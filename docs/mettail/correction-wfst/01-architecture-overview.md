@@ -31,6 +31,11 @@ for dialogue context, LLM integration, and adaptive learning.
 - [NFA Phonetic Regex](../../wfst/nfa_phonetic_regex.md) - Phonetic pattern matching
 - [References](../../wfst/references/papers.md) - 35+ cited papers
 
+**Programming Language Correction** (5-layer design with SMT repair):
+- [Grammar Correction Design](../../design/grammar-correction/README.md) - Navigation guide
+- [Complete Design Document](../../design/grammar-correction/MAIN_DESIGN.md) - 5-layer architecture (~5100 lines)
+- [Theoretical Analysis](../../design/grammar-correction/theoretical-analysis/README.md) - 28+ formal theorems
+
 ---
 
 ## Table of Contents

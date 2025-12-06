@@ -5034,6 +5034,24 @@ export function activate(context: vscode.ExtensionContext) {
 
 **All references available open-access via arXiv, ACL Anthology, or author websites.**
 
+### Related Documentation
+
+This design document is part of a larger correction architecture:
+
+**Extended Correction Layers**:
+- [MeTTaIL Correction WFST Overview](../../mettail/correction-wfst/01-architecture-overview.md) - Full 6-layer architecture
+- [Dialogue Context Layer](../../mettail/dialogue/README.md) - Coreference resolution, topic tracking
+- [LLM Integration Layer](../../mettail/llm-integration/README.md) - Prompt preprocessing, response validation
+- [Agent Learning Layer](../../mettail/agent-learning/README.md) - Feedback collection, personalization
+
+**Integration Implementation**:
+- [MORK Integration](../../integration/mork/README.md) - Pattern matching with liblevenshtein
+- [PathMap Integration](../../integration/pathmap/README.md) - Shared trie-based storage
+
+**Verification Framework**:
+- [Grammar Verification](../../verification/grammar/) - Coq/Rocq proofs for CFG properties
+- [Core Completeness Proofs](../../verification/core/) - Levenshtein algorithm correctness
+
 ---
 
 ## 16. Appendices

@@ -345,7 +345,36 @@ For detailed comparisons and integration strategies, see:
 - [`../../wfst/README.md`](../../wfst/README.md) - WFST architecture overview
 - [`../../wfst/architecture.md`](../../wfst/architecture.md) - Complete system design
 - [`../../wfst/lattice_parsing.md`](../../wfst/lattice_parsing.md) - Lattice parsing technique
-- [`../../wfst/programming_language_applications.md`](../../wfst/programming_language_applications.md) - Applying WFST to code correction
+- [`../../wfst/cfg_grammar_correction.md`](../../wfst/cfg_grammar_correction.md) - CFG-based grammar correction for code
+
+---
+
+## 🔗 Extended Architecture
+
+This 5-layer code correction design is extended by the MeTTaIL architecture for conversational AI and LLM agent support:
+
+### Extended Layers
+
+| Layer | Component | Documentation |
+|-------|-----------|---------------|
+| **Dialogue Context** | Turn tracking, entity registry, topic graph | [Dialogue README](../../mettail/dialogue/README.md) |
+| **Pragmatic Reasoning** | Speech act classification, implicature resolution | [Correction WFST Overview](../../mettail/correction-wfst/01-architecture-overview.md) |
+| **LLM Integration** | Prompt preprocessing, response validation | [LLM Integration](../../mettail/llm-integration/README.md) |
+| **Agent Learning** | Feedback collection, pattern adaptation | [Agent Learning](../../mettail/agent-learning/README.md) |
+
+### Integration Implementation
+
+For integrating grammar correction with MeTTa pattern matching:
+
+- [MORK Integration](../../integration/mork/README.md) - Pattern matching engine using liblevenshtein
+- [PathMap Integration](../../integration/pathmap/README.md) - Shared trie-based storage layer
+
+### Verification Framework
+
+Formal correctness proofs for the grammar correction layers:
+
+- [Grammar Verification](../../verification/grammar/) - Coq/Rocq proofs for CFG correctness
+- [Completeness Proofs](../../verification/core/) - Core algorithm verification
 
 ---
 
