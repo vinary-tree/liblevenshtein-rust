@@ -314,6 +314,40 @@ For comprehensive guide on applying WFST to programming languages:
 
 ---
 
+## Extended Architecture
+
+This WFST design is extended by the **MeTTaIL correction architecture**, which adds additional layers for conversational systems and LLM agent integration:
+
+### Extended Layers
+
+| Layer | Components | Purpose |
+|-------|------------|---------|
+| **Dialogue Context** | Turn Tracker, Entity Registry, Topic Graph | Multi-turn conversation tracking |
+| **Pragmatic Reasoning** | Speech Act Classifier, Implicature Resolver | Intent understanding |
+| **LLM Integration** | Preprocessor, Postprocessor, Hallucination Detector | Agent support |
+| **Agent Learning** | Feedback Collection, Pattern Learning | Adaptive personalization |
+
+### Related Documentation
+
+**Extended Correction Architecture**:
+- [Architecture Overview](../mettail/correction-wfst/01-architecture-overview.md) - Extended 6-layer architecture
+- [Tier 1: Lexical Correction](../mettail/correction-wfst/02-tier1-lexical-correction.md) - liblevenshtein integration
+- [Tier 2: Syntactic Validation](../mettail/correction-wfst/03-tier2-syntactic-validation.md) - MORK CFG validation
+- [Tier 3: Semantic Type Checking](../mettail/correction-wfst/04-tier3-semantic-type-checking.md) - MeTTaIL/OSLF types
+- [Data Flow](../mettail/correction-wfst/05-data-flow.md) - End-to-end pipeline
+- [Integration Possibilities](../mettail/correction-wfst/06-integration-possibilities.md) - Use cases
+
+**Extended Layer Documentation**:
+- [Dialogue Context Layer](../mettail/dialogue/README.md) - Coreference resolution and topic tracking
+- [LLM Integration Layer](../mettail/llm-integration/README.md) - Prompt preprocessing and response validation
+- [Agent Learning Layer](../mettail/agent-learning/README.md) - Feedback integration and personalization
+
+**Integration Implementation**:
+- [MORK Integration](../integration/mork/README.md) - Phases A-D implementation details
+- [PathMap Integration](../integration/pathmap/README.md) - Shared storage layer and schemas
+
+---
+
 ## Benchmarks and Evaluation
 
 ### Datasets
@@ -503,14 +537,16 @@ For questions about liblevenshtein-rust implementation:
 
 ---
 
-**Last Updated**: 2025-11-21
+**Last Updated**: 2025-12-06
 **Recent Updates**:
+- **NEW**: Added Extended Architecture section with cross-references to MeTTaIL correction docs
+- **NEW**: Added links to extended layers (Dialogue, LLM Integration, Agent Learning)
+- **NEW**: Added cross-references to MORK/PathMap integration documentation
 - Added comprehensive lattice parsing documentation (lattice_parsing.md, lattice_data_structures.md)
 - Expanded architecture.md with lattice parsing integration section
 - Expanded cfg_grammar_correction.md with efficiency analysis and benchmarks
-- **NEW**: Added LLM integration section to architecture.md (~640 lines)
-- **NEW**: Added LLM use cases to cfg_grammar_correction.md (~340 lines)
-- **NEW**: Updated target applications with LLM preprocessing/postprocessing/hybrid workflows
-- Updated README with new documentation structure and statistics
+- Added LLM integration section to architecture.md (~640 lines)
+- Added LLM use cases to cfg_grammar_correction.md (~340 lines)
+- Updated target applications with LLM preprocessing/postprocessing/hybrid workflows
 
 **Next Update**: After implementing Phase 1 (Lattice Output) and example code (lattice_parsing_demo.rs)

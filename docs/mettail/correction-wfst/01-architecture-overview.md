@@ -23,6 +23,14 @@ for dialogue context, LLM integration, and adaptive learning.
 - [LLM Integration Layer](../llm-integration/README.md) - Prompt preprocessing and response validation
 - [Agent Learning Layer](../agent-learning/README.md) - Feedback collection and online learning
 
+**Original WFST Documentation** (detailed implementation specs):
+- [WFST Architecture](../../wfst/architecture.md) - Complete system design (~2400 lines)
+- [CFG Grammar Correction](../../wfst/cfg_grammar_correction.md) - Error grammar formalism (~1900 lines)
+- [Lattice Parsing](../../wfst/lattice_parsing.md) - Earley parsing on lattices (~1050 lines)
+- [Lattice Data Structures](../../wfst/lattice_data_structures.md) - Rust implementations (~550 lines)
+- [NFA Phonetic Regex](../../wfst/nfa_phonetic_regex.md) - Phonetic pattern matching
+- [References](../../wfst/references/papers.md) - 35+ cited papers
+
 ---
 
 ## Table of Contents

@@ -1331,6 +1331,92 @@ impl DistributedCorrector {
 
 ---
 
+## Industry Comparison
+
+The unified correction architecture compares favorably with industry systems:
+
+### Comparison Table
+
+| Feature | NVIDIA NeMo | Google Sparrowhawk | MoNoise | liblevenshtein-rust |
+|---------|-------------|-------------------|---------|---------------------|
+| **Architecture** | FST + Neural | FST only | Pure Neural | FST + CFG + Neural |
+| **Spelling correction** | ✅ FST | ✅ FST | ✅ seq2seq | ✅ Levenshtein FST |
+| **Phonetic normalization** | ✅ FST rules | ✅ FST | ⚠️ Learned | ✅ NFA + verified rules |
+| **Grammar correction** | ⚠️ Neural only | ❌ Not supported | ⚠️ Learned | ✅ CFG + Neural |
+| **Formal verification** | ❌ None | ❌ None | ❌ None | ✅ Coq proofs |
+| **Deterministic output** | ⚠️ Neural layer | ✅ Yes | ❌ No | ✅ Tiers 1-2 |
+| **Latency (p50)** | ~100ms | <10ms | 100-500ms | <50ms (symbolic) |
+| **Training data needed** | 10,000+ | None | 10,000+ | None (rules) |
+
+### Unique Value Proposition
+
+**liblevenshtein-rust** is the only system with:
+1. **FST + CFG + Neural three-tier architecture**
+2. **Formally verified phonetic rules** (Coq proofs)
+3. **Deterministic symbolic layers** (Tiers 1-2 reproducible)
+4. **Rust native performance** (zero-cost abstractions)
+5. **Composable architecture** (NFA ∩ FST ∩ CFG)
+
+**See**: [WFST Architecture - Industry Comparison](../../wfst/architecture.md#comparison-with-industry-systems) for detailed analysis.
+
+---
+
+## Deployment Modes
+
+The correction architecture supports three deployment modes for different latency/accuracy trade-offs:
+
+### Mode Configurations
+
+| Mode | Tiers | Latency | Accuracy | Memory |
+|------|-------|---------|----------|--------|
+| **Fast** | FST + NFA | <20ms | ~85% | <100 MB |
+| **Balanced** | FST + NFA + CFG | <200ms | ~90% | <200 MB |
+| **Accurate** | FST + NFA + CFG + Neural | <500ms | ~95% | 0.5-2 GB |
+
+### Fast Mode (Real-time)
+
+```rust
+let config = PipelineConfig {
+    tiers: vec![Tier::FST, Tier::NFA],
+    max_edit_distance: 2,
+    phonetic_regex: Some("(ph|f)(ough|uff)..."),
+    grammar: None,
+    neural_lm: None,
+};
+```
+
+**Use Cases**: Mobile keyboards, real-time chat, embedded devices
+
+### Balanced Mode (Production)
+
+```rust
+let config = PipelineConfig {
+    tiers: vec![Tier::FST, Tier::NFA, Tier::CFG],
+    max_edit_distance: 2,
+    grammar: Some(load_error_grammar("grammar.cfg")?),
+    neural_lm: None,
+};
+```
+
+**Use Cases**: Desktop applications, server-side normalization, document processing
+
+### Accurate Mode (High-quality)
+
+```rust
+let config = PipelineConfig {
+    tiers: vec![Tier::FST, Tier::NFA, Tier::CFG, Tier::Neural],
+    grammar: Some(load_error_grammar("grammar.cfg")?),
+    neural_lm: Some(BertLanguageModel::load("bert-base-uncased")?),
+    neural_weight: 0.3,
+};
+```
+
+**Use Cases**: Professional writing tools, academic paper correction, high-quality editing
+
+**See**: [WFST Architecture - Deployment Modes](../../wfst/architecture.md#deployment-modes) for detailed configurations.
+
+---
+
 ## Summary
 
 Integration possibilities organized by domain:

@@ -2048,6 +2048,38 @@ async fn optimized_pipeline(input: &str) -> Result<String, Error> {
 
 ---
 
+### Extended Architecture for LLM Agents
+
+The three-tier WFST core is extended by the **MeTTaIL correction architecture** for full LLM agent support:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│          EXTENDED CORRECTION ARCHITECTURE                        │
+├─────────────────────────────────────────────────────────────────┤
+│  Dialogue Context Layer                                         │
+│    Turn History │ Entity Registry │ Topic Graph                 │
+│                              ↓                                   │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │           THREE-TIER WFST CORE (This Document)            │  │
+│  │  Tier 1: Lexical → Tier 2: Syntactic → Tier 3: Semantic   │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                              ↓                                   │
+│  LLM Integration Layer                                          │
+│    Preprocessing → LLM API → Postprocessing                     │
+│                              ↓                                   │
+│  Agent Learning Layer                                           │
+│    Feedback Collection │ Pattern Learning │ Online Updates      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Extended Layer Documentation**:
+- [Dialogue Context Layer](../mettail/dialogue/README.md) - Coreference resolution and topic tracking
+- [LLM Integration Layer](../mettail/llm-integration/README.md) - Detailed preprocessing/postprocessing
+- [Agent Learning Layer](../mettail/agent-learning/README.md) - Feedback integration and personalization
+- [Full Architecture Overview](../mettail/correction-wfst/01-architecture-overview.md) - Complete 6-layer design
+
+---
+
 ## Comparison with Industry Systems
 
 ### NVIDIA NeMo
