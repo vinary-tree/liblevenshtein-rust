@@ -358,6 +358,7 @@ This 5-layer code correction design is extended by the MeTTaIL architecture for 
 | Layer | Component | Documentation |
 |-------|-----------|---------------|
 | **Dialogue Context** | Turn tracking, entity registry, topic graph | [Dialogue README](../../mettail/dialogue/README.md) |
+| **Simplification** | Post-correction source-to-source optimization | [Simplification Transpiler](../../mettail/simplification/README.md) |
 | **Pragmatic Reasoning** | Speech act classification, implicature resolution | [Correction WFST Overview](../../mettail/correction-wfst/01-architecture-overview.md) |
 | **LLM Integration** | Prompt preprocessing, response validation | [LLM Integration](../../mettail/llm-integration/README.md) |
 | **Agent Learning** | Feedback collection, pattern adaptation | [Agent Learning](../../mettail/agent-learning/README.md) |

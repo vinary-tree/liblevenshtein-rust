@@ -22,6 +22,7 @@ for dialogue context, LLM integration, and adaptive learning.
 - [Dialogue Context Layer](../dialogue/README.md) - Discourse semantics and coreference
 - [LLM Integration Layer](../llm-integration/README.md) - Prompt preprocessing and response validation
 - [Agent Learning Layer](../agent-learning/README.md) - Feedback collection and online learning
+- [Simplification Transpiler](../simplification/README.md) - Post-correction source-to-source optimization
 
 **Original WFST Documentation** (detailed implementation specs):
 - [WFST Architecture](../../wfst/architecture.md) - Complete system design (~2400 lines)
@@ -148,6 +149,7 @@ for dialogue context, LLM integration, and adaptive learning. This multi-layer d
 |-------|------------|---------|
 | **Dialogue Context** | Turn History, Entity Registry, Topic Graph | Multi-turn conversation tracking |
 | **WFST Core** | Lexical, Syntactic, Semantic Tiers | Fundamental correction pipeline |
+| **Simplification** | Analysis, Rules, Strategy, Verification | Post-correction source optimization |
 | **Pragmatic** | Speech Acts, Implicatures, Relevance | Intent understanding |
 | **LLM Integration** | Preprocessing, Postprocessing | LLM agent support |
 | **Agent Learning** | Feedback, Patterns, Preferences | Adaptive personalization |
