@@ -1,16 +1,84 @@
-# MORK Integration for Approximate String Matching
+# MORK FuzzySource Adapter for Approximate String Matching
 
-This document describes the integration of liblevenshtein's WFST-based approximate string matching capabilities into MORK (MeTTa Optimal Reduction Kernel) for pattern matching atop PathMap.
+This document describes how MORK (MeTTa Optimal Reduction Kernel) integrates with liblevenshtein as an external library to enable fuzzy pattern matching in MeTTa queries over PathMap-backed knowledge graphs.
 
 ## Table of Contents
 
-1. [Executive Summary](#executive-summary)
-2. [Architecture Overview](#architecture-overview)
-3. [Integration Phases](#integration-phases)
-4. [Extended Architecture Layers](#extended-architecture-layers)
-5. [MORK Pattern Matching Synergies](#mork-pattern-matching-synergies)
-6. [Implementation Guide](#implementation-guide)
-7. [Related Documentation](#related-documentation)
+1. [Integration Architecture](#integration-architecture)
+2. [Executive Summary](#executive-summary)
+3. [Architecture Overview](#architecture-overview)
+4. [Integration Phases](#integration-phases)
+5. [Extended Architecture Layers](#extended-architecture-layers)
+6. [MORK Pattern Matching Synergies](#mork-pattern-matching-synergies)
+7. [Implementation Guide](#implementation-guide)
+8. [Related Documentation](#related-documentation)
+
+---
+
+## Integration Architecture
+
+### What This Is NOT
+
+liblevenshtein is **not embedded** into MORK. MORK does not contain liblevenshtein source code or directly implement fuzzy matching algorithms. The fuzzy matching logic remains in the liblevenshtein library.
+
+### What This IS
+
+Three separate integration layers working together:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 3: MeTTa Query Syntax                                    │
+│  !(match &space (fuzzy "colr" 2 $result) $result)              │
+│  User-facing query language for fuzzy matching                  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 2: MORK FuzzySource Adapter                              │
+│  MORK/kernel/src/fuzzy_source.rs                               │
+│  Implements Source trait, wraps liblevenshtein transducer       │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 1: liblevenshtein/PathMap Integration                    │
+│  liblevenshtein-rust/src/dictionary/pathmap.rs                 │
+│  PathMapDictionary backend, shared vocabulary with MORK         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| Layer | Location | Purpose |
+|-------|----------|---------|
+| **PathMap Dictionary** | liblevenshtein-rust | liblevenshtein uses PathMap as storage backend |
+| **FuzzySource Adapter** | MORK/kernel/src/fuzzy_source.rs | MORK queries liblevenshtein via Source trait |
+| **MeTTa Syntax** | MeTTa queries | User-facing `(fuzzy ...)` query syntax |
+
+### Data Flow
+
+```
+MeTTa Query: (fuzzy "colr" 2 $result)
+       │
+       ▼
+MORK query_multi_raw()
+       │
+       ▼
+FuzzySource.query()  ←── MORK adapter (implements Source trait)
+       │
+       ▼
+liblevenshtein::Transducer.query()  ←── External library call
+       │
+       ▼
+PathMapDictionary  ←── Shared storage backend
+       │
+       ▼
+PathMap (mmap)  ←── Same data as MORK's BTMSource/ACTSource
+```
+
+### Why This Design?
+
+1. **Separation of concerns**: MORK handles pattern matching, liblevenshtein handles fuzzy matching
+2. **Shared storage**: PathMap avoids vocabulary duplication between MORK and liblevenshtein
+3. **Clean interfaces**: Source trait provides uniform query abstraction for all data sources
+4. **Independent development**: Each project can evolve independently
+5. **No code duplication**: Fuzzy matching algorithms live only in liblevenshtein
 
 ---
 

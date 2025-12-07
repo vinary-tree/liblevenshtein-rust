@@ -8,14 +8,15 @@
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Architecture Alignment](#architecture-alignment)
-3. [PathMap Feature in liblevenshtein](#pathmap-feature-in-liblevenshtein)
-4. [Shared Zipper Pattern](#shared-zipper-pattern)
-5. [PathMapDictionary Implementation](#pathmapdictionary-implementation)
-6. [Integration with MORK](#integration-with-mork)
-7. [Extended PathMap Schemas](#extended-pathmap-schemas)
-8. [Performance Characteristics](#performance-characteristics)
-9. [Configuration Guide](#configuration-guide)
+2. [PathMap as the Primary Integration Point](#pathmap-as-the-primary-integration-point)
+3. [Architecture Alignment](#architecture-alignment)
+4. [PathMap Feature in liblevenshtein](#pathmap-feature-in-liblevenshtein)
+5. [Shared Zipper Pattern](#shared-zipper-pattern)
+6. [PathMapDictionary Implementation](#pathmapdictionary-implementation)
+7. [Integration with MORK](#integration-with-mork)
+8. [Extended PathMap Schemas](#extended-pathmap-schemas)
+9. [Performance Characteristics](#performance-characteristics)
+10. [Configuration Guide](#configuration-guide)
 
 ---
 
@@ -62,6 +63,71 @@ PathMap is a trie-based prefix-compressed key-value store that serves as the sha
 | **Zipper compatibility** | Unified navigation abstraction across all projects |
 | **Dialogue persistence** | Conversation history and entity state preserved across sessions |
 | **Learning storage** | User preferences and learned patterns stored efficiently |
+
+---
+
+## PathMap as the Primary Integration Point
+
+PathMap is **the primary shared layer** between liblevenshtein and MORK. It is important to understand that:
+
+1. **liblevenshtein is NOT embedded into MORK** - liblevenshtein remains an external library
+2. **MORK has an adapter** (FuzzySource) that calls liblevenshtein - it does not contain fuzzy matching code
+3. **PathMap is the shared storage** - both projects read from the same memory-mapped trie
+
+### Three Integration Layers
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 3: MeTTa Query Syntax                                    │
+│  !(match &space (fuzzy "colr" 2 $result) $result)              │
+│  User-facing query language                                     │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 2: MORK FuzzySource Adapter                              │
+│  Implements Source trait → calls liblevenshtein                 │
+│  Location: MORK/kernel/src/fuzzy_source.rs                     │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 1: liblevenshtein + PathMap (THIS LAYER)                 │
+│  PathMapDictionary backend for liblevenshtein transducers       │
+│  Location: liblevenshtein-rust/src/dictionary/pathmap.rs       │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  PathMap Storage (Shared)                                       │
+│  Memory-mapped trie shared by liblevenshtein and MORK          │
+│  Same data used by BTMSource, ACTSource, and PathMapDictionary │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Why PathMap is Primary
+
+| Aspect | Explanation |
+|--------|-------------|
+| **Single source of truth** | Both liblevenshtein and MORK read the same vocabulary |
+| **No duplication** | Dictionary words stored once, not copied between libraries |
+| **Cache coherence** | Memory-mapped access means consistent data across components |
+| **Independent operation** | liblevenshtein can function without MORK (using PathMap directly) |
+
+### Data Flow
+
+```
+MeTTa Query → MORK Space
+                 │
+                 ▼
+     FuzzySource.query()  ←── MORK adapter (Layer 2)
+                 │
+                 ▼
+ liblevenshtein::Transducer  ←── External library
+                 │
+                 ▼
+    PathMapDictionary.get()  ←── Layer 1 (this doc)
+                 │
+                 ▼
+    PathMap (memory-mapped)  ←── Shared storage
+```
 
 ---
 

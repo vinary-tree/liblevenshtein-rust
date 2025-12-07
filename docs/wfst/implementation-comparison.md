@@ -133,10 +133,12 @@ From `docs/integration/mork/README.md` and `docs/mettail/correction-wfst/`:
 
 | Phase | Component | Description |
 |-------|-----------|-------------|
-| A | FuzzySource | liblevenshtein ↔ MORK Source trait |
+| A | FuzzySource Adapter | MORK adapter wraps liblevenshtein transducer |
 | B | Lattice | MORK `query_multi_i()` at O(K×N) |
 | C | Full WFST | NFA × FST composition |
 | D | CFG | MORK pattern/template pairs |
+
+**Note**: liblevenshtein remains an **external library**. MORK's FuzzySource is an adapter that calls liblevenshtein—it does not contain fuzzy matching code. See [MORK FuzzySource Adapter](../integration/mork/README.md) for architecture details.
 
 ### Characteristics
 
@@ -364,16 +366,18 @@ impl EarleyParser {
 - No shared computation between similar paths
 - Separate chart per candidate
 
-### Integrated: MORK Pattern Matching
+### Integrated: MORK FuzzySource Adapter
 
 ```rust
-// Integration via FuzzySource trait
+// FuzzySource is a MORK adapter (in MORK/kernel/src/fuzzy_source.rs)
+// that wraps liblevenshtein as an external library
 
-impl FuzzySource for LevenshteinTransducer {
+impl Source for FuzzySource {
     fn query_multi_i(&self, lattice: &Lattice) -> Vec<Match> {
+        // FuzzySource calls liblevenshtein::Transducer internally
         // MORK processes lattice DAG directly
         // Shares computation across overlapping paths
-        // Returns ranked matches with scores
+        self.transducer.query_lattice(lattice)  // liblevenshtein call
     }
 }
 
@@ -395,7 +399,7 @@ let results = mork.query_lattice(lattice, grammar_patterns);
 
 ### Feature Comparison
 
-| Feature | Standalone Earley | Integrated MORK |
+| Feature | Standalone Earley | MORK FuzzySource Adapter |
 |---------|-------------------|-----------------|
 | CFG expressiveness | Full CFG | Pattern/template pairs |
 | Lattice input | Parse each path | Native DAG processing |
@@ -526,7 +530,7 @@ This exponential-to-linear reduction makes the integrated approach the clear cho
 ## References
 
 - `docs/wfst/architecture.md` - Standalone implementation roadmap (Phases 1-6)
-- `docs/integration/mork/README.md` - MORK integration design (Phases A-D)
+- `docs/integration/mork/README.md` - MORK FuzzySource Adapter design (Phases A-D)
 - `docs/integration/pathmap/README.md` - PathMap shared storage
 - `docs/wfst/lattice_parsing.md` - Lattice parsing benchmarks
 - `docs/wfst/limitations.md` - Chomsky hierarchy trade-offs
