@@ -105,7 +105,29 @@ This documentation describes a **three-tier hybrid architecture** (FST + CFG + N
 
 ---
 
-### 5. [references/papers.md](references/papers.md) (~600 lines)
+### 5. [implementation-comparison.md](implementation-comparison.md) (~400 lines)
+**Efficiency comparison: Standalone vs PathMap/MORK/MeTTaIL integration**.
+
+**Contents**:
+- Standalone implementation (internal Earley parser, Thompson's NFA)
+- Integrated implementation (MORK pattern matching, PathMap storage)
+- Algorithmic complexity analysis (O(K^N) vs O(K×N))
+- Memory efficiency comparison (4× reduction with PathMap)
+- Latency analysis (6× speedup with lattice parsing)
+- CFG implementation comparison (Earley vs MORK patterns)
+- Decision guidelines for choosing implementation approach
+
+**Key Findings**:
+- **Lattice complexity**: O(K^N) → O(K×N) (exponential to linear)
+- **Parse time**: 847ms → 142ms (6× speedup)
+- **Memory**: 1.2GB → 0.3GB (4× reduction)
+- **At N=10, K=3**: 59,049 paths → 30 edges (1,968× fewer operations)
+
+**Target Audience**: Architects deciding implementation strategy, developers evaluating trade-offs
+
+---
+
+### 6. [references/papers.md](references/papers.md) (~600 lines)
 **Comprehensive bibliography with 35+ cited papers**.
 
 **Contents**:
@@ -437,15 +459,16 @@ This WFST design is extended by the **MeTTaIL correction architecture**, which a
 
 ## Document Statistics
 
-**Total Documentation**: ~6,000 lines across 5 main documents + 1 README
+**Total Documentation**: ~6,400 lines across 6 main documents + 1 README
 
 **Line Counts**:
 - architecture.md: ~2,050 lines (updated with lattice + LLM integration sections)
 - cfg_grammar_correction.md: ~1,900 lines (updated with efficiency analysis + LLM use cases)
-- lattice_parsing.md: ~1,050 lines (NEW - pedagogical guide)
-- lattice_data_structures.md: ~550 lines (NEW - technical reference)
+- lattice_parsing.md: ~1,050 lines (pedagogical guide)
+- lattice_data_structures.md: ~550 lines (technical reference)
+- implementation-comparison.md: ~400 lines (NEW - standalone vs integrated efficiency)
 - references/papers.md: ~600 lines
-- README.md: ~450 lines (this file, updated with LLM applications)
+- README.md: ~470 lines (this file)
 
 **Papers Cited**: 35+ open access papers (2002-2025)
 - arXiv preprints: 20+
@@ -539,9 +562,10 @@ For questions about liblevenshtein-rust implementation:
 
 **Last Updated**: 2025-12-06
 **Recent Updates**:
-- **NEW**: Added Extended Architecture section with cross-references to MeTTaIL correction docs
-- **NEW**: Added links to extended layers (Dialogue, LLM Integration, Agent Learning)
-- **NEW**: Added cross-references to MORK/PathMap integration documentation
+- **NEW**: Added implementation-comparison.md - Comprehensive efficiency analysis comparing standalone (internal Earley/NFA) vs integrated (PathMap/MORK/MeTTaIL) approaches
+- Added Extended Architecture section with cross-references to MeTTaIL correction docs
+- Added links to extended layers (Dialogue, LLM Integration, Agent Learning)
+- Added cross-references to MORK/PathMap integration documentation
 - Added comprehensive lattice parsing documentation (lattice_parsing.md, lattice_data_structures.md)
 - Expanded architecture.md with lattice parsing integration section
 - Expanded cfg_grammar_correction.md with efficiency analysis and benchmarks
