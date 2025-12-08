@@ -5,6 +5,8 @@ This document presents Gph-enriched Lawvere theories and Graph-Structured Lambda
 reflection or combinators. These approaches directly capture operational semantics as
 graphs enriching the hom-sets.
 
+**Target audience**: Compiler engineers implementing operational semantics
+
 **Primary Sources**:
 - Stay, M. & Meredith, L. G. "Representing operational semantics with enriched Lawvere
   theories." arXiv:1704.03080, 2017.
@@ -14,17 +16,248 @@ graphs enriching the hom-sets.
 
 ## Table of Contents
 
-1. [Motivation: Why Gph-theories?](#motivation-why-gph-theories)
-2. [Mathematical Prerequisites](#mathematical-prerequisites)
-3. [Definition of Gph-theories](#definition-of-gph-theories)
-4. [Graph-Structured Lambda Theories (GSLTs)](#graph-structured-lambda-theories-gslts)
-5. [Presentation of Finitely Generated GSLTs](#presentation-of-finitely-generated-gslts)
-6. [Examples](#examples)
-7. [Reduction Contexts and Gas](#reduction-contexts-and-gas)
-8. [RHO Calculus as a Gph-theory](#rho-calculus-as-a-gph-theory)
-9. [GSLT to Rholang Compilation](#gslt-to-rholang-compilation)
-10. [Generating Typed GSLTs from Untyped Ones](#generating-typed-gslts-from-untyped-ones)
-11. [Application to MeTTa](#application-to-metta)
+1. [For Implementers: What You Need to Know](#for-implementers-what-you-need-to-know)
+2. [Comparison: GSLTs Across Calculi](#comparison-gslts-across-calculi)
+3. [Motivation: Why Gph-theories?](#motivation-why-gph-theories)
+4. [Mathematical Prerequisites](#mathematical-prerequisites)
+5. [Definition of Gph-theories](#definition-of-gph-theories)
+6. [Graph-Structured Lambda Theories (GSLTs)](#graph-structured-lambda-theories-gslts)
+7. [Presentation of Finitely Generated GSLTs](#presentation-of-finitely-generated-gslts)
+8. [Examples](#examples)
+9. [Reduction Contexts and Gas](#reduction-contexts-and-gas)
+10. [RHO Calculus as a Gph-theory](#rho-calculus-as-a-gph-theory)
+11. [GSLT to Rholang Compilation](#gslt-to-rholang-compilation)
+12. [Generating Typed GSLTs from Untyped Ones](#generating-typed-gslts-from-untyped-ones)
+13. [Application to MeTTa](#application-to-metta)
+
+---
+
+## For Implementers: What You Need to Know
+
+### The 80/20 Rule for GSLTs
+
+**Most of what you need to implement** (handles 80% of cases):
+
+1. **Parse GSLT specification** - extract sorts, morphisms, equations, reductions
+2. **Generate type-lifted symbols** - apply T(-) rules from [05-type-lifting.md](./05-type-lifting.md)
+3. **Implement src/tgt tracking** - maintain source and target of each reduction
+4. **Handle structural equations** - especially multiset commutativity/associativity
+
+**Skip for initial implementation**:
+- Full modal type derivation
+- Behavioral predicates
+- Bisimulation checking
+
+### Data Structures
+
+```rust
+// GSLT representation
+struct GSLT {
+    name: String,
+    generating_sorts: Vec<Sort>,     // P, N, R, etc.
+    generating_morphisms: Vec<Morphism>,
+    interaction: Option<Morphism>,   // The magmal operation
+    structural_equations: Vec<Equation>,
+    reductions: Vec<Reduction>,
+}
+
+struct Sort {
+    name: String,
+    is_process_sort: bool,  // P
+    is_reduction_sort: bool, // R
+}
+
+struct Morphism {
+    name: String,
+    domain: Vec<Arity>,
+    codomain: Sort,
+}
+
+enum Arity {
+    Sort(Sort),
+    Product(Box<Arity>, Box<Arity>),
+    Exponential(Box<Arity>, Box<Arity>),
+    Unit,  // 1
+}
+
+struct Reduction {
+    name: String,
+    inputs: Vec<(String, Arity)>,
+    source_equation: String,  // src(r(...)) = ...
+    target_equation: String,  // tgt(r(...)) = ...
+}
+```
+
+### Implementation Checklist
+
+- [ ] Parse GSLT specification format
+- [ ] Build symbol table for sorts and morphisms
+- [ ] Validate morphism arities
+- [ ] Implement structural equation normalization
+- [ ] Generate type-lifted morphisms
+- [ ] Extract reductions as graph edges
+- [ ] (Optional) Generate typing rules
+- [ ] (Optional) Compile to Rholang
+
+### Quick Reference: GSLT Components
+
+| Component | What It Specifies | Implementation |
+|-----------|-------------------|----------------|
+| Generating sorts | Base types (P, N, R, ...) | Enum variants |
+| Generating morphisms | Term constructors | AST node types |
+| Interaction | Binary reduction trigger | Pattern match target |
+| Structural equations | Equivalence classes | Normalization rules |
+| Reductions | Computation steps | Reduction rules |
+
+---
+
+## Comparison: GSLTs Across Calculi
+
+This table shows how the same concepts manifest across different calculi.
+
+### Structural Overview
+
+| Feature | Lambda | SKI | RHO | Ambient | MeTTa |
+|---------|--------|-----|-----|---------|-------|
+| **Generating Sorts** | P | P | P, N | P, N, M | Term, State, KB, List, MSet |
+| **Reduction Sort** | R | R | R | R | R (state transitions) |
+| **Binding** | Lam: (P->P)->P | None | ?: N x (N->P)->P | nu: (N->P)->P | Pattern vars |
+| **Interaction** | App | App | \| (par) | \| (par) | State transition |
+| **Reflection** | None | None | @, * | None | quote, eval |
+
+### Complete GSLT Specifications
+
+#### Lambda Calculus GSLT
+
+```
+GSLT Lambda:
+  Generating Sorts: (none beyond P, R)
+
+  Generating Morphisms:
+    s, t : R -> P                    ; Graph structure
+    App : P x P -> P                 ; Application
+    Lam : (P -> P) -> P              ; Abstraction
+
+  Interaction: App
+
+  Reductions:
+    Beta : (P -> P) x P -> R
+    Beta(K, N) : App(Lam(K), N) ~> ev(K, N)
+
+    Head : R x P -> R                ; In-context
+    Head(r, B) : App(s(r), B) ~> App(t(r), B)
+```
+
+#### SKI Combinator GSLT
+
+```
+GSLT SKI:
+  Generating Sorts: (none beyond P, R)
+
+  Generating Morphisms:
+    s, t : R -> P
+    S : 1 -> P
+    K : 1 -> P
+    I : 1 -> P
+    App : P x P -> P
+    S1 : P -> P                      ; S with 1 arg
+    S2 : P x P -> P                  ; S with 2 args
+    K1 : P -> P                      ; K with 1 arg
+
+  Interaction: App
+
+  Structural Equations:
+    App(S, x) = S1(x)
+    App(S1(x), y) = S2(x, y)
+    App(K, x) = K1(x)
+
+  Reductions:
+    Sigma3 : P x P x P -> R
+    Sigma3(x, y, z) : App(S2(x, y), z) ~> App(App(x, z), App(y, z))
+
+    Kappa : P x P -> R
+    Kappa(x, y) : App(K1(x), y) ~> x
+
+    Iota : P -> R
+    Iota(x) : App(I, x) ~> x
+```
+
+#### RHO Calculus GSLT
+
+```
+GSLT RHO:
+  Generating Sorts: N (names)
+
+  Generating Morphisms:
+    s, t : R -> P
+    0 : 1 -> P                       ; Nil process
+    | : P x P -> P                   ; Parallel
+    ! : N x P -> P                   ; Output (lift)
+    ? : N x (N -> P) -> P            ; Input
+    * : N -> P                       ; Dereference (drop)
+    @ : P -> N                       ; Quote
+
+  Interaction: | (parallel composition)
+
+  Structural Equations:
+    |(P, 0) = P                      ; Unit
+    |(P, Q) = |(Q, P)                ; Commutativity
+    |(|(P, Q), R) = |(P, |(Q, R))    ; Associativity
+    @(*x) = x                        ; Quote-drop identity
+
+  Reductions:
+    Comm : N x (N -> P) x P -> R     ; Communication
+    Comm(x, K, Q) : |(?(x, K), !(x, Q)) ~> ev(K, @(Q))
+
+    ParL : R x P -> R                ; In-context (left)
+    ParL(r, Q) : |(s(r), Q) ~> |(t(r), Q)
+
+    ParR : P x R -> R                ; In-context (right)
+    ParR(P, r) : |(P, s(r)) ~> |(P, t(r))
+```
+
+#### Ambient Calculus GSLT (Sketch)
+
+```
+GSLT Ambient:
+  Generating Sorts: N (names), M (capabilities)
+
+  Generating Morphisms:
+    s, t : R -> P
+    0 : 1 -> P
+    | : P x P -> P
+    [] : N x P -> P                  ; Ambient bracket
+    . : M x P -> P                   ; Capability prefix
+    nu : (N -> P) -> P               ; Restriction
+    ! : 1 -> P                       ; Replication
+    in : N -> M                      ; Enter capability
+    out : N -> M                     ; Exit capability
+    open : N -> M                    ; Open capability
+
+  Interaction: | (parallel)
+
+  Reductions:
+    In : N x N x P x P x P -> R
+    In(n, m, Q, R, S) : |([](n, |(.(in(m), Q), R)), [](m, S))
+                      ~> [](m, |([](n, |(Q, R)), S))
+
+    Out : N x N x P x P x P -> R
+    Out(n, m, Q, R, S) : [](m, |([](n, |(.(out(m), Q), R)), S))
+                       ~> |([](n, |(Q, R)), [](m, S))
+
+    Open : N x P x P -> R
+    Open(n, P, Q) : |(.(open(n), P), [](n, Q)) ~> |(P, Q)
+```
+
+### Key Differences Table
+
+| Aspect | Lambda | SKI | RHO | Ambient |
+|--------|--------|-----|-----|---------|
+| **# of base reductions** | 1 (beta) | 3 (S, K, I) | 1 (comm) | 3 (in, out, open) |
+| **Duplication in reductions** | None | S (z appears 2x) | Comm (x appears 2x) | All (n, m appear 2x) |
+| **Structural equations** | None | Partial application | Par monoid, quote-drop | Par monoid |
+| **Names** | No | No | Yes (via reflection) | Yes (primitive) |
+| **Mobility** | No | No | No | Yes |
 
 ---
 
@@ -871,6 +1104,15 @@ Extend Gph-theories with:
 - **If no** → Full OSLF required (handles binding natively)
 
 MeTTa's reflective nature (quoting) suggests the simpler path is viable.
+
+---
+
+## Related Documents
+
+- [05-type-lifting.md](./05-type-lifting.md): Type lifting transformation rules (T(-))
+- [06-inference-rules.md](./06-inference-rules.md): Inference rules derived from GSLTs
+- [02-native-type-theory-oslf.md](./02-native-type-theory-oslf.md): Full OSLF for behavioral types
+- [04-rho-calculus.md](./04-rho-calculus.md): RHO calculus details
 
 ---
 

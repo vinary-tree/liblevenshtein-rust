@@ -4,15 +4,72 @@ This document presents the operational semantics of MeTTa as defined in the Meta
 paper (Meredith et al., 2023). Understanding this foundation is essential before
 exploring semantic type checking approaches.
 
+**Target audience**: Compiler engineers and PL implementers
+
 ---
 
 ## Table of Contents
 
-1. [The State Machine Model](#the-state-machine-model)
-2. [Term Syntax](#term-syntax)
-3. [Rewrite Rules](#rewrite-rules)
-4. [Evaluation Semantics](#evaluation-semantics)
-5. [Connection to Type Checking](#connection-to-type-checking)
+1. [For Implementers: Key Takeaways](#for-implementers-key-takeaways)
+2. [The State Machine Model](#the-state-machine-model)
+3. [Term Syntax](#term-syntax)
+4. [Rewrite Rules](#rewrite-rules)
+5. [Evaluation Semantics](#evaluation-semantics)
+6. [Connection to Type Checking](#connection-to-type-checking)
+7. [Comparison with Other Calculi](#comparison-with-other-calculi)
+
+---
+
+## For Implementers: Key Takeaways
+
+Before diving into details, here's what you need to know:
+
+### The 80/20 Rule
+
+**Essential concepts** (handle 80% of use cases):
+1. The four-component state: `<i, k, w, o>` (input, knowledge, workspace, output)
+2. Pattern matching via unification against the knowledge base
+3. The five core rewrite rules (Query, Chain, Transform, AddAtom, RemAtom)
+
+**Advanced concepts** (for complete implementation):
+- Effort objects for resource tracking
+- Comprehension evaluation
+- Knowledge base consistency
+
+### Data Structures You'll Need
+
+```rust
+// Core state machine
+struct MeTTaState {
+    input: Term,              // Current term being evaluated
+    knowledge: KnowledgeBase, // Facts and rules
+    workspace: MultiSet<Term>,// Intermediate results
+    output: MultiSet<Term>,   // Final results
+}
+
+// Term representation
+enum Term {
+    Atom(Symbol),             // Symbols, numbers, strings
+    Variable(String),         // Pattern variables ($x)
+    List(Vec<Term>),          // Ordered sequences
+    MultiSet(Vec<Term>),      // Unordered bags
+}
+
+// Knowledge base
+struct KnowledgeBase {
+    facts: HashSet<Term>,
+    rules: Vec<RewriteRule>,
+}
+```
+
+### Key Operations to Implement
+
+| Operation | Complexity | Description |
+|-----------|------------|-------------|
+| `unify(p, t)` | O(n) typical | Pattern matching with occurs check |
+| `match(p, kb)` | O(kb size) | Find all unifiers in knowledge base |
+| `substitute(t, sigma)` | O(t size) | Apply substitution to term |
+| `step(state)` | O(varies) | One rewrite step |
 
 ---
 
@@ -286,6 +343,69 @@ types in OSLF.
 
 ---
 
+## Comparison with Other Calculi
+
+Understanding how MeTTa relates to other calculi helps clarify implementation choices.
+
+### State Models Compared
+
+| Calculus | State Model | Key Feature |
+|----------|-------------|-------------|
+| **MeTTa** | `<i, k, w, o>` (input, knowledge, workspace, output) | Knowledge base as first-class |
+| **Lambda** | Term only | Pure substitution |
+| **SKI** | Term only | Combinator-based |
+| **RHO** | Process soup (multiset of processes) | Reflection via quote/drop |
+| **Ambient** | Tree of nested ambients | Hierarchical mobility |
+
+### Binding Mechanisms
+
+| Calculus | Binding Mechanism | Variable Scope |
+|----------|-------------------|----------------|
+| **MeTTa** | Pattern variables (`$x`) | Per-query scope |
+| **Lambda** | Lambda abstraction (`lambda x.`) | Lexical |
+| **SKI** | None (combinator encoding) | N/A |
+| **RHO** | Input prefix (`x(y).P`) | Continuation scope |
+| **Ambient** | Restriction (`nu n.P`) | Lexical |
+
+### Interaction Patterns
+
+| Calculus | Primary Interaction | GSLT Interaction Operator |
+|----------|---------------------|---------------------------|
+| **MeTTa** | Query matching | State transition |
+| **Lambda** | Application (beta) | `App` |
+| **SKI** | Application | `App` |
+| **RHO** | Communication (comm) | `\|` (parallel) |
+| **Ambient** | Capability exercise | `\|` (parallel) |
+
+### Reduction Strategy
+
+| Calculus | Evaluation Order | Determinism |
+|----------|------------------|-------------|
+| **MeTTa** | Non-deterministic (multisets) | Non-deterministic |
+| **Lambda** | Various (CBV, CBN, lazy) | Deterministic (given strategy) |
+| **SKI** | Leftmost-outermost typical | Deterministic |
+| **RHO** | Non-deterministic | Non-deterministic |
+| **Ambient** | Non-deterministic | Non-deterministic |
+
+### Implications for Implementation
+
+**From MeTTa's perspective**:
+- The knowledge base is like a persistent multiset (similar to RHO's process soup)
+- Pattern matching is more general than beta reduction
+- Non-determinism requires careful handling (breadth-first search, probabilistic selection, etc.)
+
+**Shared with RHO**:
+- Both use multisets with commutativity/associativity equations
+- Both support reflection (MeTTa: quote/eval, RHO: quote/drop)
+- Both have non-deterministic semantics
+
+**Differs from Lambda/SKI**:
+- MeTTa has mutable state (knowledge base modification)
+- No fixed evaluation order
+- Rich pattern matching vs. simple beta/combinator reduction
+
+---
+
 ## Summary
 
 MeTTa's operational semantics provides:
@@ -300,6 +420,8 @@ The next documents explore how to derive semantic types from this operational
 foundation:
 - [02-native-type-theory-oslf.md](./02-native-type-theory-oslf.md): Full type theory derivation
 - [03-gph-enriched-lawvere.md](./03-gph-enriched-lawvere.md): Simpler graph-based approach
+- [05-type-lifting.md](./05-type-lifting.md): Type lifting transformation
+- [06-inference-rules.md](./06-inference-rules.md): Inference rules guide
 
 ---
 

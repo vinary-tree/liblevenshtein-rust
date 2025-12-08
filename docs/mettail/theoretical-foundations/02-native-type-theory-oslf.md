@@ -4,17 +4,75 @@ This document presents the OSLF (Operational Semantics via Lawvere and Fibration
 construction for deriving type systems from operational semantics. This is the
 mathematical foundation for full semantic type checking in MeTTa.
 
+**Target audience**: Compiler engineers and type theory enthusiasts
+
+**Prerequisites**: Familiarity with basic category theory is helpful but not required.
+See [06-inference-rules.md](./06-inference-rules.md) for notation guide.
+
 ---
 
 ## Table of Contents
 
-1. [The Core Idea](#the-core-idea)
-2. [λ-Theories with Equality](#λ-theories-with-equality)
-3. [The Presheaf Construction](#the-presheaf-construction)
-4. [The Internal Language Functor](#the-internal-language-functor)
-5. [Native Types](#native-types)
-6. [Behavioral Types](#behavioral-types)
-7. [Application to MeTTa](#application-to-metta)
+1. [Notation Guide (Read This First)](#notation-guide-read-this-first)
+2. [The Core Idea](#the-core-idea)
+3. [λ-Theories with Equality](#λ-theories-with-equality)
+4. [The Presheaf Construction](#the-presheaf-construction)
+5. [The Internal Language Functor](#the-internal-language-functor)
+6. [Native Types](#native-types)
+7. [Behavioral Types](#behavioral-types)
+8. [Application to MeTTa](#application-to-metta)
+9. [Worked Example: LP(T) Construction](#worked-example-lpt-construction)
+10. [OSLF vs Gph-Theory Tradeoffs](#oslf-vs-gph-theory-tradeoffs)
+
+---
+
+## Notation Guide (Read This First)
+
+Before diving into OSLF, ensure you understand this notation:
+
+### Type Theory Symbols
+
+| Symbol | Name | Meaning | Example |
+|--------|------|---------|---------|
+| `|-` | Turnstile | "derives" or "proves" | `G |- A : B` |
+| `:` | Colon | "has type" | `x : Nat` |
+| `G` | Gamma | Context (assumptions) | `x : Int, y : Bool` |
+| `->` | Arrow | Function type | `Int -> Bool` |
+| `x` | Times | Product type | `Int x Bool` |
+| `{x:A \| phi}` | Subset type | Elements of A satisfying phi | `{n:Nat \| n > 0}` |
+
+### Category Theory Symbols
+
+| Symbol | Name | Meaning |
+|--------|------|---------|
+| `Hom(A, B)` | Hom-set | Morphisms from A to B |
+| `F : C -> D` | Functor | Structure-preserving map between categories |
+| `y` | Yoneda embedding | Maps objects to representable presheaves |
+| `P(T)` | Presheaf category | Category of functors T^op -> Set |
+| `Omega` | Subobject classifier | "Type of propositions" |
+
+### OSLF-Specific Notation
+
+| Symbol | Meaning |
+|--------|---------|
+| `T` | A lambda-theory (the input) |
+| `P(T)` | Presheaf topos over T |
+| `L(E)` | Internal language of topos E |
+| `LP(T)` | Native type theory = L(P(T)) |
+| `F!` | Possible next step operator |
+| `F*` | Necessary next step operator |
+| `diamond` | Eventually (reachability) |
+| `square` | Always (invariant) |
+
+### Reading Complex Expressions
+
+Example: `G |- {x:A \| phi(x)} type`
+
+Read as: "In context G, the subset type {x:A \| phi(x)} is a valid type"
+
+Example: `diamond(hasOutput)`
+
+Read as: "Eventually reaches a state with output" (behavioral type)
 
 ---
 
@@ -390,6 +448,196 @@ This is represented using the internal hom [φ, ψ] for conditioned contexts.
 
 ---
 
+## Worked Example: LP(T) Construction
+
+Let's walk through the OSLF construction for a minimal theory to make the abstract
+machinery concrete.
+
+### Step 1: Define a Simple Lambda-Theory T_Simple
+
+```
+Theory T_Simple:
+  Sorts: T (terms)
+
+  Operations:
+    zero : 1 -> T
+    succ : T -> T
+    add  : T x T -> T
+
+  Equations:
+    add(zero, x) = x
+    add(succ(x), y) = succ(add(x, y))
+```
+
+This is natural numbers with addition.
+
+### Step 2: Construct P(T_Simple)
+
+The presheaf category P(T_Simple) has:
+
+**Objects**: Functors F : T_Simple^op -> Set
+
+Key presheaves include:
+- `y(T)` = Hom(-, T) - the representable presheaf for terms
+- `Omega` - the subobject classifier (propositions)
+- `Omega^{y(T)}` - predicates on terms
+
+**Morphisms**: Natural transformations
+
+**Example presheaf**: "Even numbers"
+
+```
+Even(c) = { t in Hom(c, T) | t = add(x, x) for some x }
+```
+
+This is a sub-presheaf of y(T).
+
+### Step 3: Extract L(P(T_Simple))
+
+The internal language gives us:
+
+**Types**:
+- `T` (terms, from the sort)
+- `T -> T` (functions on terms)
+- `{x:T | Even(x)}` (subset type of even numbers)
+- `{x:T | x = zero}` (singleton type)
+
+**Type formation rules**:
+```
+G |- T type
+
+G |- A type    G, x:A |- phi prop
+----------------------------------
+G |- {x:A | phi} type
+```
+
+**Terms and their types**:
+```
+|- zero : T
+|- succ : T -> T
+|- add : T x T -> T
+```
+
+**Propositions (predicates)**:
+```
+G, x:T |- x = zero prop
+G, x:T |- Even(x) prop
+```
+
+### Step 4: Add Reductions (Make it a GSLT)
+
+Extend with a reduction relation:
+
+```
+Extended Theory:
+  Sorts: T, R (reductions)
+
+  New Operations:
+    src : R -> T
+    tgt : R -> T
+    step : T x T -> R   (when add can reduce)
+
+  Equations:
+    src(step(x, y)) = add(x, y)
+    tgt(step(zero, y)) = y
+    tgt(step(succ(x), y)) = succ(add(x, y))
+```
+
+### Step 5: Behavioral Types from Reductions
+
+Now LP(T_Simple) includes behavioral types:
+
+```
+; Type of terms that reduce to zero
+ReducesToZero(t) := diamond(t = zero)
+
+; Expanded: exists n:Nat, r1:R, ..., rn:R.
+;   src(r1) = t /\ tgt(r1) = src(r2) /\ ... /\ tgt(rn) = zero
+
+; Type of terms that are "normal" (can't reduce)
+Normal(t) := not(exists r:R. src(r) = t)
+```
+
+### Summary of the Construction
+
+```
+T_Simple (lambda-theory)
+    |
+    | P (presheaf construction)
+    v
+P(T_Simple) (topos with internal graph)
+    |
+    | L (internal language)
+    v
+LP(T_Simple) (native type theory)
+    - Basic types: T
+    - Function types: T -> T
+    - Subset types: {x:T | phi}
+    - Behavioral types: diamond(phi), square(phi)
+```
+
+---
+
+## OSLF vs Gph-Theory Tradeoffs
+
+### When to Use Each Approach
+
+| Criterion | Use OSLF | Use Gph-Theory |
+|-----------|----------|----------------|
+| **Binding** | Complex binding patterns | Binding via reflection/combinators |
+| **Types needed** | Full dependent types, refinements | Structural types, modal types |
+| **Reasoning** | Bisimulation, behavioral specs | Operational semantics only |
+| **Implementation effort** | High | Medium |
+| **Theory maturity** | Well-established | Newer, simpler |
+
+### Feature Comparison
+
+| Feature | OSLF | Gph-Theory | Both |
+|---------|------|------------|------|
+| Structural types | Yes | Yes | Yes |
+| Modal types | Via modalities | Via interaction | Yes |
+| Dependent types | Full | Limited | Partial |
+| Behavioral predicates | Yes | No | No |
+| Bisimulation | Inductive type | No | No |
+| Binding | Native presheaves | Via combinators | Different |
+| Compilation target | N/A | Rholang | Different |
+
+### The Binding Decision
+
+The key decision point:
+
+> **Can your calculus eliminate binding via reflection or combinators?**
+
+**Yes (use Gph-theories)**:
+- RHO calculus: quote/drop eliminates binding
+- SKI: Combinators eliminate lambda
+- MeTTa: Quote/eval may suffice
+
+**No (use OSLF)**:
+- Lambda calculus with explicit binding
+- Calculi where binding is semantic (not just syntactic)
+- Systems requiring full dependent types
+
+### Hybrid Approach
+
+For MeTTa, the recommended approach is:
+
+1. **Start with Gph-theories** for core operational semantics
+2. **Use type lifting** ([05-type-lifting.md](./05-type-lifting.md)) for structural types
+3. **Add OSLF elements** selectively where behavioral types are needed
+4. **Fall back to full OSLF** only for complex refinement types
+
+### Implementation Complexity
+
+| Aspect | OSLF | Gph-Theory |
+|--------|------|------------|
+| Category theory required | Yes, significant | Minimal |
+| Implementation size | Large | Medium |
+| Proof effort | High | Medium |
+| Runtime performance | N/A (static) | Can compile to Rholang |
+
+---
+
 ## Summary
 
 Native Type Theory (OSLF) provides:
@@ -403,6 +651,10 @@ Native Type Theory (OSLF) provides:
 This is the full theoretical foundation for semantic type checking in MeTTa. For a
 simpler approach when binding can be eliminated, see
 [03-gph-enriched-lawvere.md](./03-gph-enriched-lawvere.md).
+
+**Related documents**:
+- [05-type-lifting.md](./05-type-lifting.md): Type lifting transformation rules
+- [06-inference-rules.md](./06-inference-rules.md): Practical guide to inference rules
 
 ---
 

@@ -1,20 +1,107 @@
 # The RHO Calculus
 
-This document presents the ρ-calculus (reflective higher-order calculus), the
+This document presents the rho-calculus (reflective higher-order calculus), the
 theoretical foundation of Rholang. Understanding RHO calculus is essential for
 integrating MeTTaIL with Rholang's execution model.
+
+**Target audience**: Compiler engineers integrating with Rholang
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Syntax](#syntax)
-3. [Structural Congruence](#structural-congruence)
-4. [Reduction Semantics](#reduction-semantics)
-5. [The Reflection Mechanism](#the-reflection-mechanism)
-6. [Bisimulation](#bisimulation)
-7. [Connection to Type Checking](#connection-to-type-checking)
+1. [For Implementers: RHO in Practice](#for-implementers-rho-in-practice)
+2. [Overview](#overview)
+3. [Syntax](#syntax)
+4. [Structural Congruence](#structural-congruence)
+5. [Reduction Semantics](#reduction-semantics)
+6. [The Reflection Mechanism](#the-reflection-mechanism)
+7. [Bisimulation](#bisimulation)
+8. [Comparison with Lambda and SKI](#comparison-with-lambda-and-ski)
+9. [Connection to Type Checking](#connection-to-type-checking)
+
+---
+
+## For Implementers: RHO in Practice
+
+### What Makes RHO Different
+
+RHO is unique among process calculi because:
+
+1. **Names come from processes** - No primitive name generation (nu)
+2. **Reflection via quote/drop** - Code as data without meta-levels
+3. **Simpler theory** - Binding eliminated through reflection
+4. **Direct execution model** - Maps cleanly to Rholang/RSpace
+
+### Quick Reference: RHO vs Pi-Calculus
+
+| Feature | Pi-Calculus | RHO Calculus |
+|---------|-------------|--------------|
+| Name generation | `nu x.P` (primitive) | Derived via quote |
+| Communication | `x(y).P \| x<z>` | `x(y).P \| x<\|Q\|>` |
+| Higher-order | Needs extensions | Built-in via reflection |
+| Binding | Traditional | Eliminated via @/* |
+
+### Key Implementation Points
+
+```rust
+// RHO term representation
+enum Process {
+    Nil,                              // 0
+    Par(Box<Process>, Box<Process>),  // P | Q
+    Input(Name, String, Box<Process>),// x(y).P
+    Lift(Name, Box<Process>),         // x<|P|>
+    Drop(Name),                       // *x
+}
+
+enum Name {
+    Quote(Box<Process>),              // @P
+}
+
+// Key operations
+fn quote(p: Process) -> Name {
+    Name::Quote(Box::new(p))
+}
+
+fn drop(n: &Name) -> Process {
+    match n {
+        Name::Quote(p) => *p.clone(),
+    }
+}
+
+// Structural equality uses quote-drop identity
+fn names_equal(n1: &Name, n2: &Name) -> bool {
+    // @(*x) = x
+    normalize_name(n1) == normalize_name(n2)
+}
+```
+
+### Reduction Implementation
+
+```rust
+fn reduce(p: &Process) -> Option<Process> {
+    match p {
+        // COMM rule: x<|Q|> | x(y).P -> P{@Q/y}
+        Process::Par(left, right) => {
+            if let Some((chan_l, body_l)) = as_lift(left) {
+                if let Some((chan_r, var, cont)) = as_input(right) {
+                    if names_equal(&chan_l, &chan_r) {
+                        return Some(substitute(cont, var, &quote(body_l)));
+                    }
+                }
+            }
+            // Try symmetric case...
+            None
+        }
+        // Congruence: reduce under par
+        Process::Par(l, r) => {
+            reduce(l).map(|l2| Process::Par(Box::new(l2), r.clone()))
+                .or_else(|| reduce(r).map(|r2| Process::Par(l.clone(), Box::new(r2))))
+        }
+        _ => None
+    }
+}
+```
 
 ---
 
@@ -349,6 +436,88 @@ Rholang.
 
 ---
 
+## Comparison with Lambda and SKI
+
+Understanding how RHO relates to simpler calculi illuminates its design choices.
+
+### Structural Comparison
+
+| Aspect | Lambda-Calculus | SKI | RHO |
+|--------|-----------------|-----|-----|
+| **Computational model** | Functions | Combinators | Processes |
+| **Primary interaction** | Application | Application | Parallel communication |
+| **Binding** | Lambda (lambda x.M) | None (encoded) | Input (x(y).P) |
+| **State** | Stateless | Stateless | Process soup (multiset) |
+| **Determinism** | Deterministic* | Deterministic | Non-deterministic |
+| **Names** | Variables | Variables | Quoted processes |
+
+*Given evaluation strategy
+
+### Reduction Rules Comparison
+
+| Calculus | Rule Name | Source | Target |
+|----------|-----------|--------|--------|
+| **Lambda** | Beta | `(lambda x.M) N` | `M[N/x]` |
+| **SKI** | S | `S x y z` | `(x z) (y z)` |
+| **SKI** | K | `K x y` | `x` |
+| **SKI** | I | `I x` | `x` |
+| **RHO** | Comm | `x<\|Q\|> \| x(y).P` | `P[@Q/y]` |
+
+### GSLT Form Comparison
+
+**Lambda**:
+```
+App: P x P -> P
+Lam: (P -> P) -> P
+Beta: (P -> P) x P -> R
+```
+
+**SKI**:
+```
+S, K, I: 1 -> P
+App: P x P -> P
+Sigma, Kappa, Iota: various -> R
+```
+
+**RHO**:
+```
+0: 1 -> P
+|: P x P -> P
+!: N x P -> P
+?: N x (N -> P) -> P
+Comm: N x (N -> P) x P -> R
+```
+
+### Key Insight: Reflection as Binding Elimination
+
+RHO's quote/drop mechanism (`@`, `*`) serves a similar role to SKI's combinator
+encoding of lambda:
+
+| Encoding | Source | Mechanism |
+|----------|--------|-----------|
+| Lambda -> SKI | `lambda x.M` | `S`, `K`, `I` combinators |
+| Pi -> RHO | `nu x.P` | `@P` (quote creates fresh name) |
+| RHO binding | `x(y).P` | `y` substituted with `@Q` |
+
+This is why RHO can use Gph-enriched Lawvere theories (like SKI) rather than
+requiring full OSLF (like lambda with genuine binding).
+
+### Type-Lifting Implications
+
+When type-lifted (see [05-type-lifting.md](./05-type-lifting.md)):
+
+| Calculus | Exponential in binding? | Duplication? | Extra type factors? |
+|----------|-------------------------|--------------|---------------------|
+| **Lambda** | Yes (Lam) | No | Yes (bound var type) |
+| **SKI** | No | Yes (S) | Yes (for z) |
+| **RHO** | Yes (?) | Yes (Comm) | Yes (both) |
+
+RHO inherits complexity from both:
+- Exponential handling from lambda (for input binder)
+- Duplication handling from SKI (for shared channel)
+
+---
+
 ## Summary
 
 The RHO calculus provides:
@@ -364,9 +533,17 @@ Gph-enriched Lawvere approach while maintaining full expressiveness.
 
 ---
 
+## Related Documents
+
+- [03-gph-enriched-lawvere.md](./03-gph-enriched-lawvere.md): GSLTs and the RHO GSLT
+- [05-type-lifting.md](./05-type-lifting.md): Type lifting for RHO
+- [06-inference-rules.md](./06-inference-rules.md): Typing rules including RHO examples
+
+---
+
 ## References
 
 - Meredith, L. G. & Radestock, M. "A Reflective Higher-order Calculus."
   ENTCS 141(5), pp. 49-67, 2005.
-- Sangiorgi, D. "The π-calculus: A Theory of Mobile Processes." Cambridge, 2001.
+- Sangiorgi, D. "The pi-calculus: A Theory of Mobile Processes." Cambridge, 2001.
 - See [bibliography.md](../reference/bibliography.md) for complete references.

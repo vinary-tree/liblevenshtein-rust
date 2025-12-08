@@ -47,10 +47,12 @@ type checking for MeTTa.
 | [02-native-type-theory-oslf.md](./theoretical-foundations/02-native-type-theory-oslf.md) | The 2-functor construction from λ-theories to type systems |
 | [03-gph-enriched-lawvere.md](./theoretical-foundations/03-gph-enriched-lawvere.md) | Simpler semantics when binding is eliminated via reflection |
 | [04-rho-calculus.md](./theoretical-foundations/04-rho-calculus.md) | Rholang's theoretical foundation and reflection mechanism |
+| [05-type-lifting.md](./theoretical-foundations/05-type-lifting.md) | Deriving types from operational semantics via T(-) transformation |
+| [06-inference-rules.md](./theoretical-foundations/06-inference-rules.md) | Practical guide to reading and implementing inference rules |
 
-**Reading Order**: Start with (01) for MeTTa background, then either (02) for the full
-OSLF theory or (03) for the simpler Gph-enriched approach. Document (04) explains how
-RHO calculus reflection bridges to Rholang.
+**Reading Order**: Start with (01) for MeTTa background. For type derivation, read (05)
+and (06) next. Then either (02) for full OSLF theory or (03) for the simpler Gph-enriched
+approach. Document (04) explains how RHO calculus reflection bridges to Rholang.
 
 ### [Implementation](./implementation/)
 
@@ -120,15 +122,18 @@ suggesting the simpler Gph-theory path is viable for MeTTa's reflective capabili
 ### For Implementers
 
 1. [01-metta-operational-semantics](./theoretical-foundations/01-metta-operational-semantics.md) - Understand the target
-2. [03-gph-enriched-lawvere](./theoretical-foundations/03-gph-enriched-lawvere.md) - Simplest semantic model
-3. [04-implementation-roadmap](./implementation/04-implementation-roadmap.md) - Concrete steps
-4. [gap-analysis](./reference/gap-analysis.md) - What to build
+2. [06-inference-rules](./theoretical-foundations/06-inference-rules.md) - Learn to read type notation
+3. [05-type-lifting](./theoretical-foundations/05-type-lifting.md) - Derive types from semantics
+4. [03-gph-enriched-lawvere](./theoretical-foundations/03-gph-enriched-lawvere.md) - Simplest semantic model
+5. [04-implementation-roadmap](./implementation/04-implementation-roadmap.md) - Concrete steps
+6. [gap-analysis](./reference/gap-analysis.md) - What to build
 
 ### For Theorists
 
 1. [02-native-type-theory-oslf](./theoretical-foundations/02-native-type-theory-oslf.md) - Full mathematical foundation
-2. [04-rho-calculus](./theoretical-foundations/04-rho-calculus.md) - Reflection theory
-3. [use-cases](./reference/use-cases.md) - Applications of behavioral types
+2. [05-type-lifting](./theoretical-foundations/05-type-lifting.md) - Type lifting transformation
+3. [04-rho-calculus](./theoretical-foundations/04-rho-calculus.md) - Reflection theory
+4. [use-cases](./reference/use-cases.md) - Applications of behavioral types
 
 ### For Project Managers
 
@@ -193,3 +198,21 @@ Where:
 
 This construction is **native** because types arise directly from the syntax, not
 imposed externally.
+
+---
+
+## Notation Quick Reference
+
+Common type-theoretic notation used throughout these documents:
+
+| Symbol | Name | Meaning | Example |
+|--------|------|---------|---------|
+| `⊢` | Turnstile | "derives" or "proves" | `Γ ⊢ M : A` means "Γ proves M has type A" |
+| `Γ` | Context | Type assumptions in scope | `x: Int, y: Bool` |
+| `:` | Type ascription | "has type" | `M : A` means "M has type A" |
+| `→` | Function type | Functions from A to B | `A → B` |
+| `×` | Product type | Pairs of A and B | `A × B` |
+| `◇` | Possibility | "possibly" (modal) | `◇A` = "can become A" |
+| `T(-)` | Type lifting | Transformation function | `T(A → B) = T(A) × (T(A) → T(B))` |
+
+For detailed explanations, see [06-inference-rules.md](./theoretical-foundations/06-inference-rules.md).
