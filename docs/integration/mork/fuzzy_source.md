@@ -570,43 +570,168 @@ pub enum AFactor<'trie, V: Clone + Send + Sync + Unpin + 'static = ()> {
 
 ## Usage Examples
 
+This section provides comprehensive examples of FuzzySource usage in MeTTa queries. For additional examples and architectural context, see [README.md](./README.md#metta-query-examples).
+
+### Knowledge Base Setup
+
+The examples below assume the following knowledge base:
+
+```metta
+; Entity definitions with names and types
+(= (entity-name "e1") "color")
+(= (entity-name "e2") "colour")
+(= (entity-name "e3") "collar")
+(= (entity-name "e4") "blue")
+(= (entity-type "e1") "property")
+(= (entity-type "e2") "property")
+(= (entity-type "e3") "object")
+(= (entity-type "e4") "property")
+
+; Person records
+(person john (age 30) (dept engineering))
+(person jon (age 25) (dept sales))
+(person jane (age 28) (dept engineering))
+(person joan (age 35) (dept marketing))
+```
+
 ### Basic Fuzzy Query
 
 ```metta
-; Find symbols within edit distance 2 of "color"
-!(match &space (FUZZY 2 "color") $result)
+; Find symbols within edit distance 2 of "colr" (a typo)
+!(match &space (fuzzy "colr" 2 $result) $result)
 
-; Expected results:
-; color (distance 0)
-; colour (distance 1)
-; collar (distance 2)
-; colors (distance 1)
+; Returns: "color" "colour" "collar"
+; Explanation:
+;   "color"  → distance 1 (insert 'o')
+;   "colour" → distance 2 (insert 'o', insert 'u')
+;   "collar" → distance 2 (substitute 'o'→'a', substitute 'r'→'l', substitute end)
+;   "blue"   → distance 4 (not returned, exceeds max_distance)
 ```
 
-### Fuzzy Query with Pattern Matching
+### Variable Binding with Distance
 
 ```metta
-; Find entities with fuzzy name matching
+; Get matched terms with the fuzzy binding variable
 !(match &space
-    (entity $id (name (FUZZY 1 "Jon")) $attrs)
-    ($id $attrs))
+    (= (entity-name $entity) (fuzzy "colr" 2 $matched-name))
+    ($entity $matched-name))
 
-; Matches:
-; (entity 1 (name "John") (age 30))
-; (entity 5 (name "Jon") (age 25))
+; Returns: ("e1" "color") ("e2" "colour") ("e3" "collar")
 ```
 
-### Combined Exact and Fuzzy
+### Combining Fuzzy with Exact Constraints
+
+The key advantage of FuzzySource in MORK is composing fuzzy matching with additional pattern constraints in a single unified query:
 
 ```metta
-; Query with exact type and fuzzy name
+; Find entities with names similar to "colr" AND type = "property"
 !(match &space
-    (person $id
-        (type Employee)                ; Exact match
-        (name (FUZZY 2 "Smyth")))     ; Fuzzy match
-    $id)
+    (= (entity-name $entity) (fuzzy "colr" 2 $name))
+    (= (entity-type $entity) "property")
+    ($entity $name))
 
-; Matches "Smith", "Smythe", "Smyth", etc.
+; Returns: ("e1" "color") ("e2" "colour")
+; Note: "collar" excluded because entity-type is "object", not "property"
+```
+
+How this works internally:
+1. FuzzySource yields candidates: `color`, `colour`, `collar`
+2. For each candidate, MORK checks the `(= (entity-type $entity) "property")` constraint
+3. Only entities satisfying BOTH constraints are returned in a single pass
+
+### Fuzzy Query on Nested Structures
+
+```metta
+; Find persons with fuzzy name matching in structured records
+!(match &space
+    (person (fuzzy "john" 1 $name) (age $age) (dept $dept))
+    ($name $age $dept))
+
+; Returns:
+; ("john" 30 engineering)  ; exact match, distance 0
+; ("jon" 25 sales)         ; distance 1 (delete 'h')
+; ("joan" 35 marketing)    ; distance 1 (substitute 'h'→'a')
+; Note: "jane" not returned (distance 2 > max_distance of 1)
+```
+
+### Multiple Fuzzy Constraints
+
+```metta
+; Query with multiple fuzzy fields
+!(match &space
+    (= (entity-name $e1) (fuzzy "colr" 2 $name1))
+    (= (entity-type $e1) "property")
+    (= (entity-name $e2) (fuzzy "blu" 2 $name2))
+    (= (entity-type $e2) "property")
+    (($e1 $name1) ($e2 $name2)))
+
+; Returns all pairs of (color-like property, blue-like property)
+; (("e1" "color") ("e4" "blue"))
+; (("e2" "colour") ("e4" "blue"))
+```
+
+### Algorithm Selection (Extended Syntax)
+
+```metta
+; Standard Levenshtein (insert, delete, substitute)
+!(match &space (fuzzy "teh" 1 standard $result) $result)
+; Returns: "the" (distance 1 via substitute)
+
+; Transposition (Damerau-Levenshtein, includes adjacent swaps)
+!(match &space (fuzzy "teh" 1 transposition $result) $result)
+; Returns: "the" (distance 1 via swap 'e'↔'h')
+
+; MergeAndSplit (OCR-optimized, handles character splitting)
+!(match &space (fuzzy "rn" 1 merge-and-split $result) $result)
+; Returns: "m" (distance 1, recognizes "rn" ≈ "m" in OCR errors)
+```
+
+### Error Handling
+
+```metta
+; Query with typo in type constraint (demonstrates fuzzy doesn't affect exact matches)
+!(match &space
+    (= (entity-name $entity) (fuzzy "colr" 2 $name))
+    (= (entity-type $entity) "proprety")  ; Typo! Should be "property"
+    ($entity $name))
+
+; Returns: () (empty - no entities have type "proprety")
+; The fuzzy specifier only applies to its direct argument, not to other constraints
+```
+
+```metta
+; Distance 0 requires exact match
+!(match &space (fuzzy "color" 0 $result) $result)
+
+; Returns: "color" only (exact match required)
+```
+
+### Ranking Integration (Phase B Preview)
+
+With Phase B lattice infrastructure, results include distance for ranking:
+
+```metta
+; Get top 5 matches with edit distances
+!(match &space
+    (= (entity-name $entity) (fuzzy-ranked "colr" 2 5 $name $distance))
+    ($entity $name $distance))
+
+; Returns (ordered by distance):
+; ("e1" "color" 1)
+; ("e2" "colour" 2)
+; ("e3" "collar" 2)
+```
+
+### Phonetic Matching (Phase C Preview)
+
+```metta
+; Find names that sound like "Steven" using phonetic rules
+!(match &space
+    (person (fuzzy-phonetic "Steven" english $name) $attrs)
+    ($name $attrs))
+
+; Returns: ("Stephen" ...) ("Stefan" ...) ("Stephan" ...) ("Steve" ...)
+; Phonetic rules: "ph" ≈ "f", "v" ≈ "ph", vowel variations
 ```
 
 ---

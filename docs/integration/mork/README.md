@@ -7,11 +7,12 @@ This document describes how MORK (MeTTa Optimal Reduction Kernel) integrates wit
 1. [Integration Architecture](#integration-architecture)
 2. [Executive Summary](#executive-summary)
 3. [Architecture Overview](#architecture-overview)
-4. [Integration Phases](#integration-phases)
-5. [Extended Architecture Layers](#extended-architecture-layers)
-6. [MORK Pattern Matching Synergies](#mork-pattern-matching-synergies)
-7. [Implementation Guide](#implementation-guide)
-8. [Related Documentation](#related-documentation)
+4. [MeTTa Query Examples](#metta-query-examples)
+5. [Integration Phases](#integration-phases)
+6. [Extended Architecture Layers](#extended-architecture-layers)
+7. [MORK Pattern Matching Synergies](#mork-pattern-matching-synergies)
+8. [Implementation Guide](#implementation-guide)
+9. [Related Documentation](#related-documentation)
 
 ---
 
@@ -156,6 +157,136 @@ PathMap (mmap)  ←── Same data as MORK's BTMSource/ACTSource
 │   Final ranking and validation                          │
 └─────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## MeTTa Query Examples
+
+This section demonstrates how FuzzySource enables fuzzy pattern matching in MeTTa queries. The key benefit is that fuzzy matching participates directly in MORK's unification, allowing single-pass queries that combine fuzzy and exact constraints.
+
+### Knowledge Base Setup
+
+```metta
+; Entity definitions with names and types
+(= (entity-name "e1") "color")
+(= (entity-name "e2") "colour")
+(= (entity-name "e3") "collar")
+(= (entity-name "e4") "blue")
+(= (entity-type "e1") "property")
+(= (entity-type "e2") "property")
+(= (entity-type "e3") "object")
+(= (entity-type "e4") "property")
+
+; Person names (for phonetic examples)
+(= (person-name "p1") "Stephen")
+(= (person-name "p2") "Stefan")
+(= (person-name "p3") "Stephan")
+(= (person-name "p4") "Steve")
+```
+
+### Basic Fuzzy Matching (Phase A)
+
+```metta
+; Find entities with names within edit distance 2 of "colr" (a typo)
+!(match &space
+    (= (entity-name $entity) (fuzzy "colr" 2))
+    $entity)
+; Returns: "e1" "e2" "e3"
+; Matches: "color" (dist=1), "colour" (dist=2), "collar" (dist=2)
+; Does NOT match: "blue" (dist=4 > 2)
+```
+
+### Variable Binding with Fuzzy Results
+
+```metta
+; Get both the entity ID and the actual matched name
+!(match &space
+    (= (entity-name $entity) (fuzzy "colr" 2 $matched-name))
+    ($entity $matched-name))
+; Returns: ("e1" "color") ("e2" "colour") ("e3" "collar")
+```
+
+### Combining Fuzzy with Exact Constraints
+
+The real power of FuzzySource in MORK is combining fuzzy matching with additional pattern constraints in a single query:
+
+```metta
+; Find entities with names similar to "colr" AND type = "property"
+!(match &space
+    (= (entity-name $entity) (fuzzy "colr" 2 $name))
+    (= (entity-type $entity) "property")
+    ($entity $name))
+; Returns: ("e1" "color") ("e2" "colour")
+; "collar" excluded because entity-type is "object", not "property"
+```
+
+This query demonstrates single-pass composition:
+1. FuzzySource yields candidates: `color`, `colour`, `collar`
+2. For each candidate, MORK checks the type constraint
+3. Only entities satisfying BOTH constraints are returned
+
+### Ranked Results (Phase B)
+
+```metta
+; Get top 5 matches with edit distances for ranking
+!(match &space
+    (= (entity-name $entity) (fuzzy-ranked "colr" 2 5 $name $distance))
+    ($entity $name $distance))
+; Returns: ("e1" "color" 1) ("e2" "colour" 2) ("e3" "collar" 2)
+; Results ordered by edit distance (closest matches first)
+```
+
+### Phonetic Matching (Phase C)
+
+```metta
+; Find person names that sound like "Steven" (phonetic similarity)
+!(match &space
+    (= (person-name $id) (fuzzy-phonetic "Steven" english $matched))
+    ($id $matched))
+; Returns: ("p1" "Stephen") ("p2" "Stefan") ("p3" "Stephan") ("p4" "Steve")
+; Phonetic rules: "ph" ≈ "f", "v" ≈ "ph", final vowel variations
+```
+
+### Complex Multi-Constraint Queries
+
+```metta
+; Find properties with names similar to colors (combining multiple patterns)
+!(match &space
+    (= (entity-name $e1) (fuzzy "colr" 2 $name1))
+    (= (entity-type $e1) "property")
+    (= (entity-name $e2) (fuzzy "blu" 2 $name2))
+    (= (entity-type $e2) "property")
+    (($e1 $name1) ($e2 $name2)))
+; Returns all pairs of (color-like property, blue-like property)
+```
+
+### Why FuzzySource in MORK (vs MeTTaTron-Only)
+
+Without FuzzySource, MeTTaTron would need to orchestrate multiple MORK queries:
+
+```
+WITHOUT FuzzySource (MeTTaTron orchestration):
+  1. MeTTaTron expands (fuzzy "colr" 2) → ["color", "colour", "collar", ...]
+  2. For EACH candidate, MeTTaTron calls MORK:
+     !(match &space (= (entity-name $e) "color") (= (entity-type $e) "property") ...)
+     !(match &space (= (entity-name $e) "colour") (= (entity-type $e) "property") ...)
+     !(match &space (= (entity-name $e) "collar") (= (entity-type $e) "property") ...)
+  3. MeTTaTron combines results
+
+WITH FuzzySource (single MORK query):
+  !(match &space
+      (= (entity-name $e) (fuzzy "colr" 2))
+      (= (entity-type $e) "property")
+      $e)
+```
+
+| Aspect | FuzzySource in MORK | MeTTaTron Orchestration |
+|--------|---------------------|------------------------|
+| **Query execution** | Single pass | Multiple round-trips |
+| **Ranking** | Native (distance in results) | Must be reconstructed |
+| **Optimization** | MORK optimizer sees full query | Each sub-query optimized separately |
+| **Lattice efficiency** | O(K×N) edge processing | O(K^N) path enumeration |
+| **Variable binding** | Unified across constraints | Per-query, then merged |
 
 ---
 
@@ -484,6 +615,11 @@ Phase D (Grammar)
 
 ## Changelog
 
+- **2025-12-08**: Added comprehensive MeTTa Query Examples section
+  - Added knowledge base setup examples with entities and types
+  - Added basic fuzzy matching, variable binding, and constraint composition examples
+  - Added ranked results (Phase B) and phonetic matching (Phase C) previews
+  - Added architectural comparison: FuzzySource in MORK vs MeTTaTron-only approach
 - **2024-12-06**: Extended architecture documentation
   - Added Extended Architecture Layers section for dialogue/LLM/agent learning
   - Added Phase D Extensions for Dialogue with dialogue-aware grammar rules
