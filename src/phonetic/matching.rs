@@ -148,6 +148,12 @@ pub fn context_matches(ctx: &Context, s: &[Phone], pos: usize) -> bool {
             }
         }
         Context::Anywhere => true,
+        // Compound context: both must match
+        Context::And(a, b) => context_matches(a, s, pos) && context_matches(b, s, pos),
+        // Compound context: either must match
+        Context::Or(a, b) => context_matches(a, s, pos) || context_matches(b, s, pos),
+        // Negated context: must NOT match
+        Context::Not(inner) => !context_matches(inner, s, pos),
     }
 }
 
@@ -293,6 +299,12 @@ pub fn context_matches_char(ctx: &ContextChar, s: &[PhoneChar], pos: usize) -> b
             }
         }
         ContextChar::Anywhere => true,
+        // Compound context: both must match
+        ContextChar::And(a, b) => context_matches_char(a, s, pos) && context_matches_char(b, s, pos),
+        // Compound context: either must match
+        ContextChar::Or(a, b) => context_matches_char(a, s, pos) || context_matches_char(b, s, pos),
+        // Negated context: must NOT match
+        ContextChar::Not(inner) => !context_matches_char(inner, s, pos),
     }
 }
 
@@ -460,5 +472,165 @@ mod tests {
         ];
         assert!(pattern_matches_at_char(&pattern, &s, 0));
         assert!(!pattern_matches_at_char(&pattern, &s, 1));
+    }
+
+    // ========================================================================
+    // Compound context tests (byte-level)
+    // ========================================================================
+
+    #[test]
+    fn test_context_matches_and() {
+        // Test: x -> gz when after vowel AND before vowel (exact -> egzact)
+        let s = vec![
+            Phone::Vowel(b'e'),      // pos 0
+            Phone::Consonant(b'x'),  // pos 1
+            Phone::Vowel(b'a'),      // pos 2
+            Phone::Consonant(b'c'),  // pos 3
+            Phone::Consonant(b't'),  // pos 4
+        ];
+
+        // The x->gz rule would need to check:
+        // - AfterVowel at the match position (pos 1): s[0]='e' is vowel? YES
+        // - BeforeVowel at pos after match (pos 2): s[2]='a' is vowel? YES
+        // But with a single pos, both contexts check at the same position.
+        //
+        // Semantics:
+        // - AfterVowel(vowels) at pos P: checks if s[P-1] is a vowel in vowels
+        // - BeforeVowel(vowels) at pos P: checks if s[P] is a vowel in vowels
+        //
+        // For AND to work at a single position, we need a sequence like [vowel, vowel]
+        // where we check at pos 1: AfterVowel checks s[0], BeforeVowel checks s[1].
+
+        // Test with the original 'exact' setup - at position 1:
+        // AfterVowel: s[0]='e' is vowel? YES
+        // BeforeVowel: s[1]='x' is vowel? NO -> AND fails
+        let ctx_exact = Context::And(
+            Box::new(Context::AfterVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
+            Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
+        );
+        assert!(!context_matches(&ctx_exact, &s, 1)); // AfterVowel passes, BeforeVowel fails
+
+        // Clear test for AND with vowel sequence:
+        let s2 = vec![
+            Phone::Vowel(b'a'),      // pos 0
+            Phone::Vowel(b'e'),      // pos 1 - this is where we check
+        ];
+
+        let ctx2 = Context::And(
+            Box::new(Context::AfterVowel(vec![b'a'])),   // previous char is 'a'
+            Box::new(Context::BeforeVowel(vec![b'e'])), // actually, wait... this checks same pos
+        );
+
+        // BeforeVowel(vowels) checks if s[pos] is a vowel in vowels
+        // AfterVowel(vowels) checks if s[pos-1] is a vowel in vowels
+        // So AND(AfterVowel([a]), BeforeVowel([e])) at pos 1:
+        // - AfterVowel: s[0] = 'a' is vowel? Yes, and 'a' in [a]? Yes
+        // - BeforeVowel: s[1] = 'e' is vowel? Yes, and 'e' in [e]? Yes
+        assert!(context_matches(&ctx2, &s2, 1));
+
+        // Test where AND fails (one condition fails)
+        let ctx3 = Context::And(
+            Box::new(Context::AfterVowel(vec![b'a'])),
+            Box::new(Context::BeforeVowel(vec![b'i'])), // 'e' not in [i]
+        );
+        assert!(!context_matches(&ctx3, &s2, 1));
+    }
+
+    #[test]
+    fn test_context_matches_or() {
+        let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
+
+        // Either initial OR final
+        let ctx = Context::Or(
+            Box::new(Context::Initial),
+            Box::new(Context::Final),
+        );
+
+        assert!(context_matches(&ctx, &s, 0));  // Initial matches
+        assert!(context_matches(&ctx, &s, 2));  // Final matches
+        assert!(!context_matches(&ctx, &s, 1)); // Neither matches
+    }
+
+    #[test]
+    fn test_context_matches_not() {
+        let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
+
+        // NOT initial
+        let ctx = Context::Not(Box::new(Context::Initial));
+
+        assert!(!context_matches(&ctx, &s, 0)); // Initial, so NOT fails
+        assert!(context_matches(&ctx, &s, 1));  // Not initial, so NOT succeeds
+        assert!(context_matches(&ctx, &s, 2));  // Not initial, so NOT succeeds
+    }
+
+    #[test]
+    fn test_context_matches_nested_compound() {
+        let s = vec![
+            Phone::Vowel(b'a'),      // pos 0
+            Phone::Consonant(b'k'),  // pos 1
+            Phone::Vowel(b'e'),      // pos 2
+        ];
+
+        // (NOT Initial) AND (AfterVowel OR BeforeVowel)
+        let ctx = Context::And(
+            Box::new(Context::Not(Box::new(Context::Initial))),
+            Box::new(Context::Or(
+                Box::new(Context::AfterVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
+                Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
+            )),
+        );
+
+        // pos 0: NOT Initial = false, so whole AND is false
+        assert!(!context_matches(&ctx, &s, 0));
+
+        // pos 1: NOT Initial = true, AfterVowel(a) = true (s[0]=a), so AND is true
+        assert!(context_matches(&ctx, &s, 1));
+
+        // pos 2: NOT Initial = true, AfterVowel = false (s[1]=k), BeforeVowel = true (s[2]=e)
+        assert!(context_matches(&ctx, &s, 2));
+    }
+
+    // ========================================================================
+    // Compound context tests (character-level)
+    // ========================================================================
+
+    #[test]
+    fn test_context_matches_char_and() {
+        let s = vec![
+            PhoneChar::Vowel('a'),
+            PhoneChar::Vowel('e'),
+        ];
+
+        let ctx = ContextChar::And(
+            Box::new(ContextChar::AfterVowel(vec!['a'])),
+            Box::new(ContextChar::BeforeVowel(vec!['e'])),
+        );
+
+        assert!(context_matches_char(&ctx, &s, 1));
+    }
+
+    #[test]
+    fn test_context_matches_char_or() {
+        let s = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
+
+        let ctx = ContextChar::Or(
+            Box::new(ContextChar::Initial),
+            Box::new(ContextChar::Final),
+        );
+
+        assert!(context_matches_char(&ctx, &s, 0));
+        assert!(context_matches_char(&ctx, &s, 2));
+        assert!(!context_matches_char(&ctx, &s, 1));
+    }
+
+    #[test]
+    fn test_context_matches_char_not() {
+        let s = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
+
+        let ctx = ContextChar::Not(Box::new(ContextChar::Initial));
+
+        assert!(!context_matches_char(&ctx, &s, 0));
+        assert!(context_matches_char(&ctx, &s, 1));
+        assert!(context_matches_char(&ctx, &s, 2));
     }
 }

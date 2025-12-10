@@ -24,6 +24,8 @@ pub mod operation_set;
 pub mod operation_type;
 mod ordered_query;
 pub mod phonetic;
+#[cfg(feature = "phonetic-rules")]
+pub mod phonetic_transducer;
 mod pool;
 mod position;
 mod query;
@@ -62,6 +64,12 @@ pub use substitution_set::SubstitutionSet;
 pub use substitution_set_char::SubstitutionSetChar;
 pub use value_filtered_query::{ValueFilteredQueryIterator, ValueSetFilteredQueryIterator};
 pub use zipper_query_iterator::ZipperQueryIterator;
+
+#[cfg(feature = "phonetic-rules")]
+pub use phonetic_transducer::{
+    PhoneticCandidate, PhoneticCandidateByte, PhoneticQueryIterator, PhoneticQueryIteratorChar,
+    PhoneticTransducer, PhoneticTransducerChar,
+};
 
 use crate::dictionary::{Dictionary, DictionaryNode, MappedDictionary, MappedDictionaryNode};
 use std::collections::HashSet;

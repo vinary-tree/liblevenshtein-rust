@@ -247,6 +247,11 @@ required-features = ["phonetic-rules"]
 name = "generalized_memory_benchmarks"
 harness = false
 
+[[bench]]
+name = "phonetic_nfa_benchmarks"
+harness = false
+required-features = ["phonetic-rules"]
+
 [[bin]]
 name = "liblevenshtein"
 path = "src/bin/liblevenshtein.rs"
@@ -263,6 +268,11 @@ required-features = ["phonetic-rules"]
 [[example]]
 name = "phonetic_fuzzy_matching"
 required-features = ["phonetic-rules"]
+
+[[example]]
+name = "phonetic_spellcheck"
+path = "examples/phonetic_spellcheck/src/main.rs"
+required-features = ["phonetic-rules", "serialization"]
 
 [[example]]
 name = "hierarchical_scope_completion"

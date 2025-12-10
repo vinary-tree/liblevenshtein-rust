@@ -20,92 +20,91 @@ use crate::transducer::Algorithm;
 #[cfg(feature = "serialization")]
 use crate::serialization::{BincodeSerializer, DictionarySerializer, JsonSerializer};
 
-use super::args::{Commands, SerializationFormat};
+// Phonetic rule imports
+#[cfg(feature = "phonetic-rules")]
+use crate::phonetic::{apply_rules_seq, apply_rules_seq_char};
+
+use super::args::{Cli, SerializationFormat};
 use super::detect::{detect_format, DictFormat};
 use super::paths::{default_dict_path, PersistentConfig};
 
-/// Execute a CLI command
-pub fn execute(command: Commands) -> Result<()> {
-    match command {
-        Commands::Repl { .. } => {
-            // Handled in main.rs
-            unreachable!("REPL command should be handled in main");
-        }
-        Commands::Query {
+/// Execute a CLI command based on operation flags
+pub fn execute(cli: &Cli) -> Result<()> {
+    if cli.repl {
+        // REPL is handled in main.rs
+        unreachable!("REPL operation should be handled in main");
+    } else if cli.compile {
+        let input = cli.input.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--input is required for --compile operation")
+        })?;
+        cmd_compile(input, cli.output.clone(), cli.unicode, cli.verify)
+    } else if cli.phonetic {
+        let text = cli.text.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--text is required for --phonetic operation")
+        })?;
+        let rules = cli.rules.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--rules is required for --phonetic operation")
+        })?;
+        cmd_phonetic(text, rules, cli.compiled)
+    } else if cli.query {
+        let term = cli.text.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--text is required for --query operation (use --text for query term)")
+        })?;
+        cmd_query(QueryOptions {
             term,
-            dict,
-            backend,
-            format,
-            max_distance,
-            algorithm,
-            prefix,
-            show_distances,
-            limit,
-        } => cmd_query(QueryOptions {
-            term: &term,
-            dict_path: dict,
-            backend,
-            format,
-            max_distance,
-            algorithm,
-            prefix,
-            show_distances,
-            limit,
-        }),
-        Commands::Info { dict } => cmd_info(dict),
-        Commands::Convert {
+            dict_path: cli.dict.clone(),
+            backend: cli.backend,
+            format: cli.format,
+            max_distance: cli.max_distance,
+            algorithm: cli.algorithm,
+            prefix: cli.prefix,
+            show_distances: cli.show_distances,
+            limit: cli.limit,
+        })
+    } else if cli.info {
+        cmd_info(cli.dict.clone())
+    } else if cli.convert {
+        let input = cli.input.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--input is required for --convert operation")
+        })?;
+        let output = cli.output.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--output is required for --convert operation")
+        })?;
+        cmd_convert(
             input,
             output,
-            from_backend,
-            to_backend,
-            from_format,
-            to_format,
-        } => cmd_convert(
-            &input,
-            &output,
-            from_backend,
-            to_backend,
-            from_format,
-            to_format,
-        ),
-        Commands::Insert {
-            terms,
-            dict,
-            backend,
-            format,
-        } => cmd_insert(&terms, dict, backend, format),
-        Commands::Delete {
-            terms,
-            dict,
-            backend,
-            format,
-        } => cmd_delete(&terms, dict, backend, format),
-        Commands::Clear {
-            dict,
-            backend,
-            format,
-        } => cmd_clear(dict, backend, format),
-        Commands::Minimize {
-            dict,
-            backend,
-            format,
-        } => cmd_minimize(dict, backend, format),
-        Commands::Settings {
-            set_dict,
-            set_backend,
-            set_format,
-            set_algorithm,
-            set_max_distance,
-            reset,
-        } => cmd_settings(
-            set_dict,
-            set_backend,
-            set_format,
-            set_algorithm,
-            set_max_distance,
-            reset,
-        ),
-        Commands::Config { switch, show } => cmd_config(switch, show),
+            cli.from_backend,
+            cli.to_backend,
+            cli.from_format,
+            cli.to_format,
+        )
+    } else if cli.insert {
+        if cli.terms.is_empty() {
+            bail!("At least one term is required for --insert operation");
+        }
+        cmd_insert(&cli.terms, cli.dict.clone(), cli.backend, cli.format)
+    } else if cli.delete {
+        if cli.terms.is_empty() {
+            bail!("At least one term is required for --delete operation");
+        }
+        cmd_delete(&cli.terms, cli.dict.clone(), cli.backend, cli.format)
+    } else if cli.clear {
+        cmd_clear(cli.dict.clone(), cli.backend, cli.format)
+    } else if cli.minimize {
+        cmd_minimize(cli.dict.clone(), cli.backend, cli.format)
+    } else if cli.settings {
+        cmd_settings(
+            cli.set_dict.clone(),
+            cli.set_backend,
+            cli.set_format,
+            cli.set_algorithm,
+            cli.set_max_distance,
+            cli.reset,
+        )
+    } else if cli.config_mgmt {
+        cmd_config(cli.switch.clone(), cli.show)
+    } else {
+        bail!("No operation specified. Use --help for available operations.")
     }
 }
 
@@ -1153,5 +1152,235 @@ fn print_config(config: &PersistentConfig) {
             .display()
             .to_string()
             .cyan()
+    );
+}
+
+/// Compile phonetic rules from .llev to binary format
+#[cfg(all(feature = "phonetic-rules", feature = "serialization"))]
+fn cmd_compile(
+    input: &Path,
+    output: Option<PathBuf>,
+    unicode: bool,
+    verify: bool,
+) -> Result<()> {
+    use crate::phonetic::llev::{load_file_with_includes, RuleSet, RuleSetChar};
+    use crate::phonetic::{save, save_char};
+
+    println!("{}", "Compiling Phonetic Rules".bold().underline());
+    println!();
+
+    // Parse the .llev file
+    println!(
+        "  {} Loading {}...",
+        "→".cyan(),
+        input.display().to_string().yellow()
+    );
+
+    // Use empty include paths - all includes should be relative to the input file
+    let include_paths: &[&Path] = &[];
+    let llev_file = load_file_with_includes(input, include_paths)
+        .with_context(|| format!("Failed to parse {}", input.display()))?;
+
+    // Display file metadata
+    if let Some(name) = &llev_file.metadata.name {
+        println!("    Name:    {}", name.green());
+    }
+    if let Some(version) = &llev_file.metadata.version {
+        println!("    Version: {}", version.green());
+    }
+    println!("    Rules:   {}", llev_file.rules.len().to_string().green());
+
+    // Determine output path
+    let output_path = output.unwrap_or_else(|| {
+        let mut out = input.to_path_buf();
+        let ext = if unicode { "llev.bin" } else { "llev.bin" };
+        out.set_extension(ext);
+        out
+    });
+
+    println!();
+    println!(
+        "  {} Writing {}...",
+        "→".cyan(),
+        output_path.display().to_string().yellow()
+    );
+
+    if unicode {
+        // Character-level (Unicode) rules
+        let ruleset = RuleSetChar::from_llev(&llev_file)
+            .map_err(|e| anyhow::anyhow!("Failed to convert rules: {}", e))?;
+
+        println!("    Mode:    {}", "Unicode (char-level)".green());
+        println!(
+            "    Rules:   {}",
+            ruleset.rules.len().to_string().green()
+        );
+
+        save_char(&ruleset, &output_path)
+            .map_err(|e| anyhow::anyhow!("Failed to save compiled rules: {}", e))?;
+
+        if verify {
+            println!();
+            println!("  {} Verifying...", "→".cyan());
+            let loaded = crate::phonetic::load_char(&output_path)
+                .map_err(|e| anyhow::anyhow!("Verification failed: {}", e))?;
+
+            if loaded.rules.len() == ruleset.rules.len() {
+                println!("    {}", "Verification passed".green().bold());
+            } else {
+                bail!(
+                    "Verification failed: expected {} rules, got {}",
+                    ruleset.rules.len(),
+                    loaded.rules.len()
+                );
+            }
+        }
+    } else {
+        // Byte-level (ASCII) rules
+        let ruleset = RuleSet::from_llev(&llev_file)
+            .map_err(|e| anyhow::anyhow!("Failed to convert rules: {}", e))?;
+
+        println!("    Mode:    {}", "ASCII (byte-level)".green());
+        println!(
+            "    Rules:   {}",
+            ruleset.rules.len().to_string().green()
+        );
+
+        save(&ruleset, &output_path)
+            .map_err(|e| anyhow::anyhow!("Failed to save compiled rules: {}", e))?;
+
+        if verify {
+            println!();
+            println!("  {} Verifying...", "→".cyan());
+            let loaded = crate::phonetic::load(&output_path)
+                .map_err(|e| anyhow::anyhow!("Verification failed: {}", e))?;
+
+            if loaded.rules.len() == ruleset.rules.len() {
+                println!("    {}", "Verification passed".green().bold());
+            } else {
+                bail!(
+                    "Verification failed: expected {} rules, got {}",
+                    ruleset.rules.len(),
+                    loaded.rules.len()
+                );
+            }
+        }
+    }
+
+    // Show file size
+    let file_size = std::fs::metadata(&output_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+    println!();
+    println!(
+        "  {} Compiled {} bytes",
+        "✓".green().bold(),
+        file_size.to_string().cyan()
+    );
+
+    Ok(())
+}
+
+#[cfg(not(all(feature = "phonetic-rules", feature = "serialization")))]
+fn cmd_compile(
+    _input: &Path,
+    _output: Option<PathBuf>,
+    _unicode: bool,
+    _verify: bool,
+) -> Result<()> {
+    bail!(
+        "Compile command requires both 'phonetic-rules' and 'serialization' features.\n\
+         Rebuild with: cargo build --features \"phonetic-rules,serialization\""
+    );
+}
+
+/// Apply phonetic rules to transform text
+#[cfg(all(feature = "phonetic-rules", feature = "serialization"))]
+fn cmd_phonetic(text: &str, rules_path: &Path, compiled: bool) -> Result<()> {
+    use crate::phonetic::llev::{load_file_with_includes, RuleSetChar};
+    use crate::phonetic::{load_char, PhoneChar};
+
+    println!("{}", "Phonetic Transformation".bold().underline());
+    println!();
+
+    // Determine if compiled based on extension or flag
+    let is_compiled = compiled
+        || rules_path
+            .extension()
+            .map(|e| e == "bin")
+            .unwrap_or(false);
+
+    let ruleset: RuleSetChar = if is_compiled {
+        println!(
+            "  {} Loading compiled rules from {}...",
+            "→".cyan(),
+            rules_path.display().to_string().yellow()
+        );
+        load_char(rules_path).map_err(|e| anyhow::anyhow!("Failed to load compiled rules: {}", e))?
+    } else {
+        println!(
+            "  {} Parsing rules from {}...",
+            "→".cyan(),
+            rules_path.display().to_string().yellow()
+        );
+        // Use empty include paths - all includes should be relative to the rules file
+        let include_paths: &[&Path] = &[];
+        let llev_file = load_file_with_includes(rules_path, include_paths)
+            .with_context(|| format!("Failed to parse {}", rules_path.display()))?;
+        RuleSetChar::from_llev(&llev_file)
+            .map_err(|e| anyhow::anyhow!("Failed to convert rules: {}", e))?
+    };
+
+    println!("    Rules:   {}", ruleset.rules.len().to_string().green());
+
+    // Convert input string to Vec<PhoneChar>
+    let vowels = ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'];
+    let input_phones: Vec<PhoneChar> = text
+        .chars()
+        .map(|c| {
+            if vowels.contains(&c) {
+                PhoneChar::Vowel(c)
+            } else {
+                PhoneChar::Consonant(c)
+            }
+        })
+        .collect();
+
+    // Apply rules with sufficient fuel (max 1000 iterations)
+    println!();
+    println!("  {} Applying rules...", "→".cyan());
+    let result = apply_rules_seq_char(&ruleset.rules, &input_phones, 1000);
+
+    // Convert result back to string
+    let output = match result {
+        Some(phones) => {
+            let mut s = String::new();
+            for p in &phones {
+                match p {
+                    PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => s.push(*c),
+                    PhoneChar::Digraph(c1, c2) => {
+                        s.push(*c1);
+                        s.push(*c2);
+                    }
+                    PhoneChar::Silent => {}
+                }
+            }
+            s
+        }
+        None => text.to_string(),
+    };
+
+    println!();
+    println!("  Input:  {}", text.yellow());
+    println!("  Output: {}", output.green().bold());
+
+    Ok(())
+}
+
+#[cfg(not(all(feature = "phonetic-rules", feature = "serialization")))]
+fn cmd_phonetic(_text: &str, _rules_path: &Path, _compiled: bool) -> Result<()> {
+    bail!(
+        "Phonetic command requires both 'phonetic-rules' and 'serialization' features.\n\
+         Rebuild with: cargo build --features \"phonetic-rules,serialization\""
     );
 }

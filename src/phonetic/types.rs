@@ -8,6 +8,11 @@
 //! - Byte-level (`Phone`, `Context`, `RewriteRule`) using `u8` - optimized for ASCII
 //! - Character-level (`PhoneChar`, `ContextChar`, `RewriteRuleChar`) using `char` - proper Unicode support
 //!
+//! # Serialization
+//!
+//! All types support serde serialization when the `serialization` feature is enabled.
+//! This allows compiled rule sets to be saved to binary format for faster loading.
+//!
 //! # Formal Specification
 //!
 //! These types are direct translations of the Coq definitions:
@@ -40,6 +45,9 @@
 //!
 //! See `docs/verification/phonetic/rewrite_rules.v` for the complete formal specification.
 
+#[cfg(feature = "serialization")]
+use serde::{Deserialize, Serialize};
+
 // ============================================================================
 // Byte-level types (u8) - optimized for ASCII text
 // ============================================================================
@@ -55,6 +63,7 @@
 /// - `Digraph(u8, u8)` - A two-character sound unit (e.g., 'ch', 'sh', 'th')
 /// - `Silent` - A silent letter (not pronounced)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum Phone {
     /// A vowel sound
     Vowel(u8),
@@ -79,7 +88,11 @@ pub enum Phone {
 /// - `BeforeConsonant(Vec<u8>)` - Before specific consonants
 /// - `AfterVowel(Vec<u8>)` - After specific vowels
 /// - `Anywhere` - No context restriction
+/// - `And(Box<Context>, Box<Context>)` - Both contexts must match
+/// - `Or(Box<Context>, Box<Context>)` - Either context must match
+/// - `Not(Box<Context>)` - Context must NOT match
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum Context {
     /// At the beginning of a word
     Initial,
@@ -95,6 +108,12 @@ pub enum Context {
     AfterVowel(Vec<u8>),
     /// No context restriction
     Anywhere,
+    /// Compound: both contexts must match
+    And(Box<Context>, Box<Context>),
+    /// Compound: either context must match
+    Or(Box<Context>, Box<Context>),
+    /// Negated: context must NOT match
+    Not(Box<Context>),
 }
 
 impl Context {
@@ -115,9 +134,22 @@ impl Context {
     /// - Original: `s = [a, b, c]` (length 3), position 2 is NOT final
     /// - After shortening: `s' = [a, b]` (length 2), position 2 IS now final
     /// - A rule with `Final` context might match at a position that was previously skipped
+    ///
+    /// # Compound contexts
+    ///
+    /// For compound contexts (And, Or, Not), position-dependence is propagated:
+    /// - `And(a, b)` is position-dependent if either `a` or `b` is
+    /// - `Or(a, b)` is position-dependent if either `a` or `b` is
+    /// - `Not(inner)` is position-dependent if `inner` is
     #[inline]
     pub fn is_position_dependent(&self) -> bool {
-        matches!(self, Context::Final)
+        match self {
+            Context::Final => true,
+            Context::And(a, b) => a.is_position_dependent() || b.is_position_dependent(),
+            Context::Or(a, b) => a.is_position_dependent() || b.is_position_dependent(),
+            Context::Not(inner) => inner.is_position_dependent(),
+            _ => false,
+        }
     }
 }
 
@@ -143,6 +175,7 @@ impl Context {
 /// - Pattern is non-empty: `pattern.len() > 0`
 /// - Replacement is bounded: `replacement.len() <= pattern.len() + MAX_EXPANSION_FACTOR`
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct RewriteRule {
     /// Unique identifier for the rule
     pub rule_id: usize,
@@ -176,6 +209,7 @@ pub struct RewriteRule {
 /// - `Digraph(char, char)` - A two-character sound unit
 /// - `Silent` - A silent letter
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum PhoneChar {
     /// A vowel sound
     Vowel(char),
@@ -202,7 +236,11 @@ pub enum PhoneChar {
 /// - `BeforeConsonant(Vec<char>)` - Before specific consonants
 /// - `AfterVowel(Vec<char>)` - After specific vowels
 /// - `Anywhere` - No context restriction
+/// - `And(Box<ContextChar>, Box<ContextChar>)` - Both contexts must match
+/// - `Or(Box<ContextChar>, Box<ContextChar>)` - Either context must match
+/// - `Not(Box<ContextChar>)` - Context must NOT match
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum ContextChar {
     /// At the beginning of a word
     Initial,
@@ -218,6 +256,12 @@ pub enum ContextChar {
     AfterVowel(Vec<char>),
     /// No context restriction
     Anywhere,
+    /// Compound: both contexts must match
+    And(Box<ContextChar>, Box<ContextChar>),
+    /// Compound: either context must match
+    Or(Box<ContextChar>, Box<ContextChar>),
+    /// Negated: context must NOT match
+    Not(Box<ContextChar>),
 }
 
 impl ContextChar {
@@ -227,9 +271,22 @@ impl ContextChar {
     ///
     /// Character-level variant of [`Context::is_position_dependent`].
     /// See that method for detailed documentation.
+    ///
+    /// # Compound contexts
+    ///
+    /// For compound contexts (And, Or, Not), position-dependence is propagated:
+    /// - `And(a, b)` is position-dependent if either `a` or `b` is
+    /// - `Or(a, b)` is position-dependent if either `a` or `b` is
+    /// - `Not(inner)` is position-dependent if `inner` is
     #[inline]
     pub fn is_position_dependent(&self) -> bool {
-        matches!(self, ContextChar::Final)
+        match self {
+            ContextChar::Final => true,
+            ContextChar::And(a, b) => a.is_position_dependent() || b.is_position_dependent(),
+            ContextChar::Or(a, b) => a.is_position_dependent() || b.is_position_dependent(),
+            ContextChar::Not(inner) => inner.is_position_dependent(),
+            _ => false,
+        }
     }
 }
 
@@ -254,6 +311,7 @@ impl ContextChar {
 /// - Pattern is non-empty: `pattern.len() > 0`
 /// - Replacement is bounded: `replacement.len() <= pattern.len() + MAX_EXPANSION_FACTOR`
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct RewriteRuleChar {
     /// Unique identifier for the rule
     pub rule_id: usize,
@@ -313,6 +371,9 @@ impl std::fmt::Display for Context {
                 write!(f, "AfterVowel({})", String::from_utf8_lossy(cs))
             }
             Context::Anywhere => write!(f, "Anywhere"),
+            Context::And(a, b) => write!(f, "And({}, {})", a, b),
+            Context::Or(a, b) => write!(f, "Or({}, {})", a, b),
+            Context::Not(inner) => write!(f, "Not({})", inner),
         }
     }
 }
@@ -335,6 +396,9 @@ impl std::fmt::Display for ContextChar {
                 write!(f, "AfterVowel({})", cs.iter().collect::<String>())
             }
             ContextChar::Anywhere => write!(f, "Anywhere"),
+            ContextChar::And(a, b) => write!(f, "And({}, {})", a, b),
+            ContextChar::Or(a, b) => write!(f, "Or({}, {})", a, b),
+            ContextChar::Not(inner) => write!(f, "Not({})", inner),
         }
     }
 }
@@ -439,5 +503,104 @@ mod tests {
         assert_eq!(rule.rule_id, 1);
         assert_eq!(rule.pattern.len(), 2);
         assert_eq!(rule.replacement.len(), 1);
+    }
+
+    // ============================================================================
+    // Tests for compound context types (And, Or, Not)
+    // ============================================================================
+
+    #[test]
+    fn test_compound_context_and() {
+        let ctx = Context::And(
+            Box::new(Context::AfterVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
+            Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
+        );
+        assert_eq!(
+            ctx.to_string(),
+            "And(AfterVowel(aeiou), BeforeVowel(aeiou))"
+        );
+        // Not position-dependent since neither child is
+        assert!(!ctx.is_position_dependent());
+    }
+
+    #[test]
+    fn test_compound_context_or() {
+        let ctx = Context::Or(
+            Box::new(Context::Initial),
+            Box::new(Context::Final),
+        );
+        assert_eq!(ctx.to_string(), "Or(Initial, Final)");
+        // Position-dependent because Final is
+        assert!(ctx.is_position_dependent());
+    }
+
+    #[test]
+    fn test_compound_context_not() {
+        let ctx = Context::Not(Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])));
+        assert_eq!(ctx.to_string(), "Not(BeforeVowel(aeiou))");
+        // Not position-dependent
+        assert!(!ctx.is_position_dependent());
+    }
+
+    #[test]
+    fn test_nested_compound_context() {
+        // (!BeforeVowel) & (AfterVowel | Final)
+        let ctx = Context::And(
+            Box::new(Context::Not(Box::new(Context::BeforeVowel(vec![b'a', b'e'])))),
+            Box::new(Context::Or(
+                Box::new(Context::AfterVowel(vec![b'a', b'e'])),
+                Box::new(Context::Final),
+            )),
+        );
+        // Position-dependent because nested Final is
+        assert!(ctx.is_position_dependent());
+    }
+
+    #[test]
+    fn test_compound_context_char_and() {
+        let ctx = ContextChar::And(
+            Box::new(ContextChar::AfterVowel(vec!['a', 'e', 'i', 'o', 'u'])),
+            Box::new(ContextChar::BeforeVowel(vec!['a', 'e', 'i', 'o', 'u'])),
+        );
+        assert_eq!(
+            ctx.to_string(),
+            "And(AfterVowel(aeiou), BeforeVowel(aeiou))"
+        );
+        assert!(!ctx.is_position_dependent());
+    }
+
+    #[test]
+    fn test_compound_context_char_or() {
+        let ctx = ContextChar::Or(
+            Box::new(ContextChar::Initial),
+            Box::new(ContextChar::Final),
+        );
+        assert_eq!(ctx.to_string(), "Or(Initial, Final)");
+        assert!(ctx.is_position_dependent());
+    }
+
+    #[test]
+    fn test_compound_context_char_not() {
+        let ctx = ContextChar::Not(Box::new(ContextChar::BeforeVowel(vec!['a', 'e', 'i', 'o', 'u'])));
+        assert_eq!(ctx.to_string(), "Not(BeforeVowel(aeiou))");
+        assert!(!ctx.is_position_dependent());
+    }
+
+    #[test]
+    fn test_compound_context_equality() {
+        let ctx1 = Context::And(
+            Box::new(Context::Initial),
+            Box::new(Context::BeforeVowel(vec![b'a'])),
+        );
+        let ctx2 = Context::And(
+            Box::new(Context::Initial),
+            Box::new(Context::BeforeVowel(vec![b'a'])),
+        );
+        let ctx3 = Context::And(
+            Box::new(Context::Initial),
+            Box::new(Context::BeforeVowel(vec![b'e'])),
+        );
+        assert_eq!(ctx1, ctx2);
+        assert_ne!(ctx1, ctx3);
     }
 }

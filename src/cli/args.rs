@@ -1,239 +1,223 @@
-//! CLI argument definitions
+//! CLI argument definitions using flag-based conventions
 
 use crate::repl::state::DictionaryBackend;
 use crate::transducer::Algorithm;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Parser, ValueEnum};
 use std::path::PathBuf;
 
 /// Command-line interface for liblevenshtein
+///
+/// Uses traditional Unix flag-based conventions with mutually exclusive operation flags.
 #[derive(Parser)]
 #[command(name = "liblevenshtein")]
 #[command(about = "Fast fuzzy string matching with Levenshtein automata")]
 #[command(version)]
+#[command(group(
+    ArgGroup::new("operation")
+        .required(true)
+        .args(["compile", "phonetic", "query", "repl", "info", "convert",
+               "insert", "delete", "clear", "minimize", "settings", "config_mgmt"])
+))]
 pub struct Cli {
+    // ========================================================================
+    // Global options
+    // ========================================================================
+
     /// Custom configuration file path
-    #[arg(short = 'c', long, global = true)]
-    pub config: Option<PathBuf>,
+    #[arg(short = 'c', long = "config")]
+    pub config_file: Option<PathBuf>,
 
-    /// The subcommand to execute
-    #[command(subcommand)]
-    pub command: Commands,
-}
+    // ========================================================================
+    // Operation flags (mutually exclusive)
+    // ========================================================================
 
-/// Available CLI commands
-#[derive(Subcommand)]
-pub enum Commands {
-    /// Launch interactive REPL
-    Repl {
-        /// Dictionary file to load
-        #[arg(short, long)]
-        dict: Option<PathBuf>,
+    /// Compile phonetic rules from .llev to binary format
+    #[arg(short = 'C', long)]
+    pub compile: bool,
 
-        /// Dictionary backend (auto-detected if not specified)
-        #[arg(short, long)]
-        backend: Option<DictionaryBackend>,
-
-        /// Serialization format (auto-detected if not specified)
-        #[arg(short = 'f', long)]
-        format: Option<SerializationFormat>,
-
-        /// Levenshtein algorithm
-        #[arg(short, long, default_value = "standard")]
-        algorithm: Algorithm,
-
-        /// Maximum edit distance
-        #[arg(short = 'm', long, default_value = "2")]
-        max_distance: usize,
-
-        /// Enable prefix matching mode
-        #[arg(short, long)]
-        prefix: bool,
-
-        /// Show distances in query results
-        #[arg(short = 's', long)]
-        show_distances: bool,
-
-        /// Result limit
-        #[arg(short, long)]
-        limit: Option<usize>,
-
-        /// Enable auto-sync (save after every modification)
-        #[arg(long)]
-        auto_sync: bool,
-    },
+    /// Apply phonetic rules to transform text
+    #[arg(short = 'P', long)]
+    pub phonetic: bool,
 
     /// Query dictionary for fuzzy matches
-    Query {
-        /// Query term
-        term: String,
+    #[arg(short = 'Q', long)]
+    pub query: bool,
 
-        /// Dictionary file
-        #[arg(short, long)]
-        dict: Option<PathBuf>,
-
-        /// Dictionary backend (auto-detected if not specified)
-        #[arg(short, long)]
-        backend: Option<DictionaryBackend>,
-
-        /// Serialization format (auto-detected if not specified)
-        #[arg(short = 'f', long)]
-        format: Option<SerializationFormat>,
-
-        /// Maximum edit distance
-        #[arg(short = 'm', long, default_value = "2")]
-        max_distance: usize,
-
-        /// Levenshtein algorithm
-        #[arg(short, long, default_value = "standard")]
-        algorithm: Algorithm,
-
-        /// Enable prefix matching
-        #[arg(short, long)]
-        prefix: bool,
-
-        /// Show distances
-        #[arg(short = 's', long)]
-        show_distances: bool,
-
-        /// Limit results
-        #[arg(short, long)]
-        limit: Option<usize>,
-    },
+    /// Launch interactive REPL
+    #[arg(short = 'R', long)]
+    pub repl: bool,
 
     /// Display dictionary information
-    Info {
-        /// Dictionary file
-        dict: Option<PathBuf>,
-    },
+    #[arg(short = 'I', long)]
+    pub info: bool,
 
     /// Convert dictionary between formats
-    Convert {
-        /// Input dictionary file
-        input: PathBuf,
-
-        /// Output dictionary file
-        output: PathBuf,
-
-        /// Input backend (auto-detected if not specified)
-        #[arg(long)]
-        from_backend: Option<DictionaryBackend>,
-
-        /// Output backend
-        #[arg(long, default_value = "pathmap")]
-        to_backend: DictionaryBackend,
-
-        /// Input format (auto-detected if not specified)
-        #[arg(long)]
-        from_format: Option<SerializationFormat>,
-
-        /// Output format
-        #[arg(long, default_value = "bincode")]
-        to_format: SerializationFormat,
-    },
+    #[arg(long)]
+    pub convert: bool,
 
     /// Insert terms into dictionary
-    Insert {
-        /// Terms to insert
-        terms: Vec<String>,
-
-        /// Dictionary file
-        #[arg(short, long)]
-        dict: Option<PathBuf>,
-
-        /// Dictionary backend (auto-detected if not specified)
-        #[arg(short, long)]
-        backend: Option<DictionaryBackend>,
-
-        /// Serialization format (auto-detected if not specified)
-        #[arg(short = 'f', long)]
-        format: Option<SerializationFormat>,
-    },
+    #[arg(long)]
+    pub insert: bool,
 
     /// Delete terms from dictionary
-    Delete {
-        /// Terms to delete
-        terms: Vec<String>,
-
-        /// Dictionary file
-        #[arg(short, long)]
-        dict: Option<PathBuf>,
-
-        /// Dictionary backend (auto-detected if not specified)
-        #[arg(short, long)]
-        backend: Option<DictionaryBackend>,
-
-        /// Serialization format (auto-detected if not specified)
-        #[arg(short = 'f', long)]
-        format: Option<SerializationFormat>,
-    },
+    #[arg(short = 'D', long)]
+    pub delete: bool,
 
     /// Clear all terms from dictionary
-    Clear {
-        /// Dictionary file
-        #[arg(short, long)]
-        dict: Option<PathBuf>,
-
-        /// Dictionary backend (auto-detected if not specified)
-        #[arg(short, long)]
-        backend: Option<DictionaryBackend>,
-
-        /// Serialization format (auto-detected if not specified)
-        #[arg(short = 'f', long)]
-        format: Option<SerializationFormat>,
-    },
+    #[arg(long)]
+    pub clear: bool,
 
     /// Minimize/compact dictionary (for DynamicDawg)
-    Minimize {
-        /// Dictionary file
-        #[arg(short, long)]
-        dict: Option<PathBuf>,
-
-        /// Dictionary backend (auto-detected if not specified)
-        #[arg(short, long)]
-        backend: Option<DictionaryBackend>,
-
-        /// Serialization format (auto-detected if not specified)
-        #[arg(short = 'f', long)]
-        format: Option<SerializationFormat>,
-    },
+    #[arg(short = 'M', long)]
+    pub minimize: bool,
 
     /// Show or update user settings
-    Settings {
-        /// Set default dictionary path
-        #[arg(long)]
-        set_dict: Option<PathBuf>,
-
-        /// Set default backend
-        #[arg(long)]
-        set_backend: Option<DictionaryBackend>,
-
-        /// Set default format
-        #[arg(long)]
-        set_format: Option<SerializationFormat>,
-
-        /// Set default algorithm
-        #[arg(long)]
-        set_algorithm: Option<Algorithm>,
-
-        /// Set default max distance
-        #[arg(long)]
-        set_max_distance: Option<usize>,
-
-        /// Reset configuration to defaults
-        #[arg(long)]
-        reset: bool,
-    },
+    #[arg(short = 'S', long)]
+    pub settings: bool,
 
     /// Manage config file location
-    Config {
-        /// Switch to a different config file (updates app config)
-        #[arg(long)]
-        switch: Option<PathBuf>,
+    #[arg(long)]
+    pub config_mgmt: bool,
 
-        /// Show current config file path
-        #[arg(long)]
-        show: bool,
-    },
+    // ========================================================================
+    // Input/output arguments (shared across operations)
+    // ========================================================================
+
+    /// Input file (for --compile, --convert)
+    #[arg(long)]
+    pub input: Option<PathBuf>,
+
+    /// Output file (for --compile, --convert)
+    #[arg(short = 'o', long)]
+    pub output: Option<PathBuf>,
+
+    /// Dictionary file
+    #[arg(short = 'd', long)]
+    pub dict: Option<PathBuf>,
+
+    /// Rules file (.llev source or .llev.bin compiled) for --phonetic
+    #[arg(short = 'r', long)]
+    pub rules: Option<PathBuf>,
+
+    /// Text to transform (for --phonetic) or query term (for --query)
+    #[arg(long)]
+    pub text: Option<String>,
+
+    /// Terms to insert or delete (positional arguments)
+    #[arg(value_name = "TERMS")]
+    pub terms: Vec<String>,
+
+    // ========================================================================
+    // Compile-specific options
+    // ========================================================================
+
+    /// Use character-level (Unicode) rules (default: true)
+    #[arg(long, default_value = "true")]
+    pub unicode: bool,
+
+    /// Verify compilation by loading result
+    #[arg(long)]
+    pub verify: bool,
+
+    /// Use compiled binary format (auto-detected from extension)
+    #[arg(long)]
+    pub compiled: bool,
+
+    // ========================================================================
+    // Dictionary options
+    // ========================================================================
+
+    /// Dictionary backend (auto-detected if not specified)
+    #[arg(short = 'b', long)]
+    pub backend: Option<DictionaryBackend>,
+
+    /// Serialization format (auto-detected if not specified)
+    #[arg(short = 'f', long)]
+    pub format: Option<SerializationFormat>,
+
+    /// Levenshtein algorithm
+    #[arg(short = 'a', long, default_value = "standard")]
+    pub algorithm: Algorithm,
+
+    /// Maximum edit distance
+    #[arg(short = 'm', long, default_value = "2")]
+    pub max_distance: usize,
+
+    /// Enable prefix matching mode
+    #[arg(short = 'p', long)]
+    pub prefix: bool,
+
+    /// Show distances in query results
+    #[arg(short = 's', long)]
+    pub show_distances: bool,
+
+    /// Result limit
+    #[arg(short = 'l', long)]
+    pub limit: Option<usize>,
+
+    /// Enable auto-sync (save after every modification)
+    #[arg(long)]
+    pub auto_sync: bool,
+
+    // ========================================================================
+    // Convert-specific options
+    // ========================================================================
+
+    /// Input backend (auto-detected if not specified)
+    #[arg(long)]
+    pub from_backend: Option<DictionaryBackend>,
+
+    /// Output backend
+    #[arg(long, default_value = "path-map")]
+    pub to_backend: DictionaryBackend,
+
+    /// Input format (auto-detected if not specified)
+    #[arg(long)]
+    pub from_format: Option<SerializationFormat>,
+
+    /// Output format
+    #[arg(long, default_value = "bincode")]
+    pub to_format: SerializationFormat,
+
+    // ========================================================================
+    // Settings-specific options
+    // ========================================================================
+
+    /// Set default dictionary path
+    #[arg(long)]
+    pub set_dict: Option<PathBuf>,
+
+    /// Set default backend
+    #[arg(long)]
+    pub set_backend: Option<DictionaryBackend>,
+
+    /// Set default format
+    #[arg(long)]
+    pub set_format: Option<SerializationFormat>,
+
+    /// Set default algorithm
+    #[arg(long)]
+    pub set_algorithm: Option<Algorithm>,
+
+    /// Set default max distance
+    #[arg(long)]
+    pub set_max_distance: Option<usize>,
+
+    /// Reset configuration to defaults
+    #[arg(long)]
+    pub reset: bool,
+
+    // ========================================================================
+    // Config management options
+    // ========================================================================
+
+    /// Switch to a different config file (updates app config)
+    #[arg(long)]
+    pub switch: Option<PathBuf>,
+
+    /// Show current config file path
+    #[arg(long)]
+    pub show: bool,
 }
 
 /// Serialization format for dictionary storage

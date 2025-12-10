@@ -8,7 +8,7 @@ use std::process;
 
 use liblevenshtein::cli::commands;
 use liblevenshtein::cli::paths::PersistentConfig;
-use liblevenshtein::cli::{Cli, Commands};
+use liblevenshtein::cli::Cli;
 use liblevenshtein::repl::{Command, LevenshteinHelper, ReplConfig, ReplState};
 use rustyline::error::ReadlineError;
 use rustyline::{Config, Editor};
@@ -16,35 +16,22 @@ use rustyline::{Config, Editor};
 fn main() {
     let cli = Cli::parse();
 
-    let result = match cli.command {
-        Commands::Repl {
-            dict,
-            backend,
-            format,
-            algorithm,
-            max_distance,
-            prefix,
-            show_distances,
-            limit,
-            auto_sync,
-        } => {
-            // Launch REPL with provided configuration
-            run_repl(
-                dict,
-                backend,
-                format,
-                algorithm,
-                max_distance,
-                prefix,
-                show_distances,
-                limit,
-                auto_sync,
-            )
-        }
-        _ => {
-            // Execute CLI command
-            commands::execute(cli.command)
-        }
+    let result = if cli.repl {
+        // Launch REPL with provided configuration
+        run_repl(
+            cli.dict.clone(),
+            cli.backend,
+            cli.format,
+            cli.algorithm,
+            cli.max_distance,
+            cli.prefix,
+            cli.show_distances,
+            cli.limit,
+            cli.auto_sync,
+        )
+    } else {
+        // Execute CLI command
+        commands::execute(&cli)
     };
 
     if let Err(e) = result {

@@ -1,0 +1,40 @@
+# American English Slang / Text-Speak Abbreviations
+# These rules normalize common informal spellings to their standard forms
+
+@version "1.0.0";
+
+# ============================================================
+# Single-letter abbreviations (expand to full word, then normalize)
+# ============================================================
+
+[id: 200, name: "c for see", weight: 0.0, group: slang]
+# c -> see (texting: "c u later") - then phonetic rules normalize see -> s
+c -> see / #_#;
+
+[id: 201, name: "r for are", weight: 0.0, group: slang]
+# r -> are (texting: "r u ok") - then phonetic rules normalize are -> ar
+r -> are / #_#;
+
+# NOTE: "u" is already the canonical form for the "you" sound.
+# The homophone rules below convert you/ewe/yew -> u, so standalone "u"
+# is already in canonical form and needs no transformation.
+
+# ============================================================
+# Homophones (sound-alike words)
+# ============================================================
+
+[id: 210, name: "you sound", weight: 0.0, group: homophones]
+# you -> u at word start (you, your, you'll sound like u)
+you -> u / #_;
+
+[id: 211, name: "ewe sound", weight: 0.0, group: homophones]
+# ewe -> u (ewe sounds like u)
+ewe -> u / #_;
+
+[id: 212, name: "yew sound", weight: 0.0, group: homophones]
+# yew -> u (yew sounds like u)
+yew -> u / #_;
+
+[id: 213, name: "oh sound", weight: 0.0, group: homophones]
+# oh -> o (oh sounds like o)
+oh -> o / #_;

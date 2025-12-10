@@ -7,6 +7,6 @@ pub mod commands;
 pub mod detect;
 pub mod paths;
 
-pub use args::{Cli, Commands};
+pub use args::{Cli, SerializationFormat};
 pub use detect::{detect_format, DictFormat, FormatDetection};
 pub use paths::{config_dir, default_dict_path};

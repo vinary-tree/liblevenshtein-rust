@@ -1,0 +1,20 @@
+[package]
+name = "phonetic_spellcheck"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["Dylon Edwards <dylon.devo@gmail.com>"]
+description = "Interactive phonetic spell checker demo combining phonetic normalization with Damerau-Levenshtein distance"
+readme = "README.md"
+publish = false  # Example, not for publishing
+
+[dependencies]
+liblevenshtein = { path = "../..", features = ["phonetic-rules", "serialization"] }
+
+[[bin]]
+name = "phonetic_spellcheck"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true

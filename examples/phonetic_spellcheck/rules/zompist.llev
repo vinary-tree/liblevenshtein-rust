@@ -1,0 +1,312 @@
+# Zompist English Phonetic Rules
+# ================================
+# Based on Mark Rosenfelder's (Zompist) English spelling rules
+# https://zompist.com/spell.html
+#
+# These 62 rules transform English orthography to a normalized phonetic form.
+# All rules are formally verified in Coq/Rocq (see docs/verification/phonetic/).
+#
+# Verified Properties:
+#   - Theorem 1: Well-formedness (all rules satisfy structural constraints)
+#   - Theorem 2: Bounded expansion (output <= input + 20 characters)
+#   - Theorem 3: Non-confluence (rule order matters - proven constructively)
+#   - Theorem 4: Termination (sequential application always terminates)
+#   - Theorem 5: Idempotence (fixed points remain unchanged)
+
+@name "Zompist English Phonetic Rules (Complete)"
+@version "2.0"
+@author "Based on Zompist's English spelling rules"
+@description "Complete phonetic rewrite rules for English spelling normalization"
+
+# ============================================================
+# Symbol Definitions
+# ============================================================
+
+@define FRONT_VOWEL = [ei]
+@define VOWEL = [aeiou]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+
+# ============================================================
+# Phase 1: Specific Multi-Character Patterns (HIGH PRIORITY)
+# Must be matched before simpler rules consume their components
+# ============================================================
+
+[id: 110, name: "tion ending", weight: 0.0, group: affrication]
+# tion -> shun (nation -> nashun)
+tion -> shun;
+
+[id: 111, name: "sion ending", weight: 0.0, group: affrication]
+# sion -> zhun (vision -> vizhun)
+sion -> zhun;
+
+[id: 112, name: "cious ending", weight: 0.0, group: affrication]
+# cious -> shus (precious -> preshus)
+cious -> shus;
+
+[id: 113, name: "tious ending", weight: 0.0, group: affrication]
+# tious -> shus (cautious -> kaushus)
+tious -> shus;
+
+[id: 36, name: "ough pattern", weight: 0.0, group: gh_rules]
+# ough -> o (dough -> do)
+ough -> o;
+
+[id: 37, name: "aught pattern", weight: 0.0, group: gh_rules]
+# aught -> ot (caught -> kot, daughter -> doter)
+aught -> ot;
+
+[id: 38, name: "ought pattern", weight: 0.0, group: gh_rules]
+# ought -> ot (bought -> bot, thought -> tot)
+ought -> ot;
+
+[id: 130, name: "tch simplify", weight: 0.0, group: orthography]
+# tch -> ch (batch -> bach, watch -> wach)
+tch -> ch;
+
+[id: 131, name: "dge simplify", weight: 0.0, group: orthography]
+# dge -> j (judge -> juj, bridge -> brij)
+dge -> j;
+
+# ============================================================
+# Phase 2: GH Rules (before generic gh deletion)
+# ============================================================
+
+[id: 35, name: "gh before vowel", weight: 0.0, group: gh_rules]
+# gh -> g before vowels (ghost -> gost)
+gh -> g / _VOWEL;
+
+# ============================================================
+# Phase 3: Digraph Conversions
+# ============================================================
+
+[id: 1, name: "ch digraph", weight: 0.0, group: orthography]
+# ch -> ts sound (church -> tsurts)
+ch -> ts;
+
+[id: 2, name: "sh digraph", weight: 0.0, group: orthography]
+# sh -> s sound (ship -> sip)
+sh -> s;
+
+[id: 3, name: "ph to f", weight: 0.0, group: orthography]
+# ph -> f (phone -> fone)
+ph -> f;
+
+# ============================================================
+# Phase 4: Initial Cluster Simplifications
+# ============================================================
+
+[id: 4, name: "wr initial", weight: 0.0, group: initial_clusters]
+# wr -> r at word start (write -> rite)
+wr -> r / #_;
+
+[id: 5, name: "wh initial", weight: 0.0, group: initial_clusters]
+# wh -> w at word start (what -> wat)
+wh -> w / #_;
+
+[id: 6, name: "gn initial", weight: 0.0, group: initial_clusters]
+# gn -> n at word start (gnome -> nome)
+gn -> n / #_;
+
+[id: 7, name: "kn initial", weight: 0.0, group: initial_clusters]
+# kn -> n at word start (knife -> nife)
+kn -> n / #_;
+
+[id: 8, name: "mn initial", weight: 0.0, group: initial_clusters]
+# mn -> n at word start (mnemonic -> nemonic)
+mn -> n / #_;
+
+[id: 9, name: "pt initial", weight: 0.0, group: initial_clusters]
+# pt -> t at word start (pterodactyl -> terodactyl)
+pt -> t / #_;
+
+[id: 10, name: "ps initial", weight: 0.0, group: initial_clusters]
+# ps -> s at word start (psychology -> sycology)
+ps -> s / #_;
+
+[id: 11, name: "tm initial", weight: 0.0, group: initial_clusters]
+# tm -> m at word start (tmesis -> mesis)
+tm -> m / #_;
+
+# ============================================================
+# Phase 5: X Pronunciation (compound context first)
+# ============================================================
+
+[id: 41, name: "x voiced", weight: 0.0, group: x_rules]
+# x -> gz before vowel (exam -> egzam, exact -> egzact)
+# Simplified: only checks right context (left context requires NFA-based matching)
+x -> gz / _[[:VOWEL:]];
+
+[id: 40, name: "x default", weight: 0.0, group: x_rules]
+# x -> ks elsewhere (box -> boks, fix -> fiks)
+x -> ks;
+
+# ============================================================
+# Phase 6: Contextual Single-Character Rules
+# ============================================================
+
+[id: 20, name: "soft c", weight: 0.0, group: orthography]
+# c -> s before front vowels (city -> sity)
+c -> s / _FRONT_VOWEL;
+
+[id: 21, name: "hard c", weight: 0.0, group: orthography]
+# c -> k elsewhere (cat -> kat)
+c -> k;
+
+[id: 22, name: "soft g", weight: 0.0, group: orthography]
+# g -> j before front vowels (gem -> jem)
+g -> j / _FRONT_VOWEL;
+
+# ============================================================
+# Phase 7: Additional Orthographic Rules
+# ============================================================
+
+[id: 132, name: "ck simplify", weight: 0.0, group: orthography]
+# ck -> k (back -> bak, kick -> kik)
+ck -> k;
+
+[id: 133, name: "mb final", weight: 0.0, group: orthography]
+# mb -> m at word end (lamb -> lam, climb -> clim)
+mb -> m / _#;
+
+[id: 134, name: "bt silent", weight: 0.0, group: orthography]
+# bt -> t (debt -> det, doubt -> dowt)
+bt -> t;
+
+[id: 135, name: "mn final", weight: 0.0, group: orthography]
+# mn -> m at word end (hymn -> him, column -> colum)
+mn -> m / _#;
+
+# ============================================================
+# Phase 8: Double Consonant Simplification
+# ============================================================
+
+[id: 80, name: "bb simplify", weight: 0.0, group: double_consonants]
+bb -> b;
+
+[id: 81, name: "cc simplify", weight: 0.0, group: double_consonants]
+cc -> c;
+
+[id: 82, name: "dd simplify", weight: 0.0, group: double_consonants]
+dd -> d;
+
+[id: 83, name: "ff simplify", weight: 0.0, group: double_consonants]
+ff -> f;
+
+[id: 84, name: "gg simplify", weight: 0.0, group: double_consonants]
+gg -> g;
+
+[id: 85, name: "ll simplify", weight: 0.0, group: double_consonants]
+ll -> l;
+
+[id: 86, name: "mm simplify", weight: 0.0, group: double_consonants]
+mm -> m;
+
+[id: 87, name: "nn simplify", weight: 0.0, group: double_consonants]
+nn -> n;
+
+[id: 88, name: "pp simplify", weight: 0.0, group: double_consonants]
+pp -> p;
+
+[id: 89, name: "rr simplify", weight: 0.0, group: double_consonants]
+rr -> r;
+
+[id: 90, name: "ss simplify", weight: 0.0, group: double_consonants]
+ss -> s;
+
+[id: 91, name: "tt simplify", weight: 0.0, group: double_consonants]
+tt -> t;
+
+[id: 92, name: "zz simplify", weight: 0.0, group: double_consonants]
+zz -> z;
+
+# ============================================================
+# Phase 9: Vowel Digraph Rules (weight=0.1)
+# ============================================================
+
+[id: 50, name: "ea digraph", weight: 0.1, group: vowel_digraphs]
+# ea -> e (meat -> met, read -> red)
+ea -> e;
+
+[id: 51, name: "ee digraph", weight: 0.1, group: vowel_digraphs]
+# ee -> e (feet -> fet, see -> se)
+ee -> e;
+
+[id: 52, name: "ai digraph", weight: 0.1, group: vowel_digraphs]
+# ai -> a (rain -> ran, wait -> wat)
+ai -> a;
+
+[id: 53, name: "ay digraph", weight: 0.1, group: vowel_digraphs]
+# ay -> a (day -> da, say -> sa)
+ay -> a;
+
+[id: 54, name: "oa digraph", weight: 0.1, group: vowel_digraphs]
+# oa -> o (boat -> bot, road -> rod)
+oa -> o;
+
+[id: 55, name: "oe digraph", weight: 0.1, group: vowel_digraphs]
+# oe -> o (toe -> to, foe -> fo)
+oe -> o;
+
+[id: 56, name: "ou digraph", weight: 0.1, group: vowel_digraphs]
+# ou -> ow (house -> howse, out -> owt)
+ou -> ow;
+
+[id: 58, name: "oi digraph", weight: 0.1, group: vowel_digraphs]
+# oi -> oy (coin -> coyn, oil -> oyl)
+oi -> oy;
+
+[id: 59, name: "ey digraph", weight: 0.1, group: vowel_digraphs]
+# ey -> e (they -> the, monkey -> monke)
+ey -> e;
+
+[id: 60, name: "ie digraph", weight: 0.1, group: vowel_digraphs]
+# ie -> i (pie -> pi, tie -> ti)
+ie -> i;
+
+[id: 61, name: "oo digraph", weight: 0.1, group: vowel_digraphs]
+# oo -> u (food -> fud, moon -> mun)
+oo -> u;
+
+[id: 62, name: "ue final", weight: 0.1, group: vowel_digraphs]
+# ue -> u at word end (blue -> blu, true -> tru)
+ue -> u / _#;
+
+# ============================================================
+# Phase 10: Phonetic Rules (weight=0.15)
+# ============================================================
+
+[id: 100, name: "th to t", weight: 0.15, group: phonetic]
+# th -> t (the -> te, thing -> ting)
+th -> t;
+
+[id: 101, name: "qu to kw", weight: 0.15, group: phonetic]
+# qu -> kw (queen -> kween)
+qu -> kw;
+
+[id: 102, name: "kw to qu", weight: 0.15, group: phonetic, enabled: false]
+# kw -> qu (reverse, disabled to avoid cycle)
+kw -> qu;
+
+# ============================================================
+# Phase 11: Default/Fallback Rules (LOW PRIORITY)
+# These apply after all specific patterns have been matched
+# ============================================================
+
+[id: 33, name: "silent final e", weight: 0.0, group: orthography]
+# Final e is often silent (make -> mak)
+e -> / _#;
+
+[id: 34, name: "silent gh", weight: 0.0, group: orthography]
+# gh is silent (catch-all after specific gh rules)
+# Examples: night -> nit, through -> thru
+gh -> ;
+
+# ============================================================
+# Test Rules (DISABLED - for verification only)
+# ============================================================
+
+[id: 200, name: "x expansion", weight: 0.0, group: test, enabled: false]
+x -> yy;
+
+[id: 201, name: "y to z", weight: 0.0, group: test, enabled: false]
+y -> z;
