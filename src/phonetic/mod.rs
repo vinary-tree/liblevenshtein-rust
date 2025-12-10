@@ -59,11 +59,39 @@
 //!
 //! # Rule Sets
 //!
-//! Three rule sets are provided:
+//! Three built-in rule sets are provided:
 //!
 //! - [`ORTHOGRAPHY_RULES`] - Simplifies English spelling (e.g., "gh" → "f")
 //! - [`PHONETIC_RULES`] - Maps to phonetic representations
 //! - [`TEST_RULES`] - Example rules for testing and validation
+//!
+//! # Custom Rules with `.llev` Files
+//!
+//! Load custom phonetic rules from `.llev` files:
+//!
+//! ```rust,ignore
+//! use liblevenshtein::phonetic::{parse_str, RuleSetChar, apply_rules_seq_char};
+//!
+//! // Parse rules from a string
+//! let file = parse_str(r#"
+//!     @name "Custom Rules"
+//!
+//!     [id: 1, name: "ph to f"]
+//!     ph -> f;
+//!
+//!     [id: 2, name: "soft c"]
+//!     c -> s / _[ei];
+//! "#)?;
+//!
+//! // Convert to runtime rule set
+//! let ruleset = RuleSetChar::from_llev(&file)?;
+//!
+//! // Apply rules
+//! let result = apply_rules_seq_char(&ruleset.rules, "phone");
+//! assert_eq!(result, "fone");
+//! ```
+//!
+//! See the [`llev`] module for complete documentation on the file format.
 //!
 //! # Implementation Note
 //!
@@ -83,9 +111,14 @@
 //! - Architecture documentation: `docs/verification/ARCHITECTURE.md`
 
 pub mod application;
+pub mod llev;
 pub mod matching;
+pub mod nfa;
+pub mod regex;
 pub mod rules;
+pub mod syllable;
 pub mod types;
+pub mod verified;
 
 #[cfg(test)]
 mod properties;
@@ -93,7 +126,8 @@ mod properties;
 // Re-export main types (byte-level)
 pub use application::{
     apply_rule_at, apply_rules_seq, apply_rules_seq_opt, apply_rules_seq_optimized,
-    can_apply_at, find_first_match_from, has_position_dependent_rules, MAX_EXPANSION_FACTOR,
+    apply_rules_with_cycle_detection, can_apply_at, find_first_match_from,
+    has_position_dependent_rules, NormalizationResult, MAX_EXPANSION_FACTOR,
 };
 pub use matching::{context_matches, pattern_matches_at, phone_eq};
 pub use rules::{orthography_rules, phonetic_rules, test_rules, zompist_rules};
@@ -102,11 +136,47 @@ pub use types::{Context, Phone, RewriteRule};
 // Re-export character-level types
 pub use application::{
     apply_rule_at_char, apply_rules_seq_char, apply_rules_seq_opt_char,
-    apply_rules_seq_optimized_char, can_apply_at_char, find_first_match_from_char,
-    has_position_dependent_rules_char,
+    apply_rules_seq_optimized_char, apply_rules_with_cycle_detection_char,
+    can_apply_at_char, find_first_match_from_char, has_position_dependent_rules_char,
+    NormalizationResultChar,
 };
 pub use matching::{context_matches_char, pattern_matches_at_char, phone_eq_char};
 pub use rules::{
     orthography_rules_char, phonetic_rules_char, test_rules_char, zompist_rules_char,
 };
 pub use types::{ContextChar, PhoneChar, RewriteRuleChar};
+
+// Re-export verified rules integration
+pub use verified::{
+    rule_to_nfa, rule_to_nfa_char, rules_to_nfa, rules_to_nfa_char, zompist_nfa, zompist_nfa_char,
+};
+
+// Re-export syllable detection functions
+pub use syllable::{
+    is_before_doubled_consonant, is_final_syllable, is_initial_syllable, is_open_syllable,
+    syllable_boundaries, syllable_count,
+};
+
+// Re-export LLev file format types for custom rule definitions
+pub use llev::{
+    // AST types
+    ContextAST, Expression, FileMetadata, IncludeDirective, LLevFile, RewriteRuleAST,
+    RuleDefinition, RuleMetadata, SymbolDef,
+    // Error types
+    LLevError, LLevErrorKind, LLevResult, Position,
+    // Loader
+    load_file, load_file_with_includes, Loader, LoaderConfig,
+    // Parser
+    parse_expression, parse_str, Parser,
+    // Ruleset conversion
+    RuleSet, RuleSetChar,
+};
+
+// Re-export compiled module for AOT compilation (requires serialization feature)
+#[cfg(feature = "serialization")]
+pub use llev::{
+    // Byte-level serialization
+    from_bytes, load, save, to_bytes,
+    // Character-level serialization
+    from_bytes_char, load_char, save_char, to_bytes_char,
+};

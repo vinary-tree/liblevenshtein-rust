@@ -28,7 +28,8 @@
 //!   Fixed points remain unchanged under further application
 
 use super::matching::{context_matches, context_matches_char, pattern_matches_at, pattern_matches_at_char};
-use super::types::{Phone, PhoneChar, RewriteRule, RewriteRuleChar};
+use super::types::{Context, ContextChar, Phone, PhoneChar, RewriteRule, RewriteRuleChar};
+use std::collections::HashSet;
 
 #[cfg(feature = "perf-instrumentation")]
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -115,6 +116,62 @@ pub fn has_position_dependent_rules_char(rules: &[RewriteRuleChar]) -> bool {
 }
 
 // ============================================================================
+// Context position calculation (for compound contexts)
+// ============================================================================
+
+/// Calculate the position at which to evaluate a context (byte-level).
+///
+/// Different context types require evaluation at different positions:
+/// - "Before" contexts (BeforeVowel, BeforeConsonant, Final) check what comes
+///   AFTER the pattern, so they use `pos + pattern_len`
+/// - "After" contexts (AfterVowel, AfterConsonant, Initial) check what comes
+///   BEFORE the pattern, so they use `pos`
+/// - Compound contexts (And, Or, Not) recursively determine their position based
+///   on their first "before" or "after" sub-context
+///
+/// # Arguments
+///
+/// - `ctx` - The context to calculate position for
+/// - `pos` - The pattern start position
+/// - `pattern_len` - The pattern length
+///
+/// # Returns
+///
+/// The position at which to evaluate the context
+#[inline]
+fn context_position(ctx: &Context, pos: usize, pattern_len: usize) -> usize {
+    match ctx {
+        Context::BeforeVowel(_) | Context::BeforeConsonant(_) | Context::Final => {
+            pos + pattern_len
+        }
+        Context::AfterVowel(_) | Context::AfterConsonant(_) | Context::Initial => pos,
+        Context::Anywhere => pos,
+        // For compound contexts, use position from first sub-context
+        Context::And(a, _) => context_position(a, pos, pattern_len),
+        Context::Or(a, _) => context_position(a, pos, pattern_len),
+        Context::Not(inner) => context_position(inner, pos, pattern_len),
+    }
+}
+
+/// Calculate the position at which to evaluate a context (character-level).
+///
+/// Character-level variant of [`context_position`].
+#[inline]
+fn context_position_char(ctx: &ContextChar, pos: usize, pattern_len: usize) -> usize {
+    match ctx {
+        ContextChar::BeforeVowel(_) | ContextChar::BeforeConsonant(_) | ContextChar::Final => {
+            pos + pattern_len
+        }
+        ContextChar::AfterVowel(_) | ContextChar::AfterConsonant(_) | ContextChar::Initial => pos,
+        ContextChar::Anywhere => pos,
+        // For compound contexts, use position from first sub-context
+        ContextChar::And(a, _) => context_position_char(a, pos, pattern_len),
+        ContextChar::Or(a, _) => context_position_char(a, pos, pattern_len),
+        ContextChar::Not(inner) => context_position_char(inner, pos, pattern_len),
+    }
+}
+
+// ============================================================================
 // Rule application (byte-level)
 // ============================================================================
 
@@ -135,13 +192,21 @@ pub fn has_position_dependent_rules_char(rules: &[RewriteRuleChar]) -> bool {
 /// - `false` otherwise
 #[inline]
 pub fn can_apply_at(rule: &RewriteRule, s: &[Phone], pos: usize) -> bool {
-    // Check context matches
-    if !context_matches(&rule.context, s, pos) {
+    // Check pattern matches first (quick rejection)
+    if !pattern_matches_at(&rule.pattern, s, pos) {
         return false;
     }
 
-    // Check pattern matches
-    if !pattern_matches_at(&rule.pattern, s, pos) {
+    // Calculate context position based on context type:
+    // - "Before" contexts check what comes AFTER the pattern (pos + pattern.len)
+    // - "After" contexts check what comes BEFORE the pattern (pos)
+    // - "Final" checks if the pattern ends at string end (pos + pattern.len)
+    // - "Initial" checks if the pattern starts at string start (pos)
+    // - Compound contexts (And/Or/Not) use the primary position from their components
+    let ctx_pos = context_position(&rule.context, pos, rule.pattern.len());
+
+    // Check context at the appropriate position
+    if !context_matches(&rule.context, s, ctx_pos) {
         return false;
     }
 
@@ -349,6 +414,286 @@ pub fn apply_rules_seq(rules: &[RewriteRule], s: &[Phone], fuel: usize) -> Optio
 }
 
 // ============================================================================
+// Cycle-aware rule application with equivalence set recovery (byte-level)
+// ============================================================================
+
+/// Result of applying phonetic rules with cycle awareness.
+///
+/// This enum distinguishes between three outcomes:
+/// - `FixedPoint`: No more rules can be applied (normal termination)
+/// - `Cycle`: A cycle was detected, returning all equivalent forms
+/// - `FuelExhausted`: Ran out of fuel before termination (shouldn't happen with sufficient fuel)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NormalizationResult {
+    /// Reached a fixed point where no rules can be applied.
+    FixedPoint(Vec<Phone>),
+
+    /// Detected a cycle - all forms in the set are equivalent.
+    /// The cycle may include forms that are not directly reachable from each other,
+    /// but all appeared on the path to detecting the cycle.
+    Cycle(HashSet<Vec<Phone>>),
+
+    /// Fuel exhausted before reaching a fixed point or detecting a cycle.
+    FuelExhausted(Vec<Phone>),
+}
+
+impl NormalizationResult {
+    /// Get a canonical representative form.
+    ///
+    /// For fixed points and fuel exhaustion, returns the result.
+    /// For cycles, returns the shortest form.
+    pub fn canonical(&self) -> Vec<Phone> {
+        match self {
+            NormalizationResult::FixedPoint(s) => s.clone(),
+            NormalizationResult::FuelExhausted(s) => s.clone(),
+            NormalizationResult::Cycle(set) => {
+                // Pick shortest form
+                set.iter()
+                    .min_by_key(|v| v.len())
+                    .cloned()
+                    .unwrap_or_default()
+            }
+        }
+    }
+
+    /// Get all equivalent forms.
+    ///
+    /// For fixed points and fuel exhaustion, returns a singleton set.
+    /// For cycles, returns all forms that appeared in the cycle.
+    pub fn all_forms(&self) -> HashSet<Vec<Phone>> {
+        match self {
+            NormalizationResult::FixedPoint(s) => {
+                let mut set = HashSet::new();
+                set.insert(s.clone());
+                set
+            }
+            NormalizationResult::FuelExhausted(s) => {
+                let mut set = HashSet::new();
+                set.insert(s.clone());
+                set
+            }
+            NormalizationResult::Cycle(set) => set.clone(),
+        }
+    }
+
+    /// Returns `true` if a cycle was detected.
+    pub fn is_cycle(&self) -> bool {
+        matches!(self, NormalizationResult::Cycle(_))
+    }
+
+    /// Returns `true` if a fixed point was reached.
+    pub fn is_fixed_point(&self) -> bool {
+        matches!(self, NormalizationResult::FixedPoint(_))
+    }
+}
+
+/// Apply rules with cycle detection and equivalence set recovery (byte-level).
+///
+/// This function tracks all intermediate forms and detects when a previously
+/// seen form is reached again (indicating a cycle). When a cycle is detected,
+/// all forms seen on the path are returned as an equivalence set.
+///
+/// # Algorithm
+///
+/// ```text
+/// seen = {s}
+/// current = s
+/// loop:
+///   for each rule r in rules:
+///     if r can be applied:
+///       new = apply r to current
+///       if new in seen:
+///         log warning and return Cycle(seen)
+///       seen.insert(new)
+///       current = new
+///       restart loop
+///   no rules applied → return FixedPoint(current)
+/// ```
+///
+/// # Arguments
+///
+/// - `rules` - The list of rewrite rules to apply
+/// - `s` - The phonetic string
+/// - `fuel` - Maximum number of iterations (prevents infinite loops in degenerate cases)
+///
+/// # Returns
+///
+/// - `FixedPoint(result)` if no rules can be applied
+/// - `Cycle(set)` if a previously seen form is reached (all forms in cycle)
+/// - `FuelExhausted(current)` if fuel runs out (rare with proper fuel calculation)
+///
+/// # Example
+///
+/// ```rust,ignore
+/// // With rules u -> you and you -> u:
+/// // Input "u" will detect a cycle and return {u, you}
+/// match apply_rules_with_cycle_detection(&rules, &phones, fuel) {
+///     NormalizationResult::Cycle(forms) => {
+///         // forms contains all equivalent normalizations
+///         let canonical = forms.iter().min_by_key(|f| f.len()).unwrap();
+///     }
+///     NormalizationResult::FixedPoint(result) => {
+///         // Normal case - no cycle
+///     }
+///     _ => {}
+/// }
+/// ```
+pub fn apply_rules_with_cycle_detection(
+    rules: &[RewriteRule],
+    s: &[Phone],
+    fuel: usize,
+) -> NormalizationResult {
+    let mut current = s.to_vec();
+    let mut seen: HashSet<Vec<Phone>> = HashSet::new();
+    let mut remaining_fuel = fuel;
+
+    seen.insert(current.clone());
+
+    loop {
+        if remaining_fuel == 0 {
+            return NormalizationResult::FuelExhausted(current);
+        }
+
+        let mut applied = false;
+
+        for rule in rules {
+            if let Some(pos) = find_first_match(rule, &current) {
+                if let Some(new_s) = apply_rule_at(rule, &current, pos) {
+                    // Check for cycle BEFORE updating current
+                    if seen.contains(&new_s) {
+                        // Cycle detected! Log warning and return all forms
+                        eprintln!(
+                            "[phonetic] Warning: Cycle detected in rule application. \
+                             {} equivalent forms found and will all be indexed. \
+                             Consider revising rules to avoid cycles.",
+                            seen.len()
+                        );
+                        return NormalizationResult::Cycle(seen);
+                    }
+
+                    seen.insert(new_s.clone());
+                    current = new_s;
+                    remaining_fuel -= 1;
+                    applied = true;
+                    break; // Restart from first rule
+                }
+            }
+        }
+
+        if !applied {
+            return NormalizationResult::FixedPoint(current);
+        }
+    }
+}
+
+/// Apply rules with cycle detection (character-level variant).
+///
+/// See [`apply_rules_with_cycle_detection`] for documentation.
+pub fn apply_rules_with_cycle_detection_char(
+    rules: &[RewriteRuleChar],
+    s: &[PhoneChar],
+    fuel: usize,
+) -> NormalizationResultChar {
+    let mut current = s.to_vec();
+    let mut seen: HashSet<Vec<PhoneChar>> = HashSet::new();
+    let mut remaining_fuel = fuel;
+
+    seen.insert(current.clone());
+
+    loop {
+        if remaining_fuel == 0 {
+            return NormalizationResultChar::FuelExhausted(current);
+        }
+
+        let mut applied = false;
+
+        for rule in rules {
+            if let Some(pos) = find_first_match_char(rule, &current) {
+                if let Some(new_s) = apply_rule_at_char(rule, &current, pos) {
+                    if seen.contains(&new_s) {
+                        eprintln!(
+                            "[phonetic] Warning: Cycle detected in rule application. \
+                             {} equivalent forms found and will all be indexed. \
+                             Consider revising rules to avoid cycles.",
+                            seen.len()
+                        );
+                        return NormalizationResultChar::Cycle(seen);
+                    }
+
+                    seen.insert(new_s.clone());
+                    current = new_s;
+                    remaining_fuel -= 1;
+                    applied = true;
+                    break;
+                }
+            }
+        }
+
+        if !applied {
+            return NormalizationResultChar::FixedPoint(current);
+        }
+    }
+}
+
+/// Result of applying phonetic rules with cycle awareness (character-level).
+///
+/// See [`NormalizationResult`] for documentation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NormalizationResultChar {
+    /// Reached a fixed point where no rules can be applied.
+    FixedPoint(Vec<PhoneChar>),
+
+    /// Detected a cycle - all forms in the set are equivalent.
+    Cycle(HashSet<Vec<PhoneChar>>),
+
+    /// Fuel exhausted before reaching a fixed point or detecting a cycle.
+    FuelExhausted(Vec<PhoneChar>),
+}
+
+impl NormalizationResultChar {
+    /// Get a canonical representative form.
+    pub fn canonical(&self) -> Vec<PhoneChar> {
+        match self {
+            NormalizationResultChar::FixedPoint(s) => s.clone(),
+            NormalizationResultChar::FuelExhausted(s) => s.clone(),
+            NormalizationResultChar::Cycle(set) => {
+                set.iter()
+                    .min_by_key(|v| v.len())
+                    .cloned()
+                    .unwrap_or_default()
+            }
+        }
+    }
+
+    /// Get all equivalent forms.
+    pub fn all_forms(&self) -> HashSet<Vec<PhoneChar>> {
+        match self {
+            NormalizationResultChar::FixedPoint(s) => {
+                let mut set = HashSet::new();
+                set.insert(s.clone());
+                set
+            }
+            NormalizationResultChar::FuelExhausted(s) => {
+                let mut set = HashSet::new();
+                set.insert(s.clone());
+                set
+            }
+            NormalizationResultChar::Cycle(set) => set.clone(),
+        }
+    }
+
+    /// Returns `true` if a cycle was detected.
+    pub fn is_cycle(&self) -> bool {
+        matches!(self, NormalizationResultChar::Cycle(_))
+    }
+
+    /// Returns `true` if a fixed point was reached.
+    pub fn is_fixed_point(&self) -> bool {
+        matches!(self, NormalizationResultChar::FixedPoint(_))
+    }
+}
+
+// ============================================================================
 // Optimized rule application with conditional position skipping (byte-level)
 // ============================================================================
 
@@ -491,13 +836,21 @@ pub fn apply_rules_seq_optimized(
 /// - `false` otherwise
 #[inline]
 pub fn can_apply_at_char(rule: &RewriteRuleChar, s: &[PhoneChar], pos: usize) -> bool {
-    // Check context matches
-    if !context_matches_char(&rule.context, s, pos) {
+    // Check pattern matches first (quick rejection)
+    if !pattern_matches_at_char(&rule.pattern, s, pos) {
         return false;
     }
 
-    // Check pattern matches
-    if !pattern_matches_at_char(&rule.pattern, s, pos) {
+    // Calculate context position based on context type:
+    // - "Before" contexts check what comes AFTER the pattern (pos + pattern.len)
+    // - "After" contexts check what comes BEFORE the pattern (pos)
+    // - "Final" checks if the pattern ends at string end (pos + pattern.len)
+    // - "Initial" checks if the pattern starts at string start (pos)
+    // - Compound contexts (And/Or/Not) use the primary position from their components
+    let ctx_pos = context_position_char(&rule.context, pos, rule.pattern.len());
+
+    // Check context at the appropriate position
+    if !context_matches_char(&rule.context, s, ctx_pos) {
         return false;
     }
 
@@ -1215,5 +1568,168 @@ mod tests {
         let optimized_result = apply_rules_seq_optimized_char(&[rule], &s, 100);
 
         assert_eq!(standard_result, optimized_result);
+    }
+
+    // ========================================================================
+    // Cycle detection tests
+    // ========================================================================
+
+    #[test]
+    fn test_cycle_detection_simple_cycle() {
+        // Rules: ab -> ba, ba -> ab (creates a true cycle)
+        // Both patterns are same length, so no expansion happens
+        let rule_ab_to_ba = RewriteRule {
+            rule_id: 1,
+            rule_name: "ab → ba".to_string(),
+            pattern: vec![Phone::Vowel(b'a'), Phone::Consonant(b'b')],
+            replacement: vec![Phone::Consonant(b'b'), Phone::Vowel(b'a')],
+            context: Context::Anywhere,
+            weight: 0.0,
+        };
+
+        let rule_ba_to_ab = RewriteRule {
+            rule_id: 2,
+            rule_name: "ba → ab".to_string(),
+            pattern: vec![Phone::Consonant(b'b'), Phone::Vowel(b'a')],
+            replacement: vec![Phone::Vowel(b'a'), Phone::Consonant(b'b')],
+            context: Context::Anywhere,
+            weight: 0.0,
+        };
+
+        let rules = vec![rule_ab_to_ba, rule_ba_to_ab];
+        let input = vec![Phone::Vowel(b'a'), Phone::Consonant(b'b')];
+
+        let result = apply_rules_with_cycle_detection(&rules, &input, 100);
+
+        // Should detect cycle
+        assert!(result.is_cycle(), "Expected cycle detection, got {:?}", result);
+
+        if let NormalizationResult::Cycle(forms) = &result {
+            // Should have both forms
+            assert!(forms.contains(&vec![Phone::Vowel(b'a'), Phone::Consonant(b'b')]));
+            assert!(forms.contains(&vec![Phone::Consonant(b'b'), Phone::Vowel(b'a')]));
+            assert_eq!(forms.len(), 2, "Expected exactly 2 forms in cycle");
+        }
+    }
+
+    #[test]
+    fn test_cycle_detection_fixed_point() {
+        // Rule that doesn't create a cycle: ph -> f
+        let rule = RewriteRule {
+            rule_id: 1,
+            rule_name: "ph → f".to_string(),
+            pattern: vec![Phone::Consonant(b'p'), Phone::Consonant(b'h')],
+            replacement: vec![Phone::Consonant(b'f')],
+            context: Context::Anywhere,
+            weight: 0.15,
+        };
+
+        let input = vec![
+            Phone::Consonant(b'p'),
+            Phone::Consonant(b'h'),
+            Phone::Vowel(b'o'),
+            Phone::Consonant(b'n'),
+            Phone::Vowel(b'e'),
+        ];
+
+        let result = apply_rules_with_cycle_detection(&[rule], &input, 100);
+
+        // Should reach fixed point, not cycle
+        assert!(result.is_fixed_point(), "Expected fixed point, got {:?}", result);
+
+        if let NormalizationResult::FixedPoint(form) = &result {
+            assert_eq!(
+                form,
+                &vec![
+                    Phone::Consonant(b'f'),
+                    Phone::Vowel(b'o'),
+                    Phone::Consonant(b'n'),
+                    Phone::Vowel(b'e'),
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn test_cycle_detection_fuel_exhausted() {
+        // Rule that keeps expanding (never terminates without fuel)
+        let rule = RewriteRule {
+            rule_id: 1,
+            rule_name: "a → aa".to_string(),
+            pattern: vec![Phone::Vowel(b'a')],
+            replacement: vec![Phone::Vowel(b'a'), Phone::Vowel(b'a')],
+            context: Context::Anywhere,
+            weight: 0.0,
+        };
+
+        let input = vec![Phone::Vowel(b'a')];
+
+        // With very limited fuel, should exhaust before cycle (never cycles)
+        let result = apply_rules_with_cycle_detection(&[rule], &input, 3);
+
+        // Should exhaust fuel (expansion doesn't cycle, just grows)
+        assert!(
+            matches!(result, NormalizationResult::FuelExhausted(_)),
+            "Expected fuel exhaustion, got {:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_cycle_detection_all_forms() {
+        // Three-way cycle: a -> b -> c -> a
+        let rule_a_to_b = RewriteRule {
+            rule_id: 1,
+            rule_name: "a → b".to_string(),
+            pattern: vec![Phone::Vowel(b'a')],
+            replacement: vec![Phone::Consonant(b'b')],
+            context: Context::Anywhere,
+            weight: 0.0,
+        };
+
+        let rule_b_to_c = RewriteRule {
+            rule_id: 2,
+            rule_name: "b → c".to_string(),
+            pattern: vec![Phone::Consonant(b'b')],
+            replacement: vec![Phone::Consonant(b'c')],
+            context: Context::Anywhere,
+            weight: 0.0,
+        };
+
+        let rule_c_to_a = RewriteRule {
+            rule_id: 3,
+            rule_name: "c → a".to_string(),
+            pattern: vec![Phone::Consonant(b'c')],
+            replacement: vec![Phone::Vowel(b'a')],
+            context: Context::Anywhere,
+            weight: 0.0,
+        };
+
+        let rules = vec![rule_a_to_b, rule_b_to_c, rule_c_to_a];
+        let input = vec![Phone::Vowel(b'a')];
+
+        let result = apply_rules_with_cycle_detection(&rules, &input, 100);
+
+        assert!(result.is_cycle());
+
+        let all_forms = result.all_forms();
+        assert_eq!(all_forms.len(), 3, "Expected 3 forms in cycle");
+        assert!(all_forms.contains(&vec![Phone::Vowel(b'a')]));
+        assert!(all_forms.contains(&vec![Phone::Consonant(b'b')]));
+        assert!(all_forms.contains(&vec![Phone::Consonant(b'c')]));
+    }
+
+    #[test]
+    fn test_normalization_result_canonical_shortest() {
+        // Test that canonical() picks the shortest form
+        let mut forms = HashSet::new();
+        forms.insert(vec![Phone::Vowel(b'a'), Phone::Vowel(b'a')]);
+        forms.insert(vec![Phone::Vowel(b'b')]);
+        forms.insert(vec![Phone::Vowel(b'c'), Phone::Vowel(b'c'), Phone::Vowel(b'c')]);
+
+        let result = NormalizationResult::Cycle(forms);
+
+        // Canonical should be the shortest: [b]
+        assert_eq!(result.canonical(), vec![Phone::Vowel(b'b')]);
     }
 }
