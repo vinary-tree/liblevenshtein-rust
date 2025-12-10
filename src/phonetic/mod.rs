@@ -113,6 +113,7 @@
 pub mod application;
 pub mod llev;
 pub mod matching;
+pub mod named_classes;
 pub mod nfa;
 pub mod regex;
 pub mod rules;
@@ -179,4 +180,10 @@ pub use llev::{
     from_bytes, load, save, to_bytes,
     // Character-level serialization
     from_bytes_char, load_char, save_char, to_bytes_char,
+};
+
+// Re-export named character classes
+pub use named_classes::{
+    all_builtin_class_names, get_chars_only, get_digraphs_only, get_named_class, is_builtin_class,
+    NamedClass, PhonePattern, NAMED_CLASSES,
 };

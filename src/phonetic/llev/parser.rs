@@ -150,6 +150,11 @@ impl<'a> Parser<'a> {
         let name = self.expect_identifier()?;
         let pos = self.lexer.position();
 
+        // User-defined symbols must be UPPERCASE (built-in classes are lowercase)
+        if name.chars().any(|c| c.is_ascii_lowercase()) {
+            return Err(LLevError::symbol_name_must_be_uppercase(&name, pos));
+        }
+
         // Expect '='
         self.expect(&Token::Equals)?;
 
@@ -718,9 +723,15 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse character class `[...]`.
+    /// Parse character class `[...]` or standalone named class `[:NAME:]`.
     fn parse_char_class(&mut self) -> LLevResult<Expression> {
         self.lexer.enter_char_class();
+
+        // Check for standalone named class syntax: [:NAME:]
+        // This is a shorthand for [[:NAME:]] when no additional chars are needed
+        if self.check(&Token::Colon) {
+            return self.parse_standalone_named_class();
+        }
 
         // Check for negation
         let negated = if self.check(&Token::Caret) {
@@ -787,8 +798,14 @@ impl<'a> Parser<'a> {
                             .at_position(self.lexer.position()));
                         }
 
-                        // Resolve the symbol from the symbol table
-                        if let Some(expr) = self.symbols.get(&name) {
+                        // First check built-in named classes (case-insensitive)
+                        if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
+                            // Built-in class found - add all single-char patterns
+                            // Note: digraphs are not included in CharClass; they need
+                            // special NFA handling for multi-character matching
+                            chars.extend(builtin_chars);
+                        } else if let Some(expr) = self.symbols.get(&name) {
+                            // User-defined symbol
                             match expr {
                                 Expression::CharClass {
                                     chars: ref class_chars,
@@ -805,8 +822,11 @@ impl<'a> Parser<'a> {
                                 }
                             }
                         } else {
-                            let defined: Vec<&str> =
+                            // Not a built-in or user-defined symbol
+                            let mut defined: Vec<&str> =
                                 self.symbols.keys().map(|s| s.as_str()).collect();
+                            // Add built-in class names to suggestions
+                            defined.extend(crate::phonetic::named_classes::all_builtin_class_names());
                             return Err(LLevError::undefined_symbol_with_suggestion(
                                 &name,
                                 &defined,
@@ -869,6 +889,88 @@ impl<'a> Parser<'a> {
         self.lexer.exit_char_class();
 
         Ok(Expression::CharClass { chars, negated })
+    }
+
+    /// Parse standalone named class `[:NAME:]`.
+    ///
+    /// Called when we've entered char class mode and see a leading colon.
+    /// Parses the name and returns a CharClass expression.
+    fn parse_standalone_named_class(&mut self) -> LLevResult<Expression> {
+        // Consume the leading ':'
+        self.advance()?; // Colon
+
+        // Parse the name
+        let mut name = String::new();
+        loop {
+            match self.advance()? {
+                Token::Char(c) if c.is_alphanumeric() || c == '_' => {
+                    name.push(c);
+                }
+                Token::Colon => {
+                    // End of name, expect ']' next
+                    break;
+                }
+                other => {
+                    return Err(LLevError::new(LLevErrorKind::ExpectedToken {
+                        expected: "identifier or ':'".to_string(),
+                        found: format!("{:?}", other),
+                    })
+                    .at_position(self.lexer.position()));
+                }
+            }
+        }
+
+        // Expect closing ']'
+        match self.advance()? {
+            Token::CharClassEnd => {}
+            other => {
+                return Err(LLevError::new(LLevErrorKind::ExpectedToken {
+                    expected: "']' to close named class".to_string(),
+                    found: format!("{:?}", other),
+                })
+                .at_position(self.lexer.position()));
+            }
+        }
+
+        self.lexer.exit_char_class();
+
+        if name.is_empty() {
+            return Err(LLevError::new(LLevErrorKind::InvalidPattern(
+                "empty named character class '[:]'".to_string(),
+            ))
+            .at_position(self.lexer.position()));
+        }
+
+        // Resolve the named class
+        // First check built-in classes
+        if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
+            Ok(Expression::CharClass {
+                chars: builtin_chars,
+                negated: false,
+            })
+        } else if let Some(expr) = self.symbols.get(&name) {
+            // User-defined symbol
+            match expr {
+                Expression::CharClass { chars, negated } => Ok(Expression::CharClass {
+                    chars: chars.clone(),
+                    negated: *negated,
+                }),
+                _ => Err(LLevError::new(LLevErrorKind::TypeMismatch {
+                    expected: "character class".to_string(),
+                    found: format!("symbol '{}' is not a character class", name),
+                })
+                .at_position(self.lexer.position())),
+            }
+        } else {
+            // Not found - provide suggestions
+            let mut defined: Vec<&str> = self.symbols.keys().map(|s| s.as_str()).collect();
+            defined.extend(crate::phonetic::named_classes::all_builtin_class_names());
+            Err(LLevError::undefined_symbol_with_suggestion(
+                &name,
+                &defined,
+                self.lexer.position(),
+            ))
+        }
     }
 
     // ==================== Helper Methods ====================
@@ -1178,10 +1280,11 @@ mod tests {
 
     #[test]
     fn test_parse_define_directive() {
-        let input = "@define VOWEL = [aeiou]";
+        // Use MY_VOWEL to avoid conflict with built-in "vowel" class
+        let input = "@define MY_VOWEL = [aeiou]";
         let file = parse_str(input).unwrap();
         assert_eq!(file.symbols.len(), 1);
-        assert_eq!(file.symbols[0].name, "VOWEL");
+        assert_eq!(file.symbols[0].name, "MY_VOWEL");
     }
 
     #[test]
@@ -1615,10 +1718,11 @@ ph -> f"#;
 
     #[test]
     fn test_parse_named_char_class() {
-        // Test POSIX-style named character class: [[:VOWEL:]]
+        // Test POSIX-style named character class: [[:MY_VOWEL:]]
+        // Use MY_VOWEL to avoid conflict with built-in "vowel" class
         let input = r#"
-@define VOWEL = [aeiou]
-x -> gz / [[:VOWEL:]]_[[:VOWEL:]]
+@define MY_VOWEL = [aeiou]
+x -> gz / [[:MY_VOWEL:]]_[[:MY_VOWEL:]]
 "#;
         let file = parse_str(input).unwrap();
         assert_eq!(file.rules.len(), 1);
@@ -1666,10 +1770,11 @@ x -> gz / [[:VOWEL:]]_[[:VOWEL:]]
 
     #[test]
     fn test_parse_negated_named_char_class() {
-        // Test negated named character class: [^[:VOWEL:]]
+        // Test negated named character class: [^[:MY_VOWEL:]]
+        // Use MY_VOWEL to avoid conflict with built-in "vowel" class
         let input = r#"
-@define VOWEL = [aeiou]
-c -> k / _[^[:VOWEL:]]
+@define MY_VOWEL = [aeiou]
+c -> k / _[^[:MY_VOWEL:]]
 "#;
         let file = parse_str(input).unwrap();
         assert_eq!(file.rules.len(), 1);
@@ -1696,10 +1801,11 @@ c -> k / _[^[:VOWEL:]]
 
     #[test]
     fn test_parse_mixed_named_char_class() {
-        // Test mixed syntax: [[:VOWEL:]xyz]
+        // Test mixed syntax: [[:MY_VOWEL:]xyz]
+        // Use MY_VOWEL to avoid conflict with built-in "vowel" class
         let input = r#"
-@define VOWEL = [aeiou]
-a -> b / _[[:VOWEL:]xyz]
+@define MY_VOWEL = [aeiou]
+a -> b / _[[:MY_VOWEL:]xyz]
 "#;
         let file = parse_str(input).unwrap();
         assert_eq!(file.rules.len(), 1);
@@ -1742,10 +1848,8 @@ a -> b / _[[:VOWEL:]xyz]
     #[test]
     fn test_parse_empty_named_class_error() {
         // Test error for empty named class [::]
-        let input = r#"
-@define VOWEL = [aeiou]
-a -> b / _[[::]xyz]
-"#;
+        // No @define needed - just testing empty class name detection
+        let input = "a -> b / _[[::]xyz]";
         let result = parse_str(input);
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1763,5 +1867,487 @@ a -> b / _[[:NOT_A_CLASS:]]
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(matches!(err.kind, LLevErrorKind::TypeMismatch { .. }));
+    }
+
+    // ==================== Built-in Named Class Tests ====================
+
+    #[test]
+    fn test_parse_builtin_vowel_class() {
+        // Test built-in [:vowel:] class
+        let input = "c -> s / _[[:vowel:]]";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        let ctx = rule.context.as_ref().expect("should have context");
+
+        if let Some(ref boxed) = ctx.right {
+            if let ContextExpr::Pattern(ref expr) = **boxed {
+                if let Expression::CharClass { ref chars, negated } = expr {
+                    assert!(!negated);
+                    // Should contain ASCII vowels
+                    assert!(chars.contains(&'a'));
+                    assert!(chars.contains(&'e'));
+                    assert!(chars.contains(&'i'));
+                    assert!(chars.contains(&'o'));
+                    assert!(chars.contains(&'u'));
+                    // Should contain uppercase
+                    assert!(chars.contains(&'A'));
+                    // Should contain IPA vowels
+                    assert!(chars.contains(&'ə'));
+                } else {
+                    panic!("expected CharClass");
+                }
+            } else {
+                panic!("expected Pattern");
+            }
+        } else {
+            panic!("expected Some");
+        }
+    }
+
+    #[test]
+    fn test_parse_builtin_shorthand_alias() {
+        // Test shorthand [:V:] (alias for vowel)
+        let input = "c -> s / _[[:V:]]";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        let ctx = rule.context.as_ref().expect("should have context");
+
+        if let Some(ref boxed) = ctx.right {
+            if let ContextExpr::Pattern(ref expr) = **boxed {
+                if let Expression::CharClass { ref chars, negated } = expr {
+                    assert!(!negated);
+                    // V should be alias for vowel
+                    assert!(chars.contains(&'a'));
+                    assert!(chars.contains(&'e'));
+                    assert!(chars.contains(&'ə'));
+                } else {
+                    panic!("expected CharClass");
+                }
+            } else {
+                panic!("expected Pattern");
+            }
+        } else {
+            panic!("expected Some");
+        }
+    }
+
+    #[test]
+    fn test_parse_builtin_case_insensitive() {
+        // Test case-insensitive lookup [:VOWEL:] and [:Vowel:]
+        let inputs = vec![
+            "c -> s / _[[:VOWEL:]]",
+            "c -> s / _[[:Vowel:]]",
+            "c -> s / _[[:vowel:]]",
+        ];
+
+        for input in inputs {
+            let file = parse_str(input).expect(&format!("should parse: {}", input));
+            assert_eq!(file.rules.len(), 1);
+
+            let rule = &file.rules[0].rule;
+            let ctx = rule.context.as_ref().expect("should have context");
+
+            if let Some(ref boxed) = ctx.right {
+                if let ContextExpr::Pattern(ref expr) = **boxed {
+                    if let Expression::CharClass { ref chars, .. } = expr {
+                        assert!(chars.contains(&'a'));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_builtin_consonant_class() {
+        // Test built-in [:consonant:] class
+        let input = "[[:consonant:]] -> 0";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, negated } = rule.pattern {
+            assert!(!negated);
+            // Should contain ASCII consonants
+            assert!(chars.contains(&'b'));
+            assert!(chars.contains(&'c'));
+            assert!(chars.contains(&'d'));
+            // Should NOT contain vowels
+            assert!(!chars.contains(&'a'));
+            assert!(!chars.contains(&'e'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_parse_builtin_posix_alpha() {
+        // Test POSIX [:alpha:] class
+        let input = "[[:alpha:]] -> x";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, .. } = rule.pattern {
+            // Should have all letters
+            assert!(chars.contains(&'a'));
+            assert!(chars.contains(&'z'));
+            assert!(chars.contains(&'A'));
+            assert!(chars.contains(&'Z'));
+            // Should NOT have digits
+            assert!(!chars.contains(&'0'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_parse_builtin_mixed_with_chars() {
+        // Test mixing built-in class with extra chars: [[:vowel:]y]
+        let input = "c -> s / _[[:vowel:]y]";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        let ctx = rule.context.as_ref().expect("should have context");
+
+        if let Some(ref boxed) = ctx.right {
+            if let ContextExpr::Pattern(ref expr) = **boxed {
+                if let Expression::CharClass { ref chars, .. } = expr {
+                    // Should have vowels AND 'y'
+                    assert!(chars.contains(&'a'));
+                    assert!(chars.contains(&'e'));
+                    assert!(chars.contains(&'y'));
+                } else {
+                    panic!("expected CharClass");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_define_lowercase_symbol_rejected() {
+        // Test that lowercase symbol names are rejected
+        let input = "@define vowel = [aeiou]";
+        let result = parse_str(input);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err.kind, LLevErrorKind::SymbolNameMustBeUppercase { .. }));
+    }
+
+    #[test]
+    fn test_parse_define_uppercase_required() {
+        // Test that only UPPERCASE symbol names are accepted
+        // These should fail (contain lowercase)
+        let invalid_inputs = vec![
+            "@define vowel = [aeiou]",  // all lowercase
+            "@define Vowel = [aeiou]",  // mixed case
+            "@define alpha = [abc]",    // all lowercase
+        ];
+
+        for input in invalid_inputs {
+            let result = parse_str(input);
+            assert!(result.is_err(), "should error on: {}", input);
+            let err = result.unwrap_err();
+            assert!(
+                matches!(err.kind, LLevErrorKind::SymbolNameMustBeUppercase { .. }),
+                "expected SymbolNameMustBeUppercase for: {}", input
+            );
+        }
+
+        // These should succeed (all uppercase)
+        let valid_inputs = vec![
+            "@define VOWEL = [aeiou]",
+            "@define V = [aeiou]",
+            "@define MY_CLASS = [abc]",
+        ];
+
+        for input in valid_inputs {
+            let result = parse_str(input);
+            assert!(result.is_ok(), "should succeed for: {}, got: {:?}", input, result.err());
+        }
+    }
+
+    #[test]
+    fn test_parse_user_defined_non_conflicting() {
+        // Test that user can define symbols that don't conflict with built-ins
+        let input = r#"
+@define MY_VOWELS = [aeiou]
+c -> s / _[[:MY_VOWELS:]]
+"#;
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.symbols.len(), 1);
+        assert_eq!(file.rules.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_builtin_front_vowel() {
+        // Test front vowel class (shorthand F)
+        let input = "c -> s / _[[:F:]]";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        let ctx = rule.context.as_ref().expect("should have context");
+
+        if let Some(ref boxed) = ctx.right {
+            if let ContextExpr::Pattern(ref expr) = **boxed {
+                if let Expression::CharClass { ref chars, .. } = expr {
+                    // Front vowels: e, i
+                    assert!(chars.contains(&'e'));
+                    assert!(chars.contains(&'i'));
+                    // Should NOT have back vowels
+                    assert!(!chars.contains(&'o'));
+                    assert!(!chars.contains(&'u'));
+                } else {
+                    panic!("expected CharClass");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_builtin_stop_consonant() {
+        // Test stop consonant class (shorthand S)
+        let input = "[[:S:]] -> 0";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, .. } = rule.pattern {
+            // Stop consonants: p, b, t, d, k, g
+            assert!(chars.contains(&'p'));
+            assert!(chars.contains(&'b'));
+            assert!(chars.contains(&'t'));
+            assert!(chars.contains(&'d'));
+            assert!(chars.contains(&'k'));
+            assert!(chars.contains(&'g'));
+            // Should NOT have fricatives
+            assert!(!chars.contains(&'f'));
+            assert!(!chars.contains(&'s'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_parse_builtin_ascii_vowel() {
+        // Test ASCII-only vowel subset
+        let input = "[[:ascii_vowel:]] -> V";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, .. } = rule.pattern {
+            // Should have ASCII vowels
+            assert!(chars.contains(&'a'));
+            assert!(chars.contains(&'e'));
+            // Should NOT have IPA vowels
+            assert!(!chars.contains(&'ə'));
+            assert!(!chars.contains(&'ɪ'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_parse_builtin_ipa_vowel() {
+        // Test IPA-only vowel subset
+        let input = "[[:ipa_vowel:]] -> V";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, .. } = rule.pattern {
+            // Should have IPA vowels
+            assert!(chars.contains(&'ə'));
+            assert!(chars.contains(&'ɪ'));
+            // Should NOT have ASCII vowels
+            assert!(!chars.contains(&'a'));
+            assert!(!chars.contains(&'e'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    // ==================== Standalone Named Class Syntax Tests ====================
+
+    #[test]
+    fn test_parse_standalone_vowel_class() {
+        // Test standalone [:vowel:] syntax (shorthand for [[:vowel:]])
+        let input = "[:vowel:] -> V";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, negated } = rule.pattern {
+            assert!(!negated);
+            // Should contain vowels
+            assert!(chars.contains(&'a'));
+            assert!(chars.contains(&'e'));
+            assert!(chars.contains(&'ə'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_parse_standalone_shorthand() {
+        // Test standalone [:V:] shorthand
+        let input = "[:V:] -> vowel";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, .. } = rule.pattern {
+            // V is alias for vowel
+            assert!(chars.contains(&'a'));
+            assert!(chars.contains(&'e'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_parse_standalone_in_context() {
+        // Test standalone syntax in context
+        let input = "c -> s / _[:F:]";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        let ctx = rule.context.as_ref().expect("should have context");
+
+        if let Some(ref boxed) = ctx.right {
+            if let ContextExpr::Pattern(ref expr) = **boxed {
+                if let Expression::CharClass { ref chars, .. } = expr {
+                    // F = front vowels (e, i)
+                    assert!(chars.contains(&'e'));
+                    assert!(chars.contains(&'i'));
+                    assert!(!chars.contains(&'o'));
+                } else {
+                    panic!("expected CharClass");
+                }
+            } else {
+                panic!("expected Pattern");
+            }
+        } else {
+            panic!("expected right context");
+        }
+    }
+
+    #[test]
+    fn test_parse_standalone_consonant() {
+        // Test standalone [:consonant:] in pattern
+        let input = "[:consonant:][:vowel:] -> CV";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        // Pattern should be Concat(CharClass(consonants), CharClass(vowels))
+        match &rule.pattern {
+            Expression::Concat(left, right) => {
+                if let Expression::CharClass { chars: l_chars, .. } = &**left {
+                    assert!(l_chars.contains(&'b'));
+                    assert!(l_chars.contains(&'c'));
+                    assert!(!l_chars.contains(&'a'));
+                } else {
+                    panic!("expected left CharClass");
+                }
+                if let Expression::CharClass { chars: r_chars, .. } = &**right {
+                    assert!(r_chars.contains(&'a'));
+                    assert!(r_chars.contains(&'e'));
+                    assert!(!r_chars.contains(&'b'));
+                } else {
+                    panic!("expected right CharClass");
+                }
+            }
+            _ => panic!("expected Concat"),
+        }
+    }
+
+    #[test]
+    fn test_parse_standalone_posix_digit() {
+        // Test standalone [:digit:] POSIX class
+        let input = "[:digit:] -> 0";
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, .. } = rule.pattern {
+            assert!(chars.contains(&'0'));
+            assert!(chars.contains(&'5'));
+            assert!(chars.contains(&'9'));
+            assert!(!chars.contains(&'a'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_parse_standalone_user_defined() {
+        // Test standalone syntax with user-defined class
+        let input = r#"
+@define MY_CHARS = [xyz]
+[:MY_CHARS:] -> 0
+"#;
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { ref chars, .. } = rule.pattern {
+            assert_eq!(chars.len(), 3);
+            assert!(chars.contains(&'x'));
+            assert!(chars.contains(&'y'));
+            assert!(chars.contains(&'z'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_parse_standalone_undefined_error() {
+        // Test error for undefined standalone named class
+        let input = "[:UNDEFINED_CLASS:] -> x";
+        let result = parse_str(input);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err.kind, LLevErrorKind::UndefinedSymbol(_)));
+    }
+
+    #[test]
+    fn test_parse_standalone_empty_error() {
+        // Test error for empty standalone named class [::]
+        let input = "[::]-> x";
+        let result = parse_str(input);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err.kind, LLevErrorKind::InvalidPattern(_)));
+    }
+
+    #[test]
+    fn test_parse_standalone_vs_posix() {
+        // Test that both syntaxes produce the same result
+        let standalone = parse_str("[:vowel:] -> V").unwrap();
+        let posix = parse_str("[[:vowel:]] -> V").unwrap();
+
+        let standalone_rule = &standalone.rules[0].rule;
+        let posix_rule = &posix.rules[0].rule;
+
+        if let (
+            Expression::CharClass { chars: s_chars, .. },
+            Expression::CharClass { chars: p_chars, .. },
+        ) = (&standalone_rule.pattern, &posix_rule.pattern)
+        {
+            assert_eq!(s_chars.len(), p_chars.len());
+            for c in s_chars {
+                assert!(p_chars.contains(c));
+            }
+        } else {
+            panic!("expected CharClass for both");
+        }
     }
 }

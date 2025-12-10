@@ -184,8 +184,22 @@ pub enum LLevErrorKind {
 
     /// Type mismatch
     TypeMismatch {
+        /// The expected type
         expected: String,
+        /// The found type
         found: String,
+    },
+
+    /// Attempt to define a symbol that conflicts with a built-in class name
+    BuiltinClassConflict {
+        /// The name that conflicts with a built-in
+        name: String,
+    },
+
+    /// Symbol name must be UPPERCASE (user-defined symbols must be uppercase)
+    SymbolNameMustBeUppercase {
+        /// The invalid symbol name
+        name: String,
     },
 
     // ==================== Compilation Errors ====================
@@ -366,6 +380,28 @@ impl LLevError {
     /// Create a "duplicate symbol" error.
     pub fn duplicate_symbol(symbol: impl Into<String>, position: Position) -> Self {
         Self::with_position(LLevErrorKind::DuplicateSymbol(symbol.into()), position)
+    }
+
+    /// Create a "built-in class conflict" error.
+    ///
+    /// This error indicates that a user-defined symbol name conflicts with
+    /// a built-in character class name (e.g., "vowel", "consonant", "alpha").
+    pub fn builtin_class_conflict(name: impl Into<String>, position: Position) -> Self {
+        Self::with_position(
+            LLevErrorKind::BuiltinClassConflict { name: name.into() },
+            position,
+        )
+    }
+
+    /// Create a "symbol name must be uppercase" error.
+    ///
+    /// User-defined symbols must be UPPERCASE to distinguish them from
+    /// built-in character classes (which are lowercase).
+    pub fn symbol_name_must_be_uppercase(name: impl Into<String>, position: Position) -> Self {
+        Self::with_position(
+            LLevErrorKind::SymbolNameMustBeUppercase { name: name.into() },
+            position,
+        )
     }
 
     /// Create a "non-ASCII in byte-level" error.
@@ -560,6 +596,20 @@ impl fmt::Display for LLevErrorKind {
             }
             LLevErrorKind::TypeMismatch { expected, found } => {
                 write!(f, "type mismatch: expected {}, found {}", expected, found)
+            }
+            LLevErrorKind::BuiltinClassConflict { name } => {
+                write!(
+                    f,
+                    "cannot define symbol '{}': conflicts with built-in character class",
+                    name
+                )
+            }
+            LLevErrorKind::SymbolNameMustBeUppercase { name } => {
+                write!(
+                    f,
+                    "symbol name '{}' must be UPPERCASE (built-in classes are lowercase)",
+                    name
+                )
             }
 
             // Compilation Errors

@@ -519,6 +519,11 @@ impl<'a> Lexer<'a> {
         self.in_weight = true;
     }
 
+    /// Enter char class mode (used when re-entering after nested constructs).
+    pub fn enter_char_class_mode(&mut self) {
+        self.in_char_class = true;
+    }
+
     /// Check if we're at end of input.
     pub fn is_eof(&mut self) -> bool {
         self.skip_whitespace();

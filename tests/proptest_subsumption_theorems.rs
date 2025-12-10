@@ -42,6 +42,22 @@ fn subsumable_positions() -> impl Strategy<Value = (GeneralizedPosition, General
     })
 }
 
+/// Generate a single valid I-type position with its max_distance
+fn valid_i_position() -> impl Strategy<Value = (GeneralizedPosition, u8)> {
+    (1u8..10).prop_flat_map(|max_distance| {
+        let max_d = max_distance as i32;
+        (0u8..=max_distance).prop_flat_map(move |errors| {
+            let e = errors as i32;
+            let min_offset = (-max_d).max(-e);
+            let max_offset = max_d.min(e);
+            (min_offset..=max_offset).prop_map(move |offset| {
+                let p = GeneralizedPosition::new_i(offset, errors, max_distance).unwrap();
+                (p, max_distance)
+            })
+        })
+    })
+}
+
 // ============================================================================
 // THEOREM: subsumes_transitive (HIGH PRIORITY)
 // ============================================================================
@@ -189,19 +205,9 @@ mod subsumption_irreflexivity {
 
     proptest! {
         #[test]
-        fn subsumes_is_irreflexive(
-            offset in -10i32..10,
-            errors in 0u8..10,
-            max_distance in 1u8..10
-        ) {
-            prop_assume!(errors <= max_distance);
-            prop_assume!(offset.abs() <= errors as i32);
-            prop_assume!(offset >= -(max_distance as i32) && offset <= max_distance as i32);
-
-            if let Ok(p) = GeneralizedPosition::new_i(offset, errors, max_distance) {
-                prop_assert!(!subsumes(&p, &p, max_distance),
-                    "Position {:?} should not subsume itself (irreflexivity)", p);
-            }
+        fn subsumes_is_irreflexive((p, max_distance) in valid_i_position()) {
+            prop_assert!(!subsumes(&p, &p, max_distance),
+                "Position {:?} should not subsume itself (irreflexivity)", p);
         }
     }
 }

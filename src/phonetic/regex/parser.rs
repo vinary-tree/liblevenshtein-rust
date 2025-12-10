@@ -267,7 +267,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse a character class: `[abc]`, `[^abc]`, `[a-z]`
+    /// Parse a character class: `[abc]`, `[^abc]`, `[a-z]`, `[:NAME:]`, `[[:NAME:]abc]`
     fn parse_char_class(&mut self) -> ParseResult<Regex> {
         let mut chars = Vec::new();
         let mut negated = false;
@@ -278,12 +278,32 @@ impl<'a> Parser<'a> {
             negated = true;
         }
 
+        // Check for standalone named class syntax: [:NAME:]
+        if self.lexer.peek()? == &Token::Char(':') {
+            self.lexer.next_token()?; // consume ':'
+            return self.parse_standalone_named_class(negated);
+        }
+
         loop {
             let token = self.lexer.next_token()?;
 
             match token {
                 Token::CharClassEnd => break,
                 Token::Char(c) => {
+                    // Check for POSIX-style nested named class: [[:NAME:]]
+                    if c == '[' {
+                        if self.lexer.peek()? == &Token::Char(':') {
+                            self.lexer.next_token()?; // consume ':'
+                            let named_chars = self.parse_posix_named_class()?;
+                            chars.extend(named_chars);
+                            continue;
+                        } else {
+                            // Just a literal '[' inside the class
+                            chars.push('[');
+                            continue;
+                        }
+                    }
+
                     // Check for range
                     if self.lexer.peek()? == &Token::Dash {
                         self.lexer.next_token()?; // consume '-'
@@ -338,6 +358,130 @@ impl<'a> Parser<'a> {
         };
 
         Ok(Regex::char_class(class))
+    }
+
+    /// Parse a standalone named class after `[:` has been consumed: `NAME:]`
+    fn parse_standalone_named_class(&mut self, negated: bool) -> ParseResult<Regex> {
+        let mut name = String::new();
+
+        // Collect name characters
+        loop {
+            let token = self.lexer.next_token()?;
+            match token {
+                Token::Char(':') => break, // End of name
+                Token::Char(c) if c.is_alphanumeric() || c == '_' => {
+                    name.push(c);
+                }
+                Token::Eof => {
+                    return Err(ParseError::unclosed_char_class(self.lexer.position()));
+                }
+                _ => {
+                    return Err(ParseError::with_context(
+                        ParseErrorKind::InvalidCharClass(format!(
+                            "invalid character '{}' in named class",
+                            self.token_to_char(&token)
+                        )),
+                        self.lexer.position(),
+                        format!("in [:{}...", name),
+                    ));
+                }
+            }
+        }
+
+        // Expect closing ']'
+        let token = self.lexer.next_token()?;
+        if token != Token::CharClassEnd {
+            return Err(ParseError::with_context(
+                ParseErrorKind::ExpectedChar(']'),
+                self.lexer.position(),
+                format!("after [:{}:", name),
+            ));
+        }
+
+        if name.is_empty() {
+            return Err(ParseError::new(
+                ParseErrorKind::InvalidCharClass("empty named class [::]".to_string()),
+                self.lexer.position(),
+            ));
+        }
+
+        // Look up the named class
+        if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
+            let class = if negated {
+                CharClassChar::from_chars(&builtin_chars).negated()
+            } else {
+                CharClassChar::from_chars(&builtin_chars)
+            };
+            Ok(Regex::char_class(class))
+        } else {
+            Err(ParseError::new(
+                ParseErrorKind::UnknownNamedClass(name),
+                self.lexer.position(),
+            ))
+        }
+    }
+
+    /// Parse a POSIX-style named class after `[[:` has been consumed: `NAME:]]`
+    /// Returns the characters from the named class (without creating a Regex).
+    fn parse_posix_named_class(&mut self) -> ParseResult<Vec<char>> {
+        let mut name = String::new();
+
+        // Collect name characters
+        loop {
+            let token = self.lexer.next_token()?;
+            match token {
+                Token::Char(':') => break, // End of name
+                Token::Char(c) if c.is_alphanumeric() || c == '_' => {
+                    name.push(c);
+                }
+                Token::Eof => {
+                    return Err(ParseError::unclosed_char_class(self.lexer.position()));
+                }
+                _ => {
+                    return Err(ParseError::with_context(
+                        ParseErrorKind::InvalidCharClass(format!(
+                            "invalid character '{}' in named class",
+                            self.token_to_char(&token)
+                        )),
+                        self.lexer.position(),
+                        format!("in [[:{}...", name),
+                    ));
+                }
+            }
+        }
+
+        // Expect closing ']' for the inner bracket.
+        // Note: The lexer returns CharClassEnd for ']' when in char class mode,
+        // and exits char class mode. We accept CharClassEnd here and re-enter
+        // char class mode so parsing can continue for the outer char class.
+        let token = self.lexer.next_token()?;
+        if token != Token::CharClassEnd {
+            return Err(ParseError::with_context(
+                ParseErrorKind::ExpectedChar(']'),
+                self.lexer.position(),
+                format!("expected ']]' after [[:{}:", name),
+            ));
+        }
+
+        // Re-enter char class mode since we're still parsing the outer [...]
+        self.lexer.enter_char_class_mode();
+
+        if name.is_empty() {
+            return Err(ParseError::new(
+                ParseErrorKind::InvalidCharClass("empty named class [[::]...]".to_string()),
+                self.lexer.position(),
+            ));
+        }
+
+        // Look up the named class
+        if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
+            Ok(builtin_chars)
+        } else {
+            Err(ParseError::new(
+                ParseErrorKind::UnknownNamedClass(name),
+                self.lexer.position(),
+            ))
+        }
     }
 
     /// Parse a context predicate: `left_context? _ right_context? syllable_clause?`
@@ -1407,5 +1551,139 @@ mod tests {
         let r = parse_rule_bytes(b"ph -> f").unwrap();
         assert!(r.is_rewrite_rule());
         assert_eq!(r.to_string(), "ph -> f");
+    }
+
+    // ========================================================================
+    // Named character class tests
+    // ========================================================================
+
+    #[test]
+    fn test_parse_standalone_named_class_vowel() {
+        let r = parse("[:vowel:]").unwrap();
+        // Should parse as a character class containing vowels
+        assert!(r.to_string().starts_with('['));
+        assert!(r.to_string().contains('a'));
+        assert!(r.to_string().contains('e'));
+        assert!(r.to_string().contains('i'));
+        assert!(r.to_string().contains('o'));
+        assert!(r.to_string().contains('u'));
+    }
+
+    #[test]
+    fn test_parse_standalone_named_class_negated() {
+        let r = parse("[^:vowel:]").unwrap();
+        // Should parse as a negated character class
+        assert!(r.to_string().starts_with("[^"));
+    }
+
+    #[test]
+    fn test_parse_standalone_named_class_shorthand() {
+        let r = parse("[:V:]").unwrap();
+        // V is shorthand for vowel
+        assert!(r.to_string().contains('a'));
+        assert!(r.to_string().contains('e'));
+    }
+
+    #[test]
+    fn test_parse_standalone_named_class_alpha() {
+        let r = parse("[:alpha:]").unwrap();
+        // Should contain a-z, A-Z
+        let s = r.to_string();
+        assert!(s.contains('a'));
+        assert!(s.contains('z'));
+        assert!(s.contains('A'));
+        assert!(s.contains('Z'));
+    }
+
+    #[test]
+    fn test_parse_standalone_named_class_digit() {
+        let r = parse("[:digit:]").unwrap();
+        // Should contain 0-9
+        let s = r.to_string();
+        assert!(s.contains('0'));
+        assert!(s.contains('9'));
+    }
+
+    #[test]
+    fn test_parse_posix_named_class_mixed() {
+        let r = parse("[[:vowel:]y]").unwrap();
+        // Should contain vowels plus 'y'
+        let s = r.to_string();
+        assert!(s.contains('a'));
+        assert!(s.contains('y'));
+    }
+
+    #[test]
+    fn test_parse_posix_named_class_multiple() {
+        let r = parse("[[:vowel:][:digit:]]").unwrap();
+        // Should contain vowels and digits
+        let s = r.to_string();
+        assert!(s.contains('a'));
+        assert!(s.contains('0'));
+    }
+
+    #[test]
+    fn test_parse_named_class_case_insensitive() {
+        let r1 = parse("[:VOWEL:]").unwrap();
+        let r2 = parse("[:vowel:]").unwrap();
+        // Both should work and produce similar results
+        assert!(r1.to_string().contains('a'));
+        assert!(r2.to_string().contains('a'));
+    }
+
+    #[test]
+    fn test_parse_named_class_unknown() {
+        let result = parse("[:unknown_class:]");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err.kind, ParseErrorKind::UnknownNamedClass(_)));
+    }
+
+    #[test]
+    fn test_parse_named_class_empty() {
+        let result = parse("[::]");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_named_class_in_rewrite_rule() {
+        let r = parse_rule("c -> s / _[:front_vowel:]").unwrap();
+        assert!(r.is_rewrite_rule());
+        // The context should contain front vowels
+    }
+
+    #[test]
+    fn test_parse_named_class_consonant() {
+        let r = parse("[:consonant:]").unwrap();
+        let s = r.to_string();
+        // Should contain consonants
+        assert!(s.contains('b'));
+        assert!(s.contains('c'));
+        assert!(s.contains('d'));
+        // Should NOT contain vowels
+        // (Actually the string representation shows all chars, so we can't easily test exclusion)
+    }
+
+    #[test]
+    fn test_parse_named_class_stop() {
+        let r = parse("[:stop:]").unwrap();
+        let s = r.to_string();
+        // Should contain stop consonants
+        assert!(s.contains('p'));
+        assert!(s.contains('t'));
+        assert!(s.contains('k'));
+        assert!(s.contains('b'));
+        assert!(s.contains('d'));
+        assert!(s.contains('g'));
+    }
+
+    #[test]
+    fn test_parse_literal_bracket_in_char_class() {
+        // Make sure [[] still works (literal '[' in class)
+        let r = parse("[[ab]").unwrap();
+        let s = r.to_string();
+        assert!(s.contains('['));
+        assert!(s.contains('a'));
+        assert!(s.contains('b'));
     }
 }

@@ -121,6 +121,9 @@ pub enum ParseErrorKind {
         size: usize,
         max: usize,
     },
+
+    /// Unknown named character class
+    UnknownNamedClass(String),
 }
 
 impl ParseError {
@@ -257,6 +260,9 @@ impl fmt::Display for ParseErrorKind {
                     "pattern too complex: size {} exceeds maximum {}",
                     size, max
                 )
+            }
+            ParseErrorKind::UnknownNamedClass(name) => {
+                write!(f, "unknown named character class '{}'", name)
             }
         }
     }
