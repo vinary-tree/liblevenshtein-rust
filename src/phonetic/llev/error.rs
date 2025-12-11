@@ -202,6 +202,14 @@ pub enum LLevErrorKind {
         name: String,
     },
 
+    /// Unknown built-in named class (e.g., `[:invalid:]`)
+    UnknownNamedClass {
+        /// The class name that was not found
+        name: String,
+        /// Available built-in class names
+        available: Vec<String>,
+    },
+
     // ==================== Compilation Errors ====================
     /// Serialization error
     SerializationError(String),
@@ -610,6 +618,23 @@ impl fmt::Display for LLevErrorKind {
                     "symbol name '{}' must be UPPERCASE (built-in classes are lowercase)",
                     name
                 )
+            }
+            LLevErrorKind::UnknownNamedClass { name, available } => {
+                write!(f, "unknown built-in character class '[:{}:]'", name)?;
+                if !available.is_empty() {
+                    write!(f, " (available: ")?;
+                    for (i, avail) in available.iter().take(5).enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}", avail)?;
+                    }
+                    if available.len() > 5 {
+                        write!(f, ", ... ({} more)", available.len() - 5)?;
+                    }
+                    write!(f, ")")?;
+                }
+                Ok(())
             }
 
             // Compilation Errors

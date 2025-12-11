@@ -103,6 +103,9 @@ pub enum Token {
     /// Initial syllable condition keyword
     InitialSyllable,
 
+    /// User-defined symbol reference ($NAME or ${NAME})
+    SymbolRef(String),
+
     /// End of input
     Eof,
 }
@@ -125,6 +128,7 @@ impl Token {
                 | Token::GroupStart
                 | Token::Dot
                 | Token::Hash
+                | Token::SymbolRef(_)
         )
     }
 }
@@ -276,6 +280,7 @@ impl<'a> Lexer<'a> {
             | Token::ClosedSyllable
             | Token::FinalSyllable
             | Token::InitialSyllable => 'i', // keywords
+            Token::SymbolRef(_) => '$',
             Token::Eof => '\0',
         }
     }
@@ -372,6 +377,62 @@ impl<'a> Lexer<'a> {
         Ok(value)
     }
 
+    /// Parse a symbol reference ($NAME or ${NAME}).
+    fn parse_symbol_ref(&mut self) -> ParseResult<Token> {
+        let pos = self.position;
+        if self.peek_char() == Some('{') {
+            // Explicit form: ${NAME}
+            self.advance(); // consume '{'
+            let mut name = String::new();
+            while let Some(c) = self.peek_char() {
+                if c == '}' {
+                    self.advance();
+                    if name.is_empty() {
+                        return Err(ParseError::with_context(
+                            ParseErrorKind::InvalidCharClass("empty symbol name in ${...}".to_string()),
+                            pos,
+                            "expected symbol name",
+                        ));
+                    }
+                    return Ok(Token::SymbolRef(name));
+                } else if c.is_alphanumeric() || c == '_' {
+                    self.advance();
+                    name.push(c);
+                } else {
+                    return Err(ParseError::with_context(
+                        ParseErrorKind::InvalidCharClass(format!("invalid character '{}' in symbol name", c)),
+                        self.position,
+                        "symbol names must be alphanumeric",
+                    ));
+                }
+            }
+            Err(ParseError::with_context(
+                ParseErrorKind::UnexpectedEof,
+                pos,
+                "unclosed ${...} - expected '}'",
+            ))
+        } else {
+            // Simple form: $NAME
+            let mut name = String::new();
+            while let Some(c) = self.peek_char() {
+                if c.is_alphanumeric() || c == '_' {
+                    self.advance();
+                    name.push(c);
+                } else {
+                    break;
+                }
+            }
+            if name.is_empty() {
+                return Err(ParseError::with_context(
+                    ParseErrorKind::InvalidCharClass("expected symbol name after '$'".to_string()),
+                    pos,
+                    "symbol name required",
+                ));
+            }
+            Ok(Token::SymbolRef(name))
+        }
+    }
+
     /// Internal method to get the next token.
     fn next_token_internal(&mut self) -> ParseResult<Token> {
         // Skip whitespace unless inside character class
@@ -397,6 +458,7 @@ impl<'a> Lexer<'a> {
                     let escaped = self.parse_escape()?;
                     Ok(Token::Char(escaped))
                 }
+                '$' => self.parse_symbol_ref(),
                 _ => Ok(Token::Char(c)),
             };
         }
@@ -461,6 +523,7 @@ impl<'a> Lexer<'a> {
             }
             '&' => Ok(Token::Ampersand),
             '!' => Ok(Token::Exclamation),
+            '$' => self.parse_symbol_ref(),
             c if c.is_ascii_digit() => {
                 let n = self.parse_number(c)?;
                 Ok(Token::Number(n))
@@ -1064,6 +1127,87 @@ mod tests {
         assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
         assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
         assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+    }
+
+    // Symbol reference tests
+
+    #[test]
+    fn test_lexer_symbol_ref_simple() {
+        let mut lexer = Lexer::new("$VOWEL");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("VOWEL".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_symbol_ref_braced() {
+        let mut lexer = Lexer::new("${FRONT_VOWEL}");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("FRONT_VOWEL".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_symbol_ref_in_pattern() {
+        let mut lexer = Lexer::new("a$VOWEL+");
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("VOWEL".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Plus);
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_symbol_ref_in_char_class() {
+        let mut lexer = Lexer::new("[$FRONT$BACK]");
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("FRONT".to_string())
+        );
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("BACK".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
+    }
+
+    #[test]
+    fn test_lexer_symbol_ref_braced_adjacent() {
+        // Test that ${NAME}x parses correctly
+        let mut lexer = Lexer::new("${FRONT}y");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("FRONT".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('y'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_symbol_ref_empty_name_error() {
+        let mut lexer = Lexer::new("$ ");
+        let err = lexer.next_token().unwrap_err();
+        assert!(
+            format!("{:?}", err).contains("symbol name"),
+            "Error should mention symbol name"
+        );
+    }
+
+    #[test]
+    fn test_lexer_symbol_ref_empty_braced_error() {
+        let mut lexer = Lexer::new("${}");
+        let err = lexer.next_token().unwrap_err();
+        assert!(
+            format!("{:?}", err).contains("empty"),
+            "Error should mention empty"
+        );
     }
 
     // Byte-level tests

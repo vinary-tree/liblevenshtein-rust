@@ -103,6 +103,45 @@ impl LLevFile {
         !self.symbols.is_empty()
     }
 
+    /// Extract symbols as a SymbolTable for use with the regex parser.
+    ///
+    /// This converts symbol definitions to a HashMap<String, Vec<char>> that can be
+    /// passed to `regex::Parser::new_with_symbols()` for symbol sharing between
+    /// LLev grammars and regex patterns.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use liblevenshtein::phonetic::{parse_str, regex};
+    ///
+    /// let llev_file = parse_str(r#"
+    ///     @define VOWEL = [aeiou]
+    ///     @define FRONT = [ei]
+    /// "#).unwrap();
+    ///
+    /// let symbols = llev_file.to_symbol_table();
+    /// let mut parser = regex::Parser::new_with_symbols("[$VOWEL]+", &symbols);
+    /// let regex = parser.parse().unwrap();
+    /// ```
+    pub fn to_symbol_table(&self) -> std::collections::HashMap<String, Vec<char>> {
+        let mut table = std::collections::HashMap::new();
+        for symbol in &self.symbols {
+            if let Some(chars) = Self::extract_chars(&symbol.value) {
+                table.insert(symbol.name.clone(), chars);
+            }
+        }
+        table
+    }
+
+    /// Extract characters from an Expression (if it's a CharClass).
+    fn extract_chars(expr: &Expression) -> Option<Vec<char>> {
+        match expr {
+            Expression::CharClass { chars, negated: false } => Some(chars.clone()),
+            Expression::Char(c) => Some(vec![*c]),
+            _ => None, // Other expression types not supported for symbol tables
+        }
+    }
+
     /// Merge another `.llev` file into this one.
     ///
     /// This appends rules, symbols, and resolved includes from the other file.

@@ -22,6 +22,9 @@ pub enum Token {
     /// An identifier (for symbols, metadata keys)
     Identifier(String),
 
+    /// A symbol reference (`$NAME` or `${NAME}`)
+    SymbolRef(String),
+
     /// A number
     Number(usize),
 
@@ -137,6 +140,12 @@ pub enum Token {
     // ==================== Special ====================
     /// End of input
     Eof,
+
+    // ==================== Phonetic Shortcuts ====================
+    /// A phonetic class shortcut (e.g., `\v` for vowel, `\V` for non-vowel)
+    /// - `class_name`: The full class name to look up
+    /// - `negated`: true for uppercase (negated), false for lowercase (positive)
+    PhoneticShortcut { class_name: String, negated: bool },
 }
 
 impl Token {
@@ -158,6 +167,7 @@ impl Token {
                 | Token::Dot
                 | Token::Hash
                 | Token::Identifier(_)
+                | Token::SymbolRef(_)
         )
     }
 
@@ -600,6 +610,148 @@ impl<'a> Lexer<'a> {
         })
     }
 
+    /// Parse an escape sequence or phonetic shortcut.
+    ///
+    /// Phonetic shortcuts provide quick access to named character classes.
+    /// Following standard regex convention:
+    /// - Lowercase = positive match (e.g., `\v` matches vowels)
+    /// - Uppercase = negated match (e.g., `\V` matches non-vowels)
+    ///
+    /// Available phonetic shortcuts:
+    /// - `\v` / `\V` → vowel / non-vowel
+    /// - `\c` / `\C` → consonant / non-consonant
+    /// - `\f` / `\F` → front_vowel / non-front_vowel
+    /// - `\k` / `\K` → back_vowel / non-back_vowel (K for bacK; `\b`/`\B` are word boundary)
+    /// - `\h` / `\H` → high_vowel / non-high_vowel
+    /// - `\l` / `\L` → low_vowel / non-low_vowel
+    /// - `\m` / `\M` → mid_vowel / non-mid_vowel
+    /// - `\p` / `\P` → stop/plosive / non-stop (P for Plosive; `\s`/`\S` are whitespace)
+    /// - `\g` / `\G` → glide / non-glide
+    /// - `\z` / `\Z` → nasal / non-nasal (Z since `\n` is newline)
+    /// - `\q` / `\Q` → liquid / non-liquid (Q since L is taken for low_vowel)
+    ///
+    /// Standard regex escapes are preserved and NOT overridden:
+    /// - `\d`, `\D` → digit / non-digit (POSIX)
+    /// - `\w`, `\W` → word character / non-word (POSIX)
+    /// - `\s`, `\S` → whitespace / non-whitespace (POSIX)
+    /// - `\b`, `\B` → word boundary / non-word boundary
+    /// - `\n`, `\r`, `\t` → newline, carriage return, tab
+    ///
+    /// For non-shortcut escapes, falls back to `parse_escape`.
+    fn parse_escape_or_shortcut(&mut self) -> LLevResult<Token> {
+        // Peek at the next character to check for phonetic shortcuts
+        let next = self.peek_char();
+
+        match next {
+            // Phonetic class shortcuts
+            // v/V - vowel
+            Some('v') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "vowel".to_string(), negated: false })
+            }
+            Some('V') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "vowel".to_string(), negated: true })
+            }
+            // c/C - consonant
+            Some('c') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "consonant".to_string(), negated: false })
+            }
+            Some('C') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "consonant".to_string(), negated: true })
+            }
+            // f/F - front_vowel
+            Some('f') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "front_vowel".to_string(), negated: false })
+            }
+            Some('F') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "front_vowel".to_string(), negated: true })
+            }
+            // k/K - back_vowel (can't use b/B - word boundary)
+            Some('k') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "back_vowel".to_string(), negated: false })
+            }
+            Some('K') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "back_vowel".to_string(), negated: true })
+            }
+            // h/H - high_vowel
+            Some('h') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "high_vowel".to_string(), negated: false })
+            }
+            Some('H') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "high_vowel".to_string(), negated: true })
+            }
+            // l/L - low_vowel
+            Some('l') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "low_vowel".to_string(), negated: false })
+            }
+            Some('L') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "low_vowel".to_string(), negated: true })
+            }
+            // m/M - mid_vowel
+            Some('m') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "mid_vowel".to_string(), negated: false })
+            }
+            Some('M') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "mid_vowel".to_string(), negated: true })
+            }
+            // p/P - stop/plosive (can't use s/S - whitespace)
+            Some('p') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "stop".to_string(), negated: false })
+            }
+            Some('P') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "stop".to_string(), negated: true })
+            }
+            // g/G - glide
+            Some('g') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "glide".to_string(), negated: false })
+            }
+            Some('G') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "glide".to_string(), negated: true })
+            }
+            // z/Z - nasal (can't use n - newline)
+            Some('z') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false })
+            }
+            Some('Z') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: true })
+            }
+            // q/Q - liquid (can't use l/L - low_vowel)
+            Some('q') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "liquid".to_string(), negated: false })
+            }
+            Some('Q') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "liquid".to_string(), negated: true })
+            }
+            // Standard regex shortcuts and other escapes - pass through to parse_escape
+            // \d, \D, \w, \W, \s, \S, \b, \B, \n, \r, \t, etc.
+            _ => {
+                let escaped = self.parse_escape()?;
+                Ok(Token::Char(escaped))
+            }
+        }
+    }
+
     /// Parse a string literal.
     fn parse_string(&mut self) -> LLevResult<String> {
         let start_pos = self.position.clone();
@@ -640,6 +792,65 @@ impl<'a> Lexer<'a> {
         }
 
         result
+    }
+
+    /// Parse a symbol reference: `$NAME` or `${NAME}`.
+    /// Called after `$` has been consumed.
+    fn parse_symbol_ref(&mut self) -> LLevResult<Token> {
+        let pos = self.position;
+
+        if self.peek_char() == Some('{') {
+            // Explicit form: ${NAME}
+            self.advance(); // consume '{'
+
+            let mut name = String::new();
+            while let Some(c) = self.peek_char() {
+                if c == '}' {
+                    self.advance(); // consume '}'
+                    if name.is_empty() {
+                        return Err(LLevError::new(LLevErrorKind::InvalidSymbolName(
+                            "empty symbol name in ${...}".to_string(),
+                        ))
+                        .at_position(pos));
+                    }
+                    return Ok(Token::SymbolRef(name));
+                } else if c.is_alphanumeric() || c == '_' {
+                    self.advance();
+                    name.push(c);
+                } else {
+                    return Err(LLevError::new(LLevErrorKind::InvalidPattern(format!(
+                        "invalid character '{}' in symbol name",
+                        c
+                    )))
+                    .at_position(self.position));
+                }
+            }
+            // Hit EOF before closing brace
+            Err(LLevError::new(LLevErrorKind::InvalidPattern(
+                "unclosed ${...} - expected '}'".to_string(),
+            ))
+            .at_position(pos))
+        } else {
+            // Simple form: $NAME
+            // If not followed by a valid identifier, $ is a literal character
+            let mut name = String::new();
+            while let Some(c) = self.peek_char() {
+                if c.is_alphanumeric() || c == '_' {
+                    self.advance();
+                    name.push(c);
+                } else {
+                    break;
+                }
+            }
+
+            if name.is_empty() {
+                // $ not followed by identifier = literal '$' character
+                // This allows [$] to match literal '$' (standard regex convention)
+                return Ok(Token::Char('$'));
+            }
+
+            Ok(Token::SymbolRef(name))
+        }
     }
 
     /// Parse a number.
@@ -780,11 +991,8 @@ impl<'a> Lexer<'a> {
             '&' => Ok(Token::Ampersand),
             '!' => Ok(Token::Bang),
 
-            // Escape sequence
-            '\\' => {
-                let escaped = self.parse_escape()?;
-                Ok(Token::Char(escaped))
-            }
+            // Escape sequence or phonetic shortcut
+            '\\' => self.parse_escape_or_shortcut(),
 
             // Number
             c if c.is_ascii_digit() => self.parse_number(c),
@@ -864,24 +1072,14 @@ impl<'a> Lexer<'a> {
             '&' => Ok(Token::Ampersand),
             '!' => Ok(Token::Bang),
 
-            // Escape sequence
-            '\\' => {
-                let escaped = self.parse_escape()?;
-                Ok(Token::Char(escaped))
-            }
+            // Symbol reference: $NAME or ${NAME}
+            '$' => self.parse_symbol_ref(),
+
+            // Escape sequence or phonetic shortcut
+            '\\' => self.parse_escape_or_shortcut(),
 
             // Number
             c if c.is_ascii_digit() => self.parse_number(c),
-
-            // In Pattern mode:
-            // - UPPERCASE sequences (like VOWEL, FRONT_VOWEL) are symbol references (Identifiers)
-            // - lowercase letters and other alphabetic chars are literal characters
-            // - "if" keyword for syllable conditions
-            c if c.is_uppercase() => {
-                // This is a symbol reference - parse the full identifier
-                let ident = self.parse_identifier(c);
-                Ok(Token::Identifier(ident))
-            }
 
             // Check for "if" keyword
             'i' if self.peek_char() == Some('f') => {
@@ -913,13 +1111,18 @@ impl<'a> Lexer<'a> {
                 self.state = LexerState::Pattern;
                 Ok(Token::CharClassEnd)
             }
+            // '[' inside a character class signals nested class: [[...]]
+            // Note: escaped \[ is handled below and returns Token::Char('[')
+            '[' => Ok(Token::CharClassStart),
             '^' => Ok(Token::Caret),
             '-' => Ok(Token::Dash),
             ':' => Ok(Token::Colon),
-            '\\' => {
-                let escaped = self.parse_escape()?;
-                Ok(Token::Char(escaped))
-            }
+            // Symbol references work inside character classes: [a$NAME] unions 'a' with symbol
+            '$' => self.parse_symbol_ref(),
+            // Escape sequences or phonetic shortcuts
+            // \[ returns Token::Char('[') (literal bracket)
+            // \v returns Token::PhoneticShortcut("vowel")
+            '\\' => self.parse_escape_or_shortcut(),
             _ => Ok(Token::Char(c)),
         }
     }
@@ -1056,12 +1259,44 @@ mod tests {
     }
 
     #[test]
-    fn test_lexer_identifier() {
-        let mut lexer = Lexer::new("FRONT_VOWEL");
+    fn test_lexer_symbol_ref_simple() {
+        let mut lexer = Lexer::new("$FRONT_VOWEL");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::Identifier("FRONT_VOWEL".to_string())
+            Token::SymbolRef("FRONT_VOWEL".to_string())
         );
+    }
+
+    #[test]
+    fn test_lexer_symbol_ref_braced() {
+        let mut lexer = Lexer::new("${FRONT_VOWEL}");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("FRONT_VOWEL".to_string())
+        );
+    }
+
+    #[test]
+    fn test_lexer_symbol_ref_in_char_class() {
+        let mut lexer = Lexer::new("[$FOO]");
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
+        lexer.enter_char_class();
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("FOO".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
+    }
+
+    #[test]
+    fn test_lexer_uppercase_now_literal_in_pattern() {
+        // After sigil change, bare uppercase is literal, not symbol
+        let mut lexer = Lexer::new("FRONT");
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('F'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('R'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('O'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('N'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('T'));
     }
 
     #[test]
@@ -1314,11 +1549,14 @@ mod tests {
 
     #[test]
     fn test_lexer_escaped_uppercase() {
-        // Test that \A produces a literal 'A' character token
-        let mut lexer = Lexer::new("\\A\\B\\Z");
+        // Test that escaped uppercase letters (not phonetic shortcuts) produce literal character tokens
+        // Note: V, C, F, K, H, L, M, P, G, Z, Q are phonetic shortcuts, so we use A, B, D, E, etc.
+        let mut lexer = Lexer::new("\\A\\B\\D\\E\\X");
         assert_eq!(lexer.next_token().unwrap(), Token::Char('A'));
         assert_eq!(lexer.next_token().unwrap(), Token::Char('B'));
-        assert_eq!(lexer.next_token().unwrap(), Token::Char('Z'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('D'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('E'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('X'));
     }
 
     #[test]
@@ -1338,6 +1576,82 @@ mod tests {
         // Test that \U followed by hex digits still works as unicode escape
         let mut lexer = Lexer::new("\\U00000041");
         assert_eq!(lexer.next_token().unwrap(), Token::Char('A'));
+    }
+
+    #[test]
+    fn test_lexer_phonetic_shortcuts() {
+        // Test phonetic shortcuts: lowercase = positive, uppercase = negated
+        let mut lexer = Lexer::new("\\v\\V\\c\\C");
+        // \v = vowel (positive)
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::PhoneticShortcut {
+                class_name: "vowel".to_string(),
+                negated: false
+            }
+        );
+        // \V = vowel (negated)
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::PhoneticShortcut {
+                class_name: "vowel".to_string(),
+                negated: true
+            }
+        );
+        // \c = consonant (positive)
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::PhoneticShortcut {
+                class_name: "consonant".to_string(),
+                negated: false
+            }
+        );
+        // \C = consonant (negated)
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::PhoneticShortcut {
+                class_name: "consonant".to_string(),
+                negated: true
+            }
+        );
+    }
+
+    #[test]
+    fn test_lexer_phonetic_shortcuts_all() {
+        // Test all phonetic shortcuts
+        let shortcuts = [
+            ("\\f", "front_vowel", false),
+            ("\\F", "front_vowel", true),
+            ("\\k", "back_vowel", false),
+            ("\\K", "back_vowel", true),
+            ("\\h", "high_vowel", false),
+            ("\\H", "high_vowel", true),
+            ("\\l", "low_vowel", false),
+            ("\\L", "low_vowel", true),
+            ("\\m", "mid_vowel", false),
+            ("\\M", "mid_vowel", true),
+            ("\\p", "stop", false),
+            ("\\P", "stop", true),
+            ("\\g", "glide", false),
+            ("\\G", "glide", true),
+            ("\\z", "nasal", false),
+            ("\\Z", "nasal", true),
+            ("\\q", "liquid", false),
+            ("\\Q", "liquid", true),
+        ];
+
+        for (input, expected_class, expected_negated) in shortcuts.iter() {
+            let mut lexer = Lexer::new(input);
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::PhoneticShortcut {
+                    class_name: expected_class.to_string(),
+                    negated: *expected_negated
+                },
+                "Failed for input: {}",
+                input
+            );
+        }
     }
 
     #[test]
@@ -1449,8 +1763,8 @@ mod tests {
         // Enter char class mode
         lexer.enter_char_class();
 
-        // '[' is a regular character in char class mode
-        assert_eq!(lexer.next_token().unwrap(), Token::Char('['));
+        // '[' inside char class mode returns CharClassStart (signals nested class)
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
         // ':' is recognized as Token::Colon
         assert_eq!(lexer.next_token().unwrap(), Token::Colon);
         // Characters of the name
@@ -1475,8 +1789,8 @@ mod tests {
 
         lexer.enter_char_class();
 
-        // Named class start marker
-        assert_eq!(lexer.next_token().unwrap(), Token::Char('['));
+        // '[' inside char class mode returns CharClassStart (signals nested class)
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
         assert_eq!(lexer.next_token().unwrap(), Token::Colon);
         // Name characters
         assert_eq!(lexer.next_token().unwrap(), Token::Char('V'));

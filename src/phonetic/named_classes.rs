@@ -7,7 +7,6 @@
 //!
 //! - **POSIX classes**: `[:alpha:]`, `[:digit:]`, `[:space:]`, etc.
 //! - **Phonetic classes**: `[:vowel:]`, `[:consonant:]`, `[:fricative:]`, etc.
-//! - **Shorthands**: `[:V:]` (vowel), `[:C:]` (consonant), `[:F:]` (front), etc.
 //!
 //! # Syntax
 //!
@@ -18,7 +17,7 @@
 //!
 //! ```text
 //! # LLev grammar rules
-//! c -> s / _[:F:];              # c -> s before front vowel
+//! c -> s / _[:front_vowel:];    # c -> s before front vowel
 //! [:voiced:] -> [:voiceless:];  # devoicing rule
 //! [:nasal:] -> m / _[:stop:];   # nasal assimilation
 //! ```
@@ -202,7 +201,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // All vowels (ASCII + IPA)
     add_class(NamedClass {
         name: "vowel",
-        aliases: &["v"],
+        aliases: &[],
         patterns: vec![
             // ASCII vowels
             Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
@@ -226,7 +225,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Front vowels
     add_class(NamedClass {
         name: "front_vowel",
-        aliases: &["f", "front"],
+        aliases: &[],
         patterns: vec![
             Char('e'), Char('i'), Char('E'), Char('I'),
             Char('ɪ'), Char('ɛ'), Char('æ'),
@@ -237,7 +236,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Back vowels
     add_class(NamedClass {
         name: "back_vowel",
-        aliases: &["b", "back"],
+        aliases: &[],
         patterns: vec![
             Char('a'), Char('o'), Char('u'), Char('A'), Char('O'), Char('U'),
             Char('ʊ'), Char('ɔ'), Char('ɑ'), Char('ɒ'),
@@ -248,7 +247,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // High vowels
     add_class(NamedClass {
         name: "high_vowel",
-        aliases: &["h", "high"],
+        aliases: &[],
         patterns: vec![
             Char('i'), Char('u'), Char('I'), Char('U'),
             Char('ɪ'), Char('ʊ'),
@@ -259,7 +258,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Low vowels
     add_class(NamedClass {
         name: "low_vowel",
-        aliases: &["l", "low"],
+        aliases: &[],
         patterns: vec![
             Char('a'), Char('A'),
             Char('æ'), Char('ɑ'), Char('ɒ'), Char('ɐ'),
@@ -270,7 +269,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Mid vowels
     add_class(NamedClass {
         name: "mid_vowel",
-        aliases: &["m", "mid"],
+        aliases: &[],
         patterns: vec![
             Char('e'), Char('o'), Char('E'), Char('O'),
             Char('ə'), Char('ɛ'), Char('ɔ'), Char('ʌ'), Char('ɜ'),
@@ -281,7 +280,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Central vowels
     add_class(NamedClass {
         name: "central_vowel",
-        aliases: &["central"],
+        aliases: &[],
         patterns: vec![Char('ə'), Char('ʌ'), Char('ɜ'), Char('ɐ')],
         description: "Central vowels (schwa family)",
     });
@@ -301,7 +300,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // All consonants
     add_class(NamedClass {
         name: "consonant",
-        aliases: &["c"],
+        aliases: &[],
         patterns: vec![
             // ASCII consonants
             Char('b'), Char('c'), Char('d'), Char('f'), Char('g'),
@@ -330,7 +329,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Stop consonants (plosives)
     add_class(NamedClass {
         name: "stop",
-        aliases: &["s", "plosive"],
+        aliases: &["plosive"],
         patterns: vec![
             Char('p'), Char('b'), Char('t'), Char('d'), Char('k'), Char('g'),
             Char('P'), Char('B'), Char('T'), Char('D'), Char('K'), Char('G'),
@@ -362,7 +361,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Nasal consonants (with digraphs)
     add_class(NamedClass {
         name: "nasal",
-        aliases: &["n"],
+        aliases: &[],
         patterns: vec![
             Char('m'), Char('n'), Char('M'), Char('N'),
             Char('ŋ'),
@@ -375,7 +374,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Liquid consonants
     add_class(NamedClass {
         name: "liquid",
-        aliases: &["r"],
+        aliases: &[],
         patterns: vec![
             Char('l'), Char('r'), Char('L'), Char('R'),
             Char('ɹ'), Char('ɾ'),
@@ -386,7 +385,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     // Glides (semivowels)
     add_class(NamedClass {
         name: "glide",
-        aliases: &["g", "semivowel"],
+        aliases: &["semivowel"],
         patterns: vec![
             Char('w'), Char('y'), Char('W'), Char('Y'),
             Char('j'), Char('J'), // IPA j = English y
@@ -550,9 +549,9 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
 /// let vowels2 = get_named_class("VOWEL").expect("case insensitive");
 /// assert_eq!(vowels.patterns.len(), vowels2.patterns.len());
 ///
-/// // Shorthand alias
-/// let vowels3 = get_named_class("V").expect("shorthand works");
-/// assert_eq!(vowels.patterns.len(), vowels3.patterns.len());
+/// // Full word aliases (e.g., "plosive" for "stop", "semivowel" for "glide")
+/// let stops = get_named_class("plosive").expect("alias works");
+/// assert_eq!(get_named_class("stop").unwrap().patterns.len(), stops.patterns.len());
 /// ```
 pub fn get_named_class(name: &str) -> Option<&'static NamedClass> {
     NAMED_CLASSES.get(name.to_lowercase().as_str())
@@ -656,11 +655,16 @@ mod tests {
     }
 
     #[test]
-    fn test_shorthand_alias() {
-        let v1 = get_named_class("vowel").expect("full name");
-        let v2 = get_named_class("v").expect("shorthand");
+    fn test_full_word_alias() {
+        // "plosive" is an alias for "stop"
+        let s1 = get_named_class("stop").expect("full name");
+        let s2 = get_named_class("plosive").expect("alias");
+        assert_eq!(s1.patterns.len(), s2.patterns.len());
 
-        assert_eq!(v1.patterns.len(), v2.patterns.len());
+        // "semivowel" is an alias for "glide"
+        let g1 = get_named_class("glide").expect("full name");
+        let g2 = get_named_class("semivowel").expect("alias");
+        assert_eq!(g1.patterns.len(), g2.patterns.len());
     }
 
     #[test]
@@ -688,10 +692,13 @@ mod tests {
     fn test_is_builtin_class() {
         assert!(is_builtin_class("vowel"));
         assert!(is_builtin_class("VOWEL"));
-        assert!(is_builtin_class("V"));
+        assert!(is_builtin_class("plosive")); // alias for stop
         assert!(is_builtin_class("fricative"));
         assert!(is_builtin_class("alpha"));
 
+        // Single-letter names are NOT built-in (reserved for user symbols)
+        assert!(!is_builtin_class("V"));
+        assert!(!is_builtin_class("C"));
         assert!(!is_builtin_class("not_a_class"));
         assert!(!is_builtin_class("CUSTOM"));
     }

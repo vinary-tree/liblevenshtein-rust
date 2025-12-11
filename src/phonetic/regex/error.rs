@@ -124,6 +124,24 @@ pub enum ParseErrorKind {
 
     /// Unknown named character class
     UnknownNamedClass(String),
+
+    /// Undefined symbol reference
+    UndefinedSymbol {
+        /// The symbol name that was not found
+        name: String,
+        /// Available symbols (for error message suggestions)
+        available: Vec<String>,
+    },
+
+    /// Symbol type mismatch (e.g., using non-char-class symbol in char class)
+    SymbolTypeMismatch {
+        /// The symbol name
+        name: String,
+        /// Expected type
+        expected: String,
+        /// Actual type
+        found: String,
+    },
 }
 
 impl ParseError {
@@ -263,6 +281,25 @@ impl fmt::Display for ParseErrorKind {
             }
             ParseErrorKind::UnknownNamedClass(name) => {
                 write!(f, "unknown named character class '{}'", name)
+            }
+            ParseErrorKind::UndefinedSymbol { name, available } => {
+                if available.is_empty() {
+                    write!(f, "undefined symbol '${}'", name)
+                } else {
+                    write!(
+                        f,
+                        "undefined symbol '${}'; available symbols: {}",
+                        name,
+                        available.iter().map(|s| format!("${}", s)).collect::<Vec<_>>().join(", ")
+                    )
+                }
+            }
+            ParseErrorKind::SymbolTypeMismatch { name, expected, found } => {
+                write!(
+                    f,
+                    "symbol '${}' has wrong type: expected {}, found {}",
+                    name, expected, found
+                )
             }
         }
     }

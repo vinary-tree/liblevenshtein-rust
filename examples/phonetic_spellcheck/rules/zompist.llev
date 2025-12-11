@@ -73,7 +73,7 @@ dge -> j;
 
 [id: 35, name: "gh before vowel", weight: 0.0, group: gh_rules]
 # gh -> g before vowels (ghost -> gost)
-gh -> g / _VOWEL;
+gh -> g / _$VOWEL;
 
 # ============================================================
 # Phase 3: Digraph Conversions
@@ -134,7 +134,7 @@ tm -> m / #_;
 [id: 41, name: "x voiced", weight: 0.0, group: x_rules]
 # x -> gz before vowel (exam -> egzam, exact -> egzact)
 # Simplified: only checks right context (left context requires NFA-based matching)
-x -> gz / _[[:VOWEL:]];
+x -> gz / _[:VOWEL:];
 
 [id: 40, name: "x default", weight: 0.0, group: x_rules]
 # x -> ks elsewhere (box -> boks, fix -> fiks)
@@ -146,7 +146,7 @@ x -> ks;
 
 [id: 20, name: "soft c", weight: 0.0, group: orthography]
 # c -> s before front vowels (city -> sity)
-c -> s / _FRONT_VOWEL;
+c -> s / _$FRONT_VOWEL;
 
 [id: 21, name: "hard c", weight: 0.0, group: orthography]
 # c -> k elsewhere (cat -> kat)
@@ -154,7 +154,7 @@ c -> k;
 
 [id: 22, name: "soft g", weight: 0.0, group: orthography]
 # g -> j before front vowels (gem -> jem)
-g -> j / _FRONT_VOWEL;
+g -> j / _$FRONT_VOWEL;
 
 # ============================================================
 # Phase 7: Additional Orthographic Rules

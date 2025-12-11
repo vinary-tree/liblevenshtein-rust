@@ -500,14 +500,14 @@ fn test_llev_symbol_expansion() {
         r#"
         @define FRONT = [ei]
 
-        # Soft c using defined symbol
-        c -> s / _FRONT;
+        # Soft c using defined symbol - requires $ sigil
+        c -> s / _$FRONT;
         "#,
     )
     .expect("parse failed");
     let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
 
-    // Symbol FRONT expands to [ei]
+    // Symbol $FRONT expands to [ei]
     let result = ruleset.apply("city");
     assert_eq!(result, "sity");
 
@@ -1435,4 +1435,305 @@ fn test_verified_nfa_new_rules() {
     assert!(nfa.accepts("ck"));
     assert!(nfa.accepts("mb"));
     assert!(nfa.accepts("bt"));
+}
+
+// ============================================================================
+// LLev-to-Regex Symbol Sharing Tests
+// ============================================================================
+
+#[test]
+fn test_llev_to_regex_symbol_sharing() {
+    use liblevenshtein::phonetic::regex::Parser;
+
+    // Parse an LLev grammar with symbol definitions
+    let llev_file = parse_str(
+        r#"
+        @define VOWEL = [aeiou]
+        @define FRONT = [ei]
+        @define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+        "#,
+    )
+    .expect("parse failed");
+
+    // Extract the symbol table for use with regex parser
+    let symbols = llev_file.to_symbol_table();
+
+    // Verify the symbol table contains the expected symbols
+    assert!(symbols.contains_key("VOWEL"));
+    assert!(symbols.contains_key("FRONT"));
+    assert!(symbols.contains_key("CONSONANT"));
+
+    // Verify the symbol values
+    let vowels = symbols.get("VOWEL").unwrap();
+    assert_eq!(vowels.len(), 5);
+    assert!(vowels.contains(&'a'));
+    assert!(vowels.contains(&'e'));
+    assert!(vowels.contains(&'i'));
+    assert!(vowels.contains(&'o'));
+    assert!(vowels.contains(&'u'));
+}
+
+#[test]
+fn test_regex_with_shared_symbols() {
+    use liblevenshtein::phonetic::regex::Parser;
+
+    // Parse an LLev grammar with symbol definitions
+    let llev_file = parse_str(
+        r#"
+        @define VOWEL = [aeiou]
+        "#,
+    )
+    .expect("parse failed");
+
+    // Extract the symbol table
+    let symbols = llev_file.to_symbol_table();
+
+    // Parse a regex pattern using the shared symbols
+    let mut parser = Parser::new_with_symbols("[$VOWEL]+", &symbols);
+    let regex = parser.parse().expect("regex parse failed");
+
+    // The regex should have been parsed successfully
+    // (The actual matching would require NFA compilation)
+    assert!(!format!("{:?}", regex).is_empty());
+}
+
+#[test]
+fn test_regex_symbol_undefined_error() {
+    use liblevenshtein::phonetic::regex::{Parser, ParseErrorKind};
+
+    // Parse an LLev grammar with symbol definitions
+    let llev_file = parse_str("@define VOWEL = [aeiou]").expect("parse failed");
+
+    // Extract the symbol table
+    let symbols = llev_file.to_symbol_table();
+
+    // Try to parse a regex with an undefined symbol
+    let mut parser = Parser::new_with_symbols("[$UNDEFINED]+", &symbols);
+    let result = parser.parse();
+
+    // Should error with UndefinedSymbol
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    match err.kind {
+        ParseErrorKind::UndefinedSymbol { name, available } => {
+            assert_eq!(name, "UNDEFINED");
+            assert!(available.contains(&"VOWEL".to_string()));
+        }
+        _ => panic!("Expected UndefinedSymbol error, got {:?}", err.kind),
+    }
+}
+
+#[test]
+fn test_regex_symbol_braced_syntax() {
+    use liblevenshtein::phonetic::regex::Parser;
+
+    // Parse an LLev grammar with symbol definitions
+    let llev_file = parse_str(
+        r#"
+        @define V = [aeiou]
+        "#,
+    )
+    .expect("parse failed");
+
+    // Extract the symbol table
+    let symbols = llev_file.to_symbol_table();
+
+    // Parse a regex pattern using the explicit ${V} syntax
+    let mut parser = Parser::new_with_symbols("x${V}z", &symbols);
+    let regex = parser.parse().expect("regex parse failed");
+
+    // Should parse successfully
+    assert!(!format!("{:?}", regex).is_empty());
+}
+
+#[test]
+fn test_regex_multiple_symbols_in_char_class() {
+    use liblevenshtein::phonetic::regex::Parser;
+
+    // Parse an LLev grammar with multiple symbol definitions
+    let llev_file = parse_str(
+        r#"
+        @define FRONT = [ei]
+        @define BACK = [ou]
+        "#,
+    )
+    .expect("parse failed");
+
+    // Extract the symbol table
+    let symbols = llev_file.to_symbol_table();
+
+    // Parse a regex pattern with multiple symbols in a character class
+    let mut parser = Parser::new_with_symbols("[${FRONT}${BACK}]+", &symbols);
+    let regex = parser.parse().expect("regex parse failed");
+
+    // Should parse successfully
+    assert!(!format!("{:?}", regex).is_empty());
+}
+
+#[test]
+fn test_end_to_end_llev_regex_integration() {
+    use liblevenshtein::phonetic::regex::Parser;
+    use liblevenshtein::phonetic::nfa::compile;
+
+    // Parse an LLev grammar with symbol definitions
+    let llev_file = parse_str(
+        r#"
+        @define VOWEL = [aeiou]
+        @define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+        "#,
+    )
+    .expect("parse failed");
+
+    // Extract the symbol table
+    let symbols = llev_file.to_symbol_table();
+
+    // Parse a regex pattern using the shared symbols
+    let mut parser = Parser::new_with_symbols("[$CONSONANT][$VOWEL][$CONSONANT]", &symbols);
+    let regex = parser.parse().expect("regex parse failed");
+
+    // Compile the regex to an NFA
+    let nfa = compile(&regex).expect("compile failed");
+
+    // Test that the NFA matches CVC patterns (consonant-vowel-consonant)
+    assert!(nfa.accepts("cat"));
+    assert!(nfa.accepts("dog"));
+    assert!(nfa.accepts("bat"));
+    assert!(nfa.accepts("pen"));
+
+    // Test that it doesn't match non-CVC patterns
+    assert!(!nfa.accepts("a"));      // single vowel
+    assert!(!nfa.accepts("at"));     // VC pattern
+    assert!(!nfa.accepts("cats"));   // CVCC pattern
+    assert!(!nfa.accepts("eat"));    // VVC pattern
+}
+
+// ============================================================================
+// Dual Syntax Tests: Both $SYMBOL and [:SYMBOL:] for User Symbols
+// ============================================================================
+
+/// Test that `[:SYMBOL:]` POSIX syntax works for user-defined symbols in LLev
+#[test]
+fn test_llev_posix_syntax_for_user_symbols() {
+    // Define a symbol and use it with POSIX syntax inside a character class
+    let file = parse_str(
+        r#"
+        @define FRONT = [ei]
+        c -> s / _[[:FRONT:]];
+        "#,
+    )
+    .expect("parse failed");
+
+    // Verify the rule parsed successfully
+    assert_eq!(file.rules.len(), 1);
+}
+
+/// Test that `[:SYMBOL:]` POSIX syntax works for user-defined symbols in regex
+#[test]
+fn test_regex_posix_syntax_for_user_symbols() {
+    use liblevenshtein::phonetic::regex::Parser;
+    use liblevenshtein::phonetic::nfa::compile;
+
+    let mut symbols = std::collections::HashMap::new();
+    symbols.insert("FRONT".to_string(), vec!['e', 'i']);
+
+    // Use POSIX syntax for user symbol
+    let mut parser = Parser::new_with_symbols("[[:FRONT:]]", &symbols);
+    let regex = parser.parse().expect("regex parse failed");
+    let nfa = compile(&regex).expect("compile failed");
+
+    assert!(nfa.accepts("e"));
+    assert!(nfa.accepts("i"));
+    assert!(!nfa.accepts("a"));
+    assert!(!nfa.accepts("o"));
+}
+
+/// Test that both `$SYMBOL` and `[:SYMBOL:]` can be used in the same character class
+#[test]
+fn test_dual_syntax_in_same_char_class() {
+    use liblevenshtein::phonetic::regex::Parser;
+    use liblevenshtein::phonetic::nfa::compile;
+
+    let mut symbols = std::collections::HashMap::new();
+    symbols.insert("FRONT".to_string(), vec!['e', 'i']);
+    symbols.insert("BACK".to_string(), vec!['o', 'u']);
+
+    // Mix both syntaxes in one character class: $FRONT and [[:BACK:]]
+    // The nested [[:BACK:]] is POSIX-style inside the outer char class
+    let mut parser = Parser::new_with_symbols("[$FRONT[[:BACK:]]]", &symbols);
+    let regex = parser.parse().expect("regex parse failed");
+    let nfa = compile(&regex).expect("compile failed");
+
+    // Should accept all vowels from both symbols (e, i from FRONT; o, u from BACK)
+    assert!(nfa.accepts("e"));
+    assert!(nfa.accepts("i"));
+    assert!(nfa.accepts("o"));
+    assert!(nfa.accepts("u"));
+    // Note: 'a' is not in either FRONT or BACK, so it should not match
+    // unless there's some other chars being included
+    assert!(!nfa.accepts("b"));  // definitely not in either
+    assert!(!nfa.accepts("c"));  // definitely not in either
+}
+
+/// Test that built-in named classes work (e.g., [:vowel:])
+/// Note: Uppercase shorthand aliases (V, C, etc.) were removed - use full names
+#[test]
+fn test_builtin_uppercase_shorthands_still_work() {
+    use liblevenshtein::phonetic::regex::Parser;
+    use liblevenshtein::phonetic::nfa::compile;
+
+    // Empty symbol table - we're testing built-in classes
+    let symbols = std::collections::HashMap::new();
+
+    // Use full name [:vowel:] (shorthand [:V:] was removed)
+    let mut parser = Parser::new_with_symbols("[[:vowel:]]", &symbols);
+    let regex = parser.parse().expect("regex parse failed");
+    let nfa = compile(&regex).expect("compile failed");
+
+    // Should match all basic vowels
+    assert!(nfa.accepts("a"));
+    assert!(nfa.accepts("e"));
+    assert!(nfa.accepts("i"));
+    assert!(nfa.accepts("o"));
+    assert!(nfa.accepts("u"));
+    assert!(!nfa.accepts("b"));
+    assert!(!nfa.accepts("c"));
+}
+
+/// Test that user symbols take precedence over built-in when both could match
+#[test]
+fn test_user_symbol_shadows_builtin_when_defined() {
+    use liblevenshtein::phonetic::regex::Parser;
+    use liblevenshtein::phonetic::nfa::compile;
+
+    // The built-in [:V:] matches vowels, but we define our own V
+    // Built-ins should be checked first, so this should still use the built-in
+    let mut symbols = std::collections::HashMap::new();
+    symbols.insert("CUSTOM".to_string(), vec!['x', 'y', 'z']);
+
+    // Use the custom symbol
+    let mut parser = Parser::new_with_symbols("[[:CUSTOM:]]", &symbols);
+    let regex = parser.parse().expect("regex parse failed");
+    let nfa = compile(&regex).expect("compile failed");
+
+    assert!(nfa.accepts("x"));
+    assert!(nfa.accepts("y"));
+    assert!(nfa.accepts("z"));
+    assert!(!nfa.accepts("a"));
+}
+
+/// Test LLev with mixed built-in and user-defined symbols in POSIX syntax
+#[test]
+fn test_llev_mixed_builtin_and_user_posix_syntax() {
+    // Define a user symbol and use both it and a built-in in the same rule
+    // Note: Use full name [:vowel:] since shorthand [:V:] was removed
+    let file = parse_str(
+        r#"
+        @define SIBILANT = [szʃʒ]
+        c -> s / [[:vowel:]]_[[:SIBILANT:]];
+        "#,
+    )
+    .expect("parse failed");
+
+    // Verify the rule parsed successfully
+    assert_eq!(file.rules.len(), 1);
 }

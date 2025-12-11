@@ -1125,7 +1125,7 @@ mod tests {
         let file = parse_str(
             r#"
             @define FRONT = [ei]
-            c -> s / _FRONT;
+            c -> s / _$FRONT;
             "#,
         )
         .expect("parse failed");
@@ -1143,8 +1143,8 @@ mod tests {
 
     #[test]
     fn test_undefined_symbol_error() {
-        let file = parse_str("c -> s / _UNDEFINED;").expect("parse failed");
-        let result = RuleSetChar::from_llev(&file);
+        // Undefined symbols are now caught at parse time
+        let result = parse_str("c -> s / _$UNDEFINED;");
 
         assert!(result.is_err());
         match result.unwrap_err().kind {
@@ -1158,16 +1158,14 @@ mod tests {
     #[test]
     fn test_undefined_symbol_with_suggestion() {
         // Define FRONT_VOWEL but use FRONTVOWEL (missing underscore - typo)
-        // Note: lowercase names are NOT treated as symbol references in the grammar,
-        // only UPPERCASE identifiers are symbol references
-        let file = parse_str(
+        // User-defined symbols require $ prefix
+        // Undefined symbols are now caught at parse time with suggestions
+        let result = parse_str(
             r#"
             @define FRONT_VOWEL = [ei]
-            c -> s / _FRONTVOWEL;
+            c -> s / _$FRONTVOWEL;
             "#,
-        )
-        .expect("parse failed");
-        let result = RuleSetChar::from_llev(&file);
+        );
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1181,14 +1179,13 @@ mod tests {
     #[test]
     fn test_undefined_symbol_typo_suggestion() {
         // Define CONSONANT but use CONSNANT (typo)
-        let file = parse_str(
+        // Undefined symbols are now caught at parse time with suggestions
+        let result = parse_str(
             r#"
             @define CONSONANT = [bcdfghjklmnpqrstvwxyz]
-            x -> y / _CONSNANT;
+            x -> y / _$CONSNANT;
             "#,
-        )
-        .expect("parse failed");
-        let result = RuleSetChar::from_llev(&file);
+        );
 
         assert!(result.is_err());
         let err = result.unwrap_err();

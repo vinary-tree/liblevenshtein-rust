@@ -19,6 +19,8 @@
 //! weight       ::= '[' float ']'
 //! ```
 
+use std::collections::HashMap;
+
 use super::ast::{
     ContextExpr, ContextExprByte, ContextPredicate, ContextPredicateByte, Regex, RegexByte,
     SyllableCondition, SyllableExpr,
@@ -30,9 +32,56 @@ use crate::phonetic::nfa::types::{CharClass, CharClassChar};
 /// Maximum complexity for parsed patterns (prevents DoS).
 const MAX_PATTERN_SIZE: usize = 10_000;
 
+/// Symbol table for user-defined character classes.
+/// Maps symbol names to their character sets.
+pub type SymbolTable = HashMap<String, Vec<char>>;
+
+/// Check if a name represents a user-defined symbol (all uppercase).
+///
+/// User-defined symbols use UPPERCASE names to distinguish them from
+/// built-in classes which use lowercase (e.g., `[:alpha:]`, `[:vowel:]`).
+///
+/// A name is considered a user symbol if:
+/// - It starts with an uppercase letter
+/// - All alphabetic characters are uppercase
+/// - Non-alphabetic characters (digits, underscores) are allowed after the first character
+///
+/// # Examples
+/// - `"VOWEL"` → true (user symbol)
+/// - `"FRONT_V"` → true (user symbol)
+/// - `"V2"` → true (user symbol with digit)
+/// - `"alpha"` → false (built-in)
+/// - `"Vowel"` → false (mixed case, treated as built-in)
+/// - `"_FOO"` → false (must start with a letter)
+/// - `"123"` → false (must start with a letter)
+fn is_user_symbol_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    // Must start with an uppercase letter
+    match chars.next() {
+        Some(first) if first.is_uppercase() => {
+            // Remaining characters: alphabetic must be uppercase, non-alphabetic are allowed
+            chars.all(|c| c.is_uppercase() || !c.is_alphabetic())
+        }
+        _ => false,
+    }
+}
+
+/// Compute complement of a character class using printable ASCII.
+///
+/// This is used for negated named classes like `[^[:vowel:]]`.
+/// Returns all printable ASCII characters (0x20-0x7E) that are NOT in the input set.
+fn negate_char_class(chars: &[char]) -> Vec<char> {
+    (0x20u8..=0x7Eu8)
+        .map(|b| b as char)
+        .filter(|c| !chars.contains(c))
+        .collect()
+}
+
 /// Parser for phonetic regular expressions.
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
+    /// Optional symbol table for user-defined symbols ($NAME references)
+    symbols: Option<&'a SymbolTable>,
 }
 
 impl<'a> Parser<'a> {
@@ -40,6 +89,31 @@ impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             lexer: Lexer::new(input),
+            symbols: None,
+        }
+    }
+
+    /// Create a new parser with a symbol table for user-defined symbols.
+    ///
+    /// This allows the regex to reference symbols defined in an LLev grammar
+    /// using the `$SYMBOL` syntax.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use std::collections::HashMap;
+    /// use liblevenshtein::phonetic::regex::parser::{Parser, SymbolTable};
+    ///
+    /// let mut symbols: SymbolTable = HashMap::new();
+    /// symbols.insert("VOWEL".to_string(), vec!['a', 'e', 'i', 'o', 'u']);
+    ///
+    /// let mut parser = Parser::new_with_symbols("[$VOWEL]+", &symbols);
+    /// let regex = parser.parse().unwrap();
+    /// ```
+    pub fn new_with_symbols(input: &'a str, symbols: &'a SymbolTable) -> Self {
+        Self {
+            lexer: Lexer::new(input),
+            symbols: Some(symbols),
         }
     }
 
@@ -245,7 +319,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse a primary expression: `(...)`, `[...]`, `.`, `#`, or literal
+    /// Parse a primary expression: `(...)`, `[...]`, `.`, `#`, `$SYMBOL`, or literal
     fn parse_primary(&mut self) -> ParseResult<Regex> {
         let token = self.lexer.next_token()?;
 
@@ -259,6 +333,7 @@ impl<'a> Parser<'a> {
             Token::Dot => Ok(Regex::any()),
             Token::Hash => Ok(Regex::word_boundary()),
             Token::Char(c) => Ok(Regex::char(c)),
+            Token::SymbolRef(name) => self.expand_symbol_ref(&name),
             Token::Eof => Err(ParseError::unexpected_eof(self.lexer.position())),
             _ => Err(ParseError::unexpected_char(
                 self.token_to_char(&token),
@@ -267,7 +342,47 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Expand a symbol reference to a character class.
+    fn expand_symbol_ref(&self, name: &str) -> ParseResult<Regex> {
+        let chars = self.get_symbol_chars(name)?;
+        Ok(Regex::CharClass(CharClassChar::from_chars(&chars)))
+    }
+
+    /// Get the characters for a symbol reference.
+    fn get_symbol_chars(&self, name: &str) -> ParseResult<Vec<char>> {
+        match &self.symbols {
+            Some(symbols) => {
+                if let Some(chars) = symbols.get(name) {
+                    Ok(chars.clone())
+                } else {
+                    // Symbol not found - provide helpful error with available symbols
+                    let available: Vec<String> = symbols.keys().cloned().collect();
+                    Err(ParseError::new(
+                        ParseErrorKind::UndefinedSymbol { name: name.to_string(), available },
+                        self.lexer.position(),
+                    ))
+                }
+            }
+            None => {
+                // No symbol table provided
+                Err(ParseError::with_context(
+                    ParseErrorKind::UndefinedSymbol {
+                        name: name.to_string(),
+                        available: vec![],
+                    },
+                    self.lexer.position(),
+                    "no symbol table provided to parser",
+                ))
+            }
+        }
+    }
+
     /// Parse a character class: `[abc]`, `[^abc]`, `[a-z]`, `[:NAME:]`, `[[:NAME:]abc]`
+    ///
+    /// Also supports:
+    /// - Inline named classes: `[x[:vowel:]]` - `:NAME:` anywhere in a char class
+    /// - Negated nested classes: `[^[:vowel:]]` - negates the named class
+    /// - Arbitrary nesting: `[$FRONT[[:BACK:][^[:SYMBOL:]]]]` - all unioned together
     fn parse_char_class(&mut self) -> ParseResult<Regex> {
         let mut chars = Vec::new();
         let mut negated = false;
@@ -290,16 +405,22 @@ impl<'a> Parser<'a> {
             match token {
                 Token::CharClassEnd => break,
                 Token::Char(c) => {
-                    // Check for POSIX-style nested named class: [[:NAME:]]
+                    // Check for nested character class: [[...]] or [^[...]]
                     if c == '[' {
-                        if self.lexer.peek()? == &Token::Char(':') {
-                            self.lexer.next_token()?; // consume ':'
-                            let named_chars = self.parse_posix_named_class()?;
+                        // Parse the nested class content
+                        let nested_chars = self.parse_nested_char_class_content()?;
+                        chars.extend(nested_chars);
+                        continue;
+                    }
+
+                    // Check for inline named class: :NAME:
+                    if c == ':' {
+                        if let Some(named_chars) = self.try_parse_inline_named_class()? {
                             chars.extend(named_chars);
                             continue;
                         } else {
-                            // Just a literal '[' inside the class
-                            chars.push('[');
+                            // Not a valid :NAME: pattern, treat ':' as literal
+                            chars.push(':');
                             continue;
                         }
                     }
@@ -332,6 +453,11 @@ impl<'a> Parser<'a> {
                     // Dash at start of class is literal
                     chars.push('-');
                 }
+                Token::SymbolRef(name) => {
+                    // Expand symbol reference into chars
+                    let symbol_chars = self.get_symbol_chars(&name)?;
+                    chars.extend(symbol_chars);
+                }
                 Token::Eof => {
                     return Err(ParseError::unclosed_char_class(self.lexer.position()));
                 }
@@ -358,6 +484,115 @@ impl<'a> Parser<'a> {
         };
 
         Ok(Regex::char_class(class))
+    }
+
+    /// Parse nested character class content after `[` has been consumed.
+    /// Handles `[[:NAME:]]`, `[^[:NAME:]]`, and arbitrary nesting.
+    /// Returns the characters to union with the parent class.
+    fn parse_nested_char_class_content(&mut self) -> ParseResult<Vec<char>> {
+        // Check for negation inside the nested class
+        let inner_negated = self.lexer.peek()? == &Token::Char('^');
+        if inner_negated {
+            self.lexer.next_token()?; // consume '^'
+        }
+
+        // Check if this is a named class: [[:NAME:]] or [^[:NAME:]]
+        if self.lexer.peek()? == &Token::Char(':') {
+            self.lexer.next_token()?; // consume ':'
+            let named_chars = self.parse_posix_named_class()?;
+            if inner_negated {
+                Ok(negate_char_class(&named_chars))
+            } else {
+                Ok(named_chars)
+            }
+        } else if self.lexer.peek()? == &Token::Char('[') {
+            // Another level of nesting: [[[...]]]
+            self.lexer.next_token()?; // consume '['
+            let nested_chars = self.parse_nested_char_class_content()?;
+
+            // Expect closing ']' for this level
+            let token = self.lexer.next_token()?;
+            if token != Token::CharClassEnd {
+                return Err(ParseError::with_context(
+                    ParseErrorKind::ExpectedChar(']'),
+                    self.lexer.position(),
+                    "closing nested character class",
+                ));
+            }
+            // Re-enter char class mode for the outer class
+            self.lexer.enter_char_class_mode();
+
+            if inner_negated {
+                Ok(negate_char_class(&nested_chars))
+            } else {
+                Ok(nested_chars)
+            }
+        } else {
+            // Just a literal '[' followed by something else - treat '[' as literal
+            // But we already consumed '[', so we need to handle this case
+            // Actually if we get here, it's not a valid nested class syntax
+            // For backwards compatibility, treat it as literal '['
+            // Put back what we consumed and return just '['
+            let mut result = vec!['['];
+            if inner_negated {
+                result.push('^');
+            }
+            Ok(result)
+        }
+    }
+
+    /// Try to parse inline :NAME: syntax. Called after ':' has been consumed.
+    /// Returns Some(chars) if successful, None if not a valid :NAME: pattern.
+    fn try_parse_inline_named_class(&mut self) -> ParseResult<Option<Vec<char>>> {
+        let mut name = String::new();
+
+        // Collect name characters until we hit ':' or something else
+        loop {
+            let token = self.lexer.peek()?;
+            match token {
+                Token::Char(':') => {
+                    self.lexer.next_token()?; // consume closing ':'
+                    break;
+                }
+                Token::Char(c) if c.is_alphanumeric() || *c == '_' => {
+                    let c = *c;
+                    self.lexer.next_token()?;
+                    name.push(c);
+                }
+                _ => {
+                    // Not a valid :NAME: pattern
+                    // We've already consumed some tokens, but we can't easily backtrack
+                    // Return the collected name characters as literals instead
+                    if name.is_empty() {
+                        return Ok(None);
+                    }
+                    // This is actually an error - we saw :NAME but no closing :
+                    return Err(ParseError::with_context(
+                        ParseErrorKind::InvalidCharClass("expected ':' to close named class".to_string()),
+                        self.lexer.position(),
+                        format!(":{}...", name),
+                    ));
+                }
+            }
+        }
+
+        if name.is_empty() {
+            // Just "::" - treat as two literal colons
+            return Ok(Some(vec![':']));
+        }
+
+        // Resolve the name: built-in first, then user symbol
+        if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
+            Ok(Some(builtin_chars))
+        } else if is_user_symbol_name(&name) {
+            let chars = self.get_symbol_chars(&name)?;
+            Ok(Some(chars))
+        } else {
+            Err(ParseError::new(
+                ParseErrorKind::UnknownNamedClass(name),
+                self.lexer.position(),
+            ))
+        }
     }
 
     /// Parse a standalone named class after `[:` has been consumed: `NAME:]`
@@ -405,20 +640,28 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        // Look up the named class
-        if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
-            let class = if negated {
-                CharClassChar::from_chars(&builtin_chars).negated()
-            } else {
-                CharClassChar::from_chars(&builtin_chars)
-            };
-            Ok(Regex::char_class(class))
+        // First check built-in classes (case-insensitive lookup)
+        // Then check user-defined symbols if not found and name is uppercase
+        let chars = if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
+            // Built-in class found
+            builtin_chars
+        } else if is_user_symbol_name(&name) {
+            // Not a built-in class, but has uppercase name - treat as user symbol
+            self.get_symbol_chars(&name)?
         } else {
-            Err(ParseError::new(
-                ParseErrorKind::UnknownNamedClass(name),
+            // Unknown built-in class (lowercase name that doesn't exist)
+            return Err(ParseError::new(
+                ParseErrorKind::UnknownNamedClass(name.clone()),
                 self.lexer.position(),
-            ))
-        }
+            ));
+        };
+
+        let class = if negated {
+            CharClassChar::from_chars(&chars).negated()
+        } else {
+            CharClassChar::from_chars(&chars)
+        };
+        Ok(Regex::char_class(class))
     }
 
     /// Parse a POSIX-style named class after `[[:` has been consumed: `NAME:]]`
@@ -473,12 +716,18 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        // Look up the named class
+        // First check built-in classes (case-insensitive lookup)
+        // Then check user-defined symbols if not found and name is uppercase
         if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
+            // Built-in class found
             Ok(builtin_chars)
+        } else if is_user_symbol_name(&name) {
+            // Not a built-in class, but has uppercase name - treat as user symbol
+            self.get_symbol_chars(&name)
         } else {
+            // Unknown built-in class (lowercase name that doesn't exist)
             Err(ParseError::new(
-                ParseErrorKind::UnknownNamedClass(name),
+                ParseErrorKind::UnknownNamedClass(name.clone()),
                 self.lexer.position(),
             ))
         }
@@ -739,6 +988,7 @@ impl<'a> Parser<'a> {
                 | Token::GroupStart
                 | Token::Dot
                 | Token::Hash
+                | Token::SymbolRef(_)
         )
     }
 
@@ -791,6 +1041,7 @@ impl<'a> Parser<'a> {
             Token::ClosedSyllable => 'c',
             Token::FinalSyllable => 'f',
             Token::InitialSyllable => 'i',
+            Token::SymbolRef(_) => '$',
             Token::Eof => '\0',
         }
     }
@@ -1577,9 +1828,10 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_standalone_named_class_shorthand() {
-        let r = parse("[:V:]").unwrap();
-        // V is shorthand for vowel
+    fn test_parse_standalone_named_class_full_name() {
+        // Use full name since shorthand aliases were removed
+        let r = parse("[:vowel:]").unwrap();
+        // Should contain vowels
         assert!(r.to_string().contains('a'));
         assert!(r.to_string().contains('e'));
     }
@@ -1685,5 +1937,131 @@ mod tests {
         assert!(s.contains('['));
         assert!(s.contains('a'));
         assert!(s.contains('b'));
+    }
+
+    // ========================================================================
+    // Symbol reference tests
+    // ========================================================================
+
+    #[test]
+    fn test_parse_symbol_ref_standalone() {
+        let mut symbols = SymbolTable::new();
+        symbols.insert("VOWEL".to_string(), vec!['a', 'e', 'i', 'o', 'u']);
+
+        let mut parser = Parser::new_with_symbols("$VOWEL", &symbols);
+        let r = parser.parse().unwrap();
+        let s = r.to_string();
+        assert!(s.contains('a'));
+        assert!(s.contains('e'));
+        assert!(s.contains('i'));
+        assert!(s.contains('o'));
+        assert!(s.contains('u'));
+    }
+
+    #[test]
+    fn test_parse_symbol_ref_in_pattern() {
+        let mut symbols = SymbolTable::new();
+        symbols.insert("VOWEL".to_string(), vec!['a', 'e', 'i', 'o', 'u']);
+
+        let mut parser = Parser::new_with_symbols("$VOWEL+", &symbols);
+        let r = parser.parse().unwrap();
+        // Pattern should match one or more vowels
+        assert!(r.to_string().contains('+'));
+    }
+
+    #[test]
+    fn test_parse_symbol_ref_in_char_class() {
+        let mut symbols = SymbolTable::new();
+        symbols.insert("FRONT".to_string(), vec!['e', 'i']);
+        symbols.insert("BACK".to_string(), vec!['o', 'u']);
+
+        let mut parser = Parser::new_with_symbols("[$FRONT$BACK]", &symbols);
+        let r = parser.parse().unwrap();
+        let s = r.to_string();
+        assert!(s.contains('e'));
+        assert!(s.contains('i'));
+        assert!(s.contains('o'));
+        assert!(s.contains('u'));
+    }
+
+    #[test]
+    fn test_parse_symbol_ref_braced() {
+        let mut symbols = SymbolTable::new();
+        symbols.insert("FRONT_VOWEL".to_string(), vec!['e', 'i']);
+
+        let mut parser = Parser::new_with_symbols("${FRONT_VOWEL}y", &symbols);
+        let r = parser.parse().unwrap();
+        // Should parse as character class followed by 'y'
+        assert!(r.to_string().contains('y'));
+    }
+
+    #[test]
+    fn test_parse_symbol_ref_undefined_error() {
+        let symbols = SymbolTable::new();
+
+        let mut parser = Parser::new_with_symbols("$UNDEFINED", &symbols);
+        let result = parser.parse();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err.kind, ParseErrorKind::UndefinedSymbol { .. }));
+    }
+
+    #[test]
+    fn test_parse_symbol_ref_undefined_with_suggestions() {
+        let mut symbols = SymbolTable::new();
+        symbols.insert("VOWEL".to_string(), vec!['a', 'e', 'i', 'o', 'u']);
+        symbols.insert("CONSONANT".to_string(), vec!['b', 'c', 'd']);
+
+        let mut parser = Parser::new_with_symbols("$UNDEFINED", &symbols);
+        let result = parser.parse();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        if let ParseErrorKind::UndefinedSymbol { name, available } = &err.kind {
+            assert_eq!(name, "UNDEFINED");
+            // Available should contain our defined symbols
+            assert!(available.contains(&"VOWEL".to_string()) || available.contains(&"CONSONANT".to_string()));
+        } else {
+            panic!("Expected UndefinedSymbol error");
+        }
+    }
+
+    #[test]
+    fn test_parse_symbol_ref_no_symbols_error() {
+        // Using regular parser without symbols
+        let result = parse("$VOWEL");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err.kind, ParseErrorKind::UndefinedSymbol { .. }));
+    }
+
+    #[test]
+    fn test_parse_symbol_ref_mixed_with_literals() {
+        let mut symbols = SymbolTable::new();
+        symbols.insert("V".to_string(), vec!['a', 'e', 'i', 'o', 'u']);
+
+        // Use braced form ${V} to separate symbol from following 'z'
+        let mut parser = Parser::new_with_symbols("[x${V}z]", &symbols);
+        let r = parser.parse().unwrap();
+        let s = r.to_string();
+        assert!(s.contains('x'));
+        assert!(s.contains('a'));
+        assert!(s.contains('z'));
+    }
+
+    #[test]
+    fn test_parse_symbol_ref_simple_form_consumes_alphanum() {
+        // Verify that $Vz parses as symbol "Vz", not "V" + "z"
+        let mut symbols = SymbolTable::new();
+        symbols.insert("V".to_string(), vec!['a', 'e', 'i', 'o', 'u']);
+
+        let mut parser = Parser::new_with_symbols("[$Vz]", &symbols);
+        let result = parser.parse();
+        // Should fail because "Vz" is not defined, only "V"
+        assert!(result.is_err());
+        if let ParseErrorKind::UndefinedSymbol { name, .. } = &result.unwrap_err().kind {
+            assert_eq!(name, "Vz");
+        } else {
+            panic!("Expected UndefinedSymbol error");
+        }
     }
 }
