@@ -265,9 +265,26 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse a repetition quantifier: `{n}`, `{n,}`, `{n,m}`
+    /// Parse a repetition quantifier: `{n}`, `{n,}`, `{,m}`, `{n,m}`
     fn parse_repetition(&mut self, inner: Regex) -> ParseResult<Regex> {
-        // Expect a number
+        // Check for {,m} syntax (at most m, min defaults to 0)
+        let peek = self.lexer.peek()?;
+        if peek == &Token::Comma {
+            self.lexer.next_token()?; // consume ','
+            let max = match self.lexer.next_token()? {
+                Token::Number(n) => n,
+                _ => {
+                    return Err(ParseError::new(
+                        ParseErrorKind::InvalidQuantifier("expected number after ','".to_string()),
+                        self.lexer.position(),
+                    ))
+                }
+            };
+            self.expect_token(Token::QuantifierEnd)?;
+            return Ok(Regex::repeat_range(inner, 0, Some(max)));
+        }
+
+        // Expect a number for {n}, {n,}, {n,m}
         let min = match self.lexer.next_token()? {
             Token::Number(n) => n,
             token => {
@@ -1180,8 +1197,26 @@ impl<'a> ParserByte<'a> {
         }
     }
 
-    /// Parse a repetition quantifier.
+    /// Parse a repetition quantifier: `{n}`, `{n,}`, `{,m}`, `{n,m}`
     fn parse_repetition(&mut self, inner: RegexByte) -> ParseResult<RegexByte> {
+        // Check for {,m} syntax (at most m, min defaults to 0)
+        let peek = self.lexer.peek()?;
+        if peek == &TokenByte::Comma {
+            self.lexer.next_token()?; // consume ','
+            let max = match self.lexer.next_token()? {
+                TokenByte::Number(n) => n,
+                _ => {
+                    return Err(ParseError::new(
+                        ParseErrorKind::InvalidQuantifier("expected number after ','".to_string()),
+                        self.lexer.position(),
+                    ))
+                }
+            };
+            self.expect_token(TokenByte::QuantifierEnd)?;
+            return Ok(RegexByte::repeat_range(inner, 0, Some(max)));
+        }
+
+        // Expect a number for {n}, {n,}, {n,m}
         let min = match self.lexer.next_token()? {
             TokenByte::Number(n) => n,
             token => {
@@ -1695,6 +1730,20 @@ mod tests {
     fn test_parse_repetition_unbounded() {
         let r = parse("a{2,}").unwrap();
         assert_eq!(r.to_string(), "a{2,}");
+    }
+
+    #[test]
+    fn test_parse_repetition_at_most() {
+        // {,m} is equivalent to {0,m}
+        let r = parse("a{,3}").unwrap();
+        assert_eq!(r.to_string(), "a{0,3}");
+    }
+
+    #[test]
+    fn test_parse_repetition_at_most_zero() {
+        // {,0} means zero occurrences (effectively empty)
+        let r = parse("a{,0}").unwrap();
+        assert_eq!(r.to_string(), "a{0,0}");
     }
 
     #[test]

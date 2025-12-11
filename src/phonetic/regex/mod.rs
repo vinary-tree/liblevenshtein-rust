@@ -21,6 +21,7 @@
 //! | `?` | Zero or one | `a?` |
 //! | `{n}` | Exactly n | `a{3}` |
 //! | `{n,}` | At least n | `a{2,}` |
+//! | `{,m}` | At most m | `a{,3}` |
 //! | `{n,m}` | Between n and m | `a{2,4}` |
 //!
 //! ## Phonetic Extensions

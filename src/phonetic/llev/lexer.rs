@@ -2,7 +2,7 @@
 //!
 //! This lexer extends the regex lexer with additional tokens for:
 //! - Directives (`@name`, `@include`, `@define`, etc.)
-//! - Comments (line `#`, `//` and block `/* */`)
+//! - Comments (line `//` and block `/* */`)
 //! - Metadata blocks (`[id: 1, name: "..."]`)
 //! - String literals (`"..."`)
 //! - Identifiers (for symbol references)
@@ -462,12 +462,8 @@ impl<'a> Lexer<'a> {
                 }
             }
 
-            // Check for comments
+            // Check for comments (// line comments and /* */ block comments)
             match self.peek_char() {
-                Some('#') => {
-                    // Line comment starting with #
-                    self.skip_line_comment();
-                }
                 Some('/') => {
                     match self.peek_char2() {
                         Some('/') => {
@@ -489,7 +485,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Skip a line comment (# or //).
+    /// Skip a line comment (//).
     fn skip_line_comment(&mut self) {
         while let Some(c) = self.advance() {
             if c == '\n' {
@@ -1365,13 +1361,12 @@ mod tests {
     }
 
     #[test]
-    fn test_lexer_line_comment_hash() {
-        // Comments are only recognized at top-level, not in patterns
-        // (where # is a word boundary marker)
-        // Note: The newline is consumed as part of the comment
-        let mut lexer = Lexer::new_file("a # comment\nb");
+    fn test_lexer_hash_is_not_comment() {
+        // # is NOT a comment character - it's a word boundary marker (Hash token)
+        // Use // for line comments instead
+        let mut lexer = Lexer::new_file("a # b");
         assert_eq!(lexer.next_token().unwrap(), Token::Identifier("a".to_string()));
-        // Newline is consumed by skip_line_comment()
+        assert_eq!(lexer.next_token().unwrap(), Token::Hash);
         assert_eq!(lexer.next_token().unwrap(), Token::Identifier("b".to_string()));
     }
 

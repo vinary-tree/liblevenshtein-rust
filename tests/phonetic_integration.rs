@@ -435,7 +435,7 @@ fn test_llev_parse_and_apply_simple_rule() {
 fn test_llev_parse_and_apply_multiple_rules() {
     let file = parse_str(
         r#"
-        # Phonetic simplification rules
+        // Phonetic simplification rules
         ph -> f;
         gh -> ;
         "#,
@@ -455,7 +455,7 @@ fn test_llev_parse_and_apply_multiple_rules() {
 fn test_llev_context_before_vowel() {
     let file = parse_str(
         r#"
-        # Soft c before front vowels
+        // Soft c before front vowels
         c -> s / _[ei];
         "#,
     )
@@ -478,7 +478,7 @@ fn test_llev_context_before_vowel() {
 fn test_llev_context_word_boundary() {
     let file = parse_str(
         r#"
-        # Delete silent final e
+        // Delete silent final e
         e -> / _#;
         "#,
     )
@@ -500,7 +500,7 @@ fn test_llev_symbol_expansion() {
         r#"
         @define FRONT = [ei]
 
-        # Soft c using defined symbol - requires $ sigil
+        // Soft c using defined symbol - requires $ sigil
         c -> s / _$FRONT;
         "#,
     )
@@ -574,18 +574,18 @@ fn test_llev_end_to_end_zompist_style_rules() {
         @name "Zompist English Orthography"
         @version "1.0"
 
-        # Digraphs
+        // Digraphs
         [id: 1, name: "ph to f"]
         ph -> f;
 
         [id: 2, name: "gh deletion"]
         gh -> ;
 
-        # Contextual rules
+        // Contextual rules
         [id: 3, name: "soft c"]
         c -> s / _[ei];
 
-        # Word boundary
+        // Word boundary
         [id: 4, name: "silent final e"]
         e -> / _#;
         "#,
@@ -727,7 +727,7 @@ fn test_llev_x_to_gz_between_vowels() {
     // in rules.rs which use Context::And directly.
     let file = parse_str(
         r#"
-        # x → ks (simplified, compound context not yet supported in LLev conversion)
+        // x → ks (simplified, compound context not yet supported in LLev conversion)
         x -> ks;
         "#,
     )
@@ -1162,13 +1162,13 @@ fn test_llev_rule_ordering_gh_rules() {
     // GH rules must be ordered: specific patterns before generic deletion
     let file = parse_str(
         r#"
-        # Specific patterns first
+        // Specific patterns first
         ough -> o;
         aught -> ot;
         ought -> ot;
-        # gh before vowel
+        // gh before vowel
         gh -> g / _[aeiou];
-        # Generic gh deletion last
+        // Generic gh deletion last
         gh -> ;
         "#,
     )
@@ -1193,10 +1193,10 @@ fn test_llev_rule_ordering_multi_character() {
     // Multi-character patterns must come before simpler rules
     let file = parse_str(
         r#"
-        # Multi-char patterns first
+        // Multi-char patterns first
         tch -> ch;
         dge -> j;
-        # Simple patterns after
+        // Simple patterns after
         ch -> ts;
         "#,
     )
@@ -1227,44 +1227,44 @@ fn test_llev_comprehensive_zompist_rules() {
         r#"
         @name "Complete Zompist Rules Test"
 
-        # Phase 1: Affrication
+        // Phase 1: Affrication
         tion -> shun;
         sion -> zhun;
 
-        # Phase 2: GH patterns
+        // Phase 2: GH patterns
         ough -> o;
 
-        # Phase 3: Digraphs
+        // Phase 3: Digraphs
         ch -> ts;
         sh -> s;
         ph -> f;
         th -> t;
 
-        # Phase 4: Initial clusters
+        // Phase 4: Initial clusters
         kn -> n / #_;
         wr -> r / #_;
 
-        # Phase 5: X rules (simplified - compound context not supported in LLev conversion)
+        // Phase 5: X rules (simplified - compound context not supported in LLev conversion)
         x -> ks;
 
-        # Phase 6: Additional ortho (ck before c -> k to avoid "back" -> "bakk")
+        // Phase 6: Additional ortho (ck before c -> k to avoid "back" -> "bakk")
         ck -> k;
 
-        # Phase 7: Contextual (single char rules after multi-char patterns)
+        // Phase 7: Contextual (single char rules after multi-char patterns)
         c -> s / _[ei];
         c -> k;
 
-        # Phase 8: Vowel digraphs
+        // Phase 8: Vowel digraphs
         ea -> e;
         ee -> e;
         oo -> u;
 
-        # Phase 9: Double consonants
+        // Phase 9: Double consonants
         ll -> l;
         ss -> s;
         tt -> t;
 
-        # Phase 10: Fallback
+        // Phase 10: Fallback
         e -> / _#;
         gh -> ;
         "#,
@@ -1312,7 +1312,7 @@ fn test_llev_context_after_and_before() {
     // For LLev file format, use simpler single-side contexts:
     let file = parse_str(
         r#"
-        # Simple context: after vowel
+        // Simple context: after vowel
         x -> gz / [aeiou]_;
         "#,
     )
