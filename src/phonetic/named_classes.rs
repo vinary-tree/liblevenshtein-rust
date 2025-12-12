@@ -22,7 +22,7 @@
 //! [:nasal:] -> m / _[:stop:];   # nasal assimilation
 //! ```
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
 // ============================================================================
@@ -175,6 +175,18 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             .map(Char)
             .collect(),
         description: "Alphanumeric characters (a-z, A-Z, 0-9)",
+    });
+
+    add_class(NamedClass {
+        name: "word",
+        aliases: &[],
+        patterns: ('a'..='z')
+            .chain('A'..='Z')
+            .chain('0'..='9')
+            .map(Char)
+            .chain(std::iter::once(Char('_')))
+            .collect(),
+        description: "Word characters (a-z, A-Z, 0-9, _)",
     });
 
     add_class(NamedClass {
@@ -598,6 +610,79 @@ pub fn get_digraphs_only(name: &str) -> Option<Vec<(char, char)>> {
 }
 
 // ============================================================================
+// Feature Bundle Helpers (for intersection semantics)
+// ============================================================================
+
+/// Get all phonetic characters (union of all vowels and consonants).
+///
+/// This is used as the universe for computing negation of character sets.
+/// Returns both ASCII and IPA characters.
+pub fn get_all_phonetic_chars() -> Vec<char> {
+    let mut chars: HashSet<char> = HashSet::new();
+    if let Some(v) = get_chars_only("vowel") {
+        chars.extend(v);
+    }
+    if let Some(c) = get_chars_only("consonant") {
+        chars.extend(c);
+    }
+    chars.into_iter().collect()
+}
+
+/// Compute the intersection of multiple character sets.
+///
+/// Returns characters that appear in ALL of the provided sets.
+/// An empty input returns an empty result.
+///
+/// # Example
+///
+/// ```
+/// use liblevenshtein::phonetic::named_classes::{get_chars_only, intersect_char_sets};
+///
+/// let voiced = get_chars_only("voiced").unwrap();
+/// let stop = get_chars_only("stop").unwrap();
+/// let result = intersect_char_sets(&[voiced, stop]);
+/// // result contains only voiced stops: b, d, g
+/// assert!(result.contains(&'b'));
+/// assert!(result.contains(&'d'));
+/// assert!(result.contains(&'g'));
+/// assert!(!result.contains(&'p')); // voiceless
+/// ```
+pub fn intersect_char_sets(sets: &[Vec<char>]) -> Vec<char> {
+    if sets.is_empty() {
+        return Vec::new();
+    }
+    let mut result: HashSet<char> = sets[0].iter().copied().collect();
+    for set in &sets[1..] {
+        let other: HashSet<char> = set.iter().copied().collect();
+        result = result.intersection(&other).copied().collect();
+    }
+    result.into_iter().collect()
+}
+
+/// Negate a character set (relative to all phonetic characters).
+///
+/// Returns all phonetic characters that are NOT in the provided set.
+///
+/// # Example
+///
+/// ```
+/// use liblevenshtein::phonetic::named_classes::{get_chars_only, negate_char_set};
+///
+/// let nasal = get_chars_only("nasal").unwrap();
+/// let not_nasal = negate_char_set(&nasal);
+/// // not_nasal contains everything except m, n, ŋ
+/// assert!(!not_nasal.contains(&'m'));
+/// assert!(!not_nasal.contains(&'n'));
+/// assert!(not_nasal.contains(&'p'));
+/// assert!(not_nasal.contains(&'a'));
+/// ```
+pub fn negate_char_set(chars: &[char]) -> Vec<char> {
+    let all = get_all_phonetic_chars();
+    let excluded: HashSet<char> = chars.iter().copied().collect();
+    all.into_iter().filter(|c| !excluded.contains(c)).collect()
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -766,5 +851,140 @@ mod tests {
         assert!(names.contains(&"consonant"));
         assert!(names.contains(&"alpha"));
         assert!(names.contains(&"fricative"));
+    }
+
+    // =========================================================================
+    // Feature Bundle Helper Tests
+    // =========================================================================
+
+    #[test]
+    fn test_get_all_phonetic_chars() {
+        let all = get_all_phonetic_chars();
+
+        // Should contain vowels
+        assert!(all.contains(&'a'));
+        assert!(all.contains(&'e'));
+        assert!(all.contains(&'ə')); // IPA schwa
+
+        // Should contain consonants
+        assert!(all.contains(&'b'));
+        assert!(all.contains(&'p'));
+        assert!(all.contains(&'ŋ')); // IPA eng
+
+        // Should NOT contain digits or punctuation
+        assert!(!all.contains(&'0'));
+        assert!(!all.contains(&'.'));
+    }
+
+    #[test]
+    fn test_intersect_char_sets_voiced_stop() {
+        let voiced = get_chars_only("voiced").expect("voiced class");
+        let stop = get_chars_only("stop").expect("stop class");
+        let result = intersect_char_sets(&[voiced, stop]);
+
+        // Voiced stops: b, d, g
+        assert!(result.contains(&'b'));
+        assert!(result.contains(&'d'));
+        assert!(result.contains(&'g'));
+
+        // Voiceless stops should NOT be in result
+        assert!(!result.contains(&'p'));
+        assert!(!result.contains(&'t'));
+        assert!(!result.contains(&'k'));
+
+        // Non-stops should NOT be in result
+        assert!(!result.contains(&'v')); // voiced fricative
+        assert!(!result.contains(&'z')); // voiced fricative
+    }
+
+    #[test]
+    fn test_intersect_char_sets_empty() {
+        let result = intersect_char_sets(&[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_intersect_char_sets_single() {
+        let stop = get_chars_only("stop").expect("stop class");
+        let result = intersect_char_sets(&[stop.clone()]);
+
+        // Single set intersection should return the same set
+        assert_eq!(result.len(), stop.len());
+        for c in &stop {
+            assert!(result.contains(c));
+        }
+    }
+
+    #[test]
+    fn test_intersect_char_sets_three_features() {
+        // high + front + vowel should give high front vowels (i, ɪ, y, ʏ, etc.)
+        let high = get_chars_only("high_vowel").expect("high_vowel class");
+        let front = get_chars_only("front_vowel").expect("front_vowel class");
+        let vowel = get_chars_only("vowel").expect("vowel class");
+        let result = intersect_char_sets(&[high, front, vowel]);
+
+        // i should be in high front vowels
+        assert!(result.contains(&'i'));
+        assert!(result.contains(&'I'));
+
+        // a should NOT be in result (low, not high)
+        assert!(!result.contains(&'a'));
+
+        // u should NOT be in result (back, not front)
+        assert!(!result.contains(&'u'));
+    }
+
+    #[test]
+    fn test_negate_char_set_nasal() {
+        let nasal = get_chars_only("nasal").expect("nasal class");
+        let not_nasal = negate_char_set(&nasal);
+
+        // Nasals should NOT be in result
+        assert!(!not_nasal.contains(&'m'));
+        assert!(!not_nasal.contains(&'n'));
+        assert!(!not_nasal.contains(&'ŋ'));
+
+        // Other consonants should be in result
+        assert!(not_nasal.contains(&'p'));
+        assert!(not_nasal.contains(&'b'));
+        assert!(not_nasal.contains(&'t'));
+
+        // Vowels should be in result
+        assert!(not_nasal.contains(&'a'));
+        assert!(not_nasal.contains(&'e'));
+    }
+
+    #[test]
+    fn test_negate_char_set_empty() {
+        let not_empty = negate_char_set(&[]);
+        let all = get_all_phonetic_chars();
+
+        // Negating empty set should give all chars
+        assert_eq!(not_empty.len(), all.len());
+    }
+
+    #[test]
+    fn test_intersect_with_negation() {
+        // Test the pattern: [:!nasal stop:] = oral stops (p, t, k, b, d, g)
+        let nasal = get_chars_only("nasal").expect("nasal class");
+        let not_nasal = negate_char_set(&nasal);
+        let stop = get_chars_only("stop").expect("stop class");
+        let result = intersect_char_sets(&[not_nasal, stop]);
+
+        // All non-nasal stops
+        assert!(result.contains(&'p'));
+        assert!(result.contains(&'t'));
+        assert!(result.contains(&'k'));
+        assert!(result.contains(&'b'));
+        assert!(result.contains(&'d'));
+        assert!(result.contains(&'g'));
+
+        // Nasal consonants should NOT be in result (m, n are not stops anyway)
+        assert!(!result.contains(&'m'));
+        assert!(!result.contains(&'n'));
+
+        // Other consonants should NOT be in result
+        assert!(!result.contains(&'f'));
+        assert!(!result.contains(&'s'));
     }
 }

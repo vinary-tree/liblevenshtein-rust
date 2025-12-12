@@ -739,8 +739,63 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 Ok(Token::PhoneticShortcut { class_name: "liquid".to_string(), negated: true })
             }
-            // Standard regex shortcuts and other escapes - pass through to parse_escape
-            // \d, \D, \w, \W, \s, \S, \b, \B, \n, \r, \t, etc.
+            // o/O - voiced
+            Some('o') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "voiced".to_string(), negated: false })
+            }
+            Some('O') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "voiced".to_string(), negated: true })
+            }
+            // e/E - fricative
+            Some('e') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "fricative".to_string(), negated: false })
+            }
+            Some('E') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "fricative".to_string(), negated: true })
+            }
+            // a/A - affricate
+            Some('a') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: false })
+            }
+            Some('A') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: true })
+            }
+            // Standard regex class shortcuts
+            // d/D - digit
+            Some('d') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "digit".to_string(), negated: false })
+            }
+            Some('D') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "digit".to_string(), negated: true })
+            }
+            // w/W - word character
+            Some('w') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "word".to_string(), negated: false })
+            }
+            Some('W') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "word".to_string(), negated: true })
+            }
+            // s/S - whitespace (can't use for stop - uses p/P instead)
+            Some('s') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "space".to_string(), negated: false })
+            }
+            Some('S') => {
+                self.advance();
+                Ok(Token::PhoneticShortcut { class_name: "space".to_string(), negated: true })
+            }
+            // Other escapes - pass through to parse_escape
+            // \b, \B, \n, \r, \t, etc.
             _ => {
                 let escaped = self.parse_escape()?;
                 Ok(Token::Char(escaped))
@@ -1545,12 +1600,13 @@ mod tests {
     #[test]
     fn test_lexer_escaped_uppercase() {
         // Test that escaped uppercase letters (not phonetic shortcuts) produce literal character tokens
-        // Note: V, C, F, K, H, L, M, P, G, Z, Q are phonetic shortcuts, so we use A, B, D, E, etc.
-        let mut lexer = Lexer::new("\\A\\B\\D\\E\\X");
-        assert_eq!(lexer.next_token().unwrap(), Token::Char('A'));
+        // Note: Phonetic shortcuts are: A, C, D, E, F, G, H, K, L, M, O, P, Q, S, V, W, Z
+        // So we use non-shortcut letters: B, I, J, N, R, T, X, Y
+        let mut lexer = Lexer::new("\\B\\I\\J\\N\\X");
         assert_eq!(lexer.next_token().unwrap(), Token::Char('B'));
-        assert_eq!(lexer.next_token().unwrap(), Token::Char('D'));
-        assert_eq!(lexer.next_token().unwrap(), Token::Char('E'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('I'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('J'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('N'));
         assert_eq!(lexer.next_token().unwrap(), Token::Char('X'));
     }
 
@@ -1651,11 +1707,11 @@ mod tests {
 
     #[test]
     fn test_lexer_uppercase_pattern_rule() {
-        // Test a complete pattern with escaped uppercase
-        let mut lexer = Lexer::new("\\A -> a");
-        assert_eq!(lexer.next_token().unwrap(), Token::Char('A'));
+        // Test a complete pattern with escaped uppercase (using non-shortcut letter)
+        let mut lexer = Lexer::new("\\B -> b");
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('B'));
         assert_eq!(lexer.next_token().unwrap(), Token::Arrow);
-        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
     }
 
     // ========================================================================

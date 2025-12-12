@@ -1,0 +1,464 @@
+(* ============================================================================
+   Phonetic Regex Grammar - Extended Backus-Naur Form (EBNF)
+
+   This grammar extends standard regular expressions with phonetic features
+   for use in phonetic rewrite rules and pattern matching.
+
+   This grammar is implemented in:
+     - src/phonetic/regex/lexer.rs  (tokenization)
+     - src/phonetic/regex/parser.rs (parsing)
+   ============================================================================ *)
+
+
+(* ============================================================================
+   TOP-LEVEL PRODUCTIONS
+   ============================================================================ *)
+
+regex
+    = alternation ;
+
+rewrite_rule
+    = pattern , "->" , replacement , [ context ] , [ weight ] ;
+
+pattern
+    = alternation ;
+
+replacement
+    = alternation
+    | (* empty - deletion *) ;
+
+
+(* ============================================================================
+   REGULAR EXPRESSION GRAMMAR
+
+   Operator Precedence (lowest to highest):
+     1. Alternation    (|)    - lowest
+     2. Concatenation  (implicit, sequential)
+     3. Quantifiers    (*, +, ?, {n}, etc.)  - highest (binds tightest)
+
+   Associativity:
+     - Alternation: right-associative (a|b|c = a|(b|c))
+     - Concatenation: left-associative (abc = (ab)c)
+   ============================================================================ *)
+
+alternation
+    = concatenation , { "|" , concatenation } ;
+
+concatenation
+    = { quantified } ;
+
+quantified
+    = primary , [ quantifier ] ;
+
+quantifier
+    = "*"                                   (* zero or more: Kleene star *)
+    | "+"                                   (* one or more: Kleene plus *)
+    | "?"                                   (* zero or one: optional *)
+    | "{" , NUMBER , "}"                    (* exact repetition: {n} *)
+    | "{" , NUMBER , "," , "}"              (* at least n: {n,} *)
+    | "{" , "," , NUMBER , "}"              (* at most m: {,m} = {0,m} *)
+    | "{" , NUMBER , "," , NUMBER , "}" ;   (* range: {n,m} *)
+
+primary
+    = group
+    | char_class
+    | standalone_named_class
+    | symbol_ref
+    | literal_char
+    | "."                                   (* any character *)
+    | "#" ;                                 (* word boundary *)
+
+group
+    = "(" , alternation , ")" ;
+
+
+(* ============================================================================
+   CHARACTER CLASSES
+
+   Syntax: [^?<contents>]
+
+   A character class matches any single character from the specified set.
+   The caret (^) at the start negates the class.
+   ============================================================================ *)
+
+char_class
+    = "[" , [ "^" ] , char_class_contents , "]" ;
+
+char_class_contents
+    = { char_class_element } ;
+
+char_class_element
+    = nested_char_class
+    | posix_named_class
+    | symbol_ref
+    | char_range
+    | literal_char_in_class
+    | "-" ;                                 (* literal dash at start/end *)
+
+char_range
+    = char_in_class , "-" , char_in_class ;
+
+char_in_class
+    = ANY_PRINTABLE - ( "]" | "\\" )
+    | escape_sequence ;
+
+literal_char_in_class
+    = ANY_PRINTABLE - ( "]" | "\\" | "-" )
+    | escape_sequence ;
+
+
+(* ============================================================================
+   NESTED CHARACTER CLASSES
+
+   Character classes can be nested for union operations.
+   Example: [a[[:vowel:]]z] = union of 'a', vowels, and 'z'
+   ============================================================================ *)
+
+nested_char_class
+    = "[" , [ "^" ] , char_class_contents , "]" ;
+
+
+(* ============================================================================
+   NAMED CHARACTER CLASSES
+
+   POSIX-style named classes provide predefined character sets.
+   Two syntaxes are supported:
+
+   Standalone:  [:name:]     - Used as a complete pattern
+   Inline:      [[:name:]]   - Used inside a character class
+   ============================================================================ *)
+
+standalone_named_class
+    = "[" , [ "^" ] , ":" , named_class_name , ":" , "]"
+    | feature_bundle ;
+
+posix_named_class
+    = "[" , ":" , named_class_name , ":" , "]"
+    | feature_bundle ;
+
+named_class_name
+    = IDENTIFIER ;
+
+
+(* ============================================================================
+   FEATURE BUNDLES
+
+   Feature bundles allow intersection of phonetic features using space-separated
+   syntax within POSIX-style brackets.
+
+   Semantics:
+     - Space = intersection (AND)
+     - ! prefix = negation (NOT)
+     - Union uses nested brackets: [[:a:][:b:]]
+
+   Examples:
+     [:voiced stop:]      voiced AND stop → b, d, g
+     [:!nasal stop:]      (NOT nasal) AND stop → p, t, k, b, d, g
+     [:high front vowel:] high AND front AND vowel → i, ɪ, y, ʏ
+     [:!nasal:]           NOT nasal (anything except nasals)
+   ============================================================================ *)
+
+feature_bundle
+    = "[:" , feature_term , { feature_term } , ":]" ;
+
+feature_term
+    = [ "!" ] , feature_name ;
+
+feature_name
+    = IDENTIFIER ;  (* voiced, stop, nasal, high, front, back, etc. *)
+
+
+(* ============================================================================
+   SYMBOL REFERENCES
+
+   References to user-defined character sets.
+   User symbols should be UPPERCASE to avoid conflicts with built-in classes.
+   ============================================================================ *)
+
+symbol_ref
+    = "$" , IDENTIFIER                      (* simple form: $VOWEL *)
+    | "$" , "{" , IDENTIFIER , "}" ;        (* braced form: ${FRONT_VOWEL} *)
+
+
+(* ============================================================================
+   CONTEXT EXPRESSIONS (for rewrite rules)
+
+   Contexts specify positional constraints for rule application.
+   Syntax: / [left_context] _ [right_context] [if syllable_clause]
+
+   The underscore (_) marks where the pattern match occurs.
+   ============================================================================ *)
+
+context
+    = "/" , [ context_left ] , "_" , [ context_right ] , [ syllable_clause ] ;
+
+context_left
+    = context_expr ;
+
+context_right
+    = context_expr ;
+
+
+(* ============================================================================
+   CONTEXT OPERATORS
+
+   Operator Precedence (lowest to highest):
+     1. OR  (|)  - lowest
+     2. AND (&)
+     3. NOT (!)  - highest
+   ============================================================================ *)
+
+context_expr
+    = context_or ;
+
+context_or
+    = context_and , { "|" , context_and } ;
+
+context_and
+    = context_not , { "&" , context_not } ;
+
+context_not
+    = "!" , context_not
+    | context_primary ;
+
+context_primary
+    = "#"                           (* word boundary *)
+    | "(" , context_expr , ")"      (* grouping *)
+    | concatenation ;               (* pattern to match *)
+
+
+(* ============================================================================
+   SYLLABLE CONDITIONS
+
+   Optional syllable-based constraints.
+   Syntax: if <syllable_expression>
+
+   Operator Precedence (same as context operators):
+     1. OR  (|)  - lowest
+     2. AND (&)
+     3. NOT (!)  - highest
+   ============================================================================ *)
+
+syllable_clause
+    = "if" , syllable_expr ;
+
+syllable_expr
+    = syllable_or ;
+
+syllable_or
+    = syllable_and , { "|" , syllable_and } ;
+
+syllable_and
+    = syllable_not , { "&" , syllable_not } ;
+
+syllable_not
+    = "!" , syllable_not
+    | syllable_primary ;
+
+syllable_primary
+    = syllable_condition
+    | "(" , syllable_expr , ")" ;
+
+syllable_condition
+    = "monosyllable"        (* word has exactly one syllable *)
+    | "polysyllable"        (* word has more than one syllable *)
+    | "open_syllable"       (* current syllable ends with vowel *)
+    | "closed_syllable"     (* current syllable ends with consonant *)
+    | "final_syllable"      (* match is in the last syllable *)
+    | "initial_syllable" ;  (* match is in the first syllable *)
+
+
+(* ============================================================================
+   WEIGHTS (for rewrite rules)
+
+   Optional weight for rule prioritization.
+   Lower weights have higher priority (0.0 = highest).
+   ============================================================================ *)
+
+weight
+    = "[" , FLOAT , "]" ;
+
+
+(* ============================================================================
+   WORD BOUNDARY
+
+   The hash (#) marks word boundaries.
+   - #abc  matches "abc" only at word start
+   - abc#  matches "abc" only at word end
+   - #abc# matches "abc" as a complete word
+
+   In contexts:
+   - / #_   left context is word start
+   - / _#   right context is word end
+   ============================================================================ *)
+
+
+(* ============================================================================
+   ESCAPE SEQUENCES
+
+   Escape sequences for special characters and Unicode.
+   ============================================================================ *)
+
+escape_sequence
+    = "\\" , escaped_char ;
+
+escaped_char
+    = "n"                                   (* newline *)
+    | "r"                                   (* carriage return *)
+    | "t"                                   (* tab *)
+    | "0"                                   (* null *)
+    | "\\"                                  (* backslash *)
+    | special_char
+    | "x" , HEX_DIGIT , HEX_DIGIT           (* hex: \xNN *)
+    | "u" , HEX_DIGIT{4}                    (* Unicode: \uNNNN *)
+    | "U" , HEX_DIGIT{8} ;                  (* Unicode: \UNNNNNNNN *)
+
+special_char
+    = "[" | "]" | "(" | ")" | "{" | "}"
+    | "|" | "*" | "+" | "?" | "."
+    | "^" | "$" | "-" | "/" | "#" | "\\" ;
+
+
+(* ============================================================================
+   LEXICAL ELEMENTS (TERMINALS)
+   ============================================================================ *)
+
+literal_char
+    = ANY_PRINTABLE - SPECIAL_CHAR
+    | escape_sequence ;
+
+IDENTIFIER
+    = LETTER , { LETTER | DIGIT | "_" } ;
+
+NUMBER
+    = DIGIT , { DIGIT } ;
+
+FLOAT
+    = NUMBER , [ "." , NUMBER ] ;
+
+LETTER
+    = "A".."Z" | "a".."z" ;
+
+DIGIT
+    = "0".."9" ;
+
+HEX_DIGIT
+    = DIGIT | "A".."F" | "a".."f" ;
+
+SPECIAL_CHAR
+    = "[" | "]" | "(" | ")" | "{" | "}"
+    | "|" | "*" | "+" | "?" | "."
+    | "^" | "$" | "-" | "/" | "#" ;
+
+ANY_PRINTABLE
+    = ? any printable ASCII character (0x20-0x7E) ? ;
+
+
+(* ============================================================================
+   BUILT-IN NAMED CHARACTER CLASSES
+
+   Available with [:name:] or [[:name:]] syntax.
+   Lookup is case-insensitive.
+   ============================================================================ *)
+
+(*
+   === POSIX Standard Classes ===
+
+   [:alpha:]      Alphabetic characters (a-z, A-Z)
+   [:digit:]      Decimal digits (0-9)
+   [:alnum:]      Alphanumeric ([:alpha:] + [:digit:])
+   [:space:]      Whitespace characters
+   [:punct:]      Punctuation characters
+   [:ascii:]      ASCII characters (0x00-0x7F)
+   [:print:]      Printable characters
+   [:cntrl:]      Control characters
+   [:graph:]      Graphical characters ([:alnum:] + [:punct:])
+   [:lower:]      Lowercase letters (a-z)
+   [:upper:]      Uppercase letters (A-Z)
+   [:xdigit:]     Hexadecimal digits (0-9, a-f, A-F)
+   [:word:]       Word characters ([:alnum:] + '_')
+   [:blank:]      Horizontal whitespace (space, tab)
+
+
+   === Phonetic Vowel Classes ===
+
+   [:vowel:]        All vowels (a, e, i, o, u + IPA vowels)
+   [:ascii_vowel:]  ASCII vowels only (a, e, i, o, u)
+   [:ipa_vowel:]    IPA vowel symbols
+
+   [:front_vowel:]    Front vowels (e, i, etc.)
+   [:central_vowel:]  Central vowels (schwa, etc.)
+   [:back_vowel:]     Back vowels (o, u, etc.)
+
+   [:high_vowel:]     High/close vowels (i, u, etc.)
+   [:mid_vowel:]      Mid vowels (e, o, schwa, etc.)
+   [:low_vowel:]      Low/open vowels (a, etc.)
+
+   [:open_vowel:]     Alias for [:low_vowel:]
+   [:close_vowel:]    Alias for [:high_vowel:]
+
+
+   === Phonetic Consonant Classes ===
+
+   [:consonant:]    All consonants
+
+   [:stop:]         Stop consonants (p, t, k, b, d, g)
+   [:plosive:]      Alias for [:stop:]
+
+   [:fricative:]    Fricative consonants (f, v, s, z, sh, th, etc.)
+   [:affricate:]    Affricate consonants (ch, j)
+
+   [:nasal:]        Nasal consonants (m, n, ng)
+   [:liquid:]       Liquid consonants (l, r)
+   [:glide:]        Glide/semivowel consonants (w, y)
+   [:semivowel:]    Alias for [:glide:]
+   [:approximant:]  Approximant consonants
+
+   [:voiced:]       Voiced consonants (b, d, g, v, z, etc.)
+   [:voiceless:]    Voiceless consonants (p, t, k, f, s, etc.)
+
+   [:labial:]       Labial consonants (p, b, m, f, v, w)
+   [:dental:]       Dental consonants (th)
+   [:alveolar:]     Alveolar consonants (t, d, n, s, z, l, r)
+   [:palatal:]      Palatal consonants (y, sh, ch, j)
+   [:velar:]        Velar consonants (k, g, ng)
+   [:glottal:]      Glottal consonants (h)
+*)
+
+
+(* ============================================================================
+   AST NODE TYPES (Semantic Representation)
+
+   The parser produces these AST node types:
+   ============================================================================ *)
+
+(*
+   Regex AST:
+     Empty                           - Empty pattern
+     Char(char)                      - Single character
+     CharClass { chars, negated }    - Character class
+     Any                             - Any character (.)
+     Concat(Regex, Regex)            - Concatenation
+     Alt(Regex, Regex)               - Alternation (|)
+     Star(Regex)                     - Zero or more (*)
+     Plus(Regex)                     - One or more (+)
+     Optional(Regex)                 - Zero or one (?)
+     RepeatExact(Regex, n)           - Exact repetition {n}
+     RepeatRange(Regex, n, m)        - Range repetition {n,m}
+     Group(Regex)                    - Grouping (...)
+     WordBoundary                    - Word boundary (#)
+     RewriteRule { pattern, replacement, context, weight }
+
+   Context AST:
+     Pattern(Regex)                  - Pattern to match
+     WordBoundary                    - Word boundary (#)
+     And(Context, Context)           - AND (&)
+     Or(Context, Context)            - OR (|)
+     Not(Context)                    - NOT (!)
+
+   Syllable AST:
+     Cond(SyllableCondition)         - Syllable condition
+     And(Syllable, Syllable)         - AND (&)
+     Or(Syllable, Syllable)          - OR (|)
+     Not(Syllable)                   - NOT (!)
+*)

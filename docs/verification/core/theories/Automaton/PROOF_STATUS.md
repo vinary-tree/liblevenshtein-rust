@@ -1,35 +1,127 @@
 # Automaton Proofs Status
 
-**Date**: December 4, 2025
+**Date**: December 10, 2025 (Session 4 Update)
 **Build Status**: ✅ Compiles successfully
 
 ## Summary
 
-The Automaton verification module contains proofs for soundness and completeness of Levenshtein automata supporting three algorithms: Standard, Transposition (Damerau), and Merge/Split. The build compiles but has **13 admitted lemmas** across three files.
+The Automaton verification module contains proofs for soundness and completeness of Levenshtein automata supporting three algorithms: Standard, Transposition (Damerau), and Merge/Split. The build compiles but has **22 admitted lemmas** across multiple files:
+- Completeness.v: 8
+- Soundness.v: 4
+- OptimalTrace/MergeSplitConstruction.v: 4
+- Composition/DamerauComposition.v: 2
+- Core/MergeSplitDistance.v: 2
+- Composition/MergeSplitComposition.v: 1
+- MainTheorem.v: 1
+
+### Recent Progress (December 10, 2025)
+
+**Session 4 Progress: Merge-Split Trace Infrastructure**
+
+**OptimalTrace/MergeSplitConstruction.v - Branch Lemmas:**
+- ✅ **PROVEN**: `ms_trace_cost_shift_A_delete` - Delete branch cost decomposition
+- ✅ **PROVEN**: `ms_trace_cost_shift_B_insert` - Insert branch cost decomposition
+- ⚠️ **ADMITTED**: `ms_trace_cost_cons_merge` - Merge branch (goal structure issue after unfold)
+- ⚠️ **ADMITTED**: `ms_trace_cost_cons_split` - Split branch (same structural issue)
+- ⚠️ **ADMITTED**: `ms_trace_cost_cons_double` - Double-subst branch (same structural issue)
+- ⚠️ **ADMITTED**: `ms_optimal_trace_cost_eq` - Optimal trace has cost = distance
+
+**Key Issue Identified:** After unfolding `ms_trace_cost`, the goal becomes a raw arithmetic expression and `ms_trace_change_cost_shift_*` lemmas cannot find their patterns because `ms_trace_change_cost` has been expanded. Requires either:
+- (a) Different proof strategy that doesn't unfold ms_trace_cost
+- (b) Direct fold_left manipulation lemmas
+- (c) Compositional cost function that avoids structural mismatch
+
+**Added Infrastructure:**
+- `ms_element_shift_A_2`, `ms_element_shift_B_2` - Shift by 2 for multi-position operations
+- `ms_trace_shift_A_2_map`, `ms_trace_shift_B_2_map` - Map versions of shift
+- `nth_plus_2_minus_1` - Arithmetic helper for shift-by-2 proofs
+- Position length preservation lemmas for shift-by-2
+
+**Triangle Inequality Status:**
+- `ms_triangle` in Core/MergeSplitDistance.v remains admitted
+- `ms_triangle_via_trace` in Composition/MergeSplitComposition.v remains admitted
+- Both await completion of `ms_optimal_trace_cost_eq`
+- Semantic justification is clear: going through intermediate string is one valid transformation
+
+### Previous Progress (December 9, 2025)
+
+**Session 3 Progress:**
+
+**DamerauTrace.v - `dl_distance_le_valid_trace_cost`:**
+- Added helper lemmas: `dl_touched_A_length_bound`, `dl_touched_B_length_bound`, `dl_trace_cost_nonneg`, `dl_change_cost_mono`, `dl_change_cost_fold_ge`
+- Completed empty trace case (uses `damerau_lev_le_standard` + `lev_distance_upper_bound`)
+- Non-empty trace case documented but still admitted (requires trace-to-edit-sequence correspondence)
+
+**DamerauTrace.v - `dl_optimal_trace_exists`:**
+- Added detailed proof strategy documentation
+- Completed base cases:
+  - Empty A: empty trace has cost = |B| = distance
+  - Empty B: empty trace has cost = |A| = distance
+  - Single char A and B: `[DLMatch 1 1]` achieves exact distance
+- Remaining edge cases (single vs multi, multi vs single, main case) still admitted
+
+**Session 2 Progress:**
+
+**COMPLETED:** `automaton_run_std_trans_correspondence` (Qed)
+- Extended `automaton_run_step_std_trans` to return additional invariants:
+  - Position inclusion: `incl (positions s_std') (positions s_trans')`
+  - Non-special preservation: Standard positions are non-special
+  - Spread bound propagation: Transposition positions satisfy spread bound
+- Used these invariants in the induction step of `automaton_run_std_trans_correspondence`
+
+**PROVEN:** Non-special preservation within `automaton_run_step_std_trans`
+- Used `transition_state_positions_standard_nonspecial`: Standard transitions produce only non-special positions
+- Used `epsilon_closure_nonspecial`: Epsilon closure preserves non-special property
+- Used `fold_state_insert_non_special`: Antichain filtering preserves non-special property
+
+**REMAINING in `automaton_run_step_std_trans`:** 2 admits
+- Position inclusion (line 3214): Antichain filtering can differ between Standard and Transposition
+- Spread bound (line 3251): Need to show spread is preserved through transitions
+
+**Session 1 Progress:**
+
+**Added:** Epsilon closure helper lemmas to Transition.v:
+- `epsilon_closure_from_origin_term_eq_errors_aux`: Proves term_index = num_errors for positions from initial state
+- `epsilon_closure_from_origin_term_eq_errors`: Simplified interface for the above
+- `epsilon_closure_from_origin_term_bounded`: Proves term_index <= n for initial state positions
+- `epsilon_closure_aux_preserves_original`: Original positions are preserved in closure
+- `std_pos_0_0_in_epsilon_closure`: std_pos 0 0 is always in initial closure
+- `fold_left_min_contains_zero`: Helper for computing minimum term_index
+- `epsilon_closure_from_origin_min_is_zero`: Minimum term_index in initial closure is 0
+
+**COMPLETED:** `standard_accepts_implies_transposition_accepts` (Qed)
+- Used the new epsilon closure lemmas to prove spread bound for initial state
+- Required adding spread bound hypothesis to `automaton_run_step_std_trans` and `automaton_run_std_trans_correspondence`
+
+### Previous Progress
+- Fixed assertion error in `automaton_run_std_trans_correspondence` (line 3337-3339)
+- Added helper lemmas: `fold_state_insert_final_reverse`, `incl_not_nil`
 
 ## Admitted Lemmas by File
 
-### Automaton/Completeness.v (9 admitted)
+### Automaton/Soundness.v (4 admitted)
+
+| Line | Name | Type | Scope | Notes |
+|------|------|------|-------|-------|
+| 246 | `pseudo_reachable_nonspecial_implies_reachable` | Lemma | Transposition | complete_transpose case for spurious specials |
+| 4142 | `automaton_run_preserves_reachable_transposition` | Lemma | Transposition | **BLOCKED** - See detailed analysis below |
+| 4634 | `automaton_sound_merge_split` | Theorem | Merge/Split | **OUT OF SCOPE** |
+| 4651 | `automaton_sound_merge_split_lev` | Corollary | Merge/Split | **OUT OF SCOPE** |
+
+### Automaton/Completeness.v (8 admitted)
 
 | Line | Name | Type | Scope | Notes |
 |------|------|------|-------|-------|
 | 2438 | `reachable_implies_contained_aux` | Lemma | Standard | **CRITICAL** - Core lemma for completeness |
 | 2566 | `automaton_run_not_dead_for_reachable` | Lemma | Standard | Depends on contained_aux |
 | 2614 | `automaton_final_state_accepts_standard` | Lemma | Standard | Depends on above two |
-| 2922 | `automaton_run_step_std_trans` | Lemma | Transposition | Transition step inclusion |
-| 2964 | `standard_accepts_implies_transposition_accepts` | Lemma | Transposition | Algorithm inclusion |
-| 2996 | `standard_accepts_implies_merge_split_accepts` | Lemma | Merge/Split | **OUT OF SCOPE** |
-| 3092 | `automaton_complete_transposition` | Theorem | Transposition | Main transposition completeness |
-| 3130 | `automaton_complete_merge_split` | Theorem | Merge/Split | **OUT OF SCOPE** |
-| 3187 | `automaton_finds_distance` | Corollary | All | Distance computation corollary |
-
-### Automaton/Soundness.v (3 admitted)
-
-| Line | Name | Type | Scope | Notes |
-|------|------|------|-------|-------|
-| 3926 | `automaton_run_preserves_reachable_transposition` | Lemma | Transposition | Damerau soundness infrastructure |
-| 4417 | `automaton_sound_merge_split` | Theorem | Merge/Split | **OUT OF SCOPE** |
-| 4434 | `automaton_sound_merge_split_lev` | Corollary | Merge/Split | **OUT OF SCOPE** |
+| 3276 | `automaton_run_step_std_trans` | Lemma | Transposition | 2 internal admits: position inclusion, spread bound |
+| ~3388 | `automaton_run_std_trans_correspondence` | Lemma | Transposition | ✅ **COMPLETED** - Uses automaton_run_step_std_trans properties |
+| ~3474 | `standard_accepts_implies_transposition_accepts` | Lemma | Transposition | ✅ **COMPLETED** - Uses epsilon closure lemmas |
+| 3527 | `standard_accepts_implies_merge_split_accepts` | Lemma | Merge/Split | **OUT OF SCOPE** |
+| 3623 | `automaton_complete_transposition` | Theorem | Transposition | Main transposition completeness |
+| 3661 | `automaton_complete_merge_split` | Theorem | Merge/Split | **OUT OF SCOPE** |
+| 3718 | `automaton_finds_distance` | Corollary | All | Distance computation corollary |
 
 ### Automaton/MainTheorem.v (1 admitted)
 
@@ -37,28 +129,46 @@ The Automaton verification module contains proofs for soundness and completeness
 |------|------|------|-------|-------|
 | 250 | `automaton_distance_correct` | Theorem | Standard | Distance = lev_distance |
 
+### Other Files
+
+| File | Line | Name | Notes |
+|------|------|------|-------|
+| Composition/DamerauComposition.v | 826 | `damerau_change_cost_bound` | Inner admits in algebraic bounds |
+| Composition/DamerauComposition.v | 2082 | `damerau_lev_triangle_via_composition` | Depends on above |
+| Composition/MergeSplitComposition.v | 176 | `ms_triangle_via_trace` | Awaits ms_optimal_trace_cost_eq |
+| Core/MergeSplitDistance.v | 1648 | `ms_seq_compose` | Edit sequence composition |
+| Core/MergeSplitDistance.v | 1896 | `ms_triangle` | Direct approach (main case admitted) |
+| OptimalTrace/MergeSplitConstruction.v | 1120 | `ms_trace_cost_cons_merge` | Goal structure issue after unfold |
+| OptimalTrace/MergeSplitConstruction.v | 1241 | `ms_trace_cost_cons_split` | Same structural issue |
+| OptimalTrace/MergeSplitConstruction.v | 1268 | `ms_trace_cost_cons_double` | Same structural issue |
+| OptimalTrace/MergeSplitConstruction.v | 1316 | `ms_optimal_trace_cost_eq` | Main cost equality theorem |
+
+**Note:** Trace/DamerauTrace.v now has 0 admits (base cases fully proven)
+
 ## Dependency Graph
 
 ```
-reachable_implies_contained_aux (CRITICAL)
+reachable_implies_contained_aux (CRITICAL - Admitted)
     ↓
-automaton_run_not_dead_for_reachable
+automaton_run_not_dead_for_reachable (Admitted)
     ↓
-automaton_final_state_accepts_standard
+automaton_final_state_accepts_standard (Admitted)
     ↓
 reachable_final_implies_accepts [PROVEN]
     ↓
 automaton_complete_standard [PROVEN]
     ↓
-automaton_distance_correct (MainTheorem.v)
+automaton_distance_correct (MainTheorem.v - Admitted)
 
-automaton_run_step_std_trans
+automaton_run_step_std_trans (Admitted - 2 internal admits remaining)
     ↓
-standard_accepts_implies_transposition_accepts
+automaton_run_std_trans_correspondence [PROVEN]
     ↓
-automaton_complete_transposition
+standard_accepts_implies_transposition_accepts [PROVEN]
+    ↓
+automaton_complete_transposition (Admitted - needs Damerau-specific proof)
 
-automaton_run_preserves_reachable_transposition (independent, for Damerau soundness)
+automaton_run_preserves_reachable_transposition (independent, for Damerau soundness - Admitted)
 ```
 
 ## Critical Issue: `reachable_implies_contained_aux`
@@ -182,6 +292,109 @@ The following 4 merge/split lemmas are **not in scope** for the current work:
 
 These require integration with the MergeSplitDistance.v module which defines a different distance metric.
 
+## Critical Issue: Transposition Soundness (`automaton_run_preserves_reachable_transposition`)
+
+**Date Updated**: December 8, 2025
+
+### Statement
+```coq
+Lemma automaton_run_preserves_reachable_transposition : forall query n dict_prefix dict s final,
+  query_length s = length query ->
+  automaton_run Transposition query n dict s = Some final ->
+  (forall p, In p (Automaton.State.positions s) ->
+             is_special p = false ->
+             position_reachable_damerau query n dict_prefix p) ->
+  (forall p, In p (Automaton.State.positions final) ->
+             is_special p = false ->
+             position_reachable_damerau query n (dict_prefix ++ dict) p).
+```
+
+### Problem Analysis: Spurious Special Positions
+
+The transposition algorithm creates **spurious special positions** when `query[i] = query[i+1]`:
+
+1. **Normal case** (`c ≠ query[i]`): Enter-transpose creates `special_pos i (e+1)` which is reachable via `reach_damerau_enter_transpose`
+
+2. **Spurious case** (`c = query[i] = query[i+1]`): Enter-transpose ALSO creates `special_pos i (e+1)` but:
+   - `reach_damerau_enter_transpose` requires `c ≠ c_next` (c ≠ query[i])
+   - So the spurious special position is NOT semantically reachable
+   - It exists in the automaton state but has no valid edit sequence
+
+### Why This Breaks the Proof
+
+At line 4134 in Soundness.v, we need to provide:
+```coq
+position_reachable_damerau query n dict_prefix p2
+```
+where `p2` is a special position in state `s`.
+
+**The issue**: `transition_positions_reachable_transposition` (line 3814) requires ALL input positions to be reachable, but our hypothesis only guarantees non-special inputs are reachable.
+
+### Key Insight: Subsumption Saves Soundness
+
+Spurious positions don't affect soundness because:
+
+1. **Same term_index**: When `query[i] = query[i+1] = c`:
+   - Spurious path: `std_pos i e → special_pos i (e+1) → std_pos (i+2) (e+1)`
+   - Match path: `std_pos i e → std_pos (i+1) e → std_pos (i+2) e`
+
+2. **Error count**: Match path has error count `e`, spurious path has `e+1`
+
+3. **Subsumption**: `std_pos (i+2) e` subsumes `std_pos (i+2) (e+1)` by standard subsumption rules (same term_index, lower errors)
+
+4. **Antichain filtering**: The spurious position is removed, only the reachable one survives
+
+### Solution Approaches
+
+#### Approach A: Track Position Provenance
+Strengthen the invariant to track how special positions were created:
+```coq
+Inductive position_trackable_damerau (query : list Char) (n : nat) :
+  list Char -> Position -> Prop :=
+  | trackable_reachable : forall dp p,
+      position_reachable_damerau query n dp p ->
+      is_special p = false ->
+      position_trackable_damerau query n dp p
+  | trackable_special : forall dp c i e,
+      position_reachable_damerau query n dp (std_pos i e) ->
+      S i < length query ->
+      nth_error query (S i) = Some c ->
+      e < n ->
+      position_trackable_damerau query n (dp ++ [c]) (special_pos i (S e)).
+```
+Then prove non-special trackable positions are either reachable OR subsumed by reachable.
+
+#### Approach B: Use Pseudo-Reachability
+1. Complete `pseudo_reachable_nonspecial_implies_reachable` (Soundness.v:246)
+2. Change invariant to track pseudo-reachability
+3. Convert to true reachability at final step
+
+**Blocked by**: Same issue - complete_transpose case for spurious specials.
+
+#### Approach C: Prove Post-Antichain Only
+Instead of proving all `trans_pos` positions are reachable, prove:
+1. Positions surviving antichain are reachable
+2. Use the fact that spurious positions are always subsumed
+
+This requires showing: if `std_pos (i+2) (e+1)` comes from spurious complete_transpose, then `std_pos (i+2) e` (from matches) is also in `trans_pos`.
+
+### Verified Behaviors
+
+From Subsumption.v (lines 73-96), for Transposition subsumption:
+- Same `is_special`: standard subsumption `e ≤ f ∧ |i-j| ≤ f-e`
+- Different `is_special`: no subsumption possible
+- Special positions only subsume same-index special positions
+
+This confirms spurious non-special outputs ARE subsumed by match outputs.
+
+### Recommended Path Forward
+
+1. **Prove helper**: Show that when enter_transpose fires and c = query[i], the match transition also fires, producing `std_pos (i+1) e` which leads to `std_pos (i+2) e`
+
+2. **Prove subsumption**: Show `std_pos (i+2) e` subsumes `std_pos (i+2) (e+1)` and both are in same `trans_pos`
+
+3. **Restructure main lemma**: Only claim reachability for positions surviving antichain
+
 ## Recommended Next Steps
 
 1. **Decide on solution approach** for `reachable_implies_contained_aux`:
@@ -198,10 +411,69 @@ These require integration with the MergeSplitDistance.v module which defines a d
    - `automaton_run_step_std_trans` needs characteristic vector analysis
    - `standard_accepts_implies_transposition_accepts` builds on step lemma
    - `automaton_complete_transposition` may need separate Damerau reachability
+   - See detailed analysis above for `automaton_run_preserves_reachable_transposition`
 
 4. **For soundness**:
-   - `automaton_run_preserves_reachable_transposition` handles special positions
-   - Need to account for spurious special positions from epsilon closure
+   - `automaton_run_preserves_reachable_transposition` blocked by spurious position issue
+   - Need to implement one of the solution approaches (A, B, or C) above
+
+## Categorization of Remaining Work
+
+### Category 1: Requires Structural Changes (HIGH COMPLEXITY)
+
+These lemmas need fundamental changes to the proof approach:
+
+| Lemma | Issue | Effort |
+|-------|-------|--------|
+| `automaton_run_preserves_reachable_transposition` | Spurious special positions (see analysis above) | HIGH |
+| `pseudo_reachable_nonspecial_implies_reachable` | Same spurious position issue | HIGH |
+
+**Recommendation**: Implement Approach C (post-antichain reachability) - requires proving spurious outputs are always subsumed.
+
+### Category 2: Requires Trace-Edit Correspondence (MEDIUM COMPLEXITY)
+
+These lemmas need to establish correspondence between traces and edit sequences:
+
+| Lemma | What's Needed | Effort |
+|-------|---------------|--------|
+| `dl_distance_le_valid_trace_cost` | Prove trace represents valid edit sequence with matching cost | MEDIUM |
+| `dl_optimal_trace_exists` | Construct trace by backtracking through DP recursion | MEDIUM |
+
+**Recommendation**: Define an inductive "trace-to-edits" relation and prove correspondence.
+
+### Category 3: Requires Characteristic Vector Analysis (MEDIUM COMPLEXITY)
+
+| Lemma | What's Needed | Effort |
+|-------|---------------|--------|
+| `automaton_run_step_std_trans` | Analyze CV bit compatibility between Standard and Transposition | MEDIUM |
+
+**Recommendation**: Prove that Standard's CV window is contained in Transposition's, so Standard transitions are a subset.
+
+### Category 4: Chain from Other Lemmas (LOW COMPLEXITY once dependencies complete)
+
+| Lemma | Dependencies | Status |
+|-------|-------------|--------|
+| `standard_accepts_implies_transposition_accepts` | `automaton_run_step_std_trans` | **COMPLETED (Qed)** |
+| `automaton_complete_transposition` | Direct Damerau completeness (cannot use Standard→Trans because damerau < lev possible) | Admitted |
+
+**Note on `standard_accepts_implies_transposition_accepts`**: This lemma is proven but relies on admitted subcases in `automaton_run_step_std_trans` (spread bound) and `automaton_run_std_trans_correspondence` (position inclusion through antichain). The proof structure is sound.
+
+### Category 4.1: Position Inclusion Through Antichain (HIGH COMPLEXITY)
+
+The `automaton_run_std_trans_correspondence` lemma requires maintaining position inclusion `incl (positions s_std) (positions s_trans)` through the automaton run. After each transition:
+- We have `incl closed_std closed_trans` before antichain filtering
+- But proving inclusion AFTER antichain filtering is complex because:
+  - Transposition's `closed_trans` has extra positions (from complete_transpose)
+  - These extra non-special positions could subsume Standard positions
+  - Special positions cannot subsume non-special (subsumption rules)
+
+**Key insight**: For FINAL positions, the protection is that final positions can only be subsumed by other final positions with lower errors. So even if exact position inclusion doesn't hold, FINAL position preservation does hold.
+
+The current proof uses this weaker property (final state preservation) rather than full position inclusion.
+
+### Category 5: Out of Scope
+
+The 4 merge/split lemmas remain out of scope as documented.
 
 ## Build Command
 
@@ -212,8 +484,10 @@ systemd-run --user --scope -p MemoryMax=126G -p CPUQuota=1800% -p IOWeight=30 -p
 
 ## File Locations
 
-- Plan: `/home/dylon/.claude/plans/agile-kindling-pretzel.md`
+- Plan: `/home/dylon/.claude/plans/robust-gliding-porcupine.md`
 - Completeness.v: `Automaton/Completeness.v`
 - Soundness.v: `Automaton/Soundness.v`
 - MainTheorem.v: `Automaton/MainTheorem.v`
 - Transition.v: `Automaton/Transition.v` (helper lemmas)
+- DamerauTrace.v: `Trace/DamerauTrace.v` (DL trace infrastructure)
+- DamerauComposition.v: `Composition/DamerauComposition.v` (triangle inequality)

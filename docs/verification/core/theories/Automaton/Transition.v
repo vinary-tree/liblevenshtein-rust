@@ -324,6 +324,144 @@ Proof.
   - exact Hin.
 Qed.
 
+(** For epsilon closure starting from std_pos 0 0, all positions have term_index = num_errors.
+    This is because delete_step from (i, e) produces (i+1, e+1), preserving the invariant. *)
+Lemma epsilon_closure_from_origin_term_eq_errors_aux :
+  forall fuel positions n qlen p,
+    (forall p0, In p0 positions -> term_index p0 = num_errors p0) ->
+    In p (epsilon_closure_aux positions n qlen fuel) ->
+    term_index p = num_errors p.
+Proof.
+  induction fuel as [| fuel' IH]; intros positions n qlen p Hinv Hin.
+  - (* fuel = 0 *)
+    simpl in Hin. apply Hinv. exact Hin.
+  - (* fuel = S fuel' *)
+    simpl in Hin.
+    set (new := flat_map (fun p0 => match delete_step p0 n qlen with
+                                    | Some p' => [p']
+                                    | None => []
+                                    end) positions) in *.
+    destruct (is_nil new) eqn:Hnil.
+    + (* new is empty, positions unchanged *)
+      apply Hinv. exact Hin.
+    + (* new is non-empty, recurse *)
+      apply IH with (positions := positions ++ new) (n := n) (qlen := qlen); auto.
+      intros p0 Hp0. apply in_app_or in Hp0. destruct Hp0 as [Hp0 | Hp0].
+      * (* p0 in original positions *)
+        apply Hinv. exact Hp0.
+      * (* p0 in new, produced by delete_step *)
+        unfold new in Hp0.
+        apply in_flat_map in Hp0.
+        destruct Hp0 as [p1 [Hp1 Hdel]].
+        destruct (delete_step p1 n qlen) as [p'|] eqn:Hdel_eq.
+        -- (* delete_step p1 = Some p' *)
+           simpl in Hdel. destruct Hdel as [Heq | []].
+           subst p0.
+           unfold delete_step in Hdel_eq.
+           destruct (is_special p1) eqn:Hspec.
+           ++ discriminate.
+           ++ destruct ((S (term_index p1) <=? qlen) && (num_errors p1 <? n)) eqn:Hcond.
+              ** injection Hdel_eq as Heq.
+                 rewrite <- Heq. simpl.
+                 (* term_index (std_pos (S i) (S e)) = S i, num_errors = S e *)
+                 (* By Hinv, term_index p1 = num_errors p1 *)
+                 specialize (Hinv p1 Hp1). lia.
+              ** discriminate.
+        -- simpl in Hdel. contradiction.
+Qed.
+
+Lemma epsilon_closure_from_origin_term_eq_errors :
+  forall n qlen p,
+    In p (epsilon_closure [std_pos 0 0] n qlen) ->
+    term_index p = num_errors p.
+Proof.
+  intros n qlen p Hin.
+  unfold epsilon_closure in Hin.
+  apply epsilon_closure_from_origin_term_eq_errors_aux with
+      (fuel := S n) (positions := [std_pos 0 0]) (n := n) (qlen := qlen); auto.
+  intros p0 Hp0. simpl in Hp0. destruct Hp0 as [Heq | []].
+  subst p0. simpl. reflexivity.
+Qed.
+
+(** Corollary: term_index is bounded by n for epsilon_closure from origin *)
+Lemma epsilon_closure_from_origin_term_bounded :
+  forall n qlen p,
+    In p (epsilon_closure [std_pos 0 0] n qlen) ->
+    term_index p <= n.
+Proof.
+  intros n qlen p Hin.
+  assert (Heq : term_index p = num_errors p).
+  { apply epsilon_closure_from_origin_term_eq_errors with (n := n) (qlen := qlen). exact Hin. }
+  rewrite Heq.
+  apply epsilon_closure_bounded with (positions := [std_pos 0 0]) (n := n) (qlen := qlen); auto.
+  intros p0 Hp0. simpl in Hp0. destruct Hp0 as [Heq0 | []].
+  subst p0. simpl. lia.
+Qed.
+
+(** Helper: std_pos 0 0 is always in the epsilon closure from [std_pos 0 0].
+    This is because the original position is always preserved. *)
+Lemma epsilon_closure_aux_preserves_original :
+  forall fuel positions n qlen p,
+    In p positions ->
+    In p (epsilon_closure_aux positions n qlen fuel).
+Proof.
+  induction fuel as [| fuel' IH]; intros positions n qlen p Hin.
+  - simpl. exact Hin.
+  - simpl.
+    set (new := flat_map (fun p0 : Position =>
+                            match delete_step p0 n qlen with
+                            | Some p' => [p']
+                            | None => []
+                            end) positions).
+    destruct (is_nil new).
+    + exact Hin.
+    + apply IH. apply in_or_app. left. exact Hin.
+Qed.
+
+Lemma std_pos_0_0_in_epsilon_closure :
+  forall n qlen,
+    In (std_pos 0 0) (epsilon_closure [std_pos 0 0] n qlen).
+Proof.
+  intros n qlen.
+  unfold epsilon_closure.
+  apply epsilon_closure_aux_preserves_original.
+  simpl. left. reflexivity.
+Qed.
+
+(** Helper: fold_left Nat.min over a list containing 0 returns 0 *)
+Lemma fold_left_min_contains_zero :
+  forall (l : list nat) acc,
+    In 0 l \/ acc = 0 ->
+    fold_left Nat.min l acc = 0.
+Proof.
+  induction l as [| h t IH]; intros acc Hzero; simpl.
+  - destruct Hzero as [[] | Hacc]. exact Hacc.
+  - apply IH.
+    destruct Hzero as [Hin | Hacc].
+    + destruct Hin as [Hh | Ht].
+      * subst h. right. lia.
+      * left. exact Ht.
+    + subst acc. right. lia.
+Qed.
+
+(** The minimum term_index in epsilon_closure from [std_pos 0 0] is 0 *)
+Lemma epsilon_closure_from_origin_min_is_zero :
+  forall n qlen,
+    fold_left Nat.min (map term_index (epsilon_closure [std_pos 0 0] n qlen)) qlen = 0.
+Proof.
+  intros n qlen.
+  (* std_pos 0 0 is always in the epsilon closure with term_index 0 *)
+  pose proof (std_pos_0_0_in_epsilon_closure n qlen) as Hin.
+  (* Therefore 0 is in the map of term_indices *)
+  assert (Hzero : In 0 (map term_index (epsilon_closure [std_pos 0 0] n qlen))).
+  { apply in_map_iff. exists (std_pos 0 0). split.
+    - reflexivity.
+    - exact Hin. }
+  (* fold_left Nat.min over a list containing 0 returns 0 *)
+  apply fold_left_min_contains_zero.
+  left. exact Hzero.
+Qed.
+
 (** * Algorithm Inclusion Lemmas *)
 
 (** Transposition includes all Standard transitions for non-special positions.

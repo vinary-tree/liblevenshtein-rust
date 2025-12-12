@@ -26,38 +26,8 @@ use super::ast::{
     ContextAST, ContextExpr, Expression, IncludeDirective, LLevFile, RewriteRuleAST,
     RuleDefinition, RuleMetadata, SyllableCondition, SyllableExpr, SymbolDef,
 };
-use super::error::{LLevError, LLevErrorKind, LLevResult, Position};
+use super::error::{LLevError, LLevErrorKind, LLevResult};
 use super::lexer::{Lexer, Token};
-
-/// Check if a name represents a user-defined symbol (all uppercase).
-///
-/// User-defined symbols use UPPERCASE names to distinguish them from
-/// built-in classes which use lowercase (e.g., `[:alpha:]`, `[:vowel:]`).
-///
-/// A name is considered a user symbol if:
-/// - It starts with an uppercase letter
-/// - All alphabetic characters are uppercase
-/// - Non-alphabetic characters (digits, underscores) are allowed after the first character
-///
-/// # Examples
-/// - `"VOWEL"` → true (user symbol)
-/// - `"FRONT_V"` → true (user symbol)
-/// - `"V2"` → true (user symbol with digit)
-/// - `"alpha"` → false (built-in)
-/// - `"Vowel"` → false (mixed case, treated as built-in)
-/// - `"_FOO"` → false (must start with a letter)
-/// - `"123"` → false (must start with a letter)
-fn is_user_symbol_name(name: &str) -> bool {
-    let mut chars = name.chars();
-    // Must start with an uppercase letter
-    match chars.next() {
-        Some(first) if first.is_uppercase() => {
-            // Remaining characters: alphabetic must be uppercase, non-alphabetic are allowed
-            chars.all(|c| c.is_uppercase() || !c.is_alphabetic())
-        }
-        _ => false,
-    }
-}
 
 /// Compute complement of a character class using printable ASCII.
 ///
@@ -942,29 +912,66 @@ impl<'a> Parser<'a> {
     /// Called when we've entered char class mode and see a leading colon.
     /// If the pattern is `[:NAME:]`, parses as named class.
     /// If the pattern is `[:chars]` (no closing `:`), treats as literal characters.
+    /// Parse a standalone named class or feature bundle: `[:name:]` or `[:feature1 feature2:]`
+    ///
+    /// Feature bundles allow intersection of phonetic features:
+    /// - `[:voiced stop:]` → voiced AND stop = b, d, g
+    /// - `[:!nasal stop:]` → NOT nasal AND stop = p, t, k, b, d, g
+    /// - `[:high front vowel:]` → high AND front AND vowel
     fn parse_standalone_named_class(&mut self) -> LLevResult<Expression> {
         // Consume the leading ':'
         self.advance()?; // Colon
 
-        // Collect chars that could be a name
-        let mut name_chars = Vec::new();
-        let mut found_closing_colon = false;
+        // Collect feature terms: Vec<(name, negated)>
+        let mut terms: Vec<(String, bool)> = Vec::new();
+        let mut current_name = String::new();
+        let mut current_negated = false;
 
         loop {
             match self.advance()? {
                 Token::Char(c) if c.is_alphanumeric() || c == '_' => {
-                    name_chars.push(c);
+                    current_name.push(c);
+                }
+                Token::Char(' ') | Token::Char('\t') => {
+                    // Space separates terms in feature bundles
+                    if !current_name.is_empty() {
+                        terms.push((current_name.clone(), current_negated));
+                        current_name.clear();
+                        current_negated = false;
+                    }
+                    // Skip additional whitespace
+                }
+                Token::Char('!') => {
+                    // Negation prefix for feature term
+                    if !current_name.is_empty() {
+                        // '!' after name chars - push previous term first
+                        terms.push((current_name.clone(), current_negated));
+                        current_name.clear();
+                    }
+                    current_negated = true;
                 }
                 Token::Colon => {
-                    // Found closing colon - this is a valid named class
-                    found_closing_colon = true;
+                    // Found closing colon - push final term if any
+                    if !current_name.is_empty() {
+                        terms.push((current_name.clone(), current_negated));
+                    }
                     break;
                 }
                 Token::CharClassEnd => {
                     // No closing colon found - treat ':' and collected chars as literals
                     self.lexer.exit_char_class();
                     let mut chars = vec![':'];
-                    chars.extend(name_chars);
+                    for (name, neg) in &terms {
+                        if *neg {
+                            chars.push('!');
+                        }
+                        chars.extend(name.chars());
+                        chars.push(' ');
+                    }
+                    if current_negated {
+                        chars.push('!');
+                    }
+                    chars.extend(current_name.chars());
                     return Ok(Expression::CharClass {
                         chars,
                         negated: false,
@@ -974,7 +981,17 @@ impl<'a> Parser<'a> {
                     // Dash in the name area - treat as literals
                     // Need to collect remaining chars until ]
                     let mut chars = vec![':'];
-                    chars.extend(name_chars);
+                    for (name, neg) in &terms {
+                        if *neg {
+                            chars.push('!');
+                        }
+                        chars.extend(name.chars());
+                        chars.push(' ');
+                    }
+                    if current_negated {
+                        chars.push('!');
+                    }
+                    chars.extend(current_name.chars());
                     chars.push('-');
                     loop {
                         match self.advance()? {
@@ -1000,20 +1017,12 @@ impl<'a> Parser<'a> {
                 }
                 other => {
                     return Err(LLevError::new(LLevErrorKind::ExpectedToken {
-                        expected: "identifier, ':', or ']'".to_string(),
+                        expected: "identifier, '!', ':', or ']'".to_string(),
                         found: format!("{:?}", other),
                     })
                     .at_position(self.lexer.position()));
                 }
             }
-        }
-
-        if !found_closing_colon {
-            // This shouldn't be reachable due to loop logic above
-            return Err(LLevError::new(LLevErrorKind::InvalidPattern(
-                "incomplete named class syntax".to_string(),
-            ))
-            .at_position(self.lexer.position()));
         }
 
         // Expect closing ']'
@@ -1030,51 +1039,76 @@ impl<'a> Parser<'a> {
 
         self.lexer.exit_char_class();
 
-        let name: String = name_chars.iter().collect();
-        if name.is_empty() {
+        if terms.is_empty() {
             return Err(LLevError::new(LLevErrorKind::InvalidPattern(
                 "empty named character class '[:]'".to_string(),
             ))
             .at_position(self.lexer.position()));
         }
 
-        // Resolve the named class
-        // User-defined symbols have precedence over built-in classes
-        if let Some(expr) = self.symbols.get(&name) {
-            // User-defined symbol
-            match expr {
-                Expression::CharClass { chars, negated } => Ok(Expression::CharClass {
-                    chars: chars.clone(),
-                    negated: *negated,
-                }),
-                _ => Err(LLevError::new(LLevErrorKind::TypeMismatch {
-                    expected: "character class".to_string(),
-                    found: format!("symbol '{}' is not a character class", name),
-                })
-                .at_position(self.lexer.position())),
-            }
-        } else if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(&name) {
-            // Fallback to built-in classes
-            Ok(Expression::CharClass {
-                chars: builtin_chars,
-                negated: false,
-            })
-        } else {
-            // Not found - provide suggestions
-            let mut defined: Vec<&str> = self.symbols.keys().map(|s| s.as_str()).collect();
-            defined.extend(crate::phonetic::named_classes::all_builtin_class_names());
-            Err(LLevError::undefined_symbol_with_suggestion(
-                &name,
-                &defined,
-                self.lexer.position(),
-            ))
+        // Resolve feature bundle
+        self.resolve_feature_bundle(&terms)
+    }
+
+    /// Resolve a feature bundle to a character class by computing the intersection.
+    ///
+    /// Each term is (name, negated). The result is the intersection of all terms,
+    /// where negated terms are first complemented relative to all phonetic characters.
+    fn resolve_feature_bundle(&self, terms: &[(String, bool)]) -> LLevResult<Expression> {
+        use crate::phonetic::named_classes::{
+            get_chars_only, intersect_char_sets, negate_char_set,
+        };
+
+        let mut char_sets: Vec<Vec<char>> = Vec::new();
+
+        for (name, negated) in terms {
+            // Try user symbol first, then built-in
+            let chars = if let Some(expr) = self.symbols.get(name) {
+                match expr {
+                    Expression::CharClass { chars, negated: _ } => chars.clone(),
+                    _ => {
+                        return Err(LLevError::new(LLevErrorKind::TypeMismatch {
+                            expected: "character class".to_string(),
+                            found: format!("symbol '{}' is not a character class", name),
+                        })
+                        .at_position(self.lexer.position()));
+                    }
+                }
+            } else if let Some(builtin_chars) = get_chars_only(name) {
+                builtin_chars
+            } else {
+                // Not found - provide suggestions
+                let mut defined: Vec<&str> = self.symbols.keys().map(|s| s.as_str()).collect();
+                defined.extend(crate::phonetic::named_classes::all_builtin_class_names());
+                return Err(LLevError::undefined_symbol_with_suggestion(
+                    name,
+                    &defined,
+                    self.lexer.position(),
+                ));
+            };
+
+            let final_chars = if *negated {
+                negate_char_set(&chars)
+            } else {
+                chars
+            };
+
+            char_sets.push(final_chars);
         }
+
+        let result_chars = intersect_char_sets(&char_sets);
+
+        Ok(Expression::CharClass {
+            chars: result_chars,
+            negated: false,
+        })
     }
 
     /// Parse nested character class content after '[' has been consumed.
     ///
     /// Handles:
     /// - `[[:NAME:]]` - nested named class
+    /// - `[[:feature1 feature2:]]` - nested feature bundle (intersection)
     /// - `[[^:NAME:]]` - negated nested named class
     /// - `[[abc]]` - arbitrary characters inside nested class
     /// - `[[a-z]]` - ranges inside nested class
@@ -1093,24 +1127,47 @@ impl<'a> Parser<'a> {
 
         let mut nested_chars = Vec::new();
 
-        // Check if first token is ':' - this indicates [:name:] pattern
+        // Check if first token is ':' - this indicates [:name:] or [:feature bundle:] pattern
         // which is only valid at the START of nested content
         if self.check(&Token::Colon) {
             self.advance()?; // consume ':'
-            // Parse the name
-            let mut name = String::new();
+
+            // Parse feature terms (supports both single name and feature bundles)
+            let mut terms: Vec<(String, bool)> = Vec::new();
+            let mut current_name = String::new();
+            let mut current_negated = false;
+
             loop {
                 match self.advance()? {
                     Token::Char(nc) if nc.is_alphanumeric() || nc == '_' => {
-                        name.push(nc);
+                        current_name.push(nc);
+                    }
+                    Token::Char(' ') | Token::Char('\t') => {
+                        // Space separates terms in feature bundles
+                        if !current_name.is_empty() {
+                            terms.push((current_name.clone(), current_negated));
+                            current_name.clear();
+                            current_negated = false;
+                        }
+                    }
+                    Token::Char('!') => {
+                        // Negation prefix for feature term
+                        if !current_name.is_empty() {
+                            terms.push((current_name.clone(), current_negated));
+                            current_name.clear();
+                        }
+                        current_negated = true;
                     }
                     Token::Colon => {
-                        // End of name, expect ']' next
+                        // End of feature bundle - push final term if any
+                        if !current_name.is_empty() {
+                            terms.push((current_name.clone(), current_negated));
+                        }
                         break;
                     }
                     other => {
                         return Err(LLevError::new(LLevErrorKind::ExpectedToken {
-                            expected: "identifier or ':'".to_string(),
+                            expected: "identifier, '!', or ':'".to_string(),
                             found: format!("{:?}", other),
                         })
                         .at_position(self.lexer.position()));
@@ -1132,17 +1189,21 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            if name.is_empty() {
+            if terms.is_empty() {
                 return Err(LLevError::new(LLevErrorKind::InvalidPattern(
                     "empty named character class '[:]'".to_string(),
                 ))
                 .at_position(self.lexer.position()));
             }
 
-            // Resolve the named class
-            nested_chars = self.resolve_named_class(&name, start_pos)?;
+            // Resolve feature bundle
+            let expr = self.resolve_feature_bundle(&terms)?;
+            nested_chars = match expr {
+                Expression::CharClass { chars, negated: _ } => chars,
+                _ => Vec::new(),
+            };
 
-            // Apply negation if needed and return early
+            // Apply outer negation if needed and return early
             return if is_negated {
                 Ok(negate_char_class(&nested_chars))
             } else {
@@ -1282,48 +1343,6 @@ impl<'a> Parser<'a> {
             Ok(negate_char_class(&nested_chars))
         } else {
             Ok(nested_chars)
-        }
-    }
-
-    /// Resolve a named class reference to its character set.
-    ///
-    /// Resolution order (user-defined symbols have precedence):
-    /// 1. User-defined symbols (uppercase names like VOWEL, CONSONANT)
-    /// 2. Built-in named classes (lowercase names like vowel, consonant)
-    fn resolve_named_class(&self, name: &str, pos: Position) -> LLevResult<Vec<char>> {
-        // First check user-defined symbols (they have precedence over built-ins)
-        if is_user_symbol_name(name) {
-            if let Some(expr) = self.symbols.get(name) {
-                return match expr {
-                    Expression::CharClass {
-                        chars: ref class_chars,
-                        ..
-                    } => Ok(class_chars.clone()),
-                    _ => Err(LLevError::new(LLevErrorKind::TypeMismatch {
-                        expected: "character class".to_string(),
-                        found: format!("symbol '{}' is not a character class", name),
-                    })
-                    .at_position(pos)),
-                };
-            }
-            // User symbol name but not defined - fall through to check built-ins
-        }
-
-        // Then check built-in classes
-        if let Some(builtin_chars) = crate::phonetic::named_classes::get_chars_only(name) {
-            Ok(builtin_chars)
-        } else if is_user_symbol_name(name) {
-            // User symbol name but not defined and no matching built-in
-            let defined: Vec<&str> = self.symbols.keys().map(|s| s.as_str()).collect();
-            Err(LLevError::undefined_symbol_with_suggestion(name, &defined, pos))
-        } else {
-            // Unknown built-in class
-            let builtin_names = crate::phonetic::named_classes::all_builtin_class_names();
-            Err(LLevError::new(LLevErrorKind::UnknownNamedClass {
-                name: name.to_string(),
-                available: builtin_names.into_iter().map(|s| s.to_string()).collect(),
-            })
-            .at_position(pos))
         }
     }
 
@@ -1785,16 +1804,17 @@ ph -> f"#;
 
     #[test]
     fn test_parse_escaped_uppercase_literal() {
-        // Test that \A in a pattern becomes a literal 'A' character
-        let input = r#"\A -> a"#;
+        // Test that \B in a pattern becomes a literal 'B' character
+        // Note: Using \B because \A is now the affricate shortcut
+        let input = r#"\B -> b"#;
         let file = parse_str(input).unwrap();
         assert_eq!(file.rules.len(), 1);
 
         let rule = &file.rules[0].rule;
-        // Pattern should be literal 'A'
-        assert!(matches!(rule.pattern, Expression::Char('A')));
-        // Replacement should be literal 'a'
-        assert!(matches!(rule.replacement, Expression::Char('a')));
+        // Pattern should be literal 'B'
+        assert!(matches!(rule.pattern, Expression::Char('B')));
+        // Replacement should be literal 'b'
+        assert!(matches!(rule.replacement, Expression::Char('b')));
     }
 
     #[test]
@@ -1825,19 +1845,20 @@ ph -> f"#;
     #[test]
     fn test_parse_mixed_escaped_and_regular() {
         // Test mixing escaped uppercase with regular patterns
-        let input = r#"\Abc -> abc"#;
+        // Note: Using \B because \A is now the affricate shortcut
+        let input = r#"\Bcd -> bcd"#;
         let file = parse_str(input).unwrap();
         assert_eq!(file.rules.len(), 1);
 
         let rule = &file.rules[0].rule;
-        // Pattern should be Concat(Concat(Char('A'), Char('b')), Char('c'))
+        // Pattern should be Concat(Concat(Char('B'), Char('c')), Char('d'))
         match &rule.pattern {
             Expression::Concat(left, right) => {
-                assert!(matches!(**right, Expression::Char('c')));
+                assert!(matches!(**right, Expression::Char('d')));
                 match &**left {
                     Expression::Concat(ll, lr) => {
-                        assert!(matches!(**ll, Expression::Char('A')));
-                        assert!(matches!(**lr, Expression::Char('b')));
+                        assert!(matches!(**ll, Expression::Char('B')));
+                        assert!(matches!(**lr, Expression::Char('c')));
                     }
                     _ => panic!("expected nested Concat"),
                 }
@@ -2992,6 +3013,140 @@ $MY_CHARS -> 0
             assert!(chars.contains(&'i'));
             assert!(chars.contains(&'o'));
             assert!(chars.contains(&'u'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    // =========================================================================
+    // Feature Bundle Tests
+    // =========================================================================
+
+    #[test]
+    fn test_feature_bundle_voiced_stop() {
+        // [:voiced stop:] should give only voiced stops: b, d, g
+        let file = parse_str("[:voiced stop:] -> V").unwrap();
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { chars, negated } = &rule.pattern {
+            assert!(!negated);
+            // Voiced stops
+            assert!(chars.contains(&'b'));
+            assert!(chars.contains(&'d'));
+            assert!(chars.contains(&'g'));
+            // NOT voiceless stops
+            assert!(!chars.contains(&'p'));
+            assert!(!chars.contains(&'t'));
+            assert!(!chars.contains(&'k'));
+            // NOT non-stops
+            assert!(!chars.contains(&'v'));
+            assert!(!chars.contains(&'z'));
+            assert!(!chars.contains(&'a'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_feature_bundle_negated_nasal_stop() {
+        // [:!nasal stop:] should give oral stops: p, t, k, b, d, g
+        let file = parse_str("[:!nasal stop:] -> S").unwrap();
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { chars, negated } = &rule.pattern {
+            assert!(!negated);
+            // All stops
+            assert!(chars.contains(&'p'));
+            assert!(chars.contains(&'t'));
+            assert!(chars.contains(&'k'));
+            assert!(chars.contains(&'b'));
+            assert!(chars.contains(&'d'));
+            assert!(chars.contains(&'g'));
+            // NOT nasals
+            assert!(!chars.contains(&'m'));
+            assert!(!chars.contains(&'n'));
+            // NOT fricatives
+            assert!(!chars.contains(&'f'));
+            assert!(!chars.contains(&'s'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_feature_bundle_single_negated() {
+        // [:!nasal:] should give everything except nasals
+        let file = parse_str("[:!nasal:] -> X").unwrap();
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { chars, negated } = &rule.pattern {
+            assert!(!negated);
+            // NOT nasals
+            assert!(!chars.contains(&'m'));
+            assert!(!chars.contains(&'n'));
+            // Other consonants should be included
+            assert!(chars.contains(&'p'));
+            assert!(chars.contains(&'b'));
+            // Vowels should be included
+            assert!(chars.contains(&'a'));
+            assert!(chars.contains(&'e'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_feature_bundle_three_features() {
+        // [:high front vowel:] should give high front vowels only
+        let file = parse_str("[:high_vowel front_vowel vowel:] -> I").unwrap();
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { chars, negated } = &rule.pattern {
+            assert!(!negated);
+            // High front vowels
+            assert!(chars.contains(&'i'));
+            assert!(chars.contains(&'I'));
+            // NOT low vowels
+            assert!(!chars.contains(&'a'));
+            // NOT back vowels
+            assert!(!chars.contains(&'u'));
+            // NOT consonants
+            assert!(!chars.contains(&'p'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_feature_bundle_nested_syntax() {
+        // Nested syntax [[:voiced stop:]] should also work
+        let file = parse_str("[x[[:voiced stop:]]] -> X").unwrap();
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { chars, negated } = &rule.pattern {
+            assert!(!negated);
+            // Should have 'x'
+            assert!(chars.contains(&'x'));
+            // Voiced stops
+            assert!(chars.contains(&'b'));
+            assert!(chars.contains(&'d'));
+            assert!(chars.contains(&'g'));
+            // NOT voiceless stops
+            assert!(!chars.contains(&'p'));
+        } else {
+            panic!("expected CharClass");
+        }
+    }
+
+    #[test]
+    fn test_feature_bundle_backwards_compatible() {
+        // Single term should still work: [:stop:] = all stops
+        let file = parse_str("[:stop:] -> S").unwrap();
+        let rule = &file.rules[0].rule;
+        if let Expression::CharClass { chars, negated } = &rule.pattern {
+            assert!(!negated);
+            // All stops
+            assert!(chars.contains(&'p'));
+            assert!(chars.contains(&'t'));
+            assert!(chars.contains(&'k'));
+            assert!(chars.contains(&'b'));
+            assert!(chars.contains(&'d'));
+            assert!(chars.contains(&'g'));
         } else {
             panic!("expected CharClass");
         }

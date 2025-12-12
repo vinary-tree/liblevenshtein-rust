@@ -413,3 +413,27 @@ Proof.
   - apply non_final_cannot_subsume_final_transposition; assumption.
   - apply non_final_cannot_subsume_final_merge_split; assumption.
 Qed.
+
+(** For non-special positions, Standard and Transposition subsumption are equivalent.
+    This is key for proving that Standard acceptance implies Transposition acceptance. *)
+Lemma subsumes_nonspecial_std_trans : forall qlen p1 p2,
+  is_special p1 = false ->
+  is_special p2 = false ->
+  subsumes_standard qlen p1 p2 = subsumes_transposition p1 p2 qlen.
+Proof.
+  intros qlen [i1 e1 s1] [i2 e2 s2] Hs1 Hs2.
+  unfold subsumes_standard, subsumes_transposition, position_is_final_for_subsumption.
+  simpl in *. subst s1 s2. simpl.
+  (* For non-special positions, Bool.eqb false false = true *)
+  (* The transposition branch becomes: if negb (e1 <=? e2) then false else abs_diff ... *)
+  (* The standard formula is: (e1 <=? e2) && (abs_diff ...) *)
+  destruct (qlen <=? i1) eqn:Hi1, (qlen <=? i2) eqn:Hi2; simpl.
+  - (* Both final *)
+    destruct (e1 <=? e2) eqn:He; simpl; reflexivity.
+  - (* p1 final, p2 non-final *)
+    destruct (e1 <=? e2) eqn:He; simpl; reflexivity.
+  - (* p1 non-final, p2 final: returns false for both *)
+    reflexivity.
+  - (* Both non-final *)
+    destruct (e1 <=? e2) eqn:He; simpl; reflexivity.
+Qed.

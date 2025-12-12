@@ -30,6 +30,7 @@ Trace/TouchedPositions.v
 Trace/TraceCost.v
 Trace/TraceComposition.v
 Trace/DamerauTrace.v
+Trace/MergeSplitTrace.v
 
 # Tier 5: Cardinality & Witnesses
 Cardinality/NoDupInclusion.v
@@ -44,11 +45,13 @@ Composition/CompositionNoDup.v
 Composition/CompositionValidity.v
 Composition/CostBounds.v
 Composition/DamerauComposition.v
+Composition/MergeSplitComposition.v
 
 # Tier 8: Optimal Trace
 OptimalTrace/Construction.v
 OptimalTrace/Validity.v
 OptimalTrace/CostEquality.v
+OptimalTrace/MergeSplitConstruction.v
 
 # Tier 9: Main Theorems (including DamerauLevDistance which imports DamerauComposition)
 Core/DamerauLevDistance.v
