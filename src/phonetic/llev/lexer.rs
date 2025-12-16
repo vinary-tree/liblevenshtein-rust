@@ -7,6 +7,8 @@
 //! - String literals (`"..."`)
 //! - Identifiers (for symbol references)
 
+use crate::phonetic::common::traits::{LexerLike, TokenLike};
+use crate::phonetic::common::syllable::SyllableCondition;
 use super::error::{LLevError, LLevErrorKind, LLevResult, Position};
 
 /// A token in the `.llev` file format.
@@ -195,6 +197,75 @@ impl Token {
             Token::DirectiveDefine => Some("define"),
             _ => None,
         }
+    }
+}
+
+impl TokenLike for Token {
+    fn is_pipe(&self) -> bool {
+        matches!(self, Token::Pipe)
+    }
+
+    fn is_ampersand(&self) -> bool {
+        matches!(self, Token::Ampersand)
+    }
+
+    fn is_exclamation(&self) -> bool {
+        matches!(self, Token::Bang)
+    }
+
+    fn is_group_start(&self) -> bool {
+        matches!(self, Token::GroupStart)
+    }
+
+    fn is_group_end(&self) -> bool {
+        matches!(self, Token::GroupEnd)
+    }
+
+    fn is_hash(&self) -> bool {
+        matches!(self, Token::Hash)
+    }
+
+    fn is_star(&self) -> bool {
+        matches!(self, Token::Star)
+    }
+
+    fn is_plus(&self) -> bool {
+        matches!(self, Token::Plus)
+    }
+
+    fn is_question(&self) -> bool {
+        matches!(self, Token::Question)
+    }
+
+    fn is_brace_start(&self) -> bool {
+        matches!(self, Token::BraceStart)
+    }
+
+    fn is_eof(&self) -> bool {
+        matches!(self, Token::Eof)
+    }
+
+    fn is_if_keyword(&self) -> bool {
+        matches!(self, Token::KeywordIf)
+    }
+
+    fn as_syllable_condition(&self) -> Option<SyllableCondition> {
+        match self {
+            Token::Identifier(name) => match name.as_str() {
+                "monosyllable" => Some(SyllableCondition::Monosyllable),
+                "polysyllable" => Some(SyllableCondition::Polysyllable),
+                "open_syllable" => Some(SyllableCondition::OpenSyllable),
+                "closed_syllable" => Some(SyllableCondition::ClosedSyllable),
+                "final_syllable" => Some(SyllableCondition::FinalSyllable),
+                "initial_syllable" => Some(SyllableCondition::InitialSyllable),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    fn can_start_primary(&self) -> bool {
+        Token::can_start_primary(self)
     }
 }
 
@@ -1129,8 +1200,9 @@ impl<'a> Lexer<'a> {
             // Escape sequence or phonetic shortcut
             '\\' => self.parse_escape_or_shortcut(),
 
-            // Number
-            c if c.is_ascii_digit() => self.parse_number(c),
+            // Digits are literal characters in patterns (e.g., "2 -> to" for text-speak)
+            // Numbers are only parsed in metadata mode (e.g., "[id: 210]")
+            c if c.is_ascii_digit() => Ok(Token::Char(c)),
 
             // Check for "if" keyword
             'i' if self.peek_char() == Some('f') => {
@@ -1168,12 +1240,11 @@ impl<'a> Lexer<'a> {
             '^' => Ok(Token::Caret),
             '-' => Ok(Token::Dash),
             ':' => Ok(Token::Colon),
-            // Symbol references work inside character classes: [a$NAME] unions 'a' with symbol
-            '$' => self.parse_symbol_ref(),
             // Escape sequences or phonetic shortcuts
             // \[ returns Token::Char('[') (literal bracket)
             // \v returns Token::PhoneticShortcut("vowel")
             '\\' => self.parse_escape_or_shortcut(),
+            // $ is a literal character inside character classes (unlike outside)
             _ => Ok(Token::Char(c)),
         }
     }
@@ -1222,6 +1293,23 @@ impl<'a> Lexer<'a> {
             }
             _ => Err(LLevError::unexpected_char(c, self.position.clone())),
         }
+    }
+}
+
+impl<'a> LexerLike for Lexer<'a> {
+    type Token = Token;
+    type Error = LLevError;
+
+    fn peek(&mut self) -> Result<&Self::Token, Self::Error> {
+        Lexer::peek(self)
+    }
+
+    fn advance(&mut self) -> Result<Self::Token, Self::Error> {
+        Lexer::next_token(self)
+    }
+
+    fn position(&self) -> Position {
+        Lexer::position(self)
     }
 }
 
@@ -1328,14 +1416,15 @@ mod tests {
     }
 
     #[test]
-    fn test_lexer_symbol_ref_in_char_class() {
-        let mut lexer = Lexer::new("[$FOO]");
+    fn test_dollar_literal_in_char_class() {
+        // $ is now a literal character inside character classes
+        let mut lexer = Lexer::new("[$abc]");
         assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
         lexer.enter_char_class();
-        assert_eq!(
-            lexer.next_token().unwrap(),
-            Token::SymbolRef("FOO".to_string())
-        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('$'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
         assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
     }
 

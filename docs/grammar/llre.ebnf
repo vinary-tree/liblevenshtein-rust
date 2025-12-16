@@ -1,0 +1,241 @@
+(* ============================================================================
+   LLRE File Format Grammar - Extended Backus-Naur Form (EBNF)
+
+   The `.llre` (LibLevenshtein Regex Expression) file format contains a single
+   regex pattern with optional metadata, imports, and global flags.
+
+   This grammar is implemented in:
+     - src/phonetic/llre/parser.rs   (parsing)
+     - src/phonetic/llre/loader.rs   (import resolution)
+     - src/phonetic/llre/compiled.rs (AOT compilation)
+   ============================================================================ *)
+
+
+(* ============================================================================
+   TOP-LEVEL STRUCTURE
+
+   A .llre file consists of optional directives followed by a single regex
+   pattern. Empty lines and comments are ignored.
+   ============================================================================ *)
+
+llre_file
+    = { directive | NEWLINE | comment } , pattern , [ NEWLINE ] , [ comment ] ;
+
+comment
+    = "#" , { ANY_CHAR - NEWLINE } , NEWLINE ;
+
+
+(* ============================================================================
+   DIRECTIVES
+
+   Directives provide metadata and configuration for the regex pattern.
+   All directives start with "@" and must appear before the pattern.
+   ============================================================================ *)
+
+directive
+    = "@" , directive_name , directive_value , NEWLINE ;
+
+directive_name
+    = "name"
+    | "version"
+    | "author"
+    | "description"
+    | "import"
+    | "flags" ;
+
+
+(* ============================================================================
+   METADATA DIRECTIVES
+
+   Metadata provides human-readable information about the pattern.
+   All metadata values are quoted strings.
+
+   @name "Pattern Name"           - Short descriptive name
+   @version "1.0"                 - Version string
+   @author "Author Name"          - Author attribution
+   @description "..."             - Longer description
+   ============================================================================ *)
+
+name_directive
+    = "@name" , STRING_LITERAL ;
+
+version_directive
+    = "@version" , STRING_LITERAL ;
+
+author_directive
+    = "@author" , STRING_LITERAL ;
+
+description_directive
+    = "@description" , STRING_LITERAL ;
+
+
+(* ============================================================================
+   IMPORT DIRECTIVE
+
+   Imports symbols from .llev (phonetic rule) files. Imported symbols can
+   be referenced in the pattern using $SYMBOL syntax.
+
+   @import "path/to/file.llev"           - Simple import
+   @import "path/to/file.llev" as alias  - Import with alias
+   ============================================================================ *)
+
+import_directive
+    = "@import" , STRING_LITERAL , [ "as" , IDENTIFIER ] ;
+
+
+(* ============================================================================
+   FLAGS DIRECTIVE
+
+   Global flags that modify pattern matching behavior.
+
+   @flags multiline              - Single flag
+   @flags multiline, dotall      - Multiple flags (comma-separated)
+
+   Available flags:
+     multiline (m)        - ^ and $ match at line boundaries
+     dotall (s)           - . matches newlines
+     case_insensitive (i) - Case-insensitive matching
+     unicode (u)          - Unicode-aware character classes
+   ============================================================================ *)
+
+flags_directive
+    = "@flags" , flag_list ;
+
+flag_list
+    = flag_name , { "," , flag_name } ;
+
+flag_name
+    = "multiline"
+    | "dotall"
+    | "case_insensitive"
+    | "unicode" ;
+
+
+(* ============================================================================
+   PATTERN
+
+   The regex pattern follows standard regex syntax with extensions.
+   See docs/grammar/regex.ebnf for the full regex grammar.
+
+   Additional anchors supported in .llre files:
+     ^   - Start of line (or start of input in non-multiline mode)
+     $   - End of line (or end of input in non-multiline mode)
+     \A  - Start of input (absolute)
+     \Z  - End of input (allows trailing newline)
+     \z  - End of input (strict, no trailing newline)
+   ============================================================================ *)
+
+pattern
+    = regex ;  (* See regex.ebnf for full grammar *)
+
+
+(* ============================================================================
+   ANCHOR EXTENSIONS
+
+   These anchor productions extend the regex grammar for .llre files.
+   ============================================================================ *)
+
+anchor
+    = "^"      (* Start of line / input *)
+    | "$"      (* End of line / input *)
+    | "\\A"    (* Start of input - absolute *)
+    | "\\Z"    (* End of input - allows trailing \n *)
+    | "\\z" ;  (* End of input - strict *)
+
+
+(* ============================================================================
+   SYMBOL REFERENCES
+
+   Reference symbols imported from .llev files or defined inline.
+
+   $VOWEL      - Simple reference
+   ${VOWEL}    - Braced reference (for adjacent text)
+   $en::VOWEL  - Aliased import reference
+   ============================================================================ *)
+
+symbol_ref
+    = "$" , IDENTIFIER
+    | "$" , "{" , IDENTIFIER , "}"
+    | "$" , IDENTIFIER , "::" , IDENTIFIER ;
+
+
+(* ============================================================================
+   LEXICAL ELEMENTS
+   ============================================================================ *)
+
+STRING_LITERAL
+    = '"' , { STRING_CHAR } , '"' ;
+
+STRING_CHAR
+    = ANY_CHAR - ( '"' | "\\" )
+    | "\\" , ESCAPED_CHAR ;
+
+ESCAPED_CHAR
+    = '"' | "\\" | "n" | "r" | "t" ;
+
+IDENTIFIER
+    = LETTER , { LETTER | DIGIT | "_" } ;
+
+LETTER
+    = "A".."Z" | "a".."z" ;
+
+DIGIT
+    = "0".."9" ;
+
+NEWLINE
+    = "\n" | "\r\n" ;
+
+ANY_CHAR
+    = ? any character ? ;
+
+
+(* ============================================================================
+   EXAMPLE FILE
+
+   # Email validator pattern
+   @name "Email Validator"
+   @version "1.0"
+   @author "LibLevenshtein Team"
+   @description "Validates email addresses with RFC 5322 compliance"
+
+   # Import phonetic symbols
+   @import "phonetic/symbols.llev"
+   @import "phonetic/english.llev" as en
+
+   # Enable multiline mode
+   @flags multiline
+
+   # The pattern
+   ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+   ============================================================================ *)
+
+
+(* ============================================================================
+   FILE EXTENSION
+
+   .llre     - Source file (human-readable)
+   .llre.bin - Compiled binary (AOT-compiled NFA)
+   ============================================================================ *)
+
+
+(* ============================================================================
+   COMPILATION
+
+   .llre files can be compiled to binary format for instant loading:
+
+   # Compile to binary
+   liblevenshtein --compile-regex --input pattern.llre --output pattern.llre.bin
+
+   # Load compiled (no parsing overhead)
+   let compiled = load("pattern.llre.bin")?;
+
+   Binary format structure:
+   +------------------+------------------+------------------+
+   | Magic "LLRE"     | Version (1 byte) | Flags (1 byte)   |
+   | (4 bytes)        |                  |                  |
+   +------------------+------------------+------------------+
+   | Metadata (bincode-serialized)                          |
+   +-------------------------------------------------------+
+   | NFA (bincode-serialized)                               |
+   +-------------------------------------------------------+
+   ============================================================================ *)

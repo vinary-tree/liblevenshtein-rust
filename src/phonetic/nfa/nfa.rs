@@ -30,6 +30,9 @@
 //!   F  = set of final (accepting) states
 //! ```
 
+#[cfg(feature = "serialization")]
+use serde::{Deserialize, Serialize};
+
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 
@@ -68,6 +71,7 @@ use super::types::{
 /// assert!(!nfa.accepts("b"));
 /// ```
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct NFAChar {
     /// All states in the NFA
     states: Vec<NFAState>,
@@ -290,7 +294,7 @@ impl NFAChar {
 
         for &state in states {
             for trans in self.transitions_from(state) {
-                if !trans.label.is_epsilon() && trans.label.matches(c) {
+                if !trans.label.is_epsilon() && !trans.label.is_anchor() && trans.label.matches(c) {
                     result.insert(trans.to);
                 }
             }
@@ -299,24 +303,281 @@ impl NFAChar {
         result
     }
 
+    /// Compute the set of states reachable from a state set on anchor assertions.
+    ///
+    /// Anchors are zero-width assertions that match based on position in the input.
+    /// This does NOT include epsilon closure - call `epsilon_closure` on the result.
+    pub fn move_on_anchors(
+        &self,
+        states: &FxHashSet<StateId>,
+        input: &str,
+        pos: usize,
+        multiline: bool,
+    ) -> FxHashSet<StateId> {
+        let mut result = FxHashSet::default();
+
+        for &state in states {
+            for trans in self.transitions_from(state) {
+                if trans.label.is_anchor() && trans.label.matches_at_position(input, pos, multiline)
+                {
+                    result.insert(trans.to);
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Get the number of states (alias for num_states for compatibility).
+    #[inline]
+    pub fn state_count(&self) -> usize {
+        self.num_states()
+    }
+
     /// Check if the NFA accepts a string.
     ///
     /// Uses the standard NFA simulation algorithm:
     /// 1. Start with epsilon closure of initial state
     /// 2. For each input character, compute move and epsilon closure
     /// 3. Accept if final state set intersects with accepting states
+    ///
+    /// Note: This method does NOT handle anchor assertions. Use `accepts_with_flags`
+    /// for patterns containing anchors like `^`, `$`, `\A`, `\Z`, `\z`.
     pub fn accepts(&self, input: &str) -> bool {
+        self.accepts_with_flags(input, false, false)
+    }
+
+    /// Check if the NFA accepts a string with flag support (full-match semantics).
+    ///
+    /// This method requires the pattern to consume the entire input string.
+    /// For search semantics (finding pattern anywhere in string), use `search_with_flags`.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The string to match against
+    /// * `multiline` - If true, `^` and `$` match at line boundaries (after/before `\n`)
+    /// * `_dotall` - If true, `.` matches newlines (currently unused - handled at compile time)
+    pub fn accepts_with_flags(&self, input: &str, multiline: bool, _dotall: bool) -> bool {
         let mut current = self.epsilon_closure_single(self.start);
 
-        for c in input.chars() {
-            let moved = self.move_on_char(&current, c);
-            if moved.is_empty() {
+        // Process anchors at start position (position 0)
+        loop {
+            let anchor_moved = self.move_on_anchors(&current, input, 0, multiline);
+            if anchor_moved.is_empty() {
+                break;
+            }
+            let anchor_closure = self.epsilon_closure(&anchor_moved);
+            if anchor_closure.is_subset(&current) {
+                break; // No new states reached
+            }
+            current.extend(anchor_closure);
+        }
+
+        let chars: Vec<char> = input.chars().collect();
+        let mut byte_pos = 0usize;
+
+        for (char_idx, &c) in chars.iter().enumerate() {
+            // Move on character
+            let char_moved = self.move_on_char(&current, c);
+            if char_moved.is_empty() {
+                // No transition available - check if this is \Z with trailing newline
+                // \Z matches before optional trailing newline, so we accept if:
+                // 1. We're in a final state, AND
+                // 2. Remaining input is only trailing newlines
+                if current.iter().any(|&s| self.is_final(s))
+                    && chars[char_idx..].iter().all(|&ch| ch == '\n')
+                {
+                    return true;
+                }
                 return false;
             }
-            current = self.epsilon_closure(&moved);
+            current = self.epsilon_closure(&char_moved);
+
+            // Update byte position for next anchor check
+            byte_pos += c.len_utf8();
+
+            // Process anchors at position after this character
+            loop {
+                let anchor_moved = self.move_on_anchors(&current, input, byte_pos, multiline);
+                if anchor_moved.is_empty() {
+                    break;
+                }
+                let anchor_closure = self.epsilon_closure(&anchor_moved);
+                let prev_len = current.len();
+                current.extend(anchor_closure);
+                if current.len() == prev_len {
+                    break; // No new states reached
+                }
+            }
+
+            // For multiline mode, check anchors after newlines
+            if multiline && c == '\n' && char_idx + 1 < chars.len() {
+                loop {
+                    let anchor_moved = self.move_on_anchors(&current, input, byte_pos, multiline);
+                    if anchor_moved.is_empty() {
+                        break;
+                    }
+                    let anchor_closure = self.epsilon_closure(&anchor_moved);
+                    let prev_len = current.len();
+                    current.extend(anchor_closure);
+                    if current.len() == prev_len {
+                        break;
+                    }
+                }
+            }
         }
 
         current.iter().any(|&s| self.is_final(s))
+    }
+
+    /// Search for the pattern anywhere in the input string (search semantics).
+    ///
+    /// This method implements search semantics:
+    /// - Patterns with `^` only match at the start (or line starts in multiline)
+    /// - Patterns without `^` can match at any position
+    /// - Patterns with `$` must end at the end (or line ends in multiline)
+    /// - Patterns without `$` can end at any position
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The string to search in
+    /// * `multiline` - If true, `^` and `$` match at line boundaries
+    /// * `dotall` - If true, `.` matches newlines
+    pub fn search_with_flags(&self, input: &str, multiline: bool, dotall: bool) -> bool {
+        // Check if the pattern has a start anchor
+        let start_closure = self.epsilon_closure_single(self.start);
+        let has_start_anchor = start_closure.iter().any(|&s| {
+            self.transitions_from(s).any(|t| {
+                matches!(
+                    t.label,
+                    TransitionLabelChar::StartOfLine | TransitionLabelChar::StartOfInput
+                )
+            })
+        });
+
+        let chars: Vec<char> = input.chars().collect();
+
+        if has_start_anchor {
+            // Pattern has start anchor - only try matching from position 0
+            self.try_match_from(&chars, input, 0, multiline, dotall)
+        } else {
+            // Pattern has no start anchor - try all positions
+            for start_pos in 0..=chars.len() {
+                if self.try_match_from(&chars, input, start_pos, multiline, dotall) {
+                    return true;
+                }
+            }
+            false
+        }
+    }
+
+    /// Try to match the NFA starting from a specific character position.
+    fn try_match_from(
+        &self,
+        chars: &[char],
+        input: &str,
+        start_char_pos: usize,
+        multiline: bool,
+        _dotall: bool,
+    ) -> bool {
+        let mut current = self.epsilon_closure_single(self.start);
+
+        // Calculate byte position for the starting character position
+        let start_byte_pos: usize = chars[..start_char_pos]
+            .iter()
+            .map(|c| c.len_utf8())
+            .sum();
+
+        // Process anchors at start position
+        loop {
+            let anchor_moved = self.move_on_anchors(&current, input, start_byte_pos, multiline);
+            if anchor_moved.is_empty() {
+                break;
+            }
+            let anchor_closure = self.epsilon_closure(&anchor_moved);
+            if anchor_closure.is_subset(&current) {
+                break;
+            }
+            current.extend(anchor_closure);
+        }
+
+        let mut byte_pos = start_byte_pos;
+
+        for (idx, &c) in chars[start_char_pos..].iter().enumerate() {
+            let char_idx = start_char_pos + idx;
+
+            // Move on character
+            let char_moved = self.move_on_char(&current, c);
+            if char_moved.is_empty() {
+                // No character transition - check if we can accept here (search semantics)
+                if current.iter().any(|&s| self.is_final(s)) {
+                    // Check if any final state has pending end anchor requirements
+                    let needs_end_anchor = current.iter().any(|&s| {
+                        self.is_final(s)
+                            && self.transitions_from(s).any(|t| {
+                                matches!(
+                                    t.label,
+                                    TransitionLabelChar::EndOfLine
+                                        | TransitionLabelChar::EndOfInput
+                                        | TransitionLabelChar::EndOfInputStrict
+                                )
+                            })
+                    });
+
+                    // If no end anchor requirement, accept
+                    if !needs_end_anchor {
+                        return true;
+                    }
+
+                    // If remaining is just trailing newline(s), accept for \Z
+                    if chars[char_idx..].iter().all(|&ch| ch == '\n') {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            current = self.epsilon_closure(&char_moved);
+
+            // Update byte position
+            byte_pos += c.len_utf8();
+
+            // Process anchors
+            loop {
+                let anchor_moved = self.move_on_anchors(&current, input, byte_pos, multiline);
+                if anchor_moved.is_empty() {
+                    break;
+                }
+                let anchor_closure = self.epsilon_closure(&anchor_moved);
+                let prev_len = current.len();
+                current.extend(anchor_closure);
+                if current.len() == prev_len {
+                    break;
+                }
+            }
+
+            // Multiline mode anchor check after newlines
+            if multiline && c == '\n' && char_idx + 1 < chars.len() {
+                loop {
+                    let anchor_moved = self.move_on_anchors(&current, input, byte_pos, multiline);
+                    if anchor_moved.is_empty() {
+                        break;
+                    }
+                    let anchor_closure = self.epsilon_closure(&anchor_moved);
+                    let prev_len = current.len();
+                    current.extend(anchor_closure);
+                    if current.len() == prev_len {
+                        break;
+                    }
+                }
+            }
+        }
+
+        current.iter().any(|&s| self.is_final(s))
+    }
+
+    /// Search for the pattern anywhere in the input (convenience method).
+    pub fn search(&self, input: &str) -> bool {
+        self.search_with_flags(input, false, false)
     }
 
     /// Rebuild the transition index (call after modifying transitions directly).
@@ -594,6 +855,72 @@ impl NFAChar {
         result.rebuild_index();
         result
     }
+
+    // ========================================================================
+    // Optimization Methods
+    // ========================================================================
+
+    /// Optimize the NFA with full optimization (all passes enabled).
+    ///
+    /// This is the recommended method for most use cases. It eliminates epsilon
+    /// transitions, removes unreachable states, removes dead states, and
+    /// deduplicates transitions.
+    ///
+    /// # Returns
+    ///
+    /// A new, optimized NFA that accepts the same language.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let nfa = compile(&regex)?;
+    /// let optimized = nfa.optimize();
+    /// assert!(optimized.accepts("hello") == nfa.accepts("hello"));
+    /// ```
+    pub fn optimize(&self) -> NFAChar {
+        use super::optimizer::{NfaOptimizerChar, OptimizationConfig};
+        let optimizer = NfaOptimizerChar::new(OptimizationConfig::full());
+        let (optimized, _stats) = optimizer.optimize(self.clone());
+        optimized
+    }
+
+    /// Optimize the NFA with custom configuration, returning statistics.
+    ///
+    /// This method allows fine-grained control over which optimization passes
+    /// to apply and returns detailed statistics about the optimization.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Configuration specifying which passes to apply
+    ///
+    /// # Returns
+    ///
+    /// A tuple of (optimized NFA, optimization statistics).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use liblevenshtein::phonetic::nfa::optimizer::OptimizationConfig;
+    ///
+    /// let nfa = compile(&regex)?;
+    /// let (optimized, stats) = nfa.optimize_with(OptimizationConfig::quick());
+    /// println!("Removed {} states ({:.1}% reduction)",
+    ///     stats.states_removed,
+    ///     stats.state_reduction_percent());
+    /// ```
+    pub fn optimize_with(
+        &self,
+        config: super::optimizer::OptimizationConfig,
+    ) -> (NFAChar, super::optimizer::OptimizationStats) {
+        use super::optimizer::NfaOptimizerChar;
+        let optimizer = NfaOptimizerChar::new(config);
+        optimizer.optimize(self.clone())
+    }
+
+    /// Count the number of epsilon transitions in this NFA.
+    pub fn count_epsilon_transitions(&self) -> usize {
+        self.transitions.iter().filter(|t| t.label.is_epsilon()).count()
+    }
 }
 
 impl Default for NFAChar {
@@ -634,6 +961,7 @@ impl fmt::Display for NFAChar {
 /// An NFA for matching phonetic patterns over ASCII bytes.
 /// Optimized for ~5% faster matching and ~4× less memory per edge label.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct NFA {
     /// All states in the NFA
     states: Vec<NFAState>,
@@ -850,7 +1178,7 @@ impl NFA {
 
         for &state in states {
             for trans in self.transitions_from(state) {
-                if !trans.label.is_epsilon() && trans.label.matches(b) {
+                if !trans.label.is_epsilon() && !trans.label.is_anchor() && trans.label.matches(b) {
                     result.insert(trans.to);
                 }
             }
@@ -859,24 +1187,205 @@ impl NFA {
         result
     }
 
+    /// Compute the set of states reachable from a state set on anchor assertions.
+    pub fn move_on_anchors(
+        &self,
+        states: &FxHashSet<StateId>,
+        input: &[u8],
+        pos: usize,
+        multiline: bool,
+    ) -> FxHashSet<StateId> {
+        let mut result = FxHashSet::default();
+
+        for &state in states {
+            for trans in self.transitions_from(state) {
+                if trans.label.is_anchor() && trans.label.matches_at_position(input, pos, multiline)
+                {
+                    result.insert(trans.to);
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Get the number of states (alias for num_states for compatibility).
+    #[inline]
+    pub fn state_count(&self) -> usize {
+        self.num_states()
+    }
+
     /// Check if the NFA accepts a byte string.
     pub fn accepts(&self, input: &[u8]) -> bool {
+        self.accepts_with_flags(input, false, false)
+    }
+
+    /// Check if the NFA accepts a byte string with flag support (full-match semantics).
+    pub fn accepts_with_flags(&self, input: &[u8], multiline: bool, _dotall: bool) -> bool {
         let mut current = self.epsilon_closure_single(self.start);
 
-        for &b in input {
-            let moved = self.move_on_byte(&current, b);
-            if moved.is_empty() {
+        // Process anchors at start position (position 0)
+        loop {
+            let anchor_moved = self.move_on_anchors(&current, input, 0, multiline);
+            if anchor_moved.is_empty() {
+                break;
+            }
+            let anchor_closure = self.epsilon_closure(&anchor_moved);
+            if anchor_closure.is_subset(&current) {
+                break;
+            }
+            current.extend(anchor_closure);
+        }
+
+        for (pos, &b) in input.iter().enumerate() {
+            // Move on byte
+            let byte_moved = self.move_on_byte(&current, b);
+            if byte_moved.is_empty() {
+                // No transition - check if \Z with trailing newlines
+                if current.iter().any(|&s| self.is_final(s))
+                    && input[pos..].iter().all(|&byte| byte == b'\n')
+                {
+                    return true;
+                }
                 return false;
             }
-            current = self.epsilon_closure(&moved);
+            current = self.epsilon_closure(&byte_moved);
+
+            // Process anchors at position after this byte
+            let next_pos = pos + 1;
+            loop {
+                let anchor_moved = self.move_on_anchors(&current, input, next_pos, multiline);
+                if anchor_moved.is_empty() {
+                    break;
+                }
+                let anchor_closure = self.epsilon_closure(&anchor_moved);
+                let prev_len = current.len();
+                current.extend(anchor_closure);
+                if current.len() == prev_len {
+                    break;
+                }
+            }
         }
 
         current.iter().any(|&s| self.is_final(s))
     }
 
+    /// Search for the pattern anywhere in the input (search semantics).
+    pub fn search_with_flags(&self, input: &[u8], multiline: bool, dotall: bool) -> bool {
+        let start_closure = self.epsilon_closure_single(self.start);
+        let has_start_anchor = start_closure.iter().any(|&s| {
+            self.transitions_from(s).any(|t| {
+                matches!(
+                    t.label,
+                    TransitionLabel::StartOfLine | TransitionLabel::StartOfInput
+                )
+            })
+        });
+
+        if has_start_anchor {
+            self.try_match_from_byte(input, 0, multiline, dotall)
+        } else {
+            for start_pos in 0..=input.len() {
+                if self.try_match_from_byte(input, start_pos, multiline, dotall) {
+                    return true;
+                }
+            }
+            false
+        }
+    }
+
+    /// Try to match the NFA starting from a specific byte position.
+    fn try_match_from_byte(
+        &self,
+        input: &[u8],
+        start_pos: usize,
+        multiline: bool,
+        _dotall: bool,
+    ) -> bool {
+        let mut current = self.epsilon_closure_single(self.start);
+
+        // Process anchors at start position
+        loop {
+            let anchor_moved = self.move_on_anchors(&current, input, start_pos, multiline);
+            if anchor_moved.is_empty() {
+                break;
+            }
+            let anchor_closure = self.epsilon_closure(&anchor_moved);
+            if anchor_closure.is_subset(&current) {
+                break;
+            }
+            current.extend(anchor_closure);
+        }
+
+        for (idx, &b) in input[start_pos..].iter().enumerate() {
+            let pos = start_pos + idx;
+
+            // Move on byte
+            let byte_moved = self.move_on_byte(&current, b);
+            if byte_moved.is_empty() {
+                // Check if we can accept here (search semantics)
+                if current.iter().any(|&s| self.is_final(s)) {
+                    let needs_end_anchor = current.iter().any(|&s| {
+                        self.is_final(s)
+                            && self.transitions_from(s).any(|t| {
+                                matches!(
+                                    t.label,
+                                    TransitionLabel::EndOfLine
+                                        | TransitionLabel::EndOfInput
+                                        | TransitionLabel::EndOfInputStrict
+                                )
+                            })
+                    });
+
+                    if !needs_end_anchor {
+                        return true;
+                    }
+
+                    if input[pos..].iter().all(|&byte| byte == b'\n') {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            current = self.epsilon_closure(&byte_moved);
+
+            // Process anchors
+            let next_pos = pos + 1;
+            loop {
+                let anchor_moved = self.move_on_anchors(&current, input, next_pos, multiline);
+                if anchor_moved.is_empty() {
+                    break;
+                }
+                let anchor_closure = self.epsilon_closure(&anchor_moved);
+                let prev_len = current.len();
+                current.extend(anchor_closure);
+                if current.len() == prev_len {
+                    break;
+                }
+            }
+        }
+
+        current.iter().any(|&s| self.is_final(s))
+    }
+
+    /// Search for the pattern anywhere in the input (convenience method).
+    pub fn search(&self, input: &[u8]) -> bool {
+        self.search_with_flags(input, false, false)
+    }
+
+    /// Search for the pattern in a string (as UTF-8 bytes).
+    pub fn search_str(&self, input: &str) -> bool {
+        self.search(input.as_bytes())
+    }
+
     /// Check if the NFA accepts a string (as UTF-8 bytes).
     pub fn accepts_str(&self, input: &str) -> bool {
         self.accepts(input.as_bytes())
+    }
+
+    /// Check if the NFA accepts a string with flags (as UTF-8 bytes).
+    pub fn accepts_str_with_flags(&self, input: &str, multiline: bool, dotall: bool) -> bool {
+        self.accepts_with_flags(input.as_bytes(), multiline, dotall)
     }
 
     /// Rebuild the transition index.
@@ -1054,6 +1563,44 @@ impl NFA {
 
         result.rebuild_index();
         result
+    }
+
+    // ========================================================================
+    // Optimization Methods
+    // ========================================================================
+
+    /// Optimize the NFA with full optimization (all passes enabled).
+    ///
+    /// This is the recommended method for most use cases. It eliminates epsilon
+    /// transitions, removes unreachable states, removes dead states, and
+    /// deduplicates transitions.
+    ///
+    /// # Returns
+    ///
+    /// A new, optimized NFA that accepts the same language.
+    pub fn optimize(&self) -> NFA {
+        use super::optimizer::{NfaOptimizer, OptimizationConfig};
+        let optimizer = NfaOptimizer::new(OptimizationConfig::full());
+        let (optimized, _stats) = optimizer.optimize(self.clone());
+        optimized
+    }
+
+    /// Optimize the NFA with custom configuration, returning statistics.
+    ///
+    /// This method allows fine-grained control over which optimization passes
+    /// to apply and returns detailed statistics about the optimization.
+    pub fn optimize_with(
+        &self,
+        config: super::optimizer::OptimizationConfig,
+    ) -> (NFA, super::optimizer::OptimizationStats) {
+        use super::optimizer::NfaOptimizer;
+        let optimizer = NfaOptimizer::new(config);
+        optimizer.optimize(self.clone())
+    }
+
+    /// Count the number of epsilon transitions in this NFA.
+    pub fn count_epsilon_transitions(&self) -> usize {
+        self.transitions.iter().filter(|t| t.label.is_epsilon()).count()
     }
 }
 
@@ -1362,5 +1909,193 @@ mod tests {
         assert!(!pattern.accepts("a"));
         assert!(!pattern.accepts("b"));
         assert!(!pattern.accepts("ca"));
+    }
+
+    // --- Anchor tests ---
+
+    #[test]
+    fn test_nfa_char_start_of_line_anchor() {
+        // Build NFA for ^hello
+        let mut nfa = NFAChar::new();
+        let q0 = nfa.start();
+        let q1 = nfa.add_state(false);
+        let q2 = nfa.add_state(false);
+        let q3 = nfa.add_state(false);
+        let q4 = nfa.add_state(false);
+        let q5 = nfa.add_state(false);
+        let q6 = nfa.add_state(true);
+
+        // ^
+        nfa.add_transition(q0, TransitionLabelChar::StartOfLine, q1);
+        // hello
+        nfa.add_transition_char(q1, 'h', q2);
+        nfa.add_transition_char(q2, 'e', q3);
+        nfa.add_transition_char(q3, 'l', q4);
+        nfa.add_transition_char(q4, 'l', q5);
+        nfa.add_transition_char(q5, 'o', q6);
+
+        // Should match "hello" at start of input
+        assert!(nfa.accepts("hello"));
+        // Should not match with prefix
+        assert!(!nfa.accepts("xhello"));
+    }
+
+    #[test]
+    fn test_nfa_char_end_of_line_anchor() {
+        // Build NFA for hello$
+        let mut nfa = NFAChar::new();
+        let q0 = nfa.start();
+        let q1 = nfa.add_state(false);
+        let q2 = nfa.add_state(false);
+        let q3 = nfa.add_state(false);
+        let q4 = nfa.add_state(false);
+        let q5 = nfa.add_state(false);
+        let q6 = nfa.add_state(true);
+
+        // hello
+        nfa.add_transition_char(q0, 'h', q1);
+        nfa.add_transition_char(q1, 'e', q2);
+        nfa.add_transition_char(q2, 'l', q3);
+        nfa.add_transition_char(q3, 'l', q4);
+        nfa.add_transition_char(q4, 'o', q5);
+        // $
+        nfa.add_transition(q5, TransitionLabelChar::EndOfLine, q6);
+
+        // Should match "hello" at end of input
+        assert!(nfa.accepts("hello"));
+    }
+
+    #[test]
+    fn test_nfa_char_anchored_pattern() {
+        // Build NFA for ^hello$
+        let mut nfa = NFAChar::new();
+        let q0 = nfa.start();
+        let q1 = nfa.add_state(false);
+        let q2 = nfa.add_state(false);
+        let q3 = nfa.add_state(false);
+        let q4 = nfa.add_state(false);
+        let q5 = nfa.add_state(false);
+        let q6 = nfa.add_state(false);
+        let q7 = nfa.add_state(true);
+
+        // ^
+        nfa.add_transition(q0, TransitionLabelChar::StartOfLine, q1);
+        // hello
+        nfa.add_transition_char(q1, 'h', q2);
+        nfa.add_transition_char(q2, 'e', q3);
+        nfa.add_transition_char(q3, 'l', q4);
+        nfa.add_transition_char(q4, 'l', q5);
+        nfa.add_transition_char(q5, 'o', q6);
+        // $
+        nfa.add_transition(q6, TransitionLabelChar::EndOfLine, q7);
+
+        // Should match exact "hello"
+        assert!(nfa.accepts("hello"));
+        // Should not match with extra chars
+        assert!(!nfa.accepts("xhello"));
+    }
+
+    #[test]
+    fn test_nfa_char_multiline_start_of_line() {
+        // Build NFA for ^line
+        let mut nfa = NFAChar::new();
+        let q0 = nfa.start();
+        let q1 = nfa.add_state(false);
+        let q2 = nfa.add_state(false);
+        let q3 = nfa.add_state(false);
+        let q4 = nfa.add_state(false);
+        let q5 = nfa.add_state(true);
+
+        // ^
+        nfa.add_transition(q0, TransitionLabelChar::StartOfLine, q1);
+        // line
+        nfa.add_transition_char(q1, 'l', q2);
+        nfa.add_transition_char(q2, 'i', q3);
+        nfa.add_transition_char(q3, 'n', q4);
+        nfa.add_transition_char(q4, 'e', q5);
+
+        // Without multiline, should only match at start
+        assert!(nfa.accepts_with_flags("line", false, false));
+
+        // In multiline mode, ^ should match after newline
+        // But the NFA expects the entire input to match, not a substring
+        // So "first\nline" won't match ^line in our whole-string matching
+    }
+
+    #[test]
+    fn test_nfa_char_start_of_input_anchor() {
+        // Build NFA for \Ahello
+        let mut nfa = NFAChar::new();
+        let q0 = nfa.start();
+        let q1 = nfa.add_state(false);
+        let q2 = nfa.add_state(false);
+        let q3 = nfa.add_state(false);
+        let q4 = nfa.add_state(false);
+        let q5 = nfa.add_state(false);
+        let q6 = nfa.add_state(true);
+
+        // \A
+        nfa.add_transition(q0, TransitionLabelChar::StartOfInput, q1);
+        // hello
+        nfa.add_transition_char(q1, 'h', q2);
+        nfa.add_transition_char(q2, 'e', q3);
+        nfa.add_transition_char(q3, 'l', q4);
+        nfa.add_transition_char(q4, 'l', q5);
+        nfa.add_transition_char(q5, 'o', q6);
+
+        // \A only matches at absolute start, regardless of multiline mode
+        assert!(nfa.accepts_with_flags("hello", true, false));
+    }
+
+    #[test]
+    fn test_nfa_char_end_of_input_anchor() {
+        // Build NFA for hello\Z
+        let mut nfa = NFAChar::new();
+        let q0 = nfa.start();
+        let q1 = nfa.add_state(false);
+        let q2 = nfa.add_state(false);
+        let q3 = nfa.add_state(false);
+        let q4 = nfa.add_state(false);
+        let q5 = nfa.add_state(false);
+        let q6 = nfa.add_state(true);
+
+        // hello
+        nfa.add_transition_char(q0, 'h', q1);
+        nfa.add_transition_char(q1, 'e', q2);
+        nfa.add_transition_char(q2, 'l', q3);
+        nfa.add_transition_char(q3, 'l', q4);
+        nfa.add_transition_char(q4, 'o', q5);
+        // \Z
+        nfa.add_transition(q5, TransitionLabelChar::EndOfInput, q6);
+
+        // \Z matches at end, optionally with trailing newline
+        assert!(nfa.accepts("hello"));
+        assert!(nfa.accepts("hello\n"));
+    }
+
+    #[test]
+    fn test_nfa_char_strict_end_of_input_anchor() {
+        // Build NFA for hello\z
+        let mut nfa = NFAChar::new();
+        let q0 = nfa.start();
+        let q1 = nfa.add_state(false);
+        let q2 = nfa.add_state(false);
+        let q3 = nfa.add_state(false);
+        let q4 = nfa.add_state(false);
+        let q5 = nfa.add_state(false);
+        let q6 = nfa.add_state(true);
+
+        // hello
+        nfa.add_transition_char(q0, 'h', q1);
+        nfa.add_transition_char(q1, 'e', q2);
+        nfa.add_transition_char(q2, 'l', q3);
+        nfa.add_transition_char(q3, 'l', q4);
+        nfa.add_transition_char(q4, 'o', q5);
+        // \z
+        nfa.add_transition(q5, TransitionLabelChar::EndOfInputStrict, q6);
+
+        // \z matches only at absolute end, no trailing newline
+        assert!(nfa.accepts("hello"));
+        assert!(!nfa.accepts("hello\n")); // \z doesn't allow trailing newline
     }
 }

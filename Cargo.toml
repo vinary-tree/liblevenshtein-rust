@@ -1,3 +1,7 @@
+[workspace]
+members = [".", "liblevenshtein-macros"]
+resolver = "2"
+
 [package]
 name = "liblevenshtein"
 version = "0.7.0"

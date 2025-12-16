@@ -16,7 +16,8 @@ use std::path::PathBuf;
     ArgGroup::new("operation")
         .required(true)
         .args(["compile", "phonetic", "query", "repl", "info", "convert",
-               "insert", "delete", "clear", "minimize", "settings", "config_mgmt"])
+               "insert", "delete", "clear", "minimize", "settings", "config_mgmt",
+               "compile_regex", "match_regex"])
 ))]
 pub struct Cli {
     // ========================================================================
@@ -79,6 +80,14 @@ pub struct Cli {
     #[arg(long)]
     pub config_mgmt: bool,
 
+    /// Compile a .llre regex file to binary format
+    #[arg(long = "compile-regex")]
+    pub compile_regex: bool,
+
+    /// Match text against a .llre regex pattern
+    #[arg(long = "match-regex")]
+    pub match_regex: bool,
+
     // ========================================================================
     // Input/output arguments (shared across operations)
     // ========================================================================
@@ -122,6 +131,18 @@ pub struct Cli {
     /// Use compiled binary format (auto-detected from extension)
     #[arg(long)]
     pub compiled: bool,
+
+    // ========================================================================
+    // Regex options (for --compile-regex, --match-regex)
+    // ========================================================================
+
+    /// Enable multiline mode for regex (^ and $ match line boundaries)
+    #[arg(long)]
+    pub multiline: bool,
+
+    /// Enable dotall mode for regex (. matches newlines)
+    #[arg(long)]
+    pub dotall: bool,
 
     // ========================================================================
     // Dictionary options

@@ -2,7 +2,40 @@
 //!
 //! Tokenizes input strings into a stream of tokens for the parser.
 
+use crate::phonetic::common::traits::{LexerLike, TokenLike};
+use crate::phonetic::common::syllable::SyllableCondition;
 use super::error::{ParseError, ParseErrorKind, ParseResult, Position};
+
+/// Parsed regex flags from `(?...)` syntax.
+///
+/// Used to communicate flag state from lexer to parser.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ParsedFlags {
+    /// Case-insensitive flag (`i` or `-i`)
+    pub case_insensitive: Option<bool>,
+    /// Unicode normalization form (`u:NFC`, etc.)
+    pub unicode_normalization: Option<String>,
+    /// Feature-based matching flag (`f` or `-f`)
+    pub feature_based: Option<bool>,
+    /// Accent-insensitive flag (`a` or `-a`)
+    pub accent_insensitive: Option<bool>,
+    /// Multiline flag (`m` or `-m`) - `^` and `$` match line boundaries
+    pub multiline: Option<bool>,
+    /// Dotall flag (`s` or `-s`) - `.` matches newlines
+    pub dotall: Option<bool>,
+}
+
+impl ParsedFlags {
+    /// Check if any flags are set.
+    pub fn is_empty(&self) -> bool {
+        self.case_insensitive.is_none()
+            && self.unicode_normalization.is_none()
+            && self.feature_based.is_none()
+            && self.accent_insensitive.is_none()
+            && self.multiline.is_none()
+            && self.dotall.is_none()
+    }
+}
 
 /// A token in the phonetic regex language.
 #[derive(Debug, Clone, PartialEq)]
@@ -22,11 +55,26 @@ pub enum Token {
     /// Range in character class `-`
     Dash,
 
-    /// Start of group `(`
+    /// Start of capturing group `(`
     GroupStart,
 
     /// End of group `)`
     GroupEnd,
+
+    /// Start of non-capturing group `(?:`
+    NonCapturingGroupStart,
+
+    /// Start of named group `(?<name>` - contains the group name
+    NamedGroupStart(String),
+
+    /// Group reference (subroutine call) `(?&name)` - contains the group name
+    GroupReference(String),
+
+    /// Inline flags `(?i)` - applies to rest of current scope
+    InlineFlags(ParsedFlags),
+
+    /// Scoped flags start `(?i:` - contains flags, pattern follows until `)`
+    ScopedFlagsStart(ParsedFlags),
 
     /// Alternation `|`
     Pipe,
@@ -110,6 +158,21 @@ pub enum Token {
     /// User-defined symbol reference ($NAME or ${NAME})
     SymbolRef(String),
 
+    /// Start of line anchor `^` (outside char class)
+    StartOfLine,
+
+    /// End of line anchor `$` (outside char class)
+    EndOfLine,
+
+    /// Start of input anchor `\A`
+    StartOfInput,
+
+    /// End of input anchor `\Z` (allows trailing newline)
+    EndOfInput,
+
+    /// Strict end of input anchor `\z` (no trailing newline)
+    EndOfInputStrict,
+
     /// End of input
     Eof,
 }
@@ -130,11 +193,93 @@ impl Token {
             Token::Char(_)
                 | Token::CharClassStart
                 | Token::GroupStart
+                | Token::NonCapturingGroupStart
+                | Token::NamedGroupStart(_)
+                | Token::GroupReference(_)
+                | Token::InlineFlags(_)
+                | Token::ScopedFlagsStart(_)
                 | Token::Dot
                 | Token::Hash
                 | Token::SymbolRef(_)
                 | Token::PhoneticShortcut { .. }
+                | Token::StartOfLine
+                | Token::EndOfLine
+                | Token::StartOfInput
+                | Token::EndOfInput
+                | Token::EndOfInputStrict
         )
+    }
+}
+
+impl TokenLike for Token {
+    fn is_pipe(&self) -> bool {
+        matches!(self, Token::Pipe)
+    }
+
+    fn is_ampersand(&self) -> bool {
+        matches!(self, Token::Ampersand)
+    }
+
+    fn is_exclamation(&self) -> bool {
+        matches!(self, Token::Exclamation)
+    }
+
+    fn is_group_start(&self) -> bool {
+        matches!(
+            self,
+            Token::GroupStart
+                | Token::NonCapturingGroupStart
+                | Token::NamedGroupStart(_)
+                | Token::ScopedFlagsStart(_)
+        )
+    }
+
+    fn is_group_end(&self) -> bool {
+        matches!(self, Token::GroupEnd)
+    }
+
+    fn is_hash(&self) -> bool {
+        matches!(self, Token::Hash)
+    }
+
+    fn is_star(&self) -> bool {
+        matches!(self, Token::Star)
+    }
+
+    fn is_plus(&self) -> bool {
+        matches!(self, Token::Plus)
+    }
+
+    fn is_question(&self) -> bool {
+        matches!(self, Token::Question)
+    }
+
+    fn is_brace_start(&self) -> bool {
+        matches!(self, Token::QuantifierStart)
+    }
+
+    fn is_eof(&self) -> bool {
+        matches!(self, Token::Eof)
+    }
+
+    fn is_if_keyword(&self) -> bool {
+        matches!(self, Token::IfKeyword)
+    }
+
+    fn as_syllable_condition(&self) -> Option<SyllableCondition> {
+        match self {
+            Token::Monosyllable => Some(SyllableCondition::Monosyllable),
+            Token::Polysyllable => Some(SyllableCondition::Polysyllable),
+            Token::OpenSyllable => Some(SyllableCondition::OpenSyllable),
+            Token::ClosedSyllable => Some(SyllableCondition::ClosedSyllable),
+            Token::FinalSyllable => Some(SyllableCondition::FinalSyllable),
+            Token::InitialSyllable => Some(SyllableCondition::InitialSyllable),
+            _ => None,
+        }
+    }
+
+    fn can_start_primary(&self) -> bool {
+        Token::can_start_primary(self)
     }
 }
 
@@ -260,8 +405,13 @@ impl<'a> Lexer<'a> {
             Token::CharClassEnd | Token::WeightEnd => ']',
             Token::Caret => '^',
             Token::Dash => '-',
-            Token::GroupStart => '(',
+            Token::GroupStart
+            | Token::NonCapturingGroupStart
+            | Token::NamedGroupStart(_)
+            | Token::ScopedFlagsStart(_) => '(',
             Token::GroupEnd => ')',
+            Token::GroupReference(_) => '(',
+            Token::InlineFlags(_) => '(',
             Token::Pipe => '|',
             Token::Star => '*',
             Token::Plus => '+',
@@ -287,6 +437,11 @@ impl<'a> Lexer<'a> {
             | Token::InitialSyllable => 'i', // keywords
             Token::PhoneticShortcut { .. } => '\\', // escape sequence
             Token::SymbolRef(_) => '$',
+            Token::StartOfLine => '^',
+            Token::EndOfLine => '$',
+            Token::StartOfInput => '\\', // \A
+            Token::EndOfInput => '\\',   // \Z
+            Token::EndOfInputStrict => '\\', // \z
             Token::Eof => '\0',
         }
     }
@@ -463,14 +618,15 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 Ok(Token::PhoneticShortcut { class_name: "glide".to_string(), negated: true })
             }
-            // z/Z - nasal (can't use n - newline)
+            // z - nasal (inside char class) or EndOfInputStrict anchor (outside)
             Some('z') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false })
-            }
-            Some('Z') => {
-                self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: true })
+                // \z is EndOfInputStrict anchor outside char class, nasal inside
+                if self.in_char_class {
+                    Ok(Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false })
+                } else {
+                    Ok(Token::EndOfInputStrict)
+                }
             }
             // q/Q - liquid (can't use l/L - low_vowel)
             Some('q') => {
@@ -499,14 +655,29 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 Ok(Token::PhoneticShortcut { class_name: "fricative".to_string(), negated: true })
             }
-            // a/A - affricate
+            // a/A - affricate (inside char class) or anchor (outside)
             Some('a') => {
                 self.advance();
                 Ok(Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: false })
             }
             Some('A') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: true })
+                // \A is StartOfInput anchor outside char class, affricate negation inside
+                if self.in_char_class {
+                    Ok(Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: true })
+                } else {
+                    Ok(Token::StartOfInput)
+                }
+            }
+            // Z/z - nasal (inside char class) or anchor (outside)
+            Some('Z') => {
+                self.advance();
+                // \Z is EndOfInput anchor outside char class, nasal negation inside
+                if self.in_char_class {
+                    Ok(Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: true })
+                } else {
+                    Ok(Token::EndOfInput)
+                }
             }
             // Default: fall back to standard escape handling
             _ => {
@@ -622,6 +793,7 @@ impl<'a> Lexer<'a> {
         };
 
         // Inside character class, most characters are literal
+        // Note: $ is a literal character inside character classes (unlike outside)
         if self.in_char_class {
             return match c {
                 ']' => {
@@ -631,8 +803,7 @@ impl<'a> Lexer<'a> {
                 '^' => Ok(Token::Caret),
                 '-' => Ok(Token::Dash),
                 '\\' => self.parse_escape_or_shortcut(),
-                '$' => self.parse_symbol_ref(),
-                _ => Ok(Token::Char(c)),
+                _ => Ok(Token::Char(c)),  // $ falls through here as literal
             };
         }
 
@@ -668,7 +839,15 @@ impl<'a> Lexer<'a> {
                 Ok(Token::CharClassStart)
             }
             ']' => Ok(Token::CharClassEnd),
-            '(' => Ok(Token::GroupStart),
+            '(' => {
+                // Check for special group syntax (?...)
+                if self.peek_char() == Some('?') {
+                    self.advance(); // consume '?'
+                    self.parse_special_group()
+                } else {
+                    Ok(Token::GroupStart)
+                }
+            }
             ')' => Ok(Token::GroupEnd),
             '|' => Ok(Token::Pipe),
             '*' => Ok(Token::Star),
@@ -693,7 +872,16 @@ impl<'a> Lexer<'a> {
             '\\' => self.parse_escape_or_shortcut(),
             '&' => Ok(Token::Ampersand),
             '!' => Ok(Token::Exclamation),
-            '$' => self.parse_symbol_ref(),
+            '^' => Ok(Token::StartOfLine), // Anchor outside char class
+            '$' => {
+                // $ is EndOfLine anchor unless followed by identifier (then SymbolRef)
+                match self.peek_char() {
+                    Some(c) if c.is_alphanumeric() || c == '_' || c == '{' => {
+                        self.parse_symbol_ref()
+                    }
+                    _ => Ok(Token::EndOfLine),
+                }
+            }
             c if c.is_ascii_digit() => {
                 let n = self.parse_number(c)?;
                 Ok(Token::Number(n))
@@ -746,6 +934,237 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Parse a special group `(?...)` after consuming `(?`.
+    ///
+    /// Handles:
+    /// - `(?:` - non-capturing group
+    /// - `(?<name>` - named group (PCRE/JS style)
+    /// - `(?&name)` - group reference (subroutine call)
+    /// - `(?i)` - inline flags
+    /// - `(?i:` - scoped flags
+    fn parse_special_group(&mut self) -> ParseResult<Token> {
+        let pos = self.position;
+
+        match self.peek_char() {
+            Some(':') => {
+                // Non-capturing group (?:
+                self.advance();
+                Ok(Token::NonCapturingGroupStart)
+            }
+            Some('<') => {
+                // Named group (?<name>
+                self.advance();
+                self.parse_named_group_start()
+            }
+            Some('&') => {
+                // Group reference (?&name)
+                self.advance();
+                self.parse_group_reference()
+            }
+            Some(c) if c == 'i' || c == 'm' || c == 's' || c == 'u' || c == 'f' || c == 'a' || c == '-' => {
+                // Flags: (?i), (?m), (?s), (?-i), (?i:...), (?u:NFC:...), etc.
+                self.parse_flags_group()
+            }
+            Some(c) => {
+                Err(ParseError::with_context(
+                    ParseErrorKind::InvalidGroupSyntax(format!("unexpected '{}' after '(?'", c)),
+                    pos,
+                    "expected ':', '<', '&', or flag (i, m, s, u, f, a, -)",
+                ))
+            }
+            None => {
+                Err(ParseError::with_context(
+                    ParseErrorKind::UnexpectedEof,
+                    pos,
+                    "unexpected end of input after '(?'",
+                ))
+            }
+        }
+    }
+
+    /// Parse a named group start `(?<name>` after consuming `(?<`.
+    fn parse_named_group_start(&mut self) -> ParseResult<Token> {
+        let pos = self.position;
+        let mut name = String::new();
+
+        // Collect the group name
+        while let Some(c) = self.peek_char() {
+            if c == '>' {
+                self.advance();
+                if name.is_empty() {
+                    return Err(ParseError::with_context(
+                        ParseErrorKind::InvalidGroupName("empty group name".to_string()),
+                        pos,
+                        "group name cannot be empty",
+                    ));
+                }
+                return Ok(Token::NamedGroupStart(name));
+            } else if c.is_ascii_alphanumeric() || c == '_' {
+                self.advance();
+                name.push(c);
+            } else {
+                return Err(ParseError::with_context(
+                    ParseErrorKind::InvalidGroupName(format!("invalid character '{}' in group name", c)),
+                    self.position,
+                    "group names must be alphanumeric or underscore",
+                ));
+            }
+        }
+
+        Err(ParseError::with_context(
+            ParseErrorKind::UnclosedGroup,
+            pos,
+            "unclosed named group - expected '>'",
+        ))
+    }
+
+    /// Parse a group reference `(?&name)` after consuming `(?&`.
+    fn parse_group_reference(&mut self) -> ParseResult<Token> {
+        let pos = self.position;
+        let mut name = String::new();
+
+        // Collect the group name
+        while let Some(c) = self.peek_char() {
+            if c == ')' {
+                self.advance();
+                if name.is_empty() {
+                    return Err(ParseError::with_context(
+                        ParseErrorKind::InvalidGroupReference("empty group reference".to_string()),
+                        pos,
+                        "group reference name cannot be empty",
+                    ));
+                }
+                return Ok(Token::GroupReference(name));
+            } else if c.is_ascii_alphanumeric() || c == '_' {
+                self.advance();
+                name.push(c);
+            } else {
+                return Err(ParseError::with_context(
+                    ParseErrorKind::InvalidGroupReference(format!("invalid character '{}' in group reference", c)),
+                    self.position,
+                    "group reference names must be alphanumeric or underscore",
+                ));
+            }
+        }
+
+        Err(ParseError::with_context(
+            ParseErrorKind::UnclosedGroup,
+            pos,
+            "unclosed group reference - expected ')'",
+        ))
+    }
+
+    /// Parse flags group `(?flags)` or `(?flags:...)` after consuming `(?`.
+    fn parse_flags_group(&mut self) -> ParseResult<Token> {
+        let pos = self.position;
+        let mut flags = ParsedFlags::default();
+        let mut negating = false;
+
+        // Parse flags until we see ':' (scoped) or ')' (inline)
+        loop {
+            match self.peek_char() {
+                Some(':') => {
+                    // Scoped flags (?flags:...)
+                    self.advance();
+                    return Ok(Token::ScopedFlagsStart(flags));
+                }
+                Some(')') => {
+                    // Inline flags (?flags)
+                    self.advance();
+                    return Ok(Token::InlineFlags(flags));
+                }
+                Some('-') => {
+                    // Start negating all following flags until ')' or ':'
+                    self.advance();
+                    negating = true;
+                }
+                Some('i') => {
+                    self.advance();
+                    flags.case_insensitive = Some(!negating);
+                    // Note: Don't reset negating - it applies to all following flags
+                }
+                Some('f') => {
+                    self.advance();
+                    flags.feature_based = Some(!negating);
+                }
+                Some('a') => {
+                    self.advance();
+                    flags.accent_insensitive = Some(!negating);
+                }
+                Some('m') => {
+                    // Multiline mode: ^ and $ match line boundaries
+                    self.advance();
+                    flags.multiline = Some(!negating);
+                }
+                Some('s') => {
+                    // Dotall (single-line) mode: . matches newlines
+                    self.advance();
+                    flags.dotall = Some(!negating);
+                }
+                Some('u') => {
+                    // Unicode normalization: (?u:NFC) or (?u:NFC:...)
+                    self.advance();
+                    if self.peek_char() == Some(':') {
+                        self.advance();
+                        let norm_form = self.parse_normalization_form()?;
+                        flags.unicode_normalization = Some(norm_form);
+                    } else {
+                        return Err(ParseError::with_context(
+                            ParseErrorKind::InvalidFlag("expected ':' after 'u' for normalization form".to_string()),
+                            self.position,
+                            "use (?u:NFC:...) or (?u:NFD:...) syntax",
+                        ));
+                    }
+                }
+                Some(c) => {
+                    return Err(ParseError::with_context(
+                        ParseErrorKind::InvalidFlag(format!("unknown flag '{}'", c)),
+                        self.position,
+                        "valid flags are: i (case-insensitive), m (multiline), s (dotall), f (feature-based), a (accent-insensitive), u:NFC/NFD/NFKC/NFKD",
+                    ));
+                }
+                None => {
+                    return Err(ParseError::with_context(
+                        ParseErrorKind::UnclosedGroup,
+                        pos,
+                        "unclosed flags group - expected ':' or ')'",
+                    ));
+                }
+            }
+        }
+    }
+
+    /// Parse a Unicode normalization form (NFC, NFD, NFKC, NFKD).
+    fn parse_normalization_form(&mut self) -> ParseResult<String> {
+        let pos = self.position;
+        let mut form = String::new();
+
+        // Collect uppercase letters for the normalization form
+        while let Some(c) = self.peek_char() {
+            if c.is_ascii_uppercase() {
+                self.advance();
+                form.push(c);
+            } else {
+                break;
+            }
+        }
+
+        // Validate the form
+        match form.as_str() {
+            "NFC" | "NFD" | "NFKC" | "NFKD" => Ok(form),
+            "" => Err(ParseError::with_context(
+                ParseErrorKind::InvalidFlag("missing normalization form after 'u:'".to_string()),
+                pos,
+                "expected NFC, NFD, NFKC, or NFKD",
+            )),
+            _ => Err(ParseError::with_context(
+                ParseErrorKind::InvalidFlag(format!("unknown normalization form '{}'", form)),
+                pos,
+                "expected NFC, NFD, NFKC, or NFKD",
+            )),
+        }
+    }
+
     /// Enter weight parsing mode (after seeing a rewrite rule).
     pub fn enter_weight_mode(&mut self) {
         self.in_char_class = false;
@@ -761,6 +1180,23 @@ impl<'a> Lexer<'a> {
     pub fn is_eof(&mut self) -> bool {
         self.skip_whitespace();
         self.chars.peek().is_none()
+    }
+}
+
+impl<'a> LexerLike for Lexer<'a> {
+    type Token = Token;
+    type Error = ParseError;
+
+    fn peek(&mut self) -> Result<&Self::Token, Self::Error> {
+        Lexer::peek(self)
+    }
+
+    fn advance(&mut self) -> Result<Self::Token, Self::Error> {
+        Lexer::next_token(self)
+    }
+
+    fn position(&self) -> Position {
+        Lexer::position(self)
     }
 }
 
@@ -1137,6 +1573,96 @@ impl<'a> LexerByte<'a> {
     }
 }
 
+impl TokenLike for TokenByte {
+    fn is_pipe(&self) -> bool {
+        matches!(self, TokenByte::Pipe)
+    }
+
+    fn is_ampersand(&self) -> bool {
+        matches!(self, TokenByte::Ampersand)
+    }
+
+    fn is_exclamation(&self) -> bool {
+        matches!(self, TokenByte::Exclamation)
+    }
+
+    fn is_group_start(&self) -> bool {
+        matches!(self, TokenByte::GroupStart)
+    }
+
+    fn is_group_end(&self) -> bool {
+        matches!(self, TokenByte::GroupEnd)
+    }
+
+    fn is_hash(&self) -> bool {
+        matches!(self, TokenByte::Hash)
+    }
+
+    fn is_star(&self) -> bool {
+        matches!(self, TokenByte::Star)
+    }
+
+    fn is_plus(&self) -> bool {
+        matches!(self, TokenByte::Plus)
+    }
+
+    fn is_question(&self) -> bool {
+        matches!(self, TokenByte::Question)
+    }
+
+    fn is_brace_start(&self) -> bool {
+        matches!(self, TokenByte::QuantifierStart)
+    }
+
+    fn is_eof(&self) -> bool {
+        matches!(self, TokenByte::Eof)
+    }
+
+    fn is_if_keyword(&self) -> bool {
+        matches!(self, TokenByte::IfKeyword)
+    }
+
+    fn as_syllable_condition(&self) -> Option<SyllableCondition> {
+        match self {
+            TokenByte::Monosyllable => Some(SyllableCondition::Monosyllable),
+            TokenByte::Polysyllable => Some(SyllableCondition::Polysyllable),
+            TokenByte::OpenSyllable => Some(SyllableCondition::OpenSyllable),
+            TokenByte::ClosedSyllable => Some(SyllableCondition::ClosedSyllable),
+            TokenByte::FinalSyllable => Some(SyllableCondition::FinalSyllable),
+            TokenByte::InitialSyllable => Some(SyllableCondition::InitialSyllable),
+            _ => None,
+        }
+    }
+
+    fn can_start_primary(&self) -> bool {
+        matches!(
+            self,
+            TokenByte::Byte(_)
+                | TokenByte::ByteClassStart
+                | TokenByte::GroupStart
+                | TokenByte::Dot
+                | TokenByte::Hash
+        )
+    }
+}
+
+impl<'a> LexerLike for LexerByte<'a> {
+    type Token = TokenByte;
+    type Error = ParseError;
+
+    fn peek(&mut self) -> Result<&Self::Token, Self::Error> {
+        LexerByte::peek(self)
+    }
+
+    fn advance(&mut self) -> Result<Self::Token, Self::Error> {
+        LexerByte::next_token(self)
+    }
+
+    fn position(&self) -> Position {
+        LexerByte::position(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1334,17 +1860,14 @@ mod tests {
     }
 
     #[test]
-    fn test_lexer_symbol_ref_in_char_class() {
-        let mut lexer = Lexer::new("[$FRONT$BACK]");
+    fn test_dollar_literal_in_char_class() {
+        // $ is now a literal character inside character classes
+        let mut lexer = Lexer::new("[$abc]");
         assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
-        assert_eq!(
-            lexer.next_token().unwrap(),
-            Token::SymbolRef("FRONT".to_string())
-        );
-        assert_eq!(
-            lexer.next_token().unwrap(),
-            Token::SymbolRef("BACK".to_string())
-        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('$'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
         assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
     }
 
@@ -1361,13 +1884,10 @@ mod tests {
     }
 
     #[test]
-    fn test_lexer_symbol_ref_empty_name_error() {
+    fn test_lexer_dollar_followed_by_space_is_anchor() {
+        // $ followed by space is EndOfLine anchor (not a symbol ref error)
         let mut lexer = Lexer::new("$ ");
-        let err = lexer.next_token().unwrap_err();
-        assert!(
-            format!("{:?}", err).contains("symbol name"),
-            "Error should mention symbol name"
-        );
+        assert_eq!(lexer.next_token().unwrap(), Token::EndOfLine);
     }
 
     #[test]
@@ -1480,13 +2000,26 @@ mod tests {
 
     #[test]
     fn test_lexer_phonetic_shortcut_affricate() {
-        let mut lexer = Lexer::new(r"\a\A");
+        // Outside char class: \a = affricate shortcut, \A = StartOfInput anchor
+        let mut lexer = Lexer::new(r"\a");
         assert_eq!(
             lexer.next_token().unwrap(),
             Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: false }
         );
+
+        // \A outside char class is StartOfInput anchor (not negated affricate)
+        let mut lexer2 = Lexer::new(r"\A");
+        assert_eq!(lexer2.next_token().unwrap(), Token::StartOfInput);
+
+        // Inside char class: both \a and \A are phonetic shortcuts
+        let mut lexer3 = Lexer::new(r"[\a\A]");
+        assert_eq!(lexer3.next_token().unwrap(), Token::CharClassStart);
         assert_eq!(
-            lexer.next_token().unwrap(),
+            lexer3.next_token().unwrap(),
+            Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: false }
+        );
+        assert_eq!(
+            lexer3.next_token().unwrap(),
             Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: true }
         );
     }
@@ -1573,18 +2106,433 @@ mod tests {
 
     #[test]
     fn test_lexer_shortcut_consonant_types() {
-        let mut lexer = Lexer::new(r"\g\z\q");
+        // \g = glide, \q = liquid (outside char class)
+        // Note: \z is EndOfInputStrict anchor outside char class
+        let mut lexer = Lexer::new(r"\g\q");
         assert_eq!(
             lexer.next_token().unwrap(),
             Token::PhoneticShortcut { class_name: "glide".to_string(), negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false }
-        );
-        assert_eq!(
-            lexer.next_token().unwrap(),
             Token::PhoneticShortcut { class_name: "liquid".to_string(), negated: false }
         );
+
+        // \z outside char class is EndOfInputStrict anchor
+        let mut lexer2 = Lexer::new(r"\z");
+        assert_eq!(lexer2.next_token().unwrap(), Token::EndOfInputStrict);
+
+        // Inside char class: \z is nasal phonetic shortcut
+        let mut lexer3 = Lexer::new(r"[\z]");
+        assert_eq!(lexer3.next_token().unwrap(), Token::CharClassStart);
+        assert_eq!(
+            lexer3.next_token().unwrap(),
+            Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false }
+        );
+    }
+
+    // ========================================================================
+    // Special Group Tests
+    // ========================================================================
+
+    #[test]
+    fn test_lexer_non_capturing_group() {
+        let mut lexer = Lexer::new("(?:abc)");
+        assert_eq!(lexer.next_token().unwrap(), Token::NonCapturingGroupStart);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_named_group() {
+        let mut lexer = Lexer::new("(?<vowel>[aeiou])");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::NamedGroupStart("vowel".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('e'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('i'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('o'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('u'));
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_named_group_with_underscore() {
+        let mut lexer = Lexer::new("(?<front_vowel>[ei])");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::NamedGroupStart("front_vowel".to_string())
+        );
+    }
+
+    #[test]
+    fn test_lexer_group_reference() {
+        let mut lexer = Lexer::new("(?&vowel)");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::GroupReference("vowel".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_inline_flags_case_insensitive() {
+        let mut lexer = Lexer::new("(?i)abc");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.case_insensitive, Some(true));
+                assert_eq!(flags.feature_based, None);
+                assert_eq!(flags.accent_insensitive, None);
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+    }
+
+    #[test]
+    fn test_lexer_inline_flags_negated() {
+        let mut lexer = Lexer::new("(?-i)abc");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.case_insensitive, Some(false));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_inline_flags_combined() {
+        let mut lexer = Lexer::new("(?ia)abc");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.case_insensitive, Some(true));
+                assert_eq!(flags.accent_insensitive, Some(true));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_scoped_flags() {
+        let mut lexer = Lexer::new("(?i:abc)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::ScopedFlagsStart(flags) => {
+                assert_eq!(flags.case_insensitive, Some(true));
+            }
+            _ => panic!("Expected ScopedFlagsStart, got {:?}", token),
+        }
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+    }
+
+    #[test]
+    fn test_lexer_unicode_normalization_flag() {
+        let mut lexer = Lexer::new("(?u:NFC)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.unicode_normalization, Some("NFC".to_string()));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_unicode_normalization_scoped() {
+        let mut lexer = Lexer::new("(?u:NFD:cafe)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::ScopedFlagsStart(flags) => {
+                assert_eq!(flags.unicode_normalization, Some("NFD".to_string()));
+            }
+            _ => panic!("Expected ScopedFlagsStart, got {:?}", token),
+        }
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+    }
+
+    #[test]
+    fn test_lexer_feature_flag() {
+        let mut lexer = Lexer::new("(?f)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.feature_based, Some(true));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_named_group_empty_error() {
+        let mut lexer = Lexer::new("(?<>abc)");
+        let err = lexer.next_token().unwrap_err();
+        assert!(
+            format!("{:?}", err).contains("empty"),
+            "Error should mention empty group name"
+        );
+    }
+
+    #[test]
+    fn test_lexer_group_reference_empty_error() {
+        let mut lexer = Lexer::new("(?&)");
+        let err = lexer.next_token().unwrap_err();
+        assert!(
+            format!("{:?}", err).contains("empty"),
+            "Error should mention empty group reference"
+        );
+    }
+
+    #[test]
+    fn test_lexer_invalid_group_syntax() {
+        let mut lexer = Lexer::new("(?x)");
+        let err = lexer.next_token().unwrap_err();
+        assert!(
+            format!("{:?}", err).contains("InvalidGroupSyntax") || format!("{:?}", err).contains("InvalidFlag"),
+            "Error should be InvalidGroupSyntax or InvalidFlag"
+        );
+    }
+
+    #[test]
+    fn test_lexer_capturing_group_unchanged() {
+        // Regular (abc) should still produce GroupStart
+        let mut lexer = Lexer::new("(abc)");
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupStart);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+    }
+
+    // ========================================================================
+    // Anchor Tests
+    // ========================================================================
+
+    #[test]
+    fn test_lexer_anchor_start_of_line() {
+        let mut lexer = Lexer::new("^hello");
+        assert_eq!(lexer.next_token().unwrap(), Token::StartOfLine);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('h'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('e'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('o'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_anchor_end_of_line() {
+        let mut lexer = Lexer::new("hello$");
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('h'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('e'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('o'));
+        assert_eq!(lexer.next_token().unwrap(), Token::EndOfLine);
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_anchor_both() {
+        let mut lexer = Lexer::new("^hello$");
+        assert_eq!(lexer.next_token().unwrap(), Token::StartOfLine);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('h'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('e'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('o'));
+        assert_eq!(lexer.next_token().unwrap(), Token::EndOfLine);
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_anchor_start_of_input() {
+        // \A outside char class = StartOfInput anchor
+        let mut lexer = Lexer::new(r"\Ahello");
+        assert_eq!(lexer.next_token().unwrap(), Token::StartOfInput);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('h'));
+    }
+
+    #[test]
+    fn test_lexer_anchor_end_of_input() {
+        // \Z outside char class = EndOfInput anchor
+        let mut lexer = Lexer::new(r"hello\Z");
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('h'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('e'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('o'));
+        assert_eq!(lexer.next_token().unwrap(), Token::EndOfInput);
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_anchor_end_of_input_strict() {
+        // \z outside char class = EndOfInputStrict anchor
+        let mut lexer = Lexer::new(r"hello\z");
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('h'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('e'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('l'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('o'));
+        assert_eq!(lexer.next_token().unwrap(), Token::EndOfInputStrict);
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_caret_in_char_class() {
+        // ^ inside char class is negation (Caret), not StartOfLine
+        let mut lexer = Lexer::new("[^abc]");
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
+        assert_eq!(lexer.next_token().unwrap(), Token::Caret);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+    }
+
+    #[test]
+    fn test_lexer_anchor_escapes_in_char_class() {
+        // \A, \Z, \z inside char class should remain phonetic shortcuts
+        let mut lexer = Lexer::new(r"[\A\Z\z]");
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
+        // \A inside = affricate (negated)
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: true }
+        );
+        // \Z inside = nasal (negated)
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: true }
+        );
+        // \z inside = nasal (non-negated)
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false }
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
+    }
+
+    #[test]
+    fn test_lexer_dollar_symbol_vs_anchor() {
+        // $NAME = SymbolRef, $ alone or before non-identifier = EndOfLine
+        let mut lexer = Lexer::new("$VOWEL");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::SymbolRef("VOWEL".to_string())
+        );
+
+        let mut lexer2 = Lexer::new("$");
+        assert_eq!(lexer2.next_token().unwrap(), Token::EndOfLine);
+
+        let mut lexer3 = Lexer::new("$ ");
+        assert_eq!(lexer3.next_token().unwrap(), Token::EndOfLine);
+    }
+
+    // ========================================================================
+    // Multiline and Dotall Flag Tests
+    // ========================================================================
+
+    #[test]
+    fn test_lexer_multiline_flag() {
+        let mut lexer = Lexer::new("(?m)^line$");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.multiline, Some(true));
+                assert_eq!(flags.dotall, None);
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+        assert_eq!(lexer.next_token().unwrap(), Token::StartOfLine);
+    }
+
+    #[test]
+    fn test_lexer_dotall_flag() {
+        let mut lexer = Lexer::new("(?s).*");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.dotall, Some(true));
+                assert_eq!(flags.multiline, None);
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+        assert_eq!(lexer.next_token().unwrap(), Token::Dot);
+    }
+
+    #[test]
+    fn test_lexer_multiline_dotall_combined() {
+        let mut lexer = Lexer::new("(?ms)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.multiline, Some(true));
+                assert_eq!(flags.dotall, Some(true));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_multiline_negated() {
+        let mut lexer = Lexer::new("(?-m)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.multiline, Some(false));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_dotall_negated() {
+        let mut lexer = Lexer::new("(?-s)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.dotall, Some(false));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_scoped_multiline() {
+        let mut lexer = Lexer::new("(?m:^line$)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::ScopedFlagsStart(flags) => {
+                assert_eq!(flags.multiline, Some(true));
+            }
+            _ => panic!("Expected ScopedFlagsStart, got {:?}", token),
+        }
+        assert_eq!(lexer.next_token().unwrap(), Token::StartOfLine);
+    }
+
+    #[test]
+    fn test_lexer_all_flags_combined() {
+        let mut lexer = Lexer::new("(?ims)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.case_insensitive, Some(true));
+                assert_eq!(flags.multiline, Some(true));
+                assert_eq!(flags.dotall, Some(true));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
     }
 }

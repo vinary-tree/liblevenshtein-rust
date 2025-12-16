@@ -103,6 +103,19 @@ pub fn execute(cli: &Cli) -> Result<()> {
         )
     } else if cli.config_mgmt {
         cmd_config(cli.switch.clone(), cli.show)
+    } else if cli.compile_regex {
+        let input = cli.input.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--input is required for --compile-regex operation")
+        })?;
+        cmd_compile_regex(input, cli.output.clone(), cli.verify)
+    } else if cli.match_regex {
+        let text = cli.text.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--text is required for --match-regex operation")
+        })?;
+        let rules = cli.rules.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--rules is required for --match-regex operation")
+        })?;
+        cmd_match_regex(text, rules, cli.multiline, cli.dotall, cli.compiled)
     } else {
         bail!("No operation specified. Use --help for available operations.")
     }
@@ -1381,6 +1394,211 @@ fn cmd_phonetic(text: &str, rules_path: &Path, compiled: bool) -> Result<()> {
 fn cmd_phonetic(_text: &str, _rules_path: &Path, _compiled: bool) -> Result<()> {
     bail!(
         "Phonetic command requires both 'phonetic-rules' and 'serialization' features.\n\
+         Rebuild with: cargo build --features \"phonetic-rules,serialization\""
+    );
+}
+
+/// Compile .llre regex file to binary format
+#[cfg(all(feature = "phonetic-rules", feature = "serialization"))]
+fn cmd_compile_regex(input: &Path, output: Option<PathBuf>, verify: bool) -> Result<()> {
+    use crate::phonetic::llre::{compile, load_file, save, to_bytes};
+
+    println!("{}", "Compiling LLRE Regex".bold().underline());
+    println!();
+
+    // Load the .llre file
+    println!(
+        "  {} Loading {}...",
+        "→".cyan(),
+        input.display().to_string().yellow()
+    );
+
+    let llre_file = load_file(input)
+        .map_err(|e| anyhow::anyhow!("Failed to parse {}: {}", input.display(), e))?;
+
+    // Display file metadata
+    if let Some(name) = &llre_file.metadata.name {
+        println!("    Name:    {}", name.green());
+    }
+    if let Some(version) = &llre_file.metadata.version {
+        println!("    Version: {}", version.green());
+    }
+    if llre_file.is_multiline() {
+        println!("    Flags:   {}", "multiline".cyan());
+    }
+    if llre_file.is_dotall() {
+        println!("    Flags:   {}", "dotall".cyan());
+    }
+
+    // Compile to NFA
+    println!();
+    println!("  {} Compiling to NFA...", "→".cyan());
+
+    let compiled = compile(&llre_file)
+        .map_err(|e| anyhow::anyhow!("Failed to compile regex: {}", e))?;
+
+    println!("    States:      {}", compiled.state_count().to_string().green());
+    println!("    Transitions: {}", compiled.transition_count().to_string().green());
+
+    // Determine output path
+    let output_path = output.unwrap_or_else(|| {
+        let mut out = input.to_path_buf();
+        out.set_extension("llre.bin");
+        out
+    });
+
+    println!();
+    println!(
+        "  {} Writing {}...",
+        "→".cyan(),
+        output_path.display().to_string().yellow()
+    );
+
+    save(&compiled, &output_path)
+        .map_err(|e| anyhow::anyhow!("Failed to save compiled regex: {}", e))?;
+
+    if verify {
+        println!();
+        println!("  {} Verifying...", "→".cyan());
+
+        let loaded = crate::phonetic::llre::load(&output_path)
+            .map_err(|e| anyhow::anyhow!("Verification failed: {}", e))?;
+
+        // Test that the loaded NFA has the same state count
+        if loaded.state_count() == compiled.state_count() {
+            println!("    {}", "Verification passed".green().bold());
+        } else {
+            bail!(
+                "Verification failed: expected {} states, got {}",
+                compiled.state_count(),
+                loaded.state_count()
+            );
+        }
+    }
+
+    // Show file size
+    let file_size = std::fs::metadata(&output_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+    println!();
+    println!(
+        "  {} Compiled {} bytes",
+        "✓".green().bold(),
+        file_size.to_string().cyan()
+    );
+
+    Ok(())
+}
+
+#[cfg(not(all(feature = "phonetic-rules", feature = "serialization")))]
+fn cmd_compile_regex(_input: &Path, _output: Option<PathBuf>, _verify: bool) -> Result<()> {
+    bail!(
+        "Compile-regex command requires both 'phonetic-rules' and 'serialization' features.\n\
+         Rebuild with: cargo build --features \"phonetic-rules,serialization\""
+    );
+}
+
+/// Match text against a .llre regex pattern
+#[cfg(all(feature = "phonetic-rules", feature = "serialization"))]
+fn cmd_match_regex(
+    text: &str,
+    rules_path: &Path,
+    multiline: bool,
+    dotall: bool,
+    compiled: bool,
+) -> Result<()> {
+    use crate::phonetic::llre::{compile, load, load_file, CompiledNFA};
+
+    println!("{}", "LLRE Regex Match".bold().underline());
+    println!();
+
+    // Determine if compiled based on extension or flag
+    let is_compiled = compiled
+        || rules_path
+            .extension()
+            .map(|e| e == "bin")
+            .unwrap_or(false);
+
+    let mut nfa: CompiledNFA = if is_compiled {
+        println!(
+            "  {} Loading compiled regex from {}...",
+            "→".cyan(),
+            rules_path.display().to_string().yellow()
+        );
+        load(rules_path)
+            .map_err(|e| anyhow::anyhow!("Failed to load compiled regex: {}", e))?
+    } else {
+        println!(
+            "  {} Parsing regex from {}...",
+            "→".cyan(),
+            rules_path.display().to_string().yellow()
+        );
+        let llre_file = load_file(rules_path)
+            .map_err(|e| anyhow::anyhow!("Failed to parse {}: {}", rules_path.display(), e))?;
+        compile(&llre_file)
+            .map_err(|e| anyhow::anyhow!("Failed to compile regex: {}", e))?
+    };
+
+    // Override flags from command line if specified
+    if multiline {
+        nfa.multiline = true;
+    }
+    if dotall {
+        nfa.dotall = true;
+    }
+
+    println!(
+        "    States:      {}",
+        nfa.state_count().to_string().green()
+    );
+    println!(
+        "    Transitions: {}",
+        nfa.transition_count().to_string().green()
+    );
+    if nfa.multiline {
+        println!("    Flags:       {}", "multiline".cyan());
+    }
+    if nfa.dotall {
+        println!("    Flags:       {}", "dotall".cyan());
+    }
+
+    // Perform match
+    println!();
+    println!("  {} Testing match...", "→".cyan());
+    println!("    Input:  {}", text.yellow());
+
+    let matches = nfa.matches(text);
+
+    if matches {
+        println!("    Result: {}", "MATCH".green().bold());
+    } else {
+        println!("    Result: {}", "NO MATCH".red().bold());
+    }
+
+    // Also try full match
+    let full_matches = nfa.matches_full(text);
+    if full_matches != matches {
+        println!();
+        if full_matches {
+            println!("    Full match: {}", "YES".green());
+        } else {
+            println!("    Full match: {}", "NO".yellow());
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(not(all(feature = "phonetic-rules", feature = "serialization")))]
+fn cmd_match_regex(
+    _text: &str,
+    _rules_path: &Path,
+    _multiline: bool,
+    _dotall: bool,
+    _compiled: bool,
+) -> Result<()> {
+    bail!(
+        "Match-regex command requires both 'phonetic-rules' and 'serialization' features.\n\
          Rebuild with: cargo build --features \"phonetic-rules,serialization\""
     );
 }

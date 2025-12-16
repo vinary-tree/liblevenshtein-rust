@@ -34,6 +34,9 @@
 //! assert!(trans.label.is_epsilon());
 //! ```
 
+#[cfg(feature = "serialization")]
+use serde::{Deserialize, Serialize};
+
 use std::fmt;
 
 // ============================================================================
@@ -60,6 +63,7 @@ pub type StateId = u32;
 /// let accepting = NFAState::new(1, true);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct NFAState {
     /// Unique identifier for this state
     pub id: StateId,
@@ -126,6 +130,7 @@ impl fmt::Display for NFAState {
 /// let lowercase = CharClassChar::from_range('a', 'z');
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct CharClassChar {
     /// Character ranges (inclusive on both ends)
     pub ranges: Vec<(char, char)>,
@@ -232,6 +237,7 @@ impl fmt::Display for CharClassChar {
 /// Optimized for ASCII text processing. Uses `u8` instead of `char`
 /// for ~4× less memory per edge label and ~5% faster matching.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct CharClass {
     /// Byte ranges (inclusive on both ends)
     pub ranges: Vec<(u8, u8)>,
@@ -344,6 +350,7 @@ impl fmt::Display for CharClass {
 /// ```
 /// Where Σ is the input alphabet and ε represents epsilon transitions.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum TransitionLabelChar {
     /// Epsilon transition (no input consumed)
     Epsilon,
@@ -353,6 +360,18 @@ pub enum TransitionLabelChar {
     CharClass(CharClassChar),
     /// Matches any single character
     Any,
+
+    // Zero-width anchor assertions
+    /// Start of line anchor (^) - matches at line start or input start
+    StartOfLine,
+    /// End of line anchor ($) - matches at line end or input end
+    EndOfLine,
+    /// Start of input anchor (\A) - matches only at absolute input start
+    StartOfInput,
+    /// End of input anchor (\Z) - matches at input end, allows trailing newline
+    EndOfInput,
+    /// Strict end of input anchor (\z) - matches only at absolute input end
+    EndOfInputStrict,
 }
 
 impl TransitionLabelChar {
@@ -362,24 +381,117 @@ impl TransitionLabelChar {
         matches!(self, TransitionLabelChar::Epsilon)
     }
 
+    /// Check if this is a zero-width assertion (anchor).
+    ///
+    /// Zero-width assertions don't consume input but impose positional constraints.
+    #[inline]
+    pub fn is_anchor(&self) -> bool {
+        matches!(
+            self,
+            TransitionLabelChar::StartOfLine
+                | TransitionLabelChar::EndOfLine
+                | TransitionLabelChar::StartOfInput
+                | TransitionLabelChar::EndOfInput
+                | TransitionLabelChar::EndOfInputStrict
+        )
+    }
+
     /// Check if a character matches this label.
     ///
     /// Returns `true` for epsilon transitions (they always "match" without consuming input).
+    /// Anchors require position-aware matching via `matches_at_position`.
     pub fn matches(&self, c: char) -> bool {
         match self {
             TransitionLabelChar::Epsilon => true,
             TransitionLabelChar::Char(expected) => c == *expected,
             TransitionLabelChar::CharClass(class) => class.matches(c),
             TransitionLabelChar::Any => true,
+            // Anchors don't match characters - use matches_at_position
+            TransitionLabelChar::StartOfLine
+            | TransitionLabelChar::EndOfLine
+            | TransitionLabelChar::StartOfInput
+            | TransitionLabelChar::EndOfInput
+            | TransitionLabelChar::EndOfInputStrict => false,
+        }
+    }
+
+    /// Check if this anchor matches at the given position in the input.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The full input string
+    /// * `pos` - Current position in the input (byte offset)
+    /// * `multiline` - Whether multiline mode is enabled (affects ^ and $)
+    ///
+    /// # Returns
+    ///
+    /// `true` if the anchor matches at this position, `false` otherwise.
+    /// Returns `false` for non-anchor labels.
+    pub fn matches_at_position(&self, input: &str, pos: usize, multiline: bool) -> bool {
+        let len = input.len();
+
+        match self {
+            TransitionLabelChar::StartOfLine => {
+                // ^ matches at start of input
+                if pos == 0 {
+                    return true;
+                }
+                // In multiline mode, also matches after newline
+                if multiline && pos > 0 {
+                    let bytes = input.as_bytes();
+                    if pos <= len && bytes.get(pos - 1) == Some(&b'\n') {
+                        return true;
+                    }
+                }
+                false
+            }
+            TransitionLabelChar::EndOfLine => {
+                // $ matches at end of input
+                if pos == len {
+                    return true;
+                }
+                // In multiline mode, also matches before newline
+                if multiline {
+                    let bytes = input.as_bytes();
+                    if bytes.get(pos) == Some(&b'\n') {
+                        return true;
+                    }
+                }
+                false
+            }
+            TransitionLabelChar::StartOfInput => {
+                // \A matches only at absolute start
+                pos == 0
+            }
+            TransitionLabelChar::EndOfInput => {
+                // \Z matches at end, optionally before trailing newline
+                if pos == len {
+                    return true;
+                }
+                // Also matches before single trailing \n
+                if pos == len.saturating_sub(1) {
+                    let bytes = input.as_bytes();
+                    if bytes.last() == Some(&b'\n') {
+                        return true;
+                    }
+                }
+                false
+            }
+            TransitionLabelChar::EndOfInputStrict => {
+                // \z matches only at absolute end
+                pos == len
+            }
+            // Non-anchor labels don't match positions
+            _ => false,
         }
     }
 
     /// Check if this label consumes input.
     ///
-    /// Epsilon transitions don't consume input; all others do.
+    /// Epsilon transitions and anchors don't consume input; all others do.
     #[inline]
     pub fn consumes_input(&self) -> bool {
-        !self.is_epsilon()
+        !self.is_epsilon() && !self.is_anchor()
     }
 }
 
@@ -390,6 +502,11 @@ impl fmt::Display for TransitionLabelChar {
             TransitionLabelChar::Char(c) => write!(f, "{}", c),
             TransitionLabelChar::CharClass(class) => write!(f, "{}", class),
             TransitionLabelChar::Any => write!(f, "."),
+            TransitionLabelChar::StartOfLine => write!(f, "^"),
+            TransitionLabelChar::EndOfLine => write!(f, "$"),
+            TransitionLabelChar::StartOfInput => write!(f, "\\A"),
+            TransitionLabelChar::EndOfInput => write!(f, "\\Z"),
+            TransitionLabelChar::EndOfInputStrict => write!(f, "\\z"),
         }
     }
 }
@@ -402,6 +519,7 @@ impl fmt::Display for TransitionLabelChar {
 ///
 /// Byte-level version optimized for ASCII text processing.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum TransitionLabel {
     /// Epsilon transition (no input consumed)
     Epsilon,
@@ -411,6 +529,18 @@ pub enum TransitionLabel {
     CharClass(CharClass),
     /// Matches any single byte
     Any,
+
+    // Zero-width anchor assertions
+    /// Start of line anchor (^) - matches at line start or input start
+    StartOfLine,
+    /// End of line anchor ($) - matches at line end or input end
+    EndOfLine,
+    /// Start of input anchor (\A) - matches only at absolute input start
+    StartOfInput,
+    /// End of input anchor (\Z) - matches at input end, allows trailing newline
+    EndOfInput,
+    /// Strict end of input anchor (\z) - matches only at absolute input end
+    EndOfInputStrict,
 }
 
 impl TransitionLabel {
@@ -420,6 +550,19 @@ impl TransitionLabel {
         matches!(self, TransitionLabel::Epsilon)
     }
 
+    /// Check if this is a zero-width assertion (anchor).
+    #[inline]
+    pub fn is_anchor(&self) -> bool {
+        matches!(
+            self,
+            TransitionLabel::StartOfLine
+                | TransitionLabel::EndOfLine
+                | TransitionLabel::StartOfInput
+                | TransitionLabel::EndOfInput
+                | TransitionLabel::EndOfInputStrict
+        )
+    }
+
     /// Check if a byte matches this label.
     pub fn matches(&self, b: u8) -> bool {
         match self {
@@ -427,13 +570,63 @@ impl TransitionLabel {
             TransitionLabel::Byte(expected) => b == *expected,
             TransitionLabel::CharClass(class) => class.matches(b),
             TransitionLabel::Any => true,
+            // Anchors don't match bytes - use matches_at_position
+            TransitionLabel::StartOfLine
+            | TransitionLabel::EndOfLine
+            | TransitionLabel::StartOfInput
+            | TransitionLabel::EndOfInput
+            | TransitionLabel::EndOfInputStrict => false,
+        }
+    }
+
+    /// Check if this anchor matches at the given position in the input.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The full input byte slice
+    /// * `pos` - Current position in the input
+    /// * `multiline` - Whether multiline mode is enabled (affects ^ and $)
+    pub fn matches_at_position(&self, input: &[u8], pos: usize, multiline: bool) -> bool {
+        let len = input.len();
+
+        match self {
+            TransitionLabel::StartOfLine => {
+                if pos == 0 {
+                    return true;
+                }
+                if multiline && pos > 0 && input.get(pos - 1) == Some(&b'\n') {
+                    return true;
+                }
+                false
+            }
+            TransitionLabel::EndOfLine => {
+                if pos == len {
+                    return true;
+                }
+                if multiline && input.get(pos) == Some(&b'\n') {
+                    return true;
+                }
+                false
+            }
+            TransitionLabel::StartOfInput => pos == 0,
+            TransitionLabel::EndOfInput => {
+                if pos == len {
+                    return true;
+                }
+                if pos == len.saturating_sub(1) && input.last() == Some(&b'\n') {
+                    return true;
+                }
+                false
+            }
+            TransitionLabel::EndOfInputStrict => pos == len,
+            _ => false,
         }
     }
 
     /// Check if this label consumes input.
     #[inline]
     pub fn consumes_input(&self) -> bool {
-        !self.is_epsilon()
+        !self.is_epsilon() && !self.is_anchor()
     }
 }
 
@@ -444,6 +637,11 @@ impl fmt::Display for TransitionLabel {
             TransitionLabel::Byte(b) => write!(f, "{}", *b as char),
             TransitionLabel::CharClass(class) => write!(f, "{}", class),
             TransitionLabel::Any => write!(f, "."),
+            TransitionLabel::StartOfLine => write!(f, "^"),
+            TransitionLabel::EndOfLine => write!(f, "$"),
+            TransitionLabel::StartOfInput => write!(f, "\\A"),
+            TransitionLabel::EndOfInput => write!(f, "\\Z"),
+            TransitionLabel::EndOfInputStrict => write!(f, "\\z"),
         }
     }
 }
@@ -474,6 +672,7 @@ impl fmt::Display for TransitionLabel {
 /// let on_a = TransitionChar::on_char(1, 'a', 2);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct TransitionChar {
     /// Source state
     pub from: StateId,
@@ -551,6 +750,7 @@ impl fmt::Display for TransitionChar {
 ///
 /// Byte-level version optimized for ASCII text processing.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct Transition {
     /// Source state
     pub from: StateId,

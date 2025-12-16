@@ -38,6 +38,227 @@ use std::fmt;
 
 use super::super::nfa::types::CharClassChar;
 
+// Re-export syllable types from common module for backward compatibility
+pub use crate::phonetic::common::syllable::{SyllableCondition, SyllableExpr};
+
+// ============================================================================
+// Regex Flags and Unicode Normalization
+// ============================================================================
+
+/// Unicode normalization forms.
+///
+/// Used with the `(?u:NFC)` flag syntax to normalize input before matching.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UnicodeNormalization {
+    /// Canonical Decomposition, followed by Canonical Composition
+    NFC,
+    /// Canonical Decomposition
+    NFD,
+    /// Compatibility Decomposition, followed by Canonical Composition
+    NFKC,
+    /// Compatibility Decomposition
+    NFKD,
+}
+
+impl fmt::Display for UnicodeNormalization {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UnicodeNormalization::NFC => write!(f, "NFC"),
+            UnicodeNormalization::NFD => write!(f, "NFD"),
+            UnicodeNormalization::NFKC => write!(f, "NFKC"),
+            UnicodeNormalization::NFKD => write!(f, "NFKD"),
+        }
+    }
+}
+
+impl std::str::FromStr for UnicodeNormalization {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "NFC" => Ok(UnicodeNormalization::NFC),
+            "NFD" => Ok(UnicodeNormalization::NFD),
+            "NFKC" => Ok(UnicodeNormalization::NFKC),
+            "NFKD" => Ok(UnicodeNormalization::NFKD),
+            _ => Err(format!("unknown Unicode normalization form: {}", s)),
+        }
+    }
+}
+
+/// Flags/modifiers for regex matching behavior.
+///
+/// These can be set inline with `(?i)` or scoped with `(?i:pattern)`.
+/// `None` means inherit from parent scope, `Some(true)` enables, `Some(false)` disables.
+///
+/// # Examples
+///
+/// - `(?i)abc` - case-insensitive matching for the rest of the pattern
+/// - `(?i:abc)def` - case-insensitive only for "abc"
+/// - `(?-i:abc)` - explicitly case-sensitive
+/// - `(?u:NFC:cafe)` - normalize to NFC before matching
+/// - `(?ia:cafe)` - case-insensitive AND accent-insensitive
+/// - `(?m)^line$` - multiline: `^` and `$` match line boundaries
+/// - `(?s).*` - dotall: `.` matches newlines
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct RegexFlags {
+    /// Case-insensitive matching (`(?i)` or `(?-i)`)
+    pub case_insensitive: Option<bool>,
+
+    /// Unicode normalization mode (`(?u:NFC)`, `(?u:NFD)`, etc.)
+    pub unicode_normalization: Option<UnicodeNormalization>,
+
+    /// Feature-based matching for phonetic patterns (`(?f)`)
+    ///
+    /// When enabled, character classes like `[voiced]` match any character
+    /// with the "voiced" phonetic feature.
+    pub feature_based: Option<bool>,
+
+    /// Accent-insensitive matching (`(?a)`)
+    ///
+    /// Ignores diacritics when matching (e.g., "é" matches "e").
+    pub accent_insensitive: Option<bool>,
+
+    /// Multiline mode (`(?m)` or `(?-m)`)
+    ///
+    /// When enabled, `^` matches at the start of any line and `$` matches
+    /// at the end of any line. When disabled, they only match at input
+    /// start/end.
+    pub multiline: Option<bool>,
+
+    /// Dotall (single-line) mode (`(?s)` or `(?-s)`)
+    ///
+    /// When enabled, `.` matches any character including newlines.
+    /// When disabled, `.` matches any character except newlines.
+    pub dotall: Option<bool>,
+}
+
+impl RegexFlags {
+    /// Create a new empty flags set (all flags inherit from parent).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Create flags with case-insensitive matching enabled.
+    pub fn case_insensitive() -> Self {
+        Self {
+            case_insensitive: Some(true),
+            ..Default::default()
+        }
+    }
+
+    /// Create flags with Unicode normalization.
+    pub fn with_normalization(form: UnicodeNormalization) -> Self {
+        Self {
+            unicode_normalization: Some(form),
+            ..Default::default()
+        }
+    }
+
+    /// Create flags with feature-based matching enabled.
+    pub fn feature_based() -> Self {
+        Self {
+            feature_based: Some(true),
+            ..Default::default()
+        }
+    }
+
+    /// Create flags with accent-insensitive matching enabled.
+    pub fn accent_insensitive() -> Self {
+        Self {
+            accent_insensitive: Some(true),
+            ..Default::default()
+        }
+    }
+
+    /// Create flags with multiline mode enabled.
+    ///
+    /// In multiline mode, `^` and `$` match at line boundaries,
+    /// not just at input start/end.
+    pub fn multiline() -> Self {
+        Self {
+            multiline: Some(true),
+            ..Default::default()
+        }
+    }
+
+    /// Create flags with dotall (single-line) mode enabled.
+    ///
+    /// In dotall mode, `.` matches any character including newlines.
+    pub fn dotall() -> Self {
+        Self {
+            dotall: Some(true),
+            ..Default::default()
+        }
+    }
+
+    /// Merge flags, with `other` taking precedence for explicitly set values.
+    ///
+    /// This is used for flag scoping: inner flags override outer flags.
+    pub fn merge(&self, other: &RegexFlags) -> RegexFlags {
+        RegexFlags {
+            case_insensitive: other.case_insensitive.or(self.case_insensitive),
+            unicode_normalization: other.unicode_normalization.or(self.unicode_normalization),
+            feature_based: other.feature_based.or(self.feature_based),
+            accent_insensitive: other.accent_insensitive.or(self.accent_insensitive),
+            multiline: other.multiline.or(self.multiline),
+            dotall: other.dotall.or(self.dotall),
+        }
+    }
+
+    /// Check if any flags are explicitly set.
+    pub fn is_empty(&self) -> bool {
+        self.case_insensitive.is_none()
+            && self.unicode_normalization.is_none()
+            && self.feature_based.is_none()
+            && self.accent_insensitive.is_none()
+            && self.multiline.is_none()
+            && self.dotall.is_none()
+    }
+}
+
+impl fmt::Display for RegexFlags {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut parts = Vec::new();
+
+        if self.case_insensitive == Some(true) {
+            parts.push("i".to_string());
+        } else if self.case_insensitive == Some(false) {
+            parts.push("-i".to_string());
+        }
+
+        if let Some(norm) = self.unicode_normalization {
+            parts.push(format!("u:{}", norm));
+        }
+
+        if self.feature_based == Some(true) {
+            parts.push("f".to_string());
+        } else if self.feature_based == Some(false) {
+            parts.push("-f".to_string());
+        }
+
+        if self.accent_insensitive == Some(true) {
+            parts.push("a".to_string());
+        } else if self.accent_insensitive == Some(false) {
+            parts.push("-a".to_string());
+        }
+
+        if self.multiline == Some(true) {
+            parts.push("m".to_string());
+        } else if self.multiline == Some(false) {
+            parts.push("-m".to_string());
+        }
+
+        if self.dotall == Some(true) {
+            parts.push("s".to_string());
+        } else if self.dotall == Some(false) {
+            parts.push("-s".to_string());
+        }
+
+        write!(f, "{}", parts.join(""))?;
+        Ok(())
+    }
+}
+
 /// A phonetic regular expression AST node.
 ///
 /// Supports both standard regex constructs and phonetic rewrite rules.
@@ -76,11 +297,73 @@ pub enum Regex {
     /// Range repetition (`a{2,4}` or `a{2,}`)
     RepeatRange(Box<Regex>, usize, Option<usize>),
 
-    /// Capturing group (for future use)
+    /// Numbered capturing group: `(pattern)`
+    ///
+    /// The `usize` is the group number (1-indexed for captures).
+    /// Group 0 is reserved for the full match in capture extraction.
+    CapturingGroup(usize, Box<Regex>),
+
+    /// Non-capturing group: `(?:pattern)`
+    ///
+    /// Groups the pattern for precedence without capturing.
+    NonCapturingGroup(Box<Regex>),
+
+    /// Named capturing group: `(?<name>pattern)`
+    ///
+    /// A capturing group that can be referenced by name using `(?&name)`.
+    NamedGroup(String, Box<Regex>),
+
+    /// Group reference (subroutine call): `(?&name)`
+    ///
+    /// References a named group, allowing pattern reuse and recursion.
+    /// The referenced group must be defined somewhere in the pattern.
+    GroupRef(String),
+
+    /// Scoped flags: `(?flags:pattern)` or standalone `(?flags)`
+    ///
+    /// Applies flags to the inner pattern (scoped) or to subsequent patterns (inline).
+    /// If `inner` is `None`, this is an inline flag that affects the rest of the pattern.
+    FlagsGroup {
+        flags: RegexFlags,
+        inner: Option<Box<Regex>>,
+    },
+
+    /// Legacy group variant (deprecated, use CapturingGroup, NonCapturingGroup, or NamedGroup)
+    #[deprecated(since = "0.8.0", note = "Use CapturingGroup, NonCapturingGroup, or NamedGroup instead")]
     Group(Box<Regex>),
 
     /// Word boundary assertion (`#` at start or end)
     WordBoundary,
+
+    /// Start of line anchor (`^`)
+    ///
+    /// In multiline mode (`(?m)`), matches at the start of any line.
+    /// Otherwise, matches only at the start of the input.
+    StartOfLine,
+
+    /// End of line anchor (`$`)
+    ///
+    /// In multiline mode (`(?m)`), matches at the end of any line.
+    /// Otherwise, matches only at the end of the input.
+    EndOfLine,
+
+    /// Start of input anchor (`\A`)
+    ///
+    /// Always matches only at the absolute start of the input,
+    /// regardless of multiline mode.
+    StartOfInput,
+
+    /// End of input anchor (`\Z`)
+    ///
+    /// Matches at the end of the input, allowing an optional trailing newline.
+    /// This is the standard "end of string" anchor.
+    EndOfInput,
+
+    /// Strict end of input anchor (`\z`)
+    ///
+    /// Matches only at the absolute end of the input,
+    /// with no trailing newline allowed.
+    EndOfInputStrict,
 
     /// Rewrite rule: pattern -> replacement with optional context and weight
     RewriteRule {
@@ -89,100 +372,6 @@ pub enum Regex {
         context: Option<Box<ContextPredicate>>,
         weight: f64,
     },
-}
-
-// ============================================================================
-// Syllable Conditions
-// ============================================================================
-
-/// Syllable-based condition for phonetic rules.
-///
-/// These conditions allow rules to be constrained based on syllable structure,
-/// which is important for rules like vowel length and Y pronunciation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SyllableCondition {
-    /// Word has exactly one syllable (e.g., "fly", "ply")
-    Monosyllable,
-    /// Word has more than one syllable (e.g., "happy", "flying")
-    Polysyllable,
-    /// Current syllable ends in a vowel (vowel is long)
-    OpenSyllable,
-    /// Current syllable ends in a consonant (vowel is short)
-    ClosedSyllable,
-    /// Match position is in the final syllable
-    FinalSyllable,
-    /// Match position is in the initial syllable
-    InitialSyllable,
-}
-
-impl fmt::Display for SyllableCondition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SyllableCondition::Monosyllable => write!(f, "monosyllable"),
-            SyllableCondition::Polysyllable => write!(f, "polysyllable"),
-            SyllableCondition::OpenSyllable => write!(f, "open_syllable"),
-            SyllableCondition::ClosedSyllable => write!(f, "closed_syllable"),
-            SyllableCondition::FinalSyllable => write!(f, "final_syllable"),
-            SyllableCondition::InitialSyllable => write!(f, "initial_syllable"),
-        }
-    }
-}
-
-/// A syllable expression with logical operators.
-///
-/// Allows combining syllable conditions with AND, OR, NOT.
-#[derive(Debug, Clone, PartialEq)]
-pub enum SyllableExpr {
-    /// Simple syllable condition
-    Cond(SyllableCondition),
-    /// Both expressions must be true
-    And(Box<SyllableExpr>, Box<SyllableExpr>),
-    /// Either expression must be true
-    Or(Box<SyllableExpr>, Box<SyllableExpr>),
-    /// Expression must be false
-    Not(Box<SyllableExpr>),
-}
-
-impl SyllableExpr {
-    /// Create a simple condition expression.
-    pub fn cond(cond: SyllableCondition) -> Self {
-        SyllableExpr::Cond(cond)
-    }
-
-    /// Create an AND expression.
-    pub fn and(left: SyllableExpr, right: SyllableExpr) -> Self {
-        SyllableExpr::And(Box::new(left), Box::new(right))
-    }
-
-    /// Create an OR expression.
-    pub fn or(left: SyllableExpr, right: SyllableExpr) -> Self {
-        SyllableExpr::Or(Box::new(left), Box::new(right))
-    }
-
-    /// Create a NOT expression.
-    pub fn not(inner: SyllableExpr) -> Self {
-        SyllableExpr::Not(Box::new(inner))
-    }
-
-    /// Get the estimated size/complexity of this syllable expression.
-    pub fn size(&self) -> usize {
-        match self {
-            SyllableExpr::Cond(_) => 1,
-            SyllableExpr::And(a, b) | SyllableExpr::Or(a, b) => 1 + a.size() + b.size(),
-            SyllableExpr::Not(inner) => 1 + inner.size(),
-        }
-    }
-}
-
-impl fmt::Display for SyllableExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SyllableExpr::Cond(cond) => write!(f, "{}", cond),
-            SyllableExpr::And(a, b) => write!(f, "({} & {})", a, b),
-            SyllableExpr::Or(a, b) => write!(f, "({} | {})", a, b),
-            SyllableExpr::Not(inner) => write!(f, "!{}", inner),
-        }
-    }
 }
 
 // ============================================================================
@@ -417,7 +606,63 @@ impl Regex {
         Regex::RepeatRange(Box::new(inner), min, max)
     }
 
-    /// Create a capturing group.
+    /// Create a numbered capturing group.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_num` - The group number (1-indexed)
+    /// * `inner` - The pattern inside the group
+    pub fn capturing_group(group_num: usize, inner: Regex) -> Self {
+        Regex::CapturingGroup(group_num, Box::new(inner))
+    }
+
+    /// Create a non-capturing group.
+    ///
+    /// Groups the pattern for precedence without capturing.
+    pub fn non_capturing_group(inner: Regex) -> Self {
+        Regex::NonCapturingGroup(Box::new(inner))
+    }
+
+    /// Create a named capturing group.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The group name (for later reference with `(?&name)`)
+    /// * `inner` - The pattern inside the group
+    pub fn named_group(name: impl Into<String>, inner: Regex) -> Self {
+        Regex::NamedGroup(name.into(), Box::new(inner))
+    }
+
+    /// Create a group reference (subroutine call).
+    ///
+    /// References a named group defined elsewhere in the pattern.
+    pub fn group_ref(name: impl Into<String>) -> Self {
+        Regex::GroupRef(name.into())
+    }
+
+    /// Create a scoped flags group.
+    ///
+    /// Applies flags only to the inner pattern.
+    pub fn flags_group(flags: RegexFlags, inner: Regex) -> Self {
+        Regex::FlagsGroup {
+            flags,
+            inner: Some(Box::new(inner)),
+        }
+    }
+
+    /// Create inline flags (no inner pattern).
+    ///
+    /// Applies flags to subsequent patterns in the same scope.
+    pub fn inline_flags(flags: RegexFlags) -> Self {
+        Regex::FlagsGroup {
+            flags,
+            inner: None,
+        }
+    }
+
+    /// Create a capturing group (deprecated, use `capturing_group` instead).
+    #[deprecated(since = "0.8.0", note = "Use capturing_group, non_capturing_group, or named_group instead")]
+    #[allow(deprecated)]
     pub fn group(inner: Regex) -> Self {
         Regex::Group(Box::new(inner))
     }
@@ -460,16 +705,32 @@ impl Regex {
     }
 
     /// Get the estimated size/complexity of this regex.
+    #[allow(deprecated)]
     pub fn size(&self) -> usize {
         match self {
-            Regex::Empty | Regex::Char(_) | Regex::Any | Regex::WordBoundary => 1,
+            Regex::Empty
+            | Regex::Char(_)
+            | Regex::Any
+            | Regex::WordBoundary
+            | Regex::StartOfLine
+            | Regex::EndOfLine
+            | Regex::StartOfInput
+            | Regex::EndOfInput
+            | Regex::EndOfInputStrict => 1,
             Regex::CharClass(_) => 1,
+            Regex::GroupRef(_) => 1,
             Regex::Concat(a, b) | Regex::Alt(a, b) => 1 + a.size() + b.size(),
             Regex::Star(inner)
             | Regex::Plus(inner)
             | Regex::Optional(inner)
-            | Regex::Group(inner) => 1 + inner.size(),
+            | Regex::Group(inner)
+            | Regex::NonCapturingGroup(inner)
+            | Regex::CapturingGroup(_, inner)
+            | Regex::NamedGroup(_, inner) => 1 + inner.size(),
             Regex::RepeatExact(inner, _) | Regex::RepeatRange(inner, _, _) => 1 + inner.size(),
+            Regex::FlagsGroup { inner, .. } => {
+                1 + inner.as_ref().map_or(0, |i| i.size())
+            }
             Regex::RewriteRule {
                 pattern,
                 replacement,
@@ -542,8 +803,24 @@ impl fmt::Display for Regex {
                     write!(f, "({}){}", inner, quantifier)
                 }
             }
+            #[allow(deprecated)]
             Regex::Group(inner) => write!(f, "({})", inner),
+            Regex::CapturingGroup(_, inner) => write!(f, "({})", inner),
+            Regex::NonCapturingGroup(inner) => write!(f, "(?:{})", inner),
+            Regex::NamedGroup(name, inner) => write!(f, "(?<{}>{})", name, inner),
+            Regex::GroupRef(name) => write!(f, "(?&{})", name),
+            Regex::FlagsGroup { flags, inner } => {
+                match inner {
+                    Some(inner) => write!(f, "(?{}:{})", flags, inner),
+                    None => write!(f, "(?{})", flags),
+                }
+            }
             Regex::WordBoundary => write!(f, "#"),
+            Regex::StartOfLine => write!(f, "^"),
+            Regex::EndOfLine => write!(f, "$"),
+            Regex::StartOfInput => write!(f, "\\A"),
+            Regex::EndOfInput => write!(f, "\\Z"),
+            Regex::EndOfInputStrict => write!(f, "\\z"),
             Regex::RewriteRule {
                 pattern,
                 replacement,
@@ -617,11 +894,60 @@ pub enum RegexByte {
     /// Range repetition (`a{2,4}` or `a{2,}`)
     RepeatRange(Box<RegexByte>, usize, Option<usize>),
 
-    /// Capturing group (for future use)
+    /// Numbered capturing group: `(pattern)`
+    CapturingGroup(usize, Box<RegexByte>),
+
+    /// Non-capturing group: `(?:pattern)`
+    NonCapturingGroup(Box<RegexByte>),
+
+    /// Named capturing group: `(?<name>pattern)`
+    NamedGroup(String, Box<RegexByte>),
+
+    /// Group reference (subroutine call): `(?&name)`
+    GroupRef(String),
+
+    /// Scoped flags: `(?flags:pattern)` or standalone `(?flags)`
+    FlagsGroup {
+        flags: RegexFlags,
+        inner: Option<Box<RegexByte>>,
+    },
+
+    /// Legacy group variant (deprecated)
+    #[deprecated(since = "0.8.0", note = "Use CapturingGroup, NonCapturingGroup, or NamedGroup instead")]
     Group(Box<RegexByte>),
 
     /// Word boundary assertion (`#` at start or end)
     WordBoundary,
+
+    /// Start of line anchor (`^`)
+    ///
+    /// In multiline mode (`(?m)`), matches at the start of any line.
+    /// Otherwise, matches only at the start of the input.
+    StartOfLine,
+
+    /// End of line anchor (`$`)
+    ///
+    /// In multiline mode (`(?m)`), matches at the end of any line.
+    /// Otherwise, matches only at the end of the input.
+    EndOfLine,
+
+    /// Start of input anchor (`\A`)
+    ///
+    /// Always matches only at the absolute start of the input,
+    /// regardless of multiline mode.
+    StartOfInput,
+
+    /// End of input anchor (`\Z`)
+    ///
+    /// Matches at the end of the input, allowing an optional trailing newline.
+    /// This is the standard "end of string" anchor.
+    EndOfInput,
+
+    /// Strict end of input anchor (`\z`)
+    ///
+    /// Matches only at the absolute end of the input,
+    /// with no trailing newline allowed.
+    EndOfInputStrict,
 
     /// Rewrite rule: pattern -> replacement with optional context and weight
     RewriteRule {
@@ -850,7 +1176,45 @@ impl RegexByte {
         RegexByte::RepeatRange(Box::new(inner), min, max)
     }
 
-    /// Create a capturing group.
+    /// Create a numbered capturing group.
+    pub fn capturing_group(group_num: usize, inner: RegexByte) -> Self {
+        RegexByte::CapturingGroup(group_num, Box::new(inner))
+    }
+
+    /// Create a non-capturing group.
+    pub fn non_capturing_group(inner: RegexByte) -> Self {
+        RegexByte::NonCapturingGroup(Box::new(inner))
+    }
+
+    /// Create a named capturing group.
+    pub fn named_group(name: impl Into<String>, inner: RegexByte) -> Self {
+        RegexByte::NamedGroup(name.into(), Box::new(inner))
+    }
+
+    /// Create a group reference (subroutine call).
+    pub fn group_ref(name: impl Into<String>) -> Self {
+        RegexByte::GroupRef(name.into())
+    }
+
+    /// Create a scoped flags group.
+    pub fn flags_group(flags: RegexFlags, inner: RegexByte) -> Self {
+        RegexByte::FlagsGroup {
+            flags,
+            inner: Some(Box::new(inner)),
+        }
+    }
+
+    /// Create inline flags (no inner pattern).
+    pub fn inline_flags(flags: RegexFlags) -> Self {
+        RegexByte::FlagsGroup {
+            flags,
+            inner: None,
+        }
+    }
+
+    /// Create a capturing group (deprecated).
+    #[deprecated(since = "0.8.0", note = "Use capturing_group, non_capturing_group, or named_group instead")]
+    #[allow(deprecated)]
     pub fn group(inner: RegexByte) -> Self {
         RegexByte::Group(Box::new(inner))
     }
@@ -886,17 +1250,33 @@ impl RegexByte {
     }
 
     /// Get the estimated size/complexity of this regex.
+    #[allow(deprecated)]
     pub fn size(&self) -> usize {
         match self {
-            RegexByte::Empty | RegexByte::Byte(_) | RegexByte::Any | RegexByte::WordBoundary => 1,
+            RegexByte::Empty
+            | RegexByte::Byte(_)
+            | RegexByte::Any
+            | RegexByte::WordBoundary
+            | RegexByte::StartOfLine
+            | RegexByte::EndOfLine
+            | RegexByte::StartOfInput
+            | RegexByte::EndOfInput
+            | RegexByte::EndOfInputStrict => 1,
             RegexByte::ByteClass(_) => 1,
+            RegexByte::GroupRef(_) => 1,
             RegexByte::Concat(a, b) | RegexByte::Alt(a, b) => 1 + a.size() + b.size(),
             RegexByte::Star(inner)
             | RegexByte::Plus(inner)
             | RegexByte::Optional(inner)
-            | RegexByte::Group(inner) => 1 + inner.size(),
+            | RegexByte::Group(inner)
+            | RegexByte::NonCapturingGroup(inner)
+            | RegexByte::CapturingGroup(_, inner)
+            | RegexByte::NamedGroup(_, inner) => 1 + inner.size(),
             RegexByte::RepeatExact(inner, _) | RegexByte::RepeatRange(inner, _, _) => {
                 1 + inner.size()
+            }
+            RegexByte::FlagsGroup { inner, .. } => {
+                1 + inner.as_ref().map_or(0, |i| i.size())
             }
             RegexByte::RewriteRule {
                 pattern,
@@ -988,8 +1368,24 @@ impl fmt::Display for RegexByte {
                     write!(f, "({}){}", inner, quantifier)
                 }
             }
+            #[allow(deprecated)]
             RegexByte::Group(inner) => write!(f, "({})", inner),
+            RegexByte::CapturingGroup(_, inner) => write!(f, "({})", inner),
+            RegexByte::NonCapturingGroup(inner) => write!(f, "(?:{})", inner),
+            RegexByte::NamedGroup(name, inner) => write!(f, "(?<{}>{})", name, inner),
+            RegexByte::GroupRef(name) => write!(f, "(?&{})", name),
+            RegexByte::FlagsGroup { flags, inner } => {
+                match inner {
+                    Some(inner) => write!(f, "(?{}:{})", flags, inner),
+                    None => write!(f, "(?{})", flags),
+                }
+            }
             RegexByte::WordBoundary => write!(f, "#"),
+            RegexByte::StartOfLine => write!(f, "^"),
+            RegexByte::EndOfLine => write!(f, "$"),
+            RegexByte::StartOfInput => write!(f, "\\A"),
+            RegexByte::EndOfInput => write!(f, "\\Z"),
+            RegexByte::EndOfInputStrict => write!(f, "\\z"),
             RegexByte::RewriteRule {
                 pattern,
                 replacement,

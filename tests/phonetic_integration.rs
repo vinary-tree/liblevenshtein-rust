@@ -1507,8 +1507,9 @@ fn test_regex_symbol_undefined_error() {
     // Extract the symbol table
     let symbols = llev_file.to_symbol_table();
 
-    // Try to parse a regex with an undefined symbol
-    let mut parser = Parser::new_with_symbols("[$UNDEFINED]+", &symbols);
+    // Try to parse a regex with an undefined symbol OUTSIDE char class
+    // ($ is literal inside char classes, so we test outside)
+    let mut parser = Parser::new_with_symbols("$UNDEFINED+", &symbols);
     let result = parser.parse();
 
     // Should error with UndefinedSymbol
@@ -1587,8 +1588,9 @@ fn test_end_to_end_llev_regex_integration() {
     // Extract the symbol table
     let symbols = llev_file.to_symbol_table();
 
-    // Parse a regex pattern using the shared symbols
-    let mut parser = Parser::new_with_symbols("[$CONSONANT][$VOWEL][$CONSONANT]", &symbols);
+    // Parse a regex pattern using the shared symbols with POSIX syntax
+    // ($ is literal inside char classes, so use [[:SYMBOL:]] syntax)
+    let mut parser = Parser::new_with_symbols("[[:CONSONANT:]][[:VOWEL:]][[:CONSONANT:]]", &symbols);
     let regex = parser.parse().expect("regex parse failed");
 
     // Compile the regex to an NFA
@@ -1647,7 +1649,8 @@ fn test_regex_posix_syntax_for_user_symbols() {
     assert!(!nfa.accepts("o"));
 }
 
-/// Test that both `$SYMBOL` and `[:SYMBOL:]` can be used in the same character class
+/// Test that `[:SYMBOL:]` POSIX syntax works for multiple user-defined symbols in a char class
+/// Note: $ is literal inside char classes, so use [[:SYMBOL:]] syntax for symbol expansion
 #[test]
 fn test_dual_syntax_in_same_char_class() {
     use liblevenshtein::phonetic::regex::Parser;
@@ -1657,9 +1660,9 @@ fn test_dual_syntax_in_same_char_class() {
     symbols.insert("FRONT".to_string(), vec!['e', 'i']);
     symbols.insert("BACK".to_string(), vec!['o', 'u']);
 
-    // Mix both syntaxes in one character class: $FRONT and [[:BACK:]]
-    // The nested [[:BACK:]] is POSIX-style inside the outer char class
-    let mut parser = Parser::new_with_symbols("[$FRONT[[:BACK:]]]", &symbols);
+    // Use POSIX syntax for both symbols inside char class
+    // The nested [[:FRONT:]] and [[:BACK:]] expand the user symbols
+    let mut parser = Parser::new_with_symbols("[[[:FRONT:]][[:BACK:]]]", &symbols);
     let regex = parser.parse().expect("regex parse failed");
     let nfa = compile(&regex).expect("compile failed");
 

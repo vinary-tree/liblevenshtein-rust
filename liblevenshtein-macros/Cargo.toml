@@ -1,0 +1,23 @@
+[package]
+name = "liblevenshtein-macros"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["Dylon Edwards <dylon.devo@gmail.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/universal-automata/liblevenshtein-rust"
+description = "Compile-time regex NFA generation macros for liblevenshtein"
+keywords = ["levenshtein", "regex", "nfa", "compile-time", "proc-macro"]
+categories = ["development-tools::procedural-macro-helpers"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+# Proc macro essentials
+quote = "1.0"
+syn = { version = "2.0", features = ["full", "parsing"] }
+proc-macro2 = "1.0"
+
+# The main crate for parsing and compiling
+liblevenshtein = { path = "..", features = ["phonetic-rules", "serialization"] }

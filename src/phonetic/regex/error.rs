@@ -2,42 +2,8 @@
 
 use std::fmt;
 
-/// Position in the input string where an error occurred.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Position {
-    /// Line number (1-indexed)
-    pub line: usize,
-    /// Column number (1-indexed)
-    pub column: usize,
-    /// Byte offset in the input
-    pub offset: usize,
-}
-
-impl Position {
-    /// Create a new position.
-    pub fn new(line: usize, column: usize, offset: usize) -> Self {
-        Self {
-            line,
-            column,
-            offset,
-        }
-    }
-
-    /// Create a position at the start of input.
-    pub fn start() -> Self {
-        Self {
-            line: 1,
-            column: 1,
-            offset: 0,
-        }
-    }
-}
-
-impl fmt::Display for Position {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "line {}, column {}", self.line, self.column)
-    }
-}
+// Re-export Position from common module for backward compatibility
+pub use crate::phonetic::common::Position;
 
 /// Error type for regex parsing.
 #[derive(Debug, Clone, PartialEq)]
@@ -142,6 +108,33 @@ pub enum ParseErrorKind {
         /// Actual type
         found: String,
     },
+
+    /// Invalid group syntax in (?...)
+    InvalidGroupSyntax(String),
+
+    /// Invalid group name
+    InvalidGroupName(String),
+
+    /// Duplicate named group
+    DuplicateGroupName(String),
+
+    /// Invalid group reference
+    InvalidGroupReference(String),
+
+    /// Undefined group reference
+    UndefinedGroupReference(String),
+
+    /// Invalid flag syntax
+    InvalidFlag(String),
+
+    /// Recursion depth exceeded during NFA compilation
+    RecursionDepthExceeded {
+        depth: usize,
+        max: usize,
+    },
+
+    /// Internal compilation error (should not occur in normal use)
+    InternalError(String),
 }
 
 impl ParseError {
@@ -301,6 +294,34 @@ impl fmt::Display for ParseErrorKind {
                     name, expected, found
                 )
             }
+            ParseErrorKind::InvalidGroupSyntax(msg) => {
+                write!(f, "invalid group syntax: {}", msg)
+            }
+            ParseErrorKind::InvalidGroupName(msg) => {
+                write!(f, "invalid group name: {}", msg)
+            }
+            ParseErrorKind::DuplicateGroupName(name) => {
+                write!(f, "duplicate named group '{}' (group names must be unique)", name)
+            }
+            ParseErrorKind::InvalidGroupReference(msg) => {
+                write!(f, "invalid group reference: {}", msg)
+            }
+            ParseErrorKind::UndefinedGroupReference(name) => {
+                write!(f, "undefined group reference '(?&{})' (group '{}' was never defined)", name, name)
+            }
+            ParseErrorKind::InvalidFlag(msg) => {
+                write!(f, "invalid flag: {}", msg)
+            }
+            ParseErrorKind::RecursionDepthExceeded { depth, max } => {
+                write!(
+                    f,
+                    "recursion depth {} exceeded maximum {} during group reference expansion",
+                    depth, max
+                )
+            }
+            ParseErrorKind::InternalError(msg) => {
+                write!(f, "internal error: {}", msg)
+            }
         }
     }
 }
@@ -313,20 +334,6 @@ pub type ParseResult<T> = Result<T, ParseError>;
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_position_display() {
-        let pos = Position::new(5, 10, 42);
-        assert_eq!(pos.to_string(), "line 5, column 10");
-    }
-
-    #[test]
-    fn test_position_start() {
-        let pos = Position::start();
-        assert_eq!(pos.line, 1);
-        assert_eq!(pos.column, 1);
-        assert_eq!(pos.offset, 0);
-    }
 
     #[test]
     fn test_parse_error_display() {

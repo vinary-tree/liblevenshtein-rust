@@ -9,7 +9,11 @@ This guide explains how to write phonetic rewrite rules using LLev grammar and f
 3. [Part 2: Phonetic Regex](#part-2-phonetic-regex)
 4. [Part 3: Integration](#part-3-integration)
 5. [Part 4: Levenshtein Integration](#part-4-levenshtein-integration)
-6. [Quick Reference](#quick-reference)
+6. [Part 5: Advanced Pattern Matching](#part-5-advanced-pattern-matching)
+7. [Part 6: LLRE File Format](#part-6-llre-file-format)
+8. [Part 7: Serialization & AOT](#part-7-serialization--aot)
+9. [Part 8: Advanced Topics](#part-8-advanced-topics)
+10. [Quick Reference](#quick-reference)
 
 ---
 
@@ -252,6 +256,8 @@ Escape sequences that expand to character classes. Both LLev and phonetic regex 
 
 **Note:** Uppercase letters used as shortcuts (`A`, `C`, `D`, `E`, `F`, `G`, `H`, `K`, `L`, `M`, `O`, `P`, `Q`, `S`, `V`, `W`, `Z`) cannot be escaped for literal use. Use quoted strings `"A"` or non-shortcut letters (`\B`, `\I`, `\J`, `\N`, `\R`, `\T`, `\X`, `\Y`) for literal uppercase characters.
 
+**Note:** Standard regex word boundary escapes `\b` and `\B` are not supported. Use `#` for word boundaries instead.
+
 ```llev
 // Using shortcuts
 x -> gz / \v_\v;     // x → gz between vowels
@@ -383,16 +389,39 @@ The nested bracket syntax `[[^[:nasal:]][:stop:]]` creates a **union**: (not nas
 
 ### Symbol References
 
-Reference user-defined symbols from LLev:
+Reference user-defined symbols from LLev (outside character classes only):
 
 ```regex
-$VOWEL          // simple form
+$VOWEL          // simple form - expands to vowel chars
 ${FRONT_VOWEL}  // braced form (for clarity)
 
-// In patterns
+// In context patterns
 c -> s / _$FRONT_VOWEL;
-[$VOWEL$CONSONANT]   // union of both classes
+
+// Inside character classes, use POSIX named class syntax:
+[[:vowel:][:consonant:]]  // union of built-in classes
+
+// $ is a LITERAL character inside character classes:
+[$abc]  // matches literal '$', 'a', 'b', 'c'
 ```
+
+### Character Class Negation
+
+Negation follows De Morgan's laws for properly nested classes:
+
+| Pattern | Equivalent | Description |
+|---------|------------|-------------|
+| `[^[:vowel:]]` | all non-vowels | Simple negation |
+| `[^[:vowel:][:voiced:]]` | ¬(vowel ∪ voiced) | Negate the union |
+| `[^[^[:vowel:]]]` | `[:vowel:]` | Double negation cancels out |
+| `[:!nasal stop:]` | (¬nasal) ∩ stop | Inner negation with intersection |
+
+**De Morgan's Laws:**
+- ¬(A ∪ B) = ¬A ∩ ¬B
+- ¬(A ∩ B) = ¬A ∪ ¬B
+
+For feature bundles, `!` inside the bundle negates individual features before intersection:
+- `[:!nasal stop:]` = (NOT nasal) AND (stop) = oral stops only
 
 ### Word Boundary
 
@@ -406,6 +435,7 @@ abc#        // "abc" at word end
 // In context
 / #_        // at word start
 / _#        // at word end
+/ #_#       // complete word (both boundaries)
 ```
 
 ### Escape Sequences
@@ -530,6 +560,37 @@ use liblevenshtein::phonetic::nfa::compile_rule;
 // [aeiou]+ -> V
 
 // The conversion happens automatically in RuleSet::from_llev()
+```
+
+### NFA Optimization
+
+Compiled NFAs are automatically optimized to reduce size and improve matching
+performance. Optimization removes epsilon transitions, unreachable states, and
+dead states.
+
+```rust
+use liblevenshtein::phonetic::nfa::{compile, OptimizationConfig, NFACompilerChar};
+use liblevenshtein::phonetic::regex::parse;
+
+// Optimization is enabled by default
+let regex = parse("(ph|f)one")?;
+let nfa = compile(&regex)?;
+
+// View optimization statistics
+let mut compiler = NFACompilerChar::new().without_optimization();
+let unoptimized = compiler.compile(&regex)?;
+let (optimized, stats) = unoptimized.optimize_with(OptimizationConfig::full());
+println!("States: {} → {}", stats.original_states, stats.final_states);
+println!("Epsilon transitions eliminated: {}", stats.epsilon_transitions_eliminated);
+
+// Configuration presets:
+// - OptimizationConfig::full()  - All passes (default)
+// - OptimizationConfig::quick() - Remove unreachable/dead only
+// - OptimizationConfig::none()  - No optimization
+
+// Disable optimization for debugging
+let mut compiler = NFACompilerChar::new().without_optimization();
+let unoptimized = compiler.compile(&regex)?;
 ```
 
 ---
@@ -690,6 +751,479 @@ let transducer = Transducer::with_operations(&dictionary, ops);
 - Use character-level for Unicode/IPA support
 - Pre-normalize dictionary at build time
 - Cache normalized forms for repeated queries
+
+---
+
+## Part 5: Advanced Pattern Matching
+
+Beyond basic NFA matching, the phonetic module provides specialized matchers for different use cases: lazy DFA construction, fuzzy regex matching, cached matching, and streaming input.
+
+### 5.1 Lazy DFA
+
+The `LazyDFAChar` provides on-demand DFA state construction. Instead of computing the full powerset construction upfront, states are created only when needed during matching.
+
+```rust
+use liblevenshtein::phonetic::nfa::{compile, LazyDFAChar};
+use liblevenshtein::phonetic::regex::parse;
+
+// Parse and compile the pattern
+let regex = parse("(ph|f)one")?;
+let nfa = compile(&regex)?;
+
+// Create lazy DFA - no upfront computation
+let mut lazy_dfa = LazyDFAChar::new(nfa);
+
+// States are constructed on-demand during matching
+assert!(lazy_dfa.accepts("phone"));
+assert!(lazy_dfa.accepts("fone"));
+assert!(!lazy_dfa.accepts("bone"));
+
+// View cache statistics
+let stats = lazy_dfa.cache_stats();
+println!("Cache size: {}", lazy_dfa.cache_size());
+println!("Cache hits: {}, misses: {}", stats.hits, stats.misses);
+
+// Clear cache if memory is a concern
+lazy_dfa.clear_cache();
+```
+
+**When to use Lazy DFA:**
+- Large patterns where full DFA would be memory-prohibitive
+- Patterns with many branches that are rarely all exercised
+- Applications with diverse inputs (cache benefits from locality)
+- Startup-time sensitive applications (no upfront computation)
+
+### 5.2 Product Automaton
+
+The `ProductAutomatonChar` combines an NFA with a Levenshtein automaton, enabling fuzzy regex matching—find strings that match a pattern within a specified edit distance.
+
+```rust
+use liblevenshtein::phonetic::nfa::{compile, ProductAutomatonChar};
+use liblevenshtein::phonetic::regex::parse;
+
+let regex = parse("(ph|f)one")?;
+let nfa = compile(&regex)?;
+
+// Create product automaton with max edit distance 2
+let product = ProductAutomatonChar::new(nfa, 2);
+
+// Exact match - distance 0
+assert!(product.accepts("phone"));
+assert_eq!(product.min_distance("phone"), Some(0));
+
+// Fuzzy match - distance 1
+assert!(product.accepts("phon"));   // deletion
+assert!(product.accepts("pphone")); // insertion
+assert_eq!(product.min_distance("phon"), Some(1));
+
+// Fuzzy match - distance 2
+assert!(product.accepts("ph"));
+assert_eq!(product.min_distance("ph"), Some(2));
+
+// Beyond threshold - rejected
+assert!(!product.accepts("x"));
+assert_eq!(product.min_distance("xyz"), None);
+```
+
+**Phonetic Weighting:**
+
+```rust
+// Phonetically-weighted product automaton
+let product = ProductAutomatonChar::new(nfa, 2)
+    .with_phonetic_weight(0.5);  // Phonetic substitutions cost 0.5
+
+// ph→f is phonetically similar, costs less than arbitrary substitution
+```
+
+**Use cases:**
+- Spell checking with pattern constraints
+- Fuzzy search in structured data (e.g., phone numbers, codes)
+- OCR error correction with format validation
+
+### 5.3 Memoized Matching
+
+The `MemoizedMatcherChar` wraps a product automaton with an LRU cache, ideal for repeated queries over the same inputs.
+
+```rust
+use liblevenshtein::phonetic::nfa::{
+    compile, ProductAutomatonChar, MemoizedMatcherChar
+};
+use liblevenshtein::phonetic::regex::parse;
+
+let regex = parse("(ph|f)one")?;
+let nfa = compile(&regex)?;
+let product = ProductAutomatonChar::new(nfa, 2);
+
+// Create memoized matcher with LRU cache (1000 entries)
+let mut matcher = MemoizedMatcherChar::new(product, 1000);
+
+// First query - computed and cached
+assert!(matcher.accepts("phone"));
+
+// Repeated query - cache hit
+assert!(matcher.accepts("phone"));
+
+// Distance queries are also cached
+assert_eq!(matcher.min_distance("phone"), Some(0));
+
+// View cache statistics
+let stats = matcher.stats();
+println!("Hits: {}, Misses: {}", stats.hits, stats.misses);
+println!("Hit rate: {:.1}%", stats.hit_rate() * 100.0);
+
+// Clear cache if needed
+matcher.clear();
+```
+
+**When to use memoization:**
+- Spell checking with common misspellings
+- Autocomplete with frequently typed prefixes
+- Batch processing with duplicate inputs
+- Interactive applications with repeated queries
+
+### 5.4 Incremental/Streaming Matching
+
+The `IncrementalMatcherChar` processes input character-by-character, enabling real-time feedback during typing.
+
+```rust
+use liblevenshtein::phonetic::nfa::{compile, IncrementalMatcherChar};
+use liblevenshtein::phonetic::regex::parse;
+
+let regex = parse("(ph|f)one")?;
+let nfa = compile(&regex)?;
+
+let mut matcher = IncrementalMatcherChar::new(nfa);
+
+// Feed characters one at a time
+matcher.feed('p');
+assert!(!matcher.is_accepting());  // "p" doesn't match yet
+assert!(!matcher.is_dead());       // But matching could still succeed
+
+matcher.feed('h');
+matcher.feed('o');
+matcher.feed('n');
+matcher.feed('e');
+assert!(matcher.is_accepting());   // "phone" matches!
+
+// Feed a string all at once
+matcher.reset();
+matcher.feed_str("fone");
+assert!(matcher.is_accepting());
+
+// Snapshot for backtracking
+let snapshot = matcher.snapshot();
+
+matcher.feed('s');
+assert!(!matcher.is_accepting());  // "fones" doesn't match
+
+// Restore to previous state
+matcher.restore(snapshot);
+assert!(matcher.is_accepting());   // Back to "fone"
+```
+
+**Use cases:**
+- Real-time validation in text editors
+- Autocomplete with live feedback
+- Streaming input from networks or pipes
+- Undo/redo with snapshot/restore
+
+### 5.5 Choosing the Right Matcher
+
+| Matcher | Memory | Startup | Per-Query | Best For |
+|---------|--------|---------|-----------|----------|
+| `NFAChar` (direct) | Low | Fast | Slow | Simple patterns, one-off matching |
+| `LazyDFAChar` | Medium | Fast | Fast* | Large patterns, diverse inputs |
+| `ProductAutomatonChar` | High | Medium | Medium | Fuzzy regex matching |
+| `MemoizedMatcherChar` | High | Medium | Very Fast** | Repeated queries |
+| `IncrementalMatcherChar` | Low | Fast | Very Fast | Streaming, real-time feedback |
+
+\* After cache warmup
+\** For cached inputs
+
+---
+
+## Part 6: LLRE File Format
+
+LLRE (Levenshtein Regular Expression) files define single regex patterns with metadata and imports. They complement LLev files which define rewrite rules.
+
+### 6.1 Format Overview
+
+```llre
+@name "Phone Pattern"
+@version "1.0"
+@import "phonetic-symbols.llev"  # Import symbols from LLev file
+@flags case_insensitive
+
+# The regex pattern (only one per file)
+(ph|f)one
+```
+
+### 6.2 Directives
+
+| Directive | Description | Example |
+|-----------|-------------|---------|
+| `@name` | Pattern name for documentation | `@name "US Phone"` |
+| `@version` | Semantic version | `@version "1.0.0"` |
+| `@import` | Import symbols from LLev file | `@import "symbols.llev"` |
+| `@flags` | Space-separated flags | `@flags multiline dotall` |
+
+### 6.3 Flags
+
+| Flag | Effect |
+|------|--------|
+| `multiline` | `^` and `$` match line boundaries, not just string boundaries |
+| `dotall` | `.` matches newlines (normally excluded) |
+| `case_insensitive` | Case-insensitive matching |
+| `unicode` | Full Unicode character class support |
+| `greedy` | Quantifiers are greedy by default (standard) |
+| `lazy` | Quantifiers are lazy by default |
+
+### 6.4 Loading LLRE Files
+
+```rust
+use liblevenshtein::phonetic::llre::{load_llre_file, compile_llre};
+use liblevenshtein::phonetic::nfa::LazyDFAChar;
+
+// Load and parse LLRE file
+let file = load_llre_file("patterns/phone.llre")?;
+
+// Access metadata
+println!("Pattern: {}", file.name.unwrap_or("unnamed"));
+println!("Version: {}", file.version.unwrap_or("0.0.0"));
+
+// Compile to NFA
+let nfa = compile_llre(&file)?;
+
+// Use with any matcher
+let mut dfa = LazyDFAChar::new(nfa);
+assert!(dfa.accepts("phone"));
+```
+
+### 6.5 Symbol Imports
+
+LLRE files can import symbols defined in LLev files:
+
+```llev
+// phonetic-symbols.llev
+@define VOWEL = [aeiou]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+@define DIGIT = [0-9]
+```
+
+```llre
+// pattern.llre
+@import "phonetic-symbols.llev"
+
+# Use imported symbols
+$CONSONANT+$VOWEL+$CONSONANT*
+```
+
+---
+
+## Part 7: Serialization & AOT
+
+For production deployments, pre-compile rules and patterns to binary format for instant loading.
+
+> **Note:** Requires the `serialization` feature flag.
+
+### 7.1 LLev Rule Serialization
+
+```rust
+use liblevenshtein::phonetic::llev::{
+    RuleSetChar, save_char, load_char
+};
+
+// Compile rules from LLev file (done at build time)
+let ruleset = RuleSetChar::from_file("rules/english.llev")?;
+
+// Save to binary format
+save_char(&ruleset, "rules/english.bin")?;
+
+// At runtime: load instantly (no parsing)
+let ruleset = load_char("rules/english.bin")?;
+
+// Use normally
+let normalized = ruleset.apply("knight");
+```
+
+### 7.2 NFA Serialization
+
+```rust
+use liblevenshtein::phonetic::llre::{
+    save_compiled_llre, load_compiled_llre
+};
+use liblevenshtein::phonetic::nfa::{compile, LazyDFAChar};
+use liblevenshtein::phonetic::regex::parse;
+
+// Compile pattern (done at build time)
+let regex = parse("(ph|f)one")?;
+let nfa = compile(&regex)?;
+
+// Save compiled NFA
+save_compiled_llre(&nfa, "patterns/phone.nfa.bin")?;
+
+// At runtime: load pre-compiled NFA
+let nfa = load_compiled_llre("patterns/phone.nfa.bin")?;
+let mut dfa = LazyDFAChar::new(nfa);
+```
+
+### 7.3 Build Script Integration
+
+```rust
+// build.rs
+use liblevenshtein::phonetic::llev::{RuleSetChar, save_char};
+use liblevenshtein::phonetic::llre::{load_llre_file, compile_llre, save_compiled_llre};
+
+fn main() {
+    // Compile LLev rules
+    let ruleset = RuleSetChar::from_file("rules/english.llev")
+        .expect("Failed to parse rules");
+    save_char(&ruleset, "target/english.bin")
+        .expect("Failed to save rules");
+
+    // Compile LLRE patterns
+    for entry in std::fs::read_dir("patterns").unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension() == Some("llre".as_ref()) {
+            let file = load_llre_file(&path).expect("Failed to parse");
+            let nfa = compile_llre(&file).expect("Failed to compile");
+            let out_path = path.with_extension("nfa.bin");
+            save_compiled_llre(&nfa, &out_path).expect("Failed to save");
+        }
+    }
+
+    println!("cargo:rerun-if-changed=rules/");
+    println!("cargo:rerun-if-changed=patterns/");
+}
+```
+
+### 7.4 Performance Comparison
+
+| Operation | Parse + Compile | Load Binary |
+|-----------|-----------------|-------------|
+| 50-rule LLev | ~2ms | ~50μs |
+| Complex regex | ~500μs | ~20μs |
+| Large NFA (1000 states) | ~5ms | ~100μs |
+
+Binary loading is 20-50× faster than parsing.
+
+---
+
+## Part 8: Advanced Topics
+
+### 8.1 Context Patterns
+
+Context patterns enable position-aware matching—ensuring patterns only match at specific positions like word boundaries.
+
+```rust
+use liblevenshtein::phonetic::nfa::{
+    compile, ContextMatcherChar, ContextPatternChar, BoundaryKind
+};
+use liblevenshtein::phonetic::regex::parse;
+
+let regex = parse("the")?;
+let nfa = compile(&regex)?;
+
+// Match only at word start
+let pattern = ContextPatternChar::new()
+    .with_left_boundary(BoundaryKind::WordStart)
+    .with_pattern(nfa);
+
+let matcher = ContextMatcherChar::new(pattern);
+
+// "the" at position 0 - word start
+assert!(matcher.matches_at("the quick fox", 0));
+
+// "the" at position 10 - mid-word in "other"
+assert!(!matcher.matches_at("another thing", 3));
+```
+
+**Boundary Types:**
+
+| Boundary | Description |
+|----------|-------------|
+| `WordStart` | After whitespace or string start |
+| `WordEnd` | Before whitespace or string end |
+| `LineStart` | After newline or string start |
+| `LineEnd` | Before newline or string end |
+| `StringStart` | Only at position 0 |
+| `StringEnd` | Only at final position |
+
+### 8.2 Cycle Detection
+
+When applying rules iteratively, infinite loops can occur if rules form a cycle. Use cycle detection to handle this safely.
+
+```rust
+use liblevenshtein::phonetic::{
+    apply_rules_with_cycle_detection, NormalizationResult
+};
+
+match apply_rules_with_cycle_detection(&rules, input, 100) {
+    NormalizationResult::FixedPoint(output) => {
+        // Converged to stable result
+        println!("Normalized: {}", output);
+    }
+    NormalizationResult::Cycle { value, cycle_start } => {
+        // Detected infinite loop
+        eprintln!("Cycle at iteration {}: {}", cycle_start, value);
+    }
+    NormalizationResult::MaxIterations(output) => {
+        // Hit limit without converging
+        println!("Result after max iterations: {}", output);
+    }
+}
+```
+
+### 8.3 Performance Optimization
+
+#### Position Skipping
+
+For very long strings with repetitive patterns (100+ characters), use the optimized applier:
+
+```rust
+use liblevenshtein::phonetic::apply_rules_seq_optimized;
+
+// Up to 26× faster for synthetic strings with repetitive patterns
+let result = apply_rules_seq_optimized(&rules, very_long_input);
+```
+
+**Recommendations:**
+- `apply_rules_seq` - Default, best for typical words (<100 chars)
+- `apply_rules_seq_optimized` - Only for very long strings with repetition
+
+#### Thompson Builder (Low-level NFA)
+
+For programmatic NFA construction without parsing:
+
+```rust
+use liblevenshtein::phonetic::nfa::ThompsonBuilderChar;
+
+let builder = ThompsonBuilderChar::new();
+
+// Build NFA directly
+let a = builder.single_char('a');
+let b = builder.single_char('b');
+let a_or_b = builder.alternation(a, b);
+let pattern = builder.kleene_star(a_or_b);  // (a|b)*
+
+assert!(pattern.accepts(""));
+assert!(pattern.accepts("abab"));
+assert!(pattern.accepts("aaaa"));
+```
+
+**Thompson Builder Operations:**
+
+| Method | Description | Regex Equivalent |
+|--------|-------------|------------------|
+| `single_char(c)` | Single character | `c` |
+| `literal(s)` | Literal string | `abc` |
+| `char_class(cc)` | Character class | `[abc]` |
+| `epsilon()` | Empty match | ε |
+| `concatenate(a, b)` | Sequence | `ab` |
+| `alternation(a, b)` | Choice | `a\|b` |
+| `kleene_star(a)` | Zero or more | `a*` |
+| `kleene_plus(a)` | One or more | `a+` |
+| `optional(a)` | Zero or one | `a?` |
 
 ---
 

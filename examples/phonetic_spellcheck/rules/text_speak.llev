@@ -1,0 +1,204 @@
+// American English Text-Speak / SMS Abbreviations
+// Normalizes informal spellings to standard forms for fuzzy matching
+
+@version "1.0.0";
+
+// ============================================================
+// Single-letter substitutions
+// ============================================================
+
+[id: 200, name: "c for see", weight: 0.0, group: text_speak]
+c -> see / #_#;
+
+[id: 201, name: "r for are", weight: 0.0, group: text_speak]
+r -> are / #_#;
+
+[id: 202, name: "u for you", weight: 0.0, group: text_speak]
+u -> you / #_#;
+
+[id: 203, name: "n for and", weight: 0.0, group: text_speak]
+n -> and / #_#;
+
+[id: 204, name: "y for why", weight: 0.0, group: text_speak]
+y -> why / #_#;
+
+[id: 205, name: "b for be", weight: 0.0, group: text_speak]
+b -> be / #_#;
+
+[id: 206, name: "k for okay", weight: 0.0, group: text_speak]
+k -> okay / #_#;
+
+// ============================================================
+// Number substitutions
+// ============================================================
+
+[id: 210, name: "2 for to", weight: 0.0, group: text_speak]
+2 -> to / #_#;
+
+[id: 211, name: "4 for for", weight: 0.0, group: text_speak]
+4 -> for / #_#;
+
+[id: 212, name: "8 for ate", weight: 0.0, group: text_speak]
+8 -> ate / #_#;
+
+// ============================================================
+// Common abbreviations with numbers
+// ============================================================
+
+[id: 220, name: "b4 for before", weight: 0.0, group: text_speak]
+b4 -> before / #_#;
+
+[id: 221, name: "l8r for later", weight: 0.0, group: text_speak]
+l8r -> later / #_#;
+
+[id: 222, name: "l8 for late", weight: 0.0, group: text_speak]
+l8 -> late / #_#;
+
+[id: 223, name: "gr8 for great", weight: 0.0, group: text_speak]
+gr8 -> great / #_#;
+
+[id: 224, name: "w8 for wait", weight: 0.0, group: text_speak]
+w8 -> wait / #_#;
+
+[id: 225, name: "m8 for mate", weight: 0.0, group: text_speak]
+m8 -> mate / #_#;
+
+[id: 226, name: "h8 for hate", weight: 0.0, group: text_speak]
+h8 -> hate / #_#;
+
+[id: 227, name: "sk8 for skate", weight: 0.0, group: text_speak]
+sk8 -> skate / #_#;
+
+[id: 228, name: "2day for today", weight: 0.0, group: text_speak]
+2day -> today / #_#;
+
+[id: 229, name: "2nite for tonight", weight: 0.0, group: text_speak]
+2nite -> tonight / #_#;
+
+[id: 230, name: "2morrow for tomorrow", weight: 0.0, group: text_speak]
+2morrow -> tomorrow / #_#;
+
+[id: 231, name: "4ever for forever", weight: 0.0, group: text_speak]
+4ever -> forever / #_#;
+
+// ============================================================
+// Letter-based abbreviations
+// ============================================================
+
+[id: 240, name: "ur for your", weight: 0.0, group: text_speak]
+ur -> your / #_#;
+
+[id: 241, name: "ure for youre", weight: 0.0, group: text_speak]
+ure -> youre / #_#;
+
+[id: 242, name: "thx for thanks", weight: 0.0, group: text_speak]
+thx -> thanks / #_#;
+
+[id: 243, name: "thnx for thanks", weight: 0.0, group: text_speak]
+thnx -> thanks / #_#;
+
+[id: 244, name: "pls for please", weight: 0.0, group: text_speak]
+pls -> please / #_#;
+
+[id: 245, name: "plz for please", weight: 0.0, group: text_speak]
+plz -> please / #_#;
+
+[id: 246, name: "msg for message", weight: 0.0, group: text_speak]
+msg -> message / #_#;
+
+[id: 247, name: "txt for text", weight: 0.0, group: text_speak]
+txt -> text / #_#;
+
+[id: 248, name: "bc for because", weight: 0.0, group: text_speak]
+bc -> because / #_#;
+
+[id: 249, name: "cuz for because", weight: 0.0, group: text_speak]
+cuz -> because / #_#;
+
+[id: 250, name: "bcuz for because", weight: 0.0, group: text_speak]
+bcuz -> because / #_#;
+
+[id: 251, name: "idk for i dont know", weight: 0.0, group: text_speak]
+idk -> idontknow / #_#;
+
+[id: 252, name: "btw for by the way", weight: 0.0, group: text_speak]
+btw -> bytheway / #_#;
+
+[id: 253, name: "omg for oh my god", weight: 0.0, group: text_speak]
+omg -> ohmygod / #_#;
+
+[id: 254, name: "tbh for to be honest", weight: 0.0, group: text_speak]
+tbh -> tobehonest / #_#;
+
+[id: 255, name: "imo for in my opinion", weight: 0.0, group: text_speak]
+imo -> inmyopinion / #_#;
+
+[id: 256, name: "brb for be right back", weight: 0.0, group: text_speak]
+brb -> berightback / #_#;
+
+[id: 257, name: "nvm for never mind", weight: 0.0, group: text_speak]
+nvm -> nevermind / #_#;
+
+[id: 258, name: "ttyl for talk to you later", weight: 0.0, group: text_speak]
+ttyl -> talktoyoulater / #_#;
+
+[id: 259, name: "np for no problem", weight: 0.0, group: text_speak]
+np -> noproblem / #_#;
+
+[id: 260, name: "ty for thank you", weight: 0.0, group: text_speak]
+ty -> thankyou / #_#;
+
+[id: 261, name: "yw for youre welcome", weight: 0.0, group: text_speak]
+yw -> yourewelcome / #_#;
+
+// ============================================================
+// Phonetic spellings
+// ============================================================
+
+[id: 270, name: "nite for night", weight: 0.0, group: text_speak]
+nite -> night / #_#;
+
+[id: 271, name: "lite for light", weight: 0.0, group: text_speak]
+lite -> light / #_#;
+
+[id: 272, name: "rite for right", weight: 0.0, group: text_speak]
+rite -> right / #_#;
+
+[id: 273, name: "tho for though", weight: 0.0, group: text_speak]
+tho -> though / #_#;
+
+[id: 274, name: "thru for through", weight: 0.0, group: text_speak]
+thru -> through / #_#;
+
+[id: 275, name: "enuf for enough", weight: 0.0, group: text_speak]
+enuf -> enough / #_#;
+
+[id: 276, name: "luv for love", weight: 0.0, group: text_speak]
+luv -> love / #_#;
+
+[id: 277, name: "kno for know", weight: 0.0, group: text_speak]
+kno -> know / #_#;
+
+[id: 278, name: "wanna for want to", weight: 0.0, group: text_speak]
+wanna -> wantto / #_#;
+
+[id: 279, name: "gonna for going to", weight: 0.0, group: text_speak]
+gonna -> goingto / #_#;
+
+[id: 280, name: "gotta for got to", weight: 0.0, group: text_speak]
+gotta -> gotto / #_#;
+
+[id: 281, name: "kinda for kind of", weight: 0.0, group: text_speak]
+kinda -> kindof / #_#;
+
+[id: 282, name: "sorta for sort of", weight: 0.0, group: text_speak]
+sorta -> sortof / #_#;
+
+[id: 283, name: "dunno for dont know", weight: 0.0, group: text_speak]
+dunno -> dontknow / #_#;
+
+[id: 284, name: "lemme for let me", weight: 0.0, group: text_speak]
+lemme -> letme / #_#;
+
+[id: 285, name: "gimme for give me", weight: 0.0, group: text_speak]
+gimme -> giveme / #_#;

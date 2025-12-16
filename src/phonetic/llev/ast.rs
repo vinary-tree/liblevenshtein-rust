@@ -33,6 +33,9 @@ use std::path::PathBuf;
 
 use super::error::Position;
 
+// Re-export syllable types from common module for backward compatibility
+pub use crate::phonetic::common::syllable::{SyllableCondition, SyllableExpr};
+
 // ============================================================================
 // File-level AST
 // ============================================================================
@@ -502,140 +505,6 @@ impl fmt::Display for ContextExpr {
             ContextExpr::And(a, b) => write!(f, "({} & {})", a, b),
             ContextExpr::Or(a, b) => write!(f, "({} | {})", a, b),
             ContextExpr::Not(inner) => write!(f, "!{}", inner),
-        }
-    }
-}
-
-// ============================================================================
-// Syllable Conditions
-// ============================================================================
-
-/// Syllable-based conditions for context-sensitive rules.
-///
-/// These conditions allow rules to apply based on syllable structure,
-/// enabling correct handling of vowel length, Y pronunciation, etc.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SyllableCondition {
-    /// Word has exactly 1 syllable (e.g., "ply", "fly")
-    Monosyllable,
-
-    /// Word has more than 1 syllable (e.g., "happy", "flying")
-    Polysyllable,
-
-    /// Current syllable ends in vowel (long vowel context)
-    OpenSyllable,
-
-    /// Current syllable ends in consonant (short vowel context)
-    ClosedSyllable,
-
-    /// Match is in the last syllable
-    FinalSyllable,
-
-    /// Match is in the first syllable
-    InitialSyllable,
-}
-
-impl SyllableCondition {
-    /// Parse a syllable condition from a string.
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "monosyllable" => Some(SyllableCondition::Monosyllable),
-            "polysyllable" => Some(SyllableCondition::Polysyllable),
-            "open_syllable" => Some(SyllableCondition::OpenSyllable),
-            "closed_syllable" => Some(SyllableCondition::ClosedSyllable),
-            "final_syllable" => Some(SyllableCondition::FinalSyllable),
-            "initial_syllable" => Some(SyllableCondition::InitialSyllable),
-            _ => None,
-        }
-    }
-
-    /// Get the string representation of this condition.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            SyllableCondition::Monosyllable => "monosyllable",
-            SyllableCondition::Polysyllable => "polysyllable",
-            SyllableCondition::OpenSyllable => "open_syllable",
-            SyllableCondition::ClosedSyllable => "closed_syllable",
-            SyllableCondition::FinalSyllable => "final_syllable",
-            SyllableCondition::InitialSyllable => "initial_syllable",
-        }
-    }
-}
-
-impl fmt::Display for SyllableCondition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-/// Syllable expression with compound operators.
-///
-/// Allows combining syllable conditions with And/Or/Not.
-///
-/// # Examples
-///
-/// ```text
-/// monosyllable                     -> Cond (simple condition)
-/// polysyllable & final_syllable    -> And (both must be true)
-/// monosyllable | !final_syllable   -> Or with negation
-/// ```
-#[derive(Debug, Clone, PartialEq)]
-pub enum SyllableExpr {
-    /// Simple syllable condition
-    Cond(SyllableCondition),
-
-    /// Both conditions must be true
-    And(Box<SyllableExpr>, Box<SyllableExpr>),
-
-    /// Either condition must be true
-    Or(Box<SyllableExpr>, Box<SyllableExpr>),
-
-    /// Condition must NOT be true
-    Not(Box<SyllableExpr>),
-}
-
-impl SyllableExpr {
-    /// Create a simple condition expression.
-    pub fn cond(condition: SyllableCondition) -> Self {
-        SyllableExpr::Cond(condition)
-    }
-
-    /// Create an AND expression.
-    pub fn and(a: SyllableExpr, b: SyllableExpr) -> Self {
-        SyllableExpr::And(Box::new(a), Box::new(b))
-    }
-
-    /// Create an OR expression.
-    pub fn or(a: SyllableExpr, b: SyllableExpr) -> Self {
-        SyllableExpr::Or(Box::new(a), Box::new(b))
-    }
-
-    /// Create a NOT expression.
-    pub fn not(inner: SyllableExpr) -> Self {
-        SyllableExpr::Not(Box::new(inner))
-    }
-
-    /// Check if this is a simple condition (no compound operators).
-    pub fn is_simple(&self) -> bool {
-        matches!(self, SyllableExpr::Cond(_))
-    }
-
-    /// Get the inner condition if this is simple.
-    pub fn as_condition(&self) -> Option<SyllableCondition> {
-        match self {
-            SyllableExpr::Cond(c) => Some(*c),
-            _ => None,
-        }
-    }
-}
-
-impl fmt::Display for SyllableExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SyllableExpr::Cond(c) => write!(f, "{}", c),
-            SyllableExpr::And(a, b) => write!(f, "({} & {})", a, b),
-            SyllableExpr::Or(a, b) => write!(f, "({} | {})", a, b),
-            SyllableExpr::Not(inner) => write!(f, "!{}", inner),
         }
     }
 }

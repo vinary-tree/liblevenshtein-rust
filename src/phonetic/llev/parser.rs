@@ -22,23 +22,15 @@
 
 use std::collections::HashMap;
 
+use crate::phonetic::common::traits::SyllableParser;
+use crate::phonetic::common::utils::negate_char_class;
+
 use super::ast::{
     ContextAST, ContextExpr, Expression, IncludeDirective, LLevFile, RewriteRuleAST,
     RuleDefinition, RuleMetadata, SyllableCondition, SyllableExpr, SymbolDef,
 };
-use super::error::{LLevError, LLevErrorKind, LLevResult};
+use super::error::{LLevError, LLevErrorKind, LLevResult, Position};
 use super::lexer::{Lexer, Token};
-
-/// Compute complement of a character class using printable ASCII.
-///
-/// This is used for negated named classes like `[^[:vowel:]]`.
-/// Returns all printable ASCII characters (0x20-0x7E) that are NOT in the input set.
-fn negate_char_class(chars: &[char]) -> Vec<char> {
-    (0x20u8..=0x7Eu8)
-        .map(|b| b as char)
-        .filter(|c| !chars.contains(c))
-        .collect()
-}
 
 /// Parser for `.llev` files.
 pub struct Parser<'a> {
@@ -1498,6 +1490,34 @@ pub fn parse_str_with_symbols(
     parser.parse_file()
 }
 
+impl<'a> SyllableParser for Parser<'a> {
+    type Lexer = Lexer<'a>;
+    type Error = LLevError;
+
+    fn lexer_mut(&mut self) -> &mut Self::Lexer {
+        &mut self.lexer
+    }
+
+    fn make_unexpected_token_error(
+        &self,
+        expected: &str,
+        found: &Token,
+        position: Position,
+    ) -> Self::Error {
+        LLevError::with_position(
+            LLevErrorKind::InvalidPattern(format!(
+                "expected {}, got {:?}",
+                expected, found
+            )),
+            position,
+        )
+    }
+
+    fn from_lexer_error(&self, err: LLevError) -> Self::Error {
+        err
+    }
+}
+
 /// Parse a single expression from a string.
 pub fn parse_expression(input: &str) -> LLevResult<Expression> {
     let mut parser = Parser::new_pattern(input);
@@ -2132,11 +2152,11 @@ ph -> f"#;
 
     #[test]
     fn test_parse_user_symbol_in_char_class() {
-        // $SYMBOL inside character classes expands the symbol
-        // [$MY_VOWEL] = vowels (a, e, i, o, u)
+        // $ is now a LITERAL character inside character classes
+        // [$MY_VOWEL] = literal chars: $, M, Y, _, V, O, W, E, L
         let input = r#"
 @define MY_VOWEL = [aeiou]
-x -> gz / [$MY_VOWEL]_[AB]
+x -> gz / [$abc]_[AB]
 "#;
         let file = parse_str(input).unwrap();
         assert_eq!(file.rules.len(), 1);
@@ -2144,21 +2164,17 @@ x -> gz / [$MY_VOWEL]_[AB]
         let rule = &file.rules[0].rule;
         let ctx = rule.context.as_ref().expect("should have context");
 
-        // Left context should be a char class with vowels from MY_VOWEL symbol
+        // Left context should be a char class with literal $, a, b, c
         if let Some(ref boxed) = ctx.left {
             if let ContextExpr::Pattern(ref expr) = **boxed {
                 if let Expression::CharClass { ref chars, negated } = expr {
                     assert!(!negated);
-                    // Should contain vowels from the symbol
-                    assert!(chars.contains(&'a'));
-                    assert!(chars.contains(&'e'));
-                    assert!(chars.contains(&'i'));
-                    assert!(chars.contains(&'o'));
-                    assert!(chars.contains(&'u'));
-                    // Should NOT contain literal $, M, Y
-                    assert!(!chars.contains(&'$'));
-                    assert!(!chars.contains(&'M'));
-                    assert!(!chars.contains(&'Y'));
+                    // Should contain literal $
+                    assert!(chars.contains(&'$'), "Should contain literal $");
+                    // Should contain literal a, b, c
+                    assert!(chars.contains(&'a'), "Should contain literal a");
+                    assert!(chars.contains(&'b'), "Should contain literal b");
+                    assert!(chars.contains(&'c'), "Should contain literal c");
                 } else {
                     panic!("expected CharClass in left context");
                 }
@@ -2203,11 +2219,11 @@ c -> k / _[^\$ab]
 
     #[test]
     fn test_parse_mixed_symbol_and_chars_in_class() {
-        // ${SYMBOL} inside character class expands the symbol
-        // Define M symbol and test expansion
+        // $ is now a LITERAL character inside character classes
+        // [$xyz] contains literal $, x, y, z
         let input = r#"
 @define M = [mn]
-a -> b / _[${M}xyz]
+a -> b / _[$xyz]
 "#;
         let file = parse_str(input).unwrap();
         assert_eq!(file.rules.len(), 1);
@@ -2215,22 +2231,17 @@ a -> b / _[${M}xyz]
         let rule = &file.rules[0].rule;
         let ctx = rule.context.as_ref().expect("should have context");
 
-        // Right context should have m, n (from M symbol), x, y, z
+        // Right context should have literal $, x, y, z
         if let Some(ref boxed) = ctx.right {
             if let ContextExpr::Pattern(ref expr) = **boxed {
                 if let Expression::CharClass { ref chars, negated } = expr {
                     assert!(!negated);
-                    // From symbol M
-                    assert!(chars.contains(&'m'));
-                    assert!(chars.contains(&'n'));
+                    // Literal $
+                    assert!(chars.contains(&'$'), "Should contain literal $");
                     // Literal chars
                     assert!(chars.contains(&'x'));
                     assert!(chars.contains(&'y'));
                     assert!(chars.contains(&'z'));
-                    // Should NOT contain literal $, {, }
-                    assert!(!chars.contains(&'$'));
-                    assert!(!chars.contains(&'{'));
-                    assert!(!chars.contains(&'}'));
                 } else {
                     panic!("expected CharClass in right context");
                 }
@@ -2853,17 +2864,19 @@ $MY_CHARS -> 0
 
     #[test]
     fn test_parse_inline_named_class_with_symbol() {
-        // $SYMBOL inside character classes expands the symbol
-        // Define ABC symbol and test that it expands
+        // $ is now a LITERAL character inside character classes
+        // [$abc:xyz:] = literal $, a, b, c, :, x, y, z, :
         let input = r#"
 @define ABC = [abc]
-[$ABC:xyz:] -> X
+[$abc:xyz:] -> X
 "#;
         let file = parse_str(input).unwrap();
         let rule = &file.rules[0].rule;
         if let Expression::CharClass { chars, negated } = &rule.pattern {
             assert!(!negated);
-            // a, b, c from ABC symbol
+            // Literal $
+            assert!(chars.contains(&'$'), "Should contain literal $");
+            // Literal a, b, c
             assert!(chars.contains(&'a'));
             assert!(chars.contains(&'b'));
             assert!(chars.contains(&'c'));
@@ -2873,11 +2886,6 @@ $MY_CHARS -> 0
             assert!(chars.contains(&'x'));
             assert!(chars.contains(&'y'));
             assert!(chars.contains(&'z'));
-            // Should NOT contain literal $, A, B, C
-            assert!(!chars.contains(&'$'));
-            assert!(!chars.contains(&'A'));
-            assert!(!chars.contains(&'B'));
-            assert!(!chars.contains(&'C'));
         } else {
             panic!("expected CharClass");
         }

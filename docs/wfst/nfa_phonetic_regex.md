@@ -831,6 +831,86 @@ impl MemoizedIntersection {
 
 ---
 
+## NFA Optimization
+
+The NFA module includes automatic optimization that runs after Thompson construction.
+This improves both size (fewer states/transitions) and matching performance (no runtime
+epsilon closure computation).
+
+### Optimization Passes
+
+The optimizer applies four passes in order:
+
+1. **Epsilon Elimination** - O(|Q|² × |δ|)
+   - Computes epsilon closure for all states
+   - Adds direct transitions bypassing epsilon edges
+   - Marks states as final if their epsilon closure contains a final state
+   - Preserves anchor transitions (anchors are not epsilon transitions)
+
+2. **Unreachable State Removal** - O(|Q| + |δ|)
+   - BFS from start state to find reachable states
+   - Removes unreachable states and their transitions
+   - Renumbers states to maintain contiguous IDs
+
+3. **Dead State Removal** - O(|Q| + |δ|)
+   - Builds reverse transition graph
+   - Backward BFS from all final states
+   - Removes states that cannot reach any final state
+
+4. **Transition Deduplication**
+   - Removes duplicate transitions created during epsilon elimination
+   - Uses hash set for O(1) duplicate detection
+
+### Configuration
+
+```rust
+use liblevenshtein::phonetic::nfa::{compile, OptimizationConfig, NFACompilerChar};
+use liblevenshtein::phonetic::regex::parse;
+
+// Full optimization (default)
+let regex = parse("(ph|f)one")?;
+let nfa = compile(&regex)?;  // Automatically optimized
+
+// Custom configuration
+let mut compiler = NFACompilerChar::new()
+    .with_optimization(OptimizationConfig::quick());  // No epsilon elimination
+let nfa = compiler.compile(&regex)?;
+
+// Disable optimization (for debugging)
+let mut compiler = NFACompilerChar::new()
+    .without_optimization();
+let unoptimized = compiler.compile(&regex)?;
+
+// Manual optimization with statistics
+let (optimized, stats) = unoptimized.optimize_with(OptimizationConfig::full());
+println!("States: {} → {}", stats.original_states, stats.final_states);
+println!("Transitions: {} → {}", stats.original_transitions, stats.final_transitions);
+println!("Epsilon transitions eliminated: {}", stats.epsilon_transitions_eliminated);
+```
+
+### Configuration Presets
+
+| Preset | Epsilon Elimination | Remove Unreachable | Remove Dead | Deduplicate |
+|--------|:------------------:|:------------------:|:-----------:|:-----------:|
+| `full()` | ✓ | ✓ | ✓ | ✓ |
+| `quick()` | ✗ | ✓ | ✓ | ✗ |
+| `none()` | ✗ | ✗ | ✗ | ✗ |
+
+- **`full()`**: Maximum optimization, best for production use
+- **`quick()`**: Fast optimization without expensive epsilon elimination
+- **`none()`**: No optimization, useful for debugging Thompson construction
+
+### Expected Impact
+
+| Metric | Before Optimization | After Optimization |
+|--------|--------------------|--------------------|
+| Epsilon transitions | O(n) | 0 |
+| State count | 100% | 70-90% |
+| Transition count | 100% | 70-85% |
+| Match runtime | Epsilon closure per step | Direct transitions |
+
+---
+
 ## Implementation Examples
 
 ### Example 1: Basic Phonetic Regex

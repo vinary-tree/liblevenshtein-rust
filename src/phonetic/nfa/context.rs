@@ -47,7 +47,6 @@
 //! ```
 
 use super::nfa::{NFAChar, NFA};
-use crate::phonetic::regex::ast::{SyllableCondition, SyllableExpr};
 
 /// Kind of context boundary condition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

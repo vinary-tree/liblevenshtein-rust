@@ -47,6 +47,8 @@ theories/Trace/TraceBasics.v
 theories/Trace/TraceCost.v
 theories/Trace/TouchedPositions.v
 theories/Trace/TraceComposition.v
+theories/Trace/MergeSplitTrace.v
+theories/Trace/DamerauTrace.v
 
 # Triangle inequality
 theories/Triangle/SubstCostTriangle.v

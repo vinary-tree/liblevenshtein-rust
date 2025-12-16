@@ -138,6 +138,87 @@ impl ThompsonBuilderChar {
         nfa
     }
 
+    // ========================================================================
+    // Anchor Assertions (Zero-width)
+    // ========================================================================
+
+    /// Create an NFA for the start-of-line anchor (^).
+    ///
+    /// This is a zero-width assertion that matches at:
+    /// - The start of the input, or
+    /// - After a newline (in multiline mode)
+    ///
+    /// ```text
+    /// [q0] --^--> [q1*]
+    /// ```
+    pub fn start_of_line(&self) -> NFAChar {
+        let mut nfa = NFAChar::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabelChar::StartOfLine, q1);
+        nfa
+    }
+
+    /// Create an NFA for the end-of-line anchor ($).
+    ///
+    /// This is a zero-width assertion that matches at:
+    /// - The end of the input, or
+    /// - Before a newline (in multiline mode)
+    ///
+    /// ```text
+    /// [q0] --$--> [q1*]
+    /// ```
+    pub fn end_of_line(&self) -> NFAChar {
+        let mut nfa = NFAChar::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabelChar::EndOfLine, q1);
+        nfa
+    }
+
+    /// Create an NFA for the start-of-input anchor (\A).
+    ///
+    /// This is a zero-width assertion that matches only at the absolute
+    /// start of the input, regardless of multiline mode.
+    ///
+    /// ```text
+    /// [q0] --\A--> [q1*]
+    /// ```
+    pub fn start_of_input(&self) -> NFAChar {
+        let mut nfa = NFAChar::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabelChar::StartOfInput, q1);
+        nfa
+    }
+
+    /// Create an NFA for the end-of-input anchor (\Z).
+    ///
+    /// This is a zero-width assertion that matches at the end of the input,
+    /// optionally allowing a trailing newline.
+    ///
+    /// ```text
+    /// [q0] --\Z--> [q1*]
+    /// ```
+    pub fn end_of_input(&self) -> NFAChar {
+        let mut nfa = NFAChar::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabelChar::EndOfInput, q1);
+        nfa
+    }
+
+    /// Create an NFA for the strict end-of-input anchor (\z).
+    ///
+    /// This is a zero-width assertion that matches only at the absolute
+    /// end of the input, with no trailing newline allowed.
+    ///
+    /// ```text
+    /// [q0] --\z--> [q1*]
+    /// ```
+    pub fn end_of_input_strict(&self) -> NFAChar {
+        let mut nfa = NFAChar::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabelChar::EndOfInputStrict, q1);
+        nfa
+    }
+
     /// Create an NFA that accepts a literal string.
     ///
     /// ```text
@@ -366,6 +447,50 @@ impl ThompsonBuilder {
         let mut nfa = NFA::new();
         let q1 = nfa.add_state(true);
         nfa.add_transition_class(0, class, q1);
+        nfa
+    }
+
+    // ========================================================================
+    // Anchor Assertions (Zero-width)
+    // ========================================================================
+
+    /// Create an NFA for the start-of-line anchor (^).
+    pub fn start_of_line(&self) -> NFA {
+        let mut nfa = NFA::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabel::StartOfLine, q1);
+        nfa
+    }
+
+    /// Create an NFA for the end-of-line anchor ($).
+    pub fn end_of_line(&self) -> NFA {
+        let mut nfa = NFA::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabel::EndOfLine, q1);
+        nfa
+    }
+
+    /// Create an NFA for the start-of-input anchor (\A).
+    pub fn start_of_input(&self) -> NFA {
+        let mut nfa = NFA::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabel::StartOfInput, q1);
+        nfa
+    }
+
+    /// Create an NFA for the end-of-input anchor (\Z).
+    pub fn end_of_input(&self) -> NFA {
+        let mut nfa = NFA::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabel::EndOfInput, q1);
+        nfa
+    }
+
+    /// Create an NFA for the strict end-of-input anchor (\z).
+    pub fn end_of_input_strict(&self) -> NFA {
+        let mut nfa = NFA::new();
+        let q1 = nfa.add_state(true);
+        nfa.add_transition(0, TransitionLabel::EndOfInputStrict, q1);
         nfa
     }
 
@@ -725,6 +850,68 @@ mod tests {
         assert!(!nfa.accepts("a"));
         assert!(!nfa.accepts("ab"));
         assert!(!nfa.accepts("abcd"));
+    }
+
+    // --- Anchor tests ---
+
+    #[test]
+    fn test_thompson_start_of_line() {
+        let builder = ThompsonBuilderChar::new();
+        let nfa = builder.start_of_line();
+
+        // Anchor NFA should have proper structure
+        assert_eq!(nfa.state_count(), 2);
+        // Note: Actual anchor matching is tested in NFA with position-aware methods
+    }
+
+    #[test]
+    fn test_thompson_end_of_line() {
+        let builder = ThompsonBuilderChar::new();
+        let nfa = builder.end_of_line();
+
+        assert_eq!(nfa.state_count(), 2);
+    }
+
+    #[test]
+    fn test_thompson_start_of_input() {
+        let builder = ThompsonBuilderChar::new();
+        let nfa = builder.start_of_input();
+
+        assert_eq!(nfa.state_count(), 2);
+    }
+
+    #[test]
+    fn test_thompson_end_of_input() {
+        let builder = ThompsonBuilderChar::new();
+        let nfa = builder.end_of_input();
+
+        assert_eq!(nfa.state_count(), 2);
+    }
+
+    #[test]
+    fn test_thompson_end_of_input_strict() {
+        let builder = ThompsonBuilderChar::new();
+        let nfa = builder.end_of_input_strict();
+
+        assert_eq!(nfa.state_count(), 2);
+    }
+
+    #[test]
+    fn test_thompson_anchor_concatenation() {
+        // Pattern: ^hello$
+        let builder = ThompsonBuilderChar::new();
+        let start = builder.start_of_line();
+        let hello = builder.literal("hello");
+        let end = builder.end_of_line();
+
+        let pattern = builder.concatenate(builder.concatenate(start, hello), end);
+
+        // Should have structure: start_of_line -> h -> e -> l -> l -> o -> end_of_line
+        // 2 (anchor) + 5 (hello) + 2 (anchor) - 2 (merged states) = 7
+        // Actually: Thompson concatenation merges final->initial, so
+        // start_anchor(2) + hello(6 states for 5 chars + 1) = complex
+        // The exact count depends on implementation details
+        assert!(pattern.state_count() >= 4);
     }
 
     // --- Complex patterns ---

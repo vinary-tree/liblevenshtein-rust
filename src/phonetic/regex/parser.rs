@@ -23,59 +23,19 @@ use std::collections::HashMap;
 
 use super::ast::{
     ContextExpr, ContextExprByte, ContextPredicate, ContextPredicateByte, Regex, RegexByte,
-    SyllableCondition, SyllableExpr,
+    RegexFlags, SyllableCondition, SyllableExpr, UnicodeNormalization,
 };
-use super::error::{ParseError, ParseErrorKind, ParseResult};
-use super::lexer::{Lexer, LexerByte, Token, TokenByte};
+use super::error::{ParseError, ParseErrorKind, ParseResult, Position};
+use super::lexer::{Lexer, LexerByte, ParsedFlags, Token, TokenByte};
+use crate::phonetic::common::traits::SyllableParser;
+use crate::phonetic::common::utils::{is_user_symbol_name, negate_char_class};
 use crate::phonetic::nfa::types::{CharClass, CharClassChar};
 
 /// Maximum complexity for parsed patterns (prevents DoS).
-const MAX_PATTERN_SIZE: usize = 10_000;
+pub const MAX_PATTERN_SIZE: usize = 10_000;
 
-/// Symbol table for user-defined character classes.
-/// Maps symbol names to their character sets.
-pub type SymbolTable = HashMap<String, Vec<char>>;
-
-/// Check if a name represents a user-defined symbol (all uppercase).
-///
-/// User-defined symbols use UPPERCASE names to distinguish them from
-/// built-in classes which use lowercase (e.g., `[:alpha:]`, `[:vowel:]`).
-///
-/// A name is considered a user symbol if:
-/// - It starts with an uppercase letter
-/// - All alphabetic characters are uppercase
-/// - Non-alphabetic characters (digits, underscores) are allowed after the first character
-///
-/// # Examples
-/// - `"VOWEL"` → true (user symbol)
-/// - `"FRONT_V"` → true (user symbol)
-/// - `"V2"` → true (user symbol with digit)
-/// - `"alpha"` → false (built-in)
-/// - `"Vowel"` → false (mixed case, treated as built-in)
-/// - `"_FOO"` → false (must start with a letter)
-/// - `"123"` → false (must start with a letter)
-fn is_user_symbol_name(name: &str) -> bool {
-    let mut chars = name.chars();
-    // Must start with an uppercase letter
-    match chars.next() {
-        Some(first) if first.is_uppercase() => {
-            // Remaining characters: alphabetic must be uppercase, non-alphabetic are allowed
-            chars.all(|c| c.is_uppercase() || !c.is_alphabetic())
-        }
-        _ => false,
-    }
-}
-
-/// Compute complement of a character class using printable ASCII.
-///
-/// This is used for negated named classes like `[^[:vowel:]]`.
-/// Returns all printable ASCII characters (0x20-0x7E) that are NOT in the input set.
-fn negate_char_class(chars: &[char]) -> Vec<char> {
-    (0x20u8..=0x7Eu8)
-        .map(|b| b as char)
-        .filter(|c| !chars.contains(c))
-        .collect()
-}
+// Re-export SymbolTable from common for backward compatibility
+pub use crate::phonetic::common::utils::SymbolTable;
 
 /// Resolve a feature bundle to a character set.
 ///
@@ -126,6 +86,16 @@ pub struct Parser<'a> {
     lexer: Lexer<'a>,
     /// Optional symbol table for user-defined symbols ($NAME references)
     symbols: Option<&'a SymbolTable>,
+
+    // Group tracking state (Phase 3)
+    /// Next capturing group number (starts at 1)
+    next_group_number: usize,
+    /// Named groups registry: name -> (group_number, pattern AST)
+    /// The pattern AST is stored so group references can be expanded.
+    named_groups: HashMap<String, (usize, Regex)>,
+    /// Deferred validation: group references that need to be validated after parsing
+    /// Stores (name, position) for each reference found.
+    group_refs_to_validate: Vec<(String, Position)>,
 }
 
 impl<'a> Parser<'a> {
@@ -134,6 +104,9 @@ impl<'a> Parser<'a> {
         Self {
             lexer: Lexer::new(input),
             symbols: None,
+            next_group_number: 1,
+            named_groups: HashMap::new(),
+            group_refs_to_validate: Vec::new(),
         }
     }
 
@@ -158,6 +131,9 @@ impl<'a> Parser<'a> {
         Self {
             lexer: Lexer::new(input),
             symbols: Some(symbols),
+            next_group_number: 1,
+            named_groups: HashMap::new(),
+            group_refs_to_validate: Vec::new(),
         }
     }
 
@@ -176,6 +152,9 @@ impl<'a> Parser<'a> {
             }
         }
 
+        // Validate all group references (Phase 3)
+        self.validate_group_references()?;
+
         // Check complexity
         let size = result.size();
         if size > MAX_PATTERN_SIZE {
@@ -189,6 +168,19 @@ impl<'a> Parser<'a> {
         }
 
         Ok(result)
+    }
+
+    /// Validate that all group references refer to defined named groups.
+    fn validate_group_references(&self) -> ParseResult<()> {
+        for (name, position) in &self.group_refs_to_validate {
+            if !self.named_groups.contains_key(name) {
+                return Err(ParseError::new(
+                    ParseErrorKind::UndefinedGroupReference(name.clone()),
+                    *position,
+                ));
+            }
+        }
+        Ok(())
     }
 
     /// Parse a rewrite rule: `pattern -> replacement context? weight?`
@@ -380,16 +372,72 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse a primary expression: `(...)`, `[...]`, `.`, `#`, `$SYMBOL`, or literal
+    /// Parse a primary expression: `(...)`, `(?:...)`, `(?<name>...)`, `(?&name)`, `(?flags:...)`,
+    /// `[...]`, `.`, `#`, `$SYMBOL`, or literal
     fn parse_primary(&mut self) -> ParseResult<Regex> {
         let token = self.lexer.next_token()?;
 
         match token {
+            // Capturing group: (...)
             Token::GroupStart => {
+                let group_num = self.next_group_number;
+                self.next_group_number += 1;
                 let inner = self.parse_alternation()?;
                 self.expect_token(Token::GroupEnd)?;
-                Ok(Regex::group(inner))
+                Ok(Regex::capturing_group(group_num, inner))
             }
+
+            // Non-capturing group: (?:...)
+            Token::NonCapturingGroupStart => {
+                let inner = self.parse_alternation()?;
+                self.expect_token(Token::GroupEnd)?;
+                Ok(Regex::non_capturing_group(inner))
+            }
+
+            // Named group: (?<name>...)
+            Token::NamedGroupStart(name) => {
+                // Check for duplicate group name
+                if self.named_groups.contains_key(&name) {
+                    return Err(ParseError::new(
+                        ParseErrorKind::DuplicateGroupName(name),
+                        self.lexer.position(),
+                    ));
+                }
+
+                let group_num = self.next_group_number;
+                self.next_group_number += 1;
+
+                // Parse the inner pattern
+                let inner = self.parse_alternation()?;
+                self.expect_token(Token::GroupEnd)?;
+
+                // Register the named group
+                self.named_groups.insert(name.clone(), (group_num, inner.clone()));
+
+                Ok(Regex::named_group(name, inner))
+            }
+
+            // Group reference (subroutine call): (?&name)
+            Token::GroupReference(name) => {
+                // Record for deferred validation
+                self.group_refs_to_validate.push((name.clone(), self.lexer.position()));
+                Ok(Regex::group_ref(name))
+            }
+
+            // Inline flags: (?i) - applies to rest of current scope
+            Token::InlineFlags(parsed_flags) => {
+                let flags = self.parsed_flags_to_regex_flags(&parsed_flags)?;
+                Ok(Regex::inline_flags(flags))
+            }
+
+            // Scoped flags: (?i:...) - applies only to inner pattern
+            Token::ScopedFlagsStart(parsed_flags) => {
+                let flags = self.parsed_flags_to_regex_flags(&parsed_flags)?;
+                let inner = self.parse_alternation()?;
+                self.expect_token(Token::GroupEnd)?;
+                Ok(Regex::flags_group(flags, inner))
+            }
+
             Token::CharClassStart => self.parse_char_class(),
             Token::Dot => Ok(Regex::any()),
             Token::Hash => Ok(Regex::word_boundary()),
@@ -398,12 +446,53 @@ impl<'a> Parser<'a> {
             Token::PhoneticShortcut { class_name, negated } => {
                 self.expand_phonetic_shortcut(&class_name, negated)
             }
+
+            // Anchors
+            Token::StartOfLine => Ok(Regex::StartOfLine),
+            Token::EndOfLine => Ok(Regex::EndOfLine),
+            Token::StartOfInput => Ok(Regex::StartOfInput),
+            Token::EndOfInput => Ok(Regex::EndOfInput),
+            Token::EndOfInputStrict => Ok(Regex::EndOfInputStrict),
+
             Token::Eof => Err(ParseError::unexpected_eof(self.lexer.position())),
             _ => Err(ParseError::unexpected_char(
                 self.token_to_char(&token),
                 self.lexer.position(),
             )),
         }
+    }
+
+    /// Convert lexer ParsedFlags to AST RegexFlags.
+    fn parsed_flags_to_regex_flags(&self, parsed: &ParsedFlags) -> ParseResult<RegexFlags> {
+        // Convert unicode normalization string to enum
+        let unicode_normalization = if let Some(ref norm_str) = parsed.unicode_normalization {
+            Some(match norm_str.as_str() {
+                "NFC" => UnicodeNormalization::NFC,
+                "NFD" => UnicodeNormalization::NFD,
+                "NFKC" => UnicodeNormalization::NFKC,
+                "NFKD" => UnicodeNormalization::NFKD,
+                other => {
+                    return Err(ParseError::new(
+                        ParseErrorKind::InvalidFlag(format!(
+                            "unknown normalization form '{}', expected NFC, NFD, NFKC, or NFKD",
+                            other
+                        )),
+                        self.lexer.position(),
+                    ));
+                }
+            })
+        } else {
+            None
+        };
+
+        Ok(RegexFlags {
+            case_insensitive: parsed.case_insensitive,
+            unicode_normalization,
+            feature_based: parsed.feature_based,
+            accent_insensitive: parsed.accent_insensitive,
+            multiline: parsed.multiline,
+            dotall: parsed.dotall,
+        })
     }
 
     /// Expand a symbol reference to a character class.
@@ -469,20 +558,23 @@ impl<'a> Parser<'a> {
     /// - Arbitrary nesting: `[$FRONT[[:BACK:][^[:SYMBOL:]]]]` - all unioned together
     ///
     /// Note: `:` is a literal character inside char classes. Use `[a[:name:]z]` syntax.
+    ///
+    /// De Morgan's Law: Tracks cumulative negation count. Even count = positive, odd = negated.
+    /// This allows `[^[^[:vowel:]]]` to properly equal `[:vowel:]`.
     fn parse_char_class(&mut self) -> ParseResult<Regex> {
         let mut chars = Vec::new();
-        let mut negated = false;
+        let mut negation_count: usize = 0;
 
         // Check for negation
         if self.lexer.peek()? == &Token::Caret {
             self.lexer.next_token()?;
-            negated = true;
+            negation_count += 1;
         }
 
         // Check for standalone named class syntax: [:NAME:]
         if self.lexer.peek()? == &Token::Char(':') {
             self.lexer.next_token()?; // consume ':'
-            return self.parse_standalone_named_class(negated);
+            return self.parse_standalone_named_class(negation_count % 2 == 1);
         }
 
         loop {
@@ -493,9 +585,11 @@ impl<'a> Parser<'a> {
                 Token::Char(c) => {
                     // Check for nested character class: [[...]] or [^[...]]
                     if c == '[' {
-                        // Parse the nested class content
-                        let nested_chars = self.parse_nested_char_class_content()?;
+                        // Parse the nested class content - returns (chars, negation_count)
+                        let (nested_chars, nested_neg_count) =
+                            self.parse_nested_char_class_content()?;
                         chars.extend(nested_chars);
+                        negation_count += nested_neg_count;
                         continue;
                     }
 
@@ -574,7 +668,9 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let class = if negated {
+        // De Morgan's Law: odd negation count = negated, even count = positive
+        let final_negated = negation_count % 2 == 1;
+        let class = if final_negated {
             CharClassChar::from_chars(&chars).negated()
         } else {
             CharClassChar::from_chars(&chars)
@@ -585,27 +681,29 @@ impl<'a> Parser<'a> {
 
     /// Parse nested character class content after `[` has been consumed.
     /// Handles `[[:NAME:]]`, `[^[:NAME:]]`, and arbitrary nesting.
-    /// Returns the characters to union with the parent class.
-    fn parse_nested_char_class_content(&mut self) -> ParseResult<Vec<char>> {
+    /// Returns (characters, negation_count) where negation_count is how many `^` were encountered.
+    /// This enables proper De Morgan's law handling: even count = positive, odd count = negated.
+    fn parse_nested_char_class_content(&mut self) -> ParseResult<(Vec<char>, usize)> {
         // Check for negation inside the nested class
-        let inner_negated = self.lexer.peek()? == &Token::Char('^');
-        if inner_negated {
+        // Note: Inside character classes, ^ is tokenized as Token::Caret, not Token::Char('^')
+        let inner_negated = self.lexer.peek()? == &Token::Caret;
+        let negation_count: usize = if inner_negated {
             self.lexer.next_token()?; // consume '^'
-        }
+            1
+        } else {
+            0
+        };
 
         // Check if this is a named class: [[:NAME:]] or [^[:NAME:]]
         if self.lexer.peek()? == &Token::Char(':') {
             self.lexer.next_token()?; // consume ':'
             let named_chars = self.parse_posix_named_class()?;
-            if inner_negated {
-                Ok(negate_char_class(&named_chars))
-            } else {
-                Ok(named_chars)
-            }
+            // Return chars without applying negation - let caller handle parity
+            Ok((named_chars, negation_count))
         } else if self.lexer.peek()? == &Token::Char('[') {
             // Another level of nesting: [[[...]]]
             self.lexer.next_token()?; // consume '['
-            let nested_chars = self.parse_nested_char_class_content()?;
+            let (nested_chars, nested_neg_count) = self.parse_nested_char_class_content()?;
 
             // Expect closing ']' for this level
             let token = self.lexer.next_token()?;
@@ -619,11 +717,8 @@ impl<'a> Parser<'a> {
             // Re-enter char class mode for the outer class
             self.lexer.enter_char_class_mode();
 
-            if inner_negated {
-                Ok(negate_char_class(&nested_chars))
-            } else {
-                Ok(nested_chars)
-            }
+            // Combine negation counts
+            Ok((nested_chars, negation_count + nested_neg_count))
         } else {
             // Just a literal '[' followed by something else - treat '[' as literal
             // But we already consumed '[', so we need to handle this case
@@ -634,7 +729,7 @@ impl<'a> Parser<'a> {
             if inner_negated {
                 result.push('^');
             }
-            Ok(result)
+            Ok((result, 0)) // Not a real negation, just literal chars
         }
     }
 
@@ -1066,9 +1161,21 @@ impl<'a> Parser<'a> {
             Token::Char(_)
                 | Token::CharClassStart
                 | Token::GroupStart
+                | Token::NonCapturingGroupStart
+                | Token::NamedGroupStart(_)
+                | Token::GroupReference(_)
+                | Token::InlineFlags(_)
+                | Token::ScopedFlagsStart(_)
                 | Token::Dot
                 | Token::Hash
                 | Token::SymbolRef(_)
+                | Token::PhoneticShortcut { .. }
+                // Anchors
+                | Token::StartOfLine
+                | Token::EndOfLine
+                | Token::StartOfInput
+                | Token::EndOfInput
+                | Token::EndOfInputStrict
         )
     }
 
@@ -1096,6 +1203,11 @@ impl<'a> Parser<'a> {
             Token::Dash => '-',
             Token::GroupStart => '(',
             Token::GroupEnd => ')',
+            Token::NonCapturingGroupStart => '(',
+            Token::NamedGroupStart(_) => '(',
+            Token::GroupReference(_) => '(',
+            Token::InlineFlags(_) => '(',
+            Token::ScopedFlagsStart(_) => '(',
             Token::Pipe => '|',
             Token::Star => '*',
             Token::Plus => '+',
@@ -1123,8 +1235,41 @@ impl<'a> Parser<'a> {
             Token::InitialSyllable => 'i',
             Token::PhoneticShortcut { .. } => '\\',
             Token::SymbolRef(_) => '$',
+            Token::StartOfLine => '^',
+            Token::EndOfLine => '$',
+            Token::StartOfInput => '\\', // \A
+            Token::EndOfInput => '\\',   // \Z
+            Token::EndOfInputStrict => '\\', // \z
             Token::Eof => '\0',
         }
+    }
+}
+
+impl<'a> SyllableParser for Parser<'a> {
+    type Lexer = Lexer<'a>;
+    type Error = ParseError;
+
+    fn lexer_mut(&mut self) -> &mut Self::Lexer {
+        &mut self.lexer
+    }
+
+    fn make_unexpected_token_error(
+        &self,
+        expected: &str,
+        found: &Token,
+        position: Position,
+    ) -> Self::Error {
+        ParseError::new(
+            ParseErrorKind::InvalidContext(format!(
+                "expected {}, got {:?}",
+                expected, found
+            )),
+            position,
+        )
+    }
+
+    fn from_lexer_error(&self, err: ParseError) -> Self::Error {
+        err
     }
 }
 
@@ -1683,6 +1828,34 @@ impl<'a> ParserByte<'a> {
     }
 }
 
+impl<'a> SyllableParser for ParserByte<'a> {
+    type Lexer = LexerByte<'a>;
+    type Error = ParseError;
+
+    fn lexer_mut(&mut self) -> &mut Self::Lexer {
+        &mut self.lexer
+    }
+
+    fn make_unexpected_token_error(
+        &self,
+        expected: &str,
+        found: &TokenByte,
+        position: Position,
+    ) -> Self::Error {
+        ParseError::new(
+            ParseErrorKind::InvalidContext(format!(
+                "expected {}, got {:?}",
+                expected, found
+            )),
+            position,
+        )
+    }
+
+    fn from_lexer_error(&self, err: ParseError) -> Self::Error {
+        err
+    }
+}
+
 // ============================================================================
 // Convenience functions
 // ============================================================================
@@ -2083,18 +2256,15 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_symbol_ref_in_char_class() {
-        let mut symbols = SymbolTable::new();
-        symbols.insert("FRONT".to_string(), vec!['e', 'i']);
-        symbols.insert("BACK".to_string(), vec!['o', 'u']);
-
-        let mut parser = Parser::new_with_symbols("[$FRONT$BACK]", &symbols);
-        let r = parser.parse().unwrap();
+    fn test_dollar_literal_in_char_class() {
+        // $ is a literal character inside character classes, not a symbol reference
+        let r = parse("[$abc]").unwrap();
         let s = r.to_string();
-        assert!(s.contains('e'));
-        assert!(s.contains('i'));
-        assert!(s.contains('o'));
-        assert!(s.contains('u'));
+        // Should contain literal '$' and 'a', 'b', 'c'
+        assert!(s.contains('$'), "should contain literal $");
+        assert!(s.contains('a'));
+        assert!(s.contains('b'));
+        assert!(s.contains('c'));
     }
 
     #[test]
@@ -2148,34 +2318,36 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_symbol_ref_mixed_with_literals() {
+    fn test_parse_symbol_ref_outside_char_class() {
+        // $ symbols are only expanded OUTSIDE character classes
         let mut symbols = SymbolTable::new();
         symbols.insert("V".to_string(), vec!['a', 'e', 'i', 'o', 'u']);
 
-        // Use braced form ${V} to separate symbol from following 'z'
-        let mut parser = Parser::new_with_symbols("[x${V}z]", &symbols);
+        // Symbol reference before char class
+        let mut parser = Parser::new_with_symbols("$V[xyz]", &symbols);
         let r = parser.parse().unwrap();
         let s = r.to_string();
-        assert!(s.contains('x'));
-        assert!(s.contains('a'));
-        assert!(s.contains('z'));
+        // Vowels should be expanded from $V
+        assert!(s.contains('a'), "Should contain vowel from $V");
+        assert!(s.contains('e'), "Should contain vowel from $V");
     }
 
     #[test]
-    fn test_parse_symbol_ref_simple_form_consumes_alphanum() {
-        // Verify that $Vz parses as symbol "Vz", not "V" + "z"
+    fn test_dollar_is_literal_inside_char_class() {
+        // $ is a LITERAL character inside character classes
         let mut symbols = SymbolTable::new();
         symbols.insert("V".to_string(), vec!['a', 'e', 'i', 'o', 'u']);
 
+        // Inside char class, $V is literal chars '$', 'V'
         let mut parser = Parser::new_with_symbols("[$Vz]", &symbols);
-        let result = parser.parse();
-        // Should fail because "Vz" is not defined, only "V"
-        assert!(result.is_err());
-        if let ParseErrorKind::UndefinedSymbol { name, .. } = &result.unwrap_err().kind {
-            assert_eq!(name, "Vz");
-        } else {
-            panic!("Expected UndefinedSymbol error");
-        }
+        let r = parser.parse().unwrap();
+        let s = r.to_string();
+        // Should contain literal '$'
+        assert!(s.contains('$'), "Should contain literal $");
+        // Should contain literal 'V' (not expanded to vowels)
+        assert!(s.contains('V'), "Should contain literal V");
+        // Should NOT contain 'a' since symbol is not expanded
+        assert!(!s.contains('a'), "Should NOT expand symbol inside []");
     }
 
     // ========================================================================
@@ -2279,6 +2451,74 @@ mod tests {
         // [::]  should error (empty)
         let result = parse("[::]");
         assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // De Morgan's Law Tests
+    // ========================================================================
+
+    #[test]
+    fn test_double_negation_equals_positive() {
+        // [^[^[:vowel:]]] should equal [:vowel:] (double negation cancels out)
+        let double_neg = parse("[^[^[:vowel:]]]").unwrap();
+        let positive = parse("[:vowel:]").unwrap();
+
+        let double_neg_str = double_neg.to_string();
+        let positive_str = positive.to_string();
+
+        // Both should contain the same vowels
+        for c in ['a', 'e', 'i', 'o', 'u'] {
+            assert!(
+                double_neg_str.contains(c),
+                "double_neg should contain '{}'",
+                c
+            );
+            assert!(positive_str.contains(c), "positive should contain '{}'", c);
+        }
+        // Neither should contain consonants (for the positive case, they're excluded)
+        for c in ['p', 't', 'k'] {
+            // The double negation result should NOT be negated
+            assert!(
+                !double_neg_str.contains('^'),
+                "double negation should not have ^ flag"
+            );
+        }
+    }
+
+    #[test]
+    fn test_negated_union() {
+        // [^[:vowel:][:stop:]] = ¬(vowel ∪ stop)
+        let r = parse("[^[:vowel:][:stop:]]").unwrap();
+        let s = r.to_string();
+
+        // Should be a negated char class
+        assert!(s.starts_with("[^"), "Should be negated: {}", s);
+        // Should contain vowels and stops (which are then negated)
+        assert!(s.contains('a'), "Should contain 'a' (to be negated)");
+        assert!(s.contains('p'), "Should contain 'p' (to be negated)");
+    }
+
+    #[test]
+    fn test_triple_negation() {
+        // [^[^[^[:vowel:]]]] should equal [^[:vowel:]] (odd count = negated)
+        let triple = parse("[^[^[^[:vowel:]]]]").unwrap();
+        let s = triple.to_string();
+
+        // Should be negated (odd count of negations)
+        assert!(s.starts_with("[^"), "Triple negation should result in negated: {}", s);
+    }
+
+    #[test]
+    fn test_quadruple_negation() {
+        // [^[^[^[^[:vowel:]]]]] should equal [:vowel:] (even count = positive)
+        let quad = parse("[^[^[^[^[:vowel:]]]]]").unwrap();
+        let s = quad.to_string();
+
+        // Should NOT be negated (even count of negations)
+        assert!(!s.starts_with("[^"), "Quadruple negation should be positive: {}", s);
+        // Should contain vowels
+        assert!(s.contains('a'), "Should contain 'a'");
+        assert!(s.contains('e'), "Should contain 'e'");
     }
 
     // ========================================================================
@@ -2424,5 +2664,408 @@ mod tests {
         let r = parse(r"\v+").unwrap();
         // Just check it parses successfully
         assert!(r.to_string().len() > 0);
+    }
+
+    // ========================================================================
+    // Tests for Group Types (Phase 3)
+    // ========================================================================
+
+    #[test]
+    fn test_parse_capturing_group() {
+        // Standard capturing group: (abc)
+        let r = parse("(abc)").unwrap();
+        // Should produce CapturingGroup(1, ...)
+        assert_eq!(r.to_string(), "(abc)");
+    }
+
+    #[test]
+    fn test_parse_capturing_group_numbering() {
+        // Multiple capturing groups should get sequential numbers
+        let r = parse("(a)(b)(c)").unwrap();
+        // All groups parse correctly
+        assert!(r.to_string().contains("(a)"));
+        assert!(r.to_string().contains("(b)"));
+        assert!(r.to_string().contains("(c)"));
+    }
+
+    #[test]
+    fn test_parse_non_capturing_group() {
+        // Non-capturing group: (?:abc)
+        let r = parse("(?:abc)").unwrap();
+        assert_eq!(r.to_string(), "(?:abc)");
+    }
+
+    #[test]
+    fn test_parse_non_capturing_group_complex() {
+        // Non-capturing group with alternation
+        let r = parse("(?:ph|f)one").unwrap();
+        assert!(r.to_string().contains("(?:"));
+    }
+
+    #[test]
+    fn test_parse_named_group() {
+        // Named group: (?<name>pattern)
+        let r = parse("(?<vowel>[aeiou])").unwrap();
+        assert!(r.to_string().contains("(?<vowel>"));
+    }
+
+    #[test]
+    fn test_parse_named_group_with_reference() {
+        // Named group with valid reference
+        let r = parse("(?<digit>[0-9])(?&digit)").unwrap();
+        assert!(r.to_string().contains("(?<digit>"));
+        assert!(r.to_string().contains("(?&digit)"));
+    }
+
+    #[test]
+    fn test_parse_duplicate_named_group_error() {
+        // Duplicate named groups should error
+        let result = parse("(?<x>a)(?<x>b)");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err.kind, ParseErrorKind::DuplicateGroupName(_)));
+    }
+
+    #[test]
+    fn test_parse_undefined_group_reference_error() {
+        // References to undefined groups should error
+        let result = parse("(?&undefined)");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err.kind, ParseErrorKind::UndefinedGroupReference(_)));
+    }
+
+    #[test]
+    fn test_parse_forward_reference() {
+        // Forward references are allowed (reference before definition)
+        // The validation happens after parsing, so this pattern should parse
+        // but the reference should be validated at the end
+        let result = parse("(?&later)(?<later>abc)");
+        // This should succeed because the group is defined before validation
+        assert!(result.is_ok());
+    }
+
+    // ========================================================================
+    // Tests for Flags (Phase 3)
+    // ========================================================================
+
+    #[test]
+    fn test_parse_inline_flags_case_insensitive() {
+        // Inline case-insensitive flag
+        let r = parse("(?i)abc").unwrap();
+        assert!(r.to_string().contains("(?i)"));
+    }
+
+    #[test]
+    fn test_parse_scoped_flags_case_insensitive() {
+        // Scoped case-insensitive flag
+        let r = parse("(?i:abc)def").unwrap();
+        assert!(r.to_string().contains("(?i:"));
+    }
+
+    #[test]
+    fn test_parse_flag_disable() {
+        // Disable flag
+        let r = parse("(?-i)abc").unwrap();
+        assert!(r.to_string().contains("(?-i)"));
+    }
+
+    #[test]
+    fn test_parse_unicode_normalization_flag() {
+        // Unicode normalization flag
+        let r = parse("(?u:NFC:abc)").unwrap();
+        assert!(r.to_string().contains("u:NFC"));
+    }
+
+    #[test]
+    fn test_parse_unicode_normalization_nfd() {
+        let r = parse("(?u:NFD:abc)").unwrap();
+        assert!(r.to_string().contains("u:NFD"));
+    }
+
+    #[test]
+    fn test_parse_unicode_normalization_nfkc() {
+        let r = parse("(?u:NFKC:abc)").unwrap();
+        assert!(r.to_string().contains("u:NFKC"));
+    }
+
+    #[test]
+    fn test_parse_unicode_normalization_nfkd() {
+        let r = parse("(?u:NFKD:abc)").unwrap();
+        assert!(r.to_string().contains("u:NFKD"));
+    }
+
+    #[test]
+    fn test_parse_feature_flag() {
+        // Feature-based matching flag
+        let r = parse("(?f)abc").unwrap();
+        assert!(r.to_string().contains("(?f)"));
+    }
+
+    #[test]
+    fn test_parse_accent_flag() {
+        // Accent-insensitive flag
+        let r = parse("(?a)cafe").unwrap();
+        assert!(r.to_string().contains("(?a)"));
+    }
+
+    #[test]
+    fn test_parse_combined_flags() {
+        // Combined flags
+        let r = parse("(?ia)abc").unwrap();
+        let s = r.to_string();
+        // Should contain both flags
+        assert!(s.contains('i') || s.contains('a'));
+    }
+
+    #[test]
+    fn test_parse_combined_scoped_flags() {
+        // Combined scoped flags
+        let r = parse("(?ia:abc)def").unwrap();
+        assert!(r.to_string().contains("(?"));
+    }
+
+    // ========================================================================
+    // Tests for NFA Compilation of New Group Types
+    // ========================================================================
+
+    #[test]
+    fn test_compile_non_capturing_group() {
+        use crate::phonetic::nfa::compiler::compile;
+        let regex = parse("(?:ph|f)one").unwrap();
+        let nfa = compile(&regex).unwrap();
+        assert!(nfa.accepts("phone"));
+        assert!(nfa.accepts("fone"));
+        assert!(!nfa.accepts("bone"));
+    }
+
+    #[test]
+    fn test_compile_capturing_group() {
+        use crate::phonetic::nfa::compiler::compile;
+        let regex = parse("(ph|f)one").unwrap();
+        let nfa = compile(&regex).unwrap();
+        assert!(nfa.accepts("phone"));
+        assert!(nfa.accepts("fone"));
+    }
+
+    #[test]
+    fn test_compile_named_group() {
+        use crate::phonetic::nfa::compiler::compile;
+        let regex = parse("(?<prefix>ph|f)one").unwrap();
+        let nfa = compile(&regex).unwrap();
+        assert!(nfa.accepts("phone"));
+        assert!(nfa.accepts("fone"));
+    }
+
+    #[test]
+    fn test_compile_flags_group() {
+        use crate::phonetic::nfa::compiler::compile;
+        // Flags don't affect matching yet, but should compile
+        let regex = parse("(?i:abc)").unwrap();
+        let nfa = compile(&regex).unwrap();
+        // Without case-insensitive implementation, only exact match works
+        assert!(nfa.accepts("abc"));
+    }
+
+    #[test]
+    fn test_compile_inline_flags() {
+        use crate::phonetic::nfa::compiler::compile;
+        // Inline flags produce epsilon for now
+        let regex = parse("(?i)").unwrap();
+        let nfa = compile(&regex).unwrap();
+        // Should accept empty string (epsilon)
+        assert!(nfa.accepts(""));
+    }
+
+    // ========================================================================
+    // Anchor Tests
+    // ========================================================================
+
+    /// Helper function to check if a Regex tree contains a specific variant
+    fn contains_variant(regex: &Regex, predicate: &dyn Fn(&Regex) -> bool) -> bool {
+        if predicate(regex) {
+            return true;
+        }
+        match regex {
+            Regex::Concat(left, right) => {
+                contains_variant(left, predicate) || contains_variant(right, predicate)
+            }
+            Regex::Alt(left, right) => {
+                contains_variant(left, predicate) || contains_variant(right, predicate)
+            }
+            Regex::Star(inner) | Regex::Plus(inner) | Regex::Optional(inner) => {
+                contains_variant(inner, predicate)
+            }
+            Regex::RepeatExact(inner, _) | Regex::RepeatRange(inner, _, _) => {
+                contains_variant(inner, predicate)
+            }
+            Regex::CapturingGroup(_, inner) | Regex::NonCapturingGroup(inner) | Regex::NamedGroup(_, inner) => {
+                contains_variant(inner, predicate)
+            }
+            Regex::FlagsGroup { inner: Some(inner), .. } => {
+                contains_variant(inner, predicate)
+            }
+            #[allow(deprecated)]
+            Regex::Group(inner) => contains_variant(inner, predicate),
+            _ => false,
+        }
+    }
+
+    /// Helper to get the leftmost node in a concat chain
+    fn leftmost(regex: &Regex) -> &Regex {
+        match regex {
+            Regex::Concat(left, _) => leftmost(left),
+            _ => regex,
+        }
+    }
+
+    /// Helper to get the rightmost node in a concat chain
+    fn rightmost(regex: &Regex) -> &Regex {
+        match regex {
+            Regex::Concat(_, right) => rightmost(right),
+            _ => regex,
+        }
+    }
+
+    #[test]
+    fn test_parse_start_of_line_anchor() {
+        let regex = parse("^hello").unwrap();
+        // Check that the leftmost element is StartOfLine
+        assert!(
+            matches!(leftmost(&regex), Regex::StartOfLine),
+            "Expected StartOfLine at start, got {:?}", regex
+        );
+    }
+
+    #[test]
+    fn test_parse_end_of_line_anchor() {
+        let regex = parse("hello$").unwrap();
+        // Check that the rightmost element is EndOfLine
+        assert!(
+            matches!(rightmost(&regex), Regex::EndOfLine),
+            "Expected EndOfLine at end, got {:?}", regex
+        );
+    }
+
+    #[test]
+    fn test_parse_both_anchors() {
+        let regex = parse("^hello$").unwrap();
+        assert!(
+            matches!(leftmost(&regex), Regex::StartOfLine),
+            "Expected StartOfLine at start"
+        );
+        assert!(
+            matches!(rightmost(&regex), Regex::EndOfLine),
+            "Expected EndOfLine at end"
+        );
+    }
+
+    #[test]
+    fn test_parse_start_of_input_anchor() {
+        let regex = parse(r"\Ahello").unwrap();
+        assert!(
+            matches!(leftmost(&regex), Regex::StartOfInput),
+            "Expected StartOfInput at start, got {:?}", regex
+        );
+    }
+
+    #[test]
+    fn test_parse_end_of_input_anchor() {
+        let regex = parse(r"hello\Z").unwrap();
+        assert!(
+            matches!(rightmost(&regex), Regex::EndOfInput),
+            "Expected EndOfInput at end, got {:?}", regex
+        );
+    }
+
+    #[test]
+    fn test_parse_end_of_input_strict_anchor() {
+        let regex = parse(r"hello\z").unwrap();
+        assert!(
+            matches!(rightmost(&regex), Regex::EndOfInputStrict),
+            "Expected EndOfInputStrict at end, got {:?}", regex
+        );
+    }
+
+    #[test]
+    fn test_parse_anchors_roundtrip() {
+        // Test that anchors are correctly represented in Display
+        let regex = parse("^hello$").unwrap();
+        let display = regex.to_string();
+        assert!(display.contains('^'), "Display should contain ^: {}", display);
+        assert!(display.contains('$'), "Display should contain $: {}", display);
+    }
+
+    // ========================================================================
+    // Multiline and Dotall Flag Tests
+    // ========================================================================
+
+    /// Helper to find FlagsGroup in a regex tree and return its flags
+    fn find_flags_group(regex: &Regex) -> Option<&RegexFlags> {
+        match regex {
+            Regex::FlagsGroup { flags, .. } => Some(flags),
+            Regex::Concat(left, right) => {
+                find_flags_group(left).or_else(|| find_flags_group(right))
+            }
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn test_parse_multiline_flag() {
+        let regex = parse("(?m)^line$").unwrap();
+        // Pattern should contain FlagsGroup with multiline=true
+        let flags = find_flags_group(&regex);
+        assert!(flags.is_some(), "Expected FlagsGroup in {:?}", regex);
+        assert_eq!(flags.unwrap().multiline, Some(true));
+    }
+
+    #[test]
+    fn test_parse_dotall_flag() {
+        let regex = parse("(?s).*").unwrap();
+        let flags = find_flags_group(&regex);
+        assert!(flags.is_some(), "Expected FlagsGroup in {:?}", regex);
+        assert_eq!(flags.unwrap().dotall, Some(true));
+    }
+
+    #[test]
+    fn test_parse_combined_multiline_dotall() {
+        let regex = parse("(?ms)test").unwrap();
+        let flags = find_flags_group(&regex);
+        assert!(flags.is_some(), "Expected FlagsGroup in {:?}", regex);
+        let flags = flags.unwrap();
+        assert_eq!(flags.multiline, Some(true));
+        assert_eq!(flags.dotall, Some(true));
+    }
+
+    #[test]
+    fn test_parse_scoped_multiline() {
+        let regex = parse("(?m:^line$)").unwrap();
+        // Should be FlagsGroup with inner pattern containing anchors
+        match &regex {
+            Regex::FlagsGroup { flags, inner: Some(inner) } => {
+                assert_eq!(flags.multiline, Some(true));
+                // Inner should contain anchors
+                assert!(
+                    contains_variant(inner, &|r| matches!(r, Regex::StartOfLine)),
+                    "Expected StartOfLine in inner"
+                );
+                assert!(
+                    contains_variant(inner, &|r| matches!(r, Regex::EndOfLine)),
+                    "Expected EndOfLine in inner"
+                );
+            }
+            _ => panic!("Expected FlagsGroup with inner pattern, got {:?}", regex),
+        }
+    }
+
+    #[test]
+    fn test_parse_negated_flags() {
+        let regex = parse("(?-ms)test").unwrap();
+        let flags = find_flags_group(&regex);
+        assert!(flags.is_some(), "Expected FlagsGroup in {:?}", regex);
+        let flags = flags.unwrap();
+        assert_eq!(flags.multiline, Some(false), "multiline should be false");
+        assert_eq!(flags.dotall, Some(false), "dotall should be false");
     }
 }

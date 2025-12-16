@@ -111,7 +111,9 @@
 //! - Architecture documentation: `docs/verification/ARCHITECTURE.md`
 
 pub mod application;
+pub mod common;
 pub mod llev;
+pub mod llre;
 pub mod matching;
 pub mod named_classes;
 pub mod nfa;
@@ -186,4 +188,29 @@ pub use llev::{
 pub use named_classes::{
     all_builtin_class_names, get_chars_only, get_digraphs_only, get_named_class, is_builtin_class,
     NamedClass, PhonePattern, NAMED_CLASSES,
+};
+
+// Re-export LLRE (LibLevenshtein Regex Expression) types
+pub use llre::{
+    // AST types
+    Directive as LLreDirective, FileMetadata as LLreMetadata, ImportDirective as LLreImport,
+    LLreFile, LLreFlags, ResolvedImport, SymbolTable,
+    // Error types
+    LLreError, LLreErrorKind, LLreResult, Position as LLrePosition,
+    // Loader
+    load_file as load_llre_file, load_file_with_config as load_llre_file_with_config,
+    Loader as LLreLoader, LoaderConfig as LLreLoaderConfig,
+    // Compiler
+    compile as compile_llre, compile_pattern, compile_pattern_with_flags, compile_with_options,
+    is_match as llre_is_match, is_match_multiline as llre_is_match_multiline,
+    CompileOptions as LLreCompileOptions, CompiledNFA,
+    // Parser
+    parse_str as parse_llre_str, Parser as LLreParser,
+};
+
+// Re-export LLRE serialization functions (requires serialization feature)
+#[cfg(feature = "serialization")]
+pub use llre::{
+    from_bytes as llre_from_bytes, load as load_compiled_llre, save as save_compiled_llre,
+    to_bytes as llre_to_bytes, CompiledMetadata as LLreCompiledMetadata,
 };

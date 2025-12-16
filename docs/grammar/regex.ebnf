@@ -65,11 +65,146 @@ primary
     | standalone_named_class
     | symbol_ref
     | literal_char
+    | anchor
     | "."                                   (* any character *)
     | "#" ;                                 (* word boundary *)
 
+
+(* ============================================================================
+   ANCHORS (Zero-Width Assertions)
+
+   Anchors match positions rather than characters. They are zero-width,
+   meaning they don't consume input.
+
+   Line vs Input Anchors:
+     ^ and $ - Behavior depends on multiline mode ((?m) flag)
+     \A, \Z, \z - Always match input boundaries (ignore multiline mode)
+
+   Multiline Mode ((?m)):
+     ^  matches: start of input OR position after \n
+     $  matches: end of input OR position before \n
+
+   Non-Multiline Mode (default):
+     ^  matches: only start of input
+     $  matches: only end of input
+   ============================================================================ *)
+
+anchor
+    = "^"                                   (* start of line/input *)
+    | "$"                                   (* end of line/input *)
+    | "\\A"                                 (* start of input - absolute *)
+    | "\\Z"                                 (* end of input - allows trailing \n *)
+    | "\\z" ;                               (* end of input - strict *)
+
+
+(* ============================================================================
+   GROUPS AND SUBPATTERNS
+
+   The grammar supports several group types following PCRE/JavaScript conventions:
+
+   - Capturing groups:      (pattern)           Capture matched text
+   - Non-capturing groups:  (?:pattern)         Group without capturing
+   - Named groups:          (?<name>pattern)    Named capture group
+   - Group references:      (?&name)            Subroutine call (recursion)
+   - Flags groups:          (?flags:pattern)    Scoped flag modification
+   - Inline flags:          (?flags)            Flag modification for rest of scope
+   ============================================================================ *)
+
 group
+    = capturing_group
+    | non_capturing_group
+    | named_group
+    | group_reference
+    | flags_group ;
+
+capturing_group
     = "(" , alternation , ")" ;
+
+non_capturing_group
+    = "(?:" , alternation , ")" ;
+
+named_group
+    = "(?<" , group_name , ">" , alternation , ")" ;
+
+group_reference
+    = "(?&" , group_name , ")" ;
+
+group_name
+    = IDENTIFIER ;
+
+
+(* ============================================================================
+   FLAGS AND MODIFIERS
+
+   Flags modify matching behavior. They can be:
+   - Inline:  (?flags)         Applies to rest of current scope
+   - Scoped:  (?flags:pattern) Applies only to the pattern
+
+   Available flags:
+     i    Case-insensitive matching
+     -i   Case-sensitive matching (disable)
+     m    Multiline mode (^ and $ match at line boundaries)
+     -m   Single-line mode (^ and $ match only at input boundaries)
+     s    Dotall mode (. matches newlines)
+     -s   Default mode (. does not match newlines)
+     f    Feature-based matching (phonetic features)
+     -f   Disable feature-based matching
+     a    Accent-insensitive matching (ignore diacritics)
+     -a   Accent-sensitive matching (disable)
+     u:N  Unicode normalization (NFC, NFD, NFKC, NFKD)
+
+   Flags can be combined: (?ims:pattern) for case-insensitive multiline dotall
+
+   Examples:
+     (?i)abc         - Case-insensitive match for "abc"
+     (?i:abc)def     - Only "abc" is case-insensitive
+     (?m)^line$      - Match "line" at any line boundary
+     (?s)a.*b        - Match "a" ... "b" across newlines
+     (?ms)^.*$       - Match entire lines including newlines
+     (?u:NFC:café)   - Normalize to NFC before matching
+     (?ia:café)      - Case and accent insensitive
+   ============================================================================ *)
+
+flags_group
+    = inline_flags
+    | scoped_flags ;
+
+inline_flags
+    = "(?" , flag_spec , ")" ;
+
+scoped_flags
+    = "(?" , flag_spec , ":" , alternation , ")" ;
+
+flag_spec
+    = { flag_element } ;
+
+flag_element
+    = flag_enable
+    | flag_disable
+    | unicode_normalization_flag ;
+
+flag_enable
+    = "i"                                   (* case-insensitive *)
+    | "m"                                   (* multiline mode *)
+    | "s"                                   (* dotall mode *)
+    | "f"                                   (* feature-based matching *)
+    | "a" ;                                 (* accent-insensitive *)
+
+flag_disable
+    = "-i"                                  (* disable case-insensitive *)
+    | "-m"                                  (* disable multiline mode *)
+    | "-s"                                  (* disable dotall mode *)
+    | "-f"                                  (* disable feature-based *)
+    | "-a" ;                                (* disable accent-insensitive *)
+
+unicode_normalization_flag
+    = "u:" , normalization_form ;
+
+normalization_form
+    = "NFC"                                 (* Canonical Composition *)
+    | "NFD"                                 (* Canonical Decomposition *)
+    | "NFKC"                                (* Compatibility Composition *)
+    | "NFKD" ;                              (* Compatibility Decomposition *)
 
 
 (* ============================================================================
@@ -445,9 +580,39 @@ ANY_PRINTABLE
      Optional(Regex)                 - Zero or one (?)
      RepeatExact(Regex, n)           - Exact repetition {n}
      RepeatRange(Regex, n, m)        - Range repetition {n,m}
-     Group(Regex)                    - Grouping (...)
      WordBoundary                    - Word boundary (#)
      RewriteRule { pattern, replacement, context, weight }
+
+     -- Anchor Types --
+     StartOfLine                     - ^ (line/input start)
+     EndOfLine                       - $ (line/input end)
+     StartOfInput                    - \A (absolute input start)
+     EndOfInput                      - \Z (input end, allows trailing \n)
+     EndOfInputStrict                - \z (strict input end)
+
+     -- Group Types --
+     CapturingGroup(n, Regex)        - Numbered capturing group (...)
+     NonCapturingGroup(Regex)        - Non-capturing group (?:...)
+     NamedGroup(name, Regex)         - Named group (?<name>...)
+     GroupRef(name)                  - Group reference/subroutine (?&name)
+     FlagsGroup { flags, inner }     - Flags group (?flags:...) or (?flags)
+
+     -- Deprecated --
+     Group(Regex)                    - Legacy grouping (use CapturingGroup)
+
+   RegexFlags:
+     case_insensitive: Option<bool>              - (?i) or (?-i)
+     multiline: Option<bool>                     - (?m) or (?-m)
+     dotall: Option<bool>                        - (?s) or (?-s)
+     unicode_normalization: Option<Normalization> - (?u:NFC) etc.
+     feature_based: Option<bool>                 - (?f) or (?-f)
+     accent_insensitive: Option<bool>            - (?a) or (?-a)
+
+   UnicodeNormalization:
+     NFC   - Canonical Composition
+     NFD   - Canonical Decomposition
+     NFKC  - Compatibility Composition
+     NFKD  - Compatibility Decomposition
 
    Context AST:
      Pattern(Regex)                  - Pattern to match

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### NFA Optimizer Module (2025-12-15)
+- **Automatic NFA Optimization** - Reduces NFA size and improves matching performance
+  - Epsilon elimination: Removes ε-transitions by computing transitive closure
+  - Unreachable state removal: Prunes states not reachable from start
+  - Dead state removal: Removes states that cannot reach any final state
+  - Transition deduplication: Removes duplicate transitions after epsilon elimination
+
+- **New Types**
+  - `OptimizationConfig`: Configuration with `full()`, `quick()`, `none()` presets
+  - `OptimizationStats`: Statistics on optimization results (states/transitions removed)
+  - `NfaOptimizerChar` / `NfaOptimizer`: Optimizer implementations for char/byte NFAs
+
+- **NFAChar/NFA API Additions**
+  - `optimize()`: Apply full optimization
+  - `optimize_with(config)`: Apply custom optimization, returns statistics
+  - `count_epsilon_transitions()`: Count ε-transitions in NFA
+
+- **Compiler Integration**
+  - `NFACompilerChar::with_optimization(config)`: Set optimization configuration
+  - `NFACompilerChar::without_optimization()`: Disable automatic optimization
+  - Optimization enabled by default in `compile()` function
+  - 11 unit tests covering all optimization passes
+
 ## [0.7.0] - 2025-11-15
 
 ### Added
