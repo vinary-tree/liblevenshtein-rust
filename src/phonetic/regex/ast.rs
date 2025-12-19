@@ -130,6 +130,19 @@ pub struct RegexFlags {
     /// When enabled, `.` matches any character including newlines.
     /// When disabled, `.` matches any character except newlines.
     pub dotall: Option<bool>,
+
+    /// Local Levenshtein distance limit for this pattern segment (`(?;N)` or `(?flags;N:pattern)`)
+    ///
+    /// When set, this specifies the maximum edit distance allowed for matching
+    /// this pattern segment. This allows different parts of a pattern to have
+    /// different error tolerance levels.
+    ///
+    /// # Examples
+    ///
+    /// - `(?;0:exact)` - "exact" must match exactly (0 edits)
+    /// - `(?;2:fuzzy)` - "fuzzy" allows up to 2 edits
+    /// - `(?i;1:word)` - case-insensitive "word" with up to 1 edit
+    pub local_distance: Option<u8>,
 }
 
 impl RegexFlags {
@@ -202,6 +215,7 @@ impl RegexFlags {
             accent_insensitive: other.accent_insensitive.or(self.accent_insensitive),
             multiline: other.multiline.or(self.multiline),
             dotall: other.dotall.or(self.dotall),
+            local_distance: other.local_distance.or(self.local_distance),
         }
     }
 
@@ -213,6 +227,15 @@ impl RegexFlags {
             && self.accent_insensitive.is_none()
             && self.multiline.is_none()
             && self.dotall.is_none()
+            && self.local_distance.is_none()
+    }
+
+    /// Create flags with a specific local Levenshtein distance limit.
+    pub fn with_local_distance(distance: u8) -> Self {
+        Self {
+            local_distance: Some(distance),
+            ..Default::default()
+        }
     }
 }
 
@@ -254,7 +277,17 @@ impl fmt::Display for RegexFlags {
             parts.push("-s".to_string());
         }
 
-        write!(f, "{}", parts.join(""))?;
+        // Format: flags;N or just ;N if no flags
+        let flags_str = parts.join("");
+        if let Some(dist) = self.local_distance {
+            if flags_str.is_empty() {
+                write!(f, ";{}", dist)?;
+            } else {
+                write!(f, "{};{}", flags_str, dist)?;
+            }
+        } else {
+            write!(f, "{}", flags_str)?;
+        }
         Ok(())
     }
 }

@@ -2683,60 +2683,6 @@ Proof.
 Qed.
 
 (**
-   CRITICAL PREREQUISITE: Valid traces have no duplicate pairs.
-
-   This is the KEY lemma that was missing! Once we prove that is_valid_trace_aux
-   enforces uniqueness of pairs (not just compatibility), the NoDup lemmas for
-   projections become trivial.
-
-   The proof works by showing that compatible_pairs(p1, p2) returns false when
-   p1 and p2 are distinct pairs, which combined with forallb in is_valid_trace_aux
-   ensures no pair appears twice.
-*)
-(*
-   COMMENTED OUT: This lemma is UNPROVABLE with current definitions.
-
-   Reason: is_valid_trace_aux allows duplicate pairs because compatible_pairs(p, p) = true.
-   Resolution: We strengthened is_valid_trace to include an explicit NoDup check.
-   See is_valid_trace_implies_NoDup (proven above) for the working version.
-
-   Preserved for documentation purposes.
-
-Lemma is_valid_trace_aux_NoDup :
-  forall (T : list (nat * nat)),
-    is_valid_trace_aux T = true ->
-    NoDup T.
-Proof.
-  intros T H_valid.
-  induction T as [| p T' IH].
-  - constructor.
-  - destruct p as [i j].
-    simpl in H_valid.
-    apply andb_true_iff in H_valid as [H_forall H_valid'].
-    constructor.
-    + intro H_in.
-      rewrite forallb_forall in H_forall.
-      specialize (H_forall (i,j) H_in).
-      (* BLOCKED: compatible_pairs(p,p) = true, so no contradiction possible *)
-      admit.
-    + apply IH. exact H_valid'.
-Admitted.
-*)
-
-(**
-   NOTE: The above lemma is ADMITTED and UNPROVABLE with the current is_valid_trace_aux definition.
-
-   REASON: is_valid_trace_aux allows duplicate pairs because compatible_pairs(p, p) = true.
-   This means the same pair can appear multiple times in a valid trace_aux.
-
-   RESOLUTION: We strengthened is_valid_trace to include an explicit NoDup check.
-   Therefore, is_valid_trace_implies_NoDup (proven above) provides the needed property.
-
-   This lemma (is_valid_trace_aux_NoDup) is kept for documentation purposes to show
-   why the strengthened definition was necessary. It is NOT used in any proofs.
-*)
-
-(**
    Helper: If a value is in the touched list, the corresponding pair exists in the trace.
 *)
 Lemma in_touched_in_A_exists_pair :
@@ -4414,34 +4360,6 @@ Proof.
       (* Use IH': length (filter ... T') <= 1 *)
       exact IH'.
 Qed.
-
-(*
-   COMMENTED OUT: Superseded by witness-based approach (Strategy 2).
-
-   This lemma attempted to prove fold_left length bounds via direct induction,
-   but the proof is complex and the fold_left structure doesn't match standard patterns.
-
-   The superior witness-based approach (compose_witness_bounded_T1/T2) is used instead.
-   Preserved for documentation purposes.
-
-(**
-   Helper: Generalized fold_left length bound for compose_trace.
-*)
-Lemma compose_fold_length_bound :
-  forall (A B C : list Char) (T1 : Trace A B) (T2 : Trace B C) (acc : list (nat * nat)),
-    is_valid_trace B C T2 = true ->
-    (forall p, In p T1 -> is_valid_trace_aux T2 = true ->
-       length (filter (fun p2 => let '(j2, _) := p2 in (snd p) =? j2) T2) <= 1) ->
-    length (fold_left (fun acc' p1 =>
-      let '(i, j) := p1 in
-      let matches := filter (fun p2 => let '(j2, _) := p2 in j =? j2) T2 in
-      fold_left (fun acc2 p2 => let '(_, k) := p2 in (i, k) :: acc2) matches acc'
-    ) T1 acc) <= length acc + length T1.
-Proof.
-  intros A B C T1 T2 acc Hval2 Hfilter_bound.
-  admit.
-Admitted.
-*)
 
 (**
    Strategy 2: Witness extraction as computable functions.

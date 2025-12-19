@@ -57,6 +57,22 @@ pub mod repl;
 #[cfg(feature = "cli")]
 pub mod cli;
 
+/// Grep support for compressed, archived, and document files
+///
+/// This module provides streaming decompression and archive support
+/// for searching through .gz, .zst, .xz, .bz2, .tar, and .zip files.
+/// Also provides document extraction support for PDF, DOCX, XLSX, EPUB, and ODT files.
+#[cfg(any(
+    feature = "grep-compression",
+    feature = "grep-archives",
+    feature = "grep-pdf",
+    feature = "grep-docx",
+    feature = "grep-xlsx",
+    feature = "grep-epub",
+    feature = "grep-odt"
+))]
+pub mod grep;
+
 /// Test corpus utilities
 ///
 /// This module provides parsers and generators for standard spelling

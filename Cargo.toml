@@ -48,6 +48,28 @@ colored = { version = "2.0", optional = true }
 dirs = { version = "5.0", optional = true }
 # Random number generation for corpus utilities (test/benchmark use)
 rand = { version = "0.8", optional = true }
+# Parallel grep support (optional)
+rayon = { version = "1.11", optional = true }
+# Compression formats for grep (optional)
+zstd = { version = "0.13", optional = true }
+xz2 = { version = "0.1", optional = true }
+bzip2 = { version = "0.5", optional = true }
+# Archive formats for grep (optional)
+tar = { version = "0.4", optional = true }
+zip = { version = "2.0", optional = true }
+# Glob pattern matching for archive entry filtering (optional)
+globset = { version = "0.4", optional = true }
+# Document text extraction dependencies (optional)
+pdf-extract = { version = "0.7", optional = true }
+# Suppress stdout during PDF extraction (to hide pdf-extract warnings)
+gag = { version = "1.0", optional = true }
+calamine = { version = "0.26", optional = true }
+docx-rs = { version = "0.4", optional = true }
+epub = { version = "2.1", optional = true }
+quick-xml = { version = "0.37", optional = true }
+leptess = { version = "0.14", optional = true }
+# Unicode normalization for accent-insensitive matching and (?u:NFC) flag
+unicode-normalization = { version = "0.1", optional = true }
 # SIMD optimization uses std::arch (no external dependencies needed)
 
 [dev-dependencies]
@@ -256,6 +278,11 @@ name = "phonetic_nfa_benchmarks"
 harness = false
 required-features = ["phonetic-rules"]
 
+[[bench]]
+name = "phonetic_grep_parallel_benchmarks"
+harness = false
+required-features = ["parallel-grep"]
+
 [[bin]]
 name = "liblevenshtein"
 path = "src/bin/liblevenshtein.rs"
@@ -318,7 +345,9 @@ serialization = ["serde", "bincode", "serde_json"]
 protobuf = ["prost", "bytes", "prost-build", "serialization"]
 compression = ["flate2", "serialization"]
 cli = ["clap", "anyhow", "rustyline", "colored", "dirs", "pathmap-backend", "serialization"]
-phonetic-rules = []  # Phonetic rewrite rules with formal verification
+phonetic-rules = ["unicode-normalization"]  # Phonetic rewrite rules with formal verification
+embedded-rules = ["phonetic-rules"]  # Pre-compiled English phonetic rules embedded in binary
+parallel-grep = ["rayon", "phonetic-rules"]  # Parallel phonetic grep with Rayon for multi-core document scanning
 perf-instrumentation = []  # Performance instrumentation for optimization analysis (dev only)
 
 # Eviction wrapper optimization features
@@ -336,6 +365,22 @@ eviction-opt-memory = ["eviction-compact-metadata"]
 
 # SIMD optimization with AVX2/SSE4.1 intrinsics (Phase 3)
 simd = []
+
+# Grep compression support (gzip, zstd, xz, bzip2)
+grep-compression = ["flate2", "zstd", "xz2", "bzip2"]
+# Archive support for grep (tar, zip) - implies compression for .tar.gz etc.
+grep-archives = ["tar", "zip", "globset", "grep-compression"]
+# Full grep features (phonetic + parallel + compression + archives)
+grep-full = ["phonetic-rules", "parallel-grep", "grep-compression", "grep-archives", "grep-documents"]
+
+# Document extraction features for grep
+grep-pdf = ["pdf-extract", "gag"]
+grep-pdf-ocr = ["grep-pdf", "leptess"]
+grep-docx = ["docx-rs"]
+grep-xlsx = ["calamine"]
+grep-epub = ["epub"]
+grep-odt = ["quick-xml", "zip"]
+grep-documents = ["grep-pdf", "grep-docx", "grep-xlsx", "grep-epub", "grep-odt"]
 
 [package.metadata.generate-rpm]
 assets = [

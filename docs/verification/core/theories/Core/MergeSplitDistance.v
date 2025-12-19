@@ -28,16 +28,16 @@
     - ms_single           : Single character case
     - ms_seq_exists       : Optimal edit sequences exist
     - ms_upper_bound      : Distance <= cost of any valid sequence
-    - ms_triangle_via_seq : Triangle inequality (IF ms_seq_compose proven)
     - min6_swap_12_45     : Helper for symmetry
 
     ADMITTED (Semantically Sound):
-    - ms_seq_compose      : Sequence composition (model limitation)
     - ms_triangle         : Triangle inequality (main case)
       ** Trace-based proof: See Composition/MergeSplitComposition.v **
       ** ms_triangle_via_trace uses OptimalTrace/MergeSplitConstruction.v **
 
-    REMOVED (FALSE Lemma):
+    REMOVED:
+    - ms_seq_compose      : Sequence composition (model limitation - deleted)
+    - ms_triangle_via_seq : Depended on ms_seq_compose (deleted)
     - ms_eq_lev_when_no_merge_split : FALSE - double-subst optimization
       Correct relationship: merge_split_distance <= lev_distance (proven)
 *)
@@ -1560,118 +1560,6 @@ Proof.
     { apply ms_op_le_branch. exact Hop. }
     (* Combine: ms(s1,s2) <= op_cost + ms(s1',s2') <= op_cost + cost(ops') *)
     lia.
-Qed.
-
-(** *** ADMITTED - FUNDAMENTAL MODEL LIMITATION ***
-
-    Composing edit sequences: going s1→s2→s3 gives a sequence s1→s3
-
-    STATUS: Admitted due to fundamental model issue, NOT provability.
-
-    ISSUE: The current (source, target) pair model breaks composition:
-    - ops1 transforms (s1, s2) to ([], []) by consuming both strings
-    - ops2 transforms (s2, s3) to ([], []) by consuming both strings
-    - Problem: ops1 consumes s2 as TARGET, but ops2 needs s2 as SOURCE
-    - Direct concatenation ops1 ++ ops2 cannot work with this model
-
-    SEMANTIC SOUNDNESS: The lemma is semantically true because:
-    - An edit sequence s1→s2 represents operations transforming s1 into s2
-    - An edit sequence s2→s3 represents operations transforming s2 into s3
-    - Composing them gives a valid transformation s1→s2→s3
-    - The total cost is additive: cost(s1→s2) + cost(s2→s3)
-
-    ALTERNATIVES TO PROVE THIS FORMALLY:
-    1. Single-string transformation model: Define operations that transform one
-       string (with positions), not pairs. Then composition is trivial.
-    2. Trace-based approach: Use alignment traces (position pairs) instead of
-       operation sequences. Trace composition is well-defined.
-       ** RECOMMENDED: See theories/Trace/MergeSplitTrace.v **
-    3. Operation rewriting: Define a function that adjusts ops2 to work with
-       s3 as target instead of s2.
-
-    This lemma is used by ms_triangle_via_seq for the triangle inequality.
-    The semantic argument for triangle is sound regardless of this formal gap.
-
-    NOTE: The trace-based approach bypasses this lemma entirely. With trace
-    infrastructure, ms_triangle can be proven directly without ms_seq_compose.
-    See the documentation for ms_triangle below.
-*)
-Lemma ms_seq_compose : forall ops1 ops2 s1 s2 s3,
-  ms_seq_valid ops1 s1 s2 ->
-  ms_seq_valid ops2 s2 s3 ->
-  ms_seq_valid (ops1 ++ ops2) s1 s3.
-Proof.
-  intros ops1 ops2 s1 s2 s3 H1 H2.
-  unfold ms_seq_valid in *.
-  (* ops1 transforms (s1, s2) to ([], [])
-     ops2 transforms (s2, s3) to ([], [])
-     But this doesn't directly compose...
-
-     The issue: our apply_ms_seq works on a PAIR (src, tgt), consuming
-     both simultaneously. Going s1→s2 means ops1 applied to (s1, s2) gives ([], []).
-     Going s2→s3 means ops2 applied to (s2, s3) gives ([], []).
-
-     The composition should give ops on (s1, s3). But this requires
-     that the operations are "independent" in a certain sense.
-
-     Actually, the right model is: ops transforms (source, target) to ([], [])
-     by consuming from both ends based on operation type.
-     - Delete consumes from source
-     - Insert consumes from target
-     - Subst consumes from both
-     - Merge consumes 2 from source, 1 from target
-     - Split consumes 1 from source, 2 from target
-
-     For composition via intermediate s2:
-     - ops1 on (s1, s2) gives ([], [])
-     - ops2 on (s2, s3) gives ([], [])
-     - Combined should give ops on (s1, s3)
-
-     The key insight: s2 is both the "target" of ops1 and "source" of ops2.
-     So ops1 consumes s2 as target, and ops2 needs s2 as source.
-
-     This doesn't directly compose because after ops1, s2 is consumed from target.
-
-     The proper model for composition is different: edit operations transform
-     a STRING, not a (source, target) pair. Let me reconsider...
-
-     Actually, for the triangle inequality, we don't need full composition.
-     We just need: ms(s1, s3) <= ms(s1, s2) + ms(s2, s3).
-
-     The semantic argument is: ms(s1, s2) + ms(s2, s3) represents the cost
-     of some valid transformation s1→s3 (via s2), and ms(s1, s3) is the minimum
-     over all transformations, so ms(s1, s3) <= that cost.
-
-     Let me take a different approach: prove ms_triangle directly using
-     the optimality property ms_upper_bound. *)
-  admit.
-Admitted.
-
-(** Triangle inequality - direct proof using sequence infrastructure *)
-Lemma ms_triangle_via_seq : forall s1 s2 s3,
-  merge_split_distance s1 s3 <= merge_split_distance s1 s2 + merge_split_distance s2 s3.
-Proof.
-  (* Semantic argument made formal:
-     1. There exist optimal sequences ops1: s1→s2 and ops2: s2→s3
-     2. Their composition gives a valid sequence s1→s3
-     3. By optimality of ms, ms(s1,s3) <= cost(composition) = cost(ops1) + cost(ops2)
-
-     The key lemma is ms_upper_bound: ms <= cost of any valid sequence.
-     Combined with existence of sequences matching ms, this gives triangle. *)
-  intros s1 s2 s3.
-  (* Use ms_seq_exists to get optimal sequences for s1→s2 and s2→s3 *)
-  destruct (ms_seq_exists s1 s2) as [ops1 [Hv1 Hc1]].
-  destruct (ms_seq_exists s2 s3) as [ops2 [Hv2 Hc2]].
-  (* Compose the sequences *)
-  assert (Hcomp: ms_seq_valid (ops1 ++ ops2) s1 s3).
-  { apply (ms_seq_compose ops1 ops2 s1 s2 s3); assumption. }
-  (* Apply upper bound *)
-  assert (Hub: merge_split_distance s1 s3 <= ms_seq_cost (ops1 ++ ops2)).
-  { apply ms_upper_bound. exact Hcomp. }
-  (* Cost is additive *)
-  rewrite ms_seq_cost_app in Hub.
-  rewrite Hc1, Hc2 in Hub.
-  exact Hub.
 Qed.
 
 (** *** ADMITTED - MAIN CASE ONLY (BASE CASES PROVEN) ***

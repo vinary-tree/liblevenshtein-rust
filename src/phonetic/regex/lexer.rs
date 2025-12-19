@@ -23,6 +23,8 @@ pub struct ParsedFlags {
     pub multiline: Option<bool>,
     /// Dotall flag (`s` or `-s`) - `.` matches newlines
     pub dotall: Option<bool>,
+    /// Local Levenshtein distance limit (`(?;N)` or `(?flags;N:pattern)`)
+    pub levenshtein_distance: Option<u8>,
 }
 
 impl ParsedFlags {
@@ -34,6 +36,7 @@ impl ParsedFlags {
             && self.accent_insensitive.is_none()
             && self.multiline.is_none()
             && self.dotall.is_none()
+            && self.levenshtein_distance.is_none()
     }
 }
 
@@ -961,15 +964,15 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 self.parse_group_reference()
             }
-            Some(c) if c == 'i' || c == 'm' || c == 's' || c == 'u' || c == 'f' || c == 'a' || c == '-' => {
-                // Flags: (?i), (?m), (?s), (?-i), (?i:...), (?u:NFC:...), etc.
+            Some(c) if c == 'i' || c == 'm' || c == 's' || c == 'u' || c == 'f' || c == 'a' || c == '-' || c == ';' => {
+                // Flags: (?i), (?m), (?s), (?-i), (?i:...), (?u:NFC:...), (?;N), (?i;N:...), etc.
                 self.parse_flags_group()
             }
             Some(c) => {
                 Err(ParseError::with_context(
                     ParseErrorKind::InvalidGroupSyntax(format!("unexpected '{}' after '(?'", c)),
                     pos,
-                    "expected ':', '<', '&', or flag (i, m, s, u, f, a, -)",
+                    "expected ':', '<', '&', or flag (i, m, s, u, f, a, -, ;N)",
                 ))
             }
             None => {
@@ -1055,6 +1058,12 @@ impl<'a> Lexer<'a> {
     }
 
     /// Parse flags group `(?flags)` or `(?flags:...)` after consuming `(?`.
+    ///
+    /// Also supports local Levenshtein distance syntax:
+    /// - `(?i;0:pattern)` - case-insensitive with max 0 edits
+    /// - `(?;2:pattern)` - distance only (2 edits)
+    /// - `(?i;N)` - inline flags + distance
+    /// - `(?;N)` - inline distance only
     fn parse_flags_group(&mut self) -> ParseResult<Token> {
         let pos = self.position;
         let mut flags = ParsedFlags::default();
@@ -1077,6 +1086,13 @@ impl<'a> Lexer<'a> {
                     // Start negating all following flags until ')' or ':'
                     self.advance();
                     negating = true;
+                }
+                Some(';') => {
+                    // Local Levenshtein distance: (?flags;N...) or (?;N...)
+                    self.advance();
+                    let distance = self.parse_levenshtein_distance()?;
+                    flags.levenshtein_distance = Some(distance);
+                    // After parsing distance, must be ':' (scoped) or ')' (inline)
                 }
                 Some('i') => {
                     self.advance();
@@ -1120,7 +1136,7 @@ impl<'a> Lexer<'a> {
                     return Err(ParseError::with_context(
                         ParseErrorKind::InvalidFlag(format!("unknown flag '{}'", c)),
                         self.position,
-                        "valid flags are: i (case-insensitive), m (multiline), s (dotall), f (feature-based), a (accent-insensitive), u:NFC/NFD/NFKC/NFKD",
+                        "valid flags are: i (case-insensitive), m (multiline), s (dotall), f (feature-based), a (accent-insensitive), u:NFC/NFD/NFKC/NFKD, ;N (distance)",
                     ));
                 }
                 None => {
@@ -1132,6 +1148,38 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
+    }
+
+    /// Parse a local Levenshtein distance value (digits after `;`).
+    fn parse_levenshtein_distance(&mut self) -> ParseResult<u8> {
+        let pos = self.position;
+        let mut digits = String::new();
+
+        // Collect digits
+        while let Some(c) = self.peek_char() {
+            if c.is_ascii_digit() {
+                self.advance();
+                digits.push(c);
+            } else {
+                break;
+            }
+        }
+
+        if digits.is_empty() {
+            return Err(ParseError::with_context(
+                ParseErrorKind::InvalidFlag("expected distance number after ';'".to_string()),
+                pos,
+                "use (?;N) or (?flags;N:pattern) syntax where N is a number (0-255)",
+            ));
+        }
+
+        digits.parse::<u8>().map_err(|_| {
+            ParseError::with_context(
+                ParseErrorKind::InvalidFlag(format!("distance '{}' out of range", digits)),
+                pos,
+                "distance must be a number between 0 and 255",
+            )
+        })
     }
 
     /// Parse a Unicode normalization form (NFC, NFD, NFKC, NFKD).
@@ -2534,5 +2582,99 @@ mod tests {
             }
             _ => panic!("Expected InlineFlags, got {:?}", token),
         }
+    }
+
+    #[test]
+    fn test_lexer_levenshtein_distance_inline() {
+        // (?;2) - inline distance only
+        let mut lexer = Lexer::new("(?;2)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.levenshtein_distance, Some(2));
+                assert_eq!(flags.case_insensitive, None);
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_levenshtein_distance_with_flags() {
+        // (?i;0) - case-insensitive with distance 0
+        let mut lexer = Lexer::new("(?i;0)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.case_insensitive, Some(true));
+                assert_eq!(flags.levenshtein_distance, Some(0));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_levenshtein_distance_scoped() {
+        // (?;1:...) - scoped distance only
+        let mut lexer = Lexer::new("(?;1:abc)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::ScopedFlagsStart(flags) => {
+                assert_eq!(flags.levenshtein_distance, Some(1));
+                assert_eq!(flags.case_insensitive, None);
+            }
+            _ => panic!("Expected ScopedFlagsStart, got {:?}", token),
+        }
+        // Continue reading "abc)"
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+    }
+
+    #[test]
+    fn test_lexer_levenshtein_distance_with_flags_scoped() {
+        // (?i;0:...) - case-insensitive with distance 0, scoped
+        let mut lexer = Lexer::new("(?i;0:rpo)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::ScopedFlagsStart(flags) => {
+                assert_eq!(flags.case_insensitive, Some(true));
+                assert_eq!(flags.levenshtein_distance, Some(0));
+            }
+            _ => panic!("Expected ScopedFlagsStart, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_levenshtein_distance_multi_digit() {
+        // (?;255) - max distance value
+        let mut lexer = Lexer::new("(?;255)");
+        let token = lexer.next_token().unwrap();
+        match token {
+            Token::InlineFlags(flags) => {
+                assert_eq!(flags.levenshtein_distance, Some(255));
+            }
+            _ => panic!("Expected InlineFlags, got {:?}", token),
+        }
+    }
+
+    #[test]
+    fn test_lexer_levenshtein_distance_missing_number() {
+        // (?;) - error: missing distance number
+        let mut lexer = Lexer::new("(?;)");
+        let result = lexer.next_token();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("expected distance number"));
+    }
+
+    #[test]
+    fn test_lexer_levenshtein_distance_overflow() {
+        // (?;256) - error: distance out of range (u8 max is 255)
+        let mut lexer = Lexer::new("(?;256)");
+        let result = lexer.next_token();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("out of range"));
     }
 }

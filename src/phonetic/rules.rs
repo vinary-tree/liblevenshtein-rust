@@ -43,6 +43,10 @@
 //!
 //! Original specification: <https://zompist.com/spell.html>
 
+// Submodules
+#[cfg(feature = "embedded-rules")]
+pub mod english;
+
 use super::types::{Context, ContextChar, Phone, PhoneChar, RewriteRule, RewriteRuleChar};
 
 // ============================================================================

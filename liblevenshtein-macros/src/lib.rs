@@ -429,3 +429,208 @@ impl syn::parse::Parse for MacroArgs {
         })
     }
 }
+
+// ============================================================================
+// LLev Macros
+// ============================================================================
+
+/// Compile inline `.llev` content to a RuleSetChar at compile time.
+///
+/// The rule set is serialized and embedded directly in the binary, eliminating
+/// runtime parsing and compilation overhead. Parse errors are caught at compile time.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// use liblevenshtein::llev;
+///
+/// // Simple rules
+/// let rules = llev!(r#"
+///     ph -> f;
+///     gh -> ;
+///     kn -> n / #_;
+/// "#);
+///
+/// // Use the rules
+/// let normalized = rules.apply("phone"); // "fone"
+/// ```
+///
+/// # Compile-time Errors
+///
+/// Invalid rules will cause compile-time errors:
+///
+/// ```rust,ignore
+/// // This won't compile:
+/// let bad = llev!("-> f;");  // Compile error: empty pattern
+/// ```
+///
+/// # Performance
+///
+/// - **Zero startup cost**: RuleSet is already serialized in binary
+/// - **Rule validation**: Errors caught at compile time
+/// - **Trade-off**: Larger binary size vs. faster startup
+#[proc_macro]
+pub fn llev(input: TokenStream) -> TokenStream {
+    let content_lit = parse_macro_input!(input as LitStr);
+    let content = content_lit.value();
+
+    // Parse .llev content at compile time
+    let file = match liblevenshtein::phonetic::llev::parse_str(&content) {
+        Ok(f) => f,
+        Err(e) => {
+            let msg = format!("Failed to parse llev content: {}", e);
+            return syn::Error::new(content_lit.span(), msg)
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    // Compile to RuleSetChar at compile time
+    let ruleset = match liblevenshtein::phonetic::llev::RuleSetChar::from_llev(&file) {
+        Ok(r) => r,
+        Err(e) => {
+            let msg = format!("Failed to compile llev content: {}", e);
+            return syn::Error::new(content_lit.span(), msg)
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    // Serialize to bytes at compile time
+    let bytes = match liblevenshtein::phonetic::llev::to_bytes_char(&ruleset) {
+        Ok(b) => b,
+        Err(e) => {
+            let msg = format!("Failed to serialize RuleSetChar: {}", e);
+            return syn::Error::new(content_lit.span(), msg)
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    let bytes_lit = syn::LitByteStr::new(&bytes, content_lit.span());
+
+    quote! {
+        {
+            static BYTES: &[u8] = #bytes_lit;
+            static RULESET: std::sync::OnceLock<liblevenshtein::phonetic::llev::RuleSetChar> =
+                std::sync::OnceLock::new();
+            RULESET.get_or_init(|| {
+                liblevenshtein::phonetic::llev::from_bytes_char(BYTES)
+                    .expect("Invalid embedded RuleSetChar - this is a bug in liblevenshtein-macros")
+            })
+        }
+    }
+    .into()
+}
+
+/// Load and compile a `.llev` file to a RuleSetChar at compile time.
+///
+/// The file is loaded, parsed, and compiled to a RuleSetChar at compile time.
+/// The serialized rule set is embedded directly in the binary.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// use liblevenshtein::llev_file;
+///
+/// // Load and compile at compile time
+/// let english = llev_file!("data/rules/english/zompist.llev");
+/// let normalized = english.apply("phone"); // "fone"
+/// ```
+///
+/// # File Format
+///
+/// ```text
+/// # Example .llev file
+/// @name "English Rules"
+/// @version "1.0"
+///
+/// # Define reusable symbols
+/// @define FRONT_VOWEL = [ei]
+///
+/// # Rules
+/// ph -> f;
+/// c -> s / _$FRONT_VOWEL;
+/// c -> k;
+/// ```
+///
+/// # Compile-time Errors
+///
+/// - File not found
+/// - Parse errors in .llev file
+/// - Rule compilation errors
+///
+/// # Search Paths
+///
+/// Files are searched relative to `CARGO_MANIFEST_DIR` (the directory containing
+/// your `Cargo.toml`).
+#[proc_macro]
+pub fn llev_file(input: TokenStream) -> TokenStream {
+    let path_lit = parse_macro_input!(input as LitStr);
+    let relative_path = path_lit.value();
+
+    // Get the manifest directory for relative path resolution
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+    let full_path = std::path::Path::new(&manifest_dir).join(&relative_path);
+
+    // Load the file at compile time
+    let file = match liblevenshtein::phonetic::llev::load_file(&full_path) {
+        Ok(f) => f,
+        Err(e) => {
+            let msg = format!(
+                "Failed to load .llev file '{}': {}",
+                full_path.display(),
+                e
+            );
+            return syn::Error::new(path_lit.span(), msg)
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    // Compile to RuleSetChar at compile time
+    let ruleset = match liblevenshtein::phonetic::llev::RuleSetChar::from_llev(&file) {
+        Ok(r) => r,
+        Err(e) => {
+            let msg = format!(
+                "Failed to compile .llev file '{}': {}",
+                full_path.display(),
+                e
+            );
+            return syn::Error::new(path_lit.span(), msg)
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    // Serialize to bytes at compile time
+    let bytes = match liblevenshtein::phonetic::llev::to_bytes_char(&ruleset) {
+        Ok(b) => b,
+        Err(e) => {
+            let msg = format!("Failed to serialize RuleSetChar: {}", e);
+            return syn::Error::new(path_lit.span(), msg)
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    // Generate code that embeds and deserializes the RuleSetChar
+    let bytes_lit = syn::LitByteStr::new(&bytes, path_lit.span());
+    let path_str = full_path.display().to_string();
+
+    quote! {
+        {
+            // Include the file in dependency tracking so rebuilds happen on change
+            const _: &str = include_str!(#path_str);
+
+            static BYTES: &[u8] = #bytes_lit;
+            static RULESET: std::sync::OnceLock<liblevenshtein::phonetic::llev::RuleSetChar> =
+                std::sync::OnceLock::new();
+            RULESET.get_or_init(|| {
+                liblevenshtein::phonetic::llev::from_bytes_char(BYTES)
+                    .expect("Invalid embedded RuleSetChar - this is a bug in liblevenshtein-macros")
+            })
+        }
+    }
+    .into()
+}

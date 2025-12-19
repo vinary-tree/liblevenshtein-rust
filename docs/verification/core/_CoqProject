@@ -21,6 +21,7 @@ theories/Core/MinLemmas.v
 
 # Distance metrics (depend on Definitions, MinLemmas)
 theories/Core/LevDistance.v
+theories/Core/DamerauLevDistanceDef.v
 theories/Core/DamerauLevDistance.v
 theories/Core/MergeSplitDistance.v
 theories/Core/MetricProperties.v
@@ -63,6 +64,8 @@ theories/Composition/WitnessLemmas.v
 theories/Composition/CostBounds.v
 theories/Composition/CompositionValidity.v
 theories/Composition/CompositionNoDup.v
+theories/Composition/DamerauComposition.v
+theories/Composition/MergeSplitComposition.v
 
 # Optimal trace construction
 theories/OptimalTrace/Construction.v

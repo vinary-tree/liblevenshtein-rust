@@ -17,7 +17,7 @@ use std::path::PathBuf;
         .required(true)
         .args(["compile", "phonetic", "query", "repl", "info", "convert",
                "insert", "delete", "clear", "minimize", "settings", "config_mgmt",
-               "compile_regex", "match_regex"])
+               "compile_regex", "match_regex", "grep"])
 ))]
 pub struct Cli {
     // ========================================================================
@@ -88,6 +88,10 @@ pub struct Cli {
     #[arg(long = "match-regex")]
     pub match_regex: bool,
 
+    /// Search files for fuzzy phonetic matches (grep-style)
+    #[arg(short = 'G', long)]
+    pub grep: bool,
+
     // ========================================================================
     // Input/output arguments (shared across operations)
     // ========================================================================
@@ -143,6 +147,78 @@ pub struct Cli {
     /// Enable dotall mode for regex (. matches newlines)
     #[arg(long)]
     pub dotall: bool,
+
+    // ========================================================================
+    // Grep options (for --grep)
+    // ========================================================================
+
+    /// Pattern to search for (regex or literal) in grep mode
+    #[arg(long)]
+    pub pattern: Option<String>,
+
+    /// Files to search (for --grep)
+    #[arg(long)]
+    pub files: Vec<PathBuf>,
+
+    /// Print filename for each match
+    #[arg(long = "with-filename")]
+    pub with_filename: bool,
+
+    /// Suppress filename output
+    #[arg(long = "no-filename")]
+    pub no_filename: bool,
+
+    /// Print line number for each match
+    #[arg(short = 'n', long = "line-number")]
+    pub line_number: bool,
+
+    /// Print column number for each match
+    #[arg(long = "column")]
+    pub column: bool,
+
+    /// Count matches only
+    #[arg(long = "count")]
+    pub count: bool,
+
+    /// Disable colored output
+    #[arg(long = "no-color")]
+    pub no_color: bool,
+
+    /// Case insensitive matching
+    #[arg(short = 'i', long = "ignore-case")]
+    pub ignore_case: bool,
+
+    /// Only show matching part of line
+    #[arg(short = 'O', long = "only-matching")]
+    pub only_matching: bool,
+
+    /// Disable automatic decompression (treat compressed files as plain text)
+    #[arg(long = "no-decompress")]
+    pub no_decompress: bool,
+
+    /// Filter pattern for archive entries (glob syntax, e.g. "*.log", "src/**/*.rs")
+    #[arg(short = 'A', long = "archive-filter")]
+    pub archive_filter: Option<String>,
+
+    /// Maximum file size to process in bytes (default: 100MB)
+    #[arg(long = "max-file-size")]
+    pub max_file_size: Option<u64>,
+
+    /// Include hidden files (starting with .)
+    #[arg(long = "hidden")]
+    pub include_hidden: bool,
+
+    /// Extract text from document files (PDF, DOCX, XLSX, EPUB, ODT)
+    #[arg(long = "extract-documents")]
+    pub extract_documents: bool,
+
+    /// Enable OCR for image-based PDFs (requires Tesseract)
+    #[arg(long = "ocr")]
+    pub enable_ocr: bool,
+
+    /// OCR language code (default: eng)
+    #[arg(long = "ocr-lang", default_value = "eng")]
+    pub ocr_language: String,
 
     // ========================================================================
     // Dictionary options

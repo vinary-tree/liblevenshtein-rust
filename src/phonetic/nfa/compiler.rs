@@ -25,10 +25,36 @@ use super::context::{BoundaryKind, ContextPattern, ContextPatternChar};
 use super::nfa::{NFAChar, NFA};
 use super::optimizer::{OptimizationConfig, NfaOptimizerChar};
 use super::thompson::{ThompsonBuilder, ThompsonBuilderChar};
-use crate::phonetic::regex::ast::{ContextExpr, ContextExprByte, Regex, RegexByte, RegexFlags};
+use crate::phonetic::regex::ast::{ContextExpr, ContextExprByte, Regex, RegexByte, RegexFlags, UnicodeNormalization};
 use crate::phonetic::regex::error::{ParseError, ParseErrorKind, ParseResult, Position};
+use crate::phonetic::regex::transform::{apply_flags, TransformResult};
+
+/// Result of compiling a regex with flag support.
+///
+/// Contains both the compiled NFA and runtime settings extracted from flags.
+#[derive(Debug, Clone)]
+pub struct CompileResultChar {
+    /// The compiled NFA.
+    pub nfa: NFAChar,
+    /// Unicode normalization to apply to input at runtime.
+    pub unicode_normalization: Option<UnicodeNormalization>,
+    /// Whether multiline mode is enabled (for `^` and `$`).
+    pub multiline: bool,
+    /// Whether dotall mode is enabled (`.` matches newlines).
+    pub dotall: bool,
+    /// Local Levenshtein distance override (from `(?;N)` syntax).
+    ///
+    /// When set, this distance limit should be used for fuzzy matching
+    /// instead of the global distance parameter.
+    pub local_distance: Option<u8>,
+}
 
 /// Compile a character-level regex to an NFA.
+///
+/// This applies regex flag transformations (like `(?i)` case-insensitive)
+/// before compilation. For flags that affect runtime behavior (unicode
+/// normalization, multiline, dotall), use [`compile_with_flags`] instead
+/// to access those settings.
 ///
 /// # Arguments
 ///
@@ -49,10 +75,53 @@ use crate::phonetic::regex::error::{ParseError, ParseErrorKind, ParseResult, Pos
 /// assert!(nfa.accepts("ac"));
 /// assert!(nfa.accepts("aaac"));
 /// assert!(nfa.accepts("abbc"));
+///
+/// // Case-insensitive matching via (?i) flag
+/// let regex = parse("(?i:hello)").unwrap();
+/// let nfa = compile(&regex).unwrap();
+/// assert!(nfa.accepts("hello"));
+/// assert!(nfa.accepts("HELLO"));
+/// assert!(nfa.accepts("HeLLo"));
 /// ```
 pub fn compile(regex: &Regex) -> ParseResult<NFAChar> {
     let mut compiler = NFACompilerChar::new();
     compiler.compile(regex)
+}
+
+/// Compile a character-level regex to an NFA with full flag support.
+///
+/// This applies regex flag transformations and returns both the NFA and
+/// runtime settings extracted from flags like `(?u:NFC)`, `(?m)`, and `(?s)`.
+///
+/// # Arguments
+///
+/// * `regex` - The regex AST to compile
+///
+/// # Returns
+///
+/// A [`CompileResultChar`] containing the NFA and runtime settings.
+///
+/// # Examples
+///
+/// ```ignore
+/// use liblevenshtein::phonetic::regex::parse;
+/// use liblevenshtein::phonetic::nfa::compiler::compile_with_flags;
+///
+/// let regex = parse("(?iu:café)").unwrap();
+/// let result = compile_with_flags(&regex).unwrap();
+///
+/// // NFA matches case-insensitively (transformed)
+/// assert!(result.nfa.accepts("café"));
+/// assert!(result.nfa.accepts("CAFÉ"));
+///
+/// // Unicode normalization available for runtime use
+/// if let Some(norm) = result.unicode_normalization {
+///     // Apply normalization to input before matching
+/// }
+/// ```
+pub fn compile_with_flags(regex: &Regex) -> ParseResult<CompileResultChar> {
+    let mut compiler = NFACompilerChar::new();
+    compiler.compile_with_flags(regex)
 }
 
 /// Compile a byte-level regex to an NFA.
@@ -292,10 +361,16 @@ impl NFACompilerChar {
 
     /// Compile a regex AST to an NFA.
     ///
-    /// If optimization is enabled (default), the NFA is automatically optimized
-    /// after Thompson construction. Use `without_optimization()` to disable this.
+    /// This applies flag transformations (like `(?i)` case-insensitive) before
+    /// compilation. If optimization is enabled (default), the NFA is automatically
+    /// optimized after Thompson construction.
+    ///
+    /// For access to runtime flags (unicode normalization, multiline, dotall),
+    /// use [`compile_with_flags`] instead.
     pub fn compile(&mut self, regex: &Regex) -> ParseResult<NFAChar> {
-        let nfa = self.compile_regex(regex)?;
+        // Apply flag transformations before compilation
+        let transform_result = apply_flags(regex);
+        let nfa = self.compile_regex(&transform_result.regex)?;
 
         // Apply optimization if configured
         if let Some(ref config) = self.optimization {
@@ -305,6 +380,33 @@ impl NFACompilerChar {
         } else {
             Ok(nfa)
         }
+    }
+
+    /// Compile a regex AST to an NFA with full flag support.
+    ///
+    /// This applies flag transformations and returns both the NFA and runtime
+    /// settings extracted from flags like `(?u:NFC)`, `(?m)`, and `(?s)`.
+    pub fn compile_with_flags(&mut self, regex: &Regex) -> ParseResult<CompileResultChar> {
+        // Apply flag transformations before compilation
+        let transform_result = apply_flags(regex);
+        let nfa = self.compile_regex(&transform_result.regex)?;
+
+        // Apply optimization if configured
+        let nfa = if let Some(ref config) = self.optimization {
+            let optimizer = NfaOptimizerChar::new(config.clone());
+            let (optimized, _stats) = optimizer.optimize(nfa);
+            optimized
+        } else {
+            nfa
+        };
+
+        Ok(CompileResultChar {
+            nfa,
+            unicode_normalization: transform_result.unicode_normalization,
+            multiline: transform_result.multiline,
+            dotall: transform_result.dotall,
+            local_distance: transform_result.local_distance,
+        })
     }
 
     /// Compile a rewrite rule.

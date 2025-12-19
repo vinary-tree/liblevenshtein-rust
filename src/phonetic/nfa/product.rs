@@ -39,6 +39,7 @@
 
 use super::nfa::{NFAChar, NFA};
 use super::types::StateId;
+use crate::transducer::Algorithm;
 use rustc_hash::FxHashSet;
 use std::collections::VecDeque;
 
@@ -61,6 +62,8 @@ pub struct ProductAutomatonChar {
     max_distance: u8,
     /// Phonetic weight applied to NFA transitions (default: 0.0)
     phonetic_weight: f64,
+    /// Levenshtein algorithm variant (standard, transposition, merge-and-split)
+    algorithm: Algorithm,
 }
 
 /// A state in the product automaton.
@@ -100,6 +103,23 @@ impl ProductAutomatonChar {
             nfa,
             max_distance,
             phonetic_weight: 0.0,
+            algorithm: Algorithm::Standard,
+        }
+    }
+
+    /// Create a product automaton with a specific algorithm.
+    ///
+    /// # Arguments
+    ///
+    /// * `nfa` - The phonetic NFA pattern
+    /// * `max_distance` - Maximum edit distance allowed
+    /// * `algorithm` - The Levenshtein algorithm variant to use
+    pub fn with_algorithm(nfa: NFAChar, max_distance: u8, algorithm: Algorithm) -> Self {
+        Self {
+            nfa,
+            max_distance,
+            phonetic_weight: 0.0,
+            algorithm,
         }
     }
 
@@ -112,6 +132,22 @@ impl ProductAutomatonChar {
             nfa,
             max_distance,
             phonetic_weight,
+            algorithm: Algorithm::Standard,
+        }
+    }
+
+    /// Create a product automaton with both algorithm and phonetic weight.
+    pub fn with_algorithm_and_weight(
+        nfa: NFAChar,
+        max_distance: u8,
+        algorithm: Algorithm,
+        phonetic_weight: f64,
+    ) -> Self {
+        Self {
+            nfa,
+            max_distance,
+            phonetic_weight,
+            algorithm,
         }
     }
 
@@ -123,6 +159,11 @@ impl ProductAutomatonChar {
     /// Get the phonetic weight.
     pub fn phonetic_weight(&self) -> f64 {
         self.phonetic_weight
+    }
+
+    /// Get the algorithm variant.
+    pub fn algorithm(&self) -> Algorithm {
+        self.algorithm
     }
 
     /// Get the initial state of the product automaton.
@@ -303,6 +344,32 @@ impl ProductAutomatonChar {
                 if !del_states.is_empty() {
                     queue.push_back((pos, del_states, errors + 1));
                 }
+
+                // 5. Transposition: swap adjacent characters (e.g., "ab" → "ba")
+                if self.algorithm.supports_transposition() && pos + 1 < n {
+                    let next_c = input_chars[pos + 1];
+                    let trans_states = self.nfa_step_transposed(&nfa_states, c, next_c);
+                    if !trans_states.is_empty() {
+                        queue.push_back((pos + 2, trans_states, errors + 1));
+                    }
+                }
+
+                // 6. Merge: two input chars → one NFA transition (e.g., "cl" → "d")
+                if self.algorithm.supports_merge_split() && pos + 1 < n {
+                    let next_c = input_chars[pos + 1];
+                    let merge_states = self.nfa_step_merged(&nfa_states, c, next_c);
+                    if !merge_states.is_empty() {
+                        queue.push_back((pos + 2, merge_states, errors + 1));
+                    }
+                }
+
+                // 7. Split: one input char → two NFA transitions (e.g., "ä" → "ae")
+                if self.algorithm.supports_merge_split() {
+                    let split_states = self.nfa_step_split(&nfa_states, c);
+                    if !split_states.is_empty() {
+                        queue.push_back((pos + 1, split_states, errors + 1));
+                    }
+                }
             }
         }
 
@@ -322,6 +389,51 @@ impl ProductAutomatonChar {
         }
 
         self.nfa.epsilon_closure(&next_states)
+    }
+
+    /// Step NFA with transposed characters.
+    ///
+    /// For transposition, we match c2 first, then c1 (swapped order).
+    /// This handles cases like "ab" → "ba" where the input has the characters
+    /// in transposed order relative to the pattern.
+    fn nfa_step_transposed(
+        &self,
+        states: &FxHashSet<StateId>,
+        c1: char,
+        c2: char,
+    ) -> FxHashSet<StateId> {
+        // Match c2 first (in NFA), then c1
+        // This corresponds to: pattern expects "ab" but input has "ba"
+        // We consume both input chars (b,a) while matching NFA pattern (a,b)
+        let after_c2 = self.nfa_step(states, c2);
+        self.nfa_step(&after_c2, c1)
+    }
+
+    /// Step NFA treating two input chars as merged into one NFA transition.
+    ///
+    /// For merge, we consume 2 input chars but advance NFA by only 1 transition.
+    /// This handles OCR errors like "cl" → "d" where two chars merge into one.
+    fn nfa_step_merged(
+        &self,
+        _states: &FxHashSet<StateId>,
+        _c1: char,
+        _c2: char,
+    ) -> FxHashSet<StateId> {
+        // For merge: consume 2 input chars, advance NFA by 1
+        // This is effectively skipping c1 and doing a wildcard match for c2's slot
+        // We advance NFA with any transition (like substitution, but consuming 2 chars)
+        self.nfa_advance(_states)
+    }
+
+    /// Step NFA with split (one input char consumes two NFA transitions).
+    ///
+    /// For split, we consume 1 input char but advance NFA by 2 transitions.
+    /// This handles OCR errors like "ä" → "ae" where one char splits into two.
+    fn nfa_step_split(&self, states: &FxHashSet<StateId>, _c: char) -> FxHashSet<StateId> {
+        // For split: consume 1 input char, advance NFA by 2
+        // We do two wildcard advances in the NFA
+        let after_first = self.nfa_advance(states);
+        self.nfa_advance(&after_first)
     }
 
     /// Check if we can reach a final state with remaining error budget.
@@ -452,6 +564,32 @@ impl ProductAutomatonChar {
                 if !del_states.is_empty() {
                     queue.push_back((pos, del_states, errors + 1));
                 }
+
+                // 5. Transposition: swap adjacent characters (e.g., "ab" → "ba")
+                if self.algorithm.supports_transposition() && pos + 1 < n {
+                    let next_c = input_chars[pos + 1];
+                    let trans_states = self.nfa_step_transposed(&nfa_states, c, next_c);
+                    if !trans_states.is_empty() {
+                        queue.push_back((pos + 2, trans_states, errors + 1));
+                    }
+                }
+
+                // 6. Merge: two input chars → one NFA transition (e.g., "cl" → "d")
+                if self.algorithm.supports_merge_split() && pos + 1 < n {
+                    let next_c = input_chars[pos + 1];
+                    let merge_states = self.nfa_step_merged(&nfa_states, c, next_c);
+                    if !merge_states.is_empty() {
+                        queue.push_back((pos + 2, merge_states, errors + 1));
+                    }
+                }
+
+                // 7. Split: one input char → two NFA transitions (e.g., "ä" → "ae")
+                if self.algorithm.supports_merge_split() {
+                    let split_states = self.nfa_step_split(&nfa_states, c);
+                    if !split_states.is_empty() {
+                        queue.push_back((pos + 1, split_states, errors + 1));
+                    }
+                }
             }
         }
 
@@ -512,6 +650,8 @@ pub struct ProductAutomaton {
     max_distance: u8,
     /// Phonetic weight
     phonetic_weight: f64,
+    /// Levenshtein algorithm variant
+    algorithm: Algorithm,
 }
 
 /// A state in the byte-level product automaton.
@@ -542,6 +682,17 @@ impl ProductAutomaton {
             nfa,
             max_distance,
             phonetic_weight: 0.0,
+            algorithm: Algorithm::Standard,
+        }
+    }
+
+    /// Create a product automaton with a specific algorithm.
+    pub fn with_algorithm(nfa: NFA, max_distance: u8, algorithm: Algorithm) -> Self {
+        Self {
+            nfa,
+            max_distance,
+            phonetic_weight: 0.0,
+            algorithm,
         }
     }
 
@@ -551,12 +702,33 @@ impl ProductAutomaton {
             nfa,
             max_distance,
             phonetic_weight,
+            algorithm: Algorithm::Standard,
+        }
+    }
+
+    /// Create a product automaton with both algorithm and phonetic weight.
+    pub fn with_algorithm_and_weight(
+        nfa: NFA,
+        max_distance: u8,
+        algorithm: Algorithm,
+        phonetic_weight: f64,
+    ) -> Self {
+        Self {
+            nfa,
+            max_distance,
+            phonetic_weight,
+            algorithm,
         }
     }
 
     /// Get max distance.
     pub fn max_distance(&self) -> u8 {
         self.max_distance
+    }
+
+    /// Get the algorithm variant.
+    pub fn algorithm(&self) -> Algorithm {
+        self.algorithm
     }
 
     /// Get the initial state.
@@ -601,6 +773,33 @@ impl ProductAutomaton {
         }
 
         self.nfa.epsilon_closure(&next_states)
+    }
+
+    /// Step NFA with transposed bytes.
+    fn nfa_step_transposed(
+        &self,
+        states: &FxHashSet<StateId>,
+        b1: u8,
+        b2: u8,
+    ) -> FxHashSet<StateId> {
+        let after_b2 = self.nfa_step(states, b2);
+        self.nfa_step(&after_b2, b1)
+    }
+
+    /// Step NFA treating two input bytes as merged.
+    fn nfa_step_merged(
+        &self,
+        states: &FxHashSet<StateId>,
+        _b1: u8,
+        _b2: u8,
+    ) -> FxHashSet<StateId> {
+        self.nfa_advance(states)
+    }
+
+    /// Step NFA with split (one byte consumes two NFA transitions).
+    fn nfa_step_split(&self, states: &FxHashSet<StateId>, _b: u8) -> FxHashSet<StateId> {
+        let after_first = self.nfa_advance(states);
+        self.nfa_advance(&after_first)
     }
 
     /// Check if input is accepted.
@@ -658,6 +857,32 @@ impl ProductAutomaton {
                 let del_states = self.nfa_advance(&nfa_states);
                 if !del_states.is_empty() {
                     queue.push_back((pos, del_states, errors + 1));
+                }
+
+                // 5. Transposition
+                if self.algorithm.supports_transposition() && pos + 1 < n {
+                    let next_b = input[pos + 1];
+                    let trans_states = self.nfa_step_transposed(&nfa_states, b, next_b);
+                    if !trans_states.is_empty() {
+                        queue.push_back((pos + 2, trans_states, errors + 1));
+                    }
+                }
+
+                // 6. Merge
+                if self.algorithm.supports_merge_split() && pos + 1 < n {
+                    let next_b = input[pos + 1];
+                    let merge_states = self.nfa_step_merged(&nfa_states, b, next_b);
+                    if !merge_states.is_empty() {
+                        queue.push_back((pos + 2, merge_states, errors + 1));
+                    }
+                }
+
+                // 7. Split
+                if self.algorithm.supports_merge_split() {
+                    let split_states = self.nfa_step_split(&nfa_states, b);
+                    if !split_states.is_empty() {
+                        queue.push_back((pos + 1, split_states, errors + 1));
+                    }
                 }
             }
         }
@@ -777,6 +1002,32 @@ impl ProductAutomaton {
                 let del_states = self.nfa_advance(&nfa_states);
                 if !del_states.is_empty() {
                     queue.push_back((pos, del_states, errors + 1));
+                }
+
+                // 5. Transposition
+                if self.algorithm.supports_transposition() && pos + 1 < n {
+                    let next_b = input[pos + 1];
+                    let trans_states = self.nfa_step_transposed(&nfa_states, b, next_b);
+                    if !trans_states.is_empty() {
+                        queue.push_back((pos + 2, trans_states, errors + 1));
+                    }
+                }
+
+                // 6. Merge
+                if self.algorithm.supports_merge_split() && pos + 1 < n {
+                    let next_b = input[pos + 1];
+                    let merge_states = self.nfa_step_merged(&nfa_states, b, next_b);
+                    if !merge_states.is_empty() {
+                        queue.push_back((pos + 2, merge_states, errors + 1));
+                    }
+                }
+
+                // 7. Split
+                if self.algorithm.supports_merge_split() {
+                    let split_states = self.nfa_step_split(&nfa_states, b);
+                    if !split_states.is_empty() {
+                        queue.push_back((pos + 1, split_states, errors + 1));
+                    }
                 }
             }
         }
@@ -987,5 +1238,109 @@ mod tests {
 
         assert_eq!(product.min_distance(b"phone"), Some(0));
         assert_eq!(product.min_distance(b"phon"), Some(1));
+    }
+
+    // ============================================================================
+    // Algorithm-specific Tests (Transposition, Merge/Split)
+    // ============================================================================
+
+    #[test]
+    fn test_transposition_accepts() {
+        // With standard algorithm, "ab" does NOT match "ba" with distance 1
+        // (requires 2 substitutions: a→b, b→a)
+        let nfa = compile(&parse("ab").unwrap()).unwrap();
+        let standard = ProductAutomatonChar::new(nfa.clone(), 1);
+        assert!(!standard.accepts("ba")); // distance 2 with standard
+
+        // With transposition algorithm, "ab" DOES match "ba" with distance 1
+        let transposition = ProductAutomatonChar::with_algorithm(nfa, 1, Algorithm::Transposition);
+        assert!(transposition.accepts("ba")); // distance 1 with transposition
+    }
+
+    #[test]
+    fn test_transposition_min_distance() {
+        let nfa = compile(&parse("ab").unwrap()).unwrap();
+
+        // Standard: "ba" is distance 2 from "ab"
+        let standard = ProductAutomatonChar::new(nfa.clone(), 2);
+        assert_eq!(standard.min_distance("ba"), Some(2));
+
+        // Transposition: "ba" is distance 1 from "ab"
+        let transposition = ProductAutomatonChar::with_algorithm(nfa, 2, Algorithm::Transposition);
+        assert_eq!(transposition.min_distance("ba"), Some(1));
+    }
+
+    #[test]
+    fn test_transposition_longer_string() {
+        // "hte" is "the" with h and t transposed
+        let nfa = compile(&parse("the").unwrap()).unwrap();
+
+        let standard = ProductAutomatonChar::new(nfa.clone(), 1);
+        // With standard, "hte" requires 2 substitutions
+        assert!(!standard.accepts("hte"));
+
+        let transposition = ProductAutomatonChar::with_algorithm(nfa, 1, Algorithm::Transposition);
+        // With transposition, "hte" is just 1 transposition away
+        assert!(transposition.accepts("hte"));
+    }
+
+    #[test]
+    fn test_merge_split_accepts() {
+        // With merge/split, we can match strings where chars are merged or split
+        let nfa = compile(&parse("abc").unwrap()).unwrap();
+
+        // Standard algorithm
+        let standard = ProductAutomatonChar::new(nfa.clone(), 1);
+        // "abcd" is 1 insertion (matches with standard)
+        assert!(standard.accepts("abcd"));
+        // "ab" is 1 deletion (matches with standard)
+        assert!(standard.accepts("ab"));
+
+        // With merge-and-split, we have additional operations
+        let merge_split =
+            ProductAutomatonChar::with_algorithm(nfa.clone(), 1, Algorithm::MergeAndSplit);
+        assert!(merge_split.accepts("abcd")); // Still works
+        assert!(merge_split.accepts("ab")); // Still works
+    }
+
+    #[test]
+    fn test_merge_split_min_distance() {
+        let nfa = compile(&parse("abc").unwrap()).unwrap();
+
+        let standard = ProductAutomatonChar::new(nfa.clone(), 3);
+        let merge_split = ProductAutomatonChar::with_algorithm(nfa, 3, Algorithm::MergeAndSplit);
+
+        // Both should find exact match
+        assert_eq!(standard.min_distance("abc"), Some(0));
+        assert_eq!(merge_split.min_distance("abc"), Some(0));
+
+        // Both should find single-edit matches
+        assert_eq!(standard.min_distance("ab"), Some(1));
+        assert_eq!(merge_split.min_distance("ab"), Some(1));
+    }
+
+    #[test]
+    fn test_algorithm_getter() {
+        let nfa = compile(&parse("test").unwrap()).unwrap();
+
+        let standard = ProductAutomatonChar::new(nfa.clone(), 1);
+        assert_eq!(standard.algorithm(), Algorithm::Standard);
+
+        let transposition = ProductAutomatonChar::with_algorithm(nfa.clone(), 1, Algorithm::Transposition);
+        assert_eq!(transposition.algorithm(), Algorithm::Transposition);
+
+        let merge_split = ProductAutomatonChar::with_algorithm(nfa, 1, Algorithm::MergeAndSplit);
+        assert_eq!(merge_split.algorithm(), Algorithm::MergeAndSplit);
+    }
+
+    #[test]
+    fn test_byte_level_transposition() {
+        let nfa = compile_bytes(&parse_bytes(b"ab").unwrap()).unwrap();
+
+        let standard = ProductAutomaton::new(nfa.clone(), 1);
+        assert!(!standard.accepts(b"ba")); // distance 2 with standard
+
+        let transposition = ProductAutomaton::with_algorithm(nfa, 1, Algorithm::Transposition);
+        assert!(transposition.accepts(b"ba")); // distance 1 with transposition
     }
 }

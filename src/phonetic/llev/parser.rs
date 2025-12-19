@@ -1405,9 +1405,31 @@ impl<'a> Parser<'a> {
     }
 
     /// Expect and consume a number.
+    /// In Pattern mode, digits are Char tokens - collect them into a number.
     fn expect_number(&mut self) -> LLevResult<usize> {
         match self.advance()? {
             Token::Number(n) => Ok(n),
+            // In Pattern mode, digits are Char tokens - collect them into a number
+            Token::Char(c) if c.is_ascii_digit() => {
+                let mut num_str = String::new();
+                num_str.push(c);
+                // Collect consecutive digit chars
+                while let Ok(Token::Char(next_c)) = self.lexer.peek() {
+                    if next_c.is_ascii_digit() {
+                        num_str.push(*next_c);
+                        self.advance()?;
+                    } else {
+                        break;
+                    }
+                }
+                num_str.parse::<usize>().map_err(|_| {
+                    LLevError::expected_token(
+                        "number".to_string(),
+                        format!("'{}'", num_str),
+                        self.lexer.position(),
+                    )
+                })
+            }
             other => Err(LLevError::expected_token(
                 "number".to_string(),
                 format!("{:?}", other),

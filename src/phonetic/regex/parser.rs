@@ -492,6 +492,7 @@ impl<'a> Parser<'a> {
             accent_insensitive: parsed.accent_insensitive,
             multiline: parsed.multiline,
             dotall: parsed.dotall,
+            local_distance: parsed.levenshtein_distance,
         })
     }
 

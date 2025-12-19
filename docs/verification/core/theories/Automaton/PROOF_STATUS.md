@@ -1,20 +1,124 @@
 # Automaton Proofs Status
 
-**Date**: December 10, 2025 (Session 4 Update)
+**Date**: December 18, 2025 (Session 6 Update)
 **Build Status**: ✅ Compiles successfully
 
 ## Summary
 
-The Automaton verification module contains proofs for soundness and completeness of Levenshtein automata supporting three algorithms: Standard, Transposition (Damerau), and Merge/Split. The build compiles but has **22 admitted lemmas** across multiple files:
-- Completeness.v: 8
-- Soundness.v: 4
+The Automaton verification module contains proofs for soundness and completeness of Levenshtein automata supporting three algorithms: Standard, Transposition (Damerau), and Merge/Split. The build compiles but has **21 admitted lemmas** across multiple files:
+- Completeness.v: 9
+- Soundness.v: 3 (reduced from 4 - deleted orphan `pseudo_reachable_nonspecial_implies_reachable`)
 - OptimalTrace/MergeSplitConstruction.v: 4
 - Composition/DamerauComposition.v: 2
 - Core/MergeSplitDistance.v: 2
 - Composition/MergeSplitComposition.v: 1
 - MainTheorem.v: 1
 
-### Recent Progress (December 10, 2025)
+### Recent Progress (December 18, 2025)
+
+**Session 6 Progress: Merge-Split Soundness Analysis**
+
+**Key Finding: `standard_accepts_implies_merge_split_accepts` is PROVEN**
+
+The lemma at Completeness.v:4127-4206 is fully proven (Qed), not admitted. This was previously marked as out of scope. The proof uses:
+- `automaton_run_std_ms_correspondence` for relating Standard and MergeAndSplit runs
+- Initial position equality and epsilon closure correspondence
+- Final position preservation through antichain filtering
+
+**Analysis of Remaining Soundness Admits (3 total):**
+
+| Lemma | Line | Issue | Required Infrastructure |
+|-------|------|-------|-------------------------|
+| `automaton_run_preserves_reachable_transposition` | 3872-3999 | Special position tracking gap at line 3991 | Needs provenance tracking |
+| `automaton_sound_merge_split` | 4479-4491 | No proof body | Needs `position_reachable_merge_split` infrastructure |
+| `automaton_sound_merge_split_lev` | 4498-4508 | Depends on above + needs `lev_le_double_merge_split` | Moderate effort |
+
+**Session 6 Action: Deleted `pseudo_reachable_nonspecial_implies_reachable`**
+
+The orphan `position_pseudo_reachable_damerau` infrastructure (inductive + 2 lemmas) was deleted because:
+1. `pseudo_reachable_nonspecial_implies_reachable` was NEVER used
+2. `automaton_sound_transposition` (Qed) uses a different proof path via `automaton_run_preserves_reachable_transposition`
+3. Removing ~140 lines of dead code reduces complexity without affecting any proofs
+
+**Merge-Split Soundness Requirements:**
+
+For `automaton_sound_merge_split`:
+1. **Missing Infrastructure**: No `position_reachable_merge_split` inductive type exists
+2. **Transition Structure**: MergeAndSplit has `transition_position_merge_split` with:
+   - Standard transitions (match, substitute, insert)
+   - Merge: 2 query chars → 1 dict char (`std_pos (S (S i)) (S e)`)
+   - Enter split: creates `special_pos i (S e)` to start split
+   - Complete split: from special, creates `std_pos (S i) e`
+3. **Required Work**: Define `position_reachable_merge_split` and prove `automaton_run_preserves_reachable_merge_split`
+
+For `automaton_sound_merge_split_lev`:
+1. Depends on `automaton_sound_merge_split` (merge_split_distance ≤ n)
+2. Needs `lev_le_double_merge_split: lev_distance s1 s2 ≤ 2 * merge_split_distance s1 s2`
+   - Not currently proven; needs induction on optimal MS edit sequence
+   - Each merge/split (cost 1) simulated by ≤2 standard ops (cost 2)
+
+**Proven Relationships:**
+- ✅ `ms_le_standard`: `merge_split_distance ≤ lev_distance` (MergeSplitDistance.v:184)
+- ❌ `lev_le_double_merge_split`: `lev_distance ≤ 2 * merge_split_distance` (MISSING)
+
+---
+
+**Session 5 Progress: Position Tracking Analysis**
+
+**Key Finding: `fold_state_insert_incl` is FALSE as stated**
+
+The lemma at Completeness.v:3769 claimed that antichain filtering preserves inclusion between position lists. This is FALSE due to how subsumption works:
+
+```coq
+(* Counterexample: *)
+(* pos_list1 = [p], pos_list2 = [p, q] where q subsumes p for alg2 *)
+(* Output for pos_list1: [p] (p survives, nothing to subsume it) *)
+(* Output for pos_list2: [q] (q subsumes and replaces p) *)
+(* incl [p] [q] = false *)
+```
+
+Updated the lemma's docstring to clearly document it as FALSE with counterexample.
+
+**Fundamental Issue: `positions_contain` vs Antichain Mismatch**
+
+The completeness proof structure assumes `positions_contain` is preserved through execution, but this is incompatible with antichain filtering:
+
+1. **`positions_contain`** requires exact `term_index` matching via `position_subsumes`
+2. **`subsumes_standard`** allows positions at different indices to subsume each other when `|i - j| <= f - e`
+
+This mismatch means:
+- A position `(i, e)` might be subsumed by `(j, f)` with `j ≠ i` and `f < e`
+- The transition from `(j, f)` produces different output than from `(i, e)`
+- So `positions_contain` invariant breaks
+
+**Blocking Admits in Completeness.v**:
+
+| Line | Lemma | Issue |
+|------|-------|-------|
+| 2438 | `reachable_implies_contained_aux` | Inner admits at 2396, 2416, 2436 - need state-level transition lemmas |
+| 2566 | `automaton_run_not_dead_for_reachable` | Match case at 2531 needs e < n but match has e <= n |
+| 2614 | `automaton_final_state_accepts_standard` | Depends on `reachable_implies_contained_aux` |
+| 3345 | `automaton_run_step_std_trans` | Uses false `fold_state_insert_incl` |
+| 3769 | `fold_state_insert_incl` | **FALSE as stated** - documented |
+| 4054 | `automaton_run_step_std_ms` | Uses false `fold_state_insert_incl` |
+| 4302 | `automaton_complete_transposition` | Needs Damerau-specific path tracking |
+| 4340 | `automaton_complete_merge_split` | Needs MergeAndSplit-specific path tracking |
+| 4397 | `automaton_finds_distance` | Depends on completeness infrastructure |
+
+**Proven Helpers**:
+- ✅ `fold_state_insert_nonempty`: Antichain on non-empty list is non-empty
+- ✅ `fold_state_insert_preserves_membership`: Final positions survive antichain (key for acceptance)
+- ✅ `fold_state_insert_has_final`: If input has final position, output has final position
+
+**Recommended Approach (Option C from above)**:
+
+Instead of tracking all reachable positions, track only that:
+1. The automaton doesn't go dead (maintains some position with bounded errors)
+2. When a final position is reachable, SOME final position survives to the final state
+
+Key insight: `fold_state_insert_has_final` + "non-final cannot subsume final" rule means final positions are protected. The gap is showing final positions enter the state in the first place.
+
+### Previous Progress (December 10, 2025)
 
 **Session 4 Progress: Merge-Split Trace Infrastructure**
 
@@ -99,14 +203,15 @@ The Automaton verification module contains proofs for soundness and completeness
 
 ## Admitted Lemmas by File
 
-### Automaton/Soundness.v (4 admitted)
+### Automaton/Soundness.v (3 admitted - reduced from 4)
 
 | Line | Name | Type | Scope | Notes |
 |------|------|------|-------|-------|
-| 246 | `pseudo_reachable_nonspecial_implies_reachable` | Lemma | Transposition | complete_transpose case for spurious specials |
-| 4142 | `automaton_run_preserves_reachable_transposition` | Lemma | Transposition | **BLOCKED** - See detailed analysis below |
-| 4634 | `automaton_sound_merge_split` | Theorem | Merge/Split | **OUT OF SCOPE** |
-| 4651 | `automaton_sound_merge_split_lev` | Corollary | Merge/Split | **OUT OF SCOPE** |
+| 3999 | `automaton_run_preserves_reachable_transposition` | Lemma | Transposition | Special position tracking gap at line 3991 |
+| 4491 | `automaton_sound_merge_split` | Theorem | Merge/Split | Needs `position_reachable_merge_split` |
+| 4508 | `automaton_sound_merge_split_lev` | Corollary | Merge/Split | Depends on above + `lev_le_double_merge_split` |
+
+**Deleted:** `pseudo_reachable_nonspecial_implies_reachable` (was orphan code, never used)
 
 ### Automaton/Completeness.v (8 admitted)
 
@@ -281,14 +386,15 @@ The following proven lemmas can help complete the remaining proofs:
 - `fold_state_insert_accepting` (Completeness.v)
 - `transition_state_not_dead_standard` (Completeness.v)
 
-## Out of Scope Lemmas
+## Merge/Split Lemma Status
 
-The following 4 merge/split lemmas are **not in scope** for the current work:
+**PROVEN:**
+- ✅ `standard_accepts_implies_merge_split_accepts` (Completeness.v:4127-4206) - Qed
 
-1. `automaton_sound_merge_split` (Soundness.v:4417)
-2. `automaton_sound_merge_split_lev` (Soundness.v:4434)
-3. `standard_accepts_implies_merge_split_accepts` (Completeness.v:2996)
-4. `automaton_complete_merge_split` (Completeness.v:3130)
+**ADMITTED (require infrastructure):**
+- `automaton_sound_merge_split` (Soundness.v:4622-4634) - needs `position_reachable_merge_split`
+- `automaton_sound_merge_split_lev` (Soundness.v:4641-4651) - depends on above + `lev_le_double_merge_split`
+- `automaton_complete_merge_split` (Completeness.v:4326-4340) - needs merge-split-specific path tracking
 
 These require integration with the MergeSplitDistance.v module which defines a different distance metric.
 
@@ -364,12 +470,12 @@ Inductive position_trackable_damerau (query : list Char) (n : nat) :
 ```
 Then prove non-special trackable positions are either reachable OR subsumed by reachable.
 
-#### Approach B: Use Pseudo-Reachability
-1. Complete `pseudo_reachable_nonspecial_implies_reachable` (Soundness.v:246)
-2. Change invariant to track pseudo-reachability
-3. Convert to true reachability at final step
+#### Approach B: Use Pseudo-Reachability (ABANDONED)
+~~1. Complete `pseudo_reachable_nonspecial_implies_reachable` (Soundness.v:246)~~
+~~2. Change invariant to track pseudo-reachability~~
+~~3. Convert to true reachability at final step~~
 
-**Blocked by**: Same issue - complete_transpose case for spurious specials.
+**Status**: ABANDONED - The `position_pseudo_reachable_damerau` infrastructure was deleted in Session 6 as orphan code. The soundness proof uses a different path via `automaton_run_preserves_reachable_transposition`.
 
 #### Approach C: Prove Post-Antichain Only
 Instead of proving all `trans_pos` positions are reachable, prove:
@@ -426,7 +532,8 @@ These lemmas need fundamental changes to the proof approach:
 | Lemma | Issue | Effort |
 |-------|-------|--------|
 | `automaton_run_preserves_reachable_transposition` | Spurious special positions (see analysis above) | HIGH |
-| `pseudo_reachable_nonspecial_implies_reachable` | Same spurious position issue | HIGH |
+
+**Deleted**: `pseudo_reachable_nonspecial_implies_reachable` was removed as orphan code (Session 6)
 
 **Recommendation**: Implement Approach C (post-antichain reachability) - requires proving spurious outputs are always subsumed.
 
@@ -471,9 +578,142 @@ The `automaton_run_std_trans_correspondence` lemma requires maintaining position
 
 The current proof uses this weaker property (final state preservation) rather than full position inclusion.
 
-### Category 5: Out of Scope
+### Category 5: Merge/Split (Requires Significant Infrastructure)
 
-The 4 merge/split lemmas remain out of scope as documented.
+**PROVEN:**
+- ✅ `standard_accepts_implies_merge_split_accepts` (Completeness.v:4127-4206)
+
+**ADMITTED:**
+- `automaton_sound_merge_split` - requires `position_reachable_merge_split` inductive type
+- `automaton_sound_merge_split_lev` - requires `lev_le_double_merge_split` lemma
+- `automaton_complete_merge_split` - requires merge-split-specific path tracking
+
+## Option C Implementation Strategy (December 18, 2025)
+
+### Key Insight: Subsumption Preserves Reachability to Final
+
+The fundamental insight enabling Option C is that if position `p` can reach a final position with errors ≤ n, and `p'` subsumes `p` (via `subsumes_standard`), then `p'` can ALSO reach a final position with errors ≤ n.
+
+**Proof Sketch:**
+- Let `p = (i, e)` reach final `(qlen, f)` with `f ≤ n` via some edit operations
+- Let `p' = (j, e')` subsume `p`, meaning `e' ≤ e` and `|i - j| ≤ e - e'`
+- Case `j ≤ i` (i.e., `j = i - d` where `0 ≤ d ≤ e - e'`):
+  - Use `d` delete operations: `(j, e') → (j+d, e'+d) = (i, e'+d)` with `e'+d ≤ e`
+  - Follow same path as `p` to reach `(qlen, f' = e'+d + (f-e))`
+  - Total: `f' = f + (e'+d) - e ≤ f + (e'-e) + d ≤ f` (since `d ≤ e-e'`)
+  - So `f' ≤ f ≤ n` ✓
+- Case `j > i` is symmetric
+
+### Implementation Plan
+
+#### Step 1: Define `can_complete_to_final` Predicate
+
+```coq
+(* Position can complete to a final position via remaining dict chars *)
+Definition can_complete_to_final (qlen n : nat) (p : Position) (remaining_dict : list Char) (query : list Char) : Prop :=
+  exists p_final,
+    position_reachable_from query n remaining_dict p p_final /\
+    position_is_final p_final qlen = true /\
+    num_errors p_final <= n.
+```
+
+Where `position_reachable_from` extends `position_reachable` to start from position `p` instead of `initial_position`.
+
+#### Step 2: Prove `subsumption_preserves_can_complete`
+
+```coq
+Lemma subsumption_preserves_can_complete : forall qlen n p p' remaining query,
+  subsumes_standard qlen p' p = true ->
+  can_complete_to_final qlen n p remaining query ->
+  can_complete_to_final qlen n p' remaining query.
+```
+
+This follows from the insight above: the subsuming position can simulate the path by prepending delete operations.
+
+#### Step 3: Prove `can_complete_preserved_through_antichain`
+
+```coq
+Lemma can_complete_preserved_through_antichain : forall qlen alg positions remaining query n,
+  (exists p, In p positions /\ can_complete_to_final qlen n p remaining query) ->
+  let result := fold_left (fun s q => state_insert q s) positions (empty_state alg qlen) in
+  (exists p', In p' (positions result) /\ can_complete_to_final qlen n p' remaining query).
+```
+
+This uses `subsumption_preserves_can_complete`: if a can-complete position is filtered out, its subsuming replacement can also complete.
+
+#### Step 4: Prove `can_complete_preserved_through_transition`
+
+```coq
+Lemma can_complete_preserved_through_transition : forall qlen n s c remaining query s',
+  transition_state Standard s c query n = Some s' ->
+  (exists p, In p (positions s) /\ can_complete_to_final qlen n p (c :: remaining) query) ->
+  (exists p', In p' (positions s') /\ can_complete_to_final qlen n p' remaining query).
+```
+
+Key steps:
+1. From `can_complete` for `(c :: remaining)`, extract the position `p` and its completion path
+2. The first step of the path uses `c` via match/substitute/insert
+3. `transition_state` generates the corresponding next position in `trans_positions`
+4. `epsilon_closure` preserves or extends it
+5. Antichain filtering preserves `can_complete` (Step 3)
+
+#### Step 5: Prove `reachable_final_produces_closed_final`
+
+```coq
+Lemma reachable_final_produces_closed_final : forall query n dict,
+  (exists p, position_reachable query n dict p /\
+             position_is_final p (length query) = true /\
+             num_errors p <= n) ->
+  match automaton_run_from_initial Standard query n dict with
+  | None => False
+  | Some final => state_is_final final = true
+  end.
+```
+
+Proof by induction on `dict`:
+- Base: `dict = []`, initial position `(0,0)` can complete to final (given hypothesis)
+- Step: Use `can_complete_preserved_through_transition` for each character
+
+At the end, `can_complete_to_final qlen n p [] query` means `p` IS a final position (no more chars to process). Use `fold_state_insert_has_final` to show it survives.
+
+#### Step 6: Update `automaton_final_state_accepts_standard`
+
+Replace the current admitted proof with:
+```coq
+Lemma automaton_final_state_accepts_standard : forall query n dict final p,
+  automaton_run_from_initial Standard query n dict = Some final ->
+  position_reachable query n dict p ->
+  position_is_final p (length query) = true ->
+  is_special p = false ->
+  num_errors p <= n ->
+  state_is_final final = true.
+Proof.
+  intros query n dict final p Hrun Hreach Hfinal Hspec Herr.
+  apply reachable_final_produces_closed_final.
+  - exists p. split; [exact Hreach | split; [exact Hfinal | exact Herr]].
+  - rewrite Hrun. (* Shows final state exists *)
+Qed.
+```
+
+### Why This Approach Works
+
+1. **No individual position tracking**: We don't track whether specific positions survive antichain
+2. **Property-based reasoning**: We track "can complete to final" which is preserved by subsumption
+3. **Final position protection**: `fold_state_insert_has_final` ensures final positions survive
+4. **Existing infrastructure**: Uses proven lemmas (`fold_state_insert_has_final`, `transition_*_produces_*`)
+
+### Estimated Complexity
+
+| Lemma | Lines | Difficulty |
+|-------|-------|------------|
+| `can_complete_to_final` definition | 10-20 | LOW |
+| `position_reachable_from` inductive | 30-50 | MEDIUM |
+| `subsumption_preserves_can_complete` | 40-60 | MEDIUM |
+| `can_complete_preserved_through_antichain` | 30-50 | MEDIUM |
+| `can_complete_preserved_through_transition` | 60-100 | HIGH |
+| `reachable_final_produces_closed_final` | 40-60 | MEDIUM |
+| Update `automaton_final_state_accepts_standard` | 10-20 | LOW |
+| **Total** | **220-360** | - |
 
 ## Build Command
 

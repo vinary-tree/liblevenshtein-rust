@@ -1441,13 +1441,15 @@ mod tests {
 
     #[test]
     fn test_lexer_number() {
-        let mut lexer = Lexer::new("123");
+        // Use new_file() for TopLevel mode where numbers are tokenized
+        let mut lexer = Lexer::new_file("123");
         assert_eq!(lexer.next_token().unwrap(), Token::Number(123));
     }
 
     #[test]
     fn test_lexer_float() {
-        let mut lexer = Lexer::new("0.15");
+        // Use new_file() for TopLevel mode where floats are tokenized
+        let mut lexer = Lexer::new_file("0.15");
         match lexer.next_token().unwrap() {
             Token::Float(f) => assert!((f - 0.15).abs() < 0.001),
             t => panic!("expected Float, got {:?}", t),

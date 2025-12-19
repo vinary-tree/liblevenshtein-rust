@@ -24,6 +24,10 @@ use crate::serialization::{BincodeSerializer, DictionarySerializer, JsonSerializ
 #[cfg(feature = "phonetic-rules")]
 use crate::phonetic::{apply_rules_seq, apply_rules_seq_char};
 
+// Phonetic grep imports
+#[cfg(feature = "phonetic-rules")]
+use crate::phonetic::grep::PhoneticGrep;
+
 use super::args::{Cli, SerializationFormat};
 use super::detect::{detect_format, DictFormat};
 use super::paths::{default_dict_path, PersistentConfig};
@@ -116,6 +120,32 @@ pub fn execute(cli: &Cli) -> Result<()> {
             anyhow::anyhow!("--rules is required for --match-regex operation")
         })?;
         cmd_match_regex(text, rules, cli.multiline, cli.dotall, cli.compiled)
+    } else if cli.grep {
+        let pattern = cli.pattern.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--pattern is required for --grep operation")
+        })?;
+        cmd_grep(GrepOptions {
+            pattern,
+            files: &cli.files,
+            rules: cli.rules.as_ref(),
+            max_distance: cli.max_distance as u8,
+            algorithm: cli.algorithm,
+            with_filename: cli.with_filename,
+            no_filename: cli.no_filename,
+            line_number: cli.line_number,
+            column: cli.column,
+            count: cli.count,
+            no_color: cli.no_color,
+            ignore_case: cli.ignore_case,
+            only_matching: cli.only_matching,
+            no_decompress: cli.no_decompress,
+            archive_filter: cli.archive_filter.as_deref(),
+            max_file_size: cli.max_file_size,
+            include_hidden: cli.include_hidden,
+            extract_documents: cli.extract_documents,
+            enable_ocr: cli.enable_ocr,
+            ocr_language: &cli.ocr_language,
+        })
     } else {
         bail!("No operation specified. Use --help for available operations.")
     }
@@ -1600,5 +1630,451 @@ fn cmd_match_regex(
     bail!(
         "Match-regex command requires both 'phonetic-rules' and 'serialization' features.\n\
          Rebuild with: cargo build --features \"phonetic-rules,serialization\""
+    );
+}
+
+/// Grep command options
+struct GrepOptions<'a> {
+    pattern: &'a str,
+    files: &'a [PathBuf],
+    rules: Option<&'a PathBuf>,
+    max_distance: u8,
+    algorithm: Algorithm,
+    with_filename: bool,
+    no_filename: bool,
+    line_number: bool,
+    column: bool,
+    count: bool,
+    no_color: bool,
+    ignore_case: bool,
+    only_matching: bool,
+    // Compression/archive options
+    no_decompress: bool,
+    archive_filter: Option<&'a str>,
+    max_file_size: Option<u64>,
+    include_hidden: bool,
+    // Document extraction options
+    extract_documents: bool,
+    enable_ocr: bool,
+    ocr_language: &'a str,
+}
+
+/// Search files for fuzzy phonetic matches
+#[cfg(feature = "phonetic-rules")]
+fn cmd_grep(opts: GrepOptions) -> Result<()> {
+    use std::io::{BufRead, Write};
+
+    // Apply case-insensitivity at compile time by wrapping pattern with (?i:...)
+    // This ensures the NFA is built with character classes for both cases,
+    // fixing the bug where --ignore-case didn't work with local distance patterns
+    let pattern = if opts.ignore_case {
+        format!("(?i:{})", opts.pattern)
+    } else {
+        opts.pattern.to_string()
+    };
+
+    // Build the grep matcher with the specified algorithm
+    let grep = if let Some(rules_path) = opts.rules {
+        PhoneticGrep::with_rules(&pattern, rules_path, opts.max_distance)
+            .map_err(|e| anyhow::anyhow!("Failed to create grep matcher: {}", e))?
+            .algorithm(opts.algorithm)
+    } else {
+        PhoneticGrep::from_pattern(&pattern, opts.max_distance)
+            .map_err(|e| anyhow::anyhow!("Failed to create grep matcher: {}", e))?
+            .algorithm(opts.algorithm)
+    };
+
+    // Still set case_insensitive for consistency (runtime lowercasing is now redundant
+    // but harmless since the NFA already accepts both cases)
+    let grep = if opts.ignore_case {
+        grep.case_insensitive(true)
+    } else {
+        grep
+    };
+
+    // Determine if we should show filenames
+    let show_filename = if opts.no_filename {
+        false
+    } else if opts.with_filename {
+        true
+    } else {
+        // Auto: show if multiple files or reading from stdin
+        opts.files.len() > 1 || opts.files.is_empty()
+    };
+
+    // Use color unless --no-color is specified
+    // The colored crate will automatically disable colors when stdout is not a TTY
+    let use_color = !opts.no_color;
+
+    // Process files (or stdin if no files specified)
+    let mut total_matches = 0usize;
+    let mut file_match_counts: Vec<(String, usize)> = Vec::new();
+
+    if opts.files.is_empty() {
+        // Read from stdin
+        let stdin = std::io::stdin();
+        let content = stdin.lock().lines().filter_map(|l| l.ok()).collect::<Vec<_>>().join("\n");
+        let matches = process_content(&grep, &content, "(stdin)", show_filename, &opts, use_color)?;
+        total_matches += matches;
+        if opts.count {
+            file_match_counts.push(("(stdin)".to_string(), matches));
+        }
+    } else {
+        // Check if we should use GrepSource for compressed/archived files
+        #[cfg(any(feature = "grep-compression", feature = "grep-archives"))]
+        {
+            use crate::grep::{GrepConfig, GrepPath, GrepSource};
+
+            // Build GrepConfig from options
+            let mut config = GrepConfig::new();
+            if opts.no_decompress {
+                config = config.no_decompress();
+            }
+            if let Some(max_size) = opts.max_file_size {
+                config = config.max_size(max_size);
+            }
+            config = config.include_hidden_files(opts.include_hidden);
+            if let Some(filter) = opts.archive_filter {
+                config = config.default_filter(filter);
+            }
+            // Document extraction options
+            if opts.extract_documents {
+                config = config.extract_documents(true);
+            }
+            if opts.enable_ocr {
+                config = config.enable_ocr(true);
+            }
+            if !opts.ocr_language.is_empty() && opts.ocr_language != "eng" {
+                config = config.ocr_language(opts.ocr_language);
+            }
+
+            let source = GrepSource::new(config);
+
+            for file_path in opts.files {
+                // Parse the path (handles archive:filter syntax)
+                let grep_path = match GrepPath::parse(&file_path.display().to_string()) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        // Fall back to regular path
+                        GrepPath::from_path(file_path)
+                    }
+                };
+
+                // Use GrepSource for all files (handles plain, compressed, archived, and documents like PDF)
+                match source.open(&grep_path) {
+                    Ok(entries) => {
+                        for entry_result in entries {
+                            match entry_result {
+                                Ok(entry) => {
+                                    let source_name = entry.source_id().display();
+                                    match entry.content_str() {
+                                        Ok(content) => {
+                                            let matches = process_content(
+                                                &grep,
+                                                content,
+                                                &source_name,
+                                                show_filename,
+                                                &opts,
+                                                use_color,
+                                            )?;
+                                            total_matches += matches;
+                                            if opts.count {
+                                                file_match_counts.push((source_name, matches));
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("{}: {}", source_name.red(), e);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("{}: {}", file_path.display().to_string().red(), e);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("{}: {}", file_path.display().to_string().red(), e);
+                    }
+                }
+            }
+        }
+
+        #[cfg(not(any(feature = "grep-compression", feature = "grep-archives")))]
+        {
+            // No compression/archive support - use GrepSource for document extraction if available
+            #[cfg(any(
+                feature = "grep-pdf",
+                feature = "grep-docx",
+                feature = "grep-xlsx",
+                feature = "grep-epub",
+                feature = "grep-odt"
+            ))]
+            {
+                use crate::grep::{GrepConfig, GrepPath, GrepSource};
+
+                // Build GrepConfig from options
+                let mut config = GrepConfig::new();
+                if let Some(max_size) = opts.max_file_size {
+                    config = config.max_size(max_size);
+                }
+                config = config.include_hidden_files(opts.include_hidden);
+                // Document extraction options
+                if opts.extract_documents {
+                    config = config.extract_documents(true);
+                }
+                if opts.enable_ocr {
+                    config = config.enable_ocr(true);
+                }
+                if !opts.ocr_language.is_empty() && opts.ocr_language != "eng" {
+                    config = config.ocr_language(opts.ocr_language.clone());
+                }
+
+                let source = GrepSource::new(config);
+
+                for file_path in opts.files {
+                    let grep_path = GrepPath::from_path(file_path.clone());
+
+                    match source.open(&grep_path) {
+                        Ok(entries) => {
+                            for entry_result in entries {
+                                match entry_result {
+                                    Ok(entry) => {
+                                        let source_name = entry.source_id().display();
+                                        match entry.content_str() {
+                                            Ok(content) => {
+                                                let matches = process_content(
+                                                    &grep,
+                                                    content,
+                                                    &source_name,
+                                                    show_filename,
+                                                    &opts,
+                                                    use_color,
+                                                )?;
+                                                total_matches += matches;
+                                                if opts.count {
+                                                    file_match_counts.push((source_name, matches));
+                                                }
+                                            }
+                                            Err(e) => {
+                                                eprintln!("{}: {}", source_name.red(), e);
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("{}: {}", file_path.display().to_string().red(), e);
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("{}: {}", file_path.display().to_string().red(), e);
+                        }
+                    }
+                }
+            }
+
+            // No document extraction support - read files directly as text
+            #[cfg(not(any(
+                feature = "grep-pdf",
+                feature = "grep-docx",
+                feature = "grep-xlsx",
+                feature = "grep-epub",
+                feature = "grep-odt"
+            )))]
+            {
+                for file_path in opts.files {
+                    let filename = file_path.display().to_string();
+                    match std::fs::read_to_string(file_path) {
+                        Ok(content) => {
+                            let matches = process_content(&grep, &content, &filename, show_filename, &opts, use_color)?;
+                            total_matches += matches;
+                            if opts.count {
+                                file_match_counts.push((filename, matches));
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("{}: {}", filename.red(), e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Print count summary if in count mode
+    if opts.count {
+        for (filename, count) in &file_match_counts {
+            if show_filename {
+                if use_color {
+                    println!("{}:{}", filename.magenta(), count.to_string().green());
+                } else {
+                    println!("{}:{}", filename, count);
+                }
+            } else {
+                println!("{}", count);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Process content and print matches
+#[cfg(feature = "phonetic-rules")]
+fn process_content(
+    grep: &PhoneticGrep,
+    content: &str,
+    filename: &str,
+    show_filename: bool,
+    opts: &GrepOptions,
+    use_color: bool,
+) -> Result<usize> {
+    use std::io::Write;
+
+    let mut match_count = 0usize;
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
+
+    for line_match in grep.grep_file(content) {
+        match_count += line_match.matches.len();
+
+        // In count mode, just count, don't print
+        if opts.count {
+            continue;
+        }
+
+        for m in &line_match.matches {
+            if opts.only_matching {
+                // Only print the matched text
+                print_only_matching(&mut handle, filename, show_filename, &line_match, m, opts, use_color)?;
+            } else {
+                // Print full line with highlighted match
+                print_full_line(&mut handle, filename, show_filename, &line_match, m, opts, use_color)?;
+            }
+        }
+    }
+
+    Ok(match_count)
+}
+
+/// Print only the matching portion
+#[cfg(feature = "phonetic-rules")]
+fn print_only_matching(
+    handle: &mut std::io::StdoutLock,
+    filename: &str,
+    show_filename: bool,
+    line_match: &crate::phonetic::grep::LineMatch,
+    m: &crate::phonetic::grep::GrepMatch,
+    opts: &GrepOptions,
+    use_color: bool,
+) -> Result<()> {
+    use std::io::Write;
+
+    if show_filename {
+        if use_color {
+            write!(handle, "{}:", filename.magenta())?;
+        } else {
+            write!(handle, "{}:", filename)?;
+        }
+    }
+
+    if opts.line_number {
+        if use_color {
+            write!(handle, "{}:", line_match.line_number.to_string().green())?;
+        } else {
+            write!(handle, "{}:", line_match.line_number)?;
+        }
+    }
+
+    if opts.column {
+        if use_color {
+            write!(handle, "{}:", m.start_column.to_string().cyan())?;
+        } else {
+            write!(handle, "{}:", m.start_column)?;
+        }
+    }
+
+    // Print matched text with distance indicator
+    if use_color {
+        let color_text = if m.distance == 0 {
+            m.matched_text.green().bold().to_string()
+        } else {
+            m.matched_text.yellow().to_string()
+        };
+        writeln!(handle, "{}", color_text)?;
+    } else {
+        writeln!(handle, "{}", m.matched_text)?;
+    }
+
+    Ok(())
+}
+
+/// Print full line with highlighted match
+#[cfg(feature = "phonetic-rules")]
+fn print_full_line(
+    handle: &mut std::io::StdoutLock,
+    filename: &str,
+    show_filename: bool,
+    line_match: &crate::phonetic::grep::LineMatch,
+    m: &crate::phonetic::grep::GrepMatch,
+    opts: &GrepOptions,
+    use_color: bool,
+) -> Result<()> {
+    use std::io::Write;
+
+    if show_filename {
+        if use_color {
+            write!(handle, "{}:", filename.magenta())?;
+        } else {
+            write!(handle, "{}:", filename)?;
+        }
+    }
+
+    if opts.line_number {
+        if use_color {
+            write!(handle, "{}:", line_match.line_number.to_string().green())?;
+        } else {
+            write!(handle, "{}:", line_match.line_number)?;
+        }
+    }
+
+    if opts.column {
+        if use_color {
+            write!(handle, "{}:", m.start_column.to_string().cyan())?;
+        } else {
+            write!(handle, "{}:", m.start_column)?;
+        }
+    }
+
+    // Print line with highlighted match
+    let line = &line_match.line;
+    let start = m.start_column.saturating_sub(1); // 0-indexed
+    let end = m.end_column.min(line.len());
+
+    if use_color {
+        let before = &line[..start];
+        let matched = &line[start..end];
+        let after = &line[end..];
+
+        let colored_match = if m.distance == 0 {
+            matched.green().bold().to_string()
+        } else {
+            matched.yellow().to_string()
+        };
+
+        writeln!(handle, "{}{}{}", before, colored_match, after)?;
+    } else {
+        writeln!(handle, "{}", line)?;
+    }
+
+    Ok(())
+}
+
+#[cfg(not(feature = "phonetic-rules"))]
+fn cmd_grep(_opts: GrepOptions) -> Result<()> {
+    bail!(
+        "Grep command requires 'phonetic-rules' feature.\n\
+         Rebuild with: cargo build --features \"phonetic-rules\""
     );
 }

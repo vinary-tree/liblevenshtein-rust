@@ -1,0 +1,175 @@
+// English Homophones
+// Normalizes sound-alike words to canonical standard spellings for fuzzy matching
+
+@version "1.0.0";
+
+// ============================================================
+// Letter-name homophones (spelled-out letter names -> letters)
+// These normalize word forms to allow matching queries like "oh" to "o"
+// ============================================================
+
+[id: 300, name: "oh to o", weight: 0.0, group: letter_homophones]
+oh -> o / #_#;
+
+[id: 301, name: "aye to i", weight: 0.0, group: letter_homophones]
+aye -> i / #_#;
+
+// ============================================================
+// Common homophones normalized to most frequent spelling
+// ============================================================
+
+// to/too/two family -> "to"
+[id: 310, name: "too to to", weight: 0.0, group: homophones]
+too -> to / #_#;
+
+[id: 311, name: "two to to", weight: 0.0, group: homophones]
+two -> to / #_#;
+
+// for/fore/four family -> "for"
+[id: 315, name: "fore to for", weight: 0.0, group: homophones]
+fore -> for / #_#;
+
+[id: 316, name: "four to for", weight: 0.0, group: homophones]
+four -> for / #_#;
+
+// their/there/theyre family -> "their"
+[id: 320, name: "there to their", weight: 0.0, group: homophones]
+there -> their / #_#;
+
+[id: 321, name: "theyre to their", weight: 0.0, group: homophones]
+theyre -> their / #_#;
+
+// your/youre family -> "your"
+[id: 325, name: "youre to your", weight: 0.0, group: homophones]
+youre -> your / #_#;
+
+// know/no family -> "know"
+[id: 335, name: "no to know", weight: 0.0, group: homophones]
+no -> know / #_#;
+
+// knew/new family -> "new"
+[id: 340, name: "knew to new", weight: 0.0, group: homophones]
+knew -> new / #_#;
+
+// write/right family -> "right"
+[id: 345, name: "write to right", weight: 0.0, group: homophones]
+write -> right / #_#;
+
+[id: 346, name: "rite to right", weight: 0.0, group: homophones]
+rite -> right / #_#;
+
+// hear/here family -> "here"
+[id: 350, name: "hear to here", weight: 0.0, group: homophones]
+hear -> here / #_#;
+
+// wear/where family -> "where"
+[id: 355, name: "wear to where", weight: 0.0, group: homophones]
+wear -> where / #_#;
+
+// see/sea family -> "see"
+[id: 360, name: "sea to see", weight: 0.0, group: homophones]
+sea -> see / #_#;
+
+// be/bee family -> "be"
+[id: 365, name: "bee to be", weight: 0.0, group: homophones]
+bee -> be / #_#;
+
+// by/buy/bye family -> "by"
+[id: 370, name: "buy to by", weight: 0.0, group: homophones]
+buy -> by / #_#;
+
+[id: 371, name: "bye to by", weight: 0.0, group: homophones]
+bye -> by / #_#;
+
+// ate/eight family -> "ate"
+[id: 375, name: "eight to ate", weight: 0.0, group: homophones]
+eight -> ate / #_#;
+
+// wait/weight family -> "wait"
+[id: 380, name: "weight to wait", weight: 0.0, group: homophones]
+weight -> wait / #_#;
+
+// way/weigh family -> "way"
+[id: 385, name: "weigh to way", weight: 0.0, group: homophones]
+weigh -> way / #_#;
+
+// one/won family -> "one"
+[id: 390, name: "won to one", weight: 0.0, group: homophones]
+won -> one / #_#;
+
+// sun/son family -> "son"
+[id: 395, name: "sun to son", weight: 0.0, group: homophones]
+sun -> son / #_#;
+
+// would/wood family -> "would"
+[id: 400, name: "wood to would", weight: 0.0, group: homophones]
+wood -> would / #_#;
+
+// break/brake family -> "break"
+[id: 405, name: "brake to break", weight: 0.0, group: homophones]
+brake -> break / #_#;
+
+// pair/pear/pare family -> "pair"
+[id: 410, name: "pear to pair", weight: 0.0, group: homophones]
+pear -> pair / #_#;
+
+[id: 411, name: "pare to pair", weight: 0.0, group: homophones]
+pare -> pair / #_#;
+
+// peace/piece family -> "peace"
+[id: 415, name: "piece to peace", weight: 0.0, group: homophones]
+piece -> peace / #_#;
+
+// meet/meat family -> "meet"
+[id: 420, name: "meat to meet", weight: 0.0, group: homophones]
+meat -> meet / #_#;
+
+// week/weak family -> "week"
+[id: 425, name: "weak to week", weight: 0.0, group: homophones]
+weak -> week / #_#;
+
+// made/maid family -> "made"
+[id: 430, name: "maid to made", weight: 0.0, group: homophones]
+maid -> made / #_#;
+
+// tail/tale family -> "tale"
+[id: 435, name: "tail to tale", weight: 0.0, group: homophones]
+tail -> tale / #_#;
+
+// plain/plane family -> "plain"
+[id: 440, name: "plane to plain", weight: 0.0, group: homophones]
+plane -> plain / #_#;
+
+// rain/reign/rein family -> "rain"
+[id: 445, name: "reign to rain", weight: 0.0, group: homophones]
+reign -> rain / #_#;
+
+[id: 446, name: "rein to rain", weight: 0.0, group: homophones]
+rein -> rain / #_#;
+
+// vain/vane/vein family -> "vain"
+[id: 450, name: "vane to vain", weight: 0.0, group: homophones]
+vane -> vain / #_#;
+
+[id: 451, name: "vein to vain", weight: 0.0, group: homophones]
+vein -> vain / #_#;
+
+// whale/wail family -> "whale"
+[id: 455, name: "wail to whale", weight: 0.0, group: homophones]
+wail -> whale / #_#;
+
+// which/witch family -> "which"
+[id: 460, name: "witch to which", weight: 0.0, group: homophones]
+witch -> which / #_#;
+
+// flour/flower family -> "flower"
+[id: 465, name: "flour to flower", weight: 0.0, group: homophones]
+flour -> flower / #_#;
+
+// knot/not family -> "not"
+[id: 470, name: "knot to not", weight: 0.0, group: homophones]
+knot -> not / #_#;
+
+// knight/night family -> "night"
+[id: 475, name: "knight to night", weight: 0.0, group: homophones]
+knight -> night / #_#;

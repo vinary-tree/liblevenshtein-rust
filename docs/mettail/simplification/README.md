@@ -37,6 +37,40 @@ Simplified Source (Same Language)
 - **Semantic verification** via MeTTaIL predicates
 - **Rholang congruence rules** for process calculus simplification
 - **Termination guarantees** with formal proof sketch
+- **Bisimulation-based optimization** with RPO-proven soundness
+- **Up-to verification techniques** for efficient equivalence checking
+
+---
+
+## Bisimulation-Based Optimization
+
+The simplification transpiler uses **bisimulation** as the soundness criterion for optimizations:
+
+| Property | Description |
+|----------|-------------|
+| **Soundness** | If `P ≈ Q`, replacing P with Q preserves all observable behaviors |
+| **Completeness** | Bisimulation captures exactly the observable distinctions |
+| **Compositionality** | Bisimilar subterms can be replaced in any context |
+
+### Optimization Strategies
+
+| Constraint | Strategy | Guarantee |
+|------------|----------|-----------|
+| Memory | Dead code elimination, scope minimization | `P ≈ simplify(P)` |
+| Latency | Communication fusion, inlining | `P ≈ optimize(P)` |
+| Parallelism | Scope extrusion, parallel fusion | `P ≈ parallelize(P)` |
+
+### Verification Efficiency
+
+Up-to techniques reduce verification complexity:
+
+| Technique | Speedup |
+|-----------|---------|
+| Up-to congruence | 4-100x |
+| Up-to transitivity | O(1) amortized |
+| Up-to context | 100-10,000x |
+
+See [11-optimization-strategies.md](11-optimization-strategies.md) and [12-up-to-verification.md](12-up-to-verification.md) for details.
 
 ---
 
@@ -69,6 +103,13 @@ Simplified Source (Same Language)
 6. [Rholang Congruence](06-rholang-congruence.md) - Process calculus structural laws
 7. [Termination Proof](07-termination-proof.md) - Formal termination argument
 8. [Performance Targets](08-performance-targets.md) - Benchmarks and optimization goals
+
+### Bisimulation-Based Optimization
+
+9. [RPO Congruence Proofs](09-rpo-congruence-proofs.md) - Formal bisimilarity proofs for congruence laws
+10. [Transparency Guarantees](10-transparency-guarantees.md) - Phase transparency proofs
+11. [Optimization Strategies](11-optimization-strategies.md) - Bisimulation-based code optimization
+12. [Up-To Verification](12-up-to-verification.md) - Efficient bisimulation verification techniques
 
 ### Rule Definitions
 
@@ -169,4 +210,5 @@ See [Performance Targets](08-performance-targets.md) for detailed benchmarks.
 
 ## Changelog
 
+- **2025-12-17**: Added bisimulation-based optimization documentation (09-12)
 - **2025-12-06**: Initial design documentation created

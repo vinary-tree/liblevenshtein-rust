@@ -7,7 +7,8 @@
 //!
 //! - **Phonetic Normalization**: Uses Zompist rules from `.llev` files
 //! - **Transposition Support**: Catches adjacent character swaps ("teh" → "the")
-//! - **AOT Compilation**: Pre-compile rules for instant startup
+//! - **Two Modes**: On-the-fly (fast startup) or preprocessed (fast queries)
+//! - **AOT Compilation**: Pre-compile rules and dictionary for instant startup
 //! - **Memoized Matching**: Cache repeated queries for instant responses
 //! - **Cycle Detection**: Safe handling of rule pathologies
 //! - **Interactive REPL**: Type queries and see matches in real-time
@@ -16,9 +17,9 @@
 //!
 //! ```bash
 //! cd examples/phonetic_spellcheck
-//! make run              # Normal mode
-//! make aot              # Pre-compile rules
-//! make run-fast         # Run with cached rules
+//! make run              # On-the-fly mode (default, fast startup)
+//! make preprocess       # Pre-compile dictionary (one-time)
+//! make run-preprocessed # Preprocessed mode (fast queries)
 //! ```
 
 use clap::Parser;
@@ -60,6 +61,12 @@ struct Args {
     /// Pre-compile rules to binary cache for faster startup
     #[arg(long)]
     aot: bool,
+
+    /// Use preprocessed dictionary (transducer-based matching).
+    /// Without this flag, uses on-the-fly matching which is faster to start
+    /// but slower per-query.
+    #[arg(long)]
+    preprocessed: bool,
 
     /// Show normalization steps for each query
     #[arg(short, long)]
@@ -327,6 +334,27 @@ fn run(args: Args) -> Result<()> {
     let rules = load_rules(&example_dir, &cache_dir, args.use_cache, &mut stats)?;
     println!("  Loaded {} rules", rules.len());
 
+    // Branch based on mode:
+    // - Preprocessed/cached: Use transducer with normalized dictionary (fast queries)
+    // - Default: On-the-fly matching (fast startup, slower queries)
+    if args.preprocessed || args.use_cache {
+        run_preprocessed_mode(&args, &example_dir, &cache_dir, &rules, &mut stats)
+    } else {
+        run_onthefly_mode(&args, &example_dir, &rules, &mut stats)
+    }
+}
+
+/// Run with preprocessed dictionary (transducer-based matching).
+///
+/// This mode normalizes all dictionary words upfront and builds a transducer
+/// for efficient fuzzy matching. Best for many queries over the same dictionary.
+fn run_preprocessed_mode(
+    args: &Args,
+    example_dir: &Path,
+    cache_dir: &Path,
+    rules: &[RewriteRule],
+    stats: &mut Stats,
+) -> Result<()> {
     // Paths for cache validation
     let dict_path = example_dir.join("data/english_words.txt");
     let rules_dir = example_dir.join("rules");
@@ -369,18 +397,18 @@ fn run(args: Args) -> Result<()> {
             Ok(_) => {
                 // Cache is stale - rebuild
                 println!("  Cache is stale (source files changed), rebuilding...");
-                build_index_fresh(&dict_path, &rules, args.verbose, &mut stats)?
+                build_index_fresh(&dict_path, rules, args.verbose, stats)?
             }
             Err(e) => {
                 // Cache is corrupted - rebuild
                 eprintln!("  Warning: Could not load cache: {}", e);
                 println!("  Rebuilding from source...");
-                build_index_fresh(&dict_path, &rules, args.verbose, &mut stats)?
+                build_index_fresh(&dict_path, rules, args.verbose, stats)?
             }
         }
     } else {
         // No cache requested or available - build fresh
-        build_index_fresh(&dict_path, &rules, args.verbose, &mut stats)?
+        build_index_fresh(&dict_path, rules, args.verbose, stats)?
     };
 
     println!();
@@ -392,7 +420,8 @@ fn run(args: Args) -> Result<()> {
         args.cache_size,
     );
 
-    println!("Using Damerau-Levenshtein (transposition) with max distance {}", MAX_DISTANCE);
+    println!("Using PREPROCESSED mode (transducer-based matching)");
+    println!("Damerau-Levenshtein (transposition) with max distance {}", MAX_DISTANCE);
     println!("Query cache size: {}", args.cache_size);
     if args.detect_cycles {
         println!("Cycle detection: enabled");
@@ -456,10 +485,10 @@ fn run(args: Args) -> Result<()> {
         // Normalize the query
         let (normalized_query, cycle_warning) = normalize(
             query,
-            &rules,
+            rules,
             args.detect_cycles,
             args.verbose,
-            &mut stats,
+            stats,
         );
 
         println!();
@@ -473,7 +502,7 @@ fn run(args: Args) -> Result<()> {
         }
 
         // Query with memoization
-        let results = checker.query(&normalized_query, &mut stats);
+        let results = checker.query(&normalized_query, stats);
 
         if results.is_empty() {
             println!("  No matches found within distance {}", MAX_DISTANCE);
@@ -616,6 +645,20 @@ fn find_example_dir() -> Result<PathBuf> {
     ];
 
     for candidate in &candidates {
+        // Check canonical location: data/rules/english/ relative to project root
+        let canonical_rules = if candidate.as_os_str() == "." {
+            PathBuf::from("../../data/rules/english/zompist.llev")
+        } else if candidate.as_os_str() == "examples/phonetic_spellcheck" {
+            PathBuf::from("data/rules/english/zompist.llev")
+        } else {
+            candidate.join("../../data/rules/english/zompist.llev")
+        };
+
+        if canonical_rules.exists() {
+            return Ok(candidate.clone());
+        }
+
+        // Fallback: rules/ directory in example (legacy)
         let rules_path = candidate.join("rules/zompist.llev");
         if rules_path.exists() {
             return Ok(candidate.clone());
@@ -623,7 +666,13 @@ fn find_example_dir() -> Result<PathBuf> {
     }
 
     if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
-        let path = PathBuf::from(manifest_dir).join("examples/phonetic_spellcheck");
+        // Check canonical location first
+        let canonical_rules = PathBuf::from(&manifest_dir).join("data/rules/english/zompist.llev");
+        let path = PathBuf::from(&manifest_dir).join("examples/phonetic_spellcheck");
+        if canonical_rules.exists() {
+            return Ok(path);
+        }
+        // Fallback to legacy location
         if path.join("rules/zompist.llev").exists() {
             return Ok(path);
         }
@@ -642,6 +691,25 @@ fn load_dictionary(path: &PathBuf) -> Result<Vec<String>> {
         .filter(|line| line.chars().all(|c| c.is_ascii_alphabetic()))
         .collect();
     Ok(terms)
+}
+
+/// Find the rules directory, checking canonical location first
+fn find_rules_dir(example_dir: &Path) -> PathBuf {
+    // Check canonical location: data/rules/english/ relative to project root
+    let canonical_candidates = [
+        example_dir.join("../../data/rules/english"),
+        PathBuf::from("data/rules/english"),
+        PathBuf::from("../../data/rules/english"),
+    ];
+
+    for candidate in &canonical_candidates {
+        if candidate.join("zompist.llev").exists() {
+            return candidate.clone();
+        }
+    }
+
+    // Fallback to legacy location in example directory
+    example_dir.join("rules")
 }
 
 /// Load phonetic rules (from cache or .llev files)
@@ -663,7 +731,7 @@ fn load_rules(
         return Ok(ruleset.rules);
     }
 
-    let rules_dir = example_dir.join("rules");
+    let rules_dir = find_rules_dir(example_dir);
     println!("Loading phonetic rules from {}...", rules_dir.display());
     let rules = load_rules_from_llev(&rules_dir)?;
     stats.rule_loading_time = start.elapsed();
@@ -890,6 +958,181 @@ fn phones_to_string(phones: &[Phone]) -> String {
         .collect()
 }
 
+/// Run with on-the-fly matching (no dictionary preprocessing).
+///
+/// This mode loads the dictionary as a simple word list and normalizes each word
+/// on-demand during queries. This provides fast startup but slower per-query
+/// performance. Best for exploring phonetic rules interactively or quick demos.
+fn run_onthefly_mode(
+    args: &Args,
+    example_dir: &Path,
+    rules: &[RewriteRule],
+    stats: &mut Stats,
+) -> Result<()> {
+    let dict_path = example_dir.join("data/english_words.txt");
+
+    // Load dictionary as word list only (no preprocessing/normalization)
+    let start = Instant::now();
+    println!("Loading dictionary from {}...", dict_path.display());
+    let dictionary = load_dictionary(&dict_path)?;
+    stats.dictionary_loading_time = start.elapsed();
+    println!("  Loaded {} terms in {:?}", dictionary.len(), stats.dictionary_loading_time);
+
+    println!();
+    println!("Using ON-THE-FLY matching (no dictionary preprocessing)");
+    println!("Each query normalizes dictionary words on-demand.");
+    println!("Damerau-Levenshtein (transposition) with max distance {}", MAX_DISTANCE);
+    if args.detect_cycles {
+        println!("Cycle detection: enabled (queries only)");
+    }
+    if args.verbose {
+        println!("Verbose mode: enabled");
+    }
+    println!();
+    println!("Type a misspelled word to find matches. Commands:");
+    println!("  exit, quit, q - Exit the program");
+    println!("  help, ?       - Show this help");
+    println!("  stats         - Show performance statistics");
+    println!();
+
+    // Interactive query loop
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    loop {
+        print!("query> ");
+        stdout.flush()?;
+
+        let mut input = String::new();
+        if stdin.lock().read_line(&mut input)? == 0 {
+            println!();
+            break;
+        }
+
+        let query = input.trim();
+        if query.is_empty() {
+            continue;
+        }
+
+        // Handle commands
+        match query.to_lowercase().as_str() {
+            "exit" | "quit" | "q" => {
+                if args.stats {
+                    stats.print();
+                }
+                println!("Goodbye!");
+                break;
+            }
+            "help" | "?" => {
+                print_help();
+                continue;
+            }
+            "stats" => {
+                stats.print();
+                continue;
+            }
+            _ => {}
+        }
+
+        // Normalize the query
+        let (normalized_query, cycle_warning) = normalize(
+            query,
+            rules,
+            args.detect_cycles,
+            args.verbose,
+            stats,
+        );
+
+        stats.query_count += 1;
+
+        // ON-THE-FLY: Check each dictionary word
+        let start = Instant::now();
+        let mut results: Vec<(String, usize)> = dictionary
+            .iter()
+            .filter_map(|term| {
+                let normalized_term = normalize_fast(term, rules);
+                let distance = levenshtein_distance(&normalized_query, &normalized_term);
+                if distance <= MAX_DISTANCE {
+                    Some((term.clone(), distance))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Sort by distance, then alphabetically
+        results.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
+        results.truncate(MAX_RESULTS);
+        let query_time = start.elapsed();
+
+        println!();
+        println!(
+            "Matches for \"{}\" (normalized: \"{}\") [{:?}]:",
+            query, normalized_query, query_time
+        );
+
+        if let Some(warning) = cycle_warning {
+            println!("  Warning: {}", warning);
+        }
+
+        if results.is_empty() {
+            println!("  No matches found within distance {}", MAX_DISTANCE);
+        } else {
+            for (i, (term, distance)) in results.iter().enumerate() {
+                let note = if *distance == 0 {
+                    " (exact phonetic match)"
+                } else {
+                    ""
+                };
+                println!("  {}. {} (distance: {}){}", i + 1, term, distance, note);
+            }
+        }
+        println!();
+    }
+
+    Ok(())
+}
+
+/// Compute Levenshtein distance between two strings.
+///
+/// Uses a simple O(mn) dynamic programming approach with O(min(m,n)) space.
+fn levenshtein_distance(a: &str, b: &str) -> usize {
+    let a_bytes: Vec<char> = a.chars().collect();
+    let b_bytes: Vec<char> = b.chars().collect();
+    let m = a_bytes.len();
+    let n = b_bytes.len();
+
+    // Early termination: if lengths differ by more than MAX_DISTANCE, skip
+    if m.abs_diff(n) > MAX_DISTANCE {
+        return m.abs_diff(n);
+    }
+
+    // Use two-row optimization for O(min(m,n)) space
+    let (shorter, longer, short_len, long_len) = if m <= n {
+        (&a_bytes, &b_bytes, m, n)
+    } else {
+        (&b_bytes, &a_bytes, n, m)
+    };
+
+    let mut prev_row: Vec<usize> = (0..=short_len).collect();
+    let mut curr_row: Vec<usize> = vec![0; short_len + 1];
+
+    for i in 1..=long_len {
+        curr_row[0] = i;
+
+        for j in 1..=short_len {
+            let cost = if longer[i - 1] == shorter[j - 1] { 0 } else { 1 };
+            curr_row[j] = (prev_row[j] + 1)           // deletion
+                .min(curr_row[j - 1] + 1)             // insertion
+                .min(prev_row[j - 1] + cost);         // substitution
+        }
+
+        std::mem::swap(&mut prev_row, &mut curr_row);
+    }
+
+    prev_row[short_len]
+}
+
 fn print_banner() {
     println!();
     println!("╔══════════════════════════════════════════════════════════════════╗");
@@ -906,10 +1149,14 @@ fn print_help() {
     println!("  exit, quit, q - Exit the program");
     println!("  help, ?       - Show this help");
     println!("  stats         - Show performance statistics");
-    println!("  clear         - Clear the query cache");
+    println!("  clear         - Clear the query cache (preprocessed mode only)");
     println!();
     println!("The spellchecker normalizes both your query and the dictionary");
     println!("using phonetic rules, then finds matches within edit distance {}.", MAX_DISTANCE);
+    println!();
+    println!("Modes:");
+    println!("  ON-THE-FLY (default): Fast startup, normalizes dictionary per-query");
+    println!("  PREPROCESSED:         Slower startup, sub-millisecond queries");
     println!();
     println!("Examples:");
     println!("  fone       -> phone (ph->f normalization)");
@@ -918,11 +1165,12 @@ fn print_help() {
     println!("  enuf       -> enough (gh->silent, final e->silent)");
     println!();
     println!("CLI Options:");
-    println!("  --aot          Pre-compile rules to binary cache");
-    println!("  --use-cache    Use pre-compiled rules (faster startup)");
+    println!("  --preprocessed Use preprocessed dictionary (transducer-based)");
+    println!("  --aot          Pre-compile rules and dictionary to binary cache");
+    println!("  --use-cache    Load from pre-compiled cache (implies --preprocessed)");
     println!("  --verbose, -v  Show normalization steps");
     println!("  --stats        Show statistics on exit");
     println!("  --detect-cycles Enable cycle detection in rule application");
-    println!("  --cache-size N LRU cache size (default: 1000)");
+    println!("  --cache-size N LRU cache size (default: 1000, preprocessed mode only)");
     println!();
 }

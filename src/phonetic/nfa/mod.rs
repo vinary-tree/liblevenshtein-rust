@@ -74,7 +74,10 @@ pub mod thompson;
 pub mod types;
 
 // Re-export main types (character-level)
-pub use compiler::{compile, compile_rewrite, CompiledRewriteChar, NFACompilerChar};
+pub use compiler::{
+    compile, compile_rewrite, compile_with_flags, CompileResultChar, CompiledRewriteChar,
+    NFACompilerChar,
+};
 pub use context::{
     BoundaryKind, ContextMatcherChar, ContextPatternChar, ContextualRewriteRuleChar,
 };

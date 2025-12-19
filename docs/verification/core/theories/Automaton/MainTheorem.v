@@ -18,7 +18,7 @@ Import ListNotations.
 
 From Liblevenshtein.Core Require Import Core.Definitions.
 From Liblevenshtein.Core Require Import Core.LevDistance.
-From Liblevenshtein.Core Require Import Core.DamerauLevDistance.
+From Liblevenshtein.Core Require Import Core.DamerauLevDistanceDef.
 From Liblevenshtein.Core Require Import Core.MergeSplitDistance.
 From Liblevenshtein.Core Require Import Automaton.Position.
 From Liblevenshtein.Core Require Import Automaton.State.

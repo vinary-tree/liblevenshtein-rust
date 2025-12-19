@@ -648,6 +648,44 @@ Proof.
     + apply IH; assumption.
 Qed.
 
+(** For any position in ms_trace_positions_A, there is an element containing it *)
+Lemma ms_position_from_min : forall (strA strB : list Char) T p,
+  In p (ms_trace_positions_A T) ->
+  forallb (ms_valid_element (length strA) (length strB)) T = true ->
+  forallb ms_element_positions_ordered T = true ->
+  exists e, In e T /\ In p (ms_element_positions_A e).
+Proof.
+  intros strA strB T p Hin Hvalid Hord.
+  induction T as [| e rest IH].
+  - simpl in Hin. contradiction.
+  - simpl in Hin. apply in_app_or in Hin.
+    simpl in Hvalid. apply andb_prop in Hvalid as [He Hrest_valid].
+    simpl in Hord. apply andb_prop in Hord as [He_ord Hrest_ord].
+    destruct Hin as [Hin_e | Hin_rest].
+    + exists e. split; [left; reflexivity | exact Hin_e].
+    + specialize (IH Hin_rest Hrest_valid Hrest_ord) as [e' [Hin' Hpos']].
+      exists e'. split; [right; exact Hin' | exact Hpos'].
+Qed.
+
+(** For any position in ms_trace_positions_B, there is an element containing it *)
+Lemma ms_position_from_min_B : forall (strA strB : list Char) T p,
+  In p (ms_trace_positions_B T) ->
+  forallb (ms_valid_element (length strA) (length strB)) T = true ->
+  forallb ms_element_positions_ordered T = true ->
+  exists e, In e T /\ In p (ms_element_positions_B e).
+Proof.
+  intros strA strB T p Hin Hvalid Hord.
+  induction T as [| e rest IH].
+  - simpl in Hin. contradiction.
+  - simpl in Hin. apply in_app_or in Hin.
+    simpl in Hvalid. apply andb_prop in Hvalid as [He Hrest_valid].
+    simpl in Hord. apply andb_prop in Hord as [He_ord Hrest_ord].
+    destruct Hin as [Hin_e | Hin_rest].
+    + exists e. split; [left; reflexivity | exact Hin_e].
+    + specialize (IH Hin_rest Hrest_valid Hrest_ord) as [e' [Hin' Hpos']].
+      exists e'. split; [right; exact Hin' | exact Hpos'].
+Qed.
+
 (** ** Main Bounds Lemmas *)
 
 (** Valid trace positions are bounded by string length.
@@ -754,6 +792,149 @@ Proof.
     (* length (b :: B') - 1 + 1 = S (length B') - 1 + 1 = S (length B') *)
     replace (S (length B') - 1 + 1) with (S (length B')) in Hbound by lia.
     exact Hbound.
+Qed.
+
+(** Shifted bound for A positions when all elements have min_A > k.
+    This is used when processing a trace after the first element:
+    - By monotonicity, all elements in rest have min_A > max_A e
+    - So all positions in rest are in range (max_A e, length A]
+    - Therefore count <= length A - max_A e
+*)
+Lemma ms_trace_touched_A_bound_shifted : forall A B T k,
+  ms_trace_valid A B T = true ->
+  (forall e, In e T -> ms_element_min_A e > k) ->
+  length (ms_trace_positions_A T) <= length A - k.
+Proof.
+  intros A B T k Hvalid Hall_gt.
+  unfold ms_trace_valid in Hvalid.
+  apply andb_prop in Hvalid as [Hvalid' Hmonotonic].
+  apply andb_prop in Hvalid' as [Hvalid'' Hno_overlap_B].
+  apply andb_prop in Hvalid'' as [Hvalid''' Hno_overlap_A].
+  apply andb_prop in Hvalid''' as [Helems_valid Hordered].
+  destruct (le_lt_dec (length A) k) as [Hle | Hlt].
+  - (* k >= length A: positions in range (k, lenA] is empty *)
+    destruct T as [| e rest].
+    + simpl. lia.
+    + (* T non-empty but no valid positions exist *)
+      exfalso.
+      simpl in Helems_valid. apply andb_prop in Helems_valid as [He _].
+      unfold ms_valid_element in He. apply andb_prop in He as [HvalidA _].
+      specialize (Hall_gt e (or_introl eq_refl)).
+      destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in HvalidA.
+      * unfold all_positions_valid in HvalidA. simpl in HvalidA.
+        apply andb_prop in HvalidA as [Hpos _].
+        pose proof (valid_position_bounds (length A) i Hpos) as [H1 H2].
+        simpl in Hall_gt. lia.
+      * unfold all_positions_valid in HvalidA. simpl in HvalidA.
+        apply andb_prop in HvalidA as [Hpos1 _].
+        pose proof (valid_position_bounds (length A) i1 Hpos1) as [H1 H2].
+        simpl in Hall_gt. lia.
+      * unfold all_positions_valid in HvalidA. simpl in HvalidA.
+        apply andb_prop in HvalidA as [Hpos _].
+        pose proof (valid_position_bounds (length A) i Hpos) as [H1 H2].
+        simpl in Hall_gt. lia.
+      * unfold all_positions_valid in HvalidA. simpl in HvalidA.
+        apply andb_prop in HvalidA as [Hpos1 _].
+        pose proof (valid_position_bounds (length A) i1 Hpos1) as [H1 H2].
+        simpl in Hall_gt. lia.
+  - (* k < length A: positions in range (k, lenA] *)
+    assert (Hbound: length (ms_trace_positions_A T) <= length A - (k + 1) + 1).
+    { apply NoDup_length_le_range.
+      - apply no_duplicate_positions_NoDup. exact Hno_overlap_A.
+      - intros x Hx.
+        pose proof (ms_trace_positions_A_in_range A B T Helems_valid x Hx) as [Hlo Hhi].
+        pose proof (ms_position_from_min A B T x Hx Helems_valid Hordered) as [e' [Hin' Hpos']].
+        specialize (Hall_gt e' Hin').
+        split; [|exact Hhi].
+        destruct e' as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in Hall_gt, Hpos'.
+        + destruct Hpos' as [Hx_eq | []]. subst x. lia.
+        + (* MSMerge2: min_A = i1, positions = [i1; i2], ordered: i1 < i2 *)
+          assert (Hord_e': ms_element_positions_ordered (MSMerge2 i1 i2 j) = true).
+          { apply forallb_forall with (x := MSMerge2 i1 i2 j) in Hordered; auto. }
+          simpl in Hord_e'. apply Nat.ltb_lt in Hord_e'.
+          destruct Hpos' as [Hx_eq | [Hx_eq | []]]; subst x.
+          * lia.
+          * lia.
+        + destruct Hpos' as [Hx_eq | []]. subst x. lia.
+        + (* MSDouble: min_A = i1, positions = [i1; i2], ordered: i1 < i2 *)
+          assert (Hord_e': ms_element_positions_ordered (MSDouble i1 i2 j1 j2) = true).
+          { apply forallb_forall with (x := MSDouble i1 i2 j1 j2) in Hordered; auto. }
+          simpl in Hord_e'. apply andb_prop in Hord_e' as [Hord_a Hord_b].
+          apply Nat.ltb_lt in Hord_a.
+          destruct Hpos' as [Hx_eq | [Hx_eq | []]]; subst x.
+          * lia.
+          * lia.
+      - lia. }
+    lia.
+Qed.
+
+(** Symmetric shifted bound for B positions *)
+Lemma ms_trace_touched_B_bound_shifted : forall A B T k,
+  ms_trace_valid A B T = true ->
+  (forall e, In e T -> ms_element_min_B e > k) ->
+  length (ms_trace_positions_B T) <= length B - k.
+Proof.
+  intros A B T k Hvalid Hall_gt.
+  unfold ms_trace_valid in Hvalid.
+  apply andb_prop in Hvalid as [Hvalid' Hmonotonic].
+  apply andb_prop in Hvalid' as [Hvalid'' Hno_overlap_B].
+  apply andb_prop in Hvalid'' as [Hvalid''' Hno_overlap_A].
+  apply andb_prop in Hvalid''' as [Helems_valid Hordered].
+  destruct (le_lt_dec (length B) k) as [Hle | Hlt].
+  - (* k >= length B: positions in range (k, lenB] is empty *)
+    destruct T as [| e rest].
+    + simpl. lia.
+    + (* T non-empty but no valid positions exist *)
+      exfalso.
+      simpl in Helems_valid. apply andb_prop in Helems_valid as [He _].
+      unfold ms_valid_element in He. apply andb_prop in He as [_ HvalidB].
+      specialize (Hall_gt e (or_introl eq_refl)).
+      destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in HvalidB.
+      * unfold all_positions_valid in HvalidB. simpl in HvalidB.
+        apply andb_prop in HvalidB as [Hpos _].
+        pose proof (valid_position_bounds (length B) j Hpos) as [H1 H2].
+        simpl in Hall_gt. lia.
+      * unfold all_positions_valid in HvalidB. simpl in HvalidB.
+        apply andb_prop in HvalidB as [Hpos _].
+        pose proof (valid_position_bounds (length B) j Hpos) as [H1 H2].
+        simpl in Hall_gt. lia.
+      * unfold all_positions_valid in HvalidB. simpl in HvalidB.
+        apply andb_prop in HvalidB as [Hpos1 _].
+        pose proof (valid_position_bounds (length B) j1 Hpos1) as [H1 H2].
+        simpl in Hall_gt. lia.
+      * unfold all_positions_valid in HvalidB. simpl in HvalidB.
+        apply andb_prop in HvalidB as [Hpos1 _].
+        pose proof (valid_position_bounds (length B) j1 Hpos1) as [H1 H2].
+        simpl in Hall_gt. lia.
+  - (* k < length B: positions in range (k, lenB] *)
+    assert (Hbound: length (ms_trace_positions_B T) <= length B - (k + 1) + 1).
+    { apply NoDup_length_le_range.
+      - apply no_duplicate_positions_NoDup. exact Hno_overlap_B.
+      - intros x Hx.
+        pose proof (ms_trace_positions_B_in_range A B T Helems_valid x Hx) as [Hlo Hhi].
+        pose proof (ms_position_from_min_B A B T x Hx Helems_valid Hordered) as [e' [Hin' Hpos']].
+        specialize (Hall_gt e' Hin').
+        split; [|exact Hhi].
+        destruct e' as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in Hall_gt, Hpos'.
+        + destruct Hpos' as [Hx_eq | []]. subst x. lia.
+        + destruct Hpos' as [Hx_eq | []]. subst x. lia.
+        + (* MSSplit2: min_B = j1, positions = [j1; j2], ordered: j1 < j2 *)
+          assert (Hord_e': ms_element_positions_ordered (MSSplit2 i j1 j2) = true).
+          { apply forallb_forall with (x := MSSplit2 i j1 j2) in Hordered; auto. }
+          simpl in Hord_e'. apply Nat.ltb_lt in Hord_e'.
+          destruct Hpos' as [Hx_eq | [Hx_eq | []]]; subst x.
+          * lia.
+          * lia.
+        + (* MSDouble: min_B = j1, positions = [j1; j2], ordered: j1 < j2 *)
+          assert (Hord_e': ms_element_positions_ordered (MSDouble i1 i2 j1 j2) = true).
+          { apply forallb_forall with (x := MSDouble i1 i2 j1 j2) in Hordered; auto. }
+          simpl in Hord_e'. apply andb_prop in Hord_e' as [Hord_a Hord_b].
+          apply Nat.ltb_lt in Hord_b.
+          destruct Hpos' as [Hx_eq | [Hx_eq | []]]; subst x.
+          * lia.
+          * lia.
+      - lia. }
+    lia.
 Qed.
 
 (** * Trace-to-Sequence Conversion Infrastructure *)
@@ -2965,6 +3146,36 @@ Proof.
   lia.
 Qed.
 
+(** Helper: positions_A count is bounded by max_A for consecutive elements with min_A >= 1 *)
+Lemma pos_le_max_A : forall e,
+  ms_element_positions_consecutive e = true ->
+  1 <= ms_element_min_A e ->
+  length (ms_element_positions_A e) <= ms_element_max_A e.
+Proof.
+  intros e Hcons Hmin.
+  destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in *.
+  - lia.
+  - apply Nat.eqb_eq in Hcons. lia.
+  - lia.
+  - apply andb_prop in Hcons. destruct Hcons as [Ha _].
+    apply Nat.eqb_eq in Ha. lia.
+Qed.
+
+(** Helper: positions_B count is bounded by max_B for consecutive elements with min_B >= 1 *)
+Lemma pos_le_max_B : forall e,
+  ms_element_positions_consecutive e = true ->
+  1 <= ms_element_min_B e ->
+  length (ms_element_positions_B e) <= ms_element_max_B e.
+Proof.
+  intros e Hcons Hmin.
+  destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in *.
+  - lia.
+  - lia.
+  - apply Nat.eqb_eq in Hcons. lia.
+  - apply andb_prop in Hcons. destruct Hcons as [_ Hb].
+    apply Nat.eqb_eq in Hb. lia.
+Qed.
+
 (** Cost bound for trace_to_seq_aux *)
 Lemma trace_to_seq_aux_cost_bound : forall fuel A B T,
   length A + length B < fuel ->
@@ -3280,17 +3491,9 @@ Proof.
 
       (* Establish bounds needed for natural number arithmetic *)
       assert (Hpos_a_e_le_max: length (ms_element_positions_A e) <= ms_element_max_A e).
-      { destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in *.
-        - destruct Hmin_a_pos as [H1 _]. lia.
-        - destruct Hmin_a_pos as [H1 _]. simpl in H1. lia.
-        - destruct Hmin_a_pos as [H1 _]. lia.
-        - destruct Hmin_a_pos as [H1 _]. simpl in H1. lia. }
+      { apply pos_le_max_A; [exact He_cons | exact (proj1 Hmin_a_pos)]. }
       assert (Hpos_b_e_le_max: length (ms_element_positions_B e) <= ms_element_max_B e).
-      { destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in *.
-        - destruct Hmin_b_pos as [H1 _]. lia.
-        - destruct Hmin_b_pos as [H1 _]. lia.
-        - destruct Hmin_b_pos as [H1 _]. simpl in H1. lia.
-        - destruct Hmin_b_pos as [H1 _]. simpl in H1. lia. }
+      { apply pos_le_max_B; [exact He_cons | exact (proj1 Hmin_b_pos)]. }
 
       (* Build full validity for rest *)
       assert (Hrest_trace_valid: ms_trace_valid A B rest = true).
@@ -3302,9 +3505,20 @@ Proof.
         - exact Hrest_no_B.
         - exact Hrest_mono. }
 
-      (* Get bounds on positions in rest *)
-      pose proof (ms_valid_trace_touched_A_bound A B rest Hrest_trace_valid) as Hrest_touched_A.
-      pose proof (ms_valid_trace_touched_B_bound A B rest Hrest_trace_valid) as Hrest_touched_B.
+      (* Get SHIFTED bounds on positions in rest using monotonicity *)
+      (* For rest, all elements have min_A > max_A e, so positions are in range (max_A e, len A] *)
+      assert (Hrest_touched_A: length (ms_trace_positions_A rest) <= length A - shift_a).
+      { rewrite Hshift_a_eq.
+        apply (ms_trace_touched_A_bound_shifted A B rest (ms_element_max_A e)).
+        - exact Hrest_trace_valid.
+        - intros e' Hin'.
+          pose proof (ms_monotonic_head_lt_all_A e rest Hmono Hrest_ord e' Hin') as Hlt. lia. }
+      assert (Hrest_touched_B: length (ms_trace_positions_B rest) <= length B - shift_b).
+      { rewrite Hshift_b_eq.
+        apply (ms_trace_touched_B_bound_shifted A B rest (ms_element_max_B e)).
+        - exact Hrest_trace_valid.
+        - intros e' Hin'.
+          pose proof (ms_monotonic_head_lt_all_B e rest Hmono Hrest_ord e' Hin') as Hlt. lia. }
 
       (* Final arithmetic: the goal is
          prefix_a + prefix_b + element_cost + rec <=
@@ -3379,28 +3593,48 @@ Proof.
         rewrite Hshift_a_eq, Hshift_b_eq.
         exact Hrec_bound.
       * (* maxA = minA - 1 + posAe: use existing lemma *)
-        unfold maxA, minA, posAe.
+        unfold maxA, minA, posAe, prefix_a.
         pose proof (ms_element_max_minus_positions_A e He_cons (proj1 Hmin_a_pos)) as Heq.
-        unfold prefix_a in Heq. lia.
+        (* Heq: max - |pos| = min - 1. Goal: max = (min - 1) + |pos|. *)
+        (* Arithmetic: max - |pos| = min - 1 and max >= |pos| implies max = (min - 1) + |pos| *)
+        (* We need max >= |pos|. Prove case by case, keeping min >= 1 for MSMerge2/MSDouble: *)
+        assert (Hge: ms_element_max_A e >= length (ms_element_positions_A e)).
+        { clear - He_cons Hmin_a_pos.
+          destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in *.
+          - lia.  (* MSMatch: i >= 1 from Hmin_a_pos *)
+          - apply Nat.eqb_eq in He_cons. lia.  (* MSMerge2 *)
+          - lia.  (* MSSplit2: i >= 1 from Hmin_a_pos *)
+          - apply andb_prop in He_cons as [Hi _]. apply Nat.eqb_eq in Hi. lia. }  (* MSDouble *)
+        (* Clear context to speed up final lia *)
+        clear - Heq Hge. lia.
       * (* maxB = minB - 1 + posBe: use existing lemma *)
-        unfold maxB, minB, posBe.
+        unfold maxB, minB, posBe, prefix_b.
         pose proof (ms_element_max_minus_positions_B e He_cons (proj1 Hmin_b_pos)) as Heq.
-        unfold prefix_b in Heq. lia.
+        assert (Hge: ms_element_max_B e >= length (ms_element_positions_B e)).
+        { clear - He_cons Hmin_b_pos.
+          destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in *.
+          - lia.  (* MSMatch: j >= 1 from Hmin_b_pos *)
+          - lia.  (* MSMerge2: j >= 1 from Hmin_b_pos *)
+          - apply Nat.eqb_eq in He_cons. lia.  (* MSSplit2 *)
+          - apply andb_prop in He_cons as [_ Hj]. apply Nat.eqb_eq in Hj. lia. }  (* MSDouble *)
+        clear - Heq Hge. lia.
       * unfold maxA, lenA. exact Hmax_a.
       * unfold maxB, lenB. exact Hmax_b.
       * unfold maxA, posAe.
-        destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in *;
-        destruct Hmin_a_pos as [H1 _]; unfold minA in H1; simpl in H1; lia.
+        apply pos_le_max_A; [exact He_cons | exact (proj1 Hmin_a_pos)].
       * unfold maxB, posBe.
-        destruct e as [i j | i1 i2 j | i j1 j2 | i1 i2 j1 j2]; simpl in *;
-        destruct Hmin_b_pos as [H1 _]; unfold minB in H1; simpl in H1; lia.
+        apply pos_le_max_B; [exact He_cons | exact (proj1 Hmin_b_pos)].
       * unfold minA. exact (proj1 Hmin_a_pos).
       * unfold minB. exact (proj1 Hmin_b_pos).
       * (* posArest <= lenA - maxA *)
-        unfold posArest, lenA, maxA.
+        (* Goal is: length (ms_trace_positions_A rest) <= length A - ms_element_max_A e *)
+        (* Hshift_a_eq: shift_a = ms_element_max_A e *)
+        (* Hrest_touched_A: length (ms_trace_positions_A rest) <= length A - shift_a *)
         rewrite <- Hshift_a_eq. exact Hrest_touched_A.
       * (* posBrest <= lenB - maxB *)
-        unfold posBrest, lenB, maxB.
+        (* Goal is: length (ms_trace_positions_B rest) <= length B - ms_element_max_B e *)
+        (* Hshift_b_eq: shift_b = ms_element_max_B e *)
+        (* Hrest_touched_B: length (ms_trace_positions_B rest) <= length B - shift_b *)
         rewrite <- Hshift_b_eq. exact Hrest_touched_B.
 Qed.
 
@@ -3579,5 +3813,6 @@ Proof.
       destruct H_trace_induces_transform as [ops [Hops_valid Hops_cost]].
       pose proof (ms_upper_bound ops A B Hops_valid) as Hupper.
       unfold ms_trace_cost, ms_trace_delete_cost, ms_trace_insert_cost in *.
-      lia.
+      (* Use le_trans instead of lia to avoid slow proof term compilation *)
+      apply (Nat.le_trans _ (ms_seq_cost ops) _ Hupper Hops_cost).
 Qed.

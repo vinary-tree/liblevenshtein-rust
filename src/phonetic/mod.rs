@@ -112,14 +112,20 @@
 
 pub mod application;
 pub mod common;
+pub mod features;
+pub mod grep;
+pub mod grep_online;
 pub mod llev;
 pub mod llre;
 pub mod matching;
 pub mod named_classes;
 pub mod nfa;
+pub mod online_scanner;
+pub mod online_transducer;
 pub mod regex;
 pub mod rules;
 pub mod syllable;
+pub mod token_grep;
 pub mod types;
 pub mod verified;
 
@@ -158,6 +164,12 @@ pub use verified::{
 pub use syllable::{
     is_before_doubled_consonant, is_final_syllable, is_initial_syllable, is_open_syllable,
     syllable_boundaries, syllable_count,
+};
+
+// Re-export phonetic feature types for (?f) flag support
+pub use features::{
+    are_similar, chars_with_any_feature, chars_with_features, expand_feature_based, get_features,
+    get_similar_chars, get_voicing_pair, PhoneticFeature,
 };
 
 // Re-export LLev file format types for custom rule definitions
@@ -213,4 +225,23 @@ pub use llre::{
 pub use llre::{
     from_bytes as llre_from_bytes, load as load_compiled_llre, save as save_compiled_llre,
     to_bytes as llre_to_bytes, CompiledMetadata as LLreCompiledMetadata,
+};
+
+// Re-export grep types for on-the-fly phonetic pattern matching
+pub use grep::{GrepError, GrepMatch, LineMatch, PhoneticGrep, WordBoundaryIterator};
+
+// Re-export online grep for character-level streaming matching
+pub use grep_online::{PhoneticGrepOnline, StreamingScanner};
+
+// Re-export online transducer for streaming phonetic normalization
+pub use online_transducer::OnlinePhoneticTransducerChar;
+
+// Re-export online scanner for streaming document matching
+pub use online_scanner::{OnlinePhoneticScannerChar, ScanMatch, ScannerStats};
+
+// Re-export token-aware grep for per-token Levenshtein matching
+pub use token_grep::{
+    parse_query as parse_token_query, CompiledTokenQuery, DocumentMatch, Separator,
+    StreamingTokenMatcher, TokenGrep, TokenMatch, TokenMatchDetail, TokenPattern, TokenQuery,
+    TokenSpec,
 };

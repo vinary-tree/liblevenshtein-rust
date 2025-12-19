@@ -782,6 +782,181 @@ impl Default for VerificationConfig {
 
 ---
 
+## Unified Type-Behavioral Verification
+
+This section integrates type checking with behavioral verification for improved efficiency.
+
+### Theorem: Well-Typed Congruence Implies Behavioral Preservation
+
+**Statement**: If `Γ ⊢ P : T` and `Γ ⊢ Q : T` and `P ≡ Q` (structural congruence), then `P ≈ Q` (behavioral equivalence).
+
+**Proof**:
+1. **Type Preservation Lemma**: Structural congruence laws preserve types
+   - Nil identity: `Γ ⊢ P | 0 : T` implies `Γ ⊢ P : T`
+   - Commutativity: `Γ ⊢ P | Q : T` implies `Γ ⊢ Q | P : T`
+   - (Similarly for all congruence laws)
+
+2. **Congruence-Bisimilarity**: Each structural congruence implies bisimilarity
+   - Proven via RPO framework in [09-rpo-congruence-proofs.md](09-rpo-congruence-proofs.md)
+
+3. **Transitivity**: Well-typed congruence ⟹ type preservation + bisimilarity ⟹ behavioral equivalence
+
+**Implication**: For well-typed simplifications using only structural congruence:
+1. Check types once (O(n) complexity)
+2. Apply structural congruence rules (no bisim check needed per rule)
+3. Final result is guaranteed bisimilar to original
+
+### Optimization: Skip Bisimulation for Well-Typed Congruence
+
+When simplification is derivable entirely by structural congruence on well-typed terms, we can skip the expensive O(n²) bisimulation check:
+
+```rust
+/// Evidence types for verification
+#[derive(Clone, Debug)]
+pub enum VerificationFastPath {
+    /// Types match and derivable by congruence - no bisim needed
+    TypedCongruence {
+        original_type: Type,
+        congruence_trace: Vec<CongruenceStep>,
+    },
+
+    /// Quick structural equivalence after normalization
+    NormalizedEquivalent {
+        normalized_hash: u64,
+    },
+
+    /// Required full bisimulation check
+    FullBisimulation {
+        witness: BisimulationWitness,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub struct CongruenceStep {
+    pub rule: CongruenceRule,
+    pub location: AstPath,
+}
+
+#[derive(Clone, Debug)]
+pub enum CongruenceRule {
+    NilIdentity,
+    Commutativity,
+    Associativity,
+    ScopeExtrusion,
+    ScopeFusion,
+    DeadScopeElimination,
+}
+
+/// Optimized verification that uses fast path when possible
+pub fn verify_simplification_optimized(
+    original: &Proc,
+    simplified: &Proc,
+    derivation: &SimplificationDerivation,
+) -> VerificationResult {
+    // Fast path 1: Check if types match and derivation uses only congruence
+    if let (Ok(orig_type), Ok(simp_type)) = (infer_type(original), infer_type(simplified)) {
+        if types_equal(&orig_type, &simp_type) {
+            if let Some(trace) = derivation.as_congruence_trace() {
+                return VerificationResult {
+                    status: VerificationStatus::Valid,
+                    evidence: VerificationEvidence::FastPath(
+                        VerificationFastPath::TypedCongruence {
+                            original_type: orig_type,
+                            congruence_trace: trace,
+                        }
+                    ),
+                    verification_time: Duration::ZERO, // Essentially free
+                };
+            }
+        }
+    }
+
+    // Fast path 2: Structural equivalence after normalization
+    let norm_orig = canonicalize(original);
+    let norm_simp = canonicalize(simplified);
+
+    if norm_orig.content_hash() == norm_simp.content_hash() {
+        return VerificationResult {
+            status: VerificationStatus::Valid,
+            evidence: VerificationEvidence::FastPath(
+                VerificationFastPath::NormalizedEquivalent {
+                    normalized_hash: norm_orig.content_hash(),
+                }
+            ),
+            verification_time: Duration::from_micros(100), // Very fast
+        };
+    }
+
+    // Slow path: Full bisimulation with up-to techniques
+    let start = Instant::now();
+    let mut cache = BisimCache::new();
+
+    if check_bisimilar_upto(&norm_orig, &norm_simp, &mut cache) {
+        VerificationResult {
+            status: VerificationStatus::Valid,
+            evidence: VerificationEvidence::FastPath(
+                VerificationFastPath::FullBisimulation {
+                    witness: cache.extract_witness(&norm_orig, &norm_simp),
+                }
+            ),
+            verification_time: start.elapsed(),
+        }
+    } else {
+        VerificationResult {
+            status: VerificationStatus::Invalid(
+                "Programs not bisimilar".to_string()
+            ),
+            evidence: VerificationEvidence::Combined(vec![]),
+            verification_time: start.elapsed(),
+        }
+    }
+}
+```
+
+### Verification Complexity Analysis
+
+| Scenario | Complexity | When Used |
+|----------|------------|-----------|
+| Typed congruence | O(n) | Well-typed programs, congruence-only rules |
+| Normalized equivalence | O(n log n) | Programs normalize to same form |
+| Up-to bisimulation | O(k²) | General case with up-to techniques |
+| Full bisimulation | O(n²) | Fallback (rarely needed) |
+
+Where:
+- n = AST size
+- k = interface size (typically k << n)
+
+### Integration with Verification Pipeline
+
+```rust
+impl VerificationLayer {
+    /// Enhanced verification with fast paths
+    pub fn verify_with_fast_paths(
+        &self,
+        original: &Proc,
+        simplified: &Proc,
+        derivation: &SimplificationDerivation,
+        config: &VerificationConfig,
+    ) -> VerificationResult {
+        // Try fast paths first
+        if config.use_fast_paths {
+            let fast_result = verify_simplification_optimized(
+                original, simplified, derivation
+            );
+
+            if fast_result.status == VerificationStatus::Valid {
+                return fast_result;
+            }
+        }
+
+        // Fall back to standard verification
+        self.verify(original, simplified, config)
+    }
+}
+```
+
+---
+
 ## MeTTaIL Complete Verification Predicate
 
 ```metta
@@ -822,9 +997,14 @@ impl Default for VerificationConfig {
 
 - [Rholang Congruence](06-rholang-congruence.md) - Detailed Rholang structural laws
 - [Termination Proof](07-termination-proof.md) - Formal termination argument
+- [RPO Congruence Proofs](09-rpo-congruence-proofs.md) - Bisimilarity proofs for congruence laws
+- [Transparency Guarantees](10-transparency-guarantees.md) - Phase transparency proofs
+- [Optimization Strategies](11-optimization-strategies.md) - Bisimulation-based optimizations
+- [Up-To Verification](12-up-to-verification.md) - Efficient bisimulation checking
 
 ---
 
 ## Changelog
 
+- **2025-12-17**: Added unified type-behavioral verification section
 - **2025-12-06**: Initial verification layer documentation

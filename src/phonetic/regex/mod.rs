@@ -86,6 +86,7 @@ pub mod ast;
 pub mod error;
 pub mod lexer;
 pub mod parser;
+pub mod transform;
 
 // Re-export main types (character-level)
 pub use ast::{ContextPredicate, Regex};

@@ -552,6 +552,126 @@ G |- A : s^R    G |- B : s^P
 G |- tgttgt(par1par1(A, B)) = ||(tgttgt(A), B)
 ```
 
+### RPO-Derived Transition System (Behavior Framework)
+
+Following Wells & Stay's "Behavior in Higher-Order Languages", the transition
+system for a lambda theory can be derived automatically via **relative pushouts (RPOs)**
+rather than explicitly specified.
+
+#### The Key Insight
+
+Rather than manually specifying modal types for each context (like `ctxrecv_i`,
+`ctxcomm_d`, etc.), the **derived transition system** computes transitions as
+**idempotent pushouts (IPOs)**:
+
+```
+Γ ⊢ t⃗ →[c] d⟨⟨r⃗⟩⟩
+```
+
+where:
+- `t⃗` is the source term(s)
+- `c` is the **minimal context** (label) enabling the rewrite
+- `d⟨⟨r⃗⟩⟩` is the target term in context d with arguments r⃗
+
+**The label `c` represents what the environment must provide to enable the reduction.**
+
+#### Definition: Derived Transition (Definition 17)
+
+For a rewrite rule `p ⇝ q` and term `t`:
+
+```
+Γ ⊢ t →[c] d⟨⟨r⃗⟩⟩
+```
+
+if there exists an IPO square:
+
+```
+        p ←— Γ'
+        ↓      ↓
+        t ←— c
+```
+
+where `c` is the minimal context such that `c(t)` contains a redex matching `p`.
+
+#### Connection to Modal Types
+
+The modal types `ctxrecv_i`, `ctxcomm_d`, etc. from [05-type-lifting.md](./05-type-lifting.md)
+are **derivable** from the RPO computation:
+
+| Modal Type | Derived From |
+|------------|--------------|
+| `ctxrecv_i(...)` | IPO for comm rule with receive context |
+| `ctxsend_i(...)` | IPO for comm rule with send context |
+| `ctxcomm_i(...)` | IPO for comm rule with sent-process context |
+| `ctxposs_i(T)` | General possibility via reflexive-transitive closure |
+
+**Implementation note**: The current explicit modal type generation in MeTTaIL is a
+concrete implementation strategy for the abstract RPO derivation. Both approaches
+produce equivalent typing information.
+
+#### Why IPOs Matter
+
+IPOs (idempotent pushouts) ensure that:
+1. Labels are **minimal** - no unnecessary context information
+2. Labels are **canonical** - unique up to isomorphism
+3. **Bisimilarity is a congruence** - behavioral equivalence is preserved by contexts
+
+This is proven in Theorem 20 and Theorem 22 of the Behavior paper.
+
+---
+
+## Transparency and Congruence
+
+For behavioral equivalence (bisimilarity) to be preserved under all contexts,
+we need conditions on the calculus structure.
+
+### Reactive vs Transparent Contexts
+
+**Reactive context**: A context containing a redex pattern. For example:
+- `out(n, −) | in(n, λx.q)` in RHO is reactive (contains comm redex pattern)
+- `App(Lam(K), −)` in lambda-calculus is reactive (contains beta redex pattern)
+
+**Transparent context**: A non-reactive context `c` where there exists a unique
+complementary context `c̄` such that for any term `t`:
+
+```
+c(t) →[c̄] d(t)
+```
+
+### Theorem: Transparency implies Congruence (Theorem 15)
+
+If a calculus is **transparent** (all non-reactive contexts are transparent),
+then weak bisimilarity is a congruence.
+
+**The RHO calculus and lambda-calculus are both transparent.**
+
+This means:
+- If `p ≈ q` (p and q are behaviorally equivalent)
+- Then `C[p] ≈ C[q]` for any context C
+
+### IPO Uniformity (Definition 21)
+
+A stronger condition: context `g` is **IPO uniform** if transitions factor
+predictably through sublists of the context.
+
+**Theorem 22**: If every context is either reactive or IPO uniform, weak
+bisimilarity is a congruence.
+
+### Implications for Type Checking
+
+These conditions ensure that:
+1. Type-level behavioral equivalences are preserved by all term constructors
+2. Typed terms with equivalent types behave equivalently in all contexts
+3. The type system soundly approximates behavioral equivalence
+
+### Quick Reference: Congruence Conditions
+
+| Condition | Definition | Ensures |
+|-----------|------------|---------|
+| Transparency | Non-reactive contexts have unique complementary labels | Weak bisimilarity congruence |
+| IPO Uniformity | Transitions factor through context sublists | Strong congruence property |
+| Reactive | Context contains redex pattern | Context participates in reduction |
+
 ---
 
 ## Complete Derivation Examples
@@ -921,8 +1041,12 @@ impl TypeChecker {
 
 ## References
 
+- Wells, P. & Stay, M. "Behavior in Higher-Order Languages." 2024.
+  (Primary reference for RPO framework, transparency conditions, and bisimilarity congruence)
 - Pierce, B. C. "Types and Programming Languages." MIT Press, 2002.
 - Williams, P. & Stay, M. "Native Type Theory." EPTCS 372, pp. 116-132, 2022.
 - Stay, M. & Meredith, L. G. "Representing operational semantics with enriched
   Lawvere theories." arXiv:1704.03080, 2017.
+- Milner, R. "Deriving bisimulation congruences for reactive systems." CONCUR 2003.
+  (Foundation for RPO-based transition system derivation)
 - See [bibliography.md](../reference/bibliography.md) for complete references.

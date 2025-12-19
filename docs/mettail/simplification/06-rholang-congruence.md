@@ -19,6 +19,32 @@ The structural congruence relation `≡` is the smallest congruence satisfying:
 
 ---
 
+## Bisimilarity Guarantees
+
+Each structural congruence law preserves behavioral equivalence (bisimilarity). This is proven formally using the Relative Pushout (RPO) framework in [09-rpo-congruence-proofs.md](09-rpo-congruence-proofs.md).
+
+### Summary of Bisimilarity Proofs
+
+| Law | Statement | Bisimilarity | Proof Reference |
+|-----|-----------|--------------|-----------------|
+| Nil Identity | `P \| 0 ≡ P` | `P \| 0 ≈ P` | [RPO Proof §1](09-rpo-congruence-proofs.md#law-1-nil-identity) |
+| Commutativity | `P \| Q ≡ Q \| P` | `P \| Q ≈ Q \| P` | [RPO Proof §2](09-rpo-congruence-proofs.md#law-2-commutativity) |
+| Associativity | `(P \| Q) \| R ≡ P \| (Q \| R)` | `(P \| Q) \| R ≈ P \| (Q \| R)` | [RPO Proof §3](09-rpo-congruence-proofs.md#law-3-associativity) |
+| Scope Extrusion | `new x.(P \| Q) ≡ (new x.P) \| Q` | `new x.(P \| Q) ≈ (new x.P) \| Q` | [RPO Proof §4](09-rpo-congruence-proofs.md#law-4-scope-extrusion) |
+| Scope Fusion | `new x.new x.P ≡ new x.P` | `new x.new x.P ≈ new x.P` | [RPO Proof §5](09-rpo-congruence-proofs.md#law-5-scope-fusion) |
+| Dead Scope | `new x.P ≡ P` (when `x ∉ FV(P)`) | `new x.P ≈ P` | [RPO Proof §6](09-rpo-congruence-proofs.md#law-6-dead-scope-elimination) |
+
+### Implication for Simplification
+
+Because each congruence law preserves bisimilarity:
+1. **Soundness**: Simplification using only these laws is semantically safe
+2. **Compositionality**: Sequential application of laws preserves bisimilarity (by transitivity)
+3. **Context-independence**: Bisimilar terms remain bisimilar in any context (congruence property)
+
+This means well-typed simplifications using structural congruence can skip expensive bisimulation verification - the proofs guarantee correctness. See [05-verification.md](05-verification.md#unified-type-behavioral-verification) for the optimized verification pipeline.
+
+---
+
 ## Structural Congruence Laws
 
 ### Law 1: Nil Identity
@@ -599,9 +625,13 @@ This order ensures:
 
 - [Termination Proof](07-termination-proof.md) - Formal termination argument
 - [Rule Application](03-rule-application.md) - MORK integration details
+- [RPO Congruence Proofs](09-rpo-congruence-proofs.md) - Formal bisimilarity proofs
+- [Transparency Guarantees](10-transparency-guarantees.md) - Phase transparency
+- [Optimization Strategies](11-optimization-strategies.md) - Using congruence for optimization
 
 ---
 
 ## Changelog
 
+- **2025-12-17**: Added bisimilarity guarantees section with RPO proof references
 - **2025-12-06**: Initial Rholang congruence documentation
