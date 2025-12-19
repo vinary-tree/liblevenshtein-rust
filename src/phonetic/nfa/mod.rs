@@ -70,6 +70,7 @@ pub mod memoized;
 pub mod nfa;
 pub mod optimizer;
 pub mod product;
+pub mod state_set;
 pub mod thompson;
 pub mod types;
 
@@ -103,6 +104,9 @@ pub use nfa::NFA;
 pub use product::{ProductAutomaton, ProductState};
 pub use thompson::ThompsonBuilder;
 pub use types::{CharClass, Transition, TransitionLabel};
+
+// Re-export state set
+pub use state_set::StateSet;
 
 // Re-export optimizer types
 pub use optimizer::{NfaOptimizerChar, NfaOptimizer, OptimizationConfig, OptimizationStats};

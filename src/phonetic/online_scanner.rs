@@ -313,7 +313,7 @@ impl OnlinePhoneticScannerChar {
                     let closure = self.query_nfa.epsilon_closure(
                         &std::iter::once(trans.to).collect()
                     );
-                    next_states.extend(closure);
+                    next_states.extend(closure.iter());
                 }
             }
         }

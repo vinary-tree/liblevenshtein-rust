@@ -373,13 +373,17 @@ impl NFACompilerChar {
         let nfa = self.compile_regex(&transform_result.regex)?;
 
         // Apply optimization if configured
-        if let Some(ref config) = self.optimization {
+        let mut nfa = if let Some(ref config) = self.optimization {
             let optimizer = NfaOptimizerChar::new(config.clone());
             let (optimized, _stats) = optimizer.optimize(nfa);
-            Ok(optimized)
+            optimized
         } else {
-            Ok(nfa)
-        }
+            nfa
+        };
+
+        // H9: Finalize CSR transition table
+        nfa.finalize();
+        Ok(nfa)
     }
 
     /// Compile a regex AST to an NFA with full flag support.
@@ -399,6 +403,10 @@ impl NFACompilerChar {
         } else {
             nfa
         };
+
+        // H9: Finalize CSR transition table
+        let mut nfa = nfa;
+        nfa.finalize();
 
         Ok(CompileResultChar {
             nfa,
@@ -422,13 +430,15 @@ impl NFACompilerChar {
             } => {
                 // Compile and optimize the source pattern
                 let source = self.compile_regex(pattern)?;
-                let source = if let Some(ref config) = self.optimization {
+                let mut source = if let Some(ref config) = self.optimization {
                     let optimizer = NfaOptimizerChar::new(config.clone());
                     let (optimized, _stats) = optimizer.optimize(source);
                     optimized
                 } else {
                     source
                 };
+                // H9: Finalize CSR transition table
+                source.finalize();
 
                 let replacement_chars = self.regex_to_literal(replacement)?;
 
@@ -468,13 +478,15 @@ impl NFACompilerChar {
             ContextExpr::Pattern(regex) => {
                 let nfa = self.compile_regex(regex)?;
                 // Apply optimization if configured
-                let nfa = if let Some(ref config) = self.optimization {
+                let mut nfa = if let Some(ref config) = self.optimization {
                     let optimizer = NfaOptimizerChar::new(config.clone());
                     let (optimized, _stats) = optimizer.optimize(nfa);
                     optimized
                 } else {
                     nfa
                 };
+                // H9: Finalize CSR transition table
+                nfa.finalize();
                 Ok(ContextPatternChar::Nfa(nfa))
             }
             ContextExpr::WordBoundary => {
@@ -812,7 +824,10 @@ impl NFACompilerByte {
 
     /// Compile a regex AST to an NFA.
     pub fn compile(&mut self, regex: &RegexByte) -> ParseResult<NFA> {
-        self.compile_regex(regex)
+        let mut nfa = self.compile_regex(regex)?;
+        // H9: Finalize CSR transition table
+        nfa.finalize();
+        Ok(nfa)
     }
 
     /// Compile a rewrite rule.
@@ -824,7 +839,9 @@ impl NFACompilerByte {
                 context,
                 weight,
             } => {
-                let source = self.compile_regex(pattern)?;
+                let mut source = self.compile_regex(pattern)?;
+                // H9: Finalize CSR transition table
+                source.finalize();
                 let replacement_bytes = self.regex_to_literal(replacement)?;
 
                 let (left_context, right_context) = if let Some(ctx) = context {
@@ -861,7 +878,9 @@ impl NFACompilerByte {
     fn compile_context_expr(&mut self, expr: &ContextExprByte) -> ParseResult<ContextPattern> {
         match expr {
             ContextExprByte::Pattern(regex) => {
-                let nfa = self.compile_regex(regex)?;
+                let mut nfa = self.compile_regex(regex)?;
+                // H9: Finalize CSR transition table
+                nfa.finalize();
                 Ok(ContextPattern::Nfa(nfa))
             }
             ContextExprByte::WordBoundary => {

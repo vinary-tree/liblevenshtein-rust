@@ -33,15 +33,322 @@
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::fmt;
 
 use rustc_hash::FxHashSet;
 
+use super::state_set::StateSet;
 use super::types::{
     CharClass, CharClassChar, NFAState, StateId, Transition, TransitionChar, TransitionLabel,
     TransitionLabelChar,
 };
+
+// ============================================================================
+// Transitions Iterator Types (H9)
+// ============================================================================
+
+/// Iterator wrapper for transitions from a state (character-level).
+///
+/// This enum allows `transitions_from()` to return either a CSR slice (fast path)
+/// or fall back to linear scanning for non-finalized NFAs.
+pub enum TransitionsFromChar<'a> {
+    /// Fast path: direct slice from CSR structure
+    Slice(&'a [TransitionChar]),
+    /// Fallback: references to pending and finalized transitions for filtering
+    Pending(
+        &'a [TransitionChar], // pending_transitions
+        &'a [TransitionChar], // transitions (finalized)
+        &'a [usize],          // transition_offsets
+        StateId,
+    ),
+}
+
+impl<'a> TransitionsFromChar<'a> {
+    /// Iterate over all transitions from this state.
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = &'a TransitionChar> + '_ {
+        TransitionsFromCharIter::new(self)
+    }
+}
+
+impl<'a> IntoIterator for TransitionsFromChar<'a> {
+    type Item = &'a TransitionChar;
+    type IntoIter = TransitionsFromCharOwned<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        TransitionsFromCharOwned::new(self)
+    }
+}
+
+/// Owned iterator for TransitionsFromChar (for `for` loops).
+pub struct TransitionsFromCharOwned<'a> {
+    source: TransitionsFromChar<'a>,
+    idx: usize,
+    phase: u8,
+}
+
+impl<'a> TransitionsFromCharOwned<'a> {
+    fn new(source: TransitionsFromChar<'a>) -> Self {
+        Self {
+            source,
+            idx: 0,
+            phase: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for TransitionsFromCharOwned<'a> {
+    type Item = &'a TransitionChar;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &self.source {
+            TransitionsFromChar::Slice(slice) => {
+                if self.idx < slice.len() {
+                    let item = &slice[self.idx];
+                    self.idx += 1;
+                    Some(item)
+                } else {
+                    None
+                }
+            }
+            TransitionsFromChar::Pending(pending, transitions, offsets, state) => {
+                if self.phase == 0 {
+                    let state_idx = *state as usize;
+                    if state_idx + 1 < offsets.len() {
+                        let start = offsets[state_idx];
+                        let end = offsets[state_idx + 1];
+                        while start + self.idx < end {
+                            let item = &transitions[start + self.idx];
+                            self.idx += 1;
+                            return Some(item);
+                        }
+                    }
+                    self.phase = 1;
+                    self.idx = 0;
+                }
+                while self.idx < pending.len() {
+                    let trans = &pending[self.idx];
+                    self.idx += 1;
+                    if trans.from == *state {
+                        return Some(trans);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+
+/// Iterator for TransitionsFromChar.
+struct TransitionsFromCharIter<'a, 'b> {
+    source: &'b TransitionsFromChar<'a>,
+    idx: usize,
+    phase: u8, // 0 = CSR/slice, 1 = pending
+}
+
+impl<'a, 'b> TransitionsFromCharIter<'a, 'b> {
+    fn new(source: &'b TransitionsFromChar<'a>) -> Self {
+        Self {
+            source,
+            idx: 0,
+            phase: 0,
+        }
+    }
+}
+
+impl<'a, 'b> Iterator for TransitionsFromCharIter<'a, 'b> {
+    type Item = &'a TransitionChar;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.source {
+            TransitionsFromChar::Slice(slice) => {
+                if self.idx < slice.len() {
+                    let item = &slice[self.idx];
+                    self.idx += 1;
+                    Some(item)
+                } else {
+                    None
+                }
+            }
+            TransitionsFromChar::Pending(pending, transitions, offsets, state) => {
+                // Phase 0: iterate CSR portion (if any)
+                if self.phase == 0 {
+                    let state_idx = *state as usize;
+                    if state_idx + 1 < offsets.len() {
+                        let start = offsets[state_idx];
+                        let end = offsets[state_idx + 1];
+                        while start + self.idx < end {
+                            let item = &transitions[start + self.idx];
+                            self.idx += 1;
+                            return Some(item);
+                        }
+                    }
+                    // Switch to pending phase
+                    self.phase = 1;
+                    self.idx = 0;
+                }
+                // Phase 1: iterate pending_transitions with filter
+                while self.idx < pending.len() {
+                    let trans = &pending[self.idx];
+                    self.idx += 1;
+                    if trans.from == *state {
+                        return Some(trans);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+
+/// Iterator wrapper for transitions from a state (byte-level).
+pub enum TransitionsFrom<'a> {
+    /// Fast path: direct slice from CSR structure
+    Slice(&'a [Transition]),
+    /// Fallback: references to pending and finalized transitions for filtering
+    Pending(
+        &'a [Transition],
+        &'a [Transition],
+        &'a [usize],
+        StateId,
+    ),
+}
+
+impl<'a> TransitionsFrom<'a> {
+    /// Iterate over all transitions from this state.
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = &'a Transition> + '_ {
+        TransitionsFromIter::new(self)
+    }
+}
+
+impl<'a> IntoIterator for TransitionsFrom<'a> {
+    type Item = &'a Transition;
+    type IntoIter = TransitionsFromOwned<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        TransitionsFromOwned::new(self)
+    }
+}
+
+/// Owned iterator for TransitionsFrom (for `for` loops).
+pub struct TransitionsFromOwned<'a> {
+    source: TransitionsFrom<'a>,
+    idx: usize,
+    phase: u8,
+}
+
+impl<'a> TransitionsFromOwned<'a> {
+    fn new(source: TransitionsFrom<'a>) -> Self {
+        Self {
+            source,
+            idx: 0,
+            phase: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for TransitionsFromOwned<'a> {
+    type Item = &'a Transition;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &self.source {
+            TransitionsFrom::Slice(slice) => {
+                if self.idx < slice.len() {
+                    let item = &slice[self.idx];
+                    self.idx += 1;
+                    Some(item)
+                } else {
+                    None
+                }
+            }
+            TransitionsFrom::Pending(pending, transitions, offsets, state) => {
+                if self.phase == 0 {
+                    let state_idx = *state as usize;
+                    if state_idx + 1 < offsets.len() {
+                        let start = offsets[state_idx];
+                        let end = offsets[state_idx + 1];
+                        while start + self.idx < end {
+                            let item = &transitions[start + self.idx];
+                            self.idx += 1;
+                            return Some(item);
+                        }
+                    }
+                    self.phase = 1;
+                    self.idx = 0;
+                }
+                while self.idx < pending.len() {
+                    let trans = &pending[self.idx];
+                    self.idx += 1;
+                    if trans.from == *state {
+                        return Some(trans);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+
+/// Iterator for TransitionsFrom.
+struct TransitionsFromIter<'a, 'b> {
+    source: &'b TransitionsFrom<'a>,
+    idx: usize,
+    phase: u8,
+}
+
+impl<'a, 'b> TransitionsFromIter<'a, 'b> {
+    fn new(source: &'b TransitionsFrom<'a>) -> Self {
+        Self {
+            source,
+            idx: 0,
+            phase: 0,
+        }
+    }
+}
+
+impl<'a, 'b> Iterator for TransitionsFromIter<'a, 'b> {
+    type Item = &'a Transition;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.source {
+            TransitionsFrom::Slice(slice) => {
+                if self.idx < slice.len() {
+                    let item = &slice[self.idx];
+                    self.idx += 1;
+                    Some(item)
+                } else {
+                    None
+                }
+            }
+            TransitionsFrom::Pending(pending, transitions, offsets, state) => {
+                if self.phase == 0 {
+                    let state_idx = *state as usize;
+                    if state_idx + 1 < offsets.len() {
+                        let start = offsets[state_idx];
+                        let end = offsets[state_idx + 1];
+                        while start + self.idx < end {
+                            let item = &transitions[start + self.idx];
+                            self.idx += 1;
+                            return Some(item);
+                        }
+                    }
+                    self.phase = 1;
+                    self.idx = 0;
+                }
+                while self.idx < pending.len() {
+                    let trans = &pending[self.idx];
+                    self.idx += 1;
+                    if trans.from == *state {
+                        return Some(trans);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
 
 // ============================================================================
 // NFA (Character-level)
@@ -50,6 +357,14 @@ use super::types::{
 /// Nondeterministic Finite Automaton (character-level).
 ///
 /// An NFA for matching phonetic patterns over Unicode characters.
+///
+/// # H9 Optimization: CSR Transition Table
+///
+/// Uses Compressed Sparse Row (CSR) format for transitions:
+/// - `transitions`: contiguous array sorted by source state
+/// - `transition_offsets`: `offsets[s]..offsets[s+1]` = transitions from state s
+///
+/// This provides O(1) lookup with no hash overhead and better cache locality.
 ///
 /// # Examples
 ///
@@ -75,14 +390,19 @@ use super::types::{
 pub struct NFAChar {
     /// All states in the NFA
     states: Vec<NFAState>,
-    /// All transitions
+    /// All transitions (H9: sorted by source state for CSR access)
     transitions: Vec<TransitionChar>,
     /// Initial state
     start: StateId,
     /// Set of final (accepting) states
     finals: FxHashSet<StateId>,
-    /// Index: state -> indices of outgoing transitions
-    transition_index: HashMap<StateId, Vec<usize>>,
+    /// H9: CSR offsets - transitions for state s are at transitions[offsets[s]..offsets[s+1]]
+    /// Length = num_states + 1 (last element is transitions.len())
+    transition_offsets: Vec<usize>,
+    /// Pending transitions before finalization (used during construction)
+    pending_transitions: Vec<TransitionChar>,
+    /// Whether the CSR structure is finalized
+    finalized: bool,
 }
 
 impl NFAChar {
@@ -96,7 +416,9 @@ impl NFAChar {
             transitions: Vec::new(),
             start: 0,
             finals,
-            transition_index: HashMap::new(),
+            transition_offsets: vec![0, 0], // One state, no transitions
+            pending_transitions: Vec::new(),
+            finalized: true,
         }
     }
 
@@ -112,7 +434,54 @@ impl NFAChar {
             transitions: Vec::new(),
             start: 0,
             finals,
-            transition_index: HashMap::new(),
+            transition_offsets: vec![0, 0],
+            pending_transitions: Vec::new(),
+            finalized: true,
+        }
+    }
+
+    /// Finalize the NFA by building CSR transition table (H9 optimization).
+    ///
+    /// This must be called after all states and transitions are added,
+    /// before any matching operations.
+    pub fn finalize(&mut self) {
+        if self.finalized && self.pending_transitions.is_empty() {
+            return;
+        }
+
+        // Merge pending transitions into the main list
+        if !self.pending_transitions.is_empty() {
+            self.transitions.append(&mut self.pending_transitions);
+        }
+
+        // Sort transitions by source state for CSR format
+        self.transitions.sort_by_key(|t| t.from);
+
+        // Build offset array
+        let num_states = self.states.len();
+        let mut offsets = vec![0usize; num_states + 1];
+
+        // Count transitions per state
+        for trans in &self.transitions {
+            if (trans.from as usize) < num_states {
+                offsets[trans.from as usize + 1] += 1;
+            }
+        }
+
+        // Convert counts to cumulative offsets
+        for i in 1..=num_states {
+            offsets[i] += offsets[i - 1];
+        }
+
+        self.transition_offsets = offsets;
+        self.finalized = true;
+    }
+
+    /// Ensure the NFA is finalized before access.
+    #[inline]
+    fn ensure_finalized(&mut self) {
+        if !self.finalized {
+            self.finalize();
         }
     }
 
@@ -174,6 +543,8 @@ impl NFAChar {
         if is_final {
             self.finals.insert(id);
         }
+        // Extend offsets array for new state (H9)
+        self.transition_offsets.push(self.transition_offsets.last().copied().unwrap_or(0));
         id
     }
 
@@ -203,13 +574,9 @@ impl NFAChar {
         weight: f64,
     ) {
         let trans = TransitionChar::with_weight(from, label, to, weight);
-        let idx = self.transitions.len();
-        self.transitions.push(trans);
-
-        self.transition_index
-            .entry(from)
-            .or_insert_with(Vec::new)
-            .push(idx);
+        // H9: Add to pending transitions (will be sorted on finalize)
+        self.pending_transitions.push(trans);
+        self.finalized = false;
     }
 
     /// Add an epsilon transition.
@@ -230,21 +597,40 @@ impl NFAChar {
         self.add_transition(from, TransitionLabelChar::CharClass(class), to);
     }
 
-    /// Get all transitions from a given state.
-    pub fn transitions_from(&self, state: StateId) -> impl Iterator<Item = &TransitionChar> {
-        self.transition_index
-            .get(&state)
-            .map(|indices| indices.iter().map(|&i| &self.transitions[i]))
-            .into_iter()
-            .flatten()
+    /// Get all transitions from a given state (H9: O(1) CSR lookup when finalized).
+    ///
+    /// When the NFA is finalized, this uses CSR for O(1) lookup.
+    /// When not finalized, returns a collected slice from pending_transitions.
+    #[inline]
+    pub fn transitions_from(&self, state: StateId) -> TransitionsFromChar<'_> {
+        if self.finalized && self.pending_transitions.is_empty() {
+            // CSR fast path
+            let state_idx = state as usize;
+            if state_idx + 1 < self.transition_offsets.len() {
+                let start = self.transition_offsets[state_idx];
+                let end = self.transition_offsets[state_idx + 1];
+                TransitionsFromChar::Slice(&self.transitions[start..end])
+            } else {
+                TransitionsFromChar::Slice(&[])
+            }
+        } else {
+            // Fallback: linear scan through pending_transitions
+            // This maintains backwards compatibility for tests that don't call finalize()
+            TransitionsFromChar::Pending(
+                &self.pending_transitions,
+                &self.transitions,
+                &self.transition_offsets,
+                state,
+            )
+        }
     }
 
     /// Compute the epsilon closure of a single state.
     ///
     /// The epsilon closure is the set of all states reachable from the given state
     /// by following zero or more epsilon transitions.
-    pub fn epsilon_closure_single(&self, state: StateId) -> FxHashSet<StateId> {
-        let mut closure = FxHashSet::default();
+    pub fn epsilon_closure_single(&self, state: StateId) -> StateSet {
+        let mut closure = StateSet::new();
         let mut queue = VecDeque::new();
 
         closure.insert(state);
@@ -263,11 +649,11 @@ impl NFAChar {
     }
 
     /// Compute the epsilon closure of a set of states.
-    pub fn epsilon_closure(&self, states: &FxHashSet<StateId>) -> FxHashSet<StateId> {
-        let mut closure = FxHashSet::default();
+    pub fn epsilon_closure(&self, states: &StateSet) -> StateSet {
+        let mut closure = StateSet::new();
         let mut queue = VecDeque::new();
 
-        for &state in states {
+        for state in states.iter() {
             if closure.insert(state) {
                 queue.push_back(state);
             }
@@ -289,10 +675,10 @@ impl NFAChar {
     ///
     /// This does NOT include epsilon closure - call `epsilon_closure` on the result
     /// if needed.
-    pub fn move_on_char(&self, states: &FxHashSet<StateId>, c: char) -> FxHashSet<StateId> {
-        let mut result = FxHashSet::default();
+    pub fn move_on_char(&self, states: &StateSet, c: char) -> StateSet {
+        let mut result = StateSet::new();
 
-        for &state in states {
+        for state in states.iter() {
             for trans in self.transitions_from(state) {
                 if !trans.label.is_epsilon() && !trans.label.is_anchor() && trans.label.matches(c) {
                     result.insert(trans.to);
@@ -309,14 +695,14 @@ impl NFAChar {
     /// This does NOT include epsilon closure - call `epsilon_closure` on the result.
     pub fn move_on_anchors(
         &self,
-        states: &FxHashSet<StateId>,
+        states: &StateSet,
         input: &str,
         pos: usize,
         multiline: bool,
-    ) -> FxHashSet<StateId> {
-        let mut result = FxHashSet::default();
+    ) -> StateSet {
+        let mut result = StateSet::new();
 
-        for &state in states {
+        for state in states.iter() {
             for trans in self.transitions_from(state) {
                 if trans.label.is_anchor() && trans.label.matches_at_position(input, pos, multiline)
                 {
@@ -370,7 +756,7 @@ impl NFAChar {
             if anchor_closure.is_subset(&current) {
                 break; // No new states reached
             }
-            current.extend(anchor_closure);
+            current.extend(&anchor_closure);
         }
 
         let chars: Vec<char> = input.chars().collect();
@@ -384,7 +770,7 @@ impl NFAChar {
                 // \Z matches before optional trailing newline, so we accept if:
                 // 1. We're in a final state, AND
                 // 2. Remaining input is only trailing newlines
-                if current.iter().any(|&s| self.is_final(s))
+                if current.iter().any(|s| self.is_final(s))
                     && chars[char_idx..].iter().all(|&ch| ch == '\n')
                 {
                     return true;
@@ -404,7 +790,7 @@ impl NFAChar {
                 }
                 let anchor_closure = self.epsilon_closure(&anchor_moved);
                 let prev_len = current.len();
-                current.extend(anchor_closure);
+                current.extend(&anchor_closure);
                 if current.len() == prev_len {
                     break; // No new states reached
                 }
@@ -419,7 +805,7 @@ impl NFAChar {
                     }
                     let anchor_closure = self.epsilon_closure(&anchor_moved);
                     let prev_len = current.len();
-                    current.extend(anchor_closure);
+                    current.extend(&anchor_closure);
                     if current.len() == prev_len {
                         break;
                     }
@@ -427,7 +813,7 @@ impl NFAChar {
             }
         }
 
-        current.iter().any(|&s| self.is_final(s))
+        current.iter().any(|s| self.is_final(s))
     }
 
     /// Search for the pattern anywhere in the input string (search semantics).
@@ -446,8 +832,8 @@ impl NFAChar {
     pub fn search_with_flags(&self, input: &str, multiline: bool, dotall: bool) -> bool {
         // Check if the pattern has a start anchor
         let start_closure = self.epsilon_closure_single(self.start);
-        let has_start_anchor = start_closure.iter().any(|&s| {
-            self.transitions_from(s).any(|t| {
+        let has_start_anchor = start_closure.iter().any(|s| {
+            self.transitions_from(s).iter().any(|t| {
                 matches!(
                     t.label,
                     TransitionLabelChar::StartOfLine | TransitionLabelChar::StartOfInput
@@ -498,7 +884,7 @@ impl NFAChar {
             if anchor_closure.is_subset(&current) {
                 break;
             }
-            current.extend(anchor_closure);
+            current.extend(&anchor_closure);
         }
 
         let mut byte_pos = start_byte_pos;
@@ -510,11 +896,11 @@ impl NFAChar {
             let char_moved = self.move_on_char(&current, c);
             if char_moved.is_empty() {
                 // No character transition - check if we can accept here (search semantics)
-                if current.iter().any(|&s| self.is_final(s)) {
+                if current.iter().any(|s| self.is_final(s)) {
                     // Check if any final state has pending end anchor requirements
-                    let needs_end_anchor = current.iter().any(|&s| {
+                    let needs_end_anchor = current.iter().any(|s| {
                         self.is_final(s)
-                            && self.transitions_from(s).any(|t| {
+                            && self.transitions_from(s).iter().any(|t| {
                                 matches!(
                                     t.label,
                                     TransitionLabelChar::EndOfLine
@@ -549,7 +935,7 @@ impl NFAChar {
                 }
                 let anchor_closure = self.epsilon_closure(&anchor_moved);
                 let prev_len = current.len();
-                current.extend(anchor_closure);
+                current.extend(&anchor_closure);
                 if current.len() == prev_len {
                     break;
                 }
@@ -564,7 +950,7 @@ impl NFAChar {
                     }
                     let anchor_closure = self.epsilon_closure(&anchor_moved);
                     let prev_len = current.len();
-                    current.extend(anchor_closure);
+                    current.extend(&anchor_closure);
                     if current.len() == prev_len {
                         break;
                     }
@@ -572,7 +958,7 @@ impl NFAChar {
             }
         }
 
-        current.iter().any(|&s| self.is_final(s))
+        current.iter().any(|s| self.is_final(s))
     }
 
     /// Search for the pattern anywhere in the input (convenience method).
@@ -580,15 +966,12 @@ impl NFAChar {
         self.search_with_flags(input, false, false)
     }
 
-    /// Rebuild the transition index (call after modifying transitions directly).
+    /// Rebuild the CSR transition table (H9: call after modifying transitions directly).
+    ///
+    /// This re-finalizes the NFA, sorting transitions and rebuilding the offset table.
     pub fn rebuild_index(&mut self) {
-        self.transition_index.clear();
-        for (idx, trans) in self.transitions.iter().enumerate() {
-            self.transition_index
-                .entry(trans.from)
-                .or_insert_with(Vec::new)
-                .push(idx);
-        }
+        self.finalized = false;
+        self.finalize();
     }
 
     /// Shift all state IDs by an offset.
@@ -602,6 +985,12 @@ impl NFAChar {
         }
 
         for trans in &mut self.transitions {
+            trans.from += offset;
+            trans.to += offset;
+        }
+
+        // H9: Also shift pending_transitions
+        for trans in &mut self.pending_transitions {
             trans.from += offset;
             trans.to += offset;
         }
@@ -642,11 +1031,15 @@ impl NFAChar {
         let offset_a = 1;
         let mut nfa_a = self;
         nfa_a.shift_states(offset_a);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_a.finalize();
 
         // Offset for other's states (after self)
         let offset_b = offset_a + nfa_a.num_states() as StateId;
         let mut nfa_b = other;
         nfa_b.shift_states(offset_b);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_b.finalize();
 
         // New final state
         let new_final = offset_b + nfa_b.num_states() as StateId;
@@ -704,12 +1097,16 @@ impl NFAChar {
         let mut result = NFAChar::new();
 
         // Self starts at offset 0
-        let nfa_a = self;
+        // H9: Ensure pending transitions are merged before copying
+        let mut nfa_a = self;
+        nfa_a.finalize();
 
         // Other starts after self's states
         let offset_b = nfa_a.num_states() as StateId;
         let mut nfa_b = other;
         nfa_b.shift_states(offset_b);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_b.finalize();
 
         // Build combined NFA
         result.states = nfa_a.states;
@@ -754,6 +1151,8 @@ impl NFAChar {
         let offset_a = 1;
         let mut nfa_a = self;
         nfa_a.shift_states(offset_a);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_a.finalize();
 
         // New start and final states
         let new_start = 0;
@@ -818,6 +1217,8 @@ impl NFAChar {
         let offset_a = 1;
         let mut nfa_a = self;
         nfa_a.shift_states(offset_a);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_a.finalize();
 
         // New start and final states
         let new_start = 0;
@@ -960,19 +1361,29 @@ impl fmt::Display for NFAChar {
 ///
 /// An NFA for matching phonetic patterns over ASCII bytes.
 /// Optimized for ~5% faster matching and ~4× less memory per edge label.
+///
+/// # H9 Optimization: CSR Transition Table
+///
+/// Uses Compressed Sparse Row (CSR) format for transitions:
+/// - `transitions`: contiguous array sorted by source state
+/// - `transition_offsets`: `offsets[s]..offsets[s+1]` = transitions from state s
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct NFA {
     /// All states in the NFA
     states: Vec<NFAState>,
-    /// All transitions
+    /// All transitions (H9: sorted by source state for CSR access)
     transitions: Vec<Transition>,
     /// Initial state
     start: StateId,
     /// Set of final (accepting) states
     finals: FxHashSet<StateId>,
-    /// Index: state -> indices of outgoing transitions
-    transition_index: HashMap<StateId, Vec<usize>>,
+    /// H9: CSR offsets - transitions for state s are at transitions[offsets[s]..offsets[s+1]]
+    transition_offsets: Vec<usize>,
+    /// Pending transitions before finalization
+    pending_transitions: Vec<Transition>,
+    /// Whether the CSR structure is finalized
+    finalized: bool,
 }
 
 impl NFA {
@@ -986,7 +1397,9 @@ impl NFA {
             transitions: Vec::new(),
             start: 0,
             finals,
-            transition_index: HashMap::new(),
+            transition_offsets: vec![0, 0],
+            pending_transitions: Vec::new(),
+            finalized: true,
         }
     }
 
@@ -1002,7 +1415,46 @@ impl NFA {
             transitions: Vec::new(),
             start: 0,
             finals,
-            transition_index: HashMap::new(),
+            transition_offsets: vec![0, 0],
+            pending_transitions: Vec::new(),
+            finalized: true,
+        }
+    }
+
+    /// Finalize the NFA by building CSR transition table (H9 optimization).
+    pub fn finalize(&mut self) {
+        if self.finalized && self.pending_transitions.is_empty() {
+            return;
+        }
+
+        if !self.pending_transitions.is_empty() {
+            self.transitions.append(&mut self.pending_transitions);
+        }
+
+        self.transitions.sort_by_key(|t| t.from);
+
+        let num_states = self.states.len();
+        let mut offsets = vec![0usize; num_states + 1];
+
+        for trans in &self.transitions {
+            if (trans.from as usize) < num_states {
+                offsets[trans.from as usize + 1] += 1;
+            }
+        }
+
+        for i in 1..=num_states {
+            offsets[i] += offsets[i - 1];
+        }
+
+        self.transition_offsets = offsets;
+        self.finalized = true;
+    }
+
+    /// Ensure the NFA is finalized before access.
+    #[inline]
+    fn ensure_finalized(&mut self) {
+        if !self.finalized {
+            self.finalize();
         }
     }
 
@@ -1064,6 +1516,9 @@ impl NFA {
         if is_final {
             self.finals.insert(id);
         }
+        // Extend offsets array for new state (H9)
+        self.transition_offsets
+            .push(self.transition_offsets.last().copied().unwrap_or(0));
         id
     }
 
@@ -1093,13 +1548,9 @@ impl NFA {
         weight: f64,
     ) {
         let trans = Transition::with_weight(from, label, to, weight);
-        let idx = self.transitions.len();
-        self.transitions.push(trans);
-
-        self.transition_index
-            .entry(from)
-            .or_insert_with(Vec::new)
-            .push(idx);
+        // H9: Add to pending transitions (will be sorted on finalize)
+        self.pending_transitions.push(trans);
+        self.finalized = false;
     }
 
     /// Add an epsilon transition.
@@ -1120,18 +1571,33 @@ impl NFA {
         self.add_transition(from, TransitionLabel::CharClass(class), to);
     }
 
-    /// Get all transitions from a given state.
-    pub fn transitions_from(&self, state: StateId) -> impl Iterator<Item = &Transition> {
-        self.transition_index
-            .get(&state)
-            .map(|indices| indices.iter().map(|&i| &self.transitions[i]))
-            .into_iter()
-            .flatten()
+    /// Get all transitions from a given state (H9: O(1) CSR lookup when finalized).
+    #[inline]
+    pub fn transitions_from(&self, state: StateId) -> TransitionsFrom<'_> {
+        if self.finalized && self.pending_transitions.is_empty() {
+            // CSR fast path
+            let state_idx = state as usize;
+            if state_idx + 1 < self.transition_offsets.len() {
+                let start = self.transition_offsets[state_idx];
+                let end = self.transition_offsets[state_idx + 1];
+                TransitionsFrom::Slice(&self.transitions[start..end])
+            } else {
+                TransitionsFrom::Slice(&[])
+            }
+        } else {
+            // Fallback: linear scan through pending_transitions
+            TransitionsFrom::Pending(
+                &self.pending_transitions,
+                &self.transitions,
+                &self.transition_offsets,
+                state,
+            )
+        }
     }
 
     /// Compute the epsilon closure of a single state.
-    pub fn epsilon_closure_single(&self, state: StateId) -> FxHashSet<StateId> {
-        let mut closure = FxHashSet::default();
+    pub fn epsilon_closure_single(&self, state: StateId) -> StateSet {
+        let mut closure = StateSet::new();
         let mut queue = VecDeque::new();
 
         closure.insert(state);
@@ -1150,11 +1616,11 @@ impl NFA {
     }
 
     /// Compute the epsilon closure of a set of states.
-    pub fn epsilon_closure(&self, states: &FxHashSet<StateId>) -> FxHashSet<StateId> {
-        let mut closure = FxHashSet::default();
+    pub fn epsilon_closure(&self, states: &StateSet) -> StateSet {
+        let mut closure = StateSet::new();
         let mut queue = VecDeque::new();
 
-        for &state in states {
+        for state in states.iter() {
             if closure.insert(state) {
                 queue.push_back(state);
             }
@@ -1173,10 +1639,10 @@ impl NFA {
     }
 
     /// Compute the set of states reachable from a state set on input byte `b`.
-    pub fn move_on_byte(&self, states: &FxHashSet<StateId>, b: u8) -> FxHashSet<StateId> {
-        let mut result = FxHashSet::default();
+    pub fn move_on_byte(&self, states: &StateSet, b: u8) -> StateSet {
+        let mut result = StateSet::new();
 
-        for &state in states {
+        for state in states.iter() {
             for trans in self.transitions_from(state) {
                 if !trans.label.is_epsilon() && !trans.label.is_anchor() && trans.label.matches(b) {
                     result.insert(trans.to);
@@ -1190,14 +1656,14 @@ impl NFA {
     /// Compute the set of states reachable from a state set on anchor assertions.
     pub fn move_on_anchors(
         &self,
-        states: &FxHashSet<StateId>,
+        states: &StateSet,
         input: &[u8],
         pos: usize,
         multiline: bool,
-    ) -> FxHashSet<StateId> {
-        let mut result = FxHashSet::default();
+    ) -> StateSet {
+        let mut result = StateSet::new();
 
-        for &state in states {
+        for state in states.iter() {
             for trans in self.transitions_from(state) {
                 if trans.label.is_anchor() && trans.label.matches_at_position(input, pos, multiline)
                 {
@@ -1234,7 +1700,7 @@ impl NFA {
             if anchor_closure.is_subset(&current) {
                 break;
             }
-            current.extend(anchor_closure);
+            current.extend(&anchor_closure);
         }
 
         for (pos, &b) in input.iter().enumerate() {
@@ -1242,7 +1708,7 @@ impl NFA {
             let byte_moved = self.move_on_byte(&current, b);
             if byte_moved.is_empty() {
                 // No transition - check if \Z with trailing newlines
-                if current.iter().any(|&s| self.is_final(s))
+                if current.iter().any(|s| self.is_final(s))
                     && input[pos..].iter().all(|&byte| byte == b'\n')
                 {
                     return true;
@@ -1260,21 +1726,21 @@ impl NFA {
                 }
                 let anchor_closure = self.epsilon_closure(&anchor_moved);
                 let prev_len = current.len();
-                current.extend(anchor_closure);
+                current.extend(&anchor_closure);
                 if current.len() == prev_len {
                     break;
                 }
             }
         }
 
-        current.iter().any(|&s| self.is_final(s))
+        current.iter().any(|s| self.is_final(s))
     }
 
     /// Search for the pattern anywhere in the input (search semantics).
     pub fn search_with_flags(&self, input: &[u8], multiline: bool, dotall: bool) -> bool {
         let start_closure = self.epsilon_closure_single(self.start);
-        let has_start_anchor = start_closure.iter().any(|&s| {
-            self.transitions_from(s).any(|t| {
+        let has_start_anchor = start_closure.iter().any(|s| {
+            self.transitions_from(s).iter().any(|t| {
                 matches!(
                     t.label,
                     TransitionLabel::StartOfLine | TransitionLabel::StartOfInput
@@ -1314,7 +1780,7 @@ impl NFA {
             if anchor_closure.is_subset(&current) {
                 break;
             }
-            current.extend(anchor_closure);
+            current.extend(&anchor_closure);
         }
 
         for (idx, &b) in input[start_pos..].iter().enumerate() {
@@ -1324,10 +1790,10 @@ impl NFA {
             let byte_moved = self.move_on_byte(&current, b);
             if byte_moved.is_empty() {
                 // Check if we can accept here (search semantics)
-                if current.iter().any(|&s| self.is_final(s)) {
-                    let needs_end_anchor = current.iter().any(|&s| {
+                if current.iter().any(|s| self.is_final(s)) {
+                    let needs_end_anchor = current.iter().any(|s| {
                         self.is_final(s)
-                            && self.transitions_from(s).any(|t| {
+                            && self.transitions_from(s).iter().any(|t| {
                                 matches!(
                                     t.label,
                                     TransitionLabel::EndOfLine
@@ -1358,14 +1824,14 @@ impl NFA {
                 }
                 let anchor_closure = self.epsilon_closure(&anchor_moved);
                 let prev_len = current.len();
-                current.extend(anchor_closure);
+                current.extend(&anchor_closure);
                 if current.len() == prev_len {
                     break;
                 }
             }
         }
 
-        current.iter().any(|&s| self.is_final(s))
+        current.iter().any(|s| self.is_final(s))
     }
 
     /// Search for the pattern anywhere in the input (convenience method).
@@ -1388,15 +1854,10 @@ impl NFA {
         self.accepts_with_flags(input.as_bytes(), multiline, dotall)
     }
 
-    /// Rebuild the transition index.
+    /// Rebuild the CSR transition table (H9: call after modifying transitions directly).
     pub fn rebuild_index(&mut self) {
-        self.transition_index.clear();
-        for (idx, trans) in self.transitions.iter().enumerate() {
-            self.transition_index
-                .entry(trans.from)
-                .or_insert_with(Vec::new)
-                .push(idx);
-        }
+        self.finalized = false;
+        self.finalize();
     }
 
     /// Shift all state IDs by an offset.
@@ -1408,6 +1869,12 @@ impl NFA {
         }
 
         for trans in &mut self.transitions {
+            trans.from += offset;
+            trans.to += offset;
+        }
+
+        // H9: Also shift pending_transitions
+        for trans in &mut self.pending_transitions {
             trans.from += offset;
             trans.to += offset;
         }
@@ -1429,10 +1896,14 @@ impl NFA {
         let offset_a = 1;
         let mut nfa_a = self;
         nfa_a.shift_states(offset_a);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_a.finalize();
 
         let offset_b = offset_a + nfa_a.num_states() as StateId;
         let mut nfa_b = other;
         nfa_b.shift_states(offset_b);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_b.finalize();
 
         let new_final = offset_b + nfa_b.num_states() as StateId;
 
@@ -1467,11 +1938,15 @@ impl NFA {
     pub fn concatenate(self, other: NFA) -> NFA {
         let mut result = NFA::new();
 
-        let nfa_a = self;
+        // H9: Ensure pending transitions are merged before copying
+        let mut nfa_a = self;
+        nfa_a.finalize();
 
         let offset_b = nfa_a.num_states() as StateId;
         let mut nfa_b = other;
         nfa_b.shift_states(offset_b);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_b.finalize();
 
         result.states = nfa_a.states;
         result.states.extend(nfa_b.states.iter().cloned());
@@ -1497,6 +1972,8 @@ impl NFA {
         let offset_a = 1;
         let mut nfa_a = self;
         nfa_a.shift_states(offset_a);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_a.finalize();
 
         let new_start = 0;
         let new_final = offset_a + nfa_a.num_states() as StateId;
@@ -1539,6 +2016,8 @@ impl NFA {
         let offset_a = 1;
         let mut nfa_a = self;
         nfa_a.shift_states(offset_a);
+        // H9: Ensure pending transitions are merged before copying
+        nfa_a.finalize();
 
         let new_start = 0;
         let new_final = offset_a + nfa_a.num_states() as StateId;

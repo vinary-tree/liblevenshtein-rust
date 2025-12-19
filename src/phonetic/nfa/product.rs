@@ -38,14 +38,15 @@
 //! ```
 
 use super::nfa::{NFAChar, NFA};
+use super::state_set::StateSet;
 use super::types::StateId;
 use crate::transducer::Algorithm;
 use rustc_hash::FxHashSet;
 use std::collections::VecDeque;
 
-/// Helper to create a single-element FxHashSet.
-fn fx_singleton(state: StateId) -> FxHashSet<StateId> {
-    let mut set = FxHashSet::default();
+/// Helper to create a single-element StateSet.
+fn singleton(state: StateId) -> StateSet {
+    let mut set = StateSet::new();
     set.insert(state);
     set
 }
@@ -171,7 +172,8 @@ impl ProductAutomatonChar {
     /// The initial state is the epsilon closure of the NFA start state
     /// with 0 edit distance.
     pub fn initial_state(&self) -> ProductStateChar {
-        let initial_closure = self.nfa.epsilon_closure(&fx_singleton(self.nfa.start()));
+        let initial_closure: FxHashSet<StateId> =
+            self.nfa.epsilon_closure_single(self.nfa.start()).into();
         ProductStateChar::new(initial_closure, 0)
     }
 
@@ -222,8 +224,8 @@ impl ProductAutomatonChar {
                 for trans in self.nfa.transitions_from(nfa_state) {
                     if trans.label.consumes_input() {
                         // Add successor regardless of whether it matches c
-                        let closure = self.nfa.epsilon_closure(&fx_singleton(trans.to));
-                        subst_states.extend(closure);
+                        let closure = self.nfa.epsilon_closure_single(trans.to);
+                        subst_states.extend(closure.iter());
                     }
                 }
             }
@@ -252,7 +254,7 @@ impl ProductAutomatonChar {
 
     /// Advance NFA states by consuming a character.
     fn nfa_step(&self, states: &FxHashSet<StateId>, c: char) -> FxHashSet<StateId> {
-        let mut next_states = FxHashSet::default();
+        let mut next_states = StateSet::new();
 
         for &state in states {
             for trans in self.nfa.transitions_from(state) {
@@ -262,8 +264,8 @@ impl ProductAutomatonChar {
             }
         }
 
-        // Apply epsilon closure
-        self.nfa.epsilon_closure(&next_states)
+        // Apply epsilon closure and convert to FxHashSet
+        self.nfa.epsilon_closure(&next_states).into()
     }
 
     /// Check if the input string is accepted by the fuzzy regex.
@@ -288,7 +290,8 @@ impl ProductAutomatonChar {
         let n = input_chars.len();
 
         // BFS state: (nfa_states, input_position, edit_distance)
-        let initial_closure = self.nfa.epsilon_closure(&fx_singleton(self.nfa.start()));
+        let initial_closure: FxHashSet<StateId> =
+            self.nfa.epsilon_closure_single(self.nfa.start()).into();
 
         // Use dynamic programming / BFS
         // State: (position in input, set of NFA states, edit distance used)
@@ -378,7 +381,7 @@ impl ProductAutomatonChar {
 
     /// Advance NFA states via any consuming transition.
     fn nfa_advance(&self, states: &FxHashSet<StateId>) -> FxHashSet<StateId> {
-        let mut next_states = FxHashSet::default();
+        let mut next_states = StateSet::new();
 
         for &state in states {
             for trans in self.nfa.transitions_from(state) {
@@ -388,7 +391,7 @@ impl ProductAutomatonChar {
             }
         }
 
-        self.nfa.epsilon_closure(&next_states)
+        self.nfa.epsilon_closure(&next_states).into()
     }
 
     /// Step NFA with transposed characters.
@@ -503,7 +506,8 @@ impl ProductAutomatonChar {
         let input_chars: Vec<char> = input.chars().collect();
         let n = input_chars.len();
 
-        let initial_closure = self.nfa.epsilon_closure(&fx_singleton(self.nfa.start()));
+        let initial_closure: FxHashSet<StateId> =
+            self.nfa.epsilon_closure_single(self.nfa.start()).into();
 
         let mut min_dist: Option<u8> = None;
         let mut visited: FxHashSet<(usize, Vec<StateId>, u8)> = FxHashSet::default();
@@ -733,7 +737,8 @@ impl ProductAutomaton {
 
     /// Get the initial state.
     pub fn initial_state(&self) -> ProductState {
-        let initial_closure = self.nfa.epsilon_closure(&fx_singleton(self.nfa.start()));
+        let initial_closure: FxHashSet<StateId> =
+            self.nfa.epsilon_closure_single(self.nfa.start()).into();
         ProductState::new(initial_closure, 0)
     }
 
@@ -747,7 +752,7 @@ impl ProductAutomaton {
 
     /// Advance NFA states by consuming a byte.
     fn nfa_step(&self, states: &FxHashSet<StateId>, b: u8) -> FxHashSet<StateId> {
-        let mut next_states = FxHashSet::default();
+        let mut next_states = StateSet::new();
 
         for &state in states {
             for trans in self.nfa.transitions_from(state) {
@@ -757,12 +762,12 @@ impl ProductAutomaton {
             }
         }
 
-        self.nfa.epsilon_closure(&next_states)
+        self.nfa.epsilon_closure(&next_states).into()
     }
 
     /// Advance NFA states via any consuming transition.
     fn nfa_advance(&self, states: &FxHashSet<StateId>) -> FxHashSet<StateId> {
-        let mut next_states = FxHashSet::default();
+        let mut next_states = StateSet::new();
 
         for &state in states {
             for trans in self.nfa.transitions_from(state) {
@@ -772,7 +777,7 @@ impl ProductAutomaton {
             }
         }
 
-        self.nfa.epsilon_closure(&next_states)
+        self.nfa.epsilon_closure(&next_states).into()
     }
 
     /// Step NFA with transposed bytes.
@@ -809,7 +814,8 @@ impl ProductAutomaton {
         }
 
         let n = input.len();
-        let initial_closure = self.nfa.epsilon_closure(&fx_singleton(self.nfa.start()));
+        let initial_closure: FxHashSet<StateId> =
+            self.nfa.epsilon_closure_single(self.nfa.start()).into();
 
         let mut visited: FxHashSet<(usize, Vec<StateId>, u8)> = FxHashSet::default();
         let mut queue: VecDeque<(usize, FxHashSet<StateId>, u8)> = VecDeque::new();
@@ -943,7 +949,8 @@ impl ProductAutomaton {
         }
 
         let n = input.len();
-        let initial_closure = self.nfa.epsilon_closure(&fx_singleton(self.nfa.start()));
+        let initial_closure: FxHashSet<StateId> =
+            self.nfa.epsilon_closure_single(self.nfa.start()).into();
 
         let mut min_dist: Option<u8> = None;
         let mut visited: FxHashSet<(usize, Vec<StateId>, u8)> = FxHashSet::default();

@@ -33,9 +33,9 @@
 //! ```
 
 use super::nfa::{NFAChar, NFA};
+use super::state_set::StateSet;
 use super::types::StateId;
 use rustc_hash::FxHashMap;
-use rustc_hash::FxHashSet;
 
 // ============================================================================
 // Character-level Lazy DFA
@@ -49,86 +49,135 @@ use rustc_hash::FxHashSet;
 /// - Efficient equality comparison
 pub type DFAStateChar = Vec<StateId>;
 
+/// Compact ID for a DFA state (H8 optimization).
+/// Using u32 for cache-friendly key size while supporting millions of states.
+type DFAStateId = u32;
+
 /// Lazy DFA for character-level NFA simulation.
 ///
 /// Constructs DFA states on-demand during matching, caching transitions
 /// for efficient repeated queries.
+///
+/// # H8 Optimization: State ID Caching
+///
+/// Instead of using `Vec<StateId>` as cache keys (which requires O(n) hash
+/// and comparison), we assign each unique DFA state a compact numeric ID.
+/// Cache lookups become O(1) instead of O(n).
 #[derive(Debug, Clone)]
 pub struct LazyDFAChar {
     /// The underlying NFA
     nfa: NFAChar,
-    /// Cached transitions: (dfa_state, char) -> dfa_state
-    cache: FxHashMap<(DFAStateChar, char), DFAStateChar>,
-    /// The initial DFA state (epsilon closure of NFA start state)
-    initial_state: DFAStateChar,
-    /// Cache of which DFA states are accepting
-    accepting_cache: FxHashMap<DFAStateChar, bool>,
+    /// Cached transitions: (state_id, char) -> state_id (H8: O(1) keys)
+    cache: FxHashMap<(DFAStateId, char), DFAStateId>,
+    /// Registry mapping DFA states to compact IDs
+    state_to_id: FxHashMap<DFAStateChar, DFAStateId>,
+    /// Reverse mapping: ID -> DFA state
+    id_to_state: Vec<DFAStateChar>,
+    /// The initial DFA state ID
+    initial_state_id: DFAStateId,
+    /// Cache of which DFA state IDs are accepting
+    accepting_cache: FxHashMap<DFAStateId, bool>,
 }
 
 impl LazyDFAChar {
     /// Create a new lazy DFA from an NFA.
     pub fn new(nfa: NFAChar) -> Self {
         // Compute initial state as epsilon closure of NFA start
-        let mut initial_set = FxHashSet::default();
-        initial_set.insert(nfa.start());
-        let initial_closure = nfa.epsilon_closure(&initial_set);
+        let initial_closure = nfa.epsilon_closure_single(nfa.start());
         let initial_state = Self::set_to_state(&initial_closure);
+
+        // Register the initial state with ID 0
+        let mut state_to_id = FxHashMap::default();
+        state_to_id.insert(initial_state.clone(), 0);
+        let id_to_state = vec![initial_state];
 
         Self {
             nfa,
             cache: FxHashMap::default(),
-            initial_state,
+            state_to_id,
+            id_to_state,
+            initial_state_id: 0,
             accepting_cache: FxHashMap::default(),
         }
     }
 
     /// Convert a set of NFA states to a canonical DFA state representation.
-    fn set_to_state(states: &FxHashSet<StateId>) -> DFAStateChar {
-        let mut vec: Vec<StateId> = states.iter().copied().collect();
+    fn set_to_state(states: &StateSet) -> DFAStateChar {
+        let mut vec: Vec<StateId> = states.iter().collect();
         vec.sort_unstable();
         vec
     }
 
-    /// Convert a DFA state back to a set for NFA operations.
-    fn state_to_set(state: &DFAStateChar) -> FxHashSet<StateId> {
+    /// Convert a DFA state back to a StateSet for NFA operations.
+    fn state_to_set(state: &DFAStateChar) -> StateSet {
         state.iter().copied().collect()
+    }
+
+    /// Get or create a state ID for a DFA state (H8 optimization).
+    #[inline]
+    fn get_or_create_id(&mut self, state: DFAStateChar) -> DFAStateId {
+        if let Some(&id) = self.state_to_id.get(&state) {
+            return id;
+        }
+        let id = self.id_to_state.len() as DFAStateId;
+        self.state_to_id.insert(state.clone(), id);
+        self.id_to_state.push(state);
+        id
+    }
+
+    /// Get the DFA state for an ID.
+    #[inline]
+    fn get_state(&self, id: DFAStateId) -> &DFAStateChar {
+        &self.id_to_state[id as usize]
     }
 
     /// Get the initial DFA state.
     #[inline]
     pub fn initial_state(&self) -> &DFAStateChar {
-        &self.initial_state
+        self.get_state(self.initial_state_id)
+    }
+
+    /// Check if a DFA state is accepting (by ID).
+    #[inline]
+    fn is_accepting_id(&mut self, state_id: DFAStateId) -> bool {
+        if let Some(&accepting) = self.accepting_cache.get(&state_id) {
+            return accepting;
+        }
+
+        let state = self.get_state(state_id);
+        let accepting = state.iter().any(|&s| self.nfa.is_final(s));
+        self.accepting_cache.insert(state_id, accepting);
+        accepting
     }
 
     /// Check if a DFA state is accepting.
     ///
     /// A DFA state is accepting if any of its constituent NFA states is final.
     pub fn is_accepting(&mut self, state: &DFAStateChar) -> bool {
-        if let Some(&accepting) = self.accepting_cache.get(state) {
-            return accepting;
+        // Look up the state ID (should exist if we're checking acceptance)
+        if let Some(&state_id) = self.state_to_id.get(state) {
+            self.is_accepting_id(state_id)
+        } else {
+            // State not registered - compute directly
+            state.iter().any(|&s| self.nfa.is_final(s))
         }
-
-        let accepting = state.iter().any(|&s| self.nfa.is_final(s));
-        self.accepting_cache.insert(state.clone(), accepting);
-        accepting
     }
 
-    /// Compute the transition from a DFA state on a character.
-    ///
-    /// This is the core lazy construction: we compute DFA states on-demand
-    /// and cache the results.
-    pub fn transition(&mut self, state: &DFAStateChar, c: char) -> DFAStateChar {
-        // Check cache first
-        let cache_key = (state.clone(), c);
-        if let Some(next) = self.cache.get(&cache_key) {
-            return next.clone();
+    /// Compute the transition from a DFA state ID on a character (H8 core).
+    #[inline]
+    fn transition_id(&mut self, state_id: DFAStateId, c: char) -> DFAStateId {
+        // Check cache first - O(1) lookup with compact key
+        let cache_key = (state_id, c);
+        if let Some(&next_id) = self.cache.get(&cache_key) {
+            return next_id;
         }
 
         // Compute transition: for each NFA state, collect states reachable on c
-        let current_set = Self::state_to_set(state);
-        let mut next_set = FxHashSet::default();
+        let state = self.get_state(state_id).clone(); // Clone needed for borrow checker
+        let current_set = Self::state_to_set(&state);
+        let mut next_set = StateSet::new();
 
-        for &nfa_state in &current_set {
+        for nfa_state in current_set.iter() {
             for trans in self.nfa.transitions_from(nfa_state) {
                 if trans.label.matches(c) && trans.label.consumes_input() {
                     next_set.insert(trans.to);
@@ -140,25 +189,46 @@ impl LazyDFAChar {
         let next_closure = self.nfa.epsilon_closure(&next_set);
         let next_state = Self::set_to_state(&next_closure);
 
-        // Cache the result
-        self.cache.insert(cache_key, next_state.clone());
-        next_state
+        // Get or create ID for next state
+        let next_id = self.get_or_create_id(next_state);
+
+        // Cache the result with compact key
+        self.cache.insert(cache_key, next_id);
+        next_id
+    }
+
+    /// Compute the transition from a DFA state on a character.
+    ///
+    /// This is the core lazy construction: we compute DFA states on-demand
+    /// and cache the results.
+    pub fn transition(&mut self, state: &DFAStateChar, c: char) -> DFAStateChar {
+        // Get or create state ID
+        let state_id = if let Some(&id) = self.state_to_id.get(state) {
+            id
+        } else {
+            self.get_or_create_id(state.clone())
+        };
+
+        let next_id = self.transition_id(state_id, c);
+        self.get_state(next_id).clone()
     }
 
     /// Check if an input string is accepted by the NFA.
     ///
     /// Uses lazy DFA construction with caching for efficient matching.
+    /// H8 optimization: internally uses state IDs for O(1) cache lookups.
     pub fn accepts(&mut self, input: &str) -> bool {
-        let mut current = self.initial_state.clone();
+        let mut current_id = self.initial_state_id;
 
         for c in input.chars() {
-            current = self.transition(&current, c);
-            if current.is_empty() {
-                return false; // Dead state
+            current_id = self.transition_id(current_id, c);
+            // Check for dead state (empty state has a dedicated ID or is checked)
+            if self.get_state(current_id).is_empty() {
+                return false;
             }
         }
 
-        self.is_accepting(&current)
+        self.is_accepting_id(current_id)
     }
 
     /// Get the number of cached transitions.
@@ -167,12 +237,25 @@ impl LazyDFAChar {
         self.cache.len()
     }
 
+    /// Get the number of unique DFA states discovered.
+    #[inline]
+    pub fn state_count(&self) -> usize {
+        self.id_to_state.len()
+    }
+
     /// Clear the transition cache.
     ///
     /// Useful for memory management in long-running applications.
+    /// Note: This also clears the state registry, resetting to initial state only.
     pub fn clear_cache(&mut self) {
         self.cache.clear();
         self.accepting_cache.clear();
+        // Reset state registry to only contain the initial state
+        let initial = self.id_to_state[0].clone();
+        self.state_to_id.clear();
+        self.state_to_id.insert(initial.clone(), 0);
+        self.id_to_state.clear();
+        self.id_to_state.push(initial);
     }
 
     /// Get cache statistics.
@@ -192,74 +275,118 @@ impl LazyDFAChar {
 pub type DFAState = Vec<StateId>;
 
 /// Lazy DFA for byte-level NFA simulation.
+///
+/// # H8 Optimization: State ID Caching
+///
+/// Uses compact numeric IDs for cache keys instead of Vec<StateId>.
 #[derive(Debug, Clone)]
 pub struct LazyDFA {
     /// The underlying NFA
     nfa: NFA,
-    /// Cached transitions: (dfa_state, byte) -> dfa_state
-    cache: FxHashMap<(DFAState, u8), DFAState>,
-    /// The initial DFA state
-    initial_state: DFAState,
-    /// Cache of which DFA states are accepting
-    accepting_cache: FxHashMap<DFAState, bool>,
+    /// Cached transitions: (state_id, byte) -> state_id (H8: O(1) keys)
+    cache: FxHashMap<(DFAStateId, u8), DFAStateId>,
+    /// Registry mapping DFA states to compact IDs
+    state_to_id: FxHashMap<DFAState, DFAStateId>,
+    /// Reverse mapping: ID -> DFA state
+    id_to_state: Vec<DFAState>,
+    /// The initial DFA state ID
+    initial_state_id: DFAStateId,
+    /// Cache of which DFA state IDs are accepting
+    accepting_cache: FxHashMap<DFAStateId, bool>,
 }
 
 impl LazyDFA {
     /// Create a new lazy DFA from an NFA.
     pub fn new(nfa: NFA) -> Self {
-        let mut initial_set = FxHashSet::default();
-        initial_set.insert(nfa.start());
-        let initial_closure = nfa.epsilon_closure(&initial_set);
+        let initial_closure = nfa.epsilon_closure_single(nfa.start());
         let initial_state = Self::set_to_state(&initial_closure);
+
+        // Register the initial state with ID 0
+        let mut state_to_id = FxHashMap::default();
+        state_to_id.insert(initial_state.clone(), 0);
+        let id_to_state = vec![initial_state];
 
         Self {
             nfa,
             cache: FxHashMap::default(),
-            initial_state,
+            state_to_id,
+            id_to_state,
+            initial_state_id: 0,
             accepting_cache: FxHashMap::default(),
         }
     }
 
     /// Convert a set of NFA states to a canonical DFA state.
-    fn set_to_state(states: &FxHashSet<StateId>) -> DFAState {
-        let mut vec: Vec<StateId> = states.iter().copied().collect();
+    fn set_to_state(states: &StateSet) -> DFAState {
+        let mut vec: Vec<StateId> = states.iter().collect();
         vec.sort_unstable();
         vec
     }
 
-    /// Convert a DFA state back to a set.
-    fn state_to_set(state: &DFAState) -> FxHashSet<StateId> {
+    /// Convert a DFA state back to a StateSet.
+    fn state_to_set(state: &DFAState) -> StateSet {
         state.iter().copied().collect()
+    }
+
+    /// Get or create a state ID for a DFA state (H8 optimization).
+    #[inline]
+    fn get_or_create_id(&mut self, state: DFAState) -> DFAStateId {
+        if let Some(&id) = self.state_to_id.get(&state) {
+            return id;
+        }
+        let id = self.id_to_state.len() as DFAStateId;
+        self.state_to_id.insert(state.clone(), id);
+        self.id_to_state.push(state);
+        id
+    }
+
+    /// Get the DFA state for an ID.
+    #[inline]
+    fn get_state(&self, id: DFAStateId) -> &DFAState {
+        &self.id_to_state[id as usize]
     }
 
     /// Get the initial DFA state.
     #[inline]
     pub fn initial_state(&self) -> &DFAState {
-        &self.initial_state
+        self.get_state(self.initial_state_id)
+    }
+
+    /// Check if a DFA state is accepting (by ID).
+    #[inline]
+    fn is_accepting_id(&mut self, state_id: DFAStateId) -> bool {
+        if let Some(&accepting) = self.accepting_cache.get(&state_id) {
+            return accepting;
+        }
+
+        let state = self.get_state(state_id);
+        let accepting = state.iter().any(|&s| self.nfa.is_final(s));
+        self.accepting_cache.insert(state_id, accepting);
+        accepting
     }
 
     /// Check if a DFA state is accepting.
     pub fn is_accepting(&mut self, state: &DFAState) -> bool {
-        if let Some(&accepting) = self.accepting_cache.get(state) {
-            return accepting;
+        if let Some(&state_id) = self.state_to_id.get(state) {
+            self.is_accepting_id(state_id)
+        } else {
+            state.iter().any(|&s| self.nfa.is_final(s))
         }
-
-        let accepting = state.iter().any(|&s| self.nfa.is_final(s));
-        self.accepting_cache.insert(state.clone(), accepting);
-        accepting
     }
 
-    /// Compute the transition from a DFA state on a byte.
-    pub fn transition(&mut self, state: &DFAState, b: u8) -> DFAState {
-        let cache_key = (state.clone(), b);
-        if let Some(next) = self.cache.get(&cache_key) {
-            return next.clone();
+    /// Compute the transition from a DFA state ID on a byte (H8 core).
+    #[inline]
+    fn transition_id(&mut self, state_id: DFAStateId, b: u8) -> DFAStateId {
+        let cache_key = (state_id, b);
+        if let Some(&next_id) = self.cache.get(&cache_key) {
+            return next_id;
         }
 
-        let current_set = Self::state_to_set(state);
-        let mut next_set = FxHashSet::default();
+        let state = self.get_state(state_id).clone();
+        let current_set = Self::state_to_set(&state);
+        let mut next_set = StateSet::new();
 
-        for &nfa_state in &current_set {
+        for nfa_state in current_set.iter() {
             for trans in self.nfa.transitions_from(nfa_state) {
                 if trans.label.matches(b) && trans.label.consumes_input() {
                     next_set.insert(trans.to);
@@ -270,22 +397,35 @@ impl LazyDFA {
         let next_closure = self.nfa.epsilon_closure(&next_set);
         let next_state = Self::set_to_state(&next_closure);
 
-        self.cache.insert(cache_key, next_state.clone());
-        next_state
+        let next_id = self.get_or_create_id(next_state);
+        self.cache.insert(cache_key, next_id);
+        next_id
+    }
+
+    /// Compute the transition from a DFA state on a byte.
+    pub fn transition(&mut self, state: &DFAState, b: u8) -> DFAState {
+        let state_id = if let Some(&id) = self.state_to_id.get(state) {
+            id
+        } else {
+            self.get_or_create_id(state.clone())
+        };
+
+        let next_id = self.transition_id(state_id, b);
+        self.get_state(next_id).clone()
     }
 
     /// Check if input is accepted.
     pub fn accepts(&mut self, input: &[u8]) -> bool {
-        let mut current = self.initial_state.clone();
+        let mut current_id = self.initial_state_id;
 
         for &b in input {
-            current = self.transition(&current, b);
-            if current.is_empty() {
+            current_id = self.transition_id(current_id, b);
+            if self.get_state(current_id).is_empty() {
                 return false;
             }
         }
 
-        self.is_accepting(&current)
+        self.is_accepting_id(current_id)
     }
 
     /// Get the number of cached transitions.
@@ -294,10 +434,21 @@ impl LazyDFA {
         self.cache.len()
     }
 
+    /// Get the number of unique DFA states discovered.
+    #[inline]
+    pub fn state_count(&self) -> usize {
+        self.id_to_state.len()
+    }
+
     /// Clear the transition cache.
     pub fn clear_cache(&mut self) {
         self.cache.clear();
         self.accepting_cache.clear();
+        let initial = self.id_to_state[0].clone();
+        self.state_to_id.clear();
+        self.state_to_id.insert(initial.clone(), 0);
+        self.id_to_state.clear();
+        self.id_to_state.push(initial);
     }
 
     /// Get cache statistics.

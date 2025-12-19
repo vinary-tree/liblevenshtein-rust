@@ -41,6 +41,7 @@ use std::collections::{HashMap, VecDeque};
 use rustc_hash::FxHashSet;
 
 use super::nfa::{NFAChar, NFA};
+use super::state_set::StateSet;
 use super::types::{
     NFAState, StateId, TransitionChar, TransitionLabelChar, Transition, TransitionLabel,
 };
@@ -191,6 +192,10 @@ impl NfaOptimizerChar {
 
     /// Optimize an NFA, returning the optimized NFA and statistics.
     pub fn optimize(&self, nfa: NFAChar) -> (NFAChar, OptimizationStats) {
+        // H9: Finalize the input NFA to ensure all transitions are accessible
+        let mut nfa = nfa;
+        nfa.finalize();
+
         let mut stats = OptimizationStats {
             original_states: nfa.num_states(),
             original_transitions: nfa.num_transitions(),
@@ -204,6 +209,8 @@ impl NfaOptimizerChar {
         if self.config.eliminate_epsilon {
             let before_transitions = result.num_transitions();
             result = eliminate_epsilon_char(result);
+            // H9: Finalize after each step to make transitions accessible
+            result.finalize();
             let epsilon_after = count_epsilon_transitions_char(&result);
             stats.epsilon_transitions_eliminated =
                 stats.original_epsilon_count.saturating_sub(epsilon_after);
@@ -215,6 +222,8 @@ impl NfaOptimizerChar {
         if self.config.remove_unreachable {
             let before_states = result.num_states();
             result = remove_unreachable_char(result);
+            // H9: Finalize after each step
+            result.finalize();
             stats.unreachable_states_removed = before_states.saturating_sub(result.num_states());
         }
 
@@ -222,6 +231,8 @@ impl NfaOptimizerChar {
         if self.config.remove_dead {
             let before_states = result.num_states();
             result = remove_dead_char(result);
+            // H9: Finalize after each step
+            result.finalize();
             stats.dead_states_removed = before_states.saturating_sub(result.num_states());
         }
 
@@ -229,6 +240,8 @@ impl NfaOptimizerChar {
         if self.config.deduplicate_transitions {
             let before_transitions = result.num_transitions();
             result = deduplicate_transitions_char(result);
+            // H9: Finalize after each step
+            result.finalize();
             stats.duplicate_transitions_removed =
                 before_transitions.saturating_sub(result.num_transitions());
         }
@@ -259,6 +272,10 @@ impl NfaOptimizer {
 
     /// Optimize an NFA, returning the optimized NFA and statistics.
     pub fn optimize(&self, nfa: NFA) -> (NFA, OptimizationStats) {
+        // H9: Finalize the input NFA to ensure all transitions are accessible
+        let mut nfa = nfa;
+        nfa.finalize();
+
         let mut stats = OptimizationStats {
             original_states: nfa.num_states(),
             original_transitions: nfa.num_transitions(),
@@ -270,6 +287,8 @@ impl NfaOptimizer {
 
         if self.config.eliminate_epsilon {
             result = eliminate_epsilon(result);
+            // H9: Finalize after each step to make transitions accessible
+            result.finalize();
             let epsilon_after = count_epsilon_transitions(&result);
             stats.epsilon_transitions_eliminated =
                 stats.original_epsilon_count.saturating_sub(epsilon_after);
@@ -278,18 +297,24 @@ impl NfaOptimizer {
         if self.config.remove_unreachable {
             let before_states = result.num_states();
             result = remove_unreachable(result);
+            // H9: Finalize after each step
+            result.finalize();
             stats.unreachable_states_removed = before_states.saturating_sub(result.num_states());
         }
 
         if self.config.remove_dead {
             let before_states = result.num_states();
             result = remove_dead(result);
+            // H9: Finalize after each step
+            result.finalize();
             stats.dead_states_removed = before_states.saturating_sub(result.num_states());
         }
 
         if self.config.deduplicate_transitions {
             let before_transitions = result.num_transitions();
             result = deduplicate_transitions(result);
+            // H9: Finalize after each step
+            result.finalize();
             stats.duplicate_transitions_removed =
                 before_transitions.saturating_sub(result.num_transitions());
         }
@@ -380,7 +405,7 @@ fn remove_dead_char(nfa: NFAChar) -> NFAChar {
 /// Eliminate epsilon transitions by computing transitive closure.
 fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
     // Precompute epsilon closures for all states
-    let closures: Vec<FxHashSet<StateId>> = (0..nfa.num_states() as StateId)
+    let closures: Vec<StateSet> = (0..nfa.num_states() as StateId)
         .map(|s| nfa.epsilon_closure_single(s))
         .collect();
 
@@ -389,7 +414,7 @@ fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
 
     // Add states (same number as original)
     // State 0 already exists from NFAChar::new()
-    for i in 1..nfa.num_states() {
+    for _ in 1..nfa.num_states() {
         new_nfa.add_state(false);
     }
 
@@ -400,7 +425,7 @@ fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
     for state_id in 0..nfa.num_states() as StateId {
         let is_final = closures[state_id as usize]
             .iter()
-            .any(|&s| nfa.is_final(s));
+            .any(|s| nfa.is_final(s));
         new_nfa.set_final(state_id, is_final);
     }
 
@@ -408,7 +433,7 @@ fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
     for state_id in 0..nfa.num_states() as StateId {
         let closure = &closures[state_id as usize];
 
-        for &reachable in closure {
+        for reachable in closure.iter() {
             for trans in nfa.transitions_from(reachable) {
                 // Skip epsilon transitions
                 if trans.label.is_epsilon() {
@@ -418,7 +443,7 @@ fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
                 // For non-epsilon transitions, add transition from original state
                 // to all states in epsilon closure of destination
                 let dest_closure = &closures[trans.to as usize];
-                for &dest in dest_closure {
+                for dest in dest_closure.iter() {
                     new_nfa.add_transition_weighted(
                         state_id,
                         trans.label.clone(),
@@ -619,7 +644,7 @@ fn remove_dead(nfa: NFA) -> NFA {
 
 /// Eliminate epsilon transitions (byte-level).
 fn eliminate_epsilon(nfa: NFA) -> NFA {
-    let closures: Vec<FxHashSet<StateId>> = (0..nfa.num_states() as StateId)
+    let closures: Vec<StateSet> = (0..nfa.num_states() as StateId)
         .map(|s| nfa.epsilon_closure_single(s))
         .collect();
 
@@ -632,21 +657,21 @@ fn eliminate_epsilon(nfa: NFA) -> NFA {
     for state_id in 0..nfa.num_states() as StateId {
         let is_final = closures[state_id as usize]
             .iter()
-            .any(|&s| nfa.is_final(s));
+            .any(|s| nfa.is_final(s));
         new_nfa.set_final(state_id, is_final);
     }
 
     for state_id in 0..nfa.num_states() as StateId {
         let closure = &closures[state_id as usize];
 
-        for &reachable in closure {
+        for reachable in closure.iter() {
             for trans in nfa.transitions_from(reachable) {
                 if trans.label.is_epsilon() {
                     continue;
                 }
 
                 let dest_closure = &closures[trans.to as usize];
-                for &dest in dest_closure {
+                for dest in dest_closure.iter() {
                     new_nfa.add_transition_weighted(
                         state_id,
                         trans.label.clone(),
@@ -933,9 +958,14 @@ mod tests {
         nfa.add_transition_char(0, 'a', q1);
         nfa.add_transition_char(0, 'a', q1);
 
+        // H9: Finalize to move pending transitions to the main list
+        nfa.finalize();
+
         assert_eq!(nfa.num_transitions(), 3);
 
-        let optimized = deduplicate_transitions_char(nfa);
+        let mut optimized = deduplicate_transitions_char(nfa);
+        // H9: Finalize the result to make transitions accessible
+        optimized.finalize();
         assert_eq!(optimized.num_transitions(), 1);
     }
 

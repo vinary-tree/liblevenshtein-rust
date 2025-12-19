@@ -36,6 +36,7 @@
 //! ```
 
 use super::nfa::{NFAChar, NFA};
+use super::state_set::StateSet;
 use super::types::StateId;
 use rustc_hash::FxHashSet;
 
@@ -62,9 +63,8 @@ pub struct IncrementalMatcherChar {
 impl IncrementalMatcherChar {
     /// Create a new incremental matcher from an NFA.
     pub fn new(nfa: NFAChar) -> Self {
-        let mut initial_set = FxHashSet::default();
-        initial_set.insert(nfa.start());
-        let current_states = nfa.epsilon_closure(&initial_set);
+        let current_states: FxHashSet<StateId> =
+            nfa.epsilon_closure_single(nfa.start()).into();
 
         Self {
             nfa,
@@ -83,7 +83,7 @@ impl IncrementalMatcherChar {
         }
 
         // Compute next states
-        let mut next_states = FxHashSet::default();
+        let mut next_states = StateSet::new();
 
         for &state in &self.current_states {
             for trans in self.nfa.transitions_from(state) {
@@ -94,7 +94,7 @@ impl IncrementalMatcherChar {
         }
 
         // Apply epsilon closure
-        self.current_states = self.nfa.epsilon_closure(&next_states);
+        self.current_states = self.nfa.epsilon_closure(&next_states).into();
         self.chars_processed += 1;
 
         // Check if we've reached a dead state
@@ -153,9 +153,7 @@ impl IncrementalMatcherChar {
 
     /// Reset the matcher to its initial state.
     pub fn reset(&mut self) {
-        let mut initial_set = FxHashSet::default();
-        initial_set.insert(self.nfa.start());
-        self.current_states = self.nfa.epsilon_closure(&initial_set);
+        self.current_states = self.nfa.epsilon_closure_single(self.nfa.start()).into();
         self.is_dead = false;
         self.chars_processed = 0;
     }
@@ -224,9 +222,8 @@ pub struct IncrementalMatcher {
 impl IncrementalMatcher {
     /// Create a new incremental matcher from an NFA.
     pub fn new(nfa: NFA) -> Self {
-        let mut initial_set = FxHashSet::default();
-        initial_set.insert(nfa.start());
-        let current_states = nfa.epsilon_closure(&initial_set);
+        let current_states: FxHashSet<StateId> =
+            nfa.epsilon_closure_single(nfa.start()).into();
 
         Self {
             nfa,
@@ -244,7 +241,7 @@ impl IncrementalMatcher {
             return false;
         }
 
-        let mut next_states = FxHashSet::default();
+        let mut next_states = StateSet::new();
 
         for &state in &self.current_states {
             for trans in self.nfa.transitions_from(state) {
@@ -254,7 +251,7 @@ impl IncrementalMatcher {
             }
         }
 
-        self.current_states = self.nfa.epsilon_closure(&next_states);
+        self.current_states = self.nfa.epsilon_closure(&next_states).into();
         self.bytes_processed += 1;
 
         if self.current_states.is_empty() {
@@ -305,9 +302,7 @@ impl IncrementalMatcher {
 
     /// Reset the matcher to its initial state.
     pub fn reset(&mut self) {
-        let mut initial_set = FxHashSet::default();
-        initial_set.insert(self.nfa.start());
-        self.current_states = self.nfa.epsilon_closure(&initial_set);
+        self.current_states = self.nfa.epsilon_closure_single(self.nfa.start()).into();
         self.is_dead = false;
         self.bytes_processed = 0;
     }
@@ -384,12 +379,10 @@ impl IncrementalProductMatcherChar {
         let word_chars: Vec<char> = word.chars().collect();
 
         // Initialize with start state at distance 0
-        let mut initial_nfa_set = FxHashSet::default();
-        initial_nfa_set.insert(nfa.start());
-        let initial_closure = nfa.epsilon_closure(&initial_nfa_set);
+        let initial_closure = nfa.epsilon_closure_single(nfa.start());
 
         let mut current_states = FxHashSet::default();
-        for &state in &initial_closure {
+        for state in initial_closure.iter() {
             current_states.insert((state, 0));
         }
 
@@ -457,9 +450,7 @@ impl IncrementalProductMatcherChar {
         // Apply epsilon closure to NFA states
         let mut with_epsilon = FxHashSet::default();
         for &(state, dist) in &next_states {
-            let mut singleton = FxHashSet::default();
-            singleton.insert(state);
-            for &closed_state in &self.nfa.epsilon_closure(&singleton) {
+            for closed_state in self.nfa.epsilon_closure_single(state).iter() {
                 with_epsilon.insert((closed_state, dist));
             }
         }
@@ -524,12 +515,10 @@ impl IncrementalProductMatcherChar {
 
     /// Reset the matcher.
     pub fn reset(&mut self) {
-        let mut initial_nfa_set = FxHashSet::default();
-        initial_nfa_set.insert(self.nfa.start());
-        let initial_closure = self.nfa.epsilon_closure(&initial_nfa_set);
+        let initial_closure = self.nfa.epsilon_closure_single(self.nfa.start());
 
         self.current_states.clear();
-        for &state in &initial_closure {
+        for state in initial_closure.iter() {
             self.current_states.insert((state, 0));
         }
 
