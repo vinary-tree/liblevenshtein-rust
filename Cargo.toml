@@ -283,6 +283,11 @@ name = "phonetic_grep_parallel_benchmarks"
 harness = false
 required-features = ["parallel-grep"]
 
+[[bench]]
+name = "phonetic_compilation_benchmarks"
+harness = false
+required-features = ["phonetic-rules"]
+
 [[bin]]
 name = "liblevenshtein"
 path = "src/bin/liblevenshtein.rs"
