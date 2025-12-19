@@ -12,12 +12,12 @@
 //! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use std::hint::black_box as hint_black_box;
 
 #[cfg(feature = "phonetic-rules")]
 mod benchmarks {
     use super::*;
-    use liblevenshtein::phonetic::llev::{parse_file, parse_str, LLevFile};
+    use liblevenshtein::phonetic::llev::{load_file, parse_str, LLevFile};
+    use liblevenshtein::phonetic::llev::lexer::{Lexer, Token};
     use liblevenshtein::phonetic::RuleSetChar;
 
     /// Rule files to benchmark
@@ -39,9 +39,9 @@ mod benchmarks {
 
             group.throughput(Throughput::Bytes(content_len));
 
-            group.bench_with_input(BenchmarkId::new("parse_file", name), path, |b, path| {
+            group.bench_with_input(BenchmarkId::new("load_file", name), path, |b, path| {
                 b.iter(|| {
-                    let file = parse_file(black_box(*path)).expect("Parse failed");
+                    let file = load_file(black_box(*path)).expect("Parse failed");
                     black_box(file)
                 });
             });
@@ -56,7 +56,7 @@ mod benchmarks {
         group.sample_size(100);
 
         for (name, path) in RULE_FILES {
-            let llev_file = parse_file(path).expect("Failed to parse");
+            let llev_file = load_file(path).expect("Failed to parse");
             let rule_count = llev_file.rules.len();
 
             group.throughput(Throughput::Elements(rule_count as u64));
@@ -85,7 +85,7 @@ mod benchmarks {
         for (name, path) in RULE_FILES {
             group.bench_with_input(BenchmarkId::new("end_to_end", name), path, |b, path| {
                 b.iter(|| {
-                    let file = parse_file(black_box(*path)).expect("Parse failed");
+                    let file = load_file(black_box(*path)).expect("Parse failed");
                     let ruleset = RuleSetChar::from_llev(&file).expect("Conversion failed");
                     black_box(ruleset)
                 });
@@ -121,8 +121,6 @@ mod benchmarks {
 
     /// Benchmark lexer token generation (isolate tokenization overhead)
     pub fn bench_lexer_throughput(c: &mut Criterion) {
-        use liblevenshtein::phonetic::llev::Lexer;
-
         let mut group = c.benchmark_group("lexer_throughput");
         group.sample_size(100);
 
@@ -136,8 +134,12 @@ mod benchmarks {
                 b.iter(|| {
                     let mut lexer = Lexer::new(black_box(content));
                     let mut count = 0usize;
-                    while lexer.next_token().is_ok() {
-                        count += 1;
+                    loop {
+                        match lexer.next_token() {
+                            Ok(Token::Eof) => break,
+                            Ok(_) => count += 1,
+                            Err(_) => break,
+                        }
                     }
                     black_box(count)
                 });

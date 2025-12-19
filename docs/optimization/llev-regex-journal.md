@@ -20,34 +20,52 @@ Scientific journal tracking optimization experiments for LLev (phonetic rewrite 
 
 ## Baseline Measurements
 
-**Date**: TBD
+**Date**: 2025-12-18
 **Branch**: `opt/baseline`
-**Commit**: TBD
+**Commit**: `5a470df9c341ed89b5fd32b8bbbbb4b06fcd089f`
 
-### LLev Parsing
+### LLev Parsing (load_file)
 
-| Rule File | Mean | Std Dev | 95% CI | p95 |
-|-----------|------|---------|--------|-----|
-| zompist.llev | TBD | TBD | TBD | TBD |
-| homophones.llev | TBD | TBD | TBD | TBD |
-| text_speak.llev | TBD | TBD | TBD | TBD |
+| Rule File | Mean | 95% CI | Throughput |
+|-----------|------|--------|------------|
+| zompist.llev (9.3KB, 62 rules) | 143.59 µs | [143.59, 144.79] µs | 67.4 MiB/s |
+| homophones.llev (4.8KB, 43 rules) | 135.61 µs | [135.61, 136.79] µs | 36.7 MiB/s |
+| text_speak.llev (5.9KB, 60 rules) | 198.53 µs | [198.53, 200.85] µs | 29.6 MiB/s |
 
-### NFA Construction
+### RuleSet Construction (from_llev)
 
-| Pattern | Mean | Std Dev | 95% CI | States |
-|---------|------|---------|--------|--------|
-| TBD | TBD | TBD | TBD | TBD |
+| Rule File | Mean | 95% CI | Throughput |
+|-----------|------|--------|------------|
+| zompist.llev | 16.92 µs | [16.92, 17.12] µs | 3.66 Melem/s |
+| homophones.llev | 20.20 µs | [20.20, 20.66] µs | 2.11 Melem/s |
+| text_speak.llev | 30.51 µs | [30.51, 30.96] µs | 1.94 Melem/s |
 
-### Pattern Matching Throughput
+### Cold Start (end-to-end parse + compile)
 
-| Document Size | Mean (MB/s) | Std Dev | 95% CI |
-|---------------|-------------|---------|--------|
-| TBD | TBD | TBD | TBD |
+| Rule File | Mean | 95% CI |
+|-----------|------|--------|
+| zompist.llev | 173.83 µs | [173.83, 176.14] µs |
+| homophones.llev | 164.29 µs | [164.29, 168.67] µs |
+| text_speak.llev | 250.66 µs | [250.66, 253.92] µs |
+
+### Small Parse Throughput
+
+| Benchmark | Mean | Throughput |
+|-----------|------|------------|
+| 100 simple rules | 173.49 µs | 20.2 MiB/s |
+
+### Lexer Tokenization
+
+| Rule File | Mean | Throughput |
+|-----------|------|------------|
+| zompist.llev | 42.89 µs | 218.1 MiB/s |
+| homophones.llev | 30.50 µs | 158.1 MiB/s |
+| text_speak.llev | 53.26 µs | 111.7 MiB/s |
 
 ### Perf Top Symbols
 
 ```
-TBD - Run perf record and populate
+TBD - Run perf record to identify hot paths
 ```
 
 ---

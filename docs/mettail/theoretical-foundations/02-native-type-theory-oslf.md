@@ -34,7 +34,7 @@ Before diving into OSLF, ensure you understand this notation:
 
 | Symbol | Name | Meaning | Example |
 |--------|------|---------|---------|
-| `|-` | Turnstile | "derives" or "proves" | `G |- A : B` |
+| `⊢` | Turnstile | "derives" or "proves" | `Γ ⊢ A : B` |
 | `:` | Colon | "has type" | `x : Nat` |
 | `G` | Gamma | Context (assumptions) | `x : Int, y : Bool` |
 | `->` | Arrow | Function type | `Int -> Bool` |
@@ -66,7 +66,7 @@ Before diving into OSLF, ensure you understand this notation:
 
 ### Reading Complex Expressions
 
-Example: `G |- {x:A \| phi(x)} type`
+Example: `Γ ⊢ {x:A \| φ(x)} type`
 
 Read as: "In context G, the subset type {x:A \| phi(x)} is a valid type"
 
@@ -504,24 +504,24 @@ The internal language gives us:
 
 **Type formation rules**:
 ```
-G |- T type
+Γ ⊢ T type
 
-G |- A type    G, x:A |- phi prop
+Γ ⊢ A type    Γ, x:A ⊢ φ prop
 ----------------------------------
-G |- {x:A | phi} type
+Γ ⊢ {x:A | φ} type
 ```
 
 **Terms and their types**:
 ```
-|- zero : T
-|- succ : T -> T
-|- add : T x T -> T
+⊢ zero : T
+⊢ succ : T → T
+⊢ add : T × T → T
 ```
 
 **Propositions (predicates)**:
 ```
-G, x:T |- x = zero prop
-G, x:T |- Even(x) prop
+Γ, x:T ⊢ x = zero prop
+Γ, x:T ⊢ Even(x) prop
 ```
 
 ### Step 4: Add Reductions (Make it a GSLT)

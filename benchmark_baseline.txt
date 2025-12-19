@@ -1,0 +1,883 @@
+   Compiling liblevenshtein v0.7.0 (/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust)
+warning: unused import: `SubstitutionSet`
+  --> src/transducer/operation_set.rs:59:40
+   |
+59 | use crate::transducer::{OperationType, SubstitutionSet};
+   |                                        ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `super::online_transducer::OnlinePhoneticTransducerChar`
+  --> src/phonetic/grep_online.rs:70:5
+   |
+70 | use super::online_transducer::OnlinePhoneticTransducerChar;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `TransformResult`
+  --> src/phonetic/nfa/compiler.rs:30:54
+   |
+30 | use crate::phonetic::regex::transform::{apply_flags, TransformResult};
+   |                                                      ^^^^^^^^^^^^^^^
+
+warning: unused import: `NFAState`
+  --> src/phonetic/nfa/optimizer.rs:45:5
+   |
+45 |     NFAState, StateId, TransitionChar, TransitionLabelChar, Transition, TransitionLabel,
+   |     ^^^^^^^^
+
+warning: use of deprecated struct `dictionary::dawg_optimized::OptimizedDawg`: Use DynamicDawg instead - 11× faster construction with full feature support
+  --> src/dictionary/factory.rs:25:28
+   |
+25 | use super::dawg_optimized::OptimizedDawg;
+   |                            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated struct `dictionary::dawg_optimized::OptimizedDawg`: Use DynamicDawg instead - 11× faster construction with full feature support
+  --> src/dictionary/factory.rs:74:19
+   |
+74 |     OptimizedDawg(OptimizedDawg),
+   |                   ^^^^^^^^^^^^^
+
+warning: use of deprecated function `phonetic::application::apply_rules_seq_opt`: Use apply_rules_seq for typical workloads. Use apply_rules_seq_optimized only for long repetitive strings (100+ chars).
+   --> src/phonetic/mod.rs:137:37
+    |
+137 |     apply_rule_at, apply_rules_seq, apply_rules_seq_opt, apply_rules_seq_optimized,
+    |                                     ^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated function `phonetic::application::apply_rules_seq_opt_char`: Use apply_rules_seq_char for typical workloads. Use apply_rules_seq_optimized_char only for long repetitive strings (100+ chars).
+   --> src/phonetic/mod.rs:147:47
+    |
+147 |     apply_rule_at_char, apply_rules_seq_char, apply_rules_seq_opt_char,
+    |                                               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `dictionary::dawg_optimized::OptimizedDawg`: Use DynamicDawg instead - 11× faster construction with full feature support
+  --> src/lib.rs:97:48
+   |
+97 |     pub use crate::dictionary::dawg_optimized::OptimizedDawg;
+   |                                                ^^^^^^^^^^^^^
+
+warning: use of deprecated associated function `phonetic::regex::ast::RegexByte::group`: Use capturing_group, non_capturing_group, or named_group instead
+    --> src/phonetic/regex/parser.rs:1485:31
+     |
+1485 |                 Ok(RegexByte::group(inner))
+     |                               ^^^^^
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:266:9
+    |
+266 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:267:9
+    |
+267 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:598:9
+    |
+598 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:599:9
+    |
+599 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:910:9
+    |
+910 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:911:9
+    |
+911 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:986:9
+    |
+986 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:987:9
+    |
+987 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `pos`
+   --> src/phonetic/llev/parser.rs:222:13
+    |
+222 |         let pos = self.lexer.current_offset();
+    |             ^^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+222 |         let _pos = self.lexer.current_offset();
+    |             +
+help: you might have meant to pattern match on the similarly named constant `MAX_ACTIVE_ATTEMPTS`
+    |
+222 -         let pos = self.lexer.current_offset();
+222 +         let phonetic::token_grep::MAX_ACTIVE_ATTEMPTS = self.lexer.current_offset();
+    |
+
+warning: unused variable: `c1`
+   --> src/phonetic/llev/ruleset.rs:237:36
+    |
+237 |                 PhoneChar::Digraph(c1, c2) => {
+    |                                    ^^ help: if this is intentional, prefix it with an underscore: `_c1`
+
+warning: unused variable: `c2`
+   --> src/phonetic/llev/ruleset.rs:237:40
+    |
+237 |                 PhoneChar::Digraph(c1, c2) => {
+    |                                        ^^ help: if this is intentional, prefix it with an underscore: `_c2`
+
+warning: unused variable: `i`
+   --> src/phonetic/nfa/optimizer.rs:392:9
+    |
+392 |     for i in 1..nfa.num_states() {
+    |         ^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+392 |     for _i in 1..nfa.num_states() {
+    |         +
+help: you might have meant to pattern match on the similarly named constant `MAX_ACTIVE_ATTEMPTS`
+    |
+392 -     for i in 1..nfa.num_states() {
+392 +     for phonetic::token_grep::MAX_ACTIVE_ATTEMPTS in 1..nfa.num_states() {
+    |
+
+warning: unused variable: `i`
+   --> src/phonetic/nfa/optimizer.rs:462:9
+    |
+462 |     for i in 1..nfa.num_states() {
+    |         ^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+462 |     for _i in 1..nfa.num_states() {
+    |         +
+help: you might have meant to pattern match on the similarly named constant `MAX_ACTIVE_ATTEMPTS`
+    |
+462 -     for i in 1..nfa.num_states() {
+462 +     for phonetic::token_grep::MAX_ACTIVE_ATTEMPTS in 1..nfa.num_states() {
+    |
+
+warning: unused variable: `i`
+   --> src/phonetic/nfa/optimizer.rs:494:9
+    |
+494 |     for i in 1..sorted_states.len() {
+    |         ^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+494 |     for _i in 1..sorted_states.len() {
+    |         +
+help: you might have meant to pattern match on the similarly named constant `MAX_ACTIVE_ATTEMPTS`
+    |
+494 -     for i in 1..sorted_states.len() {
+494 +     for phonetic::token_grep::MAX_ACTIVE_ATTEMPTS in 1..sorted_states.len() {
+    |
+
+warning: unused variable: `new_start`
+   --> src/phonetic/nfa/optimizer.rs:500:9
+    |
+500 |     let new_start = *old_to_new.get(&nfa.start()).unwrap_or(&0);
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_new_start`
+
+warning: unused variable: `c2`
+   --> src/phonetic/online_transducer.rs:423:36
+    |
+423 |             PhoneChar::Digraph(c1, c2) => {
+    |                                    ^^ help: if this is intentional, prefix it with an underscore: `_c2`
+
+warning: field `policy` is never read
+  --> src/transducer/universal/automaton.rs:71:5
+   |
+67 | pub struct UniversalAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrestricted> {
+   |            ------------------ field in this struct
+...
+71 |     policy: P,
+   |     ^^^^^^
+   |
+   = note: `UniversalAutomaton` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `characteristic_vector` is never used
+   --> src/transducer/generalized/bit_vector.rs:286:8
+    |
+286 | pub fn characteristic_vector(character: char, word: &str) -> CharacteristicVector {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `PADDING_CHAR` is never used
+   --> src/transducer/generalized/bit_vector.rs:293:7
+    |
+293 | const PADDING_CHAR: char = '$';
+    |       ^^^^^^^^^^^^
+
+warning: function `relevant_subword` is never used
+   --> src/transducer/generalized/bit_vector.rs:328:4
+    |
+328 | fn relevant_subword(word: &str, position: usize, max_distance: u8) -> String {
+    |    ^^^^^^^^^^^^^^^^
+
+warning: function `encode_word_pair` is never used
+   --> src/transducer/generalized/bit_vector.rs:404:8
+    |
+404 | pub fn encode_word_pair(
+    |        ^^^^^^^^^^^^^^^^
+
+warning: method `is_directive_raw` is never used
+   --> src/phonetic/llev/parser.rs:101:8
+    |
+ 42 | impl<'a> Parser<'a> {
+    | ------------------- method in this implementation
+...
+101 |     fn is_directive_raw(&mut self) -> bool {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: enum `LiteralWork` is never used
+   --> src/phonetic/nfa/compiler.rs:209:6
+    |
+209 | enum LiteralWork<'a> {
+    |      ^^^^^^^^^^^
+
+warning: enum `ContextWork` is never used
+   --> src/phonetic/nfa/compiler.rs:218:6
+    |
+218 | enum ContextWork<'a> {
+    |      ^^^^^^^^^^^
+
+warning: field `phonetic_weight` is never read
+   --> src/phonetic/nfa/product.rs:652:5
+    |
+646 | pub struct ProductAutomaton {
+    |            ---------------- field in this struct
+...
+652 |     phonetic_weight: f64,
+    |     ^^^^^^^^^^^^^^^
+    |
+    = note: `ProductAutomaton` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `input` is never read
+   --> src/phonetic/regex/lexer.rs:291:5
+    |
+290 | pub struct Lexer<'a> {
+    |            ----- field in this struct
+291 |     input: &'a str,
+    |     ^^^^^
+
+warning: field `in_weight` is never read
+    --> src/phonetic/regex/lexer.rs:1257:5
+     |
+1252 | pub struct LexerByte<'a> {
+     |            --------- field in this struct
+...
+1257 |     in_weight: bool,
+     |     ^^^^^^^^^
+
+warning: method `parse_weight` is never used
+    --> src/phonetic/regex/parser.rs:1118:8
+     |
+ 101 | impl<'a> Parser<'a> {
+     | ------------------- method in this implementation
+...
+1118 |     fn parse_weight(&mut self) -> ParseResult<f64> {
+     |        ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llev/ast.rs:665:9
+    |
+665 |         inner: Box<Expression>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: the lint level is defined here
+   --> src/lib.rs:27:9
+    |
+ 27 | #![warn(missing_docs)]
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llev/ast.rs:666:9
+    |
+666 |         min: usize,
+    |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llev/ast.rs:667:9
+    |
+667 |         max: Option<usize>,
+    |         ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/error.rs:45:9
+   |
+45 |         max: usize,
+   |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/error.rs:46:9
+   |
+46 |         path: PathBuf,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/error.rs:51:9
+   |
+51 |         path: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/error.rs:52:9
+   |
+52 |         search_paths: Vec<PathBuf>,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/error.rs:77:9
+   |
+77 |         expected: String,
+   |         ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/error.rs:78:9
+   |
+78 |         found: String,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/error.rs:89:9
+   |
+89 |         key: String,
+   |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/error.rs:90:9
+   |
+90 |         value: String,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llev/error.rs:188:9
+    |
+188 |         expected_version: u32,
+    |         ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llev/error.rs:189:9
+    |
+189 |         found_version: u32,
+    |         ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llev/lexer.rs:150:24
+    |
+150 |     PhoneticShortcut { class_name: String, negated: bool },
+    |                        ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llev/lexer.rs:150:44
+    |
+150 |     PhoneticShortcut { class_name: String, negated: bool },
+    |                                            ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llev/ruleset.rs:64:5
+   |
+64 |     pub version: Option<String>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llev/ruleset.rs:145:5
+    |
+145 |     pub version: Option<String>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a function
+   --> src/phonetic/llre/compiled.rs:423:1
+    |
+423 | pub fn save<P: AsRef<std::path::Path>>(_compiled: &CompiledNFA, _path: P) -> LLreResult<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a function
+   --> src/phonetic/llre/compiled.rs:430:1
+    |
+430 | pub fn load<P: AsRef<std::path::Path>>(_path: P) -> LLreResult<CompiledNFA> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a function
+   --> src/phonetic/llre/compiled.rs:437:1
+    |
+437 | pub fn to_bytes(_compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a function
+   --> src/phonetic/llre/compiled.rs:444:1
+    |
+444 | pub fn from_bytes(_bytes: &[u8]) -> LLreResult<CompiledNFA> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:45:9
+   |
+45 |         max: usize,
+   |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:46:9
+   |
+46 |         path: PathBuf,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:51:9
+   |
+51 |         path: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:52:9
+   |
+52 |         search_paths: Vec<PathBuf>,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:57:9
+   |
+57 |         path: String,
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:58:9
+   |
+58 |         reason: String,
+   |         ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:82:9
+   |
+82 |         expected: String,
+   |         ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:83:9
+   |
+83 |         found: String,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:98:9
+   |
+98 |         directive: String,
+   |         ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/llre/error.rs:99:9
+   |
+99 |         value: String,
+   |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:100:9
+    |
+100 |         reason: String,
+    |         ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:125:9
+    |
+125 |         flag1: String,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:126:9
+    |
+126 |         flag2: String,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:132:9
+    |
+132 |         name: String,
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:133:9
+    |
+133 |         available: Vec<String>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:138:9
+    |
+138 |         name: String,
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:139:9
+    |
+139 |         expected: String,
+    |         ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:140:9
+    |
+140 |         found: String,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:145:9
+    |
+145 |         alias: String,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:146:9
+    |
+146 |         path1: String,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:147:9
+    |
+147 |         path2: String,
+    |         ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:156:9
+    |
+156 |         size: usize,
+    |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:157:9
+    |
+157 |         max: usize,
+    |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:162:9
+    |
+162 |         depth: usize,
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:163:9
+    |
+163 |         max: usize,
+    |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:172:9
+    |
+172 |         expected: u8,
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/llre/error.rs:173:9
+    |
+173 |         found: u8,
+    |         ^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:360:9
+    |
+360 |         flags: RegexFlags,
+    |         ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:361:9
+    |
+361 |         inner: Option<Box<Regex>>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:403:9
+    |
+403 |         pattern: Box<Regex>,
+    |         ^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:404:9
+    |
+404 |         replacement: Box<Regex>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:405:9
+    |
+405 |         context: Option<Box<ContextPredicate>>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:406:9
+    |
+406 |         weight: f64,
+    |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:944:9
+    |
+944 |         flags: RegexFlags,
+    |         ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:945:9
+    |
+945 |         inner: Option<Box<RegexByte>>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:987:9
+    |
+987 |         pattern: Box<RegexByte>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:988:9
+    |
+988 |         replacement: Box<RegexByte>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:989:9
+    |
+989 |         context: Option<Box<ContextPredicateByte>>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/ast.rs:990:9
+    |
+990 |         weight: f64,
+    |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/regex/error.rs:45:9
+   |
+45 |         min: usize,
+   |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/regex/error.rs:46:9
+   |
+46 |         max: usize,
+   |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/regex/error.rs:87:9
+   |
+87 |         size: usize,
+   |         ^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/phonetic/regex/error.rs:88:9
+   |
+88 |         max: usize,
+   |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/error.rs:132:9
+    |
+132 |         depth: usize,
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/error.rs:133:9
+    |
+133 |         max: usize,
+    |         ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/lexer.rs:159:24
+    |
+159 |     PhoneticShortcut { class_name: String, negated: bool },
+    |                        ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/phonetic/regex/lexer.rs:159:44
+    |
+159 |     PhoneticShortcut { class_name: String, negated: bool },
+    |                                            ^^^^^^^^^^^^^
+
+warning: `liblevenshtein` (lib) generated 106 warnings (run `cargo fix --lib -p liblevenshtein` to apply 8 suggestions)
+warning: unused import: `LLevFile`
+  --> benches/phonetic_compilation_benchmarks.rs:19:64
+   |
+19 |     use liblevenshtein::phonetic::llev::{load_file, parse_str, LLevFile};
+   |                                                                ^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `liblevenshtein` (bench "phonetic_compilation_benchmarks") generated 1 warning (run `cargo fix --bench "phonetic_compilation_benchmarks"` to apply 1 suggestion)
+    Finished `bench` profile [optimized + debuginfo] target(s) in 1m 21s
+     Running benches/phonetic_compilation_benchmarks.rs (target/release/deps/phonetic_compilation_benchmarks-989f0884677d7064)
+Benchmarking llev_parsing/load_file/zompist
+Benchmarking llev_parsing/load_file/zompist: Warming up for 3.0000 s
+Benchmarking llev_parsing/load_file/zompist: Collecting 100 samples in estimated 5.3445 s (35k iterations)
+Benchmarking llev_parsing/load_file/zompist: Analyzing
+llev_parsing/load_file/zompist
+                        time:   [143.59 µs 144.17 µs 144.79 µs]
+                        thrpt:  [67.447 MiB/s 67.737 MiB/s 68.010 MiB/s]
+                 change:
+                        time:   [+0.6360% +1.6497% +2.8274%] (p = 0.00 < 0.05)
+                        thrpt:  [-2.7496% -1.6229% -0.6320%]
+                        Change within noise threshold.
+Found 5 outliers among 100 measurements (5.00%)
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+Benchmarking llev_parsing/load_file/homophones
+Benchmarking llev_parsing/load_file/homophones: Warming up for 3.0000 s
+Benchmarking llev_parsing/load_file/homophones: Collecting 100 samples in estimated 5.5062 s (40k iterations)
+Benchmarking llev_parsing/load_file/homophones: Analyzing
+llev_parsing/load_file/homophones
+                        time:   [135.61 µs 136.19 µs 136.79 µs]
+                        thrpt:  [36.672 MiB/s 36.832 MiB/s 36.990 MiB/s]
+                 change:
+                        time:   [-3.6301% -1.3446% +0.8319%] (p = 0.25 > 0.05)
+                        thrpt:  [-0.8250% +1.3629% +3.7669%]
+                        No change in performance detected.
+Found 6 outliers among 100 measurements (6.00%)
+  5 (5.00%) high mild
+  1 (1.00%) high severe
+Benchmarking llev_parsing/load_file/text_speak
+Benchmarking llev_parsing/load_file/text_speak: Warming up for 3.0000 s
+Benchmarking llev_parsing/load_file/text_speak: Collecting 100 samples in estimated 5.1852 s (25k iterations)
+Benchmarking llev_parsing/load_file/text_speak: Analyzing
+llev_parsing/load_file/text_speak
+                        time:   [198.53 µs 199.66 µs 200.85 µs]
+                        thrpt:  [29.610 MiB/s 29.787 MiB/s 29.955 MiB/s]
+                 change:
+                        time:   [-2.4273% -1.5162% -0.5929%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.5964% +1.5395% +2.4877%]
+                        Change within noise threshold.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking ruleset_construction/from_llev/zompist
+Benchmarking ruleset_construction/from_llev/zompist: Warming up for 3.0000 s
+Benchmarking ruleset_construction/from_llev/zompist: Collecting 100 samples in estimated 5.0560 s (278k iterations)
+Benchmarking ruleset_construction/from_llev/zompist: Analyzing
+ruleset_construction/from_llev/zompist
+                        time:   [16.923 µs 17.015 µs 17.118 µs]
+                        thrpt:  [3.6219 Melem/s 3.6439 Melem/s 3.6637 Melem/s]
+                 change:
+                        time:   [+3.9899% +5.3127% +6.8430%] (p = 0.00 < 0.05)
+                        thrpt:  [-6.4047% -5.0447% -3.8368%]
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  7 (7.00%) high mild
+  1 (1.00%) high severe
+Benchmarking ruleset_construction/from_llev/homophones
+Benchmarking ruleset_construction/from_llev/homophones: Warming up for 3.0000 s
+Benchmarking ruleset_construction/from_llev/homophones: Collecting 100 samples in estimated 5.0732 s (247k iterations)
+Benchmarking ruleset_construction/from_llev/homophones: Analyzing
+ruleset_construction/from_llev/homophones
+                        time:   [20.195 µs 20.423 µs 20.660 µs]
+                        thrpt:  [2.0813 Melem/s 2.1055 Melem/s 2.1292 Melem/s]
+                 change:
+                        time:   [+3.3319% +4.4718% +5.6087%] (p = 0.00 < 0.05)
+                        thrpt:  [-5.3108% -4.2804% -3.2244%]
+                        Performance has regressed.
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+Benchmarking ruleset_construction/from_llev/text_speak
+Benchmarking ruleset_construction/from_llev/text_speak: Warming up for 3.0000 s
+Benchmarking ruleset_construction/from_llev/text_speak: Collecting 100 samples in estimated 5.1272 s (162k iterations)
+Benchmarking ruleset_construction/from_llev/text_speak: Analyzing
+ruleset_construction/from_llev/text_speak
+                        time:   [30.509 µs 30.723 µs 30.955 µs]
+                        thrpt:  [1.9383 Melem/s 1.9529 Melem/s 1.9666 Melem/s]
+                 change:
+                        time:   [+6.8276% +7.7951% +8.6413%] (p = 0.00 < 0.05)
+                        thrpt:  [-7.9540% -7.2314% -6.3913%]
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  4 (4.00%) high mild
+
+Benchmarking cold_start/end_to_end/zompist
+Benchmarking cold_start/end_to_end/zompist: Warming up for 3.0000 s
+Benchmarking cold_start/end_to_end/zompist: Collecting 50 samples in estimated 5.1268 s (29k iterations)
+Benchmarking cold_start/end_to_end/zompist: Analyzing
+cold_start/end_to_end/zompist
+                        time:   [173.83 µs 174.87 µs 176.14 µs]
+                        change: [+9.2078% +10.445% +11.554%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 3 outliers among 50 measurements (6.00%)
+  1 (2.00%) low mild
+  2 (4.00%) high mild
+Benchmarking cold_start/end_to_end/homophones
+Benchmarking cold_start/end_to_end/homophones: Warming up for 3.0000 s
+Benchmarking cold_start/end_to_end/homophones: Collecting 50 samples in estimated 5.0460 s (29k iterations)
+Benchmarking cold_start/end_to_end/homophones: Analyzing
+cold_start/end_to_end/homophones
+                        time:   [164.29 µs 166.56 µs 168.67 µs]
+                        change: [+5.4054% +6.5028% +7.5493%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 50 measurements (2.00%)
+  1 (2.00%) high mild
+Benchmarking cold_start/end_to_end/text_speak
+Benchmarking cold_start/end_to_end/text_speak: Warming up for 3.0000 s
+Benchmarking cold_start/end_to_end/text_speak: Collecting 50 samples in estimated 5.2862 s (20k iterations)
+Benchmarking cold_start/end_to_end/text_speak: Analyzing
+cold_start/end_to_end/text_speak
+                        time:   [250.66 µs 252.24 µs 253.92 µs]
+                        change: [+5.3373% +6.4359% +7.6106%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 5 outliers among 50 measurements (10.00%)
+  2 (4.00%) low mild
+  2 (4.00%) high mild
+  1 (2.00%) high severe
+
+Benchmarking small_parses/parse_100_rules
+Benchmarking small_parses/parse_100_rules: Warming up for 3.0000 s
+Benchmarking small_parses/parse_100_rules: Collecting 100 samples in estimated 5.9185 s (20k iterations)
+Benchmarking small_parses/parse_100_rules: Analyzing
+small_parses/parse_100_rules
+                        time:   [291.94 µs 293.73 µs 295.61 µs]
+                        thrpt:  [7.6782 MiB/s 7.7274 MiB/s 7.7748 MiB/s]
+                 change:
+                        time:   [-12.023% -6.0093% -0.9399%] (p = 0.04 < 0.05)
+                        thrpt:  [+0.9488% +6.3935% +13.666%]
+                        Change within noise threshold.
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+
+Benchmarking lexer_throughput/tokenize/zompist
+Benchmarking lexer_throughput/tokenize/zompist: Warming up for 3.0000 s
+Benchmarking lexer_throughput/tokenize/zompist: Collecting 100 samples in estimated 5.5429 s (40k iterations)
+Benchmarking lexer_throughput/tokenize/zompist: Analyzing
+lexer_throughput/tokenize/zompist
+                        time:   [138.85 µs 140.30 µs 141.84 µs]
+                        thrpt:  [68.851 MiB/s 69.606 MiB/s 70.331 MiB/s]
+Benchmarking lexer_throughput/tokenize/homophones
+Benchmarking lexer_throughput/tokenize/homophones: Warming up for 3.0000 s
+Benchmarking lexer_throughput/tokenize/homophones: Collecting 100 samples in estimated 5.2808 s (76k iterations)
+Benchmarking lexer_throughput/tokenize/homophones: Analyzing
+lexer_throughput/tokenize/homophones
+                        time:   [67.495 µs 67.838 µs 68.185 µs]
+                        thrpt:  [73.570 MiB/s 73.946 MiB/s 74.321 MiB/s]
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+Benchmarking lexer_throughput/tokenize/text_speak
+Benchmarking lexer_throughput/tokenize/text_speak: Warming up for 3.0000 s
+Benchmarking lexer_throughput/tokenize/text_speak: Collecting 100 samples in estimated 5.2080 s (61k iterations)
+Benchmarking lexer_throughput/tokenize/text_speak: Analyzing
+lexer_throughput/tokenize/text_speak
+                        time:   [83.648 µs 84.235 µs 84.862 µs]
+                        thrpt:  [70.080 MiB/s 70.602 MiB/s 71.097 MiB/s]
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
