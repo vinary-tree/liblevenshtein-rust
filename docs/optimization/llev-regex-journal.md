@@ -6,7 +6,7 @@ Scientific journal tracking optimization experiments for LLev (phonetic rewrite 
 
 | ID | Hypothesis | Status | Branch | Effect Size | p-value |
 |----|------------|--------|--------|-------------|---------|
-| H1 | Intern phonetic class names | PENDING | opt/llev-h1-intern-class-names | - | - |
+| H1 | Intern phonetic class names | **ACCEPTED** | opt/llev-h1-intern-class-names | -8% to -11% lexer time | p < 0.05 |
 | H2 | Named class lookup optimization | PENDING | opt/llev-h2-named-class-lookup | - | - |
 | H3 | Symbol table FxHashMap | PENDING | opt/llev-h3-symbol-table | - | - |
 | H4 | SmallVec for character classes | PENDING | opt/llev-h4-smallvec-charclass | - | - |
@@ -62,11 +62,19 @@ Scientific journal tracking optimization experiments for LLev (phonetic rewrite 
 | homophones.llev | 30.50 µs | 158.1 MiB/s |
 | text_speak.llev | 53.26 µs | 111.7 MiB/s |
 
-### Perf Top Symbols
+### Perf Top Symbols (Lexer Benchmark)
 
-```
-TBD - Run perf record to identify hot paths
-```
+| Symbol | CPU % | Insight |
+|--------|-------|---------|
+| `Lexer::next_token_internal` | 33.36% | Main tokenization loop |
+| `Lexer::skip_whitespace_only` | 23.39% | Significant - uses `is_whitespace()` in loop |
+| `Lexer::advance` | 15.17% | Called per character, tracks position |
+| `Lexer::parse_string` | 2.64% | String allocation overhead |
+| `Lexer::peek_char` | 0.50% | Character lookahead |
+
+**Key Insight**: 71.92% of lexer time is in just 3 functions. Potential quick wins:
+- Replace `is_whitespace()` with `is_ascii_whitespace()` (faster, no Unicode tables)
+- Reduce per-character overhead in `advance()`
 
 ---
 
@@ -121,5 +129,59 @@ TBD - Run perf record to identify hot paths
 
 ## Detailed Experiment Records
 
-(Individual experiments will be added below as they are conducted)
+### Experiment: H1 - Intern Phonetic Class Names
+
+**Date**: 2025-12-18
+**Branch**: `opt/llev-h1-intern-class-names`
+
+#### Hypothesis
+**H0 (Null)**: Changing `class_name: String` to `class_name: &'static str` in `Token::PhoneticShortcut` will not improve lexer performance.
+**H1 (Alternative)**: Eliminating 34 heap allocations per file parse will measurably improve lexer throughput.
+
+#### Implementation Details
+- Files modified:
+  - `src/phonetic/llev/lexer.rs` - Changed Token type, removed `.to_string()` calls
+  - `src/phonetic/regex/lexer.rs` - Changed Token type, removed `.to_string()` calls
+  - `src/phonetic/regex/parser.rs` - Updated error handling for new type
+- Lines changed: +68/-68 (type changes and test updates)
+- Key changes: Replace `String` with `&'static str` for 17 phonetic class names, eliminating heap allocation for each shortcut token
+
+#### Baseline Results (from opt/baseline)
+| Benchmark | Mean | Throughput |
+|-----------|------|------------|
+| lexer/zompist | 142.89 µs | 68.4 MiB/s |
+| lexer/homophones | 72.63 µs | 69.1 MiB/s |
+| lexer/text_speak | 87.02 µs | 68.3 MiB/s |
+
+#### Post-Optimization Results
+| Benchmark | Mean | Throughput | Change |
+|-----------|------|------------|--------|
+| lexer/zompist | 127.73 µs | 76.5 MiB/s | **-11.2%** |
+| lexer/homophones | 66.70 µs | 75.2 MiB/s | **-8.2%** |
+| lexer/text_speak | 80.66 µs | 73.7 MiB/s | **-7.3%** |
+
+#### Statistical Analysis
+| Benchmark | Improvement | p-value | Significance |
+|-----------|-------------|---------|--------------|
+| zompist | -11.2% | p = 0.00 | ✅ Significant |
+| homophones | -8.2% | p = 0.00 | ✅ Significant |
+| text_speak | -7.3% | p = 0.00 | ✅ Significant |
+| small_parses | -3.0% | p = 0.00 | ✅ Significant |
+
+#### Secondary Observations
+- Full parsing (load_file) showed mixed results: zompist unchanged, homophones/text_speak +2-3%
+- Cold start showed small regressions (1-5%) which may be measurement noise
+- The lexer benchmark (isolated tokenization) is the most direct measure of this optimization
+
+#### Decision
+- [x] **ACCEPTED** - p < 0.05 for all lexer benchmarks, improvement 7-11%
+- [ ] REJECTED
+- [ ] DEFERRED
+
+#### Notes
+1. This optimization targets the lexer specifically; effects on full pipeline are secondary
+2. The Token enum is now smaller (no heap pointer), which may affect cache behavior
+3. All 34 phonetic class names are compile-time constants, making `&'static str` safe
+4. Error messages still use `.to_string()` for the error type, preserving compatibility
+5. Future work: Consider H1b to add `is_ascii_whitespace()` optimization identified in profiling
 

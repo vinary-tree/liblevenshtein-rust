@@ -156,7 +156,8 @@ pub enum Token {
 
     /// Phonetic/standard class shortcut (\v for vowel, \d for digit, etc.)
     /// Lowercase = match class, Uppercase = negate class
-    PhoneticShortcut { class_name: String, negated: bool },
+    /// Uses interned &'static str for zero allocation
+    PhoneticShortcut { class_name: &'static str, negated: bool },
 
     /// User-defined symbol reference ($NAME or ${NAME})
     SymbolRef(String),
@@ -517,116 +518,116 @@ impl<'a> Lexer<'a> {
             // Standard regex class shortcuts
             Some('d') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "digit".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "digit", negated: false })
             }
             Some('D') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "digit".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "digit", negated: true })
             }
             Some('w') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "word".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "word", negated: false })
             }
             Some('W') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "word".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "word", negated: true })
             }
             Some('s') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "space".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "space", negated: false })
             }
             Some('S') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "space".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "space", negated: true })
             }
             // Phonetic class shortcuts
             // v/V - vowel
             Some('v') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "vowel".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "vowel", negated: false })
             }
             Some('V') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "vowel".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "vowel", negated: true })
             }
             // c/C - consonant
             Some('c') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "consonant".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "consonant", negated: false })
             }
             Some('C') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "consonant".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "consonant", negated: true })
             }
             // f/F - front_vowel
             Some('f') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "front_vowel".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "front_vowel", negated: false })
             }
             Some('F') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "front_vowel".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "front_vowel", negated: true })
             }
             // k/K - back_vowel (can't use b/B - word boundary)
             Some('k') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "back_vowel".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "back_vowel", negated: false })
             }
             Some('K') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "back_vowel".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "back_vowel", negated: true })
             }
             // h/H - high_vowel
             Some('h') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "high_vowel".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "high_vowel", negated: false })
             }
             Some('H') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "high_vowel".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "high_vowel", negated: true })
             }
             // l/L - low_vowel
             Some('l') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "low_vowel".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "low_vowel", negated: false })
             }
             Some('L') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "low_vowel".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "low_vowel", negated: true })
             }
             // m/M - mid_vowel
             Some('m') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "mid_vowel".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "mid_vowel", negated: false })
             }
             Some('M') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "mid_vowel".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "mid_vowel", negated: true })
             }
             // p/P - stop/plosive (can't use s/S - whitespace)
             Some('p') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "stop".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "stop", negated: false })
             }
             Some('P') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "stop".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "stop", negated: true })
             }
             // g/G - glide
             Some('g') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "glide".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "glide", negated: false })
             }
             Some('G') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "glide".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "glide", negated: true })
             }
             // z - nasal (inside char class) or EndOfInputStrict anchor (outside)
             Some('z') => {
                 self.advance();
                 // \z is EndOfInputStrict anchor outside char class, nasal inside
                 if self.in_char_class {
-                    Ok(Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false })
+                    Ok(Token::PhoneticShortcut { class_name: "nasal", negated: false })
                 } else {
                     Ok(Token::EndOfInputStrict)
                 }
@@ -634,40 +635,40 @@ impl<'a> Lexer<'a> {
             // q/Q - liquid (can't use l/L - low_vowel)
             Some('q') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "liquid".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "liquid", negated: false })
             }
             Some('Q') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "liquid".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "liquid", negated: true })
             }
             // o/O - voiced
             Some('o') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "voiced".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "voiced", negated: false })
             }
             Some('O') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "voiced".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "voiced", negated: true })
             }
             // e/E - fricative
             Some('e') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "fricative".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "fricative", negated: false })
             }
             Some('E') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "fricative".to_string(), negated: true })
+                Ok(Token::PhoneticShortcut { class_name: "fricative", negated: true })
             }
             // a/A - affricate (inside char class) or anchor (outside)
             Some('a') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: false })
+                Ok(Token::PhoneticShortcut { class_name: "affricate", negated: false })
             }
             Some('A') => {
                 self.advance();
                 // \A is StartOfInput anchor outside char class, affricate negation inside
                 if self.in_char_class {
-                    Ok(Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: true })
+                    Ok(Token::PhoneticShortcut { class_name: "affricate", negated: true })
                 } else {
                     Ok(Token::StartOfInput)
                 }
@@ -677,7 +678,7 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 // \Z is EndOfInput anchor outside char class, nasal negation inside
                 if self.in_char_class {
-                    Ok(Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: true })
+                    Ok(Token::PhoneticShortcut { class_name: "nasal", negated: true })
                 } else {
                     Ok(Token::EndOfInput)
                 }
@@ -1986,11 +1987,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\v\V");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "vowel".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "vowel", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "vowel".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "vowel", negated: true }
         );
     }
 
@@ -1999,11 +2000,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\c\C");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "consonant".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "consonant", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "consonant".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "consonant", negated: true }
         );
     }
 
@@ -2012,11 +2013,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\p\P");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "stop".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "stop", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "stop".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "stop", negated: true }
         );
     }
 
@@ -2025,11 +2026,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\o\O");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "voiced".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "voiced", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "voiced".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "voiced", negated: true }
         );
     }
 
@@ -2038,11 +2039,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\e\E");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "fricative".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "fricative", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "fricative".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "fricative", negated: true }
         );
     }
 
@@ -2052,7 +2053,7 @@ mod tests {
         let mut lexer = Lexer::new(r"\a");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "affricate", negated: false }
         );
 
         // \A outside char class is StartOfInput anchor (not negated affricate)
@@ -2064,11 +2065,11 @@ mod tests {
         assert_eq!(lexer3.next_token().unwrap(), Token::CharClassStart);
         assert_eq!(
             lexer3.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "affricate", negated: false }
         );
         assert_eq!(
             lexer3.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "affricate", negated: true }
         );
     }
 
@@ -2077,11 +2078,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\d\D");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "digit".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "digit", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "digit".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "digit", negated: true }
         );
     }
 
@@ -2090,11 +2091,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\w\W");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "word".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "word", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "word".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "word", negated: true }
         );
     }
 
@@ -2103,11 +2104,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\s\S");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "space".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "space", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "space".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "space", negated: true }
         );
     }
 
@@ -2118,11 +2119,11 @@ mod tests {
         assert_eq!(lexer.next_token().unwrap(), Token::CharClassStart);
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "vowel".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "vowel", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "digit".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "digit", negated: false }
         );
         assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
     }
@@ -2132,23 +2133,23 @@ mod tests {
         let mut lexer = Lexer::new(r"\f\k\h\l\m");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "front_vowel".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "front_vowel", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "back_vowel".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "back_vowel", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "high_vowel".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "high_vowel", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "low_vowel".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "low_vowel", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "mid_vowel".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "mid_vowel", negated: false }
         );
     }
 
@@ -2159,11 +2160,11 @@ mod tests {
         let mut lexer = Lexer::new(r"\g\q");
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "glide".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "glide", negated: false }
         );
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "liquid".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "liquid", negated: false }
         );
 
         // \z outside char class is EndOfInputStrict anchor
@@ -2175,7 +2176,7 @@ mod tests {
         assert_eq!(lexer3.next_token().unwrap(), Token::CharClassStart);
         assert_eq!(
             lexer3.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "nasal", negated: false }
         );
     }
 
@@ -2457,17 +2458,17 @@ mod tests {
         // \A inside = affricate (negated)
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "affricate".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "affricate", negated: true }
         );
         // \Z inside = nasal (negated)
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: true }
+            Token::PhoneticShortcut { class_name: "nasal", negated: true }
         );
         // \z inside = nasal (non-negated)
         assert_eq!(
             lexer.next_token().unwrap(),
-            Token::PhoneticShortcut { class_name: "nasal".to_string(), negated: false }
+            Token::PhoneticShortcut { class_name: "nasal", negated: false }
         );
         assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
     }

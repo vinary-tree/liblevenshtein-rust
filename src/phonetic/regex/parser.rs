@@ -637,9 +637,9 @@ impl<'a> Parser<'a> {
                 Token::PhoneticShortcut { class_name, negated } => {
                     // Expand phonetic shortcut into chars
                     use crate::phonetic::named_classes::get_chars_only;
-                    let shortcut_chars = get_chars_only(&class_name).ok_or_else(|| {
+                    let shortcut_chars = get_chars_only(class_name).ok_or_else(|| {
                         ParseError::new(
-                            ParseErrorKind::UnknownNamedClass(class_name.clone()),
+                            ParseErrorKind::UnknownNamedClass(class_name.to_string()),
                             self.lexer.position(),
                         )
                     })?;
