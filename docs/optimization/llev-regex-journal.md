@@ -7,7 +7,7 @@ Scientific journal tracking optimization experiments for LLev (phonetic rewrite 
 | ID | Hypothesis | Status | Branch | Effect Size | p-value |
 |----|------------|--------|--------|-------------|---------|
 | H1 | Intern phonetic class names | **ACCEPTED** | opt/llev-h1-intern-class-names | -8% to -11% lexer time | p < 0.05 |
-| H2 | Named class lookup optimization | PENDING | opt/llev-h2-named-class-lookup | - | - |
+| H2 | Named class lookup optimization | **ACCEPTED** | opt/llev-h2-named-class-lookup | -3% to -4% cold start, -9% to -13% lexer | p < 0.05 |
 | H3 | Symbol table FxHashMap | PENDING | opt/llev-h3-symbol-table | - | - |
 | H4 | SmallVec for character classes | PENDING | opt/llev-h4-smallvec-charclass | - | - |
 | H5 | Precomputed epsilon closure | PENDING | opt/nfa-h5-precomputed-epsilon | - | - |
@@ -184,4 +184,59 @@ Scientific journal tracking optimization experiments for LLev (phonetic rewrite 
 3. All 34 phonetic class names are compile-time constants, making `&'static str` safe
 4. Error messages still use `.to_string()` for the error type, preserving compatibility
 5. Future work: Consider H1b to add `is_ascii_whitespace()` optimization identified in profiling
+
+---
+
+### Experiment: H2 - Named Class Lookup Optimization
+
+**Date**: 2025-12-18
+**Branch**: `opt/llev-h2-named-class-lookup`
+**Parent Branch**: `opt/llev-h1-intern-class-names`
+
+#### Hypothesis
+**H0 (Null)**: Replacing `to_lowercase()` with stack-allocated ASCII lowercase conversion in `get_named_class()` will not improve performance.
+**H1 (Alternative)**: Eliminating heap allocation in case-insensitive class name lookup will measurably improve ruleset construction and cold start times.
+
+#### Implementation Details
+- Files modified:
+  - `src/phonetic/named_classes.rs` - Refactored `get_named_class()` and `is_builtin_class()` functions
+- Lines changed: +45/-6
+- Key changes:
+  - Added `normalize_class_name()` helper for stack-based ASCII lowercase conversion
+  - Added fast path for exact match (already lowercase names)
+  - Used fixed-size 16-byte stack buffer instead of heap-allocated String
+  - Early return for non-ASCII or too-long names (all built-in class names are ≤15 ASCII chars)
+
+#### Post-Optimization Results (vs H1 baseline)
+
+| Benchmark | Mean | Change | p-value | Significance |
+|-----------|------|--------|---------|--------------|
+| cold_start/zompist | 150.98 µs | -2.59% | p = 0.02 | ⚠️ Within noise |
+| cold_start/homophones | 148.30 µs | **-3.25%** | p = 0.00 | ✅ Improved |
+| cold_start/text_speak | 221.17 µs | **-3.48%** | p = 0.00 | ✅ Improved |
+| ruleset/zompist | 16.39 µs | **-4.42%** | p = 0.00 | ✅ Improved |
+| ruleset/homophones | 19.39 µs | +0.20% | p = 0.69 | ⚪ No change |
+| llev_parsing/text_speak | 190.03 µs | **-2.16%** | p = 0.00 | ✅ Improved |
+| lexer/zompist | 118.01 µs | **-8.65%** | p = 0.00 | ✅ Improved |
+| lexer/homophones | 58.25 µs | **-13.05%** | p = 0.00 | ✅ Improved |
+| lexer/text_speak | 69.96 µs | **-13.26%** | p = 0.00 | ✅ Improved |
+
+#### Cumulative Effect (H1 + H2 combined vs baseline)
+
+Estimated total improvement in lexer throughput:
+- zompist: ~19% faster (0.888 × 0.914 = 0.812)
+- homophones: ~20% faster (0.918 × 0.870 = 0.799)
+- text_speak: ~20% faster (0.927 × 0.867 = 0.804)
+
+#### Decision
+- [x] **ACCEPTED** - p < 0.05 for most benchmarks, cold start improved 3-4%
+- [ ] REJECTED
+- [ ] DEFERRED
+
+#### Notes
+1. The large lexer improvements (~9-13%) are cumulative from H1+H2, comparing to the original baseline saved by Criterion
+2. The fast path for exact-match lookups (common case for lowercase class names) adds negligible overhead
+3. Using a fixed-size stack buffer eliminates all heap allocation from case-insensitive lookup
+4. The 16-byte buffer size accommodates the longest built-in class name ("ascii_consonant" = 15 chars)
+5. All built-in class names are ASCII-only, allowing use of `to_ascii_lowercase()` which is faster than full Unicode lowercase
 

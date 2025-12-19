@@ -545,9 +545,36 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
 // Lookup Functions
 // ============================================================================
 
+/// Maximum length of any built-in class name.
+/// Used for stack-allocated lowercase buffer.
+const MAX_CLASS_NAME_LEN: usize = 16; // "ascii_consonant" = 15 chars
+
+/// Normalize a class name to lowercase using stack allocation.
+///
+/// Returns None if the name is too long or contains non-ASCII characters.
+/// This is an internal helper for zero-allocation case-insensitive lookup.
+#[inline]
+fn normalize_class_name(name: &str) -> Option<([u8; MAX_CLASS_NAME_LEN], usize)> {
+    let len = name.len();
+    if len > MAX_CLASS_NAME_LEN || !name.is_ascii() {
+        return None;
+    }
+
+    let mut buf = [0u8; MAX_CLASS_NAME_LEN];
+    let bytes = name.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        buf[i] = b.to_ascii_lowercase();
+    }
+
+    Some((buf, len))
+}
+
 /// Look up a named class by name (case-insensitive).
 ///
 /// Returns the named class definition if found.
+///
+/// This function uses a stack-allocated buffer for case conversion,
+/// avoiding heap allocation on every lookup.
 ///
 /// # Example
 ///
@@ -566,15 +593,39 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
 /// assert_eq!(get_named_class("stop").unwrap().patterns.len(), stops.patterns.len());
 /// ```
 pub fn get_named_class(name: &str) -> Option<&'static NamedClass> {
-    NAMED_CLASSES.get(name.to_lowercase().as_str())
+    // Fast path: exact match (common for lowercase names)
+    if let Some(class) = NAMED_CLASSES.get(name) {
+        return Some(class);
+    }
+
+    // Normalize to lowercase in stack buffer
+    let (buf, len) = normalize_class_name(name)?;
+
+    // SAFETY: Input verified as ASCII, ASCII lowercase is valid UTF-8
+    let lowered = unsafe { std::str::from_utf8_unchecked(&buf[..len]) };
+    NAMED_CLASSES.get(lowered)
 }
 
 /// Check if a name is a built-in class (case-insensitive).
 ///
 /// This is useful for detecting conflicts when users try to define
 /// symbols with the same name as built-in classes.
+///
+/// Uses stack-allocated buffer for case conversion (no heap allocation).
 pub fn is_builtin_class(name: &str) -> bool {
-    NAMED_CLASSES.contains_key(name.to_lowercase().as_str())
+    // Fast path: exact match
+    if NAMED_CLASSES.contains_key(name) {
+        return true;
+    }
+
+    // Normalize to lowercase in stack buffer
+    let Some((buf, len)) = normalize_class_name(name) else {
+        return false;
+    };
+
+    // SAFETY: Input verified as ASCII
+    let lowered = unsafe { std::str::from_utf8_unchecked(&buf[..len]) };
+    NAMED_CLASSES.contains_key(lowered)
 }
 
 /// Get all built-in class names (for error messages and documentation).
