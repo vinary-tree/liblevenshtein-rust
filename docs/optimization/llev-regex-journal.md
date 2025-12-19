@@ -8,7 +8,7 @@ Scientific journal tracking optimization experiments for LLev (phonetic rewrite 
 |----|------------|--------|--------|-------------|---------|
 | H1 | Intern phonetic class names | **ACCEPTED** | opt/llev-h1-intern-class-names | -8% to -11% lexer time | p < 0.05 |
 | H2 | Named class lookup optimization | **ACCEPTED** | opt/llev-h2-named-class-lookup | -3% to -4% cold start, -9% to -13% lexer | p < 0.05 |
-| H3 | Symbol table FxHashMap | PENDING | opt/llev-h3-symbol-table | - | - |
+| H3 | Symbol table FxHashMap | **REJECTED** | opt/llev-h3-symbol-table | +10% to +15% regression | p < 0.05 |
 | H4 | SmallVec for character classes | PENDING | opt/llev-h4-smallvec-charclass | - | - |
 | H5 | Precomputed epsilon closure | PENDING | opt/nfa-h5-precomputed-epsilon | - | - |
 | H6 | CharClass bitmap acceleration | PENDING | opt/nfa-h6-charclass-bitmap | - | - |
@@ -239,4 +239,46 @@ Estimated total improvement in lexer throughput:
 3. Using a fixed-size stack buffer eliminates all heap allocation from case-insensitive lookup
 4. The 16-byte buffer size accommodates the longest built-in class name ("ascii_consonant" = 15 chars)
 5. All built-in class names are ASCII-only, allowing use of `to_ascii_lowercase()` which is faster than full Unicode lowercase
+
+---
+
+### Experiment: H3 - Symbol Table FxHashMap
+
+**Date**: 2025-12-18
+**Branch**: `opt/llev-h3-symbol-table`
+**Parent Branch**: `opt/llev-h2-named-class-lookup`
+
+#### Hypothesis
+**H0 (Null)**: Replacing std::HashMap with FxHashMap for the parser symbol table will not improve parsing performance.
+**H1 (Alternative)**: FxHashMap's faster hashing algorithm will improve symbol lookup performance.
+
+#### Implementation Details
+- Files modified:
+  - `src/phonetic/llev/parser.rs` - Changed symbol table type
+- Lines changed: +4/-2
+- Key changes: Replace `HashMap<String, Expression>` with `FxHashMap<String, Expression>`
+
+#### Post-Optimization Results (vs H2 baseline)
+
+| Benchmark | Mean | Change | p-value | Significance |
+|-----------|------|--------|---------|--------------|
+| llev_parsing/zompist | 156.86 µs | **+13.8%** | p = 0.00 | ❌ Regressed |
+| llev_parsing/homophones | 145.58 µs | **+10.2%** | p = 0.00 | ❌ Regressed |
+| llev_parsing/text_speak | 219.88 µs | **+11.4%** | p = 0.00 | ❌ Regressed |
+
+#### Analysis
+The regression was unexpected. Possible causes:
+1. **Small table overhead**: The symbol table is typically empty (most LLev files don't use `@define`). FxHashMap may have higher initialization cost than std::HashMap's lazy allocation.
+2. **Cache effects**: FxHashMap's different memory layout may cause more cache misses.
+3. **Compiler optimization**: std::HashMap may receive better optimization from the compiler.
+
+#### Decision
+- [ ] ACCEPTED
+- [x] **REJECTED** - Clear regression of 10-15% in parsing benchmarks
+- [ ] DEFERRED
+
+#### Notes
+1. FxHashMap is NOT always faster than std::HashMap - depends on usage patterns
+2. For typically-empty or small hash maps, std::HashMap's lazy allocation is more efficient
+3. Future optimization: Consider removing the symbol table entirely if `@define` is rarely used, or use a different data structure (e.g., SmallVec for small counts)
 
