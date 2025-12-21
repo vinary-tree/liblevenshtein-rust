@@ -1,0 +1,9 @@
+# Build outputs
+/target/
+/pkg/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

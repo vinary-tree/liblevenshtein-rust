@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phonetic Spellcheck Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Phonetic Spellcheck Demo</h1>
+            <p class="subtitle">
+                Combining phonetic normalization with Levenshtein distance
+            </p>
+        </header>
+
+        <main>
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading dictionary and rules...</p>
+                <p class="loading-detail" id="loading-detail"></p>
+            </div>
+
+            <div id="app" class="hidden">
+                <div class="input-section">
+                    <input
+                        type="text"
+                        id="query-input"
+                        placeholder="Type a misspelled word..."
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                    <button id="search-btn">Search</button>
+                </div>
+
+                <div class="examples">
+                    <span>Try:</span>
+                    <button class="example-btn" data-query="fone">fone</button>
+                    <button class="example-btn" data-query="teh">teh</button>
+                    <button class="example-btn" data-query="filosofy">filosofy</button>
+                    <button class="example-btn" data-query="enuf">enuf</button>
+                    <button class="example-btn" data-query="nite">nite</button>
+                </div>
+
+                <div id="results" class="results-section">
+                    <p class="hint">Enter a word to search for spelling suggestions</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="stats">
+                <span>Dictionary: <strong id="dict-size">-</strong> words</span>
+                <span>|</span>
+                <span>Rules: <strong id="rules-count">-</strong></span>
+                <span>|</span>
+                <span>Init time: <strong id="init-time">-</strong></span>
+            </div>
+            <p class="powered-by">
+                Powered by <a href="https://github.com/f1r3fly-io/liblevenshtein-rust" target="_blank">liblevenshtein</a>
+            </p>
+        </footer>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

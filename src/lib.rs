@@ -32,6 +32,8 @@ pub mod commands;
 pub mod contextual;
 pub mod dictionary;
 pub mod distance;
+/// Cross-platform synchronization primitives (parking_lot on native, std::sync on WASM)
+pub mod sync_compat;
 pub mod transducer;
 
 /// Phonetic rewrite rules for approximate string matching
@@ -50,11 +52,11 @@ pub mod serialization;
 pub mod cache;
 
 /// Interactive REPL for exploring Levenshtein dictionaries
-#[cfg(feature = "cli")]
+#[cfg(all(feature = "cli", not(target_arch = "wasm32")))]
 pub mod repl;
 
 /// CLI interface and utilities
-#[cfg(feature = "cli")]
+#[cfg(all(feature = "cli", not(target_arch = "wasm32")))]
 pub mod cli;
 
 /// Grep support for compressed, archived, and document files
@@ -62,16 +64,42 @@ pub mod cli;
 /// This module provides streaming decompression and archive support
 /// for searching through .gz, .zst, .xz, .bz2, .tar, and .zip files.
 /// Also provides document extraction support for PDF, DOCX, XLSX, EPUB, and ODT files.
-#[cfg(any(
-    feature = "grep-compression",
-    feature = "grep-archives",
-    feature = "grep-pdf",
-    feature = "grep-docx",
-    feature = "grep-xlsx",
-    feature = "grep-epub",
-    feature = "grep-odt"
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(
+        feature = "grep-compression",
+        feature = "grep-archives",
+        feature = "grep-pdf",
+        feature = "grep-docx",
+        feature = "grep-xlsx",
+        feature = "grep-epub",
+        feature = "grep-odt"
+    )
 ))]
 pub mod grep;
+
+/// WebAssembly bindings for browser and Node.js via wasm-bindgen
+///
+/// This module provides JavaScript-friendly APIs for all core functionality:
+/// - Distance functions (Levenshtein, Damerau-Levenshtein)
+/// - Dictionary backends (DoubleArrayTrie, DynamicDawg)
+/// - Levenshtein transducers for fuzzy search
+/// - Phonetic rules (with `wasm-phonetic` feature)
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
+/// C-compatible FFI for WASI runtimes and native language bindings
+///
+/// This module provides raw C-compatible functions (`extern "C"`) for:
+/// - Distance calculations
+/// - Dictionary construction and querying
+/// - Transducer operations
+/// - Memory management (string/array allocation and freeing)
+///
+/// Suitable for WASI runtimes (Wasmtime, WasmEdge) and native FFI from
+/// other languages (Python, Ruby, Go, etc.)
+#[cfg(feature = "ffi")]
+pub mod ffi;
 
 /// Test corpus utilities
 ///

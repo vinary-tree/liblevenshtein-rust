@@ -60,13 +60,25 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Update package index (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update
+  
       - name: Install protobuf compiler (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
+        run: sudo apt-get install -y protobuf-compiler
+  
       - name: Install protobuf compiler (macOS)
         if: runner.os == 'macOS'
         run: brew install protobuf
+  
+      - name: Install leptonica (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libleptonica-dev
+  
+      - name: Install leptonica (macOS)
+        if: runner.os == 'macOS'
+        run: brew install leptonica
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1

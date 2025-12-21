@@ -8,7 +8,7 @@ use crate::dictionary::dynamic_dawg_zipper::DynamicDawgZipper;
 use crate::dictionary::iterator::DictionaryIterator;
 use crate::dictionary::value::DictionaryValue;
 use crate::dictionary::{Dictionary, DictionaryNode, SyncStrategy};
-use parking_lot::RwLock;
+use crate::sync_compat::RwLock;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use std::collections::HashMap;

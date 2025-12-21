@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 // Conditional imports based on feature flags
 #[cfg(all(feature = "eviction-parking-lot", not(feature = "eviction-dashmap")))]
-use parking_lot::RwLock;
+use crate::sync_compat::RwLock;
 #[cfg(all(
     not(feature = "eviction-parking-lot"),
     not(feature = "eviction-dashmap")

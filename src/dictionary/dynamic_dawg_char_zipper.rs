@@ -8,7 +8,7 @@
 use crate::dictionary::dynamic_dawg_char::{DynamicDawgChar, DynamicDawgCharInner};
 use crate::dictionary::value::DictionaryValue;
 use crate::dictionary::zipper::{DictZipper, ValuedDictZipper};
-use parking_lot::RwLock;
+use crate::sync_compat::RwLock;
 use std::sync::Arc;
 
 /// Zipper for Dynamic DAWG character-level dictionaries.

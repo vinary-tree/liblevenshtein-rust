@@ -1,5 +1,6 @@
 [workspace]
 members = [".", "liblevenshtein-macros"]
+exclude = ["examples/phonetic_spellcheck", "examples/phonetic_spellcheck_wasm"]
 resolver = "2"
 
 [package]
@@ -71,6 +72,14 @@ leptess = { version = "0.14", optional = true }
 # Unicode normalization for accent-insensitive matching and (?u:NFC) flag
 unicode-normalization = { version = "0.1", optional = true }
 # SIMD optimization uses std::arch (no external dependencies needed)
+
+# WASM bindings (optional, for browser/Node.js targets)
+# Note: Use =0.2.100 to avoid externref issues in newer versions
+wasm-bindgen = { version = "=0.2.100", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+getrandom = { version = "0.2", features = ["js"], optional = true }
+js-sys = { version = "0.3", optional = true }
 
 [dev-dependencies]
 criterion = "0.5"
@@ -386,6 +395,15 @@ grep-xlsx = ["calamine"]
 grep-epub = ["epub"]
 grep-odt = ["quick-xml", "zip"]
 grep-documents = ["grep-pdf", "grep-docx", "grep-xlsx", "grep-epub", "grep-odt"]
+
+# WASM support - enables wasm-bindgen bindings for JavaScript
+wasm = ["wasm-bindgen", "serde-wasm-bindgen", "console_error_panic_hook", "getrandom", "js-sys", "serde", "serde_json"]
+# WASM with full phonetic support
+wasm-phonetic = ["wasm", "phonetic-rules"]
+# C FFI support - exposes raw C-compatible functions (for WASI or native FFI)
+ffi = []
+# Combined WASM + FFI
+wasm-ffi = ["wasm", "ffi"]
 
 [package.metadata.generate-rpm]
 assets = [
