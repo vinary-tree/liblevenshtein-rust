@@ -227,7 +227,7 @@ jobs:
       - name: Test basic functionality
         run: |
           echo -e "test\ntesting\ntested\ntester" > /tmp/test-dict.txt
-          liblevenshtein query "tset" --dict /tmp/test-dict.txt -m 2
+          liblevenshtein --query --text "tset" --dict /tmp/test-dict.txt -m 2
           echo "Basic query test passed!"
 
   package-rpm:
@@ -408,7 +408,7 @@ jobs:
       - name: Test basic functionality
         run: |
           echo -e "test\ntesting\ntested\ntester" > /tmp/test-dict.txt
-          liblevenshtein query "tset" --dict /tmp/test-dict.txt -m 2
+          liblevenshtein --query --text "tset" --dict /tmp/test-dict.txt -m 2
           echo "Basic query test passed!"
 
   test-arch-package:
@@ -445,7 +445,7 @@ jobs:
       - name: Test basic functionality
         run: |
           echo -e "test\ntesting\ntested\ntester" > /tmp/test-dict.txt
-          liblevenshtein query "tset" --dict /tmp/test-dict.txt -m 2
+          liblevenshtein --query --text "tset" --dict /tmp/test-dict.txt -m 2
           echo "Basic query test passed!"
 
   create-release:
@@ -535,7 +535,7 @@ jobs:
 
           # Test basic query
           echo "Testing basic query..."
-          liblevenshtein query "tset" --dict /tmp/test-dict.txt -m 2 | tee /tmp/results.txt
+          liblevenshtein --query --text "tset" --dict /tmp/test-dict.txt -m 2 | tee /tmp/results.txt
 
           # Verify we got expected results
           if grep -q "test" /tmp/results.txt; then
