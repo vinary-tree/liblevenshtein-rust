@@ -5,9 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.0] - 2025-12-20
 
 ### Added
+
+#### WASM and WASI Support (2025-12-19)
+- **WebAssembly compilation targets**
+  - Full WASM support for browser and Node.js targets
+  - WASI support for server-side WebAssembly runtimes
+  - `wasm` feature flag enables wasm-bindgen bindings
+  - `wasm-phonetic` feature combines WASM with phonetic rules
+  - `ffi` feature exposes C-compatible functions for WASI/native FFI
+  - Phonetic spellcheck example includes WASM demo application
+
+#### LLev - Levenshtein Regular Expressions (2025-11-16 to 2025-12-18)
+- **Complete LLev Parser and NFA Engine**
+  - New domain-specific language for phonetic pattern matching
+  - LLRE (Levenshtein Regex) format for compact pattern specification
+  - Full regex-like syntax: quantifiers (`*`, `+`, `?`, `{n,m}`, `{,m}`), alternation, grouping
+  - Built-in named character classes (`[:alpha:]`, `[:digit:]`, `[:vowel:]`, etc.)
+  - Escape shortcuts for common character categories
+  - Cycle detection and equivalence set recovery for pattern analysis
+
+- **Phonetic Spellcheck Example**
+  - Complete demo application with dictionary caching
+  - Interactive spellcheck with phonetic similarity matching
+  - WASM-compatible version for browser deployment
 
 #### NFA Optimizer Module (2025-12-15)
 - **Automatic NFA Optimization** - Reduces NFA size and improves matching performance
@@ -31,6 +54,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `NFACompilerChar::without_optimization()`: Disable automatic optimization
   - Optimization enabled by default in `compile()` function
   - 11 unit tests covering all optimization passes
+
+#### Generic Iterator Support (2025-11-28)
+- **Universal iterator interface for all dictionary backends**
+  - Consistent iteration API across PathMap, DAWG, DoubleArrayTrie, and SuffixAutomaton
+  - Both byte-level and character-level variants supported
+  - Enables generic algorithms over any dictionary type
+
+#### Formal Verification (2025-11-15 to 2025-12-17)
+- **Levenshtein Automaton Proofs in Coq/Rocq**
+  - Complete axiom-free proofs for Levenshtein distance properties
+  - Triangle inequality proof using Wagner-Fischer trace approach
+  - Modular decomposition with 0 Admitted lemmas in extraction
+  - Position skipping verification: 50/50 proofs complete
+  - Comprehensive trace composition cost bounds
+
+- **Phonetic Rewrite Rules Verification**
+  - All 5 core theorems proven in Coq
+  - OCaml extraction infrastructure for verified code
+  - Property-based tests mirroring Coq theorems (proptest)
+
+### Performance
+
+#### NFA Optimizations (2025-12-18)
+- **H7+H8+H9 Combined Optimizations** - 2-7× speedup for NFA operations
+  - H7: State representation optimization
+  - H8: Transition table compaction
+  - H9: Hot path specialization
+
+- **Phonetic Lexer Optimizations**
+  - H1: Intern phonetic class names for 7-11% speedup
+  - H2: Stack-based ASCII lowercase for 3-4% cold start improvement
+  - H3 (rejected): FxHashMap caused 10-15% regression
+  - H4 (rejected): Alternative approach showed no improvement
+
+#### Phonetic Matching Optimizations (2025-11-17 to 2025-11-25)
+- **Position Skipping Optimization** - Up to 26.6× speedup
+  - Skip ahead to first potential match position in phonetic patterns
+  - Reduces unnecessary state exploration
+  - Opt-in via explicit API call (see Deprecated section)
+
+- **Phonetic Rules Allocation Elimination** - 27-30% speedup
+  - Eliminated string allocations in successor methods
+  - H2 conditional optimization with zero overhead
+
+### Changed
+
+#### API Changes
+- **apply_rules_seq_opt deprecated** - Position skipping is now opt-in
+  - Use `apply_rules_with_skip()` for position skipping behavior
+  - Default `apply_rules()` uses standard sequential matching
+  - Migration: Replace `apply_rules_seq_opt` calls with explicit skip API
+
+### Fixed
+
+#### Bug Fixes
+- **M-type merge index overflow** - Fixed overflow bug in generalized automaton module
+  - Added comprehensive property tests to prevent regression
+  - Affects phonetic split operations with accumulated errors
+
+### Documentation
+
+#### Integration Architecture (2025-11-26 to 2025-12-02)
+- **MORK and PathMap Integration**
+  - Comprehensive MeTTa query examples
+  - Three-layer integration architecture clarification
+  - Extended architecture layers documentation
+
+- **WFST Documentation**
+  - Weighted finite-state transducer implementation comparison
+  - Cross-references to MeTTaIL correction documentation
+
+- **Theoretical Foundations**
+  - Pedagogical content for compiler implementers
+  - Semantic type checking documentation
+  - Dialogue, LLM integration, and agent learning patterns
+
+#### Verification Documentation
+- **Comprehensive proof status tracking**
+  - Admitted lemmas analysis and resolution
+  - Phase-by-phase completion status
+  - Modular proof index
+
+### CI/CD
+
+#### Build Infrastructure (2025-12-19)
+- **OCR Support in CI**
+  - Tesseract and Leptonica installation for document processing
+  - Ubuntu workflow updates for libtesseract-dev
 
 ## [0.7.0] - 2025-11-15
 
@@ -956,6 +1067,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/F1R3FLY-io/liblevenshtein-rust/compare/v0.2.0...HEAD
+[0.8.0]: https://github.com/F1R3FLY-io/liblevenshtein-rust/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/F1R3FLY-io/liblevenshtein-rust/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/F1R3FLY-io/liblevenshtein-rust/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/F1R3FLY-io/liblevenshtein-rust/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/F1R3FLY-io/liblevenshtein-rust/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/F1R3FLY-io/liblevenshtein-rust/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/F1R3FLY-io/liblevenshtein-rust/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/F1R3FLY-io/liblevenshtein-rust/releases/tag/v0.1.0

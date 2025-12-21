@@ -124,6 +124,19 @@ LEV_n(W) accepts L_Lev(n,W) = {V | d_L(W,V) ≤ n}
   - Dictionary edge lookup with data-driven threshold tuning
   - Distance matrix computation with vectorized operations
   - Automatic fallback to scalar implementation when SIMD unavailable
+- **WASM/WASI support** (optional `wasm` feature):
+  - WebAssembly compilation for browser and Node.js targets
+  - WASI support for server-side WebAssembly runtimes
+  - `wasm-phonetic` feature combines WASM with phonetic rules
+  - C FFI via `ffi` feature for native integration
+- **LLev/LLRE - Phonetic Pattern Languages** (requires `phonetic-rules` feature):
+  - `.llev` format for phonetic rewrite rules with metadata and includes
+  - `.llre` format for regex-style patterns with NFA compilation
+  - Regex-like syntax: quantifiers (`*`, `+`, `?`, `{n,m}`), alternation, grouping
+  - Built-in named character classes (`[:alpha:]`, `[:vowel:]`, etc.)
+  - NFA engine with automatic optimization (epsilon elimination, dead state removal)
+  - AOT compilation to binary format for instant loading
+  - See [LLev Grammar](docs/grammar/llev.ebnf) and [LLRE Grammar](docs/grammar/llre.ebnf)
 
 ## Installation
 
@@ -133,10 +146,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-liblevenshtein = "0.5"
+liblevenshtein = "0.8"
 
 # Or with SIMD acceleration (x86_64 only, requires SSE4.1/AVX2):
-liblevenshtein = { version = "0.5", features = ["simd"] }
+liblevenshtein = { version = "0.8", features = ["simd"] }
 ```
 
 Or install the CLI tool:
@@ -467,7 +480,7 @@ Requires `serialization` and `compression` features:
 
 ```toml
 [dependencies]
-liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", tag = "v0.3.0", features = ["serialization", "compression"] }
+liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", tag = "v0.8.0", features = ["serialization", "compression"] }
 ```
 
 ### CLI Tool
@@ -476,7 +489,7 @@ The library includes a full-featured command-line tool with interactive REPL:
 
 ```bash
 # Install with CLI support (from GitHub)
-cargo install --git https://github.com/universal-automata/liblevenshtein-rust --tag v0.3.0 \
+cargo install --git https://github.com/universal-automata/liblevenshtein-rust --tag v0.8.0 \
   --features cli,compression,protobuf liblevenshtein
 
 # Or download pre-built binaries from GitHub Releases
@@ -767,40 +780,72 @@ for term in transducer.query_filtered("var", 1, |scope_id| *scope_id <= 1) {
 
 ### Phonetic Rewrite Rules (Formally Verified)
 
-The `phonetic-rules` feature provides **mathematically verified** phonetic transformation rules for English spelling normalization, enabling phonetic fuzzy matching:
+The `phonetic-rules` feature provides **mathematically verified** phonetic transformation rules for fuzzy matching. Use `PhoneticGrep` for on-the-fly matching with automatic Levenshtein composition:
 
 ```rust
-use liblevenshtein::phonetic::*;
+use liblevenshtein::phonetic::grep::PhoneticGrep;
 
-// Convert words to phonetic representations
-let words = vec!["phone", "church", "ghost", "enough"];
-let ortho_rules = orthography_rules();
+// PhoneticGrep composes NFA patterns with Levenshtein automata
+// No preprocessing or normalization required!
+let grep = PhoneticGrep::from_pattern("phone", 1)?;
 
-for word in words {
-    // Convert to phonetic representation
-    let phones: Vec<Phone> = word.bytes()
-        .map(|b| if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u') {
-            Phone::Vowel(b)
-        } else {
-            Phone::Consonant(b)
-        })
-        .collect();
-
-    // Apply transformation rules
-    let fuel = phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-    if let Some(result) = apply_rules_seq(&ortho_rules, &phones, fuel) {
-        // Result: phonetic representation (e.g., "ph" → "f", "gh" → silent)
-        println!("Input: {} → Output: {:?}", word, result);
-    }
-}
+// Matches within edit distance 1
+assert!(grep.matches("phone").is_some());  // exact match (distance 0)
+assert!(grep.matches("fone").is_some());   // distance 1 (p→f)
+assert!(grep.matches("phon").is_some());   // distance 1 (missing e)
+assert!(grep.matches("phones").is_some()); // distance 1 (extra s)
 ```
 
-**Formal Verification**: All algorithms are proven correct in Coq/Rocq with 5 theorems:
+**Named Character Classes** (phonetic-aware):
+```rust
+// [:vowel:] includes ASCII vowels + IPA vowels (ə, ɪ, ʊ, ɛ, etc.)
+// [:consonant:] includes ASCII consonants + IPA symbols
+// [:fricative:] matches f,v,s,z,h + digraphs (sh,th,zh)
+// [:nasal:] matches m,n + ng digraph + IPA ŋ
+// [:stop:] / [:plosive:] matches p,b,t,d,k,g
+// [:voiced:] / [:voiceless:] by voicing
+
+// Match words with nasal-vowel-stop pattern within distance 1
+let grep = PhoneticGrep::from_pattern("[:nasal:][:vowel:][:stop:]", 1)?;
+// Matches: "nap", "map", "nod", "mob", "nip", "mat" ...
+
+// Front vowels for palatalization contexts
+let grep = PhoneticGrep::from_pattern("c[:front_vowel:]", 1)?;
+// Matches: "ce", "ci" (soft c contexts)
+```
+
+**Phonetic Flags** (compile-time transformations):
+```rust
+// Case-insensitive matching
+let grep = PhoneticGrep::from_pattern("(?i:hello)", 1)?;
+assert!(grep.matches("HELLO").is_some());
+
+// Accent-insensitive matching
+let grep = PhoneticGrep::from_pattern("(?a:cafe)", 0)?;
+assert!(grep.matches("café").is_some());  // é → e
+
+// Combined case + accent insensitive
+let grep = PhoneticGrep::from_pattern("(?ia:cafe)", 1)?;
+assert!(grep.matches("CAFÉ").is_some());
+
+// Local distance override: (?;N:pattern)
+let grep = PhoneticGrep::from_pattern("(?;2:difficult)", 0)?;
+// Pattern-level distance of 2, ignoring the constructor's 0
+```
+
+**Formal Verification**: All algorithms are proven correct in Coq/Rocq:
+
+*Phonetic Rules (5 theorems):*
 1. **Well-formedness** - All rules satisfy structural constraints
 2. **Bounded Expansion** - Output length ≤ input length + 20 (guaranteed)
 3. **Non-Confluence** - Rule application order matters (proven)
 4. **Termination** - Sequential application always terminates (guaranteed)
 5. **Idempotence** - Fixed points remain unchanged (stable semantics)
+
+*Levenshtein Automata:*
+- Complete axiom-free proofs for distance properties (triangle inequality, lower bounds)
+- Position skipping optimization: 50/50 proofs complete (100% verified)
+- Modular proof decomposition with 0 Admitted lemmas
 
 **Rule Sets**:
 - `orthography_rules()` - 8 orthographic transformations (ch→ç, ph→f, silent letters)
@@ -816,21 +861,22 @@ let result = apply_rules_seq(&orthography_rules(), &phones_u8, fuel);
 let result = apply_rules_seq_char(&orthography_rules_char(), &phones_char, fuel);
 ```
 
-**Integration with Levenshtein Matching**:
+**With Phonetic Rules** (for spelling normalization):
 ```rust
-// 1. Normalize query and dictionary terms phonetically
-let normalized_query = apply_rules_seq(&ortho_rules, &query_phones, fuel)?;
-let normalized_dict = dict_terms.iter()
-    .map(|term| apply_rules_seq(&ortho_rules, term, fuel))
-    .collect();
+use liblevenshtein::phonetic::grep::PhoneticGrep;
+use std::path::Path;
 
-// 2. Use Levenshtein automaton on normalized forms
-let dict = DoubleArrayTrie::from_terms(normalized_dict);
-let transducer = Transducer::new(dict, Algorithm::Standard);
-let matches = transducer.query(&normalized_query, 1);
+// Load rules from .llev file and compose with Levenshtein automaton
+let grep = PhoneticGrep::with_rules(
+    "fone",                    // Query (phonetic spelling)
+    Path::new("english.llev"), // Rules: ph→f, gh→silent, etc.
+    1                          // Max Levenshtein distance
+)?;
 
-// Example: "enough" and "enuf" match after phonetic normalization
-// (both → "enuf" via "gh" → silent, making Levenshtein distance 0)
+// "phone" matches "fone" after rule application + distance tolerance
+assert!(grep.matches("phone").is_some());
+assert!(grep.matches("fone").is_some());   // exact after normalization
+assert!(grep.matches("phones").is_some()); // distance 1
 ```
 
 **Verification Artifacts**:
@@ -852,6 +898,48 @@ cargo run --example phonetic_rewrite --features phonetic-rules
 ```
 
 **Source**: Based on [Zompist's English spelling rules](https://zompist.com/spell.html) with complete formal verification in Coq/Rocq (630+ lines of proofs, 100% proven, zero Admitted).
+
+### LLev/LLRE - Phonetic Pattern Languages
+
+For complex phonetic matching, use `.llev` files for rewrite rules or `.llre` files for regex-style patterns with phonetic extensions:
+
+```rust
+use liblevenshtein::phonetic::llev::parse_str;
+use liblevenshtein::phonetic::llre;
+
+// LLev: Rewrite rules with phonetic context
+let rules = parse_str(r#"
+    @name "English Phonetic Rules"
+
+    [id: 1, name: "ph to f"]
+    ph -> f;  // phone → fone
+
+    [id: 2, name: "soft c"]
+    c -> s / _[:front_vowel:];  // city → sity (before e,i)
+
+    [id: 3, name: "silent gh"]
+    gh -> / [:vowel:]_;  // night → nit (after vowel)
+"#)?;
+
+// LLRE: Regex patterns with named character classes
+let pattern = llre::compile_pattern("[:fricative:]one")?;
+assert!(pattern.matches("fone"));    // f ∈ [:fricative:]
+assert!(pattern.matches("shone"));   // sh ∈ [:fricative:]
+assert!(pattern.matches("zone"));    // z ∈ [:fricative:]
+
+// LLRE with flags
+let pattern = llre::compile_pattern("(?ia:[:nasal:][:vowel:][:stop:])")?;
+// Case+accent insensitive nasal-vowel-stop pattern
+
+// AOT compilation for instant loading
+#[cfg(feature = "serialization")]
+{
+    llre::save(&pattern, "pattern.llre.bin")?;
+    let loaded = llre::load("pattern.llre.bin")?;
+}
+```
+
+See [`examples/phonetic_spellcheck`](examples/phonetic_spellcheck/) for a complete demo, and the [LLev Grammar](docs/grammar/llev.ebnf) / [LLRE Grammar](docs/grammar/llre.ebnf) for full syntax reference.
 
 ## Documentation
 
@@ -946,6 +1034,13 @@ Character-level dictionary variants (`*Char`) for Unicode support:
 When to use:
 - ✅ Use `*Char` variants for multi-language dictionaries with non-ASCII Unicode
 - ✅ Use byte-level variants (`DoubleArrayTrie`, `PathMapDictionary`) for ASCII/Latin-1 content
+
+### Phonetic Pattern Matching
+
+When using the `phonetic-rules` feature:
+- **NFA optimizations**: 2-7× speedup through epsilon elimination, dead state removal, and transition deduplication
+- **Position skipping**: Up to 26.6× speedup for pattern matching with skip-ahead optimization
+- **Lexer optimizations**: 7-11% speedup via string interning and stack-based operations
 
 ## Research & Planned Features
 
