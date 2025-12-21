@@ -1,5 +1,13 @@
 # Phase B: Lattice Integration Guide
 
+**Last Updated**: 2025-12-21
+**Version**: v0.8.0
+**Status**: PROPOSED
+
+> ⚠️ **PROPOSAL NOTICE**: This document describes a **proposed** `src/lattice/` module for structured multi-candidate output. This structure is a design specification for future implementation.
+>
+> **Current Implementation**: liblevenshtein v0.8.0 returns flat iterators from transducer queries. See [Current v0.8.0 Capabilities](#current-v080-capabilities) for available features.
+
 This document provides detailed implementation guidance for Phase B of the MORK integration: creating lattice data structures for ranked, multi-candidate approximate matching.
 
 ## Overview
@@ -7,6 +15,49 @@ This document provides detailed implementation guidance for Phase B of the MORK 
 **Goal**: Extend liblevenshtein to return structured lattice DAGs instead of flat iterators, enabling ranked results with weighted scores.
 
 **Result**: Queries return `Lattice` structures that MORK can traverse to extract n-best paths with combined edit distance and phonetic costs.
+
+---
+
+## Current v0.8.0 Capabilities
+
+Before implementing the proposed lattice module, liblevenshtein v0.8.0 provides:
+
+### What's Available Now
+
+| Feature | API | Description |
+|---------|-----|-------------|
+| Flat candidate iteration | `transducer.query(term, max_dist)` | Returns `Iterator<Candidate>` |
+| Distance-based results | `Candidate { term, distance }` | Edit distance per match |
+| ProductAutomaton | `ProductAutomatonChar::new(nfa, max_dist)` | NFA × Levenshtein composition |
+
+### Current Query Pattern
+
+```rust
+use liblevenshtein::transducer::{Algorithm, Transducer};
+use liblevenshtein::dictionary::DynamicDawgChar;
+
+let dict = DynamicDawgChar::from_iter(["the", "ten", "tea", "cat", "bat", "car"]);
+let transducer = Transducer::new(&dict, Algorithm::Standard);
+
+// Current: flat iterator of candidates
+for candidate in transducer.query("teh", 2) {
+    println!("{}: distance {}", candidate.term, candidate.distance);
+}
+// Output (unordered):
+// the: distance 1
+// ten: distance 2
+// tea: distance 2
+```
+
+### Workaround: Manual Ranking
+
+Until lattice support is added, you can manually collect and sort:
+
+```rust
+let mut candidates: Vec<_> = transducer.query("teh", 2).collect();
+candidates.sort_by_key(|c| c.distance);
+let top_5 = &candidates[..5.min(candidates.len())];
+```
 
 ---
 
@@ -35,20 +86,22 @@ AFactor::LatticeSource
 ProductZipper → Unification → Ranked Results
 ```
 
-### Component Locations
+### Component Locations (PROPOSED)
+
+> **Note**: This is the **proposed** module structure. It does not currently exist.
 
 ```
 liblevenshtein-rust/src/
-├── lattice/
-│   ├── mod.rs           # Core Lattice struct
-│   ├── node.rs          # Node representation
-│   ├── edge.rs          # Edge with weights and metadata
-│   ├── builder.rs       # LatticeBuilder for construction
-│   └── path_iterator.rs # N-best path extraction
+├── lattice/                  # PROPOSED - To be implemented
+│   ├── mod.rs                # Core Lattice struct
+│   ├── node.rs               # Node representation
+│   ├── edge.rs               # Edge with weights and metadata
+│   ├── builder.rs            # LatticeBuilder for construction
+│   └── path_iterator.rs      # N-best path extraction
 
 MORK/kernel/src/
-├── lattice_zipper.rs    # Zipper adapter for lattice paths
-└── sources.rs           # LatticeSource variant in AFactor
+├── lattice_zipper.rs         # Zipper adapter for lattice paths
+└── sources.rs                # LatticeSource variant in AFactor
 ```
 
 ---

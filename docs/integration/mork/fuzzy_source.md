@@ -1,12 +1,85 @@
 # Phase A: FuzzySource Implementation Guide
 
+**Last Updated**: 2025-12-21
+**Version**: v0.8.0
+**Status**: Partially Implemented
+
 This document provides detailed implementation guidance for Phase A of the MORK integration: creating a FuzzySource that enables approximate string matching in MeTTa queries.
+
+> **Note**: This document describes the proposed FuzzySource adapter for MORK. liblevenshtein v0.8.0 provides the underlying APIs (`Transducer`, `ProductAutomatonChar`, `english::*` rules) that this adapter would wrap.
 
 ## Overview
 
 **Goal**: Enable MORK queries to perform fuzzy symbol matching using liblevenshtein's transducer.
 
 **Result**: MeTTa queries like `!(match &space (fuzzy "colr" 2 $result) $result)` return approximate matches within edit distance 2.
+
+---
+
+## v0.8.0 liblevenshtein APIs
+
+FuzzySource can leverage these v0.8.0 APIs from liblevenshtein:
+
+### Basic Transducer (Levenshtein)
+
+```rust
+use liblevenshtein::transducer::{Algorithm, Transducer};
+use liblevenshtein::dictionary::DynamicDawgChar;
+
+let dict = DynamicDawgChar::from_iter(["color", "colour", "collar", "blue"]);
+let transducer = Transducer::new(&dict, Algorithm::Transposition);
+
+for candidate in transducer.query("colr", 2) {
+    println!("{}: distance {}", candidate.term, candidate.distance);
+}
+```
+
+### ProductAutomatonChar (Phonetic + Levenshtein)
+
+For phonetic-aware matching, use `ProductAutomatonChar`:
+
+```rust
+use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
+use liblevenshtein::phonetic::verified::rules_to_nfa_char;
+use liblevenshtein::phonetic::rules::english;
+
+// Pre-compiled English rules (62 Zompist orthographic rules)
+let rules = english::zompist();
+let nfa = rules_to_nfa_char(&rules.rules);
+let product = ProductAutomatonChar::new(nfa, 2);
+
+// Check acceptance (considers both phonetic rules and edit distance)
+assert!(product.accepts("phone"));  // Matches via ph→f rule
+```
+
+### Compile-Time Pattern Embedding
+
+```rust
+use liblevenshtein::{llre, llev};
+
+// LLRE: Compile-time regex → NFA (embedded in binary)
+let phone_pattern = llre!(r"(ph|f)one");
+
+// LLEV: Compile-time phonetic rules
+let rules = llev!(r#"
+    ph -> f;
+    gh -> / [:vowel:]_;
+"#);
+```
+
+### Pre-Compiled English Rule Sets
+
+```rust
+use liblevenshtein::phonetic::rules::english;
+
+let zompist = english::zompist();        // 62 orthographic rules
+let homophones = english::homophones();  // Homophone pairs
+let text_speak = english::text_speak();  // Text-speak expansions
+
+// Combine rule sets
+use liblevenshtein::phonetic::RuleSetChar;
+let combined = RuleSetChar::new().merge(&zompist).merge(&homophones);
+```
 
 ---
 
@@ -724,6 +797,9 @@ With Phase B lattice infrastructure, results include distance for ranking:
 
 ### Phonetic Matching (Phase C Preview)
 
+> **v0.8.0 Note**: Phonetic matching is available via `ProductAutomatonChar` and `english::*` rule sets.
+> See [v0.8.0 liblevenshtein APIs](#v080-liblevenshtein-apis) above.
+
 ```metta
 ; Find names that sound like "Steven" using phonetic rules
 !(match &space
@@ -732,6 +808,21 @@ With Phase B lattice infrastructure, results include distance for ranking:
 
 ; Returns: ("Stephen" ...) ("Stefan" ...) ("Stephan" ...) ("Steve" ...)
 ; Phonetic rules: "ph" ≈ "f", "v" ≈ "ph", vowel variations
+```
+
+The underlying implementation would use:
+
+```rust
+use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
+use liblevenshtein::phonetic::rules::english;
+use liblevenshtein::phonetic::verified::rules_to_nfa_char;
+
+// Use pre-compiled English phonetic rules
+let rules = english::zompist();
+let nfa = rules_to_nfa_char(&rules.rules);
+let product = ProductAutomatonChar::new(nfa, 2);
+
+// ProductAutomatonChar handles phonetic + edit distance
 ```
 
 ---

@@ -1,22 +1,25 @@
 # PathMap Integration Infrastructure
 
 **Status**: Active Integration
-**Last Updated**: 2024-12-06
+**Last Updated**: 2025-12-21
+**Version**: v0.8.0
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [PathMap as the Primary Integration Point](#pathmap-as-the-primary-integration-point)
-3. [Architecture Alignment](#architecture-alignment)
-4. [PathMap Feature in liblevenshtein](#pathmap-feature-in-liblevenshtein)
-5. [Shared Zipper Pattern](#shared-zipper-pattern)
-6. [PathMapDictionary Implementation](#pathmapdictionary-implementation)
-7. [Integration with MORK](#integration-with-mork)
-8. [Extended PathMap Schemas](#extended-pathmap-schemas)
-9. [Performance Characteristics](#performance-characteristics)
-10. [Configuration Guide](#configuration-guide)
+2. [v0.8.0 API Highlights](#v080-api-highlights)
+3. [PathMap as the Primary Integration Point](#pathmap-as-the-primary-integration-point)
+4. [Architecture Alignment](#architecture-alignment)
+5. [PathMap Feature in liblevenshtein](#pathmap-feature-in-liblevenshtein)
+6. [Shared Zipper Pattern](#shared-zipper-pattern)
+7. [PathMapDictionary Implementation](#pathmapdictionary-implementation)
+8. [Integration with MORK](#integration-with-mork)
+9. [Extended PathMap Schemas](#extended-pathmap-schemas)
+10. [Performance Characteristics](#performance-characteristics)
+11. [Configuration Guide](#configuration-guide)
+12. [Future: WFST Module](#future-wfst-module)
 
 ---
 
@@ -63,6 +66,101 @@ PathMap is a trie-based prefix-compressed key-value store that serves as the sha
 | **Zipper compatibility** | Unified navigation abstraction across all projects |
 | **Dialogue persistence** | Conversation history and entity state preserved across sessions |
 | **Learning storage** | User preferences and learned patterns stored efficiently |
+
+---
+
+## v0.8.0 API Highlights
+
+liblevenshtein v0.8.0 introduces compile-time macros and the ProductAutomatonChar for NFA × Levenshtein composition.
+
+### Compile-Time Macros
+
+```rust
+use liblevenshtein::{llre, llev};
+
+// LLRE: Compile-time regex → NFA (embedded in binary)
+let phone_pattern = llre!(r"(ph|f)one");
+
+// LLEV: Compile-time phonetic rules
+let rules = llev!(r#"
+    ph -> f;
+    gh -> / [:vowel:]_;
+    tion -> shun;
+"#);
+```
+
+### ProductAutomaton Composition
+
+The `ProductAutomatonChar` combines a phonetic NFA with Levenshtein distance bounds:
+
+```rust
+use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
+use liblevenshtein::phonetic::verified::rules_to_nfa_char;
+
+// Compile rules to NFA and compose with Levenshtein automaton
+let nfa = rules_to_nfa_char(&rules.rules);
+let product = ProductAutomatonChar::new(nfa, 2);  // max distance = 2
+
+// Check acceptance
+assert!(product.accepts("phone"));  // Matches via ph→f rule
+assert!(product.accepts("fone"));   // Direct match
+```
+
+### Pre-Compiled English Rules
+
+```rust
+use liblevenshtein::phonetic::rules::english;
+
+// 62 orthographic rules from Zompist
+let zompist = english::zompist();
+
+// Homophone rules (e.g., "their" ↔ "there" ↔ "they're")
+let homophones = english::homophones();
+
+// Text-speak rules (e.g., "u" → "you", "2" → "to/too/two")
+let text_speak = english::text_speak();
+
+// Combine rule sets
+use liblevenshtein::phonetic::RuleSetChar;
+let combined = RuleSetChar::new().merge(&zompist).merge(&homophones);
+```
+
+### Current Module Structure
+
+The phonetic matching implementation lives in `src/phonetic/`:
+
+```
+src/phonetic/
+├── nfa/
+│   ├── mod.rs           # Module root
+│   ├── nfa.rs           # NFAChar implementation
+│   ├── thompson.rs      # Thompson's construction
+│   ├── product.rs       # ProductAutomatonChar (NFA × Levenshtein)
+│   ├── compiler.rs      # Pattern compilation
+│   └── types.rs         # StateId, Transition, CharClass
+├── llev/                # LLEV rule parsing
+├── llre/                # LLRE pattern compilation
+├── rules/               # english::zompist(), homophones(), text_speak()
+└── verified/            # rules_to_nfa_char()
+```
+
+### Error Handling Patterns
+
+```rust
+use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
+
+// min_distance returns Option<usize>
+match product.min_distance(term) {
+    Some(0) => println!("Exact match"),
+    Some(dist) => println!("Fuzzy match with distance {}", dist),
+    None => println!("No match within budget"),
+}
+
+// Or use accepts() for boolean check
+if product.accepts(term) {
+    // Within distance budget
+}
+```
 
 ---
 
@@ -862,9 +960,42 @@ Use write locks or process-level coordination for updates.
 
 ---
 
+## Future: WFST Module
+
+> **Status**: PROPOSED - Not yet implemented
+
+A full Weighted Finite State Transducer (WFST) module is planned for future implementation. This will extend beyond the current `ProductAutomatonChar` to support arbitrary semiring weights and general WFST composition.
+
+### Proposed Structure
+
+```
+src/wfst/                 # PROPOSED - Future Implementation
+├── mod.rs
+├── weight.rs             # Semiring weights
+├── semiring.rs           # Semiring operations (tropical, log, etc.)
+├── transition.rs         # Weighted transitions
+├── nfa.rs                # Weighted NFA
+├── composition.rs        # WFST composition algorithms
+└── phonetic_integration.rs  # Integration with phonetic rules
+```
+
+### Relationship to Current Implementation
+
+| Feature | Current (v0.8.0) | Proposed WFST |
+|---------|------------------|---------------|
+| Location | `src/phonetic/nfa/` | `src/wfst/` |
+| Weights | Levenshtein distance (integer) | Arbitrary semiring |
+| Composition | NFA × Levenshtein only | General WFST × WFST |
+| Primary Type | `ProductAutomatonChar` | `WeightedTransducer` |
+
+See [WFST Composition](../mork/wfst_composition.md) for the full proposal.
+
+---
+
 ## Future Enhancements
 
 1. **Incremental updates**: Efficient dictionary updates without full rebuild
 2. **Distributed PathMap**: Network-accessible shared dictionary
 3. **Compression**: Additional compression for very large dictionaries
 4. **Bloom filter integration**: Fast negative lookups before trie traversal
+5. **WFST module**: Full weighted finite state transducer support (see above)

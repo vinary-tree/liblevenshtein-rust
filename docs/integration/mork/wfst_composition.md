@@ -1,5 +1,13 @@
 # Phase C: WFST Composition Guide
 
+**Last Updated**: 2025-12-21
+**Version**: v0.8.0
+**Status**: PROPOSED
+
+> ⚠️ **PROPOSAL NOTICE**: This document describes a **proposed** `src/wfst/` module for full WFST support. The proposed structure is a design specification for future implementation.
+>
+> **Current Implementation**: liblevenshtein v0.8.0 provides `ProductAutomatonChar` (NFA × Levenshtein composition) in `src/phonetic/nfa/`. See [Current v0.8.0 Capabilities](#current-v080-capabilities) for what's available today.
+
 This document provides detailed implementation guidance for Phase C of the MORK integration: full Weighted Finite State Transducer (WFST) implementation with phonetic NFA composition.
 
 ## Overview
@@ -7,6 +15,77 @@ This document provides detailed implementation guidance for Phase C of the MORK 
 **Goal**: Implement complete WFST infrastructure including weighted transitions, phonetic NFA compilation via Thompson's construction, and FST composition operators.
 
 **Result**: Queries can compose phonetic patterns with Levenshtein automata, enabling sound-alike matching with configurable costs.
+
+---
+
+## Current v0.8.0 Capabilities
+
+Before implementing the proposed WFST module, liblevenshtein v0.8.0 provides these building blocks:
+
+### What's Available Now
+
+| Feature | Location | Description |
+|---------|----------|-------------|
+| `ProductAutomatonChar` | `src/phonetic/nfa/product.rs` | NFA × Levenshtein composition |
+| `NFAChar` | `src/phonetic/nfa/nfa.rs` | Character-level NFA implementation |
+| `ThompsonBuilderChar` | `src/phonetic/nfa/thompson.rs` | Thompson's construction for NFA |
+| `llre!` macro | `liblevenshtein-macros` | Compile-time regex → NFA |
+| `llev!` macro | `liblevenshtein-macros` | Compile-time phonetic rules |
+| `english::zompist()` | `src/phonetic/rules/english.rs` | 62 pre-compiled orthographic rules |
+| `english::homophones()` | `src/phonetic/rules/english.rs` | Homophone pairs |
+| `english::text_speak()` | `src/phonetic/rules/english.rs` | Text-speak expansions |
+| `RuleSetChar` | `src/phonetic/rules/mod.rs` | Combine multiple rule sets |
+| `rules_to_nfa_char()` | `src/phonetic/verified/mod.rs` | Convert rules to NFA |
+
+### Current API Examples
+
+```rust
+use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
+use liblevenshtein::phonetic::verified::rules_to_nfa_char;
+use liblevenshtein::phonetic::rules::english;
+use liblevenshtein::{llre, llev};
+
+// Compile-time pattern embedding
+let phone_pattern = llre!(r"(ph|f)one");
+
+// Use pre-compiled English rules
+let rules = english::zompist();
+let nfa = rules_to_nfa_char(&rules.rules);
+let product = ProductAutomatonChar::new(nfa, 2);
+
+// Check acceptance (phonetic + edit distance)
+assert!(product.accepts("phone"));
+assert!(product.accepts("fone"));
+```
+
+### Current Module Structure
+
+```
+src/phonetic/           # CURRENT - Available in v0.8.0
+├── nfa/
+│   ├── mod.rs
+│   ├── nfa.rs          # NFAChar implementation
+│   ├── thompson.rs     # Thompson's construction
+│   ├── product.rs      # ProductAutomatonChar (NFA × Levenshtein)
+│   ├── compiler.rs     # Pattern compilation
+│   └── types.rs        # StateId, Transition, CharClass
+├── llev/               # LLEV rule parsing
+├── llre/               # LLRE pattern compilation
+├── rules/              # english::zompist(), homophones(), text_speak()
+└── verified/           # rules_to_nfa_char()
+```
+
+---
+
+## Proposed WFST Module
+
+> **Status**: PROPOSED - Not yet implemented
+
+The proposed `src/wfst/` module extends the current capabilities with:
+- Arbitrary semiring weights (not just integer edit distance)
+- General WFST × WFST composition (not just NFA × Levenshtein)
+- Configurable cost functions
+- Lattice output structures
 
 ---
 
@@ -35,19 +114,26 @@ Lattice with phonetic-weighted edges
 MORK query pipeline
 ```
 
-### Component Locations
+### Component Locations (PROPOSED)
+
+> **Note**: This is the **proposed** module structure. It does not currently exist.
 
 ```
 liblevenshtein-rust/src/
-├── wfst/
-│   ├── mod.rs           # Module root and exports
-│   ├── weight.rs        # Semiring types (Tropical, Log)
-│   ├── semiring.rs      # Semiring trait definition
-│   ├── transition.rs    # Weighted transition type
-│   ├── nfa.rs           # PhoneticNfa and Thompson's construction
-│   ├── composition.rs   # FST composition operators
-│   └── phonetic_integration.rs  # Integration with verified rules
+├── wfst/                           # PROPOSED - To be implemented
+│   ├── mod.rs                      # Module root and exports
+│   ├── weight.rs                   # Semiring types (Tropical, Log)
+│   ├── semiring.rs                 # Semiring trait definition
+│   ├── transition.rs               # Weighted transition type
+│   ├── nfa.rs                      # WeightedNFA (extends PhoneticNfa)
+│   ├── composition.rs              # General WFST × WFST composition
+│   └── phonetic_integration.rs     # Integration with verified rules
 ```
+
+**Relationship to current implementation**:
+- `wfst/nfa.rs` would extend `phonetic/nfa/nfa.rs` with arbitrary weights
+- `wfst/composition.rs` would generalize `phonetic/nfa/product.rs`
+- Thompson's construction already exists in `phonetic/nfa/thompson.rs`
 
 ---
 

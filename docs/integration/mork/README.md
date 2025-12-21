@@ -1,18 +1,24 @@
 # MORK FuzzySource Adapter for Approximate String Matching
 
+**Last Updated**: 2025-12-21
+**Version**: v0.8.0
+
 This document describes how MORK (MeTTa Optimal Reduction Kernel) integrates with liblevenshtein as an external library to enable fuzzy pattern matching in MeTTa queries over PathMap-backed knowledge graphs.
+
+> **Note on Current vs. Proposed Features**: This document contains both currently implemented features (v0.8.0) and proposed future features. Sections marked with **[CURRENT]** describe available functionality, while sections marked with **[PROPOSED]** describe planned future work.
 
 ## Table of Contents
 
 1. [Integration Architecture](#integration-architecture)
-2. [Executive Summary](#executive-summary)
-3. [Architecture Overview](#architecture-overview)
-4. [MeTTa Query Examples](#metta-query-examples)
-5. [Integration Phases](#integration-phases)
-6. [Extended Architecture Layers](#extended-architecture-layers)
-7. [MORK Pattern Matching Synergies](#mork-pattern-matching-synergies)
-8. [Implementation Guide](#implementation-guide)
-9. [Related Documentation](#related-documentation)
+2. [v0.8.0 API Highlights](#v080-api-highlights)
+3. [Executive Summary](#executive-summary)
+4. [Architecture Overview](#architecture-overview)
+5. [MeTTa Query Examples](#metta-query-examples)
+6. [Integration Phases](#integration-phases)
+7. [Extended Architecture Layers](#extended-architecture-layers)
+8. [MORK Pattern Matching Synergies](#mork-pattern-matching-synergies)
+9. [Implementation Guide](#implementation-guide)
+10. [Related Documentation](#related-documentation)
 
 ---
 
@@ -83,6 +89,80 @@ PathMap (mmap)  ←── Same data as MORK's BTMSource/ACTSource
 
 ---
 
+## v0.8.0 API Highlights
+
+**[CURRENT]** liblevenshtein v0.8.0 provides these key APIs for MORK integration:
+
+### Compile-Time Macros
+
+```rust
+use liblevenshtein::{llre, llev};
+
+// LLRE: Compile-time regex → NFA (embedded in binary)
+let phone_pattern = llre!(r"(ph|f)one");
+
+// LLEV: Compile-time phonetic rules
+let rules = llev!(r#"
+    ph -> f;
+    gh -> / [:vowel:]_;
+    tion -> shun;
+"#);
+```
+
+### ProductAutomaton Composition
+
+The `ProductAutomatonChar` combines a phonetic NFA with Levenshtein distance bounds:
+
+```rust
+use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
+use liblevenshtein::phonetic::verified::rules_to_nfa_char;
+
+// Compile rules to NFA and compose with Levenshtein automaton
+let nfa = rules_to_nfa_char(&rules.rules);
+let product = ProductAutomatonChar::new(nfa, 2);  // max distance = 2
+
+// Check acceptance
+assert!(product.accepts("phone"));  // Matches via ph→f rule
+```
+
+### Pre-Compiled English Rules
+
+```rust
+use liblevenshtein::phonetic::rules::english;
+
+// 62 orthographic rules from Zompist
+let zompist = english::zompist();
+
+// Homophone rules
+let homophones = english::homophones();
+
+// Text-speak rules
+let text_speak = english::text_speak();
+
+// Combine rule sets
+use liblevenshtein::phonetic::RuleSetChar;
+let combined = RuleSetChar::new().merge(&zompist).merge(&homophones);
+```
+
+### Current Module Structure
+
+```
+src/phonetic/           # [CURRENT] - Available in v0.8.0
+├── nfa/
+│   ├── product.rs      # ProductAutomatonChar (NFA × Levenshtein)
+│   ├── nfa.rs          # NFAChar implementation
+│   └── thompson.rs     # Thompson's construction
+├── rules/              # english::zompist(), homophones(), text_speak()
+└── verified/           # rules_to_nfa_char()
+
+src/wfst/               # [PROPOSED] - Future implementation
+├── weight.rs           # Semiring weights
+├── composition.rs      # WFST composition
+└── ...                 # See wfst_composition.md
+```
+
+---
+
 ## Executive Summary
 
 **Goal**: Integrate liblevenshtein's approximate string matching into MORK to enable fuzzy pattern matching in MeTTa queries over PathMap-backed knowledge graphs.
@@ -140,7 +220,8 @@ PathMap (mmap)  ←── Same data as MORK's BTMSource/ACTSource
 ┌─────────────────────────────────────────────────────────┐
 │ Tier 1: Lexical (liblevenshtein)                        │
 │   FST/Levenshtein automata → Word lattice               │
-│   Files: src/transducer/, src/lattice/, src/wfst/       │
+│   [CURRENT] src/phonetic/nfa/, src/transducer/          │
+│   [PROPOSED] src/wfst/, src/lattice/                    │
 └─────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────┐
@@ -157,6 +238,12 @@ PathMap (mmap)  ←── Same data as MORK's BTMSource/ACTSource
 │   Final ranking and validation                          │
 └─────────────────────────────────────────────────────────┘
 ```
+
+**Current vs. Proposed Components**:
+- **[CURRENT]** `src/phonetic/nfa/` - ProductAutomatonChar for NFA × Levenshtein composition
+- **[CURRENT]** `src/transducer/` - Levenshtein transducers with dictionary backends
+- **[PROPOSED]** `src/wfst/` - Full WFST with semiring weights (see Phase C)
+- **[PROPOSED]** `src/lattice/` - Structured lattice DAG output (see Phase B)
 
 ---
 
@@ -292,7 +379,9 @@ WITH FuzzySource (single MORK query):
 
 ## Integration Phases
 
-### Phase A: FuzzySource (Milestone 1)
+> **Implementation Status**: Phase A is partially implemented. Phases B-D are proposed.
+
+### Phase A: FuzzySource (Milestone 1) **[PARTIALLY CURRENT]**
 
 **Goal**: Enable fuzzy symbol matching in MORK queries using liblevenshtein's existing transducer.
 
@@ -320,7 +409,7 @@ WITH FuzzySource (single MORK query):
 
 ---
 
-### Phase B: Lattice Infrastructure (Milestone 2)
+### Phase B: Lattice Infrastructure (Milestone 2) **[PROPOSED]**
 
 **Goal**: Return structured lattices instead of flat iterators for ranked multi-candidate results.
 
@@ -348,9 +437,11 @@ WITH FuzzySource (single MORK query):
 
 ---
 
-### Phase C: Full WFST Integration (Milestone 3)
+### Phase C: Full WFST Integration (Milestone 3) **[PROPOSED]**
 
 **Goal**: Complete WFST implementation with weighted transitions, phonetic NFA composition, and FST composition operators.
+
+> **Note**: liblevenshtein v0.8.0 provides `ProductAutomatonChar` for NFA × Levenshtein composition. This phase proposes extending to full WFST with arbitrary semiring weights.
 
 **Acceptance Criteria**:
 1. Weighted transitions with configurable cost functions
@@ -381,7 +472,7 @@ WITH FuzzySource (single MORK query):
 
 ---
 
-### Phase D: MORK-Based Grammar Correction (Future)
+### Phase D: MORK-Based Grammar Correction (Future) **[PROPOSED]**
 
 **Goal**: Use MORK's pattern matching as the rule engine for CFG-based grammatical error correction.
 
@@ -615,6 +706,11 @@ Phase D (Grammar)
 
 ## Changelog
 
+- **2025-12-21**: Updated for v0.8.0 APIs
+  - Added v0.8.0 API Highlights section (llre!/llev!, ProductAutomatonChar, english::*)
+  - Added [CURRENT] vs [PROPOSED] markers throughout document
+  - Updated Three-Tier Architecture to distinguish current/proposed paths
+  - Updated Phase status markers
 - **2025-12-08**: Added comprehensive MeTTa Query Examples section
   - Added knowledge base setup examples with entities and types
   - Added basic fuzzy matching, variable binding, and constraint composition examples
