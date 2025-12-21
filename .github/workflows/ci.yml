@@ -47,13 +47,24 @@ jobs:
       if: runner.os == 'macOS'
       run: brew install protobuf
 
-    - name: Install leptonica (Linux)
+    - name: Install Leptonica (Linux)
       if: runner.os == 'Linux'
       run: sudo apt-get install -y libleptonica-dev
 
-    - name: Install leptonica (macOS)
+    - name: Install Leptonica (macOS)
       if: runner.os == 'macOS'
       run: brew install leptonica
+
+    - name: Install Tesseract (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo add-apt-repository ppa:alex-p/tesseract-ocr5
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr
+
+    - name: Install Tesseract (macOS)
+      if: runner.os == 'macOS'
+      run: brew install tesseract
 
     - name: Install Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
