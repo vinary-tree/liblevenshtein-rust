@@ -154,4 +154,10 @@ pub mod prelude {
 
     #[cfg(feature = "pathmap-backend")]
     pub use crate::cache::eviction;
+
+    #[cfg(all(feature = "pathmap-backend", feature = "phonetic-rules"))]
+    pub use crate::dictionary::phonetic_normalized::{
+        PhoneticNormalizedCandidate, PhoneticNormalizedDictionary, PhoneticNormalizedDictionaryChar,
+        PhoneticNormalizedNode, PhoneticNormalizedZipper, RegexQueryError,
+    };
 }

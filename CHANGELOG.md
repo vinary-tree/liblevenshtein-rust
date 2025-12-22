@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### PhoneticNormalizedDictionary (2025-12-22)
+- **Phonetic-aware fuzzy dictionary** implementing Approach 1 from compositional spelling correction
+  - Pre-processes both query and dictionary for maximum query speed
+  - Normalizes terms phonetically using Zompist rules at build time
+  - Maps normalized forms back to original terms at query time
+  - `PhoneticNormalizedDictionary::from_terms()` - create with default rules
+  - `PhoneticNormalizedDictionary::from_terms_with_rules()` - create with custom rules
+  - `query()` - fuzzy search in normalized space with edit distance tolerance
+
+- **Regex Query Support** for grep-like pattern matching
+  - `query_regex()` - match regex patterns against normalized forms
+  - `query_with_product()` - use pre-compiled NFA for repeated queries
+  - Supports all regex syntax: alternation, quantifiers, character classes
+  - Results mapped back to original dictionary terms
+
+- **Phonetic Pattern Expansion** for reverse phonetic matching
+  - `query_phonetic_pattern()` - auto-expand query to match phonetic variants
+  - `expand_phonetic_alternatives_char()` - convert normalized string to regex pattern
+  - `expand_with_costs()` - expand with rule weight tracking
+  - Example: "fone" → "(ph|f)one" matching both "fone" and "phone"
+
+- **New Types**
+  - `PhoneticNormalizedCandidate` - query result with term, distance, normalized form
+  - `RegexQueryError` - error type for regex operations
+
+- **FuzzyMultiMap Enhancements**
+  - `query_with_distance()` - returns matched key, distance, and values
+  - Enables efficient phonetic → original term mapping
+
 #### WASM and WASI Support (2025-12-19)
 - **WebAssembly compilation targets**
   - Full WASM support for browser and Node.js targets

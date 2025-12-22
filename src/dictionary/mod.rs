@@ -144,6 +144,8 @@ pub mod pathmap;
 pub mod pathmap_char;
 #[cfg(feature = "pathmap-backend")]
 pub mod pathmap_zipper;
+#[cfg(all(feature = "pathmap-backend", feature = "phonetic-rules"))]
+pub mod phonetic_normalized;
 pub mod prefix_zipper;
 pub mod suffix_automaton;
 pub mod suffix_automaton_char;

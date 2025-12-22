@@ -340,6 +340,60 @@ where
     pub fn algorithm(&self) -> Algorithm {
         self.transducer.algorithm()
     }
+
+    /// Queries for fuzzy matches and returns (matched_key, distance, values) tuples.
+    ///
+    /// Unlike [`query`], this method preserves the matched key and its edit distance,
+    /// enabling applications that need to distinguish between different matches
+    /// (e.g., PhoneticNormalizedDictionary for mapping back to original terms).
+    ///
+    /// # Arguments
+    ///
+    /// - `query_term`: The term to search for
+    /// - `max_distance`: Maximum Levenshtein distance for matches
+    ///
+    /// # Returns
+    ///
+    /// A vector of `(matched_key, distance, values)` tuples, where:
+    /// - `matched_key`: The dictionary key that matched
+    /// - `distance`: The edit distance between query and matched key
+    /// - `values`: The values associated with the matched key
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::collections::HashSet;
+    /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
+    ///
+    /// let dict = PathMapDictionary::from_terms_with_values([
+    ///     ("foo", vec!["original_foo".to_string()]),
+    ///     ("bar", vec!["original_bar".to_string()]),
+    ///     ("baz", vec!["original_baz".to_string()]),
+    /// ]);
+    ///
+    /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
+    ///
+    /// // Query "bat" - matches "bar" and "baz" at distance 1
+    /// let results = fuzzy.query_with_distance("bat", 1);
+    /// for (key, distance, values) in results {
+    ///     println!("Matched '{}' (distance {}): {:?}", key, distance, values);
+    /// }
+    /// ```
+    pub fn query_with_distance(
+        &self,
+        query_term: &str,
+        max_distance: usize,
+    ) -> Vec<(String, usize, C)> {
+        self.transducer
+            .query_with_distance(query_term, max_distance)
+            .filter_map(|candidate| {
+                self.dictionary
+                    .get_value(&candidate.term)
+                    .map(|value| (candidate.term, candidate.distance, value))
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -450,5 +504,61 @@ mod tests {
         let result = fuzzy.query("hello", 2).unwrap();
         // Should at least match "hello" (exact)
         assert!(result.contains(&1));
+    }
+
+    #[test]
+    #[cfg(feature = "pathmap-backend")]
+    fn test_fuzzy_multimap_query_with_distance() {
+        let dict = PathMapDictionary::from_terms_with_values([
+            ("foo", vec!["original_foo".to_string()]),
+            ("bar", vec!["original_bar".to_string()]),
+            ("baz", vec!["original_baz".to_string()]),
+        ]);
+
+        let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
+
+        // Query "bat" with distance 1
+        // Should match "bar" and "baz"
+        let results = fuzzy.query_with_distance("bat", 1);
+
+        // Should have 2 results
+        assert_eq!(results.len(), 2);
+
+        // Check that we get both matches with their distances
+        let bar_result = results.iter().find(|(key, _, _)| key == "bar");
+        assert!(bar_result.is_some());
+        let (_, distance, values) = bar_result.unwrap();
+        assert_eq!(*distance, 1);
+        assert_eq!(values, &vec!["original_bar".to_string()]);
+
+        let baz_result = results.iter().find(|(key, _, _)| key == "baz");
+        assert!(baz_result.is_some());
+        let (_, distance, values) = baz_result.unwrap();
+        assert_eq!(*distance, 1);
+        assert_eq!(values, &vec!["original_baz".to_string()]);
+    }
+
+    #[test]
+    #[cfg(feature = "pathmap-backend")]
+    fn test_fuzzy_multimap_query_with_distance_exact() {
+        let dict = PathMapDictionary::from_terms_with_values([
+            ("test", vec!["exact_match".to_string()]),
+            ("tost", vec!["near_match".to_string()]),
+        ]);
+
+        let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
+
+        // Exact match should have distance 0
+        let results = fuzzy.query_with_distance("test", 1);
+
+        let exact = results.iter().find(|(key, _, _)| key == "test");
+        assert!(exact.is_some());
+        let (_, distance, _) = exact.unwrap();
+        assert_eq!(*distance, 0);
+
+        let near = results.iter().find(|(key, _, _)| key == "tost");
+        assert!(near.is_some());
+        let (_, distance, _) = near.unwrap();
+        assert_eq!(*distance, 1);
     }
 }

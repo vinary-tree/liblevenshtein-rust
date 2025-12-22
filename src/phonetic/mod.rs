@@ -112,6 +112,7 @@
 
 pub mod application;
 pub mod common;
+pub mod expansion;
 pub mod features;
 pub mod grep;
 pub mod grep_online;
@@ -245,3 +246,6 @@ pub use token_grep::{
     StreamingTokenMatcher, TokenGrep, TokenMatch, TokenMatchDetail, TokenPattern, TokenQuery,
     TokenSpec,
 };
+
+// Re-export phonetic pattern expansion for reverse matching
+pub use expansion::{expand_phonetic_alternatives_char, expand_with_costs};

@@ -137,6 +137,12 @@ LEV_n(W) accepts L_Lev(n,W) = {V | d_L(W,V) ≤ n}
   - NFA engine with automatic optimization (epsilon elimination, dead state removal)
   - AOT compilation to binary format for instant loading
   - See [LLev Grammar](docs/grammar/llev.ebnf) and [LLRE Grammar](docs/grammar/llre.ebnf)
+- **PhoneticNormalizedDictionary** (requires `phonetic-rules` + `pathmap-backend` features):
+  - Phonetic-aware fuzzy dictionary with maximum query speed
+  - Pre-normalizes dictionary terms for instant phonetic matching
+  - Grep-like regex queries against normalized forms
+  - Automatic phonetic pattern expansion ("fone" → "(ph|f)one")
+  - See [Compositional Phonetic Guide](docs/guides/compositional-phonetic-levenshtein.md)
 
 ## Installation
 
