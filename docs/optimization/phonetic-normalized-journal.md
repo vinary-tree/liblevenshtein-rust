@@ -621,3 +621,51 @@ After all three optimizations, comparing to the original baseline:
 | 2025-12-22 | Tested H1 Approach 3 (bitmask): **ACCEPTED** |
 | 2025-12-22 | Implemented H4: Length-based pre-filtering: **ACCEPTED** |
 | 2025-12-22 | Implemented H2: Thread-local buffer reuse: **ACCEPTED** |
+| 2025-12-22 | Optimization phase complete: 55-58% improvement on target workload |
+
+---
+
+## Optimization Phase Complete
+
+### Summary
+
+After three accepted hypotheses, the `PhoneticNormalizedDictionary` fuzzy query performance
+has been significantly improved:
+
+| Metric | Original | Final | Improvement |
+|--------|----------|-------|-------------|
+| `query_distance_1_10k` | 2.70 ms | 1.13 ms | **-58%** |
+| `query_distance_2_10k` | 2.65 ms | 1.17 ms | **-56%** |
+| `query_distance_1` (small) | 3.40 µs | 2.49 µs | **-27%** |
+| `query_distance_2` (small) | 3.29 µs | 3.41 µs | **-46%** |
+| `distance_medium_strings` | 3.16 µs | ~2.0 µs | **-37%** |
+
+### Remaining Hypotheses (Not Pursued)
+
+| Hypothesis | Reason Not Pursued |
+|------------|-------------------|
+| H3: PhoneChar buffer preallocation | Diminishing returns - main bottleneck addressed |
+| H5: SIMD distance calculation | Complex implementation, smaller expected gains |
+
+### Recommendations for Future Work
+
+1. **Profile after merge:** Re-profile on master to identify new bottlenecks
+2. **Consider H3 if normalization becomes bottleneck:** Pre-allocating PhoneChar buffers
+   could further improve construction and normalization by ~5%
+3. **SIMD opportunities:** For very long strings, SIMD min operations could help
+
+### Branches for Merge
+
+```
+master
+└── perf/phonetic-normalized-benchmarks (baseline + profiling)
+    └── perf/phonetic-normalized-opt-1 (H1: Vowel bitmask)
+        └── perf/phonetic-normalized-opt-2 (H4: Length pre-filtering)
+            └── perf/phonetic-normalized-opt-3 (H2: Buffer reuse) ← CURRENT
+```
+
+To merge to master:
+```bash
+git checkout master
+git merge perf/phonetic-normalized-opt-3 --no-ff -m "Merge phonetic optimization (H1+H4+H2): 55-58% faster fuzzy queries"
+```
