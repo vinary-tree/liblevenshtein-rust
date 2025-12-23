@@ -297,6 +297,11 @@ name = "phonetic_compilation_benchmarks"
 harness = false
 required-features = ["phonetic-rules"]
 
+[[bench]]
+name = "phonetic_normalized_benchmarks"
+harness = false
+required-features = ["pathmap-backend", "phonetic-rules"]
+
 [[bin]]
 name = "liblevenshtein"
 path = "src/bin/liblevenshtein.rs"
