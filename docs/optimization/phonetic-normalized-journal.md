@@ -702,6 +702,107 @@ After all four optimizations, comparing to the original baseline:
 
 ---
 
+## Hypothesis H5: Byte-Level Levenshtein Distance (SIMD Exploration)
+
+### Observation
+
+The Levenshtein distance calculation uses `chars()` iterators which have overhead for
+UTF-8 decoding. For phonetically normalized strings (which are ASCII-only), working
+directly with bytes could be faster and enable SIMD optimizations.
+
+### Hypothesis
+
+Using byte-level comparison with unchecked array access will improve Levenshtein
+distance calculation by >40% for long strings.
+
+### Rationale
+
+1. Normalized phonetic strings are ASCII-only (a-z, A-Z, digits)
+2. Byte access avoids UTF-8 decoding overhead of `chars()`
+3. Unchecked array access eliminates bounds checking in hot loop
+4. Byte operations are more SIMD-friendly
+
+### Implementation
+
+**Branch:** `perf/phonetic-normalized-opt-5`
+
+```rust
+impl LevenshteinBuffers {
+    fn distance(&mut self, a: &str, b: &str) -> usize {
+        // Work directly with bytes - normalized strings are ASCII
+        let a_bytes = a.as_bytes();
+        let b_bytes = b.as_bytes();
+
+        // ... DP computation with unchecked access
+        for i in 1..=m {
+            let a_byte = a_bytes[i - 1];
+            for j in 1..=n {
+                let cost = if a_byte == b_bytes[j - 1] { 0 } else { 1 };
+                unsafe {
+                    let del = *self.prev.get_unchecked(j) + 1;
+                    let ins = *self.curr.get_unchecked(j - 1) + 1;
+                    let sub = *self.prev.get_unchecked(j - 1) + cost;
+                    *self.curr.get_unchecked_mut(j) = del.min(ins).min(sub);
+                }
+            }
+        }
+    }
+}
+```
+
+### Results (H5 vs H3 Baseline)
+
+| Benchmark | Change | p-value | Verdict |
+|-----------|--------|---------|---------|
+| `from_terms/100` | +10.3% | 0.00 | Regression |
+| `from_terms/10k` | +17.1% | 0.00 | **Regression** |
+| `from_terms/100k` | +18.2% | 0.00 | **Regression** |
+| `normalize/5_chars` | +12.0% | 0.00 | Regression |
+| `normalize/20_chars` | +9.2% | 0.00 | Regression |
+| `normalize/100_chars` | +10.8% | 0.00 | Regression |
+| `normalize/phonetic` | +9.0% | 0.00 | Regression |
+| `query_exact_hit` | +11.7% | 0.00 | Regression |
+| `query_exact_miss` | +9.6% | 0.00 | Regression |
+| `query_distance_1` | **-2.8%** | 0.00 | Minor improvement |
+| `query_distance_2` | **-5.9%** | 0.00 | **Improvement** |
+| `query_exact_10k` | +6.1% | 0.00 | Regression |
+| `query_distance_1_10k` | **-16.7%** | 0.00 | **Improvement** |
+| `query_distance_2_10k` | **-15.6%** | 0.00 | **Improvement** |
+| `insert_single_empty` | +5.3% | 0.00 | Regression |
+| `insert_single_1k` | +9.3% | 0.00 | Regression |
+| `contains_hit` | +8.4% | 0.00 | Regression |
+| `contains_miss` | +7.6% | 0.00 | Regression |
+| `distance_short_strings` | **-21.1%** | 0.00 | **Significant improvement** |
+| `distance_medium_strings` | **-20.7%** | 0.00 | **Significant improvement** |
+| `distance_long_strings` | **-4.2%** | 0.00 | Minor improvement |
+
+### Statistical Summary
+
+| Metric | Value |
+|--------|-------|
+| Target benchmarks (distance_*) | -4.2% to -21.1% |
+| Non-target regressions | +5.3% to +18.2% |
+| Maximum improvement | -21.1% (`distance_short_strings`) |
+| Maximum regression | +18.2% (`from_terms/100k`) |
+
+### Decision: **REJECT**
+
+The byte-level optimization is **REJECTED** because:
+
+1. **Hypothesis not met:** Expected >40% improvement for long strings, achieved only -4.2%
+2. **Significant regressions:** Construction regressed 10-18%, normalization regressed 9-12%
+3. **Net negative impact:** 14 regressions vs 7 improvements
+4. **Trade-off unfavorable:** The improvements on distance calculations (-20%) are offset
+   by regressions in construction and normalization that affect overall system performance
+5. **Investigation note:** The regressions on non-distance operations are unexpected and
+   may indicate interference with H3's PhoneChar buffer optimization or memory layout issues
+
+**Root cause analysis:** The byte-level optimization likely interfered with the thread-local
+buffer structure introduced in H3, causing cache pressure or memory layout problems that
+affected the entire system despite the localized improvement in distance calculations.
+
+---
+
 ## Change Log
 
 | Date | Change |
@@ -715,6 +816,7 @@ After all four optimizations, comparing to the original baseline:
 | 2025-12-22 | Implemented H4: Length-based pre-filtering: **ACCEPTED** |
 | 2025-12-22 | Implemented H2: Thread-local buffer reuse: **ACCEPTED** |
 | 2025-12-22 | Implemented H3: PhoneChar buffer preallocation: **ACCEPTED** |
+| 2025-12-22 | Tested H5: Byte-level Levenshtein: **REJECTED** |
 
 ---
 
@@ -733,19 +835,22 @@ has been significantly improved:
 | `query_distance_2` (small) | 3.29 µs | 3.41 µs | **-46%** |
 | `distance_medium_strings` | 3.16 µs | ~2.0 µs | **-37%** |
 
-### Remaining Hypotheses (Not Pursued)
+### Hypotheses Status
 
-| Hypothesis | Reason Not Pursued |
-|------------|-------------------|
-| H3: PhoneChar buffer preallocation | Diminishing returns - main bottleneck addressed |
-| H5: SIMD distance calculation | Complex implementation, smaller expected gains |
+| Hypothesis | Status | Outcome |
+|------------|--------|---------|
+| H1: Vowel lookup bitmask | **ACCEPTED** | -10.9% normalization |
+| H4: Length pre-filtering | **ACCEPTED** | **-38.2% query_distance_1** |
+| H2: Buffer reuse | **ACCEPTED** | **-58.1% query_distance_1_10k** |
+| H3: PhoneChar buffer | **ACCEPTED** | **-21% construction, -17% normalization** |
+| H5: Byte-level Levenshtein | **REJECTED** | +18% construction regressions outweigh -21% distance gains |
 
 ### Recommendations for Future Work
 
 1. **Profile after merge:** Re-profile on master to identify new bottlenecks
-2. **Consider H3 if normalization becomes bottleneck:** Pre-allocating PhoneChar buffers
-   could further improve construction and normalization by ~5%
-3. **SIMD opportunities:** For very long strings, SIMD min operations could help
+2. **SIMD opportunities:** Consider vectorized row operations for very long strings,
+   but note H5 showed challenges with system-wide cache/memory effects
+3. **Alternative distance algorithms:** Explore Myers' bit-vector algorithm for long strings
 
 ### Branches for Merge
 
@@ -754,11 +859,13 @@ master
 └── perf/phonetic-normalized-benchmarks (baseline + profiling)
     └── perf/phonetic-normalized-opt-1 (H1: Vowel bitmask)
         └── perf/phonetic-normalized-opt-2 (H4: Length pre-filtering)
-            └── perf/phonetic-normalized-opt-3 (H2: Buffer reuse) ← CURRENT
+            └── perf/phonetic-normalized-opt-3 (H2: Buffer reuse)
+                └── perf/phonetic-normalized-opt-4 (H3: PhoneChar buffer) ← MERGE TARGET
+                    └── perf/phonetic-normalized-opt-5 (H5: Byte-level) ← REJECTED, NOT MERGED
 ```
 
 To merge to master:
 ```bash
 git checkout master
-git merge perf/phonetic-normalized-opt-3 --no-ff -m "Merge phonetic optimization (H1+H4+H2): 55-58% faster fuzzy queries"
+git merge perf/phonetic-normalized-opt-4 --no-ff -m "Merge phonetic optimization (H1+H4+H2+H3): 55-60% faster fuzzy queries, 25% faster construction"
 ```
