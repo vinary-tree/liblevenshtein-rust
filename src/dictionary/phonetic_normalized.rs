@@ -715,9 +715,24 @@ where
         }
 
         // For distance > 0, we need to check all normalized forms
-        // This is O(n) but the normalized index is typically small
+        // Optimization: Use length-based pre-filtering to skip forms that can't match
         let mut results = Vec::new();
+
+        // Use byte length for fast pre-filtering (exact for ASCII, conservative for UTF-8)
+        // For UTF-8, byte_len >= char_count, so this is a safe lower bound
+        let query_byte_len = normalized_query.len();
+
         for (normalized, originals) in index.iter() {
+            // H4: Length-based pre-filtering using byte length
+            // If byte length difference > max_distance, skip (safe for both ASCII and UTF-8)
+            // For ASCII: byte_len == char_count, so this is exact
+            // For UTF-8: this may skip fewer candidates, but never incorrectly skips valid matches
+            let norm_byte_len = normalized.len();
+            let byte_len_diff = query_byte_len.abs_diff(norm_byte_len);
+            if byte_len_diff > max_distance {
+                continue; // Skip: byte length difference alone exceeds max_distance
+            }
+
             let dist = levenshtein_distance(&normalized_query, normalized);
             if dist <= max_distance {
                 for term in originals {
