@@ -1,6 +1,6 @@
 [workspace]
 members = [".", "liblevenshtein-macros"]
-exclude = ["examples/phonetic_spellcheck", "examples/phonetic_spellcheck_wasm"]
+exclude = ["examples/phonetic_spellcheck"]
 resolver = "2"
 
 [package]
@@ -322,7 +322,7 @@ required-features = ["phonetic-rules"]
 [[example]]
 name = "phonetic_spellcheck"
 path = "examples/phonetic_spellcheck/src/main.rs"
-required-features = ["phonetic-rules", "serialization"]
+required-features = ["phonetic-rules", "pathmap-backend", "embedded-rules"]
 
 [[example]]
 name = "hierarchical_scope_completion"
