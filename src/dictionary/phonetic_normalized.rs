@@ -854,44 +854,85 @@ where
 // HELPER FUNCTIONS
 // ============================================================================
 
-/// Simple Levenshtein distance for normalized form comparison.
-fn levenshtein_distance(a: &str, b: &str) -> usize {
-    let a_chars: Vec<char> = a.chars().collect();
-    let b_chars: Vec<char> = b.chars().collect();
+// Thread-local buffers for Levenshtein distance calculation.
+// H2 optimization: Reuse buffers across calls to avoid allocations.
+thread_local! {
+    static LEVENSHTEIN_BUFFERS: std::cell::RefCell<LevenshteinBuffers> =
+        std::cell::RefCell::new(LevenshteinBuffers::new());
+}
 
-    let m = a_chars.len();
-    let n = b_chars.len();
+/// Reusable buffers for Levenshtein distance computation.
+struct LevenshteinBuffers {
+    a_chars: Vec<char>,
+    b_chars: Vec<char>,
+    prev: Vec<usize>,
+    curr: Vec<usize>,
+}
 
-    if m == 0 {
-        return n;
-    }
-    if n == 0 {
-        return m;
-    }
-
-    let mut prev = vec![0usize; n + 1];
-    let mut curr = vec![0usize; n + 1];
-
-    for j in 0..=n {
-        prev[j] = j;
-    }
-
-    for i in 1..=m {
-        curr[0] = i;
-        for j in 1..=n {
-            let cost = if a_chars[i - 1] == b_chars[j - 1] {
-                0
-            } else {
-                1
-            };
-            curr[j] = (prev[j] + 1) // deletion
-                .min(curr[j - 1] + 1) // insertion
-                .min(prev[j - 1] + cost); // substitution
+impl LevenshteinBuffers {
+    fn new() -> Self {
+        Self {
+            a_chars: Vec::with_capacity(64),
+            b_chars: Vec::with_capacity(64),
+            prev: Vec::with_capacity(64),
+            curr: Vec::with_capacity(64),
         }
-        std::mem::swap(&mut prev, &mut curr);
     }
 
-    prev[n]
+    /// Compute Levenshtein distance using internal buffers.
+    fn distance(&mut self, a: &str, b: &str) -> usize {
+        // Clear and reuse char buffers
+        self.a_chars.clear();
+        self.b_chars.clear();
+        self.a_chars.extend(a.chars());
+        self.b_chars.extend(b.chars());
+
+        let m = self.a_chars.len();
+        let n = self.b_chars.len();
+
+        if m == 0 {
+            return n;
+        }
+        if n == 0 {
+            return m;
+        }
+
+        // Resize DP buffers if needed, then clear
+        self.prev.clear();
+        self.curr.clear();
+        self.prev.resize(n + 1, 0);
+        self.curr.resize(n + 1, 0);
+
+        // Initialize first row
+        for j in 0..=n {
+            self.prev[j] = j;
+        }
+
+        // DP computation
+        for i in 1..=m {
+            self.curr[0] = i;
+            for j in 1..=n {
+                let cost = if self.a_chars[i - 1] == self.b_chars[j - 1] {
+                    0
+                } else {
+                    1
+                };
+                self.curr[j] = (self.prev[j] + 1) // deletion
+                    .min(self.curr[j - 1] + 1) // insertion
+                    .min(self.prev[j - 1] + cost); // substitution
+            }
+            std::mem::swap(&mut self.prev, &mut self.curr);
+        }
+
+        self.prev[n]
+    }
+}
+
+/// Simple Levenshtein distance for normalized form comparison.
+/// H2 optimization: Uses thread-local buffers to avoid allocations.
+#[inline]
+fn levenshtein_distance(a: &str, b: &str) -> usize {
+    LEVENSHTEIN_BUFFERS.with(|buffers| buffers.borrow_mut().distance(a, b))
 }
 
 /// O(1) vowel classification using bitmask lookup.
