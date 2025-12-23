@@ -12,12 +12,12 @@
 //!
 //! # Architecture
 //!
-//! The dictionary uses a dual-index design:
+//! The dictionary uses a `FuzzyMultiMap` internally which provides:
 //! - `originals`: Backend dictionary storing original terms with values
-//! - `normalized_index`: HashMap mapping normalized forms to original terms
+//! - `normalized_multimap`: FuzzyMultiMap mapping normalized forms to original terms
 //!
-//! This allows the dictionary to implement all standard dictionary traits while
-//! maintaining the phonetic normalization functionality.
+//! The `FuzzyMultiMap` provides O(k log n) fuzzy queries using Levenshtein automaton
+//! pruning on a trie, which is much more efficient than the previous BK-tree approach.
 //!
 //! # Example
 //!
@@ -50,10 +50,11 @@
 //! # Trade-offs
 //!
 //! **Advantages:**
-//! - Fastest query time (single normalization + Levenshtein search)
+//! - Fastest query time (single normalization + Levenshtein automaton search)
 //! - Implements all dictionary protocols for drop-in compatibility
 //! - Low memory overhead (normalized trie similar to original)
 //! - Supports dynamic insert and delete operations
+//! - Uses Levenshtein automaton pruning for efficient fuzzy queries
 //!
 //! **Disadvantages:**
 //! - Information loss: "phone" and "fone" become indistinguishable in normalized space
@@ -65,6 +66,7 @@
 //! - `docs/guides/compositional-phonetic-levenshtein.md` for detailed documentation
 //! - [`crate::phonetic`] module for phonetic rule definitions
 
+use crate::cache::multimap::FuzzyMultiMap;
 use crate::dictionary::dynamic_dawg_char::DynamicDawgChar;
 use crate::dictionary::dynamic_dawg_char_zipper::DynamicDawgCharZipper;
 use crate::dictionary::value::DictionaryValue;
@@ -78,10 +80,8 @@ use crate::phonetic::regex::{parse as parse_regex, ParseError as RegexParseError
 use crate::phonetic::types::{PhoneChar, RewriteRuleChar};
 use crate::phonetic::{apply_rules_seq_char, zompist_rules_char};
 use crate::transducer::Algorithm;
-use parking_lot::RwLock;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt;
-use std::sync::Arc;
 
 /// Result of a phonetic normalized query.
 ///
@@ -163,23 +163,16 @@ pub struct PhoneticNormalizedDictionary<V: DictionaryValue = (), D: Dictionary =
     /// Backend dictionary storing original terms with values
     originals: D,
 
-    /// Index: normalized_form → {original_terms}
-    /// Thread-safe for concurrent access
-    normalized_index: Arc<RwLock<HashMap<String, HashSet<String>>>>,
-
-    /// BK-tree for efficient fuzzy queries (H6 optimization)
-    /// Indexes the same normalized forms as normalized_index
-    /// Enables O(log n) fuzzy lookups instead of O(n) linear scans
-    bk_tree: Arc<RwLock<BKTree>>,
+    /// FuzzyMultiMap: normalized_form → {original_terms}
+    /// Uses Levenshtein automaton pruning for efficient fuzzy queries
+    /// O(k log n) complexity vs O(n) linear scan
+    normalized_multimap: FuzzyMultiMap<HashSet<String>, DynamicDawgChar<HashSet<String>>>,
 
     /// Phonetic rules for normalization
     rules: Vec<RewriteRuleChar>,
 
     /// Fuel for rule application (prevents infinite loops)
     fuel: usize,
-
-    /// Levenshtein algorithm to use for phonetic queries
-    algorithm: Algorithm,
 
     /// Marker for value type
     _value: std::marker::PhantomData<V>,
@@ -342,21 +335,41 @@ where
         let is_new = self.originals.insert_with_value(term, value);
 
         if is_new {
-            // 2. Update normalized index
+            // 2. Update normalized multimap
             let normalized = self.normalize(term);
-            let mut index = self.normalized_index.write();
+            let term_string = term.to_string();
 
-            // 3. Update BK-tree if this is a new normalized form
-            let is_new_normalized = !index.contains_key(&normalized);
-            if is_new_normalized {
-                let mut bk_tree = self.bk_tree.write();
-                bk_tree.insert(normalized.clone());
-            }
+            // Use update_or_insert to add term to the HashSet
+            self.normalized_multimap.update_or_insert(
+                &normalized,
+                HashSet::from([term_string.clone()]),
+                |set| { set.insert(term_string); },
+            );
+        }
 
-            index
-                .entry(normalized)
-                .or_insert_with(HashSet::new)
-                .insert(term.to_string());
+        is_new
+    }
+
+    fn update_or_insert<F>(&self, term: &str, default_value: Self::Value, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut Self::Value),
+    {
+        // Check if this is a new term
+        let existed = self.originals.get_value(term).is_some();
+
+        // Update or insert in backend
+        let is_new = self.originals.update_or_insert(term, default_value, update_fn);
+
+        // If newly inserted, also update normalized multimap
+        if is_new && !existed {
+            let normalized = self.normalize(term);
+            let term_string = term.to_string();
+
+            self.normalized_multimap.update_or_insert(
+                &normalized,
+                HashSet::from([term_string.clone()]),
+                |set| { set.insert(term_string); },
+            );
         }
 
         is_new
@@ -370,24 +383,15 @@ where
         // Delegate to backend for the union
         let count = self.originals.union_with(&other.originals, merge_fn);
 
-        // Rebuild normalized index to include new terms
-        // Also update BK-tree for new normalized forms
-        let mut index = self.normalized_index.write();
-        let mut bk_tree = self.bk_tree.write();
-
+        // Update normalized multimap with new terms
         for (term, _) in other.iter_terms() {
             let normalized = self.normalize(&term);
 
-            // Check if this is a new normalized form
-            let is_new_normalized = !index.contains_key(&normalized);
-            if is_new_normalized {
-                bk_tree.insert(normalized.clone());
-            }
-
-            index
-                .entry(normalized)
-                .or_insert_with(HashSet::new)
-                .insert(term);
+            self.normalized_multimap.update_or_insert(
+                &normalized,
+                HashSet::from([term.clone()]),
+                |set| { set.insert(term); },
+            );
         }
 
         count
@@ -411,14 +415,18 @@ where
 
     /// Create an empty dictionary with custom rules.
     pub fn with_rules(rules: Vec<RewriteRuleChar>) -> Self {
+        Self::with_rules_and_algorithm(rules, Algorithm::Standard)
+    }
+
+    /// Create an empty dictionary with custom rules and algorithm.
+    pub fn with_rules_and_algorithm(rules: Vec<RewriteRuleChar>, algorithm: Algorithm) -> Self {
         let fuel = Self::compute_fuel(&rules);
+        let normalized_dict = DynamicDawgChar::<HashSet<String>>::new();
         Self {
             originals: DynamicDawgChar::new(),
-            normalized_index: Arc::new(RwLock::new(HashMap::new())),
-            bk_tree: Arc::new(RwLock::new(BKTree::new())),
+            normalized_multimap: FuzzyMultiMap::new(normalized_dict, algorithm),
             rules,
             fuel,
-            algorithm: Algorithm::Standard,
             _value: std::marker::PhantomData,
         }
     }
@@ -472,33 +480,28 @@ where
     {
         let fuel = Self::compute_fuel(&rules);
         let originals = DynamicDawgChar::new();
-        let mut normalized_index = HashMap::<String, HashSet<String>>::new();
-        let mut bk_tree = BKTree::new();
+        let normalized_dict = DynamicDawgChar::<HashSet<String>>::new();
 
         for term in terms {
             let term = term.as_ref();
             originals.insert(term);
 
             let normalized = normalize_string_char(term, &rules, fuel);
+            let term_string = term.to_string();
 
-            // Insert into BK-tree if this is a new normalized form
-            if !normalized_index.contains_key(&normalized) {
-                bk_tree.insert(normalized.clone());
-            }
-
-            normalized_index
-                .entry(normalized)
-                .or_insert_with(HashSet::new)
-                .insert(term.to_string());
+            // Use update_or_insert to add term to the HashSet for this normalized form
+            normalized_dict.update_or_insert(
+                &normalized,
+                HashSet::from([term_string.clone()]),
+                |set| { set.insert(term_string); },
+            );
         }
 
         Self {
             originals,
-            normalized_index: Arc::new(RwLock::new(normalized_index)),
-            bk_tree: Arc::new(RwLock::new(bk_tree)),
+            normalized_multimap: FuzzyMultiMap::new(normalized_dict, algorithm),
             rules,
             fuel,
-            algorithm,
             _value: std::marker::PhantomData,
         }
     }
@@ -511,33 +514,27 @@ where
     {
         let fuel = Self::compute_fuel(&rules);
         let originals = DynamicDawgChar::new();
-        let mut normalized_index = HashMap::<String, HashSet<String>>::new();
-        let mut bk_tree = BKTree::new();
+        let normalized_dict = DynamicDawgChar::<HashSet<String>>::new();
 
         for (term, value) in terms {
             let term = term.as_ref();
             originals.insert_with_value(term, value);
 
             let normalized = normalize_string_char(term, &rules, fuel);
+            let term_string = term.to_string();
 
-            // Insert into BK-tree if this is a new normalized form
-            if !normalized_index.contains_key(&normalized) {
-                bk_tree.insert(normalized.clone());
-            }
-
-            normalized_index
-                .entry(normalized)
-                .or_insert_with(HashSet::new)
-                .insert(term.to_string());
+            normalized_dict.update_or_insert(
+                &normalized,
+                HashSet::from([term_string.clone()]),
+                |set| { set.insert(term_string); },
+            );
         }
 
         Self {
             originals,
-            normalized_index: Arc::new(RwLock::new(normalized_index)),
-            bk_tree: Arc::new(RwLock::new(bk_tree)),
+            normalized_multimap: FuzzyMultiMap::new(normalized_dict, Algorithm::Standard),
             rules,
             fuel,
-            algorithm: Algorithm::Standard,
             _value: std::marker::PhantomData,
         }
     }
@@ -583,12 +580,12 @@ where
 
     /// Get the algorithm used for phonetic queries.
     pub fn algorithm(&self) -> Algorithm {
-        self.algorithm
+        self.normalized_multimap.algorithm()
     }
 
     /// Get the number of unique normalized forms in the dictionary.
     pub fn normalized_count(&self) -> usize {
-        self.normalized_index.read().len()
+        self.normalized_multimap.dictionary().len().unwrap_or(0)
     }
 
     /// Get a reference to the backend dictionary.
@@ -596,9 +593,9 @@ where
         &self.originals
     }
 
-    /// Get the normalized index (read-only).
-    pub fn normalized_index(&self) -> &Arc<RwLock<HashMap<String, HashSet<String>>>> {
-        &self.normalized_index
+    /// Get a reference to the normalized multimap.
+    pub fn normalized_multimap(&self) -> &FuzzyMultiMap<HashSet<String>, DynamicDawgChar<HashSet<String>>> {
+        &self.normalized_multimap
     }
 }
 
@@ -630,7 +627,7 @@ where
 {
     /// Remove a term from the dictionary.
     ///
-    /// Note: This only updates the normalized index. The backend may or may not
+    /// Note: This updates the normalized multimap. The backend may or may not
     /// support removal. Use a backend like DynamicDawgChar that supports removal
     /// for full dynamic functionality.
     ///
@@ -638,19 +635,29 @@ where
     ///
     /// `true` if the term was in the normalized index, `false` otherwise.
     pub fn remove(&self, term: &str) -> bool {
-        // Check if term exists in index
+        // Check if term exists and get its normalized form
         let normalized = self.normalize(term);
-        let mut index = self.normalized_index.write();
 
-        if let Some(originals) = index.get_mut(&normalized) {
-            let removed = originals.remove(term);
-            if originals.is_empty() {
-                index.remove(&normalized);
+        // Get the current set of originals for this normalized form
+        if let Some(originals) = self.normalized_multimap.dictionary().get_value(&normalized) {
+            if originals.contains(term) {
+                // Create a new set without this term
+                let mut new_originals = originals.clone();
+                new_originals.remove(term);
+
+                if new_originals.is_empty() {
+                    // Remove the entry entirely
+                    // Note: DynamicDawgChar doesn't have a remove method,
+                    // so we just insert an empty set (which effectively marks it as removed)
+                    self.normalized_multimap.insert(&normalized, HashSet::new());
+                } else {
+                    // Update with the new set (without the removed term)
+                    self.normalized_multimap.insert(&normalized, new_originals);
+                }
+                return true;
             }
-            removed
-        } else {
-            false
         }
+        false
     }
 }
 
@@ -665,16 +672,17 @@ where
 {
     /// Iterate over all terms in the dictionary.
     ///
-    /// Note: This iterates over the normalized index, which tracks all inserted terms.
+    /// Note: This iterates over the normalized multimap, which tracks all inserted terms.
     pub fn iter_terms(&self) -> impl Iterator<Item = (String, String)> + '_ {
-        let index = self.normalized_index.read();
-        // Collect to release the lock
-        let pairs: Vec<_> = index
+        // Iterate over the underlying dictionary and flatten the HashSets
+        let pairs: Vec<_> = self.normalized_multimap.dictionary()
             .iter()
             .flat_map(|(normalized, originals)| {
                 originals
                     .iter()
+                    .filter(|_| !originals.is_empty()) // Skip empty sets from removals
                     .map(move |term| (term.clone(), normalized.clone()))
+                    .collect::<Vec<_>>()
             })
             .collect();
         pairs.into_iter()
@@ -682,10 +690,10 @@ where
 
     /// Iterate over normalized forms and their original terms.
     pub fn iter_normalized(&self) -> impl Iterator<Item = (String, HashSet<String>)> {
-        let index = self.normalized_index.read();
-        // Collect to release the lock
-        let pairs: Vec<_> = index
+        // Iterate over the underlying dictionary
+        let pairs: Vec<_> = self.normalized_multimap.dictionary()
             .iter()
+            .filter(|(_, originals)| !originals.is_empty()) // Skip empty sets from removals
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
         pairs.into_iter()
@@ -723,6 +731,9 @@ where
     /// then searched in the normalized space. Results include all original terms
     /// that match, along with the edit distance in normalized space.
     ///
+    /// Uses FuzzyMultiMap's Levenshtein automaton for efficient O(k log n) fuzzy
+    /// queries with trie pruning.
+    ///
     /// # Arguments
     ///
     /// * `query` - The search query (will be normalized)
@@ -736,79 +747,24 @@ where
     /// - `normalized_form`: The normalized form that matched
     pub fn query(&self, query: &str, max_distance: usize) -> Vec<PhoneticNormalizedCandidate> {
         let normalized_query = self.normalize(query);
-        let index = self.normalized_index.read();
 
-        // For exact match (distance 0), just look up in index
-        if max_distance == 0 {
-            if let Some(originals) = index.get(&normalized_query) {
-                return originals
-                    .iter()
-                    .map(|term| PhoneticNormalizedCandidate {
-                        term: term.clone(),
-                        distance: 0,
-                        normalized_form: normalized_query.clone(),
+        // Use FuzzyMultiMap's query_with_distance for efficient automaton-based search
+        let fuzzy_results = self.normalized_multimap.query_with_distance(&normalized_query, max_distance);
+
+        // Convert results to PhoneticNormalizedCandidate
+        let mut results: Vec<PhoneticNormalizedCandidate> = fuzzy_results
+            .into_iter()
+            .flat_map(|(normalized_form, distance, originals)| {
+                originals
+                    .into_iter()
+                    .filter(|term| !term.is_empty()) // Skip entries from removed terms
+                    .map(move |term| PhoneticNormalizedCandidate {
+                        term,
+                        distance,
+                        normalized_form: normalized_form.clone(),
                     })
-                    .collect();
-            }
-            return Vec::new();
-        }
-
-        // H6: Use BK-tree for efficient fuzzy lookup on large dictionaries
-        // BK-tree has O(k * log n) complexity vs O(n) for linear scan
-        // But the constant factor overhead makes linear scan faster for small dictionaries
-        // Threshold determined empirically: BK-tree wins for N >= 500
-        const BK_TREE_THRESHOLD: usize = 500;
-
-        let mut results = Vec::new();
-        let dict_size = index.len();
-
-        if dict_size >= BK_TREE_THRESHOLD {
-            // Large dictionary: use BK-tree (34× faster for 10k terms at d=1)
-            let bk_tree = self.bk_tree.read();
-            let bk_results = bk_tree.query(&normalized_query, max_distance);
-            drop(bk_tree); // Release BK-tree lock
-
-            // Map BK-tree results back to original terms via normalized_index
-            for (normalized_form, dist) in bk_results {
-                if let Some(originals) = index.get(&normalized_form) {
-                    for term in originals {
-                        results.push(PhoneticNormalizedCandidate {
-                            term: term.clone(),
-                            distance: dist,
-                            normalized_form: normalized_form.clone(),
-                        });
-                    }
-                }
-            }
-        } else {
-            // Small dictionary: linear scan is faster (no tree overhead)
-            let query_len = normalized_query.chars().count();
-
-            for (normalized_form, originals) in index.iter() {
-                // H4: Length pre-filtering - skip strings too different in length
-                let form_len = normalized_form.chars().count();
-                let len_diff = if query_len > form_len {
-                    query_len - form_len
-                } else {
-                    form_len - query_len
-                };
-
-                if len_diff > max_distance {
-                    continue;
-                }
-
-                let dist = levenshtein_distance(&normalized_query, normalized_form);
-                if dist <= max_distance {
-                    for term in originals {
-                        results.push(PhoneticNormalizedCandidate {
-                            term: term.clone(),
-                            distance: dist,
-                            normalized_form: normalized_form.clone(),
-                        });
-                    }
-                }
-            }
-        }
+            })
+            .collect();
 
         results.sort_by_key(|c| c.distance);
         results
@@ -839,15 +795,17 @@ where
         let nfa = compile_nfa(&ast).map_err(RegexQueryError::CompileError)?;
 
         // Create product automaton for fuzzy matching
-        let product = ProductAutomatonChar::with_algorithm(nfa, max_distance, self.algorithm);
+        let product = ProductAutomatonChar::with_algorithm(nfa, max_distance, self.algorithm());
 
-        // Search normalized index for matches
+        // Search normalized multimap for matches
         let mut results = Vec::new();
-        let index = self.normalized_index.read();
 
-        for (normalized, originals) in index.iter() {
-            if let Some(distance) = product.min_distance(normalized) {
-                for term in originals {
+        for (normalized, originals) in self.normalized_multimap.dictionary().iter() {
+            if originals.is_empty() {
+                continue; // Skip empty sets from removals
+            }
+            if let Some(distance) = product.min_distance(&normalized) {
+                for term in originals.iter() {
                     results.push(PhoneticNormalizedCandidate {
                         term: term.clone(),
                         distance: distance as usize,
@@ -871,11 +829,13 @@ where
         product: &ProductAutomatonChar,
     ) -> Vec<PhoneticNormalizedCandidate> {
         let mut results = Vec::new();
-        let index = self.normalized_index.read();
 
-        for (normalized, originals) in index.iter() {
-            if let Some(distance) = product.min_distance(normalized) {
-                for term in originals {
+        for (normalized, originals) in self.normalized_multimap.dictionary().iter() {
+            if originals.is_empty() {
+                continue; // Skip empty sets from removals
+            }
+            if let Some(distance) = product.min_distance(&normalized) {
+                for term in originals.iter() {
                     results.push(PhoneticNormalizedCandidate {
                         term: term.clone(),
                         distance: distance as usize,
@@ -918,230 +878,6 @@ where
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-// Thread-local buffers for Levenshtein distance calculation.
-// H2 optimization: Reuse buffers across calls to avoid allocations.
-thread_local! {
-    static LEVENSHTEIN_BUFFERS: std::cell::RefCell<LevenshteinBuffers> =
-        std::cell::RefCell::new(LevenshteinBuffers::new());
-}
-
-/// Reusable buffers for Levenshtein distance computation.
-struct LevenshteinBuffers {
-    a_chars: Vec<char>,
-    b_chars: Vec<char>,
-    prev: Vec<usize>,
-    curr: Vec<usize>,
-}
-
-impl LevenshteinBuffers {
-    fn new() -> Self {
-        Self {
-            a_chars: Vec::with_capacity(64),
-            b_chars: Vec::with_capacity(64),
-            prev: Vec::with_capacity(64),
-            curr: Vec::with_capacity(64),
-        }
-    }
-
-    /// Compute Levenshtein distance using internal buffers.
-    fn distance(&mut self, a: &str, b: &str) -> usize {
-        // Clear and reuse char buffers
-        self.a_chars.clear();
-        self.b_chars.clear();
-        self.a_chars.extend(a.chars());
-        self.b_chars.extend(b.chars());
-
-        let m = self.a_chars.len();
-        let n = self.b_chars.len();
-
-        if m == 0 {
-            return n;
-        }
-        if n == 0 {
-            return m;
-        }
-
-        // Resize DP buffers if needed, then clear
-        self.prev.clear();
-        self.curr.clear();
-        self.prev.resize(n + 1, 0);
-        self.curr.resize(n + 1, 0);
-
-        // Initialize first row
-        for j in 0..=n {
-            self.prev[j] = j;
-        }
-
-        // DP computation
-        for i in 1..=m {
-            self.curr[0] = i;
-            for j in 1..=n {
-                let cost = if self.a_chars[i - 1] == self.b_chars[j - 1] {
-                    0
-                } else {
-                    1
-                };
-                self.curr[j] = (self.prev[j] + 1) // deletion
-                    .min(self.curr[j - 1] + 1) // insertion
-                    .min(self.prev[j - 1] + cost); // substitution
-            }
-            std::mem::swap(&mut self.prev, &mut self.curr);
-        }
-
-        self.prev[n]
-    }
-}
-
-/// Simple Levenshtein distance for normalized form comparison.
-/// H2 optimization: Uses thread-local buffers to avoid allocations.
-#[inline]
-fn levenshtein_distance(a: &str, b: &str) -> usize {
-    LEVENSHTEIN_BUFFERS.with(|buffers| buffers.borrow_mut().distance(a, b))
-}
-
-// ============================================================================
-// BK-TREE (H6 Optimization)
-// ============================================================================
-
-/// BK-tree (Burkhard-Keller tree) for efficient fuzzy string matching.
-///
-/// A metric tree that exploits the triangle inequality of Levenshtein distance
-/// to prune search spaces during distance queries. For small query radii (1-2),
-/// typically only 5-25% of nodes are visited.
-///
-/// # Performance
-///
-/// - **Insertion**: O(log n) average, O(n) worst case
-/// - **Query**: O(k * log n) where k is fraction of nodes visited (5-25%)
-/// - **Memory**: O(n * d_avg) where d_avg is average node degree
-///
-/// # Usage in PhoneticNormalizedDictionary
-///
-/// The BK-tree indexes normalized forms, enabling O(log n) fuzzy lookups
-/// instead of O(n) linear scans for distance > 0 queries.
-struct BKTree {
-    root: Option<Box<BKNode>>,
-    size: usize,
-}
-
-/// Node in the BK-tree.
-struct BKNode {
-    /// The normalized form stored at this node
-    value: String,
-    /// Children indexed by their Levenshtein distance from this node's value
-    /// All strings in a child subtree are exactly that distance from this node
-    children: std::collections::HashMap<usize, Box<BKNode>>,
-}
-
-impl BKTree {
-    /// Create an empty BK-tree.
-    fn new() -> Self {
-        Self {
-            root: None,
-            size: 0,
-        }
-    }
-
-    /// Insert a normalized form into the tree.
-    ///
-    /// # Time Complexity
-    /// O(log n) average, O(n) worst case (degenerate tree)
-    fn insert(&mut self, value: String) {
-        if self.root.is_none() {
-            self.root = Some(Box::new(BKNode {
-                value,
-                children: std::collections::HashMap::new(),
-            }));
-            self.size = 1;
-            return;
-        }
-
-        let mut current = self.root.as_mut().expect("root should exist");
-        loop {
-            let dist = levenshtein_distance(&value, &current.value);
-
-            // If exact match, don't insert duplicate
-            if dist == 0 {
-                return;
-            }
-
-            // Check if child exists at this distance
-            if current.children.contains_key(&dist) {
-                current = current.children.get_mut(&dist).expect("key exists");
-            } else {
-                // Insert as new child
-                current.children.insert(
-                    dist,
-                    Box::new(BKNode {
-                        value,
-                        children: std::collections::HashMap::new(),
-                    }),
-                );
-                self.size += 1;
-                return;
-            }
-        }
-    }
-
-    /// Query for all normalized forms within `max_distance` of the query.
-    ///
-    /// Uses triangle inequality pruning: if a child is at distance `d` from
-    /// the current node, and the query is at distance `q` from the current node,
-    /// then the child's distance from the query is in range [|q-d|, q+d].
-    /// We only recurse if this range overlaps [0, max_distance].
-    ///
-    /// # Time Complexity
-    /// O(k * m * n * log N) where:
-    /// - k = fraction of nodes visited (typically 5-25% for radius 1-2)
-    /// - m, n = string lengths (for distance computation)
-    /// - N = tree size
-    fn query(&self, query: &str, max_distance: usize) -> Vec<(String, usize)> {
-        let mut results = Vec::new();
-        if let Some(ref root) = self.root {
-            self.query_recursive(root, query, max_distance, &mut results);
-        }
-        results
-    }
-
-    /// Recursive query helper with triangle inequality pruning.
-    fn query_recursive(
-        &self,
-        node: &BKNode,
-        query: &str,
-        max_distance: usize,
-        results: &mut Vec<(String, usize)>,
-    ) {
-        let dist = levenshtein_distance(query, &node.value);
-
-        // Add to results if within distance
-        if dist <= max_distance {
-            results.push((node.value.clone(), dist));
-        }
-
-        // Triangle inequality pruning:
-        // For a child at distance d from this node,
-        // the child's distance from query is in [|dist - d|, dist + d]
-        // We only recurse if this range overlaps [0, max_distance]
-        //
-        // Condition: |dist - d| <= max_distance
-        // Which means: d in [dist - max_distance, dist + max_distance]
-        let min_child_dist = dist.saturating_sub(max_distance);
-        let max_child_dist = dist + max_distance;
-
-        for (&child_dist, child) in &node.children {
-            if child_dist >= min_child_dist && child_dist <= max_child_dist {
-                self.query_recursive(child, query, max_distance, results);
-            }
-        }
-    }
-
-    /// Returns the number of unique normalized forms in the tree.
-    #[allow(dead_code)]
-    fn len(&self) -> usize {
-        self.size
-    }
-}
 
 /// O(1) vowel classification using bitmask lookup.
 ///
@@ -1696,13 +1432,4 @@ mod tests {
         assert_eq!(dict.sync_strategy(), SyncStrategy::InternalSync);
     }
 
-    #[test]
-    fn test_levenshtein_distance() {
-        assert_eq!(levenshtein_distance("", ""), 0);
-        assert_eq!(levenshtein_distance("abc", ""), 3);
-        assert_eq!(levenshtein_distance("", "abc"), 3);
-        assert_eq!(levenshtein_distance("abc", "abc"), 0);
-        assert_eq!(levenshtein_distance("abc", "abd"), 1);
-        assert_eq!(levenshtein_distance("kitten", "sitting"), 3);
-    }
 }

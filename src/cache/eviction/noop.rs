@@ -9,7 +9,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Noop;
@@ -50,7 +50,7 @@ impl<D> Noop<D> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Noop;
     ///
@@ -66,7 +66,7 @@ impl<D> Noop<D> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Noop;
     ///

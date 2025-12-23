@@ -12,7 +12,9 @@ use pathmap::utils::BitMask;
 use pathmap::zipper::{Zipper, ZipperMoving, ZipperValues};
 use pathmap::PathMap;
 use smallvec::SmallVec;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+
+use crate::sync_compat::RwLock;
 
 /// PathMap-backed dictionary for approximate string matching.
 ///
@@ -136,8 +138,8 @@ impl<V: DictionaryValue> PathMapDictionary<V> {
     /// Panics if the lock is poisoned (another thread panicked while holding the lock).
     pub fn insert_with_value(&self, term: &str, value: V) -> bool {
         let bytes = term.as_bytes();
-        let mut map = self.map.write().unwrap();
-        let mut count = self.term_count.write().unwrap();
+        let mut map = self.map.write();
+        let mut count = self.term_count.write();
 
         if map.insert(bytes, value).is_none() {
             *count += 1;
@@ -160,8 +162,8 @@ impl<V: DictionaryValue> PathMapDictionary<V> {
     /// Panics if the lock is poisoned.
     pub fn remove(&self, term: &str) -> bool {
         let bytes = term.as_bytes();
-        let mut map = self.map.write().unwrap();
-        let mut count = self.term_count.write().unwrap();
+        let mut map = self.map.write();
+        let mut count = self.term_count.write();
 
         if map.remove_val_at(bytes, true).is_some() {
             *count = count.saturating_sub(1);
@@ -181,8 +183,8 @@ impl<V: DictionaryValue> PathMapDictionary<V> {
     ///
     /// Panics if the lock is poisoned.
     pub fn clear(&self) {
-        let mut map = self.map.write().unwrap();
-        let mut count = self.term_count.write().unwrap();
+        let mut map = self.map.write();
+        let mut count = self.term_count.write();
 
         *map = PathMap::new();
         *count = 0;
@@ -198,7 +200,7 @@ impl<V: DictionaryValue> PathMapDictionary<V> {
     ///
     /// Panics if the lock is poisoned.
     pub fn term_count(&self) -> usize {
-        *self.term_count.read().unwrap()
+        *self.term_count.read()
     }
 
     /// Serialize to PathMap's native .paths format
@@ -212,7 +214,7 @@ impl<V: DictionaryValue> PathMapDictionary<V> {
     /// Panics if the lock is poisoned.
     pub fn serialize_paths<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         use pathmap::paths_serialization::serialize_paths;
-        let map = self.map.read().unwrap();
+        let map = self.map.read();
         serialize_paths(map.read_zipper(), writer)?;
         Ok(())
     }
@@ -259,8 +261,75 @@ impl<V: DictionaryValue> PathMapDictionary<V> {
     /// Panics if the lock is poisoned.
     pub fn get_value(&self, term: &str) -> Option<V> {
         let bytes = term.as_bytes();
-        let map = self.map.read().unwrap();
+        let map = self.map.read();
         map.get_val_at(bytes).cloned()
+    }
+
+    /// Update an existing term's value in place, or insert a new term with a default value.
+    ///
+    /// This method is useful for accumulation patterns where you want to modify an existing
+    /// value (e.g., add to a `HashSet`) or insert a new one if the term doesn't exist.
+    ///
+    /// Returns `true` if the term was newly inserted, `false` if it already existed.
+    ///
+    /// # Parameters
+    ///
+    /// - `term`: The term to update or insert
+    /// - `default_value`: The value to use if the term doesn't exist
+    /// - `update_fn`: Function to apply to the existing value if the term exists
+    ///
+    /// # Thread Safety
+    ///
+    /// This method acquires a write lock, blocking concurrent reads and writes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the lock is poisoned.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use std::collections::HashSet;
+    /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+    ///
+    /// let dict: PathMapDictionary<HashSet<String>> = PathMapDictionary::new();
+    ///
+    /// // First call - inserts new term with default value
+    /// let was_new = dict.update_or_insert(
+    ///     "key",
+    ///     HashSet::from(["value1".to_string()]),
+    ///     |set| { set.insert("value1".to_string()); }
+    /// );
+    /// assert!(was_new);
+    ///
+    /// // Second call - updates existing value
+    /// let was_new = dict.update_or_insert(
+    ///     "key",
+    ///     HashSet::new(),
+    ///     |set| { set.insert("value2".to_string()); }
+    /// );
+    /// assert!(!was_new);
+    ///
+    /// // Now "key" contains {"value1", "value2"}
+    /// ```
+    pub fn update_or_insert<F>(&self, term: &str, default_value: V, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut V),
+    {
+        let bytes = term.as_bytes();
+        let mut map = self.map.write();
+        let mut count = self.term_count.write();
+
+        // Check if term exists
+        let existed = map.get_val_at(bytes).is_some();
+        // Get mutable reference, creating with default if needed
+        let value = map.get_val_or_set_mut_at(bytes, default_value);
+        update_fn(value);
+
+        if !existed {
+            *count += 1;
+        }
+        !existed
     }
 
     /// Iterate over all `(term, value)` pairs as raw byte vectors.
@@ -374,14 +443,21 @@ impl<V: DictionaryValue> crate::dictionary::MutableMappedDictionary for PathMapD
         PathMapDictionary::insert_with_value(self, term, value)
     }
 
+    fn update_or_insert<F>(&self, term: &str, default_value: Self::Value, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut Self::Value),
+    {
+        PathMapDictionary::update_or_insert(self, term, default_value, update_fn)
+    }
+
     fn union_with<F>(&self, other: &Self, merge_fn: F) -> usize
     where
         F: Fn(&Self::Value, &Self::Value) -> Self::Value,
         Self::Value: Clone,
     {
-        let other_map = other.map.read().unwrap();
-        let mut self_map = self.map.write().unwrap();
-        let mut self_term_count = self.term_count.write().unwrap();
+        let other_map = other.map.read();
+        let mut self_map = self.map.write();
+        let mut self_term_count = self.term_count.write();
 
         let mut processed = 0;
 
@@ -435,7 +511,7 @@ impl<V: DictionaryValue> PathMapNode<V> {
     where
         F: FnOnce(pathmap::zipper::ReadZipperUntracked<'_, 'static, V>) -> R,
     {
-        let map = self.map.read().unwrap();
+        let map = self.map.read();
         let zipper = if self.path.is_empty() {
             map.read_zipper()
         } else {
@@ -495,7 +571,7 @@ impl<V: DictionaryValue> DictionaryNode for PathMapNode<V> {
 
         Box::new(edge_bytes.into_iter().filter_map(move |byte| {
             // Verify path exists (acquire lock only when actually iterating)
-            let map_guard = map.read().unwrap();
+            let map_guard = map.read();
             let mut check_zipper = if base_path.is_empty() {
                 map_guard.read_zipper()
             } else {

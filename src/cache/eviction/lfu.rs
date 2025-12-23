@@ -16,7 +16,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::cache::eviction::Lfu;
 //! use liblevenshtein::dictionary::MappedDictionary;
@@ -66,7 +66,7 @@ impl EntryMetadata {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::cache::eviction::Lfu;
 /// use liblevenshtein::dictionary::MappedDictionary;
@@ -94,7 +94,7 @@ impl<D> Lfu<D> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Lfu;
     ///

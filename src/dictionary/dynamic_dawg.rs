@@ -511,6 +511,128 @@ impl<V: DictionaryValue> DynamicDawg<V> {
         true
     }
 
+    /// Update an existing term's value in place, or insert a new term with a default value.
+    ///
+    /// This method is useful for accumulation patterns where you want to modify an existing
+    /// value (e.g., add to a `HashSet`) or insert a new one if the term doesn't exist.
+    ///
+    /// Returns `true` if the term was newly inserted, `false` if it already existed.
+    ///
+    /// # Parameters
+    ///
+    /// - `term`: The term to update or insert
+    /// - `default_value`: The value to use if the term doesn't exist
+    /// - `update_fn`: Function to apply to the existing value if the term exists
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use std::collections::HashSet;
+    /// let dict: DynamicDawg<HashSet<String>> = DynamicDawg::new();
+    ///
+    /// // First call - inserts new term with default value
+    /// let was_new = dict.update_or_insert(
+    ///     "key",
+    ///     HashSet::from(["value1".to_string()]),
+    ///     |set| { set.insert("value1".to_string()); }
+    /// );
+    /// assert!(was_new);
+    ///
+    /// // Second call - updates existing value
+    /// let was_new = dict.update_or_insert(
+    ///     "key",
+    ///     HashSet::new(),
+    ///     |set| { set.insert("value2".to_string()); }
+    /// );
+    /// assert!(!was_new);
+    ///
+    /// // Now "key" contains {"value1", "value2"}
+    /// ```
+    pub fn update_or_insert<F>(&self, term: &str, default_value: V, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut V),
+    {
+        let mut inner = self.inner.write();
+        let bytes = term.as_bytes();
+
+        // Navigate to the term's location, creating nodes as needed
+        let mut node_idx = 0;
+        let mut path_len = 0;
+
+        for &byte in bytes {
+            if let Some(&child_idx) = inner.nodes[node_idx]
+                .edges
+                .iter()
+                .find(|(b, _)| *b == byte)
+                .map(|(_, idx)| idx)
+            {
+                // Edge exists, follow it
+                node_idx = child_idx;
+                path_len += 1;
+            } else {
+                // Need to create remaining path
+                break;
+            }
+        }
+
+        // Check if term already exists
+        if path_len == bytes.len() {
+            if inner.nodes[node_idx].is_final {
+                // Term exists - update its value
+                if let Some(ref mut existing_value) = inner.nodes[node_idx].value {
+                    update_fn(existing_value);
+                } else {
+                    // Has is_final but no value (shouldn't happen for valued DAWGs, but handle it)
+                    inner.nodes[node_idx].value = Some(default_value);
+                }
+                return false; // Term already existed
+            } else {
+                // Node exists but wasn't final - mark it final with default value
+                inner.nodes[node_idx].is_final = true;
+                inner.nodes[node_idx].value = Some(default_value);
+                inner.term_count += 1;
+
+                // Add to Bloom filter if enabled
+                if let Some(ref mut bloom) = inner.bloom_filter {
+                    bloom.insert(term);
+                }
+
+                return true; // New term
+            }
+        }
+
+        // Build remaining path (term doesn't exist yet)
+        let start_byte_idx = path_len;
+        for i in start_byte_idx..bytes.len() {
+            let byte = bytes[i];
+            let new_idx = inner.nodes.len();
+            let is_final = i == bytes.len() - 1;
+
+            let mut new_node = if is_final {
+                DawgNode::new_with_value(true, Some(default_value.clone()))
+            } else {
+                DawgNode::new(false)
+            };
+            new_node.ref_count = 1;
+
+            inner.nodes.push(new_node);
+            inner.insert_edge_sorted(node_idx, byte, new_idx);
+            node_idx = new_idx;
+        }
+
+        inner.term_count += 1;
+
+        // Add to Bloom filter if enabled
+        if let Some(ref mut bloom) = inner.bloom_filter {
+            bloom.insert(term);
+        }
+
+        // Auto-minimize if needed
+        inner.check_and_auto_minimize();
+
+        true // New term was inserted
+    }
+
     /// Get the value associated with a term.
     ///
     /// Returns `Some(value)` if the term exists, `None` otherwise.
@@ -1502,6 +1624,14 @@ impl<V: DictionaryValue> crate::dictionary::MutableMappedDictionary for DynamicD
     fn insert_with_value(&self, term: &str, value: Self::Value) -> bool {
         // Delegate to the inherent method
         Self::insert_with_value(self, term, value)
+    }
+
+    fn update_or_insert<F>(&self, term: &str, default_value: Self::Value, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut Self::Value),
+    {
+        // Delegate to the inherent method
+        Self::update_or_insert(self, term, default_value, update_fn)
     }
 
     fn union_with<F>(&self, other: &Self, merge_fn: F) -> usize

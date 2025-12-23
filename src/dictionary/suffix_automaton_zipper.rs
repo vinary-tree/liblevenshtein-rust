@@ -6,7 +6,9 @@
 use crate::dictionary::suffix_automaton::{SuffixAutomaton, SuffixAutomatonInner};
 use crate::dictionary::value::DictionaryValue;
 use crate::dictionary::zipper::{DictZipper, ValuedDictZipper};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+
+use crate::sync_compat::RwLock;
 
 /// Zipper for Suffix Automaton dictionaries.
 ///
@@ -114,7 +116,7 @@ impl<V: DictionaryValue> DictZipper for SuffixAutomatonZipper<V> {
     type Unit = u8;
 
     fn is_final(&self) -> bool {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         if self.state_id < inner.nodes.len() {
             inner.nodes[self.state_id].is_final
         } else {
@@ -123,7 +125,7 @@ impl<V: DictionaryValue> DictZipper for SuffixAutomatonZipper<V> {
     }
 
     fn descend(&self, label: Self::Unit) -> Option<Self> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         if self.state_id >= inner.nodes.len() {
             return None;
         }
@@ -151,7 +153,7 @@ impl<V: DictionaryValue> DictZipper for SuffixAutomatonZipper<V> {
     fn children(&self) -> impl Iterator<Item = (Self::Unit, Self)> {
         // Collect edges to avoid holding lock during iteration
         let edges: Vec<(u8, usize)> = {
-            let inner = self.inner.read().unwrap();
+            let inner = self.inner.read();
             if self.state_id < inner.nodes.len() {
                 inner.nodes[self.state_id].edges.clone()
             } else {
@@ -181,7 +183,7 @@ impl<V: DictionaryValue> ValuedDictZipper for SuffixAutomatonZipper<V> {
     type Value = V;
 
     fn value(&self) -> Option<Self::Value> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         if self.state_id < inner.nodes.len() && inner.nodes[self.state_id].is_final {
             inner.nodes[self.state_id].value.clone()
         } else {

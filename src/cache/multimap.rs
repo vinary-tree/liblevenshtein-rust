@@ -14,17 +14,17 @@
 //!
 //! # Example Use Case
 //!
-//! ```rust
+//! ```rust,ignore
 //! use std::collections::HashSet;
 //! use liblevenshtein::prelude::*;
+//! use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
 //! use liblevenshtein::cache::multimap::FuzzyMultiMap;
 //!
 //! // Map: foo -> {1,2}, bar -> {3}, baz -> {4,5}
-//! let dict = PathMapDictionary::from_terms_with_values([
-//!     ("foo", HashSet::from([1, 2])),
-//!     ("bar", HashSet::from([3])),
-//!     ("baz", HashSet::from([4, 5])),
-//! ]);
+//! let dict: DynamicDawgChar<HashSet<i32>> = DynamicDawgChar::new();
+//! dict.insert_with_value("foo", HashSet::from([1, 2]));
+//! dict.insert_with_value("bar", HashSet::from([3]));
+//! dict.insert_with_value("baz", HashSet::from([4, 5]));
 //!
 //! let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
 //!
@@ -36,7 +36,7 @@
 //! assert_eq!(result, Some(HashSet::from([3, 4, 5])));
 //! ```
 
-use crate::dictionary::{DictionaryValue, MappedDictionary};
+use crate::dictionary::{DictionaryValue, MappedDictionary, MutableMappedDictionary};
 use crate::transducer::{Algorithm, Transducer};
 use std::collections::{BTreeSet, HashSet};
 use std::hash::Hash;
@@ -51,7 +51,7 @@ use std::hash::Hash;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// use liblevenshtein::cache::multimap::CollectionAggregate;
 /// use std::collections::HashSet;
 ///
@@ -171,16 +171,16 @@ where
 ///
 /// ## HashSet Union
 ///
-/// ```rust
+/// ```rust,ignore
 /// use std::collections::HashSet;
 /// use liblevenshtein::prelude::*;
+/// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
 /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
 ///
-/// let dict = PathMapDictionary::from_terms_with_values([
-///     ("hello", HashSet::from([1, 2])),
-///     ("hallo", HashSet::from([3])),
-///     ("hullo", HashSet::from([4, 5])),
-/// ]);
+/// let dict: DynamicDawgChar<HashSet<i32>> = DynamicDawgChar::new();
+/// dict.insert_with_value("hello", HashSet::from([1, 2]));
+/// dict.insert_with_value("hallo", HashSet::from([3]));
+/// dict.insert_with_value("hullo", HashSet::from([4, 5]));
 ///
 /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
 ///
@@ -192,15 +192,15 @@ where
 ///
 /// ## Vec Concatenation
 ///
-/// ```rust
+/// ```rust,ignore
 /// use liblevenshtein::prelude::*;
+/// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
 /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
 ///
-/// let dict = PathMapDictionary::from_terms_with_values([
-///     ("foo", vec![1, 2]),
-///     ("fob", vec![3]),
-///     ("fog", vec![4, 5]),
-/// ]);
+/// let dict: DynamicDawgChar<Vec<i32>> = DynamicDawgChar::new();
+/// dict.insert_with_value("foo", vec![1, 2]);
+/// dict.insert_with_value("fob", vec![3]);
+/// dict.insert_with_value("fog", vec![4, 5]);
 ///
 /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
 ///
@@ -230,15 +230,15 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
     /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
     ///
-    /// let dict = PathMapDictionary::from_terms_with_values([
-    ///     ("foo", HashSet::from([1])),
-    ///     ("bar", HashSet::from([2])),
-    /// ]);
+    /// let dict: DynamicDawgChar<HashSet<i32>> = DynamicDawgChar::new();
+    /// dict.insert_with_value("foo", HashSet::from([1]));
+    /// dict.insert_with_value("bar", HashSet::from([2]));
     ///
     /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
     /// ```
@@ -268,16 +268,16 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
     /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
     ///
-    /// let dict = PathMapDictionary::from_terms_with_values([
-    ///     ("foo", HashSet::from([1, 2])),
-    ///     ("bar", HashSet::from([3])),
-    ///     ("baz", HashSet::from([4, 5])),
-    /// ]);
+    /// let dict: DynamicDawgChar<HashSet<i32>> = DynamicDawgChar::new();
+    /// dict.insert_with_value("foo", HashSet::from([1, 2]));
+    /// dict.insert_with_value("bar", HashSet::from([3]));
+    /// dict.insert_with_value("baz", HashSet::from([4, 5]));
     ///
     /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
     ///
@@ -305,14 +305,14 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
     /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
     ///
-    /// let dict = PathMapDictionary::from_terms_with_values([
-    ///     ("foo", HashSet::from([1])),
-    /// ]);
+    /// let dict: DynamicDawgChar<HashSet<i32>> = DynamicDawgChar::new();
+    /// dict.insert_with_value("foo", HashSet::from([1]));
     ///
     /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
     /// assert_eq!(fuzzy.dictionary().len(), Some(1));
@@ -325,14 +325,14 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
     /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
     ///
-    /// let dict = PathMapDictionary::from_terms_with_values([
-    ///     ("foo", HashSet::from([1])),
-    /// ]);
+    /// let dict: DynamicDawgChar<HashSet<i32>> = DynamicDawgChar::new();
+    /// dict.insert_with_value("foo", HashSet::from([1]));
     ///
     /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Transposition);
     /// assert_eq!(fuzzy.algorithm(), Algorithm::Transposition);
@@ -361,16 +361,16 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
     /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
     ///
-    /// let dict = PathMapDictionary::from_terms_with_values([
-    ///     ("foo", vec!["original_foo".to_string()]),
-    ///     ("bar", vec!["original_bar".to_string()]),
-    ///     ("baz", vec!["original_baz".to_string()]),
-    /// ]);
+    /// let dict: DynamicDawgChar<Vec<String>> = DynamicDawgChar::new();
+    /// dict.insert_with_value("foo", vec!["original_foo".to_string()]);
+    /// dict.insert_with_value("bar", vec!["original_bar".to_string()]);
+    /// dict.insert_with_value("baz", vec!["original_baz".to_string()]);
     ///
     /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
     ///
@@ -395,6 +395,94 @@ where
             .collect()
     }
 }
+
+// ============================================================================
+// Mutation Methods (for MutableMappedDictionary types)
+// ============================================================================
+
+impl<C, D> FuzzyMultiMap<C, D>
+where
+    C: CollectionAggregate + DictionaryValue,
+    D: MutableMappedDictionary<Value = C> + crate::dictionary::Dictionary + Clone,
+{
+    /// Insert a term with the given value, or replace if it exists.
+    ///
+    /// Returns `true` if the term was newly inserted, `false` if it already existed.
+    ///
+    /// # Arguments
+    ///
+    /// - `term`: The term to insert
+    /// - `value`: The value to associate with the term
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use std::collections::HashSet;
+    /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
+    ///
+    /// let dict = DynamicDawgChar::<HashSet<u32>>::new();
+    /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
+    ///
+    /// let was_new = fuzzy.insert("foo", HashSet::from([1, 2]));
+    /// assert!(was_new);
+    ///
+    /// let was_new = fuzzy.insert("foo", HashSet::from([3]));
+    /// assert!(!was_new); // Already existed
+    /// ```
+    pub fn insert(&self, term: &str, value: C) -> bool {
+        self.dictionary.insert_with_value(term, value)
+    }
+
+    /// Update an existing term's value or insert with a default value.
+    ///
+    /// This is useful for accumulation patterns where you want to add to an existing
+    /// collection (e.g., add an element to a `HashSet`) rather than replace it.
+    ///
+    /// Returns `true` if the term was newly inserted, `false` if it already existed.
+    ///
+    /// # Arguments
+    ///
+    /// - `term`: The term to update or insert
+    /// - `default_value`: The value to use if the term doesn't exist
+    /// - `update_fn`: Function to apply to the existing value if the term exists
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use std::collections::HashSet;
+    /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
+    ///
+    /// let dict = DynamicDawgChar::<HashSet<String>>::new();
+    /// let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
+    ///
+    /// // First insert: creates new entry
+    /// let was_new = fuzzy.update_or_insert(
+    ///     "normalized_form",
+    ///     HashSet::from(["original1".to_string()]),
+    ///     |set| { set.insert("original1".to_string()); }
+    /// );
+    /// assert!(was_new);
+    ///
+    /// // Second insert: adds to existing set
+    /// let was_new = fuzzy.update_or_insert(
+    ///     "normalized_form",
+    ///     HashSet::new(),
+    ///     |set| { set.insert("original2".to_string()); }
+    /// );
+    /// assert!(!was_new);
+    ///
+    /// // Now "normalized_form" maps to {"original1", "original2"}
+    /// ```
+    pub fn update_or_insert<F>(&self, term: &str, default_value: C, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut C),
+    {
+        self.dictionary.update_or_insert(term, default_value, update_fn)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

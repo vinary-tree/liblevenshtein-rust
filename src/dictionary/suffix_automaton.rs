@@ -103,7 +103,9 @@
 //! - Design document: `docs/SUFFIX_AUTOMATON_DESIGN.md`
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+
+use crate::sync_compat::RwLock;
 
 use crate::dictionary::iterator::{DictionaryIterator, DictionaryTermIterator};
 use crate::dictionary::suffix_automaton_zipper::SuffixAutomatonZipper;
@@ -419,13 +421,13 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
 
     /// Get the number of states in the automaton (for debugging).
     pub fn state_count(&self) -> usize {
-        self.inner.read().unwrap().nodes.len()
+        self.inner.read().nodes.len()
     }
 
     /// Debug: print automaton structure (for development).
     #[allow(dead_code)]
     pub fn debug_print(&self) {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         println!("Suffix Automaton with {} states:", inner.nodes.len());
         for (idx, node) in inner.nodes.iter().enumerate() {
             println!(
@@ -501,7 +503,7 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
     /// dict.insert("testing insertion");
     /// ```
     pub fn insert(&self, text: &str) -> bool {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self.inner.write();
         let string_id = inner.string_count;
 
         // Store source text for serialization
@@ -547,7 +549,7 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
     /// assert!(!dict.remove("test string")); // Already removed
     /// ```
     pub fn remove(&self, text: &str) -> bool {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self.inner.write();
 
         // Navigate to end state for this text
         let mut state = 0;
@@ -609,7 +611,7 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
     /// assert_eq!(dict.string_count(), 0);
     /// ```
     pub fn clear(&self) {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self.inner.write();
         *inner = SuffixAutomatonInner::new();
     }
 
@@ -638,7 +640,7 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
     /// }
     /// ```
     pub fn compact(&self) {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self.inner.write();
 
         if !inner.needs_compaction {
             return;
@@ -708,7 +710,7 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
     /// assert_eq!(dict.string_count(), 1);
     /// ```
     pub fn string_count(&self) -> usize {
-        self.inner.read().unwrap().string_count
+        self.inner.read().string_count
     }
 
     /// Check if compaction is recommended.
@@ -730,7 +732,7 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
     /// }
     /// ```
     pub fn needs_compaction(&self) -> bool {
-        self.inner.read().unwrap().needs_compaction
+        self.inner.read().needs_compaction
     }
 
     /// Get match positions for a substring.
@@ -756,7 +758,7 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
     /// // positions will contain entries for strings ending exactly with "test"
     /// ```
     pub fn match_positions(&self, substring: &str) -> Vec<(usize, usize)> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
 
         // Navigate to the state for this substring
         let mut state = 0;
@@ -783,6 +785,103 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
         result
     }
 
+    /// Update an existing term's value in place, or insert a new term with a default value.
+    ///
+    /// This method is useful for accumulation patterns where you want to modify an existing
+    /// value (e.g., add to a `HashSet`) or insert a new one if the term doesn't exist.
+    ///
+    /// Returns `true` if the term was newly inserted, `false` if it already existed.
+    ///
+    /// # Parameters
+    ///
+    /// - `term`: The term to update or insert
+    /// - `default_value`: The value to use if the term doesn't exist
+    /// - `update_fn`: Function to apply to the existing value if the term exists
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use std::collections::HashSet;
+    /// use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+    ///
+    /// let dict: SuffixAutomaton<HashSet<String>> = SuffixAutomaton::new();
+    ///
+    /// // First call - inserts new term with default value
+    /// let was_new = dict.update_or_insert(
+    ///     "key",
+    ///     HashSet::from(["value1".to_string()]),
+    ///     |set| { set.insert("value1".to_string()); }
+    /// );
+    /// assert!(was_new);
+    ///
+    /// // Second call - updates existing value
+    /// let was_new = dict.update_or_insert(
+    ///     "key",
+    ///     HashSet::new(),
+    ///     |set| { set.insert("value2".to_string()); }
+    /// );
+    /// assert!(!was_new);
+    ///
+    /// // Now "key" contains {"value1", "value2"}
+    /// ```
+    pub fn update_or_insert<F>(&self, term: &str, default_value: V, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut V),
+    {
+        let mut inner = self.inner.write();
+
+        // Try to navigate to the term
+        let mut state = 0;
+        for &byte in term.as_bytes() {
+            match inner.nodes[state].find_edge(byte) {
+                Some(next) => state = next,
+                None => {
+                    // Term doesn't exist - need to insert it
+                    drop(inner);
+                    return self.insert_with_value_internal(term, default_value);
+                }
+            }
+        }
+
+        // Term exists - check if it has a value
+        if inner.nodes[state].value.is_some() {
+            // Update existing value
+            update_fn(inner.nodes[state].value.as_mut().unwrap());
+            false
+        } else {
+            // Node exists but no value - set the default value
+            inner.nodes[state].value = Some(default_value);
+            inner.nodes[state].is_final = true;
+            true
+        }
+    }
+
+    /// Internal helper for insert_with_value to avoid deadlock in update_or_insert.
+    fn insert_with_value_internal(&self, term: &str, value: V) -> bool {
+        let mut inner = self.inner.write();
+
+        // Reset to root for new string
+        inner.last_state = 0;
+
+        // Extend with all characters
+        for &byte in term.as_bytes() {
+            inner.extend(byte);
+        }
+
+        // Set the value at the final state
+        let final_state = inner.last_state;
+        inner.nodes[final_state].value = Some(value);
+
+        // Track the new string
+        inner.string_count += 1;
+        inner.source_texts.push(term.to_string());
+
+        // Reset last_state for future insertions
+        inner.last_state = 0;
+
+        true
+    }
+
     /// Get the original source texts used to build this automaton.
     ///
     /// Returns a vector of all texts that were indexed. This is useful
@@ -801,7 +900,7 @@ impl<V: DictionaryValue> SuffixAutomaton<V> {
     /// assert_eq!(sources.len(), 2);
     /// ```
     pub fn source_texts(&self) -> Vec<String> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         inner.source_texts.clone()
     }
 
@@ -898,7 +997,7 @@ impl<V: DictionaryValue + serde::Serialize> serde::Serialize for SuffixAutomaton
         S: serde::Serializer,
     {
         // Extract the inner data by acquiring read lock
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         inner.serialize(serializer)
     }
 }
@@ -935,12 +1034,12 @@ impl<V: DictionaryValue> DictionaryNode for SuffixNodeHandle<V> {
     type Unit = u8;
 
     fn is_final(&self) -> bool {
-        let inner = self.automaton.read().unwrap();
+        let inner = self.automaton.read();
         inner.nodes[self.state_id].is_final
     }
 
     fn transition(&self, label: u8) -> Option<Self> {
-        let inner = self.automaton.read().unwrap();
+        let inner = self.automaton.read();
         inner.nodes[self.state_id]
             .find_edge(label)
             .map(|target| Self {
@@ -951,7 +1050,7 @@ impl<V: DictionaryValue> DictionaryNode for SuffixNodeHandle<V> {
 
     fn edges(&self) -> Box<dyn Iterator<Item = (u8, Self)> + '_> {
         // Clone edges to avoid holding lock during iteration
-        let inner = self.automaton.read().unwrap();
+        let inner = self.automaton.read();
         let edges = inner.nodes[self.state_id].edges.clone();
         drop(inner);
 
@@ -967,12 +1066,12 @@ impl<V: DictionaryValue> DictionaryNode for SuffixNodeHandle<V> {
     }
 
     fn has_edge(&self, label: u8) -> bool {
-        let inner = self.automaton.read().unwrap();
+        let inner = self.automaton.read();
         inner.nodes[self.state_id].find_edge(label).is_some()
     }
 
     fn edge_count(&self) -> Option<usize> {
-        let inner = self.automaton.read().unwrap();
+        let inner = self.automaton.read();
         Some(inner.nodes[self.state_id].edges.len())
     }
 }
@@ -1034,7 +1133,7 @@ impl<V: DictionaryValue> MappedDictionaryNode for SuffixNodeHandle<V> {
     type Value = V;
 
     fn value(&self) -> Option<Self::Value> {
-        let inner = self.automaton.read().unwrap();
+        let inner = self.automaton.read();
         inner
             .nodes
             .get(self.state_id)
@@ -1072,25 +1171,14 @@ impl<V: DictionaryValue> MappedDictionary for SuffixAutomaton<V> {
 
 impl<V: DictionaryValue> MutableMappedDictionary for SuffixAutomaton<V> {
     fn insert_with_value(&self, term: &str, value: Self::Value) -> bool {
-        let mut inner = self.inner.write().unwrap();
+        self.insert_with_value_internal(term, value)
+    }
 
-        // Reset to root for new string
-        inner.last_state = 0;
-
-        // Extend with all characters
-        for &byte in term.as_bytes() {
-            inner.extend(byte);
-        }
-
-        // Set the value at the final state
-        let final_state = inner.last_state;
-        inner.nodes[final_state].value = Some(value);
-
-        // Track the new string
-        inner.string_count += 1;
-        inner.source_texts.push(term.to_string());
-
-        true
+    fn update_or_insert<F>(&self, term: &str, default_value: Self::Value, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut Self::Value),
+    {
+        SuffixAutomaton::update_or_insert(self, term, default_value, update_fn)
     }
 
     fn union_with<F>(&self, _other: &Self, _merge_fn: F) -> usize

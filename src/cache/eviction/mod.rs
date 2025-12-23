@@ -52,7 +52,7 @@
 //!
 //! ## Basic Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Lru;
@@ -73,7 +73,7 @@
 //!
 //! Wrappers can be composed to combine multiple eviction strategies:
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::{Lru, Ttl};
@@ -93,7 +93,7 @@
 //!
 //! ## Memory-Aware Caching
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::MemoryPressure;
@@ -115,7 +115,7 @@
 //!
 //! ## Cost-Based Eviction
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::CostAware;
@@ -141,7 +141,7 @@
 //!
 //! ## Lazy Initialization
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInit;

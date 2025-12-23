@@ -302,6 +302,11 @@ name = "phonetic_normalized_benchmarks"
 harness = false
 required-features = ["pathmap-backend", "phonetic-rules"]
 
+[[bench]]
+name = "bktree_vs_fuzzymap_benchmarks"
+harness = false
+required-features = ["phonetic-rules"]
+
 [[bin]]
 name = "liblevenshtein"
 path = "src/bin/liblevenshtein.rs"

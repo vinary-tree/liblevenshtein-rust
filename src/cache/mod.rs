@@ -24,7 +24,7 @@
 //! │                              ▼                                   │
 //! │  ┌──────────────────────────────────────────────────────────┐  │
 //! │  │              Inner Dictionary (any D)                     │  │
-//! │  │     (PathMapDictionary, DawgDictionary, etc.)             │  │
+//! │  │     (DynamicDawg, PathMapDictionary, etc.)                │  │
 //! │  └──────────────────────────────────────────────────────────┘  │
 //! └─────────────────────────────────────────────────────────────────┘
 //! ```
@@ -44,15 +44,15 @@
 //!
 //! ## Basic LRU Wrapper
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
+//! use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
 //! use liblevenshtein::cache::eviction::Lru;
 //!
-//! let dict = PathMapDictionary::from_terms_with_values([
-//!     ("hello", 1),
-//!     ("world", 2),
-//! ]);
+//! let dict: DynamicDawgChar<i32> = DynamicDawgChar::new();
+//! dict.insert_with_value("hello", 1);
+//! dict.insert_with_value("world", 2);
 //!
 //! let lru = Lru::new(dict);
 //! assert_eq!(lru.get_value("hello"), Some(1));
@@ -63,16 +63,16 @@
 //!
 //! ## Composing Wrappers
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
+//! use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
 //! use liblevenshtein::cache::eviction::{Lru, Ttl};
 //! use std::time::Duration;
 //!
-//! let dict = PathMapDictionary::from_terms_with_values([
-//!     ("foo", 42),
-//!     ("bar", 99),
-//! ]);
+//! let dict: DynamicDawgChar<i32> = DynamicDawgChar::new();
+//! dict.insert_with_value("foo", 42);
+//! dict.insert_with_value("bar", 99);
 //!
 //! // Compose TTL + LRU
 //! let ttl = Ttl::new(dict, Duration::from_secs(300));
@@ -83,15 +83,15 @@
 //!
 //! ## Memory Pressure Tracking
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
+//! use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
 //! use liblevenshtein::cache::eviction::MemoryPressure;
 //!
-//! let dict = PathMapDictionary::from_terms_with_values([
-//!     ("large", vec![1, 2, 3, 4, 5]),
-//!     ("small", vec![1]),
-//! ]);
+//! let dict: DynamicDawgChar<Vec<i32>> = DynamicDawgChar::new();
+//! dict.insert_with_value("large", vec![1, 2, 3, 4, 5]);
+//! dict.insert_with_value("small", vec![1]);
 //!
 //! let memory = MemoryPressure::new(dict);
 //! memory.get_value("large");

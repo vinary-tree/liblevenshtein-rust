@@ -521,6 +521,123 @@ impl<V: DictionaryValue> DynamicDawgChar<V> {
         true
     }
 
+    /// Update an existing term's value in place, or insert a new term with a default value.
+    ///
+    /// This method is useful when you want to incrementally modify a value (e.g., adding
+    /// elements to a `HashSet` or `Vec`) without replacing it entirely.
+    ///
+    /// # Arguments
+    ///
+    /// * `term` - The term to update or insert
+    /// * `default_value` - The value to use if the term doesn't exist
+    /// * `update_fn` - Function to apply to the existing value if the term exists
+    ///
+    /// # Returns
+    ///
+    /// `true` if this was a new term (inserted with default), `false` if an existing term was updated.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use std::collections::HashSet;
+    ///
+    /// let dict: DynamicDawgChar<HashSet<u32>> = DynamicDawgChar::new();
+    ///
+    /// // First call: inserts with default value {1}
+    /// assert!(dict.update_or_insert("foo", HashSet::from([1]), |set| { set.insert(1); }));
+    ///
+    /// // Second call: updates existing value to {1, 2}
+    /// assert!(!dict.update_or_insert("foo", HashSet::from([2]), |set| { set.insert(2); }));
+    ///
+    /// assert_eq!(dict.get_value("foo"), Some(HashSet::from([1, 2])));
+    /// ```
+    pub fn update_or_insert<F>(&self, term: &str, default_value: V, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut V),
+    {
+        let mut inner = self.inner.write();
+        let chars: Vec<char> = term.chars().collect();
+
+        // Navigate to insertion point
+        let mut node_idx = 0;
+        let mut path: Vec<(usize, char)> = Vec::new();
+
+        for &ch in &chars {
+            if let Some(&child_idx) = inner.nodes[node_idx]
+                .edges
+                .iter()
+                .find(|(c, _)| *c == ch)
+                .map(|(_, idx)| idx)
+            {
+                path.push((node_idx, ch));
+                node_idx = child_idx;
+            } else {
+                break;
+            }
+        }
+
+        // Check if term already exists
+        if path.len() == chars.len() && inner.nodes[node_idx].is_final {
+            // Term exists - update value in place
+            if let Some(ref mut value) = inner.nodes[node_idx].value {
+                update_fn(value);
+            } else {
+                // Term exists but has no value (shouldn't happen with typed values)
+                // Insert default and apply update
+                let mut value = default_value;
+                update_fn(&mut value);
+                inner.nodes[node_idx].value = Some(value);
+            }
+            return false;
+        }
+
+        // Term doesn't exist - insert with default value
+        if path.len() == chars.len() {
+            // Node exists but isn't final - mark as final
+            inner.nodes[node_idx].is_final = true;
+            inner.nodes[node_idx].value = Some(default_value);
+            inner.term_count += 1;
+
+            // Add to Bloom filter
+            if let Some(ref mut bloom) = inner.bloom_filter {
+                bloom.insert(term);
+            }
+
+            return true;
+        }
+
+        // Build remaining suffix
+        let start_char_idx = path.len();
+        for i in start_char_idx..chars.len() {
+            let ch = chars[i];
+            let new_idx = inner.nodes.len();
+            let is_final = i == chars.len() - 1;
+
+            let mut new_node = if is_final {
+                DawgNodeChar::new_with_value(true, Some(default_value.clone()))
+            } else {
+                DawgNodeChar::new(false)
+            };
+            new_node.ref_count = 1;
+
+            inner.nodes.push(new_node);
+            inner.insert_edge_sorted(node_idx, ch, new_idx);
+            node_idx = new_idx;
+        }
+
+        inner.term_count += 1;
+
+        // Add to Bloom filter
+        if let Some(ref mut bloom) = inner.bloom_filter {
+            bloom.insert(term);
+        }
+
+        // Auto-minimize if needed
+        inner.check_and_auto_minimize();
+
+        true
+    }
+
     /// Get the value associated with a term.
     ///
     /// Returns `Some(value)` if the term exists, `None` otherwise.
@@ -1556,6 +1673,14 @@ impl<V: DictionaryValue> crate::dictionary::MutableMappedDictionary for DynamicD
         }
 
         processed
+    }
+
+    fn update_or_insert<F>(&self, term: &str, default_value: Self::Value, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut Self::Value),
+    {
+        // Delegate to the inherent method
+        Self::update_or_insert(self, term, default_value, update_fn)
     }
 }
 

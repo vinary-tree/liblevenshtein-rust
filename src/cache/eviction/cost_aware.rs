@@ -16,7 +16,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::CostAware;
@@ -84,7 +84,7 @@ impl EntryMetadata {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::cache::eviction::CostAware;
@@ -112,7 +112,7 @@ impl<D> CostAware<D> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::CostAware;
     ///

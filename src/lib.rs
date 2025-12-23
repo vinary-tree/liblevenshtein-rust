@@ -48,8 +48,22 @@ pub mod phonetic;
 pub mod serialization;
 
 /// Fuzzy cache with composable eviction strategies
+///
+/// This module provides:
+/// - Composable eviction wrappers (LRU, LFU, TTL, etc.)
+/// - `FuzzyMultiMap` for fuzzy queries returning aggregated collections
+///
+/// Works with any `MappedDictionary` implementation.
+///
+/// Note: The public API examples use `PathMapDictionary` but internally this works
+/// with any dictionary type including `DynamicDawgChar`.
 #[cfg(feature = "pathmap-backend")]
 pub mod cache;
+
+/// Internal cache module (crate-private) for PhoneticNormalizedDictionary
+/// Only used internally when phonetic-rules is enabled without pathmap-backend
+#[cfg(all(not(feature = "pathmap-backend"), feature = "phonetic-rules"))]
+pub(crate) mod cache;
 
 /// Interactive REPL for exploring Levenshtein dictionaries
 #[cfg(all(feature = "cli", not(target_arch = "wasm32")))]
@@ -152,10 +166,12 @@ pub mod prelude {
     #[cfg(feature = "compression")]
     pub use crate::serialization::GzipSerializer;
 
+    // Eviction wrappers available when cache module is public
     #[cfg(feature = "pathmap-backend")]
     pub use crate::cache::eviction;
 
-    #[cfg(all(feature = "pathmap-backend", feature = "phonetic-rules"))]
+    // PhoneticNormalizedDictionary only requires phonetic-rules (uses DynamicDawgChar internally)
+    #[cfg(feature = "phonetic-rules")]
     pub use crate::dictionary::phonetic_normalized::{
         PhoneticNormalizedCandidate, PhoneticNormalizedDictionary, PhoneticNormalizedDictionaryChar,
         PhoneticNormalizedNode, PhoneticNormalizedZipper, RegexQueryError,

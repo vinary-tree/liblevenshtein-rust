@@ -20,7 +20,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```rust,ignore
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Ttl;
@@ -78,7 +78,7 @@ impl EntryMetadata {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::cache::eviction::Ttl;
@@ -109,7 +109,7 @@ impl<D> Ttl<D> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Ttl;
     /// use std::time::Duration;

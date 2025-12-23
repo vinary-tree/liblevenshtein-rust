@@ -8,7 +8,9 @@ use crate::dictionary::zipper::{DictZipper, ValuedDictZipper};
 use pathmap::utils::BitMask;
 use pathmap::zipper::{ReadZipperUntracked, Zipper, ZipperMoving, ZipperValues};
 use pathmap::PathMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+
+use crate::sync_compat::RwLock;
 
 /// Zipper for PathMap-backed dictionaries.
 ///
@@ -139,7 +141,7 @@ impl<V: DictionaryValue> PathMapZipper<V> {
     where
         F: FnOnce(ReadZipperUntracked<'_, 'static, V>) -> R,
     {
-        let map = self.map.read().unwrap();
+        let map = self.map.read();
         let zipper = if self.path.is_empty() {
             map.read_zipper()
         } else {
@@ -166,7 +168,7 @@ impl<V: DictionaryValue> DictZipper for PathMapZipper<V> {
 
         // Check if path exists in PathMap
         let exists = {
-            let map = self.map.read().unwrap();
+            let map = self.map.read();
             let mut zipper = map.read_zipper();
             zipper.descend_to(&new_path);
             zipper.path_exists()
@@ -191,7 +193,7 @@ impl<V: DictionaryValue> DictZipper for PathMapZipper<V> {
 
         // Acquire lock once and extract all child information
         let valid_children: Vec<(u8, Arc<[u8]>)> = {
-            let map_guard = self.map.read().unwrap();
+            let map_guard = self.map.read();
             let zipper = if self.path.is_empty() {
                 map_guard.read_zipper()
             } else {

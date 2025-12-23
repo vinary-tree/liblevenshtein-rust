@@ -144,7 +144,7 @@ pub mod pathmap;
 pub mod pathmap_char;
 #[cfg(feature = "pathmap-backend")]
 pub mod pathmap_zipper;
-#[cfg(all(feature = "pathmap-backend", feature = "phonetic-rules"))]
+#[cfg(feature = "phonetic-rules")]
 pub mod phonetic_normalized;
 pub mod prefix_zipper;
 pub mod suffix_automaton;
@@ -460,4 +460,38 @@ pub trait MutableMappedDictionary: MappedDictionary {
     {
         self.union_with(other, |_, right| right.clone())
     }
+
+    /// Update an existing term's value in place, or insert a new term with a default value.
+    ///
+    /// This method is useful when you want to incrementally modify a value (e.g., adding
+    /// elements to a `HashSet` or `Vec`) without replacing it entirely.
+    ///
+    /// # Arguments
+    ///
+    /// * `term` - The term to update or insert
+    /// * `default_value` - The value to use if the term doesn't exist
+    /// * `update_fn` - Function to apply to the existing value if the term exists
+    ///
+    /// # Returns
+    ///
+    /// `true` if this was a new term (inserted with default), `false` if an existing term was updated.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use std::collections::HashSet;
+    ///
+    /// let dict: DynamicDawgChar<HashSet<u32>> = DynamicDawgChar::new();
+    ///
+    /// // First call: inserts with default value {1}
+    /// dict.update_or_insert("foo", HashSet::from([1]), |set| { set.insert(1); });
+    ///
+    /// // Second call: updates existing value to {1, 2}
+    /// dict.update_or_insert("foo", HashSet::from([2]), |set| { set.insert(2); });
+    ///
+    /// assert_eq!(dict.get_value("foo"), Some(HashSet::from([1, 2])));
+    /// ```
+    fn update_or_insert<F>(&self, term: &str, default_value: Self::Value, update_fn: F) -> bool
+    where
+        F: FnOnce(&mut Self::Value);
 }
