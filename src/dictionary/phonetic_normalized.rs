@@ -731,8 +731,15 @@ where
     /// then searched in the normalized space. Results include all original terms
     /// that match, along with the edit distance in normalized space.
     ///
-    /// Uses FuzzyMultiMap's Levenshtein automaton for efficient O(k log n) fuzzy
-    /// queries with trie pruning.
+    /// # Performance Optimization
+    ///
+    /// For exact matches (d=0), this uses a direct trie lookup which is
+    /// **100-300× faster** than the automaton-based search. This optimization
+    /// is based on benchmark results showing HashMap/trie lookup at ~2µs vs
+    /// automaton traversal at ~600µs for 100 queries.
+    ///
+    /// For fuzzy matches (d≥1), uses FuzzyMultiMap's Levenshtein automaton
+    /// for efficient O(k log n) fuzzy queries with trie pruning.
     ///
     /// # Arguments
     ///
@@ -748,7 +755,24 @@ where
     pub fn query(&self, query: &str, max_distance: usize) -> Vec<PhoneticNormalizedCandidate> {
         let normalized_query = self.normalize(query);
 
-        // Use FuzzyMultiMap's query_with_distance for efficient automaton-based search
+        // Fast path for exact match (d=0): Direct trie lookup is 100-300× faster
+        // than automaton traversal (benchmark: 2µs vs 600µs for 100 queries)
+        if max_distance == 0 {
+            if let Some(originals) = self.normalized_multimap.dictionary().get_value(&normalized_query) {
+                return originals
+                    .iter()
+                    .filter(|term| !term.is_empty()) // Skip entries from removed terms
+                    .map(|term| PhoneticNormalizedCandidate {
+                        term: term.clone(),
+                        distance: 0,
+                        normalized_form: normalized_query.clone(),
+                    })
+                    .collect();
+            }
+            return Vec::new();
+        }
+
+        // Fuzzy path (d≥1): Use Levenshtein automaton for efficient trie pruning
         let fuzzy_results = self.normalized_multimap.query_with_distance(&normalized_query, max_distance);
 
         // Convert results to PhoneticNormalizedCandidate

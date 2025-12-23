@@ -53,17 +53,10 @@ pub mod serialization;
 /// - Composable eviction wrappers (LRU, LFU, TTL, etc.)
 /// - `FuzzyMultiMap` for fuzzy queries returning aggregated collections
 ///
-/// Works with any `MappedDictionary` implementation.
-///
-/// Note: The public API examples use `PathMapDictionary` but internally this works
-/// with any dictionary type including `DynamicDawgChar`.
-#[cfg(feature = "pathmap-backend")]
+/// Works with any `MappedDictionary` implementation including `DynamicDawgChar`,
+/// `PathMapDictionary`, `SuffixAutomaton`, etc.
+#[cfg(any(feature = "pathmap-backend", feature = "phonetic-rules"))]
 pub mod cache;
-
-/// Internal cache module (crate-private) for PhoneticNormalizedDictionary
-/// Only used internally when phonetic-rules is enabled without pathmap-backend
-#[cfg(all(not(feature = "pathmap-backend"), feature = "phonetic-rules"))]
-pub(crate) mod cache;
 
 /// Interactive REPL for exploring Levenshtein dictionaries
 #[cfg(all(feature = "cli", not(target_arch = "wasm32")))]

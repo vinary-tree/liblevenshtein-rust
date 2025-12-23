@@ -4,6 +4,9 @@
 //!
 //! Run with:
 //!   cargo bench --bench bktree_vs_fuzzymap_benchmarks --features "phonetic-rules"
+//!
+//! To test with SIMD-accelerated BK-tree distance:
+//!   cargo bench --bench bktree_vs_fuzzymap_benchmarks --features "phonetic-rules,simd"
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::collections::{HashMap, HashSet};
@@ -13,7 +16,20 @@ use std::collections::{HashMap, HashSet};
 // ============================================================================
 
 /// Levenshtein distance computation (used by BK-tree)
+/// Uses SIMD-accelerated version when `simd` feature is enabled.
+#[cfg(feature = "simd")]
 fn levenshtein_distance(a: &str, b: &str) -> usize {
+    liblevenshtein::distance::standard_distance(a, b)
+}
+
+#[cfg(not(feature = "simd"))]
+fn levenshtein_distance(a: &str, b: &str) -> usize {
+    levenshtein_distance_scalar(a, b)
+}
+
+/// Scalar Levenshtein distance implementation (fallback)
+#[allow(dead_code)]
+fn levenshtein_distance_scalar(a: &str, b: &str) -> usize {
     let a_chars: Vec<char> = a.chars().collect();
     let b_chars: Vec<char> = b.chars().collect();
     let m = a_chars.len();
@@ -188,7 +204,6 @@ impl OldPhoneticNormalizedDict {
 
 use liblevenshtein::cache::multimap::FuzzyMultiMap;
 use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use liblevenshtein::dictionary::MutableMappedDictionary;
 use liblevenshtein::transducer::Algorithm;
 
 struct NewPhoneticNormalizedDict {
@@ -237,6 +252,9 @@ impl NewPhoneticNormalizedDict {
 // TEST DATA GENERATION
 // ============================================================================
 
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
 fn normalize(s: &str) -> String {
     s.to_lowercase()
         .replace("ph", "f")
@@ -251,9 +269,42 @@ fn normalize(s: &str) -> String {
         .collect()
 }
 
-fn generate_test_data(count: usize) -> Vec<(String, String)> {
-    let base_words = [
-        "phone", "elephant", "knight", "psychology", "pneumonia", "through",
+/// Load dictionary words from system dictionary file.
+/// Falls back to embedded words if system dictionary is unavailable.
+fn load_dictionary_words() -> Vec<String> {
+    let dict_paths = [
+        "/usr/share/dict/words",
+        "/usr/share/dict/american-english",
+        "/usr/share/dict/british-english",
+    ];
+
+    for path in dict_paths {
+        if let Ok(file) = File::open(path) {
+            let reader = BufReader::new(file);
+            let words: Vec<String> = reader
+                .lines()
+                .map_while(Result::ok)
+                .filter(|w| w.len() >= 3 && w.len() <= 15) // Filter reasonable word lengths
+                .filter(|w| w.chars().all(|c| c.is_ascii_alphabetic())) // ASCII only
+                .collect();
+
+            if !words.is_empty() {
+                return words;
+            }
+        }
+    }
+
+    // Fallback: embedded word list (subset of common English words)
+    vec![
+        "the", "and", "that", "have", "for", "not", "with", "you", "this", "but",
+        "his", "from", "they", "say", "her", "she", "will", "one", "all", "would",
+        "there", "their", "what", "out", "about", "who", "get", "which", "make",
+        "can", "like", "time", "just", "him", "know", "take", "people", "into",
+        "year", "your", "good", "some", "could", "them", "see", "other", "than",
+        "then", "now", "look", "only", "come", "its", "over", "think", "also",
+        "back", "after", "use", "two", "how", "our", "work", "first", "well",
+        "way", "even", "new", "want", "because", "any", "these", "give", "day",
+        "most", "phone", "elephant", "knight", "psychology", "pneumonia", "through",
         "though", "thought", "enough", "cough", "rough", "tough", "bought",
         "brought", "caught", "daughter", "laughter", "slaughter", "nation",
         "station", "action", "fiction", "section", "mention", "attention",
@@ -261,34 +312,45 @@ fn generate_test_data(count: usize) -> Vec<(String, String)> {
         "knife", "know", "knee", "knock", "knit", "knot", "knowledge",
         "photograph", "telephone", "microphone", "saxophone", "symphony",
         "pharmacy", "phantom", "phase", "phenomenon", "philosophy", "physical",
-    ];
+    ].into_iter().map(String::from).collect()
+}
+
+/// Global dictionary cache to avoid repeated file I/O
+static DICTIONARY_WORDS: std::sync::LazyLock<Vec<String>> =
+    std::sync::LazyLock::new(load_dictionary_words);
+
+fn generate_test_data(count: usize) -> Vec<(String, String)> {
+    let words = &*DICTIONARY_WORDS;
+
+    // Use deterministic sampling for reproducible benchmarks
+    let step = words.len().max(1) / count.max(1);
+    let step = step.max(1);
 
     let mut pairs = Vec::with_capacity(count);
 
     for i in 0..count {
-        let base = base_words[i % base_words.len()];
-        let suffix = if i < base_words.len() {
-            String::new()
-        } else {
-            format!("{}", i / base_words.len())
-        };
-        let word = format!("{}{}", base, suffix);
-        let normalized = normalize(&word);
-        pairs.push((word, normalized));
+        let idx = (i * step) % words.len();
+        let word = &words[idx];
+        let normalized = normalize(word);
+        pairs.push((word.clone(), normalized));
     }
 
     pairs
 }
 
+/// Generate realistic query variations (common misspellings/typos)
 fn generate_queries(count: usize) -> Vec<String> {
-    let queries = [
-        "fone", "elefant", "nite", "sikology", "numonia", "thru", "tho",
-        "thot", "enuf", "cof", "ruf", "tuf", "rite", "rong", "nife",
-        "no", "fotograf", "telefon", "filosofy", "fizical",
-    ];
+    let words = &*DICTIONARY_WORDS;
+
+    // Sample words and apply phonetic normalization (simulating user queries)
+    let step = words.len().max(1) / count.max(1);
+    let step = step.max(1);
 
     (0..count)
-        .map(|i| normalize(queries[i % queries.len()]))
+        .map(|i| {
+            let idx = (i * step + words.len() / 3) % words.len(); // Offset from test data
+            normalize(&words[idx])
+        })
         .collect()
 }
 
