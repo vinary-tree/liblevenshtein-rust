@@ -963,46 +963,73 @@ fn is_vowel(c: char) -> bool {
     (VOWEL_MASK & bit) != 0
 }
 
-/// Helper function to normalize a string using character-level phonetic rules.
-fn normalize_string_char(input: &str, rules: &[RewriteRuleChar], fuel: usize) -> String {
-    if rules.is_empty() {
-        return input.to_string();
+// H3 optimization: Thread-local buffer for PhoneChar normalization input.
+// Reuses buffer across normalize_string_char calls to avoid allocation.
+thread_local! {
+    static NORMALIZE_BUFFER: std::cell::RefCell<NormalizeBuffers> =
+        std::cell::RefCell::new(NormalizeBuffers::new());
+}
+
+struct NormalizeBuffers {
+    input_phones: Vec<PhoneChar>,
+    output_string: String,
+}
+
+impl NormalizeBuffers {
+    fn new() -> Self {
+        Self {
+            input_phones: Vec::with_capacity(64),
+            output_string: String::with_capacity(64),
+        }
     }
 
-    // Convert string to Vec<PhoneChar>
-    // Uses O(1) is_vowel() instead of O(10) array search
-    let input_phones: Vec<PhoneChar> = input
-        .chars()
-        .map(|c| {
+    fn normalize(&mut self, input: &str, rules: &[RewriteRuleChar], fuel: usize) -> String {
+        if rules.is_empty() {
+            return input.to_string();
+        }
+
+        // Reuse input buffer
+        self.input_phones.clear();
+        self.input_phones.extend(input.chars().map(|c| {
             if is_vowel(c) {
                 PhoneChar::Vowel(c)
             } else {
                 PhoneChar::Consonant(c)
             }
-        })
-        .collect();
+        }));
 
-    // Apply rules
-    let result = apply_rules_seq_char(rules, &input_phones, fuel);
+        // Apply rules
+        let result = apply_rules_seq_char(rules, &self.input_phones, fuel);
 
-    // Convert result back to string
-    match result {
-        Some(phones) => {
-            let mut s = String::with_capacity(phones.len());
-            for p in &phones {
-                match p {
-                    PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => s.push(*c),
-                    PhoneChar::Digraph(c1, c2) => {
-                        s.push(*c1);
-                        s.push(*c2);
+        // Convert result back to string using reusable buffer
+        match result {
+            Some(phones) => {
+                self.output_string.clear();
+                self.output_string.reserve(phones.len());
+                for p in &phones {
+                    match p {
+                        PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => {
+                            self.output_string.push(*c)
+                        }
+                        PhoneChar::Digraph(c1, c2) => {
+                            self.output_string.push(*c1);
+                            self.output_string.push(*c2);
+                        }
+                        PhoneChar::Silent => {}
                     }
-                    PhoneChar::Silent => {}
                 }
+                self.output_string.clone()
             }
-            s
+            None => input.to_string(),
         }
-        None => input.to_string(),
     }
+}
+
+/// Helper function to normalize a string using character-level phonetic rules.
+/// H3 optimization: Uses thread-local buffers to reduce allocations.
+#[inline]
+fn normalize_string_char(input: &str, rules: &[RewriteRuleChar], fuel: usize) -> String {
+    NORMALIZE_BUFFER.with(|buffers| buffers.borrow_mut().normalize(input, rules, fuel))
 }
 
 // ============================================================================
