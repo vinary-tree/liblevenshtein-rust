@@ -487,53 +487,74 @@ impl SharedMappingHandle {
 |---------|------------|---------|
 | **MeTTaTron** | MORK backend | Pattern matching for evaluation |
 | **Rholang** | PathMap Par | Cross-language data exchange |
-| **liblevenshtein** | FuzzySource trait | Fuzzy dictionary lookups |
+| **liblevenshtein** | PhoneticNormalizedDictionary | Phonetic-aware fuzzy dictionary lookups |
 | **MeTTaIL** | Predicate storage | Type predicate evaluation |
 
-### FuzzySource Integration (Planned)
+### FuzzySource Integration [CURRENT]
 
-liblevenshtein will integrate via the FuzzySource trait:
+liblevenshtein integrates via `PhoneticNormalizedDictionary` for phonetic-aware fuzzy matching:
 
 ```rust
-/// FuzzySource trait for fuzzy dictionary lookup
+use liblevenshtein::dictionary::phonetic_normalized::{
+    PhoneticNormalizedDictionary, PhoneticNormalizedCandidate
+};
+use liblevenshtein::phonetic::rules::english;
+
+/// FuzzySource trait for phonetic-aware fuzzy dictionary lookup.
 pub trait FuzzySource {
-    /// Fuzzy lookup with maximum edit distance
-    fn fuzzy_lookup(&self, query: &[u8], max_distance: u8)
-        -> impl Iterator<Item = (Vec<u8>, u8)>;
+    /// Fuzzy lookup with phonetic normalization and maximum edit distance.
+    fn fuzzy_lookup(&self, query: &str, max_distance: usize)
+        -> Vec<PhoneticNormalizedCandidate>;
 }
 
-/// PathMap implementation of FuzzySource
+/// PathMap implementation using PhoneticNormalizedDictionary.
 impl FuzzySource for PathMap<Vec<u8>, Vec<u8>> {
-    fn fuzzy_lookup(&self, query: &[u8], max_distance: u8)
-        -> impl Iterator<Item = (Vec<u8>, u8)>
+    fn fuzzy_lookup(&self, query: &str, max_distance: usize)
+        -> Vec<PhoneticNormalizedCandidate>
     {
-        // Use liblevenshtein automata for fuzzy matching
-        let automaton = LevenshteinAutomaton::new(query, max_distance);
+        // Extract terms from PathMap
+        let terms: Vec<String> = self.iter()
+            .filter_map(|(k, _)| String::from_utf8(k.clone()).ok())
+            .collect();
 
-        self.iter()
-            .filter_map(move |(key, _)| {
-                let distance = automaton.distance(&key)?;
-                if distance <= max_distance {
-                    Some((key.clone(), distance))
-                } else {
-                    None
-                }
-            })
+        // Build PhoneticNormalizedDictionary with English phonetic rules
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+            &terms,
+            english::combined()
+        );
+
+        // Query with phonetic normalization
+        // - d=0: Direct trie lookup (100-300× faster)
+        // - d≥1: FuzzyMultiMap with Levenshtein automaton pruning O(k log n)
+        dict.query(query, max_distance)
     }
 }
 ```
 
-### MORK Space as FuzzySource
+### PhoneticNormalizedDictionary Features
+
+- **Automatic normalization**: Terms normalized at build time using phonetic rules
+- **FuzzyMultiMap acceleration**: O(k log n) fuzzy queries via Levenshtein automaton pruning
+- **Thread-local buffers**: Optimized for concurrent queries (H3 optimization)
+- **Pre-compiled rules**: `english::zompist()`, `english::homophones()`, `english::text_speak()`, `english::combined()`
+
+### MORK Space with Phonetic Matching
 
 ```rust
-/// MORK Space implementation of FuzzySource
+use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedCandidate;
+
+/// MORK Space implementation using PhoneticNormalizedDictionary.
 impl FuzzySource for Space {
-    fn fuzzy_lookup(&self, query: &[u8], max_distance: u8)
-        -> impl Iterator<Item = (Vec<u8>, u8)>
+    fn fuzzy_lookup(&self, query: &str, max_distance: usize)
+        -> Vec<PhoneticNormalizedCandidate>
     {
         self.map.fuzzy_lookup(query, max_distance)
     }
 }
+
+/// Usage in MeTTa queries:
+/// - (fuzzy "colr" 2 $result)          - Standard Levenshtein
+/// - (fuzzy-phonetic "fone" 2 $result) - Phonetic-aware matching
 ```
 
 ---

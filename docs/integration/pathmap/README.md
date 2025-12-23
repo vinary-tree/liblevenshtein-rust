@@ -1,15 +1,15 @@
 # PathMap Integration Infrastructure
 
 **Status**: Active Integration
-**Last Updated**: 2025-12-21
-**Version**: v0.8.0
+**Last Updated**: 2025-12-23
+**Version**: v0.8.x (PhoneticNormalizedDictionary API)
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [v0.8.0 API Highlights](#v080-api-highlights)
+2. [PhoneticNormalizedDictionary API](#phoneticnormalizeddictionary-api)
 3. [PathMap as the Primary Integration Point](#pathmap-as-the-primary-integration-point)
 4. [Architecture Alignment](#architecture-alignment)
 5. [PathMap Feature in liblevenshtein](#pathmap-feature-in-liblevenshtein)
@@ -69,41 +69,77 @@ PathMap is a trie-based prefix-compressed key-value store that serves as the sha
 
 ---
 
-## v0.8.0 API Highlights
+## PhoneticNormalizedDictionary API
 
-liblevenshtein v0.8.0 introduces compile-time macros and the ProductAutomatonChar for NFA × Levenshtein composition.
+liblevenshtein provides `PhoneticNormalizedDictionary` for phonetic-aware fuzzy matching with automatic normalization and optimized query paths.
 
-### Compile-Time Macros
+### Architecture Overview
 
-```rust
-use liblevenshtein::{llre, llev};
-
-// LLRE: Compile-time regex → NFA (embedded in binary)
-let phone_pattern = llre!(r"(ph|f)one");
-
-// LLEV: Compile-time phonetic rules
-let rules = llev!(r#"
-    ph -> f;
-    gh -> / [:vowel:]_;
-    tion -> shun;
-"#);
+```
+PhoneticNormalizedDictionary<V, D>
+├── originals: D                           # Backend dictionary (DynamicDawgChar)
+├── normalized_multimap: FuzzyMultiMap     # normalized → {originals}
+│   └── Uses Levenshtein automaton for O(k log n) fuzzy queries
+├── rules: Vec<RewriteRuleChar>            # Phonetic transformation rules
+└── fuel: usize                            # Prevents infinite rule loops
 ```
 
-### ProductAutomaton Composition
+**Key Optimizations:**
+- **Exact match fast path (d=0)**: Direct trie lookup is **100-300× faster** than automaton traversal
+- **FuzzyMultiMap**: O(k log n) fuzzy queries via Levenshtein automaton pruning
+- **Thread-local NormalizeBuffers (H3)**: Reuses buffers to reduce allocations
+- **O(1) vowel classification**: Bitmask lookup instead of linear array search
 
-The `ProductAutomatonChar` combines a phonetic NFA with Levenshtein distance bounds:
+### Building a Dictionary
 
 ```rust
-use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
-use liblevenshtein::phonetic::verified::rules_to_nfa_char;
+use liblevenshtein::dictionary::phonetic_normalized::{
+    PhoneticNormalizedDictionary, PhoneticNormalizedCandidate
+};
+use liblevenshtein::phonetic::rules::english;
 
-// Compile rules to NFA and compose with Levenshtein automaton
-let nfa = rules_to_nfa_char(&rules.rules);
-let product = ProductAutomatonChar::new(nfa, 2);  // max distance = 2
+// Build with combined English rules (zompist + homophones + text_speak)
+let combined_rules = english::combined();
+let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, combined_rules);
 
-// Check acceptance
-assert!(product.accepts("phone"));  // Matches via ph→f rule
-assert!(product.accepts("fone"));   // Direct match
+// Or use specific rule sets
+let dict_zompist = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+    &words,
+    english::zompist().rules
+);
+```
+
+### Fuzzy Queries
+
+```rust
+// Query returns Vec<PhoneticNormalizedCandidate>
+let results = dict.query("fone", 2);  // max distance = 2
+
+for candidate in results {
+    println!("{}: distance={}, normalized='{}'",
+        candidate.term, candidate.distance, candidate.normalized_form);
+}
+// Output:
+// phone: distance=0, normalized='fon'
+// phon: distance=1, normalized='fon'
+
+// PhoneticNormalizedCandidate structure:
+// - term: String           # Original term from dictionary
+// - distance: usize        # Edit distance in normalized space
+// - normalized_form: String # The normalized form that matched
+```
+
+### Advanced Query Methods
+
+```rust
+// Regex query on normalized forms
+let regex_results = dict.query_regex("(ph|f)one", 0)?;
+
+// Phonetic pattern expansion
+let pattern = dict.expand_to_phonetic_pattern("fone");  // → "(ph|f)one"
+
+// Direct normalization
+let normalized = dict.normalize("phone");  // → "fon"
 ```
 
 ### Pre-Compiled English Rules
@@ -120,47 +156,36 @@ let homophones = english::homophones();
 // Text-speak rules (e.g., "u" → "you", "2" → "to/too/two")
 let text_speak = english::text_speak();
 
-// Combine rule sets
-use liblevenshtein::phonetic::RuleSetChar;
-let combined = RuleSetChar::new().merge(&zompist).merge(&homophones);
+// Combined rule set (recommended for most use cases)
+let combined = english::combined();
 ```
 
-### Current Module Structure
-
-The phonetic matching implementation lives in `src/phonetic/`:
+### Module Structure
 
 ```
+src/dictionary/
+├── phonetic_normalized/
+│   ├── mod.rs           # PhoneticNormalizedDictionary
+│   ├── candidate.rs     # PhoneticNormalizedCandidate
+│   └── normalize.rs     # Thread-local NormalizeBuffers (H3)
+├── fuzzy_multimap.rs    # FuzzyMultiMap with Levenshtein automaton pruning
+└── ...
+
 src/phonetic/
-├── nfa/
-│   ├── mod.rs           # Module root
-│   ├── nfa.rs           # NFAChar implementation
-│   ├── thompson.rs      # Thompson's construction
-│   ├── product.rs       # ProductAutomatonChar (NFA × Levenshtein)
-│   ├── compiler.rs      # Pattern compilation
-│   └── types.rs         # StateId, Transition, CharClass
-├── llev/                # LLEV rule parsing
-├── llre/                # LLRE pattern compilation
-├── rules/               # english::zompist(), homophones(), text_speak()
-└── verified/            # rules_to_nfa_char()
+├── rules/               # english::zompist(), homophones(), text_speak(), combined()
+├── normalizer.rs        # Phonetic normalization logic
+└── ...
 ```
 
-### Error Handling Patterns
+### Performance Notes
 
-```rust
-use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
+| Query Type | Complexity | Notes |
+|------------|------------|-------|
+| Exact (d=0) | O(k) | Direct trie lookup, 100-300× faster |
+| Fuzzy (d≥1) | O(k log n) | Levenshtein automaton pruning |
+| Regex | O(n × k) | Scans normalized forms |
 
-// min_distance returns Option<usize>
-match product.min_distance(term) {
-    Some(0) => println!("Exact match"),
-    Some(dist) => println!("Fuzzy match with distance {}", dist),
-    None => println!("No match within budget"),
-}
-
-// Or use accepts() for boolean check
-if product.accepts(term) {
-    // Within distance budget
-}
-```
+Where k = query length, n = dictionary size.
 
 ---
 
@@ -177,20 +202,23 @@ PathMap is **the primary shared layer** between liblevenshtein and MORK. It is i
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Layer 3: MeTTa Query Syntax                                    │
+│  !(match &space (fuzzy-phonetic "fone" 2 $result) $result)     │
 │  !(match &space (fuzzy "colr" 2 $result) $result)              │
-│  User-facing query language                                     │
+│  User-facing query language (phonetic-aware and standard)       │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Layer 2: MORK FuzzySource Adapter                              │
-│  Implements Source trait → calls liblevenshtein                 │
+│  Layer 2: MORK FuzzySource / FuzzyPhoneticSource Adapters       │
+│  FuzzyPhoneticSource → PhoneticNormalizedDictionary.query()    │
+│  FuzzySource → standard Levenshtein transducer                  │
 │  Location: MORK/kernel/src/fuzzy_source.rs                     │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │  Layer 1: liblevenshtein + PathMap (THIS LAYER)                 │
-│  PathMapDictionary backend for liblevenshtein transducers       │
-│  Location: liblevenshtein-rust/src/dictionary/pathmap.rs       │
+│  PhoneticNormalizedDictionary for phonetic-aware fuzzy matching │
+│  PathMapDictionary backend for standard transducers             │
+│  Location: liblevenshtein-rust/src/dictionary/                 │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -212,17 +240,19 @@ PathMap is **the primary shared layer** between liblevenshtein and MORK. It is i
 ### Data Flow
 
 ```
-MeTTa Query → MORK Space
+MeTTa Query: (fuzzy-phonetic "fone" 2 $result)
                  │
                  ▼
-     FuzzySource.query()  ←── MORK adapter (Layer 2)
+          MORK Space
                  │
                  ▼
- liblevenshtein::Transducer  ←── External library
+FuzzyPhoneticSource.query()  ←── MORK adapter (Layer 2)
                  │
                  ▼
-    PathMapDictionary.get()  ←── Layer 1 (this doc)
+PhoneticNormalizedDictionary.query()  ←── liblevenshtein API
                  │
+                 ├── d=0: Direct trie lookup (100-300× faster)
+                 ├── d≥1: FuzzyMultiMap with Levenshtein automaton pruning O(k log n)
                  ▼
     PathMap (memory-mapped)  ←── Shared storage
 ```
@@ -599,73 +629,99 @@ PathMap serves as the shared storage between liblevenshtein and MORK.
 
 ```rust
 use pathmap::PathMap;
-use liblevenshtein::{PathMapDictionary, Transducer, Algorithm};
-use mork_kernel::{Space, FuzzySource};
+use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
+use liblevenshtein::phonetic::rules::english;
+use mork_kernel::{Space, FuzzyPhoneticSource};
 
 fn setup_shared_dictionary() -> Result<(), Error> {
-    // Create shared PathMap
+    // Load shared PathMap
     let pathmap = PathMap::mmap("dictionary.pathmap")?;
 
-    // Use in liblevenshtein for fuzzy matching
-    let dictionary = PathMapDictionary::from_pathmap(pathmap.clone());
-    let transducer = Transducer::builder()
-        .dictionary(dictionary)
-        .algorithm(Algorithm::Transposition)
-        .max_distance(2)
-        .build();
+    // Extract terms from PathMap
+    let words: Vec<String> = pathmap.iter()
+        .filter_map(|(k, _)| String::from_utf8(k.to_vec()).ok())
+        .collect();
 
-    // Use same PathMap in MORK for pattern queries
+    // Build PhoneticNormalizedDictionary with combined English rules
+    let combined_rules = english::combined();
+    let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, combined_rules);
+
+    // Use in MORK for phonetic-aware fuzzy queries
     let mork_space = Space::new();
-    mork_space.add_source(FuzzySource::from_transducer(transducer));
+    mork_space.add_source(FuzzyPhoneticSource::from_phonetic_dict(dict));
 
-    // Now both systems share the same underlying trie
+    // Query example
+    let results = mork_space.query("(fuzzy-phonetic \"fone\" 2 $result)");
+    // Returns: ["phone", "phon", "fawn", ...]
+
     Ok(())
 }
 ```
 
-### FuzzySource Integration
+### FuzzyPhoneticSource Integration
 
 ```rust
-// MORK kernel integration
+// MORK kernel integration with PhoneticNormalizedDictionary
 
-use liblevenshtein::{PathMapDictionary, Transducer};
+use liblevenshtein::dictionary::phonetic_normalized::{
+    PhoneticNormalizedDictionary, PhoneticNormalizedCandidate
+};
+use liblevenshtein::phonetic::rules::english;
 use mork_kernel::Source;
+use pathmap::PathMap;
 
-/// MORK Source backed by liblevenshtein transducer
-pub struct FuzzySource {
-    transducer: Transducer<PathMapDictionary>,
+/// MORK Source backed by PhoneticNormalizedDictionary for phonetic-aware matching.
+pub struct FuzzyPhoneticSource {
+    dict: PhoneticNormalizedDictionary<()>,
     max_distance: usize,
 }
 
-impl FuzzySource {
-    pub fn new(pathmap: PathMap, max_distance: usize) -> Self {
-        let dictionary = PathMapDictionary::from_pathmap(pathmap);
-        let transducer = Transducer::builder()
-            .dictionary(dictionary)
-            .algorithm(Algorithm::Transposition)
-            .max_distance(max_distance)
-            .build();
+impl FuzzyPhoneticSource {
+    /// Create from PathMap with combined English phonetic rules.
+    pub fn new(pathmap: &PathMap, max_distance: usize) -> Self {
+        let words: Vec<String> = pathmap.iter()
+            .filter_map(|(k, _)| String::from_utf8(k.to_vec()).ok())
+            .collect();
 
-        Self { transducer, max_distance }
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+            &words,
+            english::combined()
+        );
+
+        Self { dict, max_distance }
+    }
+
+    /// Create from existing PhoneticNormalizedDictionary.
+    pub fn from_phonetic_dict(dict: PhoneticNormalizedDictionary<()>) -> Self {
+        Self { dict, max_distance: 2 }
     }
 }
 
-impl Source for FuzzySource {
-    type Zipper = TransducerZipper;
+impl Source for FuzzyPhoneticSource {
+    type Zipper = FuzzyZipper;
 
     fn zipper(&self) -> Self::Zipper {
-        TransducerZipper::new(&self.transducer)
+        FuzzyZipper::new(Vec::new(), &[])
     }
 
     fn query(&self, pattern: &[u8]) -> Vec<Match> {
-        self.transducer
-            .query(pattern, self.max_distance)
+        let query_str = String::from_utf8_lossy(pattern);
+        self.dict.query(&query_str, self.max_distance)
+            .into_iter()
             .map(|candidate| Match {
-                key: candidate.term.clone(),
+                key: candidate.term.into_bytes(),
                 distance: candidate.distance,
+                normalized_form: Some(candidate.normalized_form),
             })
             .collect()
     }
+}
+
+/// Match result with optional normalized form for debugging/ranking.
+pub struct Match {
+    pub key: Vec<u8>,
+    pub distance: usize,
+    pub normalized_form: Option<String>,
 }
 ```
 
@@ -981,12 +1037,12 @@ src/wfst/                 # PROPOSED - Future Implementation
 
 ### Relationship to Current Implementation
 
-| Feature | Current (v0.8.0) | Proposed WFST |
-|---------|------------------|---------------|
-| Location | `src/phonetic/nfa/` | `src/wfst/` |
+| Feature | Current (PhoneticNormalizedDictionary) | Proposed WFST |
+|---------|----------------------------------------|---------------|
+| Location | `src/dictionary/phonetic_normalized/` | `src/wfst/` |
 | Weights | Levenshtein distance (integer) | Arbitrary semiring |
-| Composition | NFA × Levenshtein only | General WFST × WFST |
-| Primary Type | `ProductAutomatonChar` | `WeightedTransducer` |
+| Composition | FuzzyMultiMap with automaton pruning | General WFST × WFST |
+| Primary Type | `PhoneticNormalizedDictionary` | `WeightedTransducer` |
 
 See [WFST Composition](../mork/wfst_composition.md) for the full proposal.
 

@@ -10,7 +10,7 @@ This document describes how MORK (MeTTa Optimal Reduction Kernel) integrates wit
 ## Table of Contents
 
 1. [Integration Architecture](#integration-architecture)
-2. [v0.8.0 API Highlights](#v080-api-highlights)
+2. [PhoneticNormalizedDictionary API](#phoneticnormalizeddictionary-api)
 3. [Executive Summary](#executive-summary)
 4. [Architecture Overview](#architecture-overview)
 5. [MeTTa Query Examples](#metta-query-examples)
@@ -35,20 +35,20 @@ Three separate integration layers working together:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Layer 3: MeTTa Query Syntax                                    │
-│  !(match &space (fuzzy "colr" 2 $result) $result)              │
+│  !(match &space (fuzzy-phonetic "fone" 2 $result) $result)     │
 │  User-facing query language for fuzzy matching                  │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │  Layer 2: MORK FuzzySource Adapter                              │
 │  MORK/kernel/src/fuzzy_source.rs                               │
-│  Implements Source trait, wraps liblevenshtein transducer       │
+│  Implements Source trait, wraps PhoneticNormalizedDictionary    │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  Layer 1: liblevenshtein/PathMap Integration                    │
-│  liblevenshtein-rust/src/dictionary/pathmap.rs                 │
-│  PathMapDictionary backend, shared vocabulary with MORK         │
+│  Layer 1: liblevenshtein PhoneticNormalizedDictionary           │
+│  liblevenshtein-rust/src/dictionary/phonetic_normalized.rs     │
+│  FuzzyMultiMap backend, shared vocabulary with MORK via PathMap │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -61,22 +61,23 @@ Three separate integration layers working together:
 ### Data Flow
 
 ```
-MeTTa Query: (fuzzy "colr" 2 $result)
+MeTTa Query: (fuzzy-phonetic "fone" 2 $result)
        │
        ▼
 MORK query_multi_raw()
        │
        ▼
-FuzzySource.query()  ←── MORK adapter (implements Source trait)
+FuzzyPhoneticSource.query()  ←── MORK adapter (implements Source trait)
        │
        ▼
-liblevenshtein::Transducer.query()  ←── External library call
+PhoneticNormalizedDictionary.query()  ←── liblevenshtein API
+       │
+       ├── d=0: Direct trie lookup (100-300× faster)
+       │
+       ├── d≥1: FuzzyMultiMap with Levenshtein automaton pruning O(k log n)
        │
        ▼
-PathMapDictionary  ←── Shared storage backend
-       │
-       ▼
-PathMap (mmap)  ←── Same data as MORK's BTMSource/ACTSource
+PathMap (mmap)  ←── Shared storage backend with MORK's BTMSource/ACTSource
 ```
 
 ### Why This Design?
@@ -89,76 +90,105 @@ PathMap (mmap)  ←── Same data as MORK's BTMSource/ACTSource
 
 ---
 
-## v0.8.0 API Highlights
+## PhoneticNormalizedDictionary API
 
-**[CURRENT]** liblevenshtein v0.8.0 provides these key APIs for MORK integration:
+**[CURRENT]** liblevenshtein provides `PhoneticNormalizedDictionary` as the primary API for MORK integration:
 
-### Compile-Time Macros
+### Architecture
 
-```rust
-use liblevenshtein::{llre, llev};
+The dictionary uses a dual-index architecture with **FuzzyMultiMap** (Levenshtein automaton pruning):
 
-// LLRE: Compile-time regex → NFA (embedded in binary)
-let phone_pattern = llre!(r"(ph|f)one");
-
-// LLEV: Compile-time phonetic rules
-let rules = llev!(r#"
-    ph -> f;
-    gh -> / [:vowel:]_;
-    tion -> shun;
-"#);
+```
+PhoneticNormalizedDictionary<V, D>
+├── originals: D                           # Backend dictionary (DynamicDawgChar)
+├── normalized_multimap: FuzzyMultiMap     # normalized → {originals}
+│   └── Uses Levenshtein automaton for O(k log n) fuzzy queries
+├── rules: Vec<RewriteRuleChar>            # Phonetic transformation rules
+└── fuel: usize                            # Prevents infinite rule loops
 ```
 
-### ProductAutomaton Composition
+**Key Optimizations:**
+- **Exact match fast path (d=0)**: Direct trie lookup is **100-300× faster** than automaton traversal
+- **FuzzyMultiMap**: O(k log n) fuzzy queries via Levenshtein automaton pruning
+- **Thread-local NormalizeBuffers (H3)**: Reuses buffers to reduce allocations
+- **O(1) vowel classification**: Bitmask lookup instead of linear array search
 
-The `ProductAutomatonChar` combines a phonetic NFA with Levenshtein distance bounds:
+### Basic Usage
 
 ```rust
-use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
-use liblevenshtein::phonetic::verified::rules_to_nfa_char;
+use liblevenshtein::dictionary::phonetic_normalized::{
+    PhoneticNormalizedDictionary, PhoneticNormalizedCandidate
+};
+use liblevenshtein::phonetic::rules::english;
 
-// Compile rules to NFA and compose with Levenshtein automaton
-let nfa = rules_to_nfa_char(&rules.rules);
-let product = ProductAutomatonChar::new(nfa, 2);  // max distance = 2
+// Build with combined English rules (zompist + homophones + text_speak)
+let combined_rules = english::combined();
+let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, combined_rules);
 
-// Check acceptance
-assert!(product.accepts("phone"));  // Matches via ph→f rule
+// Fuzzy query - returns Vec<PhoneticNormalizedCandidate>
+// Fast path for d=0 (100-300× faster), automaton pruning for d≥1
+let results = dict.query("fone", 2);
+for candidate in results {
+    println!("{}: distance={}, normalized='{}'",
+        candidate.term, candidate.distance, candidate.normalized_form);
+}
+// Output: "phone": distance=0, normalized='fn'  (both "phone" and "fone" normalize to "fn")
 ```
 
-### Pre-Compiled English Rules
+### PhoneticNormalizedCandidate Structure
+
+```rust
+/// Result from phonetic fuzzy matching.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PhoneticNormalizedCandidate {
+    pub term: String,           // Original term from dictionary
+    pub distance: usize,        // Edit distance in normalized space
+    pub normalized_form: String, // The normalized form that matched
+}
+```
+
+### Query Methods
+
+```rust
+// Basic fuzzy query with phonetic awareness
+let results = dict.query("fone", 2);
+
+// Regex query on normalized forms
+let regex_results = dict.query_regex("(ph|f)one", 0)?;
+
+// Phonetic pattern expansion (generates regex from rules)
+let pattern = dict.expand_to_phonetic_pattern("fone");  // → "(ph|f)one"
+
+// Query with expanded phonetic pattern
+let phonetic_results = dict.query_phonetic_pattern("fone", 2)?;
+```
+
+### Pre-Compiled English Rule Sets
 
 ```rust
 use liblevenshtein::phonetic::rules::english;
 
-// 62 orthographic rules from Zompist
-let zompist = english::zompist();
-
-// Homophone rules
-let homophones = english::homophones();
-
-// Text-speak rules
-let text_speak = english::text_speak();
-
-// Combine rule sets
-use liblevenshtein::phonetic::RuleSetChar;
-let combined = RuleSetChar::new().merge(&zompist).merge(&homophones);
+let zompist = english::zompist();        // 62 orthographic rules from Zompist
+let homophones = english::homophones();  // Homophone pair rules
+let text_speak = english::text_speak();  // Text-speak expansions
+let combined = english::combined();      // All rules combined
 ```
 
 ### Current Module Structure
 
 ```
-src/phonetic/           # [CURRENT] - Available in v0.8.0
-├── nfa/
-│   ├── product.rs      # ProductAutomatonChar (NFA × Levenshtein)
-│   ├── nfa.rs          # NFAChar implementation
-│   └── thompson.rs     # Thompson's construction
-├── rules/              # english::zompist(), homophones(), text_speak()
-└── verified/           # rules_to_nfa_char()
+src/dictionary/
+├── phonetic_normalized.rs    # [CURRENT] PhoneticNormalizedDictionary
+└── ...
 
-src/wfst/               # [PROPOSED] - Future implementation
-├── weight.rs           # Semiring weights
-├── composition.rs      # WFST composition
-└── ...                 # See wfst_composition.md
+src/phonetic/
+├── rules/                    # [CURRENT] english::zompist(), homophones(), text_speak(), combined()
+└── ...
+
+src/wfst/                     # [PROPOSED] - Future implementation
+├── weight.rs                 # Semiring weights
+├── composition.rs            # WFST composition
+└── ...                       # See wfst_composition.md
 ```
 
 ---
@@ -323,15 +353,21 @@ This query demonstrates single-pass composition:
 ; Results ordered by edit distance (closest matches first)
 ```
 
-### Phonetic Matching (Phase C)
+### Phonetic Matching **[CURRENT]**
+
+Using `fuzzy-phonetic` for phonetic-aware matching via `PhoneticNormalizedDictionary`:
 
 ```metta
 ; Find person names that sound like "Steven" (phonetic similarity)
 !(match &space
-    (= (person-name $id) (fuzzy-phonetic "Steven" english $matched))
+    (= (person-name $id) (fuzzy-phonetic "Steven" 2 $matched))
     ($id $matched))
 ; Returns: ("p1" "Stephen") ("p2" "Stefan") ("p3" "Stephan") ("p4" "Steve")
 ; Phonetic rules: "ph" ≈ "f", "v" ≈ "ph", final vowel variations
+; Both "Steven" and "Stephen" normalize to "stfn" → distance=0 match!
+
+; The underlying implementation uses PhoneticNormalizedDictionary:
+; dict.query("Steven", 2) returns PhoneticNormalizedCandidate for each match
 ```
 
 ### Complex Multi-Constraint Queries
@@ -706,6 +742,13 @@ Phase D (Grammar)
 
 ## Changelog
 
+- **2025-12-23**: Updated to PhoneticNormalizedDictionary API
+  - Replaced v0.8.0 API Highlights with PhoneticNormalizedDictionary section
+  - Updated architecture to reflect FuzzyMultiMap with Levenshtein automaton pruning
+  - Added `fuzzy-phonetic` MeTTa syntax for phonetic-aware matching
+  - Updated Data Flow diagram to show PhoneticNormalizedDictionary.query()
+  - Marked Phonetic Matching as [CURRENT] (no longer Phase C)
+  - Added key optimizations: exact match fast path (100-300× faster), O(1) vowel classification
 - **2025-12-21**: Updated for v0.8.0 APIs
   - Added v0.8.0 API Highlights section (llre!/llev!, ProductAutomatonChar, english::*)
   - Added [CURRENT] vs [PROPOSED] markers throughout document

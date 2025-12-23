@@ -1,73 +1,82 @@
 # Phase A: FuzzySource Implementation Guide
 
-**Last Updated**: 2025-12-21
-**Version**: v0.8.0
-**Status**: Partially Implemented
+**Last Updated**: 2025-12-23
+**Version**: v0.8.x (PhoneticNormalizedDictionary API)
+**Status**: Implementation Guide
 
-This document provides detailed implementation guidance for Phase A of the MORK integration: creating a FuzzySource that enables approximate string matching in MeTTa queries.
-
-> **Note**: This document describes the proposed FuzzySource adapter for MORK. liblevenshtein v0.8.0 provides the underlying APIs (`Transducer`, `ProductAutomatonChar`, `english::*` rules) that this adapter would wrap.
+This document provides detailed implementation guidance for MORK integration: creating FuzzySource and FuzzyPhoneticSource that enable approximate string matching in MeTTa queries.
 
 ## Overview
 
-**Goal**: Enable MORK queries to perform fuzzy symbol matching using liblevenshtein's transducer.
+**Goal**: Enable MORK queries to perform fuzzy symbol matching using liblevenshtein's `PhoneticNormalizedDictionary`.
 
-**Result**: MeTTa queries like `!(match &space (fuzzy "colr" 2 $result) $result)` return approximate matches within edit distance 2.
+**Result**: MeTTa queries support both standard and phonetic-aware fuzzy matching:
+- `!(match &space (fuzzy "colr" 2 $result) $result)` - standard Levenshtein
+- `!(match &space (fuzzy-phonetic "fone" 2 $result) $result)` - phonetic-aware matching
 
 ---
 
-## v0.8.0 liblevenshtein APIs
+## PhoneticNormalizedDictionary API
 
-FuzzySource can leverage these v0.8.0 APIs from liblevenshtein:
+The FuzzySource adapters use `PhoneticNormalizedDictionary` for phonetic-aware fuzzy matching.
 
-### Basic Transducer (Levenshtein)
+### Architecture Overview
 
-```rust
-use liblevenshtein::transducer::{Algorithm, Transducer};
-use liblevenshtein::dictionary::DynamicDawgChar;
-
-let dict = DynamicDawgChar::from_iter(["color", "colour", "collar", "blue"]);
-let transducer = Transducer::new(&dict, Algorithm::Transposition);
-
-for candidate in transducer.query("colr", 2) {
-    println!("{}: distance {}", candidate.term, candidate.distance);
-}
+```
+PhoneticNormalizedDictionary<V, D>
+├── originals: D                           # Backend dictionary (DynamicDawgChar)
+├── normalized_multimap: FuzzyMultiMap     # normalized → {originals}
+│   └── Uses Levenshtein automaton for O(k log n) fuzzy queries
+├── rules: Vec<RewriteRuleChar>            # Phonetic transformation rules
+└── fuel: usize                            # Prevents infinite rule loops
 ```
 
-### ProductAutomatonChar (Phonetic + Levenshtein)
+**Key Optimizations:**
+- **Exact match fast path (d=0)**: Direct trie lookup is **100-300× faster** than automaton traversal
+- **FuzzyMultiMap**: O(k log n) fuzzy queries via Levenshtein automaton pruning
+- **Thread-local NormalizeBuffers (H3)**: Reuses buffers to reduce allocations
+- **O(1) vowel classification**: Bitmask lookup instead of linear array search
 
-For phonetic-aware matching, use `ProductAutomatonChar`:
+### Building a Dictionary
 
 ```rust
-use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
-use liblevenshtein::phonetic::verified::rules_to_nfa_char;
+use liblevenshtein::dictionary::phonetic_normalized::{
+    PhoneticNormalizedDictionary, PhoneticNormalizedCandidate
+};
 use liblevenshtein::phonetic::rules::english;
 
-// Pre-compiled English rules (62 Zompist orthographic rules)
-let rules = english::zompist();
-let nfa = rules_to_nfa_char(&rules.rules);
-let product = ProductAutomatonChar::new(nfa, 2);
+// Build with combined English rules (zompist + homophones + text_speak)
+let combined_rules = english::combined();
+let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, combined_rules);
 
-// Check acceptance (considers both phonetic rules and edit distance)
-assert!(product.accepts("phone"));  // Matches via ph→f rule
+// Or use specific rule sets
+let dict_zompist = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+    &words,
+    english::zompist().rules
+);
 ```
 
-### Compile-Time Pattern Embedding
+### Fuzzy Queries
 
 ```rust
-use liblevenshtein::{llre, llev};
+// Query returns Vec<PhoneticNormalizedCandidate>
+let results = dict.query("fone", 2);  // max distance = 2
 
-// LLRE: Compile-time regex → NFA (embedded in binary)
-let phone_pattern = llre!(r"(ph|f)one");
+for candidate in results {
+    println!("{}: distance={}, normalized='{}'",
+        candidate.term, candidate.distance, candidate.normalized_form);
+}
+// Output:
+// phone: distance=0, normalized='fon'
+// phon: distance=1, normalized='fon'
 
-// LLEV: Compile-time phonetic rules
-let rules = llev!(r#"
-    ph -> f;
-    gh -> / [:vowel:]_;
-"#);
+// PhoneticNormalizedCandidate structure:
+// - term: String           # Original term from dictionary
+// - distance: usize        # Edit distance in normalized space
+// - normalized_form: String # The normalized form that matched
 ```
 
-### Pre-Compiled English Rule Sets
+### Pre-Compiled English Rules
 
 ```rust
 use liblevenshtein::phonetic::rules::english;
@@ -76,9 +85,8 @@ let zompist = english::zompist();        // 62 orthographic rules
 let homophones = english::homophones();  // Homophone pairs
 let text_speak = english::text_speak();  // Text-speak expansions
 
-// Combine rule sets
-use liblevenshtein::phonetic::RuleSetChar;
-let combined = RuleSetChar::new().merge(&zompist).merge(&homophones);
+// Combined rule set (recommended for most use cases)
+let combined = english::combined();
 ```
 
 ---
@@ -88,26 +96,26 @@ let combined = RuleSetChar::new().merge(&zompist).merge(&homophones);
 ### Data Flow
 
 ```
-MeTTa Query
+MeTTa Query: (fuzzy-phonetic "fone" 2 $result)
     |
     v
 MORK Query Parser
     |
-    | Recognizes (fuzzy ...) pattern
+    | Recognizes (fuzzy ...) or (fuzzy-phonetic ...) pattern
     v
-FuzzySource::new(expr)
+FuzzySource or FuzzyPhoneticSource::new(expr)
     |
-    | Parses: max_distance, algorithm, pattern
+    | Parses: max_distance, pattern
     v
-FuzzySource::request()
+FuzzyPhoneticSource::request()
     |
     | Requests BTM (PathMap) access
     v
-FuzzySource::source()
+FuzzyPhoneticSource::source()
     |
     | Builds FuzzyDictionaryView from PathMap
-    | Creates Transducer<PathMapDictionary>
-    | Returns FuzzyZipper over candidates
+    | Uses PhoneticNormalizedDictionary.query()
+    | Returns FuzzyZipper over PhoneticNormalizedCandidate
     v
 ProductZipper (combines with other sources)
     |
@@ -115,7 +123,7 @@ ProductZipper (combines with other sources)
 Unification with query pattern
     |
     v
-Results
+Results (with normalized forms for debugging/ranking)
 ```
 
 ### Component Relationships
@@ -124,35 +132,39 @@ Results
 ┌─────────────────────────────────────────────────────────────┐
 │ MORK/kernel/src/                                            │
 │                                                             │
-│  ┌─────────────────┐     ┌─────────────────┐               │
-│  │ sources.rs      │     │ fuzzy_source.rs │ (NEW)         │
-│  │                 │     │                 │               │
-│  │ ASource enum    │◄────│ FuzzySource     │               │
-│  │   BTMSource     │     │ FuzzyConfig     │               │
-│  │   ACTSource     │     │ FuzzyResult     │               │
-│  │   FuzzySource   │     └────────┬────────┘               │
-│  └────────┬────────┘              │                        │
-│           │                       │                        │
-│           v                       v                        │
-│  ┌─────────────────┐     ┌─────────────────┐               │
-│  │ AFactor enum    │     │ fuzzy_zipper.rs │ (NEW)         │
-│  │   PosSource     │     │                 │               │
-│  │   ACTSource     │◄────│ FuzzyZipper     │               │
-│  │   FuzzySource   │     │                 │               │
-│  └─────────────────┘     └────────┬────────┘               │
-│                                   │                        │
-└───────────────────────────────────│────────────────────────┘
-                                    │
-                                    v
+│  ┌─────────────────────┐     ┌─────────────────────────┐   │
+│  │ sources.rs          │     │ fuzzy_source.rs         │   │
+│  │                     │     │                         │   │
+│  │ ASource enum        │◄────│ FuzzySource             │   │
+│  │   BTMSource         │     │ FuzzyPhoneticSource     │   │
+│  │   ACTSource         │     │ FuzzyConfig             │   │
+│  │   FuzzySource       │     │ FuzzyDictionaryView     │   │
+│  │   FuzzyPhoneticSrc  │     └───────────┬─────────────┘   │
+│  └──────────┬──────────┘                 │                 │
+│             │                            │                 │
+│             v                            v                 │
+│  ┌─────────────────────┐     ┌─────────────────────────┐   │
+│  │ AFactor enum        │     │ fuzzy_zipper.rs         │   │
+│  │   PosSource         │     │                         │   │
+│  │   ACTSource         │◄────│ FuzzyZipper (Candidate) │   │
+│  │   FuzzySource       │     │                         │   │
+│  │   FuzzyPhoneticSrc  │     └───────────┬─────────────┘   │
+│  └─────────────────────┘                 │                 │
+│                                          │                 │
+└──────────────────────────────────────────│─────────────────┘
+                                           │
+                                           v
 ┌─────────────────────────────────────────────────────────────┐
 │ liblevenshtein-rust/src/                                    │
 │                                                             │
-│  ┌─────────────────┐     ┌─────────────────┐               │
-│  │ transducer/     │     │ dictionary/     │               │
-│  │   mod.rs        │     │   pathmap.rs    │               │
-│  │   Transducer<D> │◄────│ PathMapDict     │               │
-│  │   Candidate     │     │                 │               │
-│  └─────────────────┘     └─────────────────┘               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ dictionary/phonetic_normalized/                      │   │
+│  │   PhoneticNormalizedDictionary                       │   │
+│  │   PhoneticNormalizedCandidate                        │   │
+│  │                                                      │   │
+│  │   .query() → d=0: trie lookup (100-300× faster)     │   │
+│  │           → d≥1: FuzzyMultiMap automaton pruning     │   │
+│  └─────────────────────────────────────────────────────┘   │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -248,12 +260,19 @@ pub struct FuzzyResult {
 ### Step 3: Create FuzzyDictionaryView
 
 ```rust
-/// Wrapper providing fuzzy lookup over a PathMap subtrie.
+use liblevenshtein::dictionary::phonetic_normalized::{
+    PhoneticNormalizedDictionary, PhoneticNormalizedCandidate
+};
+use liblevenshtein::phonetic::rules::english;
+use pathmap::PathMap;
+use pathmap::zipper::{ReadZipperUntracked, ZipperIteration};
+
+/// Wrapper providing phonetic-aware fuzzy lookup over a PathMap subtrie.
 ///
-/// This struct builds a temporary dictionary from PathMap symbols
-/// and provides fuzzy query capabilities via liblevenshtein.
+/// This struct builds a PhoneticNormalizedDictionary from PathMap symbols
+/// and provides phonetic-aware fuzzy query capabilities.
 pub struct FuzzyDictionaryView {
-    transducer: Transducer<PathMapDictionary<()>>,
+    dict: PhoneticNormalizedDictionary<()>,
 }
 
 impl FuzzyDictionaryView {
@@ -262,162 +281,179 @@ impl FuzzyDictionaryView {
     /// # Arguments
     /// * `map` - The PathMap to extract symbols from
     /// * `prefix` - Path prefix to scope the dictionary
-    /// * `config` - Fuzzy matching configuration
     ///
     /// # Example
     /// ```rust
-    /// let view = FuzzyDictionaryView::new(&space.btm, b"symbols/", &config);
-    /// for candidate in view.fuzzy_lookup(b"color", 2) {
-    ///     println!("{}: distance {}", candidate.term, candidate.distance);
+    /// let view = FuzzyDictionaryView::new(&space.btm, b"symbols/");
+    /// for candidate in view.fuzzy_lookup("color", 2) {
+    ///     println!("{}: distance {}, normalized='{}'",
+    ///         candidate.term, candidate.distance, candidate.normalized_form);
     /// }
     /// ```
-    pub fn new(map: &PathMap<()>, prefix: &[u8], config: &FuzzyConfig) -> Self {
-        let dict = Self::build_dictionary_from_prefix(map, prefix);
-        let transducer = Transducer::new(dict, config.algorithm);
-        Self { transducer }
+    pub fn new(map: &PathMap<()>, prefix: &[u8]) -> Self {
+        let terms = Self::extract_terms(map, prefix);
+        let combined = english::combined();
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(terms, combined);
+        Self { dict }
     }
 
     /// Extract all terminal symbols under the given prefix as dictionary terms.
-    fn build_dictionary_from_prefix(map: &PathMap<()>, prefix: &[u8]) -> PathMapDictionary<()> {
-        let mut dict = PathMapDictionary::new();
-
-        // Navigate to prefix in PathMap
+    fn extract_terms(map: &PathMap<()>, prefix: &[u8]) -> Vec<String> {
+        let mut terms = Vec::new();
         let mut rz = map.read_zipper();
+
         if !rz.descend_to(prefix) {
-            return dict;  // Prefix not found, return empty dictionary
+            return terms; // Prefix not found
         }
 
-        // Collect all terminal symbols (values) under this prefix
         while rz.to_next_val() {
             let path = rz.path();
-            // Extract the symbol portion after the prefix
             if path.len() > prefix.len() {
                 let symbol = &path[prefix.len()..];
-                // Convert to string for dictionary
                 if let Ok(term) = std::str::from_utf8(symbol) {
-                    dict.insert(term);
+                    terms.push(term.to_string());
                 }
             }
         }
 
-        dict
+        terms
     }
 
-    /// Perform fuzzy lookup and return matching candidates.
+    /// Perform phonetic-aware fuzzy lookup.
     ///
     /// # Arguments
-    /// * `query` - The query term as bytes
+    /// * `query` - The query term
     /// * `max_distance` - Maximum edit distance for matches
     ///
     /// # Returns
-    /// Iterator over `Candidate` structs containing matched terms and distances.
-    pub fn fuzzy_lookup<'a>(
-        &'a self,
-        query: &[u8],
-        max_distance: usize,
-    ) -> impl Iterator<Item = Candidate> + 'a {
-        let query_str = String::from_utf8_lossy(query);
-        self.transducer.query_candidates(&query_str, max_distance)
+    /// Vector of `PhoneticNormalizedCandidate` with term, distance, and normalized form.
+    pub fn fuzzy_lookup(&self, query: &str, max_distance: usize)
+        -> Vec<PhoneticNormalizedCandidate>
+    {
+        self.dict.query(query, max_distance)
+    }
+
+    /// Get the normalized form of a query string.
+    pub fn normalize(&self, query: &str) -> String {
+        self.dict.normalize(query)
     }
 }
 ```
 
-### Step 4: Create FuzzySource
+### Step 4: Create FuzzyPhoneticSource
 
 ```rust
-/// Fuzzy source implementing the MORK Source trait pattern.
+use liblevenshtein::dictionary::phonetic_normalized::{
+    PhoneticNormalizedDictionary, PhoneticNormalizedCandidate
+};
+use liblevenshtein::phonetic::rules::english;
+use crate::sources::{Source, ResourceRequest, Resource, AFactor};
+use mork_expr::{Expr, Tag, item_byte};
+
+/// Phonetic-aware fuzzy source using PhoneticNormalizedDictionary.
+///
+/// FuzzyPhoneticSource matches expressions of the form:
+/// ```metta
+/// (FUZZY-PHONETIC max_distance pattern)
+/// ```
+///
+/// Where:
+/// - `max_distance` is an integer (1-255)
+/// - `pattern` is the symbol to match with phonetic awareness
+///
+/// # Example
+/// ```metta
+/// !(match &space (fuzzy-phonetic "fone" 2 $result) $result)
+/// ; Returns: phone, phon, fawn, etc. (phonetically similar terms)
+/// ```
+pub struct FuzzyPhoneticSource {
+    /// Original expression for error messages
+    e: Expr,
+
+    /// Maximum edit distance
+    max_distance: usize,
+
+    /// The pattern symbol to match
+    pattern_symbol: Vec<u8>,
+}
+
+impl FuzzyPhoneticSource {
+    /// Create a new FuzzyPhoneticSource from a MORK expression.
+    ///
+    /// # Expression Format
+    /// ```
+    /// (FUZZY-PHONETIC max_dist pattern)
+    ///  ^               ^        ^
+    ///  |               |        └── Symbol to match
+    ///  |               └── Maximum edit distance (u8)
+    ///  └── Arity 3 with "FUZZY-PHONETIC" head
+    /// ```
+    pub fn new(e: Expr) -> Self {
+        let (max_distance, pattern_symbol) = Self::parse_expr(e);
+        Self { e, max_distance, pattern_symbol }
+    }
+
+    fn parse_expr(e: Expr) -> (usize, Vec<u8>) {
+        unsafe {
+            let ptr = e.ptr;
+            // Skip arity tag and "FUZZY-PHONETIC" symbol
+            // Format: (FUZZY-PHONETIC max_dist pattern)
+            let dist_ptr = ptr.add(1 + 1 + 14); // Arity(3) + SymbolSize(14) + "FUZZY-PHONETIC"
+            let max_distance = (*dist_ptr & 0x3F) as usize;
+
+            let pattern_ptr = dist_ptr.add(1);
+            let pattern_len = (*pattern_ptr & 0x3F) as usize;
+            let pattern_data = std::slice::from_raw_parts(pattern_ptr.add(1), pattern_len);
+
+            (max_distance, pattern_data.to_vec())
+        }
+    }
+}
+
+/// Standard Levenshtein fuzzy source (non-phonetic).
 ///
 /// FuzzySource matches expressions of the form:
 /// ```metta
 /// (FUZZY max_distance pattern)
 /// ```
 ///
-/// Where:
-/// - `max_distance` is an integer (1-255)
-/// - `pattern` is the symbol to match fuzzily
-///
 /// # Example
 /// ```metta
-/// !(match &space (FUZZY 2 "color") $result)
-/// ; Returns: color, colour, collar, etc.
+/// !(match &space (fuzzy "colr" 2 $result) $result)
+/// ; Returns: color, colour, collar (edit distance only, no phonetic rules)
 /// ```
 pub struct FuzzySource {
-    /// Original expression for error messages
     e: Expr,
-
-    /// Parsed configuration
     config: FuzzyConfig,
-
-    /// The pattern symbol to match
     pattern_symbol: Vec<u8>,
 }
 
 impl FuzzySource {
-    /// Create a new FuzzySource from a MORK expression.
-    ///
-    /// # Expression Format
-    /// ```
-    /// (FUZZY max_dist pattern)
-    ///  ^      ^        ^
-    ///  |      |        └── Symbol to match
-    ///  |      └── Maximum edit distance (u8)
-    ///  └── Arity 3 with "FUZZY" head
-    /// ```
     pub fn new(e: Expr) -> Self {
         let (config, pattern_symbol) = Self::parse_fuzzy_expr(e);
         Self { e, config, pattern_symbol }
     }
 
-    /// Parse a FUZZY expression into config and pattern.
     fn parse_fuzzy_expr(e: Expr) -> (FuzzyConfig, Vec<u8>) {
-        // Safety: Expression structure validated by MORK parser
         unsafe {
             let ptr = e.ptr;
-
             // Skip arity tag and "FUZZY" symbol
             // Arity(3) + SymbolSize(5) + "FUZZY" = 1 + 1 + 5 = 7 bytes
             let dist_ptr = ptr.add(7);
+            let max_distance = (*dist_ptr & 0x3F) as usize;
 
-            // Parse max_distance (assume small integer encoding)
-            let max_distance = Self::parse_int_at(dist_ptr);
-
-            // Parse pattern symbol (after distance)
-            let pattern_ptr = dist_ptr.add(Self::int_size(dist_ptr));
-            let pattern_symbol = Self::parse_symbol_at(pattern_ptr);
+            let pattern_ptr = dist_ptr.add(1);
+            let pattern_len = (*pattern_ptr & 0x3F) as usize;
+            let pattern_data = std::slice::from_raw_parts(pattern_ptr.add(1), pattern_len);
 
             let config = FuzzyConfig {
                 max_distance,
-                algorithm: Algorithm::Standard,  // Default; could parse from expression
+                algorithm: Algorithm::Standard,
                 include_exact: true,
             };
 
-            (config, pattern_symbol)
+            (config, pattern_data.to_vec())
         }
-    }
-
-    /// Parse an integer from MORK expression encoding.
-    unsafe fn parse_int_at(ptr: *const u8) -> usize {
-        // MORK encodes small integers; implementation depends on encoding
-        // Simplified: assume direct byte value for distance 0-63
-        let tag = *ptr;
-        if tag < 64 {
-            tag as usize
-        } else {
-            2  // Default fallback
-        }
-    }
-
-    /// Get size of integer encoding at pointer.
-    unsafe fn int_size(_ptr: *const u8) -> usize {
-        1  // Simplified; depends on actual encoding
-    }
-
-    /// Parse a symbol from MORK expression encoding.
-    unsafe fn parse_symbol_at(ptr: *const u8) -> Vec<u8> {
-        let tag = *ptr;
-        let size = (tag & 0x3F) as usize;  // SymbolSize(n) encodes size in low bits
-        let data = std::slice::from_raw_parts(ptr.add(1), size);
-        data.to_vec()
     }
 }
 ```
@@ -427,9 +463,10 @@ impl FuzzySource {
 ```rust
 use crate::sources::{Source, ResourceRequest, Resource, AFactor};
 
-impl Source for FuzzySource {
+/// Source implementation for phonetic-aware fuzzy matching.
+impl Source for FuzzyPhoneticSource {
     fn new(e: Expr) -> Self {
-        FuzzySource::new(e)
+        FuzzyPhoneticSource::new(e)
     }
 
     fn request(&self) -> impl Iterator<Item = ResourceRequest> {
@@ -449,19 +486,52 @@ impl Source for FuzzySource {
         // Get the BTM resource
         let btm = match it.next() {
             Some(Resource::BTM(map)) => map,
+            _ => panic!("FuzzyPhoneticSource requires BTM resource"),
+        };
+
+        // Build PhoneticNormalizedDictionary from PathMap
+        let view = FuzzyDictionaryView::new(btm, &[]);
+
+        // Query with phonetic normalization
+        let query_str = String::from_utf8_lossy(&self.pattern_symbol);
+        let candidates = view.fuzzy_lookup(&query_str, self.max_distance);
+
+        // Return as FuzzyZipper wrapped in AFactor
+        AFactor::FuzzyPhoneticSource(FuzzyZipper::new(candidates, &[]))
+    }
+}
+
+/// Source implementation for standard Levenshtein fuzzy matching (non-phonetic).
+impl Source for FuzzySource {
+    fn new(e: Expr) -> Self {
+        FuzzySource::new(e)
+    }
+
+    fn request(&self) -> impl Iterator<Item = ResourceRequest> {
+        std::iter::once(ResourceRequest::BTM(&[]))
+    }
+
+    fn source<'trie, 'path, It>(
+        &self,
+        mut it: It,
+        _path: &[u8],
+    ) -> AFactor<'trie, ()>
+    where
+        It: Iterator<Item = Resource<'trie, 'path>>,
+        'path: 'trie,
+    {
+        let btm = match it.next() {
+            Some(Resource::BTM(map)) => map,
             _ => panic!("FuzzySource requires BTM resource"),
         };
 
-        // Build fuzzy dictionary view
-        let view = FuzzyDictionaryView::new(btm, &[], &self.config);
+        // For standard fuzzy, build without phonetic rules
+        // Uses standard Levenshtein transducer
+        let view = FuzzyDictionaryView::new(btm, &[]);
+        let query_str = String::from_utf8_lossy(&self.pattern_symbol);
+        let candidates = view.fuzzy_lookup(&query_str, self.config.max_distance);
 
-        // Get fuzzy matches
-        let candidates: Vec<_> = view
-            .fuzzy_lookup(&self.pattern_symbol, self.config.max_distance)
-            .collect();
-
-        // Return as FuzzyZipper wrapped in AFactor
-        AFactor::FuzzySource(FuzzyZipper::new(candidates.into_iter(), &[]))
+        AFactor::FuzzySource(FuzzyZipper::new(candidates, &[]))
     }
 }
 ```
@@ -471,24 +541,24 @@ impl Source for FuzzySource {
 **File**: `MORK/kernel/src/fuzzy_zipper.rs`
 
 ```rust
-//! Zipper adapter that presents transducer results as a virtual trie.
+//! Zipper adapter that presents PhoneticNormalizedCandidate results as a virtual trie.
 //!
-//! FuzzyZipper wraps an iterator over fuzzy match candidates and presents
-//! them as a navigable path structure compatible with MORK's ProductZipper.
+//! FuzzyZipper wraps a vector of candidates and presents them as a navigable
+//! path structure compatible with MORK's ProductZipper.
 
-use liblevenshtein::transducer::Candidate;
+use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedCandidate;
 use pathmap::zipper::{Zipper, ZipperIteration, ZipperAbsolutePath};
 
-/// A zipper that iterates over fuzzy match candidates.
+/// A zipper that iterates over phonetic fuzzy match candidates.
 ///
-/// Presents transducer results as navigable paths for integration with
-/// MORK's query pipeline.
-pub struct FuzzyZipper<I: Iterator<Item = Candidate>> {
-    /// Underlying candidate iterator
-    candidates: I,
+/// Presents PhoneticNormalizedDictionary results as navigable paths for
+/// integration with MORK's query pipeline.
+pub struct FuzzyZipper {
+    /// Candidates from PhoneticNormalizedDictionary
+    candidates: std::vec::IntoIter<PhoneticNormalizedCandidate>,
 
     /// Current candidate (if any)
-    current_candidate: Option<Candidate>,
+    current: Option<PhoneticNormalizedCandidate>,
 
     /// Buffer for constructing path representation
     path_buffer: Vec<u8>,
@@ -497,73 +567,76 @@ pub struct FuzzyZipper<I: Iterator<Item = Candidate>> {
     prefix: Vec<u8>,
 }
 
-impl<I: Iterator<Item = Candidate>> FuzzyZipper<I> {
-    /// Create a new FuzzyZipper from an iterator of candidates.
+impl FuzzyZipper {
+    /// Create a new FuzzyZipper from a vector of candidates.
     ///
     /// # Arguments
-    /// * `candidates` - Iterator over fuzzy match candidates
+    /// * `candidates` - Vector of PhoneticNormalizedCandidate from query
     /// * `prefix` - Path prefix for result paths
-    pub fn new(candidates: I, prefix: &[u8]) -> Self {
+    pub fn new(candidates: Vec<PhoneticNormalizedCandidate>, prefix: &[u8]) -> Self {
         let mut zipper = Self {
-            candidates,
-            current_candidate: None,
+            candidates: candidates.into_iter(),
+            current: None,
             path_buffer: Vec::with_capacity(256),
             prefix: prefix.to_vec(),
         };
-        // Initialize to first candidate
         zipper.advance();
         zipper
     }
 
     /// Advance to the next candidate.
     fn advance(&mut self) {
-        self.current_candidate = self.candidates.next();
-        self.rebuild_path_buffer();
+        self.current = self.candidates.next();
+        self.rebuild_path();
     }
 
     /// Rebuild the path buffer from current candidate.
-    fn rebuild_path_buffer(&mut self) {
+    fn rebuild_path(&mut self) {
         self.path_buffer.clear();
         self.path_buffer.extend_from_slice(&self.prefix);
-        if let Some(ref candidate) = self.current_candidate {
-            self.path_buffer.extend_from_slice(candidate.term.as_bytes());
+        if let Some(ref c) = self.current {
+            self.path_buffer.extend_from_slice(c.term.as_bytes());
         }
     }
 
     /// Get the edit distance of the current candidate.
-    ///
-    /// Returns `None` if no current candidate.
     pub fn current_distance(&self) -> Option<usize> {
-        self.current_candidate.as_ref().map(|c| c.distance)
+        self.current.as_ref().map(|c| c.distance)
     }
 
     /// Get the term of the current candidate.
     pub fn current_term(&self) -> Option<&str> {
-        self.current_candidate.as_ref().map(|c| c.term.as_str())
+        self.current.as_ref().map(|c| c.term.as_str())
+    }
+
+    /// Get the normalized form of the current candidate.
+    ///
+    /// Useful for debugging and understanding why a match occurred.
+    pub fn current_normalized(&self) -> Option<&str> {
+        self.current.as_ref().map(|c| c.normalized_form.as_str())
     }
 }
 
-impl<I: Iterator<Item = Candidate>> ZipperIteration for FuzzyZipper<I> {
+impl ZipperIteration for FuzzyZipper {
     fn to_next_val(&mut self) -> bool {
-        if self.current_candidate.is_some() {
+        if self.current.is_some() {
             self.advance();
-            self.current_candidate.is_some()
+            self.current.is_some()
         } else {
             false
         }
     }
 
     fn is_val(&self) -> bool {
-        self.current_candidate.is_some()
+        self.current.is_some()
     }
 
     fn to_next_step(&mut self) -> bool {
-        // FuzzyZipper only has values, no intermediate steps
         self.to_next_val()
     }
 }
 
-impl<I: Iterator<Item = Candidate>> ZipperAbsolutePath for FuzzyZipper<I> {
+impl ZipperAbsolutePath for FuzzyZipper {
     fn path(&self) -> &[u8] {
         &self.path_buffer
     }
@@ -573,16 +646,11 @@ impl<I: Iterator<Item = Candidate>> ZipperAbsolutePath for FuzzyZipper<I> {
     }
 }
 
-// Placeholder implementations for other zipper traits
-impl<I: Iterator<Item = Candidate>> Zipper for FuzzyZipper<I> {
+impl Zipper for FuzzyZipper {
     type Value = ();
 
     fn val(&self) -> Option<&Self::Value> {
-        if self.current_candidate.is_some() {
-            Some(&())
-        } else {
-            None
-        }
+        if self.current.is_some() { Some(&()) } else { None }
     }
 }
 ```
@@ -593,24 +661,32 @@ impl<I: Iterator<Item = Candidate>> Zipper for FuzzyZipper<I> {
 
 ```rust
 // Add to imports
-use crate::fuzzy_source::FuzzySource;
+use crate::fuzzy_source::{FuzzySource, FuzzyPhoneticSource};
 use crate::fuzzy_zipper::FuzzyZipper;
 
-// Add variant to ASource enum
+// Add variants to ASource enum
 pub enum ASource {
     PosSource(BTMSource),
     ACTSource(ACTSource),
     CmpSource(CmpSource),
-    FuzzySource(FuzzySource),  // NEW
+    FuzzySource(FuzzySource),           // Standard Levenshtein
+    FuzzyPhoneticSource(FuzzyPhoneticSource),  // Phonetic-aware
 }
 
 impl Source for ASource {
     fn new(e: Expr) -> Self {
-        // Check for FUZZY pattern: (FUZZY max_dist pattern)
-        // Arity(3) + SymbolSize(5) + "FUZZY"
         unsafe {
+            // Check for FUZZY-PHONETIC pattern first (longer symbol)
+            // (FUZZY-PHONETIC max_dist pattern)
             if *e.ptr == item_byte(Tag::Arity(3)) {
                 let second = e.ptr.add(1);
+                if *second == item_byte(Tag::SymbolSize(14)) {
+                    let sym = std::slice::from_raw_parts(second.add(1), 14);
+                    if sym == b"FUZZY-PHONETIC" {
+                        return ASource::FuzzyPhoneticSource(FuzzyPhoneticSource::new(e));
+                    }
+                }
+                // Check for FUZZY pattern: (FUZZY max_dist pattern)
                 if *second == item_byte(Tag::SymbolSize(5)) {
                     let sym = std::slice::from_raw_parts(second.add(1), 5);
                     if sym == b"FUZZY" {
@@ -629,13 +705,14 @@ impl Source for ASource {
     // ... other trait methods ...
 }
 
-// Add variant to AFactor enum
+// Add variants to AFactor enum
 #[derive(PolyZipper)]
 pub enum AFactor<'trie, V: Clone + Send + Sync + Unpin + 'static = ()> {
     PosSource(PrefixZipper<'trie, ReadZipperUntracked<'trie, 'trie, V>>),
     ACTSource(PrefixZipper<'trie, ACTMmapZipper<'trie, V>>),
     CmpSource(/* ... */),
-    FuzzySource(FuzzyZipper<std::vec::IntoIter<Candidate>>),  // NEW
+    FuzzySource(FuzzyZipper),         // Standard Levenshtein results
+    FuzzyPhoneticSource(FuzzyZipper), // Phonetic-aware results
 }
 ```
 
@@ -795,34 +872,51 @@ With Phase B lattice infrastructure, results include distance for ranking:
 ; ("e3" "collar" 2)
 ```
 
-### Phonetic Matching (Phase C Preview)
+### Phonetic Matching [CURRENT]
 
-> **v0.8.0 Note**: Phonetic matching is available via `ProductAutomatonChar` and `english::*` rule sets.
-> See [v0.8.0 liblevenshtein APIs](#v080-liblevenshtein-apis) above.
+Phonetic-aware matching is fully available via `fuzzy-phonetic` and `PhoneticNormalizedDictionary`.
 
 ```metta
 ; Find names that sound like "Steven" using phonetic rules
 !(match &space
-    (person (fuzzy-phonetic "Steven" english $name) $attrs)
+    (person (fuzzy-phonetic "Steven" 2 $name) $attrs)
     ($name $attrs))
 
 ; Returns: ("Stephen" ...) ("Stefan" ...) ("Stephan" ...) ("Steve" ...)
 ; Phonetic rules: "ph" ≈ "f", "v" ≈ "ph", vowel variations
+; Expected output:
+; [("Stephen", (age 45, dept research)),
+;  ("Stefan", (age 32, dept engineering)),
+;  ("Steve", (age 28, dept marketing))]
 ```
 
-The underlying implementation would use:
+```metta
+; Find words that sound like "fone" (phonetic misspelling of "phone")
+!(match &space (fuzzy-phonetic "fone" 2 $result) $result)
+
+; Returns: "phone", "phon", etc.
+; Expected output: ["phone", "phon"]
+; Explanation: "fone" normalizes to "fon", which matches "phone" (→ "fon") at distance 0
+```
+
+The underlying implementation uses `PhoneticNormalizedDictionary`:
 
 ```rust
-use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
+use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
 use liblevenshtein::phonetic::rules::english;
-use liblevenshtein::phonetic::verified::rules_to_nfa_char;
 
-// Use pre-compiled English phonetic rules
-let rules = english::zompist();
-let nfa = rules_to_nfa_char(&rules.rules);
-let product = ProductAutomatonChar::new(nfa, 2);
+// Build dictionary with combined English phonetic rules
+let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+    &words,
+    english::combined()
+);
 
-// ProductAutomatonChar handles phonetic + edit distance
+// Query with phonetic normalization
+let results = dict.query("fone", 2);
+// results contains PhoneticNormalizedCandidate:
+//   - term: "phone"
+//   - distance: 0  (in normalized space)
+//   - normalized_form: "fon"
 ```
 
 ---
@@ -837,6 +931,7 @@ let product = ProductAutomatonChar::new(nfa, 2);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedCandidate;
 
     #[test]
     fn test_fuzzy_config_default() {
@@ -848,10 +943,9 @@ mod tests {
     #[test]
     fn test_fuzzy_dictionary_view_empty() {
         let map = PathMap::new();
-        let config = FuzzyConfig::default();
-        let view = FuzzyDictionaryView::new(&map, b"", &config);
+        let view = FuzzyDictionaryView::new(&map, b"");
 
-        let results: Vec<_> = view.fuzzy_lookup(b"test", 2).collect();
+        let results = view.fuzzy_lookup("test", 2);
         assert!(results.is_empty());
     }
 
@@ -863,29 +957,55 @@ mod tests {
         map.set_val_at(b"collar", ());
         map.set_val_at(b"zebra", ());
 
-        let config = FuzzyConfig::default();
-        let view = FuzzyDictionaryView::new(&map, b"", &config);
+        let view = FuzzyDictionaryView::new(&map, b"");
 
-        let results: Vec<_> = view.fuzzy_lookup(b"color", 2).collect();
+        let results = view.fuzzy_lookup("color", 2);
 
         assert!(results.iter().any(|c| c.term == "color" && c.distance == 0));
-        assert!(results.iter().any(|c| c.term == "colour" && c.distance == 1));
-        assert!(results.iter().any(|c| c.term == "collar" && c.distance == 2));
+        assert!(results.iter().any(|c| c.term == "colour"));
+        assert!(results.iter().any(|c| c.term == "collar"));
+        assert!(!results.iter().any(|c| c.term == "zebra"));
+    }
+
+    #[test]
+    fn test_fuzzy_dictionary_view_phonetic() {
+        let mut map = PathMap::new();
+        map.set_val_at(b"phone", ());
+        map.set_val_at(b"phon", ());
+        map.set_val_at(b"fone", ());
+        map.set_val_at(b"zebra", ());
+
+        let view = FuzzyDictionaryView::new(&map, b"");
+
+        // "fone" should match "phone" due to phonetic normalization
+        let results = view.fuzzy_lookup("fone", 2);
+
+        // Check that we get phonetically similar matches
+        assert!(results.iter().any(|c| c.term == "phone"));
         assert!(!results.iter().any(|c| c.term == "zebra"));
     }
 
     #[test]
     fn test_fuzzy_zipper_iteration() {
         let candidates = vec![
-            Candidate { term: "color".to_string(), distance: 0 },
-            Candidate { term: "colour".to_string(), distance: 1 },
+            PhoneticNormalizedCandidate {
+                term: "color".to_string(),
+                distance: 0,
+                normalized_form: "color".to_string(),
+            },
+            PhoneticNormalizedCandidate {
+                term: "colour".to_string(),
+                distance: 1,
+                normalized_form: "colour".to_string(),
+            },
         ];
 
-        let mut zipper = FuzzyZipper::new(candidates.into_iter(), b"prefix/");
+        let mut zipper = FuzzyZipper::new(candidates, b"prefix/");
 
         assert!(zipper.is_val());
         assert_eq!(zipper.current_term(), Some("color"));
         assert_eq!(zipper.current_distance(), Some(0));
+        assert_eq!(zipper.current_normalized(), Some("color"));
 
         assert!(zipper.to_next_val());
         assert_eq!(zipper.current_term(), Some("colour"));
@@ -893,6 +1013,22 @@ mod tests {
 
         assert!(!zipper.to_next_val());
         assert!(!zipper.is_val());
+    }
+
+    #[test]
+    fn test_fuzzy_zipper_phonetic_normalized() {
+        let candidates = vec![
+            PhoneticNormalizedCandidate {
+                term: "phone".to_string(),
+                distance: 0,
+                normalized_form: "fon".to_string(),
+            },
+        ];
+
+        let zipper = FuzzyZipper::new(candidates, b"");
+
+        assert_eq!(zipper.current_term(), Some("phone"));
+        assert_eq!(zipper.current_normalized(), Some("fon"));
     }
 }
 ```
@@ -902,7 +1038,7 @@ mod tests {
 **File**: `MORK/kernel/tests/fuzzy_integration.rs`
 
 ```rust
-//! Integration tests for FuzzySource in MORK query pipeline.
+//! Integration tests for FuzzySource and FuzzyPhoneticSource in MORK query pipeline.
 
 use mork_kernel::prelude::*;
 
@@ -916,12 +1052,32 @@ fn test_fuzzy_query_basic() {
     space.insert_sexpr("(word collar)");
     space.insert_sexpr("(word zebra)");
 
-    // Query with fuzzy matching
-    let results = space.query_sexpr("(word (FUZZY 2 \"color\"))");
+    // Query with standard fuzzy matching (Levenshtein only)
+    let results = space.query_sexpr("(word (fuzzy \"color\" 2 $result))");
 
     assert!(results.contains("color"));
     assert!(results.contains("colour"));
     assert!(results.contains("collar"));
+    assert!(!results.contains("zebra"));
+}
+
+#[test]
+fn test_fuzzy_phonetic_query() {
+    let mut space = Space::new();
+
+    // Insert test data
+    space.insert_sexpr("(word phone)");
+    space.insert_sexpr("(word phon)");
+    space.insert_sexpr("(word fone)");
+    space.insert_sexpr("(word zebra)");
+
+    // Query with phonetic-aware fuzzy matching
+    let results = space.query_sexpr("(word (fuzzy-phonetic \"fone\" 2 $result))");
+
+    // "fone" should match "phone" due to phonetic normalization (ph → f)
+    assert!(results.contains("phone"));
+    assert!(results.contains("phon"));
+    assert!(results.contains("fone"));
     assert!(!results.contains("zebra"));
 }
 
@@ -933,10 +1089,29 @@ fn test_fuzzy_query_with_unification() {
     space.insert_sexpr("(person jon (age 25))");
     space.insert_sexpr("(person jane (age 28))");
 
-    let results = space.query_sexpr("(person (FUZZY 1 \"john\") $age)");
+    let results = space.query_sexpr("(person (fuzzy \"john\" 1 $name) $age)");
 
     // Should match "john" (distance 0) and "jon" (distance 1)
     assert_eq!(results.len(), 2);
+}
+
+#[test]
+fn test_fuzzy_phonetic_names() {
+    let mut space = Space::new();
+
+    space.insert_sexpr("(person Stephen (age 45))");
+    space.insert_sexpr("(person Stefan (age 32))");
+    space.insert_sexpr("(person Steve (age 28))");
+    space.insert_sexpr("(person Alice (age 30))");
+
+    // Phonetic query for "Steven" should find phonetically similar names
+    let results = space.query_sexpr("(person (fuzzy-phonetic \"Steven\" 2 $name) $attrs)");
+
+    // Stephen, Stefan, Steve are phonetically similar to Steven
+    assert!(results.iter().any(|r| r.contains("Stephen")));
+    assert!(results.iter().any(|r| r.contains("Stefan")));
+    assert!(results.iter().any(|r| r.contains("Steve")));
+    assert!(!results.iter().any(|r| r.contains("Alice")));
 }
 ```
 
@@ -969,19 +1144,22 @@ Factors affecting latency:
 
 ---
 
-## Future Enhancements (Phase B+)
+## Future Enhancements
 
-1. **Weighted results**: Return `ScoredCandidate` with phonetic costs
-2. **Algorithm selection**: Parse algorithm from expression
-3. **Streaming iteration**: Avoid collecting all candidates
-4. **Caching**: Cache dictionary views across queries
-5. **Phonetic integration**: Combine with phonetic rules for better matching
+1. **Weighted results**: Return candidates with combined phonetic + edit distance scores
+2. **Algorithm selection**: Parse algorithm from expression (Standard, Transposition, MergeAndSplit)
+3. **Streaming iteration**: Avoid collecting all candidates for large result sets
+4. **Caching**: Cache PhoneticNormalizedDictionary views across queries
+5. **Language-specific rules**: Support for non-English phonetic rules (German, French, etc.)
+6. **Custom rule sets**: Allow users to define domain-specific phonetic rules
 
 ---
 
 ## References
 
 - [MORK Source Trait](../../../MORK/kernel/src/sources.rs)
-- [liblevenshtein Transducer](../../src/transducer/mod.rs)
+- [PhoneticNormalizedDictionary](../../src/dictionary/phonetic_normalized/mod.rs)
+- [PhoneticNormalizedCandidate](../../src/dictionary/phonetic_normalized/candidate.rs)
+- [English Phonetic Rules](../../src/phonetic/rules/english.rs)
 - [PathMap Dictionary Backend](../../src/dictionary/pathmap.rs)
 - [PathMap Zipper Traits](../../../PathMap/src/zipper.rs)
