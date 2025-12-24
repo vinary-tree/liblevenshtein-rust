@@ -1,0 +1,248 @@
+// German Base Phonetic Rules
+// ===========================
+// Phonetic rules for Standard German (Hochdeutsch).
+// Based on German phonology and orthography conventions.
+//
+// Key features:
+//   - Umlauts: ä, ö, ü (with optional ae, oe, ue normalization)
+//   - Eszett: ß → ss
+//   - CH variations: ich-Laut vs ach-Laut
+//   - Final devoicing (Auslautverhärtung): b→p, d→t, g→k at word end
+//   - W→v, V→f pronunciation
+//   - SP/ST → ʃp/ʃt at syllable start
+//   - Silent H after vowels (lengthening marker)
+//   - Double consonant simplification
+//
+// Note: All pattern matching is case-insensitive by default.
+// Use (?c:pattern) for case-sensitive matching if needed.
+//
+// Rule IDs: 1800-1899
+
+@name "German Base Phonetic Rules"
+@version "2.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Standard German"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiouäöü]
+@define FRONT_VOWEL = [eiäöü]
+@define BACK_VOWEL = [aou]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyzß]
+
+// ============================================================
+// MULTI-CHARACTER PATTERNS (highest priority)
+// ============================================================
+
+// SCH digraph - voiceless postalveolar fricative /ʃ/ (like English 'sh')
+[id: 1800, name: "sch to sh", weight: 0.1, group: german_digraphs, ipa: "/ʃ/"]
+sch -> ʃ;
+
+// TSCH - voiceless postalveolar affricate /t͡ʃ/ (like English 'ch' in 'church')
+[id: 1803, name: "tsch to tsh", weight: 0.1, group: german_digraphs, ipa: "/t͡ʃ/"]
+tsch -> tʃ;
+
+// CH after front vowels (ich-Laut) - voiceless palatal fricative /ç/
+[id: 1805, name: "ch after i", weight: 0.15, group: german_ch, ipa: "/ç/"]
+ich -> iç;
+
+[id: 1806, name: "ch after e", weight: 0.15, group: german_ch, ipa: "/ç/"]
+ech -> eç;
+
+[id: 1807, name: "ch after ä", weight: 0.15, group: german_ch, ipa: "/ç/"]
+äch -> æç;
+
+[id: 1808, name: "ch after ö", weight: 0.15, group: german_ch, ipa: "/ç/"]
+öch -> øç;
+
+[id: 1809, name: "ch after ü", weight: 0.15, group: german_ch, ipa: "/ç/"]
+üch -> yç;
+
+// CH after back vowels (ach-Laut) - voiceless velar fricative /x/
+[id: 1810, name: "ch after a", weight: 0.15, group: german_ch, ipa: "/x/"]
+ach -> ax;
+
+[id: 1811, name: "ch after o", weight: 0.15, group: german_ch, ipa: "/x/"]
+och -> ox;
+
+[id: 1812, name: "ch after u", weight: 0.15, group: german_ch, ipa: "/x/"]
+uch -> ux;
+
+// CK digraph - just /k/
+[id: 1815, name: "ck to k", weight: 0.1, group: german_digraphs, ipa: "/k/"]
+ck -> k;
+
+// PH - /f/ (from Greek loanwords)
+[id: 1816, name: "ph to f", weight: 0.1, group: german_digraphs, ipa: "/f/"]
+ph -> f;
+
+// TH - /t/ (German has no /θ/, loanwords pronounced as /t/)
+[id: 1818, name: "th to t", weight: 0.15, group: german_digraphs, ipa: "/t/"]
+th -> t;
+
+// ============================================================
+// SP/ST AT SYLLABLE START
+// ============================================================
+// sp → /ʃp/, st → /ʃt/ at the beginning of words or syllables
+
+[id: 1820, name: "sp initial to shp", weight: 0.15, group: german_sp_st, ipa: "/ʃp/"]
+sp -> ʃp / #_;
+
+[id: 1822, name: "st initial to sht", weight: 0.15, group: german_sp_st, ipa: "/ʃt/"]
+st -> ʃt / #_;
+
+// ============================================================
+// ESZETT (ß)
+// ============================================================
+
+[id: 1825, name: "eszett to ss", weight: 0.1, group: german_special, ipa: "/s/"]
+ß -> ss;
+
+// ============================================================
+// VOWEL DIPHTHONGS
+// ============================================================
+
+// EI → /aɪ/ diphthong
+[id: 1830, name: "ei to ai", weight: 0.05, group: german_vowels, ipa: "/aɪ/"]
+ei -> aɪ;
+
+// EU/ÄU → /ɔʏ/ diphthong
+[id: 1832, name: "eu to oy", weight: 0.05, group: german_vowels, ipa: "/ɔʏ/"]
+eu -> ɔʏ;
+
+[id: 1834, name: "äu to oy", weight: 0.05, group: german_vowels, ipa: "/ɔʏ/"]
+äu -> ɔʏ;
+
+// AU → /aʊ/ diphthong
+[id: 1835, name: "au to au", weight: 0.05, group: german_vowels, ipa: "/aʊ/"]
+au -> aʊ;
+
+// IE → long /iː/ (like German "Liebe")
+[id: 1837, name: "ie to i", weight: 0.05, group: german_vowels, ipa: "/iː/"]
+ie -> iː;
+
+// ============================================================
+// UMLAUT NORMALIZATION
+// ============================================================
+// Converting to IPA vowel symbols
+
+[id: 1840, name: "ä to ae", weight: 0.15, group: german_umlaut, ipa: "/ɛ/"]
+ä -> ɛ;
+
+[id: 1841, name: "ö to oe", weight: 0.15, group: german_umlaut, ipa: "/ø/"]
+ö -> ø;
+
+[id: 1842, name: "ü to ue", weight: 0.15, group: german_umlaut, ipa: "/y/"]
+ü -> y;
+
+// ============================================================
+// FINAL DEVOICING (Auslautverhärtung)
+// ============================================================
+// Voiced stops become voiceless at word end
+
+[id: 1850, name: "final b to p", weight: 0.2, group: german_devoicing, ipa: "[p]"]
+b -> p / _#;
+
+[id: 1851, name: "final d to t", weight: 0.2, group: german_devoicing, ipa: "[t]"]
+d -> t / _#;
+
+[id: 1852, name: "final g to k", weight: 0.2, group: german_devoicing, ipa: "[k]"]
+g -> k / _#;
+
+// ============================================================
+// W AND V PRONUNCIATION
+// ============================================================
+
+// W → /v/ (voiced labiodental fricative)
+[id: 1855, name: "w to v", weight: 0.15, group: german_consonants, ipa: "/v/"]
+w -> v;
+
+// V → /f/ in native German words (but /v/ in loanwords)
+// Note: This rule applies to original 'v', not 'V' from w->v conversion
+[id: 1857, name: "v to f", weight: 0.2, group: german_consonants, ipa: "/f/"]
+(?c:v) -> f;
+
+// ============================================================
+// Z PRONUNCIATION
+// ============================================================
+
+// Z → /ts/ (voiceless alveolar affricate)
+[id: 1860, name: "z to ts", weight: 0.15, group: german_consonants, ipa: "/t͡s/"]
+z -> ts;
+
+// ============================================================
+// QU PATTERN
+// ============================================================
+
+// QU → /kv/ (not /kw/ like English)
+[id: 1865, name: "qu to kv", weight: 0.15, group: german_consonants, ipa: "/kv/"]
+qu -> kv;
+
+// ============================================================
+// SILENT H (DEHNUNGS-H)
+// ============================================================
+// H after vowels is silent (just lengthens the vowel)
+
+[id: 1870, name: "silent h after a", weight: 0.2, group: german_silent, ipa: "/aː/"]
+ah -> aː;
+
+[id: 1871, name: "silent h after e", weight: 0.2, group: german_silent, ipa: "/eː/"]
+eh -> eː;
+
+[id: 1872, name: "silent h after i", weight: 0.2, group: german_silent, ipa: "/iː/"]
+ih -> iː;
+
+[id: 1873, name: "silent h after o", weight: 0.2, group: german_silent, ipa: "/oː/"]
+oh -> oː;
+
+[id: 1874, name: "silent h after u", weight: 0.2, group: german_silent, ipa: "/uː/"]
+uh -> uː;
+
+// ============================================================
+// DOUBLE CONSONANT SIMPLIFICATION
+// ============================================================
+
+[id: 1880, name: "bb to b", weight: 0.1, group: german_doubles]
+bb -> b;
+
+[id: 1881, name: "dd to d", weight: 0.1, group: german_doubles]
+dd -> d;
+
+[id: 1882, name: "ff to f", weight: 0.1, group: german_doubles]
+ff -> f;
+
+[id: 1883, name: "gg to g", weight: 0.1, group: german_doubles]
+gg -> g;
+
+[id: 1884, name: "ll to l", weight: 0.1, group: german_doubles]
+ll -> l;
+
+[id: 1885, name: "mm to m", weight: 0.1, group: german_doubles]
+mm -> m;
+
+[id: 1886, name: "nn to n", weight: 0.1, group: german_doubles]
+nn -> n;
+
+[id: 1887, name: "pp to p", weight: 0.1, group: german_doubles]
+pp -> p;
+
+[id: 1888, name: "rr to r", weight: 0.1, group: german_doubles]
+rr -> r;
+
+[id: 1889, name: "ss to s", weight: 0.1, group: german_doubles]
+ss -> s;
+
+[id: 1890, name: "tt to t", weight: 0.1, group: german_doubles]
+tt -> t;
+
+// ============================================================
+// CASE NORMALIZATION for common initials
+// ============================================================
+
+[id: 1895, name: "C to k", weight: 0.2, group: german_case, ipa: "/k/"]
+c -> k;
+
+[id: 1896, name: "Y to ue", weight: 0.25, group: german_foreign, ipa: "/y/"]
+y -> y;

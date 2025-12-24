@@ -1,0 +1,136 @@
+// Brazilian Portuguese Dialect Rules
+// ===================================
+// Dialect-specific rules for Brazilian Portuguese.
+// These rules layer on top of the shared Portuguese base rules.
+//
+// Key Brazilian Portuguese features:
+//   - T/D palatalization before 'i' → tʃ/dʒ (like English ch/j)
+//   - L vocalization at end of syllable → w
+//   - R variation (can be h-like in Rio/São Paulo)
+//   - Less vowel reduction than European Portuguese
+//   - More open vowels
+
+@name "Brazilian Portuguese Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Brazilian Portuguese"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiouáàâãéêíóôõúü]
+@define CONSONANT = [bcdfghjklmnpqrstvwxz]
+
+// ============================================================
+// T/D PALATALIZATION
+// ============================================================
+// This is the most distinctive Brazilian feature
+// T before 'i' → tʃ (ch sound)
+// D before 'i' → dʒ (j sound)
+
+// TI → tʃi
+[id: 1650, name: "t palatalization before i", weight: 0.1, group: brazilian_palatalization, ipa: "/t͡ʃi/"]
+ti -> t͡ʃi;
+
+[id: 1651, name: "t palatalization before í", weight: 0.1, group: brazilian_palatalization, ipa: "/t͡ʃi/"]
+tí -> t͡ʃí;
+
+// DI → dʒi
+[id: 1655, name: "d palatalization before i", weight: 0.1, group: brazilian_palatalization, ipa: "/d͡ʒi/"]
+di -> d͡ʒi;
+
+[id: 1656, name: "d palatalization before í", weight: 0.1, group: brazilian_palatalization, ipa: "/d͡ʒi/"]
+dí -> d͡ʒí;
+
+// TE at word end often pronounced as [tʃi] in Brazil
+[id: 1660, name: "final te to tshi", weight: 0.15, group: brazilian_palatalization, ipa: "/t͡ʃi/"]
+te -> t͡ʃi / _#;
+
+// DE at word end often pronounced as [dʒi] in Brazil
+[id: 1661, name: "final de to dji", weight: 0.15, group: brazilian_palatalization, ipa: "/d͡ʒi/"]
+de -> d͡ʒi / _#;
+
+// ============================================================
+// L VOCALIZATION
+// ============================================================
+// L at end of syllable → w (like English w)
+// This is nearly universal in Brazilian Portuguese
+
+// L at word end → w
+[id: 1665, name: "final l to w", weight: 0.1, group: brazilian_l]
+l -> w / _#;
+
+// L before consonant → w
+[id: 1666, name: "l before consonant to w", weight: 0.1, group: brazilian_l]
+l -> w / _$CONSONANT;
+
+// Common words with L vocalization
+[id: 1670, name: "al to aw", weight: 0.1, group: brazilian_l]
+al -> aw / _#;
+
+[id: 1671, name: "el to ew", weight: 0.1, group: brazilian_l]
+el -> ew / _#;
+
+[id: 1672, name: "il to iw", weight: 0.1, group: brazilian_l]
+il -> iw / _#;
+
+[id: 1673, name: "ol to ow", weight: 0.1, group: brazilian_l]
+ol -> ow / _#;
+
+[id: 1674, name: "ul to uw", weight: 0.1, group: brazilian_l]
+ul -> uw / _#;
+
+// ============================================================
+// R PATTERNS
+// ============================================================
+// Brazilian Portuguese R varies by region
+// Rio/São Paulo: initial R and RR → h or x (voiceless velar fricative)
+// Other regions: trilled or tap
+
+// Initial R → h (glottal fricative) or x (velar fricative)
+// Rio/São Paulo style - most common in media
+[id: 1680, name: "initial r to h", weight: 0.1, group: brazilian_r, ipa: "/h/"]
+r -> h / #_;
+
+// RR → h (in base, RR is marked as ʀ; override here for Brazilian)
+[id: 1681, name: "rr to h", weight: 0.1, group: brazilian_r, ipa: "/h/"]
+ʀ -> h;
+
+// R at end of syllable → h (h-like pronunciation)
+[id: 1685, name: "final r to h", weight: 0.15, group: brazilian_r, ipa: "/h/"]
+r -> h / _#;
+
+[id: 1686, name: "r before consonant to h", weight: 0.15, group: brazilian_r, ipa: "/h/"]
+r -> h / _$CONSONANT;
+
+// ============================================================
+// S PATTERNS
+// ============================================================
+// Brazilian S before consonant stays as s (unlike European → sh)
+
+// S at word end → s (not sh like European)
+// Base rule applies - no change needed
+
+// In Rio: S before consonant can become ʃ
+// But standard Brazilian keeps it as s
+// Commented out for standard Brazilian:
+// [id: 1690, name: "s before consonant carioca", weight: 0.2, group: brazilian_s]
+// s -> sh / _$CONSONANT;
+
+// ============================================================
+// VOWEL PATTERNS
+// ============================================================
+// Brazilian Portuguese has less vowel reduction
+// Vowels are generally more open and clear
+
+// No strong reduction rules needed - vowels preserved
+
+// Final 'o' → u (slight raising, but less than European)
+[id: 1695, name: "final o to u", weight: 0.2, group: brazilian_vowels]
+o -> u / _#;
+
+// Final 'e' → i (common in many dialects)
+[id: 1696, name: "final e to i", weight: 0.2, group: brazilian_vowels]
+e -> i / _#;
+

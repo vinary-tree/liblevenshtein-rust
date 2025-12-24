@@ -1,0 +1,655 @@
+// Vietnamese Phonetic Rules
+// =========================
+// Phonetic rules for Vietnamese (Tiếng Việt).
+// Strips tonal diacritics and normalizes vowels for phonetic matching.
+//
+// Key features:
+//   - Latin script with extensive diacritics
+//   - 6 tones marked with diacritics (stripped for matching)
+//   - Special vowels: ă, â, ê, ô, ơ, ư
+//   - Special consonant: đ (voiced alveolar)
+//   - Digraphs: ch, gh, gi, kh, ng, ngh, nh, ph, qu, th, tr
+//
+// Vietnamese vowels (12 base forms):
+// a, ă, â, e, ê, i, o, ô, ơ, u, ư, y
+//
+// Tone marks (on all vowels):
+// - No mark (ngang): flat tone
+// - Grave (huyền): à, falling tone
+// - Acute (sắc): á, rising tone
+// - Hook (hỏi): ả, dipping-rising tone
+// - Tilde (ngã): ã, creaky rising tone
+// - Dot below (nặng): ạ, low falling tone
+//
+// Rule IDs: 2950-2999
+
+@name "Vietnamese Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Vietnamese"
+
+// ============================================================
+// DIGRAPHS (highest priority - must match before singles)
+// ============================================================
+
+// NGH must come before NG (longer match first)
+[id: 2950, name: "ngh to ŋ", weight: 0.02, group: vietnamese_digraphs, ipa: "/ŋ/"]
+ngh -> ŋ;
+
+[id: 2951, name: "NGH to ŋ", weight: 0.02, group: vietnamese_digraphs, ipa: "/ŋ/"]
+NGH -> ŋ;
+
+[id: 2952, name: "Ngh to ŋ", weight: 0.02, group: vietnamese_digraphs, ipa: "/ŋ/"]
+Ngh -> ŋ;
+
+// NG (velar nasal)
+[id: 2953, name: "ng to ŋ", weight: 0.03, group: vietnamese_digraphs, ipa: "/ŋ/"]
+NG -> ŋ;
+
+[id: 2954, name: "Ng to ŋ", weight: 0.03, group: vietnamese_digraphs, ipa: "/ŋ/"]
+Ng -> ŋ;
+
+// CH (like English "ch")
+[id: 2955, name: "ch to t͡ɕ", weight: 0.03, group: vietnamese_digraphs, ipa: "/t͡ɕ/"]
+CH -> t͡ɕ;
+
+[id: 2956, name: "Ch to t͡ɕ", weight: 0.03, group: vietnamese_digraphs, ipa: "/t͡ɕ/"]
+Ch -> t͡ɕ;
+
+// GH (like "g" before e, ê, i)
+[id: 2957, name: "gh to g", weight: 0.03, group: vietnamese_digraphs]
+gh -> g;
+
+[id: 2958, name: "GH to g", weight: 0.03, group: vietnamese_digraphs]
+GH -> g;
+
+[id: 2959, name: "Gh to g", weight: 0.03, group: vietnamese_digraphs]
+Gh -> g;
+
+// GI (like "z" in Northern, "y" in Southern)
+[id: 2960, name: "gi to z", weight: 0.03, group: vietnamese_digraphs]
+gi -> z;
+
+[id: 2961, name: "GI to z", weight: 0.03, group: vietnamese_digraphs]
+GI -> z;
+
+[id: 2962, name: "Gi to z", weight: 0.03, group: vietnamese_digraphs]
+Gi -> z;
+
+// KH (voiceless velar fricative)
+[id: 2963, name: "kh to x", weight: 0.03, group: vietnamese_digraphs, ipa: "/x/"]
+KH -> x;
+
+[id: 2964, name: "Kh to x", weight: 0.03, group: vietnamese_digraphs, ipa: "/x/"]
+Kh -> x;
+
+// NH (palatal nasal, like Spanish ñ)
+[id: 2965, name: "nh to ɲ", weight: 0.03, group: vietnamese_digraphs, ipa: "/ɲ/"]
+nh -> ɲ;
+
+[id: 2966, name: "NH to ɲ", weight: 0.03, group: vietnamese_digraphs, ipa: "/ɲ/"]
+NH -> ɲ;
+
+[id: 2967, name: "Nh to ɲ", weight: 0.03, group: vietnamese_digraphs, ipa: "/ɲ/"]
+Nh -> ɲ;
+
+// PH (like "f")
+[id: 2968, name: "ph to f", weight: 0.03, group: vietnamese_digraphs]
+ph -> f;
+
+[id: 2969, name: "PH to f", weight: 0.03, group: vietnamese_digraphs]
+PH -> f;
+
+[id: 2970, name: "Ph to f", weight: 0.03, group: vietnamese_digraphs]
+Ph -> f;
+
+// QU (like "kw")
+[id: 2971, name: "qu to kw", weight: 0.03, group: vietnamese_digraphs]
+qu -> kw;
+
+[id: 2972, name: "QU to kw", weight: 0.03, group: vietnamese_digraphs]
+QU -> kw;
+
+[id: 2973, name: "Qu to kw", weight: 0.03, group: vietnamese_digraphs]
+Qu -> kw;
+
+// TH (aspirated t)
+[id: 2974, name: "th to tʰ", weight: 0.03, group: vietnamese_digraphs, ipa: "/tʰ/"]
+TH -> tʰ;
+
+[id: 2975, name: "Th to tʰ", weight: 0.03, group: vietnamese_digraphs, ipa: "/tʰ/"]
+Th -> tʰ;
+
+// TR (retroflex, like "ch" in some dialects)
+[id: 2976, name: "tr to tr", weight: 0.03, group: vietnamese_digraphs]
+TR -> tr;
+
+[id: 2977, name: "Tr to tr", weight: 0.03, group: vietnamese_digraphs]
+Tr -> tr;
+
+// ============================================================
+// SPECIAL CONSONANT: Đ (voiced alveolar stop)
+// ============================================================
+
+[id: 2978, name: "đ to d", weight: 0.05, group: vietnamese_consonants]
+đ -> d;
+
+[id: 2979, name: "Đ to d", weight: 0.05, group: vietnamese_consonants]
+Đ -> d;
+
+// ============================================================
+// VOWEL: A (with all tone marks)
+// ============================================================
+
+// Ă (short a) - all tones
+[id: 2980, name: "ă tones to a", weight: 0.1, group: vietnamese_vowels]
+ă -> a;
+
+[id: 2981, name: "ằ to a", weight: 0.1, group: vietnamese_vowels]
+ằ -> a;
+
+[id: 2982, name: "ắ to a", weight: 0.1, group: vietnamese_vowels]
+ắ -> a;
+
+[id: 2983, name: "ẳ to a", weight: 0.1, group: vietnamese_vowels]
+ẳ -> a;
+
+[id: 2984, name: "ẵ to a", weight: 0.1, group: vietnamese_vowels]
+ẵ -> a;
+
+[id: 2985, name: "ặ to a", weight: 0.1, group: vietnamese_vowels]
+ặ -> a;
+
+// Â (close central) - all tones
+[id: 2986, name: "â to a", weight: 0.1, group: vietnamese_vowels]
+â -> a;
+
+[id: 2987, name: "ầ to a", weight: 0.1, group: vietnamese_vowels]
+ầ -> a;
+
+[id: 2988, name: "ấ to a", weight: 0.1, group: vietnamese_vowels]
+ấ -> a;
+
+[id: 2989, name: "ẩ to a", weight: 0.1, group: vietnamese_vowels]
+ẩ -> a;
+
+[id: 2990, name: "ẫ to a", weight: 0.1, group: vietnamese_vowels]
+ẫ -> a;
+
+[id: 2991, name: "ậ to a", weight: 0.1, group: vietnamese_vowels]
+ậ -> a;
+
+// A with tone marks
+[id: 2992, name: "à to a", weight: 0.1, group: vietnamese_vowels]
+à -> a;
+
+[id: 2993, name: "á to a", weight: 0.1, group: vietnamese_vowels]
+á -> a;
+
+[id: 2994, name: "ả to a", weight: 0.1, group: vietnamese_vowels]
+ả -> a;
+
+[id: 2995, name: "ã to a", weight: 0.1, group: vietnamese_vowels]
+ã -> a;
+
+[id: 2996, name: "ạ to a", weight: 0.1, group: vietnamese_vowels]
+ạ -> a;
+
+// ============================================================
+// VOWEL: E (with all tone marks)
+// ============================================================
+
+// Ê (close-mid front) - all tones
+[id: 2997, name: "ê to e", weight: 0.1, group: vietnamese_vowels]
+ê -> e;
+
+[id: 2998, name: "ề to e", weight: 0.1, group: vietnamese_vowels]
+ề -> e;
+
+[id: 2999, name: "ế to e", weight: 0.1, group: vietnamese_vowels]
+ế -> e;
+
+[id: 3000, name: "ể to e", weight: 0.1, group: vietnamese_vowels]
+ể -> e;
+
+[id: 3001, name: "ễ to e", weight: 0.1, group: vietnamese_vowels]
+ễ -> e;
+
+[id: 3002, name: "ệ to e", weight: 0.1, group: vietnamese_vowels]
+ệ -> e;
+
+// E with tone marks
+[id: 3003, name: "è to e", weight: 0.1, group: vietnamese_vowels]
+è -> e;
+
+[id: 3004, name: "é to e", weight: 0.1, group: vietnamese_vowels]
+é -> e;
+
+[id: 3005, name: "ẻ to e", weight: 0.1, group: vietnamese_vowels]
+ẻ -> e;
+
+[id: 3006, name: "ẽ to e", weight: 0.1, group: vietnamese_vowels]
+ẽ -> e;
+
+[id: 3007, name: "ẹ to e", weight: 0.1, group: vietnamese_vowels]
+ẹ -> e;
+
+// ============================================================
+// VOWEL: I (with all tone marks)
+// ============================================================
+
+[id: 3008, name: "ì to i", weight: 0.1, group: vietnamese_vowels]
+ì -> i;
+
+[id: 3009, name: "í to i", weight: 0.1, group: vietnamese_vowels]
+í -> i;
+
+[id: 3010, name: "ỉ to i", weight: 0.1, group: vietnamese_vowels]
+ỉ -> i;
+
+[id: 3011, name: "ĩ to i", weight: 0.1, group: vietnamese_vowels]
+ĩ -> i;
+
+[id: 3012, name: "ị to i", weight: 0.1, group: vietnamese_vowels]
+ị -> i;
+
+// ============================================================
+// VOWEL: O (with all tone marks)
+// ============================================================
+
+// Ô (close-mid back rounded) - all tones
+[id: 3013, name: "ô to o", weight: 0.1, group: vietnamese_vowels]
+ô -> o;
+
+[id: 3014, name: "ồ to o", weight: 0.1, group: vietnamese_vowels]
+ồ -> o;
+
+[id: 3015, name: "ố to o", weight: 0.1, group: vietnamese_vowels]
+ố -> o;
+
+[id: 3016, name: "ổ to o", weight: 0.1, group: vietnamese_vowels]
+ổ -> o;
+
+[id: 3017, name: "ỗ to o", weight: 0.1, group: vietnamese_vowels]
+ỗ -> o;
+
+[id: 3018, name: "ộ to o", weight: 0.1, group: vietnamese_vowels]
+ộ -> o;
+
+// Ơ (open-mid back unrounded) - all tones
+[id: 3019, name: "ơ to o", weight: 0.1, group: vietnamese_vowels]
+ơ -> o;
+
+[id: 3020, name: "ờ to o", weight: 0.1, group: vietnamese_vowels]
+ờ -> o;
+
+[id: 3021, name: "ớ to o", weight: 0.1, group: vietnamese_vowels]
+ớ -> o;
+
+[id: 3022, name: "ở to o", weight: 0.1, group: vietnamese_vowels]
+ở -> o;
+
+[id: 3023, name: "ỡ to o", weight: 0.1, group: vietnamese_vowels]
+ỡ -> o;
+
+[id: 3024, name: "ợ to o", weight: 0.1, group: vietnamese_vowels]
+ợ -> o;
+
+// O with tone marks
+[id: 3025, name: "ò to o", weight: 0.1, group: vietnamese_vowels]
+ò -> o;
+
+[id: 3026, name: "ó to o", weight: 0.1, group: vietnamese_vowels]
+ó -> o;
+
+[id: 3027, name: "ỏ to o", weight: 0.1, group: vietnamese_vowels]
+ỏ -> o;
+
+[id: 3028, name: "õ to o", weight: 0.1, group: vietnamese_vowels]
+õ -> o;
+
+[id: 3029, name: "ọ to o", weight: 0.1, group: vietnamese_vowels]
+ọ -> o;
+
+// ============================================================
+// VOWEL: U (with all tone marks)
+// ============================================================
+
+// Ư (close back unrounded) - all tones
+[id: 3030, name: "ư to u", weight: 0.1, group: vietnamese_vowels]
+ư -> u;
+
+[id: 3031, name: "ừ to u", weight: 0.1, group: vietnamese_vowels]
+ừ -> u;
+
+[id: 3032, name: "ứ to u", weight: 0.1, group: vietnamese_vowels]
+ứ -> u;
+
+[id: 3033, name: "ử to u", weight: 0.1, group: vietnamese_vowels]
+ử -> u;
+
+[id: 3034, name: "ữ to u", weight: 0.1, group: vietnamese_vowels]
+ữ -> u;
+
+[id: 3035, name: "ự to u", weight: 0.1, group: vietnamese_vowels]
+ự -> u;
+
+// U with tone marks
+[id: 3036, name: "ù to u", weight: 0.1, group: vietnamese_vowels]
+ù -> u;
+
+[id: 3037, name: "ú to u", weight: 0.1, group: vietnamese_vowels]
+ú -> u;
+
+[id: 3038, name: "ủ to u", weight: 0.1, group: vietnamese_vowels]
+ủ -> u;
+
+[id: 3039, name: "ũ to u", weight: 0.1, group: vietnamese_vowels]
+ũ -> u;
+
+[id: 3040, name: "ụ to u", weight: 0.1, group: vietnamese_vowels]
+ụ -> u;
+
+// ============================================================
+// VOWEL: Y (with all tone marks)
+// ============================================================
+
+[id: 3041, name: "ỳ to y", weight: 0.1, group: vietnamese_vowels]
+ỳ -> y;
+
+[id: 3042, name: "ý to y", weight: 0.1, group: vietnamese_vowels]
+ý -> y;
+
+[id: 3043, name: "ỷ to y", weight: 0.1, group: vietnamese_vowels]
+ỷ -> y;
+
+[id: 3044, name: "ỹ to y", weight: 0.1, group: vietnamese_vowels]
+ỹ -> y;
+
+[id: 3045, name: "ỵ to y", weight: 0.1, group: vietnamese_vowels]
+ỵ -> y;
+
+// ============================================================
+// UPPERCASE VOWELS WITH DIACRITICS
+// ============================================================
+
+// Uppercase Ă variants
+[id: 3046, name: "Ă to a", weight: 0.1, group: vietnamese_uppercase]
+Ă -> a;
+
+[id: 3047, name: "Ằ to a", weight: 0.1, group: vietnamese_uppercase]
+Ằ -> a;
+
+[id: 3048, name: "Ắ to a", weight: 0.1, group: vietnamese_uppercase]
+Ắ -> a;
+
+[id: 3049, name: "Ẳ to a", weight: 0.1, group: vietnamese_uppercase]
+Ẳ -> a;
+
+[id: 3050, name: "Ẵ to a", weight: 0.1, group: vietnamese_uppercase]
+Ẵ -> a;
+
+[id: 3051, name: "Ặ to a", weight: 0.1, group: vietnamese_uppercase]
+Ặ -> a;
+
+// Uppercase Â variants
+[id: 3052, name: "Â to a", weight: 0.1, group: vietnamese_uppercase]
+Â -> a;
+
+[id: 3053, name: "Ầ to a", weight: 0.1, group: vietnamese_uppercase]
+Ầ -> a;
+
+[id: 3054, name: "Ấ to a", weight: 0.1, group: vietnamese_uppercase]
+Ấ -> a;
+
+[id: 3055, name: "Ẩ to a", weight: 0.1, group: vietnamese_uppercase]
+Ẩ -> a;
+
+[id: 3056, name: "Ẫ to a", weight: 0.1, group: vietnamese_uppercase]
+Ẫ -> a;
+
+[id: 3057, name: "Ậ to a", weight: 0.1, group: vietnamese_uppercase]
+Ậ -> a;
+
+// Uppercase A with tones
+[id: 3058, name: "À to a", weight: 0.1, group: vietnamese_uppercase]
+À -> a;
+
+[id: 3059, name: "Á to a", weight: 0.1, group: vietnamese_uppercase]
+Á -> a;
+
+[id: 3060, name: "Ả to a", weight: 0.1, group: vietnamese_uppercase]
+Ả -> a;
+
+[id: 3061, name: "Ã to a", weight: 0.1, group: vietnamese_uppercase]
+Ã -> a;
+
+[id: 3062, name: "Ạ to a", weight: 0.1, group: vietnamese_uppercase]
+Ạ -> a;
+
+// Uppercase Ê variants
+[id: 3063, name: "Ê to e", weight: 0.1, group: vietnamese_uppercase]
+Ê -> e;
+
+[id: 3064, name: "Ề to e", weight: 0.1, group: vietnamese_uppercase]
+Ề -> e;
+
+[id: 3065, name: "Ế to e", weight: 0.1, group: vietnamese_uppercase]
+Ế -> e;
+
+[id: 3066, name: "Ể to e", weight: 0.1, group: vietnamese_uppercase]
+Ể -> e;
+
+[id: 3067, name: "Ễ to e", weight: 0.1, group: vietnamese_uppercase]
+Ễ -> e;
+
+[id: 3068, name: "Ệ to e", weight: 0.1, group: vietnamese_uppercase]
+Ệ -> e;
+
+// Uppercase E with tones
+[id: 3069, name: "È to e", weight: 0.1, group: vietnamese_uppercase]
+È -> e;
+
+[id: 3070, name: "É to e", weight: 0.1, group: vietnamese_uppercase]
+É -> e;
+
+[id: 3071, name: "Ẻ to e", weight: 0.1, group: vietnamese_uppercase]
+Ẻ -> e;
+
+[id: 3072, name: "Ẽ to e", weight: 0.1, group: vietnamese_uppercase]
+Ẽ -> e;
+
+[id: 3073, name: "Ẹ to e", weight: 0.1, group: vietnamese_uppercase]
+Ẹ -> e;
+
+// Uppercase I with tones
+[id: 3074, name: "Ì to i", weight: 0.1, group: vietnamese_uppercase]
+Ì -> i;
+
+[id: 3075, name: "Í to i", weight: 0.1, group: vietnamese_uppercase]
+Í -> i;
+
+[id: 3076, name: "Ỉ to i", weight: 0.1, group: vietnamese_uppercase]
+Ỉ -> i;
+
+[id: 3077, name: "Ĩ to i", weight: 0.1, group: vietnamese_uppercase]
+Ĩ -> i;
+
+[id: 3078, name: "Ị to i", weight: 0.1, group: vietnamese_uppercase]
+Ị -> i;
+
+// Uppercase Ô variants
+[id: 3079, name: "Ô to o", weight: 0.1, group: vietnamese_uppercase]
+Ô -> o;
+
+[id: 3080, name: "Ồ to o", weight: 0.1, group: vietnamese_uppercase]
+Ồ -> o;
+
+[id: 3081, name: "Ố to o", weight: 0.1, group: vietnamese_uppercase]
+Ố -> o;
+
+[id: 3082, name: "Ổ to o", weight: 0.1, group: vietnamese_uppercase]
+Ổ -> o;
+
+[id: 3083, name: "Ỗ to o", weight: 0.1, group: vietnamese_uppercase]
+Ỗ -> o;
+
+[id: 3084, name: "Ộ to o", weight: 0.1, group: vietnamese_uppercase]
+Ộ -> o;
+
+// Uppercase Ơ variants
+[id: 3085, name: "Ơ to o", weight: 0.1, group: vietnamese_uppercase]
+Ơ -> o;
+
+[id: 3086, name: "Ờ to o", weight: 0.1, group: vietnamese_uppercase]
+Ờ -> o;
+
+[id: 3087, name: "Ớ to o", weight: 0.1, group: vietnamese_uppercase]
+Ớ -> o;
+
+[id: 3088, name: "Ở to o", weight: 0.1, group: vietnamese_uppercase]
+Ở -> o;
+
+[id: 3089, name: "Ỡ to o", weight: 0.1, group: vietnamese_uppercase]
+Ỡ -> o;
+
+[id: 3090, name: "Ợ to o", weight: 0.1, group: vietnamese_uppercase]
+Ợ -> o;
+
+// Uppercase O with tones
+[id: 3091, name: "Ò to o", weight: 0.1, group: vietnamese_uppercase]
+Ò -> o;
+
+[id: 3092, name: "Ó to o", weight: 0.1, group: vietnamese_uppercase]
+Ó -> o;
+
+[id: 3093, name: "Ỏ to o", weight: 0.1, group: vietnamese_uppercase]
+Ỏ -> o;
+
+[id: 3094, name: "Õ to o", weight: 0.1, group: vietnamese_uppercase]
+Õ -> o;
+
+[id: 3095, name: "Ọ to o", weight: 0.1, group: vietnamese_uppercase]
+Ọ -> o;
+
+// Uppercase Ư variants
+[id: 3096, name: "Ư to u", weight: 0.1, group: vietnamese_uppercase]
+Ư -> u;
+
+[id: 3097, name: "Ừ to u", weight: 0.1, group: vietnamese_uppercase]
+Ừ -> u;
+
+[id: 3098, name: "Ứ to u", weight: 0.1, group: vietnamese_uppercase]
+Ứ -> u;
+
+[id: 3099, name: "Ử to u", weight: 0.1, group: vietnamese_uppercase]
+Ử -> u;
+
+[id: 3100, name: "Ữ to u", weight: 0.1, group: vietnamese_uppercase]
+Ữ -> u;
+
+[id: 3101, name: "Ự to u", weight: 0.1, group: vietnamese_uppercase]
+Ự -> u;
+
+// Uppercase U with tones
+[id: 3102, name: "Ù to u", weight: 0.1, group: vietnamese_uppercase]
+Ù -> u;
+
+[id: 3103, name: "Ú to u", weight: 0.1, group: vietnamese_uppercase]
+Ú -> u;
+
+[id: 3104, name: "Ủ to u", weight: 0.1, group: vietnamese_uppercase]
+Ủ -> u;
+
+[id: 3105, name: "Ũ to u", weight: 0.1, group: vietnamese_uppercase]
+Ũ -> u;
+
+[id: 3106, name: "Ụ to u", weight: 0.1, group: vietnamese_uppercase]
+Ụ -> u;
+
+// Uppercase Y with tones
+[id: 3107, name: "Ỳ to y", weight: 0.1, group: vietnamese_uppercase]
+Ỳ -> y;
+
+[id: 3108, name: "Ý to y", weight: 0.1, group: vietnamese_uppercase]
+Ý -> y;
+
+[id: 3109, name: "Ỷ to y", weight: 0.1, group: vietnamese_uppercase]
+Ỷ -> y;
+
+[id: 3110, name: "Ỹ to y", weight: 0.1, group: vietnamese_uppercase]
+Ỹ -> y;
+
+[id: 3111, name: "Ỵ to y", weight: 0.1, group: vietnamese_uppercase]
+Ỵ -> y;
+
+// ============================================================
+// CASE NORMALIZATION (uppercase to lowercase)
+// ============================================================
+
+[id: 3112, name: "A to a", weight: 0.2, group: vietnamese_case]
+A -> a;
+
+[id: 3113, name: "B to b", weight: 0.2, group: vietnamese_case]
+B -> b;
+
+[id: 3114, name: "C to c", weight: 0.2, group: vietnamese_case]
+C -> c;
+
+[id: 3115, name: "D to d", weight: 0.2, group: vietnamese_case]
+D -> d;
+
+[id: 3116, name: "E to e", weight: 0.2, group: vietnamese_case]
+E -> e;
+
+[id: 3117, name: "G to g", weight: 0.2, group: vietnamese_case]
+G -> g;
+
+[id: 3118, name: "H to h", weight: 0.2, group: vietnamese_case]
+H -> h;
+
+[id: 3119, name: "I to i", weight: 0.2, group: vietnamese_case]
+I -> i;
+
+[id: 3120, name: "K to k", weight: 0.2, group: vietnamese_case]
+K -> k;
+
+[id: 3121, name: "L to l", weight: 0.2, group: vietnamese_case]
+L -> l;
+
+[id: 3122, name: "M to m", weight: 0.2, group: vietnamese_case]
+M -> m;
+
+[id: 3123, name: "N to n", weight: 0.2, group: vietnamese_case]
+N -> n;
+
+[id: 3124, name: "O to o", weight: 0.2, group: vietnamese_case]
+O -> o;
+
+[id: 3125, name: "P to p", weight: 0.2, group: vietnamese_case]
+P -> p;
+
+[id: 3126, name: "Q to q", weight: 0.2, group: vietnamese_case]
+Q -> q;
+
+[id: 3127, name: "R to r", weight: 0.2, group: vietnamese_case]
+R -> r;
+
+[id: 3128, name: "S to s", weight: 0.2, group: vietnamese_case]
+S -> s;
+
+[id: 3129, name: "T to t", weight: 0.2, group: vietnamese_case]
+T -> t;
+
+[id: 3130, name: "U to u", weight: 0.2, group: vietnamese_case]
+U -> u;
+
+[id: 3131, name: "V to v", weight: 0.2, group: vietnamese_case]
+V -> v;
+
+[id: 3132, name: "X to x", weight: 0.2, group: vietnamese_case]
+X -> x;
+
+[id: 3133, name: "Y to y", weight: 0.2, group: vietnamese_case]
+Y -> y;
+

@@ -1,0 +1,279 @@
+// Hungarian Base Phonetic Rules
+// =============================
+// Phonetic rules for Hungarian (magyar) using Latin script with diacritics.
+// Maps Hungarian letters and digraphs to phonetic representations.
+//
+// Hungarian has 44 letters including 14 vowels and 9 digraphs.
+// Unique features:
+//   - S alone = "sh" sound (unlike most languages!)
+//   - 9 digraphs treated as single letters: cs, dz, dzs, gy, ly, ny, sz, ty, zs
+//   - Double-acute accent for long ő and ű
+//   - Vowel harmony (back/front vowels) - not handled phonetically
+//
+// Key features:
+//   - Digraphs: cs→CH, dz→DZ, dzs→DZS, gy→GY, ly→Y, ny→NY, sz→S, ty→TY, zs→ZS
+//   - S alone → SH (unique Hungarian feature!)
+//   - Long vowels: á, é, í, ó, ú (with acute)
+//   - Front rounded vowels: ö, ő, ü, ű
+//
+// Rule IDs: 2860-2949
+
+@name "Hungarian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Hungarian language"
+
+// ============================================================
+// TRIGRAPH (highest priority - must match before digraphs)
+// ============================================================
+
+// DZS → d͡ʒ (like English "j" in "job")
+[id: 2860, name: "dzs trigraph", weight: 0.02, group: hungarian_trigraphs, ipa: "/d͡ʒ/"]
+dzs -> d͡ʒ;
+
+[id: 2861, name: "Dzs trigraph", weight: 0.02, group: hungarian_trigraphs, ipa: "/d͡ʒ/"]
+Dzs -> d͡ʒ;
+
+[id: 2862, name: "DZS trigraph", weight: 0.02, group: hungarian_trigraphs, ipa: "/d͡ʒ/"]
+DZS -> d͡ʒ;
+
+// ============================================================
+// DIGRAPHS (must come before single letters)
+// ============================================================
+
+// CS → t͡ʃ (like English "ch")
+[id: 2865, name: "cs digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/t͡ʃ/"]
+cs -> t͡ʃ;
+
+[id: 2866, name: "Cs digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/t͡ʃ/"]
+Cs -> t͡ʃ;
+
+[id: 2867, name: "CS digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/t͡ʃ/"]
+CS -> t͡ʃ;
+
+// DZ → d͡z (voiced alveolar affricate)
+[id: 2868, name: "dz digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/d͡z/"]
+dz -> d͡z;
+
+// GY → ɟ (voiced palatal plosive)
+[id: 2870, name: "gy digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ɟ/"]
+gy -> ɟ;
+
+[id: 2871, name: "Gy digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ɟ/"]
+Gy -> ɟ;
+
+[id: 2872, name: "GY digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ɟ/"]
+GY -> ɟ;
+
+// LY → j (palatal lateral, pronounced as [j] in modern Hungarian)
+[id: 2873, name: "ly digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/j/"]
+ly -> j;
+
+[id: 2874, name: "Ly digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/j/"]
+Ly -> j;
+
+// NY → ɲ (palatal nasal, like Spanish ñ)
+[id: 2875, name: "ny digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ɲ/"]
+ny -> ɲ;
+
+[id: 2876, name: "Ny digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ɲ/"]
+Ny -> ɲ;
+
+[id: 2877, name: "NY digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ɲ/"]
+NY -> ɲ;
+
+// SZ → s (voiceless alveolar fricative, like English "s")
+[id: 2878, name: "sz digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/s/"]
+sz -> s;
+
+[id: 2879, name: "Sz digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/s/"]
+Sz -> s;
+
+[id: 2880, name: "SZ digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/s/"]
+SZ -> s;
+
+// TY → c (voiceless palatal plosive)
+[id: 2881, name: "ty digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/c/"]
+ty -> c;
+
+[id: 2882, name: "Ty digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/c/"]
+Ty -> c;
+
+// ZS → ʒ (voiced postalveolar fricative, like French "j")
+[id: 2883, name: "zs digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ʒ/"]
+zs -> ʒ;
+
+[id: 2884, name: "Zs digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ʒ/"]
+Zs -> ʒ;
+
+[id: 2885, name: "ZS digraph", weight: 0.05, group: hungarian_digraphs, ipa: "/ʒ/"]
+ZS -> ʒ;
+
+// ============================================================
+// HUNGARIAN S (unique feature!)
+// ============================================================
+// In Hungarian, standalone S = "sh" sound (like English "sh")
+// This is AFTER digraph rules so sz→s happens first
+
+[id: 2890, name: "s to ʃ", weight: 0.1, group: hungarian_s, ipa: "/ʃ/"]
+s -> ʃ;
+
+[id: 2891, name: "S to ʃ", weight: 0.1, group: hungarian_s, ipa: "/ʃ/"]
+S -> ʃ;
+
+// ============================================================
+// LONG VOWELS (acute accent = long)
+// ============================================================
+
+// Á → A (long a)
+[id: 2895, name: "long a", weight: 0.15, group: hungarian_long_vowels]
+á -> A;
+
+[id: 2896, name: "long A upper", weight: 0.15, group: hungarian_long_vowels]
+Á -> A;
+
+// É → E (long e)
+[id: 2897, name: "long e", weight: 0.15, group: hungarian_long_vowels]
+é -> E;
+
+[id: 2898, name: "long E upper", weight: 0.15, group: hungarian_long_vowels]
+É -> E;
+
+// Í → I (long i)
+[id: 2899, name: "long i", weight: 0.15, group: hungarian_long_vowels]
+í -> I;
+
+[id: 2900, name: "long I upper", weight: 0.15, group: hungarian_long_vowels]
+Í -> I;
+
+// Ó → O (long o)
+[id: 2901, name: "long o", weight: 0.15, group: hungarian_long_vowels]
+ó -> O;
+
+[id: 2902, name: "long O upper", weight: 0.15, group: hungarian_long_vowels]
+Ó -> O;
+
+// Ú → U (long u)
+[id: 2903, name: "long u", weight: 0.15, group: hungarian_long_vowels]
+ú -> U;
+
+[id: 2904, name: "long U upper", weight: 0.15, group: hungarian_long_vowels]
+Ú -> U;
+
+// ============================================================
+// FRONT ROUNDED VOWELS
+// ============================================================
+
+// Ö → ø (short front rounded o)
+[id: 2905, name: "short o umlaut", weight: 0.15, group: hungarian_front_vowels, ipa: "/ø/"]
+ö -> ø;
+
+[id: 2906, name: "short O umlaut upper", weight: 0.15, group: hungarian_front_vowels, ipa: "/ø/"]
+Ö -> ø;
+
+// Ő → øː (long front rounded o, double acute)
+[id: 2907, name: "long o double acute", weight: 0.15, group: hungarian_front_vowels, ipa: "/øː/"]
+ő -> øː;
+
+[id: 2908, name: "long O double acute upper", weight: 0.15, group: hungarian_front_vowels, ipa: "/øː/"]
+Ő -> øː;
+
+// Ü → y (short front rounded u)
+[id: 2909, name: "short u umlaut", weight: 0.15, group: hungarian_front_vowels, ipa: "/y/"]
+ü -> y;
+
+[id: 2910, name: "short U umlaut upper", weight: 0.15, group: hungarian_front_vowels, ipa: "/y/"]
+Ü -> y;
+
+// Ű → yː (long front rounded u, double acute)
+[id: 2911, name: "long u double acute", weight: 0.15, group: hungarian_front_vowels, ipa: "/yː/"]
+ű -> yː;
+
+[id: 2912, name: "long U double acute upper", weight: 0.15, group: hungarian_front_vowels, ipa: "/yː/"]
+Ű -> yː;
+
+// ============================================================
+// CONSONANT TRANSFORMATIONS
+// ============================================================
+
+// C → t͡s (when not part of cs digraph)
+[id: 2915, name: "c to t͡s", weight: 0.2, group: hungarian_consonants, ipa: "/t͡s/"]
+c -> t͡s;
+
+// J → j (like English "y", palatal approximant)
+[id: 2916, name: "j to j", weight: 0.2, group: hungarian_consonants, ipa: "/j/"]
+j -> j;
+
+// W → v (rare, in loanwords)
+[id: 2917, name: "w to v", weight: 0.2, group: hungarian_consonants]
+w -> v;
+
+// X → ks (rare, in loanwords)
+[id: 2918, name: "x to ks", weight: 0.2, group: hungarian_consonants]
+x -> ks;
+
+// Q → k (rare, in loanwords)
+[id: 2919, name: "q to k", weight: 0.2, group: hungarian_consonants]
+q -> k;
+
+// ============================================================
+// DOUBLE DIGRAPH HANDLING (gemination)
+// ============================================================
+// Hungarian writes doubled digraphs as: ccs, ssz, nny, etc.
+// (first letter + full digraph)
+
+[id: 2925, name: "geminate cs", weight: 0.03, group: hungarian_gemination, ipa: "/t͡ʃː/"]
+ccs -> t͡ʃ;
+
+[id: 2926, name: "geminate sz", weight: 0.03, group: hungarian_gemination, ipa: "/sː/"]
+ssz -> s;
+
+[id: 2927, name: "geminate zs", weight: 0.03, group: hungarian_gemination, ipa: "/ʒː/"]
+zzs -> ʒ;
+
+[id: 2928, name: "geminate ny", weight: 0.03, group: hungarian_gemination, ipa: "/ɲː/"]
+nny -> ɲ;
+
+[id: 2929, name: "geminate gy", weight: 0.03, group: hungarian_gemination, ipa: "/ɟː/"]
+ggy -> ɟ;
+
+[id: 2930, name: "geminate ty", weight: 0.03, group: hungarian_gemination, ipa: "/cː/"]
+tty -> c;
+
+[id: 2931, name: "geminate ly", weight: 0.03, group: hungarian_gemination, ipa: "/jː/"]
+lly -> j;
+
+// ============================================================
+// IPA SIMPLIFICATION (geminate reduction for matching)
+// ============================================================
+
+[id: 2940, name: "double t͡ʃ", weight: 0.25, group: hungarian_simplification]
+t͡ʃt͡ʃ -> t͡ʃ;
+
+[id: 2941, name: "double s", weight: 0.25, group: hungarian_simplification]
+ss -> s;
+
+[id: 2942, name: "double ʒ", weight: 0.25, group: hungarian_simplification]
+ʒʒ -> ʒ;
+
+[id: 2943, name: "double ɲ", weight: 0.25, group: hungarian_simplification]
+ɲɲ -> ɲ;
+
+[id: 2944, name: "double ɟ", weight: 0.25, group: hungarian_simplification]
+ɟɟ -> ɟ;
+
+[id: 2945, name: "double c palatal", weight: 0.25, group: hungarian_simplification]
+cc -> c;
+
+[id: 2946, name: "double d͡z", weight: 0.25, group: hungarian_simplification]
+d͡zd͡z -> d͡z;
+
+[id: 2947, name: "double d͡ʒ", weight: 0.25, group: hungarian_simplification]
+d͡ʒd͡ʒ -> d͡ʒ;
+
+[id: 2948, name: "double ʃ", weight: 0.25, group: hungarian_simplification]
+ʃʃ -> ʃ;
+
+[id: 2949, name: "double j", weight: 0.25, group: hungarian_simplification]
+jj -> j;
+

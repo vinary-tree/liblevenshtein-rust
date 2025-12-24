@@ -1,0 +1,362 @@
+// Marathi Base Phonetic Rules
+// ============================
+// Phonetic rules for Marathi (मराठी) Devanagari script romanization.
+// Maps Devanagari letters to Latin equivalents for phonetic matching.
+//
+// Marathi uses the same Devanagari script as Hindi with:
+//   - All Hindi consonants and vowels
+//   - ळ (retroflex lateral) - unique to Marathi
+//   - Different schwa deletion patterns (not handled in rules)
+//
+// Key features:
+//   - 12 vowels (including ऍ for English æ sound)
+//   - 36 consonants (Hindi consonants + ळ)
+//   - Same vowel matras as Hindi
+//   - Same diacritics and numerals as Hindi
+//
+// Rule IDs: 4200-4249
+
+@name "Marathi Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Marathi Devanagari script"
+
+// ============================================================
+// MARATHI-SPECIFIC CONSONANTS (highest priority)
+// ============================================================
+
+// ळ - retroflex lateral (unique to Marathi)
+[id: 4200, name: "La retroflex", weight: 0.02, group: marathi_special, ipa: "/ɭ/"]
+ळ -> ɭ;
+
+// ळ्ह - aspirated retroflex lateral (rare)
+[id: 4201, name: "Lha retroflex", weight: 0.02, group: marathi_special, ipa: "/ɭʰ/"]
+ळ्ह -> ɭʰ;
+
+// ऍ - caret/æ sound (for English loanwords)
+[id: 4202, name: "ae vowel", weight: 0.02, group: marathi_special, ipa: "/æ/"]
+ऍ -> æ;
+
+// ऑ - open o sound (for English loanwords)
+[id: 4203, name: "aw vowel", weight: 0.02, group: marathi_special, ipa: "/ɔ/"]
+ऑ -> ɔ;
+
+// ॅ - ae matra
+[id: 4204, name: "ae matra", weight: 0.02, group: marathi_special, ipa: "/æ/"]
+ॅ -> æ;
+
+// ॉ - aw matra
+[id: 4205, name: "aw matra", weight: 0.02, group: marathi_special, ipa: "/ɔ/"]
+ॉ -> ɔ;
+
+// ============================================================
+// INDEPENDENT VOWELS (SVAR)
+// ============================================================
+
+// Short a (inherent vowel of consonants)
+[id: 4206, name: "a vowel", weight: 0.05, group: marathi_vowels]
+अ -> a;
+
+// Long aa
+[id: 4207, name: "aa vowel", weight: 0.05, group: marathi_vowels, ipa: "/aː/"]
+आ -> aː;
+
+// Short i
+[id: 4208, name: "i vowel", weight: 0.05, group: marathi_vowels]
+इ -> i;
+
+// Long ii
+[id: 4209, name: "ii vowel", weight: 0.05, group: marathi_vowels, ipa: "/iː/"]
+ई -> iː;
+
+// Short u
+[id: 4210, name: "u vowel", weight: 0.05, group: marathi_vowels]
+उ -> u;
+
+// Long uu
+[id: 4211, name: "uu vowel", weight: 0.05, group: marathi_vowels, ipa: "/uː/"]
+ऊ -> uː;
+
+// Vocalic r (ri)
+[id: 4212, name: "ri vowel", weight: 0.05, group: marathi_vowels, ipa: "/r̩/"]
+ऋ -> r̩;
+
+// Short e
+[id: 4213, name: "e vowel", weight: 0.05, group: marathi_vowels]
+ए -> e;
+
+// Diphthong ai
+[id: 4214, name: "ai vowel", weight: 0.05, group: marathi_vowels, ipa: "/ɛː/"]
+ऐ -> ɛː;
+
+// Short o
+[id: 4215, name: "o vowel", weight: 0.05, group: marathi_vowels]
+ओ -> o;
+
+// Diphthong au
+[id: 4216, name: "au vowel", weight: 0.05, group: marathi_vowels, ipa: "/ɔː/"]
+औ -> ɔː;
+
+// ============================================================
+// VELAR CONSONANTS (क-वर्ग)
+// ============================================================
+
+[id: 4217, name: "ka", weight: 0.05, group: marathi_velars]
+क -> k;
+
+[id: 4218, name: "kha", weight: 0.05, group: marathi_velars]
+ख -> kh;
+
+[id: 4219, name: "ga", weight: 0.05, group: marathi_velars]
+ग -> g;
+
+[id: 4220, name: "gha", weight: 0.05, group: marathi_velars]
+घ -> gh;
+
+[id: 4221, name: "nga", weight: 0.05, group: marathi_velars, ipa: "/ŋ/"]
+ङ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (च-वर्ग)
+// ============================================================
+
+[id: 4222, name: "cha", weight: 0.05, group: marathi_palatals]
+च -> c;
+
+[id: 4223, name: "chha", weight: 0.05, group: marathi_palatals]
+छ -> ch;
+
+[id: 4224, name: "ja", weight: 0.05, group: marathi_palatals]
+ज -> j;
+
+[id: 4225, name: "jha", weight: 0.05, group: marathi_palatals]
+झ -> jh;
+
+[id: 4226, name: "nya", weight: 0.05, group: marathi_palatals, ipa: "/ɲ/"]
+ञ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ट-वर्ग)
+// ============================================================
+
+[id: 4227, name: "Ta", weight: 0.05, group: marathi_retroflexes, ipa: "/ʈ/"]
+ट -> ʈ;
+
+[id: 4228, name: "Tha", weight: 0.05, group: marathi_retroflexes, ipa: "/ʈʰ/"]
+ठ -> ʈʰ;
+
+[id: 4229, name: "Da", weight: 0.05, group: marathi_retroflexes, ipa: "/ɖ/"]
+ड -> ɖ;
+
+[id: 4230, name: "Dha", weight: 0.05, group: marathi_retroflexes, ipa: "/ɖʰ/"]
+ढ -> ɖʰ;
+
+[id: 4231, name: "Na", weight: 0.05, group: marathi_retroflexes, ipa: "/ɳ/"]
+ण -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (त-वर्ग)
+// ============================================================
+
+[id: 4232, name: "ta", weight: 0.05, group: marathi_dentals]
+त -> t;
+
+[id: 4233, name: "tha", weight: 0.05, group: marathi_dentals]
+थ -> th;
+
+[id: 4234, name: "da", weight: 0.05, group: marathi_dentals]
+द -> d;
+
+[id: 4235, name: "dha", weight: 0.05, group: marathi_dentals]
+ध -> dh;
+
+[id: 4236, name: "na", weight: 0.05, group: marathi_dentals]
+न -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (प-वर्ग)
+// ============================================================
+
+[id: 4237, name: "pa", weight: 0.05, group: marathi_labials]
+प -> p;
+
+[id: 4238, name: "pha", weight: 0.05, group: marathi_labials]
+फ -> ph;
+
+[id: 4239, name: "ba", weight: 0.05, group: marathi_labials]
+ब -> b;
+
+[id: 4240, name: "bha", weight: 0.05, group: marathi_labials]
+भ -> bh;
+
+[id: 4241, name: "ma", weight: 0.05, group: marathi_labials]
+म -> m;
+
+// ============================================================
+// SEMI-VOWELS (अन्तस्थ)
+// ============================================================
+
+[id: 4242, name: "ya", weight: 0.05, group: marathi_semivowels]
+य -> y;
+
+[id: 4243, name: "ra", weight: 0.05, group: marathi_semivowels]
+र -> r;
+
+[id: 4244, name: "la", weight: 0.05, group: marathi_semivowels]
+ल -> l;
+
+[id: 4245, name: "va", weight: 0.05, group: marathi_semivowels]
+व -> v;
+
+// ============================================================
+// SIBILANTS AND ASPIRATE (ऊष्म)
+// ============================================================
+
+[id: 4246, name: "sha palatal", weight: 0.05, group: marathi_sibilants, ipa: "/ʃ/"]
+श -> ʃ;
+
+[id: 4247, name: "Sha retroflex", weight: 0.05, group: marathi_sibilants, ipa: "/ʂ/"]
+ष -> ʂ;
+
+[id: 4248, name: "sa", weight: 0.05, group: marathi_sibilants]
+स -> s;
+
+[id: 4249, name: "ha", weight: 0.05, group: marathi_sibilants]
+ह -> h;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels)
+// ============================================================
+
+[id: 4250, name: "aa matra", weight: 0.05, group: marathi_matras, ipa: "/aː/"]
+ा -> aː;
+
+[id: 4251, name: "i matra", weight: 0.05, group: marathi_matras]
+ि -> i;
+
+[id: 4252, name: "ii matra", weight: 0.05, group: marathi_matras, ipa: "/iː/"]
+ी -> iː;
+
+[id: 4253, name: "u matra", weight: 0.05, group: marathi_matras]
+ु -> u;
+
+[id: 4254, name: "uu matra", weight: 0.05, group: marathi_matras, ipa: "/uː/"]
+ू -> uː;
+
+[id: 4255, name: "ri matra", weight: 0.05, group: marathi_matras, ipa: "/r̩/"]
+ृ -> r̩;
+
+[id: 4256, name: "e matra", weight: 0.05, group: marathi_matras]
+े -> e;
+
+[id: 4257, name: "ai matra", weight: 0.05, group: marathi_matras, ipa: "/ɛː/"]
+ै -> ɛː;
+
+[id: 4258, name: "o matra", weight: 0.05, group: marathi_matras]
+ो -> o;
+
+[id: 4259, name: "au matra", weight: 0.05, group: marathi_matras, ipa: "/ɔː/"]
+ौ -> ɔː;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Virama (halant) with ZWJ
+[id: 4260, name: "virama zwj", weight: 0.1, group: marathi_diacritics]
+्‍ -> ;
+
+// Virama alone
+[id: 4261, name: "virama alone", weight: 0.1, group: marathi_diacritics]
+् -> ;
+
+// Anusvara - nasalization
+[id: 4262, name: "anusvara", weight: 0.1, group: marathi_diacritics, ipa: "/̃/"]
+ं -> ̃;
+
+// Chandrabindu - nasal vowel
+[id: 4263, name: "chandrabindu", weight: 0.1, group: marathi_diacritics, ipa: "/̃/"]
+ँ -> ̃;
+
+// Visarga - voiceless glottal fricative
+[id: 4264, name: "visarga", weight: 0.1, group: marathi_diacritics, ipa: "/h/"]
+ः -> h;
+
+// Avagraha - elision marker
+[id: 4265, name: "avagraha", weight: 0.1, group: marathi_diacritics]
+ऽ -> ';
+
+// ============================================================
+// DEVANAGARI NUMERALS
+// ============================================================
+
+[id: 4266, name: "numeral 0", weight: 0.1, group: marathi_numerals]
+० -> 0;
+
+[id: 4267, name: "numeral 1", weight: 0.1, group: marathi_numerals]
+१ -> 1;
+
+[id: 4268, name: "numeral 2", weight: 0.1, group: marathi_numerals]
+२ -> 2;
+
+[id: 4269, name: "numeral 3", weight: 0.1, group: marathi_numerals]
+३ -> 3;
+
+[id: 4270, name: "numeral 4", weight: 0.1, group: marathi_numerals]
+४ -> 4;
+
+[id: 4271, name: "numeral 5", weight: 0.1, group: marathi_numerals]
+५ -> 5;
+
+[id: 4272, name: "numeral 6", weight: 0.1, group: marathi_numerals]
+६ -> 6;
+
+[id: 4273, name: "numeral 7", weight: 0.1, group: marathi_numerals]
+७ -> 7;
+
+[id: 4274, name: "numeral 8", weight: 0.1, group: marathi_numerals]
+८ -> 8;
+
+[id: 4275, name: "numeral 9", weight: 0.1, group: marathi_numerals]
+९ -> 9;
+
+// ============================================================
+// IPA SIMPLIFICATION
+// ============================================================
+
+[id: 4276, name: "double retroflex lateral", weight: 0.2, group: marathi_simplification]
+ɭɭ -> ɭ;
+
+[id: 4277, name: "double retroflex t", weight: 0.2, group: marathi_simplification]
+ʈʈ -> ʈ;
+
+[id: 4278, name: "double retroflex d", weight: 0.2, group: marathi_simplification]
+ɖɖ -> ɖ;
+
+[id: 4279, name: "double retroflex n", weight: 0.2, group: marathi_simplification]
+ɳɳ -> ɳ;
+
+[id: 4280, name: "double palatal sh", weight: 0.2, group: marathi_simplification]
+ʃʃ -> ʃ;
+
+[id: 4281, name: "double retroflex sh", weight: 0.2, group: marathi_simplification]
+ʂʂ -> ʂ;
+
+[id: 4282, name: "double palatal nasal", weight: 0.2, group: marathi_simplification]
+ɲɲ -> ɲ;
+
+[id: 4283, name: "double ai vowel", weight: 0.2, group: marathi_simplification]
+ɛːɛː -> ɛː;
+
+[id: 4284, name: "double au vowel", weight: 0.2, group: marathi_simplification]
+ɔːɔː -> ɔː;
+
+[id: 4285, name: "double vocalic r", weight: 0.2, group: marathi_simplification]
+r̩r̩ -> r̩;
+
+[id: 4286, name: "double ae vowel", weight: 0.2, group: marathi_simplification]
+ææ -> æ;
+
+[id: 4287, name: "double aw vowel", weight: 0.2, group: marathi_simplification]
+ɔɔ -> ɔ;
+

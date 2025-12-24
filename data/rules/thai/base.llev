@@ -1,0 +1,300 @@
+// Thai Base Phonetic Rules
+// ========================
+// Phonetic rules for Thai (ภาษาไทย) script romanization.
+// Maps Thai letters to Latin equivalents for phonetic matching.
+//
+// Thai is a Brahmic-derived abugida with unique features:
+//   - No spaces between words
+//   - 5 tones (not fully marked in writing)
+//   - 44 consonants in 3 classes (high, mid, low)
+//   - Vowels can appear before, after, above, below, or around consonants
+//   - Inherent vowel /o/ or /a/ depending on context
+//
+// Rule IDs: 4500-4599
+
+@name "Thai Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Thai script"
+
+// ============================================================
+// LEADING VOWELS (highest priority - appear before consonant)
+// ============================================================
+
+[id: 4500, name: "sara e leading", weight: 0.02, group: thai_leading_vowels]
+เ -> e;
+
+[id: 4501, name: "sara ae leading", weight: 0.02, group: thai_leading_vowels, ipa: "/æ/"]
+แ -> æ;
+
+[id: 4502, name: "sara o leading", weight: 0.02, group: thai_leading_vowels]
+โ -> o;
+
+[id: 4503, name: "sara ai muan", weight: 0.02, group: thai_leading_vowels, ipa: "/aɪ/"]
+ใ -> aɪ;
+
+[id: 4504, name: "sara ai malai", weight: 0.02, group: thai_leading_vowels, ipa: "/aɪ/"]
+ไ -> aɪ;
+
+// ============================================================
+// FOLLOWING VOWELS (appear after consonant)
+// ============================================================
+
+[id: 4510, name: "sara a short", weight: 0.05, group: thai_following_vowels]
+ะ -> a;
+
+[id: 4511, name: "sara aa long", weight: 0.05, group: thai_following_vowels, ipa: "/aː/"]
+า -> aː;
+
+[id: 4512, name: "sara am", weight: 0.05, group: thai_following_vowels, ipa: "/am/"]
+ำ -> am;
+
+// ============================================================
+// UPPER VOWELS (combining, above consonant)
+// ============================================================
+
+[id: 4515, name: "sara i", weight: 0.05, group: thai_upper_vowels]
+ิ -> i;
+
+[id: 4516, name: "sara ii", weight: 0.05, group: thai_upper_vowels, ipa: "/iː/"]
+ี -> iː;
+
+[id: 4517, name: "sara ue", weight: 0.05, group: thai_upper_vowels, ipa: "/ɯ/"]
+ึ -> ɯ;
+
+[id: 4518, name: "sara uee", weight: 0.05, group: thai_upper_vowels, ipa: "/ɯː/"]
+ื -> ɯː;
+
+[id: 4519, name: "mai han akat", weight: 0.05, group: thai_upper_vowels]
+ั -> a;
+
+// ============================================================
+// LOWER VOWELS (combining, below consonant)
+// ============================================================
+
+[id: 4520, name: "sara u", weight: 0.05, group: thai_lower_vowels]
+ุ -> u;
+
+[id: 4521, name: "sara uu", weight: 0.05, group: thai_lower_vowels, ipa: "/uː/"]
+ู -> uː;
+
+// ============================================================
+// HIGH CLASS CONSONANTS
+// ============================================================
+
+[id: 4525, name: "kho khai", weight: 0.05, group: thai_high_consonants]
+ข -> kh;
+
+[id: 4526, name: "kho khuat", weight: 0.05, group: thai_high_consonants]
+ฃ -> kh;
+
+[id: 4527, name: "cho ching", weight: 0.05, group: thai_high_consonants]
+ฉ -> ch;
+
+[id: 4528, name: "so so", weight: 0.05, group: thai_high_consonants]
+ซ -> s;
+
+[id: 4529, name: "tho thahan", weight: 0.05, group: thai_high_consonants]
+ฐ -> th;
+
+[id: 4530, name: "tho phuthao", weight: 0.05, group: thai_high_consonants]
+ถ -> th;
+
+[id: 4531, name: "pho phung", weight: 0.05, group: thai_high_consonants]
+ผ -> ph;
+
+[id: 4532, name: "fo fa", weight: 0.05, group: thai_high_consonants]
+ฝ -> f;
+
+[id: 4533, name: "so sala", weight: 0.05, group: thai_high_consonants]
+ศ -> s;
+
+[id: 4534, name: "so rusi", weight: 0.05, group: thai_high_consonants]
+ษ -> s;
+
+[id: 4535, name: "so suea", weight: 0.05, group: thai_high_consonants]
+ส -> s;
+
+[id: 4536, name: "ho hip", weight: 0.05, group: thai_high_consonants]
+ห -> h;
+
+// ============================================================
+// MID CLASS CONSONANTS
+// ============================================================
+
+[id: 4540, name: "ko kai", weight: 0.05, group: thai_mid_consonants]
+ก -> k;
+
+[id: 4541, name: "cho chan", weight: 0.05, group: thai_mid_consonants]
+จ -> c;
+
+[id: 4542, name: "do chada", weight: 0.05, group: thai_mid_consonants]
+ฎ -> d;
+
+[id: 4543, name: "to patak", weight: 0.05, group: thai_mid_consonants]
+ฏ -> t;
+
+[id: 4544, name: "do dek", weight: 0.05, group: thai_mid_consonants]
+ด -> d;
+
+[id: 4545, name: "to tao", weight: 0.05, group: thai_mid_consonants]
+ต -> t;
+
+[id: 4546, name: "bo baimai", weight: 0.05, group: thai_mid_consonants]
+บ -> b;
+
+[id: 4547, name: "po pla", weight: 0.05, group: thai_mid_consonants]
+ป -> p;
+
+[id: 4548, name: "o ang", weight: 0.05, group: thai_mid_consonants]
+อ -> ';
+
+// ============================================================
+// LOW CLASS CONSONANTS (unpaired)
+// ============================================================
+
+[id: 4550, name: "ngo ngu", weight: 0.05, group: thai_low_consonants, ipa: "/ŋ/"]
+ง -> ŋ;
+
+[id: 4551, name: "yo ying", weight: 0.05, group: thai_low_consonants]
+ญ -> y;
+
+[id: 4552, name: "no nen", weight: 0.05, group: thai_low_consonants]
+ณ -> n;
+
+[id: 4553, name: "no nu", weight: 0.05, group: thai_low_consonants]
+น -> n;
+
+[id: 4554, name: "mo ma", weight: 0.05, group: thai_low_consonants]
+ม -> m;
+
+[id: 4555, name: "yo yak", weight: 0.05, group: thai_low_consonants]
+ย -> y;
+
+[id: 4556, name: "ro ruea", weight: 0.05, group: thai_low_consonants]
+ร -> r;
+
+[id: 4557, name: "lo ling", weight: 0.05, group: thai_low_consonants]
+ล -> l;
+
+[id: 4558, name: "wo waen", weight: 0.05, group: thai_low_consonants]
+ว -> w;
+
+// ============================================================
+// LOW CLASS CONSONANTS (paired)
+// ============================================================
+
+[id: 4560, name: "kho khwai", weight: 0.05, group: thai_low_paired]
+ค -> kh;
+
+[id: 4561, name: "kho khon", weight: 0.05, group: thai_low_paired]
+ฅ -> kh;
+
+[id: 4562, name: "kho ra-khang", weight: 0.05, group: thai_low_paired]
+ฆ -> kh;
+
+[id: 4563, name: "cho chang", weight: 0.05, group: thai_low_paired]
+ช -> ch;
+
+[id: 4564, name: "so cho", weight: 0.05, group: thai_low_paired]
+ฌ -> ch;
+
+[id: 4565, name: "tho montho", weight: 0.05, group: thai_low_paired]
+ฑ -> th;
+
+[id: 4566, name: "tho thangthan", weight: 0.05, group: thai_low_paired]
+ฒ -> th;
+
+[id: 4567, name: "tho thong", weight: 0.05, group: thai_low_paired]
+ท -> th;
+
+[id: 4568, name: "tho thahaan", weight: 0.05, group: thai_low_paired]
+ธ -> th;
+
+[id: 4569, name: "pho phan", weight: 0.05, group: thai_low_paired]
+พ -> ph;
+
+[id: 4570, name: "fo fan", weight: 0.05, group: thai_low_paired]
+ฟ -> f;
+
+[id: 4571, name: "pho samphao", weight: 0.05, group: thai_low_paired]
+ภ -> ph;
+
+[id: 4572, name: "lo chula", weight: 0.05, group: thai_low_paired]
+ฬ -> l;
+
+[id: 4573, name: "ho nokhuk", weight: 0.05, group: thai_low_paired]
+ฮ -> h;
+
+// ============================================================
+// TONE MARKS (silent in romanization)
+// ============================================================
+
+[id: 4575, name: "mai ek", weight: 0.1, group: thai_tones]
+่ -> ;
+
+[id: 4576, name: "mai tho", weight: 0.1, group: thai_tones]
+้ -> ;
+
+[id: 4577, name: "mai tri", weight: 0.1, group: thai_tones]
+๊ -> ;
+
+[id: 4578, name: "mai chattawa", weight: 0.1, group: thai_tones]
+๋ -> ;
+
+// ============================================================
+// SPECIAL MARKS
+// ============================================================
+
+[id: 4580, name: "thanthakhat", weight: 0.1, group: thai_special]
+์ -> ;
+
+[id: 4581, name: "nikhahit", weight: 0.1, group: thai_special, ipa: "/m/"]
+ํ -> m;
+
+[id: 4582, name: "yamakkan", weight: 0.1, group: thai_special]
+๎ -> ;
+
+[id: 4583, name: "paiyannoi", weight: 0.1, group: thai_special]
+ฯ -> ;
+
+[id: 4584, name: "maiyamok", weight: 0.1, group: thai_special]
+ๆ -> ;
+
+[id: 4585, name: "mai tai khu", weight: 0.1, group: thai_special]
+็ -> ;
+
+// ============================================================
+// THAI NUMERALS
+// ============================================================
+
+[id: 4590, name: "numeral 0", weight: 0.1, group: thai_numerals]
+๐ -> 0;
+
+[id: 4591, name: "numeral 1", weight: 0.1, group: thai_numerals]
+๑ -> 1;
+
+[id: 4592, name: "numeral 2", weight: 0.1, group: thai_numerals]
+๒ -> 2;
+
+[id: 4593, name: "numeral 3", weight: 0.1, group: thai_numerals]
+๓ -> 3;
+
+[id: 4594, name: "numeral 4", weight: 0.1, group: thai_numerals]
+๔ -> 4;
+
+[id: 4595, name: "numeral 5", weight: 0.1, group: thai_numerals]
+๕ -> 5;
+
+[id: 4596, name: "numeral 6", weight: 0.1, group: thai_numerals]
+๖ -> 6;
+
+[id: 4597, name: "numeral 7", weight: 0.1, group: thai_numerals]
+๗ -> 7;
+
+[id: 4598, name: "numeral 8", weight: 0.1, group: thai_numerals]
+๘ -> 8;
+
+[id: 4599, name: "numeral 9", weight: 0.1, group: thai_numerals]
+๙ -> 9;
+

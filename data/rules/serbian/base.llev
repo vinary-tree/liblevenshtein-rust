@@ -1,0 +1,244 @@
+// Serbian Base Phonetic Rules (Cyrillic)
+// ======================================
+// Phonetic rules for Serbian (Српски језик) - Cyrillic script.
+// Maps Serbian Cyrillic to Latin phonetic representations.
+//
+// Key features:
+//   - Perfect phonemic orthography: one letter = one sound
+//   - Unique Cyrillic letters: Љ(lj), Њ(nj), Џ(dž), Ћ(ć), Ђ(đ)
+//   - Both Cyrillic and Latin scripts are official
+//   - Cyrillic is more traditional, Latin more common in casual use
+//
+// Serbian Cyrillic alphabet (30 letters):
+// А Б В Г Д Ђ Е Ж З И Ј К Л Љ М Н Њ О П Р С Т Ћ У Ф Х Ц Ч Џ Ш
+//
+// Rule IDs: 3400-3499
+
+@name "Serbian Base Phonetic Rules (Cyrillic)"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Serbian Cyrillic script"
+
+// ============================================================
+// UNIQUE SERBIAN CYRILLIC LETTERS (highest priority)
+// ============================================================
+
+// Љ → ʎ (palatal lateral approximant - single letter in Cyrillic!)
+[id: 3400, name: "љ to ʎ", weight: 0.05, group: serbian_unique, ipa: "/ʎ/"]
+љ -> ʎ;
+
+[id: 3401, name: "Љ to ʎ", weight: 0.05, group: serbian_unique, ipa: "/ʎ/"]
+Љ -> ʎ;
+
+// Њ → ɲ (palatal nasal - single letter in Cyrillic!)
+[id: 3402, name: "њ to ɲ", weight: 0.05, group: serbian_unique, ipa: "/ɲ/"]
+њ -> ɲ;
+
+[id: 3403, name: "Њ to ɲ", weight: 0.05, group: serbian_unique, ipa: "/ɲ/"]
+Њ -> ɲ;
+
+// Џ → d͡ʒ (voiced postalveolar affricate - single letter in Cyrillic!)
+[id: 3404, name: "џ to d͡ʒ", weight: 0.05, group: serbian_unique, ipa: "/d͡ʒ/"]
+џ -> d͡ʒ;
+
+[id: 3405, name: "Џ to d͡ʒ", weight: 0.05, group: serbian_unique, ipa: "/d͡ʒ/"]
+Џ -> d͡ʒ;
+
+// Ћ → tɕ (voiceless alveolo-palatal affricate, like soft ch)
+[id: 3406, name: "ћ to tɕ", weight: 0.05, group: serbian_unique, ipa: "/tɕ/"]
+ћ -> tɕ;
+
+[id: 3407, name: "Ћ to tɕ", weight: 0.05, group: serbian_unique, ipa: "/tɕ/"]
+Ћ -> tɕ;
+
+// Ђ → dʑ (voiced alveolo-palatal affricate)
+[id: 3408, name: "ђ to dʑ", weight: 0.05, group: serbian_unique, ipa: "/dʑ/"]
+ђ -> dʑ;
+
+[id: 3409, name: "Ђ to dʑ", weight: 0.05, group: serbian_unique, ipa: "/dʑ/"]
+Ђ -> dʑ;
+
+// ============================================================
+// MULTI-CHARACTER PATTERNS (double consonants)
+// ============================================================
+
+[id: 3410, name: "жж to ʒ", weight: 0.05, group: serbian_doubles, ipa: "/ʒ/"]
+жж -> ʒ;
+
+[id: 3411, name: "шш to ʃ", weight: 0.05, group: serbian_doubles, ipa: "/ʃ/"]
+шш -> ʃ;
+
+[id: 3412, name: "цц to t͡s", weight: 0.05, group: serbian_doubles, ipa: "/t͡s/"]
+цц -> t͡s;
+
+[id: 3413, name: "чч to t͡ʃ", weight: 0.05, group: serbian_doubles, ipa: "/t͡ʃ/"]
+чч -> t͡ʃ;
+
+// ============================================================
+// COMPLEX CONSONANTS
+// ============================================================
+
+// Ж → ʒ (voiced postalveolar fricative)
+[id: 3414, name: "ж to ʒ", weight: 0.1, group: serbian_complex, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 3415, name: "Ж to ʒ", weight: 0.1, group: serbian_complex, ipa: "/ʒ/"]
+Ж -> ʒ;
+
+// Ш → ʃ (voiceless postalveolar fricative)
+[id: 3416, name: "ш to ʃ", weight: 0.1, group: serbian_complex, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 3417, name: "Ш to ʃ", weight: 0.1, group: serbian_complex, ipa: "/ʃ/"]
+Ш -> ʃ;
+
+// Х → x (voiceless velar fricative)
+[id: 3418, name: "х to x", weight: 0.1, group: serbian_complex, ipa: "/x/"]
+х -> x;
+
+[id: 3419, name: "Х to x", weight: 0.1, group: serbian_complex, ipa: "/x/"]
+Х -> x;
+
+// Ц → t͡s (voiceless alveolar affricate)
+[id: 3420, name: "ц to t͡s", weight: 0.1, group: serbian_complex, ipa: "/t͡s/"]
+ц -> t͡s;
+
+[id: 3421, name: "Ц to t͡s", weight: 0.1, group: serbian_complex, ipa: "/t͡s/"]
+Ц -> t͡s;
+
+// Ч → t͡ʃ (voiceless postalveolar affricate)
+[id: 3422, name: "ч to t͡ʃ", weight: 0.1, group: serbian_complex, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 3423, name: "Ч to t͡ʃ", weight: 0.1, group: serbian_complex, ipa: "/t͡ʃ/"]
+Ч -> t͡ʃ;
+
+// ============================================================
+// SIMPLE VOWELS
+// ============================================================
+
+[id: 3424, name: "а to a", weight: 0.2, group: serbian_vowels]
+а -> a;
+
+[id: 3425, name: "А to a", weight: 0.2, group: serbian_vowels]
+А -> a;
+
+[id: 3426, name: "е to e", weight: 0.2, group: serbian_vowels]
+е -> e;
+
+[id: 3427, name: "Е to e", weight: 0.2, group: serbian_vowels]
+Е -> e;
+
+[id: 3428, name: "и to i", weight: 0.2, group: serbian_vowels]
+и -> i;
+
+[id: 3429, name: "И to i", weight: 0.2, group: serbian_vowels]
+И -> i;
+
+[id: 3430, name: "о to o", weight: 0.2, group: serbian_vowels]
+о -> o;
+
+[id: 3431, name: "О to o", weight: 0.2, group: serbian_vowels]
+О -> o;
+
+[id: 3432, name: "у to u", weight: 0.2, group: serbian_vowels]
+у -> u;
+
+[id: 3433, name: "У to u", weight: 0.2, group: serbian_vowels]
+У -> u;
+
+// ============================================================
+// SIMPLE CONSONANTS
+// ============================================================
+
+[id: 3434, name: "б to b", weight: 0.2, group: serbian_consonants]
+б -> b;
+
+[id: 3435, name: "Б to b", weight: 0.2, group: serbian_consonants]
+Б -> b;
+
+[id: 3436, name: "в to v", weight: 0.2, group: serbian_consonants]
+в -> v;
+
+[id: 3437, name: "В to v", weight: 0.2, group: serbian_consonants]
+В -> v;
+
+[id: 3438, name: "г to g", weight: 0.2, group: serbian_consonants]
+г -> g;
+
+[id: 3439, name: "Г to g", weight: 0.2, group: serbian_consonants]
+Г -> g;
+
+[id: 3440, name: "д to d", weight: 0.2, group: serbian_consonants]
+д -> d;
+
+[id: 3441, name: "Д to d", weight: 0.2, group: serbian_consonants]
+Д -> d;
+
+[id: 3442, name: "з to z", weight: 0.2, group: serbian_consonants]
+з -> z;
+
+[id: 3443, name: "З to z", weight: 0.2, group: serbian_consonants]
+З -> z;
+
+// Ј → j (like English y in yes)
+[id: 3444, name: "ј to j", weight: 0.2, group: serbian_consonants, ipa: "/j/"]
+ј -> j;
+
+[id: 3445, name: "Ј to j", weight: 0.2, group: serbian_consonants, ipa: "/j/"]
+Ј -> j;
+
+[id: 3446, name: "к to k", weight: 0.2, group: serbian_consonants]
+к -> k;
+
+[id: 3447, name: "К to k", weight: 0.2, group: serbian_consonants]
+К -> k;
+
+[id: 3448, name: "л to l", weight: 0.2, group: serbian_consonants]
+л -> l;
+
+[id: 3449, name: "Л to l", weight: 0.2, group: serbian_consonants]
+Л -> l;
+
+[id: 3450, name: "м to m", weight: 0.2, group: serbian_consonants]
+м -> m;
+
+[id: 3451, name: "М to m", weight: 0.2, group: serbian_consonants]
+М -> m;
+
+[id: 3452, name: "н to n", weight: 0.2, group: serbian_consonants]
+н -> n;
+
+[id: 3453, name: "Н to n", weight: 0.2, group: serbian_consonants]
+Н -> n;
+
+[id: 3454, name: "п to p", weight: 0.2, group: serbian_consonants]
+п -> p;
+
+[id: 3455, name: "П to p", weight: 0.2, group: serbian_consonants]
+П -> p;
+
+[id: 3456, name: "р to r", weight: 0.2, group: serbian_consonants]
+р -> r;
+
+[id: 3457, name: "Р to r", weight: 0.2, group: serbian_consonants]
+Р -> r;
+
+[id: 3458, name: "с to s", weight: 0.2, group: serbian_consonants]
+с -> s;
+
+[id: 3459, name: "С to s", weight: 0.2, group: serbian_consonants]
+С -> s;
+
+[id: 3460, name: "т to t", weight: 0.2, group: serbian_consonants]
+т -> t;
+
+[id: 3461, name: "Т to t", weight: 0.2, group: serbian_consonants]
+Т -> t;
+
+[id: 3462, name: "ф to f", weight: 0.2, group: serbian_consonants]
+ф -> f;
+
+[id: 3463, name: "Ф to f", weight: 0.2, group: serbian_consonants]
+Ф -> f;
+

@@ -2,43 +2,12 @@
 //!
 //! Tokenizes input strings into a stream of tokens for the parser.
 
-use crate::phonetic::common::traits::{LexerLike, TokenLike};
 use crate::phonetic::common::syllable::SyllableCondition;
+use crate::phonetic::common::traits::{LexerLike, TokenLike};
 use super::error::{ParseError, ParseErrorKind, ParseResult, Position};
 
-/// Parsed regex flags from `(?...)` syntax.
-///
-/// Used to communicate flag state from lexer to parser.
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct ParsedFlags {
-    /// Case-insensitive flag (`i` or `-i`)
-    pub case_insensitive: Option<bool>,
-    /// Unicode normalization form (`u:NFC`, etc.)
-    pub unicode_normalization: Option<String>,
-    /// Feature-based matching flag (`f` or `-f`)
-    pub feature_based: Option<bool>,
-    /// Accent-insensitive flag (`a` or `-a`)
-    pub accent_insensitive: Option<bool>,
-    /// Multiline flag (`m` or `-m`) - `^` and `$` match line boundaries
-    pub multiline: Option<bool>,
-    /// Dotall flag (`s` or `-s`) - `.` matches newlines
-    pub dotall: Option<bool>,
-    /// Local Levenshtein distance limit (`(?;N)` or `(?flags;N:pattern)`)
-    pub levenshtein_distance: Option<u8>,
-}
-
-impl ParsedFlags {
-    /// Check if any flags are set.
-    pub fn is_empty(&self) -> bool {
-        self.case_insensitive.is_none()
-            && self.unicode_normalization.is_none()
-            && self.feature_based.is_none()
-            && self.accent_insensitive.is_none()
-            && self.multiline.is_none()
-            && self.dotall.is_none()
-            && self.levenshtein_distance.is_none()
-    }
-}
+// Re-export ParsedFlags for users of this module
+pub use crate::phonetic::common::flags::ParsedFlags;
 
 /// A token in the phonetic regex language.
 #[derive(Debug, Clone, PartialEq)]

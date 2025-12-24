@@ -31,21 +31,21 @@
 // Must be matched before simpler rules consume their components
 // ============================================================
 
-[id: 110, name: "tion ending", weight: 0.0, group: affrication]
-// tion -> shun (nation -> nashun)
-tion -> shun;
+[id: 110, name: "tion ending", weight: 0.0, group: affrication, ipa: "/ʃən/"]
+// tion -> ʃən (nation -> naʃən)
+tion -> ʃən;
 
-[id: 111, name: "sion ending", weight: 0.0, group: affrication]
-// sion -> zhun (vision -> vizhun)
-sion -> zhun;
+[id: 111, name: "sion ending", weight: 0.0, group: affrication, ipa: "/ʒən/"]
+// sion -> ʒən (vision -> viʒən)
+sion -> ʒən;
 
-[id: 112, name: "cious ending", weight: 0.0, group: affrication]
-// cious -> shus (precious -> preshus)
-cious -> shus;
+[id: 112, name: "cious ending", weight: 0.0, group: affrication, ipa: "/ʃəs/"]
+// cious -> ʃəs (precious -> preʃəs)
+cious -> ʃəs;
 
-[id: 113, name: "tious ending", weight: 0.0, group: affrication]
-// tious -> shus (cautious -> kaushus)
-tious -> shus;
+[id: 113, name: "tious ending", weight: 0.0, group: affrication, ipa: "/ʃəs/"]
+// tious -> ʃəs (cautious -> kɔːʃəs)
+tious -> ʃəs;
 
 [id: 36, name: "ough pattern", weight: 0.0, group: gh_rules]
 // ough -> o (dough -> do)
@@ -59,13 +59,13 @@ aught -> ot;
 // ought -> ot (bought -> bot, thought -> tot)
 ought -> ot;
 
-[id: 130, name: "tch simplify", weight: 0.0, group: orthography]
-// tch -> ch (batch -> bach, watch -> wach)
-tch -> ch;
+[id: 130, name: "tch simplify", weight: 0.0, group: orthography, ipa: "/t͡ʃ/"]
+// tch -> t͡ʃ (batch -> bæt͡ʃ, watch -> wɒt͡ʃ)
+tch -> t͡ʃ;
 
-[id: 131, name: "dge simplify", weight: 0.0, group: orthography]
-// dge -> j (judge -> juj, bridge -> brij)
-dge -> j;
+[id: 131, name: "dge simplify", weight: 0.0, group: orthography, ipa: "/d͡ʒ/"]
+// dge -> d͡ʒ (judge -> d͡ʒʌd͡ʒ, bridge -> brɪd͡ʒ)
+dge -> d͡ʒ;
 
 // ============================================================
 // Phase 2: GH Rules (before generic gh deletion)
@@ -79,13 +79,13 @@ gh -> g / _$VOWEL;
 // Phase 3: Digraph Conversions
 // ============================================================
 
-[id: 1, name: "ch digraph", weight: 0.0, group: orthography]
-// ch -> ts sound (church -> tsurts)
-ch -> ts;
+[id: 1, name: "ch digraph", weight: 0.0, group: orthography, ipa: "/t͡ʃ/"]
+// ch -> t͡ʃ sound (church -> t͡ʃɜːt͡ʃ)
+ch -> t͡ʃ;
 
-[id: 2, name: "sh digraph", weight: 0.0, group: orthography]
-// sh -> s sound (ship -> sip)
-sh -> s;
+[id: 2, name: "sh digraph", weight: 0.0, group: orthography, ipa: "/ʃ/"]
+// sh -> ʃ sound (ship -> ʃɪp)
+sh -> ʃ;
 
 [id: 3, name: "ph to f", weight: 0.0, group: orthography]
 // ph -> f (phone -> fone)
@@ -152,9 +152,9 @@ c -> s / _$FRONT_VOWEL;
 // c -> k elsewhere (cat -> kat)
 c -> k;
 
-[id: 22, name: "soft g", weight: 0.0, group: orthography]
-// g -> j before front vowels (gem -> jem)
-g -> j / _$FRONT_VOWEL;
+[id: 22, name: "soft g", weight: 0.0, group: orthography, ipa: "/d͡ʒ/"]
+// g -> d͡ʒ before front vowels (gem -> d͡ʒem)
+g -> d͡ʒ / _$FRONT_VOWEL;
 
 // ============================================================
 // Phase 7: Additional Orthographic Rules
@@ -275,9 +275,10 @@ ue -> u / _#;
 // Phase 10: Phonetic Rules (weight=0.15)
 // ============================================================
 
-[id: 100, name: "th to t", weight: 0.15, group: phonetic]
-// th -> t (the -> te, thing -> ting)
-th -> t;
+[id: 100, name: "th to θ", weight: 0.15, group: phonetic, ipa: "/θ/"]
+// th -> θ (the -> ðə, thing -> θɪŋ)
+// Note: Simplified - English th can be /θ/ (voiceless) or /ð/ (voiced)
+th -> θ;
 
 [id: 101, name: "qu to kw", weight: 0.15, group: phonetic]
 // qu -> kw (queen -> kween)

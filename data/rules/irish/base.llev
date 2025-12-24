@@ -1,0 +1,262 @@
+// Irish Base Phonetic Rules
+// =========================
+// Phonetic rules for Irish (Gaeilge).
+// Celtic language spoken in Ireland.
+//
+// Key features:
+//   - Séimhiú (lenition): consonant + h changes sound
+//   - Lenited consonants: bh, ch, dh, fh, gh, mh, ph, sh, th
+//   - Fadas (acute accent): á, é, í, ó, ú (long vowels)
+//   - FH is completely silent!
+//
+// Rule IDs: 4880-4949
+
+@name "Irish Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Irish"
+
+// ============================================================
+// SÉIMHIÚ (LENITION) - consonant + h
+// ============================================================
+
+// BH → V (like English "v")
+[id: 4880, name: "bh lenition", weight: 0.05, group: irish_lenition]
+bh -> v;
+
+[id: 4881, name: "Bh lenition", weight: 0.05, group: irish_lenition]
+Bh -> v;
+
+[id: 4882, name: "BH lenition upper", weight: 0.05, group: irish_lenition]
+BH -> v;
+
+// CH → x (voiceless velar fricative, like Scottish "loch")
+[id: 4883, name: "ch lenition", weight: 0.05, group: irish_lenition, ipa: "/x/"]
+ch -> x;
+
+[id: 4884, name: "Ch lenition", weight: 0.05, group: irish_lenition, ipa: "/x/"]
+Ch -> x;
+
+[id: 4885, name: "CH lenition upper", weight: 0.05, group: irish_lenition, ipa: "/x/"]
+CH -> x;
+
+// DH → ɣ (voiced velar fricative)
+[id: 4886, name: "dh lenition", weight: 0.05, group: irish_lenition, ipa: "/ɣ/"]
+dh -> ɣ;
+
+[id: 4887, name: "Dh lenition", weight: 0.05, group: irish_lenition, ipa: "/ɣ/"]
+Dh -> ɣ;
+
+[id: 4888, name: "DH lenition upper", weight: 0.05, group: irish_lenition, ipa: "/ɣ/"]
+DH -> ɣ;
+
+// FH → (silent!) - completely silent in Irish
+[id: 4889, name: "fh lenition", weight: 0.05, group: irish_lenition]
+fh -> ;
+
+[id: 4890, name: "Fh lenition", weight: 0.05, group: irish_lenition]
+Fh -> ;
+
+[id: 4891, name: "FH lenition upper", weight: 0.05, group: irish_lenition]
+FH -> ;
+
+// GH → ɣ (voiced velar fricative)
+[id: 4892, name: "gh lenition", weight: 0.05, group: irish_lenition, ipa: "/ɣ/"]
+gh -> ɣ;
+
+[id: 4893, name: "Gh lenition", weight: 0.05, group: irish_lenition, ipa: "/ɣ/"]
+Gh -> ɣ;
+
+[id: 4894, name: "GH lenition upper", weight: 0.05, group: irish_lenition, ipa: "/ɣ/"]
+GH -> ɣ;
+
+// MH → V (like English "v")
+[id: 4895, name: "mh lenition", weight: 0.05, group: irish_lenition]
+mh -> v;
+
+[id: 4896, name: "Mh lenition", weight: 0.05, group: irish_lenition]
+Mh -> v;
+
+[id: 4897, name: "MH lenition upper", weight: 0.05, group: irish_lenition]
+MH -> v;
+
+// PH → F (like English "f")
+[id: 4898, name: "ph lenition", weight: 0.05, group: irish_lenition]
+ph -> f;
+
+[id: 4899, name: "Ph lenition", weight: 0.05, group: irish_lenition]
+Ph -> f;
+
+[id: 4900, name: "PH lenition upper", weight: 0.05, group: irish_lenition]
+PH -> f;
+
+// SH → H (like English "h")
+[id: 4901, name: "sh lenition", weight: 0.05, group: irish_lenition]
+sh -> h;
+
+[id: 4902, name: "Sh lenition", weight: 0.05, group: irish_lenition]
+Sh -> h;
+
+[id: 4903, name: "SH lenition upper", weight: 0.05, group: irish_lenition]
+SH -> h;
+
+// TH → H (like English "h")
+[id: 4904, name: "th lenition", weight: 0.05, group: irish_lenition]
+th -> h;
+
+[id: 4905, name: "Th lenition", weight: 0.05, group: irish_lenition]
+Th -> h;
+
+[id: 4906, name: "TH lenition upper", weight: 0.05, group: irish_lenition]
+TH -> h;
+
+// ============================================================
+// FADAS (long vowels with acute accent)
+// ============================================================
+
+[id: 4907, name: "a fada", weight: 0.1, group: irish_fadas]
+á -> a;
+
+[id: 4908, name: "A fada", weight: 0.1, group: irish_fadas]
+Á -> a;
+
+[id: 4909, name: "e fada", weight: 0.1, group: irish_fadas]
+é -> e;
+
+[id: 4910, name: "E fada", weight: 0.1, group: irish_fadas]
+É -> e;
+
+[id: 4911, name: "i fada", weight: 0.1, group: irish_fadas]
+í -> i;
+
+[id: 4912, name: "I fada", weight: 0.1, group: irish_fadas]
+Í -> i;
+
+[id: 4913, name: "o fada", weight: 0.1, group: irish_fadas]
+ó -> o;
+
+[id: 4914, name: "O fada", weight: 0.1, group: irish_fadas]
+Ó -> o;
+
+[id: 4915, name: "u fada", weight: 0.1, group: irish_fadas]
+ú -> u;
+
+[id: 4916, name: "U fada", weight: 0.1, group: irish_fadas]
+Ú -> u;
+
+// ============================================================
+// STANDARD VOWELS
+// ============================================================
+
+[id: 4917, name: "a vowel", weight: 0.15, group: irish_vowels]
+a -> a;
+
+[id: 4918, name: "A vowel", weight: 0.15, group: irish_vowels]
+A -> a;
+
+[id: 4919, name: "e vowel", weight: 0.15, group: irish_vowels]
+e -> e;
+
+[id: 4920, name: "E vowel", weight: 0.15, group: irish_vowels]
+E -> e;
+
+[id: 4921, name: "i vowel", weight: 0.15, group: irish_vowels]
+i -> i;
+
+[id: 4922, name: "I vowel", weight: 0.15, group: irish_vowels]
+I -> i;
+
+[id: 4923, name: "o vowel", weight: 0.15, group: irish_vowels]
+o -> o;
+
+[id: 4924, name: "O vowel", weight: 0.15, group: irish_vowels]
+O -> o;
+
+[id: 4925, name: "u vowel", weight: 0.15, group: irish_vowels]
+u -> u;
+
+[id: 4926, name: "U vowel", weight: 0.15, group: irish_vowels]
+U -> u;
+
+// ============================================================
+// CONSONANTS
+// ============================================================
+
+[id: 4927, name: "b consonant", weight: 0.2, group: irish_consonants]
+b -> b;
+
+[id: 4928, name: "B consonant", weight: 0.2, group: irish_consonants]
+B -> b;
+
+[id: 4929, name: "c consonant", weight: 0.2, group: irish_consonants]
+c -> k;
+
+[id: 4930, name: "C consonant", weight: 0.2, group: irish_consonants]
+C -> k;
+
+[id: 4931, name: "d consonant", weight: 0.2, group: irish_consonants]
+d -> d;
+
+[id: 4932, name: "D consonant", weight: 0.2, group: irish_consonants]
+D -> d;
+
+[id: 4933, name: "f consonant", weight: 0.2, group: irish_consonants]
+f -> f;
+
+[id: 4934, name: "F consonant", weight: 0.2, group: irish_consonants]
+F -> f;
+
+[id: 4935, name: "g consonant", weight: 0.2, group: irish_consonants]
+g -> g;
+
+[id: 4936, name: "G consonant", weight: 0.2, group: irish_consonants]
+G -> g;
+
+[id: 4937, name: "h consonant", weight: 0.2, group: irish_consonants]
+h -> h;
+
+[id: 4938, name: "H consonant", weight: 0.2, group: irish_consonants]
+H -> h;
+
+[id: 4939, name: "l consonant", weight: 0.2, group: irish_consonants]
+l -> l;
+
+[id: 4940, name: "L consonant", weight: 0.2, group: irish_consonants]
+L -> l;
+
+[id: 4941, name: "m consonant", weight: 0.2, group: irish_consonants]
+m -> m;
+
+[id: 4942, name: "M consonant", weight: 0.2, group: irish_consonants]
+M -> m;
+
+[id: 4943, name: "n consonant", weight: 0.2, group: irish_consonants]
+n -> n;
+
+[id: 4944, name: "N consonant", weight: 0.2, group: irish_consonants]
+N -> n;
+
+[id: 4945, name: "p consonant", weight: 0.2, group: irish_consonants]
+p -> p;
+
+[id: 4946, name: "P consonant", weight: 0.2, group: irish_consonants]
+P -> p;
+
+[id: 4947, name: "r consonant", weight: 0.2, group: irish_consonants]
+r -> r;
+
+[id: 4948, name: "R consonant", weight: 0.2, group: irish_consonants]
+R -> r;
+
+[id: 4949, name: "s consonant", weight: 0.2, group: irish_consonants]
+s -> s;
+
+[id: 4950, name: "S consonant", weight: 0.2, group: irish_consonants]
+S -> s;
+
+[id: 4951, name: "t consonant", weight: 0.2, group: irish_consonants]
+t -> t;
+
+[id: 4952, name: "T consonant", weight: 0.2, group: irish_consonants]
+T -> t;
+

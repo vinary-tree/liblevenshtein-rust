@@ -1,0 +1,272 @@
+// Korean Base Phonetic Rules
+// ==========================
+// Phonetic rules for Korean (한국어) using Hangul script.
+// Maps Hangul jamo to Latin phonetic representations using
+// Revised Romanization of Korean (RR).
+//
+// Note: Korean syllable blocks are pre-composed characters.
+// This file handles individual jamo (letters) which appear
+// in decomposed form or as compatibility characters.
+//
+// Key features:
+//   - Hangul jamo (consonants and vowels) to Latin
+//   - Double consonants (ㄲ, ㄸ, ㅃ, ㅆ, ㅉ) → tensed consonants
+//   - Vowel combinations and diphthongs
+//   - Initial vs final consonant pronunciation differences
+//
+// Rule IDs: 2050-2149
+
+@name "Korean Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Korean Hangul"
+
+// ============================================================
+// DOUBLE (TENSE) CONSONANTS - Higher priority
+// ============================================================
+// These need to match before single consonants
+
+// ㄲ (ssang-giyeok) → kk
+[id: 2050, name: "ssang giyeok", weight: 0.05, group: korean_double_consonants]
+ㄲ -> kk;
+
+// ㄸ (ssang-digeut) → tt
+[id: 2051, name: "ssang digeut", weight: 0.05, group: korean_double_consonants]
+ㄸ -> tt;
+
+// ㅃ (ssang-bieup) → pp
+[id: 2052, name: "ssang bieup", weight: 0.05, group: korean_double_consonants]
+ㅃ -> pp;
+
+// ㅆ (ssang-siot) → ss
+[id: 2053, name: "ssang siot", weight: 0.05, group: korean_double_consonants]
+ㅆ -> ss;
+
+// ㅉ (ssang-jieut) → t͡ɕ͈ (tense alveolo-palatal affricate)
+[id: 2054, name: "ssang jieut", weight: 0.05, group: korean_double_consonants, ipa: "/t͡ɕ͈/"]
+ㅉ -> t͡ɕ͈;
+
+// ============================================================
+// ASPIRATED CONSONANTS
+// ============================================================
+
+// ㅋ (kieuk) → k (aspirated k)
+[id: 2060, name: "kieuk", weight: 0.1, group: korean_aspirated]
+ㅋ -> k;
+
+// ㅌ (tieut) → t (aspirated t)
+[id: 2061, name: "tieut", weight: 0.1, group: korean_aspirated]
+ㅌ -> t;
+
+// ㅍ (pieup) → p (aspirated p)
+[id: 2062, name: "pieup", weight: 0.1, group: korean_aspirated]
+ㅍ -> p;
+
+// ㅊ (chieut) → t͡ɕʰ (aspirated alveolo-palatal affricate)
+[id: 2063, name: "chieut", weight: 0.1, group: korean_aspirated, ipa: "/t͡ɕʰ/"]
+ㅊ -> t͡ɕʰ;
+
+// ============================================================
+// BASIC CONSONANTS
+// ============================================================
+
+// ㄱ (giyeok) → g/k (varies by position)
+[id: 2070, name: "giyeok", weight: 0.15, group: korean_consonants]
+ㄱ -> g;
+
+// ㄴ (nieun) → n
+[id: 2071, name: "nieun", weight: 0.15, group: korean_consonants]
+ㄴ -> n;
+
+// ㄷ (digeut) → d/t (varies by position)
+[id: 2072, name: "digeut", weight: 0.15, group: korean_consonants]
+ㄷ -> d;
+
+// ㄹ (rieul) → r/l (varies by position)
+[id: 2073, name: "rieul", weight: 0.15, group: korean_consonants]
+ㄹ -> r;
+
+// ㅁ (mieum) → m
+[id: 2074, name: "mieum", weight: 0.15, group: korean_consonants]
+ㅁ -> m;
+
+// ㅂ (bieup) → b/p (varies by position)
+[id: 2075, name: "bieup", weight: 0.15, group: korean_consonants]
+ㅂ -> b;
+
+// ㅅ (siot) → s
+[id: 2076, name: "siot", weight: 0.15, group: korean_consonants]
+ㅅ -> s;
+
+// ㅇ (ieung) → silent initially, ŋ finally
+// When initial, it's a placeholder (silent)
+// When final, it represents velar nasal
+[id: 2077, name: "ieung", weight: 0.15, group: korean_consonants, ipa: "/ŋ/"]
+ㅇ -> ŋ;
+
+// ㅈ (jieut) → t͡ɕ (alveolo-palatal affricate)
+[id: 2078, name: "jieut", weight: 0.15, group: korean_consonants, ipa: "/t͡ɕ/"]
+ㅈ -> t͡ɕ;
+
+// ㅎ (hieut) → h
+[id: 2079, name: "hieut", weight: 0.15, group: korean_consonants]
+ㅎ -> h;
+
+// ============================================================
+// COMPOUND FINAL CONSONANTS
+// ============================================================
+
+// ㄳ (giyeok-siot) → ks
+[id: 2080, name: "giyeok siot", weight: 0.1, group: korean_compound_finals]
+ㄳ -> ks;
+
+// ㄵ (nieun-jieut) → nj
+[id: 2081, name: "nieun jieut", weight: 0.1, group: korean_compound_finals]
+ㄵ -> nj;
+
+// ㄶ (nieun-hieut) → nh
+[id: 2082, name: "nieun hieut", weight: 0.1, group: korean_compound_finals]
+ㄶ -> nh;
+
+// ㄺ (rieul-giyeok) → lg
+[id: 2083, name: "rieul giyeok", weight: 0.1, group: korean_compound_finals]
+ㄺ -> lg;
+
+// ㄻ (rieul-mieum) → lm
+[id: 2084, name: "rieul mieum", weight: 0.1, group: korean_compound_finals]
+ㄻ -> lm;
+
+// ㄼ (rieul-bieup) → lb
+[id: 2085, name: "rieul bieup", weight: 0.1, group: korean_compound_finals]
+ㄼ -> lb;
+
+// ㄽ (rieul-siot) → ls
+[id: 2086, name: "rieul siot", weight: 0.1, group: korean_compound_finals]
+ㄽ -> ls;
+
+// ㄾ (rieul-tieut) → lt
+[id: 2087, name: "rieul tieut", weight: 0.1, group: korean_compound_finals]
+ㄾ -> lt;
+
+// ㄿ (rieul-pieup) → lp
+[id: 2088, name: "rieul pieup", weight: 0.1, group: korean_compound_finals]
+ㄿ -> lp;
+
+// ㅀ (rieul-hieut) → lh
+[id: 2089, name: "rieul hieut", weight: 0.1, group: korean_compound_finals]
+ㅀ -> lh;
+
+// ㅄ (bieup-siot) → ps
+[id: 2090, name: "bieup siot", weight: 0.1, group: korean_compound_finals]
+ㅄ -> ps;
+
+// ============================================================
+// BASIC VOWELS
+// ============================================================
+
+// ㅏ (a) → a
+[id: 2100, name: "vowel a", weight: 0.2, group: korean_vowels]
+ㅏ -> a;
+
+// ㅓ (eo) → eo
+[id: 2101, name: "vowel eo", weight: 0.2, group: korean_vowels]
+ㅓ -> eo;
+
+// ㅗ (o) → o
+[id: 2102, name: "vowel o", weight: 0.2, group: korean_vowels]
+ㅗ -> o;
+
+// ㅜ (u) → u
+[id: 2103, name: "vowel u", weight: 0.2, group: korean_vowels]
+ㅜ -> u;
+
+// ㅡ (eu) → eu
+[id: 2104, name: "vowel eu", weight: 0.2, group: korean_vowels]
+ㅡ -> eu;
+
+// ㅣ (i) → i
+[id: 2105, name: "vowel i", weight: 0.2, group: korean_vowels]
+ㅣ -> i;
+
+// ㅐ (ae) → ae
+[id: 2106, name: "vowel ae", weight: 0.2, group: korean_vowels]
+ㅐ -> ae;
+
+// ㅔ (e) → e
+[id: 2107, name: "vowel e", weight: 0.2, group: korean_vowels]
+ㅔ -> e;
+
+// ============================================================
+// Y-COMBINATION VOWELS (Iotized vowels)
+// ============================================================
+
+// ㅑ (ya) → ya
+[id: 2110, name: "vowel ya", weight: 0.2, group: korean_y_vowels]
+ㅑ -> ya;
+
+// ㅕ (yeo) → yeo
+[id: 2111, name: "vowel yeo", weight: 0.2, group: korean_y_vowels]
+ㅕ -> yeo;
+
+// ㅛ (yo) → yo
+[id: 2112, name: "vowel yo", weight: 0.2, group: korean_y_vowels]
+ㅛ -> yo;
+
+// ㅠ (yu) → yu
+[id: 2113, name: "vowel yu", weight: 0.2, group: korean_y_vowels]
+ㅠ -> yu;
+
+// ㅒ (yae) → yae
+[id: 2114, name: "vowel yae", weight: 0.2, group: korean_y_vowels]
+ㅒ -> yae;
+
+// ㅖ (ye) → ye
+[id: 2115, name: "vowel ye", weight: 0.2, group: korean_y_vowels]
+ㅖ -> ye;
+
+// ============================================================
+// W-COMBINATION VOWELS (Labial glide vowels)
+// ============================================================
+
+// ㅘ (wa) → wa
+[id: 2120, name: "vowel wa", weight: 0.2, group: korean_w_vowels]
+ㅘ -> wa;
+
+// ㅙ (wae) → wae
+[id: 2121, name: "vowel wae", weight: 0.2, group: korean_w_vowels]
+ㅙ -> wae;
+
+// ㅚ (oe) → oe (or we in modern pronunciation)
+[id: 2122, name: "vowel oe", weight: 0.2, group: korean_w_vowels]
+ㅚ -> oe;
+
+// ㅝ (wo) → wo
+[id: 2123, name: "vowel wo", weight: 0.2, group: korean_w_vowels]
+ㅝ -> wo;
+
+// ㅞ (we) → we
+[id: 2124, name: "vowel we", weight: 0.2, group: korean_w_vowels]
+ㅞ -> we;
+
+// ㅟ (wi) → wi
+[id: 2125, name: "vowel wi", weight: 0.2, group: korean_w_vowels]
+ㅟ -> wi;
+
+// ㅢ (ui) → ui (or i after consonants)
+[id: 2126, name: "vowel ui", weight: 0.2, group: korean_w_vowels]
+ㅢ -> ui;
+
+// ============================================================
+// COMMON SYLLABLE SIMPLIFICATIONS
+// ============================================================
+// Simplify double romanizations for easier matching
+
+[id: 2140, name: "eo to o", weight: 0.3, group: korean_simplification]
+eo -> o;
+
+[id: 2141, name: "eu to u", weight: 0.3, group: korean_simplification]
+eu -> u;
+
+[id: 2142, name: "ae to e", weight: 0.3, group: korean_simplification]
+ae -> e;
+

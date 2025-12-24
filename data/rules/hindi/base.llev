@@ -1,0 +1,409 @@
+// Hindi Base Phonetic Rules
+// =========================
+// Phonetic rules for Hindi (हिन्दी) Devanagari script romanization.
+// Maps Devanagari letters to Latin equivalents for phonetic matching.
+//
+// Hindi uses the Devanagari abugida script where:
+//   - Consonants carry an inherent /a/ vowel
+//   - Vowel matras modify the inherent vowel
+//   - Virama (्) removes the inherent vowel
+//   - Conjunct consonants are formed by combining consonants
+//
+// Key features:
+//   - 11 vowels (independent and matra forms)
+//   - 33 consonants in 5 series + semi-vowels + sibilants
+//   - Aspirated consonants (ख, घ, छ, झ, ठ, ढ, थ, ध, फ, भ)
+//   - Retroflex consonants (ट, ठ, ड, ढ, ण)
+//   - Nukta letters for borrowed sounds (क़, ख़, ग़, ज़, फ़)
+//   - Anusvara (ं) and Chandrabindu (ँ) for nasalization
+//
+// Rule IDs: 2600-2699
+
+@name "Hindi Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Hindi Devanagari script"
+
+// ============================================================
+// INDEPENDENT VOWELS (SVAR)
+// ============================================================
+
+// Short a (inherent vowel of consonants)
+[id: 2600, name: "a vowel", weight: 0.05, group: hindi_vowels]
+अ -> a;
+
+// Long aa
+[id: 2601, name: "aa vowel", weight: 0.05, group: hindi_vowels, ipa: "/aː/"]
+आ -> aː;
+
+// Short i
+[id: 2602, name: "i vowel", weight: 0.05, group: hindi_vowels]
+इ -> i;
+
+// Long ii
+[id: 2603, name: "ii vowel", weight: 0.05, group: hindi_vowels, ipa: "/iː/"]
+ई -> iː;
+
+// Short u
+[id: 2604, name: "u vowel", weight: 0.05, group: hindi_vowels]
+उ -> u;
+
+// Long uu
+[id: 2605, name: "uu vowel", weight: 0.05, group: hindi_vowels, ipa: "/uː/"]
+ऊ -> uː;
+
+// Vocalic r (ri)
+[id: 2606, name: "ri vowel", weight: 0.05, group: hindi_vowels, ipa: "/r̩/"]
+ऋ -> r̩;
+
+// Short e
+[id: 2607, name: "e vowel", weight: 0.05, group: hindi_vowels]
+ए -> e;
+
+// Diphthong ai
+[id: 2608, name: "ai vowel", weight: 0.05, group: hindi_vowels, ipa: "/ɛː/"]
+ऐ -> ɛː;
+
+// Short o
+[id: 2609, name: "o vowel", weight: 0.05, group: hindi_vowels]
+ओ -> o;
+
+// Diphthong au
+[id: 2610, name: "au vowel", weight: 0.05, group: hindi_vowels, ipa: "/ɔː/"]
+औ -> ɔː;
+
+// ============================================================
+// VELAR CONSONANTS (क-वर्ग / ka-varga)
+// ============================================================
+
+// ka - voiceless velar stop
+[id: 2615, name: "ka", weight: 0.05, group: hindi_velars]
+क -> k;
+
+// kha - aspirated voiceless velar stop
+[id: 2616, name: "kha", weight: 0.05, group: hindi_velars]
+ख -> kh;
+
+// ga - voiced velar stop
+[id: 2617, name: "ga", weight: 0.05, group: hindi_velars]
+ग -> g;
+
+// gha - aspirated voiced velar stop
+[id: 2618, name: "gha", weight: 0.05, group: hindi_velars]
+घ -> gh;
+
+// nga - velar nasal
+[id: 2619, name: "nga", weight: 0.05, group: hindi_velars, ipa: "/ŋ/"]
+ङ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (च-वर्ग / cha-varga)
+// ============================================================
+
+// cha - voiceless palatal affricate
+[id: 2620, name: "cha", weight: 0.05, group: hindi_palatals]
+च -> c;
+
+// chha - aspirated voiceless palatal affricate
+[id: 2621, name: "chha", weight: 0.05, group: hindi_palatals]
+छ -> ch;
+
+// ja - voiced palatal affricate
+[id: 2622, name: "ja", weight: 0.05, group: hindi_palatals]
+ज -> j;
+
+// jha - aspirated voiced palatal affricate
+[id: 2623, name: "jha", weight: 0.05, group: hindi_palatals]
+झ -> jh;
+
+// nya - palatal nasal
+[id: 2624, name: "nya", weight: 0.05, group: hindi_palatals, ipa: "/ɲ/"]
+ञ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ट-वर्ग / Ta-varga)
+// ============================================================
+
+// Ta - voiceless retroflex stop
+[id: 2625, name: "Ta", weight: 0.05, group: hindi_retroflexes, ipa: "/ʈ/"]
+ट -> ʈ;
+
+// Tha - aspirated voiceless retroflex stop
+[id: 2626, name: "Tha", weight: 0.05, group: hindi_retroflexes, ipa: "/ʈʰ/"]
+ठ -> ʈʰ;
+
+// Da - voiced retroflex stop
+[id: 2627, name: "Da", weight: 0.05, group: hindi_retroflexes, ipa: "/ɖ/"]
+ड -> ɖ;
+
+// Dha - aspirated voiced retroflex stop
+[id: 2628, name: "Dha", weight: 0.05, group: hindi_retroflexes, ipa: "/ɖʰ/"]
+ढ -> ɖʰ;
+
+// Na - retroflex nasal
+[id: 2629, name: "Na", weight: 0.05, group: hindi_retroflexes, ipa: "/ɳ/"]
+ण -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (त-वर्ग / ta-varga)
+// ============================================================
+
+// ta - voiceless dental stop
+[id: 2630, name: "ta", weight: 0.05, group: hindi_dentals]
+त -> t;
+
+// tha - aspirated voiceless dental stop
+[id: 2631, name: "tha", weight: 0.05, group: hindi_dentals]
+थ -> th;
+
+// da - voiced dental stop
+[id: 2632, name: "da", weight: 0.05, group: hindi_dentals]
+द -> d;
+
+// dha - aspirated voiced dental stop
+[id: 2633, name: "dha", weight: 0.05, group: hindi_dentals]
+ध -> dh;
+
+// na - dental nasal
+[id: 2634, name: "na", weight: 0.05, group: hindi_dentals]
+न -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (प-वर्ग / pa-varga)
+// ============================================================
+
+// pa - voiceless bilabial stop
+[id: 2635, name: "pa", weight: 0.05, group: hindi_labials]
+प -> p;
+
+// pha - aspirated voiceless bilabial stop
+[id: 2636, name: "pha", weight: 0.05, group: hindi_labials]
+फ -> ph;
+
+// ba - voiced bilabial stop
+[id: 2637, name: "ba", weight: 0.05, group: hindi_labials]
+ब -> b;
+
+// bha - aspirated voiced bilabial stop
+[id: 2638, name: "bha", weight: 0.05, group: hindi_labials]
+भ -> bh;
+
+// ma - bilabial nasal
+[id: 2639, name: "ma", weight: 0.05, group: hindi_labials]
+म -> m;
+
+// ============================================================
+// SEMI-VOWELS (अन्तस्थ / antastha)
+// ============================================================
+
+// ya - palatal approximant
+[id: 2640, name: "ya", weight: 0.05, group: hindi_semivowels]
+य -> y;
+
+// ra - alveolar tap/flap
+[id: 2641, name: "ra", weight: 0.05, group: hindi_semivowels]
+र -> r;
+
+// la - lateral approximant
+[id: 2642, name: "la", weight: 0.05, group: hindi_semivowels]
+ल -> l;
+
+// va/wa - labial approximant
+[id: 2643, name: "va", weight: 0.05, group: hindi_semivowels]
+व -> v;
+
+// ============================================================
+// SIBILANTS AND ASPIRATE (ऊष्म / ushma)
+// ============================================================
+
+// sha - palatal fricative
+[id: 2645, name: "sha palatal", weight: 0.05, group: hindi_sibilants, ipa: "/ʃ/"]
+श -> ʃ;
+
+// Sha - retroflex fricative
+[id: 2646, name: "Sha retroflex", weight: 0.05, group: hindi_sibilants, ipa: "/ʂ/"]
+ष -> ʂ;
+
+// sa - alveolar fricative
+[id: 2647, name: "sa", weight: 0.05, group: hindi_sibilants]
+स -> s;
+
+// ha - glottal fricative
+[id: 2648, name: "ha", weight: 0.05, group: hindi_sibilants]
+ह -> h;
+
+// ============================================================
+// NUKTA CONSONANTS (borrowed sounds)
+// ============================================================
+// IMPORTANT: Nukta consonants are composed of base consonant + nukta (़).
+// They must have LOWER weight (higher priority) than base consonants
+// so the two-character sequence is matched before the base consonant.
+
+// qa - voiceless uvular stop (Arabic/Persian)
+[id: 2650, name: "qa nukta", weight: 0.02, group: hindi_nukta]
+क़ -> q;
+
+// kha nukta - voiceless velar fricative (Arabic/Persian kh)
+[id: 2651, name: "kha nukta", weight: 0.02, group: hindi_nukta]
+ख़ -> KH;
+
+// ga nukta - voiced velar fricative (Arabic/Persian gh)
+[id: 2652, name: "ga nukta", weight: 0.02, group: hindi_nukta]
+ग़ -> GH;
+
+// za - voiced alveolar fricative (Arabic/Persian z)
+[id: 2653, name: "za nukta", weight: 0.02, group: hindi_nukta]
+ज़ -> z;
+
+// fa - voiceless labiodental fricative (Arabic/Persian f)
+[id: 2654, name: "fa nukta", weight: 0.02, group: hindi_nukta]
+फ़ -> f;
+
+// Ra - retroflex flap (with nukta)
+[id: 2655, name: "Ra flap nukta", weight: 0.02, group: hindi_nukta, ipa: "/ɽ/"]
+ड़ -> ɽ;
+
+// Rha - aspirated retroflex flap (with nukta)
+[id: 2656, name: "Rha flap nukta", weight: 0.02, group: hindi_nukta, ipa: "/ɽʰ/"]
+ढ़ -> ɽʰ;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels)
+// ============================================================
+
+// aa matra
+[id: 2660, name: "aa matra", weight: 0.05, group: hindi_matras, ipa: "/aː/"]
+ा -> aː;
+
+// i matra
+[id: 2661, name: "i matra", weight: 0.05, group: hindi_matras]
+ि -> i;
+
+// ii matra
+[id: 2662, name: "ii matra", weight: 0.05, group: hindi_matras, ipa: "/iː/"]
+ी -> iː;
+
+// u matra
+[id: 2663, name: "u matra", weight: 0.05, group: hindi_matras]
+ु -> u;
+
+// uu matra
+[id: 2664, name: "uu matra", weight: 0.05, group: hindi_matras, ipa: "/uː/"]
+ू -> uː;
+
+// ri matra
+[id: 2665, name: "ri matra", weight: 0.05, group: hindi_matras, ipa: "/r̩/"]
+ृ -> r̩;
+
+// e matra
+[id: 2666, name: "e matra", weight: 0.05, group: hindi_matras]
+े -> e;
+
+// ai matra
+[id: 2667, name: "ai matra", weight: 0.05, group: hindi_matras, ipa: "/ɛː/"]
+ै -> ɛː;
+
+// o matra
+[id: 2668, name: "o matra", weight: 0.05, group: hindi_matras]
+ो -> o;
+
+// au matra
+[id: 2669, name: "au matra", weight: 0.05, group: hindi_matras, ipa: "/ɔː/"]
+ौ -> ɔː;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Virama (halant) - vowel killer, removes inherent a
+[id: 2670, name: "virama", weight: 0.1, group: hindi_diacritics]
+्‍ -> ;
+
+// Virama alone
+[id: 2671, name: "virama alone", weight: 0.1, group: hindi_diacritics]
+् -> ;
+
+// Anusvara - nasalization
+[id: 2672, name: "anusvara", weight: 0.1, group: hindi_diacritics, ipa: "/̃/"]
+ं -> ̃;
+
+// Chandrabindu - nasal vowel
+[id: 2673, name: "chandrabindu", weight: 0.1, group: hindi_diacritics, ipa: "/̃/"]
+ँ -> ̃;
+
+// Visarga - voiceless glottal fricative
+[id: 2674, name: "visarga", weight: 0.1, group: hindi_diacritics, ipa: "/h/"]
+ः -> h;
+
+// Avagraha - elision marker
+[id: 2675, name: "avagraha", weight: 0.1, group: hindi_diacritics]
+ऽ -> ';
+
+// ============================================================
+// DEVANAGARI NUMERALS
+// ============================================================
+
+[id: 2680, name: "numeral 0", weight: 0.1, group: hindi_numerals]
+० -> 0;
+
+[id: 2681, name: "numeral 1", weight: 0.1, group: hindi_numerals]
+१ -> 1;
+
+[id: 2682, name: "numeral 2", weight: 0.1, group: hindi_numerals]
+२ -> 2;
+
+[id: 2683, name: "numeral 3", weight: 0.1, group: hindi_numerals]
+३ -> 3;
+
+[id: 2684, name: "numeral 4", weight: 0.1, group: hindi_numerals]
+४ -> 4;
+
+[id: 2685, name: "numeral 5", weight: 0.1, group: hindi_numerals]
+५ -> 5;
+
+[id: 2686, name: "numeral 6", weight: 0.1, group: hindi_numerals]
+६ -> 6;
+
+[id: 2687, name: "numeral 7", weight: 0.1, group: hindi_numerals]
+७ -> 7;
+
+[id: 2688, name: "numeral 8", weight: 0.1, group: hindi_numerals]
+८ -> 8;
+
+[id: 2689, name: "numeral 9", weight: 0.1, group: hindi_numerals]
+९ -> 9;
+
+// ============================================================
+// IPA SIMPLIFICATION
+// ============================================================
+
+[id: 2690, name: "double retroflex t", weight: 0.2, group: hindi_simplification]
+ʈʈ -> ʈ;
+
+[id: 2691, name: "double retroflex d", weight: 0.2, group: hindi_simplification]
+ɖɖ -> ɖ;
+
+[id: 2692, name: "double retroflex n", weight: 0.2, group: hindi_simplification]
+ɳɳ -> ɳ;
+
+[id: 2693, name: "double retroflex flap", weight: 0.2, group: hindi_simplification]
+ɽɽ -> ɽ;
+
+[id: 2694, name: "double palatal sh", weight: 0.2, group: hindi_simplification]
+ʃʃ -> ʃ;
+
+[id: 2695, name: "double retroflex sh", weight: 0.2, group: hindi_simplification]
+ʂʂ -> ʂ;
+
+[id: 2696, name: "double palatal nasal", weight: 0.2, group: hindi_simplification]
+ɲɲ -> ɲ;
+
+[id: 2697, name: "double ai vowel", weight: 0.2, group: hindi_simplification]
+ɛːɛː -> ɛː;
+
+[id: 2698, name: "double au vowel", weight: 0.2, group: hindi_simplification]
+ɔːɔː -> ɔː;
+
+[id: 2699, name: "double vocalic r", weight: 0.2, group: hindi_simplification]
+r̩r̩ -> r̩;
+

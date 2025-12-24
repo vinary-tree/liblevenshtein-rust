@@ -32,6 +32,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use super::error::Position;
+use crate::phonetic::common::flags::ParsedFlags;
 
 // Re-export syllable types from common module for backward compatibility
 pub use crate::phonetic::common::syllable::{SyllableCondition, SyllableExpr};
@@ -305,6 +306,12 @@ pub struct RuleMetadata {
 
     /// Whether the rule is enabled (default: true)
     pub enabled: bool,
+
+    /// IPA transcription with bracket notation.
+    /// Use "/.../" for phonemic transcription (abstract sound category).
+    /// Use "[...]" for phonetic transcription (specific realization).
+    /// Example: `ipa: "/ʃ/"` or `ipa: "[ʃ]"`
+    pub ipa: Option<String>,
 }
 
 impl RuleMetadata {
@@ -339,6 +346,7 @@ impl Default for RuleMetadata {
             weight: None,
             group: None,
             enabled: true,
+            ipa: None,
         }
     }
 }
@@ -670,6 +678,18 @@ pub enum Expression {
     /// Grouped expression (parentheses)
     Group(Box<Expression>),
 
+    /// Expression with scoped flags (e.g., `(?c:pattern)` for case-sensitive)
+    ///
+    /// In LLev, matching is case-insensitive by default (phonetic rules are
+    /// about sound, not spelling). Use `(?c:...)` or `(?-i:...)` to opt out
+    /// and match case-sensitively within the scoped group.
+    ScopedFlags {
+        /// The flags that apply to this scope
+        flags: ParsedFlags,
+        /// The inner expression to which the flags apply
+        inner: Box<Expression>,
+    },
+
     /// Word boundary (`#`)
     WordBoundary,
 
@@ -780,6 +800,28 @@ impl Expression {
         Expression::Group(Box::new(inner))
     }
 
+    /// Create a scoped flags expression.
+    ///
+    /// This wraps an inner expression with modified flags that apply only
+    /// within that scope. In LLev, the primary use is `(?c:...)` or `(?-i:...)`
+    /// to enable case-sensitive matching within the group.
+    pub fn scoped_flags(flags: ParsedFlags, inner: Expression) -> Self {
+        Expression::ScopedFlags {
+            flags,
+            inner: Box::new(inner),
+        }
+    }
+
+    /// Create a case-sensitive scoped expression.
+    ///
+    /// Convenience method for `(?c:...)` or `(?-i:...)` patterns.
+    pub fn case_sensitive(inner: Expression) -> Self {
+        Expression::ScopedFlags {
+            flags: ParsedFlags::case_sensitive(),
+            inner: Box::new(inner),
+        }
+    }
+
     /// Create a word boundary.
     pub fn word_boundary() -> Self {
         Expression::WordBoundary
@@ -808,6 +850,7 @@ impl Expression {
             | Expression::Group(inner)
             | Expression::RepeatExact(inner, _) => inner.has_symbol_refs(),
             Expression::RepeatRange { inner, .. } => inner.has_symbol_refs(),
+            Expression::ScopedFlags { inner, .. } => inner.has_symbol_refs(),
             _ => false,
         }
     }
@@ -829,6 +872,7 @@ impl Expression {
             | Expression::Group(inner)
             | Expression::RepeatExact(inner, _) => 1 + inner.size(),
             Expression::RepeatRange { inner, .. } => 1 + inner.size(),
+            Expression::ScopedFlags { inner, .. } => 1 + inner.size(),
         }
     }
 }
@@ -905,6 +949,15 @@ impl fmt::Display for Expression {
                 }
             }
             Expression::Group(inner) => write!(f, "({})", inner),
+            Expression::ScopedFlags { flags, inner } => {
+                // Display as (?c:...) if case-insensitive is disabled
+                if flags.case_insensitive == Some(false) {
+                    write!(f, "(?c:{})", inner)
+                } else {
+                    // Generic scoped flags display (for potential future flags)
+                    write!(f, "({})", inner)
+                }
+            }
             Expression::WordBoundary => write!(f, "#"),
             Expression::SymbolRef(name) => write!(f, "{}", name),
         }
@@ -920,6 +973,7 @@ fn needs_parens_for_quantifier(expr: &Expression) -> bool {
             | Expression::CharRange { .. }
             | Expression::Any
             | Expression::Group(_)
+            | Expression::ScopedFlags { .. }
             | Expression::SymbolRef(_)
     )
 }

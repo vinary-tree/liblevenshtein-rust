@@ -1,0 +1,176 @@
+// Punjabi Shahmukhi Phonetic Rules
+// =================================
+// Phonetic rules for Punjabi (پنجابی) in Shahmukhi script (Pakistan).
+// Maps Shahmukhi (Arabic-based) letters to Latin equivalents for phonetic matching.
+//
+// Shahmukhi is an Arabic-derived script used in Pakistan for Punjabi.
+// It shares many features with Urdu script.
+//
+// Key features:
+//   - Arabic-based with additional letters for Punjabi sounds
+//   - Right-to-left script
+//   - Short vowels usually not written (like Arabic/Urdu)
+//   - Tonal language (3 tones, not marked)
+//
+// Rule IDs: 4450-4499
+
+@name "Punjabi Shahmukhi Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Punjabi in Shahmukhi script"
+
+// ============================================================
+// PUNJABI-SPECIFIC LETTERS (highest priority)
+// ============================================================
+
+// Additional letters not in standard Arabic/Urdu
+[id: 4450, name: "gha with hamza", weight: 0.02, group: shahmukhi_special, ipa: "/ɣ/"]
+ݣ -> ɣ;
+
+// ============================================================
+// CONSONANTS (shared with Urdu/Arabic)
+// ============================================================
+
+[id: 4455, name: "alif", weight: 0.05, group: shahmukhi_consonants]
+ا -> a;
+
+[id: 4456, name: "ba", weight: 0.05, group: shahmukhi_consonants]
+ب -> b;
+
+[id: 4457, name: "pa", weight: 0.05, group: shahmukhi_consonants]
+پ -> p;
+
+[id: 4458, name: "ta", weight: 0.05, group: shahmukhi_consonants]
+ت -> t;
+
+[id: 4459, name: "Ta emphatic", weight: 0.05, group: shahmukhi_consonants, ipa: "/ʈ/"]
+ٹ -> ʈ;
+
+[id: 4460, name: "tha", weight: 0.05, group: shahmukhi_consonants]
+ث -> s;
+
+[id: 4461, name: "jim", weight: 0.05, group: shahmukhi_consonants]
+ج -> j;
+
+[id: 4462, name: "che", weight: 0.05, group: shahmukhi_consonants]
+چ -> c;
+
+[id: 4463, name: "ha emphatic", weight: 0.05, group: shahmukhi_consonants]
+ح -> h;
+
+[id: 4464, name: "kha", weight: 0.05, group: shahmukhi_consonants]
+خ -> x;
+
+[id: 4465, name: "dal", weight: 0.05, group: shahmukhi_consonants]
+د -> d;
+
+[id: 4466, name: "Dal emphatic", weight: 0.05, group: shahmukhi_consonants, ipa: "/ɖ/"]
+ڈ -> ɖ;
+
+[id: 4467, name: "zal", weight: 0.05, group: shahmukhi_consonants]
+ذ -> z;
+
+[id: 4468, name: "ra", weight: 0.05, group: shahmukhi_consonants]
+ر -> r;
+
+[id: 4469, name: "Ra emphatic", weight: 0.05, group: shahmukhi_consonants, ipa: "/ɽ/"]
+ڑ -> ɽ;
+
+[id: 4470, name: "za", weight: 0.05, group: shahmukhi_consonants]
+ز -> z;
+
+[id: 4471, name: "zhe", weight: 0.05, group: shahmukhi_consonants, ipa: "/ʒ/"]
+ژ -> ʒ;
+
+[id: 4472, name: "sin", weight: 0.05, group: shahmukhi_consonants]
+س -> s;
+
+[id: 4473, name: "shin", weight: 0.05, group: shahmukhi_consonants, ipa: "/ʃ/"]
+ش -> ʃ;
+
+[id: 4474, name: "sad", weight: 0.05, group: shahmukhi_consonants]
+ص -> s;
+
+[id: 4475, name: "dad", weight: 0.05, group: shahmukhi_consonants]
+ض -> z;
+
+[id: 4476, name: "ta emphatic arabic", weight: 0.05, group: shahmukhi_consonants]
+ط -> t;
+
+[id: 4477, name: "za emphatic", weight: 0.05, group: shahmukhi_consonants]
+ظ -> z;
+
+[id: 4478, name: "ain", weight: 0.05, group: shahmukhi_consonants]
+ع -> ';
+
+[id: 4479, name: "ghain", weight: 0.05, group: shahmukhi_consonants, ipa: "/ɣ/"]
+غ -> ɣ;
+
+[id: 4480, name: "fa", weight: 0.05, group: shahmukhi_consonants]
+ف -> f;
+
+[id: 4481, name: "qaf", weight: 0.05, group: shahmukhi_consonants]
+ق -> q;
+
+[id: 4482, name: "kaf", weight: 0.05, group: shahmukhi_consonants]
+ک -> k;
+
+[id: 4483, name: "gaf", weight: 0.05, group: shahmukhi_consonants]
+گ -> g;
+
+[id: 4484, name: "lam", weight: 0.05, group: shahmukhi_consonants]
+ل -> l;
+
+[id: 4485, name: "mim", weight: 0.05, group: shahmukhi_consonants]
+م -> m;
+
+[id: 4486, name: "nun", weight: 0.05, group: shahmukhi_consonants]
+ن -> n;
+
+[id: 4487, name: "noon ghunna", weight: 0.05, group: shahmukhi_consonants, ipa: "/̃/"]
+ں -> ̃;
+
+[id: 4488, name: "waw", weight: 0.05, group: shahmukhi_consonants]
+و -> v;
+
+[id: 4489, name: "ha", weight: 0.05, group: shahmukhi_consonants]
+ہ -> h;
+
+[id: 4490, name: "hamza", weight: 0.05, group: shahmukhi_consonants]
+ء -> ';
+
+[id: 4491, name: "ya", weight: 0.05, group: shahmukhi_consonants]
+ی -> y;
+
+[id: 4492, name: "ye", weight: 0.05, group: shahmukhi_consonants]
+ے -> e;
+
+// ============================================================
+// VOWEL MARKS (harakat)
+// ============================================================
+
+[id: 4493, name: "fatha", weight: 0.1, group: shahmukhi_vowels]
+َ -> a;
+
+[id: 4494, name: "kasra", weight: 0.1, group: shahmukhi_vowels]
+ِ -> i;
+
+[id: 4495, name: "damma", weight: 0.1, group: shahmukhi_vowels]
+ُ -> u;
+
+[id: 4496, name: "sukun", weight: 0.1, group: shahmukhi_vowels]
+ْ -> ;
+
+[id: 4497, name: "shadda", weight: 0.1, group: shahmukhi_vowels]
+ّ -> ;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 4498, name: "double retroflex flap", weight: 0.2, group: shahmukhi_simplification]
+ɽɽ -> ɽ;
+
+[id: 4499, name: "double retroflex t", weight: 0.2, group: shahmukhi_simplification]
+ʈʈ -> ʈ;
+

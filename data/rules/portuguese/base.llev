@@ -1,0 +1,285 @@
+// Portuguese Base Phonetic Rules
+// ===============================
+// Shared rules for all Portuguese dialects (European and Brazilian).
+// Portuguese has moderate orthographic complexity.
+//
+// Key features:
+//   - Rich nasal vowel system (ã, õ, ão, ões)
+//   - Digraphs: ch, lh, nh, ss, rr
+//   - C softening before front vowels (like French/Spanish)
+//   - Ç (c-cedilla) always /s/
+//   - X has multiple pronunciations
+
+@name "Portuguese Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Shared phonetic rules for all Portuguese dialects"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiouáàâãéêíóôõúü]
+@define FRONT_VOWEL = [eiéêí]
+@define CONSONANT = [bcdfghjklmnpqrstvwxz]
+@define NASAL_VOWEL = [ãõ]
+
+// ============================================================
+// CONSONANT DIGRAPHS (must come first - before nasals)
+// ============================================================
+// Process CH, LH, NH BEFORE nasal rules to prevent en→e~ from
+// consuming the 'n' in 'nh', etc.
+
+// CH → ʃ (sh sound)
+[id: 1500, name: "ch to sh", weight: 0.05, group: portuguese_digraphs, ipa: "/ʃ/"]
+ch -> ʃ;
+
+// LH → ʎ (palatalized l, like Spanish ll or Italian gli)
+[id: 1501, name: "lh to ly", weight: 0.05, group: portuguese_digraphs, ipa: "/ʎ/"]
+lh -> ʎ;
+
+// NH → ɲ (like Spanish ñ)
+[id: 1502, name: "nh to ny", weight: 0.05, group: portuguese_digraphs, ipa: "/ɲ/"]
+nh -> ɲ;
+
+// SS → s (prevents voicing)
+[id: 1503, name: "ss to s", weight: 0.05, group: portuguese_digraphs]
+ss -> s;
+
+// RR → strong r (trilled or guttural, dialect-dependent)
+// Base rule: mark as uvular/guttural R
+[id: 1504, name: "rr marker", weight: 0.05, group: portuguese_digraphs, ipa: "/ʀ/"]
+rr -> ʀ;
+
+// ============================================================
+// NASAL DIPHTHONGS (longest match first)
+// ============================================================
+
+// ÃO - very common nasal diphthong (coração, não, mão)
+[id: 1510, name: "ão nasal diphthong", weight: 0.1, group: portuguese_nasals, ipa: "/ɐ̃w̃/"]
+ão -> ɐ̃w̃;
+
+// ÕE/ÕES - plural of -ão words
+[id: 1511, name: "ões nasal diphthong", weight: 0.1, group: portuguese_nasals, ipa: "/õj̃s/"]
+ões -> õj̃s;
+
+[id: 1512, name: "õe nasal diphthong", weight: 0.1, group: portuguese_nasals, ipa: "/õj̃/"]
+õe -> õj̃;
+
+// ÃE - nasal diphthong (mãe, cães)
+[id: 1513, name: "ãe nasal diphthong", weight: 0.1, group: portuguese_nasals, ipa: "/ɐ̃j̃/"]
+ãe -> ɐ̃j̃;
+
+[id: 1514, name: "ães nasal diphthong", weight: 0.1, group: portuguese_nasals, ipa: "/ɐ̃j̃s/"]
+ães -> ɐ̃j̃s;
+
+// ============================================================
+// NASAL VOWELS
+// ============================================================
+
+// Ã - nasal a
+[id: 1520, name: "ã nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ɐ̃/"]
+ã -> ɐ̃;
+
+// Õ - nasal o
+[id: 1521, name: "õ nasal", weight: 0.15, group: portuguese_nasals, ipa: "/õ/"]
+õ -> õ;
+
+// AM/AN before consonant - nasal
+[id: 1525, name: "am nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ɐ̃/"]
+am -> ɐ̃ / _$CONSONANT;
+
+[id: 1526, name: "an nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ɐ̃/"]
+an -> ɐ̃ / _$CONSONANT;
+
+// EM/EN - nasal (often at word end)
+[id: 1527, name: "em nasal final", weight: 0.15, group: portuguese_nasals, ipa: "/ẽ/"]
+em -> ẽ / _#;
+
+[id: 1528, name: "em nasal before consonant", weight: 0.15, group: portuguese_nasals, ipa: "/ẽ/"]
+em -> ẽ / _$CONSONANT;
+
+[id: 1529, name: "en nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ẽ/"]
+en -> ẽ / _$CONSONANT;
+
+// IM/IN - nasal
+[id: 1530, name: "im nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ĩ/"]
+im -> ĩ / _$CONSONANT;
+
+[id: 1531, name: "im nasal final", weight: 0.15, group: portuguese_nasals, ipa: "/ĩ/"]
+im -> ĩ / _#;
+
+[id: 1532, name: "in nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ĩ/"]
+in -> ĩ / _$CONSONANT;
+
+// OM/ON - nasal
+[id: 1533, name: "om nasal", weight: 0.15, group: portuguese_nasals, ipa: "/õ/"]
+om -> õ / _$CONSONANT;
+
+[id: 1534, name: "on nasal", weight: 0.15, group: portuguese_nasals, ipa: "/õ/"]
+on -> õ / _$CONSONANT;
+
+// UM/UN - nasal
+[id: 1535, name: "um nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ũ/"]
+um -> ũ / _$CONSONANT;
+
+[id: 1536, name: "um nasal final", weight: 0.15, group: portuguese_nasals, ipa: "/ũ/"]
+um -> ũ / _#;
+
+[id: 1537, name: "un nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ũ/"]
+un -> ũ / _$CONSONANT;
+
+// QU handling
+[id: 1505, name: "qu before e", weight: 0.05, group: portuguese_digraphs]
+que -> ke;
+
+[id: 1506, name: "qu before i", weight: 0.05, group: portuguese_digraphs]
+qui -> ki;
+
+// GU handling (u silent before e/i)
+[id: 1507, name: "gu before e", weight: 0.05, group: portuguese_digraphs]
+gue -> ge;
+
+[id: 1508, name: "gu before i", weight: 0.05, group: portuguese_digraphs]
+gui -> gi;
+
+// ============================================================
+// C SOFTENING
+// ============================================================
+
+// C before e/i → s
+[id: 1540, name: "c before e", weight: 0.15, group: portuguese_softening]
+ce -> se;
+
+[id: 1541, name: "c before i", weight: 0.15, group: portuguese_softening]
+ci -> si;
+
+[id: 1542, name: "c before é", weight: 0.15, group: portuguese_softening]
+cé -> sé;
+
+[id: 1543, name: "c before ê", weight: 0.15, group: portuguese_softening]
+cê -> sê;
+
+[id: 1544, name: "c before í", weight: 0.15, group: portuguese_softening]
+cí -> sí;
+
+// Ç always → s
+[id: 1545, name: "c cedilla", weight: 0.15, group: portuguese_softening, ipa: "/s/"]
+ç -> s;
+
+// C elsewhere → k
+[id: 1550, name: "c before a", weight: 0.2, group: portuguese_c]
+ca -> ka;
+
+[id: 1551, name: "c before o", weight: 0.2, group: portuguese_c]
+co -> ko;
+
+[id: 1552, name: "c before u", weight: 0.2, group: portuguese_c]
+cu -> ku;
+
+[id: 1553, name: "c before consonant", weight: 0.2, group: portuguese_c]
+c -> k / _$CONSONANT;
+
+// ============================================================
+// G SOFTENING
+// ============================================================
+
+// G before e/i → ʒ (zh sound)
+[id: 1560, name: "g before e", weight: 0.15, group: portuguese_softening, ipa: "/ʒ/"]
+ge -> ʒe;
+
+[id: 1561, name: "g before i", weight: 0.15, group: portuguese_softening, ipa: "/ʒ/"]
+gi -> ʒi;
+
+[id: 1562, name: "g before é", weight: 0.15, group: portuguese_softening, ipa: "/ʒ/"]
+gé -> ʒé;
+
+[id: 1563, name: "g before í", weight: 0.15, group: portuguese_softening, ipa: "/ʒ/"]
+gí -> ʒí;
+
+// ============================================================
+// J PRONUNCIATION
+// ============================================================
+
+// J always → ʒ (zh sound)
+[id: 1565, name: "j to zh", weight: 0.15, group: portuguese_j, ipa: "/ʒ/"]
+j -> ʒ;
+
+// ============================================================
+// X PATTERNS
+// ============================================================
+// X has multiple pronunciations in Portuguese; default to ʃ
+
+[id: 1570, name: "x to sh default", weight: 0.2, group: portuguese_x, ipa: "/ʃ/"]
+x -> ʃ;
+
+// ============================================================
+// S PATTERNS
+// ============================================================
+
+// Note: S patterns are highly dialect-specific:
+// - European: s → sh before consonants and at word end
+// - Brazilian: s stays as s (mostly)
+// Intervocalic s → z is handled in dialect files where appropriate
+
+// ============================================================
+// Z PATTERNS
+// ============================================================
+
+// Z at word end often → s or sh (dialect-dependent)
+// Base rule: keep z, dialects handle
+
+// ============================================================
+// SILENT H
+// ============================================================
+
+[id: 1580, name: "silent h initial", weight: 0.2, group: portuguese_silent]
+h -> / #_;
+
+// ============================================================
+// ACCENT NORMALIZATION
+// ============================================================
+
+[id: 1585, name: "á to a", weight: 0.3, group: portuguese_accents]
+á -> a;
+
+[id: 1586, name: "à to a", weight: 0.3, group: portuguese_accents]
+à -> a;
+
+[id: 1587, name: "â to a", weight: 0.3, group: portuguese_accents]
+â -> a;
+
+[id: 1588, name: "é to e", weight: 0.3, group: portuguese_accents]
+é -> e;
+
+[id: 1589, name: "ê to e", weight: 0.3, group: portuguese_accents]
+ê -> e;
+
+[id: 1590, name: "í to i", weight: 0.3, group: portuguese_accents]
+í -> i;
+
+[id: 1591, name: "ó to o", weight: 0.3, group: portuguese_accents]
+ó -> o;
+
+[id: 1592, name: "ô to o", weight: 0.3, group: portuguese_accents]
+ô -> o;
+
+[id: 1593, name: "ú to u", weight: 0.3, group: portuguese_accents]
+ú -> u;
+
+[id: 1594, name: "ü to u", weight: 0.3, group: portuguese_accents]
+ü -> u;
+
+// ============================================================
+// DOUBLE CONSONANTS
+// ============================================================
+
+[id: 1595, name: "cc to k", weight: 0.25, group: portuguese_doubles]
+cc -> k;
+
+[id: 1596, name: "mm to m", weight: 0.25, group: portuguese_doubles]
+mm -> m;
+
+[id: 1597, name: "nn to n", weight: 0.25, group: portuguese_doubles]
+nn -> n;
+

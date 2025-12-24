@@ -1,0 +1,342 @@
+// Bengali Base Phonetic Rules
+// ===========================
+// Phonetic rules for Bengali (বাংলা) script romanization.
+// Maps Bengali letters to Latin equivalents for phonetic matching.
+//
+// Bengali uses a Brahmic abugida similar to Devanagari but with:
+//   - Inherent vowel is /ɔ/ (like 'o' in "hot"), NOT /a/ like Hindi
+//   - 11 vowels (independent and matra forms)
+//   - 35+ consonants including nukta variants
+//
+// Key features:
+//   - Different inherent vowel than Hindi (ɔ vs a)
+//   - Three nukta consonants: ড়(rra), ঢ়(rrha), য়(yya)
+//   - Unique letters: ং (anusvara), ঁ (chandrabindu), ঃ (visarga)
+//   - Hasanta (্) removes inherent vowel
+//
+// Rule IDs: 3900-3999
+
+@name "Bengali Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Bengali script"
+
+// ============================================================
+// NUKTA CONSONANTS (highest priority)
+// ============================================================
+// These are two-character sequences that must match before base consonants
+
+// ড় - retroflex flap (da + nukta)
+[id: 3900, name: "rra flap", weight: 0.02, group: bengali_nukta, ipa: "/ɽ/"]
+ড় -> ɽ;
+
+// ঢ় - aspirated retroflex flap (dha + nukta)
+[id: 3901, name: "rrha flap", weight: 0.02, group: bengali_nukta, ipa: "/ɽʰ/"]
+ঢ় -> ɽʰ;
+
+// য় - approximant ya (ya + nukta)
+[id: 3902, name: "yya nukta", weight: 0.02, group: bengali_nukta]
+য় -> YY;
+
+// ৎ - khanda ta (final t)
+[id: 3903, name: "khanda ta", weight: 0.02, group: bengali_nukta]
+ৎ -> t;
+
+// ============================================================
+// INDEPENDENT VOWELS (SVAR)
+// ============================================================
+
+// অ - inherent vowel (ɔ sound, NOT a like Hindi!)
+[id: 3905, name: "o vowel", weight: 0.05, group: bengali_vowels]
+অ -> o;
+
+// আ - long a
+[id: 3906, name: "a vowel", weight: 0.05, group: bengali_vowels]
+আ -> a;
+
+// ই - short i
+[id: 3907, name: "i vowel", weight: 0.05, group: bengali_vowels]
+ই -> i;
+
+// ঈ - long ii
+[id: 3908, name: "ii vowel", weight: 0.05, group: bengali_vowels, ipa: "/iː/"]
+ঈ -> iː;
+
+// উ - short u
+[id: 3909, name: "u vowel", weight: 0.05, group: bengali_vowels]
+উ -> u;
+
+// ঊ - long uu
+[id: 3910, name: "uu vowel", weight: 0.05, group: bengali_vowels, ipa: "/uː/"]
+ঊ -> uː;
+
+// ঋ - vocalic r
+[id: 3911, name: "ri vowel", weight: 0.05, group: bengali_vowels, ipa: "/r̩/"]
+ঋ -> r̩;
+
+// এ - e vowel
+[id: 3912, name: "e vowel", weight: 0.05, group: bengali_vowels]
+এ -> e;
+
+// ঐ - oi diphthong
+[id: 3913, name: "oi vowel", weight: 0.05, group: bengali_vowels, ipa: "/oɪ/"]
+ঐ -> oɪ;
+
+// ও - o vowel
+[id: 3914, name: "O vowel", weight: 0.05, group: bengali_vowels, ipa: "/oː/"]
+ও -> oː;
+
+// ঔ - ou diphthong
+[id: 3915, name: "ou vowel", weight: 0.05, group: bengali_vowels, ipa: "/oʊ/"]
+ঔ -> oʊ;
+
+// ============================================================
+// VELAR CONSONANTS (ক-বর্গ)
+// ============================================================
+
+[id: 3920, name: "ka", weight: 0.05, group: bengali_velars]
+ক -> k;
+
+[id: 3921, name: "kha", weight: 0.05, group: bengali_velars]
+খ -> kh;
+
+[id: 3922, name: "ga", weight: 0.05, group: bengali_velars]
+গ -> g;
+
+[id: 3923, name: "gha", weight: 0.05, group: bengali_velars]
+ঘ -> gh;
+
+[id: 3924, name: "nga", weight: 0.05, group: bengali_velars, ipa: "/ŋ/"]
+ঙ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (চ-বর্গ)
+// ============================================================
+
+[id: 3925, name: "cha", weight: 0.05, group: bengali_palatals]
+চ -> c;
+
+[id: 3926, name: "chha", weight: 0.05, group: bengali_palatals]
+ছ -> ch;
+
+[id: 3927, name: "ja", weight: 0.05, group: bengali_palatals]
+জ -> j;
+
+[id: 3928, name: "jha", weight: 0.05, group: bengali_palatals]
+ঝ -> jh;
+
+[id: 3929, name: "nya", weight: 0.05, group: bengali_palatals, ipa: "/ɲ/"]
+ঞ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ট-বর্গ)
+// ============================================================
+
+[id: 3930, name: "Ta", weight: 0.05, group: bengali_retroflexes, ipa: "/ʈ/"]
+ট -> ʈ;
+
+[id: 3931, name: "Tha", weight: 0.05, group: bengali_retroflexes, ipa: "/ʈʰ/"]
+ঠ -> ʈʰ;
+
+[id: 3932, name: "Da", weight: 0.05, group: bengali_retroflexes, ipa: "/ɖ/"]
+ড -> ɖ;
+
+[id: 3933, name: "Dha", weight: 0.05, group: bengali_retroflexes, ipa: "/ɖʰ/"]
+ঢ -> ɖʰ;
+
+[id: 3934, name: "Na", weight: 0.05, group: bengali_retroflexes, ipa: "/ɳ/"]
+ণ -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (ত-বর্গ)
+// ============================================================
+
+[id: 3935, name: "ta", weight: 0.05, group: bengali_dentals]
+ত -> t;
+
+[id: 3936, name: "tha", weight: 0.05, group: bengali_dentals]
+থ -> th;
+
+[id: 3937, name: "da", weight: 0.05, group: bengali_dentals]
+দ -> d;
+
+[id: 3938, name: "dha", weight: 0.05, group: bengali_dentals]
+ধ -> dh;
+
+[id: 3939, name: "na", weight: 0.05, group: bengali_dentals]
+ন -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (প-বর্গ)
+// ============================================================
+
+[id: 3940, name: "pa", weight: 0.05, group: bengali_labials]
+প -> p;
+
+[id: 3941, name: "pha", weight: 0.05, group: bengali_labials]
+ফ -> ph;
+
+[id: 3942, name: "ba", weight: 0.05, group: bengali_labials]
+ব -> b;
+
+[id: 3943, name: "bha", weight: 0.05, group: bengali_labials]
+ভ -> bh;
+
+[id: 3944, name: "ma", weight: 0.05, group: bengali_labials]
+ম -> m;
+
+// ============================================================
+// SEMI-VOWELS (অন্তঃস্থ)
+// ============================================================
+
+[id: 3945, name: "ya", weight: 0.05, group: bengali_semivowels]
+য -> j;
+
+[id: 3946, name: "ra", weight: 0.05, group: bengali_semivowels]
+র -> r;
+
+[id: 3947, name: "la", weight: 0.05, group: bengali_semivowels]
+ল -> l;
+
+// ============================================================
+// SIBILANTS AND ASPIRATE (ঊষ্ম)
+// ============================================================
+
+[id: 3950, name: "sha palatal", weight: 0.05, group: bengali_sibilants, ipa: "/ʃ/"]
+শ -> ʃ;
+
+[id: 3951, name: "Sha retroflex", weight: 0.05, group: bengali_sibilants, ipa: "/ʂ/"]
+ষ -> ʂ;
+
+[id: 3952, name: "sa", weight: 0.05, group: bengali_sibilants]
+স -> s;
+
+[id: 3953, name: "ha", weight: 0.05, group: bengali_sibilants]
+হ -> h;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels)
+// ============================================================
+
+[id: 3960, name: "a matra", weight: 0.05, group: bengali_matras]
+া -> a;
+
+[id: 3961, name: "i matra", weight: 0.05, group: bengali_matras]
+ি -> i;
+
+[id: 3962, name: "ii matra", weight: 0.05, group: bengali_matras, ipa: "/iː/"]
+ী -> iː;
+
+[id: 3963, name: "u matra", weight: 0.05, group: bengali_matras]
+ু -> u;
+
+[id: 3964, name: "uu matra", weight: 0.05, group: bengali_matras, ipa: "/uː/"]
+ূ -> uː;
+
+[id: 3965, name: "ri matra", weight: 0.05, group: bengali_matras, ipa: "/r̩/"]
+ৃ -> r̩;
+
+[id: 3966, name: "e matra", weight: 0.05, group: bengali_matras]
+ে -> e;
+
+[id: 3967, name: "oi matra", weight: 0.05, group: bengali_matras, ipa: "/oɪ/"]
+ৈ -> oɪ;
+
+[id: 3968, name: "o matra", weight: 0.05, group: bengali_matras, ipa: "/oː/"]
+ো -> oː;
+
+[id: 3969, name: "ou matra", weight: 0.05, group: bengali_matras, ipa: "/oʊ/"]
+ৌ -> oʊ;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Hasanta (virama) - removes inherent vowel
+[id: 3970, name: "hasanta", weight: 0.1, group: bengali_diacritics]
+্ -> ;
+
+// Anusvara - nasalization
+[id: 3971, name: "anusvara", weight: 0.1, group: bengali_diacritics, ipa: "/̃/"]
+ং -> ̃;
+
+// Chandrabindu - nasal vowel
+[id: 3972, name: "chandrabindu", weight: 0.1, group: bengali_diacritics, ipa: "/̃/"]
+ঁ -> ̃;
+
+// Visarga - voiceless glottal fricative
+[id: 3973, name: "visarga", weight: 0.1, group: bengali_diacritics, ipa: "/h/"]
+ঃ -> h;
+
+// Avagraha - elision marker
+[id: 3974, name: "avagraha", weight: 0.1, group: bengali_diacritics]
+ঽ -> ';
+
+// ============================================================
+// BENGALI NUMERALS
+// ============================================================
+
+[id: 3980, name: "numeral 0", weight: 0.1, group: bengali_numerals]
+০ -> 0;
+
+[id: 3981, name: "numeral 1", weight: 0.1, group: bengali_numerals]
+১ -> 1;
+
+[id: 3982, name: "numeral 2", weight: 0.1, group: bengali_numerals]
+২ -> 2;
+
+[id: 3983, name: "numeral 3", weight: 0.1, group: bengali_numerals]
+৩ -> 3;
+
+[id: 3984, name: "numeral 4", weight: 0.1, group: bengali_numerals]
+৪ -> 4;
+
+[id: 3985, name: "numeral 5", weight: 0.1, group: bengali_numerals]
+৫ -> 5;
+
+[id: 3986, name: "numeral 6", weight: 0.1, group: bengali_numerals]
+৬ -> 6;
+
+[id: 3987, name: "numeral 7", weight: 0.1, group: bengali_numerals]
+৭ -> 7;
+
+[id: 3988, name: "numeral 8", weight: 0.1, group: bengali_numerals]
+৮ -> 8;
+
+[id: 3989, name: "numeral 9", weight: 0.1, group: bengali_numerals]
+৯ -> 9;
+
+// ============================================================
+// IPA SIMPLIFICATION
+// ============================================================
+
+[id: 3990, name: "double retroflex flap", weight: 0.2, group: bengali_simplification]
+ɽɽ -> ɽ;
+
+[id: 3991, name: "double retroflex t", weight: 0.2, group: bengali_simplification]
+ʈʈ -> ʈ;
+
+[id: 3992, name: "double retroflex d", weight: 0.2, group: bengali_simplification]
+ɖɖ -> ɖ;
+
+[id: 3993, name: "double retroflex n", weight: 0.2, group: bengali_simplification]
+ɳɳ -> ɳ;
+
+[id: 3994, name: "double palatal sh", weight: 0.2, group: bengali_simplification]
+ʃʃ -> ʃ;
+
+[id: 3995, name: "double retroflex sh", weight: 0.2, group: bengali_simplification]
+ʂʂ -> ʂ;
+
+[id: 3996, name: "double palatal nasal", weight: 0.2, group: bengali_simplification]
+ɲɲ -> ɲ;
+
+[id: 3997, name: "double oi diphthong", weight: 0.2, group: bengali_simplification]
+oɪoɪ -> oɪ;
+
+[id: 3998, name: "double ou diphthong", weight: 0.2, group: bengali_simplification]
+oʊoʊ -> oʊ;
+
+[id: 3999, name: "double vocalic r", weight: 0.2, group: bengali_simplification]
+r̩r̩ -> r̩;
+

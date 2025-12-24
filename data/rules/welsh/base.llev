@@ -1,0 +1,285 @@
+// Welsh Base Phonetic Rules
+// =========================
+// Phonetic rules for Welsh (Cymraeg).
+// Celtic language spoken in Wales.
+//
+// Key features:
+//   - 8 digraphs treated as single letters: ch, dd, ff, ng, ll, ph, rh, th
+//   - LL: Unique voiceless lateral fricative [ɬ]
+//   - W and Y as vowels
+//   - Circumflex for long vowels: â, ê, î, ô, û, ŵ, ŷ
+//
+// Rule IDs: 4800-4849
+
+@name "Welsh Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Welsh"
+
+// ============================================================
+// DIGRAPHS (treated as single letters in Welsh)
+// ============================================================
+
+// CH → x (voiceless velar fricative, like Scottish "loch")
+[id: 4800, name: "ch digraph", weight: 0.05, group: welsh_digraphs, ipa: "/x/"]
+ch -> x;
+
+[id: 4801, name: "Ch digraph", weight: 0.05, group: welsh_digraphs, ipa: "/x/"]
+Ch -> x;
+
+[id: 4802, name: "CH digraph upper", weight: 0.05, group: welsh_digraphs, ipa: "/x/"]
+CH -> x;
+
+// DD → ð (voiced dental fricative, like English "the")
+[id: 4803, name: "dd digraph", weight: 0.05, group: welsh_digraphs, ipa: "/ð/"]
+dd -> ð;
+
+[id: 4804, name: "Dd digraph", weight: 0.05, group: welsh_digraphs, ipa: "/ð/"]
+Dd -> ð;
+
+[id: 4805, name: "DD digraph upper", weight: 0.05, group: welsh_digraphs, ipa: "/ð/"]
+DD -> ð;
+
+// FF → f (voiceless labiodental fricative, like English "f")
+[id: 4806, name: "ff digraph", weight: 0.05, group: welsh_digraphs, ipa: "/f/"]
+ff -> f;
+
+[id: 4807, name: "Ff digraph", weight: 0.05, group: welsh_digraphs, ipa: "/f/"]
+Ff -> f;
+
+[id: 4808, name: "FF digraph upper", weight: 0.05, group: welsh_digraphs, ipa: "/f/"]
+FF -> f;
+
+// NG → ŋ (velar nasal, like English "sing")
+[id: 4809, name: "ng digraph", weight: 0.05, group: welsh_digraphs, ipa: "/ŋ/"]
+ng -> ŋ;
+
+[id: 4810, name: "Ng digraph", weight: 0.05, group: welsh_digraphs, ipa: "/ŋ/"]
+Ng -> ŋ;
+
+[id: 4811, name: "NG digraph upper", weight: 0.05, group: welsh_digraphs, ipa: "/ŋ/"]
+NG -> ŋ;
+
+// LL → ɬ (voiceless lateral fricative - unique Welsh sound!)
+[id: 4812, name: "ll digraph", weight: 0.05, group: welsh_digraphs, ipa: "/ɬ/"]
+ll -> ɬ;
+
+[id: 4813, name: "Ll digraph", weight: 0.05, group: welsh_digraphs, ipa: "/ɬ/"]
+Ll -> ɬ;
+
+[id: 4814, name: "LL digraph upper", weight: 0.05, group: welsh_digraphs, ipa: "/ɬ/"]
+LL -> ɬ;
+
+// PH → f (like English "ph" = f)
+[id: 4815, name: "ph digraph", weight: 0.05, group: welsh_digraphs, ipa: "/f/"]
+ph -> f;
+
+[id: 4816, name: "Ph digraph", weight: 0.05, group: welsh_digraphs, ipa: "/f/"]
+Ph -> f;
+
+[id: 4817, name: "PH digraph upper", weight: 0.05, group: welsh_digraphs, ipa: "/f/"]
+PH -> f;
+
+// RH → r̥ (voiceless alveolar trill)
+[id: 4818, name: "rh digraph", weight: 0.05, group: welsh_digraphs, ipa: "/r̥/"]
+rh -> r̥;
+
+[id: 4819, name: "Rh digraph", weight: 0.05, group: welsh_digraphs, ipa: "/r̥/"]
+Rh -> r̥;
+
+[id: 4820, name: "RH digraph upper", weight: 0.05, group: welsh_digraphs, ipa: "/r̥/"]
+RH -> r̥;
+
+// TH → θ (voiceless dental fricative, like English "think")
+[id: 4821, name: "th digraph", weight: 0.05, group: welsh_digraphs, ipa: "/θ/"]
+th -> θ;
+
+[id: 4822, name: "Th digraph", weight: 0.05, group: welsh_digraphs, ipa: "/θ/"]
+Th -> θ;
+
+[id: 4823, name: "TH digraph upper", weight: 0.05, group: welsh_digraphs, ipa: "/θ/"]
+TH -> θ;
+
+// ============================================================
+// LONG VOWELS (circumflex)
+// ============================================================
+
+[id: 4824, name: "a circumflex", weight: 0.1, group: welsh_long_vowels]
+â -> a;
+
+[id: 4825, name: "A circumflex", weight: 0.1, group: welsh_long_vowels]
+Â -> a;
+
+[id: 4826, name: "e circumflex", weight: 0.1, group: welsh_long_vowels]
+ê -> e;
+
+[id: 4827, name: "E circumflex", weight: 0.1, group: welsh_long_vowels]
+Ê -> e;
+
+[id: 4828, name: "i circumflex", weight: 0.1, group: welsh_long_vowels]
+î -> i;
+
+[id: 4829, name: "I circumflex", weight: 0.1, group: welsh_long_vowels]
+Î -> i;
+
+[id: 4830, name: "o circumflex", weight: 0.1, group: welsh_long_vowels]
+ô -> o;
+
+[id: 4831, name: "O circumflex", weight: 0.1, group: welsh_long_vowels]
+Ô -> o;
+
+[id: 4832, name: "u circumflex", weight: 0.1, group: welsh_long_vowels]
+û -> u;
+
+[id: 4833, name: "U circumflex", weight: 0.1, group: welsh_long_vowels]
+Û -> u;
+
+[id: 4834, name: "w circumflex", weight: 0.1, group: welsh_long_vowels]
+ŵ -> w;
+
+[id: 4835, name: "W circumflex", weight: 0.1, group: welsh_long_vowels]
+Ŵ -> w;
+
+[id: 4836, name: "y circumflex", weight: 0.1, group: welsh_long_vowels]
+ŷ -> y;
+
+[id: 4837, name: "Y circumflex", weight: 0.1, group: welsh_long_vowels]
+Ŷ -> y;
+
+// ============================================================
+// STANDARD VOWELS (including W and Y as vowels)
+// ============================================================
+
+[id: 4838, name: "a vowel", weight: 0.15, group: welsh_vowels]
+a -> a;
+
+[id: 4839, name: "A vowel", weight: 0.15, group: welsh_vowels]
+A -> a;
+
+[id: 4840, name: "e vowel", weight: 0.15, group: welsh_vowels]
+e -> e;
+
+[id: 4841, name: "E vowel", weight: 0.15, group: welsh_vowels]
+E -> e;
+
+[id: 4842, name: "i vowel", weight: 0.15, group: welsh_vowels]
+i -> i;
+
+[id: 4843, name: "I vowel", weight: 0.15, group: welsh_vowels]
+I -> i;
+
+[id: 4844, name: "o vowel", weight: 0.15, group: welsh_vowels]
+o -> o;
+
+[id: 4845, name: "O vowel", weight: 0.15, group: welsh_vowels]
+O -> o;
+
+[id: 4846, name: "u vowel", weight: 0.15, group: welsh_vowels]
+u -> u;
+
+[id: 4847, name: "U vowel", weight: 0.15, group: welsh_vowels]
+U -> u;
+
+// W as vowel (sounds like "oo")
+[id: 4848, name: "w vowel", weight: 0.15, group: welsh_vowels]
+w -> w;
+
+[id: 4849, name: "W vowel", weight: 0.15, group: welsh_vowels]
+W -> w;
+
+// Y as vowel (schwa or "i" sound)
+[id: 4850, name: "y vowel", weight: 0.15, group: welsh_vowels]
+y -> y;
+
+[id: 4851, name: "Y vowel", weight: 0.15, group: welsh_vowels]
+Y -> y;
+
+// ============================================================
+// CONSONANTS
+// ============================================================
+
+[id: 4852, name: "b consonant", weight: 0.2, group: welsh_consonants]
+b -> b;
+
+[id: 4853, name: "B consonant", weight: 0.2, group: welsh_consonants]
+B -> b;
+
+[id: 4854, name: "c consonant", weight: 0.2, group: welsh_consonants]
+c -> k;
+
+[id: 4855, name: "C consonant", weight: 0.2, group: welsh_consonants]
+C -> k;
+
+[id: 4856, name: "d consonant", weight: 0.2, group: welsh_consonants]
+d -> d;
+
+[id: 4857, name: "D consonant", weight: 0.2, group: welsh_consonants]
+D -> d;
+
+// F in Welsh = v sound (ff = f sound)
+[id: 4858, name: "f consonant", weight: 0.2, group: welsh_consonants, ipa: "/v/"]
+f -> v;
+
+[id: 4859, name: "F consonant", weight: 0.2, group: welsh_consonants, ipa: "/v/"]
+F -> v;
+
+[id: 4860, name: "g consonant", weight: 0.2, group: welsh_consonants]
+g -> g;
+
+[id: 4861, name: "G consonant", weight: 0.2, group: welsh_consonants]
+G -> g;
+
+[id: 4862, name: "h consonant", weight: 0.2, group: welsh_consonants]
+h -> h;
+
+[id: 4863, name: "H consonant", weight: 0.2, group: welsh_consonants]
+H -> h;
+
+[id: 4864, name: "j consonant", weight: 0.2, group: welsh_consonants, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+[id: 4865, name: "J consonant", weight: 0.2, group: welsh_consonants, ipa: "/d͡ʒ/"]
+J -> d͡ʒ;
+
+[id: 4866, name: "l consonant", weight: 0.2, group: welsh_consonants]
+l -> l;
+
+[id: 4867, name: "L consonant", weight: 0.2, group: welsh_consonants]
+L -> l;
+
+[id: 4868, name: "m consonant", weight: 0.2, group: welsh_consonants]
+m -> m;
+
+[id: 4869, name: "M consonant", weight: 0.2, group: welsh_consonants]
+M -> m;
+
+[id: 4870, name: "n consonant", weight: 0.2, group: welsh_consonants]
+n -> n;
+
+[id: 4871, name: "N consonant", weight: 0.2, group: welsh_consonants]
+N -> n;
+
+[id: 4872, name: "p consonant", weight: 0.2, group: welsh_consonants]
+p -> p;
+
+[id: 4873, name: "P consonant", weight: 0.2, group: welsh_consonants]
+P -> p;
+
+[id: 4874, name: "r consonant", weight: 0.2, group: welsh_consonants]
+r -> r;
+
+[id: 4875, name: "R consonant", weight: 0.2, group: welsh_consonants]
+R -> r;
+
+[id: 4876, name: "s consonant", weight: 0.2, group: welsh_consonants]
+s -> s;
+
+[id: 4877, name: "S consonant", weight: 0.2, group: welsh_consonants]
+S -> s;
+
+[id: 4878, name: "t consonant", weight: 0.2, group: welsh_consonants]
+t -> t;
+
+[id: 4879, name: "T consonant", weight: 0.2, group: welsh_consonants]
+T -> t;
+

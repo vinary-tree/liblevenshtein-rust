@@ -1,0 +1,363 @@
+// Catalan Base Phonetic Rules
+// ===========================
+// Phonetic rules for Catalan (català).
+// Romance language spoken in Catalonia, Valencia, and Balearic Islands.
+//
+// Key features:
+//   - L·L (ela geminada): Geminated l, unique to Catalan
+//   - NY: Palatal nasal (like Spanish ñ)
+//   - TX: Like English "ch"
+//   - TG/TJ: Like English "j"
+//   - Ç: s sound
+//   - Accents distinguish vowel quality and stress
+//
+// Rule IDs: 4900-4949
+
+@name "Catalan Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Catalan"
+
+// ============================================================
+// SPECIAL DIGRAPHS/TRIGRAPHS (highest priority)
+// ============================================================
+
+// L·L → L (ela geminada, geminated l - normalize to single L)
+[id: 4900, name: "l interpunct l", weight: 0.05, group: catalan_special]
+l·l -> L;
+
+[id: 4901, name: "L interpunct L", weight: 0.05, group: catalan_special]
+L·L -> L;
+
+// NY → ɲ (palatal nasal, like Spanish ñ)
+[id: 4902, name: "ny digraph", weight: 0.05, group: catalan_digraphs, ipa: "/ɲ/"]
+ny -> ɲ;
+
+[id: 4903, name: "Ny digraph", weight: 0.05, group: catalan_digraphs, ipa: "/ɲ/"]
+Ny -> ɲ;
+
+[id: 4904, name: "NY digraph", weight: 0.05, group: catalan_digraphs, ipa: "/ɲ/"]
+NY -> ɲ;
+
+// TX → t͡ʃ (like English "ch")
+[id: 4905, name: "tx digraph", weight: 0.05, group: catalan_digraphs, ipa: "/t͡ʃ/"]
+tx -> t͡ʃ;
+
+[id: 4906, name: "Tx digraph", weight: 0.05, group: catalan_digraphs, ipa: "/t͡ʃ/"]
+Tx -> t͡ʃ;
+
+[id: 4907, name: "TX digraph", weight: 0.05, group: catalan_digraphs, ipa: "/t͡ʃ/"]
+TX -> t͡ʃ;
+
+// IG → t͡ʃ (in final position, like "ch")
+[id: 4908, name: "ig digraph", weight: 0.05, group: catalan_digraphs, ipa: "/t͡ʃ/"]
+ig -> t͡ʃ;
+
+[id: 4909, name: "IG digraph", weight: 0.05, group: catalan_digraphs, ipa: "/t͡ʃ/"]
+IG -> t͡ʃ;
+
+// TG → d͡ʒ (like English "j" before e, i)
+[id: 4910, name: "tg digraph", weight: 0.05, group: catalan_digraphs, ipa: "/d͡ʒ/"]
+tg -> d͡ʒ;
+
+[id: 4911, name: "Tg digraph", weight: 0.05, group: catalan_digraphs, ipa: "/d͡ʒ/"]
+Tg -> d͡ʒ;
+
+[id: 4912, name: "TG digraph", weight: 0.05, group: catalan_digraphs, ipa: "/d͡ʒ/"]
+TG -> d͡ʒ;
+
+// TJ → d͡ʒ (like English "j")
+[id: 4913, name: "tj digraph", weight: 0.05, group: catalan_digraphs, ipa: "/d͡ʒ/"]
+tj -> d͡ʒ;
+
+[id: 4914, name: "Tj digraph", weight: 0.05, group: catalan_digraphs, ipa: "/d͡ʒ/"]
+Tj -> d͡ʒ;
+
+[id: 4915, name: "TJ digraph", weight: 0.05, group: catalan_digraphs, ipa: "/d͡ʒ/"]
+TJ -> d͡ʒ;
+
+// LL → ʎ (palatal lateral)
+[id: 4916, name: "ll digraph", weight: 0.05, group: catalan_digraphs, ipa: "/ʎ/"]
+ll -> ʎ;
+
+[id: 4917, name: "Ll digraph", weight: 0.05, group: catalan_digraphs, ipa: "/ʎ/"]
+Ll -> ʎ;
+
+[id: 4918, name: "LL digraph", weight: 0.05, group: catalan_digraphs, ipa: "/ʎ/"]
+LL -> ʎ;
+
+// SS → S (geminate s)
+[id: 4919, name: "ss digraph", weight: 0.05, group: catalan_digraphs]
+ss -> S;
+
+[id: 4920, name: "SS digraph", weight: 0.05, group: catalan_digraphs]
+SS -> S;
+
+// ============================================================
+// SPECIAL CONSONANTS
+// ============================================================
+
+// Ç → s (c cedilla, s sound)
+[id: 4921, name: "c cedilla to s", weight: 0.1, group: catalan_consonants, ipa: "/s/"]
+ç -> s;
+
+[id: 4922, name: "C cedilla to s", weight: 0.1, group: catalan_consonants, ipa: "/s/"]
+Ç -> s;
+
+// X → ʃ (represents "sh" sound in Catalan)
+[id: 4923, name: "x to ʃ", weight: 0.1, group: catalan_consonants, ipa: "/ʃ/"]
+x -> ʃ;
+
+[id: 4924, name: "X to ʃ", weight: 0.1, group: catalan_consonants, ipa: "/ʃ/"]
+X -> ʃ;
+
+// ============================================================
+// ACCENTED VOWELS (normalize to base vowels)
+// ============================================================
+
+// À/à → a (grave accent, open a)
+[id: 4925, name: "a grave to a", weight: 0.1, group: catalan_vowels]
+à -> a;
+
+[id: 4926, name: "A grave to a", weight: 0.1, group: catalan_vowels]
+À -> a;
+
+// È/è → e (grave accent, open e)
+[id: 4927, name: "e grave to e", weight: 0.1, group: catalan_vowels]
+è -> e;
+
+[id: 4928, name: "E grave to e", weight: 0.1, group: catalan_vowels]
+È -> e;
+
+// É/é → e (acute accent, closed e)
+[id: 4929, name: "e acute to e", weight: 0.1, group: catalan_vowels]
+é -> e;
+
+[id: 4930, name: "E acute to e", weight: 0.1, group: catalan_vowels]
+É -> e;
+
+// Í/í → i (acute accent)
+[id: 4931, name: "i acute to i", weight: 0.1, group: catalan_vowels]
+í -> i;
+
+[id: 4932, name: "I acute to i", weight: 0.1, group: catalan_vowels]
+Í -> i;
+
+// Ï/ï → i (diaeresis, hiatus)
+[id: 4933, name: "i diaeresis to i", weight: 0.1, group: catalan_vowels]
+ï -> i;
+
+[id: 4934, name: "I diaeresis to i", weight: 0.1, group: catalan_vowels]
+Ï -> i;
+
+// Ò/ò → o (grave accent, open o)
+[id: 4935, name: "o grave to o", weight: 0.1, group: catalan_vowels]
+ò -> o;
+
+[id: 4936, name: "O grave to o", weight: 0.1, group: catalan_vowels]
+Ò -> o;
+
+// Ó/ó → o (acute accent, closed o)
+[id: 4937, name: "o acute to o", weight: 0.1, group: catalan_vowels]
+ó -> o;
+
+[id: 4938, name: "O acute to o", weight: 0.1, group: catalan_vowels]
+Ó -> o;
+
+// Ú/ú → u (acute accent)
+[id: 4939, name: "u acute to u", weight: 0.1, group: catalan_vowels]
+ú -> u;
+
+[id: 4940, name: "U acute to u", weight: 0.1, group: catalan_vowels]
+Ú -> u;
+
+// Ü/ü → u (diaeresis, hiatus)
+[id: 4941, name: "u diaeresis to u", weight: 0.1, group: catalan_vowels]
+ü -> u;
+
+[id: 4942, name: "U diaeresis to u", weight: 0.1, group: catalan_vowels]
+Ü -> u;
+
+// ============================================================
+// SIMPLE VOWELS
+// ============================================================
+
+// A → a
+[id: 4943, name: "a vowel", weight: 0.15, group: catalan_vowels]
+a -> a;
+
+[id: 4944, name: "A vowel", weight: 0.15, group: catalan_vowels]
+A -> a;
+
+// E → e
+[id: 4945, name: "e vowel", weight: 0.15, group: catalan_vowels]
+e -> e;
+
+[id: 4946, name: "E vowel", weight: 0.15, group: catalan_vowels]
+E -> e;
+
+// I → i
+[id: 4947, name: "i vowel", weight: 0.15, group: catalan_vowels]
+i -> i;
+
+[id: 4948, name: "I vowel", weight: 0.15, group: catalan_vowels]
+I -> i;
+
+// O → o
+[id: 4949, name: "o vowel", weight: 0.15, group: catalan_vowels]
+o -> o;
+
+[id: 3263, name: "O vowel", weight: 0.15, group: catalan_vowels]
+O -> o;
+
+// U → u
+[id: 3264, name: "u vowel", weight: 0.15, group: catalan_vowels]
+u -> u;
+
+[id: 3265, name: "U vowel", weight: 0.15, group: catalan_vowels]
+U -> u;
+
+// ============================================================
+// CONSONANTS
+// ============================================================
+
+// B → b
+[id: 3266, name: "b consonant", weight: 0.2, group: catalan_consonants]
+b -> b;
+
+[id: 3267, name: "B consonant", weight: 0.2, group: catalan_consonants]
+B -> b;
+
+// C → k (before a, o, u) or s (before e, i) - simplified to k
+[id: 3268, name: "c consonant", weight: 0.2, group: catalan_consonants]
+c -> k;
+
+[id: 3269, name: "C consonant", weight: 0.2, group: catalan_consonants]
+C -> k;
+
+// D → d
+[id: 3270, name: "d consonant", weight: 0.2, group: catalan_consonants]
+d -> d;
+
+[id: 3271, name: "D consonant", weight: 0.2, group: catalan_consonants]
+D -> d;
+
+// F → f
+[id: 3272, name: "f consonant", weight: 0.2, group: catalan_consonants]
+f -> f;
+
+[id: 3273, name: "F consonant", weight: 0.2, group: catalan_consonants]
+F -> f;
+
+// G → g
+[id: 3274, name: "g consonant", weight: 0.2, group: catalan_consonants]
+g -> g;
+
+[id: 3275, name: "G consonant", weight: 0.2, group: catalan_consonants]
+G -> g;
+
+// H → (silent in Catalan)
+[id: 3276, name: "h silent", weight: 0.2, group: catalan_consonants]
+h -> ;
+
+[id: 3277, name: "H silent", weight: 0.2, group: catalan_consonants]
+H -> ;
+
+// J → ʒ (like French "j", voiced postalveolar fricative)
+[id: 3278, name: "j consonant", weight: 0.2, group: catalan_consonants, ipa: "/ʒ/"]
+j -> ʒ;
+
+[id: 3279, name: "J consonant", weight: 0.2, group: catalan_consonants, ipa: "/ʒ/"]
+J -> ʒ;
+
+// K → k (loanwords)
+[id: 3280, name: "k consonant", weight: 0.2, group: catalan_consonants]
+k -> k;
+
+[id: 3281, name: "K consonant", weight: 0.2, group: catalan_consonants]
+K -> k;
+
+// L → l
+[id: 3282, name: "l consonant", weight: 0.2, group: catalan_consonants]
+l -> l;
+
+[id: 3283, name: "L consonant", weight: 0.2, group: catalan_consonants]
+L -> l;
+
+// M → m
+[id: 3284, name: "m consonant", weight: 0.2, group: catalan_consonants]
+m -> m;
+
+[id: 3285, name: "M consonant", weight: 0.2, group: catalan_consonants]
+M -> m;
+
+// N → n
+[id: 3286, name: "n consonant", weight: 0.2, group: catalan_consonants]
+n -> n;
+
+[id: 3287, name: "N consonant", weight: 0.2, group: catalan_consonants]
+N -> n;
+
+// P → p
+[id: 3288, name: "p consonant", weight: 0.2, group: catalan_consonants]
+p -> p;
+
+[id: 3289, name: "P consonant", weight: 0.2, group: catalan_consonants]
+P -> p;
+
+// Q → k (always followed by u)
+[id: 3290, name: "q consonant", weight: 0.2, group: catalan_consonants]
+q -> k;
+
+[id: 3291, name: "Q consonant", weight: 0.2, group: catalan_consonants]
+Q -> k;
+
+// R → r
+[id: 3292, name: "r consonant", weight: 0.2, group: catalan_consonants]
+r -> r;
+
+[id: 3293, name: "R consonant", weight: 0.2, group: catalan_consonants]
+R -> r;
+
+// S → s
+[id: 3294, name: "s consonant", weight: 0.2, group: catalan_consonants]
+s -> s;
+
+[id: 3295, name: "S consonant", weight: 0.2, group: catalan_consonants]
+S -> s;
+
+// T → t
+[id: 3296, name: "t consonant", weight: 0.2, group: catalan_consonants]
+t -> t;
+
+[id: 3297, name: "T consonant", weight: 0.2, group: catalan_consonants]
+T -> t;
+
+// V → b (like Spanish, b/v merger in most dialects)
+[id: 3298, name: "v to b", weight: 0.2, group: catalan_consonants]
+v -> b;
+
+[id: 3299, name: "V to b", weight: 0.2, group: catalan_consonants]
+V -> b;
+
+// W → u (loanwords)
+[id: 3300, name: "w to u", weight: 0.2, group: catalan_consonants]
+w -> u;
+
+[id: 3301, name: "W to u", weight: 0.2, group: catalan_consonants]
+W -> u;
+
+// Y → i (loanwords)
+[id: 3302, name: "y to i", weight: 0.2, group: catalan_consonants]
+y -> i;
+
+[id: 3303, name: "Y to i", weight: 0.2, group: catalan_consonants]
+Y -> i;
+
+// Z → z
+[id: 3304, name: "z consonant", weight: 0.2, group: catalan_consonants]
+z -> z;
+
+[id: 3305, name: "Z consonant", weight: 0.2, group: catalan_consonants]
+Z -> z;
+

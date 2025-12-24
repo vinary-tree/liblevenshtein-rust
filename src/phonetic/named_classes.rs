@@ -538,6 +538,513 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         description: "IPA back vowels only",
     });
 
+    // ========================================================================
+    // Extended IPA Consonants - Place of Articulation
+    // ========================================================================
+
+    // Retroflex consonants (tongue curled back)
+    add_class(NamedClass {
+        name: "retroflex",
+        aliases: &[],
+        patterns: vec![
+            Char('ʈ'), // voiceless retroflex stop (U+0288)
+            Char('ɖ'), // voiced retroflex stop (U+0256)
+            Char('ɳ'), // retroflex nasal (U+0273)
+            Char('ɽ'), // retroflex flap (U+027D)
+            Char('ʂ'), // voiceless retroflex fricative (U+0282)
+            Char('ʐ'), // voiced retroflex fricative (U+0290)
+            Char('ɻ'), // retroflex approximant (U+027B)
+            Char('ɭ'), // retroflex lateral approximant (U+026D)
+        ],
+        description: "Retroflex consonants (tongue curled back)",
+    });
+
+    // Uvular consonants (back of throat)
+    add_class(NamedClass {
+        name: "uvular",
+        aliases: &[],
+        patterns: vec![
+            Char('q'), // voiceless uvular stop
+            Char('ɢ'), // voiced uvular stop (U+0262)
+            Char('ɴ'), // uvular nasal (U+0274)
+            Char('ʀ'), // uvular trill (U+0280)
+            Char('χ'), // voiceless uvular fricative (U+03C7)
+            Char('ʁ'), // voiced uvular fricative/approximant (U+0281)
+        ],
+        description: "Uvular consonants (articulated at uvula)",
+    });
+
+    // Pharyngeal consonants
+    add_class(NamedClass {
+        name: "pharyngeal",
+        aliases: &[],
+        patterns: vec![
+            Char('ħ'), // voiceless pharyngeal fricative (U+0127)
+            Char('ʕ'), // voiced pharyngeal fricative (U+0295)
+        ],
+        description: "Pharyngeal consonants (articulated at pharynx)",
+    });
+
+    // Glottal consonants
+    add_class(NamedClass {
+        name: "glottal",
+        aliases: &[],
+        patterns: vec![
+            Char('ʔ'), // glottal stop (U+0294)
+            Char('h'), // voiceless glottal fricative
+            Char('ɦ'), // voiced glottal fricative (U+0266)
+        ],
+        description: "Glottal consonants",
+    });
+
+    // Palatal consonants
+    add_class(NamedClass {
+        name: "palatal",
+        aliases: &[],
+        patterns: vec![
+            Char('c'), // voiceless palatal stop
+            Char('ɟ'), // voiced palatal stop (U+025F)
+            Char('ɲ'), // palatal nasal (U+0272)
+            Char('ç'), // voiceless palatal fricative (U+00E7)
+            Char('ʝ'), // voiced palatal fricative (U+029D)
+            Char('j'), // palatal approximant
+            Char('ʎ'), // palatal lateral approximant (U+028E)
+        ],
+        description: "Palatal consonants",
+    });
+
+    // Velar consonants
+    add_class(NamedClass {
+        name: "velar",
+        aliases: &[],
+        patterns: vec![
+            Char('k'), Char('K'),
+            Char('g'), Char('G'),
+            Char('ŋ'), // velar nasal (U+014B)
+            Char('x'), // voiceless velar fricative
+            Char('ɣ'), // voiced velar fricative (U+0263)
+            Char('ɰ'), // velar approximant (U+0270)
+            Char('ʟ'), // velar lateral approximant (U+029F)
+        ],
+        description: "Velar consonants (articulated at soft palate)",
+    });
+
+    // Alveolar consonants
+    add_class(NamedClass {
+        name: "alveolar",
+        aliases: &[],
+        patterns: vec![
+            Char('t'), Char('T'), Char('d'), Char('D'),
+            Char('n'), Char('N'),
+            Char('s'), Char('S'), Char('z'), Char('Z'),
+            Char('ɹ'), // alveolar approximant (U+0279)
+            Char('ɾ'), // alveolar tap (U+027E)
+            Char('r'), Char('R'), // alveolar trill
+            Char('l'), Char('L'),
+            Char('ɬ'), // voiceless alveolar lateral fricative (U+026C)
+            Char('ɮ'), // voiced alveolar lateral fricative (U+026E)
+        ],
+        description: "Alveolar consonants (articulated at alveolar ridge)",
+    });
+
+    // Bilabial consonants
+    add_class(NamedClass {
+        name: "bilabial",
+        aliases: &[],
+        patterns: vec![
+            Char('p'), Char('P'), Char('b'), Char('B'),
+            Char('m'), Char('M'),
+            Char('ɸ'), // voiceless bilabial fricative (U+0278)
+            Char('β'), // voiced bilabial fricative (U+03B2)
+            Char('ʙ'), // bilabial trill (U+0299)
+        ],
+        description: "Bilabial consonants (articulated with both lips)",
+    });
+
+    // Labiodental consonants
+    add_class(NamedClass {
+        name: "labiodental",
+        aliases: &[],
+        patterns: vec![
+            Char('f'), Char('F'), Char('v'), Char('V'),
+            Char('ɱ'), // labiodental nasal (U+0271)
+            Char('ⱱ'), // labiodental flap (U+2C71)
+            Char('ʋ'), // labiodental approximant (U+028B)
+        ],
+        description: "Labiodental consonants (lower lip to upper teeth)",
+    });
+
+    // Dental consonants
+    add_class(NamedClass {
+        name: "dental",
+        aliases: &[],
+        patterns: vec![
+            Char('θ'), // voiceless dental fricative (U+03B8)
+            Char('ð'), // voiced dental fricative (U+00F0)
+            Digraph('t', 'h'),
+            Digraph('T', 'H'),
+        ],
+        description: "Dental consonants (articulated at teeth)",
+    });
+
+    // Postalveolar consonants
+    add_class(NamedClass {
+        name: "postalveolar",
+        aliases: &[],
+        patterns: vec![
+            Char('ʃ'), // voiceless postalveolar fricative (U+0283)
+            Char('ʒ'), // voiced postalveolar fricative (U+0292)
+            Digraph('s', 'h'),
+            Digraph('z', 'h'),
+        ],
+        description: "Postalveolar consonants (just behind alveolar ridge)",
+    });
+
+    // ========================================================================
+    // Extended IPA Consonants - Manner of Articulation
+    // ========================================================================
+
+    // Trill consonants
+    add_class(NamedClass {
+        name: "trill",
+        aliases: &[],
+        patterns: vec![
+            Char('r'), Char('R'), // alveolar trill
+            Char('ʙ'), // bilabial trill (U+0299)
+            Char('ʀ'), // uvular trill (U+0280)
+        ],
+        description: "Trill consonants (rapid vibration)",
+    });
+
+    // Tap/flap consonants
+    add_class(NamedClass {
+        name: "tap",
+        aliases: &["flap"],
+        patterns: vec![
+            Char('ɾ'), // alveolar tap (U+027E)
+            Char('ɽ'), // retroflex flap (U+027D)
+            Char('ⱱ'), // labiodental flap (U+2C71)
+        ],
+        description: "Tap/flap consonants (single rapid contact)",
+    });
+
+    // Approximant consonants
+    add_class(NamedClass {
+        name: "approximant",
+        aliases: &[],
+        patterns: vec![
+            Char('ɹ'), // alveolar approximant (U+0279)
+            Char('ɻ'), // retroflex approximant (U+027B)
+            Char('j'), // palatal approximant
+            Char('w'), Char('W'), // labio-velar approximant
+            Char('ɰ'), // velar approximant (U+0270)
+            Char('ʋ'), // labiodental approximant (U+028B)
+        ],
+        description: "Approximant consonants (narrowing without turbulence)",
+    });
+
+    // Lateral approximant consonants
+    add_class(NamedClass {
+        name: "lateral",
+        aliases: &[],
+        patterns: vec![
+            Char('l'), Char('L'),
+            Char('ɭ'), // retroflex lateral (U+026D)
+            Char('ʎ'), // palatal lateral (U+028E)
+            Char('ʟ'), // velar lateral (U+029F)
+            Char('ɬ'), // voiceless lateral fricative (U+026C)
+            Char('ɮ'), // voiced lateral fricative (U+026E)
+        ],
+        description: "Lateral consonants (airflow around sides of tongue)",
+    });
+
+    // ========================================================================
+    // Non-Pulmonic Consonants
+    // ========================================================================
+
+    // Click consonants
+    add_class(NamedClass {
+        name: "click",
+        aliases: &[],
+        patterns: vec![
+            Char('ʘ'), // bilabial click (U+0298)
+            Char('ǀ'), // dental click (U+01C0)
+            Char('ǃ'), // alveolar click (U+01C3)
+            Char('ǂ'), // palatal click (U+01C2)
+            Char('ǁ'), // lateral click (U+01C1)
+        ],
+        description: "Click consonants (ingressive velaric airstream)",
+    });
+
+    // Implosive consonants
+    add_class(NamedClass {
+        name: "implosive",
+        aliases: &[],
+        patterns: vec![
+            Char('ɓ'), // voiced bilabial implosive (U+0253)
+            Char('ɗ'), // voiced alveolar implosive (U+0257)
+            Char('ʄ'), // voiced palatal implosive (U+0284)
+            Char('ɠ'), // voiced velar implosive (U+0260)
+            Char('ʛ'), // voiced uvular implosive (U+029B)
+        ],
+        description: "Implosive consonants (ingressive glottalic airstream)",
+    });
+
+    // ========================================================================
+    // Extended IPA Vowels - Rounded/Unrounded
+    // ========================================================================
+
+    // Rounded vowels
+    add_class(NamedClass {
+        name: "rounded",
+        aliases: &["rounded_vowel"],
+        patterns: vec![
+            Char('o'), Char('O'), Char('u'), Char('U'),
+            Char('ʊ'), // near-close back rounded (U+028A)
+            Char('ɔ'), // open-mid back rounded (U+0254)
+            Char('ɒ'), // open back rounded (U+0252)
+            Char('y'), // close front rounded (U+0079)
+            Char('ʏ'), // near-close front rounded (U+028F)
+            Char('ø'), // close-mid front rounded (U+00F8)
+            Char('œ'), // open-mid front rounded (U+0153)
+            Char('ɶ'), // open front rounded (U+0276)
+            Char('ɵ'), // close-mid central rounded (U+0275)
+            Char('ɞ'), // open-mid central rounded (U+025E)
+        ],
+        description: "Rounded vowels (with lip rounding)",
+    });
+
+    // Unrounded vowels
+    add_class(NamedClass {
+        name: "unrounded",
+        aliases: &["unrounded_vowel"],
+        patterns: vec![
+            Char('i'), Char('I'), Char('e'), Char('E'),
+            Char('a'), Char('A'),
+            Char('ɪ'), // near-close front unrounded (U+026A)
+            Char('ɛ'), // open-mid front unrounded (U+025B)
+            Char('æ'), // near-open front unrounded (U+00E6)
+            Char('ɑ'), // open back unrounded (U+0251)
+            Char('ə'), // mid central (schwa) (U+0259)
+            Char('ɜ'), // open-mid central unrounded (U+025C)
+            Char('ʌ'), // open-mid back unrounded (U+028C)
+            Char('ɯ'), // close back unrounded (U+026F)
+            Char('ɤ'), // close-mid back unrounded (U+0264)
+            Char('ɨ'), // close central unrounded (U+0268)
+            Char('ɘ'), // close-mid central unrounded (U+0258)
+            Char('ɐ'), // near-open central (U+0250)
+        ],
+        description: "Unrounded vowels (without lip rounding)",
+    });
+
+    // Front rounded vowels (like German ü, ö)
+    add_class(NamedClass {
+        name: "front_rounded",
+        aliases: &[],
+        patterns: vec![
+            Char('y'), // close front rounded (U+0079)
+            Char('ʏ'), // near-close front rounded (U+028F)
+            Char('ø'), // close-mid front rounded (U+00F8)
+            Char('œ'), // open-mid front rounded (U+0153)
+            Char('ɶ'), // open front rounded (U+0276)
+        ],
+        description: "Front rounded vowels (German ü, ö sounds)",
+    });
+
+    // Rhotic vowels (r-colored)
+    add_class(NamedClass {
+        name: "rhotic",
+        aliases: &["rhotic_vowel", "r_colored"],
+        patterns: vec![
+            Char('ɚ'), // schwa with hook (mid central) (U+025A)
+            Char('ɝ'), // open-mid central with hook (U+025D)
+            // Note: syllabic r (ɹ + combining vertical line) would need digraph support
+        ],
+        description: "Rhotic/r-colored vowels (American English 'er')",
+    });
+
+    // ========================================================================
+    // IPA Diacritics (combining characters)
+    // ========================================================================
+
+    // Common diacritics as standalone class
+    add_class(NamedClass {
+        name: "diacritic",
+        aliases: &["diacritics"],
+        patterns: vec![
+            Char('\u{0325}'), // combining ring below (voiceless)
+            Char('\u{032C}'), // combining caron below (voiced)
+            Char('\u{0324}'), // combining diaeresis below (breathy)
+            Char('\u{0330}'), // combining tilde below (creaky)
+            Char('\u{0329}'), // combining vertical line below (syllabic)
+            Char('\u{032A}'), // combining bridge below (dental)
+            Char('\u{033A}'), // combining inverted bridge below (apical)
+            Char('\u{033C}'), // combining seagull below (linguolabial)
+            Char('\u{031F}'), // combining plus sign below (advanced)
+            Char('\u{0320}'), // combining minus sign below (retracted)
+            Char('\u{0308}'), // combining diaeresis (centralized)
+            Char('\u{033D}'), // combining x above (mid-centralized)
+            Char('\u{0319}'), // combining right tack below (retracted tongue root)
+            Char('\u{031A}'), // combining left angle above (no audible release)
+            Char('\u{0303}'), // combining tilde (nasalized)
+            Char('\u{02B0}'), // modifier letter small h (aspirated)
+            Char('\u{02B7}'), // modifier letter small w (labialized)
+            Char('\u{02B2}'), // modifier letter small j (palatalized)
+            Char('\u{02E0}'), // modifier letter small gamma (velarized)
+            Char('\u{02E4}'), // modifier letter small reversed glottal stop (pharyngealized)
+            Char('\u{02BC}'), // modifier letter apostrophe (ejective)
+            Char('\u{0334}'), // combining tilde overlay (velarized/pharyngealized)
+            Char('\u{031C}'), // combining left half ring below (less rounded)
+            Char('\u{0339}'), // combining right half ring below (more rounded)
+        ],
+        description: "IPA diacritics (combining characters for modification)",
+    });
+
+    // Voiceless diacritic specifically
+    add_class(NamedClass {
+        name: "voiceless_diacritic",
+        aliases: &[],
+        patterns: vec![Char('\u{0325}')], // combining ring below
+        description: "Voiceless diacritic (ring below)",
+    });
+
+    // Syllabic diacritic
+    add_class(NamedClass {
+        name: "syllabic_diacritic",
+        aliases: &[],
+        patterns: vec![Char('\u{0329}')], // combining vertical line below
+        description: "Syllabic diacritic (vertical line below)",
+    });
+
+    // Nasalization diacritic
+    add_class(NamedClass {
+        name: "nasal_diacritic",
+        aliases: &["nasalized_diacritic"],
+        patterns: vec![Char('\u{0303}')], // combining tilde
+        description: "Nasalization diacritic (tilde above)",
+    });
+
+    // Aspiration marker
+    add_class(NamedClass {
+        name: "aspirated_diacritic",
+        aliases: &["aspiration"],
+        patterns: vec![Char('\u{02B0}')], // modifier letter small h
+        description: "Aspiration marker (superscript h)",
+    });
+
+    // ========================================================================
+    // Suprasegmentals (stress, length, tone)
+    // ========================================================================
+
+    // Stress markers
+    add_class(NamedClass {
+        name: "stress",
+        aliases: &["stress_mark"],
+        patterns: vec![
+            Char('ˈ'), // primary stress (U+02C8)
+            Char('ˌ'), // secondary stress (U+02CC)
+        ],
+        description: "Stress markers (primary and secondary)",
+    });
+
+    // Length markers
+    add_class(NamedClass {
+        name: "length",
+        aliases: &["length_mark"],
+        patterns: vec![
+            Char('ː'), // long (U+02D0)
+            Char('ˑ'), // half-long (U+02D1)
+            Char('˘'), // extra-short (U+02D8)
+        ],
+        description: "Length markers (long, half-long, extra-short)",
+    });
+
+    // Tone markers (contour and level)
+    add_class(NamedClass {
+        name: "tone",
+        aliases: &["tone_mark"],
+        patterns: vec![
+            // Level tones (Chao tone letters)
+            Char('˥'), // extra high (U+02E5)
+            Char('˦'), // high (U+02E6)
+            Char('˧'), // mid (U+02E7)
+            Char('˨'), // low (U+02E8)
+            Char('˩'), // extra low (U+02E9)
+            // Combining tone marks
+            Char('\u{030B}'), // combining double acute accent (extra high)
+            Char('\u{0301}'), // combining acute accent (high)
+            Char('\u{0304}'), // combining macron (mid)
+            Char('\u{0300}'), // combining grave accent (low)
+            Char('\u{030F}'), // combining double grave accent (extra low)
+            Char('\u{030C}'), // combining caron (rising)
+            Char('\u{0302}'), // combining circumflex (falling)
+            Char('\u{1DC4}'), // combining macron-acute (high rising)
+            Char('\u{1DC5}'), // combining grave-macron (low rising)
+            Char('\u{1DC8}'), // combining grave-acute-grave (rising-falling)
+        ],
+        description: "Tone markers (level and contour tones)",
+    });
+
+    // ========================================================================
+    // Affricates with Tie Bars
+    // ========================================================================
+
+    // Extended affricate class with IPA tie bar forms
+    add_class(NamedClass {
+        name: "ipa_affricate",
+        aliases: &[],
+        patterns: vec![
+            Char('ʧ'), // voiceless postalveolar affricate (U+02A7)
+            Char('ʤ'), // voiced postalveolar affricate (U+02A4)
+            Char('ʦ'), // voiceless alveolar affricate (U+02A6)
+            Char('ʣ'), // voiced alveolar affricate (U+02A3)
+            Char('ʨ'), // voiceless alveolo-palatal affricate (U+02A8)
+            Char('ʥ'), // voiced alveolo-palatal affricate (U+02A5)
+            // Also include the digraph representations
+            Digraph('t', 'ʃ'),
+            Digraph('d', 'ʒ'),
+            Digraph('t', 's'),
+            Digraph('d', 'z'),
+        ],
+        description: "IPA affricates (precomposed and with digraphs)",
+    });
+
+    // ========================================================================
+    // All IPA Characters (comprehensive set)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "ipa",
+        aliases: &["ipa_all"],
+        patterns: vec![
+            // IPA vowels
+            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
+            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'),
+            Char('ɐ'), Char('ɚ'), Char('ɝ'), Char('ʏ'), Char('ø'),
+            Char('œ'), Char('ɶ'), Char('ɵ'), Char('ɞ'), Char('ɯ'),
+            Char('ɤ'), Char('ɨ'), Char('ɘ'),
+            // IPA consonants
+            Char('ŋ'), Char('θ'), Char('ð'), Char('ʃ'), Char('ʒ'),
+            Char('ɹ'), Char('ɾ'), Char('ʔ'), Char('ɬ'), Char('ɮ'),
+            Char('ʈ'), Char('ɖ'), Char('ɳ'), Char('ɽ'), Char('ʂ'),
+            Char('ʐ'), Char('ɻ'), Char('ɭ'), Char('ɢ'), Char('ɴ'),
+            Char('ʀ'), Char('χ'), Char('ʁ'), Char('ħ'), Char('ʕ'),
+            Char('ɦ'), Char('ɟ'), Char('ɲ'), Char('ç'), Char('ʝ'),
+            Char('ʎ'), Char('ɣ'), Char('ɰ'), Char('ʟ'), Char('ɸ'),
+            Char('β'), Char('ʙ'), Char('ɱ'), Char('ⱱ'), Char('ʋ'),
+            // Click consonants
+            Char('ʘ'), Char('ǀ'), Char('ǃ'), Char('ǂ'), Char('ǁ'),
+            // Implosives
+            Char('ɓ'), Char('ɗ'), Char('ʄ'), Char('ɠ'), Char('ʛ'),
+            // Affricates
+            Char('ʧ'), Char('ʤ'), Char('ʦ'), Char('ʣ'), Char('ʨ'), Char('ʥ'),
+            // Suprasegmentals
+            Char('ˈ'), Char('ˌ'), Char('ː'), Char('ˑ'),
+            Char('˥'), Char('˦'), Char('˧'), Char('˨'), Char('˩'),
+        ],
+        description: "All IPA characters (comprehensive phonetic alphabet)",
+    });
+
     m
 });
 
@@ -547,7 +1054,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
 
 /// Maximum length of any built-in class name.
 /// Used for stack-allocated lowercase buffer.
-const MAX_CLASS_NAME_LEN: usize = 16; // "ascii_consonant" = 15 chars
+const MAX_CLASS_NAME_LEN: usize = 20; // "nasalized_diacritic" = 19 chars
 
 /// Normalize a class name to lowercase using stack allocation.
 ///
@@ -1037,5 +1544,173 @@ mod tests {
         // Other consonants should NOT be in result
         assert!(!result.contains(&'f'));
         assert!(!result.contains(&'s'));
+    }
+
+    // =========================================================================
+    // Extended IPA Class Tests
+    // =========================================================================
+
+    #[test]
+    fn test_retroflex_class() {
+        let retroflex = get_named_class("retroflex").expect("retroflex class");
+
+        // Should have retroflex consonants
+        assert!(retroflex.patterns.contains(&PhonePattern::Char('ʈ'))); // U+0288
+        assert!(retroflex.patterns.contains(&PhonePattern::Char('ɖ'))); // U+0256
+        assert!(retroflex.patterns.contains(&PhonePattern::Char('ɻ'))); // U+027B
+        assert!(retroflex.patterns.contains(&PhonePattern::Char('ʂ'))); // U+0282
+    }
+
+    #[test]
+    fn test_uvular_class() {
+        let uvular = get_named_class("uvular").expect("uvular class");
+
+        assert!(uvular.patterns.contains(&PhonePattern::Char('ʁ'))); // U+0281
+        assert!(uvular.patterns.contains(&PhonePattern::Char('ɢ'))); // U+0262
+        assert!(uvular.patterns.contains(&PhonePattern::Char('ʀ'))); // U+0280
+    }
+
+    #[test]
+    fn test_click_class() {
+        let click = get_named_class("click").expect("click class");
+
+        assert!(click.patterns.contains(&PhonePattern::Char('ʘ'))); // bilabial
+        assert!(click.patterns.contains(&PhonePattern::Char('ǀ'))); // dental
+        assert!(click.patterns.contains(&PhonePattern::Char('ǃ'))); // alveolar
+    }
+
+    #[test]
+    fn test_implosive_class() {
+        let implosive = get_named_class("implosive").expect("implosive class");
+
+        assert!(implosive.patterns.contains(&PhonePattern::Char('ɓ'))); // U+0253
+        assert!(implosive.patterns.contains(&PhonePattern::Char('ɗ'))); // U+0257
+        assert!(implosive.patterns.contains(&PhonePattern::Char('ɠ'))); // U+0260
+    }
+
+    #[test]
+    fn test_front_rounded_class() {
+        let front_rounded = get_named_class("front_rounded").expect("front_rounded class");
+
+        // German ü, ö sounds
+        assert!(front_rounded.patterns.contains(&PhonePattern::Char('y'))); // close front rounded
+        assert!(front_rounded.patterns.contains(&PhonePattern::Char('ø'))); // close-mid front rounded
+        assert!(front_rounded.patterns.contains(&PhonePattern::Char('œ'))); // open-mid front rounded
+    }
+
+    #[test]
+    fn test_stress_class() {
+        let stress = get_named_class("stress").expect("stress class");
+
+        assert!(stress.patterns.contains(&PhonePattern::Char('ˈ'))); // primary
+        assert!(stress.patterns.contains(&PhonePattern::Char('ˌ'))); // secondary
+    }
+
+    #[test]
+    fn test_length_class() {
+        let length = get_named_class("length").expect("length class");
+
+        assert!(length.patterns.contains(&PhonePattern::Char('ː'))); // long
+        assert!(length.patterns.contains(&PhonePattern::Char('ˑ'))); // half-long
+    }
+
+    #[test]
+    fn test_tone_class() {
+        let tone = get_named_class("tone").expect("tone class");
+
+        // Chao tone letters
+        assert!(tone.patterns.contains(&PhonePattern::Char('˥'))); // extra high
+        assert!(tone.patterns.contains(&PhonePattern::Char('˩'))); // extra low
+    }
+
+    #[test]
+    fn test_diacritic_class() {
+        let diacritic = get_named_class("diacritic").expect("diacritic class");
+
+        // Should have common diacritics
+        assert!(diacritic.patterns.contains(&PhonePattern::Char('\u{0325}'))); // voiceless
+        assert!(diacritic.patterns.contains(&PhonePattern::Char('\u{0303}'))); // nasalized
+        assert!(diacritic.patterns.contains(&PhonePattern::Char('\u{02B0}'))); // aspirated
+    }
+
+    #[test]
+    fn test_ipa_affricate_class() {
+        let affricate = get_named_class("ipa_affricate").expect("ipa_affricate class");
+
+        // Precomposed affricates
+        assert!(affricate.patterns.contains(&PhonePattern::Char('ʧ'))); // tʃ
+        assert!(affricate.patterns.contains(&PhonePattern::Char('ʤ'))); // dʒ
+        assert!(affricate.patterns.contains(&PhonePattern::Char('ʦ'))); // ts
+    }
+
+    #[test]
+    fn test_comprehensive_ipa_class() {
+        let ipa = get_named_class("ipa").expect("ipa class");
+
+        // Should have all major IPA categories
+        // Vowels
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ə'))); // schwa
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ɚ'))); // rhotic schwa
+
+        // Consonants
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ŋ'))); // velar nasal
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ʃ'))); // sh sound
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ʁ'))); // uvular fricative
+
+        // Clicks
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ǃ'))); // alveolar click
+
+        // Implosives
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ɓ'))); // bilabial implosive
+
+        // Suprasegmentals
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ˈ'))); // primary stress
+        assert!(ipa.patterns.contains(&PhonePattern::Char('ː'))); // long
+    }
+
+    #[test]
+    fn test_tap_flap_alias() {
+        let tap = get_named_class("tap").expect("tap class");
+        let flap = get_named_class("flap").expect("flap alias");
+
+        assert_eq!(tap.patterns.len(), flap.patterns.len());
+        assert!(tap.patterns.contains(&PhonePattern::Char('ɾ'))); // alveolar tap
+    }
+
+    #[test]
+    fn test_place_of_articulation_classes() {
+        // Test various place of articulation classes
+        let bilabial = get_named_class("bilabial").expect("bilabial");
+        let alveolar = get_named_class("alveolar").expect("alveolar");
+        let velar = get_named_class("velar").expect("velar");
+        let palatal = get_named_class("palatal").expect("palatal");
+
+        assert!(bilabial.patterns.contains(&PhonePattern::Char('p')));
+        assert!(bilabial.patterns.contains(&PhonePattern::Char('m')));
+
+        assert!(alveolar.patterns.contains(&PhonePattern::Char('t')));
+        assert!(alveolar.patterns.contains(&PhonePattern::Char('n')));
+
+        assert!(velar.patterns.contains(&PhonePattern::Char('k')));
+        assert!(velar.patterns.contains(&PhonePattern::Char('ŋ')));
+
+        assert!(palatal.patterns.contains(&PhonePattern::Char('ç'))); // voiceless palatal fricative
+        assert!(palatal.patterns.contains(&PhonePattern::Char('j'))); // palatal approximant
+    }
+
+    #[test]
+    fn test_manner_of_articulation_classes() {
+        let trill = get_named_class("trill").expect("trill");
+        let approximant = get_named_class("approximant").expect("approximant");
+        let lateral = get_named_class("lateral").expect("lateral");
+
+        assert!(trill.patterns.contains(&PhonePattern::Char('r')));
+        assert!(trill.patterns.contains(&PhonePattern::Char('ʀ'))); // uvular trill
+
+        assert!(approximant.patterns.contains(&PhonePattern::Char('ɹ'))); // alveolar approx
+        assert!(approximant.patterns.contains(&PhonePattern::Char('j'))); // palatal approx
+
+        assert!(lateral.patterns.contains(&PhonePattern::Char('l')));
+        assert!(lateral.patterns.contains(&PhonePattern::Char('ɬ'))); // lateral fricative
     }
 }

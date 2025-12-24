@@ -1,0 +1,247 @@
+// Georgian Base Phonetic Rules
+// ============================
+// Phonetic rules for Georgian (ქართული) Mkhedruli script romanization.
+// Maps Georgian letters to Latin equivalents for phonetic matching.
+//
+// Georgian is unique:
+//   - Mkhedruli script has no uppercase/lowercase
+//   - 33 letters (5 vowels, 28 consonants)
+//   - Ejective consonants (marked with ')
+//   - Nearly phonemic orthography
+//   - Extensive consonant clusters
+//
+// Rule IDs: 4600-4699
+
+@name "Georgian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Georgian Mkhedruli script"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// Georgian has 5 simple vowels, no diphthongs
+// ============================================================
+
+[id: 4600, name: "ani", weight: 0.05, group: georgian_vowels]
+ა -> a;
+
+[id: 4601, name: "eni", weight: 0.05, group: georgian_vowels]
+ე -> e;
+
+[id: 4602, name: "ini", weight: 0.05, group: georgian_vowels]
+ი -> i;
+
+[id: 4603, name: "oni", weight: 0.05, group: georgian_vowels]
+ო -> o;
+
+[id: 4604, name: "uni", weight: 0.05, group: georgian_vowels]
+უ -> u;
+
+// ============================================================
+// STOPS AND PLOSIVES
+// Georgian distinguishes three series:
+//   - Voiced: ბ, გ, დ
+//   - Aspirated: თ, ფ, ქ
+//   - Ejective: კ, პ, ტ
+// ============================================================
+
+// Voiced stops (weight 0.05)
+[id: 4610, name: "bani", weight: 0.05, group: georgian_voiced_stops]
+ბ -> b;
+
+[id: 4611, name: "gani", weight: 0.05, group: georgian_voiced_stops]
+გ -> g;
+
+[id: 4612, name: "doni", weight: 0.05, group: georgian_voiced_stops]
+დ -> d;
+
+// Aspirated stops (weight 0.05)
+[id: 4615, name: "tani aspirated", weight: 0.05, group: georgian_aspirated, ipa: "/tʰ/"]
+თ -> tʰ;
+
+[id: 4616, name: "pari aspirated", weight: 0.05, group: georgian_aspirated, ipa: "/pʰ/"]
+ფ -> pʰ;
+
+[id: 4617, name: "kani aspirated", weight: 0.05, group: georgian_aspirated, ipa: "/kʰ/"]
+ქ -> kʰ;
+
+// Ejective stops (weight 0.02 - distinctive feature)
+[id: 4620, name: "kani ejective", weight: 0.02, group: georgian_ejectives, ipa: "/kʼ/"]
+კ -> kʼ;
+
+[id: 4621, name: "pari ejective", weight: 0.02, group: georgian_ejectives, ipa: "/pʼ/"]
+პ -> pʼ;
+
+[id: 4622, name: "tari ejective", weight: 0.02, group: georgian_ejectives, ipa: "/tʼ/"]
+ტ -> tʼ;
+
+// ============================================================
+// AFFRICATES
+// Georgian distinguishes three series:
+//   - Voiced: ძ, ჯ
+//   - Aspirated: ც, ჩ
+//   - Ejective: წ, ჭ
+// ============================================================
+
+// Voiced affricates (weight 0.05)
+[id: 4625, name: "dzili voiced", weight: 0.05, group: georgian_voiced_affricates, ipa: "/d͡z/"]
+ძ -> d͡z;
+
+[id: 4626, name: "jani voiced", weight: 0.05, group: georgian_voiced_affricates, ipa: "/d͡ʒ/"]
+ჯ -> d͡ʒ;
+
+// Aspirated affricates (weight 0.05)
+[id: 4630, name: "tsani aspirated", weight: 0.05, group: georgian_aspirated_affricates, ipa: "/t͡sʰ/"]
+ც -> t͡sʰ;
+
+[id: 4631, name: "chini aspirated", weight: 0.05, group: georgian_aspirated_affricates, ipa: "/t͡ʃʰ/"]
+ჩ -> t͡ʃʰ;
+
+// Ejective affricates (weight 0.02 - distinctive)
+[id: 4635, name: "tsili ejective", weight: 0.02, group: georgian_ejective_affricates, ipa: "/t͡sʼ/"]
+წ -> t͡sʼ;
+
+[id: 4636, name: "chari ejective", weight: 0.02, group: georgian_ejective_affricates, ipa: "/t͡ʃʼ/"]
+ჭ -> t͡ʃʼ;
+
+// ============================================================
+// FRICATIVES
+// Georgian has voiced and voiceless pairs
+// ============================================================
+
+// Sibilants (weight 0.05)
+[id: 4640, name: "zeni voiced", weight: 0.05, group: georgian_sibilants]
+ზ -> z;
+
+[id: 4641, name: "sani voiceless", weight: 0.05, group: georgian_sibilants]
+ს -> s;
+
+[id: 4642, name: "zhani voiced", weight: 0.05, group: georgian_sibilants, ipa: "/ʒ/"]
+ჟ -> ʒ;
+
+[id: 4643, name: "shini voiceless", weight: 0.05, group: georgian_sibilants, ipa: "/ʃ/"]
+შ -> ʃ;
+
+// Velar/uvular fricatives (weight 0.05)
+[id: 4645, name: "ghani voiced", weight: 0.05, group: georgian_velar_fricatives, ipa: "/ɣ/"]
+ღ -> ɣ;
+
+[id: 4646, name: "khani voiceless", weight: 0.05, group: georgian_velar_fricatives, ipa: "/x/"]
+ხ -> x;
+
+// Glottal fricative (weight 0.05)
+[id: 4648, name: "hae", weight: 0.05, group: georgian_glottal]
+ჰ -> h;
+
+// ============================================================
+// UVULAR
+// Ejective uvular stop - very distinctive Georgian sound
+// ============================================================
+
+[id: 4650, name: "qari ejective uvular", weight: 0.02, group: georgian_uvular, ipa: "/qʼ/"]
+ყ -> qʼ;
+
+// ============================================================
+// SONORANTS
+// ============================================================
+
+// Nasals (weight 0.05)
+[id: 4655, name: "mani", weight: 0.05, group: georgian_nasals]
+მ -> m;
+
+[id: 4656, name: "nari", weight: 0.05, group: georgian_nasals]
+ნ -> n;
+
+// Liquids (weight 0.05)
+[id: 4660, name: "lasi", weight: 0.05, group: georgian_liquids]
+ლ -> l;
+
+[id: 4661, name: "rae", weight: 0.05, group: georgian_liquids]
+რ -> r;
+
+// Approximants (weight 0.05)
+[id: 4665, name: "vini", weight: 0.05, group: georgian_approximants]
+ვ -> v;
+
+// ============================================================
+// OBSOLETE/ARCHAIC LETTERS
+// These letters are rarely used in modern Georgian
+// (weight 0.1 - lower priority)
+// ============================================================
+
+[id: 4670, name: "he obsolete", weight: 0.1, group: georgian_archaic]
+ჱ -> e;
+
+[id: 4671, name: "hie obsolete", weight: 0.1, group: georgian_archaic]
+ჲ -> y;
+
+[id: 4672, name: "we obsolete", weight: 0.1, group: georgian_archaic]
+ჳ -> w;
+
+[id: 4673, name: "har obsolete", weight: 0.1, group: georgian_archaic]
+ჴ -> q;
+
+[id: 4674, name: "hoe obsolete", weight: 0.1, group: georgian_archaic]
+ჵ -> o;
+
+[id: 4675, name: "fi obsolete", weight: 0.1, group: georgian_archaic]
+ჶ -> f;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// Simplify markers for fuzzy matching
+// Affricates at 0.15 (must fire before single letters at 0.2)
+// ============================================================
+
+// Affricate simplifications (weight 0.15 - fire first)
+[id: 4680, name: "double ts aspirated", weight: 0.15, group: georgian_simplification]
+t͡sʰt͡sʰ -> t͡sʰ;
+
+[id: 4681, name: "double ch aspirated", weight: 0.15, group: georgian_simplification]
+t͡ʃʰt͡ʃʰ -> t͡ʃʰ;
+
+[id: 4682, name: "double voiced velar fricative", weight: 0.15, group: georgian_simplification]
+ɣɣ -> ɣ;
+
+[id: 4683, name: "double sh", weight: 0.15, group: georgian_simplification]
+ʃʃ -> ʃ;
+
+[id: 4684, name: "double zh", weight: 0.15, group: georgian_simplification]
+ʒʒ -> ʒ;
+
+// Ejective simplifications (weight 0.15 - fire before single letters)
+[id: 4685, name: "simplify ejective k", weight: 0.15, group: georgian_simplification]
+kʼ -> k;
+
+[id: 4686, name: "simplify ejective p", weight: 0.15, group: georgian_simplification]
+pʼ -> p;
+
+[id: 4687, name: "simplify ejective t", weight: 0.15, group: georgian_simplification]
+tʼ -> t;
+
+[id: 4688, name: "simplify ejective ts", weight: 0.15, group: georgian_simplification]
+t͡sʼ -> t͡s;
+
+[id: 4689, name: "simplify ejective ch", weight: 0.15, group: georgian_simplification]
+t͡ʃʼ -> t͡ʃ;
+
+[id: 4690, name: "simplify ejective q", weight: 0.15, group: georgian_simplification]
+qʼ -> q;
+
+// Aspirated simplifications (weight 0.2 - fire after affricates)
+[id: 4691, name: "simplify aspirated t", weight: 0.2, group: georgian_simplification]
+tʰ -> t;
+
+[id: 4692, name: "simplify aspirated p", weight: 0.2, group: georgian_simplification]
+pʰ -> p;
+
+[id: 4693, name: "simplify aspirated k", weight: 0.2, group: georgian_simplification]
+kʰ -> k;
+
+// Voiced affricate simplifications
+[id: 4694, name: "double dz", weight: 0.2, group: georgian_simplification]
+d͡zd͡z -> d͡z;
+
+[id: 4695, name: "double dzh", weight: 0.2, group: georgian_simplification]
+d͡ʒd͡ʒ -> d͡ʒ;
+

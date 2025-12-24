@@ -1,0 +1,277 @@
+// Tamil Base Phonetic Rules
+// =========================
+// Phonetic rules for Tamil (தமிழ்) script romanization.
+// Maps Tamil letters to Latin equivalents for phonetic matching.
+//
+// Tamil uses the oldest Dravidian script with unique features:
+//   - Limited consonant set compared to Sanskrit-based scripts
+//   - Unique sounds: ழ (retroflex approximant), ற (alveolar trill), ன (alveolar nasal)
+//   - Grantha letters for Sanskrit loanwords: ஜ, ஶ, ஷ, ஸ, ஹ
+//   - No aspirated consonants in native Tamil
+//
+// Key features:
+//   - 12 vowels (independent and matra forms)
+//   - 18 native consonants + 5 Grantha consonants
+//   - Inherent /a/ vowel
+//
+// Rule IDs: 4000-4099
+
+@name "Tamil Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Tamil script"
+
+// ============================================================
+// TAMIL-SPECIFIC CONSONANTS (highest priority)
+// ============================================================
+
+// ழ - retroflex approximant (unique to Tamil)
+[id: 4000, name: "zha retroflex approximant", weight: 0.02, group: tamil_special, ipa: "/ɻ/"]
+ழ -> ɻ;
+
+// ற - alveolar trill
+[id: 4001, name: "rra alveolar trill", weight: 0.02, group: tamil_special, ipa: "/r/"]
+ற -> r;
+
+// ன - alveolar nasal
+[id: 4002, name: "na alveolar", weight: 0.02, group: tamil_special, ipa: "/n̺/"]
+ன -> n̺;
+
+// ள - retroflex lateral
+[id: 4003, name: "lla retroflex lateral", weight: 0.02, group: tamil_special, ipa: "/ɭ/"]
+ள -> ɭ;
+
+// ============================================================
+// INDEPENDENT VOWELS (உயிரெழுத்து)
+// ============================================================
+
+[id: 4010, name: "a vowel", weight: 0.05, group: tamil_vowels]
+அ -> a;
+
+[id: 4011, name: "aa vowel", weight: 0.05, group: tamil_vowels, ipa: "/aː/"]
+ஆ -> aː;
+
+[id: 4012, name: "i vowel", weight: 0.05, group: tamil_vowels]
+இ -> i;
+
+[id: 4013, name: "ii vowel", weight: 0.05, group: tamil_vowels, ipa: "/iː/"]
+ஈ -> iː;
+
+[id: 4014, name: "u vowel", weight: 0.05, group: tamil_vowels]
+உ -> u;
+
+[id: 4015, name: "uu vowel", weight: 0.05, group: tamil_vowels, ipa: "/uː/"]
+ஊ -> uː;
+
+[id: 4016, name: "e short vowel", weight: 0.05, group: tamil_vowels]
+எ -> e;
+
+[id: 4017, name: "ee long vowel", weight: 0.05, group: tamil_vowels, ipa: "/eː/"]
+ஏ -> eː;
+
+[id: 4018, name: "ai vowel", weight: 0.05, group: tamil_vowels, ipa: "/aɪ/"]
+ஐ -> aɪ;
+
+[id: 4019, name: "o short vowel", weight: 0.05, group: tamil_vowels]
+ஒ -> o;
+
+[id: 4020, name: "oo long vowel", weight: 0.05, group: tamil_vowels, ipa: "/oː/"]
+ஓ -> oː;
+
+[id: 4021, name: "au vowel", weight: 0.05, group: tamil_vowels, ipa: "/aʊ/"]
+ஔ -> aʊ;
+
+// ============================================================
+// NATIVE TAMIL CONSONANTS (மெய்யெழுத்து)
+// ============================================================
+
+// Vallinam (hard consonants)
+[id: 4025, name: "ka", weight: 0.05, group: tamil_vallinam]
+க -> k;
+
+[id: 4026, name: "cha", weight: 0.05, group: tamil_vallinam]
+ச -> c;
+
+[id: 4027, name: "Ta retroflex", weight: 0.05, group: tamil_vallinam, ipa: "/ʈ/"]
+ட -> ʈ;
+
+[id: 4028, name: "ta dental", weight: 0.05, group: tamil_vallinam]
+த -> t;
+
+[id: 4029, name: "pa", weight: 0.05, group: tamil_vallinam]
+ப -> p;
+
+// Mellinam (soft consonants - nasals)
+[id: 4035, name: "nga velar nasal", weight: 0.05, group: tamil_mellinam, ipa: "/ŋ/"]
+ங -> ŋ;
+
+[id: 4036, name: "nya palatal nasal", weight: 0.05, group: tamil_mellinam, ipa: "/ɲ/"]
+ஞ -> ɲ;
+
+[id: 4037, name: "Na retroflex nasal", weight: 0.05, group: tamil_mellinam, ipa: "/ɳ/"]
+ண -> ɳ;
+
+[id: 4038, name: "na dental nasal", weight: 0.05, group: tamil_mellinam]
+ந -> n;
+
+[id: 4039, name: "ma labial nasal", weight: 0.05, group: tamil_mellinam]
+ம -> m;
+
+// Idaiyinam (medium consonants)
+[id: 4045, name: "ya", weight: 0.05, group: tamil_idaiyinam]
+ய -> y;
+
+[id: 4046, name: "ra", weight: 0.05, group: tamil_idaiyinam]
+ர -> r;
+
+[id: 4047, name: "la", weight: 0.05, group: tamil_idaiyinam]
+ல -> l;
+
+[id: 4048, name: "va", weight: 0.05, group: tamil_idaiyinam]
+வ -> v;
+
+// ============================================================
+// GRANTHA CONSONANTS (Sanskrit loanwords)
+// ============================================================
+
+[id: 4055, name: "ja grantha", weight: 0.05, group: tamil_grantha]
+ஜ -> j;
+
+[id: 4056, name: "sha grantha palatal", weight: 0.05, group: tamil_grantha, ipa: "/ʃ/"]
+ஶ -> ʃ;
+
+[id: 4057, name: "Sha grantha retroflex", weight: 0.05, group: tamil_grantha, ipa: "/ʂ/"]
+ஷ -> ʂ;
+
+[id: 4058, name: "sa grantha", weight: 0.05, group: tamil_grantha]
+ஸ -> s;
+
+[id: 4059, name: "ha grantha", weight: 0.05, group: tamil_grantha]
+ஹ -> h;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels / உயிர் குறி)
+// ============================================================
+
+[id: 4060, name: "aa matra", weight: 0.05, group: tamil_matras, ipa: "/aː/"]
+ா -> aː;
+
+[id: 4061, name: "i matra", weight: 0.05, group: tamil_matras]
+ி -> i;
+
+[id: 4062, name: "ii matra", weight: 0.05, group: tamil_matras, ipa: "/iː/"]
+ீ -> iː;
+
+[id: 4063, name: "u matra", weight: 0.05, group: tamil_matras]
+ு -> u;
+
+[id: 4064, name: "uu matra", weight: 0.05, group: tamil_matras, ipa: "/uː/"]
+ூ -> uː;
+
+[id: 4065, name: "e short matra", weight: 0.05, group: tamil_matras]
+ெ -> e;
+
+[id: 4066, name: "ee long matra", weight: 0.05, group: tamil_matras, ipa: "/eː/"]
+ே -> eː;
+
+[id: 4067, name: "ai matra", weight: 0.05, group: tamil_matras, ipa: "/aɪ/"]
+ை -> aɪ;
+
+[id: 4068, name: "o short matra", weight: 0.05, group: tamil_matras]
+ொ -> o;
+
+[id: 4069, name: "oo long matra", weight: 0.05, group: tamil_matras, ipa: "/oː/"]
+ோ -> oː;
+
+[id: 4070, name: "au matra", weight: 0.05, group: tamil_matras, ipa: "/aʊ/"]
+ௌ -> aʊ;
+
+// Au length mark
+[id: 4071, name: "au length mark", weight: 0.05, group: tamil_matras, ipa: "/aʊ/"]
+ௗ -> aʊ;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Pulli (virama) - removes inherent vowel
+[id: 4075, name: "pulli virama", weight: 0.1, group: tamil_diacritics]
+் -> ;
+
+// Anusvara (rare in Tamil)
+[id: 4076, name: "anusvara", weight: 0.1, group: tamil_diacritics, ipa: "/̃/"]
+ஂ -> ̃;
+
+// Aytham (visarga equivalent, used for aspirated sounds)
+[id: 4077, name: "aytham", weight: 0.1, group: tamil_diacritics, ipa: "/h/"]
+ஃ -> h;
+
+// ============================================================
+// TAMIL NUMERALS
+// ============================================================
+
+[id: 4080, name: "numeral 0", weight: 0.1, group: tamil_numerals]
+௦ -> 0;
+
+[id: 4081, name: "numeral 1", weight: 0.1, group: tamil_numerals]
+௧ -> 1;
+
+[id: 4082, name: "numeral 2", weight: 0.1, group: tamil_numerals]
+௨ -> 2;
+
+[id: 4083, name: "numeral 3", weight: 0.1, group: tamil_numerals]
+௩ -> 3;
+
+[id: 4084, name: "numeral 4", weight: 0.1, group: tamil_numerals]
+௪ -> 4;
+
+[id: 4085, name: "numeral 5", weight: 0.1, group: tamil_numerals]
+௫ -> 5;
+
+[id: 4086, name: "numeral 6", weight: 0.1, group: tamil_numerals]
+௬ -> 6;
+
+[id: 4087, name: "numeral 7", weight: 0.1, group: tamil_numerals]
+௭ -> 7;
+
+[id: 4088, name: "numeral 8", weight: 0.1, group: tamil_numerals]
+௮ -> 8;
+
+[id: 4089, name: "numeral 9", weight: 0.1, group: tamil_numerals]
+௯ -> 9;
+
+// Tamil special numerals
+[id: 4090, name: "numeral 10", weight: 0.1, group: tamil_numerals]
+௰ -> 10;
+
+[id: 4091, name: "numeral 100", weight: 0.1, group: tamil_numerals]
+௱ -> 100;
+
+[id: 4092, name: "numeral 1000", weight: 0.1, group: tamil_numerals]
+௲ -> 1000;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 4093, name: "double retroflex approximant", weight: 0.2, group: tamil_simplification]
+ɻɻ -> ɻ;
+
+[id: 4094, name: "double retroflex lateral", weight: 0.2, group: tamil_simplification]
+ɭɭ -> ɭ;
+
+[id: 4095, name: "double alveolar trill", weight: 0.2, group: tamil_simplification]
+rr -> r;
+
+[id: 4096, name: "double retroflex t", weight: 0.2, group: tamil_simplification]
+ʈʈ -> ʈ;
+
+[id: 4097, name: "double retroflex nasal", weight: 0.2, group: tamil_simplification]
+ɳɳ -> ɳ;
+
+[id: 4098, name: "double palatal sh", weight: 0.2, group: tamil_simplification]
+ʃʃ -> ʃ;
+
+[id: 4099, name: "double ai diphthong", weight: 0.2, group: tamil_simplification]
+aɪaɪ -> aɪ;
+

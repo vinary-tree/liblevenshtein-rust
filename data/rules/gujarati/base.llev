@@ -1,0 +1,320 @@
+// Gujarati Base Phonetic Rules
+// ============================
+// Phonetic rules for Gujarati (ગુજરાતી) script romanization.
+// Maps Gujarati letters to Latin equivalents for phonetic matching.
+//
+// Gujarati uses a Brahmic abugida derived from Devanagari but:
+//   - No headline (shirorekha) unlike Devanagari
+//   - Same inherent /a/ vowel as Hindi
+//   - Same consonant organization as Hindi
+//
+// Key features:
+//   - 11 vowels (independent and matra forms)
+//   - 33+ consonants in standard arrangement
+//   - ળ (retroflex lateral) - like Marathi
+//
+// Rule IDs: 4250-4349
+
+@name "Gujarati Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Gujarati script"
+
+// ============================================================
+// GUJARATI-SPECIFIC CONSONANTS (highest priority)
+// ============================================================
+
+// ળ - retroflex lateral (like Marathi)
+[id: 4250, name: "La retroflex", weight: 0.02, group: gujarati_special, ipa: "/ɭ/"]
+ળ -> ɭ;
+
+// ============================================================
+// INDEPENDENT VOWELS (SVAR)
+// ============================================================
+
+[id: 4255, name: "a vowel", weight: 0.05, group: gujarati_vowels]
+અ -> a;
+
+[id: 4256, name: "aa vowel", weight: 0.05, group: gujarati_vowels, ipa: "/aː/"]
+આ -> aː;
+
+[id: 4257, name: "i vowel", weight: 0.05, group: gujarati_vowels]
+ઇ -> i;
+
+[id: 4258, name: "ii vowel", weight: 0.05, group: gujarati_vowels, ipa: "/iː/"]
+ઈ -> iː;
+
+[id: 4259, name: "u vowel", weight: 0.05, group: gujarati_vowels]
+ઉ -> u;
+
+[id: 4260, name: "uu vowel", weight: 0.05, group: gujarati_vowels, ipa: "/uː/"]
+ઊ -> uː;
+
+[id: 4261, name: "ri vowel", weight: 0.05, group: gujarati_vowels, ipa: "/r̩/"]
+ઋ -> r̩;
+
+[id: 4262, name: "e vowel", weight: 0.05, group: gujarati_vowels]
+એ -> e;
+
+[id: 4263, name: "ai vowel", weight: 0.05, group: gujarati_vowels, ipa: "/ɛː/"]
+ઐ -> ɛː;
+
+[id: 4264, name: "o vowel", weight: 0.05, group: gujarati_vowels]
+ઓ -> o;
+
+[id: 4265, name: "au vowel", weight: 0.05, group: gujarati_vowels, ipa: "/ɔː/"]
+ઔ -> ɔː;
+
+// ============================================================
+// VELAR CONSONANTS (ક-વર્ગ)
+// ============================================================
+
+[id: 4270, name: "ka", weight: 0.05, group: gujarati_velars]
+ક -> k;
+
+[id: 4271, name: "kha", weight: 0.05, group: gujarati_velars]
+ખ -> kh;
+
+[id: 4272, name: "ga", weight: 0.05, group: gujarati_velars]
+ગ -> g;
+
+[id: 4273, name: "gha", weight: 0.05, group: gujarati_velars]
+ઘ -> gh;
+
+[id: 4274, name: "nga", weight: 0.05, group: gujarati_velars, ipa: "/ŋ/"]
+ઙ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (ચ-વર્ગ)
+// ============================================================
+
+[id: 4275, name: "cha", weight: 0.05, group: gujarati_palatals]
+ચ -> c;
+
+[id: 4276, name: "chha", weight: 0.05, group: gujarati_palatals]
+છ -> ch;
+
+[id: 4277, name: "ja", weight: 0.05, group: gujarati_palatals]
+જ -> j;
+
+[id: 4278, name: "jha", weight: 0.05, group: gujarati_palatals]
+ઝ -> jh;
+
+[id: 4279, name: "nya", weight: 0.05, group: gujarati_palatals, ipa: "/ɲ/"]
+ઞ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ટ-વર્ગ)
+// ============================================================
+
+[id: 4280, name: "Ta", weight: 0.05, group: gujarati_retroflexes, ipa: "/ʈ/"]
+ટ -> ʈ;
+
+[id: 4281, name: "Tha", weight: 0.05, group: gujarati_retroflexes, ipa: "/ʈʰ/"]
+ઠ -> ʈʰ;
+
+[id: 4282, name: "Da", weight: 0.05, group: gujarati_retroflexes, ipa: "/ɖ/"]
+ડ -> ɖ;
+
+[id: 4283, name: "Dha", weight: 0.05, group: gujarati_retroflexes, ipa: "/ɖʰ/"]
+ઢ -> ɖʰ;
+
+[id: 4284, name: "Na", weight: 0.05, group: gujarati_retroflexes, ipa: "/ɳ/"]
+ણ -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (ત-વર્ગ)
+// ============================================================
+
+[id: 4285, name: "ta", weight: 0.05, group: gujarati_dentals]
+ત -> t;
+
+[id: 4286, name: "tha", weight: 0.05, group: gujarati_dentals]
+થ -> th;
+
+[id: 4287, name: "da", weight: 0.05, group: gujarati_dentals]
+દ -> d;
+
+[id: 4288, name: "dha", weight: 0.05, group: gujarati_dentals]
+ધ -> dh;
+
+[id: 4289, name: "na", weight: 0.05, group: gujarati_dentals]
+ન -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (પ-વર્ગ)
+// ============================================================
+
+[id: 4290, name: "pa", weight: 0.05, group: gujarati_labials]
+પ -> p;
+
+[id: 4291, name: "pha", weight: 0.05, group: gujarati_labials]
+ફ -> ph;
+
+[id: 4292, name: "ba", weight: 0.05, group: gujarati_labials]
+બ -> b;
+
+[id: 4293, name: "bha", weight: 0.05, group: gujarati_labials]
+ભ -> bh;
+
+[id: 4294, name: "ma", weight: 0.05, group: gujarati_labials]
+મ -> m;
+
+// ============================================================
+// SEMI-VOWELS (અન્તઃસ્થ)
+// ============================================================
+
+[id: 4295, name: "ya", weight: 0.05, group: gujarati_semivowels]
+ય -> y;
+
+[id: 4296, name: "ra", weight: 0.05, group: gujarati_semivowels]
+ર -> r;
+
+[id: 4297, name: "la", weight: 0.05, group: gujarati_semivowels]
+લ -> l;
+
+[id: 4298, name: "va", weight: 0.05, group: gujarati_semivowels]
+વ -> v;
+
+// ============================================================
+// SIBILANTS AND ASPIRATE (ઊષ્મ)
+// ============================================================
+
+[id: 4300, name: "sha palatal", weight: 0.05, group: gujarati_sibilants, ipa: "/ʃ/"]
+શ -> ʃ;
+
+[id: 4301, name: "Sha retroflex", weight: 0.05, group: gujarati_sibilants, ipa: "/ʂ/"]
+ષ -> ʂ;
+
+[id: 4302, name: "sa", weight: 0.05, group: gujarati_sibilants]
+સ -> s;
+
+[id: 4303, name: "ha", weight: 0.05, group: gujarati_sibilants]
+હ -> h;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels)
+// ============================================================
+
+[id: 4310, name: "aa matra", weight: 0.05, group: gujarati_matras, ipa: "/aː/"]
+ા -> aː;
+
+[id: 4311, name: "i matra", weight: 0.05, group: gujarati_matras]
+િ -> i;
+
+[id: 4312, name: "ii matra", weight: 0.05, group: gujarati_matras, ipa: "/iː/"]
+ી -> iː;
+
+[id: 4313, name: "u matra", weight: 0.05, group: gujarati_matras]
+ુ -> u;
+
+[id: 4314, name: "uu matra", weight: 0.05, group: gujarati_matras, ipa: "/uː/"]
+ૂ -> uː;
+
+[id: 4315, name: "ri matra", weight: 0.05, group: gujarati_matras, ipa: "/r̩/"]
+ૃ -> r̩;
+
+[id: 4316, name: "e matra", weight: 0.05, group: gujarati_matras]
+ે -> e;
+
+[id: 4317, name: "ai matra", weight: 0.05, group: gujarati_matras, ipa: "/ɛː/"]
+ૈ -> ɛː;
+
+[id: 4318, name: "o matra", weight: 0.05, group: gujarati_matras]
+ો -> o;
+
+[id: 4319, name: "au matra", weight: 0.05, group: gujarati_matras, ipa: "/ɔː/"]
+ૌ -> ɔː;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Virama - removes inherent vowel
+[id: 4320, name: "virama", weight: 0.1, group: gujarati_diacritics]
+્ -> ;
+
+// Anusvara - nasalization
+[id: 4321, name: "anusvara", weight: 0.1, group: gujarati_diacritics, ipa: "/̃/"]
+ં -> ̃;
+
+// Chandrabindu - nasal vowel
+[id: 4322, name: "chandrabindu", weight: 0.1, group: gujarati_diacritics, ipa: "/̃/"]
+ઁ -> ̃;
+
+// Visarga - voiceless glottal fricative
+[id: 4323, name: "visarga", weight: 0.1, group: gujarati_diacritics, ipa: "/h/"]
+ઃ -> h;
+
+// Avagraha - elision marker
+[id: 4324, name: "avagraha", weight: 0.1, group: gujarati_diacritics]
+ઽ -> ';
+
+// ============================================================
+// GUJARATI NUMERALS
+// ============================================================
+
+[id: 4330, name: "numeral 0", weight: 0.1, group: gujarati_numerals]
+૦ -> 0;
+
+[id: 4331, name: "numeral 1", weight: 0.1, group: gujarati_numerals]
+૧ -> 1;
+
+[id: 4332, name: "numeral 2", weight: 0.1, group: gujarati_numerals]
+૨ -> 2;
+
+[id: 4333, name: "numeral 3", weight: 0.1, group: gujarati_numerals]
+૩ -> 3;
+
+[id: 4334, name: "numeral 4", weight: 0.1, group: gujarati_numerals]
+૪ -> 4;
+
+[id: 4335, name: "numeral 5", weight: 0.1, group: gujarati_numerals]
+૫ -> 5;
+
+[id: 4336, name: "numeral 6", weight: 0.1, group: gujarati_numerals]
+૬ -> 6;
+
+[id: 4337, name: "numeral 7", weight: 0.1, group: gujarati_numerals]
+૭ -> 7;
+
+[id: 4338, name: "numeral 8", weight: 0.1, group: gujarati_numerals]
+૮ -> 8;
+
+[id: 4339, name: "numeral 9", weight: 0.1, group: gujarati_numerals]
+૯ -> 9;
+
+// ============================================================
+// IPA SIMPLIFICATION
+// ============================================================
+
+[id: 4340, name: "double retroflex lateral", weight: 0.2, group: gujarati_simplification]
+ɭɭ -> ɭ;
+
+[id: 4341, name: "double retroflex t", weight: 0.2, group: gujarati_simplification]
+ʈʈ -> ʈ;
+
+[id: 4342, name: "double retroflex d", weight: 0.2, group: gujarati_simplification]
+ɖɖ -> ɖ;
+
+[id: 4343, name: "double retroflex n", weight: 0.2, group: gujarati_simplification]
+ɳɳ -> ɳ;
+
+[id: 4344, name: "double palatal sh", weight: 0.2, group: gujarati_simplification]
+ʃʃ -> ʃ;
+
+[id: 4345, name: "double retroflex sh", weight: 0.2, group: gujarati_simplification]
+ʂʂ -> ʂ;
+
+[id: 4346, name: "double palatal nasal", weight: 0.2, group: gujarati_simplification]
+ɲɲ -> ɲ;
+
+[id: 4347, name: "double ai vowel", weight: 0.2, group: gujarati_simplification]
+ɛːɛː -> ɛː;
+
+[id: 4348, name: "double au vowel", weight: 0.2, group: gujarati_simplification]
+ɔːɔː -> ɔː;
+
+[id: 4349, name: "double vocalic r", weight: 0.2, group: gujarati_simplification]
+r̩r̩ -> r̩;
+

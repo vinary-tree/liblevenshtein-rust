@@ -1,0 +1,403 @@
+// Urdu Base Phonetic Rules
+// =========================
+// Phonetic rules for Urdu (اردو) script romanization.
+// Maps Urdu letters to Latin equivalents for phonetic matching.
+//
+// Urdu uses a modified Perso-Arabic script (Nastaliq style) with
+// additional letters for Indo-Aryan sounds not found in Arabic/Persian.
+//
+// Key features:
+//   - Based on Arabic alphabet with Persian additions
+//   - Retroflex consonants: ٹ, ڈ, ڑ (unique to South Asian languages)
+//   - Aspirated consonants: کھ, گھ, پھ, بھ, etc.
+//   - Additional letters: پ (p), چ (ch), ژ (zh), گ (g)
+//   - Bari ye (ے) for word-final long e sound
+//   - Do-chashmi he (ھ) for aspiration marker
+//
+// Rule IDs: 2550-2649
+
+@name "Urdu Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Urdu script"
+
+// ============================================================
+// ARABIC-INHERITED CONSONANTS
+// ============================================================
+
+// Alif - can be long 'a' vowel or glottal stop carrier
+[id: 2550, name: "alif", weight: 0.05, group: urdu_consonants]
+ا -> a;
+
+// Ba - voiced bilabial stop
+[id: 2551, name: "ba", weight: 0.05, group: urdu_consonants]
+ب -> b;
+
+// Ta - voiceless dental stop
+[id: 2552, name: "ta", weight: 0.05, group: urdu_consonants]
+ت -> t;
+
+// Tha - voiceless dental fricative
+[id: 2553, name: "tha", weight: 0.05, group: urdu_consonants, ipa: "/θ/"]
+ث -> θ;
+
+// Jim - voiced palatal affricate
+[id: 2554, name: "jim", weight: 0.05, group: urdu_consonants]
+ج -> j;
+
+// Ha (pharyngeal) - voiceless pharyngeal fricative
+[id: 2555, name: "ha pharyngeal", weight: 0.05, group: urdu_consonants, ipa: "/ħ/"]
+ح -> ħ;
+
+// Kha - voiceless velar fricative
+[id: 2556, name: "kha", weight: 0.05, group: urdu_consonants, ipa: "/x/"]
+خ -> x;
+
+// Dal - voiced dental stop
+[id: 2557, name: "dal", weight: 0.05, group: urdu_consonants]
+د -> d;
+
+// Dhal - voiced dental fricative
+[id: 2558, name: "dhal", weight: 0.05, group: urdu_consonants, ipa: "/ð/"]
+ذ -> ð;
+
+// Ra - alveolar trill/tap
+[id: 2559, name: "ra", weight: 0.05, group: urdu_consonants]
+ر -> r;
+
+// Zay - voiced alveolar fricative
+[id: 2560, name: "zay", weight: 0.05, group: urdu_consonants]
+ز -> z;
+
+// Sin - voiceless alveolar fricative
+[id: 2561, name: "sin", weight: 0.05, group: urdu_consonants]
+س -> s;
+
+// Shin - voiceless postalveolar fricative
+[id: 2562, name: "shin", weight: 0.05, group: urdu_consonants, ipa: "/ʃ/"]
+ش -> ʃ;
+
+// Sad - emphatic voiceless alveolar fricative
+[id: 2563, name: "sad", weight: 0.05, group: urdu_emphatic, ipa: "/sˤ/"]
+ص -> sˤ;
+
+// Dad - emphatic voiced alveolar stop
+[id: 2564, name: "dad", weight: 0.05, group: urdu_emphatic, ipa: "/dˤ/"]
+ض -> dˤ;
+
+// Ta emphatic - emphatic voiceless dental stop
+[id: 2565, name: "ta emphatic", weight: 0.05, group: urdu_emphatic, ipa: "/tˤ/"]
+ط -> tˤ;
+
+// Dha emphatic - emphatic voiced dental fricative
+[id: 2566, name: "dha emphatic", weight: 0.05, group: urdu_emphatic, ipa: "/ðˤ/"]
+ظ -> ðˤ;
+
+// Ayn - voiced pharyngeal fricative
+[id: 2567, name: "ayn", weight: 0.05, group: urdu_consonants, ipa: "/ʕ/"]
+ع -> ʕ;
+
+// Ghayn - voiced velar fricative
+[id: 2568, name: "ghayn", weight: 0.05, group: urdu_consonants, ipa: "/ɣ/"]
+غ -> ɣ;
+
+// Fa - voiceless labiodental fricative
+[id: 2569, name: "fa", weight: 0.05, group: urdu_consonants]
+ف -> f;
+
+// Qaf - voiceless uvular stop
+[id: 2570, name: "qaf", weight: 0.05, group: urdu_consonants]
+ق -> q;
+
+// Kaf - voiceless velar stop
+[id: 2571, name: "kaf", weight: 0.05, group: urdu_consonants]
+ک -> k;
+
+// Lam - alveolar lateral approximant
+[id: 2572, name: "lam", weight: 0.05, group: urdu_consonants]
+ل -> l;
+
+// Mim - bilabial nasal
+[id: 2573, name: "mim", weight: 0.05, group: urdu_consonants]
+م -> m;
+
+// Nun - alveolar nasal
+[id: 2574, name: "nun", weight: 0.05, group: urdu_consonants]
+ن -> n;
+
+// Waw - labial-velar approximant or long u vowel
+[id: 2575, name: "waw", weight: 0.05, group: urdu_consonants]
+و -> w;
+
+// Choti ye - palatal approximant or long i vowel
+[id: 2576, name: "choti ye", weight: 0.05, group: urdu_consonants]
+ی -> y;
+
+// ============================================================
+// URDU-SPECIFIC CONSONANTS (Persian/Indo-Aryan additions)
+// ============================================================
+
+// Pe - voiceless bilabial stop (Persian addition)
+[id: 2580, name: "pe", weight: 0.05, group: urdu_specific]
+پ -> p;
+
+// Che - voiceless postalveolar affricate (Persian addition)
+[id: 2581, name: "che", weight: 0.05, group: urdu_specific, ipa: "/t͡ʃ/"]
+چ -> t͡ʃ;
+
+// Zhe - voiced postalveolar fricative (Persian addition)
+[id: 2582, name: "zhe", weight: 0.05, group: urdu_specific, ipa: "/ʒ/"]
+ژ -> ʒ;
+
+// Gaf - voiced velar stop (Persian addition)
+[id: 2583, name: "gaf", weight: 0.05, group: urdu_specific]
+گ -> g;
+
+// ============================================================
+// RETROFLEX CONSONANTS (Indo-Aryan)
+// ============================================================
+
+// Retroflex Ta - voiceless retroflex stop
+[id: 2585, name: "retroflex ta", weight: 0.05, group: urdu_retroflex, ipa: "/ʈ/"]
+ٹ -> ʈ;
+
+// Retroflex Dal - voiced retroflex stop
+[id: 2586, name: "retroflex dal", weight: 0.05, group: urdu_retroflex, ipa: "/ɖ/"]
+ڈ -> ɖ;
+
+// Retroflex Ra - retroflex flap
+[id: 2587, name: "retroflex ra", weight: 0.05, group: urdu_retroflex, ipa: "/ɽ/"]
+ڑ -> ɽ;
+
+// ============================================================
+// SPECIAL URDU LETTERS
+// ============================================================
+
+// Nun ghunna (nasal nun) - nasalization marker
+[id: 2590, name: "nun ghunna", weight: 0.05, group: urdu_special, ipa: "/̃/"]
+ں -> ̃;
+
+// Bari ye - word-final long e sound
+[id: 2591, name: "bari ye", weight: 0.05, group: urdu_special]
+ے -> e;
+
+// He (gol/choti he) - glottal fricative
+[id: 2592, name: "gol he", weight: 0.05, group: urdu_special]
+ہ -> h;
+
+// Do-chashmi he (two-eyed he) - aspiration marker
+[id: 2593, name: "do-chashmi he", weight: 0.05, group: urdu_special]
+ھ -> h;
+
+// Hamza
+[id: 2594, name: "hamza", weight: 0.05, group: urdu_special]
+ء -> ';
+
+// Hamza on ya
+[id: 2595, name: "hamza on ya", weight: 0.05, group: urdu_special]
+ئ -> i;
+
+// ============================================================
+// ASPIRATED CONSONANTS
+// ============================================================
+
+// Aspirated Bh
+[id: 2600, name: "bh aspirated", weight: 0.08, group: urdu_aspirated]
+بھ -> bh;
+
+// Aspirated Ph
+[id: 2601, name: "ph aspirated", weight: 0.08, group: urdu_aspirated]
+پھ -> ph;
+
+// Aspirated Th
+[id: 2602, name: "th aspirated", weight: 0.08, group: urdu_aspirated]
+تھ -> th;
+
+// Aspirated Retroflex Th
+[id: 2603, name: "retroflex th aspirated", weight: 0.08, group: urdu_aspirated, ipa: "/ʈʰ/"]
+ٹھ -> ʈʰ;
+
+// Aspirated Jh
+[id: 2604, name: "jh aspirated", weight: 0.08, group: urdu_aspirated]
+جھ -> jh;
+
+// Aspirated Ch
+[id: 2605, name: "ch aspirated", weight: 0.08, group: urdu_aspirated, ipa: "/t͡ʃʰ/"]
+چھ -> t͡ʃʰ;
+
+// Aspirated Dh
+[id: 2606, name: "dh aspirated", weight: 0.08, group: urdu_aspirated]
+دھ -> dh;
+
+// Aspirated Retroflex Dh
+[id: 2607, name: "retroflex dh aspirated", weight: 0.08, group: urdu_aspirated, ipa: "/ɖʰ/"]
+ڈھ -> ɖʰ;
+
+// Aspirated Rh (retroflex)
+[id: 2608, name: "retroflex rh aspirated", weight: 0.08, group: urdu_aspirated, ipa: "/ɽʰ/"]
+ڑھ -> ɽʰ;
+
+// Aspirated Kh
+[id: 2609, name: "kh aspirated", weight: 0.08, group: urdu_aspirated]
+کھ -> kh;
+
+// Aspirated Gh
+[id: 2610, name: "gh aspirated", weight: 0.08, group: urdu_aspirated]
+گھ -> gh;
+
+// ============================================================
+// SPECIAL FORMS
+// ============================================================
+
+// Alif madda (long aa)
+[id: 2615, name: "alif madda", weight: 0.05, group: urdu_forms, ipa: "/aː/"]
+آ -> aː;
+
+// Ta marbuta
+[id: 2616, name: "ta marbuta", weight: 0.05, group: urdu_forms]
+ة -> a;
+
+// Alif maqsura
+[id: 2617, name: "alif maqsura", weight: 0.05, group: urdu_forms]
+ى -> a;
+
+// Hamza on alif above
+[id: 2618, name: "hamza on alif above", weight: 0.05, group: urdu_forms]
+أ -> a;
+
+// Hamza on alif below
+[id: 2619, name: "hamza on alif below", weight: 0.05, group: urdu_forms]
+إ -> i;
+
+// Hamza on waw
+[id: 2620, name: "hamza on waw", weight: 0.05, group: urdu_forms]
+ؤ -> u;
+
+// ============================================================
+// DIACRITICS (HARAKAT)
+// ============================================================
+
+// Zabar (fatha) - short a
+[id: 2625, name: "zabar", weight: 0.1, group: urdu_diacritics]
+َ -> a;
+
+// Zer (kasra) - short i
+[id: 2626, name: "zer", weight: 0.1, group: urdu_diacritics]
+ِ -> i;
+
+// Pesh (damma) - short u
+[id: 2627, name: "pesh", weight: 0.1, group: urdu_diacritics]
+ُ -> u;
+
+// Jazm (sukun) - vowelless
+[id: 2628, name: "jazm", weight: 0.1, group: urdu_diacritics]
+ْ -> ;
+
+// Tashdid (shadda) - gemination
+[id: 2629, name: "tashdid", weight: 0.1, group: urdu_diacritics]
+ّ -> ;
+
+// Tanwin fath
+[id: 2630, name: "tanwin fath", weight: 0.1, group: urdu_diacritics]
+ً -> an;
+
+// Tanwin damm
+[id: 2631, name: "tanwin damm", weight: 0.1, group: urdu_diacritics]
+ٌ -> un;
+
+// Tanwin kasr
+[id: 2632, name: "tanwin kasr", weight: 0.1, group: urdu_diacritics]
+ٍ -> in;
+
+// ============================================================
+// NUMERALS (Extended Arabic-Indic for Urdu)
+// ============================================================
+
+[id: 2635, name: "numeral 0", weight: 0.1, group: urdu_numerals]
+۰ -> 0;
+
+[id: 2636, name: "numeral 1", weight: 0.1, group: urdu_numerals]
+۱ -> 1;
+
+[id: 2637, name: "numeral 2", weight: 0.1, group: urdu_numerals]
+۲ -> 2;
+
+[id: 2638, name: "numeral 3", weight: 0.1, group: urdu_numerals]
+۳ -> 3;
+
+[id: 2639, name: "numeral 4", weight: 0.1, group: urdu_numerals]
+۴ -> 4;
+
+[id: 2640, name: "numeral 5", weight: 0.1, group: urdu_numerals]
+۵ -> 5;
+
+[id: 2641, name: "numeral 6", weight: 0.1, group: urdu_numerals]
+۶ -> 6;
+
+[id: 2642, name: "numeral 7", weight: 0.1, group: urdu_numerals]
+۷ -> 7;
+
+[id: 2643, name: "numeral 8", weight: 0.1, group: urdu_numerals]
+۸ -> 8;
+
+[id: 2644, name: "numeral 9", weight: 0.1, group: urdu_numerals]
+۹ -> 9;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 2650, name: "double theta", weight: 0.2, group: urdu_simplification]
+θθ -> θ;
+
+[id: 2651, name: "double sh", weight: 0.2, group: urdu_simplification]
+ʃʃ -> ʃ;
+
+[id: 2652, name: "double velar fricative", weight: 0.2, group: urdu_simplification]
+xx -> x;
+
+[id: 2653, name: "double eth", weight: 0.2, group: urdu_simplification]
+ðð -> ð;
+
+[id: 2654, name: "double voiced velar fricative", weight: 0.2, group: urdu_simplification]
+ɣɣ -> ɣ;
+
+[id: 2655, name: "double zh", weight: 0.2, group: urdu_simplification]
+ʒʒ -> ʒ;
+
+[id: 2656, name: "double retroflex t", weight: 0.2, group: urdu_simplification]
+ʈʈ -> ʈ;
+
+[id: 2657, name: "double retroflex d", weight: 0.2, group: urdu_simplification]
+ɖɖ -> ɖ;
+
+[id: 2658, name: "double retroflex flap", weight: 0.2, group: urdu_simplification]
+ɽɽ -> ɽ;
+
+[id: 2659, name: "double ch affricate", weight: 0.2, group: urdu_simplification]
+t͡ʃt͡ʃ -> t͡ʃ;
+
+[id: 2660, name: "double pharyngeal h", weight: 0.2, group: urdu_simplification]
+ħħ -> ħ;
+
+[id: 2661, name: "double pharyngeal ayn", weight: 0.2, group: urdu_simplification]
+ʕʕ -> ʕ;
+
+[id: 2662, name: "double nasalization", weight: 0.2, group: urdu_simplification]
+̃̃ -> ̃;
+
+[id: 2663, name: "double emphatic s", weight: 0.2, group: urdu_simplification]
+sˤsˤ -> sˤ;
+
+[id: 2664, name: "double emphatic d", weight: 0.2, group: urdu_simplification]
+dˤdˤ -> dˤ;
+
+[id: 2665, name: "double emphatic t", weight: 0.2, group: urdu_simplification]
+tˤtˤ -> tˤ;
+
+[id: 2666, name: "double emphatic dh", weight: 0.2, group: urdu_simplification]
+ðˤðˤ -> ðˤ;
+
+[id: 2667, name: "double long a", weight: 0.2, group: urdu_simplification]
+aːaː -> aː;
+

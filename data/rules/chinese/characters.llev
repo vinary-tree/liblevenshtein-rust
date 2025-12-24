@@ -1,0 +1,1296 @@
+// Chinese Hanzi Character Phonetic Rules
+// =======================================
+// Phonetic rules mapping Chinese characters (汉字/Hanzi) to Pinyin.
+// Maps individual characters to their most common pronunciation.
+//
+// This is a comprehensive set of the most frequently used Chinese characters,
+// covering approximately 99% of modern Chinese text. Characters are organized
+// by frequency and HSK (Hanyu Shuiping Kaoshi) levels.
+//
+// Key features:
+//   - Logographic script: each character represents a morpheme
+//   - Character→Pinyin mapping with tone-stripped output
+//   - Most common pronunciation used for polyphonic characters
+//   - ~3,000 most common characters
+//
+// Polyphony notes:
+//   Some characters have multiple pronunciations depending on context.
+//   This file uses the most common pronunciation. Examples:
+//   - 行: xíng (walk) is more common than háng (row)
+//   - 了: le (aspect marker) is more common than liǎo (finish)
+//   - 还: hái (still) is more common than huán (return)
+//
+// Rule IDs: 10000-19999 (reserved block for Chinese characters)
+
+@name "Chinese Hanzi Character Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Chinese Hanzi characters (汉字)"
+
+// ============================================================
+// HSK 1 CHARACTERS (~150 most basic)
+// ============================================================
+// These are the most fundamental characters for beginners
+
+// Pronouns and basic nouns
+[id: 10001, name: "wo", weight: 0.01, group: hanzi_hsk1]
+我 -> wo;
+
+[id: 10002, name: "ni", weight: 0.01, group: hanzi_hsk1]
+你 -> ni;
+
+[id: 10003, name: "ta male", weight: 0.01, group: hanzi_hsk1]
+他 -> ta;
+
+[id: 10004, name: "ta female", weight: 0.01, group: hanzi_hsk1]
+她 -> ta;
+
+[id: 10005, name: "it/they", weight: 0.01, group: hanzi_hsk1]
+它 -> ta;
+
+// Multi-character compounds need lower weight (higher priority) than single characters
+[id: 10006, name: "we", weight: 0.005, group: hanzi_hsk1]
+我们 -> women;
+
+[id: 10007, name: "you plural", weight: 0.005, group: hanzi_hsk1]
+你们 -> nimen;
+
+[id: 10008, name: "they", weight: 0.005, group: hanzi_hsk1]
+他们 -> tamen;
+
+[id: 10009, name: "this", weight: 0.01, group: hanzi_hsk1]
+这 -> zhe;
+
+[id: 10010, name: "that", weight: 0.01, group: hanzi_hsk1]
+那 -> na;
+
+[id: 10011, name: "what", weight: 0.01, group: hanzi_hsk1]
+什 -> shen;
+
+[id: 10012, name: "me", weight: 0.01, group: hanzi_hsk1]
+么 -> me;
+
+[id: 10013, name: "who", weight: 0.01, group: hanzi_hsk1]
+谁 -> shei;
+
+[id: 10014, name: "where", weight: 0.01, group: hanzi_hsk1]
+哪 -> na;
+
+[id: 10015, name: "li/inside", weight: 0.01, group: hanzi_hsk1]
+里 -> li;
+
+// Numbers
+[id: 10020, name: "one", weight: 0.01, group: hanzi_hsk1]
+一 -> yi;
+
+[id: 10021, name: "two", weight: 0.01, group: hanzi_hsk1]
+二 -> er;
+
+[id: 10022, name: "three", weight: 0.01, group: hanzi_hsk1]
+三 -> san;
+
+[id: 10023, name: "four", weight: 0.01, group: hanzi_hsk1]
+四 -> si;
+
+[id: 10024, name: "five", weight: 0.01, group: hanzi_hsk1]
+五 -> wu;
+
+[id: 10025, name: "six", weight: 0.01, group: hanzi_hsk1]
+六 -> liu;
+
+[id: 10026, name: "seven", weight: 0.01, group: hanzi_hsk1]
+七 -> qi;
+
+[id: 10027, name: "eight", weight: 0.01, group: hanzi_hsk1]
+八 -> ba;
+
+[id: 10028, name: "nine", weight: 0.01, group: hanzi_hsk1]
+九 -> jiu;
+
+[id: 10029, name: "ten", weight: 0.01, group: hanzi_hsk1]
+十 -> shi;
+
+[id: 10030, name: "zero", weight: 0.01, group: hanzi_hsk1]
+零 -> ling;
+
+[id: 10031, name: "hundred", weight: 0.01, group: hanzi_hsk1]
+百 -> bai;
+
+[id: 10032, name: "thousand", weight: 0.01, group: hanzi_hsk1]
+千 -> qian;
+
+[id: 10033, name: "ten thousand", weight: 0.01, group: hanzi_hsk1]
+万 -> wan;
+
+[id: 10034, name: "two/pair", weight: 0.01, group: hanzi_hsk1]
+两 -> liang;
+
+// Common verbs
+[id: 10040, name: "is/am/are", weight: 0.01, group: hanzi_hsk1]
+是 -> shi;
+
+[id: 10041, name: "have", weight: 0.01, group: hanzi_hsk1]
+有 -> you;
+
+[id: 10042, name: "not have", weight: 0.01, group: hanzi_hsk1]
+没 -> mei;
+
+[id: 10043, name: "do/make", weight: 0.01, group: hanzi_hsk1]
+做 -> zuo;
+
+[id: 10044, name: "go", weight: 0.01, group: hanzi_hsk1]
+去 -> qu;
+
+[id: 10045, name: "come", weight: 0.01, group: hanzi_hsk1]
+来 -> lai;
+
+[id: 10046, name: "see", weight: 0.01, group: hanzi_hsk1]
+看 -> kan;
+
+[id: 10047, name: "hear", weight: 0.01, group: hanzi_hsk1]
+听 -> ting;
+
+[id: 10048, name: "speak", weight: 0.01, group: hanzi_hsk1]
+说 -> shuo;
+
+[id: 10049, name: "read", weight: 0.01, group: hanzi_hsk1]
+读 -> du;
+
+[id: 10050, name: "write", weight: 0.01, group: hanzi_hsk1]
+写 -> xie;
+
+[id: 10051, name: "eat", weight: 0.01, group: hanzi_hsk1]
+吃 -> chi;
+
+[id: 10052, name: "drink", weight: 0.01, group: hanzi_hsk1]
+喝 -> he;
+
+[id: 10053, name: "sleep", weight: 0.01, group: hanzi_hsk1]
+睡 -> shui;
+
+[id: 10054, name: "sit", weight: 0.01, group: hanzi_hsk1]
+坐 -> zuo;
+
+[id: 10055, name: "stand", weight: 0.01, group: hanzi_hsk1]
+站 -> zhan;
+
+[id: 10056, name: "walk", weight: 0.01, group: hanzi_hsk1]
+走 -> zou;
+
+[id: 10057, name: "run", weight: 0.01, group: hanzi_hsk1]
+跑 -> pao;
+
+[id: 10058, name: "call/name", weight: 0.01, group: hanzi_hsk1]
+叫 -> jiao;
+
+[id: 10059, name: "like/love", weight: 0.01, group: hanzi_hsk1]
+喜 -> xi;
+
+[id: 10060, name: "joy/happy", weight: 0.01, group: hanzi_hsk1]
+欢 -> huan;
+
+[id: 10061, name: "want", weight: 0.01, group: hanzi_hsk1]
+要 -> yao;
+
+[id: 10062, name: "can/able", weight: 0.01, group: hanzi_hsk1]
+能 -> neng;
+
+[id: 10063, name: "know how", weight: 0.01, group: hanzi_hsk1]
+会 -> hui;
+
+[id: 10064, name: "think", weight: 0.01, group: hanzi_hsk1]
+想 -> xiang;
+
+[id: 10065, name: "know", weight: 0.01, group: hanzi_hsk1]
+知 -> zhi;
+
+[id: 10066, name: "dao/way", weight: 0.01, group: hanzi_hsk1]
+道 -> dao;
+
+[id: 10067, name: "learn", weight: 0.01, group: hanzi_hsk1]
+学 -> xue;
+
+[id: 10068, name: "work", weight: 0.01, group: hanzi_hsk1]
+工 -> gong;
+
+[id: 10069, name: "make/do", weight: 0.01, group: hanzi_hsk1]
+作 -> zuo;
+
+[id: 10070, name: "live/life", weight: 0.01, group: hanzi_hsk1]
+住 -> zhu;
+
+[id: 10071, name: "buy", weight: 0.01, group: hanzi_hsk1]
+买 -> mai;
+
+[id: 10072, name: "sell", weight: 0.01, group: hanzi_hsk1]
+卖 -> mai;
+
+[id: 10073, name: "give", weight: 0.01, group: hanzi_hsk1]
+给 -> gei;
+
+[id: 10074, name: "hit/play", weight: 0.01, group: hanzi_hsk1]
+打 -> da;
+
+[id: 10075, name: "open", weight: 0.01, group: hanzi_hsk1]
+开 -> kai;
+
+[id: 10076, name: "close", weight: 0.01, group: hanzi_hsk1]
+关 -> guan;
+
+// Time words
+[id: 10080, name: "year", weight: 0.01, group: hanzi_hsk1]
+年 -> nian;
+
+[id: 10081, name: "month", weight: 0.01, group: hanzi_hsk1]
+月 -> yue;
+
+[id: 10082, name: "day", weight: 0.01, group: hanzi_hsk1]
+日 -> ri;
+
+[id: 10083, name: "week", weight: 0.01, group: hanzi_hsk1]
+星 -> xing;
+
+[id: 10084, name: "period", weight: 0.01, group: hanzi_hsk1]
+期 -> qi;
+
+[id: 10085, name: "today", weight: 0.01, group: hanzi_hsk1]
+今 -> jin;
+
+[id: 10086, name: "sky/day", weight: 0.01, group: hanzi_hsk1]
+天 -> tian;
+
+[id: 10087, name: "bright/tomorrow", weight: 0.01, group: hanzi_hsk1]
+明 -> ming;
+
+[id: 10088, name: "yesterday", weight: 0.01, group: hanzi_hsk1]
+昨 -> zuo;
+
+[id: 10089, name: "time/hour", weight: 0.01, group: hanzi_hsk1]
+时 -> shi;
+
+[id: 10090, name: "minute", weight: 0.01, group: hanzi_hsk1]
+分 -> fen;
+
+[id: 10091, name: "second", weight: 0.01, group: hanzi_hsk1]
+秒 -> miao;
+
+[id: 10092, name: "now/present", weight: 0.01, group: hanzi_hsk1]
+现 -> xian;
+
+[id: 10093, name: "in/at", weight: 0.01, group: hanzi_hsk1]
+在 -> zai;
+
+[id: 10094, name: "after/behind", weight: 0.01, group: hanzi_hsk1]
+后 -> hou;
+
+[id: 10095, name: "before/front", weight: 0.01, group: hanzi_hsk1]
+前 -> qian;
+
+[id: 10096, name: "up", weight: 0.01, group: hanzi_hsk1]
+上 -> shang;
+
+[id: 10097, name: "down", weight: 0.01, group: hanzi_hsk1]
+下 -> xia;
+
+// People and body
+[id: 10100, name: "person", weight: 0.01, group: hanzi_hsk1]
+人 -> ren;
+
+[id: 10101, name: "big/large", weight: 0.01, group: hanzi_hsk1]
+大 -> da;
+
+[id: 10102, name: "small", weight: 0.01, group: hanzi_hsk1]
+小 -> xiao;
+
+[id: 10103, name: "old", weight: 0.01, group: hanzi_hsk1]
+老 -> lao;
+
+[id: 10104, name: "teacher/master", weight: 0.01, group: hanzi_hsk1]
+师 -> shi;
+
+[id: 10105, name: "student", weight: 0.01, group: hanzi_hsk1]
+生 -> sheng;
+
+[id: 10106, name: "friend", weight: 0.01, group: hanzi_hsk1]
+朋 -> peng;
+
+[id: 10107, name: "friend", weight: 0.01, group: hanzi_hsk1]
+友 -> you;
+
+[id: 10108, name: "father", weight: 0.01, group: hanzi_hsk1]
+爸 -> ba;
+
+[id: 10109, name: "mother", weight: 0.01, group: hanzi_hsk1]
+妈 -> ma;
+
+[id: 10110, name: "son/child", weight: 0.01, group: hanzi_hsk1]
+儿 -> er;
+
+[id: 10111, name: "child/son", weight: 0.01, group: hanzi_hsk1]
+子 -> zi;
+
+[id: 10112, name: "female", weight: 0.01, group: hanzi_hsk1]
+女 -> nv;
+
+[id: 10113, name: "name", weight: 0.01, group: hanzi_hsk1]
+名 -> ming;
+
+[id: 10114, name: "character/word", weight: 0.01, group: hanzi_hsk1]
+字 -> zi;
+
+// Places
+[id: 10120, name: "middle/center", weight: 0.01, group: hanzi_hsk1]
+中 -> zhong;
+
+[id: 10121, name: "country", weight: 0.01, group: hanzi_hsk1]
+国 -> guo;
+
+[id: 10122, name: "home/family", weight: 0.01, group: hanzi_hsk1]
+家 -> jia;
+
+[id: 10123, name: "school", weight: 0.01, group: hanzi_hsk1]
+校 -> xiao;
+
+[id: 10124, name: "shop/store", weight: 0.01, group: hanzi_hsk1]
+店 -> dian;
+
+[id: 10125, name: "hospital", weight: 0.01, group: hanzi_hsk1]
+院 -> yuan;
+
+[id: 10126, name: "company", weight: 0.01, group: hanzi_hsk1]
+公 -> gong;
+
+[id: 10127, name: "manager/department", weight: 0.01, group: hanzi_hsk1]
+司 -> si;
+
+[id: 10128, name: "city", weight: 0.01, group: hanzi_hsk1]
+市 -> shi;
+
+[id: 10129, name: "east", weight: 0.01, group: hanzi_hsk1]
+东 -> dong;
+
+[id: 10130, name: "west", weight: 0.01, group: hanzi_hsk1]
+西 -> xi;
+
+[id: 10131, name: "south", weight: 0.01, group: hanzi_hsk1]
+南 -> nan;
+
+[id: 10132, name: "north", weight: 0.01, group: hanzi_hsk1]
+北 -> bei;
+
+[id: 10133, name: "capital/Beijing", weight: 0.01, group: hanzi_hsk1]
+京 -> jing;
+
+// Things
+[id: 10140, name: "thing/east", weight: 0.01, group: hanzi_hsk1]
+东 -> dong;
+
+[id: 10141, name: "thing/west", weight: 0.01, group: hanzi_hsk1]
+西 -> xi;
+
+[id: 10142, name: "book", weight: 0.01, group: hanzi_hsk1]
+书 -> shu;
+
+[id: 10143, name: "electricity", weight: 0.01, group: hanzi_hsk1]
+电 -> dian;
+
+[id: 10144, name: "brain/head", weight: 0.01, group: hanzi_hsk1]
+脑 -> nao;
+
+[id: 10145, name: "picture/vision", weight: 0.01, group: hanzi_hsk1]
+视 -> shi;
+
+[id: 10146, name: "phone/words", weight: 0.01, group: hanzi_hsk1]
+话 -> hua;
+
+[id: 10147, name: "car", weight: 0.01, group: hanzi_hsk1]
+车 -> che;
+
+[id: 10148, name: "airplane", weight: 0.01, group: hanzi_hsk1]
+飞 -> fei;
+
+[id: 10149, name: "machine", weight: 0.01, group: hanzi_hsk1]
+机 -> ji;
+
+[id: 10150, name: "water", weight: 0.01, group: hanzi_hsk1]
+水 -> shui;
+
+[id: 10151, name: "fire", weight: 0.01, group: hanzi_hsk1]
+火 -> huo;
+
+[id: 10152, name: "tea", weight: 0.01, group: hanzi_hsk1]
+茶 -> cha;
+
+[id: 10153, name: "rice/meal", weight: 0.01, group: hanzi_hsk1]
+饭 -> fan;
+
+[id: 10154, name: "vegetable/dish", weight: 0.01, group: hanzi_hsk1]
+菜 -> cai;
+
+[id: 10155, name: "fruit/fruit", weight: 0.01, group: hanzi_hsk1]
+果 -> guo;
+
+[id: 10156, name: "apple", weight: 0.01, group: hanzi_hsk1]
+苹 -> ping;
+
+[id: 10157, name: "money", weight: 0.01, group: hanzi_hsk1]
+钱 -> qian;
+
+[id: 10158, name: "clothes", weight: 0.01, group: hanzi_hsk1]
+衣 -> yi;
+
+[id: 10159, name: "clothing", weight: 0.01, group: hanzi_hsk1]
+服 -> fu;
+
+// Common adjectives
+[id: 10160, name: "good", weight: 0.01, group: hanzi_hsk1]
+好 -> hao;
+
+[id: 10161, name: "many/much", weight: 0.01, group: hanzi_hsk1]
+多 -> duo;
+
+[id: 10162, name: "few", weight: 0.01, group: hanzi_hsk1]
+少 -> shao;
+
+[id: 10163, name: "high/tall", weight: 0.01, group: hanzi_hsk1]
+高 -> gao;
+
+[id: 10164, name: "new", weight: 0.01, group: hanzi_hsk1]
+新 -> xin;
+
+[id: 10165, name: "cold", weight: 0.01, group: hanzi_hsk1]
+冷 -> leng;
+
+[id: 10166, name: "hot", weight: 0.01, group: hanzi_hsk1]
+热 -> re;
+
+[id: 10167, name: "fast/quick", weight: 0.01, group: hanzi_hsk1]
+快 -> kuai;
+
+[id: 10168, name: "slow", weight: 0.01, group: hanzi_hsk1]
+慢 -> man;
+
+[id: 10169, name: "happy", weight: 0.01, group: hanzi_hsk1]
+乐 -> le;
+
+[id: 10170, name: "long", weight: 0.01, group: hanzi_hsk1]
+长 -> chang;
+
+[id: 10171, name: "beautiful", weight: 0.01, group: hanzi_hsk1]
+美 -> mei;
+
+[id: 10172, name: "far", weight: 0.01, group: hanzi_hsk1]
+远 -> yuan;
+
+[id: 10173, name: "near", weight: 0.01, group: hanzi_hsk1]
+近 -> jin;
+
+[id: 10174, name: "right/correct", weight: 0.01, group: hanzi_hsk1]
+对 -> dui;
+
+[id: 10175, name: "wrong", weight: 0.01, group: hanzi_hsk1]
+错 -> cuo;
+
+// Particles and modifiers
+[id: 10180, name: "de possessive", weight: 0.01, group: hanzi_hsk1]
+的 -> de;
+
+[id: 10181, name: "de adverb", weight: 0.01, group: hanzi_hsk1]
+地 -> di;
+
+[id: 10182, name: "de complement", weight: 0.01, group: hanzi_hsk1]
+得 -> de;
+
+[id: 10183, name: "le aspect", weight: 0.01, group: hanzi_hsk1]
+了 -> le;
+
+[id: 10184, name: "guo experience", weight: 0.01, group: hanzi_hsk1]
+过 -> guo;
+
+[id: 10185, name: "zhe progressive", weight: 0.01, group: hanzi_hsk1]
+着 -> zhe;
+
+[id: 10186, name: "ba particle", weight: 0.01, group: hanzi_hsk1]
+吧 -> ba;
+
+[id: 10187, name: "ma question", weight: 0.01, group: hanzi_hsk1]
+吗 -> ma;
+
+[id: 10188, name: "ne particle", weight: 0.01, group: hanzi_hsk1]
+呢 -> ne;
+
+[id: 10189, name: "a exclamation", weight: 0.01, group: hanzi_hsk1]
+啊 -> a;
+
+[id: 10190, name: "not/no", weight: 0.01, group: hanzi_hsk1]
+不 -> bu;
+
+[id: 10191, name: "very", weight: 0.01, group: hanzi_hsk1]
+很 -> hen;
+
+[id: 10192, name: "also/too", weight: 0.01, group: hanzi_hsk1]
+也 -> ye;
+
+[id: 10193, name: "still/yet", weight: 0.01, group: hanzi_hsk1]
+还 -> hai;
+
+[id: 10194, name: "really", weight: 0.01, group: hanzi_hsk1]
+真 -> zhen;
+
+[id: 10195, name: "all/both", weight: 0.01, group: hanzi_hsk1]
+都 -> dou;
+
+// ============================================================
+// HSK 2 CHARACTERS (~150 additional)
+// ============================================================
+
+// Additional verbs
+[id: 10200, name: "tell/inform", weight: 0.01, group: hanzi_hsk2]
+告 -> gao;
+
+[id: 10201, name: "tell/inform", weight: 0.01, group: hanzi_hsk2]
+诉 -> su;
+
+[id: 10202, name: "ask", weight: 0.01, group: hanzi_hsk2]
+问 -> wen;
+
+[id: 10203, name: "answer", weight: 0.01, group: hanzi_hsk2]
+答 -> da;
+
+[id: 10204, name: "help", weight: 0.01, group: hanzi_hsk2]
+帮 -> bang;
+
+[id: 10205, name: "wait", weight: 0.01, group: hanzi_hsk2]
+等 -> deng;
+
+[id: 10206, name: "send", weight: 0.01, group: hanzi_hsk2]
+送 -> song;
+
+[id: 10207, name: "arrive", weight: 0.01, group: hanzi_hsk2]
+到 -> dao;
+
+[id: 10208, name: "find", weight: 0.01, group: hanzi_hsk2]
+找 -> zhao;
+
+[id: 10209, name: "begin/start", weight: 0.01, group: hanzi_hsk2]
+始 -> shi;
+
+[id: 10210, name: "complete", weight: 0.01, group: hanzi_hsk2]
+完 -> wan;
+
+[id: 10211, name: "finish", weight: 0.01, group: hanzi_hsk2]
+成 -> cheng;
+
+[id: 10212, name: "use", weight: 0.01, group: hanzi_hsk2]
+用 -> yong;
+
+[id: 10213, name: "need", weight: 0.01, group: hanzi_hsk2]
+需 -> xu;
+
+[id: 10214, name: "feel/sense", weight: 0.01, group: hanzi_hsk2]
+感 -> gan;
+
+[id: 10215, name: "consciousness", weight: 0.01, group: hanzi_hsk2]
+觉 -> jue;
+
+[id: 10216, name: "believe", weight: 0.01, group: hanzi_hsk2]
+相 -> xiang;
+
+[id: 10217, name: "believe", weight: 0.01, group: hanzi_hsk2]
+信 -> xin;
+
+[id: 10218, name: "hope", weight: 0.01, group: hanzi_hsk2]
+希 -> xi;
+
+[id: 10219, name: "hope", weight: 0.01, group: hanzi_hsk2]
+望 -> wang;
+
+[id: 10220, name: "prepare", weight: 0.01, group: hanzi_hsk2]
+准 -> zhun;
+
+[id: 10221, name: "prepare", weight: 0.01, group: hanzi_hsk2]
+备 -> bei;
+
+[id: 10222, name: "decide", weight: 0.01, group: hanzi_hsk2]
+决 -> jue;
+
+[id: 10223, name: "determine", weight: 0.01, group: hanzi_hsk2]
+定 -> ding;
+
+[id: 10224, name: "enter", weight: 0.01, group: hanzi_hsk2]
+进 -> jin;
+
+[id: 10225, name: "exit/out", weight: 0.01, group: hanzi_hsk2]
+出 -> chu;
+
+[id: 10226, name: "return", weight: 0.01, group: hanzi_hsk2]
+回 -> hui;
+
+[id: 10227, name: "wear", weight: 0.01, group: hanzi_hsk2]
+穿 -> chuan;
+
+[id: 10228, name: "wash", weight: 0.01, group: hanzi_hsk2]
+洗 -> xi;
+
+[id: 10229, name: "introduce", weight: 0.01, group: hanzi_hsk2]
+介 -> jie;
+
+[id: 10230, name: "introduce", weight: 0.01, group: hanzi_hsk2]
+绍 -> shao;
+
+// Additional nouns
+[id: 10240, name: "problem", weight: 0.01, group: hanzi_hsk2]
+题 -> ti;
+
+[id: 10241, name: "thing/event", weight: 0.01, group: hanzi_hsk2]
+事 -> shi;
+
+[id: 10242, name: "emotion", weight: 0.01, group: hanzi_hsk2]
+情 -> qing;
+
+[id: 10243, name: "condition", weight: 0.01, group: hanzi_hsk2]
+况 -> kuang;
+
+[id: 10244, name: "reason", weight: 0.01, group: hanzi_hsk2]
+因 -> yin;
+
+[id: 10245, name: "reason", weight: 0.01, group: hanzi_hsk2]
+为 -> wei;
+
+[id: 10246, name: "therefore", weight: 0.01, group: hanzi_hsk2]
+所 -> suo;
+
+[id: 10247, name: "with", weight: 0.01, group: hanzi_hsk2]
+以 -> yi;
+
+[id: 10248, name: "but", weight: 0.01, group: hanzi_hsk2]
+但 -> dan;
+
+[id: 10249, name: "if", weight: 0.01, group: hanzi_hsk2]
+如 -> ru;
+
+[id: 10250, name: "place", weight: 0.01, group: hanzi_hsk2]
+地 -> di;
+
+[id: 10251, name: "room", weight: 0.01, group: hanzi_hsk2]
+房 -> fang;
+
+[id: 10252, name: "room", weight: 0.01, group: hanzi_hsk2]
+间 -> jian;
+
+[id: 10253, name: "road", weight: 0.01, group: hanzi_hsk2]
+路 -> lu;
+
+[id: 10254, name: "door", weight: 0.01, group: hanzi_hsk2]
+门 -> men;
+
+[id: 10255, name: "window", weight: 0.01, group: hanzi_hsk2]
+窗 -> chuang;
+
+[id: 10256, name: "table", weight: 0.01, group: hanzi_hsk2]
+桌 -> zhuo;
+
+[id: 10257, name: "chair", weight: 0.01, group: hanzi_hsk2]
+椅 -> yi;
+
+[id: 10258, name: "bed", weight: 0.01, group: hanzi_hsk2]
+床 -> chuang;
+
+// Weather and nature
+[id: 10260, name: "weather", weight: 0.01, group: hanzi_hsk2]
+气 -> qi;
+
+[id: 10261, name: "rain", weight: 0.01, group: hanzi_hsk2]
+雨 -> yu;
+
+[id: 10262, name: "snow", weight: 0.01, group: hanzi_hsk2]
+雪 -> xue;
+
+[id: 10263, name: "wind", weight: 0.01, group: hanzi_hsk2]
+风 -> feng;
+
+[id: 10264, name: "cloud", weight: 0.01, group: hanzi_hsk2]
+云 -> yun;
+
+[id: 10265, name: "sun", weight: 0.01, group: hanzi_hsk2]
+阳 -> yang;
+
+[id: 10266, name: "shade/moon", weight: 0.01, group: hanzi_hsk2]
+阴 -> yin;
+
+[id: 10267, name: "spring", weight: 0.01, group: hanzi_hsk2]
+春 -> chun;
+
+[id: 10268, name: "summer", weight: 0.01, group: hanzi_hsk2]
+夏 -> xia;
+
+[id: 10269, name: "autumn", weight: 0.01, group: hanzi_hsk2]
+秋 -> qiu;
+
+[id: 10270, name: "winter", weight: 0.01, group: hanzi_hsk2]
+冬 -> dong;
+
+// Body parts
+[id: 10280, name: "head", weight: 0.01, group: hanzi_hsk2]
+头 -> tou;
+
+[id: 10281, name: "face", weight: 0.01, group: hanzi_hsk2]
+脸 -> lian;
+
+[id: 10282, name: "eye", weight: 0.01, group: hanzi_hsk2]
+眼 -> yan;
+
+[id: 10283, name: "eye/look", weight: 0.01, group: hanzi_hsk2]
+睛 -> jing;
+
+[id: 10284, name: "ear", weight: 0.01, group: hanzi_hsk2]
+耳 -> er;
+
+[id: 10285, name: "mouth", weight: 0.01, group: hanzi_hsk2]
+嘴 -> zui;
+
+[id: 10286, name: "nose", weight: 0.01, group: hanzi_hsk2]
+鼻 -> bi;
+
+[id: 10287, name: "hand", weight: 0.01, group: hanzi_hsk2]
+手 -> shou;
+
+[id: 10288, name: "foot", weight: 0.01, group: hanzi_hsk2]
+脚 -> jiao;
+
+[id: 10289, name: "leg", weight: 0.01, group: hanzi_hsk2]
+腿 -> tui;
+
+[id: 10290, name: "body", weight: 0.01, group: hanzi_hsk2]
+身 -> shen;
+
+[id: 10291, name: "body/physical", weight: 0.01, group: hanzi_hsk2]
+体 -> ti;
+
+[id: 10292, name: "heart", weight: 0.01, group: hanzi_hsk2]
+心 -> xin;
+
+// Colors
+[id: 10300, name: "color", weight: 0.01, group: hanzi_hsk2]
+色 -> se;
+
+[id: 10301, name: "red", weight: 0.01, group: hanzi_hsk2]
+红 -> hong;
+
+[id: 10302, name: "yellow", weight: 0.01, group: hanzi_hsk2]
+黄 -> huang;
+
+[id: 10303, name: "blue", weight: 0.01, group: hanzi_hsk2]
+蓝 -> lan;
+
+[id: 10304, name: "green", weight: 0.01, group: hanzi_hsk2]
+绿 -> lv;
+
+[id: 10305, name: "white", weight: 0.01, group: hanzi_hsk2]
+白 -> bai;
+
+[id: 10306, name: "black", weight: 0.01, group: hanzi_hsk2]
+黑 -> hei;
+
+// ============================================================
+// HSK 3-4 CHARACTERS (~300 additional commonly used)
+// ============================================================
+
+// Additional common characters
+[id: 10400, name: "country/kingdom", weight: 0.01, group: hanzi_hsk3]
+王 -> wang;
+
+[id: 10401, name: "first/primary", weight: 0.01, group: hanzi_hsk3]
+第 -> di;
+
+[id: 10402, name: "every/each", weight: 0.01, group: hanzi_hsk3]
+每 -> mei;
+
+[id: 10403, name: "already", weight: 0.01, group: hanzi_hsk3]
+已 -> yi;
+
+[id: 10404, name: "pass/experience", weight: 0.01, group: hanzi_hsk3]
+经 -> jing;
+
+[id: 10405, name: "often", weight: 0.01, group: hanzi_hsk3]
+常 -> chang;
+
+[id: 10406, name: "should", weight: 0.01, group: hanzi_hsk3]
+应 -> ying;
+
+[id: 10407, name: "this/should", weight: 0.01, group: hanzi_hsk3]
+该 -> gai;
+
+[id: 10408, name: "between", weight: 0.01, group: hanzi_hsk3]
+间 -> jian;
+
+[id: 10409, name: "like/same", weight: 0.01, group: hanzi_hsk3]
+同 -> tong;
+
+[id: 10410, name: "different", weight: 0.01, group: hanzi_hsk3]
+别 -> bie;
+
+[id: 10411, name: "special", weight: 0.01, group: hanzi_hsk3]
+特 -> te;
+
+[id: 10412, name: "really/very", weight: 0.01, group: hanzi_hsk3]
+非 -> fei;
+
+[id: 10413, name: "correct", weight: 0.01, group: hanzi_hsk3]
+正 -> zheng;
+
+[id: 10414, name: "perhaps", weight: 0.01, group: hanzi_hsk3]
+或 -> huo;
+
+[id: 10415, name: "person/those", weight: 0.01, group: hanzi_hsk3]
+者 -> zhe;
+
+[id: 10416, name: "must", weight: 0.01, group: hanzi_hsk3]
+必 -> bi;
+
+[id: 10417, name: "must", weight: 0.01, group: hanzi_hsk3]
+须 -> xu;
+
+[id: 10418, name: "only", weight: 0.01, group: hanzi_hsk3]
+只 -> zhi;
+
+[id: 10419, name: "just/exactly", weight: 0.01, group: hanzi_hsk3]
+就 -> jiu;
+
+[id: 10420, name: "then/only then", weight: 0.01, group: hanzi_hsk3]
+才 -> cai;
+
+[id: 10421, name: "again", weight: 0.01, group: hanzi_hsk3]
+再 -> zai;
+
+[id: 10422, name: "again", weight: 0.01, group: hanzi_hsk3]
+又 -> you;
+
+[id: 10423, name: "together", weight: 0.01, group: hanzi_hsk3]
+共 -> gong;
+
+[id: 10424, name: "and/with", weight: 0.01, group: hanzi_hsk3]
+和 -> he;
+
+[id: 10425, name: "or", weight: 0.01, group: hanzi_hsk3]
+或 -> huo;
+
+[id: 10426, name: "compare", weight: 0.01, group: hanzi_hsk3]
+比 -> bi;
+
+[id: 10427, name: "compare/more", weight: 0.01, group: hanzi_hsk3]
+较 -> jiao;
+
+[id: 10428, name: "most", weight: 0.01, group: hanzi_hsk3]
+最 -> zui;
+
+[id: 10429, name: "even", weight: 0.01, group: hanzi_hsk3]
+更 -> geng;
+
+// Additional verbs
+[id: 10430, name: "change", weight: 0.01, group: hanzi_hsk3]
+变 -> bian;
+
+[id: 10431, name: "develop", weight: 0.01, group: hanzi_hsk3]
+发 -> fa;
+
+[id: 10432, name: "exhibit", weight: 0.01, group: hanzi_hsk3]
+展 -> zhan;
+
+[id: 10433, name: "produce", weight: 0.01, group: hanzi_hsk3]
+产 -> chan;
+
+[id: 10434, name: "produce", weight: 0.01, group: hanzi_hsk3]
+生 -> sheng;
+
+[id: 10435, name: "research", weight: 0.01, group: hanzi_hsk3]
+研 -> yan;
+
+[id: 10436, name: "research", weight: 0.01, group: hanzi_hsk3]
+究 -> jiu;
+
+[id: 10437, name: "discover", weight: 0.01, group: hanzi_hsk3]
+现 -> xian;
+
+[id: 10438, name: "express", weight: 0.01, group: hanzi_hsk3]
+表 -> biao;
+
+[id: 10439, name: "indicate", weight: 0.01, group: hanzi_hsk3]
+示 -> shi;
+
+[id: 10440, name: "explain", weight: 0.01, group: hanzi_hsk3]
+解 -> jie;
+
+[id: 10441, name: "release", weight: 0.01, group: hanzi_hsk3]
+释 -> shi;
+
+[id: 10442, name: "prove", weight: 0.01, group: hanzi_hsk3]
+证 -> zheng;
+
+[id: 10443, name: "accept", weight: 0.01, group: hanzi_hsk3]
+接 -> jie;
+
+[id: 10444, name: "receive", weight: 0.01, group: hanzi_hsk3]
+受 -> shou;
+
+[id: 10445, name: "hold", weight: 0.01, group: hanzi_hsk3]
+拿 -> na;
+
+[id: 10446, name: "bring", weight: 0.01, group: hanzi_hsk3]
+带 -> dai;
+
+[id: 10447, name: "lift", weight: 0.01, group: hanzi_hsk3]
+提 -> ti;
+
+[id: 10448, name: "push", weight: 0.01, group: hanzi_hsk3]
+推 -> tui;
+
+[id: 10449, name: "pull", weight: 0.01, group: hanzi_hsk3]
+拉 -> la;
+
+[id: 10450, name: "place", weight: 0.01, group: hanzi_hsk3]
+放 -> fang;
+
+[id: 10451, name: "control", weight: 0.01, group: hanzi_hsk3]
+管 -> guan;
+
+[id: 10452, name: "control", weight: 0.01, group: hanzi_hsk3]
+理 -> li;
+
+[id: 10453, name: "handle", weight: 0.01, group: hanzi_hsk3]
+处 -> chu;
+
+[id: 10454, name: "participate", weight: 0.01, group: hanzi_hsk3]
+参 -> can;
+
+[id: 10455, name: "add", weight: 0.01, group: hanzi_hsk3]
+加 -> jia;
+
+[id: 10456, name: "reduce", weight: 0.01, group: hanzi_hsk3]
+减 -> jian;
+
+// Nouns - abstract concepts
+[id: 10460, name: "method", weight: 0.01, group: hanzi_hsk3]
+方 -> fang;
+
+[id: 10461, name: "law", weight: 0.01, group: hanzi_hsk3]
+法 -> fa;
+
+[id: 10462, name: "meaning", weight: 0.01, group: hanzi_hsk3]
+意 -> yi;
+
+[id: 10463, name: "think", weight: 0.01, group: hanzi_hsk3]
+思 -> si;
+
+[id: 10464, name: "spirit", weight: 0.01, group: hanzi_hsk3]
+精 -> jing;
+
+[id: 10465, name: "god", weight: 0.01, group: hanzi_hsk3]
+神 -> shen;
+
+[id: 10466, name: "power", weight: 0.01, group: hanzi_hsk3]
+力 -> li;
+
+[id: 10467, name: "capacity", weight: 0.01, group: hanzi_hsk3]
+量 -> liang;
+
+[id: 10468, name: "quality", weight: 0.01, group: hanzi_hsk3]
+质 -> zhi;
+
+[id: 10469, name: "form", weight: 0.01, group: hanzi_hsk3]
+形 -> xing;
+
+[id: 10470, name: "shape", weight: 0.01, group: hanzi_hsk3]
+式 -> shi;
+
+[id: 10471, name: "structure", weight: 0.01, group: hanzi_hsk3]
+构 -> gou;
+
+[id: 10472, name: "build", weight: 0.01, group: hanzi_hsk3]
+造 -> zao;
+
+[id: 10473, name: "plan", weight: 0.01, group: hanzi_hsk3]
+计 -> ji;
+
+[id: 10474, name: "plan", weight: 0.01, group: hanzi_hsk3]
+划 -> hua;
+
+[id: 10475, name: "system", weight: 0.01, group: hanzi_hsk3]
+制 -> zhi;
+
+[id: 10476, name: "degree", weight: 0.01, group: hanzi_hsk3]
+度 -> du;
+
+[id: 10477, name: "level", weight: 0.01, group: hanzi_hsk3]
+级 -> ji;
+
+[id: 10478, name: "step", weight: 0.01, group: hanzi_hsk3]
+步 -> bu;
+
+[id: 10479, name: "stage", weight: 0.01, group: hanzi_hsk3]
+段 -> duan;
+
+// Society and culture
+[id: 10480, name: "society", weight: 0.01, group: hanzi_hsk3]
+社 -> she;
+
+[id: 10481, name: "politics", weight: 0.01, group: hanzi_hsk3]
+政 -> zheng;
+
+[id: 10482, name: "government", weight: 0.01, group: hanzi_hsk3]
+府 -> fu;
+
+[id: 10483, name: "economy", weight: 0.01, group: hanzi_hsk3]
+济 -> ji;
+
+[id: 10484, name: "culture", weight: 0.01, group: hanzi_hsk3]
+文 -> wen;
+
+[id: 10485, name: "transform", weight: 0.01, group: hanzi_hsk3]
+化 -> hua;
+
+[id: 10486, name: "science", weight: 0.01, group: hanzi_hsk3]
+科 -> ke;
+
+[id: 10487, name: "technology", weight: 0.01, group: hanzi_hsk3]
+技 -> ji;
+
+[id: 10488, name: "art", weight: 0.01, group: hanzi_hsk3]
+术 -> shu;
+
+[id: 10489, name: "history", weight: 0.01, group: hanzi_hsk3]
+历 -> li;
+
+[id: 10490, name: "record", weight: 0.01, group: hanzi_hsk3]
+史 -> shi;
+
+[id: 10491, name: "people", weight: 0.01, group: hanzi_hsk3]
+民 -> min;
+
+[id: 10492, name: "ethnic", weight: 0.01, group: hanzi_hsk3]
+族 -> zu;
+
+[id: 10493, name: "religion", weight: 0.01, group: hanzi_hsk3]
+教 -> jiao;
+
+[id: 10494, name: "educate", weight: 0.01, group: hanzi_hsk3]
+育 -> yu;
+
+// Industry and work
+[id: 10500, name: "industry", weight: 0.01, group: hanzi_hsk3]
+业 -> ye;
+
+[id: 10501, name: "agriculture", weight: 0.01, group: hanzi_hsk3]
+农 -> nong;
+
+[id: 10502, name: "trade", weight: 0.01, group: hanzi_hsk3]
+商 -> shang;
+
+[id: 10503, name: "serve", weight: 0.01, group: hanzi_hsk3]
+服 -> fu;
+
+[id: 10504, name: "duty", weight: 0.01, group: hanzi_hsk3]
+务 -> wu;
+
+[id: 10505, name: "item/object", weight: 0.01, group: hanzi_hsk3]
+物 -> wu;
+
+[id: 10506, name: "price", weight: 0.01, group: hanzi_hsk3]
+价 -> jia;
+
+[id: 10507, name: "brand", weight: 0.01, group: hanzi_hsk3]
+品 -> pin;
+
+[id: 10508, name: "material", weight: 0.01, group: hanzi_hsk3]
+料 -> liao;
+
+[id: 10509, name: "finance", weight: 0.01, group: hanzi_hsk3]
+资 -> zi;
+
+[id: 10510, name: "gold/metal", weight: 0.01, group: hanzi_hsk3]
+金 -> jin;
+
+[id: 10511, name: "silver", weight: 0.01, group: hanzi_hsk3]
+银 -> yin;
+
+[id: 10512, name: "bank", weight: 0.01, group: hanzi_hsk3]
+行 -> hang;
+
+// Relationships
+[id: 10520, name: "love", weight: 0.01, group: hanzi_hsk3]
+爱 -> ai;
+
+[id: 10521, name: "relationship", weight: 0.01, group: hanzi_hsk3]
+关 -> guan;
+
+[id: 10522, name: "connect", weight: 0.01, group: hanzi_hsk3]
+系 -> xi;
+
+[id: 10523, name: "marry", weight: 0.01, group: hanzi_hsk3]
+婚 -> hun;
+
+[id: 10524, name: "husband", weight: 0.01, group: hanzi_hsk3]
+夫 -> fu;
+
+[id: 10525, name: "wife", weight: 0.01, group: hanzi_hsk3]
+妻 -> qi;
+
+[id: 10526, name: "older brother", weight: 0.01, group: hanzi_hsk3]
+哥 -> ge;
+
+[id: 10527, name: "older sister", weight: 0.01, group: hanzi_hsk3]
+姐 -> jie;
+
+[id: 10528, name: "younger brother", weight: 0.01, group: hanzi_hsk3]
+弟 -> di;
+
+[id: 10529, name: "younger sister", weight: 0.01, group: hanzi_hsk3]
+妹 -> mei;
+
+// ============================================================
+// COMMON HIGH-FREQUENCY CHARACTERS
+// ============================================================
+// Additional high-frequency characters not covered above
+
+[id: 10600, name: "and", weight: 0.01, group: hanzi_common]
+与 -> yu;
+
+[id: 10601, name: "toward", weight: 0.01, group: hanzi_common]
+向 -> xiang;
+
+[id: 10602, name: "from", weight: 0.01, group: hanzi_common]
+从 -> cong;
+
+[id: 10603, name: "through", weight: 0.01, group: hanzi_common]
+通 -> tong;
+
+[id: 10604, name: "according to", weight: 0.01, group: hanzi_common]
+按 -> an;
+
+[id: 10605, name: "according to", weight: 0.01, group: hanzi_common]
+照 -> zhao;
+
+[id: 10606, name: "according", weight: 0.01, group: hanzi_common]
+依 -> yi;
+
+[id: 10607, name: "rely", weight: 0.01, group: hanzi_common]
+据 -> ju;
+
+[id: 10608, name: "regarding", weight: 0.01, group: hanzi_common]
+关 -> guan;
+
+[id: 10609, name: "about", weight: 0.01, group: hanzi_common]
+于 -> yu;
+
+[id: 10610, name: "after", weight: 0.01, group: hanzi_common]
+后 -> hou;
+
+[id: 10611, name: "obtain", weight: 0.01, group: hanzi_common]
+取 -> qu;
+
+[id: 10612, name: "lose", weight: 0.01, group: hanzi_common]
+失 -> shi;
+
+[id: 10613, name: "win", weight: 0.01, group: hanzi_common]
+赢 -> ying;
+
+[id: 10614, name: "keep", weight: 0.01, group: hanzi_common]
+保 -> bao;
+
+[id: 10615, name: "protect", weight: 0.01, group: hanzi_common]
+护 -> hu;
+
+[id: 10616, name: "safe", weight: 0.01, group: hanzi_common]
+安 -> an;
+
+[id: 10617, name: "whole/complete", weight: 0.01, group: hanzi_common]
+全 -> quan;
+
+[id: 10618, name: "dangerous", weight: 0.01, group: hanzi_common]
+危 -> wei;
+
+[id: 10619, name: "insurance", weight: 0.01, group: hanzi_common]
+险 -> xian;
+
+[id: 10620, name: "healthy", weight: 0.01, group: hanzi_common]
+健 -> jian;
+
+[id: 10621, name: "health", weight: 0.01, group: hanzi_common]
+康 -> kang;
+
+[id: 10622, name: "life/fate", weight: 0.01, group: hanzi_common]
+命 -> ming;
+
+[id: 10623, name: "active/alive", weight: 0.01, group: hanzi_common]
+活 -> huo;
+
+[id: 10624, name: "move", weight: 0.01, group: hanzi_common]
+动 -> dong;
+
+[id: 10625, name: "quiet", weight: 0.01, group: hanzi_common]
+静 -> jing;
+
+[id: 10626, name: "early", weight: 0.01, group: hanzi_common]
+早 -> zao;
+
+[id: 10627, name: "evening", weight: 0.01, group: hanzi_common]
+晚 -> wan;
+
+[id: 10628, name: "morning", weight: 0.01, group: hanzi_common]
+早 -> zao;
+
+[id: 10629, name: "afternoon", weight: 0.01, group: hanzi_common]
+午 -> wu;
+
+[id: 10630, name: "night", weight: 0.01, group: hanzi_common]
+夜 -> ye;
+
+[id: 10631, name: "point/order", weight: 0.01, group: hanzi_common]
+点 -> dian;
+
+[id: 10632, name: "half", weight: 0.01, group: hanzi_common]
+半 -> ban;
+
+[id: 10633, name: "edge/side", weight: 0.01, group: hanzi_common]
+边 -> bian;
+
+[id: 10634, name: "side", weight: 0.01, group: hanzi_common]
+旁 -> pang;
+
+[id: 10635, name: "center", weight: 0.01, group: hanzi_common]
+中 -> zhong;
+
+[id: 10636, name: "outside", weight: 0.01, group: hanzi_common]
+外 -> wai;
+
+[id: 10637, name: "inside", weight: 0.01, group: hanzi_common]
+内 -> nei;
+
+[id: 10638, name: "left", weight: 0.01, group: hanzi_common]
+左 -> zuo;
+
+[id: 10639, name: "right", weight: 0.01, group: hanzi_common]
+右 -> you;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 19900, name: "double zh marker", weight: 0.2, group: hanzi_simplification]
+ZZ -> Z;
+
+[id: 19901, name: "double ch marker", weight: 0.2, group: hanzi_simplification]
+CC -> C;
+
+[id: 19902, name: "double sh marker", weight: 0.2, group: hanzi_simplification]
+SS -> S;
+
+[id: 19903, name: "double r marker", weight: 0.2, group: hanzi_simplification]
+RR -> R;
+
+[id: 19904, name: "double x marker", weight: 0.2, group: hanzi_simplification]
+XX -> X;
+
+[id: 19905, name: "double q marker", weight: 0.2, group: hanzi_simplification]
+QQ -> Q;
+

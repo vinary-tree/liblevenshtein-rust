@@ -1,0 +1,114 @@
+// Canadian French (Québécois) Dialect Rules
+// ==========================================
+// Dialect-specific rules for Canadian French (Québécois).
+// These rules layer on top of the shared French base rules.
+//
+// Key Québécois features:
+//   - AFFRICATION: T/D before high front vowels (i, u, y) → ts/dz
+//     - tu → tsu, dire → dzire, petit → petsit
+//   - More preserved vowel distinctions
+//   - Different vowel quality in some contexts (lax vowels)
+//   - Dipthongization of long vowels
+
+@name "Canadian French (Québécois) Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Canadian French (Québécois)"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define HIGH_FRONT = [iyu]
+@define VOWEL = [aeiouyàâäéèêëïîôùûüœæ]
+
+// ============================================================
+// AFFRICATION OF T/D
+// ============================================================
+// This is the most distinctive feature of Québécois French
+// T → TS and D → DZ before high front vowels (i, u, y)
+
+// T affrication before i
+[id: 1400, name: "t affrication before i", weight: 0.1, group: quebec_affrication, ipa: "/t͡si/"]
+ti -> t͡si;
+
+// T affrication before u
+[id: 1401, name: "t affrication before u", weight: 0.1, group: quebec_affrication, ipa: "/t͡su/"]
+tu -> t͡su;
+
+// T affrication before y
+[id: 1402, name: "t affrication before y", weight: 0.1, group: quebec_affrication, ipa: "/t͡sy/"]
+ty -> t͡sy;
+
+// D affrication before i
+[id: 1405, name: "d affrication before i", weight: 0.1, group: quebec_affrication, ipa: "/d͡zi/"]
+di -> d͡zi;
+
+// D affrication before u
+[id: 1406, name: "d affrication before u", weight: 0.1, group: quebec_affrication, ipa: "/d͡zu/"]
+du -> d͡zu;
+
+// D affrication before y
+[id: 1407, name: "d affrication before y", weight: 0.1, group: quebec_affrication, ipa: "/d͡zy/"]
+dy -> d͡zy;
+
+// Common words with affrication
+[id: 1410, name: "petit affrication", weight: 0.1, group: quebec_affrication, ipa: "/t͡si/"]
+tit -> t͡sit;
+
+[id: 1411, name: "dire affrication", weight: 0.1, group: quebec_affrication, ipa: "/d͡zi/"]
+dir -> d͡zir;
+
+// ============================================================
+// LAX VOWELS
+// ============================================================
+// Québécois has lax vowels in closed syllables
+// i → ɪ, u → ʊ, y → ʏ in certain contexts
+
+// These are difficult to represent in ASCII, so we approximate
+// by keeping them but marking the context
+
+// ============================================================
+// IL/ILL PATTERNS
+// ============================================================
+// Slightly different treatment than standard French
+
+[id: 1420, name: "ill to y quebec", weight: 0.15, group: quebec_vowels]
+ill -> iy;
+
+// Note: Full context ($VOWEL _#) requires NFA matching, simplified
+[id: 1421, name: "il to y quebec", weight: 0.15, group: quebec_vowels]
+il -> iy / $VOWEL _;
+
+// ============================================================
+// -ER/-EZ VERB ENDINGS
+// ============================================================
+// Same as standard French
+
+[id: 1425, name: "er infinitive quebec", weight: 0.15, group: quebec_endings]
+er -> e / _#;
+
+[id: 1426, name: "ez ending quebec", weight: 0.15, group: quebec_endings]
+ez -> e / _#;
+
+// ============================================================
+// DIPTHONGIZATION
+// ============================================================
+// Long vowels often become diphthongs in Québécois
+// fête → fâète, pâte → pâwte
+
+// These are complex to model accurately without prosodic info
+// Simplified versions:
+
+[id: 1430, name: "ê dipthong", weight: 0.2, group: quebec_diphthongs]
+ê -> ae;
+
+[id: 1431, name: "â dipthong", weight: 0.2, group: quebec_diphthongs]
+â -> ao;
+
+// ============================================================
+// VOCABULARY NOTES
+// ============================================================
+// Québécois has different vocabulary (char for car, blonde for girlfriend)
+// but these are lexical differences, not phonetic rule differences
+

@@ -1,0 +1,236 @@
+// Hebrew Base Phonetic Rules
+// ==========================
+// Phonetic rules for Hebrew (עברית) using Hebrew script.
+// Maps Hebrew letters and vowel points to Latin phonetic representations.
+//
+// Hebrew is an abjad where vowels are typically omitted or indicated
+// with optional diacritical marks (niqqud). This file handles:
+//   - All 22 consonant letters plus 5 final forms
+//   - Niqqud (vowel points) transliteration
+//   - Dagesh modifications for בכפ
+//   - Shin/Sin distinction
+//
+// Key features:
+//   - Gutturals: א, ה, ח, ע (can be silent or indicate vowels)
+//   - Begadkefat letters: ב, ג, ד, כ, פ, ת (historically had two sounds)
+//   - Final forms: ך, ם, ן, ף, ץ
+//   - Shin dot (שׁ) vs Sin dot (שׂ)
+//
+// Rule IDs: 2150-2199
+
+@name "Hebrew Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Hebrew script"
+
+// ============================================================
+// CONSONANTS WITH DAGESH (harder pronunciation)
+// ============================================================
+// Must come before plain consonants
+
+// בּ (bet with dagesh) → b
+[id: 2150, name: "bet dagesh", weight: 0.05, group: hebrew_dagesh]
+בּ -> b;
+
+// כּ (kaf with dagesh) → k
+[id: 2151, name: "kaf dagesh", weight: 0.05, group: hebrew_dagesh]
+כּ -> k;
+
+// פּ (pe with dagesh) → p
+[id: 2152, name: "pe dagesh", weight: 0.05, group: hebrew_dagesh]
+פּ -> p;
+
+// ============================================================
+// SHIN/SIN DISTINCTION
+// ============================================================
+
+// שׁ (shin with shin dot) → ʃ
+[id: 2155, name: "shin with dot", weight: 0.05, group: hebrew_sibilants, ipa: "/ʃ/"]
+שׁ -> ʃ;
+
+// שׂ (sin with sin dot) → s
+[id: 2156, name: "sin with dot", weight: 0.05, group: hebrew_sibilants]
+שׂ -> s;
+
+// ============================================================
+// BASIC CONSONANTS
+// ============================================================
+
+// א (alef) → ' (glottal stop, often silent)
+[id: 2160, name: "alef", weight: 0.1, group: hebrew_consonants]
+א -> ';
+
+// ב (bet without dagesh) → v
+[id: 2161, name: "bet", weight: 0.1, group: hebrew_consonants]
+ב -> v;
+
+// ג (gimel) → g
+[id: 2162, name: "gimel", weight: 0.1, group: hebrew_consonants]
+ג -> g;
+
+// ד (dalet) → d
+[id: 2163, name: "dalet", weight: 0.1, group: hebrew_consonants]
+ד -> d;
+
+// ה (he) → h
+[id: 2164, name: "he", weight: 0.1, group: hebrew_consonants]
+ה -> h;
+
+// ו (vav) → v
+[id: 2165, name: "vav", weight: 0.1, group: hebrew_consonants]
+ו -> v;
+
+// ז (zayin) → z
+[id: 2166, name: "zayin", weight: 0.1, group: hebrew_consonants]
+ז -> z;
+
+// ח (het) → x (velar fricative)
+[id: 2167, name: "het", weight: 0.1, group: hebrew_consonants, ipa: "/x/"]
+ח -> x;
+
+// ט (tet) → t
+[id: 2168, name: "tet", weight: 0.1, group: hebrew_consonants]
+ט -> t;
+
+// י (yod) → y
+[id: 2169, name: "yod", weight: 0.1, group: hebrew_consonants]
+י -> y;
+
+// כ (kaf without dagesh) → x
+[id: 2170, name: "kaf", weight: 0.1, group: hebrew_consonants, ipa: "/x/"]
+כ -> x;
+
+// ל (lamed) → l
+[id: 2171, name: "lamed", weight: 0.1, group: hebrew_consonants]
+ל -> l;
+
+// מ (mem) → m
+[id: 2172, name: "mem", weight: 0.1, group: hebrew_consonants]
+מ -> m;
+
+// נ (nun) → n
+[id: 2173, name: "nun", weight: 0.1, group: hebrew_consonants]
+נ -> n;
+
+// ס (samekh) → s
+[id: 2174, name: "samekh", weight: 0.1, group: hebrew_consonants]
+ס -> s;
+
+// ע (ayin) → ' (guttural, often silent)
+[id: 2175, name: "ayin", weight: 0.1, group: hebrew_consonants]
+ע -> ';
+
+// פ (pe without dagesh) → f
+[id: 2176, name: "pe", weight: 0.1, group: hebrew_consonants]
+פ -> f;
+
+// צ (tsadi) → t͡s
+[id: 2177, name: "tsadi", weight: 0.1, group: hebrew_consonants, ipa: "/t͡s/"]
+צ -> t͡s;
+
+// ק (qof) → k
+[id: 2178, name: "qof", weight: 0.1, group: hebrew_consonants]
+ק -> k;
+
+// ר (resh) → r
+[id: 2179, name: "resh", weight: 0.1, group: hebrew_consonants]
+ר -> r;
+
+// ש (shin, unmarked) → ʃ (default to shin pronunciation)
+[id: 2180, name: "shin", weight: 0.1, group: hebrew_consonants, ipa: "/ʃ/"]
+ש -> ʃ;
+
+// ת (tav) → t
+[id: 2181, name: "tav", weight: 0.1, group: hebrew_consonants]
+ת -> t;
+
+// ============================================================
+// FINAL LETTER FORMS
+// ============================================================
+
+// ך (final kaf) → x
+[id: 2185, name: "final kaf", weight: 0.1, group: hebrew_finals, ipa: "/x/"]
+ך -> x;
+
+// ם (final mem) → m
+[id: 2186, name: "final mem", weight: 0.1, group: hebrew_finals]
+ם -> m;
+
+// ן (final nun) → n
+[id: 2187, name: "final nun", weight: 0.1, group: hebrew_finals]
+ן -> n;
+
+// ף (final pe) → f
+[id: 2188, name: "final pe", weight: 0.1, group: hebrew_finals]
+ף -> f;
+
+// ץ (final tsadi) → t͡s
+[id: 2189, name: "final tsadi", weight: 0.1, group: hebrew_finals, ipa: "/t͡s/"]
+ץ -> t͡s;
+
+// ============================================================
+// NIQQUD (VOWEL POINTS)
+// ============================================================
+
+// ְ (sheva) → e (or silent)
+[id: 2190, name: "sheva", weight: 0.15, group: hebrew_vowels]
+ְ -> e;
+
+// ֱ (hataf segol) → e
+[id: 2191, name: "hataf segol", weight: 0.15, group: hebrew_vowels]
+ֱ -> e;
+
+// ֲ (hataf patah) → a
+[id: 2192, name: "hataf patah", weight: 0.15, group: hebrew_vowels]
+ֲ -> a;
+
+// ֳ (hataf qamats) → o
+[id: 2193, name: "hataf qamats", weight: 0.15, group: hebrew_vowels]
+ֳ -> o;
+
+// ִ (hiriq) → i
+[id: 2194, name: "hiriq", weight: 0.15, group: hebrew_vowels]
+ִ -> i;
+
+// ֵ (tsere) → e
+[id: 2195, name: "tsere", weight: 0.15, group: hebrew_vowels]
+ֵ -> e;
+
+// ֶ (segol) → e
+[id: 2196, name: "segol", weight: 0.15, group: hebrew_vowels]
+ֶ -> e;
+
+// ַ (patah) → a
+[id: 2197, name: "patah", weight: 0.15, group: hebrew_vowels]
+ַ -> a;
+
+// ָ (qamats) → a (or o in some dialects)
+[id: 2198, name: "qamats", weight: 0.15, group: hebrew_vowels]
+ָ -> a;
+
+// ֹ (holam) → o
+[id: 2199, name: "holam", weight: 0.15, group: hebrew_vowels]
+ֹ -> o;
+
+// ֻ (qubuts) → u
+[id: 2200, name: "qubuts", weight: 0.15, group: hebrew_vowels]
+ֻ -> u;
+
+// ============================================================
+// SILENT MARKERS AND SIMPLIFICATIONS
+// ============================================================
+
+// Remove glottal stops for simpler matching
+[id: 2205, name: "remove glottal", weight: 0.2, group: hebrew_simplification]
+' -> ;
+
+// Double consonant simplification (gemination)
+[id: 2206, name: "double velar fricative", weight: 0.2, group: hebrew_simplification]
+xx -> x;
+
+[id: 2207, name: "double sh", weight: 0.2, group: hebrew_simplification]
+ʃʃ -> ʃ;
+
+[id: 2208, name: "double ts affricate", weight: 0.2, group: hebrew_simplification]
+t͡st͡s -> t͡s;
+

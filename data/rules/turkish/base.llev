@@ -1,0 +1,150 @@
+// Turkish Base Phonetic Rules
+// ===========================
+// Phonetic rules for Turkish (Türkçe) using Latin script with diacritics.
+// Maps Turkish letters and common features to phonetic representations.
+//
+// Turkish has 29 letters: the standard Latin alphabet with some modifications:
+//   - Added: Ç, Ğ, I, İ, Ö, Ş, Ü
+//   - Removed: Q, W, X (only in loanwords)
+//
+// Key features:
+//   - Dotted/undotted I distinction: ı vs i, I vs İ
+//   - Ğ (soft g): lengthens preceding vowel, nearly silent
+//   - Ş = sh, Ç = ch sounds
+//   - Ö, Ü = front rounded vowels (like German)
+//   - Vowel harmony (not encoded in phonetic rules)
+//
+// Rule IDs: 2300-2349
+
+@name "Turkish Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Turkish language"
+
+// ============================================================
+// SPECIAL TURKISH CONSONANTS
+// ============================================================
+
+// Ş → ʃ (voiceless postalveolar fricative)
+[id: 2300, name: "s cedilla lower", weight: 0.05, group: turkish_special, ipa: "/ʃ/"]
+ş -> ʃ;
+
+// Ş → ʃ (uppercase)
+[id: 2301, name: "s cedilla upper", weight: 0.05, group: turkish_special, ipa: "/ʃ/"]
+Ş -> ʃ;
+
+// Ç → t͡ʃ (voiceless postalveolar affricate)
+[id: 2302, name: "c cedilla lower", weight: 0.05, group: turkish_special, ipa: "/t͡ʃ/"]
+ç -> t͡ʃ;
+
+// Ç → t͡ʃ (uppercase)
+[id: 2303, name: "c cedilla upper", weight: 0.05, group: turkish_special, ipa: "/t͡ʃ/"]
+Ç -> t͡ʃ;
+
+// Ğ → ɣ (voiced velar fricative - soft g, lengthens preceding vowel)
+// In practice ğ is often silent or lengthens the vowel
+[id: 2304, name: "soft g lower", weight: 0.05, group: turkish_special, ipa: "/ɣ/"]
+ğ -> ɣ;
+
+// Ğ → ɣ (uppercase)
+[id: 2305, name: "soft g upper", weight: 0.05, group: turkish_special, ipa: "/ɣ/"]
+Ğ -> ɣ;
+
+// ============================================================
+// DOTTED/UNDOTTED I DISTINCTION
+// ============================================================
+
+// Turkish has a four-way I distinction:
+//   - ı (undotted lowercase) = back unrounded vowel
+//   - i (dotted lowercase) = front unrounded vowel
+//   - I (undotted uppercase) = uppercase of ı
+//   - İ (dotted uppercase) = uppercase of i
+
+// ı → ɯ (using IPA for back unrounded vowel)
+[id: 2310, name: "undotted i lower", weight: 0.1, group: turkish_vowels, ipa: "/ɯ/"]
+ı -> ɯ;
+
+// I → ɯ (undotted uppercase - back vowel)
+// Note: In Turkish, uppercase undotted I is 'I' (no dot)
+[id: 2311, name: "undotted I upper", weight: 0.1, group: turkish_vowels, ipa: "/ɯ/"]
+I -> ɯ;
+
+// i → i (dotted lowercase, front vowel, keep as is)
+// No rule needed - identity
+
+// İ → i (dotted uppercase → lowercase i)
+[id: 2312, name: "dotted I upper", weight: 0.1, group: turkish_vowels]
+İ -> i;
+
+// ============================================================
+// SPECIAL TURKISH VOWELS
+// ============================================================
+
+// Ö → ø (front rounded vowel)
+// Similar to German ö
+[id: 2315, name: "o umlaut lower", weight: 0.1, group: turkish_vowels, ipa: "/ø/"]
+ö -> ø;
+
+// Ö → ø (uppercase)
+[id: 2316, name: "O umlaut upper", weight: 0.1, group: turkish_vowels, ipa: "/ø/"]
+Ö -> ø;
+
+// Ü → y (front rounded vowel)
+// Similar to German ü
+[id: 2317, name: "u umlaut lower", weight: 0.1, group: turkish_vowels, ipa: "/y/"]
+ü -> y;
+
+// Ü → y (uppercase)
+[id: 2318, name: "U umlaut upper", weight: 0.1, group: turkish_vowels, ipa: "/y/"]
+Ü -> y;
+
+// ============================================================
+// STANDARD CONSONANT MAPPINGS
+// ============================================================
+
+// C → d͡ʒ (Turkish c = English j sound, voiced postalveolar affricate)
+[id: 2320, name: "c to d͡ʒ", weight: 0.15, group: turkish_consonants, ipa: "/d͡ʒ/"]
+c -> d͡ʒ;
+
+// J → ʒ (Turkish j = French j, voiced postalveolar fricative)
+// Similar to zh in English "measure"
+[id: 2321, name: "j to ʒ", weight: 0.15, group: turkish_consonants, ipa: "/ʒ/"]
+j -> ʒ;
+
+// Y → y (like English y)
+// No rule needed - identity
+
+// V → v (like English v, but sometimes realized as w between vowels)
+// No rule needed - identity
+
+// ============================================================
+// DOUBLE CONSONANTS (gemination)
+// ============================================================
+
+// Turkish has phonemic consonant length (doubling)
+// Simplify for matching purposes
+
+[id: 2330, name: "double ʃ", weight: 0.2, group: turkish_simplification]
+ʃʃ -> ʃ;
+
+[id: 2331, name: "double t͡ʃ", weight: 0.2, group: turkish_simplification]
+t͡ʃt͡ʃ -> t͡ʃ;
+
+[id: 2332, name: "double ɣ", weight: 0.2, group: turkish_simplification]
+ɣɣ -> ɣ;
+
+[id: 2333, name: "double ɯ", weight: 0.2, group: turkish_simplification]
+ɯɯ -> ɯ;
+
+[id: 2334, name: "double ø", weight: 0.2, group: turkish_simplification]
+øø -> ø;
+
+[id: 2335, name: "double y", weight: 0.2, group: turkish_simplification]
+yy -> y;
+
+[id: 2336, name: "double ʒ", weight: 0.2, group: turkish_simplification]
+ʒʒ -> ʒ;
+
+[id: 2337, name: "double d͡ʒ", weight: 0.2, group: turkish_simplification]
+d͡ʒd͡ʒ -> d͡ʒ;
+

@@ -7,6 +7,7 @@
 //! - String literals (`"..."`)
 //! - Identifiers (for symbol references)
 
+use crate::phonetic::common::flags::ParsedFlags;
 use crate::phonetic::common::traits::{LexerLike, TokenLike};
 use crate::phonetic::common::syllable::SyllableCondition;
 use super::error::{LLevError, LLevErrorKind, LLevResult, Position};
@@ -67,6 +68,13 @@ pub enum Token {
 
     /// Start of group `(`
     GroupStart,
+
+    /// Start of scoped flags group `(?c:...)` or `(?-i:...)`
+    ///
+    /// In LLev, matching is case-insensitive by default (phonetic rules are
+    /// about sound, not spelling). Use `(?c:...)` or `(?-i:...)` to opt out
+    /// and match case-sensitively within the scoped group.
+    ScopedFlagsStart(ParsedFlags),
 
     /// End of group `)`
     GroupEnd,
@@ -166,6 +174,7 @@ impl Token {
             Token::Char(_)
                 | Token::CharClassStart
                 | Token::GroupStart
+                | Token::ScopedFlagsStart(_)
                 | Token::Dot
                 | Token::Hash
                 | Token::Identifier(_)
@@ -1043,6 +1052,57 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Try to parse a scoped flags group: `(?c:...)` or `(?-i:...)`.
+    ///
+    /// Called after consuming `(` when the next char is `?`.
+    /// Returns `Some(Token::ScopedFlagsStart(...))` if valid flags are found,
+    /// or `None` if this is not a flags group (caller should treat as regular group).
+    ///
+    /// In LLev, only case-sensitivity flags are supported:
+    /// - `(?c:...)` - case-sensitive (opt out of default case-insensitive)
+    /// - `(?-i:...)` - case-sensitive (regex-style syntax)
+    ///
+    /// Note: `(?i:...)` is NOT needed since case-insensitive is the default in LLev.
+    fn try_parse_scoped_flags(&mut self) -> LLevResult<Option<Token>> {
+        // Peek ahead to check the pattern
+        // We've already consumed '(' and peek shows '?'
+
+        // Check what follows '?'
+        // Clone the iterator to peek ahead without consuming
+        let mut iter_clone = self.chars.clone();
+        iter_clone.next(); // skip '?'
+
+        let next_char = iter_clone.next().map(|(_, c)| c);
+        let next_next = iter_clone.next().map(|(_, c)| c);
+
+        // Check for (?c:...) - case-sensitive
+        if next_char == Some('c') && next_next == Some(':') {
+            // Consume '?', 'c', ':'
+            self.advance(); // '?'
+            self.advance(); // 'c'
+            self.advance(); // ':'
+            return Ok(Some(Token::ScopedFlagsStart(ParsedFlags::case_sensitive())));
+        }
+
+        // Check for (?-i:...) - case-sensitive (disable case-insensitive)
+        if next_char == Some('-') {
+            let after_minus = iter_clone.next().map(|(_, c)| c);
+            if next_next == Some('i') && after_minus == Some(':') {
+                // Consume '?', '-', 'i', ':'
+                self.advance(); // '?'
+                self.advance(); // '-'
+                self.advance(); // 'i'
+                self.advance(); // ':'
+                return Ok(Some(Token::ScopedFlagsStart(ParsedFlags::case_sensitive())));
+            }
+        }
+
+        // Not a recognized flags group - reset position and return None
+        // The caller will treat '(' as a regular GroupStart
+        // Note: we haven't consumed anything since we only peeked
+        Ok(None)
+    }
+
     /// Internal method to get the next token.
     fn next_token_internal(&mut self) -> LLevResult<Token> {
         // Handle state-specific tokenization
@@ -1090,7 +1150,15 @@ impl<'a> Lexer<'a> {
             }
 
             ']' => Ok(Token::CharClassEnd),
-            '(' => Ok(Token::GroupStart),
+            '(' => {
+                // Check for scoped flags: (?c:...) or (?-i:...)
+                if self.peek_char() == Some('?') {
+                    if let Some(token) = self.try_parse_scoped_flags()? {
+                        return Ok(token);
+                    }
+                }
+                Ok(Token::GroupStart)
+            }
             ')' => Ok(Token::GroupEnd),
             '|' => Ok(Token::Pipe),
             '*' => Ok(Token::Star),
@@ -1171,7 +1239,15 @@ impl<'a> Lexer<'a> {
             '[' => Ok(Token::CharClassStart),
 
             ']' => Ok(Token::CharClassEnd),
-            '(' => Ok(Token::GroupStart),
+            '(' => {
+                // Check for scoped flags: (?c:...) or (?-i:...)
+                if self.peek_char() == Some('?') {
+                    if let Some(token) = self.try_parse_scoped_flags()? {
+                        return Ok(token);
+                    }
+                }
+                Ok(Token::GroupStart)
+            }
             ')' => Ok(Token::GroupEnd),
             '|' => Ok(Token::Pipe),
             '*' => Ok(Token::Star),
@@ -1944,5 +2020,111 @@ mod tests {
         assert_eq!(lexer.next_token().unwrap(), Token::Colon);
         // This ']' closes the named class reference and exits char class mode
         assert_eq!(lexer.next_token().unwrap(), Token::CharClassEnd);
+    }
+
+    // ========================================================================
+    // Tests for scoped flags (case-sensitive opt-out)
+    // ========================================================================
+
+    #[test]
+    fn test_lexer_scoped_flags_c() {
+        // (?c:...) - case-sensitive group
+        let mut lexer = Lexer::new("(?c:abc)");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+    }
+
+    #[test]
+    fn test_lexer_scoped_flags_minus_i() {
+        // (?-i:...) - case-sensitive group (regex-style)
+        let mut lexer = Lexer::new("(?-i:xyz)");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('x'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('y'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('z'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+    }
+
+    #[test]
+    fn test_lexer_scoped_flags_in_rule() {
+        // Test scoped flags in a full rule: (?c:ABC) -> abc;
+        let mut lexer = Lexer::new("(?c:ABC) -> abc;");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('A'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('B'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('C'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+        assert_eq!(lexer.next_token().unwrap(), Token::Arrow);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Semicolon);
+    }
+
+    #[test]
+    fn test_lexer_regular_group_not_flags() {
+        // Regular groups should not be affected: (abc)
+        let mut lexer = Lexer::new("(abc)");
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupStart);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+    }
+
+    #[test]
+    fn test_lexer_question_not_flags() {
+        // (? followed by something other than flags should be GroupStart + Question
+        let mut lexer = Lexer::new("(?abc)");
+        // This is NOT a flags group (no ':' after the flag char)
+        // So we get GroupStart, then Question, then chars
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupStart);
+        assert_eq!(lexer.next_token().unwrap(), Token::Question);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('a'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('b'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+    }
+
+    #[test]
+    fn test_lexer_scoped_flags_with_nested_content() {
+        // (?c:sch) -> sh; - case-sensitive "sch" pattern
+        let mut lexer = Lexer::new("(?c:sch) -> sh;");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('s'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('c'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('h'));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
+        assert_eq!(lexer.next_token().unwrap(), Token::Arrow);
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('s'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Char('h'));
+        assert_eq!(lexer.next_token().unwrap(), Token::Semicolon);
+    }
+
+    #[test]
+    fn test_lexer_scoped_flags_at_top_level() {
+        // Test (?c:...) at top-level mode (file parsing)
+        let mut lexer = Lexer::new_file("(?c:abc)");
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Identifier("abc".to_string()));
+        assert_eq!(lexer.next_token().unwrap(), Token::GroupEnd);
     }
 }

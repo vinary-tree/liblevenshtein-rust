@@ -1,0 +1,251 @@
+// Icelandic Phonetic Rules
+// ========================
+// Phonetic rules for Icelandic (Íslenska).
+// Maps Icelandic orthography to phonetic representations.
+//
+// Key features:
+//   - Archaic Norse orthography preserved
+//   - Unique letters: Þ/þ (voiceless th), Ð/ð (voiced th), Æ/æ (ai)
+//   - Accented vowels indicate quality, not just length
+//   - Complex consonant clusters with special pronunciations
+//
+// Icelandic alphabet (32 letters):
+// A Á B D Ð E É F G H I Í J K L M N O Ó P R S T U Ú V X Y Ý Þ Æ Ö
+//
+// Rule IDs: 3850-3950
+
+@name "Icelandic Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Icelandic"
+
+// ============================================================
+// CONSONANT CLUSTERS (highest priority)
+// ============================================================
+
+// HV → kv (like "kv")
+[id: 3850, name: "hv to kv", weight: 0.02, group: icelandic_clusters]
+hv -> kv;
+
+[id: 3851, name: "Hv to kv", weight: 0.02, group: icelandic_clusters]
+Hv -> kv;
+
+[id: 3852, name: "HV to kv", weight: 0.02, group: icelandic_clusters]
+HV -> kv;
+
+// LL → tl (special Icelandic pronunciation)
+[id: 3853, name: "ll to tl", weight: 0.02, group: icelandic_clusters]
+ll -> tl;
+
+[id: 3854, name: "LL to tl", weight: 0.02, group: icelandic_clusters]
+LL -> tl;
+
+// RL → rtl (retroflex + lateral)
+[id: 3855, name: "rl to rtl", weight: 0.02, group: icelandic_clusters]
+rl -> rtl;
+
+[id: 3856, name: "RL to rtl", weight: 0.02, group: icelandic_clusters]
+RL -> rtl;
+
+// RN → rtn (retroflex nasal)
+[id: 3857, name: "rn to rtn", weight: 0.02, group: icelandic_clusters]
+rn -> rtn;
+
+[id: 3858, name: "RN to rtn", weight: 0.02, group: icelandic_clusters]
+RN -> rtn;
+
+// NN → tn (pre-aspirated)
+[id: 3859, name: "nn to tn", weight: 0.02, group: icelandic_clusters]
+nn -> tn;
+
+[id: 3860, name: "NN to tn", weight: 0.02, group: icelandic_clusters]
+NN -> tn;
+
+// DJ, GJ, HJ → j (all become /j/)
+[id: 3861, name: "dj to j", weight: 0.02, group: icelandic_clusters]
+dj -> j;
+
+[id: 3862, name: "Dj to j", weight: 0.02, group: icelandic_clusters]
+Dj -> j;
+
+[id: 3863, name: "gj to j", weight: 0.02, group: icelandic_clusters]
+gj -> j;
+
+[id: 3864, name: "Gj to j", weight: 0.02, group: icelandic_clusters]
+Gj -> j;
+
+[id: 3865, name: "hj to j", weight: 0.02, group: icelandic_clusters]
+hj -> j;
+
+[id: 3866, name: "Hj to j", weight: 0.02, group: icelandic_clusters]
+Hj -> j;
+
+// LJ → lj (palatal l)
+[id: 3867, name: "lj to lj", weight: 0.02, group: icelandic_clusters]
+Lj -> lj;
+
+[id: 3868, name: "LJ to lj", weight: 0.02, group: icelandic_clusters]
+LJ -> lj;
+
+// FN → pn (devoiced)
+[id: 3869, name: "fn to pn", weight: 0.02, group: icelandic_clusters]
+fn -> pn;
+
+[id: 3870, name: "Fn to pn", weight: 0.02, group: icelandic_clusters]
+Fn -> pn;
+
+// ============================================================
+// UNIQUE LETTERS
+// ============================================================
+
+// Þ/þ → θ (voiceless dental fricative, like English "thing")
+[id: 3871, name: "þ to θ", weight: 0.05, group: icelandic_unique, ipa: "/θ/"]
+þ -> θ;
+
+[id: 3872, name: "Þ to θ", weight: 0.05, group: icelandic_unique, ipa: "/θ/"]
+Þ -> θ;
+
+// Ð/ð → ð (voiced dental fricative, like English "the")
+[id: 3873, name: "ð to ð", weight: 0.05, group: icelandic_unique, ipa: "/ð/"]
+ð -> ð;
+
+[id: 3874, name: "Ð to ð", weight: 0.05, group: icelandic_unique, ipa: "/ð/"]
+Ð -> ð;
+
+// Æ/æ → aɪ (diphthong)
+[id: 3875, name: "æ to aɪ", weight: 0.05, group: icelandic_unique, ipa: "/aɪ/"]
+æ -> aɪ;
+
+[id: 3876, name: "Æ to aɪ", weight: 0.05, group: icelandic_unique, ipa: "/aɪ/"]
+Æ -> aɪ;
+
+// Ö/ö → ø (rounded front vowel)
+[id: 3877, name: "ö to ø", weight: 0.05, group: icelandic_unique, ipa: "/ø/"]
+ö -> ø;
+
+[id: 3878, name: "Ö to ø", weight: 0.05, group: icelandic_unique, ipa: "/ø/"]
+Ö -> ø;
+
+// ============================================================
+// ACCENTED VOWELS (different sounds, not just length)
+// ============================================================
+
+// Á/á → au (diphthong /au/)
+[id: 3879, name: "á to au", weight: 0.1, group: icelandic_accents, ipa: "/au/"]
+á -> au;
+
+[id: 3880, name: "Á to au", weight: 0.1, group: icelandic_accents, ipa: "/au/"]
+Á -> au;
+
+// É/é → jɛ (diphthong /jɛ/)
+[id: 3881, name: "é to jɛ", weight: 0.1, group: icelandic_accents, ipa: "/jɛ/"]
+é -> jɛ;
+
+[id: 3882, name: "É to jɛ", weight: 0.1, group: icelandic_accents, ipa: "/jɛ/"]
+É -> jɛ;
+
+// Í/í → iː (long /iː/)
+[id: 3883, name: "í to iː", weight: 0.1, group: icelandic_accents, ipa: "/iː/"]
+í -> iː;
+
+[id: 3884, name: "Í to iː", weight: 0.1, group: icelandic_accents, ipa: "/iː/"]
+Í -> iː;
+
+// Ó/ó → ou (diphthong /ou/)
+[id: 3885, name: "ó to ou", weight: 0.1, group: icelandic_accents, ipa: "/ou/"]
+ó -> ou;
+
+[id: 3886, name: "Ó to ou", weight: 0.1, group: icelandic_accents, ipa: "/ou/"]
+Ó -> ou;
+
+// Ú/ú → uː (long /uː/)
+[id: 3887, name: "ú to uː", weight: 0.1, group: icelandic_accents, ipa: "/uː/"]
+ú -> uː;
+
+[id: 3888, name: "Ú to uː", weight: 0.1, group: icelandic_accents, ipa: "/uː/"]
+Ú -> uː;
+
+// Ý/ý → iː (same as í in Modern Icelandic)
+[id: 3889, name: "ý to iː", weight: 0.1, group: icelandic_accents, ipa: "/iː/"]
+ý -> iː;
+
+[id: 3890, name: "Ý to iː", weight: 0.1, group: icelandic_accents, ipa: "/iː/"]
+Ý -> iː;
+
+// ============================================================
+// BASE VOWELS
+// ============================================================
+
+[id: 3891, name: "a to a", weight: 0.15, group: icelandic_vowels]
+A -> a;
+
+[id: 3892, name: "e to e", weight: 0.15, group: icelandic_vowels]
+E -> e;
+
+[id: 3893, name: "i to i", weight: 0.15, group: icelandic_vowels]
+I -> i;
+
+[id: 3894, name: "o to o", weight: 0.15, group: icelandic_vowels]
+O -> o;
+
+[id: 3895, name: "u to u", weight: 0.15, group: icelandic_vowels]
+U -> u;
+
+[id: 3896, name: "y to i", weight: 0.15, group: icelandic_vowels]
+y -> i;
+
+[id: 3897, name: "Y to i", weight: 0.15, group: icelandic_vowels]
+Y -> i;
+
+// ============================================================
+// CONSONANTS (case normalization)
+// ============================================================
+
+[id: 3898, name: "B to b", weight: 0.2, group: icelandic_consonants]
+B -> b;
+
+[id: 3899, name: "D to d", weight: 0.2, group: icelandic_consonants]
+D -> d;
+
+[id: 3900, name: "F to f", weight: 0.2, group: icelandic_consonants]
+F -> f;
+
+[id: 3901, name: "G to g", weight: 0.2, group: icelandic_consonants]
+G -> g;
+
+[id: 3902, name: "H to h", weight: 0.2, group: icelandic_consonants]
+H -> h;
+
+[id: 3903, name: "J to j", weight: 0.2, group: icelandic_consonants]
+J -> j;
+
+[id: 3904, name: "K to k", weight: 0.2, group: icelandic_consonants]
+K -> k;
+
+[id: 3905, name: "L to l", weight: 0.2, group: icelandic_consonants]
+L -> l;
+
+[id: 3906, name: "M to m", weight: 0.2, group: icelandic_consonants]
+M -> m;
+
+[id: 3907, name: "N to n", weight: 0.2, group: icelandic_consonants]
+N -> n;
+
+[id: 3908, name: "P to p", weight: 0.2, group: icelandic_consonants]
+P -> p;
+
+[id: 3909, name: "R to r", weight: 0.2, group: icelandic_consonants]
+R -> r;
+
+[id: 3910, name: "S to s", weight: 0.2, group: icelandic_consonants]
+S -> s;
+
+[id: 3911, name: "T to t", weight: 0.2, group: icelandic_consonants]
+T -> t;
+
+[id: 3912, name: "V to v", weight: 0.2, group: icelandic_consonants]
+V -> v;
+
+[id: 3913, name: "X to x", weight: 0.2, group: icelandic_consonants]
+X -> x;
+

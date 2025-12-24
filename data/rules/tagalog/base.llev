@@ -1,0 +1,145 @@
+// Tagalog Base Phonetic Rules
+// ===========================
+// Phonetic rules for Tagalog/Filipino language normalization.
+// Maps Tagalog letters and digraphs to phonetic equivalents.
+//
+// Tagalog uses the Latin alphabet with some distinctive features:
+//   - NG digraph for velar nasal (very common in Tagalog)
+//   - Glottal stop often unmarked or represented by hyphen/apostrophe
+//   - Spanish loanwords with adapted spelling
+//   - Simple 5-vowel system: a, e, i, o, u
+//
+// Key features:
+//   - 15 native consonants + borrowed sounds
+//   - Velar nasal NG as a single phoneme
+//   - Spanish influence in loanwords (f->p, v->b)
+//   - Reduplication patterns (common in morphology)
+//
+// NOTE: This file only contains TRANSFORMATION rules, not identity rules.
+// Identity rules (a -> a, b -> b, etc.) and general case normalization rules
+// are omitted because they would interfere with digraph markers like NG.
+// Characters that don't match any rule pass through unchanged.
+//
+// Rule IDs: 2700-2780
+
+@name "Tagalog Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Tagalog/Filipino"
+
+// ============================================================
+// NG DIGRAPH (must be matched before single N and G)
+// ============================================================
+// The ng digraph represents the velar nasal, very common in Tagalog.
+// Uses NG as a marker to prevent re-processing.
+// Must have lower weight than single letters to match first.
+
+[id: 2700, name: "ng velar nasal", weight: 0.02, group: tagalog_digraphs, ipa: "/ŋ/"]
+ng -> ŋ;
+
+[id: 2701, name: "Ng velar nasal", weight: 0.02, group: tagalog_digraphs, ipa: "/ŋ/"]
+Ng -> ŋ;
+
+// Note: NG -> NG would be an identity rule and is not needed
+
+// ============================================================
+// SPANISH LOANWORD ADAPTATIONS
+// ============================================================
+// Spanish sounds not native to Tagalog that get adapted
+// Lower weight to match multi-char patterns first
+
+// LL -> ʎ (Spanish ll, palatal lateral)
+[id: 2705, name: "ll to ʎ", weight: 0.02, group: tagalog_spanish, ipa: "/ʎ/"]
+ll -> ʎ;
+
+[id: 2706, name: "LL to ʎ", weight: 0.02, group: tagalog_spanish, ipa: "/ʎ/"]
+LL -> ʎ;
+
+[id: 2707, name: "Ll to ʎ", weight: 0.02, group: tagalog_spanish, ipa: "/ʎ/"]
+Ll -> ʎ;
+
+// N with tilde -> ɲ (Spanish ñ, palatal nasal)
+[id: 2708, name: "n tilde to ɲ", weight: 0.02, group: tagalog_spanish, ipa: "/ɲ/"]
+ñ -> ɲ;
+
+[id: 2709, name: "N tilde to ɲ", weight: 0.02, group: tagalog_spanish, ipa: "/ɲ/"]
+Ñ -> ɲ;
+
+// Spanish QU -> K
+[id: 2710, name: "qu to k", weight: 0.02, group: tagalog_spanish]
+qu -> k;
+
+[id: 2711, name: "Qu to k", weight: 0.02, group: tagalog_spanish]
+Qu -> k;
+
+[id: 2712, name: "QU to k", weight: 0.02, group: tagalog_spanish]
+QU -> k;
+
+// ============================================================
+// BORROWED CONSONANTS (from Spanish/English)
+// ============================================================
+// These sounds are not native to Tagalog but appear in loanwords.
+// In native words: f->p, v->b, z->s
+
+// F -> P (native adaptation)
+[id: 2745, name: "f to p", weight: 0.05, group: tagalog_borrowed]
+f -> p;
+
+[id: 2746, name: "F to p", weight: 0.05, group: tagalog_borrowed]
+F -> p;
+
+// V -> B (native adaptation)
+[id: 2747, name: "v to b", weight: 0.05, group: tagalog_borrowed]
+v -> b;
+
+[id: 2748, name: "V to b", weight: 0.05, group: tagalog_borrowed]
+V -> b;
+
+// Z -> S (native adaptation)
+[id: 2749, name: "z to s", weight: 0.05, group: tagalog_borrowed]
+z -> s;
+
+[id: 2750, name: "Z to s", weight: 0.05, group: tagalog_borrowed]
+Z -> s;
+
+// C -> K (use K as default for C)
+[id: 2751, name: "c to k", weight: 0.05, group: tagalog_borrowed]
+c -> k;
+
+[id: 2752, name: "C to k", weight: 0.05, group: tagalog_borrowed]
+C -> k;
+
+// J -> H (Spanish j sound)
+[id: 2753, name: "j to h", weight: 0.05, group: tagalog_borrowed]
+j -> h;
+
+[id: 2754, name: "J to h", weight: 0.05, group: tagalog_borrowed]
+J -> h;
+
+// X -> KS
+[id: 2755, name: "x to ks", weight: 0.05, group: tagalog_borrowed]
+x -> ks;
+
+[id: 2756, name: "X to ks", weight: 0.05, group: tagalog_borrowed]
+X -> ks;
+
+// ============================================================
+// GLOTTAL STOP MARKERS
+// ============================================================
+// Glottal stop in Tagalog is often unmarked, but sometimes
+// represented with apostrophe. Hyphens are kept as-is since they
+// may serve other purposes (e.g., compounds, reduplication).
+
+[id: 2775, name: "apostrophe glottal", weight: 0.1, group: tagalog_glottal]
+' -> ;
+
+[id: 2776, name: "backtick glottal", weight: 0.1, group: tagalog_glottal]
+` -> ;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 2780, name: "double ŋ simplification", weight: 0.2, group: tagalog_simplification]
+ŋŋ -> ŋ;
+

@@ -1,0 +1,220 @@
+// Dutch Base Phonetic Rules
+// =========================
+// Phonetic rules for Standard Dutch (Nederlands).
+// Based on Dutch phonology and orthography conventions.
+//
+// Key features:
+//   - IJ digraph (treated as single unit, like German ü)
+//   - G/CH → guttural [x] or [ɣ]
+//   - W → v-like approximant
+//   - Final devoicing (like German)
+//   - OE → /u/ sound
+//   - EU → /ø/ sound
+//   - UI diphthong
+//   - Double vowels for length (aa, ee, oo, uu)
+//   - SCH → /sx/ (not /ʃ/ like German)
+//
+// Rule IDs: 1900-1949
+
+@name "Dutch Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Standard Dutch"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiouAEIOU]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]
+
+// ============================================================
+// MULTI-CHARACTER PATTERNS (highest priority)
+// ============================================================
+
+// SCH in Dutch is /sx/, NOT /ʃ/ like German
+[id: 1900, name: "sch to sx", weight: 0.1, group: dutch_digraphs, ipa: "/sx/"]
+sch -> sx;
+
+[id: 1901, name: "Sch to sx", weight: 0.1, group: dutch_digraphs, ipa: "/sx/"]
+Sch -> sx;
+
+// IJ digraph - represents /ɛi/ diphthong, historically a single letter
+[id: 1902, name: "ij to ɛi", weight: 0.1, group: dutch_digraphs, ipa: "/ɛi/"]
+ij -> ɛi;
+
+[id: 1903, name: "IJ to ɛi", weight: 0.1, group: dutch_digraphs, ipa: "/ɛi/"]
+IJ -> ɛi;
+
+[id: 1904, name: "Ij to ɛi", weight: 0.1, group: dutch_digraphs, ipa: "/ɛi/"]
+Ij -> ɛi;
+
+// OE → /u/ sound (like German "Buch")
+[id: 1905, name: "oe to u", weight: 0.1, group: dutch_vowels, ipa: "/u/"]
+oe -> u;
+
+[id: 1906, name: "Oe to u", weight: 0.1, group: dutch_vowels, ipa: "/u/"]
+Oe -> u;
+
+// EU → /ø/ sound (like German ö, French eu)
+[id: 1907, name: "eu to ø", weight: 0.1, group: dutch_vowels, ipa: "/ø/"]
+eu -> ø;
+
+[id: 1908, name: "Eu to ø", weight: 0.1, group: dutch_vowels, ipa: "/ø/"]
+Eu -> ø;
+
+// UI diphthong → /œy/ (unique Dutch sound)
+[id: 1909, name: "ui to œy", weight: 0.1, group: dutch_vowels, ipa: "/œy/"]
+ui -> œy;
+
+[id: 1910, name: "Ui to œy", weight: 0.1, group: dutch_vowels, ipa: "/œy/"]
+Ui -> œy;
+
+// AU/OU diphthong → /ɔu/ (like English "ow" in "now")
+[id: 1911, name: "au to ɔu", weight: 0.1, group: dutch_vowels, ipa: "/ɔu/"]
+au -> ɔu;
+
+[id: 1912, name: "Au to ɔu", weight: 0.1, group: dutch_vowels, ipa: "/ɔu/"]
+Au -> ɔu;
+
+[id: 1913, name: "ou to ɔu", weight: 0.1, group: dutch_vowels, ipa: "/ɔu/"]
+ou -> ɔu;
+
+[id: 1914, name: "Ou to ɔu", weight: 0.1, group: dutch_vowels, ipa: "/ɔu/"]
+Ou -> ɔu;
+
+// EI → /ɛi/ diphthong (same as IJ)
+[id: 1915, name: "ei to ɛi", weight: 0.1, group: dutch_vowels, ipa: "/ɛi/"]
+ei -> ɛi;
+
+[id: 1916, name: "Ei to ɛi", weight: 0.1, group: dutch_vowels, ipa: "/ɛi/"]
+Ei -> ɛi;
+
+// AA, EE, OO, UU - long vowels (simplified to single vowel)
+[id: 1917, name: "aa to a", weight: 0.15, group: dutch_long_vowels]
+aa -> a;
+
+[id: 1918, name: "ee to e", weight: 0.15, group: dutch_long_vowels]
+ee -> e;
+
+[id: 1919, name: "oo to o", weight: 0.15, group: dutch_long_vowels]
+oo -> o;
+
+[id: 1920, name: "uu to u", weight: 0.15, group: dutch_long_vowels]
+uu -> u;
+
+// IE → /i/ long vowel
+[id: 1921, name: "ie to i", weight: 0.15, group: dutch_long_vowels]
+ie -> i;
+
+// ============================================================
+// CONSONANT PATTERNS
+// ============================================================
+
+// G → guttural /x/ or /ɣ/ (like Scottish "loch")
+[id: 1925, name: "g to x", weight: 0.2, group: dutch_consonants, ipa: "/x/"]
+g -> x;
+
+[id: 1926, name: "G to x", weight: 0.2, group: dutch_consonants, ipa: "/x/"]
+G -> x;
+
+// CH → same guttural /x/ sound as G
+[id: 1927, name: "ch to x", weight: 0.2, group: dutch_consonants, ipa: "/x/"]
+ch -> x;
+
+[id: 1928, name: "Ch to x", weight: 0.2, group: dutch_consonants, ipa: "/x/"]
+Ch -> x;
+
+// W → /ʋ/ (labiodental approximant, between English v and w)
+[id: 1929, name: "w to ʋ", weight: 0.2, group: dutch_consonants, ipa: "/ʋ/"]
+w -> ʋ;
+
+[id: 1930, name: "W to ʋ", weight: 0.2, group: dutch_consonants, ipa: "/ʋ/"]
+W -> ʋ;
+
+// V → /v/ (voiced labiodental fricative)
+[id: 1931, name: "v to v", weight: 0.2, group: dutch_consonants, ipa: "/v/"]
+v -> v;
+
+// CK → k
+[id: 1932, name: "ck to k", weight: 0.15, group: dutch_consonants]
+ck -> k;
+
+// QU → kw (Dutch pronunciation)
+[id: 1933, name: "qu to kw", weight: 0.15, group: dutch_consonants]
+qu -> kw;
+
+[id: 1934, name: "Qu to kw", weight: 0.15, group: dutch_consonants]
+Qu -> kw;
+
+// PH → f (loanwords)
+[id: 1935, name: "ph to f", weight: 0.15, group: dutch_consonants]
+ph -> f;
+
+[id: 1936, name: "Ph to f", weight: 0.15, group: dutch_consonants]
+Ph -> f;
+
+// TH → t (loanwords, Dutch has no /θ/)
+[id: 1937, name: "th to t", weight: 0.15, group: dutch_consonants]
+th -> t;
+
+[id: 1938, name: "Th to t", weight: 0.15, group: dutch_consonants]
+Th -> t;
+
+// ============================================================
+// FINAL DEVOICING
+// ============================================================
+// Voiced consonants become voiceless at word end (like German)
+
+[id: 1940, name: "final b to p", weight: 0.25, group: dutch_devoicing]
+b -> p / _#;
+
+[id: 1941, name: "final d to t", weight: 0.25, group: dutch_devoicing]
+d -> t / _#;
+
+// Note: final g is already X, no additional rule needed
+
+// ============================================================
+// DOUBLE CONSONANT SIMPLIFICATION
+// ============================================================
+
+[id: 1945, name: "bb to b", weight: 0.1, group: dutch_doubles]
+bb -> b;
+
+[id: 1946, name: "dd to d", weight: 0.1, group: dutch_doubles]
+dd -> d;
+
+[id: 1947, name: "ff to f", weight: 0.1, group: dutch_doubles]
+ff -> f;
+
+[id: 1948, name: "ll to l", weight: 0.1, group: dutch_doubles]
+ll -> l;
+
+[id: 1949, name: "mm to m", weight: 0.1, group: dutch_doubles]
+mm -> m;
+
+[id: 1950, name: "nn to n", weight: 0.1, group: dutch_doubles]
+nn -> n;
+
+[id: 1951, name: "pp to p", weight: 0.1, group: dutch_doubles]
+pp -> p;
+
+[id: 1952, name: "rr to r", weight: 0.1, group: dutch_doubles]
+rr -> r;
+
+[id: 1953, name: "ss to s", weight: 0.1, group: dutch_doubles]
+ss -> s;
+
+[id: 1954, name: "tt to t", weight: 0.1, group: dutch_doubles]
+tt -> t;
+
+// ============================================================
+// CASE NORMALIZATION
+// ============================================================
+
+[id: 1955, name: "C to k", weight: 0.25, group: dutch_case]
+C -> k;
+
+[id: 1956, name: "c to k", weight: 0.25, group: dutch_case]
+c -> k;
+

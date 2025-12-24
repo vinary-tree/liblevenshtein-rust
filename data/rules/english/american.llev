@@ -1,0 +1,283 @@
+// American English Phonetic Rules
+// ================================
+// Dialect-specific rules for American English phonetic transformations.
+// These rules layer on top of the shared zompist base rules.
+//
+// Key American English Features:
+//   - Yod-dropping: No /j/ sound after alveolar consonants (t, d, n, s, z, l)
+//     Examples: tune -> toon, new -> noo, dune -> doon
+//   - T-flapping: Intervocalic /t/ becomes a flap sound (like /d/)
+//     Examples: water -> wader, butter -> budder
+//   - Rhotic: All Rs are pronounced (no r-dropping)
+
+@name "American English Dialect Rules"
+@version "2.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for American English"
+
+// Import the shared Zompist base rules
+@include "english/zompist.llev"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiou]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+@define ALVEOLAR = [tdnszl]
+
+// ============================================================
+// YOD-DROPPING RULES (American English)
+// ============================================================
+// In American English, the /j/ (yod) sound is dropped after
+// alveolar consonants: t, d, n, s, z, l
+// British English preserves this sound.
+
+// After T
+[id: 500, name: "yod-drop tune", weight: 0.2, group: american_yod]
+tune -> toon;
+
+[id: 501, name: "yod-drop tuesday", weight: 0.2, group: american_yod]
+tues -> toos;
+
+[id: 502, name: "yod-drop tutor", weight: 0.2, group: american_yod]
+tutor -> tootor;
+
+[id: 503, name: "yod-drop tube", weight: 0.2, group: american_yod]
+tube -> toob;
+
+[id: 504, name: "yod-drop tulip", weight: 0.2, group: american_yod]
+tulip -> toolip;
+
+[id: 505, name: "yod-drop tumult", weight: 0.2, group: american_yod]
+tumult -> toomult;
+
+[id: 506, name: "yod-drop tuna", weight: 0.2, group: american_yod]
+tuna -> toona;
+
+// After D
+[id: 510, name: "yod-drop dune", weight: 0.2, group: american_yod]
+dune -> doon;
+
+[id: 511, name: "yod-drop due", weight: 0.2, group: american_yod]
+due -> doo;
+
+[id: 512, name: "yod-drop dew", weight: 0.2, group: american_yod]
+dew -> doo;
+
+[id: 513, name: "yod-drop dual", weight: 0.2, group: american_yod]
+dual -> dool;
+
+[id: 514, name: "yod-drop duke", weight: 0.2, group: american_yod]
+duke -> dook;
+
+[id: 515, name: "yod-drop dupe", weight: 0.2, group: american_yod]
+dupe -> doop;
+
+[id: 516, name: "yod-drop duty", weight: 0.2, group: american_yod]
+duty -> dooty;
+
+[id: 517, name: "yod-drop during", weight: 0.2, group: american_yod]
+during -> dooring;
+
+[id: 518, name: "yod-drop durable", weight: 0.2, group: american_yod]
+durable -> doorable;
+
+// After N
+[id: 520, name: "yod-drop new", weight: 0.2, group: american_yod]
+new -> noo;
+
+[id: 521, name: "yod-drop news", weight: 0.2, group: american_yod]
+news -> nooz;
+
+[id: 522, name: "yod-drop nude", weight: 0.2, group: american_yod]
+nude -> nood;
+
+[id: 523, name: "yod-drop nuisance", weight: 0.2, group: american_yod]
+nuisance -> noosance;
+
+[id: 524, name: "yod-drop neutral", weight: 0.2, group: american_yod]
+neutral -> nootral;
+
+[id: 525, name: "yod-drop numerous", weight: 0.2, group: american_yod]
+numerous -> noomerous;
+
+[id: 526, name: "yod-drop nuclear", weight: 0.2, group: american_yod]
+nuclear -> nooklear;
+
+[id: 527, name: "yod-drop newt", weight: 0.2, group: american_yod]
+newt -> noot;
+
+// After S
+[id: 530, name: "yod-drop suit", weight: 0.2, group: american_yod]
+suit -> soot;
+
+[id: 531, name: "yod-drop sue", weight: 0.2, group: american_yod]
+sue -> soo;
+
+[id: 532, name: "yod-drop super", weight: 0.2, group: american_yod]
+super -> sooper;
+
+[id: 533, name: "yod-drop assume", weight: 0.2, group: american_yod]
+sume -> soom;
+
+[id: 534, name: "yod-drop presume", weight: 0.2, group: american_yod]
+sume -> soom;
+
+[id: 535, name: "yod-drop consume", weight: 0.2, group: american_yod]
+sume -> soom;
+
+[id: 536, name: "yod-drop supreme", weight: 0.2, group: american_yod]
+supreme -> soopreme;
+
+// After L
+[id: 540, name: "yod-drop lute", weight: 0.2, group: american_yod]
+lute -> loot;
+
+[id: 541, name: "yod-droplude", weight: 0.2, group: american_yod]
+lude -> lood;
+
+[id: 542, name: "yod-drop lure", weight: 0.2, group: american_yod]
+lure -> loor;
+
+[id: 543, name: "yod-drop lunar", weight: 0.2, group: american_yod]
+lunar -> loonar;
+
+[id: 544, name: "yod-drop ludicrous", weight: 0.2, group: american_yod]
+ludicrous -> loodikrous;
+
+[id: 545, name: "yod-drop illuminate", weight: 0.2, group: american_yod]
+luminate -> loominate;
+
+// After Z
+[id: 550, name: "yod-drop zeus", weight: 0.2, group: american_yod]
+zeus -> zoos;
+
+[id: 551, name: "yod-drop resume", weight: 0.2, group: american_yod]
+zume -> zoom;
+
+// ============================================================
+// T-FLAPPING RULES (American English)
+// ============================================================
+// In American English, intervocalic /t/ becomes a flap (sounds like /d/)
+// This occurs between vowels, especially in unstressed syllables.
+
+[id: 560, name: "t-flap water", weight: 0.25, group: american_flapping]
+water -> wader;
+
+[id: 561, name: "t-flap butter", weight: 0.25, group: american_flapping]
+butter -> budder;
+
+[id: 562, name: "t-flap better", weight: 0.25, group: american_flapping]
+better -> bedder;
+
+[id: 563, name: "t-flap letter", weight: 0.25, group: american_flapping]
+letter -> ledder;
+
+[id: 564, name: "t-flap matter", weight: 0.25, group: american_flapping]
+matter -> madder;
+
+[id: 565, name: "t-flap city", weight: 0.25, group: american_flapping]
+city -> sidy;
+
+[id: 566, name: "t-flap pretty", weight: 0.25, group: american_flapping]
+pretty -> preddy;
+
+[id: 567, name: "t-flap little", weight: 0.25, group: american_flapping]
+little -> liddle;
+
+[id: 568, name: "t-flap bottle", weight: 0.25, group: american_flapping]
+bottle -> boddle;
+
+[id: 569, name: "t-flap metal", weight: 0.25, group: american_flapping]
+metal -> medal;
+
+[id: 570, name: "t-flap eating", weight: 0.25, group: american_flapping]
+eating -> eading;
+
+[id: 571, name: "t-flap meeting", weight: 0.25, group: american_flapping]
+meeting -> meading;
+
+[id: 572, name: "t-flap waiting", weight: 0.25, group: american_flapping]
+waiting -> waiding;
+
+[id: 573, name: "t-flap writing", weight: 0.25, group: american_flapping]
+writing -> riding;
+
+[id: 574, name: "t-flap putting", weight: 0.25, group: american_flapping]
+putting -> pudding;
+
+[id: 575, name: "t-flap hitting", weight: 0.25, group: american_flapping]
+hitting -> hidding;
+
+[id: 576, name: "t-flap getting", weight: 0.25, group: american_flapping]
+getting -> gedding;
+
+[id: 577, name: "t-flap setting", weight: 0.25, group: american_flapping]
+setting -> sedding;
+
+[id: 578, name: "t-flap pity", weight: 0.25, group: american_flapping]
+pity -> pidy;
+
+[id: 579, name: "t-flap kitty", weight: 0.25, group: american_flapping]
+kitty -> kiddy;
+
+[id: 580, name: "t-flap fatty", weight: 0.25, group: american_flapping]
+fatty -> faddy;
+
+[id: 581, name: "t-flap patty", weight: 0.25, group: american_flapping]
+patty -> paddy;
+
+[id: 582, name: "t-flap bitter", weight: 0.25, group: american_flapping]
+bitter -> bidder;
+
+[id: 583, name: "t-flap hotter", weight: 0.25, group: american_flapping]
+hotter -> hodder;
+
+[id: 584, name: "t-flap otter", weight: 0.25, group: american_flapping]
+otter -> odder;
+
+[id: 585, name: "t-flap later", weight: 0.25, group: american_flapping]
+later -> lader;
+
+[id: 586, name: "t-flap eater", weight: 0.25, group: american_flapping]
+eater -> eader;
+
+[id: 587, name: "t-flap waiter", weight: 0.25, group: american_flapping]
+waiter -> waider;
+
+[id: 588, name: "t-flap liter", weight: 0.25, group: american_flapping]
+liter -> lider;
+
+[id: 589, name: "t-flap meter", weight: 0.25, group: american_flapping]
+meter -> meder;
+
+[id: 590, name: "t-flap patter", weight: 0.25, group: american_flapping]
+patter -> padder;
+
+[id: 591, name: "t-flap scatter", weight: 0.25, group: american_flapping]
+scatter -> scadder;
+
+[id: 592, name: "t-flap shatter", weight: 0.25, group: american_flapping]
+shatter -> shadder;
+
+[id: 593, name: "t-flap tatter", weight: 0.25, group: american_flapping]
+tatter -> tadder;
+
+[id: 594, name: "t-flap latter", weight: 0.25, group: american_flapping]
+latter -> ladder;
+
+[id: 595, name: "t-flap atom", weight: 0.25, group: american_flapping]
+atom -> adom;
+
+[id: 596, name: "t-flap item", weight: 0.25, group: american_flapping]
+item -> idem;
+
+[id: 597, name: "t-flap Saturday", weight: 0.25, group: american_flapping]
+saturday -> sadurday;
+
+[id: 598, name: "t-flap automatic", weight: 0.25, group: american_flapping]
+automatic -> audomatic;
+
+[id: 599, name: "t-flap photograph", weight: 0.25, group: american_flapping]
+otograph -> odograph;

@@ -1,0 +1,212 @@
+// Japanese Romaji Phonetic Rules
+// ===============================
+// Phonetic rules for Japanese romanization (Romaji / ローマ字).
+// Normalizes variant romanization systems for phonetic matching.
+//
+// Main romanization systems:
+//   - Hepburn (most common in English): shi, chi, tsu, fu
+//   - Nihon-shiki / Kunrei-shiki: si, ti, tu, hu
+//
+// Key features:
+//   - Long vowel normalization (macrons → doubled vowels)
+//   - Variant romanization normalization (ti→chi, tu→tsu, etc.)
+//   - Double consonant simplification (っ = kk, tt, etc.)
+//   - N before vowel handling (n' vs n)
+//
+// Rule IDs: 2350-2399
+
+@name "Japanese Romaji Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Japanese romanization"
+
+// ============================================================
+// LONG VOWEL NORMALIZATION
+// ============================================================
+
+// Macron vowels → doubled vowels
+// Using markers to prevent further processing
+
+// ā → A (long a marker)
+[id: 2350, name: "long a macron", weight: 0.05, group: romaji_long_vowels]
+ā -> A;
+
+// ē → E (long e marker)
+[id: 2351, name: "long e macron", weight: 0.05, group: romaji_long_vowels]
+ē -> E;
+
+// ī → I (long i marker)
+[id: 2352, name: "long i macron", weight: 0.05, group: romaji_long_vowels]
+ī -> I;
+
+// ō → O (long o marker)
+[id: 2353, name: "long o macron", weight: 0.05, group: romaji_long_vowels]
+ō -> O;
+
+// ū → U (long u marker)
+[id: 2354, name: "long u macron", weight: 0.05, group: romaji_long_vowels]
+ū -> U;
+
+// Uppercase macrons
+[id: 2355, name: "long A macron upper", weight: 0.05, group: romaji_long_vowels]
+Ā -> A;
+
+[id: 2356, name: "long E macron upper", weight: 0.05, group: romaji_long_vowels]
+Ē -> E;
+
+[id: 2357, name: "long I macron upper", weight: 0.05, group: romaji_long_vowels]
+Ī -> I;
+
+[id: 2358, name: "long O macron upper", weight: 0.05, group: romaji_long_vowels]
+Ō -> O;
+
+[id: 2359, name: "long U macron upper", weight: 0.05, group: romaji_long_vowels]
+Ū -> U;
+
+// ============================================================
+// ROMANIZATION VARIANT NORMALIZATION
+// ============================================================
+
+// Nihon-shiki/Kunrei-shiki → Hepburn normalization
+// These must come before double consonant rules
+
+// ti → t͡ɕ (Kunrei ti = Hepburn chi)
+[id: 2360, name: "ti to t͡ɕ", weight: 0.1, group: romaji_variants, ipa: "/t͡ɕ/"]
+ti -> t͡ɕ;
+
+// tu → t͡s (Kunrei tu = Hepburn tsu)
+[id: 2361, name: "tu to t͡s", weight: 0.1, group: romaji_variants, ipa: "/t͡s/"]
+tu -> t͡s;
+
+// si → ɕ (Kunrei si = Hepburn shi)
+[id: 2362, name: "si to ɕ", weight: 0.1, group: romaji_variants, ipa: "/ɕ/"]
+si -> ɕ;
+
+// hu → ɸ (Kunrei hu = Hepburn fu)
+[id: 2363, name: "hu to ɸ", weight: 0.1, group: romaji_variants, ipa: "/ɸ/"]
+hu -> ɸ;
+
+// zi → d͡ʑ (Kunrei zi = Hepburn ji)
+[id: 2364, name: "zi to d͡ʑ", weight: 0.1, group: romaji_variants, ipa: "/d͡ʑ/"]
+zi -> d͡ʑ;
+
+// di → d͡ʑ (in many dialects/borrowings)
+[id: 2365, name: "di to d͡ʑ", weight: 0.1, group: romaji_variants, ipa: "/d͡ʑ/"]
+di -> d͡ʑ;
+
+// du → d͡z (Kunrei du = Hepburn zu, or dzu)
+[id: 2366, name: "du to d͡z", weight: 0.1, group: romaji_variants, ipa: "/d͡z/"]
+du -> d͡z;
+
+// ============================================================
+// DIGRAPH NORMALIZATION
+// ============================================================
+
+// Normalize common digraphs to markers
+
+// shi → ɕ (voiceless alveolo-palatal fricative)
+[id: 2370, name: "shi digraph", weight: 0.1, group: romaji_digraphs, ipa: "/ɕ/"]
+shi -> ɕ;
+
+// chi → t͡ɕ (voiceless alveolo-palatal affricate)
+[id: 2371, name: "chi digraph", weight: 0.1, group: romaji_digraphs, ipa: "/t͡ɕ/"]
+chi -> t͡ɕ;
+
+// tsu → t͡s (voiceless alveolar affricate)
+[id: 2372, name: "tsu digraph", weight: 0.1, group: romaji_digraphs, ipa: "/t͡s/"]
+tsu -> t͡s;
+
+// fu → ɸ (voiceless bilabial fricative, unique Japanese sound)
+[id: 2373, name: "fu digraph", weight: 0.1, group: romaji_digraphs, ipa: "/ɸ/"]
+fu -> ɸ;
+
+// sha → ɕa
+[id: 2374, name: "sha digraph", weight: 0.1, group: romaji_digraphs, ipa: "/ɕa/"]
+sha -> ɕa;
+
+// shu → ɕɯ
+[id: 2375, name: "shu digraph", weight: 0.1, group: romaji_digraphs, ipa: "/ɕɯ/"]
+shu -> ɕɯ;
+
+// sho → ɕo
+[id: 2376, name: "sho digraph", weight: 0.1, group: romaji_digraphs, ipa: "/ɕo/"]
+sho -> ɕo;
+
+// cha → t͡ɕa
+[id: 2377, name: "cha digraph", weight: 0.1, group: romaji_digraphs, ipa: "/t͡ɕa/"]
+cha -> t͡ɕa;
+
+// chu → t͡ɕɯ
+[id: 2378, name: "chu digraph", weight: 0.1, group: romaji_digraphs, ipa: "/t͡ɕɯ/"]
+chu -> t͡ɕɯ;
+
+// cho → t͡ɕo
+[id: 2379, name: "cho digraph", weight: 0.1, group: romaji_digraphs, ipa: "/t͡ɕo/"]
+cho -> t͡ɕo;
+
+// ============================================================
+// DOUBLE CONSONANT SIMPLIFICATION
+// ============================================================
+
+// Small tsu (っ) = gemination, represented as doubled consonants
+// Simplify for matching
+
+[id: 2380, name: "double kk", weight: 0.15, group: romaji_gemination]
+kk -> K;
+
+[id: 2381, name: "double pp", weight: 0.15, group: romaji_gemination]
+pp -> P;
+
+[id: 2382, name: "double tt", weight: 0.15, group: romaji_gemination]
+tt -> T;
+
+[id: 2383, name: "double ss", weight: 0.15, group: romaji_gemination]
+ss -> S;
+
+[id: 2384, name: "double cc", weight: 0.15, group: romaji_gemination]
+cc -> C;
+
+// ============================================================
+// N SYLLABLE HANDLING
+// ============================================================
+
+// n' (syllable-final n before vowel) → N marker
+// Distinguishes kan'i from kani
+[id: 2385, name: "n apostrophe", weight: 0.1, group: romaji_syllabic_n]
+n' -> N;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+// Simplify doubled markers
+[id: 2390, name: "double S marker", weight: 0.2, group: romaji_simplification]
+SS -> S;
+
+[id: 2391, name: "double C marker", weight: 0.2, group: romaji_simplification]
+CC -> C;
+
+[id: 2392, name: "double TS marker", weight: 0.2, group: romaji_simplification]
+TSTS -> TS;
+
+[id: 2393, name: "double F marker", weight: 0.2, group: romaji_simplification]
+FF -> F;
+
+[id: 2394, name: "double J marker", weight: 0.2, group: romaji_simplification]
+JJ -> J;
+
+[id: 2395, name: "double Z marker", weight: 0.2, group: romaji_simplification]
+ZZ -> Z;
+
+[id: 2396, name: "double K marker", weight: 0.2, group: romaji_simplification]
+KK -> K;
+
+[id: 2397, name: "double P marker", weight: 0.2, group: romaji_simplification]
+PP -> P;
+
+[id: 2398, name: "double T marker", weight: 0.2, group: romaji_simplification]
+TT -> T;
+
+[id: 2399, name: "double N marker", weight: 0.2, group: romaji_simplification]
+NN -> N;
+

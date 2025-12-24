@@ -1,0 +1,293 @@
+// Czech Base Phonetic Rules
+// =========================
+// Phonetic rules for Czech (čeština).
+// West Slavic language spoken in the Czech Republic.
+//
+// Key features:
+//   - Háčky (caron): č(ch), š(sh), ž(zh), ř(rzh - unique!)
+//   - Čárka (acute): á, é, í, ó, ú, ý (long vowels)
+//   - Kroužek: ů (long u, historically from uo)
+//   - Soft consonants: ď, ť, ň
+//
+// Rule IDs: 3300-3349
+
+@name "Czech Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Czech"
+
+// ============================================================
+// SPECIAL CONSONANTS WITH HÁČEK (caron)
+// ============================================================
+
+// Č/č → t͡ʃ (voiceless postalveolar affricate)
+[id: 3300, name: "c hacek", weight: 0.05, group: czech_caron, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 3301, name: "C hacek", weight: 0.05, group: czech_caron, ipa: "/t͡ʃ/"]
+Č -> t͡ʃ;
+
+// Š/š → ʃ (voiceless postalveolar fricative)
+[id: 3302, name: "s hacek", weight: 0.05, group: czech_caron, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 3303, name: "S hacek", weight: 0.05, group: czech_caron, ipa: "/ʃ/"]
+Š -> ʃ;
+
+// Ž/ž → ʒ (voiced postalveolar fricative)
+[id: 3304, name: "z hacek", weight: 0.05, group: czech_caron, ipa: "/ʒ/"]
+ž -> ʒ;
+
+[id: 3305, name: "Z hacek", weight: 0.05, group: czech_caron, ipa: "/ʒ/"]
+Ž -> ʒ;
+
+// Ř/ř → r̝ (raised alveolar trill - unique Czech sound)
+[id: 3306, name: "r hacek", weight: 0.05, group: czech_caron, ipa: "/r̝/"]
+ř -> r̝;
+
+[id: 3307, name: "R hacek", weight: 0.05, group: czech_caron, ipa: "/r̝/"]
+Ř -> r̝;
+
+// ============================================================
+// SOFT CONSONANTS
+// ============================================================
+
+// Ď/ď → ɟ (voiced palatal plosive)
+[id: 3308, name: "d hacek", weight: 0.05, group: czech_soft, ipa: "/ɟ/"]
+ď -> ɟ;
+
+[id: 3309, name: "D hacek", weight: 0.05, group: czech_soft, ipa: "/ɟ/"]
+Ď -> ɟ;
+
+// Ť/ť → c (voiceless palatal plosive)
+[id: 3310, name: "t hacek", weight: 0.05, group: czech_soft, ipa: "/c/"]
+ť -> c;
+
+[id: 3311, name: "T hacek", weight: 0.05, group: czech_soft, ipa: "/c/"]
+Ť -> c;
+
+// Ň/ň → ɲ (palatal nasal, like Spanish ñ)
+[id: 3312, name: "n hacek", weight: 0.05, group: czech_soft, ipa: "/ɲ/"]
+ň -> ɲ;
+
+[id: 3313, name: "N hacek", weight: 0.05, group: czech_soft, ipa: "/ɲ/"]
+Ň -> ɲ;
+
+// ============================================================
+// VOWELS WITH ČÁRKA (acute) - long vowels
+// ============================================================
+
+// Á/á → a (long a, normalize to short)
+[id: 3314, name: "a acute", weight: 0.1, group: czech_long_vowels]
+á -> a;
+
+[id: 3315, name: "A acute", weight: 0.1, group: czech_long_vowels]
+Á -> a;
+
+// É/é → e (long e)
+[id: 3316, name: "e acute", weight: 0.1, group: czech_long_vowels]
+é -> e;
+
+[id: 3317, name: "E acute", weight: 0.1, group: czech_long_vowels]
+É -> e;
+
+// Í/í → i (long i)
+[id: 3318, name: "i acute", weight: 0.1, group: czech_long_vowels]
+í -> i;
+
+[id: 3319, name: "I acute", weight: 0.1, group: czech_long_vowels]
+Í -> i;
+
+// Ó/ó → o (long o, rare in native words)
+[id: 3320, name: "o acute", weight: 0.1, group: czech_long_vowels]
+ó -> o;
+
+[id: 3321, name: "O acute", weight: 0.1, group: czech_long_vowels]
+Ó -> o;
+
+// Ú/ú → u (long u at word start)
+[id: 3322, name: "u acute", weight: 0.1, group: czech_long_vowels]
+ú -> u;
+
+[id: 3323, name: "U acute", weight: 0.1, group: czech_long_vowels]
+Ú -> u;
+
+// Ů/ů → u (long u with kroužek, mid/end of word)
+[id: 3324, name: "u ring", weight: 0.1, group: czech_long_vowels]
+ů -> u;
+
+[id: 3325, name: "U ring", weight: 0.1, group: czech_long_vowels]
+Ů -> u;
+
+// Ý/ý → i (long y, same sound as í)
+[id: 3326, name: "y acute", weight: 0.1, group: czech_long_vowels]
+ý -> i;
+
+[id: 3327, name: "Y acute", weight: 0.1, group: czech_long_vowels]
+Ý -> i;
+
+// ============================================================
+// STANDARD VOWELS
+// ============================================================
+
+[id: 3328, name: "a vowel", weight: 0.15, group: czech_vowels]
+a -> a;
+
+[id: 3329, name: "A vowel", weight: 0.15, group: czech_vowels]
+A -> a;
+
+[id: 3330, name: "e vowel", weight: 0.15, group: czech_vowels]
+e -> e;
+
+[id: 3331, name: "E vowel", weight: 0.15, group: czech_vowels]
+E -> e;
+
+[id: 3332, name: "i vowel", weight: 0.15, group: czech_vowels]
+i -> i;
+
+[id: 3333, name: "I vowel", weight: 0.15, group: czech_vowels]
+I -> i;
+
+[id: 3334, name: "o vowel", weight: 0.15, group: czech_vowels]
+o -> o;
+
+[id: 3335, name: "O vowel", weight: 0.15, group: czech_vowels]
+O -> o;
+
+[id: 3336, name: "u vowel", weight: 0.15, group: czech_vowels]
+u -> u;
+
+[id: 3337, name: "U vowel", weight: 0.15, group: czech_vowels]
+U -> u;
+
+// Y/y → i (y and i have same pronunciation)
+[id: 3338, name: "y vowel", weight: 0.15, group: czech_vowels]
+y -> i;
+
+[id: 3339, name: "Y vowel", weight: 0.15, group: czech_vowels]
+Y -> i;
+
+// ============================================================
+// CONSONANTS
+// ============================================================
+
+[id: 3340, name: "b consonant", weight: 0.2, group: czech_consonants]
+b -> b;
+
+[id: 3341, name: "B consonant", weight: 0.2, group: czech_consonants]
+B -> b;
+
+[id: 3342, name: "c consonant", weight: 0.2, group: czech_consonants, ipa: "/t͡s/"]
+c -> t͡s;
+
+[id: 3343, name: "C consonant", weight: 0.2, group: czech_consonants, ipa: "/t͡s/"]
+C -> t͡s;
+
+[id: 3344, name: "d consonant", weight: 0.2, group: czech_consonants]
+d -> d;
+
+[id: 3345, name: "D consonant", weight: 0.2, group: czech_consonants]
+D -> d;
+
+[id: 3346, name: "f consonant", weight: 0.2, group: czech_consonants]
+f -> f;
+
+[id: 3347, name: "F consonant", weight: 0.2, group: czech_consonants]
+F -> f;
+
+[id: 3348, name: "g consonant", weight: 0.2, group: czech_consonants]
+g -> g;
+
+[id: 3349, name: "G consonant", weight: 0.2, group: czech_consonants]
+G -> g;
+
+[id: 3350, name: "h consonant", weight: 0.2, group: czech_consonants]
+h -> h;
+
+[id: 3351, name: "H consonant", weight: 0.2, group: czech_consonants]
+H -> h;
+
+[id: 3352, name: "j consonant", weight: 0.2, group: czech_consonants, ipa: "/j/"]
+j -> j;
+
+[id: 3353, name: "J consonant", weight: 0.2, group: czech_consonants, ipa: "/j/"]
+J -> j;
+
+[id: 3354, name: "k consonant", weight: 0.2, group: czech_consonants]
+k -> k;
+
+[id: 3355, name: "K consonant", weight: 0.2, group: czech_consonants]
+K -> k;
+
+[id: 3356, name: "l consonant", weight: 0.2, group: czech_consonants]
+l -> l;
+
+[id: 3357, name: "L consonant", weight: 0.2, group: czech_consonants]
+L -> l;
+
+[id: 3358, name: "m consonant", weight: 0.2, group: czech_consonants]
+m -> m;
+
+[id: 3359, name: "M consonant", weight: 0.2, group: czech_consonants]
+M -> m;
+
+[id: 3360, name: "n consonant", weight: 0.2, group: czech_consonants]
+n -> n;
+
+[id: 3361, name: "N consonant", weight: 0.2, group: czech_consonants]
+N -> n;
+
+[id: 3362, name: "p consonant", weight: 0.2, group: czech_consonants]
+p -> p;
+
+[id: 3363, name: "P consonant", weight: 0.2, group: czech_consonants]
+P -> p;
+
+[id: 3364, name: "q consonant", weight: 0.2, group: czech_consonants]
+q -> kv;
+
+[id: 3365, name: "Q consonant", weight: 0.2, group: czech_consonants]
+Q -> kv;
+
+[id: 3366, name: "r consonant", weight: 0.2, group: czech_consonants]
+r -> r;
+
+[id: 3367, name: "R consonant", weight: 0.2, group: czech_consonants]
+R -> r;
+
+[id: 3368, name: "s consonant", weight: 0.2, group: czech_consonants]
+s -> s;
+
+[id: 3369, name: "S consonant", weight: 0.2, group: czech_consonants]
+S -> s;
+
+[id: 3370, name: "t consonant", weight: 0.2, group: czech_consonants]
+t -> t;
+
+[id: 3371, name: "T consonant", weight: 0.2, group: czech_consonants]
+T -> t;
+
+[id: 3372, name: "v consonant", weight: 0.2, group: czech_consonants]
+v -> v;
+
+[id: 3373, name: "V consonant", weight: 0.2, group: czech_consonants]
+V -> v;
+
+[id: 3374, name: "w consonant", weight: 0.2, group: czech_consonants]
+w -> v;
+
+[id: 3375, name: "W consonant", weight: 0.2, group: czech_consonants]
+W -> v;
+
+[id: 3376, name: "x consonant", weight: 0.2, group: czech_consonants]
+x -> ks;
+
+[id: 3377, name: "X consonant", weight: 0.2, group: czech_consonants]
+X -> ks;
+
+[id: 3378, name: "z consonant", weight: 0.2, group: czech_consonants]
+z -> z;
+
+[id: 3379, name: "Z consonant", weight: 0.2, group: czech_consonants]
+Z -> z;
+

@@ -1,0 +1,230 @@
+// Persian (Farsi) Phonetic Rules
+// ===============================
+// Phonetic rules for Persian (فارسی / Farsi).
+// Maps Persian Arabic script to Latin phonetic representations.
+//
+// Key features:
+//   - Arabic script with 4 additional Persian letters
+//   - Persian additions: پ(p), چ(ch), ژ(zh), گ(g)
+//   - Short vowels usually not written
+//   - ع (ayn) often silent in Persian
+//   - ه at word end can be silent or /e/
+//
+// Persian alphabet (32 letters):
+// ا ب پ ت ث ج چ ح خ د ذ ر ز ژ س ش ص ض ط ظ ع غ ف ق ک گ ل م ن و ه ی
+//
+// Rule IDs: 5100-5199
+
+@name "Persian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Persian (Farsi)"
+
+// ============================================================
+// PERSIAN-SPECIFIC LETTERS (highest priority)
+// ============================================================
+
+// پ (pe) → p (not in Arabic)
+[id: 5100, name: "pe to p", weight: 0.05, group: persian_unique]
+پ -> p;
+
+// چ (che) → t͡ʃ (not in Arabic)
+[id: 5101, name: "che to ch", weight: 0.05, group: persian_unique, ipa: "/t͡ʃ/"]
+چ -> t͡ʃ;
+
+// ژ (zhe) → ʒ (not in Arabic)
+[id: 5102, name: "zhe to zh", weight: 0.05, group: persian_unique, ipa: "/ʒ/"]
+ژ -> ʒ;
+
+// گ (gaf) → g (not in Arabic)
+[id: 5103, name: "gaf to g", weight: 0.05, group: persian_unique]
+گ -> g;
+
+// ============================================================
+// CONSONANTS WITH SPECIAL PERSIAN PRONUNCIATION
+// ============================================================
+
+// ث (se) → s (in Persian, not th like Arabic)
+[id: 5104, name: "se to s", weight: 0.1, group: persian_consonants]
+ث -> s;
+
+// ذ (zal) → z (in Persian, not th like Arabic)
+[id: 5105, name: "zal to z", weight: 0.1, group: persian_consonants]
+ذ -> z;
+
+// ص (sad) → s
+[id: 5106, name: "sad to s", weight: 0.1, group: persian_consonants]
+ص -> s;
+
+// ض (zad) → z
+[id: 5107, name: "zad to z", weight: 0.1, group: persian_consonants]
+ض -> z;
+
+// ط (ta) → t
+[id: 5108, name: "ta to t", weight: 0.1, group: persian_consonants]
+ط -> t;
+
+// ظ (za) → z
+[id: 5109, name: "za to z", weight: 0.1, group: persian_consonants]
+ظ -> z;
+
+// ع (ayn) → a (often silent or glottal in Persian)
+[id: 5110, name: "ayn to a", weight: 0.1, group: persian_consonants]
+ع -> a;
+
+// غ (ghayn) → ɣ
+[id: 5111, name: "ghayn to gh", weight: 0.1, group: persian_consonants, ipa: "/ɣ/"]
+غ -> ɣ;
+
+// ق (qaf) → ɣ (in Persian, usually pronounced like غ)
+[id: 5112, name: "qaf to gh", weight: 0.1, group: persian_consonants, ipa: "/ɣ/"]
+ق -> ɣ;
+
+// خ (khe) → x
+[id: 5113, name: "khe to kh", weight: 0.1, group: persian_consonants, ipa: "/x/"]
+خ -> x;
+
+// ح (he) → h (guttural h)
+[id: 5114, name: "he to h", weight: 0.1, group: persian_consonants]
+ح -> h;
+
+// ش (shin) → ʃ
+[id: 5115, name: "shin to sh", weight: 0.1, group: persian_consonants, ipa: "/ʃ/"]
+ش -> ʃ;
+
+// ============================================================
+// STANDARD CONSONANTS
+// ============================================================
+
+// ب (be) → b
+[id: 5116, name: "be to b", weight: 0.15, group: persian_standard]
+ب -> b;
+
+// ت (te) → t
+[id: 5117, name: "te to t", weight: 0.15, group: persian_standard]
+ت -> t;
+
+// ج (jim) → j
+[id: 5118, name: "jim to j", weight: 0.15, group: persian_standard]
+ج -> j;
+
+// د (dal) → d
+[id: 5119, name: "dal to d", weight: 0.15, group: persian_standard]
+د -> d;
+
+// ر (re) → r
+[id: 5120, name: "re to r", weight: 0.15, group: persian_standard]
+ر -> r;
+
+// ز (ze) → z
+[id: 5121, name: "ze to z", weight: 0.15, group: persian_standard]
+ز -> z;
+
+// س (sin) → s
+[id: 5122, name: "sin to s", weight: 0.15, group: persian_standard]
+س -> s;
+
+// ف (fe) → f
+[id: 5123, name: "fe to f", weight: 0.15, group: persian_standard]
+ف -> f;
+
+// ک (kaf) → k
+[id: 5124, name: "kaf to k", weight: 0.15, group: persian_standard]
+ک -> k;
+
+// ل (lam) → l
+[id: 5125, name: "lam to l", weight: 0.15, group: persian_standard]
+ل -> l;
+
+// م (mim) → m
+[id: 5126, name: "mim to m", weight: 0.15, group: persian_standard]
+م -> m;
+
+// ن (nun) → n
+[id: 5127, name: "nun to n", weight: 0.15, group: persian_standard]
+ن -> n;
+
+// ============================================================
+// VOWELS AND SEMI-VOWELS
+// ============================================================
+
+// ا (alef) → a (long vowel carrier)
+[id: 5128, name: "alef to a", weight: 0.15, group: persian_vowels]
+ا -> a;
+
+// آ (alef madda) → a (long a)
+[id: 5129, name: "alef madda to a", weight: 0.15, group: persian_vowels]
+آ -> a;
+
+// و (vav) → v/u/o (context dependent, using v as default)
+[id: 5130, name: "vav to v", weight: 0.15, group: persian_vowels]
+و -> v;
+
+// ی (ye) → y/i (context dependent, using y as default)
+[id: 5131, name: "ye to y", weight: 0.15, group: persian_vowels]
+ی -> y;
+
+// ه (he) → h/e (word-final often silent or /e/)
+[id: 5132, name: "he final to h", weight: 0.15, group: persian_vowels]
+ه -> h;
+
+// ============================================================
+// SHORT VOWEL DIACRITICS (often omitted in writing)
+// ============================================================
+
+// فتحه (fatha) → a
+[id: 5133, name: "fatha to a", weight: 0.2, group: persian_diacritics]
+َ -> a;
+
+// کسره (kasra) → e
+[id: 5134, name: "kasra to e", weight: 0.2, group: persian_diacritics]
+ِ -> e;
+
+// ضمه (damma) → o
+[id: 5135, name: "damma to o", weight: 0.2, group: persian_diacritics]
+ُ -> o;
+
+// سکون (sukun) → (silent, marks no vowel)
+[id: 5136, name: "sukun to empty", weight: 0.2, group: persian_diacritics]
+ْ -> ;
+
+// تشدید (shadda) → (gemination marker, ignore for phonetic)
+[id: 5137, name: "shadda to empty", weight: 0.2, group: persian_diacritics]
+ّ -> ;
+
+// ============================================================
+// SPECIAL CHARACTERS
+// ============================================================
+
+// همزه (hamza) → (glottal stop, often ignored)
+[id: 5138, name: "hamza to empty", weight: 0.2, group: persian_special]
+ء -> ;
+
+// ئ (ye with hamza above)
+[id: 5139, name: "ye hamza to y", weight: 0.2, group: persian_special]
+ئ -> y;
+
+// ؤ (vav with hamza above)
+[id: 5140, name: "vav hamza to v", weight: 0.2, group: persian_special]
+ؤ -> v;
+
+// أ (alef with hamza above)
+[id: 5141, name: "alef hamza above to a", weight: 0.2, group: persian_special]
+أ -> a;
+
+// إ (alef with hamza below)
+[id: 5142, name: "alef hamza below to e", weight: 0.2, group: persian_special]
+إ -> e;
+
+// ة (ta marbuta) → h/a (Arabic ending, rarely used in Persian)
+[id: 5143, name: "ta marbuta to a", weight: 0.2, group: persian_special]
+ة -> a;
+
+// ي (Arabic ye, sometimes used)
+[id: 5144, name: "arabic ye to y", weight: 0.2, group: persian_special]
+ي -> y;
+
+// ك (Arabic kaf, sometimes used)
+[id: 5145, name: "arabic kaf to k", weight: 0.2, group: persian_special]
+ك -> k;
+

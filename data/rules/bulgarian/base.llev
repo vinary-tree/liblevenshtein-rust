@@ -1,0 +1,258 @@
+// Bulgarian Base Phonetic Rules
+// =============================
+// Phonetic rules for Bulgarian (Български език).
+// Maps Cyrillic script to Latin phonetic representations.
+//
+// Key features:
+//   - Cyrillic to Latin transliteration
+//   - Щ = sht (NOT shch like Russian!)
+//   - Ъ = schwa vowel (NOT hard sign like Russian!)
+//   - No Ы, Ё, Э (unlike Russian)
+//   - Iotated vowels (е, ю, я)
+//
+// Rule IDs: 3550-3599
+
+@name "Bulgarian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Bulgarian"
+
+// ============================================================
+// MULTI-CHARACTER PATTERNS (highest priority)
+// ============================================================
+
+// ЩЩ double consonant → ʃt
+[id: 3550, name: "щщ to ʃt", weight: 0.05, group: bulgarian_doubles, ipa: "/ʃt/"]
+щщ -> ʃt;
+
+// ЖЖ double consonant → ʒ
+[id: 3551, name: "жж to ʒ", weight: 0.05, group: bulgarian_doubles, ipa: "/ʒ/"]
+жж -> ʒ;
+
+// ШШ double consonant → ʃ
+[id: 3552, name: "шш to ʃ", weight: 0.05, group: bulgarian_doubles, ipa: "/ʃ/"]
+шш -> ʃ;
+
+// ЦЦ double consonant → t͡s
+[id: 3553, name: "цц to t͡s", weight: 0.05, group: bulgarian_doubles, ipa: "/t͡s/"]
+цц -> t͡s;
+
+// ЧЧ double consonant → t͡ʃ
+[id: 3554, name: "чч to t͡ʃ", weight: 0.05, group: bulgarian_doubles, ipa: "/t͡ʃ/"]
+чч -> t͡ʃ;
+
+// ============================================================
+// COMPLEX CONSONANTS
+// ============================================================
+
+// Щ → ʃt (Bulgarian specific! Unlike Russian shch)
+[id: 3555, name: "щ to ʃt", weight: 0.1, group: bulgarian_complex, ipa: "/ʃt/"]
+щ -> ʃt;
+
+[id: 3556, name: "Щ to ʃt", weight: 0.1, group: bulgarian_complex, ipa: "/ʃt/"]
+Щ -> ʃt;
+
+// Ж → ʒ (voiced postalveolar fricative)
+[id: 3557, name: "ж to ʒ", weight: 0.1, group: bulgarian_complex, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 3558, name: "Ж to ʒ", weight: 0.1, group: bulgarian_complex, ipa: "/ʒ/"]
+Ж -> ʒ;
+
+// Ш → ʃ (voiceless postalveolar fricative)
+[id: 3559, name: "ш to ʃ", weight: 0.1, group: bulgarian_complex, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 3560, name: "Ш to ʃ", weight: 0.1, group: bulgarian_complex, ipa: "/ʃ/"]
+Ш -> ʃ;
+
+// Х → x (voiceless velar fricative)
+[id: 3561, name: "х to x", weight: 0.1, group: bulgarian_complex, ipa: "/x/"]
+х -> x;
+
+[id: 3562, name: "Х to x", weight: 0.1, group: bulgarian_complex, ipa: "/x/"]
+Х -> x;
+
+// Ц → t͡s (voiceless alveolar affricate)
+[id: 3563, name: "ц to t͡s", weight: 0.1, group: bulgarian_complex, ipa: "/t͡s/"]
+ц -> t͡s;
+
+[id: 3564, name: "Ц to t͡s", weight: 0.1, group: bulgarian_complex, ipa: "/t͡s/"]
+Ц -> t͡s;
+
+// Ч → t͡ʃ (voiceless postalveolar affricate)
+[id: 3565, name: "ч to t͡ʃ", weight: 0.1, group: bulgarian_complex, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 3566, name: "Ч to t͡ʃ", weight: 0.1, group: bulgarian_complex, ipa: "/t͡ʃ/"]
+Ч -> t͡ʃ;
+
+// ============================================================
+// IOTATED VOWELS
+// ============================================================
+
+// Е → e (in Bulgarian, е is pronounced as e, not ye like Russian)
+[id: 3567, name: "е to e", weight: 0.15, group: bulgarian_iotated]
+е -> e;
+
+[id: 3568, name: "Е to e", weight: 0.15, group: bulgarian_iotated]
+Е -> e;
+
+// Ю → ju
+[id: 3569, name: "ю to ju", weight: 0.15, group: bulgarian_iotated, ipa: "/ju/"]
+ю -> ju;
+
+[id: 3570, name: "Ю to ju", weight: 0.15, group: bulgarian_iotated, ipa: "/ju/"]
+Ю -> ju;
+
+// Я → ja
+[id: 3571, name: "я to ja", weight: 0.15, group: bulgarian_iotated, ipa: "/ja/"]
+я -> ja;
+
+[id: 3572, name: "Я to ja", weight: 0.15, group: bulgarian_iotated, ipa: "/ja/"]
+Я -> ja;
+
+// ============================================================
+// SCHWA VOWEL (Bulgarian specific!)
+// ============================================================
+
+// Ъ → ə (schwa sound, very common in Bulgarian - NOT a hard sign!)
+[id: 3573, name: "ъ to ə", weight: 0.15, group: bulgarian_schwa, ipa: "/ə/"]
+ъ -> ə;
+
+[id: 3574, name: "Ъ to ə", weight: 0.15, group: bulgarian_schwa, ipa: "/ə/"]
+Ъ -> ə;
+
+// ============================================================
+// SIMPLE VOWELS
+// ============================================================
+
+[id: 3575, name: "а to a", weight: 0.2, group: bulgarian_vowels]
+а -> a;
+
+[id: 3576, name: "А to a", weight: 0.2, group: bulgarian_vowels]
+А -> a;
+
+[id: 3577, name: "и to i", weight: 0.2, group: bulgarian_vowels]
+и -> i;
+
+[id: 3578, name: "И to i", weight: 0.2, group: bulgarian_vowels]
+И -> i;
+
+[id: 3579, name: "о to o", weight: 0.2, group: bulgarian_vowels]
+о -> o;
+
+[id: 3580, name: "О to o", weight: 0.2, group: bulgarian_vowels]
+О -> o;
+
+[id: 3581, name: "у to u", weight: 0.2, group: bulgarian_vowels]
+у -> u;
+
+[id: 3582, name: "У to u", weight: 0.2, group: bulgarian_vowels]
+У -> u;
+
+// ============================================================
+// SIMPLE CONSONANTS
+// ============================================================
+
+[id: 3583, name: "б to b", weight: 0.2, group: bulgarian_consonants]
+б -> b;
+
+[id: 3584, name: "Б to b", weight: 0.2, group: bulgarian_consonants]
+Б -> b;
+
+[id: 3585, name: "в to v", weight: 0.2, group: bulgarian_consonants]
+в -> v;
+
+[id: 3586, name: "В to v", weight: 0.2, group: bulgarian_consonants]
+В -> v;
+
+[id: 3587, name: "г to g", weight: 0.2, group: bulgarian_consonants]
+г -> g;
+
+[id: 3588, name: "Г to g", weight: 0.2, group: bulgarian_consonants]
+Г -> g;
+
+[id: 3589, name: "д to d", weight: 0.2, group: bulgarian_consonants]
+д -> d;
+
+[id: 3590, name: "Д to d", weight: 0.2, group: bulgarian_consonants]
+Д -> d;
+
+[id: 3591, name: "з to z", weight: 0.2, group: bulgarian_consonants]
+з -> z;
+
+[id: 3592, name: "З to z", weight: 0.2, group: bulgarian_consonants]
+З -> z;
+
+[id: 3593, name: "й to j", weight: 0.2, group: bulgarian_consonants, ipa: "/j/"]
+й -> j;
+
+[id: 3594, name: "Й to j", weight: 0.2, group: bulgarian_consonants, ipa: "/j/"]
+Й -> j;
+
+[id: 3595, name: "к to k", weight: 0.2, group: bulgarian_consonants]
+к -> k;
+
+[id: 3596, name: "К to k", weight: 0.2, group: bulgarian_consonants]
+К -> k;
+
+[id: 3597, name: "л to l", weight: 0.2, group: bulgarian_consonants]
+л -> l;
+
+[id: 3598, name: "Л to l", weight: 0.2, group: bulgarian_consonants]
+Л -> l;
+
+[id: 3599, name: "м to m", weight: 0.2, group: bulgarian_consonants]
+м -> m;
+
+[id: 3600, name: "М to m", weight: 0.2, group: bulgarian_consonants]
+М -> m;
+
+[id: 3601, name: "н to n", weight: 0.2, group: bulgarian_consonants]
+н -> n;
+
+[id: 3602, name: "Н to n", weight: 0.2, group: bulgarian_consonants]
+Н -> n;
+
+[id: 3603, name: "п to p", weight: 0.2, group: bulgarian_consonants]
+п -> p;
+
+[id: 3604, name: "П to p", weight: 0.2, group: bulgarian_consonants]
+П -> p;
+
+[id: 3605, name: "р to r", weight: 0.2, group: bulgarian_consonants]
+р -> r;
+
+[id: 3606, name: "Р to r", weight: 0.2, group: bulgarian_consonants]
+Р -> r;
+
+[id: 3607, name: "с to s", weight: 0.2, group: bulgarian_consonants]
+с -> s;
+
+[id: 3608, name: "С to s", weight: 0.2, group: bulgarian_consonants]
+С -> s;
+
+[id: 3609, name: "т to t", weight: 0.2, group: bulgarian_consonants]
+т -> t;
+
+[id: 3610, name: "Т to t", weight: 0.2, group: bulgarian_consonants]
+Т -> t;
+
+[id: 3611, name: "ф to f", weight: 0.2, group: bulgarian_consonants]
+ф -> f;
+
+[id: 3612, name: "Ф to f", weight: 0.2, group: bulgarian_consonants]
+Ф -> f;
+
+// ============================================================
+// SOFT SIGN (palatalization marker)
+// ============================================================
+
+// Ь → (silent, marks palatalization)
+[id: 3613, name: "ь soft sign", weight: 0.2, group: bulgarian_signs]
+ь -> ;
+
+[id: 3614, name: "Ь soft sign", weight: 0.2, group: bulgarian_signs]
+Ь -> ;
+

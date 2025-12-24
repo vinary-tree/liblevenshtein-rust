@@ -1,0 +1,337 @@
+// Russian Base Phonetic Rules
+// ===========================
+// Phonetic rules for Standard Russian (Русский язык).
+// Maps Cyrillic script to Latin phonetic representations.
+//
+// Key features:
+//   - Cyrillic to Latin transliteration
+//   - Vowel reduction (о in unstressed positions)
+//   - Final devoicing
+//   - Soft consonants (before ь and soft vowels)
+//   - Iotated vowels (е, ё, ю, я → ye, yo, yu, ya)
+//
+// Rule IDs: 2000-2099
+
+@name "Russian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Standard Russian"
+
+// ============================================================
+// MULTI-CHARACTER PATTERNS (highest priority)
+// ============================================================
+
+// ЩЩ double consonant → ɕː (long palatal fricative)
+[id: 2000, name: "щщ to ɕː", weight: 0.05, group: russian_doubles, ipa: "/ɕː/"]
+щщ -> ɕː;
+
+// ЖЖ double consonant → ʒ
+[id: 2001, name: "жж to ʒ", weight: 0.05, group: russian_doubles, ipa: "/ʒ/"]
+жж -> ʒ;
+
+// ШШ double consonant → ʃ
+[id: 2002, name: "шш to ʃ", weight: 0.05, group: russian_doubles, ipa: "/ʃ/"]
+шш -> ʃ;
+
+// ЦЦ double consonant → t͡s
+[id: 2003, name: "цц to t͡s", weight: 0.05, group: russian_doubles, ipa: "/t͡s/"]
+цц -> t͡s;
+
+// ЧЧ double consonant → t͡ʃ
+[id: 2004, name: "чч to t͡ʃ", weight: 0.05, group: russian_doubles, ipa: "/t͡ʃ/"]
+чч -> t͡ʃ;
+
+// ============================================================
+// COMPLEX CONSONANTS (before simple consonants)
+// ============================================================
+
+// Щ → ɕː (voiceless alveolo-palatal fricative, long)
+[id: 2010, name: "щ to ɕː", weight: 0.1, group: russian_complex, ipa: "/ɕː/"]
+щ -> ɕː;
+
+[id: 2011, name: "Щ to ɕː", weight: 0.1, group: russian_complex, ipa: "/ɕː/"]
+Щ -> ɕː;
+
+// Ж → ʒ (voiced postalveolar fricative)
+[id: 2012, name: "ж to ʒ", weight: 0.1, group: russian_complex, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 2013, name: "Ж to ʒ", weight: 0.1, group: russian_complex, ipa: "/ʒ/"]
+Ж -> ʒ;
+
+// Ш → ʃ (voiceless postalveolar fricative)
+[id: 2014, name: "ш to ʃ", weight: 0.1, group: russian_complex, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 2015, name: "Ш to ʃ", weight: 0.1, group: russian_complex, ipa: "/ʃ/"]
+Ш -> ʃ;
+
+// Х → x (voiceless velar fricative)
+[id: 2016, name: "х to x", weight: 0.1, group: russian_complex, ipa: "/x/"]
+х -> x;
+
+[id: 2017, name: "Х to x", weight: 0.1, group: russian_complex, ipa: "/x/"]
+Х -> x;
+
+// Ц → t͡s (voiceless alveolar affricate)
+[id: 2018, name: "ц to t͡s", weight: 0.1, group: russian_complex, ipa: "/t͡s/"]
+ц -> t͡s;
+
+[id: 2019, name: "Ц to t͡s", weight: 0.1, group: russian_complex, ipa: "/t͡s/"]
+Ц -> t͡s;
+
+// Ч → t͡ʃ (voiceless postalveolar affricate)
+[id: 2020, name: "ч to t͡ʃ", weight: 0.1, group: russian_complex, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 2021, name: "Ч to t͡ʃ", weight: 0.1, group: russian_complex, ipa: "/t͡ʃ/"]
+Ч -> t͡ʃ;
+
+// ============================================================
+// IOTATED VOWELS (vowels with initial /j/)
+// ============================================================
+// These vowels contain a "y" sound at the start
+
+// Е → je (or e after consonants - simplified to je for matching)
+[id: 2025, name: "е to je", weight: 0.15, group: russian_iotated, ipa: "/je/"]
+е -> je;
+
+[id: 2026, name: "Е to je", weight: 0.15, group: russian_iotated, ipa: "/je/"]
+Е -> je;
+
+// Ё → jo (always stressed, always iotated)
+[id: 2027, name: "ё to jo", weight: 0.15, group: russian_iotated, ipa: "/jo/"]
+ё -> jo;
+
+[id: 2028, name: "Ё to jo", weight: 0.15, group: russian_iotated, ipa: "/jo/"]
+Ё -> jo;
+
+// Ю → ju
+[id: 2029, name: "ю to ju", weight: 0.15, group: russian_iotated, ipa: "/ju/"]
+ю -> ju;
+
+[id: 2030, name: "Ю to ju", weight: 0.15, group: russian_iotated, ipa: "/ju/"]
+Ю -> ju;
+
+// Я → ja
+[id: 2031, name: "я to ja", weight: 0.15, group: russian_iotated, ipa: "/ja/"]
+я -> ja;
+
+[id: 2032, name: "Я to ja", weight: 0.15, group: russian_iotated, ipa: "/ja/"]
+Я -> ja;
+
+// ============================================================
+// SIMPLE VOWELS
+// ============================================================
+
+// А → a
+[id: 2035, name: "а to a", weight: 0.2, group: russian_vowels]
+а -> a;
+
+[id: 2036, name: "А to a", weight: 0.2, group: russian_vowels]
+А -> a;
+
+// Э → e (open e, like "bed")
+[id: 2037, name: "э to e", weight: 0.2, group: russian_vowels]
+э -> e;
+
+[id: 2038, name: "Э to e", weight: 0.2, group: russian_vowels]
+Э -> e;
+
+// И → i
+[id: 2039, name: "и to i", weight: 0.2, group: russian_vowels]
+и -> i;
+
+[id: 2040, name: "И to i", weight: 0.2, group: russian_vowels]
+И -> i;
+
+// О → o
+[id: 2041, name: "о to o", weight: 0.2, group: russian_vowels]
+о -> o;
+
+[id: 2042, name: "О to o", weight: 0.2, group: russian_vowels]
+О -> o;
+
+// У → u
+[id: 2043, name: "у to u", weight: 0.2, group: russian_vowels]
+у -> u;
+
+[id: 2044, name: "У to u", weight: 0.2, group: russian_vowels]
+У -> u;
+
+// Ы → ɨ (unique Russian vowel, close central unrounded)
+[id: 2045, name: "ы to ɨ", weight: 0.2, group: russian_vowels, ipa: "/ɨ/"]
+ы -> ɨ;
+
+[id: 2046, name: "Ы to ɨ", weight: 0.2, group: russian_vowels, ipa: "/ɨ/"]
+Ы -> ɨ;
+
+// ============================================================
+// SIMPLE CONSONANTS
+// ============================================================
+
+// Б → b
+[id: 2050, name: "б to b", weight: 0.25, group: russian_consonants]
+б -> b;
+
+[id: 2051, name: "Б to b", weight: 0.25, group: russian_consonants]
+Б -> b;
+
+// В → v
+[id: 2052, name: "в to v", weight: 0.25, group: russian_consonants]
+в -> v;
+
+[id: 2053, name: "В to v", weight: 0.25, group: russian_consonants]
+В -> v;
+
+// Г → g
+[id: 2054, name: "г to g", weight: 0.25, group: russian_consonants]
+г -> g;
+
+[id: 2055, name: "Г to g", weight: 0.25, group: russian_consonants]
+Г -> g;
+
+// Д → d
+[id: 2056, name: "д to d", weight: 0.25, group: russian_consonants]
+д -> d;
+
+[id: 2057, name: "Д to d", weight: 0.25, group: russian_consonants]
+Д -> d;
+
+// З → z
+[id: 2058, name: "з to z", weight: 0.25, group: russian_consonants]
+з -> z;
+
+[id: 2059, name: "З to z", weight: 0.25, group: russian_consonants]
+З -> z;
+
+// Й → j (palatal approximant)
+[id: 2060, name: "й to j", weight: 0.25, group: russian_consonants, ipa: "/j/"]
+й -> j;
+
+[id: 2061, name: "Й to j", weight: 0.25, group: russian_consonants, ipa: "/j/"]
+Й -> j;
+
+// К → k
+[id: 2062, name: "к to k", weight: 0.25, group: russian_consonants]
+к -> k;
+
+[id: 2063, name: "К to k", weight: 0.25, group: russian_consonants]
+К -> k;
+
+// Л → l
+[id: 2064, name: "л to l", weight: 0.25, group: russian_consonants]
+л -> l;
+
+[id: 2065, name: "Л to l", weight: 0.25, group: russian_consonants]
+Л -> l;
+
+// М → m
+[id: 2066, name: "м to m", weight: 0.25, group: russian_consonants]
+м -> m;
+
+[id: 2067, name: "М to m", weight: 0.25, group: russian_consonants]
+М -> m;
+
+// Н → n
+[id: 2068, name: "н to n", weight: 0.25, group: russian_consonants]
+н -> n;
+
+[id: 2069, name: "Н to n", weight: 0.25, group: russian_consonants]
+Н -> n;
+
+// П → p
+[id: 2070, name: "п to p", weight: 0.25, group: russian_consonants]
+п -> p;
+
+[id: 2071, name: "П to p", weight: 0.25, group: russian_consonants]
+П -> p;
+
+// Р → r
+[id: 2072, name: "р to r", weight: 0.25, group: russian_consonants]
+р -> r;
+
+[id: 2073, name: "Р to r", weight: 0.25, group: russian_consonants]
+Р -> r;
+
+// С → s
+[id: 2074, name: "с to s", weight: 0.25, group: russian_consonants]
+с -> s;
+
+[id: 2075, name: "С to s", weight: 0.25, group: russian_consonants]
+С -> s;
+
+// Т → t
+[id: 2076, name: "т to t", weight: 0.25, group: russian_consonants]
+т -> t;
+
+[id: 2077, name: "Т to t", weight: 0.25, group: russian_consonants]
+Т -> t;
+
+// Ф → f
+[id: 2078, name: "ф to f", weight: 0.25, group: russian_consonants]
+ф -> f;
+
+[id: 2079, name: "Ф to f", weight: 0.25, group: russian_consonants]
+Ф -> f;
+
+// ============================================================
+// SOFT AND HARD SIGNS
+// ============================================================
+// These modify the preceding consonant but have no sound of their own
+
+// Ь (soft sign) → remove (marks palatalization)
+[id: 2085, name: "soft sign remove", weight: 0.3, group: russian_signs]
+ь -> ;
+
+[id: 2086, name: "Soft sign remove", weight: 0.3, group: russian_signs]
+Ь -> ;
+
+// Ъ (hard sign) → remove (marks separation, no longer used much)
+[id: 2087, name: "hard sign remove", weight: 0.3, group: russian_signs]
+ъ -> ;
+
+[id: 2088, name: "Hard sign remove", weight: 0.3, group: russian_signs]
+Ъ -> ;
+
+// ============================================================
+// FINAL DEVOICING (at word end)
+// ============================================================
+// Voiced consonants become voiceless at word end
+// Must run BEFORE transliteration (lower weight = earlier)
+
+[id: 2090, name: "final б to p", weight: 0.08, group: russian_devoicing]
+б -> p / _#;
+
+[id: 2091, name: "final в to f", weight: 0.08, group: russian_devoicing]
+в -> f / _#;
+
+[id: 2092, name: "final г to k", weight: 0.08, group: russian_devoicing]
+г -> k / _#;
+
+[id: 2093, name: "final д to t", weight: 0.08, group: russian_devoicing]
+д -> t / _#;
+
+[id: 2094, name: "final ж to ʃ", weight: 0.08, group: russian_devoicing, ipa: "/ʃ/"]
+ж -> ʃ / _#;
+
+[id: 2095, name: "final з to s", weight: 0.08, group: russian_devoicing]
+з -> s / _#;
+
+// ============================================================
+// DOUBLE CONSONANT SIMPLIFICATION (Latin output)
+// ============================================================
+// After transliteration, simplify double Latin consonants
+
+[id: 2096, name: "bb to b", weight: 0.4, group: russian_latin_doubles]
+bb -> b;
+
+[id: 2097, name: "dd to d", weight: 0.4, group: russian_latin_doubles]
+dd -> d;
+
+[id: 2098, name: "ff to f", weight: 0.4, group: russian_latin_doubles]
+ff -> f;
+
+[id: 2099, name: "kk to k", weight: 0.4, group: russian_latin_doubles]
+kk -> k;
+

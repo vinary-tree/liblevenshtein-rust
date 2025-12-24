@@ -1,0 +1,80 @@
+// Castilian Spanish Dialect Rules
+// ================================
+// Dialect-specific rules for Castilian (Peninsular) Spanish.
+// These rules layer on top of the shared Spanish base rules.
+//
+// Key Castilian Feature: DISTINCIÓN
+//   - Z and C (before e/i) are pronounced as /θ/ (theta, like English "th" in "think")
+//   - S remains /s/
+//   - This distinguishes "caza" (hunt) from "casa" (house)
+//
+// This is in contrast to Latin American "seseo" where all become /s/.
+
+@name "Castilian Spanish Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Castilian (Peninsular) Spanish"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define FRONT_VOWEL = [eiéí]
+@define CONSONANT = [bcdfghjklmnñpqrstvwxyz]
+
+// ============================================================
+// DISTINCIÓN: Z → θ
+// ============================================================
+// Z is always /θ/ in Castilian Spanish
+
+[id: 1100, name: "z to theta", weight: 0.15, group: castilian_distincion, ipa: "/θ/"]
+z -> θ;
+
+// ============================================================
+// DISTINCIÓN: C before front vowels → θ
+// ============================================================
+// C before e/i is /θ/ (overrides base rule)
+
+[id: 1110, name: "c before e to theta", weight: 0.1, group: castilian_distincion, ipa: "/θ/"]
+ce -> θe;
+
+[id: 1111, name: "c before i to theta", weight: 0.1, group: castilian_distincion, ipa: "/θ/"]
+ci -> θi;
+
+[id: 1112, name: "c before é to theta", weight: 0.1, group: castilian_distincion, ipa: "/θ/"]
+cé -> θé;
+
+[id: 1113, name: "c before í to theta", weight: 0.1, group: castilian_distincion, ipa: "/θ/"]
+cí -> θí;
+
+// ============================================================
+// C elsewhere → K
+// ============================================================
+// C before a/o/u or consonants is /k/
+
+[id: 1120, name: "c before a", weight: 0.2, group: castilian_c]
+ca -> ka;
+
+[id: 1121, name: "c before o", weight: 0.2, group: castilian_c]
+co -> ko;
+
+[id: 1122, name: "c before u", weight: 0.2, group: castilian_c]
+cu -> ku;
+
+[id: 1123, name: "c before á", weight: 0.2, group: castilian_c]
+cá -> ká;
+
+[id: 1124, name: "c before ó", weight: 0.2, group: castilian_c]
+có -> kó;
+
+[id: 1125, name: "c before ú", weight: 0.2, group: castilian_c]
+cú -> kú;
+
+// C before consonant
+[id: 1130, name: "c before consonant", weight: 0.25, group: castilian_c]
+c -> k / _$CONSONANT;
+
+// C at word end (rare in Spanish)
+[id: 1131, name: "c at word end", weight: 0.25, group: castilian_c]
+c -> k / _#;
+

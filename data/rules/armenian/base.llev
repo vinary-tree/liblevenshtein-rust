@@ -1,0 +1,334 @@
+// Armenian Base Phonetic Rules
+// ============================
+// Phonetic rules for Armenian script romanization.
+// Maps Armenian letters to Latin equivalents for phonetic matching.
+//
+// Armenian script created in 405 AD:
+//   - 39 letters (originally 36)
+//   - Has uppercase and lowercase
+//   - Aspirated consonant series
+//   - Two dialects: Eastern (Armenia) vs Western (diaspora)
+//   - This implementation follows Eastern Armenian pronunciation
+//
+// Rule IDs: 4700-4799
+
+@name "Armenian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Armenian script"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// Armenian has 6 vowels (7 including schwa)
+// Both uppercase and lowercase forms
+// ============================================================
+
+// Uppercase vowels
+[id: 4700, name: "ayb upper", weight: 0.05, group: armenian_vowels]
+\u0531 -> a;
+
+[id: 4701, name: "ech upper", weight: 0.05, group: armenian_vowels]
+\u0535 -> e;
+
+[id: 4702, name: "e upper", weight: 0.05, group: armenian_vowels, ipa: "/ɛ/"]
+\u0537 -> ɛ;
+
+[id: 4703, name: "ini upper", weight: 0.05, group: armenian_vowels]
+\u053B -> i;
+
+[id: 4704, name: "oh upper", weight: 0.05, group: armenian_vowels]
+\u0548 -> o;
+
+[id: 4705, name: "o upper", weight: 0.05, group: armenian_vowels, ipa: "/ɔ/"]
+\u0555 -> ɔ;
+
+// Lowercase vowels
+[id: 4710, name: "ayb lower", weight: 0.05, group: armenian_vowels]
+\u0561 -> a;
+
+[id: 4711, name: "ech lower", weight: 0.05, group: armenian_vowels]
+\u0565 -> e;
+
+[id: 4712, name: "e lower", weight: 0.05, group: armenian_vowels, ipa: "/ɛ/"]
+\u0567 -> ɛ;
+
+[id: 4713, name: "ini lower", weight: 0.05, group: armenian_vowels]
+\u056B -> i;
+
+[id: 4714, name: "oh lower", weight: 0.05, group: armenian_vowels]
+\u0578 -> o;
+
+[id: 4715, name: "o lower", weight: 0.05, group: armenian_vowels, ipa: "/ɔ/"]
+\u0585 -> ɔ;
+
+// Schwa (sometimes considered vowel, sometimes consonant)
+[id: 4716, name: "et upper schwa", weight: 0.05, group: armenian_vowels, ipa: "/ə/"]
+\u0538 -> ə;
+
+[id: 4717, name: "et lower schwa", weight: 0.05, group: armenian_vowels, ipa: "/ə/"]
+\u0568 -> ə;
+
+// ============================================================
+// CONSONANTS - VOICED STOPS
+// ============================================================
+
+[id: 4720, name: "ben upper", weight: 0.05, group: armenian_voiced_stops]
+\u0532 -> b;
+
+[id: 4721, name: "ben lower", weight: 0.05, group: armenian_voiced_stops]
+\u0562 -> b;
+
+[id: 4722, name: "gim upper", weight: 0.05, group: armenian_voiced_stops]
+\u0533 -> g;
+
+[id: 4723, name: "gim lower", weight: 0.05, group: armenian_voiced_stops]
+\u0563 -> g;
+
+[id: 4724, name: "da upper", weight: 0.05, group: armenian_voiced_stops]
+\u0534 -> d;
+
+[id: 4725, name: "da lower", weight: 0.05, group: armenian_voiced_stops]
+\u0564 -> d;
+
+// ============================================================
+// CONSONANTS - VOICELESS STOPS (aspirated)
+// ============================================================
+
+[id: 4730, name: "to upper aspirated", weight: 0.05, group: armenian_aspirated, ipa: "/tʰ/"]
+\u0539 -> tʰ;
+
+[id: 4731, name: "to lower aspirated", weight: 0.05, group: armenian_aspirated, ipa: "/tʰ/"]
+\u0569 -> tʰ;
+
+[id: 4732, name: "piwr upper aspirated", weight: 0.05, group: armenian_aspirated, ipa: "/pʰ/"]
+\u0553 -> pʰ;
+
+[id: 4733, name: "piwr lower aspirated", weight: 0.05, group: armenian_aspirated, ipa: "/pʰ/"]
+\u0583 -> pʰ;
+
+[id: 4734, name: "ke upper aspirated", weight: 0.05, group: armenian_aspirated, ipa: "/kʰ/"]
+\u0554 -> kʰ;
+
+[id: 4735, name: "ke lower aspirated", weight: 0.05, group: armenian_aspirated, ipa: "/kʰ/"]
+\u0584 -> kʰ;
+
+// ============================================================
+// CONSONANTS - EJECTIVE-LIKE (Eastern Armenian)
+// ============================================================
+
+[id: 4740, name: "tiwn upper", weight: 0.05, group: armenian_ejective_like]
+\u054F -> t;
+
+[id: 4741, name: "tiwn lower", weight: 0.05, group: armenian_ejective_like]
+\u057F -> t;
+
+[id: 4742, name: "pe upper", weight: 0.05, group: armenian_ejective_like]
+\u054A -> p;
+
+[id: 4743, name: "pe lower", weight: 0.05, group: armenian_ejective_like]
+\u057A -> p;
+
+[id: 4744, name: "ken upper", weight: 0.05, group: armenian_ejective_like]
+\u053F -> k;
+
+[id: 4745, name: "ken lower", weight: 0.05, group: armenian_ejective_like]
+\u056F -> k;
+
+// ============================================================
+// CONSONANTS - AFFRICATES
+// ============================================================
+
+[id: 4750, name: "tsa upper", weight: 0.05, group: armenian_affricates, ipa: "/t͡sʰ/"]
+\u053E -> t͡sʰ;
+
+[id: 4751, name: "tsa lower", weight: 0.05, group: armenian_affricates, ipa: "/t͡sʰ/"]
+\u056E -> t͡sʰ;
+
+[id: 4752, name: "ja upper", weight: 0.05, group: armenian_affricates, ipa: "/d͡z/"]
+\u0541 -> d͡z;
+
+[id: 4753, name: "ja lower", weight: 0.05, group: armenian_affricates, ipa: "/d͡z/"]
+\u0571 -> d͡z;
+
+[id: 4754, name: "che upper", weight: 0.05, group: armenian_affricates, ipa: "/t͡ʃ/"]
+\u0543 -> t͡ʃ;
+
+[id: 4755, name: "che lower", weight: 0.05, group: armenian_affricates, ipa: "/t͡ʃ/"]
+\u0573 -> t͡ʃ;
+
+[id: 4756, name: "cha upper aspirated", weight: 0.05, group: armenian_affricates, ipa: "/t͡ʃʰ/"]
+\u0549 -> t͡ʃʰ;
+
+[id: 4757, name: "cha lower aspirated", weight: 0.05, group: armenian_affricates, ipa: "/t͡ʃʰ/"]
+\u0579 -> t͡ʃʰ;
+
+[id: 4758, name: "je upper", weight: 0.05, group: armenian_affricates, ipa: "/d͡ʒ/"]
+\u054B -> d͡ʒ;
+
+[id: 4759, name: "je lower", weight: 0.05, group: armenian_affricates, ipa: "/d͡ʒ/"]
+\u057B -> d͡ʒ;
+
+[id: 4760, name: "co upper", weight: 0.05, group: armenian_affricates, ipa: "/t͡s/"]
+\u0551 -> t͡s;
+
+[id: 4761, name: "co lower", weight: 0.05, group: armenian_affricates, ipa: "/t͡s/"]
+\u0581 -> t͡s;
+
+// ============================================================
+// CONSONANTS - FRICATIVES
+// ============================================================
+
+[id: 4765, name: "za upper", weight: 0.05, group: armenian_fricatives]
+\u0536 -> z;
+
+[id: 4766, name: "za lower", weight: 0.05, group: armenian_fricatives]
+\u0566 -> z;
+
+[id: 4767, name: "zhe upper", weight: 0.05, group: armenian_fricatives, ipa: "/ʒ/"]
+\u053A -> ʒ;
+
+[id: 4768, name: "zhe lower", weight: 0.05, group: armenian_fricatives, ipa: "/ʒ/"]
+\u056A -> ʒ;
+
+[id: 4769, name: "sha upper", weight: 0.05, group: armenian_fricatives, ipa: "/ʃ/"]
+\u0547 -> ʃ;
+
+[id: 4770, name: "sha lower", weight: 0.05, group: armenian_fricatives, ipa: "/ʃ/"]
+\u0577 -> ʃ;
+
+[id: 4771, name: "se upper", weight: 0.05, group: armenian_fricatives]
+\u054D -> s;
+
+[id: 4772, name: "se lower", weight: 0.05, group: armenian_fricatives]
+\u057D -> s;
+
+[id: 4773, name: "ho upper", weight: 0.05, group: armenian_fricatives]
+\u0540 -> h;
+
+[id: 4774, name: "ho lower", weight: 0.05, group: armenian_fricatives]
+\u0570 -> h;
+
+[id: 4775, name: "xe upper", weight: 0.05, group: armenian_fricatives]
+\u053D -> x;
+
+[id: 4776, name: "xe lower", weight: 0.05, group: armenian_fricatives]
+\u056D -> x;
+
+[id: 4777, name: "ghat upper", weight: 0.05, group: armenian_fricatives, ipa: "/ɣ/"]
+\u0542 -> ɣ;
+
+[id: 4778, name: "ghat lower", weight: 0.05, group: armenian_fricatives, ipa: "/ɣ/"]
+\u0572 -> ɣ;
+
+[id: 4779, name: "fe upper", weight: 0.05, group: armenian_fricatives]
+\u0556 -> f;
+
+[id: 4780, name: "fe lower", weight: 0.05, group: armenian_fricatives]
+\u0586 -> f;
+
+// ============================================================
+// CONSONANTS - SONORANTS
+// ============================================================
+
+[id: 4782, name: "men upper", weight: 0.05, group: armenian_sonorants]
+\u0544 -> m;
+
+[id: 4783, name: "men lower", weight: 0.05, group: armenian_sonorants]
+\u0574 -> m;
+
+[id: 4784, name: "nu upper", weight: 0.05, group: armenian_sonorants]
+\u0546 -> n;
+
+[id: 4785, name: "nu lower", weight: 0.05, group: armenian_sonorants]
+\u0576 -> n;
+
+[id: 4786, name: "liwn upper", weight: 0.05, group: armenian_sonorants]
+\u053C -> l;
+
+[id: 4787, name: "liwn lower", weight: 0.05, group: armenian_sonorants]
+\u056C -> l;
+
+[id: 4788, name: "re upper", weight: 0.05, group: armenian_sonorants]
+\u0550 -> r;
+
+[id: 4789, name: "re lower", weight: 0.05, group: armenian_sonorants]
+\u0580 -> r;
+
+[id: 4790, name: "ra upper trilled", weight: 0.05, group: armenian_sonorants]
+\u054C -> RR;
+
+[id: 4791, name: "ra lower trilled", weight: 0.05, group: armenian_sonorants]
+\u057C -> RR;
+
+[id: 4792, name: "vew upper", weight: 0.05, group: armenian_sonorants]
+\u054E -> v;
+
+[id: 4793, name: "vew lower", weight: 0.05, group: armenian_sonorants]
+\u057E -> v;
+
+[id: 4794, name: "yi upper", weight: 0.05, group: armenian_sonorants]
+\u0545 -> y;
+
+[id: 4795, name: "yi lower", weight: 0.05, group: armenian_sonorants]
+\u0575 -> y;
+
+// Historical/obsolete letters
+[id: 4796, name: "wiwn upper", weight: 0.1, group: armenian_archaic]
+\u0552 -> w;
+
+[id: 4797, name: "wiwn lower", weight: 0.1, group: armenian_archaic]
+\u0582 -> w;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// Simplify IPA markers for fuzzy matching
+// Affricates at 0.15 (must fire before single letters at 0.2)
+// ============================================================
+
+// Affricate simplifications (weight 0.15 - fire first)
+[id: 4803, name: "simplify aspirated ts affricate", weight: 0.15, group: armenian_simplification]
+t͡sʰ -> t͡s;
+
+[id: 4804, name: "simplify dz affricate", weight: 0.15, group: armenian_simplification]
+d͡zd͡z -> d͡z;
+
+[id: 4805, name: "simplify aspirated ch affricate", weight: 0.15, group: armenian_simplification]
+t͡ʃʰ -> t͡ʃ;
+
+[id: 4806, name: "double sh", weight: 0.15, group: armenian_simplification]
+ʃʃ -> ʃ;
+
+[id: 4807, name: "double zh", weight: 0.15, group: armenian_simplification]
+ʒʒ -> ʒ;
+
+[id: 4808, name: "double gh", weight: 0.15, group: armenian_simplification]
+ɣɣ -> ɣ;
+
+[id: 4809, name: "double ch affricate", weight: 0.15, group: armenian_simplification]
+t͡ʃt͡ʃ -> t͡ʃ;
+
+[id: 4810, name: "double ts affricate", weight: 0.15, group: armenian_simplification]
+t͡st͡s -> t͡s;
+
+[id: 4811, name: "double dzh affricate", weight: 0.15, group: armenian_simplification]
+d͡ʒd͡ʒ -> d͡ʒ;
+
+// Aspirated simplifications (weight 0.2 - fire after affricates)
+[id: 4812, name: "simplify aspirated t", weight: 0.2, group: armenian_simplification]
+tʰ -> t;
+
+[id: 4813, name: "simplify aspirated p", weight: 0.2, group: armenian_simplification]
+pʰ -> p;
+
+[id: 4814, name: "simplify aspirated k", weight: 0.2, group: armenian_simplification]
+kʰ -> k;
+
+[id: 4815, name: "simplify open e", weight: 0.2, group: armenian_simplification]
+ɛ -> e;
+
+[id: 4816, name: "simplify open o", weight: 0.2, group: armenian_simplification]
+ɔ -> o;
+
+[id: 4817, name: "simplify schwa", weight: 0.2, group: armenian_simplification]
+ə -> e;
+

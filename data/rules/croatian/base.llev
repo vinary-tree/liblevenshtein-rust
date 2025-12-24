@@ -1,0 +1,256 @@
+// Croatian Base Phonetic Rules
+// ============================
+// Phonetic rules for Croatian (hrvatski).
+// South Slavic language spoken in Croatia.
+//
+// Key features:
+//   - Latin script only (unlike Serbian which uses both)
+//   - Digraphs as single letters: lj, nj, dž
+//   - Diacritics: č, ć, š, ž, đ
+//   - Perfect phonemic orthography
+//
+// Rule IDs: 3500-3549
+
+@name "Croatian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Croatian"
+
+// ============================================================
+// DIGRAPHS (high priority - treated as single letters)
+// ============================================================
+
+// LJ/lj → ʎ (palatal lateral approximant)
+[id: 3500, name: "lj digraph", weight: 0.05, group: croatian_digraphs, ipa: "/ʎ/"]
+lj -> ʎ;
+
+[id: 3501, name: "Lj digraph", weight: 0.05, group: croatian_digraphs, ipa: "/ʎ/"]
+Lj -> ʎ;
+
+[id: 3502, name: "LJ digraph", weight: 0.05, group: croatian_digraphs, ipa: "/ʎ/"]
+LJ -> ʎ;
+
+// NJ/nj → ɲ (palatal nasal, like Spanish ñ)
+[id: 3503, name: "nj digraph", weight: 0.05, group: croatian_digraphs, ipa: "/ɲ/"]
+nj -> ɲ;
+
+[id: 3504, name: "Nj digraph", weight: 0.05, group: croatian_digraphs, ipa: "/ɲ/"]
+Nj -> ɲ;
+
+[id: 3505, name: "NJ digraph", weight: 0.05, group: croatian_digraphs, ipa: "/ɲ/"]
+NJ -> ɲ;
+
+// DŽ/dž → d͡ʒ (voiced postalveolar affricate)
+[id: 3506, name: "dz hacek", weight: 0.05, group: croatian_digraphs, ipa: "/d͡ʒ/"]
+dž -> d͡ʒ;
+
+[id: 3507, name: "Dz hacek", weight: 0.05, group: croatian_digraphs, ipa: "/d͡ʒ/"]
+Dž -> d͡ʒ;
+
+[id: 3508, name: "DZ hacek", weight: 0.05, group: croatian_digraphs, ipa: "/d͡ʒ/"]
+DŽ -> d͡ʒ;
+
+// ============================================================
+// CONSONANTS WITH DIACRITICS
+// ============================================================
+
+// Č/č → t͡ʃ (voiceless postalveolar affricate)
+[id: 3509, name: "c hacek", weight: 0.05, group: croatian_diacritics, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 3510, name: "C hacek", weight: 0.05, group: croatian_diacritics, ipa: "/t͡ʃ/"]
+Č -> t͡ʃ;
+
+// Ć/ć → tɕ (voiceless alveolo-palatal affricate, softer than č)
+[id: 3511, name: "c acute", weight: 0.05, group: croatian_diacritics, ipa: "/tɕ/"]
+ć -> tɕ;
+
+[id: 3512, name: "C acute", weight: 0.05, group: croatian_diacritics, ipa: "/tɕ/"]
+Ć -> tɕ;
+
+// Š/š → ʃ (voiceless postalveolar fricative)
+[id: 3513, name: "s hacek", weight: 0.05, group: croatian_diacritics, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 3514, name: "S hacek", weight: 0.05, group: croatian_diacritics, ipa: "/ʃ/"]
+Š -> ʃ;
+
+// Ž/ž → ʒ (voiced postalveolar fricative)
+[id: 3515, name: "z hacek", weight: 0.05, group: croatian_diacritics, ipa: "/ʒ/"]
+ž -> ʒ;
+
+[id: 3516, name: "Z hacek", weight: 0.05, group: croatian_diacritics, ipa: "/ʒ/"]
+Ž -> ʒ;
+
+// Đ/đ → dʑ (voiced alveolo-palatal affricate)
+[id: 3517, name: "d stroke", weight: 0.05, group: croatian_diacritics, ipa: "/dʑ/"]
+đ -> dʑ;
+
+[id: 3518, name: "D stroke", weight: 0.05, group: croatian_diacritics, ipa: "/dʑ/"]
+Đ -> dʑ;
+
+// ============================================================
+// STANDARD VOWELS
+// ============================================================
+
+[id: 3519, name: "a vowel", weight: 0.15, group: croatian_vowels]
+a -> a;
+
+[id: 3520, name: "A vowel", weight: 0.15, group: croatian_vowels]
+A -> a;
+
+[id: 3521, name: "e vowel", weight: 0.15, group: croatian_vowels]
+e -> e;
+
+[id: 3522, name: "E vowel", weight: 0.15, group: croatian_vowels]
+E -> e;
+
+[id: 3523, name: "i vowel", weight: 0.15, group: croatian_vowels]
+i -> i;
+
+[id: 3524, name: "I vowel", weight: 0.15, group: croatian_vowels]
+I -> i;
+
+[id: 3525, name: "o vowel", weight: 0.15, group: croatian_vowels]
+o -> o;
+
+[id: 3526, name: "O vowel", weight: 0.15, group: croatian_vowels]
+O -> o;
+
+[id: 3527, name: "u vowel", weight: 0.15, group: croatian_vowels]
+u -> u;
+
+[id: 3528, name: "U vowel", weight: 0.15, group: croatian_vowels]
+U -> u;
+
+// ============================================================
+// CONSONANTS
+// ============================================================
+
+[id: 3529, name: "b consonant", weight: 0.2, group: croatian_consonants]
+b -> b;
+
+[id: 3530, name: "B consonant", weight: 0.2, group: croatian_consonants]
+B -> b;
+
+[id: 3531, name: "c consonant", weight: 0.2, group: croatian_consonants, ipa: "/t͡s/"]
+c -> t͡s;
+
+[id: 3532, name: "C consonant", weight: 0.2, group: croatian_consonants, ipa: "/t͡s/"]
+C -> t͡s;
+
+[id: 3533, name: "d consonant", weight: 0.2, group: croatian_consonants]
+d -> d;
+
+[id: 3534, name: "D consonant", weight: 0.2, group: croatian_consonants]
+D -> d;
+
+[id: 3535, name: "f consonant", weight: 0.2, group: croatian_consonants]
+f -> f;
+
+[id: 3536, name: "F consonant", weight: 0.2, group: croatian_consonants]
+F -> f;
+
+[id: 3537, name: "g consonant", weight: 0.2, group: croatian_consonants]
+g -> g;
+
+[id: 3538, name: "G consonant", weight: 0.2, group: croatian_consonants]
+G -> g;
+
+[id: 3539, name: "h consonant", weight: 0.2, group: croatian_consonants]
+h -> h;
+
+[id: 3540, name: "H consonant", weight: 0.2, group: croatian_consonants]
+H -> h;
+
+[id: 3541, name: "j consonant", weight: 0.2, group: croatian_consonants, ipa: "/j/"]
+j -> j;
+
+[id: 3542, name: "J consonant", weight: 0.2, group: croatian_consonants, ipa: "/j/"]
+J -> j;
+
+[id: 3543, name: "k consonant", weight: 0.2, group: croatian_consonants]
+k -> k;
+
+[id: 3544, name: "K consonant", weight: 0.2, group: croatian_consonants]
+K -> k;
+
+[id: 3545, name: "l consonant", weight: 0.2, group: croatian_consonants]
+l -> l;
+
+[id: 3546, name: "L consonant", weight: 0.2, group: croatian_consonants]
+L -> l;
+
+[id: 3547, name: "m consonant", weight: 0.2, group: croatian_consonants]
+m -> m;
+
+[id: 3548, name: "M consonant", weight: 0.2, group: croatian_consonants]
+M -> m;
+
+[id: 3549, name: "n consonant", weight: 0.2, group: croatian_consonants]
+n -> n;
+
+[id: 3550, name: "N consonant", weight: 0.2, group: croatian_consonants]
+N -> n;
+
+[id: 3551, name: "p consonant", weight: 0.2, group: croatian_consonants]
+p -> p;
+
+[id: 3552, name: "P consonant", weight: 0.2, group: croatian_consonants]
+P -> p;
+
+[id: 3553, name: "r consonant", weight: 0.2, group: croatian_consonants]
+r -> r;
+
+[id: 3554, name: "R consonant", weight: 0.2, group: croatian_consonants]
+R -> r;
+
+[id: 3555, name: "s consonant", weight: 0.2, group: croatian_consonants]
+s -> s;
+
+[id: 3556, name: "S consonant", weight: 0.2, group: croatian_consonants]
+S -> s;
+
+[id: 3557, name: "t consonant", weight: 0.2, group: croatian_consonants]
+t -> t;
+
+[id: 3558, name: "T consonant", weight: 0.2, group: croatian_consonants]
+T -> t;
+
+[id: 3559, name: "v consonant", weight: 0.2, group: croatian_consonants]
+v -> v;
+
+[id: 3560, name: "V consonant", weight: 0.2, group: croatian_consonants]
+V -> v;
+
+[id: 3561, name: "z consonant", weight: 0.2, group: croatian_consonants]
+z -> z;
+
+[id: 3562, name: "Z consonant", weight: 0.2, group: croatian_consonants]
+Z -> z;
+
+// Foreign letters (loanwords)
+[id: 3563, name: "q consonant", weight: 0.2, group: croatian_foreign]
+q -> k;
+
+[id: 3564, name: "Q consonant", weight: 0.2, group: croatian_foreign]
+Q -> k;
+
+[id: 3565, name: "w consonant", weight: 0.2, group: croatian_foreign]
+w -> v;
+
+[id: 3566, name: "W consonant", weight: 0.2, group: croatian_foreign]
+W -> v;
+
+[id: 3567, name: "x consonant", weight: 0.2, group: croatian_foreign]
+x -> ks;
+
+[id: 3568, name: "X consonant", weight: 0.2, group: croatian_foreign]
+X -> ks;
+
+[id: 3569, name: "y consonant", weight: 0.2, group: croatian_foreign]
+y -> i;
+
+[id: 3570, name: "Y consonant", weight: 0.2, group: croatian_foreign]
+Y -> i;
+

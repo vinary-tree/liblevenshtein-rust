@@ -283,6 +283,11 @@ impl<'a> Parser<'a> {
                     let enabled = self.expect_bool()?;
                     metadata.enabled = enabled;
                 }
+                "ipa" => {
+                    // IPA transcription with bracket notation: "/ʃ/" (phonemic) or "[ʃ]" (phonetic)
+                    let ipa = self.expect_string()?;
+                    metadata.ipa = Some(ipa);
+                }
                 _ => {
                     return Err(LLevError::new(LLevErrorKind::InvalidMetadataKey(key))
                         .at_position(self.lexer.position()));
@@ -616,6 +621,7 @@ impl<'a> Parser<'a> {
                 Token::Char(_)
                     | Token::CharClassStart
                     | Token::GroupStart
+                    | Token::ScopedFlagsStart(_)
                     | Token::Dot
                     | Token::Hash
                     | Token::PhoneticShortcut { .. }
@@ -704,6 +710,16 @@ impl<'a> Parser<'a> {
                 let expr = self.parse_alternation()?;
                 self.expect(&Token::GroupEnd)?;
                 Ok(expr)
+            }
+
+            Token::ScopedFlagsStart(flags) => {
+                // Parse scoped flags group: (?c:...) or (?-i:...)
+                let inner = self.parse_alternation()?;
+                self.expect(&Token::GroupEnd)?;
+                Ok(Expression::ScopedFlags {
+                    flags,
+                    inner: Box::new(inner),
+                })
             }
 
             Token::Dot => Ok(Expression::Any),
@@ -1842,6 +1858,43 @@ ph -> f"#;
         assert_eq!(file.rules.len(), 1);
         let def = &file.rules[0];
         assert_eq!(def.metadata.group, Some("orthography".to_string()));
+    }
+
+    #[test]
+    fn test_parse_metadata_ipa_phonemic() {
+        // Test parsing IPA phonemic transcription (with slashes)
+        let input = r#"[id: 1, name: "sch to sh", ipa: "/ʃ/"]
+sch -> sh"#;
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+        let def = &file.rules[0];
+        assert_eq!(def.metadata.ipa, Some("/ʃ/".to_string()));
+    }
+
+    #[test]
+    fn test_parse_metadata_ipa_phonetic() {
+        // Test parsing IPA phonetic transcription (with brackets)
+        let input = r#"[id: 2, name: "ch to x", ipa: "[x]"]
+ch -> X / V_"#;
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+        let def = &file.rules[0];
+        assert_eq!(def.metadata.ipa, Some("[x]".to_string()));
+    }
+
+    #[test]
+    fn test_parse_metadata_ipa_with_all_fields() {
+        // Test parsing IPA with all other metadata fields
+        let input = r#"[id: 100, name: "tsch affricate", weight: 0.5, group: german_consonants, ipa: "/t͡ʃ/"]
+tsch -> tsh"#;
+        let file = parse_str(input).unwrap();
+        assert_eq!(file.rules.len(), 1);
+        let def = &file.rules[0];
+        assert_eq!(def.metadata.id, Some(100));
+        assert_eq!(def.metadata.name, Some("tsch affricate".to_string()));
+        assert_eq!(def.metadata.weight, Some(0.5));
+        assert_eq!(def.metadata.group, Some("german_consonants".to_string()));
+        assert_eq!(def.metadata.ipa, Some("/t͡ʃ/".to_string()));
     }
 
     #[test]
@@ -3180,5 +3233,106 @@ $MY_CHARS -> 0
         } else {
             panic!("expected CharClass");
         }
+    }
+
+    // ========================================================================
+    // Tests for scoped flags (case-sensitive opt-out)
+    // ========================================================================
+
+    #[test]
+    fn test_parse_scoped_flags_case_sensitive_c() {
+        // (?c:...) - case-sensitive pattern
+        let file = parse_str("(?c:ABC) -> abc").unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::ScopedFlags { flags, inner } = &rule.pattern {
+            // Should have case_insensitive = Some(false) (case-sensitive)
+            assert_eq!(flags.case_insensitive, Some(false));
+            // Inner should be concatenation of A, B, C
+            if let Expression::Concat(_, _) = **inner {
+                // Good - it's a concat
+            } else if let Expression::Char(_) = **inner {
+                // Single char also ok for short patterns
+            } else {
+                panic!("expected Concat or Char inside ScopedFlags, got {:?}", inner);
+            }
+        } else {
+            panic!("expected ScopedFlags, got {:?}", rule.pattern);
+        }
+    }
+
+    #[test]
+    fn test_parse_scoped_flags_case_sensitive_minus_i() {
+        // (?-i:...) - case-sensitive pattern (regex-style)
+        let file = parse_str("(?-i:XYZ) -> xyz").unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::ScopedFlags { flags, inner: _ } = &rule.pattern {
+            // Should have case_insensitive = Some(false) (case-sensitive)
+            assert_eq!(flags.case_insensitive, Some(false));
+        } else {
+            panic!("expected ScopedFlags, got {:?}", rule.pattern);
+        }
+    }
+
+    #[test]
+    fn test_parse_scoped_flags_in_context() {
+        // Scoped flags in context position
+        let file = parse_str("a -> b / (?c:ABC)_").unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        let ctx = rule.context.as_ref().expect("should have context");
+
+        // Check left context has ScopedFlags
+        if let Some(ref left) = ctx.left {
+            if let ContextExpr::Pattern(ref expr) = **left {
+                assert!(
+                    matches!(expr, Expression::ScopedFlags { .. }),
+                    "expected ScopedFlags in left context"
+                );
+            } else {
+                panic!("expected Pattern in left context");
+            }
+        } else {
+            panic!("expected left context");
+        }
+    }
+
+    #[test]
+    fn test_parse_scoped_flags_with_alternation() {
+        // Scoped flags containing alternation
+        let file = parse_str("(?c:A|B) -> x").unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        if let Expression::ScopedFlags { flags, inner } = &rule.pattern {
+            assert_eq!(flags.case_insensitive, Some(false));
+            // Inner should be alternation
+            assert!(
+                matches!(**inner, Expression::Alt(_, _)),
+                "expected Alt inside ScopedFlags, got {:?}",
+                inner
+            );
+        } else {
+            panic!("expected ScopedFlags");
+        }
+    }
+
+    #[test]
+    fn test_parse_regular_group_not_scoped_flags() {
+        // Regular groups should NOT become ScopedFlags
+        let file = parse_str("(abc) -> xyz").unwrap();
+        assert_eq!(file.rules.len(), 1);
+
+        let rule = &file.rules[0].rule;
+        // Should be Concat of a, b, c (groups are transparent in this parser)
+        // or a nested structure, but NOT ScopedFlags
+        assert!(
+            !matches!(rule.pattern, Expression::ScopedFlags { .. }),
+            "regular group should not become ScopedFlags"
+        );
     }
 }

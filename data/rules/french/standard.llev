@@ -1,0 +1,68 @@
+// Standard French (Metropolitan) Dialect Rules
+// =============================================
+// Dialect-specific rules for Standard/Metropolitan French.
+// These rules layer on top of the shared French base rules.
+//
+// Standard French is based on Parisian pronunciation (Île-de-France).
+// Key features that distinguish it from Canadian French:
+//   - No affrication of t/d before high front vowels
+//   - More vowel mergers (less distinction between /a/ and /ɑ/)
+//   - Different treatment of certain digraphs
+
+@name "Standard French (Metropolitan) Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Standard/Metropolitan French"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define HIGH_FRONT = [iy]
+@define VOWEL = [aeiouyàâäéèêëïîôùûüœæ]
+
+// ============================================================
+// STANDARD FRENCH SPECIFIC PATTERNS
+// ============================================================
+
+// In standard French, T and D are NOT affricated before i/u
+// (unlike Canadian French where ti → tsi, tu → tsu)
+// No rules needed - base rules preserve t/d
+
+// ============================================================
+// VOWEL PATTERNS SPECIFIC TO STANDARD FRENCH
+// ============================================================
+
+// Standard French has merged /a/ and /ɑ/ in most contexts
+// No distinction between "patte" and "pâte" for most speakers
+[id: 1350, name: "long a merger", weight: 0.2, group: french_standard]
+â -> a;
+
+// IL/ILL patterns - typically /j/ in standard French
+[id: 1355, name: "ill to y", weight: 0.15, group: french_standard]
+ill -> iy;
+
+// Note: Full context ($VOWEL _#) requires NFA matching, simplified
+[id: 1356, name: "il after vowel to y", weight: 0.15, group: french_standard]
+il -> iy / $VOWEL _;
+
+// ============================================================
+// -ER/-EZ VERB ENDINGS
+// ============================================================
+// These are pronounced /e/ in standard French
+
+[id: 1360, name: "er infinitive ending", weight: 0.15, group: french_standard]
+er -> e / _#;
+
+[id: 1361, name: "ez ending", weight: 0.15, group: french_standard]
+ez -> e / _#;
+
+// ============================================================
+// LIAISON CONSONANTS
+// ============================================================
+// Standard French preserves liaison patterns more consistently
+// (but liaisons are complex and context-dependent)
+
+// Note: Full liaison handling would require syntactic context
+// which is beyond simple phonetic rules. These are approximations.
+

@@ -1,0 +1,182 @@
+// Korean Romanization Phonetic Rules
+// ===================================
+// Phonetic rules for Korean romanization variant normalization.
+// Normalizes McCune-Reischauer (MR) and other systems to Revised Romanization (RR).
+//
+// Main romanization systems:
+//   - Revised Romanization (RR): Official South Korean system (2000-)
+//   - McCune-Reischauer (MR): Older system, uses breves and apostrophes
+//   - Yale Romanization: Academic linguistic system
+//
+// Key features:
+//   - Breve vowel normalization (MR ŏ → RR eo, ŭ → eu)
+//   - Aspirate marker removal (k' → k, p' → p, t' → t)
+//   - Initial consonant variants (P- → B-, K- → G-, T- → D-)
+//   - Syllable separator handling (hyphen removal)
+//
+// Rule IDs: 2750-2799
+
+@name "Korean Romanization Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Normalizes Korean romanization variants to Revised Romanization"
+
+// ============================================================
+// BREVE VOWELS (McCune-Reischauer)
+// ============================================================
+// MR uses breves for vowels that RR writes as digraphs
+
+// ŏ → eo (MR breve o = RR eo)
+[id: 2750, name: "o breve to eo", weight: 0.05, group: korean_mr_vowels]
+ŏ -> eo;
+
+[id: 2751, name: "O breve to eo", weight: 0.05, group: korean_mr_vowels]
+Ŏ -> eo;
+
+// ŭ → eu (MR breve u = RR eu)
+[id: 2752, name: "u breve to eu", weight: 0.05, group: korean_mr_vowels]
+ŭ -> eu;
+
+[id: 2753, name: "U breve to eu", weight: 0.05, group: korean_mr_vowels]
+Ŭ -> eu;
+
+// ============================================================
+// ASPIRATE MARKERS (McCune-Reischauer)
+// ============================================================
+// MR uses apostrophe to mark aspirated consonants
+// RR doesn't distinguish, so we remove the marker
+
+// k' → k (aspirated k in MR)
+[id: 2755, name: "k apostrophe", weight: 0.05, group: korean_mr_aspirates]
+k' -> k;
+
+[id: 2756, name: "K apostrophe", weight: 0.05, group: korean_mr_aspirates]
+K' -> k;
+
+// p' → p (aspirated p in MR)
+[id: 2757, name: "p apostrophe", weight: 0.05, group: korean_mr_aspirates]
+p' -> p;
+
+[id: 2758, name: "P apostrophe", weight: 0.05, group: korean_mr_aspirates]
+P' -> p;
+
+// t' → t (aspirated t in MR)
+[id: 2759, name: "t apostrophe", weight: 0.05, group: korean_mr_aspirates]
+t' -> t;
+
+[id: 2760, name: "T apostrophe", weight: 0.05, group: korean_mr_aspirates]
+T' -> t;
+
+// ch' → ch (aspirated ch in MR)
+[id: 2761, name: "ch apostrophe", weight: 0.05, group: korean_mr_aspirates]
+ch' -> ch;
+
+[id: 2762, name: "Ch apostrophe", weight: 0.05, group: korean_mr_aspirates]
+Ch' -> ch;
+
+[id: 2763, name: "CH apostrophe", weight: 0.05, group: korean_mr_aspirates]
+CH' -> ch;
+
+// ============================================================
+// DIGRAPH NORMALIZATION
+// ============================================================
+// Normalize consonant digraphs to uppercase markers
+
+// CH → C (prevent reprocessing)
+[id: 2765, name: "ch digraph", weight: 0.1, group: korean_digraphs]
+ch -> C;
+
+[id: 2766, name: "Ch digraph", weight: 0.1, group: korean_digraphs]
+Ch -> C;
+
+[id: 2767, name: "CH digraph", weight: 0.1, group: korean_digraphs]
+CH -> C;
+
+// ============================================================
+// VOWEL SIMPLIFICATION
+// ============================================================
+// Normalize vowel digraphs for consistent matching
+
+// eo → O (marker for this vowel)
+[id: 2770, name: "eo digraph", weight: 0.15, group: korean_vowel_norm]
+eo -> O;
+
+// eu → U (marker for this vowel)
+[id: 2771, name: "eu digraph", weight: 0.15, group: korean_vowel_norm]
+eu -> U;
+
+// ae → E (simplify ae to e sound)
+[id: 2772, name: "ae digraph", weight: 0.15, group: korean_vowel_norm]
+ae -> E;
+
+// oe → WE (modern pronunciation)
+[id: 2773, name: "oe digraph", weight: 0.15, group: korean_vowel_norm]
+oe -> WE;
+
+// ui → I (when pronounced as i after consonant)
+[id: 2774, name: "ui digraph", weight: 0.15, group: korean_vowel_norm]
+ui -> I;
+
+// ============================================================
+// W-COMBINATIONS
+// ============================================================
+
+// wa → WA marker
+[id: 2775, name: "wa combo", weight: 0.1, group: korean_w_combos]
+wa -> WA;
+
+// wo → WO marker
+[id: 2776, name: "wo combo", weight: 0.1, group: korean_w_combos]
+wo -> WO;
+
+// we → WE marker
+[id: 2777, name: "we combo", weight: 0.1, group: korean_w_combos]
+we -> WE;
+
+// wi → WI marker
+[id: 2778, name: "wi combo", weight: 0.1, group: korean_w_combos]
+wi -> WI;
+
+// wae → WE (simplified)
+[id: 2779, name: "wae combo", weight: 0.1, group: korean_w_combos]
+wae -> WE;
+
+// ============================================================
+// Y-COMBINATIONS
+// ============================================================
+
+// yeo → YO (simplified)
+[id: 2780, name: "yeo combo", weight: 0.1, group: korean_y_combos]
+yeo -> YO;
+
+// yae → YE (simplified)
+[id: 2781, name: "yae combo", weight: 0.1, group: korean_y_combos]
+yae -> YE;
+
+// ============================================================
+// SYLLABLE SEPARATORS
+// ============================================================
+// Remove hyphens used as syllable separators
+
+[id: 2785, name: "hyphen separator", weight: 0.2, group: korean_separators]
+"-" -> ;
+
+// ============================================================
+// DOUBLED MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 2790, name: "double O marker", weight: 0.25, group: korean_simplification]
+OO -> O;
+
+[id: 2791, name: "double U marker", weight: 0.25, group: korean_simplification]
+UU -> U;
+
+[id: 2792, name: "double E marker", weight: 0.25, group: korean_simplification]
+EE -> E;
+
+[id: 2793, name: "double C marker", weight: 0.25, group: korean_simplification]
+CC -> C;
+
+[id: 2794, name: "double WE marker", weight: 0.25, group: korean_simplification]
+WEWE -> WE;
+

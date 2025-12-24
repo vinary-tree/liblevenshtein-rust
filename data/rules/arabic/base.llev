@@ -1,0 +1,304 @@
+// Arabic Base Phonetic Rules
+// ==========================
+// Phonetic rules for Arabic (العربية) script romanization.
+// Maps Arabic letters to Latin equivalents for phonetic matching.
+//
+// Arabic is an abjad script with 28 consonant letters.
+// Vowels are typically unmarked or shown with diacritics (harakat).
+//
+// Key features:
+//   - Consonant letters form the core
+//   - Long vowels: ا (aa), و (uu/w), ي (ii/y)
+//   - Emphatic consonants: ص, ض, ط, ظ
+//   - Pharyngeal consonants: ع, ح
+//   - Hamza (ء): glottal stop
+//   - Diacritics (optional): fatha, kasra, damma, sukun, shadda
+//
+// Rule IDs: 2450-2549
+
+@name "Arabic Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Arabic script"
+
+// ============================================================
+// BASIC CONSONANTS
+// ============================================================
+
+// ا (alif) - can be long 'a' vowel or glottal stop carrier
+[id: 2450, name: "alif", weight: 0.05, group: arabic_consonants]
+ا -> a;
+
+// ب (ba) - voiced bilabial stop
+[id: 2451, name: "ba", weight: 0.05, group: arabic_consonants]
+ب -> b;
+
+// ت (ta) - voiceless dental stop
+[id: 2452, name: "ta", weight: 0.05, group: arabic_consonants]
+ت -> t;
+
+// ث (tha) - voiceless dental fricative (English "th" in "think")
+[id: 2453, name: "tha", weight: 0.05, group: arabic_consonants, ipa: "/θ/"]
+ث -> θ;
+
+// ج (jim) - voiced palatal affricate (varies by dialect: j, g, zh)
+[id: 2454, name: "jim", weight: 0.05, group: arabic_consonants]
+ج -> j;
+
+// ح (ha) - voiceless pharyngeal fricative
+[id: 2455, name: "ha pharyngeal", weight: 0.05, group: arabic_consonants, ipa: "/ħ/"]
+ح -> ħ;
+
+// خ (kha) - voiceless velar fricative (German "ch" in "Bach")
+[id: 2456, name: "kha", weight: 0.05, group: arabic_consonants, ipa: "/x/"]
+خ -> x;
+
+// د (dal) - voiced dental stop
+[id: 2457, name: "dal", weight: 0.05, group: arabic_consonants]
+د -> d;
+
+// ذ (dhal) - voiced dental fricative (English "th" in "this")
+[id: 2458, name: "dhal", weight: 0.05, group: arabic_consonants, ipa: "/ð/"]
+ذ -> ð;
+
+// ر (ra) - alveolar trill/tap
+[id: 2459, name: "ra", weight: 0.05, group: arabic_consonants]
+ر -> r;
+
+// ز (zay) - voiced alveolar fricative
+[id: 2460, name: "zay", weight: 0.05, group: arabic_consonants]
+ز -> z;
+
+// س (sin) - voiceless alveolar fricative
+[id: 2461, name: "sin", weight: 0.05, group: arabic_consonants]
+س -> s;
+
+// ش (shin) - voiceless postalveolar fricative
+[id: 2462, name: "shin", weight: 0.05, group: arabic_consonants, ipa: "/ʃ/"]
+ش -> ʃ;
+
+// ص (sad) - emphatic voiceless alveolar fricative
+[id: 2463, name: "sad", weight: 0.05, group: arabic_emphatic, ipa: "/sˤ/"]
+ص -> sˤ;
+
+// ض (dad) - emphatic voiced alveolar stop (unique to Arabic)
+[id: 2464, name: "dad", weight: 0.05, group: arabic_emphatic, ipa: "/dˤ/"]
+ض -> dˤ;
+
+// ط (ta emphatic) - emphatic voiceless dental stop
+[id: 2465, name: "ta emphatic", weight: 0.05, group: arabic_emphatic, ipa: "/tˤ/"]
+ط -> tˤ;
+
+// ظ (dha emphatic) - emphatic voiced dental fricative
+[id: 2466, name: "dha emphatic", weight: 0.05, group: arabic_emphatic, ipa: "/ðˤ/"]
+ظ -> ðˤ;
+
+// ع (ayn) - voiced pharyngeal fricative
+[id: 2467, name: "ayn", weight: 0.05, group: arabic_consonants, ipa: "/ʕ/"]
+ع -> ʕ;
+
+// غ (ghayn) - voiced velar fricative
+[id: 2468, name: "ghayn", weight: 0.05, group: arabic_consonants, ipa: "/ɣ/"]
+غ -> ɣ;
+
+// ف (fa) - voiceless labiodental fricative
+[id: 2469, name: "fa", weight: 0.05, group: arabic_consonants]
+ف -> f;
+
+// ق (qaf) - voiceless uvular stop
+[id: 2470, name: "qaf", weight: 0.05, group: arabic_consonants]
+ق -> q;
+
+// ك (kaf) - voiceless velar stop
+[id: 2471, name: "kaf", weight: 0.05, group: arabic_consonants]
+ك -> k;
+
+// ل (lam) - alveolar lateral approximant
+[id: 2472, name: "lam", weight: 0.05, group: arabic_consonants]
+ل -> l;
+
+// م (mim) - bilabial nasal
+[id: 2473, name: "mim", weight: 0.05, group: arabic_consonants]
+م -> m;
+
+// ن (nun) - alveolar nasal
+[id: 2474, name: "nun", weight: 0.05, group: arabic_consonants]
+ن -> n;
+
+// ه (ha) - voiceless glottal fricative
+[id: 2475, name: "ha glottal", weight: 0.05, group: arabic_consonants]
+ه -> h;
+
+// و (waw) - labial-velar approximant or long u vowel
+[id: 2476, name: "waw", weight: 0.05, group: arabic_consonants]
+و -> w;
+
+// ي (ya) - palatal approximant or long i vowel
+[id: 2477, name: "ya", weight: 0.05, group: arabic_consonants]
+ي -> y;
+
+// ============================================================
+// HAMZA (GLOTTAL STOP)
+// ============================================================
+
+// Standalone hamza
+[id: 2480, name: "hamza standalone", weight: 0.05, group: arabic_hamza]
+ء -> ';
+
+// Hamza on alif
+[id: 2481, name: "hamza on alif above", weight: 0.05, group: arabic_hamza]
+أ -> a;
+
+// Hamza under alif
+[id: 2482, name: "hamza on alif below", weight: 0.05, group: arabic_hamza]
+إ -> i;
+
+// Hamza on waw
+[id: 2483, name: "hamza on waw", weight: 0.05, group: arabic_hamza]
+ؤ -> u;
+
+// Hamza on ya (ya with hamza)
+[id: 2484, name: "hamza on ya", weight: 0.05, group: arabic_hamza]
+ئ -> i;
+
+// ============================================================
+// SPECIAL FORMS
+// ============================================================
+
+// Alif madda (long aa)
+[id: 2485, name: "alif madda", weight: 0.05, group: arabic_special, ipa: "/aː/"]
+آ -> aː;
+
+// Ta marbuta (word-final)
+[id: 2486, name: "ta marbuta", weight: 0.05, group: arabic_special]
+ة -> a;
+
+// Alif maqsura (word-final long a)
+[id: 2487, name: "alif maqsura", weight: 0.05, group: arabic_special]
+ى -> a;
+
+// ============================================================
+// DIACRITICS (HARAKAT)
+// ============================================================
+
+// Fatha (short a)
+[id: 2490, name: "fatha", weight: 0.1, group: arabic_diacritics]
+ـَ -> a;
+
+[id: 2491, name: "fatha standalone", weight: 0.1, group: arabic_diacritics]
+َ -> a;
+
+// Kasra (short i)
+[id: 2492, name: "kasra", weight: 0.1, group: arabic_diacritics]
+ـِ -> i;
+
+[id: 2493, name: "kasra standalone", weight: 0.1, group: arabic_diacritics]
+ِ -> i;
+
+// Damma (short u)
+[id: 2494, name: "damma", weight: 0.1, group: arabic_diacritics]
+ـُ -> u;
+
+[id: 2495, name: "damma standalone", weight: 0.1, group: arabic_diacritics]
+ُ -> u;
+
+// Sukun (vowelless)
+[id: 2496, name: "sukun", weight: 0.1, group: arabic_diacritics]
+ـْ -> ;
+
+[id: 2497, name: "sukun standalone", weight: 0.1, group: arabic_diacritics]
+ْ -> ;
+
+// Shadda (gemination) - remove mark, doubling handled elsewhere
+[id: 2498, name: "shadda", weight: 0.1, group: arabic_diacritics]
+ـّ -> ;
+
+[id: 2499, name: "shadda standalone", weight: 0.1, group: arabic_diacritics]
+ّ -> ;
+
+// Tanwin fath (accusative ending -an)
+[id: 2500, name: "tanwin fath", weight: 0.1, group: arabic_diacritics]
+ً -> an;
+
+// Tanwin damm (nominative ending -un)
+[id: 2501, name: "tanwin damm", weight: 0.1, group: arabic_diacritics]
+ٌ -> un;
+
+// Tanwin kasr (genitive ending -in)
+[id: 2502, name: "tanwin kasr", weight: 0.1, group: arabic_diacritics]
+ٍ -> in;
+
+// ============================================================
+// NUMERALS (Arabic-Indic)
+// ============================================================
+
+[id: 2510, name: "numeral 0", weight: 0.1, group: arabic_numerals]
+٠ -> 0;
+
+[id: 2511, name: "numeral 1", weight: 0.1, group: arabic_numerals]
+١ -> 1;
+
+[id: 2512, name: "numeral 2", weight: 0.1, group: arabic_numerals]
+٢ -> 2;
+
+[id: 2513, name: "numeral 3", weight: 0.1, group: arabic_numerals]
+٣ -> 3;
+
+[id: 2514, name: "numeral 4", weight: 0.1, group: arabic_numerals]
+٤ -> 4;
+
+[id: 2515, name: "numeral 5", weight: 0.1, group: arabic_numerals]
+٥ -> 5;
+
+[id: 2516, name: "numeral 6", weight: 0.1, group: arabic_numerals]
+٦ -> 6;
+
+[id: 2517, name: "numeral 7", weight: 0.1, group: arabic_numerals]
+٧ -> 7;
+
+[id: 2518, name: "numeral 8", weight: 0.1, group: arabic_numerals]
+٨ -> 8;
+
+[id: 2519, name: "numeral 9", weight: 0.1, group: arabic_numerals]
+٩ -> 9;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 2530, name: "double theta", weight: 0.2, group: arabic_simplification]
+θθ -> θ;
+
+[id: 2531, name: "double sh", weight: 0.2, group: arabic_simplification]
+ʃʃ -> ʃ;
+
+[id: 2532, name: "double velar fricative", weight: 0.2, group: arabic_simplification]
+xx -> x;
+
+[id: 2533, name: "double eth", weight: 0.2, group: arabic_simplification]
+ðð -> ð;
+
+[id: 2534, name: "double voiced velar fricative", weight: 0.2, group: arabic_simplification]
+ɣɣ -> ɣ;
+
+[id: 2535, name: "double pharyngeal h", weight: 0.2, group: arabic_simplification]
+ħħ -> ħ;
+
+[id: 2536, name: "double pharyngeal ayn", weight: 0.2, group: arabic_simplification]
+ʕʕ -> ʕ;
+
+[id: 2537, name: "double emphatic s", weight: 0.2, group: arabic_simplification]
+sˤsˤ -> sˤ;
+
+[id: 2538, name: "double emphatic d", weight: 0.2, group: arabic_simplification]
+dˤdˤ -> dˤ;
+
+[id: 2539, name: "double emphatic t", weight: 0.2, group: arabic_simplification]
+tˤtˤ -> tˤ;
+
+[id: 2540, name: "double emphatic dh", weight: 0.2, group: arabic_simplification]
+ðˤðˤ -> ðˤ;
+
+[id: 2541, name: "double long a", weight: 0.2, group: arabic_simplification]
+aːaː -> aː;
+

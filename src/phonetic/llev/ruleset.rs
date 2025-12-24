@@ -204,6 +204,10 @@ impl RuleSetChar {
     /// This is a convenience method that handles conversion between strings
     /// and PhoneChar arrays internally.
     ///
+    /// Matching is case-insensitive by default. Input is lowercased before
+    /// matching against patterns (which are also lowercased during ruleset
+    /// conversion). Replacement output uses the exact case specified in rules.
+    ///
     /// # Arguments
     ///
     /// - `input` - The input string to transform
@@ -217,14 +221,18 @@ impl RuleSetChar {
     /// ```rust,ignore
     /// let ruleset = RuleSetChar::from_llev(&file)?;
     /// let result = ruleset.apply("phone"); // "fone"
+    /// let result = ruleset.apply("PHONE"); // "fone" (case-insensitive match)
     /// ```
     pub fn apply(&self, input: &str) -> String {
-        // Convert string to PhoneChar array
+        // Convert string to PhoneChar array with case folding for matching
+        // Input is lowercased to match against lowercased patterns
         let phones: Vec<PhoneChar> = input.chars().map(|c| {
-            if is_vowel_char(c) {
-                PhoneChar::Vowel(c)
+            // Lowercase for case-insensitive matching
+            let c_lower = c.to_lowercase().next().unwrap_or(c);
+            if is_vowel_char(c_lower) {
+                PhoneChar::Vowel(c_lower)
             } else {
-                PhoneChar::Consonant(c)
+                PhoneChar::Consonant(c_lower)
             }
         }).collect();
 
@@ -250,13 +258,17 @@ impl RuleSetChar {
     ///
     /// Like [`apply`], but properly handles digraph output by expanding
     /// them to their constituent characters.
+    ///
+    /// Matching is case-insensitive by default (same as [`apply`]).
     pub fn apply_full(&self, input: &str) -> String {
-        // Convert string to PhoneChar array
+        // Convert string to PhoneChar array with case folding for matching
         let phones: Vec<PhoneChar> = input.chars().map(|c| {
-            if is_vowel_char(c) {
-                PhoneChar::Vowel(c)
+            // Lowercase for case-insensitive matching
+            let c_lower = c.to_lowercase().next().unwrap_or(c);
+            if is_vowel_char(c_lower) {
+                PhoneChar::Vowel(c_lower)
             } else {
-                PhoneChar::Consonant(c)
+                PhoneChar::Consonant(c_lower)
             }
         }).collect();
 
@@ -316,11 +328,14 @@ impl<'a> RuleConverter<'a> {
     }
 
     /// Convert an AST rule definition to a runtime rule.
+    ///
+    /// Patterns and contexts are converted with case folding enabled by default
+    /// for case-insensitive matching. Replacements preserve original case.
     fn convert_rule(&self, rule_def: &RuleDefinition, index: usize) -> LLevResult<RewriteRule> {
         let pos = rule_def.position;
 
-        // Convert pattern
-        let pattern = self.convert_pattern(&rule_def.rule.pattern, pos)?;
+        // Convert pattern with case folding for case-insensitive matching
+        let pattern = self.convert_pattern(&rule_def.rule.pattern, pos, true)?;
         if pattern.is_empty() {
             return Err(LLevError::with_position(
                 LLevErrorKind::InvalidRule("Pattern cannot be empty".into()),
@@ -328,10 +343,10 @@ impl<'a> RuleConverter<'a> {
             ));
         }
 
-        // Convert replacement
-        let replacement = self.convert_pattern(&rule_def.rule.replacement, pos)?;
+        // Convert replacement WITHOUT case folding - preserve original output
+        let replacement = self.convert_pattern(&rule_def.rule.replacement, pos, false)?;
 
-        // Convert context
+        // Convert context with case folding for case-insensitive matching
         let context = self.convert_context(&rule_def.rule.context, pos)?;
 
         // Determine weight (inline weight takes precedence over metadata weight)
@@ -362,26 +377,46 @@ impl<'a> RuleConverter<'a> {
     }
 
     /// Convert an AST expression to a sequence of phones.
-    fn convert_pattern(&self, expr: &Expression, pos: Position) -> LLevResult<Vec<Phone>> {
+    ///
+    /// # Arguments
+    /// - `expr`: The expression to convert
+    /// - `pos`: Position for error reporting
+    /// - `case_fold`: If true, convert characters to lowercase for case-insensitive matching
+    fn convert_pattern(
+        &self,
+        expr: &Expression,
+        pos: Position,
+        case_fold: bool,
+    ) -> LLevResult<Vec<Phone>> {
         match expr {
             Expression::Empty => Ok(Vec::new()),
 
             Expression::Char(c) => {
-                let phone = self.char_to_phone(*c, pos)?;
+                let phone = self.char_to_phone(*c, pos, case_fold)?;
                 Ok(vec![phone])
             }
 
             Expression::Concat(a, b) => {
-                let mut result = self.convert_pattern(a, pos)?;
-                result.extend(self.convert_pattern(b, pos)?);
+                let mut result = self.convert_pattern(a, pos, case_fold)?;
+                result.extend(self.convert_pattern(b, pos, case_fold)?);
                 Ok(result)
             }
 
-            Expression::Group(inner) => self.convert_pattern(inner, pos),
+            Expression::Group(inner) => self.convert_pattern(inner, pos, case_fold),
+
+            Expression::ScopedFlags { flags, inner } => {
+                // Override case_fold based on the scoped flags
+                let new_case_fold = match flags.case_insensitive {
+                    Some(false) => false, // (?c:...) or (?-i:...) - case-sensitive
+                    Some(true) => true,   // Explicit case-insensitive
+                    None => case_fold,    // Use parent context's setting
+                };
+                self.convert_pattern(inner, pos, new_case_fold)
+            }
 
             Expression::SymbolRef(name) => {
                 if let Some(symbol_expr) = self.symbols.get(name.as_str()) {
-                    self.convert_pattern(symbol_expr, pos)
+                    self.convert_pattern(symbol_expr, pos, case_fold)
                 } else {
                     // Use suggestion-aware error for better developer experience
                     Err(LLevError::undefined_symbol_with_suggestion(
@@ -466,7 +501,19 @@ impl<'a> RuleConverter<'a> {
     }
 
     /// Convert a character to a Phone.
-    fn char_to_phone(&self, c: char, pos: Position) -> LLevResult<Phone> {
+    ///
+    /// # Arguments
+    /// - `c`: The character to convert
+    /// - `pos`: Position for error reporting
+    /// - `case_fold`: If true, convert to lowercase for case-insensitive matching
+    fn char_to_phone(&self, c: char, pos: Position, case_fold: bool) -> LLevResult<Phone> {
+        // Apply case folding if requested (for ASCII only)
+        let c = if case_fold && c.is_ascii() {
+            c.to_ascii_lowercase()
+        } else {
+            c
+        };
+
         // Check if character fits in a single byte
         if !c.is_ascii() {
             return Err(LLevError::non_ascii_in_byte_level(c, None, pos));
@@ -577,6 +624,8 @@ impl<'a> RuleConverter<'a> {
     }
 
     /// Extract character class bytes from an Expression.
+    ///
+    /// Characters are lowercased for case-insensitive context matching.
     fn extract_char_class_bytes_from_expr(
         &self,
         expr: &Expression,
@@ -592,7 +641,8 @@ impl<'a> RuleConverter<'a> {
                     if !c.is_ascii() {
                         return Err(LLevError::non_ascii_in_byte_level(c, None, pos));
                     }
-                    bytes.push(c as u8);
+                    // Lowercase for case-insensitive matching
+                    bytes.push(c.to_ascii_lowercase() as u8);
                 }
                 Ok(Some(bytes))
             }
@@ -605,7 +655,10 @@ impl<'a> RuleConverter<'a> {
                 if !end.is_ascii() {
                     return Err(LLevError::non_ascii_in_byte_level(*end, None, pos));
                 }
-                let bytes: Vec<u8> = (*start as u8..=*end as u8).collect();
+                // Lowercase the range for case-insensitive matching
+                let bytes: Vec<u8> = (*start as u8..=*end as u8)
+                    .map(|b| (b as char).to_ascii_lowercase() as u8)
+                    .collect();
                 Ok(Some(bytes))
             }
 
@@ -654,11 +707,14 @@ impl<'a> RuleConverterChar<'a> {
     }
 
     /// Convert an AST rule definition to a runtime rule.
+    ///
+    /// Patterns and contexts are converted with case folding enabled by default
+    /// for case-insensitive matching. Replacements preserve original case.
     fn convert_rule(&self, rule_def: &RuleDefinition, index: usize) -> LLevResult<RewriteRuleChar> {
         let pos = rule_def.position;
 
-        // Convert pattern
-        let pattern = self.convert_pattern(&rule_def.rule.pattern, pos)?;
+        // Convert pattern with case folding for case-insensitive matching
+        let pattern = self.convert_pattern(&rule_def.rule.pattern, pos, true)?;
         if pattern.is_empty() {
             return Err(LLevError::with_position(
                 LLevErrorKind::InvalidRule("Pattern cannot be empty".into()),
@@ -666,10 +722,10 @@ impl<'a> RuleConverterChar<'a> {
             ));
         }
 
-        // Convert replacement
-        let replacement = self.convert_pattern(&rule_def.rule.replacement, pos)?;
+        // Convert replacement WITHOUT case folding - preserve original output
+        let replacement = self.convert_pattern(&rule_def.rule.replacement, pos, false)?;
 
-        // Convert context
+        // Convert context with case folding for case-insensitive matching
         let context = self.convert_context(&rule_def.rule.context, pos)?;
 
         // Determine weight (inline weight takes precedence over metadata weight)
@@ -700,26 +756,46 @@ impl<'a> RuleConverterChar<'a> {
     }
 
     /// Convert an AST expression to a sequence of phones.
-    fn convert_pattern(&self, expr: &Expression, pos: Position) -> LLevResult<Vec<PhoneChar>> {
+    ///
+    /// # Arguments
+    /// - `expr`: The expression to convert
+    /// - `pos`: Position for error reporting
+    /// - `case_fold`: If true, convert characters to lowercase for case-insensitive matching
+    fn convert_pattern(
+        &self,
+        expr: &Expression,
+        pos: Position,
+        case_fold: bool,
+    ) -> LLevResult<Vec<PhoneChar>> {
         match expr {
             Expression::Empty => Ok(Vec::new()),
 
             Expression::Char(c) => {
-                let phone = self.char_to_phone(*c);
+                let phone = self.char_to_phone(*c, case_fold);
                 Ok(vec![phone])
             }
 
             Expression::Concat(a, b) => {
-                let mut result = self.convert_pattern(a, pos)?;
-                result.extend(self.convert_pattern(b, pos)?);
+                let mut result = self.convert_pattern(a, pos, case_fold)?;
+                result.extend(self.convert_pattern(b, pos, case_fold)?);
                 Ok(result)
             }
 
-            Expression::Group(inner) => self.convert_pattern(inner, pos),
+            Expression::Group(inner) => self.convert_pattern(inner, pos, case_fold),
+
+            Expression::ScopedFlags { flags, inner } => {
+                // Override case_fold based on the scoped flags
+                let new_case_fold = match flags.case_insensitive {
+                    Some(false) => false, // (?c:...) or (?-i:...) - case-sensitive
+                    Some(true) => true,   // Explicit case-insensitive
+                    None => case_fold,    // Use parent context's setting
+                };
+                self.convert_pattern(inner, pos, new_case_fold)
+            }
 
             Expression::SymbolRef(name) => {
                 if let Some(symbol_expr) = self.symbols.get(name.as_str()) {
-                    self.convert_pattern(symbol_expr, pos)
+                    self.convert_pattern(symbol_expr, pos, case_fold)
                 } else {
                     // Use suggestion-aware error for better developer experience
                     Err(LLevError::undefined_symbol_with_suggestion(
@@ -804,7 +880,18 @@ impl<'a> RuleConverterChar<'a> {
     }
 
     /// Convert a character to a PhoneChar.
-    fn char_to_phone(&self, c: char) -> PhoneChar {
+    ///
+    /// # Arguments
+    /// - `c`: The character to convert
+    /// - `case_fold`: If true, convert to lowercase for case-insensitive matching
+    fn char_to_phone(&self, c: char, case_fold: bool) -> PhoneChar {
+        let c = if case_fold {
+            // Unicode case folding - convert to lowercase for matching
+            c.to_lowercase().next().unwrap_or(c)
+        } else {
+            c
+        };
+
         // Classify as vowel or consonant
         if is_vowel_char(c) {
             PhoneChar::Vowel(c)
@@ -902,6 +989,8 @@ impl<'a> RuleConverterChar<'a> {
     }
 
     /// Extract character class chars from an Expression.
+    ///
+    /// Characters are lowercased for case-insensitive context matching.
     fn extract_char_class_from_expr(
         &self,
         expr: &Expression,
@@ -912,11 +1001,19 @@ impl<'a> RuleConverterChar<'a> {
                 if *negated {
                     return Ok(None); // Negated classes not supported
                 }
-                Ok(Some(chars.clone()))
+                // Lowercase chars for case-insensitive matching
+                let lowered: Vec<char> = chars
+                    .iter()
+                    .map(|c| c.to_lowercase().next().unwrap_or(*c))
+                    .collect();
+                Ok(Some(lowered))
             }
 
             Expression::CharRange { start, end } => {
-                let chars: Vec<char> = (*start..=*end).collect();
+                // Lowercase the range for case-insensitive matching
+                let chars: Vec<char> = (*start..=*end)
+                    .map(|c| c.to_lowercase().next().unwrap_or(c))
+                    .collect();
                 Ok(Some(chars))
             }
 

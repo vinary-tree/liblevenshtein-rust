@@ -1,0 +1,106 @@
+// Latin American Spanish Dialect Rules
+// =====================================
+// Dialect-specific rules for Latin American Spanish.
+// These rules layer on top of the shared Spanish base rules.
+//
+// Key Latin American Feature: SESEO
+//   - Z and C (before e/i) are pronounced as /s/ (same as S)
+//   - No distinction between "caza" and "casa" pronunciation
+//   - This is the norm in all of Latin America
+//
+// Additional variants (not included by default):
+//   - Rioplatense "sheísmo/zheísmo" (Argentina, Uruguay): ll/y → /ʃ/ or /ʒ/
+//   - Caribbean aspiration: final s → h
+//   - Mexican distinción is rare (mostly in educated speech)
+
+@name "Latin American Spanish Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Latin American Spanish"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define FRONT_VOWEL = [eiéí]
+@define CONSONANT = [bcdfghjklmnñpqrstvwxyz]
+
+// ============================================================
+// SESEO: Z → S
+// ============================================================
+// Z is always /s/ in Latin American Spanish
+
+[id: 1150, name: "z to s", weight: 0.15, group: latam_seseo]
+z -> s;
+
+// ============================================================
+// SESEO: C before front vowels → S
+// ============================================================
+// C before e/i is /s/
+
+[id: 1160, name: "c before e to s", weight: 0.1, group: latam_seseo]
+ce -> se;
+
+[id: 1161, name: "c before i to s", weight: 0.1, group: latam_seseo]
+ci -> si;
+
+[id: 1162, name: "c before é to s", weight: 0.1, group: latam_seseo]
+cé -> sé;
+
+[id: 1163, name: "c before í to s", weight: 0.1, group: latam_seseo]
+cí -> sí;
+
+// ============================================================
+// C elsewhere → K
+// ============================================================
+// C before a/o/u or consonants is /k/
+
+[id: 1170, name: "c before a", weight: 0.2, group: latam_c]
+ca -> ka;
+
+[id: 1171, name: "c before o", weight: 0.2, group: latam_c]
+co -> ko;
+
+[id: 1172, name: "c before u", weight: 0.2, group: latam_c]
+cu -> ku;
+
+[id: 1173, name: "c before á", weight: 0.2, group: latam_c]
+cá -> ká;
+
+[id: 1174, name: "c before ó", weight: 0.2, group: latam_c]
+có -> kó;
+
+[id: 1175, name: "c before ú", weight: 0.2, group: latam_c]
+cú -> kú;
+
+// C before consonant
+[id: 1180, name: "c before consonant", weight: 0.25, group: latam_c]
+c -> k / _$CONSONANT;
+
+// C at word end (rare in Spanish)
+[id: 1181, name: "c at word end", weight: 0.25, group: latam_c]
+c -> k / _#;
+
+// ============================================================
+// OPTIONAL: YEÍSMO (already in base, but reinforced here)
+// ============================================================
+// LL and Y both → /y/ (palatal approximant)
+// This is the default in base.llev, no override needed
+
+// ============================================================
+// OPTIONAL REGIONAL VARIANTS (commented out)
+// ============================================================
+// Uncomment for specific regional variants:
+
+// --- Rioplatense sheísmo (Argentina, Uruguay) ---
+// Uncomment to enable ll/y → sh sound
+// [id: 1190, name: "ll to sh (Rioplatense)", weight: 0.1, group: latam_rioplatense]
+// ll -> sh;
+// [id: 1191, name: "y to sh (Rioplatense)", weight: 0.15, group: latam_rioplatense]
+// y -> sh / $VOWEL_;
+
+// --- Caribbean s-aspiration ---
+// Final s becomes an h sound or is dropped
+// [id: 1195, name: "final s aspiration", weight: 0.2, group: latam_caribbean]
+// s -> h / _#;
+

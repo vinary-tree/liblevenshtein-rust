@@ -1,0 +1,308 @@
+// Ukrainian Base Phonetic Rules
+// =============================
+// Phonetic rules for Ukrainian (Українська мова).
+// Maps Cyrillic script to Latin phonetic representations.
+//
+// Key differences from Russian:
+//   - Unique letters: і, ї, є, ґ
+//   - No ы, ё, э (Russian letters)
+//   - Ukrainian и sounds like Russian ы
+//   - Ukrainian г = [ɦ] (voiced glottal), ґ = [g] (plosive)
+//   - Apostrophe (') separates consonants from soft vowels
+//
+// Key features:
+//   - Cyrillic to Latin transliteration
+//   - Unique Ukrainian vowels (і, ї, є)
+//   - Plosive ґ vs glottal г distinction
+//   - Final devoicing
+//   - Soft consonants (before ь and soft vowels)
+//
+// Rule IDs: 2800-2859
+
+@name "Ukrainian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Ukrainian"
+
+// ============================================================
+// UNIQUE UKRAINIAN LETTERS (highest priority)
+// ============================================================
+
+// Ї → yi (unique to Ukrainian, always iotated)
+[id: 2800, name: "ї to yi", weight: 0.05, group: ukrainian_unique]
+ї -> yi;
+
+[id: 2801, name: "Ї to yi", weight: 0.05, group: ukrainian_unique]
+Ї -> yi;
+
+// Є → ye (Ukrainian soft ye)
+[id: 2802, name: "є to ye", weight: 0.05, group: ukrainian_unique]
+є -> ye;
+
+[id: 2803, name: "Є to ye", weight: 0.05, group: ukrainian_unique]
+Є -> ye;
+
+// І → i (Ukrainian i, like "ee")
+[id: 2804, name: "і to i", weight: 0.05, group: ukrainian_unique]
+і -> i;
+
+[id: 2805, name: "І to i", weight: 0.05, group: ukrainian_unique]
+І -> i;
+
+// Ґ → g (plosive g, rare but distinctive)
+[id: 2806, name: "ґ to g", weight: 0.05, group: ukrainian_unique]
+ґ -> g;
+
+[id: 2807, name: "Ґ to g", weight: 0.05, group: ukrainian_unique]
+Ґ -> g;
+
+// ============================================================
+// COMPLEX CONSONANTS (before simple consonants)
+// ============================================================
+
+// Щ → ʃt͡ʃ (voiceless postalveolar fricative + affricate cluster)
+[id: 2810, name: "щ to ʃt͡ʃ", weight: 0.1, group: ukrainian_complex, ipa: "/ʃt͡ʃ/"]
+щ -> ʃt͡ʃ;
+
+[id: 2811, name: "Щ to ʃt͡ʃ", weight: 0.1, group: ukrainian_complex, ipa: "/ʃt͡ʃ/"]
+Щ -> ʃt͡ʃ;
+
+// Ж → ʒ (voiced postalveolar fricative)
+[id: 2812, name: "ж to ʒ", weight: 0.1, group: ukrainian_complex, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 2813, name: "Ж to ʒ", weight: 0.1, group: ukrainian_complex, ipa: "/ʒ/"]
+Ж -> ʒ;
+
+// Ш → ʃ (voiceless postalveolar fricative)
+[id: 2814, name: "ш to ʃ", weight: 0.1, group: ukrainian_complex, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 2815, name: "Ш to ʃ", weight: 0.1, group: ukrainian_complex, ipa: "/ʃ/"]
+Ш -> ʃ;
+
+// Х → x (voiceless velar fricative)
+[id: 2816, name: "х to x", weight: 0.1, group: ukrainian_complex, ipa: "/x/"]
+х -> x;
+
+[id: 2817, name: "Х to x", weight: 0.1, group: ukrainian_complex, ipa: "/x/"]
+Х -> x;
+
+// Ц → t͡s (voiceless alveolar affricate)
+[id: 2818, name: "ц to t͡s", weight: 0.1, group: ukrainian_complex, ipa: "/t͡s/"]
+ц -> t͡s;
+
+[id: 2819, name: "Ц to t͡s", weight: 0.1, group: ukrainian_complex, ipa: "/t͡s/"]
+Ц -> t͡s;
+
+// Ч → t͡ʃ (voiceless postalveolar affricate)
+[id: 2820, name: "ч to t͡ʃ", weight: 0.1, group: ukrainian_complex, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 2821, name: "Ч to t͡ʃ", weight: 0.1, group: ukrainian_complex, ipa: "/t͡ʃ/"]
+Ч -> t͡ʃ;
+
+// ============================================================
+// IOTATED VOWELS (vowels with initial /j/)
+// ============================================================
+
+// Е → e (NOT iotated in Ukrainian, unlike Russian)
+[id: 2823, name: "е to e", weight: 0.15, group: ukrainian_vowels]
+е -> e;
+
+[id: 2824, name: "Е to e", weight: 0.15, group: ukrainian_vowels]
+Е -> e;
+
+// Ю → ju
+[id: 2825, name: "ю to ju", weight: 0.15, group: ukrainian_iotated, ipa: "/ju/"]
+ю -> ju;
+
+[id: 2826, name: "Ю to ju", weight: 0.15, group: ukrainian_iotated, ipa: "/ju/"]
+Ю -> ju;
+
+// Я → ja
+[id: 2827, name: "я to ja", weight: 0.15, group: ukrainian_iotated, ipa: "/ja/"]
+я -> ja;
+
+[id: 2828, name: "Я to ja", weight: 0.15, group: ukrainian_iotated, ipa: "/ja/"]
+Я -> ja;
+
+// ============================================================
+// SIMPLE VOWELS
+// ============================================================
+
+// А → a
+[id: 2830, name: "а to a", weight: 0.2, group: ukrainian_vowels]
+а -> a;
+
+[id: 2831, name: "А to a", weight: 0.2, group: ukrainian_vowels]
+А -> a;
+
+// И → ɪ (near-close front unrounded, sounds like Russian ы)
+[id: 2832, name: "и to ɪ", weight: 0.2, group: ukrainian_vowels, ipa: "/ɪ/"]
+и -> ɪ;
+
+[id: 2833, name: "И to ɪ", weight: 0.2, group: ukrainian_vowels, ipa: "/ɪ/"]
+И -> ɪ;
+
+// О → o
+[id: 2834, name: "о to o", weight: 0.2, group: ukrainian_vowels]
+о -> o;
+
+[id: 2835, name: "О to o", weight: 0.2, group: ukrainian_vowels]
+О -> o;
+
+// У → u
+[id: 2836, name: "у to u", weight: 0.2, group: ukrainian_vowels]
+у -> u;
+
+[id: 2837, name: "У to u", weight: 0.2, group: ukrainian_vowels]
+У -> u;
+
+// ============================================================
+// SIMPLE CONSONANTS
+// ============================================================
+
+// Б → b
+[id: 2838, name: "б to b", weight: 0.25, group: ukrainian_consonants]
+б -> b;
+
+[id: 2839, name: "Б to b", weight: 0.25, group: ukrainian_consonants]
+Б -> b;
+
+// В → v
+[id: 2840, name: "в to v", weight: 0.25, group: ukrainian_consonants]
+в -> v;
+
+[id: 2841, name: "В to v", weight: 0.25, group: ukrainian_consonants]
+В -> v;
+
+// Г → ɦ (voiced glottal fricative, NOT like Russian г!)
+[id: 2842, name: "г to ɦ", weight: 0.25, group: ukrainian_consonants, ipa: "/ɦ/"]
+г -> ɦ;
+
+[id: 2843, name: "Г to ɦ", weight: 0.25, group: ukrainian_consonants, ipa: "/ɦ/"]
+Г -> ɦ;
+
+// Д → d
+[id: 2844, name: "д to d", weight: 0.25, group: ukrainian_consonants]
+д -> d;
+
+[id: 2845, name: "Д to d", weight: 0.25, group: ukrainian_consonants]
+Д -> d;
+
+// З → z
+[id: 2846, name: "з to z", weight: 0.25, group: ukrainian_consonants]
+з -> z;
+
+[id: 2847, name: "З to z", weight: 0.25, group: ukrainian_consonants]
+З -> z;
+
+// Й → j (palatal approximant)
+[id: 2848, name: "й to j", weight: 0.25, group: ukrainian_consonants, ipa: "/j/"]
+й -> j;
+
+[id: 2849, name: "Й to j", weight: 0.25, group: ukrainian_consonants, ipa: "/j/"]
+Й -> j;
+
+// К → k
+[id: 2850, name: "к to k", weight: 0.25, group: ukrainian_consonants]
+к -> k;
+
+[id: 2868, name: "К to k", weight: 0.25, group: ukrainian_consonants]
+К -> k;
+
+// Л → l
+[id: 2851, name: "л to l", weight: 0.25, group: ukrainian_consonants]
+л -> l;
+
+[id: 2869, name: "Л to l", weight: 0.25, group: ukrainian_consonants]
+Л -> l;
+
+// М → m
+[id: 2852, name: "м to m", weight: 0.25, group: ukrainian_consonants]
+м -> m;
+
+[id: 2870, name: "М to m", weight: 0.25, group: ukrainian_consonants]
+М -> m;
+
+// Н → n
+[id: 2853, name: "н to n", weight: 0.25, group: ukrainian_consonants]
+н -> n;
+
+[id: 2871, name: "Н to n", weight: 0.25, group: ukrainian_consonants]
+Н -> n;
+
+// П → p
+[id: 2854, name: "п to p", weight: 0.25, group: ukrainian_consonants]
+п -> p;
+
+[id: 2872, name: "П to p", weight: 0.25, group: ukrainian_consonants]
+П -> p;
+
+// Р → r
+[id: 2855, name: "р to r", weight: 0.25, group: ukrainian_consonants]
+р -> r;
+
+[id: 2873, name: "Р to r", weight: 0.25, group: ukrainian_consonants]
+Р -> r;
+
+// С → s
+[id: 2856, name: "с to s", weight: 0.25, group: ukrainian_consonants]
+с -> s;
+
+[id: 2874, name: "С to s", weight: 0.25, group: ukrainian_consonants]
+С -> s;
+
+// Т → t
+[id: 2857, name: "т to t", weight: 0.25, group: ukrainian_consonants]
+т -> t;
+
+[id: 2875, name: "Т to t", weight: 0.25, group: ukrainian_consonants]
+Т -> t;
+
+// Ф → f
+[id: 2858, name: "ф to f", weight: 0.25, group: ukrainian_consonants]
+ф -> f;
+
+[id: 2876, name: "Ф to f", weight: 0.25, group: ukrainian_consonants]
+Ф -> f;
+
+// ============================================================
+// SOFT SIGN AND APOSTROPHE
+// ============================================================
+
+// Ь (soft sign) → remove (marks palatalization)
+[id: 2859, name: "soft sign remove", weight: 0.3, group: ukrainian_signs]
+ь -> ;
+
+// Apostrophe (separates consonant from soft vowel) → remove
+[id: 2860, name: "apostrophe remove", weight: 0.3, group: ukrainian_signs]
+' -> ;
+
+// ============================================================
+// FINAL DEVOICING (at word end)
+// ============================================================
+// Voiced consonants become voiceless at word end
+
+[id: 2861, name: "final б to p", weight: 0.08, group: ukrainian_devoicing]
+б -> p / _#;
+
+[id: 2862, name: "final в to f", weight: 0.08, group: ukrainian_devoicing]
+в -> f / _#;
+
+[id: 2863, name: "final г to x", weight: 0.08, group: ukrainian_devoicing]
+г -> x / _#;
+
+[id: 2864, name: "final ґ to k", weight: 0.08, group: ukrainian_devoicing]
+ґ -> k / _#;
+
+[id: 2865, name: "final д to t", weight: 0.08, group: ukrainian_devoicing]
+д -> t / _#;
+
+[id: 2866, name: "final ж to ʃ", weight: 0.08, group: ukrainian_devoicing]
+ж -> ʃ / _#;
+
+[id: 2867, name: "final з to s", weight: 0.08, group: ukrainian_devoicing]
+з -> s / _#;
+

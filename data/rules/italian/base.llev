@@ -1,0 +1,266 @@
+// Italian Phonetic Rules
+// ======================
+// Italian has relatively transparent orthography.
+// Most letters have consistent pronunciations.
+//
+// Key features:
+//   - Geminate (double) consonants are meaningful and preserved
+//   - C/G softening before front vowels (e, i)
+//   - CH/GH preserve hard C/G before front vowels
+//   - SC before e/i → ʃ (sh sound)
+//   - GN → ɲ (like Spanish ñ)
+//   - GLI → ʎ (palatalized l)
+//   - H is always silent
+//   - 7 vowels (a, e open/closed, i, o open/closed, u)
+
+@name "Italian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic rules for Standard Italian"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiouàèéìíòóùú]
+@define FRONT_VOWEL = [eiéèíì]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+
+// ============================================================
+// MULTI-CHARACTER PATTERNS (longest match first)
+// ============================================================
+
+// GLI pattern - palatalized l (ʎ)
+// GLIA, GLIE, GLIO, GLIU must come before GLI for longest match
+[id: 1700, name: "glia to ʎa", weight: 0.05, group: italian_digraphs, ipa: "/ʎ/"]
+glia -> ʎa;
+
+[id: 1701, name: "glie to ʎe", weight: 0.05, group: italian_digraphs, ipa: "/ʎ/"]
+glie -> ʎe;
+
+[id: 1702, name: "glio to ʎo", weight: 0.05, group: italian_digraphs, ipa: "/ʎ/"]
+glio -> ʎo;
+
+[id: 1703, name: "gliu to ʎu", weight: 0.05, group: italian_digraphs, ipa: "/ʎ/"]
+gliu -> ʎu;
+
+[id: 1704, name: "gli to ʎ", weight: 0.05, group: italian_digraphs, ipa: "/ʎ/"]
+gli -> ʎ;
+
+// SCH pattern - keeps hard S before e/i
+[id: 1710, name: "sche to ske", weight: 0.05, group: italian_digraphs]
+sche -> ske;
+
+[id: 1711, name: "schi to ski", weight: 0.05, group: italian_digraphs]
+schi -> ski;
+
+// SC before e/i → ʃ (sh sound)
+[id: 1715, name: "sce to she", weight: 0.1, group: italian_digraphs, ipa: "/ʃ/"]
+sce -> ʃe;
+
+[id: 1716, name: "sci to shi", weight: 0.1, group: italian_digraphs, ipa: "/ʃ/"]
+sci -> ʃi;
+
+// SC before a/o/u → sk
+[id: 1717, name: "sca to ska", weight: 0.1, group: italian_digraphs]
+sca -> ska;
+
+[id: 1718, name: "sco to sko", weight: 0.1, group: italian_digraphs]
+sco -> sko;
+
+[id: 1719, name: "scu to sku", weight: 0.1, group: italian_digraphs]
+scu -> sku;
+
+// GN pattern - ɲ (like Spanish ñ)
+[id: 1720, name: "gn to ny", weight: 0.1, group: italian_digraphs, ipa: "/ɲ/"]
+gn -> ɲ;
+
+// CH pattern - keeps hard C before e/i
+[id: 1725, name: "che to ke", weight: 0.1, group: italian_digraphs]
+che -> ke;
+
+[id: 1726, name: "chi to ki", weight: 0.1, group: italian_digraphs]
+chi -> ki;
+
+// GH pattern - keeps hard G before e/i
+// Use capital G to prevent soft G rules from matching output
+[id: 1730, name: "ghe to Ge", weight: 0.1, group: italian_digraphs]
+ghe -> Ge;
+
+[id: 1731, name: "ghi to Gi", weight: 0.1, group: italian_digraphs]
+ghi -> Gi;
+
+// QU pattern
+[id: 1735, name: "qu to kw", weight: 0.1, group: italian_digraphs]
+qu -> kw;
+
+// ============================================================
+// C SOFTENING
+// ============================================================
+// C before e/i → tʃ (ch sound like English "church")
+// CIA, CIO, CIU must come BEFORE CI for longest match (i is silent)
+
+[id: 1740, name: "cia to t͡ʃa", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+cia -> t͡ʃa;
+
+[id: 1741, name: "cio to t͡ʃo", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+cio -> t͡ʃo;
+
+[id: 1742, name: "ciu to t͡ʃu", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+ciu -> t͡ʃu;
+
+[id: 1743, name: "c before e to ch", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+ce -> t͡ʃe;
+
+[id: 1744, name: "c before i to ch", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+ci -> t͡ʃi;
+
+[id: 1745, name: "c before è to ch", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+cè -> t͡ʃè;
+
+[id: 1746, name: "c before é to ch", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+cé -> t͡ʃé;
+
+[id: 1747, name: "c before ì to ch", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+cì -> t͡ʃì;
+
+[id: 1748, name: "c before í to ch", weight: 0.15, group: italian_softening, ipa: "/t͡ʃ/"]
+cí -> t͡ʃí;
+
+// C before a/o/u → k
+[id: 1750, name: "c before a", weight: 0.2, group: italian_c]
+ca -> ka;
+
+[id: 1751, name: "c before o", weight: 0.2, group: italian_c]
+co -> ko;
+
+[id: 1752, name: "c before u", weight: 0.2, group: italian_c]
+cu -> ku;
+
+// C before consonant → k
+[id: 1755, name: "c before consonant", weight: 0.2, group: italian_c]
+c -> k / _$CONSONANT;
+
+// C at word end (rare) → k
+[id: 1756, name: "c final", weight: 0.2, group: italian_c]
+c -> k / _#;
+
+// ============================================================
+// G SOFTENING
+// ============================================================
+// G before e/i → dʒ (j sound like English "judge")
+// Use DZH to represent /dʒ/ - avoids j->dj infinite loop
+// GIA, GIO, GIU must come BEFORE GI for longest match (i is silent)
+
+[id: 1760, name: "gia to d͡ʒa", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+gia -> d͡ʒa;
+
+[id: 1761, name: "gio to d͡ʒo", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+gio -> d͡ʒo;
+
+[id: 1762, name: "giu to d͡ʒu", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+giu -> d͡ʒu;
+
+[id: 1763, name: "g before e to j", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+ge -> d͡ʒe;
+
+[id: 1764, name: "g before i to j", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+gi -> d͡ʒi;
+
+[id: 1765, name: "g before è to j", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+gè -> d͡ʒè;
+
+[id: 1766, name: "g before é to j", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+gé -> d͡ʒé;
+
+[id: 1767, name: "g before ì to j", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+gì -> d͡ʒì;
+
+[id: 1768, name: "g before í to j", weight: 0.15, group: italian_softening, ipa: "/d͡ʒ/"]
+gí -> d͡ʒí;
+
+// ============================================================
+// SILENT H
+// ============================================================
+// H is always silent in Italian (used in ho, hai, ha, hanno and ch/gh)
+
+[id: 1770, name: "h initial silent", weight: 0.2, group: italian_silent]
+h -> / #_;
+
+// ============================================================
+// Z PATTERNS
+// ============================================================
+// Z can be voiced [dz] or voiceless [ts] - lexically determined
+// Default to ts (more common)
+
+[id: 1775, name: "z to ts", weight: 0.2, group: italian_z, ipa: "/t͡s/"]
+z -> t͡s;
+
+// ZZ - often voiced [ddz] but we'll use ts for simplicity
+[id: 1776, name: "zz to tts", weight: 0.2, group: italian_z, ipa: "/t͡ːs/"]
+zz -> t͡ːs;
+
+// ============================================================
+// GEMINATE CONSONANTS
+// ============================================================
+// Italian preserves meaningful double consonants
+// They indicate longer/stronger pronunciation
+// We keep them doubled to preserve the distinction
+
+// Double consonants are preserved (not simplified)
+// This is intentionally different from other Romance languages
+
+// ============================================================
+// ACCENT NORMALIZATION
+// ============================================================
+// Italian uses grave accent (è, ò) for open vowels
+// and acute accent (é, ó) for closed vowels
+// Normalize for matching purposes
+
+[id: 1780, name: "à to a", weight: 0.3, group: italian_accents]
+à -> a;
+
+[id: 1781, name: "è to e", weight: 0.3, group: italian_accents]
+è -> e;
+
+[id: 1782, name: "é to e", weight: 0.3, group: italian_accents]
+é -> e;
+
+[id: 1783, name: "ì to i", weight: 0.3, group: italian_accents]
+ì -> i;
+
+[id: 1784, name: "í to i", weight: 0.3, group: italian_accents]
+í -> i;
+
+[id: 1785, name: "ò to o", weight: 0.3, group: italian_accents]
+ò -> o;
+
+[id: 1786, name: "ó to o", weight: 0.3, group: italian_accents]
+ó -> o;
+
+[id: 1787, name: "ù to u", weight: 0.3, group: italian_accents]
+ù -> u;
+
+[id: 1788, name: "ú to u", weight: 0.3, group: italian_accents]
+ú -> u;
+
+// ============================================================
+// FOREIGN LETTERS
+// ============================================================
+// J, K, W, X, Y only appear in loanwords
+
+[id: 1790, name: "j to d͡ʒ", weight: 0.3, group: italian_foreign, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+[id: 1791, name: "k preserved", weight: 0.3, group: italian_foreign]
+k -> k;
+
+[id: 1792, name: "w to v", weight: 0.3, group: italian_foreign]
+w -> v;
+
+[id: 1793, name: "x to ks", weight: 0.3, group: italian_foreign]
+x -> ks;
+
+[id: 1794, name: "y to i", weight: 0.3, group: italian_foreign]
+y -> i;
+

@@ -1,0 +1,348 @@
+// Telugu Base Phonetic Rules
+// ==========================
+// Phonetic rules for Telugu (తెలుగు) script romanization.
+// Maps Telugu letters to Latin equivalents for phonetic matching.
+//
+// Telugu uses a Brahmic abugida with distinctive rounded letters,
+// closely related to Kannada script.
+//
+// Key features:
+//   - 16 vowels (independent and matra forms)
+//   - 36+ consonants in standard arrangement
+//   - Inherent /a/ vowel (like Hindi)
+//   - ళ (retroflex lateral approximant)
+//   - ఱ (alveolar trill)
+//
+// Rule IDs: 4100-4199
+
+@name "Telugu Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Telugu script"
+
+// ============================================================
+// TELUGU-SPECIFIC CONSONANTS (highest priority)
+// ============================================================
+
+// ళ - retroflex lateral approximant
+[id: 4100, name: "La retroflex", weight: 0.02, group: telugu_special, ipa: "/ɭ/"]
+ళ -> ɭ;
+
+// ఱ - alveolar trill (historical, now rare)
+[id: 4101, name: "Rra alveolar", weight: 0.02, group: telugu_special, ipa: "/ɽ/"]
+ఱ -> ɽ;
+
+// ============================================================
+// INDEPENDENT VOWELS (అచ్చులు)
+// ============================================================
+
+[id: 4105, name: "a vowel", weight: 0.05, group: telugu_vowels]
+అ -> a;
+
+[id: 4106, name: "aa vowel", weight: 0.05, group: telugu_vowels, ipa: "/aː/"]
+ఆ -> aː;
+
+[id: 4107, name: "i vowel", weight: 0.05, group: telugu_vowels]
+ఇ -> i;
+
+[id: 4108, name: "ii vowel", weight: 0.05, group: telugu_vowels, ipa: "/iː/"]
+ఈ -> iː;
+
+[id: 4109, name: "u vowel", weight: 0.05, group: telugu_vowels]
+ఉ -> u;
+
+[id: 4110, name: "uu vowel", weight: 0.05, group: telugu_vowels, ipa: "/uː/"]
+ఊ -> uː;
+
+[id: 4111, name: "ri vowel", weight: 0.05, group: telugu_vowels, ipa: "/r̩/"]
+ఋ -> r̩;
+
+[id: 4112, name: "rii vowel", weight: 0.05, group: telugu_vowels, ipa: "/r̩ː/"]
+ౠ -> r̩ː;
+
+[id: 4113, name: "li vowel", weight: 0.05, group: telugu_vowels, ipa: "/l̩/"]
+ఌ -> l̩;
+
+[id: 4114, name: "lii vowel", weight: 0.05, group: telugu_vowels, ipa: "/l̩ː/"]
+ౡ -> l̩ː;
+
+[id: 4115, name: "e short vowel", weight: 0.05, group: telugu_vowels]
+ఎ -> e;
+
+[id: 4116, name: "ee long vowel", weight: 0.05, group: telugu_vowels, ipa: "/eː/"]
+ఏ -> eː;
+
+[id: 4117, name: "ai vowel", weight: 0.05, group: telugu_vowels, ipa: "/aɪ/"]
+ఐ -> aɪ;
+
+[id: 4118, name: "o short vowel", weight: 0.05, group: telugu_vowels]
+ఒ -> o;
+
+[id: 4119, name: "oo long vowel", weight: 0.05, group: telugu_vowels, ipa: "/oː/"]
+ఓ -> oː;
+
+[id: 4120, name: "au vowel", weight: 0.05, group: telugu_vowels, ipa: "/aʊ/"]
+ఔ -> aʊ;
+
+// ============================================================
+// VELAR CONSONANTS (క-వర్గం)
+// ============================================================
+
+[id: 4125, name: "ka", weight: 0.05, group: telugu_velars]
+క -> k;
+
+[id: 4126, name: "kha", weight: 0.05, group: telugu_velars]
+ఖ -> kh;
+
+[id: 4127, name: "ga", weight: 0.05, group: telugu_velars]
+గ -> g;
+
+[id: 4128, name: "gha", weight: 0.05, group: telugu_velars]
+ఘ -> gh;
+
+[id: 4129, name: "nga", weight: 0.05, group: telugu_velars, ipa: "/ŋ/"]
+ఙ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (చ-వర్గం)
+// ============================================================
+
+[id: 4130, name: "cha", weight: 0.05, group: telugu_palatals]
+చ -> c;
+
+[id: 4131, name: "chha", weight: 0.05, group: telugu_palatals]
+ఛ -> ch;
+
+[id: 4132, name: "ja", weight: 0.05, group: telugu_palatals]
+జ -> j;
+
+[id: 4133, name: "jha", weight: 0.05, group: telugu_palatals]
+ఝ -> jh;
+
+[id: 4134, name: "nya", weight: 0.05, group: telugu_palatals, ipa: "/ɲ/"]
+ఞ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ట-వర్గం)
+// ============================================================
+
+[id: 4135, name: "Ta", weight: 0.05, group: telugu_retroflexes, ipa: "/ʈ/"]
+ట -> ʈ;
+
+[id: 4136, name: "Tha", weight: 0.05, group: telugu_retroflexes, ipa: "/ʈʰ/"]
+ఠ -> ʈʰ;
+
+[id: 4137, name: "Da", weight: 0.05, group: telugu_retroflexes, ipa: "/ɖ/"]
+డ -> ɖ;
+
+[id: 4138, name: "Dha", weight: 0.05, group: telugu_retroflexes, ipa: "/ɖʰ/"]
+ఢ -> ɖʰ;
+
+[id: 4139, name: "Na", weight: 0.05, group: telugu_retroflexes, ipa: "/ɳ/"]
+ణ -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (త-వర్గం)
+// ============================================================
+
+[id: 4140, name: "ta", weight: 0.05, group: telugu_dentals]
+త -> t;
+
+[id: 4141, name: "tha", weight: 0.05, group: telugu_dentals]
+థ -> th;
+
+[id: 4142, name: "da", weight: 0.05, group: telugu_dentals]
+ద -> d;
+
+[id: 4143, name: "dha", weight: 0.05, group: telugu_dentals]
+ధ -> dh;
+
+[id: 4144, name: "na", weight: 0.05, group: telugu_dentals]
+న -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (ప-వర్గం)
+// ============================================================
+
+[id: 4145, name: "pa", weight: 0.05, group: telugu_labials]
+ప -> p;
+
+[id: 4146, name: "pha", weight: 0.05, group: telugu_labials]
+ఫ -> ph;
+
+[id: 4147, name: "ba", weight: 0.05, group: telugu_labials]
+బ -> b;
+
+[id: 4148, name: "bha", weight: 0.05, group: telugu_labials]
+భ -> bh;
+
+[id: 4149, name: "ma", weight: 0.05, group: telugu_labials]
+మ -> m;
+
+// ============================================================
+// SEMI-VOWELS (అంతస్థాలు)
+// ============================================================
+
+[id: 4150, name: "ya", weight: 0.05, group: telugu_semivowels]
+య -> y;
+
+[id: 4151, name: "ra", weight: 0.05, group: telugu_semivowels]
+ర -> r;
+
+[id: 4152, name: "la", weight: 0.05, group: telugu_semivowels]
+ల -> l;
+
+[id: 4153, name: "va", weight: 0.05, group: telugu_semivowels]
+వ -> v;
+
+// ============================================================
+// SIBILANTS AND ASPIRATE (ఊష్మాలు)
+// ============================================================
+
+[id: 4155, name: "sha palatal", weight: 0.05, group: telugu_sibilants, ipa: "/ʃ/"]
+శ -> ʃ;
+
+[id: 4156, name: "Sha retroflex", weight: 0.05, group: telugu_sibilants, ipa: "/ʂ/"]
+ష -> ʂ;
+
+[id: 4157, name: "sa", weight: 0.05, group: telugu_sibilants]
+స -> s;
+
+[id: 4158, name: "ha", weight: 0.05, group: telugu_sibilants]
+హ -> h;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels / మాత్రలు)
+// ============================================================
+
+[id: 4160, name: "aa matra", weight: 0.05, group: telugu_matras, ipa: "/aː/"]
+ా -> aː;
+
+[id: 4161, name: "i matra", weight: 0.05, group: telugu_matras]
+ి -> i;
+
+[id: 4162, name: "ii matra", weight: 0.05, group: telugu_matras, ipa: "/iː/"]
+ీ -> iː;
+
+[id: 4163, name: "u matra", weight: 0.05, group: telugu_matras]
+ు -> u;
+
+[id: 4164, name: "uu matra", weight: 0.05, group: telugu_matras, ipa: "/uː/"]
+ూ -> uː;
+
+[id: 4165, name: "ri matra", weight: 0.05, group: telugu_matras, ipa: "/r̩/"]
+ృ -> r̩;
+
+[id: 4166, name: "rii matra", weight: 0.05, group: telugu_matras, ipa: "/r̩ː/"]
+ౄ -> r̩ː;
+
+[id: 4167, name: "e short matra", weight: 0.05, group: telugu_matras]
+ె -> e;
+
+[id: 4168, name: "ee long matra", weight: 0.05, group: telugu_matras, ipa: "/eː/"]
+ే -> eː;
+
+[id: 4169, name: "ai matra", weight: 0.05, group: telugu_matras, ipa: "/aɪ/"]
+ై -> aɪ;
+
+[id: 4170, name: "o short matra", weight: 0.05, group: telugu_matras]
+ొ -> o;
+
+[id: 4171, name: "oo long matra", weight: 0.05, group: telugu_matras, ipa: "/oː/"]
+ో -> oː;
+
+[id: 4172, name: "au matra", weight: 0.05, group: telugu_matras, ipa: "/aʊ/"]
+ౌ -> aʊ;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Virama (halant) - removes inherent vowel
+[id: 4175, name: "virama", weight: 0.1, group: telugu_diacritics]
+్ -> ;
+
+// Anusvara - nasalization
+[id: 4176, name: "anusvara", weight: 0.1, group: telugu_diacritics, ipa: "/̃/"]
+ం -> ̃;
+
+// Chandrabindu - nasal vowel
+[id: 4177, name: "chandrabindu", weight: 0.1, group: telugu_diacritics, ipa: "/̃/"]
+ఁ -> ̃;
+
+// Visarga - voiceless glottal fricative
+[id: 4178, name: "visarga", weight: 0.1, group: telugu_diacritics, ipa: "/h/"]
+ః -> h;
+
+// Avagraha - elision marker
+[id: 4179, name: "avagraha", weight: 0.1, group: telugu_diacritics]
+ఽ -> ';
+
+// ============================================================
+// TELUGU NUMERALS
+// ============================================================
+
+[id: 4180, name: "numeral 0", weight: 0.1, group: telugu_numerals]
+౦ -> 0;
+
+[id: 4181, name: "numeral 1", weight: 0.1, group: telugu_numerals]
+౧ -> 1;
+
+[id: 4182, name: "numeral 2", weight: 0.1, group: telugu_numerals]
+౨ -> 2;
+
+[id: 4183, name: "numeral 3", weight: 0.1, group: telugu_numerals]
+౩ -> 3;
+
+[id: 4184, name: "numeral 4", weight: 0.1, group: telugu_numerals]
+౪ -> 4;
+
+[id: 4185, name: "numeral 5", weight: 0.1, group: telugu_numerals]
+౫ -> 5;
+
+[id: 4186, name: "numeral 6", weight: 0.1, group: telugu_numerals]
+౬ -> 6;
+
+[id: 4187, name: "numeral 7", weight: 0.1, group: telugu_numerals]
+౭ -> 7;
+
+[id: 4188, name: "numeral 8", weight: 0.1, group: telugu_numerals]
+౮ -> 8;
+
+[id: 4189, name: "numeral 9", weight: 0.1, group: telugu_numerals]
+౯ -> 9;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 4190, name: "double retroflex lateral", weight: 0.2, group: telugu_simplification]
+ɭɭ -> ɭ;
+
+[id: 4191, name: "double retroflex flap", weight: 0.2, group: telugu_simplification]
+ɽɽ -> ɽ;
+
+[id: 4192, name: "double retroflex t", weight: 0.2, group: telugu_simplification]
+ʈʈ -> ʈ;
+
+[id: 4193, name: "double retroflex d", weight: 0.2, group: telugu_simplification]
+ɖɖ -> ɖ;
+
+[id: 4194, name: "double retroflex nasal", weight: 0.2, group: telugu_simplification]
+ɳɳ -> ɳ;
+
+[id: 4195, name: "double palatal sh", weight: 0.2, group: telugu_simplification]
+ʃʃ -> ʃ;
+
+[id: 4196, name: "double retroflex sh", weight: 0.2, group: telugu_simplification]
+ʂʂ -> ʂ;
+
+[id: 4197, name: "double palatal nasal", weight: 0.2, group: telugu_simplification]
+ɲɲ -> ɲ;
+
+[id: 4198, name: "double ai diphthong", weight: 0.2, group: telugu_simplification]
+aɪaɪ -> aɪ;
+
+[id: 4199, name: "double au diphthong", weight: 0.2, group: telugu_simplification]
+aʊaʊ -> aʊ;
+

@@ -1,0 +1,128 @@
+// European Portuguese Dialect Rules
+// ==================================
+// Dialect-specific rules for European Portuguese (Portugal).
+// These rules layer on top of the shared Portuguese base rules.
+//
+// Key European Portuguese features:
+//   - Strong vowel reduction in unstressed syllables
+//   - Different R pronunciation (uvular [ʀ] initially and in rr)
+//   - Final s/z often → ʃ (sh) before consonant or pause
+//   - More closed vowels
+
+@name "European Portuguese Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for European Portuguese"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiouáàâãéêíóôõúü]
+@define CONSONANT = [bcdfghjklmnpqrstvwxz]
+
+// ============================================================
+// VOWEL REDUCTION
+// ============================================================
+// European Portuguese strongly reduces unstressed vowels
+// This is one of the most distinctive features vs Brazilian
+
+// Unstressed 'e' often → schwa or dropped entirely
+// (Context-dependent - simplified rules here)
+// Note: Full context requires NFA matching, simplified for fuzzy matching
+
+[id: 1600, name: "unstressed e reduction", weight: 0.15, group: european_reduction, ipa: "/ə/"]
+e -> ə / $CONSONANT _;
+
+// Unstressed 'o' → u
+[id: 1605, name: "unstressed o to u", weight: 0.15, group: european_reduction]
+o -> u / _$CONSONANT;
+
+// ============================================================
+// R PRONUNCIATION
+// ============================================================
+// European Portuguese uses uvular R [ʀ] initially and for rr
+// Single r between vowels is a tap [ɾ]
+
+// Initial R → uvular (represented as RR)
+[id: 1610, name: "initial r uvular", weight: 0.1, group: european_r]
+r -> R / #_;
+
+// RR already marked as R in base rules (guttural/uvular)
+
+// Single r between vowels → tap (represented as r)
+// (default behavior, no rule needed)
+
+// R after consonant at syllable start → uvular
+[id: 1615, name: "r after n uvular", weight: 0.15, group: european_r]
+nr -> nR;
+
+[id: 1616, name: "r after l uvular", weight: 0.15, group: european_r]
+lr -> lR;
+
+[id: 1617, name: "r after s uvular", weight: 0.15, group: european_r]
+sr -> sR;
+
+// ============================================================
+// S/Z AT END OF SYLLABLE
+// ============================================================
+// European Portuguese: s/z before consonant or pause → ʃ/ʒ
+
+// S before voiceless consonant → ʃ (sh)
+[id: 1620, name: "s before p", weight: 0.15, group: european_s, ipa: "/ʃ/"]
+sp -> ʃp;
+
+[id: 1621, name: "s before t", weight: 0.15, group: european_s, ipa: "/ʃ/"]
+st -> ʃt;
+
+[id: 1622, name: "s before k", weight: 0.15, group: european_s, ipa: "/ʃ/"]
+sc -> ʃk / _[aou];
+
+[id: 1623, name: "s before f", weight: 0.15, group: european_s, ipa: "/ʃ/"]
+sf -> ʃf;
+
+// S before voiced consonant → ʒ (zh)
+[id: 1625, name: "s before b", weight: 0.15, group: european_s, ipa: "/ʒ/"]
+sb -> ʒb;
+
+[id: 1626, name: "s before d", weight: 0.15, group: european_s, ipa: "/ʒ/"]
+sd -> ʒd;
+
+[id: 1627, name: "s before g", weight: 0.15, group: european_s, ipa: "/ʒ/"]
+sg -> ʒg;
+
+[id: 1628, name: "s before v", weight: 0.15, group: european_s, ipa: "/ʒ/"]
+sv -> ʒv;
+
+// S at word end → ʃ
+[id: 1630, name: "final s to sh", weight: 0.15, group: european_s, ipa: "/ʃ/"]
+s -> ʃ / _#;
+
+// Z at word end → ʃ
+[id: 1631, name: "final z to sh", weight: 0.15, group: european_s, ipa: "/ʃ/"]
+z -> ʃ / _#;
+
+// ============================================================
+// L PATTERNS
+// ============================================================
+// European Portuguese keeps 'l' as lateral (unlike Brazilian)
+
+// L at end of syllable - kept as l (dark l)
+// No change needed - l stays l
+
+// ============================================================
+// T/D PATTERNS
+// ============================================================
+// European Portuguese does NOT palatalize t/d before i
+// (unlike Brazilian Portuguese)
+
+// No rules needed - t and d stay as t and d
+
+// ============================================================
+// E FINAL
+// ============================================================
+// Final 'e' is often very reduced or dropped in European Portuguese
+
+[id: 1640, name: "final e reduced", weight: 0.2, group: european_final, ipa: "/ə/"]
+e -> ə / _#;
+

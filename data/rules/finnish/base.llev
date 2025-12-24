@@ -1,0 +1,245 @@
+// Finnish Base Phonetic Rules
+// ===========================
+// Phonetic rules for Finnish (suomi).
+// Finnish has nearly phonemic orthography.
+//
+// Key features:
+//   - Nearly phonemic spelling (very regular)
+//   - Two front vowels: ä, ö
+//   - Vowel harmony: front (ä, ö, y) vs back (a, o, u)
+//   - Gemination: double letters indicate long sounds
+//   - Ng digraph = velar nasal [ŋː]
+//   - No voiced stops (b, d, g) in native words
+//
+// Rule IDs: 3800-3849
+
+@name "Finnish Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Finnish"
+
+// ============================================================
+// DIGRAPHS (highest priority)
+// ============================================================
+
+// Ng → ŋː (geminate velar nasal, like "ng" in "singer")
+[id: 3800, name: "ng digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋː/"]
+ng -> ŋː;
+
+[id: 3801, name: "Ng digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋː/"]
+Ng -> ŋː;
+
+[id: 3802, name: "NG digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋː/"]
+NG -> ŋː;
+
+// Nk → ŋk (velar nasal + k)
+[id: 3803, name: "nk digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋk/"]
+nk -> ŋk;
+
+[id: 3804, name: "Nk digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋk/"]
+Nk -> ŋk;
+
+[id: 3805, name: "NK digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋk/"]
+NK -> ŋk;
+
+// ============================================================
+// FRONT VOWELS (special Finnish vowels)
+// ============================================================
+
+// Ä/ä → æ (front open vowel, like German ä)
+[id: 3810, name: "a umlaut to æ", weight: 0.1, group: finnish_front_vowels, ipa: "/æ/"]
+ä -> æ;
+
+[id: 3811, name: "A umlaut to æ", weight: 0.1, group: finnish_front_vowels, ipa: "/æ/"]
+Ä -> æ;
+
+// Ö/ö → ø (front rounded vowel, like German ö)
+[id: 3812, name: "o umlaut to ø", weight: 0.1, group: finnish_front_vowels, ipa: "/ø/"]
+ö -> ø;
+
+[id: 3813, name: "O umlaut to ø", weight: 0.1, group: finnish_front_vowels, ipa: "/ø/"]
+Ö -> ø;
+
+// Y/y → y (front rounded vowel, like German ü)
+[id: 3814, name: "y front vowel", weight: 0.1, group: finnish_front_vowels, ipa: "/y/"]
+y -> y;
+
+[id: 3815, name: "Y front vowel", weight: 0.1, group: finnish_front_vowels, ipa: "/y/"]
+Y -> y;
+
+// ============================================================
+// BACK VOWELS
+// ============================================================
+
+// A → a
+[id: 3816, name: "a vowel", weight: 0.15, group: finnish_vowels]
+a -> a;
+
+[id: 3817, name: "A vowel", weight: 0.15, group: finnish_vowels]
+A -> a;
+
+// E → e
+[id: 3818, name: "e vowel", weight: 0.15, group: finnish_vowels]
+e -> e;
+
+[id: 3819, name: "E vowel", weight: 0.15, group: finnish_vowels]
+E -> e;
+
+// I → i
+[id: 3820, name: "i vowel", weight: 0.15, group: finnish_vowels]
+i -> i;
+
+[id: 3821, name: "I vowel", weight: 0.15, group: finnish_vowels]
+I -> i;
+
+// O → o
+[id: 3822, name: "o vowel", weight: 0.15, group: finnish_vowels]
+o -> o;
+
+[id: 3823, name: "O vowel", weight: 0.15, group: finnish_vowels]
+O -> o;
+
+// U → u
+[id: 3824, name: "u vowel", weight: 0.15, group: finnish_vowels]
+u -> u;
+
+[id: 3825, name: "U vowel", weight: 0.15, group: finnish_vowels]
+U -> u;
+
+// ============================================================
+// CONSONANTS
+// ============================================================
+
+// B → p (b only in loanwords, often pronounced as p)
+[id: 3826, name: "b to p", weight: 0.2, group: finnish_consonants]
+b -> p;
+
+[id: 3827, name: "B to p", weight: 0.2, group: finnish_consonants]
+B -> p;
+
+// C → k (c only in loanwords)
+[id: 3828, name: "c to k", weight: 0.2, group: finnish_consonants]
+c -> k;
+
+[id: 3829, name: "C to k", weight: 0.2, group: finnish_consonants]
+C -> k;
+
+// D → t (d is marginal, often realized as t in dialects)
+[id: 3830, name: "d consonant", weight: 0.2, group: finnish_consonants]
+d -> t;
+
+[id: 3831, name: "D consonant", weight: 0.2, group: finnish_consonants]
+D -> t;
+
+// F → f (loanwords only)
+[id: 3832, name: "f consonant", weight: 0.2, group: finnish_consonants]
+f -> f;
+
+[id: 3833, name: "F consonant", weight: 0.2, group: finnish_consonants]
+F -> f;
+
+// G → k (g only in loanwords or after n)
+[id: 3834, name: "g to k", weight: 0.2, group: finnish_consonants]
+g -> k;
+
+[id: 3835, name: "G to k", weight: 0.2, group: finnish_consonants]
+G -> k;
+
+// H → h
+[id: 3836, name: "h consonant", weight: 0.2, group: finnish_consonants]
+h -> h;
+
+[id: 3837, name: "H consonant", weight: 0.2, group: finnish_consonants]
+H -> h;
+
+// J → j (like English y, palatal approximant)
+[id: 3838, name: "j consonant", weight: 0.2, group: finnish_consonants, ipa: "/j/"]
+j -> j;
+
+[id: 3839, name: "J consonant", weight: 0.2, group: finnish_consonants, ipa: "/j/"]
+J -> j;
+
+// K → k
+[id: 3840, name: "k consonant", weight: 0.2, group: finnish_consonants]
+k -> k;
+
+[id: 3841, name: "K consonant", weight: 0.2, group: finnish_consonants]
+K -> k;
+
+// L → l
+[id: 3842, name: "l consonant", weight: 0.2, group: finnish_consonants]
+l -> l;
+
+[id: 3843, name: "L consonant", weight: 0.2, group: finnish_consonants]
+L -> l;
+
+// M → m
+[id: 3844, name: "m consonant", weight: 0.2, group: finnish_consonants]
+m -> m;
+
+[id: 3845, name: "M consonant", weight: 0.2, group: finnish_consonants]
+M -> m;
+
+// N → n
+[id: 3846, name: "n consonant", weight: 0.2, group: finnish_consonants]
+n -> n;
+
+[id: 3847, name: "N consonant", weight: 0.2, group: finnish_consonants]
+N -> n;
+
+// P → p
+[id: 3848, name: "p consonant", weight: 0.2, group: finnish_consonants]
+p -> p;
+
+[id: 3849, name: "P consonant", weight: 0.2, group: finnish_consonants]
+P -> p;
+
+// R → r (alveolar trill)
+[id: 3234, name: "r consonant", weight: 0.2, group: finnish_consonants]
+r -> r;
+
+[id: 3235, name: "R consonant", weight: 0.2, group: finnish_consonants]
+R -> r;
+
+// S → s
+[id: 3236, name: "s consonant", weight: 0.2, group: finnish_consonants]
+s -> s;
+
+[id: 3237, name: "S consonant", weight: 0.2, group: finnish_consonants]
+S -> s;
+
+// T → t
+[id: 3238, name: "t consonant", weight: 0.2, group: finnish_consonants]
+t -> t;
+
+[id: 3239, name: "T consonant", weight: 0.2, group: finnish_consonants]
+T -> t;
+
+// V → v
+[id: 3240, name: "v consonant", weight: 0.2, group: finnish_consonants]
+v -> v;
+
+[id: 3241, name: "V consonant", weight: 0.2, group: finnish_consonants]
+V -> v;
+
+// W → v (loanwords, same as v)
+[id: 3242, name: "w to v", weight: 0.2, group: finnish_consonants]
+w -> v;
+
+[id: 3243, name: "W to v", weight: 0.2, group: finnish_consonants]
+W -> v;
+
+// X → ks (loanwords)
+[id: 3244, name: "x to ks", weight: 0.2, group: finnish_consonants]
+x -> ks;
+
+[id: 3245, name: "X to ks", weight: 0.2, group: finnish_consonants]
+X -> ks;
+
+// Z → t͡s (loanwords, pronounced as ts)
+[id: 3246, name: "z to t͡s", weight: 0.2, group: finnish_consonants, ipa: "/t͡s/"]
+z -> t͡s;
+
+[id: 3247, name: "Z to t͡s", weight: 0.2, group: finnish_consonants, ipa: "/t͡s/"]
+Z -> t͡s;
+

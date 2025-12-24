@@ -1,0 +1,315 @@
+// Punjabi Gurmukhi Phonetic Rules
+// ================================
+// Phonetic rules for Punjabi (ਪੰਜਾਬੀ) in Gurmukhi script (India).
+// Maps Gurmukhi letters to Latin equivalents for phonetic matching.
+//
+// Gurmukhi is a Brahmic abugida used primarily in India for Punjabi.
+// Shahmukhi (Arabic script) is used in Pakistan.
+//
+// Key features:
+//   - 10 vowels (independent and matra forms)
+//   - 32+ consonants with nukta forms for Persian/Arabic loanwords
+//   - Inherent /a/ vowel
+//   - Tonal language (3 tones, not fully marked)
+//   - Addak (੍) for gemination
+//
+// Rule IDs: 4350-4424
+
+@name "Punjabi Gurmukhi Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Punjabi in Gurmukhi script"
+
+// ============================================================
+// NUKTA CONSONANTS (Persian/Arabic loanwords - highest priority)
+// ============================================================
+
+[id: 4350, name: "sha nukta", weight: 0.02, group: punjabi_nukta, ipa: "/ʃ/"]
+ਸ਼ -> ʃ;
+
+[id: 4351, name: "kha nukta", weight: 0.02, group: punjabi_nukta, ipa: "/x/"]
+ਖ਼ -> x;
+
+[id: 4352, name: "ga nukta", weight: 0.02, group: punjabi_nukta, ipa: "/ɣ/"]
+ਗ਼ -> ɣ;
+
+[id: 4353, name: "za nukta", weight: 0.02, group: punjabi_nukta, ipa: "/z/"]
+ਜ਼ -> z;
+
+[id: 4354, name: "fa nukta", weight: 0.02, group: punjabi_nukta, ipa: "/f/"]
+ਫ਼ -> f;
+
+[id: 4355, name: "rra nukta", weight: 0.02, group: punjabi_nukta, ipa: "/ɽ/"]
+ੜ -> ɽ;
+
+[id: 4356, name: "lla nukta", weight: 0.02, group: punjabi_nukta, ipa: "/ɭ/"]
+ਲ਼ -> ɭ;
+
+// ============================================================
+// INDEPENDENT VOWELS (ਸਵਰ)
+// ============================================================
+
+[id: 4360, name: "a vowel", weight: 0.05, group: punjabi_vowels]
+ਅ -> a;
+
+[id: 4361, name: "aa vowel", weight: 0.05, group: punjabi_vowels, ipa: "/aː/"]
+ਆ -> aː;
+
+[id: 4362, name: "i vowel", weight: 0.05, group: punjabi_vowels]
+ਇ -> i;
+
+[id: 4363, name: "ii vowel", weight: 0.05, group: punjabi_vowels, ipa: "/iː/"]
+ਈ -> iː;
+
+[id: 4364, name: "u vowel", weight: 0.05, group: punjabi_vowels]
+ਉ -> u;
+
+[id: 4365, name: "uu vowel", weight: 0.05, group: punjabi_vowels, ipa: "/uː/"]
+ਊ -> uː;
+
+[id: 4366, name: "e vowel", weight: 0.05, group: punjabi_vowels, ipa: "/eː/"]
+ਏ -> eː;
+
+[id: 4367, name: "ai vowel", weight: 0.05, group: punjabi_vowels, ipa: "/ɛː/"]
+ਐ -> ɛː;
+
+[id: 4368, name: "o vowel", weight: 0.05, group: punjabi_vowels, ipa: "/oː/"]
+ਓ -> oː;
+
+[id: 4369, name: "au vowel", weight: 0.05, group: punjabi_vowels, ipa: "/ɔː/"]
+ਔ -> ɔː;
+
+// ============================================================
+// VELAR CONSONANTS (ਕ-ਵਰਗ)
+// ============================================================
+
+[id: 4372, name: "ka", weight: 0.05, group: punjabi_velars]
+ਕ -> k;
+
+[id: 4373, name: "kha", weight: 0.05, group: punjabi_velars]
+ਖ -> kh;
+
+[id: 4374, name: "ga", weight: 0.05, group: punjabi_velars]
+ਗ -> g;
+
+[id: 4375, name: "gha", weight: 0.05, group: punjabi_velars]
+ਘ -> gh;
+
+[id: 4376, name: "nga", weight: 0.05, group: punjabi_velars, ipa: "/ŋ/"]
+ਙ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (ਚ-ਵਰਗ)
+// ============================================================
+
+[id: 4377, name: "cha", weight: 0.05, group: punjabi_palatals]
+ਚ -> c;
+
+[id: 4378, name: "chha", weight: 0.05, group: punjabi_palatals]
+ਛ -> ch;
+
+[id: 4379, name: "ja", weight: 0.05, group: punjabi_palatals]
+ਜ -> j;
+
+[id: 4380, name: "jha", weight: 0.05, group: punjabi_palatals]
+ਝ -> jh;
+
+[id: 4381, name: "nya", weight: 0.05, group: punjabi_palatals, ipa: "/ɲ/"]
+ਞ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ਟ-ਵਰਗ)
+// ============================================================
+
+[id: 4382, name: "Ta", weight: 0.05, group: punjabi_retroflexes, ipa: "/ʈ/"]
+ਟ -> ʈ;
+
+[id: 4383, name: "Tha", weight: 0.05, group: punjabi_retroflexes, ipa: "/ʈʰ/"]
+ਠ -> ʈʰ;
+
+[id: 4384, name: "Da", weight: 0.05, group: punjabi_retroflexes, ipa: "/ɖ/"]
+ਡ -> ɖ;
+
+[id: 4385, name: "Dha", weight: 0.05, group: punjabi_retroflexes, ipa: "/ɖʰ/"]
+ਢ -> ɖʰ;
+
+[id: 4386, name: "Na", weight: 0.05, group: punjabi_retroflexes, ipa: "/ɳ/"]
+ਣ -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (ਤ-ਵਰਗ)
+// ============================================================
+
+[id: 4387, name: "ta", weight: 0.05, group: punjabi_dentals]
+ਤ -> t;
+
+[id: 4388, name: "tha", weight: 0.05, group: punjabi_dentals]
+ਥ -> th;
+
+[id: 4389, name: "da", weight: 0.05, group: punjabi_dentals]
+ਦ -> d;
+
+[id: 4390, name: "dha", weight: 0.05, group: punjabi_dentals]
+ਧ -> dh;
+
+[id: 4391, name: "na", weight: 0.05, group: punjabi_dentals]
+ਨ -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (ਪ-ਵਰਗ)
+// ============================================================
+
+[id: 4392, name: "pa", weight: 0.05, group: punjabi_labials]
+ਪ -> p;
+
+[id: 4393, name: "pha", weight: 0.05, group: punjabi_labials]
+ਫ -> ph;
+
+[id: 4394, name: "ba", weight: 0.05, group: punjabi_labials]
+ਬ -> b;
+
+[id: 4395, name: "bha", weight: 0.05, group: punjabi_labials]
+ਭ -> bh;
+
+[id: 4396, name: "ma", weight: 0.05, group: punjabi_labials]
+ਮ -> m;
+
+// ============================================================
+// SEMI-VOWELS AND SIBILANTS
+// ============================================================
+
+[id: 4397, name: "ya", weight: 0.05, group: punjabi_semivowels]
+ਯ -> y;
+
+[id: 4398, name: "ra", weight: 0.05, group: punjabi_semivowels]
+ਰ -> r;
+
+[id: 4399, name: "la", weight: 0.05, group: punjabi_semivowels]
+ਲ -> l;
+
+[id: 4400, name: "va", weight: 0.05, group: punjabi_semivowels]
+ਵ -> v;
+
+[id: 4401, name: "sa", weight: 0.05, group: punjabi_sibilants]
+ਸ -> s;
+
+[id: 4402, name: "ha", weight: 0.05, group: punjabi_sibilants]
+ਹ -> h;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels / ਲਗਾਂ)
+// ============================================================
+
+[id: 4405, name: "aa matra", weight: 0.05, group: punjabi_matras, ipa: "/aː/"]
+ਾ -> aː;
+
+[id: 4406, name: "i matra", weight: 0.05, group: punjabi_matras]
+ਿ -> i;
+
+[id: 4407, name: "ii matra", weight: 0.05, group: punjabi_matras, ipa: "/iː/"]
+ੀ -> iː;
+
+[id: 4408, name: "u matra", weight: 0.05, group: punjabi_matras]
+ੁ -> u;
+
+[id: 4409, name: "uu matra", weight: 0.05, group: punjabi_matras, ipa: "/uː/"]
+ੂ -> uː;
+
+[id: 4410, name: "e matra", weight: 0.05, group: punjabi_matras, ipa: "/eː/"]
+ੇ -> eː;
+
+[id: 4411, name: "ai matra", weight: 0.05, group: punjabi_matras, ipa: "/ɛː/"]
+ੈ -> ɛː;
+
+[id: 4412, name: "o matra", weight: 0.05, group: punjabi_matras, ipa: "/oː/"]
+ੋ -> oː;
+
+[id: 4413, name: "au matra", weight: 0.05, group: punjabi_matras, ipa: "/ɔː/"]
+ੌ -> ɔː;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Virama (halant) - removes inherent vowel
+[id: 4415, name: "virama", weight: 0.1, group: punjabi_diacritics]
+੍ -> ;
+
+// Bindi - nasalization
+[id: 4416, name: "bindi", weight: 0.1, group: punjabi_diacritics, ipa: "/̃/"]
+ਂ -> ̃;
+
+// Tippi - nasalization (before consonant)
+[id: 4417, name: "tippi", weight: 0.1, group: punjabi_diacritics, ipa: "/̃/"]
+ੰ -> ̃;
+
+// Adak Bindi - gemination marker
+[id: 4418, name: "adak bindi", weight: 0.1, group: punjabi_diacritics]
+ਁ -> ;
+
+// Visarga
+[id: 4419, name: "visarga", weight: 0.1, group: punjabi_diacritics, ipa: "/h/"]
+ਃ -> h;
+
+// ============================================================
+// GURMUKHI NUMERALS
+// ============================================================
+
+[id: 4420, name: "numeral 0", weight: 0.1, group: punjabi_numerals]
+੦ -> 0;
+
+[id: 4421, name: "numeral 1", weight: 0.1, group: punjabi_numerals]
+੧ -> 1;
+
+[id: 4422, name: "numeral 2", weight: 0.1, group: punjabi_numerals]
+੨ -> 2;
+
+[id: 4423, name: "numeral 3", weight: 0.1, group: punjabi_numerals]
+੩ -> 3;
+
+[id: 4424, name: "numeral 4", weight: 0.1, group: punjabi_numerals]
+੪ -> 4;
+
+[id: 4425, name: "numeral 5", weight: 0.1, group: punjabi_numerals]
+੫ -> 5;
+
+[id: 4426, name: "numeral 6", weight: 0.1, group: punjabi_numerals]
+੬ -> 6;
+
+[id: 4427, name: "numeral 7", weight: 0.1, group: punjabi_numerals]
+੭ -> 7;
+
+[id: 4428, name: "numeral 8", weight: 0.1, group: punjabi_numerals]
+੮ -> 8;
+
+[id: 4429, name: "numeral 9", weight: 0.1, group: punjabi_numerals]
+੯ -> 9;
+
+// ============================================================
+// MARKER SIMPLIFICATION
+// ============================================================
+
+[id: 4430, name: "double retroflex flap", weight: 0.2, group: punjabi_simplification]
+ɽɽ -> ɽ;
+
+[id: 4431, name: "double retroflex lateral", weight: 0.2, group: punjabi_simplification]
+ɭɭ -> ɭ;
+
+[id: 4432, name: "double retroflex t", weight: 0.2, group: punjabi_simplification]
+ʈʈ -> ʈ;
+
+[id: 4433, name: "double retroflex d", weight: 0.2, group: punjabi_simplification]
+ɖɖ -> ɖ;
+
+[id: 4434, name: "double retroflex nasal", weight: 0.2, group: punjabi_simplification]
+ɳɳ -> ɳ;
+
+[id: 4435, name: "double palatal sh", weight: 0.2, group: punjabi_simplification]
+ʃʃ -> ʃ;
+
+[id: 4436, name: "double ai vowel", weight: 0.2, group: punjabi_simplification]
+ɛːɛː -> ɛː;
+
+[id: 4437, name: "double au vowel", weight: 0.2, group: punjabi_simplification]
+ɔːɔː -> ɔː;
+

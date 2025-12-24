@@ -1,0 +1,288 @@
+// Belarusian Base Phonetic Rules
+// ===============================
+// Phonetic rules for Belarusian (Беларуская мова).
+// Maps Cyrillic script to Latin phonetic representations.
+//
+// Key features:
+//   - Cyrillic to Latin transliteration
+//   - Unique Ў (short u/w sound) - ONLY Belarusian has this!
+//   - І instead of И (like Ukrainian)
+//   - No Щ (uses ШЧ instead)
+//   - Ё is commonly used (unlike Russian where it's often written as Е)
+//
+// Rule IDs: 3600-3699
+
+@name "Belarusian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Belarusian"
+
+// ============================================================
+// MULTI-CHARACTER PATTERNS (highest priority)
+// ============================================================
+
+// ШЧ → ʃt͡ʃ (Belarusian uses this instead of Щ)
+[id: 3600, name: "шч to ʃt͡ʃ", weight: 0.05, group: belarusian_digraphs, ipa: "/ʃt͡ʃ/"]
+шч -> ʃt͡ʃ;
+
+[id: 3601, name: "ШЧ to ʃt͡ʃ", weight: 0.05, group: belarusian_digraphs, ipa: "/ʃt͡ʃ/"]
+ШЧ -> ʃt͡ʃ;
+
+// Double consonants
+[id: 3602, name: "жж to ʒ", weight: 0.05, group: belarusian_doubles, ipa: "/ʒ/"]
+жж -> ʒ;
+
+[id: 3603, name: "шш to ʃ", weight: 0.05, group: belarusian_doubles, ipa: "/ʃ/"]
+шш -> ʃ;
+
+[id: 3604, name: "цц to t͡s", weight: 0.05, group: belarusian_doubles, ipa: "/t͡s/"]
+цц -> t͡s;
+
+[id: 3605, name: "чч to t͡ʃ", weight: 0.05, group: belarusian_doubles, ipa: "/t͡ʃ/"]
+чч -> t͡ʃ;
+
+// ============================================================
+// UNIQUE BELARUSIAN LETTER: Ў (SHORT U / W SOUND)
+// ============================================================
+
+// Ў → w (unique to Belarusian! Like English "w")
+[id: 3606, name: "ў to w", weight: 0.1, group: belarusian_unique]
+ў -> w;
+
+[id: 3607, name: "Ў to w", weight: 0.1, group: belarusian_unique]
+Ў -> w;
+
+// ============================================================
+// COMPLEX CONSONANTS
+// ============================================================
+
+// Ж → ʒ (voiced postalveolar fricative)
+[id: 3608, name: "ж to ʒ", weight: 0.1, group: belarusian_complex, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 3609, name: "Ж to ʒ", weight: 0.1, group: belarusian_complex, ipa: "/ʒ/"]
+Ж -> ʒ;
+
+// Ш → ʃ (voiceless postalveolar fricative)
+[id: 3610, name: "ш to ʃ", weight: 0.1, group: belarusian_complex, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 3611, name: "Ш to ʃ", weight: 0.1, group: belarusian_complex, ipa: "/ʃ/"]
+Ш -> ʃ;
+
+// Х → x (voiceless velar fricative)
+[id: 3612, name: "х to x", weight: 0.1, group: belarusian_complex, ipa: "/x/"]
+х -> x;
+
+[id: 3613, name: "Х to x", weight: 0.1, group: belarusian_complex, ipa: "/x/"]
+Х -> x;
+
+// Ц → t͡s (voiceless alveolar affricate)
+[id: 3614, name: "ц to t͡s", weight: 0.1, group: belarusian_complex, ipa: "/t͡s/"]
+ц -> t͡s;
+
+[id: 3615, name: "Ц to t͡s", weight: 0.1, group: belarusian_complex, ipa: "/t͡s/"]
+Ц -> t͡s;
+
+// Ч → t͡ʃ (voiceless postalveolar affricate)
+[id: 3616, name: "ч to t͡ʃ", weight: 0.1, group: belarusian_complex, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 3617, name: "Ч to t͡ʃ", weight: 0.1, group: belarusian_complex, ipa: "/t͡ʃ/"]
+Ч -> t͡ʃ;
+
+// ============================================================
+// IOTATED VOWELS
+// ============================================================
+
+// Е → je (Belarusian е is iotated)
+[id: 3618, name: "е to je", weight: 0.15, group: belarusian_iotated, ipa: "/je/"]
+е -> je;
+
+[id: 3619, name: "Е to je", weight: 0.15, group: belarusian_iotated, ipa: "/je/"]
+Е -> je;
+
+// Ё → jo (commonly used in Belarusian, unlike Russian)
+[id: 3620, name: "ё to jo", weight: 0.15, group: belarusian_iotated, ipa: "/jo/"]
+ё -> jo;
+
+[id: 3621, name: "Ё to jo", weight: 0.15, group: belarusian_iotated, ipa: "/jo/"]
+Ё -> jo;
+
+// Ю → ju
+[id: 3622, name: "ю to ju", weight: 0.15, group: belarusian_iotated, ipa: "/ju/"]
+ю -> ju;
+
+[id: 3623, name: "Ю to ju", weight: 0.15, group: belarusian_iotated, ipa: "/ju/"]
+Ю -> ju;
+
+// Я → ja
+[id: 3624, name: "я to ja", weight: 0.15, group: belarusian_iotated, ipa: "/ja/"]
+я -> ja;
+
+[id: 3625, name: "Я to ja", weight: 0.15, group: belarusian_iotated, ipa: "/ja/"]
+Я -> ja;
+
+// Э → e (like Russian)
+[id: 3626, name: "э to e", weight: 0.15, group: belarusian_iotated]
+э -> e;
+
+[id: 3627, name: "Э to e", weight: 0.15, group: belarusian_iotated]
+Э -> e;
+
+// ============================================================
+// І (Belarusian uses І instead of И like Ukrainian)
+// ============================================================
+
+[id: 3628, name: "і to i", weight: 0.2, group: belarusian_vowels]
+і -> i;
+
+[id: 3629, name: "І to i", weight: 0.2, group: belarusian_vowels]
+І -> i;
+
+// ============================================================
+// SIMPLE VOWELS
+// ============================================================
+
+[id: 3630, name: "а to a", weight: 0.2, group: belarusian_vowels]
+а -> a;
+
+[id: 3631, name: "А to a", weight: 0.2, group: belarusian_vowels]
+А -> a;
+
+[id: 3632, name: "о to o", weight: 0.2, group: belarusian_vowels]
+о -> o;
+
+[id: 3633, name: "О to o", weight: 0.2, group: belarusian_vowels]
+О -> o;
+
+[id: 3634, name: "у to u", weight: 0.2, group: belarusian_vowels]
+у -> u;
+
+[id: 3635, name: "У to u", weight: 0.2, group: belarusian_vowels]
+У -> u;
+
+// Ы → ɨ (close central unrounded vowel)
+[id: 3636, name: "ы to ɨ", weight: 0.2, group: belarusian_vowels, ipa: "/ɨ/"]
+ы -> ɨ;
+
+[id: 3637, name: "Ы to ɨ", weight: 0.2, group: belarusian_vowels, ipa: "/ɨ/"]
+Ы -> ɨ;
+
+// ============================================================
+// SIMPLE CONSONANTS
+// ============================================================
+
+[id: 3638, name: "б to b", weight: 0.2, group: belarusian_consonants]
+б -> b;
+
+[id: 3639, name: "Б to b", weight: 0.2, group: belarusian_consonants]
+Б -> b;
+
+[id: 3640, name: "в to v", weight: 0.2, group: belarusian_consonants]
+в -> v;
+
+[id: 3641, name: "В to v", weight: 0.2, group: belarusian_consonants]
+В -> v;
+
+[id: 3642, name: "г to ɦ", weight: 0.2, group: belarusian_consonants, ipa: "/ɦ/"]
+г -> ɦ;
+
+[id: 3643, name: "Г to ɦ", weight: 0.2, group: belarusian_consonants, ipa: "/ɦ/"]
+Г -> ɦ;
+
+// Note: Belarusian Г is pronounced as [ɦ] (voiced glottal fricative)
+// This differs from Russian Г which is [g]
+
+[id: 3644, name: "д to d", weight: 0.2, group: belarusian_consonants]
+д -> d;
+
+[id: 3645, name: "Д to d", weight: 0.2, group: belarusian_consonants]
+Д -> d;
+
+[id: 3646, name: "з to z", weight: 0.2, group: belarusian_consonants]
+з -> z;
+
+[id: 3647, name: "З to z", weight: 0.2, group: belarusian_consonants]
+З -> z;
+
+[id: 3648, name: "й to j", weight: 0.2, group: belarusian_consonants, ipa: "/j/"]
+й -> j;
+
+[id: 3649, name: "Й to j", weight: 0.2, group: belarusian_consonants, ipa: "/j/"]
+Й -> j;
+
+[id: 3650, name: "к to k", weight: 0.2, group: belarusian_consonants]
+к -> k;
+
+[id: 3651, name: "К to k", weight: 0.2, group: belarusian_consonants]
+К -> k;
+
+[id: 3652, name: "л to l", weight: 0.2, group: belarusian_consonants]
+л -> l;
+
+[id: 3653, name: "Л to l", weight: 0.2, group: belarusian_consonants]
+Л -> l;
+
+[id: 3654, name: "м to m", weight: 0.2, group: belarusian_consonants]
+м -> m;
+
+[id: 3655, name: "М to m", weight: 0.2, group: belarusian_consonants]
+М -> m;
+
+[id: 3656, name: "н to n", weight: 0.2, group: belarusian_consonants]
+н -> n;
+
+[id: 3657, name: "Н to n", weight: 0.2, group: belarusian_consonants]
+Н -> n;
+
+[id: 3658, name: "п to p", weight: 0.2, group: belarusian_consonants]
+п -> p;
+
+[id: 3659, name: "П to p", weight: 0.2, group: belarusian_consonants]
+П -> p;
+
+[id: 3660, name: "р to r", weight: 0.2, group: belarusian_consonants]
+р -> r;
+
+[id: 3661, name: "Р to r", weight: 0.2, group: belarusian_consonants]
+Р -> r;
+
+[id: 3662, name: "с to s", weight: 0.2, group: belarusian_consonants]
+с -> s;
+
+[id: 3663, name: "С to s", weight: 0.2, group: belarusian_consonants]
+С -> s;
+
+[id: 3664, name: "т to t", weight: 0.2, group: belarusian_consonants]
+т -> t;
+
+[id: 3665, name: "Т to t", weight: 0.2, group: belarusian_consonants]
+Т -> t;
+
+[id: 3666, name: "ф to f", weight: 0.2, group: belarusian_consonants]
+ф -> f;
+
+[id: 3667, name: "Ф to f", weight: 0.2, group: belarusian_consonants]
+Ф -> f;
+
+// ============================================================
+// SOFT SIGN (palatalization marker)
+// ============================================================
+
+// Ь → (silent, marks palatalization)
+[id: 3668, name: "ь soft sign", weight: 0.2, group: belarusian_signs]
+ь -> ;
+
+[id: 3669, name: "Ь soft sign", weight: 0.2, group: belarusian_signs]
+Ь -> ;
+
+// ============================================================
+// APOSTROPHE (separates consonant from iotated vowel)
+// ============================================================
+
+// Belarusian uses ' to separate consonants from iotated vowels
+// The apostrophe itself is typically removed in phonetic normalization
+[id: 3670, name: "apostrophe", weight: 0.2, group: belarusian_signs]
+' -> ;
+

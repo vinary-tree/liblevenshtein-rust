@@ -1,0 +1,171 @@
+// Polish Base Phonetic Rules
+// ==========================
+// Phonetic rules for Polish (polski) using Latin script with diacritics.
+// Maps Polish letters and digraphs to phonetic representations.
+//
+// Polish has 32 letters: the standard 26 Latin letters minus Q, V, X
+// plus 9 with diacritics: ą, ć, ę, ł, ń, ó, ś, ź, ż
+//
+// Key features:
+//   - Nasal vowels: ą, ę (context-dependent pronunciation)
+//   - Digraphs: sz, cz, rz, dz, dź, dż, ch
+//   - Ł = w sound (like English "w")
+//   - Ó = u (identical pronunciation)
+//   - Final devoicing: voiced consonants → voiceless at word end
+//
+// Rule IDs: 2200-2299
+
+@name "Polish Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Polish language"
+
+// ============================================================
+// DIGRAPHS (must come first for priority)
+// ============================================================
+
+// SZ → ʃ (voiceless postalveolar fricative)
+[id: 2200, name: "sz digraph", weight: 0.05, group: polish_digraphs, ipa: "/ʃ/"]
+sz -> ʃ;
+
+// CZ → t͡ʃ (voiceless postalveolar affricate)
+[id: 2201, name: "cz digraph", weight: 0.05, group: polish_digraphs, ipa: "/t͡ʃ/"]
+cz -> t͡ʃ;
+
+// RZ → ʒ (voiced postalveolar fricative, same as ż)
+[id: 2202, name: "rz digraph", weight: 0.05, group: polish_digraphs, ipa: "/ʒ/"]
+rz -> ʒ;
+
+// DZ → d͡z (voiced alveolar affricate)
+[id: 2203, name: "dz digraph", weight: 0.05, group: polish_digraphs, ipa: "/d͡z/"]
+dz -> d͡z;
+
+// DŹ → d͡ʑ (voiced alveolo-palatal affricate)
+[id: 2204, name: "dz-acute digraph", weight: 0.05, group: polish_digraphs, ipa: "/d͡ʑ/"]
+dź -> d͡ʑ;
+
+// DŻ → d͡ʒ (voiced postalveolar affricate)
+[id: 2205, name: "dz-dot digraph", weight: 0.05, group: polish_digraphs, ipa: "/d͡ʒ/"]
+dż -> d͡ʒ;
+
+// CH → x (voiceless velar fricative)
+[id: 2206, name: "ch digraph", weight: 0.05, group: polish_digraphs, ipa: "/x/"]
+ch -> x;
+
+// ============================================================
+// SPECIAL POLISH LETTERS
+// ============================================================
+
+// Ą → ɔ̃ (nasalized open-mid back rounded vowel)
+[id: 2210, name: "nasal a", weight: 0.1, group: polish_special, ipa: "/ɔ̃/"]
+ą -> ɔ̃;
+
+// Ę → ɛ̃ (nasalized open-mid front unrounded vowel)
+[id: 2211, name: "nasal e", weight: 0.1, group: polish_special, ipa: "/ɛ̃/"]
+ę -> ɛ̃;
+
+// Ć → tɕ (voiceless alveolo-palatal affricate)
+[id: 2212, name: "c acute", weight: 0.1, group: polish_special, ipa: "/tɕ/"]
+ć -> tɕ;
+
+// Ś → ɕ (voiceless alveolo-palatal fricative)
+[id: 2213, name: "s acute", weight: 0.1, group: polish_special, ipa: "/ɕ/"]
+ś -> ɕ;
+
+// Ź → ʑ (voiced alveolo-palatal fricative)
+[id: 2214, name: "z acute", weight: 0.1, group: polish_special, ipa: "/ʑ/"]
+ź -> ʑ;
+
+// Ż → ʒ (voiced postalveolar fricative)
+[id: 2215, name: "z dot", weight: 0.1, group: polish_special, ipa: "/ʒ/"]
+ż -> ʒ;
+
+// Ł → w (labial-velar approximant, like English "w")
+[id: 2216, name: "l stroke", weight: 0.1, group: polish_special, ipa: "/w/"]
+ł -> w;
+
+// Ó → u (identical to u in Polish)
+[id: 2217, name: "o acute", weight: 0.1, group: polish_special]
+ó -> u;
+
+// Ń → ɲ (palatal nasal)
+[id: 2218, name: "n acute", weight: 0.1, group: polish_special, ipa: "/ɲ/"]
+ń -> ɲ;
+
+// ============================================================
+// UPPERCASE SPECIAL LETTERS
+// ============================================================
+
+[id: 2220, name: "nasal A upper", weight: 0.1, group: polish_special_upper, ipa: "/ɔ̃/"]
+Ą -> ɔ̃;
+
+[id: 2221, name: "nasal E upper", weight: 0.1, group: polish_special_upper, ipa: "/ɛ̃/"]
+Ę -> ɛ̃;
+
+[id: 2222, name: "C acute upper", weight: 0.1, group: polish_special_upper, ipa: "/tɕ/"]
+Ć -> tɕ;
+
+[id: 2223, name: "S acute upper", weight: 0.1, group: polish_special_upper, ipa: "/ɕ/"]
+Ś -> ɕ;
+
+[id: 2224, name: "Z acute upper", weight: 0.1, group: polish_special_upper, ipa: "/ʑ/"]
+Ź -> ʑ;
+
+[id: 2225, name: "Z dot upper", weight: 0.1, group: polish_special_upper, ipa: "/ʒ/"]
+Ż -> ʒ;
+
+[id: 2226, name: "L stroke upper", weight: 0.1, group: polish_special_upper, ipa: "/w/"]
+Ł -> w;
+
+[id: 2227, name: "O acute upper", weight: 0.1, group: polish_special_upper]
+Ó -> u;
+
+[id: 2228, name: "N acute upper", weight: 0.1, group: polish_special_upper, ipa: "/ɲ/"]
+Ń -> ɲ;
+
+// ============================================================
+// CONSONANT TRANSFORMATIONS (only non-identity)
+// ============================================================
+
+// C → t͡s (voiceless alveolar affricate, when not part of cz digraph)
+[id: 2231, name: "c to ts", weight: 0.15, group: polish_consonants, ipa: "/t͡s/"]
+c -> t͡s;
+
+// H → x (voiceless velar fricative, same as ch)
+[id: 2235, name: "h to x", weight: 0.15, group: polish_consonants, ipa: "/x/"]
+h -> x;
+
+// J → j (palatal approximant, like English "y")
+[id: 2236, name: "j to j", weight: 0.15, group: polish_consonants, ipa: "/j/"]
+j -> j;
+
+// W → v (voiced labiodental fricative)
+[id: 2245, name: "w to v", weight: 0.15, group: polish_consonants]
+w -> v;
+
+// ============================================================
+// SIMPLIFICATIONS
+// ============================================================
+
+// Double IPA simplification
+[id: 2260, name: "double ʃ", weight: 0.2, group: polish_simplification]
+ʃʃ -> ʃ;
+
+[id: 2261, name: "double t͡ʃ", weight: 0.2, group: polish_simplification]
+t͡ʃt͡ʃ -> t͡ʃ;
+
+[id: 2262, name: "double ʒ", weight: 0.2, group: polish_simplification]
+ʒʒ -> ʒ;
+
+[id: 2263, name: "double x", weight: 0.2, group: polish_simplification]
+xx -> x;
+
+[id: 2264, name: "double t͡s", weight: 0.2, group: polish_simplification]
+t͡st͡s -> t͡s;
+
+[id: 2265, name: "double ɲ", weight: 0.2, group: polish_simplification]
+ɲɲ -> ɲ;
+
+[id: 2266, name: "double w", weight: 0.2, group: polish_simplification]
+ww -> w;
+

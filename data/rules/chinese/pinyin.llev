@@ -1,0 +1,194 @@
+// Chinese Pinyin Phonetic Rules
+// ==============================
+// Phonetic rules for Chinese Pinyin romanization (汉语拼音).
+// Normalizes tone marks and common spelling variations for phonetic matching.
+//
+// Pinyin is the official romanization system for Standard Mandarin Chinese.
+//
+// Key features:
+//   - Tone mark removal (ā á ǎ à → a)
+//   - Ü/V normalization (ü, v → U marker)
+//   - Retroflex consonants (zh, ch, sh, r)
+//   - Special finals (ing, ong, etc.)
+//
+// Rule IDs: 2400-2449
+
+@name "Chinese Pinyin Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Chinese Pinyin"
+
+// ============================================================
+// TONE MARK REMOVAL - First Tone (macron)
+// ============================================================
+
+[id: 2400, name: "a first tone", weight: 0.05, group: pinyin_tones]
+ā -> a;
+
+[id: 2401, name: "e first tone", weight: 0.05, group: pinyin_tones]
+ē -> e;
+
+[id: 2402, name: "i first tone", weight: 0.05, group: pinyin_tones]
+ī -> i;
+
+[id: 2403, name: "o first tone", weight: 0.05, group: pinyin_tones]
+ō -> o;
+
+[id: 2404, name: "u first tone", weight: 0.05, group: pinyin_tones]
+ū -> u;
+
+[id: 2405, name: "u umlaut first tone", weight: 0.05, group: pinyin_tones]
+ǖ -> U;
+
+// ============================================================
+// TONE MARK REMOVAL - Second Tone (acute accent)
+// ============================================================
+
+[id: 2406, name: "a second tone", weight: 0.05, group: pinyin_tones]
+á -> a;
+
+[id: 2407, name: "e second tone", weight: 0.05, group: pinyin_tones]
+é -> e;
+
+[id: 2408, name: "i second tone", weight: 0.05, group: pinyin_tones]
+í -> i;
+
+[id: 2409, name: "o second tone", weight: 0.05, group: pinyin_tones]
+ó -> o;
+
+[id: 2410, name: "u second tone", weight: 0.05, group: pinyin_tones]
+ú -> u;
+
+[id: 2411, name: "u umlaut second tone", weight: 0.05, group: pinyin_tones]
+ǘ -> U;
+
+// ============================================================
+// TONE MARK REMOVAL - Third Tone (caron/hacek)
+// ============================================================
+
+[id: 2412, name: "a third tone", weight: 0.05, group: pinyin_tones]
+ǎ -> a;
+
+[id: 2413, name: "e third tone", weight: 0.05, group: pinyin_tones]
+ě -> e;
+
+[id: 2414, name: "i third tone", weight: 0.05, group: pinyin_tones]
+ǐ -> i;
+
+[id: 2415, name: "o third tone", weight: 0.05, group: pinyin_tones]
+ǒ -> o;
+
+[id: 2416, name: "u third tone", weight: 0.05, group: pinyin_tones]
+ǔ -> u;
+
+[id: 2417, name: "u umlaut third tone", weight: 0.05, group: pinyin_tones]
+ǚ -> U;
+
+// ============================================================
+// TONE MARK REMOVAL - Fourth Tone (grave accent)
+// ============================================================
+
+[id: 2418, name: "a fourth tone", weight: 0.05, group: pinyin_tones]
+à -> a;
+
+[id: 2419, name: "e fourth tone", weight: 0.05, group: pinyin_tones]
+è -> e;
+
+[id: 2420, name: "i fourth tone", weight: 0.05, group: pinyin_tones]
+ì -> i;
+
+[id: 2421, name: "o fourth tone", weight: 0.05, group: pinyin_tones]
+ò -> o;
+
+[id: 2422, name: "u fourth tone", weight: 0.05, group: pinyin_tones]
+ù -> u;
+
+[id: 2423, name: "u umlaut fourth tone", weight: 0.05, group: pinyin_tones]
+ǜ -> U;
+
+// ============================================================
+// Ü/V NORMALIZATION
+// ============================================================
+
+// ü (u umlaut) appears after n and l in standard Pinyin
+// Often typed as "v" on keyboards without ü
+// Normalize to y (close front rounded vowel)
+
+[id: 2424, name: "u umlaut plain", weight: 0.1, group: pinyin_umlaut, ipa: "/y/"]
+ü -> y;
+
+[id: 2425, name: "v as u umlaut", weight: 0.1, group: pinyin_umlaut, ipa: "/y/"]
+v -> y;
+
+// Common nü and lü patterns
+[id: 2426, name: "nv to ny", weight: 0.1, group: pinyin_umlaut, ipa: "/ny/"]
+nv -> ny;
+
+[id: 2427, name: "lv to ly", weight: 0.1, group: pinyin_umlaut, ipa: "/ly/"]
+lv -> ly;
+
+// ============================================================
+// RETROFLEX CONSONANTS
+// ============================================================
+
+// zh, ch, sh, r are retroflex consonants
+// Using IPA symbols
+
+// zh → ʈ͡ʂ (retroflex affricate)
+[id: 2430, name: "zh retroflex", weight: 0.1, group: pinyin_retroflex, ipa: "/ʈ͡ʂ/"]
+zh -> ʈ͡ʂ;
+
+// ch → ʈ͡ʂʰ (retroflex affricate, aspirated)
+[id: 2431, name: "ch retroflex", weight: 0.1, group: pinyin_retroflex, ipa: "/ʈ͡ʂʰ/"]
+ch -> ʈ͡ʂʰ;
+
+// sh → ʂ (retroflex fricative)
+[id: 2432, name: "sh retroflex", weight: 0.1, group: pinyin_retroflex, ipa: "/ʂ/"]
+sh -> ʂ;
+
+// r → ɻ (retroflex approximant, unique Mandarin sound)
+[id: 2433, name: "r retroflex", weight: 0.1, group: pinyin_retroflex, ipa: "/ɻ/"]
+r -> ɻ;
+
+// ============================================================
+// OTHER CONSONANT NORMALIZATION
+// ============================================================
+
+// x → ɕ (alveolo-palatal fricative)
+[id: 2434, name: "x palatal", weight: 0.1, group: pinyin_consonants, ipa: "/ɕ/"]
+x -> ɕ;
+
+// q → t͡ɕʰ (alveolo-palatal affricate, aspirated)
+[id: 2435, name: "q palatal", weight: 0.1, group: pinyin_consonants, ipa: "/t͡ɕʰ/"]
+q -> t͡ɕʰ;
+
+// c → t͡sʰ (alveolar affricate, aspirated, not retroflex)
+[id: 2436, name: "c affricate", weight: 0.1, group: pinyin_consonants, ipa: "/t͡sʰ/"]
+c -> t͡sʰ;
+
+// ============================================================
+// IPA SIMPLIFICATION
+// ============================================================
+// Reduce doubled IPA symbols if they occur
+
+[id: 2440, name: "double ʈ͡ʂ", weight: 0.2, group: pinyin_simplification]
+ʈ͡ʂʈ͡ʂ -> ʈ͡ʂ;
+
+[id: 2441, name: "double ʂ", weight: 0.2, group: pinyin_simplification]
+ʂʂ -> ʂ;
+
+[id: 2442, name: "double ɻ", weight: 0.2, group: pinyin_simplification]
+ɻɻ -> ɻ;
+
+[id: 2443, name: "double ɕ", weight: 0.2, group: pinyin_simplification]
+ɕɕ -> ɕ;
+
+[id: 2444, name: "double t͡ɕʰ", weight: 0.2, group: pinyin_simplification]
+t͡ɕʰt͡ɕʰ -> t͡ɕʰ;
+
+[id: 2445, name: "double t͡sʰ", weight: 0.2, group: pinyin_simplification]
+t͡sʰt͡sʰ -> t͡sʰ;
+
+[id: 2446, name: "double y vowel", weight: 0.2, group: pinyin_simplification]
+yy -> y;
+

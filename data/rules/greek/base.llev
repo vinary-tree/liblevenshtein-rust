@@ -1,0 +1,391 @@
+// Greek Phonetic Rules
+// ====================
+// Phonetic rules for Modern Greek (Ελληνικά).
+// Maps Greek letters to Latin phonetic representations.
+//
+// Key features:
+//   - 24-letter Greek alphabet
+//   - Vowel digraphs: αι(e), ει(i), οι(i), υι(i), αυ(av/af), ευ(ev/ef), ου(u)
+//   - Consonant combinations: μπ(b), ντ(d/nd), γκ(g/ng), γγ(ng), τσ(ts), τζ(dz)
+//   - Accent marks (tonos) stripped for matching
+//
+// Greek alphabet:
+// Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω
+// α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ σ/ς τ υ φ χ ψ ω
+//
+// Rule IDs: 3200-3299
+
+@name "Greek Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Modern Greek"
+
+// ============================================================
+// VOWEL DIGRAPHS (highest priority - must match before singles)
+// ============================================================
+
+// ΑΥ/αυ → av (before voiced) or af (before voiceless/final)
+// Using 'av' as default phonetic representation
+[id: 3200, name: "αυ to av", weight: 0.02, group: greek_digraphs]
+αυ -> av;
+
+[id: 3201, name: "Αυ to av", weight: 0.02, group: greek_digraphs]
+Αυ -> av;
+
+[id: 3202, name: "ΑΥ to av", weight: 0.02, group: greek_digraphs]
+ΑΥ -> av;
+
+// ΕΥ/ευ → ev (before voiced) or ef (before voiceless/final)
+[id: 3203, name: "ευ to ev", weight: 0.02, group: greek_digraphs]
+ευ -> ev;
+
+[id: 3204, name: "Ευ to ev", weight: 0.02, group: greek_digraphs]
+Ευ -> ev;
+
+[id: 3205, name: "ΕΥ to ev", weight: 0.02, group: greek_digraphs]
+ΕΥ -> ev;
+
+// ΟΥ/ου → u
+[id: 3206, name: "ου to u", weight: 0.02, group: greek_digraphs]
+ου -> u;
+
+[id: 3207, name: "Ου to u", weight: 0.02, group: greek_digraphs]
+Ου -> u;
+
+[id: 3208, name: "ΟΥ to u", weight: 0.02, group: greek_digraphs]
+ΟΥ -> u;
+
+// ΑΙ/αι → e (Modern Greek)
+[id: 3209, name: "αι to e", weight: 0.02, group: greek_digraphs]
+αι -> e;
+
+[id: 3210, name: "Αι to e", weight: 0.02, group: greek_digraphs]
+Αι -> e;
+
+[id: 3211, name: "ΑΙ to e", weight: 0.02, group: greek_digraphs]
+ΑΙ -> e;
+
+// ΕΙ/ει → i (Modern Greek)
+[id: 3212, name: "ει to i", weight: 0.02, group: greek_digraphs]
+ει -> i;
+
+[id: 3213, name: "Ει to i", weight: 0.02, group: greek_digraphs]
+Ει -> i;
+
+[id: 3214, name: "ΕΙ to i", weight: 0.02, group: greek_digraphs]
+ΕΙ -> i;
+
+// ΟΙ/οι → i (Modern Greek)
+[id: 3215, name: "οι to i", weight: 0.02, group: greek_digraphs]
+οι -> i;
+
+[id: 3216, name: "Οι to i", weight: 0.02, group: greek_digraphs]
+Οι -> i;
+
+[id: 3217, name: "ΟΙ to i", weight: 0.02, group: greek_digraphs]
+ΟΙ -> i;
+
+// ΥΙ/υι → i (Modern Greek)
+[id: 3218, name: "υι to i", weight: 0.02, group: greek_digraphs]
+υι -> i;
+
+[id: 3219, name: "Υι to i", weight: 0.02, group: greek_digraphs]
+Υι -> i;
+
+[id: 3220, name: "ΥΙ to i", weight: 0.02, group: greek_digraphs]
+ΥΙ -> i;
+
+// ============================================================
+// CONSONANT COMBINATIONS (high priority)
+// ============================================================
+
+// ΜΠ/μπ → b (word-initial) or mb (mid-word)
+// Using 'b' as primary representation
+[id: 3221, name: "μπ to b", weight: 0.03, group: greek_consonant_combos]
+μπ -> b;
+
+[id: 3222, name: "Μπ to b", weight: 0.03, group: greek_consonant_combos]
+Μπ -> b;
+
+[id: 3223, name: "ΜΠ to b", weight: 0.03, group: greek_consonant_combos]
+ΜΠ -> b;
+
+// ΝΤ/ντ → d (word-initial) or nd (mid-word)
+// Using 'd' as primary representation
+[id: 3224, name: "ντ to d", weight: 0.03, group: greek_consonant_combos]
+ντ -> d;
+
+[id: 3225, name: "Ντ to d", weight: 0.03, group: greek_consonant_combos]
+Ντ -> d;
+
+[id: 3226, name: "ΝΤ to d", weight: 0.03, group: greek_consonant_combos]
+ΝΤ -> d;
+
+// ΓΚ/γκ → g (word-initial) or ng (mid-word)
+// Using 'g' as primary representation
+[id: 3227, name: "γκ to g", weight: 0.03, group: greek_consonant_combos]
+γκ -> g;
+
+[id: 3228, name: "Γκ to g", weight: 0.03, group: greek_consonant_combos]
+Γκ -> g;
+
+[id: 3229, name: "ΓΚ to g", weight: 0.03, group: greek_consonant_combos]
+ΓΚ -> g;
+
+// ΓΓ/γγ → ŋ (velar nasal)
+[id: 3230, name: "γγ to ŋ", weight: 0.03, group: greek_consonant_combos, ipa: "/ŋ/"]
+γγ -> ŋ;
+
+[id: 3231, name: "ΓΓ to ŋ", weight: 0.03, group: greek_consonant_combos, ipa: "/ŋ/"]
+ΓΓ -> ŋ;
+
+// ΤΣ/τσ → t͡s (voiceless alveolar affricate)
+[id: 3232, name: "τσ to t͡s", weight: 0.03, group: greek_consonant_combos, ipa: "/t͡s/"]
+τσ -> t͡s;
+
+[id: 3233, name: "Τσ to t͡s", weight: 0.03, group: greek_consonant_combos, ipa: "/t͡s/"]
+Τσ -> t͡s;
+
+[id: 3234, name: "ΤΣ to t͡s", weight: 0.03, group: greek_consonant_combos, ipa: "/t͡s/"]
+ΤΣ -> t͡s;
+
+// ΤΖ/τζ → d͡z (voiced alveolar affricate)
+[id: 3235, name: "τζ to d͡z", weight: 0.03, group: greek_consonant_combos, ipa: "/d͡z/"]
+τζ -> d͡z;
+
+[id: 3236, name: "Τζ to d͡z", weight: 0.03, group: greek_consonant_combos, ipa: "/d͡z/"]
+Τζ -> d͡z;
+
+[id: 3237, name: "ΤΖ to d͡z", weight: 0.03, group: greek_consonant_combos, ipa: "/d͡z/"]
+ΤΖ -> d͡z;
+
+// ============================================================
+// ACCENTED VOWELS (strip tonos)
+// ============================================================
+
+// Lowercase accented
+[id: 3238, name: "ά to a", weight: 0.05, group: greek_accents]
+ά -> a;
+
+[id: 3239, name: "έ to e", weight: 0.05, group: greek_accents]
+έ -> e;
+
+[id: 3240, name: "ή to i", weight: 0.05, group: greek_accents]
+ή -> i;
+
+[id: 3241, name: "ί to i", weight: 0.05, group: greek_accents]
+ί -> i;
+
+[id: 3242, name: "ό to o", weight: 0.05, group: greek_accents]
+ό -> o;
+
+[id: 3243, name: "ύ to i", weight: 0.05, group: greek_accents]
+ύ -> i;
+
+[id: 3244, name: "ώ to o", weight: 0.05, group: greek_accents]
+ώ -> o;
+
+// Uppercase accented
+[id: 3245, name: "Ά to a", weight: 0.05, group: greek_accents]
+Ά -> a;
+
+[id: 3246, name: "Έ to e", weight: 0.05, group: greek_accents]
+Έ -> e;
+
+[id: 3247, name: "Ή to i", weight: 0.05, group: greek_accents]
+Ή -> i;
+
+[id: 3248, name: "Ί to i", weight: 0.05, group: greek_accents]
+Ί -> i;
+
+[id: 3249, name: "Ό to o", weight: 0.05, group: greek_accents]
+Ό -> o;
+
+[id: 3250, name: "Ύ to i", weight: 0.05, group: greek_accents]
+Ύ -> i;
+
+[id: 3251, name: "Ώ to o", weight: 0.05, group: greek_accents]
+Ώ -> o;
+
+// Diaeresis variants
+[id: 3252, name: "ϊ to i", weight: 0.05, group: greek_accents]
+ϊ -> i;
+
+[id: 3253, name: "ϋ to i", weight: 0.05, group: greek_accents]
+ϋ -> i;
+
+[id: 3254, name: "Ϊ to i", weight: 0.05, group: greek_accents]
+Ϊ -> i;
+
+[id: 3255, name: "Ϋ to i", weight: 0.05, group: greek_accents]
+Ϋ -> i;
+
+[id: 3256, name: "ΐ to i", weight: 0.05, group: greek_accents]
+ΐ -> i;
+
+[id: 3257, name: "ΰ to i", weight: 0.05, group: greek_accents]
+ΰ -> i;
+
+// ============================================================
+// BASE VOWELS (lowercase)
+// ============================================================
+
+[id: 3258, name: "α to a", weight: 0.1, group: greek_vowels]
+α -> a;
+
+[id: 3259, name: "ε to e", weight: 0.1, group: greek_vowels]
+ε -> e;
+
+[id: 3260, name: "η to i", weight: 0.1, group: greek_vowels]
+η -> i;
+
+[id: 3261, name: "ι to i", weight: 0.1, group: greek_vowels]
+ι -> i;
+
+[id: 3262, name: "ο to o", weight: 0.1, group: greek_vowels]
+ο -> o;
+
+[id: 3263, name: "υ to i", weight: 0.1, group: greek_vowels]
+υ -> i;
+
+[id: 3264, name: "ω to o", weight: 0.1, group: greek_vowels]
+ω -> o;
+
+// ============================================================
+// BASE VOWELS (uppercase)
+// ============================================================
+
+[id: 3265, name: "Α to a", weight: 0.1, group: greek_vowels]
+Α -> a;
+
+[id: 3266, name: "Ε to e", weight: 0.1, group: greek_vowels]
+Ε -> e;
+
+[id: 3267, name: "Η to i", weight: 0.1, group: greek_vowels]
+Η -> i;
+
+[id: 3268, name: "Ι to i", weight: 0.1, group: greek_vowels]
+Ι -> i;
+
+[id: 3269, name: "Ο to o", weight: 0.1, group: greek_vowels]
+Ο -> o;
+
+[id: 3270, name: "Υ to i", weight: 0.1, group: greek_vowels]
+Υ -> i;
+
+[id: 3271, name: "Ω to o", weight: 0.1, group: greek_vowels]
+Ω -> o;
+
+// ============================================================
+// CONSONANTS (lowercase)
+// ============================================================
+
+[id: 3272, name: "β to v", weight: 0.15, group: greek_consonants]
+β -> v;
+
+[id: 3273, name: "γ to g", weight: 0.15, group: greek_consonants]
+γ -> g;
+
+[id: 3274, name: "δ to ð", weight: 0.15, group: greek_consonants, ipa: "/ð/"]
+δ -> ð;
+
+[id: 3275, name: "ζ to z", weight: 0.15, group: greek_consonants]
+ζ -> z;
+
+[id: 3276, name: "θ to θ", weight: 0.15, group: greek_consonants, ipa: "/θ/"]
+θ -> θ;
+
+[id: 3277, name: "κ to k", weight: 0.15, group: greek_consonants]
+κ -> k;
+
+[id: 3278, name: "λ to l", weight: 0.15, group: greek_consonants]
+λ -> l;
+
+[id: 3279, name: "μ to m", weight: 0.15, group: greek_consonants]
+μ -> m;
+
+[id: 3280, name: "ν to n", weight: 0.15, group: greek_consonants]
+ν -> n;
+
+[id: 3281, name: "ξ to x", weight: 0.15, group: greek_consonants]
+ξ -> x;
+
+[id: 3282, name: "π to p", weight: 0.15, group: greek_consonants]
+π -> p;
+
+[id: 3283, name: "ρ to r", weight: 0.15, group: greek_consonants]
+ρ -> r;
+
+[id: 3284, name: "σ to s", weight: 0.15, group: greek_consonants]
+σ -> s;
+
+[id: 3285, name: "ς to s", weight: 0.15, group: greek_consonants]
+ς -> s;
+
+[id: 3286, name: "τ to t", weight: 0.15, group: greek_consonants]
+τ -> t;
+
+[id: 3287, name: "φ to f", weight: 0.15, group: greek_consonants]
+φ -> f;
+
+[id: 3288, name: "χ to x", weight: 0.15, group: greek_consonants, ipa: "/x/"]
+χ -> x;
+
+[id: 3289, name: "ψ to ps", weight: 0.15, group: greek_consonants]
+ψ -> ps;
+
+// ============================================================
+// CONSONANTS (uppercase)
+// ============================================================
+
+[id: 3290, name: "Β to v", weight: 0.15, group: greek_consonants]
+Β -> v;
+
+[id: 3291, name: "Γ to g", weight: 0.15, group: greek_consonants]
+Γ -> g;
+
+[id: 3292, name: "Δ to ð", weight: 0.15, group: greek_consonants, ipa: "/ð/"]
+Δ -> ð;
+
+[id: 3293, name: "Ζ to z", weight: 0.15, group: greek_consonants]
+Ζ -> z;
+
+[id: 3294, name: "Θ to θ", weight: 0.15, group: greek_consonants, ipa: "/θ/"]
+Θ -> θ;
+
+[id: 3295, name: "Κ to k", weight: 0.15, group: greek_consonants]
+Κ -> k;
+
+[id: 3296, name: "Λ to l", weight: 0.15, group: greek_consonants]
+Λ -> l;
+
+[id: 3297, name: "Μ to m", weight: 0.15, group: greek_consonants]
+Μ -> m;
+
+[id: 3298, name: "Ν to n", weight: 0.15, group: greek_consonants]
+Ν -> n;
+
+[id: 3299, name: "Ξ to x", weight: 0.15, group: greek_consonants]
+Ξ -> x;
+
+[id: 3300, name: "Π to p", weight: 0.15, group: greek_consonants]
+Π -> p;
+
+[id: 3301, name: "Ρ to r", weight: 0.15, group: greek_consonants]
+Ρ -> r;
+
+[id: 3302, name: "Σ to s", weight: 0.15, group: greek_consonants]
+Σ -> s;
+
+[id: 3303, name: "Τ to t", weight: 0.15, group: greek_consonants]
+Τ -> t;
+
+[id: 3304, name: "Φ to f", weight: 0.15, group: greek_consonants]
+Φ -> f;
+
+[id: 3305, name: "Χ to x", weight: 0.15, group: greek_consonants, ipa: "/x/"]
+Χ -> x;
+
+[id: 3306, name: "Ψ to ps", weight: 0.15, group: greek_consonants]
+Ψ -> ps;
+

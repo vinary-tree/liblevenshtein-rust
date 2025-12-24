@@ -4,6 +4,8 @@
 //! `regex` and `llev` parsing modules, reducing code duplication.
 
 pub mod context;
+pub mod directives;
+pub mod flags;
 pub mod parsing;
 pub mod position;
 pub mod syllable;
@@ -12,10 +14,14 @@ pub mod utils;
 
 // Re-export commonly used types
 pub use context::ContextExpr;
+pub use directives::{FileMetadata, MetadataDirective};
+pub use flags::ParsedFlags;
 pub use position::Position;
 pub use syllable::{SyllableCondition, SyllableExpr};
 pub use traits::{ContextParser, GrammarParser, LexerLike, SyllableParser, TokenLike};
-pub use utils::{is_user_symbol_name, negate_char_class, resolve_feature_bundle_chars, SymbolTable};
+pub use utils::{
+    is_user_symbol_name, negate_char_class, resolve_feature_bundle_chars, SymbolTable,
+};
 
 // Re-export parsing functions
 pub use parsing::{

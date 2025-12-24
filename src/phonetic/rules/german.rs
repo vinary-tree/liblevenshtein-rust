@@ -1,0 +1,359 @@
+//! German phonetic normalization rules (embedded).
+//!
+//! Pre-compiled phonetic rules for Standard German (Hochdeutsch) loaded from
+//! embedded `.llev` files. These rules are parsed at first use and cached for
+//! subsequent calls.
+//!
+//! # Key Features
+//!
+//! German phonetic normalization handles:
+//! - **Umlauts**: ä → ae, ö → oe, ü → ue
+//! - **Eszett**: ß → ss
+//! - **CH variations**: ich-Laut (after front vowels) vs ach-Laut (after back vowels)
+//! - **Final devoicing**: b → p, d → t, g → k at word end
+//! - **W/V pronunciation**: w → v, v → f
+//! - **SP/ST at word start**: sp → shp, st → sht
+//! - **Silent H**: Lengthening H after vowels is deleted
+//! - **Z pronunciation**: z → ts (affricate)
+//!
+//! # Available Rule Sets
+//!
+//! - [`base()`] - Complete German orthographic rules (~50 rules)
+//!
+//! # Example
+//!
+//! ```rust,ignore
+//! use liblevenshtein::phonetic::rules::german;
+//!
+//! let rules = german::base();
+//!
+//! // Umlaut normalization
+//! let muenchen = rules.apply("München");
+//! assert!(muenchen.contains("ue"), "ü → ue");
+//!
+//! // Eszett handling
+//! let strasse = rules.apply("Straße");
+//! assert!(strasse.contains("ss"), "ß → ss");
+//!
+//! // Final devoicing
+//! let hund = rules.apply("Hund");
+//! assert!(hund.ends_with('t'), "d → t at word end");
+//! ```
+
+use crate::phonetic::llev::RuleSetChar;
+use std::sync::OnceLock;
+
+/// Base German phonetic rules.
+///
+/// Complete phonetic normalization rules for Standard German (Hochdeutsch):
+///
+/// ## Digraphs
+/// - SCH → sh (Schule → shule)
+/// - TSCH → tsh (Deutsch → doytsh)
+/// - CK → k (Stück → shtuek)
+/// - PH → f (Philosophie → filosofi)
+/// - TH → t (Theater → teater)
+///
+/// ## CH Sounds
+/// - **ich-Laut**: CH after front vowels (i, e, ä, ö, ü) → X (palatal)
+/// - **ach-Laut**: CH after back vowels (a, o, u) → K (velar)
+/// - CH at word start → k (Charakter → karakter)
+///
+/// ## Special Characters
+/// - ß → ss (Straße → strasse)
+/// - ä → ae, ö → oe, ü → ue
+///
+/// ## Final Devoicing (Auslautverhärtung)
+/// - b → p, d → t, g → k at word end
+///
+/// ## Other Features
+/// - W → v (German W sounds like English V)
+/// - V → f (in native words)
+/// - Z → ts (Zeitung → tsaitung)
+/// - QU → kv (Quelle → kvele)
+/// - SP/ST at word start → shp/sht (spät → shpaet, Stein → shtain)
+/// - Silent H after vowels (Sahne → sane)
+pub fn base() -> &'static RuleSetChar {
+    static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
+    RULESET.get_or_init(|| {
+        let content = include_str!("../../../data/rules/german/base.llev");
+        let file = crate::phonetic::llev::parse_str(content)
+            .expect("Invalid embedded german/base.llev - this is a bug in liblevenshtein");
+        RuleSetChar::from_llev(&file)
+            .expect("Failed to compile German base rules - this is a bug in liblevenshtein")
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_base_loads() {
+        let rules = base();
+        assert!(!rules.is_empty(), "German base rules should not be empty");
+        assert!(
+            rules.len() > 40,
+            "expected >40 base rules, got {}",
+            rules.len()
+        );
+    }
+
+    #[test]
+    fn test_eszett() {
+        let rules = base();
+        // Straße → shtrase (St→sht, ß→ss→s via double consonant simplification)
+        // For phonetic matching, both Straße and Strasse normalize to the same output
+        let result = rules.apply("Straße");
+        // The ß produces ss which then simplifies to s for phonetic matching
+        assert!(
+            result.contains('s'),
+            "ß should become s (via ss→s), got: {}",
+            result
+        );
+        // Verify both forms normalize the same
+        let strasse_result = rules.apply("Strasse");
+        assert_eq!(
+            result, strasse_result,
+            "Straße and Strasse should normalize identically"
+        );
+    }
+
+    #[test]
+    fn test_umlaut_a() {
+        let rules = base();
+        // Käse → kaese
+        let result = rules.apply("Käse");
+        assert!(
+            result.contains("ae"),
+            "ä should become ae, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_umlaut_o() {
+        let rules = base();
+        // schön → shoen
+        let result = rules.apply("schön");
+        assert!(
+            result.contains("oe"),
+            "ö should become oe, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_umlaut_u() {
+        let rules = base();
+        // München → muenXen (ü→ue, ch after ü→X)
+        let result = rules.apply("München");
+        assert!(
+            result.contains("ue"),
+            "ü should become ue, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_sch_digraph() {
+        let rules = base();
+        // Schule → shule
+        let result = rules.apply("Schule");
+        assert!(
+            result.starts_with("sh"),
+            "sch should become sh, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_final_devoicing_d() {
+        let rules = base();
+        // Hund → hunt (d→t at end)
+        let result = rules.apply("Hund");
+        assert!(
+            result.ends_with('t'),
+            "final d should become t, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_final_devoicing_b() {
+        let rules = base();
+        // gelb → gelp (b→p at end)
+        let result = rules.apply("gelb");
+        assert!(
+            result.ends_with('p'),
+            "final b should become p, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_final_devoicing_g() {
+        let rules = base();
+        // Tag → tak (g→k at end)
+        let result = rules.apply("Tag");
+        assert!(
+            result.ends_with('k'),
+            "final g should become k, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_w_pronunciation() {
+        let rules = base();
+        // Wasser → Vaser (W→V uppercase to prevent v→f chaining, ss→s)
+        let result = rules.apply("Wasser");
+        assert!(
+            result.starts_with('V'),
+            "W should become V (uppercase), got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_z_pronunciation() {
+        let rules = base();
+        // Zeit → tsait
+        let result = rules.apply("Zeit");
+        assert!(
+            result.starts_with("ts"),
+            "z should become ts, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_sp_initial() {
+        let rules = base();
+        // Spiel → shpil
+        let result = rules.apply("Spiel");
+        assert!(
+            result.starts_with("shp"),
+            "initial sp should become shp, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_st_initial() {
+        let rules = base();
+        // Stein → shtain
+        let result = rules.apply("Stein");
+        assert!(
+            result.starts_with("sht"),
+            "initial st should become sht, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_ie_vowel() {
+        let rules = base();
+        // Liebe → libe
+        let result = rules.apply("Liebe");
+        // ie becomes i
+        assert!(
+            result.contains('i') && !result.contains("ie"),
+            "ie should become i, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_ei_diphthong() {
+        let rules = base();
+        // Eis → AIs (Ei→AI uppercase to prevent rule chaining)
+        let result = rules.apply("Eis");
+        assert!(
+            result.contains("AI"),
+            "ei should become AI (uppercase), got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_eu_diphthong() {
+        let rules = base();
+        // neu → nOY (eu→OY uppercase to prevent rule chaining)
+        let result = rules.apply("neu");
+        assert!(
+            result.contains("OY"),
+            "eu should become OY (uppercase), got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_au_diphthong() {
+        let rules = base();
+        // Haus → HAUs (au→AU uppercase to prevent W→V chaining)
+        let result = rules.apply("Haus");
+        assert!(
+            result.contains("AU"),
+            "au should become AU (uppercase), got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_qu_pattern() {
+        let rules = base();
+        // Quelle → kVele (Qu→kV, uppercase V to prevent v→f chaining, ll→l)
+        let result = rules.apply("Quelle");
+        assert!(
+            result.starts_with("kV"),
+            "qu should become kV (uppercase V), got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_ph_pattern() {
+        let rules = base();
+        // Philosophie → filosofi
+        let result = rules.apply("Philosophie");
+        assert!(result.contains('f'), "ph should become f, got: {}", result);
+        assert!(!result.contains("ph"), "ph should not remain, got: {}", result);
+    }
+
+    #[test]
+    fn test_silent_h() {
+        let rules = base();
+        // Sahne → sane
+        let result = rules.apply("Sahne");
+        assert!(
+            !result.contains("ah"),
+            "ah should become a (silent h), got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_ck_digraph() {
+        let rules = base();
+        // Stück → shtueK (ck→k, st→sht, ü→ue)
+        let result = rules.apply("Stück");
+        assert!(
+            !result.contains("ck"),
+            "ck should become k, got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_double_consonants() {
+        let rules = base();
+        // Mutter → muter
+        let result = rules.apply("Mutter");
+        assert!(
+            !result.contains("tt"),
+            "tt should become t, got: {}",
+            result
+        );
+    }
+}

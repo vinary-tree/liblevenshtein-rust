@@ -1,0 +1,188 @@
+// Spanish Base Phonetic Rules
+// ===========================
+// Shared rules for all Spanish dialects.
+// These rules normalize Spanish orthography to phonetic representation.
+//
+// Spanish has highly regular orthography with few exceptions.
+// Key features:
+//   - 5 pure vowels (a, e, i, o, u)
+//   - C/G softening before front vowels
+//   - Silent H (always)
+//   - LL/Y merger (yeísmo in most dialects)
+//   - Ñ as distinct phoneme
+//
+// Note: Castilian distinción (z/c vs s) is handled in dialect files.
+
+@name "Spanish Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Shared phonetic rules for all Spanish dialects"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiouáéíóúü]
+@define FRONT_VOWEL = [eiéí]
+@define CONSONANT = [bcdfghjklmnñpqrstvwxyz]
+
+// ============================================================
+// MULTI-CHARACTER PATTERNS (must come first)
+// ============================================================
+
+// QU handling - qu before e/i is just k sound
+[id: 1000, name: "qu before e", weight: 0.1, group: spanish_digraphs]
+que -> ke;
+
+[id: 1001, name: "qu before i", weight: 0.1, group: spanish_digraphs]
+qui -> ki;
+
+// GU handling - gu before e/i is just g sound (u is silent)
+[id: 1002, name: "gu before e", weight: 0.1, group: spanish_digraphs]
+gue -> ge;
+
+[id: 1003, name: "gu before i", weight: 0.1, group: spanish_digraphs]
+gui -> gi;
+
+// GÜ - the diaeresis indicates u is pronounced
+[id: 1004, name: "gü before e", weight: 0.1, group: spanish_digraphs]
+güe -> gwe;
+
+[id: 1005, name: "gü before i", weight: 0.1, group: spanish_digraphs]
+güi -> gwi;
+
+// CH digraph - historically a single letter, represents /tʃ/
+[id: 1010, name: "ch digraph", weight: 0.1, group: spanish_digraphs, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+// LL digraph - /ʎ/ historically, but /y/ in most modern dialects (yeísmo)
+[id: 1011, name: "ll to y (yeísmo)", weight: 0.1, group: spanish_digraphs]
+ll -> y;
+
+// RR - trill, distinct from single r
+[id: 1012, name: "rr trill preserved", weight: 0.1, group: spanish_digraphs]
+rr -> rr;
+
+// ============================================================
+// SILENT H
+// ============================================================
+// H is always silent in Spanish (except in 'ch' digraph handled above)
+
+[id: 1020, name: "silent h word-initial", weight: 0.15, group: spanish_silent]
+h -> / #_;
+
+[id: 1021, name: "silent h after vowel", weight: 0.15, group: spanish_silent]
+h -> / $VOWEL _;
+
+// ============================================================
+// X PATTERNS (must come before G/J softening)
+// ============================================================
+// X in modern Spanish orthography is /ks/ (like "taxi", "extra")
+// This rule must be applied BEFORE G/J softening rules below,
+// so that the /x/ phoneme output from J and soft G is not converted.
+
+[id: 1030, name: "x to ks", weight: 0.2, group: spanish_x]
+x -> ks;
+
+// ============================================================
+// G SOFTENING
+// ============================================================
+// G before e/i is pronounced as velar fricative /x/ (like Scottish 'loch')
+
+[id: 1040, name: "soft g before e", weight: 0.2, group: spanish_softening, ipa: "/x/"]
+ge -> xe;
+
+[id: 1041, name: "soft g before i", weight: 0.2, group: spanish_softening, ipa: "/x/"]
+gi -> xi;
+
+[id: 1042, name: "soft g before é", weight: 0.2, group: spanish_softening, ipa: "/x/"]
+gé -> xé;
+
+[id: 1043, name: "soft g before í", weight: 0.2, group: spanish_softening, ipa: "/x/"]
+gí -> xí;
+
+// ============================================================
+// J PRONUNCIATION
+// ============================================================
+// J is always /x/ (velar fricative)
+
+[id: 1050, name: "j to x", weight: 0.2, group: spanish_j, ipa: "/x/"]
+j -> x;
+
+// ============================================================
+// B/V MERGER
+// ============================================================
+// In Spanish, B and V are allophones (both /b/)
+
+[id: 1060, name: "v to b", weight: 0.2, group: spanish_bv]
+v -> b;
+
+// ============================================================
+// ACCENT NORMALIZATION
+// ============================================================
+// Normalize accented vowels to base vowels for matching
+// (accents indicate stress, not different sounds)
+
+[id: 1070, name: "á to a", weight: 0.3, group: spanish_accents]
+á -> a;
+
+[id: 1071, name: "é to e", weight: 0.3, group: spanish_accents]
+é -> e;
+
+[id: 1072, name: "í to i", weight: 0.3, group: spanish_accents]
+í -> i;
+
+[id: 1073, name: "ó to o", weight: 0.3, group: spanish_accents]
+ó -> o;
+
+[id: 1074, name: "ú to u", weight: 0.3, group: spanish_accents]
+ú -> u;
+
+[id: 1075, name: "ü to u", weight: 0.3, group: spanish_accents]
+ü -> u;
+
+// ============================================================
+// Ñ PRESERVATION
+// ============================================================
+// Ñ is a distinct phoneme /ɲ/ (palatal nasal)
+
+[id: 1080, name: "ñ to ɲ", weight: 0.2, group: spanish_special, ipa: "/ɲ/"]
+ñ -> ɲ;
+
+// ============================================================
+// W HANDLING
+// ============================================================
+// W only appears in loanwords, pronounced as /w/ or /b/
+
+[id: 1085, name: "w to u", weight: 0.3, group: spanish_loanwords]
+w -> u;
+
+// ============================================================
+// K HANDLING
+// ============================================================
+// K only appears in loanwords (Spanish uses 'c' or 'qu')
+
+[id: 1086, name: "k preserved", weight: 0.3, group: spanish_loanwords]
+k -> k;
+
+// ============================================================
+// DOUBLE CONSONANT SIMPLIFICATION
+// ============================================================
+// Spanish doesn't have meaningful double consonants except RR and LL
+// (which are already handled above)
+
+[id: 1090, name: "cc to k", weight: 0.25, group: spanish_doubles]
+cc -> k;
+
+[id: 1091, name: "nn to n", weight: 0.25, group: spanish_doubles]
+nn -> n;
+
+[id: 1092, name: "ss to s", weight: 0.25, group: spanish_doubles]
+ss -> s;
+
+// ============================================================
+// FINAL CONSONANTS
+// ============================================================
+// Spanish preserves final consonants (unlike French)
+// No rules needed here - consonants are pronounced
+

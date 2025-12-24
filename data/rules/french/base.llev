@@ -1,0 +1,339 @@
+// French Base Phonetic Rules
+// ==========================
+// Shared rules for all French dialects.
+// French has opaque orthography with many silent letters and complex digraphs.
+//
+// Key features:
+//   - Many silent final consonants (e, s, t, d, x, z)
+//   - Nasal vowels (on, an, en, in, un)
+//   - Rich digraph system (ch, ph, ou, oi, au, eau, ai, ei, eu)
+//   - C/G softening before front vowels
+//   - Liaison patterns (preserved final consonants before vowels)
+
+@name "French Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Shared phonetic rules for all French dialects"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiouyàâäéèêëïîôùûüœæ]
+@define FRONT_VOWEL = [eiyéèêëïî]
+@define NASAL_TRIGGER = [mn]
+@define CONSONANT = [bcdfghjklmnpqrstvwxz]
+
+// ============================================================
+// MULTI-CHARACTER DIGRAPHS (must come first for longest match)
+// ============================================================
+
+// EAU - always /o/
+[id: 1200, name: "eau to o", weight: 0.05, group: french_digraphs]
+eau -> o;
+
+// Triple vowel patterns
+[id: 1201, name: "oeu to oe", weight: 0.05, group: french_digraphs]
+œu -> oe;
+
+// ============================================================
+// -TION/-SION ENDINGS (before nasal rules to match first)
+// ============================================================
+
+[id: 1205, name: "tion ending", weight: 0.1, group: french_endings, ipa: "/sjɔ̃/"]
+tion -> sjɔ̃;
+
+[id: 1206, name: "sion ending", weight: 0.1, group: french_endings, ipa: "/zjɔ̃/"]
+sion -> zjɔ̃;
+
+[id: 1207, name: "ssion ending", weight: 0.1, group: french_endings, ipa: "/sjɔ̃/"]
+ssion -> sjɔ̃;
+
+// ============================================================
+// C/G SOFTENING (before nasal rules)
+// ============================================================
+// Must come before nasals so "centre" matches ce->se before en->a~
+// Weight 0.08 < nasal weight 0.1
+
+// C before e/i/y → s
+[id: 1210, name: "c before e", weight: 0.08, group: french_softening]
+ce -> se;
+
+[id: 1211, name: "c before i", weight: 0.08, group: french_softening]
+ci -> si;
+
+[id: 1212, name: "c before y", weight: 0.08, group: french_softening]
+cy -> sy;
+
+// Ç always → s
+[id: 1213, name: "c cedilla", weight: 0.08, group: french_softening]
+ç -> s;
+
+// G before e/i/y → ʒ (zh sound)
+[id: 1215, name: "g before e", weight: 0.08, group: french_softening, ipa: "/ʒ/"]
+ge -> ʒe;
+
+[id: 1216, name: "g before i", weight: 0.08, group: french_softening, ipa: "/ʒ/"]
+gi -> ʒi;
+
+[id: 1217, name: "g before y", weight: 0.08, group: french_softening, ipa: "/ʒ/"]
+gy -> ʒy;
+
+// ============================================================
+// CONSONANT DIGRAPHS
+// ============================================================
+
+// CH → ʃ (sh sound)
+[id: 1220, name: "ch to sh", weight: 0.1, group: french_digraphs, ipa: "/ʃ/"]
+ch -> ʃ;
+
+// PH → f
+[id: 1221, name: "ph to f", weight: 0.1, group: french_digraphs, ipa: "/f/"]
+ph -> f;
+
+// TH → t (Greek origin, no English "th" sound in French)
+[id: 1222, name: "th to t", weight: 0.1, group: french_digraphs, ipa: "/t/"]
+th -> t;
+
+// GN → ɲ (palatal nasal, like Spanish ñ)
+[id: 1223, name: "gn to ɲ", weight: 0.1, group: french_digraphs, ipa: "/ɲ/"]
+gn -> ɲ;
+
+// QU → k
+[id: 1224, name: "qu to k", weight: 0.1, group: french_digraphs]
+qu -> k;
+
+// ============================================================
+// VOWEL DIGRAPHS
+// ============================================================
+
+// OU → u
+[id: 1230, name: "ou to u", weight: 0.1, group: french_vowels]
+ou -> u;
+
+// OI → wa diphthong
+[id: 1231, name: "oi to wa", weight: 0.1, group: french_vowels, ipa: "/wa/"]
+oi -> wa;
+
+// AU → o
+[id: 1232, name: "au to o", weight: 0.1, group: french_vowels]
+au -> o;
+
+// AI → e (open e)
+[id: 1233, name: "ai to e", weight: 0.1, group: french_vowels]
+ai -> e;
+
+// EI → e
+[id: 1234, name: "ei to e", weight: 0.1, group: french_vowels]
+ei -> e;
+
+// EU/ŒU → oe (schwa-like)
+[id: 1235, name: "eu to oe", weight: 0.1, group: french_vowels]
+eu -> oe;
+
+// OE ligature
+[id: 1236, name: "oe ligature", weight: 0.1, group: french_vowels]
+œ -> oe;
+
+// AE ligature (rare)
+[id: 1237, name: "ae ligature", weight: 0.1, group: french_vowels]
+æ -> e;
+
+// ============================================================
+// NASAL VOWEL PATTERNS (after softening/digraphs)
+// ============================================================
+// French nasal vowels: on/om, an/am/en/em, in/im/ain/ein, un/um
+
+// ON/OM nasal
+[id: 1240, name: "on nasal", weight: 0.1, group: french_nasals, ipa: "/ɔ̃/"]
+on -> ɔ̃;
+
+[id: 1241, name: "om before b/p", weight: 0.1, group: french_nasals, ipa: "/ɔ̃/"]
+om -> ɔ̃ / _[bp];
+
+// AN/AM/EN/EM nasal (all → same nasal)
+[id: 1245, name: "an nasal", weight: 0.1, group: french_nasals, ipa: "/ɑ̃/"]
+an -> ɑ̃;
+
+[id: 1246, name: "am before b/p", weight: 0.1, group: french_nasals, ipa: "/ɑ̃/"]
+am -> ɑ̃ / _[bp];
+
+[id: 1247, name: "en nasal", weight: 0.1, group: french_nasals, ipa: "/ɑ̃/"]
+en -> ɑ̃;
+
+[id: 1248, name: "em before b/p", weight: 0.1, group: french_nasals, ipa: "/ɑ̃/"]
+em -> ɑ̃ / _[bp];
+
+// IN/IM/AIN/EIN nasal
+[id: 1250, name: "ain nasal", weight: 0.1, group: french_nasals, ipa: "/ɛ̃/"]
+ain -> ɛ̃;
+
+[id: 1251, name: "ein nasal", weight: 0.1, group: french_nasals, ipa: "/ɛ̃/"]
+ein -> ɛ̃;
+
+[id: 1252, name: "in nasal", weight: 0.1, group: french_nasals, ipa: "/ɛ̃/"]
+in -> ɛ̃;
+
+[id: 1253, name: "im before b/p", weight: 0.1, group: french_nasals, ipa: "/ɛ̃/"]
+im -> ɛ̃ / _[bp];
+
+// UN/UM nasal
+[id: 1255, name: "un nasal", weight: 0.1, group: french_nasals, ipa: "/œ̃/"]
+un -> œ̃;
+
+[id: 1256, name: "um before b/p", weight: 0.1, group: french_nasals, ipa: "/œ̃/"]
+um -> œ̃ / _[bp];
+
+// ============================================================
+// SILENT FINAL CONSONANTS
+// ============================================================
+// Most final consonants are silent in French (except c, r, f, l - "CaReFuL")
+
+// Silent final E
+[id: 1270, name: "silent final e", weight: 0.2, group: french_silent]
+e -> / _#;
+
+// Silent final S
+[id: 1271, name: "silent final s", weight: 0.2, group: french_silent]
+s -> / _#;
+
+// Silent final T
+[id: 1272, name: "silent final t", weight: 0.2, group: french_silent]
+t -> / _#;
+
+// Silent final D
+[id: 1273, name: "silent final d", weight: 0.2, group: french_silent]
+d -> / _#;
+
+// Silent final X
+[id: 1274, name: "silent final x", weight: 0.2, group: french_silent]
+x -> / _#;
+
+// Silent final Z
+[id: 1275, name: "silent final z", weight: 0.2, group: french_silent]
+z -> / _#;
+
+// Silent final P (in some words like "trop", "beaucoup")
+[id: 1276, name: "silent final p", weight: 0.2, group: french_silent]
+p -> / _#;
+
+// Silent final G (in some words)
+[id: 1277, name: "silent final g", weight: 0.25, group: french_silent]
+g -> / _#;
+
+// ============================================================
+// SILENT H
+// ============================================================
+// H is always silent in French (though it affects liaison/elision)
+
+[id: 1280, name: "silent h initial", weight: 0.2, group: french_silent]
+h -> / #_;
+
+[id: 1281, name: "silent h medial", weight: 0.2, group: french_silent]
+h -> / $VOWEL _;
+
+// ============================================================
+// ACCENT NORMALIZATION
+// ============================================================
+
+[id: 1285, name: "à to a", weight: 0.3, group: french_accents]
+à -> a;
+
+[id: 1286, name: "â to a", weight: 0.3, group: french_accents]
+â -> a;
+
+[id: 1287, name: "ä to a", weight: 0.3, group: french_accents]
+ä -> a;
+
+[id: 1288, name: "é to e", weight: 0.3, group: french_accents]
+é -> e;
+
+[id: 1289, name: "è to e", weight: 0.3, group: french_accents]
+è -> e;
+
+[id: 1290, name: "ê to e", weight: 0.3, group: french_accents]
+ê -> e;
+
+[id: 1291, name: "ë to e", weight: 0.3, group: french_accents]
+ë -> e;
+
+[id: 1292, name: "ï to i", weight: 0.3, group: french_accents]
+ï -> i;
+
+[id: 1293, name: "î to i", weight: 0.3, group: french_accents]
+î -> i;
+
+[id: 1294, name: "ô to o", weight: 0.3, group: french_accents]
+ô -> o;
+
+[id: 1295, name: "ù to u", weight: 0.3, group: french_accents]
+ù -> u;
+
+[id: 1296, name: "û to u", weight: 0.3, group: french_accents]
+û -> u;
+
+[id: 1297, name: "ü to u", weight: 0.3, group: french_accents]
+ü -> u;
+
+// ============================================================
+// DOUBLE CONSONANTS
+// ============================================================
+// French double consonants are generally pronounced as single
+
+[id: 1300, name: "ss to s", weight: 0.25, group: french_doubles]
+ss -> s;
+
+[id: 1301, name: "tt to t", weight: 0.25, group: french_doubles]
+tt -> t;
+
+[id: 1302, name: "pp to p", weight: 0.25, group: french_doubles]
+pp -> p;
+
+[id: 1303, name: "ff to f", weight: 0.25, group: french_doubles]
+ff -> f;
+
+[id: 1304, name: "ll to l", weight: 0.25, group: french_doubles]
+ll -> l;
+
+[id: 1305, name: "mm to m", weight: 0.25, group: french_doubles]
+mm -> m;
+
+[id: 1306, name: "nn to n", weight: 0.25, group: french_doubles]
+nn -> n;
+
+[id: 1307, name: "rr to r", weight: 0.25, group: french_doubles]
+rr -> r;
+
+[id: 1308, name: "cc to k", weight: 0.25, group: french_doubles]
+cc -> k;
+
+// ============================================================
+// Y PATTERNS
+// ============================================================
+
+// Y between vowels acts as ii
+[id: 1310, name: "y between vowels", weight: 0.2, group: french_y]
+y -> i;
+
+// ============================================================
+// X PATTERNS
+// ============================================================
+
+// X in -eux/-aux endings (already silent at end)
+// X at start of word → gz (exam)
+// Note: Simplified - the full context #_$VOWEL requires NFA matching
+[id: 1315, name: "x initial", weight: 0.2, group: french_x]
+x -> gz / #_;
+
+// X elsewhere → ks
+[id: 1316, name: "x to ks", weight: 0.25, group: french_x]
+x -> ks;
+
+// ============================================================
+// W HANDLING
+// ============================================================
+// W only in loanwords, typically /w/ or /v/
+
+[id: 1320, name: "w to v", weight: 0.3, group: french_loanwords]
+w -> v;
+
