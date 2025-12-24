@@ -353,6 +353,10 @@ required-features = ["pathmap-backend"]
 name = "fuzzy_cache_basic"
 required-features = ["pathmap-backend"]
 
+[[example]]
+name = "phonetic_iteration_analysis"
+required-features = ["phonetic-rules"]
+
 [profile.release]
 opt-level = 3
 lto = true
