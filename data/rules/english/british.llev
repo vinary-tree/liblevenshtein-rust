@@ -27,523 +27,568 @@
 @define CONSONANT = [bcdfghjklmnpqrstvwxyz]
 
 // ============================================================
+// RP VOWEL PATTERNS (Dialect-Specific)
+// ============================================================
+// These rules were moved from zompist.llev because GA and RP
+// have different vowel qualities for these patterns.
+
+// GOAT vowel class - RP uses /əʊ/
+[id: 400, name: "oa digraph RP", weight: 0.1, group: british_goat, ipa: "/əʊ/"]
+// oa -> əʊ (boat -> bəʊt, road -> ɹəʊd)
+oa -> əʊ;
+
+[id: 401, name: "oe digraph RP", weight: 0.1, group: british_goat, ipa: "/əʊ/"]
+// oe -> əʊ (toe -> təʊ, foe -> fəʊ)
+oe -> əʊ;
+
+// OUGH patterns - RP specific
+[id: 410, name: "through pattern RP", weight: 0.0, group: british_ough, ipa: "/θɹuː/"]
+// through -> θɹuː (rhymes with "threw")
+through -> θɹuː / #_#;
+
+[id: 411, name: "rough ending RP", weight: 0.0, group: british_ough, ipa: "/ʌf/"]
+// rough -> ɹʌf, tough -> tʌf (STRUT vowel)
+ough -> ʌf / [rt]_;
+
+[id: 412, name: "enough pattern RP", weight: 0.0, group: british_ough, ipa: "/ɪnʌf/"]
+// enough -> ɪnʌf
+enough -> ɪnʌf / #_#;
+
+[id: 413, name: "cough pattern RP", weight: 0.0, group: british_ough, ipa: "/kɒf/"]
+// cough -> kɒf (LOT vowel in RP)
+cough -> kɒf / #_#;
+
+[id: 414, name: "ough pattern RP", weight: 0.0, group: british_ough, ipa: "/əʊ/"]
+// ough -> əʊ (dough -> dəʊ, though -> ðəʊ) - GOAT vowel
+ough -> əʊ;
+
+[id: 415, name: "aught pattern RP", weight: 0.0, group: british_ough, ipa: "/ɔːt/"]
+// aught -> ɔːt (caught -> kɔːt, daughter -> dɔːtə) - THOUGHT vowel
+aught -> ɔːt;
+
+[id: 416, name: "ought pattern RP", weight: 0.0, group: british_ough, ipa: "/ɔːt/"]
+// ought -> ɔːt (bought -> bɔːt, thought -> θɔːt) - THOUGHT vowel
+ought -> ɔːt;
+
+// ============================================================
 // NON-RHOTIC R-DROPPING RULES (British RP)
 // ============================================================
 // In British RP, /r/ is dropped after vowels when not followed
 // by another vowel. This creates distinctive vowel qualities.
 
-// AR patterns (car, far, star -> cah, fah, stah)
-[id: 600, name: "r-drop car", weight: 0.2, group: british_nonrhotic]
-car -> cah / _#;
+// AR patterns (car, far, star -> kɑː, fɑː, stɑː) - START vowel /ɑː/
+[id: 600, name: "r-drop car", weight: 0.2, group: british_nonrhotic, ipa: "/kɑː/"]
+car -> kɑː / _#;
 
-[id: 601, name: "r-drop far", weight: 0.2, group: british_nonrhotic]
-far -> fah / _#;
+[id: 601, name: "r-drop far", weight: 0.2, group: british_nonrhotic, ipa: "/fɑː/"]
+far -> fɑː / _#;
 
-[id: 602, name: "r-drop bar", weight: 0.2, group: british_nonrhotic]
-bar -> bah / _#;
+[id: 602, name: "r-drop bar", weight: 0.2, group: british_nonrhotic, ipa: "/bɑː/"]
+bar -> bɑː / _#;
 
-[id: 603, name: "r-drop star", weight: 0.2, group: british_nonrhotic]
-star -> stah / _#;
+[id: 603, name: "r-drop star", weight: 0.2, group: british_nonrhotic, ipa: "/stɑː/"]
+star -> stɑː / _#;
 
-[id: 604, name: "r-drop jar", weight: 0.2, group: british_nonrhotic]
-jar -> jah / _#;
+[id: 604, name: "r-drop jar", weight: 0.2, group: british_nonrhotic, ipa: "/d͡ʒɑː/"]
+jar -> d͡ʒɑː / _#;
 
-[id: 605, name: "r-drop tar", weight: 0.2, group: british_nonrhotic]
-tar -> tah / _#;
+[id: 605, name: "r-drop tar", weight: 0.2, group: british_nonrhotic, ipa: "/tɑː/"]
+tar -> tɑː / _#;
 
-[id: 606, name: "r-drop par", weight: 0.2, group: british_nonrhotic]
-par -> pah / _#;
+[id: 606, name: "r-drop par", weight: 0.2, group: british_nonrhotic, ipa: "/pɑː/"]
+par -> pɑː / _#;
 
-[id: 607, name: "r-drop scar", weight: 0.2, group: british_nonrhotic]
-scar -> scah / _#;
+[id: 607, name: "r-drop scar", weight: 0.2, group: british_nonrhotic, ipa: "/skɑː/"]
+scar -> skɑː / _#;
 
-[id: 608, name: "r-drop arm", weight: 0.2, group: british_nonrhotic]
-arm -> ahm;
+[id: 608, name: "r-drop arm", weight: 0.2, group: british_nonrhotic, ipa: "/ɑːm/"]
+arm -> ɑːm;
 
-[id: 609, name: "r-drop farm", weight: 0.2, group: british_nonrhotic]
-farm -> fahm;
+[id: 609, name: "r-drop farm", weight: 0.2, group: british_nonrhotic, ipa: "/fɑːm/"]
+farm -> fɑːm;
 
-[id: 610, name: "r-drop harm", weight: 0.2, group: british_nonrhotic]
-harm -> hahm;
+[id: 610, name: "r-drop harm", weight: 0.2, group: british_nonrhotic, ipa: "/hɑːm/"]
+harm -> hɑːm;
 
-[id: 611, name: "r-drop charm", weight: 0.2, group: british_nonrhotic]
-charm -> chahm;
+[id: 611, name: "r-drop charm", weight: 0.2, group: british_nonrhotic, ipa: "/t͡ʃɑːm/"]
+charm -> t͡ʃɑːm;
 
-[id: 612, name: "r-drop alarm", weight: 0.2, group: british_nonrhotic]
-alarm -> alahm;
+[id: 612, name: "r-drop alarm", weight: 0.2, group: british_nonrhotic, ipa: "/əlɑːm/"]
+alarm -> əlɑːm;
 
-[id: 613, name: "r-drop park", weight: 0.2, group: british_nonrhotic]
-park -> pahk;
+[id: 613, name: "r-drop park", weight: 0.2, group: british_nonrhotic, ipa: "/pɑːk/"]
+park -> pɑːk;
 
-[id: 614, name: "r-drop dark", weight: 0.2, group: british_nonrhotic]
-dark -> dahk;
+[id: 614, name: "r-drop dark", weight: 0.2, group: british_nonrhotic, ipa: "/dɑːk/"]
+dark -> dɑːk;
 
-[id: 615, name: "r-drop mark", weight: 0.2, group: british_nonrhotic]
-mark -> mahk;
+[id: 615, name: "r-drop mark", weight: 0.2, group: british_nonrhotic, ipa: "/mɑːk/"]
+mark -> mɑːk;
 
-[id: 616, name: "r-drop bark", weight: 0.2, group: british_nonrhotic]
-bark -> bahk;
+[id: 616, name: "r-drop bark", weight: 0.2, group: british_nonrhotic, ipa: "/bɑːk/"]
+bark -> bɑːk;
 
-[id: 617, name: "r-drop shark", weight: 0.2, group: british_nonrhotic]
-shark -> shahk;
+[id: 617, name: "r-drop shark", weight: 0.2, group: british_nonrhotic, ipa: "/ʃɑːk/"]
+shark -> ʃɑːk;
 
-[id: 618, name: "r-drop spark", weight: 0.2, group: british_nonrhotic]
-spark -> spahk;
+[id: 618, name: "r-drop spark", weight: 0.2, group: british_nonrhotic, ipa: "/spɑːk/"]
+spark -> spɑːk;
 
-[id: 619, name: "r-drop start", weight: 0.2, group: british_nonrhotic]
-start -> staht;
+[id: 619, name: "r-drop start", weight: 0.2, group: british_nonrhotic, ipa: "/stɑːt/"]
+start -> stɑːt;
 
-[id: 620, name: "r-drop heart", weight: 0.2, group: british_nonrhotic]
-heart -> haht;
+[id: 620, name: "r-drop heart", weight: 0.2, group: british_nonrhotic, ipa: "/hɑːt/"]
+heart -> hɑːt;
 
-[id: 621, name: "r-drop part", weight: 0.2, group: british_nonrhotic]
-part -> paht;
+[id: 621, name: "r-drop part", weight: 0.2, group: british_nonrhotic, ipa: "/pɑːt/"]
+part -> pɑːt;
 
-[id: 622, name: "r-drop cart", weight: 0.2, group: british_nonrhotic]
-cart -> caht;
+[id: 622, name: "r-drop cart", weight: 0.2, group: british_nonrhotic, ipa: "/kɑːt/"]
+cart -> kɑːt;
 
-[id: 623, name: "r-drop smart", weight: 0.2, group: british_nonrhotic]
-smart -> smaht;
+[id: 623, name: "r-drop smart", weight: 0.2, group: british_nonrhotic, ipa: "/smɑːt/"]
+smart -> smɑːt;
 
-[id: 624, name: "r-drop art", weight: 0.2, group: british_nonrhotic]
-art -> aht;
+[id: 624, name: "r-drop art", weight: 0.2, group: british_nonrhotic, ipa: "/ɑːt/"]
+art -> ɑːt;
 
-[id: 625, name: "r-drop chart", weight: 0.2, group: british_nonrhotic]
-chart -> chaht;
+[id: 625, name: "r-drop chart", weight: 0.2, group: british_nonrhotic, ipa: "/t͡ʃɑːt/"]
+chart -> t͡ʃɑːt;
 
-[id: 626, name: "r-drop card", weight: 0.2, group: british_nonrhotic]
-card -> cahd;
+[id: 626, name: "r-drop card", weight: 0.2, group: british_nonrhotic, ipa: "/kɑːd/"]
+card -> kɑːd;
 
-[id: 627, name: "r-drop hard", weight: 0.2, group: british_nonrhotic]
-hard -> hahd;
+[id: 627, name: "r-drop hard", weight: 0.2, group: british_nonrhotic, ipa: "/hɑːd/"]
+hard -> hɑːd;
 
-[id: 628, name: "r-drop yard", weight: 0.2, group: british_nonrhotic]
-yard -> yahd;
+[id: 628, name: "r-drop yard", weight: 0.2, group: british_nonrhotic, ipa: "/jɑːd/"]
+yard -> jɑːd;
 
-[id: 629, name: "r-drop guard", weight: 0.2, group: british_nonrhotic]
-guard -> guahd;
+[id: 629, name: "r-drop guard", weight: 0.2, group: british_nonrhotic, ipa: "/gɑːd/"]
+guard -> gɑːd;
 
-// ER patterns (her, after -> ha, afta)
-[id: 630, name: "r-drop er final", weight: 0.2, group: british_nonrhotic]
-er -> a / _#;
+// ER patterns (her, after -> hə, ɑːftə) - lettER vowel /ə/
+[id: 630, name: "r-drop er final", weight: 0.2, group: british_nonrhotic, ipa: "/ə/"]
+er -> ə / _#;
 
-[id: 631, name: "r-drop her", weight: 0.2, group: british_nonrhotic]
-her -> ha / _#;
+[id: 631, name: "r-drop her", weight: 0.2, group: british_nonrhotic, ipa: "/hɜː/"]
+her -> hɜː / _#;
 
-[id: 632, name: "r-drop after", weight: 0.2, group: british_nonrhotic]
-after -> afta;
+[id: 632, name: "r-drop after", weight: 0.2, group: british_nonrhotic, ipa: "/ɑːftə/"]
+after -> ɑːftə;
 
-[id: 633, name: "r-drop water", weight: 0.2, group: british_nonrhotic]
-water -> wata;
+[id: 633, name: "r-drop water", weight: 0.2, group: british_nonrhotic, ipa: "/wɔːtə/"]
+water -> wɔːtə;
 
-[id: 634, name: "r-drop butter", weight: 0.2, group: british_nonrhotic]
-butter -> butta;
+[id: 634, name: "r-drop butter", weight: 0.2, group: british_nonrhotic, ipa: "/bʌtə/"]
+butter -> bʌtə;
 
-[id: 635, name: "r-drop better", weight: 0.2, group: british_nonrhotic]
-better -> betta;
+[id: 635, name: "r-drop better", weight: 0.2, group: british_nonrhotic, ipa: "/bɛtə/"]
+better -> bɛtə;
 
-[id: 636, name: "r-drop letter", weight: 0.2, group: british_nonrhotic]
-letter -> letta;
+[id: 636, name: "r-drop letter", weight: 0.2, group: british_nonrhotic, ipa: "/lɛtə/"]
+letter -> lɛtə;
 
-[id: 637, name: "r-drop mother", weight: 0.2, group: british_nonrhotic]
-mother -> mutha;
+[id: 637, name: "r-drop mother", weight: 0.2, group: british_nonrhotic, ipa: "/mʌðə/"]
+mother -> mʌðə;
 
-[id: 638, name: "r-drop father", weight: 0.2, group: british_nonrhotic]
-father -> fatha;
+[id: 638, name: "r-drop father", weight: 0.2, group: british_nonrhotic, ipa: "/fɑːðə/"]
+father -> fɑːðə;
 
-[id: 639, name: "r-drop brother", weight: 0.2, group: british_nonrhotic]
-brother -> brotha;
+[id: 639, name: "r-drop brother", weight: 0.2, group: british_nonrhotic, ipa: "/bɹʌðə/"]
+brother -> bɹʌðə;
 
-[id: 640, name: "r-drop sister", weight: 0.2, group: british_nonrhotic]
-sister -> sista;
+[id: 640, name: "r-drop sister", weight: 0.2, group: british_nonrhotic, ipa: "/sɪstə/"]
+sister -> sɪstə;
 
-[id: 641, name: "r-drop mister", weight: 0.2, group: british_nonrhotic]
-mister -> mista;
+[id: 641, name: "r-drop mister", weight: 0.2, group: british_nonrhotic, ipa: "/mɪstə/"]
+mister -> mɪstə;
 
-[id: 642, name: "r-drop master", weight: 0.2, group: british_nonrhotic]
-master -> masta;
+[id: 642, name: "r-drop master", weight: 0.2, group: british_nonrhotic, ipa: "/mɑːstə/"]
+master -> mɑːstə;
 
-[id: 643, name: "r-drop faster", weight: 0.2, group: british_nonrhotic]
-faster -> fasta;
+[id: 643, name: "r-drop faster", weight: 0.2, group: british_nonrhotic, ipa: "/fɑːstə/"]
+faster -> fɑːstə;
 
-[id: 644, name: "r-drop disaster", weight: 0.2, group: british_nonrhotic]
-disaster -> disasta;
+[id: 644, name: "r-drop disaster", weight: 0.2, group: british_nonrhotic, ipa: "/dɪzɑːstə/"]
+disaster -> dɪzɑːstə;
 
-// IR patterns (bird, first -> bahd, fahst)
-[id: 650, name: "r-drop bird", weight: 0.2, group: british_nonrhotic]
-bird -> bahd;
+// IR patterns (bird, first -> bɜːd, fɜːst) - NURSE vowel /ɜː/
+[id: 650, name: "r-drop bird", weight: 0.2, group: british_nonrhotic, ipa: "/bɜːd/"]
+bird -> bɜːd;
 
-[id: 651, name: "r-drop word", weight: 0.2, group: british_nonrhotic]
-word -> wahd;
+[id: 651, name: "r-drop word", weight: 0.2, group: british_nonrhotic, ipa: "/wɜːd/"]
+word -> wɜːd;
 
-[id: 652, name: "r-drop work", weight: 0.2, group: british_nonrhotic]
-work -> wahk;
+[id: 652, name: "r-drop work", weight: 0.2, group: british_nonrhotic, ipa: "/wɜːk/"]
+work -> wɜːk;
 
-[id: 653, name: "r-drop world", weight: 0.2, group: british_nonrhotic]
-world -> wahld;
+[id: 653, name: "r-drop world", weight: 0.2, group: british_nonrhotic, ipa: "/wɜːld/"]
+world -> wɜːld;
 
-[id: 654, name: "r-drop first", weight: 0.2, group: british_nonrhotic]
-first -> fahst;
+[id: 654, name: "r-drop first", weight: 0.2, group: british_nonrhotic, ipa: "/fɜːst/"]
+first -> fɜːst;
 
-[id: 655, name: "r-drop third", weight: 0.2, group: british_nonrhotic]
-third -> thahd;
+[id: 655, name: "r-drop third", weight: 0.2, group: british_nonrhotic, ipa: "/θɜːd/"]
+third -> θɜːd;
 
-[id: 656, name: "r-drop girl", weight: 0.2, group: british_nonrhotic]
-girl -> gahl;
+[id: 656, name: "r-drop girl", weight: 0.2, group: british_nonrhotic, ipa: "/gɜːl/"]
+girl -> gɜːl;
 
-[id: 657, name: "r-drop shirt", weight: 0.2, group: british_nonrhotic]
-shirt -> shaht;
+[id: 657, name: "r-drop shirt", weight: 0.2, group: british_nonrhotic, ipa: "/ʃɜːt/"]
+shirt -> ʃɜːt;
 
-[id: 658, name: "r-drop skirt", weight: 0.2, group: british_nonrhotic]
-skirt -> skaht;
+[id: 658, name: "r-drop skirt", weight: 0.2, group: british_nonrhotic, ipa: "/skɜːt/"]
+skirt -> skɜːt;
 
-[id: 659, name: "r-drop dirt", weight: 0.2, group: british_nonrhotic]
-dirt -> daht;
+[id: 659, name: "r-drop dirt", weight: 0.2, group: british_nonrhotic, ipa: "/dɜːt/"]
+dirt -> dɜːt;
 
-[id: 660, name: "r-drop birth", weight: 0.2, group: british_nonrhotic]
-birth -> bahth;
+[id: 660, name: "r-drop birth", weight: 0.2, group: british_nonrhotic, ipa: "/bɜːθ/"]
+birth -> bɜːθ;
 
-// UR patterns (nurse, turn -> nahs, tahn)
-[id: 665, name: "r-drop nurse", weight: 0.2, group: british_nonrhotic]
-nurse -> nahs;
+// UR patterns (nurse, turn -> nɜːs, tɜːn) - NURSE vowel /ɜː/
+[id: 665, name: "r-drop nurse", weight: 0.2, group: british_nonrhotic, ipa: "/nɜːs/"]
+nurse -> nɜːs;
 
-[id: 666, name: "r-drop turn", weight: 0.2, group: british_nonrhotic]
-turn -> tahn;
+[id: 666, name: "r-drop turn", weight: 0.2, group: british_nonrhotic, ipa: "/tɜːn/"]
+turn -> tɜːn;
 
-[id: 667, name: "r-drop burn", weight: 0.2, group: british_nonrhotic]
-burn -> bahn;
+[id: 667, name: "r-drop burn", weight: 0.2, group: british_nonrhotic, ipa: "/bɜːn/"]
+burn -> bɜːn;
 
-[id: 668, name: "r-drop hurt", weight: 0.2, group: british_nonrhotic]
-hurt -> haht;
+[id: 668, name: "r-drop hurt", weight: 0.2, group: british_nonrhotic, ipa: "/hɜːt/"]
+hurt -> hɜːt;
 
-[id: 669, name: "r-drop curse", weight: 0.2, group: british_nonrhotic]
-curse -> cahs;
+[id: 669, name: "r-drop curse", weight: 0.2, group: british_nonrhotic, ipa: "/kɜːs/"]
+curse -> kɜːs;
 
-[id: 670, name: "r-drop purse", weight: 0.2, group: british_nonrhotic]
-purse -> pahs;
+[id: 670, name: "r-drop purse", weight: 0.2, group: british_nonrhotic, ipa: "/pɜːs/"]
+purse -> pɜːs;
 
-[id: 671, name: "r-drop purple", weight: 0.2, group: british_nonrhotic]
-purple -> pahple;
+[id: 671, name: "r-drop purple", weight: 0.2, group: british_nonrhotic, ipa: "/pɜːpl/"]
+purple -> pɜːpl;
 
-[id: 672, name: "r-drop church", weight: 0.2, group: british_nonrhotic]
-church -> chahch;
+[id: 672, name: "r-drop church", weight: 0.2, group: british_nonrhotic, ipa: "/t͡ʃɜːt͡ʃ/"]
+church -> t͡ʃɜːt͡ʃ;
 
-[id: 673, name: "r-drop further", weight: 0.2, group: british_nonrhotic]
-further -> fahtha;
+[id: 673, name: "r-drop further", weight: 0.2, group: british_nonrhotic, ipa: "/fɜːðə/"]
+further -> fɜːðə;
 
-// OR patterns (door, floor -> daw, flaw)
-[id: 680, name: "r-drop door", weight: 0.2, group: british_nonrhotic]
-door -> daw;
+// OR patterns (door, floor -> dɔː, flɔː) - FORCE/THOUGHT vowel /ɔː/
+[id: 680, name: "r-drop door", weight: 0.2, group: british_nonrhotic, ipa: "/dɔː/"]
+door -> dɔː;
 
-[id: 681, name: "r-drop floor", weight: 0.2, group: british_nonrhotic]
-floor -> flaw;
+[id: 681, name: "r-drop floor", weight: 0.2, group: british_nonrhotic, ipa: "/flɔː/"]
+floor -> flɔː;
 
-[id: 682, name: "r-drop more", weight: 0.2, group: british_nonrhotic]
-more -> maw;
+[id: 682, name: "r-drop more", weight: 0.2, group: british_nonrhotic, ipa: "/mɔː/"]
+more -> mɔː;
 
-[id: 683, name: "r-drop four", weight: 0.2, group: british_nonrhotic]
-four -> faw;
+[id: 683, name: "r-drop four", weight: 0.2, group: british_nonrhotic, ipa: "/fɔː/"]
+four -> fɔː;
 
-[id: 684, name: "r-drop your", weight: 0.2, group: british_nonrhotic]
-your -> yaw;
+[id: 684, name: "r-drop your", weight: 0.2, group: british_nonrhotic, ipa: "/jɔː/"]
+your -> jɔː;
 
-[id: 685, name: "r-drop pour", weight: 0.2, group: british_nonrhotic]
-pour -> paw;
+[id: 685, name: "r-drop pour", weight: 0.2, group: british_nonrhotic, ipa: "/pɔː/"]
+pour -> pɔː;
 
-[id: 686, name: "r-drop store", weight: 0.2, group: british_nonrhotic]
-store -> staw;
+[id: 686, name: "r-drop store", weight: 0.2, group: british_nonrhotic, ipa: "/stɔː/"]
+store -> stɔː;
 
-[id: 687, name: "r-drop shore", weight: 0.2, group: british_nonrhotic]
-shore -> shaw;
+[id: 687, name: "r-drop shore", weight: 0.2, group: british_nonrhotic, ipa: "/ʃɔː/"]
+shore -> ʃɔː;
 
-[id: 688, name: "r-drop core", weight: 0.2, group: british_nonrhotic]
-core -> caw;
+[id: 688, name: "r-drop core", weight: 0.2, group: british_nonrhotic, ipa: "/kɔː/"]
+core -> kɔː;
 
-[id: 689, name: "r-drop score", weight: 0.2, group: british_nonrhotic]
-score -> scaw;
+[id: 689, name: "r-drop score", weight: 0.2, group: british_nonrhotic, ipa: "/skɔː/"]
+score -> skɔː;
 
-[id: 690, name: "r-drop bore", weight: 0.2, group: british_nonrhotic]
-bore -> baw;
+[id: 690, name: "r-drop bore", weight: 0.2, group: british_nonrhotic, ipa: "/bɔː/"]
+bore -> bɔː;
 
-[id: 691, name: "r-drop wore", weight: 0.2, group: british_nonrhotic]
-wore -> waw;
+[id: 691, name: "r-drop wore", weight: 0.2, group: british_nonrhotic, ipa: "/wɔː/"]
+wore -> wɔː;
 
-[id: 692, name: "r-drop horse", weight: 0.2, group: british_nonrhotic]
-horse -> hawse;
+[id: 692, name: "r-drop horse", weight: 0.2, group: british_nonrhotic, ipa: "/hɔːs/"]
+horse -> hɔːs;
 
-[id: 693, name: "r-drop force", weight: 0.2, group: british_nonrhotic]
-force -> fawse;
+[id: 693, name: "r-drop force", weight: 0.2, group: british_nonrhotic, ipa: "/fɔːs/"]
+force -> fɔːs;
 
-[id: 694, name: "r-drop north", weight: 0.2, group: british_nonrhotic]
-north -> nawth;
+[id: 694, name: "r-drop north", weight: 0.2, group: british_nonrhotic, ipa: "/nɔːθ/"]
+north -> nɔːθ;
 
-[id: 695, name: "r-drop short", weight: 0.2, group: british_nonrhotic]
-short -> shawt;
+[id: 695, name: "r-drop short", weight: 0.2, group: british_nonrhotic, ipa: "/ʃɔːt/"]
+short -> ʃɔːt;
 
-[id: 696, name: "r-drop sport", weight: 0.2, group: british_nonrhotic]
-sport -> spawt;
+[id: 696, name: "r-drop sport", weight: 0.2, group: british_nonrhotic, ipa: "/spɔːt/"]
+sport -> spɔːt;
 
-[id: 697, name: "r-drop port", weight: 0.2, group: british_nonrhotic]
-port -> pawt;
+[id: 697, name: "r-drop port", weight: 0.2, group: british_nonrhotic, ipa: "/pɔːt/"]
+port -> pɔːt;
 
-[id: 698, name: "r-drop sort", weight: 0.2, group: british_nonrhotic]
-sort -> sawt;
+[id: 698, name: "r-drop sort", weight: 0.2, group: british_nonrhotic, ipa: "/sɔːt/"]
+sort -> sɔːt;
 
-[id: 699, name: "r-drop morning", weight: 0.2, group: british_nonrhotic]
-morning -> mawning;
+[id: 699, name: "r-drop morning", weight: 0.2, group: british_nonrhotic, ipa: "/mɔːnɪŋ/"]
+morning -> mɔːnɪŋ;
 
-// EAR patterns (hear, near -> hia, nia)
-[id: 700, name: "r-drop hear", weight: 0.2, group: british_nonrhotic]
-hear -> hia;
+// EAR patterns (hear, near -> hɪə, nɪə) - NEAR vowel /ɪə/
+[id: 700, name: "r-drop hear", weight: 0.2, group: british_nonrhotic, ipa: "/hɪə/"]
+hear -> hɪə;
 
-[id: 701, name: "r-drop near", weight: 0.2, group: british_nonrhotic]
-near -> nia;
+[id: 701, name: "r-drop near", weight: 0.2, group: british_nonrhotic, ipa: "/nɪə/"]
+near -> nɪə;
 
-[id: 702, name: "r-drop clear", weight: 0.2, group: british_nonrhotic]
-clear -> clia;
+[id: 702, name: "r-drop clear", weight: 0.2, group: british_nonrhotic, ipa: "/klɪə/"]
+clear -> klɪə;
 
-[id: 703, name: "r-drop dear", weight: 0.2, group: british_nonrhotic]
-dear -> dia;
+[id: 703, name: "r-drop dear", weight: 0.2, group: british_nonrhotic, ipa: "/dɪə/"]
+dear -> dɪə;
 
-[id: 704, name: "r-drop fear", weight: 0.2, group: british_nonrhotic]
-fear -> fia;
+[id: 704, name: "r-drop fear", weight: 0.2, group: british_nonrhotic, ipa: "/fɪə/"]
+fear -> fɪə;
 
-[id: 705, name: "r-drop year", weight: 0.2, group: british_nonrhotic]
-year -> yia;
+[id: 705, name: "r-drop year", weight: 0.2, group: british_nonrhotic, ipa: "/jɪə/"]
+year -> jɪə;
 
-[id: 706, name: "r-drop ear", weight: 0.2, group: british_nonrhotic]
-ear -> ia / _#;
+[id: 706, name: "r-drop ear", weight: 0.2, group: british_nonrhotic, ipa: "/ɪə/"]
+ear -> ɪə / _#;
 
-[id: 707, name: "r-drop learn", weight: 0.2, group: british_nonrhotic]
-learn -> lahn;
+// EAR patterns with NURSE vowel (learn, heard -> lɜːn, hɜːd) - /ɜː/
+[id: 707, name: "r-drop learn", weight: 0.2, group: british_nonrhotic, ipa: "/lɜːn/"]
+learn -> lɜːn;
 
-[id: 708, name: "r-drop heard", weight: 0.2, group: british_nonrhotic]
-heard -> hahd;
+[id: 708, name: "r-drop heard", weight: 0.2, group: british_nonrhotic, ipa: "/hɜːd/"]
+heard -> hɜːd;
 
-[id: 709, name: "r-drop earth", weight: 0.2, group: british_nonrhotic]
-earth -> ahth;
+[id: 709, name: "r-drop earth", weight: 0.2, group: british_nonrhotic, ipa: "/ɜːθ/"]
+earth -> ɜːθ;
 
-[id: 710, name: "r-drop search", weight: 0.2, group: british_nonrhotic]
-search -> sahch;
+[id: 710, name: "r-drop search", weight: 0.2, group: british_nonrhotic, ipa: "/sɜːt͡ʃ/"]
+search -> sɜːt͡ʃ;
 
-[id: 711, name: "r-drop early", weight: 0.2, group: british_nonrhotic]
-early -> ahly;
+[id: 711, name: "r-drop early", weight: 0.2, group: british_nonrhotic, ipa: "/ɜːliː/"]
+early -> ɜːliː;
 
 // ============================================================
 // BROAD 'A' BATH WORDS (British RP)
 // ============================================================
 // In British RP, the short 'a' in certain words (BATH lexical set)
-// is pronounced with a long 'ah' sound.
+// is pronounced with a long /ɑː/ sound (BATH vowel).
 
-// ATH patterns (bath, path -> bahth, pahth)
-[id: 750, name: "bath-a bath", weight: 0.25, group: british_bath]
-bath -> bahth;
+// ATH patterns (bath, path -> bɑːθ, pɑːθ) - BATH vowel /ɑː/
+[id: 750, name: "bath-a bath", weight: 0.25, group: british_bath, ipa: "/bɑːθ/"]
+bath -> bɑːθ;
 
-[id: 751, name: "bath-a path", weight: 0.25, group: british_bath]
-path -> pahth;
+[id: 751, name: "bath-a path", weight: 0.25, group: british_bath, ipa: "/pɑːθ/"]
+path -> pɑːθ;
 
-[id: 752, name: "bath-a math", weight: 0.25, group: british_bath]
-math -> mahth;
+[id: 752, name: "bath-a math", weight: 0.25, group: british_bath, ipa: "/mɑːθ/"]
+math -> mɑːθ;
 
-[id: 753, name: "bath-a lath", weight: 0.25, group: british_bath]
-lath -> lahth;
+[id: 753, name: "bath-a lath", weight: 0.25, group: british_bath, ipa: "/lɑːθ/"]
+lath -> lɑːθ;
 
-[id: 754, name: "bath-a wrath", weight: 0.25, group: british_bath]
-wrath -> wrahth;
+[id: 754, name: "bath-a wrath", weight: 0.25, group: british_bath, ipa: "/ɹɑːθ/"]
+wrath -> ɹɑːθ;
 
-// ASS patterns (class, glass -> clahs, glahs)
-[id: 760, name: "bath-a class", weight: 0.25, group: british_bath]
-class -> clahs;
+// ASS patterns (class, glass -> klɑːs, glɑːs)
+[id: 760, name: "bath-a class", weight: 0.25, group: british_bath, ipa: "/klɑːs/"]
+class -> klɑːs;
 
-[id: 761, name: "bath-a glass", weight: 0.25, group: british_bath]
-glass -> glahs;
+[id: 761, name: "bath-a glass", weight: 0.25, group: british_bath, ipa: "/glɑːs/"]
+glass -> glɑːs;
 
-[id: 762, name: "bath-a grass", weight: 0.25, group: british_bath]
-grass -> grahs;
+[id: 762, name: "bath-a grass", weight: 0.25, group: british_bath, ipa: "/gɹɑːs/"]
+grass -> gɹɑːs;
 
-[id: 763, name: "bath-a pass", weight: 0.25, group: british_bath]
-pass -> pahs;
+[id: 763, name: "bath-a pass", weight: 0.25, group: british_bath, ipa: "/pɑːs/"]
+pass -> pɑːs;
 
-[id: 764, name: "bath-a brass", weight: 0.25, group: british_bath]
-brass -> brahs;
+[id: 764, name: "bath-a brass", weight: 0.25, group: british_bath, ipa: "/bɹɑːs/"]
+brass -> bɹɑːs;
 
-[id: 765, name: "bath-a mass", weight: 0.25, group: british_bath]
-mass -> mahs;
+[id: 765, name: "bath-a mass", weight: 0.25, group: british_bath, ipa: "/mɑːs/"]
+mass -> mɑːs;
 
-// AST patterns (fast, last -> fahst, lahst)
-[id: 770, name: "bath-a fast", weight: 0.25, group: british_bath]
-fast -> fahst;
+// AST patterns (fast, last -> fɑːst, lɑːst)
+[id: 770, name: "bath-a fast", weight: 0.25, group: british_bath, ipa: "/fɑːst/"]
+fast -> fɑːst;
 
-[id: 771, name: "bath-a last", weight: 0.25, group: british_bath]
-last -> lahst;
+[id: 771, name: "bath-a last", weight: 0.25, group: british_bath, ipa: "/lɑːst/"]
+last -> lɑːst;
 
-[id: 772, name: "bath-a past", weight: 0.25, group: british_bath]
-past -> pahst;
+[id: 772, name: "bath-a past", weight: 0.25, group: british_bath, ipa: "/pɑːst/"]
+past -> pɑːst;
 
-[id: 773, name: "bath-a cast", weight: 0.25, group: british_bath]
-cast -> cahst;
+[id: 773, name: "bath-a cast", weight: 0.25, group: british_bath, ipa: "/kɑːst/"]
+cast -> kɑːst;
 
-[id: 774, name: "bath-a mast", weight: 0.25, group: british_bath]
-mast -> mahst;
+[id: 774, name: "bath-a mast", weight: 0.25, group: british_bath, ipa: "/mɑːst/"]
+mast -> mɑːst;
 
-[id: 775, name: "bath-a vast", weight: 0.25, group: british_bath]
-vast -> vahst;
+[id: 775, name: "bath-a vast", weight: 0.25, group: british_bath, ipa: "/vɑːst/"]
+vast -> vɑːst;
 
-[id: 776, name: "bath-a blast", weight: 0.25, group: british_bath]
-blast -> blahst;
+[id: 776, name: "bath-a blast", weight: 0.25, group: british_bath, ipa: "/blɑːst/"]
+blast -> blɑːst;
 
-// ASK patterns (ask, task -> ahsk, tahsk)
-[id: 780, name: "bath-a ask", weight: 0.25, group: british_bath]
-ask -> ahsk;
+// ASK patterns (ask, task -> ɑːsk, tɑːsk)
+[id: 780, name: "bath-a ask", weight: 0.25, group: british_bath, ipa: "/ɑːsk/"]
+ask -> ɑːsk;
 
-[id: 781, name: "bath-a task", weight: 0.25, group: british_bath]
-task -> tahsk;
+[id: 781, name: "bath-a task", weight: 0.25, group: british_bath, ipa: "/tɑːsk/"]
+task -> tɑːsk;
 
-[id: 782, name: "bath-a mask", weight: 0.25, group: british_bath]
-mask -> mahsk;
+[id: 782, name: "bath-a mask", weight: 0.25, group: british_bath, ipa: "/mɑːsk/"]
+mask -> mɑːsk;
 
-[id: 783, name: "bath-a basket", weight: 0.25, group: british_bath]
-basket -> bahsket;
+[id: 783, name: "bath-a basket", weight: 0.25, group: british_bath, ipa: "/bɑːskɪt/"]
+basket -> bɑːskɪt;
 
-[id: 784, name: "bath-a flask", weight: 0.25, group: british_bath]
-flask -> flahsk;
+[id: 784, name: "bath-a flask", weight: 0.25, group: british_bath, ipa: "/flɑːsk/"]
+flask -> flɑːsk;
 
-// AFT patterns (after, draft -> ahfter, drahft)
-[id: 790, name: "bath-a after", weight: 0.25, group: british_bath]
-aft -> ahft;
+// AFT patterns (after, draft -> ɑːftə, dɹɑːft)
+[id: 790, name: "bath-a after", weight: 0.25, group: british_bath, ipa: "/ɑːft/"]
+aft -> ɑːft;
 
-[id: 791, name: "bath-a draft", weight: 0.25, group: british_bath]
-draft -> drahft;
+[id: 791, name: "bath-a draft", weight: 0.25, group: british_bath, ipa: "/dɹɑːft/"]
+draft -> dɹɑːft;
 
-[id: 792, name: "bath-a craft", weight: 0.25, group: british_bath]
-craft -> crahft;
+[id: 792, name: "bath-a craft", weight: 0.25, group: british_bath, ipa: "/kɹɑːft/"]
+craft -> kɹɑːft;
 
-[id: 793, name: "bath-a daft", weight: 0.25, group: british_bath]
-daft -> dahft;
+[id: 793, name: "bath-a daft", weight: 0.25, group: british_bath, ipa: "/dɑːft/"]
+daft -> dɑːft;
 
-[id: 794, name: "bath-a shaft", weight: 0.25, group: british_bath]
-shaft -> shahft;
+[id: 794, name: "bath-a shaft", weight: 0.25, group: british_bath, ipa: "/ʃɑːft/"]
+shaft -> ʃɑːft;
 
-[id: 795, name: "bath-a laughter", weight: 0.25, group: british_bath]
-laughter -> lahfter;
+[id: 795, name: "bath-a laughter", weight: 0.25, group: british_bath, ipa: "/lɑːftə/"]
+laughter -> lɑːftə;
 
-// ALF/ALM patterns (half, calm -> hahf, cahm)
-[id: 800, name: "bath-a half", weight: 0.25, group: british_bath]
-half -> hahf;
+// ALF/ALM patterns (half, calm -> hɑːf, kɑːm)
+[id: 800, name: "bath-a half", weight: 0.25, group: british_bath, ipa: "/hɑːf/"]
+half -> hɑːf;
 
-[id: 801, name: "bath-a calf", weight: 0.25, group: british_bath]
-calf -> cahf;
+[id: 801, name: "bath-a calf", weight: 0.25, group: british_bath, ipa: "/kɑːf/"]
+calf -> kɑːf;
 
-[id: 802, name: "bath-a calm", weight: 0.25, group: british_bath]
-calm -> cahm;
+[id: 802, name: "bath-a calm", weight: 0.25, group: british_bath, ipa: "/kɑːm/"]
+calm -> kɑːm;
 
-[id: 803, name: "bath-a palm", weight: 0.25, group: british_bath]
-palm -> pahm;
+[id: 803, name: "bath-a palm", weight: 0.25, group: british_bath, ipa: "/pɑːm/"]
+palm -> pɑːm;
 
-[id: 804, name: "bath-a behalf", weight: 0.25, group: british_bath]
-behalf -> behahf;
+[id: 804, name: "bath-a behalf", weight: 0.25, group: british_bath, ipa: "/bɪhɑːf/"]
+behalf -> bɪhɑːf;
 
 // ANCE/ANDER/ANT patterns (dance, can't, demand)
-[id: 810, name: "bath-a dance", weight: 0.25, group: british_bath]
-dance -> dahnce;
+[id: 810, name: "bath-a dance", weight: 0.25, group: british_bath, ipa: "/dɑːns/"]
+dance -> dɑːns;
 
-[id: 811, name: "bath-a france", weight: 0.25, group: british_bath]
-france -> frahnce;
+[id: 811, name: "bath-a france", weight: 0.25, group: british_bath, ipa: "/fɹɑːns/"]
+france -> fɹɑːns;
 
-[id: 812, name: "bath-a chance", weight: 0.25, group: british_bath]
-chance -> chahnce;
+[id: 812, name: "bath-a chance", weight: 0.25, group: british_bath, ipa: "/t͡ʃɑːns/"]
+chance -> t͡ʃɑːns;
 
-[id: 813, name: "bath-a glance", weight: 0.25, group: british_bath]
-glance -> glahnce;
+[id: 813, name: "bath-a glance", weight: 0.25, group: british_bath, ipa: "/glɑːns/"]
+glance -> glɑːns;
 
-[id: 814, name: "bath-a advance", weight: 0.25, group: british_bath]
-advance -> advahnce;
+[id: 814, name: "bath-a advance", weight: 0.25, group: british_bath, ipa: "/ədvɑːns/"]
+advance -> ədvɑːns;
 
-[id: 815, name: "bath-a branch", weight: 0.25, group: british_bath]
-branch -> brahnch;
+[id: 815, name: "bath-a branch", weight: 0.25, group: british_bath, ipa: "/bɹɑːnt͡ʃ/"]
+branch -> bɹɑːnt͡ʃ;
 
-[id: 816, name: "bath-a can't", weight: 0.25, group: british_bath]
-can't -> cahnt;
+[id: 816, name: "bath-a can't", weight: 0.25, group: british_bath, ipa: "/kɑːnt/"]
+can't -> kɑːnt;
 
-[id: 817, name: "bath-a shan't", weight: 0.25, group: british_bath]
-shan't -> shahnt;
+[id: 817, name: "bath-a shan't", weight: 0.25, group: british_bath, ipa: "/ʃɑːnt/"]
+shan't -> ʃɑːnt;
 
-[id: 818, name: "bath-a grant", weight: 0.25, group: british_bath]
-grant -> grahnt;
+[id: 818, name: "bath-a grant", weight: 0.25, group: british_bath, ipa: "/gɹɑːnt/"]
+grant -> gɹɑːnt;
 
-[id: 819, name: "bath-a plant", weight: 0.25, group: british_bath]
-plant -> plahnt;
+[id: 819, name: "bath-a plant", weight: 0.25, group: british_bath, ipa: "/plɑːnt/"]
+plant -> plɑːnt;
 
-[id: 820, name: "bath-a slant", weight: 0.25, group: british_bath]
-slant -> slahnt;
+[id: 820, name: "bath-a slant", weight: 0.25, group: british_bath, ipa: "/slɑːnt/"]
+slant -> slɑːnt;
 
-[id: 821, name: "bath-a demand", weight: 0.25, group: british_bath]
-demand -> demahnd;
+[id: 821, name: "bath-a demand", weight: 0.25, group: british_bath, ipa: "/dɪmɑːnd/"]
+demand -> dɪmɑːnd;
 
-[id: 822, name: "bath-a command", weight: 0.25, group: british_bath]
-command -> comahnd;
+[id: 822, name: "bath-a command", weight: 0.25, group: british_bath, ipa: "/kəmɑːnd/"]
+command -> kəmɑːnd;
 
-[id: 823, name: "bath-a Alexander", weight: 0.25, group: british_bath]
-ander -> ahnder;
+[id: 823, name: "bath-a Alexander", weight: 0.25, group: british_bath, ipa: "/ɑːndə/"]
+ander -> ɑːndə;
 
 // AMPLE/ANSE/ANSWER patterns
-[id: 830, name: "bath-a example", weight: 0.25, group: british_bath]
-ample -> ahmple;
+[id: 830, name: "bath-a example", weight: 0.25, group: british_bath, ipa: "/ɑːmpl/"]
+ample -> ɑːmpl;
 
-[id: 831, name: "bath-a sample", weight: 0.25, group: british_bath]
-sample -> sahmple;
+[id: 831, name: "bath-a sample", weight: 0.25, group: british_bath, ipa: "/sɑːmpl/"]
+sample -> sɑːmpl;
 
-[id: 832, name: "bath-a answer", weight: 0.25, group: british_bath]
-answer -> ahnswer;
+[id: 832, name: "bath-a answer", weight: 0.25, group: british_bath, ipa: "/ɑːnsə/"]
+answer -> ɑːnsə;
 
 // ASP patterns
-[id: 840, name: "bath-a grasp", weight: 0.25, group: british_bath]
-grasp -> grahsp;
+[id: 840, name: "bath-a grasp", weight: 0.25, group: british_bath, ipa: "/gɹɑːsp/"]
+grasp -> gɹɑːsp;
 
-[id: 841, name: "bath-a clasp", weight: 0.25, group: british_bath]
-clasp -> clahsp;
+[id: 841, name: "bath-a clasp", weight: 0.25, group: british_bath, ipa: "/klɑːsp/"]
+clasp -> klɑːsp;
 
-[id: 842, name: "bath-a gasp", weight: 0.25, group: british_bath]
-gasp -> gahsp;
+[id: 842, name: "bath-a gasp", weight: 0.25, group: british_bath, ipa: "/gɑːsp/"]
+gasp -> gɑːsp;
 
-// ATHER patterns (father, rather -> fahther, rahther)
-[id: 850, name: "bath-a father", weight: 0.25, group: british_bath]
-father -> fahther;
+// ATHER patterns (father, rather -> fɑːðə, ɹɑːðə)
+[id: 850, name: "bath-a father", weight: 0.25, group: british_bath, ipa: "/fɑːðə/"]
+father -> fɑːðə;
 
-[id: 851, name: "bath-a rather", weight: 0.25, group: british_bath]
-rather -> rahther;
+[id: 851, name: "bath-a rather", weight: 0.25, group: british_bath, ipa: "/ɹɑːðə/"]
+rather -> ɹɑːðə;
 
-[id: 852, name: "bath-a lather", weight: 0.25, group: british_bath]
-lather -> lahther;
+[id: 852, name: "bath-a lather", weight: 0.25, group: british_bath, ipa: "/lɑːðə/"]
+lather -> lɑːðə;
 
-[id: 853, name: "bath-a gather", weight: 0.25, group: british_bath]
-gather -> gahther;
+[id: 853, name: "bath-a gather", weight: 0.25, group: british_bath, ipa: "/gɑːðə/"]
+gather -> gɑːðə;
 
 // ASTER patterns
-[id: 860, name: "bath-a master", weight: 0.25, group: british_bath]
-master -> mahster;
+[id: 860, name: "bath-a master", weight: 0.25, group: british_bath, ipa: "/mɑːstə/"]
+master -> mɑːstə;
 
-[id: 861, name: "bath-a disaster", weight: 0.25, group: british_bath]
-disaster -> disahster;
+[id: 861, name: "bath-a disaster", weight: 0.25, group: british_bath, ipa: "/dɪzɑːstə/"]
+disaster -> dɪzɑːstə;
 
-[id: 862, name: "bath-a plaster", weight: 0.25, group: british_bath]
-plaster -> plahster;
+[id: 862, name: "bath-a plaster", weight: 0.25, group: british_bath, ipa: "/plɑːstə/"]
+plaster -> plɑːstə;
 
-[id: 863, name: "bath-a castor", weight: 0.25, group: british_bath]
-castor -> cahstor;
+[id: 863, name: "bath-a castor", weight: 0.25, group: british_bath, ipa: "/kɑːstə/"]
+castor -> kɑːstə;
 
 // BANANA/TOMATO type words
-[id: 870, name: "bath-a banana", weight: 0.25, group: british_bath]
-banana -> banahna;
+[id: 870, name: "bath-a banana", weight: 0.25, group: british_bath, ipa: "/bənɑːnə/"]
+banana -> bənɑːnə;
 
-[id: 871, name: "bath-a tomato", weight: 0.25, group: british_bath]
-tomato -> tomahto;
+[id: 871, name: "bath-a tomato", weight: 0.25, group: british_bath, ipa: "/təmɑːtəʊ/"]
+tomato -> təmɑːtəʊ;
 
-[id: 872, name: "bath-a plaza", weight: 0.25, group: british_bath]
-plaza -> plahza;
+[id: 872, name: "bath-a plaza", weight: 0.25, group: british_bath, ipa: "/plɑːzə/"]
+plaza -> plɑːzə;
 
-[id: 873, name: "bath-a drama", weight: 0.25, group: british_bath]
-drama -> drahma;
+[id: 873, name: "bath-a drama", weight: 0.25, group: british_bath, ipa: "/dɹɑːmə/"]
+drama -> dɹɑːmə;
 
-[id: 874, name: "bath-a pyjamas", weight: 0.25, group: british_bath]
-pyjamas -> pyjahmas;
+[id: 874, name: "bath-a pyjamas", weight: 0.25, group: british_bath, ipa: "/pɪd͡ʒɑːməz/"]
+pyjamas -> pɪd͡ʒɑːməz;

@@ -29,7 +29,7 @@ fn apply_rules_seq_instrumented(
             // Manually inline find_first_match and apply_rule_at to avoid code duplication
             let mut match_pos = None;
             for pos in 0..=current.len() {
-                if context_matches(&rule.context, &current, pos)
+                if context_matches(&rule.context, &current, pos, rule.pattern.len())
                     && pattern_matches_at(&rule.pattern, &current, pos)
                 {
                     match_pos = Some(pos);
@@ -39,7 +39,7 @@ fn apply_rules_seq_instrumented(
 
             if let Some(pos) = match_pos {
                 // Apply the rule
-                if context_matches(&rule.context, &current, pos)
+                if context_matches(&rule.context, &current, pos, rule.pattern.len())
                     && pattern_matches_at(&rule.pattern, &current, pos)
                 {
                     let mut result = Vec::with_capacity(current.len() + MAX_EXPANSION_FACTOR);

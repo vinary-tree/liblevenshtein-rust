@@ -68,6 +68,16 @@ pub fn reset_perf_stats() {
 /// The value 20 is proven sufficient for all 56 zompist rules.
 pub const MAX_EXPANSION_FACTOR: usize = 20;
 
+/// Maximum total expansion allowed during normalization.
+///
+/// This is a defensive safeguard against runaway expansion caused by
+/// pathological rule interactions (e.g., expansion rules that create
+/// patterns matching other expansion rules).
+///
+/// If the result exceeds `input.len() + MAX_TOTAL_EXPANSION`, normalization
+/// is aborted and the current state is returned with a warning.
+pub const MAX_TOTAL_EXPANSION: usize = 100;
+
 // ============================================================================
 // Position-dependent context checks (for position skipping optimization)
 // ============================================================================
@@ -116,62 +126,6 @@ pub fn has_position_dependent_rules_char(rules: &[RewriteRuleChar]) -> bool {
 }
 
 // ============================================================================
-// Context position calculation (for compound contexts)
-// ============================================================================
-
-/// Calculate the position at which to evaluate a context (byte-level).
-///
-/// Different context types require evaluation at different positions:
-/// - "Before" contexts (BeforeVowel, BeforeConsonant, Final) check what comes
-///   AFTER the pattern, so they use `pos + pattern_len`
-/// - "After" contexts (AfterVowel, AfterConsonant, Initial) check what comes
-///   BEFORE the pattern, so they use `pos`
-/// - Compound contexts (And, Or, Not) recursively determine their position based
-///   on their first "before" or "after" sub-context
-///
-/// # Arguments
-///
-/// - `ctx` - The context to calculate position for
-/// - `pos` - The pattern start position
-/// - `pattern_len` - The pattern length
-///
-/// # Returns
-///
-/// The position at which to evaluate the context
-#[inline]
-fn context_position(ctx: &Context, pos: usize, pattern_len: usize) -> usize {
-    match ctx {
-        Context::BeforeVowel(_) | Context::BeforeConsonant(_) | Context::Final => {
-            pos + pattern_len
-        }
-        Context::AfterVowel(_) | Context::AfterConsonant(_) | Context::Initial => pos,
-        Context::Anywhere => pos,
-        // For compound contexts, use position from first sub-context
-        Context::And(a, _) => context_position(a, pos, pattern_len),
-        Context::Or(a, _) => context_position(a, pos, pattern_len),
-        Context::Not(inner) => context_position(inner, pos, pattern_len),
-    }
-}
-
-/// Calculate the position at which to evaluate a context (character-level).
-///
-/// Character-level variant of [`context_position`].
-#[inline]
-fn context_position_char(ctx: &ContextChar, pos: usize, pattern_len: usize) -> usize {
-    match ctx {
-        ContextChar::BeforeVowel(_) | ContextChar::BeforeConsonant(_) | ContextChar::Final => {
-            pos + pattern_len
-        }
-        ContextChar::AfterVowel(_) | ContextChar::AfterConsonant(_) | ContextChar::Initial => pos,
-        ContextChar::Anywhere => pos,
-        // For compound contexts, use position from first sub-context
-        ContextChar::And(a, _) => context_position_char(a, pos, pattern_len),
-        ContextChar::Or(a, _) => context_position_char(a, pos, pattern_len),
-        ContextChar::Not(inner) => context_position_char(inner, pos, pattern_len),
-    }
-}
-
-// ============================================================================
 // Rule application (byte-level)
 // ============================================================================
 
@@ -197,16 +151,9 @@ pub fn can_apply_at(rule: &RewriteRule, s: &[Phone], pos: usize) -> bool {
         return false;
     }
 
-    // Calculate context position based on context type:
-    // - "Before" contexts check what comes AFTER the pattern (pos + pattern.len)
-    // - "After" contexts check what comes BEFORE the pattern (pos)
-    // - "Final" checks if the pattern ends at string end (pos + pattern.len)
-    // - "Initial" checks if the pattern starts at string start (pos)
-    // - Compound contexts (And/Or/Not) use the primary position from their components
-    let ctx_pos = context_position(&rule.context, pos, rule.pattern.len());
-
-    // Check context at the appropriate position
-    if !context_matches(&rule.context, s, ctx_pos) {
+    // Check context - context_matches now handles position computation internally
+    // based on context type (Initial/After* check at start, Final/Before* check at end)
+    if !context_matches(&rule.context, s, pos, rule.pattern.len()) {
         return false;
     }
 
@@ -377,6 +324,7 @@ pub fn find_first_match_from(rule: &RewriteRule, s: &[Phone], start_pos: usize) 
 /// For practical use, `fuel = s.len() * rules.len() * 100` is recommended.
 pub fn apply_rules_seq(rules: &[RewriteRule], s: &[Phone], fuel: usize) -> Option<Vec<Phone>> {
     let mut current = s.to_vec();
+    let original_len = s.len();
 
     #[cfg(feature = "perf-instrumentation")]
     {
@@ -398,6 +346,18 @@ pub fn apply_rules_seq(rules: &[RewriteRule], s: &[Phone], fuel: usize) -> Optio
         for rule in rules {
             if let Some(pos) = find_first_match(rule, &current) {
                 if let Some(new_s) = apply_rule_at(rule, &current, pos) {
+                    // Defensive safeguard: abort if expansion exceeds limit
+                    if new_s.len() > original_len + MAX_TOTAL_EXPANSION {
+                        eprintln!(
+                            "[phonetic] Warning: Normalization exceeded expansion limit \
+                             ({} > {} + {}). Returning current state to prevent runaway expansion. \
+                             Consider revising rules to avoid pathological interactions.",
+                            new_s.len(),
+                            original_len,
+                            MAX_TOTAL_EXPANSION
+                        );
+                        return Some(current);
+                    }
                     current = new_s;
                     remaining_fuel -= 1;
                     applied = true;
@@ -841,16 +801,9 @@ pub fn can_apply_at_char(rule: &RewriteRuleChar, s: &[PhoneChar], pos: usize) ->
         return false;
     }
 
-    // Calculate context position based on context type:
-    // - "Before" contexts check what comes AFTER the pattern (pos + pattern.len)
-    // - "After" contexts check what comes BEFORE the pattern (pos)
-    // - "Final" checks if the pattern ends at string end (pos + pattern.len)
-    // - "Initial" checks if the pattern starts at string start (pos)
-    // - Compound contexts (And/Or/Not) use the primary position from their components
-    let ctx_pos = context_position_char(&rule.context, pos, rule.pattern.len());
-
-    // Check context at the appropriate position
-    if !context_matches_char(&rule.context, s, ctx_pos) {
+    // Check context - context_matches_char now handles position computation internally
+    // based on context type (Initial/After* check at start, Final/Before* check at end)
+    if !context_matches_char(&rule.context, s, pos, rule.pattern.len()) {
         return false;
     }
 
@@ -930,6 +883,7 @@ pub fn apply_rules_seq_char(
     fuel: usize,
 ) -> Option<Vec<PhoneChar>> {
     let mut current = s.to_vec();
+    let original_len = s.len();
     let mut remaining_fuel = fuel;
 
     loop {
@@ -942,6 +896,18 @@ pub fn apply_rules_seq_char(
         for rule in rules {
             if let Some(pos) = find_first_match_char(rule, &current) {
                 if let Some(new_s) = apply_rule_at_char(rule, &current, pos) {
+                    // Defensive safeguard: abort if expansion exceeds limit
+                    if new_s.len() > original_len + MAX_TOTAL_EXPANSION {
+                        eprintln!(
+                            "[phonetic] Warning: Normalization exceeded expansion limit \
+                             ({} > {} + {}). Returning current state to prevent runaway expansion. \
+                             Consider revising rules to avoid pathological interactions.",
+                            new_s.len(),
+                            original_len,
+                            MAX_TOTAL_EXPANSION
+                        );
+                        return Some(current);
+                    }
                     current = new_s;
                     remaining_fuel -= 1;
                     applied = true;

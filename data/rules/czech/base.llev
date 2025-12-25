@@ -77,54 +77,54 @@
 // VOWELS WITH ČÁRKA (acute) - long vowels
 // ============================================================
 
-// Á/á → a (long a, normalize to short)
-[id: 3314, name: "a acute", weight: 0.1, group: czech_long_vowels]
-á -> a;
+// Á/á → aː (long a)
+[id: 3314, name: "a acute", weight: 0.1, group: czech_long_vowels, ipa: "/aː/"]
+á -> aː;
 
-[id: 3315, name: "A acute", weight: 0.1, group: czech_long_vowels]
-Á -> a;
+[id: 3315, name: "A acute", weight: 0.1, group: czech_long_vowels, ipa: "/aː/"]
+Á -> aː;
 
-// É/é → e (long e)
-[id: 3316, name: "e acute", weight: 0.1, group: czech_long_vowels]
-é -> e;
+// É/é → eː (long e)
+[id: 3316, name: "e acute", weight: 0.1, group: czech_long_vowels, ipa: "/eː/"]
+é -> eː;
 
-[id: 3317, name: "E acute", weight: 0.1, group: czech_long_vowels]
-É -> e;
+[id: 3317, name: "E acute", weight: 0.1, group: czech_long_vowels, ipa: "/eː/"]
+É -> eː;
 
-// Í/í → i (long i)
-[id: 3318, name: "i acute", weight: 0.1, group: czech_long_vowels]
-í -> i;
+// Í/í → iː (long i)
+[id: 3318, name: "i acute", weight: 0.1, group: czech_long_vowels, ipa: "/iː/"]
+í -> iː;
 
-[id: 3319, name: "I acute", weight: 0.1, group: czech_long_vowels]
-Í -> i;
+[id: 3319, name: "I acute", weight: 0.1, group: czech_long_vowels, ipa: "/iː/"]
+Í -> iː;
 
-// Ó/ó → o (long o, rare in native words)
-[id: 3320, name: "o acute", weight: 0.1, group: czech_long_vowels]
-ó -> o;
+// Ó/ó → oː (long o, rare in native words)
+[id: 3320, name: "o acute", weight: 0.1, group: czech_long_vowels, ipa: "/oː/"]
+ó -> oː;
 
-[id: 3321, name: "O acute", weight: 0.1, group: czech_long_vowels]
-Ó -> o;
+[id: 3321, name: "O acute", weight: 0.1, group: czech_long_vowels, ipa: "/oː/"]
+Ó -> oː;
 
-// Ú/ú → u (long u at word start)
-[id: 3322, name: "u acute", weight: 0.1, group: czech_long_vowels]
-ú -> u;
+// Ú/ú → uː (long u at word start)
+[id: 3322, name: "u acute", weight: 0.1, group: czech_long_vowels, ipa: "/uː/"]
+ú -> uː;
 
-[id: 3323, name: "U acute", weight: 0.1, group: czech_long_vowels]
-Ú -> u;
+[id: 3323, name: "U acute", weight: 0.1, group: czech_long_vowels, ipa: "/uː/"]
+Ú -> uː;
 
-// Ů/ů → u (long u with kroužek, mid/end of word)
-[id: 3324, name: "u ring", weight: 0.1, group: czech_long_vowels]
-ů -> u;
+// Ů/ů → uː (long u with kroužek, mid/end of word)
+[id: 3324, name: "u ring", weight: 0.1, group: czech_long_vowels, ipa: "/uː/"]
+ů -> uː;
 
-[id: 3325, name: "U ring", weight: 0.1, group: czech_long_vowels]
-Ů -> u;
+[id: 3325, name: "U ring", weight: 0.1, group: czech_long_vowels, ipa: "/uː/"]
+Ů -> uː;
 
-// Ý/ý → i (long y, same sound as í)
-[id: 3326, name: "y acute", weight: 0.1, group: czech_long_vowels]
-ý -> i;
+// Ý/ý → iː (long y, same sound as í)
+[id: 3326, name: "y acute", weight: 0.1, group: czech_long_vowels, ipa: "/iː/"]
+ý -> iː;
 
-[id: 3327, name: "Y acute", weight: 0.1, group: czech_long_vowels]
-Ý -> i;
+[id: 3327, name: "Y acute", weight: 0.1, group: czech_long_vowels, ipa: "/iː/"]
+Ý -> iː;
 
 // ============================================================
 // STANDARD VOWELS

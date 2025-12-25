@@ -27,6 +27,55 @@
 @define ALVEOLAR = [tdnszl]
 
 // ============================================================
+// GA VOWEL PATTERNS (Dialect-Specific)
+// ============================================================
+// These rules were moved from zompist.llev because GA and RP
+// have different vowel qualities for these patterns.
+
+// GOAT vowel class - GA uses /oʊ/
+[id: 400, name: "oa digraph GA", weight: 0.1, group: american_goat, ipa: "/oʊ/"]
+// oa -> oʊ (boat -> boʊt, road -> roʊd)
+oa -> oʊ;
+
+[id: 401, name: "oe digraph GA", weight: 0.1, group: american_goat, ipa: "/oʊ/"]
+// oe -> oʊ (toe -> toʊ, foe -> foʊ)
+oe -> oʊ;
+
+// OUGH patterns - GA specific
+[id: 410, name: "through pattern GA", weight: 0.0, group: american_ough, ipa: "/θɹuː/"]
+// through -> θɹuː (rhymes with "threw")
+through -> θɹuː / #_#;
+
+[id: 411, name: "rough ending GA", weight: 0.0, group: american_ough, ipa: "/ʌf/"]
+// rough -> ɹʌf, tough -> tʌf (STRUT vowel)
+ough -> ʌf / [rt]_;
+
+[id: 412, name: "enough pattern GA", weight: 0.0, group: american_ough, ipa: "/ɪnʌf/"]
+// enough -> ɪnʌf
+enough -> ɪnʌf / #_#;
+
+[id: 413, name: "cough pattern GA", weight: 0.0, group: american_ough, ipa: "/kɑf/"]
+// cough -> kɑf (THOUGHT-LOT merger: uses /ɑ/)
+cough -> kɑf / #_#;
+
+[id: 414, name: "ough pattern GA", weight: 0.0, group: american_ough, ipa: "/oʊ/"]
+// ough -> oʊ (dough -> doʊ, though -> ðoʊ) - GOAT vowel
+ough -> oʊ;
+
+[id: 415, name: "aught pattern GA", weight: 0.0, group: american_ough, ipa: "/ɑt/"]
+// aught -> ɑt (caught -> kɑt, daughter -> dɑtəɹ) - THOUGHT-LOT merger
+aught -> ɑt;
+
+[id: 416, name: "ought pattern GA", weight: 0.0, group: american_ough, ipa: "/ɑt/"]
+// ought -> ɑt (bought -> bɑt, thought -> θɑt) - THOUGHT-LOT merger
+ought -> ɑt;
+
+// Rhoticity - GA preserves /ɹ/ in all positions
+[id: 420, name: "r to ɹ GA", weight: 0.3, group: american_rhotic, ipa: "/ɹ/"]
+// r -> ɹ (car -> kɑɹ, better -> bɛtəɹ)
+r -> ɹ;
+
+// ============================================================
 // YOD-DROPPING RULES (American English)
 // ============================================================
 // In American English, the /j/ (yod) sound is dropped after
@@ -34,127 +83,127 @@
 // British English preserves this sound.
 
 // After T
-[id: 500, name: "yod-drop tune", weight: 0.2, group: american_yod]
-tune -> toon;
+[id: 500, name: "yod-drop tune", weight: 0.2, group: american_yod, ipa: "/tuːn/"]
+tune -> tuːn;
 
-[id: 501, name: "yod-drop tuesday", weight: 0.2, group: american_yod]
-tues -> toos;
+[id: 501, name: "yod-drop tuesday", weight: 0.2, group: american_yod, ipa: "/tuːz/"]
+tues -> tuːz;
 
-[id: 502, name: "yod-drop tutor", weight: 0.2, group: american_yod]
-tutor -> tootor;
+[id: 502, name: "yod-drop tutor", weight: 0.2, group: american_yod, ipa: "/tuːtəɹ/"]
+tutor -> tuːtəɹ;
 
-[id: 503, name: "yod-drop tube", weight: 0.2, group: american_yod]
-tube -> toob;
+[id: 503, name: "yod-drop tube", weight: 0.2, group: american_yod, ipa: "/tuːb/"]
+tube -> tuːb;
 
-[id: 504, name: "yod-drop tulip", weight: 0.2, group: american_yod]
-tulip -> toolip;
+[id: 504, name: "yod-drop tulip", weight: 0.2, group: american_yod, ipa: "/tuːlɪp/"]
+tulip -> tuːlɪp;
 
-[id: 505, name: "yod-drop tumult", weight: 0.2, group: american_yod]
-tumult -> toomult;
+[id: 505, name: "yod-drop tumult", weight: 0.2, group: american_yod, ipa: "/tuːmʌlt/"]
+tumult -> tuːmʌlt;
 
-[id: 506, name: "yod-drop tuna", weight: 0.2, group: american_yod]
-tuna -> toona;
+[id: 506, name: "yod-drop tuna", weight: 0.2, group: american_yod, ipa: "/tuːnə/"]
+tuna -> tuːnə;
 
 // After D
-[id: 510, name: "yod-drop dune", weight: 0.2, group: american_yod]
-dune -> doon;
+[id: 510, name: "yod-drop dune", weight: 0.2, group: american_yod, ipa: "/duːn/"]
+dune -> duːn;
 
-[id: 511, name: "yod-drop due", weight: 0.2, group: american_yod]
-due -> doo;
+[id: 511, name: "yod-drop due", weight: 0.2, group: american_yod, ipa: "/duː/"]
+due -> duː;
 
-[id: 512, name: "yod-drop dew", weight: 0.2, group: american_yod]
-dew -> doo;
+[id: 512, name: "yod-drop dew", weight: 0.2, group: american_yod, ipa: "/duː/"]
+dew -> duː;
 
-[id: 513, name: "yod-drop dual", weight: 0.2, group: american_yod]
-dual -> dool;
+[id: 513, name: "yod-drop dual", weight: 0.2, group: american_yod, ipa: "/duːl/"]
+dual -> duːl;
 
-[id: 514, name: "yod-drop duke", weight: 0.2, group: american_yod]
-duke -> dook;
+[id: 514, name: "yod-drop duke", weight: 0.2, group: american_yod, ipa: "/duːk/"]
+duke -> duːk;
 
-[id: 515, name: "yod-drop dupe", weight: 0.2, group: american_yod]
-dupe -> doop;
+[id: 515, name: "yod-drop dupe", weight: 0.2, group: american_yod, ipa: "/duːp/"]
+dupe -> duːp;
 
-[id: 516, name: "yod-drop duty", weight: 0.2, group: american_yod]
-duty -> dooty;
+[id: 516, name: "yod-drop duty", weight: 0.2, group: american_yod, ipa: "/duːtiː/"]
+duty -> duːtiː;
 
-[id: 517, name: "yod-drop during", weight: 0.2, group: american_yod]
-during -> dooring;
+[id: 517, name: "yod-drop during", weight: 0.2, group: american_yod, ipa: "/duːɹɪŋ/"]
+during -> duːɹɪŋ;
 
-[id: 518, name: "yod-drop durable", weight: 0.2, group: american_yod]
-durable -> doorable;
+[id: 518, name: "yod-drop durable", weight: 0.2, group: american_yod, ipa: "/duːɹəbl/"]
+durable -> duːɹəbl;
 
 // After N
-[id: 520, name: "yod-drop new", weight: 0.2, group: american_yod]
-new -> noo;
+[id: 520, name: "yod-drop new", weight: 0.2, group: american_yod, ipa: "/nuː/"]
+new -> nuː;
 
-[id: 521, name: "yod-drop news", weight: 0.2, group: american_yod]
-news -> nooz;
+[id: 521, name: "yod-drop news", weight: 0.2, group: american_yod, ipa: "/nuːz/"]
+news -> nuːz;
 
-[id: 522, name: "yod-drop nude", weight: 0.2, group: american_yod]
-nude -> nood;
+[id: 522, name: "yod-drop nude", weight: 0.2, group: american_yod, ipa: "/nuːd/"]
+nude -> nuːd;
 
-[id: 523, name: "yod-drop nuisance", weight: 0.2, group: american_yod]
-nuisance -> noosance;
+[id: 523, name: "yod-drop nuisance", weight: 0.2, group: american_yod, ipa: "/nuːsəns/"]
+nuisance -> nuːsəns;
 
-[id: 524, name: "yod-drop neutral", weight: 0.2, group: american_yod]
-neutral -> nootral;
+[id: 524, name: "yod-drop neutral", weight: 0.2, group: american_yod, ipa: "/nuːtɹəl/"]
+neutral -> nuːtɹəl;
 
-[id: 525, name: "yod-drop numerous", weight: 0.2, group: american_yod]
-numerous -> noomerous;
+[id: 525, name: "yod-drop numerous", weight: 0.2, group: american_yod, ipa: "/nuːməɹəs/"]
+numerous -> nuːməɹəs;
 
-[id: 526, name: "yod-drop nuclear", weight: 0.2, group: american_yod]
-nuclear -> nooklear;
+[id: 526, name: "yod-drop nuclear", weight: 0.2, group: american_yod, ipa: "/nuːkliːəɹ/"]
+nuclear -> nuːkliːəɹ;
 
-[id: 527, name: "yod-drop newt", weight: 0.2, group: american_yod]
-newt -> noot;
+[id: 527, name: "yod-drop newt", weight: 0.2, group: american_yod, ipa: "/nuːt/"]
+newt -> nuːt;
 
 // After S
-[id: 530, name: "yod-drop suit", weight: 0.2, group: american_yod]
-suit -> soot;
+[id: 530, name: "yod-drop suit", weight: 0.2, group: american_yod, ipa: "/suːt/"]
+suit -> suːt;
 
-[id: 531, name: "yod-drop sue", weight: 0.2, group: american_yod]
-sue -> soo;
+[id: 531, name: "yod-drop sue", weight: 0.2, group: american_yod, ipa: "/suː/"]
+sue -> suː;
 
-[id: 532, name: "yod-drop super", weight: 0.2, group: american_yod]
-super -> sooper;
+[id: 532, name: "yod-drop super", weight: 0.2, group: american_yod, ipa: "/suːpəɹ/"]
+super -> suːpəɹ;
 
-[id: 533, name: "yod-drop assume", weight: 0.2, group: american_yod]
-sume -> soom;
+[id: 533, name: "yod-drop assume", weight: 0.2, group: american_yod, ipa: "/suːm/"]
+sume -> suːm;
 
-[id: 534, name: "yod-drop presume", weight: 0.2, group: american_yod]
-sume -> soom;
+[id: 534, name: "yod-drop presume", weight: 0.2, group: american_yod, ipa: "/suːm/"]
+sume -> suːm;
 
-[id: 535, name: "yod-drop consume", weight: 0.2, group: american_yod]
-sume -> soom;
+[id: 535, name: "yod-drop consume", weight: 0.2, group: american_yod, ipa: "/suːm/"]
+sume -> suːm;
 
-[id: 536, name: "yod-drop supreme", weight: 0.2, group: american_yod]
-supreme -> soopreme;
+[id: 536, name: "yod-drop supreme", weight: 0.2, group: american_yod, ipa: "/suːpɹiːm/"]
+supreme -> suːpɹiːm;
 
 // After L
-[id: 540, name: "yod-drop lute", weight: 0.2, group: american_yod]
-lute -> loot;
+[id: 540, name: "yod-drop lute", weight: 0.2, group: american_yod, ipa: "/luːt/"]
+lute -> luːt;
 
-[id: 541, name: "yod-droplude", weight: 0.2, group: american_yod]
-lude -> lood;
+[id: 541, name: "yod-drop lude", weight: 0.2, group: american_yod, ipa: "/luːd/"]
+lude -> luːd;
 
-[id: 542, name: "yod-drop lure", weight: 0.2, group: american_yod]
-lure -> loor;
+[id: 542, name: "yod-drop lure", weight: 0.2, group: american_yod, ipa: "/luːɹ/"]
+lure -> luːɹ;
 
-[id: 543, name: "yod-drop lunar", weight: 0.2, group: american_yod]
-lunar -> loonar;
+[id: 543, name: "yod-drop lunar", weight: 0.2, group: american_yod, ipa: "/luːnəɹ/"]
+lunar -> luːnəɹ;
 
-[id: 544, name: "yod-drop ludicrous", weight: 0.2, group: american_yod]
-ludicrous -> loodikrous;
+[id: 544, name: "yod-drop ludicrous", weight: 0.2, group: american_yod, ipa: "/luːdɪkɹəs/"]
+ludicrous -> luːdɪkɹəs;
 
-[id: 545, name: "yod-drop illuminate", weight: 0.2, group: american_yod]
-luminate -> loominate;
+[id: 545, name: "yod-drop illuminate", weight: 0.2, group: american_yod, ipa: "/luːmɪneɪt/"]
+luminate -> luːmɪneɪt;
 
 // After Z
-[id: 550, name: "yod-drop zeus", weight: 0.2, group: american_yod]
-zeus -> zoos;
+[id: 550, name: "yod-drop zeus", weight: 0.2, group: american_yod, ipa: "/zuːs/"]
+zeus -> zuːs;
 
-[id: 551, name: "yod-drop resume", weight: 0.2, group: american_yod]
-zume -> zoom;
+[id: 551, name: "yod-drop resume", weight: 0.2, group: american_yod, ipa: "/zuːm/"]
+zume -> zuːm;
 
 // ============================================================
 // T-FLAPPING RULES (American English)

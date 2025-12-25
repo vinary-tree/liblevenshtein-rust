@@ -1,45 +1,11 @@
 // American English Text-Speak / SMS Abbreviations
 // Normalizes informal spellings to standard forms for fuzzy matching
+//
+// NOTE: Single-letter expansions (c->see, r->are, u->you, n->and, etc.)
+// have been removed because they violate the bounded expansion guarantee
+// and can cause runaway normalization when combined with other rules.
 
 @version "1.0.0";
-
-// ============================================================
-// Single-letter substitutions
-// ============================================================
-
-[id: 200, name: "c for see", weight: 0.0, group: text_speak]
-c -> see / #_#;
-
-[id: 201, name: "r for are", weight: 0.0, group: text_speak]
-r -> are / #_#;
-
-[id: 202, name: "u for you", weight: 0.0, group: text_speak]
-u -> you / #_#;
-
-[id: 203, name: "n for and", weight: 0.0, group: text_speak]
-n -> and / #_#;
-
-[id: 204, name: "y for why", weight: 0.0, group: text_speak]
-y -> why / #_#;
-
-[id: 205, name: "b for be", weight: 0.0, group: text_speak]
-b -> be / #_#;
-
-[id: 206, name: "k for okay", weight: 0.0, group: text_speak]
-k -> okay / #_#;
-
-// ============================================================
-// Number substitutions
-// ============================================================
-
-[id: 210, name: "2 for to", weight: 0.0, group: text_speak]
-2 -> to / #_#;
-
-[id: 211, name: "4 for for", weight: 0.0, group: text_speak]
-4 -> for / #_#;
-
-[id: 212, name: "8 for ate", weight: 0.0, group: text_speak]
-8 -> ate / #_#;
 
 // ============================================================
 // Common abbreviations with numbers

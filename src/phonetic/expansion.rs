@@ -43,6 +43,15 @@ use crate::phonetic::types::{PhoneChar, RewriteRuleChar};
 /// Given rules like `ph → f`, the string "fone" becomes "(ph|f)one"
 /// because anywhere we see "f" in the output, the input could have been "ph".
 ///
+/// # Algorithm
+///
+/// This uses dynamic programming to find ALL possible segmentations of the input,
+/// not just greedy longest-first matching. This is critical for cases like:
+/// - "naɪt" which could come from "n"+"igh"+"t" (night) OR "n"+"ite" (nite)
+///
+/// The algorithm builds all valid parse trees and combines them into a single
+/// regex pattern with nested alternations.
+///
 /// # Arguments
 ///
 /// * `input` - The normalized string to expand
@@ -67,55 +76,101 @@ pub fn expand_phonetic_alternatives_char(input: &str, rules: &[RewriteRuleChar])
     // Build a map of replacement → original patterns for efficient lookup
     let reverse_map = build_reverse_map(rules);
 
-    let mut pattern = String::new();
+    // Use DP to find all possible expansions
     let chars: Vec<char> = input.chars().collect();
-    let mut i = 0;
+    let n = chars.len();
 
-    while i < chars.len() {
+    if n == 0 {
+        return String::new();
+    }
+
+    // dp[i] = set of all possible pattern strings that expand chars[0..i]
+    // We use Vec<String> to collect all alternative expansions
+    let mut dp: Vec<Vec<String>> = vec![Vec::new(); n + 1];
+    dp[0].push(String::new()); // Empty prefix has one expansion: empty string
+
+    for i in 0..n {
+        if dp[i].is_empty() {
+            continue; // No way to reach this position
+        }
+
         let remaining = &input[char_byte_index(input, i)..];
-        let mut matched = false;
 
-        // Check if any replacement matches at this position
-        // Try longer replacements first to handle overlapping rules
+        // Collect all possible matches at this position
+        let mut matches_at_i: Vec<(usize, Vec<String>)> = Vec::new();
+
+        // Check all replacements (not just the longest)
         for (replacement, originals) in &reverse_map {
             if remaining.starts_with(replacement.as_str()) {
-                // This position could be the result of one of these rules
-                // Create alternation: (original1|original2|...|replacement)
-                let mut alternatives: Vec<&str> = originals.iter().map(|s| s.as_str()).collect();
+                let len = replacement.chars().count();
+                let mut alternatives: Vec<String> =
+                    originals.iter().map(|s| regex_escape(s)).collect();
 
-                // Add the replacement itself as an alternative (identity case)
-                if !alternatives.contains(&replacement.as_str()) {
-                    alternatives.push(replacement);
+                // Add the replacement itself as an alternative
+                let escaped_replacement = regex_escape(replacement);
+                if !alternatives.contains(&escaped_replacement) {
+                    alternatives.push(escaped_replacement);
                 }
 
-                // Only create alternation if we have multiple alternatives
-                if alternatives.len() > 1 {
-                    pattern.push('(');
-                    for (j, alt) in alternatives.iter().enumerate() {
-                        if j > 0 {
-                            pattern.push('|');
-                        }
-                        pattern.push_str(&regex_escape(alt));
-                    }
-                    pattern.push(')');
-                } else {
-                    pattern.push_str(&regex_escape(alternatives[0]));
-                }
-
-                i += replacement.chars().count();
-                matched = true;
-                break;
+                matches_at_i.push((len, alternatives));
             }
         }
 
-        if !matched {
-            // No rule applies, emit literal character (escaped if necessary)
-            pattern.push_str(&regex_escape_char(chars[i]));
-            i += 1;
+        // Always allow single character match (identity)
+        let single_char = regex_escape_char(chars[i]);
+        let mut has_single = false;
+        for (len, _) in &matches_at_i {
+            if *len == 1 {
+                has_single = true;
+                break;
+            }
+        }
+        if !has_single {
+            matches_at_i.push((1, vec![single_char]));
+        }
+
+        // Clone prefixes to avoid borrow conflict
+        let prefixes_at_i: Vec<String> = dp[i].clone();
+
+        // Extend all paths from dp[i]
+        for (len, alternatives) in matches_at_i {
+            let next_pos = i + len;
+            if next_pos > n {
+                continue;
+            }
+
+            // Build the segment pattern
+            let segment = if alternatives.len() > 1 {
+                format!("({})", alternatives.join("|"))
+            } else {
+                alternatives[0].clone()
+            };
+
+            // Extend each existing expansion at position i
+            for prefix in &prefixes_at_i {
+                let new_expansion = format!("{}{}", prefix, segment);
+                dp[next_pos].push(new_expansion);
+            }
         }
     }
 
-    pattern
+    // Collect all complete expansions and deduplicate
+    let mut final_patterns: Vec<String> = dp[n].clone();
+    final_patterns.sort();
+    final_patterns.dedup();
+
+    if final_patterns.is_empty() {
+        // Fallback: just escape the input
+        return regex_escape(input);
+    }
+
+    if final_patterns.len() == 1 {
+        return final_patterns.into_iter().next().unwrap();
+    }
+
+    // Multiple complete expansions: combine with alternation
+    // But first, try to simplify by finding common prefixes/suffixes
+    format!("({})", final_patterns.join("|"))
 }
 
 /// A reverse mapping entry: replacement string → list of original patterns

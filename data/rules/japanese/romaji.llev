@@ -27,41 +27,41 @@
 // Macron vowels → doubled vowels
 // Using markers to prevent further processing
 
-// ā → A (long a marker)
-[id: 2350, name: "long a macron", weight: 0.05, group: romaji_long_vowels]
-ā -> A;
+// ā → aː (long a)
+[id: 2350, name: "long a macron", weight: 0.05, group: romaji_long_vowels, ipa: "/aː/"]
+ā -> aː;
 
-// ē → E (long e marker)
-[id: 2351, name: "long e macron", weight: 0.05, group: romaji_long_vowels]
-ē -> E;
+// ē → eː (long e)
+[id: 2351, name: "long e macron", weight: 0.05, group: romaji_long_vowels, ipa: "/eː/"]
+ē -> eː;
 
-// ī → I (long i marker)
-[id: 2352, name: "long i macron", weight: 0.05, group: romaji_long_vowels]
-ī -> I;
+// ī → iː (long i)
+[id: 2352, name: "long i macron", weight: 0.05, group: romaji_long_vowels, ipa: "/iː/"]
+ī -> iː;
 
-// ō → O (long o marker)
-[id: 2353, name: "long o macron", weight: 0.05, group: romaji_long_vowels]
-ō -> O;
+// ō → oː (long o)
+[id: 2353, name: "long o macron", weight: 0.05, group: romaji_long_vowels, ipa: "/oː/"]
+ō -> oː;
 
-// ū → U (long u marker)
-[id: 2354, name: "long u macron", weight: 0.05, group: romaji_long_vowels]
-ū -> U;
+// ū → uː (long u)
+[id: 2354, name: "long u macron", weight: 0.05, group: romaji_long_vowels, ipa: "/uː/"]
+ū -> uː;
 
 // Uppercase macrons
-[id: 2355, name: "long A macron upper", weight: 0.05, group: romaji_long_vowels]
-Ā -> A;
+[id: 2355, name: "long A macron upper", weight: 0.05, group: romaji_long_vowels, ipa: "/aː/"]
+Ā -> aː;
 
-[id: 2356, name: "long E macron upper", weight: 0.05, group: romaji_long_vowels]
-Ē -> E;
+[id: 2356, name: "long E macron upper", weight: 0.05, group: romaji_long_vowels, ipa: "/eː/"]
+Ē -> eː;
 
-[id: 2357, name: "long I macron upper", weight: 0.05, group: romaji_long_vowels]
-Ī -> I;
+[id: 2357, name: "long I macron upper", weight: 0.05, group: romaji_long_vowels, ipa: "/iː/"]
+Ī -> iː;
 
-[id: 2358, name: "long O macron upper", weight: 0.05, group: romaji_long_vowels]
-Ō -> O;
+[id: 2358, name: "long O macron upper", weight: 0.05, group: romaji_long_vowels, ipa: "/oː/"]
+Ō -> oː;
 
-[id: 2359, name: "long U macron upper", weight: 0.05, group: romaji_long_vowels]
-Ū -> U;
+[id: 2359, name: "long U macron upper", weight: 0.05, group: romaji_long_vowels, ipa: "/uː/"]
+Ū -> uː;
 
 // ============================================================
 // ROMANIZATION VARIANT NORMALIZATION

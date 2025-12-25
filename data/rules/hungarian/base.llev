@@ -125,40 +125,40 @@ S -> ʃ;
 // LONG VOWELS (acute accent = long)
 // ============================================================
 
-// Á → A (long a)
-[id: 2895, name: "long a", weight: 0.15, group: hungarian_long_vowels]
-á -> A;
+// Á → aː (long a)
+[id: 2895, name: "long a", weight: 0.15, group: hungarian_long_vowels, ipa: "/aː/"]
+á -> aː;
 
-[id: 2896, name: "long A upper", weight: 0.15, group: hungarian_long_vowels]
-Á -> A;
+[id: 2896, name: "long A upper", weight: 0.15, group: hungarian_long_vowels, ipa: "/aː/"]
+Á -> aː;
 
-// É → E (long e)
-[id: 2897, name: "long e", weight: 0.15, group: hungarian_long_vowels]
-é -> E;
+// É → eː (long e)
+[id: 2897, name: "long e", weight: 0.15, group: hungarian_long_vowels, ipa: "/eː/"]
+é -> eː;
 
-[id: 2898, name: "long E upper", weight: 0.15, group: hungarian_long_vowels]
-É -> E;
+[id: 2898, name: "long E upper", weight: 0.15, group: hungarian_long_vowels, ipa: "/eː/"]
+É -> eː;
 
-// Í → I (long i)
-[id: 2899, name: "long i", weight: 0.15, group: hungarian_long_vowels]
-í -> I;
+// Í → iː (long i)
+[id: 2899, name: "long i", weight: 0.15, group: hungarian_long_vowels, ipa: "/iː/"]
+í -> iː;
 
-[id: 2900, name: "long I upper", weight: 0.15, group: hungarian_long_vowels]
-Í -> I;
+[id: 2900, name: "long I upper", weight: 0.15, group: hungarian_long_vowels, ipa: "/iː/"]
+Í -> iː;
 
-// Ó → O (long o)
-[id: 2901, name: "long o", weight: 0.15, group: hungarian_long_vowels]
-ó -> O;
+// Ó → oː (long o)
+[id: 2901, name: "long o", weight: 0.15, group: hungarian_long_vowels, ipa: "/oː/"]
+ó -> oː;
 
-[id: 2902, name: "long O upper", weight: 0.15, group: hungarian_long_vowels]
-Ó -> O;
+[id: 2902, name: "long O upper", weight: 0.15, group: hungarian_long_vowels, ipa: "/oː/"]
+Ó -> oː;
 
-// Ú → U (long u)
-[id: 2903, name: "long u", weight: 0.15, group: hungarian_long_vowels]
-ú -> U;
+// Ú → uː (long u)
+[id: 2903, name: "long u", weight: 0.15, group: hungarian_long_vowels, ipa: "/uː/"]
+ú -> uː;
 
-[id: 2904, name: "long U upper", weight: 0.15, group: hungarian_long_vowels]
-Ú -> U;
+[id: 2904, name: "long U upper", weight: 0.15, group: hungarian_long_vowels, ipa: "/uː/"]
+Ú -> uː;
 
 // ============================================================
 // FRONT ROUNDED VOWELS

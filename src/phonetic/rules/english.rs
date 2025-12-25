@@ -137,8 +137,8 @@ mod tests {
     #[test]
     fn test_text_speak_applies() {
         let rules = text_speak();
-        // 2 -> to (simpler test that doesn't trigger rule interactions)
-        let result = rules.apply("2");
-        assert_eq!(result, "to", "expected 'to', got: {}", result);
+        // thx -> thanks (test a multi-character abbreviation that still exists)
+        let result = rules.apply("thx");
+        assert_eq!(result, "thanks", "expected 'thanks', got: {}", result);
     }
 }

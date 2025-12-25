@@ -484,7 +484,7 @@ where
 
         for term in terms {
             let term = term.as_ref();
-            originals.insert(term);
+            originals.insert_with_value(term, V::default());
 
             let normalized = normalize_string_char(term, &rules, fuel);
             let term_string = term.to_string();
@@ -714,6 +714,68 @@ where
             inner: DynamicDawgCharZipper::new_from_dict(&self.originals),
         }
     }
+
+    /// Query using a regex pattern against ORIGINAL (non-normalized) terms.
+    ///
+    /// Unlike `query_regex` which searches normalized forms, this method
+    /// searches the original terms directly. This is useful with patterns
+    /// from `expand_to_phonetic_pattern` which are designed to match
+    /// original spellings like "phone", "fone", etc.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - Regex pattern to match (e.g., "(ph|f)on", "kn.*t")
+    /// * `max_distance` - Maximum edit distance from pattern (0 for exact regex match)
+    ///
+    /// # Returns
+    ///
+    /// Results contain original terms that match the pattern.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let dict = PhoneticNormalizedDictionary::<()>::from_terms(["phone", "fone", "bone"]);
+    ///
+    /// // Expand "fone" to phonetic pattern
+    /// let pattern = dict.expand_to_phonetic_pattern("fone");
+    /// // pattern = "(ph|f)on" (based on rules)
+    ///
+    /// // Search original terms with the pattern
+    /// let results = dict.query_original_regex(&pattern, 0)?;
+    /// // Returns: ["phone", "fone"] (original terms matching pattern)
+    /// ```
+    pub fn query_original_regex(
+        &self,
+        pattern: &str,
+        max_distance: u8,
+    ) -> Result<Vec<PhoneticNormalizedCandidate>, RegexQueryError> {
+        // Parse regex pattern
+        let ast = parse_regex(pattern)?;
+
+        // Compile to NFA
+        let nfa = compile_nfa(&ast).map_err(RegexQueryError::CompileError)?;
+
+        // Create product automaton for fuzzy matching
+        let product = ProductAutomatonChar::with_algorithm(nfa, max_distance, self.algorithm());
+
+        // Search ORIGINAL terms (not normalized) for matches
+        let mut results = Vec::new();
+
+        for (original, _) in self.originals.iter() {
+            if let Some(distance) = product.min_distance(&original) {
+                let normalized_form = self.normalize(&original);
+                results.push(PhoneticNormalizedCandidate {
+                    term: original,
+                    distance: distance as usize,
+                    normalized_form,
+                });
+            }
+        }
+
+        // Sort by distance for convenience
+        results.sort_by_key(|c| c.distance);
+        Ok(results)
+    }
 }
 
 // ============================================================================
@@ -892,11 +954,18 @@ where
 
     /// Expand a query string to a phonetic pattern.
     ///
-    /// This method shows what pattern would be used by `query_phonetic_pattern`
-    /// without actually executing the query. Useful for debugging.
+    /// The query is first normalized, then expanded to a regex pattern that
+    /// matches all possible original spellings. For example:
+    /// - "fone" → normalize → "fon" → expand → "(ph|f)on"
+    ///
+    /// The resulting pattern is designed to match **original spellings** in
+    /// the dictionary. Use with `query_original_regex` for dictionary search,
+    /// or use directly for searching external text.
     pub fn expand_to_phonetic_pattern(&self, query: &str) -> String {
-        expand_phonetic_alternatives_char(query, &self.rules)
+        let normalized = self.normalize(query);
+        expand_phonetic_alternatives_char(&normalized, &self.rules)
     }
+
 }
 
 // ============================================================================
@@ -1454,6 +1523,86 @@ mod tests {
     fn test_sync_strategy() {
         let dict = PhoneticNormalizedDictionary::<()>::from_terms(["test"]);
         assert_eq!(dict.sync_strategy(), SyncStrategy::InternalSync);
+    }
+
+    #[test]
+    fn test_query_original_regex() {
+        use crate::phonetic::types::{ContextChar, PhoneChar, RewriteRuleChar};
+
+        // Create a dictionary with a simple rule: ph -> f
+        let rules = vec![RewriteRuleChar {
+            rule_id: 1,
+            rule_name: "ph_to_f".to_string(),
+            pattern: vec![PhoneChar::Consonant('p'), PhoneChar::Consonant('h')],
+            replacement: vec![PhoneChar::Consonant('f')],
+            context: ContextChar::Anywhere,
+            weight: 0.1,
+        }];
+
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+            ["phone", "fone", "bone", "cone"],
+            rules,
+        );
+
+        // Get the expanded pattern for "fone"
+        let pattern = dict.expand_to_phonetic_pattern("fone");
+
+        // Query ORIGINAL terms with the expanded pattern
+        let results = dict
+            .query_original_regex(&pattern, 0)
+            .expect("pattern should parse");
+
+        // Should find both "phone" (matches "ph" + "on") and "fone" (matches "f" + "on")
+        assert!(
+            results.iter().any(|c| c.term == "phone"),
+            "Should find 'phone' via original regex"
+        );
+        assert!(
+            results.iter().any(|c| c.term == "fone"),
+            "Should find 'fone' via original regex"
+        );
+        // "bone" and "cone" don't match the pattern
+        assert!(
+            !results.iter().any(|c| c.term == "bone"),
+            "Should NOT find 'bone'"
+        );
+        assert!(
+            !results.iter().any(|c| c.term == "cone"),
+            "Should NOT find 'cone'"
+        );
+    }
+
+    #[test]
+    fn test_expand_normalizes_input() {
+        use crate::phonetic::types::{ContextChar, PhoneChar, RewriteRuleChar};
+
+        // Create a dictionary with rules: ph -> f, ne -> n (to show normalization effect)
+        let rules = vec![
+            RewriteRuleChar {
+                rule_id: 1,
+                rule_name: "ph_to_f".to_string(),
+                pattern: vec![PhoneChar::Consonant('p'), PhoneChar::Consonant('h')],
+                replacement: vec![PhoneChar::Consonant('f')],
+                context: ContextChar::Anywhere,
+                weight: 0.1,
+            },
+        ];
+
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["phone", "fone"], rules);
+
+        // Both "phone" and "fone" normalize to "fon"
+        let phone_norm = dict.normalize("phone");
+        let fone_norm = dict.normalize("fone");
+        assert_eq!(phone_norm, fone_norm, "Both should normalize to same form");
+
+        // Expanding either should give the same pattern (since both normalize first)
+        let pattern_from_phone = dict.expand_to_phonetic_pattern("phone");
+        let pattern_from_fone = dict.expand_to_phonetic_pattern("fone");
+        assert_eq!(
+            pattern_from_phone, pattern_from_fone,
+            "Expanding either query should give same pattern"
+        );
+        println!("Pattern: {}", pattern_from_fone);
     }
 
 }

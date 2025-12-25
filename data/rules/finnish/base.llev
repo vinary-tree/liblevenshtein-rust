@@ -43,6 +43,60 @@ Nk -> ŋk;
 NK -> ŋk;
 
 // ============================================================
+// LONG VOWELS (doubled letters = long sounds)
+// ============================================================
+// Finnish uses doubled letters to indicate vowel length.
+// These must be matched BEFORE single vowel rules.
+
+[id: 3806, name: "long aa", weight: 0.04, group: finnish_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 3807, name: "long AA", weight: 0.04, group: finnish_long_vowels, ipa: "/aː/"]
+AA -> aː;
+
+[id: 3808, name: "long ee", weight: 0.04, group: finnish_long_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 3809, name: "long EE", weight: 0.04, group: finnish_long_vowels, ipa: "/eː/"]
+EE -> eː;
+
+[id: 3850, name: "long ii", weight: 0.04, group: finnish_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 3851, name: "long II", weight: 0.04, group: finnish_long_vowels, ipa: "/iː/"]
+II -> iː;
+
+[id: 3852, name: "long oo", weight: 0.04, group: finnish_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+[id: 3853, name: "long OO", weight: 0.04, group: finnish_long_vowels, ipa: "/oː/"]
+OO -> oː;
+
+[id: 3854, name: "long uu", weight: 0.04, group: finnish_long_vowels, ipa: "/uː/"]
+uu -> uː;
+
+[id: 3855, name: "long UU", weight: 0.04, group: finnish_long_vowels, ipa: "/uː/"]
+UU -> uː;
+
+[id: 3856, name: "long ää", weight: 0.04, group: finnish_long_vowels, ipa: "/æː/"]
+ää -> æː;
+
+[id: 3857, name: "long ÄÄ", weight: 0.04, group: finnish_long_vowels, ipa: "/æː/"]
+ÄÄ -> æː;
+
+[id: 3858, name: "long öö", weight: 0.04, group: finnish_long_vowels, ipa: "/øː/"]
+öö -> øː;
+
+[id: 3859, name: "long ÖÖ", weight: 0.04, group: finnish_long_vowels, ipa: "/øː/"]
+ÖÖ -> øː;
+
+[id: 3860, name: "long yy", weight: 0.04, group: finnish_long_vowels, ipa: "/yː/"]
+yy -> yː;
+
+[id: 3861, name: "long YY", weight: 0.04, group: finnish_long_vowels, ipa: "/yː/"]
+YY -> yː;
+
+// ============================================================
 // FRONT VOWELS (special Finnish vowels)
 // ============================================================
 

@@ -47,17 +47,8 @@ cious -> ʃəs;
 // tious -> ʃəs (cautious -> kɔːʃəs)
 tious -> ʃəs;
 
-[id: 36, name: "ough pattern", weight: 0.0, group: gh_rules]
-// ough -> o (dough -> do)
-ough -> o;
-
-[id: 37, name: "aught pattern", weight: 0.0, group: gh_rules]
-// aught -> ot (caught -> kot, daughter -> doter)
-aught -> ot;
-
-[id: 38, name: "ought pattern", weight: 0.0, group: gh_rules]
-// ought -> ot (bought -> bot, thought -> tot)
-ought -> ot;
+// NOTE: OUGH/AUGHT/OUGHT patterns moved to dialect files (american.llev, british.llev)
+// because GA and RP have different vowel qualities for these patterns.
 
 [id: 130, name: "tch simplify", weight: 0.0, group: orthography, ipa: "/t͡ʃ/"]
 // tch -> t͡ʃ (batch -> bæt͡ʃ, watch -> wɒt͡ʃ)
@@ -223,53 +214,47 @@ zz -> z;
 // Phase 9: Vowel Digraph Rules (weight=0.1)
 // ============================================================
 
-[id: 50, name: "ea digraph", weight: 0.1, group: vowel_digraphs]
-// ea -> e (meat -> met, read -> red)
-ea -> e;
+[id: 50, name: "ea digraph", weight: 0.1, group: vowel_digraphs, ipa: "/iː/"]
+// ea -> iː (FLEECE vowel: meat -> miːt, read -> riːd)
+ea -> iː;
 
-[id: 51, name: "ee digraph", weight: 0.1, group: vowel_digraphs]
-// ee -> e (feet -> fet, see -> se)
-ee -> e;
+[id: 51, name: "ee digraph", weight: 0.1, group: vowel_digraphs, ipa: "/iː/"]
+// ee -> iː (FLEECE vowel: feet -> fiːt, see -> siː)
+ee -> iː;
 
-[id: 52, name: "ai digraph", weight: 0.1, group: vowel_digraphs]
-// ai -> a (rain -> ran, wait -> wat)
-ai -> a;
+[id: 52, name: "ai digraph", weight: 0.1, group: vowel_digraphs, ipa: "/eɪ/"]
+// ai -> eɪ (FACE vowel: rain -> reɪn, wait -> weɪt)
+ai -> eɪ;
 
-[id: 53, name: "ay digraph", weight: 0.1, group: vowel_digraphs]
-// ay -> a (day -> da, say -> sa)
-ay -> a;
+[id: 53, name: "ay digraph", weight: 0.1, group: vowel_digraphs, ipa: "/eɪ/"]
+// ay -> eɪ (FACE vowel: day -> deɪ, say -> seɪ)
+ay -> eɪ;
 
-[id: 54, name: "oa digraph", weight: 0.1, group: vowel_digraphs]
-// oa -> o (boat -> bot, road -> rod)
-oa -> o;
+// NOTE: GOAT vowels (oa, oe) moved to dialect files (american.llev uses oʊ, british.llev uses əʊ)
 
-[id: 55, name: "oe digraph", weight: 0.1, group: vowel_digraphs]
-// oe -> o (toe -> to, foe -> fo)
-oe -> o;
+[id: 56, name: "ou digraph", weight: 0.1, group: vowel_digraphs, ipa: "/aʊ/"]
+// ou -> aʊ (MOUTH vowel: house -> haʊse, out -> aʊt)
+ou -> aʊ;
 
-[id: 56, name: "ou digraph", weight: 0.1, group: vowel_digraphs]
-// ou -> ow (house -> howse, out -> owt)
-ou -> ow;
+[id: 58, name: "oi digraph", weight: 0.1, group: vowel_digraphs, ipa: "/ɔɪ/"]
+// oi -> ɔɪ (CHOICE vowel: coin -> kɔɪn, oil -> ɔɪl)
+oi -> ɔɪ;
 
-[id: 58, name: "oi digraph", weight: 0.1, group: vowel_digraphs]
-// oi -> oy (coin -> coyn, oil -> oyl)
-oi -> oy;
+[id: 59, name: "ey digraph", weight: 0.1, group: vowel_digraphs, ipa: "/eɪ/"]
+// ey -> eɪ (FACE vowel: they -> ðeɪ, monkey -> mʌŋkeɪ)
+ey -> eɪ;
 
-[id: 59, name: "ey digraph", weight: 0.1, group: vowel_digraphs]
-// ey -> e (they -> the, monkey -> monke)
-ey -> e;
+[id: 60, name: "ie digraph", weight: 0.1, group: vowel_digraphs, ipa: "/aɪ/"]
+// ie -> aɪ (PRICE vowel: pie -> paɪ, tie -> taɪ)
+ie -> aɪ;
 
-[id: 60, name: "ie digraph", weight: 0.1, group: vowel_digraphs]
-// ie -> i (pie -> pi, tie -> ti)
-ie -> i;
+[id: 61, name: "oo digraph", weight: 0.1, group: vowel_digraphs, ipa: "/uː/"]
+// oo -> uː (GOOSE vowel: food -> fuːd, moon -> muːn)
+oo -> uː;
 
-[id: 61, name: "oo digraph", weight: 0.1, group: vowel_digraphs]
-// oo -> u (food -> fud, moon -> mun)
-oo -> u;
-
-[id: 62, name: "ue final", weight: 0.1, group: vowel_digraphs]
-// ue -> u at word end (blue -> blu, true -> tru)
-ue -> u / _#;
+[id: 62, name: "ue final", weight: 0.1, group: vowel_digraphs, ipa: "/uː/"]
+// ue -> uː at word end (GOOSE vowel: blue -> bluː, true -> truː)
+ue -> uː / _#;
 
 // ============================================================
 // Phase 10: Phonetic Rules (weight=0.15)
@@ -280,8 +265,16 @@ ue -> u / _#;
 // Note: Simplified - English th can be /θ/ (voiceless) or /ð/ (voiced)
 th -> θ;
 
+[id: 103, name: "nk cluster", weight: 0.15, group: phonetic, ipa: "/ŋk/"]
+// nk -> ŋk (think -> θɪŋk, bank -> bæŋk)
+nk -> ŋk;
+
+[id: 104, name: "ng to engma", weight: 0.15, group: phonetic, ipa: "/ŋ/"]
+// ng -> ŋ (sing -> sɪŋ, ring -> rɪŋ)
+ng -> ŋ;
+
 [id: 101, name: "qu to kw", weight: 0.15, group: phonetic]
-// qu -> kw (queen -> kween)
+// qu -> kw (queen -> kwiːn)
 qu -> kw;
 
 [id: 102, name: "kw to qu", weight: 0.15, group: phonetic, enabled: false]
@@ -289,17 +282,143 @@ qu -> kw;
 kw -> qu;
 
 // ============================================================
+// Phase 10a: Magic-E Patterns (VCe trigraphs)
+// Common word endings where silent-e changes vowel quality.
+// These rules fire BEFORE silent-e deletion to produce proper IPA.
+// ============================================================
+
+// igh trigraph (handles silent gh)
+[id: 145, name: "igh trigraph", weight: 0.04, group: magic_e, ipa: "/aɪ/"]
+igh -> aɪ;
+
+// -one endings (phone, tone, bone, zone, cone, lone)
+[id: 146, name: "one ending", weight: 0.04, group: magic_e, ipa: "/oʊn/"]
+one -> oʊn / _#;
+
+// -ine endings (pine, wine, line, fine, mine, nine)
+[id: 147, name: "ine ending", weight: 0.04, group: magic_e, ipa: "/aɪn/"]
+ine -> aɪn / _#;
+
+// -ane endings (plane, lane, sane, cane, mane)
+[id: 148, name: "ane ending", weight: 0.04, group: magic_e, ipa: "/eɪn/"]
+ane -> eɪn / _#;
+
+// -ate endings (late, fate, gate, rate, mate, date)
+[id: 149, name: "ate ending", weight: 0.04, group: magic_e, ipa: "/eɪt/"]
+ate -> eɪt / _#;
+
+// -ite endings (site, bite, kite, mite, white)
+[id: 150, name: "ite ending", weight: 0.04, group: magic_e, ipa: "/aɪt/"]
+ite -> aɪt / _#;
+
+// -ote endings (note, vote, dote, quote)
+[id: 151, name: "ote ending", weight: 0.04, group: magic_e, ipa: "/oʊt/"]
+ote -> oʊt / _#;
+
+// -ome endings (home, dome, Rome)
+[id: 152, name: "ome ending", weight: 0.04, group: magic_e, ipa: "/oʊm/"]
+ome -> oʊm / _#;
+
+// -ake endings (make, take, lake, cake, wake, sake)
+[id: 153, name: "ake ending", weight: 0.04, group: magic_e, ipa: "/eɪk/"]
+ake -> eɪk / _#;
+
+// -ike endings (like, bike, hike, mike, pike)
+[id: 154, name: "ike ending", weight: 0.04, group: magic_e, ipa: "/aɪk/"]
+ike -> aɪk / _#;
+
+// -oke endings (poke, joke, woke, smoke, broke)
+[id: 155, name: "oke ending", weight: 0.04, group: magic_e, ipa: "/oʊk/"]
+oke -> oʊk / _#;
+
+// -ose endings (nose, rose, close, those, chose)
+[id: 156, name: "ose ending", weight: 0.04, group: magic_e, ipa: "/oʊz/"]
+ose -> oʊz / _#;
+
+// -ase endings (base, case, chase, phase)
+[id: 157, name: "ase ending", weight: 0.04, group: magic_e, ipa: "/eɪs/"]
+ase -> eɪs / _#;
+
+// -use endings (use, fuse, muse)
+[id: 158, name: "use ending", weight: 0.04, group: magic_e, ipa: "/uːz/"]
+use -> uːz / _#;
+
+// -ule endings (rule, mule)
+[id: 159, name: "ule ending", weight: 0.04, group: magic_e, ipa: "/uːl/"]
+ule -> uːl / _#;
+
+// -ace endings (face, race, pace, place, space)
+[id: 160, name: "ace ending", weight: 0.04, group: magic_e, ipa: "/eɪs/"]
+ace -> eɪs / _#;
+
+// -ice endings (nice, rice, price, twice, slice)
+[id: 161, name: "ice ending", weight: 0.04, group: magic_e, ipa: "/aɪs/"]
+ice -> aɪs / _#;
+
+// -ive endings (five, hive, dive, drive)
+[id: 162, name: "ive ending", weight: 0.04, group: magic_e, ipa: "/aɪv/"]
+ive -> aɪv / _#;
+
+// -ode endings (code, mode, node)
+[id: 163, name: "ode ending", weight: 0.04, group: magic_e, ipa: "/oʊd/"]
+ode -> oʊd / _#;
+
+// -ide endings (side, wide, ride, hide, guide)
+[id: 164, name: "ide ending", weight: 0.04, group: magic_e, ipa: "/aɪd/"]
+ide -> aɪd / _#;
+
+// -ade endings (made, fade, shade, grade, trade)
+[id: 165, name: "ade ending", weight: 0.04, group: magic_e, ipa: "/eɪd/"]
+ade -> eɪd / _#;
+
+// -ime endings (time, dime, lime, crime, prime)
+[id: 166, name: "ime ending", weight: 0.04, group: magic_e, ipa: "/aɪm/"]
+ime -> aɪm / _#;
+
+// -ame endings (name, game, same, flame, shame)
+[id: 167, name: "ame ending", weight: 0.04, group: magic_e, ipa: "/eɪm/"]
+ame -> eɪm / _#;
+
+// -ope endings (hope, rope, scope, slope)
+[id: 168, name: "ope ending", weight: 0.04, group: magic_e, ipa: "/oʊp/"]
+ope -> oʊp / _#;
+
+// -ipe endings (pipe, ripe, wipe, stripe)
+[id: 169, name: "ipe ending", weight: 0.04, group: magic_e, ipa: "/aɪp/"]
+ipe -> aɪp / _#;
+
+// -ape endings (tape, cape, shape, grape)
+[id: 170, name: "ape ending", weight: 0.04, group: magic_e, ipa: "/eɪp/"]
+ape -> eɪp / _#;
+
+// -ore endings (more, core, store)
+[id: 171, name: "ore ending", weight: 0.04, group: magic_e, ipa: "/ɔːr/"]
+ore -> ɔːr / _#;
+
+// -ire endings (fire, wire, hire, tire)
+[id: 172, name: "ire ending", weight: 0.04, group: magic_e, ipa: "/aɪr/"]
+ire -> aɪr / _#;
+
+// -are endings (care, rare, share)
+[id: 173, name: "are ending", weight: 0.04, group: magic_e, ipa: "/ɛər/"]
+are -> ɛər / _#;
+
+// -ure endings (pure, cure)
+[id: 174, name: "ure ending", weight: 0.04, group: magic_e, ipa: "/jʊər/"]
+ure -> jʊər / _#;
+
+// ============================================================
 // Phase 11: Default/Fallback Rules (LOW PRIORITY)
 // These apply after all specific patterns have been matched
 // ============================================================
 
 [id: 33, name: "silent final e", weight: 0.0, group: orthography]
-// Final e is often silent (make -> mak)
+// Final e is often silent - only applies to words not matched by VCe rules
 e -> / _#;
 
 [id: 34, name: "silent gh", weight: 0.0, group: orthography]
-// gh is silent (catch-all after specific gh rules)
-// Examples: night -> nit, through -> thru
+// gh is silent (catch-all after igh trigraph rule)
+// Examples: through -> thru
 gh -> ;
 
 // ============================================================

@@ -177,14 +177,29 @@ fn demo_regex_query(dict: &PhoneticNormalizedDictionary<()>, pattern: &str, max_
 }
 
 /// Demonstrate phonetic pattern expansion.
+///
+/// The expansion works by:
+/// 1. Normalizing the query (e.g., "fone" → "fon")
+/// 2. Expanding to a pattern matching original spellings (e.g., "(ph|f)on")
+/// 3. Searching original dictionary terms with the pattern
 fn demo_pattern_expansion(dict: &PhoneticNormalizedDictionary<()>, query: &str) {
+    let normalized = dict.normalize(query);
     let pattern = dict.expand_to_phonetic_pattern(query);
+
     println!("Input: \"{}\"", query);
+    println!("  Normalized: \"{}\"", normalized);
     println!("  Expanded pattern: \"{}\"", pattern);
 
-    // Query with the expanded pattern
-    if let Ok(matches) = dict.query_regex(&pattern, 0) {
-        println!("  Matches: {:?}", matches.iter().take(5).map(|c| &c.term).collect::<Vec<_>>());
+    // Query ORIGINAL terms with the expanded pattern (not normalized forms)
+    // Use distance 0 for exact pattern matches
+    match dict.query_original_regex(&pattern, 0) {
+        Ok(matches) => {
+            let terms: Vec<_> = matches.iter().take(10).map(|c| c.term.as_str()).collect();
+            println!("  Matches: {:?}", terms);
+        }
+        Err(e) => {
+            println!("  Error: {}", e);
+        }
     }
     println!();
 }

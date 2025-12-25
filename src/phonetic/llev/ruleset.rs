@@ -558,9 +558,12 @@ impl<'a> RuleConverter<'a> {
             return Ok(Context::Final);
         }
         if left_is_boundary && right_is_boundary {
-            // Both boundaries - interpret as initial (word must also be at end)
-            // This is a rare case; could also error
-            return Ok(Context::Initial);
+            // Both boundaries - pattern must start at word start AND end at word end
+            // This means the pattern must match the entire word
+            return Ok(Context::And(
+                Box::new(Context::Initial),
+                Box::new(Context::Final),
+            ));
         }
 
         // Handle character class contexts
@@ -929,7 +932,12 @@ impl<'a> RuleConverterChar<'a> {
             return Ok(ContextChar::Final);
         }
         if left_is_boundary && right_is_boundary {
-            return Ok(ContextChar::Initial);
+            // Both boundaries - pattern must start at word start AND end at word end
+            // This means the pattern must match the entire word
+            return Ok(ContextChar::And(
+                Box::new(ContextChar::Initial),
+                Box::new(ContextChar::Final),
+            ));
         }
 
         // Handle character class contexts

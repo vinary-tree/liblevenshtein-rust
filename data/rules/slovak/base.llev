@@ -113,47 +113,47 @@ DZ -> d͡z;
 // VOWELS WITH ČÁRKA (acute) - long vowels
 // ============================================================
 
-// Á/á → a
-[id: 3402, name: "a acute", weight: 0.1, group: slovak_long_vowels]
-á -> a;
+// Á/á → aː (long a)
+[id: 3402, name: "a acute", weight: 0.1, group: slovak_long_vowels, ipa: "/aː/"]
+á -> aː;
 
-[id: 3403, name: "A acute", weight: 0.1, group: slovak_long_vowels]
-Á -> a;
+[id: 3403, name: "A acute", weight: 0.1, group: slovak_long_vowels, ipa: "/aː/"]
+Á -> aː;
 
-// É/é → e
-[id: 3404, name: "e acute", weight: 0.1, group: slovak_long_vowels]
-é -> e;
+// É/é → eː (long e)
+[id: 3404, name: "e acute", weight: 0.1, group: slovak_long_vowels, ipa: "/eː/"]
+é -> eː;
 
-[id: 3405, name: "E acute", weight: 0.1, group: slovak_long_vowels]
-É -> e;
+[id: 3405, name: "E acute", weight: 0.1, group: slovak_long_vowels, ipa: "/eː/"]
+É -> eː;
 
-// Í/í → i
-[id: 3406, name: "i acute", weight: 0.1, group: slovak_long_vowels]
-í -> i;
+// Í/í → iː (long i)
+[id: 3406, name: "i acute", weight: 0.1, group: slovak_long_vowels, ipa: "/iː/"]
+í -> iː;
 
-[id: 3407, name: "I acute", weight: 0.1, group: slovak_long_vowels]
-Í -> i;
+[id: 3407, name: "I acute", weight: 0.1, group: slovak_long_vowels, ipa: "/iː/"]
+Í -> iː;
 
-// Ó/ó → o
-[id: 3408, name: "o acute", weight: 0.1, group: slovak_long_vowels]
-ó -> o;
+// Ó/ó → oː (long o)
+[id: 3408, name: "o acute", weight: 0.1, group: slovak_long_vowels, ipa: "/oː/"]
+ó -> oː;
 
-[id: 3409, name: "O acute", weight: 0.1, group: slovak_long_vowels]
-Ó -> o;
+[id: 3409, name: "O acute", weight: 0.1, group: slovak_long_vowels, ipa: "/oː/"]
+Ó -> oː;
 
-// Ú/ú → u
-[id: 3410, name: "u acute", weight: 0.1, group: slovak_long_vowels]
-ú -> u;
+// Ú/ú → uː (long u)
+[id: 3410, name: "u acute", weight: 0.1, group: slovak_long_vowels, ipa: "/uː/"]
+ú -> uː;
 
-[id: 3411, name: "U acute", weight: 0.1, group: slovak_long_vowels]
-Ú -> u;
+[id: 3411, name: "U acute", weight: 0.1, group: slovak_long_vowels, ipa: "/uː/"]
+Ú -> uː;
 
-// Ý/ý → i (long y = long i)
-[id: 3412, name: "y acute", weight: 0.1, group: slovak_long_vowels]
-ý -> i;
+// Ý/ý → iː (long y = long i)
+[id: 3412, name: "y acute", weight: 0.1, group: slovak_long_vowels, ipa: "/iː/"]
+ý -> iː;
 
-[id: 3413, name: "Y acute", weight: 0.1, group: slovak_long_vowels]
-Ý -> i;
+[id: 3413, name: "Y acute", weight: 0.1, group: slovak_long_vowels, ipa: "/iː/"]
+Ý -> iː;
 
 // ============================================================
 // STANDARD VOWELS

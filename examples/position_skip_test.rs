@@ -15,7 +15,7 @@ fn main() {
 #[cfg(feature = "phonetic-rules")]
 fn find_first_match_baseline(rule: &RewriteRule, s: &[Phone]) -> Option<usize> {
     for pos in 0..=s.len() {
-        if context_matches(&rule.context, s, pos) &&
+        if context_matches(&rule.context, s, pos, rule.pattern.len()) &&
            pattern_matches_at(&rule.pattern, s, pos) {
             return Some(pos);
         }
@@ -57,7 +57,7 @@ fn find_first_match_from(rule: &RewriteRule, s: &[Phone], start_pos: usize) -> O
     // Scan from start_pos to end
     for pos in start_pos..=s.len() {
         // Inline can_apply_at check
-        if context_matches(&rule.context, s, pos) &&
+        if context_matches(&rule.context, s, pos, rule.pattern.len()) &&
            pattern_matches_at(&rule.pattern, s, pos) {
             return Some(pos);
         }

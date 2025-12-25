@@ -87,11 +87,12 @@ pub fn phone_eq(p1: &Phone, p2: &Phone) -> bool {
 ///
 /// - `ctx` - The context to check
 /// - `s` - The phonetic string
-/// - `pos` - The position in the string
+/// - `match_start` - The position where the pattern match starts
+/// - `pattern_len` - The length of the matched pattern
 ///
 /// # Returns
 ///
-/// `true` if the context is satisfied at the given position, `false` otherwise.
+/// `true` if the context is satisfied, `false` otherwise.
 ///
 /// # Examples
 ///
@@ -99,15 +100,19 @@ pub fn phone_eq(p1: &Phone, p2: &Phone) -> bool {
 /// use liblevenshtein::phonetic::{Context, Phone, context_matches};
 ///
 /// let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a'), Phone::Consonant(b't')];
-/// assert!(context_matches(&Context::Initial, &s, 0));
-/// assert!(context_matches(&Context::Final, &s, 3));
-/// assert!(context_matches(&Context::Anywhere, &s, 1));
+/// assert!(context_matches(&Context::Initial, &s, 0, 1));     // pattern at start
+/// assert!(context_matches(&Context::Final, &s, 2, 1));       // pattern at end
+/// assert!(context_matches(&Context::Anywhere, &s, 1, 1));
 /// ```
-pub fn context_matches(ctx: &Context, s: &[Phone], pos: usize) -> bool {
+pub fn context_matches(ctx: &Context, s: &[Phone], match_start: usize, pattern_len: usize) -> bool {
+    // Compute the appropriate position based on context type:
+    // - "Before" and "Final" contexts check at the END of the pattern (match_start + pattern_len)
+    // - "After" and "Initial" contexts check at the START of the pattern (match_start)
     match ctx {
-        Context::Initial => pos == 0,
-        Context::Final => pos == s.len(),
+        Context::Initial => match_start == 0,
+        Context::Final => match_start + pattern_len == s.len(),
         Context::BeforeVowel(vowels) => {
+            let pos = match_start + pattern_len;
             if let Some(Phone::Vowel(v)) = s.get(pos) {
                 vowels.contains(v)
             } else {
@@ -115,9 +120,9 @@ pub fn context_matches(ctx: &Context, s: &[Phone], pos: usize) -> bool {
             }
         }
         Context::AfterConsonant(consonants) => {
-            if pos == 0 {
+            if match_start == 0 {
                 false
-            } else if let Some(phone) = s.get(pos - 1) {
+            } else if let Some(phone) = s.get(match_start - 1) {
                 match phone {
                     Phone::Consonant(c) => consonants.contains(c),
                     Phone::Digraph(c1, _) => consonants.contains(c1),
@@ -128,6 +133,7 @@ pub fn context_matches(ctx: &Context, s: &[Phone], pos: usize) -> bool {
             }
         }
         Context::BeforeConsonant(consonants) => {
+            let pos = match_start + pattern_len;
             if let Some(phone) = s.get(pos) {
                 match phone {
                     Phone::Consonant(c) => consonants.contains(c),
@@ -139,21 +145,27 @@ pub fn context_matches(ctx: &Context, s: &[Phone], pos: usize) -> bool {
             }
         }
         Context::AfterVowel(vowels) => {
-            if pos == 0 {
+            if match_start == 0 {
                 false
-            } else if let Some(Phone::Vowel(v)) = s.get(pos - 1) {
+            } else if let Some(Phone::Vowel(v)) = s.get(match_start - 1) {
                 vowels.contains(v)
             } else {
                 false
             }
         }
         Context::Anywhere => true,
-        // Compound context: both must match
-        Context::And(a, b) => context_matches(a, s, pos) && context_matches(b, s, pos),
+        // Compound context: both must match (each with correct position based on type)
+        Context::And(a, b) => {
+            context_matches(a, s, match_start, pattern_len)
+                && context_matches(b, s, match_start, pattern_len)
+        }
         // Compound context: either must match
-        Context::Or(a, b) => context_matches(a, s, pos) || context_matches(b, s, pos),
+        Context::Or(a, b) => {
+            context_matches(a, s, match_start, pattern_len)
+                || context_matches(b, s, match_start, pattern_len)
+        }
         // Negated context: must NOT match
-        Context::Not(inner) => !context_matches(inner, s, pos),
+        Context::Not(inner) => !context_matches(inner, s, match_start, pattern_len),
     }
 }
 
@@ -254,11 +266,31 @@ pub fn phone_eq_char(p1: &PhoneChar, p2: &PhoneChar) -> bool {
 /// Check if a context is satisfied at a position in a phonetic string (character-level).
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:117-157`
-pub fn context_matches_char(ctx: &ContextChar, s: &[PhoneChar], pos: usize) -> bool {
+///
+/// # Arguments
+///
+/// - `ctx` - The context to check
+/// - `s` - The phonetic string (character-level)
+/// - `match_start` - The position where the pattern match starts
+/// - `pattern_len` - The length of the matched pattern
+///
+/// # Returns
+///
+/// `true` if the context is satisfied, `false` otherwise.
+pub fn context_matches_char(
+    ctx: &ContextChar,
+    s: &[PhoneChar],
+    match_start: usize,
+    pattern_len: usize,
+) -> bool {
+    // Compute the appropriate position based on context type:
+    // - "Before" and "Final" contexts check at the END of the pattern (match_start + pattern_len)
+    // - "After" and "Initial" contexts check at the START of the pattern (match_start)
     match ctx {
-        ContextChar::Initial => pos == 0,
-        ContextChar::Final => pos == s.len(),
+        ContextChar::Initial => match_start == 0,
+        ContextChar::Final => match_start + pattern_len == s.len(),
         ContextChar::BeforeVowel(vowels) => {
+            let pos = match_start + pattern_len;
             if let Some(PhoneChar::Vowel(v)) = s.get(pos) {
                 vowels.contains(v)
             } else {
@@ -266,9 +298,9 @@ pub fn context_matches_char(ctx: &ContextChar, s: &[PhoneChar], pos: usize) -> b
             }
         }
         ContextChar::AfterConsonant(consonants) => {
-            if pos == 0 {
+            if match_start == 0 {
                 false
-            } else if let Some(phone) = s.get(pos - 1) {
+            } else if let Some(phone) = s.get(match_start - 1) {
                 match phone {
                     PhoneChar::Consonant(c) => consonants.contains(c),
                     PhoneChar::Digraph(c1, _) => consonants.contains(c1),
@@ -279,6 +311,7 @@ pub fn context_matches_char(ctx: &ContextChar, s: &[PhoneChar], pos: usize) -> b
             }
         }
         ContextChar::BeforeConsonant(consonants) => {
+            let pos = match_start + pattern_len;
             if let Some(phone) = s.get(pos) {
                 match phone {
                     PhoneChar::Consonant(c) => consonants.contains(c),
@@ -290,21 +323,27 @@ pub fn context_matches_char(ctx: &ContextChar, s: &[PhoneChar], pos: usize) -> b
             }
         }
         ContextChar::AfterVowel(vowels) => {
-            if pos == 0 {
+            if match_start == 0 {
                 false
-            } else if let Some(PhoneChar::Vowel(v)) = s.get(pos - 1) {
+            } else if let Some(PhoneChar::Vowel(v)) = s.get(match_start - 1) {
                 vowels.contains(v)
             } else {
                 false
             }
         }
         ContextChar::Anywhere => true,
-        // Compound context: both must match
-        ContextChar::And(a, b) => context_matches_char(a, s, pos) && context_matches_char(b, s, pos),
+        // Compound context: both must match (each with correct position based on type)
+        ContextChar::And(a, b) => {
+            context_matches_char(a, s, match_start, pattern_len)
+                && context_matches_char(b, s, match_start, pattern_len)
+        }
         // Compound context: either must match
-        ContextChar::Or(a, b) => context_matches_char(a, s, pos) || context_matches_char(b, s, pos),
+        ContextChar::Or(a, b) => {
+            context_matches_char(a, s, match_start, pattern_len)
+                || context_matches_char(b, s, match_start, pattern_len)
+        }
         // Negated context: must NOT match
-        ContextChar::Not(inner) => !context_matches_char(inner, s, pos),
+        ContextChar::Not(inner) => !context_matches_char(inner, s, match_start, pattern_len),
     }
 }
 
@@ -384,31 +423,37 @@ mod tests {
     #[test]
     fn test_context_matches_initial() {
         let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
-        assert!(context_matches(&Context::Initial, &s, 0));
-        assert!(!context_matches(&Context::Initial, &s, 1));
+        // Pattern of length 1 at position 0 - Initial should match
+        assert!(context_matches(&Context::Initial, &s, 0, 1));
+        // Pattern at position 1 - Initial should not match
+        assert!(!context_matches(&Context::Initial, &s, 1, 1));
     }
 
     #[test]
     fn test_context_matches_final() {
         let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
-        assert!(context_matches(&Context::Final, &s, 2));
-        assert!(!context_matches(&Context::Final, &s, 1));
+        // Pattern of length 1 at position 1 (ends at 2 = s.len()) - Final matches
+        assert!(context_matches(&Context::Final, &s, 1, 1));
+        // Pattern of length 1 at position 0 (ends at 1 != 2) - Final doesn't match
+        assert!(!context_matches(&Context::Final, &s, 0, 1));
     }
 
     #[test]
     fn test_context_matches_anywhere() {
         let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
-        assert!(context_matches(&Context::Anywhere, &s, 0));
-        assert!(context_matches(&Context::Anywhere, &s, 1));
-        assert!(context_matches(&Context::Anywhere, &s, 2));
+        // Anywhere always matches regardless of position
+        assert!(context_matches(&Context::Anywhere, &s, 0, 1));
+        assert!(context_matches(&Context::Anywhere, &s, 1, 1));
     }
 
     #[test]
     fn test_context_matches_before_vowel() {
         let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
         let ctx = Context::BeforeVowel(vec![b'a', b'e', b'i']);
-        assert!(context_matches(&ctx, &s, 1));
-        assert!(!context_matches(&ctx, &s, 0));
+        // Pattern at position 0 with length 1 - checks position 1 which is vowel 'a'
+        assert!(context_matches(&ctx, &s, 0, 1));
+        // Pattern at position 1 with length 1 - checks position 2 which is out of bounds
+        assert!(!context_matches(&ctx, &s, 1, 1));
     }
 
     #[test]
@@ -458,8 +503,10 @@ mod tests {
     #[test]
     fn test_context_matches_char_initial() {
         let s = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
-        assert!(context_matches_char(&ContextChar::Initial, &s, 0));
-        assert!(!context_matches_char(&ContextChar::Initial, &s, 1));
+        // Pattern at position 0 - Initial should match
+        assert!(context_matches_char(&ContextChar::Initial, &s, 0, 1));
+        // Pattern at position 1 - Initial should not match
+        assert!(!context_matches_char(&ContextChar::Initial, &s, 1, 1));
     }
 
     #[test]
@@ -481,6 +528,7 @@ mod tests {
     #[test]
     fn test_context_matches_and() {
         // Test: x -> gz when after vowel AND before vowel (exact -> egzact)
+        // String: e x a c t (positions 0-4)
         let s = vec![
             Phone::Vowel(b'e'),      // pos 0
             Phone::Consonant(b'x'),  // pos 1
@@ -489,51 +537,50 @@ mod tests {
             Phone::Consonant(b't'),  // pos 4
         ];
 
-        // The x->gz rule would need to check:
-        // - AfterVowel at the match position (pos 1): s[0]='e' is vowel? YES
-        // - BeforeVowel at pos after match (pos 2): s[2]='a' is vowel? YES
-        // But with a single pos, both contexts check at the same position.
-        //
-        // Semantics:
-        // - AfterVowel(vowels) at pos P: checks if s[P-1] is a vowel in vowels
-        // - BeforeVowel(vowels) at pos P: checks if s[P] is a vowel in vowels
-        //
-        // For AND to work at a single position, we need a sequence like [vowel, vowel]
-        // where we check at pos 1: AfterVowel checks s[0], BeforeVowel checks s[1].
-
-        // Test with the original 'exact' setup - at position 1:
-        // AfterVowel: s[0]='e' is vowel? YES
-        // BeforeVowel: s[1]='x' is vowel? NO -> AND fails
+        // The x->gz rule with pattern 'x' (length 1) at position 1:
+        // - AfterVowel checks s[match_start-1] = s[0] = 'e' is vowel? YES
+        // - BeforeVowel checks s[match_start+pattern_len] = s[2] = 'a' is vowel? YES
         let ctx_exact = Context::And(
             Box::new(Context::AfterVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
             Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
         );
-        assert!(!context_matches(&ctx_exact, &s, 1)); // AfterVowel passes, BeforeVowel fails
+        // Pattern 'x' at position 1 with length 1: AfterVowel and BeforeVowel both pass
+        assert!(context_matches(&ctx_exact, &s, 1, 1));
 
         // Clear test for AND with vowel sequence:
         let s2 = vec![
             Phone::Vowel(b'a'),      // pos 0
-            Phone::Vowel(b'e'),      // pos 1 - this is where we check
+            Phone::Vowel(b'e'),      // pos 1
         ];
 
+        // Pattern at position 1 with length 1:
+        // - AfterVowel checks s[0] = 'a'
+        // - BeforeVowel checks s[2] which is out of bounds (fails)
         let ctx2 = Context::And(
-            Box::new(Context::AfterVowel(vec![b'a'])),   // previous char is 'a'
-            Box::new(Context::BeforeVowel(vec![b'e'])), // actually, wait... this checks same pos
+            Box::new(Context::AfterVowel(vec![b'a'])),
+            Box::new(Context::BeforeVowel(vec![b'e'])),
         );
+        assert!(!context_matches(&ctx2, &s2, 1, 1)); // BeforeVowel fails (out of bounds)
 
-        // BeforeVowel(vowels) checks if s[pos] is a vowel in vowels
-        // AfterVowel(vowels) checks if s[pos-1] is a vowel in vowels
-        // So AND(AfterVowel([a]), BeforeVowel([e])) at pos 1:
-        // - AfterVowel: s[0] = 'a' is vowel? Yes, and 'a' in [a]? Yes
-        // - BeforeVowel: s[1] = 'e' is vowel? Yes, and 'e' in [e]? Yes
-        assert!(context_matches(&ctx2, &s2, 1));
+        // Pattern at position 0 with length 1:
+        // - AfterVowel checks s[-1] which fails (at start)
+        // - BeforeVowel checks s[1] = 'e'
+        assert!(!context_matches(&ctx2, &s2, 0, 1)); // AfterVowel fails (at start)
 
-        // Test where AND fails (one condition fails)
+        // Test where AND succeeds: vowel-consonant-vowel pattern
+        let s3 = vec![
+            Phone::Vowel(b'a'),      // pos 0
+            Phone::Consonant(b'x'),  // pos 1
+            Phone::Vowel(b'e'),      // pos 2
+        ];
+        // Pattern at position 1 with length 1:
+        // - AfterVowel checks s[0] = 'a'
+        // - BeforeVowel checks s[2] = 'e'
         let ctx3 = Context::And(
             Box::new(Context::AfterVowel(vec![b'a'])),
-            Box::new(Context::BeforeVowel(vec![b'i'])), // 'e' not in [i]
+            Box::new(Context::BeforeVowel(vec![b'e'])),
         );
-        assert!(!context_matches(&ctx3, &s2, 1));
+        assert!(context_matches(&ctx3, &s3, 1, 1));
     }
 
     #[test]
@@ -546,9 +593,12 @@ mod tests {
             Box::new(Context::Final),
         );
 
-        assert!(context_matches(&ctx, &s, 0));  // Initial matches
-        assert!(context_matches(&ctx, &s, 2));  // Final matches
-        assert!(!context_matches(&ctx, &s, 1)); // Neither matches
+        // Pattern at position 0 with length 1: Initial matches (0 == 0)
+        assert!(context_matches(&ctx, &s, 0, 1));
+        // Pattern at position 1 with length 1: Final matches (1+1 == 2 == s.len())
+        assert!(context_matches(&ctx, &s, 1, 1));
+        // Pattern at position 0 with length 2: Final matches (0+2 == 2 == s.len())
+        assert!(context_matches(&ctx, &s, 0, 2));
     }
 
     #[test]
@@ -558,9 +608,10 @@ mod tests {
         // NOT initial
         let ctx = Context::Not(Box::new(Context::Initial));
 
-        assert!(!context_matches(&ctx, &s, 0)); // Initial, so NOT fails
-        assert!(context_matches(&ctx, &s, 1));  // Not initial, so NOT succeeds
-        assert!(context_matches(&ctx, &s, 2));  // Not initial, so NOT succeeds
+        // Pattern at position 0 - Initial matches, so NOT fails
+        assert!(!context_matches(&ctx, &s, 0, 1));
+        // Pattern at position 1 - Initial doesn't match, so NOT succeeds
+        assert!(context_matches(&ctx, &s, 1, 1));
     }
 
     #[test]
@@ -580,14 +631,21 @@ mod tests {
             )),
         );
 
-        // pos 0: NOT Initial = false, so whole AND is false
-        assert!(!context_matches(&ctx, &s, 0));
+        // Pattern at pos 0: Initial matches, so NOT Initial = false -> AND fails
+        assert!(!context_matches(&ctx, &s, 0, 1));
 
-        // pos 1: NOT Initial = true, AfterVowel(a) = true (s[0]=a), so AND is true
-        assert!(context_matches(&ctx, &s, 1));
+        // Pattern at pos 1 with length 1:
+        // - NOT Initial = true (1 != 0)
+        // - AfterVowel checks s[0]='a' = true
+        // - OR succeeds, AND succeeds
+        assert!(context_matches(&ctx, &s, 1, 1));
 
-        // pos 2: NOT Initial = true, AfterVowel = false (s[1]=k), BeforeVowel = true (s[2]=e)
-        assert!(context_matches(&ctx, &s, 2));
+        // Pattern at pos 2 with length 1:
+        // - NOT Initial = true (2 != 0)
+        // - AfterVowel checks s[1]='k' = false (consonant)
+        // - BeforeVowel checks s[3] = out of bounds = false
+        // - OR fails, AND fails
+        assert!(!context_matches(&ctx, &s, 2, 1));
     }
 
     // ========================================================================
@@ -596,9 +654,11 @@ mod tests {
 
     #[test]
     fn test_context_matches_char_and() {
+        // vowel-consonant-vowel sequence
         let s = vec![
-            PhoneChar::Vowel('a'),
-            PhoneChar::Vowel('e'),
+            PhoneChar::Vowel('a'),      // pos 0
+            PhoneChar::Consonant('x'),  // pos 1
+            PhoneChar::Vowel('e'),      // pos 2
         ];
 
         let ctx = ContextChar::And(
@@ -606,7 +666,10 @@ mod tests {
             Box::new(ContextChar::BeforeVowel(vec!['e'])),
         );
 
-        assert!(context_matches_char(&ctx, &s, 1));
+        // Pattern at position 1 with length 1:
+        // - AfterVowel checks s[0] = 'a'
+        // - BeforeVowel checks s[2] = 'e'
+        assert!(context_matches_char(&ctx, &s, 1, 1));
     }
 
     #[test]
@@ -618,9 +681,12 @@ mod tests {
             Box::new(ContextChar::Final),
         );
 
-        assert!(context_matches_char(&ctx, &s, 0));
-        assert!(context_matches_char(&ctx, &s, 2));
-        assert!(!context_matches_char(&ctx, &s, 1));
+        // Pattern at position 0 with length 1: Initial matches
+        assert!(context_matches_char(&ctx, &s, 0, 1));
+        // Pattern at position 1 with length 1: Final matches (1+1 == 2 == s.len())
+        assert!(context_matches_char(&ctx, &s, 1, 1));
+        // Pattern at position 0 with length 2: Both match (Initial AND Final)
+        assert!(context_matches_char(&ctx, &s, 0, 2));
     }
 
     #[test]
@@ -629,8 +695,9 @@ mod tests {
 
         let ctx = ContextChar::Not(Box::new(ContextChar::Initial));
 
-        assert!(!context_matches_char(&ctx, &s, 0));
-        assert!(context_matches_char(&ctx, &s, 1));
-        assert!(context_matches_char(&ctx, &s, 2));
+        // Pattern at position 0 - Initial matches, so NOT fails
+        assert!(!context_matches_char(&ctx, &s, 0, 1));
+        // Pattern at position 1 - Initial doesn't match, so NOT succeeds
+        assert!(context_matches_char(&ctx, &s, 1, 1));
     }
 }
