@@ -58,12 +58,21 @@ use crate::phonetic::types::{
 /// This extracts the primary character from a phone unit:
 /// - Vowels and consonants return their character
 /// - Digraphs return their first character (the pattern NFA handles the full digraph)
+/// - Trigraphs return their first character
+/// - Tetragraphs return their first character
+/// - Sequences return their first character
 /// - Silent returns None (no character to match)
 #[allow(dead_code)]
 fn phone_to_char(phone: &PhoneChar) -> Option<char> {
     match phone {
         PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => Some(*c),
         PhoneChar::Digraph(c1, _) => Some(*c1),
+        PhoneChar::Trigraph(c1, _, _) => Some(*c1),
+        PhoneChar::Tetragraph(c1, _, _, _) => Some(*c1),
+        PhoneChar::Pentagraph(c1, _, _, _, _) => Some(*c1),
+        PhoneChar::Hexagraph(c1, _, _, _, _, _) => Some(*c1),
+        PhoneChar::Heptagraph(c1, _, _, _, _, _, _) => Some(*c1),
+        PhoneChar::Sequence(s) => s.first().copied(),
         PhoneChar::Silent => None,
     }
 }
@@ -77,6 +86,46 @@ fn pattern_to_string_char(pattern: &[PhoneChar]) -> String {
             PhoneChar::Digraph(c1, c2) => {
                 result.push(*c1);
                 result.push(*c2);
+            }
+            PhoneChar::Trigraph(c1, c2, c3) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+            }
+            PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+            }
+            PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+            }
+            PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+                result.push(*c6);
+            }
+            PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+                result.push(*c6);
+                result.push(*c7);
+            }
+            PhoneChar::Sequence(s) => {
+                for c in s {
+                    result.push(*c);
+                }
             }
             PhoneChar::Silent => {}
         }
@@ -220,6 +269,12 @@ fn phone_to_byte(phone: &Phone) -> Option<u8> {
     match phone {
         Phone::Vowel(b) | Phone::Consonant(b) => Some(*b),
         Phone::Digraph(b1, _) => Some(*b1),
+        Phone::Trigraph(b1, _, _) => Some(*b1),
+        Phone::Tetragraph(b1, _, _, _) => Some(*b1),
+        Phone::Pentagraph(b1, _, _, _, _) => Some(*b1),
+        Phone::Hexagraph(b1, _, _, _, _, _) => Some(*b1),
+        Phone::Heptagraph(b1, _, _, _, _, _, _) => Some(*b1),
+        Phone::Sequence(s) => s.first().copied(),
         Phone::Silent => None,
     }
 }
@@ -233,6 +288,44 @@ fn pattern_to_bytes(pattern: &[Phone]) -> Vec<u8> {
             Phone::Digraph(b1, b2) => {
                 result.push(*b1);
                 result.push(*b2);
+            }
+            Phone::Trigraph(b1, b2, b3) => {
+                result.push(*b1);
+                result.push(*b2);
+                result.push(*b3);
+            }
+            Phone::Tetragraph(b1, b2, b3, b4) => {
+                result.push(*b1);
+                result.push(*b2);
+                result.push(*b3);
+                result.push(*b4);
+            }
+            Phone::Pentagraph(b1, b2, b3, b4, b5) => {
+                result.push(*b1);
+                result.push(*b2);
+                result.push(*b3);
+                result.push(*b4);
+                result.push(*b5);
+            }
+            Phone::Hexagraph(b1, b2, b3, b4, b5, b6) => {
+                result.push(*b1);
+                result.push(*b2);
+                result.push(*b3);
+                result.push(*b4);
+                result.push(*b5);
+                result.push(*b6);
+            }
+            Phone::Heptagraph(b1, b2, b3, b4, b5, b6, b7) => {
+                result.push(*b1);
+                result.push(*b2);
+                result.push(*b3);
+                result.push(*b4);
+                result.push(*b5);
+                result.push(*b6);
+                result.push(*b7);
+            }
+            Phone::Sequence(s) => {
+                result.extend_from_slice(s);
             }
             Phone::Silent => {}
         }
@@ -414,6 +507,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let nfa = rule_to_nfa_char(&rule);
@@ -433,6 +527,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('s')],
             context: ContextChar::BeforeVowel(vec!['e', 'i']),
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let nfa = rule_to_nfa_char(&rule);
@@ -525,6 +620,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('s')],
             context: ContextChar::BeforeVowel(vec!['e', 'i']),
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let info = rule_to_nfa_with_context_char(&rule);
@@ -560,6 +656,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let nfa = rule_to_nfa(&rule);

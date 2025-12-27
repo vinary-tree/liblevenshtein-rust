@@ -65,17 +65,11 @@ HJ -> j;
 // SPECIAL VOWELS
 // ============================================================
 
-// Æ/æ → æ (front open vowel)
-[id: 3819, name: "ae ligature", weight: 0.1, group: danish_vowels, ipa: "/æ/"]
-æ -> æ;
-
+// Æ → æ (uppercase normalization only)
 [id: 3820, name: "AE ligature", weight: 0.1, group: danish_vowels, ipa: "/æ/"]
 Æ -> æ;
 
-// Ø/ø → ø (front rounded vowel)
-[id: 3821, name: "o slash", weight: 0.1, group: danish_vowels, ipa: "/ø/"]
-ø -> ø;
-
+// Ø → ø (uppercase normalization only)
 [id: 3822, name: "O slash", weight: 0.1, group: danish_vowels, ipa: "/ø/"]
 Ø -> ø;
 
@@ -99,164 +93,50 @@ AA -> ɔ;
 // ============================================================
 // STANDARD VOWELS
 // ============================================================
-
-[id: 3828, name: "a vowel", weight: 0.15, group: danish_vowels]
-a -> a;
-
-[id: 3829, name: "A vowel", weight: 0.15, group: danish_vowels]
-A -> a;
-
-[id: 3830, name: "e vowel", weight: 0.15, group: danish_vowels]
-e -> e;
-
-[id: 3831, name: "E vowel", weight: 0.15, group: danish_vowels]
-E -> e;
-
-[id: 3832, name: "i vowel", weight: 0.15, group: danish_vowels]
-i -> i;
-
-[id: 3833, name: "I vowel", weight: 0.15, group: danish_vowels]
-I -> i;
-
-[id: 3834, name: "o vowel", weight: 0.15, group: danish_vowels]
-o -> o;
-
-[id: 3835, name: "O vowel", weight: 0.15, group: danish_vowels]
-O -> o;
-
-[id: 3836, name: "u vowel", weight: 0.15, group: danish_vowels]
-u -> u;
-
-[id: 3837, name: "U vowel", weight: 0.15, group: danish_vowels]
-U -> u;
-
-[id: 3838, name: "y vowel", weight: 0.15, group: danish_vowels, ipa: "/y/"]
-y -> y;
-
-[id: 3839, name: "Y vowel", weight: 0.15, group: danish_vowels, ipa: "/y/"]
-Y -> y;
+// Note: Standard vowels (a, e, i, o, u, y) pass through unchanged.
+// Identity mappings removed as they are no-ops - unmapped characters
+// pass through the phonetic transformation unchanged.
 
 // ============================================================
 // CONSONANTS
 // ============================================================
 
-[id: 3840, name: "b consonant", weight: 0.2, group: danish_consonants]
-b -> b;
-
-[id: 3841, name: "B consonant", weight: 0.2, group: danish_consonants]
-B -> b;
-
+// C → k (foreign letter, pronounced as k)
 [id: 3842, name: "c consonant", weight: 0.2, group: danish_consonants]
 c -> k;
 
 [id: 3843, name: "C consonant", weight: 0.2, group: danish_consonants]
 C -> k;
 
-[id: 3844, name: "d consonant", weight: 0.2, group: danish_consonants]
-d -> d;
-
-[id: 3845, name: "D consonant", weight: 0.2, group: danish_consonants]
-D -> d;
-
-[id: 3846, name: "f consonant", weight: 0.2, group: danish_consonants]
-f -> f;
-
-[id: 3847, name: "F consonant", weight: 0.2, group: danish_consonants]
-F -> f;
-
-[id: 3848, name: "g consonant", weight: 0.2, group: danish_consonants]
-g -> g;
-
-[id: 3849, name: "G consonant", weight: 0.2, group: danish_consonants]
-G -> g;
-
-[id: 3850, name: "h consonant", weight: 0.2, group: danish_consonants]
-h -> h;
-
-[id: 3851, name: "H consonant", weight: 0.2, group: danish_consonants]
-H -> h;
-
-[id: 3852, name: "j consonant", weight: 0.2, group: danish_consonants, ipa: "/j/"]
-j -> j;
-
-[id: 3853, name: "J consonant", weight: 0.2, group: danish_consonants, ipa: "/j/"]
-J -> j;
-
-[id: 3854, name: "k consonant", weight: 0.2, group: danish_consonants]
-k -> k;
-
-[id: 3855, name: "K consonant", weight: 0.2, group: danish_consonants]
-K -> k;
-
-[id: 3856, name: "l consonant", weight: 0.2, group: danish_consonants]
-l -> l;
-
-[id: 3857, name: "L consonant", weight: 0.2, group: danish_consonants]
-L -> l;
-
-[id: 3858, name: "m consonant", weight: 0.2, group: danish_consonants]
-m -> m;
-
-[id: 3859, name: "M consonant", weight: 0.2, group: danish_consonants]
-M -> m;
-
-[id: 3860, name: "n consonant", weight: 0.2, group: danish_consonants]
-n -> n;
-
-[id: 3861, name: "N consonant", weight: 0.2, group: danish_consonants]
-N -> n;
-
-[id: 3862, name: "p consonant", weight: 0.2, group: danish_consonants]
-p -> p;
-
-[id: 3863, name: "P consonant", weight: 0.2, group: danish_consonants]
-P -> p;
-
+// Q → k (foreign letter, pronounced as k)
 [id: 3864, name: "q consonant", weight: 0.2, group: danish_consonants]
 q -> k;
 
 [id: 3865, name: "Q consonant", weight: 0.2, group: danish_consonants]
 Q -> k;
 
-[id: 3866, name: "r consonant", weight: 0.2, group: danish_consonants]
-r -> r;
-
-[id: 3867, name: "R consonant", weight: 0.2, group: danish_consonants]
-R -> r;
-
-[id: 3868, name: "s consonant", weight: 0.2, group: danish_consonants]
-s -> s;
-
-[id: 3869, name: "S consonant", weight: 0.2, group: danish_consonants]
-S -> s;
-
-[id: 3870, name: "t consonant", weight: 0.2, group: danish_consonants]
-t -> t;
-
-[id: 3871, name: "T consonant", weight: 0.2, group: danish_consonants]
-T -> t;
-
-[id: 3872, name: "v consonant", weight: 0.2, group: danish_consonants]
-v -> v;
-
-[id: 3873, name: "V consonant", weight: 0.2, group: danish_consonants]
-V -> v;
-
+// W → v (foreign letter, pronounced as v)
 [id: 3874, name: "w consonant", weight: 0.2, group: danish_consonants]
 w -> v;
 
 [id: 3875, name: "W consonant", weight: 0.2, group: danish_consonants]
 W -> v;
 
+// X → ks (pronounced as k+s)
 [id: 3876, name: "x consonant", weight: 0.2, group: danish_consonants]
 x -> ks;
 
 [id: 3877, name: "X consonant", weight: 0.2, group: danish_consonants]
 X -> ks;
 
+// Z → s (foreign letter, pronounced as s)
 [id: 3878, name: "z consonant", weight: 0.2, group: danish_consonants]
 z -> s;
 
 [id: 3879, name: "Z consonant", weight: 0.2, group: danish_consonants]
 Z -> s;
+
+// Note: Other consonants (b, d, f, g, h, j, k, l, m, n, p, r, s, t, v) pass through unchanged.
+// Identity mappings removed as they are no-ops - unmapped characters
+// pass through the phonetic transformation unchanged.
 

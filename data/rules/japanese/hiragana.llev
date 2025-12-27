@@ -1,0 +1,403 @@
+// Japanese Hiragana Phonetic Rules
+// =================================
+// Phonetic rules for Japanese Hiragana (ひらがな) script to IPA.
+// Maps hiragana characters to IPA equivalents for phonetic matching.
+//
+// Hiragana is a Japanese syllabary with 46 basic characters:
+//   - 5 vowels (あ い う え お)
+//   - 40 consonant+vowel syllables
+//   - 1 mora nasal (ん)
+//
+// Additional characters via diacritics:
+//   - Dakuten (゛) - voicing (が ざ だ ば)
+//   - Handakuten (゜) - p-sound (ぱ ぴ ぷ ぺ ぽ)
+//   - Small kana - palatalization (ゃ ゅ ょ) and gemination (っ)
+//
+// Key features:
+//   - All syllables are open (CV or V structure)
+//   - Pitch accent is phonemic but not marked in kana
+//   - う is pronounced as unrounded /ɯ/
+//   - ふ is a bilabial fricative /ɸ/, not /hu/
+//
+// Rule IDs: 2200-2299
+
+@name "Japanese Hiragana Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Japanese Hiragana script"
+
+// ============================================================
+// BASIC VOWELS (あ行 / a-gyō)
+// ============================================================
+
+[id: 2200, name: "a vowel", weight: 0.05, group: hiragana_vowels, ipa: "/a/"]
+あ -> a;
+
+[id: 2201, name: "i vowel", weight: 0.05, group: hiragana_vowels, ipa: "/i/"]
+い -> i;
+
+[id: 2202, name: "u vowel", weight: 0.05, group: hiragana_vowels, ipa: "/ɯ/"]
+う -> ɯ;
+
+[id: 2203, name: "e vowel", weight: 0.05, group: hiragana_vowels, ipa: "/e/"]
+え -> e;
+
+[id: 2204, name: "o vowel", weight: 0.05, group: hiragana_vowels, ipa: "/o/"]
+お -> o;
+
+// ============================================================
+// K-ROW (か行 / ka-gyō)
+// ============================================================
+
+[id: 2205, name: "ka", weight: 0.05, group: hiragana_k]
+か -> ka;
+
+[id: 2206, name: "ki", weight: 0.05, group: hiragana_k]
+き -> ki;
+
+[id: 2207, name: "ku", weight: 0.05, group: hiragana_k, ipa: "/kɯ/"]
+く -> kɯ;
+
+[id: 2208, name: "ke", weight: 0.05, group: hiragana_k]
+け -> ke;
+
+[id: 2209, name: "ko", weight: 0.05, group: hiragana_k]
+こ -> ko;
+
+// ============================================================
+// S-ROW (さ行 / sa-gyō)
+// ============================================================
+// Note: し uses alveo-palatal ɕ ([:alveopalatal:] class)
+
+[id: 2210, name: "sa", weight: 0.05, group: hiragana_s]
+さ -> sa;
+
+// し is /ɕi/ (alveo-palatal fricative, matches [:alveopalatal:] class)
+[id: 2211, name: "shi", weight: 0.05, group: hiragana_s, ipa: "/ɕi/"]
+し -> ɕi;
+
+[id: 2212, name: "su", weight: 0.05, group: hiragana_s, ipa: "/sɯ/"]
+す -> sɯ;
+
+[id: 2213, name: "se", weight: 0.05, group: hiragana_s]
+せ -> se;
+
+[id: 2214, name: "so", weight: 0.05, group: hiragana_s]
+そ -> so;
+
+// ============================================================
+// T-ROW (た行 / ta-gyō)
+// ============================================================
+// Note: ち uses alveo-palatal t͡ɕ ([:alveopalatal:] class)
+
+[id: 2215, name: "ta", weight: 0.05, group: hiragana_t]
+た -> ta;
+
+// ち is /t͡ɕi/ (alveo-palatal affricate, matches [:alveopalatal:] class)
+[id: 2216, name: "chi", weight: 0.05, group: hiragana_t, ipa: "/t͡ɕi/"]
+ち -> t͡ɕi;
+
+// つ is /t͡sɯ/ (alveolar affricate)
+[id: 2217, name: "tsu", weight: 0.05, group: hiragana_t, ipa: "/t͡sɯ/"]
+つ -> t͡sɯ;
+
+[id: 2218, name: "te", weight: 0.05, group: hiragana_t]
+て -> te;
+
+[id: 2219, name: "to", weight: 0.05, group: hiragana_t]
+と -> to;
+
+// ============================================================
+// N-ROW (な行 / na-gyō)
+// ============================================================
+
+[id: 2220, name: "na", weight: 0.05, group: hiragana_n]
+な -> na;
+
+[id: 2221, name: "ni", weight: 0.05, group: hiragana_n]
+に -> ni;
+
+[id: 2222, name: "nu", weight: 0.05, group: hiragana_n, ipa: "/nɯ/"]
+ぬ -> nɯ;
+
+[id: 2223, name: "ne", weight: 0.05, group: hiragana_n]
+ね -> ne;
+
+[id: 2224, name: "no", weight: 0.05, group: hiragana_n]
+の -> no;
+
+// ============================================================
+// H-ROW (は行 / ha-gyō)
+// ============================================================
+
+[id: 2225, name: "ha", weight: 0.05, group: hiragana_h]
+は -> ha;
+
+[id: 2226, name: "hi", weight: 0.05, group: hiragana_h, ipa: "/çi/"]
+ひ -> çi;
+
+// ふ is /ɸɯ/ (bilabial fricative, unique to Japanese)
+[id: 2227, name: "fu", weight: 0.05, group: hiragana_h, ipa: "/ɸɯ/"]
+ふ -> ɸɯ;
+
+[id: 2228, name: "he", weight: 0.05, group: hiragana_h]
+へ -> he;
+
+[id: 2229, name: "ho", weight: 0.05, group: hiragana_h]
+ほ -> ho;
+
+// ============================================================
+// M-ROW (ま行 / ma-gyō)
+// ============================================================
+
+[id: 2230, name: "ma", weight: 0.05, group: hiragana_m]
+ま -> ma;
+
+[id: 2231, name: "mi", weight: 0.05, group: hiragana_m]
+み -> mi;
+
+[id: 2232, name: "mu", weight: 0.05, group: hiragana_m, ipa: "/mɯ/"]
+む -> mɯ;
+
+[id: 2233, name: "me", weight: 0.05, group: hiragana_m]
+め -> me;
+
+[id: 2234, name: "mo", weight: 0.05, group: hiragana_m]
+も -> mo;
+
+// ============================================================
+// Y-ROW (や行 / ya-gyō)
+// ============================================================
+
+[id: 2235, name: "ya", weight: 0.05, group: hiragana_y]
+や -> ja;
+
+[id: 2236, name: "yu", weight: 0.05, group: hiragana_y, ipa: "/jɯ/"]
+ゆ -> jɯ;
+
+[id: 2237, name: "yo", weight: 0.05, group: hiragana_y]
+よ -> jo;
+
+// ============================================================
+// R-ROW (ら行 / ra-gyō)
+// ============================================================
+// Japanese /r/ is an alveolar tap [ɾ], between English r and l
+
+[id: 2238, name: "ra", weight: 0.05, group: hiragana_r, ipa: "/ɾa/"]
+ら -> ɾa;
+
+[id: 2239, name: "ri", weight: 0.05, group: hiragana_r, ipa: "/ɾi/"]
+り -> ɾi;
+
+[id: 2240, name: "ru", weight: 0.05, group: hiragana_r, ipa: "/ɾɯ/"]
+る -> ɾɯ;
+
+[id: 2241, name: "re", weight: 0.05, group: hiragana_r, ipa: "/ɾe/"]
+れ -> ɾe;
+
+[id: 2242, name: "ro", weight: 0.05, group: hiragana_r, ipa: "/ɾo/"]
+ろ -> ɾo;
+
+// ============================================================
+// W-ROW (わ行 / wa-gyō)
+// ============================================================
+// Modern Japanese only uses わ and を (particle)
+
+[id: 2243, name: "wa", weight: 0.05, group: hiragana_w]
+わ -> wa;
+
+// を (wo) is usually pronounced as /o/ in modern Japanese
+[id: 2244, name: "wo particle", weight: 0.05, group: hiragana_w]
+を -> o;
+
+// ============================================================
+// MORA NASAL (ん)
+// ============================================================
+// ん (n) changes pronunciation based on following sound:
+// - /m/ before labials
+// - /ŋ/ before velars
+// - /n/ elsewhere or word-final
+// For simplicity, map to moraic nasal marker
+
+[id: 2245, name: "n moraic", weight: 0.05, group: hiragana_nasal, ipa: "/ɴ/"]
+ん -> ɴ;
+
+// ============================================================
+// VOICED CONSONANTS - DAKUTEN (濁点)
+// ============================================================
+
+// G-sounds (が行)
+[id: 2250, name: "ga", weight: 0.05, group: hiragana_voiced]
+が -> ga;
+
+[id: 2251, name: "gi", weight: 0.05, group: hiragana_voiced]
+ぎ -> gi;
+
+[id: 2252, name: "gu", weight: 0.05, group: hiragana_voiced, ipa: "/gɯ/"]
+ぐ -> gɯ;
+
+[id: 2253, name: "ge", weight: 0.05, group: hiragana_voiced]
+げ -> ge;
+
+[id: 2254, name: "go", weight: 0.05, group: hiragana_voiced]
+ご -> go;
+
+// Z-sounds (ざ行)
+[id: 2255, name: "za", weight: 0.05, group: hiragana_voiced]
+ざ -> za;
+
+// じ is /d͡ʑi/ (voiced alveo-palatal affricate)
+[id: 2256, name: "ji", weight: 0.05, group: hiragana_voiced, ipa: "/d͡ʑi/"]
+じ -> d͡ʑi;
+
+[id: 2257, name: "zu", weight: 0.05, group: hiragana_voiced, ipa: "/zɯ/"]
+ず -> zɯ;
+
+[id: 2258, name: "ze", weight: 0.05, group: hiragana_voiced]
+ぜ -> ze;
+
+[id: 2259, name: "zo", weight: 0.05, group: hiragana_voiced]
+ぞ -> zo;
+
+// D-sounds (だ行)
+[id: 2260, name: "da", weight: 0.05, group: hiragana_voiced]
+だ -> da;
+
+// ぢ is /d͡ʑi/ (same as じ in modern Japanese)
+[id: 2261, name: "di/ji", weight: 0.05, group: hiragana_voiced, ipa: "/d͡ʑi/"]
+ぢ -> d͡ʑi;
+
+// づ is /d͡zɯ/ (same as ず in many dialects)
+[id: 2262, name: "du/zu", weight: 0.05, group: hiragana_voiced, ipa: "/d͡zɯ/"]
+づ -> d͡zɯ;
+
+[id: 2263, name: "de", weight: 0.05, group: hiragana_voiced]
+で -> de;
+
+[id: 2264, name: "do", weight: 0.05, group: hiragana_voiced]
+ど -> do;
+
+// B-sounds (ば行)
+[id: 2265, name: "ba", weight: 0.05, group: hiragana_voiced]
+ば -> ba;
+
+[id: 2266, name: "bi", weight: 0.05, group: hiragana_voiced]
+び -> bi;
+
+[id: 2267, name: "bu", weight: 0.05, group: hiragana_voiced, ipa: "/bɯ/"]
+ぶ -> bɯ;
+
+[id: 2268, name: "be", weight: 0.05, group: hiragana_voiced]
+べ -> be;
+
+[id: 2269, name: "bo", weight: 0.05, group: hiragana_voiced]
+ぼ -> bo;
+
+// ============================================================
+// SEMI-VOICED - HANDAKUTEN (半濁点)
+// ============================================================
+
+// P-sounds (ぱ行)
+[id: 2270, name: "pa", weight: 0.05, group: hiragana_handakuten]
+ぱ -> pa;
+
+[id: 2271, name: "pi", weight: 0.05, group: hiragana_handakuten]
+ぴ -> pi;
+
+[id: 2272, name: "pu", weight: 0.05, group: hiragana_handakuten, ipa: "/pɯ/"]
+ぷ -> pɯ;
+
+[id: 2273, name: "pe", weight: 0.05, group: hiragana_handakuten]
+ぺ -> pe;
+
+[id: 2274, name: "po", weight: 0.05, group: hiragana_handakuten]
+ぽ -> po;
+
+// ============================================================
+// SMALL KANA - SOKUON (促音) - Gemination
+// ============================================================
+// Small っ indicates consonant gemination (doubling)
+// Represented as ː (length marker) applied to following consonant
+
+[id: 2275, name: "sokuon gemination", weight: 0.05, group: hiragana_small]
+っ -> ː;
+
+// ============================================================
+// SMALL KANA - YŌON (拗音) - Palatalization
+// ============================================================
+// Small ゃ ゅ ょ combine with i-row kana for palatalized sounds
+
+[id: 2276, name: "small ya", weight: 0.05, group: hiragana_small]
+ゃ -> a;
+
+[id: 2277, name: "small yu", weight: 0.05, group: hiragana_small, ipa: "/ɯ/"]
+ゅ -> ɯ;
+
+[id: 2278, name: "small yo", weight: 0.05, group: hiragana_small]
+ょ -> o;
+
+// Small vowels (for foreign sounds)
+[id: 2279, name: "small a", weight: 0.05, group: hiragana_small]
+ぁ -> a;
+
+[id: 2280, name: "small i", weight: 0.05, group: hiragana_small]
+ぃ -> i;
+
+[id: 2281, name: "small u", weight: 0.05, group: hiragana_small, ipa: "/ɯ/"]
+ぅ -> ɯ;
+
+[id: 2282, name: "small e", weight: 0.05, group: hiragana_small]
+ぇ -> e;
+
+[id: 2283, name: "small o", weight: 0.05, group: hiragana_small]
+ぉ -> o;
+
+[id: 2284, name: "small wa", weight: 0.05, group: hiragana_small]
+ゎ -> wa;
+
+// ============================================================
+// OBSOLETE KANA (歴史的仮名遣い)
+// ============================================================
+// Historical kana that are no longer in common use
+
+[id: 2285, name: "wi obsolete", weight: 0.05, group: hiragana_obsolete]
+ゐ -> i;
+
+[id: 2286, name: "we obsolete", weight: 0.05, group: hiragana_obsolete]
+ゑ -> e;
+
+// ============================================================
+// PUNCTUATION
+// ============================================================
+
+[id: 2290, name: "full stop", weight: 0.1, group: hiragana_punctuation]
+。 -> .;
+
+[id: 2291, name: "comma", weight: 0.1, group: hiragana_punctuation]
+、 -> ,;
+
+[id: 2292, name: "middle dot", weight: 0.1, group: hiragana_punctuation]
+・ -> ;
+
+[id: 2293, name: "long vowel mark", weight: 0.1, group: hiragana_punctuation]
+ー -> ː;
+
+// ============================================================
+// IPA SIMPLIFICATION
+// ============================================================
+
+[id: 2295, name: "double length marker", weight: 0.2, group: hiragana_simplification]
+ːː -> ː;
+
+[id: 2296, name: "double moraic nasal", weight: 0.2, group: hiragana_simplification]
+ɴɴ -> ɴ;
+
+[id: 2297, name: "double tap", weight: 0.2, group: hiragana_simplification]
+ɾɾ -> ɾ;
+
+[id: 2298, name: "double bilabial fricative", weight: 0.2, group: hiragana_simplification]
+ɸɸ -> ɸ;
+
+[id: 2299, name: "double palatal fricative", weight: 0.2, group: hiragana_simplification]
+çç -> ç;
+

@@ -1,0 +1,226 @@
+// Estonian Base Phonetic Rules
+// ============================
+// Phonetic rules for Estonian (eesti keel).
+// Spoken by approximately 1.1 million people in Estonia and
+// small diaspora communities.
+//
+// Estonian features:
+//   - Uralic language family (Finnic branch, close to Finnish)
+//   - THREE degrees of quantity (short, long, overlong)
+//   - 9 vowels + 36 diphthongs
+//   - Palatalized consonants
+//   - No vowel harmony (unlike Finnish)
+//   - Complex consonant gradation
+//
+// Orthography:
+//   - ä, ö, ü, õ for front/back vowels
+//   - õ for /ɤ/ (back unrounded)
+//   - Double letters for long sounds
+//   - š, ž for postalveolar fricatives (loanwords)
+//
+// Rule IDs: 11900-11999
+
+@name "Estonian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Estonian"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// Note: Vowels e, i, o, u pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 11900, name: "a", weight: 0.05, group: estonian_vowels, ipa: "/ɑ/"]
+a -> ɑ;
+
+[id: 11905, name: "ä front open", weight: 0.05, group: estonian_vowels, ipa: "/æ/"]
+ä -> æ;
+
+[id: 11906, name: "ö front rounded", weight: 0.05, group: estonian_vowels, ipa: "/ø/"]
+ö -> ø;
+
+[id: 11907, name: "ü front high rounded", weight: 0.05, group: estonian_vowels, ipa: "/y/"]
+ü -> y;
+
+[id: 11908, name: "õ back unrounded", weight: 0.05, group: estonian_vowels, ipa: "/ɤ/"]
+õ -> ɤ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 11910, name: "aa long", weight: 0.05, group: estonian_long, ipa: "/ɑː/"]
+aa -> ɑː;
+
+[id: 11911, name: "ee long", weight: 0.05, group: estonian_long, ipa: "/eː/"]
+ee -> eː;
+
+[id: 11912, name: "ii long", weight: 0.05, group: estonian_long, ipa: "/iː/"]
+ii -> iː;
+
+[id: 11913, name: "oo long", weight: 0.05, group: estonian_long, ipa: "/oː/"]
+oo -> oː;
+
+[id: 11914, name: "uu long", weight: 0.05, group: estonian_long, ipa: "/uː/"]
+uu -> uː;
+
+[id: 11915, name: "ää long", weight: 0.05, group: estonian_long, ipa: "/æː/"]
+ää -> æː;
+
+[id: 11916, name: "öö long", weight: 0.05, group: estonian_long, ipa: "/øː/"]
+öö -> øː;
+
+[id: 11917, name: "üü long", weight: 0.05, group: estonian_long, ipa: "/yː/"]
+üü -> yː;
+
+[id: 11918, name: "õõ long", weight: 0.05, group: estonian_long, ipa: "/ɤː/"]
+õõ -> ɤː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+// Note: Diphthongs ei, oi, ui, ou pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 11920, name: "ai diphthong", weight: 0.05, group: estonian_diphthongs, ipa: "/ɑi/"]
+ai -> ɑi;
+
+[id: 11924, name: "äi diphthong", weight: 0.05, group: estonian_diphthongs, ipa: "/æi/"]
+äi -> æi;
+
+[id: 11925, name: "õi diphthong", weight: 0.05, group: estonian_diphthongs, ipa: "/ɤi/"]
+õi -> ɤi;
+
+[id: 11926, name: "öi diphthong", weight: 0.05, group: estonian_diphthongs, ipa: "/øi/"]
+öi -> øi;
+
+[id: 11927, name: "au diphthong", weight: 0.05, group: estonian_diphthongs, ipa: "/ɑu/"]
+au -> ɑu;
+
+[id: 11929, name: "ea diphthong", weight: 0.05, group: estonian_diphthongs, ipa: "/eɑ/"]
+ea -> eɑ;
+
+[id: 11930, name: "õe diphthong", weight: 0.05, group: estonian_diphthongs, ipa: "/ɤe/"]
+õe -> ɤe;
+
+// ============================================================
+// PALATALIZED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 11933, name: "palatalized t", weight: 0.05, group: estonian_palatal, ipa: "/tʲ/"]
+t' -> tʲ;
+
+[id: 11934, name: "palatalized n", weight: 0.05, group: estonian_palatal, ipa: "/nʲ/"]
+n' -> nʲ;
+
+[id: 11935, name: "palatalized l", weight: 0.05, group: estonian_palatal, ipa: "/lʲ/"]
+l' -> lʲ;
+
+[id: 11936, name: "palatalized s", weight: 0.05, group: estonian_palatal, ipa: "/sʲ/"]
+s' -> sʲ;
+
+// ============================================================
+// GEMINATE CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 11938, name: "pp geminate", weight: 0.05, group: estonian_geminates, ipa: "/pː/"]
+pp -> pː;
+
+[id: 11939, name: "tt geminate", weight: 0.05, group: estonian_geminates, ipa: "/tː/"]
+tt -> tː;
+
+[id: 11940, name: "kk geminate", weight: 0.05, group: estonian_geminates, ipa: "/kː/"]
+kk -> kː;
+
+[id: 11941, name: "ss geminate", weight: 0.05, group: estonian_geminates, ipa: "/sː/"]
+ss -> sː;
+
+[id: 11942, name: "ll geminate", weight: 0.05, group: estonian_geminates, ipa: "/lː/"]
+ll -> lː;
+
+[id: 11943, name: "nn geminate", weight: 0.05, group: estonian_geminates, ipa: "/nː/"]
+nn -> nː;
+
+[id: 11944, name: "mm geminate", weight: 0.05, group: estonian_geminates, ipa: "/mː/"]
+mm -> mː;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// Note: Stops p, t, k pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 11947, name: "b", weight: 0.05, group: estonian_stops, ipa: "/p/"]
+b -> p;
+
+[id: 11949, name: "d", weight: 0.05, group: estonian_stops, ipa: "/t/"]
+d -> t;
+
+[id: 11951, name: "g", weight: 0.05, group: estonian_stops, ipa: "/k/"]
+g -> k;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// Note: Fricatives f, s, h pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 11955, name: "v", weight: 0.05, group: estonian_fricatives, ipa: "/ʋ/"]
+v -> ʋ;
+
+[id: 11957, name: "š postalveolar", weight: 0.05, group: estonian_fricatives, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 11958, name: "ž voiced postalveolar", weight: 0.05, group: estonian_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Note: Nasals m, n pass through unchanged by default.
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Note: Liquids and approximants l, r, j pass through unchanged by default.
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 11980, name: "eesti estonian", weight: 0.02, group: estonian_common]
+eesti -> eːsti;
+
+[id: 11981, name: "tere hello", weight: 0.02, group: estonian_common]
+tere -> tere;
+
+[id: 11982, name: "aitäh thank you", weight: 0.02, group: estonian_common]
+aitäh -> ɑitæh;
+
+[id: 11983, name: "jah yes", weight: 0.02, group: estonian_common]
+jah -> jɑh;
+
+// ei (no) - passes through unchanged
+
+[id: 11985, name: "vesi water", weight: 0.02, group: estonian_common]
+vesi -> ʋesi;
+
+[id: 11986, name: "leib bread food", weight: 0.02, group: estonian_common]
+leib -> leip;
+
+[id: 11987, name: "maja house", weight: 0.02, group: estonian_common]
+maja -> mɑjɑ;
+
+[id: 11988, name: "inimene person", weight: 0.02, group: estonian_common]
+inimene -> inimene;
+
+[id: 11989, name: "laps child", weight: 0.02, group: estonian_common]
+laps -> lɑps;
+

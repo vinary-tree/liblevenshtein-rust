@@ -1,0 +1,194 @@
+// Khmer Base Phonetic Rules
+// =========================
+// Phonetic rules for Khmer (ភាសាខ្មែរ / Phéasa Khmêr).
+// Spoken by approximately 16 million people in Cambodia and
+// surrounding regions.
+//
+// Khmer features:
+//   - Austroasiatic language family (Mon-Khmer)
+//   - Khmer script (abugida)
+//   - NO lexical tones (unusual for SE Asia)
+//   - Aspirated vs unaspirated stops
+//   - Register distinction (chest voice vs head voice)
+//   - Rich vowel system (13-15 vowels)
+//   - Complex consonant clusters
+//
+// Orthography (Romanization - ALA-LC):
+//   - ph, th, kh for aspirated stops
+//   - ng for /ŋ/, nh for /ɲ/
+//   - ch for /t͡ɕ/
+//   - â, ê, î, ô, û for various vowels
+//
+// Rule IDs: 10900-10999
+
+@name "Khmer Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Khmer"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// [id: 10900] Identity mapping removed: a -> a (passes through unchanged)
+
+[id: 10901, name: "â schwa-like", weight: 0.05, group: khmer_vowels, ipa: "/ɑ/"]
+â -> ɑ;
+
+// [id: 10902] Identity mapping removed: e -> e (passes through unchanged)
+
+[id: 10903, name: "ê open e", weight: 0.05, group: khmer_vowels, ipa: "/ɛ/"]
+ê -> ɛ;
+
+// [id: 10904] Identity mapping removed: i -> i (passes through unchanged)
+
+// [id: 10905] Identity mapping removed: o -> o (passes through unchanged)
+
+[id: 10906, name: "ô schwa", weight: 0.05, group: khmer_vowels, ipa: "/ə/"]
+ô -> ə;
+
+// [id: 10907] Identity mapping removed: u -> u (passes through unchanged)
+
+[id: 10908, name: "ou back rounded", weight: 0.05, group: khmer_vowels, ipa: "/ou/"]
+ou -> ou;
+
+[id: 10909, name: "oe central", weight: 0.05, group: khmer_vowels, ipa: "/ɤ/"]
+oe -> ɤ;
+
+[id: 10910, name: "ue high front rounded", weight: 0.05, group: khmer_vowels, ipa: "/ɨ/"]
+ue -> ɨ;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+[id: 10915, name: "ai diphthong", weight: 0.05, group: khmer_diphthongs, ipa: "/ai/"]
+ai -> ai;
+
+[id: 10916, name: "ao diphthong", weight: 0.05, group: khmer_diphthongs, ipa: "/au/"]
+ao -> au;
+
+[id: 10917, name: "ea diphthong", weight: 0.05, group: khmer_diphthongs, ipa: "/iə/"]
+ea -> iə;
+
+[id: 10918, name: "oa diphthong", weight: 0.05, group: khmer_diphthongs, ipa: "/uə/"]
+oa -> uə;
+
+// ============================================================
+// ASPIRATED STOPS (weight 0.05)
+// ============================================================
+
+[id: 10920, name: "ph aspirated", weight: 0.05, group: khmer_aspirated, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 10921, name: "th aspirated", weight: 0.05, group: khmer_aspirated, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 10922, name: "kh aspirated", weight: 0.05, group: khmer_aspirated, ipa: "/kʰ/"]
+kh -> kʰ;
+
+[id: 10923, name: "chh aspirated affricate", weight: 0.05, group: khmer_aspirated, ipa: "/t͡ɕʰ/"]
+chh -> t͡ɕʰ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+// [id: 10925] Identity mapping removed: p -> p (passes through unchanged)
+
+// [id: 10926] Identity mapping removed: b -> b (passes through unchanged)
+
+// [id: 10927] Identity mapping removed: t -> t (passes through unchanged)
+
+// [id: 10928] Identity mapping removed: d -> d (passes through unchanged)
+
+// [id: 10929] Identity mapping removed: k -> k (passes through unchanged)
+
+[id: 10930, name: "glottal stop", weight: 0.05, group: khmer_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10935, name: "ch voiceless", weight: 0.05, group: khmer_affricates, ipa: "/t͡ɕ/"]
+ch -> t͡ɕ;
+
+[id: 10936, name: "j voiced", weight: 0.05, group: khmer_affricates, ipa: "/d͡ʑ/"]
+j -> d͡ʑ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// [id: 10940] Identity mapping removed: s -> s (passes through unchanged)
+
+// [id: 10941] Identity mapping removed: h -> h (passes through unchanged)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// [id: 10945] Identity mapping removed: m -> m (passes through unchanged)
+
+// [id: 10946] Identity mapping removed: n -> n (passes through unchanged)
+
+[id: 10947, name: "ng velar nasal", weight: 0.05, group: khmer_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+[id: 10948, name: "nh palatal nasal", weight: 0.05, group: khmer_nasals, ipa: "/ɲ/"]
+nh -> ɲ;
+
+[id: 10949, name: "ny palatal alt", weight: 0.05, group: khmer_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// [id: 10952] Identity mapping removed: l -> l (passes through unchanged)
+
+// [id: 10953] Identity mapping removed: r -> r (passes through unchanged)
+
+// [id: 10954] Identity mapping removed: w -> w (passes through unchanged)
+
+[id: 10955, name: "y", weight: 0.05, group: khmer_approximants, ipa: "/j/"]
+y -> j;
+
+[id: 10956, name: "v", weight: 0.05, group: khmer_approximants, ipa: "/ʋ/"]
+v -> ʋ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 10970, name: "khmer", weight: 0.02, group: khmer_common]
+khmer -> kʰmae;
+
+[id: 10971, name: "sua sdei hello", weight: 0.02, group: khmer_common]
+sua sdei -> suə sdəi;
+
+[id: 10972, name: "akun thank you", weight: 0.02, group: khmer_common]
+akun -> aːkun;
+
+[id: 10973, name: "bat yes male", weight: 0.02, group: khmer_common]
+bat -> baːt;
+
+[id: 10974, name: "cha yes female", weight: 0.02, group: khmer_common]
+cha -> t͡ɕaː;
+
+[id: 10975, name: "te no", weight: 0.02, group: khmer_common]
+te -> teː;
+
+[id: 10976, name: "tuek water", weight: 0.02, group: khmer_common]
+tuek -> tɨk;
+
+[id: 10977, name: "bay rice food", weight: 0.02, group: khmer_common]
+bay -> baːj;
+
+[id: 10978, name: "pteah house", weight: 0.02, group: khmer_common]
+pteah -> pteah;
+
+[id: 10979, name: "manuh person", weight: 0.02, group: khmer_common]
+manuh -> mənuh;
+

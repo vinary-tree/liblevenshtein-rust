@@ -1,0 +1,374 @@
+// Inuktitut Base Phonetic Rules
+// =============================
+// Phonetic rules for Inuktitut (ᐃᓄᒃᑎᑐᑦ).
+// Spoken by approximately 35,000 people in Nunavut and other Canadian territories.
+//
+// Inuktitut features:
+//   - Canadian Aboriginal Syllabics writing system
+//   - Also written in Inuktitut Latin orthography (qaliujaaqpait)
+//   - Uvular consonants: q, ɢ (voiced uvular), ʁ (uvular fricative)
+//   - Three vowels: i, u, a with phonemic length distinction
+//   - Phonemic gemination (double consonants)
+//   - Complex consonant clusters
+//   - Polysynthetic morphology
+//
+// Writing systems:
+//   - Inuktitut syllabics (ᐃᓄᒃᑎᑐᑦ)
+//   - Latin orthography: vowels a, i, u; long vowels aa, ii, uu
+//   - Unique letters: ł (voiceless lateral fricative in some dialects)
+//
+// Rule IDs: 8600-8799
+
+@name "Inuktitut Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Inuktitut (Eastern Canadian Inuktitut)"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// Inuktitut has only 3 vowel qualities
+// ============================================================
+
+[id: 8600, name: "i short", weight: 0.05, group: inuktitut_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 8601, name: "u short", weight: 0.05, group: inuktitut_vowels, ipa: "/u/"]
+u -> u;
+
+[id: 8602, name: "a short", weight: 0.05, group: inuktitut_vowels, ipa: "/a/"]
+a -> a;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// Marked by doubling in Latin orthography
+// ============================================================
+
+[id: 8605, name: "ii long", weight: 0.05, group: inuktitut_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 8606, name: "uu long", weight: 0.05, group: inuktitut_long_vowels, ipa: "/uː/"]
+uu -> uː;
+
+[id: 8607, name: "aa long", weight: 0.05, group: inuktitut_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 8610, name: "p", weight: 0.05, group: inuktitut_stops, ipa: "/p/"]
+p -> p;
+
+[id: 8611, name: "t", weight: 0.05, group: inuktitut_stops, ipa: "/t/"]
+t -> t;
+
+[id: 8612, name: "k", weight: 0.05, group: inuktitut_stops, ipa: "/k/"]
+k -> k;
+
+[id: 8613, name: "q uvular", weight: 0.05, group: inuktitut_stops, ipa: "/q/"]
+q -> q;
+
+// Voiced stops (in some dialects/loanwords)
+[id: 8614, name: "g", weight: 0.05, group: inuktitut_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 8620, name: "s", weight: 0.05, group: inuktitut_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 8621, name: "v labiodental", weight: 0.05, group: inuktitut_fricatives, ipa: "/v/"]
+v -> v;
+
+// Some orthographies use 'h'
+[id: 8622, name: "h", weight: 0.05, group: inuktitut_fricatives, ipa: "/h/"]
+h -> h;
+
+// Uvular fricative (voiced)
+[id: 8623, name: "r uvular fricative", weight: 0.05, group: inuktitut_fricatives, ipa: "/ʁ/"]
+r -> ʁ;
+
+// Voiceless lateral fricative (some dialects)
+[id: 8624, name: "l-slash voiceless lateral", weight: 0.05, group: inuktitut_fricatives, ipa: "/ɬ/"]
+ł -> ɬ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 8630, name: "m", weight: 0.05, group: inuktitut_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 8631, name: "n", weight: 0.05, group: inuktitut_nasals, ipa: "/n/"]
+n -> n;
+
+[id: 8632, name: "ng velar nasal", weight: 0.05, group: inuktitut_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// Alternative spelling for velar nasal
+[id: 8633, name: "nng velar nasal alt", weight: 0.05, group: inuktitut_nasals, ipa: "/ŋ/"]
+ŋ -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 8640, name: "l", weight: 0.05, group: inuktitut_liquids, ipa: "/l/"]
+l -> l;
+
+[id: 8641, name: "j approx", weight: 0.05, group: inuktitut_approximants, ipa: "/j/"]
+j -> j;
+
+// Alternative y spelling
+[id: 8642, name: "y approx alt", weight: 0.05, group: inuktitut_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// GEMINATE CONSONANTS (weight 0.05)
+// Phonemic in Inuktitut - represented with doubled letters
+// ============================================================
+
+[id: 8650, name: "pp geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/pː/"]
+pp -> pː;
+
+[id: 8651, name: "tt geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/tː/"]
+tt -> tː;
+
+[id: 8652, name: "kk geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/kː/"]
+kk -> kː;
+
+[id: 8653, name: "qq geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/qː/"]
+qq -> qː;
+
+[id: 8654, name: "mm geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/mː/"]
+mm -> mː;
+
+[id: 8655, name: "nn geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/nː/"]
+nn -> nː;
+
+[id: 8656, name: "ll geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/lː/"]
+ll -> lː;
+
+[id: 8657, name: "ss geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/sː/"]
+ss -> sː;
+
+[id: 8658, name: "vv geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/vː/"]
+vv -> vː;
+
+[id: 8659, name: "rr geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/ʁː/"]
+rr -> ʁː;
+
+[id: 8660, name: "jj geminate", weight: 0.05, group: inuktitut_geminates, ipa: "/jː/"]
+jj -> jː;
+
+// ============================================================
+// INUKTITUT SYLLABICS - I series (ᐃ)
+// ============================================================
+
+[id: 8670, name: "syllabic i", weight: 0.05, group: inuktitut_syllabics, ipa: "/i/"]
+ᐃ -> i;
+
+[id: 8671, name: "syllabic pi", weight: 0.05, group: inuktitut_syllabics, ipa: "/pi/"]
+ᐱ -> pi;
+
+[id: 8672, name: "syllabic ti", weight: 0.05, group: inuktitut_syllabics, ipa: "/ti/"]
+ᑎ -> ti;
+
+[id: 8673, name: "syllabic ki", weight: 0.05, group: inuktitut_syllabics, ipa: "/ki/"]
+ᑭ -> ki;
+
+[id: 8674, name: "syllabic gi", weight: 0.05, group: inuktitut_syllabics, ipa: "/ɡi/"]
+ᒋ -> ɡi;
+
+[id: 8675, name: "syllabic mi", weight: 0.05, group: inuktitut_syllabics, ipa: "/mi/"]
+ᒥ -> mi;
+
+[id: 8676, name: "syllabic ni", weight: 0.05, group: inuktitut_syllabics, ipa: "/ni/"]
+ᓂ -> ni;
+
+[id: 8677, name: "syllabic si", weight: 0.05, group: inuktitut_syllabics, ipa: "/si/"]
+ᓯ -> si;
+
+[id: 8678, name: "syllabic li", weight: 0.05, group: inuktitut_syllabics, ipa: "/li/"]
+ᓕ -> li;
+
+[id: 8679, name: "syllabic ji", weight: 0.05, group: inuktitut_syllabics, ipa: "/ji/"]
+ᔨ -> ji;
+
+[id: 8680, name: "syllabic vi", weight: 0.05, group: inuktitut_syllabics, ipa: "/vi/"]
+ᕕ -> vi;
+
+[id: 8681, name: "syllabic ri", weight: 0.05, group: inuktitut_syllabics, ipa: "/ʁi/"]
+ᕆ -> ʁi;
+
+[id: 8682, name: "syllabic qi", weight: 0.05, group: inuktitut_syllabics, ipa: "/qi/"]
+ᕿ -> qi;
+
+[id: 8683, name: "syllabic ngi", weight: 0.05, group: inuktitut_syllabics, ipa: "/ŋi/"]
+ᖏ -> ŋi;
+
+// ============================================================
+// INUKTITUT SYLLABICS - U series (ᐅ)
+// ============================================================
+
+[id: 8690, name: "syllabic u", weight: 0.05, group: inuktitut_syllabics, ipa: "/u/"]
+ᐅ -> u;
+
+[id: 8691, name: "syllabic pu", weight: 0.05, group: inuktitut_syllabics, ipa: "/pu/"]
+ᐳ -> pu;
+
+[id: 8692, name: "syllabic tu", weight: 0.05, group: inuktitut_syllabics, ipa: "/tu/"]
+ᑐ -> tu;
+
+[id: 8693, name: "syllabic ku", weight: 0.05, group: inuktitut_syllabics, ipa: "/ku/"]
+ᑯ -> ku;
+
+[id: 8694, name: "syllabic gu", weight: 0.05, group: inuktitut_syllabics, ipa: "/ɡu/"]
+ᒍ -> ɡu;
+
+[id: 8695, name: "syllabic mu", weight: 0.05, group: inuktitut_syllabics, ipa: "/mu/"]
+ᒧ -> mu;
+
+[id: 8696, name: "syllabic nu", weight: 0.05, group: inuktitut_syllabics, ipa: "/nu/"]
+ᓄ -> nu;
+
+[id: 8697, name: "syllabic su", weight: 0.05, group: inuktitut_syllabics, ipa: "/su/"]
+ᓱ -> su;
+
+[id: 8698, name: "syllabic lu", weight: 0.05, group: inuktitut_syllabics, ipa: "/lu/"]
+ᓗ -> lu;
+
+[id: 8699, name: "syllabic ju", weight: 0.05, group: inuktitut_syllabics, ipa: "/ju/"]
+ᔪ -> ju;
+
+[id: 8700, name: "syllabic vu", weight: 0.05, group: inuktitut_syllabics, ipa: "/vu/"]
+ᕗ -> vu;
+
+[id: 8701, name: "syllabic ru", weight: 0.05, group: inuktitut_syllabics, ipa: "/ʁu/"]
+ᕈ -> ʁu;
+
+[id: 8702, name: "syllabic qu", weight: 0.05, group: inuktitut_syllabics, ipa: "/qu/"]
+ᖁ -> qu;
+
+[id: 8703, name: "syllabic ngu", weight: 0.05, group: inuktitut_syllabics, ipa: "/ŋu/"]
+ᖑ -> ŋu;
+
+// ============================================================
+// INUKTITUT SYLLABICS - A series (ᐊ)
+// ============================================================
+
+[id: 8710, name: "syllabic a", weight: 0.05, group: inuktitut_syllabics, ipa: "/a/"]
+ᐊ -> a;
+
+[id: 8711, name: "syllabic pa", weight: 0.05, group: inuktitut_syllabics, ipa: "/pa/"]
+ᐸ -> pa;
+
+[id: 8712, name: "syllabic ta", weight: 0.05, group: inuktitut_syllabics, ipa: "/ta/"]
+ᑕ -> ta;
+
+[id: 8713, name: "syllabic ka", weight: 0.05, group: inuktitut_syllabics, ipa: "/ka/"]
+ᑲ -> ka;
+
+[id: 8714, name: "syllabic ga", weight: 0.05, group: inuktitut_syllabics, ipa: "/ɡa/"]
+ᒐ -> ɡa;
+
+[id: 8715, name: "syllabic ma", weight: 0.05, group: inuktitut_syllabics, ipa: "/ma/"]
+ᒪ -> ma;
+
+[id: 8716, name: "syllabic na", weight: 0.05, group: inuktitut_syllabics, ipa: "/na/"]
+ᓇ -> na;
+
+[id: 8717, name: "syllabic sa", weight: 0.05, group: inuktitut_syllabics, ipa: "/sa/"]
+ᓴ -> sa;
+
+[id: 8718, name: "syllabic la", weight: 0.05, group: inuktitut_syllabics, ipa: "/la/"]
+ᓚ -> la;
+
+[id: 8719, name: "syllabic ja", weight: 0.05, group: inuktitut_syllabics, ipa: "/ja/"]
+ᔭ -> ja;
+
+[id: 8720, name: "syllabic va", weight: 0.05, group: inuktitut_syllabics, ipa: "/va/"]
+ᕙ -> va;
+
+[id: 8721, name: "syllabic ra", weight: 0.05, group: inuktitut_syllabics, ipa: "/ʁa/"]
+ᕋ -> ʁa;
+
+[id: 8722, name: "syllabic qa", weight: 0.05, group: inuktitut_syllabics, ipa: "/qa/"]
+ᖃ -> qa;
+
+[id: 8723, name: "syllabic nga", weight: 0.05, group: inuktitut_syllabics, ipa: "/ŋa/"]
+ᖓ -> ŋa;
+
+// ============================================================
+// INUKTITUT SYLLABICS - FINALS (coda consonants)
+// ============================================================
+
+[id: 8730, name: "final p", weight: 0.05, group: inuktitut_finals, ipa: "/p/"]
+ᑉ -> p;
+
+[id: 8731, name: "final t", weight: 0.05, group: inuktitut_finals, ipa: "/t/"]
+ᑦ -> t;
+
+[id: 8732, name: "final k", weight: 0.05, group: inuktitut_finals, ipa: "/k/"]
+ᒃ -> k;
+
+[id: 8733, name: "final g", weight: 0.05, group: inuktitut_finals, ipa: "/ɡ/"]
+ᒡ -> ɡ;
+
+[id: 8734, name: "final m", weight: 0.05, group: inuktitut_finals, ipa: "/m/"]
+ᒻ -> m;
+
+[id: 8735, name: "final n", weight: 0.05, group: inuktitut_finals, ipa: "/n/"]
+ᓐ -> n;
+
+[id: 8736, name: "final s", weight: 0.05, group: inuktitut_finals, ipa: "/s/"]
+ᔅ -> s;
+
+[id: 8737, name: "final l", weight: 0.05, group: inuktitut_finals, ipa: "/l/"]
+ᓪ -> l;
+
+[id: 8738, name: "final j", weight: 0.05, group: inuktitut_finals, ipa: "/j/"]
+ᔾ -> j;
+
+[id: 8739, name: "final v", weight: 0.05, group: inuktitut_finals, ipa: "/v/"]
+ᕝ -> v;
+
+[id: 8740, name: "final r", weight: 0.05, group: inuktitut_finals, ipa: "/ʁ/"]
+ᕐ -> ʁ;
+
+[id: 8741, name: "final q", weight: 0.05, group: inuktitut_finals, ipa: "/q/"]
+ᖅ -> q;
+
+[id: 8742, name: "final ng", weight: 0.05, group: inuktitut_finals, ipa: "/ŋ/"]
+ᖕ -> ŋ;
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 8750, name: "inuktitut language", weight: 0.02, group: inuktitut_common]
+inuktitut -> inuktitut;
+
+[id: 8751, name: "syllabic inuktitut", weight: 0.02, group: inuktitut_common]
+ᐃᓄᒃᑎᑐᑦ -> inuktitut;
+
+[id: 8752, name: "inuk person", weight: 0.02, group: inuktitut_common]
+inuk -> inuk;
+
+[id: 8753, name: "inuit people plural", weight: 0.02, group: inuktitut_common]
+inuit -> inuit;
+
+[id: 8754, name: "nunavut our land", weight: 0.02, group: inuktitut_common]
+nunavut -> nunavut;
+
+[id: 8755, name: "ai hello", weight: 0.02, group: inuktitut_common]
+ai -> ai;
+
+[id: 8756, name: "qujannamiik thank you", weight: 0.02, group: inuktitut_common]
+qujannamiik -> qujanːamiːk;
+
+[id: 8757, name: "taima that is all", weight: 0.02, group: inuktitut_common]
+taima -> taima;
+

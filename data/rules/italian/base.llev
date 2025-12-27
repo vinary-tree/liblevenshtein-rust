@@ -201,14 +201,12 @@ z -> t͡s;
 zz -> t͡ːs;
 
 // ============================================================
-// GEMINATE CONSONANTS
+// Geminate Consonants (Preserved - NOT Simplified)
 // ============================================================
-// Italian preserves meaningful double consonants
-// They indicate longer/stronger pronunciation
-// We keep them doubled to preserve the distinction
-
-// Double consonants are preserved (not simplified)
-// This is intentionally different from other Romance languages
+// Unlike English/German, Italian geminates are phonetically meaningful.
+// They indicate longer/stronger pronunciation (e.g., "fatto" vs "fato").
+// We preserve them to maintain the phonetic distinction.
+// The [:consonant:][:consonant:] pattern class would NOT apply here.
 
 // ============================================================
 // ACCENT NORMALIZATION
@@ -252,8 +250,7 @@ zz -> t͡ːs;
 [id: 1790, name: "j to d͡ʒ", weight: 0.3, group: italian_foreign, ipa: "/d͡ʒ/"]
 j -> d͡ʒ;
 
-[id: 1791, name: "k preserved", weight: 0.3, group: italian_foreign]
-k -> k;
+// Note: k appears only in loanwords, no transformation needed.
 
 [id: 1792, name: "w to v", weight: 0.3, group: italian_foreign]
 w -> v;

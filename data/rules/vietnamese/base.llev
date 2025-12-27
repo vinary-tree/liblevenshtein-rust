@@ -57,14 +57,14 @@ CH -> t͡ɕ;
 Ch -> t͡ɕ;
 
 // GH (like "g" before e, ê, i)
-[id: 2957, name: "gh to g", weight: 0.03, group: vietnamese_digraphs]
-gh -> g;
+[id: 2957, name: "gh to ɡ", weight: 0.03, group: vietnamese_digraphs, ipa: "/ɡ/"]
+gh -> ɡ;
 
-[id: 2958, name: "GH to g", weight: 0.03, group: vietnamese_digraphs]
-GH -> g;
+[id: 2958, name: "GH to ɡ", weight: 0.03, group: vietnamese_digraphs, ipa: "/ɡ/"]
+GH -> ɡ;
 
-[id: 2959, name: "Gh to g", weight: 0.03, group: vietnamese_digraphs]
-Gh -> g;
+[id: 2959, name: "Gh to ɡ", weight: 0.03, group: vietnamese_digraphs, ipa: "/ɡ/"]
+Gh -> ɡ;
 
 // GI (like "z" in Northern, "y" in Southern)
 [id: 2960, name: "gi to z", weight: 0.03, group: vietnamese_digraphs]
@@ -602,8 +602,8 @@ D -> d;
 [id: 3116, name: "E to e", weight: 0.2, group: vietnamese_case]
 E -> e;
 
-[id: 3117, name: "G to g", weight: 0.2, group: vietnamese_case]
-G -> g;
+[id: 3117, name: "G to ɡ", weight: 0.2, group: vietnamese_case]
+G -> ɡ;
 
 [id: 3118, name: "H to h", weight: 0.2, group: vietnamese_case]
 H -> h;

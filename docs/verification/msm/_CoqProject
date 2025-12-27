@@ -1,0 +1,31 @@
+# MSM (Move-Split-Merge) Metric Verification
+#
+# This library contains formal proofs for the MSM metric for time series,
+# proving that MSM is a proper metric (identity, symmetry, triangle inequality).
+#
+# Namespace: Liblevenshtein.MSM
+#
+# Dependencies: Coq Standard Library, QArith (rational arithmetic)
+#
+# Reference: Stefan, Alexandra, et al. "The move-split-merge metric for time series."
+#            IEEE TKDE 25.6 (2012): 1425-1438.
+#
+# Author: Dylon Edwards
+# Date: 2025-12-26
+
+-R theories Liblevenshtein.MSM
+
+# Core definitions (base layer)
+theories/Core/MsmDefinitions.v
+theories/Core/CFunction.v
+theories/Core/MsmDistance.v
+
+# Metric property proofs
+theories/Metric/Identity.v
+theories/Metric/Symmetry.v
+theories/Metric/TriangleInequality.v
+theories/Metric/MainTheorem.v
+
+# Lower bound proofs (for indexing)
+theories/Indexing/LowerBounds.v
+theories/Indexing/QuantizationBounds.v

@@ -1,0 +1,166 @@
+// Quechua Base Phonetic Rules
+// ============================
+// Phonetic rules for Quechua (Runasimi).
+// Spoken by 8-10 million people across Peru, Bolivia, Ecuador, Colombia.
+//
+// Quechua features:
+//   - Three vowel system: a, i, u (plus allophones e, o)
+//   - Ejective consonants: pʼ, tʼ, kʼ, qʼ, chʼ
+//   - Aspirated consonants: pʰ, tʰ, kʰ, qʰ, chʰ
+//   - Uvular consonants: q, qʼ, qʰ
+//   - Agglutinative morphology (like Turkish)
+//   - SOV word order
+//
+// Orthographic variants:
+//   - Peruvian: p', t', k', q', ch' for ejectives
+//   - Bolivian: p', t', k', q', ch' for ejectives
+//   - Some use ph, th, kh, qh for aspirated
+//
+// Rule IDs: 7400-7599
+
+@name "Quechua Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Quechua (Runasimi)"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// Quechua has only 3 phonemic vowels: /a/, /i/, /u/
+// [e] and [o] are allophones near uvulars
+// ============================================================
+
+// Core vowels (a, i, u) and allophones (e, o) pass through unchanged - already in IPA form
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// Voiceless unaspirated stops
+// ============================================================
+
+// Plain stops (p, t, k, q) pass through unchanged - already in IPA form
+
+// ============================================================
+// ASPIRATED STOPS (weight 0.05)
+// Written with h after the consonant
+// ============================================================
+
+[id: 7420, name: "ph aspirated", weight: 0.05, group: quechua_aspirated, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 7421, name: "th aspirated", weight: 0.05, group: quechua_aspirated, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 7422, name: "kh aspirated", weight: 0.05, group: quechua_aspirated, ipa: "/kʰ/"]
+kh -> kʰ;
+
+[id: 7423, name: "qh aspirated uvular", weight: 0.05, group: quechua_aspirated, ipa: "/qʰ/"]
+qh -> qʰ;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.02 - distinctive)
+// Written with apostrophe after consonant
+// ============================================================
+
+// Standard ejectives (pʼ, tʼ, kʼ, qʼ) pass through unchanged - already in IPA form
+
+// Alternative apostrophe representations
+[id: 7434, name: "p' ejective alt", weight: 0.02, group: quechua_ejectives, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 7435, name: "t' ejective alt", weight: 0.02, group: quechua_ejectives, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 7436, name: "k' ejective alt", weight: 0.02, group: quechua_ejectives, ipa: "/kʼ/"]
+k' -> kʼ;
+
+[id: 7437, name: "q' ejective alt", weight: 0.02, group: quechua_ejectives, ipa: "/qʼ/"]
+q' -> qʼ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+// Plain affricate
+[id: 7440, name: "ch", weight: 0.05, group: quechua_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+// Aspirated affricate
+[id: 7441, name: "chh aspirated", weight: 0.05, group: quechua_affricates, ipa: "/t͡ʃʰ/"]
+chh -> t͡ʃʰ;
+
+// Ejective affricate
+[id: 7442, name: "ch ejective", weight: 0.02, group: quechua_ejective_affricates, ipa: "/t͡ʃʼ/"]
+chʼ -> t͡ʃʼ;
+
+[id: 7443, name: "ch' ejective alt", weight: 0.02, group: quechua_ejective_affricates, ipa: "/t͡ʃʼ/"]
+ch' -> t͡ʃʼ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 7451, name: "sh post-alveolar", weight: 0.05, group: quechua_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Plain nasals (m, n) pass through unchanged - already in IPA form
+
+[id: 7462, name: "ny palatal nasal", weight: 0.05, group: quechua_nasals, ipa: "/ɲ/"]
+ñ -> ɲ;
+
+[id: 7463, name: "ny alternate", weight: 0.05, group: quechua_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Plain liquid (l) passes through unchanged - already in IPA form
+
+[id: 7471, name: "ll palatal lateral", weight: 0.05, group: quechua_liquids, ipa: "/ʎ/"]
+ll -> ʎ;
+
+[id: 7472, name: "r tap", weight: 0.05, group: quechua_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 7474, name: "y", weight: 0.05, group: quechua_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS AND MORPHEMES
+// ============================================================
+
+// Pronouns
+[id: 7480, name: "nuqa I", weight: 0.02, group: quechua_common]
+ñuqa -> ɲuqa;
+
+[id: 7481, name: "qam you", weight: 0.02, group: quechua_common]
+qam -> qam;
+
+// Common words
+[id: 7485, name: "runasimi quechua", weight: 0.02, group: quechua_common]
+runasimi -> ɾunasimi;
+
+[id: 7486, name: "inti sun", weight: 0.02, group: quechua_common]
+inti -> inti;
+
+[id: 7487, name: "pacha earth world", weight: 0.02, group: quechua_common]
+pacha -> pat͡ʃa;
+
+[id: 7488, name: "mama mother", weight: 0.02, group: quechua_common]
+mama -> mama;
+
+[id: 7489, name: "tayta father", weight: 0.02, group: quechua_common]
+tayta -> tajta;
+
+// Evidential suffixes (unique to Quechua)
+[id: 7490, name: "mi direct evidence", weight: 0.02, group: quechua_morphemes]
+-mi -> mi;
+
+[id: 7491, name: "si hearsay", weight: 0.02, group: quechua_morphemes]
+-si -> si;
+
+[id: 7492, name: "cha conjecture", weight: 0.02, group: quechua_morphemes]
+-cha -> t͡ʃa;

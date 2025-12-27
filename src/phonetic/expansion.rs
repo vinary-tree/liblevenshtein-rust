@@ -214,6 +214,46 @@ fn phones_to_string(phones: &[PhoneChar]) -> String {
                 result.push(*c1);
                 result.push(*c2);
             }
+            PhoneChar::Trigraph(c1, c2, c3) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+            }
+            PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+            }
+            PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+            }
+            PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+                result.push(*c6);
+            }
+            PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+                result.push(*c6);
+                result.push(*c7);
+            }
+            PhoneChar::Sequence(s) => {
+                for c in s {
+                    result.push(*c);
+                }
+            }
             PhoneChar::Silent => {}
         }
     }
@@ -363,6 +403,7 @@ mod tests {
                 .collect(),
             context: ContextChar::Anywhere,
             weight,
+            syllable_condition: None,
         }
     }
 

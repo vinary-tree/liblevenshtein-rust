@@ -1,0 +1,270 @@
+// Xhosa Base Phonetic Rules
+// =========================
+// Phonetic rules for Xhosa (isiXhosa).
+// Spoken by approximately 8 million people in South Africa,
+// primarily in Eastern Cape province.
+//
+// Xhosa features:
+//   - Bantu language family (Nguni branch, related to Zulu)
+//   - CLICK CONSONANTS (dental, lateral, postalveolar, palatal)
+//   - More clicks than Zulu (includes palatal click)
+//   - Prenasalized stops
+//   - Ejective consonants
+//   - 5 vowels, tonal (high/low)
+//
+// Orthography:
+//   - c for dental click /ǀ/
+//   - x for lateral click /ǁ/
+//   - q for postalveolar click /ǃ/
+//   - gc, gx, gq for voiced clicks
+//   - nc, nx, nq for nasal clicks
+//   - ph, th, kh for aspirated stops
+//
+// Rule IDs: 12700-12799
+
+@name "Xhosa Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Xhosa"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 12700, name: "a", weight: 0.05, group: xhosa_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 12701, name: "e", weight: 0.05, group: xhosa_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 12702, name: "i", weight: 0.05, group: xhosa_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 12703, name: "o", weight: 0.05, group: xhosa_vowels, ipa: "/ɔ/"]
+o -> ɔ;
+
+[id: 12704, name: "u", weight: 0.05, group: xhosa_vowels, ipa: "/u/"]
+u -> u;
+
+// ============================================================
+// CLICK CONSONANTS (weight 0.02)
+// ============================================================
+
+// Dental clicks (c)
+[id: 12708, name: "c dental click", weight: 0.02, group: xhosa_clicks, ipa: "/ǀ/"]
+c -> ǀ;
+
+[id: 12709, name: "gc voiced dental", weight: 0.02, group: xhosa_clicks, ipa: "/ɡǀ/"]
+gc -> ɡǀ;
+
+[id: 12710, name: "nc nasal dental", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǀ/"]
+nc -> ŋǀ;
+
+[id: 12711, name: "nkc aspirated dental", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǀʰ/"]
+nkc -> ŋǀʰ;
+
+// Postalveolar clicks (q)
+[id: 12714, name: "q postalveolar click", weight: 0.02, group: xhosa_clicks, ipa: "/ǃ/"]
+q -> ǃ;
+
+[id: 12715, name: "gq voiced postalveolar", weight: 0.02, group: xhosa_clicks, ipa: "/ɡǃ/"]
+gq -> ɡǃ;
+
+[id: 12716, name: "nq nasal postalveolar", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǃ/"]
+nq -> ŋǃ;
+
+[id: 12717, name: "nkq aspirated postalv", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǃʰ/"]
+nkq -> ŋǃʰ;
+
+// Lateral clicks (x)
+[id: 12720, name: "x lateral click", weight: 0.02, group: xhosa_clicks, ipa: "/ǁ/"]
+x -> ǁ;
+
+[id: 12721, name: "gx voiced lateral", weight: 0.02, group: xhosa_clicks, ipa: "/ɡǁ/"]
+gx -> ɡǁ;
+
+[id: 12722, name: "nx nasal lateral", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǁ/"]
+nx -> ŋǁ;
+
+[id: 12723, name: "nkx aspirated lateral", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǁʰ/"]
+nkx -> ŋǁʰ;
+
+// Palatal clicks (tc)
+[id: 12726, name: "tc palatal click", weight: 0.02, group: xhosa_clicks, ipa: "/ǂ/"]
+tc -> ǂ;
+
+[id: 12727, name: "gtc voiced palatal", weight: 0.02, group: xhosa_clicks, ipa: "/ɡǂ/"]
+gtc -> ɡǂ;
+
+[id: 12728, name: "ntc nasal palatal", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǂ/"]
+ntc -> ŋǂ;
+
+// Labialized prenasalized aspirated clicks (Pentagraph patterns)
+// These represent clicks with nasal+aspiration+labialization
+[id: 12729, name: "nkcw lab dental", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǀʰʷ/"]
+nkcw -> ŋǀʰʷ;
+
+[id: 12730, name: "nkqw lab postalveolar", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǃʰʷ/"]
+nkqw -> ŋǃʰʷ;
+
+[id: 12731, name: "nkxw lab lateral", weight: 0.02, group: xhosa_clicks, ipa: "/ŋǁʰʷ/"]
+nkxw -> ŋǁʰʷ;
+
+// ============================================================
+// ASPIRATED STOPS (weight 0.05)
+// ============================================================
+
+[id: 12732, name: "ph aspirated", weight: 0.05, group: xhosa_aspirated, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 12733, name: "th aspirated", weight: 0.05, group: xhosa_aspirated, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 12734, name: "kh aspirated", weight: 0.05, group: xhosa_aspirated, ipa: "/kʰ/"]
+kh -> kʰ;
+
+[id: 12735, name: "tsh aspirated affricate", weight: 0.05, group: xhosa_aspirated, ipa: "/t͡sʰ/"]
+tsh -> t͡sʰ;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.05)
+// ============================================================
+
+[id: 12738, name: "p ejective", weight: 0.05, group: xhosa_ejective, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 12739, name: "t ejective", weight: 0.05, group: xhosa_ejective, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 12740, name: "k ejective", weight: 0.05, group: xhosa_ejective, ipa: "/kʼ/"]
+k' -> kʼ;
+
+// ============================================================
+// PRENASALIZED STOPS (weight 0.05)
+// ============================================================
+
+[id: 12743, name: "mb prenasalized", weight: 0.05, group: xhosa_prenasal, ipa: "/ᵐb/"]
+mb -> ᵐb;
+
+[id: 12744, name: "nd prenasalized", weight: 0.05, group: xhosa_prenasal, ipa: "/ⁿd/"]
+nd -> ⁿd;
+
+[id: 12745, name: "ng prenasalized", weight: 0.05, group: xhosa_prenasal, ipa: "/ŋɡ/"]
+ng -> ŋɡ;
+
+[id: 12746, name: "nj prenasalized", weight: 0.05, group: xhosa_prenasal, ipa: "/ⁿd͡ʒ/"]
+nj -> ⁿd͡ʒ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+[id: 12749, name: "p", weight: 0.05, group: xhosa_stops, ipa: "/p/"]
+p -> p;
+
+[id: 12750, name: "b implosive", weight: 0.05, group: xhosa_stops, ipa: "/ɓ/"]
+b -> ɓ;
+
+[id: 12751, name: "t", weight: 0.05, group: xhosa_stops, ipa: "/t/"]
+t -> t;
+
+[id: 12752, name: "d", weight: 0.05, group: xhosa_stops, ipa: "/d/"]
+d -> d;
+
+[id: 12753, name: "k", weight: 0.05, group: xhosa_stops, ipa: "/k/"]
+k -> k;
+
+[id: 12754, name: "g", weight: 0.05, group: xhosa_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 12757, name: "f", weight: 0.05, group: xhosa_fricatives, ipa: "/f/"]
+f -> f;
+
+[id: 12758, name: "v", weight: 0.05, group: xhosa_fricatives, ipa: "/v/"]
+v -> v;
+
+[id: 12759, name: "s", weight: 0.05, group: xhosa_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 12760, name: "z", weight: 0.05, group: xhosa_fricatives, ipa: "/z/"]
+z -> z;
+
+[id: 12761, name: "sh postalveolar", weight: 0.05, group: xhosa_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 12762, name: "hl lateral fricative", weight: 0.05, group: xhosa_fricatives, ipa: "/ɬ/"]
+hl -> ɬ;
+
+[id: 12763, name: "rh breathy r", weight: 0.05, group: xhosa_fricatives, ipa: "/r̤/"]
+rh -> r̤;
+
+[id: 12764, name: "h", weight: 0.05, group: xhosa_fricatives, ipa: "/h/"]
+h -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 12767, name: "m", weight: 0.05, group: xhosa_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 12768, name: "n", weight: 0.05, group: xhosa_nasals, ipa: "/n/"]
+n -> n;
+
+[id: 12769, name: "ny palatal nasal", weight: 0.05, group: xhosa_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 12772, name: "l", weight: 0.05, group: xhosa_liquids, ipa: "/l/"]
+l -> l;
+
+[id: 12773, name: "r", weight: 0.05, group: xhosa_liquids, ipa: "/r/"]
+r -> r;
+
+[id: 12774, name: "w", weight: 0.05, group: xhosa_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 12775, name: "y", weight: 0.05, group: xhosa_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 12785, name: "isixhosa xhosa language", weight: 0.02, group: xhosa_common]
+isixhosa -> isiǁʰɔsa;
+
+[id: 12786, name: "molo hello singular", weight: 0.02, group: xhosa_common]
+molo -> mɔlɔ;
+
+[id: 12787, name: "enkosi thank you", weight: 0.02, group: xhosa_common]
+enkosi -> ɛŋkɔsi;
+
+[id: 12788, name: "ewe yes", weight: 0.02, group: xhosa_common]
+ewe -> ɛwɛ;
+
+[id: 12789, name: "hayi no", weight: 0.02, group: xhosa_common]
+hayi -> haji;
+
+[id: 12790, name: "amanzi water", weight: 0.02, group: xhosa_common]
+amanzi -> amaⁿzi;
+
+[id: 12791, name: "isonka bread food", weight: 0.02, group: xhosa_common]
+isonka -> isɔŋka;
+
+[id: 12792, name: "indlu house", weight: 0.02, group: xhosa_common]
+indlu -> iⁿɮu;
+
+[id: 12793, name: "umntu person", weight: 0.02, group: xhosa_common]
+umntu -> umⁿtu;
+
+[id: 12794, name: "umntwana child", weight: 0.02, group: xhosa_common]
+umntwana -> umⁿtwana;
+

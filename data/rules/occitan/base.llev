@@ -1,0 +1,142 @@
+// Occitan Base Phonetic Rules
+// ===========================
+// Phonetic rules for Occitan (Occitan).
+// Spoken by approximately 500,000 people in southern France,
+// parts of Spain, Italy, and Monaco.
+//
+// Occitan features:
+//   - Romance language (Gallo-Romance branch)
+//   - Six major dialects (Provençal, Languedocien, etc.)
+//   - Seven vowel phonemes: /a/, /e/, /ɛ/, /i/, /u/, /y/, /ɔ/
+//   - Distinctive schwa /ə/
+//   - Palatalized consonants lh, nh
+//   - Final consonant clusters preserved
+//   - o pronounced as /u/ in most positions
+//
+// Orthography:
+//   - Latin alphabet with diacritics
+//   - ç for /s/
+//   - nh for /ɲ/, lh for /ʎ/
+//   - ò for /ɔ/, ó for /u/
+//
+// Rule IDs: 15700-15799
+
+@name "Occitan Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Occitan"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15703, name: "è open", weight: 0.05, group: occitan_vowels, ipa: "/ɛ/"]
+è -> ɛ;
+
+[id: 15707, name: "o", weight: 0.05, group: occitan_vowels, ipa: "/u/"]
+o -> u;
+
+[id: 15708, name: "ò open", weight: 0.05, group: occitan_vowels, ipa: "/ɔ/"]
+ò -> ɔ;
+
+[id: 15710, name: "u", weight: 0.05, group: occitan_vowels, ipa: "/y/"]
+u -> y;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 15722, name: "c before aou", weight: 0.05, group: occitan_stops, ipa: "/k/"]
+c -> k;
+
+[id: 15723, name: "qu", weight: 0.05, group: occitan_stops, ipa: "/k/"]
+qu -> k;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 15728, name: "ch affricate", weight: 0.05, group: occitan_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 15729, name: "j voiced affricate", weight: 0.05, group: occitan_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+[id: 15730, name: "g before ei", weight: 0.05, group: occitan_affricates, ipa: "/d͡ʒ/"]
+ge -> d͡ʒe;
+
+[id: 15731, name: "gi", weight: 0.05, group: occitan_affricates, ipa: "/d͡ʒ/"]
+gi -> d͡ʒi;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 15737, name: "ss intervocalic", weight: 0.05, group: occitan_fricatives, ipa: "/s/"]
+ss -> s;
+
+[id: 15738, name: "ç cedilla", weight: 0.05, group: occitan_fricatives, ipa: "/s/"]
+ç -> s;
+
+[id: 15739, name: "c before ei", weight: 0.05, group: occitan_fricatives, ipa: "/s/"]
+ce -> se;
+
+[id: 15740, name: "ci", weight: 0.05, group: occitan_fricatives, ipa: "/s/"]
+ci -> si;
+
+[id: 15742, name: "h silent", weight: 0.05, group: occitan_fricatives, ipa: ""]
+h -> ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 15748, name: "nh palatal", weight: 0.05, group: occitan_nasals, ipa: "/ɲ/"]
+nh -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 15753, name: "lh palatal", weight: 0.05, group: occitan_liquids, ipa: "/ʎ/"]
+lh -> ʎ;
+
+[id: 15754, name: "ll double", weight: 0.05, group: occitan_liquids, ipa: "/l/"]
+ll -> l;
+
+[id: 15755, name: "r trill", weight: 0.05, group: occitan_liquids, ipa: "/r/"]
+rr -> r;
+
+[id: 15756, name: "r tap", weight: 0.05, group: occitan_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 15780, name: "occitan occitan", weight: 0.02, group: occitan_common]
+occitan -> uksiˈtan;
+
+[id: 15781, name: "adieu hello", weight: 0.02, group: occitan_common]
+adieu -> aˈd͡ʒew;
+
+[id: 15782, name: "mercés thank you", weight: 0.02, group: occitan_common]
+mercés -> meɾˈses;
+
+[id: 15783, name: "òc yes", weight: 0.02, group: occitan_common]
+òc -> ɔk;
+
+[id: 15784, name: "non no", weight: 0.02, group: occitan_common]
+non -> nun;
+
+[id: 15785, name: "aiga water", weight: 0.02, group: occitan_common]
+aiga -> ˈajɡa;
+
+[id: 15787, name: "ostal house", weight: 0.02, group: occitan_common]
+ostal -> usˈtal;
+
+[id: 15788, name: "òme person", weight: 0.02, group: occitan_common]
+òme -> ˈɔme;
+
+[id: 15789, name: "enfant child", weight: 0.02, group: occitan_common]
+enfant -> enˈfan;

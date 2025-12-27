@@ -1,0 +1,182 @@
+// Tatar Base Phonetic Rules
+// =========================
+// Phonetic rules for Tatar (Татар теле / Tatar tele).
+// Spoken by approximately 4 million people, primarily in Tatarstan, Russia.
+//
+// Tatar features:
+//   - Turkic language family (Kipchak branch, related to Kazakh)
+//   - Vowel harmony (front/back, rounded/unrounded)
+//   - 10 vowels including front rounded
+//   - Palatal and velar consonants
+//   - Some Arabic and Persian loanwords
+//   - Uses Cyrillic script in Russia (also historical Latin/Arabic)
+//
+// Cyrillic alphabet includes special letters:
+//   - Ә/ә for /æ/
+//   - Ө/ө for /ø/
+//   - Ү/ү for /y/
+//   - Җ/җ for /d͡ʒ/
+//   - Ң/ң for /ŋ/
+//   - Һ/һ for /h/
+//
+// Rule IDs: 17600-17649
+
+@name "Tatar Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Tatar"
+
+// ============================================================
+// CYRILLIC VOWELS
+// ============================================================
+// Back vowels
+
+[id: 17600, name: "cyrillic a", weight: 0.05, group: tatar_vowels, ipa: "/ɑ/"]
+а -> ɑ;
+
+[id: 17601, name: "cyrillic o", weight: 0.05, group: tatar_vowels]
+о -> o;
+
+[id: 17602, name: "cyrillic у", weight: 0.05, group: tatar_vowels, ipa: "/u/"]
+у -> u;
+
+[id: 17603, name: "cyrillic ы back unrounded", weight: 0.05, group: tatar_vowels, ipa: "/ɯ/"]
+ы -> ɯ;
+
+// Front vowels
+
+[id: 17604, name: "cyrillic ә front open", weight: 0.05, group: tatar_vowels, ipa: "/æ/"]
+ә -> æ;
+
+[id: 17605, name: "cyrillic е", weight: 0.05, group: tatar_vowels]
+е -> e;
+
+[id: 17606, name: "cyrillic и", weight: 0.05, group: tatar_vowels]
+и -> i;
+
+[id: 17607, name: "cyrillic ө front rounded", weight: 0.05, group: tatar_vowels, ipa: "/ø/"]
+ө -> ø;
+
+[id: 17608, name: "cyrillic ү front high rounded", weight: 0.05, group: tatar_vowels, ipa: "/y/"]
+ү -> y;
+
+[id: 17609, name: "cyrillic э", weight: 0.05, group: tatar_vowels]
+э -> e;
+
+// Palatalization markers
+[id: 17610, name: "cyrillic я", weight: 0.05, group: tatar_vowels, ipa: "/jɑ/"]
+я -> jɑ;
+
+[id: 17611, name: "cyrillic ё", weight: 0.05, group: tatar_vowels, ipa: "/jo/"]
+ё -> jo;
+
+[id: 17612, name: "cyrillic ю", weight: 0.05, group: tatar_vowels, ipa: "/ju/"]
+ю -> ju;
+
+// ============================================================
+// SPECIAL TATAR CONSONANTS
+// ============================================================
+
+// Ң - velar nasal (common in Turkic languages)
+[id: 17615, name: "velar nasal ng", weight: 0.05, group: tatar_special, ipa: "/ŋ/"]
+ң -> ŋ;
+
+// Җ - voiced postalveolar affricate (Tatar-specific)
+[id: 17616, name: "voiced affricate j", weight: 0.05, group: tatar_special, ipa: "/d͡ʒ/"]
+җ -> d͡ʒ;
+
+// Һ - voiceless glottal fricative
+[id: 17617, name: "h aspirate", weight: 0.05, group: tatar_special]
+һ -> h;
+
+// ============================================================
+// CYRILLIC CONSONANTS
+// ============================================================
+
+[id: 17620, name: "cyrillic б", weight: 0.05, group: tatar_consonants]
+б -> b;
+
+[id: 17621, name: "cyrillic в", weight: 0.05, group: tatar_consonants]
+в -> v;
+
+[id: 17622, name: "cyrillic г", weight: 0.05, group: tatar_consonants, ipa: "/ɡ/"]
+г -> ɡ;
+
+[id: 17623, name: "cyrillic д", weight: 0.05, group: tatar_consonants]
+д -> d;
+
+[id: 17624, name: "cyrillic ж", weight: 0.05, group: tatar_consonants, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 17625, name: "cyrillic з", weight: 0.05, group: tatar_consonants]
+з -> z;
+
+[id: 17626, name: "cyrillic й", weight: 0.05, group: tatar_consonants]
+й -> j;
+
+[id: 17627, name: "cyrillic к", weight: 0.05, group: tatar_consonants]
+к -> k;
+
+[id: 17628, name: "cyrillic л", weight: 0.05, group: tatar_consonants]
+л -> l;
+
+[id: 17629, name: "cyrillic м", weight: 0.05, group: tatar_consonants]
+м -> m;
+
+[id: 17630, name: "cyrillic н", weight: 0.05, group: tatar_consonants]
+н -> n;
+
+[id: 17631, name: "cyrillic п", weight: 0.05, group: tatar_consonants]
+п -> p;
+
+[id: 17632, name: "cyrillic р", weight: 0.05, group: tatar_consonants]
+р -> r;
+
+[id: 17633, name: "cyrillic с", weight: 0.05, group: tatar_consonants]
+с -> s;
+
+[id: 17634, name: "cyrillic т", weight: 0.05, group: tatar_consonants]
+т -> t;
+
+[id: 17635, name: "cyrillic ф", weight: 0.05, group: tatar_consonants]
+ф -> f;
+
+[id: 17636, name: "cyrillic х", weight: 0.05, group: tatar_consonants, ipa: "/x/"]
+х -> x;
+
+[id: 17637, name: "cyrillic ц", weight: 0.05, group: tatar_consonants, ipa: "/t͡s/"]
+ц -> t͡s;
+
+[id: 17638, name: "cyrillic ч", weight: 0.05, group: tatar_consonants, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 17639, name: "cyrillic ш", weight: 0.05, group: tatar_consonants, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 17640, name: "cyrillic щ", weight: 0.05, group: tatar_consonants, ipa: "/ʃt͡ʃ/"]
+щ -> ʃt͡ʃ;
+
+// ============================================================
+// SILENT/MODIFIER LETTERS
+// ============================================================
+
+// Soft sign - indicates palatalization, not pronounced separately
+[id: 17645, name: "soft sign", weight: 0.1, group: tatar_modifiers]
+ь -> ;
+
+// Hard sign - indicates non-palatalization, not pronounced
+[id: 17646, name: "hard sign", weight: 0.1, group: tatar_modifiers]
+ъ -> ;
+
+// ============================================================
+// LATIN ROMANIZATION (for alternative input)
+// ============================================================
+
+[id: 17647, name: "latin ng", weight: 0.05, group: tatar_latin, ipa: "/ŋ/"]
+ñ -> ŋ;
+
+[id: 17648, name: "latin front rounded o", weight: 0.05, group: tatar_latin, ipa: "/ø/"]
+ö -> ø;
+
+[id: 17649, name: "latin front high rounded", weight: 0.05, group: tatar_latin, ipa: "/y/"]
+ü -> y;

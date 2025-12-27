@@ -1,0 +1,200 @@
+// Tigrinya Base Phonetic Rules
+// ============================
+// Phonetic rules for Tigrinya (ትግርኛ / Təgrəñña).
+// Spoken by approximately 9 million people in Eritrea and
+// the Tigray region of Ethiopia.
+//
+// Tigrinya features:
+//   - Afroasiatic language family (Semitic branch)
+//   - Ge'ez (Ethiopic) script
+//   - Ejective consonants (p', t', k', s', č')
+//   - Gemination is phonemic
+//   - 7 vowels
+//   - Labialized consonants (kw, gw)
+//   - Pharyngealized consonants
+//
+// Orthography (Romanization):
+//   - ' for ejectives after consonant
+//   - ḥ for pharyngeal /ħ/
+//   - ḫ for /x/
+//   - ẖ for /ʕ/
+//   - š for /ʃ/, č for /t͡ʃ/
+//
+// Rule IDs: 12800-12899
+
+@name "Tigrinya Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Tigrinya"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+// Identity mappings removed: a->a, e->e, i->i, o->o, u->u, ə->ə
+// These vowels pass through unchanged by default.
+
+[id: 12806, name: "ä central", weight: 0.05, group: tigrinya_vowels, ipa: "/æ/"]
+ä -> æ;
+
+// ============================================================
+// EJECTIVE CONSONANTS (weight 0.02)
+// ============================================================
+
+[id: 12810, name: "p' ejective", weight: 0.02, group: tigrinya_ejective, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 12811, name: "t' ejective", weight: 0.02, group: tigrinya_ejective, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 12812, name: "k' ejective", weight: 0.02, group: tigrinya_ejective, ipa: "/kʼ/"]
+k' -> kʼ;
+
+[id: 12813, name: "s' ejective", weight: 0.02, group: tigrinya_ejective, ipa: "/sʼ/"]
+s' -> sʼ;
+
+[id: 12814, name: "č' ejective affricate", weight: 0.02, group: tigrinya_ejective, ipa: "/t͡ʃʼ/"]
+č' -> t͡ʃʼ;
+
+[id: 12815, name: "ṭ ejective (traditional)", weight: 0.02, group: tigrinya_ejective, ipa: "/tʼ/"]
+ṭ -> tʼ;
+
+[id: 12816, name: "ṣ ejective (traditional)", weight: 0.02, group: tigrinya_ejective, ipa: "/sʼ/"]
+ṣ -> sʼ;
+
+[id: 12817, name: "q uvular ejective", weight: 0.02, group: tigrinya_ejective, ipa: "/qʼ/"]
+q -> qʼ;
+
+// ============================================================
+// LABIALIZED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 12820, name: "kw labialized", weight: 0.05, group: tigrinya_labialized, ipa: "/kʷ/"]
+kw -> kʷ;
+
+[id: 12821, name: "gw labialized", weight: 0.05, group: tigrinya_labialized, ipa: "/ɡʷ/"]
+gw -> ɡʷ;
+
+[id: 12822, name: "k'w labialized ejective", weight: 0.05, group: tigrinya_labialized, ipa: "/kʷʼ/"]
+k'w -> kʷʼ;
+
+[id: 12823, name: "ḫw labialized velar", weight: 0.05, group: tigrinya_labialized, ipa: "/xʷ/"]
+ḫw -> xʷ;
+
+// ============================================================
+// PHARYNGEAL CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 12826, name: "ḥ pharyngeal", weight: 0.05, group: tigrinya_pharyngeal, ipa: "/ħ/"]
+ḥ -> ħ;
+
+[id: 12827, name: "ẖ voiced pharyngeal", weight: 0.05, group: tigrinya_pharyngeal, ipa: "/ʕ/"]
+ẖ -> ʕ;
+
+[id: 12828, name: "' glottal stop", weight: 0.05, group: tigrinya_pharyngeal, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+// Identity mappings removed: p->p, b->b, t->t, d->d, k->k
+// These consonants pass through unchanged by default.
+
+[id: 12836, name: "g", weight: 0.05, group: tigrinya_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 12839, name: "č voiceless", weight: 0.05, group: tigrinya_affricates, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 12840, name: "j voiced", weight: 0.05, group: tigrinya_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+[id: 12841, name: "c alveolar", weight: 0.05, group: tigrinya_affricates, ipa: "/t͡s/"]
+c -> t͡s;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Identity mappings removed: f->f, v->v, s->s, z->z, h->h
+// These consonants pass through unchanged by default.
+
+[id: 12848, name: "š postalveolar", weight: 0.05, group: tigrinya_fricatives, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 12849, name: "ž voiced postalveolar", weight: 0.05, group: tigrinya_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+[id: 12850, name: "ḫ velar fricative", weight: 0.05, group: tigrinya_fricatives, ipa: "/x/"]
+ḫ -> x;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Identity mappings removed: m->m, n->n
+// These consonants pass through unchanged by default.
+
+[id: 12856, name: "ñ palatal nasal", weight: 0.05, group: tigrinya_nasals, ipa: "/ɲ/"]
+ñ -> ɲ;
+
+// ============================================================
+// GEMINATION (weight 0.05)
+// ============================================================
+
+[id: 12858, name: "bb geminate", weight: 0.05, group: tigrinya_geminate, ipa: "/bː/"]
+bb -> bː;
+
+[id: 12859, name: "tt geminate", weight: 0.05, group: tigrinya_geminate, ipa: "/tː/"]
+tt -> tː;
+
+[id: 12860, name: "dd geminate", weight: 0.05, group: tigrinya_geminate, ipa: "/dː/"]
+dd -> dː;
+
+[id: 12861, name: "kk geminate", weight: 0.05, group: tigrinya_geminate, ipa: "/kː/"]
+kk -> kː;
+
+[id: 12862, name: "mm geminate", weight: 0.05, group: tigrinya_geminate, ipa: "/mː/"]
+mm -> mː;
+
+[id: 12863, name: "nn geminate", weight: 0.05, group: tigrinya_geminate, ipa: "/nː/"]
+nn -> nː;
+
+[id: 12864, name: "ll geminate", weight: 0.05, group: tigrinya_geminate, ipa: "/lː/"]
+ll -> lː;
+
+[id: 12865, name: "ss geminate", weight: 0.05, group: tigrinya_geminate, ipa: "/sː/"]
+ss -> sː;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Identity mappings removed: l->l, r->r, w->w
+// These consonants pass through unchanged by default.
+
+[id: 12871, name: "y", weight: 0.05, group: tigrinya_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 12880, name: "tigrinya", weight: 0.02, group: tigrinya_common]
+tigrinya -> tiɡriɲa;
+
+// Identity mappings removed: selam->selam, awo->awo, bani->bani, bet->bet, seb->seb
+// These words pass through unchanged by default.
+
+[id: 12882, name: "yeqenyeley thank you", weight: 0.02, group: tigrinya_common]
+yeqenyeley -> jeqʼeɲelej;
+
+[id: 12884, name: "aykonen no", weight: 0.02, group: tigrinya_common]
+aykonen -> ajkonen;
+
+[id: 12885, name: "may water", weight: 0.02, group: tigrinya_common]
+may -> maj;
+
+[id: 12889, name: "qolʿa child", weight: 0.02, group: tigrinya_common]
+qolʿa -> qʼolʕa;
+

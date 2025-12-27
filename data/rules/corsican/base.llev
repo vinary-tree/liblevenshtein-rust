@@ -1,0 +1,163 @@
+// Corsican Base Phonetic Rules
+// ============================
+// Phonetic rules for Corsican (Corsu).
+// Spoken by approximately 150,000 people in Corsica, France.
+//
+// Corsican features:
+//   - Romance language (Italo-Dalmatian branch)
+//   - Close to Tuscan Italian but distinct
+//   - Lenition of intervocalic consonants
+//   - Retroflex consonants in southern varieties
+//   - No gemination (unlike Italian)
+//   - Final vowel often reduced
+//   - Seven vowels: /a/, /e/, /ɛ/, /i/, /o/, /ɔ/, /u/
+//
+// Orthography:
+//   - Latin alphabet
+//   - ghj for /ɟ/, chj for /c/
+//   - sg for /ʒ/, sc for /ʃ/
+//   - Double consonants pronounced as single
+//
+// Rule IDs: 16000-16099
+
+@name "Corsican Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Corsican"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 16002, name: "è open", weight: 0.05, group: corsican_vowels, ipa: "/ɛ/"]
+è -> ɛ;
+
+[id: 16005, name: "ò open", weight: 0.05, group: corsican_vowels, ipa: "/ɔ/"]
+ò -> ɔ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 16012, name: "bb simplified", weight: 0.05, group: corsican_stops, ipa: "/b/"]
+bb -> b;
+
+[id: 16015, name: "dd simplified", weight: 0.05, group: corsican_stops, ipa: "/d/"]
+dd -> d;
+
+[id: 16016, name: "c before aou", weight: 0.05, group: corsican_stops, ipa: "/k/"]
+c -> k;
+
+[id: 16017, name: "g before aou", weight: 0.05, group: corsican_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+[id: 16018, name: "gg simplified", weight: 0.05, group: corsican_stops, ipa: "/ɡ/"]
+gg -> ɡ;
+
+// ============================================================
+// PALATAL CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 16022, name: "chj palatal stop", weight: 0.05, group: corsican_palatal, ipa: "/c/"]
+chj -> c;
+
+[id: 16023, name: "ghj voiced palatal", weight: 0.05, group: corsican_palatal, ipa: "/ɟ/"]
+ghj -> ɟ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 16026, name: "c before ei", weight: 0.05, group: corsican_affricates, ipa: "/t͡ʃ/"]
+ce -> t͡ʃe;
+
+[id: 16027, name: "ci", weight: 0.05, group: corsican_affricates, ipa: "/t͡ʃ/"]
+ci -> t͡ʃi;
+
+[id: 16028, name: "g before ei", weight: 0.05, group: corsican_affricates, ipa: "/d͡ʒ/"]
+ge -> d͡ʒe;
+
+[id: 16029, name: "gi", weight: 0.05, group: corsican_affricates, ipa: "/d͡ʒ/"]
+gi -> d͡ʒi;
+
+[id: 16030, name: "z ts", weight: 0.05, group: corsican_affricates, ipa: "/t͡s/"]
+z -> t͡s;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 16037, name: "ss simplified", weight: 0.05, group: corsican_fricatives, ipa: "/s/"]
+ss -> s;
+
+[id: 16038, name: "sc before ei", weight: 0.05, group: corsican_fricatives, ipa: "/ʃ/"]
+sce -> ʃe;
+
+[id: 16039, name: "sci", weight: 0.05, group: corsican_fricatives, ipa: "/ʃ/"]
+sci -> ʃi;
+
+[id: 16040, name: "sg before ei voiced", weight: 0.05, group: corsican_fricatives, ipa: "/ʒ/"]
+sge -> ʒe;
+
+[id: 16041, name: "sgi voiced", weight: 0.05, group: corsican_fricatives, ipa: "/ʒ/"]
+sgi -> ʒi;
+
+[id: 16042, name: "h silent", weight: 0.05, group: corsican_fricatives, ipa: ""]
+h -> ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 16047, name: "mm simplified", weight: 0.05, group: corsican_nasals, ipa: "/m/"]
+mm -> m;
+
+[id: 16049, name: "nn simplified", weight: 0.05, group: corsican_nasals, ipa: "/n/"]
+nn -> n;
+
+[id: 16050, name: "gn palatal", weight: 0.05, group: corsican_nasals, ipa: "/ɲ/"]
+gn -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 16055, name: "ll simplified", weight: 0.05, group: corsican_liquids, ipa: "/l/"]
+ll -> l;
+
+[id: 16056, name: "gl palatal", weight: 0.05, group: corsican_liquids, ipa: "/ʎ/"]
+gli -> ʎi;
+
+[id: 16057, name: "r tap", weight: 0.05, group: corsican_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 16058, name: "rr trill", weight: 0.05, group: corsican_liquids, ipa: "/r/"]
+rr -> r;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 16080, name: "corsu corsican", weight: 0.02, group: corsican_common]
+corsu -> koɾsu;
+
+[id: 16081, name: "bonghjornu hello", weight: 0.02, group: corsican_common]
+bonghjornu -> bonɟoɾnu;
+
+[id: 16082, name: "grazie thank you", weight: 0.02, group: corsican_common]
+grazie -> ɡɾat͡sie;
+
+[id: 16083, name: "iè yes", weight: 0.02, group: corsican_common]
+iè -> jɛ;
+
+[id: 16084, name: "innò no", weight: 0.02, group: corsican_common]
+innò -> inɔ;
+
+[id: 16085, name: "acqua water", weight: 0.02, group: corsican_common]
+acqua -> akwa;
+
+[id: 16087, name: "casa house", weight: 0.02, group: corsican_common]
+casa -> kasa;
+
+[id: 16089, name: "zitellu child", weight: 0.02, group: corsican_common]
+zitellu -> t͡sitelu;

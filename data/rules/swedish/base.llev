@@ -141,164 +141,50 @@ LJ -> j;
 // ============================================================
 // STANDARD VOWELS
 // ============================================================
-
-[id: 3681, name: "a vowel", weight: 0.15, group: swedish_vowels]
-a -> a;
-
-[id: 3682, name: "A vowel", weight: 0.15, group: swedish_vowels]
-A -> a;
-
-[id: 3683, name: "e vowel", weight: 0.15, group: swedish_vowels]
-e -> e;
-
-[id: 3684, name: "E vowel", weight: 0.15, group: swedish_vowels]
-E -> e;
-
-[id: 3685, name: "i vowel", weight: 0.15, group: swedish_vowels]
-i -> i;
-
-[id: 3686, name: "I vowel", weight: 0.15, group: swedish_vowels]
-I -> i;
-
-[id: 3687, name: "o vowel", weight: 0.15, group: swedish_vowels]
-o -> o;
-
-[id: 3688, name: "O vowel", weight: 0.15, group: swedish_vowels]
-O -> o;
-
-[id: 3689, name: "u vowel", weight: 0.15, group: swedish_vowels]
-u -> u;
-
-[id: 3690, name: "U vowel", weight: 0.15, group: swedish_vowels]
-U -> u;
-
-[id: 3691, name: "y vowel", weight: 0.15, group: swedish_vowels, ipa: "/y/"]
-y -> y;
-
-[id: 3692, name: "Y vowel", weight: 0.15, group: swedish_vowels, ipa: "/y/"]
-Y -> y;
+// Note: Standard vowels (a, e, i, o, u, y) pass through unchanged.
+// Identity mappings removed as they are no-ops - unmapped characters
+// pass through the phonetic transformation unchanged.
 
 // ============================================================
 // CONSONANTS
 // ============================================================
 
-[id: 3693, name: "b consonant", weight: 0.2, group: swedish_consonants]
-b -> b;
-
-[id: 3694, name: "B consonant", weight: 0.2, group: swedish_consonants]
-B -> b;
-
+// C → k (foreign letter, pronounced as k)
 [id: 3695, name: "c consonant", weight: 0.2, group: swedish_consonants]
 c -> k;
 
 [id: 3696, name: "C consonant", weight: 0.2, group: swedish_consonants]
 C -> k;
 
-[id: 3697, name: "d consonant", weight: 0.2, group: swedish_consonants]
-d -> d;
-
-[id: 3698, name: "D consonant", weight: 0.2, group: swedish_consonants]
-D -> d;
-
-[id: 3699, name: "f consonant", weight: 0.2, group: swedish_consonants]
-f -> f;
-
-[id: 3700, name: "F consonant", weight: 0.2, group: swedish_consonants]
-F -> f;
-
-[id: 3701, name: "g consonant", weight: 0.2, group: swedish_consonants]
-g -> g;
-
-[id: 3702, name: "G consonant", weight: 0.2, group: swedish_consonants]
-G -> g;
-
-[id: 3703, name: "h consonant", weight: 0.2, group: swedish_consonants]
-h -> h;
-
-[id: 3704, name: "H consonant", weight: 0.2, group: swedish_consonants]
-H -> h;
-
-[id: 3705, name: "j consonant", weight: 0.2, group: swedish_consonants, ipa: "/j/"]
-j -> j;
-
-[id: 3706, name: "J consonant", weight: 0.2, group: swedish_consonants, ipa: "/j/"]
-J -> j;
-
-[id: 3707, name: "k consonant", weight: 0.2, group: swedish_consonants]
-k -> k;
-
-[id: 3708, name: "K consonant", weight: 0.2, group: swedish_consonants]
-K -> k;
-
-[id: 3709, name: "l consonant", weight: 0.2, group: swedish_consonants]
-l -> l;
-
-[id: 3710, name: "L consonant", weight: 0.2, group: swedish_consonants]
-L -> l;
-
-[id: 3711, name: "m consonant", weight: 0.2, group: swedish_consonants]
-m -> m;
-
-[id: 3712, name: "M consonant", weight: 0.2, group: swedish_consonants]
-M -> m;
-
-[id: 3713, name: "n consonant", weight: 0.2, group: swedish_consonants]
-n -> n;
-
-[id: 3714, name: "N consonant", weight: 0.2, group: swedish_consonants]
-N -> n;
-
-[id: 3715, name: "p consonant", weight: 0.2, group: swedish_consonants]
-p -> p;
-
-[id: 3716, name: "P consonant", weight: 0.2, group: swedish_consonants]
-P -> p;
-
+// Q → k (foreign letter, pronounced as k)
 [id: 3717, name: "q consonant", weight: 0.2, group: swedish_consonants]
 q -> k;
 
 [id: 3718, name: "Q consonant", weight: 0.2, group: swedish_consonants]
 Q -> k;
 
-[id: 3719, name: "r consonant", weight: 0.2, group: swedish_consonants]
-r -> r;
-
-[id: 3720, name: "R consonant", weight: 0.2, group: swedish_consonants]
-R -> r;
-
-[id: 3721, name: "s consonant", weight: 0.2, group: swedish_consonants]
-s -> s;
-
-[id: 3722, name: "S consonant", weight: 0.2, group: swedish_consonants]
-S -> s;
-
-[id: 3723, name: "t consonant", weight: 0.2, group: swedish_consonants]
-t -> t;
-
-[id: 3724, name: "T consonant", weight: 0.2, group: swedish_consonants]
-T -> t;
-
-[id: 3725, name: "v consonant", weight: 0.2, group: swedish_consonants]
-v -> v;
-
-[id: 3726, name: "V consonant", weight: 0.2, group: swedish_consonants]
-V -> v;
-
+// W → v (foreign letter, pronounced as v)
 [id: 3727, name: "w consonant", weight: 0.2, group: swedish_consonants]
 w -> v;
 
 [id: 3728, name: "W consonant", weight: 0.2, group: swedish_consonants]
 W -> v;
 
+// X → ks (pronounced as k+s)
 [id: 3729, name: "x consonant", weight: 0.2, group: swedish_consonants]
 x -> ks;
 
 [id: 3730, name: "X consonant", weight: 0.2, group: swedish_consonants]
 X -> ks;
 
+// Z → s (foreign letter, pronounced as s)
 [id: 3731, name: "z consonant", weight: 0.2, group: swedish_consonants]
 z -> s;
 
 [id: 3732, name: "Z consonant", weight: 0.2, group: swedish_consonants]
 Z -> s;
+
+// Note: Other consonants (b, d, f, g, h, j, k, l, m, n, p, r, s, t, v) pass through unchanged.
+// Identity mappings removed as they are no-ops - unmapped characters
+// pass through the phonetic transformation unchanged.
 

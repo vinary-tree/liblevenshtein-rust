@@ -134,3 +134,80 @@ o -> u / _#;
 [id: 1696, name: "final e to i", weight: 0.2, group: brazilian_vowels]
 e -> i / _#;
 
+// ============================================================
+// ADDITIONAL PALATALIZATION CONTEXTS
+// ============================================================
+// More comprehensive T/D palatalization
+
+// T before 'e' in unstressed syllables often palatalizes
+[id: 1700, name: "t palatalization before e unstressed", weight: 0.15, group: brazilian_palatalization, ipa: "/t͡ʃ/"]
+te -> t͡ʃi / $CONSONANT _;
+
+// D before 'e' in unstressed syllables often palatalizes
+[id: 1701, name: "d palatalization before e unstressed", weight: 0.15, group: brazilian_palatalization, ipa: "/d͡ʒ/"]
+de -> d͡ʒi / $CONSONANT _;
+
+// ============================================================
+// NASAL VOWEL PATTERNS ([:nasal_vowel:] class)
+// ============================================================
+// Brazilian Portuguese has strong nasalization
+// Nasal vowels match the [:nasal_vowel:] class: ã, ẽ, ĩ, õ, ũ
+
+// -ão ending (very common)
+[id: 1710, name: "ao nasal", weight: 0.1, group: brazilian_nasal, ipa: "/ɐ̃w̃/"]
+ão -> ãw;
+
+// -ões ending (plural of -ão)
+[id: 1711, name: "oes nasal", weight: 0.1, group: brazilian_nasal, ipa: "/õj̃s/"]
+ões -> õjs;
+
+// -ãe/-ães ending
+[id: 1712, name: "ae nasal", weight: 0.1, group: brazilian_nasal, ipa: "/ɐ̃j̃/"]
+ãe -> ãj;
+
+[id: 1713, name: "aes nasal plural", weight: 0.1, group: brazilian_nasal, ipa: "/ɐ̃j̃s/"]
+ães -> ãjs;
+
+// ============================================================
+// CARIOCA (RIO) STYLE S
+// ============================================================
+// Rio de Janeiro dialect - s before consonant → ʃ
+// Optional: uncomment for Rio-style matching
+
+[id: 1720, name: "s before consonant carioca", weight: 0.2, group: brazilian_carioca, ipa: "/ʃ/"]
+s -> ʃ / _$CONSONANT;
+
+[id: 1721, name: "final s carioca", weight: 0.2, group: brazilian_carioca, ipa: "/ʃ/"]
+s -> ʃ / _#;
+
+// ============================================================
+// X PATTERNS
+// ============================================================
+// X has multiple pronunciations in Brazilian Portuguese
+
+// X at word start → ʃ
+[id: 1725, name: "initial x to sh", weight: 0.15, group: brazilian_x, ipa: "/ʃ/"]
+x -> ʃ / #_;
+
+// X in common prefixes (ex- before vowel) → z
+[id: 1726, name: "ex before vowel", weight: 0.15, group: brazilian_x]
+ex -> ez / _ $VOWEL;
+
+// ============================================================
+// EPENTHETIC I
+// ============================================================
+// Brazilians often add /i/ after final consonants
+
+// Final consonant clusters get epenthetic i
+[id: 1730, name: "final p epenthesis", weight: 0.2, group: brazilian_epenthesis]
+p -> pi / _#;
+
+[id: 1731, name: "final b epenthesis", weight: 0.2, group: brazilian_epenthesis]
+b -> bi / _#;
+
+[id: 1732, name: "final k epenthesis", weight: 0.2, group: brazilian_epenthesis]
+k -> ki / _#;
+
+[id: 1733, name: "final g epenthesis", weight: 0.2, group: brazilian_epenthesis]
+g -> gi / _#;
+

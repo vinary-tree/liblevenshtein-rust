@@ -107,8 +107,8 @@
 [id: 4218, name: "kha", weight: 0.05, group: marathi_velars]
 ख -> kh;
 
-[id: 4219, name: "ga", weight: 0.05, group: marathi_velars]
-ग -> g;
+[id: 4219, name: "ga", weight: 0.05, group: marathi_velars, ipa: "/ɡ/"]
+ग -> ɡ;
 
 [id: 4220, name: "gha", weight: 0.05, group: marathi_velars]
 घ -> gh;

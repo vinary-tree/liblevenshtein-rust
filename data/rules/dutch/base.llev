@@ -133,8 +133,7 @@ w -> ʋ;
 W -> ʋ;
 
 // V → /v/ (voiced labiodental fricative)
-[id: 1931, name: "v to v", weight: 0.2, group: dutch_consonants, ipa: "/v/"]
-v -> v;
+// Note: Lowercase v passes through unchanged (no transformation needed)
 
 // CK → k
 [id: 1932, name: "ck to k", weight: 0.15, group: dutch_consonants]

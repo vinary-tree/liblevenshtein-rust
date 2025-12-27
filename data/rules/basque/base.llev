@@ -26,52 +26,25 @@
 [id: 4950, name: "tx digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡ʃ/"]
 tx -> t͡ʃ;
 
-[id: 4951, name: "Tx digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡ʃ/"]
-Tx -> t͡ʃ;
-
-[id: 4952, name: "TX digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡ʃ/"]
-TX -> t͡ʃ;
-
 // Ts → t͡s (voiceless alveolar affricate)
 [id: 4953, name: "ts digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡s/"]
 ts -> t͡s;
-
-[id: 4954, name: "Ts digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡s/"]
-Ts -> t͡s;
-
-[id: 4955, name: "TS digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡s/"]
-TS -> t͡s;
 
 // Tz → t͡s̻ (laminal alveolar affricate)
 [id: 4956, name: "tz digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡s̻/"]
 tz -> t͡s̻;
 
-[id: 4957, name: "Tz digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡s̻/"]
-Tz -> t͡s̻;
-
-[id: 4958, name: "TZ digraph", weight: 0.05, group: basque_digraphs, ipa: "/t͡s̻/"]
-TZ -> t͡s̻;
-
 // Tt → c (voiceless palatal plosive)
 [id: 4959, name: "tt digraph", weight: 0.05, group: basque_digraphs, ipa: "/c/"]
 tt -> c;
-
-[id: 4960, name: "TT digraph", weight: 0.05, group: basque_digraphs, ipa: "/c/"]
-TT -> c;
 
 // Dd → ɟ (voiced palatal plosive)
 [id: 4961, name: "dd digraph", weight: 0.05, group: basque_digraphs, ipa: "/ɟ/"]
 dd -> ɟ;
 
-[id: 4962, name: "DD digraph", weight: 0.05, group: basque_digraphs, ipa: "/ɟ/"]
-DD -> ɟ;
-
 // Rr → r (trilled r)
 [id: 4963, name: "rr digraph", weight: 0.05, group: basque_digraphs, ipa: "/r/"]
 rr -> r;
-
-[id: 4964, name: "RR digraph", weight: 0.05, group: basque_digraphs, ipa: "/r/"]
-RR -> r;
 
 // ============================================================
 // SPECIAL CONSONANTS
@@ -81,182 +54,35 @@ RR -> r;
 [id: 4965, name: "x to ʃ", weight: 0.1, group: basque_special, ipa: "/ʃ/"]
 x -> ʃ;
 
-[id: 4966, name: "X to ʃ", weight: 0.1, group: basque_special, ipa: "/ʃ/"]
-X -> ʃ;
-
 // Z → s̻ (laminal alveolar, NOT "z"!)
 [id: 4967, name: "z to s̻", weight: 0.1, group: basque_special, ipa: "/s̻/"]
 z -> s̻;
-
-[id: 4968, name: "Z to s̻", weight: 0.1, group: basque_special, ipa: "/s̻/"]
-Z -> s̻;
 
 // S → s̺ (apical alveolar "s")
 [id: 4969, name: "s consonant", weight: 0.1, group: basque_special, ipa: "/s̺/"]
 s -> s̺;
 
-[id: 4970, name: "S consonant", weight: 0.1, group: basque_special, ipa: "/s̺/"]
-S -> s̺;
-
-// ============================================================
-// VOWELS
-// ============================================================
-
-// A → a
-[id: 4971, name: "a vowel", weight: 0.15, group: basque_vowels]
-a -> a;
-
-[id: 4972, name: "A vowel", weight: 0.15, group: basque_vowels]
-A -> a;
-
-// E → e
-[id: 4973, name: "e vowel", weight: 0.15, group: basque_vowels]
-e -> e;
-
-[id: 4974, name: "E vowel", weight: 0.15, group: basque_vowels]
-E -> e;
-
-// I → i
-[id: 4975, name: "i vowel", weight: 0.15, group: basque_vowels]
-i -> i;
-
-[id: 4976, name: "I vowel", weight: 0.15, group: basque_vowels]
-I -> i;
-
-// O → o
-[id: 4977, name: "o vowel", weight: 0.15, group: basque_vowels]
-o -> o;
-
-[id: 4978, name: "O vowel", weight: 0.15, group: basque_vowels]
-O -> o;
-
-// U → u
-[id: 4979, name: "u vowel", weight: 0.15, group: basque_vowels]
-u -> u;
-
-[id: 4980, name: "U vowel", weight: 0.15, group: basque_vowels]
-U -> u;
-
 // ============================================================
 // CONSONANTS
 // ============================================================
-
-// B → b
-[id: 4981, name: "b consonant", weight: 0.2, group: basque_consonants]
-b -> b;
-
-[id: 4982, name: "B consonant", weight: 0.2, group: basque_consonants]
-B -> b;
-
-// D → d
-[id: 4983, name: "d consonant", weight: 0.2, group: basque_consonants]
-d -> d;
-
-[id: 4984, name: "D consonant", weight: 0.2, group: basque_consonants]
-D -> d;
-
-// F → f (loanwords only, not native)
-[id: 4985, name: "f consonant", weight: 0.2, group: basque_consonants]
-f -> f;
-
-[id: 4986, name: "F consonant", weight: 0.2, group: basque_consonants]
-F -> f;
-
-// G → g
-[id: 4987, name: "g consonant", weight: 0.2, group: basque_consonants]
-g -> g;
-
-[id: 4988, name: "G consonant", weight: 0.2, group: basque_consonants]
-G -> g;
-
-// H → h (mostly silent in many dialects)
-[id: 4989, name: "h consonant", weight: 0.2, group: basque_consonants]
-h -> h;
-
-[id: 4990, name: "H consonant", weight: 0.2, group: basque_consonants]
-H -> h;
-
-// J → j (like English "y" or "h" depending on dialect, palatal approximant)
-[id: 4991, name: "j consonant", weight: 0.2, group: basque_consonants, ipa: "/j/"]
-j -> j;
-
-[id: 4992, name: "J consonant", weight: 0.2, group: basque_consonants, ipa: "/j/"]
-J -> j;
-
-// K → k
-[id: 4993, name: "k consonant", weight: 0.2, group: basque_consonants]
-k -> k;
-
-[id: 4994, name: "K consonant", weight: 0.2, group: basque_consonants]
-K -> k;
-
-// L → l
-[id: 4995, name: "l consonant", weight: 0.2, group: basque_consonants]
-l -> l;
-
-[id: 4996, name: "L consonant", weight: 0.2, group: basque_consonants]
-L -> l;
-
-// M → m
-[id: 4997, name: "m consonant", weight: 0.2, group: basque_consonants]
-m -> m;
-
-[id: 4998, name: "M consonant", weight: 0.2, group: basque_consonants]
-M -> m;
-
-// N → n
-[id: 4999, name: "n consonant", weight: 0.2, group: basque_consonants]
-n -> n;
-
-[id: 3248, name: "N consonant", weight: 0.2, group: basque_consonants]
-N -> n;
 
 // Ñ → ɲ (palatal nasal, like Spanish ñ)
 [id: 3249, name: "n tilde to ɲ", weight: 0.2, group: basque_consonants, ipa: "/ɲ/"]
 ñ -> ɲ;
 
-[id: 3250, name: "N tilde to ɲ", weight: 0.2, group: basque_consonants, ipa: "/ɲ/"]
-Ñ -> ɲ;
-
-// P → p
-[id: 3251, name: "p consonant", weight: 0.2, group: basque_consonants]
-p -> p;
-
-[id: 3252, name: "P consonant", weight: 0.2, group: basque_consonants]
-P -> p;
-
 // R → ɾ (single tap)
 [id: 3253, name: "r consonant", weight: 0.2, group: basque_consonants, ipa: "/ɾ/"]
 r -> ɾ;
-
-[id: 3254, name: "R consonant", weight: 0.2, group: basque_consonants, ipa: "/ɾ/"]
-R -> ɾ;
-
-// T → t
-[id: 3255, name: "t consonant", weight: 0.2, group: basque_consonants]
-t -> t;
-
-[id: 3256, name: "T consonant", weight: 0.2, group: basque_consonants]
-T -> t;
 
 // V → b (v rare, often = b in loanwords)
 [id: 3257, name: "v to b", weight: 0.2, group: basque_consonants]
 v -> b;
 
-[id: 3258, name: "V to b", weight: 0.2, group: basque_consonants]
-V -> b;
-
 // W → u (loanwords)
 [id: 3259, name: "w to u", weight: 0.2, group: basque_consonants]
 w -> u;
 
-[id: 3260, name: "W to u", weight: 0.2, group: basque_consonants]
-W -> u;
-
 // Y → i (loanwords)
 [id: 3261, name: "y to i", weight: 0.2, group: basque_consonants]
 y -> i;
-
-[id: 3262, name: "Y to i", weight: 0.2, group: basque_consonants]
-Y -> i;
 

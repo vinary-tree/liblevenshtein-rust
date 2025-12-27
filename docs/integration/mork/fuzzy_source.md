@@ -45,14 +45,14 @@ use liblevenshtein::dictionary::phonetic_normalized::{
 };
 use liblevenshtein::phonetic::rules::english;
 
-// Build with combined English rules (zompist + homophones + text_speak)
+// Build with combined English rules (base + homophones + text_speak)
 let combined_rules = english::combined();
 let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, combined_rules);
 
 // Or use specific rule sets
-let dict_zompist = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+let dict_base = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
     &words,
-    english::zompist().rules
+    english::base().rules
 );
 ```
 
@@ -81,7 +81,7 @@ for candidate in results {
 ```rust
 use liblevenshtein::phonetic::rules::english;
 
-let zompist = english::zompist();        // 62 orthographic rules
+let base = english::base();              // 62 orthographic rules
 let homophones = english::homophones();  // Homophone pairs
 let text_speak = english::text_speak();  // Text-speak expansions
 

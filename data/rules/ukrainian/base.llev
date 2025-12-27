@@ -49,12 +49,12 @@
 [id: 2805, name: "І to i", weight: 0.05, group: ukrainian_unique]
 І -> i;
 
-// Ґ → g (plosive g, rare but distinctive)
-[id: 2806, name: "ґ to g", weight: 0.05, group: ukrainian_unique]
-ґ -> g;
+// Ґ → ɡ (plosive g, rare but distinctive)
+[id: 2806, name: "ґ to ɡ", weight: 0.05, group: ukrainian_unique, ipa: "/ɡ/"]
+ґ -> ɡ;
 
-[id: 2807, name: "Ґ to g", weight: 0.05, group: ukrainian_unique]
-Ґ -> g;
+[id: 2807, name: "Ґ to ɡ", weight: 0.05, group: ukrainian_unique, ipa: "/ɡ/"]
+Ґ -> ɡ;
 
 // ============================================================
 // COMPLEX CONSONANTS (before simple consonants)

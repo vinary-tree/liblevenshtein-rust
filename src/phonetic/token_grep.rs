@@ -767,12 +767,52 @@ impl TokenGrep {
                 match apply_rules_seq_char(rules, &input_phones, 100) {
                     Some(phones) => {
                         let mut s = String::new();
-                        for p in &phones {
+                        for p in phones.iter() {
                             match p {
                                 PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => s.push(*c),
                                 PhoneChar::Digraph(c1, c2) => {
                                     s.push(*c1);
                                     s.push(*c2);
+                                }
+                                PhoneChar::Trigraph(c1, c2, c3) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                }
+                                PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                }
+                                PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                }
+                                PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                    s.push(*c6);
+                                }
+                                PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                    s.push(*c6);
+                                    s.push(*c7);
+                                }
+                                PhoneChar::Sequence(chars) => {
+                                    for c in chars {
+                                        s.push(*c);
+                                    }
                                 }
                                 PhoneChar::Silent => {}
                             }
@@ -1282,12 +1322,52 @@ impl StreamingTokenMatcher {
                 match apply_rules_seq_char(rules, &input_phones, 100) {
                     Some(phones) => {
                         let mut s = String::new();
-                        for p in &phones {
+                        for p in phones.iter() {
                             match p {
                                 PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => s.push(*c),
                                 PhoneChar::Digraph(c1, c2) => {
                                     s.push(*c1);
                                     s.push(*c2);
+                                }
+                                PhoneChar::Trigraph(c1, c2, c3) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                }
+                                PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                }
+                                PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                }
+                                PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                    s.push(*c6);
+                                }
+                                PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                    s.push(*c6);
+                                    s.push(*c7);
+                                }
+                                PhoneChar::Sequence(chars) => {
+                                    for c in chars {
+                                        s.push(*c);
+                                    }
                                 }
                                 PhoneChar::Silent => {}
                             }

@@ -116,6 +116,7 @@ pub mod expansion;
 pub mod features;
 pub mod grep;
 pub mod grep_online;
+pub mod ipa_syllable;
 pub mod llev;
 pub mod llre;
 pub mod matching;
@@ -161,10 +162,21 @@ pub use verified::{
     rule_to_nfa, rule_to_nfa_char, rules_to_nfa, rules_to_nfa_char, zompist_nfa, zompist_nfa_char,
 };
 
-// Re-export syllable detection functions
+// Re-export syllable detection functions (orthographic, English-based)
 pub use syllable::{
-    is_before_doubled_consonant, is_final_syllable, is_initial_syllable, is_open_syllable,
-    syllable_boundaries, syllable_count,
+    evaluate_syllable_condition, evaluate_syllable_condition_ipa, evaluate_syllable_expr,
+    evaluate_syllable_expr_ipa, is_before_doubled_consonant, is_final_syllable,
+    is_initial_syllable, is_open_syllable, syllable_boundaries, syllable_count,
+};
+
+// Re-export IPA-based syllable functions (language-agnostic)
+pub use ipa_syllable::{
+    ipa_syllable_boundaries, ipa_syllable_count, is_ipa_consonant, is_ipa_vowel,
+    is_length_marker, is_stress_marker, is_syllable_boundary,
+    // Position checks using IPA
+    is_final_syllable as is_final_syllable_ipa,
+    is_initial_syllable as is_initial_syllable_ipa,
+    is_open_syllable as is_open_syllable_ipa,
 };
 
 // Re-export phonetic feature types for (?f) flag support

@@ -1,0 +1,265 @@
+// Kazakh Base Phonetic Rules
+// ==========================
+// Phonetic rules for Kazakh (Қазақ тілі / Qazaq tili).
+// Spoken by approximately 13 million people in Kazakhstan and
+// neighboring countries.
+//
+// Kazakh features:
+//   - Turkic language family (Kipchak branch)
+//   - Vowel harmony (front/back, rounded/unrounded)
+//   - 9 vowels including front rounded
+//   - Uvular consonants (q, ğ)
+//   - No consonant clusters initially
+//   - Currently uses Cyrillic, transitioning to Latin
+//
+// Orthography (Latin):
+//   - ı for /ɯ/, i for /ɪ/
+//   - ö for /ø/, ü for /ʏ/
+//   - ğ for /ʁ/, q for /q/
+//   - ñ for /ŋ/
+//
+// Rule IDs: 11400-11499
+
+@name "Kazakh Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Kazakh"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// Back vowels
+// ============================================================
+
+[id: 11400, name: "a", weight: 0.05, group: kazakh_vowels, ipa: "/ɑ/"]
+a -> ɑ;
+
+// [id: 11401] Identity mapping removed: o -> o (passes through unchanged)
+
+[id: 11402, name: "u", weight: 0.05, group: kazakh_vowels, ipa: "/ʊ/"]
+u -> ʊ;
+
+[id: 11403, name: "ı back unrounded", weight: 0.05, group: kazakh_vowels, ipa: "/ɯ/"]
+ı -> ɯ;
+
+// Front vowels
+// [id: 11404] Identity mapping removed: e -> e (passes through unchanged)
+
+[id: 11405, name: "i", weight: 0.05, group: kazakh_vowels, ipa: "/ɪ/"]
+i -> ɪ;
+
+[id: 11406, name: "ö front rounded", weight: 0.05, group: kazakh_vowels, ipa: "/ø/"]
+ö -> ø;
+
+[id: 11407, name: "ü front high rounded", weight: 0.05, group: kazakh_vowels, ipa: "/ʏ/"]
+ü -> ʏ;
+
+// Cyrillic vowels
+[id: 11408, name: "cyrillic a", weight: 0.05, group: kazakh_cyrillic, ipa: "/ɑ/"]
+а -> ɑ;
+
+[id: 11409, name: "cyrillic ә schwa-like", weight: 0.05, group: kazakh_cyrillic, ipa: "/æ/"]
+ә -> æ;
+
+[id: 11410, name: "cyrillic о", weight: 0.05, group: kazakh_cyrillic, ipa: "/o/"]
+о -> o;
+
+[id: 11411, name: "cyrillic ө front rounded", weight: 0.05, group: kazakh_cyrillic, ipa: "/ø/"]
+ө -> ø;
+
+[id: 11412, name: "cyrillic у", weight: 0.05, group: kazakh_cyrillic, ipa: "/ʊ/"]
+у -> ʊ;
+
+[id: 11413, name: "cyrillic ұ back high", weight: 0.05, group: kazakh_cyrillic, ipa: "/ʊ/"]
+ұ -> ʊ;
+
+[id: 11414, name: "cyrillic ү front high rounded", weight: 0.05, group: kazakh_cyrillic, ipa: "/ʏ/"]
+ү -> ʏ;
+
+[id: 11415, name: "cyrillic ы back unrounded", weight: 0.05, group: kazakh_cyrillic, ipa: "/ɯ/"]
+ы -> ɯ;
+
+[id: 11416, name: "cyrillic і front", weight: 0.05, group: kazakh_cyrillic, ipa: "/ɪ/"]
+і -> ɪ;
+
+[id: 11417, name: "cyrillic е", weight: 0.05, group: kazakh_cyrillic, ipa: "/e/"]
+е -> e;
+
+// ============================================================
+// UVULAR CONSONANTS (weight 0.05)
+// ============================================================
+
+// [id: 11420] Identity mapping removed: q -> q (passes through unchanged)
+
+[id: 11421, name: "ğ uvular fricative", weight: 0.05, group: kazakh_uvular, ipa: "/ʁ/"]
+ğ -> ʁ;
+
+[id: 11422, name: "cyrillic қ uvular stop", weight: 0.05, group: kazakh_cyrillic, ipa: "/q/"]
+қ -> q;
+
+[id: 11423, name: "cyrillic ғ uvular fricative", weight: 0.05, group: kazakh_cyrillic, ipa: "/ʁ/"]
+ғ -> ʁ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// [id: 11425] Identity mapping removed: p -> p (passes through unchanged)
+
+// [id: 11426] Identity mapping removed: b -> b (passes through unchanged)
+
+// [id: 11427] Identity mapping removed: t -> t (passes through unchanged)
+
+// [id: 11428] Identity mapping removed: d -> d (passes through unchanged)
+
+// [id: 11429] Identity mapping removed: k -> k (passes through unchanged)
+
+[id: 11430, name: "g", weight: 0.05, group: kazakh_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// Cyrillic stops
+[id: 11431, name: "cyrillic п", weight: 0.05, group: kazakh_cyrillic, ipa: "/p/"]
+п -> p;
+
+[id: 11432, name: "cyrillic б", weight: 0.05, group: kazakh_cyrillic, ipa: "/b/"]
+б -> b;
+
+[id: 11433, name: "cyrillic т", weight: 0.05, group: kazakh_cyrillic, ipa: "/t/"]
+т -> t;
+
+[id: 11434, name: "cyrillic д", weight: 0.05, group: kazakh_cyrillic, ipa: "/d/"]
+д -> d;
+
+[id: 11435, name: "cyrillic к", weight: 0.05, group: kazakh_cyrillic, ipa: "/k/"]
+к -> k;
+
+[id: 11436, name: "cyrillic г", weight: 0.05, group: kazakh_cyrillic, ipa: "/ɡ/"]
+г -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// [id: 11440] Identity mapping removed: f -> f (passes through unchanged)
+
+// [id: 11441] Identity mapping removed: v -> v (passes through unchanged)
+
+// [id: 11442] Identity mapping removed: s -> s (passes through unchanged)
+
+// [id: 11443] Identity mapping removed: z -> z (passes through unchanged)
+
+[id: 11444, name: "ş postalveolar", weight: 0.05, group: kazakh_fricatives, ipa: "/ʃ/"]
+ş -> ʃ;
+
+[id: 11445, name: "j voiced postalveolar", weight: 0.05, group: kazakh_fricatives, ipa: "/ʒ/"]
+j -> ʒ;
+
+// [id: 11446] Identity mapping removed: x -> x (passes through unchanged)
+
+// [id: 11447] Identity mapping removed: h -> h (passes through unchanged)
+
+// Cyrillic fricatives
+[id: 11448, name: "cyrillic ф", weight: 0.05, group: kazakh_cyrillic, ipa: "/f/"]
+ф -> f;
+
+[id: 11449, name: "cyrillic с", weight: 0.05, group: kazakh_cyrillic, ipa: "/s/"]
+с -> s;
+
+[id: 11450, name: "cyrillic з", weight: 0.05, group: kazakh_cyrillic, ipa: "/z/"]
+з -> z;
+
+[id: 11451, name: "cyrillic ш", weight: 0.05, group: kazakh_cyrillic, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 11452, name: "cyrillic ж", weight: 0.05, group: kazakh_cyrillic, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 11453, name: "cyrillic х", weight: 0.05, group: kazakh_cyrillic, ipa: "/x/"]
+х -> x;
+
+[id: 11454, name: "cyrillic һ", weight: 0.05, group: kazakh_cyrillic, ipa: "/h/"]
+һ -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// [id: 11458] Identity mapping removed: m -> m (passes through unchanged)
+
+// [id: 11459] Identity mapping removed: n -> n (passes through unchanged)
+
+[id: 11460, name: "ñ velar nasal", weight: 0.05, group: kazakh_nasals, ipa: "/ŋ/"]
+ñ -> ŋ;
+
+[id: 11461, name: "ng velar nasal digraph", weight: 0.05, group: kazakh_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// Cyrillic nasals
+[id: 11462, name: "cyrillic м", weight: 0.05, group: kazakh_cyrillic, ipa: "/m/"]
+м -> m;
+
+[id: 11463, name: "cyrillic н", weight: 0.05, group: kazakh_cyrillic, ipa: "/n/"]
+н -> n;
+
+[id: 11464, name: "cyrillic ң velar nasal", weight: 0.05, group: kazakh_cyrillic, ipa: "/ŋ/"]
+ң -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// [id: 11468] Identity mapping removed: l -> l (passes through unchanged)
+
+// [id: 11469] Identity mapping removed: r -> r (passes through unchanged)
+
+// [id: 11470] Identity mapping removed: w -> w (passes through unchanged)
+
+[id: 11471, name: "y", weight: 0.05, group: kazakh_approximants, ipa: "/j/"]
+y -> j;
+
+// Cyrillic liquids
+[id: 11472, name: "cyrillic л", weight: 0.05, group: kazakh_cyrillic, ipa: "/l/"]
+л -> l;
+
+[id: 11473, name: "cyrillic р", weight: 0.05, group: kazakh_cyrillic, ipa: "/r/"]
+р -> r;
+
+[id: 11474, name: "cyrillic у semivowel", weight: 0.05, group: kazakh_cyrillic, ipa: "/w/"]
+у -> w;
+
+[id: 11475, name: "cyrillic й", weight: 0.05, group: kazakh_cyrillic, ipa: "/j/"]
+й -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 11480, name: "qazaq kazakh", weight: 0.02, group: kazakh_common]
+qazaq -> qɑzɑq;
+
+[id: 11481, name: "salam hello", weight: 0.02, group: kazakh_common]
+salam -> sɑlɑm;
+
+[id: 11482, name: "raxmet thank you", weight: 0.02, group: kazakh_common]
+raxmet -> rɑxmet;
+
+[id: 11483, name: "ia yes", weight: 0.02, group: kazakh_common]
+ia -> ɪjɑ;
+
+[id: 11484, name: "joq no", weight: 0.02, group: kazakh_common]
+joq -> ʒoq;
+
+[id: 11485, name: "su water", weight: 0.02, group: kazakh_common]
+su -> sʊ;
+
+[id: 11486, name: "nan bread food", weight: 0.02, group: kazakh_common]
+nan -> nɑn;
+
+[id: 11487, name: "üy house", weight: 0.02, group: kazakh_common]
+üy -> ʏj;
+
+[id: 11488, name: "adam person", weight: 0.02, group: kazakh_common]
+adam -> ɑdɑm;
+
+[id: 11489, name: "bala child", weight: 0.02, group: kazakh_common]
+bala -> bɑlɑ;
+

@@ -22,57 +22,59 @@
 @description "Phonetic normalization rules for Korean Hangul"
 
 // ============================================================
-// DOUBLE (TENSE) CONSONANTS - Higher priority
+// TENSE (DOUBLE) CONSONANTS ([:tense:] class) - Higher priority
 // ============================================================
+// Korean tense consonants (ssang) with IPA tenseness marker ͈ (U+0348)
 // These need to match before single consonants
 
-// ㄲ (ssang-giyeok) → kk
-[id: 2050, name: "ssang giyeok", weight: 0.05, group: korean_double_consonants]
-ㄲ -> kk;
+// ㄲ (ssang-giyeok) → k͈ (tense velar stop)
+[id: 2050, name: "ssang giyeok tense", weight: 0.05, group: korean_tense_consonants, ipa: "/k͈/"]
+ㄲ -> k͈;
 
-// ㄸ (ssang-digeut) → tt
-[id: 2051, name: "ssang digeut", weight: 0.05, group: korean_double_consonants]
-ㄸ -> tt;
+// ㄸ (ssang-digeut) → t͈ (tense alveolar stop)
+[id: 2051, name: "ssang digeut tense", weight: 0.05, group: korean_tense_consonants, ipa: "/t͈/"]
+ㄸ -> t͈;
 
-// ㅃ (ssang-bieup) → pp
-[id: 2052, name: "ssang bieup", weight: 0.05, group: korean_double_consonants]
-ㅃ -> pp;
+// ㅃ (ssang-bieup) → p͈ (tense bilabial stop)
+[id: 2052, name: "ssang bieup tense", weight: 0.05, group: korean_tense_consonants, ipa: "/p͈/"]
+ㅃ -> p͈;
 
-// ㅆ (ssang-siot) → ss
-[id: 2053, name: "ssang siot", weight: 0.05, group: korean_double_consonants]
-ㅆ -> ss;
+// ㅆ (ssang-siot) → s͈ (tense alveolar fricative)
+[id: 2053, name: "ssang siot tense", weight: 0.05, group: korean_tense_consonants, ipa: "/s͈/"]
+ㅆ -> s͈;
 
 // ㅉ (ssang-jieut) → t͡ɕ͈ (tense alveolo-palatal affricate)
-[id: 2054, name: "ssang jieut", weight: 0.05, group: korean_double_consonants, ipa: "/t͡ɕ͈/"]
+[id: 2054, name: "ssang jieut tense", weight: 0.05, group: korean_tense_consonants, ipa: "/t͡ɕ͈/"]
 ㅉ -> t͡ɕ͈;
 
 // ============================================================
-// ASPIRATED CONSONANTS
+// ASPIRATED CONSONANTS ([:aspirated:] class)
 // ============================================================
+// These use IPA aspiration marker ʰ (U+02B0)
 
-// ㅋ (kieuk) → k (aspirated k)
-[id: 2060, name: "kieuk", weight: 0.1, group: korean_aspirated]
-ㅋ -> k;
+// ㅋ (kieuk) → kʰ (aspirated velar stop)
+[id: 2060, name: "kieuk aspirated", weight: 0.1, group: korean_aspirated, ipa: "/kʰ/"]
+ㅋ -> kʰ;
 
-// ㅌ (tieut) → t (aspirated t)
-[id: 2061, name: "tieut", weight: 0.1, group: korean_aspirated]
-ㅌ -> t;
+// ㅌ (tieut) → tʰ (aspirated alveolar stop)
+[id: 2061, name: "tieut aspirated", weight: 0.1, group: korean_aspirated, ipa: "/tʰ/"]
+ㅌ -> tʰ;
 
-// ㅍ (pieup) → p (aspirated p)
-[id: 2062, name: "pieup", weight: 0.1, group: korean_aspirated]
-ㅍ -> p;
+// ㅍ (pieup) → pʰ (aspirated bilabial stop)
+[id: 2062, name: "pieup aspirated", weight: 0.1, group: korean_aspirated, ipa: "/pʰ/"]
+ㅍ -> pʰ;
 
 // ㅊ (chieut) → t͡ɕʰ (aspirated alveolo-palatal affricate)
-[id: 2063, name: "chieut", weight: 0.1, group: korean_aspirated, ipa: "/t͡ɕʰ/"]
+[id: 2063, name: "chieut aspirated", weight: 0.1, group: korean_aspirated, ipa: "/t͡ɕʰ/"]
 ㅊ -> t͡ɕʰ;
 
 // ============================================================
 // BASIC CONSONANTS
 // ============================================================
 
-// ㄱ (giyeok) → g/k (varies by position)
-[id: 2070, name: "giyeok", weight: 0.15, group: korean_consonants]
-ㄱ -> g;
+// ㄱ (giyeok) → ɡ/k (varies by position)
+[id: 2070, name: "giyeok", weight: 0.15, group: korean_consonants, ipa: "/ɡ/"]
+ㄱ -> ɡ;
 
 // ㄴ (nieun) → n
 [id: 2071, name: "nieun", weight: 0.15, group: korean_consonants]
@@ -269,4 +271,141 @@ eu -> u;
 
 [id: 2142, name: "ae to e", weight: 0.3, group: korean_simplification]
 ae -> e;
+
+// ============================================================
+// POSITION-DEPENDENT CONSONANT RULES
+// ============================================================
+// Korean consonants change pronunciation based on position:
+// - Initial: before vowel (word-initial or syllable-initial)
+// - Final: at end of syllable (batchim / 받침)
+// - Intervocalic: between vowels (typically voiced)
+//
+// These rules run AFTER basic jamo conversion to adjust
+// the IPA output based on phonetic environment.
+
+// Define vowel set for context matching
+@define KOREAN_VOWEL = [aeiou]
+
+// ------------------------------
+// ㅇ (ieung) position rules
+// ------------------------------
+// Initial ㅇ is silent (placeholder for vowel-initial syllables)
+// Final ㅇ is /ŋ/ (already covered in basic rules)
+
+// ieung is silent at word start (before vowel)
+[id: 2150, name: "ieung initial silent", weight: 0.01, group: korean_position]
+ŋ -> / # _ $KOREAN_VOWEL;
+
+// ieung is silent between vowels (as initial of second syllable)
+[id: 2151, name: "ieung intervocalic silent", weight: 0.01, group: korean_position]
+ŋ -> / $KOREAN_VOWEL _ $KOREAN_VOWEL;
+
+// ------------------------------
+// ㄹ (rieul) position rules
+// ------------------------------
+// Initial: /r/ (flap, similar to Spanish r)
+// Final: /l/ (lateral)
+// Between vowels: /r/ (flap)
+
+// rieul becomes /l/ at word end
+[id: 2152, name: "rieul final l", weight: 0.01, group: korean_position]
+r -> l / _ #;
+
+// rieul becomes /l/ before consonant
+[id: 2153, name: "rieul preconsonantal l", weight: 0.01, group: korean_position]
+r -> l / _ [ktnmpsh];
+
+// ------------------------------
+// Coda neutralization (final position)
+// ------------------------------
+// In final position (batchim), many consonants neutralize:
+// ㄱ, ㅋ, ㄲ → /k̚/ (unreleased k)
+// ㄷ, ㅌ, ㅅ, ㅆ, ㅈ, ㅊ, ㅎ → /t̚/ (unreleased t)
+// ㅂ, ㅍ → /p̚/ (unreleased p)
+
+// ɡ/k becomes unreleased k at word end
+[id: 2154, name: "velar final unreleased", weight: 0.02, group: korean_position]
+ɡ -> k / _ #;
+
+// Aspirated k also unreleases at word end
+[id: 2155, name: "aspirated k final", weight: 0.02, group: korean_position]
+kk -> k / _ #;
+
+// d/t becomes unreleased t at word end
+[id: 2156, name: "dental final unreleased", weight: 0.02, group: korean_position]
+d -> t / _ #;
+
+// s becomes t at word end (coda neutralization)
+[id: 2157, name: "siot final t", weight: 0.02, group: korean_position]
+s -> t / _ #;
+
+// ss (double siot) also becomes t finally
+[id: 2158, name: "ssang siot final t", weight: 0.02, group: korean_position]
+ss -> t / _ #;
+
+// h becomes silent or very weak at word end
+[id: 2159, name: "hieut final weak", weight: 0.02, group: korean_position]
+h -> / _ #;
+
+// b/p becomes unreleased p at word end
+[id: 2160, name: "bilabial final unreleased", weight: 0.02, group: korean_position]
+b -> p / _ #;
+
+// pp becomes p finally
+[id: 2161, name: "ssang bieup final p", weight: 0.02, group: korean_position]
+pp -> p / _ #;
+
+// ------------------------------
+// Intervocalic voicing
+// ------------------------------
+// Plain consonants between vowels often become voiced
+
+// k between vowels stays as ɡ (already ɡ from basic rules)
+// This is already handled since ㄱ → ɡ
+
+// t between vowels can voice to d
+[id: 2162, name: "t intervocalic voicing", weight: 0.02, group: korean_position]
+t -> d / $KOREAN_VOWEL _ $KOREAN_VOWEL;
+
+// p between vowels can voice to b
+[id: 2163, name: "p intervocalic voicing", weight: 0.02, group: korean_position]
+p -> b / $KOREAN_VOWEL _ $KOREAN_VOWEL;
+
+// ------------------------------
+// Palatalization before /i/, /y/
+// ------------------------------
+// s + i/y → ɕ (palatalized s)
+
+// s before i becomes palatal
+[id: 2164, name: "siot palatalization i", weight: 0.01, group: korean_position]
+si -> ɕi;
+
+// ss before i becomes tense palatal
+[id: 2165, name: "ssang siot palatalization i", weight: 0.01, group: korean_position]
+ssi -> ɕɕi;
+
+// t + i → t͡ɕi (affrication before i)
+[id: 2166, name: "digeut affrication i", weight: 0.01, group: korean_position]
+ti -> t͡ɕi;
+
+// d + i → d͡ʑi (voiced affrication before i)
+[id: 2167, name: "digeut voiced affrication i", weight: 0.01, group: korean_position]
+di -> d͡ʑi;
+
+// ------------------------------
+// Nasalization
+// ------------------------------
+// Stops become nasals before nasals
+
+// k/ɡ before n/m becomes ŋ
+[id: 2168, name: "velar nasalization", weight: 0.02, group: korean_position]
+ɡ -> ŋ / _ [nm];
+
+// t/d before n/m becomes n
+[id: 2169, name: "dental nasalization", weight: 0.02, group: korean_position]
+d -> n / _ [nm];
+
+// p/b before n/m becomes m
+[id: 2170, name: "bilabial nasalization", weight: 0.02, group: korean_position]
+b -> m / _ [nm];
 

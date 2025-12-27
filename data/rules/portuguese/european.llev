@@ -126,3 +126,58 @@ z -> ʃ / _#;
 [id: 1640, name: "final e reduced", weight: 0.2, group: european_final, ipa: "/ə/"]
 e -> ə / _#;
 
+// ============================================================
+// ADDITIONAL S BEFORE CONSONANT PATTERNS
+// ============================================================
+// More comprehensive s-palatalization contexts
+
+[id: 1645, name: "s before m", weight: 0.15, group: european_s, ipa: "/ʒ/"]
+sm -> ʒm;
+
+[id: 1646, name: "s before n", weight: 0.15, group: european_s, ipa: "/ʒ/"]
+sn -> ʒn;
+
+[id: 1647, name: "s before l", weight: 0.15, group: european_s, ipa: "/ʒ/"]
+sl -> ʒl;
+
+[id: 1648, name: "s before r", weight: 0.15, group: european_s, ipa: "/ʃ/"]
+sr -> ʃr;
+
+// ============================================================
+// VOWEL CENTRALIZATION
+// ============================================================
+// European Portuguese has more centralized vowels
+
+// Unstressed 'a' often → ɐ (near-open central)
+[id: 1650, name: "unstressed a centralization", weight: 0.2, group: european_vowels, ipa: "/ɐ/"]
+a -> ɐ / _$CONSONANT$CONSONANT;
+
+// Final unstressed 'a' → ɐ
+[id: 1651, name: "final a centralization", weight: 0.2, group: european_vowels, ipa: "/ɐ/"]
+a -> ɐ / _#;
+
+// ============================================================
+// CONSONANT CLUSTER SIMPLIFICATION
+// ============================================================
+// European Portuguese often simplifies certain clusters
+
+// MN cluster
+[id: 1655, name: "mn simplification", weight: 0.2, group: european_clusters]
+mn -> n;
+
+// CT cluster (in learned words)
+[id: 1656, name: "ct simplification", weight: 0.2, group: european_clusters]
+ct -> t;
+
+// ============================================================
+// AFFRICATE PATTERNS
+// ============================================================
+// X before vowel often → ʃ
+
+[id: 1660, name: "x to sh", weight: 0.15, group: european_x, ipa: "/ʃ/"]
+x -> ʃ / #_;
+
+// X between vowels can be /z/ or /ks/
+[id: 1661, name: "x intervocalic", weight: 0.2, group: european_x]
+x -> z / $VOWEL _ $VOWEL;
+

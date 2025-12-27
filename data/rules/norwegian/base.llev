@@ -89,17 +89,11 @@ HJ -> j;
 // SPECIAL VOWELS
 // ============================================================
 
-// Æ/æ → æ (front open vowel)
-[id: 3750, name: "ae ligature", weight: 0.1, group: norwegian_vowels, ipa: "/æ/"]
-æ -> æ;
-
+// Æ → æ (uppercase normalization only)
 [id: 3751, name: "AE ligature", weight: 0.1, group: norwegian_vowels, ipa: "/æ/"]
 Æ -> æ;
 
-// Ø/ø → ø (front rounded vowel)
-[id: 3752, name: "o slash", weight: 0.1, group: norwegian_vowels, ipa: "/ø/"]
-ø -> ø;
-
+// Ø → ø (uppercase normalization only)
 [id: 3753, name: "O slash", weight: 0.1, group: norwegian_vowels, ipa: "/ø/"]
 Ø -> ø;
 
@@ -113,164 +107,50 @@ HJ -> j;
 // ============================================================
 // STANDARD VOWELS
 // ============================================================
-
-[id: 3756, name: "a vowel", weight: 0.15, group: norwegian_vowels]
-a -> a;
-
-[id: 3757, name: "A vowel", weight: 0.15, group: norwegian_vowels]
-A -> a;
-
-[id: 3758, name: "e vowel", weight: 0.15, group: norwegian_vowels]
-e -> e;
-
-[id: 3759, name: "E vowel", weight: 0.15, group: norwegian_vowels]
-E -> e;
-
-[id: 3760, name: "i vowel", weight: 0.15, group: norwegian_vowels]
-i -> i;
-
-[id: 3761, name: "I vowel", weight: 0.15, group: norwegian_vowels]
-I -> i;
-
-[id: 3762, name: "o vowel", weight: 0.15, group: norwegian_vowels]
-o -> o;
-
-[id: 3763, name: "O vowel", weight: 0.15, group: norwegian_vowels]
-O -> o;
-
-[id: 3764, name: "u vowel", weight: 0.15, group: norwegian_vowels]
-u -> u;
-
-[id: 3765, name: "U vowel", weight: 0.15, group: norwegian_vowels]
-U -> u;
-
-[id: 3766, name: "y vowel", weight: 0.15, group: norwegian_vowels, ipa: "/y/"]
-y -> y;
-
-[id: 3767, name: "Y vowel", weight: 0.15, group: norwegian_vowels, ipa: "/y/"]
-Y -> y;
+// Note: Standard vowels (a, e, i, o, u, y) pass through unchanged.
+// Identity mappings removed as they are no-ops - unmapped characters
+// pass through the phonetic transformation unchanged.
 
 // ============================================================
 // CONSONANTS
 // ============================================================
 
-[id: 3768, name: "b consonant", weight: 0.2, group: norwegian_consonants]
-b -> b;
-
-[id: 3769, name: "B consonant", weight: 0.2, group: norwegian_consonants]
-B -> b;
-
+// C → k (foreign letter, pronounced as k)
 [id: 3770, name: "c consonant", weight: 0.2, group: norwegian_consonants]
 c -> k;
 
 [id: 3771, name: "C consonant", weight: 0.2, group: norwegian_consonants]
 C -> k;
 
-[id: 3772, name: "d consonant", weight: 0.2, group: norwegian_consonants]
-d -> d;
-
-[id: 3773, name: "D consonant", weight: 0.2, group: norwegian_consonants]
-D -> d;
-
-[id: 3774, name: "f consonant", weight: 0.2, group: norwegian_consonants]
-f -> f;
-
-[id: 3775, name: "F consonant", weight: 0.2, group: norwegian_consonants]
-F -> f;
-
-[id: 3776, name: "g consonant", weight: 0.2, group: norwegian_consonants]
-g -> g;
-
-[id: 3777, name: "G consonant", weight: 0.2, group: norwegian_consonants]
-G -> g;
-
-[id: 3778, name: "h consonant", weight: 0.2, group: norwegian_consonants]
-h -> h;
-
-[id: 3779, name: "H consonant", weight: 0.2, group: norwegian_consonants]
-H -> h;
-
-[id: 3780, name: "j consonant", weight: 0.2, group: norwegian_consonants, ipa: "/j/"]
-j -> j;
-
-[id: 3781, name: "J consonant", weight: 0.2, group: norwegian_consonants, ipa: "/j/"]
-J -> j;
-
-[id: 3782, name: "k consonant", weight: 0.2, group: norwegian_consonants]
-k -> k;
-
-[id: 3783, name: "K consonant", weight: 0.2, group: norwegian_consonants]
-K -> k;
-
-[id: 3784, name: "l consonant", weight: 0.2, group: norwegian_consonants]
-l -> l;
-
-[id: 3785, name: "L consonant", weight: 0.2, group: norwegian_consonants]
-L -> l;
-
-[id: 3786, name: "m consonant", weight: 0.2, group: norwegian_consonants]
-m -> m;
-
-[id: 3787, name: "M consonant", weight: 0.2, group: norwegian_consonants]
-M -> m;
-
-[id: 3788, name: "n consonant", weight: 0.2, group: norwegian_consonants]
-n -> n;
-
-[id: 3789, name: "N consonant", weight: 0.2, group: norwegian_consonants]
-N -> n;
-
-[id: 3790, name: "p consonant", weight: 0.2, group: norwegian_consonants]
-p -> p;
-
-[id: 3791, name: "P consonant", weight: 0.2, group: norwegian_consonants]
-P -> p;
-
+// Q → k (foreign letter, pronounced as k)
 [id: 3792, name: "q consonant", weight: 0.2, group: norwegian_consonants]
 q -> k;
 
 [id: 3793, name: "Q consonant", weight: 0.2, group: norwegian_consonants]
 Q -> k;
 
-[id: 3794, name: "r consonant", weight: 0.2, group: norwegian_consonants]
-r -> r;
-
-[id: 3795, name: "R consonant", weight: 0.2, group: norwegian_consonants]
-R -> r;
-
-[id: 3796, name: "s consonant", weight: 0.2, group: norwegian_consonants]
-s -> s;
-
-[id: 3797, name: "S consonant", weight: 0.2, group: norwegian_consonants]
-S -> s;
-
-[id: 3798, name: "t consonant", weight: 0.2, group: norwegian_consonants]
-t -> t;
-
-[id: 3799, name: "T consonant", weight: 0.2, group: norwegian_consonants]
-T -> t;
-
-[id: 3800, name: "v consonant", weight: 0.2, group: norwegian_consonants]
-v -> v;
-
-[id: 3801, name: "V consonant", weight: 0.2, group: norwegian_consonants]
-V -> v;
-
+// W → v (foreign letter, pronounced as v)
 [id: 3802, name: "w consonant", weight: 0.2, group: norwegian_consonants]
 w -> v;
 
 [id: 3803, name: "W consonant", weight: 0.2, group: norwegian_consonants]
 W -> v;
 
+// X → ks (pronounced as k+s)
 [id: 3804, name: "x consonant", weight: 0.2, group: norwegian_consonants]
 x -> ks;
 
 [id: 3805, name: "X consonant", weight: 0.2, group: norwegian_consonants]
 X -> ks;
 
+// Z → s (foreign letter, pronounced as s)
 [id: 3806, name: "z consonant", weight: 0.2, group: norwegian_consonants]
 z -> s;
 
 [id: 3807, name: "Z consonant", weight: 0.2, group: norwegian_consonants]
 Z -> s;
+
+// Note: Other consonants (b, d, f, g, h, j, k, l, m, n, p, r, s, t, v) pass through unchanged.
+// Identity mappings removed as they are no-ops - unmapped characters
+// pass through the phonetic transformation unchanged.
 

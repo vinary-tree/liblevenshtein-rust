@@ -1,0 +1,193 @@
+// Turkmen Base Phonetic Rules
+// ===========================
+// Phonetic rules for Turkmen (Türkmen dili / Түркмен дили).
+// Spoken by approximately 6 million people in Turkmenistan and
+// neighboring countries.
+//
+// Turkmen features:
+//   - Turkic language family (Oghuz branch)
+//   - Vowel harmony (front/back, rounded/unrounded)
+//   - 9 short vowels + 9 long vowels
+//   - Long vowels phonemically contrastive
+//   - No word-initial consonant clusters
+//   - Latin script officially, Cyrillic historically
+//
+// Orthography (Latin):
+//   - ä for /æ/, ö for /ø/, ü for /y/
+//   - ý for /ɣ/ (voiced velar fricative)
+//   - ň for /ŋ/ (velar nasal)
+//   - ş for /ʃ/, ç for /tʃ/, j for /dʒ/
+//   - Long vowels: aa, ee, ii, oo, uu, etc.
+//
+// Rule IDs: 11600-11699
+
+@name "Turkmen Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Turkmen"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 11600, name: "a short", weight: 0.05, group: turkmen_vowels, ipa: "/ɑ/"]
+a -> ɑ;
+
+[id: 11601, name: "e short", weight: 0.05, group: turkmen_vowels, ipa: "/e/"]
+e -> e;
+
+// [id: 11602] Identity mapping removed: i -> i (passes through unchanged)
+
+// [id: 11603] Identity mapping removed: o -> o (passes through unchanged)
+
+// [id: 11604] Identity mapping removed: u -> u (passes through unchanged)
+
+[id: 11605, name: "y back unrounded", weight: 0.05, group: turkmen_vowels, ipa: "/ɯ/"]
+y -> ɯ;
+
+[id: 11606, name: "ä front open", weight: 0.05, group: turkmen_vowels, ipa: "/æ/"]
+ä -> æ;
+
+[id: 11607, name: "ö front rounded", weight: 0.05, group: turkmen_vowels, ipa: "/ø/"]
+ö -> ø;
+
+[id: 11608, name: "ü front high rounded", weight: 0.05, group: turkmen_vowels, ipa: "/y/"]
+ü -> y;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 11610, name: "aa long", weight: 0.05, group: turkmen_long, ipa: "/ɑː/"]
+aa -> ɑː;
+
+[id: 11611, name: "ee long", weight: 0.05, group: turkmen_long, ipa: "/eː/"]
+ee -> eː;
+
+[id: 11612, name: "ii long", weight: 0.05, group: turkmen_long, ipa: "/iː/"]
+ii -> iː;
+
+[id: 11613, name: "oo long", weight: 0.05, group: turkmen_long, ipa: "/oː/"]
+oo -> oː;
+
+[id: 11614, name: "uu long", weight: 0.05, group: turkmen_long, ipa: "/uː/"]
+uu -> uː;
+
+[id: 11615, name: "yy long back", weight: 0.05, group: turkmen_long, ipa: "/ɯː/"]
+yy -> ɯː;
+
+[id: 11616, name: "ää long front", weight: 0.05, group: turkmen_long, ipa: "/æː/"]
+ää -> æː;
+
+[id: 11617, name: "öö long front rounded", weight: 0.05, group: turkmen_long, ipa: "/øː/"]
+öö -> øː;
+
+[id: 11618, name: "üü long front high", weight: 0.05, group: turkmen_long, ipa: "/yː/"]
+üü -> yː;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// [id: 11620] Identity mapping removed: p -> p (passes through unchanged)
+
+// [id: 11621] Identity mapping removed: b -> b (passes through unchanged)
+
+// [id: 11622] Identity mapping removed: t -> t (passes through unchanged)
+
+// [id: 11623] Identity mapping removed: d -> d (passes through unchanged)
+
+// [id: 11624] Identity mapping removed: k -> k (passes through unchanged)
+
+[id: 11625, name: "g", weight: 0.05, group: turkmen_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 11628, name: "ç voiceless", weight: 0.05, group: turkmen_affricates, ipa: "/t͡ʃ/"]
+ç -> t͡ʃ;
+
+[id: 11629, name: "j voiced", weight: 0.05, group: turkmen_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// [id: 11632] Identity mapping removed: f -> f (passes through unchanged)
+
+// [id: 11633] Identity mapping removed: w -> w (passes through unchanged)
+
+// [id: 11634] Identity mapping removed: s -> s (passes through unchanged)
+
+// [id: 11635] Identity mapping removed: z -> z (passes through unchanged)
+
+[id: 11636, name: "ş postalveolar", weight: 0.05, group: turkmen_fricatives, ipa: "/ʃ/"]
+ş -> ʃ;
+
+[id: 11637, name: "ž voiced postalveolar", weight: 0.05, group: turkmen_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+// [id: 11638] Identity mapping removed: h -> h (passes through unchanged)
+
+[id: 11639, name: "ý voiced velar", weight: 0.05, group: turkmen_fricatives, ipa: "/ɣ/"]
+ý -> ɣ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// [id: 11643] Identity mapping removed: m -> m (passes through unchanged)
+
+// [id: 11644] Identity mapping removed: n -> n (passes through unchanged)
+
+[id: 11645, name: "ň velar nasal", weight: 0.05, group: turkmen_nasals, ipa: "/ŋ/"]
+ň -> ŋ;
+
+[id: 11646, name: "ng velar nasal digraph", weight: 0.05, group: turkmen_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// [id: 11650] Identity mapping removed: l -> l (passes through unchanged)
+
+// [id: 11651] Identity mapping removed: r -> r (passes through unchanged)
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 11670, name: "türkmen turkmen", weight: 0.02, group: turkmen_common]
+türkmen -> tyrkmen;
+
+[id: 11671, name: "salam hello", weight: 0.02, group: turkmen_common]
+salam -> sɑlɑm;
+
+[id: 11672, name: "sag bol thank you", weight: 0.02, group: turkmen_common]
+sag bol -> sɑɡ bol;
+
+[id: 11673, name: "hawa yes", weight: 0.02, group: turkmen_common]
+hawa -> hɑwɑ;
+
+[id: 11674, name: "ýok no", weight: 0.02, group: turkmen_common]
+ýok -> ɣok;
+
+[id: 11675, name: "suw water", weight: 0.02, group: turkmen_common]
+suw -> suw;
+
+[id: 11676, name: "çörek bread food", weight: 0.02, group: turkmen_common]
+çörek -> t͡ʃørek;
+
+[id: 11677, name: "öý house", weight: 0.02, group: turkmen_common]
+öý -> øɣ;
+
+[id: 11678, name: "adam person", weight: 0.02, group: turkmen_common]
+adam -> ɑdɑm;
+
+[id: 11679, name: "çaga child", weight: 0.02, group: turkmen_common]
+çaga -> t͡ʃɑɡɑ;
+

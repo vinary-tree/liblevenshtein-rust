@@ -1,0 +1,166 @@
+// Swahili Base Phonetic Rules
+// ===========================
+// Phonetic rules for Swahili (Kiswahili).
+// Spoken by approximately 100 million people across East Africa
+// (Tanzania, Kenya, Uganda, DRC, and neighboring countries).
+//
+// Swahili features:
+//   - Bantu language family with significant Arabic influence
+//   - Simple 5-vowel system: a, e, i, o, u
+//   - No lexical tones (unusual for Bantu)
+//   - Prenasalized stops: mb, nd, ng, nj, nz
+//   - Aspirated stops in some dialects
+//   - Arabic loanword phonemes: th, dh, gh, kh
+//   - Syllable structure mostly CV
+//
+// Orthography:
+//   - ch for /tʃ/, j for /dʒ/
+//   - sh for /ʃ/
+//   - ng' for velar nasal /ŋ/ (distinct from ng /ŋɡ/)
+//   - ny for palatal nasal /ɲ/
+//   - th, dh for dental fricatives (Arabic loans)
+//
+// Rule IDs: 10100-10199
+
+@name "Swahili Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Swahili (Kiswahili)"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// Simple 5-vowel system
+// ============================================================
+// Note: Identity mappings (a->a, i->i, u->u) removed.
+
+[id: 10101, name: "e", weight: 0.05, group: swahili_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 10103, name: "o", weight: 0.05, group: swahili_vowels, ipa: "/ɔ/"]
+o -> ɔ;
+
+// ============================================================
+// PRENASALIZED STOPS (weight 0.05)
+// Characteristic Bantu feature
+// ============================================================
+
+[id: 10110, name: "mb prenasalized", weight: 0.05, group: swahili_prenasalized, ipa: "/ᵐb/"]
+mb -> ᵐb;
+
+[id: 10111, name: "nd prenasalized", weight: 0.05, group: swahili_prenasalized, ipa: "/ⁿd/"]
+nd -> ⁿd;
+
+[id: 10112, name: "ng prenasalized", weight: 0.05, group: swahili_prenasalized, ipa: "/ᵑɡ/"]
+ng -> ᵑɡ;
+
+[id: 10113, name: "nj prenasalized affricate", weight: 0.05, group: swahili_prenasalized, ipa: "/ⁿd͡ʒ/"]
+nj -> ⁿd͡ʒ;
+
+[id: 10114, name: "nz prenasalized", weight: 0.05, group: swahili_prenasalized, ipa: "/ⁿz/"]
+nz -> ⁿz;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (p->p, b->b, t->t, d->d, k->k) removed.
+
+[id: 10125, name: "g", weight: 0.05, group: swahili_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10130, name: "ch voiceless", weight: 0.05, group: swahili_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 10131, name: "j voiced", weight: 0.05, group: swahili_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Identity mappings (f->f, v->v, s->s, z->z, h->h) removed.
+
+[id: 10139, name: "sh postalveolar", weight: 0.05, group: swahili_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// Arabic loanword fricatives
+[id: 10141, name: "th voiceless dental", weight: 0.05, group: swahili_arabic, ipa: "/θ/"]
+th -> θ;
+
+[id: 10142, name: "dh voiced dental", weight: 0.05, group: swahili_arabic, ipa: "/ð/"]
+dh -> ð;
+
+[id: 10143, name: "kh velar", weight: 0.05, group: swahili_arabic, ipa: "/x/"]
+kh -> x;
+
+[id: 10144, name: "gh voiced velar", weight: 0.05, group: swahili_arabic, ipa: "/ɣ/"]
+gh -> ɣ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (m->m, n->n) removed.
+
+[id: 10152, name: "ng' velar nasal alone", weight: 0.05, group: swahili_nasals, ipa: "/ŋ/"]
+ng' -> ŋ;
+
+[id: 10153, name: "ny palatal nasal", weight: 0.05, group: swahili_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (l->l, w->w) removed.
+
+[id: 10156, name: "r flap", weight: 0.05, group: swahili_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 10158, name: "y", weight: 0.05, group: swahili_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+// Note: Identity mappings (kiswahili->kiswahili, hapana->hapana) removed.
+
+[id: 10171, name: "jambo hello", weight: 0.02, group: swahili_common]
+jambo -> d͡ʒaᵐbɔ;
+
+[id: 10172, name: "habari how are you", weight: 0.02, group: swahili_common]
+habari -> habaɾi;
+
+[id: 10173, name: "asante thank you", weight: 0.02, group: swahili_common]
+asante -> asantɛ;
+
+[id: 10174, name: "karibu welcome", weight: 0.02, group: swahili_common]
+karibu -> kaɾibu;
+
+[id: 10175, name: "ndiyo yes", weight: 0.02, group: swahili_common]
+ndiyo -> ⁿdijɔ;
+
+[id: 10177, name: "maji water", weight: 0.02, group: swahili_common]
+maji -> mad͡ʒi;
+
+[id: 10178, name: "chakula food", weight: 0.02, group: swahili_common]
+chakula -> t͡ʃakula;
+
+[id: 10179, name: "nyumba house", weight: 0.02, group: swahili_common]
+nyumba -> ɲuᵐba;
+
+[id: 10180, name: "mtu person", weight: 0.02, group: swahili_common]
+mtu -> ᵐtu;
+
+[id: 10181, name: "watoto children", weight: 0.02, group: swahili_common]
+watoto -> watɔtɔ;
+
+[id: 10182, name: "rafiki friend", weight: 0.02, group: swahili_common]
+rafiki -> ɾafiki;
+
+[id: 10183, name: "simba lion", weight: 0.02, group: swahili_common]
+simba -> siᵐba;
+
+[id: 10184, name: "safari journey", weight: 0.02, group: swahili_common]
+safari -> safaɾi;
+

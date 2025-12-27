@@ -1,0 +1,216 @@
+// Cantonese (Jyutping) Phonetic Rules
+// ====================================
+// Phonetic rules for Cantonese using Jyutping romanization.
+// Spoken by approximately 85 million people in Guangdong,
+// Hong Kong, Macau, and overseas Chinese communities.
+//
+// Cantonese features:
+//   - Yue Chinese dialect
+//   - 6 tones (9 in traditional analysis)
+//   - Preserved Middle Chinese consonant finals (-p, -t, -k)
+//   - No retroflex consonants (unlike Mandarin)
+//   - Labialized velars (gw, kw)
+//   - Syllable-final stops unreleased
+//
+// Jyutping romanization:
+//   - aa for /aː/, a for /ɐ/
+//   - oe for /œː/, eo for /ɵ/
+//   - yu for /yː/
+//   - ng can be syllabic
+//   - Tones marked 1-6
+//
+// Rule IDs: 13600-13699
+
+@name "Cantonese (Jyutping) Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Cantonese using Jyutping"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 13600, name: "aa long a", weight: 0.05, group: cantonese_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 13601, name: "a short central", weight: 0.05, group: cantonese_vowels, ipa: "/ɐ/"]
+a -> ɐ;
+
+[id: 13602, name: "e", weight: 0.05, group: cantonese_vowels, ipa: "/ɛː/"]
+e -> ɛː;
+
+[id: 13603, name: "i", weight: 0.05, group: cantonese_vowels, ipa: "/iː/"]
+i -> iː;
+
+[id: 13604, name: "o", weight: 0.05, group: cantonese_vowels, ipa: "/ɔː/"]
+o -> ɔː;
+
+[id: 13605, name: "u", weight: 0.05, group: cantonese_vowels, ipa: "/uː/"]
+u -> uː;
+
+[id: 13606, name: "oe open-mid front rounded", weight: 0.05, group: cantonese_vowels, ipa: "/œː/"]
+oe -> œː;
+
+[id: 13607, name: "eo close-mid front rounded", weight: 0.05, group: cantonese_vowels, ipa: "/ɵ/"]
+eo -> ɵ;
+
+[id: 13608, name: "yu front rounded", weight: 0.05, group: cantonese_vowels, ipa: "/yː/"]
+yu -> yː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+[id: 13612, name: "aai diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/aːi/"]
+aai -> aːi;
+
+[id: 13613, name: "aau diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/aːu/"]
+aau -> aːu;
+
+[id: 13614, name: "ai diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/ɐi/"]
+ai -> ɐi;
+
+[id: 13615, name: "au diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/ɐu/"]
+au -> ɐu;
+
+[id: 13616, name: "ei diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/ei/"]
+ei -> ei;
+
+[id: 13617, name: "iu diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/iːu/"]
+iu -> iːu;
+
+[id: 13618, name: "oi diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/ɔːi/"]
+oi -> ɔːi;
+
+[id: 13619, name: "ou diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/ou/"]
+ou -> ou;
+
+[id: 13620, name: "ui diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/uːi/"]
+ui -> uːi;
+
+[id: 13621, name: "eoi diphthong", weight: 0.05, group: cantonese_diphthongs, ipa: "/ɵy/"]
+eoi -> ɵy;
+
+// ============================================================
+// TONES (weight 0.02)
+// ============================================================
+
+[id: 13625, name: "tone 1 high level", weight: 0.02, group: cantonese_tones, ipa: "˥"]
+1 -> ˥;
+
+[id: 13626, name: "tone 2 high rising", weight: 0.02, group: cantonese_tones, ipa: "˧˥"]
+2 -> ˧˥;
+
+[id: 13627, name: "tone 3 mid level", weight: 0.02, group: cantonese_tones, ipa: "˧"]
+3 -> ˧;
+
+[id: 13628, name: "tone 4 low falling", weight: 0.02, group: cantonese_tones, ipa: "˨˩"]
+4 -> ˨˩;
+
+[id: 13629, name: "tone 5 low rising", weight: 0.02, group: cantonese_tones, ipa: "˩˧"]
+5 -> ˩˧;
+
+[id: 13630, name: "tone 6 low level", weight: 0.02, group: cantonese_tones, ipa: "˨"]
+6 -> ˨;
+
+// ============================================================
+// LABIALIZED VELARS (weight 0.05)
+// ============================================================
+
+[id: 13634, name: "gw labialized velar", weight: 0.05, group: cantonese_labialvelar, ipa: "/kʷ/"]
+gw -> kʷ;
+
+[id: 13635, name: "kw aspirated labialized", weight: 0.05, group: cantonese_labialvelar, ipa: "/kʷʰ/"]
+kw -> kʷʰ;
+
+// ============================================================
+// UNASPIRATED STOPS (weight 0.05)
+// ============================================================
+// In Jyutping, b/d/g represent unaspirated voiceless stops [p t k]
+// p/t/k pass through unchanged (no transformation needed)
+
+[id: 13639, name: "b voiced (unaspirated)", weight: 0.05, group: cantonese_stops, ipa: "/p/"]
+b -> p;
+
+[id: 13641, name: "d voiced (unaspirated)", weight: 0.05, group: cantonese_stops, ipa: "/t/"]
+d -> t;
+
+[id: 13643, name: "g voiced (unaspirated)", weight: 0.05, group: cantonese_stops, ipa: "/k/"]
+g -> k;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 13646, name: "z alveolar affricate", weight: 0.05, group: cantonese_affricates, ipa: "/t͡s/"]
+z -> t͡s;
+
+[id: 13647, name: "c aspirated affricate", weight: 0.05, group: cantonese_affricates, ipa: "/t͡sʰ/"]
+c -> t͡sʰ;
+
+// ============================================================
+// FRICATIVES
+// ============================================================
+// f, s, h pass through unchanged (no transformation needed)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// m, n pass through unchanged (no transformation needed)
+
+[id: 13658, name: "ng velar nasal", weight: 0.05, group: cantonese_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// APPROXIMANTS
+// ============================================================
+// w, j, l pass through unchanged (no transformation needed)
+
+// ============================================================
+// FINAL CONSONANTS (weight 0.05)
+// Unreleased in Cantonese
+// ============================================================
+
+[id: 13668, name: "p final unreleased", weight: 0.05, group: cantonese_finals, ipa: "/p̚/"]
+p -> p̚ / _#;
+
+[id: 13669, name: "t final unreleased", weight: 0.05, group: cantonese_finals, ipa: "/t̚/"]
+t -> t̚ / _#;
+
+[id: 13670, name: "k final unreleased", weight: 0.05, group: cantonese_finals, ipa: "/k̚/"]
+k -> k̚ / _#;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 13680, name: "jyutjyu cantonese", weight: 0.02, group: cantonese_common]
+jyutjyu -> jyːt̚jyː;
+
+[id: 13681, name: "nei hello you", weight: 0.02, group: cantonese_common]
+nei5hou2 -> nei˩˧hou˧˥;
+
+[id: 13682, name: "m4goi1 thank you", weight: 0.02, group: cantonese_common]
+m4goi1 -> m̩˨˩kɔːi˥;
+
+[id: 13683, name: "hai6 yes", weight: 0.02, group: cantonese_common]
+hai6 -> hɐi˨;
+
+[id: 13684, name: "m4hai6 no", weight: 0.02, group: cantonese_common]
+m4hai6 -> m̩˨˩hɐi˨;
+
+[id: 13685, name: "seoi2 water", weight: 0.02, group: cantonese_common]
+seoi2 -> sɵy˧˥;
+
+[id: 13686, name: "min6baau1 bread", weight: 0.02, group: cantonese_common]
+min6baau1 -> miːn˨paːu˥;
+
+[id: 13687, name: "uk1 house", weight: 0.02, group: cantonese_common]
+uk1 -> ʊk̚˥;
+
+[id: 13688, name: "jan4 person", weight: 0.02, group: cantonese_common]
+jan4 -> jɐn˨˩;
+
+[id: 13689, name: "sai3lou2zai2 child", weight: 0.02, group: cantonese_common]
+sai3lou2zai2 -> sɐi˧lou˧˥t͡sɐi˧˥;
+

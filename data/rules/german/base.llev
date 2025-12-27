@@ -201,40 +201,44 @@ oh -> oː;
 uh -> uː;
 
 // ============================================================
-// DOUBLE CONSONANT SIMPLIFICATION
+// Geminate (Double Consonant) Simplification
 // ============================================================
+// German orthographic geminates indicate short vowels in preceding syllable,
+// but don't represent phonetic consonant length. Simplify for matching.
+// These patterns could be matched with [:consonant:][:consonant:] -> [:consonant:]
+// when geminate pattern matching is implemented.
 
-[id: 1880, name: "bb to b", weight: 0.1, group: german_doubles]
+[id: 1880, name: "bb to b", weight: 0.1, group: german_geminates]
 bb -> b;
 
-[id: 1881, name: "dd to d", weight: 0.1, group: german_doubles]
+[id: 1881, name: "dd to d", weight: 0.1, group: german_geminates]
 dd -> d;
 
-[id: 1882, name: "ff to f", weight: 0.1, group: german_doubles]
+[id: 1882, name: "ff to f", weight: 0.1, group: german_geminates]
 ff -> f;
 
-[id: 1883, name: "gg to g", weight: 0.1, group: german_doubles]
-gg -> g;
+[id: 1883, name: "gg to g", weight: 0.1, group: german_geminates, ipa: "/ɡ/"]
+gg -> ɡ;
 
-[id: 1884, name: "ll to l", weight: 0.1, group: german_doubles]
+[id: 1884, name: "ll to l", weight: 0.1, group: german_geminates]
 ll -> l;
 
-[id: 1885, name: "mm to m", weight: 0.1, group: german_doubles]
+[id: 1885, name: "mm to m", weight: 0.1, group: german_geminates]
 mm -> m;
 
-[id: 1886, name: "nn to n", weight: 0.1, group: german_doubles]
+[id: 1886, name: "nn to n", weight: 0.1, group: german_geminates]
 nn -> n;
 
-[id: 1887, name: "pp to p", weight: 0.1, group: german_doubles]
+[id: 1887, name: "pp to p", weight: 0.1, group: german_geminates]
 pp -> p;
 
-[id: 1888, name: "rr to r", weight: 0.1, group: german_doubles]
+[id: 1888, name: "rr to r", weight: 0.1, group: german_geminates]
 rr -> r;
 
-[id: 1889, name: "ss to s", weight: 0.1, group: german_doubles]
+[id: 1889, name: "ss to s", weight: 0.1, group: german_geminates]
 ss -> s;
 
-[id: 1890, name: "tt to t", weight: 0.1, group: german_doubles]
+[id: 1890, name: "tt to t", weight: 0.1, group: german_geminates]
 tt -> t;
 
 // ============================================================
@@ -244,5 +248,5 @@ tt -> t;
 [id: 1895, name: "C to k", weight: 0.2, group: german_case, ipa: "/k/"]
 c -> k;
 
-[id: 1896, name: "Y to ue", weight: 0.25, group: german_foreign, ipa: "/y/"]
-y -> y;
+// Note: y in loanwords typically pronounced as /y/ (like German ü),
+// but no transformation needed since ü -> y is already handled above.

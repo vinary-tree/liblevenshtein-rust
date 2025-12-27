@@ -9,7 +9,7 @@ readme = "README.md"
 publish = false  # Example, not for publishing
 
 [dependencies]
-liblevenshtein = { path = "../..", features = ["phonetic-rules", "pathmap-backend", "embedded-rules"] }
+liblevenshtein = { path = "../..", features = ["phonetic-rules", "pathmap-backend", "embedded-rules", "serde"] }
 
 [[bin]]
 name = "phonetic_spellcheck"

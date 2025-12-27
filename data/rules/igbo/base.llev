@@ -1,0 +1,243 @@
+// Igbo Base Phonetic Rules
+// ========================
+// Phonetic rules for Igbo (Asụsụ Igbo).
+// Spoken by approximately 45 million people in southeastern Nigeria.
+//
+// Igbo features:
+//   - Niger-Congo language family (Volta-Niger)
+//   - 2-tone system: High (H) and Low (L), with downstep
+//   - 8 oral vowels with ATR harmony: i/ɪ, u/ʊ, e/ɛ, o/ɔ, a
+//   - 2 nasal vowels: ĩ, ũ
+//   - Labial-velar consonants: kp, gb, ŋw, ŋm
+//   - Aspirated stops in some dialects
+//   - Syllabic nasals
+//
+// Orthography (Ọnwụ alphabet):
+//   - ị for /ɪ/, ụ for /ʊ/
+//   - ọ for /ɔ/, no separate symbol for /ɛ/ (uses e)
+//   - Tones: á (high), à (low), often unmarked
+//   - gb, kp for labial-velars
+//   - ch for /t͡ʃ/, j for /d͡ʒ/
+//   - gw, kw, nw for labialized consonants
+//
+// Rule IDs: 10600-10699
+
+@name "Igbo Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Igbo"
+
+// ============================================================
+// +ATR VOWELS (weight 0.05)
+// Advanced tongue root vowels
+// ============================================================
+
+// NOTE: i, u, e, o pass through unchanged (identity mappings removed)
+
+// ============================================================
+// -ATR VOWELS (weight 0.05)
+// Retracted tongue root vowels (with underdot)
+// ============================================================
+
+[id: 10605, name: "ị -ATR", weight: 0.05, group: igbo_minus_atr, ipa: "/ɪ/"]
+ị -> ɪ;
+
+[id: 10606, name: "ụ -ATR", weight: 0.05, group: igbo_minus_atr, ipa: "/ʊ/"]
+ụ -> ʊ;
+
+[id: 10607, name: "ọ -ATR", weight: 0.05, group: igbo_minus_atr, ipa: "/ɔ/"]
+ọ -> ɔ;
+
+// NOTE: a passes through unchanged (identity mapping removed)
+
+// ============================================================
+// HIGH TONE VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10610, name: "á high", weight: 0.05, group: igbo_high_tone, ipa: "/a˦/"]
+á -> a˦;
+
+[id: 10611, name: "é high", weight: 0.05, group: igbo_high_tone, ipa: "/e˦/"]
+é -> e˦;
+
+[id: 10612, name: "í high", weight: 0.05, group: igbo_high_tone, ipa: "/i˦/"]
+í -> i˦;
+
+[id: 10613, name: "ó high", weight: 0.05, group: igbo_high_tone, ipa: "/o˦/"]
+ó -> o˦;
+
+[id: 10614, name: "ú high", weight: 0.05, group: igbo_high_tone, ipa: "/u˦/"]
+ú -> u˦;
+
+[id: 10615, name: "ị́ high -ATR", weight: 0.05, group: igbo_high_tone, ipa: "/ɪ˦/"]
+ị́ -> ɪ˦;
+
+[id: 10616, name: "ụ́ high -ATR", weight: 0.05, group: igbo_high_tone, ipa: "/ʊ˦/"]
+ụ́ -> ʊ˦;
+
+[id: 10617, name: "ọ́ high -ATR", weight: 0.05, group: igbo_high_tone, ipa: "/ɔ˦/"]
+ọ́ -> ɔ˦;
+
+// ============================================================
+// LOW TONE VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10620, name: "à low", weight: 0.05, group: igbo_low_tone, ipa: "/a˨/"]
+à -> a˨;
+
+[id: 10621, name: "è low", weight: 0.05, group: igbo_low_tone, ipa: "/e˨/"]
+è -> e˨;
+
+[id: 10622, name: "ì low", weight: 0.05, group: igbo_low_tone, ipa: "/i˨/"]
+ì -> i˨;
+
+[id: 10623, name: "ò low", weight: 0.05, group: igbo_low_tone, ipa: "/o˨/"]
+ò -> o˨;
+
+[id: 10624, name: "ù low", weight: 0.05, group: igbo_low_tone, ipa: "/u˨/"]
+ù -> u˨;
+
+[id: 10625, name: "ị̀ low -ATR", weight: 0.05, group: igbo_low_tone, ipa: "/ɪ˨/"]
+ị̀ -> ɪ˨;
+
+[id: 10626, name: "ụ̀ low -ATR", weight: 0.05, group: igbo_low_tone, ipa: "/ʊ˨/"]
+ụ̀ -> ʊ˨;
+
+[id: 10627, name: "ọ̀ low -ATR", weight: 0.05, group: igbo_low_tone, ipa: "/ɔ˨/"]
+ọ̀ -> ɔ˨;
+
+// ============================================================
+// NASAL VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10630, name: "ịn nasal", weight: 0.05, group: igbo_nasal_vowels, ipa: "/ɪ̃/"]
+ịn -> ɪ̃;
+
+[id: 10631, name: "ụn nasal", weight: 0.05, group: igbo_nasal_vowels, ipa: "/ʊ̃/"]
+ụn -> ʊ̃;
+
+// ============================================================
+// LABIAL-VELAR CONSONANTS (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 10635, name: "kp voiceless labial-velar", weight: 0.02, group: igbo_labial_velar, ipa: "/k͡p/"]
+kp -> k͡p;
+
+[id: 10636, name: "gb voiced labial-velar", weight: 0.02, group: igbo_labial_velar, ipa: "/ɡ͡b/"]
+gb -> ɡ͡b;
+
+[id: 10637, name: "ŋw labial-velar nasal", weight: 0.02, group: igbo_labial_velar, ipa: "/ŋ͡m/"]
+nw -> ŋ͡m;
+
+// ============================================================
+// LABIALIZED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 10640, name: "kw labialized", weight: 0.05, group: igbo_labialized, ipa: "/kʷ/"]
+kw -> kʷ;
+
+[id: 10641, name: "gw labialized", weight: 0.05, group: igbo_labialized, ipa: "/ɡʷ/"]
+gw -> ɡʷ;
+
+[id: 10642, name: "chw labialized affricate", weight: 0.05, group: igbo_labialized, ipa: "/t͡ʃʷ/"]
+chw -> t͡ʃʷ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// NOTE: p, b, t, d, k pass through unchanged (identity mappings removed)
+
+[id: 10650, name: "g", weight: 0.05, group: igbo_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10655, name: "ch voiceless palatal", weight: 0.05, group: igbo_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 10656, name: "j voiced palatal", weight: 0.05, group: igbo_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// NOTE: f, v, s, z pass through unchanged (identity mappings removed)
+
+[id: 10664, name: "sh postalveolar", weight: 0.05, group: igbo_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 10665, name: "gh velar fricative", weight: 0.05, group: igbo_fricatives, ipa: "/ɣ/"]
+gh -> ɣ;
+
+// NOTE: h passes through unchanged (identity mapping removed)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// NOTE: m, n pass through unchanged (identity mappings removed)
+
+[id: 10672, name: "ṅ velar nasal", weight: 0.05, group: igbo_nasals, ipa: "/ŋ/"]
+ṅ -> ŋ;
+
+[id: 10673, name: "ny palatal nasal", weight: 0.05, group: igbo_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// Syllabic nasals
+[id: 10674, name: "syllabic n", weight: 0.05, group: igbo_nasals, ipa: "/n̩/"]
+ń -> n̩˦;
+
+[id: 10675, name: "syllabic m", weight: 0.05, group: igbo_nasals, ipa: "/m̩/"]
+ḿ -> m̩˦;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// NOTE: l passes through unchanged (identity mapping removed)
+
+[id: 10679, name: "r flap", weight: 0.05, group: igbo_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+// NOTE: w passes through unchanged (identity mapping removed)
+
+[id: 10681, name: "y", weight: 0.05, group: igbo_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 10690, name: "igbo", weight: 0.02, group: igbo_common]
+igbo -> iɡ͡bo;
+
+[id: 10691, name: "nnọọ welcome", weight: 0.02, group: igbo_common]
+nnọọ -> n̩ːɔːɔ;
+
+// NOTE: kedu passes through unchanged (identity mapping removed)
+
+[id: 10693, name: "daalụ thank you", weight: 0.02, group: igbo_common]
+daalụ -> daːlʊ;
+
+[id: 10694, name: "ee yes", weight: 0.02, group: igbo_common]
+ee -> eː;
+
+[id: 10695, name: "mba no", weight: 0.02, group: igbo_common]
+mba -> m̩ba;
+
+[id: 10696, name: "mmiri water", weight: 0.02, group: igbo_common]
+mmiri -> m̩ːiɾi;
+
+[id: 10697, name: "nri food", weight: 0.02, group: igbo_common]
+nri -> n̩ɾi;
+
+[id: 10698, name: "ụlọ house", weight: 0.02, group: igbo_common]
+ụlọ -> ʊlɔ;
+
+[id: 10699, name: "mmadụ person", weight: 0.02, group: igbo_common]
+mmadụ -> m̩ːadʊ;
+

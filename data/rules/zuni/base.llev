@@ -1,0 +1,225 @@
+// Zuni Base Phonetic Rules
+// ========================
+// Phonetic rules for Zuni (Shiwi'ma).
+// Spoken by approximately 9,500 people in western New Mexico.
+//
+// Zuni features:
+//   - Language isolate (no known linguistic relatives)
+//   - Aspirated vs plain stops: p/pʰ, t/tʰ, k/kʰ
+//   - Lateral affricate: ɬ (written lh or ł)
+//   - Labialized consonants: kw, tsw
+//   - Vowel length distinction
+//   - Complex syllable structure
+//   - Pitch accent (high vs unmarked)
+//
+// Orthography:
+//   - ' for glottal stop
+//   - lh or ł for voiceless lateral fricative
+//   - Double letters or macron for long vowels
+//   - ts, ch for affricates
+//   - pp, tt, kk for aspirated stops (some orthographies)
+//
+// Rule IDs: 9600-9799
+
+@name "Zuni Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Zuni (Shiwi'ma)"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+// Short vowels (a, e, i, o, u) pass through unchanged - already in IPA form
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// Marked by doubling or macron
+// ============================================================
+
+[id: 9610, name: "aa long", weight: 0.05, group: zuni_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 9611, name: "ee long", weight: 0.05, group: zuni_long_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 9612, name: "ii long", weight: 0.05, group: zuni_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 9613, name: "oo long", weight: 0.05, group: zuni_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+[id: 9614, name: "uu long", weight: 0.05, group: zuni_long_vowels, ipa: "/uː/"]
+uu -> uː;
+
+// Macron variants
+[id: 9615, name: "a macron long", weight: 0.05, group: zuni_long_vowels, ipa: "/aː/"]
+ā -> aː;
+
+[id: 9616, name: "e macron long", weight: 0.05, group: zuni_long_vowels, ipa: "/eː/"]
+ē -> eː;
+
+[id: 9617, name: "i macron long", weight: 0.05, group: zuni_long_vowels, ipa: "/iː/"]
+ī -> iː;
+
+[id: 9618, name: "o macron long", weight: 0.05, group: zuni_long_vowels, ipa: "/oː/"]
+ō -> oː;
+
+[id: 9619, name: "u macron long", weight: 0.05, group: zuni_long_vowels, ipa: "/uː/"]
+ū -> uː;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// Unaspirated
+// ============================================================
+
+// Plain stops (p, t, k) pass through unchanged - already in IPA form
+
+[id: 9623, name: "kw labialized", weight: 0.05, group: zuni_stops, ipa: "/kʷ/"]
+kw -> kʷ;
+
+// ============================================================
+// ASPIRATED STOPS (weight 0.05)
+// Written with doubled letters or superscript h
+// ============================================================
+
+[id: 9625, name: "pp aspirated", weight: 0.05, group: zuni_aspirated, ipa: "/pʰ/"]
+pp -> pʰ;
+
+[id: 9626, name: "tt aspirated", weight: 0.05, group: zuni_aspirated, ipa: "/tʰ/"]
+tt -> tʰ;
+
+[id: 9627, name: "kk aspirated", weight: 0.05, group: zuni_aspirated, ipa: "/kʰ/"]
+kk -> kʰ;
+
+// With explicit h
+[id: 9628, name: "ph aspirated", weight: 0.05, group: zuni_aspirated, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 9629, name: "th aspirated", weight: 0.05, group: zuni_aspirated, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 9630, name: "kh aspirated", weight: 0.05, group: zuni_aspirated, ipa: "/kʰ/"]
+kh -> kʰ;
+
+// ============================================================
+// GLOTTAL STOP (weight 0.05)
+// ============================================================
+
+[id: 9635, name: "glottal stop apostrophe", weight: 0.05, group: zuni_glottal, ipa: "/ʔ/"]
+' -> ʔ;
+
+[id: 9636, name: "glottal stop modifier", weight: 0.05, group: zuni_glottal, ipa: "/ʔ/"]
+ʼ -> ʔ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 9640, name: "ts alveolar", weight: 0.05, group: zuni_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+[id: 9641, name: "ch postalveolar", weight: 0.05, group: zuni_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 9642, name: "tsw labialized", weight: 0.05, group: zuni_affricates, ipa: "/t͡sʷ/"]
+tsw -> t͡sʷ;
+
+// Aspirated affricates
+[id: 9643, name: "tss aspirated", weight: 0.05, group: zuni_aspirated, ipa: "/t͡sʰ/"]
+tss -> t͡sʰ;
+
+[id: 9644, name: "chh aspirated", weight: 0.05, group: zuni_aspirated, ipa: "/t͡ʃʰ/"]
+chh -> t͡ʃʰ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 9651, name: "sh postalveolar", weight: 0.05, group: zuni_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// Lateral fricative (voiceless)
+[id: 9653, name: "lh lateral fricative", weight: 0.05, group: zuni_fricatives, ipa: "/ɬ/"]
+lh -> ɬ;
+
+[id: 9654, name: "l-stroke lateral fricative", weight: 0.05, group: zuni_fricatives, ipa: "/ɬ/"]
+ł -> ɬ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Plain nasals (m, n) pass through unchanged - already in IPA form
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Plain liquid (l) and approximant (w) pass through unchanged - already in IPA form
+
+[id: 9667, name: "y", weight: 0.05, group: zuni_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// CONSONANT CLUSTERS (weight 0.05)
+// ============================================================
+
+[id: 9670, name: "ky palatalized", weight: 0.05, group: zuni_clusters, ipa: "/kʲ/"]
+ky -> kʲ;
+
+[id: 9671, name: "nk cluster", weight: 0.05, group: zuni_clusters, ipa: "/ŋk/"]
+nk -> ŋk;
+
+[id: 9672, name: "nn geminate", weight: 0.05, group: zuni_clusters, ipa: "/nː/"]
+nn -> nː;
+
+[id: 9673, name: "mm geminate", weight: 0.05, group: zuni_clusters, ipa: "/mː/"]
+mm -> mː;
+
+[id: 9674, name: "ll geminate", weight: 0.05, group: zuni_clusters, ipa: "/lː/"]
+ll -> lː;
+
+[id: 9675, name: "ss geminate", weight: 0.05, group: zuni_clusters, ipa: "/sː/"]
+ss -> sː;
+
+[id: 9676, name: "ww geminate", weight: 0.05, group: zuni_clusters, ipa: "/wː/"]
+ww -> wː;
+
+[id: 9677, name: "yy geminate", weight: 0.05, group: zuni_clusters, ipa: "/jː/"]
+yy -> jː;
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 9700, name: "zuni ashiwi people", weight: 0.02, group: zuni_common]
+ashiwi -> aʃiwi;
+
+[id: 9701, name: "shiwima zuni language", weight: 0.02, group: zuni_common]
+shiwi'ma -> ʃiwiʔma;
+
+[id: 9702, name: "keshi hello", weight: 0.02, group: zuni_common]
+keshi -> keʃi;
+
+[id: 9703, name: "elahkwa thank you", weight: 0.02, group: zuni_common]
+elahkwa -> eɬakʷa;
+
+[id: 9704, name: "hom yes", weight: 0.02, group: zuni_common]
+hom -> hom;
+
+[id: 9705, name: "amma no", weight: 0.02, group: zuni_common]
+amma -> amːa;
+
+[id: 9706, name: "kawu water", weight: 0.02, group: zuni_common]
+k'awu -> kʔawu;
+
+[id: 9707, name: "ulohnan world", weight: 0.02, group: zuni_common]
+ulohnan -> ulohnan;
+
+[id: 9708, name: "hesh good", weight: 0.02, group: zuni_common]
+hesh -> heʃ;
+
+[id: 9709, name: "yatokya sun", weight: 0.02, group: zuni_common]
+yatokya -> jatokja;
+

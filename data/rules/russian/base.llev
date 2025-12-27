@@ -184,12 +184,12 @@
 [id: 2053, name: "В to v", weight: 0.25, group: russian_consonants]
 В -> v;
 
-// Г → g
-[id: 2054, name: "г to g", weight: 0.25, group: russian_consonants]
-г -> g;
+// Г → ɡ
+[id: 2054, name: "г to ɡ", weight: 0.25, group: russian_consonants, ipa: "/ɡ/"]
+г -> ɡ;
 
-[id: 2055, name: "Г to g", weight: 0.25, group: russian_consonants]
-Г -> g;
+[id: 2055, name: "Г to ɡ", weight: 0.25, group: russian_consonants, ipa: "/ɡ/"]
+Г -> ɡ;
 
 // Д → d
 [id: 2056, name: "д to d", weight: 0.25, group: russian_consonants]
@@ -334,4 +334,36 @@ ff -> f;
 
 [id: 2099, name: "kk to k", weight: 0.4, group: russian_latin_doubles]
 kk -> k;
+
+// ============================================================
+// VOWEL REDUCTION (Akan'e and Ikan'e)
+// ============================================================
+// In Standard (Moscow) Russian, vowels reduce in unstressed positions:
+// - Akan'e (аканье): /о/ → [ɐ] unstressed (sounds like reduced 'a')
+// - Ikan'e (иканье): /е/, /я/ → [ɪ] unstressed (sounds like reduced 'i')
+//
+// These rules provide alternative phonetic representations for reduced vowels.
+// Since stress is not marked in standard Russian text, we provide both
+// the full and reduced forms as alternatives.
+
+// о → ɐ (unstressed 'o' reduces to near-open central vowel)
+[id: 2800, name: "akan'e o reduction", weight: 0.15, group: russian_reduction, ipa: "/ɐ/"]
+o -> ɐ;
+
+// е (after transliteration: je or e) → ɪ (unstressed 'e' reduces)
+[id: 2801, name: "ikan'e je reduction", weight: 0.15, group: russian_reduction, ipa: "/ɪ/"]
+je -> ɪ;
+
+// е after consonants becomes just e, which also reduces
+[id: 2802, name: "ikan'e e reduction", weight: 0.15, group: russian_reduction, ipa: "/ɪ/"]
+e -> ɪ;
+
+// я (after transliteration: ja) → ɪ (unstressed 'ya' reduces to 'i'-like)
+[id: 2803, name: "ikan'e ja reduction", weight: 0.15, group: russian_reduction, ipa: "/ɪ/"]
+ja -> ɪ;
+
+// а → ɐ (unstressed 'a' also reduces to near-open central)
+// In pretonic (immediately before stress) position, this is common
+[id: 2804, name: "a reduction", weight: 0.18, group: russian_reduction, ipa: "/ɐ/"]
+a -> ɐ;
 

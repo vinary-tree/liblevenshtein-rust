@@ -76,6 +76,7 @@ mod tests {
                     replacement,
                     context,
                     weight,
+                    syllable_condition: None,
                 },
             )
     }

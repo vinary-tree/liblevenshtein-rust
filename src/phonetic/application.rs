@@ -28,8 +28,125 @@
 //!   Fixed points remain unchanged under further application
 
 use super::matching::{context_matches, context_matches_char, pattern_matches_at, pattern_matches_at_char};
+use super::syllable::evaluate_syllable_expr;
 use super::types::{Context, ContextChar, Phone, PhoneChar, RewriteRule, RewriteRuleChar};
 use std::collections::HashSet;
+
+/// Convert a slice of Phone units to a string for syllable evaluation.
+/// Extracts the characters from vowels, consonants, digraphs, trigraphs, tetragraphs,
+/// pentagraphs, hexagraphs, heptagraphs, and sequences.
+fn phones_to_string(phones: &[Phone]) -> String {
+    let mut result = String::with_capacity(phones.len() * 7);
+    for phone in phones {
+        match phone {
+            Phone::Vowel(c) | Phone::Consonant(c) => result.push(*c as char),
+            Phone::Digraph(c1, c2) => {
+                result.push(*c1 as char);
+                result.push(*c2 as char);
+            }
+            Phone::Trigraph(c1, c2, c3) => {
+                result.push(*c1 as char);
+                result.push(*c2 as char);
+                result.push(*c3 as char);
+            }
+            Phone::Tetragraph(c1, c2, c3, c4) => {
+                result.push(*c1 as char);
+                result.push(*c2 as char);
+                result.push(*c3 as char);
+                result.push(*c4 as char);
+            }
+            Phone::Pentagraph(c1, c2, c3, c4, c5) => {
+                result.push(*c1 as char);
+                result.push(*c2 as char);
+                result.push(*c3 as char);
+                result.push(*c4 as char);
+                result.push(*c5 as char);
+            }
+            Phone::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                result.push(*c1 as char);
+                result.push(*c2 as char);
+                result.push(*c3 as char);
+                result.push(*c4 as char);
+                result.push(*c5 as char);
+                result.push(*c6 as char);
+            }
+            Phone::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                result.push(*c1 as char);
+                result.push(*c2 as char);
+                result.push(*c3 as char);
+                result.push(*c4 as char);
+                result.push(*c5 as char);
+                result.push(*c6 as char);
+                result.push(*c7 as char);
+            }
+            Phone::Sequence(s) => {
+                for c in s {
+                    result.push(*c as char);
+                }
+            }
+            Phone::Silent => {}
+        }
+    }
+    result
+}
+
+/// Convert a slice of PhoneChar units to a string for syllable evaluation.
+/// Extracts the characters from vowels, consonants, digraphs, trigraphs, tetragraphs,
+/// pentagraphs, hexagraphs, heptagraphs, and sequences.
+fn phone_chars_to_string(phones: &[PhoneChar]) -> String {
+    let mut result = String::with_capacity(phones.len() * 7);
+    for phone in phones {
+        match phone {
+            PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => result.push(*c),
+            PhoneChar::Digraph(c1, c2) => {
+                result.push(*c1);
+                result.push(*c2);
+            }
+            PhoneChar::Trigraph(c1, c2, c3) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+            }
+            PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+            }
+            PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+            }
+            PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+                result.push(*c6);
+            }
+            PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                result.push(*c1);
+                result.push(*c2);
+                result.push(*c3);
+                result.push(*c4);
+                result.push(*c5);
+                result.push(*c6);
+                result.push(*c7);
+            }
+            PhoneChar::Sequence(s) => {
+                for c in s {
+                    result.push(*c);
+                }
+            }
+            PhoneChar::Silent => {}
+        }
+    }
+    result
+}
 
 #[cfg(feature = "perf-instrumentation")]
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -157,6 +274,15 @@ pub fn can_apply_at(rule: &RewriteRule, s: &[Phone], pos: usize) -> bool {
         return false;
     }
 
+    // Check syllable condition if present
+    if let Some(ref syllable_expr) = rule.syllable_condition {
+        // Convert Phone slice to string for syllable evaluation
+        let word = phones_to_string(s);
+        if !evaluate_syllable_expr(syllable_expr, &word, pos) {
+            return false;
+        }
+    }
+
     true
 }
 
@@ -196,6 +322,7 @@ pub fn can_apply_at(rule: &RewriteRule, s: &[Phone], pos: usize) -> bool {
 ///     replacement: vec![Phone::Consonant(b'f')],
 ///     context: Context::Anywhere,
 ///     weight: 0.15,
+///     syllable_condition: None,
 /// };
 ///
 /// let s = vec![
@@ -807,6 +934,15 @@ pub fn can_apply_at_char(rule: &RewriteRuleChar, s: &[PhoneChar], pos: usize) ->
         return false;
     }
 
+    // Check syllable condition if present
+    if let Some(ref syllable_expr) = rule.syllable_condition {
+        // Convert PhoneChar slice to string for syllable evaluation
+        let word = phone_chars_to_string(s);
+        if !evaluate_syllable_expr(syllable_expr, &word, pos) {
+            return false;
+        }
+    }
+
     true
 }
 
@@ -1031,6 +1167,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1052,6 +1189,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![Phone::Vowel(b'e'), Phone::Consonant(b'k')];
@@ -1069,6 +1207,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Initial,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1096,6 +1235,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1118,6 +1258,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![Phone::Vowel(b'e'), Phone::Consonant(b'k')];
@@ -1135,6 +1276,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1156,6 +1298,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         // "ghgh" → "fgh" → "ff"
@@ -1182,6 +1325,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         // Already a fixed point (no 'gh')
@@ -1204,6 +1348,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1228,6 +1373,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1263,6 +1409,7 @@ mod tests {
                 replacement: vec![Phone::Consonant(b'k')],
                 context: Context::Anywhere,
                 weight: 1.0,
+            syllable_condition: None,
             },
             RewriteRule {
                 rule_id: 2,
@@ -1271,6 +1418,7 @@ mod tests {
                 replacement: vec![Phone::Consonant(b's')],
                 context: Context::Initial,
                 weight: 1.0,
+            syllable_condition: None,
             },
         ];
         assert!(!has_position_dependent_rules(&rules));
@@ -1286,6 +1434,7 @@ mod tests {
                 replacement: vec![Phone::Consonant(b'k')],
                 context: Context::Anywhere,
                 weight: 1.0,
+            syllable_condition: None,
             },
             RewriteRule {
                 rule_id: 2,
@@ -1294,6 +1443,7 @@ mod tests {
                 replacement: vec![],
                 context: Context::Final,
                 weight: 1.0,
+            syllable_condition: None,
             },
         ];
         assert!(has_position_dependent_rules(&rules));
@@ -1308,6 +1458,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1334,6 +1485,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         // "e gh o gh a"
@@ -1365,6 +1517,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1391,6 +1544,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1417,6 +1571,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         // Already at fixed point
@@ -1445,6 +1600,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('k')],
             context: ContextChar::Anywhere,
             weight: 1.0,
+            syllable_condition: None,
         }];
         assert!(!has_position_dependent_rules_char(&rules));
     }
@@ -1458,6 +1614,7 @@ mod tests {
             replacement: vec![],
             context: ContextChar::Final,
             weight: 1.0,
+            syllable_condition: None,
         }];
         assert!(has_position_dependent_rules_char(&rules));
     }
@@ -1471,6 +1628,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1494,6 +1652,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1519,6 +1678,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let s = vec![
@@ -1551,6 +1711,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'b'), Phone::Vowel(b'a')],
             context: Context::Anywhere,
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let rule_ba_to_ab = RewriteRule {
@@ -1560,6 +1721,7 @@ mod tests {
             replacement: vec![Phone::Vowel(b'a'), Phone::Consonant(b'b')],
             context: Context::Anywhere,
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let rules = vec![rule_ab_to_ba, rule_ba_to_ab];
@@ -1588,6 +1750,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 0.15,
+            syllable_condition: None,
         };
 
         let input = vec![
@@ -1626,6 +1789,7 @@ mod tests {
             replacement: vec![Phone::Vowel(b'a'), Phone::Vowel(b'a')],
             context: Context::Anywhere,
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let input = vec![Phone::Vowel(b'a')];
@@ -1651,6 +1815,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'b')],
             context: Context::Anywhere,
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let rule_b_to_c = RewriteRule {
@@ -1660,6 +1825,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'c')],
             context: Context::Anywhere,
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let rule_c_to_a = RewriteRule {
@@ -1669,6 +1835,7 @@ mod tests {
             replacement: vec![Phone::Vowel(b'a')],
             context: Context::Anywhere,
             weight: 0.0,
+            syllable_condition: None,
         };
 
         let rules = vec![rule_a_to_b, rule_b_to_c, rule_c_to_a];

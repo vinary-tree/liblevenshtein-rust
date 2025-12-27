@@ -75,8 +75,8 @@
 [id: 4271, name: "kha", weight: 0.05, group: gujarati_velars]
 ખ -> kh;
 
-[id: 4272, name: "ga", weight: 0.05, group: gujarati_velars]
-ગ -> g;
+[id: 4272, name: "ga", weight: 0.05, group: gujarati_velars, ipa: "/ɡ/"]
+ગ -> ɡ;
 
 [id: 4273, name: "gha", weight: 0.05, group: gujarati_velars]
 ઘ -> gh;

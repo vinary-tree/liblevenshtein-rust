@@ -1,0 +1,196 @@
+// Nahuatl Base Phonetic Rules
+// ============================
+// Phonetic rules for Classical and Modern Nahuatl (Nāhuatl).
+// Spoken by 1.7 million people in Mexico.
+//
+// Nahuatl features:
+//   - Uses Latin script (introduced by Spanish missionaries)
+//   - Glottal stop (saltillo) - written as h or ʼ in some orthographies
+//   - Long vowels (sometimes marked with macron)
+//   - Voiceless lateral affricate /tɬ/ (unique sound)
+//   - No voiced stops (b, d, g) in Classical Nahuatl
+//   - Agglutinative morphology with long words
+//
+// Orthographic variants:
+//   - Classical/SEP: tl, ch, x, hu, cu/qu
+//   - Some modern: tl, ch, sh, w, kw
+//
+// Rule IDs: 7100-7199
+
+@name "Nahuatl Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Nahuatl (Aztec) language"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// Classical Nahuatl has 4 vowels with length distinction
+// Modern varieties may have 5 (including /e/)
+// ============================================================
+
+[id: 7100, name: "a short", weight: 0.05, group: nahuatl_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 7101, name: "e short", weight: 0.05, group: nahuatl_vowels, ipa: "/e/"]
+e -> e;
+
+[id: 7102, name: "i short", weight: 0.05, group: nahuatl_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 7103, name: "o short", weight: 0.05, group: nahuatl_vowels, ipa: "/o/"]
+o -> o;
+
+// Long vowels (marked with macron in some orthographies)
+[id: 7105, name: "a long", weight: 0.05, group: nahuatl_long_vowels, ipa: "/aː/"]
+ā -> aː;
+
+[id: 7106, name: "e long", weight: 0.05, group: nahuatl_long_vowels, ipa: "/eː/"]
+ē -> eː;
+
+[id: 7107, name: "i long", weight: 0.05, group: nahuatl_long_vowels, ipa: "/iː/"]
+ī -> iː;
+
+[id: 7108, name: "o long", weight: 0.05, group: nahuatl_long_vowels, ipa: "/oː/"]
+ō -> oː;
+
+// ============================================================
+// STOPS (weight 0.05)
+// Classical Nahuatl has only voiceless stops
+// ============================================================
+
+[id: 7110, name: "p", weight: 0.05, group: nahuatl_stops, ipa: "/p/"]
+p -> p;
+
+[id: 7111, name: "t", weight: 0.05, group: nahuatl_stops, ipa: "/t/"]
+t -> t;
+
+[id: 7112, name: "k before a o u", weight: 0.05, group: nahuatl_stops, ipa: "/k/"]
+c -> k / _[aou];
+
+[id: 7113, name: "k default", weight: 0.05, group: nahuatl_stops, ipa: "/k/"]
+k -> k;
+
+[id: 7114, name: "qu as k", weight: 0.05, group: nahuatl_stops, ipa: "/k/"]
+qu -> k / _[ei];
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+// The famous /tɬ/ - voiceless lateral affricate (unique to Nahuatl family)
+[id: 7120, name: "tl lateral affricate", weight: 0.02, group: nahuatl_affricates, ipa: "/tɬ/"]
+tl -> tɬ;
+
+// /ts/ affricate - written as tz or ts
+[id: 7121, name: "tz affricate", weight: 0.05, group: nahuatl_affricates, ipa: "/t͡s/"]
+tz -> t͡s;
+
+[id: 7122, name: "ts affricate", weight: 0.05, group: nahuatl_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+// /tʃ/ affricate - written as ch
+[id: 7123, name: "ch affricate", weight: 0.05, group: nahuatl_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 7130, name: "s", weight: 0.05, group: nahuatl_fricatives, ipa: "/s/"]
+s -> s;
+
+// x represents /ʃ/ in Classical orthography
+[id: 7131, name: "x as sh", weight: 0.05, group: nahuatl_fricatives, ipa: "/ʃ/"]
+x -> ʃ;
+
+// Modern spelling with sh
+[id: 7132, name: "sh", weight: 0.05, group: nahuatl_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// h as glottal fricative
+[id: 7133, name: "h", weight: 0.05, group: nahuatl_fricatives, ipa: "/h/"]
+h -> h;
+
+// ============================================================
+// GLOTTAL STOP (SALTILLO)
+// Written as h in word-final position in some orthographies
+// or as ʼ in modern linguistic orthography
+// ============================================================
+
+[id: 7140, name: "saltillo apostrophe", weight: 0.05, group: nahuatl_glottal, ipa: "/ʔ/"]
+ʼ -> ʔ;
+
+[id: 7141, name: "saltillo h final", weight: 0.08, group: nahuatl_glottal, ipa: "/ʔ/"]
+h -> ʔ / _#;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 7145, name: "m", weight: 0.05, group: nahuatl_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 7146, name: "n", weight: 0.05, group: nahuatl_nasals, ipa: "/n/"]
+n -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 7150, name: "l", weight: 0.05, group: nahuatl_liquids, ipa: "/l/"]
+l -> l;
+
+// /w/ written as hu before vowels, or as w in modern orthography
+[id: 7151, name: "hu as w", weight: 0.05, group: nahuatl_approximants, ipa: "/w/"]
+hu -> w / _[aeiou];
+
+[id: 7152, name: "uh as w", weight: 0.05, group: nahuatl_approximants, ipa: "/w/"]
+uh -> w / [aeiou]_;
+
+[id: 7153, name: "w", weight: 0.05, group: nahuatl_approximants, ipa: "/w/"]
+w -> w;
+
+// y as palatal approximant
+[id: 7154, name: "y", weight: 0.05, group: nahuatl_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// LABIALIZED VELAR (weight 0.05)
+// /kʷ/ written as cu before a/o, qu before e/i
+// ============================================================
+
+[id: 7160, name: "cu labialized velar", weight: 0.05, group: nahuatl_labialized, ipa: "/kʷ/"]
+cu -> kʷ / _[ao];
+
+[id: 7161, name: "uc labialized velar", weight: 0.05, group: nahuatl_labialized, ipa: "/kʷ/"]
+uc -> kʷ / [aeiou]_;
+
+[id: 7162, name: "kw", weight: 0.05, group: nahuatl_labialized, ipa: "/kʷ/"]
+kw -> kʷ;
+
+// ============================================================
+// COMMON WORDS AND MORPHEMES
+// ============================================================
+
+// Common suffixes
+[id: 7170, name: "absolutive tli", weight: 0.02, group: nahuatl_morphemes]
+tli -> tɬi;
+
+[id: 7171, name: "absolutive tl", weight: 0.02, group: nahuatl_morphemes]
+tl -> tɬ / _#;
+
+// Famous words
+[id: 7175, name: "nahuatl", weight: 0.02, group: nahuatl_common]
+nahuatl -> nawatɬ;
+
+[id: 7176, name: "mexico", weight: 0.02, group: nahuatl_common]
+mexico -> meʃiko;
+
+[id: 7177, name: "aztec", weight: 0.02, group: nahuatl_common]
+azteca -> astek̯a;
+
+[id: 7178, name: "chocolate", weight: 0.02, group: nahuatl_common]
+chocolatl -> t͡ʃokolatɬ;
+
+[id: 7179, name: "tomato", weight: 0.02, group: nahuatl_common]
+tomatl -> tomatɬ;

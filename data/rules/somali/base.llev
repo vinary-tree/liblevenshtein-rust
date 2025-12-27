@@ -1,0 +1,179 @@
+// Somali Base Phonetic Rules
+// ==========================
+// Phonetic rules for Somali (Af Soomaali).
+// Spoken by approximately 22 million people in Somalia, Djibouti,
+// Ethiopia (Somali Region), and Kenya (Northeastern).
+//
+// Somali features:
+//   - Afroasiatic language family (Cushitic branch)
+//   - PHARYNGEAL consonants (ħ, ʕ)
+//   - Uvular consonants
+//   - Tonal (high/low on each mora)
+//   - Long vowels and geminate consonants
+//   - Latin script (since 1972)
+//   - Retroflex stops
+//
+// Orthography:
+//   - kh for /x/, dh for /ɖ/
+//   - c for /ʕ/ (pharyngeal)
+//   - x for /ħ/ (pharyngeal fricative)
+//   - q for uvular /q/
+//   - Double letters for length (aa, sh, etc.)
+//
+// Rule IDs: 13000-13099
+
+@name "Somali Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Somali"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (a->a, e->e, i->i, o->o, u->u)
+// These vowels pass through unchanged in Somali orthography.
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 13008, name: "aa long", weight: 0.05, group: somali_long, ipa: "/aː/"]
+aa -> aː;
+
+[id: 13009, name: "ee long", weight: 0.05, group: somali_long, ipa: "/eː/"]
+ee -> eː;
+
+[id: 13010, name: "ii long", weight: 0.05, group: somali_long, ipa: "/iː/"]
+ii -> iː;
+
+[id: 13011, name: "oo long", weight: 0.05, group: somali_long, ipa: "/oː/"]
+oo -> oː;
+
+[id: 13012, name: "uu long", weight: 0.05, group: somali_long, ipa: "/uː/"]
+uu -> uː;
+
+// ============================================================
+// PHARYNGEAL CONSONANTS (weight 0.02)
+// Distinctive feature of Somali
+// ============================================================
+
+[id: 13016, name: "x pharyngeal fricative", weight: 0.02, group: somali_pharyngeal, ipa: "/ħ/"]
+x -> ħ;
+
+[id: 13017, name: "c voiced pharyngeal", weight: 0.02, group: somali_pharyngeal, ipa: "/ʕ/"]
+c -> ʕ;
+
+[id: 13018, name: "' glottal stop", weight: 0.02, group: somali_pharyngeal, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// UVULAR CONSONANT (weight 0.05)
+// ============================================================
+// Note: Identity mapping removed (q->q)
+// Uvular stop /q/ is written as 'q' in Somali orthography.
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (b->b, t->t, d->d, k->k)
+
+[id: 13028, name: "g", weight: 0.05, group: somali_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// RETROFLEX (weight 0.05)
+// ============================================================
+
+[id: 13031, name: "dh retroflex stop", weight: 0.05, group: somali_retroflex, ipa: "/ɖ/"]
+dh -> ɖ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (f->f, s->s, h->h)
+
+[id: 13036, name: "sh postalveolar", weight: 0.05, group: somali_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 13037, name: "kh velar fricative", weight: 0.05, group: somali_fricatives, ipa: "/x/"]
+kh -> x;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (m->m, n->n)
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (l->l, w->w)
+
+[id: 13048, name: "r flap", weight: 0.05, group: somali_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 13050, name: "y", weight: 0.05, group: somali_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// GEMINATE CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 13054, name: "bb geminate", weight: 0.05, group: somali_geminate, ipa: "/bː/"]
+bb -> bː;
+
+[id: 13055, name: "dd geminate", weight: 0.05, group: somali_geminate, ipa: "/dː/"]
+dd -> dː;
+
+[id: 13056, name: "gg geminate", weight: 0.05, group: somali_geminate, ipa: "/ɡː/"]
+gg -> ɡː;
+
+[id: 13057, name: "kk geminate", weight: 0.05, group: somali_geminate, ipa: "/kː/"]
+kk -> kː;
+
+[id: 13058, name: "ll geminate", weight: 0.05, group: somali_geminate, ipa: "/lː/"]
+ll -> lː;
+
+[id: 13059, name: "mm geminate", weight: 0.05, group: somali_geminate, ipa: "/mː/"]
+mm -> mː;
+
+[id: 13060, name: "nn geminate", weight: 0.05, group: somali_geminate, ipa: "/nː/"]
+nn -> nː;
+
+[id: 13061, name: "rr geminate", weight: 0.05, group: somali_geminate, ipa: "/rː/"]
+rr -> rː;
+
+[id: 13062, name: "ss geminate", weight: 0.05, group: somali_geminate, ipa: "/sː/"]
+ss -> sː;
+
+[id: 13063, name: "tt geminate", weight: 0.05, group: somali_geminate, ipa: "/tː/"]
+tt -> tː;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 13080, name: "soomaali somali", weight: 0.02, group: somali_common]
+soomaali -> soːmaːli;
+
+[id: 13081, name: "salaama alaykum hello", weight: 0.02, group: somali_common]
+salaama alaykum -> salaːma ʕalajkum;
+
+// Note: Identity mapping removed (mahadsanid -> mahadsanid)
+
+[id: 13083, name: "haa yes", weight: 0.02, group: somali_common]
+haa -> haː;
+
+[id: 13084, name: "maya no", weight: 0.02, group: somali_common]
+maya -> maja;
+
+[id: 13085, name: "biyo water", weight: 0.02, group: somali_common]
+biyo -> bijo;
+
+[id: 13086, name: "rooti bread food", weight: 0.02, group: somali_common]
+rooti -> roːti;
+
+[id: 13087, name: "guri house", weight: 0.02, group: somali_common]
+guri -> ɡuɾi;
+
+// Note: Identity mappings removed (qof -> qof, ilmo -> ilmo)
+

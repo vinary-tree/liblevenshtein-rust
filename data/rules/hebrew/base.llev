@@ -40,6 +40,18 @@
 [id: 2152, name: "pe dagesh", weight: 0.05, group: hebrew_dagesh]
 פּ -> p;
 
+// גּ (gimel with dagesh) → ɡ (same as without dagesh in Modern Hebrew)
+[id: 2153, name: "gimel dagesh", weight: 0.05, group: hebrew_dagesh, ipa: "/ɡ/"]
+גּ -> ɡ;
+
+// דּ (dalet with dagesh) → d (same as without dagesh in Modern Hebrew)
+[id: 2154, name: "dalet dagesh", weight: 0.05, group: hebrew_dagesh]
+דּ -> d;
+
+// תּ (tav with dagesh) → t (same as without dagesh in Modern Hebrew)
+[id: 2157, name: "tav dagesh", weight: 0.05, group: hebrew_dagesh]
+תּ -> t;
+
 // ============================================================
 // SHIN/SIN DISTINCTION
 // ============================================================
@@ -64,9 +76,9 @@
 [id: 2161, name: "bet", weight: 0.1, group: hebrew_consonants]
 ב -> v;
 
-// ג (gimel) → g
-[id: 2162, name: "gimel", weight: 0.1, group: hebrew_consonants]
-ג -> g;
+// ג (gimel) → ɡ
+[id: 2162, name: "gimel", weight: 0.1, group: hebrew_consonants, ipa: "/ɡ/"]
+ג -> ɡ;
 
 // ד (dalet) → d
 [id: 2163, name: "dalet", weight: 0.1, group: hebrew_consonants]
@@ -233,4 +245,43 @@ xx -> x;
 
 [id: 2208, name: "double ts affricate", weight: 0.2, group: hebrew_simplification]
 t͡st͡s -> t͡s;
+
+// ============================================================
+// HISTORICAL SPIRANTIZATION (Begadkefat)
+// ============================================================
+// In Biblical/Tiberian Hebrew, the six Begadkefat letters (ב ג ד כ פ ת)
+// had two pronunciations: stop (with dagesh) and fricative (without).
+// Modern Hebrew only preserves this for ב כ פ.
+//
+// DESIGN NOTE: Non-Determinism Resolution
+// ----------------------------------------
+// The following rules (ג→ɣ, ד→ð, ת→θ) appear to conflict with the
+// stop rules above (ג→ɡ, ד→d, ת→t). This is intentional:
+//
+// - Stop rules have weight 0.1 (lower weight = higher priority)
+// - Spirant rules have weight 0.25 (lower priority)
+//
+// During matching, both outputs are generated as valid alternatives,
+// but the stop pronunciation receives a lower distance score,
+// prioritizing Modern Israeli Hebrew pronunciation while still
+// allowing historical/Yemenite/Sephardic matches.
+//
+// For strict Modern Hebrew matching, these spirant rules can be
+// removed or given very high weights (0.9+) to effectively disable them.
+
+// ג (gimel) → ɣ (voiced velar fricative, historical)
+// In modern Israeli Hebrew: always ɡ
+[id: 2210, name: "gimel spirant historical", weight: 0.25, group: hebrew_spirantization, ipa: "/ɣ/"]
+ג -> ɣ;
+
+// ד (dalet) → ð (voiced dental fricative, historical)
+// In modern Israeli Hebrew: always d
+[id: 2211, name: "dalet spirant historical", weight: 0.25, group: hebrew_spirantization, ipa: "/ð/"]
+ד -> ð;
+
+// ת (tav) → θ (voiceless dental fricative, historical)
+// In modern Israeli Hebrew: always t
+// Still used in some Yemenite and Sephardic pronunciations
+[id: 2212, name: "tav spirant historical", weight: 0.25, group: hebrew_spirantization, ipa: "/θ/"]
+ת -> θ;
 

@@ -451,13 +451,53 @@ impl PhoneticGrep {
                 match result {
                     Some(phones) => {
                         let mut s = String::new();
-                        for p in &phones {
+                        for p in phones.iter() {
                             match p {
                                 crate::phonetic::PhoneChar::Vowel(c)
                                 | crate::phonetic::PhoneChar::Consonant(c) => s.push(*c),
                                 crate::phonetic::PhoneChar::Digraph(c1, c2) => {
                                     s.push(*c1);
                                     s.push(*c2);
+                                }
+                                crate::phonetic::PhoneChar::Trigraph(c1, c2, c3) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                }
+                                crate::phonetic::PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                }
+                                crate::phonetic::PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                }
+                                crate::phonetic::PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                    s.push(*c6);
+                                }
+                                crate::phonetic::PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                                    s.push(*c1);
+                                    s.push(*c2);
+                                    s.push(*c3);
+                                    s.push(*c4);
+                                    s.push(*c5);
+                                    s.push(*c6);
+                                    s.push(*c7);
+                                }
+                                crate::phonetic::PhoneChar::Sequence(seq) => {
+                                    for c in seq {
+                                        s.push(*c);
+                                    }
                                 }
                                 crate::phonetic::PhoneChar::Silent => {}
                             }

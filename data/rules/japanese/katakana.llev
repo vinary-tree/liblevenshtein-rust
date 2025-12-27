@@ -1,0 +1,387 @@
+// Japanese Katakana Phonetic Rules
+// =================================
+// Phonetic rules for Japanese Katakana (カタカナ) script to IPA.
+// Maps katakana characters to IPA equivalents for phonetic matching.
+//
+// Katakana is a Japanese syllabary with 46 basic characters,
+// used primarily for:
+//   - Foreign loanwords (gairaigo)
+//   - Emphasis (similar to italics)
+//   - Technical/scientific terms
+//   - Company names and brand names
+//   - Onomatopoeia
+//
+// Phonetic values are identical to hiragana.
+//
+// Rule IDs: 2300-2399
+
+@name "Japanese Katakana Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Japanese Katakana script"
+
+// ============================================================
+// BASIC VOWELS (ア行 / a-gyō)
+// ============================================================
+
+[id: 2300, name: "a vowel", weight: 0.05, group: katakana_vowels, ipa: "/a/"]
+ア -> a;
+
+[id: 2301, name: "i vowel", weight: 0.05, group: katakana_vowels, ipa: "/i/"]
+イ -> i;
+
+[id: 2302, name: "u vowel", weight: 0.05, group: katakana_vowels, ipa: "/ɯ/"]
+ウ -> ɯ;
+
+[id: 2303, name: "e vowel", weight: 0.05, group: katakana_vowels, ipa: "/e/"]
+エ -> e;
+
+[id: 2304, name: "o vowel", weight: 0.05, group: katakana_vowels, ipa: "/o/"]
+オ -> o;
+
+// ============================================================
+// K-ROW (カ行 / ka-gyō)
+// ============================================================
+
+[id: 2305, name: "ka", weight: 0.05, group: katakana_k]
+カ -> ka;
+
+[id: 2306, name: "ki", weight: 0.05, group: katakana_k]
+キ -> ki;
+
+[id: 2307, name: "ku", weight: 0.05, group: katakana_k, ipa: "/kɯ/"]
+ク -> kɯ;
+
+[id: 2308, name: "ke", weight: 0.05, group: katakana_k]
+ケ -> ke;
+
+[id: 2309, name: "ko", weight: 0.05, group: katakana_k]
+コ -> ko;
+
+// ============================================================
+// S-ROW (サ行 / sa-gyō)
+// ============================================================
+// Note: シ uses alveo-palatal ɕ ([:alveopalatal:] class)
+
+[id: 2310, name: "sa", weight: 0.05, group: katakana_s]
+サ -> sa;
+
+[id: 2311, name: "shi", weight: 0.05, group: katakana_s, ipa: "/ɕi/"]
+シ -> ɕi;
+
+[id: 2312, name: "su", weight: 0.05, group: katakana_s, ipa: "/sɯ/"]
+ス -> sɯ;
+
+[id: 2313, name: "se", weight: 0.05, group: katakana_s]
+セ -> se;
+
+[id: 2314, name: "so", weight: 0.05, group: katakana_s]
+ソ -> so;
+
+// ============================================================
+// T-ROW (タ行 / ta-gyō)
+// ============================================================
+// Note: チ uses alveo-palatal t͡ɕ ([:alveopalatal:] class)
+
+[id: 2315, name: "ta", weight: 0.05, group: katakana_t]
+タ -> ta;
+
+[id: 2316, name: "chi", weight: 0.05, group: katakana_t, ipa: "/t͡ɕi/"]
+チ -> t͡ɕi;
+
+[id: 2317, name: "tsu", weight: 0.05, group: katakana_t, ipa: "/t͡sɯ/"]
+ツ -> t͡sɯ;
+
+[id: 2318, name: "te", weight: 0.05, group: katakana_t]
+テ -> te;
+
+[id: 2319, name: "to", weight: 0.05, group: katakana_t]
+ト -> to;
+
+// ============================================================
+// N-ROW (ナ行 / na-gyō)
+// ============================================================
+
+[id: 2320, name: "na", weight: 0.05, group: katakana_n]
+ナ -> na;
+
+[id: 2321, name: "ni", weight: 0.05, group: katakana_n]
+ニ -> ni;
+
+[id: 2322, name: "nu", weight: 0.05, group: katakana_n, ipa: "/nɯ/"]
+ヌ -> nɯ;
+
+[id: 2323, name: "ne", weight: 0.05, group: katakana_n]
+ネ -> ne;
+
+[id: 2324, name: "no", weight: 0.05, group: katakana_n]
+ノ -> no;
+
+// ============================================================
+// H-ROW (ハ行 / ha-gyō)
+// ============================================================
+
+[id: 2325, name: "ha", weight: 0.05, group: katakana_h]
+ハ -> ha;
+
+[id: 2326, name: "hi", weight: 0.05, group: katakana_h, ipa: "/çi/"]
+ヒ -> çi;
+
+[id: 2327, name: "fu", weight: 0.05, group: katakana_h, ipa: "/ɸɯ/"]
+フ -> ɸɯ;
+
+[id: 2328, name: "he", weight: 0.05, group: katakana_h]
+ヘ -> he;
+
+[id: 2329, name: "ho", weight: 0.05, group: katakana_h]
+ホ -> ho;
+
+// ============================================================
+// M-ROW (マ行 / ma-gyō)
+// ============================================================
+
+[id: 2330, name: "ma", weight: 0.05, group: katakana_m]
+マ -> ma;
+
+[id: 2331, name: "mi", weight: 0.05, group: katakana_m]
+ミ -> mi;
+
+[id: 2332, name: "mu", weight: 0.05, group: katakana_m, ipa: "/mɯ/"]
+ム -> mɯ;
+
+[id: 2333, name: "me", weight: 0.05, group: katakana_m]
+メ -> me;
+
+[id: 2334, name: "mo", weight: 0.05, group: katakana_m]
+モ -> mo;
+
+// ============================================================
+// Y-ROW (ヤ行 / ya-gyō)
+// ============================================================
+
+[id: 2335, name: "ya", weight: 0.05, group: katakana_y]
+ヤ -> ja;
+
+[id: 2336, name: "yu", weight: 0.05, group: katakana_y, ipa: "/jɯ/"]
+ユ -> jɯ;
+
+[id: 2337, name: "yo", weight: 0.05, group: katakana_y]
+ヨ -> jo;
+
+// ============================================================
+// R-ROW (ラ行 / ra-gyō)
+// ============================================================
+
+[id: 2338, name: "ra", weight: 0.05, group: katakana_r, ipa: "/ɾa/"]
+ラ -> ɾa;
+
+[id: 2339, name: "ri", weight: 0.05, group: katakana_r, ipa: "/ɾi/"]
+リ -> ɾi;
+
+[id: 2340, name: "ru", weight: 0.05, group: katakana_r, ipa: "/ɾɯ/"]
+ル -> ɾɯ;
+
+[id: 2341, name: "re", weight: 0.05, group: katakana_r, ipa: "/ɾe/"]
+レ -> ɾe;
+
+[id: 2342, name: "ro", weight: 0.05, group: katakana_r, ipa: "/ɾo/"]
+ロ -> ɾo;
+
+// ============================================================
+// W-ROW (ワ行 / wa-gyō)
+// ============================================================
+
+[id: 2343, name: "wa", weight: 0.05, group: katakana_w]
+ワ -> wa;
+
+[id: 2344, name: "wo particle", weight: 0.05, group: katakana_w]
+ヲ -> o;
+
+// ============================================================
+// MORA NASAL (ン)
+// ============================================================
+
+[id: 2345, name: "n moraic", weight: 0.05, group: katakana_nasal, ipa: "/ɴ/"]
+ン -> ɴ;
+
+// ============================================================
+// VOICED CONSONANTS - DAKUTEN (濁点)
+// ============================================================
+
+// G-sounds (ガ行)
+[id: 2350, name: "ga", weight: 0.05, group: katakana_voiced]
+ガ -> ga;
+
+[id: 2351, name: "gi", weight: 0.05, group: katakana_voiced]
+ギ -> gi;
+
+[id: 2352, name: "gu", weight: 0.05, group: katakana_voiced, ipa: "/gɯ/"]
+グ -> gɯ;
+
+[id: 2353, name: "ge", weight: 0.05, group: katakana_voiced]
+ゲ -> ge;
+
+[id: 2354, name: "go", weight: 0.05, group: katakana_voiced]
+ゴ -> go;
+
+// Z-sounds (ザ行)
+[id: 2355, name: "za", weight: 0.05, group: katakana_voiced]
+ザ -> za;
+
+[id: 2356, name: "ji", weight: 0.05, group: katakana_voiced, ipa: "/d͡ʑi/"]
+ジ -> d͡ʑi;
+
+[id: 2357, name: "zu", weight: 0.05, group: katakana_voiced, ipa: "/zɯ/"]
+ズ -> zɯ;
+
+[id: 2358, name: "ze", weight: 0.05, group: katakana_voiced]
+ゼ -> ze;
+
+[id: 2359, name: "zo", weight: 0.05, group: katakana_voiced]
+ゾ -> zo;
+
+// D-sounds (ダ行)
+[id: 2360, name: "da", weight: 0.05, group: katakana_voiced]
+ダ -> da;
+
+[id: 2361, name: "di/ji", weight: 0.05, group: katakana_voiced, ipa: "/d͡ʑi/"]
+ヂ -> d͡ʑi;
+
+[id: 2362, name: "du/zu", weight: 0.05, group: katakana_voiced, ipa: "/d͡zɯ/"]
+ヅ -> d͡zɯ;
+
+[id: 2363, name: "de", weight: 0.05, group: katakana_voiced]
+デ -> de;
+
+[id: 2364, name: "do", weight: 0.05, group: katakana_voiced]
+ド -> do;
+
+// B-sounds (バ行)
+[id: 2365, name: "ba", weight: 0.05, group: katakana_voiced]
+バ -> ba;
+
+[id: 2366, name: "bi", weight: 0.05, group: katakana_voiced]
+ビ -> bi;
+
+[id: 2367, name: "bu", weight: 0.05, group: katakana_voiced, ipa: "/bɯ/"]
+ブ -> bɯ;
+
+[id: 2368, name: "be", weight: 0.05, group: katakana_voiced]
+ベ -> be;
+
+[id: 2369, name: "bo", weight: 0.05, group: katakana_voiced]
+ボ -> bo;
+
+// ============================================================
+// SEMI-VOICED - HANDAKUTEN (半濁点)
+// ============================================================
+
+// P-sounds (パ行)
+[id: 2370, name: "pa", weight: 0.05, group: katakana_handakuten]
+パ -> pa;
+
+[id: 2371, name: "pi", weight: 0.05, group: katakana_handakuten]
+ピ -> pi;
+
+[id: 2372, name: "pu", weight: 0.05, group: katakana_handakuten, ipa: "/pɯ/"]
+プ -> pɯ;
+
+[id: 2373, name: "pe", weight: 0.05, group: katakana_handakuten]
+ペ -> pe;
+
+[id: 2374, name: "po", weight: 0.05, group: katakana_handakuten]
+ポ -> po;
+
+// ============================================================
+// SMALL KANA - SOKUON (促音) - Gemination
+// ============================================================
+
+[id: 2375, name: "sokuon gemination", weight: 0.05, group: katakana_small]
+ッ -> ː;
+
+// ============================================================
+// SMALL KANA - YŌON (拗音) - Palatalization
+// ============================================================
+
+[id: 2376, name: "small ya", weight: 0.05, group: katakana_small]
+ャ -> a;
+
+[id: 2377, name: "small yu", weight: 0.05, group: katakana_small, ipa: "/ɯ/"]
+ュ -> ɯ;
+
+[id: 2378, name: "small yo", weight: 0.05, group: katakana_small]
+ョ -> o;
+
+// Small vowels (for foreign sounds)
+[id: 2379, name: "small a", weight: 0.05, group: katakana_small]
+ァ -> a;
+
+[id: 2380, name: "small i", weight: 0.05, group: katakana_small]
+ィ -> i;
+
+[id: 2381, name: "small u", weight: 0.05, group: katakana_small, ipa: "/ɯ/"]
+ゥ -> ɯ;
+
+[id: 2382, name: "small e", weight: 0.05, group: katakana_small]
+ェ -> e;
+
+[id: 2383, name: "small o", weight: 0.05, group: katakana_small]
+ォ -> o;
+
+[id: 2384, name: "small wa", weight: 0.05, group: katakana_small]
+ヮ -> wa;
+
+// ============================================================
+// EXTENDED KATAKANA (for foreign sounds)
+// ============================================================
+// These are used to represent sounds not native to Japanese
+
+// V-sounds (ヴ = vu)
+[id: 2385, name: "vu", weight: 0.05, group: katakana_extended, ipa: "/vɯ/"]
+ヴ -> vɯ;
+
+// ============================================================
+// OBSOLETE KANA
+// ============================================================
+
+[id: 2386, name: "wi obsolete", weight: 0.05, group: katakana_obsolete]
+ヰ -> i;
+
+[id: 2387, name: "we obsolete", weight: 0.05, group: katakana_obsolete]
+ヱ -> e;
+
+// ============================================================
+// PUNCTUATION
+// ============================================================
+
+[id: 2390, name: "full stop", weight: 0.1, group: katakana_punctuation]
+。 -> .;
+
+[id: 2391, name: "comma", weight: 0.1, group: katakana_punctuation]
+、 -> ,;
+
+[id: 2392, name: "middle dot", weight: 0.1, group: katakana_punctuation]
+・ -> ;
+
+[id: 2393, name: "long vowel mark", weight: 0.1, group: katakana_punctuation]
+ー -> ː;
+
+// ============================================================
+// IPA SIMPLIFICATION
+// ============================================================
+
+[id: 2395, name: "double length marker", weight: 0.2, group: katakana_simplification]
+ːː -> ː;
+
+[id: 2396, name: "double moraic nasal", weight: 0.2, group: katakana_simplification]
+ɴɴ -> ɴ;
+
+[id: 2397, name: "double tap", weight: 0.2, group: katakana_simplification]
+ɾɾ -> ɾ;
+
+[id: 2398, name: "double bilabial fricative", weight: 0.2, group: katakana_simplification]
+ɸɸ -> ɸ;
+
+[id: 2399, name: "double palatal fricative", weight: 0.2, group: katakana_simplification]
+çç -> ç;
+

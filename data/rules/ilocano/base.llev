@@ -1,0 +1,113 @@
+// Ilocano Base Phonetic Rules
+// ===========================
+// Phonetic rules for Ilocano (Ilokano / Iluko).
+// Spoken by approximately 10 million people in northern Philippines
+// (Ilocos region, Cagayan Valley, Cordillera).
+//
+// Ilocano features:
+//   - Austronesian language family (Philippine branch)
+//   - Simple phonology
+//   - 4 vowels: a, i, u, e (limited)
+//   - Glottal stop is phonemic
+//   - No tones
+//   - Stress is phonemic
+//
+// Orthography:
+//   - ng for /ŋ/
+//   - ' for glottal stop /ʔ/
+//   - Stress marked with acute accent
+//
+// Rule IDs: 11300-11399
+
+@name "Ilocano Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Ilocano"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (a->a, i->i, u->u, o->o) removed.
+// Unmapped characters pass through unchanged by default.
+
+[id: 11303, name: "e", weight: 0.05, group: ilocano_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+// Stressed vowels
+[id: 11305, name: "á stressed", weight: 0.05, group: ilocano_stress, ipa: "/ˈa/"]
+á -> ˈa;
+
+[id: 11306, name: "í stressed", weight: 0.05, group: ilocano_stress, ipa: "/ˈi/"]
+í -> ˈi;
+
+[id: 11307, name: "ú stressed", weight: 0.05, group: ilocano_stress, ipa: "/ˈu/"]
+ú -> ˈu;
+
+[id: 11308, name: "é stressed", weight: 0.05, group: ilocano_stress, ipa: "/ˈɛ/"]
+é -> ˈɛ;
+
+[id: 11309, name: "ó stressed", weight: 0.05, group: ilocano_stress, ipa: "/ˈo/"]
+ó -> ˈo;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (p->p, b->b, t->t, d->d, k->k) removed.
+
+[id: 11320, name: "g", weight: 0.05, group: ilocano_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// Glottal stop
+[id: 11321, name: "glottal stop", weight: 0.05, group: ilocano_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Identity mappings (s->s, h->h) removed.
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (m->m, n->n) removed.
+
+[id: 11332, name: "ng velar nasal", weight: 0.05, group: ilocano_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (l->l, w->w) removed.
+
+[id: 11336, name: "r flap", weight: 0.05, group: ilocano_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 11338, name: "y", weight: 0.05, group: ilocano_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+// Note: Identity mappings (ilokano->ilokano, danum->danum, makan->makan) removed.
+
+[id: 11351, name: "naimbag hello good", weight: 0.02, group: ilocano_common]
+naimbag -> naimbaɡ;
+
+[id: 11352, name: "agyamanak thank you", weight: 0.02, group: ilocano_common]
+agyamanak -> aɡjamanak;
+
+[id: 11353, name: "wen yes", weight: 0.02, group: ilocano_common]
+wen -> wɛn;
+
+[id: 11354, name: "saan no", weight: 0.02, group: ilocano_common]
+saan -> saʔan;
+
+[id: 11357, name: "balay house", weight: 0.02, group: ilocano_common]
+balay -> balaj;
+
+[id: 11358, name: "tao person", weight: 0.02, group: ilocano_common]
+tao -> taʔo;
+
+[id: 11359, name: "ubing child", weight: 0.02, group: ilocano_common]
+ubing -> ubiŋ;
+

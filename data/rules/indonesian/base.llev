@@ -9,6 +9,8 @@
 //   - C = ch sound (like English "ch")
 //   - J = dj sound (like English "j")
 //   - Digraphs: ng, ny, sy, kh
+//   - 6 vowels: /a/, /e/, /i/, /o/, /u/ (e can be schwa)
+//   - Consonants: /b/, /d/, /f/, /g/, /h/, /k/, /l/, /m/, /n/, /p/, /r/, /s/, /t/, /w/, /y/, /z/
 //
 // Rule IDs: 3150-3199
 
@@ -21,223 +23,34 @@
 // DIGRAPHS (highest priority - must match before single letters)
 // ============================================================
 
-// Ng → ŋ (velar nasal, very common)
+// Ng -> ŋ (velar nasal, very common)
 [id: 3150, name: "ng digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ŋ/"]
 ng -> ŋ;
 
-[id: 3151, name: "Ng digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ŋ/"]
-Ng -> ŋ;
-
-[id: 3152, name: "NG digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ŋ/"]
-NG -> ŋ;
-
-// Ny → ɲ (palatal nasal, like Spanish ñ)
+// Ny -> ɲ (palatal nasal, like Spanish ñ)
 [id: 3153, name: "ny digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ɲ/"]
 ny -> ɲ;
 
-[id: 3154, name: "Ny digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ɲ/"]
-Ny -> ɲ;
-
-[id: 3155, name: "NY digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ɲ/"]
-NY -> ɲ;
-
-// Sy → ʃ (like English "sh", from Arabic loanwords)
+// Sy -> ʃ (like English "sh", from Arabic loanwords)
 [id: 3156, name: "sy digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ʃ/"]
 sy -> ʃ;
 
-[id: 3157, name: "Sy digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ʃ/"]
-Sy -> ʃ;
-
-[id: 3158, name: "SY digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/ʃ/"]
-SY -> ʃ;
-
-// Kh → x (voiceless velar fricative, Arabic loanwords)
+// Kh -> x (voiceless velar fricative, Arabic loanwords)
 [id: 3159, name: "kh digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/x/"]
 kh -> x;
-
-[id: 3160, name: "Kh digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/x/"]
-Kh -> x;
-
-[id: 3161, name: "KH digraph", weight: 0.05, group: indonesian_digraphs, ipa: "/x/"]
-KH -> x;
 
 // ============================================================
 // SPECIAL CONSONANTS
 // ============================================================
 
-// C → t͡ʃ (always like English "ch", never like "k" or "s")
+// C -> t͡ʃ (always like English "ch", never like "k" or "s")
 [id: 3165, name: "c to t͡ʃ", weight: 0.1, group: indonesian_consonants, ipa: "/t͡ʃ/"]
 c -> t͡ʃ;
 
-[id: 3166, name: "C to t͡ʃ", weight: 0.1, group: indonesian_consonants, ipa: "/t͡ʃ/"]
-C -> t͡ʃ;
-
-// J → d͡ʒ (like English "j" in "judge")
+// J -> d͡ʒ (like English "j" in "judge")
 [id: 3167, name: "j to d͡ʒ", weight: 0.1, group: indonesian_consonants, ipa: "/d͡ʒ/"]
 j -> d͡ʒ;
 
-[id: 3168, name: "J to d͡ʒ", weight: 0.1, group: indonesian_consonants, ipa: "/d͡ʒ/"]
-J -> d͡ʒ;
-
-// ============================================================
-// VOWELS
-// ============================================================
-
-// A → a
-[id: 3170, name: "a vowel", weight: 0.15, group: indonesian_vowels]
-a -> a;
-
-[id: 3171, name: "A vowel", weight: 0.15, group: indonesian_vowels]
-A -> a;
-
-// E → e (can be /e/ or schwa, context-dependent)
-[id: 3172, name: "e vowel", weight: 0.15, group: indonesian_vowels]
-e -> e;
-
-[id: 3173, name: "E vowel", weight: 0.15, group: indonesian_vowels]
-E -> e;
-
-// I → i
-[id: 3174, name: "i vowel", weight: 0.15, group: indonesian_vowels]
-i -> i;
-
-[id: 3175, name: "I vowel", weight: 0.15, group: indonesian_vowels]
-I -> i;
-
-// O → o
-[id: 3176, name: "o vowel", weight: 0.15, group: indonesian_vowels]
-o -> o;
-
-[id: 3177, name: "O vowel", weight: 0.15, group: indonesian_vowels]
-O -> o;
-
-// U → u
-[id: 3178, name: "u vowel", weight: 0.15, group: indonesian_vowels]
-u -> u;
-
-[id: 3179, name: "U vowel", weight: 0.15, group: indonesian_vowels]
-U -> u;
-
-// ============================================================
-// SIMPLE CONSONANTS
-// ============================================================
-
-// B → b
-[id: 3180, name: "b consonant", weight: 0.2, group: indonesian_consonants]
-b -> b;
-
-[id: 3181, name: "B consonant", weight: 0.2, group: indonesian_consonants]
-B -> b;
-
-// D → d
-[id: 3182, name: "d consonant", weight: 0.2, group: indonesian_consonants]
-d -> d;
-
-[id: 3183, name: "D consonant", weight: 0.2, group: indonesian_consonants]
-D -> d;
-
-// F → f (loanwords only)
-[id: 3184, name: "f consonant", weight: 0.2, group: indonesian_consonants]
-f -> f;
-
-[id: 3185, name: "F consonant", weight: 0.2, group: indonesian_consonants]
-F -> f;
-
-// G → g (always hard g)
-[id: 3186, name: "g consonant", weight: 0.2, group: indonesian_consonants]
-g -> g;
-
-[id: 3187, name: "G consonant", weight: 0.2, group: indonesian_consonants]
-G -> g;
-
-// H → h
-[id: 3188, name: "h consonant", weight: 0.2, group: indonesian_consonants]
-h -> h;
-
-[id: 3189, name: "H consonant", weight: 0.2, group: indonesian_consonants]
-H -> h;
-
-// K → k
-[id: 3190, name: "k consonant", weight: 0.2, group: indonesian_consonants]
-k -> k;
-
-[id: 3191, name: "K consonant", weight: 0.2, group: indonesian_consonants]
-K -> k;
-
-// L → l
-[id: 3192, name: "l consonant", weight: 0.2, group: indonesian_consonants]
-l -> l;
-
-[id: 3193, name: "L consonant", weight: 0.2, group: indonesian_consonants]
-L -> l;
-
-// M → m
-[id: 3194, name: "m consonant", weight: 0.2, group: indonesian_consonants]
-m -> m;
-
-[id: 3195, name: "M consonant", weight: 0.2, group: indonesian_consonants]
-M -> m;
-
-// N → n
-[id: 3196, name: "n consonant", weight: 0.2, group: indonesian_consonants]
-n -> n;
-
-[id: 3197, name: "N consonant", weight: 0.2, group: indonesian_consonants]
-N -> n;
-
-// P → p
-[id: 3198, name: "p consonant", weight: 0.2, group: indonesian_consonants]
-p -> p;
-
-[id: 3199, name: "P consonant", weight: 0.2, group: indonesian_consonants]
-P -> p;
-
-// R → r (trilled)
-[id: 3200, name: "r consonant", weight: 0.2, group: indonesian_consonants]
-r -> r;
-
-[id: 3201, name: "R consonant", weight: 0.2, group: indonesian_consonants]
-R -> r;
-
-// S → s
-[id: 3202, name: "s consonant", weight: 0.2, group: indonesian_consonants]
-s -> s;
-
-[id: 3203, name: "S consonant", weight: 0.2, group: indonesian_consonants]
-S -> s;
-
-// T → t
-[id: 3204, name: "t consonant", weight: 0.2, group: indonesian_consonants]
-t -> t;
-
-[id: 3205, name: "T consonant", weight: 0.2, group: indonesian_consonants]
-T -> t;
-
-// V → f (often pronounced as f in Indonesian)
-[id: 3206, name: "v to f", weight: 0.2, group: indonesian_consonants]
+// V -> f (often pronounced as f in Indonesian)
+[id: 3206, name: "v to f", weight: 0.2, group: indonesian_consonants, ipa: "/f/"]
 v -> f;
-
-[id: 3207, name: "V to f", weight: 0.2, group: indonesian_consonants]
-V -> f;
-
-// W → w
-[id: 3208, name: "w consonant", weight: 0.2, group: indonesian_consonants]
-w -> w;
-
-[id: 3209, name: "W consonant", weight: 0.2, group: indonesian_consonants]
-W -> w;
-
-// Y → y
-[id: 3210, name: "y consonant", weight: 0.2, group: indonesian_consonants]
-y -> y;
-
-[id: 3211, name: "Y consonant", weight: 0.2, group: indonesian_consonants]
-Y -> y;
-
-// Z → z (loanwords only)
-[id: 3212, name: "z consonant", weight: 0.2, group: indonesian_consonants]
-z -> z;
-
-[id: 3213, name: "Z consonant", weight: 0.2, group: indonesian_consonants]
-Z -> z;
-

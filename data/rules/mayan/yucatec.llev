@@ -1,0 +1,288 @@
+// Yucatec Maya Base Phonetic Rules
+// =================================
+// Phonetic rules for Yucatec Maya (Màaya T'àan).
+// Spoken by approximately 800,000 people in the Yucatan Peninsula
+// (Mexico, Guatemala, Belize).
+//
+// Yucatec Maya features:
+//   - Ejective consonants: p', t', k', ts', ch'
+//   - Implosive: b' (glottalized bilabial)
+//   - Tonal system (high vs low tone)
+//   - Vowel length distinction (short vs long)
+//   - Glottal stop as phoneme
+//   - Unique retroflex-like x /ʃ/
+//   - Contrast between ts /ts/ and tz /ts'/
+//
+// Orthography (Academia de Lenguas Mayas):
+//   - ' after consonants for ejectives
+//   - á, é, í, ó, ú for high tone
+//   - à, è, ì, ò, ù for low tone (rare in some systems)
+//   - aa, ee, ii, oo, uu for long vowels
+//   - x for /ʃ/, j for /h/, dz for /ts/
+//
+// Rule IDs: 8800-8999
+
+@name "Yucatec Maya Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Yucatec Maya (Màaya T'àan)"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 8800, name: "a short", weight: 0.05, group: yucatec_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 8801, name: "e short", weight: 0.05, group: yucatec_vowels, ipa: "/e/"]
+e -> e;
+
+[id: 8802, name: "i short", weight: 0.05, group: yucatec_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 8803, name: "o short", weight: 0.05, group: yucatec_vowels, ipa: "/o/"]
+o -> o;
+
+[id: 8804, name: "u short", weight: 0.05, group: yucatec_vowels, ipa: "/u/"]
+u -> u;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// Marked by doubling in orthography
+// ============================================================
+
+[id: 8810, name: "aa long", weight: 0.05, group: yucatec_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 8811, name: "ee long", weight: 0.05, group: yucatec_long_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 8812, name: "ii long", weight: 0.05, group: yucatec_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 8813, name: "oo long", weight: 0.05, group: yucatec_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+[id: 8814, name: "uu long", weight: 0.05, group: yucatec_long_vowels, ipa: "/uː/"]
+uu -> uː;
+
+// ============================================================
+// HIGH TONE VOWELS (weight 0.05)
+// Marked with acute accent
+// ============================================================
+
+[id: 8820, name: "a high tone", weight: 0.05, group: yucatec_tones, ipa: "/á/"]
+á -> a˦;
+
+[id: 8821, name: "e high tone", weight: 0.05, group: yucatec_tones, ipa: "/é/"]
+é -> e˦;
+
+[id: 8822, name: "i high tone", weight: 0.05, group: yucatec_tones, ipa: "/í/"]
+í -> i˦;
+
+[id: 8823, name: "o high tone", weight: 0.05, group: yucatec_tones, ipa: "/ó/"]
+ó -> o˦;
+
+[id: 8824, name: "u high tone", weight: 0.05, group: yucatec_tones, ipa: "/ú/"]
+ú -> u˦;
+
+// ============================================================
+// LOW TONE VOWELS (weight 0.05)
+// Marked with grave accent (in some orthographies)
+// ============================================================
+
+[id: 8825, name: "a low tone", weight: 0.05, group: yucatec_tones, ipa: "/à/"]
+à -> a˨;
+
+[id: 8826, name: "e low tone", weight: 0.05, group: yucatec_tones, ipa: "/è/"]
+è -> e˨;
+
+[id: 8827, name: "i low tone", weight: 0.05, group: yucatec_tones, ipa: "/ì/"]
+ì -> i˨;
+
+[id: 8828, name: "o low tone", weight: 0.05, group: yucatec_tones, ipa: "/ò/"]
+ò -> o˨;
+
+[id: 8829, name: "u low tone", weight: 0.05, group: yucatec_tones, ipa: "/ù/"]
+ù -> u˨;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+[id: 8830, name: "p", weight: 0.05, group: yucatec_stops, ipa: "/p/"]
+p -> p;
+
+[id: 8831, name: "t", weight: 0.05, group: yucatec_stops, ipa: "/t/"]
+t -> t;
+
+[id: 8832, name: "k", weight: 0.05, group: yucatec_stops, ipa: "/k/"]
+k -> k;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 8835, name: "p' ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 8836, name: "t' ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 8837, name: "k' ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/kʼ/"]
+k' -> kʼ;
+
+// With modifier letter apostrophe
+[id: 8838, name: "pʼ ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/pʼ/"]
+pʼ -> pʼ;
+
+[id: 8839, name: "tʼ ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/tʼ/"]
+tʼ -> tʼ;
+
+[id: 8840, name: "kʼ ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/kʼ/"]
+kʼ -> kʼ;
+
+// ============================================================
+// IMPLOSIVE (weight 0.02)
+// b' is a glottalized bilabial implosive
+// ============================================================
+
+[id: 8845, name: "b' implosive", weight: 0.02, group: yucatec_implosive, ipa: "/ɓ/"]
+b' -> ɓ;
+
+[id: 8846, name: "bʼ implosive", weight: 0.02, group: yucatec_implosive, ipa: "/ɓ/"]
+bʼ -> ɓ;
+
+// Plain b (usually in loanwords)
+[id: 8847, name: "b", weight: 0.05, group: yucatec_stops, ipa: "/b/"]
+b -> b;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+// Plain affricates
+[id: 8850, name: "ts alveolar", weight: 0.05, group: yucatec_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+[id: 8851, name: "tz alveolar alt", weight: 0.05, group: yucatec_affricates, ipa: "/t͡s/"]
+tz -> t͡s;
+
+[id: 8852, name: "dz voiced alveolar", weight: 0.05, group: yucatec_affricates, ipa: "/d͡z/"]
+dz -> d͡z;
+
+[id: 8853, name: "ch postalveolar", weight: 0.05, group: yucatec_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+// Ejective affricates
+[id: 8855, name: "ts' ejective", weight: 0.02, group: yucatec_ejective_affricates, ipa: "/t͡sʼ/"]
+ts' -> t͡sʼ;
+
+[id: 8856, name: "tz' ejective", weight: 0.02, group: yucatec_ejective_affricates, ipa: "/t͡sʼ/"]
+tz' -> t͡sʼ;
+
+[id: 8857, name: "ch' ejective", weight: 0.02, group: yucatec_ejective_affricates, ipa: "/t͡ʃʼ/"]
+ch' -> t͡ʃʼ;
+
+[id: 8858, name: "tsʼ ejective", weight: 0.02, group: yucatec_ejective_affricates, ipa: "/t͡sʼ/"]
+tsʼ -> t͡sʼ;
+
+[id: 8859, name: "chʼ ejective", weight: 0.02, group: yucatec_ejective_affricates, ipa: "/t͡ʃʼ/"]
+chʼ -> t͡ʃʼ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 8860, name: "s", weight: 0.05, group: yucatec_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 8861, name: "x postalveolar", weight: 0.05, group: yucatec_fricatives, ipa: "/ʃ/"]
+x -> ʃ;
+
+[id: 8862, name: "j glottal", weight: 0.05, group: yucatec_fricatives, ipa: "/h/"]
+j -> h;
+
+[id: 8863, name: "h glottal alt", weight: 0.05, group: yucatec_fricatives, ipa: "/h/"]
+h -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 8865, name: "m", weight: 0.05, group: yucatec_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 8866, name: "n", weight: 0.05, group: yucatec_nasals, ipa: "/n/"]
+n -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 8870, name: "l", weight: 0.05, group: yucatec_liquids, ipa: "/l/"]
+l -> l;
+
+[id: 8871, name: "w", weight: 0.05, group: yucatec_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 8872, name: "y", weight: 0.05, group: yucatec_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// GLOTTAL STOP (weight 0.05)
+// ============================================================
+
+[id: 8875, name: "glottal stop apostrophe", weight: 0.05, group: yucatec_glottal, ipa: "/ʔ/"]
+' -> ʔ / [aeiou]_[aeiou];
+
+[id: 8876, name: "glottal stop modifier", weight: 0.05, group: yucatec_glottal, ipa: "/ʔ/"]
+ʼ -> ʔ / [aeiou]_[aeiou];
+
+// ============================================================
+// CONSONANT CLUSTERS (weight 0.05)
+// ============================================================
+
+[id: 8880, name: "nk cluster", weight: 0.05, group: yucatec_clusters, ipa: "/ŋk/"]
+nk -> ŋk;
+
+[id: 8881, name: "nt cluster", weight: 0.05, group: yucatec_clusters, ipa: "/nt/"]
+nt -> nt;
+
+[id: 8882, name: "mp cluster", weight: 0.05, group: yucatec_clusters, ipa: "/mp/"]
+mp -> mp;
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 8900, name: "maya", weight: 0.02, group: yucatec_common]
+maya -> maja;
+
+[id: 8901, name: "maaya maya language", weight: 0.02, group: yucatec_common]
+màaya -> ma˨ja;
+
+[id: 8902, name: "taan word speech", weight: 0.02, group: yucatec_common]
+t'àan -> tʼa˨n;
+
+[id: 8903, name: "bix hello how", weight: 0.02, group: yucatec_common]
+bix -> biʃ;
+
+[id: 8904, name: "maalo good thanks", weight: 0.02, group: yucatec_common]
+ma'alob' -> maʔaloɓ;
+
+[id: 8905, name: "xook study learn", weight: 0.02, group: yucatec_common]
+xook -> ʃoːk;
+
+[id: 8906, name: "ich eye", weight: 0.02, group: yucatec_common]
+ich -> it͡ʃ;
+
+[id: 8907, name: "ja water", weight: 0.02, group: yucatec_common]
+ja' -> haʔ;
+
+[id: 8908, name: "kaan sky", weight: 0.02, group: yucatec_common]
+ka'an -> kaʔan;
+
+[id: 8909, name: "lu'um earth", weight: 0.02, group: yucatec_common]
+lu'um -> luʔum;
+

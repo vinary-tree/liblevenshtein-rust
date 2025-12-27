@@ -895,27 +895,201 @@ impl<V: DictionaryValue> DynamicDawg<V> {
     ///
     /// This method is optimized with a Bloom filter (if enabled) for fast negative lookup rejection.
     pub fn contains(&self, term: &str) -> bool {
-        let inner = self.inner.read();
+        self.contains_bytes(term.as_bytes())
+    }
 
-        // Fast path: Bloom filter check (if enabled)
-        if let Some(ref bloom) = inner.bloom_filter {
-            if !bloom.might_contain(term) {
-                return false; // Definitely not in DAWG
+    // ========================================================================
+    // Raw Byte Methods
+    // ========================================================================
+    //
+    // These methods operate directly on byte slices, enabling use cases like
+    // time series indexing where encoded data may not be valid UTF-8.
+
+    /// Insert raw bytes into the DAWG.
+    ///
+    /// Returns `true` if the bytes were newly inserted, `false` if already existed.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let dawg: DynamicDawg<()> = DynamicDawg::new();
+    /// assert!(dawg.insert_bytes(&[0x10, 0x20, 0x30]));
+    /// assert!(!dawg.insert_bytes(&[0x10, 0x20, 0x30])); // Duplicate
+    /// ```
+    pub fn insert_bytes(&self, bytes: &[u8]) -> bool {
+        let mut inner = self.inner.write();
+
+        // Navigate to insertion point, creating nodes as needed
+        let mut node_idx = 0;
+        let mut path: Vec<(usize, u8)> = Vec::new();
+
+        for &byte in bytes {
+            if let Some(&child_idx) = inner.nodes[node_idx]
+                .edges
+                .iter()
+                .find(|(b, _)| *b == byte)
+                .map(|(_, idx)| idx)
+            {
+                path.push((node_idx, byte));
+                node_idx = child_idx;
+            } else {
+                break;
             }
-            // Might be in DAWG, need full check
         }
 
-        // Full check: traverse DAWG
-        drop(inner); // Release lock before traversal
+        // Check if term already exists
+        if path.len() == bytes.len() && inner.nodes[node_idx].is_final {
+            return false;
+        }
+
+        // Build remaining suffix
+        let start_byte_idx = path.len();
+        for i in start_byte_idx..bytes.len() {
+            let byte = bytes[i];
+            let new_idx = inner.nodes.len();
+            let is_final = i == bytes.len() - 1;
+            let mut new_node = DawgNode::new(is_final);
+            new_node.ref_count = 1;
+
+            inner.nodes.push(new_node);
+            inner.insert_edge_sorted(node_idx, byte, new_idx);
+            node_idx = new_idx;
+        }
+
+        // Mark as final if we followed existing path
+        if start_byte_idx == bytes.len() {
+            inner.nodes[node_idx].is_final = true;
+        }
+
+        inner.term_count += 1;
+        inner.check_and_auto_minimize();
+        true
+    }
+
+    /// Insert raw bytes with an associated value.
+    ///
+    /// Returns `true` if newly inserted, `false` if it already existed (value is updated).
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let dawg: DynamicDawg<u32> = DynamicDawg::new();
+    /// assert!(dawg.insert_bytes_with_value(&[0x10, 0x20], 42));
+    /// assert_eq!(dawg.get_bytes_value(&[0x10, 0x20]), Some(42));
+    /// ```
+    pub fn insert_bytes_with_value(&self, bytes: &[u8], value: V) -> bool {
+        let mut inner = self.inner.write();
+
+        // Navigate to insertion point
+        let mut node_idx = 0;
+        let mut path: Vec<(usize, u8)> = Vec::new();
+
+        for &byte in bytes {
+            if let Some(&child_idx) = inner.nodes[node_idx]
+                .edges
+                .iter()
+                .find(|(b, _)| *b == byte)
+                .map(|(_, idx)| idx)
+            {
+                path.push((node_idx, byte));
+                node_idx = child_idx;
+            } else {
+                break;
+            }
+        }
+
+        // Check if term already exists
+        if path.len() == bytes.len() {
+            if inner.nodes[node_idx].is_final {
+                // Update value
+                inner.nodes[node_idx].value = Some(value);
+                return false;
+            } else {
+                // Mark as final and set value
+                inner.nodes[node_idx].is_final = true;
+                inner.nodes[node_idx].value = Some(value);
+                inner.term_count += 1;
+                return true;
+            }
+        }
+
+        // Build remaining suffix
+        let start_byte_idx = path.len();
+        for i in start_byte_idx..bytes.len() {
+            let byte = bytes[i];
+            let new_idx = inner.nodes.len();
+            let is_final = i == bytes.len() - 1;
+
+            let mut new_node = if is_final {
+                DawgNode::new_with_value(true, Some(value.clone()))
+            } else {
+                DawgNode::new(false)
+            };
+            new_node.ref_count = 1;
+
+            inner.nodes.push(new_node);
+            inner.insert_edge_sorted(node_idx, byte, new_idx);
+            node_idx = new_idx;
+        }
+
+        inner.term_count += 1;
+        inner.check_and_auto_minimize();
+        true
+    }
+
+    /// Check if raw bytes exist in the DAWG.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let dawg: DynamicDawg<()> = DynamicDawg::new();
+    /// dawg.insert_bytes(&[0x10, 0x20, 0x30]);
+    /// assert!(dawg.contains_bytes(&[0x10, 0x20, 0x30]));
+    /// assert!(!dawg.contains_bytes(&[0x10, 0x20]));
+    /// ```
+    pub fn contains_bytes(&self, bytes: &[u8]) -> bool {
         let mut node = self.root();
-        for byte in term.as_bytes() {
-            if let Some(next_node) = node.transition(*byte) {
+        for &byte in bytes {
+            if let Some(next_node) = node.transition(byte) {
                 node = next_node;
             } else {
                 return false;
             }
         }
         node.is_final()
+    }
+
+    /// Get the value associated with raw bytes.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let dawg: DynamicDawg<String> = DynamicDawg::new();
+    /// dawg.insert_bytes_with_value(&[0x10, 0x20], "value".to_string());
+    /// assert_eq!(dawg.get_bytes_value(&[0x10, 0x20]), Some("value".to_string()));
+    /// assert_eq!(dawg.get_bytes_value(&[0x99]), None);
+    /// ```
+    pub fn get_bytes_value(&self, bytes: &[u8]) -> Option<V> {
+        let inner = self.inner.read();
+        let mut node_idx = 0;
+
+        for &byte in bytes {
+            match inner.nodes[node_idx]
+                .edges
+                .iter()
+                .find(|(b, _)| *b == byte)
+                .map(|(_, idx)| idx)
+            {
+                Some(&child_idx) => node_idx = child_idx,
+                None => return None,
+            }
+        }
+
+        if inner.nodes[node_idx].is_final {
+            inner.nodes[node_idx].value.clone()
+        } else {
+            None
+        }
     }
 }
 

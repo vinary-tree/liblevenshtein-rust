@@ -145,6 +145,12 @@ fn main() {
                 .filter_map(|p| match p {
                     Phone::Vowel(c) | Phone::Consonant(c) => Some(*c as char),
                     Phone::Digraph(c1, _) => Some(*c1 as char),
+                    Phone::Trigraph(c1, _, _) => Some(*c1 as char),
+                    Phone::Tetragraph(c1, _, _, _) => Some(*c1 as char),
+                    Phone::Pentagraph(c1, _, _, _, _) => Some(*c1 as char),
+                    Phone::Hexagraph(c1, _, _, _, _, _) => Some(*c1 as char),
+                    Phone::Heptagraph(c1, _, _, _, _, _, _) => Some(*c1 as char),
+                    Phone::Sequence(s) => s.first().map(|c| *c as char),
                     Phone::Silent => None,
                 })
                 .collect();

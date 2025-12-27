@@ -1,0 +1,104 @@
+// Sundanese Base Phonetic Rules
+// =============================
+// Phonetic rules for Sundanese (Basa Sunda).
+// Spoken by approximately 42 million people in western Java, Indonesia.
+//
+// Sundanese features:
+//   - Austronesian language family
+//   - Simple phonology similar to Indonesian
+//   - 7 vowels: a, é, eu, e, i, o, u
+//   - No tones
+//   - Glottal stop at word-final position
+//   - Speech levels (formal/informal)
+//
+// Orthography:
+//   - é for /e/, e for /ə/, eu for /ɤ/
+//   - ng for /ŋ/, ny for /ɲ/
+//   - c for /tʃ/, j for /dʒ/
+//
+// Rule IDs: 11100-11199
+
+@name "Sundanese Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Sundanese"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (a->a, i->i, o->o, u->u) removed.
+
+[id: 11101, name: "é closed e", weight: 0.05, group: sundanese_vowels, ipa: "/e/"]
+é -> e;
+
+[id: 11102, name: "e pepet schwa", weight: 0.05, group: sundanese_vowels, ipa: "/ə/"]
+e -> ə;
+
+[id: 11103, name: "eu central unrounded", weight: 0.05, group: sundanese_vowels, ipa: "/ɤ/"]
+eu -> ɤ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (p->p, b->b, t->t, d->d, k->k) removed.
+
+[id: 11115, name: "g", weight: 0.05, group: sundanese_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+[id: 11116, name: "glottal stop", weight: 0.05, group: sundanese_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 11120, name: "c voiceless", weight: 0.05, group: sundanese_affricates, ipa: "/t͡ʃ/"]
+c -> t͡ʃ;
+
+[id: 11121, name: "j voiced", weight: 0.05, group: sundanese_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Identity mappings (f->f, s->s, h->h) removed.
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (m->m, n->n) removed.
+
+[id: 11132, name: "ng velar nasal", weight: 0.05, group: sundanese_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+[id: 11133, name: "ny palatal nasal", weight: 0.05, group: sundanese_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (l->l, r->r, w->w) removed.
+
+[id: 11138, name: "y", weight: 0.05, group: sundanese_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+// Note: Identity mappings (sunda->sunda, sampurasun->sampurasun, nuhun->nuhun, muhun->muhun, imah->imah) removed.
+
+[id: 11154, name: "henteu no", weight: 0.02, group: sundanese_common]
+henteu -> həntɤ;
+
+[id: 11155, name: "cai water", weight: 0.02, group: sundanese_common]
+cai -> t͡ʃai;
+
+[id: 11156, name: "sangu rice food", weight: 0.02, group: sundanese_common]
+sangu -> saŋu;
+
+[id: 11158, name: "jalma person", weight: 0.02, group: sundanese_common]
+jalma -> d͡ʒalma;
+
+[id: 11159, name: "budak child", weight: 0.02, group: sundanese_common]
+budak -> budaʔ;
+

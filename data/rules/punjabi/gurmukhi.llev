@@ -89,8 +89,8 @@
 [id: 4373, name: "kha", weight: 0.05, group: punjabi_velars]
 ਖ -> kh;
 
-[id: 4374, name: "ga", weight: 0.05, group: punjabi_velars]
-ਗ -> g;
+[id: 4374, name: "ga", weight: 0.05, group: punjabi_velars, ipa: "/ɡ/"]
+ਗ -> ɡ;
 
 [id: 4375, name: "gha", weight: 0.05, group: punjabi_velars]
 ਘ -> gh;

@@ -1,0 +1,174 @@
+// Uzbek Base Phonetic Rules
+// =========================
+// Phonetic rules for Uzbek (Oʻzbek tili).
+// Spoken by approximately 35 million people in Uzbekistan and
+// surrounding Central Asian countries.
+//
+// Uzbek features:
+//   - Turkic language family (Karluk branch)
+//   - Vowel harmony (front/back, though weakened)
+//   - No lexical tones
+//   - Voiced vs voiceless stops
+//   - Uvular consonants: q, ğ (gh)
+//   - Latin script (current), Cyrillic (historical)
+//   - 6 vowels: a, e, i, o, u, oʻ
+//
+// Orthography (Latin/Lotin):
+//   - oʻ for /ɵ/ (front rounded)
+//   - gʻ for /ʁ/ (voiced uvular fricative)
+//   - x for /χ/ (voiceless uvular fricative)
+//   - ng for /ŋ/
+//   - sh for /ʃ/, ch for /t͡ʃ/
+//   - ' (okina) for glottal stop in some loanwords
+//
+// Rule IDs: 10700-10799
+
+@name "Uzbek Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Uzbek"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+// Note: Lowercase vowels (a, e, i) pass through unchanged (already IPA)
+
+[id: 10703, name: "o", weight: 0.05, group: uzbek_vowels, ipa: "/ɔ/"]
+o -> ɔ;
+
+// Note: Lowercase 'u' passes through unchanged (already IPA /u/)
+
+// oʻ - front rounded vowel
+[id: 10705, name: "oʻ front rounded", weight: 0.05, group: uzbek_vowels, ipa: "/ɵ/"]
+oʻ -> ɵ;
+
+[id: 10706, name: "o' front rounded alt", weight: 0.05, group: uzbek_vowels, ipa: "/ɵ/"]
+o' -> ɵ;
+
+// Cyrillic ў variant
+[id: 10707, name: "ў cyrillic", weight: 0.05, group: uzbek_vowels, ipa: "/ɵ/"]
+ў -> ɵ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+// Note: Lowercase stops (p, b) pass through unchanged (already IPA)
+
+[id: 10712, name: "t", weight: 0.05, group: uzbek_stops, ipa: "/t̪/"]
+t -> t̪;
+
+[id: 10713, name: "d", weight: 0.05, group: uzbek_stops, ipa: "/d̪/"]
+d -> d̪;
+
+// Note: Lowercase 'k' passes through unchanged (already IPA /k/)
+
+[id: 10715, name: "g", weight: 0.05, group: uzbek_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// Uvular stop
+[id: 10716, name: "q uvular", weight: 0.05, group: uzbek_uvular, ipa: "/q/"]
+q -> q;
+
+// Glottal stop in loanwords
+[id: 10717, name: "glottal stop", weight: 0.05, group: uzbek_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// UVULAR FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 10720, name: "x voiceless uvular", weight: 0.05, group: uzbek_uvular, ipa: "/χ/"]
+x -> χ;
+
+[id: 10721, name: "gʻ voiced uvular", weight: 0.05, group: uzbek_uvular, ipa: "/ʁ/"]
+gʻ -> ʁ;
+
+[id: 10722, name: "g' voiced uvular alt", weight: 0.05, group: uzbek_uvular, ipa: "/ʁ/"]
+g' -> ʁ;
+
+// Cyrillic ғ variant
+[id: 10723, name: "ғ cyrillic uvular", weight: 0.05, group: uzbek_uvular, ipa: "/ʁ/"]
+ғ -> ʁ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10725, name: "ch voiceless", weight: 0.05, group: uzbek_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 10726, name: "j voiced", weight: 0.05, group: uzbek_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 10730, name: "f", weight: 0.05, group: uzbek_fricatives, ipa: "/ɸ/"]
+f -> ɸ;
+
+[id: 10731, name: "v", weight: 0.05, group: uzbek_fricatives, ipa: "/w/"]
+v -> w;
+
+// Note: Lowercase fricatives (s, z) pass through unchanged (already IPA)
+
+[id: 10734, name: "sh postalveolar", weight: 0.05, group: uzbek_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// Note: Lowercase 'h' passes through unchanged (already IPA /h/)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Lowercase nasals (m, n) pass through unchanged (already IPA)
+
+[id: 10742, name: "ng velar nasal", weight: 0.05, group: uzbek_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Lowercase liquids (l, r) pass through unchanged (already IPA)
+
+[id: 10747, name: "y", weight: 0.05, group: uzbek_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 10760, name: "ozbek uzbek", weight: 0.02, group: uzbek_common]
+oʻzbek -> ɵzbekʰ;
+
+[id: 10761, name: "salom hello", weight: 0.02, group: uzbek_common]
+salom -> salɔm;
+
+[id: 10762, name: "rahmat thank you", weight: 0.02, group: uzbek_common]
+rahmat -> raχmat̪;
+
+// Note: 'ha' passes through unchanged
+
+[id: 10764, name: "yoq no", weight: 0.02, group: uzbek_common]
+yoʻq -> jɵq;
+
+[id: 10765, name: "suv water", weight: 0.02, group: uzbek_common]
+suv -> suw;
+
+[id: 10766, name: "ovqat food", weight: 0.02, group: uzbek_common]
+ovqat -> ɔwqat̪;
+
+[id: 10767, name: "uy house", weight: 0.02, group: uzbek_common]
+uy -> uj;
+
+[id: 10768, name: "odam person", weight: 0.02, group: uzbek_common]
+odam -> ɔd̪am;
+
+[id: 10769, name: "bola child", weight: 0.02, group: uzbek_common]
+bola -> bɔla;
+
+[id: 10770, name: "kun day sun", weight: 0.02, group: uzbek_common]
+kun -> kun;
+
+[id: 10771, name: "toshkent capital", weight: 0.02, group: uzbek_common]
+toshkent -> t̪ɔʃkent̪;
+

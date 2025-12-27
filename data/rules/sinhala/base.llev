@@ -1,0 +1,244 @@
+// Sinhala Base Phonetic Rules
+// ===========================
+// Phonetic rules for Sinhala (Sinhalese).
+// Spoken by approximately 17 million people in Sri Lanka.
+//
+// Sinhala features:
+//   - Indo-Aryan language with unique features
+//   - Sinhala script (derived from Brahmi)
+//   - Prenasalized stops (mb, nd, ɳɖ, ŋg)
+//   - Aspirated consonants (but less common than in Hindi)
+//   - No retroflex ḷ (unlike Tamil)
+//   - Vowel length distinction
+//   - SOV word order
+//
+// Orthography:
+//   - Sinhala abugida script
+//   - Inherent 'a' vowel
+//   - Vowel diacritics (matras)
+//
+// Rule IDs: 14000-14099
+
+@name "Sinhala Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Sinhala"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14000, name: "අ a", weight: 0.05, group: sinhala_vowels, ipa: "/ʌ/"]
+අ -> ʌ;
+
+[id: 14001, name: "ආ aa", weight: 0.05, group: sinhala_vowels, ipa: "/aː/"]
+ආ -> aː;
+
+[id: 14002, name: "ඇ ae", weight: 0.05, group: sinhala_vowels, ipa: "/æ/"]
+ඇ -> æ;
+
+[id: 14003, name: "ඈ aee", weight: 0.05, group: sinhala_vowels, ipa: "/æː/"]
+ඈ -> æː;
+
+[id: 14004, name: "ඉ i", weight: 0.05, group: sinhala_vowels, ipa: "/i/"]
+ඉ -> i;
+
+[id: 14005, name: "ඊ ii", weight: 0.05, group: sinhala_vowels, ipa: "/iː/"]
+ඊ -> iː;
+
+[id: 14006, name: "උ u", weight: 0.05, group: sinhala_vowels, ipa: "/u/"]
+උ -> u;
+
+[id: 14007, name: "ඌ uu", weight: 0.05, group: sinhala_vowels, ipa: "/uː/"]
+ඌ -> uː;
+
+[id: 14008, name: "එ e", weight: 0.05, group: sinhala_vowels, ipa: "/e/"]
+එ -> e;
+
+[id: 14009, name: "ඒ ee", weight: 0.05, group: sinhala_vowels, ipa: "/eː/"]
+ඒ -> eː;
+
+[id: 14010, name: "ඔ o", weight: 0.05, group: sinhala_vowels, ipa: "/o/"]
+ඔ -> o;
+
+[id: 14011, name: "ඕ oo", weight: 0.05, group: sinhala_vowels, ipa: "/oː/"]
+ඕ -> oː;
+
+// ============================================================
+// PRENASALIZED STOPS (weight 0.02)
+// Distinctive feature of Sinhala
+// ============================================================
+
+[id: 14015, name: "ඹ prenasalized ba", weight: 0.02, group: sinhala_prenasalized, ipa: "/ᵐb/"]
+ඹ -> ᵐb;
+
+[id: 14016, name: "ඳ prenasalized da", weight: 0.02, group: sinhala_prenasalized, ipa: "/ⁿd/"]
+ඳ -> ⁿd;
+
+[id: 14017, name: "ඬ prenasalized ḍa", weight: 0.02, group: sinhala_prenasalized, ipa: "/ᶯɖ/"]
+ඬ -> ᶯɖ;
+
+[id: 14018, name: "ඟ prenasalized ga", weight: 0.02, group: sinhala_prenasalized, ipa: "/ᵑɡ/"]
+ඟ -> ᵑɡ;
+
+// ============================================================
+// VELAR CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 14022, name: "ක ka", weight: 0.05, group: sinhala_velars, ipa: "/k/"]
+ක -> k;
+
+[id: 14023, name: "ඛ kha", weight: 0.05, group: sinhala_velars, ipa: "/kʰ/"]
+ඛ -> kʰ;
+
+[id: 14024, name: "ග ga", weight: 0.05, group: sinhala_velars, ipa: "/ɡ/"]
+ග -> ɡ;
+
+[id: 14025, name: "ඝ gha", weight: 0.05, group: sinhala_velars, ipa: "/ɡʱ/"]
+ඝ -> ɡʱ;
+
+[id: 14026, name: "ඞ nga", weight: 0.05, group: sinhala_velars, ipa: "/ŋ/"]
+ඞ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 14028, name: "ච ca", weight: 0.05, group: sinhala_palatals, ipa: "/t͡ʃ/"]
+ච -> t͡ʃ;
+
+[id: 14029, name: "ඡ cha", weight: 0.05, group: sinhala_palatals, ipa: "/t͡ʃʰ/"]
+ඡ -> t͡ʃʰ;
+
+[id: 14030, name: "ජ ja", weight: 0.05, group: sinhala_palatals, ipa: "/d͡ʒ/"]
+ජ -> d͡ʒ;
+
+[id: 14031, name: "ඣ jha", weight: 0.05, group: sinhala_palatals, ipa: "/d͡ʒʱ/"]
+ඣ -> d͡ʒʱ;
+
+[id: 14032, name: "ඤ nya", weight: 0.05, group: sinhala_palatals, ipa: "/ɲ/"]
+ඤ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 14034, name: "ට ṭa", weight: 0.05, group: sinhala_retroflex, ipa: "/ʈ/"]
+ට -> ʈ;
+
+[id: 14035, name: "ඨ ṭha", weight: 0.05, group: sinhala_retroflex, ipa: "/ʈʰ/"]
+ඨ -> ʈʰ;
+
+[id: 14036, name: "ඩ ḍa", weight: 0.05, group: sinhala_retroflex, ipa: "/ɖ/"]
+ඩ -> ɖ;
+
+[id: 14037, name: "ඪ ḍha", weight: 0.05, group: sinhala_retroflex, ipa: "/ɖʱ/"]
+ඪ -> ɖʱ;
+
+[id: 14038, name: "ණ ṇa", weight: 0.05, group: sinhala_retroflex, ipa: "/ɳ/"]
+ණ -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 14040, name: "ත ta", weight: 0.05, group: sinhala_dentals, ipa: "/t̪/"]
+ත -> t̪;
+
+[id: 14041, name: "ථ tha", weight: 0.05, group: sinhala_dentals, ipa: "/t̪ʰ/"]
+ථ -> t̪ʰ;
+
+[id: 14042, name: "ද da", weight: 0.05, group: sinhala_dentals, ipa: "/d̪/"]
+ද -> d̪;
+
+[id: 14043, name: "ධ dha", weight: 0.05, group: sinhala_dentals, ipa: "/d̪ʱ/"]
+ධ -> d̪ʱ;
+
+[id: 14044, name: "න na", weight: 0.05, group: sinhala_dentals, ipa: "/n/"]
+න -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 14046, name: "ප pa", weight: 0.05, group: sinhala_labials, ipa: "/p/"]
+ප -> p;
+
+[id: 14047, name: "ඵ pha", weight: 0.05, group: sinhala_labials, ipa: "/pʰ/"]
+ඵ -> pʰ;
+
+[id: 14048, name: "බ ba", weight: 0.05, group: sinhala_labials, ipa: "/b/"]
+බ -> b;
+
+[id: 14049, name: "භ bha", weight: 0.05, group: sinhala_labials, ipa: "/bʱ/"]
+භ -> bʱ;
+
+[id: 14050, name: "ම ma", weight: 0.05, group: sinhala_labials, ipa: "/m/"]
+ම -> m;
+
+// ============================================================
+// SONORANTS (weight 0.05)
+// ============================================================
+
+[id: 14054, name: "ය ya", weight: 0.05, group: sinhala_sonorants, ipa: "/j/"]
+ය -> j;
+
+[id: 14055, name: "ර ra", weight: 0.05, group: sinhala_sonorants, ipa: "/r/"]
+ර -> r;
+
+[id: 14056, name: "ල la", weight: 0.05, group: sinhala_sonorants, ipa: "/l/"]
+ල -> l;
+
+[id: 14057, name: "ව va/wa", weight: 0.05, group: sinhala_sonorants, ipa: "/w/"]
+ව -> w;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 14060, name: "ස sa", weight: 0.05, group: sinhala_fricatives, ipa: "/s/"]
+ස -> s;
+
+[id: 14061, name: "හ ha", weight: 0.05, group: sinhala_fricatives, ipa: "/h/"]
+හ -> h;
+
+[id: 14062, name: "ෆ fa", weight: 0.05, group: sinhala_fricatives, ipa: "/f/"]
+ෆ -> f;
+
+[id: 14063, name: "ශ sha", weight: 0.05, group: sinhala_fricatives, ipa: "/ʃ/"]
+ශ -> ʃ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 14080, name: "සිංහල sinhala", weight: 0.02, group: sinhala_common]
+සිංහල -> siŋhʌlʌ;
+
+[id: 14081, name: "ආයුබෝවන් aayubowan hello", weight: 0.02, group: sinhala_common]
+ආයුබෝවන් -> aːjuboːwʌn;
+
+[id: 14082, name: "ස්තූතියි stuutii thank you", weight: 0.02, group: sinhala_common]
+ස්තූතියි -> st̪uːt̪iji;
+
+[id: 14083, name: "ඔව් ow yes", weight: 0.02, group: sinhala_common]
+ඔව් -> ow;
+
+[id: 14084, name: "නෑ nae no", weight: 0.02, group: sinhala_common]
+නෑ -> næː;
+
+[id: 14085, name: "වතුර watura water", weight: 0.02, group: sinhala_common]
+වතුර -> wʌt̪urʌ;
+
+[id: 14086, name: "පාන් paan bread", weight: 0.02, group: sinhala_common]
+පාන් -> paːn;
+
+[id: 14087, name: "ගෙදර gedara house", weight: 0.02, group: sinhala_common]
+ගෙදර -> ɡed̪ʌrʌ;
+
+[id: 14088, name: "මිනිහා minihaa person", weight: 0.02, group: sinhala_common]
+මිනිහා -> minihaː;
+
+[id: 14089, name: "ළමයා lamayaa child", weight: 0.02, group: sinhala_common]
+ළමයා -> lʌmʌjaː;
+

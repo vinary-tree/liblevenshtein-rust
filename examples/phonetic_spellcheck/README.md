@@ -6,7 +6,7 @@ rules for robust fuzzy string matching.
 ## Features
 
 - **PhoneticNormalizedDictionary**: Dual-index architecture with BK-tree optimization
-- **Combined English Rules**: Zompist (62) + homophones (24) + text speak (31) = 117 rules
+- **Combined English Rules**: Base (62) + homophones (24) + text speak (31) = 117 rules
 - **Fuzzy Matching**: Edit distance queries with automatic BK-tree acceleration
 - **Regex Queries**: Pattern matching against normalized dictionary forms
 - **Phonetic Pattern Expansion**: Automatic generation of phonetic alternations
@@ -34,7 +34,7 @@ Loading dictionary from data/english_words.txt...
   Loaded 123985 words in 45.2ms
 
 Combining English phonetic rules...
-  Combined 117 rules (zompist + homophones + text_speak)
+  Combined 117 rules (base + homophones + text_speak)
 
 Building PhoneticNormalizedDictionary...
   Built dictionary in 1.23s
@@ -91,7 +91,7 @@ Input: "nite"
 ## How It Works
 
 1. **Load Dictionary**: Reads `data/english_words.txt`
-2. **Combine Rules**: Merges zompist + homophones + text_speak rule sets
+2. **Combine Rules**: Merges base + homophones + text_speak rule sets
 3. **Build Dictionary**: Creates `PhoneticNormalizedDictionary` with:
    - HashMap for O(1) exact lookups
    - BK-tree for O(k log n) fuzzy queries
@@ -106,8 +106,8 @@ Input: "nite"
 
 The demo combines three phonetic rule sets:
 
-### Zompist Rules (62 rules)
-Based on Mark Rosenfelder's English spelling normalization:
+### Base Rules (62 rules)
+Based on Mark Rosenfelder's (Zompist) English spelling normalization:
 - Affrication: tion -> shun, sion -> zhun
 - GH patterns: ough -> o, aught -> ot
 - Digraphs: ch -> ts, sh -> s, ph -> f, th -> t
@@ -135,7 +135,7 @@ use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionar
 use liblevenshtein::phonetic::rules::english;
 
 // Combine rule sets
-let mut rules = english::zompist().clone();
+let mut rules = english::base().clone();
 rules.merge(english::homophones().clone());
 rules.merge(english::text_speak().clone());
 

@@ -1,0 +1,155 @@
+// Malagasy Base Phonetic Rules
+// ============================
+// Phonetic rules for Malagasy (Malagasy).
+// Spoken by approximately 25 million people in Madagascar.
+//
+// Malagasy features:
+//   - Austronesian language family (unique in Africa!)
+//   - Related to Indonesian/Malay languages
+//   - Simple phonology
+//   - No tones
+//   - Stress on penultimate syllable
+//   - Final consonant devoicing
+//   - Prenasalized stops (from Bantu influence)
+//
+// Orthography:
+//   - j for /dz/, ts for /ts/
+//   - tr for retroflex /ʈ/
+//   - dr for voiced retroflex
+//   - o for /u/ (historically)
+//   - ao, oa for diphthongs
+//
+// Rule IDs: 13200-13299
+
+@name "Malagasy Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Malagasy"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// NOTE: a, e, i pass through unchanged (identity mappings removed)
+
+[id: 13203, name: "o", weight: 0.05, group: malagasy_vowels, ipa: "/u/"]
+o -> u;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+// NOTE: ai passes through unchanged (identity mapping removed)
+
+[id: 13209, name: "ao diphthong", weight: 0.05, group: malagasy_diphthongs, ipa: "/au/"]
+ao -> au;
+
+[id: 13210, name: "oa diphthong", weight: 0.05, group: malagasy_diphthongs, ipa: "/ua/"]
+oa -> ua;
+
+// NOTE: ia passes through unchanged (identity mapping removed)
+
+// ============================================================
+// RETROFLEX CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 13215, name: "tr voiceless retroflex", weight: 0.05, group: malagasy_retroflex, ipa: "/ʈ/"]
+tr -> ʈ;
+
+[id: 13216, name: "dr voiced retroflex", weight: 0.05, group: malagasy_retroflex, ipa: "/ɖ/"]
+dr -> ɖ;
+
+// ============================================================
+// PRENASALIZED STOPS (weight 0.05)
+// ============================================================
+
+[id: 13219, name: "mb prenasalized", weight: 0.05, group: malagasy_prenasal, ipa: "/ᵐb/"]
+mb -> ᵐb;
+
+[id: 13220, name: "nd prenasalized", weight: 0.05, group: malagasy_prenasal, ipa: "/ⁿd/"]
+nd -> ⁿd;
+
+[id: 13221, name: "ng prenasalized", weight: 0.05, group: malagasy_prenasal, ipa: "/ᵑɡ/"]
+ng -> ᵑɡ;
+
+[id: 13222, name: "nj prenasalized", weight: 0.05, group: malagasy_prenasal, ipa: "/ⁿdz/"]
+nj -> ⁿdz;
+
+[id: 13223, name: "ndr prenasalized retroflex", weight: 0.05, group: malagasy_prenasal, ipa: "/ⁿɖ/"]
+ndr -> ⁿɖ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+// NOTE: p, b, t, d, k pass through unchanged (identity mappings removed)
+
+[id: 13231, name: "g", weight: 0.05, group: malagasy_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 13234, name: "ts voiceless", weight: 0.05, group: malagasy_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+[id: 13235, name: "j voiced (dz)", weight: 0.05, group: malagasy_affricates, ipa: "/d͡z/"]
+j -> d͡z;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// NOTE: f, v, s, z, h pass through unchanged (identity mappings removed)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// NOTE: m, n pass through unchanged (identity mappings removed)
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// NOTE: l passes through unchanged (identity mapping removed)
+
+[id: 13252, name: "r flap", weight: 0.05, group: malagasy_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 13253, name: "y", weight: 0.05, group: malagasy_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 13270, name: "malagasy", weight: 0.02, group: malagasy_common]
+malagasy -> malaɡasi;
+
+// NOTE: salama passes through unchanged (identity mapping removed)
+
+[id: 13272, name: "misaotra thank you", weight: 0.02, group: malagasy_common]
+misaotra -> misauʈa;
+
+[id: 13273, name: "eny yes", weight: 0.02, group: malagasy_common]
+eny -> eni;
+
+[id: 13274, name: "tsia no", weight: 0.02, group: malagasy_common]
+tsia -> t͡sia;
+
+[id: 13275, name: "rano water", weight: 0.02, group: malagasy_common]
+rano -> ɾanu;
+
+[id: 13276, name: "mofo bread food", weight: 0.02, group: malagasy_common]
+mofo -> mufu;
+
+[id: 13277, name: "trano house", weight: 0.02, group: malagasy_common]
+trano -> ʈanu;
+
+[id: 13278, name: "olona person", weight: 0.02, group: malagasy_common]
+olona -> uluna;
+
+// NOTE: zaza passes through unchanged (identity mapping removed)
+

@@ -1,0 +1,232 @@
+// Zulu Base Phonetic Rules
+// ========================
+// Phonetic rules for Zulu (isiZulu).
+// Spoken by approximately 12 million people in South Africa,
+// primarily in KwaZulu-Natal.
+//
+// Zulu features:
+//   - Bantu language family (Nguni branch)
+//   - CLICK CONSONANTS (dental, lateral, postalveolar)
+//   - Prenasalized stops (mb, nd, ng, etc.)
+//   - Ejective consonants
+//   - 5 vowels with phonemic length
+//   - Tonal (high/low)
+//   - Agglutinative morphology
+//
+// Orthography:
+//   - c for dental click /ǀ/
+//   - x for lateral click /ǁ/
+//   - q for postalveolar click /ǃ/
+//   - gc, gx, gq for voiced clicks
+//   - nc, nx, nq for nasal clicks
+//   - ph, th, kh for aspirated stops
+//
+// Rule IDs: 12600-12699
+
+@name "Zulu Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Zulu"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (a->a, i->i, u->u)
+
+[id: 12601, name: "e", weight: 0.05, group: zulu_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 12603, name: "o", weight: 0.05, group: zulu_vowels, ipa: "/ɔ/"]
+o -> ɔ;
+
+// ============================================================
+// CLICK CONSONANTS (weight 0.02)
+// Distinctive feature of Zulu
+// ============================================================
+
+// Dental clicks (c)
+[id: 12608, name: "c dental click", weight: 0.02, group: zulu_clicks, ipa: "/ǀ/"]
+c -> ǀ;
+
+[id: 12609, name: "gc voiced dental click", weight: 0.02, group: zulu_clicks, ipa: "/ɡǀ/"]
+gc -> ɡǀ;
+
+[id: 12610, name: "nc nasal dental click", weight: 0.02, group: zulu_clicks, ipa: "/ŋǀ/"]
+nc -> ŋǀ;
+
+[id: 12611, name: "ngc prenasalized dental", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǀ/"]
+ngc -> ŋɡǀ;
+
+// Postalveolar clicks (q)
+[id: 12614, name: "q postalveolar click", weight: 0.02, group: zulu_clicks, ipa: "/ǃ/"]
+q -> ǃ;
+
+[id: 12615, name: "gq voiced postalveolar", weight: 0.02, group: zulu_clicks, ipa: "/ɡǃ/"]
+gq -> ɡǃ;
+
+[id: 12616, name: "nq nasal postalveolar", weight: 0.02, group: zulu_clicks, ipa: "/ŋǃ/"]
+nq -> ŋǃ;
+
+[id: 12617, name: "ngq prenasalized postalv", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǃ/"]
+ngq -> ŋɡǃ;
+
+// Lateral clicks (x)
+[id: 12620, name: "x lateral click", weight: 0.02, group: zulu_clicks, ipa: "/ǁ/"]
+x -> ǁ;
+
+[id: 12621, name: "gx voiced lateral click", weight: 0.02, group: zulu_clicks, ipa: "/ɡǁ/"]
+gx -> ɡǁ;
+
+[id: 12622, name: "nx nasal lateral click", weight: 0.02, group: zulu_clicks, ipa: "/ŋǁ/"]
+nx -> ŋǁ;
+
+[id: 12623, name: "ngx prenasalized lateral", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǁ/"]
+ngx -> ŋɡǁ;
+
+// Labialized prenasalized voiced clicks (Tetragraph patterns)
+// These represent clicks with prenasalization + voicing + labialization
+[id: 12690, name: "ngcw lab dental", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǀʷ/"]
+ngcw -> ŋɡǀʷ;
+
+[id: 12691, name: "ngqw lab postalveolar", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǃʷ/"]
+ngqw -> ŋɡǃʷ;
+
+[id: 12692, name: "ngxw lab lateral", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǁʷ/"]
+ngxw -> ŋɡǁʷ;
+
+// Labialized prenasalized voiced aspirated clicks (Pentagraph patterns)
+// These represent clicks with prenasalization + voicing + aspiration + labialization
+[id: 12693, name: "ngchw lab asp dental", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǀʰʷ/"]
+ngchw -> ŋɡǀʰʷ;
+
+[id: 12694, name: "ngqhw lab asp postalv", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǃʰʷ/"]
+ngqhw -> ŋɡǃʰʷ;
+
+[id: 12695, name: "ngxhw lab asp lateral", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǁʰʷ/"]
+ngxhw -> ŋɡǁʰʷ;
+
+// Glottalized prenasalized voiced aspirated labialized clicks (Hexagraph patterns - 6 chars)
+// These represent the most complex click consonants, combining all modifications
+[id: 12696, name: "ngchw' glott dental", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǀʰʷʼ/"]
+ngchw' -> ŋɡǀʰʷʼ;
+
+[id: 12697, name: "ngqhw' glott postalv", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǃʰʷʼ/"]
+ngqhw' -> ŋɡǃʰʷʼ;
+
+[id: 12698, name: "ngxhw' glott lateral", weight: 0.02, group: zulu_clicks, ipa: "/ŋɡǁʰʷʼ/"]
+ngxhw' -> ŋɡǁʰʷʼ;
+
+// ============================================================
+// ASPIRATED STOPS (weight 0.05)
+// ============================================================
+
+[id: 12626, name: "ph aspirated", weight: 0.05, group: zulu_aspirated, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 12627, name: "th aspirated", weight: 0.05, group: zulu_aspirated, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 12628, name: "kh aspirated", weight: 0.05, group: zulu_aspirated, ipa: "/kʰ/"]
+kh -> kʰ;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.05)
+// ============================================================
+
+[id: 12631, name: "p ejective", weight: 0.05, group: zulu_ejective, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 12632, name: "t ejective", weight: 0.05, group: zulu_ejective, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 12633, name: "k ejective", weight: 0.05, group: zulu_ejective, ipa: "/kʼ/"]
+k' -> kʼ;
+
+// ============================================================
+// PRENASALIZED STOPS (weight 0.05)
+// ============================================================
+
+[id: 12636, name: "mb prenasalized", weight: 0.05, group: zulu_prenasal, ipa: "/ᵐb/"]
+mb -> ᵐb;
+
+[id: 12637, name: "nd prenasalized", weight: 0.05, group: zulu_prenasal, ipa: "/ⁿd/"]
+nd -> ⁿd;
+
+[id: 12638, name: "ng prenasalized", weight: 0.05, group: zulu_prenasal, ipa: "/ŋɡ/"]
+ng -> ŋɡ;
+
+[id: 12639, name: "nj prenasalized", weight: 0.05, group: zulu_prenasal, ipa: "/ⁿd͡ʒ/"]
+nj -> ⁿd͡ʒ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (p->p, t->t, d->d, k->k)
+
+[id: 12643, name: "b", weight: 0.05, group: zulu_stops, ipa: "/ɓ/"]
+b -> ɓ;
+
+[id: 12647, name: "g", weight: 0.05, group: zulu_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (f->f, v->v, s->s, z->z, h->h)
+
+[id: 12654, name: "sh postalveolar", weight: 0.05, group: zulu_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 12655, name: "hl lateral fricative", weight: 0.05, group: zulu_fricatives, ipa: "/ɬ/"]
+hl -> ɬ;
+
+[id: 12656, name: "dl voiced lateral", weight: 0.05, group: zulu_fricatives, ipa: "/ɮ/"]
+dl -> ɮ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (m->m, n->n)
+
+[id: 12662, name: "ny palatal nasal", weight: 0.05, group: zulu_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (l->l, r->r, w->w)
+
+[id: 12668, name: "y", weight: 0.05, group: zulu_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+// Note: Identity mapping removed (isizulu -> isizulu)
+
+[id: 12681, name: "sawubona hello singular", weight: 0.02, group: zulu_common]
+sawubona -> sawuɓɔna;
+
+[id: 12682, name: "ngiyabonga thank you", weight: 0.02, group: zulu_common]
+ngiyabonga -> ŋɡijaɓɔŋɡa;
+
+[id: 12683, name: "yebo yes", weight: 0.02, group: zulu_common]
+yebo -> jɛɓɔ;
+
+[id: 12684, name: "cha no", weight: 0.02, group: zulu_common]
+cha -> t͡ʃa;
+
+[id: 12685, name: "amanzi water", weight: 0.02, group: zulu_common]
+amanzi -> amaⁿzi;
+
+[id: 12686, name: "isinkwa bread food", weight: 0.02, group: zulu_common]
+isinkwa -> isiŋkwa;
+
+[id: 12687, name: "indlu house", weight: 0.02, group: zulu_common]
+indlu -> iⁿɮu;
+
+// Note: Identity mapping removed (umuntu -> umuntu)
+
+[id: 12689, name: "ingane child", weight: 0.02, group: zulu_common]
+ingane -> iŋɡanɛ;
+

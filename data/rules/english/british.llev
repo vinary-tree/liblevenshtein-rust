@@ -1,7 +1,7 @@
 // British English Phonetic Rules (Received Pronunciation)
 // =========================================================
 // Dialect-specific rules for British English (RP) phonetic transformations.
-// These rules layer on top of the shared zompist base rules.
+// These rules layer on top of the shared base rules.
 //
 // Key British English (RP) Features:
 //   - Non-rhotic: R dropped after vowels before consonants or word-end
@@ -16,8 +16,8 @@
 @author "liblevenshtein"
 @description "Dialect-specific phonetic rules for British RP"
 
-// Import the shared Zompist base rules
-@include "english/zompist.llev"
+// Import the shared base rules
+@include "english/base.llev"
 
 // ============================================================
 // Symbol Definitions

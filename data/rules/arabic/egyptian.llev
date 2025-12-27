@@ -1,0 +1,131 @@
+// Egyptian Arabic Phonetic Rules
+// ===============================
+// Dialect-specific rules for Egyptian Arabic (مصري).
+// Spoken by approximately 100+ million speakers in Egypt and diaspora.
+//
+// Key Egyptian Arabic Features:
+//   - ج (jim) → g (hard g) instead of dʒ (most distinctive feature)
+//   - ق (qaf) → ʔ (glottal stop) in most words
+//   - ث (tha) → s or t (interdental th → s/t)
+//   - ذ (dhal) → z or d (interdental dh → z/d)
+//   - ظ (zha) → zˤ or dˤ (emphatic interdental → emphatic z/d)
+//   - Case endings typically dropped
+//   - Distinct vowel quality (shorter vowels)
+//
+// Rule IDs: 2600-2699 (Egyptian dialect range)
+
+@name "Egyptian Arabic Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Egyptian Arabic"
+
+// Import the shared Arabic base rules
+@include "arabic/base.llev"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [اوي]
+@define CONSONANT = [بتثجحخدذرزسشصضطظعغفقكلمنهوي]
+
+// ============================================================
+// EGYPTIAN CONSONANT SHIFTS
+// ============================================================
+// These rules OVERRIDE the base Arabic rules for Egyptian dialect.
+// They must be defined with lower weights to take precedence.
+
+// ج (jim) → ɡ (hard g) - THE defining Egyptian feature
+// In MSA: ج → dʒ, but in Egyptian: ج → ɡ
+[id: 2600, name: "jim to g egyptian", weight: 0.0, group: egyptian_consonants, ipa: "/ɡ/"]
+ج -> ɡ;
+
+// ق (qaf) → ʔ (glottal stop) in native words
+// In MSA: ق → q, but in Egyptian: ق → ʔ
+// Exception: In Classical/religious words, qaf may be preserved
+[id: 2605, name: "qaf to glottal egyptian", weight: 0.0, group: egyptian_consonants, ipa: "/ʔ/"]
+ق -> ʔ;
+
+// ============================================================
+// INTERDENTAL FRICATIVE SHIFTS
+// ============================================================
+// Egyptian Arabic merges interdental fricatives with other sounds
+
+// ث (tha) → s (voiceless)
+// MSA ث /θ/ → Egyptian /s/
+// Examples: ثلاثة (thalatha) → salasa "three"
+[id: 2610, name: "tha to s egyptian", weight: 0.0, group: egyptian_interdental, ipa: "/s/"]
+ث -> s;
+
+// ذ (dhal) → z (voiced)
+// MSA ذ /ð/ → Egyptian /z/
+// Examples: ذهب (dhahab) → zahab "gold"
+[id: 2615, name: "dhal to z egyptian", weight: 0.0, group: egyptian_interdental, ipa: "/z/"]
+ذ -> z;
+
+// ظ (zha/emphatic dhal) → zˤ (emphatic z)
+// MSA ظ /ðˤ/ → Egyptian /zˤ/
+// Examples: ظهر (zhuhr) → zuhr "noon"
+[id: 2620, name: "zha to emphatic z egyptian", weight: 0.0, group: egyptian_interdental, ipa: "/zˤ/"]
+ظ -> zˤ;
+
+// ============================================================
+// VOWEL MODIFICATIONS
+// ============================================================
+// Egyptian Arabic has somewhat different vowel qualities
+
+// Short vowels are often reduced in unstressed syllables
+// Long vowels are preserved but may have quality shifts
+
+// Final -a often becomes -a or -e depending on context
+// (This is handled by the base rules; Egyptian keeps them similar)
+
+// ============================================================
+// COMMON EGYPTIAN WORDS
+// ============================================================
+// High-frequency words with Egyptian-specific pronunciations
+
+// "what" - إيه (eih) in Egyptian vs ما (ma) in MSA
+[id: 2650, name: "what egyptian", weight: 0.02, group: egyptian_common, ipa: "/eː/"]
+إيه -> eː;
+
+// "this" masculine - ده (da) in Egyptian vs هذا (hadha) in MSA
+[id: 2651, name: "this masc egyptian", weight: 0.02, group: egyptian_common, ipa: "/da/"]
+ده -> da;
+
+// "this" feminine - دي (di) in Egyptian vs هذه (hadhihi) in MSA
+[id: 2652, name: "this fem egyptian", weight: 0.02, group: egyptian_common, ipa: "/di/"]
+دي -> di;
+
+// "now" - دلوقتي (dilwa'ti) in Egyptian vs الآن (al-aan) in MSA
+[id: 2653, name: "now egyptian", weight: 0.02, group: egyptian_common, ipa: "/dilwaʔti/"]
+دلوقتي -> dilwaʔti;
+
+// "want" - عايز (aayiz) masculine in Egyptian
+[id: 2654, name: "want masc egyptian", weight: 0.02, group: egyptian_common, ipa: "/ʕaːjiz/"]
+عايز -> ʕaːjiz;
+
+// "want" - عايزة (aayza) feminine in Egyptian
+[id: 2655, name: "want fem egyptian", weight: 0.02, group: egyptian_common, ipa: "/ʕaːjza/"]
+عايزة -> ʕaːjza;
+
+// "where" - فين (fein) in Egyptian vs أين (ayna) in MSA
+[id: 2656, name: "where egyptian", weight: 0.02, group: egyptian_common, ipa: "/feːn/"]
+فين -> feːn;
+
+// "how" - إزاي (izzay) in Egyptian vs كيف (kayfa) in MSA
+[id: 2657, name: "how egyptian", weight: 0.02, group: egyptian_common, ipa: "/izzaːj/"]
+إزاي -> izzaːj;
+
+// "good/well" - كويس (kwayyis) in Egyptian
+[id: 2658, name: "good egyptian", weight: 0.02, group: egyptian_common, ipa: "/kuwaːjis/"]
+كويس -> kuwaːjis;
+
+// "yes" - أيوه (aywa) in Egyptian vs نعم (naam) in MSA
+[id: 2659, name: "yes egyptian", weight: 0.02, group: egyptian_common, ipa: "/ajwa/"]
+أيوه -> ajwa;
+
+// "no" - لأ (la') in Egyptian vs لا (la) in MSA
+[id: 2660, name: "no egyptian", weight: 0.02, group: egyptian_common, ipa: "/laʔ/"]
+لأ -> laʔ;
+

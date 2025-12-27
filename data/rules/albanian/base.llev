@@ -1,0 +1,167 @@
+// Albanian Base Phonetic Rules
+// ============================
+// Phonetic rules for Albanian (shqip).
+// Spoken by approximately 7 million people in Albania, Kosovo,
+// North Macedonia, Montenegro, and diaspora.
+//
+// Albanian features:
+//   - Indo-European language family (own branch)
+//   - Two main dialects: Gheg (north) and Tosk (south)
+//   - Standard based on Tosk
+//   - Dental vs alveolar distinction
+//   - 7 vowels including ë /ə/
+//   - 29 consonants
+//
+// Orthography:
+//   - ë for schwa /ə/
+//   - ç for /tʃ/, x for /dz/, xh for /dʒ/
+//   - gj for /ɟ/, q for /c/
+//   - dh for /ð/, th for /θ/
+//   - ll for dark L /ɫ/, nj for /ɲ/
+//
+// Rule IDs: 12100-12199
+
+@name "Albanian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Albanian"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// Note: Lowercase a passes through unchanged
+[id: 12101, name: "e", weight: 0.05, group: albanian_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 12102, name: "ë schwa", weight: 0.05, group: albanian_vowels, ipa: "/ə/"]
+ë -> ə;
+
+// Note: Lowercase i passes through unchanged
+// Note: Lowercase o passes through unchanged
+// Note: Lowercase u passes through unchanged
+// Note: Lowercase y passes through unchanged
+
+// ============================================================
+// PALATAL CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 12110, name: "gj voiced palatal", weight: 0.05, group: albanian_palatal, ipa: "/ɟ/"]
+gj -> ɟ;
+
+[id: 12111, name: "q voiceless palatal", weight: 0.05, group: albanian_palatal, ipa: "/c/"]
+q -> c;
+
+[id: 12112, name: "nj palatal nasal", weight: 0.05, group: albanian_palatal, ipa: "/ɲ/"]
+nj -> ɲ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 12115, name: "ç voiceless postalveolar", weight: 0.05, group: albanian_affricates, ipa: "/t͡ʃ/"]
+ç -> t͡ʃ;
+
+[id: 12116, name: "xh voiced postalveolar", weight: 0.05, group: albanian_affricates, ipa: "/d͡ʒ/"]
+xh -> d͡ʒ;
+
+[id: 12117, name: "c voiceless alveolar", weight: 0.05, group: albanian_affricates, ipa: "/t͡s/"]
+c -> t͡s;
+
+[id: 12118, name: "x voiced alveolar", weight: 0.05, group: albanian_affricates, ipa: "/d͡z/"]
+x -> d͡z;
+
+// ============================================================
+// DENTAL FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 12121, name: "dh voiced dental", weight: 0.05, group: albanian_dental, ipa: "/ð/"]
+dh -> ð;
+
+[id: 12122, name: "th voiceless dental", weight: 0.05, group: albanian_dental, ipa: "/θ/"]
+th -> θ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// Note: Lowercase p passes through unchanged
+// Note: Lowercase b passes through unchanged
+// Note: Lowercase t passes through unchanged
+// Note: Lowercase d passes through unchanged
+// Note: Lowercase k passes through unchanged
+[id: 12130, name: "g", weight: 0.05, group: albanian_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// Note: Lowercase f passes through unchanged
+// Note: Lowercase v passes through unchanged
+// Note: Lowercase s passes through unchanged
+// Note: Lowercase z passes through unchanged
+[id: 12137, name: "sh postalveolar", weight: 0.05, group: albanian_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 12138, name: "zh voiced postalveolar", weight: 0.05, group: albanian_fricatives, ipa: "/ʒ/"]
+zh -> ʒ;
+
+// Note: Lowercase h passes through unchanged
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Note: Lowercase m passes through unchanged
+// Note: Lowercase n passes through unchanged
+[id: 12145, name: "ng velar nasal", weight: 0.05, group: albanian_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Note: Lowercase l passes through unchanged
+[id: 12149, name: "ll dark", weight: 0.05, group: albanian_liquids, ipa: "/ɫ/"]
+ll -> ɫ;
+
+[id: 12150, name: "r tap", weight: 0.05, group: albanian_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 12151, name: "rr trill", weight: 0.05, group: albanian_liquids, ipa: "/r/"]
+rr -> r;
+
+// Note: Lowercase j passes through unchanged
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 12170, name: "shqip albanian", weight: 0.02, group: albanian_common]
+shqip -> ʃcip;
+
+[id: 12171, name: "përshëndetje hello", weight: 0.02, group: albanian_common]
+përshëndetje -> pərʃəndɛtjɛ;
+
+[id: 12172, name: "faleminderit thank you", weight: 0.02, group: albanian_common]
+faleminderit -> falɛmindɛrit;
+
+// Note: "po" (yes) passes through unchanged
+// Note: "jo" (no) passes through unchanged
+
+[id: 12175, name: "ujë water", weight: 0.02, group: albanian_common]
+ujë -> ujə;
+
+[id: 12176, name: "bukë bread food", weight: 0.02, group: albanian_common]
+bukë -> bukə;
+
+[id: 12177, name: "shtëpi house", weight: 0.02, group: albanian_common]
+shtëpi -> ʃtəpi;
+
+[id: 12178, name: "njeri person", weight: 0.02, group: albanian_common]
+njeri -> ɲɛri;
+
+[id: 12179, name: "fëmijë child", weight: 0.02, group: albanian_common]
+fëmijë -> fəmijə;
+

@@ -167,11 +167,11 @@
 [id: 3586, name: "В to v", weight: 0.2, group: bulgarian_consonants]
 В -> v;
 
-[id: 3587, name: "г to g", weight: 0.2, group: bulgarian_consonants]
-г -> g;
+[id: 3587, name: "г to ɡ", weight: 0.2, group: bulgarian_consonants, ipa: "/ɡ/"]
+г -> ɡ;
 
-[id: 3588, name: "Г to g", weight: 0.2, group: bulgarian_consonants]
-Г -> g;
+[id: 3588, name: "Г to ɡ", weight: 0.2, group: bulgarian_consonants, ipa: "/ɡ/"]
+Г -> ɡ;
 
 [id: 3589, name: "д to d", weight: 0.2, group: bulgarian_consonants]
 д -> d;

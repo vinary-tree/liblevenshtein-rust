@@ -100,8 +100,8 @@
 [id: 3921, name: "kha", weight: 0.05, group: bengali_velars]
 খ -> kh;
 
-[id: 3922, name: "ga", weight: 0.05, group: bengali_velars]
-গ -> g;
+[id: 3922, name: "ga", weight: 0.05, group: bengali_velars, ipa: "/ɡ/"]
+গ -> ɡ;
 
 [id: 3923, name: "gha", weight: 0.05, group: bengali_velars]
 ঘ -> gh;

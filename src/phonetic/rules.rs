@@ -78,6 +78,7 @@ fn rule_ch_to_tsh() -> RewriteRule {
         replacement: vec![Phone::Digraph(b'c', b'h')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -92,6 +93,7 @@ fn rule_sh_to_sh() -> RewriteRule {
         replacement: vec![Phone::Digraph(b's', b'h')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -106,6 +108,7 @@ fn rule_ph_to_f() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'f')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -120,6 +123,7 @@ fn rule_c_to_s_before_front() -> RewriteRule {
         replacement: vec![Phone::Consonant(b's')],
         context: Context::BeforeVowel(FRONT_VOWELS.to_vec()),
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -134,6 +138,7 @@ fn rule_c_to_k_elsewhere() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'k')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -148,6 +153,7 @@ fn rule_g_to_j_before_front() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'j')],
         context: Context::BeforeVowel(FRONT_VOWELS.to_vec()),
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -162,6 +168,7 @@ fn rule_silent_e_final() -> RewriteRule {
         replacement: vec![Phone::Silent],
         context: Context::Final,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -176,6 +183,7 @@ fn rule_gh_silent() -> RewriteRule {
         replacement: vec![Phone::Silent],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -192,6 +200,7 @@ fn rule_wr_initial() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'r')],
         context: Context::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -204,6 +213,7 @@ fn rule_wh_initial() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'w')],
         context: Context::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -216,6 +226,7 @@ fn rule_gn_initial() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'n')],
         context: Context::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -228,6 +239,7 @@ fn rule_kn_initial() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'n')],
         context: Context::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -240,6 +252,7 @@ fn rule_mn_initial() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'n')],
         context: Context::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -252,6 +265,7 @@ fn rule_pt_initial() -> RewriteRule {
         replacement: vec![Phone::Consonant(b't')],
         context: Context::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -264,6 +278,7 @@ fn rule_ps_initial() -> RewriteRule {
         replacement: vec![Phone::Consonant(b's')],
         context: Context::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -276,6 +291,7 @@ fn rule_tm_initial() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'm')],
         context: Context::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -292,6 +308,7 @@ fn rule_gh_before_vowel() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'g')],
         context: Context::BeforeVowel(VOWELS.to_vec()),
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -309,6 +326,7 @@ fn rule_ough_pattern() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'o')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -327,6 +345,7 @@ fn rule_aught_pattern() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'o'), Phone::Consonant(b't')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -345,6 +364,7 @@ fn rule_ought_pattern() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'o'), Phone::Consonant(b't')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -361,6 +381,7 @@ fn rule_x_to_ks() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'k'), Phone::Consonant(b's')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -376,6 +397,7 @@ fn rule_x_to_gz_voiced() -> RewriteRule {
             Box::new(Context::BeforeVowel(VOWELS.to_vec())),
         ),
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -392,6 +414,7 @@ fn rule_ea_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'e')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -404,6 +427,7 @@ fn rule_ee_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'e')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -416,6 +440,7 @@ fn rule_ai_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'a')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -428,6 +453,7 @@ fn rule_ay_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'a')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -440,6 +466,7 @@ fn rule_oa_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'o')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -452,6 +479,7 @@ fn rule_oe_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'o')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -464,6 +492,7 @@ fn rule_ou_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'o'), Phone::Consonant(b'w')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -476,6 +505,7 @@ fn rule_oi_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'o'), Phone::Consonant(b'y')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -488,6 +518,7 @@ fn rule_ey_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'e')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -500,6 +531,7 @@ fn rule_ie_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'i')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -512,6 +544,7 @@ fn rule_oo_digraph() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'u')],
         context: Context::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -524,6 +557,7 @@ fn rule_ue_final() -> RewriteRule {
         replacement: vec![Phone::Vowel(b'u')],
         context: Context::Final,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -540,6 +574,7 @@ fn rule_bb_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'b')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -552,6 +587,7 @@ fn rule_cc_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'c')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -564,6 +600,7 @@ fn rule_dd_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'd')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -576,6 +613,7 @@ fn rule_ff_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'f')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -588,6 +626,7 @@ fn rule_gg_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'g')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -600,6 +639,7 @@ fn rule_ll_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'l')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -612,6 +652,7 @@ fn rule_mm_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'm')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -624,6 +665,7 @@ fn rule_nn_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'n')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -636,6 +678,7 @@ fn rule_pp_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'p')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -648,6 +691,7 @@ fn rule_rr_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'r')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -660,6 +704,7 @@ fn rule_ss_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b's')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -672,6 +717,7 @@ fn rule_tt_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b't')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -684,6 +730,7 @@ fn rule_zz_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'z')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -710,6 +757,7 @@ fn rule_tion_ending() -> RewriteRule {
         ],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -732,6 +780,7 @@ fn rule_sion_ending() -> RewriteRule {
         ],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -755,6 +804,7 @@ fn rule_cious_ending() -> RewriteRule {
         ],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -778,6 +828,7 @@ fn rule_tious_ending() -> RewriteRule {
         ],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -798,6 +849,7 @@ fn rule_tch_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'c'), Phone::Consonant(b'h')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -814,6 +866,7 @@ fn rule_dge_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'j')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -826,6 +879,7 @@ fn rule_ck_simplify() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'k')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -838,6 +892,7 @@ fn rule_mb_final() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'm')],
         context: Context::Final,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -850,6 +905,7 @@ fn rule_bt_silent() -> RewriteRule {
         replacement: vec![Phone::Consonant(b't')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -862,6 +918,7 @@ fn rule_mn_final() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'm')],
         context: Context::Final,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -880,6 +937,7 @@ fn phonetic_th_to_t() -> RewriteRule {
         replacement: vec![Phone::Consonant(b't')],
         context: Context::Anywhere,
         weight: 0.15,
+        syllable_condition: None,
     }
 }
 
@@ -894,6 +952,7 @@ fn phonetic_qu_to_kw() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'k'), Phone::Consonant(b'w')],
         context: Context::Anywhere,
         weight: 0.15,
+        syllable_condition: None,
     }
 }
 
@@ -908,6 +967,7 @@ fn phonetic_kw_to_qu() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'q'), Phone::Consonant(b'u')],
         context: Context::Anywhere,
         weight: 0.15,
+        syllable_condition: None,
     }
 }
 
@@ -926,6 +986,7 @@ fn rule_x_expand() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'y'), Phone::Consonant(b'y')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -940,6 +1001,7 @@ fn rule_y_to_z() -> RewriteRule {
         replacement: vec![Phone::Consonant(b'z')],
         context: Context::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1080,6 +1142,7 @@ fn rule_ch_to_tsh_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Digraph('c', 'h')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1091,6 +1154,7 @@ fn rule_sh_to_sh_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Digraph('s', 'h')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1102,6 +1166,7 @@ fn rule_ph_to_f_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('f')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1113,6 +1178,7 @@ fn rule_c_to_s_before_front_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('s')],
         context: ContextChar::BeforeVowel(FRONT_VOWELS_CHAR.to_vec()),
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1124,6 +1190,7 @@ fn rule_c_to_k_elsewhere_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('k')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1135,6 +1202,7 @@ fn rule_g_to_j_before_front_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('j')],
         context: ContextChar::BeforeVowel(FRONT_VOWELS_CHAR.to_vec()),
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1146,6 +1214,7 @@ fn rule_silent_e_final_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Silent],
         context: ContextChar::Final,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1157,6 +1226,7 @@ fn rule_gh_silent_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Silent],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1168,6 +1238,7 @@ fn phonetic_th_to_t_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('t')],
         context: ContextChar::Anywhere,
         weight: 0.15,
+        syllable_condition: None,
     }
 }
 
@@ -1179,6 +1250,7 @@ fn phonetic_qu_to_kw_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('k'), PhoneChar::Consonant('w')],
         context: ContextChar::Anywhere,
         weight: 0.15,
+        syllable_condition: None,
     }
 }
 
@@ -1190,6 +1262,7 @@ fn phonetic_kw_to_qu_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('q'), PhoneChar::Consonant('u')],
         context: ContextChar::Anywhere,
         weight: 0.15,
+        syllable_condition: None,
     }
 }
 
@@ -1201,6 +1274,7 @@ fn rule_x_expand_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('y'), PhoneChar::Consonant('y')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1212,6 +1286,7 @@ fn rule_y_to_z_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('z')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1228,6 +1303,7 @@ fn rule_wr_initial_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('r')],
         context: ContextChar::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1240,6 +1316,7 @@ fn rule_wh_initial_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('w')],
         context: ContextChar::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1252,6 +1329,7 @@ fn rule_gn_initial_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('n')],
         context: ContextChar::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1264,6 +1342,7 @@ fn rule_kn_initial_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('n')],
         context: ContextChar::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1276,6 +1355,7 @@ fn rule_mn_initial_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('n')],
         context: ContextChar::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1288,6 +1368,7 @@ fn rule_pt_initial_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('t')],
         context: ContextChar::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1300,6 +1381,7 @@ fn rule_ps_initial_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('s')],
         context: ContextChar::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1312,6 +1394,7 @@ fn rule_tm_initial_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('m')],
         context: ContextChar::Initial,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1328,6 +1411,7 @@ fn rule_gh_before_vowel_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('g')],
         context: ContextChar::BeforeVowel(VOWELS_CHAR.to_vec()),
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1345,6 +1429,7 @@ fn rule_ough_pattern_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('o')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1363,6 +1448,7 @@ fn rule_aught_pattern_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('o'), PhoneChar::Consonant('t')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1381,6 +1467,7 @@ fn rule_ought_pattern_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('o'), PhoneChar::Consonant('t')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1397,6 +1484,7 @@ fn rule_x_to_ks_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('k'), PhoneChar::Consonant('s')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1412,6 +1500,7 @@ fn rule_x_to_gz_voiced_char() -> RewriteRuleChar {
             Box::new(ContextChar::BeforeVowel(VOWELS_CHAR.to_vec())),
         ),
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1428,6 +1517,7 @@ fn rule_ea_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('e')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1440,6 +1530,7 @@ fn rule_ee_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('e')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1452,6 +1543,7 @@ fn rule_ai_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('a')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1464,6 +1556,7 @@ fn rule_ay_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('a')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1476,6 +1569,7 @@ fn rule_oa_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('o')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1488,6 +1582,7 @@ fn rule_oe_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('o')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1500,6 +1595,7 @@ fn rule_ou_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('o'), PhoneChar::Consonant('w')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1512,6 +1608,7 @@ fn rule_oi_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('o'), PhoneChar::Consonant('y')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1524,6 +1621,7 @@ fn rule_ey_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('e')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1536,6 +1634,7 @@ fn rule_ie_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('i')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1548,6 +1647,7 @@ fn rule_oo_digraph_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('u')],
         context: ContextChar::Anywhere,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1560,6 +1660,7 @@ fn rule_ue_final_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Vowel('u')],
         context: ContextChar::Final,
         weight: 0.1,
+        syllable_condition: None,
     }
 }
 
@@ -1576,6 +1677,7 @@ fn rule_bb_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('b')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1588,6 +1690,7 @@ fn rule_cc_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('c')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1600,6 +1703,7 @@ fn rule_dd_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('d')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1612,6 +1716,7 @@ fn rule_ff_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('f')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1624,6 +1729,7 @@ fn rule_gg_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('g')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1636,6 +1742,7 @@ fn rule_ll_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('l')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1648,6 +1755,7 @@ fn rule_mm_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('m')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1660,6 +1768,7 @@ fn rule_nn_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('n')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1672,6 +1781,7 @@ fn rule_pp_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('p')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1684,6 +1794,7 @@ fn rule_rr_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('r')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1696,6 +1807,7 @@ fn rule_ss_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('s')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1708,6 +1820,7 @@ fn rule_tt_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('t')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1720,6 +1833,7 @@ fn rule_zz_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('z')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1746,6 +1860,7 @@ fn rule_tion_ending_char() -> RewriteRuleChar {
         ],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1768,6 +1883,7 @@ fn rule_sion_ending_char() -> RewriteRuleChar {
         ],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1791,6 +1907,7 @@ fn rule_cious_ending_char() -> RewriteRuleChar {
         ],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1814,6 +1931,7 @@ fn rule_tious_ending_char() -> RewriteRuleChar {
         ],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1834,6 +1952,7 @@ fn rule_tch_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('c'), PhoneChar::Consonant('h')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1850,6 +1969,7 @@ fn rule_dge_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('j')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1862,6 +1982,7 @@ fn rule_ck_simplify_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('k')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1874,6 +1995,7 @@ fn rule_mb_final_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('m')],
         context: ContextChar::Final,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1886,6 +2008,7 @@ fn rule_bt_silent_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('t')],
         context: ContextChar::Anywhere,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 
@@ -1898,6 +2021,7 @@ fn rule_mn_final_char() -> RewriteRuleChar {
         replacement: vec![PhoneChar::Consonant('m')],
         context: ContextChar::Final,
         weight: 0.0,
+        syllable_condition: None,
     }
 }
 

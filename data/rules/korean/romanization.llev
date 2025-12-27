@@ -78,80 +78,62 @@ Ch' -> ch;
 CH' -> ch;
 
 // ============================================================
-// DIGRAPH NORMALIZATION
+// CONSONANT DIGRAPHS TO IPA
 // ============================================================
-// Normalize consonant digraphs to uppercase markers
+// Convert romanized consonant digraphs to proper IPA
 
-// CH → C (prevent reprocessing)
-[id: 2765, name: "ch digraph", weight: 0.1, group: korean_digraphs]
-ch -> C;
+// ch → t͡ɕ (alveolo-palatal affricate, matches Hangul ㅈ)
+[id: 2765, name: "ch to IPA", weight: 0.1, group: korean_digraphs, ipa: "/t͡ɕ/"]
+ch -> t͡ɕ;
 
-[id: 2766, name: "Ch digraph", weight: 0.1, group: korean_digraphs]
-Ch -> C;
+// ss → s͈ (tense alveolar fricative, matches Hangul ㅆ)
+[id: 2766, name: "ss to IPA", weight: 0.1, group: korean_digraphs, ipa: "/s͈/"]
+ss -> s͈;
 
-[id: 2767, name: "CH digraph", weight: 0.1, group: korean_digraphs]
-CH -> C;
+// kk → k͈ (tense velar stop, matches Hangul ㄲ)
+[id: 2767, name: "kk to IPA", weight: 0.1, group: korean_digraphs, ipa: "/k͈/"]
+kk -> k͈;
+
+// tt → t͈ (tense alveolar stop, matches Hangul ㄸ)
+[id: 2768, name: "tt to IPA", weight: 0.1, group: korean_digraphs, ipa: "/t͈/"]
+tt -> t͈;
+
+// pp → p͈ (tense bilabial stop, matches Hangul ㅃ)
+[id: 2769, name: "pp to IPA", weight: 0.1, group: korean_digraphs, ipa: "/p͈/"]
+pp -> p͈;
+
+// jj → t͡ɕ͈ (tense alveolo-palatal affricate, matches Hangul ㅉ)
+[id: 2770, name: "jj to IPA", weight: 0.1, group: korean_digraphs, ipa: "/t͡ɕ͈/"]
+jj -> t͡ɕ͈;
+
+// ng → ŋ (velar nasal)
+[id: 2771, name: "ng to IPA", weight: 0.1, group: korean_digraphs, ipa: "/ŋ/"]
+ng -> ŋ;
 
 // ============================================================
 // VOWEL SIMPLIFICATION
 // ============================================================
-// Normalize vowel digraphs for consistent matching
+// Korean vowel digraphs simplified for matching
 
-// eo → O (marker for this vowel)
-[id: 2770, name: "eo digraph", weight: 0.15, group: korean_vowel_norm]
-eo -> O;
+// eo → ʌ (open-mid back unrounded, Korean 어)
+[id: 2772, name: "eo to IPA", weight: 0.15, group: korean_vowel_norm, ipa: "/ʌ/"]
+eo -> ʌ;
 
-// eu → U (marker for this vowel)
-[id: 2771, name: "eu digraph", weight: 0.15, group: korean_vowel_norm]
-eu -> U;
+// eu → ɯ (close back unrounded, Korean 으)
+[id: 2773, name: "eu to IPA", weight: 0.15, group: korean_vowel_norm, ipa: "/ɯ/"]
+eu -> ɯ;
 
-// ae → E (simplify ae to e sound)
-[id: 2772, name: "ae digraph", weight: 0.15, group: korean_vowel_norm]
-ae -> E;
+// ae → ɛ (open-mid front unrounded, Korean 애)
+[id: 2774, name: "ae to IPA", weight: 0.15, group: korean_vowel_norm, ipa: "/ɛ/"]
+ae -> ɛ;
 
-// oe → WE (modern pronunciation)
-[id: 2773, name: "oe digraph", weight: 0.15, group: korean_vowel_norm]
-oe -> WE;
+// oe → we (modern pronunciation, Korean 외)
+[id: 2775, name: "oe to we", weight: 0.15, group: korean_vowel_norm]
+oe -> we;
 
-// ui → I (when pronounced as i after consonant)
-[id: 2774, name: "ui digraph", weight: 0.15, group: korean_vowel_norm]
-ui -> I;
-
-// ============================================================
-// W-COMBINATIONS
-// ============================================================
-
-// wa → WA marker
-[id: 2775, name: "wa combo", weight: 0.1, group: korean_w_combos]
-wa -> WA;
-
-// wo → WO marker
-[id: 2776, name: "wo combo", weight: 0.1, group: korean_w_combos]
-wo -> WO;
-
-// we → WE marker
-[id: 2777, name: "we combo", weight: 0.1, group: korean_w_combos]
-we -> WE;
-
-// wi → WI marker
-[id: 2778, name: "wi combo", weight: 0.1, group: korean_w_combos]
-wi -> WI;
-
-// wae → WE (simplified)
-[id: 2779, name: "wae combo", weight: 0.1, group: korean_w_combos]
-wae -> WE;
-
-// ============================================================
-// Y-COMBINATIONS
-// ============================================================
-
-// yeo → YO (simplified)
-[id: 2780, name: "yeo combo", weight: 0.1, group: korean_y_combos]
-yeo -> YO;
-
-// yae → YE (simplified)
-[id: 2781, name: "yae combo", weight: 0.1, group: korean_y_combos]
-yae -> YE;
+// ui → ɰi (close back unrounded + i, Korean 의)
+[id: 2776, name: "ui to IPA", weight: 0.15, group: korean_vowel_norm, ipa: "/ɰi/"]
+ui -> ɰi;
 
 // ============================================================
 // SYLLABLE SEPARATORS
@@ -162,21 +144,15 @@ yae -> YE;
 "-" -> ;
 
 // ============================================================
-// DOUBLED MARKER SIMPLIFICATION
+// DOUBLE VOWEL SIMPLIFICATION
 // ============================================================
 
-[id: 2790, name: "double O marker", weight: 0.25, group: korean_simplification]
-OO -> O;
+[id: 2790, name: "double ʌ", weight: 0.25, group: korean_simplification]
+ʌʌ -> ʌ;
 
-[id: 2791, name: "double U marker", weight: 0.25, group: korean_simplification]
-UU -> U;
+[id: 2791, name: "double ɯ", weight: 0.25, group: korean_simplification]
+ɯɯ -> ɯ;
 
-[id: 2792, name: "double E marker", weight: 0.25, group: korean_simplification]
-EE -> E;
-
-[id: 2793, name: "double C marker", weight: 0.25, group: korean_simplification]
-CC -> C;
-
-[id: 2794, name: "double WE marker", weight: 0.25, group: korean_simplification]
-WEWE -> WE;
+[id: 2792, name: "double ɛ", weight: 0.25, group: korean_simplification]
+ɛɛ -> ɛ;
 

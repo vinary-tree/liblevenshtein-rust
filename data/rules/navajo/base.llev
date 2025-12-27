@@ -1,0 +1,216 @@
+// Navajo Base Phonetic Rules
+// ============================
+// Phonetic rules for Navajo (Diné bizaad).
+// Spoken by approximately 170,000 people.
+//
+// Navajo is phonologically complex:
+//   - Ejective consonants: tʼ, kʼ, tsʼ, tɬʼ, chʼ
+//   - Lateral fricative: ɬ (written as ł)
+//   - Lateral affricate: tɬ (written as tł)
+//   - Tone: high (á) and low (a) - 4 tones total
+//   - Nasalized vowels: ą, ę, į, ǫ
+//   - Complex verb morphology
+//
+// Orthography (Navajo standard):
+//   - ł for /ɬ/
+//   - tł for /tɬ/
+//   - ' after consonants for ejectives
+//   - Hook under vowels for nasalization
+//   - Acute accent for high tone
+//
+// Rule IDs: 7200-7399
+
+@name "Navajo Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Navajo (Diné bizaad)"
+
+// ============================================================
+// ORAL VOWELS - LOW TONE (weight 0.05)
+// ============================================================
+
+// Low tone oral vowels (a, e, i, o) pass through unchanged - no transformation needed
+
+// ============================================================
+// ORAL VOWELS - HIGH TONE (weight 0.05)
+// ============================================================
+
+// High tone oral vowels (á, é, í, ó) pass through unchanged - tone already marked
+
+// ============================================================
+// NASAL VOWELS - LOW TONE (weight 0.05)
+// ============================================================
+
+[id: 7210, name: "a nasal low", weight: 0.05, group: navajo_nasal_vowels, ipa: "/ã/"]
+ą -> ã;
+
+[id: 7211, name: "e nasal low", weight: 0.05, group: navajo_nasal_vowels, ipa: "/ẽ/"]
+ę -> ẽ;
+
+[id: 7212, name: "i nasal low", weight: 0.05, group: navajo_nasal_vowels, ipa: "/ĩ/"]
+į -> ĩ;
+
+[id: 7213, name: "o nasal low", weight: 0.05, group: navajo_nasal_vowels, ipa: "/õ/"]
+ǫ -> õ;
+
+// ============================================================
+// NASAL VOWELS - HIGH TONE (weight 0.05)
+// ============================================================
+
+[id: 7215, name: "a nasal high", weight: 0.05, group: navajo_nasal_high, ipa: "/ã́/"]
+ą́ -> ã́;
+
+[id: 7216, name: "e nasal high", weight: 0.05, group: navajo_nasal_high, ipa: "/ẽ́/"]
+ę́ -> ẽ́;
+
+[id: 7217, name: "i nasal high", weight: 0.05, group: navajo_nasal_high, ipa: "/ĩ́/"]
+į́ -> ĩ́;
+
+[id: 7218, name: "o nasal high", weight: 0.05, group: navajo_nasal_high, ipa: "/ṍ/"]
+ǫ́ -> ṍ;
+
+// ============================================================
+// LONG VOWELS (double vowel in orthography)
+// ============================================================
+
+[id: 7220, name: "aa long", weight: 0.05, group: navajo_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 7221, name: "ee long", weight: 0.05, group: navajo_long_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 7222, name: "ii long", weight: 0.05, group: navajo_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 7223, name: "oo long", weight: 0.05, group: navajo_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// Unaspirated voiceless stops
+// ============================================================
+
+[id: 7230, name: "b", weight: 0.05, group: navajo_stops, ipa: "/p/"]
+b -> p;
+
+[id: 7231, name: "d", weight: 0.05, group: navajo_stops, ipa: "/t/"]
+d -> t;
+
+[id: 7232, name: "g", weight: 0.05, group: navajo_stops, ipa: "/k/"]
+g -> k;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.02 - distinctive)
+// Written with apostrophe after the consonant
+// ============================================================
+
+// Standard ejectives (tʼ, kʼ) pass through unchanged - already in IPA form
+
+// Alternative apostrophe representations
+[id: 7237, name: "t' ejective alt", weight: 0.02, group: navajo_ejectives, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 7238, name: "k' ejective alt", weight: 0.02, group: navajo_ejectives, ipa: "/kʼ/"]
+k' -> kʼ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+// /ts/ affricate
+[id: 7240, name: "ts", weight: 0.05, group: navajo_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+// /tʃ/ affricate - written as ch
+[id: 7241, name: "ch", weight: 0.05, group: navajo_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+// /tɬ/ lateral affricate - written as tł
+[id: 7242, name: "tl lateral affricate", weight: 0.02, group: navajo_affricates, ipa: "/tɬ/"]
+tł -> tɬ;
+
+// ============================================================
+// EJECTIVE AFFRICATES (weight 0.02 - distinctive)
+// Uses Trigraph patterns for 3-character sequences
+// ============================================================
+
+[id: 7245, name: "ts ejective", weight: 0.02, group: navajo_ejective_affricates, ipa: "/t͡sʼ/"]
+tsʼ -> t͡sʼ;
+
+[id: 7246, name: "ch ejective", weight: 0.02, group: navajo_ejective_affricates, ipa: "/t͡ʃʼ/"]
+chʼ -> t͡ʃʼ;
+
+[id: 7247, name: "tl ejective", weight: 0.02, group: navajo_ejective_affricates, ipa: "/tɬʼ/"]
+tłʼ -> tɬʼ;
+
+// Alternative apostrophe representations
+[id: 7248, name: "ts' ejective alt", weight: 0.02, group: navajo_ejective_affricates, ipa: "/t͡sʼ/"]
+ts' -> t͡sʼ;
+
+[id: 7249, name: "ch' ejective alt", weight: 0.02, group: navajo_ejective_affricates, ipa: "/t͡ʃʼ/"]
+ch' -> t͡ʃʼ;
+
+[id: 7250, name: "tl' ejective alt", weight: 0.02, group: navajo_ejective_affricates, ipa: "/tɬʼ/"]
+tł' -> tɬʼ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// Plain fricatives (s, z) pass through unchanged - already in IPA form
+
+[id: 7257, name: "sh", weight: 0.05, group: navajo_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 7258, name: "zh", weight: 0.05, group: navajo_fricatives, ipa: "/ʒ/"]
+zh -> ʒ;
+
+[id: 7261, name: "gh voiced velar", weight: 0.05, group: navajo_fricatives, ipa: "/ɣ/"]
+gh -> ɣ;
+
+// ============================================================
+// LATERAL FRICATIVE (weight 0.02 - distinctive)
+// This is one of the most distinctive sounds of Navajo
+// Written as ł (l with stroke)
+// ============================================================
+
+[id: 7265, name: "l-bar lateral fricative", weight: 0.02, group: navajo_laterals, ipa: "/ɬ/"]
+ł -> ɬ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Plain nasals (m, n) pass through unchanged - already in IPA form
+
+// ============================================================
+// APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Plain approximant (w) passes through unchanged - already in IPA form
+
+[id: 7276, name: "y", weight: 0.05, group: navajo_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// GLOTTAL STOP (weight 0.05)
+// ============================================================
+
+[id: 7280, name: "glottal stop", weight: 0.05, group: navajo_glottal, ipa: "/ʔ/"]
+ʼ -> ʔ;
+
+[id: 7281, name: "glottal stop alt", weight: 0.05, group: navajo_glottal, ipa: "/ʔ/"]
+' -> ʔ / _[aeiouąęįǫ];
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 7290, name: "dine", weight: 0.02, group: navajo_common]
+diné -> tiné;
+
+[id: 7291, name: "bizaad", weight: 0.02, group: navajo_common]
+bizaad -> pisaːt;
+
+[id: 7292, name: "yaateeh hello", weight: 0.02, group: navajo_common]
+yáʼátʼééh -> jáʔátʼéːh;

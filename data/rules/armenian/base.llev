@@ -78,11 +78,11 @@
 [id: 4721, name: "ben lower", weight: 0.05, group: armenian_voiced_stops]
 \u0562 -> b;
 
-[id: 4722, name: "gim upper", weight: 0.05, group: armenian_voiced_stops]
-\u0533 -> g;
+[id: 4722, name: "gim upper", weight: 0.05, group: armenian_voiced_stops, ipa: "/ɡ/"]
+\u0533 -> ɡ;
 
-[id: 4723, name: "gim lower", weight: 0.05, group: armenian_voiced_stops]
-\u0563 -> g;
+[id: 4723, name: "gim lower", weight: 0.05, group: armenian_voiced_stops, ipa: "/ɡ/"]
+\u0563 -> ɡ;
 
 [id: 4724, name: "da upper", weight: 0.05, group: armenian_voiced_stops]
 \u0534 -> d;

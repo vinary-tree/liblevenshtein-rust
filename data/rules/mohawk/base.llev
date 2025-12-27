@@ -1,0 +1,250 @@
+// Mohawk Base Phonetic Rules
+// ==========================
+// Phonetic rules for Mohawk (Kanien'kéha).
+// Spoken by approximately 3,500 people in New York, Quebec, and Ontario.
+//
+// Mohawk features:
+//   - Iroquoian language family
+//   - NO labial consonants (no p, b, f, v, m) - unique typological feature
+//   - Only 4 vowel qualities: a, e, i, o (no u)
+//   - Vowel length distinction (short vs long)
+//   - Nasal vowels (ę, ǫ)
+//   - Glottal stop as phoneme (')
+//   - Complex consonant clusters
+//   - Stress and pitch accent
+//
+// Orthography (Akwesasne/Kahnawake):
+//   - ' for glottal stop
+//   - h for aspiration
+//   - Long vowels marked with accent: á, é, í, ó
+//   - Nasal vowels: en → ę, on → ǫ (or ʌ̃)
+//
+// Rule IDs: 9000-9199
+
+@name "Mohawk Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Mohawk (Kanien'kéha)"
+
+// ============================================================
+// SHORT ORAL VOWELS (weight 0.05)
+// Only 4 vowel qualities - no /u/
+// ============================================================
+
+[id: 9000, name: "a short", weight: 0.05, group: mohawk_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 9001, name: "e short", weight: 0.05, group: mohawk_vowels, ipa: "/e/"]
+e -> e;
+
+[id: 9002, name: "i short", weight: 0.05, group: mohawk_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 9003, name: "o short", weight: 0.05, group: mohawk_vowels, ipa: "/o/"]
+o -> o;
+
+// ============================================================
+// LONG ORAL VOWELS (weight 0.05)
+// Marked with accent in orthography
+// ============================================================
+
+[id: 9010, name: "a long", weight: 0.05, group: mohawk_long_vowels, ipa: "/aː/"]
+á -> aː;
+
+[id: 9011, name: "e long", weight: 0.05, group: mohawk_long_vowels, ipa: "/eː/"]
+é -> eː;
+
+[id: 9012, name: "i long", weight: 0.05, group: mohawk_long_vowels, ipa: "/iː/"]
+í -> iː;
+
+[id: 9013, name: "o long", weight: 0.05, group: mohawk_long_vowels, ipa: "/oː/"]
+ó -> oː;
+
+// Alternative long vowel marking (doubled)
+[id: 9014, name: "aa long", weight: 0.05, group: mohawk_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 9015, name: "ee long", weight: 0.05, group: mohawk_long_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 9016, name: "ii long", weight: 0.05, group: mohawk_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 9017, name: "oo long", weight: 0.05, group: mohawk_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+// ============================================================
+// NASAL VOWELS (weight 0.05)
+// Written with ogonek (ę, ǫ) or as en, on
+// ============================================================
+
+[id: 9020, name: "e nasal ogonek", weight: 0.05, group: mohawk_nasal_vowels, ipa: "/ẽ/"]
+ę -> ẽ;
+
+[id: 9021, name: "o nasal ogonek", weight: 0.05, group: mohawk_nasal_vowels, ipa: "/õ/"]
+ǫ -> õ;
+
+// Alternative: schwa-like nasal (some transcriptions use ʌ̃)
+[id: 9022, name: "en nasal", weight: 0.05, group: mohawk_nasal_vowels, ipa: "/ẽ/"]
+en -> ẽ / _[^aeiouáéíó];
+
+[id: 9023, name: "on nasal", weight: 0.05, group: mohawk_nasal_vowels, ipa: "/õ/"]
+on -> õ / _[^aeiouáéíó];
+
+// Long nasal vowels
+[id: 9024, name: "e nasal long", weight: 0.05, group: mohawk_nasal_vowels, ipa: "/ẽː/"]
+ę́ -> ẽː;
+
+[id: 9025, name: "o nasal long", weight: 0.05, group: mohawk_nasal_vowels, ipa: "/õː/"]
+ǫ́ -> õː;
+
+// ============================================================
+// STOPS (weight 0.05)
+// Note: NO labial stops (p, b) in Mohawk!
+// ============================================================
+
+[id: 9030, name: "t", weight: 0.05, group: mohawk_stops, ipa: "/t/"]
+t -> t;
+
+[id: 9031, name: "k", weight: 0.05, group: mohawk_stops, ipa: "/k/"]
+k -> k;
+
+// Voiced variants (allophonic)
+[id: 9032, name: "d voiced t", weight: 0.05, group: mohawk_stops, ipa: "/d/"]
+d -> d;
+
+[id: 9033, name: "g voiced k", weight: 0.05, group: mohawk_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// GLOTTAL STOP (weight 0.05)
+// Very common in Mohawk
+// ============================================================
+
+[id: 9035, name: "glottal stop apostrophe", weight: 0.05, group: mohawk_glottal, ipa: "/ʔ/"]
+' -> ʔ;
+
+[id: 9036, name: "glottal stop modifier", weight: 0.05, group: mohawk_glottal, ipa: "/ʔ/"]
+ʼ -> ʔ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 9040, name: "s", weight: 0.05, group: mohawk_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 9041, name: "sh postalveolar", weight: 0.05, group: mohawk_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 9042, name: "h", weight: 0.05, group: mohawk_fricatives, ipa: "/h/"]
+h -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// Note: NO labial nasal (m) in native words!
+// ============================================================
+
+[id: 9045, name: "n", weight: 0.05, group: mohawk_nasals, ipa: "/n/"]
+n -> n;
+
+// m only in loanwords
+[id: 9046, name: "m loanword", weight: 0.05, group: mohawk_nasals, ipa: "/m/"]
+m -> m;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 9050, name: "r", weight: 0.05, group: mohawk_liquids, ipa: "/ɹ/"]
+r -> ɹ;
+
+// Alternative: flap
+[id: 9051, name: "l", weight: 0.05, group: mohawk_liquids, ipa: "/l/"]
+l -> l;
+
+[id: 9052, name: "w", weight: 0.05, group: mohawk_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 9053, name: "y", weight: 0.05, group: mohawk_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 9055, name: "ts affricate", weight: 0.05, group: mohawk_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+[id: 9056, name: "j affricate", weight: 0.05, group: mohawk_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// CONSONANT CLUSTERS (weight 0.05)
+// Mohawk has complex clusters
+// ============================================================
+
+[id: 9060, name: "kw labialized", weight: 0.05, group: mohawk_clusters, ipa: "/kʷ/"]
+kw -> kʷ;
+
+[id: 9061, name: "ky palatalized", weight: 0.05, group: mohawk_clusters, ipa: "/kʲ/"]
+ky -> kʲ;
+
+[id: 9062, name: "ty palatalized", weight: 0.05, group: mohawk_clusters, ipa: "/tʲ/"]
+ty -> tʲ;
+
+[id: 9063, name: "hs cluster", weight: 0.05, group: mohawk_clusters, ipa: "/hs/"]
+hs -> hs;
+
+[id: 9064, name: "kh aspirated", weight: 0.05, group: mohawk_clusters, ipa: "/kʰ/"]
+kh -> kʰ;
+
+[id: 9065, name: "th aspirated", weight: 0.05, group: mohawk_clusters, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 9066, name: "nk cluster", weight: 0.05, group: mohawk_clusters, ipa: "/ŋk/"]
+nk -> ŋk;
+
+[id: 9067, name: "nt cluster", weight: 0.05, group: mohawk_clusters, ipa: "/nt/"]
+nt -> nt;
+
+[id: 9068, name: "st cluster", weight: 0.05, group: mohawk_clusters, ipa: "/st/"]
+st -> st;
+
+[id: 9069, name: "sk cluster", weight: 0.05, group: mohawk_clusters, ipa: "/sk/"]
+sk -> sk;
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 9100, name: "kanienkeha mohawk language", weight: 0.02, group: mohawk_common]
+kanien'kéha -> kaniẽʔkeːha;
+
+[id: 9101, name: "kwe hello female to female", weight: 0.02, group: mohawk_common]
+kwé -> kʷeː;
+
+[id: 9102, name: "shekoli hello male", weight: 0.02, group: mohawk_common]
+shékoli -> ʃeːkoli;
+
+[id: 9103, name: "niawenko thank you", weight: 0.02, group: mohawk_common]
+nià:wen'kó:wa -> niaːwẽʔkoːwa;
+
+[id: 9104, name: "ohenton greetings", weight: 0.02, group: mohawk_common]
+ohén:ton -> oheːntõ;
+
+[id: 9105, name: "kahnawake place name", weight: 0.02, group: mohawk_common]
+kahnawà:ke -> kahnawaːke;
+
+[id: 9106, name: "akwesasne place name", weight: 0.02, group: mohawk_common]
+akwesásne -> akʷesaːsne;
+
+[id: 9107, name: "onkwehonwe native people", weight: 0.02, group: mohawk_common]
+onkwehón:we -> õkʷehõːwe;
+
+[id: 9108, name: "ennita day", weight: 0.02, group: mohawk_common]
+énni:ta -> eːnːita;
+
+[id: 9109, name: "ka water", weight: 0.02, group: mohawk_common]
+ohnekanos -> ohnekanõs;
+

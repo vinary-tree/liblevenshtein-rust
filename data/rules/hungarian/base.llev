@@ -201,8 +201,7 @@ S -> ʃ;
 c -> t͡s;
 
 // J → j (like English "y", palatal approximant)
-[id: 2916, name: "j to j", weight: 0.2, group: hungarian_consonants, ipa: "/j/"]
-j -> j;
+// Note: Lowercase 'j' is already IPA /j/, passes through unchanged
 
 // W → v (rare, in loanwords)
 [id: 2917, name: "w to v", weight: 0.2, group: hungarian_consonants]

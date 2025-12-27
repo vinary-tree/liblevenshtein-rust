@@ -1,0 +1,249 @@
+// Lakota Base Phonetic Rules
+// ==========================
+// Phonetic rules for Lakota (Lakȟótiyapi).
+// Spoken by approximately 30,000 people in the US.
+//
+// Lakota features:
+//   - Ejective consonants: pʼ, tʼ, kʼ, čʼ
+//   - Aspirated consonants: pʰ, tʰ, kʰ, čʰ
+//   - Nasal vowels: ą, į, ų
+//   - Velar fricative: ǧ /ɣ/ and ȟ /x/
+//   - Glottalized sonorants: mʼ, nʼ, lʼ
+//   - Complex verb morphology
+//
+// Orthography (Lakota Language Consortium):
+//   - Uses háček for fricatives: š, ž, č, ȟ, ǧ
+//   - Ogonek for nasal vowels: ą, į, ų
+//   - Apostrophe for ejectives: p', t', k', č'
+//   - Superscript h for aspirates: pʰ, tʰ, kʰ
+//
+// Rule IDs: 8400-8599
+
+@name "Lakota Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Lakota (Lakȟótiyapi)"
+
+// ============================================================
+// ORAL VOWELS (weight 0.05)
+// ============================================================
+
+[id: 8400, name: "a", weight: 0.05, group: lakota_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 8401, name: "e", weight: 0.05, group: lakota_vowels, ipa: "/e/"]
+e -> e;
+
+[id: 8402, name: "i", weight: 0.05, group: lakota_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 8403, name: "o", weight: 0.05, group: lakota_vowels, ipa: "/o/"]
+o -> o;
+
+[id: 8404, name: "u", weight: 0.05, group: lakota_vowels, ipa: "/u/"]
+u -> u;
+
+// ============================================================
+// NASAL VOWELS (weight 0.05)
+// Marked with ogonek
+// ============================================================
+
+[id: 8410, name: "a nasal", weight: 0.05, group: lakota_nasal_vowels, ipa: "/ã/"]
+ą -> ã;
+
+[id: 8411, name: "i nasal", weight: 0.05, group: lakota_nasal_vowels, ipa: "/ĩ/"]
+į -> ĩ;
+
+[id: 8412, name: "u nasal", weight: 0.05, group: lakota_nasal_vowels, ipa: "/ũ/"]
+ų -> ũ;
+
+// Alternative: nasal written with n
+[id: 8413, name: "an nasal", weight: 0.05, group: lakota_nasal_vowels, ipa: "/ã/"]
+an -> ã / _[^aeiou];
+
+[id: 8414, name: "in nasal", weight: 0.05, group: lakota_nasal_vowels, ipa: "/ĩ/"]
+in -> ĩ / _[^aeiou];
+
+[id: 8415, name: "un nasal", weight: 0.05, group: lakota_nasal_vowels, ipa: "/ũ/"]
+un -> ũ / _[^aeiou];
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// Voiceless unaspirated
+// ============================================================
+
+[id: 8420, name: "p", weight: 0.05, group: lakota_stops, ipa: "/p/"]
+p -> p;
+
+[id: 8421, name: "t", weight: 0.05, group: lakota_stops, ipa: "/t/"]
+t -> t;
+
+[id: 8422, name: "k", weight: 0.05, group: lakota_stops, ipa: "/k/"]
+k -> k;
+
+// ============================================================
+// ASPIRATED STOPS (weight 0.05)
+// Written with superscript h or h after consonant
+// ============================================================
+
+[id: 8425, name: "ph aspirated", weight: 0.05, group: lakota_aspirated, ipa: "/pʰ/"]
+pʰ -> pʰ;
+
+[id: 8426, name: "th aspirated", weight: 0.05, group: lakota_aspirated, ipa: "/tʰ/"]
+tʰ -> tʰ;
+
+[id: 8427, name: "kh aspirated", weight: 0.05, group: lakota_aspirated, ipa: "/kʰ/"]
+kʰ -> kʰ;
+
+// Alternative: ph, th, kh
+[id: 8428, name: "ph alt", weight: 0.05, group: lakota_aspirated, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 8429, name: "th alt", weight: 0.05, group: lakota_aspirated, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 8430, name: "kh alt", weight: 0.05, group: lakota_aspirated, ipa: "/kʰ/"]
+kh -> kʰ;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 8435, name: "p ejective", weight: 0.02, group: lakota_ejectives, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 8436, name: "t ejective", weight: 0.02, group: lakota_ejectives, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 8437, name: "k ejective", weight: 0.02, group: lakota_ejectives, ipa: "/kʼ/"]
+k' -> kʼ;
+
+[id: 8438, name: "pʼ ejective", weight: 0.02, group: lakota_ejectives, ipa: "/pʼ/"]
+pʼ -> pʼ;
+
+[id: 8439, name: "tʼ ejective", weight: 0.02, group: lakota_ejectives, ipa: "/tʼ/"]
+tʼ -> tʼ;
+
+[id: 8440, name: "kʼ ejective", weight: 0.02, group: lakota_ejectives, ipa: "/kʼ/"]
+kʼ -> kʼ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// č = /tʃ/, čh = /tʃʰ/, č' = /tʃʼ/
+// ============================================================
+
+[id: 8445, name: "c hacek plain", weight: 0.05, group: lakota_affricates, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 8446, name: "ch affricate", weight: 0.05, group: lakota_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 8447, name: "c hacek aspirated", weight: 0.05, group: lakota_affricates, ipa: "/t͡ʃʰ/"]
+čʰ -> t͡ʃʰ;
+
+[id: 8448, name: "chh aspirated", weight: 0.05, group: lakota_affricates, ipa: "/t͡ʃʰ/"]
+čh -> t͡ʃʰ;
+
+[id: 8449, name: "c hacek ejective", weight: 0.02, group: lakota_ejective_affricates, ipa: "/t͡ʃʼ/"]
+č' -> t͡ʃʼ;
+
+[id: 8450, name: "c hacek ejective alt", weight: 0.02, group: lakota_ejective_affricates, ipa: "/t͡ʃʼ/"]
+čʼ -> t͡ʃʼ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 8455, name: "s", weight: 0.05, group: lakota_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 8456, name: "s hacek", weight: 0.05, group: lakota_fricatives, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 8457, name: "sh", weight: 0.05, group: lakota_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 8458, name: "z", weight: 0.05, group: lakota_fricatives, ipa: "/z/"]
+z -> z;
+
+[id: 8459, name: "z hacek", weight: 0.05, group: lakota_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+[id: 8460, name: "zh", weight: 0.05, group: lakota_fricatives, ipa: "/ʒ/"]
+zh -> ʒ;
+
+[id: 8461, name: "h", weight: 0.05, group: lakota_fricatives, ipa: "/h/"]
+h -> h;
+
+// Velar fricatives
+[id: 8462, name: "h hacek voiceless velar", weight: 0.05, group: lakota_fricatives, ipa: "/x/"]
+ȟ -> x;
+
+[id: 8463, name: "g hacek voiced velar", weight: 0.05, group: lakota_fricatives, ipa: "/ɣ/"]
+ǧ -> ɣ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 8470, name: "m", weight: 0.05, group: lakota_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 8471, name: "n", weight: 0.05, group: lakota_nasals, ipa: "/n/"]
+n -> n;
+
+// ============================================================
+// GLOTTALIZED SONORANTS (weight 0.02)
+// Unique feature of Lakota
+// ============================================================
+
+[id: 8475, name: "m glottalized", weight: 0.02, group: lakota_glottalized_sonorants, ipa: "/mˀ/"]
+m' -> mˀ;
+
+[id: 8476, name: "n glottalized", weight: 0.02, group: lakota_glottalized_sonorants, ipa: "/nˀ/"]
+n' -> nˀ;
+
+[id: 8477, name: "l glottalized", weight: 0.02, group: lakota_glottalized_sonorants, ipa: "/lˀ/"]
+l' -> lˀ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 8480, name: "l", weight: 0.05, group: lakota_liquids, ipa: "/l/"]
+l -> l;
+
+[id: 8481, name: "w", weight: 0.05, group: lakota_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 8482, name: "y", weight: 0.05, group: lakota_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// GLOTTAL STOP (weight 0.05)
+// ============================================================
+
+[id: 8485, name: "glottal stop", weight: 0.05, group: lakota_glottal, ipa: "/ʔ/"]
+' -> ʔ / [aeiouąįų]_[aeiouąįų];
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 8500, name: "lakota", weight: 0.02, group: lakota_common]
+lakȟóta -> laxota;
+
+[id: 8501, name: "lakhotiyapi lakota language", weight: 0.02, group: lakota_common]
+lakȟótiyapi -> laxotijapi;
+
+[id: 8502, name: "hau hello male", weight: 0.02, group: lakota_common]
+háu -> hau;
+
+[id: 8503, name: "han hello female", weight: 0.02, group: lakota_common]
+hą́ -> hã;
+
+[id: 8504, name: "pilamaya thank you", weight: 0.02, group: lakota_common]
+philámaya -> pʰilamaja;
+
+[id: 8505, name: "mitakuye oyasin all my relations", weight: 0.02, group: lakota_common]
+mitákuye oyásʼiŋ -> mitakuje ojasĩ;

@@ -123,14 +123,14 @@
 
 // ΓΚ/γκ → g (word-initial) or ng (mid-word)
 // Using 'g' as primary representation
-[id: 3227, name: "γκ to g", weight: 0.03, group: greek_consonant_combos]
-γκ -> g;
+[id: 3227, name: "γκ to g", weight: 0.03, group: greek_consonant_combos, ipa: "/ɡ/"]
+γκ -> ɡ;
 
-[id: 3228, name: "Γκ to g", weight: 0.03, group: greek_consonant_combos]
-Γκ -> g;
+[id: 3228, name: "Γκ to g", weight: 0.03, group: greek_consonant_combos, ipa: "/ɡ/"]
+Γκ -> ɡ;
 
-[id: 3229, name: "ΓΚ to g", weight: 0.03, group: greek_consonant_combos]
-ΓΚ -> g;
+[id: 3229, name: "ΓΚ to g", weight: 0.03, group: greek_consonant_combos, ipa: "/ɡ/"]
+ΓΚ -> ɡ;
 
 // ΓΓ/γγ → ŋ (velar nasal)
 [id: 3230, name: "γγ to ŋ", weight: 0.03, group: greek_consonant_combos, ipa: "/ŋ/"]
@@ -283,8 +283,8 @@
 [id: 3272, name: "β to v", weight: 0.15, group: greek_consonants]
 β -> v;
 
-[id: 3273, name: "γ to g", weight: 0.15, group: greek_consonants]
-γ -> g;
+[id: 3273, name: "γ to g", weight: 0.15, group: greek_consonants, ipa: "/ɡ/"]
+γ -> ɡ;
 
 [id: 3274, name: "δ to ð", weight: 0.15, group: greek_consonants, ipa: "/ð/"]
 δ -> ð;
@@ -292,8 +292,7 @@
 [id: 3275, name: "ζ to z", weight: 0.15, group: greek_consonants]
 ζ -> z;
 
-[id: 3276, name: "θ to θ", weight: 0.15, group: greek_consonants, ipa: "/θ/"]
-θ -> θ;
+// Note: θ (theta) passes through unchanged - already in IPA form
 
 [id: 3277, name: "κ to k", weight: 0.15, group: greek_consonants]
 κ -> k;
@@ -341,8 +340,8 @@
 [id: 3290, name: "Β to v", weight: 0.15, group: greek_consonants]
 Β -> v;
 
-[id: 3291, name: "Γ to g", weight: 0.15, group: greek_consonants]
-Γ -> g;
+[id: 3291, name: "Γ to g", weight: 0.15, group: greek_consonants, ipa: "/ɡ/"]
+Γ -> ɡ;
 
 [id: 3292, name: "Δ to ð", weight: 0.15, group: greek_consonants, ipa: "/ð/"]
 Δ -> ð;

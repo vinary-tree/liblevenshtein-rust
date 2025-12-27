@@ -1,0 +1,213 @@
+// Fulani (Fula/Pulaar/Fulfulde) Base Phonetic Rules
+// ==================================================
+// Phonetic rules for Fulani (Fulfulde / Pulaar / Fula).
+// Spoken by approximately 20-40 million people across West and Central Africa.
+//
+// Fulani features:
+//   - Niger-Congo language family (Atlantic branch)
+//   - Implosive consonants: ɓ, ɗ, ʄ (bilabial, alveolar, palatal)
+//   - Prenasalized stops: mb, nd, nj, ng
+//   - Initial consonant gradation (mutation based on grammatical context)
+//   - Long vowels (doubled in orthography)
+//   - Palatal consonants: c, j, ny, ñ
+//   - No tones (unlike many African languages)
+//
+// Orthography variants:
+//   - Latin script (most common): ɓ, ɗ, ƴ, ɲ/ny, ŋ/ng
+//   - Ajami (Arabic-based): used in religious contexts
+//   - ADLaM script: modern indigenous alphabet
+//
+// Consonant Gradation (Grade Alternation):
+//   - Continuant grade: f, s, h, w, y
+//   - Stop grade: p, t, c, k
+//   - Prenasalized grade: mb, nd, nj, ng
+//   Example: wuro → furo → mburo (house, various grammatical forms)
+//
+// Rule IDs: 17650-17699
+
+@name "Fulani Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Fulani (Fula/Pulaar/Fulfulde)"
+
+// ============================================================
+// IMPLOSIVES (weight 0.02 - highly distinctive)
+// ============================================================
+// Fulani has three implosive consonants, crucial to the language
+
+// ɓ - voiced bilabial implosive
+[id: 17650, name: "bilabial implosive", weight: 0.02, group: fulani_implosives, ipa: "/ɓ/"]
+ɓ -> ɓ;
+
+// Alternative representation
+[id: 17651, name: "bilabial implosive alt", weight: 0.02, group: fulani_implosives, ipa: "/ɓ/"]
+b' -> ɓ;
+
+// ɗ - voiced alveolar implosive
+[id: 17652, name: "alveolar implosive", weight: 0.02, group: fulani_implosives, ipa: "/ɗ/"]
+ɗ -> ɗ;
+
+// Alternative representation
+[id: 17653, name: "alveolar implosive alt", weight: 0.02, group: fulani_implosives, ipa: "/ɗ/"]
+d' -> ɗ;
+
+// ʄ - voiced palatal implosive (less common, distinctive)
+[id: 17654, name: "palatal implosive", weight: 0.02, group: fulani_implosives, ipa: "/ʄ/"]
+ʄ -> ʄ;
+
+// ƴ - palatal implosive (common orthographic representation)
+[id: 17655, name: "palatal implosive hook", weight: 0.02, group: fulani_implosives, ipa: "/ʄ/"]
+ƴ -> ʄ;
+
+// Alternative representation
+[id: 17656, name: "palatal implosive alt", weight: 0.02, group: fulani_implosives, ipa: "/ʄ/"]
+y' -> ʄ;
+
+// ============================================================
+// PRENASALIZED STOPS (weight 0.03)
+// ============================================================
+// Prenasalized consonants are phonemic in Fulani
+
+[id: 17658, name: "prenasalized mb", weight: 0.03, group: fulani_prenasalized, ipa: "/mb/"]
+mb -> mb;
+
+[id: 17659, name: "prenasalized nd", weight: 0.03, group: fulani_prenasalized, ipa: "/nd/"]
+nd -> nd;
+
+[id: 17660, name: "prenasalized nj", weight: 0.03, group: fulani_prenasalized, ipa: "/ɲd͡ʒ/"]
+nj -> ɲd͡ʒ;
+
+[id: 17661, name: "prenasalized ng", weight: 0.03, group: fulani_prenasalized, ipa: "/ŋɡ/"]
+ng -> ŋɡ;
+
+[id: 17662, name: "prenasalized ng alt", weight: 0.03, group: fulani_prenasalized, ipa: "/ŋɡ/"]
+ŋg -> ŋɡ;
+
+// ============================================================
+// PALATAL CONSONANTS (weight 0.05)
+// ============================================================
+
+// c - voiceless palatal affricate (like English "ch")
+[id: 17664, name: "c palatal affricate", weight: 0.05, group: fulani_palatals, ipa: "/t͡ʃ/"]
+c -> t͡ʃ;
+
+// j - voiced palatal affricate (like English "j")
+[id: 17665, name: "j voiced palatal", weight: 0.05, group: fulani_palatals, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ɲ - palatal nasal
+[id: 17666, name: "palatal nasal", weight: 0.05, group: fulani_palatals, ipa: "/ɲ/"]
+ɲ -> ɲ;
+
+// ny - palatal nasal alternative
+[id: 17667, name: "palatal nasal digraph", weight: 0.05, group: fulani_palatals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ñ - palatal nasal (Spanish-style)
+[id: 17668, name: "palatal nasal tilde", weight: 0.05, group: fulani_palatals, ipa: "/ɲ/"]
+ñ -> ɲ;
+
+// ============================================================
+// VELAR AND GLOTTAL (weight 0.05)
+// ============================================================
+
+// ŋ - velar nasal
+[id: 17670, name: "velar nasal", weight: 0.05, group: fulani_velars, ipa: "/ŋ/"]
+ŋ -> ŋ;
+
+// Glottal stop (word-medial/final)
+[id: 17671, name: "glottal stop", weight: 0.05, group: fulani_velars, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+[id: 17673, name: "p voiceless bilabial", weight: 0.05, group: fulani_stops]
+p -> p;
+
+[id: 17674, name: "t voiceless alveolar", weight: 0.05, group: fulani_stops]
+t -> t;
+
+[id: 17675, name: "k voiceless velar", weight: 0.05, group: fulani_stops]
+k -> k;
+
+[id: 17676, name: "b voiced bilabial", weight: 0.05, group: fulani_stops]
+b -> b;
+
+[id: 17677, name: "d voiced alveolar", weight: 0.05, group: fulani_stops]
+d -> d;
+
+[id: 17678, name: "g voiced velar", weight: 0.05, group: fulani_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 17680, name: "f voiceless labial", weight: 0.05, group: fulani_fricatives]
+f -> f;
+
+[id: 17681, name: "s voiceless alveolar", weight: 0.05, group: fulani_fricatives]
+s -> s;
+
+[id: 17682, name: "h voiceless glottal", weight: 0.05, group: fulani_fricatives]
+h -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 17684, name: "m bilabial nasal", weight: 0.05, group: fulani_nasals]
+m -> m;
+
+[id: 17685, name: "n alveolar nasal", weight: 0.05, group: fulani_nasals]
+n -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 17687, name: "l lateral", weight: 0.05, group: fulani_liquids]
+l -> l;
+
+[id: 17688, name: "r tap/flap", weight: 0.05, group: fulani_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 17689, name: "w labial-velar approximant", weight: 0.05, group: fulani_approximants]
+w -> w;
+
+[id: 17690, name: "y palatal approximant", weight: 0.05, group: fulani_approximants]
+y -> j;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+// Long vowels are phonemic and written as doubled letters
+
+[id: 17692, name: "aa long", weight: 0.05, group: fulani_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 17693, name: "ee long", weight: 0.05, group: fulani_long_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 17694, name: "ii long", weight: 0.05, group: fulani_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 17695, name: "oo long", weight: 0.05, group: fulani_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+[id: 17696, name: "uu long", weight: 0.05, group: fulani_long_vowels, ipa: "/uː/"]
+uu -> uː;
+
+// ============================================================
+// SIMPLIFICATIONS (weight 0.2)
+// ============================================================
+// For fuzzy matching, reduce geminates
+
+[id: 17698, name: "double implosive b", weight: 0.2, group: fulani_simplification]
+ɓɓ -> ɓ;
+
+[id: 17699, name: "double implosive d", weight: 0.2, group: fulani_simplification]
+ɗɗ -> ɗ;
+

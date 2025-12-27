@@ -1,0 +1,165 @@
+// Akan Base Phonetic Rules
+// ========================
+// Phonetic rules for Akan (Twi/Fante).
+// Spoken by approximately 12 million people in Ghana and
+// Côte d'Ivoire.
+//
+// Akan features:
+//   - Niger-Congo language family (Kwa branch)
+//   - Tonal (2 level tones: high, low)
+//   - 9 vowels with ATR harmony
+//   - Labial-velar consonants (kp, gb, ŋm)
+//   - Nasal vowels
+//   - CV syllable structure
+//
+// Orthography:
+//   - ɛ, ɔ for open vowels (+ATR)
+//   - Nasalization often unmarked
+//   - Tones marked with accent marks
+//   - kp, gb for labial-velars
+//   - ky, gy for palatalized velars
+//
+// Rule IDs: 13500-13599
+
+@name "Akan Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Akan (Twi/Fante)"
+
+// ============================================================
+// +ATR VOWELS (weight 0.05)
+// ============================================================
+
+// NOTE: a, e, i, o, u pass through unchanged (identity mappings removed)
+
+// ============================================================
+// -ATR VOWELS (weight 0.05)
+// ============================================================
+
+// NOTE: ɛ, ɪ, ɔ, ʊ pass through unchanged (identity mappings removed)
+
+// ============================================================
+// NASAL VOWELS (weight 0.05)
+// ============================================================
+
+[id: 13515, name: "an nasal", weight: 0.05, group: akan_nasal, ipa: "/ã/"]
+an -> ã;
+
+[id: 13516, name: "en nasal", weight: 0.05, group: akan_nasal, ipa: "/ẽ/"]
+en -> ẽ;
+
+[id: 13517, name: "in nasal", weight: 0.05, group: akan_nasal, ipa: "/ĩ/"]
+in -> ĩ;
+
+[id: 13518, name: "on nasal", weight: 0.05, group: akan_nasal, ipa: "/õ/"]
+on -> õ;
+
+[id: 13519, name: "un nasal", weight: 0.05, group: akan_nasal, ipa: "/ũ/"]
+un -> ũ;
+
+// ============================================================
+// TONES (weight 0.05)
+// ============================================================
+
+[id: 13522, name: "á high tone", weight: 0.05, group: akan_tones, ipa: "/a˦/"]
+á -> a˦;
+
+[id: 13523, name: "à low tone", weight: 0.05, group: akan_tones, ipa: "/a˨/"]
+à -> a˨;
+
+[id: 13524, name: "é high tone", weight: 0.05, group: akan_tones, ipa: "/e˦/"]
+é -> e˦;
+
+[id: 13525, name: "è low tone", weight: 0.05, group: akan_tones, ipa: "/e˨/"]
+è -> e˨;
+
+// ============================================================
+// LABIAL-VELAR CONSONANTS (weight 0.02)
+// Distinctive feature of Akan
+// ============================================================
+
+[id: 13530, name: "kp labial-velar", weight: 0.02, group: akan_labialvelar, ipa: "/k͡p/"]
+kp -> k͡p;
+
+[id: 13531, name: "gb voiced labial-velar", weight: 0.02, group: akan_labialvelar, ipa: "/ɡ͡b/"]
+gb -> ɡ͡b;
+
+[id: 13532, name: "ŋm labial-velar nasal", weight: 0.02, group: akan_labialvelar, ipa: "/ŋ͡m/"]
+ŋm -> ŋ͡m;
+
+// ============================================================
+// PALATALIZED VELARS (weight 0.05)
+// ============================================================
+
+[id: 13535, name: "ky palatalized k", weight: 0.05, group: akan_palatal, ipa: "/t͡ɕ/"]
+ky -> t͡ɕ;
+
+[id: 13536, name: "gy palatalized g", weight: 0.05, group: akan_palatal, ipa: "/d͡ʑ/"]
+gy -> d͡ʑ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+// NOTE: p, b, t, d, k pass through unchanged (identity mappings removed)
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// NOTE: f, s, h pass through unchanged (identity mappings removed)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// NOTE: m, n, ŋ pass through unchanged (identity mappings removed)
+
+[id: 13557, name: "ny palatal nasal", weight: 0.05, group: akan_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// NOTE: l passes through unchanged (identity mapping removed)
+
+[id: 13562, name: "r flap", weight: 0.05, group: akan_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+// NOTE: w passes through unchanged (identity mapping removed)
+
+[id: 13564, name: "y", weight: 0.05, group: akan_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 13580, name: "akan", weight: 0.02, group: akan_common]
+akan -> akã;
+
+[id: 13581, name: "maakye hello morning", weight: 0.02, group: akan_common]
+maakye -> maːt͡ɕe;
+
+// NOTE: medase passes through unchanged (identity mapping removed)
+
+[id: 13583, name: "aane yes", weight: 0.02, group: akan_common]
+aane -> aːne;
+
+[id: 13584, name: "daabi no", weight: 0.02, group: akan_common]
+daabi -> daːbi;
+
+// NOTE: nsuo passes through unchanged (identity mapping removed)
+
+[id: 13586, name: "paanoo bread food", weight: 0.02, group: akan_common]
+paanoo -> paːnoː;
+
+[id: 13587, name: "dan house", weight: 0.02, group: akan_common]
+dan -> dã;
+
+// NOTE: onipa passes through unchanged (identity mapping removed)
+
+[id: 13589, name: "abɔfra child", weight: 0.02, group: akan_common]
+abɔfra -> abɔfɾa;
+

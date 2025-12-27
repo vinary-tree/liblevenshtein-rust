@@ -115,48 +115,33 @@ YY -> yː;
 Ö -> ø;
 
 // Y/y → y (front rounded vowel, like German ü)
-[id: 3814, name: "y front vowel", weight: 0.1, group: finnish_front_vowels, ipa: "/y/"]
-y -> y;
-
+// Note: Lowercase 'y' is already IPA /y/, so only uppercase needs transformation
 [id: 3815, name: "Y front vowel", weight: 0.1, group: finnish_front_vowels, ipa: "/y/"]
 Y -> y;
 
 // ============================================================
 // BACK VOWELS
 // ============================================================
+// Note: Lowercase vowels (a, e, i, o, u) pass through unchanged.
+// Only uppercase variants need explicit normalization.
 
 // A → a
-[id: 3816, name: "a vowel", weight: 0.15, group: finnish_vowels]
-a -> a;
-
 [id: 3817, name: "A vowel", weight: 0.15, group: finnish_vowels]
 A -> a;
 
 // E → e
-[id: 3818, name: "e vowel", weight: 0.15, group: finnish_vowels]
-e -> e;
-
 [id: 3819, name: "E vowel", weight: 0.15, group: finnish_vowels]
 E -> e;
 
 // I → i
-[id: 3820, name: "i vowel", weight: 0.15, group: finnish_vowels]
-i -> i;
-
 [id: 3821, name: "I vowel", weight: 0.15, group: finnish_vowels]
 I -> i;
 
 // O → o
-[id: 3822, name: "o vowel", weight: 0.15, group: finnish_vowels]
-o -> o;
-
 [id: 3823, name: "O vowel", weight: 0.15, group: finnish_vowels]
 O -> o;
 
 // U → u
-[id: 3824, name: "u vowel", weight: 0.15, group: finnish_vowels]
-u -> u;
-
 [id: 3825, name: "U vowel", weight: 0.15, group: finnish_vowels]
 U -> u;
 
@@ -186,9 +171,7 @@ d -> t;
 D -> t;
 
 // F → f (loanwords only)
-[id: 3832, name: "f consonant", weight: 0.2, group: finnish_consonants]
-f -> f;
-
+// Note: Lowercase 'f' passes through unchanged
 [id: 3833, name: "F consonant", weight: 0.2, group: finnish_consonants]
 F -> f;
 
@@ -200,79 +183,57 @@ g -> k;
 G -> k;
 
 // H → h
-[id: 3836, name: "h consonant", weight: 0.2, group: finnish_consonants]
-h -> h;
-
+// Note: Lowercase 'h' passes through unchanged
 [id: 3837, name: "H consonant", weight: 0.2, group: finnish_consonants]
 H -> h;
 
 // J → j (like English y, palatal approximant)
-[id: 3838, name: "j consonant", weight: 0.2, group: finnish_consonants, ipa: "/j/"]
-j -> j;
-
+// Note: Lowercase 'j' passes through unchanged
 [id: 3839, name: "J consonant", weight: 0.2, group: finnish_consonants, ipa: "/j/"]
 J -> j;
 
 // K → k
-[id: 3840, name: "k consonant", weight: 0.2, group: finnish_consonants]
-k -> k;
-
+// Note: Lowercase 'k' passes through unchanged
 [id: 3841, name: "K consonant", weight: 0.2, group: finnish_consonants]
 K -> k;
 
 // L → l
-[id: 3842, name: "l consonant", weight: 0.2, group: finnish_consonants]
-l -> l;
-
+// Note: Lowercase 'l' passes through unchanged
 [id: 3843, name: "L consonant", weight: 0.2, group: finnish_consonants]
 L -> l;
 
 // M → m
-[id: 3844, name: "m consonant", weight: 0.2, group: finnish_consonants]
-m -> m;
-
+// Note: Lowercase 'm' passes through unchanged
 [id: 3845, name: "M consonant", weight: 0.2, group: finnish_consonants]
 M -> m;
 
 // N → n
-[id: 3846, name: "n consonant", weight: 0.2, group: finnish_consonants]
-n -> n;
-
+// Note: Lowercase 'n' passes through unchanged
 [id: 3847, name: "N consonant", weight: 0.2, group: finnish_consonants]
 N -> n;
 
 // P → p
-[id: 3848, name: "p consonant", weight: 0.2, group: finnish_consonants]
-p -> p;
-
+// Note: Lowercase 'p' passes through unchanged
 [id: 3849, name: "P consonant", weight: 0.2, group: finnish_consonants]
 P -> p;
 
 // R → r (alveolar trill)
-[id: 3234, name: "r consonant", weight: 0.2, group: finnish_consonants]
-r -> r;
-
+// Note: Lowercase 'r' passes through unchanged
 [id: 3235, name: "R consonant", weight: 0.2, group: finnish_consonants]
 R -> r;
 
 // S → s
-[id: 3236, name: "s consonant", weight: 0.2, group: finnish_consonants]
-s -> s;
-
+// Note: Lowercase 's' passes through unchanged
 [id: 3237, name: "S consonant", weight: 0.2, group: finnish_consonants]
 S -> s;
 
 // T → t
-[id: 3238, name: "t consonant", weight: 0.2, group: finnish_consonants]
-t -> t;
-
+// Note: Lowercase 't' passes through unchanged
 [id: 3239, name: "T consonant", weight: 0.2, group: finnish_consonants]
 T -> t;
 
 // V → v
-[id: 3240, name: "v consonant", weight: 0.2, group: finnish_consonants]
-v -> v;
-
+// Note: Lowercase 'v' passes through unchanged
 [id: 3241, name: "V consonant", weight: 0.2, group: finnish_consonants]
 V -> v;
 

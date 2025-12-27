@@ -5,7 +5,7 @@
 //!
 //! # Available Rule Sets
 //!
-//! - [`zompist()`] - Comprehensive phonetic transformations (62 rules)
+//! - [`base()`] - Comprehensive phonetic transformations (62 rules)
 //! - [`homophones()`] - Words that sound alike
 //! - [`text_speak()`] - SMS/text abbreviations (2 -> to, u -> you, etc.)
 //!
@@ -14,14 +14,14 @@
 //! ```rust,ignore
 //! use liblevenshtein::phonetic::rules::english;
 //!
-//! let rules = english::zompist();
+//! let rules = english::base();
 //! // Use rules.apply("knight") to get normalized form
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;
 use std::sync::OnceLock;
 
-/// Zompist phonetic rules for English.
+/// Base phonetic rules for English.
 ///
 /// Based on Mark Rosenfelder's (Zompist) English spelling rules for
 /// phonetic similarity matching. These rules transform English orthography
@@ -41,15 +41,25 @@ use std::sync::OnceLock;
 /// # Reference
 ///
 /// Original specification: <https://zompist.com/spell.html>
-pub fn zompist() -> &'static RuleSetChar {
+pub fn base() -> &'static RuleSetChar {
     static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
     RULESET.get_or_init(|| {
-        let content = include_str!("../../../data/rules/english/zompist.llev");
+        let content = include_str!("../../../data/rules/english/base.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded zompist.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded base.llev - this is a bug in liblevenshtein");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile zompist rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile base rules - this is a bug in liblevenshtein")
     })
+}
+
+/// Deprecated alias for [`base()`].
+///
+/// This function has been renamed to `base()` for consistency with other
+/// language modules. The "Zompist" name refers to Mark Rosenfelder's original
+/// specification at <https://zompist.com/spell.html>.
+#[deprecated(since = "3.1.0", note = "Use `base()` instead for consistency with other languages")]
+pub fn zompist() -> &'static RuleSetChar {
+    base()
 }
 
 /// Homophone rules for English.
@@ -99,11 +109,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_zompist_loads() {
-        let rules = zompist();
+    fn test_base_loads() {
+        let rules = base();
         // Should have rules (62 minus disabled ones)
-        assert!(!rules.is_empty(), "zompist rules should not be empty");
-        assert!(rules.len() > 50, "expected >50 zompist rules, got {}", rules.len());
+        assert!(!rules.is_empty(), "base rules should not be empty");
+        assert!(rules.len() > 50, "expected >50 base rules, got {}", rules.len());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_zompist_alias() {
+        // Ensure deprecated alias still works
+        let rules = zompist();
+        assert!(!rules.is_empty(), "zompist alias should return base rules");
     }
 
     #[test]
@@ -119,11 +137,13 @@ mod tests {
     }
 
     #[test]
-    fn test_zompist_applies() {
-        let rules = zompist();
-        // phone -> fone (ph -> f)
+    fn test_base_applies() {
+        let rules = base();
+        // phone -> foʊn (ph -> f, o_e -> oʊ with magic e)
+        // Note: IPA output includes diphthong /oʊ/
         let result = rules.apply("phone");
-        assert!(result.contains("fon"), "expected 'fon' in result, got: {}", result);
+        assert!(result.contains("f") && (result.contains("oʊn") || result.contains("on")),
+            "expected 'f' and 'oʊn' or 'on' in result, got: {}", result);
     }
 
     #[test]

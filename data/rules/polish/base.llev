@@ -136,8 +136,7 @@ c -> t͡s;
 h -> x;
 
 // J → j (palatal approximant, like English "y")
-[id: 2236, name: "j to j", weight: 0.15, group: polish_consonants, ipa: "/j/"]
-j -> j;
+// Note: j is already /j/ in Polish, no transformation needed (unmapped characters pass through unchanged)
 
 // W → v (voiced labiodental fricative)
 [id: 2245, name: "w to v", weight: 0.15, group: polish_consonants]
@@ -168,4 +167,43 @@ t͡st͡s -> t͡s;
 
 [id: 2266, name: "double w", weight: 0.2, group: polish_simplification]
 ww -> w;
+
+// ============================================================
+// FINAL DEVOICING (at word end)
+// ============================================================
+// Voiced obstruents become voiceless at word end in Polish.
+// This is a regular phonological process in Polish.
+
+// Voiced stops → voiceless stops
+[id: 2270, name: "final b to p", weight: 0.08, group: polish_devoicing]
+b -> p / _#;
+
+[id: 2271, name: "final d to t", weight: 0.08, group: polish_devoicing]
+d -> t / _#;
+
+[id: 2272, name: "final g to k", weight: 0.08, group: polish_devoicing, ipa: "/k/"]
+ɡ -> k / _#;
+
+// Voiced fricatives → voiceless fricatives
+[id: 2273, name: "final v to f", weight: 0.08, group: polish_devoicing]
+v -> f / _#;
+
+[id: 2274, name: "final z to s", weight: 0.08, group: polish_devoicing]
+z -> s / _#;
+
+[id: 2275, name: "final ʒ to ʃ", weight: 0.08, group: polish_devoicing, ipa: "/ʃ/"]
+ʒ -> ʃ / _#;
+
+[id: 2276, name: "final ʑ to ɕ", weight: 0.08, group: polish_devoicing, ipa: "/ɕ/"]
+ʑ -> ɕ / _#;
+
+// Voiced affricates → voiceless affricates
+[id: 2277, name: "final d͡z to t͡s", weight: 0.08, group: polish_devoicing, ipa: "/t͡s/"]
+d͡z -> t͡s / _#;
+
+[id: 2278, name: "final d͡ʑ to tɕ", weight: 0.08, group: polish_devoicing, ipa: "/tɕ/"]
+d͡ʑ -> tɕ / _#;
+
+[id: 2279, name: "final d͡ʒ to t͡ʃ", weight: 0.08, group: polish_devoicing, ipa: "/t͡ʃ/"]
+d͡ʒ -> t͡ʃ / _#;
 

@@ -1,0 +1,237 @@
+// Amharic Base Phonetic Rules
+// ===========================
+// Phonetic rules for Amharic (አማርኛ / Amarəñña).
+// Spoken by approximately 32 million people as a first language,
+// and many more as a second language in Ethiopia.
+//
+// Amharic features:
+//   - Semitic language family (Ethiopic branch)
+//   - Geʽez/Ethiopic script (abugida)
+//   - Ejective consonants: pʼ, tʼ, kʼ, t͡sʼ, t͡ʃʼ
+//   - Gemination (consonant doubling) is phonemic
+//   - 7 vowels in the script
+//   - Labialized consonants: kʷ, gʷ, etc.
+//   - No tones
+//
+// Orthography (Romanization):
+//   - ' after consonant for ejectives: p', t', k', ts', ch'
+//   - Gemination: written as double consonant
+//   - ñ for /ɲ/, š for /ʃ/, ž for /ʒ/
+//   - kw, gw for labialized velars
+//   - ə for schwa (most common vowel)
+//
+// Rule IDs: 10800-10899
+
+@name "Amharic Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Amharic"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// 7-vowel system in Ethiopic script
+// ============================================================
+// Identity mappings removed: ə->ə, u->u, i->i, a->a, o->o
+// These vowels pass through unchanged by default.
+
+[id: 10801, name: "e schwa alt", weight: 0.05, group: amharic_vowels, ipa: "/ə/"]
+e -> ə;
+
+[id: 10805, name: "é front mid", weight: 0.05, group: amharic_vowels, ipa: "/e/"]
+é -> e;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 10810, name: "p' ejective", weight: 0.02, group: amharic_ejectives, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 10811, name: "ṗ ejective alt", weight: 0.02, group: amharic_ejectives, ipa: "/pʼ/"]
+ṗ -> pʼ;
+
+[id: 10812, name: "t' ejective", weight: 0.02, group: amharic_ejectives, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 10813, name: "ṭ ejective alt", weight: 0.02, group: amharic_ejectives, ipa: "/tʼ/"]
+ṭ -> tʼ;
+
+[id: 10814, name: "k' ejective", weight: 0.02, group: amharic_ejectives, ipa: "/kʼ/"]
+k' -> kʼ;
+
+[id: 10815, name: "ḳ ejective alt", weight: 0.02, group: amharic_ejectives, ipa: "/kʼ/"]
+ḳ -> kʼ;
+
+[id: 10816, name: "q ejective velar", weight: 0.02, group: amharic_ejectives, ipa: "/kʼ/"]
+q -> kʼ;
+
+// ============================================================
+// EJECTIVE AFFRICATES (weight 0.02)
+// ============================================================
+
+[id: 10820, name: "ts' ejective alveolar", weight: 0.02, group: amharic_ejective_affricates, ipa: "/t͡sʼ/"]
+ts' -> t͡sʼ;
+
+[id: 10821, name: "ṣ ejective alt", weight: 0.02, group: amharic_ejective_affricates, ipa: "/t͡sʼ/"]
+ṣ -> t͡sʼ;
+
+[id: 10822, name: "ch' ejective palatal", weight: 0.02, group: amharic_ejective_affricates, ipa: "/t͡ʃʼ/"]
+ch' -> t͡ʃʼ;
+
+[id: 10823, name: "č' ejective alt", weight: 0.02, group: amharic_ejective_affricates, ipa: "/t͡ʃʼ/"]
+č' -> t͡ʃʼ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+// Identity mappings removed: p->p, b->b, t->t, d->d, k->k
+// These consonants pass through unchanged by default.
+
+[id: 10830, name: "g", weight: 0.05, group: amharic_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// Glottal stop (ʾalef)
+[id: 10831, name: "glottal stop", weight: 0.05, group: amharic_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// LABIALIZED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 10835, name: "kw labialized", weight: 0.05, group: amharic_labialized, ipa: "/kʷ/"]
+kw -> kʷ;
+
+[id: 10836, name: "gw labialized", weight: 0.05, group: amharic_labialized, ipa: "/ɡʷ/"]
+gw -> ɡʷ;
+
+[id: 10837, name: "k'w ejective labialized", weight: 0.02, group: amharic_labialized, ipa: "/kʷʼ/"]
+k'w -> kʷʼ;
+
+[id: 10838, name: "qw ejective labialized", weight: 0.02, group: amharic_labialized, ipa: "/kʷʼ/"]
+qw -> kʷʼ;
+
+[id: 10839, name: "hw labialized", weight: 0.05, group: amharic_labialized, ipa: "/hʷ/"]
+hw -> hʷ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10840, name: "ch voiceless palatal", weight: 0.05, group: amharic_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 10841, name: "č voiceless alt", weight: 0.05, group: amharic_affricates, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 10842, name: "j voiced palatal", weight: 0.05, group: amharic_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Identity mappings removed: f->f, v->v, s->s, z->z, h->h
+// These consonants pass through unchanged by default.
+
+[id: 10849, name: "š postalveolar", weight: 0.05, group: amharic_fricatives, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 10850, name: "sh postalveolar alt", weight: 0.05, group: amharic_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 10851, name: "ž voiced postalveolar", weight: 0.05, group: amharic_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+[id: 10852, name: "zh voiced alt", weight: 0.05, group: amharic_fricatives, ipa: "/ʒ/"]
+zh -> ʒ;
+
+// Pharyngeal fricative (in some analyses)
+[id: 10854, name: "ḥ pharyngeal", weight: 0.05, group: amharic_fricatives, ipa: "/ħ/"]
+ḥ -> ħ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Identity mappings removed: m->m, n->n
+// These consonants pass through unchanged by default.
+
+[id: 10860, name: "ñ palatal nasal", weight: 0.05, group: amharic_nasals, ipa: "/ɲ/"]
+ñ -> ɲ;
+
+[id: 10861, name: "ny palatal alt", weight: 0.05, group: amharic_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Identity mapping removed: l->l, w->w
+// These consonants pass through unchanged by default.
+
+[id: 10866, name: "r flap", weight: 0.05, group: amharic_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 10868, name: "y", weight: 0.05, group: amharic_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// GEMINATION (weight 0.05)
+// Consonant doubling is phonemic in Amharic
+// ============================================================
+
+[id: 10872, name: "bb geminate", weight: 0.05, group: amharic_geminates, ipa: "/bː/"]
+bb -> bː;
+
+[id: 10873, name: "tt geminate", weight: 0.05, group: amharic_geminates, ipa: "/tː/"]
+tt -> tː;
+
+[id: 10874, name: "dd geminate", weight: 0.05, group: amharic_geminates, ipa: "/dː/"]
+dd -> dː;
+
+[id: 10875, name: "kk geminate", weight: 0.05, group: amharic_geminates, ipa: "/kː/"]
+kk -> kː;
+
+[id: 10876, name: "gg geminate", weight: 0.05, group: amharic_geminates, ipa: "/ɡː/"]
+gg -> ɡː;
+
+[id: 10877, name: "ss geminate", weight: 0.05, group: amharic_geminates, ipa: "/sː/"]
+ss -> sː;
+
+[id: 10878, name: "mm geminate", weight: 0.05, group: amharic_geminates, ipa: "/mː/"]
+mm -> mː;
+
+[id: 10879, name: "nn geminate", weight: 0.05, group: amharic_geminates, ipa: "/nː/"]
+nn -> nː;
+
+[id: 10880, name: "ll geminate", weight: 0.05, group: amharic_geminates, ipa: "/lː/"]
+ll -> lː;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 10885, name: "amarəñña amharic", weight: 0.02, group: amharic_common]
+amarəñña -> amaɾəɲːa;
+
+[id: 10886, name: "selam hello peace", weight: 0.02, group: amharic_common]
+selam -> səlam;
+
+[id: 10887, name: "amesegenallehu thank you", weight: 0.02, group: amharic_common]
+amesegenallehu -> aməseɡənalːəhu;
+
+// Identity mappings removed: awo->awo, wuha->wuha, bet->bet, səw->səw
+// These words pass through unchanged by default.
+
+[id: 10889, name: "ay no", weight: 0.02, group: amharic_common]
+ay -> aj;
+
+[id: 10891, name: "megeb food", weight: 0.02, group: amharic_common]
+məgəb -> məɡəb;
+
+[id: 10894, name: "lej child", weight: 0.02, group: amharic_common]
+ləj -> ləd͡ʒ;
+
+[id: 10895, name: "addis abeba capital", weight: 0.02, group: amharic_common]
+addis abeba -> adːis abəba;
+
+[id: 10896, name: "ityopya ethiopia", weight: 0.02, group: amharic_common]
+ityop'ya -> itʼjopʼja;
+

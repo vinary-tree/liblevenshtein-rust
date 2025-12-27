@@ -1,0 +1,214 @@
+// Shona Base Phonetic Rules
+// =========================
+// Phonetic rules for Shona (chiShona).
+// Spoken by approximately 11 million people in Zimbabwe and
+// Mozambique.
+//
+// Shona features:
+//   - Bantu language family
+//   - Tonal (high/low, contour tones)
+//   - Whistled sibilants (distinctive feature)
+//   - Prenasalized stops
+//   - No clicks (unlike some Nguni languages)
+//   - 5 vowels
+//   - Complex consonant inventory
+//
+// Orthography:
+//   - sv, zv for whistled sibilants
+//   - mb, nd, ng for prenasalized stops
+//   - sh for /ʃ/, zh for /ʒ/
+//   - ch for /t͡ʃ/
+//   - bh, dh for implosives
+//
+// Rule IDs: 13100-13199
+
+@name "Shona Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Shona"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 13100, name: "a", weight: 0.05, group: shona_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 13101, name: "e", weight: 0.05, group: shona_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 13102, name: "i", weight: 0.05, group: shona_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 13103, name: "o", weight: 0.05, group: shona_vowels, ipa: "/ɔ/"]
+o -> ɔ;
+
+[id: 13104, name: "u", weight: 0.05, group: shona_vowels, ipa: "/u/"]
+u -> u;
+
+// ============================================================
+// WHISTLED SIBILANTS (weight 0.02)
+// Distinctive feature of Shona
+// ============================================================
+
+[id: 13108, name: "sv whistled s", weight: 0.02, group: shona_whistled, ipa: "/sʷ/"]
+sv -> sʷ;
+
+[id: 13109, name: "zv whistled z", weight: 0.02, group: shona_whistled, ipa: "/zʷ/"]
+zv -> zʷ;
+
+[id: 13110, name: "svw whistled cluster", weight: 0.02, group: shona_whistled, ipa: "/sᶣ/"]
+svw -> sᶣ;
+
+[id: 13111, name: "zvw whistled cluster", weight: 0.02, group: shona_whistled, ipa: "/zᶣ/"]
+zvw -> zᶣ;
+
+// ============================================================
+// PRENASALIZED STOPS (weight 0.05)
+// ============================================================
+
+[id: 13115, name: "mb prenasalized", weight: 0.05, group: shona_prenasal, ipa: "/ᵐb/"]
+mb -> ᵐb;
+
+[id: 13116, name: "nd prenasalized", weight: 0.05, group: shona_prenasal, ipa: "/ⁿd/"]
+nd -> ⁿd;
+
+[id: 13117, name: "ng prenasalized", weight: 0.05, group: shona_prenasal, ipa: "/ᵑɡ/"]
+ng -> ᵑɡ;
+
+[id: 13118, name: "nj prenasalized", weight: 0.05, group: shona_prenasal, ipa: "/ⁿd͡ʒ/"]
+nj -> ⁿd͡ʒ;
+
+// ============================================================
+// IMPLOSIVES (weight 0.05)
+// ============================================================
+
+[id: 13122, name: "bh implosive", weight: 0.05, group: shona_implosive, ipa: "/ɓ/"]
+bh -> ɓ;
+
+[id: 13123, name: "dh implosive", weight: 0.05, group: shona_implosive, ipa: "/ɗ/"]
+dh -> ɗ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+[id: 13126, name: "p", weight: 0.05, group: shona_stops, ipa: "/p/"]
+p -> p;
+
+[id: 13127, name: "b", weight: 0.05, group: shona_stops, ipa: "/b/"]
+b -> b;
+
+[id: 13128, name: "t", weight: 0.05, group: shona_stops, ipa: "/t/"]
+t -> t;
+
+[id: 13129, name: "d", weight: 0.05, group: shona_stops, ipa: "/d/"]
+d -> d;
+
+[id: 13130, name: "k", weight: 0.05, group: shona_stops, ipa: "/k/"]
+k -> k;
+
+[id: 13131, name: "g", weight: 0.05, group: shona_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 13134, name: "ch voiceless", weight: 0.05, group: shona_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 13135, name: "j voiced", weight: 0.05, group: shona_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+[id: 13136, name: "ts alveolar", weight: 0.05, group: shona_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+[id: 13137, name: "dz voiced alveolar", weight: 0.05, group: shona_affricates, ipa: "/d͡z/"]
+dz -> d͡z;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 13140, name: "f", weight: 0.05, group: shona_fricatives, ipa: "/f/"]
+f -> f;
+
+[id: 13141, name: "v", weight: 0.05, group: shona_fricatives, ipa: "/v/"]
+v -> v;
+
+[id: 13142, name: "s", weight: 0.05, group: shona_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 13143, name: "z", weight: 0.05, group: shona_fricatives, ipa: "/z/"]
+z -> z;
+
+[id: 13144, name: "sh postalveolar", weight: 0.05, group: shona_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 13145, name: "zh voiced postalveolar", weight: 0.05, group: shona_fricatives, ipa: "/ʒ/"]
+zh -> ʒ;
+
+[id: 13146, name: "h", weight: 0.05, group: shona_fricatives, ipa: "/h/"]
+h -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 13150, name: "m", weight: 0.05, group: shona_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 13151, name: "n", weight: 0.05, group: shona_nasals, ipa: "/n/"]
+n -> n;
+
+[id: 13152, name: "ny palatal nasal", weight: 0.05, group: shona_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 13156, name: "r flap", weight: 0.05, group: shona_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 13157, name: "w", weight: 0.05, group: shona_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 13158, name: "y", weight: 0.05, group: shona_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 13170, name: "chishona shona language", weight: 0.02, group: shona_common]
+chishona -> t͡ʃiʃɔna;
+
+[id: 13171, name: "mhoro hello", weight: 0.02, group: shona_common]
+mhoro -> m̤ɔɾɔ;
+
+[id: 13172, name: "mazvita thank you", weight: 0.02, group: shona_common]
+mazvita -> mazʷita;
+
+[id: 13173, name: "hongu yes", weight: 0.02, group: shona_common]
+hongu -> hɔᵑɡu;
+
+[id: 13174, name: "kwete no", weight: 0.02, group: shona_common]
+kwete -> kwɛtɛ;
+
+[id: 13175, name: "mvura water", weight: 0.02, group: shona_common]
+mvura -> mʷuɾa;
+
+[id: 13176, name: "chingwa bread food", weight: 0.02, group: shona_common]
+chingwa -> t͡ʃiᵑɡwa;
+
+[id: 13177, name: "imba house", weight: 0.02, group: shona_common]
+imba -> iᵐba;
+
+[id: 13178, name: "munhu person", weight: 0.02, group: shona_common]
+munhu -> munhu;
+
+[id: 13179, name: "mwana child", weight: 0.02, group: shona_common]
+mwana -> mwana;
+

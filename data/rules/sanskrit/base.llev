@@ -1,0 +1,387 @@
+// Sanskrit Base Phonetic Rules
+// ============================
+// Phonetic rules for Sanskrit (संस्कृतम् / saṃskṛtam).
+// Classical language of ancient India, used for religious, philosophical,
+// and scholarly texts. Still used in Hindu rituals and academic study.
+//
+// Sanskrit features:
+//   - Indo-European language (Indo-Aryan branch)
+//   - Devanagari script (also romanized using IAST)
+//   - 14 vowels including vocalic r and l
+//   - 33+ consonants with systematic phonetic organization
+//   - Three sibilants: ś (palatal), ṣ (retroflex), s (dental)
+//   - Aspirated and unaspirated consonant pairs
+//   - Retroflex consonants (ṭ, ṭh, ḍ, ḍh, ṇ)
+//   - Visarga (ḥ) and anusvara (ṃ)
+//   - Complex sandhi (sound-change) rules at word junctions
+//
+// Romanization: IAST (International Alphabet of Sanskrit Transliteration)
+//   - Macrons for long vowels: ā, ī, ū
+//   - Dot below for retroflex: ṭ, ḍ, ṇ, ṣ
+//   - Acute accent for palatal sh: ś
+//   - Tilde for nasalization: ñ
+//
+// Rule IDs: 17700-17799
+
+@name "Sanskrit Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Sanskrit (Devanagari and IAST)"
+
+// ============================================================
+// DEVANAGARI VOWELS (स्वर / svara)
+// ============================================================
+// Sanskrit has 14 vowels: short/long pairs plus vocalic consonants
+
+// Short a (inherent in consonants)
+[id: 17700, name: "a short", weight: 0.05, group: sanskrit_vowels]
+अ -> a;
+
+// Long ā
+[id: 17701, name: "aa long", weight: 0.05, group: sanskrit_vowels, ipa: "/aː/"]
+आ -> aː;
+
+// Short i
+[id: 17702, name: "i short", weight: 0.05, group: sanskrit_vowels]
+इ -> i;
+
+// Long ī
+[id: 17703, name: "ii long", weight: 0.05, group: sanskrit_vowels, ipa: "/iː/"]
+ई -> iː;
+
+// Short u
+[id: 17704, name: "u short", weight: 0.05, group: sanskrit_vowels]
+उ -> u;
+
+// Long ū
+[id: 17705, name: "uu long", weight: 0.05, group: sanskrit_vowels, ipa: "/uː/"]
+ऊ -> uː;
+
+// Vocalic r (short)
+[id: 17706, name: "vocalic r short", weight: 0.05, group: sanskrit_vowels, ipa: "/r̩/"]
+ऋ -> r̩;
+
+// Vocalic r (long) - rare
+[id: 17707, name: "vocalic r long", weight: 0.05, group: sanskrit_vowels, ipa: "/r̩ː/"]
+ॠ -> r̩ː;
+
+// Vocalic l (short) - rare
+[id: 17708, name: "vocalic l short", weight: 0.05, group: sanskrit_vowels, ipa: "/l̩/"]
+ऌ -> l̩;
+
+// Vocalic l (long) - very rare
+[id: 17709, name: "vocalic l long", weight: 0.05, group: sanskrit_vowels, ipa: "/l̩ː/"]
+ॡ -> l̩ː;
+
+// Short e (always long in Sanskrit)
+[id: 17710, name: "e vowel", weight: 0.05, group: sanskrit_vowels, ipa: "/eː/"]
+ए -> eː;
+
+// ai diphthong
+[id: 17711, name: "ai diphthong", weight: 0.05, group: sanskrit_vowels, ipa: "/aɪ/"]
+ऐ -> aɪ;
+
+// Short o (always long in Sanskrit)
+[id: 17712, name: "o vowel", weight: 0.05, group: sanskrit_vowels, ipa: "/oː/"]
+ओ -> oː;
+
+// au diphthong
+[id: 17713, name: "au diphthong", weight: 0.05, group: sanskrit_vowels, ipa: "/aʊ/"]
+औ -> aʊ;
+
+// ============================================================
+// IAST VOWEL ROMANIZATION
+// ============================================================
+
+[id: 17715, name: "iast aa macron", weight: 0.05, group: sanskrit_iast, ipa: "/aː/"]
+ā -> aː;
+
+[id: 17716, name: "iast ii macron", weight: 0.05, group: sanskrit_iast, ipa: "/iː/"]
+ī -> iː;
+
+[id: 17717, name: "iast uu macron", weight: 0.05, group: sanskrit_iast, ipa: "/uː/"]
+ū -> uː;
+
+[id: 17718, name: "iast vocalic r", weight: 0.05, group: sanskrit_iast, ipa: "/r̩/"]
+ṛ -> r̩;
+
+[id: 17719, name: "iast vocalic r long", weight: 0.05, group: sanskrit_iast, ipa: "/r̩ː/"]
+ṝ -> r̩ː;
+
+[id: 17720, name: "iast vocalic l", weight: 0.05, group: sanskrit_iast, ipa: "/l̩/"]
+ḷ -> l̩;
+
+[id: 17721, name: "iast vocalic l long", weight: 0.05, group: sanskrit_iast, ipa: "/l̩ː/"]
+ḹ -> l̩ː;
+
+// ============================================================
+// VELAR CONSONANTS (क-वर्ग / ka-varga)
+// ============================================================
+
+[id: 17725, name: "ka voiceless velar", weight: 0.05, group: sanskrit_velars]
+क -> k;
+
+[id: 17726, name: "kha aspirated velar", weight: 0.05, group: sanskrit_velars, ipa: "/kʰ/"]
+ख -> kʰ;
+
+[id: 17727, name: "ga voiced velar", weight: 0.05, group: sanskrit_velars, ipa: "/ɡ/"]
+ग -> ɡ;
+
+[id: 17728, name: "gha aspirated voiced velar", weight: 0.05, group: sanskrit_velars, ipa: "/ɡʰ/"]
+घ -> ɡʰ;
+
+[id: 17729, name: "nga velar nasal", weight: 0.05, group: sanskrit_velars, ipa: "/ŋ/"]
+ङ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (च-वर्ग / ca-varga)
+// ============================================================
+
+[id: 17730, name: "ca voiceless palatal", weight: 0.05, group: sanskrit_palatals, ipa: "/t͡ɕ/"]
+च -> t͡ɕ;
+
+[id: 17731, name: "cha aspirated palatal", weight: 0.05, group: sanskrit_palatals, ipa: "/t͡ɕʰ/"]
+छ -> t͡ɕʰ;
+
+[id: 17732, name: "ja voiced palatal", weight: 0.05, group: sanskrit_palatals, ipa: "/d͡ʑ/"]
+ज -> d͡ʑ;
+
+[id: 17733, name: "jha aspirated voiced palatal", weight: 0.05, group: sanskrit_palatals, ipa: "/d͡ʑʰ/"]
+झ -> d͡ʑʰ;
+
+[id: 17734, name: "nya palatal nasal", weight: 0.05, group: sanskrit_palatals, ipa: "/ɲ/"]
+ञ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ट-वर्ग / ṭa-varga)
+// ============================================================
+
+[id: 17735, name: "Ta retroflex stop", weight: 0.05, group: sanskrit_retroflexes, ipa: "/ʈ/"]
+ट -> ʈ;
+
+[id: 17736, name: "Tha aspirated retroflex", weight: 0.05, group: sanskrit_retroflexes, ipa: "/ʈʰ/"]
+ठ -> ʈʰ;
+
+[id: 17737, name: "Da voiced retroflex", weight: 0.05, group: sanskrit_retroflexes, ipa: "/ɖ/"]
+ड -> ɖ;
+
+[id: 17738, name: "Dha aspirated voiced retroflex", weight: 0.05, group: sanskrit_retroflexes, ipa: "/ɖʰ/"]
+ढ -> ɖʰ;
+
+[id: 17739, name: "Na retroflex nasal", weight: 0.05, group: sanskrit_retroflexes, ipa: "/ɳ/"]
+ण -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (त-वर्ग / ta-varga)
+// ============================================================
+
+[id: 17740, name: "ta dental stop", weight: 0.05, group: sanskrit_dentals, ipa: "/t̪/"]
+त -> t̪;
+
+[id: 17741, name: "tha aspirated dental", weight: 0.05, group: sanskrit_dentals, ipa: "/t̪ʰ/"]
+थ -> t̪ʰ;
+
+[id: 17742, name: "da voiced dental", weight: 0.05, group: sanskrit_dentals, ipa: "/d̪/"]
+द -> d̪;
+
+[id: 17743, name: "dha aspirated voiced dental", weight: 0.05, group: sanskrit_dentals, ipa: "/d̪ʰ/"]
+ध -> d̪ʰ;
+
+[id: 17744, name: "na dental nasal", weight: 0.05, group: sanskrit_dentals]
+न -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (प-वर्ग / pa-varga)
+// ============================================================
+
+[id: 17745, name: "pa voiceless labial", weight: 0.05, group: sanskrit_labials]
+प -> p;
+
+[id: 17746, name: "pha aspirated labial", weight: 0.05, group: sanskrit_labials, ipa: "/pʰ/"]
+फ -> pʰ;
+
+[id: 17747, name: "ba voiced labial", weight: 0.05, group: sanskrit_labials]
+ब -> b;
+
+[id: 17748, name: "bha aspirated voiced labial", weight: 0.05, group: sanskrit_labials, ipa: "/bʰ/"]
+भ -> bʰ;
+
+[id: 17749, name: "ma labial nasal", weight: 0.05, group: sanskrit_labials]
+म -> m;
+
+// ============================================================
+// SEMI-VOWELS (अन्तस्थ / antastha)
+// ============================================================
+
+[id: 17750, name: "ya palatal glide", weight: 0.05, group: sanskrit_semivowels]
+य -> j;
+
+[id: 17751, name: "ra alveolar flap", weight: 0.05, group: sanskrit_semivowels, ipa: "/ɾ/"]
+र -> ɾ;
+
+[id: 17752, name: "la lateral", weight: 0.05, group: sanskrit_semivowels]
+ल -> l;
+
+[id: 17753, name: "va labial approximant", weight: 0.05, group: sanskrit_semivowels]
+व -> ʋ;
+
+// ============================================================
+// THREE SIBILANTS (ऊष्म / ūṣma)
+// ============================================================
+// Sanskrit distinguishes three sibilant sounds
+
+// ś - palatal sibilant (IAST: ś)
+[id: 17755, name: "sha palatal sibilant", weight: 0.05, group: sanskrit_sibilants, ipa: "/ɕ/"]
+श -> ɕ;
+
+// ṣ - retroflex sibilant (IAST: ṣ)
+[id: 17756, name: "Sha retroflex sibilant", weight: 0.05, group: sanskrit_sibilants, ipa: "/ʂ/"]
+ष -> ʂ;
+
+// s - dental sibilant (IAST: s)
+[id: 17757, name: "sa dental sibilant", weight: 0.05, group: sanskrit_sibilants]
+स -> s;
+
+// h - glottal fricative
+[id: 17758, name: "ha glottal fricative", weight: 0.05, group: sanskrit_sibilants]
+ह -> h;
+
+// ============================================================
+// IAST CONSONANT ROMANIZATION
+// ============================================================
+
+// Retroflex consonants with underdot
+[id: 17760, name: "iast retroflex t", weight: 0.05, group: sanskrit_iast, ipa: "/ʈ/"]
+ṭ -> ʈ;
+
+[id: 17761, name: "iast retroflex th", weight: 0.05, group: sanskrit_iast, ipa: "/ʈʰ/"]
+ṭh -> ʈʰ;
+
+[id: 17762, name: "iast retroflex d", weight: 0.05, group: sanskrit_iast, ipa: "/ɖ/"]
+ḍ -> ɖ;
+
+[id: 17763, name: "iast retroflex dh", weight: 0.05, group: sanskrit_iast, ipa: "/ɖʰ/"]
+ḍh -> ɖʰ;
+
+[id: 17764, name: "iast retroflex n", weight: 0.05, group: sanskrit_iast, ipa: "/ɳ/"]
+ṇ -> ɳ;
+
+// Palatal sibilant with acute
+[id: 17765, name: "iast palatal sh", weight: 0.05, group: sanskrit_iast, ipa: "/ɕ/"]
+ś -> ɕ;
+
+// Retroflex sibilant with underdot
+[id: 17766, name: "iast retroflex sh", weight: 0.05, group: sanskrit_iast, ipa: "/ʂ/"]
+ṣ -> ʂ;
+
+// Palatal nasal with tilde
+[id: 17767, name: "iast palatal nasal", weight: 0.05, group: sanskrit_iast, ipa: "/ɲ/"]
+ñ -> ɲ;
+
+// Velar nasal with overdot
+[id: 17768, name: "iast velar nasal", weight: 0.05, group: sanskrit_iast, ipa: "/ŋ/"]
+ṅ -> ŋ;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Visarga - voiceless glottal fricative
+[id: 17770, name: "visarga", weight: 0.05, group: sanskrit_diacritics, ipa: "/h/"]
+ः -> h;
+
+// IAST visarga
+[id: 17771, name: "iast visarga", weight: 0.05, group: sanskrit_diacritics, ipa: "/h/"]
+ḥ -> h;
+
+// Anusvara - homorganic nasal
+[id: 17772, name: "anusvara", weight: 0.1, group: sanskrit_diacritics, ipa: "/̃/"]
+ं -> ̃;
+
+// IAST anusvara
+[id: 17773, name: "iast anusvara", weight: 0.1, group: sanskrit_diacritics, ipa: "/̃/"]
+ṃ -> ̃;
+
+// Chandrabindu - nasalized vowel
+[id: 17774, name: "chandrabindu", weight: 0.1, group: sanskrit_diacritics, ipa: "/̃/"]
+ँ -> ̃;
+
+// Virama - vowel killer
+[id: 17775, name: "virama", weight: 0.1, group: sanskrit_diacritics]
+् -> ;
+
+// Avagraha - elision marker
+[id: 17776, name: "avagraha", weight: 0.1, group: sanskrit_diacritics]
+ऽ -> ;
+
+// ============================================================
+// VOWEL MATRAS (Dependent Vowels)
+// ============================================================
+
+[id: 17778, name: "aa matra", weight: 0.05, group: sanskrit_matras, ipa: "/aː/"]
+ा -> aː;
+
+[id: 17779, name: "i matra", weight: 0.05, group: sanskrit_matras]
+ि -> i;
+
+[id: 17780, name: "ii matra", weight: 0.05, group: sanskrit_matras, ipa: "/iː/"]
+ी -> iː;
+
+[id: 17781, name: "u matra", weight: 0.05, group: sanskrit_matras]
+ु -> u;
+
+[id: 17782, name: "uu matra", weight: 0.05, group: sanskrit_matras, ipa: "/uː/"]
+ू -> uː;
+
+[id: 17783, name: "vocalic r matra", weight: 0.05, group: sanskrit_matras, ipa: "/r̩/"]
+ृ -> r̩;
+
+[id: 17784, name: "vocalic r long matra", weight: 0.05, group: sanskrit_matras, ipa: "/r̩ː/"]
+ॄ -> r̩ː;
+
+[id: 17785, name: "vocalic l matra", weight: 0.05, group: sanskrit_matras, ipa: "/l̩/"]
+ॢ -> l̩;
+
+[id: 17786, name: "vocalic l long matra", weight: 0.05, group: sanskrit_matras, ipa: "/l̩ː/"]
+ॣ -> l̩ː;
+
+[id: 17787, name: "e matra", weight: 0.05, group: sanskrit_matras, ipa: "/eː/"]
+े -> eː;
+
+[id: 17788, name: "ai matra", weight: 0.05, group: sanskrit_matras, ipa: "/aɪ/"]
+ै -> aɪ;
+
+[id: 17789, name: "o matra", weight: 0.05, group: sanskrit_matras, ipa: "/oː/"]
+ो -> oː;
+
+[id: 17790, name: "au matra", weight: 0.05, group: sanskrit_matras, ipa: "/aʊ/"]
+ौ -> aʊ;
+
+// ============================================================
+// DEVANAGARI NUMERALS
+// ============================================================
+
+[id: 17792, name: "numeral 0", weight: 0.1, group: sanskrit_numerals]
+० -> 0;
+
+[id: 17793, name: "numeral 1", weight: 0.1, group: sanskrit_numerals]
+१ -> 1;
+
+[id: 17794, name: "numeral 2", weight: 0.1, group: sanskrit_numerals]
+२ -> 2;
+
+[id: 17795, name: "numeral 3", weight: 0.1, group: sanskrit_numerals]
+३ -> 3;
+
+[id: 17796, name: "numeral 4", weight: 0.1, group: sanskrit_numerals]
+४ -> 4;
+
+[id: 17797, name: "numeral 5", weight: 0.1, group: sanskrit_numerals]
+५ -> 5;
+
+[id: 17798, name: "numeral 6", weight: 0.1, group: sanskrit_numerals]
+६ -> 6;
+
+[id: 17799, name: "numeral 7", weight: 0.1, group: sanskrit_numerals]
+७ -> 7;
+

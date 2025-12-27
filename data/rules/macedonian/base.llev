@@ -1,0 +1,179 @@
+// Macedonian Base Phonetic Rules
+// ==============================
+// Phonetic rules for Macedonian (македонски јазик).
+// Spoken by approximately 2 million people in North Macedonia
+// and diaspora communities.
+//
+// Macedonian features:
+//   - Indo-European language family (South Slavic)
+//   - Simple phonology compared to other Slavic languages
+//   - 5 vowels, fixed stress (antepenultimate)
+//   - Cyrillic script
+//   - No vowel reduction
+//   - Palatalized consonants (ќ, ѓ, љ, њ)
+//
+// Orthography (Cyrillic):
+//   - ќ for /c/, ѓ for /ɟ/
+//   - љ for /ʎ/, њ for /ɲ/
+//   - џ for /d͡ʒ/, ч for /t͡ʃ/
+//   - ш for /ʃ/, ж for /ʒ/
+//
+// Rule IDs: 12400-12499
+
+@name "Macedonian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Macedonian"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 12400, name: "а a", weight: 0.05, group: macedonian_vowels, ipa: "/a/"]
+а -> a;
+
+[id: 12401, name: "е e", weight: 0.05, group: macedonian_vowels, ipa: "/ɛ/"]
+е -> ɛ;
+
+[id: 12402, name: "и i", weight: 0.05, group: macedonian_vowels, ipa: "/i/"]
+и -> i;
+
+[id: 12403, name: "о o", weight: 0.05, group: macedonian_vowels, ipa: "/o/"]
+о -> o;
+
+[id: 12404, name: "у u", weight: 0.05, group: macedonian_vowels, ipa: "/u/"]
+у -> u;
+
+// ============================================================
+// PALATAL CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 12408, name: "ќ voiceless palatal", weight: 0.05, group: macedonian_palatal, ipa: "/c/"]
+ќ -> c;
+
+[id: 12409, name: "ѓ voiced palatal", weight: 0.05, group: macedonian_palatal, ipa: "/ɟ/"]
+ѓ -> ɟ;
+
+[id: 12410, name: "љ palatal lateral", weight: 0.05, group: macedonian_palatal, ipa: "/ʎ/"]
+љ -> ʎ;
+
+[id: 12411, name: "њ palatal nasal", weight: 0.05, group: macedonian_palatal, ipa: "/ɲ/"]
+њ -> ɲ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 12415, name: "ч postalveolar", weight: 0.05, group: macedonian_affricates, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 12416, name: "џ voiced postalveolar", weight: 0.05, group: macedonian_affricates, ipa: "/d͡ʒ/"]
+џ -> d͡ʒ;
+
+[id: 12417, name: "ц alveolar", weight: 0.05, group: macedonian_affricates, ipa: "/t͡s/"]
+ц -> t͡s;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 12420, name: "п p", weight: 0.05, group: macedonian_stops, ipa: "/p/"]
+п -> p;
+
+[id: 12421, name: "б b", weight: 0.05, group: macedonian_stops, ipa: "/b/"]
+б -> b;
+
+[id: 12422, name: "т t", weight: 0.05, group: macedonian_stops, ipa: "/t/"]
+т -> t;
+
+[id: 12423, name: "д d", weight: 0.05, group: macedonian_stops, ipa: "/d/"]
+д -> d;
+
+[id: 12424, name: "к k", weight: 0.05, group: macedonian_stops, ipa: "/k/"]
+к -> k;
+
+[id: 12425, name: "г g", weight: 0.05, group: macedonian_stops, ipa: "/ɡ/"]
+г -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 12428, name: "ф f", weight: 0.05, group: macedonian_fricatives, ipa: "/f/"]
+ф -> f;
+
+[id: 12429, name: "в v", weight: 0.05, group: macedonian_fricatives, ipa: "/v/"]
+в -> v;
+
+[id: 12430, name: "с s", weight: 0.05, group: macedonian_fricatives, ipa: "/s/"]
+с -> s;
+
+[id: 12431, name: "з z", weight: 0.05, group: macedonian_fricatives, ipa: "/z/"]
+з -> z;
+
+[id: 12432, name: "ш postalveolar", weight: 0.05, group: macedonian_fricatives, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 12433, name: "ж voiced postalveolar", weight: 0.05, group: macedonian_fricatives, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 12434, name: "х h", weight: 0.05, group: macedonian_fricatives, ipa: "/h/"]
+х -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 12438, name: "м m", weight: 0.05, group: macedonian_nasals, ipa: "/m/"]
+м -> m;
+
+[id: 12439, name: "н n", weight: 0.05, group: macedonian_nasals, ipa: "/n/"]
+н -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 12443, name: "л l", weight: 0.05, group: macedonian_liquids, ipa: "/l/"]
+л -> l;
+
+[id: 12444, name: "р r trill", weight: 0.05, group: macedonian_liquids, ipa: "/r/"]
+р -> r;
+
+[id: 12445, name: "ј j", weight: 0.05, group: macedonian_approximants, ipa: "/j/"]
+ј -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 12460, name: "македонски macedonian", weight: 0.02, group: macedonian_common]
+македонски -> makɛdonski;
+
+[id: 12461, name: "здраво hello", weight: 0.02, group: macedonian_common]
+здраво -> zdravo;
+
+[id: 12462, name: "благодарам thank you", weight: 0.02, group: macedonian_common]
+благодарам -> blaɡodaram;
+
+[id: 12463, name: "да yes", weight: 0.02, group: macedonian_common]
+да -> da;
+
+[id: 12464, name: "не no", weight: 0.02, group: macedonian_common]
+не -> nɛ;
+
+[id: 12465, name: "вода water", weight: 0.02, group: macedonian_common]
+вода -> voda;
+
+[id: 12466, name: "леб bread food", weight: 0.02, group: macedonian_common]
+леб -> lɛb;
+
+[id: 12467, name: "куќа house", weight: 0.02, group: macedonian_common]
+куќа -> kuca;
+
+[id: 12468, name: "човек person", weight: 0.02, group: macedonian_common]
+човек -> t͡ʃovɛk;
+
+[id: 12469, name: "дете child", weight: 0.02, group: macedonian_common]
+дете -> dɛtɛ;
+

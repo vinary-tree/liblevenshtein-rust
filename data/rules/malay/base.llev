@@ -1,0 +1,125 @@
+// Malay/Indonesian Base Phonetic Rules
+// =====================================
+// Phonetic rules for Malay and Indonesian (Bahasa Melayu/Bahasa Indonesia).
+// Spoken by approximately 290 million people in Malaysia, Indonesia,
+// Singapore, Brunei, and parts of Thailand and Philippines.
+//
+// Malay/Indonesian features:
+//   - Austronesian language family
+//   - Simple phonology with 6 vowels: /a/, /i/, /u/, /o/, /e/, /ə/
+//   - No lexical tones
+//   - Prenasalized stops in native words (not reflected in orthography)
+//   - Glottal stop at end of words ending in 'k'
+//   - Two allophones of 'e': schwa [ə] and [e]
+//   - Digraphs: ng [ŋ], ny [ɲ], sy [ʃ], kh [x], gh [ɣ]
+//
+// Orthography:
+//   - c for /tʃ/, j for /dʒ/
+//   - ng for velar nasal /ŋ/
+//   - ny for palatal nasal /ɲ/
+//   - sy for /ʃ/ (Arabic loanwords)
+//   - kh for /x/, gh for /ɣ/ (Arabic loanwords)
+//   - Final k often realized as glottal stop [ʔ]
+//
+// Rule IDs: 10000-10099
+
+@name "Malay/Indonesian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Malay and Indonesian"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// 'e' in Malay has two pronunciations: schwa [ə] and [e]
+// Default to schwa, specific words use [e]
+[id: 10004, name: "e pepet schwa", weight: 0.05, group: malay_vowels, ipa: "/ə/"]
+e -> ə;
+
+// é with acute accent explicitly marks [e]
+[id: 10005, name: "e taling", weight: 0.05, group: malay_vowels, ipa: "/e/"]
+é -> e;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 10020, name: "g", weight: 0.05, group: malay_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// Glottal stop (written as ' or sometimes final k)
+[id: 10021, name: "glottal stop", weight: 0.05, group: malay_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10025, name: "c voiceless palatal", weight: 0.05, group: malay_affricates, ipa: "/t͡ʃ/"]
+c -> t͡ʃ;
+
+[id: 10026, name: "j voiced palatal", weight: 0.05, group: malay_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 10034, name: "sy postalveolar", weight: 0.05, group: malay_fricatives, ipa: "/ʃ/"]
+sy -> ʃ;
+
+// Arabic loanword fricatives
+[id: 10036, name: "kh velar", weight: 0.05, group: malay_arabic, ipa: "/x/"]
+kh -> x;
+
+[id: 10037, name: "gh voiced velar", weight: 0.05, group: malay_arabic, ipa: "/ɣ/"]
+gh -> ɣ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 10042, name: "ng velar nasal", weight: 0.05, group: malay_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+[id: 10043, name: "ny palatal nasal", weight: 0.05, group: malay_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 10048, name: "y", weight: 0.05, group: malay_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 10061, name: "melayu malay", weight: 0.02, group: malay_common]
+melayu -> məlaju;
+
+[id: 10062, name: "indonesia", weight: 0.02, group: malay_common]
+indonesia -> indonəsia;
+
+[id: 10063, name: "selamat greeting", weight: 0.02, group: malay_common]
+selamat -> səlamat;
+
+[id: 10064, name: "terima kasih thank you", weight: 0.02, group: malay_common]
+terima kasih -> tərima kasih;
+
+[id: 10066, name: "tidak no", weight: 0.02, group: malay_common]
+tidak -> tidaʔ;
+
+[id: 10067, name: "ya yes", weight: 0.02, group: malay_common]
+ya -> ja;
+
+[id: 10068, name: "saya I me", weight: 0.02, group: malay_common]
+saya -> saja;
+
+[id: 10073, name: "orang person", weight: 0.02, group: malay_common]
+orang -> oraŋ;
+
+[id: 10074, name: "anak child", weight: 0.02, group: malay_common]
+anak -> anaʔ;

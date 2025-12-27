@@ -520,6 +520,7 @@ mod tests {
             replacement: replacement.chars().map(char_to_phone).collect(),
             context,
             weight: 1.0,
+        syllable_condition: None,
         }
     }
 

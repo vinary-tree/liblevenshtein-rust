@@ -98,14 +98,14 @@ use liblevenshtein::dictionary::phonetic_normalized::{
 };
 use liblevenshtein::phonetic::rules::english;
 
-// Build with combined English rules (zompist + homophones + text_speak)
+// Build with combined English rules (base + homophones + text_speak)
 let combined_rules = english::combined();
 let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, combined_rules);
 
 // Or use specific rule sets
-let dict_zompist = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+let dict_base = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
     &words,
-    english::zompist().rules
+    english::base().rules
 );
 ```
 
@@ -147,8 +147,8 @@ let normalized = dict.normalize("phone");  // → "fon"
 ```rust
 use liblevenshtein::phonetic::rules::english;
 
-// 62 orthographic rules from Zompist
-let zompist = english::zompist();
+// 62 orthographic rules (based on Zompist)
+let base = english::base();
 
 // Homophone rules (e.g., "their" ↔ "there" ↔ "they're")
 let homophones = english::homophones();
@@ -172,7 +172,7 @@ src/dictionary/
 └── ...
 
 src/phonetic/
-├── rules/               # english::zompist(), homophones(), text_speak(), combined()
+├── rules/               # english::base(), homophones(), text_speak(), combined()
 ├── normalizer.rs        # Phonetic normalization logic
 └── ...
 ```

@@ -1,0 +1,161 @@
+// Luxembourgish Base Phonetic Rules
+// ==================================
+// Phonetic rules for Luxembourgish (Lëtzebuergesch).
+// Spoken by approximately 400,000 people in Luxembourg.
+//
+// Luxembourgish features:
+//   - West Germanic language (Moselle Franconian)
+//   - Influenced by French and German
+//   - Final obstruent devoicing
+//   - Vowel length distinction
+//   - n-deletion before consonants
+//   - Complex diphthong system
+//
+// Orthography:
+//   - Latin alphabet
+//   - ë for /ə/ (schwa)
+//   - äi, äu, éi for diphthongs
+//   - sch for /ʃ/, ch for /ç/ or /x/
+//
+// Rule IDs: 15200-15299
+
+@name "Luxembourgish Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Luxembourgish"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15201, name: "e short", weight: 0.05, group: luxembourgish_short, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 15202, name: "ë schwa", weight: 0.05, group: luxembourgish_short, ipa: "/ə/"]
+ë -> ə;
+
+[id: 15203, name: "i short", weight: 0.05, group: luxembourgish_short, ipa: "/ɪ/"]
+i -> ɪ;
+
+[id: 15204, name: "o short", weight: 0.05, group: luxembourgish_short, ipa: "/ɔ/"]
+o -> ɔ;
+
+[id: 15205, name: "u short", weight: 0.05, group: luxembourgish_short, ipa: "/ʊ/"]
+u -> ʊ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15210, name: "aa long", weight: 0.05, group: luxembourgish_long, ipa: "/aː/"]
+aa -> aː;
+
+[id: 15211, name: "ee long", weight: 0.05, group: luxembourgish_long, ipa: "/eː/"]
+ee -> eː;
+
+[id: 15212, name: "ii long", weight: 0.05, group: luxembourgish_long, ipa: "/iː/"]
+ii -> iː;
+
+[id: 15213, name: "oo long", weight: 0.05, group: luxembourgish_long, ipa: "/oː/"]
+oo -> oː;
+
+[id: 15214, name: "uu long", weight: 0.05, group: luxembourgish_long, ipa: "/uː/"]
+uu -> uː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+[id: 15218, name: "äi diphthong", weight: 0.05, group: luxembourgish_diphthongs, ipa: "/æːɪ/"]
+äi -> æːɪ;
+
+[id: 15219, name: "éi diphthong", weight: 0.05, group: luxembourgish_diphthongs, ipa: "/əɪ/"]
+éi -> əɪ;
+
+[id: 15220, name: "ou diphthong", weight: 0.05, group: luxembourgish_diphthongs, ipa: "/əʊ/"]
+ou -> əʊ;
+
+[id: 15221, name: "au diphthong", weight: 0.05, group: luxembourgish_diphthongs, ipa: "/aʊ/"]
+au -> aʊ;
+
+[id: 15222, name: "äu diphthong", weight: 0.05, group: luxembourgish_diphthongs, ipa: "/æːʊ/"]
+äu -> æːʊ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 15231, name: "g", weight: 0.05, group: luxembourgish_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 15234, name: "z ts", weight: 0.05, group: luxembourgish_affricates, ipa: "/t͡s/"]
+z -> t͡s;
+
+[id: 15235, name: "tsch ch", weight: 0.05, group: luxembourgish_affricates, ipa: "/t͡ʃ/"]
+tsch -> t͡ʃ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 15241, name: "sch sh", weight: 0.05, group: luxembourgish_fricatives, ipa: "/ʃ/"]
+sch -> ʃ;
+
+[id: 15242, name: "ch palatal", weight: 0.05, group: luxembourgish_fricatives, ipa: "/ç/"]
+ch -> ç;
+
+[id: 15243, name: "j", weight: 0.05, group: luxembourgish_fricatives, ipa: "/ʒ/"]
+j -> ʒ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 15250, name: "ng velar", weight: 0.05, group: luxembourgish_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 15255, name: "r uvular", weight: 0.05, group: luxembourgish_liquids, ipa: "/ʁ/"]
+r -> ʁ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 15280, name: "lëtzebuergesch luxembourgish", weight: 0.02, group: luxembourgish_common]
+lëtzebuergesch -> lət͡səbuəɡəʃ;
+
+[id: 15281, name: "moien hello", weight: 0.02, group: luxembourgish_common]
+moien -> mɔɪən;
+
+[id: 15282, name: "merci thank you", weight: 0.02, group: luxembourgish_common]
+merci -> mɛʁsi;
+
+[id: 15283, name: "jo yes", weight: 0.02, group: luxembourgish_common]
+jo -> joː;
+
+[id: 15284, name: "nee no", weight: 0.02, group: luxembourgish_common]
+nee -> neː;
+
+[id: 15285, name: "waasser water", weight: 0.02, group: luxembourgish_common]
+waasser -> waːsəʁ;
+
+[id: 15286, name: "brout bread", weight: 0.02, group: luxembourgish_common]
+brout -> bʁəʊt;
+
+[id: 15287, name: "haus house", weight: 0.02, group: luxembourgish_common]
+haus -> haʊs;
+
+[id: 15288, name: "mënsch person", weight: 0.02, group: luxembourgish_common]
+mënsch -> mənʃ;
+
+[id: 15289, name: "kand child", weight: 0.02, group: luxembourgish_common]
+kand -> kant;
+

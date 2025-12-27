@@ -1,0 +1,213 @@
+// Lithuanian Base Phonetic Rules
+// ==============================
+// Phonetic rules for Lithuanian (lietuvių kalba).
+// Spoken by approximately 3 million people in Lithuania and
+// diaspora communities.
+//
+// Lithuanian features:
+//   - Indo-European language family (Baltic branch)
+//   - Very archaic phonology (closest to Proto-Indo-European)
+//   - Pitch accent system (acute/circumflex)
+//   - Palatalized consonants (before front vowels)
+//   - Long and short vowels
+//   - 12 vowels including diphthongs
+//
+// Orthography:
+//   - ą, ę, į, ų for long nasal vowels
+//   - č, š, ž for postalveolar fricatives
+//   - y for long /iː/
+//   - ū for long /uː/
+//
+// Rule IDs: 12200-12299
+
+@name "Lithuanian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Lithuanian"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 12200, name: "a short", weight: 0.05, group: lithuanian_vowels, ipa: "/ɐ/"]
+a -> ɐ;
+
+[id: 12201, name: "e short", weight: 0.05, group: lithuanian_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 12202, name: "i short", weight: 0.05, group: lithuanian_vowels, ipa: "/ɪ/"]
+i -> ɪ;
+
+[id: 12203, name: "o short", weight: 0.05, group: lithuanian_vowels, ipa: "/o/"]
+o -> o;
+
+[id: 12204, name: "u short", weight: 0.05, group: lithuanian_vowels, ipa: "/ʊ/"]
+u -> ʊ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 12208, name: "ą long a", weight: 0.05, group: lithuanian_long, ipa: "/aː/"]
+ą -> aː;
+
+[id: 12209, name: "ę long e", weight: 0.05, group: lithuanian_long, ipa: "/æː/"]
+ę -> æː;
+
+[id: 12210, name: "ė long close e", weight: 0.05, group: lithuanian_long, ipa: "/eː/"]
+ė -> eː;
+
+[id: 12211, name: "į long i", weight: 0.05, group: lithuanian_long, ipa: "/iː/"]
+į -> iː;
+
+[id: 12212, name: "y long i", weight: 0.05, group: lithuanian_long, ipa: "/iː/"]
+y -> iː;
+
+[id: 12213, name: "ų long u", weight: 0.05, group: lithuanian_long, ipa: "/uː/"]
+ų -> uː;
+
+[id: 12214, name: "ū long u", weight: 0.05, group: lithuanian_long, ipa: "/uː/"]
+ū -> uː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+[id: 12218, name: "ai diphthong", weight: 0.05, group: lithuanian_diphthongs, ipa: "/ɐɪ/"]
+ai -> ɐɪ;
+
+[id: 12219, name: "ei diphthong", weight: 0.05, group: lithuanian_diphthongs, ipa: "/ɛɪ/"]
+ei -> ɛɪ;
+
+[id: 12220, name: "au diphthong", weight: 0.05, group: lithuanian_diphthongs, ipa: "/ɐʊ/"]
+au -> ɐʊ;
+
+[id: 12221, name: "ui diphthong", weight: 0.05, group: lithuanian_diphthongs, ipa: "/ʊɪ/"]
+ui -> ʊɪ;
+
+[id: 12222, name: "ie diphthong", weight: 0.05, group: lithuanian_diphthongs, ipa: "/iɛ/"]
+ie -> iɛ;
+
+[id: 12223, name: "uo diphthong", weight: 0.05, group: lithuanian_diphthongs, ipa: "/uo/"]
+uo -> uo;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 12226, name: "č postalveolar", weight: 0.05, group: lithuanian_affricates, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 12227, name: "dž voiced postalveolar", weight: 0.05, group: lithuanian_affricates, ipa: "/d͡ʒ/"]
+dž -> d͡ʒ;
+
+[id: 12228, name: "c alveolar", weight: 0.05, group: lithuanian_affricates, ipa: "/t͡s/"]
+c -> t͡s;
+
+[id: 12229, name: "dz voiced alveolar", weight: 0.05, group: lithuanian_affricates, ipa: "/d͡z/"]
+dz -> d͡z;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 12232, name: "p", weight: 0.05, group: lithuanian_stops, ipa: "/p/"]
+p -> p;
+
+[id: 12233, name: "b", weight: 0.05, group: lithuanian_stops, ipa: "/b/"]
+b -> b;
+
+[id: 12234, name: "t", weight: 0.05, group: lithuanian_stops, ipa: "/t/"]
+t -> t;
+
+[id: 12235, name: "d", weight: 0.05, group: lithuanian_stops, ipa: "/d/"]
+d -> d;
+
+[id: 12236, name: "k", weight: 0.05, group: lithuanian_stops, ipa: "/k/"]
+k -> k;
+
+[id: 12237, name: "g", weight: 0.05, group: lithuanian_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 12240, name: "f loanword", weight: 0.05, group: lithuanian_fricatives, ipa: "/f/"]
+f -> f;
+
+[id: 12241, name: "v", weight: 0.05, group: lithuanian_fricatives, ipa: "/v/"]
+v -> v;
+
+[id: 12242, name: "s", weight: 0.05, group: lithuanian_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 12243, name: "z", weight: 0.05, group: lithuanian_fricatives, ipa: "/z/"]
+z -> z;
+
+[id: 12244, name: "š postalveolar", weight: 0.05, group: lithuanian_fricatives, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 12245, name: "ž voiced postalveolar", weight: 0.05, group: lithuanian_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+[id: 12246, name: "h loanword", weight: 0.05, group: lithuanian_fricatives, ipa: "/h/"]
+h -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 12250, name: "m", weight: 0.05, group: lithuanian_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 12251, name: "n", weight: 0.05, group: lithuanian_nasals, ipa: "/n/"]
+n -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 12255, name: "l", weight: 0.05, group: lithuanian_liquids, ipa: "/l/"]
+l -> l;
+
+[id: 12256, name: "r trill", weight: 0.05, group: lithuanian_liquids, ipa: "/r/"]
+r -> r;
+
+[id: 12257, name: "j", weight: 0.05, group: lithuanian_approximants, ipa: "/j/"]
+j -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 12270, name: "lietuvių lithuanian", weight: 0.02, group: lithuanian_common]
+lietuvių -> liɛtuʋiuː;
+
+[id: 12271, name: "labas hello", weight: 0.02, group: lithuanian_common]
+labas -> lɐbɐs;
+
+[id: 12272, name: "ačiū thank you", weight: 0.02, group: lithuanian_common]
+ačiū -> ɐt͡ʃiuː;
+
+[id: 12273, name: "taip yes", weight: 0.02, group: lithuanian_common]
+taip -> tɐɪp;
+
+[id: 12274, name: "ne no", weight: 0.02, group: lithuanian_common]
+ne -> nɛ;
+
+[id: 12275, name: "vanduo water", weight: 0.02, group: lithuanian_common]
+vanduo -> vɐnduo;
+
+[id: 12276, name: "duona bread food", weight: 0.02, group: lithuanian_common]
+duona -> duonɐ;
+
+[id: 12277, name: "namas house", weight: 0.02, group: lithuanian_common]
+namas -> nɐmɐs;
+
+[id: 12278, name: "žmogus person", weight: 0.02, group: lithuanian_common]
+žmogus -> ʒmoɡʊs;
+
+[id: 12279, name: "vaikas child", weight: 0.02, group: lithuanian_common]
+vaikas -> vɐɪkɐs;
+

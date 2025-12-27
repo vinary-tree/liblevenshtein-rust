@@ -1,0 +1,289 @@
+// Cree Base Phonetic Rules
+// ========================
+// Phonetic rules for Cree (ᓀᐦᐃᔭᐍᐏᐣ / Nēhiyawēwin).
+// Spoken by approximately 100,000 people across Canada.
+//
+// Cree features:
+//   - Syllabics script (Canadian Aboriginal Syllabics)
+//   - Also written in Standard Roman Orthography (SRO)
+//   - Vowel length distinction (short vs long)
+//   - No consonant clusters in syllable onset
+//   - Complex verb morphology (polysynthetic)
+//
+// Writing systems:
+//   - Cree syllabics: ᓀᐦᐃᔭᐍᐏᐣ
+//   - SRO (Standard Roman Orthography): nēhiyawēwin
+//   - Long vowels marked with macron (ā, ē, ī, ō) or circumflex (â, ê, î, ô)
+//
+// Rule IDs: 8000-8199
+
+@name "Cree Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Cree (Plains Cree)"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 8000, name: "a short", weight: 0.05, group: cree_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 8001, name: "i short", weight: 0.05, group: cree_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 8002, name: "o short", weight: 0.05, group: cree_vowels, ipa: "/o/"]
+o -> o;
+
+// ============================================================
+// LONG VOWELS - macron (weight 0.05)
+// ============================================================
+
+[id: 8005, name: "a long macron", weight: 0.05, group: cree_long_vowels, ipa: "/aː/"]
+ā -> aː;
+
+[id: 8006, name: "e long", weight: 0.05, group: cree_long_vowels, ipa: "/eː/"]
+ē -> eː;
+
+[id: 8007, name: "i long macron", weight: 0.05, group: cree_long_vowels, ipa: "/iː/"]
+ī -> iː;
+
+[id: 8008, name: "o long macron", weight: 0.05, group: cree_long_vowels, ipa: "/oː/"]
+ō -> oː;
+
+// Long vowels - circumflex (alternative orthography)
+[id: 8010, name: "a long circumflex", weight: 0.05, group: cree_long_vowels, ipa: "/aː/"]
+â -> aː;
+
+[id: 8011, name: "e long circumflex", weight: 0.05, group: cree_long_vowels, ipa: "/eː/"]
+ê -> eː;
+
+[id: 8012, name: "i long circumflex", weight: 0.05, group: cree_long_vowels, ipa: "/iː/"]
+î -> iː;
+
+[id: 8013, name: "o long circumflex", weight: 0.05, group: cree_long_vowels, ipa: "/oː/"]
+ô -> oː;
+
+// ============================================================
+// CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 8020, name: "p", weight: 0.05, group: cree_consonants, ipa: "/p/"]
+p -> p;
+
+[id: 8021, name: "t", weight: 0.05, group: cree_consonants, ipa: "/t/"]
+t -> t;
+
+[id: 8022, name: "k", weight: 0.05, group: cree_consonants, ipa: "/k/"]
+k -> k;
+
+[id: 8023, name: "c affricate", weight: 0.05, group: cree_consonants, ipa: "/t͡s/"]
+c -> t͡s;
+
+// Some dialects use ch instead of c
+[id: 8024, name: "ch affricate", weight: 0.05, group: cree_consonants, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 8025, name: "s", weight: 0.05, group: cree_consonants, ipa: "/s/"]
+s -> s;
+
+[id: 8026, name: "h", weight: 0.05, group: cree_consonants, ipa: "/h/"]
+h -> h;
+
+[id: 8027, name: "m", weight: 0.05, group: cree_consonants, ipa: "/m/"]
+m -> m;
+
+[id: 8028, name: "n", weight: 0.05, group: cree_consonants, ipa: "/n/"]
+n -> n;
+
+[id: 8029, name: "w", weight: 0.05, group: cree_consonants, ipa: "/w/"]
+w -> w;
+
+[id: 8030, name: "y", weight: 0.05, group: cree_consonants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// CREE SYLLABICS - E series (ᐁ)
+// ============================================================
+
+[id: 8040, name: "syllabic e", weight: 0.05, group: cree_syllabics, ipa: "/eː/"]
+ᐁ -> eː;
+
+[id: 8041, name: "syllabic pe", weight: 0.05, group: cree_syllabics, ipa: "/peː/"]
+ᐯ -> peː;
+
+[id: 8042, name: "syllabic te", weight: 0.05, group: cree_syllabics, ipa: "/teː/"]
+ᑌ -> teː;
+
+[id: 8043, name: "syllabic ke", weight: 0.05, group: cree_syllabics, ipa: "/keː/"]
+ᑫ -> keː;
+
+[id: 8044, name: "syllabic ce", weight: 0.05, group: cree_syllabics, ipa: "/t͡seː/"]
+ᒉ -> t͡seː;
+
+[id: 8045, name: "syllabic me", weight: 0.05, group: cree_syllabics, ipa: "/meː/"]
+ᒣ -> meː;
+
+[id: 8046, name: "syllabic ne", weight: 0.05, group: cree_syllabics, ipa: "/neː/"]
+ᓀ -> neː;
+
+[id: 8047, name: "syllabic se", weight: 0.05, group: cree_syllabics, ipa: "/seː/"]
+ᓭ -> seː;
+
+[id: 8048, name: "syllabic ye", weight: 0.05, group: cree_syllabics, ipa: "/jeː/"]
+ᔦ -> jeː;
+
+[id: 8049, name: "syllabic we", weight: 0.05, group: cree_syllabics, ipa: "/weː/"]
+ᐍ -> weː;
+
+// ============================================================
+// CREE SYLLABICS - I series (ᐃ)
+// ============================================================
+
+[id: 8050, name: "syllabic i", weight: 0.05, group: cree_syllabics, ipa: "/i/"]
+ᐃ -> i;
+
+[id: 8051, name: "syllabic pi", weight: 0.05, group: cree_syllabics, ipa: "/pi/"]
+ᐱ -> pi;
+
+[id: 8052, name: "syllabic ti", weight: 0.05, group: cree_syllabics, ipa: "/ti/"]
+ᑎ -> ti;
+
+[id: 8053, name: "syllabic ki", weight: 0.05, group: cree_syllabics, ipa: "/ki/"]
+ᑭ -> ki;
+
+[id: 8054, name: "syllabic ci", weight: 0.05, group: cree_syllabics, ipa: "/t͡si/"]
+ᒋ -> t͡si;
+
+[id: 8055, name: "syllabic mi", weight: 0.05, group: cree_syllabics, ipa: "/mi/"]
+ᒥ -> mi;
+
+[id: 8056, name: "syllabic ni", weight: 0.05, group: cree_syllabics, ipa: "/ni/"]
+ᓂ -> ni;
+
+[id: 8057, name: "syllabic si", weight: 0.05, group: cree_syllabics, ipa: "/si/"]
+ᓯ -> si;
+
+[id: 8058, name: "syllabic yi", weight: 0.05, group: cree_syllabics, ipa: "/ji/"]
+ᔨ -> ji;
+
+[id: 8059, name: "syllabic wi", weight: 0.05, group: cree_syllabics, ipa: "/wi/"]
+ᐏ -> wi;
+
+// ============================================================
+// CREE SYLLABICS - O series (ᐅ)
+// ============================================================
+
+[id: 8060, name: "syllabic o", weight: 0.05, group: cree_syllabics, ipa: "/o/"]
+ᐅ -> o;
+
+[id: 8061, name: "syllabic po", weight: 0.05, group: cree_syllabics, ipa: "/po/"]
+ᐳ -> po;
+
+[id: 8062, name: "syllabic to", weight: 0.05, group: cree_syllabics, ipa: "/to/"]
+ᑐ -> to;
+
+[id: 8063, name: "syllabic ko", weight: 0.05, group: cree_syllabics, ipa: "/ko/"]
+ᑯ -> ko;
+
+[id: 8064, name: "syllabic co", weight: 0.05, group: cree_syllabics, ipa: "/t͡so/"]
+ᒍ -> t͡so;
+
+[id: 8065, name: "syllabic mo", weight: 0.05, group: cree_syllabics, ipa: "/mo/"]
+ᒧ -> mo;
+
+[id: 8066, name: "syllabic no", weight: 0.05, group: cree_syllabics, ipa: "/no/"]
+ᓄ -> no;
+
+[id: 8067, name: "syllabic so", weight: 0.05, group: cree_syllabics, ipa: "/so/"]
+ᓱ -> so;
+
+[id: 8068, name: "syllabic yo", weight: 0.05, group: cree_syllabics, ipa: "/jo/"]
+ᔪ -> jo;
+
+[id: 8069, name: "syllabic wo", weight: 0.05, group: cree_syllabics, ipa: "/wo/"]
+ᐓ -> wo;
+
+// ============================================================
+// CREE SYLLABICS - A series (ᐊ)
+// ============================================================
+
+[id: 8070, name: "syllabic a", weight: 0.05, group: cree_syllabics, ipa: "/a/"]
+ᐊ -> a;
+
+[id: 8071, name: "syllabic pa", weight: 0.05, group: cree_syllabics, ipa: "/pa/"]
+ᐸ -> pa;
+
+[id: 8072, name: "syllabic ta", weight: 0.05, group: cree_syllabics, ipa: "/ta/"]
+ᑕ -> ta;
+
+[id: 8073, name: "syllabic ka", weight: 0.05, group: cree_syllabics, ipa: "/ka/"]
+ᑲ -> ka;
+
+[id: 8074, name: "syllabic ca", weight: 0.05, group: cree_syllabics, ipa: "/t͡sa/"]
+ᒐ -> t͡sa;
+
+[id: 8075, name: "syllabic ma", weight: 0.05, group: cree_syllabics, ipa: "/ma/"]
+ᒪ -> ma;
+
+[id: 8076, name: "syllabic na", weight: 0.05, group: cree_syllabics, ipa: "/na/"]
+ᓇ -> na;
+
+[id: 8077, name: "syllabic sa", weight: 0.05, group: cree_syllabics, ipa: "/sa/"]
+ᓴ -> sa;
+
+[id: 8078, name: "syllabic ya", weight: 0.05, group: cree_syllabics, ipa: "/ja/"]
+ᔭ -> ja;
+
+[id: 8079, name: "syllabic wa", weight: 0.05, group: cree_syllabics, ipa: "/wa/"]
+ᐘ -> wa;
+
+// ============================================================
+// CREE SYLLABICS - FINALS (coda consonants)
+// ============================================================
+
+[id: 8090, name: "final p", weight: 0.05, group: cree_finals, ipa: "/p/"]
+ᑊ -> p;
+
+[id: 8091, name: "final t", weight: 0.05, group: cree_finals, ipa: "/t/"]
+ᐟ -> t;
+
+[id: 8092, name: "final k", weight: 0.05, group: cree_finals, ipa: "/k/"]
+ᐠ -> k;
+
+[id: 8093, name: "final c", weight: 0.05, group: cree_finals, ipa: "/t͡s/"]
+ᐨ -> t͡s;
+
+[id: 8094, name: "final m", weight: 0.05, group: cree_finals, ipa: "/m/"]
+ᒼ -> m;
+
+[id: 8095, name: "final n", weight: 0.05, group: cree_finals, ipa: "/n/"]
+ᐣ -> n;
+
+[id: 8096, name: "final s", weight: 0.05, group: cree_finals, ipa: "/s/"]
+ᐢ -> s;
+
+[id: 8097, name: "final y", weight: 0.05, group: cree_finals, ipa: "/j/"]
+ᕀ -> j;
+
+[id: 8098, name: "final w", weight: 0.05, group: cree_finals, ipa: "/w/"]
+ᐤ -> w;
+
+[id: 8099, name: "final h", weight: 0.05, group: cree_finals, ipa: "/h/"]
+ᐦ -> h;
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 8100, name: "nehiyawewin cree language", weight: 0.02, group: cree_common]
+nēhiyawēwin -> neːhijaweːwin;
+
+[id: 8101, name: "tanisi hello", weight: 0.02, group: cree_common]
+tānisi -> taːnisi;
+
+[id: 8102, name: "ekosi ok goodbye", weight: 0.02, group: cree_common]
+ēkosi -> eːkosi;
+
+[id: 8103, name: "kinanaskomitin thank you", weight: 0.02, group: cree_common]
+kinanāskomitin -> kinanaːskomitin;

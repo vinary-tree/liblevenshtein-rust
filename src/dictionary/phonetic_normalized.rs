@@ -1043,7 +1043,7 @@ impl NormalizeBuffers {
             Some(phones) => {
                 self.output_string.clear();
                 self.output_string.reserve(phones.len());
-                for p in &phones {
+                for p in phones.iter() {
                     match p {
                         PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => {
                             self.output_string.push(*c)
@@ -1051,6 +1051,46 @@ impl NormalizeBuffers {
                         PhoneChar::Digraph(c1, c2) => {
                             self.output_string.push(*c1);
                             self.output_string.push(*c2);
+                        }
+                        PhoneChar::Trigraph(c1, c2, c3) => {
+                            self.output_string.push(*c1);
+                            self.output_string.push(*c2);
+                            self.output_string.push(*c3);
+                        }
+                        PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                            self.output_string.push(*c1);
+                            self.output_string.push(*c2);
+                            self.output_string.push(*c3);
+                            self.output_string.push(*c4);
+                        }
+                        PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                            self.output_string.push(*c1);
+                            self.output_string.push(*c2);
+                            self.output_string.push(*c3);
+                            self.output_string.push(*c4);
+                            self.output_string.push(*c5);
+                        }
+                        PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                            self.output_string.push(*c1);
+                            self.output_string.push(*c2);
+                            self.output_string.push(*c3);
+                            self.output_string.push(*c4);
+                            self.output_string.push(*c5);
+                            self.output_string.push(*c6);
+                        }
+                        PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                            self.output_string.push(*c1);
+                            self.output_string.push(*c2);
+                            self.output_string.push(*c3);
+                            self.output_string.push(*c4);
+                            self.output_string.push(*c5);
+                            self.output_string.push(*c6);
+                            self.output_string.push(*c7);
+                        }
+                        PhoneChar::Sequence(chars) => {
+                            for c in chars {
+                                self.output_string.push(*c);
+                            }
                         }
                         PhoneChar::Silent => {}
                     }
@@ -1420,6 +1460,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.1,
+            syllable_condition: None,
         }];
 
         let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["phone", "fone"], rules);
@@ -1447,6 +1488,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.1,
+            syllable_condition: None,
         }];
 
         let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
@@ -1498,6 +1540,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.1,
+            syllable_condition: None,
         }];
 
         let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
@@ -1537,6 +1580,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 0.1,
+            syllable_condition: None,
         }];
 
         let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
@@ -1585,6 +1629,7 @@ mod tests {
                 replacement: vec![PhoneChar::Consonant('f')],
                 context: ContextChar::Anywhere,
                 weight: 0.1,
+                syllable_condition: None,
             },
         ];
 

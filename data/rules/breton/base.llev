@@ -1,0 +1,128 @@
+// Breton Base Phonetic Rules
+// ==========================
+// Phonetic rules for Breton (Brezhoneg).
+// Spoken by approximately 200,000 people in Brittany, France.
+//
+// Breton features:
+//   - Brythonic Celtic language
+//   - Initial consonant mutations (soft, spirant, hard)
+//   - Penultimate stress (usually)
+//   - Voiced/voiceless distinction
+//   - Palatal consonants
+//   - Vowel length distinction
+//   - Front rounded vowel /y/ (like French u)
+//   - Nasal vowels: /ã/, /ẽ/, /ĩ/, /õ/
+//
+// Orthography:
+//   - Latin alphabet with diacritics
+//   - c'h for /x/, zh for /z/ or /ð/
+//   - ñ for velar nasal word-finally
+//   - Multiple spelling standards
+//
+// Rule IDs: 15900-15999
+
+@name "Breton Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Breton"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15904, name: "u front rounded", weight: 0.05, group: breton_vowels, ipa: "/y/"]
+u -> y;
+
+[id: 15905, name: "eu rounded", weight: 0.05, group: breton_vowels, ipa: "/ø/"]
+eu -> ø;
+
+[id: 15906, name: "ou back", weight: 0.05, group: breton_vowels, ipa: "/u/"]
+ou -> u;
+
+// ============================================================
+// NASAL VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15910, name: "añ nasal a", weight: 0.05, group: breton_nasal, ipa: "/ã/"]
+añ -> ã;
+
+[id: 15911, name: "eñ nasal e", weight: 0.05, group: breton_nasal, ipa: "/ẽ/"]
+eñ -> ẽ;
+
+[id: 15912, name: "iñ nasal i", weight: 0.05, group: breton_nasal, ipa: "/ĩ/"]
+iñ -> ĩ;
+
+[id: 15913, name: "oñ nasal o", weight: 0.05, group: breton_nasal, ipa: "/õ/"]
+oñ -> õ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 15924, name: "c hard k", weight: 0.05, group: breton_stops, ipa: "/k/"]
+c -> k;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 15928, name: "ch affricate", weight: 0.05, group: breton_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 15929, name: "j voiced affricate", weight: 0.05, group: breton_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 15936, name: "zh", weight: 0.05, group: breton_fricatives, ipa: "/z/"]
+zh -> z;
+
+[id: 15937, name: "c'h velar fricative", weight: 0.05, group: breton_fricatives, ipa: "/x/"]
+c'h -> x;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 15944, name: "gn palatal", weight: 0.05, group: breton_nasals, ipa: "/ɲ/"]
+gn -> ɲ;
+
+[id: 15945, name: "ñ velar final", weight: 0.05, group: breton_nasals, ipa: "/ŋ/"]
+ñ -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 15951, name: "lh palatal", weight: 0.05, group: breton_liquids, ipa: "/ʎ/"]
+lh -> ʎ;
+
+[id: 15952, name: "r uvular", weight: 0.05, group: breton_liquids, ipa: "/ʁ/"]
+r -> ʁ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 15980, name: "brezhoneg breton", weight: 0.02, group: breton_common]
+brezhoneg -> bʁezõnek;
+
+[id: 15982, name: "trugarez thank you", weight: 0.02, group: breton_common]
+trugarez -> tʁyɡaʁes;
+
+[id: 15983, name: "ya yes", weight: 0.02, group: breton_common]
+ya -> ja;
+
+[id: 15984, name: "nann no", weight: 0.02, group: breton_common]
+nann -> nan;
+
+[id: 15985, name: "dour water", weight: 0.02, group: breton_common]
+dour -> duʁ;
+
+[id: 15986, name: "bara bread", weight: 0.02, group: breton_common]
+bara -> baʁa;
+
+[id: 15989, name: "bugel child", weight: 0.02, group: breton_common]
+bugel -> byɡel;

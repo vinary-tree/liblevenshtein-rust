@@ -1,0 +1,213 @@
+// Pashto Base Phonetic Rules
+// ==========================
+// Phonetic rules for Pashto (پښتو).
+// Spoken by approximately 50 million people in Afghanistan
+// and Pakistan.
+//
+// Pashto features:
+//   - Eastern Iranian language
+//   - Arabic-based script (Nastaliq)
+//   - Retroflex consonants (ḍ, ṭ, ṇ, ṛ)
+//   - Voiced uvular fricative (غ)
+//   - Distinctive /ɺ/ (retroflex lateral flap)
+//   - Gender distinction (masculine/feminine)
+//   - SOV word order
+//
+// Orthography:
+//   - Modified Arabic script
+//   - ښ for /ʂ/, ږ for /ʐ/
+//   - ړ for retroflex lateral flap
+//
+// Rule IDs: 14400-14499
+
+@name "Pashto Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Pashto"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14400, name: "ا a", weight: 0.05, group: pashto_vowels, ipa: "/ɑ/"]
+ا -> ɑ;
+
+[id: 14401, name: "ې e", weight: 0.05, group: pashto_vowels, ipa: "/e/"]
+ې -> e;
+
+[id: 14402, name: "ي i", weight: 0.05, group: pashto_vowels, ipa: "/i/"]
+ي -> i;
+
+[id: 14403, name: "و o", weight: 0.05, group: pashto_vowels, ipa: "/o/"]
+و -> o;
+
+[id: 14404, name: "و u", weight: 0.05, group: pashto_vowels, ipa: "/u/"]
+ۇ -> u;
+
+[id: 14405, name: "ۀ schwa", weight: 0.05, group: pashto_vowels, ipa: "/ə/"]
+ۀ -> ə;
+
+[id: 14406, name: "ای ai diphthong", weight: 0.05, group: pashto_vowels, ipa: "/ai/"]
+ای -> ai;
+
+[id: 14407, name: "اوو au diphthong", weight: 0.05, group: pashto_vowels, ipa: "/au/"]
+او -> au;
+
+// ============================================================
+// RETROFLEX CONSONANTS (weight 0.02)
+// Distinctive feature of Pashto
+// ============================================================
+
+[id: 14412, name: "ټ retroflex t", weight: 0.02, group: pashto_retroflex, ipa: "/ʈ/"]
+ټ -> ʈ;
+
+[id: 14413, name: "ډ retroflex d", weight: 0.02, group: pashto_retroflex, ipa: "/ɖ/"]
+ډ -> ɖ;
+
+[id: 14414, name: "ڼ retroflex n", weight: 0.02, group: pashto_retroflex, ipa: "/ɳ/"]
+ڼ -> ɳ;
+
+[id: 14415, name: "ړ retroflex lateral flap", weight: 0.02, group: pashto_retroflex, ipa: "/ɺ̢/"]
+ړ -> ɺ̢;
+
+[id: 14416, name: "ښ retroflex sh", weight: 0.02, group: pashto_retroflex, ipa: "/ʂ/"]
+ښ -> ʂ;
+
+[id: 14417, name: "ږ retroflex zh", weight: 0.02, group: pashto_retroflex, ipa: "/ʐ/"]
+ږ -> ʐ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 14420, name: "پ p", weight: 0.05, group: pashto_stops, ipa: "/p/"]
+پ -> p;
+
+[id: 14421, name: "ب b", weight: 0.05, group: pashto_stops, ipa: "/b/"]
+ب -> b;
+
+[id: 14422, name: "ت t", weight: 0.05, group: pashto_stops, ipa: "/t/"]
+ت -> t;
+
+[id: 14423, name: "د d", weight: 0.05, group: pashto_stops, ipa: "/d/"]
+د -> d;
+
+[id: 14424, name: "ک k", weight: 0.05, group: pashto_stops, ipa: "/k/"]
+ک -> k;
+
+[id: 14425, name: "ګ g", weight: 0.05, group: pashto_stops, ipa: "/ɡ/"]
+ګ -> ɡ;
+
+[id: 14426, name: "ق q uvular", weight: 0.05, group: pashto_stops, ipa: "/q/"]
+ق -> q;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 14430, name: "چ ch", weight: 0.05, group: pashto_affricates, ipa: "/t͡ʃ/"]
+چ -> t͡ʃ;
+
+[id: 14431, name: "ج j", weight: 0.05, group: pashto_affricates, ipa: "/d͡ʒ/"]
+ج -> d͡ʒ;
+
+[id: 14432, name: "څ ts", weight: 0.05, group: pashto_affricates, ipa: "/t͡s/"]
+څ -> t͡s;
+
+[id: 14433, name: "ځ dz", weight: 0.05, group: pashto_affricates, ipa: "/d͡z/"]
+ځ -> d͡z;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 14436, name: "ف f", weight: 0.05, group: pashto_fricatives, ipa: "/f/"]
+ف -> f;
+
+[id: 14437, name: "س s", weight: 0.05, group: pashto_fricatives, ipa: "/s/"]
+س -> s;
+
+[id: 14438, name: "ز z", weight: 0.05, group: pashto_fricatives, ipa: "/z/"]
+ز -> z;
+
+[id: 14439, name: "ش sh", weight: 0.05, group: pashto_fricatives, ipa: "/ʃ/"]
+ش -> ʃ;
+
+[id: 14440, name: "ژ zh", weight: 0.05, group: pashto_fricatives, ipa: "/ʒ/"]
+ژ -> ʒ;
+
+[id: 14441, name: "خ kh", weight: 0.05, group: pashto_fricatives, ipa: "/x/"]
+خ -> x;
+
+[id: 14442, name: "غ gh voiced uvular", weight: 0.05, group: pashto_fricatives, ipa: "/ɣ/"]
+غ -> ɣ;
+
+[id: 14443, name: "ه h", weight: 0.05, group: pashto_fricatives, ipa: "/h/"]
+ه -> h;
+
+[id: 14444, name: "ع pharyngeal", weight: 0.05, group: pashto_fricatives, ipa: "/ʕ/"]
+ع -> ʕ;
+
+[id: 14445, name: "ح pharyngeal h", weight: 0.05, group: pashto_fricatives, ipa: "/ħ/"]
+ح -> ħ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 14450, name: "م m", weight: 0.05, group: pashto_nasals, ipa: "/m/"]
+م -> m;
+
+[id: 14451, name: "ن n", weight: 0.05, group: pashto_nasals, ipa: "/n/"]
+ن -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 14456, name: "ل l", weight: 0.05, group: pashto_liquids, ipa: "/l/"]
+ل -> l;
+
+[id: 14457, name: "ر r", weight: 0.05, group: pashto_liquids, ipa: "/r/"]
+ر -> r;
+
+[id: 14458, name: "و w", weight: 0.05, group: pashto_approximants, ipa: "/w/"]
+و -> w;
+
+[id: 14459, name: "ی y", weight: 0.05, group: pashto_approximants, ipa: "/j/"]
+ی -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 14480, name: "پښتو pashto", weight: 0.02, group: pashto_common]
+پښتو -> pəʂto;
+
+[id: 14481, name: "سلام salam hello", weight: 0.02, group: pashto_common]
+سلام -> sɑlɑm;
+
+[id: 14482, name: "مننه manana thank you", weight: 0.02, group: pashto_common]
+مننه -> mɑnɑnɑ;
+
+[id: 14483, name: "هو ho yes", weight: 0.02, group: pashto_common]
+هو -> ho;
+
+[id: 14484, name: "نه na no", weight: 0.02, group: pashto_common]
+نه -> nɑ;
+
+[id: 14485, name: "اوبه oba water", weight: 0.02, group: pashto_common]
+اوبه -> obɑ;
+
+[id: 14486, name: "ډوډۍ dodai bread", weight: 0.02, group: pashto_common]
+ډوډۍ -> ɖoɖəi;
+
+[id: 14487, name: "کور kor house", weight: 0.02, group: pashto_common]
+کور -> kor;
+
+[id: 14488, name: "سړی sarai person", weight: 0.02, group: pashto_common]
+سړی -> sɑɺ̢əi;
+
+[id: 14489, name: "ماشوم mashom child", weight: 0.02, group: pashto_common]
+ماشوم -> mɑʃom;
+

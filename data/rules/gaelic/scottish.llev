@@ -1,0 +1,169 @@
+// Scots Gaelic Base Phonetic Rules
+// =================================
+// Phonetic rules for Scottish Gaelic (Gàidhlig).
+// Spoken by approximately 60,000 people in Scotland.
+//
+// Scots Gaelic features:
+//   - Goidelic Celtic language
+//   - Broad (velarized) and slender (palatalized) consonants
+//   - Lenition (aspiration) marked with h
+//   - Pre-aspiration before voiceless stops
+//   - Vowel length distinction: short /a ɛ i ɔ u/ vs long /aː ɛː iː ɔː uː/
+//   - Complex consonant mutations
+//   - Special diphthong /ɯː/ for 'ao'
+//
+// Orthography:
+//   - Latin alphabet with grave accents
+//   - h indicates lenition (bh, mh, dh, gh, etc.)
+//   - Broad vowels (a, o, u) vs slender vowels (e, i)
+//   - Consonant quality determined by adjacent vowels
+//
+// Rule IDs: 15800-15899
+
+@name "Scots Gaelic Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Scottish Gaelic"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15801, name: "e short", weight: 0.05, group: gaelic_short, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 15803, name: "o short", weight: 0.05, group: gaelic_short, ipa: "/ɔ/"]
+o -> ɔ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15808, name: "à long a", weight: 0.05, group: gaelic_long, ipa: "/aː/"]
+à -> aː;
+
+[id: 15809, name: "è long e", weight: 0.05, group: gaelic_long, ipa: "/ɛː/"]
+è -> ɛː;
+
+[id: 15810, name: "ì long i", weight: 0.05, group: gaelic_long, ipa: "/iː/"]
+ì -> iː;
+
+[id: 15811, name: "ò long o", weight: 0.05, group: gaelic_long, ipa: "/ɔː/"]
+ò -> ɔː;
+
+[id: 15812, name: "ù long u", weight: 0.05, group: gaelic_long, ipa: "/uː/"]
+ù -> uː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+[id: 15816, name: "ao diphthong", weight: 0.05, group: gaelic_diphthongs, ipa: "/ɯː/"]
+ao -> ɯː;
+
+[id: 15817, name: "eu diphthong", weight: 0.05, group: gaelic_diphthongs, ipa: "/ia/"]
+eu -> ia;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 15822, name: "p aspirated", weight: 0.05, group: gaelic_stops, ipa: "/pʰ/"]
+p -> pʰ;
+
+[id: 15823, name: "b", weight: 0.05, group: gaelic_stops, ipa: "/p/"]
+b -> p;
+
+[id: 15824, name: "t aspirated", weight: 0.05, group: gaelic_stops, ipa: "/tʰ/"]
+t -> tʰ;
+
+[id: 15825, name: "d", weight: 0.05, group: gaelic_stops, ipa: "/t/"]
+d -> t;
+
+[id: 15826, name: "c aspirated", weight: 0.05, group: gaelic_stops, ipa: "/kʰ/"]
+c -> kʰ;
+
+[id: 15827, name: "g", weight: 0.05, group: gaelic_stops, ipa: "/k/"]
+g -> k;
+
+// ============================================================
+// LENITED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 15830, name: "bh lenited v", weight: 0.05, group: gaelic_lenited, ipa: "/v/"]
+bh -> v;
+
+[id: 15831, name: "mh lenited v", weight: 0.05, group: gaelic_lenited, ipa: "/v/"]
+mh -> v;
+
+[id: 15832, name: "ch lenited velar", weight: 0.05, group: gaelic_lenited, ipa: "/x/"]
+ch -> x;
+
+[id: 15833, name: "dh lenited", weight: 0.05, group: gaelic_lenited, ipa: "/ɣ/"]
+dh -> ɣ;
+
+[id: 15834, name: "gh lenited", weight: 0.05, group: gaelic_lenited, ipa: "/ɣ/"]
+gh -> ɣ;
+
+[id: 15835, name: "fh silent", weight: 0.05, group: gaelic_lenited, ipa: ""]
+fh -> ;
+
+[id: 15836, name: "ph lenited", weight: 0.05, group: gaelic_lenited, ipa: "/f/"]
+ph -> f;
+
+[id: 15837, name: "sh lenited", weight: 0.05, group: gaelic_lenited, ipa: "/h/"]
+sh -> h;
+
+[id: 15838, name: "th lenited", weight: 0.05, group: gaelic_lenited, ipa: "/h/"]
+th -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 15850, name: "nn palatal", weight: 0.05, group: gaelic_nasals, ipa: "/ɲ/"]
+nn -> ɲ;
+
+[id: 15851, name: "ng velar", weight: 0.05, group: gaelic_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 15856, name: "l", weight: 0.05, group: gaelic_liquids, ipa: "/l̪/"]
+l -> l̪;
+
+[id: 15857, name: "ll velarized", weight: 0.05, group: gaelic_liquids, ipa: "/ɫ/"]
+ll -> ɫ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 15880, name: "gàidhlig gaelic", weight: 0.02, group: gaelic_common]
+gàidhlig -> kaːliɡʲ;
+
+[id: 15881, name: "halò hello", weight: 0.02, group: gaelic_common]
+halò -> halɔː;
+
+[id: 15882, name: "tapadh leat thank you", weight: 0.02, group: gaelic_common]
+tapadh -> tʰapəɣ;
+
+[id: 15883, name: "tha yes is", weight: 0.02, group: gaelic_common]
+tha -> ha;
+
+[id: 15884, name: "chan eil no is not", weight: 0.02, group: gaelic_common]
+chan -> xan;
+
+[id: 15885, name: "uisge water", weight: 0.02, group: gaelic_common]
+uisge -> uʃkʲə;
+
+[id: 15887, name: "taigh house", weight: 0.02, group: gaelic_common]
+taigh -> tʰaj;
+
+[id: 15888, name: "duine person", weight: 0.02, group: gaelic_common]
+duine -> tɯɲə;
+
+[id: 15889, name: "pàiste child", weight: 0.02, group: gaelic_common]
+pàiste -> pʰaːʃtʲə;

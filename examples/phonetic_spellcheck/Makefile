@@ -3,7 +3,7 @@
 #
 # Build and run the phonetic spellcheck demonstration.
 # This example demonstrates the PhoneticNormalizedDictionary API with
-# combined English phonetic rules (zompist + homophones + text_speak).
+# combined English phonetic rules (base + homophones + text_speak).
 #
 # This is a self-contained example that depends on the parent liblevenshtein
 # crate via a path dependency.
@@ -74,14 +74,14 @@ help:
 	@echo "========================"
 	@echo ""
 	@echo "Demonstrates the PhoneticNormalizedDictionary API with"
-	@echo "combined English phonetic rules (zompist + homophones + text_speak)."
+	@echo "combined English phonetic rules (base + homophones + text_speak)."
 	@echo ""
 	@echo "This is a self-contained example with its own Cargo.toml that"
 	@echo "depends on the parent liblevenshtein crate via path dependency."
 	@echo ""
 	@echo "Features:"
 	@echo "  - Dual-index architecture with BK-tree optimization"
-	@echo "  - Combined English rules: Zompist (62) + homophones (24) + text speak (31)"
+	@echo "  - Combined English rules: base (62) + homophones (24) + text speak (31)"
 	@echo "  - Fuzzy matching with edit distance queries"
 	@echo "  - Regex queries against normalized dictionary forms"
 	@echo "  - Phonetic pattern expansion"

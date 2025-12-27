@@ -1,0 +1,332 @@
+// Cherokee Base Phonetic Rules
+// ============================
+// Phonetic rules for Cherokee (ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ, Tsalagi Gawonihisdi).
+// Spoken by approximately 2,000 fluent speakers.
+//
+// Cherokee features:
+//   - Unique syllabary invented by Sequoyah (1821)
+//   - 85 syllable characters
+//   - Tonal (6 tones: low, high, rising, falling, lowfall, highfall)
+//   - No consonant clusters in native words
+//   - Complex verb morphology
+//   - /tl/ cluster exists (unusual cross-linguistically)
+//
+// Cherokee Syllabary:
+//   - Each character represents a syllable (CV or V)
+//   - Organized by consonant + vowel
+//   - Six vowels: a, e, i, o, u, v (nasalized schwa)
+//
+// Rule IDs: 7800-7999
+
+@name "Cherokee Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Cherokee syllabary"
+
+// ============================================================
+// VOWEL-ONLY SYLLABLES
+// First row of Cherokee syllabary
+// ============================================================
+
+[id: 7800, name: "a", weight: 0.05, group: cherokee_vowels, ipa: "/a/"]
+Ꭰ -> a;
+
+[id: 7801, name: "e", weight: 0.05, group: cherokee_vowels, ipa: "/e/"]
+Ꭱ -> e;
+
+[id: 7802, name: "i", weight: 0.05, group: cherokee_vowels, ipa: "/i/"]
+Ꭲ -> i;
+
+[id: 7803, name: "o", weight: 0.05, group: cherokee_vowels, ipa: "/o/"]
+Ꭳ -> o;
+
+[id: 7804, name: "u", weight: 0.05, group: cherokee_vowels, ipa: "/u/"]
+Ꭴ -> u;
+
+[id: 7805, name: "v nasalized", weight: 0.05, group: cherokee_vowels, ipa: "/ə̃/"]
+Ꭵ -> ə̃;
+
+// ============================================================
+// G- SYLLABLES
+// ============================================================
+
+[id: 7810, name: "ga", weight: 0.05, group: cherokee_g, ipa: "/ga/"]
+Ꭶ -> ga;
+
+[id: 7811, name: "ge", weight: 0.05, group: cherokee_g, ipa: "/ge/"]
+Ꭸ -> ge;
+
+[id: 7812, name: "gi", weight: 0.05, group: cherokee_g, ipa: "/gi/"]
+Ꭹ -> gi;
+
+[id: 7813, name: "go", weight: 0.05, group: cherokee_g, ipa: "/go/"]
+Ꭺ -> go;
+
+[id: 7814, name: "gu", weight: 0.05, group: cherokee_g, ipa: "/gu/"]
+Ꭻ -> gu;
+
+[id: 7815, name: "gv", weight: 0.05, group: cherokee_g, ipa: "/gə̃/"]
+Ꭼ -> gə̃;
+
+// ============================================================
+// H- SYLLABLES
+// ============================================================
+
+[id: 7820, name: "ha", weight: 0.05, group: cherokee_h, ipa: "/ha/"]
+Ꭽ -> ha;
+
+[id: 7821, name: "he", weight: 0.05, group: cherokee_h, ipa: "/he/"]
+Ꭾ -> he;
+
+[id: 7822, name: "hi", weight: 0.05, group: cherokee_h, ipa: "/hi/"]
+Ꭿ -> hi;
+
+[id: 7823, name: "ho", weight: 0.05, group: cherokee_h, ipa: "/ho/"]
+Ꮀ -> ho;
+
+[id: 7824, name: "hu", weight: 0.05, group: cherokee_h, ipa: "/hu/"]
+Ꮁ -> hu;
+
+[id: 7825, name: "hv", weight: 0.05, group: cherokee_h, ipa: "/hə̃/"]
+Ꮂ -> hə̃;
+
+// ============================================================
+// L- SYLLABLES
+// ============================================================
+
+[id: 7830, name: "la", weight: 0.05, group: cherokee_l, ipa: "/la/"]
+Ꮃ -> la;
+
+[id: 7831, name: "le", weight: 0.05, group: cherokee_l, ipa: "/le/"]
+Ꮄ -> le;
+
+[id: 7832, name: "li", weight: 0.05, group: cherokee_l, ipa: "/li/"]
+Ꮅ -> li;
+
+[id: 7833, name: "lo", weight: 0.05, group: cherokee_l, ipa: "/lo/"]
+Ꮆ -> lo;
+
+[id: 7834, name: "lu", weight: 0.05, group: cherokee_l, ipa: "/lu/"]
+Ꮇ -> lu;
+
+[id: 7835, name: "lv", weight: 0.05, group: cherokee_l, ipa: "/lə̃/"]
+Ꮈ -> lə̃;
+
+// ============================================================
+// M- SYLLABLES
+// ============================================================
+
+[id: 7840, name: "ma", weight: 0.05, group: cherokee_m, ipa: "/ma/"]
+Ꮉ -> ma;
+
+[id: 7841, name: "me", weight: 0.05, group: cherokee_m, ipa: "/me/"]
+Ꮊ -> me;
+
+[id: 7842, name: "mi", weight: 0.05, group: cherokee_m, ipa: "/mi/"]
+Ꮋ -> mi;
+
+[id: 7843, name: "mo", weight: 0.05, group: cherokee_m, ipa: "/mo/"]
+Ꮌ -> mo;
+
+[id: 7844, name: "mu", weight: 0.05, group: cherokee_m, ipa: "/mu/"]
+Ꮍ -> mu;
+
+// ============================================================
+// N- SYLLABLES
+// ============================================================
+
+[id: 7845, name: "na", weight: 0.05, group: cherokee_n, ipa: "/na/"]
+Ꮎ -> na;
+
+[id: 7846, name: "ne", weight: 0.05, group: cherokee_n, ipa: "/ne/"]
+Ꮑ -> ne;
+
+[id: 7847, name: "ni", weight: 0.05, group: cherokee_n, ipa: "/ni/"]
+Ꮒ -> ni;
+
+[id: 7848, name: "no", weight: 0.05, group: cherokee_n, ipa: "/no/"]
+Ꮓ -> no;
+
+[id: 7849, name: "nu", weight: 0.05, group: cherokee_n, ipa: "/nu/"]
+Ꮔ -> nu;
+
+[id: 7850, name: "nv", weight: 0.05, group: cherokee_n, ipa: "/nə̃/"]
+Ꮕ -> nə̃;
+
+// Special: nah
+[id: 7851, name: "nah", weight: 0.05, group: cherokee_n, ipa: "/nah/"]
+Ꮐ -> nah;
+
+// ============================================================
+// QU- SYLLABLES (kw sounds)
+// ============================================================
+
+[id: 7855, name: "qua", weight: 0.05, group: cherokee_qu, ipa: "/kʷa/"]
+Ꮖ -> kʷa;
+
+[id: 7856, name: "que", weight: 0.05, group: cherokee_qu, ipa: "/kʷe/"]
+Ꮗ -> kʷe;
+
+[id: 7857, name: "qui", weight: 0.05, group: cherokee_qu, ipa: "/kʷi/"]
+Ꮘ -> kʷi;
+
+[id: 7858, name: "quo", weight: 0.05, group: cherokee_qu, ipa: "/kʷo/"]
+Ꮙ -> kʷo;
+
+[id: 7859, name: "quu", weight: 0.05, group: cherokee_qu, ipa: "/kʷu/"]
+Ꮚ -> kʷu;
+
+[id: 7860, name: "quv", weight: 0.05, group: cherokee_qu, ipa: "/kʷə̃/"]
+Ꮛ -> kʷə̃;
+
+// ============================================================
+// S- SYLLABLES
+// ============================================================
+
+[id: 7865, name: "sa", weight: 0.05, group: cherokee_s, ipa: "/sa/"]
+Ꮜ -> sa;
+
+[id: 7866, name: "se", weight: 0.05, group: cherokee_s, ipa: "/se/"]
+Ꮞ -> se;
+
+[id: 7867, name: "si", weight: 0.05, group: cherokee_s, ipa: "/si/"]
+Ꮟ -> si;
+
+[id: 7868, name: "so", weight: 0.05, group: cherokee_s, ipa: "/so/"]
+Ꮠ -> so;
+
+[id: 7869, name: "su", weight: 0.05, group: cherokee_s, ipa: "/su/"]
+Ꮡ -> su;
+
+[id: 7870, name: "sv", weight: 0.05, group: cherokee_s, ipa: "/sə̃/"]
+Ꮢ -> sə̃;
+
+// ============================================================
+// D/T- SYLLABLES
+// ============================================================
+
+[id: 7875, name: "da", weight: 0.05, group: cherokee_d, ipa: "/ta/"]
+Ꮣ -> ta;
+
+[id: 7876, name: "de", weight: 0.05, group: cherokee_d, ipa: "/te/"]
+Ꮥ -> te;
+
+[id: 7877, name: "di", weight: 0.05, group: cherokee_d, ipa: "/ti/"]
+Ꮧ -> ti;
+
+[id: 7878, name: "do", weight: 0.05, group: cherokee_d, ipa: "/to/"]
+Ꮩ -> to;
+
+[id: 7879, name: "du", weight: 0.05, group: cherokee_d, ipa: "/tu/"]
+Ꮪ -> tu;
+
+[id: 7880, name: "dv", weight: 0.05, group: cherokee_d, ipa: "/tə̃/"]
+Ꮫ -> tə̃;
+
+// Special: ta, dla
+[id: 7881, name: "ta special", weight: 0.05, group: cherokee_d, ipa: "/ta/"]
+Ꮤ -> ta;
+
+[id: 7882, name: "dla", weight: 0.05, group: cherokee_d, ipa: "/tla/"]
+Ꮬ -> tla;
+
+// ============================================================
+// TL- SYLLABLES (lateral affricate)
+// ============================================================
+
+[id: 7885, name: "tla", weight: 0.05, group: cherokee_tl, ipa: "/tɬa/"]
+Ꮭ -> tɬa;
+
+[id: 7886, name: "tle", weight: 0.05, group: cherokee_tl, ipa: "/tɬe/"]
+Ꮮ -> tɬe;
+
+[id: 7887, name: "tli", weight: 0.05, group: cherokee_tl, ipa: "/tɬi/"]
+Ꮯ -> tɬi;
+
+[id: 7888, name: "tlo", weight: 0.05, group: cherokee_tl, ipa: "/tɬo/"]
+Ꮰ -> tɬo;
+
+[id: 7889, name: "tlu", weight: 0.05, group: cherokee_tl, ipa: "/tɬu/"]
+Ꮱ -> tɬu;
+
+[id: 7890, name: "tlv", weight: 0.05, group: cherokee_tl, ipa: "/tɬə̃/"]
+Ꮲ -> tɬə̃;
+
+// ============================================================
+// TS- SYLLABLES
+// ============================================================
+
+[id: 7895, name: "tsa", weight: 0.05, group: cherokee_ts, ipa: "/t͡sa/"]
+Ꮳ -> t͡sa;
+
+[id: 7896, name: "tse", weight: 0.05, group: cherokee_ts, ipa: "/t͡se/"]
+Ꮴ -> t͡se;
+
+[id: 7897, name: "tsi", weight: 0.05, group: cherokee_ts, ipa: "/t͡si/"]
+Ꮵ -> t͡si;
+
+[id: 7898, name: "tso", weight: 0.05, group: cherokee_ts, ipa: "/t͡so/"]
+Ꮶ -> t͡so;
+
+[id: 7899, name: "tsu", weight: 0.05, group: cherokee_ts, ipa: "/t͡su/"]
+Ꮷ -> t͡su;
+
+[id: 7900, name: "tsv", weight: 0.05, group: cherokee_ts, ipa: "/t͡sə̃/"]
+Ꮸ -> t͡sə̃;
+
+// ============================================================
+// W- SYLLABLES
+// ============================================================
+
+[id: 7905, name: "wa", weight: 0.05, group: cherokee_w, ipa: "/wa/"]
+Ꮹ -> wa;
+
+[id: 7906, name: "we", weight: 0.05, group: cherokee_w, ipa: "/we/"]
+Ꮺ -> we;
+
+[id: 7907, name: "wi", weight: 0.05, group: cherokee_w, ipa: "/wi/"]
+Ꮻ -> wi;
+
+[id: 7908, name: "wo", weight: 0.05, group: cherokee_w, ipa: "/wo/"]
+Ꮼ -> wo;
+
+[id: 7909, name: "wu", weight: 0.05, group: cherokee_w, ipa: "/wu/"]
+Ꮽ -> wu;
+
+[id: 7910, name: "wv", weight: 0.05, group: cherokee_w, ipa: "/wə̃/"]
+Ꮾ -> wə̃;
+
+// ============================================================
+// Y- SYLLABLES
+// ============================================================
+
+[id: 7915, name: "ya", weight: 0.05, group: cherokee_y, ipa: "/ja/"]
+Ꮿ -> ja;
+
+[id: 7916, name: "ye", weight: 0.05, group: cherokee_y, ipa: "/je/"]
+Ᏸ -> je;
+
+[id: 7917, name: "yi", weight: 0.05, group: cherokee_y, ipa: "/ji/"]
+Ᏹ -> ji;
+
+[id: 7918, name: "yo", weight: 0.05, group: cherokee_y, ipa: "/jo/"]
+Ᏺ -> jo;
+
+[id: 7919, name: "yu", weight: 0.05, group: cherokee_y, ipa: "/ju/"]
+Ᏻ -> ju;
+
+[id: 7920, name: "yv", weight: 0.05, group: cherokee_y, ipa: "/jə̃/"]
+Ᏼ -> jə̃;
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 7950, name: "tsalagi cherokee", weight: 0.02, group: cherokee_common]
+ᏣᎳᎩ -> t͡salagi;
+
+[id: 7951, name: "osiyo hello", weight: 0.02, group: cherokee_common]
+ᎣᏏᏲ -> osijo;
+
+[id: 7952, name: "wado thank you", weight: 0.02, group: cherokee_common]
+ᏩᏙ -> wato;

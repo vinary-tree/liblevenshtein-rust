@@ -163,11 +163,11 @@
 [id: 3437, name: "В to v", weight: 0.2, group: serbian_consonants]
 В -> v;
 
-[id: 3438, name: "г to g", weight: 0.2, group: serbian_consonants]
-г -> g;
+[id: 3438, name: "г to ɡ", weight: 0.2, group: serbian_consonants, ipa: "/ɡ/"]
+г -> ɡ;
 
-[id: 3439, name: "Г to g", weight: 0.2, group: serbian_consonants]
-Г -> g;
+[id: 3439, name: "Г to ɡ", weight: 0.2, group: serbian_consonants, ipa: "/ɡ/"]
+Г -> ɡ;
 
 [id: 3440, name: "д to d", weight: 0.2, group: serbian_consonants]
 д -> d;

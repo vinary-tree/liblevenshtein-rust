@@ -159,32 +159,20 @@ DZ -> d͡z;
 // STANDARD VOWELS
 // ============================================================
 
-[id: 3414, name: "a vowel", weight: 0.15, group: slovak_vowels]
-a -> a;
+// Note: Standard vowels a, e, i, o, u pass through unchanged by default.
+// Only transformative rules (uppercase normalization and y→i) are needed.
 
 [id: 3415, name: "A vowel", weight: 0.15, group: slovak_vowels]
 A -> a;
 
-[id: 3416, name: "e vowel", weight: 0.15, group: slovak_vowels]
-e -> e;
-
 [id: 3417, name: "E vowel", weight: 0.15, group: slovak_vowels]
 E -> e;
-
-[id: 3418, name: "i vowel", weight: 0.15, group: slovak_vowels]
-i -> i;
 
 [id: 3419, name: "I vowel", weight: 0.15, group: slovak_vowels]
 I -> i;
 
-[id: 3420, name: "o vowel", weight: 0.15, group: slovak_vowels]
-o -> o;
-
 [id: 3421, name: "O vowel", weight: 0.15, group: slovak_vowels]
 O -> o;
-
-[id: 3422, name: "u vowel", weight: 0.15, group: slovak_vowels]
-u -> u;
 
 [id: 3423, name: "U vowel", weight: 0.15, group: slovak_vowels]
 U -> u;
@@ -200,8 +188,8 @@ Y -> i;
 // CONSONANTS
 // ============================================================
 
-[id: 3426, name: "b consonant", weight: 0.2, group: slovak_consonants]
-b -> b;
+// Note: Standard consonants b, d, f, g, h, j, k, l, m, n, p, r, s, t, v, z
+// pass through unchanged by default. Only transformative rules are needed.
 
 [id: 3427, name: "B consonant", weight: 0.2, group: slovak_consonants]
 B -> b;
@@ -212,62 +200,32 @@ c -> t͡s;
 [id: 3429, name: "C consonant", weight: 0.2, group: slovak_consonants, ipa: "/t͡s/"]
 C -> t͡s;
 
-[id: 3430, name: "d consonant", weight: 0.2, group: slovak_consonants]
-d -> d;
-
 [id: 3431, name: "D consonant", weight: 0.2, group: slovak_consonants]
 D -> d;
-
-[id: 3432, name: "f consonant", weight: 0.2, group: slovak_consonants]
-f -> f;
 
 [id: 3433, name: "F consonant", weight: 0.2, group: slovak_consonants]
 F -> f;
 
-[id: 3434, name: "g consonant", weight: 0.2, group: slovak_consonants]
-g -> g;
-
-[id: 3435, name: "G consonant", weight: 0.2, group: slovak_consonants]
-G -> g;
-
-[id: 3436, name: "h consonant", weight: 0.2, group: slovak_consonants]
-h -> h;
+[id: 3435, name: "G consonant", weight: 0.2, group: slovak_consonants, ipa: "/ɡ/"]
+G -> ɡ;
 
 [id: 3437, name: "H consonant", weight: 0.2, group: slovak_consonants]
 H -> h;
 
-[id: 3438, name: "j consonant", weight: 0.2, group: slovak_consonants, ipa: "/j/"]
-j -> j;
-
 [id: 3439, name: "J consonant", weight: 0.2, group: slovak_consonants, ipa: "/j/"]
 J -> j;
-
-[id: 3440, name: "k consonant", weight: 0.2, group: slovak_consonants]
-k -> k;
 
 [id: 3441, name: "K consonant", weight: 0.2, group: slovak_consonants]
 K -> k;
 
-[id: 3442, name: "l consonant", weight: 0.2, group: slovak_consonants]
-l -> l;
-
 [id: 3443, name: "L consonant", weight: 0.2, group: slovak_consonants]
 L -> l;
-
-[id: 3444, name: "m consonant", weight: 0.2, group: slovak_consonants]
-m -> m;
 
 [id: 3445, name: "M consonant", weight: 0.2, group: slovak_consonants]
 M -> m;
 
-[id: 3446, name: "n consonant", weight: 0.2, group: slovak_consonants]
-n -> n;
-
 [id: 3447, name: "N consonant", weight: 0.2, group: slovak_consonants]
 N -> n;
-
-[id: 3448, name: "p consonant", weight: 0.2, group: slovak_consonants]
-p -> p;
 
 [id: 3449, name: "P consonant", weight: 0.2, group: slovak_consonants]
 P -> p;
@@ -278,26 +236,14 @@ q -> kv;
 [id: 3451, name: "Q consonant", weight: 0.2, group: slovak_consonants]
 Q -> kv;
 
-[id: 3452, name: "r consonant", weight: 0.2, group: slovak_consonants]
-r -> r;
-
 [id: 3453, name: "R consonant", weight: 0.2, group: slovak_consonants]
 R -> r;
-
-[id: 3454, name: "s consonant", weight: 0.2, group: slovak_consonants]
-s -> s;
 
 [id: 3455, name: "S consonant", weight: 0.2, group: slovak_consonants]
 S -> s;
 
-[id: 3456, name: "t consonant", weight: 0.2, group: slovak_consonants]
-t -> t;
-
 [id: 3457, name: "T consonant", weight: 0.2, group: slovak_consonants]
 T -> t;
-
-[id: 3458, name: "v consonant", weight: 0.2, group: slovak_consonants]
-v -> v;
 
 [id: 3459, name: "V consonant", weight: 0.2, group: slovak_consonants]
 V -> v;
@@ -313,9 +259,6 @@ x -> ks;
 
 [id: 3463, name: "X consonant", weight: 0.2, group: slovak_consonants]
 X -> ks;
-
-[id: 3464, name: "z consonant", weight: 0.2, group: slovak_consonants]
-z -> z;
 
 [id: 3465, name: "Z consonant", weight: 0.2, group: slovak_consonants]
 Z -> z;

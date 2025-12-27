@@ -36,6 +36,33 @@ pub mod distance;
 pub mod sync_compat;
 pub mod transducer;
 
+/// Time series distance metrics and indexing
+///
+/// This module provides implementations for time series similarity measures,
+/// particularly the Move-Split-Merge (MSM) metric. It includes:
+/// - Direct O(mn) dynamic programming implementation
+/// - Space-optimized O(min(m,n)) variant
+/// - Full DP matrix output for debugging/alignment
+///
+/// # Example
+///
+/// ```rust
+/// use liblevenshtein::time_series::MsmConfig;
+///
+/// let config = MsmConfig::new(1.0);  // c = 1.0
+/// let x = vec![1.0, 2.0, 3.0, 2.0];
+/// let y = vec![1.0, 2.5, 2.0];
+///
+/// let distance = config.distance(&x, &y);
+/// println!("MSM distance: {}", distance);
+/// ```
+///
+/// # References
+///
+/// Stefan, Alexandra, et al. "The move-split-merge metric for time series."
+/// IEEE transactions on Knowledge and Data Engineering 25.6 (2012): 1425-1438.
+pub mod time_series;
+
 /// Phonetic rewrite rules for approximate string matching
 ///
 /// This module provides verified phonetic transformation rules with formal

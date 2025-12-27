@@ -1,0 +1,402 @@
+// Taa (!Xóõ) Phonetic Rules
+// =========================
+// Phonetic rules for Taa (!Xóõ), also known as !Xóõ.
+// Spoken by approximately 4,000 people in Botswana and Namibia.
+//
+// Taa features:
+//   - Khoisan language family (Tuu branch)
+//   - WORLD'S LARGEST CONSONANT INVENTORY (160+ consonants)
+//   - 5 click types: bilabial, dental, alveolar, palatal, lateral
+//   - Multiple click modifications: voiced, nasal, aspirated, glottalized, labialized
+//   - 5 vowels with 4 phonation types (modal, breathy, pharyngealized, strident)
+//   - Complex tone system (4 level tones + contours)
+//
+// Click orthography (based on IPA):
+//   - ʘ for bilabial click
+//   - ǀ for dental click
+//   - ǃ for alveolar (postalveolar) click
+//   - ǂ for palatal click
+//   - ǁ for lateral click
+//
+// Click modifications:
+//   - Plain: ǀ, ǃ, ǂ, ǁ, ʘ
+//   - Voiced: ɡǀ, ɡǃ, ɡǂ, ɡǁ, ɡʘ (digraphs)
+//   - Nasal: ŋǀ, ŋǃ, ŋǂ, ŋǁ, ŋʘ (digraphs)
+//   - Aspirated: ǀʰ, ǃʰ, ǂʰ, ǁʰ, ʘʰ (digraphs)
+//   - Prenasalized voiced: ŋɡǀ, ŋɡǃ, ŋɡǂ, ŋɡǁ (trigraphs)
+//   - Nasal aspirated: ŋǀʰ, ŋǃʰ, ŋǂʰ, ŋǁʰ (trigraphs)
+//   - Prenasalized voiced aspirated: ŋɡǀʰ, ŋɡǃʰ, ŋɡǂʰ, ŋɡǁʰ (tetragraphs)
+//   - Prenasalized voiced aspirated labialized: ŋɡǀʰʷ, ŋɡǃʰʷ (pentagraphs)
+//   - Glottalized prenasalized voiced aspirated labialized: ŋɡǀʰʷʼ (hexagraphs)
+//
+// Rule IDs: 17000-17199
+
+@name "Taa (!Xóõ) Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Taa (!Xóõ) - world's most complex consonant inventory"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// 5 basic vowels with multiple phonation types
+// ============================================================
+
+[id: 17000, name: "a", weight: 0.05, group: taa_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 17001, name: "e", weight: 0.05, group: taa_vowels, ipa: "/e/"]
+e -> e;
+
+[id: 17002, name: "i", weight: 0.05, group: taa_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 17003, name: "o", weight: 0.05, group: taa_vowels, ipa: "/o/"]
+o -> o;
+
+[id: 17004, name: "u", weight: 0.05, group: taa_vowels, ipa: "/u/"]
+u -> u;
+
+// Breathy vowels (voice quality)
+[id: 17005, name: "breathy a", weight: 0.05, group: taa_vowels, ipa: "/a̤/"]
+ah -> a̤;
+
+[id: 17006, name: "breathy e", weight: 0.05, group: taa_vowels, ipa: "/e̤/"]
+eh -> e̤;
+
+[id: 17007, name: "breathy i", weight: 0.05, group: taa_vowels, ipa: "/i̤/"]
+ih -> i̤;
+
+[id: 17008, name: "breathy o", weight: 0.05, group: taa_vowels, ipa: "/o̤/"]
+oh -> o̤;
+
+[id: 17009, name: "breathy u", weight: 0.05, group: taa_vowels, ipa: "/ṳ/"]
+uh -> ṳ;
+
+// ============================================================
+// PLAIN CLICKS (weight 0.02) - Char patterns
+// Basic unmodified clicks
+// ============================================================
+
+[id: 17010, name: "bilabial click", weight: 0.02, group: taa_clicks_plain, ipa: "/ʘ/"]
+O -> ʘ;
+
+[id: 17011, name: "dental click", weight: 0.02, group: taa_clicks_plain, ipa: "/ǀ/"]
+| -> ǀ;
+
+[id: 17012, name: "alveolar click", weight: 0.02, group: taa_clicks_plain, ipa: "/ǃ/"]
+! -> ǃ;
+
+[id: 17013, name: "palatal click", weight: 0.02, group: taa_clicks_plain, ipa: "/ǂ/"]
+= -> ǂ;
+
+[id: 17014, name: "lateral click", weight: 0.02, group: taa_clicks_plain, ipa: "/ǁ/"]
+|| -> ǁ;
+
+// ============================================================
+// VOICED CLICKS (weight 0.02) - Digraph patterns
+// Voiced click consonants (with ɡ prefix)
+// ============================================================
+
+[id: 17020, name: "voiced bilabial click", weight: 0.02, group: taa_clicks_voiced, ipa: "/ɡʘ/"]
+gO -> ɡʘ;
+
+[id: 17021, name: "voiced dental click", weight: 0.02, group: taa_clicks_voiced, ipa: "/ɡǀ/"]
+g| -> ɡǀ;
+
+[id: 17022, name: "voiced alveolar click", weight: 0.02, group: taa_clicks_voiced, ipa: "/ɡǃ/"]
+g! -> ɡǃ;
+
+[id: 17023, name: "voiced palatal click", weight: 0.02, group: taa_clicks_voiced, ipa: "/ɡǂ/"]
+g= -> ɡǂ;
+
+[id: 17024, name: "voiced lateral click", weight: 0.02, group: taa_clicks_voiced, ipa: "/ɡǁ/"]
+g|| -> ɡǁ;
+
+// ============================================================
+// NASAL CLICKS (weight 0.02) - Digraph patterns
+// Nasal click consonants (with ŋ prefix)
+// ============================================================
+
+[id: 17030, name: "nasal bilabial click", weight: 0.02, group: taa_clicks_nasal, ipa: "/ŋʘ/"]
+nO -> ŋʘ;
+
+[id: 17031, name: "nasal dental click", weight: 0.02, group: taa_clicks_nasal, ipa: "/ŋǀ/"]
+n| -> ŋǀ;
+
+[id: 17032, name: "nasal alveolar click", weight: 0.02, group: taa_clicks_nasal, ipa: "/ŋǃ/"]
+n! -> ŋǃ;
+
+[id: 17033, name: "nasal palatal click", weight: 0.02, group: taa_clicks_nasal, ipa: "/ŋǂ/"]
+n= -> ŋǂ;
+
+[id: 17034, name: "nasal lateral click", weight: 0.02, group: taa_clicks_nasal, ipa: "/ŋǁ/"]
+n|| -> ŋǁ;
+
+// ============================================================
+// ASPIRATED CLICKS (weight 0.02) - Digraph patterns
+// Aspirated click consonants (with ʰ suffix)
+// ============================================================
+
+[id: 17040, name: "aspirated bilabial click", weight: 0.02, group: taa_clicks_aspirated, ipa: "/ʘʰ/"]
+Oh -> ʘʰ;
+
+[id: 17041, name: "aspirated dental click", weight: 0.02, group: taa_clicks_aspirated, ipa: "/ǀʰ/"]
+|h -> ǀʰ;
+
+[id: 17042, name: "aspirated alveolar click", weight: 0.02, group: taa_clicks_aspirated, ipa: "/ǃʰ/"]
+!h -> ǃʰ;
+
+[id: 17043, name: "aspirated palatal click", weight: 0.02, group: taa_clicks_aspirated, ipa: "/ǂʰ/"]
+=h -> ǂʰ;
+
+[id: 17044, name: "aspirated lateral click", weight: 0.02, group: taa_clicks_aspirated, ipa: "/ǁʰ/"]
+||h -> ǁʰ;
+
+// ============================================================
+// GLOTTALIZED CLICKS (weight 0.02) - Digraph patterns
+// Glottalized/ejective click consonants (with ʼ suffix)
+// ============================================================
+
+[id: 17050, name: "glottalized bilabial click", weight: 0.02, group: taa_clicks_glottalized, ipa: "/ʘʼ/"]
+O' -> ʘʼ;
+
+[id: 17051, name: "glottalized dental click", weight: 0.02, group: taa_clicks_glottalized, ipa: "/ǀʼ/"]
+|' -> ǀʼ;
+
+[id: 17052, name: "glottalized alveolar click", weight: 0.02, group: taa_clicks_glottalized, ipa: "/ǃʼ/"]
+!' -> ǃʼ;
+
+[id: 17053, name: "glottalized palatal click", weight: 0.02, group: taa_clicks_glottalized, ipa: "/ǂʼ/"]
+=' -> ǂʼ;
+
+[id: 17054, name: "glottalized lateral click", weight: 0.02, group: taa_clicks_glottalized, ipa: "/ǁʼ/"]
+||' -> ǁʼ;
+
+// ============================================================
+// PRENASALIZED VOICED CLICKS (weight 0.02) - Trigraph patterns
+// Prenasalized voiced clicks (ŋɡ + click)
+// ============================================================
+
+[id: 17060, name: "prenasalized voiced bilabial", weight: 0.02, group: taa_clicks_prenasal, ipa: "/ŋɡʘ/"]
+ngO -> ŋɡʘ;
+
+[id: 17061, name: "prenasalized voiced dental", weight: 0.02, group: taa_clicks_prenasal, ipa: "/ŋɡǀ/"]
+ng| -> ŋɡǀ;
+
+[id: 17062, name: "prenasalized voiced alveolar", weight: 0.02, group: taa_clicks_prenasal, ipa: "/ŋɡǃ/"]
+ng! -> ŋɡǃ;
+
+[id: 17063, name: "prenasalized voiced palatal", weight: 0.02, group: taa_clicks_prenasal, ipa: "/ŋɡǂ/"]
+ng= -> ŋɡǂ;
+
+[id: 17064, name: "prenasalized voiced lateral", weight: 0.02, group: taa_clicks_prenasal, ipa: "/ŋɡǁ/"]
+ng|| -> ŋɡǁ;
+
+// ============================================================
+// NASAL ASPIRATED CLICKS (weight 0.02) - Trigraph patterns
+// Nasal + aspirated clicks (ŋ + click + ʰ)
+// ============================================================
+
+[id: 17070, name: "nasal aspirated bilabial", weight: 0.02, group: taa_clicks_nasal_asp, ipa: "/ŋʘʰ/"]
+nOh -> ŋʘʰ;
+
+[id: 17071, name: "nasal aspirated dental", weight: 0.02, group: taa_clicks_nasal_asp, ipa: "/ŋǀʰ/"]
+n|h -> ŋǀʰ;
+
+[id: 17072, name: "nasal aspirated alveolar", weight: 0.02, group: taa_clicks_nasal_asp, ipa: "/ŋǃʰ/"]
+n!h -> ŋǃʰ;
+
+[id: 17073, name: "nasal aspirated palatal", weight: 0.02, group: taa_clicks_nasal_asp, ipa: "/ŋǂʰ/"]
+n=h -> ŋǂʰ;
+
+[id: 17074, name: "nasal aspirated lateral", weight: 0.02, group: taa_clicks_nasal_asp, ipa: "/ŋǁʰ/"]
+n||h -> ŋǁʰ;
+
+// ============================================================
+// PRENASALIZED VOICED ASPIRATED CLICKS (weight 0.02) - Tetragraph patterns
+// Prenasalized voiced + aspirated clicks (ŋɡ + click + ʰ)
+// ============================================================
+
+[id: 17080, name: "prenasal voiced asp bilabial", weight: 0.02, group: taa_clicks_prenasal_asp, ipa: "/ŋɡʘʰ/"]
+ngOh -> ŋɡʘʰ;
+
+[id: 17081, name: "prenasal voiced asp dental", weight: 0.02, group: taa_clicks_prenasal_asp, ipa: "/ŋɡǀʰ/"]
+ng|h -> ŋɡǀʰ;
+
+[id: 17082, name: "prenasal voiced asp alveolar", weight: 0.02, group: taa_clicks_prenasal_asp, ipa: "/ŋɡǃʰ/"]
+ng!h -> ŋɡǃʰ;
+
+[id: 17083, name: "prenasal voiced asp palatal", weight: 0.02, group: taa_clicks_prenasal_asp, ipa: "/ŋɡǂʰ/"]
+ng=h -> ŋɡǂʰ;
+
+[id: 17084, name: "prenasal voiced asp lateral", weight: 0.02, group: taa_clicks_prenasal_asp, ipa: "/ŋɡǁʰ/"]
+ng||h -> ŋɡǁʰ;
+
+// ============================================================
+// LABIALIZED PRENASALIZED VOICED CLICKS (weight 0.02) - Tetragraph patterns
+// Labialized prenasalized voiced clicks (ŋɡ + click + ʷ)
+// ============================================================
+
+[id: 17090, name: "lab prenasal voiced bilabial", weight: 0.02, group: taa_clicks_lab_prenasal, ipa: "/ŋɡʘʷ/"]
+ngOw -> ŋɡʘʷ;
+
+[id: 17091, name: "lab prenasal voiced dental", weight: 0.02, group: taa_clicks_lab_prenasal, ipa: "/ŋɡǀʷ/"]
+ng|w -> ŋɡǀʷ;
+
+[id: 17092, name: "lab prenasal voiced alveolar", weight: 0.02, group: taa_clicks_lab_prenasal, ipa: "/ŋɡǃʷ/"]
+ng!w -> ŋɡǃʷ;
+
+[id: 17093, name: "lab prenasal voiced palatal", weight: 0.02, group: taa_clicks_lab_prenasal, ipa: "/ŋɡǂʷ/"]
+ng=w -> ŋɡǂʷ;
+
+[id: 17094, name: "lab prenasal voiced lateral", weight: 0.02, group: taa_clicks_lab_prenasal, ipa: "/ŋɡǁʷ/"]
+ng||w -> ŋɡǁʷ;
+
+// ============================================================
+// PRENASALIZED VOICED ASPIRATED LABIALIZED CLICKS (weight 0.02) - Pentagraph patterns
+// These combine: prenasalization + voicing + aspiration + labialization
+// ============================================================
+
+[id: 17100, name: "prenasal voiced asp lab bilabial", weight: 0.02, group: taa_clicks_complex, ipa: "/ŋɡʘʰʷ/"]
+ngOhw -> ŋɡʘʰʷ;
+
+[id: 17101, name: "prenasal voiced asp lab dental", weight: 0.02, group: taa_clicks_complex, ipa: "/ŋɡǀʰʷ/"]
+ng|hw -> ŋɡǀʰʷ;
+
+[id: 17102, name: "prenasal voiced asp lab alveolar", weight: 0.02, group: taa_clicks_complex, ipa: "/ŋɡǃʰʷ/"]
+ng!hw -> ŋɡǃʰʷ;
+
+[id: 17103, name: "prenasal voiced asp lab palatal", weight: 0.02, group: taa_clicks_complex, ipa: "/ŋɡǂʰʷ/"]
+ng=hw -> ŋɡǂʰʷ;
+
+[id: 17104, name: "prenasal voiced asp lab lateral", weight: 0.02, group: taa_clicks_complex, ipa: "/ŋɡǁʰʷ/"]
+ng||hw -> ŋɡǁʰʷ;
+
+// ============================================================
+// GLOTTALIZED PRENASALIZED VOICED ASPIRATED LABIALIZED CLICKS (weight 0.02)
+// HEXAGRAPH patterns - Most complex click consonants
+// These combine: prenasalization + voicing + aspiration + labialization + glottalization
+// ============================================================
+
+[id: 17110, name: "glott prenasal voiced asp lab bilabial", weight: 0.02, group: taa_clicks_hexagraph, ipa: "/ŋɡʘʰʷʼ/"]
+ngOhw' -> ŋɡʘʰʷʼ;
+
+[id: 17111, name: "glott prenasal voiced asp lab dental", weight: 0.02, group: taa_clicks_hexagraph, ipa: "/ŋɡǀʰʷʼ/"]
+ng|hw' -> ŋɡǀʰʷʼ;
+
+[id: 17112, name: "glott prenasal voiced asp lab alveolar", weight: 0.02, group: taa_clicks_hexagraph, ipa: "/ŋɡǃʰʷʼ/"]
+ng!hw' -> ŋɡǃʰʷʼ;
+
+[id: 17113, name: "glott prenasal voiced asp lab palatal", weight: 0.02, group: taa_clicks_hexagraph, ipa: "/ŋɡǂʰʷʼ/"]
+ng=hw' -> ŋɡǂʰʷʼ;
+
+[id: 17114, name: "glott prenasal voiced asp lab lateral", weight: 0.02, group: taa_clicks_hexagraph, ipa: "/ŋɡǁʰʷʼ/"]
+ng||hw' -> ŋɡǁʰʷʼ;
+
+// ============================================================
+// NON-CLICK CONSONANTS (weight 0.05)
+// ============================================================
+
+// Stops
+[id: 17120, name: "p", weight: 0.05, group: taa_stops, ipa: "/p/"]
+p -> p;
+
+[id: 17121, name: "b", weight: 0.05, group: taa_stops, ipa: "/b/"]
+b -> b;
+
+[id: 17122, name: "t", weight: 0.05, group: taa_stops, ipa: "/t/"]
+t -> t;
+
+[id: 17123, name: "d", weight: 0.05, group: taa_stops, ipa: "/d/"]
+d -> d;
+
+[id: 17124, name: "k", weight: 0.05, group: taa_stops, ipa: "/k/"]
+k -> k;
+
+[id: 17125, name: "g", weight: 0.05, group: taa_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+[id: 17126, name: "glottal stop", weight: 0.05, group: taa_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// Aspirated stops
+[id: 17130, name: "ph aspirated", weight: 0.05, group: taa_aspirated, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 17131, name: "th aspirated", weight: 0.05, group: taa_aspirated, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 17132, name: "kh aspirated", weight: 0.05, group: taa_aspirated, ipa: "/kʰ/"]
+kh -> kʰ;
+
+// Ejective stops
+[id: 17135, name: "p ejective", weight: 0.05, group: taa_ejective, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 17136, name: "t ejective", weight: 0.05, group: taa_ejective, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 17137, name: "k ejective", weight: 0.05, group: taa_ejective, ipa: "/kʼ/"]
+k' -> kʼ;
+
+// Fricatives
+[id: 17140, name: "s", weight: 0.05, group: taa_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 17141, name: "z", weight: 0.05, group: taa_fricatives, ipa: "/z/"]
+z -> z;
+
+[id: 17142, name: "h", weight: 0.05, group: taa_fricatives, ipa: "/h/"]
+h -> h;
+
+// Nasals
+[id: 17145, name: "m", weight: 0.05, group: taa_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 17146, name: "n", weight: 0.05, group: taa_nasals, ipa: "/n/"]
+n -> n;
+
+// Approximants
+[id: 17150, name: "w", weight: 0.05, group: taa_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 17151, name: "y", weight: 0.05, group: taa_approximants, ipa: "/j/"]
+y -> j;
+
+[id: 17152, name: "l", weight: 0.05, group: taa_approximants, ipa: "/l/"]
+l -> l;
+
+// ============================================================
+// TONE MARKERS (weight 0.02)
+// Taa has a complex tone system with 4 level tones + contours
+// ============================================================
+
+[id: 17160, name: "high tone", weight: 0.02, group: taa_tones, ipa: "/˥/"]
+V1 -> ˥;
+
+[id: 17161, name: "mid-high tone", weight: 0.02, group: taa_tones, ipa: "/˦/"]
+V2 -> ˦;
+
+[id: 17162, name: "mid-low tone", weight: 0.02, group: taa_tones, ipa: "/˨/"]
+V3 -> ˨;
+
+[id: 17163, name: "low tone", weight: 0.02, group: taa_tones, ipa: "/˩/"]
+V4 -> ˩;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// Basic vocabulary examples
+// ============================================================
+
+[id: 17180, name: "!xoo language name", weight: 0.02, group: taa_common]
+!xoo -> ǃʰɔ̤ː;
+
+[id: 17181, name: "taa language name alt", weight: 0.02, group: taa_common]
+taa -> taː;
+
+[id: 17182, name: "water", weight: 0.02, group: taa_common]
+||'an -> ǁʼan;
+
+[id: 17183, name: "person", weight: 0.02, group: taa_common]
+!u -> ǃu;
+

@@ -150,8 +150,8 @@
 ژ -> ʒ;
 
 // Gaf - voiced velar stop (Persian addition)
-[id: 2583, name: "gaf", weight: 0.05, group: urdu_specific]
-گ -> g;
+[id: 2583, name: "gaf", weight: 0.05, group: urdu_specific, ipa: "/ɡ/"]
+گ -> ɡ;
 
 // ============================================================
 // RETROFLEX CONSONANTS (Indo-Aryan)

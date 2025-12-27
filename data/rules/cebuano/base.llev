@@ -1,0 +1,118 @@
+// Cebuano Base Phonetic Rules
+// ===========================
+// Phonetic rules for Cebuano (Sinugbuanon).
+// Spoken by approximately 27 million people in the Philippines
+// (Visayas and Mindanao regions).
+//
+// Cebuano features:
+//   - Austronesian language family (Philippine branch)
+//   - Simple phonology
+//   - 3 vowels: a, i, u (with allophones e, o)
+//   - Glottal stop is phonemic (written as -)
+//   - No tones
+//   - Stress is phonemic
+//
+// Orthography:
+//   - ng for /ŋ/
+//   - - or ' for glottal stop /ʔ/
+//   - Stress marked with acute accent
+//
+// Rule IDs: 11200-11299
+
+@name "Cebuano Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Cebuano"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (a->a, i->i, u->u, o->o)
+
+// Allophones (in unstressed positions or loanwords)
+[id: 11203, name: "e allophone", weight: 0.05, group: cebuano_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+// Stressed vowels
+[id: 11205, name: "á stressed", weight: 0.05, group: cebuano_stress, ipa: "/ˈa/"]
+á -> ˈa;
+
+[id: 11206, name: "í stressed", weight: 0.05, group: cebuano_stress, ipa: "/ˈi/"]
+í -> ˈi;
+
+[id: 11207, name: "ú stressed", weight: 0.05, group: cebuano_stress, ipa: "/ˈu/"]
+ú -> ˈu;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (p->p, b->b, t->t, d->d, k->k)
+
+[id: 11215, name: "g", weight: 0.05, group: cebuano_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// Glottal stop (very important in Cebuano)
+[id: 11216, name: "glottal stop hyphen", weight: 0.05, group: cebuano_stops, ipa: "/ʔ/"]
+- -> ʔ;
+
+[id: 11217, name: "glottal stop apostrophe", weight: 0.05, group: cebuano_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (s->s, h->h)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (m->m, n->n)
+
+[id: 11227, name: "ng velar nasal", weight: 0.05, group: cebuano_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (l->l, w->w)
+
+[id: 11231, name: "r flap", weight: 0.05, group: cebuano_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 11233, name: "y", weight: 0.05, group: cebuano_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 11250, name: "cebuano", weight: 0.02, group: cebuano_common]
+cebuano -> sibuʔano;
+
+[id: 11251, name: "bisaya visayan", weight: 0.02, group: cebuano_common]
+bisaya -> bisaja;
+
+[id: 11252, name: "maayong buntag good morning", weight: 0.02, group: cebuano_common]
+maayong buntag -> maʔajoŋ buntag;
+
+// Note: Identity mapping removed (salamat -> salamat)
+
+[id: 11254, name: "oo yes", weight: 0.02, group: cebuano_common]
+oo -> oʔo;
+
+// Note: Identity mapping removed (dili -> dili)
+
+[id: 11256, name: "tubig water", weight: 0.02, group: cebuano_common]
+tubig -> tubiɡ;
+
+[id: 11257, name: "pagkaon food", weight: 0.02, group: cebuano_common]
+pagkaon -> pagkaʔon;
+
+[id: 11258, name: "balay house", weight: 0.02, group: cebuano_common]
+balay -> balaj;
+
+// Note: Identity mapping removed (tawo -> tawo)
+
+[id: 11260, name: "bata child", weight: 0.02, group: cebuano_common]
+bata -> bataʔ;
+

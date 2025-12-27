@@ -1,0 +1,86 @@
+// Hawaiian Base Phonetic Rules
+// ============================
+// Phonetic rules for Hawaiian (ʻŌlelo Hawaiʻi).
+// One of the simplest phonological systems in the world.
+//
+// Hawaiian features:
+//   - 8 consonants: h, k, l, m, n, p, w, ʻ (glottal stop)
+//   - 5 vowels: a, e, i, o, u (short and long)
+//   - Long vowels marked with macron (kahakō): ā, ē, ī, ō, ū
+//   - Glottal stop (ʻokina) is a full consonant
+//   - CV syllable structure only
+//   - No consonant clusters
+//
+// Orthography:
+//   - Uses Latin script with ʻokina (ʻ) and kahakō (macron)
+//   - Sometimes written with apostrophe (') instead of ʻokina
+//
+// Rule IDs: 7000-7099
+
+@name "Hawaiian Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Hawaiian language"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+// Note: Identity mappings removed (a->a, e->e, i->i, o->o, u->u)
+// These vowels pass through unchanged in Hawaiian orthography.
+
+// ============================================================
+// LONG VOWELS - with macron (weight 0.05)
+// ============================================================
+
+[id: 7010, name: "a long", weight: 0.05, group: hawaiian_long_vowels, ipa: "/aː/"]
+ā -> aː;
+
+[id: 7011, name: "e long", weight: 0.05, group: hawaiian_long_vowels, ipa: "/eː/"]
+ē -> eː;
+
+[id: 7012, name: "i long", weight: 0.05, group: hawaiian_long_vowels, ipa: "/iː/"]
+ī -> iː;
+
+[id: 7013, name: "o long", weight: 0.05, group: hawaiian_long_vowels, ipa: "/oː/"]
+ō -> oː;
+
+[id: 7014, name: "u long", weight: 0.05, group: hawaiian_long_vowels, ipa: "/uː/"]
+ū -> uː;
+
+// ============================================================
+// CONSONANTS (weight 0.05)
+// Hawaiian has only 8 consonants - one of the smallest inventories
+// ============================================================
+// Note: Identity mappings removed (h->h, k->k, l->l, m->m, n->n, p->p, w->w)
+
+// W has allophonic variation: [w] after /o, u/, [v] after /i, e/
+[id: 7027, name: "w after i e as v", weight: 0.08, group: hawaiian_consonants, ipa: "/v/"]
+w -> v / [ie]_;
+
+// ============================================================
+// GLOTTAL STOP (ʻOKINA)
+// A full consonant in Hawaiian, written as ʻ (U+02BB)
+// ============================================================
+
+[id: 7030, name: "okina", weight: 0.05, group: hawaiian_glottal, ipa: "/ʔ/"]
+ʻ -> ʔ;
+
+// Alternative representations of glottal stop
+[id: 7031, name: "okina apostrophe", weight: 0.08, group: hawaiian_glottal, ipa: "/ʔ/"]
+' -> ʔ;
+
+[id: 7032, name: "okina backtick", weight: 0.08, group: hawaiian_glottal, ipa: "/ʔ/"]
+` -> ʔ;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// Hawaiian has many falling diphthongs
+// ============================================================
+// Note: Identity mappings removed (ai->ai, ae->ae, ao->ao, au->au, ei->ei, eu->eu, iu->iu, oi->oi, ou->ou, ui->ui)
+// These diphthongs pass through unchanged in Hawaiian orthography.
+
+// ============================================================
+// COMMON WORD PATTERNS
+// ============================================================
+// Note: Identity mappings removed (aloha->aloha, mahalo->mahalo, ohana->ohana)
+// These common words pass through unchanged.

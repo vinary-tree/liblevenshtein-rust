@@ -149,72 +149,20 @@ TH -> θ;
 // ============================================================
 // STANDARD VOWELS (including W and Y as vowels)
 // ============================================================
-
-[id: 4838, name: "a vowel", weight: 0.15, group: welsh_vowels]
-a -> a;
-
-[id: 4839, name: "A vowel", weight: 0.15, group: welsh_vowels]
-A -> a;
-
-[id: 4840, name: "e vowel", weight: 0.15, group: welsh_vowels]
-e -> e;
-
-[id: 4841, name: "E vowel", weight: 0.15, group: welsh_vowels]
-E -> e;
-
-[id: 4842, name: "i vowel", weight: 0.15, group: welsh_vowels]
-i -> i;
-
-[id: 4843, name: "I vowel", weight: 0.15, group: welsh_vowels]
-I -> i;
-
-[id: 4844, name: "o vowel", weight: 0.15, group: welsh_vowels]
-o -> o;
-
-[id: 4845, name: "O vowel", weight: 0.15, group: welsh_vowels]
-O -> o;
-
-[id: 4846, name: "u vowel", weight: 0.15, group: welsh_vowels]
-u -> u;
-
-[id: 4847, name: "U vowel", weight: 0.15, group: welsh_vowels]
-U -> u;
-
-// W as vowel (sounds like "oo")
-[id: 4848, name: "w vowel", weight: 0.15, group: welsh_vowels]
-w -> w;
-
-[id: 4849, name: "W vowel", weight: 0.15, group: welsh_vowels]
-W -> w;
-
-// Y as vowel (schwa or "i" sound)
-[id: 4850, name: "y vowel", weight: 0.15, group: welsh_vowels]
-y -> y;
-
-[id: 4851, name: "Y vowel", weight: 0.15, group: welsh_vowels]
-Y -> y;
+// Note: Standard vowels (a, e, i, o, u, w, y) pass through unchanged.
+// Identity mappings removed as they are no-ops - unmapped characters
+// pass through the phonetic transformation unchanged.
 
 // ============================================================
 // CONSONANTS
 // ============================================================
 
-[id: 4852, name: "b consonant", weight: 0.2, group: welsh_consonants]
-b -> b;
-
-[id: 4853, name: "B consonant", weight: 0.2, group: welsh_consonants]
-B -> b;
-
+// C → k (always pronounced as k in Welsh)
 [id: 4854, name: "c consonant", weight: 0.2, group: welsh_consonants]
 c -> k;
 
 [id: 4855, name: "C consonant", weight: 0.2, group: welsh_consonants]
 C -> k;
-
-[id: 4856, name: "d consonant", weight: 0.2, group: welsh_consonants]
-d -> d;
-
-[id: 4857, name: "D consonant", weight: 0.2, group: welsh_consonants]
-D -> d;
 
 // F in Welsh = v sound (ff = f sound)
 [id: 4858, name: "f consonant", weight: 0.2, group: welsh_consonants, ipa: "/v/"]
@@ -223,63 +171,113 @@ f -> v;
 [id: 4859, name: "F consonant", weight: 0.2, group: welsh_consonants, ipa: "/v/"]
 F -> v;
 
-[id: 4860, name: "g consonant", weight: 0.2, group: welsh_consonants]
-g -> g;
-
-[id: 4861, name: "G consonant", weight: 0.2, group: welsh_consonants]
-G -> g;
-
-[id: 4862, name: "h consonant", weight: 0.2, group: welsh_consonants]
-h -> h;
-
-[id: 4863, name: "H consonant", weight: 0.2, group: welsh_consonants]
-H -> h;
-
+// J → d͡ʒ (not native to Welsh, used in loanwords)
 [id: 4864, name: "j consonant", weight: 0.2, group: welsh_consonants, ipa: "/d͡ʒ/"]
 j -> d͡ʒ;
 
 [id: 4865, name: "J consonant", weight: 0.2, group: welsh_consonants, ipa: "/d͡ʒ/"]
 J -> d͡ʒ;
 
-[id: 4866, name: "l consonant", weight: 0.2, group: welsh_consonants]
-l -> l;
+// Note: Other consonants (b, d, g, h, l, m, n, p, r, s, t) pass through unchanged.
+// Identity mappings removed as they are no-ops - unmapped characters
+// pass through the phonetic transformation unchanged.
 
-[id: 4867, name: "L consonant", weight: 0.2, group: welsh_consonants]
-L -> l;
+// ============================================================
+// SOFT MUTATION (Treiglad Meddal)
+// ============================================================
+// Soft mutation is the most common mutation in Welsh, occurring after:
+// - Feminine singular nouns (with adjectives)
+// - Direct object of a verb
+// - After certain prepositions (am, ar, at, dan, dros, drwy, heb, hyd, i, o, tan, wrth)
+// - After dy (your), ei (his), and other possessives
+//
+// These rules provide alternative phonetic representations for mutated forms.
+// The input text may contain either the radical or mutated form.
 
-[id: 4868, name: "m consonant", weight: 0.2, group: welsh_consonants]
-m -> m;
+// p → b (e.g., pen → ben)
+[id: 4870, name: "soft mutation p to b", weight: 0.05, group: welsh_soft_mutation]
+p -> b;
 
-[id: 4869, name: "M consonant", weight: 0.2, group: welsh_consonants]
-M -> m;
+// t → d (e.g., tad → dad)
+[id: 4871, name: "soft mutation t to d", weight: 0.05, group: welsh_soft_mutation]
+t -> d;
 
-[id: 4870, name: "n consonant", weight: 0.2, group: welsh_consonants]
-n -> n;
+// c → ɡ (e.g., car → gar)
+// Note: Using IPA ɡ (U+0261) for consistency
+[id: 4872, name: "soft mutation c to g", weight: 0.05, group: welsh_soft_mutation, ipa: "/ɡ/"]
+c -> ɡ;
 
-[id: 4871, name: "N consonant", weight: 0.2, group: welsh_consonants]
-N -> n;
+// b → v (e.g., baban → faban) - Welsh 'f' sounds like 'v'
+[id: 4873, name: "soft mutation b to f/v", weight: 0.05, group: welsh_soft_mutation, ipa: "/v/"]
+b -> v;
 
-[id: 4872, name: "p consonant", weight: 0.2, group: welsh_consonants]
-p -> p;
+// d → ð (e.g., drws → ddrws) - Welsh 'dd' sounds like 'ð'
+[id: 4874, name: "soft mutation d to dd", weight: 0.05, group: welsh_soft_mutation, ipa: "/ð/"]
+d -> ð;
 
-[id: 4873, name: "P consonant", weight: 0.2, group: welsh_consonants]
-P -> p;
+// g → (deleted) (e.g., gardd → ardd)
+// Note: g is deleted in soft mutation, but we keep the mapping
+// as g -> g with low weight since deletion is context-dependent
+[id: 4875, name: "soft mutation g deletion", weight: 0.05, group: welsh_soft_mutation]
+g -> ;
 
-[id: 4874, name: "r consonant", weight: 0.2, group: welsh_consonants]
-r -> r;
+// m → v (e.g., mam → fam) - mutated to 'f' which sounds like 'v'
+[id: 4876, name: "soft mutation m to f/v", weight: 0.05, group: welsh_soft_mutation, ipa: "/v/"]
+m -> v;
 
-[id: 4875, name: "R consonant", weight: 0.2, group: welsh_consonants]
-R -> r;
+// ll → l (e.g., llaw → law) - ɬ becomes plain l
+[id: 4877, name: "soft mutation ll to l", weight: 0.05, group: welsh_soft_mutation]
+ɬ -> l;
 
-[id: 4876, name: "s consonant", weight: 0.2, group: welsh_consonants]
-s -> s;
+// rh → r (e.g., rhad → rad) - voiceless r becomes voiced r
+[id: 4878, name: "soft mutation rh to r", weight: 0.05, group: welsh_soft_mutation]
+r̥ -> r;
 
-[id: 4877, name: "S consonant", weight: 0.2, group: welsh_consonants]
-S -> s;
+// ============================================================
+// NASAL MUTATION (Treiglad Trwynol)
+// ============================================================
+// Occurs after 'yn' (in), 'fy' (my).
+// Less common than soft mutation.
 
-[id: 4878, name: "t consonant", weight: 0.2, group: welsh_consonants]
-t -> t;
+// p → mh (aspirated m)
+[id: 4880, name: "nasal mutation p to mh", weight: 0.08, group: welsh_nasal_mutation]
+p -> mh;
 
-[id: 4879, name: "T consonant", weight: 0.2, group: welsh_consonants]
-T -> t;
+// t → nh (aspirated n)
+[id: 4881, name: "nasal mutation t to nh", weight: 0.08, group: welsh_nasal_mutation]
+t -> nh;
+
+// c → ŋh (ngh - aspirated ng)
+[id: 4882, name: "nasal mutation c to ngh", weight: 0.08, group: welsh_nasal_mutation]
+c -> ŋh;
+
+// b → m
+[id: 4883, name: "nasal mutation b to m", weight: 0.08, group: welsh_nasal_mutation]
+b -> m;
+
+// d → n
+[id: 4884, name: "nasal mutation d to n", weight: 0.08, group: welsh_nasal_mutation]
+d -> n;
+
+// g → ŋ (ng)
+[id: 4885, name: "nasal mutation g to ng", weight: 0.08, group: welsh_nasal_mutation, ipa: "/ŋ/"]
+g -> ŋ;
+
+// ============================================================
+// ASPIRATE MUTATION (Treiglad Llaes)
+// ============================================================
+// Occurs after 'a' (and, with), 'â' (with), 'ei' (her), 'tri/tair' (three).
+// Only affects p, t, c.
+
+// p → f (ph in Welsh = f sound)
+[id: 4886, name: "aspirate mutation p to ph", weight: 0.08, group: welsh_aspirate_mutation]
+p -> f;
+
+// t → θ (th)
+[id: 4887, name: "aspirate mutation t to th", weight: 0.08, group: welsh_aspirate_mutation, ipa: "/θ/"]
+t -> θ;
+
+// c → x (ch)
+[id: 4888, name: "aspirate mutation c to ch", weight: 0.08, group: welsh_aspirate_mutation, ipa: "/x/"]
+c -> x;
 

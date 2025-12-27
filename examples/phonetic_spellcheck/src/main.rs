@@ -1,13 +1,13 @@
 //! Phonetic Spellcheck Demo
 //!
 //! Demonstrates the `PhoneticNormalizedDictionary` API with combined English rules
-//! (zompist + homophones + text_speak) and showcases fuzzy matching, regex queries,
+//! (base + homophones + text_speak) and showcases fuzzy matching, regex queries,
 //! and phonetic pattern expansion.
 //!
 //! # Features
 //!
 //! - **PhoneticNormalizedDictionary**: Dual-index architecture with BK-tree optimization
-//! - **Combined English Rules**: Zompist phonetic rules + homophones + text speak
+//! - **Combined English Rules**: Base phonetic rules + homophones + text speak
 //! - **Fuzzy Matching**: Edit distance queries with automatic BK-tree acceleration
 //! - **Regex Queries**: Pattern matching against normalized dictionary forms
 //! - **Phonetic Pattern Expansion**: Automatic generation of phonetic alternations
@@ -42,7 +42,7 @@ fn load_dictionary<P: AsRef<Path>>(path: P) -> Vec<String> {
 
 /// Combine all three English rule sets.
 fn combined_english_rules() -> RuleSetChar {
-    let mut combined = english::zompist().clone();
+    let mut combined = english::base().clone();
     combined.merge(english::homophones().clone());
     combined.merge(english::text_speak().clone());
     combined
@@ -64,7 +64,7 @@ fn main() {
     let combined_rules = combined_english_rules();
     let rule_count = combined_rules.len();
     println!(
-        "  Combined {} rules (zompist + homophones + text_speak)\n",
+        "  Combined {} rules (base + homophones + text_speak)\n",
         rule_count
     );
 

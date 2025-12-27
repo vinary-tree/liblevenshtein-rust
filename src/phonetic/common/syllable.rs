@@ -1,12 +1,13 @@
 //! Syllable condition types for context matching.
 
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Syllable condition for context matching.
 ///
 /// These conditions are evaluated at the position where a pattern matches
 /// to determine if the context constraint is satisfied.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SyllableCondition {
     /// Word has exactly one syllable (e.g., "fly", "ply")
     Monosyllable,
@@ -65,7 +66,7 @@ impl fmt::Display for SyllableCondition {
 /// A syllable expression with logical operators.
 ///
 /// Allows combining syllable conditions with AND, OR, NOT.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SyllableExpr {
     /// Simple syllable condition
     Cond(SyllableCondition),

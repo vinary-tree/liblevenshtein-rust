@@ -1,0 +1,219 @@
+// K'iche' Maya Base Phonetic Rules
+// ================================
+// Phonetic rules for K'iche' (Qatzijob'al), a Mayan language.
+// Spoken by approximately 1 million people in Guatemala.
+//
+// K'iche' features:
+//   - Ejective consonants: p', t', tz', ch', k', q'
+//   - Uvular consonants: q, q'
+//   - Implosive: b' (technically a glottalized plosive)
+//   - Vowel length distinction
+//   - Complex consonant clusters
+//   - VOS/VSO word order (verb-initial)
+//
+// Orthography (Academia de Lenguas Mayas):
+//   - ' after consonants for ejectives/implosives
+//   - tz for /ts/, ch for /tʃ/, x for /ʃ/
+//   - Double vowels for long vowels
+//
+// Rule IDs: 7600-7799
+
+@name "K'iche' Maya Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for K'iche' Maya"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 7600, name: "a short", weight: 0.05, group: kiche_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 7601, name: "e short", weight: 0.05, group: kiche_vowels, ipa: "/e/"]
+e -> e;
+
+[id: 7602, name: "i short", weight: 0.05, group: kiche_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 7603, name: "o short", weight: 0.05, group: kiche_vowels, ipa: "/o/"]
+o -> o;
+
+[id: 7604, name: "u short", weight: 0.05, group: kiche_vowels, ipa: "/u/"]
+u -> u;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// Marked by doubling in orthography
+// ============================================================
+
+[id: 7610, name: "aa long", weight: 0.05, group: kiche_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 7611, name: "ee long", weight: 0.05, group: kiche_long_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 7612, name: "ii long", weight: 0.05, group: kiche_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 7613, name: "oo long", weight: 0.05, group: kiche_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+[id: 7614, name: "uu long", weight: 0.05, group: kiche_long_vowels, ipa: "/uː/"]
+uu -> uː;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+[id: 7620, name: "p", weight: 0.05, group: kiche_stops, ipa: "/p/"]
+p -> p;
+
+[id: 7621, name: "t", weight: 0.05, group: kiche_stops, ipa: "/t/"]
+t -> t;
+
+[id: 7622, name: "k", weight: 0.05, group: kiche_stops, ipa: "/k/"]
+k -> k;
+
+[id: 7623, name: "q uvular", weight: 0.05, group: kiche_stops, ipa: "/q/"]
+q -> q;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 7625, name: "p' ejective", weight: 0.02, group: kiche_ejectives, ipa: "/pʼ/"]
+p' -> pʼ;
+
+[id: 7626, name: "t' ejective", weight: 0.02, group: kiche_ejectives, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 7627, name: "k' ejective", weight: 0.02, group: kiche_ejectives, ipa: "/kʼ/"]
+k' -> kʼ;
+
+[id: 7628, name: "q' ejective uvular", weight: 0.02, group: kiche_ejectives, ipa: "/qʼ/"]
+q' -> qʼ;
+
+// With modifier letter apostrophe
+[id: 7629, name: "pʼ ejective", weight: 0.02, group: kiche_ejectives, ipa: "/pʼ/"]
+pʼ -> pʼ;
+
+[id: 7630, name: "tʼ ejective", weight: 0.02, group: kiche_ejectives, ipa: "/tʼ/"]
+tʼ -> tʼ;
+
+[id: 7631, name: "kʼ ejective", weight: 0.02, group: kiche_ejectives, ipa: "/kʼ/"]
+kʼ -> kʼ;
+
+[id: 7632, name: "qʼ ejective uvular", weight: 0.02, group: kiche_ejectives, ipa: "/qʼ/"]
+qʼ -> qʼ;
+
+// ============================================================
+// IMPLOSIVE (weight 0.02)
+// b' is a glottalized bilabial (implosive-like)
+// ============================================================
+
+[id: 7635, name: "b' implosive", weight: 0.02, group: kiche_implosive, ipa: "/ɓ/"]
+b' -> ɓ;
+
+[id: 7636, name: "bʼ implosive", weight: 0.02, group: kiche_implosive, ipa: "/ɓ/"]
+bʼ -> ɓ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+// Plain affricates
+[id: 7640, name: "tz alveolar", weight: 0.05, group: kiche_affricates, ipa: "/t͡s/"]
+tz -> t͡s;
+
+[id: 7641, name: "ch postalveolar", weight: 0.05, group: kiche_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+// Ejective affricates
+[id: 7645, name: "tz' ejective", weight: 0.02, group: kiche_ejective_affricates, ipa: "/t͡sʼ/"]
+tz' -> t͡sʼ;
+
+[id: 7646, name: "ch' ejective", weight: 0.02, group: kiche_ejective_affricates, ipa: "/t͡ʃʼ/"]
+ch' -> t͡ʃʼ;
+
+[id: 7647, name: "tzʼ ejective", weight: 0.02, group: kiche_ejective_affricates, ipa: "/t͡sʼ/"]
+tzʼ -> t͡sʼ;
+
+[id: 7648, name: "chʼ ejective", weight: 0.02, group: kiche_ejective_affricates, ipa: "/t͡ʃʼ/"]
+chʼ -> t͡ʃʼ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 7650, name: "s", weight: 0.05, group: kiche_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 7651, name: "x postalveolar", weight: 0.05, group: kiche_fricatives, ipa: "/ʃ/"]
+x -> ʃ;
+
+[id: 7652, name: "j velar", weight: 0.05, group: kiche_fricatives, ipa: "/x/"]
+j -> x;
+
+[id: 7653, name: "h glottal", weight: 0.05, group: kiche_fricatives, ipa: "/h/"]
+h -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 7660, name: "m", weight: 0.05, group: kiche_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 7661, name: "n", weight: 0.05, group: kiche_nasals, ipa: "/n/"]
+n -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 7665, name: "l", weight: 0.05, group: kiche_liquids, ipa: "/l/"]
+l -> l;
+
+[id: 7666, name: "r tap", weight: 0.05, group: kiche_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 7667, name: "w", weight: 0.05, group: kiche_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 7668, name: "y", weight: 0.05, group: kiche_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// GLOTTAL STOP (weight 0.05)
+// ============================================================
+
+[id: 7670, name: "glottal stop", weight: 0.05, group: kiche_glottal, ipa: "/ʔ/"]
+' -> ʔ / [aeiou]_[aeiou];
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+// K'iche' and Popol Vuj related
+[id: 7680, name: "kiche", weight: 0.02, group: kiche_common]
+k'iche' -> kʼit͡ʃeʔ;
+
+[id: 7681, name: "popol vuj", weight: 0.02, group: kiche_common]
+popol -> popol;
+
+[id: 7682, name: "vuj book", weight: 0.02, group: kiche_common]
+wuj -> wux;
+
+// Basic words
+[id: 7685, name: "ja water", weight: 0.02, group: kiche_common]
+ja' -> xaʔ;
+
+[id: 7686, name: "ab rain", weight: 0.02, group: kiche_common]
+jab' -> xaɓ;
+
+[id: 7687, name: "qij day sun", weight: 0.02, group: kiche_common]
+q'ij -> qʼix;
+
+[id: 7688, name: "aq night", weight: 0.02, group: kiche_common]
+aq'ab' -> aqʼaɓ;

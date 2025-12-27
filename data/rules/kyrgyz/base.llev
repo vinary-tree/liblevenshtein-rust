@@ -1,0 +1,196 @@
+// Kyrgyz Base Phonetic Rules
+// ==========================
+// Phonetic rules for Kyrgyz (Кыргызча).
+// Spoken by approximately 4 million people in Kyrgyzstan.
+//
+// Kyrgyz features:
+//   - Turkic language (Kipchak branch)
+//   - Cyrillic script
+//   - Vowel harmony (front/back, rounded/unrounded)
+//   - Long vowels
+//   - No consonant clusters word-initially
+//   - SOV word order
+//
+// Orthography:
+//   - Cyrillic script
+//   - ө for /ø/, ү for /y/
+//   - ң for /ŋ/
+//   - ы for /ɯ/
+//
+// Rule IDs: 14800-14899
+
+@name "Kyrgyz Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Kyrgyz"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14800, name: "а a", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/ɑ/"]
+а -> ɑ;
+
+[id: 14801, name: "э e", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/e/"]
+э -> e;
+
+[id: 14802, name: "е ye", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/e/"]
+е -> e;
+
+[id: 14803, name: "и i", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/i/"]
+и -> i;
+
+[id: 14804, name: "о o", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/o/"]
+о -> o;
+
+[id: 14805, name: "ө ö", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/ø/"]
+ө -> ø;
+
+[id: 14806, name: "у u", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/u/"]
+у -> u;
+
+[id: 14807, name: "ү ü", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/y/"]
+ү -> y;
+
+[id: 14808, name: "ы ı back i", weight: 0.05, group: kyrgyz_short_vowels, ipa: "/ɯ/"]
+ы -> ɯ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14812, name: "аа aa", weight: 0.05, group: kyrgyz_long_vowels, ipa: "/ɑː/"]
+аа -> ɑː;
+
+[id: 14813, name: "ээ ee", weight: 0.05, group: kyrgyz_long_vowels, ipa: "/eː/"]
+ээ -> eː;
+
+[id: 14814, name: "ии ii", weight: 0.05, group: kyrgyz_long_vowels, ipa: "/iː/"]
+ии -> iː;
+
+[id: 14815, name: "оо oo", weight: 0.05, group: kyrgyz_long_vowels, ipa: "/oː/"]
+оо -> oː;
+
+[id: 14816, name: "өө öö", weight: 0.05, group: kyrgyz_long_vowels, ipa: "/øː/"]
+өө -> øː;
+
+[id: 14817, name: "уу uu", weight: 0.05, group: kyrgyz_long_vowels, ipa: "/uː/"]
+уу -> uː;
+
+[id: 14818, name: "үү üü", weight: 0.05, group: kyrgyz_long_vowels, ipa: "/yː/"]
+үү -> yː;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 14822, name: "п p", weight: 0.05, group: kyrgyz_stops, ipa: "/p/"]
+п -> p;
+
+[id: 14823, name: "б b", weight: 0.05, group: kyrgyz_stops, ipa: "/b/"]
+б -> b;
+
+[id: 14824, name: "т t", weight: 0.05, group: kyrgyz_stops, ipa: "/t/"]
+т -> t;
+
+[id: 14825, name: "д d", weight: 0.05, group: kyrgyz_stops, ipa: "/d/"]
+д -> d;
+
+[id: 14826, name: "к k", weight: 0.05, group: kyrgyz_stops, ipa: "/k/"]
+к -> k;
+
+[id: 14827, name: "г g", weight: 0.05, group: kyrgyz_stops, ipa: "/ɡ/"]
+г -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 14830, name: "ч ch", weight: 0.05, group: kyrgyz_affricates, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 14831, name: "ж j", weight: 0.05, group: kyrgyz_affricates, ipa: "/d͡ʒ/"]
+ж -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 14834, name: "ф f", weight: 0.05, group: kyrgyz_fricatives, ipa: "/f/"]
+ф -> f;
+
+[id: 14835, name: "в v", weight: 0.05, group: kyrgyz_fricatives, ipa: "/v/"]
+в -> v;
+
+[id: 14836, name: "с s", weight: 0.05, group: kyrgyz_fricatives, ipa: "/s/"]
+с -> s;
+
+[id: 14837, name: "з z", weight: 0.05, group: kyrgyz_fricatives, ipa: "/z/"]
+з -> z;
+
+[id: 14838, name: "ш sh", weight: 0.05, group: kyrgyz_fricatives, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 14839, name: "х kh", weight: 0.05, group: kyrgyz_fricatives, ipa: "/x/"]
+х -> x;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 14842, name: "м m", weight: 0.05, group: kyrgyz_nasals, ipa: "/m/"]
+м -> m;
+
+[id: 14843, name: "н n", weight: 0.05, group: kyrgyz_nasals, ipa: "/n/"]
+н -> n;
+
+[id: 14844, name: "ң ng velar nasal", weight: 0.05, group: kyrgyz_nasals, ipa: "/ŋ/"]
+ң -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 14848, name: "л l", weight: 0.05, group: kyrgyz_liquids, ipa: "/l/"]
+л -> l;
+
+[id: 14849, name: "р r", weight: 0.05, group: kyrgyz_liquids, ipa: "/r/"]
+р -> r;
+
+[id: 14850, name: "й y", weight: 0.05, group: kyrgyz_approximants, ipa: "/j/"]
+й -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 14880, name: "кыргызча kyrgyz", weight: 0.02, group: kyrgyz_common]
+кыргызча -> qɯrɣɯzt͡ʃɑ;
+
+[id: 14881, name: "салам salam hello", weight: 0.02, group: kyrgyz_common]
+салам -> sɑlɑm;
+
+[id: 14882, name: "рахмат rakhmat thank you", weight: 0.02, group: kyrgyz_common]
+рахмат -> rɑxmɑt;
+
+[id: 14883, name: "ооба ooba yes", weight: 0.02, group: kyrgyz_common]
+ооба -> oːbɑ;
+
+[id: 14884, name: "жок jok no", weight: 0.02, group: kyrgyz_common]
+жок -> d͡ʒok;
+
+[id: 14885, name: "суу suu water", weight: 0.02, group: kyrgyz_common]
+суу -> suː;
+
+[id: 14886, name: "нан nan bread", weight: 0.02, group: kyrgyz_common]
+нан -> nɑn;
+
+[id: 14887, name: "үй üi house", weight: 0.02, group: kyrgyz_common]
+үй -> yj;
+
+[id: 14888, name: "адам adam person", weight: 0.02, group: kyrgyz_common]
+адам -> ɑdɑm;
+
+[id: 14889, name: "бала bala child", weight: 0.02, group: kyrgyz_common]
+бала -> bɑlɑ;
+

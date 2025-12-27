@@ -1,0 +1,156 @@
+// Indian English Phonetic Rules
+// =============================
+// Dialect-specific rules for Indian English phonetic transformations.
+// Indian English is spoken by 125M+ L2 speakers across the Indian subcontinent.
+//
+// Key Indian English Features:
+//   - Retroflex consonants: /t/ and /d/ realized as retroflex [ʈ] [ɖ]
+//   - TH-stopping: θ→t̪, ð→d̪ (dental stops instead of fricatives)
+//   - No aspiration contrast in English context
+//   - Monophthongization: some diphthongs become pure vowels
+//   - Syllable-timed rhythm (vs stress-timed in GA/RP)
+//   - Clear L in all positions (no dark L)
+//   - Distinct V and W (unlike some other varieties)
+//
+// Note: These rules layer on top of the shared zompist base rules.
+//
+// Rule IDs: 17200-17299
+
+@name "Indian English Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Indian English"
+
+// Import the shared base rules
+@include "english/base.llev"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [aeiou]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+
+// ============================================================
+// RETROFLEX CONSONANTS
+// ============================================================
+// Indian English typically uses retroflex stops where GA/RP use
+// alveolar stops. This is influenced by Hindi, Tamil, Telugu, etc.
+
+// T → ʈ (voiceless retroflex stop)
+[id: 17200, name: "t retroflex", weight: 0.1, group: indian_retroflex, ipa: "/ʈ/"]
+t -> ʈ;
+
+// D → ɖ (voiced retroflex stop)
+[id: 17201, name: "d retroflex", weight: 0.1, group: indian_retroflex, ipa: "/ɖ/"]
+d -> ɖ;
+
+// N after retroflex often becomes retroflex nasal
+[id: 17202, name: "n retroflex after retroflex", weight: 0.15, group: indian_retroflex, ipa: "/ɳ/"]
+n -> ɳ / [ʈɖ]_;
+
+// ============================================================
+// TH-STOPPING (Dental Fricatives → Dental Stops)
+// ============================================================
+// Indian English speakers often realize θ and ð as dental stops
+// rather than fricatives. This is one of the most distinctive
+// features of Indian English.
+
+// θ → t̪ (voiceless dental stop) - "think" → [t̪ɪŋk]
+[id: 17210, name: "th voiceless to dental stop", weight: 0.05, group: indian_th, ipa: "/t̪/"]
+th -> t̪;
+
+// ð → d̪ (voiced dental stop) - "the" → [d̪ə], "this" → [d̪ɪs]
+// Note: This rule targets the output of base rules that produce ð
+[id: 17211, name: "th voiced to dental stop", weight: 0.05, group: indian_th, ipa: "/d̪/"]
+ð -> d̪;
+
+// Also handle the voiceless fricative from base rules
+[id: 17212, name: "theta to dental stop", weight: 0.05, group: indian_th, ipa: "/t̪/"]
+θ -> t̪;
+
+// ============================================================
+// VOWEL MONOPHTHONGIZATION
+// ============================================================
+// Some diphthongs in Indian English tend to be monophthongized
+// or have different qualities than GA/RP.
+
+// FACE vowel: eɪ → eː (pure long vowel)
+// "say" [seː], "day" [deː], "make" [meːk]
+[id: 17220, name: "face monophthong", weight: 0.1, group: indian_vowels, ipa: "/eː/"]
+eɪ -> eː;
+
+// GOAT vowel: oʊ → oː (pure long vowel)
+// "go" [ɡoː], "no" [noː], "boat" [boːʈ]
+[id: 17221, name: "goat monophthong", weight: 0.1, group: indian_vowels, ipa: "/oː/"]
+oʊ -> oː;
+
+// GOOSE vowel often stays as [uː]
+[id: 17222, name: "goose vowel", weight: 0.15, group: indian_vowels, ipa: "/uː/"]
+oo -> uː;
+
+// ============================================================
+// R REALIZATION
+// ============================================================
+// Indian English is typically rhotic (R is pronounced in all positions)
+// but often as a tap or trill rather than the GA approximant.
+
+// R as alveolar tap in most positions
+[id: 17230, name: "r to tap", weight: 0.1, group: indian_rhotic, ipa: "/ɾ/"]
+r -> ɾ;
+
+// R as retroflex approximant in some contexts (alternative)
+[id: 17231, name: "r to retroflex approximant", weight: 0.15, group: indian_rhotic, ipa: "/ɻ/"]
+r -> ɻ;
+
+// ============================================================
+// L REALIZATION (Clear L)
+// ============================================================
+// Indian English uses clear [l] in all positions, unlike GA which
+// uses dark [ɫ] in coda positions.
+// Note: Clear L is the default; unmapped [l] passes through unchanged.
+// No rule needed as base rules don't darken L.
+
+// ============================================================
+// ASPIRATION PATTERNS
+// ============================================================
+// Indian languages have contrastive aspiration, but this doesn't
+// always transfer cleanly to English. Unaspirated stops are common.
+// Note: Unaspirated stops are the default output; no explicit rules
+// needed as characters pass through unchanged.
+
+// ============================================================
+// VOWEL QUALITY ADJUSTMENTS
+// ============================================================
+
+// TRAP vowel: typically [æ] or [ɛ]
+[id: 17260, name: "trap vowel", weight: 0.15, group: indian_vowels, ipa: "/æ/"]
+a -> æ / _$CONSONANT$CONSONANT;
+
+// STRUT vowel: often [ʌ] or [ə]
+[id: 17261, name: "strut vowel", weight: 0.2, group: indian_vowels, ipa: "/ʌ/"]
+u -> ʌ / $CONSONANT_$CONSONANT;
+
+// LOT vowel: typically [ɔ] (no LOT-THOUGHT merger)
+[id: 17262, name: "lot vowel", weight: 0.15, group: indian_vowels, ipa: "/ɔ/"]
+o -> ɔ / _$CONSONANT;
+
+// ============================================================
+// CONSONANT CLUSTER SIMPLIFICATION
+// ============================================================
+// Some consonant clusters may be simplified or have epenthetic vowels.
+
+// Final cluster simplification (common in casual speech)
+[id: 17270, name: "nd cluster simplify", weight: 0.2, group: indian_clusters]
+nd -> n / _#;
+
+[id: 17271, name: "ld cluster simplify", weight: 0.2, group: indian_clusters]
+ld -> l / _#;
+
+// ============================================================
+// W-V DISTINCTION
+// ============================================================
+// Indian English typically maintains a clear distinction between
+// W and V, unlike some other L2 varieties (e.g., Germanic L2 speakers).
+// Note: No rules needed as V and W pass through unchanged by default.
+

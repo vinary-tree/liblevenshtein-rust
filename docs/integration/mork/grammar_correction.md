@@ -6,7 +6,7 @@
 
 > ⚠️ **PROPOSAL NOTICE**: This document describes a **proposed** `src/grammar/` module for CFG-based grammatical error correction. This structure is a design specification for future implementation.
 >
-> **Current Implementation**: liblevenshtein v0.8.0 provides phonetic rules (`english::zompist()`, `llev!` macro) that handle spelling-level corrections, but not grammar-level corrections.
+> **Current Implementation**: liblevenshtein v0.8.0 provides phonetic rules (`english::base()`, `llev!` macro) that handle spelling-level corrections, but not grammar-level corrections.
 
 This document describes how MORK's pattern matching capabilities can serve as the rule engine for CFG-based grammatical error correction, building on the WFST infrastructure from Phases A-C.
 
@@ -26,7 +26,7 @@ Before implementing full grammar correction, liblevenshtein v0.8.0 provides:
 
 | Feature | API | Description |
 |---------|-----|-------------|
-| Phonetic rules | `english::zompist()` | 62 orthographic spelling rules |
+| Phonetic rules | `english::base()` | 62 orthographic spelling rules |
 | Homophone handling | `english::homophones()` | Homophone pair rules |
 | Text-speak expansion | `english::text_speak()` | Text-speak to standard spelling |
 | Rule compilation | `llev!` macro | Compile-time phonetic rules |
@@ -40,7 +40,7 @@ use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
 use liblevenshtein::phonetic::verified::rules_to_nfa_char;
 
 // Phonetic rules for spelling correction
-let rules = english::zompist();
+let rules = english::base();
 let nfa = rules_to_nfa_char(&rules.rules);
 let product = ProductAutomatonChar::new(nfa, 2);
 

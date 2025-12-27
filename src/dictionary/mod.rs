@@ -32,6 +32,11 @@
 //!   - Thread-safe insert AND remove operations
 //!   - ~5% performance overhead vs byte-level, 4x memory for edges
 //!
+//! - **Need u64 sequences or f64 time series?** Use [`DynamicDawgU64`](dynamic_dawg_u64::DynamicDawgU64)
+//!   - 8-byte edge labels for token sequences, vocabulary IDs, or hash values
+//!   - f64 convenience API: `insert_f64()`, `contains_f64()` for time series
+//!   - Thread-safe insert AND remove operations
+//!
 //! - **Need substring/infix search?** Use [`SuffixAutomaton`](suffix_automaton::SuffixAutomaton)
 //!   - Find patterns anywhere in text (not just prefixes)
 //!   - Specialized for suffix-based matching
@@ -50,6 +55,7 @@
 //! | **[DoubleArrayTrieChar]** | Unicode text | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ✅ Insert-only | ✅ Character-level |
 //! | **[DynamicDawg]** | Insert + Remove | ⭐⭐⭐ | ⭐⭐⭐ | ✅ Thread-safe | Byte-level |
 //! | **[DynamicDawgChar]** | Unicode + Insert + Remove | ⭐⭐⭐ | ⭐⭐⭐ | ✅ Thread-safe | ✅ Character-level |
+//! | **[DynamicDawgU64]** | Token sequences, time series | ⭐⭐⭐ | ⭐⭐ | ✅ Thread-safe | 64-bit labels |
 //! | **[PathMapDictionary]** | Frequent updates (requires `pathmap-backend` feature) | ⭐⭐ | ⭐⭐ | ✅ Thread-safe | Byte-level |
 //! | **[PathMapDictionaryChar]** | Unicode + updates (requires `pathmap-backend` feature) | ⭐⭐ | ⭐⭐ | ✅ Thread-safe | ✅ Character-level |
 //! | **[DawgDictionary]** | Static dictionaries | ⭐⭐⭐ | ⭐⭐⭐ | ❌ | Byte-level |
@@ -61,6 +67,7 @@
 //! [DoubleArrayTrieChar]: double_array_trie_char::DoubleArrayTrieChar
 //! [DynamicDawg]: dynamic_dawg::DynamicDawg
 //! [DynamicDawgChar]: dynamic_dawg_char::DynamicDawgChar
+//! [DynamicDawgU64]: dynamic_dawg_u64::DynamicDawgU64
 //! [PathMapDictionary]: pathmap::PathMapDictionary
 //! [PathMapDictionaryChar]: pathmap_char::PathMapDictionaryChar
 //! [DawgDictionary]: dawg::DawgDictionary
@@ -135,6 +142,8 @@ pub mod double_array_trie_zipper;
 pub mod dynamic_dawg;
 pub mod dynamic_dawg_char;
 pub mod dynamic_dawg_char_zipper;
+pub mod dynamic_dawg_u64;
+pub mod dynamic_dawg_u64_zipper;
 pub mod dynamic_dawg_zipper;
 pub mod factory;
 pub mod iterator;

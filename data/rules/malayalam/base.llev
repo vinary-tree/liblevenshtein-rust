@@ -1,0 +1,382 @@
+// Malayalam Base Phonetic Rules
+// =============================
+// Phonetic rules for Malayalam (മലയാളം) script romanization.
+// Maps Malayalam letters to Latin/IPA equivalents for phonetic matching.
+//
+// Malayalam is a Dravidian language spoken by approximately 34 million
+// people, primarily in the state of Kerala and Lakshadweep, India.
+//
+// The Malayalam script is a Brahmic abugida with highly rounded forms,
+// historically derived from the Grantha script.
+//
+// Key features:
+//   - 15 vowels (independent and matra forms)
+//   - 36+ consonants in standard arrangement
+//   - Inherent /a/ vowel (often reduced to schwa)
+//   - ള (retroflex lateral approximant)
+//   - ഴ (retroflex approximant - unique sound)
+//   - റ (alveolar trill)
+//   - ഩ (alveolar nasal, archaic)
+//   - Gemination is phonemic
+//   - Complex consonant clusters (chillu letters)
+//
+// Rule IDs: 17500-17599
+
+@name "Malayalam Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Malayalam script"
+
+// ============================================================
+// MALAYALAM-SPECIFIC CONSONANTS (highest priority)
+// ============================================================
+
+// ള - retroflex lateral approximant (Dravidian feature)
+[id: 17500, name: "La retroflex", weight: 0.02, group: malayalam_special, ipa: "/ɭ/"]
+ള -> ɭ;
+
+// ഴ - retroflex approximant (unique to Dravidian, esp. Malayalam/Tamil)
+// Often described as between "l" and "r" with retroflex tongue position
+[id: 17501, name: "zha retroflex", weight: 0.02, group: malayalam_special, ipa: "/ɻ/"]
+ഴ -> ɻ;
+
+// റ - alveolar trill (distinct from ര which is a tap)
+[id: 17502, name: "Rra alveolar trill", weight: 0.02, group: malayalam_special, ipa: "/r/"]
+റ -> r;
+
+// ഩ - alveolar nasal (archaic, rarely used in modern Malayalam)
+[id: 17503, name: "nna alveolar", weight: 0.02, group: malayalam_special]
+ഩ -> n;
+
+// ============================================================
+// INDEPENDENT VOWELS (സ്വരങ്ങൾ)
+// ============================================================
+
+[id: 17505, name: "a vowel", weight: 0.05, group: malayalam_vowels]
+അ -> a;
+
+[id: 17506, name: "aa vowel", weight: 0.05, group: malayalam_vowels, ipa: "/aː/"]
+ആ -> aː;
+
+[id: 17507, name: "i vowel", weight: 0.05, group: malayalam_vowels]
+ഇ -> i;
+
+[id: 17508, name: "ii vowel", weight: 0.05, group: malayalam_vowels, ipa: "/iː/"]
+ഈ -> iː;
+
+[id: 17509, name: "u vowel", weight: 0.05, group: malayalam_vowels]
+ഉ -> u;
+
+[id: 17510, name: "uu vowel", weight: 0.05, group: malayalam_vowels, ipa: "/uː/"]
+ഊ -> uː;
+
+[id: 17511, name: "ri vowel", weight: 0.05, group: malayalam_vowels, ipa: "/r̩/"]
+ഋ -> r̩;
+
+[id: 17512, name: "rii vowel", weight: 0.05, group: malayalam_vowels, ipa: "/r̩ː/"]
+ൠ -> r̩ː;
+
+[id: 17513, name: "li vowel", weight: 0.05, group: malayalam_vowels, ipa: "/l̩/"]
+ഌ -> l̩;
+
+[id: 17514, name: "lii vowel", weight: 0.05, group: malayalam_vowels, ipa: "/l̩ː/"]
+ൡ -> l̩ː;
+
+[id: 17515, name: "e short vowel", weight: 0.05, group: malayalam_vowels]
+എ -> e;
+
+[id: 17516, name: "ee long vowel", weight: 0.05, group: malayalam_vowels, ipa: "/eː/"]
+ഏ -> eː;
+
+[id: 17517, name: "ai vowel", weight: 0.05, group: malayalam_vowels, ipa: "/aɪ/"]
+ഐ -> aɪ;
+
+[id: 17518, name: "o short vowel", weight: 0.05, group: malayalam_vowels]
+ഒ -> o;
+
+[id: 17519, name: "oo long vowel", weight: 0.05, group: malayalam_vowels, ipa: "/oː/"]
+ഓ -> oː;
+
+[id: 17520, name: "au vowel", weight: 0.05, group: malayalam_vowels, ipa: "/aʊ/"]
+ഔ -> aʊ;
+
+// ============================================================
+// VELAR CONSONANTS (ക-വർഗ്ഗം)
+// ============================================================
+
+[id: 17522, name: "ka", weight: 0.05, group: malayalam_velars]
+ക -> k;
+
+[id: 17523, name: "kha", weight: 0.05, group: malayalam_velars, ipa: "/kʰ/"]
+ഖ -> kʰ;
+
+[id: 17524, name: "ga", weight: 0.05, group: malayalam_velars, ipa: "/ɡ/"]
+ഗ -> ɡ;
+
+[id: 17525, name: "gha", weight: 0.05, group: malayalam_velars, ipa: "/ɡʰ/"]
+ഘ -> ɡʰ;
+
+[id: 17526, name: "nga", weight: 0.05, group: malayalam_velars, ipa: "/ŋ/"]
+ങ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (ച-വർഗ്ഗം)
+// ============================================================
+
+[id: 17527, name: "cha", weight: 0.05, group: malayalam_palatals, ipa: "/t͡ʃ/"]
+ച -> t͡ʃ;
+
+[id: 17528, name: "chha", weight: 0.05, group: malayalam_palatals, ipa: "/t͡ʃʰ/"]
+ഛ -> t͡ʃʰ;
+
+[id: 17529, name: "ja", weight: 0.05, group: malayalam_palatals, ipa: "/d͡ʒ/"]
+ജ -> d͡ʒ;
+
+[id: 17530, name: "jha", weight: 0.05, group: malayalam_palatals, ipa: "/d͡ʒʰ/"]
+ഝ -> d͡ʒʰ;
+
+[id: 17531, name: "nya", weight: 0.05, group: malayalam_palatals, ipa: "/ɲ/"]
+ഞ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ട-വർഗ്ഗം)
+// ============================================================
+
+[id: 17532, name: "Ta", weight: 0.05, group: malayalam_retroflexes, ipa: "/ʈ/"]
+ട -> ʈ;
+
+[id: 17533, name: "Tha", weight: 0.05, group: malayalam_retroflexes, ipa: "/ʈʰ/"]
+ഠ -> ʈʰ;
+
+[id: 17534, name: "Da", weight: 0.05, group: malayalam_retroflexes, ipa: "/ɖ/"]
+ഡ -> ɖ;
+
+[id: 17535, name: "Dha", weight: 0.05, group: malayalam_retroflexes, ipa: "/ɖʰ/"]
+ഢ -> ɖʰ;
+
+[id: 17536, name: "Na", weight: 0.05, group: malayalam_retroflexes, ipa: "/ɳ/"]
+ണ -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (ത-വർഗ്ഗം)
+// ============================================================
+
+[id: 17537, name: "ta", weight: 0.05, group: malayalam_dentals, ipa: "/t̪/"]
+ത -> t̪;
+
+[id: 17538, name: "tha", weight: 0.05, group: malayalam_dentals, ipa: "/t̪ʰ/"]
+ഥ -> t̪ʰ;
+
+[id: 17539, name: "da", weight: 0.05, group: malayalam_dentals, ipa: "/d̪/"]
+ദ -> d̪;
+
+[id: 17540, name: "dha", weight: 0.05, group: malayalam_dentals, ipa: "/d̪ʰ/"]
+ധ -> d̪ʰ;
+
+[id: 17541, name: "na dental", weight: 0.05, group: malayalam_dentals]
+ന -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (പ-വർഗ്ഗം)
+// ============================================================
+
+[id: 17542, name: "pa", weight: 0.05, group: malayalam_labials]
+പ -> p;
+
+[id: 17543, name: "pha", weight: 0.05, group: malayalam_labials, ipa: "/pʰ/"]
+ഫ -> pʰ;
+
+[id: 17544, name: "ba", weight: 0.05, group: malayalam_labials]
+ബ -> b;
+
+[id: 17545, name: "bha", weight: 0.05, group: malayalam_labials, ipa: "/bʰ/"]
+ഭ -> bʰ;
+
+[id: 17546, name: "ma", weight: 0.05, group: malayalam_labials]
+മ -> m;
+
+// ============================================================
+// SEMI-VOWELS (അന്തഃസ്ഥങ്ങൾ)
+// ============================================================
+
+[id: 17547, name: "ya", weight: 0.05, group: malayalam_semivowels]
+യ -> j;
+
+[id: 17548, name: "ra tap", weight: 0.05, group: malayalam_semivowels, ipa: "/ɾ/"]
+ര -> ɾ;
+
+[id: 17549, name: "la", weight: 0.05, group: malayalam_semivowels]
+ല -> l;
+
+[id: 17550, name: "va", weight: 0.05, group: malayalam_semivowels]
+വ -> v;
+
+// ============================================================
+// SIBILANTS AND ASPIRATE (ഊഷ്മാക്കൾ)
+// ============================================================
+
+[id: 17552, name: "sha palatal", weight: 0.05, group: malayalam_sibilants, ipa: "/ʃ/"]
+ശ -> ʃ;
+
+[id: 17553, name: "Sha retroflex", weight: 0.05, group: malayalam_sibilants, ipa: "/ʂ/"]
+ഷ -> ʂ;
+
+[id: 17554, name: "sa", weight: 0.05, group: malayalam_sibilants]
+സ -> s;
+
+[id: 17555, name: "ha", weight: 0.05, group: malayalam_sibilants]
+ഹ -> h;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels / മാത്രകൾ)
+// ============================================================
+
+[id: 17557, name: "aa matra", weight: 0.05, group: malayalam_matras, ipa: "/aː/"]
+ാ -> aː;
+
+[id: 17558, name: "i matra", weight: 0.05, group: malayalam_matras]
+ി -> i;
+
+[id: 17559, name: "ii matra", weight: 0.05, group: malayalam_matras, ipa: "/iː/"]
+ീ -> iː;
+
+[id: 17560, name: "u matra", weight: 0.05, group: malayalam_matras]
+ു -> u;
+
+[id: 17561, name: "uu matra", weight: 0.05, group: malayalam_matras, ipa: "/uː/"]
+ൂ -> uː;
+
+[id: 17562, name: "ri matra", weight: 0.05, group: malayalam_matras, ipa: "/r̩/"]
+ൃ -> r̩;
+
+[id: 17563, name: "e short matra", weight: 0.05, group: malayalam_matras]
+െ -> e;
+
+[id: 17564, name: "ee long matra", weight: 0.05, group: malayalam_matras, ipa: "/eː/"]
+േ -> eː;
+
+[id: 17565, name: "ai matra", weight: 0.05, group: malayalam_matras, ipa: "/aɪ/"]
+ൈ -> aɪ;
+
+[id: 17566, name: "o short matra", weight: 0.05, group: malayalam_matras]
+ൊ -> o;
+
+[id: 17567, name: "oo long matra", weight: 0.05, group: malayalam_matras, ipa: "/oː/"]
+ോ -> oː;
+
+[id: 17568, name: "au matra", weight: 0.05, group: malayalam_matras, ipa: "/aʊ/"]
+ൌ -> aʊ;
+
+// Alternate au matra
+[id: 17569, name: "au matra alt", weight: 0.05, group: malayalam_matras, ipa: "/aʊ/"]
+ൗ -> aʊ;
+
+// ============================================================
+// CHILLU LETTERS (Standalone Consonants)
+// ============================================================
+// Chillu are special consonant forms without inherent vowel,
+// used at the end of syllables. Essential for Malayalam.
+
+[id: 17570, name: "chillu n", weight: 0.05, group: malayalam_chillu]
+ൺ -> n;
+
+[id: 17571, name: "chillu N retroflex", weight: 0.05, group: malayalam_chillu, ipa: "/ɳ/"]
+ൻ -> ɳ;
+
+[id: 17572, name: "chillu r", weight: 0.05, group: malayalam_chillu, ipa: "/ɾ/"]
+ർ -> ɾ;
+
+[id: 17573, name: "chillu l", weight: 0.05, group: malayalam_chillu]
+ൽ -> l;
+
+[id: 17574, name: "chillu L retroflex", weight: 0.05, group: malayalam_chillu, ipa: "/ɭ/"]
+ൾ -> ɭ;
+
+[id: 17575, name: "chillu k", weight: 0.05, group: malayalam_chillu]
+ൿ -> k;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Virama (chandrakkala) - removes inherent vowel
+[id: 17577, name: "virama", weight: 0.1, group: malayalam_diacritics]
+് -> ;
+
+// Anusvara - nasalization
+[id: 17578, name: "anusvara", weight: 0.1, group: malayalam_diacritics, ipa: "/̃/"]
+ം -> ̃;
+
+// Visarga - voiceless glottal fricative
+[id: 17579, name: "visarga", weight: 0.1, group: malayalam_diacritics, ipa: "/h/"]
+ഃ -> h;
+
+// ============================================================
+// MALAYALAM NUMERALS
+// ============================================================
+
+[id: 17580, name: "numeral 0", weight: 0.1, group: malayalam_numerals]
+൦ -> 0;
+
+[id: 17581, name: "numeral 1", weight: 0.1, group: malayalam_numerals]
+൧ -> 1;
+
+[id: 17582, name: "numeral 2", weight: 0.1, group: malayalam_numerals]
+൨ -> 2;
+
+[id: 17583, name: "numeral 3", weight: 0.1, group: malayalam_numerals]
+൩ -> 3;
+
+[id: 17584, name: "numeral 4", weight: 0.1, group: malayalam_numerals]
+൪ -> 4;
+
+[id: 17585, name: "numeral 5", weight: 0.1, group: malayalam_numerals]
+൫ -> 5;
+
+[id: 17586, name: "numeral 6", weight: 0.1, group: malayalam_numerals]
+൬ -> 6;
+
+[id: 17587, name: "numeral 7", weight: 0.1, group: malayalam_numerals]
+൭ -> 7;
+
+[id: 17588, name: "numeral 8", weight: 0.1, group: malayalam_numerals]
+൮ -> 8;
+
+[id: 17589, name: "numeral 9", weight: 0.1, group: malayalam_numerals]
+൯ -> 9;
+
+// ============================================================
+// GEMINATE SIMPLIFICATION
+// ============================================================
+// Malayalam has extensive phonemic gemination. For fuzzy matching,
+// we reduce doubled consonants to single consonants.
+
+[id: 17590, name: "double retroflex lateral", weight: 0.2, group: malayalam_simplification]
+ɭɭ -> ɭ;
+
+[id: 17591, name: "double retroflex approx", weight: 0.2, group: malayalam_simplification]
+ɻɻ -> ɻ;
+
+[id: 17592, name: "double retroflex t", weight: 0.2, group: malayalam_simplification]
+ʈʈ -> ʈ;
+
+[id: 17593, name: "double retroflex d", weight: 0.2, group: malayalam_simplification]
+ɖɖ -> ɖ;
+
+[id: 17594, name: "double retroflex nasal", weight: 0.2, group: malayalam_simplification]
+ɳɳ -> ɳ;
+
+[id: 17595, name: "double palatal sh", weight: 0.2, group: malayalam_simplification]
+ʃʃ -> ʃ;
+
+[id: 17596, name: "double retroflex sh", weight: 0.2, group: malayalam_simplification]
+ʂʂ -> ʂ;
+
+[id: 17597, name: "double palatal nasal", weight: 0.2, group: malayalam_simplification]
+ɲɲ -> ɲ;
+
+[id: 17598, name: "double ai diphthong", weight: 0.2, group: malayalam_simplification]
+aɪaɪ -> aɪ;
+
+[id: 17599, name: "double au diphthong", weight: 0.2, group: malayalam_simplification]
+aʊaʊ -> aʊ;

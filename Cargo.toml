@@ -28,6 +28,8 @@ smallvec = { version = "1.13", features = ["serde"] }
 typed-arena = { version = "2.0", optional = true }
 # Fast non-cryptographic hashing for internal use
 rustc-hash = "1.1"
+# Lock-free atomic Arc swapping for DynamicDawgU64
+arc-swap = "1.7"
 # Error handling
 thiserror = "2.0"
 # Faster RwLock for DynamicDawg (Phase 1) and eviction wrappers (optional)
@@ -476,3 +478,7 @@ harness = false
 name = "small_set_analysis"
 harness = false
 required-features = ["rand"]
+
+[[bench]]
+name = "msm_benchmarks"
+harness = false

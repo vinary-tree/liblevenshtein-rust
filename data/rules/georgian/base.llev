@@ -49,8 +49,8 @@
 [id: 4610, name: "bani", weight: 0.05, group: georgian_voiced_stops]
 ბ -> b;
 
-[id: 4611, name: "gani", weight: 0.05, group: georgian_voiced_stops]
-გ -> g;
+[id: 4611, name: "gani", weight: 0.05, group: georgian_voiced_stops, ipa: "/ɡ/"]
+გ -> ɡ;
 
 [id: 4612, name: "doni", weight: 0.05, group: georgian_voiced_stops]
 დ -> d;

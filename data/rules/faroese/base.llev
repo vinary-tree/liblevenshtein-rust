@@ -1,0 +1,163 @@
+// Faroese Base Phonetic Rules
+// ===========================
+// Phonetic rules for Faroese (Føroyskt).
+// Spoken by approximately 70,000 people in the Faroe Islands.
+//
+// Faroese features:
+//   - North Germanic language
+//   - Related to Icelandic and Norwegian
+//   - Skerping (fortition of voiced consonants)
+//   - Complex vowel system
+//   - Glides before stressed vowels
+//   - Pre-aspiration
+//
+// Orthography:
+//   - Latin alphabet with special letters
+//   - ð silent or /j/ between vowels
+//   - ó, ú for diphthongs
+//   - ø for /ø/, y for /i/
+//
+// Rule IDs: 15400-15499
+
+@name "Faroese Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Faroese"
+
+// ============================================================
+// MONOPHTHONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15401, name: "e", weight: 0.05, group: faroese_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 15402, name: "i", weight: 0.05, group: faroese_vowels, ipa: "/ɪ/"]
+i -> ɪ;
+
+[id: 15403, name: "o", weight: 0.05, group: faroese_vowels, ipa: "/ɔ/"]
+o -> ɔ;
+
+[id: 15404, name: "u", weight: 0.05, group: faroese_vowels, ipa: "/ʊ/"]
+u -> ʊ;
+
+[id: 15405, name: "y", weight: 0.05, group: faroese_vowels, ipa: "/ɪ/"]
+y -> ɪ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15410, name: "á long", weight: 0.05, group: faroese_long, ipa: "/ɔaː/"]
+á -> ɔaː;
+
+[id: 15411, name: "í long", weight: 0.05, group: faroese_long, ipa: "/ʊiː/"]
+í -> ʊiː;
+
+[id: 15412, name: "ó long", weight: 0.05, group: faroese_long, ipa: "/ɔuː/"]
+ó -> ɔuː;
+
+[id: 15413, name: "ú long", weight: 0.05, group: faroese_long, ipa: "/ʉuː/"]
+ú -> ʉuː;
+
+[id: 15414, name: "ý long", weight: 0.05, group: faroese_long, ipa: "/ʊiː/"]
+ý -> ʊiː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+[id: 15418, name: "ei diphthong", weight: 0.05, group: faroese_diphthongs, ipa: "/aɪ/"]
+ei -> aɪ;
+
+[id: 15419, name: "ey diphthong", weight: 0.05, group: faroese_diphthongs, ipa: "/ɛɪ/"]
+ey -> ɛɪ;
+
+[id: 15420, name: "oy diphthong", weight: 0.05, group: faroese_diphthongs, ipa: "/ɔɪ/"]
+oy -> ɔɪ;
+
+[id: 15421, name: "æ diphthong", weight: 0.05, group: faroese_diphthongs, ipa: "/ɛaː/"]
+æ -> ɛaː;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 15426, name: "p aspirated", weight: 0.05, group: faroese_stops, ipa: "/pʰ/"]
+p -> pʰ;
+
+[id: 15427, name: "b", weight: 0.05, group: faroese_stops, ipa: "/p/"]
+b -> p;
+
+[id: 15428, name: "t aspirated", weight: 0.05, group: faroese_stops, ipa: "/tʰ/"]
+t -> tʰ;
+
+[id: 15429, name: "d", weight: 0.05, group: faroese_stops, ipa: "/t/"]
+d -> t;
+
+[id: 15430, name: "k aspirated", weight: 0.05, group: faroese_stops, ipa: "/kʰ/"]
+k -> kʰ;
+
+[id: 15431, name: "g", weight: 0.05, group: faroese_stops, ipa: "/k/"]
+g -> k;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 15437, name: "ð intervocalic", weight: 0.05, group: faroese_fricatives, ipa: "/j/"]
+ð -> j;
+
+[id: 15439, name: "sj sh", weight: 0.05, group: faroese_fricatives, ipa: "/ʃ/"]
+sj -> ʃ;
+
+[id: 15440, name: "kj palatal", weight: 0.05, group: faroese_fricatives, ipa: "/t͡ʃ/"]
+kj -> t͡ʃ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 15446, name: "ng velar", weight: 0.05, group: faroese_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 15451, name: "r uvular", weight: 0.05, group: faroese_liquids, ipa: "/ʁ/"]
+r -> ʁ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 15480, name: "føroyskt faroese", weight: 0.02, group: faroese_common]
+føroyskt -> føɾɔɪskt;
+
+[id: 15481, name: "hey hello", weight: 0.02, group: faroese_common]
+hey -> hɛɪ;
+
+[id: 15482, name: "takk thank you", weight: 0.02, group: faroese_common]
+takk -> tʰahk;
+
+[id: 15483, name: "ja yes", weight: 0.02, group: faroese_common]
+ja -> jaː;
+
+[id: 15484, name: "nei no", weight: 0.02, group: faroese_common]
+nei -> naɪ;
+
+[id: 15485, name: "vatn water", weight: 0.02, group: faroese_common]
+vatn -> vatn;
+
+[id: 15486, name: "breyð bread", weight: 0.02, group: faroese_common]
+breyð -> pɾɛɪj;
+
+[id: 15487, name: "hús house", weight: 0.02, group: faroese_common]
+hús -> hʉuːs;
+
+[id: 15488, name: "maður person", weight: 0.02, group: faroese_common]
+maður -> maːvʊɾ;
+
+[id: 15489, name: "barn child", weight: 0.02, group: faroese_common]
+barn -> padn;
+

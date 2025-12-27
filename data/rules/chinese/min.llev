@@ -1,0 +1,189 @@
+// Min Chinese (Hokkien/Teochew) Phonetic Rules
+// =============================================
+// Phonetic rules for Min Chinese using POJ romanization.
+// Spoken by approximately 50 million people in Fujian,
+// Taiwan, Southeast Asia, and overseas.
+//
+// Min Chinese features:
+//   - Ancient Chinese language stratum
+//   - 7-8 tones (including checked tones)
+//   - Preserved Middle Chinese finals (-p, -t, -k, -h)
+//   - Nasalized vowels
+//   - Tone sandhi rules
+//   - No retroflex consonants
+//
+// POJ (Pe̍h-ōe-jī) orthography:
+//   - o͘ for /ɔ/
+//   - Nasalization with superscript n (ⁿ)
+//   - Tones marked with diacritics
+//   - h for glottal stop in some contexts
+//
+// Rule IDs: 13800-13899
+
+@name "Min Chinese (Hokkien) Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Min Chinese using POJ"
+
+// ============================================================
+// ORAL VOWELS (weight 0.05)
+// ============================================================
+// a, e, i, o, u pass through unchanged (no transformation needed)
+
+[id: 13804, name: "o͘ open o", weight: 0.05, group: min_vowels, ipa: "/ɔ/"]
+o͘ -> ɔ;
+
+// ============================================================
+// NASAL VOWELS (weight 0.05)
+// ============================================================
+
+[id: 13810, name: "aⁿ nasal", weight: 0.05, group: min_nasal, ipa: "/ã/"]
+aⁿ -> ã;
+
+[id: 13811, name: "eⁿ nasal", weight: 0.05, group: min_nasal, ipa: "/ẽ/"]
+eⁿ -> ẽ;
+
+[id: 13812, name: "iⁿ nasal", weight: 0.05, group: min_nasal, ipa: "/ĩ/"]
+iⁿ -> ĩ;
+
+[id: 13813, name: "oⁿ nasal", weight: 0.05, group: min_nasal, ipa: "/õ/"]
+oⁿ -> õ;
+
+[id: 13814, name: "o͘ⁿ nasal open o", weight: 0.05, group: min_nasal, ipa: "/ɔ̃/"]
+o͘ⁿ -> ɔ̃;
+
+[id: 13815, name: "uⁿ nasal", weight: 0.05, group: min_nasal, ipa: "/ũ/"]
+uⁿ -> ũ;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+// ai, au, ia, iu, ui pass through unchanged (no transformation needed)
+
+[id: 13822, name: "oa diphthong", weight: 0.05, group: min_diphthongs, ipa: "/ua/"]
+oa -> ua;
+
+[id: 13823, name: "oe diphthong", weight: 0.05, group: min_diphthongs, ipa: "/ue/"]
+oe -> ue;
+
+// ============================================================
+// TONES (weight 0.02)
+// ============================================================
+
+[id: 13828, name: "tone 1 high level", weight: 0.02, group: min_tones, ipa: "˥"]
+1 -> ˥;
+
+[id: 13829, name: "tone 2 high falling", weight: 0.02, group: min_tones, ipa: "˥˧"]
+2 -> ˥˧;
+
+[id: 13830, name: "tone 3 low falling", weight: 0.02, group: min_tones, ipa: "˨˩"]
+3 -> ˨˩;
+
+[id: 13831, name: "tone 4 checked high", weight: 0.02, group: min_tones, ipa: "˧ʔ"]
+4 -> ˧ʔ;
+
+[id: 13832, name: "tone 5 rising", weight: 0.02, group: min_tones, ipa: "˨˦"]
+5 -> ˨˦;
+
+[id: 13833, name: "tone 7 mid level", weight: 0.02, group: min_tones, ipa: "˧"]
+7 -> ˧;
+
+[id: 13834, name: "tone 8 checked low", weight: 0.02, group: min_tones, ipa: "˦ʔ"]
+8 -> ˦ʔ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+// p, b, t, k pass through unchanged (no transformation needed)
+
+[id: 13839, name: "ph aspirated", weight: 0.05, group: min_stops, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 13842, name: "th aspirated", weight: 0.05, group: min_stops, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 13844, name: "kh aspirated", weight: 0.05, group: min_stops, ipa: "/kʰ/"]
+kh -> kʰ;
+
+[id: 13845, name: "g voiced", weight: 0.05, group: min_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 13848, name: "ch voiceless", weight: 0.05, group: min_affricates, ipa: "/t͡s/"]
+ch -> t͡s;
+
+[id: 13849, name: "chh aspirated", weight: 0.05, group: min_affricates, ipa: "/t͡sʰ/"]
+chh -> t͡sʰ;
+
+[id: 13850, name: "j voiced", weight: 0.05, group: min_affricates, ipa: "/d͡z/"]
+j -> d͡z;
+
+// ============================================================
+// FRICATIVES
+// ============================================================
+// s, h pass through unchanged (no transformation needed)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// m, n pass through unchanged (no transformation needed)
+
+[id: 13862, name: "ng velar nasal", weight: 0.05, group: min_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// APPROXIMANTS
+// ============================================================
+// l passes through unchanged (no transformation needed)
+
+// ============================================================
+// CHECKED FINALS (weight 0.05)
+// ============================================================
+
+[id: 13870, name: "p final unreleased", weight: 0.05, group: min_finals, ipa: "/p̚/"]
+p -> p̚ / _#;
+
+[id: 13871, name: "t final unreleased", weight: 0.05, group: min_finals, ipa: "/t̚/"]
+t -> t̚ / _#;
+
+[id: 13872, name: "k final unreleased", weight: 0.05, group: min_finals, ipa: "/k̚/"]
+k -> k̚ / _#;
+
+[id: 13873, name: "h final glottal", weight: 0.05, group: min_finals, ipa: "/ʔ/"]
+h -> ʔ / _#;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+// banlam (Min Nan) passes through unchanged
+
+[id: 13881, name: "li2ho2 hello", weight: 0.02, group: min_common]
+li2ho2 -> li˥˧ho˥˧;
+
+[id: 13882, name: "tosia thank you", weight: 0.02, group: min_common]
+tosia -> tɔsia;
+
+[id: 13883, name: "si7 yes", weight: 0.02, group: min_common]
+si7 -> si˧;
+
+[id: 13884, name: "m7si7 no", weight: 0.02, group: min_common]
+m7si7 -> m̩˧si˧;
+
+[id: 13885, name: "chui2 water", weight: 0.02, group: min_common]
+chui2 -> t͡sui˥˧;
+
+[id: 13886, name: "mipang bread", weight: 0.02, group: min_common]
+mipang -> mipãŋ;
+
+[id: 13887, name: "chu7 house", weight: 0.02, group: min_common]
+chu7 -> t͡su˧;
+
+[id: 13888, name: "lang5 person", weight: 0.02, group: min_common]
+lang5 -> laŋ˨˦;
+
+[id: 13889, name: "gina2 child", weight: 0.02, group: min_common]
+gina2 -> ɡina˥˧;
+

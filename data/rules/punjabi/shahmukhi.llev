@@ -115,8 +115,8 @@
 [id: 4482, name: "kaf", weight: 0.05, group: shahmukhi_consonants]
 ک -> k;
 
-[id: 4483, name: "gaf", weight: 0.05, group: shahmukhi_consonants]
-گ -> g;
+[id: 4483, name: "gaf", weight: 0.05, group: shahmukhi_consonants, ipa: "/ɡ/"]
+گ -> ɡ;
 
 [id: 4484, name: "lam", weight: 0.05, group: shahmukhi_consonants]
 ل -> l;

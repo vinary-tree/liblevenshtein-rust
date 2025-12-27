@@ -81,9 +81,7 @@ rr -> ʀ;
 [id: 1520, name: "ã nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ɐ̃/"]
 ã -> ɐ̃;
 
-// Õ - nasal o
-[id: 1521, name: "õ nasal", weight: 0.15, group: portuguese_nasals, ipa: "/õ/"]
-õ -> õ;
+// Note: Õ is nasal o /õ/ - no transformation needed, passes through unchanged.
 
 // AM/AN before consonant - nasal
 [id: 1525, name: "am nasal", weight: 0.15, group: portuguese_nasals, ipa: "/ɐ̃/"]

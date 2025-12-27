@@ -1,0 +1,144 @@
+// Galician Base Phonetic Rules
+// ============================
+// Phonetic rules for Galician (Galego).
+// Spoken by approximately 2.4 million people in Galicia, Spain.
+//
+// Galician features:
+//   - Romance language (Galician-Portuguese branch)
+//   - Seven vowel phonemes: /a/, /e/, /ɛ/, /i/, /o/, /ɔ/, /u/
+//   - Gheada (velarization of /ɡ/)
+//   - Seseo in some areas
+//   - Nasal vowels before nasal consonants
+//   - Close relationship with Portuguese
+//
+// Orthography:
+//   - Latin alphabet with diacritics
+//   - ñ for /ɲ/
+//   - nh for /ɲ/ in some positions
+//   - x for /ʃ/
+//
+// Rule IDs: 15600-15699
+
+@name "Galician Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Galician"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 15601, name: "e open", weight: 0.05, group: galician_vowels, ipa: "/ɛ/"]
+é -> ɛ;
+
+[id: 15604, name: "o open", weight: 0.05, group: galician_vowels, ipa: "/ɔ/"]
+ó -> ɔ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 15615, name: "c before aou", weight: 0.05, group: galician_stops, ipa: "/k/"]
+c -> k;
+
+[id: 15616, name: "qu", weight: 0.05, group: galician_stops, ipa: "/k/"]
+qu -> k;
+
+[id: 15617, name: "g standard", weight: 0.05, group: galician_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// GHEADA VARIANT (weight 0.05)
+// ============================================================
+
+[id: 15620, name: "gh gheada", weight: 0.05, group: galician_gheada, ipa: "/ɣ/"]
+gh -> ɣ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 15624, name: "ch affricate", weight: 0.05, group: galician_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 15629, name: "v as b", weight: 0.05, group: galician_fricatives, ipa: "/b/"]
+v -> b;
+
+[id: 15631, name: "z voiced", weight: 0.05, group: galician_fricatives, ipa: "/θ/"]
+z -> θ;
+
+[id: 15632, name: "c before ei", weight: 0.05, group: galician_fricatives, ipa: "/θ/"]
+ce -> θe;
+
+[id: 15633, name: "ci", weight: 0.05, group: galician_fricatives, ipa: "/θ/"]
+ci -> θi;
+
+[id: 15634, name: "x sh", weight: 0.05, group: galician_fricatives, ipa: "/ʃ/"]
+x -> ʃ;
+
+[id: 15635, name: "xe before vowel", weight: 0.05, group: galician_fricatives, ipa: "/ʃ/"]
+xe -> ʃe;
+
+[id: 15636, name: "g before ei", weight: 0.05, group: galician_fricatives, ipa: "/ʃ/"]
+ge -> ʃe;
+
+[id: 15637, name: "gi", weight: 0.05, group: galician_fricatives, ipa: "/ʃ/"]
+gi -> ʃi;
+
+[id: 15638, name: "j", weight: 0.05, group: galician_fricatives, ipa: "/ʃ/"]
+j -> ʃ;
+
+[id: 15639, name: "h silent", weight: 0.05, group: galician_fricatives, ipa: ""]
+h -> ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 15646, name: "ñ palatal", weight: 0.05, group: galician_nasals, ipa: "/ɲ/"]
+ñ -> ɲ;
+
+[id: 15647, name: "nh palatal", weight: 0.05, group: galician_nasals, ipa: "/ɲ/"]
+nh -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 15653, name: "ll palatal", weight: 0.05, group: galician_liquids, ipa: "/ʎ/"]
+ll -> ʎ;
+
+[id: 15654, name: "lh palatal", weight: 0.05, group: galician_liquids, ipa: "/ʎ/"]
+lh -> ʎ;
+
+[id: 15655, name: "r trill", weight: 0.05, group: galician_liquids, ipa: "/r/"]
+rr -> r;
+
+[id: 15656, name: "r tap", weight: 0.05, group: galician_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 15680, name: "galego galician", weight: 0.02, group: galician_common]
+galego -> ɡaleɣo;
+
+[id: 15681, name: "ola hello", weight: 0.02, group: galician_common]
+ola -> ɔla;
+
+[id: 15682, name: "grazas thank you", weight: 0.02, group: galician_common]
+grazas -> ɡɾaθas;
+
+[id: 15685, name: "auga water", weight: 0.02, group: galician_common]
+auga -> awɣa;
+
+[id: 15687, name: "casa house", weight: 0.02, group: galician_common]
+casa -> kasa;
+
+[id: 15688, name: "persoa person", weight: 0.02, group: galician_common]
+persoa -> peɾsoa;

@@ -1,0 +1,469 @@
+//! Float-weighted position in the Levenshtein automaton.
+//!
+//! This module provides `PositionF64`, an extension of `Position` that uses
+//! float-valued accumulated costs instead of integer error counts.
+//!
+//! # Overview
+//!
+//! While `Position` tracks integer `num_errors` (0, 1, 2, ...), `PositionF64`
+//! tracks float `accumulated_cost` (0.0, 0.5, 1.3, ...). This enables:
+//!
+//! - **Weighted edit distance**: Different costs for different operations
+//! - **Fine-grained ranking**: Better differentiation between matches
+//! - **Domain-specific matching**: OCR, phonetic, keyboard proximity
+//!
+//! # Subsumption with Floats
+//!
+//! The subsumption relation is adapted for float costs with epsilon handling:
+//!
+//! Position `p1` at (i, e) subsumes `p2` at (j, f) if:
+//! - `e <= f` (accumulated cost comparison)
+//! - `|i - j| <= (f - e)` (bounded diagonal property)
+//!
+//! # Example
+//!
+//! ```rust
+//! use liblevenshtein::transducer::{PositionF64, Algorithm};
+//!
+//! let p1 = PositionF64::new(3, 1.5);  // At index 3 with cost 1.5
+//! let p2 = PositionF64::new(4, 2.5);  // At index 4 with cost 2.5
+//!
+//! // p1 can reach p2's position within the cost difference
+//! // |3 - 4| = 1 <= (2.5 - 1.5) = 1.0 ✓
+//! assert!(p1.subsumes(&p2, Algorithm::Standard, 5));
+//! ```
+//!
+//! # Memory Layout
+//!
+//! `PositionF64` is 25 bytes (2 usizes + f64 + bool) and is `Copy` for efficient
+//! state manipulation during automaton traversal.
+
+use super::algorithm::Algorithm;
+use std::cmp::Ordering;
+
+/// Epsilon for float comparisons in subsumption.
+const EPSILON: f64 = 1e-9;
+
+/// A position in the float-weighted Levenshtein automaton state.
+///
+/// Analogous to [`Position`](super::Position), but with float-valued
+/// `accumulated_cost` instead of integer `num_errors`.
+///
+/// # Fields
+///
+/// - `term_index`: Characters consumed from the query term
+/// - `accumulated_cost`: Total cost of operations to reach this position
+/// - `is_special`: Flag for extended algorithm states (transposition/merge-split)
+///
+/// # Copy Semantics
+///
+/// `PositionF64` is `Copy` (25 bytes) for efficient state transitions.
+/// This eliminates allocation overhead when copying positions during traversal.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PositionF64 {
+    /// Index into the query term (characters consumed).
+    pub term_index: usize,
+
+    /// Accumulated cost of edit operations to reach this position.
+    /// Unlike `Position.num_errors`, this is a float allowing weighted operations.
+    pub accumulated_cost: f64,
+
+    /// Special flag for extended algorithm states.
+    ///
+    /// - For Transposition: indicates a transposition is in progress
+    /// - For MergeAndSplit: indicates a merge/split operation state
+    pub is_special: bool,
+}
+
+impl PositionF64 {
+    /// Create a new position with the given index and cost.
+    ///
+    /// # Arguments
+    ///
+    /// * `term_index` - Characters consumed from query
+    /// * `accumulated_cost` - Total cost to reach this position (≥ 0.0)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use liblevenshtein::transducer::PositionF64;
+    ///
+    /// let pos = PositionF64::new(5, 2.5);
+    /// assert_eq!(pos.term_index, 5);
+    /// assert!((pos.accumulated_cost - 2.5).abs() < 1e-9);
+    /// assert!(!pos.is_special);
+    /// ```
+    #[inline(always)]
+    pub fn new(term_index: usize, accumulated_cost: f64) -> Self {
+        debug_assert!(
+            accumulated_cost >= 0.0,
+            "Accumulated cost must be non-negative"
+        );
+        Self {
+            term_index,
+            accumulated_cost,
+            is_special: false,
+        }
+    }
+
+    /// Create a new special position (for extended algorithms).
+    ///
+    /// Special positions track intermediate states for transposition
+    /// and merge/split operations.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use liblevenshtein::transducer::PositionF64;
+    ///
+    /// let pos = PositionF64::new_special(3, 1.0);
+    /// assert!(pos.is_special);
+    /// ```
+    #[inline(always)]
+    pub fn new_special(term_index: usize, accumulated_cost: f64) -> Self {
+        debug_assert!(
+            accumulated_cost >= 0.0,
+            "Accumulated cost must be non-negative"
+        );
+        Self {
+            term_index,
+            accumulated_cost,
+            is_special: true,
+        }
+    }
+
+    /// Create the initial position at index 0 with cost 0.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use liblevenshtein::transducer::PositionF64;
+    ///
+    /// let pos = PositionF64::initial();
+    /// assert_eq!(pos.term_index, 0);
+    /// assert_eq!(pos.accumulated_cost, 0.0);
+    /// ```
+    #[inline(always)]
+    pub fn initial() -> Self {
+        Self::new(0, 0.0)
+    }
+
+    /// Check if this position subsumes another position.
+    ///
+    /// Position `p1` subsumes `p2` if all candidates reachable from `p2`
+    /// are also reachable from `p1`. This allows pruning redundant states.
+    ///
+    /// # Float Subsumption
+    ///
+    /// The subsumption formula adapts the integer version for floats:
+    /// - `self.accumulated_cost <= other.accumulated_cost` (with epsilon)
+    /// - `|i - j| <= (f - e)` (index difference within cost slack)
+    ///
+    /// # Algorithm-Specific Logic
+    ///
+    /// | Algorithm | Special Handling |
+    /// |-----------|-----------------|
+    /// | Standard | Basic formula |
+    /// | Transposition | Special position compatibility |
+    /// | MergeAndSplit | Special cannot subsume non-special |
+    ///
+    /// # Parameters
+    ///
+    /// - `other`: The position to check subsumption against
+    /// - `algorithm`: The algorithm variant determining subsumption rules
+    /// - `query_length`: Length of the query term
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use liblevenshtein::transducer::{PositionF64, Algorithm};
+    ///
+    /// let p1 = PositionF64::new(3, 1.0);
+    /// let p2 = PositionF64::new(4, 2.5);
+    ///
+    /// // |3 - 4| = 1 <= (2.5 - 1.0) = 1.5 ✓
+    /// assert!(p1.subsumes(&p2, Algorithm::Standard, 10));
+    ///
+    /// // Cannot subsume position with lower cost
+    /// assert!(!p2.subsumes(&p1, Algorithm::Standard, 10));
+    /// ```
+    pub fn subsumes(&self, other: &PositionF64, algorithm: Algorithm, query_length: usize) -> bool {
+        let i = self.term_index;
+        let e = self.accumulated_cost;
+        let s = self.is_special;
+
+        let j = other.term_index;
+        let f = other.accumulated_cost;
+        let t = other.is_special;
+
+        // Must have lower or equal cost to subsume (with epsilon tolerance)
+        if e > f + EPSILON {
+            return false;
+        }
+
+        let cost_slack = f - e;
+
+        match algorithm {
+            Algorithm::Standard => {
+                // Standard algorithm: |i - j| <= (f - e)
+                let index_diff = i.abs_diff(j) as f64;
+                index_diff <= cost_slack + EPSILON
+            }
+
+            Algorithm::Transposition => {
+                if s {
+                    if t {
+                        // Both special: must be at same position
+                        return i == j;
+                    }
+                    // lhs special, rhs not: requires rhs at query length and same position
+                    let f_as_usize = f.floor() as usize;
+                    return (f_as_usize == query_length) && (i == j);
+                }
+
+                if t {
+                    // Normal cannot subsume special (transposition-in-progress)
+                    if !s {
+                        return false;
+                    }
+
+                    // Both special: use adjusted formula
+                    let adjusted_diff = if j < i {
+                        (i.saturating_sub(j).saturating_sub(1)) as f64
+                    } else {
+                        (j.saturating_sub(i) + 1) as f64
+                    };
+                    return adjusted_diff <= cost_slack + EPSILON;
+                }
+
+                // Neither special: standard formula
+                let index_diff = i.abs_diff(j) as f64;
+                index_diff <= cost_slack + EPSILON
+            }
+
+            Algorithm::MergeAndSplit => {
+                // Special position cannot subsume non-special
+                if s && !t {
+                    return false;
+                }
+
+                // Must have strictly lower cost for MergeAndSplit
+                // This allows (i,e,false) and (i,e,true) to coexist
+                if e >= f - EPSILON {
+                    return false;
+                }
+
+                // Standard distance-based formula
+                let index_diff = i.abs_diff(j) as f64;
+                index_diff <= cost_slack + EPSILON
+            }
+        }
+    }
+
+    /// Compare positions for sorting (lexicographic order).
+    ///
+    /// Order: term_index (asc), then accumulated_cost (asc), then is_special (false < true)
+    ///
+    /// # Note
+    ///
+    /// Float comparison uses total_cmp for consistent ordering that handles
+    /// NaN and -0.0 correctly.
+    pub fn compare(&self, other: &PositionF64) -> Ordering {
+        self.term_index
+            .cmp(&other.term_index)
+            .then_with(|| self.accumulated_cost.total_cmp(&other.accumulated_cost))
+            .then_with(|| self.is_special.cmp(&other.is_special))
+    }
+
+    /// Check if this position is approximately equal to another.
+    ///
+    /// Uses epsilon tolerance for float comparison.
+    pub fn approx_eq(&self, other: &PositionF64) -> bool {
+        self.term_index == other.term_index
+            && (self.accumulated_cost - other.accumulated_cost).abs() < EPSILON
+            && self.is_special == other.is_special
+    }
+}
+
+impl PartialOrd for PositionF64 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.compare(other))
+    }
+}
+
+impl Ord for PositionF64 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.compare(other)
+    }
+}
+
+impl Eq for PositionF64 {}
+
+impl std::hash::Hash for PositionF64 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.term_index.hash(state);
+        // Hash float bits for consistency
+        self.accumulated_cost.to_bits().hash(state);
+        self.is_special.hash(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_EPSILON: f64 = 1e-10;
+
+    fn approx_eq(a: f64, b: f64) -> bool {
+        (a - b).abs() < TEST_EPSILON
+    }
+
+    #[test]
+    fn test_position_creation() {
+        let pos = PositionF64::new(5, 2.5);
+        assert_eq!(pos.term_index, 5);
+        assert!(approx_eq(pos.accumulated_cost, 2.5));
+        assert!(!pos.is_special);
+    }
+
+    #[test]
+    fn test_position_special() {
+        let pos = PositionF64::new_special(3, 1.5);
+        assert!(pos.is_special);
+        assert_eq!(pos.term_index, 3);
+        assert!(approx_eq(pos.accumulated_cost, 1.5));
+    }
+
+    #[test]
+    fn test_position_initial() {
+        let pos = PositionF64::initial();
+        assert_eq!(pos.term_index, 0);
+        assert!(approx_eq(pos.accumulated_cost, 0.0));
+        assert!(!pos.is_special);
+    }
+
+    #[test]
+    fn test_subsumption_standard_basic() {
+        let max_distance = 5;
+
+        // (5, 2.0) should subsume (5, 3.0) - same position, lower cost
+        let p1 = PositionF64::new(5, 2.0);
+        let p2 = PositionF64::new(5, 3.0);
+        assert!(
+            p1.subsumes(&p2, Algorithm::Standard, max_distance),
+            "p1(5, 2.0) should subsume p2(5, 3.0)"
+        );
+
+        // (5, 2.0) should subsume (4, 3.0) - |5-4| = 1 <= (3.0-2.0) = 1.0
+        let p3 = PositionF64::new(5, 2.0);
+        let p4 = PositionF64::new(4, 3.0);
+        assert!(
+            p3.subsumes(&p4, Algorithm::Standard, max_distance),
+            "p3(5, 2.0) should subsume p4(4, 3.0)"
+        );
+    }
+
+    #[test]
+    fn test_subsumption_standard_float_costs() {
+        let max_distance = 5;
+
+        // (3, 1.5) should subsume (4, 2.6) - |3-4| = 1 <= (2.6-1.5) = 1.1
+        let p1 = PositionF64::new(3, 1.5);
+        let p2 = PositionF64::new(4, 2.6);
+        assert!(
+            p1.subsumes(&p2, Algorithm::Standard, max_distance),
+            "p1(3, 1.5) should subsume p2(4, 2.6)"
+        );
+
+        // (3, 1.5) should NOT subsume (5, 2.3) - |3-5| = 2 > (2.3-1.5) = 0.8
+        let p3 = PositionF64::new(3, 1.5);
+        let p4 = PositionF64::new(5, 2.3);
+        assert!(
+            !p3.subsumes(&p4, Algorithm::Standard, max_distance),
+            "p3(3, 1.5) should NOT subsume p4(5, 2.3)"
+        );
+    }
+
+    #[test]
+    fn test_subsumption_cannot_subsume_lower_cost() {
+        let max_distance = 5;
+
+        // (5, 3.0) should NOT subsume (5, 2.0) - higher cost
+        let p1 = PositionF64::new(5, 3.0);
+        let p2 = PositionF64::new(5, 2.0);
+        assert!(
+            !p1.subsumes(&p2, Algorithm::Standard, max_distance),
+            "Higher cost position cannot subsume lower cost position"
+        );
+    }
+
+    #[test]
+    fn test_subsumption_transposition_special() {
+        let max_distance = 5;
+
+        // Both special: must be at same position
+        let p1 = PositionF64::new_special(5, 2.0);
+        let p2 = PositionF64::new_special(5, 3.0);
+        assert!(
+            p1.subsumes(&p2, Algorithm::Transposition, max_distance),
+            "special(5, 2.0) should subsume special(5, 3.0)"
+        );
+
+        let p3 = PositionF64::new_special(5, 2.0);
+        let p4 = PositionF64::new_special(6, 3.0);
+        assert!(
+            !p3.subsumes(&p4, Algorithm::Transposition, max_distance),
+            "special(5, 2.0) should NOT subsume special(6, 3.0)"
+        );
+
+        // Normal cannot subsume special
+        let p5 = PositionF64::new(5, 2.0);
+        let p6 = PositionF64::new_special(4, 3.0);
+        assert!(
+            !p5.subsumes(&p6, Algorithm::Transposition, max_distance),
+            "normal cannot subsume special in transposition"
+        );
+    }
+
+    #[test]
+    fn test_subsumption_merge_split() {
+        let max_distance = 5;
+
+        // Special cannot subsume non-special
+        let p1 = PositionF64::new_special(5, 2.0);
+        let p2 = PositionF64::new(5, 3.0);
+        assert!(
+            !p1.subsumes(&p2, Algorithm::MergeAndSplit, max_distance),
+            "special cannot subsume non-special in merge-split"
+        );
+
+        // Non-special can subsume non-special with strictly lower cost
+        let p3 = PositionF64::new(5, 2.0);
+        let p4 = PositionF64::new(4, 3.0);
+        assert!(
+            p3.subsumes(&p4, Algorithm::MergeAndSplit, max_distance),
+            "normal(5, 2.0) should subsume normal(4, 3.0)"
+        );
+    }
+
+    #[test]
+    fn test_position_ordering() {
+        let p1 = PositionF64::new(3, 1.0);
+        let p2 = PositionF64::new(3, 2.0);
+        let p3 = PositionF64::new(4, 1.0);
+
+        assert!(p1 < p2); // Same index, lower cost
+        assert!(p1 < p3); // Lower index
+        assert!(p2 < p3); // Lower index
+    }
+
+    #[test]
+    fn test_approx_eq() {
+        let p1 = PositionF64::new(3, 1.5);
+        let p2 = PositionF64::new(3, 1.5 + 1e-12); // Within epsilon
+        let p3 = PositionF64::new(3, 1.6);
+
+        assert!(p1.approx_eq(&p2));
+        assert!(!p1.approx_eq(&p3));
+    }
+}

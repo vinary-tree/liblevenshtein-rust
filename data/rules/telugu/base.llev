@@ -94,8 +94,8 @@
 [id: 4126, name: "kha", weight: 0.05, group: telugu_velars]
 ఖ -> kh;
 
-[id: 4127, name: "ga", weight: 0.05, group: telugu_velars]
-గ -> g;
+[id: 4127, name: "ga", weight: 0.05, group: telugu_velars, ipa: "/ɡ/"]
+గ -> ɡ;
 
 [id: 4128, name: "gha", weight: 0.05, group: telugu_velars]
 ఘ -> gh;

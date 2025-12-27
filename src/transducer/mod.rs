@@ -17,8 +17,10 @@ mod algorithm;
 mod automaton_zipper;
 pub mod builder;
 mod builder_api;
+pub mod costs_f64;
 pub mod helpers;
 mod intersection;
+mod intersection_f64;
 pub mod intersection_zipper;
 pub mod operation_set;
 pub mod operation_type;
@@ -27,14 +29,19 @@ pub mod phonetic;
 #[cfg(feature = "phonetic-rules")]
 pub mod phonetic_transducer;
 mod pool;
+mod pool_f64;
 mod position;
+mod position_f64;
 mod query;
+mod query_f64;
 mod query_result;
 mod state;
+mod state_f64;
 pub mod substitution_policy;
 pub mod substitution_set;
 pub mod substitution_set_char;
 pub mod transition;
+pub mod transition_f64;
 pub mod universal;
 pub mod generalized;
 mod value_filtered_query;
@@ -47,21 +54,32 @@ pub use algorithm::Algorithm;
 pub use automaton_zipper::AutomatonZipper;
 pub use builder::{BuilderError, TransducerBuilder};
 pub use builder_api::QueryBuilder;
+pub use costs_f64::OperationCostsF64;
 pub use intersection::{Intersection, PathNode};
+pub use intersection_f64::IntersectionF64;
 pub use intersection_zipper::IntersectionZipper;
 pub use operation_set::{OperationSet, OperationSetBuilder};
 pub use operation_type::OperationType;
 pub use ordered_query::{OrderedCandidate, OrderedQueryIterator};
 pub use pool::StatePool;
+pub use pool_f64::StatePoolF64;
 pub use position::Position;
+pub use position_f64::PositionF64;
 pub use query::{Candidate, CandidateIterator, QueryIterator, StringQueryIterator};
+pub use query_f64::{
+    CandidateF64, CandidateIteratorF64, QueryIteratorF64, QueryResultF64, StringQueryIteratorF64,
+};
 pub use query_result::QueryResult;
 pub use state::State;
+pub use state_f64::StateF64;
 pub use substitution_policy::{
     Restricted, RestrictedChar, SubstitutionPolicy, SubstitutionPolicyChar, SubstitutionPolicyFor, Unrestricted,
 };
 pub use substitution_set::SubstitutionSet;
 pub use substitution_set_char::SubstitutionSetChar;
+pub use transition_f64::{
+    initial_state_f64, transition_position_f64, transition_state_f64, transition_state_pooled_f64,
+};
 pub use value_filtered_query::{ValueFilteredQueryIterator, ValueSetFilteredQueryIterator};
 pub use zipper_query_iterator::ZipperQueryIterator;
 

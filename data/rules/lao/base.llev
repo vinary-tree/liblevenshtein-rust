@@ -1,0 +1,189 @@
+// Lao Base Phonetic Rules
+// =======================
+// Phonetic rules for Lao (ພາສາລາວ / Phasa Lao).
+// Spoken by approximately 7 million people in Laos and
+// northeastern Thailand.
+//
+// Lao features:
+//   - Kra-Dai (Tai-Kadai) language family
+//   - Lao script (abugida, related to Thai)
+//   - 6-tone system
+//   - Aspirated vs unaspirated stops
+//   - No consonant clusters (simplified from Thai)
+//   - Final consonants limited to p, t, k, m, n, ŋ, w, j
+//
+// Orthography (Romanization):
+//   - ph, th, kh for aspirated stops
+//   - ng for /ŋ/, ny for /ɲ/
+//   - Tones: high, mid, low, rising, falling, low-falling
+//
+// Rule IDs: 11000-11099
+
+@name "Lao Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Lao"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// [id: 11000] Identity mapping removed: a -> a (passes through unchanged)
+
+[id: 11001, name: "aa long", weight: 0.05, group: lao_vowels, ipa: "/aː/"]
+aa -> aː;
+
+// [id: 11002] Identity mapping removed: e -> e (passes through unchanged)
+
+[id: 11003, name: "ee long", weight: 0.05, group: lao_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 11004, name: "ae open e", weight: 0.05, group: lao_vowels, ipa: "/ɛ/"]
+ae -> ɛ;
+
+// [id: 11005] Identity mapping removed: i -> i (passes through unchanged)
+
+[id: 11006, name: "ii long", weight: 0.05, group: lao_vowels, ipa: "/iː/"]
+ii -> iː;
+
+// [id: 11007] Identity mapping removed: o -> o (passes through unchanged)
+
+[id: 11008, name: "oo long", weight: 0.05, group: lao_vowels, ipa: "/oː/"]
+oo -> oː;
+
+[id: 11009, name: "aw open o", weight: 0.05, group: lao_vowels, ipa: "/ɔ/"]
+aw -> ɔ;
+
+// [id: 11010] Identity mapping removed: u -> u (passes through unchanged)
+
+[id: 11011, name: "uu long", weight: 0.05, group: lao_vowels, ipa: "/uː/"]
+uu -> uː;
+
+[id: 11012, name: "eu central", weight: 0.05, group: lao_vowels, ipa: "/ɯ/"]
+eu -> ɯ;
+
+// ============================================================
+// TONES (weight 0.05)
+// 6-tone system
+// ============================================================
+
+[id: 11015, name: "low tone", weight: 0.05, group: lao_tones, ipa: "˨"]
+à -> a˨;
+
+[id: 11016, name: "mid tone", weight: 0.05, group: lao_tones, ipa: "˧"]
+ā -> a˧;
+
+[id: 11017, name: "high tone", weight: 0.05, group: lao_tones, ipa: "˦"]
+á -> a˦;
+
+[id: 11018, name: "rising tone", weight: 0.05, group: lao_tones, ipa: "˨˦"]
+ǎ -> a˨˦;
+
+[id: 11019, name: "high falling tone", weight: 0.05, group: lao_tones, ipa: "˥˩"]
+â -> a˥˩;
+
+[id: 11020, name: "low falling tone", weight: 0.05, group: lao_tones, ipa: "˨˩"]
+ȁ -> a˨˩;
+
+// ============================================================
+// ASPIRATED STOPS (weight 0.05)
+// ============================================================
+
+[id: 11025, name: "ph aspirated", weight: 0.05, group: lao_aspirated, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 11026, name: "th aspirated", weight: 0.05, group: lao_aspirated, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 11027, name: "kh aspirated", weight: 0.05, group: lao_aspirated, ipa: "/kʰ/"]
+kh -> kʰ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+// [id: 11030] Identity mapping removed: p -> p (passes through unchanged)
+
+// [id: 11031] Identity mapping removed: b -> b (passes through unchanged)
+
+// [id: 11032] Identity mapping removed: t -> t (passes through unchanged)
+
+// [id: 11033] Identity mapping removed: d -> d (passes through unchanged)
+
+// [id: 11034] Identity mapping removed: k -> k (passes through unchanged)
+
+[id: 11035, name: "glottal stop", weight: 0.05, group: lao_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// [id: 11040] Identity mapping removed: f -> f (passes through unchanged)
+
+// [id: 11041] Identity mapping removed: s -> s (passes through unchanged)
+
+// [id: 11042] Identity mapping removed: h -> h (passes through unchanged)
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// [id: 11045] Identity mapping removed: m -> m (passes through unchanged)
+
+// [id: 11046] Identity mapping removed: n -> n (passes through unchanged)
+
+[id: 11047, name: "ng velar nasal", weight: 0.05, group: lao_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+[id: 11048, name: "ny palatal nasal", weight: 0.05, group: lao_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// [id: 11050] Identity mapping removed: l -> l (passes through unchanged)
+
+[id: 11051, name: "r", weight: 0.05, group: lao_liquids, ipa: "/l/"]
+r -> l;
+
+// [id: 11052] Identity mapping removed: w -> w (passes through unchanged)
+
+[id: 11053, name: "y", weight: 0.05, group: lao_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 11070, name: "lao", weight: 0.02, group: lao_common]
+lao -> laːo;
+
+[id: 11071, name: "sabaidii hello", weight: 0.02, group: lao_common]
+sabaidii -> sabaidiː;
+
+[id: 11072, name: "khop chai thank you", weight: 0.02, group: lao_common]
+khop chai -> kʰop t͡ɕai;
+
+[id: 11073, name: "chao yes", weight: 0.02, group: lao_common]
+chao -> t͡ɕau;
+
+[id: 11074, name: "bo no", weight: 0.02, group: lao_common]
+bo -> bɔː;
+
+[id: 11075, name: "nam water", weight: 0.02, group: lao_common]
+nam -> nam;
+
+[id: 11076, name: "khao rice food", weight: 0.02, group: lao_common]
+khao -> kʰaːu;
+
+[id: 11077, name: "huan house", weight: 0.02, group: lao_common]
+huan -> huːan;
+
+[id: 11078, name: "khon person", weight: 0.02, group: lao_common]
+khon -> kʰon;
+
+[id: 11079, name: "dek child", weight: 0.02, group: lao_common]
+dek -> dek;
+

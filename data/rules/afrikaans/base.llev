@@ -1,0 +1,180 @@
+// Afrikaans Base Phonetic Rules
+// =============================
+// Phonetic rules for Afrikaans.
+// Spoken by approximately 7 million people in South Africa and
+// Namibia.
+//
+// Afrikaans features:
+//   - West Germanic language (derived from Dutch)
+//   - Simplified phonology compared to Dutch
+//   - No grammatical gender
+//   - Uvular R (similar to German/Dutch)
+//   - Long vowels indicated by doubled letters
+//   - Final obstruent devoicing
+//
+// Orthography:
+//   - ê, ô for /ɛː/, /ɔː/
+//   - ie for /i/, oe for /u/
+//   - eu for /ø/, ui for /œy/
+//   - g for /x/ (velar fricative)
+//
+// Rule IDs: 13300-13399
+
+@name "Afrikaans Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Afrikaans"
+
+// ============================================================
+// MONOPHTHONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 13300, name: "a short", weight: 0.05, group: afrikaans_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 13301, name: "e short", weight: 0.05, group: afrikaans_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 13302, name: "i short", weight: 0.05, group: afrikaans_vowels, ipa: "/ə/"]
+i -> ə;
+
+[id: 13303, name: "o short", weight: 0.05, group: afrikaans_vowels, ipa: "/ɔ/"]
+o -> ɔ;
+
+[id: 13304, name: "u short", weight: 0.05, group: afrikaans_vowels, ipa: "/œ/"]
+u -> œ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 13308, name: "aa long", weight: 0.05, group: afrikaans_long, ipa: "/aː/"]
+aa -> aː;
+
+[id: 13309, name: "ee long", weight: 0.05, group: afrikaans_long, ipa: "/eː/"]
+ee -> eː;
+
+[id: 13310, name: "ie long i", weight: 0.05, group: afrikaans_long, ipa: "/i/"]
+ie -> i;
+
+[id: 13311, name: "oo long", weight: 0.05, group: afrikaans_long, ipa: "/oː/"]
+oo -> oː;
+
+[id: 13312, name: "oe long u", weight: 0.05, group: afrikaans_long, ipa: "/u/"]
+oe -> u;
+
+[id: 13313, name: "uu long", weight: 0.05, group: afrikaans_long, ipa: "/y/"]
+uu -> y;
+
+[id: 13314, name: "ê open e", weight: 0.05, group: afrikaans_long, ipa: "/ɛː/"]
+ê -> ɛː;
+
+[id: 13315, name: "ô open o", weight: 0.05, group: afrikaans_long, ipa: "/ɔː/"]
+ô -> ɔː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+// NOTE: ai passes through unchanged (identity mapping removed)
+
+[id: 13319, name: "ei diphthong", weight: 0.05, group: afrikaans_diphthongs, ipa: "/ɛi/"]
+ei -> ɛi;
+
+[id: 13320, name: "ou diphthong", weight: 0.05, group: afrikaans_diphthongs, ipa: "/ɔu/"]
+ou -> ɔu;
+
+[id: 13321, name: "ui diphthong", weight: 0.05, group: afrikaans_diphthongs, ipa: "/œy/"]
+ui -> œy;
+
+[id: 13322, name: "eu diphthong", weight: 0.05, group: afrikaans_diphthongs, ipa: "/ø/"]
+eu -> ø;
+
+[id: 13323, name: "oei diphthong", weight: 0.05, group: afrikaans_diphthongs, ipa: "/ui/"]
+oei -> ui;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// NOTE: p, b, t, d, k pass through unchanged (identity mappings removed)
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// NOTE: f passes through unchanged (identity mapping removed)
+
+[id: 13335, name: "v", weight: 0.05, group: afrikaans_fricatives, ipa: "/f/"]
+v -> f;
+
+// NOTE: s passes through unchanged (identity mapping removed)
+
+[id: 13337, name: "g velar fricative", weight: 0.05, group: afrikaans_fricatives, ipa: "/x/"]
+g -> x;
+
+[id: 13338, name: "ch velar fricative", weight: 0.05, group: afrikaans_fricatives, ipa: "/x/"]
+ch -> x;
+
+// NOTE: h passes through unchanged (identity mapping removed)
+
+[id: 13340, name: "sj postalveolar", weight: 0.05, group: afrikaans_fricatives, ipa: "/ʃ/"]
+sj -> ʃ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// NOTE: m, n pass through unchanged (identity mappings removed)
+
+[id: 13346, name: "ng velar nasal", weight: 0.05, group: afrikaans_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// NOTE: l passes through unchanged (identity mapping removed)
+
+[id: 13351, name: "r uvular", weight: 0.05, group: afrikaans_liquids, ipa: "/ʁ/"]
+r -> ʁ;
+
+[id: 13352, name: "w", weight: 0.05, group: afrikaans_approximants, ipa: "/v/"]
+w -> v;
+
+// NOTE: j passes through unchanged (identity mapping removed)
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 13370, name: "afrikaans", weight: 0.02, group: afrikaans_common]
+afrikaans -> afrikaːns;
+
+[id: 13371, name: "hallo hello", weight: 0.02, group: afrikaans_common]
+hallo -> haloː;
+
+[id: 13372, name: "dankie thank you", weight: 0.02, group: afrikaans_common]
+dankie -> daŋki;
+
+[id: 13373, name: "ja yes", weight: 0.02, group: afrikaans_common]
+ja -> jaː;
+
+[id: 13374, name: "nee no", weight: 0.02, group: afrikaans_common]
+nee -> neː;
+
+[id: 13375, name: "water", weight: 0.02, group: afrikaans_common]
+water -> vatəʁ;
+
+[id: 13376, name: "brood bread food", weight: 0.02, group: afrikaans_common]
+brood -> bʁoːt;
+
+[id: 13377, name: "huis house", weight: 0.02, group: afrikaans_common]
+huis -> hœys;
+
+[id: 13378, name: "mens person", weight: 0.02, group: afrikaans_common]
+mens -> mɛns;
+
+[id: 13379, name: "kind child", weight: 0.02, group: afrikaans_common]
+kind -> kənt;
+

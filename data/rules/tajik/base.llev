@@ -1,0 +1,176 @@
+// Tajik Base Phonetic Rules
+// =========================
+// Phonetic rules for Tajik (Тоҷикӣ).
+// Spoken by approximately 8 million people in Tajikistan
+// and Uzbekistan.
+//
+// Tajik features:
+//   - Southwestern Iranian language (Persian variety)
+//   - Cyrillic script
+//   - Closely related to Persian/Dari
+//   - Six vowel system
+//   - Consonant clusters allowed
+//   - SOV word order
+//
+// Orthography:
+//   - Cyrillic script (unique to Tajik Persian)
+//   - ӣ for long /iː/
+//   - ӯ for /ɵ/
+//   - ҳ for /h/ (distinguishes from х /x/)
+//   - қ for /q/
+//
+// Rule IDs: 14700-14799
+
+@name "Tajik Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Tajik"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14700, name: "а a", weight: 0.05, group: tajik_vowels, ipa: "/a/"]
+а -> a;
+
+[id: 14701, name: "е e", weight: 0.05, group: tajik_vowels, ipa: "/e/"]
+е -> e;
+
+[id: 14702, name: "и i", weight: 0.05, group: tajik_vowels, ipa: "/i/"]
+и -> i;
+
+[id: 14703, name: "ӣ long i", weight: 0.05, group: tajik_vowels, ipa: "/iː/"]
+ӣ -> iː;
+
+[id: 14704, name: "о o", weight: 0.05, group: tajik_vowels, ipa: "/ɔ/"]
+о -> ɔ;
+
+[id: 14705, name: "у u", weight: 0.05, group: tajik_vowels, ipa: "/u/"]
+у -> u;
+
+[id: 14706, name: "ӯ rounded schwa", weight: 0.05, group: tajik_vowels, ipa: "/ɵ/"]
+ӯ -> ɵ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 14712, name: "п p", weight: 0.05, group: tajik_stops, ipa: "/p/"]
+п -> p;
+
+[id: 14713, name: "б b", weight: 0.05, group: tajik_stops, ipa: "/b/"]
+б -> b;
+
+[id: 14714, name: "т t", weight: 0.05, group: tajik_stops, ipa: "/t/"]
+т -> t;
+
+[id: 14715, name: "д d", weight: 0.05, group: tajik_stops, ipa: "/d/"]
+д -> d;
+
+[id: 14716, name: "к k", weight: 0.05, group: tajik_stops, ipa: "/k/"]
+к -> k;
+
+[id: 14717, name: "г g", weight: 0.05, group: tajik_stops, ipa: "/ɡ/"]
+г -> ɡ;
+
+[id: 14718, name: "қ q uvular", weight: 0.05, group: tajik_stops, ipa: "/q/"]
+қ -> q;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 14722, name: "ч ch", weight: 0.05, group: tajik_affricates, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 14723, name: "ҷ j", weight: 0.05, group: tajik_affricates, ipa: "/d͡ʒ/"]
+ҷ -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 14726, name: "ф f", weight: 0.05, group: tajik_fricatives, ipa: "/f/"]
+ф -> f;
+
+[id: 14727, name: "в v", weight: 0.05, group: tajik_fricatives, ipa: "/v/"]
+в -> v;
+
+[id: 14728, name: "с s", weight: 0.05, group: tajik_fricatives, ipa: "/s/"]
+с -> s;
+
+[id: 14729, name: "з z", weight: 0.05, group: tajik_fricatives, ipa: "/z/"]
+з -> z;
+
+[id: 14730, name: "ш sh", weight: 0.05, group: tajik_fricatives, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 14731, name: "ж zh", weight: 0.05, group: tajik_fricatives, ipa: "/ʒ/"]
+ж -> ʒ;
+
+[id: 14732, name: "х kh velar", weight: 0.05, group: tajik_fricatives, ipa: "/x/"]
+х -> x;
+
+[id: 14733, name: "ғ gh voiced uvular", weight: 0.05, group: tajik_fricatives, ipa: "/ʁ/"]
+ғ -> ʁ;
+
+[id: 14734, name: "ҳ h", weight: 0.05, group: tajik_fricatives, ipa: "/h/"]
+ҳ -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 14740, name: "м m", weight: 0.05, group: tajik_nasals, ipa: "/m/"]
+м -> m;
+
+[id: 14741, name: "н n", weight: 0.05, group: tajik_nasals, ipa: "/n/"]
+н -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 14746, name: "л l", weight: 0.05, group: tajik_liquids, ipa: "/l/"]
+л -> l;
+
+[id: 14747, name: "р r", weight: 0.05, group: tajik_liquids, ipa: "/r/"]
+р -> r;
+
+[id: 14748, name: "й y", weight: 0.05, group: tajik_approximants, ipa: "/j/"]
+й -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 14780, name: "тоҷикӣ tajik", weight: 0.02, group: tajik_common]
+тоҷикӣ -> tɔd͡ʒikiː;
+
+[id: 14781, name: "салом salom hello", weight: 0.02, group: tajik_common]
+салом -> salɔm;
+
+[id: 14782, name: "ташаккур tashakkur thank you", weight: 0.02, group: tajik_common]
+ташаккур -> taʃakkur;
+
+[id: 14783, name: "ҳа ha yes", weight: 0.02, group: tajik_common]
+ҳа -> ha;
+
+[id: 14784, name: "не ne no", weight: 0.02, group: tajik_common]
+не -> ne;
+
+[id: 14785, name: "об ob water", weight: 0.02, group: tajik_common]
+об -> ɔb;
+
+[id: 14786, name: "нон non bread", weight: 0.02, group: tajik_common]
+нон -> nɔn;
+
+[id: 14787, name: "хона khona house", weight: 0.02, group: tajik_common]
+хона -> xɔna;
+
+[id: 14788, name: "одам odam person", weight: 0.02, group: tajik_common]
+одам -> ɔdam;
+
+[id: 14789, name: "кӯдак kudak child", weight: 0.02, group: tajik_common]
+кӯдак -> kɵdak;
+

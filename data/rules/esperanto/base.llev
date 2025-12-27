@@ -1,0 +1,175 @@
+// Esperanto Phonetic Rules
+// ========================
+// Phonetic rules for Esperanto, the most widely spoken constructed
+// international auxiliary language (created by L.L. Zamenhof in 1887).
+//
+// Esperanto has completely regular phonology:
+//   - One letter = one sound (perfectly phonemic orthography)
+//   - 5 vowels: a, e, i, o, u
+//   - 23 consonants (including 6 with diacritics)
+//   - Stress always on penultimate syllable
+//
+// Special letters with diacritics:
+//   - ĉ = t͡ʃ (like English "ch" in "church")
+//   - ĝ = d͡ʒ (like English "j" in "judge")
+//   - ĥ = x (voiceless velar fricative, like German "ch" in "Bach")
+//   - ĵ = ʒ (like "s" in "measure")
+//   - ŝ = ʃ (like English "sh" in "ship")
+//   - ŭ = w (non-syllabic u, forms diphthongs aŭ, eŭ)
+//
+// Note: "x-convention" alternatives (cx, gx, hx, jx, sx, ux) are also
+// supported for systems without proper Unicode support.
+//
+// Rule IDs: 17300-17399
+
+@name "Esperanto Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Esperanto"
+
+// ============================================================
+// DIACRITIC LETTERS (highest priority)
+// ============================================================
+// These are the 6 special letters unique to Esperanto
+
+// Ĉ/ĉ → t͡ʃ (voiceless postalveolar affricate)
+[id: 17300, name: "c circumflex lower", weight: 0.05, group: esperanto_diacritics, ipa: "/t͡ʃ/"]
+ĉ -> t͡ʃ;
+
+[id: 17301, name: "c circumflex upper", weight: 0.05, group: esperanto_diacritics, ipa: "/t͡ʃ/"]
+Ĉ -> t͡ʃ;
+
+// Ĝ/ĝ → d͡ʒ (voiced postalveolar affricate)
+[id: 17302, name: "g circumflex lower", weight: 0.05, group: esperanto_diacritics, ipa: "/d͡ʒ/"]
+ĝ -> d͡ʒ;
+
+[id: 17303, name: "g circumflex upper", weight: 0.05, group: esperanto_diacritics, ipa: "/d͡ʒ/"]
+Ĝ -> d͡ʒ;
+
+// Ĥ/ĥ → x (voiceless velar fricative)
+[id: 17304, name: "h circumflex lower", weight: 0.05, group: esperanto_diacritics, ipa: "/x/"]
+ĥ -> x;
+
+[id: 17305, name: "h circumflex upper", weight: 0.05, group: esperanto_diacritics, ipa: "/x/"]
+Ĥ -> x;
+
+// Ĵ/ĵ → ʒ (voiced postalveolar fricative)
+[id: 17306, name: "j circumflex lower", weight: 0.05, group: esperanto_diacritics, ipa: "/ʒ/"]
+ĵ -> ʒ;
+
+[id: 17307, name: "j circumflex upper", weight: 0.05, group: esperanto_diacritics, ipa: "/ʒ/"]
+Ĵ -> ʒ;
+
+// Ŝ/ŝ → ʃ (voiceless postalveolar fricative)
+[id: 17308, name: "s circumflex lower", weight: 0.05, group: esperanto_diacritics, ipa: "/ʃ/"]
+ŝ -> ʃ;
+
+[id: 17309, name: "s circumflex upper", weight: 0.05, group: esperanto_diacritics, ipa: "/ʃ/"]
+Ŝ -> ʃ;
+
+// Ŭ/ŭ → w (labial-velar approximant, non-syllabic u)
+[id: 17310, name: "u breve lower", weight: 0.05, group: esperanto_diacritics, ipa: "/w/"]
+ŭ -> w;
+
+[id: 17311, name: "u breve upper", weight: 0.05, group: esperanto_diacritics, ipa: "/w/"]
+Ŭ -> w;
+
+// ============================================================
+// X-CONVENTION (ASCII alternatives)
+// ============================================================
+// For systems without proper Unicode support, digraphs with "x"
+// are used as alternatives to the diacritic letters.
+
+// cx → t͡ʃ (alternative for ĉ)
+[id: 17320, name: "cx digraph", weight: 0.05, group: esperanto_xconv, ipa: "/t͡ʃ/"]
+cx -> t͡ʃ;
+
+// gx → d͡ʒ (alternative for ĝ)
+[id: 17321, name: "gx digraph", weight: 0.05, group: esperanto_xconv, ipa: "/d͡ʒ/"]
+gx -> d͡ʒ;
+
+// hx → x (alternative for ĥ)
+[id: 17322, name: "hx digraph", weight: 0.05, group: esperanto_xconv, ipa: "/x/"]
+hx -> x;
+
+// jx → ʒ (alternative for ĵ)
+[id: 17323, name: "jx digraph", weight: 0.05, group: esperanto_xconv, ipa: "/ʒ/"]
+jx -> ʒ;
+
+// sx → ʃ (alternative for ŝ)
+[id: 17324, name: "sx digraph", weight: 0.05, group: esperanto_xconv, ipa: "/ʃ/"]
+sx -> ʃ;
+
+// ux → w (alternative for ŭ)
+[id: 17325, name: "ux digraph", weight: 0.05, group: esperanto_xconv, ipa: "/w/"]
+ux -> w;
+
+// ============================================================
+// CONSONANTS
+// ============================================================
+
+// C → t͡s (voiceless alveolar affricate, like "ts" in "cats")
+[id: 17330, name: "c to ts", weight: 0.1, group: esperanto_consonants, ipa: "/t͡s/"]
+c -> t͡s;
+
+// G → ɡ (voiced velar stop, always hard as in "go")
+[id: 17331, name: "g to IPA g", weight: 0.1, group: esperanto_consonants, ipa: "/ɡ/"]
+g -> ɡ;
+
+// H → h (voiceless glottal fricative)
+[id: 17332, name: "h glottal", weight: 0.1, group: esperanto_consonants, ipa: "/h/"]
+h -> h;
+
+// J → j (palatal approximant, like "y" in "yes")
+[id: 17333, name: "j to y", weight: 0.1, group: esperanto_consonants, ipa: "/j/"]
+j -> j;
+
+// R → r (alveolar trill, rolled R)
+[id: 17334, name: "r trill", weight: 0.1, group: esperanto_consonants, ipa: "/r/"]
+r -> r;
+
+// V → v (voiced labiodental fricative)
+[id: 17335, name: "v labiodental", weight: 0.1, group: esperanto_consonants, ipa: "/v/"]
+v -> v;
+
+// ============================================================
+// DIPHTHONGS
+// ============================================================
+// Esperanto has two common diphthongs with ŭ
+
+// AŬ → aw (like "ow" in "cow")
+[id: 17340, name: "au diphthong", weight: 0.1, group: esperanto_diphthongs, ipa: "/aw/"]
+aŭ -> aw;
+
+// EŬ → ew (like "ew" in some pronunciations)
+[id: 17341, name: "eu diphthong", weight: 0.1, group: esperanto_diphthongs, ipa: "/ew/"]
+eŭ -> ew;
+
+// X-convention diphthongs
+[id: 17342, name: "aux diphthong", weight: 0.1, group: esperanto_diphthongs, ipa: "/aw/"]
+aux -> aw;
+
+[id: 17343, name: "eux diphthong", weight: 0.1, group: esperanto_diphthongs, ipa: "/ew/"]
+eux -> ew;
+
+// ============================================================
+// DOUBLE CONSONANT SIMPLIFICATION
+// ============================================================
+// Esperanto generally preserves double consonants in spelling
+// but they may be simplified in casual speech
+
+[id: 17350, name: "double t͡ʃ simplify", weight: 0.2, group: esperanto_simplification]
+t͡ʃt͡ʃ -> t͡ʃ;
+
+[id: 17351, name: "double d͡ʒ simplify", weight: 0.2, group: esperanto_simplification]
+d͡ʒd͡ʒ -> d͡ʒ;
+
+[id: 17352, name: "double ʃ simplify", weight: 0.2, group: esperanto_simplification]
+ʃʃ -> ʃ;
+
+[id: 17353, name: "double ʒ simplify", weight: 0.2, group: esperanto_simplification]
+ʒʒ -> ʒ;
+
+[id: 17354, name: "double t͡s simplify", weight: 0.2, group: esperanto_simplification]
+t͡st͡s -> t͡s;
+

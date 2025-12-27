@@ -29,16 +29,38 @@ use std::sync::LazyLock;
 // PhonePattern - Single char or digraph
 // ============================================================================
 
-/// A phonetic class element - either a single character or a digraph.
+/// A phonetic class element - supports single characters through arbitrary-length sequences.
 ///
-/// Phonetic classes can contain both single Unicode characters (including IPA)
-/// and ASCII digraphs (two-character sequences representing single sounds).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Phonetic classes can contain:
+/// - Single Unicode characters (including IPA): `Char('ʃ')`
+/// - Digraphs (2 characters): `Digraph('s', 'h')` for "sh"
+/// - Trigraphs (3 characters): `Trigraph('t', 's', 'ʼ')` for ejective affricate t͡sʼ
+/// - Tetragraphs (4 characters): `Tetragraph('ŋ', 'ɡ', 'ǀ', 'ʰ')` for prenasalized aspirated click
+/// - Pentagraphs (5 characters): `Pentagraph(...)` for prenasalized labialized clicks
+/// - Hexagraphs (6 characters): `Hexagraph(...)` for prenasalized labialized ejective affricates
+/// - Heptagraphs (7 characters): `Heptagraph(...)` for theoretical maximum complex phonemes
+/// - Sequences (8+ characters): `Sequence(vec![...])` for rare longer patterns
+///
+/// Fixed-size variants (Char through Heptagraph) avoid heap allocation.
+/// Sequence uses `Vec<char>` for rare 8+ character patterns.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhonePattern {
     /// Single character (e.g., 'a', 'ʃ', 'θ')
     Char(char),
     /// Two-character digraph (e.g., ('s', 'h') for "sh")
     Digraph(char, char),
+    /// Three-character trigraph (e.g., ('t', 's', 'ʼ') for ejective affricate t͡sʼ)
+    Trigraph(char, char, char),
+    /// Four-character tetragraph (e.g., ('ŋ', 'ɡ', 'ǀ', 'ʰ') for prenasalized aspirated click)
+    Tetragraph(char, char, char, char),
+    /// Five-character pentagraph (e.g., prenasalized labialized click)
+    Pentagraph(char, char, char, char, char),
+    /// Six-character hexagraph (e.g., prenasalized labialized ejective affricate)
+    Hexagraph(char, char, char, char, char, char),
+    /// Seven-character heptagraph (theoretical maximum for complex phonemes)
+    Heptagraph(char, char, char, char, char, char, char),
+    /// Arbitrary-length sequence (8+ characters) - heap allocated
+    Sequence(Vec<char>),
 }
 
 impl PhonePattern {
@@ -52,6 +74,11 @@ impl PhonePattern {
         PhonePattern::Digraph(c1, c2)
     }
 
+    /// Create a trigraph pattern (for ejective affricates, etc.).
+    pub const fn trigraph(c1: char, c2: char, c3: char) -> Self {
+        PhonePattern::Trigraph(c1, c2, c3)
+    }
+
     /// Check if this pattern matches a single character.
     pub fn matches_char(&self, c: char) -> bool {
         matches!(self, PhonePattern::Char(pc) if *pc == c)
@@ -60,6 +87,11 @@ impl PhonePattern {
     /// Check if this pattern matches a two-character sequence.
     pub fn matches_digraph(&self, c1: char, c2: char) -> bool {
         matches!(self, PhonePattern::Digraph(d1, d2) if *d1 == c1 && *d2 == c2)
+    }
+
+    /// Check if this pattern matches a three-character sequence.
+    pub fn matches_trigraph(&self, c1: char, c2: char, c3: char) -> bool {
+        matches!(self, PhonePattern::Trigraph(t1, t2, t3) if *t1 == c1 && *t2 == c2 && *t3 == c3)
     }
 
     /// Returns true if this is a single character.
@@ -72,20 +104,201 @@ impl PhonePattern {
         matches!(self, PhonePattern::Digraph(_, _))
     }
 
+    /// Returns true if this is a trigraph.
+    pub fn is_trigraph(&self) -> bool {
+        matches!(self, PhonePattern::Trigraph(_, _, _))
+    }
+
     /// Get the character if this is a single char pattern.
     pub fn as_char(&self) -> Option<char> {
         match self {
             PhonePattern::Char(c) => Some(*c),
-            PhonePattern::Digraph(_, _) => None,
+            _ => None,
         }
     }
 
     /// Get the digraph characters if this is a digraph pattern.
     pub fn as_digraph(&self) -> Option<(char, char)> {
         match self {
-            PhonePattern::Char(_) => None,
             PhonePattern::Digraph(c1, c2) => Some((*c1, *c2)),
+            _ => None,
         }
+    }
+
+    /// Get the trigraph characters if this is a trigraph pattern.
+    pub fn as_trigraph(&self) -> Option<(char, char, char)> {
+        match self {
+            PhonePattern::Trigraph(c1, c2, c3) => Some((*c1, *c2, *c3)),
+            _ => None,
+        }
+    }
+
+    /// Create a tetragraph pattern (for prenasalized aspirated clicks, etc.).
+    pub const fn tetragraph(c1: char, c2: char, c3: char, c4: char) -> Self {
+        PhonePattern::Tetragraph(c1, c2, c3, c4)
+    }
+
+    /// Create a pentagraph pattern (for 5-character patterns).
+    pub const fn pentagraph(c1: char, c2: char, c3: char, c4: char, c5: char) -> Self {
+        PhonePattern::Pentagraph(c1, c2, c3, c4, c5)
+    }
+
+    /// Create a hexagraph pattern (for 6-character patterns).
+    pub const fn hexagraph(c1: char, c2: char, c3: char, c4: char, c5: char, c6: char) -> Self {
+        PhonePattern::Hexagraph(c1, c2, c3, c4, c5, c6)
+    }
+
+    /// Create a heptagraph pattern (for 7-character patterns).
+    pub const fn heptagraph(
+        c1: char,
+        c2: char,
+        c3: char,
+        c4: char,
+        c5: char,
+        c6: char,
+        c7: char,
+    ) -> Self {
+        PhonePattern::Heptagraph(c1, c2, c3, c4, c5, c6, c7)
+    }
+
+    /// Create a sequence pattern (for 8+ character patterns).
+    pub fn sequence(chars: Vec<char>) -> Self {
+        debug_assert!(chars.len() >= 8, "Sequence should have 8+ characters; use fixed-size variants for shorter patterns");
+        PhonePattern::Sequence(chars)
+    }
+
+    /// Check if this pattern matches a four-character sequence.
+    pub fn matches_tetragraph(&self, c1: char, c2: char, c3: char, c4: char) -> bool {
+        matches!(self, PhonePattern::Tetragraph(t1, t2, t3, t4) if *t1 == c1 && *t2 == c2 && *t3 == c3 && *t4 == c4)
+    }
+
+    /// Check if this pattern matches a five-character sequence.
+    pub fn matches_pentagraph(&self, c1: char, c2: char, c3: char, c4: char, c5: char) -> bool {
+        matches!(self, PhonePattern::Pentagraph(p1, p2, p3, p4, p5)
+            if *p1 == c1 && *p2 == c2 && *p3 == c3 && *p4 == c4 && *p5 == c5)
+    }
+
+    /// Check if this pattern matches a six-character sequence.
+    pub fn matches_hexagraph(
+        &self,
+        c1: char,
+        c2: char,
+        c3: char,
+        c4: char,
+        c5: char,
+        c6: char,
+    ) -> bool {
+        matches!(self, PhonePattern::Hexagraph(h1, h2, h3, h4, h5, h6)
+            if *h1 == c1 && *h2 == c2 && *h3 == c3 && *h4 == c4 && *h5 == c5 && *h6 == c6)
+    }
+
+    /// Check if this pattern matches a seven-character sequence.
+    pub fn matches_heptagraph(
+        &self,
+        c1: char,
+        c2: char,
+        c3: char,
+        c4: char,
+        c5: char,
+        c6: char,
+        c7: char,
+    ) -> bool {
+        matches!(self, PhonePattern::Heptagraph(h1, h2, h3, h4, h5, h6, h7)
+            if *h1 == c1 && *h2 == c2 && *h3 == c3 && *h4 == c4 && *h5 == c5 && *h6 == c6 && *h7 == c7)
+    }
+
+    /// Check if this pattern matches an arbitrary-length sequence.
+    pub fn matches_sequence(&self, chars: &[char]) -> bool {
+        match self {
+            PhonePattern::Sequence(s) => s.as_slice() == chars,
+            _ => false,
+        }
+    }
+
+    /// Returns true if this is a tetragraph.
+    pub fn is_tetragraph(&self) -> bool {
+        matches!(self, PhonePattern::Tetragraph(_, _, _, _))
+    }
+
+    /// Returns true if this is a pentagraph.
+    pub fn is_pentagraph(&self) -> bool {
+        matches!(self, PhonePattern::Pentagraph(_, _, _, _, _))
+    }
+
+    /// Returns true if this is a hexagraph.
+    pub fn is_hexagraph(&self) -> bool {
+        matches!(self, PhonePattern::Hexagraph(_, _, _, _, _, _))
+    }
+
+    /// Returns true if this is a heptagraph.
+    pub fn is_heptagraph(&self) -> bool {
+        matches!(self, PhonePattern::Heptagraph(_, _, _, _, _, _, _))
+    }
+
+    /// Returns true if this is a sequence.
+    pub fn is_sequence(&self) -> bool {
+        matches!(self, PhonePattern::Sequence(_))
+    }
+
+    /// Get the tetragraph characters if this is a tetragraph pattern.
+    pub fn as_tetragraph(&self) -> Option<(char, char, char, char)> {
+        match self {
+            PhonePattern::Tetragraph(c1, c2, c3, c4) => Some((*c1, *c2, *c3, *c4)),
+            _ => None,
+        }
+    }
+
+    /// Get the pentagraph characters if this is a pentagraph pattern.
+    pub fn as_pentagraph(&self) -> Option<(char, char, char, char, char)> {
+        match self {
+            PhonePattern::Pentagraph(c1, c2, c3, c4, c5) => Some((*c1, *c2, *c3, *c4, *c5)),
+            _ => None,
+        }
+    }
+
+    /// Get the hexagraph characters if this is a hexagraph pattern.
+    pub fn as_hexagraph(&self) -> Option<(char, char, char, char, char, char)> {
+        match self {
+            PhonePattern::Hexagraph(c1, c2, c3, c4, c5, c6) => Some((*c1, *c2, *c3, *c4, *c5, *c6)),
+            _ => None,
+        }
+    }
+
+    /// Get the heptagraph characters if this is a heptagraph pattern.
+    pub fn as_heptagraph(&self) -> Option<(char, char, char, char, char, char, char)> {
+        match self {
+            PhonePattern::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                Some((*c1, *c2, *c3, *c4, *c5, *c6, *c7))
+            }
+            _ => None,
+        }
+    }
+
+    /// Get the sequence if this is a sequence pattern.
+    pub fn as_sequence(&self) -> Option<&[char]> {
+        match self {
+            PhonePattern::Sequence(s) => Some(s.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// Get the length of this pattern in characters.
+    pub fn len(&self) -> usize {
+        match self {
+            PhonePattern::Char(_) => 1,
+            PhonePattern::Digraph(_, _) => 2,
+            PhonePattern::Trigraph(_, _, _) => 3,
+            PhonePattern::Tetragraph(_, _, _, _) => 4,
+            PhonePattern::Pentagraph(_, _, _, _, _) => 5,
+            PhonePattern::Hexagraph(_, _, _, _, _, _) => 6,
+            PhonePattern::Heptagraph(_, _, _, _, _, _, _) => 7,
+            PhonePattern::Sequence(s) => s.len(),
+        }
+    }
+
+    /// Returns true if this pattern is empty (only possible for empty Sequence).
+    pub fn is_empty(&self) -> bool {
+        matches!(self, PhonePattern::Sequence(s) if s.is_empty())
     }
 }
 
@@ -94,6 +307,23 @@ impl std::fmt::Display for PhonePattern {
         match self {
             PhonePattern::Char(c) => write!(f, "{}", c),
             PhonePattern::Digraph(c1, c2) => write!(f, "{}{}", c1, c2),
+            PhonePattern::Trigraph(c1, c2, c3) => write!(f, "{}{}{}", c1, c2, c3),
+            PhonePattern::Tetragraph(c1, c2, c3, c4) => write!(f, "{}{}{}{}", c1, c2, c3, c4),
+            PhonePattern::Pentagraph(c1, c2, c3, c4, c5) => {
+                write!(f, "{}{}{}{}{}", c1, c2, c3, c4, c5)
+            }
+            PhonePattern::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                write!(f, "{}{}{}{}{}{}", c1, c2, c3, c4, c5, c6)
+            }
+            PhonePattern::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                write!(f, "{}{}{}{}{}{}{}", c1, c2, c3, c4, c5, c6, c7)
+            }
+            PhonePattern::Sequence(s) => {
+                for c in s {
+                    write!(f, "{}", c)?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -119,7 +349,7 @@ pub struct NamedClass {
 ///
 /// Access classes via [`get_named_class`] which handles case-insensitive lookup.
 pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock::new(|| {
-    use PhonePattern::{Char, Digraph};
+    use PhonePattern::{Char, Digraph, Heptagraph, Hexagraph, Pentagraph, Tetragraph, Trigraph};
 
     let mut m = HashMap::new();
 
@@ -334,6 +564,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Char('ɾ'), // alveolar tap
             Char('ʔ'), // glottal stop
             Char('ɬ'), // voiceless lateral fricative
+            Char('ʍ'), // voiceless labialized velar approximant (which vs witch)
         ],
         description: "All consonants (ASCII + IPA)",
     });
@@ -401,8 +632,9 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         patterns: vec![
             Char('w'), Char('y'), Char('W'), Char('Y'),
             Char('j'), Char('J'), // IPA j = English y
+            Char('ʍ'), // voiceless labialized velar approximant (U+028D) - "which" vs "witch"
         ],
-        description: "Glides/semivowels (w, y)",
+        description: "Glides/semivowels (w, y, ʍ)",
     });
 
     // Affricates (with digraphs)
@@ -417,6 +649,20 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Digraph('d', 'j'), // dj (sometimes dʒ)
         ],
         description: "Affricate consonants (ch, ts, dz)",
+    });
+
+    // Aspirated affricates (Khmer, Quechua, Mandarin)
+    add_class(NamedClass {
+        name: "aspirated_affricate",
+        aliases: &[],
+        patterns: vec![
+            // Aspirated affricates - 3 chars each (base + fricative + aspiration)
+            Trigraph('t', 's', 'ʰ'), // t͡sʰ - aspirated alveolar affricate
+            Trigraph('t', 'ʃ', 'ʰ'), // t͡ʃʰ - aspirated postalveolar affricate
+            Trigraph('t', 'ɕ', 'ʰ'), // t͡ɕʰ - aspirated alveo-palatal affricate (Khmer, Mandarin)
+            Trigraph('t', 'ʂ', 'ʰ'), // t͡ʂʰ - aspirated retroflex affricate (Mandarin)
+        ],
+        description: "Aspirated affricates (Khmer, Quechua, Mandarin)",
     });
 
     // Voiced consonants
@@ -450,6 +696,170 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Digraph('c', 'h'),
         ],
         description: "Voiceless consonants",
+    });
+
+    // ========================================================================
+    // Natural Classes (Phonological Feature Combinations)
+    // ========================================================================
+    // These classes represent major phonological natural classes used in
+    // phonological rules and constraints across languages.
+
+    // Obstruents: sounds that obstruct airflow (stops + fricatives + affricates)
+    add_class(NamedClass {
+        name: "obstruent",
+        aliases: &[],
+        patterns: vec![
+            // Stops
+            Char('p'), Char('b'), Char('t'), Char('d'), Char('k'), Char('g'),
+            Char('P'), Char('B'), Char('T'), Char('D'), Char('K'), Char('G'),
+            Char('ʔ'), // glottal stop
+            Char('q'), Char('Q'), // uvular stop
+            Char('ʈ'), Char('ɖ'), // retroflex stops
+            Char('c'), Char('ɟ'), // palatal stops
+            // Fricatives
+            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
+            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
+            Char('ʃ'), Char('ʒ'), Char('θ'), Char('ð'), Char('ɬ'), Char('ɮ'),
+            Char('x'), Char('ɣ'), Char('χ'), Char('ʁ'), // velar/uvular fricatives
+            Char('ɕ'), Char('ʑ'), // alveo-palatal fricatives
+            Char('ʂ'), Char('ʐ'), // retroflex fricatives
+            Char('ç'), Char('ʝ'), // palatal fricatives
+            Char('ħ'), Char('ʕ'), // pharyngeal fricatives
+            Char('ɸ'), Char('β'), // bilabial fricatives
+            // Affricates (as digraphs)
+            Digraph('t', 'ʃ'), Digraph('d', 'ʒ'), // postalveolar affricates
+            Digraph('t', 's'), Digraph('d', 'z'), // alveolar affricates
+            Digraph('t', 'ɕ'), Digraph('d', 'ʑ'), // alveo-palatal affricates
+            Digraph('c', 'h'), Digraph('C', 'h'),
+        ],
+        description: "Obstruents: stops + fricatives + affricates (obstruct airflow)",
+    });
+
+    // Sonorants: sounds with spontaneous voicing (nasals + approximants + vowels)
+    add_class(NamedClass {
+        name: "sonorant",
+        aliases: &[],
+        patterns: vec![
+            // Nasals
+            Char('m'), Char('n'), Char('M'), Char('N'),
+            Char('ŋ'), Char('ɲ'), Char('ɴ'), // velar, palatal, uvular nasals
+            Char('ɱ'), // labiodental nasal
+            Char('ɳ'), // retroflex nasal
+            // Liquids (laterals + rhotics)
+            Char('l'), Char('r'), Char('L'), Char('R'),
+            Char('ɹ'), Char('ɾ'), Char('ɻ'), // approximant and tap rhotics
+            Char('ʀ'), Char('ʙ'), // uvular and bilabial trills
+            Char('ɭ'), Char('ɽ'), // retroflex lateral and flap
+            Char('ʎ'), // palatal lateral
+            Char('ɫ'), // velarized lateral (dark L)
+            // Glides
+            Char('w'), Char('y'), Char('W'), Char('Y'),
+            Char('j'), Char('J'), Char('ʍ'),
+            Char('ɥ'), // labial-palatal approximant
+            // Vowels (all vowels are sonorants)
+            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
+            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
+            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
+            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
+            Char('y'), Char('ø'), Char('œ'), Char('ɯ'), Char('ɨ'), Char('ʉ'),
+        ],
+        description: "Sonorants: nasals + approximants + vowels (spontaneous voicing)",
+    });
+
+    // Continuants: sounds where airflow continues (fricatives + approximants + vowels)
+    // Excludes: stops, affricates (which have complete closure), nasals (debated)
+    add_class(NamedClass {
+        name: "continuant",
+        aliases: &[],
+        patterns: vec![
+            // Fricatives
+            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
+            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
+            Char('ʃ'), Char('ʒ'), Char('θ'), Char('ð'), Char('ɬ'), Char('ɮ'),
+            Char('x'), Char('ɣ'), Char('χ'), Char('ʁ'),
+            Char('ɕ'), Char('ʑ'), Char('ʂ'), Char('ʐ'),
+            Char('ç'), Char('ʝ'), Char('ħ'), Char('ʕ'),
+            Char('ɸ'), Char('β'),
+            // Approximants (liquids + glides)
+            Char('l'), Char('r'), Char('L'), Char('R'),
+            Char('ɹ'), Char('ɾ'), Char('ɻ'),
+            Char('ɭ'), Char('ʎ'), Char('ɫ'),
+            Char('w'), Char('y'), Char('W'), Char('Y'),
+            Char('j'), Char('J'), Char('ʍ'), Char('ɥ'),
+            // Vowels
+            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
+            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
+            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
+            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
+            Char('y'), Char('ø'), Char('œ'), Char('ɯ'), Char('ɨ'), Char('ʉ'),
+        ],
+        description: "Continuants: fricatives + approximants + vowels (continuous airflow)",
+    });
+
+    // Voiceless fricatives (for voicing assimilation rules)
+    add_class(NamedClass {
+        name: "voiceless_fricative",
+        aliases: &[],
+        patterns: vec![
+            Char('f'), Char('F'),
+            Char('s'), Char('S'),
+            Char('h'), Char('H'),
+            Char('θ'), // voiceless dental fricative
+            Char('ʃ'), // voiceless postalveolar fricative
+            Char('ɬ'), // voiceless lateral fricative
+            Char('x'), // voiceless velar fricative
+            Char('χ'), // voiceless uvular fricative
+            Char('ɕ'), // voiceless alveo-palatal fricative
+            Char('ʂ'), // voiceless retroflex fricative
+            Char('ç'), // voiceless palatal fricative
+            Char('ħ'), // voiceless pharyngeal fricative
+            Char('ɸ'), // voiceless bilabial fricative
+            Digraph('s', 'h'), Digraph('S', 'h'), Digraph('S', 'H'),
+            Digraph('t', 'h'), Digraph('T', 'h'), Digraph('T', 'H'),
+        ],
+        description: "Voiceless fricatives (for voicing assimilation)",
+    });
+
+    // Voiced fricatives (for voicing assimilation rules)
+    add_class(NamedClass {
+        name: "voiced_fricative",
+        aliases: &[],
+        patterns: vec![
+            Char('v'), Char('V'),
+            Char('z'), Char('Z'),
+            Char('ð'), // voiced dental fricative
+            Char('ʒ'), // voiced postalveolar fricative
+            Char('ɮ'), // voiced lateral fricative
+            Char('ɣ'), // voiced velar fricative
+            Char('ʁ'), // voiced uvular fricative
+            Char('ʑ'), // voiced alveo-palatal fricative
+            Char('ʐ'), // voiced retroflex fricative
+            Char('ʝ'), // voiced palatal fricative
+            Char('ʕ'), // voiced pharyngeal fricative
+            Char('β'), // voiced bilabial fricative
+            Digraph('z', 'h'), Digraph('Z', 'h'), Digraph('Z', 'H'),
+        ],
+        description: "Voiced fricatives (for voicing assimilation)",
+    });
+
+    // Sibilant fricatives (for sibilant harmony rules)
+    add_class(NamedClass {
+        name: "sibilant_fricative",
+        aliases: &["sibilant"],
+        patterns: vec![
+            // Alveolar sibilants
+            Char('s'), Char('z'), Char('S'), Char('Z'),
+            // Postalveolar sibilants
+            Char('ʃ'), Char('ʒ'),
+            // Retroflex sibilants
+            Char('ʂ'), Char('ʐ'),
+            // Alveo-palatal sibilants
+            Char('ɕ'), Char('ʑ'),
+            // Digraphs
+            Digraph('s', 'h'), Digraph('S', 'h'),
+            Digraph('z', 'h'), Digraph('Z', 'h'),
+        ],
+        description: "Sibilant fricatives (for sibilant harmony)",
     });
 
     // ========================================================================
@@ -739,6 +1149,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Char('w'), Char('W'), // labio-velar approximant
             Char('ɰ'), // velar approximant (U+0270)
             Char('ʋ'), // labiodental approximant (U+028B)
+            Char('ʍ'), // voiceless labialized velar approximant (U+028D)
         ],
         description: "Approximant consonants (narrowing without turbulence)",
     });
@@ -774,6 +1185,41 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Char('ǁ'), // lateral click (U+01C1)
         ],
         description: "Click consonants (ingressive velaric airstream)",
+    });
+
+    // Prenasalized clicks (Xhosa, Zulu, other Bantu languages)
+    add_class(NamedClass {
+        name: "prenasalized_click",
+        aliases: &["nasal_click"],
+        patterns: vec![
+            // Prenasalized aspirated clicks (Xhosa) - 3 chars each
+            Trigraph('ŋ', 'ǀ', 'ʰ'), // ŋǀʰ - prenasalized dental click + aspiration
+            Trigraph('ŋ', 'ǃ', 'ʰ'), // ŋǃʰ - prenasalized postalveolar click + aspiration
+            Trigraph('ŋ', 'ǁ', 'ʰ'), // ŋǁʰ - prenasalized lateral click + aspiration
+            // Prenasalized voiced clicks (Zulu) - 3 chars each
+            Trigraph('ŋ', 'ɡ', 'ǀ'), // ŋɡǀ - prenasalized voiced dental click
+            Trigraph('ŋ', 'ɡ', 'ǃ'), // ŋɡǃ - prenasalized voiced postalveolar click
+            Trigraph('ŋ', 'ɡ', 'ǁ'), // ŋɡǁ - prenasalized voiced lateral click
+            // Prenasalized voiced aspirated clicks (rare, 4 chars) - TETRAGRAPHS
+            Tetragraph('ŋ', 'ɡ', 'ǀ', 'ʰ'), // ŋɡǀʰ - prenasalized voiced dental + aspiration
+            Tetragraph('ŋ', 'ɡ', 'ǃ', 'ʰ'), // ŋɡǃʰ - prenasalized voiced postalveolar + aspiration
+            Tetragraph('ŋ', 'ɡ', 'ǁ', 'ʰ'), // ŋɡǁʰ - prenasalized voiced lateral + aspiration
+            // Prenasalized voiced aspirated labialized clicks (5 chars) - PENTAGRAPHS
+            // These are attested in Khoisan languages (!Xóõ, Taa)
+            Pentagraph('ŋ', 'ɡ', 'ǀ', 'ʰ', 'ʷ'), // ŋɡǀʰʷ - prenasalized voiced dental + aspiration + labialization
+            Pentagraph('ŋ', 'ɡ', 'ǃ', 'ʰ', 'ʷ'), // ŋɡǃʰʷ - prenasalized voiced postalveolar + aspiration + labialization
+            Pentagraph('ŋ', 'ɡ', 'ǁ', 'ʰ', 'ʷ'), // ŋɡǁʰʷ - prenasalized voiced lateral + aspiration + labialization
+            // Glottalized prenasalized voiced aspirated labialized clicks (6 chars) - HEXAGRAPHS
+            // These represent the most complex click consonants, attested in Khoisan languages (Taa, !Xóõ)
+            Hexagraph('ŋ', 'ɡ', 'ǀ', 'ʰ', 'ʷ', 'ʼ'), // ŋɡǀʰʷʼ - glottalized prenasalized voiced dental + aspiration + labialization
+            Hexagraph('ŋ', 'ɡ', 'ǃ', 'ʰ', 'ʷ', 'ʼ'), // ŋɡǃʰʷʼ - glottalized prenasalized voiced postalveolar + aspiration + labialization
+            Hexagraph('ŋ', 'ɡ', 'ǁ', 'ʰ', 'ʷ', 'ʼ'), // ŋɡǁʰʷʼ - glottalized prenasalized voiced lateral + aspiration + labialization
+            // Prenasalized labialized clicks without aspiration (4 chars) - TETRAGRAPHS
+            Tetragraph('ŋ', 'ɡ', 'ǀ', 'ʷ'), // ŋɡǀʷ - prenasalized voiced dental + labialization
+            Tetragraph('ŋ', 'ɡ', 'ǃ', 'ʷ'), // ŋɡǃʷ - prenasalized voiced postalveolar + labialization
+            Tetragraph('ŋ', 'ɡ', 'ǁ', 'ʷ'), // ŋɡǁʷ - prenasalized voiced lateral + labialization
+        ],
+        description: "Prenasalized clicks (Xhosa aspirated, Zulu voiced, Khoisan labialized/glottalized)",
     });
 
     // Implosive consonants
@@ -1025,7 +1471,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Char('ɤ'), Char('ɨ'), Char('ɘ'),
             // IPA consonants
             Char('ŋ'), Char('θ'), Char('ð'), Char('ʃ'), Char('ʒ'),
-            Char('ɹ'), Char('ɾ'), Char('ʔ'), Char('ɬ'), Char('ɮ'),
+            Char('ɹ'), Char('ɾ'), Char('ʔ'), Char('ɬ'), Char('ɮ'), Char('ʍ'),
             Char('ʈ'), Char('ɖ'), Char('ɳ'), Char('ɽ'), Char('ʂ'),
             Char('ʐ'), Char('ɻ'), Char('ɭ'), Char('ɢ'), Char('ɴ'),
             Char('ʀ'), Char('χ'), Char('ʁ'), Char('ħ'), Char('ʕ'),
@@ -1043,6 +1489,632 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Char('˥'), Char('˦'), Char('˧'), Char('˨'), Char('˩'),
         ],
         description: "All IPA characters (comprehensive phonetic alphabet)",
+    });
+
+    // ========================================================================
+    // Aspiration & Tenseness Classes (Korean, Hindi, Thai, Mandarin)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "aspirated",
+        aliases: &["aspirated_stop"],
+        patterns: vec![
+            // Aspirated stops (with superscript h modifier)
+            Digraph('p', 'ʰ'),
+            Digraph('t', 'ʰ'),
+            Digraph('k', 'ʰ'),
+            Digraph('ʈ', 'ʰ'), // retroflex aspirated
+            Digraph('c', 'ʰ'), // palatal aspirated
+            Digraph('q', 'ʰ'), // uvular aspirated
+            // Aspirated affricates
+            Digraph('ʧ', 'ʰ'), // postalveolar affricate aspirated
+            Digraph('ʨ', 'ʰ'), // alveo-palatal affricate aspirated
+            Digraph('ʦ', 'ʰ'), // alveolar affricate aspirated
+            // Modifier letter small h (aspiration marker standalone)
+            Char('\u{02B0}'), // ʰ
+        ],
+        description: "Aspirated consonants (Korean, Hindi, Thai, Mandarin)",
+    });
+
+    add_class(NamedClass {
+        name: "tense",
+        aliases: &["fortis"],
+        patterns: vec![
+            // Korean tense consonants (with tenseness marker ͈ U+0348)
+            Digraph('p', '\u{0348}'),
+            Digraph('t', '\u{0348}'),
+            Digraph('k', '\u{0348}'),
+            Digraph('s', '\u{0348}'),
+            Digraph('ʧ', '\u{0348}'),
+            // Combining double vertical line below (tenseness marker standalone)
+            Char('\u{0348}'), // ͈
+        ],
+        description: "Tense/fortis consonants (Korean ssang consonants)",
+    });
+
+    // ========================================================================
+    // Secondary Articulation Classes (Arabic, Slavic)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "pharyngealized",
+        aliases: &["emphatic"],
+        patterns: vec![
+            // Arabic emphatic consonants (with pharyngealization marker ˤ U+02E4)
+            Digraph('s', 'ˤ'),
+            Digraph('d', 'ˤ'),
+            Digraph('t', 'ˤ'),
+            Digraph('ð', 'ˤ'),
+            Digraph('z', 'ˤ'),
+            Digraph('l', 'ˤ'),
+            Digraph('r', 'ˤ'),
+            // Modifier letter small reversed glottal stop (pharyngealization)
+            Char('\u{02E4}'), // ˤ
+        ],
+        description: "Pharyngealized/emphatic consonants (Arabic emphatics)",
+    });
+
+    add_class(NamedClass {
+        name: "labialized",
+        aliases: &[],
+        patterns: vec![
+            // Labialized consonants (with superscript w)
+            Digraph('k', 'ʷ'),
+            Digraph('g', 'ʷ'),
+            Digraph('x', 'ʷ'),
+            Digraph('ɣ', 'ʷ'),
+            Digraph('q', 'ʷ'),
+            Digraph('ʁ', 'ʷ'),
+            // Modifier letter small w (labialization marker)
+            Char('\u{02B7}'), // ʷ
+        ],
+        description: "Labialized consonants (with lip rounding)",
+    });
+
+    add_class(NamedClass {
+        name: "velarized",
+        aliases: &["dark"],
+        patterns: vec![
+            // Velarized L (dark L) - most common
+            Char('ɫ'), // U+026B velarized L
+            // Modifier letter small gamma (velarization marker)
+            Char('\u{02E0}'), // ˠ
+            // Combining tilde overlay (velarization diacritic)
+            Char('\u{0334}'), // ̴
+            // Common velarized consonants
+            Digraph('l', '\u{0334}'), // l with tilde overlay
+            Digraph('n', '\u{0334}'), // n with tilde overlay
+        ],
+        description: "Velarized consonants (dark L, etc.)",
+    });
+
+    // ========================================================================
+    // Alveo-Palatal Class (Japanese, Korean, Polish)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "alveopalatal",
+        aliases: &["alveolo_palatal"],
+        patterns: vec![
+            // Alveo-palatal fricatives
+            Char('ɕ'), // voiceless alveo-palatal fricative (Mandarin x, Japanese sh)
+            Char('ʑ'), // voiced alveo-palatal fricative
+            // Alveo-palatal affricates (precomposed)
+            Char('ʨ'), // voiceless alveo-palatal affricate (U+02A8)
+            Char('ʥ'), // voiced alveo-palatal affricate (U+02A5)
+            // Alveo-palatal nasal
+            Char('ȵ'), // U+0235 alveo-palatal nasal
+            // Tie bar representations
+            Digraph('t', 'ɕ'),
+            Digraph('d', 'ʑ'),
+        ],
+        description: "Alveo-palatal consonants (Japanese し/じ, Korean ㅈ/ㅊ, Polish ś/ź)",
+    });
+
+    // ========================================================================
+    // Lateral Fricative Class (Welsh, Zulu)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "lateral_fricative",
+        aliases: &[],
+        patterns: vec![
+            Char('ɬ'), // voiceless lateral fricative (Welsh ll)
+            Char('ɮ'), // voiced lateral fricative
+        ],
+        description: "Lateral fricative consonants (Welsh ll, Zulu hl)",
+    });
+
+    // ========================================================================
+    // Nasal Vowels (Portuguese, French, Polish)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "nasal_vowel",
+        aliases: &["nasalized_vowel"],
+        patterns: vec![
+            // Precomposed nasal vowels (common in orthography)
+            Char('ã'), // nasal a
+            Char('ẽ'), // nasal e
+            Char('ĩ'), // nasal i
+            Char('õ'), // nasal o
+            Char('ũ'), // nasal u
+            // Polish nasal vowels
+            Char('ą'), // nasal o (Polish)
+            Char('ę'), // nasal e (Polish)
+            // IPA nasal vowels (vowel + combining tilde)
+            Digraph('a', '\u{0303}'), // ã
+            Digraph('e', '\u{0303}'), // ẽ
+            Digraph('i', '\u{0303}'), // ĩ
+            Digraph('o', '\u{0303}'), // õ
+            Digraph('u', '\u{0303}'), // ũ
+            Digraph('ɐ', '\u{0303}'), // nasal near-open central
+            Digraph('ɔ', '\u{0303}'), // nasal open-mid back rounded
+            Digraph('ɛ', '\u{0303}'), // nasal open-mid front
+            Digraph('œ', '\u{0303}'), // nasal open-mid front rounded
+            // Combining tilde (nasalization diacritic standalone)
+            Char('\u{0303}'), // ̃
+        ],
+        description: "Nasal vowels (Portuguese ã, French on/an, Polish ę/ą)",
+    });
+
+    // ========================================================================
+    // Diphthongs (English, German, Dutch)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "diphthong",
+        aliases: &[],
+        patterns: vec![
+            // English diphthongs
+            Digraph('a', 'ɪ'), // PRICE
+            Digraph('a', 'ʊ'), // MOUTH
+            Digraph('e', 'ɪ'), // FACE
+            Digraph('o', 'ʊ'), // GOAT (American)
+            Digraph('ə', 'ʊ'), // GOAT (British)
+            Digraph('ɔ', 'ɪ'), // CHOICE
+            // Centering diphthongs
+            Digraph('i', 'ə'), // NEAR
+            Digraph('ɪ', 'ə'), // NEAR variant
+            Digraph('e', 'ə'), // SQUARE
+            Digraph('ɛ', 'ə'), // SQUARE variant
+            Digraph('ʊ', 'ə'), // CURE
+            Digraph('u', 'ə'), // CURE variant
+            // German diphthongs
+            Digraph('a', 'ʏ'), // German eu/äu
+            Digraph('ɔ', 'ʏ'), // German eu variant
+            // Additional diphthongs
+            Digraph('ɛ', 'ɪ'), // FACE variant
+            Digraph('ɑ', 'ɪ'), // PRICE variant (RP)
+            Digraph('ɑ', 'ʊ'), // MOUTH variant (RP)
+        ],
+        description: "Common diphthongs (English, German, Dutch)",
+    });
+
+    // ========================================================================
+    // Syllabic Consonants (English, Czech, Hindi)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "syllabic",
+        aliases: &["syllabic_consonant"],
+        patterns: vec![
+            // Syllabic consonants (with combining vertical line below U+0329)
+            Digraph('l', '\u{0329}'), // syllabic l (bottle)
+            Digraph('n', '\u{0329}'), // syllabic n (button)
+            Digraph('m', '\u{0329}'), // syllabic m (rhythm)
+            Digraph('r', '\u{0329}'), // syllabic r (butter in rhotic accents)
+            Digraph('ɹ', '\u{0329}'), // syllabic approximant r
+            Digraph('ɾ', '\u{0329}'), // syllabic tap
+            Digraph('ŋ', '\u{0329}'), // syllabic velar nasal
+            // Combining vertical line below (syllabic marker standalone)
+            Char('\u{0329}'), // ̩
+        ],
+        description: "Syllabic consonants (English 'bottle', Czech 'vlk')",
+    });
+
+    // ========================================================================
+    // Rhotic Subtypes (Spanish, Portuguese, Hindi)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "approximant_r",
+        aliases: &["rhotic_approximant"],
+        patterns: vec![
+            Char('ɹ'), // alveolar approximant (English r)
+            Char('ɻ'), // retroflex approximant
+            Char('ɰ'), // velar approximant (sometimes rhotic)
+        ],
+        description: "Rhotic approximants (English r)",
+    });
+
+    // Note: [:tap:] and [:trill:] already exist in the file
+
+    // ========================================================================
+    // Ejective Consonants (Georgian, Amharic, Quechua, Native American)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "ejective",
+        aliases: &["glottalic_egressive"],
+        patterns: vec![
+            // Ejective stops
+            Digraph('p', 'ʼ'),
+            Digraph('t', 'ʼ'),
+            Digraph('k', 'ʼ'),
+            Digraph('q', 'ʼ'),
+            Digraph('c', 'ʼ'),
+            // Ejective affricates (using Trigraph - ignoring tie bar)
+            Trigraph('t', 's', 'ʼ'), // t͡sʼ - alveolar ejective affricate
+            Trigraph('t', 'ʃ', 'ʼ'), // t͡ʃʼ - postalveolar ejective affricate
+            Trigraph('t', 'ɕ', 'ʼ'), // t͡ɕʼ - alveo-palatal ejective affricate
+            Trigraph('t', 'ɬ', 'ʼ'), // t͡ɬʼ - lateral ejective affricate (Navajo)
+            Trigraph('k', 'x', 'ʼ'), // k͡xʼ - velar ejective affricate (rare)
+            // Ejective fricatives
+            Digraph('s', 'ʼ'),
+            Digraph('ʃ', 'ʼ'),
+            Digraph('x', 'ʼ'),
+            Digraph('f', 'ʼ'),
+            // Labialized ejectives (Trigraph - 3 chars)
+            Trigraph('k', 'ʷ', 'ʼ'), // kʷʼ - ejective labialized velar (Tlingit, Amharic, Hausa, Tigrinya)
+            Trigraph('q', 'ʷ', 'ʼ'), // qʷʼ - ejective labialized uvular (Caucasian languages)
+            Trigraph('p', 'ʷ', 'ʼ'), // pʷʼ - ejective labialized bilabial (rare)
+            Trigraph('t', 'ʷ', 'ʼ'), // tʷʼ - ejective labialized alveolar
+            // Labialized ejective affricates (Tetragraph - 4 chars)
+            Tetragraph('t', 's', 'ʷ', 'ʼ'), // t͡sʷʼ - labialized alveolar ejective affricate
+            Tetragraph('t', 'ʃ', 'ʷ', 'ʼ'), // t͡ʃʷʼ - labialized postalveolar ejective affricate
+            // Ejective marker alone
+            Char('ʼ'), // modifier letter apostrophe U+02BC
+        ],
+        description: "Ejective consonants (Georgian, Amharic, Quechua, Navajo, Tlingit)",
+    });
+
+    // Labialized ejective consonants (subset of ejectives with labialization)
+    add_class(NamedClass {
+        name: "labialized_ejective",
+        aliases: &["ejective_labialized"],
+        patterns: vec![
+            // Labialized ejective stops (Trigraph - 3 chars)
+            Trigraph('k', 'ʷ', 'ʼ'), // kʷʼ - labialized ejective velar (Tlingit, Amharic, Hausa, Tigrinya)
+            Trigraph('q', 'ʷ', 'ʼ'), // qʷʼ - labialized ejective uvular (Caucasian languages)
+            Trigraph('p', 'ʷ', 'ʼ'), // pʷʼ - labialized ejective bilabial (rare)
+            Trigraph('t', 'ʷ', 'ʼ'), // tʷʼ - labialized ejective alveolar
+            // Labialized ejective affricates (Tetragraph - 4 chars)
+            Tetragraph('t', 's', 'ʷ', 'ʼ'), // t͡sʷʼ - labialized alveolar ejective affricate
+            Tetragraph('t', 'ʃ', 'ʷ', 'ʼ'), // t͡ʃʷʼ - labialized postalveolar ejective affricate
+            Tetragraph('t', 'ɬ', 'ʷ', 'ʼ'), // t͡ɬʷʼ - labialized lateral ejective affricate
+            Tetragraph('k', 'x', 'ʷ', 'ʼ'), // k͡xʷʼ - labialized velar ejective affricate
+        ],
+        description: "Labialized ejective consonants (Caucasian, Tlingit, Amharic)",
+    });
+
+    // ========================================================================
+    // Long Vowels (Japanese, Finnish, Arabic, Hungarian)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "long_vowel",
+        aliases: &["geminate_vowel"],
+        patterns: vec![
+            // Basic long vowels
+            Digraph('a', 'ː'),
+            Digraph('e', 'ː'),
+            Digraph('i', 'ː'),
+            Digraph('o', 'ː'),
+            Digraph('u', 'ː'),
+            // IPA vowels with length
+            Digraph('ə', 'ː'),
+            Digraph('ɛ', 'ː'),
+            Digraph('ɔ', 'ː'),
+            Digraph('æ', 'ː'),
+            Digraph('ɑ', 'ː'),
+            Digraph('ɪ', 'ː'),
+            Digraph('ʊ', 'ː'),
+            Digraph('ʌ', 'ː'),
+            Digraph('ɯ', 'ː'), // Japanese long u
+            // Front rounded long vowels
+            Digraph('y', 'ː'),
+            Digraph('ø', 'ː'),
+            Digraph('œ', 'ː'),
+        ],
+        description: "Long vowels with length marker (Japanese, Finnish, Arabic, Hungarian)",
+    });
+
+    // ========================================================================
+    // Breathy Voice (Hindi, Gujarati - 4-way stop contrast)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "breathy",
+        aliases: &["murmured", "breathy_voiced"],
+        patterns: vec![
+            // Breathy voiced stops (Hindi/Gujarati aspiration)
+            Digraph('b', 'ʱ'),
+            Digraph('d', 'ʱ'),
+            Digraph('g', 'ʱ'),
+            Digraph('ɖ', 'ʱ'), // retroflex
+            Digraph('ɟ', 'ʱ'), // palatal
+            Digraph('ɢ', 'ʱ'), // uvular
+            // Breathy nasals
+            Digraph('m', 'ʱ'),
+            Digraph('n', 'ʱ'),
+            Digraph('ɳ', 'ʱ'), // retroflex nasal
+            // Breathy approximants
+            Digraph('l', 'ʱ'),
+            Digraph('r', 'ʱ'),
+            // Breathy voice modifier
+            Char('ʱ'), // modifier letter small h with hook U+02B1
+            Char('\u{0324}'), // combining diaeresis below (breathy marker)
+        ],
+        description: "Breathy voiced consonants (Hindi, Gujarati murmured stops)",
+    });
+
+    // ========================================================================
+    // Creaky Voice (Vietnamese, Zapotec, Burmese)
+    // ========================================================================
+
+    add_class(NamedClass {
+        name: "creaky",
+        aliases: &["laryngealized", "glottalized_vowel"],
+        patterns: vec![
+            // Creaky vowels (combining tilde below U+0330)
+            Digraph('a', '\u{0330}'),
+            Digraph('e', '\u{0330}'),
+            Digraph('i', '\u{0330}'),
+            Digraph('o', '\u{0330}'),
+            Digraph('u', '\u{0330}'),
+            Digraph('ə', '\u{0330}'),
+            // Creaky voice marker alone
+            Char('\u{0330}'), // combining tilde below
+        ],
+        description: "Creaky voice/laryngealized segments (Vietnamese, Zapotec)",
+    });
+
+    // ========================================================================
+    // Natural Classes (Phonological Groupings)
+    // ========================================================================
+    // These classes represent fundamental phonological categories used in
+    // phonological rules across languages. They are essential for expressing
+    // sonority hierarchy, syllable structure, and assimilation patterns.
+
+    // Continuant: sounds produced with continuous airflow (fricatives + approximants + vowels)
+    // Used in dissimilation rules, consonant clustering, and lenition
+    add_class(NamedClass {
+        name: "continuant",
+        aliases: &[],
+        patterns: vec![
+            // Fricatives (continuous turbulent airflow)
+            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
+            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
+            Char('θ'), Char('ð'), Char('ʃ'), Char('ʒ'), Char('ɬ'), Char('ɮ'),
+            Char('x'), Char('ɣ'), Char('χ'), Char('ʁ'), Char('ħ'), Char('ʕ'),
+            Char('ç'), Char('ʝ'), Char('ɸ'), Char('β'), Char('ɦ'),
+            Char('ʂ'), Char('ʐ'), Char('ɕ'), Char('ʑ'), // retroflex & alveopalatal
+            // Approximants (continuous non-turbulent airflow)
+            Char('w'), Char('W'), Char('j'), Char('J'), Char('y'), Char('Y'),
+            Char('ɹ'), Char('ɻ'), Char('ɰ'), Char('ʋ'),
+            Char('l'), Char('L'), Char('ɭ'), Char('ʎ'), Char('ʟ'),
+            Char('r'), Char('R'), Char('ɾ'), Char('ɽ'), // rhotics
+            // Vowels (maximal continuancy)
+            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
+            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
+            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
+            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
+            Char('y'), Char('ʏ'), Char('ø'), Char('œ'), Char('ɯ'), Char('ɤ'),
+            // Labialized velar approximant (voiceless)
+            Char('ʍ'), // U+028D - "which" vs "witch" distinction
+        ],
+        description: "Continuants: sounds with continuous airflow (fricatives + approximants + vowels)",
+    });
+
+    // Obstruent: sounds with complete or partial oral obstruction (stops + fricatives + affricates)
+    // Used in voicing assimilation, final devoicing, and syllable coda constraints
+    add_class(NamedClass {
+        name: "obstruent",
+        aliases: &[],
+        patterns: vec![
+            // Stops (complete obstruction)
+            Char('p'), Char('b'), Char('t'), Char('d'), Char('k'), Char('g'),
+            Char('P'), Char('B'), Char('T'), Char('D'), Char('K'), Char('G'),
+            Char('ʔ'), // glottal stop
+            Char('c'), Char('ɟ'), // palatal stops
+            Char('q'), Char('ɢ'), // uvular stops
+            Char('ʈ'), Char('ɖ'), // retroflex stops
+            // Fricatives (partial obstruction with turbulence)
+            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
+            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
+            Char('θ'), Char('ð'), Char('ʃ'), Char('ʒ'), Char('ɬ'), Char('ɮ'),
+            Char('x'), Char('ɣ'), Char('χ'), Char('ʁ'), Char('ħ'), Char('ʕ'),
+            Char('ç'), Char('ʝ'), Char('ɸ'), Char('β'), Char('ɦ'),
+            Char('ʂ'), Char('ʐ'), Char('ɕ'), Char('ʑ'), // retroflex & alveopalatal
+            // Affricates (stop + fricative)
+            Char('ʧ'), Char('ʤ'), Char('ʦ'), Char('ʣ'), Char('ʨ'), Char('ʥ'),
+        ],
+        description: "Obstruents: sounds with oral obstruction (stops + fricatives + affricates)",
+    });
+
+    // Sonorant: sounds produced with continuous resonance (nasals + approximants + vowels)
+    // Used in sonority sequencing, syllable nuclei, and nasal assimilation
+    add_class(NamedClass {
+        name: "sonorant",
+        aliases: &["resonant"],
+        patterns: vec![
+            // Nasals (resonant with nasal airflow)
+            Char('m'), Char('n'), Char('M'), Char('N'),
+            Char('ŋ'), Char('ɲ'), Char('ɳ'), Char('ɴ'), Char('ɱ'),
+            // Approximants/liquids (oral resonance)
+            Char('w'), Char('W'), Char('j'), Char('J'), Char('y'), Char('Y'),
+            Char('l'), Char('L'), Char('r'), Char('R'),
+            Char('ɹ'), Char('ɻ'), Char('ɾ'), Char('ɽ'), Char('ɰ'), Char('ʋ'),
+            Char('ɭ'), Char('ʎ'), Char('ʟ'),
+            Char('ʀ'), Char('ʙ'), // trills
+            // Vowels (maximal sonority)
+            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
+            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
+            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
+            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
+            Char('y'), Char('ʏ'), Char('ø'), Char('œ'), Char('ɯ'), Char('ɤ'),
+            Char('ɨ'), Char('ʉ'), Char('ɘ'), Char('ɵ'), Char('ɜ'), Char('ɞ'),
+        ],
+        description: "Sonorants: sounds with continuous resonance (nasals + approximants + vowels)",
+    });
+
+    // ========================================================================
+    // Fricative Voicing Subclasses
+    // ========================================================================
+    // Essential for voicing assimilation rules across languages
+
+    // Voiceless fricatives
+    add_class(NamedClass {
+        name: "voiceless_fricative",
+        aliases: &[],
+        patterns: vec![
+            Char('f'), Char('F'),
+            Char('s'), Char('S'),
+            Char('h'), Char('H'),
+            Char('θ'), // voiceless dental
+            Char('ʃ'), // voiceless postalveolar
+            Char('ɬ'), // voiceless lateral
+            Char('x'), // voiceless velar
+            Char('χ'), // voiceless uvular
+            Char('ħ'), // voiceless pharyngeal
+            Char('ç'), // voiceless palatal
+            Char('ɸ'), // voiceless bilabial
+            Char('ʂ'), // voiceless retroflex
+            Char('ɕ'), // voiceless alveopalatal
+            Char('ʍ'), // voiceless labialized velar approximant (often classified with fricatives)
+            Digraph('s', 'h'),
+            Digraph('t', 'h'),
+        ],
+        description: "Voiceless fricatives (f, s, θ, ʃ, x, h, etc.)",
+    });
+
+    // Voiced fricatives
+    add_class(NamedClass {
+        name: "voiced_fricative",
+        aliases: &[],
+        patterns: vec![
+            Char('v'), Char('V'),
+            Char('z'), Char('Z'),
+            Char('ð'), // voiced dental
+            Char('ʒ'), // voiced postalveolar
+            Char('ɮ'), // voiced lateral
+            Char('ɣ'), // voiced velar
+            Char('ʁ'), // voiced uvular
+            Char('ʕ'), // voiced pharyngeal
+            Char('ʝ'), // voiced palatal
+            Char('β'), // voiced bilabial
+            Char('ɦ'), // voiced glottal
+            Char('ʐ'), // voiced retroflex
+            Char('ʑ'), // voiced alveopalatal
+            Digraph('z', 'h'),
+        ],
+        description: "Voiced fricatives (v, z, ð, ʒ, ɣ, etc.)",
+    });
+
+    // Sibilant fricatives (high-frequency turbulence)
+    // Used in sibilant harmony rules (e.g., Turkish, Navajo)
+    add_class(NamedClass {
+        name: "sibilant",
+        aliases: &["sibilant_fricative"],
+        patterns: vec![
+            // Voiceless sibilants
+            Char('s'), Char('S'),
+            Char('ʃ'), // postalveolar
+            Char('ʂ'), // retroflex
+            Char('ɕ'), // alveopalatal
+            // Voiced sibilants
+            Char('z'), Char('Z'),
+            Char('ʒ'), // postalveolar
+            Char('ʐ'), // retroflex
+            Char('ʑ'), // alveopalatal
+            // Sibilant affricates
+            Char('ʦ'), Char('ʣ'), // alveolar
+            Char('ʧ'), Char('ʤ'), // postalveolar
+            Char('ʨ'), Char('ʥ'), // alveopalatal
+            Digraph('s', 'h'),
+            Digraph('z', 'h'),
+            Digraph('t', 's'),
+            Digraph('d', 'z'),
+        ],
+        description: "Sibilant fricatives/affricates (s, z, ʃ, ʒ, ɕ, ʑ, etc.)",
+    });
+
+    // ========================================================================
+    // Vowel Quality Combination Classes
+    // ========================================================================
+
+    // High front rounded vowels (German ü, French u)
+    add_class(NamedClass {
+        name: "high_front_rounded",
+        aliases: &[],
+        patterns: vec![
+            Char('y'), // close front rounded (IPA for German ü)
+            Char('ʏ'), // near-close front rounded
+        ],
+        description: "High front rounded vowels (German ü, French u)",
+    });
+
+    // High back unrounded vowels (Japanese u, Turkish ı)
+    add_class(NamedClass {
+        name: "high_back_unrounded",
+        aliases: &[],
+        patterns: vec![
+            Char('ɯ'), // close back unrounded (Japanese u)
+            Char('ɨ'), // close central unrounded (sometimes classified here)
+        ],
+        description: "High back unrounded vowels (Japanese u, Turkish ı)",
+    });
+
+    // Mid central vowels (schwa family)
+    add_class(NamedClass {
+        name: "mid_central",
+        aliases: &[],
+        patterns: vec![
+            Char('ə'), // schwa (mid central)
+            Char('ɘ'), // close-mid central unrounded
+            Char('ɵ'), // close-mid central rounded
+            Char('ɜ'), // open-mid central unrounded
+            Char('ɞ'), // open-mid central rounded
+        ],
+        description: "Mid central vowels (schwa and related)",
+    });
+
+    // Low back vowels
+    add_class(NamedClass {
+        name: "low_back",
+        aliases: &[],
+        patterns: vec![
+            Char('ɑ'), // open back unrounded (father)
+            Char('ɒ'), // open back rounded (British lot)
+        ],
+        description: "Low back vowels (father, lot)",
+    });
+
+    // Low front vowels
+    add_class(NamedClass {
+        name: "low_front",
+        aliases: &[],
+        patterns: vec![
+            Char('a'), Char('A'), // open front (varies by language)
+            Char('æ'), // near-open front unrounded (cat)
+        ],
+        description: "Low front vowels (cat, trap)",
+    });
+
+    // ========================================================================
+    // Voiceless Labialized Velar Approximant
+    // ========================================================================
+    // Add ʍ to the glide/approximant classes that were missing it
+
+    add_class(NamedClass {
+        name: "voiceless_glide",
+        aliases: &["voiceless_semivowel"],
+        patterns: vec![
+            Char('ʍ'), // voiceless labialized velar approximant (U+028D)
+            // Note: ʍ represents "wh" in "which" vs "witch" distinction
+        ],
+        description: "Voiceless glides/semivowels (wh as in 'which')",
     });
 
     m
@@ -1163,6 +2235,68 @@ pub fn get_digraphs_only(name: &str) -> Option<Vec<(char, char)>> {
             .patterns
             .iter()
             .filter_map(|p| p.as_digraph())
+            .collect()
+    })
+}
+
+/// Get only the trigraph patterns from a named class.
+///
+/// Returns None if the class doesn't exist, or a Vec of (char, char, char) tuples
+/// for trigraph patterns like ejective affricates.
+///
+/// # Example
+/// ```ignore
+/// let ejective_trigraphs = get_trigraphs_only("ejective");
+/// // Returns Some(vec![('t', 's', 'ʼ'), ('t', 'ʃ', 'ʼ'), ...])
+/// ```
+pub fn get_trigraphs_only(name: &str) -> Option<Vec<(char, char, char)>> {
+    get_named_class(name).map(|class| {
+        class
+            .patterns
+            .iter()
+            .filter_map(|p| p.as_trigraph())
+            .collect()
+    })
+}
+
+/// Get only the tetragraph patterns from a named class.
+///
+/// Returns None if the class doesn't exist.
+/// Returns an empty vec if the class exists but has no tetragraph patterns.
+///
+/// # Examples
+///
+/// ```ignore
+/// let click_tetragraphs = get_tetragraphs_only("prenasalized_click");
+/// // Returns Some(vec![('ŋ', 'ɡ', 'ǀ', 'ʰ'), ...])
+/// ```
+pub fn get_tetragraphs_only(name: &str) -> Option<Vec<(char, char, char, char)>> {
+    get_named_class(name).map(|class| {
+        class
+            .patterns
+            .iter()
+            .filter_map(|p| p.as_tetragraph())
+            .collect()
+    })
+}
+
+/// Get only the sequence patterns from a named class.
+///
+/// Returns None if the class doesn't exist.
+/// Returns an empty vec if the class exists but has no sequence patterns.
+///
+/// # Examples
+///
+/// ```ignore
+/// let long_patterns = get_sequences_only("complex_clusters");
+/// // Returns Some(vec![[...], [...], ...])
+/// ```
+pub fn get_sequences_only(name: &str) -> Option<Vec<Vec<char>>> {
+    get_named_class(name).map(|class| {
+        class
+            .patterns
+            .iter()
+            .filter_map(|p| p.as_sequence().map(|s| s.to_vec()))
             .collect()
     })
 }
@@ -1712,5 +2846,209 @@ mod tests {
 
         assert!(lateral.patterns.contains(&PhonePattern::Char('l')));
         assert!(lateral.patterns.contains(&PhonePattern::Char('ɬ'))); // lateral fricative
+    }
+
+    #[test]
+    fn test_prenasalized_click_class() {
+        let prenasalized =
+            get_named_class("prenasalized_click").expect("prenasalized_click class should exist");
+
+        // Test alias lookup
+        let nasal_click =
+            get_named_class("nasal_click").expect("nasal_click alias should work");
+        assert_eq!(prenasalized.patterns.len(), nasal_click.patterns.len());
+
+        // Test trigraphs (prenasalized aspirated clicks - Xhosa)
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Trigraph('ŋ', 'ǀ', 'ʰ'))); // ŋǀʰ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Trigraph('ŋ', 'ǃ', 'ʰ'))); // ŋǃʰ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Trigraph('ŋ', 'ǁ', 'ʰ'))); // ŋǁʰ
+
+        // Test trigraphs (prenasalized voiced clicks - Zulu)
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Trigraph('ŋ', 'ɡ', 'ǀ'))); // ŋɡǀ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Trigraph('ŋ', 'ɡ', 'ǃ'))); // ŋɡǃ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Trigraph('ŋ', 'ɡ', 'ǁ'))); // ŋɡǁ
+
+        // Test tetragraphs (prenasalized voiced aspirated clicks - rare)
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Tetragraph('ŋ', 'ɡ', 'ǀ', 'ʰ'))); // ŋɡǀʰ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Tetragraph('ŋ', 'ɡ', 'ǃ', 'ʰ'))); // ŋɡǃʰ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Tetragraph('ŋ', 'ɡ', 'ǁ', 'ʰ'))); // ŋɡǁʰ
+
+        // Test tetragraphs (prenasalized labialized clicks without aspiration)
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Tetragraph('ŋ', 'ɡ', 'ǀ', 'ʷ'))); // ŋɡǀʷ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Tetragraph('ŋ', 'ɡ', 'ǃ', 'ʷ'))); // ŋɡǃʷ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Tetragraph('ŋ', 'ɡ', 'ǁ', 'ʷ'))); // ŋɡǁʷ
+
+        // Test pentagraphs (prenasalized voiced aspirated labialized clicks - Khoisan)
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Pentagraph('ŋ', 'ɡ', 'ǀ', 'ʰ', 'ʷ'))); // ŋɡǀʰʷ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Pentagraph('ŋ', 'ɡ', 'ǃ', 'ʰ', 'ʷ'))); // ŋɡǃʰʷ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Pentagraph('ŋ', 'ɡ', 'ǁ', 'ʰ', 'ʷ'))); // ŋɡǁʰʷ
+
+        // Test hexagraphs (glottalized prenasalized voiced aspirated labialized clicks - Khoisan)
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Hexagraph('ŋ', 'ɡ', 'ǀ', 'ʰ', 'ʷ', 'ʼ'))); // ŋɡǀʰʷʼ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Hexagraph('ŋ', 'ɡ', 'ǃ', 'ʰ', 'ʷ', 'ʼ'))); // ŋɡǃʰʷʼ
+        assert!(prenasalized
+            .patterns
+            .contains(&PhonePattern::Hexagraph('ŋ', 'ɡ', 'ǁ', 'ʰ', 'ʷ', 'ʼ'))); // ŋɡǁʰʷʼ
+
+        // Verify count: 6 trigraphs + 6 tetragraphs + 3 pentagraphs + 3 hexagraphs = 18 patterns
+        assert_eq!(prenasalized.patterns.len(), 18);
+    }
+
+    #[test]
+    fn test_aspirated_affricate_class() {
+        let aspirated =
+            get_named_class("aspirated_affricate").expect("aspirated_affricate class should exist");
+
+        // Test trigraphs for aspirated affricates
+        assert!(aspirated
+            .patterns
+            .contains(&PhonePattern::Trigraph('t', 's', 'ʰ'))); // t͡sʰ - alveolar
+        assert!(aspirated
+            .patterns
+            .contains(&PhonePattern::Trigraph('t', 'ʃ', 'ʰ'))); // t͡ʃʰ - postalveolar
+        assert!(aspirated
+            .patterns
+            .contains(&PhonePattern::Trigraph('t', 'ɕ', 'ʰ'))); // t͡ɕʰ - alveo-palatal
+        assert!(aspirated
+            .patterns
+            .contains(&PhonePattern::Trigraph('t', 'ʂ', 'ʰ'))); // t͡ʂʰ - retroflex
+
+        // Verify count: 4 trigraph patterns
+        assert_eq!(aspirated.patterns.len(), 4);
+    }
+
+    // =========================================================================
+    // N-Graph Pattern Tests (Pentagraph, Hexagraph, Heptagraph)
+    // =========================================================================
+
+    #[test]
+    fn test_phone_pattern_pentagraph() {
+        let p = PhonePattern::Pentagraph('a', 'b', 'c', 'd', 'e');
+        assert!(p.is_pentagraph());
+        assert!(!p.is_char());
+        assert!(!p.is_digraph());
+        assert!(!p.is_trigraph());
+        assert!(!p.is_tetragraph());
+        assert!(!p.is_hexagraph());
+        assert!(!p.is_heptagraph());
+        assert_eq!(p.len(), 5);
+        assert_eq!(p.as_pentagraph(), Some(('a', 'b', 'c', 'd', 'e')));
+        assert!(p.matches_pentagraph('a', 'b', 'c', 'd', 'e'));
+        assert!(!p.matches_pentagraph('a', 'b', 'c', 'd', 'f'));
+        // Display
+        assert_eq!(format!("{}", p), "abcde");
+    }
+
+    #[test]
+    fn test_phone_pattern_hexagraph() {
+        let p = PhonePattern::Hexagraph('a', 'b', 'c', 'd', 'e', 'f');
+        assert!(p.is_hexagraph());
+        assert!(!p.is_char());
+        assert!(!p.is_digraph());
+        assert!(!p.is_trigraph());
+        assert!(!p.is_tetragraph());
+        assert!(!p.is_pentagraph());
+        assert!(!p.is_heptagraph());
+        assert_eq!(p.len(), 6);
+        assert_eq!(p.as_hexagraph(), Some(('a', 'b', 'c', 'd', 'e', 'f')));
+        assert!(p.matches_hexagraph('a', 'b', 'c', 'd', 'e', 'f'));
+        assert!(!p.matches_hexagraph('a', 'b', 'c', 'd', 'e', 'g'));
+        // Display
+        assert_eq!(format!("{}", p), "abcdef");
+    }
+
+    #[test]
+    fn test_phone_pattern_heptagraph() {
+        let p = PhonePattern::Heptagraph('a', 'b', 'c', 'd', 'e', 'f', 'g');
+        assert!(p.is_heptagraph());
+        assert!(!p.is_char());
+        assert!(!p.is_digraph());
+        assert!(!p.is_trigraph());
+        assert!(!p.is_tetragraph());
+        assert!(!p.is_pentagraph());
+        assert!(!p.is_hexagraph());
+        assert_eq!(p.len(), 7);
+        assert_eq!(p.as_heptagraph(), Some(('a', 'b', 'c', 'd', 'e', 'f', 'g')));
+        assert!(p.matches_heptagraph('a', 'b', 'c', 'd', 'e', 'f', 'g'));
+        assert!(!p.matches_heptagraph('a', 'b', 'c', 'd', 'e', 'f', 'h'));
+        // Display
+        assert_eq!(format!("{}", p), "abcdefg");
+    }
+
+    #[test]
+    fn test_phone_pattern_helper_constructors() {
+        // Test the helper constructor functions
+        let penta = PhonePattern::pentagraph('p', 'e', 'n', 't', 'a');
+        assert!(penta.is_pentagraph());
+        assert_eq!(penta.len(), 5);
+
+        let hexa = PhonePattern::hexagraph('h', 'e', 'x', 'a', 'g', 'r');
+        assert!(hexa.is_hexagraph());
+        assert_eq!(hexa.len(), 6);
+
+        let hepta = PhonePattern::heptagraph('h', 'e', 'p', 't', 'a', 'g', 'r');
+        assert!(hepta.is_heptagraph());
+        assert_eq!(hepta.len(), 7);
+    }
+
+    #[test]
+    fn test_phone_pattern_sequence_for_long_patterns() {
+        // Sequence should be used for 8+ character patterns
+        let seq = PhonePattern::Sequence(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+        assert!(!seq.is_char());
+        assert!(!seq.is_pentagraph());
+        assert!(!seq.is_hexagraph());
+        assert!(!seq.is_heptagraph());
+        assert_eq!(seq.len(), 8);
+        // Display
+        assert_eq!(format!("{}", seq), "abcdefgh");
+    }
+
+    #[test]
+    fn test_phone_pattern_ipa_complex_patterns() {
+        // Test with realistic IPA complex patterns
+        // Prenasalized labialized click: ŋɡǀʰʷ (5 chars)
+        let prenasalized_labialized_click = PhonePattern::Pentagraph('ŋ', 'ɡ', 'ǀ', 'ʰ', 'ʷ');
+        assert!(prenasalized_labialized_click.is_pentagraph());
+        assert_eq!(prenasalized_labialized_click.len(), 5);
+
+        // Prenasalized labialized ejective affricate: ⁿt͡sʷʼ (simplified to 6 chars)
+        let complex_affricate = PhonePattern::Hexagraph('ⁿ', 't', 's', 'ʷ', 'ʼ', ' ');
+        assert!(complex_affricate.is_hexagraph());
+        assert_eq!(complex_affricate.len(), 6);
     }
 }

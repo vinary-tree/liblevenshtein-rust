@@ -569,6 +569,12 @@ fn phones_to_string(phones: &[Phone]) -> String {
         .filter_map(|p| match p {
             Phone::Vowel(c) | Phone::Consonant(c) => Some(*c as char),
             Phone::Digraph(c1, _) => Some(*c1 as char), // Only take first character of digraph
+            Phone::Trigraph(c1, _, _) => Some(*c1 as char), // Only take first character of trigraph
+            Phone::Tetragraph(c1, _, _, _) => Some(*c1 as char), // Only take first character of tetragraph
+            Phone::Pentagraph(c1, _, _, _, _) => Some(*c1 as char), // Only take first character of pentagraph
+            Phone::Hexagraph(c1, _, _, _, _, _) => Some(*c1 as char), // Only take first character of hexagraph
+            Phone::Heptagraph(c1, _, _, _, _, _, _) => Some(*c1 as char), // Only take first character of heptagraph
+            Phone::Sequence(s) => s.first().map(|c| *c as char), // Only take first character of sequence
             Phone::Silent => None, // Silent phones don't appear in output
         })
         .collect()

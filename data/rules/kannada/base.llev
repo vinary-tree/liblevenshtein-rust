@@ -1,0 +1,351 @@
+// Kannada Base Phonetic Rules
+// ===========================
+// Phonetic rules for Kannada (ಕನ್ನಡ) script romanization.
+// Maps Kannada letters to Latin/IPA equivalents for phonetic matching.
+//
+// Kannada is a Dravidian language spoken by approximately 50 million
+// people, primarily in the state of Karnataka, India.
+//
+// The Kannada script is a Brahmic abugida closely related to Telugu,
+// with distinctive rounded forms and loops.
+//
+// Key features:
+//   - 16 vowels (independent and matra forms)
+//   - 34+ consonants in standard arrangement
+//   - Inherent /a/ vowel (schwa in native words)
+//   - ಳ (retroflex lateral approximant)
+//   - ಱ (historical alveolar trill, rarely used)
+//   - Gemination is phonemic
+//
+// Rule IDs: 17400-17499
+
+@name "Kannada Base Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Kannada script"
+
+// ============================================================
+// KANNADA-SPECIFIC CONSONANTS (highest priority)
+// ============================================================
+
+// ಳ - retroflex lateral approximant (unique to Dravidian)
+[id: 17400, name: "La retroflex", weight: 0.02, group: kannada_special, ipa: "/ɭ/"]
+ಳ -> ɭ;
+
+// ಱ - alveolar trill (historical, now rare in modern Kannada)
+[id: 17401, name: "Rra alveolar", weight: 0.02, group: kannada_special, ipa: "/ɽ/"]
+ಱ -> ɽ;
+
+// ೞ - historical retroflex zh (rare, archaic)
+[id: 17402, name: "zha retroflex", weight: 0.02, group: kannada_special, ipa: "/ɻ/"]
+ೞ -> ɻ;
+
+// ============================================================
+// INDEPENDENT VOWELS (ಸ್ವರಗಳು)
+// ============================================================
+
+[id: 17405, name: "a vowel", weight: 0.05, group: kannada_vowels]
+ಅ -> a;
+
+[id: 17406, name: "aa vowel", weight: 0.05, group: kannada_vowels, ipa: "/aː/"]
+ಆ -> aː;
+
+[id: 17407, name: "i vowel", weight: 0.05, group: kannada_vowels]
+ಇ -> i;
+
+[id: 17408, name: "ii vowel", weight: 0.05, group: kannada_vowels, ipa: "/iː/"]
+ಈ -> iː;
+
+[id: 17409, name: "u vowel", weight: 0.05, group: kannada_vowels]
+ಉ -> u;
+
+[id: 17410, name: "uu vowel", weight: 0.05, group: kannada_vowels, ipa: "/uː/"]
+ಊ -> uː;
+
+[id: 17411, name: "ri vowel", weight: 0.05, group: kannada_vowels, ipa: "/r̩/"]
+ಋ -> r̩;
+
+[id: 17412, name: "rii vowel", weight: 0.05, group: kannada_vowels, ipa: "/r̩ː/"]
+ೠ -> r̩ː;
+
+[id: 17413, name: "e short vowel", weight: 0.05, group: kannada_vowels]
+ಎ -> e;
+
+[id: 17414, name: "ee long vowel", weight: 0.05, group: kannada_vowels, ipa: "/eː/"]
+ಏ -> eː;
+
+[id: 17415, name: "ai vowel", weight: 0.05, group: kannada_vowels, ipa: "/aɪ/"]
+ಐ -> aɪ;
+
+[id: 17416, name: "o short vowel", weight: 0.05, group: kannada_vowels]
+ಒ -> o;
+
+[id: 17417, name: "oo long vowel", weight: 0.05, group: kannada_vowels, ipa: "/oː/"]
+ಓ -> oː;
+
+[id: 17418, name: "au vowel", weight: 0.05, group: kannada_vowels, ipa: "/aʊ/"]
+ಔ -> aʊ;
+
+// ============================================================
+// VELAR CONSONANTS (ಕ-ವರ್ಗ)
+// ============================================================
+
+[id: 17420, name: "ka", weight: 0.05, group: kannada_velars]
+ಕ -> k;
+
+[id: 17421, name: "kha", weight: 0.05, group: kannada_velars, ipa: "/kʰ/"]
+ಖ -> kʰ;
+
+[id: 17422, name: "ga", weight: 0.05, group: kannada_velars, ipa: "/ɡ/"]
+ಗ -> ɡ;
+
+[id: 17423, name: "gha", weight: 0.05, group: kannada_velars, ipa: "/ɡʰ/"]
+ಘ -> ɡʰ;
+
+[id: 17424, name: "nga", weight: 0.05, group: kannada_velars, ipa: "/ŋ/"]
+ಙ -> ŋ;
+
+// ============================================================
+// PALATAL CONSONANTS (ಚ-ವರ್ಗ)
+// ============================================================
+
+[id: 17425, name: "cha", weight: 0.05, group: kannada_palatals, ipa: "/t͡ʃ/"]
+ಚ -> t͡ʃ;
+
+[id: 17426, name: "chha", weight: 0.05, group: kannada_palatals, ipa: "/t͡ʃʰ/"]
+ಛ -> t͡ʃʰ;
+
+[id: 17427, name: "ja", weight: 0.05, group: kannada_palatals, ipa: "/d͡ʒ/"]
+ಜ -> d͡ʒ;
+
+[id: 17428, name: "jha", weight: 0.05, group: kannada_palatals, ipa: "/d͡ʒʰ/"]
+ಝ -> d͡ʒʰ;
+
+[id: 17429, name: "nya", weight: 0.05, group: kannada_palatals, ipa: "/ɲ/"]
+ಞ -> ɲ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (ಟ-ವರ್ಗ)
+// ============================================================
+
+[id: 17430, name: "Ta", weight: 0.05, group: kannada_retroflexes, ipa: "/ʈ/"]
+ಟ -> ʈ;
+
+[id: 17431, name: "Tha", weight: 0.05, group: kannada_retroflexes, ipa: "/ʈʰ/"]
+ಠ -> ʈʰ;
+
+[id: 17432, name: "Da", weight: 0.05, group: kannada_retroflexes, ipa: "/ɖ/"]
+ಡ -> ɖ;
+
+[id: 17433, name: "Dha", weight: 0.05, group: kannada_retroflexes, ipa: "/ɖʰ/"]
+ಢ -> ɖʰ;
+
+[id: 17434, name: "Na", weight: 0.05, group: kannada_retroflexes, ipa: "/ɳ/"]
+ಣ -> ɳ;
+
+// ============================================================
+// DENTAL CONSONANTS (ತ-ವರ್ಗ)
+// ============================================================
+
+[id: 17435, name: "ta", weight: 0.05, group: kannada_dentals, ipa: "/t̪/"]
+ತ -> t̪;
+
+[id: 17436, name: "tha", weight: 0.05, group: kannada_dentals, ipa: "/t̪ʰ/"]
+ಥ -> t̪ʰ;
+
+[id: 17437, name: "da", weight: 0.05, group: kannada_dentals, ipa: "/d̪/"]
+ದ -> d̪;
+
+[id: 17438, name: "dha", weight: 0.05, group: kannada_dentals, ipa: "/d̪ʰ/"]
+ಧ -> d̪ʰ;
+
+[id: 17439, name: "na", weight: 0.05, group: kannada_dentals]
+ನ -> n;
+
+// ============================================================
+// LABIAL CONSONANTS (ಪ-ವರ್ಗ)
+// ============================================================
+
+[id: 17440, name: "pa", weight: 0.05, group: kannada_labials]
+ಪ -> p;
+
+[id: 17441, name: "pha", weight: 0.05, group: kannada_labials, ipa: "/pʰ/"]
+ಫ -> pʰ;
+
+[id: 17442, name: "ba", weight: 0.05, group: kannada_labials]
+ಬ -> b;
+
+[id: 17443, name: "bha", weight: 0.05, group: kannada_labials, ipa: "/bʰ/"]
+ಭ -> bʰ;
+
+[id: 17444, name: "ma", weight: 0.05, group: kannada_labials]
+ಮ -> m;
+
+// ============================================================
+// SEMI-VOWELS (ಅಂತಸ್ಥಗಳು)
+// ============================================================
+
+[id: 17445, name: "ya", weight: 0.05, group: kannada_semivowels]
+ಯ -> j;
+
+[id: 17446, name: "ra", weight: 0.05, group: kannada_semivowels]
+ರ -> r;
+
+[id: 17447, name: "la", weight: 0.05, group: kannada_semivowels]
+ಲ -> l;
+
+[id: 17448, name: "va", weight: 0.05, group: kannada_semivowels]
+ವ -> v;
+
+// ============================================================
+// SIBILANTS AND ASPIRATE (ಊಷ್ಮಗಳು)
+// ============================================================
+
+[id: 17450, name: "sha palatal", weight: 0.05, group: kannada_sibilants, ipa: "/ʃ/"]
+ಶ -> ʃ;
+
+[id: 17451, name: "Sha retroflex", weight: 0.05, group: kannada_sibilants, ipa: "/ʂ/"]
+ಷ -> ʂ;
+
+[id: 17452, name: "sa", weight: 0.05, group: kannada_sibilants]
+ಸ -> s;
+
+[id: 17453, name: "ha", weight: 0.05, group: kannada_sibilants]
+ಹ -> h;
+
+// ============================================================
+// VOWEL MATRAS (dependent vowels / ಮಾತ್ರೆಗಳು)
+// ============================================================
+
+[id: 17455, name: "aa matra", weight: 0.05, group: kannada_matras, ipa: "/aː/"]
+ಾ -> aː;
+
+[id: 17456, name: "i matra", weight: 0.05, group: kannada_matras]
+ಿ -> i;
+
+[id: 17457, name: "ii matra", weight: 0.05, group: kannada_matras, ipa: "/iː/"]
+ೀ -> iː;
+
+[id: 17458, name: "u matra", weight: 0.05, group: kannada_matras]
+ು -> u;
+
+[id: 17459, name: "uu matra", weight: 0.05, group: kannada_matras, ipa: "/uː/"]
+ೂ -> uː;
+
+[id: 17460, name: "ri matra", weight: 0.05, group: kannada_matras, ipa: "/r̩/"]
+ೃ -> r̩;
+
+[id: 17461, name: "rii matra", weight: 0.05, group: kannada_matras, ipa: "/r̩ː/"]
+ೄ -> r̩ː;
+
+[id: 17462, name: "e short matra", weight: 0.05, group: kannada_matras]
+ೆ -> e;
+
+[id: 17463, name: "ee long matra", weight: 0.05, group: kannada_matras, ipa: "/eː/"]
+ೇ -> eː;
+
+[id: 17464, name: "ai matra", weight: 0.05, group: kannada_matras, ipa: "/aɪ/"]
+ೈ -> aɪ;
+
+[id: 17465, name: "o short matra", weight: 0.05, group: kannada_matras]
+ೊ -> o;
+
+[id: 17466, name: "oo long matra", weight: 0.05, group: kannada_matras, ipa: "/oː/"]
+ೋ -> oː;
+
+[id: 17467, name: "au matra", weight: 0.05, group: kannada_matras, ipa: "/aʊ/"]
+ೌ -> aʊ;
+
+// ============================================================
+// DIACRITICS AND SPECIAL MARKS
+// ============================================================
+
+// Virama (halant) - removes inherent vowel
+[id: 17470, name: "virama", weight: 0.1, group: kannada_diacritics]
+್ -> ;
+
+// Anusvara - nasalization
+[id: 17471, name: "anusvara", weight: 0.1, group: kannada_diacritics, ipa: "/̃/"]
+ಂ -> ̃;
+
+// Visarga - voiceless glottal fricative
+[id: 17472, name: "visarga", weight: 0.1, group: kannada_diacritics, ipa: "/h/"]
+ಃ -> h;
+
+// Jihvamuliya (rare, Vedic)
+[id: 17473, name: "jihvamuliya", weight: 0.15, group: kannada_diacritics, ipa: "/h/"]
+ೱ -> h;
+
+// Upadhmaniya (rare, Vedic)
+[id: 17474, name: "upadhmaniya", weight: 0.15, group: kannada_diacritics, ipa: "/h/"]
+ೲ -> h;
+
+// ============================================================
+// KANNADA NUMERALS
+// ============================================================
+
+[id: 17480, name: "numeral 0", weight: 0.1, group: kannada_numerals]
+೦ -> 0;
+
+[id: 17481, name: "numeral 1", weight: 0.1, group: kannada_numerals]
+೧ -> 1;
+
+[id: 17482, name: "numeral 2", weight: 0.1, group: kannada_numerals]
+೨ -> 2;
+
+[id: 17483, name: "numeral 3", weight: 0.1, group: kannada_numerals]
+೩ -> 3;
+
+[id: 17484, name: "numeral 4", weight: 0.1, group: kannada_numerals]
+೪ -> 4;
+
+[id: 17485, name: "numeral 5", weight: 0.1, group: kannada_numerals]
+೫ -> 5;
+
+[id: 17486, name: "numeral 6", weight: 0.1, group: kannada_numerals]
+೬ -> 6;
+
+[id: 17487, name: "numeral 7", weight: 0.1, group: kannada_numerals]
+೭ -> 7;
+
+[id: 17488, name: "numeral 8", weight: 0.1, group: kannada_numerals]
+೮ -> 8;
+
+[id: 17489, name: "numeral 9", weight: 0.1, group: kannada_numerals]
+೯ -> 9;
+
+// ============================================================
+// GEMINATE SIMPLIFICATION
+// ============================================================
+// Kannada has phonemic gemination. For fuzzy matching, we reduce
+// doubled consonants to single consonants.
+
+[id: 17490, name: "double retroflex lateral", weight: 0.2, group: kannada_simplification]
+ɭɭ -> ɭ;
+
+[id: 17491, name: "double retroflex flap", weight: 0.2, group: kannada_simplification]
+ɽɽ -> ɽ;
+
+[id: 17492, name: "double retroflex t", weight: 0.2, group: kannada_simplification]
+ʈʈ -> ʈ;
+
+[id: 17493, name: "double retroflex d", weight: 0.2, group: kannada_simplification]
+ɖɖ -> ɖ;
+
+[id: 17494, name: "double retroflex nasal", weight: 0.2, group: kannada_simplification]
+ɳɳ -> ɳ;
+
+[id: 17495, name: "double palatal sh", weight: 0.2, group: kannada_simplification]
+ʃʃ -> ʃ;
+
+[id: 17496, name: "double retroflex sh", weight: 0.2, group: kannada_simplification]
+ʂʂ -> ʂ;
+
+[id: 17497, name: "double palatal nasal", weight: 0.2, group: kannada_simplification]
+ɲɲ -> ɲ;
+
+[id: 17498, name: "double ai diphthong", weight: 0.2, group: kannada_simplification]
+aɪaɪ -> aɪ;
+
+[id: 17499, name: "double au diphthong", weight: 0.2, group: kannada_simplification]
+aʊaʊ -> aʊ;

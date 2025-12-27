@@ -1,0 +1,188 @@
+// Kurdish (Sorani) Phonetic Rules
+// ================================
+// Phonetic rules for Kurdish (Sorani/Central Kurdish).
+// Spoken by approximately 8 million people in Iraq and Iran.
+//
+// Sorani features:
+//   - Central Kurdish dialect
+//   - Modified Arabic/Persian script
+//   - No gender distinction (unlike Kurmanji)
+//   - Prepositions instead of case suffixes
+//   - Central vowel /ə/
+//   - SOV word order
+//
+// Orthography:
+//   - Modified Arabic script
+//   - ێ for /eː/, ۆ for /oː/
+//   - ڤ for /v/ (from Latin influence)
+//
+// Rule IDs: 14600-14699
+
+@name "Kurdish (Sorani) Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Kurdish (Sorani)"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14600, name: "ا a", weight: 0.05, group: sorani_vowels, ipa: "/a/"]
+ا -> a;
+
+[id: 14601, name: "ە schwa", weight: 0.05, group: sorani_vowels, ipa: "/ə/"]
+ە -> ə;
+
+[id: 14602, name: "ێ long e", weight: 0.05, group: sorani_vowels, ipa: "/eː/"]
+ێ -> eː;
+
+[id: 14603, name: "ی long i", weight: 0.05, group: sorani_vowels, ipa: "/iː/"]
+ی -> iː;
+
+[id: 14604, name: "ۆ long o", weight: 0.05, group: sorani_vowels, ipa: "/oː/"]
+ۆ -> oː;
+
+[id: 14605, name: "وو long u", weight: 0.05, group: sorani_vowels, ipa: "/uː/"]
+وو -> uː;
+
+[id: 14606, name: "و short u", weight: 0.05, group: sorani_vowels, ipa: "/u/"]
+و -> u;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 14612, name: "پ p", weight: 0.05, group: sorani_stops, ipa: "/p/"]
+پ -> p;
+
+[id: 14613, name: "ب b", weight: 0.05, group: sorani_stops, ipa: "/b/"]
+ب -> b;
+
+[id: 14614, name: "ت t", weight: 0.05, group: sorani_stops, ipa: "/t/"]
+ت -> t;
+
+[id: 14615, name: "د d", weight: 0.05, group: sorani_stops, ipa: "/d/"]
+د -> d;
+
+[id: 14616, name: "ک k", weight: 0.05, group: sorani_stops, ipa: "/k/"]
+ک -> k;
+
+[id: 14617, name: "گ g", weight: 0.05, group: sorani_stops, ipa: "/ɡ/"]
+گ -> ɡ;
+
+[id: 14618, name: "ق q uvular", weight: 0.05, group: sorani_stops, ipa: "/q/"]
+ق -> q;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 14622, name: "چ ch", weight: 0.05, group: sorani_affricates, ipa: "/t͡ʃ/"]
+چ -> t͡ʃ;
+
+[id: 14623, name: "ج j", weight: 0.05, group: sorani_affricates, ipa: "/d͡ʒ/"]
+ج -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 14626, name: "ف f", weight: 0.05, group: sorani_fricatives, ipa: "/f/"]
+ف -> f;
+
+[id: 14627, name: "ڤ v", weight: 0.05, group: sorani_fricatives, ipa: "/v/"]
+ڤ -> v;
+
+[id: 14628, name: "س s", weight: 0.05, group: sorani_fricatives, ipa: "/s/"]
+س -> s;
+
+[id: 14629, name: "ز z", weight: 0.05, group: sorani_fricatives, ipa: "/z/"]
+ز -> z;
+
+[id: 14630, name: "ش sh", weight: 0.05, group: sorani_fricatives, ipa: "/ʃ/"]
+ش -> ʃ;
+
+[id: 14631, name: "ژ zh", weight: 0.05, group: sorani_fricatives, ipa: "/ʒ/"]
+ژ -> ʒ;
+
+[id: 14632, name: "خ kh", weight: 0.05, group: sorani_fricatives, ipa: "/x/"]
+خ -> x;
+
+[id: 14633, name: "غ gh", weight: 0.05, group: sorani_fricatives, ipa: "/ʁ/"]
+غ -> ʁ;
+
+[id: 14634, name: "ھ h", weight: 0.05, group: sorani_fricatives, ipa: "/h/"]
+ھ -> h;
+
+[id: 14635, name: "ع pharyngeal", weight: 0.05, group: sorani_fricatives, ipa: "/ʕ/"]
+ع -> ʕ;
+
+[id: 14636, name: "ح pharyngeal h", weight: 0.05, group: sorani_fricatives, ipa: "/ħ/"]
+ح -> ħ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 14640, name: "م m", weight: 0.05, group: sorani_nasals, ipa: "/m/"]
+م -> m;
+
+[id: 14641, name: "ن n", weight: 0.05, group: sorani_nasals, ipa: "/n/"]
+ن -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 14646, name: "ل l", weight: 0.05, group: sorani_liquids, ipa: "/l/"]
+ل -> l;
+
+[id: 14647, name: "ڵ velarized l", weight: 0.05, group: sorani_liquids, ipa: "/ɫ/"]
+ڵ -> ɫ;
+
+[id: 14648, name: "ر flap", weight: 0.05, group: sorani_liquids, ipa: "/ɾ/"]
+ر -> ɾ;
+
+[id: 14649, name: "ڕ trill", weight: 0.05, group: sorani_liquids, ipa: "/r/"]
+ڕ -> r;
+
+[id: 14650, name: "و w", weight: 0.05, group: sorani_approximants, ipa: "/w/"]
+و -> w;
+
+[id: 14651, name: "ی y", weight: 0.05, group: sorani_approximants, ipa: "/j/"]
+ی -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 14680, name: "کوردی kurdish", weight: 0.02, group: sorani_common]
+کوردی -> kurdiː;
+
+[id: 14681, name: "سڵاو silav hello", weight: 0.02, group: sorani_common]
+سڵاو -> sɫaw;
+
+[id: 14682, name: "سوپاس supas thank you", weight: 0.02, group: sorani_common]
+سوپاس -> supas;
+
+[id: 14683, name: "بەڵێ bele yes", weight: 0.02, group: sorani_common]
+بەڵێ -> bəɫeː;
+
+[id: 14684, name: "نەخێر naxer no", weight: 0.02, group: sorani_common]
+نەخێر -> nəxeːɾ;
+
+[id: 14685, name: "ئاو aw water", weight: 0.02, group: sorani_common]
+ئاو -> aw;
+
+[id: 14686, name: "نان nan bread", weight: 0.02, group: sorani_common]
+نان -> nan;
+
+[id: 14687, name: "ماڵ mal house", weight: 0.02, group: sorani_common]
+ماڵ -> maɫ;
+
+[id: 14688, name: "مرۆڤ mirov person", weight: 0.02, group: sorani_common]
+مرۆڤ -> miɾoːv;
+
+[id: 14689, name: "منداڵ mindal child", weight: 0.02, group: sorani_common]
+منداڵ -> mindaɫ;
+

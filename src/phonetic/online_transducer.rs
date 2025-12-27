@@ -420,9 +420,33 @@ impl OnlinePhoneticTransducerChar {
         match phone {
             PhoneChar::Vowel(c) => Some(*c),
             PhoneChar::Consonant(c) => Some(*c),
-            PhoneChar::Digraph(c1, c2) => {
+            PhoneChar::Digraph(c1, _c2) => {
                 // For digraphs, return first char (caller should handle both)
                 Some(*c1)
+            }
+            PhoneChar::Trigraph(c1, _c2, _c3) => {
+                // For trigraphs, return first char (caller should handle all three)
+                Some(*c1)
+            }
+            PhoneChar::Tetragraph(c1, _c2, _c3, _c4) => {
+                // For tetragraphs, return first char (caller should handle all four)
+                Some(*c1)
+            }
+            PhoneChar::Pentagraph(c1, _c2, _c3, _c4, _c5) => {
+                // For pentagraphs, return first char (caller should handle all five)
+                Some(*c1)
+            }
+            PhoneChar::Hexagraph(c1, _c2, _c3, _c4, _c5, _c6) => {
+                // For hexagraphs, return first char (caller should handle all six)
+                Some(*c1)
+            }
+            PhoneChar::Heptagraph(c1, _c2, _c3, _c4, _c5, _c6, _c7) => {
+                // For heptagraphs, return first char (caller should handle all seven)
+                Some(*c1)
+            }
+            PhoneChar::Sequence(s) => {
+                // For sequences, return first char (caller should handle all)
+                s.first().copied()
             }
             PhoneChar::Silent => None,
         }
@@ -540,6 +564,7 @@ mod tests {
             replacement: replacement.chars().map(OnlinePhoneticTransducerChar::char_to_phone).collect(),
             context,
             weight: 1.0,
+        syllable_condition: None,
         }
     }
 
@@ -692,6 +717,7 @@ mod tests {
                 replacement: vec![PhoneChar::Consonant('f')],
                 context: ContextChar::Anywhere,
                 weight: 2.0, // Higher priority
+                syllable_condition: None,
             },
             RewriteRuleChar {
                 rule_id: 2,
@@ -700,6 +726,7 @@ mod tests {
                 replacement: vec![PhoneChar::Consonant('b')],
                 context: ContextChar::Anywhere,
                 weight: 1.0,
+                syllable_condition: None,
             },
         ];
 

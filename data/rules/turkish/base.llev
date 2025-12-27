@@ -148,3 +148,21 @@ yy -> y;
 [id: 2337, name: "double d͡ʒ", weight: 0.2, group: turkish_simplification]
 d͡ʒd͡ʒ -> d͡ʒ;
 
+// ============================================================
+// FINAL DEVOICING (word boundary)
+// Turkish devoices final obstruents in word-final position
+// ============================================================
+
+[id: 2340, name: "final b to p", weight: 0.08, group: turkish_devoicing, ipa: "/p/"]
+b -> p / _#;
+
+[id: 2341, name: "final d to t", weight: 0.08, group: turkish_devoicing, ipa: "/t/"]
+d -> t / _#;
+
+// Note: Turkish 'c' = /d͡ʒ/, 'ç' = /t͡ʃ/. This rule devoices the affricate word-finally.
+[id: 2342, name: "final d͡ʒ devoicing", weight: 0.08, group: turkish_devoicing, ipa: "/t͡ʃ/"]
+d͡ʒ -> t͡ʃ / _#;
+
+[id: 2343, name: "final g to k", weight: 0.08, group: turkish_devoicing, ipa: "/k/"]
+ɡ -> k / _#;
+

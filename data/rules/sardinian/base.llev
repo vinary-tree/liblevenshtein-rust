@@ -1,0 +1,137 @@
+// Sardinian Base Phonetic Rules
+// =============================
+// Phonetic rules for Sardinian (Sardu).
+// Spoken by approximately 1 million people in Sardinia, Italy.
+//
+// Sardinian features:
+//   - Romance language (most conservative of Latin)
+//   - Five vowel system: /a/, /e/, /i/, /o/, /u/ (preserved from Latin)
+//   - Lenition of intervocalic voiceless stops
+//   - Retroflex consonants (dd, ll, nn)
+//   - Betacism (b/v merger in some dialects)
+//   - Distinctive article system
+//
+// Orthography:
+//   - Latin alphabet
+//   - tz for /ts/, x for /ʃ/
+//   - dd for retroflex /ɖ/
+//   - th for interdental (in some varieties)
+//
+// Rule IDs: 16100-16199
+
+@name "Sardinian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Sardinian"
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 16112, name: "c before aou", weight: 0.05, group: sardinian_stops, ipa: "/k/"]
+c -> k;
+
+[id: 16113, name: "g before aou", weight: 0.05, group: sardinian_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// RETROFLEX CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 16116, name: "dd retroflex stop", weight: 0.05, group: sardinian_retroflex, ipa: "/ɖ/"]
+dd -> ɖ;
+
+[id: 16117, name: "ll retroflex lateral", weight: 0.05, group: sardinian_retroflex, ipa: "/ɭ/"]
+ll -> ɭ;
+
+[id: 16118, name: "nn retroflex nasal", weight: 0.05, group: sardinian_retroflex, ipa: "/ɳ/"]
+nn -> ɳ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 16122, name: "tz affricate", weight: 0.05, group: sardinian_affricates, ipa: "/t͡s/"]
+tz -> t͡s;
+
+[id: 16123, name: "z voiced affricate", weight: 0.05, group: sardinian_affricates, ipa: "/d͡z/"]
+z -> d͡z;
+
+[id: 16124, name: "c before ei", weight: 0.05, group: sardinian_affricates, ipa: "/t͡ʃ/"]
+ce -> t͡ʃe;
+
+[id: 16125, name: "ci", weight: 0.05, group: sardinian_affricates, ipa: "/t͡ʃ/"]
+ci -> t͡ʃi;
+
+[id: 16126, name: "g before ei", weight: 0.05, group: sardinian_affricates, ipa: "/d͡ʒ/"]
+ge -> d͡ʒe;
+
+[id: 16127, name: "gi", weight: 0.05, group: sardinian_affricates, ipa: "/d͡ʒ/"]
+gi -> d͡ʒi;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 16133, name: "ss double s", weight: 0.05, group: sardinian_fricatives, ipa: "/s/"]
+ss -> s;
+
+[id: 16134, name: "x sh", weight: 0.05, group: sardinian_fricatives, ipa: "/ʃ/"]
+x -> ʃ;
+
+[id: 16135, name: "sc before ei", weight: 0.05, group: sardinian_fricatives, ipa: "/ʃ/"]
+sce -> ʃe;
+
+[id: 16136, name: "sci", weight: 0.05, group: sardinian_fricatives, ipa: "/ʃ/"]
+sci -> ʃi;
+
+[id: 16137, name: "th interdental", weight: 0.05, group: sardinian_fricatives, ipa: "/θ/"]
+th -> θ;
+
+[id: 16138, name: "h silent", weight: 0.05, group: sardinian_fricatives, ipa: ""]
+h -> ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 16143, name: "mm simplified", weight: 0.05, group: sardinian_nasals, ipa: "/m/"]
+mm -> m;
+
+[id: 16145, name: "gn palatal", weight: 0.05, group: sardinian_nasals, ipa: "/ɲ/"]
+gn -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 16151, name: "gl palatal", weight: 0.05, group: sardinian_liquids, ipa: "/ʎ/"]
+gli -> ʎi;
+
+[id: 16152, name: "r tap", weight: 0.05, group: sardinian_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 16153, name: "rr trill", weight: 0.05, group: sardinian_liquids, ipa: "/r/"]
+rr -> r;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 16180, name: "sardu sardinian", weight: 0.02, group: sardinian_common]
+sardu -> saɾɖu;
+
+[id: 16181, name: "salude hello", weight: 0.02, group: sardinian_common]
+salude -> saluɖe;
+
+[id: 16182, name: "gràtzias thank you", weight: 0.02, group: sardinian_common]
+gràtzias -> ɡɾat͡sias;
+
+[id: 16185, name: "abba water", weight: 0.02, group: sardinian_common]
+abba -> aba;
+
+[id: 16188, name: "òmine person", weight: 0.02, group: sardinian_common]
+òmine -> ɔmine;
+
+[id: 16189, name: "pitzinnu child", weight: 0.02, group: sardinian_common]
+pitzinnu -> pit͡sinu;

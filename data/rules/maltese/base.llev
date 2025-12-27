@@ -29,21 +29,9 @@
 [id: 5000, name: "għ to empty", weight: 0.02, group: maltese_digraphs]
 għ -> ;
 
-[id: 5001, name: "Għ to empty", weight: 0.02, group: maltese_digraphs]
-Għ -> ;
-
-[id: 5002, name: "GĦ to empty", weight: 0.02, group: maltese_digraphs]
-GĦ -> ;
-
 // IE/ie → i (diphthong /iː/)
 [id: 5003, name: "ie to i", weight: 0.02, group: maltese_digraphs]
 ie -> i;
-
-[id: 5004, name: "Ie to i", weight: 0.02, group: maltese_digraphs]
-Ie -> i;
-
-[id: 5005, name: "IE to i", weight: 0.02, group: maltese_digraphs]
-IE -> i;
 
 // ============================================================
 // SPECIAL MALTESE LETTERS
@@ -53,116 +41,20 @@ IE -> i;
 [id: 5006, name: "ċ to t͡ʃ", weight: 0.05, group: maltese_special, ipa: "/t͡ʃ/"]
 ċ -> t͡ʃ;
 
-[id: 5007, name: "Ċ to t͡ʃ", weight: 0.05, group: maltese_special, ipa: "/t͡ʃ/"]
-Ċ -> t͡ʃ;
-
 // Ġ/ġ → d͡ʒ (voiced postalveolar affricate, like English "j")
 [id: 5008, name: "ġ to d͡ʒ", weight: 0.05, group: maltese_special, ipa: "/d͡ʒ/"]
 ġ -> d͡ʒ;
-
-[id: 5009, name: "Ġ to d͡ʒ", weight: 0.05, group: maltese_special, ipa: "/d͡ʒ/"]
-Ġ -> d͡ʒ;
-
-// Ħ/ħ → ħ (voiceless pharyngeal fricative, stronger than h)
-[id: 5010, name: "ħ to ħ", weight: 0.05, group: maltese_special, ipa: "/ħ/"]
-ħ -> ħ;
-
-[id: 5011, name: "Ħ to ħ", weight: 0.05, group: maltese_special, ipa: "/ħ/"]
-Ħ -> ħ;
 
 // Ż/ż → z (voiced alveolar sibilant)
 [id: 5012, name: "ż to z", weight: 0.05, group: maltese_special]
 ż -> z;
 
-[id: 5013, name: "Ż to z", weight: 0.05, group: maltese_special]
-Ż -> z;
-
 // X/x → ʃ (voiceless postalveolar fricative)
 [id: 5014, name: "x to ʃ", weight: 0.05, group: maltese_special, ipa: "/ʃ/"]
 x -> ʃ;
-
-[id: 5015, name: "X to ʃ", weight: 0.05, group: maltese_special, ipa: "/ʃ/"]
-X -> ʃ;
 
 // Q/q → ʔ (glottal stop, often silent in modern pronunciation)
 // Using empty output for phonetic matching since often silent
 [id: 5016, name: "q to ʔ", weight: 0.05, group: maltese_special, ipa: "/ʔ/"]
 q -> ;
-
-[id: 5017, name: "Q to ʔ", weight: 0.05, group: maltese_special, ipa: "/ʔ/"]
-Q -> ;
-
-// ============================================================
-// STANDARD CONSONANTS (case normalization)
-// ============================================================
-
-[id: 5018, name: "B to b", weight: 0.1, group: maltese_consonants]
-B -> b;
-
-[id: 5019, name: "D to d", weight: 0.1, group: maltese_consonants]
-D -> d;
-
-[id: 5020, name: "F to f", weight: 0.1, group: maltese_consonants]
-F -> f;
-
-[id: 5021, name: "G to g", weight: 0.1, group: maltese_consonants]
-G -> g;
-
-[id: 5022, name: "H to h", weight: 0.1, group: maltese_consonants]
-H -> h;
-
-[id: 5023, name: "J to j", weight: 0.1, group: maltese_consonants]
-J -> j;
-
-[id: 5024, name: "K to k", weight: 0.1, group: maltese_consonants]
-K -> k;
-
-[id: 5025, name: "L to l", weight: 0.1, group: maltese_consonants]
-L -> l;
-
-[id: 5026, name: "M to m", weight: 0.1, group: maltese_consonants]
-M -> m;
-
-[id: 5027, name: "N to n", weight: 0.1, group: maltese_consonants]
-N -> n;
-
-[id: 5028, name: "P to p", weight: 0.1, group: maltese_consonants]
-P -> p;
-
-[id: 5029, name: "R to r", weight: 0.1, group: maltese_consonants]
-R -> r;
-
-[id: 5030, name: "S to s", weight: 0.1, group: maltese_consonants]
-S -> s;
-
-[id: 5031, name: "T to t", weight: 0.1, group: maltese_consonants]
-T -> t;
-
-[id: 5032, name: "V to v", weight: 0.1, group: maltese_consonants]
-V -> v;
-
-[id: 5033, name: "W to w", weight: 0.1, group: maltese_consonants]
-W -> w;
-
-[id: 5034, name: "Z to z", weight: 0.1, group: maltese_consonants]
-Z -> z;
-
-// ============================================================
-// VOWELS (case normalization)
-// ============================================================
-
-[id: 5035, name: "A to a", weight: 0.15, group: maltese_vowels]
-A -> a;
-
-[id: 5036, name: "E to e", weight: 0.15, group: maltese_vowels]
-E -> e;
-
-[id: 5037, name: "I to i", weight: 0.15, group: maltese_vowels]
-I -> i;
-
-[id: 5038, name: "O to o", weight: 0.15, group: maltese_vowels]
-O -> o;
-
-[id: 5039, name: "U to u", weight: 0.15, group: maltese_vowels]
-U -> u;
 

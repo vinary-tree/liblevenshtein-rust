@@ -1,0 +1,203 @@
+// Northern Sámi Phonetic Rules
+// ============================
+// Phonetic rules for Northern Sámi (davvisámegiella).
+// Spoken by approximately 25,000 people in Norway, Sweden,
+// and Finland.
+//
+// Northern Sámi features:
+//   - Uralic language family (Sámi branch)
+//   - Consonant gradation (strong/weak alternations)
+//   - Phonemic consonant length
+//   - Diphthongs common
+//   - Pre-aspirated stops
+//   - Complex consonant clusters
+//
+// Orthography:
+//   - á for /aː/, č for /tʃ/, đ for /ð/
+//   - š for /ʃ/, ž for /ʒ/, ŧ for /θ/
+//   - ŋ for velar nasal
+//   - Double consonants for geminates
+//
+// Rule IDs: 12000-12099
+
+@name "Northern Sámi Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Northern Sámi"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// Note: Vowels a, e, i, o, u pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12001, name: "á long a", weight: 0.05, group: sami_vowels, ipa: "/aː/"]
+á -> aː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+// Note: Diphthongs ie, uo, ai, oi, ui pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12008, name: "ea diphthong", weight: 0.05, group: sami_diphthongs, ipa: "/eɑ/"]
+ea -> eɑ;
+
+[id: 12010, name: "oa diphthong", weight: 0.05, group: sami_diphthongs, ipa: "/oɑ/"]
+oa -> oɑ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 12018, name: "č postalveolar", weight: 0.05, group: sami_affricates, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 12019, name: "c alveolar", weight: 0.05, group: sami_affricates, ipa: "/t͡s/"]
+c -> t͡s;
+
+[id: 12020, name: "dž voiced postalveolar", weight: 0.05, group: sami_affricates, ipa: "/d͡ʒ/"]
+dž -> d͡ʒ;
+
+[id: 12021, name: "dz voiced alveolar", weight: 0.05, group: sami_affricates, ipa: "/d͡z/"]
+dz -> d͡z;
+
+// ============================================================
+// DENTAL FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 12024, name: "đ voiced dental", weight: 0.05, group: sami_dental, ipa: "/ð/"]
+đ -> ð;
+
+[id: 12025, name: "ŧ voiceless dental", weight: 0.05, group: sami_dental, ipa: "/θ/"]
+ŧ -> θ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// Note: Stops p, b, t, d, k pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12033, name: "g", weight: 0.05, group: sami_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// Note: Fricatives f, v, s, h pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12039, name: "š postalveolar", weight: 0.05, group: sami_fricatives, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 12040, name: "ž voiced postalveolar", weight: 0.05, group: sami_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+// ============================================================
+// PRE-ASPIRATED STOPS (weight 0.05)
+// Distinctive feature of Sámi
+// ============================================================
+
+[id: 12044, name: "hp pre-aspirated", weight: 0.05, group: sami_preaspirated, ipa: "/ʰp/"]
+hp -> ʰp;
+
+[id: 12045, name: "ht pre-aspirated", weight: 0.05, group: sami_preaspirated, ipa: "/ʰt/"]
+ht -> ʰt;
+
+[id: 12046, name: "hk pre-aspirated", weight: 0.05, group: sami_preaspirated, ipa: "/ʰk/"]
+hk -> ʰk;
+
+[id: 12047, name: "hc pre-aspirated affricate", weight: 0.05, group: sami_preaspirated, ipa: "/ʰt͡s/"]
+hc -> ʰt͡s;
+
+[id: 12048, name: "hč pre-aspirated affricate", weight: 0.05, group: sami_preaspirated, ipa: "/ʰt͡ʃ/"]
+hč -> ʰt͡ʃ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Note: Nasals m, n, ŋ pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12055, name: "nj palatal nasal", weight: 0.05, group: sami_nasals, ipa: "/ɲ/"]
+nj -> ɲ;
+
+[id: 12056, name: "ng velar nasal digraph", weight: 0.05, group: sami_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// GEMINATE CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 12058, name: "pp geminate", weight: 0.05, group: sami_geminates, ipa: "/pː/"]
+pp -> pː;
+
+[id: 12059, name: "tt geminate", weight: 0.05, group: sami_geminates, ipa: "/tː/"]
+tt -> tː;
+
+[id: 12060, name: "kk geminate", weight: 0.05, group: sami_geminates, ipa: "/kː/"]
+kk -> kː;
+
+[id: 12061, name: "ff geminate", weight: 0.05, group: sami_geminates, ipa: "/fː/"]
+ff -> fː;
+
+[id: 12062, name: "ss geminate", weight: 0.05, group: sami_geminates, ipa: "/sː/"]
+ss -> sː;
+
+[id: 12063, name: "mm geminate", weight: 0.05, group: sami_geminates, ipa: "/mː/"]
+mm -> mː;
+
+[id: 12064, name: "nn geminate", weight: 0.05, group: sami_geminates, ipa: "/nː/"]
+nn -> nː;
+
+[id: 12065, name: "ll geminate", weight: 0.05, group: sami_geminates, ipa: "/lː/"]
+ll -> lː;
+
+[id: 12066, name: "rr geminate", weight: 0.05, group: sami_geminates, ipa: "/rː/"]
+rr -> rː;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Note: Liquids and approximants l, r, j pass through unchanged by default.
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 12080, name: "sámi sami", weight: 0.02, group: sami_common]
+sámi -> saːmi;
+
+[id: 12081, name: "bures hello", weight: 0.02, group: sami_common]
+bures -> bures;
+
+[id: 12082, name: "giitu thank you", weight: 0.02, group: sami_common]
+giitu -> ɡiːtu;
+
+[id: 12083, name: "juo yes", weight: 0.02, group: sami_common]
+juo -> juo;
+
+[id: 12084, name: "ii no", weight: 0.02, group: sami_common]
+ii -> iː;
+
+[id: 12085, name: "čáhci water", weight: 0.02, group: sami_common]
+čáhci -> t͡ʃaːʰt͡si;
+
+[id: 12086, name: "láibi bread food", weight: 0.02, group: sami_common]
+láibi -> laːibi;
+
+[id: 12087, name: "viessu house", weight: 0.02, group: sami_common]
+viessu -> viesːu;
+
+[id: 12088, name: "olmmoš person", weight: 0.02, group: sami_common]
+olmmoš -> olmːoʃ;
+
+[id: 12089, name: "mánná child", weight: 0.02, group: sami_common]
+mánná -> maːnːaː;
+

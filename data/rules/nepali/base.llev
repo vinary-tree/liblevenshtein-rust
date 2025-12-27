@@ -1,0 +1,253 @@
+// Nepali Base Phonetic Rules
+// ==========================
+// Phonetic rules for Nepali.
+// Spoken by approximately 16 million native speakers in Nepal
+// and parts of India.
+//
+// Nepali features:
+//   - Indo-Aryan language (related to Hindi)
+//   - Devanagari script
+//   - Aspirated and breathy-voiced consonants
+//   - Retroflex consonants
+//   - Nasal vowels
+//   - SOV word order
+//   - No tones
+//
+// Orthography:
+//   - Devanagari script (shared with Hindi)
+//   - Inherent 'a' vowel (schwa deletion applies)
+//   - Aspirated consonants marked with ह
+//
+// Rule IDs: 13900-13999
+
+@name "Nepali Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Nepali"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 13900, name: "अ a", weight: 0.05, group: nepali_vowels, ipa: "/ʌ/"]
+अ -> ʌ;
+
+[id: 13901, name: "आ aa", weight: 0.05, group: nepali_vowels, ipa: "/aː/"]
+आ -> aː;
+
+[id: 13902, name: "इ i", weight: 0.05, group: nepali_vowels, ipa: "/i/"]
+इ -> i;
+
+[id: 13903, name: "ई ii", weight: 0.05, group: nepali_vowels, ipa: "/iː/"]
+ई -> iː;
+
+[id: 13904, name: "उ u", weight: 0.05, group: nepali_vowels, ipa: "/u/"]
+उ -> u;
+
+[id: 13905, name: "ऊ uu", weight: 0.05, group: nepali_vowels, ipa: "/uː/"]
+ऊ -> uː;
+
+[id: 13906, name: "ए e", weight: 0.05, group: nepali_vowels, ipa: "/e/"]
+ए -> e;
+
+[id: 13907, name: "ऐ ai", weight: 0.05, group: nepali_vowels, ipa: "/ʌi/"]
+ऐ -> ʌi;
+
+[id: 13908, name: "ओ o", weight: 0.05, group: nepali_vowels, ipa: "/o/"]
+ओ -> o;
+
+[id: 13909, name: "औ au", weight: 0.05, group: nepali_vowels, ipa: "/ʌu/"]
+औ -> ʌu;
+
+// ============================================================
+// VOWEL MATRAS (weight 0.05)
+// ============================================================
+
+[id: 13912, name: "ा aa matra", weight: 0.05, group: nepali_matras, ipa: "/aː/"]
+ा -> aː;
+
+[id: 13913, name: "ि i matra", weight: 0.05, group: nepali_matras, ipa: "/i/"]
+ि -> i;
+
+[id: 13914, name: "ी ii matra", weight: 0.05, group: nepali_matras, ipa: "/iː/"]
+ी -> iː;
+
+[id: 13915, name: "ु u matra", weight: 0.05, group: nepali_matras, ipa: "/u/"]
+ु -> u;
+
+[id: 13916, name: "ू uu matra", weight: 0.05, group: nepali_matras, ipa: "/uː/"]
+ू -> uː;
+
+[id: 13917, name: "े e matra", weight: 0.05, group: nepali_matras, ipa: "/e/"]
+े -> e;
+
+[id: 13918, name: "ै ai matra", weight: 0.05, group: nepali_matras, ipa: "/ʌi/"]
+ै -> ʌi;
+
+[id: 13919, name: "ो o matra", weight: 0.05, group: nepali_matras, ipa: "/o/"]
+ो -> o;
+
+[id: 13920, name: "ौ au matra", weight: 0.05, group: nepali_matras, ipa: "/ʌu/"]
+ौ -> ʌu;
+
+// ============================================================
+// VELAR STOPS (weight 0.05)
+// ============================================================
+
+[id: 13924, name: "क ka", weight: 0.05, group: nepali_velars, ipa: "/kʌ/"]
+क -> kʌ;
+
+[id: 13925, name: "ख kha", weight: 0.05, group: nepali_velars, ipa: "/kʰʌ/"]
+ख -> kʰʌ;
+
+[id: 13926, name: "ग ga", weight: 0.05, group: nepali_velars, ipa: "/ɡʌ/"]
+ग -> ɡʌ;
+
+[id: 13927, name: "घ gha", weight: 0.05, group: nepali_velars, ipa: "/ɡʱʌ/"]
+घ -> ɡʱʌ;
+
+[id: 13928, name: "ङ nga", weight: 0.05, group: nepali_velars, ipa: "/ŋʌ/"]
+ङ -> ŋʌ;
+
+// ============================================================
+// PALATAL STOPS (weight 0.05)
+// ============================================================
+
+[id: 13930, name: "च ca", weight: 0.05, group: nepali_palatals, ipa: "/t͡sʌ/"]
+च -> t͡sʌ;
+
+[id: 13931, name: "छ cha", weight: 0.05, group: nepali_palatals, ipa: "/t͡sʰʌ/"]
+छ -> t͡sʰʌ;
+
+[id: 13932, name: "ज ja", weight: 0.05, group: nepali_palatals, ipa: "/d͡zʌ/"]
+ज -> d͡zʌ;
+
+[id: 13933, name: "झ jha", weight: 0.05, group: nepali_palatals, ipa: "/d͡zʱʌ/"]
+झ -> d͡zʱʌ;
+
+[id: 13934, name: "ञ nya", weight: 0.05, group: nepali_palatals, ipa: "/ɲʌ/"]
+ञ -> ɲʌ;
+
+// ============================================================
+// RETROFLEX STOPS (weight 0.05)
+// ============================================================
+
+[id: 13936, name: "ट ṭa", weight: 0.05, group: nepali_retroflex, ipa: "/ʈʌ/"]
+ट -> ʈʌ;
+
+[id: 13937, name: "ठ ṭha", weight: 0.05, group: nepali_retroflex, ipa: "/ʈʰʌ/"]
+ठ -> ʈʰʌ;
+
+[id: 13938, name: "ड ḍa", weight: 0.05, group: nepali_retroflex, ipa: "/ɖʌ/"]
+ड -> ɖʌ;
+
+[id: 13939, name: "ढ ḍha", weight: 0.05, group: nepali_retroflex, ipa: "/ɖʱʌ/"]
+ढ -> ɖʱʌ;
+
+[id: 13940, name: "ण ṇa", weight: 0.05, group: nepali_retroflex, ipa: "/ɳʌ/"]
+ण -> ɳʌ;
+
+// ============================================================
+// DENTAL STOPS (weight 0.05)
+// ============================================================
+
+[id: 13942, name: "त ta", weight: 0.05, group: nepali_dentals, ipa: "/t̪ʌ/"]
+त -> t̪ʌ;
+
+[id: 13943, name: "थ tha", weight: 0.05, group: nepali_dentals, ipa: "/t̪ʰʌ/"]
+थ -> t̪ʰʌ;
+
+[id: 13944, name: "द da", weight: 0.05, group: nepali_dentals, ipa: "/d̪ʌ/"]
+द -> d̪ʌ;
+
+[id: 13945, name: "ध dha", weight: 0.05, group: nepali_dentals, ipa: "/d̪ʱʌ/"]
+ध -> d̪ʱʌ;
+
+[id: 13946, name: "न na", weight: 0.05, group: nepali_dentals, ipa: "/nʌ/"]
+न -> nʌ;
+
+// ============================================================
+// LABIAL STOPS (weight 0.05)
+// ============================================================
+
+[id: 13948, name: "प pa", weight: 0.05, group: nepali_labials, ipa: "/pʌ/"]
+प -> pʌ;
+
+[id: 13949, name: "फ pha", weight: 0.05, group: nepali_labials, ipa: "/pʰʌ/"]
+फ -> pʰʌ;
+
+[id: 13950, name: "ब ba", weight: 0.05, group: nepali_labials, ipa: "/bʌ/"]
+ब -> bʌ;
+
+[id: 13951, name: "भ bha", weight: 0.05, group: nepali_labials, ipa: "/bʱʌ/"]
+भ -> bʱʌ;
+
+[id: 13952, name: "म ma", weight: 0.05, group: nepali_labials, ipa: "/mʌ/"]
+म -> mʌ;
+
+// ============================================================
+// SEMIVOWELS AND LIQUIDS (weight 0.05)
+// ============================================================
+
+[id: 13956, name: "य ya", weight: 0.05, group: nepali_sonorants, ipa: "/jʌ/"]
+य -> jʌ;
+
+[id: 13957, name: "र ra", weight: 0.05, group: nepali_sonorants, ipa: "/rʌ/"]
+र -> rʌ;
+
+[id: 13958, name: "ल la", weight: 0.05, group: nepali_sonorants, ipa: "/lʌ/"]
+ल -> lʌ;
+
+[id: 13959, name: "व wa/va", weight: 0.05, group: nepali_sonorants, ipa: "/wʌ/"]
+व -> wʌ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 13962, name: "श sha", weight: 0.05, group: nepali_fricatives, ipa: "/ʃʌ/"]
+श -> ʃʌ;
+
+[id: 13963, name: "ष ṣa retroflex", weight: 0.05, group: nepali_fricatives, ipa: "/ʂʌ/"]
+ष -> ʂʌ;
+
+[id: 13964, name: "स sa", weight: 0.05, group: nepali_fricatives, ipa: "/sʌ/"]
+स -> sʌ;
+
+[id: 13965, name: "ह ha", weight: 0.05, group: nepali_fricatives, ipa: "/ɦʌ/"]
+ह -> ɦʌ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 13980, name: "नेपाली nepali", weight: 0.02, group: nepali_common]
+नेपाली -> nepaːliː;
+
+[id: 13981, name: "नमस्ते namaste hello", weight: 0.02, group: nepali_common]
+नमस्ते -> nʌmʌste;
+
+[id: 13982, name: "धन्यवाद thank you", weight: 0.02, group: nepali_common]
+धन्यवाद -> d̪ʱʌnjʌwaːd̪;
+
+[id: 13983, name: "हो ho yes", weight: 0.02, group: nepali_common]
+हो -> ɦo;
+
+[id: 13984, name: "होइन hoina no", weight: 0.02, group: nepali_common]
+होइन -> ɦoinʌ;
+
+[id: 13985, name: "पानी paani water", weight: 0.02, group: nepali_common]
+पानी -> paːniː;
+
+[id: 13986, name: "रोटी roti bread", weight: 0.02, group: nepali_common]
+रोटी -> roʈiː;
+
+[id: 13987, name: "घर ghar house", weight: 0.02, group: nepali_common]
+घर -> ɡʱʌr;
+
+[id: 13988, name: "मान्छे manchhe person", weight: 0.02, group: nepali_common]
+मान्छे -> maːnt͡sʰe;
+
+[id: 13989, name: "बच्चा baccha child", weight: 0.02, group: nepali_common]
+बच्चा -> bʌt͡st͡saː;
+

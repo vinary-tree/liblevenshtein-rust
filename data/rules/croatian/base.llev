@@ -92,33 +92,21 @@ DŽ -> d͡ʒ;
 // ============================================================
 // STANDARD VOWELS
 // ============================================================
+// Note: Standard vowels (a, e, i, o, u) are already in IPA form,
+// no transformation needed (unmapped characters pass through unchanged)
 
-[id: 3519, name: "a vowel", weight: 0.15, group: croatian_vowels]
-a -> a;
-
+// Uppercase vowels (case normalization only)
 [id: 3520, name: "A vowel", weight: 0.15, group: croatian_vowels]
 A -> a;
-
-[id: 3521, name: "e vowel", weight: 0.15, group: croatian_vowels]
-e -> e;
 
 [id: 3522, name: "E vowel", weight: 0.15, group: croatian_vowels]
 E -> e;
 
-[id: 3523, name: "i vowel", weight: 0.15, group: croatian_vowels]
-i -> i;
-
 [id: 3524, name: "I vowel", weight: 0.15, group: croatian_vowels]
 I -> i;
 
-[id: 3525, name: "o vowel", weight: 0.15, group: croatian_vowels]
-o -> o;
-
 [id: 3526, name: "O vowel", weight: 0.15, group: croatian_vowels]
 O -> o;
-
-[id: 3527, name: "u vowel", weight: 0.15, group: croatian_vowels]
-u -> u;
 
 [id: 3528, name: "U vowel", weight: 0.15, group: croatian_vowels]
 U -> u;
@@ -126,9 +114,8 @@ U -> u;
 // ============================================================
 // CONSONANTS
 // ============================================================
-
-[id: 3529, name: "b consonant", weight: 0.2, group: croatian_consonants]
-b -> b;
+// Note: Standard consonants (b, d, f, g, h, j, k, l, m, n, p, r, s, t, v, z)
+// are already in IPA form, no transformation needed (unmapped characters pass through unchanged)
 
 [id: 3530, name: "B consonant", weight: 0.2, group: croatian_consonants]
 B -> b;
@@ -139,92 +126,47 @@ c -> t͡s;
 [id: 3532, name: "C consonant", weight: 0.2, group: croatian_consonants, ipa: "/t͡s/"]
 C -> t͡s;
 
-[id: 3533, name: "d consonant", weight: 0.2, group: croatian_consonants]
-d -> d;
-
 [id: 3534, name: "D consonant", weight: 0.2, group: croatian_consonants]
 D -> d;
-
-[id: 3535, name: "f consonant", weight: 0.2, group: croatian_consonants]
-f -> f;
 
 [id: 3536, name: "F consonant", weight: 0.2, group: croatian_consonants]
 F -> f;
 
-[id: 3537, name: "g consonant", weight: 0.2, group: croatian_consonants]
-g -> g;
-
-[id: 3538, name: "G consonant", weight: 0.2, group: croatian_consonants]
-G -> g;
-
-[id: 3539, name: "h consonant", weight: 0.2, group: croatian_consonants]
-h -> h;
+[id: 3538, name: "G consonant", weight: 0.2, group: croatian_consonants, ipa: "/ɡ/"]
+G -> ɡ;
 
 [id: 3540, name: "H consonant", weight: 0.2, group: croatian_consonants]
 H -> h;
 
-[id: 3541, name: "j consonant", weight: 0.2, group: croatian_consonants, ipa: "/j/"]
-j -> j;
-
 [id: 3542, name: "J consonant", weight: 0.2, group: croatian_consonants, ipa: "/j/"]
 J -> j;
-
-[id: 3543, name: "k consonant", weight: 0.2, group: croatian_consonants]
-k -> k;
 
 [id: 3544, name: "K consonant", weight: 0.2, group: croatian_consonants]
 K -> k;
 
-[id: 3545, name: "l consonant", weight: 0.2, group: croatian_consonants]
-l -> l;
-
 [id: 3546, name: "L consonant", weight: 0.2, group: croatian_consonants]
 L -> l;
-
-[id: 3547, name: "m consonant", weight: 0.2, group: croatian_consonants]
-m -> m;
 
 [id: 3548, name: "M consonant", weight: 0.2, group: croatian_consonants]
 M -> m;
 
-[id: 3549, name: "n consonant", weight: 0.2, group: croatian_consonants]
-n -> n;
-
 [id: 3550, name: "N consonant", weight: 0.2, group: croatian_consonants]
 N -> n;
-
-[id: 3551, name: "p consonant", weight: 0.2, group: croatian_consonants]
-p -> p;
 
 [id: 3552, name: "P consonant", weight: 0.2, group: croatian_consonants]
 P -> p;
 
-[id: 3553, name: "r consonant", weight: 0.2, group: croatian_consonants]
-r -> r;
-
 [id: 3554, name: "R consonant", weight: 0.2, group: croatian_consonants]
 R -> r;
-
-[id: 3555, name: "s consonant", weight: 0.2, group: croatian_consonants]
-s -> s;
 
 [id: 3556, name: "S consonant", weight: 0.2, group: croatian_consonants]
 S -> s;
 
-[id: 3557, name: "t consonant", weight: 0.2, group: croatian_consonants]
-t -> t;
-
 [id: 3558, name: "T consonant", weight: 0.2, group: croatian_consonants]
 T -> t;
 
-[id: 3559, name: "v consonant", weight: 0.2, group: croatian_consonants]
-v -> v;
-
 [id: 3560, name: "V consonant", weight: 0.2, group: croatian_consonants]
 V -> v;
-
-[id: 3561, name: "z consonant", weight: 0.2, group: croatian_consonants]
-z -> z;
 
 [id: 3562, name: "Z consonant", weight: 0.2, group: croatian_consonants]
 Z -> z;

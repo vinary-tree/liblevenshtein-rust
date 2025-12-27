@@ -168,46 +168,55 @@ bt -> t;
 mn -> m / _#;
 
 // ============================================================
-// Phase 8: Double Consonant Simplification
+// Phase 8: Geminate (Double Consonant) Simplification
 // ============================================================
+// English orthographic geminates don't represent phonetic length.
+// These simplify doubled consonants to single consonants.
+// Weight 0.0 = no phonetic distance (purely orthographic).
 
-[id: 80, name: "bb simplify", weight: 0.0, group: double_consonants]
+[id: 80, name: "bb simplify", weight: 0.0, group: geminates]
 bb -> b;
 
-[id: 81, name: "cc simplify", weight: 0.0, group: double_consonants]
+[id: 81, name: "cc simplify", weight: 0.0, group: geminates]
 cc -> c;
 
-[id: 82, name: "dd simplify", weight: 0.0, group: double_consonants]
+[id: 82, name: "dd simplify", weight: 0.0, group: geminates]
 dd -> d;
 
-[id: 83, name: "ff simplify", weight: 0.0, group: double_consonants]
+[id: 83, name: "ff simplify", weight: 0.0, group: geminates]
 ff -> f;
 
-[id: 84, name: "gg simplify", weight: 0.0, group: double_consonants]
-gg -> g;
+[id: 84, name: "gg simplify", weight: 0.0, group: geminates, ipa: "/ɡ/"]
+gg -> ɡ;
 
-[id: 85, name: "ll simplify", weight: 0.0, group: double_consonants]
+[id: 140, name: "kk simplify", weight: 0.0, group: geminates]
+kk -> k;
+
+[id: 85, name: "ll simplify", weight: 0.0, group: geminates]
 ll -> l;
 
-[id: 86, name: "mm simplify", weight: 0.0, group: double_consonants]
+[id: 86, name: "mm simplify", weight: 0.0, group: geminates]
 mm -> m;
 
-[id: 87, name: "nn simplify", weight: 0.0, group: double_consonants]
+[id: 87, name: "nn simplify", weight: 0.0, group: geminates]
 nn -> n;
 
-[id: 88, name: "pp simplify", weight: 0.0, group: double_consonants]
+[id: 88, name: "pp simplify", weight: 0.0, group: geminates]
 pp -> p;
 
-[id: 89, name: "rr simplify", weight: 0.0, group: double_consonants]
+[id: 89, name: "rr simplify", weight: 0.0, group: geminates]
 rr -> r;
 
-[id: 90, name: "ss simplify", weight: 0.0, group: double_consonants]
+[id: 90, name: "ss simplify", weight: 0.0, group: geminates]
 ss -> s;
 
-[id: 91, name: "tt simplify", weight: 0.0, group: double_consonants]
+[id: 91, name: "tt simplify", weight: 0.0, group: geminates]
 tt -> t;
 
-[id: 92, name: "zz simplify", weight: 0.0, group: double_consonants]
+[id: 141, name: "vv simplify", weight: 0.0, group: geminates]
+vv -> v;
+
+[id: 92, name: "zz simplify", weight: 0.0, group: geminates]
 zz -> z;
 
 // ============================================================
@@ -260,9 +269,62 @@ ue -> uː / _#;
 // Phase 10: Phonetic Rules (weight=0.15)
 // ============================================================
 
+// TH Voiced/Voiceless Distinction
+// English TH can be voiced /ð/ or voiceless /θ/.
+// Voiced /ð/ appears in:
+//   - Function words: the, this, that, they, them, there, then, than, though
+//   - Medial position in common words: mother, father, brother, other, weather
+//   - Word-final after vowels in some words: breathe, bathe, clothe
+
+// Function words with voiced TH (must match before general th rule)
+[id: 180, name: "the word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+the -> ðə / #_#;
+
+[id: 181, name: "this word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+this -> ðɪs / #_#;
+
+[id: 182, name: "that word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+that -> ðæt / #_#;
+
+[id: 183, name: "they word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+they -> ðeɪ / #_#;
+
+[id: 184, name: "them word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+them -> ðem / #_#;
+
+[id: 185, name: "there word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+there -> ðɛər / #_#;
+
+[id: 186, name: "then word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+then -> ðen / #_#;
+
+[id: 187, name: "than word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+than -> ðæn / #_#;
+
+[id: 188, name: "these word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+these -> ðiːz / #_#;
+
+[id: 189, name: "those word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+those -> ðoʊz / #_#;
+
+[id: 190, name: "thus word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+thus -> ðʌs / #_#;
+
+[id: 191, name: "though word", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+though -> ðoʊ / #_#;
+
+// Medial voiced TH patterns (common words with -ther-, -the-)
+[id: 192, name: "ther medial voiced", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+// mother, father, brother, gather, weather, feather, leather, together
+ther -> ðər;
+
+[id: 193, name: "the medial voiced", weight: 0.10, group: th_voiced, ipa: "/ð/"]
+// breathe, bathe, clothe, soothe, loathe - th before e at word end
+the -> ð / [:VOWEL:]_#;
+
+// Default: voiceless TH
 [id: 100, name: "th to θ", weight: 0.15, group: phonetic, ipa: "/θ/"]
-// th -> θ (the -> ðə, thing -> θɪŋ)
-// Note: Simplified - English th can be /θ/ (voiceless) or /ð/ (voiced)
+// th -> θ (thing -> θɪŋ, think -> θɪŋk, bath -> bæθ)
 th -> θ;
 
 [id: 103, name: "nk cluster", weight: 0.15, group: phonetic, ipa: "/ŋk/"]

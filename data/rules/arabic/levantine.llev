@@ -1,0 +1,177 @@
+// Levantine Arabic Phonetic Rules
+// ================================
+// Dialect-specific rules for Levantine Arabic (شامي).
+// Spoken by approximately 40+ million speakers in Syria, Lebanon,
+// Palestine, Jordan, and diaspora communities worldwide.
+//
+// Key Levantine Arabic Features:
+//   - ق (qaf) → ʔ (glottal stop) in most words (like Egyptian)
+//   - ج (jim) → ʒ in Lebanese/Syrian, d͡ʒ in Palestinian/Jordanian
+//   - Imala: long /aː/ → /eː/ in many contexts (vowel fronting)
+//   - Preservation of interdental fricatives (varies by sub-dialect)
+//   - Distinctive melodic intonation patterns
+//   - Some French/Turkish loanword phonology
+//
+// Rule IDs: 2800-2899 (Levantine dialect range)
+
+@name "Levantine Arabic Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Levantine Arabic"
+
+// Import the shared Arabic base rules
+@include "arabic/base.llev"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [اوي]
+@define FRONT_VOWEL = [يِ]
+@define CONSONANT = [بتثجحخدذرزسشصضطظعغفقكلمنهوي]
+
+// ============================================================
+// LEVANTINE CONSONANT SHIFTS
+// ============================================================
+// These rules OVERRIDE the base Arabic rules for Levantine dialect.
+
+// ق (qaf) → ʔ (glottal stop) - shared with Egyptian
+// In MSA: ق → q, but in Levantine: ق → ʔ
+// Examples: قلب (qalb) → ʔalb "heart", قال (qaal) → ʔaal "said"
+[id: 2800, name: "qaf to glottal levantine", weight: 0.0, group: levantine_consonants, ipa: "/ʔ/"]
+ق -> ʔ;
+
+// ج (jim) → ʒ (Lebanese/Syrian pronunciation)
+// In MSA: ج → dʒ, but in Lebanese/Syrian: ج → ʒ
+// Note: Palestinian/Jordanian often preserve dʒ
+// Examples: جميل (jamiil) → ʒamiːl "beautiful"
+[id: 2805, name: "jim to zh levantine", weight: 0.0, group: levantine_consonants, ipa: "/ʒ/"]
+ج -> ʒ;
+
+// ============================================================
+// INTERDENTAL SHIFTS
+// ============================================================
+// Levantine Arabic has variable preservation of interdentals
+// Urban dialects often merge them; rural dialects preserve them
+// Using urban (merging) pattern as default
+
+// ث (tha) → t or s (varies)
+// Urban Lebanese/Syrian: ث → t
+// Examples: ثلاثة (thalatha) → tlaːte "three"
+[id: 2810, name: "tha to t levantine", weight: 0.0, group: levantine_interdental, ipa: "/t/"]
+ث -> t;
+
+// ذ (dhal) → d or z (varies)
+// Urban Lebanese/Syrian: ذ → d
+// Examples: ذهب (dhahab) → dahab "gold"
+[id: 2815, name: "dhal to d levantine", weight: 0.0, group: levantine_interdental, ipa: "/d/"]
+ذ -> d;
+
+// ظ (zha) → dˤ or zˤ (emphatic)
+// Urban: ظ → dˤ (emphatic d)
+[id: 2820, name: "zha to emphatic d levantine", weight: 0.0, group: levantine_interdental, ipa: "/dˤ/"]
+ظ -> dˤ;
+
+// ============================================================
+// IMALA (VOWEL FRONTING)
+// ============================================================
+// Distinctive Levantine feature: long /aː/ → /eː/ in certain contexts
+// Especially common in Lebanese and Syrian dialects
+
+// Final -a often → -e
+// Examples: هنا (huna) → hone "here", كيفا (kayfa) → kiːfe "how"
+[id: 2825, name: "final a to e levantine", weight: 0.1, group: levantine_imala, ipa: "/e/"]
+ا -> e / _#;
+
+// Long aa in certain words → eː
+// This is lexically determined; common in many words
+[id: 2830, name: "imala aa levantine", weight: 0.15, group: levantine_imala, ipa: "/eː/"]
+// Note: Full imala would require lexical lookup; this captures the pattern
+
+// ============================================================
+// VOWEL PATTERNS
+// ============================================================
+
+// Short vowels often reduced or elided between consonants
+// u/i in unstressed syllables often → schwa or deleted
+
+// Diphthong ay → eː (monophthongization)
+[id: 2835, name: "ay to e levantine", weight: 0.1, group: levantine_vowels, ipa: "/eː/"]
+اي -> eː;
+
+// Diphthong aw → oː (monophthongization)
+[id: 2840, name: "aw to o levantine", weight: 0.1, group: levantine_vowels, ipa: "/oː/"]
+او -> oː;
+
+// ============================================================
+// COMMON LEVANTINE WORDS
+// ============================================================
+// High-frequency words with Levantine-specific pronunciations
+
+// "how" - كيف (kiif) in Levantine, often with imala: keef
+[id: 2850, name: "how levantine", weight: 0.02, group: levantine_common, ipa: "/kiːf/"]
+كيف -> kiːf;
+
+// "what" - شو (shu) in Levantine vs ما/ماذا in MSA
+[id: 2851, name: "what levantine", weight: 0.02, group: levantine_common, ipa: "/ʃuː/"]
+شو -> ʃuː;
+
+// "now" - هلق/هلأ (halla'/halla) in Levantine vs الآن in MSA
+[id: 2852, name: "now levantine", weight: 0.02, group: levantine_common, ipa: "/hallaʔ/"]
+هلق -> hallaʔ;
+
+[id: 2853, name: "now levantine alt", weight: 0.02, group: levantine_common, ipa: "/hallaʔ/"]
+هلأ -> hallaʔ;
+
+// "want" - بدي (biddi) in Levantine vs أريد in MSA
+[id: 2854, name: "want levantine", weight: 0.02, group: levantine_common, ipa: "/biddi/"]
+بدي -> biddi;
+
+// "want" feminine - بدها (biddha)
+[id: 2855, name: "want fem levantine", weight: 0.02, group: levantine_common, ipa: "/biddha/"]
+بدها -> biddha;
+
+// "good/fine" - منيح (mniih) in Levantine vs جيد in MSA
+[id: 2856, name: "good levantine", weight: 0.02, group: levantine_common, ipa: "/mniːħ/"]
+منيح -> mniːħ;
+
+// "this" masculine - هاد (haad) in Levantine
+[id: 2857, name: "this masc levantine", weight: 0.02, group: levantine_common, ipa: "/haːd/"]
+هاد -> haːd;
+
+// "this" feminine - هاي (haay) in Levantine
+[id: 2858, name: "this fem levantine", weight: 0.02, group: levantine_common, ipa: "/haːj/"]
+هاي -> haːj;
+
+// "there is" - في (fii) preserved
+[id: 2859, name: "there is levantine", weight: 0.02, group: levantine_common, ipa: "/fiː/"]
+في -> fiː;
+
+// "where" - وين (wein) in Levantine vs أين in MSA
+[id: 2860, name: "where levantine", weight: 0.02, group: levantine_common, ipa: "/weːn/"]
+وين -> weːn;
+
+// "why" - ليش (leish) in Levantine vs لماذا in MSA
+[id: 2861, name: "why levantine", weight: 0.02, group: levantine_common, ipa: "/leːʃ/"]
+ليش -> leːʃ;
+
+// "yes" - إي (ii) or أي (ay)
+[id: 2862, name: "yes levantine", weight: 0.02, group: levantine_common, ipa: "/eː/"]
+إي -> eː;
+
+// "no" - لأ (la') with glottal stop
+[id: 2863, name: "no levantine", weight: 0.02, group: levantine_common, ipa: "/laʔ/"]
+لأ -> laʔ;
+
+// "I" - أنا (ana) often reduced to ana
+[id: 2864, name: "I levantine", weight: 0.02, group: levantine_common, ipa: "/ana/"]
+أنا -> ana;
+
+// "you" masculine - إنت (inte)
+[id: 2865, name: "you masc levantine", weight: 0.02, group: levantine_common, ipa: "/inte/"]
+إنت -> inte;
+
+// "you" feminine - إنتي (inti)
+[id: 2866, name: "you fem levantine", weight: 0.02, group: levantine_common, ipa: "/inti/"]
+إنتي -> inti;
+

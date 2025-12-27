@@ -31,7 +31,7 @@ Before implementing the proposed WFST module, liblevenshtein v0.8.0 provides the
 | `ThompsonBuilderChar` | `src/phonetic/nfa/thompson.rs` | Thompson's construction for NFA |
 | `llre!` macro | `liblevenshtein-macros` | Compile-time regex → NFA |
 | `llev!` macro | `liblevenshtein-macros` | Compile-time phonetic rules |
-| `english::zompist()` | `src/phonetic/rules/english.rs` | 62 pre-compiled orthographic rules |
+| `english::base()` | `src/phonetic/rules/english.rs` | 62 pre-compiled orthographic rules |
 | `english::homophones()` | `src/phonetic/rules/english.rs` | Homophone pairs |
 | `english::text_speak()` | `src/phonetic/rules/english.rs` | Text-speak expansions |
 | `RuleSetChar` | `src/phonetic/rules/mod.rs` | Combine multiple rule sets |
@@ -49,7 +49,7 @@ use liblevenshtein::{llre, llev};
 let phone_pattern = llre!(r"(ph|f)one");
 
 // Use pre-compiled English rules
-let rules = english::zompist();
+let rules = english::base();
 let nfa = rules_to_nfa_char(&rules.rules);
 let product = ProductAutomatonChar::new(nfa, 2);
 
@@ -71,7 +71,7 @@ src/phonetic/           # CURRENT - Available in v0.8.0
 │   └── types.rs        # StateId, Transition, CharClass
 ├── llev/               # LLEV rule parsing
 ├── llre/               # LLRE pattern compilation
-├── rules/              # english::zompist(), homophones(), text_speak()
+├── rules/              # english::base(), homophones(), text_speak()
 └── verified/           # rules_to_nfa_char()
 ```
 

@@ -1,0 +1,160 @@
+// Ojibwe Base Phonetic Rules
+// ==========================
+// Phonetic rules for Ojibwe (Anishinaabemowin).
+// Spoken by approximately 50,000 people in the US and Canada.
+//
+// Ojibwe features:
+//   - Double-vowel orthography (vowel length is phonemic)
+//   - Seven vowels: a, aa, e, i, ii, o, oo
+//   - Nasal vowels: anh, enh, inh, onh
+//   - Complex consonant system
+//   - Polysynthetic morphology
+//
+// Writing systems:
+//   - Double-vowel orthography (most common)
+//   - Syllabics (in some communities)
+//
+// Rule IDs: 8200-8399
+
+@name "Ojibwe Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Ojibwe (Anishinaabemowin)"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+// Short vowels (a, i, o) pass through unchanged - already in IPA form
+
+// Short e (schwa-like in some dialects)
+[id: 8203, name: "e short", weight: 0.05, group: ojibwe_vowels, ipa: "/ə/"]
+e -> ə;
+
+// ============================================================
+// LONG VOWELS - double vowel orthography (weight 0.05)
+// ============================================================
+
+[id: 8210, name: "aa long", weight: 0.05, group: ojibwe_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 8211, name: "ii long", weight: 0.05, group: ojibwe_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 8212, name: "oo long", weight: 0.05, group: ojibwe_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+[id: 8213, name: "e long", weight: 0.05, group: ojibwe_long_vowels, ipa: "/eː/"]
+e -> eː / _[aeiou];
+
+// ============================================================
+// NASAL VOWELS (weight 0.05)
+// Written with -nh after vowel
+// ============================================================
+
+[id: 8220, name: "aanh nasal long", weight: 0.05, group: ojibwe_nasal_vowels, ipa: "/ãː/"]
+aanh -> ãː;
+
+[id: 8221, name: "enh nasal", weight: 0.05, group: ojibwe_nasal_vowels, ipa: "/ẽ/"]
+enh -> ẽ;
+
+[id: 8222, name: "iinh nasal long", weight: 0.05, group: ojibwe_nasal_vowels, ipa: "/ĩː/"]
+iinh -> ĩː;
+
+[id: 8223, name: "oonh nasal long", weight: 0.05, group: ojibwe_nasal_vowels, ipa: "/õː/"]
+oonh -> õː;
+
+// Short nasal vowels
+[id: 8224, name: "anh nasal short", weight: 0.05, group: ojibwe_nasal_vowels, ipa: "/ã/"]
+anh -> ã;
+
+[id: 8225, name: "inh nasal short", weight: 0.05, group: ojibwe_nasal_vowels, ipa: "/ĩ/"]
+inh -> ĩ;
+
+[id: 8226, name: "onh nasal short", weight: 0.05, group: ojibwe_nasal_vowels, ipa: "/õ/"]
+onh -> õ;
+
+// ============================================================
+// STOPS (weight 0.05)
+// Ojibwe stops vary by dialect (voiced/voiceless lenis)
+// ============================================================
+
+[id: 8230, name: "b", weight: 0.05, group: ojibwe_stops, ipa: "/b/"]
+b -> b;
+
+[id: 8231, name: "d", weight: 0.05, group: ojibwe_stops, ipa: "/d/"]
+d -> d;
+
+[id: 8232, name: "g", weight: 0.05, group: ojibwe_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// Plain voiceless stops (p, t, k) pass through unchanged - already in IPA form
+
+// Glottal stop (written as ')
+[id: 8236, name: "glottal stop", weight: 0.05, group: ojibwe_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 8240, name: "ch", weight: 0.05, group: ojibwe_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 8241, name: "j", weight: 0.05, group: ojibwe_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 8247, name: "sh", weight: 0.05, group: ojibwe_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 8248, name: "zh", weight: 0.05, group: ojibwe_fricatives, ipa: "/ʒ/"]
+zh -> ʒ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Plain nasals (m, n) pass through unchanged - already in IPA form
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Plain approximant (w) passes through unchanged - already in IPA form
+
+[id: 8261, name: "y", weight: 0.05, group: ojibwe_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// CONSONANT CLUSTERS (weight 0.05)
+// Common Ojibwe clusters
+// ============================================================
+
+[id: 8270, name: "nj cluster", weight: 0.05, group: ojibwe_clusters, ipa: "/nd͡ʒ/"]
+nj -> nd͡ʒ;
+
+[id: 8273, name: "ng cluster", weight: 0.05, group: ojibwe_clusters, ipa: "/ŋɡ/"]
+ng -> ŋɡ;
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 8300, name: "anishinaabe", weight: 0.02, group: ojibwe_common]
+anishinaabe -> aniʃinaːbə;
+
+[id: 8301, name: "anishinaabemowin ojibwe language", weight: 0.02, group: ojibwe_common]
+anishinaabemowin -> aniʃinaːbəmowin;
+
+[id: 8302, name: "boozhoo hello", weight: 0.02, group: ojibwe_common]
+boozhoo -> boːʒoː;
+
+[id: 8303, name: "miigwech thank you", weight: 0.02, group: ojibwe_common]
+miigwech -> miːɡwət͡ʃ;
+
+[id: 8304, name: "gichi-manidoo great spirit", weight: 0.02, group: ojibwe_common]
+gichi-manidoo -> ɡit͡ʃimənidoː;

@@ -1,0 +1,166 @@
+// Latvian Base Phonetic Rules
+// ===========================
+// Phonetic rules for Latvian (latviešu valoda).
+// Spoken by approximately 1.5 million people in Latvia and
+// diaspora communities.
+//
+// Latvian features:
+//   - Indo-European language family (Baltic branch)
+//   - Three-tone system (level, falling, broken)
+//   - Palatalized consonants marked with cedilla
+//   - Long vowels marked with macron
+//   - 6 vowels (long/short distinction)
+//
+// Orthography:
+//   - ā, ē, ī, ū for long vowels
+//   - ķ, ļ, ņ, ģ for palatalized consonants
+//   - č, š, ž for postalveolar fricatives
+//   - ai, ei, ui, au for diphthongs
+//
+// Rule IDs: 12300-12399
+
+@name "Latvian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Latvian"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+// Note: Vowels a, i, o, u pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12301, name: "e short", weight: 0.05, group: latvian_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 12308, name: "ā long", weight: 0.05, group: latvian_long, ipa: "/aː/"]
+ā -> aː;
+
+[id: 12309, name: "ē long", weight: 0.05, group: latvian_long, ipa: "/ɛː/"]
+ē -> ɛː;
+
+[id: 12310, name: "ī long", weight: 0.05, group: latvian_long, ipa: "/iː/"]
+ī -> iː;
+
+[id: 12311, name: "ū long", weight: 0.05, group: latvian_long, ipa: "/uː/"]
+ū -> uː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+// Note: Diphthongs ai, au, ui, uo pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12316, name: "ei diphthong", weight: 0.05, group: latvian_diphthongs, ipa: "/ɛi/"]
+ei -> ɛi;
+
+[id: 12319, name: "ie diphthong", weight: 0.05, group: latvian_diphthongs, ipa: "/iɛ/"]
+ie -> iɛ;
+
+// ============================================================
+// PALATALIZED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 12324, name: "ķ palatalized k", weight: 0.05, group: latvian_palatal, ipa: "/c/"]
+ķ -> c;
+
+[id: 12325, name: "ģ palatalized g", weight: 0.05, group: latvian_palatal, ipa: "/ɟ/"]
+ģ -> ɟ;
+
+[id: 12326, name: "ļ palatalized l", weight: 0.05, group: latvian_palatal, ipa: "/ʎ/"]
+ļ -> ʎ;
+
+[id: 12327, name: "ņ palatalized n", weight: 0.05, group: latvian_palatal, ipa: "/ɲ/"]
+ņ -> ɲ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 12330, name: "č postalveolar", weight: 0.05, group: latvian_affricates, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 12331, name: "dž voiced postalveolar", weight: 0.05, group: latvian_affricates, ipa: "/d͡ʒ/"]
+dž -> d͡ʒ;
+
+[id: 12332, name: "c alveolar", weight: 0.05, group: latvian_affricates, ipa: "/t͡s/"]
+c -> t͡s;
+
+[id: 12333, name: "dz voiced alveolar", weight: 0.05, group: latvian_affricates, ipa: "/d͡z/"]
+dz -> d͡z;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// Note: Stops p, b, t, d, k pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12341, name: "g", weight: 0.05, group: latvian_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// Note: Fricatives f, v, s, z, h pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12348, name: "š postalveolar", weight: 0.05, group: latvian_fricatives, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 12349, name: "ž voiced postalveolar", weight: 0.05, group: latvian_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Note: Nasals m, n pass through unchanged by default.
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Note: Liquids and approximants l, r, j pass through unchanged by default.
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 12375, name: "latviešu latvian", weight: 0.02, group: latvian_common]
+latviešu -> latviɛʃu;
+
+[id: 12376, name: "sveiki hello", weight: 0.02, group: latvian_common]
+sveiki -> svɛiki;
+
+[id: 12377, name: "paldies thank you", weight: 0.02, group: latvian_common]
+paldies -> paldiɛs;
+
+[id: 12378, name: "jā yes", weight: 0.02, group: latvian_common]
+jā -> jaː;
+
+[id: 12379, name: "nē no", weight: 0.02, group: latvian_common]
+nē -> nɛː;
+
+[id: 12380, name: "ūdens water", weight: 0.02, group: latvian_common]
+ūdens -> uːdɛns;
+
+[id: 12381, name: "maize bread food", weight: 0.02, group: latvian_common]
+maize -> maizɛ;
+
+[id: 12382, name: "māja house", weight: 0.02, group: latvian_common]
+māja -> maːja;
+
+[id: 12383, name: "cilvēks person", weight: 0.02, group: latvian_common]
+cilvēks -> t͡silvɛːks;
+
+[id: 12384, name: "bērns child", weight: 0.02, group: latvian_common]
+bērns -> bɛːrns;
+

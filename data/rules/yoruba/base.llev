@@ -1,0 +1,218 @@
+// Yoruba Base Phonetic Rules
+// ==========================
+// Phonetic rules for Yoruba (Èdè Yorùbá).
+// Spoken by approximately 50 million people in Nigeria, Benin, and Togo.
+//
+// Yoruba features:
+//   - Niger-Congo language family (Volta-Niger)
+//   - 3-tone system: High (H), Mid (M), Low (L)
+//   - 7 oral vowels: a, e, ɛ, i, o, ɔ, u
+//   - 5 nasal vowels: ã, ĩ, ũ, ẽ, õ
+//   - Labial-velar consonants: kp, gb
+//   - Syllable-final nasals (syllabic n, m)
+//   - No consonant clusters
+//
+// Orthography:
+//   - Tones: á (high), a (mid), à (low)
+//   - ẹ for /ɛ/, ọ for /ɔ/
+//   - n/m for syllabic nasals
+//   - ṣ for /ʃ/
+//   - gb, kp for labial-velars
+//
+// Rule IDs: 10500-10599
+
+@name "Yoruba Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Yoruba"
+
+// ============================================================
+// ORAL VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10500, name: "a mid tone", weight: 0.05, group: yoruba_vowels, ipa: "/a˧/"]
+a -> a˧;
+
+[id: 10501, name: "e close mid", weight: 0.05, group: yoruba_vowels, ipa: "/e˧/"]
+e -> e˧;
+
+[id: 10502, name: "ẹ open mid", weight: 0.05, group: yoruba_vowels, ipa: "/ɛ˧/"]
+ẹ -> ɛ˧;
+
+[id: 10503, name: "i", weight: 0.05, group: yoruba_vowels, ipa: "/i˧/"]
+i -> i˧;
+
+[id: 10504, name: "o close mid", weight: 0.05, group: yoruba_vowels, ipa: "/o˧/"]
+o -> o˧;
+
+[id: 10505, name: "ọ open mid", weight: 0.05, group: yoruba_vowels, ipa: "/ɔ˧/"]
+ọ -> ɔ˧;
+
+[id: 10506, name: "u", weight: 0.05, group: yoruba_vowels, ipa: "/u˧/"]
+u -> u˧;
+
+// ============================================================
+// HIGH TONE VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10510, name: "a high tone", weight: 0.05, group: yoruba_high_tone, ipa: "/a˦/"]
+á -> a˦;
+
+[id: 10511, name: "e high tone", weight: 0.05, group: yoruba_high_tone, ipa: "/e˦/"]
+é -> e˦;
+
+[id: 10512, name: "ẹ́ open mid high", weight: 0.05, group: yoruba_high_tone, ipa: "/ɛ˦/"]
+ẹ́ -> ɛ˦;
+
+[id: 10513, name: "i high tone", weight: 0.05, group: yoruba_high_tone, ipa: "/i˦/"]
+í -> i˦;
+
+[id: 10514, name: "o high tone", weight: 0.05, group: yoruba_high_tone, ipa: "/o˦/"]
+ó -> o˦;
+
+[id: 10515, name: "ọ́ open mid high", weight: 0.05, group: yoruba_high_tone, ipa: "/ɔ˦/"]
+ọ́ -> ɔ˦;
+
+[id: 10516, name: "u high tone", weight: 0.05, group: yoruba_high_tone, ipa: "/u˦/"]
+ú -> u˦;
+
+// ============================================================
+// LOW TONE VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10520, name: "a low tone", weight: 0.05, group: yoruba_low_tone, ipa: "/a˨/"]
+à -> a˨;
+
+[id: 10521, name: "e low tone", weight: 0.05, group: yoruba_low_tone, ipa: "/e˨/"]
+è -> e˨;
+
+[id: 10522, name: "ẹ̀ open mid low", weight: 0.05, group: yoruba_low_tone, ipa: "/ɛ˨/"]
+ẹ̀ -> ɛ˨;
+
+[id: 10523, name: "i low tone", weight: 0.05, group: yoruba_low_tone, ipa: "/i˨/"]
+ì -> i˨;
+
+[id: 10524, name: "o low tone", weight: 0.05, group: yoruba_low_tone, ipa: "/o˨/"]
+ò -> o˨;
+
+[id: 10525, name: "ọ̀ open mid low", weight: 0.05, group: yoruba_low_tone, ipa: "/ɔ˨/"]
+ọ̀ -> ɔ˨;
+
+[id: 10526, name: "u low tone", weight: 0.05, group: yoruba_low_tone, ipa: "/u˨/"]
+ù -> u˨;
+
+// ============================================================
+// NASAL VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10530, name: "an nasal a", weight: 0.05, group: yoruba_nasal_vowels, ipa: "/ã/"]
+an -> ã;
+
+[id: 10531, name: "in nasal i", weight: 0.05, group: yoruba_nasal_vowels, ipa: "/ĩ/"]
+in -> ĩ;
+
+[id: 10532, name: "un nasal u", weight: 0.05, group: yoruba_nasal_vowels, ipa: "/ũ/"]
+un -> ũ;
+
+[id: 10533, name: "ẹn nasal open e", weight: 0.05, group: yoruba_nasal_vowels, ipa: "/ɛ̃/"]
+ẹn -> ɛ̃;
+
+[id: 10534, name: "ọn nasal open o", weight: 0.05, group: yoruba_nasal_vowels, ipa: "/ɔ̃/"]
+ọn -> ɔ̃;
+
+// ============================================================
+// LABIAL-VELAR CONSONANTS (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 10540, name: "kp labial-velar", weight: 0.02, group: yoruba_labial_velar, ipa: "/k͡p/"]
+kp -> k͡p;
+
+[id: 10541, name: "gb voiced labial-velar", weight: 0.02, group: yoruba_labial_velar, ipa: "/ɡ͡b/"]
+gb -> ɡ͡b;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (p->p, b->b, t->t, d->d, k->k) removed.
+
+[id: 10550, name: "g", weight: 0.05, group: yoruba_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Identity mappings (f->f, s->s, h->h) removed.
+
+[id: 10557, name: "ṣ postalveolar", weight: 0.05, group: yoruba_fricatives, ipa: "/ʃ/"]
+ṣ -> ʃ;
+
+[id: 10558, name: "sh postalveolar alt", weight: 0.05, group: yoruba_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (m->m, n->n) removed.
+
+// Syllabic nasals take tone
+[id: 10564, name: "syllabic n", weight: 0.05, group: yoruba_nasals, ipa: "/n̩/"]
+ń -> n̩˦;
+
+[id: 10565, name: "syllabic m", weight: 0.05, group: yoruba_nasals, ipa: "/m̩/"]
+m̀ -> m̩˨;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (l->l, w->w) removed.
+
+[id: 10571, name: "r flap", weight: 0.05, group: yoruba_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 10573, name: "y", weight: 0.05, group: yoruba_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10575, name: "j voiced palatal", weight: 0.05, group: yoruba_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 10580, name: "yoruba", weight: 0.02, group: yoruba_common]
+yorùbá -> joɾu˨ba˦;
+
+[id: 10581, name: "bawo ni hello", weight: 0.02, group: yoruba_common]
+bàwò ni -> ba˨wo˨ ni;
+
+[id: 10582, name: "o se thank you", weight: 0.02, group: yoruba_common]
+o ṣe -> o˧ ʃe˧;
+
+[id: 10583, name: "beeni yes", weight: 0.02, group: yoruba_common]
+bẹ́ẹ̀ni -> bɛ˦ɛ˨ni;
+
+[id: 10584, name: "beeko no", weight: 0.02, group: yoruba_common]
+bẹ́ẹ̀kọ́ -> bɛ˦ɛ˨kɔ˦;
+
+[id: 10585, name: "omi water", weight: 0.02, group: yoruba_common]
+omi -> omi˧;
+
+[id: 10586, name: "ounjẹ food", weight: 0.02, group: yoruba_common]
+oúnjẹ -> ou˦n̩d͡ʒɛ˧;
+
+[id: 10587, name: "ile house", weight: 0.02, group: yoruba_common]
+ilé -> ile˦;
+
+[id: 10588, name: "eniyan person", weight: 0.02, group: yoruba_common]
+ènìyàn -> e˨ni˨ja˨n;
+
+[id: 10589, name: "ọmọ child", weight: 0.02, group: yoruba_common]
+ọmọ -> ɔ˧mɔ˧;
+
+[id: 10590, name: "ọrun sun sky", weight: 0.02, group: yoruba_common]
+oòrùn -> o˧o˨ɾu˨n;
+

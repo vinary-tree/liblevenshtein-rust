@@ -1,0 +1,162 @@
+// Javanese Base Phonetic Rules
+// ============================
+// Phonetic rules for Javanese (Basa Jawa).
+// Spoken by approximately 82 million people, primarily in Java, Indonesia.
+// One of the largest languages without official status.
+//
+// Javanese features:
+//   - Austronesian language family
+//   - Retroflex consonants: ɖ, ʈ (written d, t with underdot)
+//   - Dental vs alveolar distinction
+//   - No tones
+//   - Vowel harmony in some contexts
+//   - 6-8 vowels depending on analysis
+//   - Complex speech levels (Ngoko, Krama)
+//
+// Orthography:
+//   - th for dental /t̪/, dh for dental /d̪/
+//   - ṭ for retroflex /ʈ/, ḍ for retroflex /ɖ/
+//   - c for /t͡ʃ/, j for /d͡ʒ/
+//   - ny for /ɲ/, ng for /ŋ/
+//   - y for /j/
+//
+// Rule IDs: 10200-10299
+
+@name "Javanese Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Javanese (Basa Jawa)"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (a->a, i->i, o->o, u->u) removed.
+
+[id: 10201, name: "e pepet schwa", weight: 0.05, group: javanese_vowels, ipa: "/ə/"]
+e -> ə;
+
+[id: 10202, name: "e taling", weight: 0.05, group: javanese_vowels, ipa: "/e/"]
+é -> e;
+
+[id: 10203, name: "e open", weight: 0.05, group: javanese_vowels, ipa: "/ɛ/"]
+è -> ɛ;
+
+[id: 10206, name: "o open", weight: 0.05, group: javanese_vowels, ipa: "/ɔ/"]
+ò -> ɔ;
+
+// ============================================================
+// RETROFLEX STOPS (weight 0.05)
+// Distinctive feature of Javanese
+// ============================================================
+
+[id: 10210, name: "retroflex t", weight: 0.05, group: javanese_retroflex, ipa: "/ʈ/"]
+ṭ -> ʈ;
+
+[id: 10211, name: "retroflex d", weight: 0.05, group: javanese_retroflex, ipa: "/ɖ/"]
+ḍ -> ɖ;
+
+// Alternative spelling with 'th'/'dh'
+[id: 10212, name: "th retroflex alt", weight: 0.05, group: javanese_retroflex, ipa: "/ʈ/"]
+th -> ʈ;
+
+[id: 10213, name: "dh retroflex alt", weight: 0.05, group: javanese_retroflex, ipa: "/ɖ/"]
+dh -> ɖ;
+
+// ============================================================
+// DENTAL STOPS (weight 0.05)
+// ============================================================
+
+[id: 10215, name: "dental t", weight: 0.05, group: javanese_dental, ipa: "/t̪/"]
+t -> t̪;
+
+[id: 10216, name: "dental d", weight: 0.05, group: javanese_dental, ipa: "/d̪/"]
+d -> d̪;
+
+// ============================================================
+// OTHER STOPS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (p->p, b->b, k->k) removed.
+
+[id: 10223, name: "g", weight: 0.05, group: javanese_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+[id: 10224, name: "glottal stop", weight: 0.05, group: javanese_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10230, name: "c voiceless palatal", weight: 0.05, group: javanese_affricates, ipa: "/t͡ʃ/"]
+c -> t͡ʃ;
+
+[id: 10231, name: "j voiced palatal", weight: 0.05, group: javanese_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Identity mappings (s->s, h->h, f->f) removed.
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Identity mapping (m->m) removed.
+
+[id: 10241, name: "n dental", weight: 0.05, group: javanese_nasals, ipa: "/n̪/"]
+n -> n̪;
+
+[id: 10242, name: "ng velar nasal", weight: 0.05, group: javanese_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+[id: 10243, name: "ny palatal nasal", weight: 0.05, group: javanese_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Identity mappings (l->l, r->r, w->w) removed.
+
+[id: 10248, name: "y", weight: 0.05, group: javanese_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 10260, name: "basa jawa javanese language", weight: 0.02, group: javanese_common]
+basa jawa -> basa d͡ʒawa;
+
+[id: 10261, name: "sugeng greeting", weight: 0.02, group: javanese_common]
+sugeng -> suɡəŋ;
+
+[id: 10262, name: "matur nuwun thank you", weight: 0.02, group: javanese_common]
+matur nuwun -> mat̪ur n̪uwun̪;
+
+[id: 10263, name: "inggih yes formal", weight: 0.02, group: javanese_common]
+inggih -> iŋɡih;
+
+[id: 10264, name: "mboten no formal", weight: 0.02, group: javanese_common]
+mboten -> ᵐbot̪ən̪;
+
+[id: 10265, name: "iya yes informal", weight: 0.02, group: javanese_common]
+iya -> ija;
+
+[id: 10267, name: "banyu water", weight: 0.02, group: javanese_common]
+banyu -> ban̪ju;
+
+[id: 10268, name: "pangan food", weight: 0.02, group: javanese_common]
+pangan -> paŋan̪;
+
+[id: 10270, name: "wong person", weight: 0.02, group: javanese_common]
+wong -> woŋ;
+
+[id: 10271, name: "anak child", weight: 0.02, group: javanese_common]
+anak -> an̪aʔ;
+
+[id: 10272, name: "bagus good", weight: 0.02, group: javanese_common]
+bagus -> baɡus;
+
+[id: 10274, name: "telu three", weight: 0.02, group: javanese_common]
+telu -> t̪əlu;
+

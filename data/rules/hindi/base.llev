@@ -85,8 +85,8 @@
 ख -> kh;
 
 // ga - voiced velar stop
-[id: 2617, name: "ga", weight: 0.05, group: hindi_velars]
-ग -> g;
+[id: 2617, name: "ga", weight: 0.05, group: hindi_velars, ipa: "/ɡ/"]
+ग -> ɡ;
 
 // gha - aspirated voiced velar stop
 [id: 2618, name: "gha", weight: 0.05, group: hindi_velars]
@@ -406,4 +406,75 @@
 
 [id: 2699, name: "double vocalic r", weight: 0.2, group: hindi_simplification]
 r̩r̩ -> r̩;
+
+// ============================================================
+// INHERENT SCHWA INSERTION
+// ============================================================
+// In Devanagari, consonants carry an inherent 'a' vowel unless:
+// - Followed by a matra (dependent vowel)
+// - Followed by virama (्)
+// These rules add the inherent 'a' after consonant clusters.
+// Note: These run after basic consonant mapping to add schwa between consonants.
+
+// Define consonant set for context matching
+@define HINDI_CONSONANT = [kgcjɲʈɖɳtdnpbmyrlvʃʂshŋqzfKGɽ]
+
+// Add inherent 'a' after consonant when followed by another consonant
+// This handles medial positions like in "karma" -> k+a+r+m+a
+[id: 2700, name: "inherent schwa between consonants", weight: 0.05, group: hindi_schwa]
+$HINDI_CONSONANT -> $0a / _$HINDI_CONSONANT;
+
+// Add inherent 'a' after final consonant at word boundary
+[id: 2701, name: "inherent schwa at word end", weight: 0.05, group: hindi_schwa]
+k -> ka / _#;
+[id: 2702] g -> ga / _#;
+[id: 2703] c -> ca / _#;
+[id: 2704] j -> ja / _#;
+[id: 2705] ʈ -> ʈa / _#;
+[id: 2706] ɖ -> ɖa / _#;
+[id: 2707] t -> ta / _#;
+[id: 2708] d -> da / _#;
+[id: 2709] n -> na / _#;
+[id: 2710] p -> pa / _#;
+[id: 2711] b -> ba / _#;
+[id: 2712] m -> ma / _#;
+[id: 2713] y -> ya / _#;
+[id: 2714] r -> ra / _#;
+[id: 2715] l -> la / _#;
+[id: 2716] v -> va / _#;
+[id: 2717] ʃ -> ʃa / _#;
+[id: 2718] ʂ -> ʂa / _#;
+[id: 2719] s -> sa / _#;
+[id: 2720] h -> ha / _#;
+[id: 2721] ŋ -> ŋa / _#;
+[id: 2722] ɲ -> ɲa / _#;
+[id: 2723] ɳ -> ɳa / _#;
+[id: 2724] ɽ -> ɽa / _#;
+[id: 2725] q -> qa / _#;
+[id: 2726] z -> za / _#;
+[id: 2727] f -> fa / _#;
+
+// ============================================================
+// SCHWA DELETION RULES (Hindi-specific phonotactics)
+// ============================================================
+// Hindi schwa deletion follows these patterns (Ohala 1983):
+// 1. Word-final schwa is deleted (except in monosyllables)
+// 2. Medial schwa is deleted before a syllable with a full vowel
+//
+// These rules run AFTER inherent schwa insertion.
+
+// Word-final schwa deletion in polysyllables
+// Example: कमल "kamala" -> "kamal", but राम "raama" stays (monosyllable in final form)
+[id: 2730, name: "word final schwa deletion", weight: 0.01, group: hindi_schwa_deletion]
+a -> / $HINDI_CONSONANT _ # if polysyllable;
+
+// Medial schwa deletion before heavy syllable (syllable with full vowel)
+// Example: समय "samaya" -> "samay" (schwa before final 'a' deleted)
+[id: 2731, name: "medial schwa before full vowel", weight: 0.02, group: hindi_schwa_deletion]
+a -> / $HINDI_CONSONANT _ $HINDI_CONSONANT[aːiːuːeɛːoɔːr̩];
+
+// Schwa deletion between consonants before vowel
+// Example: कमल "kamala" has schwa between m-l retained, but...
+[id: 2732, name: "medial schwa cluster", weight: 0.02, group: hindi_schwa_deletion]
+a -> / $HINDI_CONSONANT _ $HINDI_CONSONANT$HINDI_CONSONANT[aːiːuːeɛːoɔː];
 

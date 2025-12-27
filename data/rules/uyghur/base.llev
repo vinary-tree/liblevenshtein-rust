@@ -1,0 +1,203 @@
+// Uyghur Base Phonetic Rules
+// ==========================
+// Phonetic rules for Uyghur (ئۇيغۇرچە).
+// Spoken by approximately 10 million people in Xinjiang, China.
+//
+// Uyghur features:
+//   - Turkic language (Karluk branch)
+//   - Arabic-based script (Uyghur Arabic)
+//   - Vowel harmony (front/back)
+//   - Eight vowels
+//   - Aspirated stops (loanwords)
+//   - SOV word order
+//
+// Orthography:
+//   - Modified Arabic script
+//   - ئ for initial vowels
+//   - و for /u/ and /o/
+//   - ۆ for /ø/
+//   - ۈ for /y/
+//   - ە for /e/ and schwa
+//
+// Rule IDs: 14900-14999
+
+@name "Uyghur Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Uyghur"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14900, name: "ئا a", weight: 0.05, group: uyghur_vowels, ipa: "/a/"]
+ئا -> a;
+
+[id: 14901, name: "ا a medial", weight: 0.05, group: uyghur_vowels, ipa: "/a/"]
+ا -> a;
+
+[id: 14902, name: "ئە e", weight: 0.05, group: uyghur_vowels, ipa: "/e/"]
+ئە -> e;
+
+[id: 14903, name: "ە e medial", weight: 0.05, group: uyghur_vowels, ipa: "/e/"]
+ە -> e;
+
+[id: 14904, name: "ئې ë", weight: 0.05, group: uyghur_vowels, ipa: "/ɛ/"]
+ئې -> ɛ;
+
+[id: 14905, name: "ې ë medial", weight: 0.05, group: uyghur_vowels, ipa: "/ɛ/"]
+ې -> ɛ;
+
+[id: 14906, name: "ئى i", weight: 0.05, group: uyghur_vowels, ipa: "/i/"]
+ئى -> i;
+
+[id: 14907, name: "ى i medial", weight: 0.05, group: uyghur_vowels, ipa: "/i/"]
+ى -> i;
+
+[id: 14908, name: "ئو o", weight: 0.05, group: uyghur_vowels, ipa: "/o/"]
+ئو -> o;
+
+[id: 14909, name: "ئۆ ö", weight: 0.05, group: uyghur_vowels, ipa: "/ø/"]
+ئۆ -> ø;
+
+[id: 14910, name: "ۆ ö medial", weight: 0.05, group: uyghur_vowels, ipa: "/ø/"]
+ۆ -> ø;
+
+[id: 14911, name: "ئۇ u", weight: 0.05, group: uyghur_vowels, ipa: "/u/"]
+ئۇ -> u;
+
+[id: 14912, name: "ۇ u medial", weight: 0.05, group: uyghur_vowels, ipa: "/u/"]
+ۇ -> u;
+
+[id: 14913, name: "ئۈ ü", weight: 0.05, group: uyghur_vowels, ipa: "/y/"]
+ئۈ -> y;
+
+[id: 14914, name: "ۈ ü medial", weight: 0.05, group: uyghur_vowels, ipa: "/y/"]
+ۈ -> y;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 14918, name: "پ p", weight: 0.05, group: uyghur_stops, ipa: "/p/"]
+پ -> p;
+
+[id: 14919, name: "ب b", weight: 0.05, group: uyghur_stops, ipa: "/b/"]
+ب -> b;
+
+[id: 14920, name: "ت t", weight: 0.05, group: uyghur_stops, ipa: "/t/"]
+ت -> t;
+
+[id: 14921, name: "د d", weight: 0.05, group: uyghur_stops, ipa: "/d/"]
+د -> d;
+
+[id: 14922, name: "ك k", weight: 0.05, group: uyghur_stops, ipa: "/k/"]
+ك -> k;
+
+[id: 14923, name: "گ g", weight: 0.05, group: uyghur_stops, ipa: "/ɡ/"]
+گ -> ɡ;
+
+[id: 14924, name: "ق q uvular", weight: 0.05, group: uyghur_stops, ipa: "/q/"]
+ق -> q;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 14928, name: "چ ch", weight: 0.05, group: uyghur_affricates, ipa: "/t͡ʃ/"]
+چ -> t͡ʃ;
+
+[id: 14929, name: "ج j", weight: 0.05, group: uyghur_affricates, ipa: "/d͡ʒ/"]
+ج -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 14932, name: "ف f", weight: 0.05, group: uyghur_fricatives, ipa: "/f/"]
+ف -> f;
+
+[id: 14933, name: "س s", weight: 0.05, group: uyghur_fricatives, ipa: "/s/"]
+س -> s;
+
+[id: 14934, name: "ز z", weight: 0.05, group: uyghur_fricatives, ipa: "/z/"]
+ز -> z;
+
+[id: 14935, name: "ش sh", weight: 0.05, group: uyghur_fricatives, ipa: "/ʃ/"]
+ش -> ʃ;
+
+[id: 14936, name: "ژ zh", weight: 0.05, group: uyghur_fricatives, ipa: "/ʒ/"]
+ژ -> ʒ;
+
+[id: 14937, name: "خ kh", weight: 0.05, group: uyghur_fricatives, ipa: "/x/"]
+خ -> x;
+
+[id: 14938, name: "غ gh voiced uvular", weight: 0.05, group: uyghur_fricatives, ipa: "/ʁ/"]
+غ -> ʁ;
+
+[id: 14939, name: "ھ h", weight: 0.05, group: uyghur_fricatives, ipa: "/h/"]
+ھ -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 14944, name: "م m", weight: 0.05, group: uyghur_nasals, ipa: "/m/"]
+م -> m;
+
+[id: 14945, name: "ن n", weight: 0.05, group: uyghur_nasals, ipa: "/n/"]
+ن -> n;
+
+[id: 14946, name: "ڭ ng velar nasal", weight: 0.05, group: uyghur_nasals, ipa: "/ŋ/"]
+ڭ -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 14950, name: "ل l", weight: 0.05, group: uyghur_liquids, ipa: "/l/"]
+ل -> l;
+
+[id: 14951, name: "ر r", weight: 0.05, group: uyghur_liquids, ipa: "/r/"]
+ر -> r;
+
+[id: 14952, name: "ۋ w", weight: 0.05, group: uyghur_approximants, ipa: "/w/"]
+ۋ -> w;
+
+[id: 14953, name: "ي y", weight: 0.05, group: uyghur_approximants, ipa: "/j/"]
+ي -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 14980, name: "ئۇيغۇرچە uyghurche", weight: 0.02, group: uyghur_common]
+ئۇيغۇرچە -> ujʁurt͡ʃe;
+
+[id: 14981, name: "سالام salam hello", weight: 0.02, group: uyghur_common]
+سالام -> salam;
+
+[id: 14982, name: "رەھمەت rehmet thank you", weight: 0.02, group: uyghur_common]
+رەھمەت -> rehmet;
+
+[id: 14983, name: "ھەئە heʼe yes", weight: 0.02, group: uyghur_common]
+ھەئە -> hɛʔɛ;
+
+[id: 14984, name: "ياق yaq no", weight: 0.02, group: uyghur_common]
+ياق -> jaq;
+
+[id: 14985, name: "سۇ su water", weight: 0.02, group: uyghur_common]
+سۇ -> su;
+
+[id: 14986, name: "نان nan bread", weight: 0.02, group: uyghur_common]
+نان -> nan;
+
+[id: 14987, name: "ئۆي öy house", weight: 0.02, group: uyghur_common]
+ئۆي -> øj;
+
+[id: 14988, name: "ئادەم adem person", weight: 0.02, group: uyghur_common]
+ئادەم -> adem;
+
+[id: 14989, name: "بالا bala child", weight: 0.02, group: uyghur_common]
+بالا -> bala;
+

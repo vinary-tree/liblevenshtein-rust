@@ -1,0 +1,187 @@
+// Wu Chinese Phonetic Rules
+// =========================
+// Phonetic rules for Wu Chinese (Shanghainese).
+// Spoken by approximately 80 million people in Shanghai,
+// Zhejiang, and southern Jiangsu.
+//
+// Wu Chinese features:
+//   - Distinctive voiced obstruents (rare in Chinese)
+//   - Two-way register contrast (yin/yang) from tones
+//   - Voiced stops and affricates (b, d, g, dz)
+//   - Glottal stop codas
+//   - 5-8 tones depending on dialect
+//   - Syllable-timed rhythm
+//
+// Orthography (various romanizations):
+//   - Voiced letters for voiced consonants
+//   - oe for /ø/, y for /ɿ/ or /ʮ/
+//   - Tone numbers or diacritics
+//
+// Rule IDs: 13700-13799
+
+@name "Wu Chinese Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Wu Chinese (Shanghainese)"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+// a, e, i, o, u, y pass through unchanged (no transformation needed)
+
+[id: 13705, name: "oe front rounded", weight: 0.05, group: wu_vowels, ipa: "/ø/"]
+oe -> ø;
+
+[id: 13707, name: "ih syllabic fricative", weight: 0.05, group: wu_vowels, ipa: "/ɿ/"]
+ih -> ɿ;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+// ia passes through unchanged (no transformation needed)
+
+[id: 13712, name: "ai diphthong", weight: 0.05, group: wu_diphthongs, ipa: "/aɪ/"]
+ai -> aɪ;
+
+[id: 13713, name: "au diphthong", weight: 0.05, group: wu_diphthongs, ipa: "/ɔː/"]
+au -> ɔː;
+
+[id: 13714, name: "ei diphthong", weight: 0.05, group: wu_diphthongs, ipa: "/eɪ/"]
+ei -> eɪ;
+
+[id: 13715, name: "ou diphthong", weight: 0.05, group: wu_diphthongs, ipa: "/əu/"]
+ou -> əu;
+
+[id: 13717, name: "iu diphthong", weight: 0.05, group: wu_diphthongs, ipa: "/iɤ/"]
+iu -> iɤ;
+
+// ============================================================
+// TONES (weight 0.02)
+// Shanghainese tones
+// ============================================================
+
+[id: 13720, name: "tone 1 high falling", weight: 0.02, group: wu_tones, ipa: "˥˧"]
+1 -> ˥˧;
+
+[id: 13721, name: "tone 2 high rising", weight: 0.02, group: wu_tones, ipa: "˧˥"]
+2 -> ˧˥;
+
+[id: 13722, name: "tone 3 low rising", weight: 0.02, group: wu_tones, ipa: "˨˧"]
+3 -> ˨˧;
+
+[id: 13723, name: "tone 4 low falling", weight: 0.02, group: wu_tones, ipa: "˨˩"]
+4 -> ˨˩;
+
+[id: 13724, name: "tone 5 short high", weight: 0.02, group: wu_tones, ipa: "˥"]
+5 -> ˥;
+
+// ============================================================
+// VOICED STOPS (weight 0.02)
+// Distinctive feature of Wu - b, d pass through unchanged
+// ============================================================
+
+[id: 13730, name: "g voiced", weight: 0.02, group: wu_voiced, ipa: "/ɡ/"]
+g -> ɡ;
+
+[id: 13731, name: "dz voiced affricate", weight: 0.02, group: wu_voiced, ipa: "/d͡z/"]
+dz -> d͡z;
+
+[id: 13732, name: "dj voiced palatal", weight: 0.02, group: wu_voiced, ipa: "/d͡ʑ/"]
+dj -> d͡ʑ;
+
+// ============================================================
+// VOICELESS STOPS (weight 0.05)
+// ============================================================
+// p, t, k pass through unchanged (no transformation needed)
+
+[id: 13739, name: "ph aspirated", weight: 0.05, group: wu_stops, ipa: "/pʰ/"]
+ph -> pʰ;
+
+[id: 13740, name: "th aspirated", weight: 0.05, group: wu_stops, ipa: "/tʰ/"]
+th -> tʰ;
+
+[id: 13741, name: "kh aspirated", weight: 0.05, group: wu_stops, ipa: "/kʰ/"]
+kh -> kʰ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 13744, name: "ts alveolar", weight: 0.05, group: wu_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+[id: 13745, name: "tsh aspirated", weight: 0.05, group: wu_affricates, ipa: "/t͡sʰ/"]
+tsh -> t͡sʰ;
+
+[id: 13746, name: "c palatal", weight: 0.05, group: wu_affricates, ipa: "/t͡ɕ/"]
+c -> t͡ɕ;
+
+[id: 13747, name: "ch aspirated palatal", weight: 0.05, group: wu_affricates, ipa: "/t͡ɕʰ/"]
+ch -> t͡ɕʰ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// f, v, s, z, h pass through unchanged (no transformation needed)
+
+[id: 13754, name: "sh palatal", weight: 0.05, group: wu_fricatives, ipa: "/ɕ/"]
+sh -> ɕ;
+
+[id: 13755, name: "zh voiced palatal", weight: 0.05, group: wu_fricatives, ipa: "/ʑ/"]
+zh -> ʑ;
+
+[id: 13757, name: "gh voiced glottal", weight: 0.05, group: wu_fricatives, ipa: "/ɦ/"]
+gh -> ɦ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// m, n pass through unchanged (no transformation needed)
+
+[id: 13762, name: "ny palatal nasal", weight: 0.05, group: wu_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+[id: 13763, name: "ng velar nasal", weight: 0.05, group: wu_nasals, ipa: "/ŋ/"]
+ng -> ŋ;
+
+// ============================================================
+// APPROXIMANTS
+// ============================================================
+// w, j, l pass through unchanged (no transformation needed)
+
+// ============================================================
+// GLOTTAL STOP (weight 0.05)
+// ============================================================
+
+[id: 13772, name: "q glottal stop", weight: 0.05, group: wu_glottal, ipa: "/ʔ/"]
+q -> ʔ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+// e (yes), su (water) pass through unchanged
+
+[id: 13780, name: "zaonhe shangainese", weight: 0.02, group: wu_common]
+zaonhe -> zɔ̃he;
+
+[id: 13781, name: "nong you hello", weight: 0.02, group: wu_common]
+nong -> noŋ;
+
+[id: 13782, name: "xiaxia thank you", weight: 0.02, group: wu_common]
+xiaxia -> ɕiaɕia;
+
+[id: 13784, name: "mfeq no", weight: 0.02, group: wu_common]
+mfeq -> m̩fəʔ;
+
+[id: 13786, name: "meubau bread", weight: 0.02, group: wu_common]
+meubau -> møpɔː;
+
+[id: 13787, name: "oq house", weight: 0.02, group: wu_common]
+oq -> oʔ;
+
+[id: 13788, name: "nyin person", weight: 0.02, group: wu_common]
+nyin -> ɲin;
+
+[id: 13789, name: "saunin child", weight: 0.02, group: wu_common]
+saunin -> sɔ̃ɲin;
+

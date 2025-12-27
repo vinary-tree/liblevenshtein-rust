@@ -1,0 +1,142 @@
+// Slovenian Base Phonetic Rules
+// =============================
+// Phonetic rules for Slovenian (slovenščina).
+// Spoken by approximately 2.5 million people in Slovenia and
+// border areas of Italy, Austria, and Hungary.
+//
+// Slovenian features:
+//   - Indo-European language family (South Slavic)
+//   - Pitch accent system in standard (optional)
+//   - Dual number (rare grammatical feature)
+//   - 8 vowels including schwa
+//   - Vowel reduction in unstressed syllables
+//   - Palatalized consonants (lj, nj)
+//
+// Orthography:
+//   - č, š, ž for postalveolar fricatives
+//   - lj for /ʎ/, nj for /ɲ/
+//   - e can be /e/ or /ɛ/ or /ə/
+//   - No diacritics for stress/pitch
+//
+// Rule IDs: 12500-12599
+
+@name "Slovenian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Slovenian"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// Note: Standard vowels a, e, ə, i, o, u pass through unchanged by default.
+
+// ============================================================
+// OPEN VOWELS (weight 0.05)
+// In stressed positions
+// ============================================================
+
+[id: 12508, name: "è open e", weight: 0.05, group: slovenian_open, ipa: "/ɛ/"]
+è -> ɛ;
+
+[id: 12509, name: "ò open o", weight: 0.05, group: slovenian_open, ipa: "/ɔ/"]
+ò -> ɔ;
+
+// ============================================================
+// PALATAL CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 12512, name: "lj palatal lateral", weight: 0.05, group: slovenian_palatal, ipa: "/ʎ/"]
+lj -> ʎ;
+
+[id: 12513, name: "nj palatal nasal", weight: 0.05, group: slovenian_palatal, ipa: "/ɲ/"]
+nj -> ɲ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 12516, name: "č postalveolar", weight: 0.05, group: slovenian_affricates, ipa: "/t͡ʃ/"]
+č -> t͡ʃ;
+
+[id: 12517, name: "dž voiced postalveolar", weight: 0.05, group: slovenian_affricates, ipa: "/d͡ʒ/"]
+dž -> d͡ʒ;
+
+[id: 12518, name: "c alveolar", weight: 0.05, group: slovenian_affricates, ipa: "/t͡s/"]
+c -> t͡s;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// Note: Stops p, b, t, d, k pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12526, name: "g", weight: 0.05, group: slovenian_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// Note: Fricatives f, s, z pass through unchanged by default.
+// Only transformative rules are needed.
+
+[id: 12530, name: "v", weight: 0.05, group: slovenian_fricatives, ipa: "/ʋ/"]
+v -> ʋ;
+
+[id: 12533, name: "š postalveolar", weight: 0.05, group: slovenian_fricatives, ipa: "/ʃ/"]
+š -> ʃ;
+
+[id: 12534, name: "ž voiced postalveolar", weight: 0.05, group: slovenian_fricatives, ipa: "/ʒ/"]
+ž -> ʒ;
+
+[id: 12535, name: "h", weight: 0.05, group: slovenian_fricatives, ipa: "/x/"]
+h -> x;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// Note: Nasals m, n pass through unchanged by default.
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// Note: Liquids and approximants l, r, j pass through unchanged by default.
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 12560, name: "slovenščina slovenian", weight: 0.02, group: slovenian_common]
+slovenščina -> sloʋent͡ʃina;
+
+[id: 12561, name: "živijo hello", weight: 0.02, group: slovenian_common]
+živijo -> ʒiʋijo;
+
+[id: 12562, name: "hvala thank you", weight: 0.02, group: slovenian_common]
+hvala -> xʋala;
+
+[id: 12563, name: "ja yes", weight: 0.02, group: slovenian_common]
+ja -> ja;
+
+[id: 12564, name: "ne no", weight: 0.02, group: slovenian_common]
+ne -> ne;
+
+[id: 12565, name: "voda water", weight: 0.02, group: slovenian_common]
+voda -> ʋoda;
+
+[id: 12566, name: "kruh bread food", weight: 0.02, group: slovenian_common]
+kruh -> krux;
+
+[id: 12567, name: "hiša house", weight: 0.02, group: slovenian_common]
+hiša -> xiʃa;
+
+[id: 12568, name: "človek person", weight: 0.02, group: slovenian_common]
+človek -> t͡ʃloʋek;
+
+[id: 12569, name: "otrok child", weight: 0.02, group: slovenian_common]
+otrok -> otrok;
+

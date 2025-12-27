@@ -42,10 +42,21 @@ pub fn is_vowel(p: &Phone) -> bool {
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:89-95`
 ///
-/// Includes both `Consonant` and `Digraph` variants.
+/// Includes `Consonant`, `Digraph`, `Trigraph`, `Tetragraph`, `Pentagraph`, `Hexagraph`,
+/// `Heptagraph`, and `Sequence` variants.
 #[inline]
 pub fn is_consonant(p: &Phone) -> bool {
-    matches!(p, Phone::Consonant(_) | Phone::Digraph(_, _))
+    matches!(
+        p,
+        Phone::Consonant(_)
+            | Phone::Digraph(_, _)
+            | Phone::Trigraph(_, _, _)
+            | Phone::Tetragraph(_, _, _, _)
+            | Phone::Pentagraph(_, _, _, _, _)
+            | Phone::Hexagraph(_, _, _, _, _, _)
+            | Phone::Heptagraph(_, _, _, _, _, _, _)
+            | Phone::Sequence(_)
+    )
 }
 
 // ============================================================================
@@ -70,6 +81,22 @@ pub fn phone_eq(p1: &Phone, p2: &Phone) -> bool {
         (Phone::Vowel(c1), Phone::Vowel(c2)) => c1 == c2,
         (Phone::Consonant(c1), Phone::Consonant(c2)) => c1 == c2,
         (Phone::Digraph(c1, c2), Phone::Digraph(c3, c4)) => c1 == c3 && c2 == c4,
+        (Phone::Trigraph(c1, c2, c3), Phone::Trigraph(c4, c5, c6)) => {
+            c1 == c4 && c2 == c5 && c3 == c6
+        }
+        (Phone::Tetragraph(c1, c2, c3, c4), Phone::Tetragraph(c5, c6, c7, c8)) => {
+            c1 == c5 && c2 == c6 && c3 == c7 && c4 == c8
+        }
+        (Phone::Pentagraph(a, b, c, d, e), Phone::Pentagraph(f, g, h, i, j)) => {
+            a == f && b == g && c == h && d == i && e == j
+        }
+        (Phone::Hexagraph(a, b, c, d, e, f), Phone::Hexagraph(g, h, i, j, k, l)) => {
+            a == g && b == h && c == i && d == j && e == k && f == l
+        }
+        (Phone::Heptagraph(a, b, c, d, e, f, g), Phone::Heptagraph(h, i, j, k, l, m, n)) => {
+            a == h && b == i && c == j && d == k && e == l && f == m && g == n
+        }
+        (Phone::Sequence(s1), Phone::Sequence(s2)) => s1 == s2,
         (Phone::Silent, Phone::Silent) => true,
         _ => false,
     }
@@ -126,6 +153,7 @@ pub fn context_matches(ctx: &Context, s: &[Phone], match_start: usize, pattern_l
                 match phone {
                     Phone::Consonant(c) => consonants.contains(c),
                     Phone::Digraph(c1, _) => consonants.contains(c1),
+                    Phone::Trigraph(c1, _, _) => consonants.contains(c1),
                     _ => false,
                 }
             } else {
@@ -138,6 +166,7 @@ pub fn context_matches(ctx: &Context, s: &[Phone], match_start: usize, pattern_l
                 match phone {
                     Phone::Consonant(c) => consonants.contains(c),
                     Phone::Digraph(c1, _) => consonants.contains(c1),
+                    Phone::Trigraph(c1, _, _) => consonants.contains(c1),
                     _ => false,
                 }
             } else {
@@ -237,9 +266,22 @@ pub fn is_vowel_char_type(p: &PhoneChar) -> bool {
 /// Check if a phone is a consonant (character-level).
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:89-95`
+///
+/// Includes `Consonant`, `Digraph`, `Trigraph`, `Tetragraph`, `Pentagraph`, `Hexagraph`,
+/// `Heptagraph`, and `Sequence` variants.
 #[inline]
 pub fn is_consonant_char(p: &PhoneChar) -> bool {
-    matches!(p, PhoneChar::Consonant(_) | PhoneChar::Digraph(_, _))
+    matches!(
+        p,
+        PhoneChar::Consonant(_)
+            | PhoneChar::Digraph(_, _)
+            | PhoneChar::Trigraph(_, _, _)
+            | PhoneChar::Tetragraph(_, _, _, _)
+            | PhoneChar::Pentagraph(_, _, _, _, _)
+            | PhoneChar::Hexagraph(_, _, _, _, _, _)
+            | PhoneChar::Heptagraph(_, _, _, _, _, _, _)
+            | PhoneChar::Sequence(_)
+    )
 }
 
 // ============================================================================
@@ -254,6 +296,22 @@ pub fn phone_eq_char(p1: &PhoneChar, p2: &PhoneChar) -> bool {
         (PhoneChar::Vowel(c1), PhoneChar::Vowel(c2)) => c1 == c2,
         (PhoneChar::Consonant(c1), PhoneChar::Consonant(c2)) => c1 == c2,
         (PhoneChar::Digraph(c1, c2), PhoneChar::Digraph(c3, c4)) => c1 == c3 && c2 == c4,
+        (PhoneChar::Trigraph(c1, c2, c3), PhoneChar::Trigraph(c4, c5, c6)) => {
+            c1 == c4 && c2 == c5 && c3 == c6
+        }
+        (PhoneChar::Tetragraph(c1, c2, c3, c4), PhoneChar::Tetragraph(c5, c6, c7, c8)) => {
+            c1 == c5 && c2 == c6 && c3 == c7 && c4 == c8
+        }
+        (PhoneChar::Pentagraph(a, b, c, d, e), PhoneChar::Pentagraph(f, g, h, i, j)) => {
+            a == f && b == g && c == h && d == i && e == j
+        }
+        (PhoneChar::Hexagraph(a, b, c, d, e, f), PhoneChar::Hexagraph(g, h, i, j, k, l)) => {
+            a == g && b == h && c == i && d == j && e == k && f == l
+        }
+        (PhoneChar::Heptagraph(a, b, c, d, e, f, g), PhoneChar::Heptagraph(h, i, j, k, l, m, n)) => {
+            a == h && b == i && c == j && d == k && e == l && f == m && g == n
+        }
+        (PhoneChar::Sequence(s1), PhoneChar::Sequence(s2)) => s1 == s2,
         (PhoneChar::Silent, PhoneChar::Silent) => true,
         _ => false,
     }
@@ -304,6 +362,7 @@ pub fn context_matches_char(
                 match phone {
                     PhoneChar::Consonant(c) => consonants.contains(c),
                     PhoneChar::Digraph(c1, _) => consonants.contains(c1),
+                    PhoneChar::Trigraph(c1, _, _) => consonants.contains(c1),
                     _ => false,
                 }
             } else {
@@ -316,6 +375,7 @@ pub fn context_matches_char(
                 match phone {
                     PhoneChar::Consonant(c) => consonants.contains(c),
                     PhoneChar::Digraph(c1, _) => consonants.contains(c1),
+                    PhoneChar::Trigraph(c1, _, _) => consonants.contains(c1),
                     _ => false,
                 }
             } else {

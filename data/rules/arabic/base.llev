@@ -22,6 +22,26 @@
 @description "Phonetic normalization rules for Arabic script"
 
 // ============================================================
+// Symbol Definitions
+// ============================================================
+
+// Emphatic (pharyngealized) consonants - Arabic emphatics with ˤ marker
+// These can be matched using [:pharyngealized:] named class
+@define EMPHATIC = [sˤdˤtˤðˤ]
+
+// Sun letters (assimilate with definite article ال)
+@define SUN_LETTER_ARABIC = [تثدذرزسشصضطظنل]
+
+// Moon letters (do not assimilate)
+@define MOON_LETTER_ARABIC = [ابجحخعغفقكمهوي]
+
+// Pharyngeal consonants
+@define PHARYNGEAL = [حع]
+
+// Vowel diacritics
+@define SHORT_VOWEL = [اَاِاُ]
+
+// ============================================================
 // BASIC CONSONANTS
 // ============================================================
 
@@ -77,12 +97,18 @@
 [id: 2462, name: "shin", weight: 0.05, group: arabic_consonants, ipa: "/ʃ/"]
 ش -> ʃ;
 
+// ============================================================
+// EMPHATIC (PHARYNGEALIZED) CONSONANTS ([:pharyngealized:] class)
+// ============================================================
+// Arabic emphatic consonants with pharyngealization marker ˤ (U+02E4)
+// These match the [:pharyngealized:] named class for pattern matching
+
 // ص (sad) - emphatic voiceless alveolar fricative
-[id: 2463, name: "sad", weight: 0.05, group: arabic_emphatic, ipa: "/sˤ/"]
+[id: 2463, name: "sad emphatic", weight: 0.05, group: arabic_emphatic, ipa: "/sˤ/"]
 ص -> sˤ;
 
 // ض (dad) - emphatic voiced alveolar stop (unique to Arabic)
-[id: 2464, name: "dad", weight: 0.05, group: arabic_emphatic, ipa: "/dˤ/"]
+[id: 2464, name: "dad emphatic", weight: 0.05, group: arabic_emphatic, ipa: "/dˤ/"]
 ض -> dˤ;
 
 // ط (ta emphatic) - emphatic voiceless dental stop
@@ -301,4 +327,73 @@ tˤtˤ -> tˤ;
 
 [id: 2541, name: "double long a", weight: 0.2, group: arabic_simplification]
 aːaː -> aː;
+
+// ============================================================
+// SUN/MOON LETTER ASSIMILATION (DEFINITE ARTICLE)
+// ============================================================
+// In Arabic, the definite article ال (al-) assimilates with
+// "sun letters" (الحروف الشمسية) but not "moon letters".
+//
+// Sun letters cause the 'l' to assimilate completely:
+//   ال + ت = at-t (not al-t)
+//   ال + ش = ash-sh (not al-sh)
+//
+// Moon letters keep the 'l' intact:
+//   ال + ك = al-k
+//   ال + ق = al-q
+//
+// These rules must run AFTER basic letter conversion to work
+// with the IPA output.
+
+// Define sun letter consonants in IPA (post-conversion)
+@define SUN_LETTER = [tθdðrzsnʃsˤdˤtˤðˤl]
+
+// Sun letter assimilation: al + sun letter -> a + geminated sun letter
+// Example: al-t -> att, al-ʃ -> aʃʃ
+
+[id: 2545, name: "sun letter assimilation t", weight: 0.01, group: arabic_sun_moon]
+alt -> att;
+
+[id: 2546, name: "sun letter assimilation theta", weight: 0.01, group: arabic_sun_moon]
+alθ -> aθθ;
+
+[id: 2547, name: "sun letter assimilation d", weight: 0.01, group: arabic_sun_moon]
+ald -> add;
+
+[id: 2548, name: "sun letter assimilation eth", weight: 0.01, group: arabic_sun_moon]
+alð -> aðð;
+
+[id: 2549, name: "sun letter assimilation r", weight: 0.01, group: arabic_sun_moon]
+alr -> arr;
+
+[id: 2550, name: "sun letter assimilation z", weight: 0.01, group: arabic_sun_moon]
+alz -> azz;
+
+[id: 2551, name: "sun letter assimilation s", weight: 0.01, group: arabic_sun_moon]
+als -> ass;
+
+[id: 2552, name: "sun letter assimilation n", weight: 0.01, group: arabic_sun_moon]
+aln -> ann;
+
+[id: 2553, name: "sun letter assimilation sh", weight: 0.01, group: arabic_sun_moon]
+alʃ -> aʃʃ;
+
+[id: 2554, name: "sun letter assimilation emphatic s", weight: 0.01, group: arabic_sun_moon]
+alsˤ -> asˤsˤ;
+
+[id: 2555, name: "sun letter assimilation emphatic d", weight: 0.01, group: arabic_sun_moon]
+aldˤ -> adˤdˤ;
+
+[id: 2556, name: "sun letter assimilation emphatic t", weight: 0.01, group: arabic_sun_moon]
+altˤ -> atˤtˤ;
+
+[id: 2557, name: "sun letter assimilation emphatic eth", weight: 0.01, group: arabic_sun_moon]
+alðˤ -> aðˤðˤ;
+
+// Identity mapping removed: all -> all
+// Note: This was part of sun letter assimilation patterns, but 'l' is itself
+// a sun letter, so "al-l" naturally doubles to "all" without special handling.
+
+// Note: Moon letters (ا ب ج ح خ ع غ ف ق ك م ه و ي) don't need special rules
+// as they don't assimilate - "al-" remains unchanged before them.
 

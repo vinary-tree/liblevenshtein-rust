@@ -242,10 +242,34 @@ impl RuleSetChar {
             // Convert back to string
             result.iter().filter_map(|p| match p {
                 PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => Some(*c),
-                PhoneChar::Digraph(c1, c2) => {
+                PhoneChar::Digraph(_c1, _c2) => {
                     // For now, output both chars; could be refined
                     None // Skip digraphs in string output
-                },
+                }
+                PhoneChar::Trigraph(_c1, _c2, _c3) => {
+                    // For now, skip trigraphs in string output
+                    None
+                }
+                PhoneChar::Tetragraph(_c1, _c2, _c3, _c4) => {
+                    // For now, skip tetragraphs in string output
+                    None
+                }
+                PhoneChar::Pentagraph(_c1, _c2, _c3, _c4, _c5) => {
+                    // For now, skip pentagraphs in string output
+                    None
+                }
+                PhoneChar::Hexagraph(_c1, _c2, _c3, _c4, _c5, _c6) => {
+                    // For now, skip hexagraphs in string output
+                    None
+                }
+                PhoneChar::Heptagraph(_c1, _c2, _c3, _c4, _c5, _c6, _c7) => {
+                    // For now, skip heptagraphs in string output
+                    None
+                }
+                PhoneChar::Sequence(_) => {
+                    // For now, skip sequences in string output
+                    None
+                }
                 PhoneChar::Silent => None,
             }).collect()
         } else {
@@ -275,16 +299,56 @@ impl RuleSetChar {
         // Apply rules with generous fuel
         let fuel = input.len() * 10 + 100;
         if let Some(result) = crate::phonetic::apply_rules_seq_char(&self.rules, &phones, fuel) {
-            // Convert back to string with digraph expansion
-            let mut output = String::with_capacity(result.len() * 2);
-            for p in &result {
+            // Convert back to string with digraph/trigraph/tetragraph/sequence expansion
+            let mut output = String::with_capacity(result.len() * 4);
+            for p in result.iter() {
                 match p {
                     PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => output.push(*c),
                     PhoneChar::Digraph(c1, c2) => {
                         output.push(*c1);
                         output.push(*c2);
-                    },
-                    PhoneChar::Silent => {},
+                    }
+                    PhoneChar::Trigraph(c1, c2, c3) => {
+                        output.push(*c1);
+                        output.push(*c2);
+                        output.push(*c3);
+                    }
+                    PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                        output.push(*c1);
+                        output.push(*c2);
+                        output.push(*c3);
+                        output.push(*c4);
+                    }
+                    PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                        output.push(*c1);
+                        output.push(*c2);
+                        output.push(*c3);
+                        output.push(*c4);
+                        output.push(*c5);
+                    }
+                    PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                        output.push(*c1);
+                        output.push(*c2);
+                        output.push(*c3);
+                        output.push(*c4);
+                        output.push(*c5);
+                        output.push(*c6);
+                    }
+                    PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                        output.push(*c1);
+                        output.push(*c2);
+                        output.push(*c3);
+                        output.push(*c4);
+                        output.push(*c5);
+                        output.push(*c6);
+                        output.push(*c7);
+                    }
+                    PhoneChar::Sequence(s) => {
+                        for c in s {
+                            output.push(*c);
+                        }
+                    }
+                    PhoneChar::Silent => {}
                 }
             }
             output
@@ -349,6 +413,13 @@ impl<'a> RuleConverter<'a> {
         // Convert context with case folding for case-insensitive matching
         let context = self.convert_context(&rule_def.rule.context, pos)?;
 
+        // Extract syllable condition from context AST
+        let syllable_condition = rule_def
+            .rule
+            .context
+            .as_ref()
+            .and_then(|ctx| ctx.syllable.clone());
+
         // Determine weight (inline weight takes precedence over metadata weight)
         let weight = rule_def
             .rule
@@ -373,6 +444,7 @@ impl<'a> RuleConverter<'a> {
             replacement,
             context,
             weight,
+            syllable_condition,
         })
     }
 
@@ -530,6 +602,12 @@ impl<'a> RuleConverter<'a> {
     }
 
     /// Convert an AST context to a runtime Context.
+    ///
+    /// Supports:
+    /// - Word boundaries (#_ and _#)
+    /// - Character class contexts ([aeiou]_ and _[aeiou])
+    /// - Compound contexts (And, Or, Not)
+    /// - Both left AND right contexts simultaneously
     fn convert_context(
         &self,
         ctx_opt: &Option<ContextAST>,
@@ -540,71 +618,94 @@ impl<'a> RuleConverter<'a> {
             Some(ctx) => ctx,
         };
 
-        // Check for word boundary patterns
-        let left_is_boundary = matches!(
-            ctx.left.as_deref(),
-            Some(ContextExpr::WordBoundary)
-        );
-        let right_is_boundary = matches!(
-            ctx.right.as_deref(),
-            Some(ContextExpr::WordBoundary)
-        );
+        // Convert left and right contexts separately, then combine
+        let left_ctx = match &ctx.left {
+            None => None,
+            Some(expr) => Some(self.convert_context_expr(expr, pos, true)?),
+        };
 
-        // Simple word boundary cases
-        if left_is_boundary && ctx.right.is_none() {
-            return Ok(Context::Initial);
-        }
-        if right_is_boundary && ctx.left.is_none() {
-            return Ok(Context::Final);
-        }
-        if left_is_boundary && right_is_boundary {
-            // Both boundaries - pattern must start at word start AND end at word end
-            // This means the pattern must match the entire word
-            return Ok(Context::And(
-                Box::new(Context::Initial),
-                Box::new(Context::Final),
-            ));
-        }
+        let right_ctx = match &ctx.right {
+            None => None,
+            Some(expr) => Some(self.convert_context_expr(expr, pos, false)?),
+        };
 
-        // Handle character class contexts
-        if let Some(right_expr) = &ctx.right {
-            if ctx.left.is_none() {
-                if let Some(chars) = self.extract_char_class_bytes(right_expr, pos)? {
-                    // Determine if these are vowels or consonants
-                    if chars.iter().all(|&c| is_vowel_byte(c)) {
-                        return Ok(Context::BeforeVowel(chars));
-                    } else if chars.iter().all(|&c| !is_vowel_byte(c)) {
-                        return Ok(Context::BeforeConsonant(chars));
-                    }
-                    // Mixed - use BeforeVowel with the actual chars
-                    // (this is a simplification; proper handling would need a new Context variant)
-                    return Ok(Context::BeforeVowel(chars));
-                }
+        // Combine left and right contexts
+        match (left_ctx, right_ctx) {
+            (None, None) => Ok(Context::Anywhere),
+            (Some(left), None) => Ok(left),
+            (None, Some(right)) => Ok(right),
+            (Some(left), Some(right)) => {
+                // Both left and right context - combine with And
+                Ok(Context::And(Box::new(left), Box::new(right)))
             }
         }
+    }
 
-        if let Some(left_expr) = &ctx.left {
-            if ctx.right.is_none() {
-                if let Some(chars) = self.extract_char_class_bytes(left_expr, pos)? {
-                    // Determine if these are vowels or consonants
-                    if chars.iter().all(|&c| is_vowel_byte(c)) {
-                        return Ok(Context::AfterVowel(chars));
-                    } else if chars.iter().all(|&c| !is_vowel_byte(c)) {
-                        return Ok(Context::AfterConsonant(chars));
-                    }
-                    // Mixed - use AfterVowel with the actual chars
-                    return Ok(Context::AfterVowel(chars));
+    /// Convert a context expression to a runtime Context.
+    ///
+    /// This handles compound contexts (And, Or, Not) recursively.
+    fn convert_context_expr(
+        &self,
+        ctx_expr: &ContextExpr,
+        pos: Position,
+        is_left_context: bool,
+    ) -> LLevResult<Context> {
+        match ctx_expr {
+            ContextExpr::WordBoundary => {
+                if is_left_context {
+                    Ok(Context::Initial)
+                } else {
+                    Ok(Context::Final)
                 }
             }
+            ContextExpr::Pattern(expr) => {
+                // Try to extract as character class
+                if let Some(chars) = self.extract_char_class_bytes_from_expr(expr, pos)? {
+                    if is_left_context {
+                        // Left context - "after" the characters
+                        if chars.iter().all(|&c| is_vowel_byte(c)) {
+                            Ok(Context::AfterVowel(chars))
+                        } else if chars.iter().all(|&c| !is_vowel_byte(c)) {
+                            Ok(Context::AfterConsonant(chars))
+                        } else {
+                            // Mixed - use AfterVowel as fallback
+                            Ok(Context::AfterVowel(chars))
+                        }
+                    } else {
+                        // Right context - "before" the characters
+                        if chars.iter().all(|&c| is_vowel_byte(c)) {
+                            Ok(Context::BeforeVowel(chars))
+                        } else if chars.iter().all(|&c| !is_vowel_byte(c)) {
+                            Ok(Context::BeforeConsonant(chars))
+                        } else {
+                            // Mixed - use BeforeVowel as fallback
+                            Ok(Context::BeforeVowel(chars))
+                        }
+                    }
+                } else {
+                    Err(LLevError::with_position(
+                        LLevErrorKind::UnsupportedPattern(
+                            "Complex pattern in context requires NFA-based matching".into(),
+                        ),
+                        pos,
+                    ))
+                }
+            }
+            ContextExpr::And(a, b) => {
+                let left = self.convert_context_expr(a, pos, is_left_context)?;
+                let right = self.convert_context_expr(b, pos, is_left_context)?;
+                Ok(Context::And(Box::new(left), Box::new(right)))
+            }
+            ContextExpr::Or(a, b) => {
+                let left = self.convert_context_expr(a, pos, is_left_context)?;
+                let right = self.convert_context_expr(b, pos, is_left_context)?;
+                Ok(Context::Or(Box::new(left), Box::new(right)))
+            }
+            ContextExpr::Not(inner) => {
+                let converted = self.convert_context_expr(inner, pos, is_left_context)?;
+                Ok(Context::Not(Box::new(converted)))
+            }
         }
-
-        // Complex context - not supported for byte-level conversion
-        Err(LLevError::with_position(
-            LLevErrorKind::UnsupportedPattern(
-                "Complex contexts require NFA-based matching".into(),
-            ),
-            pos,
-        ))
     }
 
     /// Extract character class bytes from a context expression.
@@ -731,6 +832,13 @@ impl<'a> RuleConverterChar<'a> {
         // Convert context with case folding for case-insensitive matching
         let context = self.convert_context(&rule_def.rule.context, pos)?;
 
+        // Extract syllable condition from context AST
+        let syllable_condition = rule_def
+            .rule
+            .context
+            .as_ref()
+            .and_then(|ctx| ctx.syllable.clone());
+
         // Determine weight (inline weight takes precedence over metadata weight)
         let weight = rule_def
             .rule
@@ -755,6 +863,7 @@ impl<'a> RuleConverterChar<'a> {
             replacement,
             context,
             weight,
+            syllable_condition,
         })
     }
 
@@ -904,6 +1013,12 @@ impl<'a> RuleConverterChar<'a> {
     }
 
     /// Convert an AST context to a runtime ContextChar.
+    ///
+    /// Supports:
+    /// - Word boundaries (#_ and _#)
+    /// - Character class contexts ([aeiou]_ and _[aeiou])
+    /// - Compound contexts (And, Or, Not)
+    /// - Both left AND right contexts simultaneously
     fn convert_context(
         &self,
         ctx_opt: &Option<ContextAST>,
@@ -914,70 +1029,27 @@ impl<'a> RuleConverterChar<'a> {
             Some(ctx) => ctx,
         };
 
-        // Check for word boundary patterns
-        let left_is_boundary = matches!(
-            ctx.left.as_deref(),
-            Some(ContextExpr::WordBoundary)
-        );
-        let right_is_boundary = matches!(
-            ctx.right.as_deref(),
-            Some(ContextExpr::WordBoundary)
-        );
+        // Convert left and right contexts separately, then combine
+        let left_ctx = match &ctx.left {
+            None => None,
+            Some(expr) => Some(self.convert_context_expr(expr, pos, true)?),
+        };
 
-        // Simple word boundary cases
-        if left_is_boundary && ctx.right.is_none() {
-            return Ok(ContextChar::Initial);
-        }
-        if right_is_boundary && ctx.left.is_none() {
-            return Ok(ContextChar::Final);
-        }
-        if left_is_boundary && right_is_boundary {
-            // Both boundaries - pattern must start at word start AND end at word end
-            // This means the pattern must match the entire word
-            return Ok(ContextChar::And(
-                Box::new(ContextChar::Initial),
-                Box::new(ContextChar::Final),
-            ));
-        }
+        let right_ctx = match &ctx.right {
+            None => None,
+            Some(expr) => Some(self.convert_context_expr(expr, pos, false)?),
+        };
 
-        // Handle character class contexts
-        if let Some(right_expr) = &ctx.right {
-            if ctx.left.is_none() {
-                if let Some(chars) = self.extract_char_class(right_expr, pos)? {
-                    // Determine if these are vowels or consonants
-                    if chars.iter().all(|&c| is_vowel_char(c)) {
-                        return Ok(ContextChar::BeforeVowel(chars));
-                    } else if chars.iter().all(|&c| !is_vowel_char(c)) {
-                        return Ok(ContextChar::BeforeConsonant(chars));
-                    }
-                    // Mixed - use BeforeVowel with the actual chars
-                    return Ok(ContextChar::BeforeVowel(chars));
-                }
+        // Combine left and right contexts
+        match (left_ctx, right_ctx) {
+            (None, None) => Ok(ContextChar::Anywhere),
+            (Some(left), None) => Ok(left),
+            (None, Some(right)) => Ok(right),
+            (Some(left), Some(right)) => {
+                // Both left and right context - combine with And
+                Ok(ContextChar::And(Box::new(left), Box::new(right)))
             }
         }
-
-        if let Some(left_expr) = &ctx.left {
-            if ctx.right.is_none() {
-                if let Some(chars) = self.extract_char_class(left_expr, pos)? {
-                    // Determine if these are vowels or consonants
-                    if chars.iter().all(|&c| is_vowel_char(c)) {
-                        return Ok(ContextChar::AfterVowel(chars));
-                    } else if chars.iter().all(|&c| !is_vowel_char(c)) {
-                        return Ok(ContextChar::AfterConsonant(chars));
-                    }
-                    // Mixed - use AfterVowel with the actual chars
-                    return Ok(ContextChar::AfterVowel(chars));
-                }
-            }
-        }
-
-        // Complex context - not supported for character-level conversion
-        Err(LLevError::with_position(
-            LLevErrorKind::UnsupportedPattern(
-                "Complex contexts require NFA-based matching".into(),
-            ),
-            pos,
-        ))
     }
 
     /// Extract character class chars from a context expression.
@@ -990,8 +1062,75 @@ impl<'a> RuleConverterChar<'a> {
             ContextExpr::Pattern(expr) => self.extract_char_class_from_expr(expr, pos),
             ContextExpr::WordBoundary => Ok(None),
             ContextExpr::And(_, _) | ContextExpr::Or(_, _) | ContextExpr::Not(_) => {
-                // Compound contexts are not supported for simple char class extraction
+                // Compound contexts are handled by convert_context_expr, not char class extraction
                 Ok(None)
+            }
+        }
+    }
+
+    /// Convert a context expression to a runtime ContextChar.
+    ///
+    /// This handles compound contexts (And, Or, Not) recursively.
+    fn convert_context_expr(
+        &self,
+        ctx_expr: &ContextExpr,
+        pos: Position,
+        is_left_context: bool,
+    ) -> LLevResult<ContextChar> {
+        match ctx_expr {
+            ContextExpr::WordBoundary => {
+                if is_left_context {
+                    Ok(ContextChar::Initial)
+                } else {
+                    Ok(ContextChar::Final)
+                }
+            }
+            ContextExpr::Pattern(expr) => {
+                // Try to extract as character class
+                if let Some(chars) = self.extract_char_class_from_expr(expr, pos)? {
+                    if is_left_context {
+                        // Left context - "after" the characters
+                        if chars.iter().all(|&c| is_vowel_char(c)) {
+                            Ok(ContextChar::AfterVowel(chars))
+                        } else if chars.iter().all(|&c| !is_vowel_char(c)) {
+                            Ok(ContextChar::AfterConsonant(chars))
+                        } else {
+                            // Mixed - use AfterVowel as fallback
+                            Ok(ContextChar::AfterVowel(chars))
+                        }
+                    } else {
+                        // Right context - "before" the characters
+                        if chars.iter().all(|&c| is_vowel_char(c)) {
+                            Ok(ContextChar::BeforeVowel(chars))
+                        } else if chars.iter().all(|&c| !is_vowel_char(c)) {
+                            Ok(ContextChar::BeforeConsonant(chars))
+                        } else {
+                            // Mixed - use BeforeVowel as fallback
+                            Ok(ContextChar::BeforeVowel(chars))
+                        }
+                    }
+                } else {
+                    Err(LLevError::with_position(
+                        LLevErrorKind::UnsupportedPattern(
+                            "Complex pattern in context requires NFA-based matching".into(),
+                        ),
+                        pos,
+                    ))
+                }
+            }
+            ContextExpr::And(a, b) => {
+                let left = self.convert_context_expr(a, pos, is_left_context)?;
+                let right = self.convert_context_expr(b, pos, is_left_context)?;
+                Ok(ContextChar::And(Box::new(left), Box::new(right)))
+            }
+            ContextExpr::Or(a, b) => {
+                let left = self.convert_context_expr(a, pos, is_left_context)?;
+                let right = self.convert_context_expr(b, pos, is_left_context)?;
+                Ok(ContextChar::Or(Box::new(left), Box::new(right)))
+            }
+            ContextExpr::Not(inner) => {
+                let converted = self.convert_context_expr(inner, pos, is_left_context)?;
+                Ok(ContextChar::Not(Box::new(converted)))
             }
         }
     }
@@ -1476,6 +1615,155 @@ mod tests {
                 assert!(msg.contains("empty"));
             }
             _ => panic!("Expected InvalidRule error"),
+        }
+    }
+
+    // ========================================================================
+    // Compound Context Tests
+    // ========================================================================
+
+    #[test]
+    fn test_context_both_left_and_right() {
+        // Test that rules with both left and right contexts work
+        // x -> gz / [aeiou]_[aeiou] (voiced between vowels)
+        let file = parse_str("x -> gz / [aeiou]_[aeiou];").expect("parse failed");
+        let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.len(), 1);
+        let rule = &ruleset.rules[0];
+
+        // Should be And(AfterVowel, BeforeVowel)
+        match &rule.context {
+            ContextChar::And(left, right) => {
+                match left.as_ref() {
+                    ContextChar::AfterVowel(chars) => {
+                        assert_eq!(chars.len(), 5); // a, e, i, o, u
+                    }
+                    _ => panic!("Expected AfterVowel on left, got {:?}", left),
+                }
+                match right.as_ref() {
+                    ContextChar::BeforeVowel(chars) => {
+                        assert_eq!(chars.len(), 5); // a, e, i, o, u
+                    }
+                    _ => panic!("Expected BeforeVowel on right, got {:?}", right),
+                }
+            }
+            _ => panic!("Expected And context, got {:?}", rule.context),
+        }
+    }
+
+    #[test]
+    fn test_context_word_boundary_both() {
+        // Test that #_# works (whole word match)
+        let file = parse_str("the -> ðə / #_#;").expect("parse failed");
+        let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.len(), 1);
+        let rule = &ruleset.rules[0];
+
+        // Should be And(Initial, Final)
+        match &rule.context {
+            ContextChar::And(left, right) => {
+                assert_eq!(left.as_ref(), &ContextChar::Initial);
+                assert_eq!(right.as_ref(), &ContextChar::Final);
+            }
+            _ => panic!("Expected And(Initial, Final) context, got {:?}", rule.context),
+        }
+    }
+
+    #[test]
+    fn test_context_initial_with_char_class() {
+        // Test #_[ei] - word-initial before front vowel
+        let file = parse_str("c -> s / #_[ei];").expect("parse failed");
+        let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.len(), 1);
+        let rule = &ruleset.rules[0];
+
+        // Should be And(Initial, BeforeVowel([e, i]))
+        match &rule.context {
+            ContextChar::And(left, right) => {
+                assert_eq!(left.as_ref(), &ContextChar::Initial);
+                match right.as_ref() {
+                    ContextChar::BeforeVowel(chars) => {
+                        assert!(chars.contains(&'e'));
+                        assert!(chars.contains(&'i'));
+                    }
+                    _ => panic!("Expected BeforeVowel on right, got {:?}", right),
+                }
+            }
+            _ => panic!("Expected And context, got {:?}", rule.context),
+        }
+    }
+
+    #[test]
+    fn test_context_char_class_before_final() {
+        // Test [aeiou]_# - after vowel at word end
+        let file = parse_str("s -> z / [aeiou]_#;").expect("parse failed");
+        let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.len(), 1);
+        let rule = &ruleset.rules[0];
+
+        // Should be And(AfterVowel, Final)
+        match &rule.context {
+            ContextChar::And(left, right) => {
+                match left.as_ref() {
+                    ContextChar::AfterVowel(chars) => {
+                        assert_eq!(chars.len(), 5);
+                    }
+                    _ => panic!("Expected AfterVowel on left, got {:?}", left),
+                }
+                assert_eq!(right.as_ref(), &ContextChar::Final);
+            }
+            _ => panic!("Expected And context, got {:?}", rule.context),
+        }
+    }
+
+    #[test]
+    fn test_byte_level_compound_context() {
+        // Test compound context for byte-level converter
+        let file = parse_str("x -> gz / [aeiou]_[aeiou];").expect("parse failed");
+        let ruleset = RuleSet::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.len(), 1);
+        let rule = &ruleset.rules[0];
+
+        // Should be And(AfterVowel, BeforeVowel)
+        match &rule.context {
+            Context::And(left, right) => {
+                match left.as_ref() {
+                    Context::AfterVowel(chars) => {
+                        assert_eq!(chars.len(), 5);
+                    }
+                    _ => panic!("Expected AfterVowel on left, got {:?}", left),
+                }
+                match right.as_ref() {
+                    Context::BeforeVowel(chars) => {
+                        assert_eq!(chars.len(), 5);
+                    }
+                    _ => panic!("Expected BeforeVowel on right, got {:?}", right),
+                }
+            }
+            _ => panic!("Expected And context, got {:?}", rule.context),
+        }
+    }
+
+    #[test]
+    fn test_byte_level_word_boundary_both() {
+        // Test #_# for byte-level
+        let file = parse_str("a -> b / #_#;").expect("parse failed");
+        let ruleset = RuleSet::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.len(), 1);
+        let rule = &ruleset.rules[0];
+
+        match &rule.context {
+            Context::And(left, right) => {
+                assert_eq!(left.as_ref(), &Context::Initial);
+                assert_eq!(right.as_ref(), &Context::Final);
+            }
+            _ => panic!("Expected And(Initial, Final) context, got {:?}", rule.context),
         }
     }
 }

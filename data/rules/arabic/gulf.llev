@@ -1,0 +1,140 @@
+// Gulf Arabic Phonetic Rules
+// ==========================
+// Dialect-specific rules for Gulf Arabic (خليجي).
+// Spoken by approximately 50+ million speakers in UAE, Saudi Arabia,
+// Kuwait, Qatar, Bahrain, and Oman.
+//
+// Key Gulf Arabic Features:
+//   - ق (qaf) → g (voiced velar stop) - most distinctive feature
+//   - ك (kaf) → tʃ (palatalization before front vowels)
+//   - ج (jim) → j or y (varies by sub-dialect)
+//   - Preservation of some Classical Arabic features
+//   - Distinctive long vowel system
+//   - Guttural sounds well preserved
+//
+// Rule IDs: 2700-2799 (Gulf dialect range)
+
+@name "Gulf Arabic Dialect Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Dialect-specific phonetic rules for Gulf Arabic"
+
+// Import the shared Arabic base rules
+@include "arabic/base.llev"
+
+// ============================================================
+// Symbol Definitions
+// ============================================================
+
+@define VOWEL = [اوي]
+@define FRONT_VOWEL = [يِ]
+@define CONSONANT = [بتثجحخدذرزسشصضطظعغفقكلمنهوي]
+
+// ============================================================
+// GULF CONSONANT SHIFTS
+// ============================================================
+// These rules OVERRIDE the base Arabic rules for Gulf dialect.
+
+// ق (qaf) → ɡ (voiced velar stop) - THE defining Gulf feature
+// In MSA: ق → q, but in Gulf: ق → ɡ
+// Examples: قال (qaal) → ɡaal "said", قلب (qalb) → ɡalb "heart"
+[id: 2700, name: "qaf to g gulf", weight: 0.0, group: gulf_consonants, ipa: "/ɡ/"]
+ق -> ɡ;
+
+// ك (kaf) palatalization → tʃ before front vowels
+// In MSA: ك → k always, but in Gulf: ك → tʃ before i/e sounds
+// Examples: كيف (kayf) → tʃeːf "how", كلب (kalb) stays kalb
+[id: 2705, name: "kaf palatalized gulf", weight: 0.0, group: gulf_consonants, ipa: "/t͡ʃ/"]
+كي -> t͡ʃi;
+
+[id: 2706, name: "kaf palatalized before kasra gulf", weight: 0.0, group: gulf_consonants, ipa: "/t͡ʃ/"]
+كِ -> t͡ʃi;
+
+// ج (jim) → j (preserved like MSA in most Gulf dialects)
+// Some sub-dialects use y, but j is standard
+[id: 2710, name: "jim to j gulf", weight: 0.0, group: gulf_consonants, ipa: "/d͡ʒ/"]
+ج -> d͡ʒ;
+
+// ============================================================
+// INTERDENTAL PRESERVATION
+// ============================================================
+// Gulf Arabic generally PRESERVES interdental fricatives
+// (unlike Egyptian which merges them)
+
+// ث (tha) → θ (preserved)
+[id: 2715, name: "tha preserved gulf", weight: 0.0, group: gulf_interdental, ipa: "/θ/"]
+ث -> θ;
+
+// ذ (dhal) → ð (preserved)
+[id: 2720, name: "dhal preserved gulf", weight: 0.0, group: gulf_interdental, ipa: "/ð/"]
+ذ -> ð;
+
+// ظ (zha) → ðˤ (emphatic, preserved)
+[id: 2725, name: "zha preserved gulf", weight: 0.0, group: gulf_interdental, ipa: "/ðˤ/"]
+ظ -> ðˤ;
+
+// ============================================================
+// VOWEL PATTERNS
+// ============================================================
+// Gulf Arabic has distinctive diphthong realizations
+
+// Long aa often realized as eː in certain contexts
+// ay diphthong → eː (monophthongization)
+[id: 2730, name: "ay to e gulf", weight: 0.1, group: gulf_vowels, ipa: "/eː/"]
+اي -> eː / _#;
+
+// aw diphthong → oː (monophthongization)
+[id: 2735, name: "aw to o gulf", weight: 0.1, group: gulf_vowels, ipa: "/oː/"]
+او -> oː / _#;
+
+// ============================================================
+// COMMON GULF WORDS
+// ============================================================
+// High-frequency words with Gulf-specific pronunciations
+
+// "how" - شلون (shlon) in Gulf vs كيف (kayf) in MSA
+[id: 2750, name: "how gulf", weight: 0.02, group: gulf_common, ipa: "/ʃloːn/"]
+شلون -> ʃloːn;
+
+// "what" - شنو (shnu) in Gulf vs ما/ماذا in MSA
+[id: 2751, name: "what gulf", weight: 0.02, group: gulf_common, ipa: "/ʃnu/"]
+شنو -> ʃnu;
+
+// "now" - الحين (alhiin) in Gulf vs الآن in MSA
+[id: 2752, name: "now gulf", weight: 0.02, group: gulf_common, ipa: "/alħiːn/"]
+الحين -> alħiːn;
+
+// "want" - أبي/أبغي (abi/abghi) in Gulf vs أريد in MSA
+[id: 2753, name: "want gulf abi", weight: 0.02, group: gulf_common, ipa: "/abi/"]
+أبي -> abi;
+
+[id: 2754, name: "want gulf abghi", weight: 0.02, group: gulf_common, ipa: "/abɣi/"]
+أبغي -> abɣi;
+
+// "good" - زين (zein) in Gulf vs جيد in MSA
+[id: 2755, name: "good gulf", weight: 0.02, group: gulf_common, ipa: "/zeːn/"]
+زين -> zeːn;
+
+// "this" masculine - هذا often pronounced هاذا (haadha) with long a
+[id: 2756, name: "this masc gulf", weight: 0.02, group: gulf_common, ipa: "/haːða/"]
+هاذا -> haːða;
+
+// "this" feminine - هذي (haadhi) in Gulf
+[id: 2757, name: "this fem gulf", weight: 0.02, group: gulf_common, ipa: "/haːði/"]
+هذي -> haːði;
+
+// "there is/are" - في (fii) or فيه (fiih)
+[id: 2758, name: "there is gulf", weight: 0.02, group: gulf_common, ipa: "/fiː/"]
+فيه -> fiː;
+
+// "no" - لا (la) preserved, but emphatic لالا
+[id: 2759, name: "no emphatic gulf", weight: 0.02, group: gulf_common, ipa: "/laːlaː/"]
+لالا -> laːlaː;
+
+// "yes" - إي (ii) or هيه (hih) in Gulf
+[id: 2760, name: "yes gulf ii", weight: 0.02, group: gulf_common, ipa: "/iː/"]
+إي -> iː;
+
+[id: 2761, name: "yes gulf hih", weight: 0.02, group: gulf_common, ipa: "/hiː/"]
+هيه -> hiː;
+

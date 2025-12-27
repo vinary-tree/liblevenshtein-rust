@@ -1,0 +1,200 @@
+// Latin Phonetic Rules (Classical)
+// =================================
+// Phonetic rules for Classical Latin (reconstructed pronunciation).
+// Used for academic, religious (Church Latin), and legal contexts.
+//
+// This grammar follows the reconstructed Classical pronunciation,
+// which differs from Ecclesiastical (Church) Latin in several ways.
+//
+// Key features of Classical Latin:
+//   - V always pronounced as [w] (not [v] as in Ecclesiastical)
+//   - C always [k] before all vowels (no palatalization)
+//   - G always [ɡ] (hard, as in "go")
+//   - Long vowels distinguished by macrons: ā, ē, ī, ō, ū
+//   - Diphthongs: ae [ae̯], oe [oe̯], au [aw]
+//   - QU cluster: [kʷ]
+//   - Aspirated consonants in Greek loanwords: ph, th, ch
+//
+// Note: Ecclesiastical (Church) Latin has different rules:
+//   - C → [t͡ʃ] before e, i (palatalization)
+//   - V → [v]
+//   - AE → [e], OE → [e]
+//
+// Rule IDs: 17400-17499
+
+@name "Latin Phonetic Rules (Classical)"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Classical Latin"
+
+// ============================================================
+// CONSONANT CLUSTERS (highest priority)
+// ============================================================
+
+// QU → kʷ (labialized velar stop)
+[id: 17400, name: "qu cluster", weight: 0.05, group: latin_clusters, ipa: "/kʷ/"]
+qu -> kʷ;
+
+// GU before vowel → ɡʷ (labialized voiced velar)
+[id: 17401, name: "gu cluster", weight: 0.05, group: latin_clusters, ipa: "/ɡʷ/"]
+gu -> ɡʷ / _[aeiou];
+
+// ============================================================
+// GREEK LOANWORD ASPIRATES
+// ============================================================
+// In Classical Latin, Greek aspirated consonants (φ, θ, χ)
+// were borrowed as ph, th, ch and pronounced with aspiration.
+
+// PH → pʰ (aspirated bilabial stop)
+[id: 17405, name: "ph aspirate", weight: 0.05, group: latin_greek, ipa: "/pʰ/"]
+ph -> pʰ;
+
+// TH → tʰ (aspirated alveolar stop)
+[id: 17406, name: "th aspirate", weight: 0.05, group: latin_greek, ipa: "/tʰ/"]
+th -> tʰ;
+
+// CH → kʰ (aspirated velar stop)
+[id: 17407, name: "ch aspirate", weight: 0.05, group: latin_greek, ipa: "/kʰ/"]
+ch -> kʰ;
+
+// RH → r (Greek rho, no aspiration in Latin)
+[id: 17408, name: "rh greek", weight: 0.05, group: latin_greek, ipa: "/r/"]
+rh -> r;
+
+// ============================================================
+// DIPHTHONGS
+// ============================================================
+
+// AE → ae̯ (diphthong, like "eye" in some dialects)
+[id: 17410, name: "ae diphthong", weight: 0.08, group: latin_diphthongs, ipa: "/ae̯/"]
+ae -> ae̯;
+
+// OE → oe̯ (diphthong, similar to "oi" in German)
+[id: 17411, name: "oe diphthong", weight: 0.08, group: latin_diphthongs, ipa: "/oe̯/"]
+oe -> oe̯;
+
+// AU → aw (diphthong, like "ow" in "cow")
+[id: 17412, name: "au diphthong", weight: 0.08, group: latin_diphthongs, ipa: "/aw/"]
+au -> aw;
+
+// EI → ei̯ (rare diphthong)
+[id: 17413, name: "ei diphthong", weight: 0.08, group: latin_diphthongs, ipa: "/ei̯/"]
+ei -> ei̯;
+
+// EU → ew (rare, mainly in Greek words)
+[id: 17414, name: "eu diphthong", weight: 0.08, group: latin_diphthongs, ipa: "/ew/"]
+eu -> ew;
+
+// UI → ui̯ (rare diphthong, as in "huic")
+[id: 17415, name: "ui diphthong", weight: 0.08, group: latin_diphthongs, ipa: "/ui̯/"]
+ui -> ui̯ / _$;
+
+// ============================================================
+// LONG VOWELS (with macrons)
+// ============================================================
+// Long vowels were phonemically distinct in Classical Latin
+
+// Ā → aː (long a)
+[id: 17420, name: "long a", weight: 0.1, group: latin_long_vowels, ipa: "/aː/"]
+ā -> aː;
+
+// Ē → eː (long e)
+[id: 17421, name: "long e", weight: 0.1, group: latin_long_vowels, ipa: "/eː/"]
+ē -> eː;
+
+// Ī → iː (long i)
+[id: 17422, name: "long i", weight: 0.1, group: latin_long_vowels, ipa: "/iː/"]
+ī -> iː;
+
+// Ō → oː (long o)
+[id: 17423, name: "long o", weight: 0.1, group: latin_long_vowels, ipa: "/oː/"]
+ō -> oː;
+
+// Ū → uː (long u)
+[id: 17424, name: "long u", weight: 0.1, group: latin_long_vowels, ipa: "/uː/"]
+ū -> uː;
+
+// Y → y (Greek upsilon, rounded front vowel)
+[id: 17425, name: "y greek upsilon", weight: 0.1, group: latin_long_vowels, ipa: "/y/"]
+y -> y;
+
+// ============================================================
+// CONSONANTS
+// ============================================================
+
+// V → w (Classical Latin: always labial-velar approximant)
+[id: 17430, name: "v as w", weight: 0.1, group: latin_consonants, ipa: "/w/"]
+v -> w;
+
+// C → k (always hard, no palatalization in Classical)
+[id: 17431, name: "c as k", weight: 0.1, group: latin_consonants, ipa: "/k/"]
+c -> k;
+
+// G → ɡ (always hard, as in "go")
+[id: 17432, name: "g hard", weight: 0.1, group: latin_consonants, ipa: "/ɡ/"]
+g -> ɡ;
+
+// J/I consonant → j (before vowels, semiconsonant)
+[id: 17433, name: "j consonantal", weight: 0.1, group: latin_consonants, ipa: "/j/"]
+j -> j;
+
+// R → r (alveolar trill)
+[id: 17434, name: "r trill", weight: 0.1, group: latin_consonants, ipa: "/r/"]
+r -> r;
+
+// S → s (always voiceless, never [z])
+[id: 17435, name: "s voiceless", weight: 0.1, group: latin_consonants, ipa: "/s/"]
+s -> s;
+
+// X → ks (always [ks], never [gz])
+[id: 17436, name: "x as ks", weight: 0.1, group: latin_consonants, ipa: "/ks/"]
+x -> ks;
+
+// Z → dz (in Greek loanwords, voiced affricate)
+[id: 17437, name: "z as dz", weight: 0.1, group: latin_consonants, ipa: "/dz/"]
+z -> dz;
+
+// ============================================================
+// NASAL ASSIMILATION
+// ============================================================
+// N assimilates to following consonant's place of articulation
+
+// N before velars → ŋ
+[id: 17440, name: "n before velar", weight: 0.15, group: latin_assimilation, ipa: "/ŋ/"]
+n -> ŋ / _[kɡ];
+
+// N before labials → m
+[id: 17441, name: "n before labial", weight: 0.15, group: latin_assimilation, ipa: "/m/"]
+n -> m / _[bp];
+
+// ============================================================
+// GEMINATE (DOUBLE) CONSONANTS
+// ============================================================
+// Latin had phonemically distinct geminates (e.g., annus vs anus)
+// These are preserved in IPA output
+
+// Double consonant simplification (for matching purposes)
+[id: 17450, name: "geminate kk", weight: 0.2, group: latin_geminates]
+kk -> kː;
+
+[id: 17451, name: "geminate pp", weight: 0.2, group: latin_geminates]
+pp -> pː;
+
+[id: 17452, name: "geminate tt", weight: 0.2, group: latin_geminates]
+tt -> tː;
+
+[id: 17453, name: "geminate ss", weight: 0.2, group: latin_geminates]
+ss -> sː;
+
+[id: 17454, name: "geminate ll", weight: 0.2, group: latin_geminates]
+ll -> lː;
+
+[id: 17455, name: "geminate mm", weight: 0.2, group: latin_geminates]
+mm -> mː;
+
+[id: 17456, name: "geminate nn", weight: 0.2, group: latin_geminates]
+nn -> nː;
+
+[id: 17457, name: "geminate rr", weight: 0.2, group: latin_geminates]
+rr -> rː;
+

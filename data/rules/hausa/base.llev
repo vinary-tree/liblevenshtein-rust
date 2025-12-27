@@ -1,0 +1,302 @@
+// Hausa Base Phonetic Rules
+// =========================
+// Phonetic rules for Hausa.
+// Spoken by approximately 80 million people in Nigeria, Niger,
+// and across West Africa as a lingua franca.
+//
+// Hausa features:
+//   - Chadic language family (Afro-Asiatic)
+//   - Ejective consonants: k' (kʼ), ts' (t͡sʼ)
+//   - Implosive consonants: ɓ, ɗ
+//   - Tone system: High (á), Low (à), Falling (â)
+//   - Vowel length distinction
+//   - Geminate consonants
+//   - Palatalized and labialized consonants
+//
+// Orthography (Boko alphabet):
+//   - ' after consonant for ejectives: k', ts'
+//   - ɓ, ɗ for implosives (or b', d')
+//   - Tone usually unmarked in standard orthography
+//   - Long vowels sometimes doubled: aa, ee, ii, oo, uu
+//   - ƙ for ejective k' in some systems
+//   - ƴ for palatalized glottal: ʔʲ
+//
+// Rule IDs: 10300-10399
+
+@name "Hausa Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Hausa"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10300, name: "a short", weight: 0.05, group: hausa_vowels, ipa: "/a/"]
+a -> a;
+
+[id: 10301, name: "e short", weight: 0.05, group: hausa_vowels, ipa: "/e/"]
+e -> e;
+
+[id: 10302, name: "i short", weight: 0.05, group: hausa_vowels, ipa: "/i/"]
+i -> i;
+
+[id: 10303, name: "o short", weight: 0.05, group: hausa_vowels, ipa: "/o/"]
+o -> o;
+
+[id: 10304, name: "u short", weight: 0.05, group: hausa_vowels, ipa: "/u/"]
+u -> u;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 10310, name: "aa long", weight: 0.05, group: hausa_long_vowels, ipa: "/aː/"]
+aa -> aː;
+
+[id: 10311, name: "ee long", weight: 0.05, group: hausa_long_vowels, ipa: "/eː/"]
+ee -> eː;
+
+[id: 10312, name: "ii long", weight: 0.05, group: hausa_long_vowels, ipa: "/iː/"]
+ii -> iː;
+
+[id: 10313, name: "oo long", weight: 0.05, group: hausa_long_vowels, ipa: "/oː/"]
+oo -> oː;
+
+[id: 10314, name: "uu long", weight: 0.05, group: hausa_long_vowels, ipa: "/uː/"]
+uu -> uː;
+
+// Macron variants
+[id: 10315, name: "a macron long", weight: 0.05, group: hausa_long_vowels, ipa: "/aː/"]
+ā -> aː;
+
+[id: 10316, name: "e macron long", weight: 0.05, group: hausa_long_vowels, ipa: "/eː/"]
+ē -> eː;
+
+[id: 10317, name: "i macron long", weight: 0.05, group: hausa_long_vowels, ipa: "/iː/"]
+ī -> iː;
+
+[id: 10318, name: "o macron long", weight: 0.05, group: hausa_long_vowels, ipa: "/oː/"]
+ō -> oː;
+
+[id: 10319, name: "u macron long", weight: 0.05, group: hausa_long_vowels, ipa: "/uː/"]
+ū -> uː;
+
+// ============================================================
+// TONES (weight 0.05)
+// ============================================================
+
+[id: 10320, name: "a high tone", weight: 0.05, group: hausa_tones, ipa: "/a˦/"]
+á -> a˦;
+
+[id: 10321, name: "a low tone", weight: 0.05, group: hausa_tones, ipa: "/a˨/"]
+à -> a˨;
+
+[id: 10322, name: "a falling tone", weight: 0.05, group: hausa_tones, ipa: "/a˥˩/"]
+â -> a˥˩;
+
+[id: 10323, name: "e high tone", weight: 0.05, group: hausa_tones, ipa: "/e˦/"]
+é -> e˦;
+
+[id: 10324, name: "e low tone", weight: 0.05, group: hausa_tones, ipa: "/e˨/"]
+è -> e˨;
+
+[id: 10325, name: "i high tone", weight: 0.05, group: hausa_tones, ipa: "/i˦/"]
+í -> i˦;
+
+[id: 10326, name: "i low tone", weight: 0.05, group: hausa_tones, ipa: "/i˨/"]
+ì -> i˨;
+
+[id: 10327, name: "o high tone", weight: 0.05, group: hausa_tones, ipa: "/o˦/"]
+ó -> o˦;
+
+[id: 10328, name: "o low tone", weight: 0.05, group: hausa_tones, ipa: "/o˨/"]
+ò -> o˨;
+
+[id: 10329, name: "u high tone", weight: 0.05, group: hausa_tones, ipa: "/u˦/"]
+ú -> u˦;
+
+[id: 10330, name: "u low tone", weight: 0.05, group: hausa_tones, ipa: "/u˨/"]
+ù -> u˨;
+
+// ============================================================
+// IMPLOSIVES (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 10335, name: "ɓ implosive", weight: 0.02, group: hausa_implosives, ipa: "/ɓ/"]
+ɓ -> ɓ;
+
+[id: 10336, name: "b' implosive alt", weight: 0.02, group: hausa_implosives, ipa: "/ɓ/"]
+b' -> ɓ;
+
+[id: 10337, name: "ɗ implosive", weight: 0.02, group: hausa_implosives, ipa: "/ɗ/"]
+ɗ -> ɗ;
+
+[id: 10338, name: "d' implosive alt", weight: 0.02, group: hausa_implosives, ipa: "/ɗ/"]
+d' -> ɗ;
+
+// ============================================================
+// EJECTIVES (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 10340, name: "k' ejective", weight: 0.02, group: hausa_ejectives, ipa: "/kʼ/"]
+k' -> kʼ;
+
+[id: 10341, name: "ƙ ejective", weight: 0.02, group: hausa_ejectives, ipa: "/kʼ/"]
+ƙ -> kʼ;
+
+[id: 10342, name: "ts' ejective affricate", weight: 0.02, group: hausa_ejectives, ipa: "/t͡sʼ/"]
+ts' -> t͡sʼ;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+[id: 10345, name: "b", weight: 0.05, group: hausa_stops, ipa: "/b/"]
+b -> b;
+
+[id: 10346, name: "t", weight: 0.05, group: hausa_stops, ipa: "/t/"]
+t -> t;
+
+[id: 10347, name: "d", weight: 0.05, group: hausa_stops, ipa: "/d/"]
+d -> d;
+
+[id: 10348, name: "k", weight: 0.05, group: hausa_stops, ipa: "/k/"]
+k -> k;
+
+[id: 10349, name: "g", weight: 0.05, group: hausa_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+[id: 10350, name: "glottal stop", weight: 0.05, group: hausa_stops, ipa: "/ʔ/"]
+' -> ʔ;
+
+// ============================================================
+// LABIALIZED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 10352, name: "kw labialized", weight: 0.05, group: hausa_labialized, ipa: "/kʷ/"]
+kw -> kʷ;
+
+[id: 10353, name: "gw labialized", weight: 0.05, group: hausa_labialized, ipa: "/ɡʷ/"]
+gw -> ɡʷ;
+
+[id: 10354, name: "ƙw ejective labialized", weight: 0.02, group: hausa_labialized, ipa: "/kʷʼ/"]
+ƙw -> kʷʼ;
+
+[id: 10355, name: "k'w ejective labialized", weight: 0.02, group: hausa_labialized, ipa: "/kʷʼ/"]
+k'w -> kʷʼ;
+
+// ============================================================
+// PALATALIZED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 10357, name: "ky palatalized", weight: 0.05, group: hausa_palatalized, ipa: "/kʲ/"]
+ky -> kʲ;
+
+[id: 10358, name: "gy palatalized", weight: 0.05, group: hausa_palatalized, ipa: "/ɡʲ/"]
+gy -> ɡʲ;
+
+[id: 10359, name: "ƴ palatalized glottal", weight: 0.02, group: hausa_palatalized, ipa: "/ʔʲ/"]
+ƴ -> ʔʲ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 10360, name: "c voiceless palatal", weight: 0.05, group: hausa_affricates, ipa: "/t͡ʃ/"]
+c -> t͡ʃ;
+
+[id: 10361, name: "j voiced palatal", weight: 0.05, group: hausa_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+[id: 10362, name: "ts alveolar", weight: 0.05, group: hausa_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 10365, name: "f", weight: 0.05, group: hausa_fricatives, ipa: "/ɸ/"]
+f -> ɸ;
+
+[id: 10366, name: "s", weight: 0.05, group: hausa_fricatives, ipa: "/s/"]
+s -> s;
+
+[id: 10367, name: "z", weight: 0.05, group: hausa_fricatives, ipa: "/z/"]
+z -> z;
+
+[id: 10368, name: "sh postalveolar", weight: 0.05, group: hausa_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+[id: 10369, name: "h", weight: 0.05, group: hausa_fricatives, ipa: "/h/"]
+h -> h;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 10372, name: "m", weight: 0.05, group: hausa_nasals, ipa: "/m/"]
+m -> m;
+
+[id: 10373, name: "n", weight: 0.05, group: hausa_nasals, ipa: "/n/"]
+n -> n;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 10375, name: "l", weight: 0.05, group: hausa_liquids, ipa: "/l/"]
+l -> l;
+
+[id: 10376, name: "r flap", weight: 0.05, group: hausa_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 10377, name: "w", weight: 0.05, group: hausa_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 10378, name: "y", weight: 0.05, group: hausa_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 10385, name: "hausa", weight: 0.02, group: hausa_common]
+hausa -> hausa;
+
+[id: 10386, name: "sannu hello", weight: 0.02, group: hausa_common]
+sannu -> sanːu;
+
+[id: 10387, name: "nagode thank you", weight: 0.02, group: hausa_common]
+na gode -> na ɡode;
+
+[id: 10388, name: "i yes", weight: 0.02, group: hausa_common]
+i -> i;
+
+[id: 10389, name: "a'a no", weight: 0.02, group: hausa_common]
+a'a -> aʔa;
+
+[id: 10390, name: "ruwa water", weight: 0.02, group: hausa_common]
+ruwa -> ɾuwa;
+
+[id: 10391, name: "abinci food", weight: 0.02, group: hausa_common]
+abinci -> abint͡ʃi;
+
+[id: 10392, name: "gida house", weight: 0.02, group: hausa_common]
+gida -> ɡida;
+
+[id: 10393, name: "mutum person", weight: 0.02, group: hausa_common]
+mutum -> mutum;
+
+[id: 10394, name: "yaro child boy", weight: 0.02, group: hausa_common]
+yaro -> jaɾo;
+
+[id: 10395, name: "yarinya girl", weight: 0.02, group: hausa_common]
+yarinya -> jaɾiɲa;
+
+[id: 10396, name: "ƙasa country land", weight: 0.02, group: hausa_common]
+ƙasa -> kʼasa;
+
+[id: 10397, name: "rana sun day", weight: 0.02, group: hausa_common]
+rana -> ɾana;
+

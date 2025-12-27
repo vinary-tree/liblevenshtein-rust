@@ -48,11 +48,13 @@
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
 
+use super::common::syllable::SyllableExpr;
+
 // ============================================================================
 // Byte-level types (u8) - optimized for ASCII text
 // ============================================================================
 
-/// A phonetic unit representing a single sound.
+/// A phonetic unit representing a single sound (byte-level).
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:30-34`
 ///
@@ -61,8 +63,14 @@ use serde::{Deserialize, Serialize};
 /// - `Vowel(u8)` - A vowel sound (e.g., 'a', 'e', 'i', 'o', 'u')
 /// - `Consonant(u8)` - A consonant sound (e.g., 'b', 'k', 'p')
 /// - `Digraph(u8, u8)` - A two-character sound unit (e.g., 'ch', 'sh', 'th')
+/// - `Trigraph(u8, u8, u8)` - A three-character sound unit (e.g., ejective affricates)
+/// - `Tetragraph(u8, u8, u8, u8)` - A four-character sound unit (e.g., prenasalized aspirated clicks)
+/// - `Pentagraph(u8, u8, u8, u8, u8)` - A five-character sound unit (e.g., prenasalized labialized clicks)
+/// - `Hexagraph(u8, u8, u8, u8, u8, u8)` - A six-character sound unit (e.g., complex clusters)
+/// - `Heptagraph(u8, u8, u8, u8, u8, u8, u8)` - A seven-character sound unit (theoretical maximum)
+/// - `Sequence(Vec<u8>)` - An 8+ character sound unit (rare complex clusters)
 /// - `Silent` - A silent letter (not pronounced)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum Phone {
     /// A vowel sound
@@ -71,6 +79,18 @@ pub enum Phone {
     Consonant(u8),
     /// A two-character sound unit (digraph)
     Digraph(u8, u8),
+    /// A three-character sound unit (trigraph, e.g., ejective affricates)
+    Trigraph(u8, u8, u8),
+    /// A four-character sound unit (tetragraph, e.g., prenasalized aspirated clicks)
+    Tetragraph(u8, u8, u8, u8),
+    /// A five-character sound unit (pentagraph, e.g., prenasalized labialized clicks)
+    Pentagraph(u8, u8, u8, u8, u8),
+    /// A six-character sound unit (hexagraph, e.g., complex clusters)
+    Hexagraph(u8, u8, u8, u8, u8, u8),
+    /// A seven-character sound unit (heptagraph, theoretical maximum)
+    Heptagraph(u8, u8, u8, u8, u8, u8, u8),
+    /// An 8+ character sound unit (rare complex clusters) - heap allocated
+    Sequence(Vec<u8>),
     /// A silent letter
     Silent,
 }
@@ -189,6 +209,9 @@ pub struct RewriteRule {
     pub context: Context,
     /// Priority weight (higher = applied first)
     pub weight: f64,
+    /// Optional syllable condition
+    /// When present, the rule only applies if the word satisfies this condition
+    pub syllable_condition: Option<SyllableExpr>,
 }
 
 // ============================================================================
@@ -207,8 +230,14 @@ pub struct RewriteRule {
 /// - `Vowel(char)` - A vowel sound
 /// - `Consonant(char)` - A consonant sound
 /// - `Digraph(char, char)` - A two-character sound unit
+/// - `Trigraph(char, char, char)` - A three-character sound unit (e.g., ejective affricates)
+/// - `Tetragraph(char, char, char, char)` - A four-character sound unit (e.g., prenasalized aspirated clicks)
+/// - `Pentagraph(char, char, char, char, char)` - A five-character sound unit (e.g., prenasalized labialized clicks)
+/// - `Hexagraph(char, char, char, char, char, char)` - A six-character sound unit (e.g., complex clusters)
+/// - `Heptagraph(char, char, char, char, char, char, char)` - A seven-character sound unit (theoretical maximum)
+/// - `Sequence(Vec<char>)` - An 8+ character sound unit (rare complex clusters)
 /// - `Silent` - A silent letter
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum PhoneChar {
     /// A vowel sound
@@ -217,6 +246,18 @@ pub enum PhoneChar {
     Consonant(char),
     /// A two-character sound unit (digraph)
     Digraph(char, char),
+    /// A three-character sound unit (trigraph, e.g., ejective affricates)
+    Trigraph(char, char, char),
+    /// A four-character sound unit (tetragraph, e.g., prenasalized aspirated clicks)
+    Tetragraph(char, char, char, char),
+    /// A five-character sound unit (pentagraph, e.g., prenasalized labialized clicks)
+    Pentagraph(char, char, char, char, char),
+    /// A six-character sound unit (hexagraph, e.g., complex clusters)
+    Hexagraph(char, char, char, char, char, char),
+    /// A seven-character sound unit (heptagraph, theoretical maximum)
+    Heptagraph(char, char, char, char, char, char, char),
+    /// An 8+ character sound unit (rare complex clusters) - heap allocated
+    Sequence(Vec<char>),
     /// A silent letter
     Silent,
 }
@@ -325,6 +366,9 @@ pub struct RewriteRuleChar {
     pub context: ContextChar,
     /// Priority weight (higher = applied first)
     pub weight: f64,
+    /// Optional syllable condition
+    /// When present, the rule only applies if the word satisfies this condition
+    pub syllable_condition: Option<SyllableExpr>,
 }
 
 // ============================================================================
@@ -337,6 +381,53 @@ impl std::fmt::Display for Phone {
             Phone::Vowel(c) => write!(f, "V({})", *c as char),
             Phone::Consonant(c) => write!(f, "C({})", *c as char),
             Phone::Digraph(c1, c2) => write!(f, "D({},{})", *c1 as char, *c2 as char),
+            Phone::Trigraph(c1, c2, c3) => {
+                write!(f, "T({},{},{})", *c1 as char, *c2 as char, *c3 as char)
+            }
+            Phone::Tetragraph(c1, c2, c3, c4) => {
+                write!(
+                    f,
+                    "Q({},{},{},{})",
+                    *c1 as char, *c2 as char, *c3 as char, *c4 as char
+                )
+            }
+            Phone::Pentagraph(c1, c2, c3, c4, c5) => {
+                write!(
+                    f,
+                    "P5({},{},{},{},{})",
+                    *c1 as char, *c2 as char, *c3 as char, *c4 as char, *c5 as char
+                )
+            }
+            Phone::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                write!(
+                    f,
+                    "H6({},{},{},{},{},{})",
+                    *c1 as char, *c2 as char, *c3 as char, *c4 as char, *c5 as char, *c6 as char
+                )
+            }
+            Phone::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                write!(
+                    f,
+                    "H7({},{},{},{},{},{},{})",
+                    *c1 as char,
+                    *c2 as char,
+                    *c3 as char,
+                    *c4 as char,
+                    *c5 as char,
+                    *c6 as char,
+                    *c7 as char
+                )
+            }
+            Phone::Sequence(s) => {
+                write!(f, "S(")?;
+                for (i, c) in s.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ",")?;
+                    }
+                    write!(f, "{}", *c as char)?;
+                }
+                write!(f, ")")
+            }
             Phone::Silent => write!(f, "Silent"),
         }
     }
@@ -348,6 +439,27 @@ impl std::fmt::Display for PhoneChar {
             PhoneChar::Vowel(c) => write!(f, "V({})", c),
             PhoneChar::Consonant(c) => write!(f, "C({})", c),
             PhoneChar::Digraph(c1, c2) => write!(f, "D({},{})", c1, c2),
+            PhoneChar::Trigraph(c1, c2, c3) => write!(f, "T({},{},{})", c1, c2, c3),
+            PhoneChar::Tetragraph(c1, c2, c3, c4) => write!(f, "Q({},{},{},{})", c1, c2, c3, c4),
+            PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                write!(f, "P5({},{},{},{},{})", c1, c2, c3, c4, c5)
+            }
+            PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                write!(f, "H6({},{},{},{},{},{})", c1, c2, c3, c4, c5, c6)
+            }
+            PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                write!(f, "H7({},{},{},{},{},{},{})", c1, c2, c3, c4, c5, c6, c7)
+            }
+            PhoneChar::Sequence(s) => {
+                write!(f, "S(")?;
+                for (i, c) in s.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ",")?;
+                    }
+                    write!(f, "{}", c)?;
+                }
+                write!(f, ")")
+            }
             PhoneChar::Silent => write!(f, "Silent"),
         }
     }
@@ -484,6 +596,7 @@ mod tests {
             replacement: vec![Phone::Consonant(b'f')],
             context: Context::Anywhere,
             weight: 1.0,
+            syllable_condition: None,
         };
         assert_eq!(rule.rule_id, 1);
         assert_eq!(rule.pattern.len(), 2);
@@ -499,6 +612,7 @@ mod tests {
             replacement: vec![PhoneChar::Consonant('f')],
             context: ContextChar::Anywhere,
             weight: 1.0,
+            syllable_condition: None,
         };
         assert_eq!(rule.rule_id, 1);
         assert_eq!(rule.pattern.len(), 2);

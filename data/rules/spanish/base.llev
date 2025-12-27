@@ -59,9 +59,8 @@ ch -> t͡ʃ;
 [id: 1011, name: "ll to y (yeísmo)", weight: 0.1, group: spanish_digraphs]
 ll -> y;
 
-// RR - trill, distinct from single r
-[id: 1012, name: "rr trill preserved", weight: 0.1, group: spanish_digraphs]
-rr -> rr;
+// Note: RR represents a trill distinct from single r tap.
+// No transformation needed - trill passes through unchanged.
 
 // ============================================================
 // SILENT H
@@ -157,27 +156,23 @@ v -> b;
 [id: 1085, name: "w to u", weight: 0.3, group: spanish_loanwords]
 w -> u;
 
-// ============================================================
-// K HANDLING
-// ============================================================
-// K only appears in loanwords (Spanish uses 'c' or 'qu')
-
-[id: 1086, name: "k preserved", weight: 0.3, group: spanish_loanwords]
-k -> k;
+// Note: K only appears in loanwords (Spanish uses 'c' or 'qu').
+// No transformation needed - k passes through unchanged.
 
 // ============================================================
-// DOUBLE CONSONANT SIMPLIFICATION
+// Geminate (Double Consonant) Simplification
 // ============================================================
-// Spanish doesn't have meaningful double consonants except RR and LL
-// (which are already handled above)
+// Spanish doesn't have meaningful geminates except RR (trill) and LL
+// (palatal lateral, handled above as digraphs, not true geminates).
+// Other orthographic doubles are simplified for phonetic matching.
 
-[id: 1090, name: "cc to k", weight: 0.25, group: spanish_doubles]
+[id: 1090, name: "cc to k", weight: 0.25, group: spanish_geminates]
 cc -> k;
 
-[id: 1091, name: "nn to n", weight: 0.25, group: spanish_doubles]
+[id: 1091, name: "nn to n", weight: 0.25, group: spanish_geminates]
 nn -> n;
 
-[id: 1092, name: "ss to s", weight: 0.25, group: spanish_doubles]
+[id: 1092, name: "ss to s", weight: 0.25, group: spanish_geminates]
 ss -> s;
 
 // ============================================================

@@ -36,9 +36,9 @@
 [id: 5102, name: "zhe to zh", weight: 0.05, group: persian_unique, ipa: "/ʒ/"]
 ژ -> ʒ;
 
-// گ (gaf) → g (not in Arabic)
-[id: 5103, name: "gaf to g", weight: 0.05, group: persian_unique]
-گ -> g;
+// گ (gaf) → ɡ (not in Arabic)
+[id: 5103, name: "gaf to g", weight: 0.05, group: persian_unique, ipa: "/ɡ/"]
+گ -> ɡ;
 
 // ============================================================
 // CONSONANTS WITH SPECIAL PERSIAN PRONUNCIATION

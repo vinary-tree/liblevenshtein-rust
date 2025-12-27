@@ -1,0 +1,156 @@
+// Lingala Base Phonetic Rules
+// ===========================
+// Phonetic rules for Lingala.
+// Spoken by approximately 20 million people in the Democratic
+// Republic of Congo and Republic of Congo.
+//
+// Lingala features:
+//   - Bantu language family (Zone C)
+//   - Tonal (high/low)
+//   - 7 vowels including open/close e,o
+//   - Prenasalized stops
+//   - No clicks
+//   - Simple syllable structure (CV)
+//   - Loan vocabulary from French
+//
+// Orthography:
+//   - ɛ and ɔ for open vowels (or è, ò)
+//   - mb, nd, ng, nz for prenasalized stops
+//   - ny for palatal nasal
+//   - Tone marks optional (acute/grave)
+//
+// Rule IDs: 13400-13499
+
+@name "Lingala Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Lingala"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// ============================================================
+
+// NOTE: a, e pass through unchanged (identity mappings removed)
+
+// NOTE: ɛ passes through unchanged (identity mapping removed)
+
+[id: 13403, name: "è open alt", weight: 0.05, group: lingala_vowels, ipa: "/ɛ/"]
+è -> ɛ;
+
+// NOTE: i, o pass through unchanged (identity mappings removed)
+
+// NOTE: ɔ passes through unchanged (identity mapping removed)
+
+[id: 13407, name: "ò open alt", weight: 0.05, group: lingala_vowels, ipa: "/ɔ/"]
+ò -> ɔ;
+
+// NOTE: u passes through unchanged (identity mapping removed)
+
+// ============================================================
+// TONES (weight 0.05)
+// ============================================================
+
+[id: 13412, name: "á high tone", weight: 0.05, group: lingala_tones, ipa: "/a˦/"]
+á -> a˦;
+
+[id: 13413, name: "à low tone", weight: 0.05, group: lingala_tones, ipa: "/a˨/"]
+à -> a˨;
+
+[id: 13414, name: "é high tone", weight: 0.05, group: lingala_tones, ipa: "/e˦/"]
+é -> e˦;
+
+[id: 13415, name: "í high tone", weight: 0.05, group: lingala_tones, ipa: "/i˦/"]
+í -> i˦;
+
+[id: 13416, name: "ó high tone", weight: 0.05, group: lingala_tones, ipa: "/o˦/"]
+ó -> o˦;
+
+[id: 13417, name: "ú high tone", weight: 0.05, group: lingala_tones, ipa: "/u˦/"]
+ú -> u˦;
+
+// ============================================================
+// PRENASALIZED STOPS (weight 0.05)
+// ============================================================
+
+[id: 13420, name: "mb prenasalized", weight: 0.05, group: lingala_prenasal, ipa: "/ᵐb/"]
+mb -> ᵐb;
+
+[id: 13421, name: "nd prenasalized", weight: 0.05, group: lingala_prenasal, ipa: "/ⁿd/"]
+nd -> ⁿd;
+
+[id: 13422, name: "ng prenasalized", weight: 0.05, group: lingala_prenasal, ipa: "/ᵑɡ/"]
+ng -> ᵑɡ;
+
+[id: 13423, name: "nz prenasalized", weight: 0.05, group: lingala_prenasal, ipa: "/ⁿz/"]
+nz -> ⁿz;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// ============================================================
+
+// NOTE: p, b, t, d, k pass through unchanged (identity mappings removed)
+
+[id: 13431, name: "g", weight: 0.05, group: lingala_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// NOTE: f, v, s, z pass through unchanged (identity mappings removed)
+
+[id: 13438, name: "sh postalveolar", weight: 0.05, group: lingala_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// NOTE: m, n pass through unchanged (identity mappings removed)
+
+[id: 13444, name: "ny palatal nasal", weight: 0.05, group: lingala_nasals, ipa: "/ɲ/"]
+ny -> ɲ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// NOTE: l passes through unchanged (identity mapping removed)
+
+[id: 13449, name: "r flap", weight: 0.05, group: lingala_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+// NOTE: w passes through unchanged (identity mapping removed)
+
+[id: 13451, name: "y", weight: 0.05, group: lingala_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 13470, name: "lingala", weight: 0.02, group: lingala_common]
+lingala -> liᵑɡala;
+
+[id: 13471, name: "mbote hello", weight: 0.02, group: lingala_common]
+mbote -> ᵐbɔtɛ;
+
+[id: 13472, name: "matondi thank you", weight: 0.02, group: lingala_common]
+matondi -> matɔⁿdi;
+
+[id: 13473, name: "ee yes", weight: 0.02, group: lingala_common]
+ee -> eː;
+
+[id: 13474, name: "te no", weight: 0.02, group: lingala_common]
+te -> tɛ;
+
+// NOTE: mai, lipa pass through unchanged (identity mappings removed)
+
+[id: 13477, name: "ndako house", weight: 0.02, group: lingala_common]
+ndako -> ⁿdako;
+
+[id: 13478, name: "moto person", weight: 0.02, group: lingala_common]
+moto -> mɔtɔ;
+
+// NOTE: mwana passes through unchanged (identity mapping removed)
+

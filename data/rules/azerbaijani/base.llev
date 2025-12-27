@@ -1,0 +1,132 @@
+// Azerbaijani Base Phonetic Rules
+// ================================
+// Phonetic rules for Azerbaijani (Azərbaycan dili).
+// Spoken by approximately 23 million people in Azerbaijan and
+// northwestern Iran.
+//
+// Azerbaijani features:
+//   - Turkic language family (Oghuz branch, related to Turkish)
+//   - Vowel harmony (front/back, rounded/unrounded)
+//   - 9 vowels including front rounded ö, ü
+//   - Velar/uvular distinction (k/q, g/ğ)
+//   - Latin script in Azerbaijan, Arabic in Iran
+//
+// Orthography (Latin):
+//   - ə for /æ/ (schwa-like front vowel)
+//   - ö for /ø/, ü for /y/
+//   - x for /x/, q for /ɡ/ (voiced uvular)
+//   - ğ for /ɣ/ (voiced velar fricative)
+//   - ş for /ʃ/, c for /dʒ/, ç for /tʃ/
+//
+// Rule IDs: 11500-11599
+
+@name "Azerbaijani Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Azerbaijani"
+
+// ============================================================
+// VOWELS (weight 0.05)
+// Back vowels
+// ============================================================
+
+[id: 11500, name: "a", weight: 0.05, group: azerbaijani_vowels, ipa: "/ɑ/"]
+a -> ɑ;
+
+[id: 11501, name: "ı back unrounded", weight: 0.05, group: azerbaijani_vowels, ipa: "/ɯ/"]
+ı -> ɯ;
+
+// Note: Lowercase 'o' and 'u' pass through unchanged (already IPA /o/ and /u/)
+
+// Front vowels
+// Note: Lowercase 'e' and 'i' pass through unchanged (already IPA /e/ and /i/)
+
+[id: 11505, name: "ə front open", weight: 0.05, group: azerbaijani_vowels, ipa: "/æ/"]
+ə -> æ;
+
+[id: 11507, name: "ö front rounded", weight: 0.05, group: azerbaijani_vowels, ipa: "/ø/"]
+ö -> ø;
+
+[id: 11508, name: "ü front high rounded", weight: 0.05, group: azerbaijani_vowels, ipa: "/y/"]
+ü -> y;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+// Note: Lowercase stops (p, b, t, d, k) pass through unchanged (already IPA)
+
+[id: 11515, name: "g", weight: 0.05, group: azerbaijani_stops, ipa: "/ɟ/"]
+g -> ɟ;
+
+[id: 11516, name: "q voiced uvular", weight: 0.05, group: azerbaijani_stops, ipa: "/ɡ/"]
+q -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 11520, name: "c voiced postalveolar", weight: 0.05, group: azerbaijani_affricates, ipa: "/d͡ʒ/"]
+c -> d͡ʒ;
+
+[id: 11521, name: "ç voiceless postalveolar", weight: 0.05, group: azerbaijani_affricates, ipa: "/t͡ʃ/"]
+ç -> t͡ʃ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+// Note: Lowercase fricatives (f, v, s, z) pass through unchanged (already IPA)
+
+[id: 11529, name: "ş postalveolar", weight: 0.05, group: azerbaijani_fricatives, ipa: "/ʃ/"]
+ş -> ʃ;
+
+[id: 11530, name: "j voiced postalveolar", weight: 0.05, group: azerbaijani_fricatives, ipa: "/ʒ/"]
+j -> ʒ;
+
+// Note: Lowercase 'x' and 'h' pass through unchanged (already IPA /x/ and /h/)
+
+[id: 11532, name: "ğ voiced velar fricative", weight: 0.05, group: azerbaijani_fricatives, ipa: "/ɣ/"]
+ğ -> ɣ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+// Note: Lowercase nasals (m, n) pass through unchanged (already IPA)
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+// Note: Lowercase liquids (l, r) pass through unchanged (already IPA)
+
+[id: 11545, name: "y", weight: 0.05, group: azerbaijani_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 11560, name: "azərbaycan azerbaijani", weight: 0.02, group: azerbaijani_common]
+azərbaycan -> ɑzærbɑjd͡ʒɑn;
+
+[id: 11561, name: "salam hello", weight: 0.02, group: azerbaijani_common]
+salam -> sɑlɑm;
+
+[id: 11562, name: "təşəkkür thank you", weight: 0.02, group: azerbaijani_common]
+təşəkkür -> tæʃækkyr;
+
+[id: 11563, name: "bəli yes", weight: 0.02, group: azerbaijani_common]
+bəli -> bæli;
+
+[id: 11564, name: "xeyr no", weight: 0.02, group: azerbaijani_common]
+xeyr -> xejr;
+
+// Note: 'su' and 'ev' pass through unchanged
+
+[id: 11566, name: "çörək bread food", weight: 0.02, group: azerbaijani_common]
+çörək -> t͡ʃørək;
+
+[id: 11568, name: "adam person", weight: 0.02, group: azerbaijani_common]
+adam -> ɑdɑm;
+
+[id: 11569, name: "uşaq child", weight: 0.02, group: azerbaijani_common]
+uşaq -> uʃɑq;
+

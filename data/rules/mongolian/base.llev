@@ -1,0 +1,223 @@
+// Mongolian Base Phonetic Rules
+// =============================
+// Phonetic rules for Mongolian (Khalkha Mongolian).
+// Spoken by approximately 6 million people in Mongolia
+// and Inner Mongolia.
+//
+// Mongolian features:
+//   - Mongolic language family
+//   - Vowel harmony (front/back, rounded/unrounded)
+//   - Long vowels
+//   - Palatalized consonants
+//   - Aspirated vs unaspirated stops
+//   - Cyrillic script (Mongolia) or Traditional script
+//   - SOV word order
+//
+// Orthography:
+//   - Cyrillic script (standard in Mongolia)
+//   - ө for /ɵ/, ү for /u/ (front rounded)
+//   - Short vs long vowels
+//
+// Rule IDs: 14100-14199
+
+@name "Mongolian Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Mongolian (Khalkha)"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14100, name: "а a", weight: 0.05, group: mongolian_short_vowels, ipa: "/a/"]
+а -> a;
+
+[id: 14101, name: "э e", weight: 0.05, group: mongolian_short_vowels, ipa: "/e/"]
+э -> e;
+
+[id: 14102, name: "и i", weight: 0.05, group: mongolian_short_vowels, ipa: "/i/"]
+и -> i;
+
+[id: 14103, name: "о o", weight: 0.05, group: mongolian_short_vowels, ipa: "/ɔ/"]
+о -> ɔ;
+
+[id: 14104, name: "ө ö front rounded", weight: 0.05, group: mongolian_short_vowels, ipa: "/ɵ/"]
+ө -> ɵ;
+
+[id: 14105, name: "у u back", weight: 0.05, group: mongolian_short_vowels, ipa: "/ʊ/"]
+у -> ʊ;
+
+[id: 14106, name: "ү ü front", weight: 0.05, group: mongolian_short_vowels, ipa: "/u/"]
+ү -> u;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14110, name: "аа aa", weight: 0.05, group: mongolian_long_vowels, ipa: "/aː/"]
+аа -> aː;
+
+[id: 14111, name: "ээ ee", weight: 0.05, group: mongolian_long_vowels, ipa: "/eː/"]
+ээ -> eː;
+
+[id: 14112, name: "ий ii", weight: 0.05, group: mongolian_long_vowels, ipa: "/iː/"]
+ий -> iː;
+
+[id: 14113, name: "оо oo", weight: 0.05, group: mongolian_long_vowels, ipa: "/ɔː/"]
+оо -> ɔː;
+
+[id: 14114, name: "өө öö", weight: 0.05, group: mongolian_long_vowels, ipa: "/ɵː/"]
+өө -> ɵː;
+
+[id: 14115, name: "уу uu", weight: 0.05, group: mongolian_long_vowels, ipa: "/ʊː/"]
+уу -> ʊː;
+
+[id: 14116, name: "үү üü", weight: 0.05, group: mongolian_long_vowels, ipa: "/uː/"]
+үү -> uː;
+
+// ============================================================
+// DIPHTHONGS (weight 0.05)
+// ============================================================
+
+[id: 14120, name: "ай ai", weight: 0.05, group: mongolian_diphthongs, ipa: "/æː/"]
+ай -> æː;
+
+[id: 14121, name: "эй ei", weight: 0.05, group: mongolian_diphthongs, ipa: "/eː/"]
+эй -> eː;
+
+[id: 14122, name: "ой oi", weight: 0.05, group: mongolian_diphthongs, ipa: "/ɔː/"]
+ой -> ɔː;
+
+[id: 14123, name: "уй ui", weight: 0.05, group: mongolian_diphthongs, ipa: "/ʊi/"]
+уй -> ʊi;
+
+[id: 14124, name: "үй üi", weight: 0.05, group: mongolian_diphthongs, ipa: "/ui/"]
+үй -> ui;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+[id: 14128, name: "п p", weight: 0.05, group: mongolian_stops, ipa: "/p/"]
+п -> p;
+
+[id: 14129, name: "б b", weight: 0.05, group: mongolian_stops, ipa: "/p/"]
+б -> p;
+
+[id: 14130, name: "т t", weight: 0.05, group: mongolian_stops, ipa: "/t/"]
+т -> t;
+
+[id: 14131, name: "д d", weight: 0.05, group: mongolian_stops, ipa: "/t/"]
+д -> t;
+
+[id: 14132, name: "к k", weight: 0.05, group: mongolian_stops, ipa: "/k/"]
+к -> k;
+
+[id: 14133, name: "г g", weight: 0.05, group: mongolian_stops, ipa: "/ɡ/"]
+г -> ɡ;
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 14136, name: "ц ts", weight: 0.05, group: mongolian_affricates, ipa: "/t͡s/"]
+ц -> t͡s;
+
+[id: 14137, name: "з dz", weight: 0.05, group: mongolian_affricates, ipa: "/d͡z/"]
+з -> d͡z;
+
+[id: 14138, name: "ч ch", weight: 0.05, group: mongolian_affricates, ipa: "/t͡ʃ/"]
+ч -> t͡ʃ;
+
+[id: 14139, name: "ж j", weight: 0.05, group: mongolian_affricates, ipa: "/d͡ʒ/"]
+ж -> d͡ʒ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 14142, name: "ф f", weight: 0.05, group: mongolian_fricatives, ipa: "/f/"]
+ф -> f;
+
+[id: 14143, name: "в v", weight: 0.05, group: mongolian_fricatives, ipa: "/w/"]
+в -> w;
+
+[id: 14144, name: "с s", weight: 0.05, group: mongolian_fricatives, ipa: "/s/"]
+с -> s;
+
+[id: 14145, name: "ш sh", weight: 0.05, group: mongolian_fricatives, ipa: "/ʃ/"]
+ш -> ʃ;
+
+[id: 14146, name: "х kh", weight: 0.05, group: mongolian_fricatives, ipa: "/x/"]
+х -> x;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 14150, name: "м m", weight: 0.05, group: mongolian_nasals, ipa: "/m/"]
+м -> m;
+
+[id: 14151, name: "н n", weight: 0.05, group: mongolian_nasals, ipa: "/n/"]
+н -> n;
+
+[id: 14152, name: "ң ng", weight: 0.05, group: mongolian_nasals, ipa: "/ŋ/"]
+ң -> ŋ;
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 14156, name: "л l", weight: 0.05, group: mongolian_liquids, ipa: "/ɮ/"]
+л -> ɮ;
+
+[id: 14157, name: "р r", weight: 0.05, group: mongolian_liquids, ipa: "/r/"]
+р -> r;
+
+[id: 14158, name: "й j", weight: 0.05, group: mongolian_approximants, ipa: "/j/"]
+й -> j;
+
+// ============================================================
+// PALATALIZED CONSONANTS (weight 0.05)
+// ============================================================
+
+[id: 14162, name: "нь ny", weight: 0.05, group: mongolian_palatalized, ipa: "/ɲ/"]
+нь -> ɲ;
+
+[id: 14163, name: "ль ly", weight: 0.05, group: mongolian_palatalized, ipa: "/ʎ/"]
+ль -> ʎ;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 14180, name: "монгол mongol", weight: 0.02, group: mongolian_common]
+монгол -> mɔŋɡɔɮ;
+
+[id: 14181, name: "сайн байна уу hello", weight: 0.02, group: mongolian_common]
+сайнбайнауу -> sæːnpæːnaʊː;
+
+[id: 14182, name: "баярлалаа thank you", weight: 0.02, group: mongolian_common]
+баярлалаа -> pajarɮaɮaː;
+
+[id: 14183, name: "тийм yes", weight: 0.02, group: mongolian_common]
+тийм -> tiːm;
+
+[id: 14184, name: "үгүй no", weight: 0.02, group: mongolian_common]
+үгүй -> uɡui;
+
+[id: 14185, name: "ус us water", weight: 0.02, group: mongolian_common]
+ус -> ʊs;
+
+[id: 14186, name: "талх talkh bread", weight: 0.02, group: mongolian_common]
+талх -> taɮx;
+
+[id: 14187, name: "гэр ger house", weight: 0.02, group: mongolian_common]
+гэр -> ɡer;
+
+[id: 14188, name: "хүн khün person", weight: 0.02, group: mongolian_common]
+хүн -> xun;
+
+[id: 14189, name: "хүүхэд khüükhed child", weight: 0.02, group: mongolian_common]
+хүүхэд -> xuːxet;
+

@@ -1,0 +1,322 @@
+// Tlingit Base Phonetic Rules
+// ===========================
+// Phonetic rules for Tlingit (Lingít).
+// Spoken by approximately 500-1,000 people in Southeast Alaska and British Columbia.
+//
+// Tlingit features:
+//   - Na-Dené language family (related to Navajo)
+//   - Extremely complex consonant system (~40-50 phonemes)
+//   - Four-way stop contrast: plain, aspirated, ejective, voiced
+//   - Ejective consonants: t', k', kw', tl', ts', ch', x', etc.
+//   - Uvular consonants: x, xw, x', xw'
+//   - Lateral affricates: tl, tl' (like Navajo)
+//   - Tone system: high (á) vs low (a), falling (àa)
+//   - No /p/ or /b/ (like other Na-Dené languages)
+//
+// Orthography (Tlingit practical alphabet):
+//   - Underline for uvulars: x̱ (/χ/), g̱ (/ɢ/)
+//   - ' for ejectives: k', t', tl', etc.
+//   - Tone: á (high), a (low), àa (falling)
+//
+// Rule IDs: 9200-9399
+
+@name "Tlingit Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Tlingit (Lingít)"
+
+// ============================================================
+// VOWELS - LOW TONE (unmarked) (weight 0.05)
+// ============================================================
+
+[id: 9200, name: "a low tone", weight: 0.05, group: tlingit_vowels, ipa: "/a˨/"]
+a -> a˨;
+
+[id: 9201, name: "e low tone", weight: 0.05, group: tlingit_vowels, ipa: "/e˨/"]
+e -> e˨;
+
+[id: 9202, name: "i low tone", weight: 0.05, group: tlingit_vowels, ipa: "/i˨/"]
+i -> i˨;
+
+[id: 9203, name: "u low tone", weight: 0.05, group: tlingit_vowels, ipa: "/u˨/"]
+u -> u˨;
+
+// ============================================================
+// VOWELS - HIGH TONE (acute accent) (weight 0.05)
+// ============================================================
+
+[id: 9210, name: "a high tone", weight: 0.05, group: tlingit_high_tone, ipa: "/a˦/"]
+á -> a˦;
+
+[id: 9211, name: "e high tone", weight: 0.05, group: tlingit_high_tone, ipa: "/e˦/"]
+é -> e˦;
+
+[id: 9212, name: "i high tone", weight: 0.05, group: tlingit_high_tone, ipa: "/i˦/"]
+í -> i˦;
+
+[id: 9213, name: "u high tone", weight: 0.05, group: tlingit_high_tone, ipa: "/u˦/"]
+ú -> u˦;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 9220, name: "aa long low", weight: 0.05, group: tlingit_long_vowels, ipa: "/aː˨/"]
+aa -> aː˨;
+
+[id: 9221, name: "ee long low", weight: 0.05, group: tlingit_long_vowels, ipa: "/eː˨/"]
+ee -> eː˨;
+
+[id: 9222, name: "ii long low", weight: 0.05, group: tlingit_long_vowels, ipa: "/iː˨/"]
+ii -> iː˨;
+
+[id: 9223, name: "oo long low", weight: 0.05, group: tlingit_long_vowels, ipa: "/uː˨/"]
+oo -> uː˨;
+
+[id: 9224, name: "aa long high", weight: 0.05, group: tlingit_long_vowels, ipa: "/aː˦/"]
+áa -> aː˦;
+
+[id: 9225, name: "ee long high", weight: 0.05, group: tlingit_long_vowels, ipa: "/eː˦/"]
+ée -> eː˦;
+
+[id: 9226, name: "ii long high", weight: 0.05, group: tlingit_long_vowels, ipa: "/iː˦/"]
+íi -> iː˦;
+
+[id: 9227, name: "oo long high", weight: 0.05, group: tlingit_long_vowels, ipa: "/uː˦/"]
+úu -> uː˦;
+
+// ============================================================
+// PLAIN STOPS (weight 0.05)
+// No labial stops (no p, b)
+// ============================================================
+
+[id: 9230, name: "t plain", weight: 0.05, group: tlingit_stops, ipa: "/t/"]
+t -> t;
+
+[id: 9231, name: "k plain", weight: 0.05, group: tlingit_stops, ipa: "/k/"]
+k -> k;
+
+[id: 9232, name: "kw labialized", weight: 0.05, group: tlingit_stops, ipa: "/kʷ/"]
+kw -> kʷ;
+
+// Voiced stops
+[id: 9233, name: "d voiced", weight: 0.05, group: tlingit_stops, ipa: "/t/"]
+d -> t;
+
+[id: 9234, name: "g voiced", weight: 0.05, group: tlingit_stops, ipa: "/k/"]
+g -> k;
+
+[id: 9235, name: "gw voiced labialized", weight: 0.05, group: tlingit_stops, ipa: "/kʷ/"]
+gw -> kʷ;
+
+// ============================================================
+// UVULAR STOPS (weight 0.05)
+// Written with underline: g̱
+// ============================================================
+
+[id: 9238, name: "g-underline uvular voiced", weight: 0.05, group: tlingit_uvulars, ipa: "/ɢ/"]
+g̱ -> ɢ;
+
+// ============================================================
+// EJECTIVE STOPS (weight 0.02 - distinctive)
+// ============================================================
+
+[id: 9240, name: "t' ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/tʼ/"]
+t' -> tʼ;
+
+[id: 9241, name: "k' ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/kʼ/"]
+k' -> kʼ;
+
+[id: 9242, name: "kw' ejective labialized", weight: 0.02, group: tlingit_ejectives, ipa: "/kʷʼ/"]
+kw' -> kʷʼ;
+
+// With modifier letter apostrophe
+[id: 9243, name: "tʼ ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/tʼ/"]
+tʼ -> tʼ;
+
+[id: 9244, name: "kʼ ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/kʼ/"]
+kʼ -> kʼ;
+
+[id: 9245, name: "kwʼ ejective labialized", weight: 0.02, group: tlingit_ejectives, ipa: "/kʷʼ/"]
+kwʼ -> kʷʼ;
+
+// ============================================================
+// LATERAL AFFRICATES (weight 0.05)
+// Important feature of Tlingit
+// ============================================================
+
+[id: 9250, name: "tl lateral affricate", weight: 0.05, group: tlingit_laterals, ipa: "/tɬ/"]
+tl -> tɬ;
+
+[id: 9251, name: "dl voiced lateral affricate", weight: 0.05, group: tlingit_laterals, ipa: "/dɮ/"]
+dl -> dɮ;
+
+// Ejective lateral affricate
+[id: 9252, name: "tl' lateral ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/tɬʼ/"]
+tl' -> tɬʼ;
+
+[id: 9253, name: "tlʼ lateral ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/tɬʼ/"]
+tlʼ -> tɬʼ;
+
+// ============================================================
+// LATERAL FRICATIVES (weight 0.05)
+// ============================================================
+
+[id: 9255, name: "l voiceless lateral fricative", weight: 0.05, group: tlingit_laterals, ipa: "/ɬ/"]
+ł -> ɬ;
+
+[id: 9256, name: "l voiced lateral", weight: 0.05, group: tlingit_laterals, ipa: "/l/"]
+l -> l;
+
+// ============================================================
+// ALVEOLAR AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 9260, name: "ts alveolar", weight: 0.05, group: tlingit_affricates, ipa: "/t͡s/"]
+ts -> t͡s;
+
+[id: 9261, name: "dz voiced alveolar", weight: 0.05, group: tlingit_affricates, ipa: "/d͡z/"]
+dz -> d͡z;
+
+// Ejective
+[id: 9262, name: "ts' ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/t͡sʼ/"]
+ts' -> t͡sʼ;
+
+[id: 9263, name: "tsʼ ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/t͡sʼ/"]
+tsʼ -> t͡sʼ;
+
+// ============================================================
+// POSTALVEOLAR AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 9265, name: "ch postalveolar", weight: 0.05, group: tlingit_affricates, ipa: "/t͡ʃ/"]
+ch -> t͡ʃ;
+
+[id: 9266, name: "j voiced postalveolar", weight: 0.05, group: tlingit_affricates, ipa: "/d͡ʒ/"]
+j -> d͡ʒ;
+
+// Ejective
+[id: 9267, name: "ch' ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/t͡ʃʼ/"]
+ch' -> t͡ʃʼ;
+
+[id: 9268, name: "chʼ ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/t͡ʃʼ/"]
+chʼ -> t͡ʃʼ;
+
+// ============================================================
+// FRICATIVES - ALVEOLAR (weight 0.05)
+// ============================================================
+
+[id: 9270, name: "s alveolar", weight: 0.05, group: tlingit_fricatives, ipa: "/s/"]
+s -> s;
+
+// Ejective fricative
+[id: 9271, name: "s' ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/sʼ/"]
+s' -> sʼ;
+
+// ============================================================
+// FRICATIVES - POSTALVEOLAR (weight 0.05)
+// ============================================================
+
+[id: 9273, name: "sh postalveolar", weight: 0.05, group: tlingit_fricatives, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// ============================================================
+// FRICATIVES - VELAR (weight 0.05)
+// ============================================================
+
+[id: 9275, name: "x velar", weight: 0.05, group: tlingit_fricatives, ipa: "/x/"]
+x -> x;
+
+[id: 9276, name: "xw velar labialized", weight: 0.05, group: tlingit_fricatives, ipa: "/xʷ/"]
+xw -> xʷ;
+
+// Ejective velar fricatives
+[id: 9277, name: "x' ejective velar", weight: 0.02, group: tlingit_ejectives, ipa: "/xʼ/"]
+x' -> xʼ;
+
+[id: 9278, name: "xw' ejective velar labialized", weight: 0.02, group: tlingit_ejectives, ipa: "/xʷʼ/"]
+xw' -> xʷʼ;
+
+// ============================================================
+// FRICATIVES - UVULAR (weight 0.05)
+// Written with underline: x̱
+// ============================================================
+
+[id: 9280, name: "x-underline uvular", weight: 0.05, group: tlingit_uvulars, ipa: "/χ/"]
+x̱ -> χ;
+
+[id: 9281, name: "x-underline-w uvular labialized", weight: 0.05, group: tlingit_uvulars, ipa: "/χʷ/"]
+x̱w -> χʷ;
+
+// Ejective uvular fricatives
+[id: 9282, name: "x-underline' ejective uvular", weight: 0.02, group: tlingit_ejectives, ipa: "/χʼ/"]
+x̱' -> χʼ;
+
+[id: 9283, name: "x-underline-w' ejective uvular labialized", weight: 0.02, group: tlingit_ejectives, ipa: "/χʷʼ/"]
+x̱w' -> χʷʼ;
+
+// ============================================================
+// GLOTTAL (weight 0.05)
+// ============================================================
+
+[id: 9285, name: "h glottal", weight: 0.05, group: tlingit_glottal, ipa: "/h/"]
+h -> h;
+
+[id: 9286, name: "glottal stop", weight: 0.05, group: tlingit_glottal, ipa: "/ʔ/"]
+' -> ʔ / [aeiouáéíú]_[aeiouáéíú];
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+[id: 9290, name: "n", weight: 0.05, group: tlingit_nasals, ipa: "/n/"]
+n -> n;
+
+// m only in some borrowed words
+[id: 9291, name: "m loanword", weight: 0.05, group: tlingit_nasals, ipa: "/m/"]
+m -> m;
+
+// ============================================================
+// APPROXIMANTS (weight 0.05)
+// ============================================================
+
+[id: 9295, name: "w", weight: 0.05, group: tlingit_approximants, ipa: "/w/"]
+w -> w;
+
+[id: 9296, name: "y", weight: 0.05, group: tlingit_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS
+// ============================================================
+
+[id: 9300, name: "lingit tlingit language", weight: 0.02, group: tlingit_common]
+lingít -> liŋkit˦;
+
+[id: 9301, name: "yoo x at hello", weight: 0.02, group: tlingit_common]
+yéi -> jeː˦i;
+
+[id: 9302, name: "gunalcheesh thank you", weight: 0.02, group: tlingit_common]
+gunalchéesh -> kunalt͡ʃeː˦ʃ;
+
+[id: 9303, name: "ax my", weight: 0.02, group: tlingit_common]
+ax̱ -> aχ;
+
+[id: 9304, name: "haa our", weight: 0.02, group: tlingit_common]
+haa -> haː;
+
+[id: 9305, name: "wé that", weight: 0.02, group: tlingit_common]
+wé -> we˦;
+
+[id: 9306, name: "tlingit aani tlingit land", weight: 0.02, group: tlingit_common]
+lingít aaní -> liŋkit˦ aːni˦;
+
+[id: 9307, name: "xat i", weight: 0.02, group: tlingit_common]
+x̱át -> χa˦t;
+
+[id: 9308, name: "shaa mountain", weight: 0.02, group: tlingit_common]
+shaa -> ʃaː;
+
+[id: 9309, name: "aan town land", weight: 0.02, group: tlingit_common]
+aan -> aːn;
+

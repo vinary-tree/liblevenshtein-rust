@@ -1,0 +1,166 @@
+// Kurdish (Kurmanji) Phonetic Rules
+// ==================================
+// Phonetic rules for Kurdish (Kurmanji/Northern Kurdish).
+// Spoken by approximately 20 million people in Turkey,
+// Syria, Iraq, and Iran.
+//
+// Kurmanji features:
+//   - Northwestern Iranian language
+//   - Latin-based script (standard)
+//   - Aspirated consonants
+//   - Voicing distinction
+//   - Gender distinction (masculine/feminine)
+//   - Ergative-absolutive alignment
+//   - SOV word order
+//
+// Orthography:
+//   - Modified Latin alphabet
+//   - ê, î, û for long vowels
+//   - x for /x/, ş for /ʃ/
+//   - c for /d͡ʒ/, ç for /t͡ʃ/
+//
+// Rule IDs: 14500-14599
+
+@name "Kurdish (Kurmanji) Phonetic Rules"
+@version "1.0.0"
+@author "liblevenshtein"
+@description "Phonetic normalization rules for Kurdish (Kurmanji)"
+
+// ============================================================
+// SHORT VOWELS (weight 0.05)
+// ============================================================
+
+// [id: 14500] Identity mapping removed: "a" passes through unchanged
+
+[id: 14501, name: "e", weight: 0.05, group: kurmanji_short_vowels, ipa: "/ɛ/"]
+e -> ɛ;
+
+[id: 14502, name: "i", weight: 0.05, group: kurmanji_short_vowels, ipa: "/ɪ/"]
+i -> ɪ;
+
+// [id: 14503] Identity mapping removed: "o" passes through unchanged
+
+[id: 14504, name: "u", weight: 0.05, group: kurmanji_short_vowels, ipa: "/ʊ/"]
+u -> ʊ;
+
+// ============================================================
+// LONG VOWELS (weight 0.05)
+// ============================================================
+
+[id: 14508, name: "ê long e", weight: 0.05, group: kurmanji_long_vowels, ipa: "/eː/"]
+ê -> eː;
+
+[id: 14509, name: "î long i", weight: 0.05, group: kurmanji_long_vowels, ipa: "/iː/"]
+î -> iː;
+
+[id: 14510, name: "û long u", weight: 0.05, group: kurmanji_long_vowels, ipa: "/uː/"]
+û -> uː;
+
+// ============================================================
+// STOPS (weight 0.05)
+// ============================================================
+
+// [id: 14514] Identity mapping removed: "p" passes through unchanged
+
+// [id: 14515] Identity mapping removed: "b" passes through unchanged
+
+// [id: 14516] Identity mapping removed: "t" passes through unchanged
+
+// [id: 14517] Identity mapping removed: "d" passes through unchanged
+
+// [id: 14518] Identity mapping removed: "k" passes through unchanged
+
+[id: 14519, name: "g", weight: 0.05, group: kurmanji_stops, ipa: "/ɡ/"]
+g -> ɡ;
+
+// [id: 14520] Identity mapping removed: "q" passes through unchanged
+
+// ============================================================
+// AFFRICATES (weight 0.05)
+// ============================================================
+
+[id: 14524, name: "c voiced", weight: 0.05, group: kurmanji_affricates, ipa: "/d͡ʒ/"]
+c -> d͡ʒ;
+
+[id: 14525, name: "ç voiceless", weight: 0.05, group: kurmanji_affricates, ipa: "/t͡ʃ/"]
+ç -> t͡ʃ;
+
+// ============================================================
+// FRICATIVES (weight 0.05)
+// ============================================================
+
+// [id: 14528] Identity mapping removed: "f" passes through unchanged
+
+// [id: 14529] Identity mapping removed: "v" passes through unchanged
+
+// [id: 14530] Identity mapping removed: "s" passes through unchanged
+
+// [id: 14531] Identity mapping removed: "z" passes through unchanged
+
+[id: 14532, name: "ş sh", weight: 0.05, group: kurmanji_fricatives, ipa: "/ʃ/"]
+ş -> ʃ;
+
+[id: 14533, name: "j zh", weight: 0.05, group: kurmanji_fricatives, ipa: "/ʒ/"]
+j -> ʒ;
+
+// [id: 14534] Identity mapping removed: "x" passes through unchanged
+
+// [id: 14535] Identity mapping removed: "h" passes through unchanged
+
+[id: 14536, name: "ẍ uvular", weight: 0.05, group: kurmanji_fricatives, ipa: "/ʁ/"]
+ẍ -> ʁ;
+
+// ============================================================
+// NASALS (weight 0.05)
+// ============================================================
+
+// [id: 14540] Identity mapping removed: "m" passes through unchanged
+
+// [id: 14541] Identity mapping removed: "n" passes through unchanged
+
+// ============================================================
+// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// ============================================================
+
+// [id: 14546] Identity mapping removed: "l" passes through unchanged
+
+[id: 14547, name: "r flap", weight: 0.05, group: kurmanji_liquids, ipa: "/ɾ/"]
+r -> ɾ;
+
+[id: 14548, name: "rr trill", weight: 0.05, group: kurmanji_liquids, ipa: "/r/"]
+rr -> r;
+
+// [id: 14549] Identity mapping removed: "w" passes through unchanged
+
+[id: 14550, name: "y", weight: 0.05, group: kurmanji_approximants, ipa: "/j/"]
+y -> j;
+
+// ============================================================
+// COMMON WORDS (weight 0.02)
+// ============================================================
+
+[id: 14580, name: "kurdî kurdish", weight: 0.02, group: kurmanji_common]
+kurdî -> kuɾdiː;
+
+[id: 14581, name: "silav hello", weight: 0.02, group: kurmanji_common]
+silav -> sɪlav;
+
+// [id: 14582] Identity mapping removed: "spas" passes through unchanged
+
+[id: 14583, name: "erê yes", weight: 0.02, group: kurmanji_common]
+erê -> ɛɾeː;
+
+// [id: 14584] Identity mapping removed: "na" passes through unchanged
+
+// [id: 14585] Identity mapping removed: "av" passes through unchanged
+
+// [id: 14586] Identity mapping removed: "nan" passes through unchanged
+
+// [id: 14587] Identity mapping removed: "mal" passes through unchanged
+
+[id: 14588, name: "mirov person", weight: 0.02, group: kurmanji_common]
+mirov -> mɪɾov;
+
+[id: 14589, name: "zarok child", weight: 0.02, group: kurmanji_common]
+zarok -> zaɾok;
+
