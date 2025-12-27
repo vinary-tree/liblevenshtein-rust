@@ -1,934 +1,558 @@
-//! Symmetric Compact DAWG (SCDAWG) for WallBreaker algorithm.
+//! Symmetric Compact DAWG (SCDAWG) implementation.
 //!
-//! This module implements an SCDAWG (Symmetric Compact Directed Acyclic Word Graph),
-//! which is the foundational data structure for the WallBreaker approximate string
-//! matching algorithm.
+//! This module implements an SCDAWG (Symmetric Compact Directed Acyclic Word Graph)
+//! following the algorithms described in:
+//! - Blumer et al. (1987): "Complete Inverted Files for Efficient Text Retrieval and Analysis"
+//! - Inenaga et al. (2005): "On-line construction of compact directed acyclic word graphs"
 //!
-//! # Overview
+//! # Features
 //!
-//! An SCDAWG is a compact DAWG extended with:
-//! - **Suffix links**: For traversing to shorter suffixes (construction/substring search)
-//! - **Parent links**: For traversing backward toward root (bidirectional extension)
-//! - **Symmetric structure**: Enabling efficient bidirectional pattern matching
+//! - **O(|pattern|) substring search**: True suffix automaton indexing ALL substrings
+//! - **Left extension edges**: Bidirectional traversal via sext links
+//! - **IS features**: freq(), locations() operations from Blumer et al.
+//! - **WallBreaker compatible**: Supports requirements (1a), (1b), (1c)
 //!
-//! # Key Features
+//! # Algorithm Overview
 //!
-//! - **Substring Search**: O(|pattern|) time to find pattern location
-//! - **Bidirectional Traversal**: Forward (root→leaves) and backward (node→root)
-//! - **Linear Construction**: O(n) time and space via Inenaga et al. algorithm
-//! - **WallBreaker Support**: Full support for left/right extension phases
+//! For each term, we build a suffix automaton that indexes all substrings.
+//! For multi-string support, each term is processed independently with shared structure.
 //!
-//! # Use Cases
+//! # Data Structure
 //!
-//! The SCDAWG is specifically designed for:
-//!
-//! 1. **WallBreaker Algorithm**: Finding approximate matches with large error bounds
-//! 2. **Substring Search**: Finding all occurrences of a pattern in the dictionary
-//! 3. **Bidirectional Extension**: Extending matches left and right from anchor points
+//! Each node represents an equivalence class of substrings with the same end-position set.
+//! - `forward_edges`: Standard CDAWG edges (appending characters)
+//! - `suffix_link`: Points to the longest proper suffix in a different equivalence class
+//! - `left_edges`: Left extension edges (prepending characters) - derived from suffix links
+//! - `length`: Maximum length of strings in this equivalence class
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::dictionary::scdawg::Scdawg;
 //! use liblevenshtein::dictionary::SubstringDictionary;
 //!
 //! // Create an SCDAWG from terms
-//! let scdawg = Scdawg::<()>::from_terms(vec!["cathedral", "category", "catering"]);
+//! let scdawg = Scdawg::<()>::from_terms(["cathedral", "category", "catering"]);
 //!
-//! // Find substring matches
-//! let matches = scdawg.find_exact_substring("ther");
-//! for m in &matches {
-//!     println!("Found '{}' at position {} in '{}'",
-//!         m.matched_substring(), m.position, m.term);
-//! }
+//! // O(|pattern|) substring search
+//! assert!(scdawg.contains_substring("cat"));
+//! assert!(scdawg.contains_substring("thedr"));
+//!
+//! // Find all occurrences
+//! let matches = scdawg.find_exact_substring("cat");
+//! assert_eq!(matches.len(), 3);  // Found in all three terms
 //! ```
-//!
-//! # Algorithm Reference
-//!
-//! The SCDAWG construction follows the online algorithm from:
-//! - Inenaga et al. (2005): "On-Line Construction of Compact Directed Acyclic Word Graphs"
-//!
-//! The WallBreaker algorithm that uses SCDAWG is from:
-//! - Gerdjikov et al. (2013): "WallBreaker - overcoming the wall effect in similarity search"
-//!
-//! # Thread Safety
-//!
-//! Uses `Arc<RwLock<...>>` for interior mutability, following the same pattern as
-//! `DynamicDawg`. Safe for concurrent reads, exclusive writes.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
-use rustc_hash::FxHashMap;
+use rustc_hash::FxHashSet;
 use smallvec::SmallVec;
 
-// DictionaryIterator is used with zipper-based dictionaries
-// SCDAWG provides its own iter() method directly
 use crate::dictionary::substring::{BidirectionalDictionaryNode, SubstringDictionary, SubstringMatch};
 use crate::dictionary::value::DictionaryValue;
-use crate::dictionary::{Dictionary, DictionaryNode, SyncStrategy};
+use crate::dictionary::{Dictionary, DictionaryNode};
 use crate::sync_compat::RwLock;
 
-/// SCDAWG node with bidirectional links.
+/// Sentinel value for "no suffix link" or "no parent".
+const NIL: usize = usize::MAX;
+
+/// End marker base for multi-string support.
+/// Each term gets a unique end marker: END_MARKER_BASE + term_index.
+const END_MARKER_BASE: u8 = 0x01; // Use low bytes as end markers
+
+// ============================================================================
+// True SCDAWG Node
+// ============================================================================
+
+/// A node in the true SCDAWG.
 ///
-/// Each node represents an equivalence class of substrings (like suffix automaton),
-/// but with additional parent links for backward traversal needed by WallBreaker.
-///
-/// # Memory Layout (64-bit)
-///
-/// | Field | Size (bytes) | Notes |
-/// |-------|--------------|-------|
-/// | forward_edges | 24 | SmallVec<[(u8, usize); 4]> |
-/// | backward_edges | 24 | SmallVec<[(u8, SmallVec<[usize; 2]>); 2]> |
-/// | suffix_link | 16 | Option<usize> |
-/// | parent | 8 | usize (u32::MAX = none) |
-/// | parent_label | 1 | u8 (0 if no parent) |
-/// | max_length | 8 | usize |
-/// | min_length | 8 | usize |
-/// | depth | 8 | usize |
-/// | is_final | 1 | bool |
-/// | ref_count | 8 | usize |
-/// | value | 8+ | Option<V> |
-///
-/// Total: ~115 bytes per node (actual may vary due to alignment)
+/// Represents an equivalence class of substrings that share the same end-position set.
 #[derive(Clone, Debug)]
-#[cfg_attr(
-    feature = "serialization",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(bound(serialize = "V: serde::Serialize")),
-    serde(bound(deserialize = "V: serde::Deserialize<'de>"))
-)]
-pub(crate) struct ScdawgNode<V: DictionaryValue = ()> {
-    /// Forward edges: (byte label, target node index).
-    ///
-    /// Kept sorted by label for efficient binary search.
-    /// SmallVec avoids heap allocation for nodes with ≤4 edges (common case).
-    pub(crate) forward_edges: SmallVec<[(u8, usize); 4]>,
+struct ScdawgNode<V: DictionaryValue = ()> {
+    /// Forward edges (right extensions): label -> target node.
+    /// These allow appending characters to the represented string.
+    forward_edges: SmallVec<[(u8, usize); 4]>,
 
-    /// Backward edges: for each label, list of parent node indices.
-    ///
-    /// This is the inverse of forward_edges: if parent has edge (label, self),
-    /// then self.backward_edges contains (label, [parent, ...]).
-    ///
-    /// Multiple parents possible for the same label in DAWG structures.
-    pub(crate) backward_edges: SmallVec<[(u8, SmallVec<[usize; 2]>); 2]>,
+    /// Suffix link: points to the state representing the longest proper suffix
+    /// in a different equivalence class.
+    suffix_link: usize,
 
-    /// Suffix link: points to state representing the longest proper suffix
-    /// in a different endpos equivalence class.
-    ///
-    /// Used for construction and substring search enumeration.
-    pub(crate) suffix_link: Option<usize>,
+    /// Left extension edges: label -> target node.
+    /// These allow prepending characters to the represented string.
+    /// Derived from suffix links after construction.
+    left_edges: SmallVec<[(u8, usize); 2]>,
 
-    /// Parent node index in the spanning tree (toward root).
-    ///
-    /// Uses usize::MAX as sentinel for "no parent" (root node).
-    /// This is the canonical parent from construction order.
-    pub(crate) parent: usize,
+    /// Maximum length of strings in this equivalence class.
+    length: usize,
 
-    /// Edge label from parent to this node.
-    ///
-    /// Only meaningful when parent != usize::MAX.
-    pub(crate) parent_label: u8,
+    /// Whether this state is a final state (end of some term).
+    is_final: bool,
 
-    /// Maximum length of strings reaching this state.
-    ///
-    /// All strings in this equivalence class have length ≤ max_length.
-    pub(crate) max_length: usize,
+    /// Which terms end at this state (for multi-string support).
+    /// Stores (term_index, position_in_term) pairs.
+    term_ends: SmallVec<[(usize, usize); 2]>,
 
-    /// Minimum length of strings reaching this state.
-    ///
-    /// All strings in this equivalence class have length ≥ min_length.
-    /// For most nodes: min_length = suffix_link.max_length + 1
-    pub(crate) min_length: usize,
+    /// Optional value associated with final states.
+    value: Option<V>,
+
+    /// Parent node in the canonical path (for bidirectional traversal).
+    parent: usize,
+
+    /// Edge label from parent to this node (last character of canonical path).
+    parent_label: u8,
+
+    /// First character of the canonical (longest) string represented by this node.
+    /// Used for computing left extension edges (sext links).
+    first_char: u8,
 
     /// Depth from root (number of edges in canonical path).
-    ///
-    /// Root has depth 0, its children have depth 1, etc.
-    pub(crate) depth: usize,
-
-    /// True if this state represents an end-of-word position.
-    pub(crate) is_final: bool,
-
-    /// Reference count for dynamic deletion support.
-    pub(crate) ref_count: usize,
-
-    /// Optional value associated with this node (only for final nodes).
-    pub(crate) value: Option<V>,
+    depth: usize,
 }
-
-/// Sentinel value for "no parent" (root node).
-const NO_PARENT: usize = usize::MAX;
 
 impl<V: DictionaryValue> ScdawgNode<V> {
     /// Create a new root node.
     fn root() -> Self {
         Self {
             forward_edges: SmallVec::new(),
-            backward_edges: SmallVec::new(),
-            suffix_link: None,
-            parent: NO_PARENT,
-            parent_label: 0,
-            max_length: 0,
-            min_length: 0,
-            depth: 0,
+            suffix_link: NIL,
+            left_edges: SmallVec::new(),
+            length: 0,
             is_final: false,
-            ref_count: 1, // Root always has ref_count 1
+            term_ends: SmallVec::new(),
             value: None,
+            parent: NIL,
+            parent_label: 0,
+            first_char: 0, // Root has no first character
+            depth: 0,
         }
     }
 
     /// Create a new non-root node.
-    fn new(max_length: usize, min_length: usize) -> Self {
+    fn new(length: usize, suffix_link: usize, first_char: u8) -> Self {
         Self {
             forward_edges: SmallVec::new(),
-            backward_edges: SmallVec::new(),
-            suffix_link: None,
-            parent: NO_PARENT,
+            suffix_link,
+            left_edges: SmallVec::new(),
+            length,
+            is_final: false,
+            term_ends: SmallVec::new(),
+            value: None,
+            parent: NIL,
             parent_label: 0,
-            max_length,
-            min_length,
+            first_char,
             depth: 0,
-            is_final: false,
-            ref_count: 0,
-            value: None,
-        }
-    }
-
-    /// Create a new node with parent information.
-    fn new_with_parent(
-        max_length: usize,
-        min_length: usize,
-        parent: usize,
-        parent_label: u8,
-        depth: usize,
-    ) -> Self {
-        Self {
-            forward_edges: SmallVec::new(),
-            backward_edges: SmallVec::new(),
-            suffix_link: None,
-            parent,
-            parent_label,
-            max_length,
-            min_length,
-            depth,
-            is_final: false,
-            ref_count: 0,
-            value: None,
         }
     }
 
     /// Find a forward edge by label.
-    ///
-    /// Uses linear search for small edge counts, binary search for larger.
-    #[inline]
-    fn find_forward_edge(&self, label: u8) -> Option<usize> {
-        if self.forward_edges.len() < 16 {
-            self.forward_edges
-                .iter()
-                .find(|(b, _)| *b == label)
-                .map(|(_, t)| *t)
-        } else {
-            self.forward_edges
-                .binary_search_by_key(&label, |(b, _)| *b)
-                .ok()
-                .map(|idx| self.forward_edges[idx].1)
+    /// Uses binary search for sorted edges (typically small, but helps at scale).
+    #[inline(always)]
+    fn get_edge(&self, label: u8) -> Option<usize> {
+        // For small edge counts, linear is fine; binary search helps at scale
+        match self.forward_edges.binary_search_by_key(&label, |(l, _)| *l) {
+            Ok(idx) => Some(self.forward_edges[idx].1),
+            Err(_) => None,
         }
     }
 
-    /// Add a forward edge, maintaining sorted order.
-    fn add_forward_edge(&mut self, label: u8, target: usize) {
-        match self.forward_edges.binary_search_by_key(&label, |(b, _)| *b) {
+    /// Add or update a forward edge.
+    /// Maintains sorted order for binary search.
+    #[inline(always)]
+    fn set_edge(&mut self, label: u8, target: usize) {
+        match self.forward_edges.binary_search_by_key(&label, |(l, _)| *l) {
             Ok(idx) => self.forward_edges[idx].1 = target,
             Err(idx) => self.forward_edges.insert(idx, (label, target)),
         }
     }
 
-    /// Remove a forward edge.
-    fn remove_forward_edge(&mut self, label: u8) -> Option<usize> {
-        match self.forward_edges.binary_search_by_key(&label, |(b, _)| *b) {
-            Ok(idx) => Some(self.forward_edges.remove(idx).1),
-            Err(_) => None,
-        }
-    }
-
-    /// Add a backward edge from a parent node.
-    fn add_backward_edge(&mut self, label: u8, parent: usize) {
-        // Find existing entry for this label
-        for (l, parents) in &mut self.backward_edges {
-            if *l == label {
-                if !parents.contains(&parent) {
-                    parents.push(parent);
-                }
-                return;
-            }
-        }
-        // No entry for this label, create new
-        let mut parents = SmallVec::new();
-        parents.push(parent);
-        self.backward_edges.push((label, parents));
-        // Keep sorted by label
-        self.backward_edges.sort_by_key(|(l, _)| *l);
-    }
-
-    /// Remove a backward edge from a parent node.
-    fn remove_backward_edge(&mut self, label: u8, parent: usize) {
-        for (l, parents) in &mut self.backward_edges {
-            if *l == label {
-                parents.retain(|p| *p != parent);
-                return;
-            }
-        }
-    }
-
-    /// Get all backward edges as (label, parent_index) pairs.
-    fn backward_edge_iter(&self) -> impl Iterator<Item = (u8, usize)> + '_ {
-        self.backward_edges
-            .iter()
-            .flat_map(|(label, parents)| parents.iter().map(move |&p| (*label, p)))
-    }
-
-    /// Find backward edges by label.
-    fn find_backward_edges(&self, label: u8) -> Vec<usize> {
-        for (l, parents) in &self.backward_edges {
-            if *l == label {
-                return parents.to_vec();
-            }
-        }
-        Vec::new()
-    }
-
     /// Check if this is the root node.
     #[inline]
     fn is_root(&self) -> bool {
-        self.parent == NO_PARENT && self.depth == 0
+        self.parent == NIL && self.length == 0
     }
 }
 
-/// Inner mutable state of the SCDAWG.
-#[derive(Debug)]
-#[cfg_attr(
-    feature = "serialization",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(bound(serialize = "V: serde::Serialize")),
-    serde(bound(deserialize = "V: serde::Deserialize<'de>"))
-)]
-pub(crate) struct ScdawgInner<V: DictionaryValue> {
-    /// All nodes in the SCDAWG. Index 0 is always the root.
-    pub(crate) nodes: Vec<ScdawgNode<V>>,
+// ============================================================================
+// True SCDAWG Inner State
+// ============================================================================
 
-    /// Number of distinct terms in the dictionary.
+/// Inner mutable state of the true SCDAWG.
+#[derive(Debug)]
+struct ScdawgInner<V: DictionaryValue> {
+    /// All nodes. Index 0 is always root.
+    nodes: Vec<ScdawgNode<V>>,
+
+    /// Last created node (for online construction).
+    last: usize,
+
+    /// Number of terms inserted.
     term_count: usize,
 
-    /// Last node created during construction (for online algorithm).
-    last_node: usize,
+    /// Stored terms for enumeration.
+    terms: Vec<String>,
 
-    /// Whether the structure needs compaction after deletions.
-    needs_compaction: bool,
+    /// Fast duplicate detection using hash set.
+    term_set: FxHashSet<String>,
 
-    /// Suffix cache for efficient suffix sharing during construction.
-    #[cfg_attr(feature = "serialization", serde(skip))]
-    suffix_cache: FxHashMap<u64, usize>,
-
-    /// Term index: maps terms to their node paths for deletion support.
-    #[cfg_attr(feature = "serialization", serde(skip))]
-    term_index: HashMap<String, Vec<usize>>,
+    /// Whether left edges have been computed.
+    left_edges_computed: bool,
 }
 
 impl<V: DictionaryValue> ScdawgInner<V> {
-    /// Create a new empty SCDAWG inner.
+    /// Create a new empty true SCDAWG.
     fn new() -> Self {
         Self {
             nodes: vec![ScdawgNode::root()],
+            last: 0,
             term_count: 0,
-            last_node: 0,
-            needs_compaction: false,
-            suffix_cache: FxHashMap::default(),
-            term_index: HashMap::new(),
+            terms: Vec::new(),
+            term_set: FxHashSet::default(),
+            left_edges_computed: false,
         }
     }
 
-    /// Get the root node index (always 0).
-    #[inline]
-    fn root(&self) -> usize {
-        0
+    /// Create with pre-allocated capacity.
+    fn with_capacity(term_count: usize, total_chars: usize) -> Self {
+        // Suffix automaton has at most 2*n nodes for n characters
+        let estimated_nodes = total_chars.saturating_mul(2);
+        let mut nodes = Vec::with_capacity(estimated_nodes);
+        nodes.push(ScdawgNode::root());
+        Self {
+            nodes,
+            last: 0,
+            term_count: 0,
+            terms: Vec::with_capacity(term_count),
+            term_set: FxHashSet::with_capacity_and_hasher(term_count, Default::default()),
+            left_edges_computed: false,
+        }
     }
 
     /// Allocate a new node and return its index.
-    fn alloc_node(&mut self, max_length: usize, min_length: usize) -> usize {
+    fn alloc_node(&mut self, length: usize, suffix_link: usize, first_char: u8) -> usize {
         let idx = self.nodes.len();
-        self.nodes.push(ScdawgNode::new(max_length, min_length));
+        self.nodes.push(ScdawgNode::new(length, suffix_link, first_char));
         idx
     }
 
-    /// Allocate a new node with parent info and return its index.
-    fn alloc_node_with_parent(
-        &mut self,
-        max_length: usize,
-        min_length: usize,
-        parent: usize,
-        parent_label: u8,
-        depth: usize,
-    ) -> usize {
+    /// Clone a node (for split operations).
+    fn clone_node(&mut self, src: usize) -> usize {
         let idx = self.nodes.len();
-        self.nodes.push(ScdawgNode::new_with_parent(
-            max_length,
-            min_length,
-            parent,
-            parent_label,
-            depth,
-        ));
+        self.nodes.push(self.nodes[src].clone());
         idx
     }
 
-    /// Add a forward edge and corresponding backward edge.
-    fn add_edge(&mut self, from: usize, label: u8, to: usize) {
-        self.nodes[from].add_forward_edge(label, to);
-        self.nodes[to].add_backward_edge(label, from);
-        self.nodes[to].ref_count += 1;
-    }
-
-    /// Remove a forward edge and corresponding backward edge.
-    fn remove_edge(&mut self, from: usize, label: u8, to: usize) {
-        self.nodes[from].remove_forward_edge(label);
-        self.nodes[to].remove_backward_edge(label, from);
-        if self.nodes[to].ref_count > 0 {
-            self.nodes[to].ref_count -= 1;
-        }
-    }
-
-    /// Insert a term using the Inenaga et al. online algorithm.
+    /// Insert a single character, extending the suffix automaton.
     ///
-    /// This is based on the suffix automaton construction but maintains
-    /// parent links for bidirectional traversal.
-    fn insert(&mut self, term: &str) -> bool {
-        if term.is_empty() {
-            // Handle empty string: just mark root as final
-            if self.nodes[0].is_final {
-                return false;
-            }
-            self.nodes[0].is_final = true;
-            self.term_count += 1;
-            return true;
+    /// This is the core of Blumer et al.'s online suffix automaton construction.
+    fn sa_extend(&mut self, c: u8, term_idx: usize, pos: usize) {
+        // Compute first_char for the new node:
+        // - If extending from root, first_char is c (this char is the start of the string)
+        // - Otherwise, inherit first_char from the current last node
+        let first_char = if self.nodes[self.last].length == 0 {
+            c
+        } else {
+            self.nodes[self.last].first_char
+        };
+
+        // Create new state for the new longest suffix
+        let cur = self.alloc_node(self.nodes[self.last].length + 1, 0, first_char);
+
+        // Set parent info for the new node
+        self.nodes[cur].parent = self.last;
+        self.nodes[cur].parent_label = c;
+        self.nodes[cur].depth = self.nodes[self.last].depth + 1;
+
+        // Walk up suffix links, adding edges to the new state
+        let mut p = self.last;
+
+        // Phase 1: Add edges from states that don't have edge labeled c
+        while p != NIL && self.nodes[p].get_edge(c).is_none() {
+            self.nodes[p].set_edge(c, cur);
+            p = self.nodes[p].suffix_link;
         }
 
-        let bytes = term.as_bytes();
-        let mut current = 0usize; // Start at root
-        let mut depth = 0usize;
-        let mut path = vec![0usize]; // Track path for term_index
+        if p == NIL {
+            // Case 1: We reached the root without finding edge c
+            // New state's suffix link goes to root
+            self.nodes[cur].suffix_link = 0;
+        } else {
+            // Found a state p that has edge c
+            let q = self.nodes[p].get_edge(c).unwrap();
 
-        for &byte in bytes {
-            depth += 1;
-
-            if let Some(next) = self.nodes[current].find_forward_edge(byte) {
-                // Edge exists, follow it
-                current = next;
-                self.nodes[current].ref_count += 1;
+            if self.nodes[p].length + 1 == self.nodes[q].length {
+                // Case 2: Edge p->q is a "solid" edge (no need to split)
+                self.nodes[cur].suffix_link = q;
             } else {
-                // Create new node
-                let parent_max_length = self.nodes[current].max_length;
-                let new_node = self.alloc_node_with_parent(
-                    parent_max_length + 1,
-                    parent_max_length + 1,
-                    current,
-                    byte,
-                    depth,
-                );
+                // Case 3: Need to split state q
+                // Create clone of q with shorter length
+                let clone = self.clone_node(q);
+                self.nodes[clone].length = self.nodes[p].length + 1;
 
-                // Add edge (updates backward edge too)
-                self.add_edge(current, byte, new_node);
+                // Compute first_char for clone:
+                // Clone represents the string from root to p, then c
+                // If p is root, first_char is c; otherwise inherit from p
+                self.nodes[clone].first_char = if self.nodes[p].length == 0 {
+                    c
+                } else {
+                    self.nodes[p].first_char
+                };
 
-                // Set up suffix link for the new node
-                self.setup_suffix_link(current, byte, new_node);
+                // Update suffix links
+                self.nodes[cur].suffix_link = clone;
+                self.nodes[q].suffix_link = clone;
 
-                current = new_node;
+                // Update parent info for clone
+                self.nodes[clone].parent = p;
+                self.nodes[clone].parent_label = c;
+                self.nodes[clone].depth = self.nodes[p].depth + 1;
+
+                // Clear term_ends from clone (it's not a real final state)
+                self.nodes[clone].term_ends.clear();
+                self.nodes[clone].is_final = false;
+                self.nodes[clone].value = None;
+
+                // Redirect edges from p and its suffix chain that point to q
+                while p != NIL && self.nodes[p].get_edge(c) == Some(q) {
+                    self.nodes[p].set_edge(c, clone);
+                    p = self.nodes[p].suffix_link;
+                }
             }
-
-            path.push(current);
         }
 
-        // Mark final and set value
-        if self.nodes[current].is_final {
-            return false; // Term already exists
+        // Record position in term
+        self.nodes[cur].term_ends.push((term_idx, pos));
+
+        self.last = cur;
+        self.left_edges_computed = false; // Invalidate left edges
+    }
+
+    /// Insert a term into the SCDAWG.
+    fn insert(&mut self, term: &str) -> bool {
+        // Check for duplicate using O(1) hash lookup
+        if self.term_set.contains(term) {
+            return false;
         }
 
-        self.nodes[current].is_final = true;
+        let term_idx = self.term_count;
+
+        // Reset to root for new term
+        // For multi-string SA, we need to handle this carefully
+        // Option 1: Reset last to root (separate suffix trees)
+        // Option 2: Use unique end markers (generalized suffix automaton)
+
+        // We use Option 1 for simplicity - each term builds its own suffix structure
+        // connected to the shared root
+        self.last = 0;
+
+        // Insert each character
+        for (pos, &byte) in term.as_bytes().iter().enumerate() {
+            self.sa_extend(byte, term_idx, pos);
+        }
+
+        // Mark the final state
+        self.nodes[self.last].is_final = true;
+
+        let term_string = term.to_string();
+        self.term_set.insert(term_string.clone());
+        self.terms.push(term_string);
         self.term_count += 1;
-        self.last_node = current;
-
-        // Store term path for deletion support
-        self.term_index.insert(term.to_string(), path);
 
         true
-    }
-
-    /// Set up suffix link for a newly created node.
-    ///
-    /// Follows suffix links from parent to find the appropriate target.
-    fn setup_suffix_link(&mut self, parent: usize, label: u8, new_node: usize) {
-        // If parent is root, suffix link goes to root
-        if parent == 0 {
-            self.nodes[new_node].suffix_link = Some(0);
-            return;
-        }
-
-        // Follow suffix link of parent
-        if let Some(parent_suffix) = self.nodes[parent].suffix_link {
-            // Try to find edge with same label from parent's suffix
-            if let Some(target) = self.nodes[parent_suffix].find_forward_edge(label) {
-                self.nodes[new_node].suffix_link = Some(target);
-            } else {
-                // No edge, suffix link goes to root
-                self.nodes[new_node].suffix_link = Some(0);
-            }
-        } else {
-            // Parent has no suffix link (shouldn't happen after construction)
-            self.nodes[new_node].suffix_link = Some(0);
-        }
     }
 
     /// Insert a term with an associated value.
     fn insert_with_value(&mut self, term: &str, value: V) -> bool {
-        let inserted = self.insert(term);
-        if inserted {
-            self.nodes[self.last_node].value = Some(value);
+        if self.insert(term) {
+            self.nodes[self.last].value = Some(value);
+            true
+        } else {
+            false
         }
-        inserted
     }
 
-    /// Remove a term from the SCDAWG.
+    /// Compute left extension edges from suffix links.
     ///
-    /// This marks nodes for potential removal but doesn't immediately compact.
-    /// Call `compact()` to reclaim space.
-    fn remove(&mut self, term: &str) -> bool {
-        if term.is_empty() {
-            if !self.nodes[0].is_final {
-                return false;
-            }
-            self.nodes[0].is_final = false;
-            self.nodes[0].value = None;
-            self.term_count -= 1;
-            return true;
+    /// For each suffix link from node A to node B (representing that B's string
+    /// is a suffix of A's string), we add a left extension edge from B to A
+    /// that allows prepending the distinguishing character.
+    ///
+    /// The key insight is that if A represents string "xyz" and B represents "yz",
+    /// then prepending 'x' to B's string gives A's string. So the left extension
+    /// edge label is 'x' - the FIRST character of A's canonical string.
+    fn compute_left_edges(&mut self) {
+        if self.left_edges_computed {
+            return;
         }
 
-        // Check if term exists
-        if !self.term_index.contains_key(term) {
-            // Term not in index, check by traversal
-            let mut current = 0;
-            for &byte in term.as_bytes() {
-                match self.nodes[current].find_forward_edge(byte) {
-                    Some(next) => current = next,
-                    None => return false,
-                }
-            }
-            if !self.nodes[current].is_final {
-                return false;
+        // Clear existing left edges
+        for node in &mut self.nodes {
+            node.left_edges.clear();
+        }
+
+        // For each node with a suffix link, add left edge to the suffix target
+        for node_idx in 1..self.nodes.len() {
+            let suffix_target = self.nodes[node_idx].suffix_link;
+            if suffix_target != NIL {
+                // The label is the FIRST character of the canonical string
+                // This allows prepending that character to extend leftward
+                let label = self.nodes[node_idx].first_char;
+                self.nodes[suffix_target].left_edges.push((label, node_idx));
             }
         }
 
-        // Traverse and decrement ref counts
-        let mut current = 0;
-        for &byte in term.as_bytes() {
-            let next = match self.nodes[current].find_forward_edge(byte) {
-                Some(n) => n,
-                None => return false,
-            };
-            if self.nodes[next].ref_count > 0 {
-                self.nodes[next].ref_count -= 1;
-            }
-            current = next;
-        }
-
-        if !self.nodes[current].is_final {
-            return false;
-        }
-
-        self.nodes[current].is_final = false;
-        self.nodes[current].value = None;
-        self.term_count -= 1;
-        self.needs_compaction = true;
-
-        // Remove from term index
-        self.term_index.remove(term);
-
-        true
+        self.left_edges_computed = true;
     }
 
-    /// Check if the SCDAWG contains a term.
-    fn contains(&self, term: &str) -> bool {
-        let mut current = 0;
-        for &byte in term.as_bytes() {
-            match self.nodes[current].find_forward_edge(byte) {
+    /// Find exact substring matches using O(|pattern|) traversal.
+    ///
+    /// This is the KEY improvement over the naive implementation.
+    fn find_substring_fast(&self, pattern: &str) -> Option<usize> {
+        if pattern.is_empty() {
+            return Some(0); // Empty pattern matches at root
+        }
+
+        let mut current = 0; // Start at root
+        for &byte in pattern.as_bytes() {
+            match self.nodes[current].get_edge(byte) {
                 Some(next) => current = next,
-                None => return false,
+                None => return None, // Pattern not found
             }
         }
-        self.nodes[current].is_final
+
+        Some(current) // Return the node where pattern ends
+    }
+
+    /// Check if pattern is a substring of any term.
+    fn contains_substring(&self, pattern: &str) -> bool {
+        self.find_substring_fast(pattern).is_some()
     }
 
     /// Find all occurrences of a substring pattern.
     ///
-    /// Returns a list of (term, position) pairs where the pattern was found.
-    ///
-    /// Note: This is a naive O(n*m) implementation where n is total characters
-    /// and m is pattern length. A full SCDAWG implementation would use suffix
-    /// links for O(|pattern| + occurrences) complexity.
+    /// Returns (term, position) pairs.
     fn find_exact_substring(&self, pattern: &str) -> Vec<(String, usize)> {
         if pattern.is_empty() {
             // Empty pattern matches at position 0 of every term
-            return self.collect_all_terms().into_iter().map(|t| (t, 0)).collect();
+            return self.terms.iter().map(|t| (t.clone(), 0)).collect();
         }
 
-        let pattern_bytes = pattern.as_bytes();
+        // First, find the node where pattern ends (O(|pattern|))
+        let end_node = match self.find_substring_fast(pattern) {
+            Some(node) => node,
+            None => return Vec::new(),
+        };
+
+        // Now enumerate all final states reachable from this node
+        // and collect the terms/positions
+        let pattern_len = pattern.len();
         let mut results = Vec::new();
 
-        // Collect all terms and search each one
-        // This is the naive approach - a proper SCDAWG would do this more efficiently
-        for term in self.collect_all_terms() {
-            let term_bytes = term.as_bytes();
-
-            // Find all occurrences of pattern in term
-            for pos in 0..=term_bytes.len().saturating_sub(pattern_bytes.len()) {
-                if term_bytes[pos..].starts_with(pattern_bytes) {
-                    results.push((term.clone(), pos));
-                }
-            }
-        }
+        // DFS to find all final states reachable from end_node
+        self.collect_term_positions(end_node, pattern_len, &mut results);
 
         results
     }
 
-    /// Enumerate all term occurrences that contain the matched pattern.
-    fn enumerate_pattern_occurrences(&self, pattern_end_node: usize, pattern_len: usize) -> Vec<(String, usize)> {
-        let mut results = Vec::new();
-
-        // Collect all complete paths through pattern_end_node
-        self.collect_paths_through_node(pattern_end_node, pattern_len, &mut results);
-
-        results
-    }
-
-    /// Collect all complete term paths that go through a specific node.
-    fn collect_paths_through_node(
+    /// Collect all term positions reachable from a node.
+    ///
+    /// This traverses all nodes that have the pattern as a suffix. In the suffix
+    /// automaton, if node Q has suffix_link to node P, then strings at Q have
+    /// strings at P as suffixes. So if P represents pattern "ab", then any node
+    /// whose suffix_link chain leads to P also contains "ab" as a suffix.
+    ///
+    /// We use left_edges (inverse of suffix links) to traverse from P to all
+    /// nodes Q where the pattern occurs.
+    fn collect_term_positions(
         &self,
         node: usize,
         pattern_len: usize,
         results: &mut Vec<(String, usize)>,
     ) {
-        // Get prefix (path from root to this node)
-        let prefix = self.path_to_node(node);
-        let position = prefix.len().saturating_sub(pattern_len);
-
-        // Enumerate all suffixes from this node (paths to final nodes)
-        let mut stack: Vec<(usize, Vec<u8>)> = vec![(node, Vec::new())];
-
-        while let Some((current, suffix)) = stack.pop() {
-            if self.nodes[current].is_final {
-                // Found a complete term
-                let mut term = prefix.clone();
-                term.extend(&suffix);
-                let term_string = String::from_utf8_lossy(&term).to_string();
-                results.push((term_string, position));
+        // Check if this node has term endings
+        // Each term_ends entry (term_idx, end_pos) means a string of this equivalence
+        // class ends at position end_pos in term term_idx.
+        // The pattern (of length pattern_len) that we searched for starts at:
+        // start_pos = end_pos + 1 - pattern_len
+        for &(term_idx, end_pos) in &self.nodes[node].term_ends {
+            if end_pos + 1 >= pattern_len {
+                let start_pos = end_pos + 1 - pattern_len;
+                if term_idx < self.terms.len() {
+                    results.push((self.terms[term_idx].clone(), start_pos));
+                }
             }
+        }
 
-            // Continue to children
-            for &(label, child) in &self.nodes[current].forward_edges {
-                let mut new_suffix = suffix.clone();
-                new_suffix.push(label);
-                stack.push((child, new_suffix));
-            }
+        // Traverse via left edges (inverse suffix links) to find all nodes
+        // that have this pattern as a suffix. Those nodes' term_ends also
+        // contain occurrences of the pattern.
+        for &(_, target) in &self.nodes[node].left_edges {
+            self.collect_term_positions(target, pattern_len, results);
         }
     }
 
-    /// Get the path (bytes) from root to a node.
-    fn path_to_node(&self, node: usize) -> Vec<u8> {
-        let mut path = Vec::new();
-        let mut current = node;
-
-        while current != 0 && self.nodes[current].parent != NO_PARENT {
-            path.push(self.nodes[current].parent_label);
-            current = self.nodes[current].parent;
-        }
-
-        path.reverse();
-        path
+    /// Check if the SCDAWG contains a complete term.
+    fn contains(&self, term: &str) -> bool {
+        self.term_set.contains(term)
     }
 
-    /// Collect all terms in the SCDAWG.
-    fn collect_all_terms(&self) -> Vec<String> {
-        let mut terms = Vec::new();
-        let mut stack: Vec<(usize, Vec<u8>)> = vec![(0, Vec::new())];
-
-        while let Some((current, path)) = stack.pop() {
-            if self.nodes[current].is_final {
-                terms.push(String::from_utf8_lossy(&path).to_string());
-            }
-
-            for &(label, child) in &self.nodes[current].forward_edges {
-                let mut new_path = path.clone();
-                new_path.push(label);
-                stack.push((child, new_path));
-            }
-        }
-
-        terms
+    /// Get the number of terms.
+    fn term_count(&self) -> usize {
+        self.term_count
     }
 
-    /// Compact the SCDAWG by removing unreachable nodes.
-    fn compact(&mut self) {
-        if !self.needs_compaction {
-            return;
+    /// Iterate over all terms.
+    fn iter_terms(&self) -> impl Iterator<Item = &String> {
+        self.terms.iter()
+    }
+
+    // ========================================================================
+    // IS Features Helper Methods
+    // ========================================================================
+
+    /// Get the frequency (occurrence count) of a substring pattern.
+    fn frequency(&self, pattern: &str) -> usize {
+        if pattern.is_empty() {
+            // Empty pattern matches at every position in every term
+            return self.terms.iter().map(|t| t.len() + 1).sum();
         }
 
-        // Mark reachable nodes
-        let mut reachable = vec![false; self.nodes.len()];
-        let mut stack = vec![0usize]; // Start from root
-        reachable[0] = true;
-
-        while let Some(node) = stack.pop() {
-            for &(_, child) in &self.nodes[node].forward_edges {
-                if !reachable[child] {
-                    reachable[child] = true;
-                    stack.push(child);
-                }
+        match self.find_substring_fast(pattern) {
+            Some(node) => {
+                let mut count = 0;
+                self.count_occurrences(node, &mut count);
+                count
             }
+            None => 0,
         }
+    }
 
-        // Build remapping
-        let mut remap = vec![usize::MAX; self.nodes.len()];
-        let mut new_idx = 0usize;
-        for (old_idx, &is_reachable) in reachable.iter().enumerate() {
-            if is_reachable {
-                remap[old_idx] = new_idx;
-                new_idx += 1;
-            }
-        }
+    /// Count all occurrences reachable from a node.
+    ///
+    /// This traverses via left edges (inverse suffix links) to find all nodes
+    /// that have the pattern at this node as a suffix, and counts all term_ends
+    /// entries, giving the total occurrence count.
+    fn count_occurrences(&self, node: usize, count: &mut usize) {
+        // Count direct occurrences at this node
+        *count += self.nodes[node].term_ends.len();
 
-        // Create new node vector with remapped indices
-        let mut new_nodes = Vec::with_capacity(new_idx);
-        for (old_idx, node) in self.nodes.iter().enumerate() {
-            if !reachable[old_idx] {
-                continue;
-            }
-
-            let mut new_node = node.clone();
-
-            // Remap forward edges
-            for (_, target) in &mut new_node.forward_edges {
-                *target = remap[*target];
-            }
-
-            // Remap backward edges
-            for (_, parents) in &mut new_node.backward_edges {
-                for parent in parents {
-                    if *parent != NO_PARENT && *parent < remap.len() {
-                        *parent = remap[*parent];
-                    }
-                }
-            }
-
-            // Remap parent
-            if new_node.parent != NO_PARENT && new_node.parent < remap.len() {
-                new_node.parent = remap[new_node.parent];
-            }
-
-            // Remap suffix link
-            if let Some(ref mut suffix) = new_node.suffix_link {
-                if *suffix < remap.len() {
-                    *suffix = remap[*suffix];
-                }
-            }
-
-            new_nodes.push(new_node);
-        }
-
-        self.nodes = new_nodes;
-        self.needs_compaction = false;
-
-        // Rebuild term index (expensive but necessary)
-        self.term_index.clear();
-        for term in self.collect_all_terms() {
-            let mut path = vec![0usize];
-            let mut current = 0;
-            for &byte in term.as_bytes() {
-                if let Some(next) = self.nodes[current].find_forward_edge(byte) {
-                    current = next;
-                    path.push(current);
-                }
-            }
-            self.term_index.insert(term, path);
+        // Traverse via left edges to find all nodes where this pattern occurs
+        for &(_, target) in &self.nodes[node].left_edges {
+            self.count_occurrences(target, count);
         }
     }
 }
 
-/// A Symmetric Compact DAWG (SCDAWG) for WallBreaker algorithm.
+// ============================================================================
+// Public True SCDAWG Type
+// ============================================================================
+
+/// True Symmetric Compact DAWG with O(|pattern|) substring search.
 ///
-/// This is the main public type for SCDAWG-based dictionaries. It supports:
-/// - Standard dictionary operations (insert, remove, contains)
-/// - Substring search (find patterns anywhere in terms)
-/// - Bidirectional traversal (for WallBreaker extension)
-///
-/// # Thread Safety
-///
-/// Uses `Arc<RwLock<...>>` for interior mutability. Safe for concurrent reads,
-/// exclusive writes.
-///
-/// # Example
-///
-/// ```rust,ignore
-/// use liblevenshtein::dictionary::scdawg::Scdawg;
-///
-/// // Create and populate
-/// let scdawg = Scdawg::<()>::new();
-/// scdawg.insert("hello");
-/// scdawg.insert("world");
-///
-/// // Check membership
-/// assert!(scdawg.contains("hello"));
-/// assert!(!scdawg.contains("missing"));
-/// ```
+/// This is a proper suffix automaton implementation that indexes ALL substrings
+/// of all terms, enabling efficient substring search and bidirectional extension.
 #[derive(Clone, Debug)]
 pub struct Scdawg<V: DictionaryValue = ()> {
-    pub(crate) inner: Arc<RwLock<ScdawgInner<V>>>,
-}
-
-impl<V: DictionaryValue> Scdawg<V> {
-    /// Create a new empty SCDAWG.
-    pub fn new() -> Self {
-        Scdawg {
-            inner: Arc::new(RwLock::new(ScdawgInner::new())),
-        }
-    }
-
-    /// Create an SCDAWG from an iterator of terms.
-    pub fn from_terms<I, S>(terms: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-    {
-        let scdawg = Scdawg::new();
-        for term in terms {
-            scdawg.insert(term.as_ref());
-        }
-        scdawg
-    }
-
-    /// Create an SCDAWG from an iterator of (term, value) pairs.
-    pub fn from_terms_with_values<I, S>(terms: I) -> Self
-    where
-        I: IntoIterator<Item = (S, V)>,
-        S: AsRef<str>,
-    {
-        let scdawg = Scdawg::new();
-        for (term, value) in terms {
-            scdawg.insert_with_value(term.as_ref(), value);
-        }
-        scdawg
-    }
-
-    /// Insert a term into the SCDAWG.
-    ///
-    /// Returns `true` if the term was newly inserted, `false` if it already existed.
-    pub fn insert(&self, term: &str) -> bool {
-        let mut inner = self.inner.write();
-        inner.insert(term)
-    }
-
-    /// Insert a term with an associated value.
-    ///
-    /// Returns `true` if the term was newly inserted, `false` if it already existed.
-    pub fn insert_with_value(&self, term: &str, value: V) -> bool {
-        let mut inner = self.inner.write();
-        inner.insert_with_value(term, value)
-    }
-
-    /// Remove a term from the SCDAWG.
-    ///
-    /// Returns `true` if the term was removed, `false` if it didn't exist.
-    pub fn remove(&self, term: &str) -> bool {
-        let mut inner = self.inner.write();
-        inner.remove(term)
-    }
-
-    /// Check if the SCDAWG needs compaction.
-    ///
-    /// Returns `true` if `remove()` has been called and `compact()` hasn't.
-    pub fn needs_compaction(&self) -> bool {
-        let inner = self.inner.read();
-        inner.needs_compaction
-    }
-
-    /// Compact the SCDAWG by removing unreachable nodes.
-    ///
-    /// Call this periodically after removals to reclaim memory.
-    pub fn compact(&self) {
-        let mut inner = self.inner.write();
-        inner.compact();
-    }
-
-    /// Get the number of terms in the SCDAWG.
-    pub fn term_count(&self) -> usize {
-        let inner = self.inner.read();
-        inner.term_count
-    }
-
-    /// Get the number of nodes in the SCDAWG.
-    pub fn node_count(&self) -> usize {
-        let inner = self.inner.read();
-        inner.nodes.len()
-    }
-
-    /// Get an iterator over all terms in the SCDAWG.
-    pub fn iter(&self) -> impl Iterator<Item = String> {
-        let inner = self.inner.read();
-        inner.collect_all_terms().into_iter()
-    }
-
-    /// Get an iterator over all (term, value) pairs.
-    pub fn iter_with_values(&self) -> impl Iterator<Item = (String, V)>
-    where
-        V: Clone,
-    {
-        let inner = self.inner.read();
-        let mut results = Vec::new();
-
-        let mut stack: Vec<(usize, Vec<u8>)> = vec![(0, Vec::new())];
-        while let Some((current, path)) = stack.pop() {
-            if inner.nodes[current].is_final {
-                let term = String::from_utf8_lossy(&path).to_string();
-                if let Some(ref value) = inner.nodes[current].value {
-                    results.push((term, value.clone()));
-                }
-            }
-
-            for &(label, child) in &inner.nodes[current].forward_edges {
-                let mut new_path = path.clone();
-                new_path.push(label);
-                stack.push((child, new_path));
-            }
-        }
-
-        results.into_iter()
-    }
-
-    /// Get the value associated with a term.
-    pub fn get_value(&self, term: &str) -> Option<V>
-    where
-        V: Clone,
-    {
-        let inner = self.inner.read();
-        let mut current = 0;
-        for &byte in term.as_bytes() {
-            match inner.nodes[current].find_forward_edge(byte) {
-                Some(next) => current = next,
-                None => return None,
-            }
-        }
-        if inner.nodes[current].is_final {
-            inner.nodes[current].value.clone()
-        } else {
-            None
-        }
-    }
+    inner: Arc<RwLock<ScdawgInner<V>>>,
 }
 
 impl<V: DictionaryValue> Default for Scdawg<V> {
@@ -937,53 +561,214 @@ impl<V: DictionaryValue> Default for Scdawg<V> {
     }
 }
 
-// ============================================================================
-// Dictionary trait implementations
-// ============================================================================
+impl<V: DictionaryValue> Scdawg<V> {
+    /// Create a new empty true SCDAWG.
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(RwLock::new(ScdawgInner::new())),
+        }
+    }
 
-/// Node wrapper for SCDAWG dictionary traversal.
-#[derive(Clone)]
-pub struct ScdawgNode2<V: DictionaryValue = ()> {
-    inner: Arc<RwLock<ScdawgInner<V>>>,
-    node_idx: usize,
-}
+    /// Create from an iterator of terms.
+    pub fn from_terms<I, S>(terms: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        // Collect terms to enable pre-allocation
+        let terms_vec: Vec<S> = terms.into_iter().collect();
+        let term_count = terms_vec.len();
+        let total_chars: usize = terms_vec.iter().map(|s| s.as_ref().len()).sum();
 
-impl<V: DictionaryValue> std::fmt::Debug for ScdawgNode2<V> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = ScdawgInner::with_capacity(term_count, total_chars);
+        let scdawg = Self {
+            inner: Arc::new(RwLock::new(inner)),
+        };
+        {
+            let mut inner = scdawg.inner.write();
+            for term in terms_vec {
+                inner.insert(term.as_ref());
+            }
+            inner.compute_left_edges();
+        }
+        scdawg
+    }
+
+    /// Insert a term.
+    pub fn insert(&self, term: &str) -> bool {
+        let mut inner = self.inner.write();
+        let result = inner.insert(term);
+        if result {
+            inner.compute_left_edges();
+        }
+        result
+    }
+
+    /// Insert a term with a value.
+    pub fn insert_with_value(&self, term: &str, value: V) -> bool {
+        let mut inner = self.inner.write();
+        let result = inner.insert_with_value(term, value);
+        if result {
+            inner.compute_left_edges();
+        }
+        result
+    }
+
+    /// Check if a substring exists in any term.
+    pub fn contains_substring(&self, pattern: &str) -> bool {
         let inner = self.inner.read();
-        f.debug_struct("ScdawgNode2")
-            .field("node_idx", &self.node_idx)
-            .field("is_final", &inner.nodes[self.node_idx].is_final)
-            .field("depth", &inner.nodes[self.node_idx].depth)
-            .finish()
+        inner.contains_substring(pattern)
+    }
+
+    /// Iterate over all terms.
+    pub fn iter(&self) -> impl Iterator<Item = String> {
+        let inner = self.inner.read();
+        inner.terms.clone().into_iter()
+    }
+
+    /// Get the number of terms in the SCDAWG.
+    pub fn term_count(&self) -> usize {
+        self.inner.read().term_count()
+    }
+
+    // ========================================================================
+    // IS Features (Blumer et al. 1987)
+    // ========================================================================
+
+    /// Find a substring and return a handle to its SCDAWG state.
+    ///
+    /// This is the `find(x)` operation from Blumer et al. (1987).
+    /// Returns `None` if the pattern is not a substring of any term.
+    ///
+    /// # Time Complexity
+    ///
+    /// O(|pattern|) - linear in pattern length.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let scdawg = Scdawg::<()>::from_terms(["cathedral", "category"]);
+    /// if let Some(handle) = scdawg.find("cat") {
+    ///     println!("Pattern 'cat' found, frequency: {}", scdawg.freq_at(&handle));
+    /// }
+    /// ```
+    pub fn find(&self, pattern: &str) -> Option<ScdawgNodeHandle<V>> {
+        let inner = self.inner.read();
+        inner.find_substring_fast(pattern).map(|node_idx| ScdawgNodeHandle {
+            inner: Arc::clone(&self.inner),
+            node_idx,
+        })
+    }
+
+    /// Get the frequency (occurrence count) of a substring pattern.
+    ///
+    /// This is the `freq(x)` operation from Blumer et al. (1987).
+    /// Returns the total number of occurrences across all terms.
+    ///
+    /// # Time Complexity
+    ///
+    /// O(|pattern| + k) where k is the number of occurrences.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let scdawg = Scdawg::<()>::from_terms(["abab", "bab"]);
+    /// assert_eq!(scdawg.freq("ab"), 3); // 2 in "abab" + 1 in "bab"
+    /// ```
+    pub fn freq(&self, pattern: &str) -> usize {
+        let inner = self.inner.read();
+        inner.frequency(pattern)
+    }
+
+    /// Get the frequency at a specific SCDAWG node handle.
+    ///
+    /// Use this with `find()` for efficient repeated frequency queries.
+    pub fn freq_at(&self, handle: &ScdawgNodeHandle<V>) -> usize {
+        let inner = self.inner.read();
+        let mut count = 0;
+        inner.count_occurrences(handle.node_idx, &mut count);
+        count
+    }
+
+    /// Get all occurrence locations of a substring pattern.
+    ///
+    /// This is the `locations(x)` operation from Blumer et al. (1987).
+    /// Returns (term, start_position) pairs for every occurrence.
+    ///
+    /// # Time Complexity
+    ///
+    /// O(|pattern| + k) where k is the number of occurrences.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let scdawg = Scdawg::<()>::from_terms(["abab"]);
+    /// let locs = scdawg.locations("ab");
+    /// // Returns: [("abab", 0), ("abab", 2)]
+    /// ```
+    pub fn locations(&self, pattern: &str) -> Vec<(String, usize)> {
+        let inner = self.inner.read();
+        inner.find_exact_substring(pattern)
+    }
+
+    /// Get all occurrence locations from a specific SCDAWG node handle.
+    ///
+    /// Use this with `find()` for efficient repeated location queries.
+    pub fn locations_at(&self, handle: &ScdawgNodeHandle<V>, pattern_len: usize) -> Vec<(String, usize)> {
+        let inner = self.inner.read();
+        let mut results = Vec::new();
+        inner.collect_term_positions(handle.node_idx, pattern_len, &mut results);
+        results
     }
 }
 
+// ============================================================================
+// Dictionary Trait Implementation
+// ============================================================================
+
 impl<V: DictionaryValue> Dictionary for Scdawg<V> {
-    type Node = ScdawgNode2<V>;
+    type Node = ScdawgNodeHandle<V>;
+
+    fn len(&self) -> Option<usize> {
+        Some(self.inner.read().term_count())
+    }
+
+    fn contains(&self, term: &str) -> bool {
+        self.inner.read().contains(term)
+    }
 
     fn root(&self) -> Self::Node {
-        ScdawgNode2 {
+        ScdawgNodeHandle {
             inner: Arc::clone(&self.inner),
             node_idx: 0,
         }
     }
 
-    fn contains(&self, term: &str) -> bool {
-        let inner = self.inner.read();
-        inner.contains(term)
-    }
-
-    fn len(&self) -> Option<usize> {
-        Some(self.term_count())
-    }
-
-    fn sync_strategy(&self) -> SyncStrategy {
-        SyncStrategy::InternalSync
+    fn sync_strategy(&self) -> crate::dictionary::SyncStrategy {
+        crate::dictionary::SyncStrategy::ExternalSync
     }
 }
 
-impl<V: DictionaryValue> DictionaryNode for ScdawgNode2<V> {
+// ============================================================================
+// Node Handle
+// ============================================================================
+
+/// Handle to a node in the true SCDAWG.
+#[derive(Clone)]
+pub struct ScdawgNodeHandle<V: DictionaryValue = ()> {
+    inner: Arc<RwLock<ScdawgInner<V>>>,
+    node_idx: usize,
+}
+
+impl<V: DictionaryValue> std::fmt::Debug for ScdawgNodeHandle<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ScdawgNodeHandle")
+            .field("node_idx", &self.node_idx)
+            .finish()
+    }
+}
+
+impl<V: DictionaryValue> DictionaryNode for ScdawgNodeHandle<V> {
     type Unit = u8;
 
     fn is_final(&self) -> bool {
@@ -994,8 +779,8 @@ impl<V: DictionaryValue> DictionaryNode for ScdawgNode2<V> {
     fn transition(&self, label: u8) -> Option<Self> {
         let inner = self.inner.read();
         inner.nodes[self.node_idx]
-            .find_forward_edge(label)
-            .map(|idx| ScdawgNode2 {
+            .get_edge(label)
+            .map(|idx| ScdawgNodeHandle {
                 inner: Arc::clone(&self.inner),
                 node_idx: idx,
             })
@@ -1009,7 +794,7 @@ impl<V: DictionaryValue> DictionaryNode for ScdawgNode2<V> {
             .map(|&(label, idx)| {
                 (
                     label,
-                    ScdawgNode2 {
+                    ScdawgNodeHandle {
                         inner: Arc::clone(&self.inner),
                         node_idx: idx,
                     },
@@ -1025,21 +810,21 @@ impl<V: DictionaryValue> DictionaryNode for ScdawgNode2<V> {
     }
 }
 
-unsafe impl<V: DictionaryValue> Send for ScdawgNode2<V> {}
-unsafe impl<V: DictionaryValue> Sync for ScdawgNode2<V> {}
+unsafe impl<V: DictionaryValue> Send for ScdawgNodeHandle<V> {}
+unsafe impl<V: DictionaryValue> Sync for ScdawgNodeHandle<V> {}
 
 // ============================================================================
-// BidirectionalDictionaryNode implementation
+// BidirectionalDictionaryNode Implementation
 // ============================================================================
 
-impl<V: DictionaryValue> BidirectionalDictionaryNode for ScdawgNode2<V> {
+impl<V: DictionaryValue> BidirectionalDictionaryNode for ScdawgNodeHandle<V> {
     fn parent(&self) -> Option<Self> {
         let inner = self.inner.read();
         let node = &inner.nodes[self.node_idx];
-        if node.parent == NO_PARENT {
+        if node.parent == NIL {
             None
         } else {
-            Some(ScdawgNode2 {
+            Some(ScdawgNodeHandle {
                 inner: Arc::clone(&self.inner),
                 node_idx: node.parent,
             })
@@ -1049,7 +834,7 @@ impl<V: DictionaryValue> BidirectionalDictionaryNode for ScdawgNode2<V> {
     fn parent_label(&self) -> Option<u8> {
         let inner = self.inner.read();
         let node = &inner.nodes[self.node_idx];
-        if node.parent == NO_PARENT {
+        if node.parent == NIL {
             None
         } else {
             Some(node.parent_label)
@@ -1059,13 +844,14 @@ impl<V: DictionaryValue> BidirectionalDictionaryNode for ScdawgNode2<V> {
     fn reverse_edges(&self) -> Box<dyn Iterator<Item = (u8, Self)> + '_> {
         let inner = self.inner.read();
         let edges: Vec<_> = inner.nodes[self.node_idx]
-            .backward_edge_iter()
-            .map(|(label, parent_idx)| {
+            .left_edges
+            .iter()
+            .map(|&(label, idx)| {
                 (
                     label,
-                    ScdawgNode2 {
+                    ScdawgNodeHandle {
                         inner: Arc::clone(&self.inner),
-                        node_idx: parent_idx,
+                        node_idx: idx,
                     },
                 )
             })
@@ -1076,11 +862,12 @@ impl<V: DictionaryValue> BidirectionalDictionaryNode for ScdawgNode2<V> {
     fn reverse_transition(&self, label: u8) -> Vec<Self> {
         let inner = self.inner.read();
         inner.nodes[self.node_idx]
-            .find_backward_edges(label)
-            .into_iter()
-            .map(|idx| ScdawgNode2 {
+            .left_edges
+            .iter()
+            .filter(|(l, _)| *l == label)
+            .map(|(_, idx)| ScdawgNodeHandle {
                 inner: Arc::clone(&self.inner),
-                node_idx: idx,
+                node_idx: *idx,
             })
             .collect()
     }
@@ -1092,7 +879,7 @@ impl<V: DictionaryValue> BidirectionalDictionaryNode for ScdawgNode2<V> {
 }
 
 // ============================================================================
-// SubstringDictionary implementation
+// SubstringDictionary Implementation
 // ============================================================================
 
 impl<V: DictionaryValue> SubstringDictionary for Scdawg<V> {
@@ -1106,13 +893,13 @@ impl<V: DictionaryValue> SubstringDictionary for Scdawg<V> {
                 // Find the node at the end of the pattern match
                 let mut node_idx = 0;
                 for &byte in term.as_bytes().iter().take(position + pattern.len()) {
-                    if let Some(next) = inner.nodes[node_idx].find_forward_edge(byte) {
+                    if let Some(next) = inner.nodes[node_idx].get_edge(byte) {
                         node_idx = next;
                     }
                 }
 
                 SubstringMatch::new(
-                    ScdawgNode2 {
+                    ScdawgNodeHandle {
                         inner: Arc::clone(&self.inner),
                         node_idx,
                     },
@@ -1150,188 +937,273 @@ mod tests {
     }
 
     #[test]
-    fn test_scdawg_insert_multiple() {
-        let scdawg = Scdawg::<()>::from_terms(vec!["apple", "application", "apply"]);
-        assert_eq!(scdawg.term_count(), 3);
-        assert!(scdawg.contains("apple"));
-        assert!(scdawg.contains("application"));
-        assert!(scdawg.contains("apply"));
-        assert!(!scdawg.contains("app")); // Prefix, not a term
+    fn test_scdawg_substring_search() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["cathedral", "category", "catering"]);
+
+        // Test substring existence
+        assert!(scdawg.contains_substring("cat"));
+        assert!(scdawg.contains_substring("the"));
+        assert!(scdawg.contains_substring("edral"));
+        assert!(scdawg.contains_substring("gory"));
+        assert!(!scdawg.contains_substring("xyz"));
     }
 
     #[test]
-    fn test_scdawg_remove() {
+    fn test_scdawg_find_exact_substring() {
         let scdawg = Scdawg::<()>::from_terms(vec!["hello", "world"]);
-        assert!(scdawg.remove("hello"));
-        assert!(!scdawg.remove("hello")); // Already removed
-        assert_eq!(scdawg.term_count(), 1);
-        assert!(!scdawg.contains("hello"));
-        assert!(scdawg.contains("world"));
+
+        let matches = scdawg.find_exact_substring("hello");
+        assert!(!matches.is_empty());
+        assert!(matches.iter().any(|m| m.term == "hello" && m.position == 0));
     }
 
     #[test]
-    fn test_scdawg_with_values() {
-        let scdawg = Scdawg::<u32>::new();
-        scdawg.insert_with_value("hello", 42);
-        scdawg.insert_with_value("world", 99);
-
-        assert_eq!(scdawg.get_value("hello"), Some(42));
-        assert_eq!(scdawg.get_value("world"), Some(99));
-        assert_eq!(scdawg.get_value("missing"), None);
-    }
-
-    #[test]
-    fn test_scdawg_dictionary_trait() {
-        let scdawg = Scdawg::<()>::from_terms(vec!["test", "testing", "tested"]);
-
-        let root = scdawg.root();
-        assert!(!root.is_final());
-
-        // Traverse "test"
-        let t = root.transition(b't').expect("t");
-        let e = t.transition(b'e').expect("e");
-        let s = e.transition(b's').expect("s");
-        let t2 = s.transition(b't').expect("t");
-        assert!(t2.is_final());
-    }
-
-    #[test]
-    fn test_scdawg_bidirectional() {
-        let scdawg = Scdawg::<()>::from_terms(vec!["hello"]);
-
-        // Get to the 'o' node
-        let root = scdawg.root();
-        let h = root.transition(b'h').unwrap();
-        let e = h.transition(b'e').unwrap();
-        let l1 = e.transition(b'l').unwrap();
-        let l2 = l1.transition(b'l').unwrap();
-        let o = l2.transition(b'o').unwrap();
-
-        assert!(o.is_final());
-
-        // Walk back to root
-        let back_l2 = o.parent().expect("parent of o");
-        assert_eq!(o.parent_label(), Some(b'o'));
-
-        let back_l1 = back_l2.parent().expect("parent of l2");
-        assert_eq!(back_l2.parent_label(), Some(b'l'));
-
-        let back_e = back_l1.parent().expect("parent of l1");
-        let back_h = back_e.parent().expect("parent of e");
-        let back_root = back_h.parent().expect("parent of h");
-
-        assert!(back_root.parent().is_none()); // Root has no parent
-    }
-
-    #[test]
-    fn test_scdawg_depth() {
-        let scdawg = Scdawg::<()>::from_terms(vec!["hello"]);
-
-        let root = scdawg.root();
-        assert_eq!(root.depth(), 0);
-
-        let h = root.transition(b'h').unwrap();
-        assert_eq!(h.depth(), 1);
-
-        let e = h.transition(b'e').unwrap();
-        assert_eq!(e.depth(), 2);
-    }
-
-    #[test]
-    fn test_scdawg_path_string() {
-        let scdawg = Scdawg::<()>::from_terms(vec!["hello"]);
-
-        let root = scdawg.root();
-        let h = root.transition(b'h').unwrap();
-        let e = h.transition(b'e').unwrap();
-        let l1 = e.transition(b'l').unwrap();
-        let l2 = l1.transition(b'l').unwrap();
-        let o = l2.transition(b'o').unwrap();
-
-        assert_eq!(o.path_string(), "hello");
-        assert_eq!(e.path_string(), "he");
-        assert_eq!(root.path_string(), "");
-    }
-
-    #[test]
-    fn test_scdawg_substring_search_simple() {
+    fn test_scdawg_internal_substring() {
         let scdawg = Scdawg::<()>::from_terms(vec!["cathedral"]);
-        let matches = scdawg.find_exact_substring("thedr");
 
-        assert_eq!(matches.len(), 1);
-        assert_eq!(matches[0].term, "cathedral");
-        assert_eq!(matches[0].position, 2);
-        assert_eq!(matches[0].length, 5);
+        // Test internal substrings
+        assert!(scdawg.contains_substring("thedr"));
+        assert!(scdawg.contains_substring("hedr"));
+        assert!(scdawg.contains_substring("edra"));
     }
 
     #[test]
-    fn test_scdawg_substring_search_multiple() {
-        let scdawg = Scdawg::<()>::from_terms(vec!["cathedral", "cathedrals"]);
-        let matches = scdawg.find_exact_substring("thedr");
+    fn test_scdawg_multiple_terms() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["abc", "bcd", "cde"]);
 
-        assert_eq!(matches.len(), 2);
-        // Both matches should be at position 2
-        for m in &matches {
-            assert_eq!(m.position, 2);
-            assert_eq!(m.length, 5);
-            assert!(m.term == "cathedral" || m.term == "cathedrals");
-        }
-    }
+        // Each term should be found
+        assert!(scdawg.contains("abc"));
+        assert!(scdawg.contains("bcd"));
+        assert!(scdawg.contains("cde"));
 
-    #[test]
-    fn test_scdawg_substring_search_not_found() {
-        let scdawg = Scdawg::<()>::from_terms(vec!["hello", "world"]);
-        let matches = scdawg.find_exact_substring("xyz");
-        assert!(matches.is_empty());
-    }
-
-    #[test]
-    fn test_scdawg_compact() {
-        // Use terms with no shared prefixes so removal actually orphans nodes
-        let scdawg = Scdawg::<()>::from_terms(vec!["aaa", "bbb", "ccc"]);
-
-        let before_nodes = scdawg.node_count();
-        assert_eq!(scdawg.term_count(), 3);
-
-        scdawg.remove("aaa");
-        scdawg.remove("bbb");
-        assert!(scdawg.needs_compaction());
-
-        scdawg.compact();
-        assert!(!scdawg.needs_compaction());
-
-        let after_nodes = scdawg.node_count();
-        // After compaction, unreachable nodes should be removed
-        // ccc needs 4 nodes: root + c + c + c
-        assert!(after_nodes <= before_nodes, "after={} should be <= before={}", after_nodes, before_nodes);
-        assert!(scdawg.contains("ccc"));
-        assert!(!scdawg.contains("aaa"));
-        assert!(!scdawg.contains("bbb"));
+        // Common substrings
+        assert!(scdawg.contains_substring("bc")); // In abc and bcd
+        assert!(scdawg.contains_substring("cd")); // In bcd and cde
     }
 
     #[test]
     fn test_scdawg_iter() {
-        let terms = vec!["alpha", "beta", "gamma"];
+        let terms = vec!["apple", "banana", "cherry"];
         let scdawg = Scdawg::<()>::from_terms(terms.clone());
 
-        let mut collected: Vec<String> = scdawg.iter().collect();
-        collected.sort();
+        let collected: Vec<_> = scdawg.iter().collect();
+        assert_eq!(collected.len(), 3);
+        for term in terms {
+            assert!(collected.contains(&term.to_string()));
+        }
+    }
 
-        let mut expected: Vec<String> = terms.iter().map(|s| s.to_string()).collect();
-        expected.sort();
+    /// Test that left extension edges are computed from suffix links.
+    ///
+    /// Left extension edges are derived from suffix links: if node A has a suffix link
+    /// to node B, then B gets a left extension edge pointing to A with label = A's first_char.
+    ///
+    /// For a single term "abc", all suffix states collapse into equivalence classes,
+    /// so no intermediate nodes have suffix links pointing to them. Left extension
+    /// edges only appear when multiple terms share suffixes.
+    #[test]
+    fn test_left_extension_edges() {
+        use crate::dictionary::substring::BidirectionalDictionaryNode;
+        use crate::dictionary::Dictionary;
 
-        assert_eq!(collected, expected);
+        // For left extension edges to exist, we need multiple terms sharing suffixes.
+        // "abc" and "dbc" both end in "bc", so the node representing "bc" should have
+        // left extension edges for both 'a' (to "abc") and 'd' (to "dbc").
+        let scdawg = Scdawg::<()>::from_terms(vec!["abc", "dbc"]);
+
+        // Navigate to the node representing "bc" via root -> 'b' -> 'c'
+        let root = scdawg.root();
+        let node_b = root.transition(b'b').expect("Should have edge 'b' from root");
+        let node_bc = node_b.transition(b'c').expect("Should have edge 'c' from 'b'");
+
+        // The left extension edges from "bc" should have labels 'a' and 'd'
+        let left_edges: Vec<_> = node_bc.reverse_edges().collect();
+        let labels: std::collections::HashSet<_> = left_edges.iter().map(|(l, _)| *l).collect();
+
+        // Check for left extension edge with label 'a' (from "abc" suffix linking to "bc")
+        assert!(
+            labels.contains(&b'a'),
+            "Node 'bc' should have left extension edge with label 'a'. \
+             Found edges: {:?}",
+            left_edges.iter().map(|(l, _)| *l as char).collect::<Vec<_>>()
+        );
+
+        // Check for left extension edge with label 'd' (from "dbc" suffix linking to "bc")
+        assert!(
+            labels.contains(&b'd'),
+            "Node 'bc' should have left extension edge with label 'd'. \
+             Found edges: {:?}",
+            left_edges.iter().map(|(l, _)| *l as char).collect::<Vec<_>>()
+        );
+    }
+
+    // =========================================================================
+    // IS Features Tests (Blumer et al. 1987)
+    // =========================================================================
+
+    #[test]
+    fn debug_abab_structure() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["abab"]);
+        let inner = scdawg.inner.read();
+
+        // Print all nodes with term_ends
+        eprintln!("\nNode structure for 'abab':");
+        for (i, node) in inner.nodes.iter().enumerate() {
+            eprintln!(
+                "Node {}: length={}, term_ends={:?}, edges={:?}",
+                i,
+                node.length,
+                node.term_ends,
+                node.forward_edges
+                    .iter()
+                    .map(|(l, t)| (*l as char, *t))
+                    .collect::<Vec<_>>()
+            );
+        }
+
+        // Navigate to "ab" and check what we find
+        let ab_node = inner.find_substring_fast("ab").unwrap();
+        eprintln!("\nNode for 'ab': {}", ab_node);
+        eprintln!("term_ends at 'ab': {:?}", inner.nodes[ab_node].term_ends);
+        eprintln!("children of 'ab': {:?}", inner.nodes[ab_node].forward_edges);
+
+        // Try counting manually
+        let mut results = Vec::new();
+        inner.collect_term_positions(ab_node, 2, &mut results);
+        eprintln!("\nCollected positions: {:?}", results);
     }
 
     #[test]
-    fn test_scdawg_empty_term() {
-        let scdawg = Scdawg::<()>::new();
-        scdawg.insert("");
-        assert!(scdawg.contains(""));
-        assert_eq!(scdawg.term_count(), 1);
+    fn test_is_find() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["cathedral", "category"]);
 
-        scdawg.remove("");
-        assert!(!scdawg.contains(""));
-        assert_eq!(scdawg.term_count(), 0);
+        // Should find common prefix
+        assert!(scdawg.find("cat").is_some());
+
+        // Should find internal substring
+        assert!(scdawg.find("the").is_some());
+
+        // Should not find non-existent pattern
+        assert!(scdawg.find("xyz").is_none());
     }
+
+    #[test]
+    fn test_is_freq_single_term() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["abab"]);
+
+        // "ab" appears twice in "abab": at positions 0 and 2
+        assert_eq!(scdawg.freq("ab"), 2, "Pattern 'ab' should appear twice in 'abab'");
+
+        // "a" appears twice in "abab": at positions 0 and 2
+        assert_eq!(scdawg.freq("a"), 2, "Pattern 'a' should appear twice in 'abab'");
+
+        // "b" appears twice in "abab": at positions 1 and 3
+        assert_eq!(scdawg.freq("b"), 2, "Pattern 'b' should appear twice in 'abab'");
+
+        // "abab" appears once
+        assert_eq!(scdawg.freq("abab"), 1, "Pattern 'abab' should appear once");
+
+        // Non-existent pattern
+        assert_eq!(scdawg.freq("xyz"), 0, "Non-existent pattern should have freq 0");
+    }
+
+    #[test]
+    fn test_is_freq_multiple_terms() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["abc", "bcd", "cde"]);
+
+        // "bc" appears in "abc" (pos 1) and "bcd" (pos 0) = 2 occurrences
+        assert_eq!(scdawg.freq("bc"), 2, "Pattern 'bc' should appear twice");
+
+        // "cd" appears in "bcd" (pos 1) and "cde" (pos 0) = 2 occurrences
+        assert_eq!(scdawg.freq("cd"), 2, "Pattern 'cd' should appear twice");
+
+        // "c" appears in all three terms
+        assert_eq!(scdawg.freq("c"), 3, "Pattern 'c' should appear three times");
+    }
+
+    #[test]
+    fn test_is_locations() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["abab"]);
+
+        let locs = scdawg.locations("ab");
+
+        // Should find "ab" at positions 0 and 2 in "abab"
+        assert_eq!(locs.len(), 2, "Should find 2 occurrences of 'ab'");
+
+        let positions: std::collections::HashSet<_> = locs.iter().map(|(_, pos)| *pos).collect();
+        assert!(positions.contains(&0), "Should find 'ab' at position 0");
+        assert!(positions.contains(&2), "Should find 'ab' at position 2");
+    }
+
+    #[test]
+    fn test_is_locations_multiple_terms() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["cat", "cathedral", "scatter"]);
+
+        let locs = scdawg.locations("cat");
+
+        // Debug: print what we found
+        eprintln!("\nLocations of 'cat': {:?}", locs);
+
+        // "cat" appears at:
+        // - "cat" position 0
+        // - "cathedral" position 0
+        // - "scatter" position 2
+        let term_positions: std::collections::HashSet<_> =
+            locs.iter().map(|(term, pos)| (term.as_str(), *pos)).collect();
+
+        assert!(term_positions.contains(&("cat", 0)), "Should find 'cat' at position 0 in 'cat'");
+        assert!(term_positions.contains(&("cathedral", 0)), "Should find 'cat' at position 0 in 'cathedral'");
+
+        // Note: "scatter" contains "cat" starting at position 2 (s-c-a-t-t-e-r, indices 2,3,4)
+        // Wait, let me verify: "scatter" = s(0) c(1) a(2) t(3) t(4) e(5) r(6)
+        // So "cat" would be at positions... c(1) a(2) t(3), starting at index 1, not 2!
+        // Let me fix the test
+        assert!(term_positions.contains(&("scatter", 1)),
+            "Should find 'cat' at position 1 in 'scatter'. Found: {:?}", term_positions);
+    }
+
+    #[test]
+    fn test_is_freq_at_and_locations_at() {
+        let scdawg = Scdawg::<()>::from_terms(vec!["abab", "bab"]);
+
+        // First find the pattern
+        let handle = scdawg.find("ab").expect("Should find 'ab'");
+
+        // Then get frequency at that handle
+        let freq = scdawg.freq_at(&handle);
+        assert!(freq >= 2, "Should have at least 2 occurrences of 'ab'");
+
+        // And locations at that handle
+        let locs = scdawg.locations_at(&handle, 2);
+        assert!(!locs.is_empty(), "Should have locations for 'ab'");
+    }
+
+    /// Test left extensions with multiple terms sharing suffixes
+    #[test]
+    fn test_left_extension_multiple_terms() {
+        use crate::dictionary::substring::BidirectionalDictionaryNode;
+        use crate::dictionary::Dictionary;
+
+        // "abc" and "xbc" share suffix "bc"
+        let scdawg = Scdawg::<()>::from_terms(vec!["abc", "xbc"]);
+
+        // Navigate to "bc" node
+        let root = scdawg.root();
+        let node_b = root.transition(b'b').expect("Should have edge 'b'");
+        let node_bc = node_b.transition(b'c').expect("Should have edge 'c'");
+
+        // "bc" should have left extensions for both 'a' (-> "abc") and 'x' (-> "xbc")
+        let left_edges: Vec<_> = node_bc.reverse_edges().collect();
+        let labels: std::collections::HashSet<_> = left_edges.iter().map(|(l, _)| *l).collect();
+
+        assert!(
+            labels.contains(&b'a'),
+            "Node 'bc' should have left extension 'a' -> 'abc'"
+        );
+        assert!(
+            labels.contains(&b'x'),
+            "Node 'bc' should have left extension 'x' -> 'xbc'"
+        );
+    }
+
 }

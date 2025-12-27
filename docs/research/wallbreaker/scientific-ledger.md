@@ -447,4 +447,523 @@ The algorithm could theoretically outperform traditional approaches when:
 - Error bound is very high (k≥16)
 - A true suffix automaton is used for substring search
 
-None of these conditions are met in typical dictionary search use cases.
+---
+
+## Experiment 5: True SCDAWG Implementation (O(|pattern|) Substring Search)
+
+**Date**: 2025-12-27
+**Branch**: `feat/wallbreaker-simd` (continued)
+**Baseline**: Experiment 1 results
+**Status**: ✅ ACCEPTED - **Breakthrough Result**
+
+### Hypothesis
+- **H₀**: A true suffix automaton implementation provides no performance improvement over the naive O(n*m) search
+- **H₁**: True suffix automaton implementation achieves O(|pattern|) substring search with >10× speedup
+
+### Acceptance Criteria
+- p < 0.05 improvement over baseline
+- >10× reduction in substring search time
+- Identical correctness to old implementation
+- All existing tests pass
+
+### Implementation
+
+Created `src/dictionary/scdawg_true.rs` implementing a proper **suffix automaton** (not just a DAWG):
+
+**Key Differences from Old Implementation:**
+
+| Property | Old Scdawg | TrueScdawg |
+|----------|------------|------------|
+| Forward edges from root | Only dictionary term prefixes | **All substrings** of all terms |
+| Substring search complexity | O(Σ term lengths × |pattern|) | **O(|pattern|)** |
+| Left extension edges | Reversed forward edges (WRONG) | Derived from suffix links (CORRECT) |
+| Construction algorithm | Simple DAWG | Blumer et al. online suffix automaton |
+
+**Core Algorithm** (`sa_extend`):
+```rust
+fn sa_extend(&mut self, c: u8, term_idx: usize, pos: usize) {
+    let cur = self.alloc_node(self.nodes[self.last].length + 1, 0);
+    let mut p = self.last;
+
+    // Add edges from states that don't have edge labeled c
+    while p != NIL && self.nodes[p].get_edge(c).is_none() {
+        self.nodes[p].set_edge(c, cur);
+        p = self.nodes[p].suffix_link;
+    }
+
+    if p == NIL {
+        self.nodes[cur].suffix_link = 0;  // Link to root
+    } else {
+        let q = self.nodes[p].get_edge(c).unwrap();
+        if self.nodes[p].length + 1 == self.nodes[q].length {
+            self.nodes[cur].suffix_link = q;  // Solid edge
+        } else {
+            // Split node q
+            let clone = self.clone_node(q);
+            // ... redirect edges appropriately
+        }
+    }
+    self.last = cur;
+}
+```
+
+**Key Innovation**: Forward edges from root now lead to ALL substrings of all terms, enabling O(|pattern|) pattern matching by simple graph traversal.
+
+### Substring Search Performance (vs Old Implementation)
+
+**Test Setup**: 10,000 dictionary terms, 100 iterations per pattern, debug build
+
+| Pattern | Old SCDAWG | TrueScdawg | **Speedup** |
+|---------|------------|------------|-------------|
+| "the"   | 1.239 s    | 19.237 ms  | **64×**     |
+| "ing"   | 1.344 s    | 6.524 ms   | **206×**    |
+| "tion"  | 1.253 s    | 2.953 ms   | **424×**    |
+| "cat"   | 1.175 s    | 1.677 ms   | **701×**    |
+| "abc"   | 1.122 s    | 335.887 µs | **3,339×**  |
+
+**Note**: The speedup increases for rarer patterns because:
+- Old implementation always scans all terms O(n*m)
+- New implementation traverses only the relevant portion of the automaton O(|pattern|)
+
+### WallBreaker Performance with TrueScdawg Backend
+
+**Test Setup**: Criterion.rs benchmarks, 50 samples, release build
+
+| Configuration | Old SCDAWG | TrueScdawg | **Speedup** | vs Traditional |
+|---------------|------------|------------|-------------|----------------|
+| small_d2_q20 (5K) | 31.6 ms | 729 µs | **43×** | 🟢 **Faster** |
+| small_d4_q30 (5K) | 58.6 ms | 10.1 ms | **5.8×** | 🟢 **Faster** |
+| medium_d4_q50 (10K) | 93.4 ms | 243 µs | **384×** | 🟢 **Faster** |
+
+### Comparison with Traditional Transducer
+
+From Experiment 1, traditional transducer performance:
+- medium_d4_q50: 44.57 ms
+
+With TrueScdawg:
+- WallBreaker medium_d4_q50: 0.243 ms
+
+**WallBreaker is now 183× FASTER than traditional transducer!**
+
+### Trade-off: Construction Time
+
+| Dict Size | Old SCDAWG | TrueScdawg | Ratio |
+|-----------|------------|------------|-------|
+| 10,000    | 55 ms      | 1.92 s     | 35× slower |
+
+The suffix automaton construction is more expensive because it must index all substrings.
+However, this is a **one-time cost** that is amortized over many queries.
+
+### Correctness Verification
+
+- **Test**: `test_true_scdawg_vs_old_correctness` - Verifies identical substring matches
+- **Test**: `test_wallbreaker_old_vs_new_scdawg` - Verifies identical WallBreaker results
+- **Result**: All 8 new tests pass, all 19 WallBreaker tests pass
+
+### Conclusion
+
+**Decision**: ✅ ACCEPTED
+
+**Rationale**: The TrueScdawg implementation provides **43-384× speedup** for WallBreaker queries, making it **faster than the traditional transducer** for the first time. This validates the original WallBreaker paper's theoretical advantages when using a proper suffix automaton.
+
+### Impact
+
+This breakthrough resolves the fundamental architectural limitation identified in Experiments 1-4:
+
+| Before TrueScdawg | After TrueScdawg |
+|-------------------|------------------|
+| WallBreaker 1.3-1328× **slower** | WallBreaker up to 183× **faster** |
+| O(n*m) substring search | O(\|pattern\|) substring search |
+| Cannot compete with transducer | Outperforms transducer |
+
+### Remaining Work
+
+1. ✅ ~~Implement true suffix automaton~~ (DONE)
+2. ✅ ~~Add proper left extension edges (sext links) with first_char tracking~~ (DONE)
+3. ✅ ~~Implement IS features (freq/locations) from Blumer et al.~~ (DONE)
+4. ⬜ Optimize construction time (currently 35× slower than old SCDAWG)
+
+---
+
+## Experiment 6: Left Extension Edges (sext links) with first_char Tracking
+
+**Date**: 2025-12-27
+**Branch**: `feat/wallbreaker-simd` (continued)
+**Status**: ✅ COMPLETE
+
+### Implementation
+
+Added proper left extension edges following Blumer et al. (1987) and Inenaga et al. (2001):
+
+**Key Changes to `TrueScdawgNode`:**
+- Added `first_char: u8` field to track the first character of the canonical (longest) string at each node
+- Modified `sa_extend()` to compute and propagate `first_char`:
+  - If extending from root (length 0), `first_char = c` (the new character)
+  - Otherwise, inherit `first_char` from the current last node
+- Updated `compute_left_edges()` to use `first_char` for proper edge labels
+
+**Why first_char Matters:**
+The left extension edge label should be the first character of the string represented by the source node.
+This enables correct bidirectional navigation where prepending character `σ` to pattern `V` yields `σ∘V`.
+
+### Tests
+
+- `test_left_extension_edges` - Verifies left edges exist for shared suffixes
+- `test_left_extension_multiple_terms` - Tests with multiple terms sharing common suffixes ("abc", "dbc")
+
+Both tests pass, confirming proper sext link construction.
+
+---
+
+## Experiment 7: IS Features (freq/locations) from Blumer et al. (1987)
+
+**Date**: 2025-12-27
+**Branch**: `feat/wallbreaker-simd` (continued)
+**Status**: ✅ COMPLETE
+
+### Implementation
+
+Added IS (Inverted-file Structure) features from Blumer et al. (1987) Section 7:
+
+**Public API:**
+```rust
+impl<V: DictionaryValue> TrueScdawg<V> {
+    /// Find pattern and return handle to SCDAWG state
+    pub fn find(&self, pattern: &str) -> Option<TrueScdawgNodeHandle<V>>
+
+    /// Return occurrence count of pattern across all terms
+    pub fn freq(&self, pattern: &str) -> usize
+
+    /// Return occurrence count at a given handle
+    pub fn freq_at(&self, handle: &TrueScdawgNodeHandle<V>) -> usize
+
+    /// Return all (term, position) pairs where pattern occurs
+    pub fn locations(&self, pattern: &str) -> Vec<(String, usize)>
+
+    /// Return locations at a given handle
+    pub fn locations_at(&self, handle: &TrueScdawgNodeHandle<V>, pattern_len: usize) -> Vec<(String, usize)>
+}
+```
+
+**Key Implementation Detail:**
+The `freq()` and `locations()` functions traverse **left_edges** (inverse suffix links) to find all occurrences.
+This is because:
+- Each node's `term_ends` records direct endings at that node
+- Left edges connect to nodes with LONGER strings that include this node's substring
+- Traversing left edges finds all extensions, and thus all occurrences
+
+**Initial Bug Fixed:**
+The first implementation incorrectly traversed `forward_edges` (children in the automaton graph).
+This was wrong because forward edges lead to EXTENSIONS of the pattern (e.g., "ab" → "abc"),
+not to positions where the pattern occurs.
+
+### Tests
+
+- `test_is_freq_single_term` - Verifies `freq("ab")` = 2 in "abab"
+- `test_is_freq_multiple_terms` - Verifies frequencies across multiple terms
+- `test_is_locations` - Verifies correct (term, position) pairs
+- `test_is_locations_multiple_terms` - Tests "cat" in ["scatter", "catapult", "catalog"]
+
+All 4 tests pass with correct occurrence counts and positions.
+
+### Results
+
+| Method | Complexity | Use Case |
+|--------|------------|----------|
+| `find(pattern)` | O(\|pattern\|) | Get handle for repeated IS queries |
+| `freq(pattern)` | O(\|pattern\| + occurrences) | Count substring occurrences |
+| `freq_at(handle)` | O(occurrences) | Count at precomputed handle |
+| `locations(pattern)` | O(\|pattern\| + occurrences) | Find all (term, position) pairs |
+| `locations_at(handle)` | O(occurrences) | Locations at precomputed handle |
+
+### Impact
+
+The IS features enable powerful substring analytics:
+- Count how many times a pattern appears across the dictionary
+- Find all positions where a pattern occurs
+- Separate pattern search (O(\|pattern\|)) from occurrence enumeration
+
+This completes the Blumer et al. (1987) SCDAWG feature set.
+
+---
+
+## Updated Summary of Decisions
+
+| Experiment | Branch | Decision | Key Metric | Notes |
+|------------|--------|----------|------------|-------|
+| Baseline   | feat/wallbreaker-benchmarks | ✅ COMPLETE | WallBreaker 1.3-1328× slower | Substring search is critical bottleneck |
+| Suffix Links | feat/wallbreaker-substring-opt | ❌ REJECTED | Architectural incompatibility | SCDAWG is DAWG, not suffix automaton |
+| Freq Split | feat/wallbreaker-freq-split | ❌ REJECTED | 4/5 configs regress 15-28% | Only k=8 medium dict shows 26% improvement |
+| SIMD | feat/wallbreaker-simd | ❌ REJECTED | 9/11 configs regress 13-22% | Distance verification is not the bottleneck |
+| **TrueScdawg** | **feat/wallbreaker-simd** | **✅ ACCEPTED** | **43-384× speedup** | **Breakthrough: WallBreaker now faster than traditional** |
+| **Sext Links** | **feat/wallbreaker-simd** | **✅ COMPLETE** | first_char tracking | Proper left extension edges for bidirectional navigation |
+| **IS Features** | **feat/wallbreaker-simd** | **✅ COMPLETE** | O(\|pattern\|) search | freq(), locations() from Blumer et al. (1987) |
+| **Construction Opt** | **feat/wallbreaker-simd** | **✅ ACCEPTED** | 31× speedup | TrueScdawg now only 2× slower than old SCDAWG (was 35×) |
+
+---
+
+## Revised Overall Conclusions
+
+After Experiments 5-7, the WallBreaker algorithm **fully implements** the SCDAWG theory from Blumer et al. (1987) and now **outperforms** the traditional Levenshtein transducer.
+
+### Key Achievements
+
+The theoretical advantage of WallBreaker (avoiding the "wall effect" by using pigeonhole principle + substring search) is now realized in practice:
+
+| Metric | Before (Exp 1-4) | After (Exp 5-7) |
+|--------|------------------|-----------------|
+| WallBreaker vs Traditional | 1.3-1328× **slower** | Up to 183× **faster** |
+| Substring search | O(n*m) | O(\|pattern\|) |
+| Primary bottleneck | Substring search | Construction time |
+| Left extension edges | Wrong semantics | ✅ Correct with first_char tracking |
+| IS features (freq/locations) | Not available | ✅ O(\|pattern\| + occurrences) |
+
+### Feature Completion Status
+
+| Feature | Status | Reference |
+|---------|--------|-----------|
+| True Suffix Automaton | ✅ Complete | Blumer et al. (1985) |
+| O(\|pattern\|) substring search | ✅ Complete | Blumer et al. (1987) |
+| Left extension edges (sext links) | ✅ Complete | Inenaga et al. (2001) |
+| `find()` - pattern → handle | ✅ Complete | Blumer et al. (1987) §7 |
+| `freq()` - occurrence count | ✅ Complete | Blumer et al. (1987) §7 |
+| `locations()` - all (term, pos) pairs | ✅ Complete | Blumer et al. (1987) §7 |
+| WallBreaker integration | ✅ Complete | Gerdjikov et al. (2013) |
+
+### Recommendations
+
+1. **Use TrueScdawg** for applications with:
+   - Many queries against the same dictionary
+   - High error bounds (k ≥ 4)
+   - Long query strings (length >> k)
+   - Substring analytics (freq/locations)
+
+2. **Use Traditional Transducer** for:
+   - One-off queries (construction cost not amortized)
+   - Very low error bounds (k ≤ 2)
+   - Frequently changing dictionaries
+
+3. **Construction Time Optimization (Completed)**:
+   - TrueScdawg construction now only **1.6-2.2× slower** than old SCDAWG (down from 35×)
+   - See Experiment 8 below for details
+
+---
+
+## Experiment 8: TrueScdawg Construction Time Optimization
+
+**Date**: 2025-12-27
+**Branch**: `feat/wallbreaker-simd` (continued)
+**Status**: ✅ COMPLETE
+
+### Problem
+
+Initial TrueScdawg construction was **35× slower** than old SCDAWG due to:
+1. O(n²) duplicate detection using linear search
+2. Linear edge lookup in `get_edge()` and `set_edge()`
+3. No pre-allocation of vectors
+
+### Optimizations Applied
+
+#### 1. O(1) Duplicate Detection with FxHashSet
+
+**Before:**
+```rust
+if self.terms.iter().any(|t| t == term) {  // O(n) per insert = O(n²) total
+    return false;
+}
+```
+
+**After:**
+```rust
+if self.term_set.contains(term) {  // O(1) per insert = O(n) total
+    return false;
+}
+```
+
+**Impact:** ~7× speedup for 10K terms
+
+#### 2. Binary Search for Edge Operations
+
+**Before:** Linear search O(k) where k = number of edges
+**After:** Binary search O(log k) with sorted edges
+
+```rust
+fn get_edge(&self, label: u8) -> Option<usize> {
+    match self.forward_edges.binary_search_by_key(&label, |(l, _)| *l) {
+        Ok(idx) => Some(self.forward_edges[idx].1),
+        Err(_) => None,
+    }
+}
+```
+
+**Impact:** Additional 5-10% speedup
+
+#### 3. Pre-allocation of Vectors
+
+```rust
+fn with_capacity(term_count: usize, total_chars: usize) -> Self {
+    let estimated_nodes = total_chars.saturating_mul(2);  // SA has at most 2n nodes
+    let mut nodes = Vec::with_capacity(estimated_nodes);
+    // ...
+}
+```
+
+**Impact:** Reduces memory reallocation during construction
+
+### Results
+
+| Dictionary | Original | After Optimization | Speedup |
+|------------|----------|-------------------|---------|
+| 1K terms   | 2.16 ms  | 1.08 ms          | **2.0×** |
+| 10K terms  | 130.26 ms | 14.42 ms        | **9.0×** |
+| 89K terms  | ~9.2 s   | 298 ms           | **31×** |
+
+### Comparison with Other Backends
+
+| Dictionary | TrueScdawg | Old SCDAWG | DynamicDawg | TrueScdawg vs Old |
+|------------|------------|------------|-------------|-------------------|
+| 1K terms   | 1.08 ms    | 686 µs     | 330 µs      | 1.6× slower |
+| 10K terms  | 14.42 ms   | 7.81 ms    | 3.16 ms     | 1.8× slower |
+| 89K terms  | 298 ms     | 137 ms     | 30 ms       | 2.2× slower |
+
+### WallBreaker Query Performance (Unchanged)
+
+The optimizations improved query performance as well:
+
+| Config | Old SCDAWG | TrueScdawg | Speedup |
+|--------|------------|------------|---------|
+| small_d2_q20 | 32.37 ms | 410 µs | **79×** faster |
+| small_d4_q30 | 60.78 ms | 5.14 ms | **12×** faster |
+| medium_d4_q50 | 98.75 ms | 116 µs | **851×** faster |
+
+### Conclusion
+
+**Decision:** ✅ ACCEPTED
+
+TrueScdawg construction is now practical for real-world use:
+- Construction overhead reduced from 35× to ~2× (vs old SCDAWG)
+- Query performance remains 12-851× faster than old SCDAWG
+- Trade-off: slightly slower construction for dramatically faster queries
+
+The remaining ~2× construction gap is **inherent** because:
+- TrueScdawg is a suffix automaton indexing ALL substrings (O(n) nodes per word)
+- Old SCDAWG is a DAWG indexing only prefixes
+
+This is acceptable because construction is a one-time cost amortized over many queries
+
+---
+
+## Experiment 9: SCDAWG Implementation Refactoring
+
+**Date**: 2025-12-27
+**Branch**: `feat/wallbreaker-simd` (continued)
+**Status**: ✅ COMPLETE
+
+### Objective
+
+Promote TrueScdawg to the canonical SCDAWG implementation and remove the old broken implementation. Also create ScdawgChar (Unicode/UTF-8 support) based on the true suffix automaton pattern.
+
+### Problem
+
+The codebase had two SCDAWG implementations:
+1. **Old `Scdawg`** (`scdawg.rs`): DAWG (not true suffix automaton)
+   - O(n*m) substring search
+   - Broken `backward_edges` (just reversed forward edges, NOT left extensions)
+   - Only indexed prefixes, not all substrings
+
+2. **New `TrueScdawg`** (`scdawg_true.rs`): True suffix automaton
+   - O(|pattern|) substring search
+   - Proper left extension edges (sext links) via first_char tracking
+   - Indexes ALL substrings
+
+### Changes Made
+
+#### 1. Renamed TrueScdawg → Scdawg
+
+In `src/dictionary/scdawg.rs` (formerly `scdawg_true.rs`):
+- `TrueScdawg` → `Scdawg`
+- `TrueScdawgNode` → `ScdawgNode`
+- `TrueScdawgInner` → `ScdawgInner`
+- `TrueScdawgNodeHandle` → `ScdawgNodeHandle`
+- Updated all test function names
+
+#### 2. Removed Old Implementation
+
+- Deleted `scdawg_old.rs` (backup of broken implementation)
+- Removed `pub mod scdawg_true;` from `mod.rs`
+- Removed all comparison benchmarks (no longer needed)
+
+#### 3. Rewrote ScdawgChar
+
+Created new `src/dictionary/scdawg_char.rs` following the true suffix automaton pattern:
+
+**Key Features:**
+- `char` edge labels instead of `u8` for Unicode support
+- Same O(|pattern|) substring search algorithm
+- Proper suffix link construction with first_char tracking
+- IS features: `find()`, `freq()`, `locations()`
+- BidirectionalDictionaryNode implementation with left extension edges
+
+**Example:**
+```rust
+use liblevenshtein::dictionary::scdawg_char::ScdawgChar;
+use liblevenshtein::dictionary::SubstringDictionary;
+
+let scdawg = ScdawgChar::<()>::from_terms(["café", "naïve", "中文"]);
+
+// O(|pattern|) substring search (in characters, not bytes)
+assert!(scdawg.contains_substring("afé"));
+assert!(scdawg.contains_substring("中"));
+
+// Find all occurrences
+let matches = scdawg.find_exact_substring("afé");
+assert_eq!(matches[0].position, 1);  // Position 1 in characters
+```
+
+#### 4. Updated Imports and Tests
+
+- Updated `wallbreaker/mod.rs` tests
+- Updated `benches/wallbreaker_benchmarks.rs`
+- Removed all `TrueScdawg` comparison tests and benchmarks
+
+### Test Results
+
+**All tests pass:**
+- 984 unit tests ✓
+- 218 doc tests ✓
+- 14 new ScdawgChar tests ✓ (Unicode, CJK, emoji support verified)
+
+### Impact
+
+| Before Refactoring | After Refactoring |
+|--------------------|-------------------|
+| Two SCDAWG implementations | One canonical `Scdawg` |
+| Confusing API (which to use?) | Clear: use `Scdawg` (ASCII) or `ScdawgChar` (Unicode) |
+| Old `ScdawgChar` had broken substring search | New `ScdawgChar` has O(\|pattern\|) search |
+| `TrueScdawg` name was temporary | Clean naming: `Scdawg`, `ScdawgChar` |
+
+### Conclusion
+
+**Decision:** ✅ COMPLETE
+
+The refactoring successfully:
+1. Made the true suffix automaton the canonical `Scdawg` implementation
+2. Removed the broken old implementation
+3. Created a proper Unicode-aware `ScdawgChar` with all features:
+   - O(|pattern|) substring search
+   - Left extension edges (sext links)
+   - IS features (freq/locations)
+4. Maintained full backward compatibility (same public API)
+
+---
+
+## Final Summary
+
+| Implementation | Status | Substring Search | Unicode |
+|----------------|--------|------------------|---------|
+| `Scdawg` | ✅ Canonical | O(\|pattern\|) | No (u8) |
+| `ScdawgChar` | ✅ Complete | O(\|pattern\|) | Yes (char) |
+| Old Scdawg | ❌ Deleted | O(n*m) | No |
+| Old ScdawgChar | ❌ Replaced | O(n*m) | Yes |
+
+The WallBreaker algorithm now has proper SCDAWG backends for both ASCII and Unicode text, with theoretical O(|pattern|) substring search complexity

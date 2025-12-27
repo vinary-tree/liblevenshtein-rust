@@ -191,6 +191,8 @@ pub mod prelude {
     };
     #[cfg(feature = "pathmap-backend")]
     pub use crate::dictionary::pathmap::PathMapDictionary;
+    #[cfg(feature = "persistent-artrie")]
+    pub use crate::dictionary::persistent_artrie::{PersistentARTrie, PersistentARTrieZipper};
     pub use crate::dictionary::suffix_automaton::SuffixAutomaton;
     pub use crate::dictionary::{Dictionary, DictionaryNode, SyncStrategy};
     pub use crate::transducer::{

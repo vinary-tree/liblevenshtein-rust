@@ -200,4 +200,18 @@ mod tests {
         let results: Vec<_> = wb.query("cathedrel").collect();
         assert!(results.iter().any(|r| r.term == "cathedral"));
     }
+
+    #[test]
+    fn test_wallbreaker_multiple_terms() {
+        let terms = vec!["cathedral", "category", "catering", "catastrophe", "catalog"];
+        let dict = Scdawg::<()>::from_terms(terms);
+        let wb = WallBreaker::new(&dict, 2);
+
+        // Test various queries
+        let results: Vec<_> = wb.query("cathedrel").collect();
+        assert!(results.iter().any(|r| r.term == "cathedral"));
+
+        let results: Vec<_> = wb.query("caterng").collect();
+        assert!(results.iter().any(|r| r.term == "catering"));
+    }
 }

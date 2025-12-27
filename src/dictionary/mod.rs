@@ -153,6 +153,10 @@ pub mod pathmap;
 pub mod pathmap_char;
 #[cfg(feature = "pathmap-backend")]
 pub mod pathmap_zipper;
+#[cfg(feature = "persistent-artrie")]
+pub mod persistent_artrie;
+#[cfg(feature = "persistent-artrie")]
+pub mod persistent_artrie_char;
 #[cfg(feature = "phonetic-rules")]
 pub mod phonetic_normalized;
 pub mod prefix_zipper;
@@ -168,6 +172,10 @@ pub mod zipper;
 
 pub use char_unit::CharUnit;
 pub use iterator::{DictionaryIterator, DictionaryTermIterator};
+#[cfg(feature = "persistent-artrie")]
+pub use persistent_artrie::{PersistentARTrie, PersistentARTrieZipper};
+#[cfg(feature = "persistent-artrie")]
+pub use persistent_artrie_char::{PersistentARTrieChar, PersistentARTrieCharNode, PersistentARTrieCharZipper};
 pub use substring::{BidirectionalDictionaryNode, ExtensionResult, SubstringDictionary, SubstringMatch};
 pub use value::DictionaryValue;
 pub use zipper::{DictZipper, ValuedDictZipper};

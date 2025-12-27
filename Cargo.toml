@@ -73,6 +73,8 @@ quick-xml = { version = "0.37", optional = true }
 leptess = { version = "0.14", optional = true }
 # Unicode normalization for accent-insensitive matching and (?u:NFC) flag
 unicode-normalization = { version = "0.1", optional = true }
+# Memory-mapped I/O for persistent data structures
+memmap2 = { version = "0.9", optional = true }
 # SIMD optimization uses std::arch (no external dependencies needed)
 
 # WASM bindings (optional, for browser/Node.js targets)
@@ -396,6 +398,9 @@ eviction-opt-memory = ["eviction-compact-metadata"]
 # SIMD optimization with AVX2/SSE4.1 intrinsics (Phase 3)
 simd = []
 
+# Persistent Adaptive Radix Trie (disk-based dictionary)
+persistent-artrie = ["memmap2", "parking_lot"]
+
 # Grep compression support (gzip, zstd, xz, bzip2)
 grep-compression = ["flate2", "zstd", "xz2", "bzip2"]
 # Archive support for grep (tar, zip) - implies compression for .tar.gz etc.
@@ -486,3 +491,8 @@ harness = false
 [[bench]]
 name = "wallbreaker_benchmarks"
 harness = false
+
+[[bench]]
+name = "persistent_artrie_benchmarks"
+harness = false
+required-features = ["persistent-artrie"]
