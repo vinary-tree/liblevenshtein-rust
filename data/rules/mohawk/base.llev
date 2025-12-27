@@ -22,26 +22,18 @@
 // Rule IDs: 9000-9199
 
 @name "Mohawk Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Mohawk (Kanien'kéha)"
+
+// Version 1.0.1: Removed identity mappings (pattern == replacement)
+// Identity mappings are redundant - unmapped characters pass through unchanged
 
 // ============================================================
 // SHORT ORAL VOWELS (weight 0.05)
 // Only 4 vowel qualities - no /u/
+// Identity mappings removed: a->a, e->e, i->i, o->o (pass through unchanged)
 // ============================================================
-
-[id: 9000, name: "a short", weight: 0.05, group: mohawk_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 9001, name: "e short", weight: 0.05, group: mohawk_vowels, ipa: "/e/"]
-e -> e;
-
-[id: 9002, name: "i short", weight: 0.05, group: mohawk_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 9003, name: "o short", weight: 0.05, group: mohawk_vowels, ipa: "/o/"]
-o -> o;
 
 // ============================================================
 // LONG ORAL VOWELS (weight 0.05)
@@ -101,18 +93,10 @@ on -> õ / _[^aeiouáéíó];
 // ============================================================
 // STOPS (weight 0.05)
 // Note: NO labial stops (p, b) in Mohawk!
+// Identity mappings removed: t->t, k->k, d->d (pass through unchanged)
 // ============================================================
 
-[id: 9030, name: "t", weight: 0.05, group: mohawk_stops, ipa: "/t/"]
-t -> t;
-
-[id: 9031, name: "k", weight: 0.05, group: mohawk_stops, ipa: "/k/"]
-k -> k;
-
 // Voiced variants (allophonic)
-[id: 9032, name: "d voiced t", weight: 0.05, group: mohawk_stops, ipa: "/d/"]
-d -> d;
-
 [id: 9033, name: "g voiced k", weight: 0.05, group: mohawk_stops, ipa: "/ɡ/"]
 g -> ɡ;
 
@@ -129,42 +113,25 @@ g -> ɡ;
 
 // ============================================================
 // FRICATIVES (weight 0.05)
+// Identity mappings removed: s->s, h->h (pass through unchanged)
 // ============================================================
-
-[id: 9040, name: "s", weight: 0.05, group: mohawk_fricatives, ipa: "/s/"]
-s -> s;
 
 [id: 9041, name: "sh postalveolar", weight: 0.05, group: mohawk_fricatives, ipa: "/ʃ/"]
 sh -> ʃ;
 
-[id: 9042, name: "h", weight: 0.05, group: mohawk_fricatives, ipa: "/h/"]
-h -> h;
-
 // ============================================================
 // NASALS (weight 0.05)
 // Note: NO labial nasal (m) in native words!
+// Identity mappings removed: n->n, m->m (pass through unchanged)
 // ============================================================
-
-[id: 9045, name: "n", weight: 0.05, group: mohawk_nasals, ipa: "/n/"]
-n -> n;
-
-// m only in loanwords
-[id: 9046, name: "m loanword", weight: 0.05, group: mohawk_nasals, ipa: "/m/"]
-m -> m;
 
 // ============================================================
 // LIQUIDS AND APPROXIMANTS (weight 0.05)
+// Identity mappings removed: l->l, w->w (pass through unchanged)
 // ============================================================
 
 [id: 9050, name: "r", weight: 0.05, group: mohawk_liquids, ipa: "/ɹ/"]
 r -> ɹ;
-
-// Alternative: flap
-[id: 9051, name: "l", weight: 0.05, group: mohawk_liquids, ipa: "/l/"]
-l -> l;
-
-[id: 9052, name: "w", weight: 0.05, group: mohawk_approximants, ipa: "/w/"]
-w -> w;
 
 [id: 9053, name: "y", weight: 0.05, group: mohawk_approximants, ipa: "/j/"]
 y -> j;
@@ -182,6 +149,7 @@ j -> d͡ʒ;
 // ============================================================
 // CONSONANT CLUSTERS (weight 0.05)
 // Mohawk has complex clusters
+// Identity mappings removed: hs->hs, nt->nt, st->st, sk->sk (pass through unchanged)
 // ============================================================
 
 [id: 9060, name: "kw labialized", weight: 0.05, group: mohawk_clusters, ipa: "/kʷ/"]
@@ -193,9 +161,6 @@ ky -> kʲ;
 [id: 9062, name: "ty palatalized", weight: 0.05, group: mohawk_clusters, ipa: "/tʲ/"]
 ty -> tʲ;
 
-[id: 9063, name: "hs cluster", weight: 0.05, group: mohawk_clusters, ipa: "/hs/"]
-hs -> hs;
-
 [id: 9064, name: "kh aspirated", weight: 0.05, group: mohawk_clusters, ipa: "/kʰ/"]
 kh -> kʰ;
 
@@ -204,15 +169,6 @@ th -> tʰ;
 
 [id: 9066, name: "nk cluster", weight: 0.05, group: mohawk_clusters, ipa: "/ŋk/"]
 nk -> ŋk;
-
-[id: 9067, name: "nt cluster", weight: 0.05, group: mohawk_clusters, ipa: "/nt/"]
-nt -> nt;
-
-[id: 9068, name: "st cluster", weight: 0.05, group: mohawk_clusters, ipa: "/st/"]
-st -> st;
-
-[id: 9069, name: "sk cluster", weight: 0.05, group: mohawk_clusters, ipa: "/sk/"]
-sk -> sk;
 
 // ============================================================
 // COMMON WORDS

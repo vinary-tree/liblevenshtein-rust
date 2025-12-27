@@ -21,9 +21,14 @@
 // Rule IDs: 9200-9399
 
 @name "Tlingit Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Tlingit (Lingít)"
+
+// CHANGELOG v1.0.1:
+// - Removed identity mappings (rules where pattern equals replacement)
+// - Removed: t->t, k->k, l->l, s->s, x->x, h->h, n->n, m->m, w->w, tʼ->tʼ, kʼ->kʼ
+// - Kept: All actual transformations (ejectives with ', affricates, tone markers, etc.)
 
 // ============================================================
 // VOWELS - LOW TONE (unmarked) (weight 0.05)
@@ -89,12 +94,8 @@ oo -> uː˨;
 // PLAIN STOPS (weight 0.05)
 // No labial stops (no p, b)
 // ============================================================
-
-[id: 9230, name: "t plain", weight: 0.05, group: tlingit_stops, ipa: "/t/"]
-t -> t;
-
-[id: 9231, name: "k plain", weight: 0.05, group: tlingit_stops, ipa: "/k/"]
-k -> k;
+// NOTE: Plain t and k identity mappings removed (9230, 9231)
+// Only actual transformations remain
 
 [id: 9232, name: "kw labialized", weight: 0.05, group: tlingit_stops, ipa: "/kʷ/"]
 kw -> kʷ;
@@ -131,11 +132,8 @@ k' -> kʼ;
 kw' -> kʷʼ;
 
 // With modifier letter apostrophe
-[id: 9243, name: "tʼ ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/tʼ/"]
-tʼ -> tʼ;
-
-[id: 9244, name: "kʼ ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/kʼ/"]
-kʼ -> kʼ;
+// NOTE: Identity mappings tʼ->tʼ and kʼ->kʼ removed (9243, 9244)
+// These were redundant since the modifier letter apostrophe is already IPA
 
 [id: 9245, name: "kwʼ ejective labialized", weight: 0.02, group: tlingit_ejectives, ipa: "/kʷʼ/"]
 kwʼ -> kʷʼ;
@@ -165,8 +163,7 @@ tlʼ -> tɬʼ;
 [id: 9255, name: "l voiceless lateral fricative", weight: 0.05, group: tlingit_laterals, ipa: "/ɬ/"]
 ł -> ɬ;
 
-[id: 9256, name: "l voiced lateral", weight: 0.05, group: tlingit_laterals, ipa: "/l/"]
-l -> l;
+// NOTE: Identity mapping l->l removed (9256)
 
 // ============================================================
 // ALVEOLAR AFFRICATES (weight 0.05)
@@ -205,9 +202,7 @@ chʼ -> t͡ʃʼ;
 // ============================================================
 // FRICATIVES - ALVEOLAR (weight 0.05)
 // ============================================================
-
-[id: 9270, name: "s alveolar", weight: 0.05, group: tlingit_fricatives, ipa: "/s/"]
-s -> s;
+// NOTE: Identity mapping s->s removed (9270)
 
 // Ejective fricative
 [id: 9271, name: "s' ejective", weight: 0.02, group: tlingit_ejectives, ipa: "/sʼ/"]
@@ -223,9 +218,7 @@ sh -> ʃ;
 // ============================================================
 // FRICATIVES - VELAR (weight 0.05)
 // ============================================================
-
-[id: 9275, name: "x velar", weight: 0.05, group: tlingit_fricatives, ipa: "/x/"]
-x -> x;
+// NOTE: Identity mapping x->x removed (9275)
 
 [id: 9276, name: "xw velar labialized", weight: 0.05, group: tlingit_fricatives, ipa: "/xʷ/"]
 xw -> xʷ;
@@ -258,9 +251,7 @@ x̱w' -> χʷʼ;
 // ============================================================
 // GLOTTAL (weight 0.05)
 // ============================================================
-
-[id: 9285, name: "h glottal", weight: 0.05, group: tlingit_glottal, ipa: "/h/"]
-h -> h;
+// NOTE: Identity mapping h->h removed (9285)
 
 [id: 9286, name: "glottal stop", weight: 0.05, group: tlingit_glottal, ipa: "/ʔ/"]
 ' -> ʔ / [aeiouáéíú]_[aeiouáéíú];
@@ -268,20 +259,13 @@ h -> h;
 // ============================================================
 // NASALS (weight 0.05)
 // ============================================================
-
-[id: 9290, name: "n", weight: 0.05, group: tlingit_nasals, ipa: "/n/"]
-n -> n;
-
-// m only in some borrowed words
-[id: 9291, name: "m loanword", weight: 0.05, group: tlingit_nasals, ipa: "/m/"]
-m -> m;
+// NOTE: Identity mappings n->n and m->m removed (9290, 9291)
+// These phonemes don't require transformation in Tlingit
 
 // ============================================================
 // APPROXIMANTS (weight 0.05)
 // ============================================================
-
-[id: 9295, name: "w", weight: 0.05, group: tlingit_approximants, ipa: "/w/"]
-w -> w;
+// NOTE: Identity mapping w->w removed (9295)
 
 [id: 9296, name: "y", weight: 0.05, group: tlingit_approximants, ipa: "/j/"]
 y -> j;

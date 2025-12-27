@@ -21,9 +21,12 @@
 //   - ph, th, kh for aspirated stops
 //
 // Rule IDs: 12700-12799
+//
+// Note: Identity mappings (pattern == replacement) have been removed.
+// Only actual phonetic transformations are included.
 
 @name "Xhosa Phonetic Rules"
-@version "1.0.0"
+@version "1.1.0"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Xhosa"
 
@@ -31,20 +34,11 @@
 // VOWELS (weight 0.05)
 // ============================================================
 
-[id: 12700, name: "a", weight: 0.05, group: xhosa_vowels, ipa: "/a/"]
-a -> a;
-
 [id: 12701, name: "e", weight: 0.05, group: xhosa_vowels, ipa: "/ɛ/"]
 e -> ɛ;
 
-[id: 12702, name: "i", weight: 0.05, group: xhosa_vowels, ipa: "/i/"]
-i -> i;
-
 [id: 12703, name: "o", weight: 0.05, group: xhosa_vowels, ipa: "/ɔ/"]
 o -> ɔ;
-
-[id: 12704, name: "u", weight: 0.05, group: xhosa_vowels, ipa: "/u/"]
-u -> u;
 
 // ============================================================
 // CLICK CONSONANTS (weight 0.02)
@@ -159,20 +153,8 @@ nj -> ⁿd͡ʒ;
 // PLAIN STOPS (weight 0.05)
 // ============================================================
 
-[id: 12749, name: "p", weight: 0.05, group: xhosa_stops, ipa: "/p/"]
-p -> p;
-
 [id: 12750, name: "b implosive", weight: 0.05, group: xhosa_stops, ipa: "/ɓ/"]
 b -> ɓ;
-
-[id: 12751, name: "t", weight: 0.05, group: xhosa_stops, ipa: "/t/"]
-t -> t;
-
-[id: 12752, name: "d", weight: 0.05, group: xhosa_stops, ipa: "/d/"]
-d -> d;
-
-[id: 12753, name: "k", weight: 0.05, group: xhosa_stops, ipa: "/k/"]
-k -> k;
 
 [id: 12754, name: "g", weight: 0.05, group: xhosa_stops, ipa: "/ɡ/"]
 g -> ɡ;
@@ -180,18 +162,6 @@ g -> ɡ;
 // ============================================================
 // FRICATIVES (weight 0.05)
 // ============================================================
-
-[id: 12757, name: "f", weight: 0.05, group: xhosa_fricatives, ipa: "/f/"]
-f -> f;
-
-[id: 12758, name: "v", weight: 0.05, group: xhosa_fricatives, ipa: "/v/"]
-v -> v;
-
-[id: 12759, name: "s", weight: 0.05, group: xhosa_fricatives, ipa: "/s/"]
-s -> s;
-
-[id: 12760, name: "z", weight: 0.05, group: xhosa_fricatives, ipa: "/z/"]
-z -> z;
 
 [id: 12761, name: "sh postalveolar", weight: 0.05, group: xhosa_fricatives, ipa: "/ʃ/"]
 sh -> ʃ;
@@ -202,18 +172,9 @@ hl -> ɬ;
 [id: 12763, name: "rh breathy r", weight: 0.05, group: xhosa_fricatives, ipa: "/r̤/"]
 rh -> r̤;
 
-[id: 12764, name: "h", weight: 0.05, group: xhosa_fricatives, ipa: "/h/"]
-h -> h;
-
 // ============================================================
 // NASALS (weight 0.05)
 // ============================================================
-
-[id: 12767, name: "m", weight: 0.05, group: xhosa_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 12768, name: "n", weight: 0.05, group: xhosa_nasals, ipa: "/n/"]
-n -> n;
 
 [id: 12769, name: "ny palatal nasal", weight: 0.05, group: xhosa_nasals, ipa: "/ɲ/"]
 ny -> ɲ;
@@ -221,15 +182,6 @@ ny -> ɲ;
 // ============================================================
 // LIQUIDS AND APPROXIMANTS (weight 0.05)
 // ============================================================
-
-[id: 12772, name: "l", weight: 0.05, group: xhosa_liquids, ipa: "/l/"]
-l -> l;
-
-[id: 12773, name: "r", weight: 0.05, group: xhosa_liquids, ipa: "/r/"]
-r -> r;
-
-[id: 12774, name: "w", weight: 0.05, group: xhosa_approximants, ipa: "/w/"]
-w -> w;
 
 [id: 12775, name: "y", weight: 0.05, group: xhosa_approximants, ipa: "/j/"]
 y -> j;

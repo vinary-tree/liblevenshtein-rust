@@ -22,152 +22,54 @@
 // ============================================================
 // DIGRAPHS (highest priority - must match before singles)
 // ============================================================
+// Note: Case variants removed - case-insensitive matching is automatic
 
 // Lj/lj → ʎ (palatal lateral approximant)
 [id: 3464, name: "lj to ʎ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/ʎ/"]
 lj -> ʎ;
 
-[id: 3465, name: "Lj to ʎ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/ʎ/"]
-Lj -> ʎ;
-
-[id: 3466, name: "LJ to ʎ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/ʎ/"]
-LJ -> ʎ;
-
 // Nj/nj → ɲ (palatal nasal)
 [id: 3467, name: "nj to ɲ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/ɲ/"]
 nj -> ɲ;
-
-[id: 3468, name: "Nj to ɲ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/ɲ/"]
-Nj -> ɲ;
-
-[id: 3469, name: "NJ to ɲ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/ɲ/"]
-NJ -> ɲ;
 
 // Dž/dž → d͡ʒ (voiced postalveolar affricate)
 [id: 3470, name: "dž to d͡ʒ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/d͡ʒ/"]
 dž -> d͡ʒ;
 
-[id: 3471, name: "Dž to d͡ʒ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/d͡ʒ/"]
-Dž -> d͡ʒ;
-
-[id: 3472, name: "DŽ to d͡ʒ", weight: 0.05, group: serbian_latin_digraphs, ipa: "/d͡ʒ/"]
-DŽ -> d͡ʒ;
-
 // ============================================================
 // DIACRITICAL CONSONANTS
 // ============================================================
+// Note: Case variants removed - case-insensitive matching is automatic
 
 // Č/č → t͡ʃ (voiceless postalveolar affricate)
 [id: 3473, name: "č to t͡ʃ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/t͡ʃ/"]
 č -> t͡ʃ;
 
-[id: 3474, name: "Č to t͡ʃ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/t͡ʃ/"]
-Č -> t͡ʃ;
-
 // Ć/ć → tɕ (voiceless alveolo-palatal affricate, softer than č)
 [id: 3475, name: "ć to tɕ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/tɕ/"]
 ć -> tɕ;
-
-[id: 3476, name: "Ć to tɕ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/tɕ/"]
-Ć -> tɕ;
 
 // Š/š → ʃ (voiceless postalveolar fricative)
 [id: 3477, name: "š to ʃ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/ʃ/"]
 š -> ʃ;
 
-[id: 3478, name: "Š to ʃ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/ʃ/"]
-Š -> ʃ;
-
 // Ž/ž → ʒ (voiced postalveolar fricative)
 [id: 3479, name: "ž to ʒ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/ʒ/"]
 ž -> ʒ;
-
-[id: 3480, name: "Ž to ʒ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/ʒ/"]
-Ž -> ʒ;
 
 // Đ/đ → dʑ (voiced alveolo-palatal affricate)
 [id: 3481, name: "đ to dʑ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/dʑ/"]
 đ -> dʑ;
 
-[id: 3482, name: "Đ to dʑ", weight: 0.1, group: serbian_latin_diacritics, ipa: "/dʑ/"]
-Đ -> dʑ;
-
 // ============================================================
-// CASE NORMALIZATION (uppercase to lowercase)
+// PLAIN CONSONANTS WITH IPA TRANSFORMATIONS
 // ============================================================
 
-[id: 3483, name: "A to a", weight: 0.2, group: serbian_latin_case]
-A -> a;
-
-[id: 3484, name: "B to b", weight: 0.2, group: serbian_latin_case]
-B -> b;
-
-[id: 3485, name: "C to t͡s", weight: 0.2, group: serbian_latin_case, ipa: "/t͡s/"]
-C -> t͡s;
-
-[id: 3486, name: "c to t͡s", weight: 0.2, group: serbian_latin_case, ipa: "/t͡s/"]
+// C/c → t͡s (voiceless alveolar affricate)
+[id: 3485, name: "c to t͡s", weight: 0.1, group: serbian_latin_consonants, ipa: "/t͡s/"]
 c -> t͡s;
 
-[id: 3487, name: "D to d", weight: 0.2, group: serbian_latin_case]
-D -> d;
-
-[id: 3488, name: "E to e", weight: 0.2, group: serbian_latin_case]
-E -> e;
-
-[id: 3489, name: "F to f", weight: 0.2, group: serbian_latin_case]
-F -> f;
-
-[id: 3490, name: "G to g", weight: 0.2, group: serbian_latin_case]
-G -> g;
-
-[id: 3491, name: "H to x", weight: 0.2, group: serbian_latin_case, ipa: "/x/"]
-H -> x;
-
-[id: 3492, name: "h to x", weight: 0.2, group: serbian_latin_case, ipa: "/x/"]
+// H/h → x (voiceless velar fricative)
+[id: 3491, name: "h to x", weight: 0.1, group: serbian_latin_consonants, ipa: "/x/"]
 h -> x;
-
-[id: 3493, name: "I to i", weight: 0.2, group: serbian_latin_case]
-I -> i;
-
-[id: 3494, name: "J to j", weight: 0.2, group: serbian_latin_case, ipa: "/j/"]
-J -> j;
-
-[id: 3495, name: "j to j", weight: 0.2, group: serbian_latin_case, ipa: "/j/"]
-j -> j;
-
-[id: 3496, name: "K to k", weight: 0.2, group: serbian_latin_case]
-K -> k;
-
-[id: 3497, name: "L to l", weight: 0.2, group: serbian_latin_case]
-L -> l;
-
-[id: 3498, name: "M to m", weight: 0.2, group: serbian_latin_case]
-M -> m;
-
-[id: 3499, name: "N to n", weight: 0.2, group: serbian_latin_case]
-N -> n;
-
-[id: 3500, name: "O to o", weight: 0.2, group: serbian_latin_case]
-O -> o;
-
-[id: 3501, name: "P to p", weight: 0.2, group: serbian_latin_case]
-P -> p;
-
-[id: 3502, name: "R to r", weight: 0.2, group: serbian_latin_case]
-R -> r;
-
-[id: 3503, name: "S to s", weight: 0.2, group: serbian_latin_case]
-S -> s;
-
-[id: 3504, name: "T to t", weight: 0.2, group: serbian_latin_case]
-T -> t;
-
-[id: 3505, name: "U to u", weight: 0.2, group: serbian_latin_case]
-U -> u;
-
-[id: 3506, name: "V to v", weight: 0.2, group: serbian_latin_case]
-V -> v;
-
-[id: 3507, name: "Z to z", weight: 0.2, group: serbian_latin_case]
-Z -> z;
 

@@ -19,28 +19,19 @@
 // Rule IDs: 7600-7799
 
 @name "K'iche' Maya Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for K'iche' Maya"
+
+// Changelog:
+// v1.0.1 - Removed identity mappings (rules where pattern equals replacement)
+//          to focus on actual phonetic transformations
 
 // ============================================================
 // SHORT VOWELS (weight 0.05)
 // ============================================================
-
-[id: 7600, name: "a short", weight: 0.05, group: kiche_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 7601, name: "e short", weight: 0.05, group: kiche_vowels, ipa: "/e/"]
-e -> e;
-
-[id: 7602, name: "i short", weight: 0.05, group: kiche_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 7603, name: "o short", weight: 0.05, group: kiche_vowels, ipa: "/o/"]
-o -> o;
-
-[id: 7604, name: "u short", weight: 0.05, group: kiche_vowels, ipa: "/u/"]
-u -> u;
+// NOTE: Identity mappings (a->a, e->e, i->i, o->o, u->u) removed in v1.0.1
+//       Short vowels are preserved as-is in K'iche' orthography
 
 // ============================================================
 // LONG VOWELS (weight 0.05)
@@ -65,18 +56,8 @@ uu -> uː;
 // ============================================================
 // PLAIN STOPS (weight 0.05)
 // ============================================================
-
-[id: 7620, name: "p", weight: 0.05, group: kiche_stops, ipa: "/p/"]
-p -> p;
-
-[id: 7621, name: "t", weight: 0.05, group: kiche_stops, ipa: "/t/"]
-t -> t;
-
-[id: 7622, name: "k", weight: 0.05, group: kiche_stops, ipa: "/k/"]
-k -> k;
-
-[id: 7623, name: "q uvular", weight: 0.05, group: kiche_stops, ipa: "/q/"]
-q -> q;
+// NOTE: Identity mappings (p->p, t->t, k->k, q->q) removed in v1.0.1
+//       Plain stops are preserved as-is in K'iche' orthography
 
 // ============================================================
 // EJECTIVE STOPS (weight 0.02 - distinctive)
@@ -94,18 +75,8 @@ k' -> kʼ;
 [id: 7628, name: "q' ejective uvular", weight: 0.02, group: kiche_ejectives, ipa: "/qʼ/"]
 q' -> qʼ;
 
-// With modifier letter apostrophe
-[id: 7629, name: "pʼ ejective", weight: 0.02, group: kiche_ejectives, ipa: "/pʼ/"]
-pʼ -> pʼ;
-
-[id: 7630, name: "tʼ ejective", weight: 0.02, group: kiche_ejectives, ipa: "/tʼ/"]
-tʼ -> tʼ;
-
-[id: 7631, name: "kʼ ejective", weight: 0.02, group: kiche_ejectives, ipa: "/kʼ/"]
-kʼ -> kʼ;
-
-[id: 7632, name: "qʼ ejective uvular", weight: 0.02, group: kiche_ejectives, ipa: "/qʼ/"]
-qʼ -> qʼ;
+// NOTE: Identity mappings with modifier letter apostrophe (pʼ->pʼ, tʼ->tʼ, kʼ->kʼ, qʼ->qʼ)
+//       removed in v1.0.1. ASCII apostrophe rules above handle normalization.
 
 // ============================================================
 // IMPLOSIVE (weight 0.02)
@@ -145,9 +116,7 @@ chʼ -> t͡ʃʼ;
 // ============================================================
 // FRICATIVES (weight 0.05)
 // ============================================================
-
-[id: 7650, name: "s", weight: 0.05, group: kiche_fricatives, ipa: "/s/"]
-s -> s;
+// NOTE: Identity mappings (s->s, h->h) removed in v1.0.1
 
 [id: 7651, name: "x postalveolar", weight: 0.05, group: kiche_fricatives, ipa: "/ʃ/"]
 x -> ʃ;
@@ -155,31 +124,19 @@ x -> ʃ;
 [id: 7652, name: "j velar", weight: 0.05, group: kiche_fricatives, ipa: "/x/"]
 j -> x;
 
-[id: 7653, name: "h glottal", weight: 0.05, group: kiche_fricatives, ipa: "/h/"]
-h -> h;
-
 // ============================================================
 // NASALS (weight 0.05)
 // ============================================================
-
-[id: 7660, name: "m", weight: 0.05, group: kiche_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 7661, name: "n", weight: 0.05, group: kiche_nasals, ipa: "/n/"]
-n -> n;
+// NOTE: Identity mappings (m->m, n->n) removed in v1.0.1
+//       Nasals are preserved as-is in K'iche' orthography
 
 // ============================================================
 // LIQUIDS AND APPROXIMANTS (weight 0.05)
 // ============================================================
-
-[id: 7665, name: "l", weight: 0.05, group: kiche_liquids, ipa: "/l/"]
-l -> l;
+// NOTE: Identity mappings (l->l, w->w) removed in v1.0.1
 
 [id: 7666, name: "r tap", weight: 0.05, group: kiche_liquids, ipa: "/ɾ/"]
 r -> ɾ;
-
-[id: 7667, name: "w", weight: 0.05, group: kiche_approximants, ipa: "/w/"]
-w -> w;
 
 [id: 7668, name: "y", weight: 0.05, group: kiche_approximants, ipa: "/j/"]
 y -> j;
@@ -199,8 +156,7 @@ y -> j;
 [id: 7680, name: "kiche", weight: 0.02, group: kiche_common]
 k'iche' -> kʼit͡ʃeʔ;
 
-[id: 7681, name: "popol vuj", weight: 0.02, group: kiche_common]
-popol -> popol;
+// NOTE: Identity mapping (popol->popol) removed in v1.0.1
 
 [id: 7682, name: "vuj book", weight: 0.02, group: kiche_common]
 wuj -> wux;

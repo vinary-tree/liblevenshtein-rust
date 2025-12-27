@@ -21,30 +21,24 @@
 //   - bh, dh for implosives
 //
 // Rule IDs: 13100-13199
+//
+// Note: Identity mappings removed (rules where pattern == replacement).
+// Only actual phonetic transformations are included.
 
 @name "Shona Phonetic Rules"
-@version "1.0.0"
+@version "1.1.0"
 @author "liblevenshtein"
-@description "Phonetic normalization rules for Shona"
+@description "Phonetic normalization rules for Shona (identity mappings removed)"
 
 // ============================================================
 // VOWELS (weight 0.05)
 // ============================================================
 
-[id: 13100, name: "a", weight: 0.05, group: shona_vowels, ipa: "/a/"]
-a -> a;
-
 [id: 13101, name: "e", weight: 0.05, group: shona_vowels, ipa: "/ɛ/"]
 e -> ɛ;
 
-[id: 13102, name: "i", weight: 0.05, group: shona_vowels, ipa: "/i/"]
-i -> i;
-
 [id: 13103, name: "o", weight: 0.05, group: shona_vowels, ipa: "/ɔ/"]
 o -> ɔ;
-
-[id: 13104, name: "u", weight: 0.05, group: shona_vowels, ipa: "/u/"]
-u -> u;
 
 // ============================================================
 // WHISTLED SIBILANTS (weight 0.02)
@@ -93,21 +87,6 @@ dh -> ɗ;
 // PLAIN STOPS (weight 0.05)
 // ============================================================
 
-[id: 13126, name: "p", weight: 0.05, group: shona_stops, ipa: "/p/"]
-p -> p;
-
-[id: 13127, name: "b", weight: 0.05, group: shona_stops, ipa: "/b/"]
-b -> b;
-
-[id: 13128, name: "t", weight: 0.05, group: shona_stops, ipa: "/t/"]
-t -> t;
-
-[id: 13129, name: "d", weight: 0.05, group: shona_stops, ipa: "/d/"]
-d -> d;
-
-[id: 13130, name: "k", weight: 0.05, group: shona_stops, ipa: "/k/"]
-k -> k;
-
 [id: 13131, name: "g", weight: 0.05, group: shona_stops, ipa: "/ɡ/"]
 g -> ɡ;
 
@@ -131,36 +110,15 @@ dz -> d͡z;
 // FRICATIVES (weight 0.05)
 // ============================================================
 
-[id: 13140, name: "f", weight: 0.05, group: shona_fricatives, ipa: "/f/"]
-f -> f;
-
-[id: 13141, name: "v", weight: 0.05, group: shona_fricatives, ipa: "/v/"]
-v -> v;
-
-[id: 13142, name: "s", weight: 0.05, group: shona_fricatives, ipa: "/s/"]
-s -> s;
-
-[id: 13143, name: "z", weight: 0.05, group: shona_fricatives, ipa: "/z/"]
-z -> z;
-
 [id: 13144, name: "sh postalveolar", weight: 0.05, group: shona_fricatives, ipa: "/ʃ/"]
 sh -> ʃ;
 
 [id: 13145, name: "zh voiced postalveolar", weight: 0.05, group: shona_fricatives, ipa: "/ʒ/"]
 zh -> ʒ;
 
-[id: 13146, name: "h", weight: 0.05, group: shona_fricatives, ipa: "/h/"]
-h -> h;
-
 // ============================================================
 // NASALS (weight 0.05)
 // ============================================================
-
-[id: 13150, name: "m", weight: 0.05, group: shona_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 13151, name: "n", weight: 0.05, group: shona_nasals, ipa: "/n/"]
-n -> n;
 
 [id: 13152, name: "ny palatal nasal", weight: 0.05, group: shona_nasals, ipa: "/ɲ/"]
 ny -> ɲ;
@@ -171,9 +129,6 @@ ny -> ɲ;
 
 [id: 13156, name: "r flap", weight: 0.05, group: shona_liquids, ipa: "/ɾ/"]
 r -> ɾ;
-
-[id: 13157, name: "w", weight: 0.05, group: shona_approximants, ipa: "/w/"]
-w -> w;
 
 [id: 13158, name: "y", weight: 0.05, group: shona_approximants, ipa: "/j/"]
 y -> j;

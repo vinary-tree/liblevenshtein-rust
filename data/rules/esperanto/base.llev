@@ -23,9 +23,17 @@
 // Rule IDs: 17300-17399
 
 @name "Esperanto Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Esperanto"
+
+// ============================================================
+// CHANGELOG
+// ============================================================
+// v1.0.1 (2025-12-26):
+//   - Removed identity mappings (h->h, j->j, r->r, v->v)
+//   - These letters already represent their IPA phonetic values
+//   - Only transformations and diacritic normalizations remain
 
 // ============================================================
 // DIACRITIC LETTERS (highest priority)
@@ -107,30 +115,18 @@ ux -> w;
 // ============================================================
 // CONSONANTS
 // ============================================================
+// Note: Most Esperanto consonants (b, d, f, h, j, k, l, m, n, p, r, s, t, v, z)
+// have identical orthographic and IPA representations, so only transformations
+// are included here (c → t͡s, g → ɡ).
 
 // C → t͡s (voiceless alveolar affricate, like "ts" in "cats")
 [id: 17330, name: "c to ts", weight: 0.1, group: esperanto_consonants, ipa: "/t͡s/"]
 c -> t͡s;
 
 // G → ɡ (voiced velar stop, always hard as in "go")
+// Note: This converts Latin letter 'g' to IPA symbol 'ɡ' (U+0261)
 [id: 17331, name: "g to IPA g", weight: 0.1, group: esperanto_consonants, ipa: "/ɡ/"]
 g -> ɡ;
-
-// H → h (voiceless glottal fricative)
-[id: 17332, name: "h glottal", weight: 0.1, group: esperanto_consonants, ipa: "/h/"]
-h -> h;
-
-// J → j (palatal approximant, like "y" in "yes")
-[id: 17333, name: "j to y", weight: 0.1, group: esperanto_consonants, ipa: "/j/"]
-j -> j;
-
-// R → r (alveolar trill, rolled R)
-[id: 17334, name: "r trill", weight: 0.1, group: esperanto_consonants, ipa: "/r/"]
-r -> r;
-
-// V → v (voiced labiodental fricative)
-[id: 17335, name: "v labiodental", weight: 0.1, group: esperanto_consonants, ipa: "/v/"]
-v -> v;
 
 // ============================================================
 // DIPHTHONGS

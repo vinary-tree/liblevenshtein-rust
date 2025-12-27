@@ -22,28 +22,14 @@
 // Rule IDs: 9400-9599
 
 @name "Hopi Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Hopi (Hopilàvayi)"
+// v1.0.1: Removed identity mappings (unmapped characters pass through unchanged)
 
 // ============================================================
 // SHORT VOWELS (weight 0.05)
 // ============================================================
-
-[id: 9400, name: "a short", weight: 0.05, group: hopi_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 9401, name: "e short", weight: 0.05, group: hopi_vowels, ipa: "/e/"]
-e -> e;
-
-[id: 9402, name: "i short", weight: 0.05, group: hopi_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 9403, name: "o short", weight: 0.05, group: hopi_vowels, ipa: "/o/"]
-o -> o;
-
-[id: 9404, name: "u short", weight: 0.05, group: hopi_vowels, ipa: "/u/"]
-u -> u;
 
 // Central/front rounded vowel (varies by dialect)
 [id: 9405, name: "o umlaut", weight: 0.05, group: hopi_vowels, ipa: "/ø/"]
@@ -113,22 +99,10 @@ uu -> uː;
 // p is marginal in Hopi
 // ============================================================
 
-[id: 9430, name: "p marginal", weight: 0.05, group: hopi_stops, ipa: "/p/"]
-p -> p;
-
-[id: 9431, name: "t", weight: 0.05, group: hopi_stops, ipa: "/t/"]
-t -> t;
-
-[id: 9432, name: "k", weight: 0.05, group: hopi_stops, ipa: "/k/"]
-k -> k;
-
 [id: 9433, name: "kw labialized velar", weight: 0.05, group: hopi_stops, ipa: "/kʷ/"]
 kw -> kʷ;
 
 // Uvular stops
-[id: 9434, name: "q uvular", weight: 0.05, group: hopi_stops, ipa: "/q/"]
-q -> q;
-
 [id: 9435, name: "qw labialized uvular", weight: 0.05, group: hopi_stops, ipa: "/qʷ/"]
 qw -> qʷ;
 
@@ -146,48 +120,17 @@ qw -> qʷ;
 // FRICATIVES (weight 0.05)
 // ============================================================
 
-[id: 9440, name: "s", weight: 0.05, group: hopi_fricatives, ipa: "/s/"]
-s -> s;
-
-[id: 9441, name: "h", weight: 0.05, group: hopi_fricatives, ipa: "/h/"]
-h -> h;
-
-[id: 9442, name: "v labiodental", weight: 0.05, group: hopi_fricatives, ipa: "/v/"]
-v -> v;
-
 // ============================================================
 // NASALS (weight 0.05)
 // ============================================================
 
-[id: 9445, name: "m", weight: 0.05, group: hopi_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 9446, name: "n", weight: 0.05, group: hopi_nasals, ipa: "/n/"]
-n -> n;
-
 [id: 9447, name: "ng velar nasal", weight: 0.05, group: hopi_nasals, ipa: "/ŋ/"]
 ng -> ŋ;
-
-// Velar nasal symbol
-[id: 9448, name: "ng symbol", weight: 0.05, group: hopi_nasals, ipa: "/ŋ/"]
-ŋ -> ŋ;
 
 // ============================================================
 // VOICELESS SONORANTS (weight 0.05)
 // Distinctive feature of Hopi
 // ============================================================
-
-[id: 9450, name: "m voiceless", weight: 0.05, group: hopi_voiceless_sonorants, ipa: "/m̥/"]
-m̥ -> m̥;
-
-[id: 9451, name: "n voiceless", weight: 0.05, group: hopi_voiceless_sonorants, ipa: "/n̥/"]
-n̥ -> n̥;
-
-[id: 9452, name: "l voiceless", weight: 0.05, group: hopi_voiceless_sonorants, ipa: "/l̥/"]
-l̥ -> l̥;
-
-[id: 9453, name: "r voiceless", weight: 0.05, group: hopi_voiceless_sonorants, ipa: "/r̥/"]
-r̥ -> r̥;
 
 [id: 9454, name: "w voiceless", weight: 0.05, group: hopi_voiceless_sonorants, ipa: "/ʍ/"]
 w̥ -> ʍ;
@@ -199,14 +142,8 @@ y̥ -> j̊;
 // LIQUIDS AND APPROXIMANTS (weight 0.05)
 // ============================================================
 
-[id: 9460, name: "l", weight: 0.05, group: hopi_liquids, ipa: "/l/"]
-l -> l;
-
 [id: 9461, name: "r tap", weight: 0.05, group: hopi_liquids, ipa: "/ɾ/"]
 r -> ɾ;
-
-[id: 9462, name: "w", weight: 0.05, group: hopi_approximants, ipa: "/w/"]
-w -> w;
 
 [id: 9463, name: "y", weight: 0.05, group: hopi_approximants, ipa: "/j/"]
 y -> j;
@@ -231,17 +168,11 @@ ngw -> ŋʷ;
 // COMMON WORDS
 // ============================================================
 
-[id: 9500, name: "hopi", weight: 0.02, group: hopi_common]
-hopi -> hopi;
-
 [id: 9501, name: "hopilavayi hopi language", weight: 0.02, group: hopi_common]
 hopilàvayi -> hopila˥˩vaji;
 
 [id: 9502, name: "katsina spirit", weight: 0.02, group: hopi_common]
 katsina -> kat͡sina;
-
-[id: 9503, name: "lolma good", weight: 0.02, group: hopi_common]
-lolma -> lolma;
 
 [id: 9504, name: "kwakwha thank you", weight: 0.02, group: hopi_common]
 kwakwhá -> kʷakʷha˦;
@@ -254,9 +185,6 @@ pàahu -> pa˥˩ahu;
 
 [id: 9507, name: "tuuwaqatsi earth life", weight: 0.02, group: hopi_common]
 tuuwaqatsi -> tuːwaqat͡si;
-
-[id: 9508, name: "qa not", weight: 0.02, group: hopi_common]
-qa -> qa;
 
 [id: 9509, name: "taawa sun", weight: 0.02, group: hopi_common]
 taawa -> taːwa;

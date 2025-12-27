@@ -21,9 +21,13 @@
 //   - AE → [e], OE → [e]
 //
 // Rule IDs: 17400-17499
+//
+// CHANGELOG:
+// v1.0.1 - Removed identity mappings (y->y, j->j, r->r, s->s) as they provide
+//          no phonetic transformation and are redundant in the grammar.
 
 @name "Latin Phonetic Rules (Classical)"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Classical Latin"
 
@@ -114,9 +118,8 @@ ui -> ui̯ / _$;
 [id: 17424, name: "long u", weight: 0.1, group: latin_long_vowels, ipa: "/uː/"]
 ū -> uː;
 
-// Y → y (Greek upsilon, rounded front vowel)
-[id: 17425, name: "y greek upsilon", weight: 0.1, group: latin_long_vowels, ipa: "/y/"]
-y -> y;
+// NOTE: Y (Greek upsilon) removed - identity mapping (y->y) provides no transformation
+// The letter 'y' in Latin is already the IPA representation [y] for the rounded front vowel
 
 // ============================================================
 // CONSONANTS
@@ -134,17 +137,14 @@ c -> k;
 [id: 17432, name: "g hard", weight: 0.1, group: latin_consonants, ipa: "/ɡ/"]
 g -> ɡ;
 
-// J/I consonant → j (before vowels, semiconsonant)
-[id: 17433, name: "j consonantal", weight: 0.1, group: latin_consonants, ipa: "/j/"]
-j -> j;
+// NOTE: J (semiconsonant) removed - identity mapping (j->j) provides no transformation
+// The letter 'j' is already the IPA representation [j] for the palatal approximant
 
-// R → r (alveolar trill)
-[id: 17434, name: "r trill", weight: 0.1, group: latin_consonants, ipa: "/r/"]
-r -> r;
+// NOTE: R (alveolar trill) removed - identity mapping (r->r) provides no transformation
+// The letter 'r' is already the IPA representation [r] for the alveolar trill
 
-// S → s (always voiceless, never [z])
-[id: 17435, name: "s voiceless", weight: 0.1, group: latin_consonants, ipa: "/s/"]
-s -> s;
+// NOTE: S (voiceless alveolar fricative) removed - identity mapping (s->s) provides no transformation
+// The letter 's' is already the IPA representation [s] for the voiceless alveolar fricative
 
 // X → ks (always [ks], never [gz])
 [id: 17436, name: "x as ks", weight: 0.1, group: latin_consonants, ipa: "/ks/"]

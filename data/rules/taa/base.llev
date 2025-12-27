@@ -3,6 +3,9 @@
 // Phonetic rules for Taa (!Xóõ), also known as !Xóõ.
 // Spoken by approximately 4,000 people in Botswana and Namibia.
 //
+// This file contains ONLY actual phonetic transformations (ASCII/orthographic to IPA).
+// Identity mappings have been removed to reduce file size and improve processing efficiency.
+//
 // Taa features:
 //   - Khoisan language family (Tuu branch)
 //   - WORLD'S LARGEST CONSONANT INVENTORY (160+ consonants)
@@ -38,23 +41,8 @@
 
 // ============================================================
 // VOWELS (weight 0.05)
-// 5 basic vowels with multiple phonation types
+// Breathy vowels with voice quality transformations
 // ============================================================
-
-[id: 17000, name: "a", weight: 0.05, group: taa_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 17001, name: "e", weight: 0.05, group: taa_vowels, ipa: "/e/"]
-e -> e;
-
-[id: 17002, name: "i", weight: 0.05, group: taa_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 17003, name: "o", weight: 0.05, group: taa_vowels, ipa: "/o/"]
-o -> o;
-
-[id: 17004, name: "u", weight: 0.05, group: taa_vowels, ipa: "/u/"]
-u -> u;
 
 // Breathy vowels (voice quality)
 [id: 17005, name: "breathy a", weight: 0.05, group: taa_vowels, ipa: "/a̤/"]
@@ -297,22 +285,7 @@ ng||hw' -> ŋɡǁʰʷʼ;
 // NON-CLICK CONSONANTS (weight 0.05)
 // ============================================================
 
-// Stops
-[id: 17120, name: "p", weight: 0.05, group: taa_stops, ipa: "/p/"]
-p -> p;
-
-[id: 17121, name: "b", weight: 0.05, group: taa_stops, ipa: "/b/"]
-b -> b;
-
-[id: 17122, name: "t", weight: 0.05, group: taa_stops, ipa: "/t/"]
-t -> t;
-
-[id: 17123, name: "d", weight: 0.05, group: taa_stops, ipa: "/d/"]
-d -> d;
-
-[id: 17124, name: "k", weight: 0.05, group: taa_stops, ipa: "/k/"]
-k -> k;
-
+// Stops (ASCII to IPA transformations)
 [id: 17125, name: "g", weight: 0.05, group: taa_stops, ipa: "/ɡ/"]
 g -> ɡ;
 
@@ -339,32 +312,9 @@ t' -> tʼ;
 [id: 17137, name: "k ejective", weight: 0.05, group: taa_ejective, ipa: "/kʼ/"]
 k' -> kʼ;
 
-// Fricatives
-[id: 17140, name: "s", weight: 0.05, group: taa_fricatives, ipa: "/s/"]
-s -> s;
-
-[id: 17141, name: "z", weight: 0.05, group: taa_fricatives, ipa: "/z/"]
-z -> z;
-
-[id: 17142, name: "h", weight: 0.05, group: taa_fricatives, ipa: "/h/"]
-h -> h;
-
-// Nasals
-[id: 17145, name: "m", weight: 0.05, group: taa_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 17146, name: "n", weight: 0.05, group: taa_nasals, ipa: "/n/"]
-n -> n;
-
 // Approximants
-[id: 17150, name: "w", weight: 0.05, group: taa_approximants, ipa: "/w/"]
-w -> w;
-
 [id: 17151, name: "y", weight: 0.05, group: taa_approximants, ipa: "/j/"]
 y -> j;
-
-[id: 17152, name: "l", weight: 0.05, group: taa_approximants, ipa: "/l/"]
-l -> l;
 
 // ============================================================
 // TONE MARKERS (weight 0.02)

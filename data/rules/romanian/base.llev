@@ -9,6 +9,9 @@
 //   - â vs î: Same sound, â used mid-word, î at beginning/end
 //   - Romance language with Latin roots
 //
+// Note: Only lowercase rules are defined. Input normalization should be
+//       handled separately (case-folding before phonetic transformation).
+//
 // Rule IDs: 3100-3149
 
 @name "Romanian Base Phonetic Rules"
@@ -20,193 +23,62 @@
 // SPECIAL CONSONANTS (highest priority)
 // ============================================================
 
-// Ș/ș → ʃ (like English "sh")
+// ș → ʃ (like English "sh")
 [id: 3100, name: "s cedilla to sh", weight: 0.05, group: romanian_special, ipa: "/ʃ/"]
 ș -> ʃ;
 
-[id: 3101, name: "S cedilla to sh", weight: 0.05, group: romanian_special, ipa: "/ʃ/"]
-Ș -> ʃ;
-
-// Ț/ț → t͡s (like "ts" in "cats")
+// ț → t͡s (like "ts" in "cats")
 [id: 3102, name: "t cedilla to ts", weight: 0.05, group: romanian_special, ipa: "/t͡s/"]
 ț -> t͡s;
-
-[id: 3103, name: "T cedilla to ts", weight: 0.05, group: romanian_special, ipa: "/t͡s/"]
-Ț -> t͡s;
 
 // ============================================================
 // SPECIAL VOWELS
 // ============================================================
 
-// Ă/ă → ə (schwa)
+// ă → ə (schwa)
 [id: 3105, name: "a breve to schwa", weight: 0.1, group: romanian_vowels, ipa: "/ə/"]
 ă -> ə;
 
-[id: 3106, name: "A breve to schwa", weight: 0.1, group: romanian_vowels, ipa: "/ə/"]
-Ă -> ə;
-
-// Â/â → ɨ (close central unrounded, similar to Russian ы)
+// â → ɨ (close central unrounded, similar to Russian ы)
 [id: 3107, name: "a circumflex to ɨ", weight: 0.1, group: romanian_vowels, ipa: "/ɨ/"]
 â -> ɨ;
 
-[id: 3108, name: "A circumflex to ɨ", weight: 0.1, group: romanian_vowels, ipa: "/ɨ/"]
-Â -> ɨ;
-
-// Î/î → ɨ (same sound as â, used at word beginning/end)
+// î → ɨ (same sound as â, used at word beginning/end)
 [id: 3109, name: "i circumflex to ɨ", weight: 0.1, group: romanian_vowels, ipa: "/ɨ/"]
 î -> ɨ;
-
-[id: 3110, name: "I circumflex to ɨ", weight: 0.1, group: romanian_vowels, ipa: "/ɨ/"]
-Î -> ɨ;
 
 // ============================================================
 // DIGRAPHS
 // ============================================================
 
-// Ch → k (before e, i - like Italian)
-// Note: Case variants removed (case-insensitive matching)
+// ch → k (before e, i - like Italian)
 [id: 3112, name: "ch digraph", weight: 0.08, group: romanian_digraphs, ipa: "/k/"]
 ch -> k;
 
-// Gh → ɡ (before e, i - like Italian)
-// Note: Case variants removed (case-insensitive matching)
+// gh → ɡ (before e, i - like Italian)
 [id: 3115, name: "gh digraph", weight: 0.08, group: romanian_digraphs, ipa: "/ɡ/"]
 gh -> ɡ;
 
 // ============================================================
-// SIMPLE VOWELS
+// CONSONANT TRANSFORMATIONS
 // ============================================================
 
-// A → a
-// Note: Lowercase a passes through unchanged
-[id: 3121, name: "A vowel", weight: 0.15, group: romanian_vowels]
-A -> a;
-
-// E → e
-// Note: Lowercase e passes through unchanged
-[id: 3123, name: "E vowel", weight: 0.15, group: romanian_vowels]
-E -> e;
-
-// I → i
-// Note: Lowercase i passes through unchanged
-[id: 3125, name: "I vowel", weight: 0.15, group: romanian_vowels]
-I -> i;
-
-// O → o
-// Note: Lowercase o passes through unchanged
-[id: 3127, name: "O vowel", weight: 0.15, group: romanian_vowels]
-O -> o;
-
-// U → u
-// Note: Lowercase u passes through unchanged
-[id: 3129, name: "U vowel", weight: 0.15, group: romanian_vowels]
-U -> u;
-
-// ============================================================
-// CONSONANTS
-// ============================================================
-
-// B → b
-// Note: Lowercase b passes through unchanged
-[id: 3131, name: "B consonant", weight: 0.2, group: romanian_consonants]
-B -> b;
-
-// C → k (before a, o, u) or ch (before e, i) - simplified to k
+// c → k (before a, o, u) or ch (before e, i) - simplified to k
 [id: 3132, name: "c consonant", weight: 0.2, group: romanian_consonants]
 c -> k;
 
-[id: 3133, name: "C consonant", weight: 0.2, group: romanian_consonants]
-C -> k;
-
-// D → d
-// Note: Lowercase d passes through unchanged
-[id: 3135, name: "D consonant", weight: 0.2, group: romanian_consonants]
-D -> d;
-
-// F → f
-// Note: Lowercase f passes through unchanged
-[id: 3137, name: "F consonant", weight: 0.2, group: romanian_consonants]
-F -> f;
-
-// Note: g → ɡ handled via gh digraph; standalone g passes through unchanged
-
-// H → h
-// Note: Lowercase h passes through unchanged
-[id: 3141, name: "H consonant", weight: 0.2, group: romanian_consonants]
-H -> h;
-
-// J → ʒ (like French "j")
+// j → ʒ (like French "j")
 [id: 3142, name: "j to zh", weight: 0.2, group: romanian_consonants, ipa: "/ʒ/"]
 j -> ʒ;
 
-[id: 3143, name: "J to zh", weight: 0.2, group: romanian_consonants, ipa: "/ʒ/"]
-J -> ʒ;
-
-// Note: k passes through unchanged (rare in Romanian, mostly loanwords)
-
-// L → l
-// Note: Lowercase l passes through unchanged
-[id: 3147, name: "L consonant", weight: 0.2, group: romanian_consonants]
-L -> l;
-
-// M → m
-// Note: Lowercase m passes through unchanged
-[id: 3149, name: "M consonant", weight: 0.2, group: romanian_consonants]
-M -> m;
-
-// N → n (using IDs from next range as we have more consonants)
-// Note: Lowercase n passes through unchanged
-[id: 3215, name: "N consonant", weight: 0.2, group: romanian_consonants]
-N -> n;
-
-// P → p
-// Note: Lowercase p passes through unchanged
-[id: 3217, name: "P consonant", weight: 0.2, group: romanian_consonants]
-P -> p;
-
-// R → r (trilled)
-// Note: Lowercase r passes through unchanged
-[id: 3219, name: "R consonant", weight: 0.2, group: romanian_consonants]
-R -> r;
-
-// S → s
-// Note: Lowercase s passes through unchanged
-[id: 3221, name: "S consonant", weight: 0.2, group: romanian_consonants]
-S -> s;
-
-// T → t
-// Note: Lowercase t passes through unchanged
-[id: 3223, name: "T consonant", weight: 0.2, group: romanian_consonants]
-T -> t;
-
-// V → v
-// Note: Lowercase v passes through unchanged
-[id: 3225, name: "V consonant", weight: 0.2, group: romanian_consonants]
-V -> v;
-
-// W → v (loanwords, pronounced as v)
+// w → v (loanwords, pronounced as v)
 [id: 3226, name: "w to v", weight: 0.2, group: romanian_consonants]
 w -> v;
 
-[id: 3227, name: "W to v", weight: 0.2, group: romanian_consonants]
-W -> v;
-
-// X → ks
+// x → ks
 [id: 3228, name: "x to ks", weight: 0.2, group: romanian_consonants]
 x -> ks;
 
-[id: 3229, name: "X to ks", weight: 0.2, group: romanian_consonants]
-X -> ks;
-
-// Y → i (rare, loanwords)
+// y → i (rare, loanwords)
 [id: 3230, name: "y to i", weight: 0.2, group: romanian_consonants]
 y -> i;
-
-[id: 3231, name: "Y to i", weight: 0.2, group: romanian_consonants]
-Y -> i;
-
-// Z → z
-// Note: Lowercase z passes through unchanged
-[id: 3233, name: "Z consonant", weight: 0.2, group: romanian_consonants]
-Z -> z;
-

@@ -21,31 +21,15 @@
 //   - q for /kʼ/
 //   - ' for glottal stop
 //
+// NOTE: This file contains only transformative rules.
+//       Identity mappings have been removed for efficiency.
+//
 // Rule IDs: 12900-12999
 
 @name "Oromo Phonetic Rules"
 @version "1.0.0"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Oromo"
-
-// ============================================================
-// SHORT VOWELS (weight 0.05)
-// ============================================================
-
-[id: 12900, name: "a short", weight: 0.05, group: oromo_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 12901, name: "e short", weight: 0.05, group: oromo_vowels, ipa: "/e/"]
-e -> e;
-
-[id: 12902, name: "i short", weight: 0.05, group: oromo_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 12903, name: "o short", weight: 0.05, group: oromo_vowels, ipa: "/o/"]
-o -> o;
-
-[id: 12904, name: "u short", weight: 0.05, group: oromo_vowels, ipa: "/u/"]
-u -> u;
 
 // ============================================================
 // LONG VOWELS (weight 0.05)
@@ -86,21 +70,6 @@ ph -> pʼ;
 // STOPS (weight 0.05)
 // ============================================================
 
-[id: 12922, name: "p", weight: 0.05, group: oromo_stops, ipa: "/p/"]
-p -> p;
-
-[id: 12923, name: "b", weight: 0.05, group: oromo_stops, ipa: "/b/"]
-b -> b;
-
-[id: 12924, name: "t", weight: 0.05, group: oromo_stops, ipa: "/t/"]
-t -> t;
-
-[id: 12925, name: "d", weight: 0.05, group: oromo_stops, ipa: "/d/"]
-d -> d;
-
-[id: 12926, name: "k", weight: 0.05, group: oromo_stops, ipa: "/k/"]
-k -> k;
-
 [id: 12927, name: "g", weight: 0.05, group: oromo_stops, ipa: "/ɡ/"]
 g -> ɡ;
 
@@ -128,30 +97,12 @@ j -> d͡ʒ;
 // FRICATIVES (weight 0.05)
 // ============================================================
 
-[id: 12938, name: "f", weight: 0.05, group: oromo_fricatives, ipa: "/f/"]
-f -> f;
-
-[id: 12939, name: "s", weight: 0.05, group: oromo_fricatives, ipa: "/s/"]
-s -> s;
-
-[id: 12940, name: "z loanword", weight: 0.05, group: oromo_fricatives, ipa: "/z/"]
-z -> z;
-
 [id: 12941, name: "sh postalveolar", weight: 0.05, group: oromo_fricatives, ipa: "/ʃ/"]
 sh -> ʃ;
-
-[id: 12942, name: "h", weight: 0.05, group: oromo_fricatives, ipa: "/h/"]
-h -> h;
 
 // ============================================================
 // NASALS (weight 0.05)
 // ============================================================
-
-[id: 12946, name: "m", weight: 0.05, group: oromo_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 12947, name: "n", weight: 0.05, group: oromo_nasals, ipa: "/n/"]
-n -> n;
 
 [id: 12948, name: "ny palatal nasal", weight: 0.05, group: oromo_nasals, ipa: "/ɲ/"]
 ny -> ɲ;
@@ -159,15 +110,6 @@ ny -> ɲ;
 // ============================================================
 // LIQUIDS AND APPROXIMANTS (weight 0.05)
 // ============================================================
-
-[id: 12952, name: "l", weight: 0.05, group: oromo_liquids, ipa: "/l/"]
-l -> l;
-
-[id: 12953, name: "r", weight: 0.05, group: oromo_liquids, ipa: "/r/"]
-r -> r;
-
-[id: 12954, name: "w", weight: 0.05, group: oromo_approximants, ipa: "/w/"]
-w -> w;
 
 [id: 12955, name: "y", weight: 0.05, group: oromo_approximants, ipa: "/j/"]
 y -> j;
@@ -230,12 +172,6 @@ bishaanii -> biʃaniː;
 
 [id: 12986, name: "buddeenaa bread food", weight: 0.02, group: oromo_common]
 buddeenaa -> budːeːnaː;
-
-[id: 12987, name: "mana house", weight: 0.02, group: oromo_common]
-mana -> mana;
-
-[id: 12988, name: "nama person", weight: 0.02, group: oromo_common]
-nama -> nama;
 
 [id: 12989, name: "ijoollee child", weight: 0.02, group: oromo_common]
 ijoollee -> id͡ʒoːlːeː;

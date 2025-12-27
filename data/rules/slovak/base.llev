@@ -10,7 +10,12 @@
 //   - Ô → uo diphthong
 //   - Dz, Dž as single phonemes
 //
-// Rule IDs: 3380-3449
+// Note: This file contains only lowercase transformations.
+// Uppercase normalization is handled by case folding in the engine.
+//
+// Rule IDs: 3380, 3383, 3386, 3388, 3390, 3392, 3394, 3396, 3398,
+//           3400, 3402, 3404, 3406, 3408, 3410, 3412, 3424, 3428,
+//           3430, 3434, 3450, 3460, 3462
 
 @name "Slovak Base Phonetic Rules"
 @version "1.0.0"
@@ -21,245 +26,115 @@
 // DIGRAPHS (high priority)
 // ============================================================
 
-// DŽ/dž → d͡ʒ (voiced postalveolar affricate)
+// dž → d͡ʒ (voiced postalveolar affricate)
 [id: 3380, name: "dz hacek", weight: 0.05, group: slovak_digraphs, ipa: "/d͡ʒ/"]
 dž -> d͡ʒ;
 
-[id: 3381, name: "Dz hacek", weight: 0.05, group: slovak_digraphs, ipa: "/d͡ʒ/"]
-Dž -> d͡ʒ;
-
-[id: 3382, name: "DZ hacek", weight: 0.05, group: slovak_digraphs, ipa: "/d͡ʒ/"]
-DŽ -> d͡ʒ;
-
-// DZ/dz → d͡z (voiced alveolar affricate)
+// dz → d͡z (voiced alveolar affricate)
 [id: 3383, name: "dz digraph", weight: 0.05, group: slovak_digraphs, ipa: "/d͡z/"]
 dz -> d͡z;
-
-[id: 3384, name: "Dz digraph", weight: 0.05, group: slovak_digraphs, ipa: "/d͡z/"]
-Dz -> d͡z;
-
-[id: 3385, name: "DZ digraph", weight: 0.05, group: slovak_digraphs, ipa: "/d͡z/"]
-DZ -> d͡z;
 
 // ============================================================
 // SPECIAL CONSONANTS WITH HÁČEK (caron)
 // ============================================================
 
-// Č/č → t͡ʃ (voiceless postalveolar affricate)
+// č → t͡ʃ (voiceless postalveolar affricate)
 [id: 3386, name: "c hacek", weight: 0.05, group: slovak_caron, ipa: "/t͡ʃ/"]
 č -> t͡ʃ;
 
-[id: 3387, name: "C hacek", weight: 0.05, group: slovak_caron, ipa: "/t͡ʃ/"]
-Č -> t͡ʃ;
-
-// Š/š → ʃ (voiceless postalveolar fricative)
+// š → ʃ (voiceless postalveolar fricative)
 [id: 3388, name: "s hacek", weight: 0.05, group: slovak_caron, ipa: "/ʃ/"]
 š -> ʃ;
 
-[id: 3389, name: "S hacek", weight: 0.05, group: slovak_caron, ipa: "/ʃ/"]
-Š -> ʃ;
-
-// Ž/ž → ʒ (voiced postalveolar fricative)
+// ž → ʒ (voiced postalveolar fricative)
 [id: 3390, name: "z hacek", weight: 0.05, group: slovak_caron, ipa: "/ʒ/"]
 ž -> ʒ;
-
-[id: 3391, name: "Z hacek", weight: 0.05, group: slovak_caron, ipa: "/ʒ/"]
-Ž -> ʒ;
 
 // ============================================================
 // SOFT CONSONANTS
 // ============================================================
 
-// Ď/ď → ɟ (voiced palatal plosive)
+// ď → ɟ (voiced palatal plosive)
 [id: 3392, name: "d hacek", weight: 0.05, group: slovak_soft, ipa: "/ɟ/"]
 ď -> ɟ;
 
-[id: 3393, name: "D hacek", weight: 0.05, group: slovak_soft, ipa: "/ɟ/"]
-Ď -> ɟ;
-
-// Ť/ť → c (voiceless palatal plosive)
+// ť → c (voiceless palatal plosive)
 [id: 3394, name: "t hacek", weight: 0.05, group: slovak_soft, ipa: "/c/"]
 ť -> c;
 
-[id: 3395, name: "T hacek", weight: 0.05, group: slovak_soft, ipa: "/c/"]
-Ť -> c;
-
-// Ň/ň → ɲ (palatal nasal, like Spanish ñ)
+// ň → ɲ (palatal nasal, like Spanish ñ)
 [id: 3396, name: "n hacek", weight: 0.05, group: slovak_soft, ipa: "/ɲ/"]
 ň -> ɲ;
 
-[id: 3397, name: "N hacek", weight: 0.05, group: slovak_soft, ipa: "/ɲ/"]
-Ň -> ɲ;
-
-// Ľ/ľ → ʎ (palatal lateral approximant - Slovak specific)
+// ľ → ʎ (palatal lateral approximant - Slovak specific)
 [id: 3398, name: "l hacek", weight: 0.05, group: slovak_soft, ipa: "/ʎ/"]
 ľ -> ʎ;
-
-[id: 3399, name: "L hacek", weight: 0.05, group: slovak_soft, ipa: "/ʎ/"]
-Ľ -> ʎ;
 
 // ============================================================
 // SPECIAL VOWELS
 // ============================================================
 
-// Ô/ô → uo (diphthong, Slovak specific)
+// ô → uo (diphthong, Slovak specific)
 [id: 3400, name: "o circumflex", weight: 0.1, group: slovak_diphthongs, ipa: "/uo/"]
 ô -> uo;
-
-[id: 3401, name: "O circumflex", weight: 0.1, group: slovak_diphthongs, ipa: "/uo/"]
-Ô -> uo;
 
 // ============================================================
 // VOWELS WITH ČÁRKA (acute) - long vowels
 // ============================================================
 
-// Á/á → aː (long a)
+// á → aː (long a)
 [id: 3402, name: "a acute", weight: 0.1, group: slovak_long_vowels, ipa: "/aː/"]
 á -> aː;
 
-[id: 3403, name: "A acute", weight: 0.1, group: slovak_long_vowels, ipa: "/aː/"]
-Á -> aː;
-
-// É/é → eː (long e)
+// é → eː (long e)
 [id: 3404, name: "e acute", weight: 0.1, group: slovak_long_vowels, ipa: "/eː/"]
 é -> eː;
 
-[id: 3405, name: "E acute", weight: 0.1, group: slovak_long_vowels, ipa: "/eː/"]
-É -> eː;
-
-// Í/í → iː (long i)
+// í → iː (long i)
 [id: 3406, name: "i acute", weight: 0.1, group: slovak_long_vowels, ipa: "/iː/"]
 í -> iː;
 
-[id: 3407, name: "I acute", weight: 0.1, group: slovak_long_vowels, ipa: "/iː/"]
-Í -> iː;
-
-// Ó/ó → oː (long o)
+// ó → oː (long o)
 [id: 3408, name: "o acute", weight: 0.1, group: slovak_long_vowels, ipa: "/oː/"]
 ó -> oː;
 
-[id: 3409, name: "O acute", weight: 0.1, group: slovak_long_vowels, ipa: "/oː/"]
-Ó -> oː;
-
-// Ú/ú → uː (long u)
+// ú → uː (long u)
 [id: 3410, name: "u acute", weight: 0.1, group: slovak_long_vowels, ipa: "/uː/"]
 ú -> uː;
 
-[id: 3411, name: "U acute", weight: 0.1, group: slovak_long_vowels, ipa: "/uː/"]
-Ú -> uː;
-
-// Ý/ý → iː (long y = long i)
+// ý → iː (long y = long i)
 [id: 3412, name: "y acute", weight: 0.1, group: slovak_long_vowels, ipa: "/iː/"]
 ý -> iː;
-
-[id: 3413, name: "Y acute", weight: 0.1, group: slovak_long_vowels, ipa: "/iː/"]
-Ý -> iː;
 
 // ============================================================
 // STANDARD VOWELS
 // ============================================================
 
-// Note: Standard vowels a, e, i, o, u pass through unchanged by default.
-// Only transformative rules (uppercase normalization and y→i) are needed.
-
-[id: 3415, name: "A vowel", weight: 0.15, group: slovak_vowels]
-A -> a;
-
-[id: 3417, name: "E vowel", weight: 0.15, group: slovak_vowels]
-E -> e;
-
-[id: 3419, name: "I vowel", weight: 0.15, group: slovak_vowels]
-I -> i;
-
-[id: 3421, name: "O vowel", weight: 0.15, group: slovak_vowels]
-O -> o;
-
-[id: 3423, name: "U vowel", weight: 0.15, group: slovak_vowels]
-U -> u;
-
-// Y/y → i (y and i same pronunciation)
+// y → i (y and i have same pronunciation)
 [id: 3424, name: "y vowel", weight: 0.15, group: slovak_vowels]
 y -> i;
-
-[id: 3425, name: "Y vowel", weight: 0.15, group: slovak_vowels]
-Y -> i;
 
 // ============================================================
 // CONSONANTS
 // ============================================================
 
-// Note: Standard consonants b, d, f, g, h, j, k, l, m, n, p, r, s, t, v, z
-// pass through unchanged by default. Only transformative rules are needed.
-
-[id: 3427, name: "B consonant", weight: 0.2, group: slovak_consonants]
-B -> b;
-
+// c → t͡s (voiceless alveolar affricate)
 [id: 3428, name: "c consonant", weight: 0.2, group: slovak_consonants, ipa: "/t͡s/"]
 c -> t͡s;
 
-[id: 3429, name: "C consonant", weight: 0.2, group: slovak_consonants, ipa: "/t͡s/"]
-C -> t͡s;
+// g → ɡ (ASCII g to IPA voiced velar plosive)
+[id: 3430, name: "g consonant", weight: 0.2, group: slovak_consonants, ipa: "/ɡ/"]
+g -> ɡ;
 
-[id: 3431, name: "D consonant", weight: 0.2, group: slovak_consonants]
-D -> d;
-
-[id: 3433, name: "F consonant", weight: 0.2, group: slovak_consonants]
-F -> f;
-
-[id: 3435, name: "G consonant", weight: 0.2, group: slovak_consonants, ipa: "/ɡ/"]
-G -> ɡ;
-
-[id: 3437, name: "H consonant", weight: 0.2, group: slovak_consonants]
-H -> h;
-
-[id: 3439, name: "J consonant", weight: 0.2, group: slovak_consonants, ipa: "/j/"]
-J -> j;
-
-[id: 3441, name: "K consonant", weight: 0.2, group: slovak_consonants]
-K -> k;
-
-[id: 3443, name: "L consonant", weight: 0.2, group: slovak_consonants]
-L -> l;
-
-[id: 3445, name: "M consonant", weight: 0.2, group: slovak_consonants]
-M -> m;
-
-[id: 3447, name: "N consonant", weight: 0.2, group: slovak_consonants]
-N -> n;
-
-[id: 3449, name: "P consonant", weight: 0.2, group: slovak_consonants]
-P -> p;
-
-[id: 3450, name: "q consonant", weight: 0.2, group: slovak_consonants]
+// q → kv (loanword)
+[id: 3434, name: "q consonant", weight: 0.2, group: slovak_consonants]
 q -> kv;
 
-[id: 3451, name: "Q consonant", weight: 0.2, group: slovak_consonants]
-Q -> kv;
-
-[id: 3453, name: "R consonant", weight: 0.2, group: slovak_consonants]
-R -> r;
-
-[id: 3455, name: "S consonant", weight: 0.2, group: slovak_consonants]
-S -> s;
-
-[id: 3457, name: "T consonant", weight: 0.2, group: slovak_consonants]
-T -> t;
-
-[id: 3459, name: "V consonant", weight: 0.2, group: slovak_consonants]
-V -> v;
-
-[id: 3460, name: "w consonant", weight: 0.2, group: slovak_consonants]
+// w → v (loanword)
+[id: 3450, name: "w consonant", weight: 0.2, group: slovak_consonants]
 w -> v;
 
-[id: 3461, name: "W consonant", weight: 0.2, group: slovak_consonants]
-W -> v;
-
-[id: 3462, name: "x consonant", weight: 0.2, group: slovak_consonants]
+// x → ks (loanword)
+[id: 3460, name: "x consonant", weight: 0.2, group: slovak_consonants]
 x -> ks;
-
-[id: 3463, name: "X consonant", weight: 0.2, group: slovak_consonants]
-X -> ks;
-
-[id: 3465, name: "Z consonant", weight: 0.2, group: slovak_consonants]
-Z -> z;
 

@@ -20,23 +20,20 @@
 // Rule IDs: 8600-8799
 
 @name "Inuktitut Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Inuktitut (Eastern Canadian Inuktitut)"
 
+// CHANGELOG (v1.0.1):
+// - Removed all identity mappings where pattern equals replacement
+// - Kept only actual phonetic transformations (e.g., ng->ŋ, y->j, long vowels, geminates)
+// - Kept all syllabics-to-Latin conversions and IPA normalizations
+
 // ============================================================
-// SHORT VOWELS (weight 0.05)
-// Inuktitut has only 3 vowel qualities
+// SHORT VOWELS
+// NOTE: All identity mappings (i->i, u->u, a->a) removed in v1.0.1
+// Only transformations are retained.
 // ============================================================
-
-[id: 8600, name: "i short", weight: 0.05, group: inuktitut_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 8601, name: "u short", weight: 0.05, group: inuktitut_vowels, ipa: "/u/"]
-u -> u;
-
-[id: 8602, name: "a short", weight: 0.05, group: inuktitut_vowels, ipa: "/a/"]
-a -> a;
 
 // ============================================================
 // LONG VOWELS (weight 0.05)
@@ -53,20 +50,10 @@ uu -> uː;
 aa -> aː;
 
 // ============================================================
-// STOPS (weight 0.05)
+// STOPS
+// NOTE: Identity mappings (p->p, t->t, k->k, q->q) removed in v1.0.1
+// Only transformations are retained.
 // ============================================================
-
-[id: 8610, name: "p", weight: 0.05, group: inuktitut_stops, ipa: "/p/"]
-p -> p;
-
-[id: 8611, name: "t", weight: 0.05, group: inuktitut_stops, ipa: "/t/"]
-t -> t;
-
-[id: 8612, name: "k", weight: 0.05, group: inuktitut_stops, ipa: "/k/"]
-k -> k;
-
-[id: 8613, name: "q uvular", weight: 0.05, group: inuktitut_stops, ipa: "/q/"]
-q -> q;
 
 // Voiced stops (in some dialects/loanwords)
 [id: 8614, name: "g", weight: 0.05, group: inuktitut_stops, ipa: "/ɡ/"]
@@ -74,17 +61,9 @@ g -> ɡ;
 
 // ============================================================
 // FRICATIVES (weight 0.05)
+// NOTE: Identity mappings (s->s, v->v, h->h) removed in v1.0.1
+// Only transformations are retained.
 // ============================================================
-
-[id: 8620, name: "s", weight: 0.05, group: inuktitut_fricatives, ipa: "/s/"]
-s -> s;
-
-[id: 8621, name: "v labiodental", weight: 0.05, group: inuktitut_fricatives, ipa: "/v/"]
-v -> v;
-
-// Some orthographies use 'h'
-[id: 8622, name: "h", weight: 0.05, group: inuktitut_fricatives, ipa: "/h/"]
-h -> h;
 
 // Uvular fricative (voiced)
 [id: 8623, name: "r uvular fricative", weight: 0.05, group: inuktitut_fricatives, ipa: "/ʁ/"]
@@ -96,30 +75,18 @@ r -> ʁ;
 
 // ============================================================
 // NASALS (weight 0.05)
+// NOTE: Identity mappings (m->m, n->n, ŋ->ŋ) removed in v1.0.1
+// Only transformations are retained.
 // ============================================================
-
-[id: 8630, name: "m", weight: 0.05, group: inuktitut_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 8631, name: "n", weight: 0.05, group: inuktitut_nasals, ipa: "/n/"]
-n -> n;
 
 [id: 8632, name: "ng velar nasal", weight: 0.05, group: inuktitut_nasals, ipa: "/ŋ/"]
 ng -> ŋ;
 
-// Alternative spelling for velar nasal
-[id: 8633, name: "nng velar nasal alt", weight: 0.05, group: inuktitut_nasals, ipa: "/ŋ/"]
-ŋ -> ŋ;
-
 // ============================================================
 // LIQUIDS AND APPROXIMANTS (weight 0.05)
+// NOTE: Identity mappings (l->l, j->j) removed in v1.0.1
+// Only transformations are retained.
 // ============================================================
-
-[id: 8640, name: "l", weight: 0.05, group: inuktitut_liquids, ipa: "/l/"]
-l -> l;
-
-[id: 8641, name: "j approx", weight: 0.05, group: inuktitut_approximants, ipa: "/j/"]
-j -> j;
 
 // Alternative y spelling
 [id: 8642, name: "y approx alt", weight: 0.05, group: inuktitut_approximants, ipa: "/j/"]
@@ -346,29 +313,14 @@ jj -> jː;
 
 // ============================================================
 // COMMON WORDS
+// NOTE: Identity mappings removed in v1.0.1 (inuktitut->inuktitut, inuk->inuk,
+// inuit->inuit, nunavut->nunavut, ai->ai, taima->taima)
+// Only transformations are retained.
 // ============================================================
-
-[id: 8750, name: "inuktitut language", weight: 0.02, group: inuktitut_common]
-inuktitut -> inuktitut;
 
 [id: 8751, name: "syllabic inuktitut", weight: 0.02, group: inuktitut_common]
 ᐃᓄᒃᑎᑐᑦ -> inuktitut;
 
-[id: 8752, name: "inuk person", weight: 0.02, group: inuktitut_common]
-inuk -> inuk;
-
-[id: 8753, name: "inuit people plural", weight: 0.02, group: inuktitut_common]
-inuit -> inuit;
-
-[id: 8754, name: "nunavut our land", weight: 0.02, group: inuktitut_common]
-nunavut -> nunavut;
-
-[id: 8755, name: "ai hello", weight: 0.02, group: inuktitut_common]
-ai -> ai;
-
 [id: 8756, name: "qujannamiik thank you", weight: 0.02, group: inuktitut_common]
 qujannamiik -> qujanːamiːk;
-
-[id: 8757, name: "taima that is all", weight: 0.02, group: inuktitut_common]
-taima -> taima;
 

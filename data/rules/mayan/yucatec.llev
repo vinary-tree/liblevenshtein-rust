@@ -23,28 +23,24 @@
 // Rule IDs: 8800-8999
 
 @name "Yucatec Maya Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Yucatec Maya (Màaya T'àan)"
 
 // ============================================================
+// CHANGELOG
+// ============================================================
+// v1.0.1 (2025-12-26):
+//   - Removed identity mappings (rules where pattern equals replacement)
+//   - Kept only actual transformations (apostrophe normalization,
+//     orthographic to IPA conversions, etc.)
+//   - Reduced rule count while maintaining all phonetic distinctions
+
+// ============================================================
 // SHORT VOWELS (weight 0.05)
 // ============================================================
-
-[id: 8800, name: "a short", weight: 0.05, group: yucatec_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 8801, name: "e short", weight: 0.05, group: yucatec_vowels, ipa: "/e/"]
-e -> e;
-
-[id: 8802, name: "i short", weight: 0.05, group: yucatec_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 8803, name: "o short", weight: 0.05, group: yucatec_vowels, ipa: "/o/"]
-o -> o;
-
-[id: 8804, name: "u short", weight: 0.05, group: yucatec_vowels, ipa: "/u/"]
-u -> u;
+// NOTE: Identity mappings removed (a->a, e->e, i->i, o->o, u->u).
+//       Short vowels are preserved as-is in phonetic normalization.
 
 // ============================================================
 // LONG VOWELS (weight 0.05)
@@ -109,15 +105,8 @@ uu -> uː;
 // ============================================================
 // PLAIN STOPS (weight 0.05)
 // ============================================================
-
-[id: 8830, name: "p", weight: 0.05, group: yucatec_stops, ipa: "/p/"]
-p -> p;
-
-[id: 8831, name: "t", weight: 0.05, group: yucatec_stops, ipa: "/t/"]
-t -> t;
-
-[id: 8832, name: "k", weight: 0.05, group: yucatec_stops, ipa: "/k/"]
-k -> k;
+// NOTE: Identity mappings removed (p->p, t->t, k->k).
+//       Plain stops are preserved as-is in phonetic normalization.
 
 // ============================================================
 // EJECTIVE STOPS (weight 0.02 - distinctive)
@@ -132,15 +121,8 @@ t' -> tʼ;
 [id: 8837, name: "k' ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/kʼ/"]
 k' -> kʼ;
 
-// With modifier letter apostrophe
-[id: 8838, name: "pʼ ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/pʼ/"]
-pʼ -> pʼ;
-
-[id: 8839, name: "tʼ ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/tʼ/"]
-tʼ -> tʼ;
-
-[id: 8840, name: "kʼ ejective", weight: 0.02, group: yucatec_ejectives, ipa: "/kʼ/"]
-kʼ -> kʼ;
+// NOTE: Identity mappings removed for IPA modifier letter apostrophe (pʼ->pʼ, tʼ->tʼ, kʼ->kʼ).
+//       These forms (with U+02BC) are already in IPA format and require no transformation.
 
 // ============================================================
 // IMPLOSIVE (weight 0.02)
@@ -153,9 +135,8 @@ b' -> ɓ;
 [id: 8846, name: "bʼ implosive", weight: 0.02, group: yucatec_implosive, ipa: "/ɓ/"]
 bʼ -> ɓ;
 
-// Plain b (usually in loanwords)
-[id: 8847, name: "b", weight: 0.05, group: yucatec_stops, ipa: "/b/"]
-b -> b;
+// NOTE: Identity mapping removed for plain b (b->b).
+//       Plain b (usually in loanwords) is preserved as-is.
 
 // ============================================================
 // AFFRICATES (weight 0.05)
@@ -184,18 +165,14 @@ tz' -> t͡sʼ;
 [id: 8857, name: "ch' ejective", weight: 0.02, group: yucatec_ejective_affricates, ipa: "/t͡ʃʼ/"]
 ch' -> t͡ʃʼ;
 
-[id: 8858, name: "tsʼ ejective", weight: 0.02, group: yucatec_ejective_affricates, ipa: "/t͡sʼ/"]
-tsʼ -> t͡sʼ;
-
-[id: 8859, name: "chʼ ejective", weight: 0.02, group: yucatec_ejective_affricates, ipa: "/t͡ʃʼ/"]
-chʼ -> t͡ʃʼ;
+// NOTE: Identity mappings removed for IPA forms (tsʼ->t͡sʼ, chʼ->t͡ʃʼ).
+//       These forms are already in IPA format and require no transformation.
 
 // ============================================================
 // FRICATIVES (weight 0.05)
 // ============================================================
-
-[id: 8860, name: "s", weight: 0.05, group: yucatec_fricatives, ipa: "/s/"]
-s -> s;
+// NOTE: Identity mappings removed (s->s, h->h).
+//       These are preserved as-is in phonetic normalization.
 
 [id: 8861, name: "x postalveolar", weight: 0.05, group: yucatec_fricatives, ipa: "/ʃ/"]
 x -> ʃ;
@@ -203,28 +180,17 @@ x -> ʃ;
 [id: 8862, name: "j glottal", weight: 0.05, group: yucatec_fricatives, ipa: "/h/"]
 j -> h;
 
-[id: 8863, name: "h glottal alt", weight: 0.05, group: yucatec_fricatives, ipa: "/h/"]
-h -> h;
-
 // ============================================================
 // NASALS (weight 0.05)
 // ============================================================
-
-[id: 8865, name: "m", weight: 0.05, group: yucatec_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 8866, name: "n", weight: 0.05, group: yucatec_nasals, ipa: "/n/"]
-n -> n;
+// NOTE: Identity mappings removed (m->m, n->n).
+//       Nasals are preserved as-is in phonetic normalization.
 
 // ============================================================
 // LIQUIDS AND APPROXIMANTS (weight 0.05)
 // ============================================================
-
-[id: 8870, name: "l", weight: 0.05, group: yucatec_liquids, ipa: "/l/"]
-l -> l;
-
-[id: 8871, name: "w", weight: 0.05, group: yucatec_approximants, ipa: "/w/"]
-w -> w;
+// NOTE: Identity mappings removed (l->l, w->w).
+//       These are preserved as-is in phonetic normalization.
 
 [id: 8872, name: "y", weight: 0.05, group: yucatec_approximants, ipa: "/j/"]
 y -> j;
@@ -242,15 +208,11 @@ y -> j;
 // ============================================================
 // CONSONANT CLUSTERS (weight 0.05)
 // ============================================================
+// NOTE: Identity mappings removed (nt->nt, mp->mp).
+//       Only transformational cluster rules are retained.
 
 [id: 8880, name: "nk cluster", weight: 0.05, group: yucatec_clusters, ipa: "/ŋk/"]
 nk -> ŋk;
-
-[id: 8881, name: "nt cluster", weight: 0.05, group: yucatec_clusters, ipa: "/nt/"]
-nt -> nt;
-
-[id: 8882, name: "mp cluster", weight: 0.05, group: yucatec_clusters, ipa: "/mp/"]
-mp -> mp;
 
 // ============================================================
 // COMMON WORDS

@@ -21,31 +21,15 @@
 //   - ƙ for ejective k' in some systems
 //   - ƴ for palatalized glottal: ʔʲ
 //
+// Note: Identity mappings (pattern == replacement) have been removed
+// to reduce file size and improve processing efficiency.
+//
 // Rule IDs: 10300-10399
 
 @name "Hausa Phonetic Rules"
-@version "1.0.0"
+@version "1.1.0"
 @author "liblevenshtein"
-@description "Phonetic normalization rules for Hausa"
-
-// ============================================================
-// SHORT VOWELS (weight 0.05)
-// ============================================================
-
-[id: 10300, name: "a short", weight: 0.05, group: hausa_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 10301, name: "e short", weight: 0.05, group: hausa_vowels, ipa: "/e/"]
-e -> e;
-
-[id: 10302, name: "i short", weight: 0.05, group: hausa_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 10303, name: "o short", weight: 0.05, group: hausa_vowels, ipa: "/o/"]
-o -> o;
-
-[id: 10304, name: "u short", weight: 0.05, group: hausa_vowels, ipa: "/u/"]
-u -> u;
+@description "Phonetic normalization rules for Hausa (identity mappings removed)"
 
 // ============================================================
 // LONG VOWELS (weight 0.05)
@@ -123,14 +107,8 @@ uu -> uː;
 // IMPLOSIVES (weight 0.02 - distinctive)
 // ============================================================
 
-[id: 10335, name: "ɓ implosive", weight: 0.02, group: hausa_implosives, ipa: "/ɓ/"]
-ɓ -> ɓ;
-
 [id: 10336, name: "b' implosive alt", weight: 0.02, group: hausa_implosives, ipa: "/ɓ/"]
 b' -> ɓ;
-
-[id: 10337, name: "ɗ implosive", weight: 0.02, group: hausa_implosives, ipa: "/ɗ/"]
-ɗ -> ɗ;
 
 [id: 10338, name: "d' implosive alt", weight: 0.02, group: hausa_implosives, ipa: "/ɗ/"]
 d' -> ɗ;
@@ -151,18 +129,6 @@ ts' -> t͡sʼ;
 // ============================================================
 // PLAIN STOPS (weight 0.05)
 // ============================================================
-
-[id: 10345, name: "b", weight: 0.05, group: hausa_stops, ipa: "/b/"]
-b -> b;
-
-[id: 10346, name: "t", weight: 0.05, group: hausa_stops, ipa: "/t/"]
-t -> t;
-
-[id: 10347, name: "d", weight: 0.05, group: hausa_stops, ipa: "/d/"]
-d -> d;
-
-[id: 10348, name: "k", weight: 0.05, group: hausa_stops, ipa: "/k/"]
-k -> k;
 
 [id: 10349, name: "g", weight: 0.05, group: hausa_stops, ipa: "/ɡ/"]
 g -> ɡ;
@@ -219,40 +185,15 @@ ts -> t͡s;
 [id: 10365, name: "f", weight: 0.05, group: hausa_fricatives, ipa: "/ɸ/"]
 f -> ɸ;
 
-[id: 10366, name: "s", weight: 0.05, group: hausa_fricatives, ipa: "/s/"]
-s -> s;
-
-[id: 10367, name: "z", weight: 0.05, group: hausa_fricatives, ipa: "/z/"]
-z -> z;
-
 [id: 10368, name: "sh postalveolar", weight: 0.05, group: hausa_fricatives, ipa: "/ʃ/"]
 sh -> ʃ;
-
-[id: 10369, name: "h", weight: 0.05, group: hausa_fricatives, ipa: "/h/"]
-h -> h;
-
-// ============================================================
-// NASALS (weight 0.05)
-// ============================================================
-
-[id: 10372, name: "m", weight: 0.05, group: hausa_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 10373, name: "n", weight: 0.05, group: hausa_nasals, ipa: "/n/"]
-n -> n;
 
 // ============================================================
 // LIQUIDS AND APPROXIMANTS (weight 0.05)
 // ============================================================
 
-[id: 10375, name: "l", weight: 0.05, group: hausa_liquids, ipa: "/l/"]
-l -> l;
-
 [id: 10376, name: "r flap", weight: 0.05, group: hausa_liquids, ipa: "/ɾ/"]
 r -> ɾ;
-
-[id: 10377, name: "w", weight: 0.05, group: hausa_approximants, ipa: "/w/"]
-w -> w;
 
 [id: 10378, name: "y", weight: 0.05, group: hausa_approximants, ipa: "/j/"]
 y -> j;
@@ -261,17 +202,11 @@ y -> j;
 // COMMON WORDS (weight 0.02)
 // ============================================================
 
-[id: 10385, name: "hausa", weight: 0.02, group: hausa_common]
-hausa -> hausa;
-
 [id: 10386, name: "sannu hello", weight: 0.02, group: hausa_common]
 sannu -> sanːu;
 
 [id: 10387, name: "nagode thank you", weight: 0.02, group: hausa_common]
 na gode -> na ɡode;
-
-[id: 10388, name: "i yes", weight: 0.02, group: hausa_common]
-i -> i;
 
 [id: 10389, name: "a'a no", weight: 0.02, group: hausa_common]
 a'a -> aʔa;

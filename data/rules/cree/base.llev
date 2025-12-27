@@ -18,22 +18,15 @@
 // Rule IDs: 8000-8199
 
 @name "Cree Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Cree (Plains Cree)"
+@changelog "1.0.1: Removed identity mappings (a→a, i→i, o→o, p→p, t→t, k→k, s→s, h→h, m→m, n→n, w→w) as they are redundant"
 
 // ============================================================
-// SHORT VOWELS (weight 0.05)
+// SHORT VOWELS
 // ============================================================
-
-[id: 8000, name: "a short", weight: 0.05, group: cree_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 8001, name: "i short", weight: 0.05, group: cree_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 8002, name: "o short", weight: 0.05, group: cree_vowels, ipa: "/o/"]
-o -> o;
+// Note: Short vowels a, i, o pass through unchanged (no explicit rules needed)
 
 // ============================================================
 // LONG VOWELS - macron (weight 0.05)
@@ -67,15 +60,7 @@ o -> o;
 // ============================================================
 // CONSONANTS (weight 0.05)
 // ============================================================
-
-[id: 8020, name: "p", weight: 0.05, group: cree_consonants, ipa: "/p/"]
-p -> p;
-
-[id: 8021, name: "t", weight: 0.05, group: cree_consonants, ipa: "/t/"]
-t -> t;
-
-[id: 8022, name: "k", weight: 0.05, group: cree_consonants, ipa: "/k/"]
-k -> k;
+// Note: Basic consonants p, t, k, s, h, m, n, w pass through unchanged
 
 [id: 8023, name: "c affricate", weight: 0.05, group: cree_consonants, ipa: "/t͡s/"]
 c -> t͡s;
@@ -83,21 +68,6 @@ c -> t͡s;
 // Some dialects use ch instead of c
 [id: 8024, name: "ch affricate", weight: 0.05, group: cree_consonants, ipa: "/t͡ʃ/"]
 ch -> t͡ʃ;
-
-[id: 8025, name: "s", weight: 0.05, group: cree_consonants, ipa: "/s/"]
-s -> s;
-
-[id: 8026, name: "h", weight: 0.05, group: cree_consonants, ipa: "/h/"]
-h -> h;
-
-[id: 8027, name: "m", weight: 0.05, group: cree_consonants, ipa: "/m/"]
-m -> m;
-
-[id: 8028, name: "n", weight: 0.05, group: cree_consonants, ipa: "/n/"]
-n -> n;
-
-[id: 8029, name: "w", weight: 0.05, group: cree_consonants, ipa: "/w/"]
-w -> w;
 
 [id: 8030, name: "y", weight: 0.05, group: cree_consonants, ipa: "/j/"]
 y -> j;

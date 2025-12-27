@@ -11,6 +11,9 @@
 //   - Ng digraph = velar nasal [ŋː]
 //   - No voiced stops (b, d, g) in native words
 //
+// Note: All rules are case-insensitive. Only lowercase patterns are defined;
+//       uppercase and mixed-case variants are handled automatically.
+//
 // Rule IDs: 3800-3849
 
 @name "Finnish Base Phonetic Rules"
@@ -21,240 +24,89 @@
 // ============================================================
 // DIGRAPHS (highest priority)
 // ============================================================
+// Case variants (Ng, NG, Nk, NK) are handled automatically.
 
-// Ng → ŋː (geminate velar nasal, like "ng" in "singer")
+// ng → ŋː (geminate velar nasal, like "ng" in "singer")
 [id: 3800, name: "ng digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋː/"]
 ng -> ŋː;
 
-[id: 3801, name: "Ng digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋː/"]
-Ng -> ŋː;
-
-[id: 3802, name: "NG digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋː/"]
-NG -> ŋː;
-
-// Nk → ŋk (velar nasal + k)
+// nk → ŋk (velar nasal + k)
 [id: 3803, name: "nk digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋk/"]
 nk -> ŋk;
-
-[id: 3804, name: "Nk digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋk/"]
-Nk -> ŋk;
-
-[id: 3805, name: "NK digraph", weight: 0.05, group: finnish_digraphs, ipa: "/ŋk/"]
-NK -> ŋk;
 
 // ============================================================
 // LONG VOWELS (doubled letters = long sounds)
 // ============================================================
 // Finnish uses doubled letters to indicate vowel length.
 // These must be matched BEFORE single vowel rules.
+// Case variants (AA, EE, II, etc.) are handled automatically.
 
 [id: 3806, name: "long aa", weight: 0.04, group: finnish_long_vowels, ipa: "/aː/"]
 aa -> aː;
 
-[id: 3807, name: "long AA", weight: 0.04, group: finnish_long_vowels, ipa: "/aː/"]
-AA -> aː;
-
 [id: 3808, name: "long ee", weight: 0.04, group: finnish_long_vowels, ipa: "/eː/"]
 ee -> eː;
-
-[id: 3809, name: "long EE", weight: 0.04, group: finnish_long_vowels, ipa: "/eː/"]
-EE -> eː;
 
 [id: 3850, name: "long ii", weight: 0.04, group: finnish_long_vowels, ipa: "/iː/"]
 ii -> iː;
 
-[id: 3851, name: "long II", weight: 0.04, group: finnish_long_vowels, ipa: "/iː/"]
-II -> iː;
-
 [id: 3852, name: "long oo", weight: 0.04, group: finnish_long_vowels, ipa: "/oː/"]
 oo -> oː;
-
-[id: 3853, name: "long OO", weight: 0.04, group: finnish_long_vowels, ipa: "/oː/"]
-OO -> oː;
 
 [id: 3854, name: "long uu", weight: 0.04, group: finnish_long_vowels, ipa: "/uː/"]
 uu -> uː;
 
-[id: 3855, name: "long UU", weight: 0.04, group: finnish_long_vowels, ipa: "/uː/"]
-UU -> uː;
-
 [id: 3856, name: "long ää", weight: 0.04, group: finnish_long_vowels, ipa: "/æː/"]
 ää -> æː;
-
-[id: 3857, name: "long ÄÄ", weight: 0.04, group: finnish_long_vowels, ipa: "/æː/"]
-ÄÄ -> æː;
 
 [id: 3858, name: "long öö", weight: 0.04, group: finnish_long_vowels, ipa: "/øː/"]
 öö -> øː;
 
-[id: 3859, name: "long ÖÖ", weight: 0.04, group: finnish_long_vowels, ipa: "/øː/"]
-ÖÖ -> øː;
-
 [id: 3860, name: "long yy", weight: 0.04, group: finnish_long_vowels, ipa: "/yː/"]
 yy -> yː;
-
-[id: 3861, name: "long YY", weight: 0.04, group: finnish_long_vowels, ipa: "/yː/"]
-YY -> yː;
 
 // ============================================================
 // FRONT VOWELS (special Finnish vowels)
 // ============================================================
+// Case variants (Ä, Ö) are handled automatically.
 
-// Ä/ä → æ (front open vowel, like German ä)
+// ä → æ (front open vowel, like German ä)
 [id: 3810, name: "a umlaut to æ", weight: 0.1, group: finnish_front_vowels, ipa: "/æ/"]
 ä -> æ;
 
-[id: 3811, name: "A umlaut to æ", weight: 0.1, group: finnish_front_vowels, ipa: "/æ/"]
-Ä -> æ;
-
-// Ö/ö → ø (front rounded vowel, like German ö)
+// ö → ø (front rounded vowel, like German ö)
 [id: 3812, name: "o umlaut to ø", weight: 0.1, group: finnish_front_vowels, ipa: "/ø/"]
 ö -> ø;
 
-[id: 3813, name: "O umlaut to ø", weight: 0.1, group: finnish_front_vowels, ipa: "/ø/"]
-Ö -> ø;
-
-// Y/y → y (front rounded vowel, like German ü)
-// Note: Lowercase 'y' is already IPA /y/, so only uppercase needs transformation
-[id: 3815, name: "Y front vowel", weight: 0.1, group: finnish_front_vowels, ipa: "/y/"]
-Y -> y;
-
 // ============================================================
-// BACK VOWELS
+// CONSONANTS (transformative rules for loanwords)
 // ============================================================
-// Note: Lowercase vowels (a, e, i, o, u) pass through unchanged.
-// Only uppercase variants need explicit normalization.
+// Case variants (B, C, D, G, W, X, Z) are handled automatically.
 
-// A → a
-[id: 3817, name: "A vowel", weight: 0.15, group: finnish_vowels]
-A -> a;
-
-// E → e
-[id: 3819, name: "E vowel", weight: 0.15, group: finnish_vowels]
-E -> e;
-
-// I → i
-[id: 3821, name: "I vowel", weight: 0.15, group: finnish_vowels]
-I -> i;
-
-// O → o
-[id: 3823, name: "O vowel", weight: 0.15, group: finnish_vowels]
-O -> o;
-
-// U → u
-[id: 3825, name: "U vowel", weight: 0.15, group: finnish_vowels]
-U -> u;
-
-// ============================================================
-// CONSONANTS
-// ============================================================
-
-// B → p (b only in loanwords, often pronounced as p)
+// b → p (b only in loanwords, often pronounced as p)
 [id: 3826, name: "b to p", weight: 0.2, group: finnish_consonants]
 b -> p;
 
-[id: 3827, name: "B to p", weight: 0.2, group: finnish_consonants]
-B -> p;
-
-// C → k (c only in loanwords)
+// c → k (c only in loanwords)
 [id: 3828, name: "c to k", weight: 0.2, group: finnish_consonants]
 c -> k;
 
-[id: 3829, name: "C to k", weight: 0.2, group: finnish_consonants]
-C -> k;
-
-// D → t (d is marginal, often realized as t in dialects)
+// d → t (d is marginal, often realized as t in dialects)
 [id: 3830, name: "d consonant", weight: 0.2, group: finnish_consonants]
 d -> t;
 
-[id: 3831, name: "D consonant", weight: 0.2, group: finnish_consonants]
-D -> t;
-
-// F → f (loanwords only)
-// Note: Lowercase 'f' passes through unchanged
-[id: 3833, name: "F consonant", weight: 0.2, group: finnish_consonants]
-F -> f;
-
-// G → k (g only in loanwords or after n)
+// g → k (g only in loanwords or after n)
 [id: 3834, name: "g to k", weight: 0.2, group: finnish_consonants]
 g -> k;
 
-[id: 3835, name: "G to k", weight: 0.2, group: finnish_consonants]
-G -> k;
-
-// H → h
-// Note: Lowercase 'h' passes through unchanged
-[id: 3837, name: "H consonant", weight: 0.2, group: finnish_consonants]
-H -> h;
-
-// J → j (like English y, palatal approximant)
-// Note: Lowercase 'j' passes through unchanged
-[id: 3839, name: "J consonant", weight: 0.2, group: finnish_consonants, ipa: "/j/"]
-J -> j;
-
-// K → k
-// Note: Lowercase 'k' passes through unchanged
-[id: 3841, name: "K consonant", weight: 0.2, group: finnish_consonants]
-K -> k;
-
-// L → l
-// Note: Lowercase 'l' passes through unchanged
-[id: 3843, name: "L consonant", weight: 0.2, group: finnish_consonants]
-L -> l;
-
-// M → m
-// Note: Lowercase 'm' passes through unchanged
-[id: 3845, name: "M consonant", weight: 0.2, group: finnish_consonants]
-M -> m;
-
-// N → n
-// Note: Lowercase 'n' passes through unchanged
-[id: 3847, name: "N consonant", weight: 0.2, group: finnish_consonants]
-N -> n;
-
-// P → p
-// Note: Lowercase 'p' passes through unchanged
-[id: 3849, name: "P consonant", weight: 0.2, group: finnish_consonants]
-P -> p;
-
-// R → r (alveolar trill)
-// Note: Lowercase 'r' passes through unchanged
-[id: 3235, name: "R consonant", weight: 0.2, group: finnish_consonants]
-R -> r;
-
-// S → s
-// Note: Lowercase 's' passes through unchanged
-[id: 3237, name: "S consonant", weight: 0.2, group: finnish_consonants]
-S -> s;
-
-// T → t
-// Note: Lowercase 't' passes through unchanged
-[id: 3239, name: "T consonant", weight: 0.2, group: finnish_consonants]
-T -> t;
-
-// V → v
-// Note: Lowercase 'v' passes through unchanged
-[id: 3241, name: "V consonant", weight: 0.2, group: finnish_consonants]
-V -> v;
-
-// W → v (loanwords, same as v)
+// w → v (loanwords, same as v)
 [id: 3242, name: "w to v", weight: 0.2, group: finnish_consonants]
 w -> v;
 
-[id: 3243, name: "W to v", weight: 0.2, group: finnish_consonants]
-W -> v;
-
-// X → ks (loanwords)
+// x → ks (loanwords)
 [id: 3244, name: "x to ks", weight: 0.2, group: finnish_consonants]
 x -> ks;
 
-[id: 3245, name: "X to ks", weight: 0.2, group: finnish_consonants]
-X -> ks;
-
-// Z → t͡s (loanwords, pronounced as ts)
+// z → t͡s (loanwords, pronounced as ts)
 [id: 3246, name: "z to t͡s", weight: 0.2, group: finnish_consonants, ipa: "/t͡s/"]
 z -> t͡s;
-
-[id: 3247, name: "Z to t͡s", weight: 0.2, group: finnish_consonants, ipa: "/t͡s/"]
-Z -> t͡s;
-

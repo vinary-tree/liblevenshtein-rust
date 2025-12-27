@@ -17,9 +17,10 @@
 // Rule IDs: 8200-8399
 
 @name "Ojibwe Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Ojibwe (Anishinaabemowin)"
+// Changelog v1.0.1: Removed identity mappings (b->b, d->d) - redundant as unmapped characters pass through unchanged
 
 // ============================================================
 // SHORT VOWELS (weight 0.05)
@@ -79,16 +80,10 @@ onh -> õ;
 // Ojibwe stops vary by dialect (voiced/voiceless lenis)
 // ============================================================
 
-[id: 8230, name: "b", weight: 0.05, group: ojibwe_stops, ipa: "/b/"]
-b -> b;
-
-[id: 8231, name: "d", weight: 0.05, group: ojibwe_stops, ipa: "/d/"]
-d -> d;
+// Plain stops (b, d, p, t, k) pass through unchanged - already in IPA form
 
 [id: 8232, name: "g", weight: 0.05, group: ojibwe_stops, ipa: "/ɡ/"]
 g -> ɡ;
-
-// Plain voiceless stops (p, t, k) pass through unchanged - already in IPA form
 
 // Glottal stop (written as ')
 [id: 8236, name: "glottal stop", weight: 0.05, group: ojibwe_stops, ipa: "/ʔ/"]

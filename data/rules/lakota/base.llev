@@ -20,28 +20,10 @@
 // Rule IDs: 8400-8599
 
 @name "Lakota Phonetic Rules"
-@version "1.0.0"
+@version "1.0.1"
 @author "liblevenshtein"
 @description "Phonetic normalization rules for Lakota (Lakȟótiyapi)"
-
-// ============================================================
-// ORAL VOWELS (weight 0.05)
-// ============================================================
-
-[id: 8400, name: "a", weight: 0.05, group: lakota_vowels, ipa: "/a/"]
-a -> a;
-
-[id: 8401, name: "e", weight: 0.05, group: lakota_vowels, ipa: "/e/"]
-e -> e;
-
-[id: 8402, name: "i", weight: 0.05, group: lakota_vowels, ipa: "/i/"]
-i -> i;
-
-[id: 8403, name: "o", weight: 0.05, group: lakota_vowels, ipa: "/o/"]
-o -> o;
-
-[id: 8404, name: "u", weight: 0.05, group: lakota_vowels, ipa: "/u/"]
-u -> u;
+@changelog "1.0.1: Removed 21 identity mappings (unmapped characters pass through unchanged)"
 
 // ============================================================
 // NASAL VOWELS (weight 0.05)
@@ -68,32 +50,9 @@ in -> ĩ / _[^aeiou];
 un -> ũ / _[^aeiou];
 
 // ============================================================
-// PLAIN STOPS (weight 0.05)
-// Voiceless unaspirated
-// ============================================================
-
-[id: 8420, name: "p", weight: 0.05, group: lakota_stops, ipa: "/p/"]
-p -> p;
-
-[id: 8421, name: "t", weight: 0.05, group: lakota_stops, ipa: "/t/"]
-t -> t;
-
-[id: 8422, name: "k", weight: 0.05, group: lakota_stops, ipa: "/k/"]
-k -> k;
-
-// ============================================================
 // ASPIRATED STOPS (weight 0.05)
 // Written with superscript h or h after consonant
 // ============================================================
-
-[id: 8425, name: "ph aspirated", weight: 0.05, group: lakota_aspirated, ipa: "/pʰ/"]
-pʰ -> pʰ;
-
-[id: 8426, name: "th aspirated", weight: 0.05, group: lakota_aspirated, ipa: "/tʰ/"]
-tʰ -> tʰ;
-
-[id: 8427, name: "kh aspirated", weight: 0.05, group: lakota_aspirated, ipa: "/kʰ/"]
-kʰ -> kʰ;
 
 // Alternative: ph, th, kh
 [id: 8428, name: "ph alt", weight: 0.05, group: lakota_aspirated, ipa: "/pʰ/"]
@@ -117,15 +76,6 @@ t' -> tʼ;
 
 [id: 8437, name: "k ejective", weight: 0.02, group: lakota_ejectives, ipa: "/kʼ/"]
 k' -> kʼ;
-
-[id: 8438, name: "pʼ ejective", weight: 0.02, group: lakota_ejectives, ipa: "/pʼ/"]
-pʼ -> pʼ;
-
-[id: 8439, name: "tʼ ejective", weight: 0.02, group: lakota_ejectives, ipa: "/tʼ/"]
-tʼ -> tʼ;
-
-[id: 8440, name: "kʼ ejective", weight: 0.02, group: lakota_ejectives, ipa: "/kʼ/"]
-kʼ -> kʼ;
 
 // ============================================================
 // AFFRICATES (weight 0.05)
@@ -154,17 +104,11 @@ ch -> t͡ʃ;
 // FRICATIVES (weight 0.05)
 // ============================================================
 
-[id: 8455, name: "s", weight: 0.05, group: lakota_fricatives, ipa: "/s/"]
-s -> s;
-
 [id: 8456, name: "s hacek", weight: 0.05, group: lakota_fricatives, ipa: "/ʃ/"]
 š -> ʃ;
 
 [id: 8457, name: "sh", weight: 0.05, group: lakota_fricatives, ipa: "/ʃ/"]
 sh -> ʃ;
-
-[id: 8458, name: "z", weight: 0.05, group: lakota_fricatives, ipa: "/z/"]
-z -> z;
 
 [id: 8459, name: "z hacek", weight: 0.05, group: lakota_fricatives, ipa: "/ʒ/"]
 ž -> ʒ;
@@ -172,25 +116,12 @@ z -> z;
 [id: 8460, name: "zh", weight: 0.05, group: lakota_fricatives, ipa: "/ʒ/"]
 zh -> ʒ;
 
-[id: 8461, name: "h", weight: 0.05, group: lakota_fricatives, ipa: "/h/"]
-h -> h;
-
 // Velar fricatives
 [id: 8462, name: "h hacek voiceless velar", weight: 0.05, group: lakota_fricatives, ipa: "/x/"]
 ȟ -> x;
 
 [id: 8463, name: "g hacek voiced velar", weight: 0.05, group: lakota_fricatives, ipa: "/ɣ/"]
 ǧ -> ɣ;
-
-// ============================================================
-// NASALS (weight 0.05)
-// ============================================================
-
-[id: 8470, name: "m", weight: 0.05, group: lakota_nasals, ipa: "/m/"]
-m -> m;
-
-[id: 8471, name: "n", weight: 0.05, group: lakota_nasals, ipa: "/n/"]
-n -> n;
 
 // ============================================================
 // GLOTTALIZED SONORANTS (weight 0.02)
@@ -207,14 +138,8 @@ n' -> nˀ;
 l' -> lˀ;
 
 // ============================================================
-// LIQUIDS AND APPROXIMANTS (weight 0.05)
+// APPROXIMANTS (weight 0.05)
 // ============================================================
-
-[id: 8480, name: "l", weight: 0.05, group: lakota_liquids, ipa: "/l/"]
-l -> l;
-
-[id: 8481, name: "w", weight: 0.05, group: lakota_approximants, ipa: "/w/"]
-w -> w;
 
 [id: 8482, name: "y", weight: 0.05, group: lakota_approximants, ipa: "/j/"]
 y -> j;
