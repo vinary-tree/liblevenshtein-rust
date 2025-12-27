@@ -258,9 +258,10 @@ The suffix links in the current implementation are simplified - they point to ro
 
 ## Experiment 3: Frequency-Based Pattern Splitting
 
-**Date**: TBD
+**Date**: 2025-12-27
 **Branch**: `feat/wallbreaker-freq-split`
-**Baseline**: Last ACCEPTED optimization
+**Baseline**: `feat/wallbreaker-benchmarks` (Experiment 1)
+**Status**: ❌ REJECTED (Overall regression)
 
 ### Hypothesis
 - **H₀**: Frequency-based pattern splitting provides no performance improvement over uniform splitting
@@ -271,15 +272,66 @@ The suffix links in the current implementation are simplified - they point to ro
 - >10% reduction in query time
 - All existing tests pass
 
-### Results
+### Implementation
 
-| Configuration | Baseline (ns) | Optimized (ns) | Δ% | p-value | Cohen's d | Significant? |
-|---------------|---------------|----------------|-----|---------|-----------|--------------||
-| TBD           | TBD           | TBD            | TBD | TBD     | TBD       | TBD          |
+Implemented `FrequencyPatternSplitter` that:
+1. Computes character frequencies from dictionary terms during construction
+2. Assigns rarity scores inversely proportional to frequency (rare chars → high score)
+3. Uses greedy algorithm to find split points that maximize minimum rarity per piece
+4. Places rare characters within pieces (not at boundaries) to reduce false-positive matches
+
+### Pattern Splitting Overhead
+
+| Configuration | Uniform (µs) | Frequency (µs) | Overhead |
+|---------------|--------------|----------------|----------|
+| k2_q20        | 29.83        | ~66            | 2.2× slower |
+| k2_q50        | 42.36        | ~141           | 3.3× slower |
+| k2_q100       | ~61          | 517            | 8.5× slower |
+| k4_q20        | 36.3         | 73.2           | 2.0× slower |
+| k4_q50        | 47.8         | 148.0          | 3.1× slower |
+| k4_q100       | 59.6         | 386.5          | 6.5× slower |
+| k8_q20        | 47.6         | 84.3           | 1.8× slower |
+| k8_q50        | 72.0         | 172.8          | 2.4× slower |
+| k8_q100       | 81.9         | 298.1          | 3.6× slower |
+
+*Pattern splitting overhead is 2-8× due to rarity score computation and optimization.*
+
+### End-to-End WallBreaker Comparison
+
+| Configuration | Standard (ms) | Frequency (ms) | Δ% | Result |
+|---------------|---------------|----------------|-----|--------|
+| medium_d2_q20 (10K) | 53.3 | 61.1 | **+15% slower** | ❌ Regression |
+| medium_d4_q50 (10K) | 92.4 | 111.7 | **+21% slower** | ❌ Regression |
+| medium_d8_q50 (10K) | 248.5 | 197.4 | **-26% faster** | ✓ Improvement |
+| large_d4_q50 (50K) | 541.2 | 634.6 | **+17% slower** | ❌ Regression |
+| large_d8_q100 (50K) | 1,064.8 | 1,364.1 | **+28% slower** | ❌ Regression |
+
+### Analysis
+
+**Finding**: Frequency-based splitting shows improvement ONLY at high error bounds (k=8) with medium-sized dictionaries. At this configuration, the 26% speedup is statistically significant.
+
+**Root Cause of Regressions**:
+1. Pattern splitting overhead (2-8×) is NOT amortized by reduced false positives in most cases
+2. With lower error bounds (k≤4), pieces are longer and already have good discriminative power
+3. False-positive reduction only matters when:
+   - Query contains rare characters
+   - Error bound is high (many pieces, each short)
+   - Dictionary is not too large (O(n*m) search dominates at large scales)
+
+**Potential Value**: Could be useful as an optional mode for k≥8 scenarios, but requires:
+- Faster frequency analysis (precomputed, not per-query)
+- Smarter switching heuristic
 
 ### Conclusion
-**Decision**: TBD (ACCEPTED/REJECTED)
-**Rationale**: TBD
+
+**Decision**: ❌ REJECTED
+
+**Rationale**: The optimization fails to meet the >10% improvement criterion for the majority of tested configurations (4 of 5 regress by 15-28%). While the k=8 medium dictionary case shows 26% improvement, this is insufficient to justify the complexity and regressions in common use cases.
+
+**Preserved Work**: The `FrequencyPatternSplitter` and `FrequencyWallBreaker` implementations are retained for:
+1. Future investigation of conditional activation at high error bounds
+2. Reference implementation for alternative splitting strategies
+3. Benchmark comparison baseline
 
 ---
 
@@ -317,5 +369,22 @@ The suffix links in the current implementation are simplified - they point to ro
 |------------|--------|----------|------------|-------|
 | Baseline   | feat/wallbreaker-benchmarks | ✅ COMPLETE | WallBreaker 1.3-1328× slower than traditional | Substring search is critical bottleneck |
 | Suffix Links | feat/wallbreaker-substring-opt | ❌ REJECTED | Architectural incompatibility | SCDAWG is DAWG, not suffix automaton |
-| Freq Split | feat/wallbreaker-freq-split | TBD | TBD | Will base off benchmarks branch |
+| Freq Split | feat/wallbreaker-freq-split | ❌ REJECTED | 4/5 configs regress 15-28% | Only k=8 medium dict shows 26% improvement |
 | SIMD | feat/wallbreaker-simd | TBD | TBD | |
+
+---
+
+## Overall Conclusions
+
+After three experiments, the WallBreaker algorithm remains **1.3-1328× slower** than the traditional Levenshtein transducer across all tested configurations. The key findings:
+
+1. **Substring Search Bottleneck**: The naive O(n*m) substring enumeration is the dominant cost
+2. **Architectural Limitation**: Optimizing to O(|pattern|) requires a true suffix automaton, not a DAWG
+3. **Frequency Splitting**: Adds overhead that rarely pays off except at very high error bounds (k≥8)
+
+### Recommendations for Future Work
+
+1. **Alternative Data Structure**: Build a separate suffix array or FM-index for substring search
+2. **Hybrid Approach**: Use WallBreaker for k≥8, traditional transducer for k<8
+3. **Parallel Substring Search**: Parallelize the O(n*m) search across CPU cores
+4. **Bloom Filter Pre-filtering**: Skip patterns that cannot appear in dictionary

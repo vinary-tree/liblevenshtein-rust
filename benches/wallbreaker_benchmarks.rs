@@ -15,7 +15,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use liblevenshtein::dictionary::scdawg::Scdawg;
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::Algorithm;
-use liblevenshtein::wallbreaker::WallBreaker;
+use liblevenshtein::wallbreaker::{FrequencyPatternSplitter, FrequencyWallBreaker, PatternSplitter, WallBreaker};
 use std::collections::HashSet;
 
 // ============================================================================
@@ -386,6 +386,118 @@ fn bench_wallbreaker_vs_traditional(c: &mut Criterion) {
     group.finish();
 }
 
+/// Compare standard WallBreaker vs FrequencyWallBreaker
+fn bench_standard_vs_frequency_wallbreaker(c: &mut Criterion) {
+    let mut group = c.benchmark_group("standard_vs_frequency_wallbreaker");
+    group.sample_size(50);
+
+    // Focus on configurations where frequency splitting might help
+    let configs = [
+        (10_000, 2, 20, "medium_d2_q20"),
+        (10_000, 4, 50, "medium_d4_q50"),
+        (10_000, 8, 50, "medium_d8_q50"),
+        (50_000, 4, 50, "large_d4_q50"),
+        (50_000, 8, 100, "large_d8_q100"),
+    ];
+
+    for (dict_size, max_distance, query_len, label) in configs {
+        let dict_words = load_dictionary(dict_size);
+        let actual_size = dict_words.len();
+
+        if actual_size < dict_size / 2 {
+            continue;
+        }
+
+        // Build SCDAWG
+        let scdawg = Scdawg::<()>::from_terms(dict_words.iter().map(|s| s.as_str()));
+
+        // Build both WallBreaker variants
+        let standard_wb = WallBreaker::new(&scdawg, max_distance);
+        let frequency_wb = FrequencyWallBreaker::from_terms(
+            &scdawg,
+            dict_words.iter().map(|s| s.as_str()),
+            max_distance,
+        );
+
+        // Generate queries - use mix of common and rare characters
+        let queries: Vec<String> = (0..10)
+            .map(|i| generate_realistic_query(&dict_words, i * 7919, query_len))
+            .collect();
+
+        group.throughput(Throughput::Elements(queries.len() as u64));
+
+        group.bench_function(BenchmarkId::new("standard", label), |b| {
+            b.iter(|| {
+                let mut total = 0usize;
+                for query in &queries {
+                    total += black_box(standard_wb.query(query).count());
+                }
+                total
+            })
+        });
+
+        group.bench_function(BenchmarkId::new("frequency", label), |b| {
+            b.iter(|| {
+                let mut total = 0usize;
+                for query in &queries {
+                    total += black_box(frequency_wb.query(query).count());
+                }
+                total
+            })
+        });
+    }
+
+    group.finish();
+}
+
+/// Benchmark frequency-based pattern splitting (Phase 3)
+fn bench_frequency_pattern_splitting(c: &mut Criterion) {
+    let mut group = c.benchmark_group("frequency_pattern_splitting");
+    group.sample_size(1000);
+
+    let dict_words = load_dictionary(50_000);
+
+    for max_distance in [2, 4, 8] {
+        // Build both splitters
+        let uniform_splitter = PatternSplitter::new(max_distance);
+        let frequency_splitter = FrequencyPatternSplitter::from_terms(
+            dict_words.iter().map(|s| s.as_str()),
+            max_distance,
+        );
+
+        // Test different query lengths
+        for query_len in [20, 50, 100] {
+            let queries: Vec<String> = (0..100)
+                .map(|i| generate_query(query_len, i * 997))
+                .collect();
+
+            let id = format!("k{}_q{}", max_distance, query_len);
+
+            group.bench_function(BenchmarkId::new("uniform", &id), |b| {
+                b.iter(|| {
+                    let mut total = 0usize;
+                    for query in &queries {
+                        total += black_box(uniform_splitter.split(query).len());
+                    }
+                    total
+                })
+            });
+
+            group.bench_function(BenchmarkId::new("frequency", &id), |b| {
+                b.iter(|| {
+                    let mut total = 0usize;
+                    for query in &queries {
+                        total += black_box(frequency_splitter.split(query).len());
+                    }
+                    total
+                })
+            });
+        }
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_wallbreaker_query,
@@ -394,5 +506,7 @@ criterion_group!(
     bench_substring_search,
     bench_pattern_splitting,
     bench_wallbreaker_vs_traditional,
+    bench_standard_vs_frequency_wallbreaker,
+    bench_frequency_pattern_splitting,
 );
 criterion_main!(benches);
