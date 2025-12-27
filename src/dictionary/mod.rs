@@ -156,6 +156,9 @@ pub mod pathmap_zipper;
 #[cfg(feature = "phonetic-rules")]
 pub mod phonetic_normalized;
 pub mod prefix_zipper;
+pub mod scdawg;
+pub mod scdawg_char;
+pub mod substring;
 pub mod suffix_automaton;
 pub mod suffix_automaton_char;
 pub mod suffix_automaton_char_zipper;
@@ -165,6 +168,7 @@ pub mod zipper;
 
 pub use char_unit::CharUnit;
 pub use iterator::{DictionaryIterator, DictionaryTermIterator};
+pub use substring::{BidirectionalDictionaryNode, ExtensionResult, SubstringDictionary, SubstringMatch};
 pub use value::DictionaryValue;
 pub use zipper::{DictZipper, ValuedDictZipper};
 

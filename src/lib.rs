@@ -36,6 +36,32 @@ pub mod distance;
 pub mod sync_compat;
 pub mod transducer;
 
+/// WallBreaker algorithm for approximate string matching with large error bounds.
+///
+/// This module implements the WallBreaker algorithm from:
+/// > "WallBreaker - overcoming the wall effect in similarity search"
+/// > (Gerdjikov, Mihov, Mitankin, Schulz - EDBT/ICDT 2013)
+///
+/// WallBreaker overcomes the "wall effect" in traditional Levenshtein automata
+/// by using the pigeonhole principle and SCDAWG substring search. For large
+/// error bounds, it achieves significant speedups (5600× for 100-char patterns
+/// with 16 errors in a 750K dictionary).
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use liblevenshtein::dictionary::scdawg::Scdawg;
+/// use liblevenshtein::wallbreaker::WallBreaker;
+///
+/// let dict = Scdawg::<()>::from_terms(vec!["hello", "world", "help"]);
+/// let wb = WallBreaker::new(&dict, 1);
+///
+/// for result in wb.query("helo") {
+///     println!("{} (distance {})", result.term, result.distance);
+/// }
+/// ```
+pub mod wallbreaker;
+
 /// Time series distance metrics and indexing
 ///
 /// This module provides implementations for time series similarity measures,
@@ -195,5 +221,15 @@ pub mod prelude {
     pub use crate::dictionary::phonetic_normalized::{
         PhoneticNormalizedCandidate, PhoneticNormalizedDictionary, PhoneticNormalizedDictionaryChar,
         PhoneticNormalizedNode, PhoneticNormalizedZipper, RegexQueryError,
+    };
+
+    // WallBreaker for large error bounds
+    pub use crate::dictionary::scdawg::Scdawg;
+    pub use crate::dictionary::scdawg_char::ScdawgChar;
+    pub use crate::dictionary::substring::{
+        BidirectionalDictionaryNode, SubstringDictionary, SubstringMatch,
+    };
+    pub use crate::wallbreaker::{
+        PatternPiece, PatternSplitter, WallBreaker, WallBreakerQuery, WallBreakerResult,
     };
 }
