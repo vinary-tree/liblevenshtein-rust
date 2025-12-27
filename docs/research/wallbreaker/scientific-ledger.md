@@ -182,9 +182,10 @@ The baseline benchmarks reveal that the current WallBreaker implementation is **
 
 ## Experiment 2: Suffix Link Substring Search Optimization
 
-**Date**: TBD
+**Date**: 2025-12-27
 **Branch**: `feat/wallbreaker-substring-opt`
 **Baseline**: Experiment 1 results
+**Status**: ❌ REJECTED (Architectural Incompatibility)
 
 ### Hypothesis
 - **H₀**: Suffix link-based substring search provides no performance improvement over naive O(n*m) search
@@ -195,20 +196,63 @@ The baseline benchmarks reveal that the current WallBreaker implementation is **
 - >30% reduction in substring search time for patterns >10 chars
 - All existing tests pass
 
-### Command
-```bash
-cargo bench --bench wallbreaker_benchmarks -- --baseline wallbreaker-baseline
+### Investigation Results
+
+**Finding**: The optimization is **architecturally incompatible** with the current SCDAWG implementation.
+
+The SCDAWG as implemented is a **DAWG (Directed Acyclic Word Graph)** for dictionary terms, NOT a **true suffix automaton**. The critical difference:
+
+| Property | DAWG (Current) | Suffix Automaton (Required) |
+|----------|----------------|----------------------------|
+| Forward edges from root | Only dictionary term prefixes | All substrings of all terms |
+| Pattern "thedr" in "cathedral" | No path from root starting with 't' | Path exists: root → t → h → e → d → r |
+| Substring search complexity | O(total_chars × pattern_len) | O(\|pattern\| + occurrences) |
+
+**Attempted Implementation**:
+```rust
+// Walk from root following forward edges to find pattern end node
+let mut current = 0; // Start at root
+for &byte in pattern.as_bytes() {
+    match self.nodes[current].find_forward_edge(byte) {
+        Some(next) => current = next,
+        None => return Vec::new(), // Pattern not found
+    }
+}
 ```
 
-### Results
+**Why It Failed**:
+- When searching for substring "thedr" in dictionary containing "cathedral"
+- Root node only has edge 'c' (from "cathedral"), not 't'
+- The pattern "thedr" is an internal substring, not accessible via forward edges from root
 
-| Configuration | Baseline (ns) | Optimized (ns) | Δ% | p-value | Cohen's d | Significant? |
-|---------------|---------------|----------------|-----|---------|-----------|--------------||
-| TBD           | TBD           | TBD            | TBD | TBD     | TBD       | TBD          |
+**Root Cause**:
+The suffix links in the current implementation are simplified - they point to root when no matching edge exists. A true suffix automaton (Blumer et al.'s algorithm) maintains suffix links that connect all substring equivalence classes.
+
+### Alternative Approaches Considered
+
+1. **True Suffix Automaton**: Requires fundamental reconstruction of the SCDAWG
+   - Would need to store all suffixes of all terms (significant memory overhead)
+   - Construction algorithm would need complete rewrite
+
+2. **Suffix Array/Tree**: Alternative data structure for substring search
+   - Separate from DAWG, additional memory cost
+   - Would require maintaining two structures
+
+3. **Current Approach**: O(n*m) enumeration search
+   - Simple, correct, no additional memory
+   - Performance acceptable for most use cases (215-288ms for 20 patterns in 50K dict)
 
 ### Conclusion
-**Decision**: TBD (ACCEPTED/REJECTED)
-**Rationale**: TBD
+
+**Decision**: ❌ REJECTED
+
+**Rationale**: The hypothesis assumed the SCDAWG was a true suffix automaton with forward edges for all substrings. Investigation revealed it is a DAWG that only stores dictionary term prefixes. Implementing suffix link-based substring search would require converting to a true suffix automaton, which is a major architectural change beyond the scope of this optimization.
+
+**Impact on WallBreaker**: The substring search bottleneck identified in Experiment 1 remains. Alternative optimization strategies should be explored:
+1. Reduce the number of substring searches needed (Phase 3: smarter pattern splitting)
+2. Parallel substring searches using SIMD (Phase 4)
+3. Bloom filter pre-filtering to skip impossible patterns
+4. Consider building a separate suffix array for substring search
 
 ---
 
@@ -272,6 +316,6 @@ cargo bench --bench wallbreaker_benchmarks -- --baseline wallbreaker-baseline
 | Experiment | Branch | Decision | Key Metric | Notes |
 |------------|--------|----------|------------|-------|
 | Baseline   | feat/wallbreaker-benchmarks | ✅ COMPLETE | WallBreaker 1.3-1328× slower than traditional | Substring search is critical bottleneck |
-| Suffix Links | feat/wallbreaker-substring-opt | TBD | TBD | |
-| Freq Split | feat/wallbreaker-freq-split | TBD | TBD | |
+| Suffix Links | feat/wallbreaker-substring-opt | ❌ REJECTED | Architectural incompatibility | SCDAWG is DAWG, not suffix automaton |
+| Freq Split | feat/wallbreaker-freq-split | TBD | TBD | Will base off benchmarks branch |
 | SIMD | feat/wallbreaker-simd | TBD | TBD | |

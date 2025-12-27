@@ -569,9 +569,15 @@ impl<V: DictionaryValue> ScdawgInner<V> {
     ///
     /// Returns a list of (term, position) pairs where the pattern was found.
     ///
-    /// Note: This is a naive O(n*m) implementation where n is total characters
-    /// and m is pattern length. A full SCDAWG implementation would use suffix
-    /// links for O(|pattern| + occurrences) complexity.
+    /// Note: This implementation uses O(total_chars * pattern_len) complexity.
+    /// The SCDAWG as implemented is a DAWG (Directed Acyclic Word Graph) for
+    /// dictionary terms, not a true suffix automaton. A suffix automaton would
+    /// have forward edges for all substrings from root, enabling O(|pattern| +
+    /// occurrences) search. However, this DAWG only has edges for term prefixes,
+    /// so substring search requires enumeration.
+    ///
+    /// Future optimization would require converting to a true suffix automaton
+    /// (Blumer et al.'s algorithm) which stores all substrings implicitly.
     fn find_exact_substring(&self, pattern: &str) -> Vec<(String, usize)> {
         if pattern.is_empty() {
             // Empty pattern matches at position 0 of every term
@@ -581,8 +587,7 @@ impl<V: DictionaryValue> ScdawgInner<V> {
         let pattern_bytes = pattern.as_bytes();
         let mut results = Vec::new();
 
-        // Collect all terms and search each one
-        // This is the naive approach - a proper SCDAWG would do this more efficiently
+        // Enumerate all terms and search each one
         for term in self.collect_all_terms() {
             let term_bytes = term.as_bytes();
 

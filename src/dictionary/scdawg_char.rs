@@ -346,6 +346,11 @@ impl<V: DictionaryValue> ScdawgCharInner<V> {
         self.nodes[current].is_final
     }
 
+    /// Find all occurrences of a substring pattern.
+    ///
+    /// Note: This implementation uses O(total_chars * pattern_len) complexity.
+    /// See scdawg.rs for detailed explanation of why O(|pattern| + occurrences)
+    /// optimization requires a true suffix automaton rather than a DAWG.
     fn find_exact_substring(&self, pattern: &str) -> Vec<(String, usize)> {
         if pattern.is_empty() {
             return self.collect_all_terms().into_iter().map(|t| (t, 0)).collect();
