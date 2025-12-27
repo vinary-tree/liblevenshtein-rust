@@ -482,3 +482,7 @@ required-features = ["rand"]
 [[bench]]
 name = "msm_benchmarks"
 harness = false
+
+[[bench]]
+name = "wallbreaker_benchmarks"
+harness = false
