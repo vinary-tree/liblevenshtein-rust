@@ -1179,13 +1179,13 @@ mod tests {
     #[test]
     fn test_string_values() {
         let dict = DoubleArrayTrie::from_terms_with_values(vec![
-            ("hello", "greeting"),
-            ("world", "noun"),
-            ("test", "verb"),
+            ("hello", "greeting".to_string()),
+            ("world", "noun".to_string()),
+            ("test", "verb".to_string()),
         ]);
 
-        assert_eq!(dict.get_value("hello"), Some("greeting"));
-        assert_eq!(dict.get_value("world"), Some("noun"));
-        assert_eq!(dict.get_value("test"), Some("verb"));
+        assert_eq!(dict.get_value("hello"), Some("greeting".to_string()));
+        assert_eq!(dict.get_value("world"), Some("noun".to_string()));
+        assert_eq!(dict.get_value("test"), Some("verb".to_string()));
     }
 }

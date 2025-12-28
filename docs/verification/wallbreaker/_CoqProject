@@ -1,0 +1,21 @@
+# WallBreaker Pigeonhole Verification Library
+#
+# This library contains formal proofs for the pigeonhole principle
+# as applied to the WallBreaker algorithm for approximate string matching.
+#
+# Proves:
+#   - Standard Levenshtein: (k+1) pieces suffice
+#   - Transposition: (k+1) pieces FAIL, (2k+1) pieces suffice
+#   - MergeAndSplit: (k+1) pieces FAIL, (2k+1) pieces suffice
+#
+# Namespace: WallBreaker
+#
+# Dependencies: Coq Standard Library, Lia (linear integer arithmetic)
+#
+# Author: Formal Verification Team
+# Date: 2025-12-27
+
+-R theories WallBreaker
+
+# Pigeonhole theorems for extended edit distances
+theories/Pigeonhole/WallBreakerPigeonhole.v

@@ -93,6 +93,12 @@ pub enum WalRecordType {
     CommitTx = 5,
     /// Abort transaction (for future use)
     AbortTx = 6,
+    /// Atomic increment operation
+    Increment = 7,
+    /// Atomic upsert operation (update if exists, insert if not)
+    Upsert = 8,
+    /// Atomic compare-and-swap operation
+    CompareAndSwap = 9,
 }
 
 impl TryFrom<u8> for WalRecordType {
@@ -106,6 +112,9 @@ impl TryFrom<u8> for WalRecordType {
             4 => Ok(WalRecordType::BeginTx),
             5 => Ok(WalRecordType::CommitTx),
             6 => Ok(WalRecordType::AbortTx),
+            7 => Ok(WalRecordType::Increment),
+            8 => Ok(WalRecordType::Upsert),
+            9 => Ok(WalRecordType::CompareAndSwap),
             _ => Err(WalError::InvalidRecordType(value)),
         }
     }
@@ -148,6 +157,40 @@ pub enum WalRecord {
         /// Transaction ID
         tx_id: u64,
     },
+    /// Atomic increment operation
+    ///
+    /// Increments the value associated with a term by `delta`.
+    /// If the term doesn't exist, inserts with `delta` as the initial value.
+    Increment {
+        /// The term to increment
+        term: Vec<u8>,
+        /// The delta to add (can be negative)
+        delta: i64,
+        /// The resulting value after increment
+        result: i64,
+    },
+    /// Atomic upsert operation
+    ///
+    /// Updates the value if the term exists, otherwise inserts a new term.
+    Upsert {
+        /// The term to upsert
+        term: Vec<u8>,
+        /// The new serialized value
+        value: Vec<u8>,
+    },
+    /// Atomic compare-and-swap operation
+    ///
+    /// Updates the value only if the current value matches `expected`.
+    CompareAndSwap {
+        /// The term to update
+        term: Vec<u8>,
+        /// The expected current value (None means term should not exist)
+        expected: Option<Vec<u8>>,
+        /// The new value to set
+        new_value: Vec<u8>,
+        /// Whether the swap succeeded
+        success: bool,
+    },
 }
 
 impl WalRecord {
@@ -160,6 +203,9 @@ impl WalRecord {
             WalRecord::BeginTx { .. } => WalRecordType::BeginTx,
             WalRecord::CommitTx { .. } => WalRecordType::CommitTx,
             WalRecord::AbortTx { .. } => WalRecordType::AbortTx,
+            WalRecord::Increment { .. } => WalRecordType::Increment,
+            WalRecord::Upsert { .. } => WalRecordType::Upsert,
+            WalRecord::CompareAndSwap { .. } => WalRecordType::CompareAndSwap,
         }
     }
 
@@ -195,6 +241,44 @@ impl WalRecord {
             | WalRecord::CommitTx { tx_id }
             | WalRecord::AbortTx { tx_id } => {
                 buf.extend_from_slice(&tx_id.to_le_bytes());
+            }
+            WalRecord::Increment {
+                term,
+                delta,
+                result,
+            } => {
+                // Term length (4 bytes) + term + delta (8 bytes) + result (8 bytes)
+                buf.extend_from_slice(&(term.len() as u32).to_le_bytes());
+                buf.extend_from_slice(term);
+                buf.extend_from_slice(&delta.to_le_bytes());
+                buf.extend_from_slice(&result.to_le_bytes());
+            }
+            WalRecord::Upsert { term, value } => {
+                // Term length (4 bytes) + term + value length (4 bytes) + value
+                buf.extend_from_slice(&(term.len() as u32).to_le_bytes());
+                buf.extend_from_slice(term);
+                buf.extend_from_slice(&(value.len() as u32).to_le_bytes());
+                buf.extend_from_slice(value);
+            }
+            WalRecord::CompareAndSwap {
+                term,
+                expected,
+                new_value,
+                success,
+            } => {
+                // Term length + term + has_expected (1 byte) + [expected_len + expected] + new_value_len + new_value + success (1 byte)
+                buf.extend_from_slice(&(term.len() as u32).to_le_bytes());
+                buf.extend_from_slice(term);
+                if let Some(exp) = expected {
+                    buf.push(1); // has_expected = true
+                    buf.extend_from_slice(&(exp.len() as u32).to_le_bytes());
+                    buf.extend_from_slice(exp);
+                } else {
+                    buf.push(0); // has_expected = false
+                }
+                buf.extend_from_slice(&(new_value.len() as u32).to_le_bytes());
+                buf.extend_from_slice(new_value);
+                buf.push(if *success { 1 } else { 0 });
             }
         }
 
@@ -273,6 +357,108 @@ impl WalRecord {
                 }
                 let tx_id = u64::from_le_bytes(payload[0..8].try_into().unwrap());
                 Ok(WalRecord::AbortTx { tx_id })
+            }
+            WalRecordType::Increment => {
+                // term_len (4) + term + delta (8) + result (8)
+                if payload.len() < 4 {
+                    return Err(WalError::CorruptedRecord("Increment payload too short".into()));
+                }
+                let term_len = u32::from_le_bytes(payload[0..4].try_into().unwrap()) as usize;
+                if payload.len() < 4 + term_len + 16 {
+                    return Err(WalError::CorruptedRecord("Increment payload truncated".into()));
+                }
+                let term = payload[4..4 + term_len].to_vec();
+                let delta_offset = 4 + term_len;
+                let delta = i64::from_le_bytes(
+                    payload[delta_offset..delta_offset + 8].try_into().unwrap(),
+                );
+                let result = i64::from_le_bytes(
+                    payload[delta_offset + 8..delta_offset + 16]
+                        .try_into()
+                        .unwrap(),
+                );
+                Ok(WalRecord::Increment {
+                    term,
+                    delta,
+                    result,
+                })
+            }
+            WalRecordType::Upsert => {
+                // term_len (4) + term + value_len (4) + value
+                if payload.len() < 4 {
+                    return Err(WalError::CorruptedRecord("Upsert payload too short".into()));
+                }
+                let term_len = u32::from_le_bytes(payload[0..4].try_into().unwrap()) as usize;
+                if payload.len() < 4 + term_len + 4 {
+                    return Err(WalError::CorruptedRecord("Upsert term truncated".into()));
+                }
+                let term = payload[4..4 + term_len].to_vec();
+                let value_len_offset = 4 + term_len;
+                let value_len = u32::from_le_bytes(
+                    payload[value_len_offset..value_len_offset + 4]
+                        .try_into()
+                        .unwrap(),
+                ) as usize;
+                if payload.len() < value_len_offset + 4 + value_len {
+                    return Err(WalError::CorruptedRecord("Upsert value truncated".into()));
+                }
+                let value = payload[value_len_offset + 4..value_len_offset + 4 + value_len].to_vec();
+                Ok(WalRecord::Upsert { term, value })
+            }
+            WalRecordType::CompareAndSwap => {
+                // term_len + term + has_expected (1) + [expected_len + expected] + new_value_len + new_value + success (1)
+                if payload.len() < 4 {
+                    return Err(WalError::CorruptedRecord("CAS payload too short".into()));
+                }
+                let term_len = u32::from_le_bytes(payload[0..4].try_into().unwrap()) as usize;
+                if payload.len() < 4 + term_len + 1 {
+                    return Err(WalError::CorruptedRecord("CAS term truncated".into()));
+                }
+                let term = payload[4..4 + term_len].to_vec();
+                let mut offset = 4 + term_len;
+
+                let has_expected = payload[offset] != 0;
+                offset += 1;
+
+                let expected = if has_expected {
+                    if payload.len() < offset + 4 {
+                        return Err(WalError::CorruptedRecord("CAS expected length truncated".into()));
+                    }
+                    let exp_len = u32::from_le_bytes(
+                        payload[offset..offset + 4].try_into().unwrap(),
+                    ) as usize;
+                    offset += 4;
+                    if payload.len() < offset + exp_len {
+                        return Err(WalError::CorruptedRecord("CAS expected truncated".into()));
+                    }
+                    let exp = payload[offset..offset + exp_len].to_vec();
+                    offset += exp_len;
+                    Some(exp)
+                } else {
+                    None
+                };
+
+                if payload.len() < offset + 4 {
+                    return Err(WalError::CorruptedRecord("CAS new_value length truncated".into()));
+                }
+                let new_value_len = u32::from_le_bytes(
+                    payload[offset..offset + 4].try_into().unwrap(),
+                ) as usize;
+                offset += 4;
+                if payload.len() < offset + new_value_len + 1 {
+                    return Err(WalError::CorruptedRecord("CAS new_value truncated".into()));
+                }
+                let new_value = payload[offset..offset + new_value_len].to_vec();
+                offset += new_value_len;
+
+                let success = payload[offset] != 0;
+
+                Ok(WalRecord::CompareAndSwap {
+                    term,
+                    expected,
+                    new_value,
+                    success,
+                })
             }
         }
     }
@@ -583,6 +769,57 @@ impl WalWriter {
         let header = self.header.lock().expect("header lock poisoned");
         header.checkpoint_lsn
     }
+
+    /// Truncate the WAL file, removing all records.
+    ///
+    /// This is typically called after successful recovery to prevent
+    /// re-replaying the same operations on subsequent opens. The header
+    /// is preserved but all records are removed.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or a `WalError` on failure.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// // After recovery completes successfully
+    /// wal_writer.truncate()?;
+    /// ```
+    pub fn truncate(&self) -> Result<(), WalError> {
+        let mut file = self.file.lock().expect("WAL lock poisoned");
+
+        // Flush any pending writes
+        file.flush()?;
+
+        // Get the underlying file and truncate to header size only
+        let inner_file = file.get_mut();
+        inner_file.set_len(WalHeader::SIZE as u64)?;
+
+        // Seek to end of header for subsequent writes
+        file.seek(SeekFrom::Start(WalHeader::SIZE as u64))?;
+
+        // Reset LSN counters
+        self.next_lsn.store(1, Ordering::SeqCst);
+        self.synced_lsn.store(0, Ordering::SeqCst);
+
+        // Reset checkpoint LSN in header
+        {
+            let mut header = self.header.lock().expect("header lock poisoned");
+            header.checkpoint_lsn = 0;
+
+            // Write updated header to disk
+            file.seek(SeekFrom::Start(0))?;
+            file.write_all(&header.to_bytes())?;
+            file.flush()?;
+            file.get_ref().sync_all()?;
+
+            // Seek back to end of header for subsequent writes
+            file.seek(SeekFrom::Start(WalHeader::SIZE as u64))?;
+        }
+
+        Ok(())
+    }
 }
 
 /// WAL reader for recovery.
@@ -887,5 +1124,67 @@ mod tests {
         let reader = WalReader::new(&wal_path).expect("open WAL");
         let records: Vec<_> = reader.iter().collect();
         assert_eq!(records.len(), 2);
+    }
+
+    #[test]
+    fn test_wal_truncate() {
+        let dir = tempdir().expect("create temp dir");
+        let wal_path = dir.path().join("test.wal");
+
+        // Create WAL and write some records
+        {
+            let wal = WalWriter::create(&wal_path).expect("create WAL");
+            wal.append(WalRecord::Insert {
+                term: b"first".to_vec(),
+                value: None,
+            })
+            .expect("append");
+            wal.append(WalRecord::Insert {
+                term: b"second".to_vec(),
+                value: None,
+            })
+            .expect("append");
+            wal.checkpoint(2).expect("checkpoint");
+            wal.sync().expect("sync");
+
+            // Verify records exist before truncate
+            assert_eq!(wal.current_lsn(), 4); // 2 inserts + 1 checkpoint = LSN 3, next is 4
+
+            // Truncate the WAL
+            wal.truncate().expect("truncate");
+
+            // Verify LSN is reset
+            assert_eq!(wal.current_lsn(), 1);
+            assert_eq!(wal.synced_lsn(), 0);
+            assert_eq!(wal.checkpoint_lsn(), 0);
+        }
+
+        // Verify WAL is empty after truncate
+        let reader = WalReader::new(&wal_path).expect("open WAL");
+        let records: Vec<_> = reader.iter().collect();
+        assert_eq!(records.len(), 0, "WAL should be empty after truncate");
+
+        // Verify we can append new records after truncate
+        {
+            let wal = WalWriter::open(&wal_path).expect("open WAL");
+            assert_eq!(wal.current_lsn(), 1); // Should start fresh
+
+            let lsn = wal
+                .append(WalRecord::Insert {
+                    term: b"new_record".to_vec(),
+                    value: None,
+                })
+                .expect("append after truncate");
+            assert_eq!(lsn, 1);
+            wal.sync().expect("sync");
+        }
+
+        // Verify new record is readable
+        let reader = WalReader::new(&wal_path).expect("open WAL");
+        let records: Vec<_> = reader.iter().collect();
+        assert_eq!(records.len(), 1);
+        let (lsn, rec) = records[0].as_ref().expect("record");
+        assert_eq!(*lsn, 1);
+        assert!(matches!(rec, WalRecord::Insert { term, .. } if term == b"new_record"));
     }
 }

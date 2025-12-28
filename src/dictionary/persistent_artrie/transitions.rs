@@ -253,7 +253,7 @@ pub fn art_node_to_bucket(
 }
 
 /// Represents a child pointer that can be either a bucket or an ART node
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ChildNode {
     /// A bucket leaf node
     Bucket(StringBucket),
@@ -265,6 +265,16 @@ pub enum ChildNode {
         is_final: bool,
         /// Value if this is a final state with a value
         value: Option<Vec<u8>>,
+        /// Child nodes (for nested ART)
+        children: Vec<(u8, ChildNode)>,
+    },
+    /// A disk-backed reference (not yet loaded)
+    ///
+    /// This variant is used for lazy loading. When accessed, the SwizzledPtr
+    /// is resolved by loading the node from disk via the BufferManager.
+    DiskRef {
+        /// The swizzled pointer containing disk location
+        ptr: SwizzledPtr,
     },
 }
 
@@ -280,12 +290,46 @@ impl ChildNode {
             node,
             is_final,
             value,
+            children: Vec::new(),
         }
+    }
+
+    /// Create a new ART node child with children
+    pub fn art_node_with_children(
+        node: Node,
+        is_final: bool,
+        value: Option<Vec<u8>>,
+        children: Vec<(u8, ChildNode)>,
+    ) -> Self {
+        ChildNode::ArtNode {
+            node,
+            is_final,
+            value,
+            children,
+        }
+    }
+
+    /// Create a new disk reference child
+    pub fn disk_ref(ptr: SwizzledPtr) -> Self {
+        ChildNode::DiskRef { ptr }
     }
 
     /// Check if this is a bucket
     pub fn is_bucket(&self) -> bool {
         matches!(self, ChildNode::Bucket(_))
+    }
+
+    /// Check if this is a disk reference (not yet loaded)
+    pub fn is_disk_ref(&self) -> bool {
+        matches!(self, ChildNode::DiskRef { .. })
+    }
+
+    /// Get the SwizzledPtr if this is a disk reference
+    pub fn as_disk_ref(&self) -> Option<&SwizzledPtr> {
+        match self {
+            ChildNode::DiskRef { ptr } => Some(ptr),
+            _ => None,
+        }
     }
 
     /// Get as bucket reference
@@ -301,6 +345,174 @@ impl ChildNode {
         match self {
             ChildNode::Bucket(b) => Some(b),
             _ => None,
+        }
+    }
+
+    /// Get as ART node reference
+    pub fn as_art_node(&self) -> Option<(&Node, bool, &Option<Vec<u8>>, &Vec<(u8, ChildNode)>)> {
+        match self {
+            ChildNode::ArtNode {
+                node,
+                is_final,
+                value,
+                children,
+            } => Some((node, *is_final, value, children)),
+            _ => None,
+        }
+    }
+
+    /// Get as mutable ART node reference
+    pub fn as_art_node_mut(
+        &mut self,
+    ) -> Option<(&mut Node, &mut bool, &mut Option<Vec<u8>>, &mut Vec<(u8, ChildNode)>)> {
+        match self {
+            ChildNode::ArtNode {
+                node,
+                is_final,
+                value,
+                children,
+            } => Some((node, is_final, value, children)),
+            _ => None,
+        }
+    }
+
+    /// Recursively insert a key into this child node.
+    ///
+    /// This handles all child types:
+    /// - `Bucket`: directly insert into the bucket
+    /// - `ArtNode`: recursively descend through nested ART structure
+    /// - `DiskRef`: not supported for mutation (returns false)
+    ///
+    /// Returns `true` if the key was newly inserted, `false` if it already existed
+    /// or if insertion failed.
+    pub fn insert_key(&mut self, remaining: &[u8]) -> bool {
+        match self {
+            ChildNode::Bucket(bucket) => {
+                bucket.insert_key(remaining).unwrap_or(false)
+            }
+            ChildNode::ArtNode {
+                is_final,
+                value: _,
+                children,
+                ..
+            } => {
+                if remaining.is_empty() {
+                    // Insert at this node (make it final)
+                    if *is_final {
+                        false // Already exists
+                    } else {
+                        *is_final = true;
+                        true
+                    }
+                } else {
+                    let first = remaining[0];
+                    let rest = &remaining[1..];
+
+                    // Find child with matching byte
+                    for (b, child) in children.iter_mut() {
+                        if *b == first {
+                            return child.insert_key(rest);
+                        }
+                    }
+
+                    // No matching child, create new bucket
+                    let mut new_bucket = StringBucket::with_values();
+                    let _ = new_bucket.insert_key(rest);
+                    children.push((first, ChildNode::Bucket(new_bucket)));
+                    true
+                }
+            }
+            ChildNode::DiskRef { .. } => {
+                // Cannot insert into disk ref without loading first
+                false
+            }
+        }
+    }
+
+    /// Recursively remove a key from this child node.
+    ///
+    /// This handles all child types:
+    /// - `Bucket`: directly remove from the bucket
+    /// - `ArtNode`: recursively descend through nested ART structure
+    /// - `DiskRef`: not supported for mutation (returns false)
+    ///
+    /// Returns `true` if the key was removed, `false` if it didn't exist
+    /// or if removal failed.
+    pub fn remove_key(&mut self, remaining: &[u8]) -> bool {
+        match self {
+            ChildNode::Bucket(bucket) => {
+                bucket.remove(remaining).is_some()
+            }
+            ChildNode::ArtNode {
+                is_final,
+                value,
+                children,
+                ..
+            } => {
+                if remaining.is_empty() {
+                    // Remove at this node
+                    if *is_final {
+                        *is_final = false;
+                        *value = None;
+                        true
+                    } else {
+                        false // Didn't exist
+                    }
+                } else {
+                    let first = remaining[0];
+                    let rest = &remaining[1..];
+
+                    // Find child with matching byte
+                    for (b, child) in children.iter_mut() {
+                        if *b == first {
+                            return child.remove_key(rest);
+                        }
+                    }
+                    false // Child not found
+                }
+            }
+            ChildNode::DiskRef { .. } => {
+                // Cannot remove from disk ref without loading first
+                false
+            }
+        }
+    }
+
+    /// Check if this child node contains a key.
+    ///
+    /// This handles all child types:
+    /// - `Bucket`: directly check in the bucket
+    /// - `ArtNode`: recursively descend through nested ART structure
+    /// - `DiskRef`: not supported (returns false)
+    pub fn contains_key(&self, remaining: &[u8]) -> bool {
+        match self {
+            ChildNode::Bucket(bucket) => {
+                bucket.contains(remaining)
+            }
+            ChildNode::ArtNode {
+                is_final,
+                children,
+                ..
+            } => {
+                if remaining.is_empty() {
+                    *is_final
+                } else {
+                    let first = remaining[0];
+                    let rest = &remaining[1..];
+
+                    // Find child with matching byte
+                    for (b, child) in children.iter() {
+                        if *b == first {
+                            return child.contains_key(rest);
+                        }
+                    }
+                    false // Child not found
+                }
+            }
+            ChildNode::DiskRef { .. } => {
+                // Cannot check disk ref without loading
+                false
+            }
         }
     }
 }
@@ -477,5 +689,123 @@ mod tests {
         let child = ChildNode::art_node(node, false, None);
         assert!(!child.is_bucket());
         assert!(child.as_bucket().is_none());
+    }
+
+    #[test]
+    fn test_child_node_insert_key_bucket() {
+        let bucket = StringBucket::new();
+        let mut child = ChildNode::bucket(bucket);
+
+        // Insert into bucket child
+        assert!(child.insert_key(b"apple"));
+        assert!(child.insert_key(b"banana"));
+
+        // Duplicate returns false
+        assert!(!child.insert_key(b"apple"));
+
+        // Verify keys exist
+        assert!(child.contains_key(b"apple"));
+        assert!(child.contains_key(b"banana"));
+        assert!(!child.contains_key(b"cherry"));
+    }
+
+    #[test]
+    fn test_child_node_insert_key_art() {
+        let node = Node::N4(Box::new(Node4::new()));
+        let mut child = ChildNode::art_node_with_children(node, false, None, Vec::new());
+
+        // Insert creates new bucket children
+        assert!(child.insert_key(b"apple"));
+        assert!(child.insert_key(b"apricot"));
+
+        // Verify keys exist
+        assert!(child.contains_key(b"apple"));
+        assert!(child.contains_key(b"apricot"));
+        assert!(!child.contains_key(b"banana"));
+
+        // Insert at empty path (marks node as final)
+        assert!(child.insert_key(b""));
+        assert!(!child.insert_key(b"")); // Already final
+    }
+
+    #[test]
+    fn test_child_node_remove_key_bucket() {
+        let mut bucket = StringBucket::new();
+        bucket.insert_key(b"apple").unwrap();
+        bucket.insert_key(b"banana").unwrap();
+
+        let mut child = ChildNode::bucket(bucket);
+
+        // Remove existing key
+        assert!(child.remove_key(b"apple"));
+        assert!(!child.contains_key(b"apple"));
+
+        // Remove non-existing key
+        assert!(!child.remove_key(b"apple"));
+
+        // Verify other key still exists
+        assert!(child.contains_key(b"banana"));
+    }
+
+    #[test]
+    fn test_child_node_remove_key_art() {
+        let node = Node::N4(Box::new(Node4::new()));
+        let mut child = ChildNode::art_node_with_children(node, true, None, Vec::new());
+
+        // Insert some keys
+        assert!(child.insert_key(b"apple"));
+
+        // Remove from final state
+        assert!(child.remove_key(b""));
+
+        // Remove existing key
+        assert!(child.remove_key(b"apple"));
+        assert!(!child.contains_key(b"apple"));
+
+        // Remove non-existing key
+        assert!(!child.remove_key(b"apple"));
+    }
+
+    #[test]
+    fn test_child_node_nested_art_operations() {
+        // Create a nested ART structure: root ART -> child ART -> bucket
+        let inner_node = Node::N4(Box::new(Node4::new()));
+        let inner_bucket = StringBucket::new();
+        let inner_child = ChildNode::art_node_with_children(
+            inner_node,
+            false,
+            None,
+            vec![(b'p', ChildNode::Bucket(inner_bucket))],
+        );
+
+        let outer_node = Node::N4(Box::new(Node4::new()));
+        let mut outer_child = ChildNode::art_node_with_children(
+            outer_node,
+            false,
+            None,
+            vec![(b'a', inner_child)],
+        );
+
+        // Insert through nested structure
+        assert!(outer_child.insert_key(b"apple")); // a -> p -> ple
+
+        // Verify the key exists
+        assert!(outer_child.contains_key(b"apple"));
+        assert!(!outer_child.contains_key(b"apricot"));
+
+        // Remove through nested structure
+        assert!(outer_child.remove_key(b"apple"));
+        assert!(!outer_child.contains_key(b"apple"));
+    }
+
+    #[test]
+    fn test_child_node_disk_ref_operations() {
+        let ptr = SwizzledPtr::null();
+        let mut child = ChildNode::disk_ref(ptr);
+
+        // All operations on disk ref return false (not supported without loading)
+        assert!(!child.insert_key(b"test"));
+        assert!(!child.remove_key(b"test"));
+        assert!(!child.contains_key(b"test"));
     }
 }

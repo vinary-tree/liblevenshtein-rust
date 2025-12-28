@@ -246,8 +246,10 @@ mod tests {
 
     #[test]
     fn test_zipper_string_values() {
-        let dict =
-            DoubleArrayTrie::from_terms_with_values(vec![("hello", "greeting"), ("world", "noun")]);
+        let dict = DoubleArrayTrie::from_terms_with_values(vec![
+            ("hello", "greeting".to_string()),
+            ("world", "noun".to_string()),
+        ]);
 
         let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
 
@@ -261,6 +263,6 @@ mod tests {
             .unwrap();
 
         assert!(z.is_final());
-        assert_eq!(z.value(), Some("greeting"));
+        assert_eq!(z.value(), Some("greeting".to_string()));
     }
 }

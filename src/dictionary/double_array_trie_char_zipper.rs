@@ -252,8 +252,8 @@ mod tests {
     #[test]
     fn test_zipper_string_values() {
         let dict = DoubleArrayTrieChar::from_terms_with_values(vec![
-            ("hello", "greeting"),
-            ("世界", "world"),
+            ("hello", "greeting".to_string()),
+            ("世界", "world".to_string()),
         ]);
 
         let zipper = DoubleArrayTrieCharZipper::new_from_dict(&dict);
@@ -268,13 +268,15 @@ mod tests {
             .unwrap();
 
         assert!(z.is_final());
-        assert_eq!(z.value(), Some("greeting"));
+        assert_eq!(z.value(), Some("greeting".to_string()));
     }
 
     #[test]
     fn test_zipper_emoji() {
-        let dict =
-            DoubleArrayTrieChar::from_terms_with_values(vec![("🎉", "party"), ("🌍", "earth")]);
+        let dict = DoubleArrayTrieChar::from_terms_with_values(vec![
+            ("🎉", "party".to_string()),
+            ("🌍", "earth".to_string()),
+        ]);
 
         let zipper = DoubleArrayTrieCharZipper::new_from_dict(&dict);
 
@@ -282,7 +284,7 @@ mod tests {
         let z = zipper.descend('🎉').unwrap();
 
         assert!(z.is_final());
-        assert_eq!(z.value(), Some("party"));
+        assert_eq!(z.value(), Some("party".to_string()));
     }
 
     #[test]

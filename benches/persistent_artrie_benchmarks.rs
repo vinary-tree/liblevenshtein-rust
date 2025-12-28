@@ -549,6 +549,98 @@ fn bench_memory_efficiency(c: &mut Criterion) {
 }
 
 // ============================================================================
+// Disk I/O Benchmarks (requires persistent-artrie feature)
+// ============================================================================
+
+/// Benchmark PersistentARTrie with disk persistence enabled
+fn bench_part_disk_io(c: &mut Criterion) {
+    use std::time::Instant;
+    use tempfile::tempdir;
+
+    let mut group = c.benchmark_group("part_disk_io");
+    group.sample_size(10); // Fewer samples due to I/O
+
+    for size in [100, 500, 1000].iter() {
+        let terms = generate_terms(*size);
+
+        // Benchmark: Create + Insert + Sync
+        group.throughput(Throughput::Elements(*size as u64));
+        group.bench_with_input(
+            BenchmarkId::new("create_insert_sync", size),
+            size,
+            |b, _| {
+                b.iter_custom(|iters| {
+                    let mut total = std::time::Duration::ZERO;
+                    for _ in 0..iters {
+                        let dir = tempdir().unwrap();
+                        let path = dir.path().join("bench.part");
+
+                        let start = Instant::now();
+                        let mut dict = PersistentARTrie::<()>::create(&path).unwrap();
+                        for term in &terms {
+                            let _ = dict.insert(bb(term));
+                        }
+                        let _ = dict.sync();
+                        total += start.elapsed();
+                        drop(dict);
+                    }
+                    total
+                });
+            },
+        );
+
+        // Benchmark: Recovery time
+        group.bench_with_input(
+            BenchmarkId::new("recovery", size),
+            size,
+            |b, _| {
+                // Setup: create and populate dictionary
+                let dir = tempdir().unwrap();
+                let path = dir.path().join("bench.part");
+                {
+                    let mut dict = PersistentARTrie::<()>::create(&path).unwrap();
+                    for term in &terms {
+                        let _ = dict.insert(term);
+                    }
+                    let _ = dict.sync();
+                }
+
+                b.iter_custom(|iters| {
+                    let mut total = std::time::Duration::ZERO;
+                    for _ in 0..iters {
+                        let start = Instant::now();
+                        let dict = PersistentARTrie::<()>::open(&path).unwrap();
+                        black_box(dict.len());
+                        total += start.elapsed();
+                    }
+                    total
+                });
+            },
+        );
+
+        // Benchmark: Checkpoint
+        group.bench_with_input(
+            BenchmarkId::new("checkpoint", size),
+            size,
+            |b, _| {
+                let dir = tempdir().unwrap();
+                let path = dir.path().join("bench.part");
+                let mut dict = PersistentARTrie::<()>::create(&path).unwrap();
+                for term in &terms {
+                    let _ = dict.insert(term);
+                }
+
+                b.iter(|| {
+                    let _ = dict.checkpoint();
+                    black_box(())
+                });
+            },
+        );
+    }
+    group.finish();
+}
+
+// ============================================================================
 // Criterion Groups
 // ============================================================================
 
@@ -585,10 +677,16 @@ criterion_group!(
     bench_memory_efficiency,
 );
 
+criterion_group!(
+    disk_io_benches,
+    bench_part_disk_io,
+);
+
 criterion_main!(
     construction_benches,
     lookup_benches,
     edge_traversal_benches,
     transition_benches,
     memory_benches,
+    disk_io_benches,
 );

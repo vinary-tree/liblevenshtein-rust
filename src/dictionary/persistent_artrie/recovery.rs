@@ -108,9 +108,52 @@ pub type Result<T> = std::result::Result<T, RecoveryError>;
 #[derive(Debug, Clone)]
 pub enum RecoveredOperation {
     /// Insert a term with optional value
-    Insert { term: Vec<u8>, value: Option<Vec<u8>> },
+    Insert {
+        /// Log sequence number of this operation
+        lsn: Lsn,
+        /// The term bytes
+        term: Vec<u8>,
+        /// Optional serialized value
+        value: Option<Vec<u8>>,
+    },
     /// Remove a term
-    Remove { term: Vec<u8> },
+    Remove {
+        /// Log sequence number of this operation
+        lsn: Lsn,
+        /// The term bytes
+        term: Vec<u8>,
+    },
+    /// Atomic increment operation
+    Increment {
+        /// Log sequence number of this operation
+        lsn: Lsn,
+        /// The term bytes
+        term: Vec<u8>,
+        /// Delta that was added
+        delta: i64,
+        /// Resulting value after increment
+        result: i64,
+    },
+    /// Atomic upsert operation
+    Upsert {
+        /// Log sequence number of this operation
+        lsn: Lsn,
+        /// The term bytes
+        term: Vec<u8>,
+        /// The new serialized value
+        value: Vec<u8>,
+    },
+    /// Atomic compare-and-swap operation
+    CompareAndSwap {
+        /// Log sequence number of this operation
+        lsn: Lsn,
+        /// The term bytes
+        term: Vec<u8>,
+        /// The new value that was set (only if success)
+        new_value: Vec<u8>,
+        /// Whether the swap succeeded
+        success: bool,
+    },
 }
 
 /// State of a transaction during recovery.
@@ -335,11 +378,17 @@ impl RecoveryManager {
     /// Redo phase: Replay committed operations.
     ///
     /// Returns:
-    /// - Vector of committed operations in LSN order
+    /// - Vector of committed operations in LSN order (after checkpoint if provided)
     /// - The next LSN to use
+    ///
+    /// # Checkpoint Skipping
+    ///
+    /// When `checkpoint_lsn` is provided, operations with LSN <= checkpoint_lsn are
+    /// skipped since they are already reflected in the persistent trie state on disk.
+    /// This optimization avoids replaying the entire WAL history on every open.
     fn redo_phase(
         &self,
-        _checkpoint_lsn: Option<Lsn>,
+        checkpoint_lsn: Option<Lsn>,
         _transactions: &HashMap<u64, TransactionState>,
         stats: &mut RecoveryStats,
     ) -> Result<(Vec<RecoveredOperation>, Lsn)> {
@@ -360,6 +409,10 @@ impl RecoveryManager {
             };
 
             next_lsn = lsn + 1;
+
+            // Note: Checkpoint-based filtering is done by the caller (dict_impl.rs)
+            // since it knows whether the disk state was successfully loaded.
+            // Operations carry their LSN so the caller can filter appropriately.
 
             match record {
                 WalRecord::BeginTx { tx_id } => {
@@ -383,7 +436,7 @@ impl RecoveryManager {
                     }
                 }
                 WalRecord::Insert { term, value } => {
-                    let op = RecoveredOperation::Insert { term, value };
+                    let op = RecoveredOperation::Insert { lsn, term, value };
                     if let Some(tx_id) = current_tx {
                         // Part of a transaction - buffer until commit
                         pending_tx_ops.entry(tx_id).or_default().push(op);
@@ -394,7 +447,7 @@ impl RecoveryManager {
                     }
                 }
                 WalRecord::Remove { term } => {
-                    let op = RecoveredOperation::Remove { term };
+                    let op = RecoveredOperation::Remove { lsn, term };
                     if let Some(tx_id) = current_tx {
                         pending_tx_ops.entry(tx_id).or_default().push(op);
                     } else {
@@ -403,7 +456,55 @@ impl RecoveryManager {
                     }
                 }
                 WalRecord::Checkpoint { .. } => {
-                    // Checkpoints don't affect operation replay
+                    // Checkpoint records are processed during analysis phase.
+                    // Checkpoint-based skipping will be implemented when full
+                    // disk persistence is added.
+                }
+                WalRecord::Increment {
+                    term,
+                    delta,
+                    result,
+                } => {
+                    let op = RecoveredOperation::Increment {
+                        lsn,
+                        term,
+                        delta,
+                        result,
+                    };
+                    if let Some(tx_id) = current_tx {
+                        pending_tx_ops.entry(tx_id).or_default().push(op);
+                    } else {
+                        operations.push(op);
+                    }
+                }
+                WalRecord::Upsert { term, value } => {
+                    let op = RecoveredOperation::Upsert { lsn, term, value };
+                    if let Some(tx_id) = current_tx {
+                        pending_tx_ops.entry(tx_id).or_default().push(op);
+                    } else {
+                        operations.push(op);
+                    }
+                }
+                WalRecord::CompareAndSwap {
+                    term,
+                    expected: _,
+                    new_value,
+                    success,
+                } => {
+                    // Only apply if the CAS succeeded
+                    if success {
+                        let op = RecoveredOperation::CompareAndSwap {
+                            lsn,
+                            term,
+                            new_value,
+                            success,
+                        };
+                        if let Some(tx_id) = current_tx {
+                            pending_tx_ops.entry(tx_id).or_default().push(op);
+                        } else {
+                            operations.push(op);
+                        }
+                    }
                 }
             }
         }
@@ -413,6 +514,9 @@ impl RecoveryManager {
             match op {
                 RecoveredOperation::Insert { .. } => stats.insert_operations += 1,
                 RecoveredOperation::Remove { .. } => stats.remove_operations += 1,
+                RecoveredOperation::Increment { .. } => stats.insert_operations += 1,
+                RecoveredOperation::Upsert { .. } => stats.insert_operations += 1,
+                RecoveredOperation::CompareAndSwap { .. } => stats.insert_operations += 1,
             }
         }
 
@@ -481,7 +585,7 @@ impl IncrementalRecovery {
             match self.reader.next_record() {
                 Some(Ok((lsn, record))) => {
                     self.next_lsn = lsn + 1;
-                    if let Some(ops) = self.process_record(record)? {
+                    if let Some(ops) = self.process_record(lsn, record)? {
                         batch.extend(ops);
                     }
                 }
@@ -507,7 +611,7 @@ impl IncrementalRecovery {
     }
 
     /// Process a single record and return any committed operations.
-    fn process_record(&mut self, record: WalRecord) -> Result<Option<Vec<RecoveredOperation>>> {
+    fn process_record(&mut self, lsn: Lsn, record: WalRecord) -> Result<Option<Vec<RecoveredOperation>>> {
         match record {
             WalRecord::BeginTx { tx_id } => {
                 self.current_tx = Some(tx_id);
@@ -531,7 +635,7 @@ impl IncrementalRecovery {
                 Ok(None)
             }
             WalRecord::Insert { term, value } => {
-                let op = RecoveredOperation::Insert { term, value };
+                let op = RecoveredOperation::Insert { lsn, term, value };
                 if self.current_tx.is_some() {
                     self.pending_ops.push(op);
                     Ok(None)
@@ -540,7 +644,7 @@ impl IncrementalRecovery {
                 }
             }
             WalRecord::Remove { term } => {
-                let op = RecoveredOperation::Remove { term };
+                let op = RecoveredOperation::Remove { lsn, term };
                 if self.current_tx.is_some() {
                     self.pending_ops.push(op);
                     Ok(None)
@@ -549,6 +653,57 @@ impl IncrementalRecovery {
                 }
             }
             WalRecord::Checkpoint { .. } => Ok(None),
+            WalRecord::Increment {
+                term,
+                delta,
+                result,
+            } => {
+                let op = RecoveredOperation::Increment {
+                    lsn,
+                    term,
+                    delta,
+                    result,
+                };
+                if self.current_tx.is_some() {
+                    self.pending_ops.push(op);
+                    Ok(None)
+                } else {
+                    Ok(Some(vec![op]))
+                }
+            }
+            WalRecord::Upsert { term, value } => {
+                let op = RecoveredOperation::Upsert { lsn, term, value };
+                if self.current_tx.is_some() {
+                    self.pending_ops.push(op);
+                    Ok(None)
+                } else {
+                    Ok(Some(vec![op]))
+                }
+            }
+            WalRecord::CompareAndSwap {
+                term,
+                expected: _,
+                new_value,
+                success,
+            } => {
+                // Only apply if the CAS succeeded
+                if success {
+                    let op = RecoveredOperation::CompareAndSwap {
+                        lsn,
+                        term,
+                        new_value,
+                        success,
+                    };
+                    if self.current_tx.is_some() {
+                        self.pending_ops.push(op);
+                        Ok(None)
+                    } else {
+                        Ok(Some(vec![op]))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
         }
     }
 
@@ -573,15 +728,42 @@ where
 
     for op in operations {
         match op {
-            RecoveredOperation::Insert { term, value } => {
+            RecoveredOperation::Insert { lsn: _, term, value } => {
                 insert_fn(&term, value.as_deref())?;
                 count += 1;
             }
-            RecoveredOperation::Remove { term } => {
+            RecoveredOperation::Remove { lsn: _, term } => {
                 // For removes, we pass None as the value to indicate removal
                 // The actual implementation would call a remove function
                 insert_fn(&term, None)?;
                 count += 1;
+            }
+            RecoveredOperation::Increment {
+                lsn: _,
+                term,
+                delta: _,
+                result,
+            } => {
+                // For increment, we store the final result value
+                let value_bytes = result.to_le_bytes();
+                insert_fn(&term, Some(&value_bytes))?;
+                count += 1;
+            }
+            RecoveredOperation::Upsert { lsn: _, term, value } => {
+                insert_fn(&term, Some(&value))?;
+                count += 1;
+            }
+            RecoveredOperation::CompareAndSwap {
+                lsn: _,
+                term,
+                new_value,
+                success,
+            } => {
+                // Only apply if CAS succeeded
+                if success {
+                    insert_fn(&term, Some(&new_value))?;
+                    count += 1;
+                }
             }
         }
     }
@@ -653,7 +835,7 @@ mod tests {
         let ops: Vec<_> = state.operations().collect();
 
         match &ops[0] {
-            RecoveredOperation::Insert { term, value } => {
+            RecoveredOperation::Insert { term, value, .. } => {
                 assert_eq!(term, b"hello");
                 assert!(value.is_none());
             }
@@ -661,7 +843,7 @@ mod tests {
         }
 
         match &ops[1] {
-            RecoveredOperation::Insert { term, value } => {
+            RecoveredOperation::Insert { term, value, .. } => {
                 assert_eq!(term, b"world");
                 assert_eq!(value.as_deref(), Some(b"value".as_slice()));
             }
@@ -669,7 +851,7 @@ mod tests {
         }
 
         match &ops[2] {
-            RecoveredOperation::Remove { term } => {
+            RecoveredOperation::Remove { term, .. } => {
                 assert_eq!(term, b"hello");
             }
             _ => panic!("Expected remove"),

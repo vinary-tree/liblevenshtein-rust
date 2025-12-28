@@ -43,32 +43,88 @@ pub const MAX_BLOCK_ID: u32 = (1 << BLOCK_ID_BITS) - 1;
 pub const MAX_OFFSET: u32 = (1 << OFFSET_BITS) - 1;
 
 /// Node type identifiers stored in the flags field.
+///
+/// # Byte-Level Nodes (0-99)
+///
+/// These are used by `PersistentARTrie` with u8 keys:
+/// - `Node4`: 1-4 children, linear scan
+/// - `Node16`: 5-16 children, SSE4.1 SIMD
+/// - `Node48`: 17-48 children, indexed lookup
+/// - `Node256`: 49-256 children, direct array
+/// - `Bucket`: Leaf bucket with strings
+///
+/// # Char-Level Nodes (100-199)
+///
+/// These are used by `PersistentARTrieChar` with u32 keys:
+/// - `CharNode4`: 1-4 children, linear scan
+/// - `CharNode16`: 5-16 children, AVX2 SIMD (8×u32)
+/// - `CharNode48`: 17-48 children, binary search
+/// - `CharBucket`: >48 children, HashMap-like
+///
+/// Note: CharNode256 is impossible for u32 keys (would require 4GB array).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum NodeType {
-    /// Node with 1-4 children, linear scan lookup.
+    // === Byte-Level Nodes (0-99) ===
+
+    /// Node with 1-4 children, linear scan lookup (byte-level).
     Node4 = 4,
-    /// Node with 5-16 children, SIMD lookup.
+    /// Node with 5-16 children, SIMD lookup (byte-level).
     Node16 = 16,
-    /// Node with 17-48 children, indexed lookup.
+    /// Node with 17-48 children, indexed lookup (byte-level).
     Node48 = 48,
-    /// Node with 49-256 children, direct array lookup.
+    /// Node with 49-256 children, direct array lookup (byte-level).
     Node256 = 0, // Use 0 since 256 doesn't fit in u8 nicely
-    /// Leaf bucket containing multiple strings.
+    /// Leaf bucket containing multiple strings (byte-level).
     Bucket = 1,
+
+    // === Char-Level Nodes (100-199) ===
+
+    /// Char node with 1-4 children, linear scan lookup (char-level).
+    CharNode4 = 104,
+    /// Char node with 5-16 children, AVX2 SIMD lookup (char-level).
+    CharNode16 = 116,
+    /// Char node with 17-48 children, binary search lookup (char-level).
+    CharNode48 = 148,
+    /// Char bucket with >48 children, HashMap-like (char-level).
+    CharBucket = 101,
 }
 
 impl NodeType {
     /// Convert from u8, returning None for invalid values.
     pub fn from_u8(value: u8) -> Option<Self> {
         match value {
+            // Byte-level nodes
             4 => Some(NodeType::Node4),
             16 => Some(NodeType::Node16),
             48 => Some(NodeType::Node48),
             0 => Some(NodeType::Node256),
             1 => Some(NodeType::Bucket),
+            // Char-level nodes
+            104 => Some(NodeType::CharNode4),
+            116 => Some(NodeType::CharNode16),
+            148 => Some(NodeType::CharNode48),
+            101 => Some(NodeType::CharBucket),
             _ => None,
         }
+    }
+
+    /// Check if this is a byte-level node type.
+    #[inline]
+    pub fn is_byte_level(&self) -> bool {
+        matches!(
+            self,
+            NodeType::Node4 | NodeType::Node16 | NodeType::Node48 | NodeType::Node256 | NodeType::Bucket
+        )
+    }
+
+    /// Check if this is a char-level node type.
+    #[inline]
+    pub fn is_char_level(&self) -> bool {
+        matches!(
+            self,
+            NodeType::CharNode4 | NodeType::CharNode16 | NodeType::CharNode48 | NodeType::CharBucket
+        )
     }
 }
 

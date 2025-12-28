@@ -29,6 +29,57 @@
 use std::collections::HashSet;
 use std::hash::Hash;
 
+#[cfg(feature = "persistent-artrie")]
+use serde::{de::DeserializeOwned, Serialize};
+
+/// Marker trait for types that can be stored as dictionary values.
+///
+/// Any type implementing `DictionaryValue` can be associated with terms in a dictionary.
+/// The trait requires `Clone`, `Send`, and `Sync` to support concurrent access patterns
+/// common in fuzzy search applications.
+///
+/// # Automatic Implementation
+///
+/// This trait is automatically implemented for common types including:
+/// - Unit type `()` (for dictionaries without values)
+/// - Primitives: `u8`, `u16`, `u32`, `u64`, `usize`, `i8`, `i16`, `i32`, `i64`, `isize`
+/// - Strings: `String`, `&'static str`
+/// - Collections: `Vec<T>`, `HashSet<T>`, `smallvec::SmallVec<A>`
+///
+/// # Custom Types
+///
+/// You can implement this trait for your own types:
+///
+/// ```
+/// use liblevenshtein::dictionary::value::DictionaryValue;
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(Clone, Serialize, Deserialize)]
+/// struct Metadata {
+///     category: String,
+///     priority: u32,
+/// }
+///
+/// impl DictionaryValue for Metadata {}
+/// ```
+///
+/// # Serialization (persistent-artrie feature)
+///
+/// When the `persistent-artrie` feature is enabled, `DictionaryValue` additionally
+/// requires `serde::Serialize + serde::de::DeserializeOwned` to support value persistence.
+#[cfg(feature = "persistent-artrie")]
+pub trait DictionaryValue:
+    Clone + Send + Sync + Unpin + 'static + Serialize + DeserializeOwned
+{
+    /// Returns `true` if this is a meaningful value (not unit type).
+    ///
+    /// Default implementation returns `true`. The unit type `()` overrides this
+    /// to return `false` for backward compatibility with non-map dictionaries.
+    fn is_value(&self) -> bool {
+        true
+    }
+}
+
 /// Marker trait for types that can be stored as dictionary values.
 ///
 /// Any type implementing `DictionaryValue` can be associated with terms in a dictionary.
@@ -58,6 +109,7 @@ use std::hash::Hash;
 ///
 /// impl DictionaryValue for Metadata {}
 /// ```
+#[cfg(not(feature = "persistent-artrie"))]
 pub trait DictionaryValue: Clone + Send + Sync + Unpin + 'static {
     /// Returns `true` if this is a meaningful value (not unit type).
     ///
@@ -188,8 +240,12 @@ impl FilterableValue for String {
     }
 }
 
+// Note: &'static str does not implement DeserializeOwned, so it cannot be used
+// as a DictionaryValue when persistent-artrie is enabled. Use String instead.
+#[cfg(not(feature = "persistent-artrie"))]
 impl DictionaryValue for &'static str {}
 
+#[cfg(not(feature = "persistent-artrie"))]
 impl FilterableValue for &'static str {
     fn matches_any<F>(&self, predicate: &F) -> bool
     where

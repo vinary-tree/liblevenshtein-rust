@@ -1,7 +1,7 @@
 //! Query iterator for WallBreaker algorithm.
 //!
 //! The main query iterator that orchestrates:
-//! 1. Pattern splitting into `b+1` pieces
+//! 1. Pattern splitting into pieces (algorithm-dependent count)
 //! 2. Finding exact substring matches for each piece
 //! 3. Bidirectional extension from matches
 //! 4. Deduplication of results
@@ -10,6 +10,10 @@ use std::collections::HashSet;
 
 use crate::dictionary::substring::{BidirectionalDictionaryNode, SubstringDictionary};
 use crate::dictionary::Dictionary;
+use crate::distance::{
+    create_memo_cache, merge_and_split_distance, standard_distance, transposition_distance,
+};
+use crate::transducer::Algorithm;
 
 use super::extension::BidirectionalExtension;
 use super::pattern_splitter::{PatternPiece, PatternSplitter};
@@ -39,10 +43,11 @@ impl WallBreakerResult {
 ///
 /// # Algorithm
 ///
-/// 1. Split query into `b+1` pieces (where `b` is max_distance)
+/// 1. Split query into pieces (algorithm-dependent count)
 /// 2. For each piece, find exact substring matches in dictionary
 /// 3. Extend each match bidirectionally using Levenshtein filters
-/// 4. Deduplicate and yield results
+/// 4. Verify distance using the correct algorithm-specific function
+/// 5. Deduplicate and yield results
 pub struct WallBreakerQuery<'a, D>
 where
     D: Dictionary + SubstringDictionary,
@@ -57,6 +62,9 @@ where
 
     /// Maximum edit distance.
     max_distance: usize,
+
+    /// The edit distance algorithm to use for verification.
+    algorithm: Algorithm,
 
     /// Pattern pieces from splitting.
     pieces: Vec<PatternPiece>,
@@ -89,8 +97,8 @@ where
     ///
     /// * `dictionary` - The dictionary to search
     /// * `query` - The query string
-    /// * `max_distance` - Maximum Levenshtein distance
-    /// * `splitter` - Pattern splitter to use
+    /// * `max_distance` - Maximum edit distance
+    /// * `splitter` - Pattern splitter to use (contains algorithm info)
     pub fn new(
         dictionary: &'a D,
         query: &str,
@@ -98,17 +106,33 @@ where
         splitter: &PatternSplitter,
     ) -> Self {
         let pieces = splitter.split(query);
+        let algorithm = splitter.algorithm();
 
         WallBreakerQuery {
             dictionary,
             query: query.to_string(),
             max_distance,
+            algorithm,
             pieces,
             current_piece_idx: 0,
             current_results: Vec::new(),
             result_idx: 0,
             seen_terms: HashSet::new(),
             exhausted: false,
+        }
+    }
+
+    /// Compute edit distance using the configured algorithm.
+    fn compute_distance(&self, s1: &str, s2: &str) -> usize {
+        match self.algorithm {
+            Algorithm::Standard => standard_distance(s1, s2),
+            Algorithm::Transposition => transposition_distance(s1, s2),
+            Algorithm::MergeAndSplit => {
+                // MergeAndSplit requires a cache; create one per verification
+                // This could be optimized with a thread-local cache if needed
+                let cache = create_memo_cache();
+                merge_and_split_distance(s1, s2, &cache)
+            }
         }
     }
 
@@ -144,10 +168,10 @@ where
                         continue;
                     }
 
-                    // Verify the distance is within bounds
+                    // Verify the distance is within bounds using the correct algorithm
                     // The extension may have computed partial distances,
-                    // so we verify with actual Levenshtein computation
-                    let actual_distance = levenshtein_distance(&self.query, &term);
+                    // so we verify with actual distance computation
+                    let actual_distance = self.compute_distance(&self.query, &term);
                     if actual_distance <= self.max_distance {
                         self.seen_terms.insert(term.clone());
                         self.current_results
@@ -200,59 +224,37 @@ where
     }
 }
 
-/// Compute Levenshtein distance between two strings.
-///
-/// Uses the standard Wagner-Fischer dynamic programming algorithm.
-fn levenshtein_distance(s1: &str, s2: &str) -> usize {
-    let chars1: Vec<char> = s1.chars().collect();
-    let chars2: Vec<char> = s2.chars().collect();
-
-    let m = chars1.len();
-    let n = chars2.len();
-
-    // Handle empty strings
-    if m == 0 {
-        return n;
-    }
-    if n == 0 {
-        return m;
-    }
-
-    // Use two-row optimization
-    let mut prev_row: Vec<usize> = (0..=n).collect();
-    let mut curr_row: Vec<usize> = vec![0; n + 1];
-
-    for i in 1..=m {
-        curr_row[0] = i;
-
-        for j in 1..=n {
-            let cost = if chars1[i - 1] == chars2[j - 1] { 0 } else { 1 };
-
-            curr_row[j] = (prev_row[j] + 1) // deletion
-                .min(curr_row[j - 1] + 1) // insertion
-                .min(prev_row[j - 1] + cost); // substitution
-        }
-
-        std::mem::swap(&mut prev_row, &mut curr_row);
-    }
-
-    prev_row[n]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_levenshtein_distance() {
-        assert_eq!(levenshtein_distance("", ""), 0);
-        assert_eq!(levenshtein_distance("abc", ""), 3);
-        assert_eq!(levenshtein_distance("", "abc"), 3);
-        assert_eq!(levenshtein_distance("abc", "abc"), 0);
-        assert_eq!(levenshtein_distance("kitten", "sitting"), 3);
-        assert_eq!(levenshtein_distance("saturday", "sunday"), 3);
-        assert_eq!(levenshtein_distance("hello", "helo"), 1);
-        assert_eq!(levenshtein_distance("cathedral", "cathedrel"), 1);
+        // Now using the distance module functions
+        assert_eq!(standard_distance("", ""), 0);
+        assert_eq!(standard_distance("abc", ""), 3);
+        assert_eq!(standard_distance("", "abc"), 3);
+        assert_eq!(standard_distance("abc", "abc"), 0);
+        assert_eq!(standard_distance("kitten", "sitting"), 3);
+        assert_eq!(standard_distance("saturday", "sunday"), 3);
+        assert_eq!(standard_distance("hello", "helo"), 1);
+        assert_eq!(standard_distance("cathedral", "cathedrel"), 1);
+    }
+
+    #[test]
+    fn test_transposition_distance() {
+        assert_eq!(transposition_distance("ab", "ba"), 1);
+        assert_eq!(transposition_distance("test", "tset"), 1);
+        // Transposition is more efficient than standard for swaps
+        assert_eq!(transposition_distance("abc", "acb"), 1);
+    }
+
+    #[test]
+    fn test_merge_and_split_distance() {
+        let cache = create_memo_cache();
+        assert_eq!(merge_and_split_distance("", "", &cache), 0);
+        assert_eq!(merge_and_split_distance("abc", "abc", &cache), 0);
+        assert_eq!(merge_and_split_distance("test", "best", &cache), 1);
     }
 
     #[test]

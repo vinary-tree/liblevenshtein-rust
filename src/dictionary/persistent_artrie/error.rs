@@ -287,6 +287,46 @@ impl PersistentARTrieError {
     }
 }
 
+#[cfg(feature = "persistent-artrie")]
+impl From<super::wal::WalError> for PersistentARTrieError {
+    fn from(err: super::wal::WalError) -> Self {
+        use super::wal::WalError;
+        match err {
+            WalError::Io(e) => Self::IoError {
+                operation: "WAL operation".to_string(),
+                path: String::new(),
+                source: e,
+            },
+            WalError::InvalidRecordType(t) => Self::CorruptedFile {
+                reason: format!("Invalid WAL record type: {}", t),
+            },
+            WalError::CorruptedRecord(msg) => Self::CorruptedFile {
+                reason: format!("Corrupted WAL record: {}", msg),
+            },
+            WalError::UnexpectedEof => Self::CorruptedFile {
+                reason: "Unexpected end of WAL file".to_string(),
+            },
+            WalError::AlreadyExists => Self::InternalError {
+                message: "WAL file already exists".to_string(),
+            },
+            WalError::NotFound => Self::IoError {
+                operation: "WAL open".to_string(),
+                path: String::new(),
+                source: io::Error::new(io::ErrorKind::NotFound, "WAL file not found"),
+            },
+        }
+    }
+}
+
+#[cfg(feature = "persistent-artrie")]
+impl From<super::recovery::RecoveryError> for PersistentARTrieError {
+    fn from(err: super::recovery::RecoveryError) -> Self {
+        Self::InternalError {
+            message: format!("Recovery error: {}", err),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

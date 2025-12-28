@@ -142,7 +142,7 @@ pub use transitions::{
 pub use node_impl::PersistentARTrieNode;
 
 // Dictionary types
-pub use dict_impl::PersistentARTrie;
+pub use dict_impl::{PersistentARTrie, TermIterator, TermValueIterator};
 
 // Zipper types
 pub use zipper::PersistentARTrieZipper;

@@ -291,6 +291,16 @@ impl Node {
         }
     }
 
+    /// Look up a child by key byte (mutable)
+    pub fn find_child_mut(&mut self, key: u8) -> Option<&mut SwizzledPtr> {
+        match self {
+            Node::N4(n) => n.find_child_mut(key),
+            Node::N16(n) => n.find_child_mut(key),
+            Node::N48(n) => n.find_child_mut(key),
+            Node::N256(n) => n.find_child_mut(key),
+        }
+    }
+
     /// Get an iterator over all (key, child) pairs
     pub fn iter_children(&self) -> Box<dyn Iterator<Item = (u8, &SwizzledPtr)> + '_> {
         match self {

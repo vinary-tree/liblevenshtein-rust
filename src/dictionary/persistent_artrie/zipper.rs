@@ -171,9 +171,18 @@ impl<V: DictionaryValue> PersistentARTrieZipper<V> {
                                 ChildNode::Bucket(bucket) => {
                                     self.bucket_has_path(bucket, remaining)
                                 }
-                                ChildNode::ArtNode { .. } => {
-                                    // TODO: Recursive check for nested ART nodes
-                                    !remaining.is_empty()
+                                ChildNode::ArtNode { children: nested_children, .. } => {
+                                    // Recursive check for nested ART nodes
+                                    if remaining.is_empty() {
+                                        true
+                                    } else {
+                                        let next_byte = remaining[0];
+                                        nested_children.iter().any(|(b, _)| *b == next_byte)
+                                    }
+                                }
+                                ChildNode::DiskRef { .. } => {
+                                    // Disk-backed nodes require lazy loading (not supported in zipper yet)
+                                    false
                                 }
                             };
                         }
@@ -223,13 +232,30 @@ impl<V: DictionaryValue> PersistentARTrieZipper<V> {
                             ChildNode::Bucket(bucket) => {
                                 bucket.contains(remaining)
                             }
-                            ChildNode::ArtNode { is_final: child_final, .. } => {
+                            ChildNode::ArtNode { is_final: child_final, children: nested_children, .. } => {
                                 if remaining.is_empty() {
                                     *child_final
                                 } else {
-                                    // TODO: Recursive check for nested ART nodes
+                                    // Recursive check for nested ART nodes
+                                    let next_byte = remaining[0];
+                                    let next_remaining = &remaining[1..];
+                                    for (nb, nc) in nested_children {
+                                        if *nb == next_byte {
+                                            return match nc {
+                                                ChildNode::Bucket(b) => b.contains(next_remaining),
+                                                ChildNode::ArtNode { is_final: nf, .. } => {
+                                                    next_remaining.is_empty() && *nf
+                                                }
+                                                ChildNode::DiskRef { .. } => false,
+                                            };
+                                        }
+                                    }
                                     false
                                 }
+                            }
+                            ChildNode::DiskRef { .. } => {
+                                // Disk-backed nodes require lazy loading (not supported in zipper yet)
+                                false
                             }
                         };
                     }
@@ -259,8 +285,17 @@ impl<V: DictionaryValue> PersistentARTrieZipper<V> {
                                 ChildNode::Bucket(bucket) => {
                                     self.get_bucket_children(bucket, remaining)
                                 }
-                                ChildNode::ArtNode { .. } => {
-                                    // TODO: Handle nested ART nodes
+                                ChildNode::ArtNode { children: nested_children, .. } => {
+                                    if remaining.is_empty() {
+                                        // At this node, return its direct children
+                                        nested_children.iter().map(|(b, _)| *b).collect()
+                                    } else {
+                                        // Need to go deeper (limited recursive support)
+                                        Vec::new()
+                                    }
+                                }
+                                ChildNode::DiskRef { .. } => {
+                                    // Disk-backed nodes require lazy loading (not supported in zipper yet)
                                     Vec::new()
                                 }
                             };
@@ -298,8 +333,9 @@ impl<V: DictionaryValue> ValuedDictZipper for PersistentARTrieZipper<V> {
     type Value = V;
 
     fn value(&self) -> Option<Self::Value> {
-        // TODO: Implement value retrieval from buckets
-        // For now, return None as values aren't fully supported yet
+        // Value retrieval is not implemented because internal storage uses Vec<u8>
+        // while the trait requires V. To implement this, DictionaryValue would need
+        // serialization bounds (e.g., serde) to convert between V and Vec<u8>.
         None
     }
 }

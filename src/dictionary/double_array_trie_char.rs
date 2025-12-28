@@ -902,13 +902,13 @@ mod tests {
     #[test]
     fn test_string_values() {
         let dict = DoubleArrayTrieChar::from_terms_with_values(vec![
-            ("café", "coffee"),
-            ("中文", "Chinese"),
-            ("🎉", "party"),
+            ("café", "coffee".to_string()),
+            ("中文", "Chinese".to_string()),
+            ("🎉", "party".to_string()),
         ]);
 
-        assert_eq!(dict.get_value("café"), Some("coffee"));
-        assert_eq!(dict.get_value("中文"), Some("Chinese"));
-        assert_eq!(dict.get_value("🎉"), Some("party"));
+        assert_eq!(dict.get_value("café"), Some("coffee".to_string()));
+        assert_eq!(dict.get_value("中文"), Some("Chinese".to_string()));
+        assert_eq!(dict.get_value("🎉"), Some("party".to_string()));
     }
 }
