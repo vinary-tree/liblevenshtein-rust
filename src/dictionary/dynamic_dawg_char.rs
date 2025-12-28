@@ -71,8 +71,15 @@ pub struct DynamicDawgChar<V: DictionaryValue = ()> {
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize),
+)]
+#[cfg_attr(
+    all(feature = "serialization", not(feature = "persistent-artrie")),
     serde(bound(serialize = "V: serde::Serialize")),
     serde(bound(deserialize = "V: serde::Deserialize<'de>"))
+)]
+#[cfg_attr(
+    all(feature = "serialization", feature = "persistent-artrie"),
+    serde(bound = "")
 )]
 pub(crate) struct DynamicDawgCharInner<V: DictionaryValue> {
     pub(crate) nodes: Vec<DawgNodeChar<V>>,
@@ -119,8 +126,15 @@ struct NodeSignature {
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize),
+)]
+#[cfg_attr(
+    all(feature = "serialization", not(feature = "persistent-artrie")),
     serde(bound(serialize = "V: serde::Serialize")),
     serde(bound(deserialize = "V: serde::Deserialize<'de>"))
+)]
+#[cfg_attr(
+    all(feature = "serialization", feature = "persistent-artrie"),
+    serde(bound = "")
 )]
 pub(crate) struct DawgNodeChar<V: DictionaryValue> {
     // Use SmallVec to avoid heap allocation for nodes with ≤4 edges (most common case)
@@ -1461,10 +1475,27 @@ impl<V: DictionaryValue + serde::Serialize> serde::Serialize for DynamicDawgChar
     }
 }
 
-#[cfg(feature = "serialization")]
+/// Deserialize implementation when only `serialization` feature is enabled (not `persistent-artrie`).
+/// In this case, we need explicit `Deserialize` bounds.
+#[cfg(all(feature = "serialization", not(feature = "persistent-artrie")))]
 impl<'de, V: DictionaryValue + serde::Deserialize<'de>> serde::Deserialize<'de>
     for DynamicDawgChar<V>
 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let inner = DynamicDawgCharInner::deserialize(deserializer)?;
+        Ok(DynamicDawgChar {
+            inner: Arc::new(RwLock::new(inner)),
+        })
+    }
+}
+
+/// Deserialize implementation when `persistent-artrie` feature is enabled.
+/// `DictionaryValue` already includes `DeserializeOwned`, so no additional bounds needed.
+#[cfg(all(feature = "serialization", feature = "persistent-artrie"))]
+impl<'de, V: DictionaryValue> serde::Deserialize<'de> for DynamicDawgChar<V> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

@@ -122,8 +122,15 @@ use crate::dictionary::{Dictionary, DictionaryNode, SyncStrategy};
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize),
+)]
+#[cfg_attr(
+    all(feature = "serialization", not(feature = "persistent-artrie")),
     serde(bound(serialize = "V: serde::Serialize")),
     serde(bound(deserialize = "V: serde::Deserialize<'de>"))
+)]
+#[cfg_attr(
+    all(feature = "serialization", feature = "persistent-artrie"),
+    serde(bound = "")
 )]
 pub(crate) struct SuffixNodeChar<V: DictionaryValue = ()> {
     /// Outgoing edges: (character label, target state index).
@@ -229,8 +236,15 @@ impl<V: DictionaryValue> SuffixNodeChar<V> {
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize),
+)]
+#[cfg_attr(
+    all(feature = "serialization", not(feature = "persistent-artrie")),
     serde(bound(serialize = "V: serde::Serialize")),
     serde(bound(deserialize = "V: serde::Deserialize<'de>"))
+)]
+#[cfg_attr(
+    all(feature = "serialization", feature = "persistent-artrie"),
+    serde(bound = "")
 )]
 pub(crate) struct SuffixAutomatonCharInner<V: DictionaryValue = ()> {
     /// Node storage (index-based graph).
@@ -1003,10 +1017,27 @@ impl<V: DictionaryValue + serde::Serialize> serde::Serialize for SuffixAutomaton
     }
 }
 
-#[cfg(feature = "serialization")]
+/// Deserialize implementation when only `serialization` feature is enabled (not `persistent-artrie`).
+/// In this case, we need explicit `Deserialize` bounds.
+#[cfg(all(feature = "serialization", not(feature = "persistent-artrie")))]
 impl<'de, V: DictionaryValue + serde::Deserialize<'de>> serde::Deserialize<'de>
     for SuffixAutomatonChar<V>
 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let inner = SuffixAutomatonCharInner::deserialize(deserializer)?;
+        Ok(SuffixAutomatonChar {
+            inner: Arc::new(RwLock::new(inner)),
+        })
+    }
+}
+
+/// Deserialize implementation when `persistent-artrie` feature is enabled.
+/// `DictionaryValue` already includes `DeserializeOwned`, so no additional bounds needed.
+#[cfg(all(feature = "serialization", feature = "persistent-artrie"))]
+impl<'de, V: DictionaryValue> serde::Deserialize<'de> for SuffixAutomatonChar<V> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

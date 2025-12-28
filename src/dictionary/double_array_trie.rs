@@ -91,8 +91,15 @@ where
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize),
+)]
+#[cfg_attr(
+    all(feature = "serialization", not(feature = "persistent-artrie")),
     serde(bound(serialize = "V: serde::Serialize")),
     serde(bound(deserialize = "V: serde::Deserialize<'de>"))
+)]
+#[cfg_attr(
+    all(feature = "serialization", feature = "persistent-artrie"),
+    serde(bound = "")
 )]
 #[derive(Clone, Debug)]
 pub(crate) struct DATShared<V: DictionaryValue = ()> {
@@ -197,8 +204,15 @@ pub(crate) struct DATShared<V: DictionaryValue = ()> {
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize),
+)]
+#[cfg_attr(
+    all(feature = "serialization", not(feature = "persistent-artrie")),
     serde(bound(serialize = "V: serde::Serialize")),
     serde(bound(deserialize = "V: serde::Deserialize<'de>"))
+)]
+#[cfg_attr(
+    all(feature = "serialization", feature = "persistent-artrie"),
+    serde(bound = "")
 )]
 #[derive(Clone, Debug)]
 pub struct DoubleArrayTrie<V: DictionaryValue = ()> {
