@@ -14,15 +14,13 @@
 //!     vec!["test", "testing", "tested"]
 //! );
 //!
-//! // Create a DAWG dictionary
+//! // Create a DynamicDawg dictionary
 //! let dict = DictionaryFactory::create(
-//!     DictionaryBackend::Dawg,
+//!     DictionaryBackend::DynamicDawg,
 //!     vec!["test", "testing", "tested"]
 //! );
 //! ```
 
-use super::dawg::DawgDictionary;
-use super::dawg_optimized::OptimizedDawg;
 use super::double_array_trie::DoubleArrayTrie;
 use super::dynamic_dawg::DynamicDawg;
 #[cfg(feature = "pathmap-backend")]
@@ -36,10 +34,6 @@ pub enum DictionaryBackend {
     /// PathMap-based trie dictionary (fastest for queries, highest memory)
     #[cfg(feature = "pathmap-backend")]
     PathMap,
-    /// Static DAWG dictionary (space-efficient, fast queries, immutable)
-    Dawg,
-    /// Optimized DAWG with arena allocation (20-25% faster, 30% less memory)
-    OptimizedDawg,
     /// Double-Array Trie (O(1) transitions, excellent cache, supports updates)
     DoubleArrayTrie,
     /// Dynamic DAWG dictionary (space-efficient, supports modifications)
@@ -53,8 +47,6 @@ impl std::fmt::Display for DictionaryBackend {
         match self {
             #[cfg(feature = "pathmap-backend")]
             DictionaryBackend::PathMap => write!(f, "PathMap"),
-            DictionaryBackend::Dawg => write!(f, "DAWG"),
-            DictionaryBackend::OptimizedDawg => write!(f, "OptimizedDAWG"),
             DictionaryBackend::DoubleArrayTrie => write!(f, "DoubleArrayTrie"),
             DictionaryBackend::DynamicDawg => write!(f, "DynamicDAWG"),
             DictionaryBackend::SuffixAutomaton => write!(f, "SuffixAutomaton"),
@@ -68,10 +60,6 @@ pub enum DictionaryContainer {
     /// PathMap-based trie dictionary
     #[cfg(feature = "pathmap-backend")]
     PathMap(PathMapDictionary),
-    /// Static DAWG dictionary
-    Dawg(DawgDictionary),
-    /// Optimized DAWG dictionary
-    OptimizedDawg(OptimizedDawg),
     /// Double-Array Trie dictionary
     DoubleArrayTrie(DoubleArrayTrie),
     /// Dynamic DAWG dictionary
@@ -86,8 +74,6 @@ impl DictionaryContainer {
         match self {
             #[cfg(feature = "pathmap-backend")]
             DictionaryContainer::PathMap(_) => DictionaryBackend::PathMap,
-            DictionaryContainer::Dawg(_) => DictionaryBackend::Dawg,
-            DictionaryContainer::OptimizedDawg(_) => DictionaryBackend::OptimizedDawg,
             DictionaryContainer::DoubleArrayTrie(_) => DictionaryBackend::DoubleArrayTrie,
             DictionaryContainer::DynamicDawg(_) => DictionaryBackend::DynamicDawg,
             DictionaryContainer::SuffixAutomaton(_) => DictionaryBackend::SuffixAutomaton,
@@ -99,8 +85,6 @@ impl DictionaryContainer {
         match self {
             #[cfg(feature = "pathmap-backend")]
             DictionaryContainer::PathMap(d) => d.len(),
-            DictionaryContainer::Dawg(d) => d.len(),
-            DictionaryContainer::OptimizedDawg(d) => d.len(),
             DictionaryContainer::DoubleArrayTrie(d) => d.len(),
             DictionaryContainer::DynamicDawg(d) => d.len(),
             DictionaryContainer::SuffixAutomaton(d) => d.len(),
@@ -117,8 +101,6 @@ impl DictionaryContainer {
         match self {
             #[cfg(feature = "pathmap-backend")]
             DictionaryContainer::PathMap(d) => d.contains(term),
-            DictionaryContainer::Dawg(d) => d.contains(term),
-            DictionaryContainer::OptimizedDawg(d) => d.contains(term),
             DictionaryContainer::DoubleArrayTrie(d) => d.contains(term),
             DictionaryContainer::DynamicDawg(d) => d.contains(term),
             DictionaryContainer::SuffixAutomaton(d) => d.contains(term),
@@ -147,7 +129,7 @@ impl DictionaryFactory {
     /// use liblevenshtein::dictionary::factory::{DictionaryFactory, DictionaryBackend};
     ///
     /// let dict = DictionaryFactory::create(
-    ///     DictionaryBackend::Dawg,
+    ///     DictionaryBackend::DynamicDawg,
     ///     vec!["hello", "world"]
     /// );
     ///
@@ -163,11 +145,6 @@ impl DictionaryFactory {
             #[cfg(feature = "pathmap-backend")]
             DictionaryBackend::PathMap => {
                 DictionaryContainer::PathMap(PathMapDictionary::from_terms(terms))
-            }
-            DictionaryBackend::Dawg => DictionaryContainer::Dawg(DawgDictionary::from_iter(terms)),
-            #[allow(deprecated)]
-            DictionaryBackend::OptimizedDawg => {
-                DictionaryContainer::OptimizedDawg(OptimizedDawg::from_terms(terms))
             }
             DictionaryBackend::DoubleArrayTrie => {
                 DictionaryContainer::DoubleArrayTrie(DoubleArrayTrie::from_terms(terms))
@@ -203,11 +180,6 @@ impl DictionaryFactory {
         match backend {
             #[cfg(feature = "pathmap-backend")]
             DictionaryBackend::PathMap => DictionaryContainer::PathMap(PathMapDictionary::new()),
-            DictionaryBackend::Dawg => DictionaryContainer::Dawg(DawgDictionary::new()),
-            #[allow(deprecated)]
-            DictionaryBackend::OptimizedDawg => {
-                DictionaryContainer::OptimizedDawg(OptimizedDawg::new())
-            }
             DictionaryBackend::DoubleArrayTrie => {
                 DictionaryContainer::DoubleArrayTrie(DoubleArrayTrie::new())
             }
@@ -223,8 +195,6 @@ impl DictionaryFactory {
         vec![
             #[cfg(feature = "pathmap-backend")]
             DictionaryBackend::PathMap,
-            DictionaryBackend::Dawg,
-            DictionaryBackend::OptimizedDawg,
             DictionaryBackend::DoubleArrayTrie,
             DictionaryBackend::DynamicDawg,
             DictionaryBackend::SuffixAutomaton,
@@ -237,12 +207,6 @@ impl DictionaryFactory {
             #[cfg(feature = "pathmap-backend")]
             DictionaryBackend::PathMap => {
                 "Fast queries with higher memory usage. Best for in-memory applications."
-            }
-            DictionaryBackend::Dawg => {
-                "Space-efficient immutable dictionary. Best for static dictionaries."
-            }
-            DictionaryBackend::OptimizedDawg => {
-                "Arena-based DAWG with 20-25% faster queries and 30% less memory. Best for large static dictionaries."
             }
             DictionaryBackend::DoubleArrayTrie => {
                 "O(1) transitions with excellent cache locality. Best for memory-constrained environments."
@@ -278,19 +242,6 @@ mod tests {
     }
 
     #[test]
-    fn test_factory_dawg() {
-        let dict =
-            DictionaryFactory::create(DictionaryBackend::Dawg, vec!["hello", "world", "test"]);
-
-        assert_eq!(dict.backend(), DictionaryBackend::Dawg);
-        assert_eq!(dict.len(), Some(3));
-        assert!(dict.contains("hello"));
-        assert!(dict.contains("world"));
-        assert!(dict.contains("test"));
-        assert!(!dict.contains("testing"));
-    }
-
-    #[test]
     fn test_factory_dynamic_dawg() {
         let dict =
             DictionaryFactory::create(DictionaryBackend::DynamicDawg, vec!["foo", "bar", "baz"]);
@@ -312,10 +263,6 @@ mod tests {
             assert!(pathmap.is_empty());
         }
 
-        let dawg = DictionaryFactory::empty(DictionaryBackend::Dawg);
-        assert_eq!(dawg.len(), Some(0));
-        assert!(dawg.is_empty());
-
         let dynamic_dawg = DictionaryFactory::empty(DictionaryBackend::DynamicDawg);
         assert_eq!(dynamic_dawg.len(), Some(0));
         assert!(dynamic_dawg.is_empty());
@@ -325,7 +272,6 @@ mod tests {
     fn test_backend_display() {
         #[cfg(feature = "pathmap-backend")]
         assert_eq!(DictionaryBackend::PathMap.to_string(), "PathMap");
-        assert_eq!(DictionaryBackend::Dawg.to_string(), "DAWG");
         assert_eq!(DictionaryBackend::DynamicDawg.to_string(), "DynamicDAWG");
     }
 
@@ -333,13 +279,11 @@ mod tests {
     fn test_available_backends() {
         let backends = DictionaryFactory::available_backends();
         #[cfg(feature = "pathmap-backend")]
-        assert_eq!(backends.len(), 6);
+        assert_eq!(backends.len(), 4);
         #[cfg(not(feature = "pathmap-backend"))]
-        assert_eq!(backends.len(), 5);
+        assert_eq!(backends.len(), 3);
         #[cfg(feature = "pathmap-backend")]
         assert!(backends.contains(&DictionaryBackend::PathMap));
-        assert!(backends.contains(&DictionaryBackend::Dawg));
-        assert!(backends.contains(&DictionaryBackend::OptimizedDawg));
         assert!(backends.contains(&DictionaryBackend::DoubleArrayTrie));
         assert!(backends.contains(&DictionaryBackend::DynamicDawg));
         assert!(backends.contains(&DictionaryBackend::SuffixAutomaton));

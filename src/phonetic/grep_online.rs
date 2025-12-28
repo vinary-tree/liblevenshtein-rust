@@ -28,7 +28,7 @@
 //! use liblevenshtein::phonetic::rules::english;
 //!
 //! // "fude" and "food" both normalize to "fud", so distance is 0
-//! let grep = PhoneticGrepOnline::with_rules("fude", english::zompist().rules_vec(), 0);
+//! let grep = PhoneticGrepOnline::with_rules("fude", english::base().rules_vec(), 0);
 //!
 //! let matches = grep.scan("The food was delicious.");
 //! assert_eq!(matches.len(), 1);
@@ -127,7 +127,7 @@ impl SharedNormalized {
 /// use liblevenshtein::phonetic::rules::english;
 ///
 /// // Find phonetic equivalents
-/// let grep = PhoneticGrepOnline::with_rules("phone", english::zompist().rules_vec(), 0);
+/// let grep = PhoneticGrepOnline::with_rules("phone", english::base().rules_vec(), 0);
 /// let matches = grep.scan("Call my fone!"); // "fone" normalizes to same as "phone"
 /// ```
 #[derive(Debug, Clone)]
@@ -158,7 +158,7 @@ impl PhoneticGrepOnline {
     ///
     /// let grep = PhoneticGrepOnline::with_rules(
     ///     "phone",
-    ///     english::zompist().rules_vec(),
+    ///     english::base().rules_vec(),
     ///     1, // Allow 1 edit after normalization
     /// );
     /// ```

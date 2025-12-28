@@ -10,7 +10,6 @@
 //! |----------|----------|
 //! | [`apply_rules_seq`] | **Default** - use for all typical workloads (dictionary words, phrases) |
 //! | [`apply_rules_seq_optimized`] | **Opt-in** - use only for very long strings (100+ chars) with repetitive patterns |
-//! | [`apply_rules_seq_opt`] | **Deprecated** - now just calls `apply_rules_seq` |
 //!
 //! The position skipping optimization in `apply_rules_seq_optimized` provides up to
 //! 26.6× speedup for synthetic repetitive strings, but causes 1-15% overhead for
@@ -136,7 +135,7 @@ mod properties;
 
 // Re-export main types (byte-level)
 pub use application::{
-    apply_rule_at, apply_rules_seq, apply_rules_seq_opt, apply_rules_seq_optimized,
+    apply_rule_at, apply_rules_seq, apply_rules_seq_optimized,
     apply_rules_with_cycle_detection, can_apply_at, find_first_match_from,
     has_position_dependent_rules, NormalizationResult, MAX_EXPANSION_FACTOR,
 };
@@ -146,10 +145,9 @@ pub use types::{Context, Phone, RewriteRule};
 
 // Re-export character-level types
 pub use application::{
-    apply_rule_at_char, apply_rules_seq_char, apply_rules_seq_opt_char,
-    apply_rules_seq_optimized_char, apply_rules_with_cycle_detection_char,
-    can_apply_at_char, find_first_match_from_char, has_position_dependent_rules_char,
-    NormalizationResultChar,
+    apply_rule_at_char, apply_rules_seq_char, apply_rules_seq_optimized_char,
+    apply_rules_with_cycle_detection_char, can_apply_at_char, find_first_match_from_char,
+    has_position_dependent_rules_char, NormalizationResultChar,
 };
 pub use matching::{context_matches_char, pattern_matches_at_char, phone_eq_char};
 pub use rules::{

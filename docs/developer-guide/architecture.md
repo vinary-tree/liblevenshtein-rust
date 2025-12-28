@@ -23,7 +23,7 @@ This document describes the architecture and design principles of liblevenshtein
 
 liblevenshtein-rust is a high-performance library for approximate string matching using Levenshtein automata. The architecture is designed around three core pillars:
 
-1. **Pluggable Dictionary Backends** - Multiple trie implementations (PathMap, DAWG, DynamicDawg)
+1. **Pluggable Dictionary Backends** - Multiple trie implementations (PathMap, DoubleArrayTrie, DynamicDawg)
 2. **Efficient Automata** - Optimized state machines for Levenshtein distance computation
 3. **Flexible Serialization** - Multiple formats with optional compression
 
@@ -47,9 +47,9 @@ src/
 │   ├── mod.rs                  # Dictionary trait, DictionaryNode trait
 │   ├── factory.rs              # Unified factory for creating dictionaries
 │   ├── pathmap.rs              # PathMap backend (default, thread-safe)
-│   ├── dawg.rs                 # Static DAWG (space-efficient, read-only)
+│   ├── double_array_trie.rs    # DoubleArrayTrie (O(1) transitions, read-optimized)
 │   ├── dynamic_dawg.rs         # Mutable DAWG (insert/delete/minimize)
-│   └── dawg_query.rs           # Index-based DAWG query iterator
+│   └── suffix_automaton.rs     # Suffix automaton (substring matching)
 │
 ├── transducer/                 # Levenshtein automata
 │   ├── mod.rs                  # Transducer struct, public API

@@ -68,52 +68,49 @@ fn main() {
     println!("   Nodes: {} (minimized)", dawg.node_count());
     println!("   Needs compaction: {}", dawg.needs_compaction());
 
-    // Comparison with static DAWG
-    println!("\n6. Comparison: Dynamic vs Static DAWG\n");
+    // Comparison with DoubleArrayTrie
+    println!("\n6. Comparison: DynamicDawg vs DoubleArrayTrie\n");
 
     let terms = vec!["apple", "application", "apply", "applesauce"];
 
-    // Static DAWG (built once, immutable)
-    let static_dawg = DawgDictionary::from_iter(terms.clone());
-    println!("   Static DAWG:");
-    println!("     Terms: {}", static_dawg.term_count());
-    println!(
-        "     Nodes: {} (perfectly minimal)",
-        static_dawg.node_count()
-    );
+    // DoubleArrayTrie (built once, fast reads)
+    let dat = DoubleArrayTrie::from_terms(terms.clone());
+    println!("   DoubleArrayTrie:");
+    println!("     Terms: {}", dat.len().unwrap_or(0));
+    println!("     (Compact O(1) state transitions)");
 
     // Dynamic DAWG (after compaction)
-    println!("\n   Dynamic DAWG (after compaction):");
+    println!("\n   DynamicDawg (after compaction):");
     println!("     Terms: {}", dawg.term_count());
     println!("     Nodes: {}", dawg.node_count());
 
     // Performance characteristics
     println!("\n7. Performance Characteristics\n");
-    println!("   Dynamic DAWG:");
+    println!("   DynamicDawg:");
     println!("     ✓ Online insertions: O(m) per term");
     println!("     ✓ Online deletions: O(m) per term");
     println!("     ✓ Compaction: O(n) total size");
     println!("     ✓ Thread-safe: RwLock for concurrent access");
     println!("     ✗ May become non-minimal between compactions");
 
-    println!("\n   Static DAWG:");
-    println!("     ✓ Perfectly minimal structure");
-    println!("     ✓ No synchronization needed (immutable)");
-    println!("     ✗ Cannot modify after construction");
-    println!("     ✗ Requires rebuild for updates");
+    println!("\n   DoubleArrayTrie:");
+    println!("     ✓ O(1) state transitions");
+    println!("     ✓ Excellent cache locality");
+    println!("     ✓ Compact memory representation");
+    println!("     ✗ Expensive updates (requires rebuild)");
 
     // Use cases
     println!("\n8. Use Cases\n");
-    println!("   Use Dynamic DAWG when:");
+    println!("   Use DynamicDawg when:");
     println!("     • Dictionary changes frequently");
     println!("     • Real-time updates required");
     println!("     • Periodic compaction acceptable");
     println!("     • Examples: live spell checker, auto-complete");
 
-    println!("\n   Use Static DAWG when:");
-    println!("     • Dictionary is fixed");
-    println!("     • Maximum space efficiency needed");
-    println!("     • No updates after construction");
+    println!("\n   Use DoubleArrayTrie when:");
+    println!("     • Dictionary is static or rarely changes");
+    println!("     • Maximum query performance needed");
+    println!("     • Memory efficiency important");
     println!("     • Examples: embedded systems, read-only dictionaries");
 
     println!("\n✓ Dynamic DAWG demonstration completed!");

@@ -962,7 +962,7 @@ pub fn default_language() -> &'static str {
 /// Combine American English rule sets into a single vector.
 ///
 /// This includes:
-/// - Zompist orthographic rules (base spelling normalization)
+/// - Base orthographic rules (spelling normalization)
 /// - American dialect rules (yod-dropping, t-flapping)
 /// - Homophone rules (words that sound alike)
 /// - Text-speak rules (SMS/text abbreviations)
@@ -970,7 +970,7 @@ fn american_english_rules() -> Vec<RewriteRuleChar> {
     use super::rules::english;
 
     let mut rules = Vec::new();
-    rules.extend(english::zompist().rules.iter().cloned());
+    rules.extend(english::base().rules.iter().cloned());
     rules.extend(english::american().rules.iter().cloned());
     rules.extend(english::homophones().rules.iter().cloned());
     rules.extend(english::text_speak().rules.iter().cloned());
@@ -980,7 +980,7 @@ fn american_english_rules() -> Vec<RewriteRuleChar> {
 /// Combine British English rule sets into a single vector.
 ///
 /// This includes:
-/// - Zompist orthographic rules (base spelling normalization)
+/// - Base orthographic rules (spelling normalization)
 /// - British dialect rules (r-dropping, broad 'a' in BATH words)
 /// - Homophone rules (words that sound alike)
 /// - Text-speak rules (SMS/text abbreviations)
@@ -988,7 +988,7 @@ fn british_english_rules() -> Vec<RewriteRuleChar> {
     use super::rules::english;
 
     let mut rules = Vec::new();
-    rules.extend(english::zompist().rules.iter().cloned());
+    rules.extend(english::base().rules.iter().cloned());
     rules.extend(english::british().rules.iter().cloned());
     rules.extend(english::homophones().rules.iter().cloned());
     rules.extend(english::text_speak().rules.iter().cloned());

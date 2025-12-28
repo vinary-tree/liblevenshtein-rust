@@ -1,7 +1,7 @@
 # Dictionary Backend Guide
 
-**Version**: 0.4.0
-**Last Updated**: 2025-10-31
+**Version**: 0.8.0
+**Last Updated**: 2025-12-28
 
 This guide explains the different dictionary backends available in liblevenshtein-rust and how to choose the right one for your use case.
 
@@ -154,55 +154,7 @@ for term in transducer.query("test", 1) {
 
 **Feature flag:** `pathmap-backend` (optional)
 
-### 5. DAWG (Space-Efficient Static)
-
-**Type**: Directed Acyclic Word Graph with suffix sharing
-
-**Characteristics:**
-- **Construction**: Slow (minimization required)
-- **Query**: Good
-- **Memory**: Minimal (shares prefixes and suffixes)
-- **Updates**: No
-
-**When to use:**
-- Memory-constrained environments
-- Dictionaries with many shared prefixes/suffixes
-- Read-only dictionaries
-- Can tolerate slower construction
-
-**Example:**
-
-```rust
-use liblevenshtein::prelude::*;
-
-let dict = DawgDictionary::from_terms(vec![
-    "testing", "walking", "talking", "making"
-]);
-
-println!("Terms: {}, Nodes: {}",
-    dict.term_count(), dict.node_count());
-```
-
-**Feature flag:** `dawg-backend` (optional)
-
-### 6. OptimizedDawg (Fast Construction)
-
-**Type**: Arena-based DAWG with optimized construction
-
-**Characteristics:**
-- **Construction**: Medium (20-25% faster than DAWG)
-- **Query**: Good
-- **Memory**: Minimal
-- **Updates**: No
-
-**When to use:**
-- Need DAWG space efficiency
-- Frequent dictionary reconstruction
-- Construction time matters
-
-**Feature flag:** `dawg-backend` (optional)
-
-### 7. DynamicDawg (Updates + Space Efficiency)
+### 5. DynamicDawg (Updates + Space Efficiency)
 
 **Type**: DAWG with online insert/delete/minimize operations
 
@@ -236,7 +188,7 @@ println!("Nodes after minimization: {}", dict.node_count());
 
 **Feature flag:** `dawg-backend` (optional)
 
-### 8. SuffixAutomaton (Substring Matching)
+### 6. SuffixAutomaton (Substring Matching)
 
 **Type**: Suffix automaton for infix matching
 
@@ -270,6 +222,85 @@ for term in transducer.query("test", 1) {
 
 **Feature flag:** `suffix-automaton-backend` (optional)
 
+### 7. SCDAWG (Symmetric Compact DAWG)
+
+**Type**: Symmetric Compact Directed Acyclic Word Graph with bidirectional traversal
+
+**Characteristics:**
+- **Construction**: Medium (builds suffix automaton per term)
+- **Query**: Excellent for substring (O(|pattern|))
+- **Memory**: Moderate
+- **Updates**: No (immutable after construction)
+- **Special**: True suffix automaton indexing ALL substrings with bidirectional edges
+
+**When to use:**
+- Need O(|pattern|) substring search
+- Bidirectional pattern traversal (left/right extensions)
+- Text indexing with substring frequency queries
+- WallBreaker pattern splitting algorithm
+
+**Example:**
+
+```rust
+use liblevenshtein::prelude::*;
+
+let scdawg = Scdawg::<()>::from_terms(["cathedral", "category", "catering"]);
+
+// O(|pattern|) substring search
+assert!(scdawg.contains_substring("cat"));
+assert!(scdawg.contains_substring("thedr"));
+
+// Find all occurrences
+let matches = scdawg.find_exact_substring("cat");
+assert_eq!(matches.len(), 3);  // Found in all three terms
+```
+
+**Feature flag:** `scdawg-backend` (optional)
+
+### 8. PersistentARTrie (Disk-Based)
+
+**Type**: Persistent Adaptive Radix Trie with memory-mapped storage
+
+**Characteristics:**
+- **Construction**: Fast (incremental inserts)
+- **Query**: Excellent (adaptive node sizes, SIMD acceleration)
+- **Memory**: Disk-based (configurable buffer cache)
+- **Updates**: ✅ Yes (with WAL for crash recovery)
+- **Special**: Handles dictionaries larger than RAM
+
+**When to use:**
+- Dictionary too large to fit in memory
+- Need persistence across application restarts
+- Crash recovery required
+- Memory-constrained environments with large dictionaries
+
+**Example:**
+
+```rust
+use liblevenshtein::dictionary::persistent_artrie::PersistentARTrie;
+
+// Create a new persistent dictionary
+let dict = PersistentARTrie::create("words.part")?;
+
+// Insert terms (persisted to disk)
+dict.insert("hello", ())?;
+dict.insert("world", ())?;
+
+// Query with transducer
+let transducer = Transducer::new(&dict, Algorithm::Standard);
+for result in transducer.query("helo", 1) {
+    println!("{}: distance {}", result.term, result.distance);
+}
+```
+
+**Architecture:**
+- Adaptive node sizes: Node4, Node16 (SIMD), Node48, Node256
+- B-trie buckets for efficient leaf storage
+- Pointer swizzling for lazy loading
+- Write-ahead logging (WAL) for crash recovery
+
+**Feature flag:** `persistent-artrie` (optional)
+
 ## Backend Comparison
 
 ### Performance Summary
@@ -278,10 +309,10 @@ for term in transducer.query("test", 1) {
 |---------|-------------|-------|--------|---------|----------------|
 | DoubleArrayTrie | ●●●○○ Medium | ●●●●● Excellent | ●●●●● Minimal | ✗ No | DoubleArrayTrieChar |
 | PathMap | ●●●●○ Fast | ●●●●○ Very Good | ●●●○○ Moderate | ✅ Yes | PathMapDictionaryChar |
-| DAWG | ●●○○○ Slow | ●●●○○ Good | ●●●●● Minimal | ✗ No | - |
-| OptimizedDawg | ●●●○○ Medium | ●●●○○ Good | ●●●●● Minimal | ✗ No | - |
-| DynamicDawg | ●●●●○ Fast | ●●●○○ Good | ●●●●○ Low | ✅ Yes | - |
-| SuffixAutomaton | ●●●●○ Fast | ●●●○○ Good | ●●●○○ Moderate | ✗ No | - |
+| DynamicDawg | ●●●●○ Fast | ●●●○○ Good | ●●●●○ Low | ✅ Yes | DynamicDawgChar |
+| SuffixAutomaton | ●●●●○ Fast | ●●●○○ Good | ●●●○○ Moderate | ✗ No | SuffixAutomatonChar |
+| SCDAWG | ●●●○○ Medium | ●●●●● Excellent (substring) | ●●●○○ Moderate | ✗ No | ScdawgChar |
+| PersistentARTrie | ●●●●○ Fast | ●●●●● Excellent | Disk-based | ✅ Yes | PersistentARTrieChar |
 
 ### Benchmark Results
 
@@ -293,10 +324,10 @@ Query performance relative to DoubleArrayTrie (100K terms, distance 2):
 | DoubleArrayTrieChar | 0.95× | 11.2 |
 | PathMapDictionary | 0.92× | 12.3 |
 | PathMapDictionaryChar | 0.87× | 16.8 |
-| DAWG | 0.81× | 7.1 |
-| OptimizedDawg | 0.83× | 7.2 |
-| DynamicDawg | 0.79× | 7.8 |
-| SuffixAutomaton | 0.76× | 10.5 |
+| DynamicDawg | 0.85× | 7.8 |
+| SuffixAutomaton | 0.82× | 10.5 |
+| SCDAWG | 0.90× (substring: 1.2×) | 14.2 |
+| PersistentARTrie | 0.88× | Disk + cache |
 
 **Note**: All backends benefit from SIMD acceleration (20-64% faster with `simd` feature).
 
@@ -325,12 +356,6 @@ Query performance relative to DoubleArrayTrie (100K terms, distance 2):
 - ✅ Internationalized app with runtime changes
 - ✅ Can accept higher memory usage
 
-### Choose DAWG/OptimizedDawg when:
-- ✅ Memory is severely constrained
-- ✅ Dictionary is read-only
-- ✅ Many shared prefixes/suffixes
-- ✅ Can tolerate slower construction (DAWG) or query (both)
-
 ### Choose DynamicDawg when:
 - ✅ Need both updates and space efficiency
 - ✅ Memory constrained but need updates
@@ -341,6 +366,18 @@ Query performance relative to DoubleArrayTrie (100K terms, distance 2):
 - ✅ Pattern matching within words
 - ✅ Text indexing applications
 
+### Choose SCDAWG when:
+- ✅ Need O(|pattern|) substring search
+- ✅ Bidirectional pattern traversal required
+- ✅ Pattern splitting (WallBreaker algorithm)
+- ✅ Substring frequency queries
+
+### Choose PersistentARTrie when:
+- ✅ Dictionary larger than available RAM
+- ✅ Need persistence across restarts
+- ✅ Crash recovery is required
+- ✅ Building dictionary incrementally over time
+
 ## Feature Flags
 
 Enable backends via Cargo features:
@@ -349,12 +386,14 @@ Enable backends via Cargo features:
 [dependencies]
 liblevenshtein = {
     git = "https://github.com/universal-automata/liblevenshtein-rust",
-    tag = "v0.4.0",
+    tag = "v0.8.0",
     features = [
-        "dat-backend",           # DoubleArrayTrie (default)
-        "pathmap-backend",       # PathMapDictionary
-        "dawg-backend",          # DAWG variants
-        "suffix-automaton-backend"  # SuffixAutomaton
+        "dat-backend",              # DoubleArrayTrie (default)
+        "pathmap-backend",          # PathMapDictionary
+        "dawg-backend",             # DynamicDawg
+        "suffix-automaton-backend", # SuffixAutomaton
+        "scdawg-backend",           # SCDAWG
+        "persistent-artrie"         # PersistentARTrie
     ]
 }
 ```

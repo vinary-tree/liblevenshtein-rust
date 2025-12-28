@@ -42,12 +42,12 @@ mod cli_integration_tests {
 
         let detection = detect_format(
             &dict_path,
-            Some(DictionaryBackend::Dawg),
+            Some(DictionaryBackend::DynamicDawg),
             Some(SerializationFormat::Text),
         )
         .unwrap();
 
-        assert_eq!(detection.format.backend, DictionaryBackend::Dawg);
+        assert_eq!(detection.format.backend, DictionaryBackend::DynamicDawg);
         assert_eq!(detection.format.format, SerializationFormat::Text);
     }
 
@@ -76,7 +76,7 @@ mod cli_integration_tests {
         let base_config = PersistentConfig::default();
         let cli_overrides = PersistentConfig {
             dict_path: None,
-            backend: Some(DictionaryBackend::Dawg),
+            backend: Some(DictionaryBackend::DynamicDawg),
             format: None,
             algorithm: Some(liblevenshtein::transducer::Algorithm::Transposition),
             max_distance: Some(3),
@@ -87,7 +87,7 @@ mod cli_integration_tests {
         };
         let merged = base_config.merge_with_cli(&cli_overrides);
 
-        assert_eq!(merged.backend, Some(DictionaryBackend::Dawg));
+        assert_eq!(merged.backend, Some(DictionaryBackend::DynamicDawg));
         assert_eq!(
             merged.algorithm,
             Some(liblevenshtein::transducer::Algorithm::Transposition)

@@ -58,8 +58,6 @@
 //! | **[DynamicDawgU64]** | Token sequences, time series | ⭐⭐⭐ | ⭐⭐ | ✅ Thread-safe | 64-bit labels |
 //! | **[PathMapDictionary]** | Frequent updates (requires `pathmap-backend` feature) | ⭐⭐ | ⭐⭐ | ✅ Thread-safe | Byte-level |
 //! | **[PathMapDictionaryChar]** | Unicode + updates (requires `pathmap-backend` feature) | ⭐⭐ | ⭐⭐ | ✅ Thread-safe | ✅ Character-level |
-//! | **[DawgDictionary]** | Static dictionaries | ⭐⭐⭐ | ⭐⭐⭐ | ❌ | Byte-level |
-//! | **[OptimizedDawg]** | Fast construction | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ❌ | Byte-level |
 //! | **[SuffixAutomaton]** | Substring search | ⭐⭐⭐ | ⭐⭐ | ✅ Insert + Remove | Byte-level |
 //! | **[SuffixAutomatonChar]** | Unicode substring search | ⭐⭐⭐ | ⭐⭐ | ✅ Insert + Remove | ✅ Character-level |
 //!
@@ -70,8 +68,6 @@
 //! [DynamicDawgU64]: dynamic_dawg_u64::DynamicDawgU64
 //! [PathMapDictionary]: pathmap::PathMapDictionary
 //! [PathMapDictionaryChar]: pathmap_char::PathMapDictionaryChar
-//! [DawgDictionary]: dawg::DawgDictionary
-//! [OptimizedDawg]: dawg_optimized::OptimizedDawg
 //! [SuffixAutomaton]: suffix_automaton::SuffixAutomaton
 //! [SuffixAutomatonChar]: suffix_automaton_char::SuffixAutomatonChar
 //!
@@ -132,9 +128,6 @@
 //! ```
 
 pub mod char_unit;
-pub mod dawg;
-pub mod dawg_optimized;
-pub mod dawg_query;
 pub mod double_array_trie;
 pub mod double_array_trie_char;
 pub mod double_array_trie_char_zipper;

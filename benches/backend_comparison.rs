@@ -2,8 +2,6 @@
 //!
 //! This benchmark compares:
 //! - PathMap (baseline - fastest queries, highest memory)
-//! - DAWG (space-efficient, immutable)
-//! - OptimizedDawg (arena-based, 20-25% faster than DAWG)
 //! - DoubleArrayTrie (O(1) transitions, excellent cache)
 //! - DynamicDAWG (space-efficient with modifications)
 //! - SuffixAutomaton (substring matching)
@@ -79,17 +77,6 @@ fn bench_construction(c: &mut Criterion) {
     );
 
     group.bench_with_input(
-        BenchmarkId::new("DAWG", sample_size),
-        &sample,
-        |b, terms| {
-            b.iter(|| {
-                let dict = DawgDictionary::from_iter(terms.clone());
-                black_box(dict)
-            })
-        },
-    );
-
-    group.bench_with_input(
         BenchmarkId::new("DoubleArrayTrie", sample_size),
         &sample,
         |b, terms| {
@@ -133,7 +120,6 @@ fn bench_exact_matching(c: &mut Criterion) {
     let queries = sample_queries();
 
     let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(sample.clone());
-    let dawg_dict = DawgDictionary::from_iter(sample.clone());
     let dat_dict = DoubleArrayTrie::from_terms(sample.clone());
     let dynamic_dawg_dict: DynamicDawg = DynamicDawg::from_terms(sample.clone());
     let suffix_dict: SuffixAutomaton = SuffixAutomaton::from_texts(sample.clone());
@@ -142,16 +128,6 @@ fn bench_exact_matching(c: &mut Criterion) {
 
     group.bench_function("PathMap", |b| {
         let transducer = Transducer::new(pathmap_dict.clone(), Algorithm::Standard);
-        b.iter(|| {
-            for query in &queries {
-                let results: Vec<_> = transducer.query(query, 0).collect();
-                black_box(results);
-            }
-        })
-    });
-
-    group.bench_function("DAWG", |b| {
-        let transducer = Transducer::new(dawg_dict.clone(), Algorithm::Standard);
         b.iter(|| {
             for query in &queries {
                 let results: Vec<_> = transducer.query(query, 0).collect();
@@ -201,7 +177,6 @@ fn bench_distance_1_matching(c: &mut Criterion) {
     let queries = sample_queries();
 
     let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(sample.clone());
-    let dawg_dict = DawgDictionary::from_iter(sample.clone());
     let dat_dict = DoubleArrayTrie::from_terms(sample.clone());
     let dynamic_dawg_dict: DynamicDawg = DynamicDawg::from_terms(sample.clone());
     let suffix_dict: SuffixAutomaton = SuffixAutomaton::from_texts(sample.clone());
@@ -210,16 +185,6 @@ fn bench_distance_1_matching(c: &mut Criterion) {
 
     group.bench_function("PathMap", |b| {
         let transducer = Transducer::new(pathmap_dict.clone(), Algorithm::Standard);
-        b.iter(|| {
-            for query in &queries {
-                let results: Vec<_> = transducer.query(query, 1).collect();
-                black_box(results);
-            }
-        })
-    });
-
-    group.bench_function("DAWG", |b| {
-        let transducer = Transducer::new(dawg_dict.clone(), Algorithm::Standard);
         b.iter(|| {
             for query in &queries {
                 let results: Vec<_> = transducer.query(query, 1).collect();
@@ -269,7 +234,6 @@ fn bench_distance_2_matching(c: &mut Criterion) {
     let queries = sample_queries();
 
     let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(sample.clone());
-    let dawg_dict = DawgDictionary::from_iter(sample.clone());
     let dat_dict = DoubleArrayTrie::from_terms(sample.clone());
     let dynamic_dawg_dict: DynamicDawg = DynamicDawg::from_terms(sample.clone());
     let suffix_dict: SuffixAutomaton = SuffixAutomaton::from_texts(sample.clone());
@@ -278,16 +242,6 @@ fn bench_distance_2_matching(c: &mut Criterion) {
 
     group.bench_function("PathMap", |b| {
         let transducer = Transducer::new(pathmap_dict.clone(), Algorithm::Standard);
-        b.iter(|| {
-            for query in &queries {
-                let results: Vec<_> = transducer.query(query, 2).collect();
-                black_box(results);
-            }
-        })
-    });
-
-    group.bench_function("DAWG", |b| {
-        let transducer = Transducer::new(dawg_dict.clone(), Algorithm::Standard);
         b.iter(|| {
             for query in &queries {
                 let results: Vec<_> = transducer.query(query, 2).collect();
@@ -336,7 +290,6 @@ fn bench_contains_operation(c: &mut Criterion) {
     let sample: Vec<String> = words.iter().take(sample_size).cloned().collect();
 
     let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(sample.clone());
-    let dawg_dict = DawgDictionary::from_iter(sample.clone());
     let dat_dict = DoubleArrayTrie::from_terms(sample.clone());
     let dynamic_dawg_dict: DynamicDawg = DynamicDawg::from_terms(sample.clone());
     let suffix_dict: SuffixAutomaton = SuffixAutomaton::from_texts(sample.clone());
@@ -350,14 +303,6 @@ fn bench_contains_operation(c: &mut Criterion) {
         b.iter(|| {
             for word in &test_words {
                 black_box(pathmap_dict.contains(word));
-            }
-        })
-    });
-
-    group.bench_function("DAWG", |b| {
-        b.iter(|| {
-            for word in &test_words {
-                black_box(dawg_dict.contains(word));
             }
         })
     });

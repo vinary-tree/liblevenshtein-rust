@@ -57,10 +57,10 @@ mod repl_integration_tests {
 
     #[test]
     fn test_parse_backend_command() {
-        let cmd = Command::parse("backend dawg").unwrap();
+        let cmd = Command::parse("backend dynamic-dawg").unwrap();
         match cmd {
             Command::Backend { backend } => {
-                assert_eq!(backend, DictionaryBackend::Dawg);
+                assert_eq!(backend, DictionaryBackend::DynamicDawg);
             }
             _ => panic!("Wrong command type"),
         }
@@ -160,11 +160,11 @@ mod repl_integration_tests {
         state.dictionary.insert("world").unwrap();
         assert_eq!(state.backend, DictionaryBackend::PathMap);
 
-        // Migrate to DAWG
-        let cmd = Command::parse("backend dawg").unwrap();
+        // Migrate to DynamicDawg
+        let cmd = Command::parse("backend dynamic-dawg").unwrap();
         cmd.execute(&mut state).unwrap();
 
-        assert_eq!(state.backend, DictionaryBackend::Dawg);
+        assert_eq!(state.backend, DictionaryBackend::DynamicDawg);
         assert_eq!(state.dictionary.len(), 2);
         assert!(state.dictionary.contains("hello"));
         assert!(state.dictionary.contains("world"));

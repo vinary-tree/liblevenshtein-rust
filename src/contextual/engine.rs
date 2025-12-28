@@ -76,30 +76,6 @@ where
     transducer: Arc<RwLock<Transducer<D>>>,
 }
 
-/// Deprecated alias for `DynamicContextualCompletionEngine`.
-///
-/// This type was renamed in version 0.7.0 to better distinguish it from the new
-/// `StaticContextualCompletionEngine`. Code using this alias will continue to work
-/// but will receive deprecation warnings.
-///
-/// # Migration
-///
-/// Replace uses of `ContextualCompletionEngine` with `DynamicContextualCompletionEngine`:
-///
-/// ```rust,ignore
-/// // Old (deprecated)
-/// let engine = ContextualCompletionEngine::new();
-///
-/// // New (recommended)
-/// let engine = DynamicContextualCompletionEngine::new();
-/// ```
-#[deprecated(
-    since = "0.7.0",
-    note = "Renamed to `DynamicContextualCompletionEngine`. This alias will be removed in 1.0.0"
-)]
-pub type ContextualCompletionEngine<D = PathMapDictionary<Vec<ContextId>>> =
-    DynamicContextualCompletionEngine<D>;
-
 // Convenience constructors for default PathMapDictionary backend
 impl DynamicContextualCompletionEngine<PathMapDictionary<Vec<ContextId>>> {
     /// Create a new engine with default configuration (PathMapDictionary + Standard algorithm).

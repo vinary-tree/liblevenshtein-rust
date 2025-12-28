@@ -141,14 +141,14 @@ fn bench_edge_lookup_realistic_workload(c: &mut Criterion) {
     }
 }
 
-/// Benchmark DAWG dictionary integration.
+/// Benchmark dictionary integration.
 ///
 /// This measures the end-to-end performance improvement in actual
 /// dictionary operations with SIMD edge lookup integrated.
 fn bench_dawg_dictionary_integration(c: &mut Criterion) {
     use liblevenshtein::prelude::*;
 
-    let mut group = c.benchmark_group("dawg_integration");
+    let mut group = c.benchmark_group("dictionary_integration");
 
     // Create a dictionary with realistic English words
     let terms = vec![
@@ -212,7 +212,7 @@ fn bench_dawg_dictionary_integration(c: &mut Criterion) {
         "compute",
     ];
 
-    let dict = DawgDictionary::from_iter(terms.clone());
+    let dict = DoubleArrayTrie::from_terms(terms.clone());
 
     // Benchmark: Dictionary contains() (uses transition() internally)
     group.bench_function("contains_existing", |b| {
@@ -278,7 +278,7 @@ fn bench_transducer_query_integration(c: &mut Criterion) {
         "computation",
     ];
 
-    let dict = DawgDictionary::from_iter(terms);
+    let dict = DoubleArrayTrie::from_terms(terms);
     let transducer = Transducer::new(dict, Algorithm::Standard);
 
     // Query with distance 1 (typical autocorrect)

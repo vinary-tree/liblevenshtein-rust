@@ -192,10 +192,10 @@ mod tests {
     }
 
     #[test]
-    fn test_builder_with_dawg() {
-        use crate::dictionary::dawg::DawgDictionary;
+    fn test_builder_with_double_array_trie() {
+        use crate::dictionary::double_array_trie::DoubleArrayTrie;
 
-        let dict = DawgDictionary::from_iter(vec!["test", "testing"]);
+        let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
         let transducer = TransducerBuilder::new()
             .dictionary(dict)
             .algorithm(Algorithm::Standard)

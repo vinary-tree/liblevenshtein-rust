@@ -37,11 +37,11 @@ pub struct DawgNode {
     pub is_final: bool,
 }
 
-/// Extract nodes from DawgDictionary for direct testing
+/// Extract nodes from DoubleArrayTrie for direct testing
 /// This is a bit hacky but allows us to test different thresholds
 #[allow(dead_code)]
-fn extract_nodes(dict: &DawgDictionary) -> Vec<DawgNode> {
-    // We can't directly access the Arc<Vec<DawgNode>> since it's private
+fn extract_nodes(dict: &DoubleArrayTrie) -> Vec<DawgNode> {
+    // We can't directly access the internal arrays since they're private
     // Instead, we'll traverse and rebuild
     let mut nodes = Vec::new();
     let mut visited = std::collections::HashMap::new();
@@ -95,7 +95,7 @@ fn bench_threshold_values(c: &mut Criterion) {
 
     for &dict_size in &dict_sizes {
         let terms = generate_terms(dict_size);
-        let dict = DawgDictionary::from_iter(terms.iter().map(|s| s.as_str()));
+        let dict = DoubleArrayTrie::from_terms(terms.iter().map(|s| s.as_str()));
 
         // NOTE: We can't extract nodes directly, so we'll test with the actual contains()
         // which uses threshold=8. For true threshold testing, we'd need to modify source code.

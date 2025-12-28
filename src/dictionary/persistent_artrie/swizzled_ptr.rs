@@ -375,12 +375,6 @@ impl SwizzledPtr {
     pub fn from_raw(raw: u64) -> Self {
         Self(AtomicU64::new(raw))
     }
-
-    /// Get the raw value for debugging purposes (deprecated, use to_raw).
-    #[deprecated(note = "Use to_raw() instead")]
-    pub fn raw(&self) -> u64 {
-        self.to_raw()
-    }
 }
 
 impl Clone for SwizzledPtr {

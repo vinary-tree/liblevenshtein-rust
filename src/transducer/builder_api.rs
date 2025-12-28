@@ -13,7 +13,7 @@ use crate::dictionary::Dictionary;
 /// ```rust,ignore
 /// use liblevenshtein::prelude::*;
 ///
-/// let dict = DawgDictionary::from_iter(vec!["test", "testing", "tested"]);
+/// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
 /// let transducer = Transducer::new(dict, Algorithm::Standard);
 ///
 /// // Simple query
@@ -27,8 +27,8 @@ use crate::dictionary::Dictionary;
 /// let results: Vec<_> = transducer
 ///     .query_builder("te")
 ///     .max_distance(1)
-///     .prefix_mode(true)
 ///     .ordered()
+///     .prefix()
 ///     .take(10)
 ///     .collect();
 /// ```
@@ -37,7 +37,6 @@ pub struct QueryBuilder<'a, D: Dictionary> {
     term: String,
     max_distance: usize,
     algorithm: Algorithm,
-    prefix: bool,
 }
 
 impl<'a, D: Dictionary> QueryBuilder<'a, D> {
@@ -53,7 +52,6 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
             term: term.into(),
             max_distance: default_distance,
             algorithm,
-            prefix: false,
         }
     }
 
@@ -87,44 +85,13 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
         self
     }
 
-    /// Enable or disable prefix matching mode
-    ///
-    /// **DEPRECATED**: This method is non-functional and will be removed in a future version.
-    ///
-    /// # Migration Guide
-    ///
-    /// Use `.ordered().prefix()` instead for prefix matching:
-    ///
-    /// ```rust,ignore
-    /// // OLD (doesn't work):
-    /// let results = transducer
-    ///     .query_builder("te")
-    ///     .prefix_mode(true)
-    ///     .execute();
-    ///
-    /// // NEW (works correctly):
-    /// let results = transducer
-    ///     .query_builder("te")
-    ///     .ordered()
-    ///     .prefix()  // Enable prefix matching
-    ///     .collect();
-    /// ```
-    #[deprecated(
-        since = "0.4.1",
-        note = "This method is non-functional. Use `.ordered().prefix()` instead for prefix matching."
-    )]
-    pub fn prefix_mode(mut self, enabled: bool) -> Self {
-        self.prefix = enabled;
-        self
-    }
-
     /// Execute the query and return an iterator over matching terms
     ///
     /// Returns terms in arbitrary order as they are found during traversal.
     ///
     /// # Note
     ///
-    /// For prefix matching, use `.ordered().prefix()` instead of `.prefix_mode()`.
+    /// For prefix matching, use `.ordered().prefix()`.
     pub fn execute(self) -> QueryIterator<D::Node>
     where
         Unrestricted: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
@@ -216,12 +183,12 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
 
 #[cfg(test)]
 mod tests {
-    use crate::dictionary::dawg::DawgDictionary;
+    use crate::dictionary::double_array_trie::DoubleArrayTrie;
     use crate::transducer::{Algorithm, Transducer};
 
     #[test]
     fn test_query_builder_basic() {
-        let dict = DawgDictionary::from_iter(vec!["test", "testing", "tested"]);
+        let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
         let transducer = Transducer::new(dict, Algorithm::Standard);
 
         let results: Vec<_> = transducer
@@ -235,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_query_builder_with_distance() {
-        let dict = DawgDictionary::from_iter(vec!["test", "best", "rest"]);
+        let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest"]);
         let transducer = Transducer::new(dict, Algorithm::Standard);
 
         let results: Vec<_> = transducer
@@ -250,12 +217,11 @@ mod tests {
     }
 
     #[test]
-    fn test_query_builder_prefix_mode() {
-        let dict = DawgDictionary::from_iter(vec!["test", "testing", "tested", "best"]);
+    fn test_query_builder_ordered_prefix() {
+        let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested", "best"]);
         let transducer = Transducer::new(dict, Algorithm::Standard);
 
-        // Use query_ordered().prefix() which is the implemented approach
-        // Note: query_builder().prefix_mode() is not yet implemented
+        // Use .ordered().prefix() for prefix matching
         let results: Vec<_> = transducer
             .query_ordered("tes", 0)
             .prefix()
@@ -270,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_query_builder_ordered() {
-        let dict = DawgDictionary::from_iter(vec!["test", "best", "rest", "testing"]);
+        let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest", "testing"]);
         let transducer = Transducer::new(dict, Algorithm::Standard);
 
         let results: Vec<_> = transducer
@@ -287,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_query_builder_collect_vec() {
-        let dict = DawgDictionary::from_iter(vec!["test", "best"]);
+        let dict = DoubleArrayTrie::from_terms(vec!["test", "best"]);
         let transducer = Transducer::new(dict, Algorithm::Standard);
 
         let results = transducer
@@ -300,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_query_builder_limit() {
-        let dict = DawgDictionary::from_iter(vec!["test", "best", "rest", "nest"]);
+        let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest", "nest"]);
         let transducer = Transducer::new(dict, Algorithm::Standard);
 
         let results: Vec<_> = transducer

@@ -564,11 +564,6 @@ impl NFACompilerChar {
                 let nfa = self.compile_regex_recursive(inner)?;
                 Ok(self.builder.repeat_range(nfa, *min, *max))
             }
-            // Legacy group (deprecated)
-            Regex::Group(inner) => {
-                // Groups don't affect NFA structure (capturing is not implemented yet)
-                self.compile_regex_recursive(inner)
-            }
             // Capturing group: (...)
             Regex::CapturingGroup(_, inner) => {
                 // Capturing groups compile like regular groups for now
@@ -741,8 +736,7 @@ impl NFACompilerChar {
             }
 
             // === Group wrappers: pass-through to inner ===
-            Regex::Group(inner)
-            | Regex::CapturingGroup(_, inner)
+            Regex::CapturingGroup(_, inner)
             | Regex::NonCapturingGroup(inner)
             | Regex::NamedGroup(_, inner) => {
                 work_stack.push(CompileWork::Compile(inner));
@@ -783,8 +777,7 @@ impl NFACompilerChar {
                 Ok(chars)
             }
             // All group types extract the inner literal
-            Regex::Group(inner)
-            | Regex::CapturingGroup(_, inner)
+            Regex::CapturingGroup(_, inner)
             | Regex::NonCapturingGroup(inner)
             | Regex::NamedGroup(_, inner) => self.regex_to_literal(inner),
             // Flags group with inner pattern
@@ -941,10 +934,6 @@ impl NFACompilerByte {
                 let nfa = self.compile_regex(inner)?;
                 Ok(self.builder.repeat_range(nfa, *min, *max))
             }
-            // Legacy group (deprecated)
-            RegexByte::Group(inner) => {
-                self.compile_regex(inner)
-            }
             // Capturing group: (...)
             RegexByte::CapturingGroup(_, inner) => {
                 self.compile_regex(inner)
@@ -1001,8 +990,7 @@ impl NFACompilerByte {
                 Ok(bytes)
             }
             // All group types extract the inner literal
-            RegexByte::Group(inner)
-            | RegexByte::CapturingGroup(_, inner)
+            RegexByte::CapturingGroup(_, inner)
             | RegexByte::NonCapturingGroup(inner)
             | RegexByte::NamedGroup(_, inner) => self.regex_to_literal(inner),
             // Flags group with inner pattern

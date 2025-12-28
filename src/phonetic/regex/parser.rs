@@ -1482,7 +1482,7 @@ impl<'a> ParserByte<'a> {
             TokenByte::GroupStart => {
                 let inner = self.parse_alternation()?;
                 self.expect_token(TokenByte::GroupEnd)?;
-                Ok(RegexByte::group(inner))
+                Ok(RegexByte::non_capturing_group(inner))
             }
             TokenByte::ByteClassStart => self.parse_byte_class(),
             TokenByte::Dot => Ok(RegexByte::any()),
@@ -2906,8 +2906,6 @@ mod tests {
             Regex::FlagsGroup { inner: Some(inner), .. } => {
                 contains_variant(inner, predicate)
             }
-            #[allow(deprecated)]
-            Regex::Group(inner) => contains_variant(inner, predicate),
             _ => false,
         }
     }

@@ -16,7 +16,7 @@
 //! use liblevenshtein::phonetic::online_transducer::OnlinePhoneticTransducerChar;
 //! use liblevenshtein::phonetic::rules::english;
 //!
-//! let rules = english::zompist().rules_vec();
+//! let rules = english::base().rules_vec();
 //! let mut transducer = OnlinePhoneticTransducerChar::new(rules);
 //!
 //! // Feed characters one at a time

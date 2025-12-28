@@ -5,8 +5,6 @@
 use crate::cli::args::SerializationFormat;
 use crate::commands::core::QueryParams;
 use crate::commands::handlers::query::execute_query;
-use crate::dictionary::dawg::DawgDictionary;
-use crate::dictionary::dawg_optimized::OptimizedDawg;
 use crate::dictionary::double_array_trie::DoubleArrayTrie;
 use crate::dictionary::dynamic_dawg::DynamicDawg;
 use crate::dictionary::pathmap::PathMapDictionary;
@@ -67,10 +65,6 @@ pub enum DictionaryBackend {
     PathMap,
     /// Double-Array Trie (recommended default, fast and compact)
     DoubleArrayTrie,
-    /// Static DAWG (read-only, compressed)
-    Dawg,
-    /// Optimized DAWG (arena-based, most compact)
-    OptimizedDawg,
     /// Dynamic DAWG (supports modifications, compressed)
     DynamicDawg,
     /// Suffix automaton (substring matching, dynamic)
@@ -82,8 +76,6 @@ impl std::fmt::Display for DictionaryBackend {
         match self {
             Self::PathMap => write!(f, "path-map"),
             Self::DoubleArrayTrie => write!(f, "double-array-trie"),
-            Self::Dawg => write!(f, "dawg"),
-            Self::OptimizedDawg => write!(f, "optimized-dawg"),
             Self::DynamicDawg => write!(f, "dynamic-dawg"),
             Self::SuffixAutomaton => write!(f, "suffix-automaton"),
         }
@@ -97,12 +89,10 @@ impl std::str::FromStr for DictionaryBackend {
         match s.to_lowercase().as_str() {
             "pathmap" | "path-map" => Ok(Self::PathMap),
             "double-array-trie" | "doublearraytrie" | "dat" => Ok(Self::DoubleArrayTrie),
-            "dawg" => Ok(Self::Dawg),
-            "optimized-dawg" | "optimizeddawg" => Ok(Self::OptimizedDawg),
             "dynamic-dawg" | "dynamicdawg" => Ok(Self::DynamicDawg),
             "suffix-automaton" | "suffixautomaton" => Ok(Self::SuffixAutomaton),
             _ => Err(anyhow::anyhow!(
-                "Unknown backend: {}. Valid options: path-map, double-array-trie (dat), dawg, optimized-dawg, dynamic-dawg, suffix-automaton",
+                "Unknown backend: {}. Valid options: path-map, double-array-trie (dat), dynamic-dawg, suffix-automaton",
                 s
             )),
         }
@@ -115,10 +105,6 @@ pub enum DictContainer {
     PathMap(PathMapDictionary),
     /// Double-Array Trie dictionary
     DoubleArrayTrie(DoubleArrayTrie),
-    /// Static DAWG dictionary
-    Dawg(DawgDictionary),
-    /// Optimized DAWG dictionary
-    OptimizedDawg(OptimizedDawg),
     /// Dynamic DAWG dictionary
     DynamicDawg(DynamicDawg),
     /// Suffix automaton dictionary
@@ -131,8 +117,6 @@ impl DictContainer {
         match self {
             Self::PathMap(_) => DictionaryBackend::PathMap,
             Self::DoubleArrayTrie(_) => DictionaryBackend::DoubleArrayTrie,
-            Self::Dawg(_) => DictionaryBackend::Dawg,
-            Self::OptimizedDawg(_) => DictionaryBackend::OptimizedDawg,
             Self::DynamicDawg(_) => DictionaryBackend::DynamicDawg,
             Self::SuffixAutomaton(_) => DictionaryBackend::SuffixAutomaton,
         }
@@ -143,8 +127,6 @@ impl DictContainer {
         match self {
             Self::PathMap(d) => d.contains(term),
             Self::DoubleArrayTrie(d) => d.contains(term),
-            Self::Dawg(d) => d.contains(term),
-            Self::OptimizedDawg(d) => d.contains(term),
             Self::DynamicDawg(d) => d.contains(term),
             Self::SuffixAutomaton(d) => d.contains(term),
         }
@@ -155,8 +137,6 @@ impl DictContainer {
         match self {
             Self::PathMap(d) => Ok(d.insert(term)),
             Self::DoubleArrayTrie(_) => Err(anyhow::anyhow!("DoubleArrayTrie dictionary is read-only. Use 'backend dynamic-dawg', 'backend pathmap', or 'backend suffix-automaton' for modifications.")),
-            Self::Dawg(_) => Err(anyhow::anyhow!("DAWG dictionary is read-only. Use 'backend dynamic-dawg', 'backend pathmap', or 'backend suffix-automaton' for modifications.")),
-            Self::OptimizedDawg(_) => Err(anyhow::anyhow!("OptimizedDawg dictionary is read-only. Use 'backend dynamic-dawg', 'backend pathmap', or 'backend suffix-automaton' for modifications.")),
             Self::DynamicDawg(d) => Ok(d.insert(term)),
             Self::SuffixAutomaton(d) => Ok(d.insert(term)),
         }
@@ -167,8 +147,6 @@ impl DictContainer {
         match self {
             Self::PathMap(d) => Ok(d.remove(term)),
             Self::DoubleArrayTrie(_) => Err(anyhow::anyhow!("DoubleArrayTrie dictionary is read-only. Use 'backend dynamic-dawg', 'backend pathmap', or 'backend suffix-automaton' for modifications.")),
-            Self::Dawg(_) => Err(anyhow::anyhow!("DAWG dictionary is read-only. Use 'backend dynamic-dawg', 'backend pathmap', or 'backend suffix-automaton' for modifications.")),
-            Self::OptimizedDawg(_) => Err(anyhow::anyhow!("OptimizedDawg dictionary is read-only. Use 'backend dynamic-dawg', 'backend pathmap', or 'backend suffix-automaton' for modifications.")),
             Self::DynamicDawg(d) => Ok(d.remove(term)),
             Self::SuffixAutomaton(d) => Ok(d.remove(term)),
         }
@@ -179,8 +157,6 @@ impl DictContainer {
         match self {
             Self::PathMap(d) => d.len().unwrap_or(0),
             Self::DoubleArrayTrie(d) => d.len().unwrap_or(0),
-            Self::Dawg(d) => d.len().unwrap_or(0),
-            Self::OptimizedDawg(d) => d.len().unwrap_or(0),
             Self::DynamicDawg(d) => d.len().unwrap_or(0),
             Self::SuffixAutomaton(d) => d.string_count(),
         }
@@ -196,8 +172,6 @@ impl DictContainer {
         match self {
             Self::PathMap(d) => extract_terms(d),
             Self::DoubleArrayTrie(d) => extract_terms(d),
-            Self::Dawg(d) => extract_terms(d),
-            Self::OptimizedDawg(d) => extract_terms(d),
             Self::DynamicDawg(d) => extract_terms(d),
             Self::SuffixAutomaton(d) => d.source_texts(),
         }
@@ -215,14 +189,6 @@ impl DictContainer {
             DictionaryBackend::DoubleArrayTrie => {
                 let dict = DoubleArrayTrie::from_terms(terms);
                 Self::DoubleArrayTrie(dict)
-            }
-            DictionaryBackend::Dawg => {
-                let dict = DawgDictionary::from_iter(terms.iter().map(|s| s.as_str()));
-                Self::Dawg(dict)
-            }
-            DictionaryBackend::OptimizedDawg => {
-                let dict = OptimizedDawg::from_terms(terms);
-                Self::OptimizedDawg(dict)
             }
             DictionaryBackend::DynamicDawg => {
                 let dict = DynamicDawg::new();
@@ -250,8 +216,6 @@ impl DictContainer {
             Self::DoubleArrayTrie(_) => {
                 Err(anyhow::anyhow!("DoubleArrayTrie dictionary is read-only"))
             }
-            Self::Dawg(_) => Err(anyhow::anyhow!("DAWG dictionary is read-only")),
-            Self::OptimizedDawg(_) => Err(anyhow::anyhow!("OptimizedDawg dictionary is read-only")),
             Self::DynamicDawg(_) => {
                 // Replace with new empty DynamicDawg
                 *self = Self::DynamicDawg(DynamicDawg::new());
@@ -273,10 +237,6 @@ impl DictContainer {
             }
             Self::DoubleArrayTrie(_) => Err(anyhow::anyhow!(
                 "DoubleArrayTrie dictionary is already minimized"
-            )),
-            Self::Dawg(_) => Err(anyhow::anyhow!("DAWG dictionary is already minimized")),
-            Self::OptimizedDawg(_) => Err(anyhow::anyhow!(
-                "OptimizedDawg dictionary is already minimized"
             )),
             Self::DynamicDawg(d) => {
                 d.minimize();
@@ -395,11 +355,7 @@ impl ReplState {
                     DictContainer::PathMap(PathMapDictionary::from_terms(terms))
                 }
                 DictionaryBackend::DoubleArrayTrie => {
-                    DictContainer::DoubleArrayTrie(DoubleArrayTrie::from_iter(terms))
-                }
-                DictionaryBackend::Dawg => DictContainer::Dawg(DawgDictionary::from_iter(terms)),
-                DictionaryBackend::OptimizedDawg => {
-                    DictContainer::OptimizedDawg(OptimizedDawg::from_iter(terms))
+                    DictContainer::DoubleArrayTrie(DoubleArrayTrie::from_terms(terms))
                 }
                 DictionaryBackend::DynamicDawg => {
                     let dict = DynamicDawg::new();
@@ -498,8 +454,6 @@ impl ReplState {
         match &self.dictionary {
             DictContainer::PathMap(d) => execute_query(d, &params),
             DictContainer::DoubleArrayTrie(d) => execute_query(d, &params),
-            DictContainer::Dawg(d) => execute_query(d, &params),
-            DictContainer::OptimizedDawg(d) => execute_query(d, &params),
             DictContainer::DynamicDawg(d) => execute_query(d, &params),
             DictContainer::SuffixAutomaton(d) => execute_query(d, &params),
         }
@@ -518,8 +472,6 @@ impl ReplState {
         match &self.dictionary {
             DictContainer::PathMap(_) => None,
             DictContainer::DoubleArrayTrie(_) => None,
-            DictContainer::Dawg(d) => Some(d.node_count()),
-            DictContainer::OptimizedDawg(d) => Some(d.node_count()),
             DictContainer::DynamicDawg(d) => Some(d.node_count()),
             DictContainer::SuffixAutomaton(d) => Some(d.state_count()),
         }

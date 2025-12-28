@@ -20,19 +20,6 @@ use liblevenshtein::prelude::*;
 let dict = PathMapDictionary::from_iter(vec!["test", "testing"]);
 ```
 
-#### DAWG Dictionary
-- **Type**: Directed Acyclic Word Graph with suffix sharing
-- **Best for**: Large static dictionaries with common patterns
-- **Thread-safe**: Fully immutable, no synchronization needed
-- **Space efficiency**: Shares both prefixes and suffixes
-- **Usage**:
-```rust
-use liblevenshtein::prelude::*;
-
-let dict = DawgDictionary::from_iter(vec!["testing", "walking", "talking"]);
-println!("Terms: {}, Nodes: {}", dict.term_count(), dict.node_count());
-```
-
 #### DynamicDawg Dictionary
 - **Type**: DAWG with online insert/delete/minimize operations
 - **Best for**: Dictionaries needing both space efficiency and runtime updates
@@ -282,7 +269,7 @@ RUSTFLAGS="-C target-cpu=native" cargo bench
 All dictionary implementations are thread-safe:
 
 - **PathMapDictionary**: Uses `Arc<RwLock<...>>` for concurrent access
-- **DawgDictionary**: Fully immutable, `SyncStrategy::Persistent`
+- **DynamicDawg**: Uses `Arc<RwLock<...>>` for concurrent access
 - **Transducer**: Clone-cheap, can be shared across threads
 
 ## Feature Comparison with Java Version

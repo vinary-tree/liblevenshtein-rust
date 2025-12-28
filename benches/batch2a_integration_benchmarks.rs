@@ -68,7 +68,7 @@ fn bench_query_integration(c: &mut Criterion) {
         "compute",
     ];
 
-    let dict = DawgDictionary::from_iter(terms);
+    let dict = DoubleArrayTrie::from_terms(terms);
     let transducer = Transducer::new(dict, Algorithm::Standard);
 
     let mut group = c.benchmark_group("query_integration");

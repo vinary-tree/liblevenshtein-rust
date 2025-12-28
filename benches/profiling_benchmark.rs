@@ -30,11 +30,11 @@ fn main() {
     let words = load_dictionary();
     println!("Loaded {} words\n", words.len());
 
-    // Build DAWG (exercises construction + minimization)
-    println!("Building DAWG...");
+    // Build DoubleArrayTrie (exercises construction)
+    println!("Building DoubleArrayTrie...");
     let start = std::time::Instant::now();
-    let dict = DawgDictionary::from_iter(words.iter().map(|s| s.as_str()));
-    println!("DAWG built in {:?}\n", start.elapsed());
+    let dict = DoubleArrayTrie::from_terms(words.iter().map(|s| s.as_str()));
+    println!("DoubleArrayTrie built in {:?}\n", start.elapsed());
 
     // Build transducer (exercises hot paths)
     println!("Building transducer...");

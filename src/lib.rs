@@ -171,19 +171,6 @@ pub mod corpus;
 
 /// Common imports for convenient usage
 pub mod prelude {
-    pub use crate::dictionary::dawg::DawgDictionary;
-
-    /// **DEPRECATED**: Use `DynamicDawg` instead - 11× faster with full feature support.
-    ///
-    /// OptimizedDawg was an experimental DAWG implementation with arena-based edge storage,
-    /// but benchmarks show DynamicDawg is significantly faster while providing more features
-    /// (MappedDictionary, ValuedDictZipper, mutability).
-    #[deprecated(
-        since = "0.7.0",
-        note = "Use DynamicDawg instead - 11× faster construction with full feature support"
-    )]
-    pub use crate::dictionary::dawg_optimized::OptimizedDawg;
-
     pub use crate::dictionary::double_array_trie::DoubleArrayTrie;
     pub use crate::dictionary::dynamic_dawg::DynamicDawg;
     pub use crate::dictionary::factory::{

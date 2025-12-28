@@ -1,0 +1,496 @@
+    Blocking waiting for file lock on build directory
+   Compiling liblevenshtein v0.8.0 (/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust)
+warning: unused import: `super::nodes::flags`
+  --> src/dictionary/persistent_artrie/serialization.rs:62:5
+   |
+62 | use super::nodes::flags;
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `Node16`, `Node256`, and `Node48`
+  --> src/dictionary/persistent_artrie/node_impl.rs:26:42
+   |
+26 | use super::nodes::{ArtNode, Node, Node4, Node16, Node48, Node256};
+   |                                          ^^^^^^  ^^^^^^  ^^^^^^^
+
+warning: unused imports: `AddChildError` and `Node4`
+  --> src/dictionary/persistent_artrie/dict_impl.rs:26:35
+   |
+26 | use super::nodes::{ArtNode, Node, Node4, AddChildError};
+   |                                   ^^^^^  ^^^^^^^^^^^^^
+
+warning: unused import: `flags`
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:72:42
+   |
+72 |     CharNodeHeader, CHAR_MAX_PREFIX_LEN, flags,
+   |                                          ^^^^^
+
+warning: unused import: `SubstitutionSet`
+  --> src/transducer/operation_set.rs:59:40
+   |
+59 | use crate::transducer::{OperationType, SubstitutionSet};
+   |                                        ^^^^^^^^^^^^^^^
+
+warning: unused variable: `has_values`
+   --> src/dictionary/persistent_artrie/transitions.rs:132:9
+    |
+132 |     let has_values = bucket.header().has_values();
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_has_values`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `child_ptr`
+   --> src/dictionary/persistent_artrie/node_impl.rs:164:27
+    |
+164 |                 for (key, child_ptr) in n.iter_children() {
+    |                           ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_child_ptr`
+
+warning: unused variable: `entry_count`
+   --> src/dictionary/persistent_artrie/dict_impl.rs:232:13
+    |
+232 |         let entry_count = disk_manager.entry_count()?;
+    |             ^^^^^^^^^^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+232 |         let _entry_count = disk_manager.entry_count()?;
+    |             +
+help: you might have meant to pattern match on the similarly named constant `BUCKET_MAGIC`
+    |
+232 -         let entry_count = disk_manager.entry_count()?;
+232 +         let dictionary::persistent_artrie::bucket::BUCKET_MAGIC = disk_manager.entry_count()?;
+    |
+
+warning: unused variable: `child_value`
+   --> src/dictionary/persistent_artrie/dict_impl.rs:981:40
+    |
+981 | ...                   value: child_value,
+    |                              ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_child_value`
+
+warning: unused variable: `value_bytes`
+    --> src/dictionary/persistent_artrie/dict_impl.rs:1736:21
+     |
+1736 |                 let value_bytes: Vec<u8> = Vec::new(); // Value serialization not yet implemented
+     |                     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_value_bytes`
+
+warning: unused variable: `checkpoint_lsn`
+   --> src/dictionary/persistent_artrie/recovery.rs:391:9
+    |
+391 |         checkpoint_lsn: Option<Lsn>,
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_checkpoint_lsn`
+
+warning: unused variable: `entry_count`
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:594:13
+    |
+594 |         let entry_count = disk_manager.entry_count()?;
+    |             ^^^^^^^^^^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+594 |         let _entry_count = disk_manager.entry_count()?;
+    |             +
+help: you might have meant to pattern match on the similarly named constant `BUCKET_MAGIC`
+    |
+594 -         let entry_count = disk_manager.entry_count()?;
+594 +         let dictionary::persistent_artrie::bucket::BUCKET_MAGIC = disk_manager.entry_count()?;
+    |
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:266:9
+    |
+266 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:267:9
+    |
+267 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:598:9
+    |
+598 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:599:9
+    |
+599 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:910:9
+    |
+910 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:911:9
+    |
+911 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:986:9
+    |
+986 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:987:9
+    |
+987 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: value assigned to `state` is never read
+   --> src/time_series/msm_transition.rs:281:13
+    |
+281 |     let mut state = initial_msm_state(query, target, config, max_cost)?;
+    |             ^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: type `DawgNodeU64<V>` is more private than the item `DynamicDawgU64Zipper::<V>::node_ref`
+   --> src/dictionary/dynamic_dawg_u64_zipper.rs:104:5
+    |
+104 |     pub fn node_ref(&self) -> &Arc<DawgNodeU64<V>> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method `DynamicDawgU64Zipper::<V>::node_ref` is reachable at visibility `pub`
+    |
+note: but type `DawgNodeU64<V>` is only usable at visibility `pub(crate)`
+   --> src/dictionary/dynamic_dawg_u64.rs:103:1
+    |
+103 | pub(crate) struct DawgNodeU64<V: DictionaryValue> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: method `might_contain` is never used
+   --> src/dictionary/dynamic_dawg.rs:180:8
+    |
+145 | impl BloomFilter {
+    | ---------------- method in this implementation
+...
+180 |     fn might_contain(&self, term: &str) -> bool {
+    |        ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `without_edge` is never used
+  --> src/dictionary/dynamic_dawg_u64.rs:86:8
+   |
+49 | impl<V: DictionaryValue> EdgeList<V> {
+   | ------------------------------------ method in this implementation
+...
+86 |     fn without_edge(&self, label: u64) -> Self {
+   |        ^^^^^^^^^^^^
+
+warning: method `root_node` is never used
+   --> src/dictionary/dynamic_dawg_u64.rs:795:19
+    |
+234 | impl<V: DictionaryValue> DynamicDawgU64<V> {
+    | ------------------------------------------ method in this implementation
+...
+795 |     pub(crate) fn root_node(&self) -> &Arc<DawgNodeU64<V>> {
+    |                   ^^^^^^^^^
+
+warning: field `dawg` is never read
+   --> src/dictionary/dynamic_dawg_u64.rs:812:5
+    |
+811 | struct DawgIterator<'a, V: DictionaryValue> {
+    |        ------------ field in this struct
+812 |     dawg: &'a DynamicDawgU64<V>,
+    |     ^^^^
+
+warning: field `dawg` is never read
+   --> src/dictionary/dynamic_dawg_u64.rs:855:5
+    |
+854 | struct DawgIteratorWithValues<'a, V: DictionaryValue> {
+    |        ---------------------- field in this struct
+855 |     dawg: &'a DynamicDawgU64<V>,
+    |     ^^^^
+
+warning: associated function `from_node` is never used
+  --> src/dictionary/dynamic_dawg_u64_zipper.rs:97:19
+   |
+71 | impl<V: DictionaryValue> DynamicDawgU64Zipper<V> {
+   | ------------------------------------------------ associated function in this implementation
+...
+97 |     pub(crate) fn from_node(node: Arc<DawgNodeU64<V>>, path: Vec<u64>) -> Self {
+   |                   ^^^^^^^^^
+
+warning: variant `Empty` is never constructed
+  --> src/dictionary/persistent_artrie/node_impl.rs:77:5
+   |
+52 | enum NodeInner<V: DictionaryValue> {
+   |      --------- variant in this enum
+...
+77 |     Empty,
+   |     ^^^^^
+   |
+   = note: `NodeInner` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: associated function `empty` is never used
+   --> src/dictionary/persistent_artrie/node_impl.rs:122:8
+    |
+ 80 | impl<V: DictionaryValue> PersistentARTrieNode<V> {
+    | ------------------------------------------------ associated function in this implementation
+...
+122 |     fn empty() -> Self {
+    |        ^^^^^
+
+warning: method `resolve_child_if_needed` is never used
+    --> src/dictionary/persistent_artrie/dict_impl.rs:1490:8
+     |
+ 796 | impl<V: DictionaryValue> PersistentARTrieInner<V> {
+     | ------------------------------------------------- method in this implementation
+...
+1490 |     fn resolve_child_if_needed(&self, child: &ChildNode) -> Option<ChildNode> {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `pending` is never read
+   --> src/dictionary/persistent_artrie/wal.rs:943:5
+    |
+940 | pub struct GroupCommit {
+    |            ----------- field in this struct
+...
+943 |     pending: Mutex<Vec<(Lsn, std::sync::mpsc::Sender<Result<(), WalError>>)>>,
+    |     ^^^^^^^
+
+warning: struct `PendingTransaction` is never constructed
+   --> src/dictionary/persistent_artrie/recovery.rs:172:8
+    |
+172 | struct PendingTransaction {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: methods `load_char_node_from_disk_lazy`, `resolve_swizzled_ptr`, and `resolve_swizzled_ptr_mut` are never used
+    --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:902:8
+     |
+ 524 | impl<V: DictionaryValue> DiskBackedCharTrieInner<V> {
+     | --------------------------------------------------- methods in this implementation
+...
+ 902 |     fn load_char_node_from_disk_lazy(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 994 |     fn resolve_swizzled_ptr(&self, ptr: &SwizzledPtr) -> Result<&CharTrieNodeInner<V>> {
+     |        ^^^^^^^^^^^^^^^^^^^^
+...
+1046 |     fn resolve_swizzled_ptr_mut(&self, ptr: &SwizzledPtr) -> Result<&mut CharTrieNodeInner<V>> {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `END_MARKER_BASE` is never used
+  --> src/dictionary/scdawg.rs:61:7
+   |
+61 | const END_MARKER_BASE: u8 = 0x01; // Use low bytes as end markers
+   |       ^^^^^^^^^^^^^^^
+
+warning: method `is_root` is never used
+   --> src/dictionary/scdawg.rs:169:8
+    |
+112 | impl<V: DictionaryValue> ScdawgNode<V> {
+    | -------------------------------------- method in this implementation
+...
+169 |     fn is_root(&self) -> bool {
+    |        ^^^^^^^
+
+warning: method `iter_terms` is never used
+   --> src/dictionary/scdawg.rs:503:8
+    |
+200 | impl<V: DictionaryValue> ScdawgInner<V> {
+    | --------------------------------------- method in this implementation
+...
+503 |     fn iter_terms(&self) -> impl Iterator<Item = &String> {
+    |        ^^^^^^^^^^
+
+warning: field `policy` is never read
+  --> src/transducer/universal/automaton.rs:71:5
+   |
+67 | pub struct UniversalAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrestricted> {
+   |            ------------------ field in this struct
+...
+71 |     policy: P,
+   |     ^^^^^^
+   |
+   = note: `UniversalAutomaton` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: function `characteristic_vector` is never used
+   --> src/transducer/generalized/bit_vector.rs:286:8
+    |
+286 | pub fn characteristic_vector(character: char, word: &str) -> CharacteristicVector {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `PADDING_CHAR` is never used
+   --> src/transducer/generalized/bit_vector.rs:293:7
+    |
+293 | const PADDING_CHAR: char = '$';
+    |       ^^^^^^^^^^^^
+
+warning: function `relevant_subword` is never used
+   --> src/transducer/generalized/bit_vector.rs:328:4
+    |
+328 | fn relevant_subword(word: &str, position: usize, max_distance: u8) -> String {
+    |    ^^^^^^^^^^^^^^^^
+
+warning: function `encode_word_pair` is never used
+   --> src/transducer/generalized/bit_vector.rs:404:8
+    |
+404 | pub fn encode_word_pair(
+    |        ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie/serialization.rs:83:5
+   |
+83 |     pub const NODE4: u8 = 4;
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> src/lib.rs:27:9
+   |
+27 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie/serialization.rs:84:5
+   |
+84 |     pub const NODE16: u8 = 16;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie/serialization.rs:85:5
+   |
+85 |     pub const NODE48: u8 = 48;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie/serialization.rs:86:5
+   |
+86 |     pub const NODE256: u8 = 0; // Uses 0 to match in-memory representation
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/dictionary/persistent_artrie/recovery.rs:50:25
+   |
+50 |     InvalidCheckpoint { lsn: Lsn, reason: String },
+   |                         ^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/dictionary/persistent_artrie/recovery.rs:50:35
+   |
+50 |     InvalidCheckpoint { lsn: Lsn, reason: String },
+   |                                   ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/dictionary/persistent_artrie/recovery.rs:52:32
+   |
+52 |     TransactionInconsistency { tx_id: u64, reason: String },
+   |                                ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/dictionary/persistent_artrie/recovery.rs:52:44
+   |
+52 |     TransactionInconsistency { tx_id: u64, reason: String },
+   |                                            ^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:91:5
+   |
+91 |     pub const CHARNODE4: u8 = 104;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:92:5
+   |
+92 |     pub const CHARNODE16: u8 = 116;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:93:5
+   |
+93 |     pub const CHARNODE48: u8 = 148;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:94:5
+   |
+94 |     pub const CHARBUCKET: u8 = 101;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:490:5
+    |
+490 |     pub buffer_manager: Option<Arc<RwLock<BufferManager>>>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:492:5
+    |
+492 |     pub wal_writer: Option<Arc<RwLock<WalWriter>>>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:494:5
+    |
+494 |     pub next_lsn: u64,
+    |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:496:5
+    |
+496 |     pub file_path: Option<PathBuf>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `liblevenshtein` (lib) generated 58 warnings (run `cargo fix --lib -p liblevenshtein` to apply 7 suggestions)
+    Finished `bench` profile [optimized + debuginfo] target(s) in 3m 04s
+     Running benches/persistent_artrie_char_benchmarks.rs (target/release/deps/persistent_artrie_char_benchmarks-aaaae120eb068c2d)
+Benchmarking char_lookup/persistent_artrie_char/100
+Benchmarking char_lookup/persistent_artrie_char/100: Warming up for 3.0000 s
+Benchmarking char_lookup/persistent_artrie_char/100: Collecting 50 samples in estimated 5.0051 s (320k iterations)
+Benchmarking char_lookup/persistent_artrie_char/100: Analyzing
+char_lookup/persistent_artrie_char/100
+                        time:   [15.690 µs 15.772 µs 15.854 µs]
+                        thrpt:  [6.3075 Melem/s 6.3404 Melem/s 6.3734 Melem/s]
+Benchmarking char_lookup/persistent_artrie_char/1000
+Benchmarking char_lookup/persistent_artrie_char/1000: Warming up for 3.0000 s
+Benchmarking char_lookup/persistent_artrie_char/1000: Collecting 50 samples in estimated 5.0034 s (254k iterations)
+Benchmarking char_lookup/persistent_artrie_char/1000: Analyzing
+char_lookup/persistent_artrie_char/1000
+                        time:   [19.229 µs 19.335 µs 19.441 µs]
+                        thrpt:  [5.1439 Melem/s 5.1720 Melem/s 5.2005 Melem/s]
+Found 2 outliers among 50 measurements (4.00%)
+  1 (2.00%) low severe
+  1 (2.00%) low mild
+Benchmarking char_lookup/persistent_artrie_char/5000
+Benchmarking char_lookup/persistent_artrie_char/5000: Warming up for 3.0000 s
+Benchmarking char_lookup/persistent_artrie_char/5000: Collecting 50 samples in estimated 5.0236 s (250k iterations)
+Benchmarking char_lookup/persistent_artrie_char/5000: Analyzing
+char_lookup/persistent_artrie_char/5000
+                        time:   [20.340 µs 20.646 µs 20.945 µs]
+                        thrpt:  [4.7745 Melem/s 4.8436 Melem/s 4.9164 Melem/s]
+
+Benchmarking char_lookup_cjk/cjk_lookup
+Benchmarking char_lookup_cjk/cjk_lookup: Warming up for 3.0000 s
+Benchmarking char_lookup_cjk/cjk_lookup: Collecting 50 samples in estimated 5.0051 s (442k iterations)
+Benchmarking char_lookup_cjk/cjk_lookup: Analyzing
+char_lookup_cjk/cjk_lookup
+                        time:   [10.947 µs 11.046 µs 11.144 µs]
+                        thrpt:  [8.9736 Melem/s 9.0534 Melem/s 9.1346 Melem/s]
+Found 2 outliers among 50 measurements (4.00%)
+  2 (4.00%) high mild
+
+
+ Performance counter stats for 'cargo bench --bench persistent_artrie_char_benchmarks --features persistent-artrie -- char_lookup':
+
+   410,706,199,750      cycles:u                                                              
+   434,861,748,706      instructions:u                   #    1.06  insn per cycle            
+     3,733,464,935      cache-references:u                                                    
+       258,189,913      cache-misses:u                   #    6.92% of all cache refs         
+    82,142,983,870      branch-instructions:u                                                 
+     2,597,320,728      branch-misses:u                  #    3.16% of all branches           
+
+     255.917858643 seconds time elapsed
+
+     135.964852000 seconds user
+       3.277466000 seconds sys
+
+

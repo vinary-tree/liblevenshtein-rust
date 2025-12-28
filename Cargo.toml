@@ -115,10 +115,6 @@ name = "micro_benchmarks"
 harness = false
 
 [[bench]]
-name = "dawg_benchmarks"
-harness = false
-
-[[bench]]
 name = "profiling_benchmark"
 harness = false
 
@@ -347,10 +343,6 @@ required-features = ["pathmap-backend"]
 
 [[example]]
 name = "custom_sync_strategy"
-required-features = ["pathmap-backend"]
-
-[[example]]
-name = "dawg_demo"
 required-features = ["pathmap-backend"]
 
 [[example]]

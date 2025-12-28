@@ -361,10 +361,6 @@ pub enum Regex {
         inner: Option<Box<Regex>>,
     },
 
-    /// Legacy group variant (deprecated, use CapturingGroup, NonCapturingGroup, or NamedGroup)
-    #[deprecated(since = "0.8.0", note = "Use CapturingGroup, NonCapturingGroup, or NamedGroup instead")]
-    Group(Box<Regex>),
-
     /// Word boundary assertion (`#` at start or end)
     WordBoundary,
 
@@ -693,13 +689,6 @@ impl Regex {
         }
     }
 
-    /// Create a capturing group (deprecated, use `capturing_group` instead).
-    #[deprecated(since = "0.8.0", note = "Use capturing_group, non_capturing_group, or named_group instead")]
-    #[allow(deprecated)]
-    pub fn group(inner: Regex) -> Self {
-        Regex::Group(Box::new(inner))
-    }
-
     /// Create a word boundary assertion.
     pub fn word_boundary() -> Self {
         Regex::WordBoundary
@@ -756,7 +745,6 @@ impl Regex {
             Regex::Star(inner)
             | Regex::Plus(inner)
             | Regex::Optional(inner)
-            | Regex::Group(inner)
             | Regex::NonCapturingGroup(inner)
             | Regex::CapturingGroup(_, inner)
             | Regex::NamedGroup(_, inner) => 1 + inner.size(),
@@ -836,8 +824,6 @@ impl fmt::Display for Regex {
                     write!(f, "({}){}", inner, quantifier)
                 }
             }
-            #[allow(deprecated)]
-            Regex::Group(inner) => write!(f, "({})", inner),
             Regex::CapturingGroup(_, inner) => write!(f, "({})", inner),
             Regex::NonCapturingGroup(inner) => write!(f, "(?:{})", inner),
             Regex::NamedGroup(name, inner) => write!(f, "(?<{}>{})", name, inner),
@@ -944,10 +930,6 @@ pub enum RegexByte {
         flags: RegexFlags,
         inner: Option<Box<RegexByte>>,
     },
-
-    /// Legacy group variant (deprecated)
-    #[deprecated(since = "0.8.0", note = "Use CapturingGroup, NonCapturingGroup, or NamedGroup instead")]
-    Group(Box<RegexByte>),
 
     /// Word boundary assertion (`#` at start or end)
     WordBoundary,
@@ -1245,13 +1227,6 @@ impl RegexByte {
         }
     }
 
-    /// Create a capturing group (deprecated).
-    #[deprecated(since = "0.8.0", note = "Use capturing_group, non_capturing_group, or named_group instead")]
-    #[allow(deprecated)]
-    pub fn group(inner: RegexByte) -> Self {
-        RegexByte::Group(Box::new(inner))
-    }
-
     /// Create a word boundary assertion.
     pub fn word_boundary() -> Self {
         RegexByte::WordBoundary
@@ -1301,7 +1276,6 @@ impl RegexByte {
             RegexByte::Star(inner)
             | RegexByte::Plus(inner)
             | RegexByte::Optional(inner)
-            | RegexByte::Group(inner)
             | RegexByte::NonCapturingGroup(inner)
             | RegexByte::CapturingGroup(_, inner)
             | RegexByte::NamedGroup(_, inner) => 1 + inner.size(),
@@ -1401,8 +1375,6 @@ impl fmt::Display for RegexByte {
                     write!(f, "({}){}", inner, quantifier)
                 }
             }
-            #[allow(deprecated)]
-            RegexByte::Group(inner) => write!(f, "({})", inner),
             RegexByte::CapturingGroup(_, inner) => write!(f, "({})", inner),
             RegexByte::NonCapturingGroup(inner) => write!(f, "(?:{})", inner),
             RegexByte::NamedGroup(name, inner) => write!(f, "(?<{}>{})", name, inner),
@@ -1537,13 +1509,6 @@ mod tests {
 
         let r2 = Regex::repeat_range(a, 2, None);
         assert_eq!(r2.to_string(), "a{2,}");
-    }
-
-    #[test]
-    fn test_regex_group() {
-        let inner = Regex::alt(Regex::char('a'), Regex::char('b'));
-        let r = Regex::group(inner);
-        assert_eq!(r.to_string(), "((a|b))");
     }
 
     #[test]

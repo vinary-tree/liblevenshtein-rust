@@ -784,45 +784,12 @@ impl NormalizationResultChar {
 // Optimized rule application with conditional position skipping (byte-level)
 // ============================================================================
 
-/// Apply rules with automatic optimization selection (byte-level).
-///
-/// **DEPRECATED**: Benchmarks show position skipping optimization causes 1-15%
-/// overhead for typical English dictionary words. Use [`apply_rules_seq`] for
-/// normal workloads, or [`apply_rules_seq_optimized`] only for very long strings
-/// (100+ chars) with high rule match density (e.g., repetitive patterns).
-///
-/// **Formal Specification**: `docs/verification/phonetic/position_skipping_proof.v`
-///
-/// This function previously auto-detected when position skipping was safe and
-/// enabled it. As of v0.8.0, it simply delegates to the standard implementation.
-///
-/// # Arguments
-///
-/// - `rules` - The list of rewrite rules to apply
-/// - `s` - The phonetic string
-/// - `fuel` - Maximum number of iterations
-///
-/// # Returns
-///
-/// - `Some(result)` with the transformed string
-/// - `None` if fuel is exhausted
-#[deprecated(
-    since = "0.8.0",
-    note = "Use apply_rules_seq for typical workloads. Use apply_rules_seq_optimized only for long repetitive strings (100+ chars)."
-)]
-pub fn apply_rules_seq_opt(rules: &[RewriteRule], s: &[Phone], fuel: usize) -> Option<Vec<Phone>> {
-    // No longer auto-applies optimization - delegates to standard implementation
-    // Benchmarks showed optimization causes overhead for typical dictionary words
-    apply_rules_seq(rules, s, fuel)
-}
-
 /// Apply rules with position skipping optimization enabled (byte-level).
 ///
 /// **Formal Specification**: `docs/verification/phonetic/position_skipping_proof.v`
 ///
 /// **SAFETY**: This function MUST only be called when no rules use `Context::Final`.
-/// Use [`apply_rules_seq_opt`] for automatic safety checking, or verify with
-/// [`has_position_dependent_rules`] before calling this function directly.
+/// Verify with [`has_position_dependent_rules`] before calling this function directly.
 ///
 /// # Algorithm
 ///
@@ -1061,42 +1028,6 @@ pub fn apply_rules_seq_char(
 // ============================================================================
 // Optimized rule application with conditional position skipping (character-level)
 // ============================================================================
-
-/// Apply rules with automatic optimization selection (character-level).
-///
-/// **DEPRECATED**: Benchmarks show position skipping optimization causes 1-15%
-/// overhead for typical English dictionary words. Use [`apply_rules_seq_char`] for
-/// normal workloads, or [`apply_rules_seq_optimized_char`] only for very long strings
-/// (100+ chars) with high rule match density (e.g., repetitive patterns).
-///
-/// **Formal Specification**: `docs/verification/phonetic/position_skipping_proof.v`
-///
-/// This function previously auto-detected when position skipping was safe and
-/// enabled it. As of v0.8.0, it simply delegates to the standard implementation.
-///
-/// # Arguments
-///
-/// - `rules` - The list of rewrite rules to apply
-/// - `s` - The phonetic string
-/// - `fuel` - Maximum number of iterations
-///
-/// # Returns
-///
-/// - `Some(result)` with the transformed string
-/// - `None` if fuel is exhausted
-#[deprecated(
-    since = "0.8.0",
-    note = "Use apply_rules_seq_char for typical workloads. Use apply_rules_seq_optimized_char only for long repetitive strings (100+ chars)."
-)]
-pub fn apply_rules_seq_opt_char(
-    rules: &[RewriteRuleChar],
-    s: &[PhoneChar],
-    fuel: usize,
-) -> Option<Vec<PhoneChar>> {
-    // No longer auto-applies optimization - delegates to standard implementation
-    // Benchmarks showed optimization causes overhead for typical dictionary words
-    apply_rules_seq_char(rules, s, fuel)
-}
 
 /// Apply rules with position skipping optimization enabled (character-level).
 ///
@@ -1508,33 +1439,6 @@ mod tests {
     }
 
     #[test]
-    fn test_apply_rules_seq_opt_safe_rules() {
-        // Test with safe rules (no Final context) - should use optimized path
-        let rule = RewriteRule {
-            rule_id: 1,
-            rule_name: "gh → f".to_string(),
-            pattern: vec![Phone::Consonant(b'g'), Phone::Consonant(b'h')],
-            replacement: vec![Phone::Consonant(b'f')],
-            context: Context::Anywhere,
-            weight: 0.15,
-            syllable_condition: None,
-        };
-
-        let s = vec![
-            Phone::Consonant(b'g'),
-            Phone::Consonant(b'h'),
-            Phone::Consonant(b'g'),
-            Phone::Consonant(b'h'),
-        ];
-
-        let result = apply_rules_seq_opt(&[rule], &s, 100);
-        assert_eq!(
-            result,
-            Some(vec![Phone::Consonant(b'f'), Phone::Consonant(b'f')])
-        );
-    }
-
-    #[test]
     fn test_apply_rules_seq_optimized_produces_same_result() {
         // Verify optimized version produces same result as non-optimized
         let rule = RewriteRule {
@@ -1641,32 +1545,6 @@ mod tests {
         assert_eq!(find_first_match_from_char(&rule, &s, 0), Some(1));
         assert_eq!(find_first_match_from_char(&rule, &s, 1), Some(1));
         assert_eq!(find_first_match_from_char(&rule, &s, 2), None);
-    }
-
-    #[test]
-    fn test_apply_rules_seq_opt_char_safe_rules() {
-        let rule = RewriteRuleChar {
-            rule_id: 1,
-            rule_name: "gh → f".to_string(),
-            pattern: vec![PhoneChar::Consonant('g'), PhoneChar::Consonant('h')],
-            replacement: vec![PhoneChar::Consonant('f')],
-            context: ContextChar::Anywhere,
-            weight: 0.15,
-            syllable_condition: None,
-        };
-
-        let s = vec![
-            PhoneChar::Consonant('g'),
-            PhoneChar::Consonant('h'),
-            PhoneChar::Consonant('g'),
-            PhoneChar::Consonant('h'),
-        ];
-
-        let result = apply_rules_seq_opt_char(&[rule], &s, 100);
-        assert_eq!(
-            result,
-            Some(vec![PhoneChar::Consonant('f'), PhoneChar::Consonant('f')])
-        );
     }
 
     #[test]

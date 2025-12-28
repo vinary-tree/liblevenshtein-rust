@@ -356,14 +356,13 @@ impl<D: Dictionary, P: SubstitutionPolicy + SubstitutionPolicyFor<<D::Node as Di
     /// ```rust,ignore
     /// use liblevenshtein::prelude::*;
     ///
-    /// let dict = DawgDictionary::from_iter(vec!["test", "testing"]);
+    /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
     /// let transducer = Transducer::new(dict, Algorithm::Standard);
     ///
     /// // Fluent API
     /// let results: Vec<_> = transducer
     ///     .query_builder("tset")
     ///     .max_distance(2)
-    ///     .prefix_mode(true)
     ///     .limit(10)
     ///     .collect();
     ///

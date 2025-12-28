@@ -7,8 +7,6 @@ use std::path::{Path, PathBuf};
 
 use crate::commands::core::QueryParams;
 use crate::commands::handlers::query::execute_query;
-use crate::dictionary::dawg::DawgDictionary;
-use crate::dictionary::dawg_optimized::OptimizedDawg;
 use crate::dictionary::double_array_trie::DoubleArrayTrie;
 use crate::dictionary::dynamic_dawg::DynamicDawg;
 use crate::dictionary::pathmap::PathMapDictionary;
@@ -186,8 +184,6 @@ fn cmd_query(opts: QueryOptions) -> Result<()> {
     let results: Vec<(String, usize)> = match &container {
         DictContainer::PathMap(d) => execute_query(d, &params),
         DictContainer::DoubleArrayTrie(d) => execute_query(d, &params),
-        DictContainer::Dawg(d) => execute_query(d, &params),
-        DictContainer::OptimizedDawg(d) => execute_query(d, &params),
         DictContainer::DynamicDawg(d) => execute_query(d, &params),
         DictContainer::SuffixAutomaton(d) => execute_query(d, &params),
     };
@@ -235,26 +231,11 @@ fn cmd_info(dict_path: Option<PathBuf>) -> Result<()> {
     let container = load_dictionary(&path, dict_format)?;
     println!("  Terms:   {}", container.len().to_string().green());
 
-    match &container {
-        DictContainer::Dawg(d) => {
-            let nodes = d.node_count();
-            let ratio = nodes as f64 / container.len() as f64;
-            println!("  Nodes:   {}", nodes.to_string().green());
-            println!("  Ratio:   {:.2}x", ratio);
-        }
-        DictContainer::OptimizedDawg(d) => {
-            let nodes = d.node_count();
-            let ratio = nodes as f64 / container.len() as f64;
-            println!("  Nodes:   {}", nodes.to_string().green());
-            println!("  Ratio:   {:.2}x", ratio);
-        }
-        DictContainer::DynamicDawg(d) => {
-            let nodes = d.node_count();
-            let ratio = nodes as f64 / container.len() as f64;
-            println!("  Nodes:   {}", nodes.to_string().green());
-            println!("  Ratio:   {:.2}x", ratio);
-        }
-        _ => {}
+    if let DictContainer::DynamicDawg(d) = &container {
+        let nodes = d.node_count();
+        let ratio = nodes as f64 / container.len() as f64;
+        println!("  Nodes:   {}", nodes.to_string().green());
+        println!("  Ratio:   {:.2}x", ratio);
     }
 
     println!();
@@ -590,16 +571,6 @@ fn load_bincode_dict(path: &Path, backend: DictionaryBackend) -> Result<DictCont
             let dict: DoubleArrayTrie = BincodeSerializer::deserialize(file)?;
             DictContainer::DoubleArrayTrie(dict)
         }
-        DictionaryBackend::Dawg => {
-            let dict: DawgDictionary = BincodeSerializer::deserialize(file)?;
-            DictContainer::Dawg(dict)
-        }
-        DictionaryBackend::OptimizedDawg => {
-            // OptimizedDawg doesn't implement DictionaryFromTerms, so extract terms and rebuild
-            let dict: PathMapDictionary = BincodeSerializer::deserialize(file)?;
-            let terms = extract_terms_from_dict(&dict);
-            create_dict_from_terms(terms, backend)?
-        }
         DictionaryBackend::DynamicDawg => {
             // DynamicDawg doesn't implement DictionaryFromTerms, so extract terms and rebuild
             let dict: PathMapDictionary = BincodeSerializer::deserialize(file)?;
@@ -625,16 +596,6 @@ fn load_json_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContain
         DictionaryBackend::DoubleArrayTrie => {
             let dict: DoubleArrayTrie = JsonSerializer::deserialize(file)?;
             DictContainer::DoubleArrayTrie(dict)
-        }
-        DictionaryBackend::Dawg => {
-            let dict: DawgDictionary = JsonSerializer::deserialize(file)?;
-            DictContainer::Dawg(dict)
-        }
-        DictionaryBackend::OptimizedDawg => {
-            // OptimizedDawg doesn't implement DictionaryFromTerms, so extract terms and rebuild
-            let dict: PathMapDictionary = JsonSerializer::deserialize(file)?;
-            let terms = extract_terms_from_dict(&dict);
-            create_dict_from_terms(terms, backend)?
         }
         DictionaryBackend::DynamicDawg => {
             // DynamicDawg doesn't implement DictionaryFromTerms, so extract terms and rebuild
@@ -665,16 +626,6 @@ fn load_bincode_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<Dic
             let dict: DoubleArrayTrie = GzipSerializer::<BincodeSerializer>::deserialize(file)?;
             DictContainer::DoubleArrayTrie(dict)
         }
-        DictionaryBackend::Dawg => {
-            let dict: DawgDictionary = GzipSerializer::<BincodeSerializer>::deserialize(file)?;
-            DictContainer::Dawg(dict)
-        }
-        DictionaryBackend::OptimizedDawg => {
-            // OptimizedDawg doesn't implement DictionaryFromTerms, so extract terms and rebuild
-            let dict: PathMapDictionary = GzipSerializer::<BincodeSerializer>::deserialize(file)?;
-            let terms = extract_terms_from_dict(&dict);
-            create_dict_from_terms(terms, backend)?
-        }
         DictionaryBackend::DynamicDawg => {
             // DynamicDawg doesn't implement DictionaryFromTerms, so extract terms and rebuild
             let dict: PathMapDictionary = GzipSerializer::<BincodeSerializer>::deserialize(file)?;
@@ -702,16 +653,6 @@ fn load_json_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<DictCo
         DictionaryBackend::DoubleArrayTrie => {
             let dict: DoubleArrayTrie = GzipSerializer::<JsonSerializer>::deserialize(file)?;
             DictContainer::DoubleArrayTrie(dict)
-        }
-        DictionaryBackend::Dawg => {
-            let dict: DawgDictionary = GzipSerializer::<JsonSerializer>::deserialize(file)?;
-            DictContainer::Dawg(dict)
-        }
-        DictionaryBackend::OptimizedDawg => {
-            // OptimizedDawg doesn't implement DictionaryFromTerms, so extract terms and rebuild
-            let dict: PathMapDictionary = GzipSerializer::<JsonSerializer>::deserialize(file)?;
-            let terms = extract_terms_from_dict(&dict);
-            create_dict_from_terms(terms, backend)?
         }
         DictionaryBackend::DynamicDawg => {
             // DynamicDawg doesn't implement DictionaryFromTerms, so extract terms and rebuild
@@ -767,12 +708,6 @@ fn create_dict_from_terms(terms: Vec<String>, backend: DictionaryBackend) -> Res
         DictionaryBackend::DoubleArrayTrie => {
             DictContainer::DoubleArrayTrie(DoubleArrayTrie::from_terms(terms))
         }
-        DictionaryBackend::Dawg => {
-            DictContainer::Dawg(DawgDictionary::from_iter(terms.iter().map(|s| s.as_str())))
-        }
-        DictionaryBackend::OptimizedDawg => {
-            DictContainer::OptimizedDawg(OptimizedDawg::from_terms(terms))
-        }
         DictionaryBackend::DynamicDawg => {
             let dict = DynamicDawg::new();
             for term in &terms {
@@ -794,12 +729,6 @@ fn create_empty_dict(backend: DictionaryBackend) -> DictContainer {
         DictionaryBackend::PathMap => DictContainer::PathMap(PathMapDictionary::new()),
         DictionaryBackend::DoubleArrayTrie => {
             DictContainer::DoubleArrayTrie(DoubleArrayTrie::from_terms(Vec::<String>::new()))
-        }
-        DictionaryBackend::Dawg => {
-            DictContainer::Dawg(DawgDictionary::from_iter(Vec::<&str>::new()))
-        }
-        DictionaryBackend::OptimizedDawg => {
-            DictContainer::OptimizedDawg(OptimizedDawg::from_terms(Vec::<String>::new()))
         }
         DictionaryBackend::DynamicDawg => DictContainer::DynamicDawg(DynamicDawg::new()),
         DictionaryBackend::SuffixAutomaton => {
@@ -852,8 +781,6 @@ fn save_bincode_dict(container: &DictContainer, path: &Path) -> Result<()> {
     match container {
         DictContainer::PathMap(d) => BincodeSerializer::serialize(d, file)?,
         DictContainer::DoubleArrayTrie(d) => BincodeSerializer::serialize(d, file)?,
-        DictContainer::Dawg(d) => BincodeSerializer::serialize(d, file)?,
-        DictContainer::OptimizedDawg(d) => BincodeSerializer::serialize(d, file)?,
         DictContainer::DynamicDawg(d) => BincodeSerializer::serialize(d, file)?,
         DictContainer::SuffixAutomaton(d) => {
             BincodeSerializer::serialize_suffix_automaton(d, file)?
@@ -868,8 +795,6 @@ fn save_json_dict(container: &DictContainer, path: &Path) -> Result<()> {
     match container {
         DictContainer::PathMap(d) => JsonSerializer::serialize(d, file)?,
         DictContainer::DoubleArrayTrie(d) => JsonSerializer::serialize(d, file)?,
-        DictContainer::Dawg(d) => JsonSerializer::serialize(d, file)?,
-        DictContainer::OptimizedDawg(d) => JsonSerializer::serialize(d, file)?,
         DictContainer::DynamicDawg(d) => JsonSerializer::serialize(d, file)?,
         DictContainer::SuffixAutomaton(d) => JsonSerializer::serialize(d, file)?,
     }
@@ -886,8 +811,6 @@ fn save_bincode_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> 
         DictContainer::DoubleArrayTrie(d) => {
             GzipSerializer::<BincodeSerializer>::serialize(d, file)?
         }
-        DictContainer::Dawg(d) => GzipSerializer::<BincodeSerializer>::serialize(d, file)?,
-        DictContainer::OptimizedDawg(d) => GzipSerializer::<BincodeSerializer>::serialize(d, file)?,
         DictContainer::DynamicDawg(d) => GzipSerializer::<BincodeSerializer>::serialize(d, file)?,
         DictContainer::SuffixAutomaton(d) => {
             GzipSerializer::<BincodeSerializer>::serialize(d, file)?
@@ -904,8 +827,6 @@ fn save_json_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> {
     match container {
         DictContainer::PathMap(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
         DictContainer::DoubleArrayTrie(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
-        DictContainer::Dawg(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
-        DictContainer::OptimizedDawg(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
         DictContainer::DynamicDawg(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
         DictContainer::SuffixAutomaton(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
     }

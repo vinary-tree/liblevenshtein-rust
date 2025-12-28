@@ -52,16 +52,6 @@ pub fn base() -> &'static RuleSetChar {
     })
 }
 
-/// Deprecated alias for [`base()`].
-///
-/// This function has been renamed to `base()` for consistency with other
-/// language modules. The "Zompist" name refers to Mark Rosenfelder's original
-/// specification at <https://zompist.com/spell.html>.
-#[deprecated(since = "3.1.0", note = "Use `base()` instead for consistency with other languages")]
-pub fn zompist() -> &'static RuleSetChar {
-    base()
-}
-
 /// Homophone rules for English.
 ///
 /// Maps words that sound identical to a canonical spelling for matching.
@@ -114,14 +104,6 @@ mod tests {
         // Should have rules (62 minus disabled ones)
         assert!(!rules.is_empty(), "base rules should not be empty");
         assert!(rules.len() > 50, "expected >50 base rules, got {}", rules.len());
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_zompist_alias() {
-        // Ensure deprecated alias still works
-        let rules = zompist();
-        assert!(!rules.is_empty(), "zompist alias should return base rules");
     }
 
     #[test]

@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+#### DawgDictionary and OptimizedDawg Deprecated and Removed (2025-12-28)
+- **DawgDictionary and OptimizedDawg removed in favor of DynamicDawg and DoubleArrayTrie**
+  - Static DAWG implementations superseded by superior alternatives:
+    - `DynamicDawg`: Supports online insert/delete/compact with better performance
+    - `DoubleArrayTrie`: Faster O(1) transitions for static dictionaries
+  - All references updated across codebase (~50 files)
+  - Migration: Replace `DawgDictionary::from_terms()` or `OptimizedDawg::from_terms()` with:
+    - `DynamicDawg::from_terms()` for mutable scenarios
+    - `DoubleArrayTrie::from_terms()` for static/read-only scenarios
+  - Deleted files: `src/dictionary/dawg.rs`, `src/dictionary/dawg_query.rs`, `src/dictionary/optimized_dawg.rs`
+  - Deleted examples: `dawg_demo.rs`, `dawg_query_comparison.rs`
+  - Deleted benchmarks: `dawg_benchmarks.rs`
+  - **Current dictionary backends (12 total)**:
+    - `DoubleArrayTrie` / `DoubleArrayTrieChar` - O(1) transitions for static dictionaries
+    - `DynamicDawg` / `DynamicDawgChar` - Mutable DAWG with online minimization
+    - `SuffixAutomaton` / `SuffixAutomatonChar` - Substring matching
+    - `SCDAWG` / `ScdawgChar` - Symmetric Compact DAWG for bidirectional traversal
+    - `PersistentARTrie` / `PersistentARTrieChar` - Disk-based adaptive radix trie
+    - `PathMap` / `PathMapChar` - Dynamic trie (feature-gated)
+
 ## [0.8.0] - 2025-12-20
 
 ### Added
@@ -318,12 +342,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Phase 6: Dictionary Layer Completeness (2025-11-11)
 - **Phase 6 is now 100% complete** 🎉
   - All 9 production-ready dictionary backends support complete feature set
-  - **MappedDictionary support**: 9/9 backends (100%)
+  - **MappedDictionary support**: 8/8 backends (100%)
     - PathMapDictionary, PathMapDictionaryChar
     - DynamicDawg, DynamicDawgChar
     - DoubleArrayTrie, DoubleArrayTrieChar
     - SuffixAutomaton, SuffixAutomatonChar
-    - DawgDictionary (legacy)
   - **ValuedDictZipper support**: 7/7 backends (100%)
     - PathMapZipper
     - DoubleArrayTrieZipper, DoubleArrayTrieCharZipper

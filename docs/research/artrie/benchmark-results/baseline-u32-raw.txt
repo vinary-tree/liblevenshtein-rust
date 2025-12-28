@@ -1,0 +1,784 @@
+   Compiling liblevenshtein v0.8.0 (/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust)
+warning: unused import: `super::nodes::flags`
+  --> src/dictionary/persistent_artrie/serialization.rs:62:5
+   |
+62 | use super::nodes::flags;
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `Node16`, `Node256`, and `Node48`
+  --> src/dictionary/persistent_artrie/node_impl.rs:26:42
+   |
+26 | use super::nodes::{ArtNode, Node, Node4, Node16, Node48, Node256};
+   |                                          ^^^^^^  ^^^^^^  ^^^^^^^
+
+warning: unused imports: `AddChildError` and `Node4`
+  --> src/dictionary/persistent_artrie/dict_impl.rs:26:35
+   |
+26 | use super::nodes::{ArtNode, Node, Node4, AddChildError};
+   |                                   ^^^^^  ^^^^^^^^^^^^^
+
+warning: unused import: `flags`
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:72:42
+   |
+72 |     CharNodeHeader, CHAR_MAX_PREFIX_LEN, flags,
+   |                                          ^^^^^
+
+warning: unused import: `SubstitutionSet`
+  --> src/transducer/operation_set.rs:59:40
+   |
+59 | use crate::transducer::{OperationType, SubstitutionSet};
+   |                                        ^^^^^^^^^^^^^^^
+
+warning: unused variable: `has_values`
+   --> src/dictionary/persistent_artrie/transitions.rs:132:9
+    |
+132 |     let has_values = bucket.header().has_values();
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_has_values`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `child_ptr`
+   --> src/dictionary/persistent_artrie/node_impl.rs:164:27
+    |
+164 |                 for (key, child_ptr) in n.iter_children() {
+    |                           ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_child_ptr`
+
+warning: unused variable: `entry_count`
+   --> src/dictionary/persistent_artrie/dict_impl.rs:232:13
+    |
+232 |         let entry_count = disk_manager.entry_count()?;
+    |             ^^^^^^^^^^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+232 |         let _entry_count = disk_manager.entry_count()?;
+    |             +
+help: you might have meant to pattern match on the similarly named constant `BUCKET_MAGIC`
+    |
+232 -         let entry_count = disk_manager.entry_count()?;
+232 +         let dictionary::persistent_artrie::bucket::BUCKET_MAGIC = disk_manager.entry_count()?;
+    |
+
+warning: unused variable: `child_value`
+   --> src/dictionary/persistent_artrie/dict_impl.rs:981:40
+    |
+981 | ...                   value: child_value,
+    |                              ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_child_value`
+
+warning: unused variable: `value_bytes`
+    --> src/dictionary/persistent_artrie/dict_impl.rs:1736:21
+     |
+1736 |                 let value_bytes: Vec<u8> = Vec::new(); // Value serialization not yet implemented
+     |                     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_value_bytes`
+
+warning: unused variable: `checkpoint_lsn`
+   --> src/dictionary/persistent_artrie/recovery.rs:391:9
+    |
+391 |         checkpoint_lsn: Option<Lsn>,
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_checkpoint_lsn`
+
+warning: unused variable: `entry_count`
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:594:13
+    |
+594 |         let entry_count = disk_manager.entry_count()?;
+    |             ^^^^^^^^^^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+594 |         let _entry_count = disk_manager.entry_count()?;
+    |             +
+help: you might have meant to pattern match on the similarly named constant `BUCKET_MAGIC`
+    |
+594 -         let entry_count = disk_manager.entry_count()?;
+594 +         let dictionary::persistent_artrie::bucket::BUCKET_MAGIC = disk_manager.entry_count()?;
+    |
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:266:9
+    |
+266 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:267:9
+    |
+267 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:598:9
+    |
+598 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:599:9
+    |
+599 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:910:9
+    |
+910 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:911:9
+    |
+911 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: unused variable: `full_word`
+   --> src/transducer/generalized/state.rs:986:9
+    |
+986 |         full_word: &str,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_word`
+
+warning: unused variable: `word_chars`
+   --> src/transducer/generalized/state.rs:987:9
+    |
+987 |         word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_word_chars`
+
+warning: value assigned to `state` is never read
+   --> src/time_series/msm_transition.rs:281:13
+    |
+281 |     let mut state = initial_msm_state(query, target, config, max_cost)?;
+    |             ^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: type `DawgNodeU64<V>` is more private than the item `DynamicDawgU64Zipper::<V>::node_ref`
+   --> src/dictionary/dynamic_dawg_u64_zipper.rs:104:5
+    |
+104 |     pub fn node_ref(&self) -> &Arc<DawgNodeU64<V>> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method `DynamicDawgU64Zipper::<V>::node_ref` is reachable at visibility `pub`
+    |
+note: but type `DawgNodeU64<V>` is only usable at visibility `pub(crate)`
+   --> src/dictionary/dynamic_dawg_u64.rs:103:1
+    |
+103 | pub(crate) struct DawgNodeU64<V: DictionaryValue> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: method `might_contain` is never used
+   --> src/dictionary/dynamic_dawg.rs:180:8
+    |
+145 | impl BloomFilter {
+    | ---------------- method in this implementation
+...
+180 |     fn might_contain(&self, term: &str) -> bool {
+    |        ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `without_edge` is never used
+  --> src/dictionary/dynamic_dawg_u64.rs:86:8
+   |
+49 | impl<V: DictionaryValue> EdgeList<V> {
+   | ------------------------------------ method in this implementation
+...
+86 |     fn without_edge(&self, label: u64) -> Self {
+   |        ^^^^^^^^^^^^
+
+warning: method `root_node` is never used
+   --> src/dictionary/dynamic_dawg_u64.rs:795:19
+    |
+234 | impl<V: DictionaryValue> DynamicDawgU64<V> {
+    | ------------------------------------------ method in this implementation
+...
+795 |     pub(crate) fn root_node(&self) -> &Arc<DawgNodeU64<V>> {
+    |                   ^^^^^^^^^
+
+warning: field `dawg` is never read
+   --> src/dictionary/dynamic_dawg_u64.rs:812:5
+    |
+811 | struct DawgIterator<'a, V: DictionaryValue> {
+    |        ------------ field in this struct
+812 |     dawg: &'a DynamicDawgU64<V>,
+    |     ^^^^
+
+warning: field `dawg` is never read
+   --> src/dictionary/dynamic_dawg_u64.rs:855:5
+    |
+854 | struct DawgIteratorWithValues<'a, V: DictionaryValue> {
+    |        ---------------------- field in this struct
+855 |     dawg: &'a DynamicDawgU64<V>,
+    |     ^^^^
+
+warning: associated function `from_node` is never used
+  --> src/dictionary/dynamic_dawg_u64_zipper.rs:97:19
+   |
+71 | impl<V: DictionaryValue> DynamicDawgU64Zipper<V> {
+   | ------------------------------------------------ associated function in this implementation
+...
+97 |     pub(crate) fn from_node(node: Arc<DawgNodeU64<V>>, path: Vec<u64>) -> Self {
+   |                   ^^^^^^^^^
+
+warning: variant `Empty` is never constructed
+  --> src/dictionary/persistent_artrie/node_impl.rs:77:5
+   |
+52 | enum NodeInner<V: DictionaryValue> {
+   |      --------- variant in this enum
+...
+77 |     Empty,
+   |     ^^^^^
+   |
+   = note: `NodeInner` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: associated function `empty` is never used
+   --> src/dictionary/persistent_artrie/node_impl.rs:122:8
+    |
+ 80 | impl<V: DictionaryValue> PersistentARTrieNode<V> {
+    | ------------------------------------------------ associated function in this implementation
+...
+122 |     fn empty() -> Self {
+    |        ^^^^^
+
+warning: method `resolve_child_if_needed` is never used
+    --> src/dictionary/persistent_artrie/dict_impl.rs:1490:8
+     |
+ 796 | impl<V: DictionaryValue> PersistentARTrieInner<V> {
+     | ------------------------------------------------- method in this implementation
+...
+1490 |     fn resolve_child_if_needed(&self, child: &ChildNode) -> Option<ChildNode> {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `pending` is never read
+   --> src/dictionary/persistent_artrie/wal.rs:943:5
+    |
+940 | pub struct GroupCommit {
+    |            ----------- field in this struct
+...
+943 |     pending: Mutex<Vec<(Lsn, std::sync::mpsc::Sender<Result<(), WalError>>)>>,
+    |     ^^^^^^^
+
+warning: struct `PendingTransaction` is never constructed
+   --> src/dictionary/persistent_artrie/recovery.rs:172:8
+    |
+172 | struct PendingTransaction {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: methods `load_char_node_from_disk_lazy`, `resolve_swizzled_ptr`, and `resolve_swizzled_ptr_mut` are never used
+    --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:902:8
+     |
+ 524 | impl<V: DictionaryValue> DiskBackedCharTrieInner<V> {
+     | --------------------------------------------------- methods in this implementation
+...
+ 902 |     fn load_char_node_from_disk_lazy(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 994 |     fn resolve_swizzled_ptr(&self, ptr: &SwizzledPtr) -> Result<&CharTrieNodeInner<V>> {
+     |        ^^^^^^^^^^^^^^^^^^^^
+...
+1046 |     fn resolve_swizzled_ptr_mut(&self, ptr: &SwizzledPtr) -> Result<&mut CharTrieNodeInner<V>> {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `END_MARKER_BASE` is never used
+  --> src/dictionary/scdawg.rs:61:7
+   |
+61 | const END_MARKER_BASE: u8 = 0x01; // Use low bytes as end markers
+   |       ^^^^^^^^^^^^^^^
+
+warning: method `is_root` is never used
+   --> src/dictionary/scdawg.rs:169:8
+    |
+112 | impl<V: DictionaryValue> ScdawgNode<V> {
+    | -------------------------------------- method in this implementation
+...
+169 |     fn is_root(&self) -> bool {
+    |        ^^^^^^^
+
+warning: method `iter_terms` is never used
+   --> src/dictionary/scdawg.rs:503:8
+    |
+200 | impl<V: DictionaryValue> ScdawgInner<V> {
+    | --------------------------------------- method in this implementation
+...
+503 |     fn iter_terms(&self) -> impl Iterator<Item = &String> {
+    |        ^^^^^^^^^^
+
+warning: field `policy` is never read
+  --> src/transducer/universal/automaton.rs:71:5
+   |
+67 | pub struct UniversalAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrestricted> {
+   |            ------------------ field in this struct
+...
+71 |     policy: P,
+   |     ^^^^^^
+   |
+   = note: `UniversalAutomaton` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: function `characteristic_vector` is never used
+   --> src/transducer/generalized/bit_vector.rs:286:8
+    |
+286 | pub fn characteristic_vector(character: char, word: &str) -> CharacteristicVector {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `PADDING_CHAR` is never used
+   --> src/transducer/generalized/bit_vector.rs:293:7
+    |
+293 | const PADDING_CHAR: char = '$';
+    |       ^^^^^^^^^^^^
+
+warning: function `relevant_subword` is never used
+   --> src/transducer/generalized/bit_vector.rs:328:4
+    |
+328 | fn relevant_subword(word: &str, position: usize, max_distance: u8) -> String {
+    |    ^^^^^^^^^^^^^^^^
+
+warning: function `encode_word_pair` is never used
+   --> src/transducer/generalized/bit_vector.rs:404:8
+    |
+404 | pub fn encode_word_pair(
+    |        ^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie/serialization.rs:83:5
+   |
+83 |     pub const NODE4: u8 = 4;
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> src/lib.rs:27:9
+   |
+27 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie/serialization.rs:84:5
+   |
+84 |     pub const NODE16: u8 = 16;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie/serialization.rs:85:5
+   |
+85 |     pub const NODE48: u8 = 48;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie/serialization.rs:86:5
+   |
+86 |     pub const NODE256: u8 = 0; // Uses 0 to match in-memory representation
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/dictionary/persistent_artrie/recovery.rs:50:25
+   |
+50 |     InvalidCheckpoint { lsn: Lsn, reason: String },
+   |                         ^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/dictionary/persistent_artrie/recovery.rs:50:35
+   |
+50 |     InvalidCheckpoint { lsn: Lsn, reason: String },
+   |                                   ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/dictionary/persistent_artrie/recovery.rs:52:32
+   |
+52 |     TransactionInconsistency { tx_id: u64, reason: String },
+   |                                ^^^^^^^^^^
+
+warning: missing documentation for a struct field
+  --> src/dictionary/persistent_artrie/recovery.rs:52:44
+   |
+52 |     TransactionInconsistency { tx_id: u64, reason: String },
+   |                                            ^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:91:5
+   |
+91 |     pub const CHARNODE4: u8 = 104;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:92:5
+   |
+92 |     pub const CHARNODE16: u8 = 116;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:93:5
+   |
+93 |     pub const CHARNODE48: u8 = 148;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a constant
+  --> src/dictionary/persistent_artrie_char/serialization_char.rs:94:5
+   |
+94 |     pub const CHARBUCKET: u8 = 101;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:490:5
+    |
+490 |     pub buffer_manager: Option<Arc<RwLock<BufferManager>>>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:492:5
+    |
+492 |     pub wal_writer: Option<Arc<RwLock<WalWriter>>>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:494:5
+    |
+494 |     pub next_lsn: u64,
+    |     ^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> src/dictionary/persistent_artrie_char/dict_impl_char.rs:496:5
+    |
+496 |     pub file_path: Option<PathBuf>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `liblevenshtein` (lib) generated 58 warnings (run `cargo fix --lib -p liblevenshtein` to apply 7 suggestions)
+    Finished `bench` profile [optimized + debuginfo] target(s) in 1m 11s
+     Running benches/persistent_artrie_char_benchmarks.rs (target/release/deps/persistent_artrie_char_benchmarks-aaaae120eb068c2d)
+Benchmarking char_construction/persistent_artrie_char/100
+Benchmarking char_construction/persistent_artrie_char/100: Warming up for 3.0000 s
+Benchmarking char_construction/persistent_artrie_char/100: Collecting 20 samples in estimated 5.0225 s (33k iterations)
+Benchmarking char_construction/persistent_artrie_char/100: Analyzing
+char_construction/persistent_artrie_char/100
+                        time:   [151.54 µs 153.54 µs 155.59 µs]
+                        thrpt:  [642.71 Kelem/s 651.29 Kelem/s 659.87 Kelem/s]
+Benchmarking char_construction/persistent_artrie_char/500
+Benchmarking char_construction/persistent_artrie_char/500: Warming up for 3.0000 s
+Benchmarking char_construction/persistent_artrie_char/500: Collecting 20 samples in estimated 5.1034 s (5460 iterations)
+Benchmarking char_construction/persistent_artrie_char/500: Analyzing
+char_construction/persistent_artrie_char/500
+                        time:   [935.84 µs 948.09 µs 955.72 µs]
+                        thrpt:  [523.17 Kelem/s 527.38 Kelem/s 534.28 Kelem/s]
+Benchmarking char_construction/persistent_artrie_char/1000
+Benchmarking char_construction/persistent_artrie_char/1000: Warming up for 3.0000 s
+Benchmarking char_construction/persistent_artrie_char/1000: Collecting 20 samples in estimated 5.2021 s (2520 iterations)
+Benchmarking char_construction/persistent_artrie_char/1000: Analyzing
+char_construction/persistent_artrie_char/1000
+                        time:   [2.0467 ms 2.0792 ms 2.1179 ms]
+                        thrpt:  [472.17 Kelem/s 480.96 Kelem/s 488.59 Kelem/s]
+Found 1 outliers among 20 measurements (5.00%)
+  1 (5.00%) high mild
+Benchmarking char_construction/persistent_artrie_char/5000
+Benchmarking char_construction/persistent_artrie_char/5000: Warming up for 3.0000 s
+Benchmarking char_construction/persistent_artrie_char/5000: Collecting 20 samples in estimated 6.5959 s (630 iterations)
+Benchmarking char_construction/persistent_artrie_char/5000: Analyzing
+char_construction/persistent_artrie_char/5000
+                        time:   [10.121 ms 10.281 ms 10.446 ms]
+                        thrpt:  [478.65 Kelem/s 486.35 Kelem/s 494.01 Kelem/s]
+
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/100
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/100: Warming up for 3.0000 s
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/100: Collecting 20 samples in estimated 5.0411 s (24k iterations)
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/100: Analyzing
+char_construction_ascii/persistent_artrie_char_ascii/100
+                        time:   [204.15 µs 206.78 µs 209.11 µs]
+                        thrpt:  [478.21 Kelem/s 483.61 Kelem/s 489.83 Kelem/s]
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/500
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/500: Warming up for 3.0000 s
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/500: Collecting 20 samples in estimated 5.1293 s (4830 iterations)
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/500: Analyzing
+char_construction_ascii/persistent_artrie_char_ascii/500
+                        time:   [1.0383 ms 1.0480 ms 1.0574 ms]
+                        thrpt:  [472.85 Kelem/s 477.09 Kelem/s 481.54 Kelem/s]
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/1000
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/1000: Warming up for 3.0000 s
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/1000: Collecting 20 samples in estimated 5.4129 s (2520 iterations)
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/1000: Analyzing
+char_construction_ascii/persistent_artrie_char_ascii/1000
+                        time:   [2.1165 ms 2.1316 ms 2.1497 ms]
+                        thrpt:  [465.17 Kelem/s 469.13 Kelem/s 472.48 Kelem/s]
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/5000
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/5000: Warming up for 3.0000 s
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/5000: Collecting 20 samples in estimated 7.2199 s (630 iterations)
+Benchmarking char_construction_ascii/persistent_artrie_char_ascii/5000: Analyzing
+char_construction_ascii/persistent_artrie_char_ascii/5000
+                        time:   [11.342 ms 11.387 ms 11.422 ms]
+                        thrpt:  [437.74 Kelem/s 439.11 Kelem/s 440.85 Kelem/s]
+Found 1 outliers among 20 measurements (5.00%)
+  1 (5.00%) high severe
+
+Benchmarking char_lookup/persistent_artrie_char/100
+Benchmarking char_lookup/persistent_artrie_char/100: Warming up for 3.0000 s
+Benchmarking char_lookup/persistent_artrie_char/100: Collecting 50 samples in estimated 5.0098 s (324k iterations)
+Benchmarking char_lookup/persistent_artrie_char/100: Analyzing
+char_lookup/persistent_artrie_char/100
+                        time:   [15.144 µs 15.269 µs 15.417 µs]
+                        thrpt:  [6.4863 Melem/s 6.5494 Melem/s 6.6031 Melem/s]
+Found 1 outliers among 50 measurements (2.00%)
+  1 (2.00%) high mild
+Benchmarking char_lookup/persistent_artrie_char/1000
+Benchmarking char_lookup/persistent_artrie_char/1000: Warming up for 3.0000 s
+Benchmarking char_lookup/persistent_artrie_char/1000: Collecting 50 samples in estimated 5.0176 s (270k iterations)
+Benchmarking char_lookup/persistent_artrie_char/1000: Analyzing
+char_lookup/persistent_artrie_char/1000
+                        time:   [18.286 µs 18.397 µs 18.503 µs]
+                        thrpt:  [5.4044 Melem/s 5.4356 Melem/s 5.4688 Melem/s]
+Benchmarking char_lookup/persistent_artrie_char/5000
+Benchmarking char_lookup/persistent_artrie_char/5000: Warming up for 3.0000 s
+Benchmarking char_lookup/persistent_artrie_char/5000: Collecting 50 samples in estimated 5.0222 s (250k iterations)
+Benchmarking char_lookup/persistent_artrie_char/5000: Analyzing
+char_lookup/persistent_artrie_char/5000
+                        time:   [19.948 µs 20.109 µs 20.285 µs]
+                        thrpt:  [4.9298 Melem/s 4.9730 Melem/s 5.0129 Melem/s]
+
+Benchmarking char_lookup_cjk/cjk_lookup
+Benchmarking char_lookup_cjk/cjk_lookup: Warming up for 3.0000 s
+Benchmarking char_lookup_cjk/cjk_lookup: Collecting 50 samples in estimated 5.0018 s (460k iterations)
+Benchmarking char_lookup_cjk/cjk_lookup: Analyzing
+char_lookup_cjk/cjk_lookup
+                        time:   [10.989 µs 11.089 µs 11.185 µs]
+                        thrpt:  [8.9409 Melem/s 9.0176 Melem/s 9.1000 Melem/s]
+Found 2 outliers among 50 measurements (4.00%)
+  1 (2.00%) low mild
+  1 (2.00%) high mild
+
+Benchmarking char_edge_traversal/persistent_artrie_char/100
+Benchmarking char_edge_traversal/persistent_artrie_char/100: Warming up for 3.0000 s
+Benchmarking char_edge_traversal/persistent_artrie_char/100: Collecting 50 samples in estimated 5.0114 s (382k iterations)
+Benchmarking char_edge_traversal/persistent_artrie_char/100: Analyzing
+char_edge_traversal/persistent_artrie_char/100
+                        time:   [12.531 µs 12.654 µs 12.794 µs]
+                        thrpt:  [7.8161 Melem/s 7.9024 Melem/s 7.9803 Melem/s]
+Found 1 outliers among 50 measurements (2.00%)
+  1 (2.00%) high mild
+Benchmarking char_edge_traversal/persistent_artrie_char/1000
+Benchmarking char_edge_traversal/persistent_artrie_char/1000: Warming up for 3.0000 s
+Benchmarking char_edge_traversal/persistent_artrie_char/1000: Collecting 50 samples in estimated 5.1066 s (57k iterations)
+Benchmarking char_edge_traversal/persistent_artrie_char/1000: Analyzing
+char_edge_traversal/persistent_artrie_char/1000
+                        time:   [87.497 µs 88.141 µs 88.809 µs]
+                        thrpt:  [11.260 Melem/s 11.345 Melem/s 11.429 Melem/s]
+Found 1 outliers among 50 measurements (2.00%)
+  1 (2.00%) high mild
+Benchmarking char_edge_traversal/persistent_artrie_char/5000
+Benchmarking char_edge_traversal/persistent_artrie_char/5000: Warming up for 3.0000 s
+Benchmarking char_edge_traversal/persistent_artrie_char/5000: Collecting 50 samples in estimated 5.1858 s (15k iterations)
+Benchmarking char_edge_traversal/persistent_artrie_char/5000: Analyzing
+char_edge_traversal/persistent_artrie_char/5000
+                        time:   [334.13 µs 336.50 µs 338.81 µs]
+                        thrpt:  [14.757 Melem/s 14.859 Melem/s 14.964 Melem/s]
+
+Benchmarking char_transitions/persistent_artrie_char/100
+Benchmarking char_transitions/persistent_artrie_char/100: Warming up for 3.0000 s
+Benchmarking char_transitions/persistent_artrie_char/100: Collecting 100 samples in estimated 5.0158 s (369k iterations)
+Benchmarking char_transitions/persistent_artrie_char/100: Analyzing
+char_transitions/persistent_artrie_char/100
+                        time:   [13.565 µs 13.659 µs 13.766 µs]
+                        thrpt:  [7.2645 Melem/s 7.3210 Melem/s 7.3722 Melem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  4 (4.00%) high mild
+  2 (2.00%) high severe
+Benchmarking char_transitions/persistent_artrie_char/1000
+Benchmarking char_transitions/persistent_artrie_char/1000: Warming up for 3.0000 s
+Benchmarking char_transitions/persistent_artrie_char/1000: Collecting 100 samples in estimated 5.0609 s (298k iterations)
+Benchmarking char_transitions/persistent_artrie_char/1000: Analyzing
+char_transitions/persistent_artrie_char/1000
+                        time:   [17.150 µs 17.310 µs 17.458 µs]
+                        thrpt:  [5.7279 Melem/s 5.7772 Melem/s 5.8309 Melem/s]
+Benchmarking char_transitions/persistent_artrie_char/5000
+Benchmarking char_transitions/persistent_artrie_char/5000: Warming up for 3.0000 s
+Benchmarking char_transitions/persistent_artrie_char/5000: Collecting 100 samples in estimated 5.0741 s (263k iterations)
+Benchmarking char_transitions/persistent_artrie_char/5000: Analyzing
+char_transitions/persistent_artrie_char/5000
+                        time:   [19.217 µs 19.361 µs 19.519 µs]
+                        thrpt:  [5.1233 Melem/s 5.1650 Melem/s 5.2038 Melem/s]
+Found 7 outliers among 100 measurements (7.00%)
+  2 (2.00%) low mild
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking char_transitions_emoji/emoji_transitions
+Benchmarking char_transitions_emoji/emoji_transitions: Warming up for 3.0000 s
+Benchmarking char_transitions_emoji/emoji_transitions: Collecting 50 samples in estimated 5.0008 s (1.1M iterations)
+Benchmarking char_transitions_emoji/emoji_transitions: Analyzing
+char_transitions_emoji/emoji_transitions
+                        time:   [4.5610 µs 4.6050 µs 4.6534 µs]
+                        thrpt:  [10.745 Melem/s 10.858 Melem/s 10.962 Melem/s]
+Found 1 outliers among 50 measurements (2.00%)
+  1 (2.00%) high mild
+
+Benchmarking char_iteration/iter/100
+Benchmarking char_iteration/iter/100: Warming up for 3.0000 s
+Benchmarking char_iteration/iter/100: Collecting 30 samples in estimated 5.0034 s (216k iterations)
+Benchmarking char_iteration/iter/100: Analyzing
+char_iteration/iter/100 time:   [21.763 µs 21.936 µs 22.134 µs]
+                        thrpt:  [4.5180 Melem/s 4.5587 Melem/s 4.5950 Melem/s]
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+Benchmarking char_iteration/iter/500
+Benchmarking char_iteration/iter/500: Warming up for 3.0000 s
+Benchmarking char_iteration/iter/500: Collecting 30 samples in estimated 5.0105 s (64k iterations)
+Benchmarking char_iteration/iter/500: Analyzing
+char_iteration/iter/500 time:   [77.273 µs 78.178 µs 79.396 µs]
+                        thrpt:  [6.2976 Melem/s 6.3957 Melem/s 6.4706 Melem/s]
+Benchmarking char_iteration/iter/1000
+Benchmarking char_iteration/iter/1000: Warming up for 3.0000 s
+Benchmarking char_iteration/iter/1000: Collecting 30 samples in estimated 5.0698 s (32k iterations)
+Benchmarking char_iteration/iter/1000: Analyzing
+char_iteration/iter/1000
+                        time:   [159.54 µs 161.03 µs 162.69 µs]
+                        thrpt:  [6.1466 Melem/s 6.2101 Melem/s 6.2682 Melem/s]
+
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/1000
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/1000: Warming up for 3.0000 s
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/1000: Collecting 10 samples in estimated 5.0187 s (2750 iterations)
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/1000: Analyzing
+char_memory_efficiency/persistent_artrie_char_size/1000
+                        time:   [1.7889 ms 1.8154 ms 1.8397 ms]
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/5000
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/5000: Warming up for 3.0000 s
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/5000: Collecting 10 samples in estimated 5.3322 s (550 iterations)
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/5000: Analyzing
+char_memory_efficiency/persistent_artrie_char_size/5000
+                        time:   [9.4724 ms 9.6068 ms 9.8035 ms]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) low mild
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/10000
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/10000: Warming up for 3.0000 s
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/10000: Collecting 10 samples in estimated 5.4055 s (275 iterations)
+Benchmarking char_memory_efficiency/persistent_artrie_char_size/10000: Analyzing
+char_memory_efficiency/persistent_artrie_char_size/10000
+                        time:   [19.323 ms 19.539 ms 19.677 ms]
+
+Benchmarking char_optimistic_reads/regular_contains/100
+Benchmarking char_optimistic_reads/regular_contains/100: Warming up for 3.0000 s
+Benchmarking char_optimistic_reads/regular_contains/100: Collecting 50 samples in estimated 5.0007 s (323k iterations)
+Benchmarking char_optimistic_reads/regular_contains/100: Analyzing
+char_optimistic_reads/regular_contains/100
+                        time:   [14.998 µs 15.106 µs 15.233 µs]
+                        thrpt:  [6.5646 Melem/s 6.6198 Melem/s 6.6675 Melem/s]
+Benchmarking char_optimistic_reads/regular_contains/1000
+Benchmarking char_optimistic_reads/regular_contains/1000: Warming up for 3.0000 s
+Benchmarking char_optimistic_reads/regular_contains/1000: Collecting 50 samples in estimated 5.0107 s (280k iterations)
+Benchmarking char_optimistic_reads/regular_contains/1000: Analyzing
+char_optimistic_reads/regular_contains/1000
+                        time:   [18.324 µs 18.500 µs 18.686 µs]
+                        thrpt:  [5.3516 Melem/s 5.4054 Melem/s 5.4573 Melem/s]
+Found 1 outliers among 50 measurements (2.00%)
+  1 (2.00%) low mild
+Benchmarking char_optimistic_reads/regular_contains/5000
+Benchmarking char_optimistic_reads/regular_contains/5000: Warming up for 3.0000 s
+Benchmarking char_optimistic_reads/regular_contains/5000: Collecting 50 samples in estimated 5.0186 s (259k iterations)
+Benchmarking char_optimistic_reads/regular_contains/5000: Analyzing
+char_optimistic_reads/regular_contains/5000
+                        time:   [19.262 µs 19.470 µs 19.689 µs]
+                        thrpt:  [5.0789 Melem/s 5.1362 Melem/s 5.1915 Melem/s]
+Found 2 outliers among 50 measurements (4.00%)
+  2 (4.00%) high mild
+
+Benchmarking char_disk_io/create_insert_sync/100
+Benchmarking char_disk_io/create_insert_sync/100: Warming up for 3.0000 s
+Benchmarking char_disk_io/create_insert_sync/100: Collecting 10 samples in estimated 5.0044 s (25k iterations)
+Benchmarking char_disk_io/create_insert_sync/100: Analyzing
+char_disk_io/create_insert_sync/100
+                        time:   [123.43 µs 124.74 µs 125.81 µs]
+                        thrpt:  [794.82 Kelem/s 801.68 Kelem/s 810.21 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking char_disk_io/recovery/100
+Benchmarking char_disk_io/recovery/100: Warming up for 3.0000 s
+Benchmarking char_disk_io/recovery/100: Collecting 10 samples in estimated 5.0075 s (27k iterations)
+Benchmarking char_disk_io/recovery/100: Analyzing
+char_disk_io/recovery/100
+                        time:   [146.89 µs 148.75 µs 150.74 µs]
+                        thrpt:  [663.37 Kelem/s 672.27 Kelem/s 680.77 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking char_disk_io/checkpoint/100
+Benchmarking char_disk_io/checkpoint/100: Warming up for 3.0000 s
+Benchmarking char_disk_io/checkpoint/100: Collecting 10 samples in estimated 9.2235 s (110 iterations)
+Benchmarking char_disk_io/checkpoint/100: Analyzing
+char_disk_io/checkpoint/100
+                        time:   [82.389 ms 83.323 ms 85.285 ms]
+                        thrpt:  [1.1725 Kelem/s 1.2001 Kelem/s 1.2138 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking char_disk_io/create_insert_sync/500
+Benchmarking char_disk_io/create_insert_sync/500: Warming up for 3.0000 s
+Benchmarking char_disk_io/create_insert_sync/500: Collecting 10 samples in estimated 5.0248 s (8690 iterations)
+Benchmarking char_disk_io/create_insert_sync/500: Analyzing
+char_disk_io/create_insert_sync/500
+                        time:   [410.59 µs 416.93 µs 424.91 µs]
+                        thrpt:  [1.1767 Melem/s 1.1993 Melem/s 1.2177 Melem/s]
+Found 3 outliers among 10 measurements (30.00%)
+  2 (20.00%) low mild
+  1 (10.00%) high severe
+Benchmarking char_disk_io/recovery/500
+Benchmarking char_disk_io/recovery/500: Warming up for 3.0000 s
+Benchmarking char_disk_io/recovery/500: Collecting 10 samples in estimated 5.0202 s (7370 iterations)
+Benchmarking char_disk_io/recovery/500: Analyzing
+char_disk_io/recovery/500
+                        time:   [583.16 µs 589.32 µs 595.38 µs]
+                        thrpt:  [839.80 Kelem/s 848.44 Kelem/s 857.40 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking char_disk_io/checkpoint/500
+Benchmarking char_disk_io/checkpoint/500: Warming up for 3.0000 s
+Benchmarking char_disk_io/checkpoint/500: Collecting 10 samples in estimated 6.2957 s (20 iterations)
+Benchmarking char_disk_io/checkpoint/500: Analyzing
+char_disk_io/checkpoint/500
+                        time:   [320.80 ms 322.93 ms 325.18 ms]
+                        thrpt:  [1.5376 Kelem/s 1.5483 Kelem/s 1.5586 Kelem/s]
+Benchmarking char_disk_io/create_insert_sync/1000
+Benchmarking char_disk_io/create_insert_sync/1000: Warming up for 3.0000 s
+Benchmarking char_disk_io/create_insert_sync/1000: Collecting 10 samples in estimated 5.0293 s (4675 iterations)
+Benchmarking char_disk_io/create_insert_sync/1000: Analyzing
+char_disk_io/create_insert_sync/1000
+                        time:   [786.82 µs 791.22 µs 796.66 µs]
+                        thrpt:  [1.2552 Melem/s 1.2639 Melem/s 1.2709 Melem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking char_disk_io/recovery/1000
+Benchmarking char_disk_io/recovery/1000: Warming up for 3.0000 s
+Benchmarking char_disk_io/recovery/1000: Collecting 10 samples in estimated 5.0023 s (3960 iterations)
+Benchmarking char_disk_io/recovery/1000: Analyzing
+char_disk_io/recovery/1000
+                        time:   [1.0876 ms 1.0952 ms 1.1099 ms]
+                        thrpt:  [900.94 Kelem/s 913.03 Kelem/s 919.46 Kelem/s]
+Benchmarking char_disk_io/checkpoint/1000
+Benchmarking char_disk_io/checkpoint/1000: Warming up for 3.0000 s
+
+Warning: Unable to complete 10 samples in 5.0s. You may wish to increase target time to 5.6s.
+Benchmarking char_disk_io/checkpoint/1000: Collecting 10 samples in estimated 5.6332 s (10 iterations)
+Benchmarking char_disk_io/checkpoint/1000: Analyzing
+char_disk_io/checkpoint/1000
+                        time:   [578.52 ms 582.45 ms 586.04 ms]
+                        thrpt:  [1.7064 Kelem/s 1.7169 Kelem/s 1.7285 Kelem/s]
+
+Benchmarking char_disk_io_cjk/cjk_create_insert_sync
+Benchmarking char_disk_io_cjk/cjk_create_insert_sync: Warming up for 3.0000 s
+Benchmarking char_disk_io_cjk/cjk_create_insert_sync: Collecting 10 samples in estimated 5.0212 s (11k iterations)
+Benchmarking char_disk_io_cjk/cjk_create_insert_sync: Analyzing
+char_disk_io_cjk/cjk_create_insert_sync
+                        time:   [387.97 µs 390.98 µs 394.94 µs]
+                        thrpt:  [1.2660 Melem/s 1.2788 Melem/s 1.2888 Melem/s]
+Found 3 outliers among 10 measurements (30.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+
+Benchmarking char_atomic_ops/increment
+Benchmarking char_atomic_ops/increment: Warming up for 3.0000 s
+Benchmarking char_atomic_ops/increment: Collecting 30 samples in estimated 5.0350 s (64k iterations)
+Benchmarking char_atomic_ops/increment: Analyzing
+char_atomic_ops/increment
+                        time:   [78.048 µs 78.701 µs 79.352 µs]
+                        thrpt:  [1.2602 Melem/s 1.2706 Melem/s 1.2813 Melem/s]
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+Benchmarking char_atomic_ops/upsert
+Benchmarking char_atomic_ops/upsert: Warming up for 3.0000 s
+Benchmarking char_atomic_ops/upsert: Collecting 30 samples in estimated 5.0204 s (67k iterations)
+Benchmarking char_atomic_ops/upsert: Analyzing
+char_atomic_ops/upsert  time:   [73.809 µs 74.634 µs 75.526 µs]
+                        thrpt:  [1.3240 Melem/s 1.3399 Melem/s 1.3549 Melem/s]
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+

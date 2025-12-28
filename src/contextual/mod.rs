@@ -16,7 +16,6 @@ pub use checkpoint::{Checkpoint, CheckpointStack};
 pub use completion::Completion;
 pub use context_tree::{ContextId, ContextTree};
 pub use draft_buffer::DraftBuffer;
-#[allow(deprecated)]
-pub use engine::{ContextualCompletionEngine, DynamicContextualCompletionEngine};
+pub use engine::DynamicContextualCompletionEngine;
 pub use error::{ContextError, Result};
 pub use static_engine::StaticContextualCompletionEngine;

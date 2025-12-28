@@ -13,12 +13,12 @@
 //! Run with: cargo bench --bench substitution_integration_bench
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::dictionary::dawg::DawgDictionary;
+use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::dictionary::Dictionary;
 use liblevenshtein::transducer::{Algorithm, Restricted, SubstitutionSet, Transducer};
 
 /// Create a test dictionary with common English words
-fn create_test_dictionary() -> DawgDictionary {
+fn create_test_dictionary() -> DoubleArrayTrie {
     let words = vec![
         "apple",
         "application",
@@ -290,7 +290,7 @@ fn create_test_dictionary() -> DawgDictionary {
         "fund",
         "future",
     ];
-    DawgDictionary::from_iter(words)
+    DoubleArrayTrie::from_terms(words)
 }
 
 /// Benchmark: Unrestricted (baseline) query performance
@@ -504,7 +504,7 @@ fn bench_policy_overhead_by_distance(c: &mut Criterion) {
 }
 
 // Note: Unicode char benchmarks with RestrictedChar would require a char-based dictionary
-// backend (e.g., PathMapDictionary<()>). DawgDictionary is byte-based (u8) only.
+// backend (e.g., PathMapDictionary<()>). DoubleArrayTrie is byte-based (u8) only.
 
 criterion_group!(
     benches,

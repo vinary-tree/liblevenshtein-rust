@@ -105,22 +105,6 @@ proptest! {
         }
     }
 
-    /// Test DawgDictionary consistency
-    #[test]
-    fn prop_dawg_contains(
-        dict_words in small_dict_strategy(),
-    ) {
-        let dict = DawgDictionary::from_iter(dict_words.clone());
-
-        for word in &dict_words {
-            prop_assert!(
-                dict.contains(word),
-                "DawgDictionary should contain inserted word '{}'",
-                word
-            );
-        }
-    }
-
     /// Test DynamicDawg consistency
     #[test]
     fn prop_dynamic_dawg_contains(
@@ -132,22 +116,6 @@ proptest! {
             prop_assert!(
                 dict.contains(word),
                 "DynamicDawg should contain inserted word '{}'",
-                word
-            );
-        }
-    }
-
-    /// Test OptimizedDawg consistency
-    #[test]
-    fn prop_optimized_dawg_contains(
-        dict_words in small_dict_strategy(),
-    ) {
-        let dict = OptimizedDawg::from_terms(dict_words.clone());
-
-        for word in &dict_words {
-            prop_assert!(
-                dict.contains(word),
-                "OptimizedDawg should contain inserted word '{}'",
                 word
             );
         }
@@ -168,28 +136,14 @@ proptest! {
         query in ascii_word_strategy(),
     ) {
         let dat = DoubleArrayTrie::from_terms(dict_words.clone());
-        let dawg = DawgDictionary::from_iter(dict_words.clone());
         let dynamic: DynamicDawg<()> = DynamicDawg::from_terms(dict_words.clone());
-        let optimized = OptimizedDawg::from_terms(dict_words.clone());
 
         let dat_result = dat.contains(&query);
-        let dawg_result = dawg.contains(&query);
         let dynamic_result = dynamic.contains(&query);
-        let optimized_result = optimized.contains(&query);
 
-        prop_assert_eq!(
-            dat_result, dawg_result,
-            "DoubleArrayTrie and DawgDictionary disagree on contains('{}')",
-            query
-        );
         prop_assert_eq!(
             dat_result, dynamic_result,
             "DoubleArrayTrie and DynamicDawg disagree on contains('{}')",
-            query
-        );
-        prop_assert_eq!(
-            dat_result, optimized_result,
-            "DoubleArrayTrie and OptimizedDawg disagree on contains('{}')",
             query
         );
     }
@@ -202,37 +156,21 @@ proptest! {
         max_dist in 0usize..=2,
     ) {
         let dat = DoubleArrayTrie::from_terms(dict_words.clone());
-        let dawg = DawgDictionary::from_iter(dict_words.clone());
-        let dynamic: DynamicDawg<()> = DynamicDawg::from_terms(dict_words.clone());
-        let optimized = OptimizedDawg::from_terms(dict_words);
+        let dynamic: DynamicDawg<()> = DynamicDawg::from_terms(dict_words);
 
         let t_dat = Transducer::new(dat, Algorithm::Standard);
-        let t_dawg = Transducer::new(dawg, Algorithm::Standard);
         let t_dynamic = Transducer::new(dynamic, Algorithm::Standard);
-        let t_optimized = Transducer::new(optimized, Algorithm::Standard);
 
         let mut results_dat: Vec<_> = t_dat.query(&query, max_dist).collect();
-        let mut results_dawg: Vec<_> = t_dawg.query(&query, max_dist).collect();
         let mut results_dynamic: Vec<_> = t_dynamic.query(&query, max_dist).collect();
-        let mut results_optimized: Vec<_> = t_optimized.query(&query, max_dist).collect();
 
         // Sort for comparison
         results_dat.sort();
-        results_dawg.sort();
         results_dynamic.sort();
-        results_optimized.sort();
 
-        prop_assert_eq!(
-            &results_dat, &results_dawg,
-            "DoubleArrayTrie and DawgDictionary produce different query results"
-        );
         prop_assert_eq!(
             &results_dat, &results_dynamic,
             "DoubleArrayTrie and DynamicDawg produce different query results"
-        );
-        prop_assert_eq!(
-            &results_dat, &results_optimized,
-            "DoubleArrayTrie and OptimizedDawg produce different query results"
         );
     }
 }
@@ -526,35 +464,6 @@ proptest! {
         }
     }
 
-    /// Test DawgDictionary with all algorithms
-    #[test]
-    fn prop_dawg_all_algorithms(
-        dict_words in small_dict_strategy(),
-        query in ascii_word_strategy(),
-        max_dist in 0usize..=2,
-    ) {
-        let cache = create_memo_cache();
-        for algorithm in &[Algorithm::Standard, Algorithm::Transposition, Algorithm::MergeAndSplit] {
-            let dict = DawgDictionary::from_iter(dict_words.clone());
-            let transducer = Transducer::new(dict, *algorithm);
-            let results: Vec<_> = transducer.query(&query, max_dist).collect();
-
-            // Verify with algorithm-specific distance function
-            for result in &results {
-                let dist = match algorithm {
-                    Algorithm::Standard => standard_distance(&query, result),
-                    Algorithm::Transposition => transposition_distance(&query, result),
-                    Algorithm::MergeAndSplit => merge_and_split_distance(&query, result, &cache),
-                };
-                prop_assert!(
-                    dist <= max_dist,
-                    "DawgDictionary with {:?} returned '{}' with distance {} > {}",
-                    algorithm, result, dist, max_dist
-                );
-            }
-        }
-    }
-
     /// Test DynamicDawg with all algorithms
     #[test]
     fn prop_dynamic_dawg_all_algorithms(
@@ -578,35 +487,6 @@ proptest! {
                 prop_assert!(
                     dist <= max_dist,
                     "DynamicDawg with {:?} returned '{}' with distance {} > {}",
-                    algorithm, result, dist, max_dist
-                );
-            }
-        }
-    }
-
-    /// Test OptimizedDawg with all algorithms
-    #[test]
-    fn prop_optimized_dawg_all_algorithms(
-        dict_words in small_dict_strategy(),
-        query in ascii_word_strategy(),
-        max_dist in 0usize..=2,
-    ) {
-        let cache = create_memo_cache();
-        for algorithm in &[Algorithm::Standard, Algorithm::Transposition, Algorithm::MergeAndSplit] {
-            let dict = OptimizedDawg::from_terms(dict_words.clone());
-            let transducer = Transducer::new(dict, *algorithm);
-            let results: Vec<_> = transducer.query(&query, max_dist).collect();
-
-            // Verify with algorithm-specific distance function
-            for result in &results {
-                let dist = match algorithm {
-                    Algorithm::Standard => standard_distance(&query, result),
-                    Algorithm::Transposition => transposition_distance(&query, result),
-                    Algorithm::MergeAndSplit => merge_and_split_distance(&query, result, &cache),
-                };
-                prop_assert!(
-                    dist <= max_dist,
-                    "OptimizedDawg with {:?} returned '{}' with distance {} > {}",
                     algorithm, result, dist, max_dist
                 );
             }

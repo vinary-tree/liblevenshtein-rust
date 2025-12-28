@@ -2,7 +2,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use liblevenshtein::prelude::*;
 
 /// Analyze the distribution of edge counts in DAWG nodes
-fn analyze_edge_distribution(dict: &DawgDictionary) -> EdgeDistribution {
+fn analyze_edge_distribution(dict: &DoubleArrayTrie) -> EdgeDistribution {
     let mut distribution = EdgeDistribution::new();
 
     // Traverse all nodes and count edge distributions
@@ -103,7 +103,7 @@ fn bench_threshold_values(c: &mut Criterion) {
     // Test with different dictionary sizes
     for dict_size in [100, 500, 1000, 5000].iter() {
         let terms = generate_terms(*dict_size);
-        let dict = DawgDictionary::from_iter(terms.iter().map(|s| s.as_str()));
+        let dict = DoubleArrayTrie::from_terms(terms.clone());
 
         // Analyze distribution for this dictionary
         println!("\n\n=== Dictionary size: {} terms ===", dict_size);

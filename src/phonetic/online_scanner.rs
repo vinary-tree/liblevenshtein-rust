@@ -16,7 +16,7 @@
 //! use liblevenshtein::phonetic::online_scanner::OnlinePhoneticScannerChar;
 //! use liblevenshtein::phonetic::rules::english;
 //!
-//! let rules = english::zompist().rules_vec();
+//! let rules = english::base().rules_vec();
 //! let mut scanner = OnlinePhoneticScannerChar::new("phone", &rules, 1);
 //!
 //! // Scan a document

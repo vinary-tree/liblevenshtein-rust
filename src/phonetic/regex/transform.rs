@@ -258,12 +258,6 @@ fn apply_flags_with_context(
             let inner_transformed = apply_flags_with_context(inner, inherited, result);
             Regex::NamedGroup(name.clone(), Box::new(inner_transformed))
         }
-        #[allow(deprecated)]
-        Regex::Group(inner) => {
-            let inner_transformed = apply_flags_with_context(inner, inherited, result);
-            #[allow(deprecated)]
-            Regex::Group(Box::new(inner_transformed))
-        }
 
         // RewriteRule: transform pattern and replacement
         Regex::RewriteRule {
