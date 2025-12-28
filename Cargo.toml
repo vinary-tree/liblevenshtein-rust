@@ -398,8 +398,12 @@ eviction-opt-memory = ["eviction-compact-metadata"]
 # SIMD optimization with AVX2/SSE4.1 intrinsics (Phase 3)
 simd = []
 
+# SCDAWG optimization experiments (Phase 4)
+scdawg-bloom = []  # 64-bit bloom filter for edge lookup fast-reject
+scdawg-simd = []   # SIMD edge lookup for small edge counts
+
 # Persistent Adaptive Radix Trie (disk-based dictionary)
-persistent-artrie = ["memmap2", "parking_lot"]
+persistent-artrie = ["memmap2", "parking_lot", "serde", "bincode"]
 
 # Grep compression support (gzip, zstd, xz, bzip2)
 grep-compression = ["flate2", "zstd", "xz2", "bzip2"]
@@ -496,3 +500,7 @@ harness = false
 name = "persistent_artrie_benchmarks"
 harness = false
 required-features = ["persistent-artrie"]
+
+[[bench]]
+name = "scdawg_optimization_benchmarks"
+harness = false
