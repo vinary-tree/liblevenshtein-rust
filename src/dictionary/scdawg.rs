@@ -73,12 +73,6 @@ struct ScdawgNode<V: DictionaryValue = ()> {
     /// These allow appending characters to the represented string.
     forward_edges: SmallVec<[(u8, usize); 4]>,
 
-    /// 64-bit bloom filter for edge labels (fast rejection of non-existent edges).
-    /// Each bit corresponds to `label % 64`. If bit is 0, edge definitely doesn't exist.
-    /// If bit is 1, edge might exist (need to check forward_edges).
-    #[cfg(feature = "scdawg-bloom")]
-    edge_bloom: u64,
-
     /// Suffix link: points to the state representing the longest proper suffix
     /// in a different equivalence class.
     suffix_link: usize,
@@ -120,8 +114,6 @@ impl<V: DictionaryValue> ScdawgNode<V> {
     fn root() -> Self {
         Self {
             forward_edges: SmallVec::new(),
-            #[cfg(feature = "scdawg-bloom")]
-            edge_bloom: 0,
             suffix_link: NIL,
             left_edges: SmallVec::new(),
             length: 0,
@@ -139,8 +131,6 @@ impl<V: DictionaryValue> ScdawgNode<V> {
     fn new(length: usize, suffix_link: usize, first_char: u8) -> Self {
         Self {
             forward_edges: SmallVec::new(),
-            #[cfg(feature = "scdawg-bloom")]
-            edge_bloom: 0,
             suffix_link,
             left_edges: SmallVec::new(),
             length,
@@ -156,102 +146,18 @@ impl<V: DictionaryValue> ScdawgNode<V> {
 
     /// Find a forward edge by label.
     /// Uses binary search for sorted edges (typically small, but helps at scale).
-    ///
-    /// With `scdawg-bloom` feature: Uses 64-bit bloom filter for fast rejection.
-    /// With `scdawg-simd` feature: Uses SIMD for small edge counts (≤16).
     #[inline(always)]
     fn get_edge(&self, label: u8) -> Option<usize> {
-        // With bloom filter: fast rejection for non-existent edges
-        #[cfg(feature = "scdawg-bloom")]
-        {
-            // Check bloom filter first: if bit is 0, edge definitely doesn't exist
-            let bit = 1u64 << (label % 64);
-            if (self.edge_bloom & bit) == 0 {
-                return None;
-            }
-        }
-
-        // With SIMD: use vectorized comparison for small edge counts
-        #[cfg(all(target_arch = "x86_64", feature = "scdawg-simd"))]
-        {
-            let count = self.forward_edges.len();
-            if count == 0 {
-                return None;
-            }
-            if count <= 16 {
-                // SAFETY: We check target_arch = x86_64 and SSE4.1 is available on all x86_64 CPUs
-                unsafe {
-                    return self.get_edge_simd(label);
-                }
-            }
-        }
-
-        // Fallback: Binary search for actual edge lookup
         match self.forward_edges.binary_search_by_key(&label, |(l, _)| *l) {
             Ok(idx) => Some(self.forward_edges[idx].1),
             Err(_) => None,
         }
     }
 
-    /// SIMD edge lookup for small edge counts (≤16 edges).
-    ///
-    /// Uses SSE4.1 to compare all labels simultaneously.
-    #[cfg(all(target_arch = "x86_64", feature = "scdawg-simd"))]
-    #[target_feature(enable = "sse4.1")]
-    #[inline]
-    unsafe fn get_edge_simd(&self, label: u8) -> Option<usize> {
-        use std::arch::x86_64::*;
-
-        let count = self.forward_edges.len();
-        if count == 0 {
-            return None;
-        }
-
-        // Pack labels into arrays for SIMD comparison
-        // We handle up to 16 labels at once
-        let mut labels = [0u8; 16];
-        for (i, (l, _)) in self.forward_edges.iter().enumerate().take(16) {
-            labels[i] = *l;
-        }
-
-        // Load the labels into an XMM register
-        let labels_vec = _mm_loadu_si128(labels.as_ptr() as *const __m128i);
-
-        // Broadcast the query label to all bytes
-        let query_vec = _mm_set1_epi8(label as i8);
-
-        // Compare all 16 bytes at once
-        let cmp = _mm_cmpeq_epi8(labels_vec, query_vec);
-
-        // Get the comparison result as a bitmask
-        let mask = _mm_movemask_epi8(cmp) as u32;
-
-        // Create a mask for valid positions (only the first 'count' positions)
-        let valid_mask = (1u32 << count) - 1;
-        let result_mask = mask & valid_mask;
-
-        if result_mask != 0 {
-            // Found a match - return the index of the first set bit
-            let idx = result_mask.trailing_zeros() as usize;
-            Some(self.forward_edges[idx].1)
-        } else {
-            None
-        }
-    }
-
     /// Add or update a forward edge.
     /// Maintains sorted order for binary search.
-    ///
-    /// With `scdawg-bloom` feature: Updates bloom filter for the label.
     #[inline(always)]
     fn set_edge(&mut self, label: u8, target: usize) {
-        // Update bloom filter
-        #[cfg(feature = "scdawg-bloom")]
-        {
-            self.edge_bloom |= 1u64 << (label % 64);
-        }
-
-        // Insert or update edge in sorted order
         match self.forward_edges.binary_search_by_key(&label, |(l, _)| *l) {
             Ok(idx) => self.forward_edges[idx].1 = target,
             Err(idx) => self.forward_edges.insert(idx, (label, target)),
