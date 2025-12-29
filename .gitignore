@@ -29,6 +29,7 @@ flamegraph.svg
 flamegraph_*.svg
 flamegraphs/
 perf.data*
+perf-*.data*
 
 # Benchmark results and logs
 *_results.log
@@ -49,6 +50,7 @@ batch*_*.txt
 *_analysis.md
 fuzzy_multimap_*.txt
 fuzzy_multimap_*.md
+docs/research/artrie/perf-reports/*.txt
 
 # Analysis scripts (temporary/development)
 analyze_*.py
