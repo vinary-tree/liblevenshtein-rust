@@ -127,7 +127,29 @@ This documentation describes a **three-tier hybrid architecture** (FST + CFG + N
 
 ---
 
-### 6. [references/papers.md](references/papers.md) (~600 lines)
+### 6. [adaptive-msm.md](adaptive-msm.md) (~500 lines)
+**Adaptive MSM parameter learning using FPTL algorithm**.
+
+**Contents**:
+- MSM metric overview (move, split, merge operations)
+- The c constant challenge and optimal selection
+- FPTL algorithm for online learning
+- Laplacian perturbation for exploration
+- Gradient estimation and update rules
+- Regret bounds and convergence analysis
+- Complete code examples
+
+**Key Features**:
+- **Online learning** of MSM c parameter
+- **Laplacian noise** for exploration/exploitation balance
+- **Theoretical regret bounds** from online learning theory
+- **Practical examples** for time series matching
+
+**Target Audience**: Developers implementing adaptive time series metrics, researchers in online learning
+
+---
+
+### 7. [references/papers.md](references/papers.md) (~600 lines)
 **Comprehensive bibliography with 35+ cited papers**.
 
 **Contents**:

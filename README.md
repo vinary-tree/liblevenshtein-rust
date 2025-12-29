@@ -6,1153 +6,1462 @@
 [![Release](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/release.yml/badge.svg)](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-A Rust implementation of [liblevenshtein](https://github.com/universal-automata/liblevenshtein-cpp) for fast approximate string matching using **Levenshtein Automata**—deterministic finite automata that enable O(|W|) construction complexity for error-tolerant dictionary queries.
+A Rust implementation of **Levenshtein Automata** for fast approximate string matching with O(|W|) automaton construction and O(|D|) dictionary traversal.
 
 Based on "Fast String Correction with Levenshtein-Automata" (Schulz & Mihov, 2002).
 
-## Overview
+## Table of Contents
 
-This library provides efficient fuzzy string matching against large dictionaries using finite state automata. It supports multiple Levenshtein distance algorithms and pluggable dictionary backends.
+- [Quick Start](#quick-start)
+- [Common Use Cases](#common-use-cases)
+- [Thread Safety & Parallelism](#thread-safety--parallelism)
+- [Dictionary Types](#dictionary-types)
+- [Levenshtein Automata](#levenshtein-automata)
+- [Universal Automata (Restricted Substitutions)](#universal-automata-restricted-substitutions)
+- [MSM Automata (Time Series)](#msm-automata-time-series)
+- [Weighted Automata](#weighted-automata)
+- [WallBreaker Algorithm (Large Error Bounds)](#wallbreaker-algorithm-large-error-bounds)
+- [LLev Phonetic Rules](#llev-phonetic-rules)
+- [LLRE Fuzzy Regular Expressions](#llre-fuzzy-regular-expressions)
+- [Phonetic NFA + Levenshtein Composition](#phonetic-nfa--levenshtein-composition)
+- [WFST Integration with lling-llang](#wfst-integration-with-lling-llang)
+- [Contextual Completion Engine](#contextual-completion-engine)
+- [FuzzyCache (Eviction Policies)](#fuzzycache-eviction-policies)
+- [Additional Features](#additional-features)
+- [Performance](#performance)
+- [Feature Flags Reference](#feature-flags-reference)
+- [References](#references)
 
-## What Makes This Library Fast
+---
 
-Unlike naive approaches that compute Levenshtein distance for every dictionary word (O(|D| × |W| × |V|)), this library uses **Levenshtein Automata**—a deterministic finite automaton that accepts exactly all words within distance n from a query word.
+## Quick Start
 
-### Key Algorithmic Advantages
+```rust
+use liblevenshtein::prelude::*;
 
-1. **O(|W|) Automaton Construction** - Linear in query word length for fixed error bound n
-2. **O(|D|) Dictionary Traversal** - Single pass through dictionary (measured as total edges)
-3. **No Distance Recomputation** - Automaton guides search, avoiding per-word calculations
-4. **Proven Correctness** - Accepts exactly L_Lev(n,W) = {V | d_L(W,V) ≤ n}
+// Create a dictionary
+let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
 
-**Result:** Query time is effectively independent of dictionary size for well-distributed tries!
+// Create a transducer with Standard Levenshtein distance
+let transducer = Transducer::new(dict, Algorithm::Standard);
 
-**Theory:** Based on "Fast String Correction with Levenshtein-Automata" (Schulz & Mihov, 2002). See [complete algorithm documentation](docs/research/levenshtein-automata/) for algorithmic details including Position structures, Subsumption relations, and Characteristic vectors.
-
-## Theoretical Background
-
-### How Levenshtein Automata Work
-
-Traditional approaches compute edit distance for every dictionary word, requiring O(|D| × |W| × |V|) operations. This library uses **Levenshtein Automata**—deterministic finite automata that accept exactly all words within distance n from query word W:
-
+// Query for terms within edit distance 2
+for candidate in transducer.query_with_distance("tset", 2) {
+    println!("{}: distance {}", candidate.term, candidate.distance);
+}
+// Output: test: distance 1
 ```
-LEV_n(W) accepts L_Lev(n,W) = {V | d_L(W,V) ≤ n}
-```
 
-### Key Concepts
-
-**Position (i#e)**: Represents "matched i characters of W with e errors"
-- Example: 3#1 means "matched 3 characters, used 1 error"
-- Range: 0 ≤ i ≤ |W|, 0 ≤ e ≤ n
-
-**Subsumption (⊑)**: Eliminates redundant positions for minimal state sets
-- Position i#e subsumes j#f if: (e < f) ∧ (|j-i| ≤ f-e)
-- Any word accepted from j#f is also accepted from i#e
-
-**Characteristic Vectors (χ)**: Encode where characters appear in query word
-- χ(x,W) = ⟨b₁,...,b_w⟩ where b_i = 1 if W[i] = x
-- Used to determine valid transitions without recomputing distances
-
-**Elementary Transitions**: Move between positions based on dictionary character
-- Defined in Tables 4.1, 7.1, 8.1 of the paper for each algorithm variant
-- Enable O(1) state updates during traversal
-
-**Result:** Automaton construction is O(|W|), dictionary traversal is O(|D|), regardless of dictionary size!
-
-### Foundational Papers
-
-**Core Algorithm:**
-- Schulz, Klaus U., and Stoyan Mihov. "Fast string correction with Levenshtein automata." *International Journal on Document Analysis and Recognition* 5.1 (2002): 67-85.
-
-**Extensions:**
-- Mitankin, Petar, Stoyan Mihov, and Klaus Schulz. "Universal Levenshtein Automata. Building and Properties." *Information Processing & Management* 41.4 (2005): 687-702.
-
-### Documentation
-
-- [Complete Algorithm Documentation](docs/research/levenshtein-automata/README.md) - Detailed paper summary
-- [Implementation Mapping](docs/research/levenshtein-automata/implementation-mapping.md) - Code-to-paper correspondence
-- [Glossary](docs/research/levenshtein-automata/glossary.md) - Terms and notation reference
-- [Universal Levenshtein Automata Research](docs/research/universal-levenshtein/) - Restricted substitutions
-- [Weighted Distance Research](docs/research/weighted-levenshtein-automata/) - Variable operation costs
-
-### Features
-
-- **Fast approximate string matching** using Levenshtein Automata with **O(|W|) construction** complexity
-- **Multiple algorithms** (all maintaining O(|W|) construction complexity):
-  - `Standard`: Insert, delete, substitute operations (Chapters 4-6 of foundational paper)
-    - Example: "hello" → "helo" (delete), "helo" → "hello" (insert), "hello" → "hallo" (substitute)
-    - Use for: General fuzzy matching, spell checking
-  - `Transposition`: Adds adjacent character swaps (Chapter 7) - Damerau-Levenshtein distance
-    - Example: "teh" → "the" costs 1 (not 2), "recieve" → "receive" costs 1
-    - Use for: Typing errors, keyboard input corrections
-  - `MergeAndSplit`: Adds two-character ↔ one-character operations (Chapter 8)
-    - Example: "rn" ↔ "m", "vv" ↔ "w" (common in OCR)
-    - Use for: Scanned documents, character recognition systems
-- **Multiple dictionary backends**:
-  - **DoubleArrayTrie** (recommended, default) - O(1) transitions with excellent cache locality and minimal memory footprint
-  - **DoubleArrayTrieChar** - Character-level variant for correct Unicode Levenshtein distances
-  - **PathMap** (optional `pathmap-backend` feature) - high-performance trie with structural sharing, supports dynamic updates
-  - **PathMapChar** (optional `pathmap-backend` feature) - Character-level PathMap for Unicode fuzzy matching
-  - **DAWG** - Directed Acyclic Word Graph for space-efficient storage
-  - **OptimizedDawg** - Arena-based DAWG with 20-25% faster construction
-  - **DynamicDawg** - DAWG with online insert/delete/minimize operations
-  - **DynamicDawgChar** - Character-level DAWG with Unicode support and online updates
-  - **SuffixAutomaton** - For substring/infix matching
-  - **SuffixAutomatonChar** - Character-level suffix automaton for Unicode substring matching
-  - Extensible trait-based design for custom backends
-- **Ordered results**: `OrderedQueryIterator` returns results sorted by distance first, then lexicographically
-- **Filtering and prefix matching**: Filter results with custom predicates, enable prefix mode for code completion
-- **Serialization support** (optional `serialization` feature):
-  - **Multiple formats**: Bincode (binary), JSON, Plain Text (newline-delimited UTF-8), Protobuf
-  - **Optimized Protobuf formats**: V2 (62% smaller), DAT-specific, SuffixAutomaton-specific
-  - **Gzip compression** (optional `compression` feature) - 85% file size reduction
-  - Save and load dictionaries to/from disk
-- **Full-featured CLI tool** (optional `cli` feature):
-  - Interactive REPL for exploration
-  - Query, insert, delete, convert operations
-  - Support for all serialization formats including compressed variants
-- **Runtime dictionary updates**:
-  - Thread-safe insert, remove, and clear operations (PathMap, DynamicDawg)
-  - Queries automatically see updates via `RwLock`-based interior mutability
-  - Concurrent queries during modifications
-- **Lazy evaluation** - results generated on-demand
-- **Efficient memory usage** - shared dictionary state across transducers
-- **SIMD acceleration** (optional `simd` feature, x86_64 only):
-  - AVX2/SSE4.1 optimized operations with runtime CPU feature detection
-  - **20-64% faster** query performance across all workloads
-  - Optimized characteristic vectors, position subsumption, state operations
-  - Dictionary edge lookup with data-driven threshold tuning
-  - Distance matrix computation with vectorized operations
-  - Automatic fallback to scalar implementation when SIMD unavailable
-- **WASM/WASI support** (optional `wasm` feature):
-  - WebAssembly compilation for browser and Node.js targets
-  - WASI support for server-side WebAssembly runtimes
-  - `wasm-phonetic` feature combines WASM with phonetic rules
-  - C FFI via `ffi` feature for native integration
-- **LLev/LLRE - Phonetic Pattern Languages** (requires `phonetic-rules` feature):
-  - `.llev` format for phonetic rewrite rules with metadata and includes
-  - `.llre` format for regex-style patterns with NFA compilation
-  - Regex-like syntax: quantifiers (`*`, `+`, `?`, `{n,m}`), alternation, grouping
-  - Built-in named character classes (`[:alpha:]`, `[:vowel:]`, etc.)
-  - NFA engine with automatic optimization (epsilon elimination, dead state removal)
-  - AOT compilation to binary format for instant loading
-  - See [LLev Grammar](docs/grammar/llev.ebnf) and [LLRE Grammar](docs/grammar/llre.ebnf)
-- **PhoneticNormalizedDictionary** (requires `phonetic-rules` + `pathmap-backend` features):
-  - Phonetic-aware fuzzy dictionary with maximum query speed
-  - Pre-normalizes dictionary terms for instant phonetic matching
-  - Grep-like regex queries against normalized forms
-  - Automatic phonetic pattern expansion ("fone" → "(ph|f)one")
-  - See [Compositional Phonetic Guide](docs/guides/compositional-phonetic-levenshtein.md)
-
-## Installation
-
-### From crates.io (Recommended)
-
-Add to your `Cargo.toml`:
+### Installation
 
 ```toml
 [dependencies]
 liblevenshtein = "0.8"
 
-# Or with SIMD acceleration (x86_64 only, requires SSE4.1/AVX2):
+# With SIMD acceleration (x86_64 only):
 liblevenshtein = { version = "0.8", features = ["simd"] }
+
+# With phonetic rules:
+liblevenshtein = { version = "0.8", features = ["phonetic-rules"] }
 ```
 
-Or install the CLI tool:
+**Thread-safe by design**: All dictionary types implement `Send + Sync`. Queries are lock-free, and dynamic dictionaries support atomic insert/remove operations for concurrent access.
 
-```bash
-cargo install liblevenshtein --features cli,compression,protobuf
+---
+
+## Common Use Cases
+
+Find the right starting point for your application:
+
+| Task | Solution | Section |
+|------|----------|---------|
+| **Spell checking** | Standard Levenshtein with static dictionary | [Levenshtein Automata](#levenshtein-automata) |
+| **Autocomplete / prefix search** | Dictionary prefix iteration | [Prefix Search](#prefix-search-command-completion) |
+| **IDE code completion** | Hierarchical scopes with draft management | [Contextual Completion Engine](#contextual-completion-engine) |
+| **Fuzzy search with metadata** | Aggregate values from fuzzy matches | [FuzzyMultiMap](#fuzzymultimap-value-aggregation) |
+| **Phonetic matching** | Pattern NFAs composed with Levenshtein | [Phonetic NFA Composition](#phonetic-nfa--levenshtein-composition) |
+| **Time series similarity** | Move-Split-Merge metric | [MSM Automata](#msm-automata-time-series) |
+| **Keyboard typo correction** | Transposition algorithm | [Algorithm Variants](#algorithm-variants) |
+| **OCR error correction** | MergeAndSplit + restricted substitutions | [Universal Automata](#universal-automata-restricted-substitutions) |
+| **Large error bounds (k > 5)** | WallBreaker with SCDAWG | [WallBreaker Algorithm](#wallbreaker-algorithm-large-error-bounds) |
+| **Substring fuzzy search** | SCDAWG + bidirectional extension | [SCDAWG](#scdawg-symmetric-compact-dawg) |
+| **Persistent LM training** | Memory-mapped ARTrie for incremental updates | [Persistent ARTrie](#persistentmemory-mapped-dictionaries) |
+| **WFST composition** | Compose with language models via lling-llang | [WFST Integration](#wfst-integration-with-lling-llang) |
+| **Caching with eviction** | Composable TTL, LRU, LFU, cost-aware policies | [FuzzyCache](#fuzzycache-eviction-policies) |
+
+---
+
+## Thread Safety & Parallelism
+
+liblevenshtein is designed for **concurrent, parallel workloads** from the ground up.
+
+### Concurrency Guarantees
+
+| Operation | Semantics |
+|-----------|-----------|
+| **Queries** | Lock-free, fully parallel |
+| **Insert** | Atomic, non-blocking readers |
+| **Remove** | Atomic, non-blocking readers |
+| **Contains** | Lock-free |
+
+### Sharing Across Threads
+
+All dictionary types implement `Send + Sync`:
+
+```rust
+use std::sync::Arc;
+use std::thread;
+use liblevenshtein::prelude::*;
+
+let dict = Arc::new(DynamicDawg::from_terms(vec!["hello", "world"]));
+
+// Spawn parallel query threads
+let handles: Vec<_> = (0..4).map(|_| {
+    let dict = Arc::clone(&dict);
+    thread::spawn(move || {
+        let transducer = Transducer::new(&*dict, Algorithm::Standard);
+        transducer.query("helo", 1).collect::<Vec<_>>()
+    })
+}).collect();
+
+// All threads query concurrently without blocking
+for handle in handles {
+    let results = handle.join().expect("thread panicked");
+}
 ```
 
-### Pre-built Packages
+### Atomic Updates
 
-Download pre-built packages from the [GitHub Releases](https://github.com/universal-automata/liblevenshtein-rust/releases) page:
+Dynamic dictionaries use fine-grained interior mutability:
 
-- **Debian/Ubuntu**: `.deb` packages
-- **Fedora/RHEL/CentOS**: `.rpm` packages
-- **Arch Linux**: `.pkg.tar.zst` packages
-- **macOS**: `.dmg` disk images for easy installation (x86_64 and ARM64)
-- **Binaries**: `.tar.gz` and `.zip` archives for Linux and macOS (x86_64 and ARM64)
+- **Readers never block**: Queries proceed during concurrent inserts/removes
+- **Writers are atomic**: Insert and remove complete as single operations
+- **No external locking required**: Safe to share `Arc<DynamicDawg>` directly
 
-## Usage
+---
 
-### Basic Querying
+## Dictionary Types
+
+### Label Types and Interpretation
+
+Dictionaries store labels of different sizes. While named for character types, they can store arbitrary values:
+
+| Label Size | Types | Character Use | Arbitrary Use |
+|------------|-------|---------------|---------------|
+| **1-byte (u8)** | DoubleArrayTrie, DynamicDawg, SuffixAutomaton | ASCII characters | Byte sequences, small integers (0-255), bit flags |
+| **4-byte (char/u32)** | DoubleArrayTrieChar, DynamicDawgChar, SuffixAutomatonChar | Unicode codepoints | 32-bit integers, small floats (via bit-casting) |
+| **8-byte (u64)** | DynamicDawgU64 | N/A | 64-bit integers, double-precision floats (via bit-casting), compound keys |
 
 ```rust
 use liblevenshtein::prelude::*;
 
-// Create a dictionary from terms (using DoubleArrayTrie for best performance)
-let terms = vec!["test", "testing", "tested", "tester"];
-let dict = DoubleArrayTrie::from_terms(terms);
-
-// Create a transducer with Standard algorithm
-let transducer = Transducer::new(dict, Algorithm::Standard);
-
-// Query for terms within edit distance 2
-for term in transducer.query("tset", 2) {
-    println!("Match: {}", term);
-}
-
-// Query with distances
-for candidate in transducer.query_with_distance("tset", 2) {
-    println!("Match: {} (distance: {})", candidate.term, candidate.distance);
-}
+// Store 32-bit integers as "characters"
+let dict = DynamicDawgChar::new();
+let values: Vec<char> = vec![0x1234, 0x5678, 0x9ABC]
+    .into_iter()
+    .map(|n| char::from_u32(n).unwrap())
+    .collect();
+dict.insert_seq(&values);
 ```
 
-**Output:**
-```
-Match: test
-Match: tester
-Match: test (distance: 1)
-Match: tester (distance: 2)
-```
+#### UTF-8 Compliance (*Char Variants)
 
-### Unicode Support
+The `*Char` variants (DoubleArrayTrieChar, DynamicDawgChar, etc.) provide **correct character-level Levenshtein distance** for UTF-8 encoded text. This matters because:
 
-For correct character-level Levenshtein distances with Unicode text, use the character-level dictionary variants:
+- **Byte-level is wrong for multi-byte characters**: "café" is 5 bytes but 4 characters. Using byte-level dictionaries, "café" → "cafe" would compute as 2 edits (replacing the 2-byte `é`), not 1.
+- **Character-level is correct**: `*Char` variants use `char` (Unicode scalar values), so "café" → "cafe" = 1 substitution (é → e).
+
+| Text | Byte Length | Char Length | Edit to ASCII |
+|------|-------------|-------------|---------------|
+| café | 5 | 4 | 1 (é→e) |
+| 中文 | 6 | 2 | 2 |
+| 🎉 | 4 | 1 | 1 |
+
+**Use `*Char` variants for**: Non-ASCII text, internationalized content, CJK, Cyrillic, Arabic, emoji, or any text with accented characters.
+
+### When to Use Each Dictionary
+
+| Dictionary | Best For | Characteristics |
+|------------|----------|-----------------|
+| **DoubleArrayTrie** | Static ASCII dictionaries | O(1) transitions, 8 bytes/state, fastest queries |
+| **DoubleArrayTrieChar** | Static Unicode dictionaries | Correct character-level distances |
+| **DynamicDawg** | Dynamic ASCII dictionaries | Thread-safe insert/remove, SIMD + Bloom filter |
+| **DynamicDawgChar** | Dynamic Unicode dictionaries | Character-level with runtime modifications |
+| **DynamicDawgU64** | 64-bit label spaces | Large identifier spaces |
+| **SuffixAutomaton** | Substring/infix search (ASCII) | Find patterns anywhere in terms |
+| **SuffixAutomatonChar** | Substring/infix search (UTF-8) | Unicode-aware substring matching |
+| **Scdawg** | Large error bound substring (ASCII) | O(\|pattern\|) search, WallBreaker support |
+| **ScdawgChar** | Large error bound substring (UTF-8) | Unicode WallBreaker support |
+| **PersistentARTrie** | Memory-mapped ASCII dictionaries | Zero-copy disk access |
+| **PersistentARTrieChar** | Memory-mapped UTF-8 dictionaries | Zero-copy, `persistent-artrie` feature |
+| **PathMapDictionaryChar** | Dynamic UTF-8 with PathMap backend | `pathmap-backend` feature required |
+
+**All types are `Send + Sync`**: Safe to share across threads. Static types (DoubleArrayTrie, PersistentARTrie) are immutable after construction. Dynamic types (DynamicDawg, SuffixAutomaton, Scdawg) support atomic concurrent modifications.
+
+### High-Performance Read-Only Dictionaries
+
+Best for static dictionaries that don't change after construction:
 
 ```rust
+use liblevenshtein::prelude::*;
+
+// ASCII dictionary (1 byte per label)
+let ascii_dict = DoubleArrayTrie::from_terms(vec!["hello", "world"]);
+
+// Unicode dictionary (4 bytes per label)
 use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
-use liblevenshtein::prelude::*;
-
-// Create a character-level dictionary for Unicode content
-let terms = vec!["café", "naïve", "中文", "🎉"];
-let dict = DoubleArrayTrieChar::from_terms(terms);
-let transducer = Transducer::new(dict, Algorithm::Standard);
-
-// Character-level distance: "" → "¡" is distance 1 (one character)
-// Byte-level would incorrectly report distance 2 (two UTF-8 bytes)
-let results: Vec<_> = transducer.query("", 1).collect();
-// Results include single-character Unicode terms
-
-// Works with accented characters
-for candidate in transducer.query_with_distance("cafe", 1) {
-    println!("{}: {}", candidate.term, candidate.distance);
-    // Output: café: 1 (one character substitution: e→é)
-}
+let unicode_dict = DoubleArrayTrieChar::from_terms(vec!["café", "naïve", "中文"]);
 ```
 
-**Character-level backends**:
-- `DoubleArrayTrieChar` - Character-level Double-Array Trie
-- `PathMapDictionaryChar` (requires `pathmap-backend` feature) - Character-level PathMap with dynamic updates
+### Dynamic Dictionaries (Insert & Remove)
 
-**When to use**:
-- ✅ Dictionaries containing non-ASCII Unicode (accented characters, CJK, emoji)
-- ✅ When edit distance must count characters, not bytes
-- ✅ Multi-language applications requiring correct Unicode semantics
-
-**Performance**: ~5% overhead for UTF-8 decoding, 4x memory for edge labels (char vs u8).
-
-### Runtime Dictionary Updates
-
-The **DynamicDawg** backend supports **thread-safe runtime updates**:
+Support runtime modifications with thread-safe operations:
 
 ```rust
 use liblevenshtein::prelude::*;
 
-// Create dictionary with runtime update support
-let dict = DynamicDawg::from_terms(vec!["cat", "dog"]);
-let transducer = Transducer::new(dict.clone(), Algorithm::Standard);
+let dict = DynamicDawg::new();
+dict.insert("initial");
 
-// Insert new terms at runtime
-dict.insert("cot");
-dict.insert("bat");
+// Thread-safe modifications
+dict.insert("added");
+dict.remove("initial");
 
-// Queries immediately see the new terms
-let results: Vec<_> = transducer.query("cot", 1).collect();
-// Results: ["cat", "cot"]
-
-// Remove terms
-dict.remove("dog");
+// Query immediately sees changes
+assert!(dict.contains("added"));
+assert!(!dict.contains("initial"));
 ```
 
-**Thread Safety**: The dictionary uses `RwLock` for interior mutability:
-- Multiple concurrent queries are allowed (read locks)
-- Modifications acquire exclusive write locks
-- Active `Transducer` instances automatically see updates
+**Thread Safety & Non-Blocking Semantics**:
+- **Queries are lock-free**: Readers never block, even during concurrent writes
+- **Atomic modifications**: Insert and remove are single atomic operations
+- **No reader starvation**: Writers don't block pending reads
+- **Zero external synchronization**: Share via `Arc<DynamicDawg>` without mutexes
 
-**Performance Optimizations**: Configure Bloom filter and auto-minimization for better performance:
+#### Optimizations for DynamicDawg Variants
+
+**Bloom Filter**: Pre-filter transitions to skip impossible branches:
 
 ```rust
 use liblevenshtein::prelude::*;
 
-// Enable Bloom filter for 10x faster contains() operations
+// Enable Bloom filter with expected capacity
 let dict = DynamicDawg::with_config(
     f32::INFINITY,  // Auto-minimize threshold (disabled)
-    Some(10000),    // Bloom filter capacity (enabled)
-);
-
-// Or enable auto-minimization for bulk insertions (30% faster for large datasets)
-let dict = DynamicDawg::with_config(
-    1.5,            // Auto-minimize at 50% growth
-    None,           // Bloom filter (disabled)
-);
-
-// Or enable both optimizations
-let dict = DynamicDawg::with_config(
-    1.5,            // Auto-minimize threshold
     Some(10000),    // Bloom filter capacity
 );
+// Result: 88-93% faster contains() operations
 ```
 
-**Optimization Guide**:
-- **Bloom Filter**: Use when frequently checking if terms exist (88-93% faster `contains()`)
-- **Auto-Minimization**: Use for bulk insertions of 1000+ terms (30% faster, prevents memory bloat)
-- Default: Both disabled for maximum flexibility and minimal overhead on small datasets
-
-**Note**: PathMapDictionary also supports runtime updates but requires the optional `pathmap-backend` feature.
-
-See [`examples/dynamic_dictionary.rs`](examples/dynamic_dictionary.rs) for a complete demonstration.
-
-### Value-Mapped Dictionaries
-
-Store metadata with dictionary terms using **value-mapped dictionaries**:
+**SIMD Acceleration**: Vectorized transition lookups with AVX2/SSE4.1:
 
 ```rust
-use liblevenshtein::prelude::*;
-use std::collections::HashSet;
-
-// DynamicDawg with integer values (e.g., word frequencies)
-let dict: DynamicDawg<u32> = DynamicDawg::new();
-dict.insert_with_value("apple", 42);
-dict.insert_with_value("apply", 17);
-
-// Retrieve values
-assert_eq!(dict.get_value("apple"), Some(42));
-assert_eq!(dict.get_value("banana"), None);
-
-// Use with FuzzyMap for fuzzy lookups with values
-let map = FuzzyMap::new(dict, Algorithm::Standard);
-let results = map.get_with_distance("aple", 1);  // fuzzy lookup
-// Results include both terms and their values
-
-// Or use FuzzyMultiMap to aggregate multiple values
-let dict: DynamicDawg<HashSet<u32>> = DynamicDawg::new();
-dict.insert_with_value("test", HashSet::from([1, 2, 3]));
+// Enable with feature flag
+// Cargo.toml: features = ["simd"]
+// Provides 20-64% faster queries automatically
 ```
 
-**Supported backends**:
-- `DynamicDawg<V>` - Dynamic dictionary with values of type `V`
-- `DynamicDawgChar<V>` - Character-level dynamic dictionary with Unicode support
-- `PathMapDictionary<V>` - PathMap with values (requires `pathmap-backend`)
-- `PathMapDictionaryChar<V>` - Character-level PathMap with values
+#### PathMap Backend (Alternative Dynamic Dictionary)
 
-**Common value types**:
-- `u32` / `u64` - Frequencies, scores, IDs
-- `HashSet<T>` - Multiple associations per term
-- `Vec<T>` - Ordered collections
-- Any type implementing `Clone + Send + Sync + 'static`
-
-**Integration with contextual completion**:
-```rust
-use liblevenshtein::prelude::*;
-
-// Use DynamicDawg backend for contextual completion
-let dict: DynamicDawg<Vec<u32>> = DynamicDawg::new();
-let engine = ContextualCompletionEngine::with_dictionary(
-    dict,
-    Algorithm::Standard
-);
-
-// Insert terms with context IDs
-let ctx = engine.create_root_context();
-engine.insert_finalized(ctx, "variable", vec![ctx]);
-```
-
-### Ordered Results
-
-Get results sorted by edit distance first, then alphabetically:
+For workloads with frequent updates, the PathMap backend offers an alternative:
 
 ```rust
-use liblevenshtein::prelude::*;
+// Requires: features = ["pathmap-backend"]
+use liblevenshtein::dictionary::pathmap_char::PathMapDictionaryChar;
 
-let dict = DoubleArrayTrie::from_terms(vec!["apple", "apply", "ape", "app"]);
-let transducer = Transducer::new(dict, Algorithm::Standard);
-
-// Results ordered by distance, then alphabetically
-for candidate in transducer.query_ordered("aple", 1) {
-    println!("{}: {}", candidate.term, candidate.distance);
-}
+let dict = PathMapDictionaryChar::new();
+dict.insert("日本語");  // UTF-8 compliant
+dict.insert("한국어");
 ```
 
-**Output:**
-```
-ape: 1
-apple: 1
-apply: 1
-```
+### Prefix Search (Command Completion)
 
-### Filtering and Prefix Matching
-
-Filter results and enable prefix matching for code completion:
-
-```rust
-use liblevenshtein::prelude::*;
-
-let dict = DoubleArrayTrie::from_terms(vec![
-    "getValue", "getVariable", "setValue", "setVariable"
-]);
-let transducer = Transducer::new(dict, Algorithm::Standard);
-
-// Prefix matching with filtering
-for candidate in transducer
-    .query_ordered("getVal", 1)
-    .prefix()  // Match terms starting with query ± edits
-    .filter(|c| c.term.starts_with("get"))  // Only getter methods
-{
-    println!("{}: {}", candidate.term, candidate.distance);
-}
-```
-
-**Output:**
-```
-getValue: 0
-getVariable: 1
-```
-
-See [`examples/code_completion_demo.rs`](examples/code_completion_demo.rs) and [`examples/contextual_filtering_optimization.rs`](examples/contextual_filtering_optimization.rs) for more examples.
-
-### Dictionary Backend Comparison
-
-The library provides multiple dictionary backends optimized for different use cases:
-
-| Backend | Best For | Performance Highlights |
-|---------|----------|----------------------|
-| **DoubleArrayTrie** | **General use** (recommended) | 3x faster queries, 30x faster contains, 8 bytes/state |
-| **DoubleArrayTrieChar** | Unicode text, character-level distances | Correct Unicode semantics, ~5% overhead |
-| **PathMap** | Dynamic updates, runtime modifications | Thread-safe insert/delete, fastest dynamic backend |
-| **PathMapChar** | Unicode + dynamic updates | Character-level distances with runtime modifications |
-| **DAWG** | Static dictionaries, moderate size | Good balance of speed and memory |
-| **OptimizedDawg** | Static dictionaries, construction speed | 20-25% faster construction than DAWG |
-| **DynamicDawg** | Occasional modifications | Best fuzzy matching for dynamic use |
-| **DynamicDawgChar** | Unicode + occasional modifications | Character-level with insert/remove, ~5% overhead |
-| **SuffixAutomaton** | Substring/infix matching | Find patterns anywhere in text |
-
-**Performance Comparison** (10,000 words):
-
-```
-Construction:     DAT: 3.2ms   PathMap: 3.5ms   DAWG: 7.2ms
-Exact Match:      DAT: 6.6µs   DAWG: 19.8µs     PathMap: 71.1µs
-Contains (100):   DAT: 0.22µs  DAWG: 6.7µs      PathMap: 132µs
-Distance 1:       DAT: 12.9µs  DAWG: 319µs      PathMap: 888µs
-Distance 2:       DAT: 16.3µs  DAWG: 2,150µs    PathMap: 5,919µs
-Memory/state:     DAT: ~8B     OptDawg: ~13B    DAWG: ~32B
-```
-
-**Why DoubleArrayTrie is Fastest:**
-- **O(1) transitions** - Direct array indexing vs pointer chasing
-- **Excellent cache locality** - Sequential memory layout minimizes cache misses
-- **Minimal memory footprint** - ~8 bytes per state (vs 32 bytes for DAWG)
-- **Perfect for parallel traversal** - Optimal implementation of dictionary automaton A^D from paper
-
-All backends implement the dictionary automaton A^D that is traversed in parallel with the Levenshtein automaton LEV_n(W) during queries. The choice of backend affects the constant factors in the O(|D|) query complexity, with DoubleArrayTrie providing the smallest constants due to hardware-friendly memory access patterns.
-
-**Prefix Matching Support**: All backends except `SuffixAutomaton` support efficient prefix matching through the `.prefix()` method, making them ideal for code completion and autocomplete applications.
-
-**When to use each backend**:
-- **Static dictionaries (ASCII/Latin-1)** → `DoubleArrayTrie` (best overall performance, default choice)
-- **Static dictionaries (Unicode)** → `DoubleArrayTrieChar` (correct character-level distances)
-- **Dynamic updates (ASCII/Latin-1)** → `DynamicDawg` (thread-safe runtime modifications)
-- **Dynamic updates (Unicode)** → `DynamicDawgChar` (character-level with insert/remove, best fuzzy matching)
-- **Dynamic updates (Unicode, frequent)** → `PathMapChar` (alternative, requires `pathmap-backend`)
-- **Substring search** → `SuffixAutomaton` (finds patterns anywhere in text)
-- **Memory-constrained** → `DoubleArrayTrie` (8 bytes/state, most efficient)
-- **Multi-language apps** → Character-level variants (`*Char`) for correct Unicode semantics
-
-### Serialization and Compression
-
-Save and load dictionaries with optional compression:
-
-```rust
-use liblevenshtein::prelude::*;
-use std::fs::File;
-
-let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
-
-// Save with compression (85% file size reduction)
-let file = File::create("dict.bin.gz")?;
-GzipSerializer::<BincodeSerializer>::serialize(&dict, file)?;
-
-// Load compressed dictionary
-let file = File::open("dict.bin.gz")?;
-let dict: DoubleArrayTrie = GzipSerializer::<BincodeSerializer>::deserialize(file)?;
-
-// Or use optimized Protobuf formats
-let file = File::create("dict.pb")?;
-OptimizedProtobufSerializer::serialize(&dict, file)?;  // 62% smaller than standard
-```
-
-Requires `serialization` and `compression` features:
-
-```toml
-[dependencies]
-liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", tag = "v0.8.0", features = ["serialization", "compression"] }
-```
-
-### CLI Tool
-
-The library includes a full-featured command-line tool with interactive REPL:
-
-```bash
-# Install with CLI support (from GitHub)
-cargo install --git https://github.com/universal-automata/liblevenshtein-rust --tag v0.8.0 \
-  --features cli,compression,protobuf liblevenshtein
-
-# Or download pre-built binaries from GitHub Releases
-
-# Query a dictionary
-liblevenshtein query "test" --dict /usr/share/dict/words -m 2 -s
-
-# Convert between formats with compression
-liblevenshtein convert words.txt words.bin.gz \
-  --to-format bincode-gz --to-backend path-map
-
-# Launch interactive REPL
-liblevenshtein repl --dict words.bin.gz
-```
-
-The CLI auto-detects formats from file extensions and supports:
-- **Formats**: text, bincode, json, protobuf (plus `-gz` compressed variants)
-- **Backends**: path-map, dawg, dynamic-dawg
-- **Operations**: query, insert, delete, convert, save, info
-
-See [`docs/developer-guide/building.md`](docs/developer-guide/building.md) for comprehensive CLI documentation.
-
-### FuzzyMultiMap - Aggregating Values
-
-The `FuzzyMultiMap` enables fuzzy lookup of associated values, aggregating results from all matching terms:
-
-```rust
-use liblevenshtein::prelude::*;
-use liblevenshtein::cache::multimap::FuzzyMultiMap;
-use std::collections::HashSet;
-
-// Create a dictionary with values (e.g., user IDs for each name)
-let dict = PathMapDictionary::from_terms_with_values([
-    ("alice", HashSet::from([101, 102])),
-    ("alicia", HashSet::from([103])),
-    ("bob", HashSet::from([201])),
-    ("robert", HashSet::from([202, 203])),
-]);
-
-// Create fuzzy multimap
-let fuzzy_map = FuzzyMultiMap::new(dict, Algorithm::Standard);
-
-// Query "alise" - matches both "alice" and "alicia" at distance 1
-let user_ids = fuzzy_map.query("alise", 1).unwrap();
-// Returns: HashSet {101, 102, 103} - union of all matching values
-
-// Practical use case: find all IDs for fuzzy name search
-let ids = fuzzy_map.query("rob", 2).unwrap();
-// Returns IDs for both "bob" (distance 1) and "robert" (distance 2)
-```
-
-**Supported collection types**:
-- `HashSet<T>` - Union of all matching sets
-- `BTreeSet<T>` - Union of all matching sets
-- `Vec<T>` - Concatenation of all matching vectors
-
-**Use cases**:
-- User ID lookup with fuzzy name matching
-- Tag aggregation across similar terms
-- Multi-valued dictionary queries with error tolerance
-
-### Contextual Code Completion (Zipper-Based)
-
-The `ContextualCompletionEngine` provides hierarchical scope-aware code completion with draft state management:
-
-```rust
-use liblevenshtein::contextual::ContextualCompletionEngine;
-use liblevenshtein::transducer::Algorithm;
-
-// Create engine (thread-safe, shareable with Arc)
-let engine = ContextualCompletionEngine::with_algorithm(Algorithm::Standard);
-
-// Create hierarchical scopes (global → function → block)
-let global = engine.create_root_context(0);
-let function = engine.create_child_context(1, global).unwrap();
-let block = engine.create_child_context(2, function).unwrap();
-
-// Add finalized terms to each scope
-engine.finalize_direct(global, "std::vector").unwrap();
-engine.finalize_direct(global, "std::string").unwrap();
-engine.finalize_direct(function, "parameter").unwrap();
-engine.finalize_direct(function, "result").unwrap();
-
-// Incremental typing in block scope (draft state)
-engine.insert_str(block, "local_var").unwrap();
-
-// Query completions - sees all visible scopes (block + function + global)
-let completions = engine.complete(block, "par", 1);
-for comp in completions {
-    println!("{} (distance: {}, draft: {}, from context: {:?})",
-             comp.term, comp.distance, comp.is_draft, comp.contexts);
-}
-// Output: parameter (distance: 0, draft: false, from context: [1])
-
-// Checkpoint/undo support for editor integration
-engine.checkpoint(block).unwrap();
-engine.insert_str(block, "iable").unwrap();  // Now: "local_variable"
-engine.undo(block).unwrap();  // Restore to: "local_var"
-
-// Finalize draft to add to dictionary
-let term = engine.finalize(block).unwrap();  // Returns "local_var"
-assert!(engine.has_term("local_var"));
-
-// Query now sees finalized term
-let results = engine.complete(block, "loc", 1);
-// Returns: local_var (now finalized, visible in this context)
-```
-
-**Features**:
-- **Hierarchical visibility**: Child contexts see parent terms (global → function → block)
-- **Draft state**: Incremental typing without polluting finalized dictionary
-- **Checkpoint/undo**: Editor-friendly state management
-- **Thread-safe**: Share engine across threads with `Arc`
-- **Mixed queries**: Search both drafts and finalized terms simultaneously
-
-**Performance** (sub-millisecond for interactive use):
-- Insert character: ~4 µs
-- Checkpoint: ~116 ns
-- Query (500 terms, distance 1): ~11.5 µs
-- Query (distance 2): ~309 µs
-
-**Use cases**:
-- LSP servers with multi-file scope awareness
-- Code editors with context-sensitive completion
-- REPL environments with session-scoped symbols
-- Any application requiring hierarchical fuzzy matching
-
-See [`examples/contextual_completion.rs`](examples/contextual_completion.rs) for a complete example.
-
-### Prefix-Based Iteration (PrefixZipper)
-
-For efficient autocomplete and code completion scenarios, use the `PrefixZipper` trait to navigate directly to a prefix and iterate only matching terms. This is **5-10× faster** than full dictionary iteration with filtering when the prefix matches a small subset of terms.
-
-**Performance**: O(k) navigation + O(m) iteration, where k = prefix length, m = matching terms.
+Navigate to a prefix and iterate only matching terms:
 
 ```rust
 use liblevenshtein::prelude::*;
 use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
 use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
 
-let terms = vec!["process", "processUser", "produce", "product", "apple"];
-let dict = DoubleArrayTrie::from_terms(terms.iter());
-
-// Create zipper and navigate to prefix
+let dict = DoubleArrayTrie::from_terms(vec!["getValue", "getVariable", "setValue"]);
 let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
-if let Some(iter) = zipper.with_prefix(b"proc") {
-    for (path, _zipper) in iter {
-        let term = String::from_utf8(path).unwrap();
-        println!("Found: {}", term);
-        // Prints only: "process" and "processUser" (not all 5 terms!)
-    }
-}
-```
 
-**Unicode support** (character-level):
-
-```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
-use liblevenshtein::dictionary::double_array_trie_char_zipper::DoubleArrayTrieCharZipper;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
-
-let terms = vec!["café", "cafétéria", "naïve"];
-let dict = DoubleArrayTrieChar::from_terms(terms.iter());
-
-let zipper = DoubleArrayTrieCharZipper::new_from_dict(&dict);
-let prefix: Vec<char> = "caf".chars().collect();
-
-if let Some(iter) = zipper.with_prefix(&prefix) {
+if let Some(iter) = zipper.with_prefix(b"get") {
     for (path, _) in iter {
-        let term: String = path.iter().collect();
+        let term = String::from_utf8(path).expect("valid UTF-8");
         println!("Found: {}", term);
+        // Output: getValue, getVariable
     }
 }
 ```
 
-**Valued dictionaries** (for metadata like scope IDs, frequencies, etc.):
+### Substring/Suffix Search
+
+Find patterns anywhere within terms:
 
 ```rust
-use liblevenshtein::dictionary::prefix_zipper::ValuedPrefixZipper;
+use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
 
-let dict = DoubleArrayTrie::from_terms_with_values(
-    vec![("cat", 1), ("cats", 2), ("dog", 3)].into_iter()
-);
+let sa = SuffixAutomaton::from_text("hello world");
 
-let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
-if let Some(iter) = zipper.with_prefix_values(b"cat") {
-    for (path, value) in iter {
-        let term = String::from_utf8(path).unwrap();
-        println!("{} -> {}", term, value);
-        // Prints: "cat -> 1", "cats -> 2"
-    }
-}
+// Check if substring exists
+assert!(sa.contains_substring("llo wo"));
+assert!(!sa.contains_substring("xyz"));
 ```
 
-**Use cases**:
-- Code completion / autocomplete
-- Prefix search in large dictionaries
-- Pattern-aware completion (LSP servers)
-- Any scenario requiring "terms starting with X"
+### SCDAWG (Symmetric Compact DAWG)
 
-**Backend support**: All dictionary backends support `PrefixZipper` (DoubleArrayTrie, DynamicDawg, PathMap, etc.) through blanket trait implementation.
+A **Symmetric Compact DAWG** (Blumer et al. 1987, Inenaga et al. 2005) indexes *all* substrings of a text and supports bidirectional traversal via left extension edges.
 
-### Advanced: Direct Zipper API
-
-For fine-grained control over traversal, use the zipper API directly:
+**Key properties:**
+- O(|pattern|) substring search
+- Bidirectional traversal for extending matches in both directions
+- Required backend for the [WallBreaker algorithm](#wallbreaker-algorithm-large-error-bounds)
+- Space-efficient: O(n) nodes for text of length n
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
-use liblevenshtein::transducer::{AutomatonZipper, Algorithm, StatePool};
-use liblevenshtein::transducer::intersection_zipper::IntersectionZipper;
+use liblevenshtein::dictionary::scdawg::Scdawg;           // ASCII
+use liblevenshtein::dictionary::scdawg_char::ScdawgChar;  // UTF-8
 
-// Create dictionary
-let dict = PathMapDictionary::<()>::new();
-dict.insert("cat");
-dict.insert("cats");
-dict.insert("dog");
+// ASCII version (byte-level)
+let scdawg = Scdawg::from_text("mississippi");
+assert!(scdawg.contains_substring("issi"));
 
-// Create zippers
-let dict_zipper = PathMapZipper::new_from_dict(&dict);
-let auto_zipper = AutomatonZipper::new("cot".as_bytes(), 1, Algorithm::Standard);
+// UTF-8 version (character-level) - use for non-ASCII text
+let scdawg_utf8 = ScdawgChar::from_text("北京欢迎你");
+assert!(scdawg_utf8.contains_substring("欢迎"));  // 2 characters, not 6 bytes
 
-// Intersect dictionary and automaton
-let intersection = IntersectionZipper::new(dict_zipper, auto_zipper);
+// Bidirectional navigation (for WallBreaker)
+if let Some(state) = scdawg.follow_substring("iss") {
+    // Extend left: what characters precede "iss"?
+    let left_extensions = scdawg.left_extensions(state);
+    // Returns: ['m', 's'] (from "miss" and "siss")
 
-// Manual traversal
-let mut pool = StatePool::new();
-for (label, child) in intersection.children(&mut pool) {
-    if child.is_match() {
-        println!("Match: {} (distance: {})",
-                 child.term(),
-                 child.distance().unwrap());
-    }
-
-    // Recurse into child for custom traversal algorithms
-    for (_, grandchild) in child.children(&mut pool) {
-        // Custom logic here...
-    }
+    // Extend right: what characters follow "iss"?
+    let right_extensions = scdawg.right_extensions(state);
+    // Returns: ['i'] (from "issi")
 }
 ```
 
-**When to use**:
-- Custom traversal algorithms (DFS, A*, beam search)
-- Early termination with custom heuristics
-- Integration with external data structures
-- Research and experimentation
+**When to use SCDAWG over SuffixAutomaton:**
+| Feature | SuffixAutomaton | SCDAWG |
+|---------|-----------------|--------|
+| Substring search | O(\|pattern\|) | O(\|pattern\|) |
+| Bidirectional extension | No | Yes |
+| WallBreaker support | No | Yes |
+| Memory | Lower | Slightly higher (sext links) |
 
-**Note**: Most users should use `Transducer::query()` or `ContextualCompletionEngine` instead. The zipper API is lower-level and requires manual state management.
+### Persistent/Memory-Mapped Dictionaries
 
-### Value-Filtered Queries
+Zero-copy disk access for large dictionaries (requires `persistent-artrie` feature):
 
-For performance optimization when querying dictionaries with scoped values:
+```rust
+use liblevenshtein::dictionary::persistent_artrie::PersistentARTrie;           // ASCII
+use liblevenshtein::dictionary::persistent_artrie_char::PersistentARTrieChar;  // UTF-8
+
+// Memory-map from file (zero-copy) - ASCII version
+let dict = PersistentARTrie::open("dictionary.dat").expect("failed to open");
+
+// UTF-8 version for Unicode dictionaries
+let dict_utf8 = PersistentARTrieChar::open("unicode_dict.dat").expect("failed to open");
+
+// Query without loading entire file into memory
+let transducer = Transducer::new(dict, Algorithm::Standard);
+```
+
+### Value-Mapped Dictionaries
+
+Store metadata with each term:
 
 ```rust
 use liblevenshtein::prelude::*;
-use std::collections::HashSet;
 
-// Dictionary with scope IDs
-let dict = PathMapDictionary::from_terms_with_values([
-    ("global_var", 0),      // Scope 0 (global)
-    ("function_param", 1),  // Scope 1 (function)
-    ("local_var", 2),       // Scope 2 (block)
-]);
+// Store word frequencies
+let dict: DynamicDawg<u32> = DynamicDawg::new();
+dict.insert_with_value("apple", 1500);
+dict.insert_with_value("apply", 850);
 
-let transducer = Transducer::new(dict, Algorithm::Standard);
+// Retrieve values
+assert_eq!(dict.get_value("apple"), Some(1500));
 
-// Query only specific scopes (e.g., visible from scope 1)
-let visible_scopes = HashSet::from([0, 1]);  // global + function
-for term in transducer.query_by_value_set("param", 1, &visible_scopes) {
-    println!("{}", term);
+// Fuzzy lookup with values
+let map = FuzzyMap::new(dict, Algorithm::Standard);
+let results = map.get_with_distance("aple", 1);
+for (term, value, distance) in results {
+    println!("{}: {} (distance {})", term, value, distance);
 }
-// Output: function_param (scope 1 is visible)
-// Does NOT return: local_var (scope 2 not in visible set)
-
-// Or use custom predicate
-for term in transducer.query_filtered("var", 1, |scope_id| *scope_id <= 1) {
-    println!("{}", term);
-}
-// Returns: global_var, function_param (scopes 0, 1)
 ```
 
-**Performance benefit**: Filtering by value during traversal is **significantly faster** than post-filtering results, especially for large dictionaries with many out-of-scope matches.
+### FuzzyMultiMap (Value Aggregation)
 
-**Use cases**:
-- Scope-based code completion (only show visible symbols)
-- Access control (filter by user permissions)
-- Multi-tenancy (filter by tenant ID)
+Aggregate values from multiple fuzzy-matched keys. Useful when multiple dictionary entries may match and you need all associated data.
 
-### Phonetic Rewrite Rules (Formally Verified)
-
-The `phonetic-rules` feature provides **mathematically verified** phonetic transformation rules for fuzzy matching. Compose phonetic NFAs with Levenshtein automata for approximate string matching without normalization.
-
-#### Compile-Time Macros
-
-Use `llre!` and `llev!` macros to compile patterns and rules at build time (NFA embedded in binary):
+| Collection Type | Aggregation |
+|-----------------|-------------|
+| `HashSet<T>` | Union of all sets |
+| `BTreeSet<T>` | Union of all sets |
+| `Vec<T>` | Concatenation |
 
 ```rust
-use liblevenshtein::{llre, llev, llre_file, llev_file};
+use std::collections::HashSet;
+use liblevenshtein::prelude::*;
+use liblevenshtein::cache::multimap::FuzzyMultiMap;
 
-// Compile regex pattern at build time - NFA embedded in binary
-let pattern = llre!(r"(ph|f)one");
-assert!(pattern.matches("phone"));
-assert!(pattern.matches("fone"));
+// Map terms to sets of document IDs
+let dict: DynamicDawgChar<HashSet<u32>> = DynamicDawgChar::new();
+dict.insert_with_value("color", HashSet::from([1, 2, 5]));
+dict.insert_with_value("colour", HashSet::from([3, 4]));
+dict.insert_with_value("colr", HashSet::from([6]));
 
-// Compile LLev rules at build time
-let rules = llev!(r#"
-    ph -> f;                      // phone → fone
-    gh -> / [:vowel:]_;           // night → nit (silent gh after vowel)
-    c -> s / _[:front_vowel:];    // city → sity
-"#);
+let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
 
-// Load from files (imports resolved at compile time)
-let phonetic = llre_file!("patterns/phonetic.llre");
-let english = llev_file!("rules/english.llev");
+// Query "colur" (distance 1) - matches "color" and "colour"
+// Result: union of {1,2,5} and {3,4} = {1,2,3,4,5}
+let doc_ids = fuzzy.query("colur", 1).expect("no matches");
 ```
 
-#### Composing NFAs with Levenshtein Automata
+Preserve match details with `query_with_distance`:
 
-Build fuzzy regex matchers by composing phonetic NFAs with Levenshtein automata:
+```rust
+// Get (matched_key, distance, values) tuples
+for (key, distance, doc_ids) in fuzzy.query_with_distance("colur", 1) {
+    println!("'{}' (distance {}): {:?}", key, distance, doc_ids);
+}
+// Output:
+//   'color' (distance 1): {1, 2, 5}
+//   'colour' (distance 1): {3, 4}
+```
+
+---
+
+## Levenshtein Automata
+
+### Algorithm Variants
+
+| Algorithm | Operations | Use Case |
+|-----------|-----------|----------|
+| **Standard** | Insert, delete, substitute | General fuzzy matching |
+| **Transposition** | + adjacent swaps | Typing errors (teh→the) |
+| **MergeAndSplit** | + two↔one character | OCR errors (rn→m, vv→w) |
+
+```rust
+use liblevenshtein::prelude::*;
+
+let dict = DoubleArrayTrie::from_terms(vec!["the", "them", "then"]);
+
+// Standard: "teh" → "the" costs 2 (delete h, insert h)
+let standard = Transducer::new(dict.clone(), Algorithm::Standard);
+
+// Transposition: "teh" → "the" costs 1 (swap e↔h)
+let transposition = Transducer::new(dict.clone(), Algorithm::Transposition);
+
+// MergeAndSplit: "rn" ↔ "m" costs 1
+let merge_split = Transducer::new(dict, Algorithm::MergeAndSplit);
+```
+
+### Query Types
+
+```rust
+use liblevenshtein::prelude::*;
+
+let dict = DoubleArrayTrie::from_terms(vec!["apple", "apply", "ape"]);
+let transducer = Transducer::new(dict, Algorithm::Standard);
+
+// Basic query - returns matching terms
+for term in transducer.query("aple", 1) {
+    println!("{}", term);
+}
+
+// With distances
+for c in transducer.query_with_distance("aple", 1) {
+    println!("{}: {}", c.term, c.distance);
+}
+
+// Ordered by distance, then alphabetically
+for c in transducer.query_ordered("aple", 1) {
+    println!("{}: {}", c.term, c.distance);
+}
+
+// Filtered by predicate
+for c in transducer.query_filtered("aple", 2, |v| *v > 100) {
+    println!("{}", c.term);
+}
+
+// Filtered by value set (optimized for scope visibility)
+use std::collections::HashSet;
+let visible_scopes: HashSet<u32> = [1, 2, 3].iter().cloned().collect();
+for c in transducer.query_by_value_set("func", 2, &visible_scopes) {
+    println!("{}", c.term);  // Only terms in scopes 1, 2, or 3
+}
+```
+
+---
+
+## Universal Automata (Restricted Substitutions)
+
+Universal Automata allow **restricted substitutions** where only specific character pairs can be substituted at zero cost.
+
+### SubstitutionPolicy
+
+```rust
+use liblevenshtein::transducer::substitution_policy::{
+    SubstitutionPolicy, Unrestricted, Restricted
+};
+use liblevenshtein::transducer::SubstitutionSet;
+
+// Unrestricted (default) - standard Levenshtein
+let unrestricted = Unrestricted;
+
+// Restricted - only explicit pairs allowed
+let mut set = SubstitutionSet::new();
+set.allow('c', 'k');  // c ↔ k costs 0
+set.allow('f', 'p');  // f ↔ p costs 0 (single char pairs only)
+let restricted = Restricted::new(&set);
+```
+
+### Pre-built Substitution Sets
+
+```rust
+use liblevenshtein::transducer::SubstitutionSet;
+
+// Phonetic confusions (f↔ph, c↔k, s↔z)
+let phonetic = SubstitutionSet::phonetic_basic();
+
+// QWERTY keyboard adjacency
+let keyboard = SubstitutionSet::keyboard_qwerty();
+
+// OCR visual similarity (0↔O, 1↔l↔I)
+let ocr = SubstitutionSet::ocr_friendly();
+
+// Leet speak (3↔e, 4↔a, 0↔o)
+let leet = SubstitutionSet::leet_speak();
+```
+
+### Unicode Substitutions
+
+```rust
+use liblevenshtein::transducer::substitution_policy::RestrictedChar;
+use liblevenshtein::transducer::SubstitutionSetChar;
+
+let mut set = SubstitutionSetChar::new();
+set.allow('é', 'e');  // Accent-insensitive
+set.allow('ñ', 'n');
+let policy = RestrictedChar::new(&set);
+```
+
+---
+
+## MSM Automata (Time Series)
+
+The **Move-Split-Merge (MSM)** metric provides similarity measurement for time series data.
+
+### Move-Split-Merge Operations
+
+| Operation | Description | Cost |
+|-----------|-------------|------|
+| **Move** | Change a value | \|change\| |
+| **Split** | Duplicate into two elements | c (configurable) |
+| **Merge** | Combine two equal elements | c (configurable) |
+
+```rust
+use liblevenshtein::wfst::msm::{MsmWfst, MsmWfstBuilder};
+use liblevenshtein::time_series::MsmConfig;
+
+let query = vec![1.0, 2.0, 3.0];
+let target = vec![1.0, 2.0, 3.0];
+
+let wfst = MsmWfstBuilder::new()
+    .query(&query)
+    .msm_config(MsmConfig::new(1.0))  // Split/merge cost
+    .max_cost(10.0)
+    .add_target(0, &target)
+    .build()
+    .expect("build failed");
+```
+
+### Adaptive MSM (Online Learning)
+
+```rust
+use liblevenshtein::wfst::msm::{AdaptiveMsm, AdaptiveMsmConfig};
+
+let config = AdaptiveMsmConfig::default()
+    .with_learning_rate(0.1)
+    .with_initial_cost(1.0);
+
+let mut adaptive = AdaptiveMsm::new(config);
+
+// Update parameters based on feedback
+adaptive.update_from_match(query_series, matched_series);
+```
+
+---
+
+## Weighted Automata
+
+Weighted automata support **variable operation costs** for context-sensitive matching.
+
+### Custom Operation Costs
+
+```rust
+use liblevenshtein::transducer::OperationCosts;
+
+let costs = OperationCosts::new()
+    .with_insert_cost(1.0)
+    .with_delete_cost(1.0)
+    .with_substitute_cost(1.5)     // Substitution costs more
+    .with_transpose_cost(0.5);     // Transposition costs less
+```
+
+### Generalized Automata
+
+```rust
+use liblevenshtein::wfst::GeneralizedWfst;
+
+let wfst = GeneralizedWfst::builder()
+    .operation_costs(costs)
+    .dictionary(&dict)
+    .query("example")
+    .max_cost(3.0)
+    .build();
+```
+
+---
+
+## WallBreaker Algorithm (Large Error Bounds)
+
+Traditional Levenshtein automata suffer from the **wall effect**: the first *b* steps must explore all prefixes of length ≤ *b*, regardless of the actual matches. For large error bounds (e.g., *k* = 16), this becomes prohibitively expensive.
+
+**WallBreaker** overcomes this by using the **pigeonhole principle**: if a pattern of length *m* matches with at most *k* errors, at least one piece of the pattern must match exactly when split into *p* pieces.
+
+### How It Works
+
+1. **Split** the query into *p* pieces (number depends on algorithm)
+2. **Find exact substring matches** using SCDAWG in O(|piece|) time
+3. **Extend bidirectionally** from each match to verify within error bound
+4. **Merge results** across all piece matches
+
+### Piece Counts by Algorithm
+
+The minimum number of pieces required (formally verified in Coq):
+
+| Algorithm | Pieces Required | Reason |
+|-----------|-----------------|--------|
+| **Standard** | k + 1 | Each error affects at most one piece |
+| **Transposition** | 2k + 1 | Swaps can affect adjacent pieces |
+| **MergeAndSplit** | 2k + 1 | Merge/split can span piece boundaries |
+
+### Performance
+
+For a 750,000-word dictionary with 100-character patterns and 16 errors:
+
+| Approach | Time |
+|----------|------|
+| Traditional automaton | ~500ms |
+| WallBreaker | ~0.088ms |
+| **Speedup** | **5,600x** |
+
+### Usage
+
+```rust
+use liblevenshtein::wallbreaker::{WallBreaker, WallBreakerConfig};
+use liblevenshtein::dictionary::scdawg::Scdawg;
+use liblevenshtein::transducer::Algorithm;
+
+// Build SCDAWG from dictionary (required for WallBreaker)
+let scdawg = Scdawg::from_terms(dictionary_terms);
+
+let config = WallBreakerConfig::new()
+    .algorithm(Algorithm::Standard)
+    .max_distance(16);
+
+let wallbreaker = WallBreaker::new(scdawg, config);
+
+// Query with large error bound - fast!
+for candidate in wallbreaker.query("misspelled_query_term") {
+    println!("{}: distance {}", candidate.term, candidate.distance);
+}
+```
+
+### WallBreakerWfst (WFST Integration)
+
+For composition with language models:
+
+```rust
+use liblevenshtein::wfst::{WallBreakerWfst, WallBreakerWfstBuilder};
+
+let wfst = WallBreakerWfstBuilder::new()
+    .scdawg(&scdawg)
+    .query("example_query")
+    .max_distance(10)
+    .build()
+    .expect("build failed");
+
+// Compose with n-gram language model
+// let composed = compose(wfst, language_model);
+```
+
+### When to Use WallBreaker
+
+| Scenario | Recommendation |
+|----------|----------------|
+| Short queries, small *k* (≤ 3) | Standard transducer (simpler) |
+| Long queries, large *k* (≥ 5) | WallBreaker (much faster) |
+| Pattern length > 50, *k* > 10 | WallBreaker (essential) |
+
+---
+
+## LLev Phonetic Rules
+
+The `.llev` format defines phonetic rewrite rules with metadata and context conditions.
+
+### Rule File Format
+
+```text
+@name "English Phonetic Rules"
+@version "1.0"
+
+# Simple substitution
+ph -> f;                          # phone → fone
+
+# Context-dependent (after vowel)
+gh -> / [:vowel:]_;               # night → nit
+
+# Before specific characters
+c -> s / _[:front_vowel:];        # city → sity
+```
+
+### Complete Syntax Specification
+
+**Case Sensitivity:** LLev is **case-insensitive** by default (phonetic rules match sounds, not spelling). Use `(?c:pattern)` or `(?-i:pattern)` for case-sensitive matching.
+
+**File Metadata Directives:**
+
+```text
+@name "English Phonetic Rules"    # Rule file name
+@version "1.0"                    # Version string
+@author "John Doe"                # Author attribution
+@description "Base phonetic..."   # Description text
+@include "common.llev"            # Include another rule file
+@define VOWEL = [aeiouAEIOU]      # Define reusable symbol (UPPERCASE)
+```
+
+**Rule Metadata Blocks:**
+
+```text
+[id: 1, name: "ph to f", weight: 0.0, group: orthography, enabled: true, ipa: "/f/"]
+ph -> f;
+
+[id: 20, name: "soft c", weight: 0.15, group: consonants]
+c -> s / _$FRONT_VOWEL;
+```
+
+| Metadata Key | Description |
+|--------------|-------------|
+| `id` | Unique integer identifier |
+| `name` | Human-readable rule name |
+| `weight` | Cost/priority (0.0 = exact, higher = less likely) |
+| `group` | Organizational category |
+| `enabled` | Boolean to enable/disable rule |
+| `ipa` | IPA transcription: `/f/` phonemic, `[f]` phonetic |
+
+**Rule Syntax:**
+
+| Form | Description |
+|------|-------------|
+| `pattern -> replacement;` | Simple replacement |
+| `pattern -> replacement / context;` | Conditional replacement |
+| `pattern -> / context;` | Deletion (empty replacement) |
+
+**Pattern Elements:**
+
+| Syntax | Description |
+|--------|-------------|
+| `.` | Any single character (wildcard) |
+| `[aeiou]` | Character class |
+| `[^aeiou]` | Negated character class |
+| `[a-z]` | Character range |
+| `[:VOWEL:]` | Named character class |
+| `[:VOWEL sound:]` | Feature bundle (intersection) |
+| `[:!nasal voiced:]` | Negated feature in bundle |
+| `$SYMBOL` | Reference defined symbol |
+| `(ph\|f)` | Alternation |
+| `*`, `+`, `?` | Quantifiers (zero+, one+, optional) |
+| `{n}`, `{n,m}` | Repetition |
+| `(?c:...)` | Case-sensitive group |
+
+**Phonetic Shortcuts:**
+
+| Shortcut | Matches | Negated |
+|----------|---------|---------|
+| `\v` | Vowel | `\V` |
+| `\c` | Consonant | `\C` |
+| `\f` | Front vowel | `\F` |
+| `\k` | Back vowel | `\K` |
+| `\h` | High vowel | `\H` |
+| `\l` | Low vowel | `\L` |
+| `\m` | Mid vowel | `\M` |
+| `\p` | Stop/plosive | `\P` |
+| `\e` | Fricative | `\E` |
+| `\a` | Affricate | `\A` |
+| `\z` | Nasal | `\Z` |
+| `\q` | Liquid | `\Q` |
+| `\g` | Glide | `\G` |
+| `\o` | Voiced | `\O` |
+
+**Context Operators:**
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `_` | Match position marker | `[:vowel:]_` = after vowel |
+| `#` | Word boundary | `#_` = word start, `_#` = word end |
+| `&` | AND (both must match) | `[:voiced:]_&_[:vowel:]` |
+| `\|` | OR (either matches) | `#_\|[:vowel:]_` |
+| `!` | NOT (negation) | `![:nasal:]_` = not after nasal |
+
+**Syllable Conditions:**
+
+```text
+gh -> / [:vowel:]_ if not initial_syllable;   # Silent gh except word-initial
+e -> / _# if final_syllable;                   # Drop final silent e
+a -> æ / _ if monosyllable;                    # Short a in monosyllables
+y -> i / _# if polysyllable;                   # Y to I in polysyllables
+```
+
+| Condition | Description |
+|-----------|-------------|
+| `if monosyllable` | Single-syllable word |
+| `if polysyllable` | Multi-syllable word |
+| `if open_syllable` | Syllable ends with vowel |
+| `if closed_syllable` | Syllable ends with consonant |
+| `if initial_syllable` | In first syllable |
+| `if final_syllable` | In last syllable |
+
+### Built-in Language Support
+
+**50 languages** with pre-compiled phonetic rules (Rust modules):
+
+| Language Family | Languages |
+|-----------------|-----------|
+| **Romance** | Spanish, Italian, French, Portuguese, Romanian, Catalan |
+| **Germanic** | English, German, Dutch, Swedish, Norwegian, Danish, Icelandic |
+| **Slavic** | Russian, Polish, Ukrainian, Czech, Slovak, Croatian, Serbian, Bulgarian, Belarusian |
+| **Celtic** | Welsh, Irish |
+| **Indic** | Hindi, Urdu, Marathi, Bengali, Gujarati, Telugu, Tamil, Punjabi |
+| **East Asian** | Chinese, Japanese, Korean |
+| **Southeast Asian** | Vietnamese, Thai, Indonesian, Tagalog |
+| **Semitic** | Arabic, Hebrew, Maltese |
+| **Other** | Turkish, Hungarian, Finnish, Basque, Greek, Persian, Georgian, Armenian |
+
+**122 total languages** have `.llev` rule data files loadable at runtime, including: Afrikaans, Albanian, Amharic, Azerbaijani, Estonian, Hausa, Hawaiian, Kazakh, Khmer, Kurdish, Latvian, Lithuanian, Malay, Mongolian, Nepali, Pashto, Swahili, Uzbek, Yoruba, Zulu, and many more.
+
+```rust
+use liblevenshtein::phonetic::rules::{english, spanish, german};
+
+let english_rules = english::base();      // 62 rules
+let homophones = english::homophones();   // too/two→to
+let text_speak = english::text_speak();   // u→you, thx→thanks
+
+let spanish_rules = spanish::base();
+let german_rules = german::base();
+```
+
+### Loading and Applying Rules
+
+```rust
+use liblevenshtein::phonetic::llev::{parse_str, apply_rules_seq_char};
+
+let rules = parse_str(r#"
+    ph -> f;
+    gh -> / [:vowel:]_;
+"#).expect("parse failed");
+
+let normalized = apply_rules_seq_char(&rules.rules, "phone");
+// Result: "fone"
+```
+
+### Custom Rule Files
+
+```rust
+use liblevenshtein::phonetic::llev::parse_file;
+use std::path::Path;
+
+let rules = parse_file(Path::new("custom.llev")).expect("parse failed");
+```
+
+---
+
+## LLRE Fuzzy Regular Expressions
+
+The `.llre` format provides regex-style patterns with phonetic extensions.
+
+**Case Sensitivity:** LLRE is **case-sensitive** by default (standard regex behavior). Use `(?i)` or `(?i:pattern)` for case-insensitive matching.
+
+### Pattern Syntax
+
+**Wildcards and Quantifiers:**
+
+| Syntax | Description |
+|--------|-------------|
+| `.` | Any single character (wildcard) |
+| `*` | Zero or more |
+| `+` | One or more |
+| `?` | Optional |
+| `{n}` | Exactly n occurrences |
+| `{n,}` | At least n occurrences |
+| `{,m}` | No more than m occurrences |
+| `{n,m}` | n to m occurrences |
+
+**Anchors:**
+
+| Syntax | Description |
+|--------|-------------|
+| `^` | Start of line/input |
+| `$` | End of line/input |
+| `\A` | Absolute start of input |
+| `\Z` | End of input (allows trailing newline) |
+| `\z` | Strict end of input |
+| `#` | Word boundary |
+
+**Grouping and Alternation:**
+
+| Syntax | Description | Example |
+|--------|-------------|---------|
+| `(...)` | Capture group | `(ph\|f)one` |
+| `(?:...)` | Non-capturing group | `(?:un)?do` |
+| `(?<name>...)` | Named capture group | `(?<vowel>[aeiou])` |
+| `(?&name)` | Subroutine call/reference | `(?&vowel)` |
+| `a\|b` | Alternation | `cat\|dog` |
+
+**Feature Flags:**
+
+| Syntax | Description |
+|--------|-------------|
+| `(?i)` | Case insensitive (rest of pattern) |
+| `(?-i)` | Explicitly case sensitive |
+| `(?m)` | Multiline (^ $ match line boundaries) |
+| `(?-m)` | Disable multiline |
+| `(?s)` | Dotall (. matches newlines) |
+| `(?-s)` | Disable dotall |
+| `(?a)` | Accent insensitive |
+| `(?f)` | Feature-based phonetic matching |
+
+**Scoped Flags:**
+
+| Syntax | Description |
+|--------|-------------|
+| `(?i:pattern)` | Case insensitive group |
+| `(?a:pattern)` | Accent insensitive group |
+| `(?s:pattern)` | Dotall group |
+| `(?m:pattern)` | Multiline group |
+| `(?f:pattern)` | Feature-based group |
+| `(?ia:pattern)` | Combined flags |
+| `(?u:NFC)` | Unicode NFC normalization |
+| `(?u:NFD)` | Unicode NFD normalization |
+| `(?u:NFKC)` | Unicode NFKC normalization |
+| `(?u:NFKD)` | Unicode NFKD normalization |
+| `(?;N)` | Local Levenshtein distance limit (N edits) |
+
+**File-Level Flags (.llre files):**
+
+```text
+@flags multiline              # or @flags m
+@flags dotall                 # or @flags s
+@flags case_insensitive       # or @flags i or @flags ignorecase
+@flags unicode                # or @flags u
+@flags multiline, dotall, case_insensitive   # Multiple
+```
+
+**Phonetic Shortcuts:**
+
+| Shortcut | Matches | Negated |
+|----------|---------|---------|
+| `\v` | Vowel | `\V` |
+| `\c` | Consonant | `\C` |
+| `\f` | Front vowel | `\F` |
+| `\k` | Back vowel | `\K` |
+| `\h` | High vowel | `\H` |
+| `\l` | Low vowel | `\L` |
+| `\m` | Mid vowel | `\M` |
+| `\p` | Stop/plosive | `\P` |
+| `\e` | Fricative | `\E` |
+| `\a` | Affricate | `\A` (inside char class) |
+| `\z` | Nasal | `\Z` (inside char class) |
+| `\q` | Liquid | `\Q` |
+| `\g` | Glide | `\G` |
+| `\o` | Voiced | `\O` |
+
+**Character Classes:**
+
+| Syntax | Description | Example |
+|--------|-------------|---------|
+| `[abc]` | Character set | One of a, b, or c |
+| `[^abc]` | Negated set | Any char except a, b, c |
+| `[a-z]` | Range | a through z |
+| `[a-zA-Z0-9]` | Multiple ranges | Alphanumeric |
+| `[[:name:]]` | Named class in set | `[[:vowel:]]` |
+| `[:name:]` | Named class | See tables below |
+
+### Named Character Classes
+
+**Vowel Classes:**
+
+| Class | Description |
+|-------|-------------|
+| `[:vowel:]` | All vowels (a, e, i, o, u + IPA: ə, ɪ, ʊ, ɛ, ɔ, æ, ɑ, etc.) |
+| `[:front_vowel:]` | Front vowels (i, e, æ, ɪ, ɛ) |
+| `[:back_vowel:]` | Back vowels (o, u, ɔ, ʊ, ɑ) |
+| `[:high_vowel:]` | High/close vowels (i, u, ɪ, ʊ) |
+| `[:mid_vowel:]` | Mid vowels (e, o, ə, ɛ, ɔ) |
+| `[:low_vowel:]` | Low/open vowels (a, æ, ɑ, ɐ) |
+| `[:central_vowel:]` | Central vowels (ə, ɐ, ɨ, ʉ) |
+| `[:schwa:]` | Schwa (ə) |
+| `[:rounded:]` | Rounded vowels (o, u, ɔ, ʊ, y, ø) |
+| `[:unrounded:]` | Unrounded vowels (a, e, i, æ, ɛ, ɪ) |
+| `[:ascii_vowel:]` | ASCII vowels only (a, e, i, o, u) |
+| `[:ipa_vowel:]` | IPA vowel symbols only |
+
+**Consonant Classes:**
+
+| Class | Description |
+|-------|-------------|
+| `[:consonant:]` | All consonants |
+| `[:stop:]` / `[:plosive:]` | Stops (p, b, t, d, k, g, ʔ) |
+| `[:fricative:]` | Fricatives (f, v, s, z, ʃ, ʒ, θ, ð, h, x, ɣ) |
+| `[:affricate:]` | Affricates (tʃ, dʒ, ts, dz) |
+| `[:nasal:]` | Nasals (m, n, ŋ, ɲ, ɴ) |
+| `[:liquid:]` | Liquids (l, r, ɹ, ɾ, ʁ) |
+| `[:glide:]` / `[:semivowel:]` | Glides (w, j, ʍ) |
+| `[:approximant:]` | Approximants (w, j, l, ɹ) |
+| `[:lateral:]` | Laterals (l, ɫ, ʎ, ɬ) |
+| `[:trill:]` | Trills (r, ʀ, ʙ) |
+| `[:tap:]` / `[:flap:]` | Taps/flaps (ɾ, ɽ) |
+| `[:ascii_consonant:]` | ASCII consonants only |
+| `[:ipa_consonant:]` | IPA consonant symbols only |
+
+**Voice Classes:**
+
+| Class | Description |
+|-------|-------------|
+| `[:voiced:]` | Voiced sounds (b, d, g, v, z, ʒ, m, n, l, r, w, j) |
+| `[:voiceless:]` | Voiceless sounds (p, t, k, f, s, ʃ, θ, h, x) |
+| `[:voiced_fricative:]` | Voiced fricatives (v, z, ʒ, ð, ɣ) |
+| `[:voiceless_fricative:]` | Voiceless fricatives (f, s, ʃ, θ, h, x) |
+| `[:sibilant:]` | Sibilants (s, z, ʃ, ʒ, ts, dz, tʃ, dʒ) |
+
+**Place of Articulation:**
+
+| Class | Description |
+|-------|-------------|
+| `[:bilabial:]` | Bilabials (p, b, m, ɸ, β, ʙ) |
+| `[:labiodental:]` | Labiodentals (f, v, ɱ) |
+| `[:dental:]` | Dentals (θ, ð, t̪, d̪) |
+| `[:alveolar:]` | Alveolars (t, d, n, s, z, l, r, ɾ) |
+| `[:postalveolar:]` | Postalveolars (ʃ, ʒ, tʃ, dʒ) |
+| `[:retroflex:]` | Retroflexes (ʈ, ɖ, ɳ, ʂ, ʐ, ɻ, ɽ) |
+| `[:palatal:]` | Palatals (c, ɟ, ɲ, ç, ʝ, j, ʎ) |
+| `[:velar:]` | Velars (k, g, ŋ, x, ɣ, w) |
+| `[:uvular:]` | Uvulars (q, ɢ, ɴ, χ, ʁ, ʀ) |
+| `[:pharyngeal:]` | Pharyngeals (ħ, ʕ) |
+| `[:glottal:]` | Glottals (ʔ, h, ɦ) |
+
+**Manner/Phonological Features:**
+
+| Class | Description |
+|-------|-------------|
+| `[:obstruent:]` | Obstruents (stops + fricatives + affricates) |
+| `[:sonorant:]` | Sonorants (nasals + liquids + glides + vowels) |
+| `[:continuant:]` | Continuants (fricatives + approximants + vowels) |
+| `[:aspirated_affricate:]` | Aspirated affricates (t͡sʰ, t͡ʃʰ, etc.) |
+
+**Special Classes:**
+
+| Class | Description |
+|-------|-------------|
+| `[:click:]` | Click consonants (ʘ, ǀ, ǃ, ǂ, ǁ) |
+| `[:implosive:]` | Implosives (ɓ, ɗ, ɠ, ʄ, ʛ) |
+| `[:ejective:]` | Ejectives (pʼ, tʼ, kʼ, sʼ, etc.) |
+
+**POSIX Classes:**
+
+| Class | Description |
+|-------|-------------|
+| `[:alpha:]` | All alphabetic characters |
+| `[:lower:]` | Lowercase letters (a-z) |
+| `[:upper:]` | Uppercase letters (A-Z) |
+| `[:digit:]` | Digits 0-9 |
+| `[:alnum:]` | Alphanumeric |
+| `[:word:]` | Word characters (a-z, A-Z, 0-9, _) |
+| `[:space:]` | Whitespace |
+| `[:punct:]` | Punctuation |
+
+### Compiling Patterns
+
+```rust
+use liblevenshtein::phonetic::llre;
+
+let pattern = llre::compile_pattern("[:fricative:]one").expect("compile failed");
+assert!(pattern.matches("fone"));   // f ∈ fricative
+assert!(pattern.matches("shone"));  // sh ∈ fricative
+assert!(!pattern.matches("bone"));  // b ∉ fricative
+```
+
+---
+
+## Phonetic NFA + Levenshtein Composition
+
+Combine phonetic pattern NFAs with Levenshtein automata for fuzzy phonetic matching.
+
+### How Composition Works
+
+1. **Phonetic NFA** recognizes multiple phonetic spellings (ph|f)one
+2. **Levenshtein automaton** allows edit operations (insert, delete, substitute)
+3. **Product automaton** accepts inputs matching the pattern within edit distance
+
+### ProductAutomaton Usage
 
 ```rust
 use liblevenshtein::phonetic::nfa::{compile, ProductAutomatonChar};
 use liblevenshtein::phonetic::regex::parse;
 
-// Step 1: Parse phonetic regex pattern
-let regex = parse("(ph|f)one")?;
+// Parse and compile phonetic pattern
+let regex = parse("(ph|f)one").expect("parse failed");
+let nfa = compile(&regex).expect("compile failed");
 
-// Step 2: Compile regex to NFA
-let nfa = compile(&regex)?;
-
-// Step 3: Compose NFA with Levenshtein automaton (max distance 2)
+// Compose with Levenshtein (max distance 2)
 let product = ProductAutomatonChar::new(nfa, 2);
 
-// Step 4: Fuzzy match without preprocessing
-assert!(product.accepts("phone"));     // exact match (distance 0)
-assert!(product.accepts("fone"));      // exact match (distance 0)
-assert!(product.accepts("phones"));    // distance 1 (insertion)
-assert!(product.accepts("phon"));      // distance 1 (deletion)
-assert!(product.accepts("phome"));     // distance 1 (substitution)
+// Fuzzy phonetic matching
+assert!(product.accepts("phone"));   // Exact (distance 0)
+assert!(product.accepts("fone"));    // Exact (distance 0)
+assert!(product.accepts("phones"));  // Insert 's' (distance 1)
+assert!(product.accepts("phon"));    // Delete 'e' (distance 1)
+assert!(product.accepts("phome"));   // Substitute n→m (distance 1)
 
-// Get minimum edit distance
+// Get minimum distance
 assert_eq!(product.min_distance("phone"), Some(0));
 assert_eq!(product.min_distance("fon"), Some(1));
-assert_eq!(product.min_distance("xyz"), None);  // outside budget
+assert_eq!(product.min_distance("xyz"), None);  // Outside budget
 ```
 
-#### Spelling Correction with Embedded English Rules
-
-Combine pre-compiled English phonetic rules and search a dictionary for correction candidates:
-
-```rust
-use liblevenshtein::phonetic::rules::english;
-use liblevenshtein::phonetic::llev::RuleSetChar;
-use liblevenshtein::phonetic::verified::rules_to_nfa_char;
-use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
-use liblevenshtein::dictionary::DynamicDawgChar;
-
-// Load pre-compiled English phonetic rules
-let zompist = english::zompist();       // 62 rules: ph→f, gh→∅, tion→ʃən
-let homophones = english::homophones(); // too/two→to, their/there→ther
-let text_speak = english::text_speak(); // u→you, 2→to, thx→thanks
-
-// Combine all rules into a new RuleSetChar
-let mut combined = RuleSetChar::new();
-combined.merge(zompist.clone());
-combined.merge(homophones.clone());
-combined.merge(text_speak.clone());
-
-// Convert combined rules to NFA for fuzzy matching (no normalization)
-let rules_nfa = rules_to_nfa_char(&combined.rules);
-let product = ProductAutomatonChar::new(rules_nfa, 1);
-
-// Build a dictionary of terms to search
-let mut dictionary = DynamicDawgChar::new();
-dictionary.insert("phone");
-dictionary.insert("fone");
-dictionary.insert("today");
-dictionary.insert("knight");
-
-// Query for correction candidates by filtering dictionary terms
-let query = "fone";
-let mut candidates: Vec<(&str, u8)> = dictionary
-    .iter()
-    .filter_map(|term| {
-        product.min_distance(term).map(|dist| (term, dist))
-    })
-    .collect();
-
-// Sort by distance (best matches first)
-candidates.sort_by_key(|(_, dist)| *dist);
-// candidates = [("fone", 0), ("phone", 0), ...]
-
-// Optional: Apply rules to normalize text
-let normalized = combined.apply("phone");  // "fone" (ph→f)
-let normalized = combined.apply("knight"); // "nit" (silent k, gh→∅)
-```
-
-#### Algorithm Variants
-
-```rust
-use liblevenshtein::transducer::Algorithm;
-
-// Standard Levenshtein
-let standard = ProductAutomatonChar::new(nfa.clone(), 1);
-
-// Transposition-aware (character swaps count as 1 edit)
-let transposition = ProductAutomatonChar::with_algorithm(
-    nfa.clone(), 1, Algorithm::Transposition
-);
-
-// Merge-and-split (for OCR: "cl"→"d", "ä"→"ae")
-let merge_split = ProductAutomatonChar::with_algorithm(
-    nfa, 1, Algorithm::MergeAndSplit
-);
-```
-
-#### PhoneticGrep (Convenience API)
-
-For quick on-the-fly matching without building a dictionary:
+### PhoneticGrep Convenience API
 
 ```rust
 use liblevenshtein::phonetic::grep::PhoneticGrep;
 
 // Quick on-the-fly matching
-let grep = PhoneticGrep::from_pattern("phone", 1)?;
+let grep = PhoneticGrep::from_pattern("phone", 1).expect("build failed");
 assert!(grep.matches("phone").is_some());
 assert!(grep.matches("fone").is_some());
 
-// With phonetic flags (case + accent insensitive)
-let grep = PhoneticGrep::from_pattern("(?ia:cafe)", 1)?;
+// With case + accent insensitivity
+let grep = PhoneticGrep::from_pattern("(?ia:cafe)", 1).expect("build failed");
 assert!(grep.matches("CAFÉ").is_some());
-
-// With rules from file
-let grep = PhoneticGrep::with_rules("fone", Path::new("english.llev"), 1)?;
-assert!(grep.matches("phone").is_some());
 ```
 
-**Named Character Classes** (phonetic-aware):
+---
+
+## WFST Integration with lling-llang
+
+The `wfst` feature enables integration with the [lling-llang](https://github.com/f1r3fly-io/lling-llang) weighted finite-state transducer library.
+
+### LevenshteinWfst
+
+Lazy WFST wrapper for Levenshtein × dictionary product:
+
 ```rust
-// [:vowel:] includes ASCII vowels + IPA vowels (ə, ɪ, ʊ, ɛ, etc.)
-// [:consonant:] includes ASCII consonants + IPA symbols
-// [:fricative:] matches f,v,s,z,h + digraphs (sh,th,zh)
-// [:nasal:] matches m,n + ng digraph + IPA ŋ
-// [:stop:] / [:plosive:] matches p,b,t,d,k,g
-// [:front_vowel:] / [:back_vowel:] by tongue position
-// [:voiced:] / [:voiceless:] by voicing
+use liblevenshtein::wfst::{LevenshteinWfst, DictionaryBackend};
+use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+
+let dict = DynamicDawgChar::from_terms(vec!["hello", "help", "world"]);
+
+// Create WFST for query "helo" with max distance 2
+let lev_wfst = LevenshteinWfst::new(&dict, "helo", 2);
+
+// Compose with language model
+// let composed = compose(lev_wfst, language_model);
 ```
 
-**Formal Verification**: All algorithms are proven correct in Coq/Rocq:
+### PhoneticWfst Pipeline
 
-*Phonetic Rules (5 theorems):*
-1. **Well-formedness** - All rules satisfy structural constraints
-2. **Bounded Expansion** - Output length ≤ input length + 20 (guaranteed)
-3. **Non-Confluence** - Rule application order matters (proven)
-4. **Termination** - Sequential application always terminates (guaranteed)
-5. **Idempotence** - Fixed points remain unchanged (stable semantics)
+```rust
+use liblevenshtein::wfst::{PhoneticWfst, PhoneticWfstBuilder};
 
-*Levenshtein Automata:*
-- Complete axiom-free proofs for distance properties (triangle inequality, lower bounds)
-- Position skipping optimization: 50/50 proofs complete (100% verified)
-- Modular proof decomposition with 0 Admitted lemmas
+let wfst = PhoneticWfstBuilder::new()
+    .rules_file("english.llev")
+    .dictionary(&dict)
+    .max_distance(2)
+    .build()
+    .expect("build failed");
+```
 
-**Verification Artifacts**:
-- Coq proofs: [`docs/verification/phonetic/`](docs/verification/phonetic/)
-- Rust implementation: [`src/phonetic/`](src/phonetic/)
-- Property tests: [`src/phonetic/properties.rs`](src/phonetic/properties.rs)
-- Benchmarks: [`benches/phonetic_rules.rs`](benches/phonetic_rules.rs)
-- Example: [`examples/phonetic_rewrite.rs`](examples/phonetic_rewrite.rs)
+### MsmWfst for Time Series
 
-Enable with:
+```rust
+use liblevenshtein::wfst::msm::MsmWfst;
+
+// See MSM Automata section for full example
+```
+
+### WallBreakerWfst
+
+Optimized for large error bounds:
+
+```rust
+use liblevenshtein::wfst::{WallBreakerWfst, WallBreakerWfstBuilder};
+
+let wfst = WallBreakerWfstBuilder::new()
+    .dictionary(&dict)
+    .query("example")
+    .max_distance(5)  // Large error bound
+    .build()
+    .expect("build failed");
+```
+
+---
+
+## Contextual Completion Engine
+
+IDE-like code completion with hierarchical scopes and draft management.
+
+### Hierarchical Contexts
+
+```rust
+use liblevenshtein::contextual::DynamicContextualCompletionEngine;
+use liblevenshtein::transducer::Algorithm;
+
+let engine = DynamicContextualCompletionEngine::with_algorithm(Algorithm::Standard);
+
+// Create scope hierarchy: global → function → block
+let global = engine.create_root_context(0);
+let function = engine.create_child_context(1, global).expect("create failed");
+let block = engine.create_child_context(2, function).expect("create failed");
+
+// Add terms to scopes
+engine.finalize_direct(global, "std::vector").expect("insert failed");
+engine.finalize_direct(function, "parameter").expect("insert failed");
+```
+
+### Draft Management
+
+```rust
+// Incremental typing (draft state)
+engine.insert_str(block, "local_var").expect("insert failed");
+
+// Query sees draft + finalized terms from visible scopes
+let completions = engine.complete(block, "loc", 1);
+for comp in completions {
+    println!("{} (draft: {}, distance: {})",
+             comp.term, comp.is_draft, comp.distance);
+}
+
+// Checkpoint/undo for editor integration
+engine.checkpoint(block).expect("checkpoint failed");
+engine.insert_str(block, "iable").expect("insert failed");  // "local_variable"
+engine.undo(block).expect("undo failed");  // Restore to "local_var"
+
+// Finalize draft to add to dictionary
+let term = engine.finalize(block).expect("finalize failed");
+```
+
+### Complete Example
+
+See [`examples/contextual_completion.rs`](examples/contextual_completion.rs) for a full IDE simulation.
+
+---
+
+## FuzzyCache (Eviction Policies)
+
+Composable cache eviction wrappers using the **decorator pattern**. Stack policies to combine multiple eviction behaviors.
+
+### Available Policies
+
+| Policy | Eviction Criterion | Use Case |
+|--------|-------------------|----------|
+| **Noop** | None (pass-through) | Benchmarking, testing |
+| **LazyInit** | N/A (deferred initialization) | Sparse dictionaries, memoization |
+| **TTL** | Entry age > duration | Session caching |
+| **LRU** | Least recently accessed | General-purpose |
+| **Age** | Oldest insertion time (FIFO) | Fair eviction |
+| **LFU** | Lowest access count | Long-lived caches |
+| **CostAware** | `(age × size) / (hits + 1)` | Balance regeneration cost vs. space |
+| **MemoryPressure** | `size / (hit_rate + 0.1)` | Memory-constrained environments |
+
+### Basic Usage
+
+```rust
+use liblevenshtein::cache::eviction::Lru;
+use liblevenshtein::prelude::*;
+
+let dict = DynamicDawg::from_terms(vec!["test", "testing", "tested"]);
+let lru_cache = Lru::new(dict);
+
+// Use with transducer - access patterns are tracked
+let transducer = Transducer::new(&lru_cache, Algorithm::Standard);
+for result in transducer.query("tset", 2) {
+    println!("{}", result.term);
+}
+
+// Query recency for eviction decisions
+if let Some(age) = lru_cache.recency("test") {
+    println!("Last accessed {:?} ago", age);
+}
+
+// Evict least recently used from a candidate set
+let candidates = vec!["test", "testing", "tested"];
+if let Some(evicted) = lru_cache.evict_lru(&candidates) {
+    println!("Evicted: {}", evicted);
+}
+```
+
+### Composing Policies
+
+Stack wrappers to combine behaviors (innermost applied first):
+
+```rust
+use liblevenshtein::cache::eviction::{Lru, Ttl, MemoryPressure};
+use std::time::Duration;
+
+let dict = DynamicDawg::from_terms(vec!["alpha", "beta", "gamma"]);
+
+// Stack: MemoryPressure → TTL → LRU
+let memory = MemoryPressure::new(dict);           // Track size/hits
+let ttl = Ttl::new(memory, Duration::from_secs(300));  // 5-minute expiration
+let cache = Lru::new(ttl);                        // Track recency
+
+// Entries now subject to ALL policies:
+// - Expire after 5 minutes (TTL)
+// - Evict least-recently-used when needed (LRU)
+// - Consider memory pressure for large entries (MemoryPressure)
+```
+
+### Thread Safety
+
+All eviction wrappers are **thread-safe** via `Arc<RwLock<HashMap>>`:
+- Multiple concurrent readers
+- Exclusive writers with atomic metadata updates
+- Safe to share via `Arc<Lru<D>>` across threads
+
+---
+
+## Additional Features
+
+### Serialization
+
+```rust
+use liblevenshtein::prelude::*;
+use std::fs::File;
+
+let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
+
+// Save with compression (85% size reduction)
+let file = File::create("dict.bin.gz").expect("create failed");
+GzipSerializer::<BincodeSerializer>::serialize(&dict, file).expect("serialize failed");
+
+// Load compressed
+let file = File::open("dict.bin.gz").expect("open failed");
+let dict: DoubleArrayTrie = GzipSerializer::<BincodeSerializer>::deserialize(file)
+    .expect("deserialize failed");
+```
+
+Requires `serialization` and `compression` features.
+
+### Performance Optimizations
+
+| Optimization | Effect | Feature |
+|--------------|--------|---------|
+| **SIMD** | 20-64% faster queries | `simd` |
+| **Bloom Filter** | 88-93% faster contains() | Built-in |
+| **StatePool** | Reduced allocations | Built-in |
+| **Arc Path Sharing** | Eliminated cloning | Built-in |
+
+### CLI Tool
+
+```bash
+# Install
+cargo install liblevenshtein --features cli,compression,protobuf
+
+# Query
+liblevenshtein query "test" --dict words.txt -m 2
+
+# Convert formats
+liblevenshtein convert words.txt words.bin.gz --to-format bincode-gz
+
+# Interactive REPL
+liblevenshtein repl --dict words.bin.gz
+```
+
+### WASM Support
+
 ```toml
 [dependencies]
-liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", features = ["phonetic-rules"] }
+liblevenshtein = { version = "0.8", features = ["wasm"] }
 ```
 
-**Source**: Based on [Zompist's English spelling rules](https://zompist.com/spell.html) with complete formal verification in Coq/Rocq (630+ lines of proofs, 100% proven, zero Admitted).
+### Grep Support (Document Extraction)
 
-### LLev/LLRE - Phonetic Pattern Languages
-
-For complex phonetic matching, use `.llev` files for rewrite rules or `.llre` files for regex-style patterns with phonetic extensions:
-
-```rust
-use liblevenshtein::phonetic::llev::parse_str;
-use liblevenshtein::phonetic::llre;
-
-// LLev: Rewrite rules with phonetic context and named classes
-let rules = parse_str(r#"
-    @name "English Phonetic Rules"
-
-    ph -> f;                      // phone → fone
-    c -> s / _[:front_vowel:];    // city → sity (before e,i)
-    gh -> / [:vowel:]_;           // night → nit (silent after vowel)
-"#)?;
-
-// LLRE: Compile regex pattern to NFA
-let pattern = llre::compile_pattern("[:fricative:]one")?;
-assert!(pattern.matches("fone"));   // f ∈ [:fricative:]
-assert!(pattern.matches("shone"));  // sh ∈ [:fricative:]
-
-// Compose LLRE pattern with Levenshtein for fuzzy matching
-use liblevenshtein::phonetic::nfa::ProductAutomatonChar;
-let product = ProductAutomatonChar::new(pattern.nfa.clone(), 1);
-assert!(product.accepts("phone"));  // distance 1 from pattern
+```toml
+[dependencies]
+liblevenshtein = { version = "0.8", features = ["grep-support"] }
 ```
 
-See [`examples/phonetic_spellcheck`](examples/phonetic_spellcheck/) for a complete demo, and the [LLev Grammar](docs/grammar/llev.ebnf) / [LLRE Grammar](docs/grammar/llre.ebnf) for full syntax reference.
+Supports PDF, DOCX, and archive formats.
 
-## Documentation
-
-- **[Technical Glossary](docs/GLOSSARY.md)** - Comprehensive reference for all technical terms (70+ entries)
-- **[User Guide](docs/user-guide/)** - Getting started, algorithms, backends, and features
-- **[Developer Guide](docs/developer-guide/)** - Architecture, building, contributing, and performance
-- **[Building and Testing](docs/developer-guide/building.md)** - Comprehensive build instructions and CLI usage
-- **[Contributing Guidelines](docs/developer-guide/contributing.md)** - How to contribute to the project
-- **[Features Overview](docs/user-guide/features.md)** - Detailed feature documentation
-- **[Publishing Guide](docs/developer-guide/publishing.md)** - Requirements for publishing to crates.io
-- **[Changelog](CHANGELOG.md)** - Version history and release notes
-
-## How Code Maps to Theory
-
-For developers wanting to understand the implementation or extend the algorithms:
-
-| Paper Concept | Code Location | Description |
-|---------------|---------------|-------------|
-| **Position (i#e)** | [`src/transducer/position.rs:11-35`](src/transducer/position.rs#L11-L35) | Index + error count structure |
-| **Subsumption (⊑)** | [`src/transducer/position.rs:231-269`](src/transducer/position.rs#L231-L269) | Position redundancy elimination |
-| **Characteristic Vector (χ)** | [`src/transducer/position.rs`](src/transducer/position.rs) | Character occurrence encoding |
-| **Elementary Transitions (δ)** | [`src/transducer/transition.rs:119-438`](src/transducer/transition.rs#L119-L438) | Table 4.1, 7.1, 8.1 from paper |
-| **State Transitions (Δ)** | [`src/transducer/query.rs`](src/transducer/query.rs) | Parallel traversal implementation |
-| **Algorithm Variants** | [`src/transducer/algorithm.rs`](src/transducer/algorithm.rs) | Standard/Transposition/MergeAndSplit |
-| **Imitation Method** | [`src/transducer/query.rs:86-188`](src/transducer/query.rs#L86-L188) | Chapter 6 - on-demand state generation |
-| **Dictionary Automaton (A^D)** | [`src/dictionary/`](src/dictionary/) | Multiple backend implementations |
-
-**Key Implementation Patterns:**
-
-- **Position Structure**: Tracks (term_index, num_errors, is_special) corresponding to i#e_t or i#e_s in the paper
-- **Subsumption Checking**: Ensures minimal state sets by eliminating redundant positions
-- **Transition Functions**: Implement the case analysis from Tables 4.1, 7.1, and 8.1
-- **Parallel Traversal**: Simultaneously navigate dictionary automaton A^D and Levenshtein automaton LEV_n(W)
-
-See [Implementation Mapping](docs/research/levenshtein-automata/implementation-mapping.md) for detailed code-to-paper correspondence with examples.
+---
 
 ## Performance
 
-The library maintains the theoretical guarantees from the foundational paper while adding practical optimizations:
+### Complexity Analysis
 
-### Theoretical Complexity
+| Operation | Complexity |
+|-----------|------------|
+| Automaton construction | O(\|W\|) - linear in query length |
+| Dictionary traversal | O(\|D\|) - linear in dictionary edges |
+| Space | O(\|W\|) states for fixed error bound |
 
-- **Construction:** O(|W|) time for automaton construction (Theorem 5.2.1)
-- **Query:** O(|D|) time for dictionary traversal where |D| is total edges (Chapter 3)
-- **Space:** O(|W|) states for fixed error bound n (Theorem 4.0.32)
+### Benchmark Comparison
 
-**vs Naive Approach:** Computing Levenshtein distance for every dictionary entry requires O(|D| × |W| × |V|) operations. This library achieves **100-1000× speedup** on large dictionaries by avoiding per-word distance calculations through automata-guided search.
+Construction and query times for 10,000 words:
 
-### Core Optimizations
+| Backend | Construction | Exact Match | Distance 1 | Distance 2 |
+|---------|--------------|-------------|------------|------------|
+| DoubleArrayTrie | 3.2ms | 6.6µs | 12.9µs | 16.3µs |
+| PathMap | 3.5ms | 71.1µs | 888µs | 5,919µs |
+| DAWG | 7.2ms | 19.8µs | 319µs | 2,150µs |
 
-Beyond the algorithmic foundations, the implementation includes:
+---
 
-- **Arc Path Sharing**: Eliminated expensive cloning operations during traversal
-- **StatePool**: Object pool pattern for state reuse with exceptional performance gains
-- **SmallVec Integration**: Stack-allocated vectors reduce heap allocation pressure
-- **Lazy Edge Iteration**: 15-50% faster PathMap edge iteration with zero-copy implementation
-- **Aggressive Inlining**: Hot path functions inlined for optimal performance
+## Feature Flags Reference
 
-Benchmarks show 3.3x speedup for DAWG operations and 5-18% improvements across filtering/prefix scenarios.
+| Feature | Description |
+|---------|-------------|
+| `simd` | AVX2/SSE4.1 acceleration (x86_64 only) |
+| `phonetic-rules` | LLev/LLRE phonetic pattern languages |
+| `pathmap-backend` | PathMap dictionary backend |
+| `wfst` | lling-llang WFST integration |
+| `serialization` | Save/load dictionaries |
+| `compression` | Gzip compression for serialization |
+| `protobuf` | Protocol Buffers format |
+| `cli` | Command-line interface |
+| `wasm` | WebAssembly support |
+| `grep-support` | Document extraction (PDF, DOCX) |
+| `persistent-artrie` | Memory-mapped ARTrie |
+| `bloom-filter` | Probabilistic filtering |
 
-### SIMD Acceleration (optional `simd` feature)
+---
 
-When compiled with the `simd` feature on x86_64 platforms, the library achieves **20-64% performance gains** through:
+## References
 
-- **8 SIMD-optimized components** across critical performance paths
-- **AVX2/SSE4.1 implementations** with runtime CPU feature detection
-- **Data-driven threshold tuning** based on empirical benchmarking
-- **Automatic fallback** to scalar implementation when SIMD unavailable
+- **Core Algorithm**: Schulz, Klaus U., and Stoyan Mihov. "Fast string correction with Levenshtein automata." *International Journal on Document Analysis and Recognition* 5.1 (2002): 67-85.
 
-Key optimizations:
-- Characteristic vector operations (vectorized bit manipulation)
-- Position subsumption checking (parallel state comparisons)
-- State operations (vectorized distance computations)
-- Dictionary edge lookups (batched queries with adaptive thresholds)
-- Distance matrix computation (vectorized row/column operations)
+- **Universal Automata**: Mitankin, Petar, Stoyan Mihov, and Klaus Schulz. "Universal Levenshtein Automata. Building and Properties." *Information Processing & Management* 41.4 (2005): 687-702.
 
-Performance improvements vary by workload:
-- Small dictionaries (< 1,000 terms): 20-30% faster
-- Medium dictionaries (1,000-10,000 terms): 30-45% faster
-- Large dictionaries (> 10,000 terms): 45-64% faster
-
-See `docs/analysis/` for detailed SIMD performance analysis (950+ lines of documentation).
-
-### Unicode Performance
-
-Character-level dictionary variants (`*Char`) for Unicode support:
-- **~5% overhead** for UTF-8 decoding during traversal
-- **4x memory** for edge labels (4 bytes per `char` vs 1 byte per `u8`)
-- **Zero-cost abstraction** via monomorphization (no runtime polymorphism)
-- Same query performance characteristics as byte-level variants
-
-When to use:
-- ✅ Use `*Char` variants for multi-language dictionaries with non-ASCII Unicode
-- ✅ Use byte-level variants (`DoubleArrayTrie`, `PathMapDictionary`) for ASCII/Latin-1 content
-
-### Phonetic Pattern Matching
-
-When using the `phonetic-rules` feature:
-- **NFA optimizations**: 2-7× speedup through epsilon elimination, dead state removal, and transition deduplication
-- **Position skipping**: Up to 26.6× speedup for pattern matching with skip-ahead optimization
-- **Lexer optimizations**: 7-11% speedup via string interning and stack-based operations
-
-## Research & Planned Features
-
-This library includes extensive research documentation on potential enhancements:
-
-### Universal Levenshtein Automata (Planned)
-
-Support for **restricted substitutions** where only specific character pairs can be substituted:
-
-**Use Cases:**
-- **Keyboard proximity** - Only adjacent keys allowed (QWERTY/AZERTY/Dvorak layouts)
-  - Example: 'a' ↔ 's' ↔ 'd' (adjacent on QWERTY)
-- **OCR error modeling** - Visual similarity constraints
-  - Example: 'l' ↔ 'I' ↔ '1', 'O' ↔ '0', 'rn' ↔ 'm'
-- **Phonetic matching** - Sound-alike rules
-  - Example: 'f' ↔ 'ph', 'k' ↔ 'c', 's' ↔ 'z'
-
-**Theory:** Based on "Universal Levenshtein Automata. Building and Properties" (Mitankin, Mihov, Schulz, 2005). Maintains O(|W|) construction complexity with restricted substitution set S ⊆ Σ × Σ.
-
-**Status:** Research complete, implementation planned. See [Universal Levenshtein Automata Documentation](docs/research/universal-levenshtein/) for complete details.
-
-### Weighted Operations (Research Phase)
-
-Support for variable operation costs through discretization:
-
-**Use Cases:**
-- **Keyboard distance costs** - Closer keys cost less (adjacent: 0.5, same row: 1.0, different rows: 1.5)
-- **Context-dependent costs** - Position-aware error penalties (beginning/end of word)
-- **Frequency-based costs** - Common errors cost less than rare ones
-
-**Complexity:** O(|W| × max_cost/precision) through cost discretization—still linear in query length when cost range and precision are fixed.
-
-**Status:** Methodology documented, implementation research phase. See [Weighted Levenshtein Automata Research](docs/research/weighted-levenshtein-automata/) for feasibility analysis and implementation approach.
-
-### Contributing Research
-
-Interested in implementing these features or researching new extensions? See:
-- [Contributing Guidelines](docs/developer-guide/contributing.md)
-- [Research Documentation Index](docs/research/)
+- [Algorithm Documentation](docs/research/levenshtein-automata/README.md)
 - [Implementation Mapping](docs/research/levenshtein-automata/implementation-mapping.md)
+- [GitHub Repository](https://github.com/universal-automata/liblevenshtein-rust)
+- [Original C++ Implementation](https://github.com/universal-automata/liblevenshtein-cpp)
 
-The research documentation provides complete theoretical foundations and implementation roadmaps for extending the library.
+---
 
 ## License
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
-
-## References
-
-- [Original C++ implementation](https://github.com/universal-automata/liblevenshtein-cpp)
-- [PathMap backend](https://github.com/Adam-Vandervorst/PathMap)
-- [GitHub Repository](https://github.com/universal-automata/liblevenshtein-rust)
-- [Release Page](https://github.com/universal-automata/liblevenshtein-rust/releases)

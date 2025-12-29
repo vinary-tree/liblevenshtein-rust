@@ -9,13 +9,13 @@
 
 #[cfg(feature = "pathmap-backend")]
 mod stress_tests {
-    use liblevenshtein::contextual::ContextualCompletionEngine;
+    use liblevenshtein::contextual::DynamicContextualCompletionEngine;
 
     /// Test with a large number of root contexts
     #[test]
     #[ignore] // Run with: cargo test --features pathmap-backend stress -- --ignored
     fn test_many_contexts() {
-        let engine = ContextualCompletionEngine::new();
+        let engine = DynamicContextualCompletionEngine::new();
 
         // Create 10,000 root contexts
         for i in 0..10_000 {
@@ -46,7 +46,7 @@ mod stress_tests {
     #[test]
     #[ignore]
     fn test_large_dictionary() {
-        let engine = ContextualCompletionEngine::new();
+        let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
         // Add 100,000 terms
@@ -79,7 +79,7 @@ mod stress_tests {
     #[test]
     #[ignore]
     fn test_deep_hierarchy() {
-        let engine = ContextualCompletionEngine::new();
+        let engine = DynamicContextualCompletionEngine::new();
 
         // Create a hierarchy 1000 levels deep
         println!("Creating 1000-level hierarchy...");
@@ -113,7 +113,7 @@ mod stress_tests {
     #[test]
     #[ignore]
     fn test_many_checkpoints() {
-        let engine = ContextualCompletionEngine::new();
+        let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
         // Create 10,000 checkpoints
@@ -148,7 +148,7 @@ mod stress_tests {
     #[test]
     #[ignore]
     fn test_wide_fanout() {
-        let engine = ContextualCompletionEngine::new();
+        let engine = DynamicContextualCompletionEngine::new();
         let root = engine.create_root_context(0);
 
         // Create 1,000 children of root
@@ -195,7 +195,7 @@ mod stress_tests {
     #[test]
     #[ignore]
     fn test_long_draft_session() {
-        let engine = ContextualCompletionEngine::new();
+        let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
         // Simulate a long editing session with 100,000 operations
@@ -241,7 +241,7 @@ mod stress_tests {
     #[test]
     #[ignore]
     fn test_large_subtree_removal() {
-        let engine = ContextualCompletionEngine::new();
+        let engine = DynamicContextualCompletionEngine::new();
         let root = engine.create_root_context(0);
 
         // Create a balanced tree: root -> 10 children -> 100 grandchildren each
@@ -284,7 +284,7 @@ mod stress_tests {
         use std::sync::Arc;
         use std::thread;
 
-        let engine = Arc::new(ContextualCompletionEngine::new());
+        let engine = Arc::new(DynamicContextualCompletionEngine::new());
         let root = engine.create_root_context(0);
 
         // Populate dictionary
@@ -346,7 +346,7 @@ mod stress_tests {
         println!("Testing memory stability with rapid create/destroy cycles...");
 
         for cycle in 0..100 {
-            let engine = ContextualCompletionEngine::new();
+            let engine = DynamicContextualCompletionEngine::new();
 
             // Create many contexts
             for i in 0..1_000 {

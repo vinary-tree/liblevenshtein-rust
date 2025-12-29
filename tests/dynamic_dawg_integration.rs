@@ -307,11 +307,11 @@ fn test_dynamic_dawg_empty_with_fuzzy_multimap() {
 
 #[test]
 fn test_dynamic_dawg_with_contextual_completion_basic() {
-    use liblevenshtein::contextual::ContextualCompletionEngine;
+    use liblevenshtein::contextual::DynamicContextualCompletionEngine;
 
     // Create a simple DynamicDawg-backed contextual completion engine
     let dict: DynamicDawg<Vec<u32>> = DynamicDawg::new();
-    let engine = ContextualCompletionEngine::with_dictionary(dict, Algorithm::Standard);
+    let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm::Standard);
 
     let ctx = engine.create_root_context(0);
 
@@ -335,10 +335,10 @@ fn test_dynamic_dawg_with_contextual_completion_basic() {
 
 #[test]
 fn test_dynamic_dawg_with_contextual_completion_hierarchical() {
-    use liblevenshtein::contextual::ContextualCompletionEngine;
+    use liblevenshtein::contextual::DynamicContextualCompletionEngine;
 
     let dict: DynamicDawg<Vec<u32>> = DynamicDawg::new();
-    let engine = ContextualCompletionEngine::with_dictionary(dict, Algorithm::Standard);
+    let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm::Standard);
 
     // Create hierarchical contexts
     let global = engine.create_root_context(0);
@@ -361,12 +361,12 @@ fn test_dynamic_dawg_with_contextual_completion_hierarchical() {
 
 #[test]
 fn test_dynamic_dawg_contextual_with_draft_debug() {
-    use liblevenshtein::contextual::ContextualCompletionEngine;
+    use liblevenshtein::contextual::DynamicContextualCompletionEngine;
     use liblevenshtein::dictionary::MappedDictionary;
 
     let dict: DynamicDawg<Vec<u32>> = DynamicDawg::new();
     let dict_clone = dict.clone();
-    let engine = ContextualCompletionEngine::with_dictionary(dict, Algorithm::Standard);
+    let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm::Standard);
 
     let ctx = engine.create_root_context(0);
 
@@ -408,10 +408,10 @@ fn test_dynamic_dawg_contextual_with_draft_debug() {
 
 #[test]
 fn test_dynamic_dawg_contextual_fuzzy_matching() {
-    use liblevenshtein::contextual::ContextualCompletionEngine;
+    use liblevenshtein::contextual::DynamicContextualCompletionEngine;
 
     let dict: DynamicDawg<Vec<u32>> = DynamicDawg::new();
-    let engine = ContextualCompletionEngine::with_dictionary(dict, Algorithm::Transposition);
+    let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm::Transposition);
 
     let ctx = engine.create_root_context(0);
 

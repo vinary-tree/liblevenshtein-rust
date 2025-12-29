@@ -39,7 +39,7 @@
 //! cargo run --example contextual_completion --features pathmap-backend
 //! ```
 
-use liblevenshtein::contextual::ContextualCompletionEngine;
+use liblevenshtein::contextual::DynamicContextualCompletionEngine;
 use liblevenshtein::transducer::Algorithm;
 
 fn main() {
@@ -47,7 +47,7 @@ fn main() {
     println!("==================================\n");
 
     // Create the engine with Standard Levenshtein distance
-    let engine = ContextualCompletionEngine::with_algorithm(Algorithm::Standard);
+    let engine = DynamicContextualCompletionEngine::with_algorithm(Algorithm::Standard);
 
     // Create hierarchical context tree: global -> function -> block
     let global = engine.create_root_context(0);

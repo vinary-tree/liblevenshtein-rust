@@ -85,6 +85,9 @@ console_error_panic_hook = { version = "0.1", optional = true }
 getrandom = { version = "0.2", features = ["js"], optional = true }
 js-sys = { version = "0.3", optional = true }
 
+# WFST integration with lling-llang (optional)
+lling-llang = { path = "../lling-llang", optional = true }
+
 [dev-dependencies]
 criterion = "0.5"
 tempfile = "3.8"
@@ -421,6 +424,9 @@ wasm-phonetic = ["wasm", "phonetic-rules"]
 ffi = []
 # Combined WASM + FFI
 wasm-ffi = ["wasm", "ffi"]
+
+# WFST integration - exposes Levenshtein automata as lling-llang WFSTs for composition
+wfst = ["lling-llang", "rand"]
 
 [package.metadata.generate-rpm]
 assets = [

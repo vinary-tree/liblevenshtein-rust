@@ -161,6 +161,32 @@ pub mod wasm;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 
+/// WFST integration with lling-llang
+///
+/// This module exposes liblevenshtein's Levenshtein automata as lling-llang
+/// `Wfst` implementers, enabling participation in WFST composition pipelines.
+///
+/// # Features
+///
+/// - `LevenshteinWfst`: Wraps a Levenshtein transducer as a `Wfst<char, TropicalWeight>`
+/// - `LevenshteinStateSource`: Lazy state computation for efficient composition
+/// - `DictionaryBackend`: Adapts liblevenshtein dictionaries to `LatticeBackend`
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use liblevenshtein::wfst::{LevenshteinWfst, DictionaryBackend};
+/// use lling_llang::composition::compose;
+///
+/// let dict = DynamicDawgChar::from_terms(vec!["hello", "help", "world"]);
+/// let lev_wfst = LevenshteinWfst::new(&dict, "helo", 2);
+///
+/// // Compose with a language model WFST
+/// let composed = compose(lev_wfst, language_model);
+/// ```
+#[cfg(feature = "wfst")]
+pub mod wfst;
+
 /// Test corpus utilities
 ///
 /// This module provides parsers and generators for standard spelling
