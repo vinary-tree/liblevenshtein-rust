@@ -1,0 +1,250 @@
+// American Name Phonetic Rules (NYSIIS-derived)
+// ================================================
+// Based on the NYSIIS (New York State Identification and
+// Intelligence System) algorithm, optimized for matching
+// American family names and personal names.
+//
+// NYSIIS was developed in 1970 for matching names in
+// criminal justice databases. It handles:
+//   - Common name prefix patterns (Mac, Mc, etc.)
+//   - Germanic name patterns (Sch, Pf, etc.)
+//   - Name-final patterns
+//   - Vowel normalization
+//
+// ID Range: 2800-2899
+
+@name "American Names (NYSIIS-derived)"
+@version "1.0.0"
+@author "Derived from NYSIIS algorithm"
+@description "Phonetic rules for matching American personal and family names"
+
+@include "english/base.llev"
+
+@define VOWEL = [aeiou]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+
+// ============================================================
+// Phase 1: Initial Prefix Transformations
+// Handle common name prefixes from various origins
+// ============================================================
+
+// Scottish/Irish Prefixes
+[id: 2800, name: "mac prefix", weight: 0.10, group: nysiis_prefix]
+// MAC -> MCC: MacDonald, MacArthur, MacGregor
+mac -> mkk / #_;
+
+[id: 2801, name: "mc prefix", weight: 0.10, group: nysiis_prefix]
+// MC -> MCC: McDonald, McCarthy, McGregor
+mc -> mkk / #_;
+
+// Germanic Prefixes
+[id: 2810, name: "kn initial nysiis", weight: 0.0, group: nysiis_initial]
+// KN -> N: Knuth, Knapp, Knight
+kn -> n / #_;
+
+[id: 2811, name: "k initial nysiis", weight: 0.10, group: nysiis_initial]
+// K -> C: Karl, Kaufman, Klein
+k -> k / #_;
+
+[id: 2812, name: "pf initial nysiis", weight: 0.10, group: nysiis_initial]
+// PF -> FF: Pfeiffer, Pfister, Pflug
+pf -> ff / #_;
+
+[id: 2813, name: "ph initial nysiis", weight: 0.0, group: nysiis_initial]
+// PH -> FF: Phillips, Phelps
+ph -> ff / #_;
+
+[id: 2814, name: "sch initial nysiis", weight: 0.10, group: nysiis_initial]
+// SCH -> SSS: Schmidt, Schneider, Schultz, Schwartz
+sch -> sss / #_;
+
+// ============================================================
+// Phase 2: Final Suffix Transformations
+// Handle common name endings
+// ============================================================
+
+[id: 2820, name: "ee final nysiis", weight: 0.10, group: nysiis_final]
+// EE -> Y: McGee, Lee
+ee -> i / _#;
+
+[id: 2821, name: "ie final nysiis", weight: 0.10, group: nysiis_final]
+// IE -> Y: Charlie, Maggie
+ie -> i / _#;
+
+[id: 2822, name: "dt final nysiis", weight: 0.10, group: nysiis_final]
+// DT -> D: Schmidt
+dt -> t / _#;
+
+[id: 2823, name: "rt final nysiis", weight: 0.10, group: nysiis_final]
+// RT -> D: Stewart, Robert
+rt -> t / _#;
+
+[id: 2824, name: "rd final nysiis", weight: 0.10, group: nysiis_final]
+// RD -> D: Richard, Bernard
+rd -> t / _#;
+
+[id: 2825, name: "nt final nysiis", weight: 0.10, group: nysiis_final]
+// NT -> D: Grant, Vincent
+nt -> t / _#;
+
+[id: 2826, name: "nd final nysiis", weight: 0.10, group: nysiis_final]
+// ND -> D: Raymond, Edmund
+nd -> t / _#;
+
+[id: 2827, name: "ey final nysiis", weight: 0.10, group: nysiis_final]
+// EY -> Y: Stanley, Dudley
+ey -> i / _#;
+
+[id: 2828, name: "ay final nysiis", weight: 0.10, group: nysiis_final]
+// AY -> Y: Murray, Barclay
+ay -> i / _#;
+
+// ============================================================
+// Phase 3: Medial/Internal Transformations
+// ============================================================
+
+[id: 2830, name: "ev to af nysiis", weight: 0.25, group: nysiis_medial]
+// EV -> AF: Steven -> Stafan, Evelyn -> Afalyn
+ev -> af;
+
+[id: 2831, name: "kn medial nysiis", weight: 0.10, group: nysiis_medial]
+// KN -> N: Atkinson
+kn -> n;
+
+[id: 2832, name: "sch medial nysiis", weight: 0.10, group: nysiis_medial]
+// SCH -> SSS: Fischer
+sch -> sss;
+
+[id: 2833, name: "ph medial nysiis", weight: 0.0, group: nysiis_medial]
+// PH -> FF: Stephens, Joseph
+ph -> ff;
+
+// ============================================================
+// Phase 4: Consonant Simplifications
+// ============================================================
+
+[id: 2840, name: "q to g nysiis", weight: 0.15, group: nysiis_consonant]
+// Q -> G: Quincy -> Gincy (NYSIIS encoding)
+q -> g;
+
+[id: 2841, name: "z to s nysiis", weight: 0.10, group: nysiis_consonant]
+// Z -> S: Fitzgerald, Gonzalez
+z -> s;
+
+[id: 2842, name: "m to n nysiis", weight: 0.20, group: nysiis_consonant]
+// M -> N: (nasal equivalence for matching)
+m -> n;
+
+[id: 2843, name: "k to c nysiis", weight: 0.10, group: nysiis_consonant]
+// K -> C: (NYSIIS uses C as primary)
+k -> k;
+
+// ============================================================
+// Phase 5: H Handling
+// ============================================================
+
+[id: 2850, name: "h after consonant nysiis", weight: 0.15, group: nysiis_h]
+// H after consonant -> silent: Christoph, Anthony
+h -> / ${CONSONANT}_;
+
+[id: 2851, name: "h between consonants nysiis", weight: 0.15, group: nysiis_h]
+// H between consonants -> silent
+h -> / ${CONSONANT}_$CONSONANT;
+
+// ============================================================
+// Phase 6: W Handling
+// ============================================================
+
+[id: 2855, name: "w after vowel nysiis", weight: 0.20, group: nysiis_w]
+// W after vowel -> vowel: Edward, Howard
+w -> / ${VOWEL}_;
+
+// ============================================================
+// Phase 7: Vowel Normalization
+// NYSIIS reduces most vowels to A for matching
+// Using lower weights to preserve some vowel distinction
+// ============================================================
+
+// Note: Full NYSIIS vowel reduction (all -> A) is too aggressive
+// for general use. These rules capture the pattern but preserve
+// more vowel information.
+
+[id: 2860, name: "vowel e to a nysiis", weight: 0.30, group: nysiis_vowel]
+// E -> A in unstressed positions
+e -> a / ${CONSONANT}_$CONSONANT;
+
+[id: 2861, name: "vowel i to a nysiis", weight: 0.30, group: nysiis_vowel]
+// I -> A in unstressed positions
+i -> a / ${CONSONANT}_$CONSONANT;
+
+[id: 2862, name: "vowel o to a nysiis", weight: 0.30, group: nysiis_vowel]
+// O -> A in unstressed positions
+o -> a / ${CONSONANT}_$CONSONANT;
+
+[id: 2863, name: "vowel u to a nysiis", weight: 0.30, group: nysiis_vowel]
+// U -> A in unstressed positions
+u -> a / ${CONSONANT}_$CONSONANT;
+
+// ============================================================
+// Phase 8: Name-Final Cleanup
+// ============================================================
+
+[id: 2870, name: "s final names nysiis", weight: 0.25, group: nysiis_cleanup]
+// Final S often dropped in name matching: Williams -> William
+s -> / _#;
+
+[id: 2871, name: "a final names nysiis", weight: 0.25, group: nysiis_cleanup]
+// Final A normalization: Maria, Anna
+a ->  / _#;
+
+// ============================================================
+// Phase 9: Common Name Variants
+// Rules for matching common spelling variants
+// ============================================================
+
+// Germanic name patterns
+[id: 2880, name: "mann to man", weight: 0.10, group: nysiis_variant]
+// MANN -> MAN: Hofmann/Hoffman, Hartmann/Hartman
+mann -> man / _#;
+
+[id: 2881, name: "berg to burg", weight: 0.15, group: nysiis_variant]
+// BERG/BURG equivalence: Goldberg, Ginsburg
+berg -> burg / _#;
+
+[id: 2882, name: "stein to stin", weight: 0.15, group: nysiis_variant]
+// STEIN variants: Einstein, Weinstein
+stein -> stin / _#;
+
+[id: 2883, name: "witz to wits", weight: 0.10, group: nysiis_variant]
+// WITZ endings: Horowitz, Lefkowitz
+witz -> wits / _#;
+
+// Slavic name patterns
+[id: 2884, name: "ski to sky", weight: 0.10, group: nysiis_variant]
+// SKI/SKY equivalence: Kowalski/Kowalsky
+ski -> sky / _#;
+
+[id: 2885, name: "vich to witch", weight: 0.15, group: nysiis_variant]
+// VICH/WICH variants: Petrovich, Ivanovich
+vich -> wit͡ʃ / _#;
+
+[id: 2886, name: "ovich to owitch", weight: 0.15, group: nysiis_variant]
+// OVICH endings
+ovich -> owit͡ʃ / _#;
+
+// Irish name patterns
+// NOTE: O' prefix (O'Brien, O'Connor) - apostrophe typically removed before processing
+
+// ============================================================
+// Phase 10: Double Letter Simplification
+// ============================================================
+
+// NOTE: Double consonants -> single already handled by base.llev
+
+[id: 2891, name: "tz to ts nysiis", weight: 0.10, group: nysiis_geminate, ipa: "/t͡s/"]
+// TZ -> t͡s: Schwartz, Katz
+tz -> t͡s;
+
+[id: 2892, name: "ck to k nysiis", weight: 0.0, group: nysiis_geminate]
+// CK -> K: Becker, Tucker
+ck -> k;

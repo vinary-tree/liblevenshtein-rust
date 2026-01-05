@@ -1,0 +1,256 @@
+// German/Germanic Name Phonetic Rules (Beider-Morse Derived)
+// =============================================================
+// Rules for matching Germanic family names and personal names.
+// Based on the Beider-Morse Phonetic Matching (BMPM) algorithm's
+// Germanic language branch.
+//
+// Handles:
+//   - Traditional German name patterns
+//   - Yiddish-influenced names
+//   - Ashkenazi Jewish names (Germanic branch)
+//   - Austrian and Swiss German variants
+//
+// ID Range: 2900-2999
+
+@name "Germanic Names (Beider-Morse Derived)"
+@version "1.0.0"
+@author "Derived from Beider-Morse BMPM"
+@description "Phonetic rules for matching Germanic personal and family names"
+
+@include "german/base.llev"
+
+@define VOWEL = [aeiouäöü]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyzß]
+
+// ============================================================
+// Phase 1: Common Germanic Name Patterns
+// ============================================================
+
+// EI/IE Patterns in Names
+[id: 2900, name: "ei in names", weight: 0.10, group: bm_germanic_vowel, ipa: "/aɪ/"]
+// EI -> ai: Einstein, Weinstein, Bernstein
+ei -> aɪ;
+
+[id: 2901, name: "ie in names", weight: 0.10, group: bm_germanic_vowel, ipa: "/iː/"]
+// IE -> i: Schneider, Meier, Richter
+ie -> iː;
+
+[id: 2902, name: "ey in names", weight: 0.15, group: bm_germanic_vowel, ipa: "/aɪ/"]
+// EY -> ai: Meyer, Breyer (variant of EI)
+ey -> aɪ;
+
+// ============================================================
+// Phase 2: Name Suffix Patterns
+// ============================================================
+
+// -MANN/-MAN Equivalence
+[id: 2910, name: "mann ending", weight: 0.10, group: bm_germanic_suffix]
+// MANN/MAN: Hofmann/Hoffman, Hartmann/Hartman
+mann -> man / _#;
+
+// -STEIN Variants
+[id: 2911, name: "stein ending", weight: 0.10, group: bm_germanic_suffix, ipa: "/ʃtaɪn/"]
+// STEIN at end: Goldstein, Weinstein, Bernstein
+stein -> ʃtaɪn / _#;
+
+[id: 2912, name: "steen ending", weight: 0.15, group: bm_germanic_suffix]
+// STEEN (Dutch variant): Springsteen
+steen -> ʃtiːn / _#;
+
+// -BERG/-BURG Variants
+[id: 2913, name: "berg ending", weight: 0.10, group: bm_germanic_suffix]
+// BERG: Goldberg, Rosenberg, Heidelberg
+berg -> bɛrk / _#;
+
+[id: 2914, name: "burg ending", weight: 0.10, group: bm_germanic_suffix]
+// BURG: Hamburg, Ginsburg
+burg -> burk / _#;
+
+// -WITZ/-VITZ Variants (Slavic influence)
+[id: 2915, name: "witz ending", weight: 0.10, group: bm_germanic_suffix, ipa: "/vɪts/"]
+// WITZ: Horowitz, Lefkowitz, Moskowitz
+witz -> vɪts / _#;
+
+[id: 2916, name: "vitz ending", weight: 0.10, group: bm_germanic_suffix]
+// VITZ variant: Markowitz
+vitz -> vɪts / _#;
+
+// -THAL/-TAL Variants
+[id: 2917, name: "thal ending", weight: 0.10, group: bm_germanic_suffix]
+// THAL: Rosenthal, Blumenthal
+thal -> tal / _#;
+
+// -BAUM/-BOIM Variants
+[id: 2918, name: "baum ending", weight: 0.10, group: bm_germanic_suffix, ipa: "/baʊm/"]
+// BAUM: Rosenbaum, Tannenbaum, Nussbaum
+baum -> baʊm / _#;
+
+// -FELD Ending
+[id: 2919, name: "feld ending", weight: 0.10, group: bm_germanic_suffix]
+// FELD: Rosenfeld, Seinfeld
+feld -> fɛlt / _#;
+
+// ============================================================
+// Phase 3: Yiddish-Influenced Patterns
+// ============================================================
+
+// TZ Pattern (common in Yiddish names)
+[id: 2920, name: "tz yiddish", weight: 0.10, group: bm_yiddish, ipa: "/t͡s/"]
+// TZ -> t͡s: Schwartz, Katz, Plotz
+tz -> t͡s;
+
+// Initial SCH in Yiddish Names
+[id: 2921, name: "sch initial yiddish", weight: 0.10, group: bm_yiddish, ipa: "/ʃ/"]
+// SCH: Schwartz, Schneider, Schiff
+sch -> ʃ / #_;
+
+// OI/OY Diphthong (Yiddish influence)
+[id: 2922, name: "oi yiddish", weight: 0.15, group: bm_yiddish, ipa: "/ɔɪ/"]
+// OI -> oy: Loiman
+oi -> ɔɪ;
+
+[id: 2923, name: "oy yiddish", weight: 0.15, group: bm_yiddish, ipa: "/ɔɪ/"]
+// OY -> oy: Moyshe
+oy -> ɔɪ;
+
+// AY/AI Diphthong (Yiddish)
+[id: 2924, name: "ay yiddish", weight: 0.15, group: bm_yiddish, ipa: "/aɪ/"]
+// AY -> ai: Mayer
+ay -> aɪ;
+
+[id: 2925, name: "ai yiddish", weight: 0.15, group: bm_yiddish, ipa: "/aɪ/"]
+// AI -> ai: Saifer
+ai -> aɪ;
+
+// ============================================================
+// Phase 4: W/V Alternations in Names
+// ============================================================
+
+// W -> V in Germanic Names
+[id: 2930, name: "w to v names", weight: 0.15, group: bm_germanic_w, ipa: "/v/"]
+// W -> v: Wagner, Weiss, Werner, Winkler
+w -> v;
+
+// V -> F in Native German Names
+[id: 2931, name: "v to f names", weight: 0.20, group: bm_germanic_w, ipa: "/f/"]
+// V -> f in native words: Vogel, von (but /v/ in loanwords)
+v -> f;
+
+// ============================================================
+// Phase 5: Prefix Patterns
+// ============================================================
+
+// VON- Prefix
+[id: 2940, name: "von prefix", weight: 0.10, group: bm_germanic_prefix]
+// VON: von Braun, von Neumann (nobility indicator)
+von -> fon / #_;
+
+// VAN- Prefix (Dutch/Flemish influence)
+[id: 2941, name: "van prefix", weight: 0.10, group: bm_germanic_prefix]
+// VAN: van der Berg (Dutch names in Germanic context)
+van -> fan / #_;
+
+// ZU- Prefix
+[id: 2942, name: "zu prefix", weight: 0.10, group: bm_germanic_prefix]
+// ZU: zu Guttenberg
+zu -> tsu / #_;
+
+// ============================================================
+// Phase 6: Regional Variants
+// ============================================================
+
+// Austrian Variants
+// -ER endings: Gruber, Huber, Maier (Austrian common)
+// No change needed - standard German pronunciation
+
+// Swiss German Variants
+[id: 2951, name: "li diminutive swiss", weight: 0.15, group: bm_germanic_regional]
+// -LI diminutive: Müeterli (Swiss German)
+li -> li / _#;
+
+[id: 2952, name: "chi swiss", weight: 0.20, group: bm_germanic_regional, ipa: "/xi/"]
+// -CHI: Swiss German diminutive variant
+chi -> xi / _#;
+
+// ============================================================
+// Phase 7: Double Letter Patterns in Names
+// ============================================================
+
+// Double Consonants Common in German Names
+[id: 2960, name: "ff in names", weight: 0.10, group: bm_germanic_geminate]
+// FF: Hoffmann, Pfaff
+ff -> f;
+
+[id: 2961, name: "ll in names", weight: 0.10, group: bm_germanic_geminate]
+// LL: Müller, Schiller
+ll -> l;
+
+[id: 2962, name: "nn in names", weight: 0.10, group: bm_germanic_geminate]
+// NN: Brenner, Brunner
+nn -> n;
+
+[id: 2963, name: "ss in names", weight: 0.10, group: bm_germanic_geminate]
+// SS: Hesse, Gross
+ss -> s;
+
+[id: 2964, name: "tt in names", weight: 0.10, group: bm_germanic_geminate]
+// TT: Ritter, Natter
+tt -> t;
+
+// ============================================================
+// Phase 8: Historical/Archaic Spellings
+// ============================================================
+
+// TH in Old German Names
+[id: 2970, name: "th old german", weight: 0.15, group: bm_germanic_archaic, ipa: "/t/"]
+// TH -> t: Thalheimer (archaic spelling)
+th -> t;
+
+// PH in Names
+[id: 2971, name: "ph in names", weight: 0.10, group: bm_germanic_archaic, ipa: "/f/"]
+// PH -> f: Pfeffer sometimes spelled Pheffer historically
+ph -> f;
+
+// Y as Vowel in Names
+[id: 2972, name: "y vowel names", weight: 0.20, group: bm_germanic_archaic, ipa: "/y/"]
+// Y -> ü sound: Sylt, Freyberg
+y -> y;
+
+// ============================================================
+// Phase 9: Cross-Border Name Patterns
+// ============================================================
+
+// Names shared with Dutch
+[id: 2980, name: "ij dutch german", weight: 0.20, group: bm_germanic_cross]
+// IJ (Dutch): treated as long I in German context
+ij -> iː;
+
+// Names shared with Polish/Slavic
+[id: 2981, name: "ski german context", weight: 0.20, group: bm_germanic_cross]
+// SKI endings (Slavic origin but common in German-speaking areas)
+ski -> ski / _#;
+
+[id: 2982, name: "sky german context", weight: 0.20, group: bm_germanic_cross]
+// SKY variant
+sky -> ski / _#;
+
+// ============================================================
+// Phase 10: Special Character Normalization
+// ============================================================
+
+// Handling names without diacritics (ASCII normalization)
+[id: 2990, name: "ae for ä names", weight: 0.10, group: bm_germanic_ascii]
+// AE -> ä equivalent: Baer = Bär
+ae -> ɛ;
+
+[id: 2991, name: "oe for ö names", weight: 0.10, group: bm_germanic_ascii]
+// OE -> ö equivalent: Goetz = Götz
+oe -> ø;
+
+[id: 2992, name: "ue for ü names", weight: 0.10, group: bm_germanic_ascii]
+// UE -> ü equivalent: Mueller = Müller
+ue -> y;
+
+// SS for ß
+// SS -> s: Strauss = Strauß
+// Already handled by german/base.llev rule 1889 (ss -> s)

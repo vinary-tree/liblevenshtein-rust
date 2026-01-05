@@ -168,9 +168,9 @@ w -> v;
 // Z PRONUNCIATION
 // ============================================================
 
-// Z → /ts/ (voiceless alveolar affricate)
+// Z → /t͡s/ (voiceless alveolar affricate)
 [id: 1860, name: "z to ts", weight: 0.15, group: german_consonants, ipa: "/t͡s/"]
-z -> ts;
+z -> t͡s;
 
 // ============================================================
 // QU PATTERN
@@ -250,3 +250,145 @@ c -> k;
 
 // Note: y in loanwords typically pronounced as /y/ (like German ü),
 // but no transformation needed since ü -> y is already handled above.
+
+// ============================================================
+// Cologne Phonetic (Kölner Phonetik) Derived Rules
+// ============================================================
+// Additional rules derived from the Cologne Phonetic algorithm,
+// a phonetic algorithm designed specifically for German.
+// ID Range: 2400-2499
+
+// ------------------------------------------------------------
+// X Handling
+// ------------------------------------------------------------
+// X in German is pronounced as /ks/ (borrowed words)
+
+[id: 2400, name: "x to ks cologne", weight: 0.10, group: cologne_x, ipa: "/ks/"]
+// x -> ks: Hexe, Axel, Max
+x -> ks;
+
+// X after C/K/Q is simplified (the k is already encoded)
+[id: 2401, name: "cx to x cologne", weight: 0.10, group: cologne_x]
+// cx -> ks (rare, normalize)
+cx -> ks;
+
+[id: 2402, name: "kx to x cologne", weight: 0.10, group: cologne_x]
+kx -> ks;
+
+// ------------------------------------------------------------
+// D/T Before Sibilants
+// ------------------------------------------------------------
+// In Cologne Phonetic, D/T before C, S, Z have special handling
+
+[id: 2410, name: "ds to ts cologne", weight: 0.10, group: cologne_dt, ipa: "/t͡s/"]
+// ds -> t͡s: Handschuh (after normalization)
+ds -> t͡s;
+
+[id: 2411, name: "dt to t cologne", weight: 0.10, group: cologne_dt]
+// dt -> t: Stadt, Schmidt
+dt -> t;
+
+[id: 2412, name: "dz to ts cologne", weight: 0.10, group: cologne_dt, ipa: "/t͡s/"]
+// dz -> t͡s
+dz -> t͡s;
+
+[id: 2413, name: "tz to ts cologne", weight: 0.10, group: cologne_dt, ipa: "/t͡s/"]
+// tz -> t͡s: Katze, Platz, Netz
+tz -> t͡s;
+
+// ------------------------------------------------------------
+// Additional C Context Rules
+// ------------------------------------------------------------
+// Cologne Phonetic has complex C handling
+
+[id: 2420, name: "c before a cologne", weight: 0.15, group: cologne_c, ipa: "/k/"]
+// c -> k before a: Café (in German context)
+ca -> ka;
+
+[id: 2421, name: "c before o cologne", weight: 0.15, group: cologne_c, ipa: "/k/"]
+// c -> k before o: Computer
+co -> ko;
+
+[id: 2422, name: "c before u cologne", weight: 0.15, group: cologne_c, ipa: "/k/"]
+// c -> k before u: Cursor
+cu -> ku;
+
+// NOTE: ch already handled by ich-Laut/ach-Laut rules
+
+[id: 2424, name: "c before l cologne", weight: 0.15, group: cologne_c, ipa: "/k/"]
+// c -> k before l: Cluster
+cl -> kl;
+
+[id: 2425, name: "c before r cologne", weight: 0.15, group: cologne_c, ipa: "/k/"]
+// c -> k before r: Creme
+cr -> kr;
+
+// C after S/Z maps to different value in Cologne
+[id: 2426, name: "sc to sk cologne", weight: 0.10, group: cologne_c]
+// sc before consonant -> sk (not sch pattern)
+sc -> sk / _$CONSONANT;
+
+[id: 2427, name: "zc to sk cologne", weight: 0.10, group: cologne_c]
+// zc -> sk (rare)
+zc -> sk;
+
+// C before E/I in German loanwords can be /t͡s/ (like Z)
+[id: 2428, name: "c before e soft cologne", weight: 0.20, group: cologne_c, ipa: "/t͡s/"]
+// c -> t͡s before e in some contexts: Cello, Cent (German pronunciation)
+ce -> t͡se;
+
+[id: 2429, name: "c before i soft cologne", weight: 0.20, group: cologne_c, ipa: "/t͡s/"]
+// c -> t͡s before i: circa
+ci -> t͡si;
+
+// ------------------------------------------------------------
+// Nasal Assimilation
+// ------------------------------------------------------------
+// M/N are treated equivalently in Cologne Phonetic (code 6)
+
+// NOTE: mb, mp clusters preserved (no transformation needed)
+
+[id: 2442, name: "n before k cologne", weight: 0.15, group: cologne_nasal, ipa: "/ŋ/"]
+// nk -> ŋk (velar nasal before velar stop)
+nk -> ŋk;
+
+[id: 2443, name: "ng to velar cologne", weight: 0.15, group: cologne_nasal, ipa: "/ŋ/"]
+// ng -> ŋ
+ng -> ŋ;
+
+// ------------------------------------------------------------
+// Additional Initial Cluster Rules
+// ------------------------------------------------------------
+
+// NOTE: pf preserved (German has /pf/ affricate): Pferd, Pfeffer
+// NOTE: ps preserved (German pronounces the p): Psychologie
+// NOTE: pn preserved (German pronounces the p): Pneumatik
+// (Different from English where p is silent in ps/pn)
+
+// ------------------------------------------------------------
+// J Pronunciation
+// ------------------------------------------------------------
+
+[id: 2460, name: "j to y cologne", weight: 0.15, group: cologne_j, ipa: "/j/"]
+// j -> j/y: Jahr, jetzt (palatal approximant)
+// German J is like English Y in "yes"
+j -> j;
+
+// ------------------------------------------------------------
+// H Handling (beyond silent H)
+// ------------------------------------------------------------
+
+// NOTE: h initial (Haus, Hund) is pronounced - no change needed
+
+[id: 2471, name: "h after consonant cologne", weight: 0.15, group: cologne_h]
+// h after consonant is silent in Cologne Phonetic
+h -> / ${CONSONANT}_$VOWEL;
+
+// ------------------------------------------------------------
+// Y Handling
+// ------------------------------------------------------------
+
+[id: 2480, name: "y to ue cologne", weight: 0.20, group: cologne_y, ipa: "/y/"]
+// y in German words is typically /y/ (same as ü)
+// In loanwords: System, Gymnasium
+y -> y;

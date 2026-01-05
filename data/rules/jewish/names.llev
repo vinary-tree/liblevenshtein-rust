@@ -1,0 +1,409 @@
+// Jewish Name Phonetic Rules (Daitch-Mokotoff Soundex Derived)
+// ============================================================
+// Rules for matching Jewish family names, particularly Eastern
+// European (Ashkenazi) and Sephardic names.
+//
+// Based on the Daitch-Mokotoff Soundex algorithm, developed by
+// Gary Mokotoff and Randy Daitch specifically for Jewish and
+// Eastern European names. It handles:
+//   - Yiddish-origin names
+//   - Hebrew-origin names
+//   - Slavic-influenced Jewish names
+//   - Germanic-influenced Jewish names
+//   - Sephardic (Ladino/Spanish) Jewish names
+//
+// Key differences from standard Soundex:
+//   - Multiple code paths for ambiguous sounds
+//   - Position-sensitive coding (initial vs medial)
+//   - Retains vowel distinctions in some positions
+//   - Handles Slavic consonant clusters
+//
+// ID Range: 3000-3099
+
+@name "Jewish Names (Daitch-Mokotoff Derived)"
+@version "1.0.0"
+@author "Derived from Daitch-Mokotoff Soundex"
+@description "Phonetic rules for matching Jewish personal and family names"
+
+@define VOWEL = [aeiou]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+
+// ============================================================
+// Phase 1: AI/AJ/AY Diphthong Patterns
+// ============================================================
+// These represent the Yiddish "ay" sound
+
+[id: 3000, name: "ai diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/aɪ/"]
+// AI: Aizen, Kaitz, Saifer
+ai -> aɪ;
+
+[id: 3001, name: "aj diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/aɪ/"]
+// AJ: Polish/Slavic spelling
+aj -> aɪ;
+
+[id: 3002, name: "ay diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/aɪ/"]
+// AY: Mayer, Bayer
+ay -> aɪ;
+
+// ============================================================
+// Phase 2: AU Diphthong
+// ============================================================
+
+[id: 3005, name: "au diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/aʊ/"]
+// AU: Strauss, Kaufman
+au -> aʊ;
+
+// ============================================================
+// Phase 3: EI/EJ/EY Diphthong Patterns
+// ============================================================
+
+[id: 3008, name: "ei diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/aɪ/"]
+// EI: Einstein, Weinstein
+ei -> aɪ;
+
+[id: 3009, name: "ej diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/aɪ/"]
+// EJ: Slavic spelling
+ej -> aɪ;
+
+[id: 3010, name: "ey diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/aɪ/"]
+// EY: Meyer, Breyer
+ey -> aɪ;
+
+// ============================================================
+// Phase 4: EU/OI/OJ/OY Diphthongs
+// ============================================================
+
+[id: 3012, name: "eu diphthong dm", weight: 0.15, group: dm_diphthong, ipa: "/ɔɪ/"]
+// EU: German-origin names
+eu -> ɔɪ;
+
+[id: 3013, name: "oi diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/ɔɪ/"]
+// OI: Loiman
+oi -> ɔɪ;
+
+[id: 3014, name: "oj diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/ɔɪ/"]
+// OJ: Slavic spelling
+oj -> ɔɪ;
+
+[id: 3015, name: "oy diphthong dm", weight: 0.10, group: dm_diphthong, ipa: "/ɔɪ/"]
+// OY: Moyshe
+oy -> ɔɪ;
+
+// ============================================================
+// Phase 5: CH Patterns (Context-Dependent)
+// ============================================================
+
+[id: 3020, name: "ch initial dm", weight: 0.10, group: dm_ch, ipa: "/x/"]
+// CH initial: Often velar fricative in Yiddish
+ch -> x / #_;
+
+[id: 3021, name: "ch medial dm", weight: 0.10, group: dm_ch, ipa: "/x/"]
+// CH medial: Depends on origin
+ch -> x;
+
+[id: 3022, name: "chs dm", weight: 0.10, group: dm_ch, ipa: "/ks/"]
+// CHS: Sachs, Fuchs
+chs -> ks;
+
+[id: 3023, name: "ck dm", weight: 0.05, group: dm_ck]
+// CK: Becker, Tucker
+ck -> k;
+
+// ============================================================
+// Phase 6: CZ/CS/CSZ Slavic Patterns
+// ============================================================
+
+[id: 3025, name: "cz slavic dm", weight: 0.10, group: dm_slavic, ipa: "/t͡ʃ/"]
+// CZ: Polish pattern (Kowalczyk)
+cz -> t͡ʃ;
+
+[id: 3026, name: "cs hungarian dm", weight: 0.10, group: dm_slavic, ipa: "/t͡ʃ/"]
+// CS: Hungarian pattern
+cs -> t͡ʃ;
+
+[id: 3027, name: "csz dm", weight: 0.10, group: dm_slavic, ipa: "/t͡ʃ/"]
+// CSZ: Variant
+csz -> t͡ʃ;
+
+// ============================================================
+// Phase 7: DRZ/DRS/DS/DSH/DSZ Patterns
+// ============================================================
+
+[id: 3030, name: "drz dm", weight: 0.15, group: dm_slavic_cluster, ipa: "/dʒ/"]
+// DRZ: Polish cluster
+drz -> dʒ;
+
+[id: 3031, name: "drs dm", weight: 0.15, group: dm_slavic_cluster, ipa: "/dʒ/"]
+// DRS: Variant
+drs -> dʒ;
+
+[id: 3032, name: "ds dm", weight: 0.10, group: dm_slavic_cluster, ipa: "/d͡z/"]
+// DS:
+ds -> d͡z;
+
+[id: 3033, name: "dsh dm", weight: 0.10, group: dm_slavic_cluster, ipa: "/dʒ/"]
+// DSH:
+dsh -> dʒ;
+
+[id: 3034, name: "dsz dm", weight: 0.10, group: dm_slavic_cluster, ipa: "/dʒ/"]
+// DSZ:
+dsz -> dʒ;
+
+[id: 3035, name: "dz dm", weight: 0.10, group: dm_slavic_cluster, ipa: "/d͡z/"]
+// DZ: Polish
+dz -> d͡z;
+
+[id: 3036, name: "dzh dm", weight: 0.10, group: dm_slavic_cluster, ipa: "/dʒ/"]
+// DZH:
+dzh -> dʒ;
+
+[id: 3037, name: "dzs dm", weight: 0.10, group: dm_slavic_cluster, ipa: "/dʒ/"]
+// DZS: Hungarian
+dzs -> dʒ;
+
+// ============================================================
+// Phase 8: FB/FN Patterns
+// ============================================================
+// Not standard in most languages but in D-M for completeness
+
+// ============================================================
+// Phase 9: GH Patterns
+// ============================================================
+
+[id: 3040, name: "gh dm", weight: 0.15, group: dm_gh]
+// GH: Often silent or /g/
+gh -> g;
+
+// ============================================================
+// Phase 10: H Patterns
+// ============================================================
+
+[id: 3042, name: "h initial dm", weight: 0.20, group: dm_h]
+// H initial: Often pronounced
+h -> h / #_;
+
+[id: 3043, name: "h silent dm", weight: 0.25, group: dm_h]
+// H medial: Often silent in Yiddish
+h -> / ${VOWEL}_$VOWEL;
+
+// ============================================================
+// Phase 11: KH/KS Patterns
+// ============================================================
+
+[id: 3045, name: "kh dm", weight: 0.10, group: dm_k, ipa: "/x/"]
+// KH: Transliteration of Yiddish/Hebrew ח
+kh -> x;
+
+[id: 3046, name: "ks dm", weight: 0.05, group: dm_k, ipa: "/ks/"]
+// KS: Already ks
+ks -> ks;
+
+// ============================================================
+// Phase 12: MN/NM Patterns
+// ============================================================
+
+[id: 3048, name: "mn dm", weight: 0.15, group: dm_nasal]
+// MN: Difficult cluster
+mn -> mn;
+
+[id: 3049, name: "nm dm", weight: 0.15, group: dm_nasal]
+// NM: Rare
+nm -> nm;
+
+// ============================================================
+// Phase 13: PH/PF Patterns
+// ============================================================
+
+[id: 3050, name: "ph dm", weight: 0.05, group: dm_p, ipa: "/f/"]
+// PH: Greek origin -> /f/
+ph -> f;
+
+[id: 3051, name: "pf dm", weight: 0.10, group: dm_p, ipa: "/f/"]
+// PF: German cluster, often simplified
+pf -> f;
+
+// ============================================================
+// Phase 14: RZ/RS Patterns
+// ============================================================
+
+[id: 3055, name: "rz polish dm", weight: 0.10, group: dm_r, ipa: "/ʒ/"]
+// RZ: Polish (Grzegorz)
+rz -> ʒ;
+
+[id: 3056, name: "rs dm", weight: 0.15, group: dm_r]
+// RS: German/Dutch names
+rs -> rs;
+
+// ============================================================
+// Phase 15: SCH/SH/SHCH/SHTCH Patterns
+// ============================================================
+
+[id: 3060, name: "sch dm", weight: 0.05, group: dm_sch, ipa: "/ʃ/"]
+// SCH: German/Yiddish (Schwartz, Schneider)
+sch -> ʃ;
+
+[id: 3061, name: "sh dm", weight: 0.05, group: dm_sch, ipa: "/ʃ/"]
+// SH: English/Yiddish
+sh -> ʃ;
+
+[id: 3062, name: "shch dm", weight: 0.10, group: dm_sch, ipa: "/ʃt͡ʃ/"]
+// SHCH: Russian Щ
+shch -> ʃt͡ʃ;
+
+[id: 3063, name: "shtch dm", weight: 0.10, group: dm_sch, ipa: "/ʃt͡ʃ/"]
+// SHTCH: Variant
+shtch -> ʃt͡ʃ;
+
+[id: 3064, name: "shtsh dm", weight: 0.10, group: dm_sch, ipa: "/ʃt͡ʃ/"]
+// SHTSH: Variant
+shtsh -> ʃt͡ʃ;
+
+[id: 3065, name: "st dm", weight: 0.15, group: dm_sch]
+// ST: Standard cluster
+st -> st;
+
+[id: 3066, name: "stch dm", weight: 0.10, group: dm_sch, ipa: "/ʃt͡ʃ/"]
+// STCH: Variant of SHTCH
+stch -> ʃt͡ʃ;
+
+[id: 3067, name: "strz dm", weight: 0.10, group: dm_sch, ipa: "/ʃtʒ/"]
+// STRZ: Polish cluster
+strz -> ʃtʒ;
+
+[id: 3068, name: "strs dm", weight: 0.10, group: dm_sch, ipa: "/ʃtʃ/"]
+// STRS: Variant
+strs -> ʃtʃ;
+
+[id: 3069, name: "stsch dm", weight: 0.10, group: dm_sch, ipa: "/ʃt͡ʃ/"]
+// STSCH: German transcription
+stsch -> ʃt͡ʃ;
+
+[id: 3070, name: "stsh dm", weight: 0.10, group: dm_sch, ipa: "/ʃt͡ʃ/"]
+// STSH: Variant
+stsh -> ʃt͡ʃ;
+
+// ============================================================
+// Phase 16: SZ/SZCZ/SZCS Patterns (Polish)
+// ============================================================
+
+[id: 3072, name: "sz dm", weight: 0.05, group: dm_sz, ipa: "/ʃ/"]
+// SZ: Polish
+sz -> ʃ;
+
+[id: 3073, name: "szcz dm", weight: 0.10, group: dm_sz, ipa: "/ʃt͡ʃ/"]
+// SZCZ: Polish (Szczepanski)
+szcz -> ʃt͡ʃ;
+
+[id: 3074, name: "szcs dm", weight: 0.10, group: dm_sz, ipa: "/ʃt͡ʃ/"]
+// SZCS: Variant
+szcs -> ʃt͡ʃ;
+
+// ============================================================
+// Phase 17: TCH/TSCH/TSH/TZ Patterns
+// ============================================================
+
+[id: 3076, name: "tch dm", weight: 0.05, group: dm_t, ipa: "/t͡ʃ/"]
+// TCH:
+tch -> t͡ʃ;
+
+[id: 3077, name: "tsch dm", weight: 0.10, group: dm_t, ipa: "/t͡ʃ/"]
+// TSCH: German transcription (Tschaikowsky)
+tsch -> t͡ʃ;
+
+[id: 3078, name: "tsh dm", weight: 0.05, group: dm_t, ipa: "/t͡ʃ/"]
+// TSH:
+tsh -> t͡ʃ;
+
+[id: 3079, name: "ts dm", weight: 0.05, group: dm_t, ipa: "/t͡s/"]
+// TS:
+ts -> t͡s;
+
+[id: 3080, name: "tz dm", weight: 0.05, group: dm_t, ipa: "/t͡s/"]
+// TZ: Schwartz, Katz
+tz -> t͡s;
+
+[id: 3081, name: "tzs dm", weight: 0.10, group: dm_t, ipa: "/t͡ʃ/"]
+// TZS: Hungarian
+tzs -> t͡ʃ;
+
+[id: 3082, name: "trz dm", weight: 0.10, group: dm_t, ipa: "/tʃ/"]
+// TRZ: Polish
+trz -> tʃ;
+
+[id: 3083, name: "trs dm", weight: 0.10, group: dm_t, ipa: "/tʃ/"]
+// TRS: Variant
+trs -> tʃ;
+
+// ============================================================
+// Phase 18: ZDZ/ZDZH/ZD Patterns
+// ============================================================
+
+[id: 3085, name: "zdz dm", weight: 0.15, group: dm_z, ipa: "/ʒd͡ʒ/"]
+// ZDZ:
+zdz -> ʒd͡ʒ;
+
+[id: 3086, name: "zdzh dm", weight: 0.15, group: dm_z, ipa: "/ʒdʒ/"]
+// ZDZH:
+zdzh -> ʒdʒ;
+
+[id: 3087, name: "zhdzh dm", weight: 0.15, group: dm_z, ipa: "/ʒdʒ/"]
+// ZHDZH:
+zhdzh -> ʒdʒ;
+
+// ============================================================
+// Phase 19: ZH/ZS/ZSCH/ZSH Patterns
+// ============================================================
+
+[id: 3088, name: "zh dm", weight: 0.05, group: dm_zh, ipa: "/ʒ/"]
+// ZH: Transliteration
+zh -> ʒ;
+
+[id: 3089, name: "zs dm", weight: 0.05, group: dm_zh, ipa: "/ʒ/"]
+// ZS: Hungarian
+zs -> ʒ;
+
+[id: 3090, name: "zsch dm", weight: 0.10, group: dm_zh, ipa: "/ʒ/"]
+// ZSCH: German transcription
+zsch -> ʒ;
+
+[id: 3091, name: "zsh dm", weight: 0.10, group: dm_zh, ipa: "/ʒ/"]
+// ZSH: Variant
+zsh -> ʒ;
+
+// ============================================================
+// Phase 20: Common Jewish Name Elements
+// ============================================================
+
+// Prefixes
+[id: 3092, name: "gold prefix", weight: 0.10, group: dm_element]
+// GOLD-: Goldberg, Goldman, Goldstein
+gold -> gold / #_;
+
+[id: 3093, name: "rosen prefix", weight: 0.10, group: dm_element]
+// ROSEN-: Rosenbaum, Rosenberg, Rosenthal
+rosen -> rozen / #_;
+
+[id: 3094, name: "wein prefix", weight: 0.10, group: dm_element]
+// WEIN-: Weinberg, Weinstein
+wein -> vaɪn / #_;
+
+[id: 3095, name: "silver prefix", weight: 0.10, group: dm_element]
+// SILVER-/SILBER-: Silverberg, Silberman
+silver -> silver / #_;
+
+[id: 3096, name: "silber prefix", weight: 0.10, group: dm_element]
+silber -> zilber / #_;
+
+// Suffixes
+[id: 3097, name: "stein suffix dm", weight: 0.05, group: dm_element, ipa: "/ʃtaɪn/"]
+// -STEIN: Very common
+stein -> ʃtaɪn / _#;
+
+[id: 3098, name: "berg suffix dm", weight: 0.05, group: dm_element]
+// -BERG: Very common
+berg -> berk / _#;
+
+[id: 3099, name: "baum suffix dm", weight: 0.05, group: dm_element, ipa: "/baʊm/"]
+// -BAUM: Rosenbaum
+baum -> baʊm / _#;
+

@@ -150,9 +150,9 @@ g -> ɡ;
 [id: 17436, name: "x as ks", weight: 0.1, group: latin_consonants, ipa: "/ks/"]
 x -> ks;
 
-// Z → dz (in Greek loanwords, voiced affricate)
-[id: 17437, name: "z as dz", weight: 0.1, group: latin_consonants, ipa: "/dz/"]
-z -> dz;
+// Z → d͡z (in Greek loanwords, voiced affricate)
+[id: 17437, name: "z as dz", weight: 0.1, group: latin_consonants, ipa: "/d͡z/"]
+z -> d͡z;
 
 // ============================================================
 // NASAL ASSIMILATION

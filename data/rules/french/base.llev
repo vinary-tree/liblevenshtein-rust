@@ -337,3 +337,185 @@ x -> ks;
 [id: 1320, name: "w to v", weight: 0.3, group: french_loanwords]
 w -> v;
 
+// ============================================================
+// French Soundex/PHONEX Derived Rules
+// ============================================================
+// Additional rules based on French phonetic algorithms
+// (PHONEX, FONEM, Sonnex) for improved matching.
+// ID Range: 2600-2699
+
+// ------------------------------------------------------------
+// ILL/IL YOD Patterns
+// ------------------------------------------------------------
+// ILL and IL after vowels produce a yod sound /j/
+
+[id: 2600, name: "ail yod", weight: 0.15, group: phonex_yod, ipa: "/aj/"]
+// AIL ending: travail, détail, éventail
+ail -> aj / _#;
+
+[id: 2601, name: "eil yod", weight: 0.15, group: phonex_yod, ipa: "/ɛj/"]
+// EIL ending: soleil, conseil, réveil
+eil -> ɛj / _#;
+
+[id: 2602, name: "euil yod", weight: 0.15, group: phonex_yod, ipa: "/œj/"]
+// EUIL ending: feuille, deuil, écureuil
+euil -> œj / _#;
+
+[id: 2603, name: "œuil yod", weight: 0.15, group: phonex_yod, ipa: "/œj/"]
+// ŒUIL ending: œil
+œuil -> œj / _#;
+
+[id: 2604, name: "ueil yod", weight: 0.15, group: phonex_yod, ipa: "/œj/"]
+// UEIL ending: accueil, recueil
+ueil -> œj / _#;
+
+[id: 2605, name: "ouil yod", weight: 0.15, group: phonex_yod, ipa: "/uj/"]
+// OUIL ending: fenouil, grenouil
+ouil -> uj / _#;
+
+[id: 2610, name: "ille after vowel", weight: 0.15, group: phonex_yod, ipa: "/ij/"]
+// -ILLE after vowel: famille, fille, bille
+// Note: After consonant, -ille can be /il/ (ville, mille) - exceptions
+ille -> ij / ${VOWEL}_;
+
+[id: 2611, name: "ill after vowel", weight: 0.15, group: phonex_yod, ipa: "/ij/"]
+// -ILL- in middle of words after vowel: bataillon, médaillon
+ill -> ij / ${VOWEL}_;
+
+// ------------------------------------------------------------
+// OIN Nasal Pattern (not in base rules)
+// ------------------------------------------------------------
+
+[id: 2620, name: "oin nasal", weight: 0.10, group: phonex_nasal, ipa: "/wɛ̃/"]
+// OIN: coin, point, loin, moins, soin
+oin -> wɛ̃;
+
+[id: 2621, name: "oing nasal", weight: 0.10, group: phonex_nasal, ipa: "/wɛ̃/"]
+// OING: going (rare, loanwords)
+oing -> wɛ̃;
+
+// ------------------------------------------------------------
+// Additional Vowel Patterns
+// ------------------------------------------------------------
+
+[id: 2630, name: "oeu to œ", weight: 0.10, group: phonex_vowel, ipa: "/œ/"]
+// OEU: cœur, sœur, œuvre
+oeu -> œ;
+
+[id: 2631, name: "œu to œ", weight: 0.10, group: phonex_vowel, ipa: "/œ/"]
+// ŒU: bœuf, œuf
+œu -> œ;
+
+[id: 2632, name: "ay to ei", weight: 0.15, group: phonex_vowel, ipa: "/ɛj/"]
+// AY: payer, balayer (a + yod)
+ay -> ɛj;
+
+[id: 2633, name: "ey to ei", weight: 0.15, group: phonex_vowel, ipa: "/ɛj/"]
+// EY: hockey (loanwords)
+ey -> ɛj;
+
+[id: 2634, name: "oy to waj", weight: 0.15, group: phonex_vowel, ipa: "/waj/"]
+// OY: voyage, moyen, royal
+oy -> waj;
+
+[id: 2635, name: "uy to yij", weight: 0.20, group: phonex_vowel, ipa: "/ɥij/"]
+// UY: essuyer, appuyer (ü + yod)
+uy -> yij;
+
+// ------------------------------------------------------------
+// Additional Ending Patterns
+// ------------------------------------------------------------
+
+[id: 2640, name: "er final infinitive", weight: 0.15, group: phonex_ending, ipa: "/e/"]
+// -ER infinitive ending: parler, manger
+er -> e / _#;
+
+[id: 2641, name: "ez final", weight: 0.15, group: phonex_ending, ipa: "/e/"]
+// -EZ ending: vous parlez
+ez -> e / _#;
+
+[id: 2642, name: "et final", weight: 0.15, group: phonex_ending, ipa: "/ɛ/"]
+// -ET ending: ballet, buffet (but not as in 'net')
+// Note: Weight indicates variation
+
+[id: 2643, name: "ent final verb", weight: 0.20, group: phonex_ending]
+// -ENT in 3rd person plural: silent (ils parlent)
+ent -> / _#;
+
+[id: 2644, name: "es final", weight: 0.20, group: phonex_ending]
+// -ES ending: generally silent (maisons, tables)
+es -> / _#;
+
+// ------------------------------------------------------------
+// Verb Ending Patterns
+// ------------------------------------------------------------
+
+[id: 2650, name: "aient ending", weight: 0.15, group: phonex_verb, ipa: "/ɛ/"]
+// -AIENT imparfait: ils parlaient
+aient -> ɛ / _#;
+
+[id: 2651, name: "ait ending", weight: 0.15, group: phonex_verb, ipa: "/ɛ/"]
+// -AIT imparfait/conditionnel: il parlait
+ait -> ɛ / _#;
+
+[id: 2652, name: "ais ending", weight: 0.15, group: phonex_verb, ipa: "/ɛ/"]
+// -AIS imparfait: je parlais
+ais -> ɛ / _#;
+
+// ------------------------------------------------------------
+// X Plural Patterns
+// ------------------------------------------------------------
+
+[id: 2660, name: "aux plural", weight: 0.10, group: phonex_plural, ipa: "/o/"]
+// -AUX plural: chevaux, journaux
+aux -> o / _#;
+
+[id: 2661, name: "eux plural", weight: 0.10, group: phonex_plural, ipa: "/ø/"]
+// -EUX plural: cheveux, yeux, heureux
+eux -> ø / _#;
+
+[id: 2662, name: "oux plural", weight: 0.10, group: phonex_plural, ipa: "/u/"]
+// -OUX plural: bijoux, cailloux
+oux -> u / _#;
+
+// ------------------------------------------------------------
+// Additional Nasal Patterns
+// ------------------------------------------------------------
+
+[id: 2670, name: "ien nasal", weight: 0.15, group: phonex_nasal, ipa: "/jɛ̃/"]
+// IEN: bien, chien, rien
+ien -> jɛ̃;
+
+[id: 2671, name: "yen nasal", weight: 0.15, group: phonex_nasal, ipa: "/jɛ̃/"]
+// YEN: moyen, citoyen
+yen -> jɛ̃;
+
+[id: 2672, name: "éen", weight: 0.15, group: phonex_vowel, ipa: "/eɛ̃/"]
+// ÉEN: européen, méditerranéen
+éen -> eɛ̃;
+
+// ------------------------------------------------------------
+// C Patterns (extending softening rules)
+// ------------------------------------------------------------
+
+[id: 2680, name: "sc before e", weight: 0.10, group: phonex_c]
+// SC before e/i: scène, science
+sce -> se;
+
+[id: 2681, name: "sc before i", weight: 0.10, group: phonex_c]
+sci -> si;
+
+// ------------------------------------------------------------
+// Initial Cluster Patterns
+// ------------------------------------------------------------
+
+[id: 2690, name: "ps initial french", weight: 0.15, group: phonex_initial, ipa: "/ps/"]
+// PS initial: psychologie (p usually pronounced in French)
+// Note: Some speakers drop the p, hence weight
+
+[id: 2691, name: "pt initial french", weight: 0.15, group: phonex_initial, ipa: "/pt/"]
+// PT initial: Ptolémée (p usually pronounced)
+
+[id: 2692, name: "pn initial french", weight: 0.15, group: phonex_initial, ipa: "/pn/"]
+// PN initial: pneumatique (p usually pronounced)
+

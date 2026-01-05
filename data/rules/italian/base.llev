@@ -261,3 +261,204 @@ x -> ks;
 [id: 1794, name: "y to i", weight: 0.3, group: italian_foreign]
 y -> i;
 
+// ============================================================
+// DOUBLE METAPHONE ITALIAN PATTERNS
+// ============================================================
+// Additional rules derived from the Double Metaphone algorithm's
+// Italian language branch for improved name matching.
+// ID Range: 3600-3699
+
+@define VOWEL_IT = [aeiouàèéìíòóùú]
+@define CONSONANT_IT = [bcdfghjklmnpqrstvwxyz]
+
+// ------------------------------------------------------------
+// CCI/CCE Patterns (DoubleMetaphone)
+// ------------------------------------------------------------
+
+[id: 3600, name: "ccia to t͡ʃa dm", weight: 0.10, group: dm_italian, ipa: "/t͡ʃ/"]
+// CCIA: Arrivederci, cappuccino (geminate + soft c)
+ccia -> t͡ʃa;
+
+[id: 3601, name: "ccio to t͡ʃo dm", weight: 0.10, group: dm_italian, ipa: "/t͡ʃ/"]
+// CCIO: Fettuccine variant
+ccio -> t͡ʃo;
+
+[id: 3602, name: "cciu to t͡ʃu dm", weight: 0.10, group: dm_italian, ipa: "/t͡ʃ/"]
+// CCIU:
+cciu -> t͡ʃu;
+
+[id: 3603, name: "cce to t͡ʃe dm", weight: 0.10, group: dm_italian, ipa: "/t͡ʃ/"]
+// CCE: Geminate soft c
+cce -> t͡ʃe;
+
+[id: 3604, name: "cci to t͡ʃi dm", weight: 0.10, group: dm_italian, ipa: "/t͡ʃ/"]
+// CCI: Geminate soft c
+cci -> t͡ʃi;
+
+// ------------------------------------------------------------
+// GGI/GGE Patterns
+// ------------------------------------------------------------
+
+[id: 3610, name: "ggia to d͡ʒa dm", weight: 0.10, group: dm_italian, ipa: "/d͡ʒ/"]
+// GGIA: Pioggia, spiaggia
+ggia -> d͡ʒa;
+
+[id: 3611, name: "ggio to d͡ʒo dm", weight: 0.10, group: dm_italian, ipa: "/d͡ʒ/"]
+// GGIO: Maggio
+ggio -> d͡ʒo;
+
+[id: 3612, name: "ggiu to d͡ʒu dm", weight: 0.10, group: dm_italian, ipa: "/d͡ʒ/"]
+// GGIU:
+ggiu -> d͡ʒu;
+
+[id: 3613, name: "gge to d͡ʒe dm", weight: 0.10, group: dm_italian, ipa: "/d͡ʒ/"]
+// GGE: Geminate soft g
+gge -> d͡ʒe;
+
+[id: 3614, name: "ggi to d͡ʒi dm", weight: 0.10, group: dm_italian, ipa: "/d͡ʒ/"]
+// GGI: Geminate soft g
+ggi -> d͡ʒi;
+
+// ------------------------------------------------------------
+// Name Suffix Patterns
+// ------------------------------------------------------------
+
+[id: 3620, name: "ini suffix italian", weight: 0.10, group: bm_italian_suffix]
+// -INI: Piccini, Rossini (diminutive patronymic)
+ini -> ini / _#;
+
+[id: 3621, name: "ino suffix italian", weight: 0.10, group: bm_italian_suffix]
+// -INO: Valentino (diminutive)
+ino -> ino / _#;
+
+[id: 3622, name: "etti suffix italian", weight: 0.10, group: bm_italian_suffix]
+// -ETTI: Benedetti, Martinetti
+etti -> eti / _#;
+
+[id: 3623, name: "ello suffix italian", weight: 0.10, group: bm_italian_suffix]
+// -ELLO: Donatello, Raffaello
+ello -> elo / _#;
+
+[id: 3624, name: "ella suffix italian", weight: 0.10, group: bm_italian_suffix]
+// -ELLA: Mariella
+ella -> ela / _#;
+
+[id: 3625, name: "one suffix italian", weight: 0.10, group: bm_italian_suffix]
+// -ONE: Augmentative (big)
+one -> one / _#;
+
+[id: 3626, name: "acci suffix italian", weight: 0.10, group: bm_italian_suffix, ipa: "/at͡ʃi/"]
+// -ACCI: Pejorative (Boccacci)
+acci -> at͡ʃi / _#;
+
+// ------------------------------------------------------------
+// Regional Dialect Patterns
+// ------------------------------------------------------------
+
+// Sicilian Patterns
+[id: 3630, name: "dd sicilian", weight: 0.20, group: bm_italian_regional, ipa: "/ɖɖ/"]
+// DD in Sicilian: Retroflex (bello -> beddu)
+dd -> ɖɖ;
+
+// Neapolitan Patterns
+[id: 3631, name: "b to v neapolitan", weight: 0.25, group: bm_italian_regional]
+// B weakening in Neapolitan
+b -> v / ${VOWEL}_$VOWEL;
+
+// Venetian Patterns
+[id: 3632, name: "x venetian", weight: 0.25, group: bm_italian_regional, ipa: "/z/"]
+// X in Venetian names: Represents /z/
+x -> z;
+
+// ------------------------------------------------------------
+// Cross-Border Patterns
+// ------------------------------------------------------------
+
+[id: 3640, name: "tz german italian", weight: 0.15, group: bm_italian_cross, ipa: "/t͡s/"]
+// TZ: German names in Italian context
+tz -> t͡s;
+
+[id: 3641, name: "sch german italian", weight: 0.15, group: bm_italian_cross, ipa: "/ʃ/"]
+// SCH: German names
+sch -> ʃ;
+
+[id: 3642, name: "ski slavic italian", weight: 0.15, group: bm_italian_cross]
+// -SKI: Slavic names in Italian context
+ski -> ski / _#;
+
+// ------------------------------------------------------------
+// Historical/Latin Patterns
+// ------------------------------------------------------------
+
+[id: 3650, name: "ae latin italian", weight: 0.20, group: bm_italian_historical]
+// AE: Latin diphthong -> E
+ae -> e;
+
+[id: 3651, name: "oe latin italian", weight: 0.20, group: bm_italian_historical]
+// OE: Latin diphthong -> E
+oe -> e;
+
+[id: 3652, name: "ph latin italian", weight: 0.15, group: bm_italian_historical]
+// PH: Latin/Greek -> F
+ph -> f;
+
+[id: 3653, name: "th latin italian", weight: 0.15, group: bm_italian_historical]
+// TH: Latin/Greek -> T
+th -> t;
+
+// ------------------------------------------------------------
+// First Name Patterns
+// ------------------------------------------------------------
+
+[id: 3660, name: "giovanni name", weight: 0.10, group: bm_italian_firstname]
+// Giovanni -> John
+giovanni -> d͡ʒovani / _#;
+
+[id: 3661, name: "giuseppe name", weight: 0.10, group: bm_italian_firstname]
+// Giuseppe -> Joseph
+giuseppe -> d͡ʒuzɛpe / _#;
+
+[id: 3662, name: "francesco name", weight: 0.10, group: bm_italian_firstname]
+// Francesco -> Francis
+francesco -> frant͡ʃɛsko / _#;
+
+[id: 3663, name: "antonio name", weight: 0.10, group: bm_italian_firstname]
+// Antonio -> Anthony
+antonio -> antonio / _#;
+
+// ------------------------------------------------------------
+// Double Consonant Simplification for Matching
+// ------------------------------------------------------------
+// Note: Italian geminates are meaningful, but for cross-language
+// matching we provide simplified alternatives at higher weights
+
+[id: 3670, name: "tt to t matching", weight: 0.30, group: bm_italian_matching]
+tt -> t;
+
+[id: 3671, name: "pp to p matching", weight: 0.30, group: bm_italian_matching]
+pp -> p;
+
+[id: 3672, name: "bb to b matching", weight: 0.30, group: bm_italian_matching]
+bb -> b;
+
+[id: 3673, name: "dd to d matching", weight: 0.30, group: bm_italian_matching]
+dd -> d;
+
+[id: 3674, name: "gg to g matching", weight: 0.30, group: bm_italian_matching]
+gg -> ɡ;
+
+[id: 3675, name: "ll to l matching", weight: 0.30, group: bm_italian_matching]
+ll -> l;
+
+[id: 3676, name: "mm to m matching", weight: 0.30, group: bm_italian_matching]
+mm -> m;
+
+[id: 3677, name: "nn to n matching", weight: 0.30, group: bm_italian_matching]
+nn -> n;
+
+[id: 3678, name: "rr to r matching", weight: 0.30, group: bm_italian_matching]
+rr -> r;
+
+[id: 3679, name: "ss to s matching", weight: 0.30, group: bm_italian_matching]
+ss -> s;
+

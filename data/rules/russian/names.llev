@@ -1,0 +1,346 @@
+// Russian Name Phonetic Rules (Beider-Morse Derived)
+// ===================================================
+// Rules for matching Russian family names and personal names.
+// Based on the Beider-Morse Phonetic Matching (BMPM) algorithm's
+// Russian/Slavic language branch.
+//
+// Handles:
+//   - Traditional Russian surname patterns
+//   - Patronymic naming conventions
+//   - Jewish names with Russian spellings
+//   - Cross-border variants (Ukrainian, Belarusian, Polish)
+//   - Both Cyrillic and Latin transliterations
+//
+// ID Range: 3300-3399
+
+@name "Russian Names (Beider-Morse Derived)"
+@version "1.0.0"
+@author "Derived from Beider-Morse BMPM"
+@description "Phonetic rules for matching Russian personal and family names"
+
+@include "russian/base.llev"
+
+@define VOWEL = [aeiouɐɨɪ]
+@define CONSONANT = [bcdfghjklmnpqrstvwxz]
+
+// ============================================================
+// Phase 1: Common Surname Endings
+// ============================================================
+
+// -OV/-OVA Endings (Most Common Russian Surname Type)
+[id: 3300, name: "ov ending male", weight: 0.05, group: bm_russian_suffix]
+// -OV: Patronymic origin (Ivanov = son of Ivan)
+ov -> of / _#;
+
+[id: 3301, name: "ova ending female", weight: 0.05, group: bm_russian_suffix]
+// -OVA: Female form
+ova -> ova / _#;
+
+[id: 3302, name: "ev ending male", weight: 0.05, group: bm_russian_suffix]
+// -EV: Soft variant (Medvedev, Sergeev)
+ev -> ef / _#;
+
+[id: 3303, name: "eva ending female", weight: 0.05, group: bm_russian_suffix]
+// -EVA: Female form
+eva -> eva / _#;
+
+[id: 3304, name: "yev ending male", weight: 0.05, group: bm_russian_suffix]
+// -YEV: Variant spelling
+yev -> jef / _#;
+
+[id: 3305, name: "yeva ending female", weight: 0.05, group: bm_russian_suffix]
+// -YEVA: Female form
+yeva -> jeva / _#;
+
+// -IN/-INA Endings
+[id: 3306, name: "in ending male", weight: 0.10, group: bm_russian_suffix]
+// -IN: Pushkin, Yeltsin
+in -> in / _#;
+
+[id: 3307, name: "ina ending female", weight: 0.10, group: bm_russian_suffix]
+// -INA: Female form
+ina -> ina / _#;
+
+// -SKY/-SKAYA Endings
+[id: 3308, name: "sky ending male", weight: 0.05, group: bm_russian_suffix]
+// -SKY/-SKIJ: Dostoevsky, Trotsky
+sky -> ski / _#;
+
+[id: 3309, name: "skij ending male", weight: 0.05, group: bm_russian_suffix]
+skij -> ski / _#;
+
+[id: 3310, name: "skiy ending male", weight: 0.05, group: bm_russian_suffix]
+skiy -> ski / _#;
+
+[id: 3311, name: "skaya ending female", weight: 0.05, group: bm_russian_suffix]
+// -SKAYA: Female form
+skaya -> skaja / _#;
+
+// ============================================================
+// Phase 2: Patronymic Patterns
+// ============================================================
+
+[id: 3320, name: "ovich patronymic", weight: 0.10, group: bm_russian_patronymic]
+// -OVICH: Son of (Petrovich = son of Peter)
+ovich -> ovit͡ʃ / _#;
+
+[id: 3321, name: "evich patronymic", weight: 0.10, group: bm_russian_patronymic]
+// -EVICH: Soft variant
+evich -> evit͡ʃ / _#;
+
+[id: 3322, name: "yevich patronymic", weight: 0.10, group: bm_russian_patronymic]
+// -YEVICH: Variant spelling
+yevich -> jevit͡ʃ / _#;
+
+[id: 3323, name: "ovna patronymic", weight: 0.10, group: bm_russian_patronymic]
+// -OVNA: Daughter of
+ovna -> ovna / _#;
+
+[id: 3324, name: "evna patronymic", weight: 0.10, group: bm_russian_patronymic]
+// -EVNA: Soft variant
+evna -> evna / _#;
+
+// ============================================================
+// Phase 3: Transliteration Variants
+// ============================================================
+// Different romanization systems create variant spellings
+
+// KH/X Variants
+[id: 3330, name: "kh to x transliteration", weight: 0.10, group: bm_russian_translit, ipa: "/x/"]
+// KH: ISO transliteration for Х
+kh -> x;
+
+// ZH/Ž Variants
+[id: 3331, name: "zh to ʒ transliteration", weight: 0.10, group: bm_russian_translit, ipa: "/ʒ/"]
+// ZH: ISO transliteration for Ж
+zh -> ʒ;
+
+// SH/Š Variants
+[id: 3332, name: "sh to ʃ transliteration", weight: 0.10, group: bm_russian_translit, ipa: "/ʃ/"]
+// SH: ISO transliteration for Ш
+sh -> ʃ;
+
+// SHCH/ŠČ Variants
+[id: 3333, name: "shch to ɕː transliteration", weight: 0.10, group: bm_russian_translit, ipa: "/ɕː/"]
+// SHCH: ISO transliteration for Щ
+shch -> ɕː;
+
+// SCH (German-influenced)
+[id: 3334, name: "sch german influence", weight: 0.15, group: bm_russian_translit, ipa: "/ʃ/"]
+// SCH: German-influenced spelling for Ш
+sch -> ʃ;
+
+// CH/Č Variants
+[id: 3335, name: "ch to t͡ʃ transliteration", weight: 0.10, group: bm_russian_translit, ipa: "/t͡ʃ/"]
+// CH: ISO transliteration for Ч
+ch -> t͡ʃ;
+
+// TSCH (German-influenced)
+[id: 3336, name: "tsch german influence", weight: 0.15, group: bm_russian_translit, ipa: "/t͡ʃ/"]
+// TSCH: German-influenced spelling for Ч
+tsch -> t͡ʃ;
+
+// TS/C Variants
+[id: 3337, name: "ts to t͡s transliteration", weight: 0.10, group: bm_russian_translit, ipa: "/t͡s/"]
+// TS: ISO transliteration for Ц
+ts -> t͡s;
+
+// YE/E Variants
+[id: 3338, name: "ye to je transliteration", weight: 0.15, group: bm_russian_translit, ipa: "/je/"]
+// YE: Transliteration for Е
+ye -> je;
+
+// YO/Ë Variants
+[id: 3339, name: "yo to jo transliteration", weight: 0.15, group: bm_russian_translit, ipa: "/jo/"]
+// YO: Transliteration for Ё
+yo -> jo;
+
+// YU/Ю Variants
+[id: 3340, name: "yu to ju transliteration", weight: 0.15, group: bm_russian_translit, ipa: "/ju/"]
+// YU: Transliteration for Ю
+yu -> ju;
+
+// YA/Я Variants
+[id: 3341, name: "ya to ja transliteration", weight: 0.15, group: bm_russian_translit, ipa: "/ja/"]
+// YA: Transliteration for Я
+ya -> ja;
+
+// IY/II/Y (final Й)
+[id: 3342, name: "iy to j transliteration", weight: 0.15, group: bm_russian_translit, ipa: "/j/"]
+// IY/II: Sometimes used for final Й
+iy -> ij / _#;
+
+[id: 3343, name: "ii to ij transliteration", weight: 0.15, group: bm_russian_translit]
+// II: Variant
+ii -> ij / _#;
+
+// ============================================================
+// Phase 4: First Name Patterns
+// ============================================================
+
+// Common Russian first names with variants
+[id: 3350, name: "aleksandr name", weight: 0.10, group: bm_russian_firstname]
+// Aleksandr/Alexander
+aleksandr -> aljeksandr / _#;
+
+[id: 3351, name: "aleksei name", weight: 0.10, group: bm_russian_firstname]
+// Aleksei/Alexei
+aleksei -> aljeksej / _#;
+
+[id: 3352, name: "dmitri name", weight: 0.10, group: bm_russian_firstname]
+// Dmitri/Dmitry
+dmitri -> dmitri / _#;
+
+[id: 3353, name: "mikhail name", weight: 0.10, group: bm_russian_firstname]
+// Mikhail/Michael
+mikhail -> mixail / _#;
+
+[id: 3354, name: "nikolai name", weight: 0.10, group: bm_russian_firstname]
+// Nikolai/Nicholas
+nikolai -> nikolaj / _#;
+
+[id: 3355, name: "sergei name", weight: 0.10, group: bm_russian_firstname]
+// Sergei/Sergey
+sergei -> sergej / _#;
+
+[id: 3356, name: "vladimir name", weight: 0.10, group: bm_russian_firstname]
+// Vladimir
+vladimir -> vladimir / _#;
+
+[id: 3357, name: "yuri name", weight: 0.10, group: bm_russian_firstname]
+// Yuri/Yury/Juri
+yuri -> juri / _#;
+
+// ============================================================
+// Phase 5: Jewish-Russian Names
+// ============================================================
+
+[id: 3360, name: "gold prefix jewish russian", weight: 0.15, group: bm_russian_jewish]
+// GOLD-: Goldberg, Goldman (in Russian context)
+gold -> golt / #_;
+
+[id: 3361, name: "berg suffix jewish russian", weight: 0.15, group: bm_russian_jewish]
+// -BERG: Common Jewish surname element
+berg -> berk / _#;
+
+[id: 3362, name: "stein suffix jewish russian", weight: 0.15, group: bm_russian_jewish]
+// -STEIN/-SHTEIN: Weinstein
+shtein -> ʃtejn / _#;
+
+[id: 3363, name: "stein alt jewish russian", weight: 0.15, group: bm_russian_jewish]
+stein -> ʃtejn / _#;
+
+[id: 3364, name: "man suffix jewish russian", weight: 0.15, group: bm_russian_jewish]
+// -MAN: Hoffman
+man -> man / _#;
+
+[id: 3365, name: "witz suffix jewish russian", weight: 0.10, group: bm_russian_jewish]
+// -WITZ/-VITS: Horowitz
+witz -> vit͡s / _#;
+
+[id: 3366, name: "vitz suffix jewish russian", weight: 0.10, group: bm_russian_jewish]
+vitz -> vit͡s / _#;
+
+// ============================================================
+// Phase 6: Cross-Border Variants
+// ============================================================
+
+// Russian-Ukrainian
+[id: 3370, name: "enko ukrainian russian", weight: 0.15, group: bm_russian_cross]
+// -ENKO: Ukrainian patronymic
+enko -> enko / _#;
+
+[id: 3371, name: "chenko ukrainian russian", weight: 0.15, group: bm_russian_cross]
+// -CHENKO: Shevchenko
+chenko -> t͡ʃenko / _#;
+
+[id: 3372, name: "ko ukrainian russian", weight: 0.15, group: bm_russian_cross]
+// -KO: Ukrainian ending
+ko -> ko / _#;
+
+// Russian-Belarusian
+[id: 3373, name: "ski belarusian", weight: 0.15, group: bm_russian_cross]
+// Belarusian often uses -SKI like Polish
+ski -> ski / _#;
+
+// Russian-Polish
+[id: 3374, name: "owski polish russian", weight: 0.15, group: bm_russian_cross]
+// -OWSKI: Polish origin names in Russian context
+owski -> ovski / _#;
+
+// Russian-Georgian (common in Russian Empire)
+[id: 3375, name: "shvili georgian", weight: 0.20, group: bm_russian_cross]
+// -SHVILI: Georgian patronymic (son of)
+shvili -> ʃvili / _#;
+
+[id: 3376, name: "dze georgian", weight: 0.20, group: bm_russian_cross]
+// -DZE: Georgian ending
+dze -> d͡ze / _#;
+
+// Russian-Armenian (common in Russian Empire)
+[id: 3377, name: "ian armenian", weight: 0.20, group: bm_russian_cross]
+// -IAN/-YAN: Armenian patronymic
+ian -> jan / _#;
+
+[id: 3378, name: "yan armenian", weight: 0.20, group: bm_russian_cross]
+yan -> jan / _#;
+
+// ============================================================
+// Phase 7: Vowel Reduction Variants
+// ============================================================
+// Russian vowel reduction creates spelling confusion
+
+// A/O confusion in unstressed syllables (akan'e)
+// Ivanov can sound like Ivanof
+// Already handled by russian/base.llev vowel reduction rules
+
+// E/I confusion in unstressed syllables (ikan'e)
+// Already handled by russian/base.llev vowel reduction rules
+
+// ============================================================
+// Phase 8: Soft Sign Handling in Names
+// ============================================================
+
+[id: 3385, name: "soft l in names", weight: 0.15, group: bm_russian_soft]
+// L' (soft L): Common in names like Olga -> Ol'ga
+lj -> lj;
+
+[id: 3386, name: "soft n in names", weight: 0.15, group: bm_russian_soft]
+// N' (soft N): Tanya -> Tan'ya
+nj -> ɲ;
+
+[id: 3387, name: "soft t in names", weight: 0.15, group: bm_russian_soft]
+// T' (soft T): Common in diminutives
+tj -> tʲ;
+
+// ============================================================
+// Phase 9: Historical Spelling Variants
+// ============================================================
+
+// Pre-Reform Russian Spellings (before 1918)
+// These historical letters are rarely seen in modern transliterations
+// but may appear in émigré family names or historical documents:
+//   - Θ (fita) -> F: Old Cyrillic letter, now transliterated as F
+//   - Ѣ (yat) -> E: Historical letter replaced by Е in 1918 reform
+//   - І (i decimal) -> I: Old Cyrillic И used before vowels (Николаі -> Николай)
+
+// ============================================================
+// Phase 10: Double Letter Patterns
+// ============================================================
+
+[id: 3395, name: "nn in russian names", weight: 0.10, group: bm_russian_geminate]
+// NN: Anna, Inna
+nn -> n;
+
+[id: 3396, name: "ll in russian names", weight: 0.10, group: bm_russian_geminate]
+// LL: Kirilov -> Kirillov
+ll -> l;
+
+[id: 3397, name: "ss in russian names", weight: 0.10, group: bm_russian_geminate]
+// SS: Russia -> Rossiya
+ss -> s;
+
+[id: 3398, name: "ff in russian names", weight: 0.10, group: bm_russian_geminate]
+// FF: Mostly in loanword names
+ff -> f;
+

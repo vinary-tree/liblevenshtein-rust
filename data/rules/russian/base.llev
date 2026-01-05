@@ -367,3 +367,220 @@ ja -> ɪ;
 [id: 2804, name: "a reduction", weight: 0.18, group: russian_reduction, ipa: "/ɐ/"]
 a -> ɐ;
 
+// ============================================================
+// BEIDER-MORSE SLAVIC RULES
+// ============================================================
+// Additional rules derived from the Beider-Morse Phonetic Matching
+// algorithm for Russian and other Slavic languages.
+// ID Range: 3400-3499
+
+@define VOWEL_RU = [aeiouɐɨɪ]
+@define CONSONANT_RU = [bcdfghjklmnpqrstvwxz]
+
+// ------------------------------------------------------------
+// Regressive Voicing Assimilation
+// ------------------------------------------------------------
+// Russian has regressive voicing assimilation like Polish
+
+[id: 3400, name: "vk to fk russian", weight: 0.10, group: bm_russian_assimilation]
+vk -> fk;
+
+[id: 3401, name: "vp to fp russian", weight: 0.10, group: bm_russian_assimilation]
+vp -> fp;
+
+[id: 3402, name: "vt to ft russian", weight: 0.10, group: bm_russian_assimilation]
+vt -> ft;
+
+[id: 3403, name: "vs to fs russian", weight: 0.10, group: bm_russian_assimilation]
+vs -> fs;
+
+[id: 3404, name: "zk to sk russian", weight: 0.10, group: bm_russian_assimilation]
+zk -> sk;
+
+[id: 3405, name: "zp to sp russian", weight: 0.10, group: bm_russian_assimilation]
+zp -> sp;
+
+[id: 3406, name: "zt to st russian", weight: 0.10, group: bm_russian_assimilation]
+zt -> st;
+
+[id: 3407, name: "zs to ss russian", weight: 0.10, group: bm_russian_assimilation]
+zs -> ss;
+
+[id: 3408, name: "bk to pk russian", weight: 0.10, group: bm_russian_assimilation]
+bk -> pk;
+
+[id: 3409, name: "dk to tk russian", weight: 0.10, group: bm_russian_assimilation]
+dk -> tk;
+
+[id: 3410, name: "gk to kk russian", weight: 0.10, group: bm_russian_assimilation]
+gk -> kk;
+
+// Progressive assimilation (voiceless before voiced)
+[id: 3411, name: "kb to gb russian", weight: 0.10, group: bm_russian_assimilation]
+kb -> gb;
+
+[id: 3412, name: "sb to zb russian", weight: 0.10, group: bm_russian_assimilation]
+sb -> zb;
+
+[id: 3413, name: "sd to zd russian", weight: 0.10, group: bm_russian_assimilation]
+sd -> zd;
+
+// ------------------------------------------------------------
+// G Weakening Patterns
+// ------------------------------------------------------------
+// In some positions, г becomes в or х
+
+[id: 3420, name: "ogo to ovo russian", weight: 0.15, group: bm_russian_g]
+// -ОГО genitive -> pronounced as -ОВО (его, того, красного)
+ogo -> ovo;
+
+[id: 3421, name: "ego to evo russian", weight: 0.15, group: bm_russian_g]
+// -ЕГО genitive
+ego -> evo;
+
+[id: 3422, name: "ogo to ava russian", weight: 0.20, group: bm_russian_g]
+// -АГО old spelling
+ago -> avo;
+
+// ------------------------------------------------------------
+// Palatalization Patterns
+// ------------------------------------------------------------
+// Consonants before soft vowels are palatalized
+
+[id: 3425, name: "ti palatalization", weight: 0.10, group: bm_russian_palatal, ipa: "/tʲi/"]
+// T before I: palatalized
+ti -> tʲi;
+
+[id: 3426, name: "di palatalization", weight: 0.10, group: bm_russian_palatal, ipa: "/dʲi/"]
+// D before I: palatalized
+di -> dʲi;
+
+[id: 3427, name: "ni palatalization", weight: 0.10, group: bm_russian_palatal, ipa: "/ɲi/"]
+// N before I: palatalized
+ni -> ɲi;
+
+[id: 3428, name: "li palatalization", weight: 0.10, group: bm_russian_palatal, ipa: "/lʲi/"]
+// L before I: palatalized (different from "hard" L)
+li -> lʲi;
+
+[id: 3429, name: "si palatalization", weight: 0.10, group: bm_russian_palatal, ipa: "/ɕi/"]
+// S before I: approaches ɕ
+si -> ɕi;
+
+[id: 3430, name: "zi palatalization", weight: 0.10, group: bm_russian_palatal, ipa: "/ʑi/"]
+// Z before I
+zi -> ʑi;
+
+// ------------------------------------------------------------
+// TS Cluster Patterns
+// ------------------------------------------------------------
+
+[id: 3435, name: "dts to ts russian", weight: 0.10, group: bm_russian_cluster, ipa: "/t͡s/"]
+// ДТС cluster (as in "двадцать"): pronounced as ts
+dts -> t͡s;
+
+[id: 3436, name: "tts to ts russian", weight: 0.10, group: bm_russian_cluster, ipa: "/t͡s/"]
+// ТТС cluster: simplified
+tts -> t͡s;
+
+[id: 3437, name: "cts to ts russian", weight: 0.10, group: bm_russian_cluster, ipa: "/t͡s/"]
+// ЦТС: simplified
+cts -> t͡s;
+
+// ------------------------------------------------------------
+// STN/ZDN Simplification
+// ------------------------------------------------------------
+// Some consonant clusters simplify in speech
+
+[id: 3440, name: "stn to sn russian", weight: 0.15, group: bm_russian_simplify]
+// СТН -> СН (честный -> чесный in casual speech)
+stn -> sn;
+
+[id: 3441, name: "zdn to zn russian", weight: 0.15, group: bm_russian_simplify]
+// ЗДН -> ЗН (поздно -> позно in casual speech)
+zdn -> zn;
+
+[id: 3442, name: "stl to sl russian", weight: 0.15, group: bm_russian_simplify]
+// СТЛ -> СЛ (счастливый)
+stl -> sl;
+
+[id: 3443, name: "rdn to rn russian", weight: 0.15, group: bm_russian_simplify]
+// РДН -> РН (сердце)
+rdn -> rn;
+
+[id: 3444, name: "rdc to rc russian", weight: 0.15, group: bm_russian_simplify]
+// РДЦ -> РЦ (сердце)
+rdc -> rc;
+
+[id: 3445, name: "lnc to nc russian", weight: 0.15, group: bm_russian_simplify]
+// ЛНЦ -> НЦ (солнце -> сонце)
+lnc -> nc;
+
+// ------------------------------------------------------------
+// Cross-Slavic Patterns
+// ------------------------------------------------------------
+
+[id: 3450, name: "w to v russian", weight: 0.20, group: bm_russian_cross]
+// W -> V: Polish/German names in Russian
+w -> v;
+
+[id: 3451, name: "ow to ov russian", weight: 0.15, group: bm_russian_cross]
+// -OW: German/Polish ending
+ow -> ov / _#;
+
+[id: 3452, name: "ew to ev russian", weight: 0.15, group: bm_russian_cross]
+// -EW: German/Polish ending
+ew -> ev / _#;
+
+[id: 3453, name: "cz to ch russian", weight: 0.15, group: bm_russian_cross, ipa: "/t͡ʃ/"]
+// CZ: Polish spelling in Russian context
+cz -> t͡ʃ;
+
+[id: 3454, name: "sz to sh russian", weight: 0.15, group: bm_russian_cross, ipa: "/ʃ/"]
+// SZ: Polish spelling
+sz -> ʃ;
+
+// ------------------------------------------------------------
+// Name Suffix Patterns
+// ------------------------------------------------------------
+
+[id: 3460, name: "ov name suffix", weight: 0.05, group: bm_russian_name_suffix]
+// -ОВ: Most common surname ending
+ov -> of / _#;
+
+[id: 3461, name: "ev name suffix", weight: 0.05, group: bm_russian_name_suffix]
+// -ЕВ: After soft consonants
+ev -> ef / _#;
+
+[id: 3462, name: "in name suffix", weight: 0.10, group: bm_russian_name_suffix]
+// -ИН: Pushkin, Rasputin
+in -> in / _#;
+
+[id: 3463, name: "enko name suffix", weight: 0.10, group: bm_russian_name_suffix]
+// -ЕНКО: Ukrainian names
+enko -> enko / _#;
+
+[id: 3464, name: "ko name suffix", weight: 0.10, group: bm_russian_name_suffix]
+// -КО: Ukrainian names
+ko -> ko / _#;
+
+// ------------------------------------------------------------
+// TSS/STS Simplification
+// ------------------------------------------------------------
+
+[id: 3470, name: "tss to ts russian", weight: 0.10, group: bm_russian_geminate, ipa: "/t͡s/"]
+// Double TS simplified
+tss -> t͡s;
+
+[id: 3471, name: "sss to ss russian", weight: 0.10, group: bm_russian_geminate]
+// Triple S simplified
+sss -> ss;
+
+[id: 3472, name: "mmm to mm russian", weight: 0.10, group: bm_russian_geminate]
+// Triple M simplified
+mmm -> mm;
+
+[id: 3473, name: "nnn to nn russian", weight: 0.10, group: bm_russian_geminate]
+// Triple N simplified
+nnn -> nn;
+

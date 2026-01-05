@@ -276,3 +276,158 @@ d͡ʒd͡ʒ -> d͡ʒ;
 [id: 2949, name: "double j", weight: 0.25, group: hungarian_simplification]
 jj -> j;
 
+// ============================================================
+// BEIDER-MORSE HUNGARIAN RULES
+// ============================================================
+// Additional rules derived from the Beider-Morse Phonetic Matching
+// algorithm for Hungarian names.
+// ID Range: 3500-3599
+
+@define VOWEL_HU = [aeiouáéíóúöőüű]
+@define CONSONANT_HU = [bcdfghjklmnpqrstvwxyz]
+
+// ------------------------------------------------------------
+// Name Suffix Patterns
+// ------------------------------------------------------------
+
+[id: 3500, name: "y ending hungarian", weight: 0.10, group: bm_hungarian_suffix]
+// -Y: Common in Hungarian surnames (Kossuth, Petőfi vs older Petőfy)
+// Y often represents the archaic spelling of 'i'
+y -> i / _#;
+
+[id: 3501, name: "ffy ending hungarian", weight: 0.10, group: bm_hungarian_suffix]
+// -FFY: Szentiványffy, double ff + y ending
+ffy -> fi / _#;
+
+[id: 3502, name: "fi ending hungarian", weight: 0.10, group: bm_hungarian_suffix]
+// -FI: Modern spelling of -ffy
+fi -> fi / _#;
+
+[id: 3503, name: "né ending hungarian", weight: 0.10, group: bm_hungarian_suffix]
+// -NÉ: Married woman suffix (Kovácsnée = Mrs. Kovács)
+né -> neː / _#;
+
+// ------------------------------------------------------------
+// Vowel Variants
+// ------------------------------------------------------------
+
+[id: 3510, name: "aa to á hungarian", weight: 0.15, group: bm_hungarian_vowel]
+// AA: Sometimes used for long á in ASCII contexts
+aa -> aː;
+
+[id: 3511, name: "ee to é hungarian", weight: 0.15, group: bm_hungarian_vowel]
+// EE: Sometimes used for long é in ASCII contexts
+ee -> eː;
+
+[id: 3512, name: "oo to ó hungarian", weight: 0.15, group: bm_hungarian_vowel]
+// OO: Sometimes used for long ó in ASCII contexts
+oo -> oː;
+
+[id: 3513, name: "ue to ü hungarian", weight: 0.15, group: bm_hungarian_vowel]
+// UE: German-style representation of ü
+ue -> y;
+
+[id: 3514, name: "oe to ö hungarian", weight: 0.15, group: bm_hungarian_vowel]
+// OE: German-style representation of ö
+oe -> ø;
+
+// ------------------------------------------------------------
+// Cross-Border Name Patterns
+// ------------------------------------------------------------
+
+[id: 3520, name: "sch german hungarian", weight: 0.15, group: bm_hungarian_cross, ipa: "/ʃ/"]
+// SCH: German names in Hungarian context -> S (Hungarian s = ʃ)
+sch -> ʃ;
+
+[id: 3521, name: "tsch german hungarian", weight: 0.15, group: bm_hungarian_cross, ipa: "/t͡ʃ/"]
+// TSCH: German names -> CS
+tsch -> t͡ʃ;
+
+[id: 3522, name: "cz polish hungarian", weight: 0.10, group: bm_hungarian_cross, ipa: "/t͡ʃ/"]
+// CZ: Polish names in Hungarian context -> CS (both /t͡ʃ/)
+cz -> t͡ʃ;
+
+[id: 3523, name: "sk slavic hungarian", weight: 0.15, group: bm_hungarian_cross]
+// -SKI/-SKY: Slavic surname endings
+ski -> ʃki / _#;
+
+[id: 3524, name: "sky slavic hungarian", weight: 0.15, group: bm_hungarian_cross]
+sky -> ʃki / _#;
+
+[id: 3525, name: "ov slavic hungarian", weight: 0.15, group: bm_hungarian_cross]
+// -OV/-OVA: Slavic surname endings
+ov -> of / _#;
+
+// ------------------------------------------------------------
+// Historical Spelling Variants
+// ------------------------------------------------------------
+
+[id: 3530, name: "th historical hungarian", weight: 0.20, group: bm_hungarian_historical]
+// TH: Historical spelling -> T (Thököly)
+th -> t;
+
+[id: 3531, name: "ph historical hungarian", weight: 0.20, group: bm_hungarian_historical]
+// PH: Greek/Latin names -> F
+ph -> f;
+
+[id: 3532, name: "ch aspirated hungarian", weight: 0.20, group: bm_hungarian_historical, ipa: "/x/"]
+// CH: In some contexts (not cs), aspirated (German influence)
+// Must not interfere with cs digraph
+ch -> x;
+
+[id: 3533, name: "gh historical hungarian", weight: 0.20, group: bm_hungarian_historical]
+// GH: Historical spelling -> G
+gh -> ɡ;
+
+// ------------------------------------------------------------
+// Assimilation Patterns
+// ------------------------------------------------------------
+
+[id: 3540, name: "dgy to gy hungarian", weight: 0.10, group: bm_hungarian_assimilation, ipa: "/ɟ/"]
+// D + GY: The d assimilates (hadgyakorlat)
+dgy -> ɟ;
+
+[id: 3541, name: "tty to ty hungarian", weight: 0.10, group: bm_hungarian_assimilation, ipa: "/c/"]
+// T + TY: Geminated ty
+tty -> c;
+
+[id: 3542, name: "nny to ny hungarian", weight: 0.10, group: bm_hungarian_assimilation, ipa: "/ɲ/"]
+// N + NY: Geminated ny
+nny -> ɲ;
+
+// ------------------------------------------------------------
+// First Name Patterns
+// ------------------------------------------------------------
+
+[id: 3550, name: "györgy name", weight: 0.15, group: bm_hungarian_firstname]
+// György -> George equivalence
+györgy -> ɟørɟ / _#;
+
+[id: 3551, name: "jános name", weight: 0.15, group: bm_hungarian_firstname]
+// János -> John
+jános -> jaːnoʃ / _#;
+
+[id: 3552, name: "istván name", weight: 0.15, group: bm_hungarian_firstname]
+// István -> Stephen
+istván -> iʃtvaːn / _#;
+
+[id: 3553, name: "ference name", weight: 0.15, group: bm_hungarian_firstname]
+// Ferenc -> Francis
+ferenc -> fɛrɛnt͡s / _#;
+
+// ------------------------------------------------------------
+// Jewish-Hungarian Name Patterns
+// ------------------------------------------------------------
+
+[id: 3560, name: "stein jewish hungarian", weight: 0.15, group: bm_hungarian_jewish, ipa: "/ʃtaɪn/"]
+// -STEIN: Jewish names in Hungarian context
+stein -> ʃtaɪn / _#;
+
+[id: 3561, name: "berg jewish hungarian", weight: 0.15, group: bm_hungarian_jewish]
+// -BERG: Jewish names
+berg -> bɛrɡ / _#;
+
+[id: 3562, name: "witz jewish hungarian", weight: 0.15, group: bm_hungarian_jewish, ipa: "/vɪts/"]
+// -WITZ: Jewish names
+witz -> vit͡s / _#;
+

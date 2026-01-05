@@ -470,7 +470,172 @@ are -> ɛər / _#;
 ure -> jʊər / _#;
 
 // ============================================================
-// Phase 11: Default/Fallback Rules (LOW PRIORITY)
+// Phase 11: Classic Phonetic Algorithm Rules
+// Rules derived from Soundex, Metaphone, and DoubleMetaphone
+// ID Range: 2100-2399
+// ============================================================
+
+// ------------------------------------------------------------
+// Soundex-Derived Consonant Equivalence (ID 2100-2199)
+// These rules help match phonetically similar words.
+// Weight > 0 indicates phonetic similarity, not exact match.
+// ------------------------------------------------------------
+
+// Labial consonants (Soundex Class 1: B, F, P, V)
+// These sounds are produced with the lips and are easily confused.
+
+[id: 2100, name: "v to f equivalence", weight: 0.25, group: soundex_labial, ipa: "/f/"]
+// v -> f: voiced/voiceless labial pair (have/haff in some accents)
+v -> f;
+
+[id: 2101, name: "b to p equivalence", weight: 0.20, group: soundex_labial, ipa: "/p/"]
+// b -> p: voiced/voiceless bilabial pair (common in final devoicing)
+b -> p / _#;
+
+// Dental/Alveolar stops (Soundex Class 3: D, T)
+// Already handled by existing rules in most contexts.
+
+[id: 2110, name: "d to t word-final", weight: 0.20, group: soundex_dental, ipa: "/t/"]
+// d -> t at word end: final devoicing (common in many accents)
+d -> t / _#;
+
+// Nasal consonants (Soundex Class 5: M, N)
+// These are easily confused, especially in rapid speech.
+
+[id: 2120, name: "m to n before dental", weight: 0.25, group: soundex_nasal, ipa: "/n/"]
+// m -> n before t/d: assimilation (comfort -> confort in casual speech)
+m -> n / _[td];
+
+// ------------------------------------------------------------
+// Metaphone Context Rules (ID 2200-2299)
+// Context-sensitive rules from the Metaphone algorithm.
+// ------------------------------------------------------------
+
+[id: 2200, name: "gh to f word-final", weight: 0.15, group: metaphone_gh, ipa: "/f/"]
+// gh -> f after vowels at word end: rough, cough, tough, enough, laugh
+// Must come BEFORE the generic "gh silent" rule
+gh -> f / ${VOWEL}_#;
+
+[id: 2201, name: "sch to sk english", weight: 0.10, group: metaphone_sch, ipa: "/sk/"]
+// sch -> sk in English (school, scheme) vs. German (sch -> ʃ)
+// Must come BEFORE sh -> ʃ rule
+sch -> sk;
+
+[id: 2202, name: "x initial to s", weight: 0.15, group: metaphone_x, ipa: "/z/"]
+// x -> z at word start: xylophone, xenon, xerox
+// (Note: actually /z/ in English, but Metaphone uses S)
+x -> z / #_;
+
+// Metaphone: wh -> w (wine/whine merger)
+// Already covered by rule 5
+
+[id: 2210, name: "dg before vowel", weight: 0.10, group: metaphone_dg, ipa: "/d͡ʒ/"]
+// dg -> d͡ʒ before vowels: edge, badge, judge
+// Extends existing dge rule to handle dgi, dgy patterns
+dgi -> d͡ʒi;
+
+[id: 2211, name: "dgy pattern", weight: 0.10, group: metaphone_dg, ipa: "/d͡ʒ/"]
+dgy -> d͡ʒy;
+
+[id: 2220, name: "mb word-internal", weight: 0.10, group: metaphone_mb, ipa: "/m/"]
+// mb -> m when followed by another consonant (climbing, bombing)
+mb -> m / _$CONSONANT;
+
+[id: 2221, name: "mn to n", weight: 0.10, group: metaphone_mn, ipa: "/n/"]
+// mn -> n: condemn, hymn, autumn (already rule 135 for final, extend to medial)
+mn -> n;
+
+// Metaphone: kn -> n (knife, knee, know, knight)
+// Already covered by rule 7
+
+[id: 2231, name: "silent g before n medial", weight: 0.10, group: metaphone_gn, ipa: "/n/"]
+// gn -> n in medial position: sign, design, reign, foreign
+gn -> n / ${VOWEL}_;
+
+// Metaphone: wr -> r (write, wrong, wrist)
+// Already covered by rule 4
+
+[id: 2250, name: "h silent after vowel", weight: 0.10, group: metaphone_h]
+// h silent between vowels or after certain consonants
+// Handles words like "vehicle", "annihilate"
+h -> / ${VOWEL}_$VOWEL;
+
+[id: 2251, name: "h silent word-initial before vowel", weight: 0.20, group: metaphone_h, ipa: "∅"]
+// h can be silent at word start in borrowed words: hour, honest, heir, honor
+// Note: This is dialect-dependent; weight reflects variation
+h ->  / #_$VOWEL;
+
+// ------------------------------------------------------------
+// DoubleMetaphone Etymology Rules (ID 2300-2399)
+// Rules that handle words from different language origins.
+// ------------------------------------------------------------
+
+// Germanic Origin Patterns
+[id: 2300, name: "w to v germanic", weight: 0.25, group: dmetaphone_germanic, ipa: "/v/"]
+// Initial w -> v in Germanic names: Wagner, Weiss, Wilhelm
+// Only applied as alternate encoding, high weight indicates variation
+w -> v / #_;
+
+// Slavic Origin Patterns
+[id: 2310, name: "cz to ch slavic", weight: 0.15, group: dmetaphone_slavic, ipa: "/t͡ʃ/"]
+// cz -> t͡ʃ in Slavic names: Czech, Czar, Czeslaw
+cz -> t͡ʃ;
+
+[id: 2311, name: "j to y slavic", weight: 0.20, group: dmetaphone_slavic, ipa: "/j/"]
+// j -> y at word start in Slavic names: Jan, Janos, Janek
+j -> j / #_;
+
+// Greek Origin Patterns (validate existing)
+// DoubleMetaphone Greek: ps -> s (psychology, pseudonym, psalm)
+// Already covered by rule 10
+
+[id: 2321, name: "pn initial greek", weight: 0.0, group: dmetaphone_greek]
+// pn -> n at word start: pneumonia, pneumatic
+// Not in current rules, add it
+pn -> n / #_;
+
+// DoubleMetaphone Greek: pt -> t (pterodactyl, Ptolemy)
+// Already covered by rule 9
+
+[id: 2323, name: "ch to k greek", weight: 0.15, group: dmetaphone_greek, ipa: "/k/"]
+// ch -> k in Greek-origin words: chemistry, character, chaos, chorus
+// Context: ch before o, a, or consonant (not before front vowels)
+ch -> k / _[aourl];
+
+// Italian Origin Patterns
+[id: 2330, name: "gn to ny italian", weight: 0.15, group: dmetaphone_italian, ipa: "/ɲ/"]
+// gn -> ɲ in Italian-origin words: gnocchi, lasagna, cognac
+// Different from English gn -> n
+gn -> ɲ / _$VOWEL;
+
+[id: 2331, name: "cci to chi italian", weight: 0.15, group: dmetaphone_italian, ipa: "/t͡ʃ/"]
+// cci -> t͡ʃi in Italian words: cappuccino, fettuccine
+cci -> t͡ʃi;
+
+[id: 2332, name: "cce to che italian", weight: 0.15, group: dmetaphone_italian, ipa: "/t͡ʃ/"]
+// cce -> t͡ʃe in Italian words: bocce
+cce -> t͡ʃe;
+
+// French Origin Patterns
+[id: 2340, name: "silent t french", weight: 0.20, group: dmetaphone_french]
+// Final -et pronounced without t in French loans: ballet, buffet, bouquet
+et -> eɪ / _#;
+
+[id: 2341, name: "eau to o french", weight: 0.10, group: dmetaphone_french, ipa: "/oʊ/"]
+// eau -> oʊ in French loans: bureau, plateau, chateau
+eau -> oʊ;
+
+[id: 2342, name: "aux to o french", weight: 0.10, group: dmetaphone_french, ipa: "/oʊ/"]
+// aux -> oʊ in French loans: faux, beaux
+aux -> oʊ / _#;
+
+// Spanish Origin Patterns
+[id: 2350, name: "ll to y spanish", weight: 0.20, group: dmetaphone_spanish, ipa: "/j/"]
+// ll -> y in Spanish loans: tortilla, armadillo, llama
+ll -> j;
+
+// ============================================================
+// Phase 12: Default/Fallback Rules (LOW PRIORITY)
 // These apply after all specific patterns have been matched
 // ============================================================
 

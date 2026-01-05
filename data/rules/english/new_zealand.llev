@@ -1,0 +1,223 @@
+// New Zealand English Phonetic Rules (Caverphone-derived)
+// =========================================================
+// Based on the Caverphone 2.0 algorithm by David Hood
+// Optimized for matching New Zealand English pronunciations.
+//
+// Caverphone was developed to match electoral roll data from
+// Dunedin, New Zealand (1893-1938 period).
+//
+// Key NZ English Features:
+//   - Short vowel raising (KIT → KET, DRESS → DRASS)
+//   - Final vowel reduction
+//   - Distinctive GH/TCH handling
+//   - R-lessness in certain positions
+//
+// ID Range: 2700-2799
+
+@name "New Zealand English (Caverphone-derived)"
+@version "1.0.0"
+@author "Derived from Caverphone 2.0 by David Hood"
+@description "Phonetic rules for New Zealand English accent features"
+
+@include "english/base.llev"
+
+@define VOWEL = [aeiou]
+@define CONSONANT = [bcdfghjklmnpqrstvwxyz]
+
+// ============================================================
+// Phase 1: Specific Word Patterns
+// Caverphone handles certain words specially
+// ============================================================
+
+[id: 2700, name: "cough nz", weight: 0.15, group: caverphone_special, ipa: "/kɔf/"]
+// cough -> kof (GH as F)
+cough -> kof;
+
+[id: 2701, name: "rough nz", weight: 0.15, group: caverphone_special, ipa: "/rʌf/"]
+// rough -> ruf
+rough -> ruf;
+
+[id: 2702, name: "tough nz", weight: 0.15, group: caverphone_special, ipa: "/tʌf/"]
+// tough -> tuf
+tough -> tuf;
+
+[id: 2703, name: "enough nz", weight: 0.15, group: caverphone_special, ipa: "/ɪnʌf/"]
+// enough -> inuf
+enough -> inuf;
+
+[id: 2704, name: "trough nz", weight: 0.15, group: caverphone_special, ipa: "/trɔf/"]
+// trough -> trof
+trough -> trof;
+
+// ============================================================
+// Phase 2: Initial Consonant Clusters
+// ============================================================
+
+[id: 2710, name: "gn initial nz", weight: 0.10, group: caverphone_initial]
+// gn -> 2n (Caverphone internal representation, here -> n)
+gn -> n / #_;
+
+[id: 2711, name: "kn initial nz", weight: 0.10, group: caverphone_initial]
+// kn -> n
+kn -> n / #_;
+
+// ============================================================
+// Phase 3: Consonant Transformations
+// ============================================================
+
+[id: 2720, name: "cq to kk", weight: 0.10, group: caverphone_consonant]
+// cq -> kk (acquaint -> akkuaint)
+cq -> kk;
+
+[id: 2721, name: "c soft nz", weight: 0.10, group: caverphone_consonant]
+// c -> s before i, e, y
+ci -> si;
+
+[id: 2722, name: "ce to se nz", weight: 0.10, group: caverphone_consonant]
+ce -> se;
+
+[id: 2723, name: "cy to sy nz", weight: 0.10, group: caverphone_consonant]
+cy -> sy;
+
+[id: 2724, name: "tch nz", weight: 0.10, group: caverphone_consonant, ipa: "/t͡ʃ/"]
+// tch -> ch (batch -> bach)
+tch -> t͡ʃ;
+
+[id: 2725, name: "c to k nz", weight: 0.0, group: caverphone_consonant]
+// c -> k elsewhere
+c -> k;
+
+[id: 2726, name: "q to k nz", weight: 0.0, group: caverphone_consonant]
+// q -> k
+q -> k;
+
+[id: 2727, name: "x to k nz", weight: 0.10, group: caverphone_consonant]
+// x -> k (simplified)
+x -> k;
+
+// ============================================================
+// Phase 4: Voiced/Voiceless Pairs
+// ============================================================
+
+[id: 2730, name: "v to f nz", weight: 0.20, group: caverphone_voice]
+// v -> f (voiceless)
+v -> f;
+
+[id: 2731, name: "dg to j nz", weight: 0.10, group: caverphone_voice, ipa: "/d͡ʒ/"]
+// dg -> j
+dg -> d͡ʒ;
+
+[id: 2732, name: "tio to sio nz", weight: 0.10, group: caverphone_voice]
+// tio -> sio (action -> acsion)
+tio -> ʃo;
+
+[id: 2733, name: "tia to sia nz", weight: 0.10, group: caverphone_voice]
+// tia -> sia
+tia -> ʃa;
+
+[id: 2734, name: "d to t nz", weight: 0.15, group: caverphone_voice]
+// d -> t (final devoicing)
+d -> t / _#;
+
+[id: 2735, name: "ph to f nz", weight: 0.0, group: caverphone_voice]
+// ph -> f
+ph -> f;
+
+[id: 2736, name: "b to p nz", weight: 0.15, group: caverphone_voice]
+// b -> p (final devoicing)
+b -> p / _#;
+
+[id: 2737, name: "sh to s nz", weight: 0.15, group: caverphone_voice, ipa: "/ʃ/"]
+// sh preserved as distinct sound
+sh -> ʃ;
+
+[id: 2738, name: "z to s nz", weight: 0.10, group: caverphone_voice]
+// z -> s
+z -> s;
+
+[id: 2739, name: "g to k nz", weight: 0.15, group: caverphone_voice]
+// g -> k (final devoicing)
+g -> k / _#;
+
+// ============================================================
+// Phase 5: NZ Vowel Shifts (KIT-DRESS Merger tendency)
+// ============================================================
+
+// In NZ English, the KIT vowel is raised and centralized,
+// making it closer to schwa. This helps match spellings
+// that vary between i and e.
+
+[id: 2750, name: "i before consonant nz", weight: 0.25, group: caverphone_vowel]
+// i tends toward e before consonants (fish -> fesh tendency)
+// Weight is high because this is distinctive but variable
+i -> e / _$CONSONANT$CONSONANT;
+
+[id: 2751, name: "y vowel to e nz", weight: 0.20, group: caverphone_vowel]
+// y as vowel tends toward e in unstressed syllables
+y -> e / ${CONSONANT}_;
+
+// ============================================================
+// Phase 6: GH Handling
+// ============================================================
+
+[id: 2760, name: "gh after vowel nz", weight: 0.15, group: caverphone_gh, ipa: "/k/"]
+// gh after vowel followed by vowel -> k (ghost-like)
+gh -> k / ${VOWEL}_$VOWEL;
+
+[id: 2761, name: "gh silent nz", weight: 0.0, group: caverphone_gh]
+// gh otherwise silent
+gh -> ;
+
+// ============================================================
+// Phase 7: W and H Handling
+// ============================================================
+
+// NOTE: w preserved before vowels (no transformation needed)
+
+[id: 2771, name: "wh to w nz", weight: 0.10, group: caverphone_semivowel]
+// wh -> w (wine/whine merger)
+wh -> w;
+
+[id: 2772, name: "w drop nz", weight: 0.15, group: caverphone_semivowel]
+// w dropped before consonants or word-finally
+w -> / _$CONSONANT;
+
+[id: 2773, name: "h after vowel nz", weight: 0.15, group: caverphone_semivowel]
+// h dropped between vowels or after consonants
+h -> / ${VOWEL}_$VOWEL;
+
+// ============================================================
+// Phase 8: R Handling (NZ can be partially non-rhotic)
+// ============================================================
+
+// NOTE: r preserved before vowels (no transformation needed)
+
+[id: 2781, name: "r weakened after vowel nz", weight: 0.20, group: caverphone_r, ipa: "/ɹ/"]
+// r may be weakened after vowels (linking r context)
+r -> ɹ / ${VOWEL}_;
+
+// ============================================================
+// Phase 9: L Handling
+// ============================================================
+
+// NOTE: l preserved before vowels (no transformation needed)
+
+[id: 2786, name: "l dark nz", weight: 0.15, group: caverphone_l, ipa: "/ɫ/"]
+// dark l may be vocalized in some positions
+l -> ɫ / _$CONSONANT;
+
+// ============================================================
+// Phase 10: Final Cleanup
+// ============================================================
+
+[id: 2790, name: "mb final nz", weight: 0.10, group: caverphone_final]
+// mb -> m at word end
+mb -> m / _#;
+
+[id: 2791, name: "mn final nz", weight: 0.10, group: caverphone_final]
+// mn -> m at word end
+mn -> m / _#;
+
+[id: 2792, name: "ng final nz", weight: 0.10, group: caverphone_final, ipa: "/ŋ/"]
+// ng -> engma
+ng -> ŋ;

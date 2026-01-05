@@ -388,3 +388,207 @@
 [id: 3306, name: "Ψ to ps", weight: 0.15, group: greek_consonants]
 Ψ -> ps;
 
+// ============================================================
+// BEIDER-MORSE GREEK PATTERNS
+// ============================================================
+// Additional rules derived from the Beider-Morse Phonetic Matching
+// algorithm for Greek names and cross-language matching.
+// ID Range: 3700-3799
+
+// ------------------------------------------------------------
+// Latin Transliteration Variants
+// ------------------------------------------------------------
+// Greek names appear in many Latin spellings
+
+[id: 3700, name: "ph latin greek", weight: 0.10, group: bm_greek_latin, ipa: "/f/"]
+// PH: Latin transliteration of Φ -> F
+ph -> f;
+
+[id: 3701, name: "th latin greek", weight: 0.10, group: bm_greek_latin, ipa: "/θ/"]
+// TH: Latin transliteration of Θ -> θ
+th -> θ;
+
+[id: 3702, name: "kh latin greek", weight: 0.10, group: bm_greek_latin, ipa: "/x/"]
+// KH: Latin transliteration of Χ -> x
+kh -> x;
+
+[id: 3703, name: "ch latin greek", weight: 0.15, group: bm_greek_latin, ipa: "/x/"]
+// CH: Alternative transliteration of Χ -> x
+ch -> x;
+
+[id: 3704, name: "ps latin greek", weight: 0.10, group: bm_greek_latin, ipa: "/ps/"]
+// PS: Latin transliteration of Ψ
+ps -> ps;
+
+[id: 3705, name: "ks latin greek", weight: 0.10, group: bm_greek_latin, ipa: "/ks/"]
+// KS/X: Latin transliteration of Ξ -> ks
+ks -> ks;
+
+// ------------------------------------------------------------
+// Vowel Digraph Latin Equivalents
+// ------------------------------------------------------------
+
+[id: 3710, name: "ai latin greek", weight: 0.10, group: bm_greek_vowel]
+// AI: Latin transliteration of ΑΙ -> e
+ai -> e;
+
+[id: 3711, name: "ei latin greek", weight: 0.10, group: bm_greek_vowel]
+// EI: Latin transliteration of ΕΙ -> i
+ei -> i;
+
+[id: 3712, name: "oi latin greek", weight: 0.10, group: bm_greek_vowel]
+// OI: Latin transliteration of ΟΙ -> i
+oi -> i;
+
+[id: 3713, name: "ui latin greek", weight: 0.10, group: bm_greek_vowel]
+// UI: Latin transliteration of ΥΙ -> i
+ui -> i;
+
+[id: 3714, name: "ou latin greek", weight: 0.10, group: bm_greek_vowel]
+// OU: Latin transliteration of ΟΥ -> u
+ou -> u;
+
+[id: 3715, name: "eu latin greek", weight: 0.10, group: bm_greek_vowel]
+// EU: Latin transliteration of ΕΥ -> ev
+eu -> ev;
+
+[id: 3716, name: "au latin greek", weight: 0.10, group: bm_greek_vowel]
+// AU: Latin transliteration of ΑΥ -> av
+au -> av;
+
+// ------------------------------------------------------------
+// Name Suffix Patterns
+// ------------------------------------------------------------
+
+[id: 3720, name: "opoulos suffix", weight: 0.10, group: bm_greek_suffix]
+// -OPOULOS/-OPOYLOS: Very common Greek patronymic
+opoulos -> opulos / _#;
+
+[id: 3721, name: "opoylos suffix", weight: 0.10, group: bm_greek_suffix]
+// Alternate spelling
+opoylos -> opulos / _#;
+
+[id: 3722, name: "idis suffix", weight: 0.10, group: bm_greek_suffix]
+// -IDIS/-IDES: Patronymic from Asia Minor
+idis -> iðis / _#;
+
+[id: 3723, name: "ides suffix", weight: 0.10, group: bm_greek_suffix]
+ides -> iðis / _#;
+
+[id: 3724, name: "akis suffix", weight: 0.10, group: bm_greek_suffix]
+// -AKIS: Cretan diminutive patronymic
+akis -> akis / _#;
+
+[id: 3725, name: "akos suffix", weight: 0.10, group: bm_greek_suffix]
+// -AKOS: Variant
+akos -> akos / _#;
+
+[id: 3726, name: "atos suffix", weight: 0.10, group: bm_greek_suffix]
+// -ATOS: Ionian/Island origin
+atos -> atos / _#;
+
+[id: 3727, name: "ou suffix", weight: 0.15, group: bm_greek_suffix]
+// -OU: Feminine genitive (daughter/wife of)
+ou -> u / _#;
+
+// ------------------------------------------------------------
+// Consonant Cluster Variants
+// ------------------------------------------------------------
+
+[id: 3730, name: "mb latin greek", weight: 0.10, group: bm_greek_cluster]
+// MB: Latin spelling of ΜΠ -> b
+mb -> b;
+
+[id: 3731, name: "mp latin greek", weight: 0.10, group: bm_greek_cluster]
+// MP: Alternative spelling
+mp -> b;
+
+[id: 3732, name: "nd latin greek", weight: 0.10, group: bm_greek_cluster]
+// ND: Latin spelling of ΝΤ -> d
+nd -> d;
+
+[id: 3733, name: "nt latin greek", weight: 0.10, group: bm_greek_cluster]
+// NT: Alternative spelling
+nt -> d;
+
+[id: 3734, name: "ng latin greek", weight: 0.10, group: bm_greek_cluster]
+// NG: Latin spelling of ΓΚ -> g
+ng -> ɡ;
+
+[id: 3735, name: "nk latin greek", weight: 0.10, group: bm_greek_cluster]
+// NK: Alternative spelling
+nk -> ɡ;
+
+[id: 3736, name: "tz latin greek", weight: 0.10, group: bm_greek_cluster, ipa: "/d͡z/"]
+// TZ: Latin spelling of ΤΖ -> dz
+tz -> d͡z;
+
+[id: 3737, name: "ts latin greek", weight: 0.10, group: bm_greek_cluster, ipa: "/t͡s/"]
+// TS: Latin spelling of ΤΣ -> ts
+ts -> t͡s;
+
+// ------------------------------------------------------------
+// First Name Patterns
+// ------------------------------------------------------------
+
+[id: 3740, name: "georgios name", weight: 0.10, group: bm_greek_firstname]
+// Georgios/George
+georgios -> ɡeorɡios / _#;
+
+[id: 3741, name: "georgos name", weight: 0.10, group: bm_greek_firstname]
+// Georgos (colloquial)
+georgos -> ɡeorɡos / _#;
+
+[id: 3742, name: "ioannis name", weight: 0.10, group: bm_greek_firstname]
+// Ioannis/Giannis -> John
+ioannis -> ioanis / _#;
+
+[id: 3743, name: "giannis name", weight: 0.10, group: bm_greek_firstname]
+// Giannis (colloquial form)
+giannis -> ɡianis / _#;
+
+[id: 3744, name: "konstantinos name", weight: 0.10, group: bm_greek_firstname]
+// Konstantinos -> Constantine
+konstantinos -> kostandinos / _#;
+
+[id: 3745, name: "dimitrios name", weight: 0.10, group: bm_greek_firstname]
+// Dimitrios/Dimitris
+dimitrios -> ðimitrios / _#;
+
+[id: 3746, name: "nikolaos name", weight: 0.10, group: bm_greek_firstname]
+// Nikolaos -> Nicholas
+nikolaos -> nikolaos / _#;
+
+// ------------------------------------------------------------
+// Cross-Border Patterns
+// ------------------------------------------------------------
+
+[id: 3750, name: "os to us latin", weight: 0.20, group: bm_greek_cross]
+// -OS -> -US: Greek to Latin conversion
+os -> us / _#;
+
+[id: 3751, name: "is to es latin", weight: 0.20, group: bm_greek_cross]
+// -IS -> -ES: Some conversions
+is -> is / _#;
+
+[id: 3752, name: "ios to ius latin", weight: 0.20, group: bm_greek_cross]
+// -IOS -> -IUS: Greek to Latin
+ios -> ius / _#;
+
+// ------------------------------------------------------------
+// Ancient Greek Patterns
+// ------------------------------------------------------------
+// For matching classical names
+
+[id: 3760, name: "oe ancient greek", weight: 0.25, group: bm_greek_ancient]
+// OE: Classical diphthong -> I (modern Greek)
+oe -> i;
+
+[id: 3761, name: "ae ancient greek", weight: 0.25, group: bm_greek_ancient]
+// AE: Classical diphthong -> E
+ae -> e;
+
+[id: 3762, name: "y classical greek", weight: 0.20, group: bm_greek_ancient, ipa: "/y/"]
+// Y: Classical upsilon -> I (modern) or U (classical)
+y -> i;
+

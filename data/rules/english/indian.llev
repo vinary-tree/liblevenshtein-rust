@@ -129,7 +129,7 @@ a -> æ / _$CONSONANT$CONSONANT;
 
 // STRUT vowel: often [ʌ] or [ə]
 [id: 17261, name: "strut vowel", weight: 0.2, group: indian_vowels, ipa: "/ʌ/"]
-u -> ʌ / $CONSONANT_$CONSONANT;
+u -> ʌ / ${CONSONANT}_$CONSONANT;
 
 // LOT vowel: typically [ɔ] (no LOT-THOUGHT merger)
 [id: 17262, name: "lot vowel", weight: 0.15, group: indian_vowels, ipa: "/ɔ/"]

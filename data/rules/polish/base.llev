@@ -207,3 +207,243 @@ d͡ʑ -> tɕ / _#;
 [id: 2279, name: "final d͡ʒ to t͡ʃ", weight: 0.08, group: polish_devoicing, ipa: "/t͡ʃ/"]
 d͡ʒ -> t͡ʃ / _#;
 
+// ============================================================
+// BEIDER-MORSE SLAVIC RULES
+// ============================================================
+// Additional rules derived from the Beider-Morse Phonetic Matching
+// algorithm for Polish and other Slavic languages.
+// ID Range: 3100-3199
+
+@define VOWEL_PL = [aeiouąęóy]
+@define CONSONANT_PL = [bcćdfghjklłmnńprsśtwzźż]
+
+// ------------------------------------------------------------
+// Regressive Voicing Assimilation
+// ------------------------------------------------------------
+// In Polish, consonant clusters assimilate in voicing:
+// voiced + voiceless → voiceless + voiceless
+// voiceless + voiced → voiced + voiced
+
+[id: 3100, name: "bk to pk", weight: 0.10, group: bm_slavic_assimilation]
+bk -> pk;
+
+[id: 3101, name: "bp to pp", weight: 0.10, group: bm_slavic_assimilation]
+bp -> pp;
+
+[id: 3102, name: "bt to pt", weight: 0.10, group: bm_slavic_assimilation]
+bt -> pt;
+
+[id: 3103, name: "dk to tk", weight: 0.10, group: bm_slavic_assimilation]
+dk -> tk;
+
+[id: 3104, name: "dp to tp", weight: 0.10, group: bm_slavic_assimilation]
+dp -> tp;
+
+[id: 3105, name: "gk to kk", weight: 0.10, group: bm_slavic_assimilation]
+gk -> kk;
+
+[id: 3106, name: "gp to kp", weight: 0.10, group: bm_slavic_assimilation]
+gp -> kp;
+
+[id: 3107, name: "gt to kt", weight: 0.10, group: bm_slavic_assimilation]
+gt -> kt;
+
+[id: 3108, name: "zs to ss", weight: 0.10, group: bm_slavic_assimilation]
+zs -> ss;
+
+[id: 3109, name: "vs to fs", weight: 0.10, group: bm_slavic_assimilation]
+vs -> fs;
+
+// Progressive voicing assimilation (voiceless before voiced)
+[id: 3110, name: "kb to gb", weight: 0.10, group: bm_slavic_assimilation]
+kb -> gb;
+
+[id: 3111, name: "tb to db", weight: 0.10, group: bm_slavic_assimilation]
+tb -> db;
+
+[id: 3112, name: "td to dd", weight: 0.10, group: bm_slavic_assimilation]
+td -> dd;
+
+[id: 3113, name: "sz to z polish assimilation", weight: 0.15, group: bm_slavic_assimilation]
+// Note: sz -> ʃ is a digraph (handled above), but in some contexts
+// s before z can assimilate. This is for the reverse pattern.
+sv -> zv;
+
+// ------------------------------------------------------------
+// SCZ/SZCZ Patterns (Common in Polish names)
+// ------------------------------------------------------------
+
+// SZCZ cluster: Szczepański, Szczęsny
+// Already handled by sz -> ʃ (rule 2200) and cz -> t͡ʃ (rule 2201)
+// Combined output: /ʃt͡ʃ/
+
+[id: 3121, name: "strzsch cluster", weight: 0.10, group: bm_slavic_cluster, ipa: "/ʃt͡ʃ/"]
+// STRZ: strzała (arrow) - tr followed by z (voiced)
+strz -> ʃtʒ;
+
+[id: 3122, name: "przprz cluster", weight: 0.10, group: bm_slavic_cluster, ipa: "/pʒ/"]
+// PRZ: przez, przed, przy - common prefix
+prz -> pʒ;
+
+[id: 3123, name: "trztrz cluster", weight: 0.10, group: bm_slavic_cluster, ipa: "/tʃ/"]
+// TRZ: trzy (three) - in some dialects sounds like "czy"
+trz -> tʃ;
+
+// ------------------------------------------------------------
+// Name Suffix Patterns
+// ------------------------------------------------------------
+
+[id: 3130, name: "ski ending polish", weight: 0.05, group: bm_slavic_suffix]
+// -SKI: Kowalski, Wiśniewski - most common Polish surname ending
+ski -> ski / _#;
+
+[id: 3131, name: "ska ending polish", weight: 0.05, group: bm_slavic_suffix]
+// -SKA: Female form of -ski
+ska -> ska / _#;
+
+[id: 3132, name: "owski ending", weight: 0.05, group: bm_slavic_suffix]
+// -OWSKI: Dąbrowski, Janowski
+owski -> ovski / _#;
+
+[id: 3133, name: "ewicz ending", weight: 0.10, group: bm_slavic_suffix]
+// -EWICZ: patronymic ending (son of)
+ewicz -> evit͡ʃ / _#;
+
+[id: 3134, name: "owicz ending", weight: 0.10, group: bm_slavic_suffix]
+// -OWICZ: Adamowicz, Romanowicz
+owicz -> ovit͡ʃ / _#;
+
+[id: 3135, name: "icz ending polish", weight: 0.10, group: bm_slavic_suffix]
+// -ICZ: Slavic patronymic
+icz -> it͡ʃ / _#;
+
+[id: 3136, name: "ak ending polish", weight: 0.10, group: bm_slavic_suffix]
+// -AK: Nowak, Polak - common occupational/origin ending
+ak -> ak / _#;
+
+[id: 3137, name: "ek ending polish", weight: 0.10, group: bm_slavic_suffix]
+// -EK: Kowalek, Kurek - diminutive
+ek -> ek / _#;
+
+[id: 3138, name: "czyk ending", weight: 0.10, group: bm_slavic_suffix, ipa: "/t͡ʃɨk/"]
+// -CZYK: diminutive/occupational (like German -chen)
+czyk -> t͡ʃɨk / _#;
+
+// ------------------------------------------------------------
+// W/V Alternation
+// ------------------------------------------------------------
+// Polish W is pronounced as /v/, already handled, but important for matching
+
+[id: 3140, name: "wl initial", weight: 0.15, group: bm_slavic_w]
+// WŁ initial: Władysław, Włodzimierz
+wł -> vw / #_;
+
+[id: 3141, name: "wr initial", weight: 0.10, group: bm_slavic_w]
+// WR initial: Wrocław, wrzesień
+wr -> vr / #_;
+
+// ------------------------------------------------------------
+// GI/GE Softening
+// ------------------------------------------------------------
+// G before front vowels in some Slavic words is softened
+
+[id: 3145, name: "gi softening", weight: 0.20, group: bm_slavic_softening]
+// GI: giełda, Giewont - g before i sounds softer
+gi -> ɟi;
+
+[id: 3146, name: "ki softening", weight: 0.20, group: bm_slavic_softening]
+// KI: kiełbasa, kino - k before i sounds softer
+ki -> ci;
+
+// ------------------------------------------------------------
+// Nasal Vowel Decomposition
+// ------------------------------------------------------------
+// Ą and Ę decompose before certain consonants
+
+[id: 3150, name: "ą before b/p", weight: 0.15, group: bm_slavic_nasal]
+// Ą before labials: ząb (tooth) pronounced "zomp"
+ąb -> omb;
+
+[id: 3151, name: "ą before p", weight: 0.15, group: bm_slavic_nasal]
+ąp -> omp;
+
+[id: 3152, name: "ą before t/d", weight: 0.15, group: bm_slavic_nasal]
+// Ą before dentals: mąt (confusion) - nasal before dental
+ąt -> ont;
+
+[id: 3153, name: "ą before d", weight: 0.15, group: bm_slavic_nasal]
+ąd -> ond;
+
+[id: 3154, name: "ą before k/g", weight: 0.15, group: bm_slavic_nasal]
+// Ą before velars: pąk (bud), dąg - nasal velar
+ąk -> oŋk;
+
+[id: 3155, name: "ą before g", weight: 0.15, group: bm_slavic_nasal]
+ąg -> oŋg;
+
+[id: 3156, name: "ę before b", weight: 0.15, group: bm_slavic_nasal]
+// Ę before labials: zęby (teeth)
+ęb -> emb;
+
+[id: 3157, name: "ę before p", weight: 0.15, group: bm_slavic_nasal]
+ęp -> emp;
+
+[id: 3158, name: "ę before t", weight: 0.15, group: bm_slavic_nasal]
+// Ę before dentals
+ęt -> ent;
+
+[id: 3159, name: "ę before d", weight: 0.15, group: bm_slavic_nasal]
+ęd -> end;
+
+[id: 3160, name: "ę before k", weight: 0.15, group: bm_slavic_nasal]
+// Ę before velars: ręka (hand)
+ęk -> eŋk;
+
+[id: 3161, name: "ę before g", weight: 0.15, group: bm_slavic_nasal]
+ęg -> eŋg;
+
+// ------------------------------------------------------------
+// IE/IA Patterns
+// ------------------------------------------------------------
+
+[id: 3165, name: "ia softening", weight: 0.15, group: bm_slavic_vowel]
+// IA after soft consonants
+cia -> tɕa;
+
+[id: 3166, name: "ie softening", weight: 0.15, group: bm_slavic_vowel]
+// IE after soft consonants
+cie -> tɕe;
+
+[id: 3167, name: "sie softening", weight: 0.10, group: bm_slavic_vowel]
+// SIE: bardzo, siedzieć - s before ie
+sie -> ɕe;
+
+[id: 3168, name: "sia softening", weight: 0.10, group: bm_slavic_vowel]
+sia -> ɕa;
+
+[id: 3169, name: "zie softening", weight: 0.10, group: bm_slavic_vowel]
+zie -> ʑe;
+
+[id: 3170, name: "zia softening", weight: 0.10, group: bm_slavic_vowel]
+zia -> ʑa;
+
+[id: 3171, name: "nie softening", weight: 0.10, group: bm_slavic_vowel]
+nie -> ɲe;
+
+[id: 3172, name: "nia softening", weight: 0.10, group: bm_slavic_vowel]
+nia -> ɲa;
+
+// ------------------------------------------------------------
+// Cross-Slavic Name Matching
+// ------------------------------------------------------------
+// Rules to help match Polish names with their variants in other Slavic languages
+
+[id: 3180, name: "v to w cross slavic", weight: 0.20, group: bm_slavic_cross]
+// V -> W: Some Slavic names use V where Polish uses W
+// Vladimir/Władimir, Ivan/Iwan
+v -> w;
+
+[id: 3181, name: "j to y cross slavic", weight: 0.20, group: bm_slavic_cross]
+// J -> Y: Jan/Yan, Jerzy/Yuri
+j -> j;
+

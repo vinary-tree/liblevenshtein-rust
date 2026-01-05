@@ -285,3 +285,325 @@ t͡st͡s -> t͡s;
 [id: 2212, name: "tav spirant historical", weight: 0.25, group: hebrew_spirantization, ipa: "/θ/"]
 ת -> θ;
 
+// ============================================================
+// BEIDER-MORSE HEBREW PATTERNS (Latin Transliteration)
+// ============================================================
+// Rules for matching Hebrew names written in Latin alphabet
+// Based on Beider-Morse Phonetic Matching for Hebrew
+// Rule IDs: 3800-3899
+
+// ------------------------------------------------------------
+// CH/KH VARIANTS (ח and כ transliteration)
+// ------------------------------------------------------------
+
+// ch → x (common transliteration for het/khaf)
+[id: 3800, name: "ch to kh bm hebrew", weight: 0.10, group: bm_hebrew_trans, ipa: "/x/"]
+ch -> x;
+
+// kh → x (alternative transliteration)
+[id: 3801, name: "kh to x bm hebrew", weight: 0.10, group: bm_hebrew_trans, ipa: "/x/"]
+kh -> x;
+
+// h → x / _# (word-final h often from het)
+[id: 3802, name: "final h to kh bm hebrew", weight: 0.20, group: bm_hebrew_trans, ipa: "/x/"]
+h -> x / _#;
+
+// ------------------------------------------------------------
+// TZ/TS VARIANTS (צ transliteration)
+// ------------------------------------------------------------
+
+// tz → t͡s
+[id: 3805, name: "tz to ts bm hebrew", weight: 0.10, group: bm_hebrew_trans, ipa: "/t͡s/"]
+tz -> t͡s;
+
+// ts → t͡s
+[id: 3806, name: "ts to ts bm hebrew", weight: 0.10, group: bm_hebrew_trans, ipa: "/t͡s/"]
+ts -> t͡s;
+
+// z → t͡s / t_ (tz variant)
+[id: 3807, name: "z after t bm hebrew", weight: 0.15, group: bm_hebrew_trans, ipa: "/t͡s/"]
+tz -> t͡s;
+
+// ------------------------------------------------------------
+// SH/SCH VARIANTS (ש transliteration)
+// ------------------------------------------------------------
+
+// sch → ʃ (German-influenced)
+[id: 3810, name: "sch to sh bm hebrew", weight: 0.10, group: bm_hebrew_trans, ipa: "/ʃ/"]
+sch -> ʃ;
+
+// sh → ʃ
+[id: 3811, name: "sh to sh bm hebrew", weight: 0.10, group: bm_hebrew_trans, ipa: "/ʃ/"]
+sh -> ʃ;
+
+// ------------------------------------------------------------
+// V/W/B VARIANTS (ב and ו transliteration)
+// ------------------------------------------------------------
+
+// w → v (common in older transliterations)
+[id: 3815, name: "w to v bm hebrew", weight: 0.15, group: bm_hebrew_trans]
+w -> v;
+
+// b → v (bet without dagesh)
+[id: 3816, name: "b to v bm hebrew", weight: 0.20, group: bm_hebrew_trans]
+b -> v;
+
+// v → b / #_ (initial v often bet with dagesh)
+[id: 3817, name: "initial v to b bm hebrew", weight: 0.20, group: bm_hebrew_trans]
+v -> b / #_;
+
+// ------------------------------------------------------------
+// Q/K VARIANTS (ק and כּ transliteration)
+// ------------------------------------------------------------
+
+// q → k (qof)
+[id: 3820, name: "q to k bm hebrew", weight: 0.10, group: bm_hebrew_trans]
+q -> k;
+
+// c → k / _[aou] (before back vowels)
+[id: 3821, name: "c to k bm hebrew", weight: 0.15, group: bm_hebrew_trans]
+c -> k / _[aou];
+
+// ck → k
+[id: 3822, name: "ck to k bm hebrew", weight: 0.10, group: bm_hebrew_trans]
+ck -> k;
+
+// ------------------------------------------------------------
+// Y/J/I VARIANTS (י transliteration)
+// ------------------------------------------------------------
+
+// j → y (European transliteration)
+[id: 3825, name: "j to y bm hebrew", weight: 0.15, group: bm_hebrew_trans]
+j -> y;
+
+// y → i / _# (word-final y as vowel)
+[id: 3826, name: "final y to i bm hebrew", weight: 0.15, group: bm_hebrew_trans]
+y -> i / _#;
+
+// i → y / #_ (initial i before vowel)
+[id: 3827, name: "initial i to y bm hebrew", weight: 0.20, group: bm_hebrew_trans]
+i -> y / #_[aeiou];
+
+// ------------------------------------------------------------
+// PH/F VARIANTS (פ transliteration)
+// ------------------------------------------------------------
+
+// ph → f
+[id: 3830, name: "ph to f bm hebrew", weight: 0.10, group: bm_hebrew_trans]
+ph -> f;
+
+// ff → f
+[id: 3831, name: "double f bm hebrew", weight: 0.10, group: bm_hebrew_trans]
+ff -> f;
+
+// ------------------------------------------------------------
+// COMMON NAME SUFFIXES
+// ------------------------------------------------------------
+
+// -owitz → -ovit͡s (patronymic)
+[id: 3835, name: "owitz suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix]
+owitz -> ovit͡s / _#;
+
+// -owicz → -ovit͡s
+[id: 3836, name: "owicz suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix]
+owicz -> ovit͡s / _#;
+
+// -witz → -vit͡s
+[id: 3837, name: "witz suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix]
+witz -> vit͡s / _#;
+
+// -ovitch → -ovit͡ʃ
+[id: 3838, name: "ovitch suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix]
+ovitch -> ovit͡ʃ / _#;
+
+// -stein → -ʃtaɪn
+[id: 3840, name: "stein suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix, ipa: "/ʃtaɪn/"]
+stein -> ʃtaɪn / _#;
+
+// -berg → -berɡ
+[id: 3841, name: "berg suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix]
+berg -> berɡ / _#;
+
+// -man/-mann → -man
+[id: 3842, name: "mann suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix]
+mann -> man / _#;
+
+// -son → -son/-zon
+[id: 3843, name: "son suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix]
+son -> son / _#;
+
+// -sohn → -zon (German variant)
+[id: 3844, name: "sohn suffix bm hebrew", weight: 0.10, group: bm_hebrew_suffix]
+sohn -> zon / _#;
+
+// ------------------------------------------------------------
+// COMMON NAME PREFIXES
+// ------------------------------------------------------------
+
+// ben- → ben (Hebrew "son of")
+[id: 3850, name: "ben prefix bm hebrew", weight: 0.05, group: bm_hebrew_prefix]
+ben -> ben / #_;
+
+// bar- → bar (Aramaic "son of")
+[id: 3851, name: "bar prefix bm hebrew", weight: 0.05, group: bm_hebrew_prefix]
+bar -> bar / #_;
+
+// bat- → bat (Hebrew "daughter of")
+[id: 3852, name: "bat prefix bm hebrew", weight: 0.05, group: bm_hebrew_prefix]
+bat -> bat / #_;
+
+// el- → el (theophoric element)
+[id: 3853, name: "el prefix bm hebrew", weight: 0.10, group: bm_hebrew_prefix]
+el -> el / #_;
+
+// ------------------------------------------------------------
+// THEOPHORIC NAME ELEMENTS
+// ------------------------------------------------------------
+
+// -el → -el (God)
+[id: 3855, name: "el suffix bm hebrew", weight: 0.05, group: bm_hebrew_theophoric]
+el -> el / _#;
+
+// -yahu/-yah → -ya (YHWH)
+[id: 3856, name: "yahu suffix bm hebrew", weight: 0.10, group: bm_hebrew_theophoric]
+yahu -> ya / _#;
+
+[id: 3857, name: "yah suffix bm hebrew", weight: 0.10, group: bm_hebrew_theophoric]
+yah -> ya / _#;
+
+// -iah → -iya (variant)
+[id: 3858, name: "iah suffix bm hebrew", weight: 0.10, group: bm_hebrew_theophoric]
+iah -> iya / _#;
+
+// ------------------------------------------------------------
+// VOWEL VARIANTS (abjad effects)
+// ------------------------------------------------------------
+
+// ee → i (hiriq)
+[id: 3860, name: "ee to i bm hebrew", weight: 0.15, group: bm_hebrew_vowel]
+ee -> i;
+
+// ei → ay (tsere-yod)
+[id: 3861, name: "ei to ay bm hebrew", weight: 0.15, group: bm_hebrew_vowel]
+ei -> ay;
+
+// ai → ay
+[id: 3862, name: "ai to ay bm hebrew", weight: 0.10, group: bm_hebrew_vowel]
+ai -> ay;
+
+// ou → u (qubuts)
+[id: 3863, name: "ou to u bm hebrew", weight: 0.15, group: bm_hebrew_vowel]
+ou -> u;
+
+// oo → u (shuruk)
+[id: 3864, name: "oo to u bm hebrew", weight: 0.15, group: bm_hebrew_vowel]
+oo -> u;
+
+// ah → a (patah-he)
+[id: 3865, name: "ah to a bm hebrew", weight: 0.10, group: bm_hebrew_vowel]
+ah -> a / _#;
+
+// oh → o (holam-he)
+[id: 3866, name: "oh to o bm hebrew", weight: 0.10, group: bm_hebrew_vowel]
+oh -> o / _#;
+
+// ------------------------------------------------------------
+// DOUBLE CONSONANT SIMPLIFICATION
+// ------------------------------------------------------------
+
+// Double letters (gemination in Hebrew)
+[id: 3870, name: "double b bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+bb -> b;
+
+[id: 3871, name: "double d bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+dd -> d;
+
+[id: 3872, name: "double g bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+gg -> ɡ;
+
+[id: 3873, name: "double k bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+kk -> k;
+
+[id: 3874, name: "double l bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+ll -> l;
+
+[id: 3875, name: "double m bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+mm -> m;
+
+[id: 3876, name: "double n bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+nn -> n;
+
+[id: 3877, name: "double p bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+pp -> p;
+
+[id: 3878, name: "double r bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+rr -> r;
+
+[id: 3879, name: "double s bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+ss -> s;
+
+[id: 3880, name: "double t bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+tt -> t;
+
+[id: 3881, name: "double z bm hebrew", weight: 0.15, group: bm_hebrew_gemination]
+zz -> z;
+
+// ------------------------------------------------------------
+// COMMON HEBREW NAME PATTERNS
+// ------------------------------------------------------------
+
+// David variants
+[id: 3885, name: "dawid to david bm hebrew", weight: 0.10, group: bm_hebrew_names]
+dawid -> david;
+
+// Moshe variants
+[id: 3886, name: "mosche to moshe bm hebrew", weight: 0.10, group: bm_hebrew_names]
+mosche -> moʃe;
+
+[id: 3887, name: "moishe to moshe bm hebrew", weight: 0.10, group: bm_hebrew_names]
+moishe -> moʃe;
+
+// Yaakov variants
+[id: 3888, name: "jacob to yaakov bm hebrew", weight: 0.15, group: bm_hebrew_names]
+jacob -> yakov;
+
+[id: 3889, name: "jakob to yaakov bm hebrew", weight: 0.15, group: bm_hebrew_names]
+jakob -> yakov;
+
+// Yosef variants
+[id: 3890, name: "joseph to yosef bm hebrew", weight: 0.15, group: bm_hebrew_names]
+joseph -> yosef;
+
+[id: 3891, name: "josef to yosef bm hebrew", weight: 0.15, group: bm_hebrew_names]
+josef -> yosef;
+
+// Avraham variants
+[id: 3892, name: "abraham to avraham bm hebrew", weight: 0.15, group: bm_hebrew_names]
+abraham -> avraham;
+
+// Yitzhak variants
+[id: 3893, name: "isaac to yitzhak bm hebrew", weight: 0.15, group: bm_hebrew_names]
+isaac -> yit͡sxak;
+
+[id: 3894, name: "izaak to yitzhak bm hebrew", weight: 0.15, group: bm_hebrew_names]
+izaak -> yit͡sak;
+
+// Shlomo variants
+[id: 3895, name: "solomon to shlomo bm hebrew", weight: 0.15, group: bm_hebrew_names]
+solomon -> ʃlomo;
+
+// Sarah variants
+[id: 3896, name: "sara to sarah bm hebrew", weight: 0.10, group: bm_hebrew_names]
+sara -> sara;
+
+// Miriam variants
+[id: 3897, name: "mary to miriam bm hebrew", weight: 0.20, group: bm_hebrew_names]
+mary -> miriam;
+
+// Rivka variants
+[id: 3898, name: "rebecca to rivka bm hebrew", weight: 0.20, group: bm_hebrew_names]
+rebecca -> rivka;
+
+[id: 3899, name: "rebekah to rivka bm hebrew", weight: 0.15, group: bm_hebrew_names]
+rebekah -> rivka;
+

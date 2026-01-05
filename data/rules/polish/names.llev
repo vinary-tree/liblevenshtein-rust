@@ -1,0 +1,306 @@
+// Polish Name Phonetic Rules (Beider-Morse Derived)
+// ==================================================
+// Rules for matching Polish family names and personal names.
+// Based on the Beider-Morse Phonetic Matching (BMPM) algorithm's
+// Polish/Slavic language branch.
+//
+// Handles:
+//   - Traditional Polish surname patterns
+//   - Nobility naming conventions (name + place)
+//   - Jewish names with Polish spellings
+//   - Cross-border variants (German, Russian, Ukrainian)
+//
+// ID Range: 3200-3299
+
+@name "Polish Names (Beider-Morse Derived)"
+@version "1.0.0"
+@author "Derived from Beider-Morse BMPM"
+@description "Phonetic rules for matching Polish personal and family names"
+
+@include "polish/base.llev"
+
+@define VOWEL = [aeiouąęóy]
+@define CONSONANT = [bcćdfghjklłmnńprsśtwzźż]
+
+// ============================================================
+// Phase 1: Common Surname Endings
+// ============================================================
+
+// -SKI/-SKA Endings (Most Common Polish Surname Type)
+[id: 3200, name: "owski names", weight: 0.05, group: bm_polish_suffix]
+// -OWSKI: Place-based names (Janowski, Dąbrowski)
+owski -> ovski / _#;
+
+[id: 3201, name: "ewski names", weight: 0.05, group: bm_polish_suffix]
+// -EWSKI: Kowalewski, Majewski
+ewski -> evski / _#;
+
+[id: 3202, name: "iński names", weight: 0.05, group: bm_polish_suffix]
+// -IŃSKI: Kamiński, Zieliński
+iński -> iɲski / _#;
+
+[id: 3203, name: "yński names", weight: 0.05, group: bm_polish_suffix]
+// -YŃSKI: Szczypiński
+yński -> ɨɲski / _#;
+
+[id: 3204, name: "ańnski names", weight: 0.05, group: bm_polish_suffix]
+// -AŃSKI: Urbański, Podlaszański
+ański -> aɲski / _#;
+
+// Female Forms
+[id: 3205, name: "owska names", weight: 0.05, group: bm_polish_suffix]
+owska -> ovska / _#;
+
+[id: 3206, name: "ewska names", weight: 0.05, group: bm_polish_suffix]
+ewska -> evska / _#;
+
+[id: 3207, name: "ińska names", weight: 0.05, group: bm_polish_suffix]
+ińska -> iɲska / _#;
+
+// ============================================================
+// Phase 2: Patronymic Endings
+// ============================================================
+
+[id: 3210, name: "owicz patronymic", weight: 0.10, group: bm_polish_patronymic]
+// -OWICZ: Son of (Adamowicz = son of Adam)
+owicz -> ovit͡ʃ / _#;
+
+[id: 3211, name: "ewicz patronymic", weight: 0.10, group: bm_polish_patronymic]
+// -EWICZ: Sienkiewicz, Mickiewicz
+ewicz -> evit͡ʃ / _#;
+
+[id: 3212, name: "iewicz patronymic", weight: 0.10, group: bm_polish_patronymic]
+// -IEWICZ: Kraszewskiewicz
+iewicz -> jevit͡ʃ / _#;
+
+[id: 3213, name: "wicz patronymic", weight: 0.10, group: bm_polish_patronymic]
+// -WICZ: Markiewicz, Stankiewicz
+wicz -> vit͡ʃ / _#;
+
+// ============================================================
+// Phase 3: Occupational/Descriptive Endings
+// ============================================================
+
+// -AK: Occupational (Nowak = newcomer, Polak = Pole)
+// Already handled by polish/base.llev rule 3136
+
+// -EK: Diminutive (Kowalek = little smith)
+// Already handled by polish/base.llev rule 3137
+
+[id: 3222, name: "czyk occupational", weight: 0.10, group: bm_polish_occupational, ipa: "/t͡ʃɨk/"]
+// -CZYK: Occupational/descriptive (Bednorczyk)
+czyk -> t͡ʃɨk / _#;
+
+[id: 3223, name: "nik occupational", weight: 0.10, group: bm_polish_occupational]
+// -NIK: Occupational (Młynarnik = miller)
+nik -> ɲik / _#;
+
+[id: 3224, name: "arz occupational", weight: 0.10, group: bm_polish_occupational]
+// -ARZ: Occupational (Kowalarz = smith, archaic)
+arz -> aʒ / _#;
+
+[id: 3225, name: "ura ending", weight: 0.15, group: bm_polish_occupational]
+// -URA: Kaliszura, Maziura
+ura -> ura / _#;
+
+// ============================================================
+// Phase 4: First Name Patterns
+// ============================================================
+
+// Common Polish first names with variants
+[id: 3230, name: "władysław", weight: 0.10, group: bm_polish_firstname]
+// Władysław -> Vladimir equivalence
+władysław -> vwadɨswaf / _#;
+
+[id: 3231, name: "stanisław", weight: 0.10, group: bm_polish_firstname]
+// Stanisław
+stanisław -> staɲiswaf / _#;
+
+[id: 3232, name: "kazimierz", weight: 0.10, group: bm_polish_firstname]
+// Kazimierz -> Casimir
+kazimierz -> kazimjeʒ / _#;
+
+[id: 3233, name: "wojciech", weight: 0.10, group: bm_polish_firstname]
+// Wojciech -> Adalbert in German
+wojciech -> vojtɕex / _#;
+
+[id: 3234, name: "andrzej", weight: 0.10, group: bm_polish_firstname]
+// Andrzej -> Andrew
+andrzej -> andʒej / _#;
+
+[id: 3235, name: "krzysztof", weight: 0.10, group: bm_polish_firstname]
+// Krzysztof -> Christopher
+krzysztof -> kʃɨʃtof / _#;
+
+[id: 3236, name: "grzegorz", weight: 0.10, group: bm_polish_firstname]
+// Grzegorz -> Gregory
+grzegorz -> gʒegoʒ / _#;
+
+// ============================================================
+// Phase 5: Jewish-Polish Names
+// ============================================================
+// Many Jewish names have Polish spellings
+
+[id: 3240, name: "gold prefix jewish", weight: 0.15, group: bm_polish_jewish]
+// GOLD-: Goldberg, Goldman (in Polish context)
+gold -> golt / #_;
+
+[id: 3241, name: "berg suffix jewish", weight: 0.15, group: bm_polish_jewish]
+// -BERG: Common Jewish surname element
+berg -> berk / _#;
+
+[id: 3242, name: "stein suffix jewish", weight: 0.15, group: bm_polish_jewish]
+// -STEIN: Weinstein, Bernstein
+stein -> ʃtajn / _#;
+
+[id: 3243, name: "baum suffix jewish", weight: 0.15, group: bm_polish_jewish]
+// -BAUM: Rosenbaum, Tannenbaum
+baum -> baum / _#;
+
+[id: 3244, name: "feld suffix jewish", weight: 0.15, group: bm_polish_jewish]
+// -FELD: Rosenfeld
+feld -> fɛlt / _#;
+
+[id: 3245, name: "witz suffix jewish", weight: 0.10, group: bm_polish_jewish, ipa: "/vɪts/"]
+// -WITZ: Horowitz, Lefkowitz (Slavic Jewish names)
+witz -> vit͡s / _#;
+
+[id: 3246, name: "man suffix jewish", weight: 0.15, group: bm_polish_jewish]
+// -MAN: Hoffman, Kaufman
+man -> man / _#;
+
+[id: 3247, name: "mann suffix jewish", weight: 0.10, group: bm_polish_jewish]
+// -MANN: German spelling variant
+mann -> man / _#;
+
+// ============================================================
+// Phase 6: Regional Variants
+// ============================================================
+
+// Silesian Variants
+[id: 3250, name: "ik silesian", weight: 0.15, group: bm_polish_regional]
+// -IK: Silesian diminutive (vs -EK in standard Polish)
+ik -> ik / _#;
+
+[id: 3251, name: "ok silesian", weight: 0.15, group: bm_polish_regional]
+// -OK: Regional variant
+ok -> ok / _#;
+
+// Kashubian Variants
+// Kashubian tends to drop final vowels - no specific transformation needed
+// Names from this region may have shortened forms
+
+// Mazurian Variants (Mazurzenie - sz/cz/ż -> s/c/z)
+[id: 3253, name: "sz to s mazurian", weight: 0.25, group: bm_polish_regional, ipa: "/s/"]
+// Mazurzenie: sz -> s in some dialects
+// This is for matching names from Mazurian speakers
+ʃ -> s;
+
+[id: 3254, name: "cz to c mazurian", weight: 0.25, group: bm_polish_regional, ipa: "/t͡s/"]
+// Mazurzenie: cz -> c
+t͡ʃ -> t͡s;
+
+[id: 3255, name: "ż to z mazurian", weight: 0.25, group: bm_polish_regional, ipa: "/z/"]
+// Mazurzenie: ż -> z
+ʒ -> z;
+
+// ============================================================
+// Phase 7: Cross-Border Name Matching
+// ============================================================
+
+// Polish-German Variants
+[id: 3260, name: "sch german polish", weight: 0.15, group: bm_polish_cross]
+// SCH in German names living in Poland
+sch -> ʃ;
+
+[id: 3261, name: "tsch german polish", weight: 0.15, group: bm_polish_cross]
+// TSCH -> CZ equivalence
+tsch -> t͡ʃ;
+
+// Polish-Russian Variants
+[id: 3262, name: "ov russian polish", weight: 0.15, group: bm_polish_cross]
+// -OV (Russian) vs -OW (Polish)
+ov -> of / _#;
+
+[id: 3263, name: "ev russian polish", weight: 0.15, group: bm_polish_cross]
+// -EV (Russian) vs -EW (Polish)
+ev -> ef / _#;
+
+// Polish-Ukrainian Variants
+[id: 3264, name: "enko ukrainian", weight: 0.15, group: bm_polish_cross]
+// -ENKO: Ukrainian patronymic
+enko -> eŋko / _#;
+
+[id: 3265, name: "chuk ukrainian", weight: 0.15, group: bm_polish_cross]
+// -CHUK: Ukrainian patronymic (Pawluk)
+chuk -> t͡ʃuk / _#;
+
+[id: 3266, name: "uk ukrainian", weight: 0.15, group: bm_polish_cross]
+// -UK: Ukrainian ending
+uk -> uk / _#;
+
+// ============================================================
+// Phase 8: Historical Spelling Variants
+// ============================================================
+
+// Pre-Reform Polish Spellings
+[id: 3270, name: "y for i historical", weight: 0.20, group: bm_polish_historical]
+// Y was sometimes used where modern Polish uses I
+y -> ɨ;
+
+[id: 3271, name: "x for ks historical", weight: 0.15, group: bm_polish_historical]
+// X -> KS in older spellings
+x -> ks;
+
+[id: 3272, name: "ff for f historical", weight: 0.10, group: bm_polish_historical]
+// FF -> F in older German-influenced spellings
+ff -> f;
+
+[id: 3273, name: "th for t historical", weight: 0.10, group: bm_polish_historical]
+// TH -> T in older spellings
+th -> t;
+
+// ============================================================
+// Phase 9: Nobility Prefixes
+// ============================================================
+
+[id: 3280, name: "von nobility", weight: 0.20, group: bm_polish_nobility]
+// VON: German nobility prefix (in Polish context)
+von -> fon / #_;
+
+[id: 3281, name: "van nobility", weight: 0.20, group: bm_polish_nobility]
+// VAN: Dutch nobility prefix
+van -> fan / #_;
+
+[id: 3282, name: "de nobility", weight: 0.20, group: bm_polish_nobility]
+// DE: French/Italian nobility prefix
+de -> de / #_;
+
+// ============================================================
+// Phase 10: Double Letter Patterns in Names
+// ============================================================
+
+[id: 3290, name: "ll in names", weight: 0.10, group: bm_polish_geminate]
+// LL: Common in foreign-origin names
+ll -> l;
+
+[id: 3291, name: "nn in names", weight: 0.10, group: bm_polish_geminate]
+// NN: Brenner variant names
+nn -> n;
+
+[id: 3292, name: "ss in names", weight: 0.10, group: bm_polish_geminate]
+// SS: German-origin names
+ss -> s;
+
+[id: 3293, name: "tt in names", weight: 0.10, group: bm_polish_geminate]
+// TT: Foreign-origin names
+tt -> t;
+
+[id: 3294, name: "cc in names", weight: 0.10, group: bm_polish_geminate]
+// CC: Italian-origin names
+cc -> k;
+
+[id: 3295, name: "pp in names", weight: 0.10, group: bm_polish_geminate]
+// PP: Foreign-origin names
+pp -> p;
+
