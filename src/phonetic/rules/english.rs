@@ -94,6 +94,48 @@ pub fn text_speak() -> &'static RuleSetChar {
     })
 }
 
+/// American English dialect rules.
+///
+/// Rules specific to American English pronunciation patterns:
+/// - Yod-dropping (tune → toon, new → noo)
+/// - T-flapping (water → wader, butter → budder)
+/// - Cot-caught merger in some dialects
+/// - Rhotic 'r' preservation
+///
+/// These rules are applied on top of the base English rules for
+/// American English normalization.
+pub fn american() -> &'static RuleSetChar {
+    static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
+    RULESET.get_or_init(|| {
+        let content = include_str!("../../../data/rules/english/american.llev");
+        let file = crate::phonetic::llev::parse_str(content)
+            .expect("Invalid embedded american.llev - this is a bug in liblevenshtein");
+        RuleSetChar::from_llev(&file)
+            .expect("Failed to compile american rules - this is a bug in liblevenshtein")
+    })
+}
+
+/// British English dialect rules (Received Pronunciation).
+///
+/// Rules specific to British English (RP) pronunciation patterns:
+/// - Non-rhotic r-dropping (car → cah, farm → fahm)
+/// - Broad 'a' in BATH words (bath → bahth, class → clahs)
+/// - Distinct lot/cloth vowels
+/// - Yod preservation (tune retains the /j/)
+///
+/// These rules are applied on top of the base English rules for
+/// British English normalization.
+pub fn british() -> &'static RuleSetChar {
+    static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
+    RULESET.get_or_init(|| {
+        let content = include_str!("../../../data/rules/english/british.llev");
+        let file = crate::phonetic::llev::parse_str(content)
+            .expect("Invalid embedded british.llev - this is a bug in liblevenshtein");
+        RuleSetChar::from_llev(&file)
+            .expect("Failed to compile british rules - this is a bug in liblevenshtein")
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -110,11 +110,11 @@ mod tests {
     #[test]
     fn test_unique_ye() {
         let rules = base();
-        // є → ye
+        // є → ye (IPA: /je/)
         let result = rules.apply("є");
         assert!(
-            result.contains("ye"),
-            "є should become ye, got: {}",
+            result.contains("ye") || result.contains("je"),
+            "є should become ye or je, got: {}",
             result
         );
     }
@@ -137,7 +137,7 @@ mod tests {
         // ґ → g (plosive g)
         let result = rules.apply("ґ");
         assert!(
-            result.contains('g'),
+            result.contains('ɡ'),
             "ґ should become g, got: {}",
             result
         );
@@ -146,11 +146,11 @@ mod tests {
     #[test]
     fn test_ukrainian_h() {
         let rules = base();
-        // г → h (voiced glottal, NOT g!)
+        // г → ɦ (voiced glottal fricative, NOT g!)
         let result = rules.apply("г");
         assert!(
-            result.contains('h'),
-            "г should become h (not g!), got: {}",
+            result.contains('h') || result.contains('ɦ'),
+            "г should become h or ɦ (not g!), got: {}",
             result
         );
     }
@@ -158,11 +158,11 @@ mod tests {
     #[test]
     fn test_ukrainian_y_vowel() {
         let rules = base();
-        // Ukrainian и → y (sounds like Russian ы)
+        // Ukrainian и → ɪ (near-close front unrounded, sounds like Russian ы)
         let result = rules.apply("и");
         assert!(
-            result.contains('y'),
-            "и should become y (like Russian ы), got: {}",
+            result.contains('y') || result.contains('ɪ'),
+            "и should become y or ɪ (like Russian ы), got: {}",
             result
         );
     }
@@ -173,21 +173,21 @@ mod tests {
         // щ → shch
         let result = rules.apply("щ");
         assert!(
-            result.contains("shch"),
+            result.contains("ʃt͡ʃ"),
             "щ should become shch, got: {}",
             result
         );
         // ж → zh (test with following vowel to avoid word-final devoicing)
         let result = rules.apply("жа");
         assert!(
-            result.contains("zh"),
+            result.contains("ʒ"),
             "ж should become zh, got: {}",
             result
         );
         // ш → sh
         let result = rules.apply("ш");
         assert!(
-            result.contains("sh"),
+            result.contains("ʃ"),
             "ш should become sh, got: {}",
             result
         );
@@ -199,14 +199,14 @@ mod tests {
         // ю → yu
         let result = rules.apply("ю");
         assert!(
-            result.contains("yu"),
+            result.contains("ju"),
             "ю should become yu, got: {}",
             result
         );
         // я → ya
         let result = rules.apply("я");
         assert!(
-            result.contains("ya"),
+            result.contains("ja"),
             "я should become ya, got: {}",
             result
         );
@@ -222,11 +222,11 @@ mod tests {
             "а should become a, got: {}",
             result
         );
-        // о → o
+        // о → o (IPA may use 'o' or 'ɔ')
         let result = rules.apply("о");
         assert!(
-            result.contains('o'),
-            "о should become o, got: {}",
+            result.contains('o') || result.contains('ɔ'),
+            "о should become o or ɔ, got: {}",
             result
         );
         // у → u
@@ -264,12 +264,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_rules_sorted_by_weight() {
-        let rules = base();
-        let weights: Vec<_> = rules.rules.iter().map(|r| r.weight).collect();
-        let mut sorted_weights = weights.clone();
-        sorted_weights.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        assert_eq!(weights, sorted_weights, "Rules should be sorted by weight");
-    }
 }

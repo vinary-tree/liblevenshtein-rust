@@ -421,8 +421,8 @@ r̩r̩ -> r̩;
 
 // Add inherent 'a' after consonant when followed by another consonant
 // This handles medial positions like in "karma" -> k+a+r+m+a
-[id: 2700, name: "inherent schwa between consonants", weight: 0.05, group: hindi_schwa]
-$HINDI_CONSONANT -> $0a / _$HINDI_CONSONANT;
+// Note: Backreference pattern ($0a) not supported - using explicit rules below
+// Rule id 2700 removed - needs backreference support
 
 // Add inherent 'a' after final consonant at word boundary
 [id: 2701, name: "inherent schwa at word end", weight: 0.05, group: hindi_schwa]
@@ -465,16 +465,14 @@ k -> ka / _#;
 
 // Word-final schwa deletion in polysyllables
 // Example: कमल "kamala" -> "kamal", but राम "raama" stays (monosyllable in final form)
-[id: 2730, name: "word final schwa deletion", weight: 0.01, group: hindi_schwa_deletion]
-a -> / $HINDI_CONSONANT _ # if polysyllable;
+// Word final schwa deletion (requires polysyllable condition - not supported)
+// Rule id 2730 removed - needs conditional matching
 
-// Medial schwa deletion before heavy syllable (syllable with full vowel)
+// Medial schwa deletion before heavy syllable (requires complex pattern)
 // Example: समय "samaya" -> "samay" (schwa before final 'a' deleted)
-[id: 2731, name: "medial schwa before full vowel", weight: 0.02, group: hindi_schwa_deletion]
-a -> / $HINDI_CONSONANT _ $HINDI_CONSONANT[aːiːuːeɛːoɔːr̩];
+// Rule id 2731 removed - needs NFA-based matching for complex patterns
 
 // Schwa deletion between consonants before vowel
 // Example: कमल "kamala" has schwa between m-l retained, but...
-[id: 2732, name: "medial schwa cluster", weight: 0.02, group: hindi_schwa_deletion]
-a -> / $HINDI_CONSONANT _ $HINDI_CONSONANT$HINDI_CONSONANT[aːiːuːeɛːoɔː];
+// Rule id 2732 removed - needs NFA-based matching for complex patterns
 

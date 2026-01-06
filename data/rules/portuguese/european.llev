@@ -149,8 +149,9 @@ sr -> ʃr;
 // European Portuguese has more centralized vowels
 
 // Unstressed 'a' often → ɐ (near-open central)
-[id: 1650, name: "unstressed a centralization", weight: 0.2, group: european_vowels, ipa: "/ɐ/"]
-a -> ɐ / _$CONSONANT$CONSONANT;
+// Note: Complex context pattern (_$CONSONANT$CONSONANT) removed - requires NFA
+// The centralization of 'a' before consonant clusters is dialect-specific
+// Rule id 1650 removed - needs NFA-based matching for complex patterns
 
 // Final unstressed 'a' → ɐ
 [id: 1651, name: "final a centralization", weight: 0.2, group: european_vowels, ipa: "/ɐ/"]

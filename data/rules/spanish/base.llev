@@ -199,10 +199,9 @@ ss -> s;
 // Keeping as rr to distinguish from single r
 rr -> r;
 
-[id: 2501, name: "r initial trill spanish", weight: 0.15, group: spanish_metaphone_r, ipa: "/r/"]
 // Initial R is also a trill (phonetically same as RR)
 // For matching: initial r treated equivalently to rr
-// No transformation needed, but document pattern
+// No transformation needed - passes through unchanged (id 2501 removed)
 
 // ------------------------------------------------------------
 // Y Handling
@@ -223,10 +222,9 @@ y -> ʝ / #_;
 // Some speakers add prothetic 'e' before s+consonant clusters
 // This helps match with/without the prothesis
 
-[id: 2520, name: "s cluster prothesis", weight: 0.25, group: spanish_metaphone_cluster]
 // es- before s+consonant: España/Spain, especial/special
 // Note: This is for matching loanwords with/without prothesis
-// No transformation needed, but document pattern
+// No transformation needed - passes through unchanged (id 2520 removed)
 
 // ------------------------------------------------------------
 // NV/NF Nasal Assimilation
@@ -252,14 +250,12 @@ nf -> mf;
 // Weight indicates significant variation
 d -> / _#;
 
-[id: 2541, name: "s final weak spanish", weight: 0.35, group: spanish_metaphone_final]
 // Final S can be aspirated or dropped in Caribbean/Andalusian
 // Very high weight - this is major dialectal feature
-// Keeping as 's' in base, dialect files can override
+// No transformation in base - dialect files can override (id 2541 removed)
 
-[id: 2542, name: "r final weak spanish", weight: 0.30, group: spanish_metaphone_final]
 // Final R can be weakened: amor -> amo(r)
-// Weight indicates variation
+// No transformation in base - dialect specific (id 2542 removed)
 
 [id: 2543, name: "n final velar spanish", weight: 0.25, group: spanish_metaphone_final, ipa: "/ŋ/"]
 // Final N often velarized: pan -> paŋ
@@ -292,11 +288,9 @@ ct -> t;
 // ------------------------------------------------------------
 // Spanish keeps these clusters (unlike English which drops first letter)
 
-[id: 2570, name: "ps initial spanish", weight: 0.0, group: spanish_metaphone_initial, ipa: "/ps/"]
 // PS: psicología (p is pronounced in Spanish)
-// No change needed
+// No change needed - passes through (id 2570 removed)
 
-[id: 2571, name: "pt initial spanish", weight: 0.0, group: spanish_metaphone_initial, ipa: "/pt/"]
 // PT: pterodáctilo (p is pronounced in Spanish)
-// No change needed
+// No change needed - passes through (id 2571 removed)
 

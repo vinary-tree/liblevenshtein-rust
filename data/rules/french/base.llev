@@ -437,6 +437,7 @@ ez -> e / _#;
 [id: 2642, name: "et final", weight: 0.15, group: phonex_ending, ipa: "/ɛ/"]
 // -ET ending: ballet, buffet (but not as in 'net')
 // Note: Weight indicates variation
+et -> ɛ / _#;
 
 [id: 2643, name: "ent final verb", weight: 0.20, group: phonex_ending]
 // -ENT in 3rd person plural: silent (ils parlent)
@@ -507,15 +508,6 @@ sci -> si;
 
 // ------------------------------------------------------------
 // Initial Cluster Patterns
+// Note: PS, PT, PN clusters are identity mappings (removed as redundant)
+// The p is usually pronounced in French: psychologie, Ptolémée, pneumatique
 // ------------------------------------------------------------
-
-[id: 2690, name: "ps initial french", weight: 0.15, group: phonex_initial, ipa: "/ps/"]
-// PS initial: psychologie (p usually pronounced in French)
-// Note: Some speakers drop the p, hence weight
-
-[id: 2691, name: "pt initial french", weight: 0.15, group: phonex_initial, ipa: "/pt/"]
-// PT initial: Ptolémée (p usually pronounced)
-
-[id: 2692, name: "pn initial french", weight: 0.15, group: phonex_initial, ipa: "/pn/"]
-// PN initial: pneumatique (p usually pronounced)
-

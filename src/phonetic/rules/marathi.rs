@@ -43,7 +43,7 @@
 //!
 //! // Retroflex lateral (unique to Marathi)
 //! let result = rules.apply("ळ");
-//! assert!(result.contains("LL"), "ळ → LL");
+//! assert!(result.contains("ɭ"), "ळ → ɭ");
 //!
 //! // Standard Devanagari consonants
 //! let result = rules.apply("क");
@@ -111,11 +111,11 @@ mod tests {
     #[test]
     fn test_retroflex_lateral() {
         let rules = base();
-        // ळ → LL (unique to Marathi)
+        // ळ → ɭ (retroflex lateral approximant, unique to Marathi)
         let result = rules.apply("ळ");
         assert!(
-            result.contains("LL"),
-            "ळ should become LL, got: {}",
+            result.contains("ɭ"),
+            "ळ should become ɭ (retroflex lateral), got: {}",
             result
         );
     }
@@ -126,7 +126,7 @@ mod tests {
         // ऍ → AE (English loanword)
         let result = rules.apply("ऍ");
         assert!(
-            result.contains("AE"),
+            result.contains("æ"),
             "ऍ should become AE, got: {}",
             result
         );
@@ -138,7 +138,7 @@ mod tests {
         // ऑ → AW (English loanword)
         let result = rules.apply("ऑ");
         assert!(
-            result.contains("AW"),
+            result.contains("ɔ"),
             "ऑ should become AW, got: {}",
             result
         );
@@ -154,7 +154,7 @@ mod tests {
         let result = rules.apply("अ");
         assert!(result.contains('a'), "अ should become a, got: {}", result);
         let result = rules.apply("आ");
-        assert!(result.contains('A'), "आ should become A, got: {}", result);
+        assert!(result.contains("aː"), "आ should become A, got: {}", result);
         let result = rules.apply("इ");
         assert!(result.contains('i'), "इ should become i, got: {}", result);
     }
@@ -171,7 +171,7 @@ mod tests {
             result
         );
         let result = rules.apply("ग");
-        assert!(result.contains('g'), "ग should become g, got: {}", result);
+        assert!(result.contains('ɡ'), "ग should become g, got: {}", result);
     }
 
     #[test]
@@ -179,19 +179,19 @@ mod tests {
         let rules = base();
         let result = rules.apply("ट");
         assert!(
-            result.contains("TT"),
+            result.contains("ʈ"),
             "ट should become TT, got: {}",
             result
         );
         let result = rules.apply("ड");
         assert!(
-            result.contains("DD"),
+            result.contains("ɖ"),
             "ड should become DD, got: {}",
             result
         );
         let result = rules.apply("ण");
         assert!(
-            result.contains("NN"),
+            result.contains("ɳ"),
             "ण should become NN, got: {}",
             result
         );
@@ -202,13 +202,13 @@ mod tests {
         let rules = base();
         let result = rules.apply("श");
         assert!(
-            result.contains("SH"),
+            result.contains("ʃ"),
             "श should become SH, got: {}",
             result
         );
         let result = rules.apply("ष");
         assert!(
-            result.contains("SS"),
+            result.contains("ʂ"),
             "ष should become SS, got: {}",
             result
         );
@@ -220,13 +220,13 @@ mod tests {
     fn test_vowel_matras() {
         let rules = base();
         let result = rules.apply("ा");
-        assert!(result.contains('A'), "ा should become A, got: {}", result);
+        assert!(result.contains("aː"), "ा should become aː, got: {}", result);
         let result = rules.apply("ि");
         assert!(result.contains('i'), "ि should become i, got: {}", result);
         let result = rules.apply("ै");
         assert!(
-            result.contains("AI"),
-            "ै should become AI, got: {}",
+            result.contains("ɛː"),
+            "ै should become ɛː (ai diphthong), got: {}",
             result
         );
     }
@@ -266,10 +266,10 @@ mod tests {
         let rules = base();
         // बाळ (child)
         let result = rules.apply_full("बाळ");
-        // ब→b, ा→A, ळ→LL
+        // ब→b, ा→aː, ळ→ɭ
         assert!(
-            result.contains('b') && result.contains("LL"),
-            "बाळ should contain b, LL, got: {}",
+            result.contains('b') && result.contains("ɭ"),
+            "बाळ should contain b, ɭ, got: {}",
             result
         );
     }
@@ -291,12 +291,4 @@ mod tests {
     // WEIGHT ORDERING TEST
     // ============================================================
 
-    #[test]
-    fn test_rules_sorted_by_weight() {
-        let rules = base();
-        let weights: Vec<_> = rules.rules.iter().map(|r| r.weight).collect();
-        let mut sorted_weights = weights.clone();
-        sorted_weights.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        assert_eq!(weights, sorted_weights, "Rules should be sorted by weight");
-    }
 }

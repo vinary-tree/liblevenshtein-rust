@@ -30,7 +30,7 @@
 //!
 //! // IJ digraph
 //! let wijn = rules.apply("wijn");
-//! assert!(wijn.contains("EI"), "ij → EI");
+//! assert!(wijn.contains("eɪ"), "ij → EI");
 //!
 //! // Guttural G
 //! let goed = rules.apply("goed");
@@ -92,11 +92,11 @@ mod tests {
     #[test]
     fn test_ij_digraph() {
         let rules = base();
-        // wijn → VEIn (w→V, ij→EI)
+        // wijn → ʋɛin (w→ʋ, ij→ɛi)
         let result = rules.apply("wijn");
         assert!(
-            result.contains("EI"),
-            "ij should become EI, got: {}",
+            result.contains('ɛ'),
+            "ij should become ɛi, got: {}",
             result
         );
     }
@@ -104,11 +104,11 @@ mod tests {
     #[test]
     fn test_ij_uppercase() {
         let rules = base();
-        // IJsberg → EIsberX (IJ→EI, g→X)
+        // IJsberg → ɛisberx (IJ→ɛi, g→x)
         let result = rules.apply("IJsberg");
         assert!(
-            result.starts_with("EI"),
-            "IJ should become EI, got: {}",
+            result.starts_with('ɛ'),
+            "IJ should become ɛi, got: {}",
             result
         );
     }
@@ -116,11 +116,11 @@ mod tests {
     #[test]
     fn test_g_guttural() {
         let rules = base();
-        // goed → XUt (g→X, oe→U, d→t at end)
+        // goed → xut (g→x, oe→u, d→t at end)
         let result = rules.apply("goed");
         assert!(
-            result.starts_with('X'),
-            "g should become X (guttural), got: {}",
+            result.starts_with('x'),
+            "g should become x (guttural), got: {}",
             result
         );
     }
@@ -128,11 +128,11 @@ mod tests {
     #[test]
     fn test_ch_guttural() {
         let rules = base();
-        // acht → aXt
+        // acht → axt
         let result = rules.apply("acht");
         assert!(
-            result.contains('X'),
-            "ch should become X (guttural), got: {}",
+            result.contains('x'),
+            "ch should become x (guttural), got: {}",
             result
         );
     }
@@ -140,11 +140,11 @@ mod tests {
     #[test]
     fn test_sch_pattern() {
         let rules = base();
-        // school → sXol (sch→sX, oo→o)
+        // school → sxol (sch→sx, oo→o)
         let result = rules.apply("school");
         assert!(
-            result.starts_with("sX"),
-            "sch should become sX (not sh like German), got: {}",
+            result.starts_with("sx"),
+            "sch should become sx (not sh like German), got: {}",
             result
         );
     }
@@ -152,11 +152,11 @@ mod tests {
     #[test]
     fn test_oe_vowel() {
         let rules = base();
-        // boek → bUk (oe→U)
+        // boek → buk (oe→u)
         let result = rules.apply("boek");
         assert!(
-            result.contains('U'),
-            "oe should become U, got: {}",
+            result.contains('u'),
+            "oe should become u, got: {}",
             result
         );
     }
@@ -164,11 +164,11 @@ mod tests {
     #[test]
     fn test_eu_vowel() {
         let rules = base();
-        // neus → nOEs (eu→OE)
+        // neus → nøs (eu→ø)
         let result = rules.apply("neus");
         assert!(
-            result.contains("OE"),
-            "eu should become OE, got: {}",
+            result.contains('ø'),
+            "eu should become ø, got: {}",
             result
         );
     }
@@ -176,11 +176,11 @@ mod tests {
     #[test]
     fn test_ui_diphthong() {
         let rules = base();
-        // huis → hOYs (ui→OY)
+        // huis → hœys (ui→œy)
         let result = rules.apply("huis");
         assert!(
-            result.contains("OY"),
-            "ui should become OY, got: {}",
+            result.contains('œ'),
+            "ui should become œy, got: {}",
             result
         );
     }
@@ -188,11 +188,11 @@ mod tests {
     #[test]
     fn test_w_pronunciation() {
         let rules = base();
-        // water → Vater (w→V)
+        // water → ʋater (w→ʋ)
         let result = rules.apply("water");
         assert!(
-            result.starts_with('V'),
-            "w should become V, got: {}",
+            result.starts_with('ʋ'),
+            "w should become ʋ, got: {}",
             result
         );
     }
@@ -260,11 +260,11 @@ mod tests {
     #[test]
     fn test_ei_diphthong() {
         let rules = base();
-        // klein → klEIn (ei→EI)
+        // klein → klɛin (ei→ɛi)
         let result = rules.apply("klein");
         assert!(
-            result.contains("EI"),
-            "ei should become EI, got: {}",
+            result.contains('ɛ'),
+            "ei should become ɛi, got: {}",
             result
         );
     }
@@ -272,11 +272,11 @@ mod tests {
     #[test]
     fn test_au_diphthong() {
         let rules = base();
-        // blauw → blAUV (au→AU, w→V)
+        // blauw → blɔuʋ (au→ɔu, w→ʋ)
         let result = rules.apply("blauw");
         assert!(
-            result.contains("AU"),
-            "au should become AU, got: {}",
+            result.contains('ɔ'),
+            "au should become ɔu, got: {}",
             result
         );
     }
@@ -284,11 +284,11 @@ mod tests {
     #[test]
     fn test_ou_diphthong() {
         let rules = base();
-        // oud → AUt (ou→AU, d→t at end)
+        // oud → ɔut (ou→ɔu, d→t at end)
         let result = rules.apply("oud");
         assert!(
-            result.contains("AU"),
-            "ou should become AU, got: {}",
+            result.contains('ɔ'),
+            "ou should become ɔu, got: {}",
             result
         );
     }

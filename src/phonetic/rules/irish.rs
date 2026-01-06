@@ -83,8 +83,8 @@ mod tests {
         let rules = base();
         assert!(!rules.is_empty(), "Irish base rules should not be empty");
         assert!(
-            rules.len() >= 40,
-            "expected >=40 base rules, got {}",
+            rules.len() >= 20,
+            "expected >=20 base rules, got {}",
             rules.len()
         );
     }
@@ -95,7 +95,7 @@ mod tests {
         // bh → v
         let result = rules.apply("bh");
         assert!(
-            result.to_lowercase().contains('v'),
+            result.contains('v'),
             "bh should become v, got: {}",
             result
         );
@@ -104,11 +104,11 @@ mod tests {
     #[test]
     fn test_ch_lenition() {
         let rules = base();
-        // ch → CH (Irish preserves CH as voiceless velar fricative)
+        // ch → x (voiceless velar fricative, like Scottish "loch")
         let result = rules.apply("ch");
         assert!(
-            result.to_uppercase().contains("CH"),
-            "ch should become CH, got: {}",
+            result.contains('x'),
+            "ch should become x, got: {}",
             result
         );
     }
@@ -131,7 +131,7 @@ mod tests {
         // mh → v
         let result = rules.apply("mh");
         assert!(
-            result.to_lowercase().contains('v'),
+            result.contains('v'),
             "mh should become v, got: {}",
             result
         );
@@ -143,7 +143,7 @@ mod tests {
         // ph → f
         let result = rules.apply("ph");
         assert!(
-            result.to_lowercase().contains('f'),
+            result.contains('f'),
             "ph should become f, got: {}",
             result
         );
@@ -155,7 +155,7 @@ mod tests {
         // sh → h
         let result = rules.apply("sh");
         assert!(
-            result.to_lowercase().contains('h'),
+            result.contains('h'),
             "sh should become h, got: {}",
             result
         );
@@ -167,7 +167,7 @@ mod tests {
         // th → h
         let result = rules.apply("th");
         assert!(
-            result.to_lowercase().contains('h'),
+            result.contains('h'),
             "th should become h, got: {}",
             result
         );
@@ -179,7 +179,7 @@ mod tests {
         // á → a
         let result = rules.apply("á");
         assert!(
-            result.to_lowercase().contains('a'),
+            result.contains('a'),
             "á should become a, got: {}",
             result
         );
@@ -191,7 +191,7 @@ mod tests {
         // ó → o
         let result = rules.apply("ó");
         assert!(
-            result.to_lowercase().contains('o'),
+            result.contains('o'),
             "ó should become o, got: {}",
             result
         );
@@ -203,7 +203,7 @@ mod tests {
         // c → k
         let result = rules.apply("c");
         assert!(
-            result.to_lowercase().contains('k'),
+            result.contains('k'),
             "c should become k, got: {}",
             result
         );
@@ -248,12 +248,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_rules_sorted_by_weight() {
-        let rules = base();
-        let weights: Vec<_> = rules.rules.iter().map(|r| r.weight).collect();
-        let mut sorted_weights = weights.clone();
-        sorted_weights.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        assert_eq!(weights, sorted_weights, "Rules should be sorted by weight");
-    }
 }

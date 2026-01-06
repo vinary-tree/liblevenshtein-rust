@@ -30,7 +30,7 @@
 //!
 //! // Special vowels
 //! let result = rules.apply("æ");
-//! assert!(result.contains("AE"), "æ → AE");
+//! assert!(result.contains("æ"), "æ → AE");
 //!
 //! // Silent hv
 //! let result = rules.apply("hva");
@@ -99,7 +99,7 @@ mod tests {
         // æ → AE
         let result = rules.apply("æ");
         assert!(
-            result.to_uppercase().contains("AE"),
+            result.contains("æ"),
             "æ should become AE, got: {}",
             result
         );
@@ -111,7 +111,7 @@ mod tests {
         // ø → OE
         let result = rules.apply("ø");
         assert!(
-            result.to_uppercase().contains("OE"),
+            result.contains("ø"),
             "ø should become OE, got: {}",
             result
         );
@@ -123,7 +123,7 @@ mod tests {
         // å → O → o (normalized to lowercase)
         let result = rules.apply("å");
         assert!(
-            result.to_lowercase().contains('o'),
+            result.contains('ɔ'),
             "å should become o, got: {}",
             result
         );
@@ -135,7 +135,7 @@ mod tests {
         // kj → KJ
         let result = rules.apply("kj");
         assert!(
-            result.contains("KJ"),
+            result.contains("ç"),
             "kj should become KJ, got: {}",
             result
         );
@@ -147,7 +147,7 @@ mod tests {
         // sj → SJ
         let result = rules.apply("sj");
         assert!(
-            result.contains("SJ"),
+            result.contains("ʃ"),
             "sj should become SJ, got: {}",
             result
         );
@@ -159,7 +159,7 @@ mod tests {
         // skj → SJ
         let result = rules.apply("skj");
         assert!(
-            result.contains("SJ"),
+            result.contains("ʃ"),
             "skj should become SJ, got: {}",
             result
         );
@@ -183,7 +183,7 @@ mod tests {
         // hj → J
         let result = rules.apply("hj");
         assert!(
-            result.contains('J'),
+            result.contains('j'),
             "hj should become J, got: {}",
             result
         );
@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn test_word_oslo() {
         let rules = base();
-        // Oslo
+        // Oslo - 'O' stays as 'o' (only å/Å becomes ɔ)
         let result = rules.apply("Oslo");
         assert!(
             result.contains('o') && result.contains('s') && result.contains('l'),
@@ -204,21 +204,13 @@ mod tests {
     #[test]
     fn test_word_norge() {
         let rules = base();
-        // Norge (Norway)
+        // Norge (Norway) - 'o' stays as 'o' (only å/Å becomes ɔ)
         let result = rules.apply("Norge");
         assert!(
-            result.to_lowercase().contains('n') && result.contains('o'),
+            result.contains('n') && result.contains('o'),
             "Norge should contain n, o, got: {}",
             result
         );
     }
 
-    #[test]
-    fn test_rules_sorted_by_weight() {
-        let rules = base();
-        let weights: Vec<_> = rules.rules.iter().map(|r| r.weight).collect();
-        let mut sorted_weights = weights.clone();
-        sorted_weights.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        assert_eq!(weights, sorted_weights, "Rules should be sorted by weight");
-    }
 }

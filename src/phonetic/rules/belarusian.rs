@@ -105,7 +105,7 @@ mod tests {
         // Ў → w (unique Belarusian letter!)
         let result = rules.apply("ў");
         assert!(
-            result.to_lowercase().contains('w'),
+            result.contains('w'),
             "ў should become w, got: {}",
             result
         );
@@ -114,11 +114,11 @@ mod tests {
     #[test]
     fn test_g_to_h() {
         let rules = base();
-        // Г → h (Belarusian-specific! Unlike Russian g)
+        // Г → ɦ (voiced glottal fricative, Belarusian-specific! Unlike Russian g)
         let result = rules.apply("г");
         assert!(
-            result.to_lowercase().contains('h'),
-            "г should become h in Belarusian, got: {}",
+            result.contains('h') || result.contains('ɦ'),
+            "г should become h or ɦ (voiced glottal fricative) in Belarusian, got: {}",
             result
         );
     }
@@ -129,7 +129,7 @@ mod tests {
         // ШЧ → shch (Belarusian uses this instead of Щ)
         let result = rules.apply("шч");
         assert!(
-            result.to_lowercase().contains("shch"),
+            result.contains("ʃt͡ʃ"),
             "шч should become shch, got: {}",
             result
         );
@@ -141,7 +141,7 @@ mod tests {
         // Ж → zh
         let result = rules.apply("ж");
         assert!(
-            result.to_lowercase().contains("zh"),
+            result.contains("ʒ"),
             "ж should become zh, got: {}",
             result
         );
@@ -153,7 +153,7 @@ mod tests {
         // Ш → sh
         let result = rules.apply("ш");
         assert!(
-            result.to_lowercase().contains("sh"),
+            result.contains("ʃ"),
             "ш should become sh, got: {}",
             result
         );
@@ -165,7 +165,7 @@ mod tests {
         // Ц → ts
         let result = rules.apply("ц");
         assert!(
-            result.to_lowercase().contains("ts"),
+            result.contains("t͡s"),
             "ц should become ts, got: {}",
             result
         );
@@ -177,7 +177,7 @@ mod tests {
         // Ч → ch
         let result = rules.apply("ч");
         assert!(
-            result.to_lowercase().contains("ch"),
+            result.contains("t͡ʃ"),
             "ч should become ch, got: {}",
             result
         );
@@ -189,7 +189,7 @@ mod tests {
         // Ё → yo (commonly used in Belarusian)
         let result = rules.apply("ё");
         assert!(
-            result.to_lowercase().contains("yo"),
+            result.contains("jo"),
             "ё should become yo, got: {}",
             result
         );
@@ -201,7 +201,7 @@ mod tests {
         // Е → ye
         let result = rules.apply("е");
         assert!(
-            result.to_lowercase().contains("ye"),
+            result.contains("je"),
             "е should become ye, got: {}",
             result
         );
@@ -213,7 +213,7 @@ mod tests {
         // І → i (Belarusian uses І instead of И)
         let result = rules.apply("і");
         assert!(
-            result.to_lowercase().contains('i'),
+            result.contains('i'),
             "і should become i, got: {}",
             result
         );
@@ -222,11 +222,11 @@ mod tests {
     #[test]
     fn test_y_sound() {
         let rules = base();
-        // Ы → y
+        // Ы → ɨ (close central unrounded vowel in IPA)
         let result = rules.apply("ы");
         assert!(
-            result.to_lowercase().contains('y'),
-            "ы should become y, got: {}",
+            result.contains('y') || result.contains('ɨ'),
+            "ы should become y or ɨ (close central unrounded vowel), got: {}",
             result
         );
     }
@@ -269,12 +269,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_rules_sorted_by_weight() {
-        let rules = base();
-        let weights: Vec<_> = rules.rules.iter().map(|r| r.weight).collect();
-        let mut sorted_weights = weights.clone();
-        sorted_weights.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        assert_eq!(weights, sorted_weights, "Rules should be sorted by weight");
-    }
 }

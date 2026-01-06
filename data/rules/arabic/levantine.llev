@@ -85,8 +85,7 @@
 
 // Long aa in certain words → eː
 // This is lexically determined; common in many words
-[id: 2830, name: "imala aa levantine", weight: 0.15, group: levantine_imala, ipa: "/eː/"]
-// Note: Full imala would require lexical lookup; this captures the pattern
+// Note: Full imala would require lexical lookup (id 2830 removed - needs lexical rules)
 
 // ============================================================
 // VOWEL PATTERNS

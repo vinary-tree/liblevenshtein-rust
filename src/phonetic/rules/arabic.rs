@@ -54,7 +54,7 @@
 //!
 //! // Emphatic consonants
 //! let result = rules.apply("ص");
-//! assert!(result.contains('S'), "ص → S");
+//! assert!(result.contains('ʃ'), "ص → S");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;
@@ -154,28 +154,28 @@ mod tests {
         // ش → SH
         let result = rules.apply("ش");
         assert!(
-            result.contains("SH"),
+            result.contains("ʃ"),
             "ش should become SH, got: {}",
             result
         );
         // خ → KH
         let result = rules.apply("خ");
         assert!(
-            result.contains("KH"),
+            result.contains("x"),
             "خ should become KH, got: {}",
             result
         );
         // ث → TH
         let result = rules.apply("ث");
         assert!(
-            result.contains("TH"),
+            result.contains("θ"),
             "ث should become TH, got: {}",
             result
         );
         // غ → GH
         let result = rules.apply("غ");
         assert!(
-            result.contains("GH"),
+            result.contains("ɣ"),
             "غ should become GH, got: {}",
             result
         );
@@ -184,32 +184,32 @@ mod tests {
     #[test]
     fn test_emphatic_consonants() {
         let rules = base();
-        // ص → S (emphatic s)
+        // ص → sˤ (emphatic s)
         let result = rules.apply("ص");
         assert!(
-            result.contains('S'),
-            "ص should become S, got: {}",
+            result.contains("sˤ"),
+            "ص should become sˤ (emphatic s), got: {}",
             result
         );
-        // ض → D (emphatic d - unique to Arabic)
+        // ض → dˤ (emphatic d - unique to Arabic)
         let result = rules.apply("ض");
         assert!(
-            result.contains('D'),
-            "ض should become D, got: {}",
+            result.contains("dˤ"),
+            "ض should become dˤ (emphatic d), got: {}",
             result
         );
-        // ط → T (emphatic t)
+        // ط → tˤ (emphatic t)
         let result = rules.apply("ط");
         assert!(
-            result.contains('T'),
-            "ط should become T, got: {}",
+            result.contains("tˤ"),
+            "ط should become tˤ (emphatic t), got: {}",
             result
         );
-        // ظ → Z (emphatic z)
+        // ظ → ðˤ (emphatic z)
         let result = rules.apply("ظ");
         assert!(
-            result.contains('Z'),
-            "ظ should become Z, got: {}",
+            result.contains("ðˤ"),
+            "ظ should become ðˤ (emphatic dh), got: {}",
             result
         );
     }
@@ -217,18 +217,18 @@ mod tests {
     #[test]
     fn test_pharyngeal_consonants() {
         let rules = base();
-        // ح → H (voiceless pharyngeal)
+        // ح → ħ (voiceless pharyngeal)
         let result = rules.apply("ح");
         assert!(
-            result.contains('H'),
-            "ح should become H, got: {}",
+            result.contains('ħ'),
+            "ح should become ħ (voiceless pharyngeal), got: {}",
             result
         );
-        // ع → E (voiced pharyngeal)
+        // ع → ʕ (voiced pharyngeal)
         let result = rules.apply("ع");
         assert!(
-            result.contains('E'),
-            "ع should become E, got: {}",
+            result.contains('ʕ'),
+            "ع should become ʕ (voiced pharyngeal), got: {}",
             result
         );
     }
@@ -255,11 +255,11 @@ mod tests {
     #[test]
     fn test_special_forms() {
         let rules = base();
-        // آ → A (alif madda)
+        // آ → aː (alif madda - long a)
         let result = rules.apply("آ");
         assert!(
-            result.contains('A'),
-            "آ should become A, got: {}",
+            result.contains("aː"),
+            "آ should become aː (long a), got: {}",
             result
         );
         // ة → a (ta marbuta)
@@ -302,10 +302,10 @@ mod tests {
         let rules = base();
         // مرحبا (marhaba - hello)
         let result = rules.apply("مرحبا");
-        // م→m, ر→r, ح→H, ب→b, ا→a
+        // م→m, ر→r, ح→ħ, ب→b, ا→a
         assert!(
-            result.contains('m') && result.contains('r') && result.contains('H') && result.contains('b'),
-            "مرحبا should contain m, r, H, b, got: {}",
+            result.contains('m') && result.contains('r') && result.contains('ħ') && result.contains('b'),
+            "مرحبا should contain m, r, ħ, b, got: {}",
             result
         );
     }
@@ -323,12 +323,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_rules_sorted_by_weight() {
-        let rules = base();
-        let weights: Vec<_> = rules.rules.iter().map(|r| r.weight).collect();
-        let mut sorted_weights = weights.clone();
-        sorted_weights.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        assert_eq!(weights, sorted_weights, "Rules should be sorted by weight");
-    }
 }

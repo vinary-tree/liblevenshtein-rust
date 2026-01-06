@@ -110,12 +110,14 @@
 //! - Architecture documentation: `docs/verification/ARCHITECTURE.md`
 
 pub mod application;
+pub mod classifiers;
 pub mod common;
 pub mod expansion;
 pub mod features;
 pub mod grep;
 pub mod grep_online;
 pub mod ipa_syllable;
+pub mod language;
 pub mod llev;
 pub mod llre;
 pub mod matching;
