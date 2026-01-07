@@ -36,7 +36,7 @@
 //! assert_eq!(result, Some(HashSet::from([3, 4, 5])));
 //! ```
 
-use crate::dictionary::{DictionaryValue, MappedDictionary, MutableMappedDictionary};
+use libdictenstein::{DictionaryValue, MappedDictionary, MutableMappedDictionary};
 use crate::transducer::{Algorithm, Transducer};
 use std::collections::{BTreeSet, HashSet};
 use std::hash::Hash;
@@ -490,7 +490,7 @@ mod tests {
     use std::collections::HashSet;
 
     #[cfg(feature = "pathmap-backend")]
-    use crate::dictionary::pathmap::PathMapDictionary;
+    use libdictenstein::pathmap::PathMapDictionary;
 
     #[test]
     #[cfg(feature = "pathmap-backend")]

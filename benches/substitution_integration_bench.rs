@@ -13,8 +13,8 @@
 //! Run with: cargo bench --bench substitution_integration_bench
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::Dictionary;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::Dictionary;
 use liblevenshtein::transducer::{Algorithm, Restricted, SubstitutionSet, Transducer};
 
 /// Create a test dictionary with common English words

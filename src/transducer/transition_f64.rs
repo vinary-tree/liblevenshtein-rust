@@ -23,7 +23,7 @@ use super::{
     Algorithm, OperationCostsF64, PositionF64, StateF64, StatePoolF64, SubstitutionPolicy,
     SubstitutionPolicyFor,
 };
-use crate::dictionary::CharUnit;
+use libdictenstein::CharUnit;
 use smallvec::SmallVec;
 
 /// Epsilon for float comparisons in cost thresholds.

@@ -17,7 +17,7 @@
 //!   cargo bench --bench backend_fuzzy_comparison -- --save-baseline backend-baseline
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::dictionary::scdawg::Scdawg;
+use libdictenstein::scdawg::Scdawg;
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::Algorithm;
 use liblevenshtein::wallbreaker::WallBreaker;

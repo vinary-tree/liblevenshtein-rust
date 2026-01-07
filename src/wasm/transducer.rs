@@ -3,9 +3,9 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::dictionary::double_array_trie::DoubleArrayTrie;
-use crate::dictionary::dynamic_dawg::DynamicDawg;
-use crate::dictionary::Dictionary;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::Dictionary;
 use crate::transducer::{Algorithm, Transducer};
 
 /// A fuzzy search result candidate.

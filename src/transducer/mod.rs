@@ -89,7 +89,7 @@ pub use phonetic_transducer::{
     PhoneticTransducer, PhoneticTransducerChar,
 };
 
-use crate::dictionary::{Dictionary, DictionaryNode, MappedDictionary, MappedDictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode, MappedDictionary, MappedDictionaryNode};
 use std::collections::HashSet;
 
 /// Main transducer for approximate string matching.

@@ -40,8 +40,8 @@
 //!   then verifies with exact MSM distance. Accurate but slower.
 
 use super::encoding::QuantizationConfig;
-use crate::dictionary::dynamic_dawg::DynamicDawg;
-use crate::dictionary::DictionaryValue;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::DictionaryValue;
 use crate::transducer::{Algorithm, Transducer};
 use std::collections::HashMap;
 

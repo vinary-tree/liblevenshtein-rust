@@ -32,7 +32,7 @@
 //!     .expect("failed to build pipeline");
 //! ```
 
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 
 #[cfg(feature = "phonetic-rules")]
 use crate::phonetic::nfa::NFAChar;
@@ -378,7 +378,7 @@ mod tests {
     #[test]
     #[cfg(feature = "phonetic-rules")]
     fn test_pipeline_builder_build_full() {
-        use crate::dictionary::dynamic_dawg_char::DynamicDawgChar;
+        use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
         let dict = DynamicDawgChar::<()>::from_terms(vec!["phone", "fone", "help"]);
 

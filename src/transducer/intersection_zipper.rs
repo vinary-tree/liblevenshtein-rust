@@ -3,7 +3,7 @@
 //! This module provides a zipper that composes dictionary navigation with
 //! automaton state tracking, enabling efficient fuzzy string matching.
 
-use crate::dictionary::zipper::DictZipper;
+use libdictenstein::zipper::DictZipper;
 use crate::transducer::{AutomatonZipper, PathNode, StatePool};
 
 /// Zipper for traversing the intersection of dictionary and Levenshtein automaton.
@@ -359,8 +359,8 @@ where
 #[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
-    use crate::dictionary::pathmap::PathMapDictionary;
-    use crate::dictionary::pathmap_zipper::PathMapZipper;
+    use libdictenstein::pathmap::PathMapDictionary;
+    use libdictenstein::pathmap_zipper::PathMapZipper;
     use crate::transducer::Algorithm;
 
     #[test]

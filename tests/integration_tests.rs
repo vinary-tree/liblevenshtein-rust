@@ -1,4 +1,4 @@
-use liblevenshtein::dictionary::Dictionary;
+use libdictenstein::Dictionary;
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
 

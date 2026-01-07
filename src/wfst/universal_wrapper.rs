@@ -17,7 +17,7 @@ use lling_llang::prelude::{
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::universal::PositionVariant;
 
 use super::state_encoding;
@@ -332,7 +332,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::dynamic_dawg_char::DynamicDawgChar;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
     use crate::transducer::universal::Standard;
 
     #[test]

@@ -3,7 +3,7 @@
 //! The `TransducerBuilder` provides a fluent API for constructing
 //! `Transducer` instances with optional configuration and validation.
 
-use crate::dictionary::Dictionary;
+use libdictenstein::Dictionary;
 use crate::transducer::{Algorithm, Transducer};
 
 /// Builder for constructing a `Transducer` with a fluent API.
@@ -117,7 +117,7 @@ impl<D: Dictionary> Default for TransducerBuilder<D> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
 
     #[test]
     fn test_builder_complete() {
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_builder_with_double_array_trie() {
-        use crate::dictionary::double_array_trie::DoubleArrayTrie;
+        use libdictenstein::double_array_trie::DoubleArrayTrie;
 
         let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
         let transducer = TransducerBuilder::new()

@@ -9,8 +9,8 @@ use criterion::{
     black_box, criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration,
     Throughput,
 };
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 use liblevenshtein::transducer::{Algorithm, Transducer};
 
 fn load_dictionary() -> Vec<String> {

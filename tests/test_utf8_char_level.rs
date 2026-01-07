@@ -1,4 +1,4 @@
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
 use liblevenshtein::prelude::*;
 
 #[test]

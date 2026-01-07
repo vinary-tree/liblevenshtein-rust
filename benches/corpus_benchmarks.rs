@@ -25,7 +25,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::corpus::{BigTxtCorpus, MittonCorpus, QueryWorkload};
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::prelude::*;
 use std::path::Path;
 use std::time::Duration;

@@ -5,8 +5,8 @@
 //! materializing term strings, which can improve performance when many results
 //! match the distance threshold but few match the value filter.
 
-use crate::dictionary::value::DictionaryValue;
-use crate::dictionary::{CharUnit, MappedDictionaryNode};
+use libdictenstein::value::DictionaryValue;
+use libdictenstein::{CharUnit, MappedDictionaryNode};
 use crate::transducer::intersection::PathNode;
 use crate::transducer::transition::{initial_state, transition_state_pooled};
 use crate::transducer::{Algorithm, Candidate, Intersection, StatePool, SubstitutionPolicyFor, Unrestricted};
@@ -418,7 +418,7 @@ where
 #[cfg(feature = "pathmap-backend")]
 mod tests {
     use super::*;
-    use crate::dictionary::{pathmap::PathMapDictionary, Dictionary};
+    use libdictenstein::{pathmap::PathMapDictionary, Dictionary};
     use crate::transducer::Transducer;
 
     #[test]

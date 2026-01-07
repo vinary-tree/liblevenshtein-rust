@@ -30,7 +30,7 @@
 //! assert_eq!(lfu.get_value("foo"), Some(42));
 //! ```
 
-use crate::dictionary::{
+use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
 };
@@ -288,7 +288,7 @@ where
 mod tests {
     use super::*;
     #[cfg(feature = "pathmap-backend")]
-    use crate::dictionary::pathmap::PathMapDictionary;
+    use libdictenstein::pathmap::PathMapDictionary;
 
     #[test]
     #[cfg(feature = "pathmap-backend")]

@@ -1,7 +1,7 @@
 //! Intersection of dictionary traversal and automaton state.
 
 use super::state::State;
-use crate::dictionary::{CharUnit, DictionaryNode};
+use libdictenstein::{CharUnit, DictionaryNode};
 
 /// Lightweight representation of path history.
 ///
@@ -184,8 +184,8 @@ impl<N: DictionaryNode> Clone for Intersection<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::double_array_trie::DoubleArrayTrie;
-    use crate::dictionary::Dictionary;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::Dictionary;
     use crate::transducer::Position;
 
     #[test]

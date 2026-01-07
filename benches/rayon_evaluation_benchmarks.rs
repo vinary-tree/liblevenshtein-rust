@@ -5,8 +5,8 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::cache::eviction::Lru;
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::MappedDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::MappedDictionary;
 
 // Sample dictionary data
 fn create_test_dict(size: usize) -> PathMapDictionary<i32> {

@@ -9,9 +9,9 @@
 
 use super::error::{ContextError, Result};
 use super::{CheckpointStack, Completion, ContextId, ContextTree, DraftBuffer};
-use crate::dictionary::dynamic_dawg::DynamicDawg;
-use crate::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use crate::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::pathmap::PathMapDictionary;
 use crate::transducer::{Algorithm, Transducer};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};

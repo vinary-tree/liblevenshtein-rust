@@ -36,7 +36,7 @@ use super::encoding::QuantizationConfig;
 use super::lower_bounds::{LowerBoundConfig, LowerBoundStats, LowerBoundType};
 use super::msm::MsmConfig;
 use super::trie_index::TimeSeriesIndex;
-use crate::dictionary::DictionaryValue;
+use libdictenstein::DictionaryValue;
 use std::collections::HashMap;
 
 /// Hybrid search index combining trie filtering with exact MSM verification.

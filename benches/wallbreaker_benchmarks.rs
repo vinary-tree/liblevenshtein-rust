@@ -12,7 +12,7 @@
 //!   cargo bench --bench wallbreaker_benchmarks -- --baseline wallbreaker-baseline
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::dictionary::scdawg::Scdawg;
+use libdictenstein::scdawg::Scdawg;
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::Algorithm;
 use liblevenshtein::wallbreaker::WallBreaker;
@@ -265,7 +265,7 @@ fn bench_scdawg_construction(c: &mut Criterion) {
 
 /// Benchmark substring search specifically (isolate for Phase 2 optimization)
 fn bench_substring_search(c: &mut Criterion) {
-    use liblevenshtein::dictionary::substring::SubstringDictionary;
+    use libdictenstein::substring::SubstringDictionary;
 
     let mut group = c.benchmark_group("substring_search");
     group.sample_size(100);

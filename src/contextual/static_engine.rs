@@ -6,8 +6,8 @@
 
 use super::error::{ContextError, Result};
 use super::{CheckpointStack, Completion, ContextId, ContextTree, DraftBuffer};
-use crate::dictionary::double_array_trie::DoubleArrayTrie;
-use crate::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
 use crate::transducer::{Algorithm, Transducer};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};

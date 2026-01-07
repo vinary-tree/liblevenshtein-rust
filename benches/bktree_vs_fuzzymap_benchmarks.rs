@@ -203,7 +203,7 @@ impl OldPhoneticNormalizedDict {
 // ============================================================================
 
 use liblevenshtein::cache::multimap::FuzzyMultiMap;
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 use liblevenshtein::transducer::Algorithm;
 
 struct NewPhoneticNormalizedDict {

@@ -192,7 +192,7 @@ enum HybridScopeData {
 }
 
 // Implement DictionaryValue trait for HybridScopeData
-impl liblevenshtein::dictionary::value::DictionaryValue for HybridScopeData {}
+impl libdictenstein::DictionaryValue for HybridScopeData {}
 
 impl HybridScopeData {
     fn from_scopes(scopes: &HashSet<u32>) -> Self {

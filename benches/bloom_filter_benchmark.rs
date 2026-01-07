@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 fn generate_terms(size: usize) -> Vec<String> {
     let mut terms = Vec::with_capacity(size);

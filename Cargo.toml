@@ -17,6 +17,9 @@ categories = ["algorithms", "data-structures", "text-processing"]
 readme = "README.md"
 
 [dependencies]
+# Dictionary implementations (extracted to libdictenstein crate)
+libdictenstein = { path = "../libdictenstein", features = ["parking_lot"] }
+
 # PathMap as an optional dictionary backend
 # NOTE: PathMap uses a git dependency and is NOT available when installing from crates.io
 # To use PathMap, build from source: cargo install --git <repo-url> --features pathmap-backend
@@ -367,8 +370,8 @@ inherits = "release"
 
 [features]
 default = ["parking_lot"]
-pathmap-backend = ["pathmap"]
-serialization = ["serde", "bincode", "serde_json"]
+pathmap-backend = ["pathmap", "libdictenstein/pathmap-backend"]
+serialization = ["serde", "bincode", "serde_json", "libdictenstein/serialization"]
 protobuf = ["prost", "bytes", "prost-build", "serialization"]
 compression = ["flate2", "serialization"]
 cli = ["clap", "anyhow", "rustyline", "colored", "dirs", "pathmap-backend", "serialization"]
@@ -391,14 +394,14 @@ eviction-opt-concurrent = ["eviction-dashmap", "eviction-parking-lot", "eviction
 eviction-opt-memory = ["eviction-compact-metadata"]
 
 # SIMD optimization with AVX2/SSE4.1 intrinsics (Phase 3)
-simd = []
+simd = ["libdictenstein/simd"]
 
 # SCDAWG optimization experiments (Phase 4)
-scdawg-bloom = []  # 64-bit bloom filter for edge lookup fast-reject
-scdawg-simd = []   # SIMD edge lookup for small edge counts
+scdawg-bloom = ["libdictenstein/scdawg-bloom"]  # 64-bit bloom filter for edge lookup fast-reject
+scdawg-simd = ["libdictenstein/scdawg-simd"]   # SIMD edge lookup for small edge counts
 
 # Persistent Adaptive Radix Trie (disk-based dictionary)
-persistent-artrie = ["memmap2", "parking_lot", "serde", "bincode"]
+persistent-artrie = ["memmap2", "parking_lot", "serde", "bincode", "libdictenstein/persistent-artrie"]
 
 # Grep compression support (gzip, zstd, xz, bzip2)
 grep-compression = ["flate2", "zstd", "xz2", "bzip2"]

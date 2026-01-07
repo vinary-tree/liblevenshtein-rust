@@ -73,7 +73,7 @@
 //! }
 //! ```
 
-use crate::dictionary::{Dictionary, DictionaryValue, MappedDictionary, SyncStrategy};
+use libdictenstein::{Dictionary, DictionaryValue, MappedDictionary, SyncStrategy};
 
 //==============================================================================
 // LazyInitDefault - Zero-cost wrapper for Default values
@@ -464,7 +464,7 @@ where
 mod tests {
     use super::*;
     #[cfg(feature = "pathmap-backend")]
-    use crate::dictionary::pathmap::PathMapDictionary;
+    use libdictenstein::pathmap::PathMapDictionary;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 

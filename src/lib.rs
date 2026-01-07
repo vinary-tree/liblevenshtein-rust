@@ -197,17 +197,17 @@ pub mod corpus;
 
 /// Common imports for convenient usage
 pub mod prelude {
-    pub use crate::dictionary::double_array_trie::DoubleArrayTrie;
-    pub use crate::dictionary::dynamic_dawg::DynamicDawg;
-    pub use crate::dictionary::factory::{
+    pub use libdictenstein::double_array_trie::DoubleArrayTrie;
+    pub use libdictenstein::dynamic_dawg::DynamicDawg;
+    pub use libdictenstein::factory::{
         DictionaryBackend, DictionaryContainer, DictionaryFactory,
     };
     #[cfg(feature = "pathmap-backend")]
-    pub use crate::dictionary::pathmap::PathMapDictionary;
+    pub use libdictenstein::pathmap::PathMapDictionary;
     #[cfg(feature = "persistent-artrie")]
-    pub use crate::dictionary::persistent_artrie::{PersistentARTrie, PersistentARTrieZipper};
-    pub use crate::dictionary::suffix_automaton::SuffixAutomaton;
-    pub use crate::dictionary::{Dictionary, DictionaryNode, SyncStrategy};
+    pub use libdictenstein::persistent_artrie::{PersistentARTrie, PersistentARTrieZipper};
+    pub use libdictenstein::suffix_automaton::SuffixAutomaton;
+    pub use libdictenstein::{Dictionary, DictionaryNode, SyncStrategy};
     pub use crate::transducer::{
         Algorithm, Candidate, QueryBuilder, Transducer, TransducerBuilder,
     };
@@ -232,6 +232,7 @@ pub mod prelude {
     pub use crate::cache::eviction;
 
     // PhoneticNormalizedDictionary only requires phonetic-rules (uses DynamicDawgChar internally)
+    // This module remains in liblevenshtein since it depends on phonetic NFAs
     #[cfg(feature = "phonetic-rules")]
     pub use crate::dictionary::phonetic_normalized::{
         PhoneticNormalizedCandidate, PhoneticNormalizedDictionary, PhoneticNormalizedDictionaryChar,
@@ -239,9 +240,9 @@ pub mod prelude {
     };
 
     // WallBreaker for large error bounds
-    pub use crate::dictionary::scdawg::Scdawg;
-    pub use crate::dictionary::scdawg_char::ScdawgChar;
-    pub use crate::dictionary::substring::{
+    pub use libdictenstein::scdawg::Scdawg;
+    pub use libdictenstein::scdawg_char::ScdawgChar;
+    pub use libdictenstein::substring::{
         BidirectionalDictionaryNode, SubstringDictionary, SubstringMatch,
     };
     pub use crate::wallbreaker::{

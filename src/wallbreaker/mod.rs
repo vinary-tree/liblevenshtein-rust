@@ -72,8 +72,8 @@ pub use extension::{BidirectionalExtension, ExtensionState};
 pub use pattern_splitter::{PatternPiece, PatternSplitter};
 pub use query_iterator::{WallBreakerQuery, WallBreakerResult};
 
-use crate::dictionary::substring::{BidirectionalDictionaryNode, SubstringDictionary};
-use crate::dictionary::Dictionary;
+use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
+use libdictenstein::Dictionary;
 use crate::transducer::Algorithm;
 
 /// WallBreaker approximate string matcher.
@@ -242,7 +242,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::scdawg::Scdawg;
+    use libdictenstein::scdawg::Scdawg;
 
     #[test]
     fn test_wallbreaker_basic() {

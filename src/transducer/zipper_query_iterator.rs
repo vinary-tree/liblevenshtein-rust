@@ -5,7 +5,7 @@
 //! zipper architecture and enables performance comparison with the existing
 //! node-based QueryIterator.
 
-use crate::dictionary::zipper::DictZipper;
+use libdictenstein::zipper::DictZipper;
 use crate::transducer::{Algorithm, AutomatonZipper, Candidate, IntersectionZipper, StatePool};
 use std::collections::VecDeque;
 
@@ -157,8 +157,8 @@ where
 #[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
-    use crate::dictionary::pathmap::PathMapDictionary;
-    use crate::dictionary::pathmap_zipper::PathMapZipper;
+    use libdictenstein::pathmap::PathMapDictionary;
+    use libdictenstein::pathmap_zipper::PathMapZipper;
 
     #[test]
     fn test_exact_match() {

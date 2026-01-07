@@ -28,7 +28,7 @@
 //! | Wikipedia | Coverage | >90% | ≤2 | 100% ✓ |
 
 use liblevenshtein::corpus::MittonCorpus;
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
 use std::path::Path;

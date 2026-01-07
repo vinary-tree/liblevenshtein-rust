@@ -7,7 +7,7 @@
 //! - `eviction-compact-metadata`: Compact metadata representation
 //! - `eviction-coarse-timestamps`: Coarse-grained timestamps (reduce syscalls)
 
-use crate::dictionary::{
+use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
 };

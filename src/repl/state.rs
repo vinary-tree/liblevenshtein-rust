@@ -5,11 +5,11 @@
 use crate::cli::args::SerializationFormat;
 use crate::commands::core::QueryParams;
 use crate::commands::handlers::query::execute_query;
-use crate::dictionary::double_array_trie::DoubleArrayTrie;
-use crate::dictionary::dynamic_dawg::DynamicDawg;
-use crate::dictionary::pathmap::PathMapDictionary;
-use crate::dictionary::suffix_automaton::SuffixAutomaton;
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
+use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::Algorithm;
 use anyhow::Result;
 use std::path::Path;

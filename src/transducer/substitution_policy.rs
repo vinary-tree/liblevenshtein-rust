@@ -28,7 +28,7 @@
 //! ```
 
 use super::{SubstitutionSet, SubstitutionSetChar};
-use crate::dictionary::CharUnit;
+use libdictenstein::CharUnit;
 
 /// Zero-cost abstraction for substitution policies.
 ///

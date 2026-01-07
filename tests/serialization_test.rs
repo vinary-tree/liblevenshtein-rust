@@ -25,7 +25,7 @@ mod serialization_tests {
     #[test]
     #[cfg(feature = "pathmap-backend")]
     fn test_pathmap_bincode_roundtrip() {
-        use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+        use libdictenstein::pathmap::PathMapDictionary;
 
         let terms = test_terms();
         let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(terms.iter().copied());
@@ -100,7 +100,7 @@ mod serialization_tests {
 
     #[test]
     fn test_dynamic_dawg_char_bincode_roundtrip() {
-        use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+        use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
         let terms = test_terms();
         let dict: DynamicDawgChar<()> = DynamicDawgChar::from_terms(terms.clone());
@@ -155,7 +155,7 @@ mod serialization_tests {
     #[test]
     #[cfg(feature = "pathmap-backend")]
     fn test_pathmap_json_roundtrip() {
-        use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+        use libdictenstein::pathmap::PathMapDictionary;
 
         let terms = test_terms();
         let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(terms.iter().copied());
@@ -230,7 +230,7 @@ mod serialization_tests {
 
     #[test]
     fn test_dynamic_dawg_char_json_roundtrip() {
-        use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+        use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
         let terms = test_terms();
         let dict: DynamicDawgChar<()> = DynamicDawgChar::from_terms(terms.clone());
@@ -307,7 +307,7 @@ mod serialization_tests {
     #[test]
     #[cfg(feature = "pathmap-backend")]
     fn test_all_backends_serialize_same_content() {
-        use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+        use libdictenstein::pathmap::PathMapDictionary;
 
         let terms = test_terms();
 

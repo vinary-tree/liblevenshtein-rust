@@ -37,7 +37,7 @@
 //! assert_eq!(ttl_dict.get_value("foo"), Some(42));
 //! ```
 
-use crate::dictionary::{
+use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
 };
@@ -307,7 +307,7 @@ where
 mod tests {
     use super::*;
     #[cfg(feature = "pathmap-backend")]
-    use crate::dictionary::pathmap::PathMapDictionary;
+    use libdictenstein::pathmap::PathMapDictionary;
     use std::thread;
 
     #[test]

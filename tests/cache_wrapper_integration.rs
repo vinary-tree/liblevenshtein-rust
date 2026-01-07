@@ -6,7 +6,7 @@
 #[cfg(feature = "pathmap-backend")]
 mod wrapper_composition {
     use liblevenshtein::cache::eviction::{Age, CostAware, Lfu, Lru, MemoryPressure, Noop, Ttl};
-    use liblevenshtein::dictionary::MappedDictionary;
+    use libdictenstein::MappedDictionary;
     use liblevenshtein::prelude::*;
     use std::thread;
     use std::time::Duration;

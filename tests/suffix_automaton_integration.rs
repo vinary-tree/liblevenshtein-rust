@@ -3,7 +3,7 @@
 //! These tests verify that the suffix automaton works correctly with
 //! the existing Levenshtein transducer infrastructure.
 
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 use liblevenshtein::transducer::{Algorithm, Transducer};
 
 #[test]

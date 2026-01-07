@@ -1,7 +1,7 @@
 //! State transition logic for Levenshtein automata.
 
 use super::{Algorithm, Position, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor};
-use crate::dictionary::CharUnit;
+use libdictenstein::CharUnit;
 use smallvec::SmallVec;
 
 /// Compute the characteristic vector for a position in the query.

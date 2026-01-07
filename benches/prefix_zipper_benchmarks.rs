@@ -18,11 +18,11 @@
 //! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::dynamic_dawg_zipper::DynamicDawgZipper;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie_zipper::DoubleArrayTrieZipper;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg_zipper::DynamicDawgZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 // ============================================================================
 // Test Data Generation

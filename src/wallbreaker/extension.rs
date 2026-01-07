@@ -6,8 +6,8 @@
 //!
 //! Both directions use Levenshtein filters to prune the search space.
 
-use crate::dictionary::substring::{BidirectionalDictionaryNode, SubstringMatch};
-use crate::dictionary::DictionaryNode;
+use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringMatch};
+use libdictenstein::DictionaryNode;
 
 /// State during bidirectional extension.
 ///

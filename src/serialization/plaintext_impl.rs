@@ -35,7 +35,7 @@
 //! ```
 
 use super::{extract_terms, DictionaryFromTerms, DictionarySerializer, SerializationError};
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 use std::io::{BufRead, BufReader, Write};
 
 /// Plain text serializer using newline-delimited UTF-8.
@@ -83,7 +83,7 @@ impl DictionarySerializer for PlainTextSerializer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
 
     #[test]
     fn test_plaintext_roundtrip() {

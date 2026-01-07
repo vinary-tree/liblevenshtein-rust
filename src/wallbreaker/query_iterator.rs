@@ -8,8 +8,8 @@
 
 use std::collections::HashSet;
 
-use crate::dictionary::substring::{BidirectionalDictionaryNode, SubstringDictionary};
-use crate::dictionary::Dictionary;
+use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
+use libdictenstein::Dictionary;
 use crate::distance::{
     create_memo_cache, merge_and_split_distance, standard_distance, transposition_distance,
 };

@@ -4,8 +4,8 @@
 //! ZipperQueryIterator against the existing node-based QueryIterator.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::pathmap_zipper::PathMapZipper;
 use liblevenshtein::transducer::{Algorithm, Transducer, ZipperQueryIterator};
 
 /// Load dictionary with common English words

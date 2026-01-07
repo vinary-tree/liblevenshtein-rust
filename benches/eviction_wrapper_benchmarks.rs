@@ -7,8 +7,8 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use liblevenshtein::cache::eviction::{
     Age, CostAware, Lfu, Lru, LruOptimized, MemoryPressure, Noop, Ttl,
 };
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::MappedDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::MappedDictionary;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;

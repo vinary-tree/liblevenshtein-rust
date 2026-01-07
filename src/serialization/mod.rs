@@ -22,7 +22,7 @@
 //! let loaded_dict: DoubleArrayTrie = BincodeSerializer::deserialize(file)?;
 //! ```
 
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 use std::io::{Read, Write};
 
 // Serializer implementations
@@ -172,7 +172,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
 
     #[test]
     fn test_bincode_roundtrip() {
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_suffix_automaton_serialization() {
-        use crate::dictionary::suffix_automaton::SuffixAutomaton;
+        use libdictenstein::suffix_automaton::SuffixAutomaton;
 
         let texts = vec!["hello world".to_string(), "test string".to_string()];
         let dict = SuffixAutomaton::from_texts(texts.clone());
@@ -243,7 +243,7 @@ mod tests {
     #[cfg(feature = "protobuf")]
     #[test]
     fn test_suffix_automaton_protobuf_serialization() {
-        use crate::dictionary::suffix_automaton::SuffixAutomaton;
+        use libdictenstein::suffix_automaton::SuffixAutomaton;
         use crate::serialization::SuffixAutomatonProtobufSerializer;
 
         let texts = vec!["hello world".to_string(), "test string".to_string()];

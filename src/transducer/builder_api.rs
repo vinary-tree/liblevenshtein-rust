@@ -4,7 +4,7 @@
 //! dictionaries with various options.
 
 use super::{Algorithm, OrderedQueryIterator, QueryIterator, SubstitutionPolicyFor, Unrestricted};
-use crate::dictionary::Dictionary;
+use libdictenstein::Dictionary;
 
 /// Fluent builder for constructing Levenshtein queries
 ///
@@ -183,7 +183,7 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
 
 #[cfg(test)]
 mod tests {
-    use crate::dictionary::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
     use crate::transducer::{Algorithm, Transducer};
 
     #[test]

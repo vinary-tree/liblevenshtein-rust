@@ -3,7 +3,7 @@
 use super::query_result::QueryResult;
 use super::transition::{initial_state, transition_state_pooled};
 use super::{Algorithm, Intersection, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
-use crate::dictionary::{CharUnit, DictionaryNode};
+use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 
@@ -242,8 +242,8 @@ pub type CandidateIterator<N> = QueryIterator<N, Candidate>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::double_array_trie::DoubleArrayTrie;
-    use crate::dictionary::Dictionary;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::Dictionary;
 
     #[test]
     fn test_query_exact_match() {

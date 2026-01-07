@@ -36,7 +36,7 @@
 //! }
 //! ```
 
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 #[cfg(feature = "phonetic-rules")]
 use crate::phonetic::nfa::{NFAChar, NFA};
 #[cfg(feature = "phonetic-rules")]
@@ -500,7 +500,7 @@ where
 #[cfg(feature = "phonetic-rules")]
 mod tests {
     use super::*;
-    use crate::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+    use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
     use crate::phonetic::nfa::compiler::compile;
     use crate::phonetic::regex::parse;
 

@@ -12,11 +12,11 @@
 use criterion::{
     black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput,
 };
-use liblevenshtein::dictionary::{
+use libdictenstein::{
     persistent_artrie_char::PersistentARTrieChar, DictionaryNode,
 };
 #[cfg(feature = "persistent-artrie")]
-use liblevenshtein::dictionary::persistent_artrie_char::DiskBackedCharTrieInner;
+use libdictenstein::persistent_artrie_char::DiskBackedCharTrieInner;
 use std::hint::black_box as bb;
 
 /// Generate realistic Unicode dictionary terms for benchmarking

@@ -4,8 +4,8 @@
 //! at the character level (not byte level), providing correct Levenshtein distances
 //! for multi-byte UTF-8 sequences while supporting dynamic insert and remove operations.
 
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use liblevenshtein::dictionary::MappedDictionary;
+use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::MappedDictionary;
 use liblevenshtein::prelude::*;
 
 // ===== Basic Dictionary Operations =====
@@ -505,7 +505,7 @@ fn test_dynamic_dawg_char_thread_safety() {
 
 #[test]
 fn test_dynamic_dawg_char_vs_byte_level() {
-    use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+    use libdictenstein::dynamic_dawg::DynamicDawg;
 
     println!("\n=== DynamicDawgChar: Comparison with Byte-level ===\n");
 

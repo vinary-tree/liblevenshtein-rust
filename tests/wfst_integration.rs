@@ -5,7 +5,7 @@
 
 #![cfg(feature = "wfst")]
 
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 use liblevenshtein::wfst::{
     DictionaryBackend, LevenshteinStateSource, LevenshteinWfst, Semiring, StateSource,
     TropicalWeight, Wfst,
@@ -376,7 +376,7 @@ mod msm_tests {
 
 // Generalized Automata WFST Tests
 mod generalized_tests {
-    use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
     use liblevenshtein::transducer::OperationSet;
     use liblevenshtein::wfst::{GeneralizedWfst, GeneralizedWfstBuilder, Wfst};
     use lling_llang::prelude::LazyWfst;
@@ -445,7 +445,7 @@ mod generalized_tests {
 
 // WallBreaker WFST Tests
 mod wallbreaker_tests {
-    use liblevenshtein::dictionary::scdawg::Scdawg;
+    use libdictenstein::scdawg::Scdawg;
     use liblevenshtein::transducer::Algorithm;
     use liblevenshtein::wfst::{StateSource, WallBreakerWfst, WallBreakerWfstBuilder, Wfst};
     use lling_llang::prelude::LazyWfst;

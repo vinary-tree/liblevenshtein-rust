@@ -5,8 +5,8 @@
 
 #![cfg(feature = "persistent-artrie")]
 
-use liblevenshtein::dictionary::zipper::DictZipper;
-use liblevenshtein::dictionary::Dictionary;
+use libdictenstein::zipper::DictZipper;
+use libdictenstein::Dictionary;
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
 

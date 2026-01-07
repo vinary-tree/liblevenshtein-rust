@@ -38,7 +38,7 @@ use lling_llang::prelude::{
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::generalized::GeneralizedAutomaton;
 use crate::transducer::{OperationSet, OperationSetBuilder};
 
@@ -413,7 +413,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::dynamic_dawg_char::DynamicDawgChar;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
     #[test]
     fn test_generalized_wfst_creation() {

@@ -5,7 +5,7 @@
 
 use super::intersection::PathNode;
 use super::state_f64::StateF64;
-use crate::dictionary::{CharUnit, DictionaryNode};
+use libdictenstein::{CharUnit, DictionaryNode};
 
 /// Intersection of dictionary node and float-weighted automaton state.
 ///
@@ -122,8 +122,8 @@ impl<N: DictionaryNode> Clone for IntersectionF64<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::double_array_trie::DoubleArrayTrie;
-    use crate::dictionary::Dictionary;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::Dictionary;
     use crate::transducer::PositionF64;
 
     #[test]

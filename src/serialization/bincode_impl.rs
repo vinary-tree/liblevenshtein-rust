@@ -1,11 +1,11 @@
 //! Bincode serializer for compact binary format.
 
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 use std::io::{Read, Write};
 
 use super::{extract_terms, DictionaryFromTerms, DictionarySerializer, SerializationError};
 
-use crate::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 
 /// Bincode serializer for compact binary format.
 ///

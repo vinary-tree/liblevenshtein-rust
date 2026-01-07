@@ -1,7 +1,7 @@
 //! Benchmarks for SuffixAutomaton construction and query performance.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 use liblevenshtein::transducer::{Algorithm, Transducer};
 
 /// Generate test corpus of varying sizes

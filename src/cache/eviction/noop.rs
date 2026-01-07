@@ -26,7 +26,7 @@
 //! assert!(wrapped.contains("world"));
 //! ```
 
-use crate::dictionary::{
+use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
 };
@@ -197,7 +197,7 @@ where
 mod tests {
     use super::*;
     #[cfg(feature = "pathmap-backend")]
-    use crate::dictionary::pathmap::PathMapDictionary;
+    use libdictenstein::pathmap::PathMapDictionary;
 
     #[test]
     #[cfg(feature = "pathmap-backend")]

@@ -21,7 +21,7 @@ use lling_llang::prelude::{
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 #[cfg(feature = "phonetic-rules")]
 use crate::phonetic::nfa::{NFAChar, ProductAutomatonChar, ProductStateChar};
 
@@ -376,7 +376,7 @@ fn compute_path_hash(parent_id: u32, edge_label: char) -> u64 {
 #[cfg(feature = "phonetic-rules")]
 mod tests {
     use super::*;
-    use crate::dictionary::dynamic_dawg_char::DynamicDawgChar;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
     use crate::phonetic::nfa::compiler::compile;
     use crate::phonetic::regex::parse;
 

@@ -7,8 +7,8 @@
 
 use liblevenshtein::cache::eviction::{Age, Lfu, Lru, Ttl};
 use liblevenshtein::cache::multimap::FuzzyMultiMap;
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::MappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::MappedDictionary;
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
 use std::thread;
@@ -362,7 +362,7 @@ fn test_dynamic_dawg_with_contextual_completion_hierarchical() {
 #[test]
 fn test_dynamic_dawg_contextual_with_draft_debug() {
     use liblevenshtein::contextual::DynamicContextualCompletionEngine;
-    use liblevenshtein::dictionary::MappedDictionary;
+    use libdictenstein::MappedDictionary;
 
     let dict: DynamicDawg<Vec<u32>> = DynamicDawg::new();
     let dict_clone = dict.clone();

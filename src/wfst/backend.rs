@@ -8,7 +8,7 @@ use std::sync::Arc;
 use lling_llang::backend::{LatticeBackend, VocabId};
 use rustc_hash::FxHashMap;
 
-use crate::dictionary::{Dictionary, DictionaryNode, MappedDictionary};
+use libdictenstein::{Dictionary, DictionaryNode, MappedDictionary};
 
 /// Adapter that exposes a liblevenshtein dictionary as a lling-llang `LatticeBackend`.
 ///
@@ -191,7 +191,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::dynamic_dawg_char::DynamicDawgChar;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
     #[test]
     fn test_dictionary_backend_new() {

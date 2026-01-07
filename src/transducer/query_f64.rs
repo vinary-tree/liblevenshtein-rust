@@ -19,7 +19,7 @@ use super::{
     Algorithm, OperationCostsF64, StatePoolF64, SubstitutionPolicy, SubstitutionPolicyFor,
     Unrestricted,
 };
-use crate::dictionary::{CharUnit, DictionaryNode};
+use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 
@@ -277,8 +277,8 @@ pub type CandidateIteratorF64<N> = QueryIteratorF64<N, CandidateF64>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dictionary::double_array_trie::DoubleArrayTrie;
-    use crate::dictionary::Dictionary;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::Dictionary;
 
     const EPSILON: f64 = 1e-9;
 

@@ -12,7 +12,7 @@
 use criterion::{
     black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput,
 };
-use liblevenshtein::dictionary::{
+use libdictenstein::{
     double_array_trie::DoubleArrayTrie, dynamic_dawg::DynamicDawg, persistent_artrie::PersistentARTrie,
     Dictionary, DictionaryNode,
 };

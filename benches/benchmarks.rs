@@ -1,6 +1,7 @@
 //! Comprehensive benchmarks for liblevenshtein profiling and performance analysis.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use libdictenstein::pathmap::PathMapDictionary;
 use liblevenshtein::prelude::*;
 
 /// Create a dictionary of the specified size with varied word lengths

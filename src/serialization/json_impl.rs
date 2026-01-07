@@ -1,6 +1,6 @@
 //! JSON serializer for human-readable format.
 
-use crate::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 use std::io::{Read, Write};
 
 use super::{extract_terms, DictionaryFromTerms, DictionarySerializer, SerializationError};

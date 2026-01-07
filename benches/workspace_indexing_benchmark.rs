@@ -23,8 +23,8 @@ use criterion::{
     black_box, criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration,
     Throughput,
 };
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::{Dictionary, MutableMappedDictionary};
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::{Dictionary, MutableMappedDictionary};
 use rayon::prelude::*;
 use rustc_hash::FxHashSet;
 

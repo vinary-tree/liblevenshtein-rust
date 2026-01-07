@@ -11,9 +11,9 @@
 //!   cargo bench --bench scdawg_optimization_benchmarks --features scdawg-simd
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::dictionary::scdawg::Scdawg;
-use liblevenshtein::dictionary::substring::SubstringDictionary;
-use liblevenshtein::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::scdawg::Scdawg;
+use libdictenstein::substring::SubstringDictionary;
+use libdictenstein::{Dictionary, DictionaryNode};
 use std::collections::HashMap;
 
 // ============================================================================

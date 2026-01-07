@@ -67,12 +67,11 @@
 //! - [`crate::phonetic`] module for phonetic rule definitions
 
 use crate::cache::multimap::FuzzyMultiMap;
-use crate::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use crate::dictionary::dynamic_dawg_char_zipper::DynamicDawgCharZipper;
-use crate::dictionary::value::DictionaryValue;
-use crate::dictionary::{
-    DictZipper, Dictionary, DictionaryNode, MappedDictionary, MappedDictionaryNode,
-    MutableMappedDictionary, SyncStrategy, ValuedDictZipper,
+use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg_char_zipper::DynamicDawgCharZipper;
+use libdictenstein::{
+    DictZipper, Dictionary, DictionaryNode, DictionaryValue, MappedDictionary,
+    MappedDictionaryNode, MutableMappedDictionary, SyncStrategy, ValuedDictZipper,
 };
 use crate::phonetic::expansion::expand_phonetic_alternatives_char;
 use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar};
