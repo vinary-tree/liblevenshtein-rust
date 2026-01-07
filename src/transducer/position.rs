@@ -79,7 +79,7 @@ impl Position {
     ///
     /// # Parameters
     /// - `query_length`: Length of the query term (n in C++/Java code)
-    pub fn subsumes(&self, other: &Position, algorithm: Algorithm, query_length: usize) -> bool {
+    pub fn subsumes(&self, other: &Position, algorithm: Algorithm, _query_length: usize) -> bool {
         let i = self.term_index;
         let e = self.num_errors;
         let s = self.is_special;
@@ -108,9 +108,12 @@ impl Position {
                         // Both special: must be at same position
                         return i == j;
                     }
-                    // lhs special, rhs not: requires rhs at query length and same position
-                    // The C++ checks (f == n) && (i == j), where n is query length
-                    return (f == query_length) && (i == j);
+                    // lhs special, rhs not: NEVER subsume
+                    // Special positions can only advance via transposition completion (advance by 2)
+                    // Normal positions can advance via regular match (advance by 1)
+                    // These are different computational paths that cannot be interchanged
+                    // The original C++ rule (f == query_length && i == j) was incorrect
+                    return false;
                 }
 
                 if t {
@@ -279,12 +282,24 @@ mod tests {
             "special(5,2) should NOT subsume special(6,3) - different position"
         );
 
-        // lhs special, rhs not: same position check, requires f == max_distance
+        // lhs special, rhs not: special should NEVER subsume non-special
+        // Bug fix: Special positions (transposition-in-progress) and normal positions
+        // represent fundamentally different computational paths that cannot be interchanged.
         let p5 = Position::new_special(5, 2);
-        let p6 = Position::new(5, 3); // f=3, max_distance=3, i=j=5 → should subsume
+        let p6 = Position::new(5, 3);
         assert!(
-            p5.subsumes(&p6, Algorithm::Transposition, max_distance),
-            "special(5,2) should subsume normal(5,3) when f==max_distance"
+            !p5.subsumes(&p6, Algorithm::Transposition, max_distance),
+            "special(5,2) should NOT subsume normal(5,3) - different computational paths"
+        );
+
+        // Regression test for bug case: special(0,2) subsuming normal(0,2) caused false negatives
+        // Test case: dict=["auou"], query="ou", max_dist=2
+        // Bug: After processing 'u', (0,2,special) was subsuming (0,2), eliminating valid paths
+        let p5a = Position::new_special(0, 2);
+        let p5b = Position::new(0, 2);
+        assert!(
+            !p5a.subsumes(&p5b, Algorithm::Transposition, max_distance),
+            "special(0,2) should NOT subsume normal(0,2) - same errors, different paths"
         );
 
         // lhs normal, rhs special: normal cannot subsume special (transposition-in-progress)
