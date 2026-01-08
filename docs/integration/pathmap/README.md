@@ -4,6 +4,14 @@
 **Last Updated**: 2025-12-23
 **Version**: v0.8.x (PhoneticNormalizedDictionary API)
 
+> **Note**: PathMap dictionary implementation details have been extracted to the
+> [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate.
+> See [libdictenstein/docs/integration/pathmap/](../../../../libdictenstein/docs/integration/pathmap/)
+> for PathMap dictionary internals.
+>
+> This document focuses on how liblevenshtein integrates PathMap with Levenshtein
+> transducers, FuzzyMap, and PhoneticNormalizedDictionary.
+
 ---
 
 ## Table of Contents

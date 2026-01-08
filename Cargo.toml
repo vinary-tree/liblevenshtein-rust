@@ -138,11 +138,6 @@ name = "threshold_tuning"
 harness = false
 
 [[bench]]
-name = "serialization_benchmarks"
-harness = false
-required-features = ["serialization"]
-
-[[bench]]
 name = "filtering_prefix_benchmarks"
 harness = false
 
@@ -496,16 +491,6 @@ harness = false
 [[bench]]
 name = "wallbreaker_benchmarks"
 harness = false
-
-[[bench]]
-name = "persistent_artrie_benchmarks"
-harness = false
-required-features = ["persistent-artrie"]
-
-[[bench]]
-name = "persistent_artrie_char_benchmarks"
-harness = false
-required-features = ["persistent-artrie"]
 
 [[bench]]
 name = "scdawg_optimization_benchmarks"

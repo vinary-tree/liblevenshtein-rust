@@ -1,5 +1,13 @@
 # Symmetric Compact Directed Acyclic Word Graph (SCDAWG)
 
+> **Note**: The complete SCDAWG theory documentation has been moved to the
+> [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate.
+> See [libdictenstein/docs/theory/scdawg/](../../../../libdictenstein/docs/theory/scdawg/)
+> for the comprehensive pedagogical treatment.
+>
+> This document remains for reference on how SCDAWG integrates with liblevenshtein's
+> WallBreaker algorithm and substring-based fuzzy matching.
+
 This documentation provides a comprehensive, pedagogical treatment of the **Symmetric Compact DAWG** (SCDAWG), a data structure that enables O(|pattern|) substring searching with bidirectional navigation capabilities.
 
 ## Overview

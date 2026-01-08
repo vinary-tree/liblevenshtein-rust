@@ -1,5 +1,13 @@
 # Disk-Based Trie Data Structures
 
+> **Note**: This disk-trie theory documentation has been moved to the
+> [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate.
+> See [libdictenstein/docs/theory/disk-tries/](../../../../libdictenstein/docs/theory/disk-tries/)
+> for the complete documentation.
+>
+> This document remains for reference on how PersistentARTrie integrates with
+> liblevenshtein's Levenshtein transducers for disk-based fuzzy matching.
+
 This documentation series provides a comprehensive, pedagogical introduction to disk-based trie data structures, culminating in the design of the **Persistent Adaptive Radix Trie (PART)** - a hybrid structure combining the Adaptive Radix Tree (ART) with B-trie-style bucket storage.
 
 ## Motivation

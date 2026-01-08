@@ -2,6 +2,14 @@
 
 **Navigation**: [← Back to Algorithms](../README.md) | [Next Layer: Automata →](../02-levenshtein-automata/README.md)
 
+> **Note**: The dictionary implementations have been extracted to the
+> [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate for
+> independent use. For comprehensive dictionary documentation, see:
+> - [libdictenstein/docs/algorithms/](../../../../libdictenstein/docs/algorithms/) - Implementation guides
+> - [libdictenstein/docs/theory/](../../../../libdictenstein/docs/theory/) - SCDAWG and disk-trie theory
+>
+> This document focuses on how liblevenshtein integrates dictionaries with Levenshtein transducers.
+
 ## Overview
 
 The Dictionary Layer forms the foundation of liblevenshtein's fuzzy matching capabilities. It provides pluggable backend implementations for storing and traversing collections of terms, optimized for efficient character-by-character navigation required by Levenshtein automata.
