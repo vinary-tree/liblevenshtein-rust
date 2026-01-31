@@ -1189,6 +1189,35 @@ impl<'a> Lexer<'a> {
         self.in_weight = true;
     }
 
+    /// Check if the current position looks like a weight start `[digit` or `[-digit`.
+    /// This is used to distinguish weights `[0.15]` from character classes `[abc]`.
+    pub fn is_at_weight_start(&mut self) -> bool {
+        // Save current state
+        let saved_chars = self.chars.clone();
+        self.skip_whitespace();
+
+        // Check for '[' followed by digit or '-' digit
+        let result = if self.peek_char() == Some('[') {
+            // Peek ahead without consuming
+            let mut chars_copy = self.chars.clone();
+            chars_copy.next(); // skip '['
+            if let Some((_, c)) = chars_copy.peek() {
+                c.is_ascii_digit() || (*c == '-' && {
+                    chars_copy.next();
+                    chars_copy.peek().map(|(_, c)| c.is_ascii_digit()).unwrap_or(false)
+                })
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        // Restore state
+        self.chars = saved_chars;
+        result
+    }
+
     /// Enter char class mode (used when re-entering after nested constructs).
     pub fn enter_char_class_mode(&mut self) {
         self.in_char_class = true;

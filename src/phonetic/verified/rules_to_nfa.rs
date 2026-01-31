@@ -46,7 +46,8 @@ use crate::phonetic::nfa::nfa::{NFAChar, NFA};
 use crate::phonetic::nfa::thompson::{ThompsonBuilder, ThompsonBuilderChar};
 use crate::phonetic::rules::{zompist_rules, zompist_rules_char};
 use crate::phonetic::types::{
-    Context, ContextChar, Phone, PhoneChar, RewriteRule, RewriteRuleChar,
+    Context, ContextByte, ContextChar, Phone, PhoneByte, PhoneChar, RewriteRule, RewriteRuleByte,
+    RewriteRuleChar,
 };
 
 // ============================================================================
@@ -265,49 +266,49 @@ pub fn zompist_nfa_char() -> NFAChar {
 
 /// Convert a Phone to a byte for pattern matching.
 #[allow(dead_code)]
-fn phone_to_byte(phone: &Phone) -> Option<u8> {
+fn phone_to_byte(phone: &PhoneByte) -> Option<u8> {
     match phone {
-        Phone::Vowel(b) | Phone::Consonant(b) => Some(*b),
-        Phone::Digraph(b1, _) => Some(*b1),
-        Phone::Trigraph(b1, _, _) => Some(*b1),
-        Phone::Tetragraph(b1, _, _, _) => Some(*b1),
-        Phone::Pentagraph(b1, _, _, _, _) => Some(*b1),
-        Phone::Hexagraph(b1, _, _, _, _, _) => Some(*b1),
-        Phone::Heptagraph(b1, _, _, _, _, _, _) => Some(*b1),
-        Phone::Sequence(s) => s.first().copied(),
-        Phone::Silent => None,
+        PhoneByte::Vowel(b) | PhoneByte::Consonant(b) => Some(*b),
+        PhoneByte::Digraph(b1, _) => Some(*b1),
+        PhoneByte::Trigraph(b1, _, _) => Some(*b1),
+        PhoneByte::Tetragraph(b1, _, _, _) => Some(*b1),
+        PhoneByte::Pentagraph(b1, _, _, _, _) => Some(*b1),
+        PhoneByte::Hexagraph(b1, _, _, _, _, _) => Some(*b1),
+        PhoneByte::Heptagraph(b1, _, _, _, _, _, _) => Some(*b1),
+        PhoneByte::Sequence(s) => s.first().copied(),
+        PhoneByte::Silent => None,
     }
 }
 
 /// Convert a pattern of Phone to a byte sequence for NFA construction.
-fn pattern_to_bytes(pattern: &[Phone]) -> Vec<u8> {
+fn pattern_to_bytes(pattern: &[PhoneByte]) -> Vec<u8> {
     let mut result = Vec::new();
     for phone in pattern {
         match phone {
-            Phone::Vowel(b) | Phone::Consonant(b) => result.push(*b),
-            Phone::Digraph(b1, b2) => {
+            PhoneByte::Vowel(b) | PhoneByte::Consonant(b) => result.push(*b),
+            PhoneByte::Digraph(b1, b2) => {
                 result.push(*b1);
                 result.push(*b2);
             }
-            Phone::Trigraph(b1, b2, b3) => {
+            PhoneByte::Trigraph(b1, b2, b3) => {
                 result.push(*b1);
                 result.push(*b2);
                 result.push(*b3);
             }
-            Phone::Tetragraph(b1, b2, b3, b4) => {
+            PhoneByte::Tetragraph(b1, b2, b3, b4) => {
                 result.push(*b1);
                 result.push(*b2);
                 result.push(*b3);
                 result.push(*b4);
             }
-            Phone::Pentagraph(b1, b2, b3, b4, b5) => {
+            PhoneByte::Pentagraph(b1, b2, b3, b4, b5) => {
                 result.push(*b1);
                 result.push(*b2);
                 result.push(*b3);
                 result.push(*b4);
                 result.push(*b5);
             }
-            Phone::Hexagraph(b1, b2, b3, b4, b5, b6) => {
+            PhoneByte::Hexagraph(b1, b2, b3, b4, b5, b6) => {
                 result.push(*b1);
                 result.push(*b2);
                 result.push(*b3);
@@ -315,7 +316,7 @@ fn pattern_to_bytes(pattern: &[Phone]) -> Vec<u8> {
                 result.push(*b5);
                 result.push(*b6);
             }
-            Phone::Heptagraph(b1, b2, b3, b4, b5, b6, b7) => {
+            PhoneByte::Heptagraph(b1, b2, b3, b4, b5, b6, b7) => {
                 result.push(*b1);
                 result.push(*b2);
                 result.push(*b3);
@@ -324,10 +325,10 @@ fn pattern_to_bytes(pattern: &[Phone]) -> Vec<u8> {
                 result.push(*b6);
                 result.push(*b7);
             }
-            Phone::Sequence(s) => {
+            PhoneByte::Sequence(s) => {
                 result.extend_from_slice(s);
             }
-            Phone::Silent => {}
+            PhoneByte::Silent => {}
         }
     }
     result
@@ -344,7 +345,7 @@ fn pattern_to_bytes(pattern: &[Phone]) -> Vec<u8> {
 /// # Returns
 ///
 /// An NFA that accepts exactly the pattern bytes defined by the rule.
-pub fn rule_to_nfa(rule: &RewriteRule) -> NFA {
+pub fn rule_to_nfa(rule: &RewriteRuleByte) -> NFA {
     let builder = ThompsonBuilder::new();
     let pattern_bytes = pattern_to_bytes(&rule.pattern);
 
@@ -367,7 +368,7 @@ pub fn rule_to_nfa(rule: &RewriteRule) -> NFA {
 /// # Returns
 ///
 /// An NFA that accepts bytes matching any of the rule patterns.
-pub fn rules_to_nfa(rules: &[RewriteRule]) -> NFA {
+pub fn rules_to_nfa(rules: &[RewriteRuleByte]) -> NFA {
     if rules.is_empty() {
         let builder = ThompsonBuilder::new();
         return builder.epsilon();
@@ -417,7 +418,7 @@ pub struct RuleContextInfo {
     /// The compiled NFA for the pattern
     pub pattern_nfa: NFA,
     /// Context constraint
-    pub context: Context,
+    pub context: ContextByte,
     /// Rule weight (for prioritization)
     pub weight: f64,
     /// Original rule name (for debugging)
@@ -435,7 +436,7 @@ pub fn rule_to_nfa_with_context_char(rule: &RewriteRuleChar) -> RuleContextInfoC
 }
 
 /// Convert a rule to NFA with context information preserved (byte-level).
-pub fn rule_to_nfa_with_context(rule: &RewriteRule) -> RuleContextInfo {
+pub fn rule_to_nfa_with_context(rule: &RewriteRuleByte) -> RuleContextInfo {
     RuleContextInfo {
         pattern_nfa: rule_to_nfa(rule),
         context: rule.context.clone(),
@@ -450,7 +451,7 @@ pub fn rules_to_nfa_with_context_char(rules: &[RewriteRuleChar]) -> Vec<RuleCont
 }
 
 /// Convert multiple rules to NFAs with context information (byte-level).
-pub fn rules_to_nfa_with_context(rules: &[RewriteRule]) -> Vec<RuleContextInfo> {
+pub fn rules_to_nfa_with_context(rules: &[RewriteRuleByte]) -> Vec<RuleContextInfo> {
     rules.iter().map(rule_to_nfa_with_context).collect()
 }
 
@@ -637,24 +638,24 @@ mod tests {
 
     #[test]
     fn test_pattern_to_bytes_simple() {
-        let pattern = vec![Phone::Consonant(b'p'), Phone::Consonant(b'h')];
+        let pattern = vec![PhoneByte::Consonant(b'p'), PhoneByte::Consonant(b'h')];
         assert_eq!(pattern_to_bytes(&pattern), vec![b'p', b'h']);
     }
 
     #[test]
     fn test_pattern_to_bytes_digraph() {
-        let pattern = vec![Phone::Digraph(b'c', b'h')];
+        let pattern = vec![PhoneByte::Digraph(b'c', b'h')];
         assert_eq!(pattern_to_bytes(&pattern), vec![b'c', b'h']);
     }
 
     #[test]
     fn test_rule_to_nfa_ph_to_f() {
-        let rule = RewriteRule {
+        let rule = RewriteRuleByte {
             rule_id: 3,
             rule_name: "ph → f".to_string(),
-            pattern: vec![Phone::Consonant(b'p'), Phone::Consonant(b'h')],
-            replacement: vec![Phone::Consonant(b'f')],
-            context: Context::Anywhere,
+            pattern: vec![PhoneByte::Consonant(b'p'), PhoneByte::Consonant(b'h')],
+            replacement: vec![PhoneByte::Consonant(b'f')],
+            context: ContextByte::Anywhere,
             weight: 0.0,
             syllable_condition: None,
         };
@@ -710,7 +711,7 @@ mod tests {
 
     #[test]
     fn test_rules_to_nfa_empty() {
-        let rules: Vec<RewriteRule> = vec![];
+        let rules: Vec<RewriteRuleByte> = vec![];
         let nfa = rules_to_nfa(&rules);
 
         assert!(nfa.accepts_str(""));

@@ -163,7 +163,7 @@ impl ProductStateRegistry {
         for &s in &state.nfa_states {
             bytes.extend_from_slice(&s.to_le_bytes());
         }
-        bytes.push(state.edit_distance);
+        bytes.push(state.edit_distance());
         ProductStateKey(bytes)
     }
 
@@ -285,7 +285,7 @@ where
                 };
 
                 // Compute transition cost
-                let cost = if successor.edit_distance > product_state.edit_distance {
+                let cost = if successor.edit_distance() > product_state.edit_distance() {
                     // Edit operation was used
                     1.0
                 } else {
@@ -319,7 +319,7 @@ where
         let is_final = dict_node.is_final() && self.product.is_accepting(&product_state);
         let final_weight = if is_final {
             // Final weight is the edit distance consumed
-            TropicalWeight::new(product_state.edit_distance as f64)
+            TropicalWeight::new(product_state.edit_distance() as f64)
         } else {
             TropicalWeight::zero()
         };

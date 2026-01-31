@@ -158,41 +158,72 @@ fn subsumes_impl<V: PositionVariant>(
     }
 }
 
-/// Subsumption for Transposition variant (future extension)
+/// Subsumption for Transposition variant
 ///
 /// From Definition 11 extended for transposition:
-/// - i#e_t ≤^t_s j#f ⇔ f > e ∧ |j + 1 - i| ≤ f - e
-/// - Type subscripts must match (usual vs transposition state)
+/// - i#e ≤^t_s j#f ⇔ f > e ∧ |j - i| ≤ f - e (both usual)
+/// - i#e_t ≤^t_s j#f ⇔ f > e ∧ |j + 1 - i| ≤ f - e (transposing → usual)
+/// - i#e ≤^t_s j#f_t ⇔ false (different types)
+/// - i#e_t ≤^t_s j#f_t ⇔ false (both transposing - cannot subsume)
 #[allow(dead_code)]
 fn subsumes_transposition(
     pos1: &UniversalPosition<Transposition>,
     pos2: &UniversalPosition<Transposition>,
     _max_distance: u8,
 ) -> bool {
+    use crate::transducer::universal::position::TranspositionState;
     use UniversalPosition::*;
 
     match (pos1, pos2) {
-        (INonFinal { offset: i, errors: e, .. }, INonFinal { offset: j, errors: f, .. }) => {
+        (
+            INonFinal { offset: i, errors: e, variant_state: v1 },
+            INonFinal { offset: j, errors: f, variant_state: v2 },
+        ) => {
             if *f <= *e {
                 return false;
             }
 
-            // For transposition state, offset adjustment: |j + 1 - i|
-            // TODO: Check variant type when Transposition enum is used
-            let distance = (j - i).abs() as u8;
-            let error_diff = f - e;
+            // Subsumption rules based on variant state:
+            // - Usual → Usual: standard formula |j - i| ≤ f - e
+            // - Transposing → Usual: offset adjustment |j + 1 - i| ≤ f - e
+            // - Usual → Transposing: false (different types)
+            // - Transposing → Transposing: false (both transposing)
+            let distance = match (v1, v2) {
+                (TranspositionState::Usual, TranspositionState::Usual) => {
+                    (j - i).abs() as u8
+                }
+                (TranspositionState::Transposing, TranspositionState::Usual) => {
+                    // Transposition state offset adjustment: |j + 1 - i|
+                    (j + 1 - i).abs() as u8
+                }
+                // Different types or both transposing: no subsumption
+                _ => return false,
+            };
 
+            let error_diff = f - e;
             distance <= error_diff
         }
 
-        (MFinal { offset: i, errors: e, .. }, MFinal { offset: j, errors: f, .. }) => {
+        (
+            MFinal { offset: i, errors: e, variant_state: v1 },
+            MFinal { offset: j, errors: f, variant_state: v2 },
+        ) => {
             if *f <= *e {
                 return false;
             }
 
-            let distance = (j - i).abs() as u8;
-            let error_diff = f - e;
+            // Same rules as I-type
+            let distance = match (v1, v2) {
+                (TranspositionState::Usual, TranspositionState::Usual) => {
+                    (j - i).abs() as u8
+                }
+                (TranspositionState::Transposing, TranspositionState::Usual) => {
+                    (j + 1 - i).abs() as u8
+                }
+                _ => return false,
+            };
 
+            let error_diff = f - e;
             distance <= error_diff
         }
 
@@ -200,19 +231,70 @@ fn subsumes_transposition(
     }
 }
 
-/// Subsumption for MergeAndSplit variant (future extension)
+/// Subsumption for MergeAndSplit variant
 ///
 /// From Definition 11 extended for merge/split:
-/// - Same rules as standard, but type subscripts must match
+/// - i#e ≤^ms_s j#f ⇔ f > e ∧ |j - i| ≤ f - e (both usual)
+/// - i#e_s ≤^ms_s j#f ⇔ f > e ∧ |j - i| ≤ f - e (splitting → usual)
+/// - i#e ≤^ms_s j#f_s ⇔ false (different types)
+/// - i#e_s ≤^ms_s j#f_s ⇔ false (both splitting - cannot subsume)
 #[allow(dead_code)]
 fn subsumes_merge_split(
     pos1: &UniversalPosition<MergeAndSplit>,
     pos2: &UniversalPosition<MergeAndSplit>,
     _max_distance: u8,
 ) -> bool {
-    // Same implementation as standard for now
-    // TODO: Check variant type when MergeAndSplit enum is used
-    subsumes_impl(pos1, pos2, _max_distance)
+    use crate::transducer::universal::position::MergeSplitState;
+    use UniversalPosition::*;
+
+    match (pos1, pos2) {
+        (
+            INonFinal { offset: i, errors: e, variant_state: v1 },
+            INonFinal { offset: j, errors: f, variant_state: v2 },
+        ) => {
+            if *f <= *e {
+                return false;
+            }
+
+            // Subsumption rules based on variant state:
+            // - Usual → Usual: standard formula |j - i| ≤ f - e
+            // - Splitting → Usual: same formula (splitting can subsume usual)
+            // - Usual → Splitting: false (different types)
+            // - Splitting → Splitting: false (both splitting)
+            match (v1, v2) {
+                (MergeSplitState::Usual, MergeSplitState::Usual)
+                | (MergeSplitState::Splitting, MergeSplitState::Usual) => {
+                    let error_diff = f - e;
+                    let distance = (j - i).abs() as u8;
+                    distance <= error_diff
+                }
+                // Different types or both splitting: no subsumption
+                _ => false,
+            }
+        }
+
+        (
+            MFinal { offset: i, errors: e, variant_state: v1 },
+            MFinal { offset: j, errors: f, variant_state: v2 },
+        ) => {
+            if *f <= *e {
+                return false;
+            }
+
+            // Same rules as I-type
+            match (v1, v2) {
+                (MergeSplitState::Usual, MergeSplitState::Usual)
+                | (MergeSplitState::Splitting, MergeSplitState::Usual) => {
+                    let error_diff = f - e;
+                    let distance = (j - i).abs() as u8;
+                    distance <= error_diff
+                }
+                _ => false,
+            }
+        }
+
+        _ => false,
+    }
 }
 
 #[cfg(test)]

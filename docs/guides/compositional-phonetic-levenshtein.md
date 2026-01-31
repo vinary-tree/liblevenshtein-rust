@@ -639,7 +639,53 @@ If d < max_distance:
 Handles cases like "ä" expanding to "ae".
 ```
 
-### 5.4 Visual Walkthrough
+### 5.4 Articulatory-Weighted Substitutions
+
+The seven transition types above all use **fixed costs** (1.0 for each edit operation). However, not all substitutions are equally likely. A user who types "b" instead of "p" probably misheard or mistyped a similar sound, while "h" instead of "p" is less likely.
+
+**Articulatory distance** provides gradient substitution costs based on IPA phonetic features:
+
+| Substitution | Phonetic Difference | Cost |
+|--------------|---------------------|------|
+| p → b | Voicing only | ~0.1 |
+| p → t | Adjacent place | ~0.45 |
+| p → k | Distant place | ~1.0 |
+| p → h | Place + manner | ~1.0 |
+
+To enable articulatory-weighted substitutions, use `ProductAutomatonChar::with_articulatory_costs()`:
+
+```rust
+use liblevenshtein::phonetic::nfa::compiler::compile;
+use liblevenshtein::phonetic::nfa::product::ProductAutomatonChar;
+use liblevenshtein::phonetic::regex::parse;
+use liblevenshtein::transducer::{Algorithm, ArticulatoryCosts};
+
+// Compile phonetic pattern
+let nfa = compile(&parse("(ph|f)one").unwrap()).unwrap();
+
+// Create articulatory cost configuration
+let costs = ArticulatoryCosts::default();
+
+// Create product automaton with articulatory costs
+let product = ProductAutomatonChar::with_articulatory_costs(
+    nfa,
+    2.0,  // max accumulated cost
+    Algorithm::Standard,
+    costs,
+);
+
+// "bone" now accepted because b→f costs only ~0.1 (voicing)
+assert!(product.accepts("bone"));
+
+// "hone" likely rejected because h→f costs ~1.0 (place + manner)
+// depending on max_cost threshold
+```
+
+**Key insight**: With articulatory costs, the product automaton uses the query character and pattern character at each substitution transition to compute a phonetically-informed cost. This improves ranking quality for phonetic spell correction.
+
+For detailed documentation on articulatory distance computation and configuration, see [Articulatory Distance Guide](articulatory-distance.md).
+
+### 5.5 Visual Walkthrough
 
 Let's trace through a complete example.
 
@@ -733,7 +779,7 @@ Step 4: See 'e'
 Result: "bone" matches with distance 1 (substituted b for f)
 ```
 
-### 5.5 Acceptance Condition
+### 5.6 Acceptance Condition
 
 A dictionary word is accepted if:
 
@@ -759,7 +805,7 @@ def can_reach_final(nfa_states, current_distance, max_distance):
 
 Each step toward the accepting state costs 1 (deletion from pattern).
 
-### 5.6 Intersection with Dictionary
+### 5.7 Intersection with Dictionary
 
 The product automaton doesn't search in isolation—it simultaneously traverses the dictionary trie:
 
@@ -806,7 +852,7 @@ Queue: [(root, initial_product_state)]
 At each accepting dictionary node, check if product automaton can accept.
 ```
 
-### 5.7 Pros and Cons
+### 5.8 Pros and Cons
 
 **Advantages**:
 - **No pre-processing**: Raw dictionary, any rules at runtime
@@ -818,7 +864,7 @@ At each accepting dictionary node, check if product automaton can accept.
 - **Complex implementation**: Product automaton logic is intricate
 - **Larger search space**: Explores more states than other approaches
 
-### 5.8 Complete Pseudocode
+### 5.9 Complete Pseudocode
 
 ```python
 class ProductAutomaton:

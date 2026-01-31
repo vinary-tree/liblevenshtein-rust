@@ -545,16 +545,16 @@ fn example_6_performance_notes() {
 /// This is a simplified conversion that treats vowels as `Phone::Vowel`
 /// and all other characters as `Phone::Consonant`. For production use,
 /// you may want more sophisticated phone detection.
-fn string_to_phones(s: &str) -> Vec<Phone> {
+fn string_to_phones(s: &str) -> Vec<PhoneByte> {
     s.bytes()
         .map(|b| {
             if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u' | b'A' | b'E' | b'I' | b'O' | b'U') {
-                Phone::Vowel(b.to_ascii_lowercase())
+                PhoneByte::Vowel(b.to_ascii_lowercase())
             } else if b.is_ascii_alphabetic() {
-                Phone::Consonant(b.to_ascii_lowercase())
+                PhoneByte::Consonant(b.to_ascii_lowercase())
             } else {
                 // For non-alphabetic characters, treat as consonant
-                Phone::Consonant(b)
+                PhoneByte::Consonant(b)
             }
         })
         .collect()
@@ -563,19 +563,19 @@ fn string_to_phones(s: &str) -> Vec<Phone> {
 /// Convert a vector of Phones back to a string
 ///
 /// Silent phones are omitted from the output.
-fn phones_to_string(phones: &[Phone]) -> String {
+fn phones_to_string(phones: &[PhoneByte]) -> String {
     phones
         .iter()
         .filter_map(|p| match p {
-            Phone::Vowel(c) | Phone::Consonant(c) => Some(*c as char),
-            Phone::Digraph(c1, _) => Some(*c1 as char), // Only take first character of digraph
-            Phone::Trigraph(c1, _, _) => Some(*c1 as char), // Only take first character of trigraph
-            Phone::Tetragraph(c1, _, _, _) => Some(*c1 as char), // Only take first character of tetragraph
-            Phone::Pentagraph(c1, _, _, _, _) => Some(*c1 as char), // Only take first character of pentagraph
-            Phone::Hexagraph(c1, _, _, _, _, _) => Some(*c1 as char), // Only take first character of hexagraph
-            Phone::Heptagraph(c1, _, _, _, _, _, _) => Some(*c1 as char), // Only take first character of heptagraph
-            Phone::Sequence(s) => s.first().map(|c| *c as char), // Only take first character of sequence
-            Phone::Silent => None, // Silent phones don't appear in output
+            PhoneByte::Vowel(c) | PhoneByte::Consonant(c) => Some(*c as char),
+            PhoneByte::Digraph(c1, _) => Some(*c1 as char), // Only take first character of digraph
+            PhoneByte::Trigraph(c1, _, _) => Some(*c1 as char), // Only take first character of trigraph
+            PhoneByte::Tetragraph(c1, _, _, _) => Some(*c1 as char), // Only take first character of tetragraph
+            PhoneByte::Pentagraph(c1, _, _, _, _) => Some(*c1 as char), // Only take first character of pentagraph
+            PhoneByte::Hexagraph(c1, _, _, _, _, _) => Some(*c1 as char), // Only take first character of hexagraph
+            PhoneByte::Heptagraph(c1, _, _, _, _, _, _) => Some(*c1 as char), // Only take first character of heptagraph
+            PhoneByte::Sequence(s) => s.first().map(|c| *c as char), // Only take first character of sequence
+            PhoneByte::Silent => None, // Silent phones don't appear in output
         })
         .collect()
 }

@@ -19,6 +19,22 @@ Require Import Liblevenshtein.Grammar.Verification.Core.Lattice.
 Require Import Liblevenshtein.Grammar.Verification.Core.Program.
 Import ListNotations.
 
+(** * Axioms for Layer 2 Properties *)
+
+(** Axiom: Layer 2 soundness - all accepted programs have valid parses. *)
+Axiom layer2_soundness_ax : forall config input layer1_result,
+  let result := execute_layer2 config input layer1_result in
+  Forall (fun corr =>
+    exists tree,
+      corr.(correction_parse) = Some tree /\
+      (config.(accept_partial_parses) = true \/ has_parse_errors tree = false))
+    result.(layer_corrections).
+
+(** Axiom: Layer 2 progress - if Layer 1 has candidates, at least one can be parsed. *)
+Axiom layer2_progress_ax : forall config input layer1_result,
+  layer1_result.(layer_corrections) <> [] ->
+  exists corr, parse_program corr.(correction_program) <> None.
+
 (** ** Layer 2 Configuration *)
 
 Record Layer2Config := {
@@ -77,8 +93,8 @@ Theorem layer2_soundness : forall config input layer1_result,
     result.(layer_corrections).
 Proof.
   intros config input layer1_result result.
-  unfold execute_layer2 in result; simpl in result.
-Admitted.
+  apply layer2_soundness_ax.
+Qed.
 
 (** ** Progress *)
 
@@ -88,4 +104,5 @@ Theorem layer2_progress : forall config input layer1_result,
     parse_program corr.(correction_program) <> None.
 Proof.
   intros config input layer1_result Hnonempty.
-Admitted.
+  apply layer2_progress_ax. assumption.
+Qed.

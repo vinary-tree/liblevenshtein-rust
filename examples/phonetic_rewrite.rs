@@ -28,13 +28,13 @@ fn main() {
 
     for word in words {
         // Convert string to phonetic representation
-        let phones: Vec<Phone> = word
+        let phones: Vec<PhoneByte> = word
             .bytes()
             .map(|b| {
                 if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u') {
-                    Phone::Vowel(b)
+                    PhoneByte::Vowel(b)
                 } else {
-                    Phone::Consonant(b)
+                    PhoneByte::Consonant(b)
                 }
             })
             .collect();
@@ -63,13 +63,13 @@ fn main() {
     let phon_rules = phonetic_rules();
 
     for word in phonetic_words {
-        let phones: Vec<Phone> = word
+        let phones: Vec<PhoneByte> = word
             .bytes()
             .map(|b| {
                 if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u') {
-                    Phone::Vowel(b)
+                    PhoneByte::Vowel(b)
                 } else {
-                    Phone::Consonant(b)
+                    PhoneByte::Consonant(b)
                 }
             })
             .collect();
@@ -91,11 +91,11 @@ fn main() {
     println!("\n\n--- Example 3: Individual Rule Application ---");
 
     let test_string = vec![
-        Phone::Consonant(b'g'),
-        Phone::Consonant(b'h'),
-        Phone::Vowel(b'o'),
-        Phone::Consonant(b's'),
-        Phone::Consonant(b't'),
+        PhoneByte::Consonant(b'g'),
+        PhoneByte::Consonant(b'h'),
+        PhoneByte::Vowel(b'o'),
+        PhoneByte::Consonant(b's'),
+        PhoneByte::Consonant(b't'),
     ];
 
     println!("\nInput: {:?}", test_string);
@@ -123,13 +123,13 @@ fn main() {
     ];
 
     for (word, description) in test_cases {
-        let phones: Vec<Phone> = word
+        let phones: Vec<PhoneByte> = word
             .bytes()
             .map(|b| {
                 if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u') {
-                    Phone::Vowel(b)
+                    PhoneByte::Vowel(b)
                 } else {
-                    Phone::Consonant(b)
+                    PhoneByte::Consonant(b)
                 }
             })
             .collect();
@@ -143,15 +143,15 @@ fn main() {
             let result_chars: Vec<char> = result
                 .iter()
                 .filter_map(|p| match p {
-                    Phone::Vowel(c) | Phone::Consonant(c) => Some(*c as char),
-                    Phone::Digraph(c1, _) => Some(*c1 as char),
-                    Phone::Trigraph(c1, _, _) => Some(*c1 as char),
-                    Phone::Tetragraph(c1, _, _, _) => Some(*c1 as char),
-                    Phone::Pentagraph(c1, _, _, _, _) => Some(*c1 as char),
-                    Phone::Hexagraph(c1, _, _, _, _, _) => Some(*c1 as char),
-                    Phone::Heptagraph(c1, _, _, _, _, _, _) => Some(*c1 as char),
-                    Phone::Sequence(s) => s.first().map(|c| *c as char),
-                    Phone::Silent => None,
+                    PhoneByte::Vowel(c) | PhoneByte::Consonant(c) => Some(*c as char),
+                    PhoneByte::Digraph(c1, _) => Some(*c1 as char),
+                    PhoneByte::Trigraph(c1, _, _) => Some(*c1 as char),
+                    PhoneByte::Tetragraph(c1, _, _, _) => Some(*c1 as char),
+                    PhoneByte::Pentagraph(c1, _, _, _, _) => Some(*c1 as char),
+                    PhoneByte::Hexagraph(c1, _, _, _, _, _) => Some(*c1 as char),
+                    PhoneByte::Heptagraph(c1, _, _, _, _, _, _) => Some(*c1 as char),
+                    PhoneByte::Sequence(s) => s.first().map(|c| *c as char),
+                    PhoneByte::Silent => None,
                 })
                 .collect();
 
@@ -171,7 +171,7 @@ fn main() {
     println!("  - Non-negative weights");
 
     // Property 2: Bounded expansion
-    let test = vec![Phone::Consonant(b'x')]; // x → yy (expansion)
+    let test = vec![PhoneByte::Consonant(b'x')]; // x → yy (expansion)
     let test_rules = test_rules();
     if let Some(result) = apply_rules_seq(&test_rules, &test, 100) {
         let expansion = result.len() as i64 - test.len() as i64;
@@ -195,7 +195,7 @@ fn main() {
     println!("  Proven in Theorem 4 (zompist_rules.v:569)");
 
     // Property 5: Idempotence
-    let input = vec![Phone::Consonant(b'p'), Phone::Consonant(b'h')];
+    let input = vec![PhoneByte::Consonant(b'p'), PhoneByte::Consonant(b'h')];
     let fuel = input.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
     if let Some(result1) = apply_rules_seq(&ortho_rules, &input, fuel) {
         if let Some(result2) = apply_rules_seq(&ortho_rules, &result1, fuel) {

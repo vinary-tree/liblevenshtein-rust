@@ -213,11 +213,12 @@ impl<'a> Parser<'a> {
         };
 
         // Parse optional weight - weight syntax is [number] like [0.15]
-        // We need to distinguish from char class [abc]
-        // For simplicity, weights must start with a digit, so we can't have weights here
-        // after context since the context already consumed any [...]
-        // Weight parsing only applies when there's no context or after context ends
-        let weight = 0.0; // TODO: implement weight parsing with better syntax
+        // We distinguish from char class [abc] by checking if '[' is followed by a digit
+        let weight = if self.lexer.is_at_weight_start() {
+            self.parse_weight()?
+        } else {
+            0.0
+        };
 
         Ok(Regex::rewrite_rule(pattern, replacement, context, weight))
     }
@@ -1149,10 +1150,11 @@ impl<'a> Parser<'a> {
     /// Check if we're at context, weight, or end.
     fn is_at_context_or_weight_or_end(&mut self) -> ParseResult<bool> {
         let peek = self.lexer.peek()?;
-        Ok(matches!(
-            peek,
-            Token::Slash | Token::Eof
-        ))
+        if matches!(peek, Token::Slash | Token::Eof) {
+            return Ok(true);
+        }
+        // Also check for weight start: '[' followed by digit
+        Ok(self.lexer.is_at_weight_start())
     }
 
     /// Check if a token can start a primary expression.

@@ -113,6 +113,7 @@ pub mod application;
 pub mod classifiers;
 pub mod common;
 pub mod expansion;
+pub mod feature_distance;
 pub mod features;
 pub mod grep;
 pub mod grep_online;
@@ -143,7 +144,9 @@ pub use application::{
 };
 pub use matching::{context_matches, pattern_matches_at, phone_eq};
 pub use rules::{orthography_rules, phonetic_rules, test_rules, zompist_rules};
-pub use types::{Context, Phone, RewriteRule};
+pub use types::{
+    Context, ContextByte, Phone, PhoneByte, RewriteRule, RewriteRuleByte,
+};
 
 // Re-export character-level types
 pub use application::{
@@ -183,6 +186,11 @@ pub use ipa_syllable::{
 pub use features::{
     are_similar, chars_with_any_feature, chars_with_features, expand_feature_based, get_features,
     get_similar_chars, get_voicing_pair, PhoneticFeature,
+};
+
+// Re-export articulatory feature distance computation
+pub use feature_distance::{
+    articulatory_distance, articulatory_edit_distance, feature_set_distance, is_free_substitution,
 };
 
 // Re-export LLev file format types for custom rule definitions

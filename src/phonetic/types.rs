@@ -4,9 +4,18 @@
 //! directly translated from the Coq/Rocq verification in
 //! `docs/verification/phonetic/rewrite_rules.v`.
 //!
-//! Two versions of each type are provided:
-//! - Byte-level (`Phone`, `Context`, `RewriteRule`) using `u8` - optimized for ASCII
-//! - Character-level (`PhoneChar`, `ContextChar`, `RewriteRuleChar`) using `char` - proper Unicode support
+//! # Generic Types
+//!
+//! All types are generic over the character unit type `U: PhoneticUnit`:
+//! - `Phone<U>` - A phonetic unit (vowel, consonant, digraph, etc.)
+//! - `Context<U>` - Context specification for rule matching
+//! - `RewriteRule<U>` - A phonetic transformation rule
+//!
+//! # Type Aliases
+//!
+//! For convenience and backward compatibility, type aliases are provided:
+//! - `PhoneByte`, `ContextByte`, `RewriteRuleByte` - Byte-level (u8) types
+//! - `PhoneChar`, `ContextChar`, `RewriteRuleChar` - Character-level (char) types
 //!
 //! # Serialization
 //!
@@ -48,95 +57,282 @@
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
 
+use super::common::phonetic_unit::PhoneticUnit;
 use super::common::syllable::SyllableExpr;
 
 // ============================================================================
-// Byte-level types (u8) - optimized for ASCII text
+// Generic Phone Type
 // ============================================================================
 
-/// A phonetic unit representing a single sound (byte-level).
+/// A phonetic unit representing a single sound.
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:30-34`
 ///
+/// This type is generic over the character unit type `U: PhoneticUnit`,
+/// enabling both byte-level (`u8`) and character-level (`char`) representations.
+///
 /// # Variants
 ///
-/// - `Vowel(u8)` - A vowel sound (e.g., 'a', 'e', 'i', 'o', 'u')
-/// - `Consonant(u8)` - A consonant sound (e.g., 'b', 'k', 'p')
-/// - `Digraph(u8, u8)` - A two-character sound unit (e.g., 'ch', 'sh', 'th')
-/// - `Trigraph(u8, u8, u8)` - A three-character sound unit (e.g., ejective affricates)
-/// - `Tetragraph(u8, u8, u8, u8)` - A four-character sound unit (e.g., prenasalized aspirated clicks)
-/// - `Pentagraph(u8, u8, u8, u8, u8)` - A five-character sound unit (e.g., prenasalized labialized clicks)
-/// - `Hexagraph(u8, u8, u8, u8, u8, u8)` - A six-character sound unit (e.g., complex clusters)
-/// - `Heptagraph(u8, u8, u8, u8, u8, u8, u8)` - A seven-character sound unit (theoretical maximum)
-/// - `Sequence(Vec<u8>)` - An 8+ character sound unit (rare complex clusters)
+/// - `Vowel(U)` - A vowel sound (e.g., 'a', 'e', 'i', 'o', 'u')
+/// - `Consonant(U)` - A consonant sound (e.g., 'b', 'k', 'p')
+/// - `Digraph(U, U)` - A two-character sound unit (e.g., 'ch', 'sh', 'th')
+/// - `Trigraph(U, U, U)` - A three-character sound unit (e.g., ejective affricates)
+/// - `Tetragraph(U, U, U, U)` - A four-character sound unit (e.g., prenasalized aspirated clicks)
+/// - `Pentagraph(U, U, U, U, U)` - A five-character sound unit (e.g., prenasalized labialized clicks)
+/// - `Hexagraph(U, U, U, U, U, U)` - A six-character sound unit (e.g., complex clusters)
+/// - `Heptagraph(U, U, U, U, U, U, U)` - A seven-character sound unit (theoretical maximum)
+/// - `Sequence(Vec<U>)` - An 8+ character sound unit (rare complex clusters)
 /// - `Silent` - A silent letter (not pronounced)
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use liblevenshtein::phonetic::types::Phone;
+///
+/// // Byte-level (ASCII)
+/// let vowel_a: Phone<u8> = Phone::Vowel(b'a');
+/// let digraph_ch: Phone<u8> = Phone::Digraph(b'c', b'h');
+///
+/// // Character-level (Unicode)
+/// let vowel_e: Phone<char> = Phone::Vowel('e');
+/// let vowel_umlaut: Phone<char> = Phone::Vowel('ü');
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub enum Phone {
+#[cfg_attr(feature = "serialization", serde(bound = "U: Serialize + for<'a> Deserialize<'a>"))]
+pub enum Phone<U: PhoneticUnit> {
     /// A vowel sound
-    Vowel(u8),
+    Vowel(U),
     /// A consonant sound
-    Consonant(u8),
+    Consonant(U),
     /// A two-character sound unit (digraph)
-    Digraph(u8, u8),
+    Digraph(U, U),
     /// A three-character sound unit (trigraph, e.g., ejective affricates)
-    Trigraph(u8, u8, u8),
+    Trigraph(U, U, U),
     /// A four-character sound unit (tetragraph, e.g., prenasalized aspirated clicks)
-    Tetragraph(u8, u8, u8, u8),
+    Tetragraph(U, U, U, U),
     /// A five-character sound unit (pentagraph, e.g., prenasalized labialized clicks)
-    Pentagraph(u8, u8, u8, u8, u8),
+    Pentagraph(U, U, U, U, U),
     /// A six-character sound unit (hexagraph, e.g., complex clusters)
-    Hexagraph(u8, u8, u8, u8, u8, u8),
+    Hexagraph(U, U, U, U, U, U),
     /// A seven-character sound unit (heptagraph, theoretical maximum)
-    Heptagraph(u8, u8, u8, u8, u8, u8, u8),
+    Heptagraph(U, U, U, U, U, U, U),
     /// An 8+ character sound unit (rare complex clusters) - heap allocated
-    Sequence(Vec<u8>),
+    Sequence(Vec<U>),
     /// A silent letter
     Silent,
 }
 
-/// Context specification for when a rule applies (byte-level).
+impl<U: PhoneticUnit> Phone<U> {
+    /// Check if this phone is a vowel.
+    #[inline]
+    pub fn is_vowel(&self) -> bool {
+        matches!(self, Phone::Vowel(_))
+    }
+
+    /// Check if this phone is a consonant.
+    ///
+    /// Includes `Consonant`, `Digraph`, `Trigraph`, `Tetragraph`, `Pentagraph`,
+    /// `Hexagraph`, `Heptagraph`, and `Sequence` variants.
+    #[inline]
+    pub fn is_consonant(&self) -> bool {
+        matches!(
+            self,
+            Phone::Consonant(_)
+                | Phone::Digraph(_, _)
+                | Phone::Trigraph(_, _, _)
+                | Phone::Tetragraph(_, _, _, _)
+                | Phone::Pentagraph(_, _, _, _, _)
+                | Phone::Hexagraph(_, _, _, _, _, _)
+                | Phone::Heptagraph(_, _, _, _, _, _, _)
+                | Phone::Sequence(_)
+        )
+    }
+
+    /// Check if this phone is silent.
+    #[inline]
+    pub fn is_silent(&self) -> bool {
+        matches!(self, Phone::Silent)
+    }
+
+    /// Get the first character of this phone, if any.
+    pub fn first_char(&self) -> Option<U> {
+        match self {
+            Phone::Vowel(c)
+            | Phone::Consonant(c)
+            | Phone::Digraph(c, _)
+            | Phone::Trigraph(c, _, _)
+            | Phone::Tetragraph(c, _, _, _)
+            | Phone::Pentagraph(c, _, _, _, _)
+            | Phone::Hexagraph(c, _, _, _, _, _)
+            | Phone::Heptagraph(c, _, _, _, _, _, _) => Some(*c),
+            Phone::Sequence(s) => s.first().copied(),
+            Phone::Silent => None,
+        }
+    }
+
+    /// Get all characters of this phone as a vector.
+    pub fn chars(&self) -> Vec<U> {
+        match self {
+            Phone::Vowel(c) | Phone::Consonant(c) => vec![*c],
+            Phone::Digraph(c1, c2) => vec![*c1, *c2],
+            Phone::Trigraph(c1, c2, c3) => vec![*c1, *c2, *c3],
+            Phone::Tetragraph(c1, c2, c3, c4) => vec![*c1, *c2, *c3, *c4],
+            Phone::Pentagraph(c1, c2, c3, c4, c5) => vec![*c1, *c2, *c3, *c4, *c5],
+            Phone::Hexagraph(c1, c2, c3, c4, c5, c6) => vec![*c1, *c2, *c3, *c4, *c5, *c6],
+            Phone::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                vec![*c1, *c2, *c3, *c4, *c5, *c6, *c7]
+            }
+            Phone::Sequence(s) => s.clone(),
+            Phone::Silent => vec![],
+        }
+    }
+}
+
+impl<U: PhoneticUnit> std::fmt::Display for Phone<U> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Phone::Vowel(c) => write!(f, "V({})", U::to_char(*c)),
+            Phone::Consonant(c) => write!(f, "C({})", U::to_char(*c)),
+            Phone::Digraph(c1, c2) => write!(f, "D({},{})", U::to_char(*c1), U::to_char(*c2)),
+            Phone::Trigraph(c1, c2, c3) => {
+                write!(
+                    f,
+                    "T({},{},{})",
+                    U::to_char(*c1),
+                    U::to_char(*c2),
+                    U::to_char(*c3)
+                )
+            }
+            Phone::Tetragraph(c1, c2, c3, c4) => {
+                write!(
+                    f,
+                    "Q({},{},{},{})",
+                    U::to_char(*c1),
+                    U::to_char(*c2),
+                    U::to_char(*c3),
+                    U::to_char(*c4)
+                )
+            }
+            Phone::Pentagraph(c1, c2, c3, c4, c5) => {
+                write!(
+                    f,
+                    "P5({},{},{},{},{})",
+                    U::to_char(*c1),
+                    U::to_char(*c2),
+                    U::to_char(*c3),
+                    U::to_char(*c4),
+                    U::to_char(*c5)
+                )
+            }
+            Phone::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                write!(
+                    f,
+                    "H6({},{},{},{},{},{})",
+                    U::to_char(*c1),
+                    U::to_char(*c2),
+                    U::to_char(*c3),
+                    U::to_char(*c4),
+                    U::to_char(*c5),
+                    U::to_char(*c6)
+                )
+            }
+            Phone::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                write!(
+                    f,
+                    "H7({},{},{},{},{},{},{})",
+                    U::to_char(*c1),
+                    U::to_char(*c2),
+                    U::to_char(*c3),
+                    U::to_char(*c4),
+                    U::to_char(*c5),
+                    U::to_char(*c6),
+                    U::to_char(*c7)
+                )
+            }
+            Phone::Sequence(s) => {
+                write!(f, "S(")?;
+                for (i, c) in s.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ",")?;
+                    }
+                    write!(f, "{}", U::to_char(*c))?;
+                }
+                write!(f, ")")
+            }
+            Phone::Silent => write!(f, "Silent"),
+        }
+    }
+}
+
+// ============================================================================
+// Generic Context Type
+// ============================================================================
+
+/// Context specification for when a rule applies.
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:48-55`
+///
+/// This type is generic over the character unit type `U: PhoneticUnit`,
+/// enabling both byte-level (`u8`) and character-level (`char`) representations.
 ///
 /// # Variants
 ///
 /// - `Initial` - At the beginning of a word
 /// - `Final` - At the end of a word
-/// - `BeforeVowel(Vec<u8>)` - Before specific vowels
-/// - `AfterConsonant(Vec<u8>)` - After specific consonants
-/// - `BeforeConsonant(Vec<u8>)` - Before specific consonants
-/// - `AfterVowel(Vec<u8>)` - After specific vowels
+/// - `BeforeVowel(Vec<U>)` - Before specific vowels
+/// - `AfterConsonant(Vec<U>)` - After specific consonants
+/// - `BeforeConsonant(Vec<U>)` - Before specific consonants
+/// - `AfterVowel(Vec<U>)` - After specific vowels
 /// - `Anywhere` - No context restriction
-/// - `And(Box<Context>, Box<Context>)` - Both contexts must match
-/// - `Or(Box<Context>, Box<Context>)` - Either context must match
-/// - `Not(Box<Context>)` - Context must NOT match
+/// - `And(Box<Context<U>>, Box<Context<U>>)` - Both contexts must match
+/// - `Or(Box<Context<U>>, Box<Context<U>>)` - Either context must match
+/// - `Not(Box<Context<U>>)` - Context must NOT match
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use liblevenshtein::phonetic::types::Context;
+///
+/// // Byte-level
+/// let ctx: Context<u8> = Context::BeforeVowel(vec![b'a', b'e', b'i']);
+///
+/// // Character-level
+/// let ctx: Context<char> = Context::BeforeVowel(vec!['a', 'e', 'i', 'o', 'u']);
+///
+/// // Compound context
+/// let ctx: Context<char> = Context::And(
+///     Box::new(Context::Initial),
+///     Box::new(Context::BeforeVowel(vec!['a', 'e'])),
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub enum Context {
+#[cfg_attr(feature = "serialization", serde(bound = "U: Serialize + for<'a> Deserialize<'a>"))]
+pub enum Context<U: PhoneticUnit> {
     /// At the beginning of a word
     Initial,
     /// At the end of a word
     Final,
     /// Before specific vowels
-    BeforeVowel(Vec<u8>),
+    BeforeVowel(Vec<U>),
     /// After specific consonants
-    AfterConsonant(Vec<u8>),
+    AfterConsonant(Vec<U>),
     /// Before specific consonants
-    BeforeConsonant(Vec<u8>),
+    BeforeConsonant(Vec<U>),
     /// After specific vowels
-    AfterVowel(Vec<u8>),
+    AfterVowel(Vec<U>),
     /// No context restriction
     Anywhere,
     /// Compound: both contexts must match
-    And(Box<Context>, Box<Context>),
+    And(Box<Context<U>>, Box<Context<U>>),
     /// Compound: either context must match
-    Or(Box<Context>, Box<Context>),
+    Or(Box<Context<U>>, Box<Context<U>>),
     /// Negated: context must NOT match
-    Not(Box<Context>),
+    Not(Box<Context<U>>),
 }
 
-impl Context {
+impl<U: PhoneticUnit> Context<U> {
     /// Returns true if this context depends on string length.
     ///
     /// **Formal Specification**: `docs/verification/phonetic/position_skipping_proof.v:1202-1211`
@@ -173,314 +369,22 @@ impl Context {
     }
 }
 
-/// A phonetic rewrite rule (byte-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:62-68`
-///
-/// Represents a transformation from a pattern of phones to a replacement
-/// sequence, applicable in a specific context.
-///
-/// # Fields
-///
-/// - `rule_id` - Unique identifier for the rule
-/// - `rule_name` - Human-readable name (for debugging/documentation)
-/// - `pattern` - Sequence of phones to match
-/// - `replacement` - Sequence of phones to substitute
-/// - `context` - Context in which the rule applies
-/// - `weight` - Priority weight (higher = applied first)
-///
-/// # Formal Properties
-///
-/// Well-formed rules satisfy (Theorem 1, `zompist_rules.v:285`):
-/// - Pattern is non-empty: `pattern.len() > 0`
-/// - Replacement is bounded: `replacement.len() <= pattern.len() + MAX_EXPANSION_FACTOR`
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub struct RewriteRule {
-    /// Unique identifier for the rule
-    pub rule_id: usize,
-    /// Human-readable name
-    pub rule_name: String,
-    /// Pattern to match (sequence of phones)
-    pub pattern: Vec<Phone>,
-    /// Replacement sequence
-    pub replacement: Vec<Phone>,
-    /// Context specification
-    pub context: Context,
-    /// Priority weight (higher = applied first)
-    pub weight: f64,
-    /// Optional syllable condition
-    /// When present, the rule only applies if the word satisfies this condition
-    pub syllable_condition: Option<SyllableExpr>,
-}
-
-// ============================================================================
-// Character-level types (char) - proper Unicode support
-// ============================================================================
-
-/// A phonetic unit representing a single sound (character-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:30-34`
-///
-/// This is the character-level variant of [`Phone`] for proper Unicode support.
-/// Use when working with non-ASCII text (accented characters, CJK, emoji, etc.).
-///
-/// # Variants
-///
-/// - `Vowel(char)` - A vowel sound
-/// - `Consonant(char)` - A consonant sound
-/// - `Digraph(char, char)` - A two-character sound unit
-/// - `Trigraph(char, char, char)` - A three-character sound unit (e.g., ejective affricates)
-/// - `Tetragraph(char, char, char, char)` - A four-character sound unit (e.g., prenasalized aspirated clicks)
-/// - `Pentagraph(char, char, char, char, char)` - A five-character sound unit (e.g., prenasalized labialized clicks)
-/// - `Hexagraph(char, char, char, char, char, char)` - A six-character sound unit (e.g., complex clusters)
-/// - `Heptagraph(char, char, char, char, char, char, char)` - A seven-character sound unit (theoretical maximum)
-/// - `Sequence(Vec<char>)` - An 8+ character sound unit (rare complex clusters)
-/// - `Silent` - A silent letter
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub enum PhoneChar {
-    /// A vowel sound
-    Vowel(char),
-    /// A consonant sound
-    Consonant(char),
-    /// A two-character sound unit (digraph)
-    Digraph(char, char),
-    /// A three-character sound unit (trigraph, e.g., ejective affricates)
-    Trigraph(char, char, char),
-    /// A four-character sound unit (tetragraph, e.g., prenasalized aspirated clicks)
-    Tetragraph(char, char, char, char),
-    /// A five-character sound unit (pentagraph, e.g., prenasalized labialized clicks)
-    Pentagraph(char, char, char, char, char),
-    /// A six-character sound unit (hexagraph, e.g., complex clusters)
-    Hexagraph(char, char, char, char, char, char),
-    /// A seven-character sound unit (heptagraph, theoretical maximum)
-    Heptagraph(char, char, char, char, char, char, char),
-    /// An 8+ character sound unit (rare complex clusters) - heap allocated
-    Sequence(Vec<char>),
-    /// A silent letter
-    Silent,
-}
-
-/// Context specification for when a rule applies (character-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:48-55`
-///
-/// This is the character-level variant of [`Context`] for proper Unicode support.
-///
-/// # Variants
-///
-/// - `Initial` - At the beginning of a word
-/// - `Final` - At the end of a word
-/// - `BeforeVowel(Vec<char>)` - Before specific vowels
-/// - `AfterConsonant(Vec<char>)` - After specific consonants
-/// - `BeforeConsonant(Vec<char>)` - Before specific consonants
-/// - `AfterVowel(Vec<char>)` - After specific vowels
-/// - `Anywhere` - No context restriction
-/// - `And(Box<ContextChar>, Box<ContextChar>)` - Both contexts must match
-/// - `Or(Box<ContextChar>, Box<ContextChar>)` - Either context must match
-/// - `Not(Box<ContextChar>)` - Context must NOT match
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub enum ContextChar {
-    /// At the beginning of a word
-    Initial,
-    /// At the end of a word
-    Final,
-    /// Before specific vowels
-    BeforeVowel(Vec<char>),
-    /// After specific consonants
-    AfterConsonant(Vec<char>),
-    /// Before specific consonants
-    BeforeConsonant(Vec<char>),
-    /// After specific vowels
-    AfterVowel(Vec<char>),
-    /// No context restriction
-    Anywhere,
-    /// Compound: both contexts must match
-    And(Box<ContextChar>, Box<ContextChar>),
-    /// Compound: either context must match
-    Or(Box<ContextChar>, Box<ContextChar>),
-    /// Negated: context must NOT match
-    Not(Box<ContextChar>),
-}
-
-impl ContextChar {
-    /// Returns true if this context depends on string length.
-    ///
-    /// **Formal Specification**: `docs/verification/phonetic/position_skipping_proof.v:1202-1211`
-    ///
-    /// Character-level variant of [`Context::is_position_dependent`].
-    /// See that method for detailed documentation.
-    ///
-    /// # Compound contexts
-    ///
-    /// For compound contexts (And, Or, Not), position-dependence is propagated:
-    /// - `And(a, b)` is position-dependent if either `a` or `b` is
-    /// - `Or(a, b)` is position-dependent if either `a` or `b` is
-    /// - `Not(inner)` is position-dependent if `inner` is
-    #[inline]
-    pub fn is_position_dependent(&self) -> bool {
-        match self {
-            ContextChar::Final => true,
-            ContextChar::And(a, b) => a.is_position_dependent() || b.is_position_dependent(),
-            ContextChar::Or(a, b) => a.is_position_dependent() || b.is_position_dependent(),
-            ContextChar::Not(inner) => inner.is_position_dependent(),
-            _ => false,
-        }
-    }
-}
-
-/// A phonetic rewrite rule (character-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:62-68`
-///
-/// This is the character-level variant of [`RewriteRule`] for proper Unicode support.
-///
-/// # Fields
-///
-/// - `rule_id` - Unique identifier for the rule
-/// - `rule_name` - Human-readable name (for debugging/documentation)
-/// - `pattern` - Sequence of phones to match
-/// - `replacement` - Sequence of phones to substitute
-/// - `context` - Context in which the rule applies
-/// - `weight` - Priority weight (higher = applied first)
-///
-/// # Formal Properties
-///
-/// Well-formed rules satisfy (Theorem 1, `zompist_rules.v:285`):
-/// - Pattern is non-empty: `pattern.len() > 0`
-/// - Replacement is bounded: `replacement.len() <= pattern.len() + MAX_EXPANSION_FACTOR`
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-pub struct RewriteRuleChar {
-    /// Unique identifier for the rule
-    pub rule_id: usize,
-    /// Human-readable name
-    pub rule_name: String,
-    /// Pattern to match (sequence of phones)
-    pub pattern: Vec<PhoneChar>,
-    /// Replacement sequence
-    pub replacement: Vec<PhoneChar>,
-    /// Context specification
-    pub context: ContextChar,
-    /// Priority weight (higher = applied first)
-    pub weight: f64,
-    /// Optional syllable condition
-    /// When present, the rule only applies if the word satisfies this condition
-    pub syllable_condition: Option<SyllableExpr>,
-}
-
-// ============================================================================
-// Display implementations
-// ============================================================================
-
-impl std::fmt::Display for Phone {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Phone::Vowel(c) => write!(f, "V({})", *c as char),
-            Phone::Consonant(c) => write!(f, "C({})", *c as char),
-            Phone::Digraph(c1, c2) => write!(f, "D({},{})", *c1 as char, *c2 as char),
-            Phone::Trigraph(c1, c2, c3) => {
-                write!(f, "T({},{},{})", *c1 as char, *c2 as char, *c3 as char)
-            }
-            Phone::Tetragraph(c1, c2, c3, c4) => {
-                write!(
-                    f,
-                    "Q({},{},{},{})",
-                    *c1 as char, *c2 as char, *c3 as char, *c4 as char
-                )
-            }
-            Phone::Pentagraph(c1, c2, c3, c4, c5) => {
-                write!(
-                    f,
-                    "P5({},{},{},{},{})",
-                    *c1 as char, *c2 as char, *c3 as char, *c4 as char, *c5 as char
-                )
-            }
-            Phone::Hexagraph(c1, c2, c3, c4, c5, c6) => {
-                write!(
-                    f,
-                    "H6({},{},{},{},{},{})",
-                    *c1 as char, *c2 as char, *c3 as char, *c4 as char, *c5 as char, *c6 as char
-                )
-            }
-            Phone::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
-                write!(
-                    f,
-                    "H7({},{},{},{},{},{},{})",
-                    *c1 as char,
-                    *c2 as char,
-                    *c3 as char,
-                    *c4 as char,
-                    *c5 as char,
-                    *c6 as char,
-                    *c7 as char
-                )
-            }
-            Phone::Sequence(s) => {
-                write!(f, "S(")?;
-                for (i, c) in s.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ",")?;
-                    }
-                    write!(f, "{}", *c as char)?;
-                }
-                write!(f, ")")
-            }
-            Phone::Silent => write!(f, "Silent"),
-        }
-    }
-}
-
-impl std::fmt::Display for PhoneChar {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PhoneChar::Vowel(c) => write!(f, "V({})", c),
-            PhoneChar::Consonant(c) => write!(f, "C({})", c),
-            PhoneChar::Digraph(c1, c2) => write!(f, "D({},{})", c1, c2),
-            PhoneChar::Trigraph(c1, c2, c3) => write!(f, "T({},{},{})", c1, c2, c3),
-            PhoneChar::Tetragraph(c1, c2, c3, c4) => write!(f, "Q({},{},{},{})", c1, c2, c3, c4),
-            PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
-                write!(f, "P5({},{},{},{},{})", c1, c2, c3, c4, c5)
-            }
-            PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
-                write!(f, "H6({},{},{},{},{},{})", c1, c2, c3, c4, c5, c6)
-            }
-            PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
-                write!(f, "H7({},{},{},{},{},{},{})", c1, c2, c3, c4, c5, c6, c7)
-            }
-            PhoneChar::Sequence(s) => {
-                write!(f, "S(")?;
-                for (i, c) in s.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ",")?;
-                    }
-                    write!(f, "{}", c)?;
-                }
-                write!(f, ")")
-            }
-            PhoneChar::Silent => write!(f, "Silent"),
-        }
-    }
-}
-
-impl std::fmt::Display for Context {
+impl<U: PhoneticUnit> std::fmt::Display for Context<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Context::Initial => write!(f, "Initial"),
             Context::Final => write!(f, "Final"),
             Context::BeforeVowel(cs) => {
-                write!(f, "BeforeVowel({})", String::from_utf8_lossy(cs))
+                write!(f, "BeforeVowel({})", U::units_to_string(cs))
             }
             Context::AfterConsonant(cs) => {
-                write!(f, "AfterConsonant({})", String::from_utf8_lossy(cs))
+                write!(f, "AfterConsonant({})", U::units_to_string(cs))
             }
             Context::BeforeConsonant(cs) => {
-                write!(f, "BeforeConsonant({})", String::from_utf8_lossy(cs))
+                write!(f, "BeforeConsonant({})", U::units_to_string(cs))
             }
             Context::AfterVowel(cs) => {
-                write!(f, "AfterVowel({})", String::from_utf8_lossy(cs))
+                write!(f, "AfterVowel({})", U::units_to_string(cs))
             }
             Context::Anywhere => write!(f, "Anywhere"),
             Context::And(a, b) => write!(f, "And({}, {})", a, b),
@@ -490,106 +394,257 @@ impl std::fmt::Display for Context {
     }
 }
 
-impl std::fmt::Display for ContextChar {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ContextChar::Initial => write!(f, "Initial"),
-            ContextChar::Final => write!(f, "Final"),
-            ContextChar::BeforeVowel(cs) => {
-                write!(f, "BeforeVowel({})", cs.iter().collect::<String>())
-            }
-            ContextChar::AfterConsonant(cs) => {
-                write!(f, "AfterConsonant({})", cs.iter().collect::<String>())
-            }
-            ContextChar::BeforeConsonant(cs) => {
-                write!(f, "BeforeConsonant({})", cs.iter().collect::<String>())
-            }
-            ContextChar::AfterVowel(cs) => {
-                write!(f, "AfterVowel({})", cs.iter().collect::<String>())
-            }
-            ContextChar::Anywhere => write!(f, "Anywhere"),
-            ContextChar::And(a, b) => write!(f, "And({}, {})", a, b),
-            ContextChar::Or(a, b) => write!(f, "Or({}, {})", a, b),
-            ContextChar::Not(inner) => write!(f, "Not({})", inner),
-        }
-    }
+// ============================================================================
+// Generic RewriteRule Type
+// ============================================================================
+
+/// A phonetic rewrite rule.
+///
+/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:62-68`
+///
+/// Represents a transformation from a pattern of phones to a replacement
+/// sequence, applicable in a specific context.
+///
+/// This type is generic over the character unit type `U: PhoneticUnit`,
+/// enabling both byte-level (`u8`) and character-level (`char`) representations.
+///
+/// # Fields
+///
+/// - `rule_id` - Unique identifier for the rule
+/// - `rule_name` - Human-readable name (for debugging/documentation)
+/// - `pattern` - Sequence of phones to match
+/// - `replacement` - Sequence of phones to substitute
+/// - `context` - Context in which the rule applies
+/// - `weight` - Priority weight (higher = applied first)
+/// - `syllable_condition` - Optional syllable-based condition
+///
+/// # Formal Properties
+///
+/// Well-formed rules satisfy (Theorem 1, `zompist_rules.v:285`):
+/// - Pattern is non-empty: `pattern.len() > 0`
+/// - Replacement is bounded: `replacement.len() <= pattern.len() + MAX_EXPANSION_FACTOR`
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use liblevenshtein::phonetic::types::{Phone, Context, RewriteRule};
+///
+/// // Byte-level rule: "gh" -> "f" (anywhere)
+/// let rule: RewriteRule<u8> = RewriteRule {
+///     rule_id: 1,
+///     rule_name: "gh → f".to_string(),
+///     pattern: vec![Phone::Consonant(b'g'), Phone::Consonant(b'h')],
+///     replacement: vec![Phone::Consonant(b'f')],
+///     context: Context::Anywhere,
+///     weight: 1.0,
+///     syllable_condition: None,
+/// };
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialization", serde(bound = "U: Serialize + for<'a> Deserialize<'a>"))]
+pub struct RewriteRule<U: PhoneticUnit> {
+    /// Unique identifier for the rule
+    pub rule_id: usize,
+    /// Human-readable name
+    pub rule_name: String,
+    /// Pattern to match (sequence of phones)
+    pub pattern: Vec<Phone<U>>,
+    /// Replacement sequence
+    pub replacement: Vec<Phone<U>>,
+    /// Context specification
+    pub context: Context<U>,
+    /// Priority weight (higher = applied first)
+    pub weight: f64,
+    /// Optional syllable condition
+    /// When present, the rule only applies if the word satisfies this condition
+    pub syllable_condition: Option<SyllableExpr>,
 }
+
+// ============================================================================
+// Type Aliases for Backward Compatibility
+// ============================================================================
+
+// Note: To maintain full backward compatibility with existing code that uses
+// `Phone`, `Context`, and `RewriteRule` directly (without type parameters),
+// we need to handle import strategies carefully. Code that explicitly imports
+// `Phone<u8>` or uses turbofish syntax will continue to work.
+//
+// For code using the old non-generic names:
+// - Use `PhoneByte`/`PhoneChar` for explicit byte/char variants
+// - Or import with: `use types::{Phone, PhoneChar}` and use `Phone::<u8>::...`
+
+/// Byte-level phone (ASCII) - alias for `Phone<u8>`
+///
+/// Use this when working with ASCII-only text for better performance.
+pub type PhoneByte = Phone<u8>;
+
+/// Character-level phone (Unicode) - alias for `Phone<char>`
+///
+/// Use this when working with Unicode text (accented characters, CJK, etc.).
+pub type PhoneChar = Phone<char>;
+
+/// Byte-level context (ASCII) - alias for `Context<u8>`
+pub type ContextByte = Context<u8>;
+
+/// Character-level context (Unicode) - alias for `Context<char>`
+pub type ContextChar = Context<char>;
+
+/// Byte-level rewrite rule (ASCII) - alias for `RewriteRule<u8>`
+pub type RewriteRuleByte = RewriteRule<u8>;
+
+/// Character-level rewrite rule (Unicode) - alias for `RewriteRule<char>`
+pub type RewriteRuleChar = RewriteRule<char>;
+
+// ============================================================================
+// Tests
+// ============================================================================
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // ========================================================================
+    // Phone tests
+    // ========================================================================
+
     #[test]
-    fn test_phone_display() {
-        assert_eq!(Phone::Vowel(b'a').to_string(), "V(a)");
-        assert_eq!(Phone::Consonant(b'k').to_string(), "C(k)");
-        assert_eq!(Phone::Digraph(b'c', b'h').to_string(), "D(c,h)");
-        assert_eq!(Phone::Silent.to_string(), "Silent");
+    fn test_phone_display_byte() {
+        assert_eq!(Phone::<u8>::Vowel(b'a').to_string(), "V(a)");
+        assert_eq!(Phone::<u8>::Consonant(b'k').to_string(), "C(k)");
+        assert_eq!(Phone::<u8>::Digraph(b'c', b'h').to_string(), "D(c,h)");
+        assert_eq!(Phone::<u8>::Silent.to_string(), "Silent");
     }
 
     #[test]
-    fn test_phone_char_display() {
-        assert_eq!(PhoneChar::Vowel('a').to_string(), "V(a)");
-        assert_eq!(PhoneChar::Consonant('k').to_string(), "C(k)");
-        assert_eq!(PhoneChar::Digraph('c', 'h').to_string(), "D(c,h)");
-        assert_eq!(PhoneChar::Silent.to_string(), "Silent");
+    fn test_phone_display_char() {
+        assert_eq!(Phone::<char>::Vowel('a').to_string(), "V(a)");
+        assert_eq!(Phone::<char>::Consonant('k').to_string(), "C(k)");
+        assert_eq!(Phone::<char>::Digraph('c', 'h').to_string(), "D(c,h)");
+        assert_eq!(Phone::<char>::Silent.to_string(), "Silent");
     }
 
     #[test]
-    fn test_context_display() {
-        assert_eq!(Context::Initial.to_string(), "Initial");
-        assert_eq!(Context::Final.to_string(), "Final");
-        assert_eq!(Context::Anywhere.to_string(), "Anywhere");
+    fn test_phone_equality_byte() {
+        assert_eq!(Phone::<u8>::Vowel(b'a'), Phone::<u8>::Vowel(b'a'));
+        assert_ne!(Phone::<u8>::Vowel(b'a'), Phone::<u8>::Vowel(b'e'));
+        assert_ne!(Phone::<u8>::Vowel(b'a'), Phone::<u8>::Consonant(b'a'));
+        assert_eq!(Phone::<u8>::Silent, Phone::<u8>::Silent);
+    }
+
+    #[test]
+    fn test_phone_equality_char() {
+        assert_eq!(Phone::<char>::Vowel('a'), Phone::<char>::Vowel('a'));
+        assert_ne!(Phone::<char>::Vowel('a'), Phone::<char>::Vowel('e'));
+        assert_ne!(Phone::<char>::Vowel('a'), Phone::<char>::Consonant('a'));
+        assert_eq!(Phone::<char>::Silent, Phone::<char>::Silent);
+    }
+
+    #[test]
+    fn test_phone_is_vowel() {
+        assert!(Phone::<u8>::Vowel(b'a').is_vowel());
+        assert!(!Phone::<u8>::Consonant(b'k').is_vowel());
+        assert!(!Phone::<u8>::Silent.is_vowel());
+    }
+
+    #[test]
+    fn test_phone_is_consonant() {
+        assert!(Phone::<u8>::Consonant(b'k').is_consonant());
+        assert!(Phone::<u8>::Digraph(b'c', b'h').is_consonant());
+        assert!(!Phone::<u8>::Vowel(b'a').is_consonant());
+        assert!(!Phone::<u8>::Silent.is_consonant());
+    }
+
+    #[test]
+    fn test_phone_first_char() {
+        assert_eq!(Phone::<u8>::Vowel(b'a').first_char(), Some(b'a'));
+        assert_eq!(Phone::<u8>::Digraph(b'c', b'h').first_char(), Some(b'c'));
+        assert_eq!(Phone::<u8>::Silent.first_char(), None);
+    }
+
+    #[test]
+    fn test_phone_chars() {
+        assert_eq!(Phone::<u8>::Vowel(b'a').chars(), vec![b'a']);
+        assert_eq!(Phone::<u8>::Digraph(b'c', b'h').chars(), vec![b'c', b'h']);
+        assert_eq!(Phone::<u8>::Silent.chars(), Vec::<u8>::new());
+    }
+
+    // ========================================================================
+    // Context tests
+    // ========================================================================
+
+    #[test]
+    fn test_context_display_byte() {
+        assert_eq!(Context::<u8>::Initial.to_string(), "Initial");
+        assert_eq!(Context::<u8>::Final.to_string(), "Final");
+        assert_eq!(Context::<u8>::Anywhere.to_string(), "Anywhere");
         assert_eq!(
-            Context::BeforeVowel(vec![b'a', b'e', b'i']).to_string(),
+            Context::<u8>::BeforeVowel(vec![b'a', b'e', b'i']).to_string(),
             "BeforeVowel(aei)"
         );
     }
 
     #[test]
-    fn test_context_char_display() {
-        assert_eq!(ContextChar::Initial.to_string(), "Initial");
-        assert_eq!(ContextChar::Final.to_string(), "Final");
-        assert_eq!(ContextChar::Anywhere.to_string(), "Anywhere");
+    fn test_context_display_char() {
+        assert_eq!(Context::<char>::Initial.to_string(), "Initial");
+        assert_eq!(Context::<char>::Final.to_string(), "Final");
+        assert_eq!(Context::<char>::Anywhere.to_string(), "Anywhere");
         assert_eq!(
-            ContextChar::BeforeVowel(vec!['a', 'e', 'i']).to_string(),
+            Context::<char>::BeforeVowel(vec!['a', 'e', 'i']).to_string(),
             "BeforeVowel(aei)"
         );
     }
 
     #[test]
-    fn test_phone_equality() {
-        assert_eq!(Phone::Vowel(b'a'), Phone::Vowel(b'a'));
-        assert_ne!(Phone::Vowel(b'a'), Phone::Vowel(b'e'));
-        assert_ne!(Phone::Vowel(b'a'), Phone::Consonant(b'a'));
-        assert_eq!(Phone::Silent, Phone::Silent);
-    }
-
-    #[test]
-    fn test_phone_char_equality() {
-        assert_eq!(PhoneChar::Vowel('a'), PhoneChar::Vowel('a'));
-        assert_ne!(PhoneChar::Vowel('a'), PhoneChar::Vowel('e'));
-        assert_ne!(PhoneChar::Vowel('a'), PhoneChar::Consonant('a'));
-        assert_eq!(PhoneChar::Silent, PhoneChar::Silent);
-    }
-
-    #[test]
-    fn test_context_equality() {
-        assert_eq!(Context::Initial, Context::Initial);
-        assert_ne!(Context::Initial, Context::Final);
+    fn test_context_equality_byte() {
+        assert_eq!(Context::<u8>::Initial, Context::<u8>::Initial);
+        assert_ne!(Context::<u8>::Initial, Context::<u8>::Final);
         assert_eq!(
-            Context::BeforeVowel(vec![b'a', b'e']),
-            Context::BeforeVowel(vec![b'a', b'e'])
+            Context::<u8>::BeforeVowel(vec![b'a', b'e']),
+            Context::<u8>::BeforeVowel(vec![b'a', b'e'])
         );
         assert_ne!(
-            Context::BeforeVowel(vec![b'a']),
-            Context::BeforeVowel(vec![b'e'])
+            Context::<u8>::BeforeVowel(vec![b'a']),
+            Context::<u8>::BeforeVowel(vec![b'e'])
         );
     }
 
     #[test]
-    fn test_rewrite_rule_creation() {
-        let rule = RewriteRule {
+    fn test_context_is_position_dependent() {
+        // Final is position-dependent
+        assert!(Context::<u8>::Final.is_position_dependent());
+
+        // Others are not
+        assert!(!Context::<u8>::Initial.is_position_dependent());
+        assert!(!Context::<u8>::Anywhere.is_position_dependent());
+        assert!(!Context::<u8>::BeforeVowel(vec![b'a']).is_position_dependent());
+
+        // And propagates
+        let ctx = Context::<u8>::And(
+            Box::new(Context::Initial),
+            Box::new(Context::Final),
+        );
+        assert!(ctx.is_position_dependent());
+
+        // Or propagates
+        let ctx = Context::<u8>::Or(
+            Box::new(Context::Initial),
+            Box::new(Context::Final),
+        );
+        assert!(ctx.is_position_dependent());
+
+        // Not propagates
+        let ctx = Context::<u8>::Not(Box::new(Context::Final));
+        assert!(ctx.is_position_dependent());
+    }
+
+    // ========================================================================
+    // RewriteRule tests
+    // ========================================================================
+
+    #[test]
+    fn test_rewrite_rule_creation_byte() {
+        let rule: RewriteRule<u8> = RewriteRule {
             rule_id: 1,
             rule_name: "Test Rule".to_string(),
             pattern: vec![Phone::Consonant(b'g'), Phone::Consonant(b'h')],
@@ -604,13 +659,13 @@ mod tests {
     }
 
     #[test]
-    fn test_rewrite_rule_char_creation() {
-        let rule = RewriteRuleChar {
+    fn test_rewrite_rule_creation_char() {
+        let rule: RewriteRule<char> = RewriteRule {
             rule_id: 1,
             rule_name: "Test Rule".to_string(),
-            pattern: vec![PhoneChar::Consonant('g'), PhoneChar::Consonant('h')],
-            replacement: vec![PhoneChar::Consonant('f')],
-            context: ContextChar::Anywhere,
+            pattern: vec![Phone::Consonant('g'), Phone::Consonant('h')],
+            replacement: vec![Phone::Consonant('f')],
+            context: Context::Anywhere,
             weight: 1.0,
             syllable_condition: None,
         };
@@ -619,13 +674,26 @@ mod tests {
         assert_eq!(rule.replacement.len(), 1);
     }
 
-    // ============================================================================
-    // Tests for compound context types (And, Or, Not)
-    // ============================================================================
+    // ========================================================================
+    // Type alias tests
+    // ========================================================================
 
     #[test]
-    fn test_compound_context_and() {
-        let ctx = Context::And(
+    fn test_type_aliases() {
+        // Verify type aliases work correctly
+        let _phone_byte: PhoneByte = Phone::Vowel(b'a');
+        let _phone_char: PhoneChar = Phone::Vowel('a');
+        let _context_byte: ContextByte = Context::Initial;
+        let _context_char: ContextChar = Context::Initial;
+    }
+
+    // ========================================================================
+    // Compound context tests
+    // ========================================================================
+
+    #[test]
+    fn test_compound_context_and_byte() {
+        let ctx: Context<u8> = Context::And(
             Box::new(Context::AfterVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
             Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
         );
@@ -638,8 +706,8 @@ mod tests {
     }
 
     #[test]
-    fn test_compound_context_or() {
-        let ctx = Context::Or(
+    fn test_compound_context_or_byte() {
+        let ctx: Context<u8> = Context::Or(
             Box::new(Context::Initial),
             Box::new(Context::Final),
         );
@@ -649,8 +717,8 @@ mod tests {
     }
 
     #[test]
-    fn test_compound_context_not() {
-        let ctx = Context::Not(Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])));
+    fn test_compound_context_not_byte() {
+        let ctx: Context<u8> = Context::Not(Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])));
         assert_eq!(ctx.to_string(), "Not(BeforeVowel(aeiou))");
         // Not position-dependent
         assert!(!ctx.is_position_dependent());
@@ -659,7 +727,7 @@ mod tests {
     #[test]
     fn test_nested_compound_context() {
         // (!BeforeVowel) & (AfterVowel | Final)
-        let ctx = Context::And(
+        let ctx: Context<u8> = Context::And(
             Box::new(Context::Not(Box::new(Context::BeforeVowel(vec![b'a', b'e'])))),
             Box::new(Context::Or(
                 Box::new(Context::AfterVowel(vec![b'a', b'e'])),
@@ -671,10 +739,10 @@ mod tests {
     }
 
     #[test]
-    fn test_compound_context_char_and() {
-        let ctx = ContextChar::And(
-            Box::new(ContextChar::AfterVowel(vec!['a', 'e', 'i', 'o', 'u'])),
-            Box::new(ContextChar::BeforeVowel(vec!['a', 'e', 'i', 'o', 'u'])),
+    fn test_compound_context_and_char() {
+        let ctx: Context<char> = Context::And(
+            Box::new(Context::AfterVowel(vec!['a', 'e', 'i', 'o', 'u'])),
+            Box::new(Context::BeforeVowel(vec!['a', 'e', 'i', 'o', 'u'])),
         );
         assert_eq!(
             ctx.to_string(),
@@ -684,33 +752,33 @@ mod tests {
     }
 
     #[test]
-    fn test_compound_context_char_or() {
-        let ctx = ContextChar::Or(
-            Box::new(ContextChar::Initial),
-            Box::new(ContextChar::Final),
+    fn test_compound_context_or_char() {
+        let ctx: Context<char> = Context::Or(
+            Box::new(Context::Initial),
+            Box::new(Context::Final),
         );
         assert_eq!(ctx.to_string(), "Or(Initial, Final)");
         assert!(ctx.is_position_dependent());
     }
 
     #[test]
-    fn test_compound_context_char_not() {
-        let ctx = ContextChar::Not(Box::new(ContextChar::BeforeVowel(vec!['a', 'e', 'i', 'o', 'u'])));
+    fn test_compound_context_not_char() {
+        let ctx: Context<char> = Context::Not(Box::new(Context::BeforeVowel(vec!['a', 'e', 'i', 'o', 'u'])));
         assert_eq!(ctx.to_string(), "Not(BeforeVowel(aeiou))");
         assert!(!ctx.is_position_dependent());
     }
 
     #[test]
     fn test_compound_context_equality() {
-        let ctx1 = Context::And(
+        let ctx1: Context<u8> = Context::And(
             Box::new(Context::Initial),
             Box::new(Context::BeforeVowel(vec![b'a'])),
         );
-        let ctx2 = Context::And(
+        let ctx2: Context<u8> = Context::And(
             Box::new(Context::Initial),
             Box::new(Context::BeforeVowel(vec![b'a'])),
         );
-        let ctx3 = Context::And(
+        let ctx3: Context<u8> = Context::And(
             Box::new(Context::Initial),
             Box::new(Context::BeforeVowel(vec![b'e'])),
         );

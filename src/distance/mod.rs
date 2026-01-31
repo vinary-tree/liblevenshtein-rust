@@ -26,6 +26,8 @@ use smallvec::SmallVec;
 #[cfg(feature = "simd")]
 pub mod simd;
 
+pub mod myers;
+
 /// A symmetric pair of strings for use as cache keys.
 ///
 /// Ensures that `(a, b)` and `(b, a)` are treated as identical keys,
@@ -213,9 +215,10 @@ impl MemoCache {
 /// single-character edits (insertions, deletions, substitutions)
 /// required to transform `source` into `target`.
 ///
-/// When compiled with the `simd` feature, this function automatically detects
-/// CPU capabilities and uses SIMD-accelerated implementations (AVX2 or SSE4.1)
-/// for improved performance on longer strings.
+/// This function automatically selects the optimal algorithm:
+/// - **Myers' bit-parallel**: For strings where both are ≤64 bytes (O(mn/64) time)
+/// - **SIMD-vectorized DP**: For longer strings when `simd` feature is enabled
+/// - **Scalar DP**: Fallback for longer strings without SIMD
 ///
 /// # Example
 ///
@@ -226,6 +229,17 @@ impl MemoCache {
 /// assert_eq!(standard_distance("test", "test"), 0);
 /// ```
 pub fn standard_distance(source: &str, target: &str) -> usize {
+    let source_len = source.len();
+    let target_len = target.len();
+
+    // Myers' bit-parallel is optimal for short ASCII strings (≤64 bytes)
+    // It processes 64 positions per 64-bit word operation
+    // Note: Myers operates on bytes, so we only use it for ASCII to maintain
+    // character-based semantics for Unicode strings
+    if source_len <= 64 && target_len <= 64 && source.is_ascii() && target.is_ascii() {
+        return myers::myers_distance(source, target);
+    }
+
     #[cfg(feature = "simd")]
     {
         simd::standard_distance_simd(source, target)

@@ -9,6 +9,7 @@ use crate::phonetic::regex::ast::RegexFlags;
 
 use super::ast::{LLreFile, SymbolTable};
 use super::error::{LLreError, LLreErrorKind, LLreResult};
+use super::symbol_expander::expand_pattern_symbols;
 
 /// Compiled NFA from an .llre file.
 #[derive(Debug, Clone)]
@@ -107,8 +108,16 @@ pub fn compile_with_options(file: &LLreFile, options: &CompileOptions) -> LLreRe
     // Create the NFA compiler with symbol table
     let mut compiler = NFACompilerChar::new();
 
-    // Add symbols from the symbol table
+    // Add character class symbols from the symbol table
     add_symbols_to_compiler(&mut compiler, &file.symbol_table)?;
+
+    // Expand pattern symbols (GroupRef nodes referencing named patterns)
+    // This inlines all pattern symbol references before NFA compilation
+    let expanded_pattern = if !file.symbol_table.patterns.is_empty() {
+        expand_pattern_symbols(&file.pattern, &file.symbol_table)?
+    } else {
+        file.pattern.clone()
+    };
 
     // Set up flags
     let flags = file.effective_flags();
@@ -119,8 +128,8 @@ pub fn compile_with_options(file: &LLreFile, options: &CompileOptions) -> LLreRe
         compiler.set_trampolining(true);
     }
 
-    // Compile the pattern
-    let nfa = compiler.compile(&file.pattern).map_err(|e| {
+    // Compile the expanded pattern
+    let nfa = compiler.compile(&expanded_pattern).map_err(|e| {
         LLreError::with_position(
             LLreErrorKind::NfaCompilationFailed(e.to_string()),
             file.pattern_position,
@@ -148,7 +157,10 @@ pub fn compile_with_options(file: &LLreFile, options: &CompileOptions) -> LLreRe
     })
 }
 
-/// Add symbols from a symbol table to the NFA compiler.
+/// Add character class symbols from a symbol table to the NFA compiler.
+///
+/// Note: Pattern symbols (Regex AST nodes) are handled separately by
+/// `expand_pattern_symbols()` before NFA compilation.
 fn add_symbols_to_compiler(
     compiler: &mut NFACompilerChar,
     table: &SymbolTable,
@@ -156,14 +168,6 @@ fn add_symbols_to_compiler(
     // Add character class symbols
     for (name, chars) in &table.char_classes {
         compiler.add_symbol(name, chars.clone());
-    }
-
-    // Pattern symbols would need special handling - they're Regex AST nodes
-    // that would need to be expanded during compilation. For now, we only
-    // support character class symbols.
-    if !table.patterns.is_empty() {
-        // TODO: Support pattern symbols by expanding them during compilation
-        // For now, character class symbols are the primary use case
     }
 
     Ok(())

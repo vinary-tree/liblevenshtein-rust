@@ -4,111 +4,36 @@
 //! directly translated from the Coq/Rocq verification in
 //! `docs/verification/phonetic/rewrite_rules.v`.
 //!
-//! # Functions
+//! # Generic Functions
 //!
-//! - [`phone_eq`] / [`phone_eq_char`] - Phone equality check
-//! - [`context_matches`] / [`context_matches_char`] - Context satisfaction check
-//! - [`pattern_matches_at`] / [`pattern_matches_at_char`] - Pattern matching at position
+//! All functions are generic over `U: PhoneticUnit`, enabling use with both
+//! byte-level (`u8`) and character-level (`char`) types:
+//!
+//! - [`context_matches`] - Context satisfaction check
+//! - [`pattern_matches_at`] - Pattern matching at position
+//!
+//! # Legacy Functions (Deprecated)
+//!
+//! For backward compatibility, type-specific aliases are provided:
+//! - `context_matches_char`, `pattern_matches_at_char` - Character-level aliases
+//! - `phone_eq`, `phone_eq_char` - Phone equality (now use `==` directly)
 //!
 //! # Formal Specification
 //!
 //! All functions are direct translations of Coq functions with proven properties.
 
-use super::types::{Context, ContextChar, Phone, PhoneChar};
+use super::common::phonetic_unit::PhoneticUnit;
+use super::types::{Context, Phone, PhoneByte, PhoneChar, ContextByte, ContextChar};
 
 // ============================================================================
-// Helper functions (byte-level)
-// ============================================================================
-
-/// Check if a character is a vowel (byte-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:72-76`
-///
-/// Checks if a byte represents one of the five English vowels: a, e, i, o, u.
-#[inline]
-pub fn is_vowel_char(c: u8) -> bool {
-    matches!(c, b'a' | b'e' | b'i' | b'o' | b'u' | b'A' | b'E' | b'I' | b'O' | b'U')
-}
-
-/// Check if a phone is a vowel (byte-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:82-87`
-#[inline]
-pub fn is_vowel(p: &Phone) -> bool {
-    matches!(p, Phone::Vowel(_))
-}
-
-/// Check if a phone is a consonant (byte-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:89-95`
-///
-/// Includes `Consonant`, `Digraph`, `Trigraph`, `Tetragraph`, `Pentagraph`, `Hexagraph`,
-/// `Heptagraph`, and `Sequence` variants.
-#[inline]
-pub fn is_consonant(p: &Phone) -> bool {
-    matches!(
-        p,
-        Phone::Consonant(_)
-            | Phone::Digraph(_, _)
-            | Phone::Trigraph(_, _, _)
-            | Phone::Tetragraph(_, _, _, _)
-            | Phone::Pentagraph(_, _, _, _, _)
-            | Phone::Hexagraph(_, _, _, _, _, _)
-            | Phone::Heptagraph(_, _, _, _, _, _, _)
-            | Phone::Sequence(_)
-    )
-}
-
-// ============================================================================
-// Phone equality (byte-level)
-// ============================================================================
-
-/// Check if two phones are equal (byte-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:97-105`
-///
-/// # Examples
-///
-/// ```rust,ignore
-/// use liblevenshtein::phonetic::{Phone, phone_eq};
-///
-/// assert!(phone_eq(&Phone::Vowel(b'a'), &Phone::Vowel(b'a')));
-/// assert!(!phone_eq(&Phone::Vowel(b'a'), &Phone::Vowel(b'e')));
-/// assert!(phone_eq(&Phone::Silent, &Phone::Silent));
-/// ```
-pub fn phone_eq(p1: &Phone, p2: &Phone) -> bool {
-    match (p1, p2) {
-        (Phone::Vowel(c1), Phone::Vowel(c2)) => c1 == c2,
-        (Phone::Consonant(c1), Phone::Consonant(c2)) => c1 == c2,
-        (Phone::Digraph(c1, c2), Phone::Digraph(c3, c4)) => c1 == c3 && c2 == c4,
-        (Phone::Trigraph(c1, c2, c3), Phone::Trigraph(c4, c5, c6)) => {
-            c1 == c4 && c2 == c5 && c3 == c6
-        }
-        (Phone::Tetragraph(c1, c2, c3, c4), Phone::Tetragraph(c5, c6, c7, c8)) => {
-            c1 == c5 && c2 == c6 && c3 == c7 && c4 == c8
-        }
-        (Phone::Pentagraph(a, b, c, d, e), Phone::Pentagraph(f, g, h, i, j)) => {
-            a == f && b == g && c == h && d == i && e == j
-        }
-        (Phone::Hexagraph(a, b, c, d, e, f), Phone::Hexagraph(g, h, i, j, k, l)) => {
-            a == g && b == h && c == i && d == j && e == k && f == l
-        }
-        (Phone::Heptagraph(a, b, c, d, e, f, g), Phone::Heptagraph(h, i, j, k, l, m, n)) => {
-            a == h && b == i && c == j && d == k && e == l && f == m && g == n
-        }
-        (Phone::Sequence(s1), Phone::Sequence(s2)) => s1 == s2,
-        (Phone::Silent, Phone::Silent) => true,
-        _ => false,
-    }
-}
-
-// ============================================================================
-// Context matching (byte-level)
+// Generic Functions
 // ============================================================================
 
 /// Check if a context is satisfied at a position in a phonetic string.
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:117-157`
+///
+/// This is the generic implementation that works with any `PhoneticUnit` type.
 ///
 /// # Arguments
 ///
@@ -126,12 +51,17 @@ pub fn phone_eq(p1: &Phone, p2: &Phone) -> bool {
 /// ```rust,ignore
 /// use liblevenshtein::phonetic::{Context, Phone, context_matches};
 ///
-/// let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a'), Phone::Consonant(b't')];
+/// let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a'), Phone::Consonant(b't')];
 /// assert!(context_matches(&Context::Initial, &s, 0, 1));     // pattern at start
 /// assert!(context_matches(&Context::Final, &s, 2, 1));       // pattern at end
 /// assert!(context_matches(&Context::Anywhere, &s, 1, 1));
 /// ```
-pub fn context_matches(ctx: &Context, s: &[Phone], match_start: usize, pattern_len: usize) -> bool {
+pub fn context_matches<U: PhoneticUnit>(
+    ctx: &Context<U>,
+    s: &[Phone<U>],
+    match_start: usize,
+    pattern_len: usize,
+) -> bool {
     // Compute the appropriate position based on context type:
     // - "Before" and "Final" contexts check at the END of the pattern (match_start + pattern_len)
     // - "After" and "Initial" contexts check at the START of the pattern (match_start)
@@ -198,13 +128,11 @@ pub fn context_matches(ctx: &Context, s: &[Phone], match_start: usize, pattern_l
     }
 }
 
-// ============================================================================
-// Pattern matching (byte-level)
-// ============================================================================
-
 /// Check if a pattern matches at a specific position in a phonetic string.
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:162-174`
+///
+/// This is the generic implementation that works with any `PhoneticUnit` type.
 ///
 /// # Arguments
 ///
@@ -221,22 +149,28 @@ pub fn context_matches(ctx: &Context, s: &[Phone], match_start: usize, pattern_l
 /// ```rust,ignore
 /// use liblevenshtein::phonetic::{Phone, pattern_matches_at};
 ///
-/// let pattern = vec![Phone::Consonant(b'c'), Phone::Consonant(b'h')];
-/// let s = vec![Phone::Consonant(b'c'), Phone::Consonant(b'h'), Phone::Vowel(b'a')];
+/// let pattern: Vec<Phone<u8>> = vec![Phone::Consonant(b'c'), Phone::Consonant(b'h')];
+/// let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'c'), Phone::Consonant(b'h'), Phone::Vowel(b'a')];
 /// assert!(pattern_matches_at(&pattern, &s, 0));
 /// assert!(!pattern_matches_at(&pattern, &s, 1));
 /// ```
-pub fn pattern_matches_at(pattern: &[Phone], s: &[Phone], pos: usize) -> bool {
+pub fn pattern_matches_at<U: PhoneticUnit>(
+    pattern: &[Phone<U>],
+    s: &[Phone<U>],
+    pos: usize,
+) -> bool {
     if pattern.is_empty() {
         return true;
     }
 
+    // Check bounds first
+    if pos + pattern.len() > s.len() {
+        return false;
+    }
+
+    // Use PartialEq derived on Phone<U>
     for (i, p) in pattern.iter().enumerate() {
-        if let Some(p_str) = s.get(pos + i) {
-            if !phone_eq(p, p_str) {
-                return false;
-            }
-        } else {
+        if s.get(pos + i) != Some(p) {
             return false;
         }
     }
@@ -244,15 +178,90 @@ pub fn pattern_matches_at(pattern: &[Phone], s: &[Phone], pos: usize) -> bool {
 }
 
 // ============================================================================
-// Helper functions (character-level)
+// Backward Compatibility: Type-Specific Aliases
 // ============================================================================
+
+/// Check if a context is satisfied (character-level alias).
+///
+/// This is an alias for `context_matches::<char>` for backward compatibility.
+#[inline]
+pub fn context_matches_char(
+    ctx: &ContextChar,
+    s: &[PhoneChar],
+    match_start: usize,
+    pattern_len: usize,
+) -> bool {
+    context_matches(ctx, s, match_start, pattern_len)
+}
+
+/// Check if a pattern matches at a position (character-level alias).
+///
+/// This is an alias for `pattern_matches_at::<char>` for backward compatibility.
+#[inline]
+pub fn pattern_matches_at_char(pattern: &[PhoneChar], s: &[PhoneChar], pos: usize) -> bool {
+    pattern_matches_at(pattern, s, pos)
+}
+
+// ============================================================================
+// Legacy Functions (for backward compatibility)
+// ============================================================================
+
+/// Check if two phones are equal (byte-level).
+///
+/// **Deprecated**: Use `p1 == p2` directly instead. `Phone<U>` derives `PartialEq`.
+///
+/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:97-105`
+#[inline]
+pub fn phone_eq(p1: &PhoneByte, p2: &PhoneByte) -> bool {
+    p1 == p2
+}
+
+/// Check if two phones are equal (character-level).
+///
+/// **Deprecated**: Use `p1 == p2` directly instead. `Phone<U>` derives `PartialEq`.
+///
+/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:97-105`
+#[inline]
+pub fn phone_eq_char(p1: &PhoneChar, p2: &PhoneChar) -> bool {
+    p1 == p2
+}
+
+// ============================================================================
+// Helper functions (for backward compatibility with existing code)
+// ============================================================================
+
+/// Check if a character is a vowel (byte-level).
+///
+/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:72-76`
+///
+/// Checks if a byte represents one of the five English vowels: a, e, i, o, u.
+#[inline]
+pub fn is_vowel_char(c: u8) -> bool {
+    u8::is_vowel(c)
+}
+
+/// Check if a phone is a vowel (byte-level).
+///
+/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:82-87`
+#[inline]
+pub fn is_vowel(p: &PhoneByte) -> bool {
+    p.is_vowel()
+}
+
+/// Check if a phone is a consonant (byte-level).
+///
+/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:89-95`
+#[inline]
+pub fn is_consonant(p: &PhoneByte) -> bool {
+    p.is_consonant()
+}
 
 /// Check if a character is a vowel (character-level).
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:72-76`
 #[inline]
 pub fn is_vowel_char_char(c: char) -> bool {
-    matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'A' | 'E' | 'I' | 'O' | 'U')
+    char::is_vowel(c)
 }
 
 /// Check if a phone is a vowel (character-level).
@@ -260,176 +269,20 @@ pub fn is_vowel_char_char(c: char) -> bool {
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:82-87`
 #[inline]
 pub fn is_vowel_char_type(p: &PhoneChar) -> bool {
-    matches!(p, PhoneChar::Vowel(_))
+    p.is_vowel()
 }
 
 /// Check if a phone is a consonant (character-level).
 ///
 /// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:89-95`
-///
-/// Includes `Consonant`, `Digraph`, `Trigraph`, `Tetragraph`, `Pentagraph`, `Hexagraph`,
-/// `Heptagraph`, and `Sequence` variants.
 #[inline]
 pub fn is_consonant_char(p: &PhoneChar) -> bool {
-    matches!(
-        p,
-        PhoneChar::Consonant(_)
-            | PhoneChar::Digraph(_, _)
-            | PhoneChar::Trigraph(_, _, _)
-            | PhoneChar::Tetragraph(_, _, _, _)
-            | PhoneChar::Pentagraph(_, _, _, _, _)
-            | PhoneChar::Hexagraph(_, _, _, _, _, _)
-            | PhoneChar::Heptagraph(_, _, _, _, _, _, _)
-            | PhoneChar::Sequence(_)
-    )
+    p.is_consonant()
 }
 
 // ============================================================================
-// Phone equality (character-level)
+// Tests
 // ============================================================================
-
-/// Check if two phones are equal (character-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:97-105`
-pub fn phone_eq_char(p1: &PhoneChar, p2: &PhoneChar) -> bool {
-    match (p1, p2) {
-        (PhoneChar::Vowel(c1), PhoneChar::Vowel(c2)) => c1 == c2,
-        (PhoneChar::Consonant(c1), PhoneChar::Consonant(c2)) => c1 == c2,
-        (PhoneChar::Digraph(c1, c2), PhoneChar::Digraph(c3, c4)) => c1 == c3 && c2 == c4,
-        (PhoneChar::Trigraph(c1, c2, c3), PhoneChar::Trigraph(c4, c5, c6)) => {
-            c1 == c4 && c2 == c5 && c3 == c6
-        }
-        (PhoneChar::Tetragraph(c1, c2, c3, c4), PhoneChar::Tetragraph(c5, c6, c7, c8)) => {
-            c1 == c5 && c2 == c6 && c3 == c7 && c4 == c8
-        }
-        (PhoneChar::Pentagraph(a, b, c, d, e), PhoneChar::Pentagraph(f, g, h, i, j)) => {
-            a == f && b == g && c == h && d == i && e == j
-        }
-        (PhoneChar::Hexagraph(a, b, c, d, e, f), PhoneChar::Hexagraph(g, h, i, j, k, l)) => {
-            a == g && b == h && c == i && d == j && e == k && f == l
-        }
-        (PhoneChar::Heptagraph(a, b, c, d, e, f, g), PhoneChar::Heptagraph(h, i, j, k, l, m, n)) => {
-            a == h && b == i && c == j && d == k && e == l && f == m && g == n
-        }
-        (PhoneChar::Sequence(s1), PhoneChar::Sequence(s2)) => s1 == s2,
-        (PhoneChar::Silent, PhoneChar::Silent) => true,
-        _ => false,
-    }
-}
-
-// ============================================================================
-// Context matching (character-level)
-// ============================================================================
-
-/// Check if a context is satisfied at a position in a phonetic string (character-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:117-157`
-///
-/// # Arguments
-///
-/// - `ctx` - The context to check
-/// - `s` - The phonetic string (character-level)
-/// - `match_start` - The position where the pattern match starts
-/// - `pattern_len` - The length of the matched pattern
-///
-/// # Returns
-///
-/// `true` if the context is satisfied, `false` otherwise.
-pub fn context_matches_char(
-    ctx: &ContextChar,
-    s: &[PhoneChar],
-    match_start: usize,
-    pattern_len: usize,
-) -> bool {
-    // Compute the appropriate position based on context type:
-    // - "Before" and "Final" contexts check at the END of the pattern (match_start + pattern_len)
-    // - "After" and "Initial" contexts check at the START of the pattern (match_start)
-    match ctx {
-        ContextChar::Initial => match_start == 0,
-        ContextChar::Final => match_start + pattern_len == s.len(),
-        ContextChar::BeforeVowel(vowels) => {
-            let pos = match_start + pattern_len;
-            if let Some(PhoneChar::Vowel(v)) = s.get(pos) {
-                vowels.contains(v)
-            } else {
-                false
-            }
-        }
-        ContextChar::AfterConsonant(consonants) => {
-            if match_start == 0 {
-                false
-            } else if let Some(phone) = s.get(match_start - 1) {
-                match phone {
-                    PhoneChar::Consonant(c) => consonants.contains(c),
-                    PhoneChar::Digraph(c1, _) => consonants.contains(c1),
-                    PhoneChar::Trigraph(c1, _, _) => consonants.contains(c1),
-                    _ => false,
-                }
-            } else {
-                false
-            }
-        }
-        ContextChar::BeforeConsonant(consonants) => {
-            let pos = match_start + pattern_len;
-            if let Some(phone) = s.get(pos) {
-                match phone {
-                    PhoneChar::Consonant(c) => consonants.contains(c),
-                    PhoneChar::Digraph(c1, _) => consonants.contains(c1),
-                    PhoneChar::Trigraph(c1, _, _) => consonants.contains(c1),
-                    _ => false,
-                }
-            } else {
-                false
-            }
-        }
-        ContextChar::AfterVowel(vowels) => {
-            if match_start == 0 {
-                false
-            } else if let Some(PhoneChar::Vowel(v)) = s.get(match_start - 1) {
-                vowels.contains(v)
-            } else {
-                false
-            }
-        }
-        ContextChar::Anywhere => true,
-        // Compound context: both must match (each with correct position based on type)
-        ContextChar::And(a, b) => {
-            context_matches_char(a, s, match_start, pattern_len)
-                && context_matches_char(b, s, match_start, pattern_len)
-        }
-        // Compound context: either must match
-        ContextChar::Or(a, b) => {
-            context_matches_char(a, s, match_start, pattern_len)
-                || context_matches_char(b, s, match_start, pattern_len)
-        }
-        // Negated context: must NOT match
-        ContextChar::Not(inner) => !context_matches_char(inner, s, match_start, pattern_len),
-    }
-}
-
-// ============================================================================
-// Pattern matching (character-level)
-// ============================================================================
-
-/// Check if a pattern matches at a specific position in a phonetic string (character-level).
-///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:162-174`
-pub fn pattern_matches_at_char(pattern: &[PhoneChar], s: &[PhoneChar], pos: usize) -> bool {
-    if pattern.is_empty() {
-        return true;
-    }
-
-    for (i, p) in pattern.iter().enumerate() {
-        if let Some(p_str) = s.get(pos + i) {
-            if !phone_eq_char(p, p_str) {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
-    true
-}
 
 #[cfg(test)]
 mod tests {
@@ -482,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_context_matches_initial() {
-        let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
+        let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
         // Pattern of length 1 at position 0 - Initial should match
         assert!(context_matches(&Context::Initial, &s, 0, 1));
         // Pattern at position 1 - Initial should not match
@@ -491,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_context_matches_final() {
-        let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
+        let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
         // Pattern of length 1 at position 1 (ends at 2 = s.len()) - Final matches
         assert!(context_matches(&Context::Final, &s, 1, 1));
         // Pattern of length 1 at position 0 (ends at 1 != 2) - Final doesn't match
@@ -500,7 +353,7 @@ mod tests {
 
     #[test]
     fn test_context_matches_anywhere() {
-        let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
+        let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
         // Anywhere always matches regardless of position
         assert!(context_matches(&Context::Anywhere, &s, 0, 1));
         assert!(context_matches(&Context::Anywhere, &s, 1, 1));
@@ -508,8 +361,8 @@ mod tests {
 
     #[test]
     fn test_context_matches_before_vowel() {
-        let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
-        let ctx = Context::BeforeVowel(vec![b'a', b'e', b'i']);
+        let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
+        let ctx: Context<u8> = Context::BeforeVowel(vec![b'a', b'e', b'i']);
         // Pattern at position 0 with length 1 - checks position 1 which is vowel 'a'
         assert!(context_matches(&ctx, &s, 0, 1));
         // Pattern at position 1 with length 1 - checks position 2 which is out of bounds
@@ -518,8 +371,8 @@ mod tests {
 
     #[test]
     fn test_pattern_matches_at() {
-        let pattern = vec![Phone::Consonant(b'c'), Phone::Consonant(b'h')];
-        let s = vec![
+        let pattern: Vec<Phone<u8>> = vec![Phone::Consonant(b'c'), Phone::Consonant(b'h')];
+        let s: Vec<Phone<u8>> = vec![
             Phone::Consonant(b'c'),
             Phone::Consonant(b'h'),
             Phone::Vowel(b'a'),
@@ -531,8 +384,8 @@ mod tests {
 
     #[test]
     fn test_pattern_matches_at_empty() {
-        let pattern: Vec<Phone> = vec![];
-        let s = vec![Phone::Vowel(b'a')];
+        let pattern: Vec<Phone<u8>> = vec![];
+        let s: Vec<Phone<u8>> = vec![Phone::Vowel(b'a')];
         assert!(pattern_matches_at(&pattern, &s, 0));
     }
 
@@ -562,7 +415,7 @@ mod tests {
 
     #[test]
     fn test_context_matches_char_initial() {
-        let s = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
+        let s: Vec<PhoneChar> = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
         // Pattern at position 0 - Initial should match
         assert!(context_matches_char(&ContextChar::Initial, &s, 0, 1));
         // Pattern at position 1 - Initial should not match
@@ -571,8 +424,8 @@ mod tests {
 
     #[test]
     fn test_pattern_matches_at_char() {
-        let pattern = vec![PhoneChar::Consonant('c'), PhoneChar::Consonant('h')];
-        let s = vec![
+        let pattern: Vec<PhoneChar> = vec![PhoneChar::Consonant('c'), PhoneChar::Consonant('h')];
+        let s: Vec<PhoneChar> = vec![
             PhoneChar::Consonant('c'),
             PhoneChar::Consonant('h'),
             PhoneChar::Vowel('a'),
@@ -589,7 +442,7 @@ mod tests {
     fn test_context_matches_and() {
         // Test: x -> gz when after vowel AND before vowel (exact -> egzact)
         // String: e x a c t (positions 0-4)
-        let s = vec![
+        let s: Vec<Phone<u8>> = vec![
             Phone::Vowel(b'e'),      // pos 0
             Phone::Consonant(b'x'),  // pos 1
             Phone::Vowel(b'a'),      // pos 2
@@ -600,7 +453,7 @@ mod tests {
         // The x->gz rule with pattern 'x' (length 1) at position 1:
         // - AfterVowel checks s[match_start-1] = s[0] = 'e' is vowel? YES
         // - BeforeVowel checks s[match_start+pattern_len] = s[2] = 'a' is vowel? YES
-        let ctx_exact = Context::And(
+        let ctx_exact: Context<u8> = Context::And(
             Box::new(Context::AfterVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
             Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
         );
@@ -608,7 +461,7 @@ mod tests {
         assert!(context_matches(&ctx_exact, &s, 1, 1));
 
         // Clear test for AND with vowel sequence:
-        let s2 = vec![
+        let s2: Vec<Phone<u8>> = vec![
             Phone::Vowel(b'a'),      // pos 0
             Phone::Vowel(b'e'),      // pos 1
         ];
@@ -616,7 +469,7 @@ mod tests {
         // Pattern at position 1 with length 1:
         // - AfterVowel checks s[0] = 'a'
         // - BeforeVowel checks s[2] which is out of bounds (fails)
-        let ctx2 = Context::And(
+        let ctx2: Context<u8> = Context::And(
             Box::new(Context::AfterVowel(vec![b'a'])),
             Box::new(Context::BeforeVowel(vec![b'e'])),
         );
@@ -628,7 +481,7 @@ mod tests {
         assert!(!context_matches(&ctx2, &s2, 0, 1)); // AfterVowel fails (at start)
 
         // Test where AND succeeds: vowel-consonant-vowel pattern
-        let s3 = vec![
+        let s3: Vec<Phone<u8>> = vec![
             Phone::Vowel(b'a'),      // pos 0
             Phone::Consonant(b'x'),  // pos 1
             Phone::Vowel(b'e'),      // pos 2
@@ -636,7 +489,7 @@ mod tests {
         // Pattern at position 1 with length 1:
         // - AfterVowel checks s[0] = 'a'
         // - BeforeVowel checks s[2] = 'e'
-        let ctx3 = Context::And(
+        let ctx3: Context<u8> = Context::And(
             Box::new(Context::AfterVowel(vec![b'a'])),
             Box::new(Context::BeforeVowel(vec![b'e'])),
         );
@@ -645,10 +498,10 @@ mod tests {
 
     #[test]
     fn test_context_matches_or() {
-        let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
+        let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
 
         // Either initial OR final
-        let ctx = Context::Or(
+        let ctx: Context<u8> = Context::Or(
             Box::new(Context::Initial),
             Box::new(Context::Final),
         );
@@ -663,10 +516,10 @@ mod tests {
 
     #[test]
     fn test_context_matches_not() {
-        let s = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
+        let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
 
         // NOT initial
-        let ctx = Context::Not(Box::new(Context::Initial));
+        let ctx: Context<u8> = Context::Not(Box::new(Context::Initial));
 
         // Pattern at position 0 - Initial matches, so NOT fails
         assert!(!context_matches(&ctx, &s, 0, 1));
@@ -676,14 +529,14 @@ mod tests {
 
     #[test]
     fn test_context_matches_nested_compound() {
-        let s = vec![
+        let s: Vec<Phone<u8>> = vec![
             Phone::Vowel(b'a'),      // pos 0
             Phone::Consonant(b'k'),  // pos 1
             Phone::Vowel(b'e'),      // pos 2
         ];
 
         // (NOT Initial) AND (AfterVowel OR BeforeVowel)
-        let ctx = Context::And(
+        let ctx: Context<u8> = Context::And(
             Box::new(Context::Not(Box::new(Context::Initial))),
             Box::new(Context::Or(
                 Box::new(Context::AfterVowel(vec![b'a', b'e', b'i', b'o', b'u'])),
@@ -715,13 +568,13 @@ mod tests {
     #[test]
     fn test_context_matches_char_and() {
         // vowel-consonant-vowel sequence
-        let s = vec![
+        let s: Vec<PhoneChar> = vec![
             PhoneChar::Vowel('a'),      // pos 0
             PhoneChar::Consonant('x'),  // pos 1
             PhoneChar::Vowel('e'),      // pos 2
         ];
 
-        let ctx = ContextChar::And(
+        let ctx: ContextChar = ContextChar::And(
             Box::new(ContextChar::AfterVowel(vec!['a'])),
             Box::new(ContextChar::BeforeVowel(vec!['e'])),
         );
@@ -734,9 +587,9 @@ mod tests {
 
     #[test]
     fn test_context_matches_char_or() {
-        let s = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
+        let s: Vec<PhoneChar> = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
 
-        let ctx = ContextChar::Or(
+        let ctx: ContextChar = ContextChar::Or(
             Box::new(ContextChar::Initial),
             Box::new(ContextChar::Final),
         );
@@ -751,9 +604,9 @@ mod tests {
 
     #[test]
     fn test_context_matches_char_not() {
-        let s = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
+        let s: Vec<PhoneChar> = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
 
-        let ctx = ContextChar::Not(Box::new(ContextChar::Initial));
+        let ctx: ContextChar = ContextChar::Not(Box::new(ContextChar::Initial));
 
         // Pattern at position 0 - Initial matches, so NOT fails
         assert!(!context_matches_char(&ctx, &s, 0, 1));

@@ -32,6 +32,7 @@ pub mod commands;
 pub mod contextual;
 pub mod dictionary;
 pub mod distance;
+pub mod filter;
 /// Cross-platform synchronization primitives (parking_lot on native, std::sync on WASM)
 pub mod sync_compat;
 pub mod transducer;
@@ -248,4 +249,5 @@ pub mod prelude {
     pub use crate::wallbreaker::{
         PatternPiece, PatternSplitter, WallBreaker, WallBreakerQuery, WallBreakerResult,
     };
+
 }

@@ -40,6 +40,7 @@
 use super::nfa::{NFAChar, NFA};
 use super::state_set::StateSet;
 use super::types::StateId;
+use crate::transducer::articulatory_costs::ArticulatoryCosts;
 use crate::transducer::Algorithm;
 use rustc_hash::FxHashSet;
 use std::collections::VecDeque;
@@ -55,40 +56,87 @@ fn singleton(state: StateId) -> StateSet {
 ///
 /// Computes the intersection of a phonetic NFA with a Levenshtein automaton
 /// to enable fuzzy pattern matching.
+///
+/// # Articulatory Cost Integration
+///
+/// When `articulatory_costs` is provided, substitution operations use
+/// phonetically-informed costs based on articulatory features of IPA characters.
+/// For example, `p↔b` (voicing only) costs less than `p↔k` (different place).
+/// This improves phonetic correction quality for residual errors not covered
+/// by explicit NFA rules.
 #[derive(Debug, Clone)]
 pub struct ProductAutomatonChar {
     /// The phonetic NFA
     nfa: NFAChar,
-    /// Maximum edit distance
-    max_distance: u8,
+    /// Maximum accumulated cost (f64 to support fractional articulatory costs)
+    max_cost: f64,
     /// Phonetic weight applied to NFA transitions (default: 0.0)
     phonetic_weight: f64,
     /// Levenshtein algorithm variant (standard, transposition, merge-and-split)
     algorithm: Algorithm,
+    /// Optional articulatory costs for phonetically-informed substitutions.
+    /// When `Some`, substitution cost depends on articulatory distance between
+    /// input and pattern characters. When `None`, fixed cost (1.0) is used.
+    articulatory_costs: Option<ArticulatoryCosts>,
 }
 
 /// A state in the product automaton.
 ///
 /// Represents a configuration during fuzzy matching:
 /// - Which NFA states are active (after epsilon closure)
-/// - How many errors have been consumed
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// - Accumulated cost of edit operations
+///
+/// # Note on Float Costs
+///
+/// The `accumulated_cost` field uses `f64` to support fractional articulatory
+/// costs (e.g., `p↔b` might cost 0.1 while `p↔k` costs 0.6). For comparison
+/// purposes, we use bit-level representation with tolerance for floating-point
+/// imprecision.
+#[derive(Debug, Clone)]
 pub struct ProductStateChar {
     /// Set of active NFA states (after epsilon closure)
     pub nfa_states: Vec<StateId>,
-    /// Number of edit operations used
-    pub edit_distance: u8,
+    /// Accumulated cost of edit operations (supports fractional articulatory costs)
+    pub accumulated_cost: f64,
 }
 
 impl ProductStateChar {
     /// Create a new product state.
-    pub fn new(nfa_states: FxHashSet<StateId>, edit_distance: u8) -> Self {
+    pub fn new(nfa_states: FxHashSet<StateId>, accumulated_cost: f64) -> Self {
         let mut states: Vec<StateId> = nfa_states.into_iter().collect();
         states.sort(); // Canonical ordering for equality comparison
         Self {
             nfa_states: states,
-            edit_distance,
+            accumulated_cost,
         }
+    }
+
+    /// Create a new product state with integer edit distance (backwards compatibility).
+    pub fn with_edit_distance(nfa_states: FxHashSet<StateId>, edit_distance: u8) -> Self {
+        Self::new(nfa_states, edit_distance as f64)
+    }
+
+    /// Get the edit distance as an integer (rounds up for fractional costs).
+    pub fn edit_distance(&self) -> u8 {
+        self.accumulated_cost.ceil() as u8
+    }
+}
+
+impl PartialEq for ProductStateChar {
+    fn eq(&self, other: &Self) -> bool {
+        self.nfa_states == other.nfa_states
+            && (self.accumulated_cost - other.accumulated_cost).abs() < 1e-9
+    }
+}
+
+impl Eq for ProductStateChar {}
+
+impl std::hash::Hash for ProductStateChar {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.nfa_states.hash(state);
+        // Hash the cost with fixed precision to avoid floating-point issues
+        let cost_bits = (self.accumulated_cost * 1_000_000.0).round() as i64;
+        cost_bits.hash(state);
     }
 }
 
@@ -102,9 +150,10 @@ impl ProductAutomatonChar {
     pub fn new(nfa: NFAChar, max_distance: u8) -> Self {
         Self {
             nfa,
-            max_distance,
+            max_cost: max_distance as f64,
             phonetic_weight: 0.0,
             algorithm: Algorithm::Standard,
+            articulatory_costs: None,
         }
     }
 
@@ -118,9 +167,10 @@ impl ProductAutomatonChar {
     pub fn with_algorithm(nfa: NFAChar, max_distance: u8, algorithm: Algorithm) -> Self {
         Self {
             nfa,
-            max_distance,
+            max_cost: max_distance as f64,
             phonetic_weight: 0.0,
             algorithm,
+            articulatory_costs: None,
         }
     }
 
@@ -131,9 +181,10 @@ impl ProductAutomatonChar {
     pub fn with_phonetic_weight(nfa: NFAChar, max_distance: u8, phonetic_weight: f64) -> Self {
         Self {
             nfa,
-            max_distance,
+            max_cost: max_distance as f64,
             phonetic_weight,
             algorithm: Algorithm::Standard,
+            articulatory_costs: None,
         }
     }
 
@@ -146,15 +197,65 @@ impl ProductAutomatonChar {
     ) -> Self {
         Self {
             nfa,
-            max_distance,
+            max_cost: max_distance as f64,
             phonetic_weight,
             algorithm,
+            articulatory_costs: None,
         }
     }
 
-    /// Get the maximum edit distance.
+    /// Create a product automaton with articulatory costs for phonetically-informed
+    /// substitution weighting.
+    ///
+    /// # Arguments
+    ///
+    /// * `nfa` - The phonetic NFA pattern
+    /// * `max_cost` - Maximum accumulated cost allowed (sum of all edit operations)
+    /// * `algorithm` - The Levenshtein algorithm variant to use
+    /// * `articulatory_costs` - Articulatory cost configuration for substitutions
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use liblevenshtein::phonetic::nfa::product::ProductAutomatonChar;
+    /// use liblevenshtein::transducer::{Algorithm, ArticulatoryCosts};
+    ///
+    /// let costs = ArticulatoryCosts::default();
+    /// let product = ProductAutomatonChar::with_articulatory_costs(
+    ///     nfa,
+    ///     2.0,  // max accumulated cost
+    ///     Algorithm::Standard,
+    ///     costs,
+    /// );
+    /// ```
+    pub fn with_articulatory_costs(
+        nfa: NFAChar,
+        max_cost: f64,
+        algorithm: Algorithm,
+        articulatory_costs: ArticulatoryCosts,
+    ) -> Self {
+        Self {
+            nfa,
+            max_cost,
+            phonetic_weight: 0.0,
+            algorithm,
+            articulatory_costs: Some(articulatory_costs),
+        }
+    }
+
+    /// Get the maximum cost threshold.
+    pub fn max_cost(&self) -> f64 {
+        self.max_cost
+    }
+
+    /// Get the maximum edit distance (integer, for backwards compatibility).
     pub fn max_distance(&self) -> u8 {
-        self.max_distance
+        self.max_cost.ceil() as u8
+    }
+
+    /// Get the articulatory costs, if configured.
+    pub fn articulatory_costs(&self) -> Option<&ArticulatoryCosts> {
+        self.articulatory_costs.as_ref()
     }
 
     /// Get the phonetic weight.
@@ -170,20 +271,20 @@ impl ProductAutomatonChar {
     /// Get the initial state of the product automaton.
     ///
     /// The initial state is the epsilon closure of the NFA start state
-    /// with 0 edit distance.
+    /// with 0 accumulated cost.
     pub fn initial_state(&self) -> ProductStateChar {
         let initial_closure: FxHashSet<StateId> =
             self.nfa.epsilon_closure_single(self.nfa.start()).into();
-        ProductStateChar::new(initial_closure, 0)
+        ProductStateChar::new(initial_closure, 0.0)
     }
 
     /// Check if a product state is accepting.
     ///
     /// A state is accepting if:
     /// 1. At least one NFA state is final
-    /// 2. Edit distance is within the maximum
+    /// 2. Accumulated cost is within the maximum
     pub fn is_accepting(&self, state: &ProductStateChar) -> bool {
-        if state.edit_distance > self.max_distance {
+        if state.accumulated_cost > self.max_cost {
             return false;
         }
 
@@ -191,11 +292,48 @@ impl ProductAutomatonChar {
         state.nfa_states.iter().any(|&s| self.nfa.is_final(s))
     }
 
+    /// Compute the substitution cost between input char and pattern char.
+    ///
+    /// If articulatory costs are configured, uses phonetically-informed costs.
+    /// Otherwise, uses fixed cost (1.0).
+    #[inline]
+    fn substitution_cost(&self, input_char: char, pattern_char: Option<char>) -> f64 {
+        match (&self.articulatory_costs, pattern_char) {
+            (Some(costs), Some(pc)) => costs.substitution_cost(input_char, pc),
+            _ => 1.0, // Fixed cost when no articulatory costs or no specific pattern char
+        }
+    }
+
+    /// Get the insertion cost (currently fixed at 1.0).
+    #[inline]
+    fn insertion_cost(&self) -> f64 {
+        match &self.articulatory_costs {
+            Some(costs) => costs.insertion_cost(),
+            None => 1.0,
+        }
+    }
+
+    /// Get the deletion cost (currently fixed at 1.0).
+    #[inline]
+    fn deletion_cost(&self) -> f64 {
+        match &self.articulatory_costs {
+            Some(costs) => costs.deletion_cost(),
+            None => 1.0,
+        }
+    }
+
     /// Compute successor states after consuming a character.
     ///
     /// This implements the product transition function:
     /// - For each active NFA state, try matching the input character
     /// - Also consider edit operations (insertion, deletion, substitution)
+    ///
+    /// # Articulatory Costs
+    ///
+    /// When articulatory costs are configured, substitution operations use
+    /// phonetically-informed costs based on IPA features. For example:
+    /// - `p↔b` (voicing only) might cost 0.1
+    /// - `p↔k` (different place) might cost 0.6
     ///
     /// # Arguments
     ///
@@ -209,37 +347,51 @@ impl ProductAutomatonChar {
         let mut successors = Vec::new();
         let current_states: FxHashSet<StateId> = state.nfa_states.iter().copied().collect();
 
-        // 1. NFA Match: consume character in NFA
+        // 1. NFA Match: consume character in NFA (no cost)
         let match_states = self.nfa_step(&current_states, c);
         if !match_states.is_empty() {
-            successors.push(ProductStateChar::new(match_states, state.edit_distance));
+            successors.push(ProductStateChar::new(match_states, state.accumulated_cost));
         }
 
         // Edit operations only if we have budget
-        if state.edit_distance < self.max_distance {
-            // 2. Substitution: NFA doesn't match, consume with error
-            // For each active state, try all transitions and advance with +1 error
-            let mut subst_states = FxHashSet::default();
+        if state.accumulated_cost < self.max_cost {
+            // 2. Substitution: NFA doesn't match, consume with articulatory cost
+            // For each active state, try all transitions with character-specific cost
+            let mut subst_entries: Vec<(FxHashSet<StateId>, f64)> = Vec::new();
+
             for &nfa_state in &state.nfa_states {
                 for trans in self.nfa.transitions_from(nfa_state) {
                     if trans.label.consumes_input() {
-                        // Add successor regardless of whether it matches c
-                        let closure = self.nfa.epsilon_closure_single(trans.to);
-                        subst_states.extend(closure.iter());
+                        // Compute articulatory cost based on pattern character
+                        let pattern_char = trans.label.expected_char();
+                        let sub_cost = self.substitution_cost(c, pattern_char);
+                        let new_cost = state.accumulated_cost + sub_cost;
+
+                        // Only add if within budget
+                        if new_cost <= self.max_cost {
+                            let closure = self.nfa.epsilon_closure_single(trans.to);
+                            let closure_set: FxHashSet<StateId> = closure.into();
+                            subst_entries.push((closure_set, new_cost));
+                        }
                     }
                 }
             }
-            if !subst_states.is_empty() {
-                // Only add if different from match result
-                let subst_state = ProductStateChar::new(subst_states, state.edit_distance + 1);
-                if !successors.contains(&subst_state) {
-                    successors.push(subst_state);
+
+            // Merge substitution states by cost (group states with same cost)
+            for (subst_states, cost) in subst_entries {
+                if !subst_states.is_empty() {
+                    let subst_state = ProductStateChar::new(subst_states, cost);
+                    if !successors.contains(&subst_state) {
+                        successors.push(subst_state);
+                    }
                 }
             }
 
             // 3. Insertion: input has extra char, NFA stays in place
-            // Stay in current NFA states, consume input char with +1 error
-            successors.push(ProductStateChar::new(current_states.clone(), state.edit_distance + 1));
+            let ins_cost = state.accumulated_cost + self.insertion_cost();
+            if ins_cost <= self.max_cost {
+                successors.push(ProductStateChar::new(current_states.clone(), ins_cost));
+            }
 
             // 4. Deletion: NFA pattern has extra char, advance NFA without consuming input
             // This is handled differently - we advance NFA states via epsilon transitions
@@ -271,7 +423,13 @@ impl ProductAutomatonChar {
     /// Check if the input string is accepted by the fuzzy regex.
     ///
     /// Uses BFS to explore the product state space, pruning states
-    /// that exceed the edit distance budget.
+    /// that exceed the cost budget.
+    ///
+    /// # Note
+    ///
+    /// This method uses integer error tracking for efficiency. For full
+    /// articulatory cost support, use the `transition()` method in a
+    /// custom traversal loop.
     ///
     /// # Arguments
     ///
@@ -279,15 +437,16 @@ impl ProductAutomatonChar {
     ///
     /// # Returns
     ///
-    /// `true` if input matches the NFA pattern within edit distance.
+    /// `true` if input matches the NFA pattern within cost threshold.
     pub fn accepts(&self, input: &str) -> bool {
         // Early exit: empty pattern
         if self.nfa.is_empty() {
-            return input.is_empty() || input.len() <= self.max_distance as usize;
+            return input.is_empty() || input.len() <= self.max_distance() as usize;
         }
 
         let input_chars: Vec<char> = input.chars().collect();
         let n = input_chars.len();
+        let max_errors = self.max_distance(); // Use integer approximation
 
         // BFS state: (nfa_states, input_position, edit_distance)
         let initial_closure: FxHashSet<StateId> =
@@ -311,14 +470,14 @@ impl ProductAutomatonChar {
             }
 
             // Prune if over budget
-            if errors > self.max_distance {
+            if errors > max_errors {
                 continue;
             }
 
             // Check acceptance: at end of input and NFA accepts
             if pos == n {
                 // Check if we can reach final state with remaining budget
-                if self.can_reach_final(&nfa_states, errors) {
+                if self.can_reach_final(&nfa_states, errors, max_errors) {
                     return true;
                 }
                 continue;
@@ -332,7 +491,7 @@ impl ProductAutomatonChar {
                 queue.push_back((pos + 1, match_states, errors));
             }
 
-            if errors < self.max_distance {
+            if errors < max_errors {
                 // 2. Substitution: NFA advances (any transition), +1 error
                 let subst_states = self.nfa_advance(&nfa_states);
                 if !subst_states.is_empty() {
@@ -440,14 +599,19 @@ impl ProductAutomatonChar {
     }
 
     /// Check if we can reach a final state with remaining error budget.
-    fn can_reach_final(&self, states: &FxHashSet<StateId>, current_errors: u8) -> bool {
+    fn can_reach_final(
+        &self,
+        states: &FxHashSet<StateId>,
+        current_errors: u8,
+        max_errors: u8,
+    ) -> bool {
         // If any current state is final, we're done
         if states.iter().any(|&s| self.nfa.is_final(s)) {
             return true;
         }
 
         // Otherwise, try to reach final with remaining budget
-        let remaining = self.max_distance - current_errors;
+        let remaining = max_errors.saturating_sub(current_errors);
         if remaining == 0 {
             return false;
         }
@@ -496,7 +660,7 @@ impl ProductAutomatonChar {
         if self.nfa.is_empty() {
             return if input.is_empty() {
                 Some(0)
-            } else if input.len() <= self.max_distance as usize {
+            } else if input.len() <= self.max_distance() as usize {
                 Some(input.len() as u8)
             } else {
                 None
@@ -523,7 +687,7 @@ impl ProductAutomatonChar {
                 continue;
             }
 
-            if errors > self.max_distance {
+            if errors > self.max_distance() {
                 continue;
             }
 
@@ -553,7 +717,7 @@ impl ProductAutomatonChar {
                 queue.push_back((pos + 1, match_states, errors));
             }
 
-            if errors < self.max_distance {
+            if errors < self.max_distance() {
                 // 2. Substitution
                 let subst_states = self.nfa_advance(&nfa_states);
                 if !subst_states.is_empty() {
@@ -606,7 +770,7 @@ impl ProductAutomatonChar {
             return Some(base_dist);
         }
 
-        let remaining = self.max_distance.saturating_sub(base_dist);
+        let remaining = self.max_distance().saturating_sub(base_dist);
         if remaining == 0 {
             return None;
         }
@@ -677,6 +841,12 @@ impl ProductState {
             edit_distance,
         }
     }
+
+    /// Get the edit distance.
+    #[inline]
+    pub fn edit_distance(&self) -> u8 {
+        self.edit_distance
+    }
 }
 
 impl ProductAutomaton {
@@ -744,7 +914,7 @@ impl ProductAutomaton {
 
     /// Check if accepting.
     pub fn is_accepting(&self, state: &ProductState) -> bool {
-        if state.edit_distance > self.max_distance {
+        if state.edit_distance() > self.max_distance() {
             return false;
         }
         state.nfa_states.iter().any(|&s| self.nfa.is_final(s))
@@ -810,7 +980,7 @@ impl ProductAutomaton {
     /// Check if input is accepted.
     pub fn accepts(&self, input: &[u8]) -> bool {
         if self.nfa.is_empty() {
-            return input.is_empty() || input.len() <= self.max_distance as usize;
+            return input.is_empty() || input.len() <= self.max_distance() as usize;
         }
 
         let n = input.len();
@@ -830,7 +1000,7 @@ impl ProductAutomaton {
                 continue;
             }
 
-            if errors > self.max_distance {
+            if errors > self.max_distance() {
                 continue;
             }
 
@@ -849,7 +1019,7 @@ impl ProductAutomaton {
                 queue.push_back((pos + 1, match_states, errors));
             }
 
-            if errors < self.max_distance {
+            if errors < self.max_distance() {
                 // 2. Substitution
                 let subst_states = self.nfa_advance(&nfa_states);
                 if !subst_states.is_empty() {
@@ -902,7 +1072,7 @@ impl ProductAutomaton {
             return true;
         }
 
-        let remaining = self.max_distance - current_errors;
+        let remaining = self.max_distance() - current_errors;
         if remaining == 0 {
             return false;
         }
@@ -941,7 +1111,7 @@ impl ProductAutomaton {
         if self.nfa.is_empty() {
             return if input.is_empty() {
                 Some(0)
-            } else if input.len() <= self.max_distance as usize {
+            } else if input.len() <= self.max_distance() as usize {
                 Some(input.len() as u8)
             } else {
                 None
@@ -966,7 +1136,7 @@ impl ProductAutomaton {
                 continue;
             }
 
-            if errors > self.max_distance {
+            if errors > self.max_distance() {
                 continue;
             }
 
@@ -995,7 +1165,7 @@ impl ProductAutomaton {
                 queue.push_back((pos + 1, match_states, errors));
             }
 
-            if errors < self.max_distance {
+            if errors < self.max_distance() {
                 // 2. Substitution
                 let subst_states = self.nfa_advance(&nfa_states);
                 if !subst_states.is_empty() {
@@ -1048,7 +1218,7 @@ impl ProductAutomaton {
             return Some(base_dist);
         }
 
-        let remaining = self.max_distance.saturating_sub(base_dist);
+        let remaining = self.max_distance().saturating_sub(base_dist);
         if remaining == 0 {
             return None;
         }
@@ -1349,5 +1519,260 @@ mod tests {
 
         let transposition = ProductAutomaton::with_algorithm(nfa, 1, Algorithm::Transposition);
         assert!(transposition.accepts(b"ba")); // distance 1 with transposition
+    }
+
+    // ============================================================================
+    // Articulatory Cost Tests
+    // ============================================================================
+
+    #[cfg(feature = "phonetic-rules")]
+    mod articulatory_tests {
+        use super::*;
+        use crate::transducer::ArticulatoryCosts;
+
+        /// Test that articulatory costs constructor works properly.
+        #[test]
+        fn test_articulatory_costs_constructor() {
+            let nfa = compile(&parse("test").unwrap()).unwrap();
+            let costs = ArticulatoryCosts::default();
+
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                2.0,
+                Algorithm::Standard,
+                costs.clone(),
+            );
+
+            assert!(product.articulatory_costs().is_some());
+            assert!((product.max_cost() - 2.0).abs() < 1e-9);
+            assert_eq!(product.algorithm(), Algorithm::Standard);
+        }
+
+        /// Test that substitution costs reflect articulatory distance.
+        /// Similar sounds (voicing pairs) should cost less than distant sounds.
+        #[test]
+        fn test_substitution_cost_varies_by_phonetic_similarity() {
+            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let costs = ArticulatoryCosts::default();
+
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                2.0,
+                Algorithm::Standard,
+                costs,
+            );
+
+            // p→b (voicing only) should cost less than p→k (different place)
+            let pb_cost = product.substitution_cost('b', Some('p'));
+            let pk_cost = product.substitution_cost('k', Some('p'));
+
+            assert!(pb_cost < pk_cost,
+                "p→b ({}) should be cheaper than p→k ({})", pb_cost, pk_cost);
+
+            // p→p should be free
+            let pp_cost = product.substitution_cost('p', Some('p'));
+            assert!(pp_cost < 0.01, "p→p should be nearly free, got {}", pp_cost);
+        }
+
+        /// Test that the transition() method uses articulatory costs for substitutions.
+        #[test]
+        fn test_transition_uses_articulatory_costs() {
+            // Simple pattern that matches 'p'
+            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let costs = ArticulatoryCosts::default();
+
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                2.0,
+                Algorithm::Standard,
+                costs,
+            );
+
+            let initial = product.initial_state();
+
+            // Transition with exact match 'p' - no cost
+            let match_successors = product.transition(&initial, 'p');
+            let match_state = match_successors.iter()
+                .find(|s| s.accumulated_cost < 0.01)
+                .expect("should find match state with zero cost");
+            assert!(match_state.accumulated_cost < 0.01,
+                "Exact match should have near-zero cost, got {}", match_state.accumulated_cost);
+
+            // Transition with 'b' - should have low articulatory cost (voicing pair)
+            let b_successors = product.transition(&initial, 'b');
+            let b_subst_state = b_successors.iter()
+                .find(|s| s.accumulated_cost > 0.01 && s.accumulated_cost < 0.5)
+                .expect("should find substitution state with low cost for 'b'");
+
+            // Transition with 'k' - should have higher articulatory cost
+            let k_successors = product.transition(&initial, 'k');
+            let k_subst_state = k_successors.iter()
+                .find(|s| s.accumulated_cost > 0.3)
+                .expect("should find substitution state with higher cost for 'k'");
+
+            assert!(b_subst_state.accumulated_cost < k_subst_state.accumulated_cost,
+                "p→b ({}) should be cheaper than p→k ({})",
+                b_subst_state.accumulated_cost, k_subst_state.accumulated_cost);
+        }
+
+        /// Test accumulated cost across multiple transitions.
+        #[test]
+        fn test_accumulated_cost_tracking() {
+            let nfa = compile(&parse("ab").unwrap()).unwrap();
+            let costs = ArticulatoryCosts::default();
+
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                3.0,  // Allow up to 3.0 total cost
+                Algorithm::Standard,
+                costs,
+            );
+
+            let initial = product.initial_state();
+            assert!(initial.accumulated_cost.abs() < 1e-9, "Initial cost should be 0");
+
+            // Transition with 'a' (exact match)
+            let after_a = product.transition(&initial, 'a');
+            let match_a = after_a.iter()
+                .find(|s| s.accumulated_cost < 0.01)
+                .expect("should find exact match for 'a'");
+
+            // Transition with 'd' instead of 'b' (substitution)
+            let after_d = product.transition(match_a, 'd');
+            // Should have accumulated some cost from the substitution
+            let subst_state = after_d.iter()
+                .find(|s| s.accumulated_cost > 0.1)
+                .expect("should find state with accumulated substitution cost");
+
+            assert!(subst_state.accumulated_cost > 0.1,
+                "Accumulated cost should reflect substitution, got {}", subst_state.accumulated_cost);
+        }
+
+        /// Test that without articulatory costs, fixed cost (1.0) is used.
+        #[test]
+        fn test_fixed_cost_without_articulatory() {
+            let nfa = compile(&parse("p").unwrap()).unwrap();
+
+            // No articulatory costs
+            let product = ProductAutomatonChar::new(nfa, 2);
+
+            // Without articulatory costs, all substitutions should cost 1.0
+            let initial = product.initial_state();
+
+            let b_successors = product.transition(&initial, 'b');
+            let k_successors = product.transition(&initial, 'k');
+
+            // Find substitution states (with cost = 1.0)
+            let b_subst = b_successors.iter()
+                .find(|s| (s.accumulated_cost - 1.0).abs() < 0.01);
+            let k_subst = k_successors.iter()
+                .find(|s| (s.accumulated_cost - 1.0).abs() < 0.01);
+
+            assert!(b_subst.is_some(), "Should find substitution with cost 1.0 for 'b'");
+            assert!(k_subst.is_some(), "Should find substitution with cost 1.0 for 'k'");
+        }
+
+        /// Test that edit_distance() rounds up fractional costs.
+        #[test]
+        fn test_edit_distance_rounds_up() {
+            use rustc_hash::FxHashSet;
+
+            let states: FxHashSet<StateId> = vec![0].into_iter().collect();
+
+            // 0.3 cost should round up to 1
+            let state1 = ProductStateChar::new(states.clone(), 0.3);
+            assert_eq!(state1.edit_distance(), 1);
+
+            // 1.7 cost should round up to 2
+            let state2 = ProductStateChar::new(states.clone(), 1.7);
+            assert_eq!(state2.edit_distance(), 2);
+
+            // 0.0 cost should be 0
+            let state3 = ProductStateChar::new(states, 0.0);
+            assert_eq!(state3.edit_distance(), 0);
+        }
+
+        /// Test articulatory costs with IPA characters.
+        #[test]
+        fn test_ipa_articulatory_costs() {
+            // Pattern with IPA voiceless bilabial stop
+            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let costs = ArticulatoryCosts::default();
+
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                2.0,
+                Algorithm::Standard,
+                costs,
+            );
+
+            // Test with IPA characters (if supported)
+            // ʃ (voiceless postalveolar fricative) vs s (voiceless alveolar fricative)
+            // Both are voiceless fricatives, but different place
+            let sh_cost = product.substitution_cost('ʃ', Some('s'));
+            let sh_p_cost = product.substitution_cost('ʃ', Some('p'));
+
+            // ʃ→s should be cheaper than ʃ→p (fricative vs stop)
+            assert!(sh_cost < sh_p_cost,
+                "ʃ→s ({}) should be cheaper than ʃ→p ({})", sh_cost, sh_p_cost);
+        }
+
+        /// Test that max_cost threshold is respected.
+        #[test]
+        fn test_max_cost_threshold() {
+            let nfa = compile(&parse("abc").unwrap()).unwrap();
+            let costs = ArticulatoryCosts::default();
+
+            // Very low max_cost - should prune expensive substitutions
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                0.5,  // Only allow 0.5 total cost
+                Algorithm::Standard,
+                costs,
+            );
+
+            let initial = product.initial_state();
+
+            // Transition with 'z' - expensive substitution should be pruned
+            let z_successors = product.transition(&initial, 'z');
+
+            // All successor states should have cost <= 0.5
+            for state in &z_successors {
+                assert!(state.accumulated_cost <= 0.5 + 1e-9,
+                    "State cost {} exceeds max_cost 0.5", state.accumulated_cost);
+            }
+        }
+
+        /// Test is_accepting with articulatory costs.
+        #[test]
+        fn test_is_accepting_with_articulatory_costs() {
+            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let costs = ArticulatoryCosts::default();
+
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                1.0,  // max cost 1.0
+                Algorithm::Standard,
+                costs,
+            );
+
+            let initial = product.initial_state();
+
+            // After matching 'p', should accept
+            let after_p = product.transition(&initial, 'p');
+            let match_state = after_p.iter()
+                .find(|s| s.accumulated_cost < 0.01)
+                .expect("should find match state");
+            assert!(product.is_accepting(match_state), "Should accept after matching 'p'");
+
+            // After substituting with similar sound 'b', might still accept if cost < 1.0
+            let after_b = product.transition(&initial, 'b');
+            let subst_state = after_b.iter()
+                .find(|s| s.accumulated_cost > 0.01 && s.accumulated_cost <= 1.0);
+            if let Some(state) = subst_state {
+                assert!(product.is_accepting(state),
+                    "Should accept similar substitution within cost budget");
+            }
+        }
     }
 }

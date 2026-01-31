@@ -112,6 +112,7 @@ pub mod error;
 pub mod loader;
 pub mod nfa_compiler;
 pub mod parser;
+pub mod symbol_expander;
 
 // Re-export main types
 pub use ast::{
@@ -124,6 +125,7 @@ pub use nfa_compiler::{
     is_match_multiline, CompileOptions, CompiledNFA,
 };
 pub use parser::{parse_str, Parser};
+pub use symbol_expander::expand_pattern_symbols;
 
 // Re-export serialization functions (requires serialization feature)
 #[cfg(feature = "serialization")]

@@ -14,12 +14,9 @@ use crate::transducer::Algorithm;
 use anyhow::Result;
 use std::path::Path;
 
-// NOTE: The old FuzzyCache API has been refactored. The REPL cache functionality
-// needs to be updated to use the new eviction wrapper API.
-// #[cfg(feature = "pathmap-backend")]
-// use crate::cache::strategy::*;
-// #[cfg(feature = "pathmap-backend")]
-// use crate::cache::{FuzzyCache, FuzzyCacheBuilder};
+// NOTE: For caching, use the eviction wrappers from cache::eviction module.
+// Example: Lru<PathMapDictionary>, Ttl<DynamicDawg>, etc.
+// See src/cache/eviction/mod.rs for available wrappers.
 
 /// Helper to extract all terms from any dictionary using DFS
 fn extract_terms<D>(dict: &D) -> Vec<String>
@@ -250,14 +247,6 @@ impl DictContainer {
     }
 }
 
-/// Cache container for different eviction strategies
-/// TODO: Update to use new eviction wrapper API (cache::eviction module)
-#[cfg(all(feature = "pathmap-backend", not(feature = "pathmap-backend")))] // Disabled - needs refactor
-pub enum CacheContainer {
-    /// Placeholder - old FuzzyCache API removed
-    _Disabled,
-}
-
 /// REPL state
 pub struct ReplState {
     /// Dictionary container
@@ -282,9 +271,6 @@ pub struct ReplState {
     pub auto_sync_path: Option<std::path::PathBuf>,
     /// Custom config file path
     pub config_file_path: Option<std::path::PathBuf>,
-    /// Optional fuzzy cache - DISABLED: needs refactor for new cache API
-    #[cfg(all(feature = "pathmap-backend", not(feature = "pathmap-backend")))]
-    pub cache: Option<CacheContainer>,
 }
 
 impl ReplState {

@@ -493,6 +493,19 @@ impl TransitionLabelChar {
     pub fn consumes_input(&self) -> bool {
         !self.is_epsilon() && !self.is_anchor()
     }
+
+    /// Get the expected character if this is a single-character label.
+    ///
+    /// Returns `Some(c)` for `Char(c)` labels, `None` for all other label types
+    /// (Epsilon, Any, CharClass, anchors). This is useful for computing
+    /// articulatory distance between input and pattern characters.
+    #[inline]
+    pub fn expected_char(&self) -> Option<char> {
+        match self {
+            TransitionLabelChar::Char(c) => Some(*c),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for TransitionLabelChar {

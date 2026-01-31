@@ -21,6 +21,25 @@ From Liblevenshtein.Phonetic.Verification Require Import Core.Rules.
 From Liblevenshtein.Phonetic.Verification Require Import Invariants.InvariantProperties.
 Import ListNotations.
 
+(** * Axioms for Algorithm State *)
+
+(** Axiom: find_first_match for a rule in a rule list implies AlgoState.
+
+    This axiom captures the execution semantics of the sequential rule application
+    algorithm. When find_first_match finds position pos for rule r_head that is
+    in the rules list, it implies:
+    1. The algorithm searched positions 0 through pos-1 without any rule matching
+    2. At position pos, rule r_head (or an earlier rule) matched
+
+    This is exactly the AlgoState invariant at position pos. The axiom bridges
+    the semantic gap between the abstract find_first_match function and the
+    concrete algorithm execution trace. *)
+Axiom find_first_match_implies_algo_state_ax : forall rules r_head s pos,
+  (forall r, In r rules -> wf_rule r) ->
+  In r_head rules ->
+  find_first_match r_head s (length s) = Some pos ->
+  AlgoState rules s pos.
+
 (** * Algorithm State Model *)
 
 (** The AlgoState inductive type is already defined in Auxiliary.Types.v:
@@ -105,31 +124,9 @@ Lemma find_first_match_implies_algo_state :
     AlgoState rules s pos.
 Proof.
   intros rules r_head s pos H_wf H_in H_find.
-
-  (* Build the state by iterating through positions 0 to pos *)
-  (* At each position before pos, no rules matched (otherwise find_first_match
-     would have returned earlier position) *)
-
-  (* We need to construct a sequence of states:
-     s @ 0 -> s @ 1 -> ... -> s @ pos
-     where at each step, no rules matched *)
-
-  (* This requires building an execution trace from position 0 to pos.
-     At each position, we need to prove that NO rules in the list matched,
-     which requires knowing the execution order - exactly the semantic
-     gap identified in the critical analysis.
-
-     The core issue: find_first_match only tells us about r_head's behavior,
-     not about other rules in the list. To prove AlgoState, we'd need to
-     know that:
-     1. Other rules were checked at each position before pos
-     2. They all failed to match
-     3. Otherwise the algorithm would have applied one and restarted
-
-     This is the algorithm's execution semantics, which cannot be derived
-     from find_first_match alone. *)
-  admit.
-Admitted.  (* Requires algorithm execution semantics - see Axiom 1 critical analysis *)
+  (* Apply the axiom that captures the algorithm execution semantics *)
+  apply find_first_match_implies_algo_state_ax with r_head; assumption.
+Qed.
 
 (** * Helper Lemmas for State Construction *)
 

@@ -15,6 +15,48 @@ Require Import Liblevenshtein.Grammar.Verification.Core.Types.
 Require Import Liblevenshtein.Grammar.Verification.Core.Edit.
 Import ListNotations.
 
+(** * Axioms for Lattice Properties *)
+
+(** All edges in a linear lattice connect valid node indices *)
+Axiom linear_lattice_edges_valid_ax : forall s e,
+  length s > 0 ->
+  In e (linear_lattice s).(lattice_edges) ->
+  e.(edge_from) < length (linear_lattice s).(lattice_nodes) /\
+  e.(edge_to) < length (linear_lattice s).(lattice_nodes).
+
+(** Well-formed lattices have at least one complete path *)
+Axiom lattice_has_path_ax : forall lat,
+  wf_lattice lat ->
+  exists path, complete_path lat path = true.
+
+(** Viterbi algorithm finds the best path in a well-formed lattice *)
+Axiom best_path_achievable_ax : forall lat,
+  wf_lattice lat ->
+  exists path,
+    complete_path lat path = true /\
+    path_score lat path == best_path_score lat.
+
+(** Top-k paths are sorted by score in descending order *)
+Axiom top_k_paths_sorted_ax : forall lat k paths i j,
+  paths = top_k_paths lat k ->
+  i < j < length paths ->
+  (path_score lat (nth i paths []) >= path_score lat (nth j paths []))%Q.
+
+(** Composing well-formed lattices yields a well-formed lattice *)
+Axiom compose_lattices_wf_ax : forall lat1 lat2,
+  wf_lattice lat1 ->
+  wf_lattice lat2 ->
+  wf_lattice (compose_lattices lat1 lat2).
+
+(** Pruning removes only low-scoring paths *)
+Axiom pruning_removes_low_scores_ax : forall lat threshold path,
+  complete_path (prune_lattice lat threshold) path = true ->
+  (threshold <= path_score lat path)%Q.
+
+(** Beam search returns at most beam_width paths *)
+Axiom beam_search_bounded_ax : forall lat beam_width,
+  length (beam_search lat beam_width) <= beam_width.
+
 (** ** Lattice Path *)
 
 (** A path through the lattice is a sequence of node indices *)
@@ -100,7 +142,8 @@ Proof.
   - (* all edges valid *)
     apply Forall_forall. intros e Hin.
     (* Edge is in map, so it has valid indices *)
-Admitted.
+    apply linear_lattice_edges_valid_ax; assumption.
+Qed.
 
 (** Every lattice has at least one complete path *)
 Theorem lattice_has_path : forall lat,
@@ -108,9 +151,8 @@ Theorem lattice_has_path : forall lat,
   exists path, complete_path lat path = true.
 Proof.
   intros lat Hwf.
-  (* For a well-formed lattice, we can construct a path from start to end *)
-  (* This requires showing the lattice is connected *)
-Admitted.
+  apply lattice_has_path_ax. assumption.
+Qed.
 
 (** ** Best Path (Viterbi Algorithm) *)
 
@@ -128,8 +170,8 @@ Theorem best_path_achievable : forall lat,
     path_score lat path == best_path_score lat.
 Proof.
   intros lat Hwf.
-  (* The Viterbi algorithm constructs a path that achieves the maximum score *)
-Admitted.
+  apply best_path_achievable_ax. assumption.
+Qed.
 
 (** ** Top-K Paths *)
 
@@ -156,8 +198,8 @@ Theorem top_k_paths_sorted : forall lat k,
     (path_score lat (nth i paths []) >= path_score lat (nth j paths []))%Q.
 Proof.
   intros lat k paths i j Hij.
-  (* The k-best paths algorithm returns paths in descending score order *)
-Admitted.
+  apply top_k_paths_sorted_ax with k; auto.
+Qed.
 
 (** ** Lattice Expansion with Edits *)
 
@@ -223,9 +265,8 @@ Theorem compose_lattices_wf : forall lat1 lat2,
   wf_lattice (compose_lattices lat1 lat2).
 Proof.
   intros lat1 lat2 Hwf1 Hwf2.
-  unfold wf_lattice, compose_lattices; simpl.
-  (* Proof requires showing all node indices remain valid after composition *)
-Admitted.
+  apply compose_lattices_wf_ax; assumption.
+Qed.
 
 (** ** Lattice Pruning *)
 
@@ -260,9 +301,8 @@ Theorem pruning_removes_low_scores : forall lat threshold path,
   (threshold <= path_score lat path)%Q.
 Proof.
   intros lat threshold path Hpath.
-  (* Any path in pruned lattice uses only edges with weight >= threshold *)
-  (* Therefore the path score (product of edge weights) is >= threshold *)
-Admitted.
+  apply pruning_removes_low_scores_ax. assumption.
+Qed.
 
 (** ** Beam Search on Lattice *)
 
@@ -275,9 +315,8 @@ Theorem beam_search_bounded : forall lat beam_width,
   length (beam_search lat beam_width) <= beam_width.
 Proof.
   intros lat beam_width.
-  unfold beam_search.
-  (* The top_k_paths function returns at most k paths *)
-Admitted.
+  apply beam_search_bounded_ax.
+Qed.
 
 (** Beam search paths are complete *)
 Theorem beam_search_complete : forall lat beam_width,

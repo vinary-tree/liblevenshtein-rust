@@ -3,6 +3,11 @@
 use crate::transducer::Algorithm;
 use std::path::PathBuf;
 
+#[cfg(feature = "cli")]
+use crate::cli::args::SerializationFormat;
+#[cfg(feature = "cli")]
+use crate::repl::state::DictionaryBackend;
+
 /// Query parameters used by both CLI and REPL
 #[derive(Debug, Clone)]
 pub struct QueryParams {
@@ -95,4 +100,72 @@ impl CommandResult {
             should_exit: true,
         }
     }
+}
+
+// ============================================================================
+// I/O Operation Types (requires CLI feature for format/backend types)
+// ============================================================================
+
+/// Parameters for serializing (saving) a dictionary
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone)]
+pub struct SerializeParams {
+    /// Path to save the dictionary to
+    pub path: PathBuf,
+    /// Serialization format to use
+    pub format: SerializationFormat,
+    /// Whether to overwrite existing files
+    pub overwrite: bool,
+}
+
+/// Parameters for deserializing (loading) a dictionary
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone)]
+pub struct DeserializeParams {
+    /// Path to load the dictionary from
+    pub path: PathBuf,
+    /// Optional backend hint (auto-detected if None)
+    pub backend: Option<DictionaryBackend>,
+    /// Optional format hint (auto-detected if None)
+    pub format: Option<SerializationFormat>,
+}
+
+/// Result of a serialization operation
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone)]
+pub struct SerializeResult {
+    /// Number of terms serialized
+    pub term_count: usize,
+    /// Size of the serialized data in bytes
+    pub byte_size: u64,
+    /// Format used for serialization
+    pub format: SerializationFormat,
+}
+
+/// Result of a deserialization operation
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone)]
+pub struct DeserializeResult {
+    /// Number of terms loaded
+    pub term_count: usize,
+    /// Backend used for the dictionary
+    pub backend: DictionaryBackend,
+    /// Format detected/used for deserialization
+    pub format: SerializationFormat,
+}
+
+/// Information about a dictionary file
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone)]
+pub struct DictInfo {
+    /// File path
+    pub path: PathBuf,
+    /// Number of terms in the dictionary
+    pub term_count: usize,
+    /// Backend type
+    pub backend: DictionaryBackend,
+    /// Serialization format
+    pub format: SerializationFormat,
+    /// File size in bytes
+    pub file_size: u64,
 }

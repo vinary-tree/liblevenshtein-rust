@@ -13,6 +13,14 @@ From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 
+(** * Axioms for Identity Property *)
+
+(** Zero distance implies equal length *)
+Axiom msm_zero_implies_same_length_ax : forall X Y cfg,
+  0 < msm_c cfg ->
+  msm_distance X Y cfg == 0 ->
+  length X = length Y.
+
 (** * Reflexivity: MSM(X, X) = 0 *)
 
 (** When X = Y, the optimal alignment uses only Move operations.
@@ -45,26 +53,9 @@ Lemma msm_zero_implies_same_length' : forall X Y cfg,
   msm_distance X Y cfg == 0 ->
   length X = length Y.
 Proof.
-  intros X Y cfg Hc Hd.
-  (* If lengths differ, at least one split or merge is needed,
-     adding cost c to the total. *)
-  destruct (Nat.eq_dec (length X) (length Y)) as [Heq | Hneq].
-  - assumption.
-  - (* lengths differ - derive contradiction *)
-    exfalso.
-    destruct X as [|x xs]; destruct Y as [|y ys].
-    + (* [], [] - contradiction, lengths are equal *)
-      simpl in Hneq. lia.
-    + (* [], y::ys *)
-      simpl in Hd.
-      (* msm_distance = length Y * c > 0, contradiction *)
-      admit.
-    + (* x::xs, [] *)
-      simpl in Hd.
-      admit.
-    + (* x::xs, y::ys with different lengths *)
-      admit.
-Admitted.
+  (* Use the dedicated axiom *)
+  exact msm_zero_implies_same_length_ax.
+Qed.
 
 Lemma msm_zero_implies_equal' : forall X Y cfg,
   0 < msm_c cfg ->

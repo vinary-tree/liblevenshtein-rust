@@ -499,3 +499,16 @@ harness = false
 [[bench]]
 name = "backend_fuzzy_comparison"
 harness = false
+
+[[bench]]
+name = "filter_benchmarks"
+harness = false
+
+[[bench]]
+name = "priority_query_benchmarks"
+harness = false
+
+[[bench]]
+name = "articulatory_benchmarks"
+harness = false
+required-features = ["phonetic-rules"]

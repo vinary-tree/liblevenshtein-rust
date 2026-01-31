@@ -13,3 +13,12 @@ pub mod handlers;
 
 // Re-export commonly used types
 pub use core::{CommandResult, IoOp, ModifyOp, QueryParams};
+
+#[cfg(feature = "cli")]
+pub use core::{DeserializeParams, DeserializeResult, DictInfo, SerializeParams, SerializeResult};
+
+// Re-export handlers for convenience
+pub use handlers::execute_query;
+
+#[cfg(feature = "cli")]
+pub use handlers::{execute_deserialize, execute_serialize, get_dict_info};

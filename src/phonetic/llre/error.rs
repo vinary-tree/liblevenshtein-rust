@@ -147,6 +147,14 @@ pub enum LLreErrorKind {
         path2: String,
     },
 
+    /// Cyclic pattern reference detected during symbol expansion
+    CyclicPatternReference {
+        /// The pattern name that completes the cycle
+        name: String,
+        /// The chain of pattern references that form the cycle
+        chain: Vec<String>,
+    },
+
     // ==================== Compilation Errors ====================
     /// NFA compilation failed
     NfaCompilationFailed(String),
@@ -455,6 +463,14 @@ impl fmt::Display for LLreErrorKind {
                     f,
                     "alias '{}' already used by '{}', cannot assign to '{}'",
                     alias, path1, path2
+                )
+            }
+            LLreErrorKind::CyclicPatternReference { name, chain } => {
+                write!(
+                    f,
+                    "cyclic pattern reference: '{}' forms a cycle (chain: {})",
+                    name,
+                    chain.join(" -> ")
                 )
             }
 

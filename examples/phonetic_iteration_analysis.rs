@@ -8,10 +8,10 @@ use liblevenshtein::phonetic::*;
 
 /// Instrumented version of apply_rules_seq that counts iterations
 fn apply_rules_seq_instrumented(
-    rules: &[RewriteRule],
-    s: &[Phone],
+    rules: &[RewriteRuleByte],
+    s: &[PhoneByte],
     fuel: usize,
-) -> (Option<Vec<Phone>>, usize) {
+) -> (Option<Vec<PhoneByte>>, usize) {
     let mut current = s.to_vec();
     let mut remaining_fuel = fuel;
     let mut iteration_count = 0;
@@ -62,7 +62,7 @@ fn apply_rules_seq_instrumented(
 }
 
 fn main() {
-    println!("=== Phonetic Rules Iteration Count Analysis ===\n");
+    println!("=== PhoneBytetic Rules Iteration Count Analysis ===\n");
     println!("Testing H5: Iteration count increases superlinearly with input size\n");
 
     let ortho_rules = orthography_rules();
@@ -81,13 +81,13 @@ fn main() {
     let mut baseline_iterations = 0;
 
     for (expected_size, word) in test_cases.iter() {
-        let phones: Vec<Phone> = word
+        let phones: Vec<PhoneByte> = word
             .bytes()
             .map(|b| {
                 if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u') {
-                    Phone::Vowel(b)
+                    PhoneByte::Vowel(b)
                 } else {
-                    Phone::Consonant(b)
+                    PhoneByte::Consonant(b)
                 }
             })
             .collect();

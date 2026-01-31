@@ -39,13 +39,13 @@ fn main() {
     println!("|------------|--------|--------------|-------------|-------------|--------------|-----------|");
 
     for (expected_size, word) in test_cases.iter() {
-        let phones: Vec<Phone> = word
+        let phones: Vec<PhoneByte> = word
             .bytes()
             .map(|b| {
                 if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u') {
-                    Phone::Vowel(b)
+                    PhoneByte::Vowel(b)
                 } else {
-                    Phone::Consonant(b)
+                    PhoneByte::Consonant(b)
                 }
             })
             .collect();

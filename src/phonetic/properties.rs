@@ -16,7 +16,9 @@
 mod tests {
     use super::super::application::{apply_rule_at, apply_rules_seq, MAX_EXPANSION_FACTOR};
     use super::super::rules::{orthography_rules, phonetic_rules, test_rules, zompist_rules};
-    use super::super::types::{Context, Phone, RewriteRule};
+    use super::super::types::{
+        Context, ContextByte, Phone, PhoneByte, RewriteRule, RewriteRuleByte,
+    };
     use proptest::prelude::*;
 
     // ========================================================================
@@ -24,42 +26,42 @@ mod tests {
     // ========================================================================
 
     /// Generate arbitrary Phone values
-    fn arb_phone() -> impl Strategy<Value = Phone> {
+    fn arb_phone() -> impl Strategy<Value = PhoneByte> {
         prop_oneof![
             any::<u8>()
                 .prop_filter("valid ASCII", |&c| c >= 32 && c < 127)
-                .prop_map(Phone::Vowel),
+                .prop_map(PhoneByte::Vowel),
             any::<u8>()
                 .prop_filter("valid ASCII", |&c| c >= 32 && c < 127)
-                .prop_map(Phone::Consonant),
+                .prop_map(PhoneByte::Consonant),
             (
                 any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
                 any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127)
             )
-                .prop_map(|(c1, c2)| Phone::Digraph(c1, c2)),
-            Just(Phone::Silent),
+                .prop_map(|(c1, c2)| PhoneByte::Digraph(c1, c2)),
+            Just(PhoneByte::Silent),
         ]
     }
 
     /// Generate arbitrary Context values
-    fn arb_context() -> impl Strategy<Value = Context> {
+    fn arb_context() -> impl Strategy<Value = ContextByte> {
         prop_oneof![
-            Just(Context::Initial),
-            Just(Context::Final),
+            Just(ContextByte::Initial),
+            Just(ContextByte::Final),
             prop::collection::vec(any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127), 0..5)
-                .prop_map(Context::BeforeVowel),
+                .prop_map(ContextByte::BeforeVowel),
             prop::collection::vec(any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127), 0..5)
-                .prop_map(Context::AfterConsonant),
+                .prop_map(ContextByte::AfterConsonant),
             prop::collection::vec(any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127), 0..5)
-                .prop_map(Context::BeforeConsonant),
+                .prop_map(ContextByte::BeforeConsonant),
             prop::collection::vec(any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127), 0..5)
-                .prop_map(Context::AfterVowel),
-            Just(Context::Anywhere),
+                .prop_map(ContextByte::AfterVowel),
+            Just(ContextByte::Anywhere),
         ]
     }
 
     /// Generate arbitrary RewriteRule values
-    fn arb_rewrite_rule() -> impl Strategy<Value = RewriteRule> {
+    fn arb_rewrite_rule() -> impl Strategy<Value = RewriteRuleByte> {
         (
             any::<usize>(),
             "[a-z]+",
@@ -69,7 +71,7 @@ mod tests {
             prop::num::f64::NORMAL.prop_filter("non-negative", |&w| w >= 0.0),
         )
             .prop_map(
-                |(rule_id, rule_name, pattern, replacement, context, weight)| RewriteRule {
+                |(rule_id, rule_name, pattern, replacement, context, weight)| RewriteRuleByte {
                     rule_id,
                     rule_name,
                     pattern,
@@ -82,7 +84,7 @@ mod tests {
     }
 
     /// Generate phonetic strings (sequences of phones)
-    fn arb_phonetic_string() -> impl Strategy<Value = Vec<Phone>> {
+    fn arb_phonetic_string() -> impl Strategy<Value = Vec<PhoneByte>> {
         prop::collection::vec(arb_phone(), 0..20)
     }
 
@@ -375,7 +377,7 @@ mod tests {
         /// Property: Empty rule set is identity
         #[test]
         fn prop_empty_rules_identity(s in arb_phonetic_string()) {
-            let empty_rules: Vec<RewriteRule> = vec![];
+            let empty_rules: Vec<RewriteRuleByte> = vec![];
             let result = apply_rules_seq(&empty_rules, &s, 100);
             prop_assert_eq!(result, Some(s.clone()));
         }

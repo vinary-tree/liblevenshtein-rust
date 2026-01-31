@@ -108,6 +108,19 @@ To prevent conflicts, rules use non-overlapping ID ranges:
 | 3700-3799 | BM Greek |
 | 3800-3899 | BM Hebrew |
 
+## Complementary: Articulatory Distance
+
+The rule-based phonetic patterns described above handle *known* phonetic equivalences through explicit transformations. For *residual* substitutions not covered by rules, liblevenshtein also provides **articulatory distance**—a feature-based approach that computes phonetic similarity between any two IPA characters based on their articulatory properties.
+
+| Approach | Strengths | Use Case |
+|----------|-----------|----------|
+| **LLev Rules** | Context-sensitive, language-specific, explicit patterns | Known phonetic alternations (tion→ʃən, ph→f) |
+| **Articulatory Distance** | Universal, handles novel pairs, gradient costs | Residual substitutions after rule application |
+
+The two approaches complement each other: rules handle predictable patterns while articulatory distance provides principled costs for everything else.
+
+For full details on articulatory distance, see: [Articulatory Distance Guide](../guides/articulatory-distance.md)
+
 ## Weight System
 
 Rules use a consistent weight system:

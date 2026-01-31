@@ -9,6 +9,8 @@ use libdictenstein::zipper::DictZipper;
 use libdictenstein::Dictionary;
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
+use std::sync::Arc;
+use parking_lot::RwLock;
 
 /// Create a PersistentARTrie from a list of terms for testing
 fn create_test_dict(terms: &[&str]) -> PersistentARTrie<()> {
@@ -17,6 +19,11 @@ fn create_test_dict(terms: &[&str]) -> PersistentARTrie<()> {
         dict.insert(term);
     }
     dict
+}
+
+/// Wrap a PersistentARTrie in a shared wrapper for zipper creation
+fn wrap_dict(dict: PersistentARTrie<()>) -> Arc<RwLock<PersistentARTrie<()>>> {
+    Arc::new(RwLock::new(dict))
 }
 
 // ============================================================================
@@ -244,7 +251,8 @@ fn test_persistent_artrie_high_distance() {
 #[test]
 fn test_persistent_artrie_zipper_basic() {
     let dict = create_test_dict(&["cat", "car", "card"]);
-    let zipper = PersistentARTrieZipper::new_from_dict(&dict);
+    let shared = wrap_dict(dict);
+    let zipper = PersistentARTrieZipper::new_from_shared(shared);
 
     // Start at root
     assert!(zipper.path().is_empty());
@@ -265,7 +273,8 @@ fn test_persistent_artrie_zipper_basic() {
 #[test]
 fn test_persistent_artrie_zipper_children() {
     let dict = create_test_dict(&["cat", "car", "cow"]);
-    let zipper = PersistentARTrieZipper::new_from_dict(&dict);
+    let shared = wrap_dict(dict);
+    let zipper = PersistentARTrieZipper::new_from_shared(shared);
 
     // Root should have 'c' child
     let children: Vec<_> = zipper.children().collect();
@@ -282,7 +291,8 @@ fn test_persistent_artrie_zipper_children() {
 #[test]
 fn test_persistent_artrie_zipper_nonexistent() {
     let dict = create_test_dict(&["cat"]);
-    let zipper = PersistentARTrieZipper::new_from_dict(&dict);
+    let shared = wrap_dict(dict);
+    let zipper = PersistentARTrieZipper::new_from_shared(shared);
 
     // No 'x' from root
     assert!(zipper.descend(b'x').is_none());
@@ -295,7 +305,8 @@ fn test_persistent_artrie_zipper_nonexistent() {
 #[test]
 fn test_persistent_artrie_zipper_clone() {
     let dict = create_test_dict(&["test"]);
-    let z1 = PersistentARTrieZipper::new_from_dict(&dict);
+    let shared = wrap_dict(dict);
+    let z1 = PersistentARTrieZipper::new_from_shared(shared);
     let z2 = z1.clone();
 
     // Both should work independently

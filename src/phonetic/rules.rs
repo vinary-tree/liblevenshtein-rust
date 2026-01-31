@@ -145,7 +145,10 @@ pub mod vietnamese;
 #[cfg(feature = "embedded-rules")]
 pub mod welsh;
 
-use super::types::{Context, ContextChar, Phone, PhoneChar, RewriteRule, RewriteRuleChar};
+use super::types::{
+    Context, ContextByte, ContextChar, Phone, PhoneByte, PhoneChar, RewriteRule, RewriteRuleByte,
+    RewriteRuleChar,
+};
 
 // ============================================================================
 // Helper constants
@@ -168,7 +171,7 @@ const VOWELS_CHAR: &[char] = &['a', 'e', 'i', 'o', 'u'];
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:49-56`
 ///
 /// Example: "church" → "çurç"
-fn rule_ch_to_tsh() -> RewriteRule {
+fn rule_ch_to_tsh() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 1,
         rule_name: "ch → ç (tsh sound)".to_string(),
@@ -183,7 +186,7 @@ fn rule_ch_to_tsh() -> RewriteRule {
 /// Rule 2: sh → $ (digraph)
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:60-67`
-fn rule_sh_to_sh() -> RewriteRule {
+fn rule_sh_to_sh() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 2,
         rule_name: "sh → $ (sh sound)".to_string(),
@@ -198,7 +201,7 @@ fn rule_sh_to_sh() -> RewriteRule {
 /// Rule 3: ph → f
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:71-78`
-fn rule_ph_to_f() -> RewriteRule {
+fn rule_ph_to_f() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 3,
         rule_name: "ph → f".to_string(),
@@ -213,7 +216,7 @@ fn rule_ph_to_f() -> RewriteRule {
 /// Rule 20: c → s before front vowels (e, i)
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:84-91`
-fn rule_c_to_s_before_front() -> RewriteRule {
+fn rule_c_to_s_before_front() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 20,
         rule_name: "c → s / _[ie]".to_string(),
@@ -228,7 +231,7 @@ fn rule_c_to_s_before_front() -> RewriteRule {
 /// Rule 21: c → k elsewhere
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:95-102`
-fn rule_c_to_k_elsewhere() -> RewriteRule {
+fn rule_c_to_k_elsewhere() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 21,
         rule_name: "c → k (elsewhere)".to_string(),
@@ -243,7 +246,7 @@ fn rule_c_to_k_elsewhere() -> RewriteRule {
 /// Rule 22: g → j before front vowels
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:107-114`
-fn rule_g_to_j_before_front() -> RewriteRule {
+fn rule_g_to_j_before_front() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 22,
         rule_name: "g → j / _[ie]".to_string(),
@@ -258,7 +261,7 @@ fn rule_g_to_j_before_front() -> RewriteRule {
 /// Rule 33: Silent 'e' at end of word
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:121-128`
-fn rule_silent_e_final() -> RewriteRule {
+fn rule_silent_e_final() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 33,
         rule_name: "e → ∅ / _#".to_string(),
@@ -273,7 +276,7 @@ fn rule_silent_e_final() -> RewriteRule {
 /// Rule 34: gh → ∅ (silent)
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:132-139`
-fn rule_gh_silent() -> RewriteRule {
+fn rule_gh_silent() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 34,
         rule_name: "gh → ∅".to_string(),
@@ -290,7 +293,7 @@ fn rule_gh_silent() -> RewriteRule {
 // ============================================================================
 
 /// Rule 4: wr → r at word start (write → rite)
-fn rule_wr_initial() -> RewriteRule {
+fn rule_wr_initial() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 4,
         rule_name: "wr → r / #_".to_string(),
@@ -303,7 +306,7 @@ fn rule_wr_initial() -> RewriteRule {
 }
 
 /// Rule 5: wh → w at word start (what → wat)
-fn rule_wh_initial() -> RewriteRule {
+fn rule_wh_initial() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 5,
         rule_name: "wh → w / #_".to_string(),
@@ -316,7 +319,7 @@ fn rule_wh_initial() -> RewriteRule {
 }
 
 /// Rule 6: gn → n at word start (gnome → nome)
-fn rule_gn_initial() -> RewriteRule {
+fn rule_gn_initial() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 6,
         rule_name: "gn → n / #_".to_string(),
@@ -329,7 +332,7 @@ fn rule_gn_initial() -> RewriteRule {
 }
 
 /// Rule 7: kn → n at word start (knife → nife)
-fn rule_kn_initial() -> RewriteRule {
+fn rule_kn_initial() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 7,
         rule_name: "kn → n / #_".to_string(),
@@ -342,7 +345,7 @@ fn rule_kn_initial() -> RewriteRule {
 }
 
 /// Rule 8: mn → n at word start (mnemonic → nemonic)
-fn rule_mn_initial() -> RewriteRule {
+fn rule_mn_initial() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 8,
         rule_name: "mn → n / #_".to_string(),
@@ -355,7 +358,7 @@ fn rule_mn_initial() -> RewriteRule {
 }
 
 /// Rule 9: pt → t at word start (pterodactyl → terodactyl)
-fn rule_pt_initial() -> RewriteRule {
+fn rule_pt_initial() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 9,
         rule_name: "pt → t / #_".to_string(),
@@ -368,7 +371,7 @@ fn rule_pt_initial() -> RewriteRule {
 }
 
 /// Rule 10: ps → s at word start (psychology → sycology)
-fn rule_ps_initial() -> RewriteRule {
+fn rule_ps_initial() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 10,
         rule_name: "ps → s / #_".to_string(),
@@ -381,7 +384,7 @@ fn rule_ps_initial() -> RewriteRule {
 }
 
 /// Rule 11: tm → m at word start (tmesis → mesis)
-fn rule_tm_initial() -> RewriteRule {
+fn rule_tm_initial() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 11,
         rule_name: "tm → m / #_".to_string(),
@@ -398,7 +401,7 @@ fn rule_tm_initial() -> RewriteRule {
 // ============================================================================
 
 /// Rule 35: gh → g before vowels (ghost → gost)
-fn rule_gh_before_vowel() -> RewriteRule {
+fn rule_gh_before_vowel() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 35,
         rule_name: "gh → g / _[aeiou]".to_string(),
@@ -411,7 +414,7 @@ fn rule_gh_before_vowel() -> RewriteRule {
 }
 
 /// Rule 36: ough → o (dough → do)
-fn rule_ough_pattern() -> RewriteRule {
+fn rule_ough_pattern() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 36,
         rule_name: "ough → o".to_string(),
@@ -429,7 +432,7 @@ fn rule_ough_pattern() -> RewriteRule {
 }
 
 /// Rule 37: aught → ot (caught → kot)
-fn rule_aught_pattern() -> RewriteRule {
+fn rule_aught_pattern() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 37,
         rule_name: "aught → ot".to_string(),
@@ -448,7 +451,7 @@ fn rule_aught_pattern() -> RewriteRule {
 }
 
 /// Rule 38: ought → ot (bought → bot)
-fn rule_ought_pattern() -> RewriteRule {
+fn rule_ought_pattern() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 38,
         rule_name: "ought → ot".to_string(),
@@ -471,7 +474,7 @@ fn rule_ought_pattern() -> RewriteRule {
 // ============================================================================
 
 /// Rule 40: x → ks (box → boks)
-fn rule_x_to_ks() -> RewriteRule {
+fn rule_x_to_ks() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 40,
         rule_name: "x → ks".to_string(),
@@ -484,7 +487,7 @@ fn rule_x_to_ks() -> RewriteRule {
 }
 
 /// Rule 41: x → gz after vowel and before vowel (exact → egzact)
-fn rule_x_to_gz_voiced() -> RewriteRule {
+fn rule_x_to_gz_voiced() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 41,
         rule_name: "x → gz / [aeiou]_[aeiou]".to_string(),
@@ -504,7 +507,7 @@ fn rule_x_to_gz_voiced() -> RewriteRule {
 // ============================================================================
 
 /// Rule 50: ea → e (meat → met)
-fn rule_ea_digraph() -> RewriteRule {
+fn rule_ea_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 50,
         rule_name: "ea → e".to_string(),
@@ -517,7 +520,7 @@ fn rule_ea_digraph() -> RewriteRule {
 }
 
 /// Rule 51: ee → e (feet → fet)
-fn rule_ee_digraph() -> RewriteRule {
+fn rule_ee_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 51,
         rule_name: "ee → e".to_string(),
@@ -530,7 +533,7 @@ fn rule_ee_digraph() -> RewriteRule {
 }
 
 /// Rule 52: ai → a (rain → ran)
-fn rule_ai_digraph() -> RewriteRule {
+fn rule_ai_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 52,
         rule_name: "ai → a".to_string(),
@@ -543,7 +546,7 @@ fn rule_ai_digraph() -> RewriteRule {
 }
 
 /// Rule 53: ay → a (day → da)
-fn rule_ay_digraph() -> RewriteRule {
+fn rule_ay_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 53,
         rule_name: "ay → a".to_string(),
@@ -556,7 +559,7 @@ fn rule_ay_digraph() -> RewriteRule {
 }
 
 /// Rule 54: oa → o (boat → bot)
-fn rule_oa_digraph() -> RewriteRule {
+fn rule_oa_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 54,
         rule_name: "oa → o".to_string(),
@@ -569,7 +572,7 @@ fn rule_oa_digraph() -> RewriteRule {
 }
 
 /// Rule 55: oe → o (toe → to)
-fn rule_oe_digraph() -> RewriteRule {
+fn rule_oe_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 55,
         rule_name: "oe → o".to_string(),
@@ -582,7 +585,7 @@ fn rule_oe_digraph() -> RewriteRule {
 }
 
 /// Rule 56: ou → ow (house → howse)
-fn rule_ou_digraph() -> RewriteRule {
+fn rule_ou_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 56,
         rule_name: "ou → ow".to_string(),
@@ -595,7 +598,7 @@ fn rule_ou_digraph() -> RewriteRule {
 }
 
 /// Rule 58: oi → oy (coin → coyn)
-fn rule_oi_digraph() -> RewriteRule {
+fn rule_oi_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 58,
         rule_name: "oi → oy".to_string(),
@@ -608,7 +611,7 @@ fn rule_oi_digraph() -> RewriteRule {
 }
 
 /// Rule 59: ey → e (they → the)
-fn rule_ey_digraph() -> RewriteRule {
+fn rule_ey_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 59,
         rule_name: "ey → e".to_string(),
@@ -621,7 +624,7 @@ fn rule_ey_digraph() -> RewriteRule {
 }
 
 /// Rule 60: ie → i (pie → pi)
-fn rule_ie_digraph() -> RewriteRule {
+fn rule_ie_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 60,
         rule_name: "ie → i".to_string(),
@@ -634,7 +637,7 @@ fn rule_ie_digraph() -> RewriteRule {
 }
 
 /// Rule 61: oo → u (food → fud)
-fn rule_oo_digraph() -> RewriteRule {
+fn rule_oo_digraph() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 61,
         rule_name: "oo → u".to_string(),
@@ -647,7 +650,7 @@ fn rule_oo_digraph() -> RewriteRule {
 }
 
 /// Rule 62: ue → u at word end (blue → blu)
-fn rule_ue_final() -> RewriteRule {
+fn rule_ue_final() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 62,
         rule_name: "ue → u / _#".to_string(),
@@ -664,7 +667,7 @@ fn rule_ue_final() -> RewriteRule {
 // ============================================================================
 
 /// Rule 80: bb → b (rubber → ruber)
-fn rule_bb_simplify() -> RewriteRule {
+fn rule_bb_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 80,
         rule_name: "bb → b".to_string(),
@@ -677,7 +680,7 @@ fn rule_bb_simplify() -> RewriteRule {
 }
 
 /// Rule 81: cc → c (account → acount)
-fn rule_cc_simplify() -> RewriteRule {
+fn rule_cc_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 81,
         rule_name: "cc → c".to_string(),
@@ -690,7 +693,7 @@ fn rule_cc_simplify() -> RewriteRule {
 }
 
 /// Rule 82: dd → d (add → ad)
-fn rule_dd_simplify() -> RewriteRule {
+fn rule_dd_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 82,
         rule_name: "dd → d".to_string(),
@@ -703,7 +706,7 @@ fn rule_dd_simplify() -> RewriteRule {
 }
 
 /// Rule 83: ff → f (staff → staf)
-fn rule_ff_simplify() -> RewriteRule {
+fn rule_ff_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 83,
         rule_name: "ff → f".to_string(),
@@ -716,7 +719,7 @@ fn rule_ff_simplify() -> RewriteRule {
 }
 
 /// Rule 84: gg → g (egg → eg)
-fn rule_gg_simplify() -> RewriteRule {
+fn rule_gg_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 84,
         rule_name: "gg → g".to_string(),
@@ -729,7 +732,7 @@ fn rule_gg_simplify() -> RewriteRule {
 }
 
 /// Rule 85: ll → l (ball → bal)
-fn rule_ll_simplify() -> RewriteRule {
+fn rule_ll_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 85,
         rule_name: "ll → l".to_string(),
@@ -742,7 +745,7 @@ fn rule_ll_simplify() -> RewriteRule {
 }
 
 /// Rule 86: mm → m (hammer → hamer)
-fn rule_mm_simplify() -> RewriteRule {
+fn rule_mm_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 86,
         rule_name: "mm → m".to_string(),
@@ -755,7 +758,7 @@ fn rule_mm_simplify() -> RewriteRule {
 }
 
 /// Rule 87: nn → n (dinner → diner)
-fn rule_nn_simplify() -> RewriteRule {
+fn rule_nn_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 87,
         rule_name: "nn → n".to_string(),
@@ -768,7 +771,7 @@ fn rule_nn_simplify() -> RewriteRule {
 }
 
 /// Rule 88: pp → p (happy → hapy)
-fn rule_pp_simplify() -> RewriteRule {
+fn rule_pp_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 88,
         rule_name: "pp → p".to_string(),
@@ -781,7 +784,7 @@ fn rule_pp_simplify() -> RewriteRule {
 }
 
 /// Rule 89: rr → r (carry → cary)
-fn rule_rr_simplify() -> RewriteRule {
+fn rule_rr_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 89,
         rule_name: "rr → r".to_string(),
@@ -794,7 +797,7 @@ fn rule_rr_simplify() -> RewriteRule {
 }
 
 /// Rule 90: ss → s (class → clas)
-fn rule_ss_simplify() -> RewriteRule {
+fn rule_ss_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 90,
         rule_name: "ss → s".to_string(),
@@ -807,7 +810,7 @@ fn rule_ss_simplify() -> RewriteRule {
 }
 
 /// Rule 91: tt → t (butter → buter)
-fn rule_tt_simplify() -> RewriteRule {
+fn rule_tt_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 91,
         rule_name: "tt → t".to_string(),
@@ -820,7 +823,7 @@ fn rule_tt_simplify() -> RewriteRule {
 }
 
 /// Rule 92: zz → z (buzz → buz)
-fn rule_zz_simplify() -> RewriteRule {
+fn rule_zz_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 92,
         rule_name: "zz → z".to_string(),
@@ -837,7 +840,7 @@ fn rule_zz_simplify() -> RewriteRule {
 // ============================================================================
 
 /// Rule 110: tion → shun (nation → nashun)
-fn rule_tion_ending() -> RewriteRule {
+fn rule_tion_ending() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 110,
         rule_name: "tion → shun".to_string(),
@@ -860,7 +863,7 @@ fn rule_tion_ending() -> RewriteRule {
 }
 
 /// Rule 111: sion → zhun (vision → vizhun)
-fn rule_sion_ending() -> RewriteRule {
+fn rule_sion_ending() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 111,
         rule_name: "sion → zhun".to_string(),
@@ -883,7 +886,7 @@ fn rule_sion_ending() -> RewriteRule {
 }
 
 /// Rule 112: cious → shus (precious → preshus)
-fn rule_cious_ending() -> RewriteRule {
+fn rule_cious_ending() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 112,
         rule_name: "cious → shus".to_string(),
@@ -907,7 +910,7 @@ fn rule_cious_ending() -> RewriteRule {
 }
 
 /// Rule 113: tious → shus (cautious → kaushus)
-fn rule_tious_ending() -> RewriteRule {
+fn rule_tious_ending() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 113,
         rule_name: "tious → shus".to_string(),
@@ -935,7 +938,7 @@ fn rule_tious_ending() -> RewriteRule {
 // ============================================================================
 
 /// Rule 130: tch → ch (batch → bach)
-fn rule_tch_simplify() -> RewriteRule {
+fn rule_tch_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 130,
         rule_name: "tch → ch".to_string(),
@@ -952,7 +955,7 @@ fn rule_tch_simplify() -> RewriteRule {
 }
 
 /// Rule 131: dge → j (judge → juj)
-fn rule_dge_simplify() -> RewriteRule {
+fn rule_dge_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 131,
         rule_name: "dge → j".to_string(),
@@ -969,7 +972,7 @@ fn rule_dge_simplify() -> RewriteRule {
 }
 
 /// Rule 132: ck → k (back → bak)
-fn rule_ck_simplify() -> RewriteRule {
+fn rule_ck_simplify() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 132,
         rule_name: "ck → k".to_string(),
@@ -982,7 +985,7 @@ fn rule_ck_simplify() -> RewriteRule {
 }
 
 /// Rule 133: mb → m at word end (lamb → lam)
-fn rule_mb_final() -> RewriteRule {
+fn rule_mb_final() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 133,
         rule_name: "mb → m / _#".to_string(),
@@ -995,7 +998,7 @@ fn rule_mb_final() -> RewriteRule {
 }
 
 /// Rule 134: bt → t (debt → det)
-fn rule_bt_silent() -> RewriteRule {
+fn rule_bt_silent() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 134,
         rule_name: "bt → t".to_string(),
@@ -1008,7 +1011,7 @@ fn rule_bt_silent() -> RewriteRule {
 }
 
 /// Rule 135: mn → m at word end (hymn → him)
-fn rule_mn_final() -> RewriteRule {
+fn rule_mn_final() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 135,
         rule_name: "mn → m / _#".to_string(),
@@ -1027,7 +1030,7 @@ fn rule_mn_final() -> RewriteRule {
 /// Phonetic: th → t
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:147-154`
-fn phonetic_th_to_t() -> RewriteRule {
+fn phonetic_th_to_t() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 100,
         rule_name: "th → t (phonetic)".to_string(),
@@ -1042,7 +1045,7 @@ fn phonetic_th_to_t() -> RewriteRule {
 /// Phonetic: qu → kw
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:158-165`
-fn phonetic_qu_to_kw() -> RewriteRule {
+fn phonetic_qu_to_kw() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 101,
         rule_name: "qu → kw (phonetic)".to_string(),
@@ -1057,7 +1060,7 @@ fn phonetic_qu_to_kw() -> RewriteRule {
 /// Phonetic: kw → qu (reverse)
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:167-174`
-fn phonetic_kw_to_qu() -> RewriteRule {
+fn phonetic_kw_to_qu() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 102,
         rule_name: "kw → qu (phonetic reverse)".to_string(),
@@ -1076,7 +1079,7 @@ fn phonetic_kw_to_qu() -> RewriteRule {
 /// Test Rule 200: x → yy (expansion)
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:187-194`
-fn rule_x_expand() -> RewriteRule {
+fn rule_x_expand() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 200,
         rule_name: "x → yy (expansion test)".to_string(),
@@ -1091,7 +1094,7 @@ fn rule_x_expand() -> RewriteRule {
 /// Test Rule 201: y → z (transformation)
 ///
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:197-204`
-fn rule_y_to_z() -> RewriteRule {
+fn rule_y_to_z() -> RewriteRuleByte {
     RewriteRule {
         rule_id: 201,
         rule_name: "y → z (transformation test)".to_string(),
@@ -1113,7 +1116,7 @@ fn rule_y_to_z() -> RewriteRule {
 ///
 /// Contains all orthography rules for standard English transformations.
 /// Rules are ordered by priority - more specific patterns come first.
-pub fn orthography_rules() -> Vec<RewriteRule> {
+pub fn orthography_rules() -> Vec<RewriteRuleByte> {
     vec![
         // Phase 1: Specific multi-character patterns (HIGH PRIORITY)
         rule_tion_ending(),     // ID 110
@@ -1175,7 +1178,7 @@ pub fn orthography_rules() -> Vec<RewriteRule> {
 /// Vowel digraph rules: vowel digraph simplifications (weight=0.1)
 ///
 /// Contains rules for vowel digraph normalization.
-pub fn vowel_digraph_rules() -> Vec<RewriteRule> {
+pub fn vowel_digraph_rules() -> Vec<RewriteRuleByte> {
     vec![
         rule_ea_digraph(),      // ID 50
         rule_ee_digraph(),      // ID 51
@@ -1197,7 +1200,7 @@ pub fn vowel_digraph_rules() -> Vec<RewriteRule> {
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:221-225`
 ///
 /// Contains 3 rules for phonetic approximations.
-pub fn phonetic_rules() -> Vec<RewriteRule> {
+pub fn phonetic_rules() -> Vec<RewriteRuleByte> {
     vec![
         phonetic_th_to_t(),
         phonetic_qu_to_kw(),
@@ -1210,7 +1213,7 @@ pub fn phonetic_rules() -> Vec<RewriteRule> {
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:228-231`
 ///
 /// Contains 2 rules used in Theorem 3 (non-confluence proof).
-pub fn test_rules() -> Vec<RewriteRule> {
+pub fn test_rules() -> Vec<RewriteRuleByte> {
     vec![rule_x_expand(), rule_y_to_z()]
 }
 
@@ -1219,7 +1222,7 @@ pub fn test_rules() -> Vec<RewriteRule> {
 /// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:234-235`
 ///
 /// Combined set of orthography + vowel digraph + phonetic + test rules.
-pub fn zompist_rules() -> Vec<RewriteRule> {
+pub fn zompist_rules() -> Vec<RewriteRuleByte> {
     let mut rules = Vec::with_capacity(62);
     rules.extend(orthography_rules());
     rules.extend(vowel_digraph_rules());

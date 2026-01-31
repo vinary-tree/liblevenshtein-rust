@@ -14,6 +14,7 @@
 //! See [`universal`] module for eager (precomputed) automata.
 
 mod algorithm;
+pub mod articulatory_costs;
 mod automaton_zipper;
 pub mod builder;
 mod builder_api;
@@ -26,6 +27,7 @@ pub mod operation_set;
 pub mod operation_type;
 mod ordered_query;
 pub mod phonetic;
+mod priority_query;
 #[cfg(feature = "phonetic-rules")]
 pub mod phonetic_transducer;
 mod pool;
@@ -51,6 +53,7 @@ mod zipper_query_iterator;
 pub mod simd;
 
 pub use algorithm::Algorithm;
+pub use articulatory_costs::ArticulatoryCosts;
 pub use automaton_zipper::AutomatonZipper;
 pub use builder::{BuilderError, TransducerBuilder};
 pub use builder_api::QueryBuilder;
@@ -61,6 +64,7 @@ pub use intersection_zipper::IntersectionZipper;
 pub use operation_set::{OperationSet, OperationSetBuilder};
 pub use operation_type::OperationType;
 pub use ordered_query::{OrderedCandidate, OrderedQueryIterator};
+pub use priority_query::{priority_query, PriorityCandidate, PriorityQueryIterator};
 pub use pool::StatePool;
 pub use pool_f64::StatePoolF64;
 pub use position::Position;

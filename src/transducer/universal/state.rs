@@ -119,6 +119,18 @@ pub struct UniversalState<V: PositionVariant> {
 
     /// Maximum edit distance n
     max_distance: u8,
+
+    /// Length difference m = |query| - |dict| tracking
+    ///
+    /// Tracks position relative to diagonal in the DP matrix.
+    /// Range: `[-max_distance, +max_distance]` (bounded diagonal property).
+    ///
+    /// This field enables correct diagonal crossing detection:
+    /// - When `|length_diff| > max_distance`, positions must be converted (I → M or M → I)
+    /// - See: `docs/research/universal-levenshtein/DIAGONAL_CROSSING_BUG_ANALYSIS.md`
+    ///
+    /// Updated during `transition_with_consumption()` based on character consumption.
+    length_diff: i8,
 }
 
 impl<V: PositionVariant> UniversalState<V> {
@@ -138,6 +150,7 @@ impl<V: PositionVariant> UniversalState<V> {
         Self {
             positions: SmallVec::new(),
             max_distance,
+            length_diff: 0,
         }
     }
 
@@ -274,6 +287,30 @@ impl<V: PositionVariant> UniversalState<V> {
         has_i && has_m
     }
 
+    /// Get current length difference m = |query| - |dict|
+    ///
+    /// Returns the tracked position relative to the diagonal in the DP matrix.
+    /// Range: `[-max_distance, +max_distance]`.
+    ///
+    /// - `m > 0`: Query word is longer (dict consumed faster)
+    /// - `m < 0`: Dict word is longer (query consumed faster)
+    /// - `m = 0`: Same length consumed from both words
+    #[inline]
+    pub fn length_diff(&self) -> i8 {
+        self.length_diff
+    }
+
+    /// Create a new state with the same positions but different length_diff
+    ///
+    /// Used when constructing successor states during transitions.
+    fn with_length_diff(&self, length_diff: i8) -> Self {
+        Self {
+            positions: self.positions.clone(),
+            max_distance: self.max_distance,
+            length_diff,
+        }
+    }
+
     /// Compute transition to successor state (δ^∀,χ_n)
     ///
     /// Implements the universal state transition function from the thesis (Definition 15, page 48):
@@ -339,63 +376,182 @@ impl<V: PositionVariant> UniversalState<V> {
             return None;
         }
 
-        // Diagonal crossing check: f_n(rm(Δ), |x|)
-        // Per thesis page 48, line 1482-1483:
-        // - If f_n returns false: keep state as-is (Δ)
-        // - If f_n returns true: apply m_n conversion to all positions
+        // NOTE: Diagonal crossing is NOT performed in this method.
         //
-        // The parameter to f_n should be |x| (bit vector length), which in the thesis
-        // corresponds to the relevant subword length. In our simplified API, we use
-        // input_length as an approximation, but this may need refinement in Phase 4
-        // when we have full word context.
+        // This simplified API doesn't track character consumption, so it cannot
+        // correctly update length_diff for diagonal crossing detection.
         //
-        // NOTE: Currently this is producing invalid position conversions in some cases.
-        // The diagonal crossing functions (rm, f_n, m_n) are fully implemented and tested,
-        // but the integration here needs adjustment based on actual word/input lengths.
-        // Keeping this commented out until Phase 4 provides proper context.
-
-        // TODO: Diagonal crossing integration needs fixing
-        // The diagonal crossing logic is causing premature conversions that violate invariants.
-        // Disabling for now until the proper semantics are understood.
-        // See PHASE4_BUG_ANALYSIS.md for details.
-
-        /*
-        if let Some(rm_pos) = crate::transducer::universal::diagonal::right_most(
-            next_state.positions()
-        ) {
-            if crate::transducer::universal::diagonal::diagonal_crossed(
-                &rm_pos,
-                input_length,
-                self.max_distance,
-            ) {
-                // Apply m_n conversion to all positions
-                let mut converted_state = Self::new(self.max_distance);
-                for pos in &next_state.positions {
-                    if let Some(converted) =
-                        crate::transducer::universal::diagonal::convert_position(
-                            pos,
-                            input_length,
-                            self.max_distance,
-                        )
-                    {
-                        converted_state.add_position(converted);
-                    }
-                }
-
-                // Only use converted state if it's non-empty
-                // (Some conversions may fail due to invariant violations)
-                if !converted_state.is_empty() {
-                    next_state = converted_state;
-                }
-            }
-        }
-        */
+        // For proper diagonal crossing support, use `transition_with_consumption()`
+        // which tracks which word consumed a character and updates length_diff accordingly.
+        //
+        // This method preserves the parent state's length_diff for backward compatibility,
+        // but diagonal crossing conversions are disabled.
+        //
+        // See: docs/research/universal-levenshtein/DIAGONAL_CROSSING_BUG_ANALYSIS.md
+        next_state.length_diff = self.length_diff;
 
         // Return final state (possibly converted)
         if next_state.is_empty() {
             None
         } else {
             Some(next_state)
+        }
+    }
+
+    /// Compute transition with explicit character consumption tracking
+    ///
+    /// This is the correct API for diagonal crossing integration. It tracks which
+    /// word consumed a character, enabling proper `length_diff` updates for
+    /// diagonal crossing detection.
+    ///
+    /// # Arguments
+    ///
+    /// - `bit_vector`: Characteristic vector β(a, w) encoding matches for character a
+    /// - `consumed_query`: Whether a character was consumed from the query word
+    /// - `consumed_dict`: Whether a character was consumed from the dictionary word
+    ///
+    /// # Returns
+    ///
+    /// Successor state with updated `length_diff`, or `None` if no successors exist
+    ///
+    /// # Length Difference Updates
+    ///
+    /// - `(true, true)`: Both consumed → `length_diff` unchanged
+    /// - `(true, false)`: Query consumed → `length_diff -= 1` (query advancing)
+    /// - `(false, true)`: Dict consumed → `length_diff += 1` (dict advancing)
+    /// - `(false, false)`: Neither consumed → `length_diff` unchanged (epsilon)
+    ///
+    /// # Diagonal Crossing
+    ///
+    /// When `|length_diff| > max_distance`, positions are converted:
+    /// - I-type → M-type (or vice versa)
+    ///
+    /// This ensures the automaton correctly tracks which positions have crossed
+    /// the diagonal in the edit graph.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let state = UniversalState::<Standard>::initial(2);
+    /// let bv = CharacteristicVector::new('a', "abc");
+    ///
+    /// // Both words consume 'a'
+    /// let next = state.transition_with_consumption(&bv, true, true);
+    /// assert_eq!(next.unwrap().length_diff(), 0);
+    ///
+    /// // Only query consumes (insertion in dict)
+    /// let next = state.transition_with_consumption(&bv, true, false);
+    /// assert_eq!(next.unwrap().length_diff(), -1);
+    /// ```
+    pub fn transition_with_consumption(
+        &self,
+        bit_vector: &crate::transducer::universal::CharacteristicVector,
+        consumed_query: bool,
+        consumed_dict: bool,
+    ) -> Option<Self> {
+        // Special case: empty state has no successors
+        if self.is_empty() {
+            return None;
+        }
+
+        // Compute new length_diff based on consumption
+        let new_length_diff = self.length_diff + match (consumed_query, consumed_dict) {
+            (true, true) => 0,    // Both consumed, diff unchanged
+            (true, false) => -1,  // Query consumed, query advancing relative to dict
+            (false, true) => 1,   // Dict consumed, dict advancing relative to query
+            (false, false) => 0,  // Neither consumed (epsilon transition)
+        };
+
+        // Create new state for successors (Δ)
+        let mut next_state = Self::new(self.max_distance);
+        next_state.length_diff = new_length_diff;
+
+        // For each position π in current state Q
+        for pos in &self.positions {
+            // Compute δ^∀,χ_e(π, x) using the successors() method
+            let successors = pos.successors(bit_vector, self.max_distance);
+
+            // Add all successors to next state
+            // The add_position() method automatically applies subsumption closure ⊔
+            for succ in successors {
+                next_state.add_position(succ);
+            }
+        }
+
+        // Return None if no successors (undefined transition)
+        if next_state.is_empty() {
+            return None;
+        }
+
+        // Diagonal crossing check using length_diff
+        // When |m| > n, we've crossed the diagonal and need to convert positions
+        let c = self.max_distance as i32;
+        if new_length_diff.abs() as i32 > c {
+            // Apply position conversion (I ↔ M)
+            let mut converted_state = Self::new(self.max_distance);
+            converted_state.length_diff = new_length_diff;
+
+            for pos in &next_state.positions {
+                // Convert using length_diff-aware formula
+                if let Some(converted) = convert_position_with_length_diff(
+                    pos,
+                    new_length_diff as i32,
+                    self.max_distance,
+                ) {
+                    converted_state.add_position(converted);
+                }
+            }
+
+            // Use converted state if non-empty, otherwise keep original
+            if !converted_state.is_empty() {
+                next_state = converted_state;
+            }
+        }
+
+        // Return final state
+        if next_state.is_empty() {
+            None
+        } else {
+            Some(next_state)
+        }
+    }
+}
+
+/// Convert position between I-type and M-type using length difference
+///
+/// Simplified conversion formula that uses `length_diff` (m) instead of `k`.
+///
+/// For I-type → M-type when m > n:
+/// ```text
+/// new_offset = offset + (n + 1 - m)
+/// ```
+///
+/// For M-type → I-type when m < -n:
+/// ```text
+/// new_offset = offset - (n + 1 + m)
+/// ```
+fn convert_position_with_length_diff<V: PositionVariant>(
+    pos: &UniversalPosition<V>,
+    length_diff: i32,
+    max_distance: u8,
+) -> Option<UniversalPosition<V>> {
+    let offset = pos.offset();
+    let errors = pos.errors();
+    let n = max_distance as i32;
+
+    match pos {
+        UniversalPosition::INonFinal { .. } => {
+            // I-type → M-type: Adjust offset based on how far we've crossed
+            // The formula accounts for the crossing amount: (n + 1 - length_diff)
+            let crossing_adjustment = n + 1 - length_diff;
+            let new_offset = offset + crossing_adjustment;
+            UniversalPosition::new_m(new_offset, errors, max_distance).ok()
+        }
+        UniversalPosition::MFinal { .. } => {
+            // M-type → I-type: Reverse adjustment
+            let crossing_adjustment = n + 1 + length_diff;
+            let new_offset = offset - crossing_adjustment;
+            UniversalPosition::new_i(new_offset, errors, max_distance).ok()
         }
     }
 }

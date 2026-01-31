@@ -8,7 +8,7 @@
 //! - Iterative vs recursive implementations
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::distance::*;
+use liblevenshtein::distance::{*, myers};
 
 // ============================================================================
 // Test Data Generation
@@ -360,6 +360,88 @@ fn bench_unicode_performance(c: &mut Criterion) {
 }
 
 // ============================================================================
+// Myers Bit-Parallel Benchmarks
+// ============================================================================
+
+fn bench_myers_distance(c: &mut Criterion) {
+    let mut group = c.benchmark_group("myers_distance");
+
+    // Test data for Myers (short ASCII strings where it excels)
+    let test_cases = vec![
+        ("empty", "", ""),
+        ("short_identical", "test", "test"),
+        ("short_1edit", "test", "best"),
+        ("short_2edit", "test", "cast"),
+        ("short_different", "abc", "xyz"),
+        ("medium_identical", "programming", "programming"),
+        ("medium_similar", "programming", "programing"),
+        ("classic_kitten", "kitten", "sitting"),
+        ("classic_saturday", "saturday", "sunday"),
+        ("long_32", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+    ];
+
+    for (name, source, target) in test_cases {
+        let size = source.len() + target.len();
+        group.throughput(Throughput::Bytes(size as u64));
+
+        group.bench_with_input(
+            BenchmarkId::from_parameter(name),
+            &(source, target),
+            |b, &(s, t)| {
+                b.iter(|| myers::myers_distance(black_box(s), black_box(t)));
+            },
+        );
+    }
+
+    group.finish();
+}
+
+fn bench_myers_vs_dp(c: &mut Criterion) {
+    let mut group = c.benchmark_group("myers_vs_dp");
+
+    // Pre-generate strings for ownership
+    let boundary_a = "a".repeat(32);
+    let boundary_b = "b".repeat(32);
+
+    // Compare Myers against scalar DP for short strings
+    let test_cases: Vec<(&str, &str, &str)> = vec![
+        ("short_8", "kitten", "sitting"),
+        ("medium_16", "acknowledgement", "acknowledgment"),
+        ("boundary_64", &boundary_a, &boundary_b),
+    ];
+
+    for (name, source, target) in test_cases {
+        group.bench_function(format!("{}/myers", name), |b| {
+            b.iter(|| myers::myers_distance(black_box(source), black_box(target)));
+        });
+
+        group.bench_function(format!("{}/dp_scalar", name), |b| {
+            b.iter(|| standard_distance_impl(black_box(source), black_box(target)));
+        });
+    }
+
+    group.finish();
+}
+
+fn bench_myers_bounded(c: &mut Criterion) {
+    let mut group = c.benchmark_group("myers_bounded");
+
+    let test_cases = vec![
+        ("close_match", "test", "best", 2),
+        ("far_match", "abc", "xyz", 3),
+        ("exact_threshold", "kitten", "sitting", 3),
+    ];
+
+    for (name, source, target, threshold) in test_cases {
+        group.bench_function(name, |b| {
+            b.iter(|| myers::myers_distance_bounded(black_box(source), black_box(target), threshold));
+        });
+    }
+
+    group.finish();
+}
+
+// ============================================================================
 // Criterion Configuration
 // ============================================================================
 
@@ -375,6 +457,9 @@ criterion_group!(
     bench_string_length_scaling,
     bench_cache_effectiveness,
     bench_unicode_performance,
+    bench_myers_distance,
+    bench_myers_vs_dp,
+    bench_myers_bounded,
 );
 
 criterion_main!(benches);

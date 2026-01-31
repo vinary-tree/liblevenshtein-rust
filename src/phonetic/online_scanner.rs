@@ -255,7 +255,7 @@ impl OnlinePhoneticScannerChar {
 
             // If already at an accepting state, record it
             if self.product.is_accepting(&m.product_state) {
-                let dist = m.product_state.edit_distance;
+                let dist = m.product_state.edit_distance();
                 if m.min_distance.map_or(true, |d| dist < d) {
                     updates.push((i, dist));
                 }
@@ -265,11 +265,11 @@ impl OnlinePhoneticScannerChar {
             // Try to reach accepting state through deletions (advancing NFA without input)
             let mut state = m.product_state.clone();
             let mut attempts = 0;
-            let max_deletions = self.max_distance.saturating_sub(state.edit_distance);
+            let max_deletions = self.max_distance.saturating_sub(state.edit_distance());
 
             while attempts < max_deletions as usize + 1 {
                 if self.product.is_accepting(&state) {
-                    let dist = state.edit_distance;
+                    let dist = state.edit_distance();
                     if m.min_distance.map_or(true, |d| dist < d) {
                         updates.push((i, dist));
                     }
@@ -298,7 +298,7 @@ impl OnlinePhoneticScannerChar {
 
     /// Try a single deletion operation (advance NFA without consuming input).
     fn try_deletion_helper(&self, state: &ProductStateChar) -> Option<ProductStateChar> {
-        if state.edit_distance >= self.max_distance {
+        if state.edit_distance() >= self.max_distance {
             return None;
         }
 
@@ -321,7 +321,7 @@ impl OnlinePhoneticScannerChar {
         if next_states.is_empty() {
             None
         } else {
-            Some(ProductStateChar::new(next_states, state.edit_distance + 1))
+            Some(ProductStateChar::new(next_states, state.accumulated_cost + 1.0))
         }
     }
 
@@ -349,13 +349,13 @@ impl OnlinePhoneticScannerChar {
                 // Take the best successor (minimum edit distance)
                 let best = successors
                     .into_iter()
-                    .min_by_key(|s| s.edit_distance)
+                    .min_by_key(|s| s.edit_distance())
                     .expect("successors not empty");
 
                 // Check if we've reached an accepting state
                 if self.product.is_accepting(&best) {
                     // Record if this is the best distance seen
-                    let dist = best.edit_distance;
+                    let dist = best.edit_distance();
                     if m.min_distance.map_or(true, |d| dist < d) {
                         m.min_distance = Some(dist);
                     }

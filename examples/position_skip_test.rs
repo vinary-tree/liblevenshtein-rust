@@ -13,7 +13,7 @@ fn main() {
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn find_first_match_baseline(rule: &RewriteRule, s: &[Phone]) -> Option<usize> {
+fn find_first_match_baseline(rule: &RewriteRuleByte, s: &[PhoneByte]) -> Option<usize> {
     for pos in 0..=s.len() {
         if context_matches(&rule.context, s, pos, rule.pattern.len()) &&
            pattern_matches_at(&rule.pattern, s, pos) {
@@ -24,7 +24,7 @@ fn find_first_match_baseline(rule: &RewriteRule, s: &[Phone]) -> Option<usize> {
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn apply_rules_seq_baseline(rules: &[RewriteRule], s: &[Phone], fuel: usize) -> Option<Vec<Phone>> {
+fn apply_rules_seq_baseline(rules: &[RewriteRuleByte], s: &[PhoneByte], fuel: usize) -> Option<Vec<PhoneByte>> {
     let mut current = s.to_vec();
     let mut remaining_fuel = fuel;
 
@@ -53,7 +53,7 @@ fn apply_rules_seq_baseline(rules: &[RewriteRule], s: &[Phone], fuel: usize) -> 
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn find_first_match_from(rule: &RewriteRule, s: &[Phone], start_pos: usize) -> Option<usize> {
+fn find_first_match_from(rule: &RewriteRuleByte, s: &[PhoneByte], start_pos: usize) -> Option<usize> {
     // Scan from start_pos to end
     for pos in start_pos..=s.len() {
         // Inline can_apply_at check
@@ -66,7 +66,7 @@ fn find_first_match_from(rule: &RewriteRule, s: &[Phone], start_pos: usize) -> O
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn apply_rules_seq_optimized(rules: &[RewriteRule], s: &[Phone], fuel: usize) -> Option<Vec<Phone>> {
+fn apply_rules_seq_optimized(rules: &[RewriteRuleByte], s: &[PhoneByte], fuel: usize) -> Option<Vec<PhoneByte>> {
     let mut current = s.to_vec();
     let mut remaining_fuel = fuel;
     let mut last_pos = 0;
@@ -114,12 +114,12 @@ fn main() {
     let mut all_match = true;
 
     for word in &test_words {
-        let phones: Vec<Phone> = word.bytes()
+        let phones: Vec<PhoneByte> = word.bytes()
             .map(|b| {
                 if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u') {
-                    Phone::Vowel(b)
+                    PhoneByte::Vowel(b)
                 } else {
-                    Phone::Consonant(b)
+                    PhoneByte::Consonant(b)
                 }
             })
             .collect();

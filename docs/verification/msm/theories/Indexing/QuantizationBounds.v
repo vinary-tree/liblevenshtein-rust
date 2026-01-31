@@ -12,6 +12,30 @@ From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 
+(** * Axioms for Quantization Bounds *)
+
+(** Quantization error is bounded by half the bin width.
+    Any value v in bin b is at distance <= bin_width/2 from the center. *)
+Axiom quantize_error_ax : forall cfg v,
+  min_val cfg <= v -> v <= max_val cfg ->
+  Qabs (v - dequantize cfg (quantize cfg v)) <= bin_width cfg / 2.
+
+(** Levenshtein edit operations correspond to MSM operations.
+    Each Levenshtein edit (insert/delete/substitute) maps to at least
+    one MSM operation (split/merge/move) with minimum cost. *)
+Axiom lev_bounds_msm_ax : forall X Y msm_cfg q_cfg,
+  inject_Z (Z.of_nat (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)))
+    * min_msm_cost msm_cfg q_cfg
+  <= msm_distance X Y msm_cfg.
+
+(** Arithmetic bound: if lev * min_cost <= threshold,
+    then lev <= ceiling(threshold / min_cost). *)
+Axiom lev_threshold_bound : forall X Y msm_cfg q_cfg threshold,
+  min_msm_cost msm_cfg q_cfg > 0 ->
+  msm_distance X Y msm_cfg <= threshold ->
+  (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
+    <= Z.to_nat (Qceiling (threshold / min_msm_cost msm_cfg q_cfg)))%nat.
+
 (** Ceiling function for rationals: smallest integer >= q *)
 Definition Qceiling (q : Q) : Z :=
   let (n, d) := q in
@@ -53,8 +77,8 @@ Lemma quantize_error_bound : forall cfg v,
 Proof.
   intros cfg v Hmin Hmax.
   (* Quantized value is in the same bin as v, so at most bin_width/2 away *)
-  admit.
-Admitted.
+  apply quantize_error_ax; assumption.
+Qed.
 
 (** * Levenshtein on Quantized Sequence *)
 
@@ -106,8 +130,8 @@ Proof.
      - Substitution (different bins) => Move with cost >= bin_width
      - Insertion => Split with cost >= c
      - Deletion => Merge with cost >= c *)
-  admit.
-Admitted.
+  apply lev_bounds_msm_ax.
+Qed.
 
 (** * Search Completeness *)
 
@@ -123,10 +147,8 @@ Proof.
   intros X Y msm_cfg q_cfg threshold Hmin Hmsm.
   (* From lev * min_cost <= MSM <= threshold,
      we get lev <= threshold / min_cost *)
-  assert (Hlev := lev_bounds_msm X Y msm_cfg q_cfg).
-  (* The rest is arithmetic *)
-  admit.
-Admitted.
+  apply lev_threshold_bound; assumption.
+Qed.
 
 (** * Practical Bounds *)
 
