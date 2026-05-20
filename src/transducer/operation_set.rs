@@ -56,7 +56,7 @@
 //!     .build();
 //! ```
 
-use crate::transducer::{OperationType, SubstitutionSet};
+use crate::transducer::OperationType;
 
 /// A collection of operation types defining a generalized Levenshtein distance metric.
 ///
@@ -505,6 +505,7 @@ impl Default for OperationSetBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transducer::SubstitutionSet;
 
     #[test]
     fn test_empty_operation_set() {

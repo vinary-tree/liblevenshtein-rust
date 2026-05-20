@@ -207,7 +207,7 @@ fn test_dictionary_backend_with_vocabulary() {
 // MSM (Move-Split-Merge) WFST Tests
 mod msm_tests {
     use liblevenshtein::time_series::MsmConfig;
-    use liblevenshtein::wfst::msm::{MsmWfst, MsmWfstBuilder, MsmWeight};
+    use liblevenshtein::wfst::msm::{MsmWfstBuilder, MsmWeight};
     use lling_llang::prelude::{LazyWfst, Semiring, Wfst};
 
     #[test]
@@ -353,7 +353,7 @@ mod msm_tests {
         wfst.expand(start);
 
         // Should have transitions even with very different values
-        let transitions = wfst.transitions(start);
+        let _transitions = wfst.transitions(start);
         // Start state should have some transitions
         assert!(wfst.is_valid_state(start));
     }

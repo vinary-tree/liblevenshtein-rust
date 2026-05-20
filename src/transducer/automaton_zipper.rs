@@ -224,9 +224,9 @@ impl AutomatonZipper {
     /// assert_eq!(zipper.min_distance_accepting(), None);
     ///
     /// // Transition through "cat"
-    /// let zipper = zipper.transition(b'c', &mut pool).unwrap();
-    /// let zipper = zipper.transition(b'a', &mut pool).unwrap();
-    /// let zipper = zipper.transition(b't', &mut pool).unwrap();
+    /// let zipper = zipper.transition(b'c', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
+    /// let zipper = zipper.transition(b'a', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
+    /// let zipper = zipper.transition(b't', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
     ///
     /// // Now accepting with distance 0 (exact match)
     /// assert_eq!(zipper.min_distance_accepting(), Some(0));
@@ -292,9 +292,9 @@ impl AutomatonZipper {
     /// let mut pool = StatePool::new();
     ///
     /// // Transition through "tes" (3 characters)
-    /// let zipper = zipper.transition(b't', &mut pool).unwrap();
-    /// let zipper = zipper.transition(b'e', &mut pool).unwrap();
-    /// let zipper = zipper.transition(b's', &mut pool).unwrap();
+    /// let zipper = zipper.transition(b't', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
+    /// let zipper = zipper.transition(b'e', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
+    /// let zipper = zipper.transition(b's', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
     ///
     /// // If dictionary term "tes" ends here (length 3),
     /// // distance is 0 (matched 3/3 characters of "tes" perfectly)
@@ -326,7 +326,7 @@ impl AutomatonZipper {
     /// assert!(zipper.is_viable());
     ///
     /// // Transition on 'a' should still be viable
-    /// let zipper = zipper.transition(b'a', &mut pool).unwrap();
+    /// let zipper = zipper.transition(b'a', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
     /// assert!(zipper.is_viable());
     /// ```
     pub fn is_viable(&self) -> bool {
@@ -513,8 +513,8 @@ mod tests {
         let mut pool = StatePool::new();
 
         // Transition through "te" (2 characters)
-        let z1 = zipper.transition(b't', &mut pool).unwrap();
-        let z2 = z1.transition(b'e', &mut pool).unwrap();
+        let z1 = zipper.transition(b't', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
+        let z2 = z1.transition(b'e', &mut pool).expect("test fixture: transition on valid dictionary path");
 
         // After consuming "te", we're at position 2 with 0 errors
         // If the dictionary term "te" ends here (term_length=2),

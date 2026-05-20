@@ -31,7 +31,6 @@ use crate::grep::error::{GrepError, GrepResult};
 /// ```
 pub fn extract_text_ocr(data: &[u8], language: &str) -> GrepResult<String> {
     use leptess::LepTess;
-    use std::io::Cursor;
 
     // First, we need to render PDF pages to images
     // This requires pdf-image or similar crate, but for now we'll use a simpler approach

@@ -38,7 +38,7 @@
 //! ```
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, Wfst,
+    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, Wfst,
     WeightedTransition,
 };
 use rustc_hash::FxHashMap;
@@ -570,12 +570,6 @@ impl Default for MsmWfstBuilder {
 mod tests {
     use super::*;
 
-    const EPSILON: f64 = 1e-9;
-
-    fn approx_eq(a: f64, b: f64) -> bool {
-        (a - b).abs() < EPSILON
-    }
-
     #[test]
     fn test_quantize_value() {
         assert_eq!(quantize_value(0.0, 0.0, 100.0), 0);
@@ -593,7 +587,7 @@ mod tests {
     fn test_builder_with_query() {
         let builder = MsmWfstBuilder::new().query(&[1.0, 2.0, 3.0]);
         assert!(builder.query.is_some());
-        assert_eq!(builder.query.unwrap().len(), 3);
+        assert_eq!(builder.query.expect("expected Some query in test").len(), 3);
     }
 
     #[test]
@@ -618,7 +612,7 @@ mod tests {
             .build();
 
         assert!(result.is_ok());
-        let wfst = result.unwrap();
+        let wfst = result.expect("test fixture: build must be Ok");
         assert_eq!(wfst.query().len(), 3);
     }
 
@@ -661,7 +655,7 @@ mod tests {
         let start = Wfst::start(&wfst);
 
         // Before expansion
-        let initial_computed = wfst.computed_states();
+        let _initial_computed = wfst.computed_states();
 
         // Expand
         wfst.expand(start);

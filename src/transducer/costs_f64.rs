@@ -280,7 +280,7 @@ impl OperationCostsF64 {
             .iter()
             .copied()
             .filter(|&c| c > 0.0)
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .min_by(|a, b| a.partial_cmp(b).expect("OperationCostsF64: costs are finite (filtered > 0.0)"))
             .unwrap_or(1.0)
     }
 

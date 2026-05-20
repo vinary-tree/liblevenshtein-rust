@@ -787,7 +787,7 @@ pub fn find_minimum_simd(values: &[usize], count: usize) -> usize {
 /// Scalar fallback for minimum finding
 #[inline(always)]
 fn find_minimum_scalar(values: &[usize], count: usize) -> usize {
-    values[0..count].iter().copied().min().unwrap()
+    values[0..count].iter().copied().min().expect("find_minimum_scalar: count > 0 (caller invariant)")
 }
 
 /// AVX2-accelerated minimum finding via horizontal reduction

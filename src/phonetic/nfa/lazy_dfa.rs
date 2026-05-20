@@ -32,7 +32,7 @@
 //! assert!(dfa.accepts("phone")); // Uses cached transitions
 //! ```
 
-use super::nfa::{NFAChar, NFA};
+use super::{NFAChar, NFA};
 use super::state_set::StateSet;
 use super::types::StateId;
 use rustc_hash::FxHashMap;
@@ -485,7 +485,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_simple() {
-        let nfa = compile(&parse("abc").unwrap()).unwrap();
+        let nfa = compile(&parse("abc").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         assert!(dfa.accepts("abc"));
@@ -496,7 +496,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_alternation() {
-        let nfa = compile(&parse("cat|dog").unwrap()).unwrap();
+        let nfa = compile(&parse("cat|dog").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         assert!(dfa.accepts("cat"));
@@ -508,7 +508,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_star() {
-        let nfa = compile(&parse("a*").unwrap()).unwrap();
+        let nfa = compile(&parse("a*").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         assert!(dfa.accepts(""));
@@ -521,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_plus() {
-        let nfa = compile(&parse("a+").unwrap()).unwrap();
+        let nfa = compile(&parse("a+").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         assert!(!dfa.accepts(""));
@@ -533,7 +533,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_char_class() {
-        let nfa = compile(&parse("[aeiou]+").unwrap()).unwrap();
+        let nfa = compile(&parse("[aeiou]+").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         assert!(dfa.accepts("a"));
@@ -545,7 +545,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_complex() {
-        let nfa = compile(&parse("(ph|f)one").unwrap()).unwrap();
+        let nfa = compile(&parse("(ph|f)one").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         assert!(dfa.accepts("phone"));
@@ -556,7 +556,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_caching() {
-        let nfa = compile(&parse("test").unwrap()).unwrap();
+        let nfa = compile(&parse("test").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         // First query builds cache
@@ -572,7 +572,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_cache_clear() {
-        let nfa = compile(&parse("test").unwrap()).unwrap();
+        let nfa = compile(&parse("test").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         assert!(dfa.accepts("test"));
@@ -587,7 +587,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_bytes() {
-        let nfa = compile_bytes(&parse_bytes(b"hello").unwrap()).unwrap();
+        let nfa = compile_bytes(&parse_bytes(b"hello").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFA::new(nfa);
 
         assert!(dfa.accepts(b"hello"));
@@ -597,7 +597,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_bytes_alternation() {
-        let nfa = compile_bytes(&parse_bytes(b"yes|no").unwrap()).unwrap();
+        let nfa = compile_bytes(&parse_bytes(b"yes|no").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFA::new(nfa);
 
         assert!(dfa.accepts(b"yes"));
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn test_lazy_dfa_epsilon_pattern() {
         // Use a pattern that accepts empty string (empty alternation or a*)
-        let nfa = compile(&parse("a*").unwrap()).unwrap();
+        let nfa = compile(&parse("a*").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         // a* accepts empty string
@@ -619,7 +619,7 @@ mod tests {
 
     #[test]
     fn test_lazy_dfa_optional() {
-        let nfa = compile(&parse("colou?r").unwrap()).unwrap();
+        let nfa = compile(&parse("colou?r").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let mut dfa = LazyDFAChar::new(nfa);
 
         assert!(dfa.accepts("color"));

@@ -499,7 +499,6 @@ pub struct ScannerStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::phonetic::online_transducer::OnlinePhoneticTransducerChar;
     use crate::phonetic::types::{ContextChar, PhoneChar};
 
     /// Helper to create a simple rule for testing.

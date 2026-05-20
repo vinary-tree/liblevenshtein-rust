@@ -124,7 +124,7 @@ mod integration_tests {
         wfst.expand(start);
 
         // Should find transitions
-        let transitions = wfst.transitions(start);
+        let _transitions = wfst.transitions(start);
         // Initial transitions may exist depending on state
     }
 
@@ -134,7 +134,7 @@ mod integration_tests {
         let target = vec![10.0, 20.0, 30.0]; // Very different
 
         // Low threshold should restrict states
-        let wfst = MsmWfstBuilder::new()
+        let _wfst = MsmWfstBuilder::new()
             .query(&query)
             .msm_config(MsmConfig::new(1.0))
             .max_cost(1.0) // Very restrictive
@@ -237,6 +237,6 @@ mod integration_tests {
 
         let hint = source.num_states_hint();
         assert!(hint.is_some());
-        assert!(hint.unwrap() > 0);
+        assert!(hint.expect("expected Some hint in test") > 0);
     }
 }

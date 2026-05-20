@@ -32,7 +32,7 @@
 //! ```
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, Wfst,
+    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, Wfst,
     WeightedTransition,
 };
 use rustc_hash::FxHashMap;

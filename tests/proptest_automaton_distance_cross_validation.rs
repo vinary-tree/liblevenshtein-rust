@@ -99,7 +99,7 @@ fn automaton_query(
     max_distance: usize,
     algorithm: Algorithm,
 ) -> HashSet<String> {
-    let dict = DoubleArrayTrie::from_terms(dict_words.clone());
+    let dict = DoubleArrayTrie::from_terms(dict_words);
     let transducer = Transducer::new(dict, algorithm);
     transducer.query(query, max_distance).collect()
 }

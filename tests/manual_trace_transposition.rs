@@ -7,7 +7,7 @@ fn manual_trace_ab_to_ba() {
 
     let query = "ab";
     let dict_words = vec!["ba".to_string()];
-    let dict = DoubleArrayTrie::from_terms(dict_words);
+    let _dict = DoubleArrayTrie::from_terms(dict_words);
 
     let query_length = query.len(); // 2
     let max_distance = 1;

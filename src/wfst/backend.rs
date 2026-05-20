@@ -8,7 +8,7 @@ use std::sync::Arc;
 use lling_llang::backend::{LatticeBackend, VocabId};
 use rustc_hash::FxHashMap;
 
-use libdictenstein::{Dictionary, DictionaryNode, MappedDictionary};
+use libdictenstein::Dictionary;
 
 /// Adapter that exposes a liblevenshtein dictionary as a lling-llang `LatticeBackend`.
 ///
@@ -158,33 +158,6 @@ where
         // Dictionary backends can support structural sharing
         // depending on the underlying dictionary type
         false
-    }
-}
-
-/// Extension trait for mapped dictionaries.
-///
-/// This provides additional functionality when the dictionary supports
-/// value mapping (e.g., for contextual completion).
-pub trait MappedDictionaryBackend<D>: LatticeBackend
-where
-    D: MappedDictionary,
-{
-    /// Get the value associated with a term.
-    fn get_value(&self, term: &str) -> Option<D::Value>;
-
-    /// Check if a term has an associated value.
-    fn has_value(&self, term: &str) -> bool {
-        self.get_value(term).is_some()
-    }
-}
-
-impl<D> MappedDictionaryBackend<D> for DictionaryBackend<D>
-where
-    D: MappedDictionary + Clone + Send + Sync,
-    D::Node: Send + Sync,
-{
-    fn get_value(&self, term: &str) -> Option<D::Value> {
-        self.dictionary.get_value(term)
     }
 }
 

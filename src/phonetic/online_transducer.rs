@@ -637,16 +637,16 @@ mod tests {
         let mut transducer = OnlinePhoneticTransducerChar::new(rules);
 
         // Feed 'p' - should buffer, not emit
-        let out1: Vec<char> = transducer.feed('p').collect();
+        let _out1: Vec<char> = transducer.feed('p').collect();
         // May or may not emit 'p' depending on implementation
         // The key test is that final result is correct
 
         // Feed 'h' - should apply rule
-        let out2: Vec<char> = transducer.feed('h').collect();
+        let _out2: Vec<char> = transducer.feed('h').collect();
 
         // Feed remaining chars
         for c in "one".chars() {
-            for out_c in transducer.feed(c) {
+            for _out_c in transducer.feed(c) {
                 // collect
             }
         }
@@ -709,7 +709,7 @@ mod tests {
     #[test]
     fn test_rule_priority() {
         // Higher weight rule should apply first
-        let mut rules = vec![
+        let rules = vec![
             RewriteRuleChar {
                 rule_id: 1,
                 rule_name: "ph -> f".to_string(),

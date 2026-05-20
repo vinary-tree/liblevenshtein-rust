@@ -5,7 +5,6 @@
 //! for multi-byte UTF-8 sequences while supporting dynamic insert and remove operations.
 
 use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
-use libdictenstein::MappedDictionary;
 use liblevenshtein::prelude::*;
 
 // ===== Basic Dictionary Operations =====

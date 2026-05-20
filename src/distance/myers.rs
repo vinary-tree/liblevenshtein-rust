@@ -34,8 +34,6 @@
 struct PatternMasks {
     /// Equivalence bitmasks indexed by byte value (0-255)
     peq: [u64; 256],
-    /// Length of the pattern (capped at 64)
-    pattern_len: usize,
 }
 
 impl PatternMasks {
@@ -46,13 +44,12 @@ impl PatternMasks {
     #[inline]
     fn new(pattern: &[u8]) -> Self {
         let mut peq = [0u64; 256];
-        let pattern_len = pattern.len().min(64);
 
         for (i, &byte) in pattern.iter().enumerate().take(64) {
             peq[byte as usize] |= 1u64 << i;
         }
 
-        Self { peq, pattern_len }
+        Self { peq }
     }
 }
 

@@ -411,7 +411,7 @@ mod individual_operations {
             prop_assume!(offset > -(max_distance as i32)); // Not at left boundary
 
             // Simulate delete: offset - 1, errors + 1
-            if let Ok(succ) = GeneralizedPosition::new_i(offset - 1, errors + 1, max_distance) {
+            if let Ok(_succ) = GeneralizedPosition::new_i(offset - 1, errors + 1, max_distance) {
                 // Constructor validates invariant
                 prop_assert!((offset - 1).abs() <= (errors + 1) as i32);
             }
@@ -425,7 +425,7 @@ mod individual_operations {
             prop_assume!(errors < max_distance);
 
             // M-type delete: offset unchanged, errors + 1
-            if let Ok(succ) = GeneralizedPosition::new_m(offset, errors + 1, max_distance) {
+            if let Ok(_succ) = GeneralizedPosition::new_m(offset, errors + 1, max_distance) {
                 let n = max_distance as i32;
                 prop_assert!(errors as i32 + 1 >= -(offset) - n);
             }

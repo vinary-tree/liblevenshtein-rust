@@ -827,7 +827,7 @@ mod tests {
     #[test]
     fn test_from_data() {
         let data = vec![10.0, 20.0, 30.0, 40.0, 50.0];
-        let config = QuantizationConfig::from_data(&data, 256, 0.1).unwrap();
+        let config = QuantizationConfig::from_data(&data, 256, 0.1).expect("test fixture: must be Some");
 
         // Range is 40, margin is 4, so total range is 48
         assert!(config.min_value < 10.0);
@@ -993,7 +993,7 @@ mod tests {
         for size in 2..=10 {
             let bp = sax_encoding::get_breakpoints(size);
             assert!(bp.is_some());
-            assert_eq!(bp.unwrap().len(), size - 1);
+            assert_eq!(bp.expect("expected Some breakpoints in test").len(), size - 1);
         }
 
         assert!(sax_encoding::get_breakpoints(1).is_none());

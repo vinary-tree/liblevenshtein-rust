@@ -212,7 +212,7 @@ where
     ///
     /// // Access the transducer
     /// let transducer_ref = engine.transducer();
-    /// let transducer = transducer_ref.read().unwrap();
+    /// let transducer = transducer_ref.read().expect("contextual engine: transducer RwLock poisoned");
     ///
     /// // Clone the dictionary for serialization
     /// let dict = transducer.dictionary().clone();
@@ -249,14 +249,14 @@ where
     /// assert_eq!(global, 0);
     /// ```
     pub fn create_root_context(&self, id: ContextId) -> ContextId {
-        let mut tree = self.context_tree.write().unwrap();
+        let mut tree = self.context_tree.write().expect("contextual engine: context_tree RwLock poisoned");
         tree.create_root(id);
 
         // Initialize empty draft and checkpoint stack
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         drafts.insert(id, DraftBuffer::new());
 
-        let mut checkpoints = self.checkpoints.lock().unwrap();
+        let mut checkpoints = self.checkpoints.lock().expect("contextual engine: checkpoints Mutex poisoned");
         checkpoints.insert(id, CheckpointStack::new());
 
         id
@@ -284,18 +284,18 @@ where
     ///
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let global = engine.create_root_context(0);
-    /// let func = engine.create_child_context(1, global).unwrap();
+    /// let func = engine.create_child_context(1, global).expect("test fixture: create_child_context with valid parent");
     /// assert_eq!(func, 1);
     /// ```
     pub fn create_child_context(&self, id: ContextId, parent_id: ContextId) -> Result<ContextId> {
-        let mut tree = self.context_tree.write().unwrap();
+        let mut tree = self.context_tree.write().expect("contextual engine: context_tree RwLock poisoned");
         tree.create_child(id, parent_id)?;
 
         // Initialize empty draft and checkpoint stack
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         drafts.insert(id, DraftBuffer::new());
 
-        let mut checkpoints = self.checkpoints.lock().unwrap();
+        let mut checkpoints = self.checkpoints.lock().expect("contextual engine: checkpoints Mutex poisoned");
         checkpoints.insert(id, CheckpointStack::new());
 
         Ok(id)
@@ -320,21 +320,21 @@ where
     ///
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let global = engine.create_root_context(0);
-    /// let func = engine.create_child_context(1, global).unwrap();
+    /// let func = engine.create_child_context(1, global).expect("test fixture: create_child_context with valid parent");
     ///
     /// assert!(engine.remove_context(func));
     /// assert!(!engine.remove_context(func)); // Already removed
     /// ```
     pub fn remove_context(&self, id: ContextId) -> bool {
-        let mut tree = self.context_tree.write().unwrap();
+        let mut tree = self.context_tree.write().expect("contextual engine: context_tree RwLock poisoned");
         let removed = tree.remove(id);
 
         if removed {
             // Clean up drafts and checkpoints for removed context
-            let mut drafts = self.drafts.lock().unwrap();
+            let mut drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
             drafts.retain(|ctx_id, _| tree.depth(*ctx_id).is_some());
 
-            let mut checkpoints = self.checkpoints.lock().unwrap();
+            let mut checkpoints = self.checkpoints.lock().expect("contextual engine: checkpoints Mutex poisoned");
             checkpoints.retain(|ctx_id, _| tree.depth(*ctx_id).is_some());
         }
 
@@ -360,14 +360,14 @@ where
     ///
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let global = engine.create_root_context(0);
-    /// let module = engine.create_child_context(1, global).unwrap();
-    /// let func = engine.create_child_context(2, module).unwrap();
+    /// let module = engine.create_child_context(1, global).expect("test fixture: create_child_context with valid parent");
+    /// let func = engine.create_child_context(2, module).expect("test fixture: create_child_context with valid parent");
     ///
     /// let visible = engine.get_visible_contexts(func);
     /// assert_eq!(visible, vec![func, module, global]);
     /// ```
     pub fn get_visible_contexts(&self, id: ContextId) -> Vec<ContextId> {
-        let tree = self.context_tree.read().unwrap();
+        let tree = self.context_tree.read().expect("contextual engine: context_tree RwLock poisoned");
         tree.visible_contexts(id)
     }
 
@@ -389,7 +389,7 @@ where
     /// assert!(engine.context_exists(0));
     /// ```
     pub fn context_exists(&self, id: ContextId) -> bool {
-        let tree = self.context_tree.read().unwrap();
+        let tree = self.context_tree.read().expect("contextual engine: context_tree RwLock poisoned");
         tree.depth(id).is_some()
     }
 
@@ -417,7 +417,7 @@ where
     /// assert_eq!(engine.get_draft(ctx), Some("hello".to_string()));
     /// ```
     pub fn get_draft(&self, context: ContextId) -> Option<String> {
-        let drafts = self.drafts.lock().unwrap();
+        let drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         drafts.get(&context).map(|buf| buf.as_str())
     }
 
@@ -445,7 +445,7 @@ where
     /// assert!(engine.has_draft(ctx));
     /// ```
     pub fn has_draft(&self, context: ContextId) -> bool {
-        let drafts = self.drafts.lock().unwrap();
+        let drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         drafts
             .get(&context)
             .map(|buf| !buf.is_empty())
@@ -471,8 +471,8 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.insert_char(ctx, 'h').unwrap();
-    /// engine.insert_char(ctx, 'i').unwrap();
+    /// engine.insert_char(ctx, 'h').expect("test fixture: insert_char on existing context");
+    /// engine.insert_char(ctx, 'i').expect("test fixture: insert_char on existing context");
     /// assert_eq!(engine.get_draft(ctx), Some("hi".to_string()));
     /// ```
     pub fn insert_char(&self, context: ContextId, ch: char) -> Result<()> {
@@ -480,7 +480,7 @@ where
             return Err(ContextError::ContextNotFound(context));
         }
 
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         if let Some(buffer) = drafts.get_mut(&context) {
             buffer.insert(ch);
             Ok(())
@@ -508,8 +508,8 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.insert_str(ctx, "hello").unwrap();
-    /// engine.insert_str(ctx, " world").unwrap();
+    /// engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
+    /// engine.insert_str(ctx, " world").expect("test fixture: insert_str on existing context");
     /// assert_eq!(engine.get_draft(ctx), Some("hello world".to_string()));
     /// ```
     pub fn insert_str(&self, context: ContextId, s: &str) -> Result<()> {
@@ -542,12 +542,12 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.insert_str(ctx, "hello").unwrap();
+    /// engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
     /// assert_eq!(engine.delete_char(ctx), Some('o'));
     /// assert_eq!(engine.get_draft(ctx), Some("hell".to_string()));
     /// ```
     pub fn delete_char(&self, context: ContextId) -> Option<char> {
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         drafts.get_mut(&context).and_then(|buf| buf.delete())
     }
 
@@ -569,10 +569,10 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.insert_str(ctx, "hello").unwrap();
+    /// engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
     /// assert!(engine.has_draft(ctx));
     ///
-    /// engine.clear_draft(ctx).unwrap();
+    /// engine.clear_draft(ctx).expect("test fixture: clear_draft on existing context");
     /// assert!(!engine.has_draft(ctx));
     /// ```
     pub fn clear_draft(&self, context: ContextId) -> Result<()> {
@@ -580,7 +580,7 @@ where
             return Err(ContextError::ContextNotFound(context));
         }
 
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         if let Some(buffer) = drafts.get_mut(&context) {
             buffer.clear();
             Ok(())
@@ -609,14 +609,14 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.insert_str(ctx, "hello").unwrap();
-    /// engine.checkpoint(ctx).unwrap();
+    /// engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
+    /// engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
     ///
-    /// engine.insert_str(ctx, " world").unwrap();
+    /// engine.insert_str(ctx, " world").expect("test fixture: insert_str on existing context");
     /// assert_eq!(engine.get_draft(ctx), Some("hello world".to_string()));
     ///
     /// // Undo to checkpoint
-    /// engine.undo(ctx).unwrap();
+    /// engine.undo(ctx).expect("test fixture: undo with available checkpoint");
     /// assert_eq!(engine.get_draft(ctx), Some("hello".to_string()));
     /// ```
     pub fn checkpoint(&self, context: ContextId) -> Result<()> {
@@ -624,12 +624,12 @@ where
             return Err(ContextError::ContextNotFound(context));
         }
 
-        let drafts = self.drafts.lock().unwrap();
+        let drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         let buffer = drafts
             .get(&context)
             .ok_or(ContextError::NoDraftBuffer(context))?;
 
-        let mut checkpoints = self.checkpoints.lock().unwrap();
+        let mut checkpoints = self.checkpoints.lock().expect("contextual engine: checkpoints Mutex poisoned");
         let stack = checkpoints
             .get_mut(&context)
             .ok_or(ContextError::NoCheckpointStack(context))?;
@@ -660,14 +660,14 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.checkpoint(ctx).unwrap(); // Empty checkpoint
-    /// engine.insert_str(ctx, "hello").unwrap();
-    /// engine.checkpoint(ctx).unwrap(); // "hello" checkpoint
+    /// engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context"); // Empty checkpoint
+    /// engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
+    /// engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context"); // "hello" checkpoint
     ///
-    /// engine.insert_str(ctx, " world").unwrap();
+    /// engine.insert_str(ctx, " world").expect("test fixture: insert_str on existing context");
     /// assert_eq!(engine.get_draft(ctx), Some("hello world".to_string()));
     ///
-    /// engine.undo(ctx).unwrap(); // Restore to "hello"
+    /// engine.undo(ctx).expect("test fixture: undo with available checkpoint"); // Restore to "hello"
     /// assert_eq!(engine.get_draft(ctx), Some("hello".to_string()));
     /// ```
     pub fn undo(&self, context: ContextId) -> Result<()> {
@@ -675,7 +675,7 @@ where
             return Err(ContextError::ContextNotFound(context));
         }
 
-        let mut checkpoints = self.checkpoints.lock().unwrap();
+        let mut checkpoints = self.checkpoints.lock().expect("contextual engine: checkpoints Mutex poisoned");
         let stack = checkpoints
             .get_mut(&context)
             .ok_or(ContextError::NoCheckpointStack(context))?;
@@ -689,7 +689,7 @@ where
         let checkpoint = stack.peek().ok_or(ContextError::NoCheckpoints(context))?;
 
         // Restore buffer
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         let buffer = drafts
             .get_mut(&context)
             .ok_or(ContextError::NoDraftBuffer(context))?;
@@ -723,14 +723,14 @@ where
     ///
     /// assert_eq!(engine.checkpoint_count(ctx), 0);
     ///
-    /// engine.checkpoint(ctx).unwrap();
+    /// engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
     /// assert_eq!(engine.checkpoint_count(ctx), 1);
     ///
-    /// engine.checkpoint(ctx).unwrap();
+    /// engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
     /// assert_eq!(engine.checkpoint_count(ctx), 2);
     /// ```
     pub fn checkpoint_count(&self, context: ContextId) -> usize {
-        let checkpoints = self.checkpoints.lock().unwrap();
+        let checkpoints = self.checkpoints.lock().expect("contextual engine: checkpoints Mutex poisoned");
         checkpoints.get(&context).map(|s| s.len()).unwrap_or(0)
     }
 
@@ -752,11 +752,11 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.checkpoint(ctx).unwrap();
-    /// engine.checkpoint(ctx).unwrap();
+    /// engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
+    /// engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
     /// assert_eq!(engine.checkpoint_count(ctx), 2);
     ///
-    /// engine.clear_checkpoints(ctx).unwrap();
+    /// engine.clear_checkpoints(ctx).expect("test fixture: clear_checkpoints on existing context");
     /// assert_eq!(engine.checkpoint_count(ctx), 0);
     /// ```
     pub fn clear_checkpoints(&self, context: ContextId) -> Result<()> {
@@ -764,7 +764,7 @@ where
             return Err(ContextError::ContextNotFound(context));
         }
 
-        let mut checkpoints = self.checkpoints.lock().unwrap();
+        let mut checkpoints = self.checkpoints.lock().expect("contextual engine: checkpoints Mutex poisoned");
         if let Some(stack) = checkpoints.get_mut(&context) {
             stack.clear();
             Ok(())
@@ -796,8 +796,8 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.insert_str(ctx, "hello").unwrap();
-    /// let term = engine.finalize(ctx).unwrap();
+    /// engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
+    /// let term = engine.finalize(ctx).expect("test fixture: finalize with non-empty draft");
     /// assert_eq!(term, "hello");
     ///
     /// // Draft is cleared after finalization
@@ -809,7 +809,7 @@ where
         }
 
         // Get and validate draft
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         let buffer = drafts
             .get_mut(&context)
             .ok_or(ContextError::NoDraftBuffer(context))?;
@@ -826,7 +826,7 @@ where
         drop(drafts);
 
         // Add to dictionary
-        let transducer = self.transducer.read().unwrap();
+        let transducer = self.transducer.read().expect("contextual engine: transducer RwLock poisoned");
         let dictionary = transducer.dictionary();
 
         // Get existing contexts for this term (if any) and append the new context
@@ -838,7 +838,7 @@ where
         drop(transducer);
 
         // Clear checkpoints
-        let mut checkpoints = self.checkpoints.lock().unwrap();
+        let mut checkpoints = self.checkpoints.lock().expect("contextual engine: checkpoints Mutex poisoned");
         if let Some(stack) = checkpoints.get_mut(&context) {
             stack.clear();
         }
@@ -868,8 +868,8 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.finalize_direct(ctx, "function").unwrap();
-    /// engine.finalize_direct(ctx, "variable").unwrap();
+    /// engine.finalize_direct(ctx, "function").expect("test fixture: finalize_direct with non-empty term");
+    /// engine.finalize_direct(ctx, "variable").expect("test fixture: finalize_direct with non-empty term");
     /// ```
     pub fn finalize_direct(&self, context: ContextId, term: &str) -> Result<()> {
         if !self.context_exists(context) {
@@ -880,7 +880,7 @@ where
             return Err(ContextError::EmptyTerm);
         }
 
-        let transducer = self.transducer.read().unwrap();
+        let transducer = self.transducer.read().expect("contextual engine: transducer RwLock poisoned");
         let dictionary = transducer.dictionary();
 
         // Get existing contexts for this term (if any) and append the new context
@@ -914,8 +914,8 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.insert_str(ctx, "mistake").unwrap();
-    /// engine.discard(ctx).unwrap();
+    /// engine.insert_str(ctx, "mistake").expect("test fixture: insert_str on existing context");
+    /// engine.discard(ctx).expect("test fixture: discard on existing context");
     ///
     /// // Draft is cleared
     /// assert!(!engine.has_draft(ctx));
@@ -954,11 +954,11 @@ where
     ///
     /// assert!(!engine.has_term("hello"));
     ///
-    /// engine.finalize_direct(ctx, "hello").unwrap();
+    /// engine.finalize_direct(ctx, "hello").expect("test fixture: finalize_direct with non-empty term");
     /// assert!(engine.has_term("hello"));
     /// ```
     pub fn has_term(&self, term: &str) -> bool {
-        let transducer = self.transducer.read().unwrap();
+        let transducer = self.transducer.read().expect("contextual engine: transducer RwLock poisoned");
         transducer.dictionary().contains(term)
     }
 
@@ -979,17 +979,17 @@ where
     ///
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let global = engine.create_root_context(0);
-    /// let func = engine.create_child_context(1, global).unwrap();
+    /// let func = engine.create_child_context(1, global).expect("test fixture: create_child_context with valid parent");
     ///
-    /// engine.finalize_direct(global, "global_var").unwrap();
-    /// engine.finalize_direct(func, "local_var").unwrap();
+    /// engine.finalize_direct(global, "global_var").expect("test fixture: finalize_direct with non-empty term");
+    /// engine.finalize_direct(func, "local_var").expect("test fixture: finalize_direct with non-empty term");
     ///
     /// assert_eq!(engine.term_contexts("global_var"), vec![global]);
     /// assert_eq!(engine.term_contexts("local_var"), vec![func]);
     /// assert!(engine.term_contexts("unknown").is_empty());
     /// ```
     pub fn term_contexts(&self, term: &str) -> Vec<ContextId> {
-        let transducer = self.transducer.read().unwrap();
+        let transducer = self.transducer.read().expect("contextual engine: transducer RwLock poisoned");
         transducer.dictionary().get_value(term).unwrap_or_default()
     }
 
@@ -1021,11 +1021,11 @@ where
     /// let ctx = engine.create_root_context(0);
     ///
     /// // Add finalized terms
-    /// engine.finalize_direct(ctx, "hello").unwrap();
-    /// engine.finalize_direct(ctx, "help").unwrap();
+    /// engine.finalize_direct(ctx, "hello").expect("test fixture: finalize_direct with non-empty term");
+    /// engine.finalize_direct(ctx, "help").expect("test fixture: finalize_direct with non-empty term");
     ///
     /// // Add draft
-    /// engine.insert_str(ctx, "hero").unwrap();
+    /// engine.insert_str(ctx, "hero").expect("test fixture: insert_str on existing context");
     ///
     /// // Query
     /// let results = engine.complete(ctx, "hel", 2);
@@ -1084,7 +1084,7 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.insert_str(ctx, "hello").unwrap();
+    /// engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
     ///
     /// let results = engine.complete_drafts(ctx, "helo", 1);
     /// assert_eq!(results.len(), 1);
@@ -1102,7 +1102,7 @@ where
         let visible = self.get_visible_contexts(context);
 
         // Check each visible context's draft
-        let drafts = self.drafts.lock().unwrap();
+        let drafts = self.drafts.lock().expect("contextual engine: drafts Mutex poisoned");
         for ctx_id in visible {
             if let Some(buffer) = drafts.get(&ctx_id) {
                 let term = buffer.as_str();
@@ -1140,8 +1140,8 @@ where
     /// let engine = DynamicContextualCompletionEngine::new();
     /// let ctx = engine.create_root_context(0);
     ///
-    /// engine.finalize_direct(ctx, "hello").unwrap();
-    /// engine.finalize_direct(ctx, "help").unwrap();
+    /// engine.finalize_direct(ctx, "hello").expect("test fixture: finalize_direct with non-empty term");
+    /// engine.finalize_direct(ctx, "help").expect("test fixture: finalize_direct with non-empty term");
     ///
     /// let results = engine.complete_finalized(ctx, "helo", 1);
     /// assert!(results.len() >= 2);
@@ -1159,7 +1159,7 @@ where
         let visible = self.get_visible_contexts(context);
 
         // Query dictionary using transducer
-        let transducer = self.transducer.read().unwrap();
+        let transducer = self.transducer.read().expect("contextual engine: transducer RwLock poisoned");
         for candidate in transducer.query_with_distance(query, max_distance) {
             // Get the contexts for this term
             if let Some(contexts) = transducer.dictionary().get_value(&candidate.term) {
@@ -1264,7 +1264,7 @@ mod tests {
     fn test_create_child_context() {
         let engine = DynamicContextualCompletionEngine::new();
         let root = engine.create_root_context(0);
-        let child = engine.create_child_context(1, root).unwrap();
+        let child = engine.create_child_context(1, root).expect("test fixture: create_child_context with valid parent");
 
         assert_eq!(child, 1);
         assert!(engine.context_exists(1));
@@ -1283,7 +1283,7 @@ mod tests {
     fn test_remove_context() {
         let engine = DynamicContextualCompletionEngine::new();
         let root = engine.create_root_context(0);
-        let child = engine.create_child_context(1, root).unwrap();
+        let child = engine.create_child_context(1, root).expect("test fixture: create_child_context with valid parent");
 
         assert!(engine.remove_context(child));
         assert!(!engine.context_exists(child));
@@ -1297,8 +1297,8 @@ mod tests {
     fn test_remove_context_with_descendants() {
         let engine = DynamicContextualCompletionEngine::new();
         let root = engine.create_root_context(0);
-        let child1 = engine.create_child_context(1, root).unwrap();
-        let child2 = engine.create_child_context(2, child1).unwrap();
+        let child1 = engine.create_child_context(1, root).expect("test fixture: create_child_context with valid parent");
+        let child2 = engine.create_child_context(2, child1).expect("test fixture: create_child_context with valid parent");
 
         // Remove child1 (should also remove child2)
         assert!(engine.remove_context(child1));
@@ -1311,8 +1311,8 @@ mod tests {
     fn test_get_visible_contexts() {
         let engine = DynamicContextualCompletionEngine::new();
         let global = engine.create_root_context(0);
-        let module = engine.create_child_context(1, global).unwrap();
-        let func = engine.create_child_context(2, module).unwrap();
+        let module = engine.create_child_context(1, global).expect("test fixture: create_child_context with valid parent");
+        let func = engine.create_child_context(2, module).expect("test fixture: create_child_context with valid parent");
 
         let visible = engine.get_visible_contexts(func);
         assert_eq!(visible, vec![func, module, global]);
@@ -1345,8 +1345,8 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.insert_char(ctx, 'h').unwrap();
-        engine.insert_char(ctx, 'i').unwrap();
+        engine.insert_char(ctx, 'h').expect("test fixture: insert_char on existing context");
+        engine.insert_char(ctx, 'i').expect("test fixture: insert_char on existing context");
         assert_eq!(engine.get_draft(ctx), Some("hi".to_string()));
         assert!(engine.has_draft(ctx));
     }
@@ -1363,10 +1363,10 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.insert_str(ctx, "hello").unwrap();
+        engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
         assert_eq!(engine.get_draft(ctx), Some("hello".to_string()));
 
-        engine.insert_str(ctx, " world").unwrap();
+        engine.insert_str(ctx, " world").expect("test fixture: insert_str on existing context");
         assert_eq!(engine.get_draft(ctx), Some("hello world".to_string()));
     }
 
@@ -1375,10 +1375,10 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.insert_str(ctx, "Hello 世界").unwrap();
+        engine.insert_str(ctx, "Hello 世界").expect("test fixture: insert_str on existing context");
         assert_eq!(engine.get_draft(ctx), Some("Hello 世界".to_string()));
 
-        engine.insert_str(ctx, " 🌍").unwrap();
+        engine.insert_str(ctx, " 🌍").expect("test fixture: insert_str on existing context");
         assert_eq!(engine.get_draft(ctx), Some("Hello 世界 🌍".to_string()));
     }
 
@@ -1387,7 +1387,7 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.insert_str(ctx, "hello").unwrap();
+        engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
         assert_eq!(engine.delete_char(ctx), Some('o'));
         assert_eq!(engine.get_draft(ctx), Some("hell".to_string()));
 
@@ -1414,10 +1414,10 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.insert_str(ctx, "hello").unwrap();
+        engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
         assert!(engine.has_draft(ctx));
 
-        engine.clear_draft(ctx).unwrap();
+        engine.clear_draft(ctx).expect("test fixture: clear_draft on existing context");
         assert!(!engine.has_draft(ctx));
         assert_eq!(engine.get_draft(ctx), Some(String::new()));
     }
@@ -1435,25 +1435,25 @@ mod tests {
         let ctx = engine.create_root_context(0);
 
         // Create initial checkpoint (empty)
-        engine.checkpoint(ctx).unwrap();
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
         assert_eq!(engine.checkpoint_count(ctx), 1);
 
         // Type "hello"
-        engine.insert_str(ctx, "hello").unwrap();
-        engine.checkpoint(ctx).unwrap();
+        engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
         assert_eq!(engine.checkpoint_count(ctx), 2);
 
         // Type " world"
-        engine.insert_str(ctx, " world").unwrap();
+        engine.insert_str(ctx, " world").expect("test fixture: insert_str on existing context");
         assert_eq!(engine.get_draft(ctx), Some("hello world".to_string()));
 
         // Undo to "hello" (restore to stack top, then pop)
-        engine.undo(ctx).unwrap();
+        engine.undo(ctx).expect("test fixture: undo with available checkpoint");
         assert_eq!(engine.get_draft(ctx), Some("hello".to_string()));
         assert_eq!(engine.checkpoint_count(ctx), 1); // empty still on stack
 
         // Undo to empty
-        engine.undo(ctx).unwrap();
+        engine.undo(ctx).expect("test fixture: undo with available checkpoint");
         assert_eq!(engine.get_draft(ctx), Some(String::new()));
         assert_eq!(engine.checkpoint_count(ctx), 0); // stack now empty
     }
@@ -1488,13 +1488,13 @@ mod tests {
 
         assert_eq!(engine.checkpoint_count(ctx), 0);
 
-        engine.checkpoint(ctx).unwrap();
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
         assert_eq!(engine.checkpoint_count(ctx), 1);
 
-        engine.checkpoint(ctx).unwrap();
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
         assert_eq!(engine.checkpoint_count(ctx), 2);
 
-        engine.checkpoint(ctx).unwrap();
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
         assert_eq!(engine.checkpoint_count(ctx), 3);
     }
 
@@ -1509,11 +1509,11 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.checkpoint(ctx).unwrap();
-        engine.checkpoint(ctx).unwrap();
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
         assert_eq!(engine.checkpoint_count(ctx), 2);
 
-        engine.clear_checkpoints(ctx).unwrap();
+        engine.clear_checkpoints(ctx).expect("test fixture: clear_checkpoints on existing context");
         assert_eq!(engine.checkpoint_count(ctx), 0);
     }
 
@@ -1530,27 +1530,27 @@ mod tests {
         let ctx = engine.create_root_context(0);
 
         // Build up checkpoints
-        engine.checkpoint(ctx).unwrap(); // ""
-        engine.insert_char(ctx, 'a').unwrap();
-        engine.checkpoint(ctx).unwrap(); // "a"
-        engine.insert_char(ctx, 'b').unwrap();
-        engine.checkpoint(ctx).unwrap(); // "ab"
-        engine.insert_char(ctx, 'c').unwrap();
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context"); // ""
+        engine.insert_char(ctx, 'a').expect("test fixture: insert_char on existing context");
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context"); // "a"
+        engine.insert_char(ctx, 'b').expect("test fixture: insert_char on existing context");
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context"); // "ab"
+        engine.insert_char(ctx, 'c').expect("test fixture: insert_char on existing context");
         // Don't checkpoint after 'c', so undo will go back to "ab"
 
         assert_eq!(engine.get_draft(ctx), Some("abc".to_string()));
         assert_eq!(engine.checkpoint_count(ctx), 3);
 
         // Undo step by step - restores to stack top, then pops
-        engine.undo(ctx).unwrap(); // Restore to "ab", pop
+        engine.undo(ctx).expect("test fixture: undo with available checkpoint"); // Restore to "ab", pop
         assert_eq!(engine.get_draft(ctx), Some("ab".to_string()));
         assert_eq!(engine.checkpoint_count(ctx), 2);
 
-        engine.undo(ctx).unwrap(); // Restore to "a", pop
+        engine.undo(ctx).expect("test fixture: undo with available checkpoint"); // Restore to "a", pop
         assert_eq!(engine.get_draft(ctx), Some("a".to_string()));
         assert_eq!(engine.checkpoint_count(ctx), 1);
 
-        engine.undo(ctx).unwrap(); // Restore to empty, pop
+        engine.undo(ctx).expect("test fixture: undo with available checkpoint"); // Restore to empty, pop
         assert_eq!(engine.get_draft(ctx), Some(String::new()));
         assert_eq!(engine.checkpoint_count(ctx), 0);
     }
@@ -1560,10 +1560,10 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.insert_str(ctx, "hello").unwrap();
-        engine.checkpoint(ctx).unwrap();
+        engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
 
-        let term = engine.finalize(ctx).unwrap();
+        let term = engine.finalize(ctx).expect("test fixture: finalize with non-empty draft");
         assert_eq!(term, "hello");
 
         // Draft cleared
@@ -1598,8 +1598,8 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.finalize_direct(ctx, "function").unwrap();
-        engine.finalize_direct(ctx, "variable").unwrap();
+        engine.finalize_direct(ctx, "function").expect("test fixture: finalize_direct with non-empty term");
+        engine.finalize_direct(ctx, "variable").expect("test fixture: finalize_direct with non-empty term");
 
         assert!(engine.has_term("function"));
         assert!(engine.has_term("variable"));
@@ -1627,12 +1627,12 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.insert_str(ctx, "mistake").unwrap();
-        engine.checkpoint(ctx).unwrap();
+        engine.insert_str(ctx, "mistake").expect("test fixture: insert_str on existing context");
+        engine.checkpoint(ctx).expect("test fixture: checkpoint on existing context");
         assert!(engine.has_draft(ctx));
         assert_eq!(engine.checkpoint_count(ctx), 1);
 
-        engine.discard(ctx).unwrap();
+        engine.discard(ctx).expect("test fixture: discard on existing context");
 
         // Draft and checkpoints cleared
         assert!(!engine.has_draft(ctx));
@@ -1656,7 +1656,7 @@ mod tests {
 
         assert!(!engine.has_term("test"));
 
-        engine.finalize_direct(ctx, "test").unwrap();
+        engine.finalize_direct(ctx, "test").expect("test fixture: finalize_direct with non-empty term");
         assert!(engine.has_term("test"));
     }
 
@@ -1664,14 +1664,14 @@ mod tests {
     fn test_term_contexts() {
         let engine = DynamicContextualCompletionEngine::new();
         let global = engine.create_root_context(0);
-        let func = engine.create_child_context(1, global).unwrap();
+        let func = engine.create_child_context(1, global).expect("test fixture: create_child_context with valid parent");
 
-        engine.finalize_direct(global, "global_var").unwrap();
-        engine.finalize_direct(func, "local_var").unwrap();
+        engine.finalize_direct(global, "global_var").expect("test fixture: finalize_direct with non-empty term");
+        engine.finalize_direct(func, "local_var").expect("test fixture: finalize_direct with non-empty term");
 
         // Same term in multiple contexts
-        engine.finalize_direct(func, "shared").unwrap();
-        engine.finalize_direct(global, "shared").unwrap();
+        engine.finalize_direct(func, "shared").expect("test fixture: finalize_direct with non-empty term");
+        engine.finalize_direct(global, "shared").expect("test fixture: finalize_direct with non-empty term");
 
         assert_eq!(engine.term_contexts("global_var"), vec![global]);
         assert_eq!(engine.term_contexts("local_var"), vec![func]);
@@ -1690,7 +1690,7 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.insert_str(ctx, "hello").unwrap();
+        engine.insert_str(ctx, "hello").expect("test fixture: insert_str on existing context");
 
         let results = engine.complete_drafts(ctx, "hel", 2);
         assert_eq!(results.len(), 1);
@@ -1704,8 +1704,8 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.finalize_direct(ctx, "hello").unwrap();
-        engine.finalize_direct(ctx, "help").unwrap();
+        engine.finalize_direct(ctx, "hello").expect("test fixture: finalize_direct with non-empty term");
+        engine.finalize_direct(ctx, "help").expect("test fixture: finalize_direct with non-empty term");
 
         let results = engine.complete_finalized(ctx, "hel", 2);
         assert_eq!(results.len(), 2);
@@ -1720,11 +1720,11 @@ mod tests {
         let ctx = engine.create_root_context(0);
 
         // Finalized terms
-        engine.finalize_direct(ctx, "hello").unwrap();
-        engine.finalize_direct(ctx, "help").unwrap();
+        engine.finalize_direct(ctx, "hello").expect("test fixture: finalize_direct with non-empty term");
+        engine.finalize_direct(ctx, "help").expect("test fixture: finalize_direct with non-empty term");
 
         // Draft
-        engine.insert_str(ctx, "hero").unwrap();
+        engine.insert_str(ctx, "hero").expect("test fixture: insert_str on existing context");
 
         let results = engine.complete(ctx, "hel", 2);
 
@@ -1741,10 +1741,10 @@ mod tests {
         let ctx = engine.create_root_context(0);
 
         // Finalized term
-        engine.finalize_direct(ctx, "test").unwrap();
+        engine.finalize_direct(ctx, "test").expect("test fixture: finalize_direct with non-empty term");
 
         // Draft with same term (should override)
-        engine.insert_str(ctx, "test").unwrap();
+        engine.insert_str(ctx, "test").expect("test fixture: insert_str on existing context");
 
         let results = engine.complete(ctx, "test", 0);
 
@@ -1758,13 +1758,13 @@ mod tests {
     fn test_complete_hierarchical_visibility() {
         let engine = DynamicContextualCompletionEngine::new();
         let global = engine.create_root_context(0);
-        let func = engine.create_child_context(1, global).unwrap();
+        let func = engine.create_child_context(1, global).expect("test fixture: create_child_context with valid parent");
 
         // Global term
-        engine.finalize_direct(global, "global_var").unwrap();
+        engine.finalize_direct(global, "global_var").expect("test fixture: finalize_direct with non-empty term");
 
         // Local term
-        engine.finalize_direct(func, "local_var").unwrap();
+        engine.finalize_direct(func, "local_var").expect("test fixture: finalize_direct with non-empty term");
 
         // Query from func - should see both
         let results = engine.complete_finalized(func, "var", 10);
@@ -1782,9 +1782,9 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.finalize_direct(ctx, "test").unwrap(); // distance 0
-        engine.finalize_direct(ctx, "text").unwrap(); // distance 1
-        engine.finalize_direct(ctx, "best").unwrap(); // distance 1
+        engine.finalize_direct(ctx, "test").expect("test fixture: finalize_direct with non-empty term"); // distance 0
+        engine.finalize_direct(ctx, "text").expect("test fixture: finalize_direct with non-empty term"); // distance 1
+        engine.finalize_direct(ctx, "best").expect("test fixture: finalize_direct with non-empty term"); // distance 1
 
         let mut results = engine.complete_finalized(ctx, "test", 1);
         results.sort();
@@ -1802,7 +1802,7 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.finalize_direct(ctx, "test").unwrap();
+        engine.finalize_direct(ctx, "test").expect("test fixture: finalize_direct with non-empty term");
 
         // Empty query should match with distance = term length
         let results = engine.complete_finalized(ctx, "", 10);
@@ -1814,7 +1814,7 @@ mod tests {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
 
-        engine.finalize_direct(ctx, "hello").unwrap();
+        engine.finalize_direct(ctx, "hello").expect("test fixture: finalize_direct with non-empty term");
 
         // Query too far away
         let results = engine.complete_finalized(ctx, "xyz", 1);

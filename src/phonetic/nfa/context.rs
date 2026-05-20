@@ -46,7 +46,7 @@
 //! assert!(!matcher.matches_at("phonetic", 4, 5));
 //! ```
 
-use super::nfa::{NFAChar, NFA};
+use super::{NFAChar, NFA};
 
 /// Kind of context boundary condition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -733,7 +733,7 @@ mod tests {
     #[test]
     fn test_context_matcher_lookahead() {
         // c -> s / _[ei]
-        let nfa = compile(&parse("[ei]").unwrap()).unwrap();
+        let nfa = compile(&parse("[ei]").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let matcher = ContextMatcherChar::new(None, Some(nfa));
 
         // "city" - c before i at position 0
@@ -749,7 +749,7 @@ mod tests {
     #[test]
     fn test_context_matcher_lookbehind() {
         // s -> z / [aeiou]_
-        let nfa = compile(&parse("[aeiou]").unwrap()).unwrap();
+        let nfa = compile(&parse("[aeiou]").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let matcher = ContextMatcherChar::new(Some(nfa), None);
 
         // "roses" - s after o at position 2
@@ -762,8 +762,8 @@ mod tests {
     #[test]
     fn test_context_matcher_both_contexts() {
         // Match s between two vowels
-        let left_nfa = compile(&parse("[aeiou]").unwrap()).unwrap();
-        let right_nfa = compile(&parse("[aeiou]").unwrap()).unwrap();
+        let left_nfa = compile(&parse("[aeiou]").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let right_nfa = compile(&parse("[aeiou]").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let matcher = ContextMatcherChar::new(Some(left_nfa), Some(right_nfa));
 
         // "roses" - s between o and e at position 2
@@ -783,7 +783,7 @@ mod tests {
     #[test]
     fn test_contextual_rule_simple() {
         // ph -> f (no context)
-        let source = compile(&parse("ph").unwrap()).unwrap();
+        let source = compile(&parse("ph").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let rule = ContextualRewriteRuleChar::new(
             source,
             vec!['f'],
@@ -799,8 +799,8 @@ mod tests {
     #[test]
     fn test_contextual_rule_with_lookahead() {
         // c -> s / _[ei]
-        let source = compile(&parse("c").unwrap()).unwrap();
-        let right = compile(&parse("[ei]").unwrap()).unwrap();
+        let source = compile(&parse("c").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let right = compile(&parse("[ei]").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let rule = ContextualRewriteRuleChar::new(
             source,
             vec!['s'],
@@ -820,8 +820,8 @@ mod tests {
     #[test]
     fn test_contextual_rule_find_first_match() {
         // c -> s / _[ei]
-        let source = compile(&parse("c").unwrap()).unwrap();
-        let right = compile(&parse("[ei]").unwrap()).unwrap();
+        let source = compile(&parse("c").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let right = compile(&parse("[ei]").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let rule = ContextualRewriteRuleChar::new(
             source,
             vec!['s'],
@@ -838,7 +838,7 @@ mod tests {
     #[test]
     fn test_contextual_rule_word_boundary() {
         // e -> (empty) / _# (silent e at word end)
-        let source = compile(&parse("e").unwrap()).unwrap();
+        let source = compile(&parse("e").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let rule = ContextualRewriteRuleChar {
             source,
             replacement: vec![],
@@ -873,7 +873,7 @@ mod tests {
 
     #[test]
     fn test_byte_context_matcher_lookahead() {
-        let nfa = compile_bytes(&parse_bytes(b"[ei]").unwrap()).unwrap();
+        let nfa = compile_bytes(&parse_bytes(b"[ei]").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let matcher = ContextMatcher::new(None, Some(nfa));
 
         assert!(matcher.matches_at(b"city", 0, 1));
@@ -882,7 +882,7 @@ mod tests {
 
     #[test]
     fn test_byte_contextual_rule() {
-        let source = compile_bytes(&parse_bytes(b"ph").unwrap()).unwrap();
+        let source = compile_bytes(&parse_bytes(b"ph").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
         let rule = ContextualRewriteRule::new(
             source,
             vec![b'f'],

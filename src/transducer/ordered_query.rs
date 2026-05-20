@@ -195,6 +195,13 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
                         } else if distance > self.current_distance {
                             // Actual distance is higher than bucket - requeue to correct bucket
                             // This can happen when min_dist underestimates final distance
+                            //
+                            // CRITICAL: Queue children BEFORE requeueing the intersection!
+                            // Otherwise, children of this node will never be explored.
+                            // Example: dict=["a", "ar"], query="ar", max_dist=1
+                            // - "a" has min_dist=0 but actual_dist=1, so it's requeued to bucket[1]
+                            // - If we don't queue "a"'s children here, "ar" will never be found
+                            self.queue_children(&intersection);
                             self.pending_by_distance[distance].push_back(intersection);
                         }
                         // If distance < current_distance, skip (already passed that level)
@@ -406,7 +413,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
                 // Return the result if it's a complete word matching our prefix
                 if should_return {
                     let term = intersection.term();
-                    let distance = intersection.state.infer_prefix_distance(query_len).unwrap();
+                    let distance = intersection.state.infer_prefix_distance(query_len).expect("ordered query: state qualifies as prefix match (checked above)");
                     return Some(OrderedCandidate { distance, term });
                 }
             } else {
@@ -839,12 +846,12 @@ mod tests {
         // Prefix match + filter for lowercase
         let results: Vec<_> = query
             .prefix()
-            .filter(|c| c.term.chars().next().unwrap().is_lowercase())
+            .filter(|c| c.term.chars().next().expect("test fixture: candidate term is non-empty").is_lowercase())
             .collect();
 
         // Should only include lowercase-starting matches
         for candidate in &results {
-            assert!(candidate.term.chars().next().unwrap().is_lowercase());
+            assert!(candidate.term.chars().next().expect("test fixture: candidate term is non-empty").is_lowercase());
         }
 
         assert!(results.iter().any(|c| c.term == "testMethod"));

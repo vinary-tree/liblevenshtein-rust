@@ -670,8 +670,11 @@ pub enum Expression {
 
     /// Range repetition (`a{min,max}` or `a{min,}`)
     RepeatRange {
+        /// Sub-expression being repeated.
         inner: Box<Expression>,
+        /// Minimum number of repetitions (inclusive).
         min: usize,
+        /// Maximum number of repetitions (inclusive); `None` for unbounded.
         max: Option<usize>,
     },
 

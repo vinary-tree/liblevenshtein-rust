@@ -14,10 +14,10 @@
 //!
 //! States are computed on-demand using the MSM transition rules.
 
-use lling_llang::prelude::{LazyState, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition};
+use lling_llang::prelude::{LazyState, StateId, StateSource, TropicalWeight, WeightedTransition};
 use smallvec::SmallVec;
 
-use super::state::{MsmCompositeState, MsmStateKey, MsmStateRegistry};
+use super::state::MsmCompositeState;
 use super::weight::MsmWeight;
 use crate::time_series::MsmConfig;
 
@@ -389,7 +389,7 @@ mod tests {
         let hint = source.num_states_hint();
         assert!(hint.is_some());
         // (3+1) * (4+1) * 2 / 2 = 20
-        assert!(hint.unwrap() > 0);
+        assert!(hint.expect("expected Some hint in test") > 0);
     }
 
     #[test]
@@ -402,7 +402,7 @@ mod tests {
             .build();
 
         assert!(result.is_ok());
-        let source = result.unwrap();
+        let source = result.expect("test fixture: build must be Ok");
         assert_eq!(source.query().len(), 2);
         assert_eq!(source.msm_config().c, 0.5);
         assert_eq!(source.max_cost(), 5.0);

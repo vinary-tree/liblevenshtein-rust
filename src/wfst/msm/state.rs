@@ -374,7 +374,7 @@ mod tests {
 
         let retrieved = registry.get(id);
         assert!(retrieved.is_some());
-        let retrieved = retrieved.unwrap();
+        let retrieved = retrieved.expect("expected Some retrieved in test");
         assert_eq!(retrieved.series_id, 1);
         assert_eq!(retrieved.query_index, 2);
         assert_eq!(retrieved.target_index, 3);

@@ -362,7 +362,6 @@ fn test_dynamic_dawg_with_contextual_completion_hierarchical() {
 #[test]
 fn test_dynamic_dawg_contextual_with_draft_debug() {
     use liblevenshtein::contextual::DynamicContextualCompletionEngine;
-    use libdictenstein::MappedDictionary;
 
     let dict: DynamicDawg<Vec<u32>> = DynamicDawg::new();
     let dict_clone = dict.clone();

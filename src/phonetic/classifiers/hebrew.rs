@@ -48,6 +48,9 @@ static HEBREW_VOWELS: &[char] = &[
 impl VowelClassifier for HebrewClassifier {
     fn is_vowel(&self, c: char) -> bool {
         let code = c as u32;
+        // Documentation arms (0x05BA Holam Haser for vav) are kept for
+        // explicit linguistic intent though already subsumed by the range above.
+        #[allow(unreachable_patterns)]
         match code {
             // Hebrew niqqud (vowel points)
             0x05B0..=0x05BB => true, // Sheva through Qubuts
@@ -73,6 +76,9 @@ impl VowelClassifier for HebrewClassifier {
 
     fn is_consonant(&self, c: char) -> bool {
         let code = c as u32;
+        // Documentation arms for the five Hebrew final letter forms are kept for
+        // explicit linguistic intent though already subsumed by the range above.
+        #[allow(unreachable_patterns)]
         match code {
             // Hebrew letters (consonants)
             0x05D0..=0x05EA => true, // Alef through Tav

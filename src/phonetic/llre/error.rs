@@ -42,19 +42,25 @@ pub enum LLreErrorKind {
 
     /// Import depth exceeded
     ImportDepthExceeded {
+        /// Maximum import depth allowed before this error is raised.
         max: usize,
+        /// Path of the import that exceeded the depth limit.
         path: PathBuf,
     },
 
     /// Import file not found
     ImportNotFound {
+        /// The requested import path that could not be located.
         path: String,
+        /// Directories that were searched when looking for the import.
         search_paths: Vec<PathBuf>,
     },
 
     /// Import resolution failed
     ImportResolutionFailed {
+        /// The import path that failed to resolve.
         path: String,
+        /// Why the resolution failed.
         reason: String,
     },
 
@@ -79,7 +85,9 @@ pub enum LLreErrorKind {
 
     /// Expected a specific token
     ExpectedToken {
+        /// Description of the token kind the parser was expecting.
         expected: String,
+        /// Description of the token that was encountered instead.
         found: String,
     },
 
@@ -95,8 +103,11 @@ pub enum LLreErrorKind {
 
     /// Invalid directive value
     InvalidDirectiveValue {
+        /// Name of the directive that received the bad value.
         directive: String,
+        /// The offending value.
         value: String,
+        /// Why the value is invalid.
         reason: String,
     },
 
@@ -122,28 +133,38 @@ pub enum LLreErrorKind {
 
     /// Conflicting flags
     ConflictingFlags {
+        /// First flag in the conflict.
         flag1: String,
+        /// Second flag in the conflict.
         flag2: String,
     },
 
     // ==================== Symbol/Import Errors ====================
     /// Undefined symbol reference
     UndefinedSymbol {
+        /// Name of the symbol that could not be resolved.
         name: String,
+        /// Names of symbols that are in scope, for diagnostics.
         available: Vec<String>,
     },
 
     /// Symbol type mismatch
     SymbolTypeMismatch {
+        /// Name of the symbol involved in the mismatch.
         name: String,
+        /// Type the consumer expected.
         expected: String,
+        /// Type the symbol actually has.
         found: String,
     },
 
     /// Alias conflict (two imports with same alias)
     AliasConflict {
+        /// The alias name that is reused.
         alias: String,
+        /// Path of the first import that introduced the alias.
         path1: String,
+        /// Path of the second, conflicting import.
         path2: String,
     },
 
@@ -161,13 +182,17 @@ pub enum LLreErrorKind {
 
     /// Pattern too complex
     PatternTooComplex {
+        /// Computed pattern size that triggered the error.
         size: usize,
+        /// Maximum allowed pattern size.
         max: usize,
     },
 
     /// Recursion depth exceeded during compilation
     RecursionDepthExceeded {
+        /// Recursion depth reached when the limit was hit.
         depth: usize,
+        /// Maximum allowed recursion depth.
         max: usize,
     },
 
@@ -177,7 +202,9 @@ pub enum LLreErrorKind {
 
     /// Version mismatch
     VersionMismatch {
+        /// Binary format version the loader expected.
         expected: u8,
+        /// Binary format version actually present in the input.
         found: u8,
     },
 

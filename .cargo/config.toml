@@ -22,3 +22,9 @@ rustflags = ["-C", "target-cpu=native"]
 # ✅ cargo run                    (works automatically)
 #
 # The RUSTFLAGS environment variable will override this configuration if set.
+
+# Cargo aliases for code coverage (requires cargo-llvm-cov: cargo install cargo-llvm-cov)
+[alias]
+cov = "llvm-cov --branch --all-features --html --output-dir coverage/"
+cov-text = "llvm-cov --branch --all-features --text"
+cov-open = "llvm-cov --branch --all-features --html --open"

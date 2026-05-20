@@ -62,17 +62,21 @@
 //! See `docs/wfst/nfa_phonetic_regex.md` for the complete formal specification
 //! of NFA construction and operations.
 
+pub mod byte_nfa;
+pub mod char_nfa;
 pub mod compiler;
 pub mod context;
 pub mod incremental;
 pub mod lazy_dfa;
 pub mod memoized;
-pub mod nfa;
 pub mod optimizer;
 pub mod product;
 pub mod state_set;
 pub mod thompson;
 pub mod types;
+
+#[cfg(test)]
+mod tests;
 
 // Re-export main types (character-level)
 pub use compiler::{
@@ -87,7 +91,7 @@ pub use incremental::{
 };
 pub use lazy_dfa::{CacheStats, DFAStateChar, LazyDFAChar};
 pub use memoized::{MemoizedLazyDFAChar, MemoizedMatcherChar, MemoizedStats};
-pub use nfa::NFAChar;
+pub use char_nfa::NFAChar;
 pub use product::{ProductAutomatonChar, ProductStateChar};
 pub use thompson::ThompsonBuilderChar;
 pub use types::{
@@ -100,7 +104,7 @@ pub use context::{ContextMatcher, ContextPattern, ContextualRewriteRule};
 pub use incremental::{IncrementalMatcher, MatcherSnapshot};
 pub use lazy_dfa::{DFAState, LazyDFA};
 pub use memoized::{MemoizedLazyDFA, MemoizedMatcher};
-pub use nfa::NFA;
+pub use byte_nfa::NFA;
 pub use product::{ProductAutomaton, ProductState};
 pub use thompson::ThompsonBuilder;
 pub use types::{CharClass, Transition, TransitionLabel};

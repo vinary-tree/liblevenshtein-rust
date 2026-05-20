@@ -25,7 +25,7 @@
 //! state.insert(PositionF64::new(1, 1.0), Algorithm::Standard, 5);
 //!
 //! assert!(!state.is_empty());
-//! assert!(state.min_distance().unwrap() < 0.0001); // ~0.0
+//! assert!(state.min_distance().expect("test fixture: min_distance on non-empty state") < 0.0001); // ~0.0
 //! ```
 
 use super::algorithm::Algorithm;
@@ -265,7 +265,7 @@ impl StateF64 {
     /// state.insert(PositionF64::new(3, 2.5), Algorithm::Standard, 10);
     /// state.insert(PositionF64::new(4, 1.5), Algorithm::Standard, 10);
     ///
-    /// let min = state.min_distance().unwrap();
+    /// let min = state.min_distance().expect("test fixture: min_distance on non-empty state");
     /// assert!((min - 1.5).abs() < 1e-9);
     /// ```
     #[inline]
@@ -307,7 +307,7 @@ impl StateF64 {
     /// // Position at index 3 with cost 1.0, query length 7
     /// // Distance = 1.0 + (7 - 3) = 5.0
     /// let dist = state.infer_distance(7);
-    /// assert!((dist.unwrap() - 5.0).abs() < 1e-9);
+    /// assert!((dist.expect("doc example: distance available") - 5.0).abs() < 1e-9);
     /// ```
     #[inline]
     pub fn infer_distance(&self, query_length: usize) -> Option<f64> {
@@ -353,7 +353,7 @@ impl StateF64 {
     ///
     /// // Only position at index 5 (>= query_length 5) qualifies
     /// let dist = state.infer_prefix_distance(5);
-    /// assert!((dist.unwrap() - 1.5).abs() < 1e-9);
+    /// assert!((dist.expect("doc example: distance available") - 1.5).abs() < 1e-9);
     /// ```
     #[inline]
     pub fn infer_prefix_distance(&self, query_length: usize) -> Option<f64> {
@@ -437,14 +437,14 @@ mod tests {
         let pos = PositionF64::new(3, 1.5);
         let state = StateF64::single(pos);
         assert_eq!(state.len(), 1);
-        assert!(state.head().unwrap().approx_eq(&pos));
+        assert!(state.head().expect("test fixture: head on non-empty state").approx_eq(&pos));
     }
 
     #[test]
     fn test_state_initial() {
         let state = StateF64::initial();
         assert_eq!(state.len(), 1);
-        let head = state.head().unwrap();
+        let head = state.head().expect("test fixture: head on non-empty state");
         assert_eq!(head.term_index, 0);
         assert!(approx_eq(head.accumulated_cost, 0.0));
     }
@@ -479,7 +479,7 @@ mod tests {
         assert_eq!(state.len(), 1);
 
         // Verify (5, 2.0) is in the state
-        let pos = state.head().unwrap();
+        let pos = state.head().expect("test fixture: head on non-empty state");
         assert_eq!(pos.term_index, 5);
         assert!(approx_eq(pos.accumulated_cost, 2.0));
     }
@@ -496,7 +496,7 @@ mod tests {
         state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length);
 
         assert_eq!(state.len(), 1);
-        assert!(approx_eq(state.head().unwrap().accumulated_cost, 2.0));
+        assert!(approx_eq(state.head().expect("test fixture: head on non-empty state").accumulated_cost, 2.0));
     }
 
     #[test]
@@ -508,7 +508,7 @@ mod tests {
         state.insert(PositionF64::new(4, 1.5), Algorithm::Standard, query_length);
         state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length);
 
-        assert!(approx_eq(state.min_distance().unwrap(), 1.5));
+        assert!(approx_eq(state.min_distance().expect("test fixture: min_distance on non-empty state"), 1.5));
     }
 
     #[test]
@@ -521,7 +521,7 @@ mod tests {
 
         // Position (3, 1.0): 1.0 + (7-3) = 5.0
         // Position (5, 2.0): 2.0 + (7-5) = 4.0
-        let dist = state.infer_distance(query_length).unwrap();
+        let dist = state.infer_distance(query_length).expect("test fixture: infer_distance on non-empty state");
         assert!(approx_eq(dist, 4.0));
     }
 
@@ -534,7 +534,7 @@ mod tests {
         state.insert(PositionF64::new(3, 0.5), Algorithm::Standard, query_length);
 
         // Only (5, 1.5) qualifies (term_index >= query_length)
-        let dist = state.infer_prefix_distance(query_length).unwrap();
+        let dist = state.infer_prefix_distance(query_length).expect("test fixture: infer_prefix_distance on qualifying state");
         assert!(approx_eq(dist, 1.5));
     }
 
@@ -569,6 +569,6 @@ mod tests {
 
         state1.copy_from(&state2);
         assert_eq!(state1.len(), 1);
-        assert_eq!(state1.head().unwrap().term_index, 5);
+        assert_eq!(state1.head().expect("test fixture: head on non-empty state").term_index, 5);
     }
 }

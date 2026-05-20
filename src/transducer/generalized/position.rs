@@ -566,18 +566,18 @@ mod tests {
     #[test]
     fn test_new_i_valid() {
         // I + 0#0 (initial state)
-        let pos = GeneralizedPosition::new_i(0, 0, 2).unwrap();
+        let pos = GeneralizedPosition::new_i(0, 0, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(pos.is_non_final());
 
         // I + 1#1
-        let pos = GeneralizedPosition::new_i(1, 1, 2).unwrap();
+        let pos = GeneralizedPosition::new_i(1, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert_eq!(pos.offset(), 1);
         assert_eq!(pos.errors(), 1);
 
         // I + (-2)#2
-        let pos = GeneralizedPosition::new_i(-2, 2, 2).unwrap();
+        let pos = GeneralizedPosition::new_i(-2, 2, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert_eq!(pos.offset(), -2);
         assert_eq!(pos.errors(), 2);
     }
@@ -600,18 +600,18 @@ mod tests {
     #[test]
     fn test_new_m_valid() {
         // M + 0#0
-        let pos = GeneralizedPosition::new_m(0, 0, 2).unwrap();
+        let pos = GeneralizedPosition::new_m(0, 0, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(pos.is_final());
 
         // M + (-1)#1
-        let pos = GeneralizedPosition::new_m(-1, 1, 2).unwrap();
+        let pos = GeneralizedPosition::new_m(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
         assert_eq!(pos.offset(), -1);
         assert_eq!(pos.errors(), 1);
 
         // M + (-4)#2
-        let pos = GeneralizedPosition::new_m(-4, 2, 2).unwrap();
+        let pos = GeneralizedPosition::new_m(-4, 2, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
         assert_eq!(pos.offset(), -4);
         assert_eq!(pos.errors(), 2);
     }
@@ -633,10 +633,10 @@ mod tests {
 
     #[test]
     fn test_ordering() {
-        let pos1 = GeneralizedPosition::new_i(0, 0, 2).unwrap();
-        let pos2 = GeneralizedPosition::new_i(1, 1, 2).unwrap();
-        let pos3 = GeneralizedPosition::new_i(-1, 1, 2).unwrap();
-        let pos4 = GeneralizedPosition::new_m(0, 0, 2).unwrap();
+        let pos1 = GeneralizedPosition::new_i(0, 0, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos2 = GeneralizedPosition::new_i(1, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos3 = GeneralizedPosition::new_i(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos4 = GeneralizedPosition::new_m(0, 0, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
 
         // Sort by errors first
         assert!(pos1 < pos2);
@@ -652,10 +652,10 @@ mod tests {
 
     #[test]
     fn test_display() {
-        let pos1 = GeneralizedPosition::new_i(1, 2, 3).unwrap();
+        let pos1 = GeneralizedPosition::new_i(1, 2, 3).expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert_eq!(format!("{}", pos1), "I + 1#2");
 
-        let pos2 = GeneralizedPosition::new_m(-1, 1, 2).unwrap();
+        let pos2 = GeneralizedPosition::new_m(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
         assert_eq!(format!("{}", pos2), "M + -1#1");
     }
 
@@ -663,14 +663,14 @@ mod tests {
 
     #[test]
     fn test_new_i_transposing_valid() {
-        let pos = GeneralizedPosition::new_i_transposing(0, 1, 2).unwrap();
+        let pos = GeneralizedPosition::new_i_transposing(0, 1, 2).expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 1);
         assert!(pos.is_non_final());
         assert!(!pos.is_final());
 
         // Test with negative offset
-        let pos = GeneralizedPosition::new_i_transposing(-1, 1, 2).unwrap();
+        let pos = GeneralizedPosition::new_i_transposing(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
         assert_eq!(pos.offset(), -1);
         assert_eq!(pos.errors(), 1);
     }
@@ -684,13 +684,13 @@ mod tests {
 
     #[test]
     fn test_new_m_transposing_valid() {
-        let pos = GeneralizedPosition::new_m_transposing(0, 0, 2).unwrap();
+        let pos = GeneralizedPosition::new_m_transposing(0, 0, 2).expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(!pos.is_non_final());
         assert!(pos.is_final());
 
-        let pos = GeneralizedPosition::new_m_transposing(-1, 1, 2).unwrap();
+        let pos = GeneralizedPosition::new_m_transposing(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
         assert_eq!(pos.offset(), -1);
         assert_eq!(pos.errors(), 1);
     }
@@ -704,13 +704,13 @@ mod tests {
 
     #[test]
     fn test_new_i_splitting_valid() {
-        let pos = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').unwrap();
+        let pos = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 1);
         assert!(pos.is_non_final());
         assert!(!pos.is_final());
 
-        let pos = GeneralizedPosition::new_i_splitting(-2, 2, 2, 'b').unwrap();
+        let pos = GeneralizedPosition::new_i_splitting(-2, 2, 2, 'b').expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
         assert_eq!(pos.offset(), -2);
         assert_eq!(pos.errors(), 2);
     }
@@ -724,13 +724,13 @@ mod tests {
 
     #[test]
     fn test_new_m_splitting_valid() {
-        let pos = GeneralizedPosition::new_m_splitting(0, 0, 2, 'a').unwrap();
+        let pos = GeneralizedPosition::new_m_splitting(0, 0, 2, 'a').expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(!pos.is_non_final());
         assert!(pos.is_final());
 
-        let pos = GeneralizedPosition::new_m_splitting(-2, 2, 2, 'b').unwrap();
+        let pos = GeneralizedPosition::new_m_splitting(-2, 2, 2, 'b').expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
         assert_eq!(pos.offset(), -2);
         assert_eq!(pos.errors(), 2);
     }
@@ -744,30 +744,30 @@ mod tests {
 
     #[test]
     fn test_display_transposing() {
-        let pos = GeneralizedPosition::new_i_transposing(1, 2, 3).unwrap();
+        let pos = GeneralizedPosition::new_i_transposing(1, 2, 3).expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
         assert_eq!(format!("{}", pos), "I + 1#2_t");
 
-        let pos = GeneralizedPosition::new_m_transposing(-1, 1, 2).unwrap();
+        let pos = GeneralizedPosition::new_m_transposing(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
         assert_eq!(format!("{}", pos), "M + -1#1_t");
     }
 
     #[test]
     fn test_display_splitting() {
-        let pos = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').unwrap();
+        let pos = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
         assert_eq!(format!("{}", pos), "I + 0#1_s");
 
-        let pos = GeneralizedPosition::new_m_splitting(-2, 2, 2, 'a').unwrap();
+        let pos = GeneralizedPosition::new_m_splitting(-2, 2, 2, 'a').expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
         assert_eq!(format!("{}", pos), "M + -2#2_s");
     }
 
     #[test]
     fn test_ordering_with_new_variants() {
-        let i_normal = GeneralizedPosition::new_i(0, 1, 2).unwrap();
-        let i_transposing = GeneralizedPosition::new_i_transposing(0, 1, 2).unwrap();
-        let i_splitting = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').unwrap();
-        let m_normal = GeneralizedPosition::new_m(0, 1, 2).unwrap();
-        let m_transposing = GeneralizedPosition::new_m_transposing(0, 1, 2).unwrap();
-        let m_splitting = GeneralizedPosition::new_m_splitting(0, 1, 2, 'a').unwrap();
+        let i_normal = GeneralizedPosition::new_i(0, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let i_transposing = GeneralizedPosition::new_i_transposing(0, 1, 2).expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
+        let i_splitting = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
+        let m_normal = GeneralizedPosition::new_m(0, 1, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
+        let m_transposing = GeneralizedPosition::new_m_transposing(0, 1, 2).expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
+        let m_splitting = GeneralizedPosition::new_m_splitting(0, 1, 2, 'a').expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
 
         // I-types come before M-types
         assert!(i_normal < m_normal);

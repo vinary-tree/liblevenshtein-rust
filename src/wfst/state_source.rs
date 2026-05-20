@@ -117,10 +117,6 @@ impl<N: DictionaryNode> NodeRegistry<N> {
     fn get_node(&self, id: u32) -> Option<&N> {
         self.id_to_node.get(id as usize)
     }
-
-    fn len(&self) -> usize {
-        self.id_to_node.len()
-    }
 }
 
 impl<D> LevenshteinStateSource<D>

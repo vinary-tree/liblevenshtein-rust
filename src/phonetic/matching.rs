@@ -23,7 +23,7 @@
 //! All functions are direct translations of Coq functions with proven properties.
 
 use super::common::phonetic_unit::PhoneticUnit;
-use super::types::{Context, Phone, PhoneByte, PhoneChar, ContextByte, ContextChar};
+use super::types::{Context, Phone, PhoneByte, PhoneChar, ContextChar};
 
 // ============================================================================
 // Generic Functions

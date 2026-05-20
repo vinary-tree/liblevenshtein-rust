@@ -267,21 +267,21 @@ mod tests {
     #[test]
     fn test_no_expansion_needed() {
         let table = SymbolTable::new();
-        let regex = parse("[a-z]+").unwrap();
-        let expanded = expand_pattern_symbols(&regex, &table).unwrap();
+        let regex = parse("[a-z]+").expect("test fixture: parse must be Ok");
+        let expanded = expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
         assert_eq!(format!("{}", expanded), format!("{}", regex));
     }
 
     #[test]
     fn test_simple_pattern_expansion() {
         let mut table = SymbolTable::new();
-        let digit_pattern = parse("[0-9]").unwrap();
+        let digit_pattern = parse("[0-9]").expect("test fixture: parse must be Ok");
         table.add_pattern("DIGIT", digit_pattern, None);
 
         // Parse pattern that references DIGIT
         // Note: GroupRef syntax is (?&name)
         let regex = Regex::GroupRef("DIGIT".to_string());
-        let expanded = expand_pattern_symbols(&regex, &table).unwrap();
+        let expanded = expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
 
         // Should be wrapped in non-capturing group
         if let Regex::NonCapturingGroup(inner) = &expanded {
@@ -300,7 +300,7 @@ mod tests {
         let mut table = SymbolTable::new();
 
         // DIGIT = [0-9]
-        let digit_pattern = parse("[0-9]").unwrap();
+        let digit_pattern = parse("[0-9]").expect("test fixture: parse must be Ok");
         table.add_pattern("DIGIT", digit_pattern, None);
 
         // NUMBER = DIGIT+ (using GroupRef)
@@ -309,7 +309,7 @@ mod tests {
 
         // Pattern: (?&NUMBER)
         let regex = Regex::GroupRef("NUMBER".to_string());
-        let expanded = expand_pattern_symbols(&regex, &table).unwrap();
+        let expanded = expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
 
         // Should contain digit characters (the Display impl may expand [0-9] to [0123456789])
         // The inner DIGIT should be expanded to a digit character class wrapped in non-capturing group
@@ -371,7 +371,7 @@ mod tests {
         // Reference to undefined pattern should be preserved
         // (might be a named group reference within the same pattern)
         let regex = Regex::GroupRef("undefined".to_string());
-        let expanded = expand_pattern_symbols(&regex, &table).unwrap();
+        let expanded = expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
 
         // Should remain as GroupRef
         assert!(matches!(expanded, Regex::GroupRef(_)));
@@ -382,7 +382,7 @@ mod tests {
         let mut table = SymbolTable::new();
 
         // DIGIT = [0-9]
-        let digit_pattern = parse("[0-9]").unwrap();
+        let digit_pattern = parse("[0-9]").expect("test fixture: parse must be Ok");
         table.add_pattern("DIGIT", digit_pattern, None);
 
         // Pattern uses DIGIT twice: (?&DIGIT)\.(?&DIGIT)

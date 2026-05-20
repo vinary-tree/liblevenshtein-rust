@@ -354,11 +354,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Build per-document dictionaries
     let dicts = build_document_dicts(args.num_docs, args.terms_per_doc);
 
-    let (seq_time, tree_time, merged_dict) = match args.strategy {
+    let (_seq_time, _tree_time, merged_dict) = match args.strategy {
         MergeStrategy::Both => {
             // Sequential
             let seq_start = Instant::now();
-            let seq_result = merge_sequential(dicts.clone());
+            let _seq_result = merge_sequential(dicts.clone());
             let seq_elapsed = seq_start.elapsed();
 
             // Binary tree

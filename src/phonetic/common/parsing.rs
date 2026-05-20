@@ -319,14 +319,10 @@ mod tests {
         Exclamation,
         GroupStart,
         GroupEnd,
-        Hash,
         Monosyllable,
         Polysyllable,
         OpenSyllable,
-        ClosedSyllable,
         FinalSyllable,
-        InitialSyllable,
-        Char(char),
         Eof,
     }
 
@@ -347,7 +343,7 @@ mod tests {
             matches!(self, MockToken::GroupEnd)
         }
         fn is_hash(&self) -> bool {
-            matches!(self, MockToken::Hash)
+            false
         }
         fn is_star(&self) -> bool {
             false
@@ -372,14 +368,12 @@ mod tests {
                 MockToken::Monosyllable => Some(SyllableCondition::Monosyllable),
                 MockToken::Polysyllable => Some(SyllableCondition::Polysyllable),
                 MockToken::OpenSyllable => Some(SyllableCondition::OpenSyllable),
-                MockToken::ClosedSyllable => Some(SyllableCondition::ClosedSyllable),
                 MockToken::FinalSyllable => Some(SyllableCondition::FinalSyllable),
-                MockToken::InitialSyllable => Some(SyllableCondition::InitialSyllable),
                 _ => None,
             }
         }
         fn can_start_primary(&self) -> bool {
-            matches!(self, MockToken::Char(_) | MockToken::GroupStart | MockToken::Hash)
+            matches!(self, MockToken::GroupStart)
         }
     }
 
@@ -458,7 +452,7 @@ mod tests {
         let mut parser = MockSyllableParser::new(vec![MockToken::Monosyllable, MockToken::Eof]);
         let result = parse_syllable_expr(&mut parser);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), SyllableExpr::Cond(SyllableCondition::Monosyllable));
+        assert_eq!(result.expect("test fixture: parse must be Ok"), SyllableExpr::Cond(SyllableCondition::Monosyllable));
     }
 
     #[test]
@@ -471,7 +465,7 @@ mod tests {
         ]);
         let result = parse_syllable_expr(&mut parser);
         assert!(result.is_ok());
-        let expr = result.unwrap();
+        let expr = result.expect("test fixture: parse must be Ok");
         match expr {
             SyllableExpr::Or(left, right) => {
                 assert_eq!(*left, SyllableExpr::Cond(SyllableCondition::Monosyllable));
@@ -491,7 +485,7 @@ mod tests {
         ]);
         let result = parse_syllable_expr(&mut parser);
         assert!(result.is_ok());
-        let expr = result.unwrap();
+        let expr = result.expect("test fixture: parse must be Ok");
         match expr {
             SyllableExpr::And(left, right) => {
                 assert_eq!(*left, SyllableExpr::Cond(SyllableCondition::OpenSyllable));
@@ -510,7 +504,7 @@ mod tests {
         ]);
         let result = parse_syllable_expr(&mut parser);
         assert!(result.is_ok());
-        let expr = result.unwrap();
+        let expr = result.expect("test fixture: parse must be Ok");
         match expr {
             SyllableExpr::Not(inner) => {
                 assert_eq!(*inner, SyllableExpr::Cond(SyllableCondition::Monosyllable));

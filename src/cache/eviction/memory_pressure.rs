@@ -147,7 +147,7 @@ impl<D> MemoryPressure<D> {
     /// Records an entry access with size tracking.
     fn record_access<V: DictionaryValue>(&self, term: &str, _value: &V) {
         let size = std::mem::size_of::<V>();
-        let mut metadata = self.metadata.write().unwrap();
+        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
         metadata
             .entry(term.to_string())
             .and_modify(|m| m.increment())
@@ -158,7 +158,7 @@ impl<D> MemoryPressure<D> {
     ///
     /// Returns `None` if the entry has never been accessed.
     pub fn memory_pressure_score(&self, term: &str) -> Option<f64> {
-        let metadata = self.metadata.read().unwrap();
+        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
         metadata.get(term).map(|m| m.memory_pressure_score())
     }
 
@@ -166,7 +166,7 @@ impl<D> MemoryPressure<D> {
     ///
     /// Returns the term with the highest pressure score (most likely to evict).
     pub fn find_highest_pressure(&self, terms: &[&str]) -> Option<String> {
-        let metadata = self.metadata.read().unwrap();
+        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
         terms
             .iter()
             .filter_map(|&term| {
@@ -187,7 +187,7 @@ impl<D> MemoryPressure<D> {
     /// Returns the evicted term if any.
     pub fn evict_highest_pressure(&self, terms: &[&str]) -> Option<String> {
         if let Some(high_pressure_term) = self.find_highest_pressure(terms) {
-            let mut metadata = self.metadata.write().unwrap();
+            let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
             metadata.remove(&high_pressure_term);
             Some(high_pressure_term)
         } else {
@@ -197,7 +197,7 @@ impl<D> MemoryPressure<D> {
 
     /// Clears all metadata.
     pub fn clear_metadata(&self) {
-        let mut metadata = self.metadata.write().unwrap();
+        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
         metadata.clear();
     }
 }
@@ -342,13 +342,13 @@ mod tests {
 
         // Access foo once (hit_rate = 1/1 = 1.0)
         assert_eq!(memory_pressure.get_value("foo"), Some(42));
-        let score1 = memory_pressure.memory_pressure_score("foo").unwrap();
+        let score1 = memory_pressure.memory_pressure_score("foo").expect("expected Some score in test");
 
         // Access bar multiple times (hit_rate = 3/3 = 1.0)
         assert_eq!(memory_pressure.get_value("bar"), Some(99));
         assert_eq!(memory_pressure.get_value("bar"), Some(99));
         assert_eq!(memory_pressure.get_value("bar"), Some(99));
-        let score2 = memory_pressure.memory_pressure_score("bar").unwrap();
+        let score2 = memory_pressure.memory_pressure_score("bar").expect("expected Some score in test");
 
         // Both have same size and same hit rate (1.0), so scores should be equal
         assert!((score1 - score2).abs() < 0.01);
@@ -399,7 +399,7 @@ mod tests {
 
         // Evicted term should have no metadata
         assert_eq!(
-            memory_pressure.memory_pressure_score(&evicted.unwrap()),
+            memory_pressure.memory_pressure_score(&evicted.expect("expected Some evicted in test")),
             None
         );
     }
@@ -433,10 +433,10 @@ mod tests {
         assert!(!root.is_final());
 
         // Traverse 'h' -> 'e' -> 'l' -> 'p'
-        let h = root.transition(b'h').unwrap();
-        let e = h.transition(b'e').unwrap();
-        let l = e.transition(b'l').unwrap();
-        let p = l.transition(b'p').unwrap();
+        let h = root.transition(b'h').expect("expected Some transition h in test");
+        let e = h.transition(b'e').expect("expected Some transition e in test");
+        let l = e.transition(b'l').expect("expected Some transition l in test");
+        let p = l.transition(b'p').expect("expected Some transition p in test");
 
         assert!(p.is_final()); // "help"
     }
@@ -460,13 +460,13 @@ mod tests {
 
         // First access (hit_rate = 1/1 = 1.0)
         assert_eq!(memory_pressure.get_value("foo"), Some(42));
-        let score1 = memory_pressure.memory_pressure_score("foo").unwrap();
+        let score1 = memory_pressure.memory_pressure_score("foo").expect("expected Some score in test");
 
         // Multiple accesses (hit_rate = 6/6 = 1.0, same as before)
         for _ in 0..5 {
             assert_eq!(memory_pressure.get_value("foo"), Some(42));
         }
-        let score2 = memory_pressure.memory_pressure_score("foo").unwrap();
+        let score2 = memory_pressure.memory_pressure_score("foo").expect("expected Some score in test");
 
         // Hit rate is always 1.0 since every get_value is a hit, so scores stay equal
         assert!((score1 - score2).abs() < 0.01);

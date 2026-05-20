@@ -67,10 +67,8 @@ use crate::transducer::{SubstitutionPolicy, Unrestricted};
 pub struct UniversalAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrestricted> {
     /// Maximum edit distance n
     max_distance: u8,
-    /// Substitution policy
-    policy: P,
-    /// Phantom data for position variant
-    _phantom: std::marker::PhantomData<V>,
+    /// Phantom data for position variant and substitution policy
+    _phantom: std::marker::PhantomData<(V, P)>,
 }
 
 // Backward-compatible constructors for Unrestricted policy
@@ -94,7 +92,6 @@ impl<V: PositionVariant> UniversalAutomaton<V, Unrestricted> {
     pub fn new(max_distance: u8) -> Self {
         Self {
             max_distance,
-            policy: Unrestricted,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -121,10 +118,9 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     /// let automaton = UniversalAutomaton::<Standard>::with_policy(2, policy);
     /// ```
     #[must_use]
-    pub fn with_policy(max_distance: u8, policy: P) -> Self {
+    pub fn with_policy(max_distance: u8, _policy: P) -> Self {
         Self {
             max_distance,
-            policy,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -385,7 +381,7 @@ mod tests {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
         // I + 0#0 after processing 4 chars of 4-char word
-        state.add_position(UniversalPosition::new_i(0, 0, 2).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         // Should be accepting: word_len=4, input_len=4, offset=0, errors=0
         // current_word_pos = 4 + 0 = 4, remaining = 4 - 4 = 0 ≤ (2 - 0) = 2 ✓
@@ -397,7 +393,7 @@ mod tests {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
         // I + 0#0 after processing 2 chars of 4-char word
-        state.add_position(UniversalPosition::new_i(0, 0, 2).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         // Should be accepting: word_len=4, input_len=2, offset=0, errors=0
         // current_word_pos = 2 + 0 = 2, remaining = 4 - 2 = 2 ≤ (2 - 0) = 2 ✓
@@ -409,7 +405,7 @@ mod tests {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
         // M + 0#0 (past word end with 0 errors)
-        state.add_position(UniversalPosition::new_m(0, 0, 2).unwrap());
+        state.add_position(UniversalPosition::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args"));
 
         // M-type with offset ≤ 0 and errors ≤ n is accepting
         assert!(automaton.is_accepting(&state, 4, 5));
@@ -419,8 +415,8 @@ mod tests {
     fn test_is_accepting_mixed_state() {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
-        state.add_position(UniversalPosition::new_i(0, 0, 2).unwrap());
-        state.add_position(UniversalPosition::new_m(-1, 1, 2).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
+        state.add_position(UniversalPosition::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args"));
 
         // State with at least one accepting position (M-type) is accepting
         assert!(automaton.is_accepting(&state, 4, 5));
@@ -431,7 +427,7 @@ mod tests {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
         // I + 0#0 after processing 0 chars of 4-char word
-        state.add_position(UniversalPosition::new_i(0, 0, 2).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         // Should NOT be accepting: remaining = 4 - 0 = 4 > (2 - 0) = 2
         assert!(!automaton.is_accepting(&state, 4, 0));

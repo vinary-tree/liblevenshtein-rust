@@ -532,7 +532,7 @@ mod tests {
         adaptive.observe(3.0);
 
         assert_eq!(adaptive.round(), 1);
-        let stats = adaptive.statistics().unwrap();
+        let stats = adaptive.statistics().expect("expected Some stats in test");
         assert_eq!(stats.observations, 1);
         assert!(approx_eq(stats.total_cost, 3.0));
     }
@@ -588,7 +588,7 @@ mod tests {
 
         assert_eq!(adaptive.round(), 0);
         assert!(approx_eq(adaptive.current_c(), 1.0));
-        let stats = adaptive.statistics().unwrap();
+        let stats = adaptive.statistics().expect("expected Some stats in test");
         assert_eq!(stats.observations, 0);
     }
 

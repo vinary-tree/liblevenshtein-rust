@@ -126,7 +126,7 @@ mod tests {
             .dictionary(dict)
             .algorithm(Algorithm::Standard)
             .build()
-            .unwrap();
+            .expect("test fixture: builder with dict and algorithm");
 
         assert_eq!(transducer.algorithm(), Algorithm::Standard);
         assert_eq!(transducer.dictionary().len(), Some(2));
@@ -161,14 +161,14 @@ mod tests {
             .algorithm(Algorithm::Transposition)
             .dictionary(dict1)
             .build()
-            .unwrap();
+            .expect("test fixture: builder with dict and algorithm");
 
         // Dictionary first
         let t2 = TransducerBuilder::new()
             .dictionary(dict2)
             .algorithm(Algorithm::Transposition)
             .build()
-            .unwrap();
+            .expect("test fixture: builder with dict and algorithm");
 
         assert_eq!(t1.algorithm(), t2.algorithm());
     }
@@ -185,7 +185,7 @@ mod tests {
                 .dictionary(dict)
                 .algorithm(algo)
                 .build()
-                .unwrap();
+                .expect("test fixture: builder with dict and algorithm");
 
             assert_eq!(transducer.algorithm(), algo);
         }
@@ -200,7 +200,7 @@ mod tests {
             .dictionary(dict)
             .algorithm(Algorithm::Standard)
             .build()
-            .unwrap();
+            .expect("test fixture: builder with dict and algorithm");
 
         let results: Vec<_> = transducer.query("test", 0).collect();
         assert_eq!(results.len(), 1);

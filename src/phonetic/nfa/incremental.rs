@@ -35,7 +35,7 @@
 //! matcher.reset();
 //! ```
 
-use super::nfa::{NFAChar, NFA};
+use super::{NFAChar, NFA};
 use super::state_set::StateSet;
 use super::types::StateId;
 use rustc_hash::FxHashSet;

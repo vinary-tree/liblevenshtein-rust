@@ -25,7 +25,7 @@
 //! let dict = DoubleArrayTrie::from_terms(vec!["phone", "phones", "fone", "elephant"]);
 //!
 //! // Build phonetic NFA for pattern "(ph|f)one"
-//! let pattern = compile(&parse("(ph|f)one").unwrap()).unwrap();
+//! let pattern = compile(&parse("(ph|f)one").expect("doc example: regex parses")).expect("doc example: regex compiles");
 //!
 //! // Create phonetic transducer
 //! let transducer = PhoneticTransducer::new(dict, pattern, 1);

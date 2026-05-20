@@ -42,13 +42,17 @@ pub enum LLevErrorKind {
 
     /// Include depth exceeded
     IncludeDepthExceeded {
+        /// Maximum allowed include depth.
         max: usize,
+        /// Path that exceeded the depth limit.
         path: PathBuf,
     },
 
     /// Include file not found
     IncludeNotFound {
+        /// Path that could not be resolved.
         path: String,
+        /// Search paths that were tried.
         search_paths: Vec<PathBuf>,
     },
 
@@ -74,7 +78,9 @@ pub enum LLevErrorKind {
     // ==================== Parser Errors ====================
     /// Expected a specific token
     ExpectedToken {
+        /// Description of the token kind that was expected.
         expected: String,
+        /// Description of the token kind actually found.
         found: String,
     },
 
@@ -86,7 +92,9 @@ pub enum LLevErrorKind {
 
     /// Invalid metadata value
     InvalidMetadataValue {
+        /// The metadata key whose value is invalid.
         key: String,
+        /// The offending value.
         value: String,
     },
 
@@ -185,7 +193,9 @@ pub enum LLevErrorKind {
 
     /// Invalid compiled format (version mismatch)
     InvalidCompiledFormat {
+        /// Version supported by this binary.
         expected_version: u32,
+        /// Version encoded in the compiled artifact.
         found_version: u32,
     },
 

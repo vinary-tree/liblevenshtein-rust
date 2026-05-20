@@ -17,7 +17,7 @@ mod tests {
     use super::super::application::{apply_rule_at, apply_rules_seq, MAX_EXPANSION_FACTOR};
     use super::super::rules::{orthography_rules, phonetic_rules, test_rules, zompist_rules};
     use super::super::types::{
-        Context, ContextByte, Phone, PhoneByte, RewriteRule, RewriteRuleByte,
+        ContextByte, Phone, PhoneByte, RewriteRuleByte,
     };
     use proptest::prelude::*;
 

@@ -357,7 +357,9 @@ pub enum Regex {
     /// Applies flags to the inner pattern (scoped) or to subsequent patterns (inline).
     /// If `inner` is `None`, this is an inline flag that affects the rest of the pattern.
     FlagsGroup {
+        /// Flag set being introduced by this group.
         flags: RegexFlags,
+        /// Inner pattern when scoped (`Some`); `None` for an inline flag prefix.
         inner: Option<Box<Regex>>,
     },
 
@@ -396,9 +398,13 @@ pub enum Regex {
 
     /// Rewrite rule: pattern -> replacement with optional context and weight
     RewriteRule {
+        /// Left-hand side pattern to match.
         pattern: Box<Regex>,
+        /// Right-hand side substitution produced when the pattern matches.
         replacement: Box<Regex>,
+        /// Optional context predicate constraining where the rule applies.
         context: Option<Box<ContextPredicate>>,
+        /// Cost/weight associated with applying this rewrite.
         weight: f64,
     },
 }
@@ -927,7 +933,9 @@ pub enum RegexByte {
 
     /// Scoped flags: `(?flags:pattern)` or standalone `(?flags)`
     FlagsGroup {
+        /// Flag set being introduced by this group.
         flags: RegexFlags,
+        /// Inner pattern when scoped (`Some`); `None` for an inline flag prefix.
         inner: Option<Box<RegexByte>>,
     },
 
@@ -966,9 +974,13 @@ pub enum RegexByte {
 
     /// Rewrite rule: pattern -> replacement with optional context and weight
     RewriteRule {
+        /// Left-hand side pattern to match.
         pattern: Box<RegexByte>,
+        /// Right-hand side substitution produced when the pattern matches.
         replacement: Box<RegexByte>,
+        /// Optional context predicate constraining where the rule applies.
         context: Option<Box<ContextPredicateByte>>,
+        /// Cost/weight associated with applying this rewrite.
         weight: f64,
     },
 }

@@ -505,7 +505,7 @@ mod tests {
         // Should have transition for 'a' -> 'b'
         let a_trans = transitions.iter().find(|t| t.input == Some('a'));
         assert!(a_trans.is_some());
-        assert_eq!(a_trans.unwrap().output, Some('b'));
+        assert_eq!(a_trans.expect("expected Some a_trans in test").output, Some('b'));
     }
 
     #[test]
@@ -518,7 +518,7 @@ mod tests {
         // Should have identity transitions for unrewritten characters
         let z_trans = transitions.iter().find(|t| t.input == Some('z'));
         assert!(z_trans.is_some());
-        assert_eq!(z_trans.unwrap().output, Some('z'));
+        assert_eq!(z_trans.expect("expected Some z_trans in test").output, Some('z'));
     }
 
     #[test]
@@ -528,7 +528,7 @@ mod tests {
 
         let ph_rule = rules.iter().find(|r| r.input == "ph");
         assert!(ph_rule.is_some());
-        assert_eq!(ph_rule.unwrap().output, "f");
+        assert_eq!(ph_rule.expect("expected Some ph_rule in test").output, "f");
     }
 
     #[test]
@@ -538,7 +538,7 @@ mod tests {
 
         let sch_rule = rules.iter().find(|r| r.input == "sch");
         assert!(sch_rule.is_some());
-        assert_eq!(sch_rule.unwrap().output, "sh");
+        assert_eq!(sch_rule.expect("expected Some sch_rule in test").output, "sh");
     }
 
     #[test]

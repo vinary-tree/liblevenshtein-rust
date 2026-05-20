@@ -189,7 +189,7 @@ where
     ///
     /// // Access the transducer
     /// let transducer_ref = engine.transducer();
-    /// let transducer = transducer_ref.read().unwrap();
+    /// let transducer = transducer_ref.read().expect("static engine: transducer RwLock poisoned");
     ///
     /// // Clone the dictionary for serialization
     /// let dict = transducer.dictionary().clone();
@@ -201,30 +201,39 @@ where
 
     /// Create a root context (top-level scope).
     pub fn create_root_context(&self, id: ContextId) -> Result<ContextId> {
-        let mut tree = self.context_tree.write().unwrap();
+        let mut tree = self.context_tree.write().expect("static engine: context_tree RwLock poisoned");
         tree.create_root(id);
 
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
         drafts.insert(id, DraftBuffer::new());
 
         Ok(id)
     }
 
     /// Create a child context (nested scope).
-    pub fn create_child_context(&self, parent: ContextId, child: ContextId) -> Result<ContextId> {
-        let mut tree = self.context_tree.write().unwrap();
-        tree.create_child(parent, child)
-            .map_err(|_| ContextError::ContextNotFound(parent))?;
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - ID for the new child context
+    /// * `parent_id` - ID of the existing parent context
+    ///
+    /// # Returns
+    ///
+    /// The child context ID on success, or error if parent doesn't exist
+    pub fn create_child_context(&self, id: ContextId, parent_id: ContextId) -> Result<ContextId> {
+        let mut tree = self.context_tree.write().expect("static engine: context_tree RwLock poisoned");
+        tree.create_child(id, parent_id)
+            .map_err(|_| ContextError::ContextNotFound(parent_id))?;
 
-        let mut drafts = self.drafts.lock().unwrap();
-        drafts.insert(child, DraftBuffer::new());
+        let mut drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
+        drafts.insert(id, DraftBuffer::new());
 
-        Ok(child)
+        Ok(id)
     }
 
     /// Insert a character into the draft buffer.
     pub fn insert_char(&self, context: ContextId, ch: char) -> Result<()> {
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
         let buffer = drafts.entry(context).or_default();
         buffer.insert(ch);
         Ok(())
@@ -232,7 +241,7 @@ where
 
     /// Insert a string into the draft buffer.
     pub fn insert_str(&self, context: ContextId, s: &str) -> Result<()> {
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
         let buffer = drafts.entry(context).or_default();
         for ch in s.chars() {
             buffer.insert(ch);
@@ -242,7 +251,7 @@ where
 
     /// Delete the last character from the draft buffer (backspace).
     pub fn delete_char(&self, context: ContextId) -> Result<()> {
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
         if let Some(buffer) = drafts.get_mut(&context) {
             buffer.delete();
         }
@@ -251,7 +260,7 @@ where
 
     /// Clear the draft buffer for a context.
     pub fn clear_draft(&self, context: ContextId) -> Result<()> {
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
         if let Some(buffer) = drafts.get_mut(&context) {
             buffer.clear();
         }
@@ -260,7 +269,7 @@ where
 
     /// Get the current draft text.
     pub fn get_draft(&self, context: ContextId) -> Result<String> {
-        let drafts = self.drafts.lock().unwrap();
+        let drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
         Ok(drafts.get(&context).map(|b| b.as_str()).unwrap_or_default())
     }
 
@@ -270,7 +279,7 @@ where
     /// static dictionary. Instead, finalized terms are stored separately and
     /// queried alongside the dictionary.
     pub fn finalize(&self, context: ContextId) -> Result<String> {
-        let mut drafts = self.drafts.lock().unwrap();
+        let mut drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
         let buffer = drafts
             .get_mut(&context)
             .ok_or(ContextError::ContextNotFound(context))?;
@@ -280,7 +289,7 @@ where
         buffer.clear();
 
         // Store in finalized_terms instead of dictionary
-        let mut finalized = self.finalized_terms.write().unwrap();
+        let mut finalized = self.finalized_terms.write().expect("static engine: finalized_terms RwLock poisoned");
         finalized
             .entry(term_clone.clone())
             .or_default()
@@ -333,10 +342,10 @@ where
         query: &str,
         max_distance: usize,
     ) -> Result<Vec<Completion>> {
-        let tree = self.context_tree.read().unwrap();
+        let tree = self.context_tree.read().expect("static engine: context_tree RwLock poisoned");
         let visible = tree.visible_contexts(context);
 
-        let transducer = self.transducer.read().unwrap();
+        let transducer = self.transducer.read().expect("static engine: transducer RwLock poisoned");
         let candidates: Vec<_> = transducer
             .query_with_distance(query, max_distance)
             .collect();
@@ -371,10 +380,10 @@ where
         query: &str,
         max_distance: usize,
     ) -> Result<Vec<Completion>> {
-        let tree = self.context_tree.read().unwrap();
+        let tree = self.context_tree.read().expect("static engine: context_tree RwLock poisoned");
         let visible = tree.visible_contexts(context);
 
-        let finalized = self.finalized_terms.read().unwrap();
+        let finalized = self.finalized_terms.read().expect("static engine: finalized_terms RwLock poisoned");
         let mut results = Vec::new();
 
         for (term, contexts) in finalized.iter() {
@@ -407,10 +416,10 @@ where
         query: &str,
         max_distance: usize,
     ) -> Result<Vec<Completion>> {
-        let tree = self.context_tree.read().unwrap();
+        let tree = self.context_tree.read().expect("static engine: context_tree RwLock poisoned");
         let visible = tree.visible_contexts(context);
 
-        let drafts = self.drafts.lock().unwrap();
+        let drafts = self.drafts.lock().expect("static engine: drafts Mutex poisoned");
         let mut results = Vec::new();
 
         for &ctx in &visible {

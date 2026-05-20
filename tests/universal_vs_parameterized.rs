@@ -21,7 +21,7 @@ fn test_substitution_test_to_text() {
     let universal_result = universal.accepts(word, input);
 
     // Test with parameterized automaton
-    let mut dict: DynamicDawg<()> = DynamicDawg::default();
+    let dict: DynamicDawg<()> = DynamicDawg::default();
     dict.insert(word);
 
     let transducer = Transducer::standard(dict);
@@ -56,7 +56,7 @@ fn test_substitution_test_to_best() {
     let universal = UniversalAutomaton::<UniversalStandard>::new(max_distance);
     let universal_result = universal.accepts(word, input);
 
-    let mut dict: DynamicDawg<()> = DynamicDawg::default();
+    let dict: DynamicDawg<()> = DynamicDawg::default();
     dict.insert(word);
 
     let transducer = Transducer::standard(dict);
@@ -95,7 +95,7 @@ fn test_cross_validation_suite() {
         let universal = UniversalAutomaton::<UniversalStandard>::new(max_distance);
         let universal_result = universal.accepts(word, input);
 
-        let mut dict: DynamicDawg<()> = DynamicDawg::default();
+        let dict: DynamicDawg<()> = DynamicDawg::default();
         dict.insert(word);
 
         let transducer = Transducer::standard(dict);

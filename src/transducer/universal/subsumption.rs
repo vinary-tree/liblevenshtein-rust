@@ -305,8 +305,8 @@ mod tests {
     fn test_subsumption_basic_i_type() {
         // Test case: 1#1 ≤^ε_s 2#2
         // Invariant check: |1| = 1 ≤ 1 ✓, |2| = 2 ≤ 2 ✓
-        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
 
         // Check: f > e (2 > 1) ✓
         //        |j - i| ≤ f - e (|2 - 1| = 1 ≤ 2 - 1 = 1) ✓
@@ -317,8 +317,8 @@ mod tests {
     fn test_subsumption_fails_distance_too_large() {
         // Test: 0#1 does NOT subsume 2#2
         // Invariant check: |0| = 0 ≤ 1 ✓, |2| = 2 ≤ 2 ✓
-        let pos1 = UniversalPosition::<Standard>::new_i(0, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(0, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
 
         // Check: f > e (2 > 1) ✓
         //        |j - i| ≤ f - e (|2 - 0| = 2 ≤ 2 - 1 = 1) ✗
@@ -329,8 +329,8 @@ mod tests {
     fn test_subsumption_fails_equal_errors() {
         // Positions with equal errors: no subsumption
         // Invariant check: |1| = 1 ≤ 1 ✓, |1| = 1 ≤ 1 ✓
-        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(1, 1, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
 
         // f = e, so f > e fails
         assert!(!subsumes(&pos1, &pos2, 3));
@@ -339,8 +339,8 @@ mod tests {
     #[test]
     fn test_subsumption_m_type() {
         // Test M-type positions
-        let pos1 = UniversalPosition::<Standard>::new_m(-2, 0, 2).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_m(-1, 1, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_m(-2, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
 
         // Check: f > e (1 > 0) ✓
         //        |j - i| ≤ f - e (|-1 - (-2)| = 1 ≤ 1 - 0 = 1) ✓
@@ -350,8 +350,8 @@ mod tests {
     #[test]
     fn test_no_subsumption_across_types() {
         // I-type and M-type: no subsumption
-        let i_pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
-        let m_pos = UniversalPosition::<Standard>::new_m(0, 0, 2).unwrap();
+        let i_pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let m_pos = UniversalPosition::<Standard>::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
 
         assert!(!subsumes(&i_pos, &m_pos, 2));
         assert!(!subsumes(&m_pos, &i_pos, 2));
@@ -366,8 +366,8 @@ mod tests {
         // Test: 0#1 ≤^ε_s 1#2
         // Check: f > e (2 > 1) ✓
         //        |j - i| ≤ f - e (|1 - 0| = 1 ≤ 2 - 1 = 1) ✓ (exact boundary)
-        let pos1 = UniversalPosition::<Standard>::new_i(0, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(1, 2, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(0, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(1, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(subsumes(&pos1, &pos2, 3));
     }
 
@@ -376,8 +376,8 @@ mod tests {
         // Test: -1#1 ≤^ε_s -2#2
         // Check: f > e (2 > 1) ✓
         //        |j - i| ≤ f - e (|-2 - (-1)| = |-1| = 1 ≤ 2 - 1 = 1) ✓
-        let pos1 = UniversalPosition::<Standard>::new_i(-1, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(-2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(-1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(-2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(subsumes(&pos1, &pos2, 3));
     }
 
@@ -386,8 +386,8 @@ mod tests {
         // Test: 0#0 ≤^ε_s 0#1
         // Check: f > e (1 > 0) ✓
         //        |j - i| ≤ f - e (|0 - 0| = 0 ≤ 1 - 0 = 1) ✓
-        let pos1 = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(0, 1, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(0, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(subsumes(&pos1, &pos2, 2));
     }
 
@@ -396,8 +396,8 @@ mod tests {
         // Test: 0#1 ≤^ε_s 2#3
         // Check: f > e (3 > 1) ✓
         //        |j - i| ≤ f - e (|2 - 0| = 2 ≤ 3 - 1 = 2) ✓ (exact boundary)
-        let pos1 = UniversalPosition::<Standard>::new_i(0, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(2, 3, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(0, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(2, 3, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(subsumes(&pos1, &pos2, 3));
     }
 
@@ -405,8 +405,8 @@ mod tests {
     fn test_no_subsumption_i_reverse_order() {
         // Test: 2#2 does NOT subsume 1#1 (reversed order from basic test)
         // Check: f > e (1 > 2) ✗
-        let pos1 = UniversalPosition::<Standard>::new_i(2, 2, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(1, 1, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(!subsumes(&pos1, &pos2, 3));
     }
 
@@ -419,8 +419,8 @@ mod tests {
         // Test: M + (-2)#0 ≤^ε_s M + (-1)#1
         // Check: f > e (1 > 0) ✓
         //        |j - i| ≤ f - e (|-1 - (-2)| = 1 ≤ 1 - 0 = 1) ✓
-        let pos1 = UniversalPosition::<Standard>::new_m(-2, 0, 2).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_m(-1, 1, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_m(-2, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
         assert!(subsumes(&pos1, &pos2, 2));
     }
 
@@ -429,8 +429,8 @@ mod tests {
         // Test: M + 0#0 ≤^ε_s M + (-1)#1
         // Check: f > e (1 > 0) ✓
         //        |j - i| ≤ f - e (|-1 - 0| = 1 ≤ 1 - 0 = 1) ✓
-        let pos1 = UniversalPosition::<Standard>::new_m(0, 0, 2).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_m(-1, 1, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
         assert!(subsumes(&pos1, &pos2, 2));
     }
 
@@ -439,16 +439,16 @@ mod tests {
         // Test: M + (-4)#2 does NOT subsume M + (-2)#2 (with n=3)
         // Check: f > e (2 > 1) ✓
         //        |j - i| ≤ f - e (|-2 - (-4)| = 2 ≤ 2 - 1 = 1) ✗
-        let pos1 = UniversalPosition::<Standard>::new_m(-4, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_m(-2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_m(-4, 1, 3).expect("test fixture: UniversalPosition::new_m with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_m(-2, 2, 3).expect("test fixture: UniversalPosition::new_m with valid args");
         assert!(!subsumes(&pos1, &pos2, 3));
     }
 
     #[test]
     fn test_no_subsumption_m_equal_errors() {
         // M-type positions with equal errors: no subsumption
-        let pos1 = UniversalPosition::<Standard>::new_m(-1, 1, 2).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_m(-2, 1, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_m(-2, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
         assert!(!subsumes(&pos1, &pos2, 2));
     }
 
@@ -459,15 +459,15 @@ mod tests {
     #[test]
     fn test_no_reflexive_subsumption() {
         // Position cannot subsume itself (requires f > e)
-        let pos = UniversalPosition::<Standard>::new_i(1, 1, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(!subsumes(&pos, &pos, 2));
     }
 
     #[test]
     fn test_subsumption_not_symmetric() {
         // If A subsumes B, B does not subsume A
-        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
 
         assert!(subsumes(&pos1, &pos2, 3));   // pos1 subsumes pos2
         assert!(!subsumes(&pos2, &pos1, 3)); // but not vice versa
@@ -480,16 +480,16 @@ mod tests {
     #[test]
     fn test_subsumption_with_transposition_variant() {
         // Subsumption works the same for Transposition variant
-        let pos1 = UniversalPosition::<Transposition>::new_i(1, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<Transposition>::new_i(2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::<Transposition>::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Transposition>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(subsumes(&pos1, &pos2, 3));
     }
 
     #[test]
     fn test_subsumption_with_merge_split_variant() {
         // Subsumption works the same for MergeAndSplit variant
-        let pos1 = UniversalPosition::<MergeAndSplit>::new_i(1, 1, 3).unwrap();
-        let pos2 = UniversalPosition::<MergeAndSplit>::new_i(2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::<MergeAndSplit>::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<MergeAndSplit>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(subsumes(&pos1, &pos2, 3));
     }
 
@@ -500,8 +500,8 @@ mod tests {
     #[test]
     fn test_subsumption_max_distance() {
         // Test with positions at maximum distance n=3
-        let pos1 = UniversalPosition::<Standard>::new_i(2, 2, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(3, 3, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(3, 3, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         // Check: f > e (3 > 2) ✓
         //        |j - i| ≤ f - e (|3 - 2| = 1 ≤ 3 - 2 = 1) ✓
         assert!(subsumes(&pos1, &pos2, 3));
@@ -510,8 +510,8 @@ mod tests {
     #[test]
     fn test_subsumption_min_distance() {
         // Test with n=1 (minimum useful distance)
-        let pos1 = UniversalPosition::<Standard>::new_i(0, 0, 1).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(0, 1, 1).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(0, 0, 1).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(0, 1, 1).expect("test fixture: UniversalPosition::new_i with valid args");
         // Check: f > e (1 > 0) ✓
         //        |j - i| ≤ f - e (|0 - 0| = 0 ≤ 1 - 0 = 1) ✓
         assert!(subsumes(&pos1, &pos2, 1));
@@ -520,8 +520,8 @@ mod tests {
     #[test]
     fn test_subsumption_mixed_sign_offsets() {
         // Test with pos1 negative, pos2 positive
-        let pos1 = UniversalPosition::<Standard>::new_i(-1, 2, 3).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(1, 3, 3).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(-1, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(1, 3, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         // Check: f > e (3 > 2) ✓
         //        |j - i| ≤ f - e (|1 - (-1)| = 2 ≤ 3 - 2 = 1) ✗
         assert!(!subsumes(&pos1, &pos2, 3));

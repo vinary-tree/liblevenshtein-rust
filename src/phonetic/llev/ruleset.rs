@@ -71,6 +71,7 @@ pub struct RuleSetGeneric<U: PhoneticUnit> {
 
     /// Source file metadata (if available)
     pub name: Option<String>,
+    /// Version string declared in the source file, when present.
     pub version: Option<String>,
 }
 
@@ -760,15 +761,6 @@ impl<'a, U: PhoneticUnit> RuleConverter<'a, U> {
 // Helper Functions
 // ============================================================================
 
-/// Check if a byte is an English vowel.
-#[inline]
-fn is_vowel_byte(b: u8) -> bool {
-    matches!(
-        b,
-        b'a' | b'e' | b'i' | b'o' | b'u' | b'A' | b'E' | b'I' | b'O' | b'U'
-    )
-}
-
 /// Check if a character is an English vowel.
 #[inline]
 fn is_vowel_char(c: char) -> bool {
@@ -1164,15 +1156,6 @@ mod tests {
 
     #[test]
     fn test_vowel_classification() {
-        assert!(is_vowel_byte(b'a'));
-        assert!(is_vowel_byte(b'e'));
-        assert!(is_vowel_byte(b'i'));
-        assert!(is_vowel_byte(b'o'));
-        assert!(is_vowel_byte(b'u'));
-        assert!(is_vowel_byte(b'A'));
-        assert!(!is_vowel_byte(b'b'));
-        assert!(!is_vowel_byte(b'c'));
-
         assert!(is_vowel_char('a'));
         assert!(is_vowel_char('E'));
         assert!(!is_vowel_char('z'));

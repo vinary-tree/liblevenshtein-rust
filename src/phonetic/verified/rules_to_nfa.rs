@@ -42,11 +42,11 @@
 //! assert!(nfa.accepts("gh"));  // matches "gh → ∅" pattern
 //! ```
 
-use crate::phonetic::nfa::nfa::{NFAChar, NFA};
+use crate::phonetic::nfa::{NFAChar, NFA};
 use crate::phonetic::nfa::thompson::{ThompsonBuilder, ThompsonBuilderChar};
 use crate::phonetic::rules::{zompist_rules, zompist_rules_char};
 use crate::phonetic::types::{
-    Context, ContextByte, ContextChar, Phone, PhoneByte, PhoneChar, RewriteRule, RewriteRuleByte,
+    ContextByte, ContextChar, PhoneByte, PhoneChar, RewriteRuleByte,
     RewriteRuleChar,
 };
 

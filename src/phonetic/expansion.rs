@@ -165,7 +165,7 @@ pub fn expand_phonetic_alternatives_char(input: &str, rules: &[RewriteRuleChar])
     }
 
     if final_patterns.len() == 1 {
-        return final_patterns.into_iter().next().unwrap();
+        return final_patterns.into_iter().next().expect("len==1 checked above");
     }
 
     // Multiple complete expansions: combine with alternation

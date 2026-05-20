@@ -300,17 +300,6 @@ impl<V: PositionVariant> UniversalState<V> {
         self.length_diff
     }
 
-    /// Create a new state with the same positions but different length_diff
-    ///
-    /// Used when constructing successor states during transitions.
-    fn with_length_diff(&self, length_diff: i8) -> Self {
-        Self {
-            positions: self.positions.clone(),
-            max_distance: self.max_distance,
-            length_diff,
-        }
-    }
-
     /// Compute transition to successor state (δ^∀,χ_n)
     ///
     /// Implements the universal state transition function from the thesis (Definition 15, page 48):
@@ -437,11 +426,11 @@ impl<V: PositionVariant> UniversalState<V> {
     ///
     /// // Both words consume 'a'
     /// let next = state.transition_with_consumption(&bv, true, true);
-    /// assert_eq!(next.unwrap().length_diff(), 0);
+    /// assert_eq!(next.expect("doc example: transition produces Some").length_diff(), 0);
     ///
     /// // Only query consumes (insertion in dict)
     /// let next = state.transition_with_consumption(&bv, true, false);
-    /// assert_eq!(next.unwrap().length_diff(), -1);
+    /// assert_eq!(next.expect("doc example: transition produces Some").length_diff(), -1);
     /// ```
     pub fn transition_with_consumption(
         &self,
@@ -596,14 +585,14 @@ mod tests {
         assert_eq!(state.len(), 1);
         assert!(!state.is_final());
 
-        let pos = UniversalPosition::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         assert!(state.contains(&pos));
     }
 
     #[test]
     fn test_add_single_position() {
         let mut state = UniversalState::<Standard>::new(2);
-        let pos = UniversalPosition::new_i(1, 1, 2).unwrap();
+        let pos = UniversalPosition::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
 
         state.add_position(pos.clone());
         assert_eq!(state.len(), 1);
@@ -617,8 +606,8 @@ mod tests {
         // 0#1 and -2#2
         // Check: does 0#1 subsume -2#2? f > e: 2 > 1 ✓, |-2 - 0| = 2 ≤ 2 - 1 = 1? NO
         // Check: does -2#2 subsume 0#1? f > e: 1 > 2? NO
-        let pos1 = UniversalPosition::new_i(0, 1, 3).unwrap();
-        let pos2 = UniversalPosition::new_i(-2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::new_i(0, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::new_i(-2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
 
         state.add_position(pos1.clone());
         state.add_position(pos2.clone());
@@ -638,8 +627,8 @@ mod tests {
         // Add I+2#2, then add I+1#1 which should remove I+2#2
         // I+1#1 subsumes I+2#2 because: errors(2) > errors(1) AND |2-1| ≤ 2-1
         let mut state = UniversalState::<Standard>::new(3);
-        let pos1 = UniversalPosition::new_i(2, 2, 3).unwrap();  // Will be subsumed
-        let pos2 = UniversalPosition::new_i(1, 1, 3).unwrap();  // Better position
+        let pos1 = UniversalPosition::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");  // Will be subsumed
+        let pos2 = UniversalPosition::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");  // Better position
 
         state.add_position(pos1.clone());
         assert_eq!(state.len(), 1);
@@ -656,8 +645,8 @@ mod tests {
         // Add I+1#1, then try to add I+2#2 which should be rejected
         // I+1#1 subsumes I+2#2, so I+2#2 is rejected
         let mut state = UniversalState::<Standard>::new(3);
-        let pos1 = UniversalPosition::new_i(1, 1, 3).unwrap();  // Better position
-        let pos2 = UniversalPosition::new_i(2, 2, 3).unwrap();  // Will be rejected
+        let pos1 = UniversalPosition::new_i(1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");  // Better position
+        let pos2 = UniversalPosition::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");  // Will be rejected
 
         state.add_position(pos1.clone());
         assert_eq!(state.len(), 1);
@@ -675,9 +664,9 @@ mod tests {
         let mut state = UniversalState::<Standard>::new(3);
 
         // Use valid positions that don't subsume each other
-        let pos1 = UniversalPosition::new_i(0, 1, 3).unwrap();
-        let pos2 = UniversalPosition::new_i(-2, 2, 3).unwrap(); // Valid: |-2| = 2 ≤ 2
-        let pos3 = UniversalPosition::new_i(-1, 1, 3).unwrap();
+        let pos1 = UniversalPosition::new_i(0, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::new_i(-2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args"); // Valid: |-2| = 2 ≤ 2
+        let pos3 = UniversalPosition::new_i(-1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
 
         state.add_position(pos1.clone());
         state.add_position(pos2.clone());
@@ -701,7 +690,7 @@ mod tests {
     #[test]
     fn test_final_state_with_m_zero() {
         let mut state = UniversalState::<Standard>::new(2);
-        let pos = UniversalPosition::new_m(0, 0, 2).unwrap();
+        let pos = UniversalPosition::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
 
         state.add_position(pos);
         assert!(state.is_final());
@@ -710,7 +699,7 @@ mod tests {
     #[test]
     fn test_final_state_with_m_negative() {
         let mut state = UniversalState::<Standard>::new(2);
-        let pos = UniversalPosition::new_m(-1, 1, 2).unwrap();
+        let pos = UniversalPosition::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
 
         state.add_position(pos);
         assert!(state.is_final());
@@ -719,7 +708,7 @@ mod tests {
     #[test]
     fn test_not_final_with_only_i_positions() {
         let mut state = UniversalState::<Standard>::new(2);
-        let pos = UniversalPosition::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
 
         state.add_position(pos);
         assert!(!state.is_final());
@@ -732,8 +721,8 @@ mod tests {
     #[test]
     fn test_is_i_state() {
         let mut state = UniversalState::<Standard>::new(2);
-        let pos1 = UniversalPosition::new_i(0, 0, 2).unwrap();
-        let pos2 = UniversalPosition::new_i(1, 1, 2).unwrap();
+        let pos1 = UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
 
         state.add_position(pos1);
         state.add_position(pos2);
@@ -746,8 +735,8 @@ mod tests {
     #[test]
     fn test_is_m_state() {
         let mut state = UniversalState::<Standard>::new(2);
-        let pos1 = UniversalPosition::new_m(0, 0, 2).unwrap();
-        let pos2 = UniversalPosition::new_m(-1, 1, 2).unwrap();
+        let pos1 = UniversalPosition::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
+        let pos2 = UniversalPosition::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
 
         state.add_position(pos1);
         state.add_position(pos2);
@@ -760,8 +749,8 @@ mod tests {
     #[test]
     fn test_is_mixed_state() {
         let mut state = UniversalState::<Standard>::new(2);
-        let i_pos = UniversalPosition::new_i(0, 0, 2).unwrap();
-        let m_pos = UniversalPosition::new_m(0, 0, 2).unwrap();
+        let i_pos = UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let m_pos = UniversalPosition::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
 
         state.add_position(i_pos);
         state.add_position(m_pos);
@@ -779,8 +768,8 @@ mod tests {
     fn test_positions_iterator() {
         let mut state = UniversalState::<Standard>::new(3);
         // Use positions that don't subsume each other
-        let pos1 = UniversalPosition::new_i(0, 1, 3).unwrap();
-        let pos2 = UniversalPosition::new_i(-2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::new_i(0, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::new_i(-2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
 
         state.add_position(pos1.clone());
         state.add_position(pos2.clone());
@@ -804,7 +793,7 @@ mod tests {
     #[test]
     fn test_display_single_position() {
         let mut state = UniversalState::<Standard>::new(2);
-        let pos = UniversalPosition::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         state.add_position(pos);
 
         let display = format!("{}", state);
@@ -815,8 +804,8 @@ mod tests {
     fn test_display_multiple_positions() {
         let mut state = UniversalState::<Standard>::new(3);
         // Use positions that don't subsume each other
-        let pos1 = UniversalPosition::new_i(0, 1, 3).unwrap();
-        let pos2 = UniversalPosition::new_i(-2, 2, 3).unwrap();
+        let pos1 = UniversalPosition::new_i(0, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::new_i(-2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
 
         state.add_position(pos1);
         state.add_position(pos2);
@@ -835,7 +824,7 @@ mod tests {
         let mut state1 = UniversalState::<Standard>::new(2);
         let mut state2 = UniversalState::<Standard>::new(2);
 
-        let pos = UniversalPosition::new_i(1, 1, 2).unwrap();
+        let pos = UniversalPosition::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         state1.add_position(pos.clone());
         state2.add_position(pos);
 
@@ -847,8 +836,8 @@ mod tests {
         let mut state1 = UniversalState::<Standard>::new(2);
         let mut state2 = UniversalState::<Standard>::new(2);
 
-        state1.add_position(UniversalPosition::new_i(0, 0, 2).unwrap());
-        state2.add_position(UniversalPosition::new_i(1, 1, 2).unwrap());
+        state1.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
+        state2.add_position(UniversalPosition::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         assert_ne!(state1, state2);
     }
@@ -856,7 +845,7 @@ mod tests {
     #[test]
     fn test_state_clone() {
         let mut state1 = UniversalState::<Standard>::new(2);
-        state1.add_position(UniversalPosition::new_i(1, 1, 2).unwrap());
+        state1.add_position(UniversalPosition::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         let state2 = state1.clone();
         assert_eq!(state1, state2);
@@ -903,7 +892,7 @@ mod tests {
 
         let mut state = UniversalState::<Standard>::new(3);
         // Start with a position that will produce subsuming successors
-        state.add_position(UniversalPosition::new_i(0, 0, 3).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 0, 3).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         let bv = CharacteristicVector::new('x', "abcd"); // "0000"
 
@@ -937,8 +926,8 @@ mod tests {
         use crate::transducer::universal::CharacteristicVector;
 
         let mut state = UniversalState::<Standard>::new(2);
-        state.add_position(UniversalPosition::new_i(0, 0, 2).unwrap());
-        state.add_position(UniversalPosition::new_i(1, 1, 2).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
+        state.add_position(UniversalPosition::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         let bv = CharacteristicVector::new('a', "abc");
 
@@ -970,7 +959,7 @@ mod tests {
         use crate::transducer::universal::CharacteristicVector;
 
         let mut state = UniversalState::<Standard>::new(2);
-        state.add_position(UniversalPosition::new_i(0, 2, 2).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         // Windowed bit vector for 'a' at input position 1, word "abc", max_distance 2
         // Window: "$$abc"
@@ -1024,7 +1013,7 @@ mod tests {
         use crate::transducer::universal::CharacteristicVector;
 
         let mut state = UniversalState::<Standard>::new(0); // max_distance = 0
-        state.add_position(UniversalPosition::new_i(0, 0, 0).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 0, 0).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         // With max_distance=0, only matches are allowed
         let bv = CharacteristicVector::new('x', "abc"); // No match
@@ -1039,7 +1028,7 @@ mod tests {
         use crate::transducer::universal::CharacteristicVector;
 
         let mut state = UniversalState::<Standard>::new(2);
-        state.add_position(UniversalPosition::new_m(-1, 0, 2).unwrap());
+        state.add_position(UniversalPosition::new_m(-1, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args"));
 
         let bv = CharacteristicVector::new('a', "abc");
 
@@ -1060,8 +1049,8 @@ mod tests {
 
         let mut state = UniversalState::<Standard>::new(2);
         // Add two positions that will produce different successors
-        state.add_position(UniversalPosition::new_i(0, 0, 2).unwrap());
-        state.add_position(UniversalPosition::new_i(-1, 1, 2).unwrap());
+        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
+        state.add_position(UniversalPosition::new_i(-1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
 
         let bv = CharacteristicVector::new('a', "abc");
 

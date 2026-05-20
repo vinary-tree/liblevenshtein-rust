@@ -1059,7 +1059,7 @@ mod tests {
     #[test]
     fn test_i_position_initial_state() {
         // Initial state: I + 0#0
-        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(pos.is_i_type());
@@ -1070,7 +1070,7 @@ mod tests {
     #[test]
     fn test_i_position_positive_offset() {
         // Valid: |2| = 2 ≤ 2
-        let pos = UniversalPosition::<Standard>::new_i(2, 2, 3).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert_eq!(pos.offset(), 2);
         assert_eq!(pos.errors(), 2);
     }
@@ -1078,7 +1078,7 @@ mod tests {
     #[test]
     fn test_i_position_negative_offset() {
         // Valid: |-2| = 2 ≤ 2
-        let pos = UniversalPosition::<Standard>::new_i(-2, 2, 3).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(-2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert_eq!(pos.offset(), -2);
         assert_eq!(pos.errors(), 2);
     }
@@ -1086,7 +1086,7 @@ mod tests {
     #[test]
     fn test_i_position_boundary_max_n() {
         // Valid: |3| = 3 ≤ 3, offset at boundary
-        let pos = UniversalPosition::<Standard>::new_i(3, 3, 3).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(3, 3, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert_eq!(pos.offset(), 3);
         assert_eq!(pos.errors(), 3);
     }
@@ -1094,7 +1094,7 @@ mod tests {
     #[test]
     fn test_i_position_boundary_min_n() {
         // Valid: |-3| = 3 ≤ 3, negative offset at boundary
-        let pos = UniversalPosition::<Standard>::new_i(-3, 3, 3).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(-3, 3, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         assert_eq!(pos.offset(), -3);
         assert_eq!(pos.errors(), 3);
     }
@@ -1134,7 +1134,7 @@ mod tests {
     #[test]
     fn test_m_position_final_exact() {
         // Final position: M + 0#0 (end of word, no errors)
-        let pos = UniversalPosition::<Standard>::new_m(0, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(!pos.is_i_type());
@@ -1146,7 +1146,7 @@ mod tests {
     fn test_m_position_one_before_end() {
         // M + (-1)#1: one char before end, one error
         // Check: k ≥ -t - n ⇒ 1 ≥ -(-1) - 2 = 1 - 2 = -1 ✓
-        let pos = UniversalPosition::<Standard>::new_m(-1, 1, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
         assert_eq!(pos.offset(), -1);
         assert_eq!(pos.errors(), 1);
     }
@@ -1156,7 +1156,7 @@ mod tests {
         // M + (-4)#0: offset at -2n boundary with n=2
         // Check: k ≥ -t - n ⇒ 0 ≥ -(-4) - 2 = 4 - 2 = 2 ✗
         // Actually need k ≥ 2, so k=2 is minimum
-        let pos = UniversalPosition::<Standard>::new_m(-4, 2, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_m(-4, 2, 2).expect("test fixture: UniversalPosition::new_m with valid args");
         assert_eq!(pos.offset(), -4);
         assert_eq!(pos.errors(), 2);
     }
@@ -1196,9 +1196,9 @@ mod tests {
     #[test]
     fn test_position_variants_different_types() {
         // Create positions for each variant
-        let std_pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
-        let trans_pos = UniversalPosition::<Transposition>::new_i(0, 0, 2).unwrap();
-        let ms_pos = UniversalPosition::<MergeAndSplit>::new_i(0, 0, 2).unwrap();
+        let std_pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let trans_pos = UniversalPosition::<Transposition>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let ms_pos = UniversalPosition::<MergeAndSplit>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
 
         // All have same offset/errors but different phantom types
         assert_eq!(std_pos.offset(), trans_pos.offset());
@@ -1219,9 +1219,9 @@ mod tests {
 
     #[test]
     fn test_position_equality() {
-        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 2).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(1, 1, 2).unwrap();
-        let pos3 = UniversalPosition::<Standard>::new_i(1, 2, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos3 = UniversalPosition::<Standard>::new_i(1, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args");
 
         assert_eq!(pos1, pos2);
         assert_ne!(pos1, pos3);
@@ -1229,7 +1229,7 @@ mod tests {
 
     #[test]
     fn test_position_clone() {
-        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let pos2 = pos1.clone();
 
         assert_eq!(pos1, pos2);
@@ -1243,9 +1243,9 @@ mod tests {
 
     #[test]
     fn test_display_i_positions() {
-        let pos1 = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 2).unwrap();
-        let pos3 = UniversalPosition::<Standard>::new_i(-1, 1, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args");
+        let pos3 = UniversalPosition::<Standard>::new_i(-1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
 
         assert_eq!(format!("{}", pos1), "I + 0#0");
         assert_eq!(format!("{}", pos2), "I + 2#2");
@@ -1254,9 +1254,9 @@ mod tests {
 
     #[test]
     fn test_display_m_positions() {
-        let pos1 = UniversalPosition::<Standard>::new_m(0, 0, 2).unwrap();
-        let pos2 = UniversalPosition::<Standard>::new_m(-2, 0, 2).unwrap();
-        let pos3 = UniversalPosition::<Standard>::new_m(-1, 1, 2).unwrap();
+        let pos1 = UniversalPosition::<Standard>::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
+        let pos2 = UniversalPosition::<Standard>::new_m(-2, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
+        let pos3 = UniversalPosition::<Standard>::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args");
 
         assert_eq!(format!("{}", pos1), "M + 0#0");
         assert_eq!(format!("{}", pos2), "M + -2#0");
@@ -1301,20 +1301,20 @@ mod tests {
         // Match case: 1 < b (bit vector starts with 1 at the correct window position)
         // Testing position I+0#0 at input position 1, word "abc", max_distance 2
         // Windowed subword s_2(abc, 1) = "$$abc" (positions -1,0,1,2,3 → padding + abc)
-        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('a', "$$abc"); // [false, false, true, false, false]
 
         let succs = pos.successors(&bv, 2);
 
         // Match at index 2 (offset 0 + max_distance 2): I+0#0 → I+0#0
         assert_eq!(succs.len(), 1, "Expected 1 successor for match");
-        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap());
+        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
     }
 
     #[test]
     fn test_successors_all_zeros() {
         // All zeros case: no matches anywhere
-        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('x', "abc"); // "000"
 
         let succs = pos.successors(&bv, 2);
@@ -1325,10 +1325,10 @@ mod tests {
         assert_eq!(succs.len(), 2);
 
         // Delete: I + (-1)#1
-        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(-1, 1, 2).unwrap()));
+        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(-1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args")));
 
         // Insert: I + 0#1
-        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(0, 1, 2).unwrap()));
+        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(0, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args")));
     }
 
     #[test]
@@ -1338,7 +1338,7 @@ mod tests {
         // Windowed subword s_2(abc, 1) = "$$abc"
         // Bit vector for 'b' in "$$abc" = [false, false, false, true, false]
         //                                   $     $     a     b     c
-        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('b', "$$abc");
 
         let succs = pos.successors(&bv, 2);
@@ -1348,19 +1348,19 @@ mod tests {
         assert_eq!(succs.len(), 3, "Expected 3 successors");
 
         // Delete: I + (-1)#1
-        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(-1, 1, 2).unwrap()));
+        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(-1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args")));
 
         // Substitute: I + 0#1
-        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(0, 1, 2).unwrap()));
+        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(0, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args")));
 
         // Skip to match at index 3: I + 1#1
-        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(1, 1, 2).unwrap()));
+        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args")));
     }
 
     #[test]
     fn test_successors_empty_bit_vector() {
         // Empty bit vector
-        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('a', ""); // ""
 
         let succs = pos.successors(&bv, 2);
@@ -1368,13 +1368,13 @@ mod tests {
         // Should have one successor: delete only
         // Delete: t#(e+1) → I + (t-1)#(e+1) = I + (-1)#1
         assert_eq!(succs.len(), 1);
-        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(-1, 1, 2).unwrap());
+        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(-1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
     }
 
     #[test]
     fn test_successors_max_errors_reached() {
         // Already at max errors
-        let pos = UniversalPosition::<Standard>::new_i(0, 2, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('x', "abc"); // "000"
 
         let succs = pos.successors(&bv, 2);
@@ -1387,14 +1387,14 @@ mod tests {
     fn test_successors_match_at_max_errors() {
         // At max errors but there's a match
         // Windowed subword s_2(abc, 1) = "$$abc"
-        let pos = UniversalPosition::<Standard>::new_i(0, 2, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('a', "$$abc"); // [false, false, true, false, false]
 
         let succs = pos.successors(&bv, 2);
 
         // Should still have the match successor at index 2
         assert_eq!(succs.len(), 1, "Expected 1 successor for match at max errors");
-        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(0, 2, 2).unwrap());
+        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(0, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
     }
 
     #[test]
@@ -1411,14 +1411,14 @@ mod tests {
         // Oh wait, it expects a match. So the original test was wrong. Let me fix it properly.
         // For this to match 'a', we need the window where index (n + offset) = (2 + (-1)) = 1 contains 'a'
         // That would be "$aabc" or similar
-        let pos = UniversalPosition::<Standard>::new_i(-1, 1, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(-1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('$', "$$abc"); // Match the padding character at index 1
 
         let succs = pos.successors(&bv, 2);
 
         // Match at index (2 + (-1)) = 1: offset stays same
         assert_eq!(succs.len(), 1, "Expected 1 successor for match with negative offset");
-        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(-1, 1, 2).unwrap());
+        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(-1, 1, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
     }
 
     #[test]
@@ -1427,7 +1427,7 @@ mod tests {
         // Windowed subword s_3(abcd, 1) = "$$$abcd" (positions -2,-1,0,1,2,3,4)
         // Bit vector for 'c' in "$$$abcd" = [false, false, false, false, false, true, false]
         //                                     $     $     $     a     b     c     d
-        let pos = UniversalPosition::<Standard>::new_i(0, 0, 3).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 0, 3).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('c', "$$$abcd");
 
         let succs = pos.successors(&bv, 3);
@@ -1436,19 +1436,19 @@ mod tests {
         assert_eq!(succs.len(), 3, "Expected 3 successors");
 
         // Delete: I + (-1)#1
-        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(-1, 1, 3).unwrap()));
+        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(-1, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args")));
 
         // Substitute: I + 0#1
-        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(0, 1, 3).unwrap()));
+        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(0, 1, 3).expect("test fixture: UniversalPosition::new_i with valid args")));
 
         // Skip to match at index 5: offset=2, errors=2
-        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(2, 2, 3).unwrap()));
+        assert!(succs.contains(&UniversalPosition::<Standard>::new_i(2, 2, 3).expect("test fixture: UniversalPosition::new_i with valid args")));
     }
 
     #[test]
     fn test_successors_invariant_violation_filtered() {
         // Test that invalid successors are filtered out
-        let pos = UniversalPosition::<Standard>::new_i(2, 2, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(2, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('x', "abc"); // "000"
 
         let succs = pos.successors(&bv, 2);
@@ -1463,7 +1463,7 @@ mod tests {
     fn test_successors_m_type_position() {
         // Test M-type position successor generation
         // M-type positions use M^ε conversion: M^ε({i#e}) = {M + i#e}
-        let pos = UniversalPosition::<Standard>::new_m(-1, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_m(-1, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args");
         let bv = CharacteristicVector::new('a', "abc"); // "100"
 
         let succs = pos.successors(&bv, 2);
@@ -1471,7 +1471,7 @@ mod tests {
         // Match: δ^D,ε_e((-1)#0, "1...") = {0#0}
         // M^ε({0#0}) = {M + 0#0}
         assert_eq!(succs.len(), 1);
-        assert_eq!(succs[0], UniversalPosition::<Standard>::new_m(0, 0, 2).unwrap());
+        assert_eq!(succs[0], UniversalPosition::<Standard>::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args"));
     }
 
     #[test]
@@ -1481,14 +1481,14 @@ mod tests {
         // match_index = n + offset = 2 + 2 = 4
         // Windowed subword s_2(abc, 1) = "$$abc" (length 5)
         // Need character at index 4, which is 'c'
-        let pos = UniversalPosition::<Standard>::new_i(2, 2, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(2, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('c', "$$abc"); // [false, false, false, false, true]
 
         let succs = pos.successors(&bv, 2);
 
         // Match at index 4: offset stays same
         assert_eq!(succs.len(), 1, "Expected 1 successor for boundary offset match");
-        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(2, 2, 2).unwrap());
+        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(2, 2, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
     }
 
     #[test]
@@ -1496,27 +1496,27 @@ mod tests {
         // Multiple matches in bit vector (should only return first match)
         // Windowed subword s_2(aba, 1) = "$$aba"
         // Bit vector for 'a' in "$$aba" = [false, false, true, false, true]
-        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('a', "$$aba");
 
         let succs = pos.successors(&bv, 2);
 
         // Match at index 2 (first 'a'): I + 0#0 → I + 0#0
         assert_eq!(succs.len(), 1, "Expected 1 successor for first match");
-        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap());
+        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
     }
 
     #[test]
     fn test_successors_preserves_variant_type() {
         // Ensure Standard variant is preserved
         // Windowed subword s_2(a, 1) = "$$a"
-        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap();
+        let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args");
         let bv = CharacteristicVector::new('a', "$$a"); // [false, false, true]
 
         let succs = pos.successors(&bv, 2);
 
         assert_eq!(succs.len(), 1, "Expected 1 successor");
         // Check that result is also Standard variant: I + 0#0 → I + 0#0
-        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(0, 0, 2).unwrap());
+        assert_eq!(succs[0], UniversalPosition::<Standard>::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
     }
 }

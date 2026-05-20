@@ -11,10 +11,25 @@ use liblevenshtein::prelude::*;
 use std::collections::HashSet;
 use std::sync::Arc;
 use parking_lot::RwLock;
+use tempfile::TempDir;
+
+/// Make an empty PersistentARTrie backed by a leaked TempDir.
+///
+/// The TempDir is intentionally leaked because callers expect a bare
+/// `PersistentARTrie<()>` and integrating a lifetime would force every test
+/// site to bind the temp dir. Leaking is safe in a test binary — the OS
+/// reaps the directory at process exit.
+fn make_empty_dict() -> PersistentARTrie<()> {
+    let tmp: &'static TempDir = Box::leak(Box::new(
+        tempfile::tempdir().expect("tempdir for test PersistentARTrie")
+    ));
+    let path = tmp.path().join("dict.artrie");
+    PersistentARTrie::create(path).expect("create disk-backed PersistentARTrie")
+}
 
 /// Create a PersistentARTrie from a list of terms for testing
 fn create_test_dict(terms: &[&str]) -> PersistentARTrie<()> {
-    let mut dict = PersistentARTrie::new();
+    let mut dict = make_empty_dict();
     for term in terms {
         dict.insert(term);
     }
@@ -32,7 +47,7 @@ fn wrap_dict(dict: PersistentARTrie<()>) -> Arc<RwLock<PersistentARTrie<()>>> {
 
 #[test]
 fn test_persistent_artrie_basic_operations() {
-    let mut dict: PersistentARTrie<()> = PersistentARTrie::new();
+    let mut dict: PersistentARTrie<()> = make_empty_dict();
 
     // Insert terms
     assert!(dict.insert("apple"));
@@ -70,7 +85,7 @@ fn test_persistent_artrie_remove() {
 
 #[test]
 fn test_persistent_artrie_empty_string() {
-    let mut dict: PersistentARTrie<()> = PersistentARTrie::new();
+    let mut dict: PersistentARTrie<()> = make_empty_dict();
 
     // Insert empty string
     assert!(dict.insert(""));
@@ -327,7 +342,7 @@ fn test_persistent_artrie_zipper_clone() {
 
 #[test]
 fn test_persistent_artrie_sync_strategy() {
-    let dict: PersistentARTrie<()> = PersistentARTrie::new();
+    let dict: PersistentARTrie<()> = make_empty_dict();
     assert_eq!(dict.sync_strategy(), SyncStrategy::InternalSync);
 }
 
@@ -336,7 +351,7 @@ fn test_persistent_artrie_concurrent_reads() {
     use std::sync::Arc;
     use std::thread;
 
-    let mut dict: PersistentARTrie<()> = PersistentARTrie::new();
+    let mut dict: PersistentARTrie<()> = make_empty_dict();
     for i in 0..100 {
         dict.insert(&format!("word{:03}", i));
     }
@@ -376,7 +391,7 @@ fn test_persistent_artrie_single_char_terms() {
 #[test]
 fn test_persistent_artrie_long_term() {
     let long_term = "a".repeat(1000);
-    let mut dict: PersistentARTrie<()> = PersistentARTrie::new();
+    let mut dict: PersistentARTrie<()> = make_empty_dict();
 
     assert!(dict.insert(&long_term));
     assert!(dict.contains(&long_term));
@@ -384,7 +399,7 @@ fn test_persistent_artrie_long_term() {
 
 #[test]
 fn test_persistent_artrie_many_terms() {
-    let mut dict: PersistentARTrie<()> = PersistentARTrie::new();
+    let mut dict: PersistentARTrie<()> = make_empty_dict();
 
     // Insert 200 terms (within bucket capacity limits)
     // NOTE: Current implementation has bucket capacity limits; larger dictionaries

@@ -506,7 +506,7 @@ mod tests {
 
         // Query "bat" with distance 1
         // Should match "bar" and "baz"
-        let result = fuzzy.query("bat", 1).unwrap();
+        let result = fuzzy.query("bat", 1).expect("expected Some result in test");
         assert_eq!(result, HashSet::from([3, 4, 5]));
     }
 
@@ -522,12 +522,12 @@ mod tests {
         let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
 
         // Query "foo" with distance 0 - exact match only
-        let result = fuzzy.query("foo", 0).unwrap();
+        let result = fuzzy.query("foo", 0).expect("expected Some result in test");
         assert_eq!(result, vec![1, 2]);
 
         // Query "fox" with distance 1
         // Should match "fob" and "fog"
-        let result = fuzzy.query("fox", 1).unwrap();
+        let result = fuzzy.query("fox", 1).expect("expected Some result in test");
         // Vec concatenation maintains order of matches
         assert!(result.contains(&3));
         assert!(result.contains(&4));
@@ -556,7 +556,7 @@ mod tests {
 
         let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
 
-        let result = fuzzy.query("hello", 0).unwrap();
+        let result = fuzzy.query("hello", 0).expect("expected Some result in test");
         assert_eq!(result, HashSet::from([1, 2, 3]));
     }
 
@@ -573,7 +573,7 @@ mod tests {
         let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
 
         // All three match "fox" at distance 1
-        let result = fuzzy.query("fox", 1).unwrap();
+        let result = fuzzy.query("fox", 1).expect("expected Some result in test");
         // Should be union: {1, 2, 3, 4}
         assert_eq!(result, HashSet::from([1, 2, 3, 4]));
     }
@@ -589,7 +589,7 @@ mod tests {
         let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Transposition);
 
         // Query with transposition distance
-        let result = fuzzy.query("hello", 2).unwrap();
+        let result = fuzzy.query("hello", 2).expect("expected Some result in test");
         // Should at least match "hello" (exact)
         assert!(result.contains(&1));
     }
@@ -615,13 +615,13 @@ mod tests {
         // Check that we get both matches with their distances
         let bar_result = results.iter().find(|(key, _, _)| key == "bar");
         assert!(bar_result.is_some());
-        let (_, distance, values) = bar_result.unwrap();
+        let (_, distance, values) = bar_result.expect("expected Some bar_result in test");
         assert_eq!(*distance, 1);
         assert_eq!(values, &vec!["original_bar".to_string()]);
 
         let baz_result = results.iter().find(|(key, _, _)| key == "baz");
         assert!(baz_result.is_some());
-        let (_, distance, values) = baz_result.unwrap();
+        let (_, distance, values) = baz_result.expect("expected Some baz_result in test");
         assert_eq!(*distance, 1);
         assert_eq!(values, &vec!["original_baz".to_string()]);
     }
@@ -641,12 +641,12 @@ mod tests {
 
         let exact = results.iter().find(|(key, _, _)| key == "test");
         assert!(exact.is_some());
-        let (_, distance, _) = exact.unwrap();
+        let (_, distance, _) = exact.expect("expected Some exact in test");
         assert_eq!(*distance, 0);
 
         let near = results.iter().find(|(key, _, _)| key == "tost");
         assert!(near.is_some());
-        let (_, distance, _) = near.unwrap();
+        let (_, distance, _) = near.expect("expected Some near in test");
         assert_eq!(*distance, 1);
     }
 }

@@ -807,7 +807,7 @@ mod tests {
         );
         assert!(next.is_some());
 
-        let next_state = next.unwrap();
+        let next_state = next.expect("test fixture: transition produces Some (asserted above)");
         // Should have advanced after matching 't'
         assert!(next_state.positions().iter().any(|p| p.term_index > 0));
     }

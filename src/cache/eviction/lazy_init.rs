@@ -558,8 +558,8 @@ mod tests {
         let dict = PathMapDictionary::from_terms_with_values([("foo", 10), ("bar", 20)]);
         let lazy = LazyInit::new(dict, move || counter_clone.fetch_add(1, Ordering::SeqCst));
 
-        let val1 = lazy.get_value("foo").unwrap();
-        let val2 = lazy.get_value("bar").unwrap();
+        let val1 = lazy.get_value("foo").expect("expected Some value in test");
+        let val2 = lazy.get_value("bar").expect("expected Some value in test");
 
         // Should return existing values, not call initializer
         assert_eq!(val1, 10);

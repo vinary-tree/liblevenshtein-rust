@@ -38,10 +38,10 @@ pub type ContextId = u32;
 /// let global = tree.create_root(1);
 ///
 /// // Create module scope (child of global)
-/// let module = tree.create_child(2, global).unwrap();
+/// let module = tree.create_child(2, global).expect("doc/test fixture: create_child with existing parent");
 ///
 /// // Create function scope (child of module)
-/// let function = tree.create_child(3, module).unwrap();
+/// let function = tree.create_child(3, module).expect("doc/test fixture: create_child with existing parent");
 ///
 /// // Function can see: function, module, global
 /// let visible = tree.visible_contexts(function);
@@ -132,7 +132,7 @@ impl ContextTree {
     ///
     /// let mut tree = ContextTree::new();
     /// let root = tree.create_root(1);
-    /// let child = tree.create_child(2, root).unwrap();
+    /// let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
     ///
     /// assert_eq!(tree.parent(child), Some(root));
     /// ```
@@ -161,7 +161,7 @@ impl ContextTree {
     ///
     /// let mut tree = ContextTree::new();
     /// let root = tree.create_root(1);
-    /// let child = tree.create_child(2, root).unwrap();
+    /// let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
     ///
     /// assert_eq!(tree.parent(root), None);
     /// assert_eq!(tree.parent(child), Some(root));
@@ -234,8 +234,8 @@ impl ContextTree {
     ///
     /// let mut tree = ContextTree::new();
     /// let global = tree.create_root(1);
-    /// let module = tree.create_child(2, global).unwrap();
-    /// let function = tree.create_child(3, module).unwrap();
+    /// let module = tree.create_child(2, global).expect("doc/test fixture: create_child with existing parent");
+    /// let function = tree.create_child(3, module).expect("doc/test fixture: create_child with existing parent");
     ///
     /// // Function can see: itself, module, global
     /// let visible = tree.visible_contexts(function);
@@ -274,7 +274,7 @@ impl ContextTree {
     ///
     /// let mut tree = ContextTree::new();
     /// let root = tree.create_root(1);
-    /// let child = tree.create_child(2, root).unwrap();
+    /// let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
     ///
     /// tree.remove(root);
     /// assert!(!tree.contains(root));
@@ -325,8 +325,8 @@ impl ContextTree {
     ///
     /// let mut tree = ContextTree::new();
     /// let root = tree.create_root(1);
-    /// let child = tree.create_child(2, root).unwrap();
-    /// let grandchild = tree.create_child(3, child).unwrap();
+    /// let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
+    /// let grandchild = tree.create_child(3, child).expect("doc/test fixture: create_child with existing parent");
     ///
     /// assert!(tree.is_descendant(grandchild, root));
     /// assert!(tree.is_descendant(child, root));
@@ -367,8 +367,8 @@ impl ContextTree {
     ///
     /// let mut tree = ContextTree::new();
     /// let root = tree.create_root(1);
-    /// let child = tree.create_child(2, root).unwrap();
-    /// let grandchild = tree.create_child(3, child).unwrap();
+    /// let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
+    /// let grandchild = tree.create_child(3, child).expect("doc/test fixture: create_child with existing parent");
     ///
     /// assert_eq!(tree.depth(root), Some(0));
     /// assert_eq!(tree.depth(child), Some(1));
@@ -469,7 +469,7 @@ mod tests {
     fn test_create_child() {
         let mut tree = ContextTree::new();
         let root = tree.create_root(1);
-        let child = tree.create_child(2, root).unwrap();
+        let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
 
         assert_eq!(child, 2);
         assert!(tree.contains(child));
@@ -488,8 +488,8 @@ mod tests {
     fn test_visible_contexts() {
         let mut tree = ContextTree::new();
         let global = tree.create_root(1);
-        let module = tree.create_child(2, global).unwrap();
-        let function = tree.create_child(3, module).unwrap();
+        let module = tree.create_child(2, global).expect("doc/test fixture: create_child with existing parent");
+        let function = tree.create_child(3, module).expect("doc/test fixture: create_child with existing parent");
 
         let visible = tree.visible_contexts(function);
         assert_eq!(visible, vec![function, module, global]);
@@ -505,8 +505,8 @@ mod tests {
     fn test_is_descendant() {
         let mut tree = ContextTree::new();
         let root = tree.create_root(1);
-        let child = tree.create_child(2, root).unwrap();
-        let grandchild = tree.create_child(3, child).unwrap();
+        let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
+        let grandchild = tree.create_child(3, child).expect("doc/test fixture: create_child with existing parent");
 
         assert!(tree.is_descendant(grandchild, root));
         assert!(tree.is_descendant(grandchild, child));
@@ -520,8 +520,8 @@ mod tests {
     fn test_depth() {
         let mut tree = ContextTree::new();
         let root = tree.create_root(1);
-        let child = tree.create_child(2, root).unwrap();
-        let grandchild = tree.create_child(3, child).unwrap();
+        let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
+        let grandchild = tree.create_child(3, child).expect("doc/test fixture: create_child with existing parent");
 
         assert_eq!(tree.depth(root), Some(0));
         assert_eq!(tree.depth(child), Some(1));
@@ -533,8 +533,8 @@ mod tests {
     fn test_remove() {
         let mut tree = ContextTree::new();
         let root = tree.create_root(1);
-        let child = tree.create_child(2, root).unwrap();
-        let grandchild = tree.create_child(3, child).unwrap();
+        let child = tree.create_child(2, root).expect("doc/test fixture: create_child with existing parent");
+        let grandchild = tree.create_child(3, child).expect("doc/test fixture: create_child with existing parent");
 
         // Remove child also removes grandchild
         assert!(tree.remove(child));
@@ -581,10 +581,10 @@ mod tests {
         // 4       5 (functions)
 
         let global = tree.create_root(1);
-        let mod1 = tree.create_child(2, global).unwrap();
-        let mod2 = tree.create_child(3, global).unwrap();
-        let func1 = tree.create_child(4, mod1).unwrap();
-        let func2 = tree.create_child(5, mod2).unwrap();
+        let mod1 = tree.create_child(2, global).expect("doc/test fixture: create_child with existing parent");
+        let mod2 = tree.create_child(3, global).expect("doc/test fixture: create_child with existing parent");
+        let func1 = tree.create_child(4, mod1).expect("doc/test fixture: create_child with existing parent");
+        let func2 = tree.create_child(5, mod2).expect("doc/test fixture: create_child with existing parent");
 
         assert_eq!(tree.visible_contexts(func1), vec![func1, mod1, global]);
         assert_eq!(tree.visible_contexts(func2), vec![func2, mod2, global]);

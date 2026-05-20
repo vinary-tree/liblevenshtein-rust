@@ -179,7 +179,7 @@ impl MemoCache {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            self.cache.read().unwrap().get(key).copied()
+            self.cache.read().expect("poisoned RwLock; only fatal if writer panicked").get(key).copied()
         }
     }
 
@@ -191,7 +191,7 @@ impl MemoCache {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            self.cache.write().unwrap().insert(key, value);
+            self.cache.write().expect("poisoned RwLock; only fatal if writer panicked").insert(key, value);
         }
     }
 
@@ -204,7 +204,7 @@ impl MemoCache {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            self.cache.read().unwrap().len()
+            self.cache.read().expect("poisoned RwLock; only fatal if writer panicked").len()
         }
     }
 }

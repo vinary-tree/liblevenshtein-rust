@@ -32,12 +32,6 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
 
     #[test]
-    fn standard_distance_non_negative(a in arb_string(), b in arb_string()) {
-        let distance = standard_distance(&a, &b);
-        prop_assert!(distance >= 0, "Distance must be non-negative");
-    }
-
-    #[test]
     fn standard_distance_identity(a in arb_string()) {
         let distance = standard_distance(&a, &a);
         prop_assert_eq!(distance, 0, "Distance from string to itself must be zero");
@@ -120,13 +114,6 @@ proptest! {
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
-
-    #[test]
-    fn standard_recursive_non_negative(a in arb_string(), b in arb_string()) {
-        let cache = create_memo_cache();
-        let distance = standard_distance_recursive(&a, &b, &cache);
-        prop_assert!(distance >= 0, "Distance must be non-negative");
-    }
 
     #[test]
     fn standard_recursive_identity(a in arb_string()) {
@@ -232,12 +219,6 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
 
     #[test]
-    fn transposition_distance_non_negative(a in arb_string(), b in arb_string()) {
-        let distance = transposition_distance(&a, &b);
-        prop_assert!(distance >= 0, "Distance must be non-negative");
-    }
-
-    #[test]
     fn transposition_distance_identity(a in arb_string()) {
         let distance = transposition_distance(&a, &a);
         prop_assert_eq!(distance, 0, "Distance from string to itself must be zero");
@@ -322,13 +303,6 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
 
     #[test]
-    fn transposition_recursive_non_negative(a in arb_string(), b in arb_string()) {
-        let cache = create_memo_cache();
-        let distance = transposition_distance_recursive(&a, &b, &cache);
-        prop_assert!(distance >= 0, "Distance must be non-negative");
-    }
-
-    #[test]
     fn transposition_recursive_identity(a in arb_string()) {
         let cache = create_memo_cache();
         let distance = transposition_distance_recursive(&a, &a, &cache);
@@ -382,13 +356,6 @@ proptest! {
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
-
-    #[test]
-    fn merge_split_distance_non_negative(a in arb_string(), b in arb_string()) {
-        let cache = create_memo_cache();
-        let distance = merge_and_split_distance(&a, &b, &cache);
-        prop_assert!(distance >= 0, "Distance must be non-negative");
-    }
 
     #[test]
     fn merge_split_distance_identity(a in arb_string()) {

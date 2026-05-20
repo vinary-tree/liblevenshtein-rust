@@ -412,7 +412,7 @@ mod tests {
         assert!(table.contains("VOWEL"));
         assert!(!table.contains("CONSONANT"));
 
-        let vowels = table.get_char_class("VOWEL").unwrap();
+        let vowels = table.get_char_class("VOWEL").expect("expected Some VOWEL class in test");
         assert_eq!(vowels.len(), 5);
         assert!(vowels.contains(&'a'));
     }
@@ -431,6 +431,6 @@ mod tests {
         assert!(table1.contains("A"));
         assert!(table1.contains("B"));
         // table2's A should take precedence
-        assert_eq!(table1.get_char_class("A").unwrap(), &vec!['x']);
+        assert_eq!(table1.get_char_class("A").expect("expected Some A class in test"), &vec!['x']);
     }
 }

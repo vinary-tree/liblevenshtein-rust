@@ -54,7 +54,7 @@ mod string;
 pub use distance::*;
 pub use string::*;
 
-use std::ffi::{c_char, CStr, CString};
+use std::ffi::{c_char, CStr};
 
 /// Algorithm type for transducers.
 #[repr(C)]
@@ -88,14 +88,4 @@ unsafe fn cstr_to_str<'a>(ptr: *const c_char) -> Option<&'a str> {
         return None;
     }
     CStr::from_ptr(ptr).to_str().ok()
-}
-
-/// Convert a Rust string to a C string.
-///
-/// Returns a heap-allocated C string that must be freed with `llev_string_free`.
-fn str_to_cstring(s: &str) -> *mut c_char {
-    match CString::new(s) {
-        Ok(cstr) => cstr.into_raw(),
-        Err(_) => std::ptr::null_mut(),
-    }
 }

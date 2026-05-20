@@ -32,8 +32,6 @@ pub struct UniversalStateRegistry<V: PositionVariant> {
     state_to_id: FxHashMap<UniversalStateKey, u32>,
     /// Map from ID back to state
     id_to_state: Vec<UniversalState<V>>,
-    /// Maximum edit distance
-    max_distance: u8,
 }
 
 /// Key for hashing UniversalState.
@@ -46,7 +44,6 @@ impl<V: PositionVariant> UniversalStateRegistry<V> {
         let mut registry = Self {
             state_to_id: FxHashMap::default(),
             id_to_state: Vec::new(),
-            max_distance,
         };
 
         // Register initial state as ID 0

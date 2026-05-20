@@ -277,8 +277,9 @@ pub fn msm_distance_automaton(
         return None;
     }
 
-    // Start with initial state
-    let mut state = initial_msm_state(query, target, config, max_cost)?;
+    // Fail-fast: ensure an initial state can be constructed (return value
+    // is unused — `state` below is built directly from the first elements).
+    let _ = initial_msm_state(query, target, config, max_cost)?;
 
     // Process first position: Cost(1,1) = |x_0 - y_0|
     let initial_cost = (query[0] - target[0]).abs();
@@ -287,7 +288,7 @@ pub fn msm_distance_automaton(
     }
 
     // Set up the state after processing first elements
-    state = MsmState::single(MsmPosition::new(1, 1, initial_cost, query[0], target[0]));
+    let mut state = MsmState::single(MsmPosition::new(1, 1, initial_cost, query[0], target[0]));
 
     // Process remaining elements using a wavefront approach
     // We need to fill all cells (i, j) for i in 1..=m, j in 1..=n
@@ -506,7 +507,7 @@ mod tests {
         // Find the move transition
         let move_pos = next.iter().find(|p| p.query_index == 1 && p.target_index == 1);
         assert!(move_pos.is_some());
-        let move_pos = move_pos.unwrap();
+        let move_pos = move_pos.expect("expected Some move_pos in test");
         assert!(approx_eq(move_pos.accumulated_cost, 1.0)); // |1.5 - 2.5| = 1.0
     }
 
@@ -544,7 +545,7 @@ mod tests {
         let next_state = transition_msm_state(&state, Some(1.5), Some(2.5), &config, 10.0, 3, 3);
 
         assert!(next_state.is_some());
-        let next_state = next_state.unwrap();
+        let next_state = next_state.expect("expected Some next_state in test");
         assert!(!next_state.is_empty());
     }
 
@@ -556,7 +557,7 @@ mod tests {
 
         let state = initial_msm_state(&query, &target, &config, 10.0);
         assert!(state.is_some());
-        assert_eq!(state.unwrap().len(), 1);
+        assert_eq!(state.expect("expected Some state in test").len(), 1);
     }
 
     #[test]
@@ -579,7 +580,7 @@ mod tests {
 
         let dist = msm_distance_automaton(&series, &series, &config, f64::INFINITY);
         assert!(dist.is_some());
-        assert!(approx_eq(dist.unwrap(), 0.0));
+        assert!(approx_eq(dist.expect("expected Some dist in test"), 0.0));
     }
 
     #[test]
@@ -590,7 +591,7 @@ mod tests {
 
         let dist = msm_distance_automaton(&x, &y, &config, f64::INFINITY);
         assert!(dist.is_some());
-        assert!(approx_eq(dist.unwrap(), 1.0)); // |1.0 - 2.0| = 1.0
+        assert!(approx_eq(dist.expect("expected Some dist in test"), 1.0)); // |1.0 - 2.0| = 1.0
     }
 
     #[test]
@@ -602,7 +603,7 @@ mod tests {
         let dist = msm_distance_automaton(&x, &y, &config, f64::INFINITY);
         assert!(dist.is_some());
         // Each element shifted by 1: 3 moves of cost 1 each
-        assert!(approx_eq(dist.unwrap(), 3.0));
+        assert!(approx_eq(dist.expect("expected Some dist in test"), 3.0));
     }
 
     #[test]
@@ -612,7 +613,7 @@ mod tests {
 
         let dist = msm_distance_wavefront(&series, &series, &config, f64::INFINITY);
         assert!(dist.is_some());
-        assert!(approx_eq(dist.unwrap(), 0.0));
+        assert!(approx_eq(dist.expect("expected Some dist in test"), 0.0));
     }
 
     #[test]
@@ -626,10 +627,10 @@ mod tests {
 
         assert!(dist_wavefront.is_some());
         assert!(
-            approx_eq(dist_dp, dist_wavefront.unwrap()),
+            approx_eq(dist_dp, dist_wavefront.expect("expected Some dist_wavefront in test")),
             "DP: {}, Wavefront: {}",
             dist_dp,
-            dist_wavefront.unwrap()
+            dist_wavefront.expect("expected Some dist_wavefront in test")
         );
     }
 
@@ -644,10 +645,10 @@ mod tests {
 
         assert!(dist_auto.is_some());
         assert!(
-            approx_eq(dist_dp, dist_auto.unwrap()),
+            approx_eq(dist_dp, dist_auto.expect("expected Some dist_auto in test")),
             "DP: {}, Automaton: {}",
             dist_dp,
-            dist_auto.unwrap()
+            dist_auto.expect("expected Some dist_auto in test")
         );
     }
 

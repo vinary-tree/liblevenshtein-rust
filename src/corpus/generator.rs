@@ -286,7 +286,7 @@ impl QueryWorkload {
         let mut queries = Vec::with_capacity(num_queries);
 
         for _ in 0..num_queries {
-            let word = words.choose(&mut rng).unwrap();
+            let word = words.choose(&mut rng).expect("uniform query gen requires non-empty word list");
             queries.push((word.clone(), 1));
         }
 

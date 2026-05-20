@@ -404,7 +404,7 @@ mod tests {
         // Should find exact match with high score
         let apple_result = results.iter().find(|(t, _)| *t == "apple");
         assert!(apple_result.is_some());
-        let (_, score) = apple_result.unwrap();
+        let (_, score) = apple_result.expect("expected Some apple_result in test");
         assert!(*score > 0.99, "Exact match should have score ~1.0, got {}", score);
     }
 

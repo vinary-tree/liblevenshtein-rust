@@ -54,12 +54,11 @@
 
 pub mod position;
 mod automaton;
-mod bit_vector;
 mod state;
 mod subsumption;
 
 pub use automaton::GeneralizedAutomaton;
 pub use position::{GeneralizedPosition, PositionError};
 pub use state::GeneralizedState;
-pub use bit_vector::CharacteristicVector;
+pub use crate::transducer::universal::bit_vector::CharacteristicVector;
 pub use subsumption::subsumes;

@@ -126,7 +126,7 @@ impl<D> Age<D> {
 
     /// Records an entry access (updates metadata).
     fn record_access(&self, term: &str) {
-        let mut metadata = self.metadata.write().unwrap();
+        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
         metadata
             .entry(term.to_string())
             .or_insert_with(EntryMetadata::new);
@@ -136,7 +136,7 @@ impl<D> Age<D> {
     ///
     /// Returns `None` if the entry has never been accessed.
     pub fn age(&self, term: &str) -> Option<std::time::Duration> {
-        let metadata = self.metadata.read().unwrap();
+        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
         metadata.get(term).map(|m| m.age())
     }
 
@@ -144,7 +144,7 @@ impl<D> Age<D> {
     ///
     /// Returns the term with the longest time since insertion.
     pub fn find_oldest(&self, terms: &[&str]) -> Option<String> {
-        let metadata = self.metadata.read().unwrap();
+        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
         terms
             .iter()
             .filter_map(|&term| metadata.get(term).map(|m| (term, m.age())))
@@ -157,7 +157,7 @@ impl<D> Age<D> {
     /// Returns the evicted term if any.
     pub fn evict_oldest(&self, terms: &[&str]) -> Option<String> {
         if let Some(oldest_term) = self.find_oldest(terms) {
-            let mut metadata = self.metadata.write().unwrap();
+            let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
             metadata.remove(&oldest_term);
             Some(oldest_term)
         } else {
@@ -167,7 +167,7 @@ impl<D> Age<D> {
 
     /// Clears all metadata.
     pub fn clear_metadata(&self) {
-        let mut metadata = self.metadata.write().unwrap();
+        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
         metadata.clear();
     }
 }
@@ -322,8 +322,8 @@ mod tests {
         assert_eq!(age_wrapper.get_value("bar"), Some(99));
 
         // foo should be older
-        let foo_age = age_wrapper.age("foo").unwrap();
-        let bar_age = age_wrapper.age("bar").unwrap();
+        let foo_age = age_wrapper.age("foo").expect("expected Some age in test");
+        let bar_age = age_wrapper.age("bar").expect("expected Some age in test");
 
         assert!(foo_age > bar_age);
     }
@@ -380,7 +380,7 @@ mod tests {
 
         // Access foo
         assert_eq!(age_wrapper.get_value("foo"), Some(42));
-        let foo_age_1 = age_wrapper.age("foo").unwrap();
+        let foo_age_1 = age_wrapper.age("foo").expect("expected Some age in test");
 
         thread::sleep(Duration::from_millis(10));
 
@@ -391,7 +391,7 @@ mod tests {
 
         // Access foo again - age should increase (not reset like LRU)
         assert_eq!(age_wrapper.get_value("foo"), Some(42));
-        let foo_age_2 = age_wrapper.age("foo").unwrap();
+        let foo_age_2 = age_wrapper.age("foo").expect("expected Some age in test");
 
         // Age increases over time (not reset on access)
         assert!(foo_age_2 > foo_age_1);
@@ -432,10 +432,10 @@ mod tests {
         assert!(!root.is_final());
 
         // Traverse 'h' -> 'e' -> 'l' -> 'p'
-        let h = root.transition(b'h').unwrap();
-        let e = h.transition(b'e').unwrap();
-        let l = e.transition(b'l').unwrap();
-        let p = l.transition(b'p').unwrap();
+        let h = root.transition(b'h').expect("expected Some transition h in test");
+        let e = h.transition(b'e').expect("expected Some transition e in test");
+        let l = e.transition(b'l').expect("expected Some transition l in test");
+        let p = l.transition(b'p').expect("expected Some transition p in test");
 
         assert!(p.is_final()); // "help"
     }

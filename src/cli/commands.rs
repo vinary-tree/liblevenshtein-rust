@@ -20,7 +20,7 @@ use crate::serialization::{BincodeSerializer, DictionarySerializer, JsonSerializ
 
 // Phonetic rule imports
 #[cfg(feature = "phonetic-rules")]
-use crate::phonetic::{apply_rules_seq, apply_rules_seq_char};
+use crate::phonetic::apply_rules_seq_char;
 
 // Phonetic grep imports
 #[cfg(feature = "phonetic-rules")]
@@ -1112,7 +1112,7 @@ fn print_config(config: &PersistentConfig) {
     println!(
         "  Config file: {}",
         super::paths::config_file_path()
-            .unwrap()
+            .expect("config_file_path must succeed for status display")
             .display()
             .to_string()
             .cyan()
@@ -1392,7 +1392,7 @@ fn cmd_phonetic(_text: &str, _rules_path: &Path, _compiled: bool) -> Result<()> 
 /// Compile .llre regex file to binary format
 #[cfg(all(feature = "phonetic-rules", feature = "serialization"))]
 fn cmd_compile_regex(input: &Path, output: Option<PathBuf>, verify: bool) -> Result<()> {
-    use crate::phonetic::llre::{compile, load_file, save, to_bytes};
+    use crate::phonetic::llre::{compile, load_file, save};
 
     println!("{}", "Compiling LLRE Regex".bold().underline());
     println!();
@@ -1623,7 +1623,7 @@ struct GrepOptions<'a> {
 /// Search files for fuzzy phonetic matches
 #[cfg(feature = "phonetic-rules")]
 fn cmd_grep(opts: GrepOptions) -> Result<()> {
-    use std::io::{BufRead, Write};
+    use std::io::BufRead;
 
     // Apply case-insensitivity at compile time by wrapping pattern with (?i:...)
     // This ensures the NFA is built with character classes for both cases,
@@ -1668,7 +1668,7 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
     let use_color = !opts.no_color;
 
     // Process files (or stdin if no files specified)
-    let mut total_matches = 0usize;
+    let mut _total_matches = 0usize;
     let mut file_match_counts: Vec<(String, usize)> = Vec::new();
 
     if opts.files.is_empty() {
@@ -1676,7 +1676,7 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
         let stdin = std::io::stdin();
         let content = stdin.lock().lines().filter_map(|l| l.ok()).collect::<Vec<_>>().join("\n");
         let matches = process_content(&grep, &content, "(stdin)", show_filename, &opts, use_color)?;
-        total_matches += matches;
+        _total_matches += matches;
         if opts.count {
             file_match_counts.push(("(stdin)".to_string(), matches));
         }
@@ -1715,7 +1715,7 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
                 // Parse the path (handles archive:filter syntax)
                 let grep_path = match GrepPath::parse(&file_path.display().to_string()) {
                     Ok(p) => p,
-                    Err(e) => {
+                    Err(_e) => {
                         // Fall back to regular path
                         GrepPath::from_path(file_path)
                     }
@@ -1738,7 +1738,7 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
                                                 &opts,
                                                 use_color,
                                             )?;
-                                            total_matches += matches;
+                                            _total_matches += matches;
                                             if opts.count {
                                                 file_match_counts.push((source_name, matches));
                                             }
@@ -1812,7 +1812,7 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
                                                     &opts,
                                                     use_color,
                                                 )?;
-                                                total_matches += matches;
+                                                _total_matches += matches;
                                                 if opts.count {
                                                     file_match_counts.push((source_name, matches));
                                                 }
@@ -1849,7 +1849,7 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
                     match std::fs::read_to_string(file_path) {
                         Ok(content) => {
                             let matches = process_content(&grep, &content, &filename, show_filename, &opts, use_color)?;
-                            total_matches += matches;
+                            _total_matches += matches;
                             if opts.count {
                                 file_match_counts.push((filename, matches));
                             }
@@ -1891,8 +1891,6 @@ fn process_content(
     opts: &GrepOptions,
     use_color: bool,
 ) -> Result<usize> {
-    use std::io::Write;
-
     let mut match_count = 0usize;
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();

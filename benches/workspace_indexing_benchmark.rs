@@ -89,7 +89,7 @@ fn merge_sequential(mut dicts: Vec<DynamicDawg<Vec<ContextId>>>) -> DynamicDawg<
         return DynamicDawg::new();
     }
 
-    let mut merged = dicts.remove(0);
+    let merged = dicts.remove(0);
     for dict in dicts {
         merged.union_with(&dict, merge_contexts);
     }

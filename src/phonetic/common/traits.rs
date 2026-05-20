@@ -176,19 +176,7 @@ mod tests {
     #[derive(Debug, Clone, PartialEq)]
     enum MockToken {
         Pipe,
-        Ampersand,
-        Exclamation,
-        GroupStart,
-        GroupEnd,
-        Hash,
-        Star,
-        Plus,
-        Question,
-        BraceStart,
-        Eof,
-        IfKeyword,
         Monosyllable,
-        Polysyllable,
         Char(char),
     }
 
@@ -198,59 +186,58 @@ mod tests {
         }
 
         fn is_ampersand(&self) -> bool {
-            matches!(self, MockToken::Ampersand)
+            false
         }
 
         fn is_exclamation(&self) -> bool {
-            matches!(self, MockToken::Exclamation)
+            false
         }
 
         fn is_group_start(&self) -> bool {
-            matches!(self, MockToken::GroupStart)
+            false
         }
 
         fn is_group_end(&self) -> bool {
-            matches!(self, MockToken::GroupEnd)
+            false
         }
 
         fn is_hash(&self) -> bool {
-            matches!(self, MockToken::Hash)
+            false
         }
 
         fn is_star(&self) -> bool {
-            matches!(self, MockToken::Star)
+            false
         }
 
         fn is_plus(&self) -> bool {
-            matches!(self, MockToken::Plus)
+            false
         }
 
         fn is_question(&self) -> bool {
-            matches!(self, MockToken::Question)
+            false
         }
 
         fn is_brace_start(&self) -> bool {
-            matches!(self, MockToken::BraceStart)
+            false
         }
 
         fn is_eof(&self) -> bool {
-            matches!(self, MockToken::Eof)
+            false
         }
 
         fn is_if_keyword(&self) -> bool {
-            matches!(self, MockToken::IfKeyword)
+            false
         }
 
         fn as_syllable_condition(&self) -> Option<SyllableCondition> {
             match self {
                 MockToken::Monosyllable => Some(SyllableCondition::Monosyllable),
-                MockToken::Polysyllable => Some(SyllableCondition::Polysyllable),
                 _ => None,
             }
         }
 
         fn can_start_primary(&self) -> bool {
-            matches!(self, MockToken::Char(_) | MockToken::GroupStart | MockToken::Hash)
+            matches!(self, MockToken::Char(_))
         }
     }
 

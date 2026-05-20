@@ -451,7 +451,7 @@ mod tests {
         // Should find "hello" with full overlap
         let hello_result = candidates.iter().find(|(t, _)| *t == "hello");
         assert!(hello_result.is_some());
-        let (_, count) = hello_result.unwrap();
+        let (_, count) = hello_result.expect("expected Some hello_result in test");
         assert_eq!(*count, 4); // he, el, ll, lo
     }
 

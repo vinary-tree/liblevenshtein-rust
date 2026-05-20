@@ -242,7 +242,6 @@ fn header_to_entry_type(header: &tar::Header) -> EntryType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
     use tempfile::tempdir;
 
     fn create_test_tar() -> (tempfile::TempDir, std::path::PathBuf) {

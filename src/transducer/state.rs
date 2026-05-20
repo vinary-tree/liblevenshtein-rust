@@ -218,7 +218,7 @@ impl State {
             }
 
             // Scalar fallback for len > 8 or when SIMD unavailable
-            self.positions.iter().map(|p| p.num_errors).min().unwrap()
+            self.positions.iter().map(|p| p.num_errors).min().expect("State::min_distance: positions non-empty (first exists)")
         })
     }
 
@@ -350,7 +350,7 @@ mod tests {
             .positions()
             .iter()
             .find(|p| p.term_index == 5)
-            .unwrap();
+            .expect("test fixture: position with term_index 5 was just inserted");
         assert_eq!(pos_at_5.num_errors, 1);
     }
 

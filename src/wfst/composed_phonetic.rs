@@ -34,9 +34,6 @@
 
 use libdictenstein::{Dictionary, DictionaryNode};
 
-#[cfg(feature = "phonetic-rules")]
-use crate::phonetic::nfa::NFAChar;
-
 use super::phonetic_rewrite_wfst::{RewriteRule, RewriteWfst};
 
 /// Configuration for a phonetic matching pipeline.
@@ -390,7 +387,7 @@ mod tests {
         let result = builder.build();
         assert!(result.is_ok());
 
-        let wfst = result.unwrap();
+        let wfst = result.expect("test fixture: build must be Ok");
         assert_eq!(wfst.max_distance(), 2);
     }
 }

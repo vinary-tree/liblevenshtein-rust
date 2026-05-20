@@ -1443,8 +1443,6 @@ fn test_verified_nfa_new_rules() {
 
 #[test]
 fn test_llev_to_regex_symbol_sharing() {
-    use liblevenshtein::phonetic::regex::Parser;
-
     // Parse an LLev grammar with symbol definitions
     let llev_file = parse_str(
         r#"

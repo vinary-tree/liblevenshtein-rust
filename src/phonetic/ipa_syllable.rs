@@ -26,36 +26,6 @@
 //! assert_eq!(ipa_syllable_count("kamal"), 2);    // Hindi "कमल"
 //! ```
 
-/// Complete set of IPA vowel characters.
-///
-/// This includes all cardinal vowels and their variations:
-/// - Basic vowels: a, e, i, o, u
-/// - Central vowels: ə, ɜ, ɐ, ɨ, ʉ, ɵ
-/// - Front vowels: ɪ, ɛ, æ, y, ʏ, ø, œ
-/// - Back vowels: ʊ, ɔ, ɑ, ɒ, ʌ, ɯ, ɤ
-/// - Rhotic vowels: ɚ, ɝ
-const IPA_VOWELS: &[char] = &[
-    // Basic vowels (ASCII)
-    'a', 'e', 'i', 'o', 'u',
-    'A', 'E', 'I', 'O', 'U',
-    // Close vowels
-    'i', 'y', 'ɨ', 'ʉ', 'ɯ', 'u',
-    // Near-close vowels
-    'ɪ', 'ʏ', 'ʊ',
-    // Close-mid vowels
-    'e', 'ø', 'ɘ', 'ɵ', 'ɤ', 'o',
-    // Mid vowel
-    'ə',
-    // Open-mid vowels
-    'ɛ', 'œ', 'ɜ', 'ɞ', 'ʌ', 'ɔ',
-    // Near-open vowels
-    'æ', 'ɐ',
-    // Open vowels
-    'a', 'ɶ', 'ɑ', 'ɒ',
-    // Rhotic vowels
-    'ɚ', 'ɝ',
-];
-
 /// Length markers that don't add syllables.
 const LENGTH_MARKERS: &[char] = &[
     'ː', // long (U+02D0)
@@ -296,7 +266,7 @@ pub fn is_final_syllable(ipa: &str, pos: usize) -> bool {
         return true;
     }
 
-    let last_boundary = *boundaries.last().unwrap();
+    let last_boundary = *boundaries.last().expect("non-empty checked above");
     pos >= last_boundary
 }
 

@@ -303,7 +303,7 @@ fn bench_pattern_splitting(c: &mut Criterion) {
     group.sample_size(1000);
 
     for max_distance in [2, 4, 8, 16] {
-        let splitter = PatternSplitter::new(max_distance);
+        let splitter = PatternSplitter::new(max_distance, Algorithm::Standard);
 
         // Test different query lengths
         for query_len in [20, 50, 100] {

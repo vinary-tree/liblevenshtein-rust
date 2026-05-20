@@ -62,7 +62,7 @@
 //! assert!(!automaton.accepts("test", "hello"));
 //! ```
 
-use super::bit_vector::CharacteristicVector;
+use crate::transducer::universal::bit_vector::CharacteristicVector;
 use super::state::GeneralizedState;
 use crate::transducer::OperationSet;
 

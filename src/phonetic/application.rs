@@ -30,7 +30,7 @@
 use super::common::PhoneticUnit;
 use super::matching::{context_matches, pattern_matches_at};
 use super::syllable::evaluate_syllable_expr;
-use super::types::{Context, Phone, RewriteRule};
+use super::types::{Phone, RewriteRule};
 use std::collections::HashSet;
 
 // ============================================================================
@@ -117,6 +117,7 @@ static BYTES_COPIED: AtomicUsize = AtomicUsize::new(0);
 #[cfg(feature = "perf-instrumentation")]
 static ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
 
+/// Return the current performance counters as `(bytes_copied, allocations)`.
 #[cfg(feature = "perf-instrumentation")]
 pub fn get_perf_stats() -> (usize, usize) {
     (
@@ -125,6 +126,7 @@ pub fn get_perf_stats() -> (usize, usize) {
     )
 }
 
+/// Reset the performance counters to zero.
 #[cfg(feature = "perf-instrumentation")]
 pub fn reset_perf_stats() {
     BYTES_COPIED.store(0, Ordering::Relaxed);

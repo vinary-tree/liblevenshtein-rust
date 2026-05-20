@@ -1,7 +1,9 @@
 // Benchmark for Batch 1 SIMD optimizations (SSE4.1 + affix stripping)
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use liblevenshtein::distance::{standard_distance, standard_distance_impl};
+use liblevenshtein::distance::standard_distance;
+#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+use liblevenshtein::distance::standard_distance_impl;
 
 #[cfg(all(target_arch = "x86_64", feature = "simd"))]
 use liblevenshtein::distance::simd::{standard_distance_simd, strip_common_affixes_simd};

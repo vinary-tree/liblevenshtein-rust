@@ -44,9 +44,6 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-#[cfg(feature = "serialization")]
-use serde::{Deserialize, Serialize};
-
 pub mod arabic;
 pub mod bengali;
 pub mod cyrillic;

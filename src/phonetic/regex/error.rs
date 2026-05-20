@@ -42,7 +42,9 @@ pub enum ParseErrorKind {
 
     /// Invalid repetition bounds
     InvalidRepetition {
+        /// Lower bound of the offending repetition.
         min: usize,
+        /// Upper bound of the offending repetition.
         max: usize,
     },
 
@@ -84,7 +86,9 @@ pub enum ParseErrorKind {
 
     /// Pattern too complex
     PatternTooComplex {
+        /// Computed pattern size that triggered the error.
         size: usize,
+        /// Maximum allowed pattern size.
         max: usize,
     },
 
@@ -129,7 +133,9 @@ pub enum ParseErrorKind {
 
     /// Recursion depth exceeded during NFA compilation
     RecursionDepthExceeded {
+        /// Recursion depth reached when the limit was hit.
         depth: usize,
+        /// Maximum allowed recursion depth.
         max: usize,
     },
 

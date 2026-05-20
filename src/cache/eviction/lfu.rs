@@ -125,7 +125,7 @@ impl<D> Lfu<D> {
 
     /// Records an entry access (updates metadata).
     fn record_access(&self, term: &str) {
-        let mut metadata = self.metadata.write().unwrap();
+        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
         metadata
             .entry(term.to_string())
             .and_modify(|m| m.increment())
@@ -136,7 +136,7 @@ impl<D> Lfu<D> {
     ///
     /// Returns `None` if the entry has never been accessed.
     pub fn access_count(&self, term: &str) -> Option<u32> {
-        let metadata = self.metadata.read().unwrap();
+        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
         metadata.get(term).map(|m| m.access_count)
     }
 
@@ -144,7 +144,7 @@ impl<D> Lfu<D> {
     ///
     /// Returns the term with the lowest access count.
     pub fn find_lfu(&self, terms: &[&str]) -> Option<String> {
-        let metadata = self.metadata.read().unwrap();
+        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
         terms
             .iter()
             .filter_map(|&term| metadata.get(term).map(|m| (term, m.access_count)))
@@ -157,7 +157,7 @@ impl<D> Lfu<D> {
     /// Returns the evicted term if any.
     pub fn evict_lfu(&self, terms: &[&str]) -> Option<String> {
         if let Some(lfu_term) = self.find_lfu(terms) {
-            let mut metadata = self.metadata.write().unwrap();
+            let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
             metadata.remove(&lfu_term);
             Some(lfu_term)
         } else {
@@ -167,7 +167,7 @@ impl<D> Lfu<D> {
 
     /// Clears all metadata.
     pub fn clear_metadata(&self) {
-        let mut metadata = self.metadata.write().unwrap();
+        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
         metadata.clear();
     }
 }
@@ -321,7 +321,7 @@ mod tests {
         assert_eq!(lfu.access_count("bar"), Some(3));
 
         // foo has lower frequency
-        assert!(lfu.access_count("foo").unwrap() < lfu.access_count("bar").unwrap());
+        assert!(lfu.access_count("foo").expect("expected Some count in test") < lfu.access_count("bar").expect("expected Some count in test"));
     }
 
     #[test]
@@ -428,10 +428,10 @@ mod tests {
         assert!(!root.is_final());
 
         // Traverse 'h' -> 'e' -> 'l' -> 'p'
-        let h = root.transition(b'h').unwrap();
-        let e = h.transition(b'e').unwrap();
-        let l = e.transition(b'l').unwrap();
-        let p = l.transition(b'p').unwrap();
+        let h = root.transition(b'h').expect("expected Some transition h in test");
+        let e = h.transition(b'e').expect("expected Some transition e in test");
+        let l = e.transition(b'l').expect("expected Some transition l in test");
+        let p = l.transition(b'p').expect("expected Some transition p in test");
 
         assert!(p.is_final()); // "help"
     }

@@ -260,7 +260,7 @@ fn zip_file_to_meta(entry: &zip::read::ZipFile) -> ArchiveEntryMeta {
         entry_type,
         mtime: entry.last_modified().and_then(|dt| {
             // Convert zip DateTime to SystemTime
-            use std::time::{Duration, SystemTime, UNIX_EPOCH};
+            use std::time::{Duration, UNIX_EPOCH};
 
             // Approximate conversion - zip times are local, not UTC
             let year = dt.year() as u64;

@@ -143,9 +143,9 @@ mod tests {
         let root = dict.root();
 
         // Build path: t -> e -> s using PathNode
-        let t_node = root.transition(b't').unwrap();
-        let e_node = t_node.transition(b'e').unwrap();
-        let s_node = e_node.transition(b's').unwrap();
+        let t_node = root.transition(b't').expect("test fixture: 't' exists in dictionary root");
+        let e_node = t_node.transition(b'e').expect("test fixture: 'e' exists at t-node");
+        let s_node = e_node.transition(b's').expect("test fixture: 's' exists at e-node");
 
         let i4 = IntersectionF64::with_parent(
             b's',

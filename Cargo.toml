@@ -97,6 +97,7 @@ tempfile = "3.8"
 proptest = "1.4"
 rayon = "1.11"
 num_cpus = "1.16"
+paste = "1.0"  # For macro identifier concatenation in test macros
 
 [build-dependencies]
 prost-build = { version = "0.12", optional = true }
@@ -110,6 +111,7 @@ crate-type = ["rlib", "cdylib"]
 [[bench]]
 name = "benchmarks"
 harness = false
+required-features = ["pathmap-backend"]
 
 [[bench]]
 name = "phonetic_rules"
@@ -119,6 +121,7 @@ required-features = ["phonetic-rules"]
 [[bench]]
 name = "micro_benchmarks"
 harness = false
+required-features = ["pathmap-backend"]
 
 [[bench]]
 name = "profiling_benchmark"
@@ -140,10 +143,12 @@ harness = false
 [[bench]]
 name = "filtering_prefix_benchmarks"
 harness = false
+required-features = ["pathmap-backend"]
 
 [[bench]]
 name = "prefix_profiling"
 harness = false
+required-features = ["pathmap-backend"]
 
 [[bench]]
 name = "suffix_automaton_benchmarks"
@@ -152,14 +157,17 @@ harness = false
 [[bench]]
 name = "matching_modes_comparison"
 harness = false
+required-features = ["pathmap-backend"]
 
 [[bench]]
 name = "comprehensive_profiling"
 harness = false
+required-features = ["pathmap-backend"]
 
 [[bench]]
 name = "backend_comparison"
 harness = false
+required-features = ["pathmap-backend"]
 
 [[bench]]
 name = "subsumption_benchmarks"
@@ -266,22 +274,12 @@ harness = false
 name = "generalized_automaton_benchmarks"
 harness = false
 
-[[bench]]
-name = "phonetic_operations_benchmarks"
-harness = false
-
-[[bench]]
-name = "phonetic_acceptance_benchmarks"
-harness = false
 
 [[bench]]
 name = "phonetic_position_skip_benchmark"
 harness = false
 required-features = ["phonetic-rules"]
 
-[[bench]]
-name = "generalized_memory_benchmarks"
-harness = false
 
 [[bench]]
 name = "phonetic_nfa_benchmarks"
@@ -512,3 +510,7 @@ harness = false
 name = "articulatory_benchmarks"
 harness = false
 required-features = ["phonetic-rules"]
+
+[[bench]]
+name = "workspace_indexing_benchmark"
+harness = false

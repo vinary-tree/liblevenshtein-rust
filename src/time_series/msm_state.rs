@@ -366,7 +366,7 @@ mod tests {
         state.insert_unchecked(MsmPosition::new(2, 2, 1.0, 0.0, 0.0));
         state.insert_unchecked(MsmPosition::new(3, 3, 2.0, 0.0, 0.0));
 
-        assert!((state.min_cost().unwrap() - 1.0).abs() < EPSILON);
+        assert!((state.min_cost().expect("expected Some min_cost in test") - 1.0).abs() < EPSILON);
     }
 
     #[test]
@@ -382,7 +382,7 @@ mod tests {
 
         let min_final = state.min_final_distance(3, 4);
         assert!(min_final.is_some());
-        assert!((min_final.unwrap() - 2.0).abs() < EPSILON);
+        assert!((min_final.expect("expected Some min_final in test") - 2.0).abs() < EPSILON);
     }
 
     #[test]

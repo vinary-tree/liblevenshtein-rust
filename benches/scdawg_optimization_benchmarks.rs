@@ -12,7 +12,6 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::scdawg::Scdawg;
-use libdictenstein::substring::SubstringDictionary;
 use libdictenstein::{Dictionary, DictionaryNode};
 use std::collections::HashMap;
 

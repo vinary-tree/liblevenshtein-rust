@@ -9,25 +9,25 @@
 //! use liblevenshtein::phonetic::regex::parse;
 //!
 //! // Compile a simple pattern
-//! let nfa = compile(&parse("(ph|f)one").unwrap()).unwrap();
+//! let nfa = compile(&parse("(ph|f)one").expect("doc: regex parse must succeed")).expect("doc: nfa compile must succeed");
 //! assert!(nfa.accepts("phone"));
 //! assert!(nfa.accepts("fone"));
 //! assert!(!nfa.accepts("bone"));
 //!
 //! // Compile a rewrite rule
-//! let rule = parse_rule("ph -> f").unwrap();
-//! let rewrite = compile_rewrite(&rule).unwrap();
+//! let rule = parse_rule("ph -> f").expect("doc: rewrite rule parse must succeed");
+//! let rewrite = compile_rewrite(&rule).expect("doc: rewrite compile must succeed");
 //! ```
 
 use std::collections::HashMap;
 
 use super::context::{BoundaryKind, ContextPattern, ContextPatternChar};
-use super::nfa::{NFAChar, NFA};
+use super::{NFAChar, NFA};
 use super::optimizer::{OptimizationConfig, NfaOptimizerChar};
 use super::thompson::{ThompsonBuilder, ThompsonBuilderChar};
 use crate::phonetic::regex::ast::{ContextExpr, ContextExprByte, Regex, RegexByte, RegexFlags, UnicodeNormalization};
 use crate::phonetic::regex::error::{ParseError, ParseErrorKind, ParseResult, Position};
-use crate::phonetic::regex::transform::{apply_flags, TransformResult};
+use crate::phonetic::regex::transform::apply_flags;
 
 /// Result of compiling a regex with flag support.
 ///
@@ -70,15 +70,15 @@ pub struct CompileResultChar {
 /// use liblevenshtein::phonetic::regex::parse;
 /// use liblevenshtein::phonetic::nfa::compiler::compile;
 ///
-/// let regex = parse("a+b*c").unwrap();
-/// let nfa = compile(&regex).unwrap();
+/// let regex = parse("a+b*c").expect("doc: regex parse must succeed");
+/// let nfa = compile(&regex).expect("doc: nfa compile must succeed");
 /// assert!(nfa.accepts("ac"));
 /// assert!(nfa.accepts("aaac"));
 /// assert!(nfa.accepts("abbc"));
 ///
 /// // Case-insensitive matching via (?i) flag
-/// let regex = parse("(?i:hello)").unwrap();
-/// let nfa = compile(&regex).unwrap();
+/// let regex = parse("(?i:hello)").expect("doc: regex parse must succeed");
+/// let nfa = compile(&regex).expect("doc: nfa compile must succeed");
 /// assert!(nfa.accepts("hello"));
 /// assert!(nfa.accepts("HELLO"));
 /// assert!(nfa.accepts("HeLLo"));
@@ -107,8 +107,8 @@ pub fn compile(regex: &Regex) -> ParseResult<NFAChar> {
 /// use liblevenshtein::phonetic::regex::parse;
 /// use liblevenshtein::phonetic::nfa::compiler::compile_with_flags;
 ///
-/// let regex = parse("(?iu:café)").unwrap();
-/// let result = compile_with_flags(&regex).unwrap();
+/// let regex = parse("(?iu:café)").expect("doc: regex parse must succeed");
+/// let result = compile_with_flags(&regex).expect("doc: compile_with_flags must succeed");
 ///
 /// // NFA matches case-insensitively (transformed)
 /// assert!(result.nfa.accepts("café"));
@@ -202,28 +202,6 @@ enum CompileWork<'a> {
     DoRepeatExact(usize),
     /// Pop one value, apply range repetition, push result.
     DoRepeatRange(usize, Option<usize>),
-}
-
-/// Work item for trampolined literal extraction.
-#[derive(Debug)]
-enum LiteralWork<'a> {
-    /// Process this regex node.
-    Process(&'a Regex),
-    /// Pop two char vectors, concatenate them, push result.
-    DoConcat,
-}
-
-/// Work item for trampolined context expression compilation.
-#[derive(Debug)]
-enum ContextWork<'a> {
-    /// Process this context expression.
-    Process(&'a ContextExpr),
-    /// Pop two context patterns, create And, push result.
-    DoAnd,
-    /// Pop two context patterns, create Or, push result.
-    DoOr,
-    /// Pop one context pattern, create Not, push result.
-    DoNot,
 }
 
 /// Character-level NFA compiler.
@@ -1022,16 +1000,16 @@ mod tests {
 
     #[test]
     fn test_compile_literal() {
-        let regex = parse("phone").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("phone").expect("test: parse phone");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.accepts("phone"));
         assert!(!nfa.accepts("fone"));
     }
 
     #[test]
     fn test_compile_alternation() {
-        let regex = parse("ph|f").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("ph|f").expect("test: parse ph|f");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.accepts("ph"));
         assert!(nfa.accepts("f"));
         assert!(!nfa.accepts("g"));
@@ -1039,8 +1017,8 @@ mod tests {
 
     #[test]
     fn test_compile_group() {
-        let regex = parse("(ph|f)one").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("(ph|f)one").expect("test: parse (ph|f)one");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.accepts("phone"));
         assert!(nfa.accepts("fone"));
         assert!(!nfa.accepts("bone"));
@@ -1048,8 +1026,8 @@ mod tests {
 
     #[test]
     fn test_compile_star() {
-        let regex = parse("a*").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("a*").expect("test: parse a*");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.accepts(""));
         assert!(nfa.accepts("a"));
         assert!(nfa.accepts("aaa"));
@@ -1058,8 +1036,8 @@ mod tests {
 
     #[test]
     fn test_compile_plus() {
-        let regex = parse("a+").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("a+").expect("test: parse a+");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(!nfa.accepts(""));
         assert!(nfa.accepts("a"));
         assert!(nfa.accepts("aaa"));
@@ -1067,8 +1045,8 @@ mod tests {
 
     #[test]
     fn test_compile_optional() {
-        let regex = parse("a?b").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("a?b").expect("test: parse a?b");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.accepts("b"));
         assert!(nfa.accepts("ab"));
         assert!(!nfa.accepts("aab"));
@@ -1076,8 +1054,8 @@ mod tests {
 
     #[test]
     fn test_compile_char_class() {
-        let regex = parse("[aeiou]").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("[aeiou]").expect("test: parse [aeiou]");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.accepts("a"));
         assert!(nfa.accepts("e"));
         assert!(!nfa.accepts("b"));
@@ -1085,8 +1063,8 @@ mod tests {
 
     #[test]
     fn test_compile_any() {
-        let regex = parse("a.c").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("a.c").expect("test: parse a.c");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.accepts("abc"));
         assert!(nfa.accepts("axc"));
         assert!(!nfa.accepts("ac"));
@@ -1094,8 +1072,8 @@ mod tests {
 
     #[test]
     fn test_compile_repeat_exact() {
-        let regex = parse("a{3}").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("a{3}").expect("test: parse a{3}");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(!nfa.accepts("aa"));
         assert!(nfa.accepts("aaa"));
         assert!(!nfa.accepts("aaaa"));
@@ -1103,8 +1081,8 @@ mod tests {
 
     #[test]
     fn test_compile_repeat_range() {
-        let regex = parse("a{2,4}").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("a{2,4}").expect("test: parse a{2,4}");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(!nfa.accepts("a"));
         assert!(nfa.accepts("aa"));
         assert!(nfa.accepts("aaa"));
@@ -1114,8 +1092,8 @@ mod tests {
 
     #[test]
     fn test_compile_rewrite_rule_simple() {
-        let regex = parse_rule("ph -> f").unwrap();
-        let rewrite = compile_rewrite(&regex).unwrap();
+        let regex = parse_rule("ph -> f").expect("test: parse rule ph -> f");
+        let rewrite = compile_rewrite(&regex).expect("test: compile_rewrite");
         assert!(rewrite.source.accepts("ph"));
         assert_eq!(rewrite.replacement, vec!['f']);
         assert!(rewrite.left_context.is_none());
@@ -1124,13 +1102,13 @@ mod tests {
 
     #[test]
     fn test_compile_rewrite_rule_with_context() {
-        let regex = parse_rule("c -> s / _[ei]").unwrap();
-        let rewrite = compile_rewrite(&regex).unwrap();
+        let regex = parse_rule("c -> s / _[ei]").expect("test: parse rule c -> s / _[ei]");
+        let rewrite = compile_rewrite(&regex).expect("test: compile_rewrite");
         assert!(rewrite.source.accepts("c"));
         assert_eq!(rewrite.replacement, vec!['s']);
         assert!(rewrite.left_context.is_none());
         assert!(rewrite.right_context.is_some());
-        let right = rewrite.right_context.unwrap();
+        let right = rewrite.right_context.expect("test: right_context is_some checked above");
         assert!(right.accepts("e"));
         assert!(right.accepts("i"));
         assert!(!right.accepts("a"));
@@ -1138,16 +1116,16 @@ mod tests {
 
     #[test]
     fn test_compile_rewrite_rule_empty_replacement() {
-        let regex = parse_rule("e -> / _#").unwrap();
-        let rewrite = compile_rewrite(&regex).unwrap();
+        let regex = parse_rule("e -> / _#").expect("test: parse rule e -> / _#");
+        let rewrite = compile_rewrite(&regex).expect("test: compile_rewrite");
         assert!(rewrite.source.accepts("e"));
         assert!(rewrite.replacement.is_empty());
     }
 
     #[test]
     fn test_compile_complex_pattern() {
-        let regex = parse("(ph|f)one[s]?").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("(ph|f)one[s]?").expect("test: parse (ph|f)one[s]?");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.accepts("phone"));
         assert!(nfa.accepts("phones"));
         assert!(nfa.accepts("fone"));
@@ -1159,24 +1137,24 @@ mod tests {
 
     #[test]
     fn test_compile_bytes_literal() {
-        let regex = crate::phonetic::regex::parse_bytes(b"phone").unwrap();
-        let nfa = compile_bytes(&regex).unwrap();
+        let regex = crate::phonetic::regex::parse_bytes(b"phone").expect("test: parse_bytes phone");
+        let nfa = compile_bytes(&regex).expect("test: compile_bytes nfa");
         assert!(nfa.accepts(b"phone"));
         assert!(!nfa.accepts(b"fone"));
     }
 
     #[test]
     fn test_compile_bytes_alternation() {
-        let regex = crate::phonetic::regex::parse_bytes(b"ph|f").unwrap();
-        let nfa = compile_bytes(&regex).unwrap();
+        let regex = crate::phonetic::regex::parse_bytes(b"ph|f").expect("test: parse_bytes ph|f");
+        let nfa = compile_bytes(&regex).expect("test: compile_bytes nfa");
         assert!(nfa.accepts(b"ph"));
         assert!(nfa.accepts(b"f"));
     }
 
     #[test]
     fn test_compile_bytes_rewrite() {
-        let regex = crate::phonetic::regex::parse_rule_bytes(b"ph -> f").unwrap();
-        let rewrite = compile_rewrite_bytes(&regex).unwrap();
+        let regex = crate::phonetic::regex::parse_rule_bytes(b"ph -> f").expect("test: parse_rule_bytes ph -> f");
+        let rewrite = compile_rewrite_bytes(&regex).expect("test: compile_rewrite_bytes");
         assert!(rewrite.source.accepts(b"ph"));
         assert_eq!(rewrite.replacement, vec![b'f']);
     }
@@ -1185,53 +1163,53 @@ mod tests {
 
     #[test]
     fn test_compile_start_of_line() {
-        let regex = parse("^hello").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("^hello").expect("test: parse ^hello");
+        let nfa = compile(&regex).expect("test: compile nfa");
         // NFA should have anchor transition followed by literal
         assert!(nfa.state_count() >= 3);
     }
 
     #[test]
     fn test_compile_end_of_line() {
-        let regex = parse("hello$").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("hello$").expect("test: parse hello$");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.state_count() >= 3);
     }
 
     #[test]
     fn test_compile_anchored_pattern() {
-        let regex = parse("^hello$").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("^hello$").expect("test: parse ^hello$");
+        let nfa = compile(&regex).expect("test: compile nfa");
         // start_of_line + hello (5 chars) + end_of_line
         assert!(nfa.state_count() >= 4);
     }
 
     #[test]
     fn test_compile_start_of_input() {
-        let regex = parse(r"\Ahello").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse(r"\Ahello").expect("test: parse \\Ahello");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.state_count() >= 3);
     }
 
     #[test]
     fn test_compile_end_of_input() {
-        let regex = parse(r"hello\Z").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse(r"hello\Z").expect("test: parse hello\\Z");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.state_count() >= 3);
     }
 
     #[test]
     fn test_compile_strict_end_of_input() {
-        let regex = parse(r"hello\z").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse(r"hello\z").expect("test: parse hello\\z");
+        let nfa = compile(&regex).expect("test: compile nfa");
         assert!(nfa.state_count() >= 3);
     }
 
     #[test]
     fn test_compile_multiline_flags() {
         // Pattern with multiline flag
-        let regex = parse("(?m)^line$").unwrap();
-        let nfa = compile(&regex).unwrap();
+        let regex = parse("(?m)^line$").expect("test: parse (?m)^line$");
+        let nfa = compile(&regex).expect("test: compile nfa");
         // Should compile with anchor transitions
         assert!(nfa.state_count() >= 3);
     }

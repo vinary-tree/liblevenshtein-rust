@@ -111,10 +111,6 @@ impl<N: DictionaryNode> NodeRegistry<N> {
     fn get_node(&self, id: u32) -> Option<&N> {
         self.id_to_node.get(id as usize)
     }
-
-    fn len(&self) -> usize {
-        self.id_to_node.len()
-    }
 }
 
 /// Registry for assigning stable IDs to product states.
@@ -432,6 +428,6 @@ mod tests {
 
         let hint = source.num_states_hint();
         assert!(hint.is_some());
-        assert!(hint.unwrap() > 0);
+        assert!(hint.expect("expected Some hint in test") > 0);
     }
 }

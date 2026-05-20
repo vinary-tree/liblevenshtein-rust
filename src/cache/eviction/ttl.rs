@@ -148,7 +148,7 @@ impl<D> Ttl<D> {
 
     /// Checks if an entry is expired.
     fn is_expired(&self, term: &str) -> bool {
-        let metadata = self.metadata.read().unwrap();
+        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
         if let Some(entry_meta) = metadata.get(term) {
             entry_meta.is_expired(self.ttl)
         } else {
@@ -159,7 +159,7 @@ impl<D> Ttl<D> {
 
     /// Records an entry access (updates metadata).
     fn record_access(&self, term: &str) {
-        let mut metadata = self.metadata.write().unwrap();
+        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
         metadata
             .entry(term.to_string())
             .or_insert_with(EntryMetadata::new);
@@ -169,7 +169,7 @@ impl<D> Ttl<D> {
     ///
     /// This is a maintenance operation to prevent unbounded metadata growth.
     pub fn cleanup_expired(&self) {
-        let mut metadata = self.metadata.write().unwrap();
+        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
         metadata.retain(|_, entry_meta| !entry_meta.is_expired(self.ttl));
     }
 }
@@ -381,7 +381,7 @@ mod tests {
         ttl.cleanup_expired();
 
         // Metadata map should be empty now
-        let metadata = ttl.metadata.read().unwrap();
+        let metadata = ttl.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
         assert_eq!(metadata.len(), 0);
     }
 
@@ -395,10 +395,10 @@ mod tests {
         assert!(!root.is_final());
 
         // Traverse 'h' -> 'e' -> 'l' -> 'p'
-        let h = root.transition(b'h').unwrap();
-        let e = h.transition(b'e').unwrap();
-        let l = e.transition(b'l').unwrap();
-        let p = l.transition(b'p').unwrap();
+        let h = root.transition(b'h').expect("expected Some transition h in test");
+        let e = h.transition(b'e').expect("expected Some transition e in test");
+        let l = e.transition(b'l').expect("expected Some transition l in test");
+        let p = l.transition(b'p').expect("expected Some transition p in test");
 
         assert!(p.is_final()); // "help"
     }

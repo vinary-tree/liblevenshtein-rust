@@ -65,6 +65,9 @@ fn extract_text_from_content(content: &docx_rs::DocumentChild, parts: &mut Vec<S
 
 /// Extract text from a table row.
 fn extract_text_from_table_row(row: &docx_rs::TableChild, parts: &mut Vec<String>) {
+    // `docx_rs::TableChild` currently has only the `TableRow` variant; the
+    // `if let` is defensive against upstream additions.
+    #[allow(irrefutable_let_patterns)]
     if let docx_rs::TableChild::TableRow(tr) = row {
         for cell in &tr.cells {
             extract_text_from_table_cell(cell, parts);
@@ -74,6 +77,9 @@ fn extract_text_from_table_row(row: &docx_rs::TableChild, parts: &mut Vec<String
 
 /// Extract text from a table cell.
 fn extract_text_from_table_cell(cell: &docx_rs::TableRowChild, parts: &mut Vec<String>) {
+    // `docx_rs::TableRowChild` currently has only the `TableCell` variant; the
+    // `if let` is defensive against upstream additions.
+    #[allow(irrefutable_let_patterns)]
     if let docx_rs::TableRowChild::TableCell(tc) = cell {
         for child in &tc.children {
             if let docx_rs::TableCellContent::Paragraph(para) = child {

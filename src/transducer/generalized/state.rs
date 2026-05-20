@@ -28,7 +28,7 @@
 use smallvec::SmallVec;
 use std::fmt;
 
-use super::bit_vector::CharacteristicVector;
+use crate::transducer::universal::bit_vector::CharacteristicVector;
 use super::position::GeneralizedPosition;
 use super::subsumption::subsumes;
 
@@ -263,8 +263,8 @@ impl GeneralizedState {
         errors: u8,
         operations: &crate::transducer::OperationSet,
         bit_vector: &CharacteristicVector,
-        full_word: &str,
-        word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+        _full_word: &str,
+        _word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
         word_slice: &str,
         input_char: char,
     ) -> Vec<GeneralizedPosition> {
@@ -595,8 +595,8 @@ impl GeneralizedState {
         errors: u8,
         operations: &crate::transducer::OperationSet,
         bit_vector: &CharacteristicVector,
-        full_word: &str,
-        word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+        _full_word: &str,
+        _word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
         word_slice: &str,
         input_char: char,
     ) -> Vec<GeneralizedPosition> {
@@ -907,8 +907,8 @@ impl GeneralizedState {
         errors: u8,
         operations: &crate::transducer::OperationSet,
         bit_vector: &CharacteristicVector,
-        full_word: &str,
-        word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+        _full_word: &str,
+        _word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
         word_slice: &str,
         input_char: char,
     ) -> Vec<GeneralizedPosition> {
@@ -983,8 +983,8 @@ impl GeneralizedState {
         errors: u8,
         operations: &crate::transducer::OperationSet,
         bit_vector: &CharacteristicVector,
-        full_word: &str,
-        word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
+        _full_word: &str,
+        _word_chars: Option<&[char]>,  // H2 Optimization: Optional pre-computed character vector (None for distance <= 1)
         word_slice: &str,
         input_char: char,
     ) -> Vec<GeneralizedPosition> {
@@ -1392,23 +1392,23 @@ mod tests {
         // Add positions that don't subsume each other
         // I + 0#1 does not subsume I + (-1)#1 (same errors, different offsets)
         // Valid positions: |0| ≤ 1 ✓ and |-1| ≤ 1 ✓
-        state.add_position(GeneralizedPosition::new_i(0, 1, 2).unwrap());
-        state.add_position(GeneralizedPosition::new_i(-1, 1, 2).unwrap());
+        state.add_position(GeneralizedPosition::new_i(0, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args"));
+        state.add_position(GeneralizedPosition::new_i(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args"));
         assert_eq!(state.len(), 2);
     }
 
     #[test]
     fn test_final_state() {
         let mut state = GeneralizedState::new(2);
-        state.add_position(GeneralizedPosition::new_m(0, 0, 2).unwrap());
+        state.add_position(GeneralizedPosition::new_m(0, 0, 2).expect("test fixture: GeneralizedPosition::new_m with valid args"));
         assert!(state.is_final());
     }
 
     #[test]
     fn test_display() {
         let mut state = GeneralizedState::new(2);
-        state.add_position(GeneralizedPosition::new_i(0, 1, 2).unwrap());
-        state.add_position(GeneralizedPosition::new_i(-1, 1, 2).unwrap());
+        state.add_position(GeneralizedPosition::new_i(0, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args"));
+        state.add_position(GeneralizedPosition::new_i(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args"));
         let display = format!("{}", state);
         assert!(display.contains("I + 0#1") || display.contains("I + -1#1"));
         assert!(display.contains("I + -1#1") || display.contains("I + 0#1"));

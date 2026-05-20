@@ -277,16 +277,16 @@ mod tests {
 
     #[test]
     fn test_big_txt_corpus() {
-        let mut file = NamedTempFile::new().unwrap();
-        writeln!(file, "the").unwrap();
-        writeln!(file, "the").unwrap();
-        writeln!(file, "the").unwrap();
-        writeln!(file, "quick").unwrap();
-        writeln!(file, "brown").unwrap();
-        writeln!(file, "").unwrap(); // Empty line
-        file.flush().unwrap();
+        let mut file = NamedTempFile::new().expect("test fixture: tempfile must be Ok");
+        writeln!(file, "the").expect("test fixture: write must succeed");
+        writeln!(file, "the").expect("test fixture: write must succeed");
+        writeln!(file, "the").expect("test fixture: write must succeed");
+        writeln!(file, "quick").expect("test fixture: write must succeed");
+        writeln!(file, "brown").expect("test fixture: write must succeed");
+        writeln!(file, "").expect("test fixture: write must succeed"); // Empty line
+        file.flush().expect("test fixture: flush must succeed");
 
-        let corpus = BigTxtCorpus::load(file.path()).unwrap();
+        let corpus = BigTxtCorpus::load(file.path()).expect("test fixture: load must be Ok");
 
         assert_eq!(corpus.unique_words(), 3);
         assert_eq!(corpus.total_tokens(), 5);
@@ -300,16 +300,16 @@ mod tests {
 
     #[test]
     fn test_mitton_corpus() {
-        let mut file = NamedTempFile::new().unwrap();
-        writeln!(file, "$hello").unwrap();
-        writeln!(file, "helo 2").unwrap();
-        writeln!(file, "hllo 1").unwrap();
-        writeln!(file, "").unwrap(); // Empty line
-        writeln!(file, "$world").unwrap();
-        writeln!(file, "wrld").unwrap(); // No frequency (default 1)
-        file.flush().unwrap();
+        let mut file = NamedTempFile::new().expect("test fixture: tempfile must be Ok");
+        writeln!(file, "$hello").expect("test fixture: write must succeed");
+        writeln!(file, "helo 2").expect("test fixture: write must succeed");
+        writeln!(file, "hllo 1").expect("test fixture: write must succeed");
+        writeln!(file, "").expect("test fixture: write must succeed"); // Empty line
+        writeln!(file, "$world").expect("test fixture: write must succeed");
+        writeln!(file, "wrld").expect("test fixture: write must succeed"); // No frequency (default 1)
+        file.flush().expect("test fixture: flush must succeed");
 
-        let corpus = MittonCorpus::load(file.path()).unwrap();
+        let corpus = MittonCorpus::load(file.path()).expect("test fixture: load must be Ok");
 
         assert_eq!(corpus.num_correct_words(), 2);
         assert_eq!(corpus.unique_misspellings(), 3);
@@ -330,12 +330,12 @@ mod tests {
 
     #[test]
     fn test_mitton_corpus_missing_frequency() {
-        let mut file = NamedTempFile::new().unwrap();
-        writeln!(file, "$test").unwrap();
-        writeln!(file, "tset").unwrap();
-        file.flush().unwrap();
+        let mut file = NamedTempFile::new().expect("test fixture: tempfile must be Ok");
+        writeln!(file, "$test").expect("test fixture: write must succeed");
+        writeln!(file, "tset").expect("test fixture: write must succeed");
+        file.flush().expect("test fixture: flush must succeed");
 
-        let corpus = MittonCorpus::load(file.path()).unwrap();
+        let corpus = MittonCorpus::load(file.path()).expect("test fixture: load must be Ok");
 
         let errors = &corpus.errors["test"];
         assert_eq!(errors.len(), 1);

@@ -234,7 +234,7 @@ mod tests {
         // caza → kasa (seseo)
         let caza = rules.apply("caza");
         // casa → kasa
-        let casa = rules.apply("casa");
+        let _casa = rules.apply("casa");
         // Both should normalize similarly (z and s both become s)
         assert!(caza.contains('s'), "caza should have 's' sound in LatAm, got: {}", caza);
     }

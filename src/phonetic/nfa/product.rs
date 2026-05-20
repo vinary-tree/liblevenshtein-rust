@@ -24,7 +24,7 @@
 //! use liblevenshtein::phonetic::regex::parse;
 //!
 //! // Compile phonetic pattern: matches "phone" or "fone"
-//! let nfa = compile(&parse("(ph|f)one").unwrap()).unwrap();
+//! let nfa = compile(&parse("(ph|f)one").expect("doc: regex parse must succeed")).expect("doc: nfa compile must succeed");
 //!
 //! // Create product automaton with max edit distance 2
 //! let product = ProductAutomatonChar::new(nfa, 2);
@@ -37,20 +37,13 @@
 //! assert!(!product.accepts("xyz"));    // too far from any NFA match
 //! ```
 
-use super::nfa::{NFAChar, NFA};
+use super::{NFAChar, NFA};
 use super::state_set::StateSet;
 use super::types::StateId;
 use crate::transducer::articulatory_costs::ArticulatoryCosts;
 use crate::transducer::Algorithm;
 use rustc_hash::FxHashSet;
 use std::collections::VecDeque;
-
-/// Helper to create a single-element StateSet.
-fn singleton(state: StateId) -> StateSet {
-    let mut set = StateSet::new();
-    set.insert(state);
-    set
-}
 
 /// Character-level product automaton: NFA × Levenshtein.
 ///
@@ -309,15 +302,6 @@ impl ProductAutomatonChar {
     fn insertion_cost(&self) -> f64 {
         match &self.articulatory_costs {
             Some(costs) => costs.insertion_cost(),
-            None => 1.0,
-        }
-    }
-
-    /// Get the deletion cost (currently fixed at 1.0).
-    #[inline]
-    fn deletion_cost(&self) -> f64 {
-        match &self.articulatory_costs {
-            Some(costs) => costs.deletion_cost(),
             None => 1.0,
         }
     }
@@ -900,6 +884,11 @@ impl ProductAutomaton {
         self.max_distance
     }
 
+    /// Get the phonetic weight applied to substitutions in this product automaton.
+    pub fn phonetic_weight(&self) -> f64 {
+        self.phonetic_weight
+    }
+
     /// Get the algorithm variant.
     pub fn algorithm(&self) -> Algorithm {
         self.algorithm
@@ -1265,7 +1254,7 @@ mod tests {
 
     #[test]
     fn test_product_exact_match() {
-        let nfa = compile(&parse("phone").unwrap()).unwrap();
+        let nfa = compile(&parse("phone").expect("test: parse phone")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 2);
 
         assert!(product.accepts("phone"));
@@ -1274,7 +1263,7 @@ mod tests {
 
     #[test]
     fn test_product_alternation() {
-        let nfa = compile(&parse("ph|f").unwrap()).unwrap();
+        let nfa = compile(&parse("ph|f").expect("test: parse ph|f")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 0);
 
         assert!(product.accepts("ph"));
@@ -1284,7 +1273,7 @@ mod tests {
 
     #[test]
     fn test_product_with_edit_distance() {
-        let nfa = compile(&parse("phone").unwrap()).unwrap();
+        let nfa = compile(&parse("phone").expect("test: parse phone")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 2);
 
         // Exact match
@@ -1307,7 +1296,7 @@ mod tests {
     #[test]
     fn test_product_phonetic_pattern() {
         // Pattern: (ph|f)one - matches "phone" or "fone"
-        let nfa = compile(&parse("(ph|f)one").unwrap()).unwrap();
+        let nfa = compile(&parse("(ph|f)one").expect("test: parse (ph|f)one")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 1);
 
         assert!(product.accepts("phone"));
@@ -1319,7 +1308,7 @@ mod tests {
 
         // With max_distance=0, only exact matches
         let product_exact = ProductAutomatonChar::new(
-            compile(&parse("(ph|f)one").unwrap()).unwrap(),
+            compile(&parse("(ph|f)one").expect("test: parse (ph|f)one")).expect("test: compile nfa"),
             0,
         );
         assert!(product_exact.accepts("phone"));
@@ -1329,7 +1318,7 @@ mod tests {
 
     #[test]
     fn test_product_star() {
-        let nfa = compile(&parse("a*").unwrap()).unwrap();
+        let nfa = compile(&parse("a*").expect("test: parse a*")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 1);
 
         assert!(product.accepts(""));       // 0 a's
@@ -1341,7 +1330,7 @@ mod tests {
 
     #[test]
     fn test_product_min_distance() {
-        let nfa = compile(&parse("phone").unwrap()).unwrap();
+        let nfa = compile(&parse("phone").expect("test: parse phone")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 3);
 
         assert_eq!(product.min_distance("phone"), Some(0));
@@ -1352,7 +1341,7 @@ mod tests {
 
     #[test]
     fn test_product_char_class() {
-        let nfa = compile(&parse("[aeiou]+").unwrap()).unwrap();
+        let nfa = compile(&parse("[aeiou]+").expect("test: parse [aeiou]+")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 1);
 
         assert!(product.accepts("a"));
@@ -1364,7 +1353,7 @@ mod tests {
 
         // With max_distance=0, only exact matches
         let product_exact = ProductAutomatonChar::new(
-            compile(&parse("[aeiou]+").unwrap()).unwrap(),
+            compile(&parse("[aeiou]+").expect("test: parse [aeiou]+")).expect("test: compile nfa"),
             0,
         );
         assert!(product_exact.accepts("a"));
@@ -1375,7 +1364,7 @@ mod tests {
 
     #[test]
     fn test_product_over_budget() {
-        let nfa = compile(&parse("abc").unwrap()).unwrap();
+        let nfa = compile(&parse("abc").expect("test: parse abc")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 1);
 
         assert!(product.accepts("abc"));    // exact
@@ -1390,7 +1379,7 @@ mod tests {
 
     #[test]
     fn test_product_bytes_exact() {
-        let nfa = compile_bytes(&parse_bytes(b"phone").unwrap()).unwrap();
+        let nfa = compile_bytes(&parse_bytes(b"phone").expect("test: parse phone bytes")).expect("test: compile nfa bytes");
         let product = ProductAutomaton::new(nfa, 2);
 
         assert!(product.accepts(b"phone"));
@@ -1399,7 +1388,7 @@ mod tests {
 
     #[test]
     fn test_product_bytes_with_edits() {
-        let nfa = compile_bytes(&parse_bytes(b"abc").unwrap()).unwrap();
+        let nfa = compile_bytes(&parse_bytes(b"abc").expect("test: parse abc bytes")).expect("test: compile nfa bytes");
         let product = ProductAutomaton::new(nfa, 1);
 
         assert!(product.accepts(b"abc"));
@@ -1410,7 +1399,7 @@ mod tests {
 
     #[test]
     fn test_product_bytes_min_distance() {
-        let nfa = compile_bytes(&parse_bytes(b"phone").unwrap()).unwrap();
+        let nfa = compile_bytes(&parse_bytes(b"phone").expect("test: parse phone bytes")).expect("test: compile nfa bytes");
         let product = ProductAutomaton::new(nfa, 3);
 
         assert_eq!(product.min_distance(b"phone"), Some(0));
@@ -1425,7 +1414,7 @@ mod tests {
     fn test_transposition_accepts() {
         // With standard algorithm, "ab" does NOT match "ba" with distance 1
         // (requires 2 substitutions: a→b, b→a)
-        let nfa = compile(&parse("ab").unwrap()).unwrap();
+        let nfa = compile(&parse("ab").expect("test: parse ab")).expect("test: compile nfa");
         let standard = ProductAutomatonChar::new(nfa.clone(), 1);
         assert!(!standard.accepts("ba")); // distance 2 with standard
 
@@ -1436,7 +1425,7 @@ mod tests {
 
     #[test]
     fn test_transposition_min_distance() {
-        let nfa = compile(&parse("ab").unwrap()).unwrap();
+        let nfa = compile(&parse("ab").expect("test: parse ab")).expect("test: compile nfa");
 
         // Standard: "ba" is distance 2 from "ab"
         let standard = ProductAutomatonChar::new(nfa.clone(), 2);
@@ -1450,7 +1439,7 @@ mod tests {
     #[test]
     fn test_transposition_longer_string() {
         // "hte" is "the" with h and t transposed
-        let nfa = compile(&parse("the").unwrap()).unwrap();
+        let nfa = compile(&parse("the").expect("test: parse the")).expect("test: compile nfa");
 
         let standard = ProductAutomatonChar::new(nfa.clone(), 1);
         // With standard, "hte" requires 2 substitutions
@@ -1464,7 +1453,7 @@ mod tests {
     #[test]
     fn test_merge_split_accepts() {
         // With merge/split, we can match strings where chars are merged or split
-        let nfa = compile(&parse("abc").unwrap()).unwrap();
+        let nfa = compile(&parse("abc").expect("test: parse abc")).expect("test: compile nfa");
 
         // Standard algorithm
         let standard = ProductAutomatonChar::new(nfa.clone(), 1);
@@ -1482,7 +1471,7 @@ mod tests {
 
     #[test]
     fn test_merge_split_min_distance() {
-        let nfa = compile(&parse("abc").unwrap()).unwrap();
+        let nfa = compile(&parse("abc").expect("test: parse abc")).expect("test: compile nfa");
 
         let standard = ProductAutomatonChar::new(nfa.clone(), 3);
         let merge_split = ProductAutomatonChar::with_algorithm(nfa, 3, Algorithm::MergeAndSplit);
@@ -1498,7 +1487,7 @@ mod tests {
 
     #[test]
     fn test_algorithm_getter() {
-        let nfa = compile(&parse("test").unwrap()).unwrap();
+        let nfa = compile(&parse("test").expect("test: parse test")).expect("test: compile nfa");
 
         let standard = ProductAutomatonChar::new(nfa.clone(), 1);
         assert_eq!(standard.algorithm(), Algorithm::Standard);
@@ -1512,7 +1501,7 @@ mod tests {
 
     #[test]
     fn test_byte_level_transposition() {
-        let nfa = compile_bytes(&parse_bytes(b"ab").unwrap()).unwrap();
+        let nfa = compile_bytes(&parse_bytes(b"ab").expect("test: parse ab bytes")).expect("test: compile nfa bytes");
 
         let standard = ProductAutomaton::new(nfa.clone(), 1);
         assert!(!standard.accepts(b"ba")); // distance 2 with standard
@@ -1533,7 +1522,7 @@ mod tests {
         /// Test that articulatory costs constructor works properly.
         #[test]
         fn test_articulatory_costs_constructor() {
-            let nfa = compile(&parse("test").unwrap()).unwrap();
+            let nfa = compile(&parse("test").expect("test: parse test")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
             let product = ProductAutomatonChar::with_articulatory_costs(
@@ -1552,7 +1541,7 @@ mod tests {
         /// Similar sounds (voicing pairs) should cost less than distant sounds.
         #[test]
         fn test_substitution_cost_varies_by_phonetic_similarity() {
-            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let nfa = compile(&parse("p").expect("test: parse p")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
             let product = ProductAutomatonChar::with_articulatory_costs(
@@ -1578,7 +1567,7 @@ mod tests {
         #[test]
         fn test_transition_uses_articulatory_costs() {
             // Simple pattern that matches 'p'
-            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let nfa = compile(&parse("p").expect("test: parse p")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
             let product = ProductAutomatonChar::with_articulatory_costs(
@@ -1618,7 +1607,7 @@ mod tests {
         /// Test accumulated cost across multiple transitions.
         #[test]
         fn test_accumulated_cost_tracking() {
-            let nfa = compile(&parse("ab").unwrap()).unwrap();
+            let nfa = compile(&parse("ab").expect("test: parse ab")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
             let product = ProductAutomatonChar::with_articulatory_costs(
@@ -1651,7 +1640,7 @@ mod tests {
         /// Test that without articulatory costs, fixed cost (1.0) is used.
         #[test]
         fn test_fixed_cost_without_articulatory() {
-            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let nfa = compile(&parse("p").expect("test: parse p")).expect("test: compile nfa");
 
             // No articulatory costs
             let product = ProductAutomatonChar::new(nfa, 2);
@@ -1696,7 +1685,7 @@ mod tests {
         #[test]
         fn test_ipa_articulatory_costs() {
             // Pattern with IPA voiceless bilabial stop
-            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let nfa = compile(&parse("p").expect("test: parse p")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
             let product = ProductAutomatonChar::with_articulatory_costs(
@@ -1720,7 +1709,7 @@ mod tests {
         /// Test that max_cost threshold is respected.
         #[test]
         fn test_max_cost_threshold() {
-            let nfa = compile(&parse("abc").unwrap()).unwrap();
+            let nfa = compile(&parse("abc").expect("test: parse abc")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
             // Very low max_cost - should prune expensive substitutions
@@ -1746,7 +1735,7 @@ mod tests {
         /// Test is_accepting with articulatory costs.
         #[test]
         fn test_is_accepting_with_articulatory_costs() {
-            let nfa = compile(&parse("p").unwrap()).unwrap();
+            let nfa = compile(&parse("p").expect("test: parse p")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
             let product = ProductAutomatonChar::with_articulatory_costs(

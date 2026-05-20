@@ -264,7 +264,7 @@ impl CheckpointStack {
     /// stack.push(Checkpoint::at(5));
     ///
     /// let checkpoint = stack.pop();
-    /// assert_eq!(checkpoint.unwrap().position(), 5);
+    /// assert_eq!(checkpoint.expect("doc example: pop on non-empty stack").position(), 5);
     /// assert!(stack.is_empty());
     /// ```
     pub fn pop(&mut self) -> Option<Checkpoint> {
@@ -285,7 +285,7 @@ impl CheckpointStack {
     /// let mut stack = CheckpointStack::new();
     /// stack.push(Checkpoint::at(5));
     ///
-    /// assert_eq!(stack.peek().unwrap().position(), 5);
+    /// assert_eq!(stack.peek().expect("test/doc fixture: peek on non-empty stack").position(), 5);
     /// assert_eq!(stack.len(), 1); // Still on stack
     /// ```
     pub fn peek(&self) -> Option<&Checkpoint> {
@@ -385,7 +385,7 @@ mod tests {
         assert_eq!(stack.len(), 1);
 
         let popped = stack.pop();
-        assert_eq!(popped.unwrap().position(), 5);
+        assert_eq!(popped.expect("test fixture: pop on non-empty stack").position(), 5);
         assert!(stack.is_empty());
     }
 
@@ -394,7 +394,7 @@ mod tests {
         let mut stack = CheckpointStack::new();
         stack.push(Checkpoint::at(5));
 
-        assert_eq!(stack.peek().unwrap().position(), 5);
+        assert_eq!(stack.peek().expect("test/doc fixture: peek on non-empty stack").position(), 5);
         assert_eq!(stack.len(), 1);
     }
 
@@ -404,7 +404,7 @@ mod tests {
         let mut stack = CheckpointStack::new();
         stack.push_from_buffer(&buffer);
         assert_eq!(stack.len(), 1);
-        assert_eq!(stack.peek().unwrap().position(), 4);
+        assert_eq!(stack.peek().expect("test/doc fixture: peek on non-empty stack").position(), 4);
     }
 
     #[test]
@@ -476,17 +476,17 @@ mod tests {
 
         // Undo to "ab" (pop abc, restore to ab)
         stack.pop();
-        stack.peek().unwrap().restore(&mut buffer);
+        stack.peek().expect("test fixture: peek on non-empty stack").restore(&mut buffer);
         assert_eq!(buffer.as_str(), "ab");
 
         // Undo to "a" (pop ab, restore to a)
         stack.pop();
-        stack.peek().unwrap().restore(&mut buffer);
+        stack.peek().expect("test fixture: peek on non-empty stack").restore(&mut buffer);
         assert_eq!(buffer.as_str(), "a");
 
         // Undo to "" (pop a, restore to empty)
         stack.pop();
-        stack.peek().unwrap().restore(&mut buffer);
+        stack.peek().expect("test fixture: peek on non-empty stack").restore(&mut buffer);
         assert_eq!(buffer.as_str(), "");
     }
 }

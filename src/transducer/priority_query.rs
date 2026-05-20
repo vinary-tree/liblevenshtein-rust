@@ -299,7 +299,7 @@ mod tests {
 
         let first = iter.next();
         assert!(first.is_some());
-        let candidate = first.unwrap();
+        let candidate = first.expect("test fixture: first candidate exists (asserted above)");
         assert_eq!(candidate.term, "apple");
         assert_eq!(candidate.distance, 0);
     }

@@ -214,7 +214,7 @@ jobs:
       - name: Generate code coverage
         env:
           RUSTFLAGS: "-C target-feature=+aes,+sse2"
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov --branch --all-features --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

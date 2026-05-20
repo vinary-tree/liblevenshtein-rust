@@ -42,8 +42,10 @@
 //! - **Transposition**: 2k+1 pieces
 //! - **MergeAndSplit**: 2k+1 pieces
 
+use std::marker::PhantomData;
+
 use lling_llang::prelude::{
-    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, Wfst,
+    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, Wfst,
     WeightedTransition,
 };
 use rustc_hash::FxHashMap;
@@ -101,8 +103,8 @@ where
     D::Node: BidirectionalDictionaryNode,
     <D::Node as DictionaryNode>::Unit: Into<u32>,
 {
-    /// Reference to the dictionary.
-    dictionary: &'a D,
+    /// Phantom marker preserving the dictionary lifetime parameter.
+    _dictionary: PhantomData<&'a D>,
 
     /// The query string.
     query: String,
@@ -157,7 +159,7 @@ where
         let results: Vec<_> = wb.query(query).collect();
 
         let mut wfst = Self {
-            dictionary,
+            _dictionary: PhantomData,
             query: query.to_string(),
             max_distance,
             algorithm,
@@ -261,7 +263,7 @@ where
             .enumerate()
             .filter(|(_, r)| !r.term.is_empty())
             .map(|(idx, r)| {
-                let first_char = r.term.chars().next().unwrap();
+                let first_char = r.term.chars().next().expect("filtered out empty terms above");
                 let term_len = r.term.len();
                 let distance = r.distance;
                 (idx, first_char, term_len, distance)
@@ -659,7 +661,7 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(matches!(
-            result.unwrap().algorithm(),
+            result.expect("test fixture: build must be Ok").algorithm(),
             Algorithm::Transposition
         ));
     }
@@ -674,7 +676,7 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(matches!(
-            result.unwrap().algorithm(),
+            result.expect("test fixture: build must be Ok").algorithm(),
             Algorithm::MergeAndSplit
         ));
     }
@@ -699,7 +701,7 @@ mod tests {
 
         let hint = StateSource::<char, TropicalWeight>::num_states_hint(&wfst);
         assert!(hint.is_some());
-        assert!(hint.unwrap() > 0);
+        assert!(hint.expect("expected Some hint in test") > 0);
     }
 
     #[test]

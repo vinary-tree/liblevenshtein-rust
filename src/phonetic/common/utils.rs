@@ -192,7 +192,7 @@ mod tests {
         );
 
         assert!(result.is_ok());
-        let chars = result.unwrap();
+        let chars = result.expect("test fixture: resolve must be Ok");
         assert!(chars.contains(&'a'));
         assert!(chars.contains(&'e'));
     }
@@ -221,7 +221,7 @@ mod tests {
         );
 
         assert!(result.is_ok());
-        let chars = result.unwrap();
+        let chars = result.expect("test fixture: resolve must be Ok");
         // Negated - should NOT contain vowels
         assert!(!chars.contains(&'a'));
         assert!(!chars.contains(&'e'));
@@ -250,7 +250,7 @@ mod tests {
         );
 
         assert!(result.is_ok());
-        let chars = result.unwrap();
+        let chars = result.expect("test fixture: resolve must be Ok");
         assert!(chars.contains(&'x'));
         assert!(chars.contains(&'y'));
         assert!(chars.contains(&'z'));

@@ -579,7 +579,7 @@ mod tests {
 
         let original = index.get_original(&0);
         assert!(original.is_some());
-        assert_eq!(original.unwrap(), series.as_slice());
+        assert_eq!(original.expect("expected Some original in test"), series.as_slice());
     }
 
     #[test]

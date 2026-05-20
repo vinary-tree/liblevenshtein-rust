@@ -40,10 +40,10 @@ use std::collections::{HashMap, VecDeque};
 
 use rustc_hash::FxHashSet;
 
-use super::nfa::{NFAChar, NFA};
+use super::{NFAChar, NFA};
 use super::state_set::StateSet;
 use super::types::{
-    NFAState, StateId, TransitionChar, TransitionLabelChar, Transition, TransitionLabel,
+    StateId, TransitionChar, TransitionLabelChar, Transition, TransitionLabel,
 };
 
 // ============================================================================
@@ -484,7 +484,7 @@ fn deduplicate_transitions_char(nfa: NFAChar) -> NFAChar {
     let mut new_nfa = NFAChar::new();
 
     // Add states
-    for i in 1..nfa.num_states() {
+    for _i in 1..nfa.num_states() {
         new_nfa.add_state(false);
     }
 
@@ -516,13 +516,13 @@ fn build_nfa_with_states_char(nfa: &NFAChar, keep_states: &FxHashSet<StateId>) -
     let mut new_nfa = NFAChar::new();
 
     // Add states (state 0 already exists)
-    for i in 1..sorted_states.len() {
+    for _i in 1..sorted_states.len() {
         new_nfa.add_state(false);
     }
 
     // Set start state
     // Note: start state should always be in keep_states
-    let new_start = *old_to_new.get(&nfa.start()).unwrap_or(&0);
+    let _new_start = *old_to_new.get(&nfa.start()).unwrap_or(&0);
     // NFAChar doesn't have set_start, start is always 0
     // We need to handle the case where start might not be 0
     // For now, assume start is always 0 after optimization

@@ -48,7 +48,7 @@
 //! assert!(nfa_union.accepts("b"));
 //! ```
 
-use super::nfa::{NFAChar, NFA};
+use super::{NFAChar, NFA};
 use super::types::{CharClass, CharClassChar, TransitionLabel, TransitionLabelChar};
 
 // ============================================================================
