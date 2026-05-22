@@ -31,8 +31,10 @@ fn load_dictionary() -> Vec<String> {
 /// Benchmark: Compare matching modes at different edit distances
 fn bench_matching_modes_by_distance(c: &mut Criterion) {
     let words = load_dictionary();
-    let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
-    let suffix_dict: SuffixAutomaton<()> = SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
+    let pathmap_dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let suffix_dict: SuffixAutomaton<()> =
+        SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("matching_modes_by_distance");
     group.plot_config(PlotConfiguration::default());
@@ -95,8 +97,10 @@ fn bench_matching_modes_by_distance(c: &mut Criterion) {
 /// Benchmark: Compare matching modes with different query lengths
 fn bench_matching_modes_by_query_length(c: &mut Criterion) {
     let words = load_dictionary();
-    let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
-    let suffix_dict: SuffixAutomaton<()> = SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
+    let pathmap_dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let suffix_dict: SuffixAutomaton<()> =
+        SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("matching_modes_by_query_length");
 
@@ -144,8 +148,10 @@ fn bench_matching_modes_by_query_length(c: &mut Criterion) {
 /// Benchmark: Result set sizes (how many results are produced)
 fn bench_result_set_sizes(c: &mut Criterion) {
     let words = load_dictionary();
-    let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
-    let suffix_dict: SuffixAutomaton<()> = SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
+    let pathmap_dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let suffix_dict: SuffixAutomaton<()> =
+        SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("result_set_sizes");
 
@@ -190,8 +196,10 @@ fn bench_result_set_sizes(c: &mut Criterion) {
 /// Benchmark: Ordered vs unordered queries
 fn bench_ordered_vs_unordered(c: &mut Criterion) {
     let words = load_dictionary();
-    let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
-    let suffix_dict: SuffixAutomaton<()> = SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
+    let pathmap_dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let suffix_dict: SuffixAutomaton<()> =
+        SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("ordered_vs_unordered");
 
@@ -278,14 +286,16 @@ fn bench_dictionary_construction(c: &mut Criterion) {
 
     group.bench_function("pathmap_construction", |b| {
         b.iter(|| {
-            let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(black_box(words.iter().map(|s| s.as_str())));
+            let dict: PathMapDictionary<()> =
+                PathMapDictionary::from_terms(black_box(words.iter().map(|s| s.as_str())));
             black_box(dict);
         });
     });
 
     group.bench_function("suffix_automaton_construction", |b| {
         b.iter(|| {
-            let dict: SuffixAutomaton<()> = SuffixAutomaton::from_texts(black_box(words.iter().map(|s| s.as_str())));
+            let dict: SuffixAutomaton<()> =
+                SuffixAutomaton::from_texts(black_box(words.iter().map(|s| s.as_str())));
             black_box(dict);
         });
     });
@@ -296,7 +306,8 @@ fn bench_dictionary_construction(c: &mut Criterion) {
 /// Benchmark: Different algorithms (Standard vs Transposition)
 fn bench_algorithms(c: &mut Criterion) {
     let words = load_dictionary();
-    let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let pathmap_dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("algorithms");
 

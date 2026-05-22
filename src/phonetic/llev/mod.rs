@@ -100,7 +100,13 @@ pub use ruleset::{RuleSet, RuleSetChar};
 #[cfg(feature = "serialization")]
 pub use compiled::{
     // Byte-level
-    from_bytes, load, save, to_bytes,
+    from_bytes,
     // Character-level
-    from_bytes_char, load_char, save_char, to_bytes_char,
+    from_bytes_char,
+    load,
+    load_char,
+    save,
+    save_char,
+    to_bytes,
+    to_bytes_char,
 };

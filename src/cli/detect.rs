@@ -206,11 +206,12 @@ fn detect_by_extension(path: &Path) -> Result<FormatDetection> {
         .context("Invalid filename")?
         .to_lowercase();
 
-    let backend = if filename.contains("dawg") || filename.contains("dynamic") || filename.contains("dyn") {
-        DictionaryBackend::DynamicDawg
-    } else {
-        DictionaryBackend::PathMap
-    };
+    let backend =
+        if filename.contains("dawg") || filename.contains("dynamic") || filename.contains("dyn") {
+            DictionaryBackend::DynamicDawg
+        } else {
+            DictionaryBackend::PathMap
+        };
 
     Ok(FormatDetection {
         format: DictFormat { backend, format },

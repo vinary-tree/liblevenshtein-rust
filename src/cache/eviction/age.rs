@@ -126,7 +126,10 @@ impl<D> Age<D> {
 
     /// Records an entry access (updates metadata).
     fn record_access(&self, term: &str) {
-        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self
+            .metadata
+            .write()
+            .expect("poisoned RwLock; only fatal if writer panicked");
         metadata
             .entry(term.to_string())
             .or_insert_with(EntryMetadata::new);
@@ -136,7 +139,10 @@ impl<D> Age<D> {
     ///
     /// Returns `None` if the entry has never been accessed.
     pub fn age(&self, term: &str) -> Option<std::time::Duration> {
-        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self
+            .metadata
+            .read()
+            .expect("poisoned RwLock; only fatal if writer panicked");
         metadata.get(term).map(|m| m.age())
     }
 
@@ -144,7 +150,10 @@ impl<D> Age<D> {
     ///
     /// Returns the term with the longest time since insertion.
     pub fn find_oldest(&self, terms: &[&str]) -> Option<String> {
-        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self
+            .metadata
+            .read()
+            .expect("poisoned RwLock; only fatal if writer panicked");
         terms
             .iter()
             .filter_map(|&term| metadata.get(term).map(|m| (term, m.age())))
@@ -157,7 +166,10 @@ impl<D> Age<D> {
     /// Returns the evicted term if any.
     pub fn evict_oldest(&self, terms: &[&str]) -> Option<String> {
         if let Some(oldest_term) = self.find_oldest(terms) {
-            let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+            let mut metadata = self
+                .metadata
+                .write()
+                .expect("poisoned RwLock; only fatal if writer panicked");
             metadata.remove(&oldest_term);
             Some(oldest_term)
         } else {
@@ -167,7 +179,10 @@ impl<D> Age<D> {
 
     /// Clears all metadata.
     pub fn clear_metadata(&self) {
-        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self
+            .metadata
+            .write()
+            .expect("poisoned RwLock; only fatal if writer panicked");
         metadata.clear();
     }
 }
@@ -432,10 +447,18 @@ mod tests {
         assert!(!root.is_final());
 
         // Traverse 'h' -> 'e' -> 'l' -> 'p'
-        let h = root.transition(b'h').expect("expected Some transition h in test");
-        let e = h.transition(b'e').expect("expected Some transition e in test");
-        let l = e.transition(b'l').expect("expected Some transition l in test");
-        let p = l.transition(b'p').expect("expected Some transition p in test");
+        let h = root
+            .transition(b'h')
+            .expect("expected Some transition h in test");
+        let e = h
+            .transition(b'e')
+            .expect("expected Some transition e in test");
+        let l = e
+            .transition(b'l')
+            .expect("expected Some transition l in test");
+        let p = l
+            .transition(b'p')
+            .expect("expected Some transition p in test");
 
         assert!(p.is_final()); // "help"
     }

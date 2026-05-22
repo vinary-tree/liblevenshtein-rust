@@ -69,11 +69,11 @@ mod wrapper;
 mod composed_phonetic;
 #[cfg(feature = "phonetic-rules")]
 mod phonetic_nfa_wfst;
+mod phonetic_rewrite_wfst;
 #[cfg(feature = "phonetic-rules")]
 mod phonetic_state_source;
 #[cfg(feature = "phonetic-rules")]
 mod phonetic_wfst;
-mod phonetic_rewrite_wfst;
 
 // Time Series MSM WFST module
 pub mod msm;
@@ -92,11 +92,11 @@ pub use wrapper::LevenshteinWfst;
 pub use composed_phonetic::{PhoneticMatch, PhoneticPipelineBuilder, PhoneticPipelineConfig};
 #[cfg(feature = "phonetic-rules")]
 pub use phonetic_nfa_wfst::PhoneticNfaWfst;
+pub use phonetic_rewrite_wfst::{CommonPhoneticRules, RewriteRule, RewriteWfst};
 #[cfg(feature = "phonetic-rules")]
 pub use phonetic_state_source::PhoneticStateSource;
 #[cfg(feature = "phonetic-rules")]
 pub use phonetic_wfst::{PhoneticWfst, PhoneticWfstBuilder};
-pub use phonetic_rewrite_wfst::{CommonPhoneticRules, RewriteRule, RewriteWfst};
 
 // Generalized and WallBreaker WFST exports
 pub use generalized_wfst::{GeneralizedWfst, GeneralizedWfstBuilder};
@@ -104,8 +104,8 @@ pub use wallbreaker_wfst::{WallBreakerWfst, WallBreakerWfstBuilder};
 
 // Re-export commonly used lling-llang types for convenience
 pub use lling_llang::prelude::{
-    LazyState, LazyWfst, LazyWfstWrapper, Semiring, StateId, StateSource, TropicalWeight,
-    VocabId, Wfst, WeightedTransition,
+    LazyState, LazyWfst, LazyWfstWrapper, Semiring, StateId, StateSource, TropicalWeight, VocabId,
+    WeightedTransition, Wfst,
 };
 
 /// Composite state ID encoding for the product automaton.

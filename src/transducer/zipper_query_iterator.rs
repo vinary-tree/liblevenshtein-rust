@@ -5,8 +5,8 @@
 //! zipper architecture and enables performance comparison with the existing
 //! node-based QueryIterator.
 
-use libdictenstein::zipper::DictZipper;
 use crate::transducer::{Algorithm, AutomatonZipper, Candidate, IntersectionZipper, StatePool};
+use libdictenstein::zipper::DictZipper;
 use std::collections::VecDeque;
 
 /// Query iterator using zipper-based BFS traversal.

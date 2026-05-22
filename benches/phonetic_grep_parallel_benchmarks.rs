@@ -45,11 +45,10 @@ fn standard_rules() -> Vec<RewriteRuleChar> {
 /// Generate a document of approximately the given size with realistic text.
 fn generate_document(target_size: usize) -> String {
     let words = [
-        "phone", "fone", "food", "good", "book", "look", "check", "quick",
-        "tough", "enough", "the", "and", "to", "a", "in", "that", "is",
-        "was", "for", "on", "are", "with", "they", "be", "at", "one",
-        "have", "this", "from", "or", "had", "by", "word", "but", "not",
-        "what", "all", "were", "we", "when", "your", "can", "said",
+        "phone", "fone", "food", "good", "book", "look", "check", "quick", "tough", "enough",
+        "the", "and", "to", "a", "in", "that", "is", "was", "for", "on", "are", "with", "they",
+        "be", "at", "one", "have", "this", "from", "or", "had", "by", "word", "but", "not", "what",
+        "all", "were", "we", "when", "your", "can", "said",
     ];
 
     let mut doc = String::with_capacity(target_size);
@@ -87,26 +86,14 @@ fn bench_intra_document_parallelism(c: &mut Criterion) {
 
         group.throughput(Throughput::Bytes(size as u64));
 
-        group.bench_with_input(
-            BenchmarkId::new("sequential", name),
-            &doc,
-            |b, doc| {
-                b.iter(|| {
-                    black_box(grep.scan(doc))
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("sequential", name), &doc, |b, doc| {
+            b.iter(|| black_box(grep.scan(doc)))
+        });
 
         #[cfg(feature = "parallel-grep")]
-        group.bench_with_input(
-            BenchmarkId::new("parallel", name),
-            &doc,
-            |b, doc| {
-                b.iter(|| {
-                    black_box(grep.scan_parallel(doc))
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("parallel", name), &doc, |b, doc| {
+            b.iter(|| black_box(grep.scan_parallel(doc)))
+        });
     }
 
     group.finish();
@@ -138,7 +125,8 @@ fn bench_inter_document_parallelism(c: &mut Criterion) {
             &documents,
             |b, docs| {
                 b.iter(|| {
-                    let results: Vec<_> = docs.iter()
+                    let results: Vec<_> = docs
+                        .iter()
                         .map(|(id, text)| (*id, grep.scan(text)))
                         .collect();
                     black_box(results)
@@ -147,19 +135,14 @@ fn bench_inter_document_parallelism(c: &mut Criterion) {
         );
 
         // Parallel: scan_documents_parallel
-        let doc_refs: Vec<(usize, &str)> = documents.iter()
+        let doc_refs: Vec<(usize, &str)> = documents
+            .iter()
             .map(|(id, text)| (*id, text.as_str()))
             .collect();
 
-        group.bench_with_input(
-            BenchmarkId::new("parallel", count),
-            &doc_refs,
-            |b, docs| {
-                b.iter(|| {
-                    black_box(grep.scan_documents_parallel(docs.clone()))
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("parallel", count), &doc_refs, |b, docs| {
+            b.iter(|| black_box(grep.scan_documents_parallel(docs.clone())))
+        });
     }
 
     group.finish();
@@ -185,7 +168,8 @@ fn bench_nested_parallelism(c: &mut Criterion) {
         let total_bytes = count * doc_size;
         group.throughput(Throughput::Bytes(total_bytes as u64));
 
-        let doc_refs: Vec<(usize, &str)> = documents.iter()
+        let doc_refs: Vec<(usize, &str)> = documents
+            .iter()
             .map(|(id, text)| (*id, text.as_str()))
             .collect();
 
@@ -193,23 +177,13 @@ fn bench_nested_parallelism(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("inter_only", count),
             &doc_refs,
-            |b, docs| {
-                b.iter(|| {
-                    black_box(grep.scan_documents_parallel(docs.clone()))
-                })
-            },
+            |b, docs| b.iter(|| black_box(grep.scan_documents_parallel(docs.clone()))),
         );
 
         // Nested: inter + intra document parallelism
-        group.bench_with_input(
-            BenchmarkId::new("nested", count),
-            &doc_refs,
-            |b, docs| {
-                b.iter(|| {
-                    black_box(grep.scan_documents_parallel_nested(docs.clone()))
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("nested", count), &doc_refs, |b, docs| {
+            b.iter(|| black_box(grep.scan_documents_parallel_nested(docs.clone())))
+        });
     }
 
     group.finish();
@@ -239,7 +213,8 @@ fn bench_filtering(c: &mut Criterion) {
         })
         .collect();
 
-    let doc_refs: Vec<(usize, &str)> = documents.iter()
+    let doc_refs: Vec<(usize, &str)> = documents
+        .iter()
         .map(|(id, text)| (*id, text.as_str()))
         .collect();
 
@@ -247,33 +222,21 @@ fn bench_filtering(c: &mut Criterion) {
     group.bench_with_input(
         BenchmarkId::new("scan_all", doc_count),
         &doc_refs,
-        |b, docs| {
-            b.iter(|| {
-                black_box(grep.scan_documents_parallel(docs.clone()))
-            })
-        },
+        |b, docs| b.iter(|| black_box(grep.scan_documents_parallel(docs.clone()))),
     );
 
     // Filter documents (only return those with matches)
     group.bench_with_input(
         BenchmarkId::new("filter_only", doc_count),
         &doc_refs,
-        |b, docs| {
-            b.iter(|| {
-                black_box(grep.filter_documents_parallel(docs.clone()))
-            })
-        },
+        |b, docs| b.iter(|| black_box(grep.filter_documents_parallel(docs.clone()))),
     );
 
     // Count matches (lightweight)
     group.bench_with_input(
         BenchmarkId::new("count_only", doc_count),
         &doc_refs,
-        |b, docs| {
-            b.iter(|| {
-                black_box(grep.count_documents_parallel(docs.clone()))
-            })
-        },
+        |b, docs| b.iter(|| black_box(grep.count_documents_parallel(docs.clone()))),
     );
 
     group.finish();
@@ -289,9 +252,6 @@ criterion_group!(
 );
 
 #[cfg(not(feature = "parallel-grep"))]
-criterion_group!(
-    benches,
-    bench_intra_document_parallelism,
-);
+criterion_group!(benches, bench_intra_document_parallelism,);
 
 criterion_main!(benches);

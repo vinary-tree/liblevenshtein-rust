@@ -15,7 +15,11 @@ impl<'a> Parser<'a> {
     /// Returns (left_context, right_context, syllable_condition).
     pub(super) fn parse_context_with_syllable(
         &mut self,
-    ) -> LLevResult<(Option<ContextExpr>, Option<ContextExpr>, Option<SyllableExpr>)> {
+    ) -> LLevResult<(
+        Option<ContextExpr>,
+        Option<ContextExpr>,
+        Option<SyllableExpr>,
+    )> {
         let mut left = None;
         let mut right = None;
 
@@ -199,10 +203,8 @@ impl<'a> Parser<'a> {
     fn check_context_end(&mut self) -> bool {
         // Use raw lookahead for safety in case we're in a mixed state
         let remaining = self.lexer.remaining_input();
-        remaining.is_empty()
-            || remaining.starts_with(';')
-            || remaining.starts_with('\n')
-            // Note: '[' is NOT an end marker - it can start a char class in the context
-            // Note: 'if' is handled separately for syllable clause
+        remaining.is_empty() || remaining.starts_with(';') || remaining.starts_with('\n')
+        // Note: '[' is NOT an end marker - it can start a char class in the context
+        // Note: 'if' is handled separately for syllable clause
     }
 }

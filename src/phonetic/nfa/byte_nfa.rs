@@ -20,9 +20,7 @@ use std::fmt;
 use rustc_hash::FxHashSet;
 
 use super::state_set::StateSet;
-use super::types::{
-    CharClass, NFAState, StateId, Transition, TransitionLabel,
-};
+use super::types::{CharClass, NFAState, StateId, Transition, TransitionLabel};
 
 // ============================================================================
 // Transitions Iterator Types (H9) - byte-level
@@ -33,12 +31,7 @@ pub enum TransitionsFrom<'a> {
     /// Fast path: direct slice from CSR structure
     Slice(&'a [Transition]),
     /// Fallback: references to pending and finalized transitions for filtering
-    Pending(
-        &'a [Transition],
-        &'a [Transition],
-        &'a [usize],
-        StateId,
-    ),
+    Pending(&'a [Transition], &'a [Transition], &'a [usize], StateId),
 }
 
 impl<'a> TransitionsFrom<'a> {
@@ -735,8 +728,12 @@ impl NFA {
         result.transitions = nfa_a.transitions;
         result.transitions.extend(nfa_b.transitions);
 
-        result.transitions.push(Transition::epsilon(new_start, nfa_a.start));
-        result.transitions.push(Transition::epsilon(new_start, nfa_b.start));
+        result
+            .transitions
+            .push(Transition::epsilon(new_start, nfa_a.start));
+        result
+            .transitions
+            .push(Transition::epsilon(new_start, nfa_b.start));
 
         for &f in &nfa_a.finals {
             result.transitions.push(Transition::epsilon(f, new_final));
@@ -804,8 +801,12 @@ impl NFA {
 
         result.transitions = nfa_a.transitions;
 
-        result.transitions.push(Transition::epsilon(new_start, nfa_a.start));
-        result.transitions.push(Transition::epsilon(new_start, new_final));
+        result
+            .transitions
+            .push(Transition::epsilon(new_start, nfa_a.start));
+        result
+            .transitions
+            .push(Transition::epsilon(new_start, new_final));
 
         for &f in &nfa_a.finals {
             result.transitions.push(Transition::epsilon(f, new_final));
@@ -848,8 +849,12 @@ impl NFA {
 
         result.transitions = nfa_a.transitions;
 
-        result.transitions.push(Transition::epsilon(new_start, nfa_a.start));
-        result.transitions.push(Transition::epsilon(new_start, new_final));
+        result
+            .transitions
+            .push(Transition::epsilon(new_start, nfa_a.start));
+        result
+            .transitions
+            .push(Transition::epsilon(new_start, new_final));
 
         for &f in &nfa_a.finals {
             result.transitions.push(Transition::epsilon(f, new_final));
@@ -894,7 +899,10 @@ impl NFA {
 
     /// Count the number of epsilon transitions in this NFA.
     pub fn count_epsilon_transitions(&self) -> usize {
-        self.transitions.iter().filter(|t| t.label.is_epsilon()).count()
+        self.transitions
+            .iter()
+            .filter(|t| t.label.is_epsilon())
+            .count()
     }
 }
 

@@ -83,9 +83,11 @@ impl TarArchiveReader {
                     // Extract all header values first before any mutable borrow
                     let entry_type = header_to_entry_type(entry.header());
                     let size = entry.header().size().ok();
-                    let mtime = entry.header().mtime().ok().map(|t| {
-                        std::time::UNIX_EPOCH + std::time::Duration::from_secs(t)
-                    });
+                    let mtime = entry
+                        .header()
+                        .mtime()
+                        .ok()
+                        .map(|t| std::time::UNIX_EPOCH + std::time::Duration::from_secs(t));
                     let mode = entry.header().mode().ok();
 
                     // Skip non-files
@@ -131,10 +133,8 @@ impl TarArchiveReader {
                         mode,
                     };
 
-                    let source_id = SourceId::archive_entry(
-                        self.path.clone(),
-                        normalized.to_string(),
-                    );
+                    let source_id =
+                        SourceId::archive_entry(self.path.clone(), normalized.to_string());
 
                     collected.push(Ok((source_id, meta, content)));
                 }
@@ -168,9 +168,10 @@ impl TarArchiveReader {
                     path: normalized.to_string(),
                     size: Some(header.size()?),
                     entry_type: header_to_entry_type(header),
-                    mtime: header.mtime().ok().map(|t| {
-                        std::time::UNIX_EPOCH + std::time::Duration::from_secs(t)
-                    }),
+                    mtime: header
+                        .mtime()
+                        .ok()
+                        .map(|t| std::time::UNIX_EPOCH + std::time::Duration::from_secs(t)),
                     mode: header.mode().ok(),
                 };
 
@@ -202,9 +203,10 @@ impl TarArchiveReader {
                 path,
                 size: header.size().ok(),
                 entry_type: header_to_entry_type(header),
-                mtime: header.mtime().ok().map(|t| {
-                    std::time::UNIX_EPOCH + std::time::Duration::from_secs(t)
-                }),
+                mtime: header
+                    .mtime()
+                    .ok()
+                    .map(|t| std::time::UNIX_EPOCH + std::time::Duration::from_secs(t)),
                 mode: header.mode().ok(),
             };
             meta.normalize_path();
@@ -276,8 +278,7 @@ mod tests {
     #[test]
     fn test_list_entries() {
         let (_dir, tar_path) = create_test_tar();
-        let reader = TarArchiveReader::open(&tar_path, CompressionFormat::None)
-            .expect("open tar");
+        let reader = TarArchiveReader::open(&tar_path, CompressionFormat::None).expect("open tar");
 
         let entries = reader.list_entries().expect("list entries");
         assert_eq!(entries.len(), 2);
@@ -290,8 +291,7 @@ mod tests {
     #[test]
     fn test_read_entry() {
         let (_dir, tar_path) = create_test_tar();
-        let reader = TarArchiveReader::open(&tar_path, CompressionFormat::None)
-            .expect("open tar");
+        let reader = TarArchiveReader::open(&tar_path, CompressionFormat::None).expect("open tar");
 
         let (meta, content) = reader.read_entry("file1.txt").expect("read entry");
         assert_eq!(meta.path, "file1.txt");
@@ -301,8 +301,7 @@ mod tests {
     #[test]
     fn test_iterate_entries() {
         let (_dir, tar_path) = create_test_tar();
-        let reader = TarArchiveReader::open(&tar_path, CompressionFormat::None)
-            .expect("open tar");
+        let reader = TarArchiveReader::open(&tar_path, CompressionFormat::None).expect("open tar");
 
         let entries: Vec<_> = reader.entries().expect("get entries").collect();
         assert_eq!(entries.len(), 2);

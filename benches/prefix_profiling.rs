@@ -19,7 +19,8 @@ fn load_dictionary() -> Vec<String> {
 
 fn main() {
     let words = load_dictionary();
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
 
     // Simulate realistic workload: many queries with prefix matching and filtering
     let queries = vec![

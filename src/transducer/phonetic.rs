@@ -34,7 +34,7 @@
 //!
 //! See: `docs/research/phonetic-corrections/ENGLISH_PHONETIC_FEASIBILITY.md`
 
-use crate::transducer::{OperationType, OperationSet, OperationSetBuilder, SubstitutionSet};
+use crate::transducer::{OperationSet, OperationSetBuilder, OperationType, SubstitutionSet};
 
 /// English consonant digraphs (2→1 and 1→2 mappings).
 ///
@@ -74,19 +74,25 @@ pub fn consonant_digraphs() -> OperationSet {
 
     OperationSetBuilder::new()
         .with_operation(OperationType::with_restriction(
-            2, 1, 0.15,
+            2,
+            1,
+            0.15,
             digraphs_2_to_1,
-            "consonant_digraphs_2to1"
+            "consonant_digraphs_2to1",
         ))
         .with_operation(OperationType::with_restriction(
-            1, 2, 0.15,
+            1,
+            2,
+            0.15,
             digraphs_1_to_2,
-            "consonant_digraphs_1to2"
+            "consonant_digraphs_1to2",
         ))
         .with_operation(OperationType::with_restriction(
-            2, 2, 0.15,
+            2,
+            2,
+            0.15,
             digraphs_2_to_2,
-            "consonant_digraphs_2to2"
+            "consonant_digraphs_2to2",
         ))
         .build()
 }
@@ -132,14 +138,18 @@ pub fn initial_clusters() -> OperationSet {
 
     OperationSetBuilder::new()
         .with_operation(OperationType::with_restriction(
-            2, 1, 0.20,
+            2,
+            1,
+            0.20,
             clusters_2_to_1,
-            "initial_clusters_2to1"
+            "initial_clusters_2to1",
         ))
         .with_operation(OperationType::with_restriction(
-            1, 2, 0.20,
+            1,
+            2,
+            0.20,
             clusters_1_to_2,
-            "initial_clusters_1to2"
+            "initial_clusters_1to2",
         ))
         .build()
 }
@@ -189,14 +199,14 @@ pub fn phonetic_confusions() -> OperationSet {
     confusions.allow('e', 'i');
 
     let op = OperationType::with_restriction(
-        1, 1, 0.25,  // Moderate cost (context-dependent approximations)
+        1,
+        1,
+        0.25, // Moderate cost (context-dependent approximations)
         confusions,
-        "phonetic_confusions"
+        "phonetic_confusions",
     );
 
-    OperationSetBuilder::new()
-        .with_operation(op)
-        .build()
+    OperationSetBuilder::new().with_operation(op).build()
 }
 
 /// Double consonant simplification.
@@ -215,7 +225,9 @@ pub fn double_consonants() -> OperationSet {
     let mut doubles = SubstitutionSet::new();
 
     // Common doubled consonants
-    let consonants = ['b', 'c', 'd', 'f', 'g', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'z'];
+    let consonants = [
+        'b', 'c', 'd', 'f', 'g', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'z',
+    ];
 
     for &c in &consonants {
         let double = format!("{}{}", c, c);
@@ -225,14 +237,14 @@ pub fn double_consonants() -> OperationSet {
     }
 
     let op = OperationType::with_restriction(
-        2, 1, 0.10,  // Very low cost (extremely common)
+        2,
+        1,
+        0.10, // Very low cost (extremely common)
         doubles,
-        "double_consonants"
+        "double_consonants",
     );
 
-    OperationSetBuilder::new()
-        .with_operation(op)
-        .build()
+    OperationSetBuilder::new().with_operation(op).build()
 }
 
 /// Comprehensive English phonetic operation set (Phase 1).
@@ -296,7 +308,7 @@ mod tests {
     fn test_consonant_digraphs() {
         let ops = consonant_digraphs();
         assert!(!ops.is_empty());
-        assert_eq!(ops.len(), 3);  // Three operations: 2→1, 1→2, 2→2
+        assert_eq!(ops.len(), 3); // Three operations: 2→1, 1→2, 2→2
 
         // Verify the operations exist
         let names: Vec<_> = ops.operations().iter().map(|op| op.name()).collect();
@@ -309,7 +321,7 @@ mod tests {
     fn test_initial_clusters() {
         let ops = initial_clusters();
         assert!(!ops.is_empty());
-        assert_eq!(ops.len(), 2);  // Two operations: 2→1, 1→2
+        assert_eq!(ops.len(), 2); // Two operations: 2→1, 1→2
 
         let names: Vec<_> = ops.operations().iter().map(|op| op.name()).collect();
         assert!(names.contains(&"initial_clusters_2to1"));
@@ -363,7 +375,9 @@ mod tests {
         let ops = consonant_digraphs();
 
         // Find the 2→1 operation
-        let op_2to1 = ops.operations().iter()
+        let op_2to1 = ops
+            .operations()
+            .iter()
             .find(|op| op.name() == "consonant_digraphs_2to1")
             .expect("Should have 2to1 operation");
 
@@ -371,7 +385,9 @@ mod tests {
         assert!(op_2to1.can_apply(b"ph", b"f"));
 
         // Find the 1→2 operation
-        let op_1to2 = ops.operations().iter()
+        let op_1to2 = ops
+            .operations()
+            .iter()
             .find(|op| op.name() == "consonant_digraphs_1to2")
             .expect("Should have 1to2 operation");
 
@@ -387,7 +403,9 @@ mod tests {
         let ops = initial_clusters();
 
         // Find the 2→1 operation
-        let op_2to1 = ops.operations().iter()
+        let op_2to1 = ops
+            .operations()
+            .iter()
             .find(|op| op.name() == "initial_clusters_2to1")
             .expect("Should have 2to1 operation");
 
@@ -398,7 +416,9 @@ mod tests {
         assert!(op_2to1.can_apply(b"kn", b"n"));
 
         // Find the 1→2 operation
-        let op_1to2 = ops.operations().iter()
+        let op_1to2 = ops
+            .operations()
+            .iter()
             .find(|op| op.name() == "initial_clusters_1to2")
             .expect("Should have 1to2 operation");
 

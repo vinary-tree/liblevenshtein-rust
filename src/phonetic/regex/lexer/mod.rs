@@ -2,13 +2,13 @@
 //!
 //! Tokenizes input strings into a stream of tokens for the parser.
 
-mod char;
 mod byte;
+mod char;
 #[cfg(test)]
 mod tests;
 
-pub use char::{Lexer, Token};
 pub use byte::{LexerByte, TokenByte};
+pub use char::{Lexer, Token};
 
 // Re-export ParsedFlags for users of this module
 pub use crate::phonetic::common::flags::ParsedFlags;

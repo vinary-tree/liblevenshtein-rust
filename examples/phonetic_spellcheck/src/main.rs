@@ -71,7 +71,8 @@ fn main() {
     // Build PhoneticNormalizedDictionary with all optimizations
     println!("Building PhoneticNormalizedDictionary...");
     let start = Instant::now();
-    let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, combined_rules.rules);
+    let dict =
+        PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, combined_rules.rules);
     let build_time = start.elapsed();
     println!("  Built dictionary in {:?}", build_time);
     println!("  Original terms: {}", dict.len().unwrap_or(0));

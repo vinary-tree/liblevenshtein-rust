@@ -120,11 +120,7 @@ mod tests {
         let rules = base();
         // ου → u
         let result = rules.apply("ου");
-        assert!(
-            result.contains('u'),
-            "ου should become u, got: {}",
-            result
-        );
+        assert!(result.contains('u'), "ου should become u, got: {}", result);
     }
 
     #[test]
@@ -132,11 +128,7 @@ mod tests {
         let rules = base();
         // αι → e
         let result = rules.apply("αι");
-        assert!(
-            result.contains('e'),
-            "αι should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "αι should become e, got: {}", result);
     }
 
     #[test]
@@ -144,11 +136,7 @@ mod tests {
         let rules = base();
         // ει → i
         let result = rules.apply("ει");
-        assert!(
-            result.contains('i'),
-            "ει should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "ει should become i, got: {}", result);
     }
 
     #[test]
@@ -156,11 +144,7 @@ mod tests {
         let rules = base();
         // οι → i
         let result = rules.apply("οι");
-        assert!(
-            result.contains('i'),
-            "οι should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "οι should become i, got: {}", result);
     }
 
     // ============================================================
@@ -172,11 +156,7 @@ mod tests {
         let rules = base();
         // μπ → b
         let result = rules.apply("μπ");
-        assert!(
-            result.contains('b'),
-            "μπ should become b, got: {}",
-            result
-        );
+        assert!(result.contains('b'), "μπ should become b, got: {}", result);
     }
 
     #[test]
@@ -184,11 +164,7 @@ mod tests {
         let rules = base();
         // ντ → d
         let result = rules.apply("ντ");
-        assert!(
-            result.contains('d'),
-            "ντ should become d, got: {}",
-            result
-        );
+        assert!(result.contains('d'), "ντ should become d, got: {}", result);
     }
 
     #[test]
@@ -196,11 +172,7 @@ mod tests {
         let rules = base();
         // γκ → g
         let result = rules.apply("γκ");
-        assert!(
-            result.contains('ɡ'),
-            "γκ should become g, got: {}",
-            result
-        );
+        assert!(result.contains('ɡ'), "γκ should become g, got: {}", result);
     }
 
     #[test]
@@ -208,11 +180,7 @@ mod tests {
         let rules = base();
         // γγ → ng
         let result = rules.apply("γγ");
-        assert!(
-            result.contains("ŋ"),
-            "γγ should become ng, got: {}",
-            result
-        );
+        assert!(result.contains("ŋ"), "γγ should become ng, got: {}", result);
     }
 
     #[test]
@@ -247,22 +215,14 @@ mod tests {
     fn test_vowel_alpha() {
         let rules = base();
         let result = rules.apply("α");
-        assert!(
-            result.contains('a'),
-            "α should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "α should become a, got: {}", result);
     }
 
     #[test]
     fn test_vowel_epsilon() {
         let rules = base();
         let result = rules.apply("ε");
-        assert!(
-            result.contains('e'),
-            "ε should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "ε should become e, got: {}", result);
     }
 
     #[test]
@@ -270,22 +230,14 @@ mod tests {
         let rules = base();
         // η → i (Modern Greek)
         let result = rules.apply("η");
-        assert!(
-            result.contains('i'),
-            "η should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "η should become i, got: {}", result);
     }
 
     #[test]
     fn test_vowel_iota() {
         let rules = base();
         let result = rules.apply("ι");
-        assert!(
-            result.contains('i'),
-            "ι should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "ι should become i, got: {}", result);
     }
 
     #[test]
@@ -304,11 +256,7 @@ mod tests {
         let rules = base();
         // υ → i (Modern Greek)
         let result = rules.apply("υ");
-        assert!(
-            result.contains('i'),
-            "υ should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "υ should become i, got: {}", result);
     }
 
     #[test]
@@ -330,33 +278,21 @@ mod tests {
     fn test_accented_alpha() {
         let rules = base();
         let result = rules.apply("ά");
-        assert!(
-            result.contains('a'),
-            "ά should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "ά should become a, got: {}", result);
     }
 
     #[test]
     fn test_accented_epsilon() {
         let rules = base();
         let result = rules.apply("έ");
-        assert!(
-            result.contains('e'),
-            "έ should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "έ should become e, got: {}", result);
     }
 
     #[test]
     fn test_diaeresis_iota() {
         let rules = base();
         let result = rules.apply("ϊ");
-        assert!(
-            result.contains('i'),
-            "ϊ should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "ϊ should become i, got: {}", result);
     }
 
     // ============================================================
@@ -368,22 +304,14 @@ mod tests {
         let rules = base();
         // β → v (Modern Greek)
         let result = rules.apply("β");
-        assert!(
-            result.contains('v'),
-            "β should become v, got: {}",
-            result
-        );
+        assert!(result.contains('v'), "β should become v, got: {}", result);
     }
 
     #[test]
     fn test_consonant_gamma() {
         let rules = base();
         let result = rules.apply("γ");
-        assert!(
-            result.contains('ɡ'),
-            "γ should become g, got: {}",
-            result
-        );
+        assert!(result.contains('ɡ'), "γ should become g, got: {}", result);
     }
 
     #[test]
@@ -403,11 +331,7 @@ mod tests {
         let rules = base();
         // θ → th (voiceless dental fricative)
         let result = rules.apply("θ");
-        assert!(
-            result.contains("θ"),
-            "θ should become th, got: {}",
-            result
-        );
+        assert!(result.contains("θ"), "θ should become th, got: {}", result);
     }
 
     #[test]
@@ -415,22 +339,14 @@ mod tests {
         let rules = base();
         // ξ → x (ks)
         let result = rules.apply("ξ");
-        assert!(
-            result.contains('x'),
-            "ξ should become x, got: {}",
-            result
-        );
+        assert!(result.contains('x'), "ξ should become x, got: {}", result);
     }
 
     #[test]
     fn test_consonant_phi() {
         let rules = base();
         let result = rules.apply("φ");
-        assert!(
-            result.contains('f'),
-            "φ should become f, got: {}",
-            result
-        );
+        assert!(result.contains('f'), "φ should become f, got: {}", result);
     }
 
     #[test]
@@ -450,11 +366,7 @@ mod tests {
         let rules = base();
         // ψ → ps
         let result = rules.apply("ψ");
-        assert!(
-            result.contains("ps"),
-            "ψ should become ps, got: {}",
-            result
-        );
+        assert!(result.contains("ps"), "ψ should become ps, got: {}", result);
     }
 
     #[test]
@@ -462,11 +374,7 @@ mod tests {
         let rules = base();
         // ς → s (final sigma)
         let result = rules.apply("ς");
-        assert!(
-            result.contains('s'),
-            "ς should become s, got: {}",
-            result
-        );
+        assert!(result.contains('s'), "ς should become s, got: {}", result);
     }
 
     // ============================================================
@@ -480,7 +388,10 @@ mod tests {
         let result = rules.apply_full("Ελλάδα");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('e') && lower.contains('l') && (lower.contains('ð') || lower.contains("th")) && lower.contains('a'),
+            lower.contains('e')
+                && lower.contains('l')
+                && (lower.contains('ð') || lower.contains("th"))
+                && lower.contains('a'),
             "Ελλάδα should contain e, l, ð, a, got: {}",
             result
         );
@@ -493,7 +404,10 @@ mod tests {
         let result = rules.apply_full("Αθήνα");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('a') && lower.contains("θ") && lower.contains('i') && lower.contains('n'),
+            lower.contains('a')
+                && lower.contains("θ")
+                && lower.contains('i')
+                && lower.contains('n'),
             "Αθήνα should contain a, th, i, n, got: {}",
             result
         );
@@ -506,7 +420,10 @@ mod tests {
         let result = rules.apply_full("Όλυμπος");
         let lower = result.to_lowercase();
         assert!(
-            (lower.contains('o') || lower.contains('ɔ')) && lower.contains('l') && lower.contains('i') && lower.contains('b'),
+            (lower.contains('o') || lower.contains('ɔ'))
+                && lower.contains('l')
+                && lower.contains('i')
+                && lower.contains('b'),
             "Όλυμπος should normalize with μπ → b, got: {}",
             result
         );
@@ -515,5 +432,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

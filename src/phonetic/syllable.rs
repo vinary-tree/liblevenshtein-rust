@@ -45,12 +45,10 @@ const CONSONANTS: [char; 21] = [
 const VALID_ONSETS: &[&str] = &[
     // Single consonants
     "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "t", "v", "w", "x",
-    "y", "z",
-    // Two-consonant clusters
+    "y", "z", // Two-consonant clusters
     "bl", "br", "ch", "cl", "cr", "dr", "dw", "fl", "fr", "gh", "gl", "gn", "gr", "kn", "ph", "pl",
     "pr", "qu", "sc", "sh", "sk", "sl", "sm", "sn", "sp", "sq", "st", "sw", "th", "tr", "tw", "wh",
-    "wr",
-    // Three-consonant clusters
+    "wr", // Three-consonant clusters
     "scr", "shr", "spl", "spr", "squ", "str", "thr",
 ];
 
@@ -401,11 +399,7 @@ pub fn evaluate_syllable_condition(
 /// let expr = SyllableExpr::not(SyllableExpr::cond(SyllableCondition::Monosyllable));
 /// assert!(evaluate_syllable_expr(&expr, "flying", 0));
 /// ```
-pub fn evaluate_syllable_expr(
-    expr: &SyllableExpr,
-    word: &str,
-    match_pos: usize,
-) -> bool {
+pub fn evaluate_syllable_expr(expr: &SyllableExpr, word: &str, match_pos: usize) -> bool {
     match expr {
         SyllableExpr::Cond(cond) => evaluate_syllable_condition(cond, word, match_pos),
         SyllableExpr::And(left, right) => {
@@ -494,11 +488,7 @@ pub fn evaluate_syllable_condition_ipa(
 /// );
 /// assert!(evaluate_syllable_expr_ipa(&expr, "hæpi", 3)); // 'i' is in final syllable
 /// ```
-pub fn evaluate_syllable_expr_ipa(
-    expr: &SyllableExpr,
-    ipa: &str,
-    match_pos: usize,
-) -> bool {
+pub fn evaluate_syllable_expr_ipa(expr: &SyllableExpr, ipa: &str, match_pos: usize) -> bool {
     match expr {
         SyllableExpr::Cond(cond) => evaluate_syllable_condition_ipa(cond, ipa, match_pos),
         SyllableExpr::And(left, right) => {
@@ -695,35 +685,91 @@ mod tests {
 
     #[test]
     fn test_evaluate_syllable_condition_monosyllable() {
-        assert!(evaluate_syllable_condition(&SyllableCondition::Monosyllable, "fly", 0));
-        assert!(evaluate_syllable_condition(&SyllableCondition::Monosyllable, "cat", 0));
-        assert!(!evaluate_syllable_condition(&SyllableCondition::Monosyllable, "happy", 0));
+        assert!(evaluate_syllable_condition(
+            &SyllableCondition::Monosyllable,
+            "fly",
+            0
+        ));
+        assert!(evaluate_syllable_condition(
+            &SyllableCondition::Monosyllable,
+            "cat",
+            0
+        ));
+        assert!(!evaluate_syllable_condition(
+            &SyllableCondition::Monosyllable,
+            "happy",
+            0
+        ));
         // Note: "flying" is miscounted by orthographic algorithm - use "running" instead
-        assert!(!evaluate_syllable_condition(&SyllableCondition::Monosyllable, "running", 0));
+        assert!(!evaluate_syllable_condition(
+            &SyllableCondition::Monosyllable,
+            "running",
+            0
+        ));
     }
 
     #[test]
     fn test_evaluate_syllable_condition_polysyllable() {
-        assert!(!evaluate_syllable_condition(&SyllableCondition::Polysyllable, "fly", 0));
-        assert!(!evaluate_syllable_condition(&SyllableCondition::Polysyllable, "cat", 0));
-        assert!(evaluate_syllable_condition(&SyllableCondition::Polysyllable, "happy", 0));
+        assert!(!evaluate_syllable_condition(
+            &SyllableCondition::Polysyllable,
+            "fly",
+            0
+        ));
+        assert!(!evaluate_syllable_condition(
+            &SyllableCondition::Polysyllable,
+            "cat",
+            0
+        ));
+        assert!(evaluate_syllable_condition(
+            &SyllableCondition::Polysyllable,
+            "happy",
+            0
+        ));
         // Note: "flying" is miscounted by orthographic algorithm - use "running" instead
-        assert!(evaluate_syllable_condition(&SyllableCondition::Polysyllable, "running", 0));
+        assert!(evaluate_syllable_condition(
+            &SyllableCondition::Polysyllable,
+            "running",
+            0
+        ));
     }
 
     #[test]
     fn test_evaluate_syllable_condition_initial_syllable() {
-        assert!(evaluate_syllable_condition(&SyllableCondition::InitialSyllable, "happy", 0));
-        assert!(evaluate_syllable_condition(&SyllableCondition::InitialSyllable, "happy", 1));
-        assert!(!evaluate_syllable_condition(&SyllableCondition::InitialSyllable, "happy", 4));
+        assert!(evaluate_syllable_condition(
+            &SyllableCondition::InitialSyllable,
+            "happy",
+            0
+        ));
+        assert!(evaluate_syllable_condition(
+            &SyllableCondition::InitialSyllable,
+            "happy",
+            1
+        ));
+        assert!(!evaluate_syllable_condition(
+            &SyllableCondition::InitialSyllable,
+            "happy",
+            4
+        ));
     }
 
     #[test]
     fn test_evaluate_syllable_condition_final_syllable() {
-        assert!(!evaluate_syllable_condition(&SyllableCondition::FinalSyllable, "happy", 0));
-        assert!(evaluate_syllable_condition(&SyllableCondition::FinalSyllable, "happy", 4));
+        assert!(!evaluate_syllable_condition(
+            &SyllableCondition::FinalSyllable,
+            "happy",
+            0
+        ));
+        assert!(evaluate_syllable_condition(
+            &SyllableCondition::FinalSyllable,
+            "happy",
+            4
+        ));
         // In monosyllables, everything is in the final syllable
-        assert!(evaluate_syllable_condition(&SyllableCondition::FinalSyllable, "cat", 0));
+        assert!(evaluate_syllable_condition(
+            &SyllableCondition::FinalSyllable,
+            "cat",
+            0
+        ));
     }
 
     #[test]
@@ -799,49 +845,121 @@ mod tests {
     #[test]
     fn test_evaluate_syllable_condition_ipa_monosyllable() {
         // IPA monosyllables
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Monosyllable, "kæt", 0));
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Monosyllable, "dɔg", 0));
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Monosyllable, "flaɪ", 0));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Monosyllable,
+            "kæt",
+            0
+        ));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Monosyllable,
+            "dɔg",
+            0
+        ));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Monosyllable,
+            "flaɪ",
+            0
+        ));
 
         // IPA polysyllables
-        assert!(!evaluate_syllable_condition_ipa(&SyllableCondition::Monosyllable, "hæpi", 0));
-        assert!(!evaluate_syllable_condition_ipa(&SyllableCondition::Monosyllable, "wɔːtər", 0));
+        assert!(!evaluate_syllable_condition_ipa(
+            &SyllableCondition::Monosyllable,
+            "hæpi",
+            0
+        ));
+        assert!(!evaluate_syllable_condition_ipa(
+            &SyllableCondition::Monosyllable,
+            "wɔːtər",
+            0
+        ));
     }
 
     #[test]
     fn test_evaluate_syllable_condition_ipa_polysyllable() {
         // IPA polysyllables
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Polysyllable, "hæpi", 0));
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Polysyllable, "wɔːtər", 0));
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Polysyllable, "kamal", 0)); // Hindi
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Polysyllable,
+            "hæpi",
+            0
+        ));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Polysyllable,
+            "wɔːtər",
+            0
+        ));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Polysyllable,
+            "kamal",
+            0
+        )); // Hindi
 
         // IPA monosyllables
-        assert!(!evaluate_syllable_condition_ipa(&SyllableCondition::Polysyllable, "kæt", 0));
-        assert!(!evaluate_syllable_condition_ipa(&SyllableCondition::Polysyllable, "flaɪ", 0));
+        assert!(!evaluate_syllable_condition_ipa(
+            &SyllableCondition::Polysyllable,
+            "kæt",
+            0
+        ));
+        assert!(!evaluate_syllable_condition_ipa(
+            &SyllableCondition::Polysyllable,
+            "flaɪ",
+            0
+        ));
     }
 
     #[test]
     fn test_evaluate_syllable_condition_ipa_final_syllable() {
         // In "hæpi" (happy), 'i' at position 3 is in final syllable
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::FinalSyllable, "hæpi", 3));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::FinalSyllable,
+            "hæpi",
+            3
+        ));
         // Position 0 is NOT in final syllable
-        assert!(!evaluate_syllable_condition_ipa(&SyllableCondition::FinalSyllable, "hæpi", 0));
+        assert!(!evaluate_syllable_condition_ipa(
+            &SyllableCondition::FinalSyllable,
+            "hæpi",
+            0
+        ));
 
         // In monosyllables, everything is in final syllable
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::FinalSyllable, "kæt", 0));
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::FinalSyllable, "kæt", 2));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::FinalSyllable,
+            "kæt",
+            0
+        ));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::FinalSyllable,
+            "kæt",
+            2
+        ));
     }
 
     #[test]
     fn test_evaluate_syllable_condition_ipa_initial_syllable() {
         // Position 0 is in initial syllable
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::InitialSyllable, "hæpi", 0));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::InitialSyllable,
+            "hæpi",
+            0
+        ));
         // Position 3 (the 'i') is NOT in initial syllable
-        assert!(!evaluate_syllable_condition_ipa(&SyllableCondition::InitialSyllable, "hæpi", 3));
+        assert!(!evaluate_syllable_condition_ipa(
+            &SyllableCondition::InitialSyllable,
+            "hæpi",
+            3
+        ));
 
         // In monosyllables, everything is in initial syllable
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::InitialSyllable, "kæt", 0));
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::InitialSyllable, "kæt", 2));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::InitialSyllable,
+            "kæt",
+            0
+        ));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::InitialSyllable,
+            "kæt",
+            2
+        ));
     }
 
     #[test]
@@ -863,17 +981,37 @@ mod tests {
     #[test]
     fn test_evaluate_syllable_expr_ipa_with_length_markers() {
         // Long vowels (ː) should not add extra syllables
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Monosyllable, "biː", 0));
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Monosyllable, "siː", 0));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Monosyllable,
+            "biː",
+            0
+        ));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Monosyllable,
+            "siː",
+            0
+        ));
 
         // "wɔːtər" has 2 syllables despite the length marker
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Polysyllable, "wɔːtər", 0));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Polysyllable,
+            "wɔːtər",
+            0
+        ));
     }
 
     #[test]
     fn test_evaluate_syllable_expr_ipa_with_explicit_boundaries() {
         // Explicit syllable boundaries with '.'
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Polysyllable, "hæp.i", 0));
-        assert!(evaluate_syllable_condition_ipa(&SyllableCondition::Polysyllable, "bju.tɪ.fəl", 0));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Polysyllable,
+            "hæp.i",
+            0
+        ));
+        assert!(evaluate_syllable_condition_ipa(
+            &SyllableCondition::Polysyllable,
+            "bju.tɪ.fəl",
+            0
+        ));
     }
 }

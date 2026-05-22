@@ -45,16 +45,15 @@
 use std::marker::PhantomData;
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, Wfst,
-    WeightedTransition,
+    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, WeightedTransition, Wfst,
 };
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
-use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::Algorithm;
 use crate::wallbreaker::{WallBreaker, WallBreakerResult};
+use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
+use libdictenstein::{Dictionary, DictionaryNode};
 
 /// Cached state for WallBreaker WFST.
 #[derive(Clone)]
@@ -263,7 +262,11 @@ where
             .enumerate()
             .filter(|(_, r)| !r.term.is_empty())
             .map(|(idx, r)| {
-                let first_char = r.term.chars().next().expect("filtered out empty terms above");
+                let first_char = r
+                    .term
+                    .chars()
+                    .next()
+                    .expect("filtered out empty terms above");
                 let term_len = r.term.len();
                 let distance = r.distance;
                 (idx, first_char, term_len, distance)
@@ -295,7 +298,10 @@ where
         }
 
         // Super-start is final only if we have empty results
-        let has_empty_result = self.results.iter().any(|r| r.term.is_empty() && r.distance <= self.max_distance);
+        let has_empty_result = self
+            .results
+            .iter()
+            .any(|r| r.term.is_empty() && r.distance <= self.max_distance);
         let final_weight = if has_empty_result {
             self.results
                 .iter()
@@ -306,7 +312,11 @@ where
             f64::INFINITY
         };
 
-        (has_empty_result, TropicalWeight::new(final_weight), transitions)
+        (
+            has_empty_result,
+            TropicalWeight::new(final_weight),
+            transitions,
+        )
     }
 
     /// Compute state for a result position.
@@ -332,13 +342,7 @@ where
 
         let (term_chars, distance) = match result_info {
             Some(info) => info,
-            None => {
-                return (
-                    false,
-                    TropicalWeight::infinity(),
-                    transitions,
-                )
-            }
+            None => return (false, TropicalWeight::infinity(), transitions),
         };
 
         let pos = key.char_position as usize;
@@ -391,10 +395,7 @@ where
     }
 
     fn is_final(&self, state: StateId) -> bool {
-        self.cache
-            .get(&state)
-            .map(|s| s.is_final)
-            .unwrap_or(false)
+        self.cache.get(&state).map(|s| s.is_final).unwrap_or(false)
     }
 
     fn final_weight(&self, state: StateId) -> TropicalWeight {

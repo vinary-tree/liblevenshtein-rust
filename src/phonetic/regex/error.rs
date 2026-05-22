@@ -154,7 +154,11 @@ impl ParseError {
     }
 
     /// Create a parse error with context.
-    pub fn with_context(kind: ParseErrorKind, position: Position, context: impl Into<String>) -> Self {
+    pub fn with_context(
+        kind: ParseErrorKind,
+        position: Position,
+        context: impl Into<String>,
+    ) -> Self {
         Self {
             kind,
             position,
@@ -229,11 +233,7 @@ impl fmt::Display for ParseErrorKind {
                 write!(f, "invalid quantifier: {}", msg)
             }
             ParseErrorKind::InvalidRepetition { min, max } => {
-                write!(
-                    f,
-                    "invalid repetition: min ({}) > max ({})",
-                    min, max
-                )
+                write!(f, "invalid repetition: min ({}) > max ({})", min, max)
             }
             ParseErrorKind::InvalidWeight(msg) => {
                 write!(f, "invalid weight: {}", msg)
@@ -289,11 +289,19 @@ impl fmt::Display for ParseErrorKind {
                         f,
                         "undefined symbol '${}'; available symbols: {}",
                         name,
-                        available.iter().map(|s| format!("${}", s)).collect::<Vec<_>>().join(", ")
+                        available
+                            .iter()
+                            .map(|s| format!("${}", s))
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     )
                 }
             }
-            ParseErrorKind::SymbolTypeMismatch { name, expected, found } => {
+            ParseErrorKind::SymbolTypeMismatch {
+                name,
+                expected,
+                found,
+            } => {
                 write!(
                     f,
                     "symbol '${}' has wrong type: expected {}, found {}",
@@ -307,13 +315,21 @@ impl fmt::Display for ParseErrorKind {
                 write!(f, "invalid group name: {}", msg)
             }
             ParseErrorKind::DuplicateGroupName(name) => {
-                write!(f, "duplicate named group '{}' (group names must be unique)", name)
+                write!(
+                    f,
+                    "duplicate named group '{}' (group names must be unique)",
+                    name
+                )
             }
             ParseErrorKind::InvalidGroupReference(msg) => {
                 write!(f, "invalid group reference: {}", msg)
             }
             ParseErrorKind::UndefinedGroupReference(name) => {
-                write!(f, "undefined group reference '(?&{})' (group '{}' was never defined)", name, name)
+                write!(
+                    f,
+                    "undefined group reference '(?&{})' (group '{}' was never defined)",
+                    name, name
+                )
             }
             ParseErrorKind::InvalidFlag(msg) => {
                 write!(f, "invalid flag: {}", msg)

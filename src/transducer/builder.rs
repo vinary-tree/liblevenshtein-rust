@@ -3,8 +3,8 @@
 //! The `TransducerBuilder` provides a fluent API for constructing
 //! `Transducer` instances with optional configuration and validation.
 
-use libdictenstein::Dictionary;
 use crate::transducer::{Algorithm, Transducer};
+use libdictenstein::Dictionary;
 
 /// Builder for constructing a `Transducer` with a fluent API.
 ///

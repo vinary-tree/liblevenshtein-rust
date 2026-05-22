@@ -155,11 +155,23 @@ mod tests {
         let rules = base();
         // Note: Aspirated markers (T, P, K) are simplified to lowercase (t, p, k)
         let result = rules.apply("თ");
-        assert!(result.contains('t'), "თ should become t (aspirated T simplified), got: {}", result);
+        assert!(
+            result.contains('t'),
+            "თ should become t (aspirated T simplified), got: {}",
+            result
+        );
         let result = rules.apply("ფ");
-        assert!(result.contains('p'), "ფ should become p (aspirated P simplified), got: {}", result);
+        assert!(
+            result.contains('p'),
+            "ფ should become p (aspirated P simplified), got: {}",
+            result
+        );
         let result = rules.apply("ქ");
-        assert!(result.contains('k'), "ქ should become k (aspirated K simplified), got: {}", result);
+        assert!(
+            result.contains('k'),
+            "ქ should become k (aspirated K simplified), got: {}",
+            result
+        );
     }
 
     #[test]
@@ -372,5 +384,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

@@ -392,7 +392,10 @@ fn test_jaro_winkler_prefix_bonus() {
     let jaro = jaro_similarity("prefix_abc", "prefix_xyz");
     let jw = jaro_winkler_similarity("prefix_abc", "prefix_xyz");
 
-    assert!(jw >= jaro, "Jaro-Winkler should be >= Jaro for common prefix");
+    assert!(
+        jw >= jaro,
+        "Jaro-Winkler should be >= Jaro for common prefix"
+    );
 }
 
 #[test]
@@ -408,7 +411,10 @@ fn test_jaro_winkler_known_values() {
 fn test_ngram_empty_dictionary() {
     let index = NgramIndex::new(2);
     let candidates = index.find_candidates("test", 2);
-    assert!(candidates.is_empty(), "Empty index should return no candidates");
+    assert!(
+        candidates.is_empty(),
+        "Empty index should return no candidates"
+    );
 }
 
 #[test]
@@ -465,10 +471,7 @@ fn test_hybrid_matcher_basic() {
     let candidates = matcher.filter_candidates("aple", 2);
 
     // Should find "apple" and "apply"
-    assert!(
-        candidates.contains(&"apple"),
-        "Should find 'apple'"
-    );
+    assert!(candidates.contains(&"apple"), "Should find 'apple'");
 }
 
 #[test]
@@ -499,9 +502,7 @@ fn test_hybrid_matcher_exact_match() {
         .map(String::from)
         .collect();
 
-    let matcher = HybridMatcherBuilder::new()
-        .ngram_size(2)
-        .build(terms);
+    let matcher = HybridMatcherBuilder::new().ngram_size(2).build(terms);
 
     let candidates = matcher.filter_candidates("hello", 0);
     assert!(candidates.contains(&"hello"), "Should find 'hello'");
@@ -517,7 +518,13 @@ fn test_filter_pipeline() {
 
     // Build ngram index
     let mut index = NgramIndex::new(2);
-    let terms = ["programming", "program", "programmer", "progress", "project"];
+    let terms = [
+        "programming",
+        "program",
+        "programmer",
+        "progress",
+        "project",
+    ];
     for term in &terms {
         index.insert(*term);
     }
@@ -535,15 +542,15 @@ fn test_filter_pipeline() {
         .into_iter()
         .filter(|c| jaro_winkler_similarity(query, c) >= jw_threshold)
         .collect();
-    assert!(!refined.is_empty(), "JW refinement should keep some candidates");
+    assert!(
+        !refined.is_empty(),
+        "JW refinement should keep some candidates"
+    );
 
     // Stage 3: Exact verification
     let verified: Vec<_> = refined
         .into_iter()
         .filter(|c| standard_distance(query, c) <= max_dist)
         .collect();
-    assert!(
-        verified.contains(&"program"),
-        "Should find 'program'"
-    );
+    assert!(verified.contains(&"program"), "Should find 'program'");
 }

@@ -101,11 +101,7 @@ mod tests {
         let rules = base();
         // پ → p
         let result = rules.apply("پ");
-        assert!(
-            result.contains('p'),
-            "پ should become p, got: {}",
-            result
-        );
+        assert!(result.contains('p'), "پ should become p, got: {}", result);
     }
 
     #[test]
@@ -113,11 +109,7 @@ mod tests {
         let rules = base();
         // چ → ch
         let result = rules.apply("چ");
-        assert!(
-            result.contains("t͡ʃ"),
-            "چ should become ch, got: {}",
-            result
-        );
+        assert!(result.contains("t͡ʃ"), "چ should become ch, got: {}", result);
     }
 
     #[test]
@@ -125,11 +117,7 @@ mod tests {
         let rules = base();
         // ژ → zh
         let result = rules.apply("ژ");
-        assert!(
-            result.contains("ʒ"),
-            "ژ should become zh, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ژ should become zh, got: {}", result);
     }
 
     #[test]
@@ -137,11 +125,7 @@ mod tests {
         let rules = base();
         // گ → g
         let result = rules.apply("گ");
-        assert!(
-            result.contains('ɡ'),
-            "گ should become g, got: {}",
-            result
-        );
+        assert!(result.contains('ɡ'), "گ should become g, got: {}", result);
     }
 
     // ============================================================
@@ -189,11 +173,7 @@ mod tests {
         let rules = base();
         // غ → gh
         let result = rules.apply("غ");
-        assert!(
-            result.contains("ɣ"),
-            "غ should become gh, got: {}",
-            result
-        );
+        assert!(result.contains("ɣ"), "غ should become gh, got: {}", result);
     }
 
     #[test]
@@ -213,11 +193,7 @@ mod tests {
         let rules = base();
         // خ → kh
         let result = rules.apply("خ");
-        assert!(
-            result.contains("x"),
-            "خ should become kh, got: {}",
-            result
-        );
+        assert!(result.contains("x"), "خ should become kh, got: {}", result);
     }
 
     #[test]
@@ -225,11 +201,7 @@ mod tests {
         let rules = base();
         // ش → sh
         let result = rules.apply("ش");
-        assert!(
-            result.contains("ʃ"),
-            "ش should become sh, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ش should become sh, got: {}", result);
     }
 
     // ============================================================
@@ -240,22 +212,14 @@ mod tests {
     fn test_be() {
         let rules = base();
         let result = rules.apply("ب");
-        assert!(
-            result.contains('b'),
-            "ب should become b, got: {}",
-            result
-        );
+        assert!(result.contains('b'), "ب should become b, got: {}", result);
     }
 
     #[test]
     fn test_te() {
         let rules = base();
         let result = rules.apply("ت");
-        assert!(
-            result.contains('t'),
-            "ت should become t, got: {}",
-            result
-        );
+        assert!(result.contains('t'), "ت should become t, got: {}", result);
     }
 
     #[test]
@@ -274,44 +238,28 @@ mod tests {
     fn test_dal() {
         let rules = base();
         let result = rules.apply("د");
-        assert!(
-            result.contains('d'),
-            "د should become d, got: {}",
-            result
-        );
+        assert!(result.contains('d'), "د should become d, got: {}", result);
     }
 
     #[test]
     fn test_sin() {
         let rules = base();
         let result = rules.apply("س");
-        assert!(
-            result.contains('s'),
-            "س should become s, got: {}",
-            result
-        );
+        assert!(result.contains('s'), "س should become s, got: {}", result);
     }
 
     #[test]
     fn test_fe() {
         let rules = base();
         let result = rules.apply("ف");
-        assert!(
-            result.contains('f'),
-            "ف should become f, got: {}",
-            result
-        );
+        assert!(result.contains('f'), "ف should become f, got: {}", result);
     }
 
     #[test]
     fn test_kaf() {
         let rules = base();
         let result = rules.apply("ک");
-        assert!(
-            result.contains('k'),
-            "ک should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "ک should become k, got: {}", result);
     }
 
     // ============================================================
@@ -322,44 +270,28 @@ mod tests {
     fn test_alef() {
         let rules = base();
         let result = rules.apply("ا");
-        assert!(
-            result.contains('a'),
-            "ا should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "ا should become a, got: {}", result);
     }
 
     #[test]
     fn test_alef_madda() {
         let rules = base();
         let result = rules.apply("آ");
-        assert!(
-            result.contains('a'),
-            "آ should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "آ should become a, got: {}", result);
     }
 
     #[test]
     fn test_vav() {
         let rules = base();
         let result = rules.apply("و");
-        assert!(
-            result.contains('v'),
-            "و should become v, got: {}",
-            result
-        );
+        assert!(result.contains('v'), "و should become v, got: {}", result);
     }
 
     #[test]
     fn test_ye() {
         let rules = base();
         let result = rules.apply("ی");
-        assert!(
-            result.contains('y'),
-            "ی should become y, got: {}",
-            result
-        );
+        assert!(result.contains('y'), "ی should become y, got: {}", result);
     }
 
     // ============================================================
@@ -373,7 +305,11 @@ mod tests {
         let result = rules.apply_full("فارسی");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('f') && lower.contains('a') && lower.contains('r') && lower.contains('s') && lower.contains('y'),
+            lower.contains('f')
+                && lower.contains('a')
+                && lower.contains('r')
+                && lower.contains('s')
+                && lower.contains('y'),
             "فارسی should contain f, a, r, s, y, got: {}",
             result
         );
@@ -386,7 +322,10 @@ mod tests {
         let result = rules.apply_full("ایران");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('a') && lower.contains('y') && lower.contains('r') && lower.contains('n'),
+            lower.contains('a')
+                && lower.contains('y')
+                && lower.contains('r')
+                && lower.contains('n'),
             "ایران should contain a, y, r, n, got: {}",
             result
         );
@@ -399,7 +338,11 @@ mod tests {
         let result = rules.apply_full("تهران");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('t') && lower.contains('h') && lower.contains('r') && lower.contains('a') && lower.contains('n'),
+            lower.contains('t')
+                && lower.contains('h')
+                && lower.contains('r')
+                && lower.contains('a')
+                && lower.contains('n'),
             "تهران should contain t, h, r, a, n, got: {}",
             result
         );
@@ -408,5 +351,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

@@ -253,12 +253,7 @@ mod tests {
     #[test]
     fn test_grep_match_result() {
         let loc = MatchLocation::file("file.txt", 1, 7, 6);
-        let result = GrepMatchResult::new(
-            loc,
-            "World".to_string(),
-            "Hello World!".to_string(),
-            0,
-        );
+        let result = GrepMatchResult::new(loc, "World".to_string(), "Hello World!".to_string(), 0);
 
         assert_eq!(result.prefix(), "Hello ");
         assert_eq!(result.suffix(), "!");

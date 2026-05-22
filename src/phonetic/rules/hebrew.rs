@@ -110,18 +110,10 @@ mod tests {
         );
         // כּ → k (kaf with dagesh)
         let result = rules.apply("כּ");
-        assert!(
-            result.contains('k'),
-            "כּ should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "כּ should become k, got: {}", result);
         // פּ → p (pe with dagesh)
         let result = rules.apply("פּ");
-        assert!(
-            result.contains('p'),
-            "פּ should become p, got: {}",
-            result
-        );
+        assert!(result.contains('p'), "פּ should become p, got: {}", result);
     }
 
     #[test]
@@ -129,11 +121,7 @@ mod tests {
         let rules = base();
         // שׁ → sh (shin)
         let result = rules.apply("שׁ");
-        assert!(
-            result.contains("ʃ"),
-            "שׁ should become sh, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "שׁ should become sh, got: {}", result);
         // שׂ → s (sin)
         let result = rules.apply("שׂ");
         assert!(
@@ -163,7 +151,11 @@ mod tests {
         assert!(result.contains('d'), "ד should become d, got: {}", result);
         // ה → h (may become x at word end due to h -> x / _# rule)
         let result = rules.apply("ה");
-        assert!(result.contains('h') || result.contains('x'), "ה should become h or x, got: {}", result);
+        assert!(
+            result.contains('h') || result.contains('x'),
+            "ה should become h or x, got: {}",
+            result
+        );
         // ל → l
         let result = rules.apply("ל");
         assert!(result.contains('l'), "ל should become l, got: {}", result);
@@ -180,11 +172,7 @@ mod tests {
         let rules = base();
         // ך → kh (final kaf)
         let result = rules.apply("ך");
-        assert!(
-            result.contains("x"),
-            "ך should become kh, got: {}",
-            result
-        );
+        assert!(result.contains("x"), "ך should become kh, got: {}", result);
         // ם → m (final mem)
         let result = rules.apply("ם");
         assert!(result.contains('m'), "ם should become m, got: {}", result);
@@ -196,11 +184,7 @@ mod tests {
         assert!(result.contains('f'), "ף should become f, got: {}", result);
         // ץ → ts (final tsadi)
         let result = rules.apply("ץ");
-        assert!(
-            result.contains("t͡s"),
-            "ץ should become ts, got: {}",
-            result
-        );
+        assert!(result.contains("t͡s"), "ץ should become ts, got: {}", result);
     }
 
     #[test]
@@ -232,11 +216,7 @@ mod tests {
         );
         // צ → t͡s (tsadi)
         let result = rules.apply("צ");
-        assert!(
-            result.contains("t͡s"),
-            "צ should become ts, got: {}",
-            result
-        );
+        assert!(result.contains("t͡s"), "צ should become ts, got: {}", result);
     }
 
     #[test]
@@ -251,5 +231,4 @@ mod tests {
             result
         );
     }
-
 }

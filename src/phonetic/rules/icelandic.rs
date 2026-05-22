@@ -80,7 +80,10 @@ mod tests {
     #[test]
     fn test_base_loads() {
         let rules = base();
-        assert!(!rules.is_empty(), "Icelandic base rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Icelandic base rules should not be empty"
+        );
         assert!(
             rules.len() >= 15,
             "expected >=15 base rules, got {}",
@@ -97,11 +100,7 @@ mod tests {
         let rules = base();
         // þ → th (voiceless dental fricative)
         let result = rules.apply("þ");
-        assert!(
-            result.contains("θ"),
-            "þ should become th, got: {}",
-            result
-        );
+        assert!(result.contains("θ"), "þ should become th, got: {}", result);
     }
 
     #[test]
@@ -109,11 +108,7 @@ mod tests {
         let rules = base();
         // ð → dh (voiced dental fricative)
         let result = rules.apply("ð");
-        assert!(
-            result.contains("ð"),
-            "ð should become dh, got: {}",
-            result
-        );
+        assert!(result.contains("ð"), "ð should become dh, got: {}", result);
     }
 
     #[test]
@@ -121,11 +116,7 @@ mod tests {
         let rules = base();
         // æ → aɪ (IPA diphthong)
         let result = rules.apply("æ");
-        assert!(
-            result.contains("aɪ"),
-            "æ should become aɪ, got: {}",
-            result
-        );
+        assert!(result.contains("aɪ"), "æ should become aɪ, got: {}", result);
     }
 
     #[test]
@@ -133,11 +124,7 @@ mod tests {
         let rules = base();
         // ö → ø (IPA)
         let result = rules.apply("ö");
-        assert!(
-            result.contains('ø'),
-            "ö should become ø, got: {}",
-            result
-        );
+        assert!(result.contains('ø'), "ö should become ø, got: {}", result);
     }
 
     // ============================================================
@@ -149,11 +136,7 @@ mod tests {
         let rules = base();
         // á → au (IPA diphthong)
         let result = rules.apply("á");
-        assert!(
-            result.contains("au"),
-            "á should become au, got: {}",
-            result
-        );
+        assert!(result.contains("au"), "á should become au, got: {}", result);
     }
 
     #[test]
@@ -185,11 +168,7 @@ mod tests {
         let rules = base();
         // ó → ou (IPA diphthong)
         let result = rules.apply("ó");
-        assert!(
-            result.contains("ou"),
-            "ó should become ou, got: {}",
-            result
-        );
+        assert!(result.contains("ou"), "ó should become ou, got: {}", result);
     }
 
     #[test]
@@ -285,11 +264,7 @@ mod tests {
         let rules = base();
         // hj → j (palatal approximant)
         let result = rules.apply("hj");
-        assert!(
-            result.contains('j'),
-            "hj should become j, got: {}",
-            result
-        );
+        assert!(result.contains('j'), "hj should become j, got: {}", result);
     }
 
     #[test]
@@ -315,7 +290,12 @@ mod tests {
         let result = rules.apply_full("Ísland");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains("iː") && lower.contains('s') && lower.contains('l') && lower.contains('a') && lower.contains('n') && lower.contains('d'),
+            lower.contains("iː")
+                && lower.contains('s')
+                && lower.contains('l')
+                && lower.contains('a')
+                && lower.contains('n')
+                && lower.contains('d'),
             "Ísland should normalize í to iː, got: {}",
             result
         );
@@ -328,7 +308,10 @@ mod tests {
         let result = rules.apply_full("Reykjavík");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('r') && lower.contains('k') && lower.contains('j') && lower.contains("iː"),
+            lower.contains('r')
+                && lower.contains('k')
+                && lower.contains('j')
+                && lower.contains("iː"),
             "Reykjavík should normalize í to iː, got: {}",
             result
         );
@@ -363,5 +346,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

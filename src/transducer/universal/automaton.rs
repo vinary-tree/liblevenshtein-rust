@@ -381,7 +381,10 @@ mod tests {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
         // I + 0#0 after processing 4 chars of 4-char word
-        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
+        state.add_position(
+            UniversalPosition::new_i(0, 0, 2)
+                .expect("test fixture: UniversalPosition::new_i with valid args"),
+        );
 
         // Should be accepting: word_len=4, input_len=4, offset=0, errors=0
         // current_word_pos = 4 + 0 = 4, remaining = 4 - 4 = 0 ≤ (2 - 0) = 2 ✓
@@ -393,7 +396,10 @@ mod tests {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
         // I + 0#0 after processing 2 chars of 4-char word
-        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
+        state.add_position(
+            UniversalPosition::new_i(0, 0, 2)
+                .expect("test fixture: UniversalPosition::new_i with valid args"),
+        );
 
         // Should be accepting: word_len=4, input_len=2, offset=0, errors=0
         // current_word_pos = 2 + 0 = 2, remaining = 4 - 2 = 2 ≤ (2 - 0) = 2 ✓
@@ -405,7 +411,10 @@ mod tests {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
         // M + 0#0 (past word end with 0 errors)
-        state.add_position(UniversalPosition::new_m(0, 0, 2).expect("test fixture: UniversalPosition::new_m with valid args"));
+        state.add_position(
+            UniversalPosition::new_m(0, 0, 2)
+                .expect("test fixture: UniversalPosition::new_m with valid args"),
+        );
 
         // M-type with offset ≤ 0 and errors ≤ n is accepting
         assert!(automaton.is_accepting(&state, 4, 5));
@@ -415,8 +424,14 @@ mod tests {
     fn test_is_accepting_mixed_state() {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
-        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
-        state.add_position(UniversalPosition::new_m(-1, 1, 2).expect("test fixture: UniversalPosition::new_m with valid args"));
+        state.add_position(
+            UniversalPosition::new_i(0, 0, 2)
+                .expect("test fixture: UniversalPosition::new_i with valid args"),
+        );
+        state.add_position(
+            UniversalPosition::new_m(-1, 1, 2)
+                .expect("test fixture: UniversalPosition::new_m with valid args"),
+        );
 
         // State with at least one accepting position (M-type) is accepting
         assert!(automaton.is_accepting(&state, 4, 5));
@@ -427,7 +442,10 @@ mod tests {
         let automaton = UniversalAutomaton::<Standard>::new(2);
         let mut state = UniversalState::new(2);
         // I + 0#0 after processing 0 chars of 4-char word
-        state.add_position(UniversalPosition::new_i(0, 0, 2).expect("test fixture: UniversalPosition::new_i with valid args"));
+        state.add_position(
+            UniversalPosition::new_i(0, 0, 2)
+                .expect("test fixture: UniversalPosition::new_i with valid args"),
+        );
 
         // Should NOT be accepting: remaining = 4 - 0 = 4 > (2 - 0) = 2
         assert!(!automaton.is_accepting(&state, 4, 0));
@@ -740,9 +758,9 @@ mod tests {
         assert!(automaton.accepts("ab", "a"));
 
         // Merge at different positions
-        assert!(automaton.accepts("abc", "ac"));  // merge 'ab' → 'a'
-        assert!(automaton.accepts("xab", "xa"));  // merge 'ab' → 'a' at end
-        assert!(automaton.accepts("xaby", "xay"));  // merge 'ab' → 'a' in middle
+        assert!(automaton.accepts("abc", "ac")); // merge 'ab' → 'a'
+        assert!(automaton.accepts("xab", "xa")); // merge 'ab' → 'a' at end
+        assert!(automaton.accepts("xaby", "xay")); // merge 'ab' → 'a' in middle
     }
 
     #[test]
@@ -755,13 +773,13 @@ mod tests {
         assert!(automaton.accepts("a", "ab"));
 
         // Split at different positions
-        assert!(automaton.accepts("ac", "abc"));  // split 'a' → 'ab'
-        assert!(automaton.accepts("xa", "xab"));  // split 'a' → 'ab' at end
-        assert!(automaton.accepts("xay", "xaby"));  // split 'a' → 'ab' in middle
+        assert!(automaton.accepts("ac", "abc")); // split 'a' → 'ab'
+        assert!(automaton.accepts("xa", "xab")); // split 'a' → 'ab' at end
+        assert!(automaton.accepts("xay", "xaby")); // split 'a' → 'ab' in middle
 
         // Additional split tests
-        assert!(automaton.accepts("b", "bc"));    // split 'b' → 'bc'
-        assert!(automaton.accepts("t", "te"));    // split 't' → 'te'
+        assert!(automaton.accepts("b", "bc")); // split 'b' → 'bc'
+        assert!(automaton.accepts("t", "te")); // split 't' → 'te'
     }
 
     #[test]
@@ -770,12 +788,12 @@ mod tests {
         let automaton = UniversalAutomaton::<MergeAndSplit>::new(1);
 
         // Merge in longer words
-        assert!(automaton.accepts("algorithm", "algorihm"));  // merge 'it' → 'i'
-        assert!(automaton.accepts("banana", "banna"));  // merge 'an' → 'n'
+        assert!(automaton.accepts("algorithm", "algorihm")); // merge 'it' → 'i'
+        assert!(automaton.accepts("banana", "banna")); // merge 'an' → 'n'
 
         // Split in longer words
-        assert!(automaton.accepts("algorithim", "algorithm"));  // split 'i' → 'it'
-        assert!(automaton.accepts("banna", "banana"));  // split 'n' → 'an'
+        assert!(automaton.accepts("algorithim", "algorithm")); // split 'i' → 'it'
+        assert!(automaton.accepts("banna", "banana")); // split 'n' → 'an'
     }
 
     #[test]
@@ -805,9 +823,9 @@ mod tests {
 
         // Single character - merge/split mode still supports standard operations
         assert!(automaton.accepts("a", "a"));
-        assert!(automaton.accepts("a", "b"));  // substitution
-        assert!(automaton.accepts("a", ""));   // deletion
-        assert!(automaton.accepts("", "a"));   // insertion
+        assert!(automaton.accepts("a", "b")); // substitution
+        assert!(automaton.accepts("a", "")); // deletion
+        assert!(automaton.accepts("", "a")); // insertion
 
         // Single char to two chars (split)
         assert!(automaton.accepts("a", "ab"));
@@ -822,8 +840,8 @@ mod tests {
         let automaton = UniversalAutomaton::<MergeAndSplit>::new(1);
 
         // Merge at the very start of the word
-        assert!(automaton.accepts("abcd", "acd"));  // merge 'ab' → 'a'
-        assert!(automaton.accepts("test", "est"));  // merge 'te' → 'e'
+        assert!(automaton.accepts("abcd", "acd")); // merge 'ab' → 'a'
+        assert!(automaton.accepts("test", "est")); // merge 'te' → 'e'
     }
 
     #[test]
@@ -832,8 +850,8 @@ mod tests {
         let automaton = UniversalAutomaton::<MergeAndSplit>::new(1);
 
         // Merge at the very end of the word
-        assert!(automaton.accepts("test", "tes"));  // merge 'st' → 's'
-        assert!(automaton.accepts("abcd", "abc"));  // merge 'cd' → 'c'
+        assert!(automaton.accepts("test", "tes")); // merge 'st' → 's'
+        assert!(automaton.accepts("abcd", "abc")); // merge 'cd' → 'c'
     }
 
     #[test]
@@ -842,8 +860,8 @@ mod tests {
         let automaton = UniversalAutomaton::<MergeAndSplit>::new(1);
 
         // Split at the very start of the word
-        assert!(automaton.accepts("acd", "abcd"));  // split 'a' → 'ab'
-        assert!(automaton.accepts("est", "test"));  // split 'e' → 'te'
+        assert!(automaton.accepts("acd", "abcd")); // split 'a' → 'ab'
+        assert!(automaton.accepts("est", "test")); // split 'e' → 'te'
     }
 
     #[test]
@@ -852,8 +870,8 @@ mod tests {
         let automaton = UniversalAutomaton::<MergeAndSplit>::new(1);
 
         // Split at the very end of the word
-        assert!(automaton.accepts("tes", "test"));  // split 's' → 'st'
-        assert!(automaton.accepts("abc", "abcd"));  // split 'c' → 'cd'
+        assert!(automaton.accepts("tes", "test")); // split 's' → 'st'
+        assert!(automaton.accepts("abc", "abcd")); // split 'c' → 'cd'
     }
 
     #[test]
@@ -862,14 +880,14 @@ mod tests {
         let automaton = UniversalAutomaton::<MergeAndSplit>::new(2);
 
         // Multiple merge operations
-        assert!(automaton.accepts("abcd", "ac"));   // merge 'ab' → 'a', merge 'cd' → 'c'
+        assert!(automaton.accepts("abcd", "ac")); // merge 'ab' → 'a', merge 'cd' → 'c'
 
         // Multiple split operations
-        assert!(automaton.accepts("ac", "abcd"));   // split 'a' → 'ab', split 'c' → 'cd'
+        assert!(automaton.accepts("ac", "abcd")); // split 'a' → 'ab', split 'c' → 'cd'
 
         // Mix of operations
-        assert!(automaton.accepts("abc", "abbc"));  // split 'b' → 'bb'
-        assert!(automaton.accepts("abbc", "abc"));  // merge 'bb' → 'b'
+        assert!(automaton.accepts("abc", "abbc")); // split 'b' → 'bb'
+        assert!(automaton.accepts("abbc", "abc")); // merge 'bb' → 'b'
     }
 
     #[test]
@@ -895,8 +913,8 @@ mod tests {
         // while standard needs 2 operations.
 
         // With distance 1, merge/split can do:
-        assert!(merge_split_automaton.accepts("ab", "a"));   // merge in 1 op
-        assert!(merge_split_automaton.accepts("a", "ab"));   // split in 1 op
+        assert!(merge_split_automaton.accepts("ab", "a")); // merge in 1 op
+        assert!(merge_split_automaton.accepts("a", "ab")); // split in 1 op
         assert!(merge_split_automaton.accepts("abc", "ac")); // merge 'ab' → 'a'
         assert!(merge_split_automaton.accepts("ac", "abc")); // split 'a' → 'ab'
 
@@ -911,12 +929,12 @@ mod tests {
         let automaton = UniversalAutomaton::<MergeAndSplit>::new(1);
 
         // Merge with repeated characters
-        assert!(automaton.accepts("aab", "ab"));   // merge 'aa' → 'a'
+        assert!(automaton.accepts("aab", "ab")); // merge 'aa' → 'a'
         assert!(automaton.accepts("aabb", "abb")); // merge 'aa' → 'a'
         assert!(automaton.accepts("abbb", "abb")); // merge 'bb' → 'b'
 
         // Split with repeated characters
-        assert!(automaton.accepts("ab", "aab"));   // split 'a' → 'aa'
+        assert!(automaton.accepts("ab", "aab")); // split 'a' → 'aa'
         assert!(automaton.accepts("abb", "aabb")); // split 'a' → 'aa'
         assert!(automaton.accepts("abb", "abbb")); // split 'b' → 'bb'
     }

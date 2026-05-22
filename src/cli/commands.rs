@@ -7,13 +7,13 @@ use std::path::{Path, PathBuf};
 
 use crate::commands::core::QueryParams;
 use crate::commands::handlers::query::execute_query;
+use crate::repl::state::{DictContainer, DictionaryBackend};
+use crate::transducer::Algorithm;
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::suffix_automaton::SuffixAutomaton;
 use libdictenstein::{Dictionary, DictionaryNode};
-use crate::repl::state::{DictContainer, DictionaryBackend};
-use crate::transducer::Algorithm;
 
 #[cfg(feature = "serialization")]
 use crate::serialization::{BincodeSerializer, DictionarySerializer, JsonSerializer};
@@ -36,17 +36,20 @@ pub fn execute(cli: &Cli) -> Result<()> {
         // REPL is handled in main.rs
         unreachable!("REPL operation should be handled in main");
     } else if cli.compile {
-        let input = cli.input.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--input is required for --compile operation")
-        })?;
+        let input = cli
+            .input
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--input is required for --compile operation"))?;
         cmd_compile(input, cli.output.clone(), cli.unicode, cli.verify)
     } else if cli.phonetic {
-        let text = cli.text.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--text is required for --phonetic operation")
-        })?;
-        let rules = cli.rules.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--rules is required for --phonetic operation")
-        })?;
+        let text = cli
+            .text
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--text is required for --phonetic operation"))?;
+        let rules = cli
+            .rules
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--rules is required for --phonetic operation"))?;
         cmd_phonetic(text, rules, cli.compiled)
     } else if cli.query {
         let term = cli.text.as_ref().ok_or_else(|| {
@@ -66,12 +69,14 @@ pub fn execute(cli: &Cli) -> Result<()> {
     } else if cli.info {
         cmd_info(cli.dict.clone())
     } else if cli.convert {
-        let input = cli.input.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--input is required for --convert operation")
-        })?;
-        let output = cli.output.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--output is required for --convert operation")
-        })?;
+        let input = cli
+            .input
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--input is required for --convert operation"))?;
+        let output = cli
+            .output
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--output is required for --convert operation"))?;
         cmd_convert(
             input,
             output,
@@ -106,22 +111,26 @@ pub fn execute(cli: &Cli) -> Result<()> {
     } else if cli.config_mgmt {
         cmd_config(cli.switch.clone(), cli.show)
     } else if cli.compile_regex {
-        let input = cli.input.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--input is required for --compile-regex operation")
-        })?;
+        let input = cli
+            .input
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--input is required for --compile-regex operation"))?;
         cmd_compile_regex(input, cli.output.clone(), cli.verify)
     } else if cli.match_regex {
-        let text = cli.text.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--text is required for --match-regex operation")
-        })?;
-        let rules = cli.rules.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--rules is required for --match-regex operation")
-        })?;
+        let text = cli
+            .text
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--text is required for --match-regex operation"))?;
+        let rules = cli
+            .rules
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--rules is required for --match-regex operation"))?;
         cmd_match_regex(text, rules, cli.multiline, cli.dotall, cli.compiled)
     } else if cli.grep {
-        let pattern = cli.pattern.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("--pattern is required for --grep operation")
-        })?;
+        let pattern = cli
+            .pattern
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--pattern is required for --grep operation"))?;
         cmd_grep(GrepOptions {
             pattern,
             files: &cli.files,
@@ -1121,12 +1130,7 @@ fn print_config(config: &PersistentConfig) {
 
 /// Compile phonetic rules from .llev to binary format
 #[cfg(all(feature = "phonetic-rules", feature = "serialization"))]
-fn cmd_compile(
-    input: &Path,
-    output: Option<PathBuf>,
-    unicode: bool,
-    verify: bool,
-) -> Result<()> {
+fn cmd_compile(input: &Path, output: Option<PathBuf>, unicode: bool, verify: bool) -> Result<()> {
     use crate::phonetic::llev::{load_file_with_includes, RuleSet, RuleSetChar};
     use crate::phonetic::{save, save_char};
 
@@ -1175,10 +1179,7 @@ fn cmd_compile(
             .map_err(|e| anyhow::anyhow!("Failed to convert rules: {}", e))?;
 
         println!("    Mode:    {}", "Unicode (char-level)".green());
-        println!(
-            "    Rules:   {}",
-            ruleset.rules.len().to_string().green()
-        );
+        println!("    Rules:   {}", ruleset.rules.len().to_string().green());
 
         save_char(&ruleset, &output_path)
             .map_err(|e| anyhow::anyhow!("Failed to save compiled rules: {}", e))?;
@@ -1205,10 +1206,7 @@ fn cmd_compile(
             .map_err(|e| anyhow::anyhow!("Failed to convert rules: {}", e))?;
 
         println!("    Mode:    {}", "ASCII (byte-level)".green());
-        println!(
-            "    Rules:   {}",
-            ruleset.rules.len().to_string().green()
-        );
+        println!("    Rules:   {}", ruleset.rules.len().to_string().green());
 
         save(&ruleset, &output_path)
             .map_err(|e| anyhow::anyhow!("Failed to save compiled rules: {}", e))?;
@@ -1268,11 +1266,7 @@ fn cmd_phonetic(text: &str, rules_path: &Path, compiled: bool) -> Result<()> {
     println!();
 
     // Determine if compiled based on extension or flag
-    let is_compiled = compiled
-        || rules_path
-            .extension()
-            .map(|e| e == "bin")
-            .unwrap_or(false);
+    let is_compiled = compiled || rules_path.extension().map(|e| e == "bin").unwrap_or(false);
 
     let ruleset: RuleSetChar = if is_compiled {
         println!(
@@ -1280,7 +1274,8 @@ fn cmd_phonetic(text: &str, rules_path: &Path, compiled: bool) -> Result<()> {
             "→".cyan(),
             rules_path.display().to_string().yellow()
         );
-        load_char(rules_path).map_err(|e| anyhow::anyhow!("Failed to load compiled rules: {}", e))?
+        load_char(rules_path)
+            .map_err(|e| anyhow::anyhow!("Failed to load compiled rules: {}", e))?
     } else {
         println!(
             "  {} Parsing rules from {}...",
@@ -1425,11 +1420,17 @@ fn cmd_compile_regex(input: &Path, output: Option<PathBuf>, verify: bool) -> Res
     println!();
     println!("  {} Compiling to NFA...", "→".cyan());
 
-    let compiled = compile(&llre_file)
-        .map_err(|e| anyhow::anyhow!("Failed to compile regex: {}", e))?;
+    let compiled =
+        compile(&llre_file).map_err(|e| anyhow::anyhow!("Failed to compile regex: {}", e))?;
 
-    println!("    States:      {}", compiled.state_count().to_string().green());
-    println!("    Transitions: {}", compiled.transition_count().to_string().green());
+    println!(
+        "    States:      {}",
+        compiled.state_count().to_string().green()
+    );
+    println!(
+        "    Transitions: {}",
+        compiled.transition_count().to_string().green()
+    );
 
     // Determine output path
     let output_path = output.unwrap_or_else(|| {
@@ -1504,11 +1505,7 @@ fn cmd_match_regex(
     println!();
 
     // Determine if compiled based on extension or flag
-    let is_compiled = compiled
-        || rules_path
-            .extension()
-            .map(|e| e == "bin")
-            .unwrap_or(false);
+    let is_compiled = compiled || rules_path.extension().map(|e| e == "bin").unwrap_or(false);
 
     let mut nfa: CompiledNFA = if is_compiled {
         println!(
@@ -1516,8 +1513,7 @@ fn cmd_match_regex(
             "→".cyan(),
             rules_path.display().to_string().yellow()
         );
-        load(rules_path)
-            .map_err(|e| anyhow::anyhow!("Failed to load compiled regex: {}", e))?
+        load(rules_path).map_err(|e| anyhow::anyhow!("Failed to load compiled regex: {}", e))?
     } else {
         println!(
             "  {} Parsing regex from {}...",
@@ -1526,8 +1522,7 @@ fn cmd_match_regex(
         );
         let llre_file = load_file(rules_path)
             .map_err(|e| anyhow::anyhow!("Failed to parse {}: {}", rules_path.display(), e))?;
-        compile(&llre_file)
-            .map_err(|e| anyhow::anyhow!("Failed to compile regex: {}", e))?
+        compile(&llre_file).map_err(|e| anyhow::anyhow!("Failed to compile regex: {}", e))?
     };
 
     // Override flags from command line if specified
@@ -1538,10 +1533,7 @@ fn cmd_match_regex(
         nfa.dotall = true;
     }
 
-    println!(
-        "    States:      {}",
-        nfa.state_count().to_string().green()
-    );
+    println!("    States:      {}", nfa.state_count().to_string().green());
     println!(
         "    Transitions: {}",
         nfa.transition_count().to_string().green()
@@ -1674,7 +1666,12 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
     if opts.files.is_empty() {
         // Read from stdin
         let stdin = std::io::stdin();
-        let content = stdin.lock().lines().filter_map(|l| l.ok()).collect::<Vec<_>>().join("\n");
+        let content = stdin
+            .lock()
+            .lines()
+            .filter_map(|l| l.ok())
+            .collect::<Vec<_>>()
+            .join("\n");
         let matches = process_content(&grep, &content, "(stdin)", show_filename, &opts, use_color)?;
         _total_matches += matches;
         if opts.count {
@@ -1823,7 +1820,11 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
                                         }
                                     }
                                     Err(e) => {
-                                        eprintln!("{}: {}", file_path.display().to_string().red(), e);
+                                        eprintln!(
+                                            "{}: {}",
+                                            file_path.display().to_string().red(),
+                                            e
+                                        );
                                     }
                                 }
                             }
@@ -1848,7 +1849,14 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
                     let filename = file_path.display().to_string();
                     match std::fs::read_to_string(file_path) {
                         Ok(content) => {
-                            let matches = process_content(&grep, &content, &filename, show_filename, &opts, use_color)?;
+                            let matches = process_content(
+                                &grep,
+                                &content,
+                                &filename,
+                                show_filename,
+                                &opts,
+                                use_color,
+                            )?;
                             _total_matches += matches;
                             if opts.count {
                                 file_match_counts.push((filename, matches));
@@ -1906,10 +1914,26 @@ fn process_content(
         for m in &line_match.matches {
             if opts.only_matching {
                 // Only print the matched text
-                print_only_matching(&mut handle, filename, show_filename, &line_match, m, opts, use_color)?;
+                print_only_matching(
+                    &mut handle,
+                    filename,
+                    show_filename,
+                    &line_match,
+                    m,
+                    opts,
+                    use_color,
+                )?;
             } else {
                 // Print full line with highlighted match
-                print_full_line(&mut handle, filename, show_filename, &line_match, m, opts, use_color)?;
+                print_full_line(
+                    &mut handle,
+                    filename,
+                    show_filename,
+                    &line_match,
+                    m,
+                    opts,
+                    use_color,
+                )?;
             }
         }
     }

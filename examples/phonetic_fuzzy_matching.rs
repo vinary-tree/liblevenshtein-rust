@@ -58,8 +58,8 @@
 //! - Zero-cost character substitutions during matching
 //! - Best for: Simple phonetic equivalences, production use
 
-use liblevenshtein::prelude::*;
 use liblevenshtein::phonetic::*;
+use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::Algorithm;
 
 fn main() {
@@ -70,8 +70,18 @@ fn main() {
 
     // Example dictionary with common English words
     let dictionary = vec![
-        "phone", "enough", "rough", "cough", "philosophy", "photograph",
-        "circle", "cat", "knight", "ghost", "science", "character",
+        "phone",
+        "enough",
+        "rough",
+        "cough",
+        "philosophy",
+        "photograph",
+        "circle",
+        "cat",
+        "knight",
+        "ghost",
+        "science",
+        "character",
     ];
 
     example_1_basic_phonetic_normalization(&dictionary);
@@ -107,8 +117,8 @@ fn example_1_basic_phonetic_normalization(dictionary: &[&str]) {
         .map(|term| {
             let phones = string_to_phones(term);
             let fuel = phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-            let normalized = apply_rules_seq(&ortho_rules, &phones, fuel)
-                .expect("Rule application failed");
+            let normalized =
+                apply_rules_seq(&ortho_rules, &phones, fuel).expect("Rule application failed");
             let normalized_str = phones_to_string(&normalized);
             println!("  '{}' → '{}'", term, normalized_str);
             normalized_str
@@ -125,10 +135,10 @@ fn example_1_basic_phonetic_normalization(dictionary: &[&str]) {
     println!("--------");
 
     let test_queries = vec![
-        ("fone", "phone"),      // ph→f
-        ("enuf", "enough"),     // gh→silent, final e→silent
-        ("ruf", "rough"),       // gh→silent, final e→silent
-        ("cof", "cough"),       // gh→silent, final e→silent
+        ("fone", "phone"),          // ph→f
+        ("enuf", "enough"),         // gh→silent, final e→silent
+        ("ruf", "rough"),           // gh→silent, final e→silent
+        ("cof", "cough"),           // gh→silent, final e→silent
         ("filosofy", "philosophy"), // ph→f
     ];
 
@@ -136,16 +146,17 @@ fn example_1_basic_phonetic_normalization(dictionary: &[&str]) {
         // Normalize the query
         let query_phones = string_to_phones(query);
         let fuel = query_phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-        let normalized_query = apply_rules_seq(&ortho_rules, &query_phones, fuel)
-            .expect("Rule application failed");
+        let normalized_query =
+            apply_rules_seq(&ortho_rules, &query_phones, fuel).expect("Rule application failed");
         let normalized_query_str = phones_to_string(&normalized_query);
 
-        println!("  Query: '{}' → Normalized: '{}'", query, normalized_query_str);
+        println!(
+            "  Query: '{}' → Normalized: '{}'",
+            query, normalized_query_str
+        );
 
         // Find matches
-        let matches: Vec<String> = transducer
-            .query(&normalized_query_str, 1)
-            .collect();
+        let matches: Vec<String> = transducer.query(&normalized_query_str, 1).collect();
 
         if !matches.is_empty() {
             // Map back to original dictionary terms
@@ -189,9 +200,7 @@ fn example_2_standard_levenshtein_edits(dictionary: &[&str]) {
         .map(|term| {
             let phones = string_to_phones(term);
             let fuel = phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-            phones_to_string(
-                &apply_rules_seq(&ortho_rules, &phones, fuel).unwrap()
-            )
+            phones_to_string(&apply_rules_seq(&ortho_rules, &phones, fuel).unwrap())
         })
         .collect();
 
@@ -208,9 +217,8 @@ fn example_2_standard_levenshtein_edits(dictionary: &[&str]) {
     for (query, expected, description) in test_queries {
         let query_phones = string_to_phones(query);
         let fuel = query_phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-        let normalized_query = phones_to_string(
-            &apply_rules_seq(&ortho_rules, &query_phones, fuel).unwrap()
-        );
+        let normalized_query =
+            phones_to_string(&apply_rules_seq(&ortho_rules, &query_phones, fuel).unwrap());
 
         println!("  Query: '{}' ({})", query, description);
         println!("    Normalized: '{}'", normalized_query);
@@ -260,9 +268,7 @@ fn example_3_transposition_errors(dictionary: &[&str]) {
         .map(|term| {
             let phones = string_to_phones(term);
             let fuel = phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-            phones_to_string(
-                &apply_rules_seq(&ortho_rules, &phones, fuel).unwrap()
-            )
+            phones_to_string(&apply_rules_seq(&ortho_rules, &phones, fuel).unwrap())
         })
         .collect();
 
@@ -280,16 +286,13 @@ fn example_3_transposition_errors(dictionary: &[&str]) {
     for (query, expected, description) in test_queries {
         let query_phones = string_to_phones(query);
         let fuel = query_phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-        let normalized_query = phones_to_string(
-            &apply_rules_seq(&ortho_rules, &query_phones, fuel).unwrap()
-        );
+        let normalized_query =
+            phones_to_string(&apply_rules_seq(&ortho_rules, &query_phones, fuel).unwrap());
 
         println!("  Query: '{}' ({})", query, description);
         println!("    Normalized: '{}'", normalized_query);
 
-        let matches: Vec<String> = transducer
-            .query(&normalized_query, 2)
-            .collect();
+        let matches: Vec<String> = transducer.query(&normalized_query, 2).collect();
 
         let original_matches: Vec<&str> = matches
             .iter()
@@ -331,9 +334,7 @@ fn example_4_combined_errors(dictionary: &[&str]) {
         .map(|term| {
             let phones = string_to_phones(term);
             let fuel = phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-            phones_to_string(
-                &apply_rules_seq(&ortho_rules, &phones, fuel).unwrap()
-            )
+            phones_to_string(&apply_rules_seq(&ortho_rules, &phones, fuel).unwrap())
         })
         .collect();
 
@@ -342,17 +343,28 @@ fn example_4_combined_errors(dictionary: &[&str]) {
 
     let test_queries = vec![
         ("fhone", "phone", "phonetic (ph→f) + substitution (h→o)"),
-        ("enoguh", "enough", "phonetic (gh→silent) + transposition (u↔h)"),
-        ("philsophy", "philosophy", "phonetic (ph→f) + deletion (missing 'o')"),
-        ("fotograf", "photograph", "phonetic (ph→f) + multiple errors"),
+        (
+            "enoguh",
+            "enough",
+            "phonetic (gh→silent) + transposition (u↔h)",
+        ),
+        (
+            "philsophy",
+            "philosophy",
+            "phonetic (ph→f) + deletion (missing 'o')",
+        ),
+        (
+            "fotograf",
+            "photograph",
+            "phonetic (ph→f) + multiple errors",
+        ),
     ];
 
     for (query, expected, description) in test_queries {
         let query_phones = string_to_phones(query);
         let fuel = query_phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-        let normalized_query = phones_to_string(
-            &apply_rules_seq(&ortho_rules, &query_phones, fuel).unwrap()
-        );
+        let normalized_query =
+            phones_to_string(&apply_rules_seq(&ortho_rules, &query_phones, fuel).unwrap());
 
         println!("  Query: '{}' ({})", query, description);
         println!("    Normalized: '{}'", normalized_query);
@@ -401,9 +413,7 @@ fn example_5_comparison_matrix(dictionary: &[&str]) {
     println!();
 
     // Transducer 1: No phonetic normalization
-    let dict_trie_raw = DoubleArrayTrie::from_terms(
-        dictionary.iter().map(|s| s.to_string())
-    );
+    let dict_trie_raw = DoubleArrayTrie::from_terms(dictionary.iter().map(|s| s.to_string()));
     let transducer_raw = Transducer::new(dict_trie_raw, Algorithm::Transposition);
 
     // Transducer 2: With phonetic normalization
@@ -412,9 +422,7 @@ fn example_5_comparison_matrix(dictionary: &[&str]) {
         .map(|term| {
             let phones = string_to_phones(term);
             let fuel = phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-            phones_to_string(
-                &apply_rules_seq(&ortho_rules, &phones, fuel).unwrap()
-            )
+            phones_to_string(&apply_rules_seq(&ortho_rules, &phones, fuel).unwrap())
         })
         .collect();
     let dict_trie_norm = DoubleArrayTrie::from_terms(normalized_dict.clone());
@@ -427,25 +435,23 @@ fn example_5_comparison_matrix(dictionary: &[&str]) {
         ("foen", "phone", "Phonetic + transposition"),
     ];
 
-    println!("{:<15} {:<20} {:<25} {:<25}", "Query", "Expected", "Without Phonetic", "With Phonetic");
+    println!(
+        "{:<15} {:<20} {:<25} {:<25}",
+        "Query", "Expected", "Without Phonetic", "With Phonetic"
+    );
     println!("{}", "─".repeat(85));
 
     for (query, expected, description) in test_cases {
         // Test without phonetic normalization
-        let matches_raw: Vec<String> = transducer_raw
-            .query(query, 2)
-            .collect();
+        let matches_raw: Vec<String> = transducer_raw.query(query, 2).collect();
         let found_raw = matches_raw.contains(&expected.to_string());
 
         // Test with phonetic normalization
         let query_phones = string_to_phones(query);
         let fuel = query_phones.len() * ortho_rules.len() * MAX_EXPANSION_FACTOR;
-        let normalized_query = phones_to_string(
-            &apply_rules_seq(&ortho_rules, &query_phones, fuel).unwrap()
-        );
-        let matches_norm: Vec<String> = transducer_norm
-            .query(&normalized_query, 2)
-            .collect();
+        let normalized_query =
+            phones_to_string(&apply_rules_seq(&ortho_rules, &query_phones, fuel).unwrap());
+        let matches_norm: Vec<String> = transducer_norm.query(&normalized_query, 2).collect();
         let original_matches: Vec<&str> = matches_norm
             .iter()
             .filter_map(|m| {
@@ -461,8 +467,16 @@ fn example_5_comparison_matrix(dictionary: &[&str]) {
             "{:<15} {:<20} {:<25} {:<25}",
             query,
             description,
-            if found_raw { "✓ Found" } else { "✗ Not found" },
-            if found_norm { "✓ Found" } else { "✗ Not found" }
+            if found_raw {
+                "✓ Found"
+            } else {
+                "✗ Not found"
+            },
+            if found_norm {
+                "✓ Found"
+            } else {
+                "✗ Not found"
+            }
         );
     }
 
@@ -548,7 +562,10 @@ fn example_6_performance_notes() {
 fn string_to_phones(s: &str) -> Vec<PhoneByte> {
     s.bytes()
         .map(|b| {
-            if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u' | b'A' | b'E' | b'I' | b'O' | b'U') {
+            if matches!(
+                b,
+                b'a' | b'e' | b'i' | b'o' | b'u' | b'A' | b'E' | b'I' | b'O' | b'U'
+            ) {
                 PhoneByte::Vowel(b.to_ascii_lowercase())
             } else if b.is_ascii_alphabetic() {
                 PhoneByte::Consonant(b.to_ascii_lowercase())

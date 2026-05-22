@@ -152,11 +152,7 @@ mod tests {
         let rules = base();
         // য় → YY
         let result = rules.apply("য়");
-        assert!(
-            result.contains("YY"),
-            "য় should become YY, got: {}",
-            result
-        );
+        assert!(result.contains("YY"), "য় should become YY, got: {}", result);
     }
 
     #[test]
@@ -164,11 +160,7 @@ mod tests {
         let rules = base();
         // ৎ → t
         let result = rules.apply("ৎ");
-        assert!(
-            result.contains('t'),
-            "ৎ should become t, got: {}",
-            result
-        );
+        assert!(result.contains('t'), "ৎ should become t, got: {}", result);
     }
 
     // ============================================================
@@ -191,18 +183,10 @@ mod tests {
         let rules = base();
         // ঐ → OI (not AI like Hindi)
         let result = rules.apply("ঐ");
-        assert!(
-            result.contains("oɪ"),
-            "ঐ should become OI, got: {}",
-            result
-        );
+        assert!(result.contains("oɪ"), "ঐ should become OI, got: {}", result);
         // ঔ → OU (not AU like Hindi)
         let result = rules.apply("ঔ");
-        assert!(
-            result.contains("oʊ"),
-            "ঔ should become OU, got: {}",
-            result
-        );
+        assert!(result.contains("oʊ"), "ঔ should become OU, got: {}", result);
     }
 
     // ============================================================
@@ -234,28 +218,16 @@ mod tests {
     fn test_retroflex_consonants() {
         let rules = base();
         let result = rules.apply("ট");
-        assert!(
-            result.contains("ʈ"),
-            "ট should become TT, got: {}",
-            result
-        );
+        assert!(result.contains("ʈ"), "ট should become TT, got: {}", result);
         let result = rules.apply("ড");
-        assert!(
-            result.contains("ɖ"),
-            "ড should become DD, got: {}",
-            result
-        );
+        assert!(result.contains("ɖ"), "ড should become DD, got: {}", result);
     }
 
     #[test]
     fn test_sibilants() {
         let rules = base();
         let result = rules.apply("শ");
-        assert!(
-            result.contains("ʃ"),
-            "শ should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "শ should become SH, got: {}", result);
         let result = rules.apply("স");
         assert!(result.contains('s'), "স should become s, got: {}", result);
     }
@@ -272,11 +244,7 @@ mod tests {
         let result = rules.apply("ি");
         assert!(result.contains('i'), "ি should become i, got: {}", result);
         let result = rules.apply("ৈ");
-        assert!(
-            result.contains("oɪ"),
-            "ৈ should become OI, got: {}",
-            result
-        );
+        assert!(result.contains("oɪ"), "ৈ should become OI, got: {}", result);
     }
 
     // ============================================================
@@ -315,11 +283,7 @@ mod tests {
         // ঢাকা (Dhaka)
         let result = rules.apply_full("ঢাকা");
         // ঢ→DDh, া→a, ক→k, া→a
-        assert!(
-            result.contains('k'),
-            "ঢাকা should contain k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "ঢাকা should contain k, got: {}", result);
     }
 
     // ============================================================
@@ -340,5 +304,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

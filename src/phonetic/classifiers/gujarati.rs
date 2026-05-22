@@ -41,11 +41,11 @@ static GUJARATI_VOWELS: &[char] = &[
     'ા', // aa matra
     'િ', // i matra
     'ી', // ii matra
-    'ુ', // u matra
-    'ૂ', // uu matra
-    'ૃ', // ri matra
-    'ે', // e matra
-    'ૈ', // ai matra
+    'ુ',  // u matra
+    'ૂ',  // uu matra
+    'ૃ',  // ri matra
+    'ે',  // e matra
+    'ૈ',  // ai matra
     'ો', // o matra
     'ૌ', // au matra
 ];

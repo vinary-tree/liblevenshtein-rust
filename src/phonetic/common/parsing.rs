@@ -394,7 +394,9 @@ mod tests {
         type Error = String;
 
         fn peek(&mut self) -> Result<&Self::Token, Self::Error> {
-            self.tokens.get(self.index).ok_or_else(|| "unexpected end of input".to_string())
+            self.tokens
+                .get(self.index)
+                .ok_or_else(|| "unexpected end of input".to_string())
         }
 
         fn advance(&mut self) -> Result<Self::Token, Self::Error> {
@@ -452,7 +454,10 @@ mod tests {
         let mut parser = MockSyllableParser::new(vec![MockToken::Monosyllable, MockToken::Eof]);
         let result = parse_syllable_expr(&mut parser);
         assert!(result.is_ok());
-        assert_eq!(result.expect("test fixture: parse must be Ok"), SyllableExpr::Cond(SyllableCondition::Monosyllable));
+        assert_eq!(
+            result.expect("test fixture: parse must be Ok"),
+            SyllableExpr::Cond(SyllableCondition::Monosyllable)
+        );
     }
 
     #[test]

@@ -1,8 +1,11 @@
-#![cfg_attr(not(all(target_arch = "x86_64", feature = "simd")), allow(unused_variables))]
+#![cfg_attr(
+    not(all(target_arch = "x86_64", feature = "simd")),
+    allow(unused_variables)
+)]
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 #[cfg(all(target_arch = "x86_64", feature = "simd"))]
 use criterion::BenchmarkId;
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 #[cfg(all(target_arch = "x86_64", feature = "simd"))]
 use liblevenshtein::transducer::simd::find_edge_label_simd;

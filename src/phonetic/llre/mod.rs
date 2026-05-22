@@ -138,11 +138,14 @@ mod tests {
     #[test]
     fn test_full_workflow() {
         // Parse
-        let file = parse_str(r#"
+        let file = parse_str(
+            r#"
             @name "Test Pattern"
             @version "1.0"
             ^hello$
-        "#).expect("Failed to parse");
+        "#,
+        )
+        .expect("Failed to parse");
 
         assert_eq!(file.metadata.name, Some("Test Pattern".to_string()));
         assert_eq!(file.metadata.version, Some("1.0".to_string()));
@@ -178,10 +181,13 @@ mod tests {
 
     #[test]
     fn test_multiline_flag() {
-        let file = parse_str(r#"
+        let file = parse_str(
+            r#"
             @flags multiline
             ^line$
-        "#).expect("Failed to parse");
+        "#,
+        )
+        .expect("Failed to parse");
 
         let compiled = compile(&file).expect("Failed to compile");
         assert!(compiled.multiline);
@@ -192,11 +198,14 @@ mod tests {
 
     #[test]
     fn test_imports_parsed() {
-        let file = parse_str(r#"
+        let file = parse_str(
+            r#"
             @import "symbols.llev"
             @import "english.llev" as en
             ^test$
-        "#).expect("Failed to parse");
+        "#,
+        )
+        .expect("Failed to parse");
 
         assert_eq!(file.imports.len(), 2);
         assert_eq!(file.imports[0].path, "symbols.llev");

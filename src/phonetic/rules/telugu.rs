@@ -180,17 +180,9 @@ mod tests {
     fn test_diphthongs() {
         let rules = base();
         let result = rules.apply("ఐ");
-        assert!(
-            result.contains("aɪ"),
-            "ఐ should become AI, got: {}",
-            result
-        );
+        assert!(result.contains("aɪ"), "ఐ should become AI, got: {}", result);
         let result = rules.apply("ఔ");
-        assert!(
-            result.contains("aʊ"),
-            "ఔ should become AU, got: {}",
-            result
-        );
+        assert!(result.contains("aʊ"), "ఔ should become AU, got: {}", result);
     }
 
     // ============================================================
@@ -203,11 +195,7 @@ mod tests {
         let result = rules.apply("క");
         assert!(result.contains('k'), "క should become k, got: {}", result);
         let result = rules.apply("ఖ");
-        assert!(
-            result.contains("kh"),
-            "ఖ should become kh, got: {}",
-            result
-        );
+        assert!(result.contains("kh"), "ఖ should become kh, got: {}", result);
         let result = rules.apply("గ");
         assert!(
             result.contains('ɡ') || result.contains('g'),
@@ -220,40 +208,20 @@ mod tests {
     fn test_retroflex_consonants() {
         let rules = base();
         let result = rules.apply("ట");
-        assert!(
-            result.contains("ʈ"),
-            "ట should become TT, got: {}",
-            result
-        );
+        assert!(result.contains("ʈ"), "ట should become TT, got: {}", result);
         let result = rules.apply("డ");
-        assert!(
-            result.contains("ɖ"),
-            "డ should become DD, got: {}",
-            result
-        );
+        assert!(result.contains("ɖ"), "డ should become DD, got: {}", result);
         let result = rules.apply("ణ");
-        assert!(
-            result.contains("ɳ"),
-            "ణ should become NN, got: {}",
-            result
-        );
+        assert!(result.contains("ɳ"), "ణ should become NN, got: {}", result);
     }
 
     #[test]
     fn test_sibilants() {
         let rules = base();
         let result = rules.apply("శ");
-        assert!(
-            result.contains("ʃ"),
-            "శ should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "శ should become SH, got: {}", result);
         let result = rules.apply("ష");
-        assert!(
-            result.contains("ʂ"),
-            "ష should become SS, got: {}",
-            result
-        );
+        assert!(result.contains("ʂ"), "ష should become SS, got: {}", result);
         let result = rules.apply("స");
         assert!(result.contains('s'), "స should become s, got: {}", result);
     }
@@ -270,11 +238,7 @@ mod tests {
         let result = rules.apply("ి");
         assert!(result.contains('i'), "ి should become i, got: {}", result);
         let result = rules.apply("ై");
-        assert!(
-            result.contains("aɪ"),
-            "ై should become AI, got: {}",
-            result
-        );
+        assert!(result.contains("aɪ"), "ై should become AI, got: {}", result);
     }
 
     // ============================================================
@@ -340,5 +304,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

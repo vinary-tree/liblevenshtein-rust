@@ -42,7 +42,8 @@ impl<'a, R: Read> ZstdDecompressor<'a, R> {
     ///
     /// Returns an error if the decoder cannot be initialized.
     pub fn with_buffer_size(reader: R, capacity: usize) -> io::Result<Self> {
-        let decoder = zstd::stream::Decoder::with_buffer(BufReader::with_capacity(capacity, reader))?;
+        let decoder =
+            zstd::stream::Decoder::with_buffer(BufReader::with_capacity(capacity, reader))?;
         Ok(Self { decoder })
     }
 }

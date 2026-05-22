@@ -32,16 +32,11 @@ impl GreekClassifier {
 /// Greek vowels (base forms, lowercase and uppercase).
 static GREEK_VOWELS: &[char] = &[
     // Lowercase vowels
-    'α', 'ε', 'η', 'ι', 'ο', 'υ', 'ω',
-    // Uppercase vowels
-    'Α', 'Ε', 'Η', 'Ι', 'Ο', 'Υ', 'Ω',
-    // Accented lowercase (tonos)
-    'ά', 'έ', 'ή', 'ί', 'ό', 'ύ', 'ώ',
-    // Accented uppercase (tonos)
-    'Ά', 'Έ', 'Ή', 'Ί', 'Ό', 'Ύ', 'Ώ',
-    // With diaeresis
-    'ϊ', 'ϋ', 'Ϊ', 'Ϋ',
-    // With both tonos and diaeresis
+    'α', 'ε', 'η', 'ι', 'ο', 'υ', 'ω', // Uppercase vowels
+    'Α', 'Ε', 'Η', 'Ι', 'Ο', 'Υ', 'Ω', // Accented lowercase (tonos)
+    'ά', 'έ', 'ή', 'ί', 'ό', 'ύ', 'ώ', // Accented uppercase (tonos)
+    'Ά', 'Έ', 'Ή', 'Ί', 'Ό', 'Ύ', 'Ώ', // With diaeresis
+    'ϊ', 'ϋ', 'Ϊ', 'Ϋ', // With both tonos and diaeresis
     'ΐ', 'ΰ',
 ];
 
@@ -75,13 +70,11 @@ impl VowelClassifier for GreekClassifier {
     fn is_consonant(&self, c: char) -> bool {
         match c {
             // Lowercase consonants
-            'β' | 'γ' | 'δ' | 'ζ' | 'θ' | 'κ' | 'λ' | 'μ' |
-            'ν' | 'ξ' | 'π' | 'ρ' | 'σ' | 'ς' | 'τ' | 'φ' |
-            'χ' | 'ψ' => true,
+            'β' | 'γ' | 'δ' | 'ζ' | 'θ' | 'κ' | 'λ' | 'μ' | 'ν' | 'ξ' | 'π' | 'ρ' | 'σ' | 'ς'
+            | 'τ' | 'φ' | 'χ' | 'ψ' => true,
             // Uppercase consonants
-            'Β' | 'Γ' | 'Δ' | 'Ζ' | 'Θ' | 'Κ' | 'Λ' | 'Μ' |
-            'Ν' | 'Ξ' | 'Π' | 'Ρ' | 'Σ' | 'Τ' | 'Φ' | 'Χ' |
-            'Ψ' => true,
+            'Β' | 'Γ' | 'Δ' | 'Ζ' | 'Θ' | 'Κ' | 'Λ' | 'Μ' | 'Ν' | 'Ξ' | 'Π' | 'Ρ' | 'Σ' | 'Τ'
+            | 'Φ' | 'Χ' | 'Ψ' => true,
             _ => false,
         }
     }

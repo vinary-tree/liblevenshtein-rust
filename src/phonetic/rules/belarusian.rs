@@ -91,7 +91,10 @@ mod tests {
     #[test]
     fn test_base_loads() {
         let rules = base();
-        assert!(!rules.is_empty(), "Belarusian base rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Belarusian base rules should not be empty"
+        );
         assert!(
             rules.len() >= 40,
             "expected >=40 base rules, got {}",
@@ -104,11 +107,7 @@ mod tests {
         let rules = base();
         // Ў → w (unique Belarusian letter!)
         let result = rules.apply("ў");
-        assert!(
-            result.contains('w'),
-            "ў should become w, got: {}",
-            result
-        );
+        assert!(result.contains('w'), "ў should become w, got: {}", result);
     }
 
     #[test]
@@ -140,11 +139,7 @@ mod tests {
         let rules = base();
         // Ж → zh
         let result = rules.apply("ж");
-        assert!(
-            result.contains("ʒ"),
-            "ж should become zh, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ж should become zh, got: {}", result);
     }
 
     #[test]
@@ -152,11 +147,7 @@ mod tests {
         let rules = base();
         // Ш → sh
         let result = rules.apply("ш");
-        assert!(
-            result.contains("ʃ"),
-            "ш should become sh, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ш should become sh, got: {}", result);
     }
 
     #[test]
@@ -164,11 +155,7 @@ mod tests {
         let rules = base();
         // Ц → ts
         let result = rules.apply("ц");
-        assert!(
-            result.contains("t͡s"),
-            "ц should become ts, got: {}",
-            result
-        );
+        assert!(result.contains("t͡s"), "ц should become ts, got: {}", result);
     }
 
     #[test]
@@ -176,11 +163,7 @@ mod tests {
         let rules = base();
         // Ч → ch
         let result = rules.apply("ч");
-        assert!(
-            result.contains("t͡ʃ"),
-            "ч should become ch, got: {}",
-            result
-        );
+        assert!(result.contains("t͡ʃ"), "ч should become ch, got: {}", result);
     }
 
     #[test]
@@ -188,11 +171,7 @@ mod tests {
         let rules = base();
         // Ё → yo (commonly used in Belarusian)
         let result = rules.apply("ё");
-        assert!(
-            result.contains("jo"),
-            "ё should become yo, got: {}",
-            result
-        );
+        assert!(result.contains("jo"), "ё should become yo, got: {}", result);
     }
 
     #[test]
@@ -200,11 +179,7 @@ mod tests {
         let rules = base();
         // Е → ye
         let result = rules.apply("е");
-        assert!(
-            result.contains("je"),
-            "е should become ye, got: {}",
-            result
-        );
+        assert!(result.contains("je"), "е should become ye, got: {}", result);
     }
 
     #[test]
@@ -212,11 +187,7 @@ mod tests {
         let rules = base();
         // І → i (Belarusian uses І instead of И)
         let result = rules.apply("і");
-        assert!(
-            result.contains('i'),
-            "і should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "і should become i, got: {}", result);
     }
 
     #[test]
@@ -251,7 +222,10 @@ mod tests {
         let result = rules.apply_full("мінск");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('m') && lower.contains('n') && lower.contains('s') && lower.contains('k'),
+            lower.contains('m')
+                && lower.contains('n')
+                && lower.contains('s')
+                && lower.contains('k'),
             "мінск should contain m, n, s, k, got: {}",
             result
         );
@@ -268,5 +242,4 @@ mod tests {
             result
         );
     }
-
 }

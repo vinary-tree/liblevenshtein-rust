@@ -52,9 +52,9 @@ impl MsmStateSource {
         target_series: Vec<(u32, Vec<f64>)>,
     ) -> Self {
         // Compute value range from all series
-        let all_values = query.iter().chain(
-            target_series.iter().flat_map(|(_, s)| s.iter())
-        );
+        let all_values = query
+            .iter()
+            .chain(target_series.iter().flat_map(|(_, s)| s.iter()));
         let min_val = all_values.clone().cloned().fold(f64::INFINITY, f64::min);
         let max_val = all_values.cloned().fold(f64::NEG_INFINITY, f64::max);
 
@@ -105,11 +105,13 @@ impl MsmStateSource {
 
         let target = match target {
             Some(t) => t,
-            None => return LazyState::Computed {
-                is_final: false,
-                final_weight: TropicalWeight::infinity(),
-                transitions: SmallVec::new(),
-            },
+            None => {
+                return LazyState::Computed {
+                    is_final: false,
+                    final_weight: TropicalWeight::infinity(),
+                    transitions: SmallVec::new(),
+                }
+            }
         };
 
         let query_len = self.query.len();
@@ -241,7 +243,8 @@ impl StateSource<u8, TropicalWeight> for MsmStateSource {
 
     fn num_states_hint(&self) -> Option<usize> {
         let query_len = self.query.len();
-        let max_target_len = self.target_series
+        let max_target_len = self
+            .target_series
             .iter()
             .map(|(_, s)| s.len())
             .max()
@@ -364,12 +367,8 @@ mod tests {
 
     #[test]
     fn test_state_source_start() {
-        let source = MsmStateSource::new(
-            vec![1.0],
-            MsmConfig::new(1.0),
-            10.0,
-            vec![(0, vec![1.0])],
-        );
+        let source =
+            MsmStateSource::new(vec![1.0], MsmConfig::new(1.0), 10.0, vec![(0, vec![1.0])]);
 
         assert_eq!(StateSource::<u8, TropicalWeight>::start(&source), 0);
     }
@@ -377,12 +376,12 @@ mod tests {
     #[test]
     fn test_state_source_hint() {
         let source = MsmStateSource::new(
-            vec![1.0, 2.0, 3.0],  // len 3
+            vec![1.0, 2.0, 3.0], // len 3
             MsmConfig::new(1.0),
             10.0,
             vec![
-                (0, vec![1.0, 2.0, 3.0, 4.0]),  // len 4
-                (1, vec![1.0, 2.0]),            // len 2
+                (0, vec![1.0, 2.0, 3.0, 4.0]), // len 4
+                (1, vec![1.0, 2.0]),           // len 2
             ],
         );
 
@@ -410,18 +409,14 @@ mod tests {
 
     #[test]
     fn test_builder_no_query() {
-        let result = MsmStateSourceBuilder::new()
-            .add_target(0, &[1.0])
-            .build();
+        let result = MsmStateSourceBuilder::new().add_target(0, &[1.0]).build();
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_builder_no_targets() {
-        let result = MsmStateSourceBuilder::new()
-            .query(&[1.0])
-            .build();
+        let result = MsmStateSourceBuilder::new().query(&[1.0]).build();
 
         assert!(result.is_err());
     }
@@ -441,7 +436,11 @@ mod tests {
         let lazy = source.compute_composite_state(&state, &weight);
 
         match lazy {
-            LazyState::Computed { is_final, transitions, .. } => {
+            LazyState::Computed {
+                is_final,
+                transitions,
+                ..
+            } => {
                 assert!(!is_final); // Not at end yet
                 assert!(!transitions.is_empty()); // Should have transitions
             }
@@ -465,7 +464,11 @@ mod tests {
         let lazy = source.compute_composite_state(&state, &weight);
 
         match lazy {
-            LazyState::Computed { is_final, final_weight, .. } => {
+            LazyState::Computed {
+                is_final,
+                final_weight,
+                ..
+            } => {
                 assert!(is_final);
                 assert!((final_weight.value() - 1.5).abs() < 1e-9);
             }

@@ -146,8 +146,7 @@ fn test_unrestricted_policy_is_standard_levenshtein() {
 
     // Create transducer with explicit Unrestricted policy
     use liblevenshtein::transducer::substitution_policy::Unrestricted;
-    let transducer =
-        Transducer::with_policy(dict, Algorithm::Standard, Unrestricted);
+    let transducer = Transducer::with_policy(dict, Algorithm::Standard, Unrestricted);
 
     // Query for "text" with distance 1
     let results: Vec<String> = transducer.query("text", 1).collect();

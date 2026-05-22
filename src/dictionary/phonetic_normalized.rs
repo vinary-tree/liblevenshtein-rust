@@ -67,18 +67,18 @@
 //! - [`crate::phonetic`] module for phonetic rule definitions
 
 use crate::cache::multimap::FuzzyMultiMap;
-use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
-use libdictenstein::dynamic_dawg_char_zipper::DynamicDawgCharZipper;
-use libdictenstein::{
-    DictZipper, Dictionary, DictionaryNode, DictionaryValue, MappedDictionary,
-    MappedDictionaryNode, MutableMappedDictionary, SyncStrategy, ValuedDictZipper,
-};
 use crate::phonetic::expansion::expand_phonetic_alternatives_char;
 use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar};
 use crate::phonetic::regex::{parse as parse_regex, ParseError as RegexParseError};
 use crate::phonetic::types::{PhoneChar, RewriteRuleChar};
 use crate::phonetic::{apply_rules_seq_char, zompist_rules_char};
 use crate::transducer::Algorithm;
+use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg_char_zipper::DynamicDawgCharZipper;
+use libdictenstein::{
+    DictZipper, Dictionary, DictionaryNode, DictionaryValue, MappedDictionary,
+    MappedDictionaryNode, MutableMappedDictionary, SyncStrategy, ValuedDictZipper,
+};
 use std::collections::HashSet;
 use std::fmt;
 
@@ -181,7 +181,8 @@ pub struct PhoneticNormalizedDictionary<V: DictionaryValue = (), D: Dictionary =
 ///
 /// This is the default and recommended variant, using `char` for proper Unicode
 /// semantics with accented characters, CJK, emoji, etc.
-pub type PhoneticNormalizedDictionaryChar<V = ()> = PhoneticNormalizedDictionary<V, DynamicDawgChar<V>>;
+pub type PhoneticNormalizedDictionaryChar<V = ()> =
+    PhoneticNormalizedDictionary<V, DynamicDawgChar<V>>;
 
 // ============================================================================
 // NODE WRAPPER
@@ -342,7 +343,9 @@ where
             self.normalized_multimap.update_or_insert(
                 &normalized,
                 HashSet::from([term_string.clone()]),
-                |set| { set.insert(term_string); },
+                |set| {
+                    set.insert(term_string);
+                },
             );
         }
 
@@ -357,7 +360,9 @@ where
         let existed = self.originals.get_value(term).is_some();
 
         // Update or insert in backend
-        let is_new = self.originals.update_or_insert(term, default_value, update_fn);
+        let is_new = self
+            .originals
+            .update_or_insert(term, default_value, update_fn);
 
         // If newly inserted, also update normalized multimap
         if is_new && !existed {
@@ -367,7 +372,9 @@ where
             self.normalized_multimap.update_or_insert(
                 &normalized,
                 HashSet::from([term_string.clone()]),
-                |set| { set.insert(term_string); },
+                |set| {
+                    set.insert(term_string);
+                },
             );
         }
 
@@ -389,7 +396,9 @@ where
             self.normalized_multimap.update_or_insert(
                 &normalized,
                 HashSet::from([term.clone()]),
-                |set| { set.insert(term); },
+                |set| {
+                    set.insert(term);
+                },
             );
         }
 
@@ -492,7 +501,9 @@ where
             normalized_dict.update_or_insert(
                 &normalized,
                 HashSet::from([term_string.clone()]),
-                |set| { set.insert(term_string); },
+                |set| {
+                    set.insert(term_string);
+                },
             );
         }
 
@@ -525,7 +536,9 @@ where
             normalized_dict.update_or_insert(
                 &normalized,
                 HashSet::from([term_string.clone()]),
-                |set| { set.insert(term_string); },
+                |set| {
+                    set.insert(term_string);
+                },
             );
         }
 
@@ -593,7 +606,9 @@ where
     }
 
     /// Get a reference to the normalized multimap.
-    pub fn normalized_multimap(&self) -> &FuzzyMultiMap<HashSet<String>, DynamicDawgChar<HashSet<String>>> {
+    pub fn normalized_multimap(
+        &self,
+    ) -> &FuzzyMultiMap<HashSet<String>, DynamicDawgChar<HashSet<String>>> {
         &self.normalized_multimap
     }
 }
@@ -674,7 +689,9 @@ where
     /// Note: This iterates over the normalized multimap, which tracks all inserted terms.
     pub fn iter_terms(&self) -> impl Iterator<Item = (String, String)> + '_ {
         // Iterate over the underlying dictionary and flatten the HashSets
-        let pairs: Vec<_> = self.normalized_multimap.dictionary()
+        let pairs: Vec<_> = self
+            .normalized_multimap
+            .dictionary()
             .iter()
             .flat_map(|(normalized, originals)| {
                 originals
@@ -690,7 +707,9 @@ where
     /// Iterate over normalized forms and their original terms.
     pub fn iter_normalized(&self) -> impl Iterator<Item = (String, HashSet<String>)> {
         // Iterate over the underlying dictionary
-        let pairs: Vec<_> = self.normalized_multimap.dictionary()
+        let pairs: Vec<_> = self
+            .normalized_multimap
+            .dictionary()
             .iter()
             .filter(|(_, originals)| !originals.is_empty()) // Skip empty sets from removals
             .map(|(k, v)| (k.clone(), v.clone()))
@@ -819,7 +838,11 @@ where
         // Fast path for exact match (d=0): Direct trie lookup is 100-300× faster
         // than automaton traversal (benchmark: 2µs vs 600µs for 100 queries)
         if max_distance == 0 {
-            if let Some(originals) = self.normalized_multimap.dictionary().get_value(&normalized_query) {
+            if let Some(originals) = self
+                .normalized_multimap
+                .dictionary()
+                .get_value(&normalized_query)
+            {
                 return originals
                     .iter()
                     .filter(|term| !term.is_empty()) // Skip entries from removed terms
@@ -834,7 +857,9 @@ where
         }
 
         // Fuzzy path (d≥1): Use Levenshtein automaton for efficient trie pruning
-        let fuzzy_results = self.normalized_multimap.query_with_distance(&normalized_query, max_distance);
+        let fuzzy_results = self
+            .normalized_multimap
+            .query_with_distance(&normalized_query, max_distance);
 
         // Convert results to PhoneticNormalizedCandidate
         let mut results: Vec<PhoneticNormalizedCandidate> = fuzzy_results
@@ -964,7 +989,6 @@ where
         let normalized = self.normalize(query);
         expand_phonetic_alternatives_char(&normalized, &self.rules)
     }
-
 }
 
 // ============================================================================
@@ -1118,8 +1142,9 @@ mod tests {
 
     #[test]
     fn test_phonetic_normalized_basic() {
-        let dict =
-            PhoneticNormalizedDictionary::<()>::from_terms(["phone", "fone", "elephant", "elegance"]);
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms([
+            "phone", "fone", "elephant", "elegance",
+        ]);
 
         // Check that normalization is working
         let phone_normalized = dict.normalize("phone");
@@ -1139,7 +1164,8 @@ mod tests {
 
     #[test]
     fn test_phonetic_normalized_with_distance() {
-        let dict = PhoneticNormalizedDictionary::<()>::from_terms(["phone", "bone", "cone", "tone"]);
+        let dict =
+            PhoneticNormalizedDictionary::<()>::from_terms(["phone", "bone", "cone", "tone"]);
 
         // Query with distance tolerance
         let results = dict.query("fone", 1);
@@ -1186,7 +1212,8 @@ mod tests {
     #[test]
     fn test_phonetic_normalized_empty_rules() {
         // Test with empty rules (no normalization)
-        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["phone", "fone"], vec![]);
+        let dict =
+            PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["phone", "fone"], vec![]);
 
         // With no rules, terms should not be normalized
         assert_eq!(dict.normalize("phone"), "phone");
@@ -1462,7 +1489,8 @@ mod tests {
             syllable_condition: None,
         }];
 
-        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["phone", "fone"], rules);
+        let dict =
+            PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["phone", "fone"], rules);
 
         // Expand "fone" - should include "ph" as an alternative for "f"
         let pattern = dict.expand_to_phonetic_pattern("fone");
@@ -1516,7 +1544,10 @@ mod tests {
     #[test]
     fn test_query_phonetic_pattern_no_expansion() {
         // With no rules, the pattern should be the literal query
-        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["cat", "car", "bat"], vec![]);
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+            ["cat", "car", "bat"],
+            vec![],
+        );
 
         let pattern = dict.expand_to_phonetic_pattern("cat");
         assert_eq!(pattern, "cat", "With no rules, pattern should be literal");
@@ -1620,19 +1651,18 @@ mod tests {
         use crate::phonetic::types::{ContextChar, PhoneChar, RewriteRuleChar};
 
         // Create a dictionary with rules: ph -> f, ne -> n (to show normalization effect)
-        let rules = vec![
-            RewriteRuleChar {
-                rule_id: 1,
-                rule_name: "ph_to_f".to_string(),
-                pattern: vec![PhoneChar::Consonant('p'), PhoneChar::Consonant('h')],
-                replacement: vec![PhoneChar::Consonant('f')],
-                context: ContextChar::Anywhere,
-                weight: 0.1,
-                syllable_condition: None,
-            },
-        ];
+        let rules = vec![RewriteRuleChar {
+            rule_id: 1,
+            rule_name: "ph_to_f".to_string(),
+            pattern: vec![PhoneChar::Consonant('p'), PhoneChar::Consonant('h')],
+            replacement: vec![PhoneChar::Consonant('f')],
+            context: ContextChar::Anywhere,
+            weight: 0.1,
+            syllable_condition: None,
+        }];
 
-        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["phone", "fone"], rules);
+        let dict =
+            PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["phone", "fone"], rules);
 
         // Both "phone" and "fone" normalize to "fon"
         let phone_norm = dict.normalize("phone");
@@ -1648,5 +1678,4 @@ mod tests {
         );
         println!("Pattern: {}", pattern_from_fone);
     }
-
 }

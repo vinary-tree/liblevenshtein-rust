@@ -27,8 +27,8 @@
 //! | Aspell | Coverage | >85% | ≤2 | 100% ✓ |
 //! | Wikipedia | Coverage | >90% | ≤2 | 100% ✓ |
 
-use liblevenshtein::corpus::MittonCorpus;
 use libdictenstein::double_array_trie::DoubleArrayTrie;
+use liblevenshtein::corpus::MittonCorpus;
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
 use std::path::Path;
@@ -62,9 +62,7 @@ impl ValidationStats {
     }
 
     fn recall_at_distance(&self, max_distance: usize) -> f64 {
-        let found: usize = self.found_at_distance[..=max_distance.min(3)]
-            .iter()
-            .sum();
+        let found: usize = self.found_at_distance[..=max_distance.min(3)].iter().sum();
         found as f64 / self.total_errors as f64
     }
 
@@ -150,9 +148,7 @@ fn test_holbrook_recall() {
             }
 
             // Query with actual distance
-            let results: HashSet<_> = transducer
-                .query(misspelling, actual_distance)
-                .collect();
+            let results: HashSet<_> = transducer.query(misspelling, actual_distance).collect();
 
             let found = results.contains(correct);
             stats.record(found, actual_distance);
@@ -205,9 +201,7 @@ fn test_aspell_coverage() {
                 continue;
             }
 
-            let results: HashSet<_> = transducer
-                .query(misspelling, actual_distance)
-                .collect();
+            let results: HashSet<_> = transducer.query(misspelling, actual_distance).collect();
 
             let found = results.contains(correct);
             stats.record(found, actual_distance);
@@ -251,9 +245,7 @@ fn test_wikipedia_coverage() {
                 continue;
             }
 
-            let results: HashSet<_> = transducer
-                .query(misspelling, actual_distance)
-                .collect();
+            let results: HashSet<_> = transducer.query(misspelling, actual_distance).collect();
 
             let found = results.contains(correct);
             stats.record(found, actual_distance);
@@ -300,13 +292,9 @@ fn test_algorithm_consistency_across_corpora() {
 
         for (correct, misspellings) in corpus.errors.iter().take(10) {
             for (misspelling, _) in misspellings.iter().take(5) {
-                let results_std: HashSet<_> = transducer_std
-                    .query(misspelling, 2)
-                    .collect();
+                let results_std: HashSet<_> = transducer_std.query(misspelling, 2).collect();
 
-                let results_trans: HashSet<_> = transducer_trans
-                    .query(misspelling, 2)
-                    .collect();
+                let results_trans: HashSet<_> = transducer_trans.query(misspelling, 2).collect();
 
                 // Standard should be a subset of Transposition (or equal)
                 if !results_std.is_subset(&results_trans) {

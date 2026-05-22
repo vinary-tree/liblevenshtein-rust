@@ -29,9 +29,9 @@ fn main() {
 
     // Test different input sizes
     let test_cases = [
-        (5, "phone"),   // 5 phones
-        (10, "phonetics"), // ~9 phones
-        (20, "phoneticsphonetics"), // ~18 phones
+        (5, "phone"),                                               // 5 phones
+        (10, "phonetics"),                                          // ~9 phones
+        (20, "phoneticsphonetics"),                                 // ~18 phones
         (50, "phoneticsphoneticsphoneticsphoneticsphoneticsphone"), // ~50 phones
     ];
 

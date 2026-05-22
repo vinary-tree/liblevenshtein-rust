@@ -11,8 +11,7 @@
 //! - **WFST composition**: Can be composed with language models
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, Wfst,
-    WeightedTransition,
+    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition, Wfst,
 };
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
@@ -125,8 +124,12 @@ where
         max_distance: u8,
         phonetic_weight: f64,
     ) -> Self {
-        let state_source =
-            PhoneticStateSource::with_phonetic_weight(dictionary, nfa, max_distance, phonetic_weight);
+        let state_source = PhoneticStateSource::with_phonetic_weight(
+            dictionary,
+            nfa,
+            max_distance,
+            phonetic_weight,
+        );
 
         // Estimate max product states
         let max_product_states = ((max_distance as u32 + 1) * 1000).max(10_000);
@@ -186,7 +189,11 @@ where
 
         // Apply cache eviction if using LRU and over limit
         if let lling_llang::wfst::CachePolicy::Lru { max_states } = self.cache_policy {
-            let limit = if max_states > 0 { max_states } else { self.max_cache_size };
+            let limit = if max_states > 0 {
+                max_states
+            } else {
+                self.max_cache_size
+            };
             if self.cache.len() >= limit {
                 let to_remove = (self.cache.len() / 10).max(1);
                 let keys: Vec<_> = self.cache.keys().take(to_remove).copied().collect();
@@ -212,10 +219,7 @@ where
     }
 
     fn is_final(&self, state: StateId) -> bool {
-        self.cache
-            .get(&state)
-            .map(|s| s.is_final)
-            .unwrap_or(false)
+        self.cache.get(&state).map(|s| s.is_final).unwrap_or(false)
     }
 
     fn final_weight(&self, state: StateId) -> TropicalWeight {
@@ -244,8 +248,7 @@ where
 
     #[inline]
     fn is_valid_state(&self, state: StateId) -> bool {
-        let (dict_node, product_state) =
-            state_encoding::decode(state, self.max_product_states);
+        let (dict_node, product_state) = state_encoding::decode(state, self.max_product_states);
         product_state < self.max_product_states || dict_node == 0
     }
 }
@@ -354,9 +357,9 @@ where
 #[cfg(feature = "phonetic-rules")]
 mod tests {
     use super::*;
-    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
     use crate::phonetic::nfa::compiler::compile;
     use crate::phonetic::regex::parse;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
     #[test]
     fn test_phonetic_wfst_creation() {

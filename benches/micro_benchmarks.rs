@@ -190,7 +190,8 @@ fn bench_transition_overhead(c: &mut Criterion) {
     use liblevenshtein::transducer::transition::{initial_state, transition_state};
     use liblevenshtein::transducer::Unrestricted;
 
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(vec!["test", "testing", "tested"]);
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(vec!["test", "testing", "tested"]);
     let _root = dict.root();
 
     let mut group = c.benchmark_group("transition_overhead");
@@ -206,8 +207,15 @@ fn bench_transition_overhead(c: &mut Criterion) {
                     let state = initial_state(query.len(), max_dist, Algorithm::Standard);
 
                     // Transition through 't'
-                    let state =
-                        transition_state(&state, Unrestricted, b't', query, max_dist, Algorithm::Standard, false);
+                    let state = transition_state(
+                        &state,
+                        Unrestricted,
+                        b't',
+                        query,
+                        max_dist,
+                        Algorithm::Standard,
+                        false,
+                    );
 
                     black_box(state);
                 });
@@ -252,7 +260,8 @@ fn bench_inline_impact(c: &mut Criterion) {
 
 /// Benchmark complete query with profiling
 fn bench_query_with_instrumentation(c: &mut Criterion) {
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms((0..1000).map(|i| format!("word{:04}", i)));
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms((0..1000).map(|i| format!("word{:04}", i)));
     let transducer = Transducer::new(dict, Algorithm::Standard);
 
     let mut group = c.benchmark_group("instrumented_query");

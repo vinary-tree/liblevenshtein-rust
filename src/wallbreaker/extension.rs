@@ -129,7 +129,10 @@ where
         let mut states = Vec::new();
 
         // Characters before the piece in the query
-        let query_prefix: Vec<char> = self.query_chars[..self.piece_start].iter().copied().collect();
+        let query_prefix: Vec<char> = self.query_chars[..self.piece_start]
+            .iter()
+            .copied()
+            .collect();
 
         // Start from the beginning of the matched substring in the dictionary
         // We need to find the node at the START of the match

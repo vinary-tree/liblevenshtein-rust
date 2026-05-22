@@ -107,11 +107,7 @@ mod tests {
         let rules = base();
         // ng → NG
         let result = rules.apply("ng");
-        assert!(
-            result.contains("ŋ"),
-            "ng should become NG, got: {}",
-            result
-        );
+        assert!(result.contains("ŋ"), "ng should become NG, got: {}", result);
         // ang
         let result = rules.apply("ang");
         assert!(
@@ -138,11 +134,7 @@ mod tests {
         let rules = base();
         // ñ → ny
         let result = rules.apply("ñ");
-        assert!(
-            result.contains("ɲ"),
-            "ñ should become ny, got: {}",
-            result
-        );
+        assert!(result.contains("ɲ"), "ñ should become ny, got: {}", result);
     }
 
     #[test]
@@ -150,11 +142,7 @@ mod tests {
         let rules = base();
         // qu → k
         let result = rules.apply("qu");
-        assert!(
-            result.contains('k'),
-            "qu should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "qu should become k, got: {}", result);
     }
 
     #[test]
@@ -228,7 +216,9 @@ mod tests {
         let result = rules.apply("maganda");
         // 'g' passes through unchanged (no rule transforms it)
         assert!(
-            result.contains('m') && (result.contains('g') || result.contains('ɡ')) && result.contains('d'),
+            result.contains('m')
+                && (result.contains('g') || result.contains('ɡ'))
+                && result.contains('d'),
             "maganda should contain m, g, d, got: {}",
             result
         );
@@ -245,5 +235,4 @@ mod tests {
             result
         );
     }
-
 }

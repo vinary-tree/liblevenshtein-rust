@@ -484,11 +484,11 @@ mod tests {
         let cv = CharacteristicVector::new('a', "banana");
         // "banana" = b(0) a(1) n(2) a(3) n(4) a(5)
         assert_eq!(cv.is_match(0), false); // b[0] = 0 (b ≠ a)
-        assert_eq!(cv.is_match(1), true);  // b[1] = 1 (a = a)
+        assert_eq!(cv.is_match(1), true); // b[1] = 1 (a = a)
         assert_eq!(cv.is_match(2), false); // b[2] = 0 (n ≠ a)
-        assert_eq!(cv.is_match(3), true);  // b[3] = 1 (a = a)
+        assert_eq!(cv.is_match(3), true); // b[3] = 1 (a = a)
         assert_eq!(cv.is_match(4), false); // b[4] = 0 (n ≠ a)
-        assert_eq!(cv.is_match(5), true);  // b[5] = 1 (a = a)
+        assert_eq!(cv.is_match(5), true); // b[5] = 1 (a = a)
     }
 
     #[test]
@@ -603,7 +603,8 @@ mod tests {
     fn test_encode_word_pair_example_from_thesis() {
         // Example based on thesis page 52, but adjusted for corrected formula
         // w = "abcabb", x = "dacab", n = 3
-        let encoding = encode_word_pair("abcabb", "dacab", 3).expect("doc/test fixture: encode_word_pair with valid args");
+        let encoding = encode_word_pair("abcabb", "dacab", 3)
+            .expect("doc/test fixture: encode_word_pair with valid args");
 
         assert_eq!(encoding.len(), 5);
 
@@ -636,7 +637,8 @@ mod tests {
     #[test]
     fn test_encode_word_pair_simple() {
         // w = "ab", x = "ab", n = 1
-        let encoding = encode_word_pair("ab", "ab", 1).expect("doc/test fixture: encode_word_pair with valid args");
+        let encoding = encode_word_pair("ab", "ab", 1)
+            .expect("doc/test fixture: encode_word_pair with valid args");
 
         assert_eq!(encoding.len(), 2);
 
@@ -650,7 +652,8 @@ mod tests {
     #[test]
     fn test_encode_word_pair_exact_match() {
         // w = "test", x = "test", n = 0
-        let encoding = encode_word_pair("test", "test", 0).expect("doc/test fixture: encode_word_pair with valid args");
+        let encoding = encode_word_pair("test", "test", 0)
+            .expect("doc/test fixture: encode_word_pair with valid args");
 
         assert_eq!(encoding.len(), 4);
 
@@ -671,14 +674,16 @@ mod tests {
 
     #[test]
     fn test_encode_word_pair_empty_input() {
-        let encoding = encode_word_pair("test", "", 2).expect("doc/test fixture: encode_word_pair with valid args");
+        let encoding = encode_word_pair("test", "", 2)
+            .expect("doc/test fixture: encode_word_pair with valid args");
         assert_eq!(encoding.len(), 0);
     }
 
     #[test]
     fn test_encode_word_pair_single_character() {
         // w = "a", x = "a", n = 1
-        let encoding = encode_word_pair("a", "a", 1).expect("doc/test fixture: encode_word_pair with valid args");
+        let encoding = encode_word_pair("a", "a", 1)
+            .expect("doc/test fixture: encode_word_pair with valid args");
 
         assert_eq!(encoding.len(), 1);
         // s₁(a, 1) = w_0w_1w_2 but w only has 1 char at position 1
@@ -690,7 +695,8 @@ mod tests {
     #[test]
     fn test_encode_word_pair_no_matches() {
         // w = "aaa", x = "bbb", n = 1
-        let encoding = encode_word_pair("aaa", "bbb", 1).expect("doc/test fixture: encode_word_pair with valid args");
+        let encoding = encode_word_pair("aaa", "bbb", 1)
+            .expect("doc/test fixture: encode_word_pair with valid args");
 
         assert_eq!(encoding.len(), 3);
 
@@ -703,7 +709,8 @@ mod tests {
     #[test]
     fn test_encode_word_pair_max_distance_zero() {
         // w = "abc", x = "xyz", n = 0
-        let encoding = encode_word_pair("abc", "xyz", 0).expect("doc/test fixture: encode_word_pair with valid args");
+        let encoding = encode_word_pair("abc", "xyz", 0)
+            .expect("doc/test fixture: encode_word_pair with valid args");
 
         assert_eq!(encoding.len(), 3);
 

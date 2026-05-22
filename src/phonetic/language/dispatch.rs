@@ -27,9 +27,7 @@ use super::rules::romance::{
     european_portuguese_rules, italian_rules, latin_american_spanish_rules, romanian_rules,
     standard_french_rules,
 };
-use super::rules::semitic::{
-    arabic_rules, hebrew_rules, maltese_rules, persian_rules, urdu_rules,
-};
+use super::rules::semitic::{arabic_rules, hebrew_rules, maltese_rules, persian_rules, urdu_rules};
 use super::rules::slavic::{
     belarusian_rules, bulgarian_rules, croatian_rules, czech_rules, polish_rules, russian_rules,
     serbian_latin_rules, serbian_rules, slovak_rules, ukrainian_rules,
@@ -156,9 +154,7 @@ pub fn rules_for_language(tag: &str) -> Option<Vec<RewriteRuleChar>> {
         "fr-ca" | "quebec" | "quebecois" | "québécois" => Some(canadian_french_rules()),
 
         // Portuguese
-        "pt" | "pt-pt" | "portuguese" | "european-portuguese" => {
-            Some(european_portuguese_rules())
-        }
+        "pt" | "pt-pt" | "portuguese" | "european-portuguese" => Some(european_portuguese_rules()),
         "pt-br" | "brazilian" | "brazilian-portuguese" => Some(brazilian_portuguese_rules()),
 
         // Italian

@@ -38,7 +38,9 @@ use std::collections::HashSet;
 // ============================================================================
 
 // Re-export concrete types for backward compatibility
-pub use super::types::{ContextByte, ContextChar, PhoneByte, PhoneChar, RewriteRuleByte, RewriteRuleChar};
+pub use super::types::{
+    ContextByte, ContextChar, PhoneByte, PhoneChar, RewriteRuleByte, RewriteRuleChar,
+};
 
 /// Result of applying phonetic rules with cycle awareness (byte-level).
 pub type NormalizationResultByte = NormalizationResult<u8>;
@@ -930,7 +932,10 @@ mod tests {
         ];
 
         let result = apply_rule_at(&rule, &s, 1);
-        assert_eq!(result, Some(vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')]));
+        assert_eq!(
+            result,
+            Some(vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')])
+        );
     }
 
     #[test]
@@ -1039,7 +1044,10 @@ mod tests {
         ];
 
         let result = apply_rules_seq(&[rule], &s, 100);
-        assert_eq!(result, Some(vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')]));
+        assert_eq!(
+            result,
+            Some(vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')])
+        );
     }
 
     #[test]
@@ -1085,7 +1093,10 @@ mod tests {
         let s = vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')];
 
         let result = apply_rules_seq(&[rule], &s, 100);
-        assert_eq!(result, Some(vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')]));
+        assert_eq!(
+            result,
+            Some(vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')])
+        );
     }
 
     // ========================================================================
@@ -1111,10 +1122,7 @@ mod tests {
         ];
 
         let result = apply_rule_at(&rule, &s, 1);
-        assert_eq!(
-            result,
-            Some(vec![Phone::Vowel('e'), Phone::Consonant('f')])
-        );
+        assert_eq!(result, Some(vec![Phone::Vowel('e'), Phone::Consonant('f')]));
     }
 
     #[test]
@@ -1136,10 +1144,7 @@ mod tests {
         ];
 
         let result = apply_rules_seq(&[rule], &s, 100);
-        assert_eq!(
-            result,
-            Some(vec![Phone::Vowel('e'), Phone::Consonant('f')])
-        );
+        assert_eq!(result, Some(vec![Phone::Vowel('e'), Phone::Consonant('f')]));
     }
 
     // ========================================================================
@@ -1304,7 +1309,10 @@ mod tests {
         let s = vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')];
 
         let result = apply_rules_seq_optimized(&[rule], &s, 100);
-        assert_eq!(result, Some(vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')]));
+        assert_eq!(
+            result,
+            Some(vec![Phone::Vowel(b'e'), Phone::Consonant(b'f')])
+        );
     }
 
     // ========================================================================
@@ -1430,7 +1438,11 @@ mod tests {
         let result = apply_rules_with_cycle_detection(&rules, &input, 100);
 
         // Should detect cycle
-        assert!(result.is_cycle(), "Expected cycle detection, got {:?}", result);
+        assert!(
+            result.is_cycle(),
+            "Expected cycle detection, got {:?}",
+            result
+        );
 
         if let NormalizationResult::Cycle(forms) = &result {
             // Should have both forms
@@ -1464,7 +1476,11 @@ mod tests {
         let result = apply_rules_with_cycle_detection(&[rule], &input, 100);
 
         // Should reach fixed point, not cycle
-        assert!(result.is_fixed_point(), "Expected fixed point, got {:?}", result);
+        assert!(
+            result.is_fixed_point(),
+            "Expected fixed point, got {:?}",
+            result
+        );
 
         if let NormalizationResult::FixedPoint(form) = &result {
             assert_eq!(
@@ -1558,7 +1574,11 @@ mod tests {
         let mut forms = HashSet::new();
         forms.insert(vec![Phone::<u8>::Vowel(b'a'), Phone::Vowel(b'a')]);
         forms.insert(vec![Phone::<u8>::Vowel(b'b')]);
-        forms.insert(vec![Phone::<u8>::Vowel(b'c'), Phone::Vowel(b'c'), Phone::Vowel(b'c')]);
+        forms.insert(vec![
+            Phone::<u8>::Vowel(b'c'),
+            Phone::Vowel(b'c'),
+            Phone::Vowel(b'c'),
+        ]);
 
         let result = NormalizationResult::Cycle(forms);
 

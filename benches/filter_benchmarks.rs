@@ -6,9 +6,7 @@
 //! - Hybrid filter effectiveness vs full Levenshtein automaton
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::filter::{
-    jaro_similarity, jaro_winkler_similarity, HybridMatcher, NgramIndex,
-};
+use liblevenshtein::filter::{jaro_similarity, jaro_winkler_similarity, HybridMatcher, NgramIndex};
 
 // ============================================================================
 // Test Data Generation
@@ -17,11 +15,15 @@ use liblevenshtein::filter::{
 /// Generate a synthetic dictionary of given size
 fn generate_dictionary(size: usize) -> Vec<String> {
     // Common English word patterns for realistic benchmarking
-    let prefixes = ["pre", "un", "re", "dis", "over", "mis", "out", "sub", "trans", "inter"];
+    let prefixes = [
+        "pre", "un", "re", "dis", "over", "mis", "out", "sub", "trans", "inter",
+    ];
     let roots = [
         "act", "form", "port", "duct", "ject", "tract", "struct", "scribe", "spect", "vert",
     ];
-    let suffixes = ["ion", "ive", "ment", "ness", "able", "ible", "ous", "ful", "less", "ly"];
+    let suffixes = [
+        "ion", "ive", "ment", "ness", "able", "ible", "ous", "ful", "less", "ly",
+    ];
 
     let mut words = Vec::with_capacity(size);
 

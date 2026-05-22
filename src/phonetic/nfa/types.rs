@@ -190,7 +190,10 @@ impl CharClassChar {
 
     /// Check if a character matches this class.
     pub fn matches(&self, c: char) -> bool {
-        let in_ranges = self.ranges.iter().any(|&(start, end)| c >= start && c <= end);
+        let in_ranges = self
+            .ranges
+            .iter()
+            .any(|&(start, end)| c >= start && c <= end);
         if self.negated {
             !in_ranges
         } else {
@@ -292,7 +295,10 @@ impl CharClass {
 
     /// Check if a byte matches this class.
     pub fn matches(&self, b: u8) -> bool {
-        let in_ranges = self.ranges.iter().any(|&(start, end)| b >= start && b <= end);
+        let in_ranges = self
+            .ranges
+            .iter()
+            .any(|&(start, end)| b >= start && b <= end);
         if self.negated {
             !in_ranges
         } else {
@@ -711,7 +717,12 @@ impl TransitionChar {
 
     /// Create a new transition with a specific weight.
     #[inline]
-    pub fn with_weight(from: StateId, label: TransitionLabelChar, to: StateId, weight: f64) -> Self {
+    pub fn with_weight(
+        from: StateId,
+        label: TransitionLabelChar,
+        to: StateId,
+        weight: f64,
+    ) -> Self {
         Self {
             from,
             label,
@@ -748,7 +759,11 @@ impl TransitionChar {
 impl fmt::Display for TransitionChar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.weight != 0.0 {
-            write!(f, "q{} --{}[{:.2}]--> q{}", self.from, self.label, self.weight, self.to)
+            write!(
+                f,
+                "q{} --{}[{:.2}]--> q{}",
+                self.from, self.label, self.weight, self.to
+            )
         } else {
             write!(f, "q{} --{}--> q{}", self.from, self.label, self.to)
         }
@@ -826,7 +841,11 @@ impl Transition {
 impl fmt::Display for Transition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.weight != 0.0 {
-            write!(f, "q{} --{}[{:.2}]--> q{}", self.from, self.label, self.weight, self.to)
+            write!(
+                f,
+                "q{} --{}[{:.2}]--> q{}",
+                self.from, self.label, self.weight, self.to
+            )
         } else {
             write!(f, "q{} --{}--> q{}", self.from, self.label, self.to)
         }

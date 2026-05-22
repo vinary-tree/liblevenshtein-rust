@@ -7,7 +7,7 @@
 //! - Different rule set sizes
 //! - Byte-level vs character-level performance
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::phonetic::*;
 
 // ============================================================================
@@ -17,9 +17,16 @@ use liblevenshtein::phonetic::*;
 fn sample_phonetic_strings() -> Vec<Vec<Phone>> {
     vec![
         // Short strings
-        vec![Phone::Consonant(b'c'), Phone::Vowel(b'a'), Phone::Consonant(b't')],
-        vec![Phone::Consonant(b'p'), Phone::Consonant(b'h'), Phone::Vowel(b'o')],
-
+        vec![
+            Phone::Consonant(b'c'),
+            Phone::Vowel(b'a'),
+            Phone::Consonant(b't'),
+        ],
+        vec![
+            Phone::Consonant(b'p'),
+            Phone::Consonant(b'h'),
+            Phone::Vowel(b'o'),
+        ],
         // Medium strings
         vec![
             Phone::Consonant(b'c'),
@@ -29,7 +36,6 @@ fn sample_phonetic_strings() -> Vec<Vec<Phone>> {
             Phone::Consonant(b'c'),
             Phone::Consonant(b'h'),
         ],
-
         // Longer strings
         vec![
             Phone::Consonant(b'p'),
@@ -150,13 +156,7 @@ fn bench_throughput_by_input_size(c: &mut Criterion) {
 
         group.throughput(Throughput::Elements(*size as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
-            b.iter(|| {
-                apply_rules_seq(
-                    black_box(&rules),
-                    black_box(&input),
-                    black_box(fuel),
-                )
-            });
+            b.iter(|| apply_rules_seq(black_box(&rules), black_box(&input), black_box(fuel)));
         });
     }
 
@@ -182,13 +182,7 @@ fn bench_fuel_variation(c: &mut Criterion) {
 
     for fuel in [10, 50, 100, 500].iter() {
         group.bench_with_input(BenchmarkId::from_parameter(fuel), fuel, |b, &fuel| {
-            b.iter(|| {
-                apply_rules_seq(
-                    black_box(&rules),
-                    black_box(&test_string),
-                    black_box(fuel),
-                )
-            });
+            b.iter(|| apply_rules_seq(black_box(&rules), black_box(&test_string), black_box(fuel)));
         });
     }
 

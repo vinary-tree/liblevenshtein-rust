@@ -5,7 +5,6 @@
 ///
 /// The universal automaton should accept/reject the same word/input pairs as the
 /// parameterized version, just without needing to be constructed for each specific word.
-
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::universal::{Standard as UniversalStandard, UniversalAutomaton};
 
@@ -26,13 +25,14 @@ fn test_substitution_test_to_text() {
 
     let transducer = Transducer::standard(dict);
 
-    let parameterized_results: Vec<_> = transducer
-        .query(input, max_distance as usize)
-        .collect();
+    let parameterized_results: Vec<_> = transducer.query(input, max_distance as usize).collect();
 
     let parameterized_result = parameterized_results.iter().any(|w| w == word);
 
-    println!("Word: '{}', Input: '{}', Max distance: {}", word, input, max_distance);
+    println!(
+        "Word: '{}', Input: '{}', Max distance: {}",
+        word, input, max_distance
+    );
     println!("Universal result: {}", universal_result);
     println!("Parameterized result: {}", parameterized_result);
 
@@ -64,7 +64,10 @@ fn test_substitution_test_to_best() {
     let parameterized_results: Vec<_> = transducer.query(input, max_distance as usize).collect();
     let parameterized_result = parameterized_results.iter().any(|w| w == word);
 
-    println!("Word: '{}', Input: '{}', Max distance: {}", word, input, max_distance);
+    println!(
+        "Word: '{}', Input: '{}', Max distance: {}",
+        word, input, max_distance
+    );
     println!("Universal result: {}", universal_result);
     println!("Parameterized result: {}", parameterized_result);
 
@@ -79,16 +82,16 @@ fn test_substitution_test_to_best() {
 fn test_cross_validation_suite() {
     // Test a variety of cases
     let test_cases = vec![
-        ("test", "test", 2, true),   // Exact match
-        ("test", "text", 2, true),   // 1 substitution
-        ("test", "best", 2, true),   // 1 substitution
-        ("test", "tet", 2, true),    // 1 deletion
-        ("test", "teast", 2, true),  // 1 insertion
-        ("test", "hello", 2, false), // Too many edits
+        ("test", "test", 2, true),           // Exact match
+        ("test", "text", 2, true),           // 1 substitution
+        ("test", "best", 2, true),           // 1 substitution
+        ("test", "tet", 2, true),            // 1 deletion
+        ("test", "teast", 2, true),          // 1 insertion
+        ("test", "hello", 2, false),         // Too many edits
         ("algorithm", "algorythm", 2, true), // 1 substitution
-        ("", "", 2, true),           // Empty strings
-        ("ab", "", 2, true),         // Delete all
-        ("", "ab", 2, true),         // Insert all
+        ("", "", 2, true),                   // Empty strings
+        ("ab", "", 2, true),                 // Delete all
+        ("", "ab", 2, true),                 // Insert all
     ];
 
     for (word, input, max_distance, expected) in test_cases {
@@ -100,7 +103,8 @@ fn test_cross_validation_suite() {
 
         let transducer = Transducer::standard(dict);
 
-        let parameterized_results: Vec<_> = transducer.query(input, max_distance as usize).collect();
+        let parameterized_results: Vec<_> =
+            transducer.query(input, max_distance as usize).collect();
         let parameterized_result = parameterized_results.iter().any(|w| w == word);
 
         // Check both agree with expected

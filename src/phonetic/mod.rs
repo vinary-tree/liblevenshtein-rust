@@ -138,15 +138,13 @@ mod properties;
 
 // Re-export main types (byte-level)
 pub use application::{
-    apply_rule_at, apply_rules_seq, apply_rules_seq_optimized,
-    apply_rules_with_cycle_detection, can_apply_at, find_first_match_from,
-    has_position_dependent_rules, NormalizationResult, MAX_EXPANSION_FACTOR,
+    apply_rule_at, apply_rules_seq, apply_rules_seq_optimized, apply_rules_with_cycle_detection,
+    can_apply_at, find_first_match_from, has_position_dependent_rules, NormalizationResult,
+    MAX_EXPANSION_FACTOR,
 };
 pub use matching::{context_matches, pattern_matches_at, phone_eq};
 pub use rules::{orthography_rules, phonetic_rules, test_rules, zompist_rules};
-pub use types::{
-    Context, ContextByte, Phone, PhoneByte, RewriteRule, RewriteRuleByte,
-};
+pub use types::{Context, ContextByte, Phone, PhoneByte, RewriteRule, RewriteRuleByte};
 
 // Re-export character-level types
 pub use application::{
@@ -155,9 +153,7 @@ pub use application::{
     has_position_dependent_rules_char, NormalizationResultChar,
 };
 pub use matching::{context_matches_char, pattern_matches_at_char, phone_eq_char};
-pub use rules::{
-    orthography_rules_char, phonetic_rules_char, test_rules_char, zompist_rules_char,
-};
+pub use rules::{orthography_rules_char, phonetic_rules_char, test_rules_char, zompist_rules_char};
 pub use types::{ContextChar, PhoneChar, RewriteRuleChar};
 
 // Re-export verified rules integration
@@ -174,12 +170,17 @@ pub use syllable::{
 
 // Re-export IPA-based syllable functions (language-agnostic)
 pub use ipa_syllable::{
-    ipa_syllable_boundaries, ipa_syllable_count, is_ipa_consonant, is_ipa_vowel,
-    is_length_marker, is_stress_marker, is_syllable_boundary,
+    ipa_syllable_boundaries,
+    ipa_syllable_count,
     // Position checks using IPA
     is_final_syllable as is_final_syllable_ipa,
     is_initial_syllable as is_initial_syllable_ipa,
+    is_ipa_consonant,
+    is_ipa_vowel,
+    is_length_marker,
     is_open_syllable as is_open_syllable_ipa,
+    is_stress_marker,
+    is_syllable_boundary,
 };
 
 // Re-export phonetic feature types for (?f) flag support
@@ -195,26 +196,48 @@ pub use feature_distance::{
 
 // Re-export LLev file format types for custom rule definitions
 pub use llev::{
-    // AST types
-    ContextAST, Expression, FileMetadata, IncludeDirective, LLevFile, RewriteRuleAST,
-    RuleDefinition, RuleMetadata, SymbolDef,
-    // Error types
-    LLevError, LLevErrorKind, LLevResult, Position,
     // Loader
-    load_file, load_file_with_includes, Loader, LoaderConfig,
+    load_file,
+    load_file_with_includes,
     // Parser
-    parse_expression, parse_str, Parser,
+    parse_expression,
+    parse_str,
+    // AST types
+    ContextAST,
+    Expression,
+    FileMetadata,
+    IncludeDirective,
+    // Error types
+    LLevError,
+    LLevErrorKind,
+    LLevFile,
+    LLevResult,
+    Loader,
+    LoaderConfig,
+    Parser,
+    Position,
+    RewriteRuleAST,
+    RuleDefinition,
+    RuleMetadata,
     // Ruleset conversion
-    RuleSet, RuleSetChar,
+    RuleSet,
+    RuleSetChar,
+    SymbolDef,
 };
 
 // Re-export compiled module for AOT compilation (requires serialization feature)
 #[cfg(feature = "serialization")]
 pub use llev::{
     // Byte-level serialization
-    from_bytes, load, save, to_bytes,
+    from_bytes,
     // Character-level serialization
-    from_bytes_char, load_char, save_char, to_bytes_char,
+    from_bytes_char,
+    load,
+    load_char,
+    save,
+    save_char,
+    to_bytes,
+    to_bytes_char,
 };
 
 // Re-export named character classes
@@ -225,20 +248,36 @@ pub use named_classes::{
 
 // Re-export LLRE (LibLevenshtein Regex Expression) types
 pub use llre::{
-    // AST types
-    Directive as LLreDirective, FileMetadata as LLreMetadata, ImportDirective as LLreImport,
-    LLreFile, LLreFlags, ResolvedImport, SymbolTable,
-    // Error types
-    LLreError, LLreErrorKind, LLreResult, Position as LLrePosition,
-    // Loader
-    load_file as load_llre_file, load_file_with_config as load_llre_file_with_config,
-    Loader as LLreLoader, LoaderConfig as LLreLoaderConfig,
     // Compiler
-    compile as compile_llre, compile_pattern, compile_pattern_with_flags, compile_with_options,
-    is_match as llre_is_match, is_match_multiline as llre_is_match_multiline,
-    CompileOptions as LLreCompileOptions, CompiledNFA,
+    compile as compile_llre,
+    compile_pattern,
+    compile_pattern_with_flags,
+    compile_with_options,
+    is_match as llre_is_match,
+    is_match_multiline as llre_is_match_multiline,
+    // Loader
+    load_file as load_llre_file,
+    load_file_with_config as load_llre_file_with_config,
     // Parser
-    parse_str as parse_llre_str, Parser as LLreParser,
+    parse_str as parse_llre_str,
+    CompileOptions as LLreCompileOptions,
+    CompiledNFA,
+    // AST types
+    Directive as LLreDirective,
+    FileMetadata as LLreMetadata,
+    ImportDirective as LLreImport,
+    // Error types
+    LLreError,
+    LLreErrorKind,
+    LLreFile,
+    LLreFlags,
+    LLreResult,
+    Loader as LLreLoader,
+    LoaderConfig as LLreLoaderConfig,
+    Parser as LLreParser,
+    Position as LLrePosition,
+    ResolvedImport,
+    SymbolTable,
 };
 
 // Re-export LLRE serialization functions (requires serialization feature)

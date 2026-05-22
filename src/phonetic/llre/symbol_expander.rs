@@ -268,7 +268,8 @@ mod tests {
     fn test_no_expansion_needed() {
         let table = SymbolTable::new();
         let regex = parse("[a-z]+").expect("test fixture: parse must be Ok");
-        let expanded = expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
+        let expanded =
+            expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
         assert_eq!(format!("{}", expanded), format!("{}", regex));
     }
 
@@ -281,14 +282,18 @@ mod tests {
         // Parse pattern that references DIGIT
         // Note: GroupRef syntax is (?&name)
         let regex = Regex::GroupRef("DIGIT".to_string());
-        let expanded = expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
+        let expanded =
+            expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
 
         // Should be wrapped in non-capturing group
         if let Regex::NonCapturingGroup(inner) = &expanded {
             if let Regex::CharClass(_) = inner.as_ref() {
                 // Success
             } else {
-                panic!("Expected CharClass inside NonCapturingGroup, got {:?}", inner);
+                panic!(
+                    "Expected CharClass inside NonCapturingGroup, got {:?}",
+                    inner
+                );
             }
         } else {
             panic!("Expected NonCapturingGroup, got {:?}", expanded);
@@ -309,7 +314,8 @@ mod tests {
 
         // Pattern: (?&NUMBER)
         let regex = Regex::GroupRef("NUMBER".to_string());
-        let expanded = expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
+        let expanded =
+            expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
 
         // Should contain digit characters (the Display impl may expand [0-9] to [0123456789])
         // The inner DIGIT should be expanded to a digit character class wrapped in non-capturing group
@@ -371,7 +377,8 @@ mod tests {
         // Reference to undefined pattern should be preserved
         // (might be a named group reference within the same pattern)
         let regex = Regex::GroupRef("undefined".to_string());
-        let expanded = expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
+        let expanded =
+            expand_pattern_symbols(&regex, &table).expect("test fixture: expansion must be Ok");
 
         // Should remain as GroupRef
         assert!(matches!(expanded, Regex::GroupRef(_)));
@@ -396,6 +403,9 @@ mod tests {
         );
 
         let result = expand_pattern_symbols(&regex, &table);
-        assert!(result.is_ok(), "Pattern reuse should not trigger cycle detection");
+        assert!(
+            result.is_ok(),
+            "Pattern reuse should not trigger cycle detection"
+        );
     }
 }

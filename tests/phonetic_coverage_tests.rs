@@ -378,11 +378,7 @@ mod nfa_types_coverage {
         let on_any = TransitionChar::on_any(0, 1);
         assert!(on_any.label.matches('x'));
 
-        let on_class = TransitionChar::on_class(
-            0,
-            CharClassChar::from_range('a', 'z'),
-            1,
-        );
+        let on_class = TransitionChar::on_class(0, CharClassChar::from_range('a', 'z'), 1);
         assert!(on_class.label.matches('m'));
     }
 
@@ -844,11 +840,11 @@ mod nfa_context_coverage {
 // ============================================================================
 
 mod nfa_optimizer_coverage {
+    use liblevenshtein::phonetic::nfa::compiler::NFACompilerChar;
     use liblevenshtein::phonetic::nfa::{
         compile, NFAChar, NfaOptimizer, NfaOptimizerChar, OptimizationConfig, OptimizationStats,
         ThompsonBuilder, ThompsonBuilderChar,
     };
-    use liblevenshtein::phonetic::nfa::compiler::NFACompilerChar;
     use liblevenshtein::phonetic::regex::parse;
 
     // --- OptimizationConfig Tests ---
@@ -885,10 +881,19 @@ mod nfa_optimizer_coverage {
         let default_config = OptimizationConfig::default();
         let full_config = OptimizationConfig::full();
 
-        assert_eq!(default_config.eliminate_epsilon, full_config.eliminate_epsilon);
-        assert_eq!(default_config.remove_unreachable, full_config.remove_unreachable);
+        assert_eq!(
+            default_config.eliminate_epsilon,
+            full_config.eliminate_epsilon
+        );
+        assert_eq!(
+            default_config.remove_unreachable,
+            full_config.remove_unreachable
+        );
         assert_eq!(default_config.remove_dead, full_config.remove_dead);
-        assert_eq!(default_config.deduplicate_transitions, full_config.deduplicate_transitions);
+        assert_eq!(
+            default_config.deduplicate_transitions,
+            full_config.deduplicate_transitions
+        );
     }
 
     // --- OptimizationStats Tests ---
@@ -1123,7 +1128,8 @@ mod nfa_optimizer_coverage {
     #[test]
     fn test_optimizer_with_char_class() {
         let builder = ThompsonBuilderChar::new();
-        let vowels = liblevenshtein::phonetic::nfa::CharClassChar::from_chars(&['a', 'e', 'i', 'o', 'u']);
+        let vowels =
+            liblevenshtein::phonetic::nfa::CharClassChar::from_chars(&['a', 'e', 'i', 'o', 'u']);
         let nfa = builder.kleene_plus(builder.char_class(vowels));
 
         let optimizer = NfaOptimizerChar::new(OptimizationConfig::full());
@@ -1492,7 +1498,7 @@ mod regex_parser_coverage {
 // ============================================================================
 
 mod llev_parser_coverage {
-    use liblevenshtein::phonetic::{parse_str, parse_expression};
+    use liblevenshtein::phonetic::{parse_expression, parse_str};
 
     #[test]
     fn test_parse_empty_file() {
@@ -1573,7 +1579,10 @@ mod llev_parser_coverage {
     #[test]
     fn test_parse_directive_description() {
         let file = parse_str("@description \"Test description\";").unwrap();
-        assert_eq!(file.metadata.description, Some("Test description".to_string()));
+        assert_eq!(
+            file.metadata.description,
+            Some("Test description".to_string())
+        );
     }
 
     #[test]
@@ -1654,7 +1663,10 @@ mod llev_parser_coverage {
         .unwrap();
 
         assert_eq!(file.rules.len(), 1);
-        assert_eq!(file.rules[0].metadata.group, Some("orthography".to_string()));
+        assert_eq!(
+            file.rules[0].metadata.group,
+            Some("orthography".to_string())
+        );
     }
 
     #[test]
@@ -1719,7 +1731,10 @@ mod llev_parser_coverage {
         )
         .unwrap();
 
-        assert_eq!(file.metadata.name, Some("English Phonetic Rules".to_string()));
+        assert_eq!(
+            file.metadata.name,
+            Some("English Phonetic Rules".to_string())
+        );
         assert_eq!(file.symbols.len(), 2);
         assert_eq!(file.rules.len(), 3);
     }
@@ -1773,8 +1788,8 @@ mod llev_parser_coverage {
 mod proptest_phonetic {
     use super::*;
     use liblevenshtein::phonetic::nfa::{
-        CharClassChar, NFAState, NfaOptimizerChar, OptimizationConfig,
-        ThompsonBuilderChar, TransitionLabelChar,
+        CharClassChar, NFAState, NfaOptimizerChar, OptimizationConfig, ThompsonBuilderChar,
+        TransitionLabelChar,
     };
 
     proptest! {

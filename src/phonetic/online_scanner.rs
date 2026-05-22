@@ -310,9 +310,9 @@ impl OnlinePhoneticScannerChar {
         for &nfa_state in &state.nfa_states {
             for trans in self.query_nfa.transitions_from(nfa_state) {
                 if trans.label.consumes_input() {
-                    let closure = self.query_nfa.epsilon_closure(
-                        &std::iter::once(trans.to).collect()
-                    );
+                    let closure = self
+                        .query_nfa
+                        .epsilon_closure(&std::iter::once(trans.to).collect());
                     next_states.extend(closure.iter());
                 }
             }
@@ -321,7 +321,10 @@ impl OnlinePhoneticScannerChar {
         if next_states.is_empty() {
             None
         } else {
-            Some(ProductStateChar::new(next_states, state.accumulated_cost + 1.0))
+            Some(ProductStateChar::new(
+                next_states,
+                state.accumulated_cost + 1.0,
+            ))
         }
     }
 
@@ -519,7 +522,7 @@ mod tests {
             replacement: replacement.chars().map(char_to_phone).collect(),
             context,
             weight: 1.0,
-        syllable_condition: None,
+            syllable_condition: None,
         }
     }
 
@@ -578,7 +581,10 @@ mod tests {
         let matches = scanner.scan("food");
 
         assert!(!matches.is_empty(), "expected 'food' to match 'fude'");
-        assert_eq!(matches[0].distance, 0, "should be exact match after normalization");
+        assert_eq!(
+            matches[0].distance, 0,
+            "should be exact match after normalization"
+        );
     }
 
     #[test]

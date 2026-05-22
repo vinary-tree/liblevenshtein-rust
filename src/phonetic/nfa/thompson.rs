@@ -48,8 +48,8 @@
 //! assert!(nfa_union.accepts("b"));
 //! ```
 
-use super::{NFAChar, NFA};
 use super::types::{CharClass, CharClassChar, TransitionLabel, TransitionLabelChar};
+use super::{NFAChar, NFA};
 
 // ============================================================================
 // Thompson Builder (Character-level)

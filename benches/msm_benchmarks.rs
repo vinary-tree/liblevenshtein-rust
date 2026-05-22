@@ -112,13 +112,9 @@ fn bench_hybrid_search(c: &mut Criterion) {
         let threshold = 50.0;
 
         // Benchmark with lower bounds enabled
-        group.bench_with_input(
-            BenchmarkId::new("with_lb", db_size),
-            db_size,
-            |b, _| {
-                b.iter(|| index.search_exact(black_box(&query), black_box(threshold)));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("with_lb", db_size), db_size, |b, _| {
+            b.iter(|| index.search_exact(black_box(&query), black_box(threshold)));
+        });
 
         // Benchmark with lower bounds disabled
         let mut index_no_lb = HybridSearchIndex::new(quant_config.clone(), msm_config);
@@ -127,13 +123,9 @@ fn bench_hybrid_search(c: &mut Criterion) {
         }
         index_no_lb.set_use_lower_bounds(false);
 
-        group.bench_with_input(
-            BenchmarkId::new("without_lb", db_size),
-            db_size,
-            |b, _| {
-                b.iter(|| index_no_lb.search_exact(black_box(&query), black_box(threshold)));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("without_lb", db_size), db_size, |b, _| {
+            b.iter(|| index_no_lb.search_exact(black_box(&query), black_box(threshold)));
+        });
     }
     group.finish();
 }

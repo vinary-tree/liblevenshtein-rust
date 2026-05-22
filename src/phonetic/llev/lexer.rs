@@ -7,10 +7,10 @@
 //! - String literals (`"..."`)
 //! - Identifiers (for symbol references)
 
-use crate::phonetic::common::flags::ParsedFlags;
-use crate::phonetic::common::traits::{LexerLike, TokenLike};
-use crate::phonetic::common::syllable::SyllableCondition;
 use super::error::{LLevError, LLevErrorKind, LLevResult, Position};
+use crate::phonetic::common::flags::ParsedFlags;
+use crate::phonetic::common::syllable::SyllableCondition;
+use crate::phonetic::common::traits::{LexerLike, TokenLike};
 
 /// A token in the `.llev` file format.
 #[derive(Debug, Clone, PartialEq)]
@@ -726,156 +726,258 @@ impl<'a> Lexer<'a> {
             // v/V - vowel
             Some('v') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "vowel",
+                    negated: false,
+                })
             }
             Some('V') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "vowel",
+                    negated: true,
+                })
             }
             // c/C - consonant
             Some('c') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "consonant", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "consonant",
+                    negated: false,
+                })
             }
             Some('C') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "consonant", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "consonant",
+                    negated: true,
+                })
             }
             // f/F - front_vowel
             Some('f') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "front_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "front_vowel",
+                    negated: false,
+                })
             }
             Some('F') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "front_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "front_vowel",
+                    negated: true,
+                })
             }
             // k/K - back_vowel (can't use b/B - word boundary)
             Some('k') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "back_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "back_vowel",
+                    negated: false,
+                })
             }
             Some('K') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "back_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "back_vowel",
+                    negated: true,
+                })
             }
             // h/H - high_vowel
             Some('h') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "high_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "high_vowel",
+                    negated: false,
+                })
             }
             Some('H') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "high_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "high_vowel",
+                    negated: true,
+                })
             }
             // l/L - low_vowel
             Some('l') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "low_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "low_vowel",
+                    negated: false,
+                })
             }
             Some('L') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "low_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "low_vowel",
+                    negated: true,
+                })
             }
             // m/M - mid_vowel
             Some('m') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "mid_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "mid_vowel",
+                    negated: false,
+                })
             }
             Some('M') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "mid_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "mid_vowel",
+                    negated: true,
+                })
             }
             // p/P - stop/plosive (can't use s/S - whitespace)
             Some('p') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "stop", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "stop",
+                    negated: false,
+                })
             }
             Some('P') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "stop", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "stop",
+                    negated: true,
+                })
             }
             // g/G - glide
             Some('g') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "glide", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "glide",
+                    negated: false,
+                })
             }
             Some('G') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "glide", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "glide",
+                    negated: true,
+                })
             }
             // z/Z - nasal (can't use n - newline)
             Some('z') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "nasal", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "nasal",
+                    negated: false,
+                })
             }
             Some('Z') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "nasal", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "nasal",
+                    negated: true,
+                })
             }
             // q/Q - liquid (can't use l/L - low_vowel)
             Some('q') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "liquid", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "liquid",
+                    negated: false,
+                })
             }
             Some('Q') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "liquid", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "liquid",
+                    negated: true,
+                })
             }
             // o/O - voiced
             Some('o') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "voiced", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "voiced",
+                    negated: false,
+                })
             }
             Some('O') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "voiced", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "voiced",
+                    negated: true,
+                })
             }
             // e/E - fricative
             Some('e') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "fricative", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "fricative",
+                    negated: false,
+                })
             }
             Some('E') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "fricative", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "fricative",
+                    negated: true,
+                })
             }
             // a/A - affricate
             Some('a') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "affricate", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "affricate",
+                    negated: false,
+                })
             }
             Some('A') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "affricate", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "affricate",
+                    negated: true,
+                })
             }
             // Standard regex class shortcuts
             // d/D - digit
             Some('d') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "digit", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "digit",
+                    negated: false,
+                })
             }
             Some('D') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "digit", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "digit",
+                    negated: true,
+                })
             }
             // w/W - word character
             Some('w') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "word", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "word",
+                    negated: false,
+                })
             }
             Some('W') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "word", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "word",
+                    negated: true,
+                })
             }
             // s/S - whitespace (can't use for stop - uses p/P instead)
             Some('s') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "space", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "space",
+                    negated: false,
+                })
             }
             Some('S') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "space", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "space",
+                    negated: true,
+                })
             }
             // Other escapes - pass through to parse_escape
             // \b, \B, \n, \r, \t, etc.
@@ -1403,46 +1505,138 @@ mod tests {
     #[test]
     fn test_lexer_simple_chars() {
         let mut lexer = Lexer::new("abc");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Eof);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Eof
+        );
     }
 
     #[test]
     fn test_lexer_operators() {
         let mut lexer = Lexer::new("a*b+c?");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Star);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Plus);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Question);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Star
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Plus
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Question
+        );
     }
 
     #[test]
     fn test_lexer_arrow() {
         let mut lexer = Lexer::new("ph -> f");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('p'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('h'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('f'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('p')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('h')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('f')
+        );
     }
 
     #[test]
     fn test_lexer_unicode_arrow() {
         let mut lexer = Lexer::new("ph → f");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('p'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('h'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('f'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('p')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('h')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('f')
+        );
     }
 
     #[test]
     fn test_lexer_string_literal() {
         let mut lexer = Lexer::new("\"hello world\"");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::String("hello world".to_string())
         );
     }
@@ -1451,7 +1645,9 @@ mod tests {
     fn test_lexer_string_with_escapes() {
         let mut lexer = Lexer::new("\"hello\\nworld\"");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::String("hello\nworld".to_string())
         );
     }
@@ -1460,18 +1656,40 @@ mod tests {
     fn test_lexer_directives() {
         // Directives appear at top-level, not inside patterns
         let mut lexer = Lexer::new_file("@name @version @include");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::DirectiveName);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::DirectiveVersion);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::DirectiveInclude);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::DirectiveName
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::DirectiveVersion
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::DirectiveInclude
+        );
     }
 
     #[test]
     fn test_lexer_directive_with_string() {
         // Directives appear at top-level, not inside patterns
         let mut lexer = Lexer::new_file("@name \"English Rules\"");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::DirectiveName);
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::DirectiveName
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::String("English Rules".to_string())
         );
     }
@@ -1480,7 +1698,9 @@ mod tests {
     fn test_lexer_symbol_ref_simple() {
         let mut lexer = Lexer::new("$FRONT_VOWEL");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::SymbolRef("FRONT_VOWEL".to_string())
         );
     }
@@ -1489,7 +1709,9 @@ mod tests {
     fn test_lexer_symbol_ref_braced() {
         let mut lexer = Lexer::new("${FRONT_VOWEL}");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::SymbolRef("FRONT_VOWEL".to_string())
         );
     }
@@ -1498,38 +1720,101 @@ mod tests {
     fn test_dollar_literal_in_char_class() {
         // $ is now a literal character inside character classes
         let mut lexer = Lexer::new("[$abc]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
         lexer.enter_char_class();
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('$'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('$')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassEnd
+        );
     }
 
     #[test]
     fn test_lexer_uppercase_now_literal_in_pattern() {
         // After sigil change, bare uppercase is literal, not symbol
         let mut lexer = Lexer::new("FRONT");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('F'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('R'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('O'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('N'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('T'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('F')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('R')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('O')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('N')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('T')
+        );
     }
 
     #[test]
     fn test_lexer_number() {
         // Use new_file() for TopLevel mode where numbers are tokenized
         let mut lexer = Lexer::new_file("123");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Number(123));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Number(123)
+        );
     }
 
     #[test]
     fn test_lexer_float() {
         // Use new_file() for TopLevel mode where floats are tokenized
         let mut lexer = Lexer::new_file("0.15");
-        match lexer.next_token().expect("test: lexer.next_token must be Ok") {
+        match lexer
+            .next_token()
+            .expect("test: lexer.next_token must be Ok")
+        {
             Token::Float(f) => assert!((f - 0.15).abs() < 0.001),
             t => panic!("expected Float, got {:?}", t),
         }
@@ -1538,51 +1823,171 @@ mod tests {
     #[test]
     fn test_lexer_context() {
         let mut lexer = Lexer::new("c -> s / _[ei]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('s'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Slash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Underscore);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('s')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Slash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Underscore
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
     }
 
     #[test]
     fn test_lexer_char_class() {
         let mut lexer = Lexer::new("[aeiou]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
 
         // Enter char class mode
         lexer.enter_char_class();
 
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('e'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('i'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('o'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('u'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('e')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('i')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('o')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('u')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassEnd
+        );
     }
 
     #[test]
     fn test_lexer_char_class_negated() {
         let mut lexer = Lexer::new("[^abc]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
         lexer.enter_char_class();
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Caret);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Caret
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassEnd
+        );
     }
 
     #[test]
     fn test_lexer_char_class_range() {
         let mut lexer = Lexer::new("[a-z]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
         lexer.enter_char_class();
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Dash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('z'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Dash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('z')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassEnd
+        );
     }
 
     #[test]
@@ -1590,9 +1995,24 @@ mod tests {
         // # is NOT a comment character - it's a word boundary marker (Hash token)
         // Use // for line comments instead
         let mut lexer = Lexer::new_file("a # b");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("a".to_string()));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Hash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("b".to_string()));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("a".to_string())
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Hash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("b".to_string())
+        );
     }
 
     #[test]
@@ -1600,126 +2020,335 @@ mod tests {
         // Comments are only recognized at top-level, not in patterns
         // Note: The newline is consumed as part of the comment
         let mut lexer = Lexer::new_file("a // comment\nb");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("a".to_string()));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("a".to_string())
+        );
         // Newline is consumed by skip_line_comment()
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("b".to_string()));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("b".to_string())
+        );
     }
 
     #[test]
     fn test_lexer_block_comment() {
         // Block comments are only recognized at top-level
         let mut lexer = Lexer::new_file("a /* comment */ b");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("a".to_string()));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("b".to_string()));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("a".to_string())
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("b".to_string())
+        );
     }
 
     #[test]
     fn test_lexer_nested_block_comment() {
         // Block comments are only recognized at top-level
         let mut lexer = Lexer::new_file("a /* outer /* inner */ outer */ b");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("a".to_string()));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("b".to_string()));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("a".to_string())
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("b".to_string())
+        );
     }
 
     #[test]
     fn test_lexer_metadata_mode() {
         let mut lexer = Lexer::new("[id: 1, name: \"test\"]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
 
         // Enter metadata mode (parser would do this)
         lexer.state = LexerState::Metadata;
 
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::Identifier("id".to_string())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Colon);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Number(1));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Comma);
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Colon
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Number(1)
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Comma
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::Identifier("name".to_string())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Colon);
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Colon
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::String("test".to_string())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::MetadataEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::MetadataEnd
+        );
     }
 
     #[test]
     fn test_lexer_semicolon() {
         let mut lexer = Lexer::new("ph -> f;");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('p'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('h'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('f'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Semicolon);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('p')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('h')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('f')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Semicolon
+        );
     }
 
     #[test]
     fn test_lexer_define_directive() {
         // Directives appear at top-level
         let mut lexer = Lexer::new_file("@define VOWEL = [aeiou]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::DirectiveDefine);
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::DirectiveDefine
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::Identifier("VOWEL".to_string())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Equals);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Equals
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
     }
 
     #[test]
     fn test_lexer_peek() {
         let mut lexer = Lexer::new("ab");
-        assert_eq!(*lexer.peek().expect("test: lexer.peek must be Ok"), Token::Char('a'));
-        assert_eq!(*lexer.peek().expect("test: lexer.peek still 'a'"), Token::Char('a')); // Still 'a'
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
+        assert_eq!(
+            *lexer.peek().expect("test: lexer.peek must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            *lexer.peek().expect("test: lexer.peek still 'a'"),
+            Token::Char('a')
+        ); // Still 'a'
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
     }
 
     #[test]
     fn test_lexer_escape_sequences() {
         let mut lexer = Lexer::new("\\[\\]\\*");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('['));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char(']'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('*'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('[')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char(']')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('*')
+        );
     }
 
     #[test]
     fn test_lexer_hex_escape() {
         let mut lexer = Lexer::new("\\x41\\x42");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('A'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('B'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('A')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('B')
+        );
     }
 
     #[test]
     fn test_lexer_unicode_escape() {
         let mut lexer = Lexer::new("\\u00E9");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('é'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('é')
+        );
     }
 
     #[test]
     fn test_lexer_word_boundary() {
         let mut lexer = Lexer::new("e -> / _#");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('e'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Slash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Underscore);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Hash);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('e')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Slash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Underscore
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Hash
+        );
     }
 
     #[test]
     fn test_lexer_groups() {
         let mut lexer = Lexer::new("(ph|f)");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupStart);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('p'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('h'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Pipe);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('f'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupStart
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('p')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('h')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Pipe
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('f')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupEnd
+        );
     }
 
     #[test]
@@ -1773,30 +2402,85 @@ mod tests {
         // Note: Phonetic shortcuts are: A, C, D, E, F, G, H, K, L, M, O, P, Q, S, V, W, Z
         // So we use non-shortcut letters: B, I, J, N, R, T, X, Y
         let mut lexer = Lexer::new("\\B\\I\\J\\N\\X");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('B'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('I'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('J'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('N'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('X'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('B')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('I')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('J')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('N')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('X')
+        );
     }
 
     #[test]
     fn test_lexer_escaped_u_literal() {
         // Test that \U followed by non-hex produces literal 'U'
         let mut lexer = Lexer::new("\\Upper");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('U'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('U')
+        );
         // 'pper' should follow as lowercase literals
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('p'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('p'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('e'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('r'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('p')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('p')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('e')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('r')
+        );
     }
 
     #[test]
     fn test_lexer_unicode_escape_still_works() {
         // Test that \U followed by hex digits still works as unicode escape
         let mut lexer = Lexer::new("\\U00000041");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('A'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('A')
+        );
     }
 
     #[test]
@@ -1805,7 +2489,9 @@ mod tests {
         let mut lexer = Lexer::new("\\v\\V\\c\\C");
         // \v = vowel (positive)
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::PhoneticShortcut {
                 class_name: "vowel",
                 negated: false
@@ -1813,7 +2499,9 @@ mod tests {
         );
         // \V = vowel (negated)
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::PhoneticShortcut {
                 class_name: "vowel",
                 negated: true
@@ -1821,7 +2509,9 @@ mod tests {
         );
         // \c = consonant (positive)
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::PhoneticShortcut {
                 class_name: "consonant",
                 negated: false
@@ -1829,7 +2519,9 @@ mod tests {
         );
         // \C = consonant (negated)
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::PhoneticShortcut {
                 class_name: "consonant",
                 negated: true
@@ -1864,7 +2556,9 @@ mod tests {
         for (input, expected_class, expected_negated) in shortcuts.iter() {
             let mut lexer = Lexer::new(input);
             assert_eq!(
-                lexer.next_token().expect("test: lexer.next_token must be Ok"),
+                lexer
+                    .next_token()
+                    .expect("test: lexer.next_token must be Ok"),
                 Token::PhoneticShortcut {
                     class_name: *expected_class,
                     negated: *expected_negated
@@ -1879,9 +2573,24 @@ mod tests {
     fn test_lexer_uppercase_pattern_rule() {
         // Test a complete pattern with escaped uppercase (using non-shortcut letter)
         let mut lexer = Lexer::new("\\B -> b");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('B'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('B')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
     }
 
     // ========================================================================
@@ -1891,87 +2600,295 @@ mod tests {
     #[test]
     fn test_lexer_ampersand() {
         let mut lexer = Lexer::new("[aeiou] & [bcdf]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
         lexer.enter_char_class();
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('e'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('i'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('o'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('u'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassEnd);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Ampersand);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('e')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('i')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('o')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('u')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassEnd
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Ampersand
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
     }
 
     #[test]
     fn test_lexer_bang() {
         let mut lexer = Lexer::new("![aeiou]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Bang);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Bang
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
     }
 
     #[test]
     fn test_lexer_if_keyword() {
         let mut lexer = Lexer::new("/ _# if monosyllable");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Slash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Underscore);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Hash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::KeywordIf);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('m'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Slash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Underscore
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Hash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::KeywordIf
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('m')
+        );
     }
 
     #[test]
     fn test_lexer_if_not_keyword_in_word() {
         // "iffy" should not trigger the if keyword
         let mut lexer = Lexer::new("iffy");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('i'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('f'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('f'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('y'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('i')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('f')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('f')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('y')
+        );
     }
 
     #[test]
     fn test_lexer_if_keyword_top_level() {
         // At top-level, "if" becomes KeywordIf identifier
         let mut lexer = Lexer::new_file("if");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::KeywordIf);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::KeywordIf
+        );
     }
 
     #[test]
     fn test_lexer_compound_context_rule() {
         // Test a rule with compound context: x -> gz / [aeiou]_[aeiou]
         let mut lexer = Lexer::new("x -> gz / [aeiou]_[aeiou] & ![y]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('x'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('g'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('z'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Slash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('x')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('g')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('z')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Slash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
         lexer.enter_char_class();
         // Skip to end of char class
-        while lexer.next_token().expect("test: lexer.next_token must be Ok") != Token::CharClassEnd {}
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Underscore);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        while lexer
+            .next_token()
+            .expect("test: lexer.next_token must be Ok")
+            != Token::CharClassEnd
+        {}
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Underscore
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
         lexer.enter_char_class();
-        while lexer.next_token().expect("test: lexer.next_token must be Ok") != Token::CharClassEnd {}
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Ampersand);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Bang);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        while lexer
+            .next_token()
+            .expect("test: lexer.next_token must be Ok")
+            != Token::CharClassEnd
+        {}
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Ampersand
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Bang
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
     }
 
     #[test]
     fn test_lexer_syllable_condition_rule() {
         // Test a rule with syllable condition: y -> i / _# if monosyllable
         let mut lexer = Lexer::new("y -> i / _# if monosyllable;");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('y'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('i'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Slash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Underscore);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Hash);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::KeywordIf);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('y')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('i')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Slash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Underscore
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Hash
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::KeywordIf
+        );
         // "monosyllable" as lowercase chars
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('m'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('m')
+        );
     }
 
     #[test]
@@ -1979,25 +2896,75 @@ mod tests {
         // Test that ':' is recognized as Token::Colon in char class mode
         // The full POSIX syntax [[:NAME:]] is parsed by the parser, not the lexer
         let mut lexer = Lexer::new("[[:VOWEL:]]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
 
         // Enter char class mode
         lexer.enter_char_class();
 
         // '[' inside char class mode returns CharClassStart (signals nested class)
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
         // ':' is recognized as Token::Colon
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Colon);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Colon
+        );
         // Characters of the name
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('V'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('O'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('W'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('E'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('L'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('V')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('O')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('W')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('E')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('L')
+        );
         // Second ':' ends the name
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Colon);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Colon
+        );
         // ']' ends inner named class reference
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassEnd
+        );
         // We're now back in pattern mode, second ']' is NOT CharClassEnd
     }
 
@@ -2006,23 +2973,73 @@ mod tests {
         // Test mixed syntax: [[:VOWEL:]xyz]
         // The lexer just tokenizes; the parser handles named class resolution
         let mut lexer = Lexer::new("[[:VOWEL:]xyz]");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
 
         lexer.enter_char_class();
 
         // '[' inside char class mode returns CharClassStart (signals nested class)
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassStart);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Colon);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassStart
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Colon
+        );
         // Name characters
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('V'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('O'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('W'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('E'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('L'));
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('V')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('O')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('W')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('E')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('L')
+        );
         // End delimiter
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Colon);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Colon
+        );
         // This ']' closes the named class reference and exits char class mode
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::CharClassEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::CharClassEnd
+        );
     }
 
     // ========================================================================
@@ -2034,13 +3051,35 @@ mod tests {
         // (?c:...) - case-sensitive group
         let mut lexer = Lexer::new("(?c:abc)");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupEnd
+        );
     }
 
     #[test]
@@ -2048,13 +3087,35 @@ mod tests {
         // (?-i:...) - case-sensitive group (regex-style)
         let mut lexer = Lexer::new("(?-i:xyz)");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('x'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('y'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('z'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('x')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('y')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('z')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupEnd
+        );
     }
 
     #[test]
@@ -2062,29 +3123,101 @@ mod tests {
         // Test scoped flags in a full rule: (?c:ABC) -> abc;
         let mut lexer = Lexer::new("(?c:ABC) -> abc;");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('A'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('B'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('C'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupEnd);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Semicolon);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('A')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('B')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('C')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupEnd
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Semicolon
+        );
     }
 
     #[test]
     fn test_lexer_regular_group_not_flags() {
         // Regular groups should not be affected: (abc)
         let mut lexer = Lexer::new("(abc)");
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupStart);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupStart
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupEnd
+        );
     }
 
     #[test]
@@ -2093,12 +3226,42 @@ mod tests {
         let mut lexer = Lexer::new("(?abc)");
         // This is NOT a flags group (no ':' after the flag char)
         // So we get GroupStart, then Question, then chars
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupStart);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Question);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('a'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('b'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupStart
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Question
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('a')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('b')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupEnd
+        );
     }
 
     #[test]
@@ -2106,17 +3269,59 @@ mod tests {
         // (?c:sch) -> sh; - case-sensitive "sch" pattern
         let mut lexer = Lexer::new("(?c:sch) -> sh;");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('s'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('c'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('h'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupEnd);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Arrow);
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('s'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Char('h'));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Semicolon);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('s')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('c')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('h')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupEnd
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Arrow
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('s')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Char('h')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Semicolon
+        );
     }
 
     #[test]
@@ -2124,10 +3329,22 @@ mod tests {
         // Test (?c:...) at top-level mode (file parsing)
         let mut lexer = Lexer::new_file("(?c:abc)");
         assert_eq!(
-            lexer.next_token().expect("test: lexer.next_token must be Ok"),
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
             Token::ScopedFlagsStart(ParsedFlags::case_sensitive())
         );
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::Identifier("abc".to_string()));
-        assert_eq!(lexer.next_token().expect("test: lexer.next_token must be Ok"), Token::GroupEnd);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::Identifier("abc".to_string())
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: lexer.next_token must be Ok"),
+            Token::GroupEnd
+        );
     }
 }

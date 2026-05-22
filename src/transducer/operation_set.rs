@@ -202,9 +202,7 @@ impl OperationSet {
     /// assert_eq!(ops.len(), 4);
     /// ```
     pub fn standard() -> Self {
-        OperationSetBuilder::new()
-            .with_standard_ops()
-            .build()
+        OperationSetBuilder::new().with_standard_ops().build()
     }
 
     /// Create a Levenshtein operation set with transposition.
@@ -548,9 +546,7 @@ mod tests {
 
     #[test]
     fn test_builder_standard() {
-        let ops = OperationSetBuilder::new()
-            .with_standard_ops()
-            .build();
+        let ops = OperationSetBuilder::new().with_standard_ops().build();
 
         assert_eq!(ops.len(), 4);
     }
@@ -565,7 +561,9 @@ mod tests {
 
         assert_eq!(ops.len(), 3);
 
-        let custom_op = ops.operations().iter()
+        let custom_op = ops
+            .operations()
+            .iter()
             .find(|op| op.name() == "cheap_subst")
             .expect("Custom operation should exist");
 
@@ -580,9 +578,7 @@ mod tests {
         let ops = OperationSetBuilder::new()
             .with_match()
             .with_operation(OperationType::with_restriction(
-                2, 1, 0.15,
-                phonetic,
-                "ph_to_f"
+                2, 1, 0.15, phonetic, "ph_to_f",
             ))
             .with_standard_ops()
             .build();
@@ -590,7 +586,9 @@ mod tests {
         // Builder allows duplicates: match (explicit) + ph_to_f + standard_ops (match + substitute + insert + delete)
         assert_eq!(ops.len(), 6);
 
-        let ph_op = ops.operations().iter()
+        let ph_op = ops
+            .operations()
+            .iter()
             .find(|op| op.name() == "ph_to_f")
             .expect("Phonetic operation should exist");
 

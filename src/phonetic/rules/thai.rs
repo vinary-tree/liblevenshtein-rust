@@ -122,25 +122,13 @@ mod tests {
         let result = rules.apply("เ");
         assert!(result.contains('e'), "เ should become e, got: {}", result);
         let result = rules.apply("แ");
-        assert!(
-            result.contains("æ"),
-            "แ should become ae, got: {}",
-            result
-        );
+        assert!(result.contains("æ"), "แ should become ae, got: {}", result);
         let result = rules.apply("โ");
         assert!(result.contains('o'), "โ should become o, got: {}", result);
         let result = rules.apply("ใ");
-        assert!(
-            result.contains("aɪ"),
-            "ใ should become ai, got: {}",
-            result
-        );
+        assert!(result.contains("aɪ"), "ใ should become ai, got: {}", result);
         let result = rules.apply("ไ");
-        assert!(
-            result.contains("aɪ"),
-            "ไ should become ai, got: {}",
-            result
-        );
+        assert!(result.contains("aɪ"), "ไ should become ai, got: {}", result);
     }
 
     // ============================================================
@@ -155,11 +143,7 @@ mod tests {
         let result = rules.apply("า");
         assert!(result.contains("aː"), "า should become A, got: {}", result);
         let result = rules.apply("ำ");
-        assert!(
-            result.contains("am"),
-            "ำ should become AM, got: {}",
-            result
-        );
+        assert!(result.contains("am"), "ำ should become AM, got: {}", result);
     }
 
     // ============================================================
@@ -178,11 +162,7 @@ mod tests {
             result
         );
         let result = rules.apply("ึ");
-        assert!(
-            result.contains("ɯ"),
-            "ึ should become ɯ, got: {}",
-            result
-        );
+        assert!(result.contains("ɯ"), "ึ should become ɯ, got: {}", result);
     }
 
     #[test]
@@ -234,11 +214,7 @@ mod tests {
     fn test_low_class_consonants() {
         let rules = base();
         let result = rules.apply("ง");
-        assert!(
-            result.contains("ŋ"),
-            "ง should become ng, got: {}",
-            result
-        );
+        assert!(result.contains("ŋ"), "ง should become ng, got: {}", result);
         let result = rules.apply("ม");
         assert!(result.contains('m'), "ม should become m, got: {}", result);
         let result = rules.apply("ร");
@@ -308,5 +284,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

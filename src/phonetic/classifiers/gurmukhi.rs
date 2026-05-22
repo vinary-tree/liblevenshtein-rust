@@ -42,12 +42,12 @@ static GURMUKHI_VOWELS: &[char] = &[
     'ਾ', // aa matra
     'ਿ', // i matra
     'ੀ', // ii matra
-    'ੁ', // u matra
-    'ੂ', // uu matra
-    'ੇ', // e matra
-    'ੈ', // ai matra
-    'ੋ', // o matra
-    'ੌ', // au matra
+    'ੁ',  // u matra
+    'ੂ',  // uu matra
+    'ੇ',  // e matra
+    'ੈ',  // ai matra
+    'ੋ',  // o matra
+    'ੌ',  // au matra
 ];
 
 impl VowelClassifier for GurmukhiClassifier {
@@ -159,7 +159,7 @@ mod tests {
         assert!(!c.is_vowel('\u{0A1C}')); // ਜ ja (base of ਜ਼)
         assert!(!c.is_vowel('\u{0A5C}')); // ੜ rra (single codepoint)
         assert!(!c.is_vowel('\u{0A2B}')); // ਫ pha (base of ਫ਼)
-        // The nukta (U+0A3C) is a combining mark
+                                          // The nukta (U+0A3C) is a combining mark
         assert!(!c.is_consonant('\u{0A3C}')); // nukta
     }
 

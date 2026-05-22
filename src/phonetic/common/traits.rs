@@ -248,7 +248,10 @@ mod tests {
         assert!(!pipe.is_ampersand());
 
         let mono = MockToken::Monosyllable;
-        assert_eq!(mono.as_syllable_condition(), Some(SyllableCondition::Monosyllable));
+        assert_eq!(
+            mono.as_syllable_condition(),
+            Some(SyllableCondition::Monosyllable)
+        );
 
         let char_tok = MockToken::Char('a');
         assert!(char_tok.can_start_primary());

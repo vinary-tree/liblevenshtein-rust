@@ -121,11 +121,7 @@ pub fn encode_msm_state(
 ///
 /// Tuple of (series_id, query_index, target_index).
 #[inline]
-pub fn decode_msm_state(
-    state_id: StateId,
-    max_query_len: u32,
-    max_target_len: u32,
-) -> MsmStateKey {
+pub fn decode_msm_state(state_id: StateId, max_query_len: u32, max_target_len: u32) -> MsmStateKey {
     let query_target_space = (max_query_len + 1) * (max_target_len + 1);
     let target_space = max_target_len + 1;
 
@@ -252,11 +248,7 @@ impl MsmStateRegistry {
 /// The product of series × query positions × target positions gives an
 /// upper bound, but subsumption and cost thresholds reduce this significantly.
 #[inline]
-pub fn estimate_msm_states(
-    num_series: usize,
-    query_len: usize,
-    max_target_len: usize,
-) -> usize {
+pub fn estimate_msm_states(num_series: usize, query_len: usize, max_target_len: usize) -> usize {
     // Conservative estimate: not all cells will be explored
     // due to cost thresholds and early termination
     let cells_per_series = (query_len + 1) * (max_target_len + 1);
@@ -278,7 +270,11 @@ impl MsmTransition {
     /// Get all transition types.
     #[inline]
     pub fn all() -> SmallVec<[MsmTransition; 3]> {
-        smallvec::smallvec![MsmTransition::Move, MsmTransition::Merge, MsmTransition::Split]
+        smallvec::smallvec![
+            MsmTransition::Move,
+            MsmTransition::Merge,
+            MsmTransition::Split
+        ]
     }
 }
 

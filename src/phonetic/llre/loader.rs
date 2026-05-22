@@ -232,11 +232,7 @@ impl Loader {
     }
 
     /// Extract symbols from an LLev file into a symbol table.
-    fn extract_symbols(
-        &self,
-        file: &LLevFile,
-        alias: Option<&str>,
-    ) -> LLreResult<SymbolTable> {
+    fn extract_symbols(&self, file: &LLevFile, alias: Option<&str>) -> LLreResult<SymbolTable> {
         let mut table = SymbolTable::new();
         let source = file.source_file.clone();
 
@@ -282,7 +278,10 @@ pub fn load_file<P: AsRef<Path>>(path: P) -> LLreResult<LLreFile> {
 }
 
 /// Load a .llre file with custom configuration.
-pub fn load_file_with_config<P: AsRef<Path>>(path: P, config: LoaderConfig) -> LLreResult<LLreFile> {
+pub fn load_file_with_config<P: AsRef<Path>>(
+    path: P,
+    config: LoaderConfig,
+) -> LLreResult<LLreFile> {
     let mut loader = Loader::with_config(config);
     loader.load(path)
 }

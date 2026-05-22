@@ -53,9 +53,7 @@ impl EntryFilter {
         let glob = GlobBuilder::new(pattern)
             .literal_separator(true)
             .build()
-            .map_err(|e| {
-                GrepError::glob_pattern(pattern, e.to_string())
-            })?;
+            .map_err(|e| GrepError::glob_pattern(pattern, e.to_string()))?;
 
         Ok(Self {
             pattern: pattern.to_string(),
@@ -152,13 +150,10 @@ pub fn should_skip_entry(path: &str) -> bool {
 
     // Skip common binary file extensions
     let binary_extensions = [
-        "exe", "dll", "so", "dylib", "o", "obj", "a", "lib",
-        "png", "jpg", "jpeg", "gif", "bmp", "ico", "webp",
-        "mp3", "mp4", "wav", "ogg", "flac", "avi", "mkv", "mov",
-        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-        "zip", "tar", "gz", "bz2", "xz", "7z", "rar",
-        "class", "pyc", "pyo", "wasm",
-        "ttf", "otf", "woff", "woff2", "eot",
+        "exe", "dll", "so", "dylib", "o", "obj", "a", "lib", "png", "jpg", "jpeg", "gif", "bmp",
+        "ico", "webp", "mp3", "mp4", "wav", "ogg", "flac", "avi", "mkv", "mov", "pdf", "doc",
+        "docx", "xls", "xlsx", "ppt", "pptx", "zip", "tar", "gz", "bz2", "xz", "7z", "rar",
+        "class", "pyc", "pyo", "wasm", "ttf", "otf", "woff", "woff2", "eot",
     ];
 
     if let Some(ext) = name.rsplit('.').next() {

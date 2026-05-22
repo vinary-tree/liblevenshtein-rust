@@ -46,7 +46,8 @@ fn generate_code_identifiers(count: usize) -> Vec<String> {
 // Benchmark: Exact matching vs Prefix matching
 fn bench_prefix_vs_exact(c: &mut Criterion) {
     let words = load_dictionary();
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("prefix_vs_exact");
 
@@ -83,7 +84,8 @@ fn bench_prefix_vs_exact(c: &mut Criterion) {
 // Benchmark: Different edit distances with prefix matching
 fn bench_prefix_distances(c: &mut Criterion) {
     let words = load_dictionary();
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("prefix_distances");
 
@@ -110,7 +112,8 @@ fn bench_prefix_distances(c: &mut Criterion) {
 // Benchmark: Post-filtering strategies
 fn bench_filtering_strategies(c: &mut Criterion) {
     let identifiers = generate_code_identifiers(5000);
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(identifiers.iter().map(|s| s.as_str()));
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(identifiers.iter().map(|s| s.as_str()));
 
     // Create metadata for filtering
     let public_identifiers: Vec<_> = identifiers
@@ -138,7 +141,8 @@ fn bench_filtering_strategies(c: &mut Criterion) {
     });
 
     // Pre-filtering (sub-trie)
-    let filtered_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(public_identifiers.clone());
+    let filtered_dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(public_identifiers.clone());
     group.bench_function("pre_filter", |b| {
         b.iter(|| {
             let results: Vec<_> = Transducer::new(filtered_dict.clone(), Algorithm::Standard)
@@ -156,7 +160,8 @@ fn bench_filtering_strategies(c: &mut Criterion) {
 // Benchmark: Filter complexity impact
 fn bench_filter_complexity(c: &mut Criterion) {
     let identifiers = generate_code_identifiers(3000);
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(identifiers.iter().map(|s| s.as_str()));
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(identifiers.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("filter_complexity");
 
@@ -216,7 +221,8 @@ fn bench_filter_complexity(c: &mut Criterion) {
 // Benchmark: Combined operations
 fn bench_combined_operations(c: &mut Criterion) {
     let identifiers = generate_code_identifiers(3000);
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(identifiers.iter().map(|s| s.as_str()));
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(identifiers.iter().map(|s| s.as_str()));
 
     let public_set: std::collections::HashSet<_> = identifiers
         .iter()
@@ -312,7 +318,8 @@ fn bench_scalability(c: &mut Criterion) {
 // Benchmark: take() vs take_while() performance
 fn bench_iteration_limits(c: &mut Criterion) {
     let identifiers = generate_code_identifiers(3000);
-    let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(identifiers.iter().map(|s| s.as_str()));
+    let dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(identifiers.iter().map(|s| s.as_str()));
 
     let mut group = c.benchmark_group("iteration_limits");
 

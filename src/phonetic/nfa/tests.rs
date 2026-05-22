@@ -6,7 +6,7 @@
 //! test surface.
 
 #[cfg(test)]
-use super::{NFAChar, NFA, TransitionLabelChar};
+use super::{NFAChar, TransitionLabelChar, NFA};
 
 // --- NFAChar basic tests ---
 

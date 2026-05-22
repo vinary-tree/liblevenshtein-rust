@@ -36,11 +36,11 @@
 //! }
 //! ```
 
-use libdictenstein::{Dictionary, DictionaryNode};
+#[cfg(feature = "phonetic-rules")]
+use crate::phonetic::nfa::product::{ProductAutomaton, ProductAutomatonChar};
 #[cfg(feature = "phonetic-rules")]
 use crate::phonetic::nfa::{NFAChar, NFA};
-#[cfg(feature = "phonetic-rules")]
-use crate::phonetic::nfa::product::{ProductAutomatonChar, ProductAutomaton};
+use libdictenstein::{Dictionary, DictionaryNode};
 
 use std::collections::VecDeque;
 
@@ -500,9 +500,9 @@ where
 #[cfg(feature = "phonetic-rules")]
 mod tests {
     use super::*;
-    use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
     use crate::phonetic::nfa::compiler::compile;
     use crate::phonetic::regex::parse;
+    use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
 
     #[test]
     fn test_phonetic_candidate_ordering() {

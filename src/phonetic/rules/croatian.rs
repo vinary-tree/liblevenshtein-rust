@@ -89,11 +89,7 @@ mod tests {
         let rules = base();
         // lj → LJ
         let result = rules.apply("lj");
-        assert!(
-            result.contains("ʎ"),
-            "lj should become LJ, got: {}",
-            result
-        );
+        assert!(result.contains("ʎ"), "lj should become LJ, got: {}", result);
     }
 
     #[test]
@@ -101,11 +97,7 @@ mod tests {
         let rules = base();
         // nj → NJ
         let result = rules.apply("nj");
-        assert!(
-            result.contains("ɲ"),
-            "nj should become NJ, got: {}",
-            result
-        );
+        assert!(result.contains("ɲ"), "nj should become NJ, got: {}", result);
     }
 
     #[test]
@@ -137,11 +129,7 @@ mod tests {
         let rules = base();
         // ć → TJ (softer than č)
         let result = rules.apply("ć");
-        assert!(
-            result.contains("tɕ"),
-            "ć should become TJ, got: {}",
-            result
-        );
+        assert!(result.contains("tɕ"), "ć should become TJ, got: {}", result);
     }
 
     #[test]
@@ -149,11 +137,7 @@ mod tests {
         let rules = base();
         // š → SH
         let result = rules.apply("š");
-        assert!(
-            result.contains("ʃ"),
-            "š should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "š should become SH, got: {}", result);
     }
 
     #[test]
@@ -161,11 +145,7 @@ mod tests {
         let rules = base();
         // ž → ZH
         let result = rules.apply("ž");
-        assert!(
-            result.contains("ʒ"),
-            "ž should become ZH, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ž should become ZH, got: {}", result);
     }
 
     #[test]
@@ -205,5 +185,4 @@ mod tests {
             result
         );
     }
-
 }

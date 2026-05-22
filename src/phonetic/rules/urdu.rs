@@ -123,32 +123,16 @@ mod tests {
         let rules = base();
         // ب → b
         let result = rules.apply("ب");
-        assert!(
-            result.contains('b'),
-            "ب should become b, got: {}",
-            result
-        );
+        assert!(result.contains('b'), "ب should become b, got: {}", result);
         // ت → t
         let result = rules.apply("ت");
-        assert!(
-            result.contains('t'),
-            "ت should become t, got: {}",
-            result
-        );
+        assert!(result.contains('t'), "ت should become t, got: {}", result);
         // س → s
         let result = rules.apply("س");
-        assert!(
-            result.contains('s'),
-            "س should become s, got: {}",
-            result
-        );
+        assert!(result.contains('s'), "س should become s, got: {}", result);
         // ک → k
         let result = rules.apply("ک");
-        assert!(
-            result.contains('k'),
-            "ک should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "ک should become k, got: {}", result);
     }
 
     #[test]
@@ -156,11 +140,7 @@ mod tests {
         let rules = base();
         // پ → p
         let result = rules.apply("پ");
-        assert!(
-            result.contains('p'),
-            "پ should become p, got: {}",
-            result
-        );
+        assert!(result.contains('p'), "پ should become p, got: {}", result);
         // چ → t͡ʃ (IPA voiceless postalveolar affricate)
         let result = rules.apply("چ");
         assert!(
@@ -170,18 +150,10 @@ mod tests {
         );
         // گ → g
         let result = rules.apply("گ");
-        assert!(
-            result.contains('ɡ'),
-            "گ should become g, got: {}",
-            result
-        );
+        assert!(result.contains('ɡ'), "گ should become g, got: {}", result);
         // ژ → ʒ (IPA voiced postalveolar fricative)
         let result = rules.apply("ژ");
-        assert!(
-            result.contains("ʒ"),
-            "ژ should become ʒ, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ژ should become ʒ, got: {}", result);
     }
 
     #[test]
@@ -189,18 +161,10 @@ mod tests {
         let rules = base();
         // ٹ → ʈ (IPA retroflex voiceless stop)
         let result = rules.apply("ٹ");
-        assert!(
-            result.contains("ʈ"),
-            "ٹ should become ʈ, got: {}",
-            result
-        );
+        assert!(result.contains("ʈ"), "ٹ should become ʈ, got: {}", result);
         // ڈ → ɖ (IPA retroflex voiced stop)
         let result = rules.apply("ڈ");
-        assert!(
-            result.contains("ɖ"),
-            "ڈ should become ɖ, got: {}",
-            result
-        );
+        assert!(result.contains("ɖ"), "ڈ should become ɖ, got: {}", result);
         // ڑ → ɽ (IPA retroflex flap)
         let result = rules.apply("ڑ");
         assert!(
@@ -222,18 +186,10 @@ mod tests {
         );
         // ے → e (bari ye)
         let result = rules.apply("ے");
-        assert!(
-            result.contains('e'),
-            "ے should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "ے should become e, got: {}", result);
         // ہ → h (gol he)
         let result = rules.apply("ہ");
-        assert!(
-            result.contains('h'),
-            "ہ should become h, got: {}",
-            result
-        );
+        assert!(result.contains('h'), "ہ should become h, got: {}", result);
     }
 
     #[test]
@@ -274,32 +230,16 @@ mod tests {
         let rules = base();
         // ش → SH
         let result = rules.apply("ش");
-        assert!(
-            result.contains("ʃ"),
-            "ش should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ش should become SH, got: {}", result);
         // خ → KH
         let result = rules.apply("خ");
-        assert!(
-            result.contains("x"),
-            "خ should become KH, got: {}",
-            result
-        );
+        assert!(result.contains("x"), "خ should become KH, got: {}", result);
         // ث → TH
         let result = rules.apply("ث");
-        assert!(
-            result.contains("θ"),
-            "ث should become TH, got: {}",
-            result
-        );
+        assert!(result.contains("θ"), "ث should become TH, got: {}", result);
         // غ → GH
         let result = rules.apply("غ");
-        assert!(
-            result.contains("ɣ"),
-            "غ should become GH, got: {}",
-            result
-        );
+        assert!(result.contains("ɣ"), "غ should become GH, got: {}", result);
     }
 
     #[test]
@@ -359,25 +299,13 @@ mod tests {
         let rules = base();
         // ۰ → 0
         let result = rules.apply("۰");
-        assert!(
-            result.contains('0'),
-            "۰ should become 0, got: {}",
-            result
-        );
+        assert!(result.contains('0'), "۰ should become 0, got: {}", result);
         // ۵ → 5
         let result = rules.apply("۵");
-        assert!(
-            result.contains('5'),
-            "۵ should become 5, got: {}",
-            result
-        );
+        assert!(result.contains('5'), "۵ should become 5, got: {}", result);
         // ۹ → 9
         let result = rules.apply("۹");
-        assert!(
-            result.contains('9'),
-            "۹ should become 9, got: {}",
-            result
-        );
+        assert!(result.contains('9'), "۹ should become 9, got: {}", result);
     }
 
     #[test]
@@ -405,5 +333,4 @@ mod tests {
             result
         );
     }
-
 }

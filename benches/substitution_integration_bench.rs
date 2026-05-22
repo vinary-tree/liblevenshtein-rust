@@ -300,15 +300,15 @@ fn bench_unrestricted_baseline(c: &mut Criterion) {
 
     // Test queries with typos
     let test_queries = vec![
-        ("aple", 1),      // apple with 1 deletion
-        ("appl", 1),      // apple with 1 deletion
-        ("aplpy", 2),     // apply with 1 substitution + 1 transposition
-        ("banan", 1),     // banana with 1 deletion
-        ("beutiful", 2),  // beautiful with 2 substitutions
-        ("buisness", 2),  // business with 2 substitutions
-        ("computr", 1),   // computer with 1 deletion
-        ("famly", 1),     // family with 1 deletion
-        ("govrment", 2),  // government with 2 deletions (not in dict)
+        ("aple", 1),       // apple with 1 deletion
+        ("appl", 1),       // apple with 1 deletion
+        ("aplpy", 2),      // apply with 1 substitution + 1 transposition
+        ("banan", 1),      // banana with 1 deletion
+        ("beutiful", 2),   // beautiful with 2 substitutions
+        ("buisness", 2),   // business with 2 substitutions
+        ("computr", 1),    // computer with 1 deletion
+        ("famly", 1),      // family with 1 deletion
+        ("govrment", 2),   // government with 2 deletions (not in dict)
         ("intresting", 3), // interesting with substitution (not in dict)
     ];
 
@@ -341,12 +341,12 @@ fn bench_phonetic_preset(c: &mut Criterion) {
 
     // Test queries with phonetic typos
     let test_queries = vec![
-        ("aple", 1),     // apple -> should match with substitutions
-        ("senter", 2),   // center -> c/s substitution
-        ("kollege", 2),  // college -> c/k substitution
-        ("foto", 2),     // photo (not in dict) -> f/ph substitution
-        ("nite", 2),     // night (not in dict) -> ight/ite
-        ("kwick", 2),    // quick (not in dict) -> qu/k
+        ("aple", 1),    // apple -> should match with substitutions
+        ("senter", 2),  // center -> c/s substitution
+        ("kollege", 2), // college -> c/k substitution
+        ("foto", 2),    // photo (not in dict) -> f/ph substitution
+        ("nite", 2),    // night (not in dict) -> ight/ite
+        ("kwick", 2),   // quick (not in dict) -> qu/k
     ];
 
     for (query, distance) in test_queries.iter() {
@@ -421,10 +421,10 @@ fn bench_custom_small_set(c: &mut Criterion) {
 
     // Test queries using only allowed substitutions
     let test_queries = vec![
-        ("epple", 1),  // apple -> a/e substitution
-        ("benen", 2),  // banana -> a/e substitutions
-        ("bist", 1),   // best -> e/i substitution
-        ("bux", 1),    // box -> o/u substitution
+        ("epple", 1), // apple -> a/e substitution
+        ("benen", 2), // banana -> a/e substitutions
+        ("bist", 1),  // best -> e/i substitution
+        ("bux", 1),   // box -> o/u substitution
     ];
 
     for (query, distance) in test_queries.iter() {
@@ -472,7 +472,8 @@ fn bench_policy_overhead_by_distance(c: &mut Criterion) {
         let dict_phonetic = create_test_dictionary();
         let phonetic_set = SubstitutionSet::phonetic_basic();
         let phonetic_policy = Restricted::new(&phonetic_set);
-        let transducer_phonetic = Transducer::with_policy(dict_phonetic, Algorithm::Standard, phonetic_policy);
+        let transducer_phonetic =
+            Transducer::with_policy(dict_phonetic, Algorithm::Standard, phonetic_policy);
         group.bench_with_input(BenchmarkId::new("phonetic", distance), distance, |b, &d| {
             b.iter(|| {
                 let results: Vec<_> = transducer_phonetic
@@ -488,15 +489,20 @@ fn bench_policy_overhead_by_distance(c: &mut Criterion) {
         custom_set.allow_byte(b'e', b'i');
         custom_set.allow_byte(b'i', b'e');
         let custom_policy = Restricted::new(&custom_set);
-        let transducer_custom = Transducer::with_policy(dict_custom, Algorithm::Standard, custom_policy);
-        group.bench_with_input(BenchmarkId::new("custom_small", distance), distance, |b, &d| {
-            b.iter(|| {
-                let results: Vec<_> = transducer_custom
-                    .query(black_box(query), black_box(d))
-                    .collect();
-                black_box(results)
-            });
-        });
+        let transducer_custom =
+            Transducer::with_policy(dict_custom, Algorithm::Standard, custom_policy);
+        group.bench_with_input(
+            BenchmarkId::new("custom_small", distance),
+            distance,
+            |b, &d| {
+                b.iter(|| {
+                    let results: Vec<_> = transducer_custom
+                        .query(black_box(query), black_box(d))
+                        .collect();
+                    black_box(results)
+                });
+            },
+        );
     }
 
     group.finish();

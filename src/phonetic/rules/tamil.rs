@@ -134,11 +134,7 @@ mod tests {
         let rules = base();
         // ற → RR
         let result = rules.apply("ற");
-        assert!(
-            result.contains("r"),
-            "ற should become RR, got: {}",
-            result
-        );
+        assert!(result.contains("r"), "ற should become RR, got: {}", result);
     }
 
     #[test]
@@ -210,17 +206,9 @@ mod tests {
     fn test_diphthongs() {
         let rules = base();
         let result = rules.apply("ஐ");
-        assert!(
-            result.contains("aɪ"),
-            "ஐ should become AI, got: {}",
-            result
-        );
+        assert!(result.contains("aɪ"), "ஐ should become AI, got: {}", result);
         let result = rules.apply("ஔ");
-        assert!(
-            result.contains("aʊ"),
-            "ஔ should become AU, got: {}",
-            result
-        );
+        assert!(result.contains("aʊ"), "ஔ should become AU, got: {}", result);
     }
 
     // ============================================================
@@ -236,11 +224,7 @@ mod tests {
         let result = rules.apply("ச");
         assert!(result.contains('c'), "ச should become c, got: {}", result);
         let result = rules.apply("ட");
-        assert!(
-            result.contains("ʈ"),
-            "ட should become TT, got: {}",
-            result
-        );
+        assert!(result.contains("ʈ"), "ட should become TT, got: {}", result);
         let result = rules.apply("த");
         assert!(result.contains('t'), "த should become t, got: {}", result);
         let result = rules.apply("ப");
@@ -254,17 +238,9 @@ mod tests {
         let result = rules.apply("ங");
         assert!(result.contains('ŋ'), "ங should become N, got: {}", result);
         let result = rules.apply("ஞ");
-        assert!(
-            result.contains("ɲ"),
-            "ஞ should become NY, got: {}",
-            result
-        );
+        assert!(result.contains("ɲ"), "ஞ should become NY, got: {}", result);
         let result = rules.apply("ண");
-        assert!(
-            result.contains("ɳ"),
-            "ண should become NN, got: {}",
-            result
-        );
+        assert!(result.contains("ɳ"), "ண should become NN, got: {}", result);
     }
 
     #[test]
@@ -301,11 +277,7 @@ mod tests {
         let result = rules.apply("ி");
         assert!(result.contains('i'), "ி should become i, got: {}", result);
         let result = rules.apply("ை");
-        assert!(
-            result.contains("aɪ"),
-            "ை should become AI, got: {}",
-            result
-        );
+        assert!(result.contains("aɪ"), "ை should become AI, got: {}", result);
     }
 
     // ============================================================
@@ -374,5 +346,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

@@ -36,7 +36,10 @@ fn main() {
     let synthetic_dat = DoubleArrayTrie::from_terms(synthetic_words.clone());
     let synthetic_build_time = start.elapsed();
     println!("Synthetic DAT built in {:?}", synthetic_build_time);
-    println!("Synthetic DAT terms: {}\n", synthetic_dat.len().unwrap_or(0));
+    println!(
+        "Synthetic DAT terms: {}\n",
+        synthetic_dat.len().unwrap_or(0)
+    );
 
     // Performance benchmarks
     println!("\n=== Performance Comparison ===\n");

@@ -96,8 +96,8 @@ pub fn transition_msm_position(
                 position.query_index + 1,
                 position.target_index, // Target index doesn't change
                 merge_cost,
-                qv,                          // Update last query value
-                position.last_target_value,  // Keep last target value
+                qv,                         // Update last query value
+                position.last_target_value, // Keep last target value
             );
             if new_pos.can_reach_acceptance(query_length, target_length, max_cost, config.c) {
                 next_positions.push(new_pos);
@@ -308,18 +308,13 @@ pub fn msm_distance_automaton(
         let new_cost = prev_cost + c_cost;
 
         if new_cost <= max_cost + COST_EPSILON {
-            first_col.insert_unchecked(MsmPosition::new(
-                i,
-                1,
-                new_cost,
-                query[i - 1],
-                target[0],
-            ));
+            first_col.insert_unchecked(MsmPosition::new(i, 1, new_cost, query[i - 1], target[0]));
         }
     }
 
     // Initialize first row (i=1, j varies)
-    let mut current_row = MsmState::single(MsmPosition::new(1, 1, initial_cost, query[0], target[0]));
+    let mut current_row =
+        MsmState::single(MsmPosition::new(1, 1, initial_cost, query[0], target[0]));
     for j in 2..=n {
         let prev_cost = current_row
             .iter()
@@ -331,13 +326,7 @@ pub fn msm_distance_automaton(
         let new_cost = prev_cost + c_cost;
 
         if new_cost <= max_cost + COST_EPSILON {
-            current_row.insert_unchecked(MsmPosition::new(
-                1,
-                j,
-                new_cost,
-                query[0],
-                target[j - 1],
-            ));
+            current_row.insert_unchecked(MsmPosition::new(1, j, new_cost, query[0], target[j - 1]));
         }
     }
 
@@ -460,8 +449,10 @@ pub fn msm_distance_wavefront(
         let mut row_has_valid = false;
         for j in 2..=n {
             let move_cost = cost[i - 1][j - 1] + (query[i - 1] - target[j - 1]).abs();
-            let merge_cost = cost[i - 1][j] + config.c_func(query[i - 1], query[i - 2], target[j - 1]);
-            let split_cost = cost[i][j - 1] + config.c_func(target[j - 1], query[i - 1], target[j - 2]);
+            let merge_cost =
+                cost[i - 1][j] + config.c_func(query[i - 1], query[i - 2], target[j - 1]);
+            let split_cost =
+                cost[i][j - 1] + config.c_func(target[j - 1], query[i - 1], target[j - 2]);
 
             cost[i][j] = move_cost.min(merge_cost).min(split_cost);
 
@@ -505,7 +496,9 @@ mod tests {
         assert!(next.len() >= 1);
 
         // Find the move transition
-        let move_pos = next.iter().find(|p| p.query_index == 1 && p.target_index == 1);
+        let move_pos = next
+            .iter()
+            .find(|p| p.query_index == 1 && p.target_index == 1);
         assert!(move_pos.is_some());
         let move_pos = move_pos.expect("expected Some move_pos in test");
         assert!(approx_eq(move_pos.accumulated_cost, 1.0)); // |1.5 - 2.5| = 1.0
@@ -520,7 +513,9 @@ mod tests {
         let next = transition_msm_position(&pos, Some(1.5), None, &config, 10.0, 3, 1);
 
         // Should have merge-like transition
-        let merge_pos = next.iter().find(|p| p.query_index == 1 && p.target_index == 1);
+        let merge_pos = next
+            .iter()
+            .find(|p| p.query_index == 1 && p.target_index == 1);
         assert!(merge_pos.is_some());
     }
 
@@ -533,7 +528,9 @@ mod tests {
         let next = transition_msm_position(&pos, None, Some(2.5), &config, 10.0, 1, 3);
 
         // Should have split-like transition
-        let split_pos = next.iter().find(|p| p.query_index == 1 && p.target_index == 1);
+        let split_pos = next
+            .iter()
+            .find(|p| p.query_index == 1 && p.target_index == 1);
         assert!(split_pos.is_some());
     }
 
@@ -627,7 +624,10 @@ mod tests {
 
         assert!(dist_wavefront.is_some());
         assert!(
-            approx_eq(dist_dp, dist_wavefront.expect("expected Some dist_wavefront in test")),
+            approx_eq(
+                dist_dp,
+                dist_wavefront.expect("expected Some dist_wavefront in test")
+            ),
             "DP: {}, Wavefront: {}",
             dist_dp,
             dist_wavefront.expect("expected Some dist_wavefront in test")

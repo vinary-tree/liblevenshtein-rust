@@ -485,7 +485,10 @@ pub mod float_encoding {
     /// handled separately or transformed.
     #[inline]
     pub fn encode_f32_ordered(value: f32) -> u32 {
-        debug_assert!(value >= 0.0, "encode_f32_ordered requires non-negative values");
+        debug_assert!(
+            value >= 0.0,
+            "encode_f32_ordered requires non-negative values"
+        );
         let bits = value.to_bits();
         // For non-negative floats, the bit pattern is already ordered correctly
         bits
@@ -594,15 +597,15 @@ pub mod sax_encoding {
     /// Breakpoints for SAX alphabet sizes 2-10.
     /// These are z-score values that divide the normal distribution into equal areas.
     const SAX_BREAKPOINTS: &[&[f64]] = &[
-        &[0.0],                                                         // alphabet_size = 2
-        &[-0.43, 0.43],                                                 // 3
-        &[-0.67, 0.0, 0.67],                                            // 4
-        &[-0.84, -0.25, 0.25, 0.84],                                    // 5
-        &[-0.97, -0.43, 0.0, 0.43, 0.97],                               // 6
-        &[-1.07, -0.57, -0.18, 0.18, 0.57, 1.07],                       // 7
-        &[-1.15, -0.67, -0.32, 0.0, 0.32, 0.67, 1.15],                  // 8
-        &[-1.22, -0.76, -0.43, -0.14, 0.14, 0.43, 0.76, 1.22],          // 9
-        &[-1.28, -0.84, -0.52, -0.25, 0.0, 0.25, 0.52, 0.84, 1.28],     // 10
+        &[0.0],                                                     // alphabet_size = 2
+        &[-0.43, 0.43],                                             // 3
+        &[-0.67, 0.0, 0.67],                                        // 4
+        &[-0.84, -0.25, 0.25, 0.84],                                // 5
+        &[-0.97, -0.43, 0.0, 0.43, 0.97],                           // 6
+        &[-1.07, -0.57, -0.18, 0.18, 0.57, 1.07],                   // 7
+        &[-1.15, -0.67, -0.32, 0.0, 0.32, 0.67, 1.15],              // 8
+        &[-1.22, -0.76, -0.43, -0.14, 0.14, 0.43, 0.76, 1.22],      // 9
+        &[-1.28, -0.84, -0.52, -0.25, 0.0, 0.25, 0.52, 0.84, 1.28], // 10
     ];
 
     /// Get SAX breakpoints for a given alphabet size.
@@ -827,7 +830,8 @@ mod tests {
     #[test]
     fn test_from_data() {
         let data = vec![10.0, 20.0, 30.0, 40.0, 50.0];
-        let config = QuantizationConfig::from_data(&data, 256, 0.1).expect("test fixture: must be Some");
+        let config =
+            QuantizationConfig::from_data(&data, 256, 0.1).expect("test fixture: must be Some");
 
         // Range is 40, margin is 4, so total range is 48
         assert!(config.min_value < 10.0);
@@ -980,12 +984,18 @@ mod tests {
         // Same word should have distance 0
         let word1 = vec![0, 1, 2, 3];
         let word2 = vec![0, 1, 2, 3];
-        assert!(approx_eq(sax_encoding::mindist(&word1, &word2, 100, 4), 0.0));
+        assert!(approx_eq(
+            sax_encoding::mindist(&word1, &word2, 100, 4),
+            0.0
+        ));
 
         // Adjacent symbols should have distance 0
         let word3 = vec![0, 1, 2, 3];
         let word4 = vec![1, 2, 3, 3]; // All within 1 of word3
-        assert!(approx_eq(sax_encoding::mindist(&word3, &word4, 100, 4), 0.0));
+        assert!(approx_eq(
+            sax_encoding::mindist(&word3, &word4, 100, 4),
+            0.0
+        ));
     }
 
     #[test]
@@ -993,7 +1003,10 @@ mod tests {
         for size in 2..=10 {
             let bp = sax_encoding::get_breakpoints(size);
             assert!(bp.is_some());
-            assert_eq!(bp.expect("expected Some breakpoints in test").len(), size - 1);
+            assert_eq!(
+                bp.expect("expected Some breakpoints in test").len(),
+                size - 1
+            );
         }
 
         assert!(sax_encoding::get_breakpoints(1).is_none());

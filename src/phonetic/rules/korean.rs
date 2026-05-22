@@ -135,18 +135,10 @@ mod tests {
         let rules = base();
         // ㄲ → k͈ (IPA fortis k)
         let result = rules.apply("ㄲ");
-        assert!(
-            result.contains("k͈"),
-            "ㄲ should become k͈, got: {}",
-            result
-        );
+        assert!(result.contains("k͈"), "ㄲ should become k͈, got: {}", result);
         // ㄸ → t͈ (IPA fortis t)
         let result = rules.apply("ㄸ");
-        assert!(
-            result.contains("t͈"),
-            "ㄸ should become t͈, got: {}",
-            result
-        );
+        assert!(result.contains("t͈"), "ㄸ should become t͈, got: {}", result);
         // ㅃ → p͈ (IPA fortis p)
         let result = rules.apply("ㅃ");
         assert!(
@@ -175,25 +167,13 @@ mod tests {
         let rules = base();
         // ㅋ → kʰ (IPA aspirated k)
         let result = rules.apply("ㅋ");
-        assert!(
-            result.contains('k'),
-            "ㅋ should contain k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "ㅋ should contain k, got: {}", result);
         // ㅌ → tʰ (IPA aspirated t)
         let result = rules.apply("ㅌ");
-        assert!(
-            result.contains('t'),
-            "ㅌ should contain t, got: {}",
-            result
-        );
+        assert!(result.contains('t'), "ㅌ should contain t, got: {}", result);
         // ㅍ → pʰ (IPA aspirated p)
         let result = rules.apply("ㅍ");
-        assert!(
-            result.contains('p'),
-            "ㅍ should contain p, got: {}",
-            result
-        );
+        assert!(result.contains('p'), "ㅍ should contain p, got: {}", result);
         // ㅊ → t͡ɕʰ (IPA aspirated alveolo-palatal affricate)
         let result = rules.apply("ㅊ");
         assert!(
@@ -208,18 +188,10 @@ mod tests {
         let rules = base();
         // ㄱ → k (lax consonant, voiceless)
         let result = rules.apply("ㄱ");
-        assert!(
-            result.contains('k'),
-            "ㄱ should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "ㄱ should become k, got: {}", result);
         // ㄴ → n
         let result = rules.apply("ㄴ");
-        assert!(
-            result.contains('n'),
-            "ㄴ should become n, got: {}",
-            result
-        );
+        assert!(result.contains('n'), "ㄴ should become n, got: {}", result);
         // ㄷ → t (lax consonant, voiceless)
         let result = rules.apply("ㄷ");
         assert!(
@@ -236,11 +208,7 @@ mod tests {
         );
         // ㅁ → m
         let result = rules.apply("ㅁ");
-        assert!(
-            result.contains('m'),
-            "ㅁ should become m, got: {}",
-            result
-        );
+        assert!(result.contains('m'), "ㅁ should become m, got: {}", result);
         // ㅂ → p (lax consonant, voiceless)
         let result = rules.apply("ㅂ");
         assert!(
@@ -269,32 +237,16 @@ mod tests {
         let rules = base();
         // ㅏ → a
         let result = rules.apply("ㅏ");
-        assert!(
-            result.contains('a'),
-            "ㅏ should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "ㅏ should become a, got: {}", result);
         // ㅗ → o
         let result = rules.apply("ㅗ");
-        assert!(
-            result.contains('o'),
-            "ㅗ should become o, got: {}",
-            result
-        );
+        assert!(result.contains('o'), "ㅗ should become o, got: {}", result);
         // ㅜ → u
         let result = rules.apply("ㅜ");
-        assert!(
-            result.contains('u'),
-            "ㅜ should become u, got: {}",
-            result
-        );
+        assert!(result.contains('u'), "ㅜ should become u, got: {}", result);
         // ㅣ → i
         let result = rules.apply("ㅣ");
-        assert!(
-            result.contains('i'),
-            "ㅣ should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "ㅣ should become i, got: {}", result);
     }
 
     #[test]
@@ -366,11 +318,7 @@ mod tests {
         let rules = base();
         // ㅇ → ng
         let result = rules.apply("ㅇ");
-        assert!(
-            result.contains("ŋ"),
-            "ㅇ should become ng, got: {}",
-            result
-        );
+        assert!(result.contains("ŋ"), "ㅇ should become ng, got: {}", result);
     }
 
     #[test]
@@ -384,7 +332,6 @@ mod tests {
             result
         );
     }
-
 
     // ============================================================
     // Romanization tests
@@ -470,7 +417,8 @@ mod tests {
         // ch' → t͡ɕ (IPA voiceless alveolo-palatal affricate)
         let result = rules.apply("ch'");
         assert!(
-            (result.contains("t͡ɕ") || result.contains("ch") || result.contains('C')) && !result.contains('\''),
+            (result.contains("t͡ɕ") || result.contains("ch") || result.contains('C'))
+                && !result.contains('\''),
             "ch' should become t͡ɕ or ch, got: {}",
             result
         );
@@ -500,5 +448,4 @@ mod tests {
             result
         );
     }
-
 }

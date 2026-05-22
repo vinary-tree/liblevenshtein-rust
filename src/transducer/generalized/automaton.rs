@@ -62,8 +62,8 @@
 //! assert!(!automaton.accepts("test", "hello"));
 //! ```
 
-use crate::transducer::universal::bit_vector::CharacteristicVector;
 use super::state::GeneralizedState;
+use crate::transducer::universal::bit_vector::CharacteristicVector;
 use crate::transducer::OperationSet;
 
 /// Generalized Levenshtein Automaton A^∀,χ_n
@@ -240,10 +240,10 @@ impl GeneralizedAutomaton {
                 }
                 // Phase 2d: Transposing and splitting positions are intermediate states
                 // They are not accepting states (operation must complete first)
-                GeneralizedPosition::ITransposing { .. } |
-                GeneralizedPosition::MTransposing { .. } |
-                GeneralizedPosition::ISplitting { .. } |
-                GeneralizedPosition::MSplitting { .. } => false,
+                GeneralizedPosition::ITransposing { .. }
+                | GeneralizedPosition::MTransposing { .. }
+                | GeneralizedPosition::ISplitting { .. }
+                | GeneralizedPosition::MSplitting { .. } => false,
             }
         })
     }
@@ -301,7 +301,9 @@ impl GeneralizedAutomaton {
         // From thesis page 51: h_n(w, x) defined only if |x| ≤ |w| + n
         // However, expansion operations (e.g., split ⟨1,2⟩) can increase effective word length
         // Phase 3b: Calculate maximum expansion from operations
-        let max_expansion = self.operations.operations()
+        let max_expansion = self
+            .operations
+            .operations()
             .iter()
             .map(|op| op.consume_y().saturating_sub(op.consume_x()))
             .max()
@@ -344,11 +346,17 @@ impl GeneralizedAutomaton {
             let subword = self.relevant_subword(word, i + 1);
 
             #[cfg(debug_assertions)]
-            eprintln!("\n[DEBUG] === Input position i={}, char='{}' ===", i, input_char);
+            eprintln!(
+                "\n[DEBUG] === Input position i={}, char='{}' ===",
+                i, input_char
+            );
             #[cfg(debug_assertions)]
             eprintln!("  Subword: {:?}", subword);
             #[cfg(debug_assertions)]
-            eprintln!("  State before transition: {} positions", state.positions().count());
+            eprintln!(
+                "  State before transition: {} positions",
+                state.positions().count()
+            );
 
             // Compute characteristic vector β(x_i, s_n(w, i))
             let bit_vector = CharacteristicVector::new(input_char, &subword);
@@ -356,9 +364,20 @@ impl GeneralizedAutomaton {
             // Apply transition: state := δ^∀,χ_n(state, β)
             // Phase 3b: Pass full word, word slice, and input character for phonetic operations
             // H2 Optimization: Pass pre-computed character vector (conditional for distance > 1)
-            if let Some(next_state) = state.transition(&self.operations, &bit_vector, word, word_chars.as_deref(), &subword, input_char, i + 1) {
+            if let Some(next_state) = state.transition(
+                &self.operations,
+                &bit_vector,
+                word,
+                word_chars.as_deref(),
+                &subword,
+                input_char,
+                i + 1,
+            ) {
                 #[cfg(debug_assertions)]
-                eprintln!("  State after transition: {} positions", next_state.positions().count());
+                eprintln!(
+                    "  State after transition: {} positions",
+                    next_state.positions().count()
+                );
                 state = next_state;
             } else {
                 // Transition failed, reject
@@ -457,7 +476,12 @@ mod tests {
         let word_chars: Vec<char> = word.chars().collect();
 
         for (i, ch) in input.chars().enumerate() {
-            eprintln!("\nDEBUG: Processing char {} ('{}') at input position {}", i+1, ch, i);
+            eprintln!(
+                "\nDEBUG: Processing char {} ('{}') at input position {}",
+                i + 1,
+                ch,
+                i
+            );
 
             let subword = automaton.relevant_subword(word, i + 1);
             eprintln!("DEBUG: Relevant subword = '{}'", subword);
@@ -465,7 +489,15 @@ mod tests {
             let bit_vector = CharacteristicVector::new(ch, &subword);
             eprintln!("DEBUG: Bit vector length = {}", bit_vector.len());
 
-            match state.transition(&automaton.operations, &bit_vector, word, Some(&word_chars), &subword, ch, i + 1) {
+            match state.transition(
+                &automaton.operations,
+                &bit_vector,
+                word,
+                Some(&word_chars),
+                &subword,
+                ch,
+                i + 1,
+            ) {
                 Some(next) => {
                     eprintln!("DEBUG: Next state = {}", next);
                     state = next;
@@ -477,7 +509,11 @@ mod tests {
         }
 
         eprintln!("\nDEBUG: Final state = {}", state);
-        eprintln!("DEBUG: Word length = {}, Input length = {}", word.len(), input.len());
+        eprintln!(
+            "DEBUG: Word length = {}, Input length = {}",
+            word.len(),
+            input.len()
+        );
 
         // Check acceptance
         let is_accepting = automaton.is_accepting(&state, word.len(), input.len());
@@ -519,7 +555,12 @@ mod tests {
         let word = "test";
         let input = "tests";
 
-        eprintln!("\nDEBUG: Testing insertion word='{}', input='{}', max_distance={}", word, input, automaton.max_distance());
+        eprintln!(
+            "\nDEBUG: Testing insertion word='{}', input='{}', max_distance={}",
+            word,
+            input,
+            automaton.max_distance()
+        );
 
         let mut state = automaton.initial_state();
         eprintln!("Initial state: {}", state);
@@ -528,7 +569,12 @@ mod tests {
         let word_chars: Vec<char> = word.chars().collect();
 
         for (i, ch) in input.chars().enumerate() {
-            eprintln!("\n--- Processing char {} ('{}') at position {} ---", i+1, ch, i+1);
+            eprintln!(
+                "\n--- Processing char {} ('{}') at position {} ---",
+                i + 1,
+                ch,
+                i + 1
+            );
 
             let subword = automaton.relevant_subword(word, i + 1);
             eprintln!("Relevant subword: '{}'", subword);
@@ -536,14 +582,22 @@ mod tests {
             let bit_vector = CharacteristicVector::new(ch, &subword);
             eprintln!("Bit vector length: {}", bit_vector.len());
 
-            match state.transition(&automaton.operations, &bit_vector, word, Some(&word_chars), &subword, ch, i + 1) {
+            match state.transition(
+                &automaton.operations,
+                &bit_vector,
+                word,
+                Some(&word_chars),
+                &subword,
+                ch,
+                i + 1,
+            ) {
                 Some(next) => {
                     eprintln!("Next state: {}", next);
                     state = next;
                 }
                 None => {
                     eprintln!("Transition failed!");
-                    panic!("Should not fail at position {}", i+1);
+                    panic!("Should not fail at position {}", i + 1);
                 }
             }
         }
@@ -560,12 +614,31 @@ mod tests {
             let remaining_errors = n - (pos.errors() as i32);
 
             eprintln!("\nPosition: {}", pos);
-            eprintln!("  current_word_pos = {} + {} = {}", input.len(), pos.offset(), current_word_pos);
-            eprintln!("  remaining_chars = {} - {} = {}", word.len(), current_word_pos, remaining_chars);
-            eprintln!("  remaining_errors = {} - {} = {}", n, pos.errors(), remaining_errors);
-            eprintln!("  Accept? {} >= 0 && {} <= {} = {}",
-                     remaining_chars, remaining_chars, remaining_errors,
-                     remaining_chars >= 0 && remaining_chars <= remaining_errors);
+            eprintln!(
+                "  current_word_pos = {} + {} = {}",
+                input.len(),
+                pos.offset(),
+                current_word_pos
+            );
+            eprintln!(
+                "  remaining_chars = {} - {} = {}",
+                word.len(),
+                current_word_pos,
+                remaining_chars
+            );
+            eprintln!(
+                "  remaining_errors = {} - {} = {}",
+                n,
+                pos.errors(),
+                remaining_errors
+            );
+            eprintln!(
+                "  Accept? {} >= 0 && {} <= {} = {}",
+                remaining_chars,
+                remaining_chars,
+                remaining_errors,
+                remaining_chars >= 0 && remaining_chars <= remaining_errors
+            );
         }
 
         let is_accepting = automaton.is_accepting(&state, word.len(), input.len());
@@ -621,10 +694,14 @@ mod tests {
     fn test_debug_deletion_middle() {
         let automaton = GeneralizedAutomaton::new(1);
         let word = "test";
-        let input = "tst";  // Missing 'e' in middle
+        let input = "tst"; // Missing 'e' in middle
 
-        eprintln!("\nDEBUG: Testing deletion in middle: word='{}', input='{}', max_distance={}",
-                  word, input, automaton.max_distance());
+        eprintln!(
+            "\nDEBUG: Testing deletion in middle: word='{}', input='{}', max_distance={}",
+            word,
+            input,
+            automaton.max_distance()
+        );
         eprintln!("Expected: true (1 deletion)");
 
         // Manual step-through
@@ -635,7 +712,12 @@ mod tests {
         let word_chars: Vec<char> = word.chars().collect();
 
         for (i, ch) in input.chars().enumerate() {
-            eprintln!("\n--- Processing char {} ('{}') at position {} ---", i+1, ch, i+1);
+            eprintln!(
+                "\n--- Processing char {} ('{}') at position {} ---",
+                i + 1,
+                ch,
+                i + 1
+            );
 
             let subword = automaton.relevant_subword(word, i + 1);
             eprintln!("Relevant subword: '{}'", subword);
@@ -643,14 +725,22 @@ mod tests {
             let bit_vector = CharacteristicVector::new(ch, &subword);
             eprintln!("Bit vector length: {}", bit_vector.len());
 
-            match state.transition(&automaton.operations, &bit_vector, word, Some(&word_chars), &subword, ch, i + 1) {
+            match state.transition(
+                &automaton.operations,
+                &bit_vector,
+                word,
+                Some(&word_chars),
+                &subword,
+                ch,
+                i + 1,
+            ) {
                 Some(next) => {
                     eprintln!("Next state: {}", next);
                     state = next;
                 }
                 None => {
                     eprintln!("Transition failed - no successor state!");
-                    panic!("Should not fail at position {}", i+1);
+                    panic!("Should not fail at position {}", i + 1);
                 }
             }
         }
@@ -669,8 +759,14 @@ mod tests {
             match pos {
                 GeneralizedPosition::MFinal { offset, errors } => {
                     eprintln!("\nM-type position: offset={}, errors={}", offset, errors);
-                    eprintln!("  M-type accepting? offset <= 0 && errors <= {}: {} <= 0 && {} <= {} = {}",
-                             n, offset, errors, n, *offset <= 0 && *errors <= n as u8);
+                    eprintln!(
+                        "  M-type accepting? offset <= 0 && errors <= {}: {} <= 0 && {} <= {} = {}",
+                        n,
+                        offset,
+                        errors,
+                        n,
+                        *offset <= 0 && *errors <= n as u8
+                    );
                 }
                 GeneralizedPosition::INonFinal { offset, errors } => {
                     let current_word_pos = input.len() as i32 + offset;
@@ -678,12 +774,29 @@ mod tests {
                     let remaining_errors = n - (*errors as i32);
 
                     eprintln!("\nI-type position: offset={}, errors={}", offset, errors);
-                    eprintln!("  current_word_pos = {} + {} = {}", input.len(), offset, current_word_pos);
-                    eprintln!("  remaining_chars = {} - {} = {}", word.len(), current_word_pos, remaining_chars);
-                    eprintln!("  remaining_errors = {} - {} = {}", n, errors, remaining_errors);
-                    eprintln!("  Accept? {} >= 0 && {} <= {} = {}",
-                             remaining_chars, remaining_chars, remaining_errors,
-                             remaining_chars >= 0 && remaining_chars <= remaining_errors);
+                    eprintln!(
+                        "  current_word_pos = {} + {} = {}",
+                        input.len(),
+                        offset,
+                        current_word_pos
+                    );
+                    eprintln!(
+                        "  remaining_chars = {} - {} = {}",
+                        word.len(),
+                        current_word_pos,
+                        remaining_chars
+                    );
+                    eprintln!(
+                        "  remaining_errors = {} - {} = {}",
+                        n, errors, remaining_errors
+                    );
+                    eprintln!(
+                        "  Accept? {} >= 0 && {} <= {} = {}",
+                        remaining_chars,
+                        remaining_chars,
+                        remaining_errors,
+                        remaining_chars >= 0 && remaining_chars <= remaining_errors
+                    );
                 }
                 // Phase 2d: Debug output for transposing/splitting positions
                 GeneralizedPosition::ITransposing { offset, errors } => {
@@ -723,7 +836,7 @@ mod tests {
         let ops = crate::transducer::OperationSet::with_transposition();
         let automaton = GeneralizedAutomaton::with_operations(0, ops);
 
-        assert!(automaton.accepts("test", "test"));  // Exact match
+        assert!(automaton.accepts("test", "test")); // Exact match
         assert!(!automaton.accepts("test", "tset")); // Requires 1 error
         assert!(!automaton.accepts("test", "etst")); // Requires 1 error
     }
@@ -816,11 +929,11 @@ mod tests {
 
         // Single character (no transposition possible, but substitution works)
         assert!(automaton.accepts("a", "a"));
-        assert!(automaton.accepts("a", "b"));  // Accepted via substitution (not transposition)
+        assert!(automaton.accepts("a", "b")); // Accepted via substitution (not transposition)
 
         // Verify distance 0 rejects difference
         let strict_automaton = GeneralizedAutomaton::with_operations(0, ops);
-        assert!(!strict_automaton.accepts("a", "b"));  // No errors allowed
+        assert!(!strict_automaton.accepts("a", "b")); // No errors allowed
     }
 
     #[test]
@@ -916,7 +1029,7 @@ mod tests {
 
         // Single character (merge requires 2 input chars)
         assert!(automaton.accepts("a", "a"));
-        assert!(automaton.accepts("a", "ab"));  // Merge "ab" → "a"
+        assert!(automaton.accepts("a", "ab")); // Merge "ab" → "a"
 
         // Two char word
         assert!(automaton.accepts("ab", "ab"));
@@ -1005,7 +1118,7 @@ mod tests {
 
         // Single character (split produces 2 chars from 1)
         assert!(automaton.accepts("a", "a"));
-        assert!(automaton.accepts("ab", "a"));  // Split "a" → "ab"
+        assert!(automaton.accepts("ab", "a")); // Split "a" → "ab"
 
         // Two char word
         assert!(automaton.accepts("ab", "ab"));
@@ -1301,8 +1414,12 @@ mod tests {
         // Check operation set has the right operations
         eprintln!("Operation set has {} operations", ops.operations().len());
         for op in ops.operations() {
-            eprintln!("  Operation: consume_x={}, consume_y={}, weight={}",
-                     op.consume_x(), op.consume_y(), op.weight());
+            eprintln!(
+                "  Operation: consume_x={}, consume_y={}, weight={}",
+                op.consume_x(),
+                op.consume_y(),
+                op.weight()
+            );
         }
 
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
@@ -1471,8 +1588,8 @@ mod tests {
     fn test_cross_validate_standard_operations() {
         // Test that generalized automaton matches universal automaton
         // for standard Levenshtein operations
-        use crate::transducer::universal::UniversalAutomaton;
         use crate::transducer::universal::Standard;
+        use crate::transducer::universal::UniversalAutomaton;
 
         let test_cases = vec![
             ("kitten", "sitting", 3, true),
@@ -1493,12 +1610,16 @@ mod tests {
             let gen_result = gen_auto.accepts(word, input);
             let univ_result = univ_auto.accepts(word, input);
 
-            assert_eq!(gen_result, univ_result,
-                      "Mismatch for ('{}', '{}', {}): gen={}, univ={}",
-                      word, input, distance, gen_result, univ_result);
-            assert_eq!(gen_result, expected,
-                      "Expected {} for ('{}', '{}', {}), got {}",
-                      expected, word, input, distance, gen_result);
+            assert_eq!(
+                gen_result, univ_result,
+                "Mismatch for ('{}', '{}', {}): gen={}, univ={}",
+                word, input, distance, gen_result, univ_result
+            );
+            assert_eq!(
+                gen_result, expected,
+                "Expected {} for ('{}', '{}', {}), got {}",
+                expected, word, input, distance, gen_result
+            );
         }
     }
 
@@ -1516,28 +1637,36 @@ mod tests {
 
         // These should all be accepted
         let accept_cases = vec![
-            ("phone", "fone"),   // ph→f
-            ("graph", "graf"),   // ph→f
-            ("ship", "sip"),     // sh→s
-            ("think", "tink"),   // th→t
-            ("church", "kurc"),  // first ch→k
-            ("chair", "kair"),   // ch→k
+            ("phone", "fone"),  // ph→f
+            ("graph", "graf"),  // ph→f
+            ("ship", "sip"),    // sh→s
+            ("think", "tink"),  // th→t
+            ("church", "kurc"), // first ch→k
+            ("chair", "kair"),  // ch→k
         ];
 
         for (word, input) in accept_cases {
-            assert!(automaton.accepts(word, input),
-                   "Should accept ('{}', '{}')", word, input);
+            assert!(
+                automaton.accepts(word, input),
+                "Should accept ('{}', '{}')",
+                word,
+                input
+            );
         }
 
         // These should all be rejected (require > distance 1)
         let reject_cases = vec![
-            ("phone", "fo"),     // ph→f + delete (needs distance 2)
-            ("church", "urk"),   // ch→k + delete (needs distance 2)
+            ("phone", "fo"),   // ph→f + delete (needs distance 2)
+            ("church", "urk"), // ch→k + delete (needs distance 2)
         ];
 
         for (word, input) in reject_cases {
-            assert!(!automaton.accepts(word, input),
-                   "Should reject ('{}', '{}') at distance 1", word, input);
+            assert!(
+                !automaton.accepts(word, input),
+                "Should reject ('{}', '{}') at distance 1",
+                word,
+                input
+            );
         }
     }
 
@@ -1558,17 +1687,23 @@ mod tests {
         // "church" → "kurk" requires 2× ch→k operations
         // Each operation has weight 0.15, truncates to 0
         // Both should succeed at distance 1
-        assert!(automaton.accepts("church", "kurk"),
-               "Two phonetic operations (2×0.15=0 errors) should work at distance 1");
+        assert!(
+            automaton.accepts("church", "kurk"),
+            "Two phonetic operations (2×0.15=0 errors) should work at distance 1"
+        );
 
         // "church" → "kurks" requires 2× ch→k + 1 insert = 1 standard error
         // Should still work at distance 1
-        assert!(automaton.accepts("church", "kurks"),
-               "Two phonetic + one standard operation (total 1 error) should work at distance 1");
+        assert!(
+            automaton.accepts("church", "kurks"),
+            "Two phonetic + one standard operation (total 1 error) should work at distance 1"
+        );
 
         // But two standard operations should fail
-        assert!(!automaton.accepts("church", "korks"),
-               "Two phonetic + two standard operations should fail at distance 1");
+        assert!(
+            !automaton.accepts("church", "korks"),
+            "Two phonetic + two standard operations should fail at distance 1"
+        );
     }
 
     // Phase 3b: Phonetic split ⟨1,2⟩ tests
@@ -1584,16 +1719,22 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // "ark" → "arch" via k→ch split
-        assert!(automaton.accepts("ark", "arch"),
-               "Split k→ch should work at distance 1");
+        assert!(
+            automaton.accepts("ark", "arch"),
+            "Split k→ch should work at distance 1"
+        );
 
         // "back" → "bach" via k→ch split
-        assert!(automaton.accepts("back", "bach"),
-               "Split k→ch at word end should work");
+        assert!(
+            automaton.accepts("back", "bach"),
+            "Split k→ch at word end should work"
+        );
 
         // "kan" → "chan" via k→ch split at start
-        assert!(automaton.accepts("kan", "chan"),
-               "Split k→ch at word start should work");
+        assert!(
+            automaton.accepts("kan", "chan"),
+            "Split k→ch at word start should work"
+        );
     }
 
     #[test]
@@ -1607,12 +1748,16 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // "graf" → "graph" via f→ph split
-        assert!(automaton.accepts("graf", "graph"),
-               "Split f→ph should work at distance 1");
+        assert!(
+            automaton.accepts("graf", "graph"),
+            "Split f→ph should work at distance 1"
+        );
 
         // "foto" → "photo" via f→ph split at start
-        assert!(automaton.accepts("foto", "photo"),
-               "Split f→ph at word start should work");
+        assert!(
+            automaton.accepts("foto", "photo"),
+            "Split f→ph at word start should work"
+        );
     }
 
     #[test]
@@ -1626,12 +1771,16 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // "sip" → "ship" via s→sh split
-        assert!(automaton.accepts("sip", "ship"),
-               "Split s→sh should work at distance 1");
+        assert!(
+            automaton.accepts("sip", "ship"),
+            "Split s→sh should work at distance 1"
+        );
 
         // "sell" → "shell" via s→sh split at start
-        assert!(automaton.accepts("sell", "shell"),
-               "Split s→sh at word start should work");
+        assert!(
+            automaton.accepts("sell", "shell"),
+            "Split s→sh at word start should work"
+        );
     }
 
     #[test]
@@ -1645,12 +1794,16 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // "bat" → "bath" via t→th split
-        assert!(automaton.accepts("bat", "bath"),
-               "Split t→th should work at distance 1");
+        assert!(
+            automaton.accepts("bat", "bath"),
+            "Split t→th should work at distance 1"
+        );
 
         // "tin" → "thin" via t→th split at start
-        assert!(automaton.accepts("tin", "thin"),
-               "Split t→th at word start should work");
+        assert!(
+            automaton.accepts("tin", "thin"),
+            "Split t→th at word start should work"
+        );
     }
 
     #[test]
@@ -1666,14 +1819,18 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // Single split at distance 1 (fractional weight = 0)
-                assert!(automaton.accepts("kair", "chair"),
-                       "Single k→ch split should work at distance 1");
+        assert!(
+            automaton.accepts("kair", "chair"),
+            "Single k→ch split should work at distance 1"
+        );
 
         // But two splits need to check if fractional weights allow it
         // Each split has weight 0.15, both truncate to 0
         // So two splits should work at distance 1
-        assert!(automaton.accepts("kat", "chath"),
-               "Two splits (k→ch, t→th) with fractional weights should work at distance 1");
+        assert!(
+            automaton.accepts("kat", "chath"),
+            "Two splits (k→ch, t→th) with fractional weights should work at distance 1"
+        );
     }
 
     #[test]
@@ -1688,13 +1845,17 @@ mod tests {
 
         // Split + standard operations
         // "graf" → "grape" via f→ph split (0 errors) + e→a substitute (1 error) = 1 total
-        assert!(automaton.accepts("graf", "graphe"),
-               "Split f→ph + insert 'e' should work at distance 1");
+        assert!(
+            automaton.accepts("graf", "graphe"),
+            "Split f→ph + insert 'e' should work at distance 1"
+        );
 
         // Multiple standard operations
         // "bak" → "batch" via k→ch split (0) + insert 't' (1) = 1 total
-        assert!(automaton.accepts("bak", "batch"),
-               "Split k→ch + insert should work at distance 1");
+        assert!(
+            automaton.accepts("bak", "batch"),
+            "Split k→ch + insert should work at distance 1"
+        );
     }
 
     #[test]
@@ -1708,13 +1869,17 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(0, ops.clone());
 
         // At distance 0, no operations should work
-        assert!(!automaton.accepts("ark", "arch"),
-               "Split should not work at distance 0");
+        assert!(
+            !automaton.accepts("ark", "arch"),
+            "Split should not work at distance 0"
+        );
 
         // At distance 1, fractional-weight split should work
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
-        assert!(automaton.accepts("ark", "arch"),
-               "Split should work at distance 1");
+        assert!(
+            automaton.accepts("ark", "arch"),
+            "Split should work at distance 1"
+        );
     }
 
     // Phase 3b: Phonetic transpose ⟨2,2⟩ tests
@@ -1729,16 +1894,22 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // "queen" → "kween" via qu→kw transpose
-        assert!(automaton.accepts("queen", "kween"),
-               "Transpose qu→kw should work at distance 1");
+        assert!(
+            automaton.accepts("queen", "kween"),
+            "Transpose qu→kw should work at distance 1"
+        );
 
         // "quick" → "kwick" via qu→kw transpose
-        assert!(automaton.accepts("quick", "kwick"),
-               "Transpose qu→kw at word start should work");
+        assert!(
+            automaton.accepts("quick", "kwick"),
+            "Transpose qu→kw at word start should work"
+        );
 
         // "quit" → "kwit" via qu→kw transpose
-        assert!(automaton.accepts("quit", "kwit"),
-               "Transpose qu→kw should work");
+        assert!(
+            automaton.accepts("quit", "kwit"),
+            "Transpose qu→kw should work"
+        );
     }
 
     #[test]
@@ -1752,12 +1923,16 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // "kween" → "queen" via kw→qu transpose (reverse)
-        assert!(automaton.accepts("kween", "queen"),
-               "Transpose kw→qu should work at distance 1");
+        assert!(
+            automaton.accepts("kween", "queen"),
+            "Transpose kw→qu should work at distance 1"
+        );
 
         // "kwik" → "quik" via kw→qu transpose
-        assert!(automaton.accepts("kwik", "quik"),
-               "Transpose kw→qu should work");
+        assert!(
+            automaton.accepts("kwik", "quik"),
+            "Transpose kw→qu should work"
+        );
     }
 
     #[test]
@@ -1773,13 +1948,17 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // Single transpose at distance 1
-        assert!(automaton.accepts("queen", "kween"),
-               "Single transpose should work at distance 1");
+        assert!(
+            automaton.accepts("queen", "kween"),
+            "Single transpose should work at distance 1"
+        );
 
         // Two transposes would need multiple qu/kw in the word
         // "ququ" → "kwkw" (two transposes, both fractional = 0)
-        assert!(automaton.accepts("ququ", "kwkw"),
-               "Two transposes with fractional weights should work at distance 1");
+        assert!(
+            automaton.accepts("ququ", "kwkw"),
+            "Two transposes with fractional weights should work at distance 1"
+        );
     }
 
     #[test]
@@ -1794,8 +1973,10 @@ mod tests {
 
         // Transpose + standard operations
         // "queen" → "kweens" via qu→kw (0) + insert 's' (1) = 1 total
-        assert!(automaton.accepts("queen", "kweens"),
-               "Transpose + insert should work at distance 1");
+        assert!(
+            automaton.accepts("queen", "kweens"),
+            "Transpose + insert should work at distance 1"
+        );
     }
 
     #[test]
@@ -1809,13 +1990,17 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(0, ops.clone());
 
         // At distance 0, no operations should work
-        assert!(!automaton.accepts("queen", "kween"),
-               "Transpose should not work at distance 0");
+        assert!(
+            !automaton.accepts("queen", "kween"),
+            "Transpose should not work at distance 0"
+        );
 
         // At distance 1, fractional-weight transpose should work
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
-        assert!(automaton.accepts("queen", "kween"),
-               "Transpose should work at distance 1");
+        assert!(
+            automaton.accepts("queen", "kween"),
+            "Transpose should work at distance 1"
+        );
     }
 
     #[test]
@@ -1830,19 +2015,24 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // Merge: "phone" → "fone" (ph→f)
-        assert!(automaton.accepts("phone", "fone"),
-               "Merge operation should work");
+        assert!(
+            automaton.accepts("phone", "fone"),
+            "Merge operation should work"
+        );
 
         // Split: "graf" → "graph" (f→ph)
-        assert!(automaton.accepts("graf", "graph"),
-               "Split operation should work");
+        assert!(
+            automaton.accepts("graf", "graph"),
+            "Split operation should work"
+        );
 
         // Transpose: "queen" → "kween" (qu→kw)
-        assert!(automaton.accepts("queen", "kween"),
-               "Transpose operation should work");
+        assert!(
+            automaton.accepts("queen", "kween"),
+            "Transpose operation should work"
+        );
 
         // All three have fractional weights, all work at distance 1
         // Each operation independently truncates to 0 errors
     }
 }
-

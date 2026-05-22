@@ -2,7 +2,9 @@
 
 use super::query_result::QueryResult;
 use super::transition::{initial_state, transition_state_pooled};
-use super::{Algorithm, Intersection, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
+use super::{
+    Algorithm, Intersection, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted,
+};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
@@ -65,12 +67,16 @@ pub struct Candidate {
 ///     println!("{}: {}", candidate.term, candidate.distance);
 /// }
 /// ```
-pub struct QueryIterator<N: DictionaryNode, R: QueryResult = String, P: SubstitutionPolicy = Unrestricted> {
+pub struct QueryIterator<
+    N: DictionaryNode,
+    R: QueryResult = String,
+    P: SubstitutionPolicy = Unrestricted,
+> {
     pending: VecDeque<Box<Intersection<N>>>,
     query: Vec<N::Unit>,
     max_distance: usize,
     algorithm: Algorithm,
-    policy: P,                    // Substitution policy for matching
+    policy: P, // Substitution policy for matching
     finished: bool,
     state_pool: StatePool,        // Pool for State allocation reuse
     substring_mode: bool,         // Enable substring matching (for suffix automata)
@@ -91,11 +97,20 @@ impl<N: DictionaryNode, R: QueryResult> QueryIterator<N, R, Unrestricted> {
         algorithm: Algorithm,
         substring_mode: bool,
     ) -> Self {
-        Self::with_policy_and_substring(root, query, max_distance, algorithm, Unrestricted, substring_mode)
+        Self::with_policy_and_substring(
+            root,
+            query,
+            max_distance,
+            algorithm,
+            Unrestricted,
+            substring_mode,
+        )
     }
 }
 
-impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> QueryIterator<N, R, P> {
+impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    QueryIterator<N, R, P>
+{
     /// Create a new query iterator with custom substitution policy
     pub fn with_policy(
         root: N,
@@ -187,7 +202,7 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
             if let Some(next_state) = transition_state_pooled(
                 &intersection.state,
                 &mut self.state_pool, // Use pool for State allocation reuse
-                self.policy, // Use the iterator's policy parameter
+                self.policy,          // Use the iterator's policy parameter
                 label,
                 &self.query,
                 self.max_distance,
@@ -216,7 +231,9 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
     }
 }
 
-impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> Iterator for QueryIterator<N, R, P> {
+impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    Iterator for QueryIterator<N, R, P>
+{
     type Item = R;
 
     fn next(&mut self) -> Option<Self::Item> {

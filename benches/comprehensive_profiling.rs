@@ -33,10 +33,12 @@ fn main() {
 
     // Build dictionaries
     eprintln!("Building PathMap dictionary...");
-    let pathmap_dict: PathMapDictionary<()> = PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
+    let pathmap_dict: PathMapDictionary<()> =
+        PathMapDictionary::from_terms(words.iter().map(|s| s.as_str()));
 
     eprintln!("Building SuffixAutomaton dictionary...");
-    let suffix_dict: SuffixAutomaton<()> = SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
+    let suffix_dict: SuffixAutomaton<()> =
+        SuffixAutomaton::from_texts(words.iter().map(|s| s.as_str()));
 
     let queries = vec![
         "test", "get", "set", "value", "user", "data", "calc", "find", "prog", "proc", "func",

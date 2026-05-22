@@ -165,7 +165,10 @@ pub fn expand_phonetic_alternatives_char(input: &str, rules: &[RewriteRuleChar])
     }
 
     if final_patterns.len() == 1 {
-        return final_patterns.into_iter().next().expect("len==1 checked above");
+        return final_patterns
+            .into_iter()
+            .next()
+            .expect("len==1 checked above");
     }
 
     // Multiple complete expansions: combine with alternation
@@ -191,9 +194,7 @@ fn build_reverse_map(rules: &[RewriteRuleChar]) -> ReverseMap {
 
         // Skip identity rules and rules with empty replacement
         if original != replacement && !replacement.is_empty() {
-            map.entry(replacement)
-                .or_default()
-                .push(original);
+            map.entry(replacement).or_default().push(original);
         }
     }
 
@@ -315,8 +316,10 @@ pub fn expand_with_costs(input: &str, rules: &[RewriteRuleChar]) -> (String, f64
 
         for (replacement, originals_with_costs) in &reverse_map {
             if remaining.starts_with(replacement.as_str()) {
-                let mut alternatives: Vec<&str> =
-                    originals_with_costs.iter().map(|(s, _)| s.as_str()).collect();
+                let mut alternatives: Vec<&str> = originals_with_costs
+                    .iter()
+                    .map(|(s, _)| s.as_str())
+                    .collect();
 
                 // Track the maximum cost among alternatives
                 let max_cost = originals_with_costs
@@ -393,10 +396,7 @@ mod tests {
         RewriteRuleChar {
             rule_id: id,
             rule_name: format!("{} -> {}", pattern, replacement),
-            pattern: pattern
-                .chars()
-                .map(|c| PhoneChar::Consonant(c))
-                .collect(),
+            pattern: pattern.chars().map(|c| PhoneChar::Consonant(c)).collect(),
             replacement: replacement
                 .chars()
                 .map(|c| PhoneChar::Consonant(c))

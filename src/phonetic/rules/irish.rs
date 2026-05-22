@@ -94,11 +94,7 @@ mod tests {
         let rules = base();
         // bh → v
         let result = rules.apply("bh");
-        assert!(
-            result.contains('v'),
-            "bh should become v, got: {}",
-            result
-        );
+        assert!(result.contains('v'), "bh should become v, got: {}", result);
     }
 
     #[test]
@@ -106,11 +102,7 @@ mod tests {
         let rules = base();
         // ch → x (voiceless velar fricative, like Scottish "loch")
         let result = rules.apply("ch");
-        assert!(
-            result.contains('x'),
-            "ch should become x, got: {}",
-            result
-        );
+        assert!(result.contains('x'), "ch should become x, got: {}", result);
     }
 
     #[test]
@@ -130,11 +122,7 @@ mod tests {
         let rules = base();
         // mh → v
         let result = rules.apply("mh");
-        assert!(
-            result.contains('v'),
-            "mh should become v, got: {}",
-            result
-        );
+        assert!(result.contains('v'), "mh should become v, got: {}", result);
     }
 
     #[test]
@@ -142,11 +130,7 @@ mod tests {
         let rules = base();
         // ph → f
         let result = rules.apply("ph");
-        assert!(
-            result.contains('f'),
-            "ph should become f, got: {}",
-            result
-        );
+        assert!(result.contains('f'), "ph should become f, got: {}", result);
     }
 
     #[test]
@@ -154,11 +138,7 @@ mod tests {
         let rules = base();
         // sh → h
         let result = rules.apply("sh");
-        assert!(
-            result.contains('h'),
-            "sh should become h, got: {}",
-            result
-        );
+        assert!(result.contains('h'), "sh should become h, got: {}", result);
     }
 
     #[test]
@@ -166,11 +146,7 @@ mod tests {
         let rules = base();
         // th → h
         let result = rules.apply("th");
-        assert!(
-            result.contains('h'),
-            "th should become h, got: {}",
-            result
-        );
+        assert!(result.contains('h'), "th should become h, got: {}", result);
     }
 
     #[test]
@@ -178,11 +154,7 @@ mod tests {
         let rules = base();
         // á → a
         let result = rules.apply("á");
-        assert!(
-            result.contains('a'),
-            "á should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "á should become a, got: {}", result);
     }
 
     #[test]
@@ -190,11 +162,7 @@ mod tests {
         let rules = base();
         // ó → o
         let result = rules.apply("ó");
-        assert!(
-            result.contains('o'),
-            "ó should become o, got: {}",
-            result
-        );
+        assert!(result.contains('o'), "ó should become o, got: {}", result);
     }
 
     #[test]
@@ -202,11 +170,7 @@ mod tests {
         let rules = base();
         // c → k
         let result = rules.apply("c");
-        assert!(
-            result.contains('k'),
-            "c should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "c should become k, got: {}", result);
     }
 
     #[test]
@@ -247,5 +211,4 @@ mod tests {
             result
         );
     }
-
 }

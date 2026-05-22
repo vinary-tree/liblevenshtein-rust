@@ -103,8 +103,9 @@ pub fn latin_american() -> &'static RuleSetChar {
     static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/spanish/latin_american.llev");
-        let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded spanish/latin_american.llev - this is a bug in liblevenshtein");
+        let file = crate::phonetic::llev::parse_str(content).expect(
+            "Invalid embedded spanish/latin_american.llev - this is a bug in liblevenshtein",
+        );
         RuleSetChar::from_llev(&file)
             .expect("Failed to compile Latin American rules - this is a bug in liblevenshtein")
     })
@@ -160,7 +161,11 @@ mod tests {
     fn test_base_loads() {
         let rules = base();
         assert!(!rules.is_empty(), "Spanish base rules should not be empty");
-        assert!(rules.len() > 20, "expected >20 base rules, got {}", rules.len());
+        assert!(
+            rules.len() > 20,
+            "expected >20 base rules, got {}",
+            rules.len()
+        );
     }
 
     #[test]
@@ -172,23 +177,40 @@ mod tests {
     #[test]
     fn test_latin_american_loads() {
         let rules = latin_american();
-        assert!(!rules.is_empty(), "Latin American rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Latin American rules should not be empty"
+        );
     }
 
     #[test]
     fn test_combined_castilian_loads() {
         let rules = combined_castilian();
-        assert!(!rules.is_empty(), "Combined Castilian rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Combined Castilian rules should not be empty"
+        );
         let total = base().len() + castilian().len();
-        assert_eq!(rules.len(), total, "combined_castilian should have all rules");
+        assert_eq!(
+            rules.len(),
+            total,
+            "combined_castilian should have all rules"
+        );
     }
 
     #[test]
     fn test_combined_latin_american_loads() {
         let rules = combined_latin_american();
-        assert!(!rules.is_empty(), "Combined Latin American rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Combined Latin American rules should not be empty"
+        );
         let total = base().len() + latin_american().len();
-        assert_eq!(rules.len(), total, "combined_latin_american should have all rules");
+        assert_eq!(
+            rules.len(),
+            total,
+            "combined_latin_american should have all rules"
+        );
     }
 
     #[test]
@@ -205,8 +227,11 @@ mod tests {
         // llamar → yamar (yeísmo), then y at word start → ʝ (palatal fricative)
         let result = rules.apply("llamar");
         // ll becomes y, then initial y becomes ʝ (palatal approximant/fricative)
-        assert!(result.starts_with('y') || result.starts_with('ʝ'),
-            "ll should become y or ʝ (yeísmo), got: {}", result);
+        assert!(
+            result.starts_with('y') || result.starts_with('ʝ'),
+            "ll should become y or ʝ (yeísmo), got: {}",
+            result
+        );
     }
 
     #[test]
@@ -225,7 +250,11 @@ mod tests {
         // casa → kasa (with s)
         let casa = rules.apply("casa");
         assert_ne!(caza, casa, "Castilian should distinguish caza from casa");
-        assert!(caza.contains("θ"), "caza should have 'th' sound, got: {}", caza);
+        assert!(
+            caza.contains("θ"),
+            "caza should have 'th' sound, got: {}",
+            caza
+        );
     }
 
     #[test]
@@ -236,7 +265,11 @@ mod tests {
         // casa → kasa
         let _casa = rules.apply("casa");
         // Both should normalize similarly (z and s both become s)
-        assert!(caza.contains('s'), "caza should have 's' sound in LatAm, got: {}", caza);
+        assert!(
+            caza.contains('s'),
+            "caza should have 's' sound in LatAm, got: {}",
+            caza
+        );
     }
 
     #[test]
@@ -248,9 +281,11 @@ mod tests {
         let cinco_es = castilian_rules.apply("cinco");
         let cinco_419 = latam_rules.apply("cinco");
 
-        assert_ne!(cinco_es, cinco_419,
+        assert_ne!(
+            cinco_es, cinco_419,
             "Dialects should normalize 'cinco' differently: es='{}', es-419='{}'",
-            cinco_es, cinco_419);
+            cinco_es, cinco_419
+        );
     }
 
     #[test]
@@ -268,8 +303,11 @@ mod tests {
         // So: joven → xoben → ksoben, then final n → ŋ giving ksobeŋ
         let result = rules.apply("joven");
         // Accept either x (if x->ks rule runs before j->x) or ks (if after)
-        assert!(result.contains('x') || result.starts_with("ks"),
-            "j should become x (velar fricative) or ks, got: {}", result);
+        assert!(
+            result.contains('x') || result.starts_with("ks"),
+            "j should become x (velar fricative) or ks, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -279,8 +317,11 @@ mod tests {
         // But x is also converted to ks, so: gente → xente → ksente
         let result = rules.apply("gente");
         // Accept either x (if x->ks rule runs before g->x) or ks (if after)
-        assert!(result.contains('x') || result.contains("ks"),
-            "g before e should become x (velar fricative) or ks, got: {}", result);
+        assert!(
+            result.contains('x') || result.contains("ks"),
+            "g before e should become x (velar fricative) or ks, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -288,8 +329,16 @@ mod tests {
         let rules = base();
         // queso → keso
         let result = rules.apply("queso");
-        assert!(result.starts_with('k'), "qu should become k, got: {}", result);
-        assert!(!result.contains('u'), "u in qu should be silent, got: {}", result);
+        assert!(
+            result.starts_with('k'),
+            "qu should become k, got: {}",
+            result
+        );
+        assert!(
+            !result.contains('u'),
+            "u in qu should be silent, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -297,6 +346,10 @@ mod tests {
         let rules = base();
         // chico → t͡ʃiko (ch → t͡ʃ, voiceless postalveolar affricate)
         let result = rules.apply("chico");
-        assert!(result.contains("t͡ʃ"), "ch should become t͡ʃ (postalveolar affricate), got: {}", result);
+        assert!(
+            result.contains("t͡ʃ"),
+            "ch should become t͡ʃ (postalveolar affricate), got: {}",
+            result
+        );
     }
 }

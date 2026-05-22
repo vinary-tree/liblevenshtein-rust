@@ -8,12 +8,12 @@
 
 use std::collections::HashSet;
 
-use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
-use libdictenstein::Dictionary;
 use crate::distance::{
     create_memo_cache, merge_and_split_distance, standard_distance, transposition_distance,
 };
 use crate::transducer::Algorithm;
+use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
+use libdictenstein::Dictionary;
 
 use super::extension::BidirectionalExtension;
 use super::pattern_splitter::{PatternPiece, PatternSplitter};

@@ -35,20 +35,14 @@ impl LatinClassifier {
 /// Static list of Latin vowels for the `vowels()` method.
 static LATIN_VOWELS: &[char] = &[
     // Basic vowels
-    'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U',
-    // Acute accents
-    'á', 'é', 'í', 'ó', 'ú', 'Á', 'É', 'Í', 'Ó', 'Ú',
-    // Grave accents
-    'à', 'è', 'ì', 'ò', 'ù', 'À', 'È', 'Ì', 'Ò', 'Ù',
-    // Circumflex
-    'â', 'ê', 'î', 'ô', 'û', 'Â', 'Ê', 'Î', 'Ô', 'Û',
-    // Umlauts/diaeresis
-    'ä', 'ë', 'ï', 'ö', 'ü', 'Ä', 'Ë', 'Ï', 'Ö', 'Ü',
-    // Tilde (Portuguese, Spanish)
+    'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U', // Acute accents
+    'á', 'é', 'í', 'ó', 'ú', 'Á', 'É', 'Í', 'Ó', 'Ú', // Grave accents
+    'à', 'è', 'ì', 'ò', 'ù', 'À', 'È', 'Ì', 'Ò', 'Ù', // Circumflex
+    'â', 'ê', 'î', 'ô', 'û', 'Â', 'Ê', 'Î', 'Ô', 'Û', // Umlauts/diaeresis
+    'ä', 'ë', 'ï', 'ö', 'ü', 'Ä', 'Ë', 'Ï', 'Ö', 'Ü', // Tilde (Portuguese, Spanish)
     'ã', 'õ', 'ñ', 'Ã', 'Õ', 'Ñ', // Note: ñ is consonant in Spanish
     // Scandinavian
-    'æ', 'ø', 'å', 'Æ', 'Ø', 'Å',
-    // Other
+    'æ', 'ø', 'å', 'Æ', 'Ø', 'Å', // Other
     'œ', 'Œ', // French ligature
 ];
 

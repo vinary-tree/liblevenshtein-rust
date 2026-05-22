@@ -57,17 +57,12 @@ pub mod subsumption;
 // Re-exports
 pub use automaton::UniversalAutomaton;
 
-pub use bit_vector::{CharacteristicVector, characteristic_vector, encode_word_pair};
+pub use bit_vector::{characteristic_vector, encode_word_pair, CharacteristicVector};
 
-pub use diagonal::{right_most, diagonal_crossed, convert_position};
+pub use diagonal::{convert_position, diagonal_crossed, right_most};
 
 pub use position::{
-    UniversalPosition,
-    PositionVariant,
-    Standard,
-    Transposition,
-    MergeAndSplit,
-    PositionError,
+    MergeAndSplit, PositionError, PositionVariant, Standard, Transposition, UniversalPosition,
 };
 
 pub use state::UniversalState;

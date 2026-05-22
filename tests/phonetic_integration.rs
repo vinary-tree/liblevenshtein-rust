@@ -10,13 +10,13 @@
 #![cfg(feature = "phonetic-rules")]
 
 use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
-use liblevenshtein::phonetic::{parse_str, RuleSetChar};
 use liblevenshtein::phonetic::nfa::{
     compile, IncrementalMatcherChar, LazyDFAChar, MemoizedMatcherChar, ProductAutomatonChar,
 };
 use liblevenshtein::phonetic::regex::parse;
-use liblevenshtein::phonetic::verified::{rules_to_nfa_char, zompist_nfa_char};
 use liblevenshtein::phonetic::rules::orthography_rules_char;
+use liblevenshtein::phonetic::verified::{rules_to_nfa_char, zompist_nfa_char};
+use liblevenshtein::phonetic::{parse_str, RuleSetChar};
 use liblevenshtein::transducer::PhoneticTransducerChar;
 
 // ============================================================================
@@ -358,8 +358,18 @@ fn test_phonetic_transducer_sorted_results() {
 fn test_end_to_end_phonetic_spelling_correction() {
     // Dictionary of English words
     let dict = DoubleArrayTrieChar::from_terms([
-        "phone", "phones", "phoned", "phoning", "elephant", "elephants", "city", "cities",
-        "night", "nights", "knight", "knights",
+        "phone",
+        "phones",
+        "phoned",
+        "phoning",
+        "elephant",
+        "elephants",
+        "city",
+        "cities",
+        "night",
+        "nights",
+        "knight",
+        "knights",
     ]);
 
     // Phonetic pattern that matches "phone" variations including "fone"
@@ -385,7 +395,9 @@ fn test_end_to_end_lazy_dfa_performance() {
     let mut dfa = LazyDFAChar::new(nfa);
 
     // Test multiple inputs to exercise caching
-    let test_inputs = ["a", "b", "c", "abc", "aabbcc", "aaaa", "bbbb", "cccc", "abcabc"];
+    let test_inputs = [
+        "a", "b", "c", "abc", "aabbcc", "aaaa", "bbbb", "cccc", "abcabc",
+    ];
 
     for input in test_inputs {
         assert!(dfa.accepts(input));
@@ -1323,8 +1335,8 @@ fn test_llev_context_after_and_before() {
     assert_eq!(ruleset.apply("exam"), "egzam");
     assert_eq!(ruleset.apply("exit"), "egzit");
     assert_eq!(ruleset.apply("next"), "negzt"); // e before x
-    assert_eq!(ruleset.apply("fox"), "fogz");   // o before x
-    assert_eq!(ruleset.apply("box"), "bogz");   // o before x
+    assert_eq!(ruleset.apply("fox"), "fogz"); // o before x
+    assert_eq!(ruleset.apply("box"), "bogz"); // o before x
 }
 
 // ============================================================================
@@ -1497,7 +1509,7 @@ fn test_regex_with_shared_symbols() {
 
 #[test]
 fn test_regex_symbol_undefined_error() {
-    use liblevenshtein::phonetic::regex::{Parser, ParseErrorKind};
+    use liblevenshtein::phonetic::regex::{ParseErrorKind, Parser};
 
     // Parse an LLev grammar with symbol definitions
     let llev_file = parse_str("@define VOWEL = [aeiou]").expect("parse failed");
@@ -1571,8 +1583,8 @@ fn test_regex_multiple_symbols_in_char_class() {
 
 #[test]
 fn test_end_to_end_llev_regex_integration() {
-    use liblevenshtein::phonetic::regex::Parser;
     use liblevenshtein::phonetic::nfa::compile;
+    use liblevenshtein::phonetic::regex::Parser;
 
     // Parse an LLev grammar with symbol definitions
     let llev_file = parse_str(
@@ -1588,7 +1600,8 @@ fn test_end_to_end_llev_regex_integration() {
 
     // Parse a regex pattern using the shared symbols with POSIX syntax
     // ($ is literal inside char classes, so use [[:SYMBOL:]] syntax)
-    let mut parser = Parser::new_with_symbols("[[:CONSONANT:]][[:VOWEL:]][[:CONSONANT:]]", &symbols);
+    let mut parser =
+        Parser::new_with_symbols("[[:CONSONANT:]][[:VOWEL:]][[:CONSONANT:]]", &symbols);
     let regex = parser.parse().expect("regex parse failed");
 
     // Compile the regex to an NFA
@@ -1601,10 +1614,10 @@ fn test_end_to_end_llev_regex_integration() {
     assert!(nfa.accepts("pen"));
 
     // Test that it doesn't match non-CVC patterns
-    assert!(!nfa.accepts("a"));      // single vowel
-    assert!(!nfa.accepts("at"));     // VC pattern
-    assert!(!nfa.accepts("cats"));   // CVCC pattern
-    assert!(!nfa.accepts("eat"));    // VVC pattern
+    assert!(!nfa.accepts("a")); // single vowel
+    assert!(!nfa.accepts("at")); // VC pattern
+    assert!(!nfa.accepts("cats")); // CVCC pattern
+    assert!(!nfa.accepts("eat")); // VVC pattern
 }
 
 // ============================================================================
@@ -1630,8 +1643,8 @@ fn test_llev_posix_syntax_for_user_symbols() {
 /// Test that `[:SYMBOL:]` POSIX syntax works for user-defined symbols in regex
 #[test]
 fn test_regex_posix_syntax_for_user_symbols() {
-    use liblevenshtein::phonetic::regex::Parser;
     use liblevenshtein::phonetic::nfa::compile;
+    use liblevenshtein::phonetic::regex::Parser;
 
     let mut symbols = std::collections::HashMap::new();
     symbols.insert("FRONT".to_string(), vec!['e', 'i']);
@@ -1651,8 +1664,8 @@ fn test_regex_posix_syntax_for_user_symbols() {
 /// Note: $ is literal inside char classes, so use [[:SYMBOL:]] syntax for symbol expansion
 #[test]
 fn test_dual_syntax_in_same_char_class() {
-    use liblevenshtein::phonetic::regex::Parser;
     use liblevenshtein::phonetic::nfa::compile;
+    use liblevenshtein::phonetic::regex::Parser;
 
     let mut symbols = std::collections::HashMap::new();
     symbols.insert("FRONT".to_string(), vec!['e', 'i']);
@@ -1671,16 +1684,16 @@ fn test_dual_syntax_in_same_char_class() {
     assert!(nfa.accepts("u"));
     // Note: 'a' is not in either FRONT or BACK, so it should not match
     // unless there's some other chars being included
-    assert!(!nfa.accepts("b"));  // definitely not in either
-    assert!(!nfa.accepts("c"));  // definitely not in either
+    assert!(!nfa.accepts("b")); // definitely not in either
+    assert!(!nfa.accepts("c")); // definitely not in either
 }
 
 /// Test that built-in named classes work (e.g., [:vowel:])
 /// Note: Uppercase shorthand aliases (V, C, etc.) were removed - use full names
 #[test]
 fn test_builtin_uppercase_shorthands_still_work() {
-    use liblevenshtein::phonetic::regex::Parser;
     use liblevenshtein::phonetic::nfa::compile;
+    use liblevenshtein::phonetic::regex::Parser;
 
     // Empty symbol table - we're testing built-in classes
     let symbols = std::collections::HashMap::new();
@@ -1703,8 +1716,8 @@ fn test_builtin_uppercase_shorthands_still_work() {
 /// Test that user symbols take precedence over built-in when both could match
 #[test]
 fn test_user_symbol_shadows_builtin_when_defined() {
-    use liblevenshtein::phonetic::regex::Parser;
     use liblevenshtein::phonetic::nfa::compile;
+    use liblevenshtein::phonetic::regex::Parser;
 
     // The built-in [:V:] matches vowels, but we define our own V
     // Built-ins should be checked first, so this should still use the built-in

@@ -42,12 +42,11 @@
 //! assert!(nfa.accepts("gh"));  // matches "gh → ∅" pattern
 //! ```
 
-use crate::phonetic::nfa::{NFAChar, NFA};
 use crate::phonetic::nfa::thompson::{ThompsonBuilder, ThompsonBuilderChar};
+use crate::phonetic::nfa::{NFAChar, NFA};
 use crate::phonetic::rules::{zompist_rules, zompist_rules_char};
 use crate::phonetic::types::{
-    ContextByte, ContextChar, PhoneByte, PhoneChar, RewriteRuleByte,
-    RewriteRuleChar,
+    ContextByte, ContextChar, PhoneByte, PhoneChar, RewriteRuleByte, RewriteRuleChar,
 };
 
 // ============================================================================
@@ -463,8 +462,8 @@ pub fn rules_to_nfa_with_context(rules: &[RewriteRuleByte]) -> Vec<RuleContextIn
 mod tests {
     use super::*;
     use crate::phonetic::rules::{
-        orthography_rules, orthography_rules_char, phonetic_rules, phonetic_rules_char,
-        test_rules, test_rules_char,
+        orthography_rules, orthography_rules_char, phonetic_rules, phonetic_rules_char, test_rules,
+        test_rules_char,
     };
 
     // ============================================================================

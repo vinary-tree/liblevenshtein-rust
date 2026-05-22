@@ -11,14 +11,13 @@
 //! - **Variant Support**: Supports Standard, Transposition, and MergeAndSplit variants
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, Wfst,
-    WeightedTransition,
+    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition, Wfst,
 };
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::universal::PositionVariant;
+use libdictenstein::{Dictionary, DictionaryNode};
 
 use super::state_encoding;
 use super::universal_state_source::UniversalLevenshteinStateSource;
@@ -164,7 +163,11 @@ where
 
         // Apply cache eviction if using LRU and over limit
         if let lling_llang::wfst::CachePolicy::Lru { max_states } = self.cache_policy {
-            let limit = if max_states > 0 { max_states } else { self.max_cache_size };
+            let limit = if max_states > 0 {
+                max_states
+            } else {
+                self.max_cache_size
+            };
             if self.cache.len() >= limit {
                 let to_remove = (self.cache.len() / 10).max(1);
                 let keys: Vec<_> = self.cache.keys().take(to_remove).copied().collect();
@@ -191,10 +194,7 @@ where
     }
 
     fn is_final(&self, state: StateId) -> bool {
-        self.cache
-            .get(&state)
-            .map(|s| s.is_final)
-            .unwrap_or(false)
+        self.cache.get(&state).map(|s| s.is_final).unwrap_or(false)
     }
 
     fn final_weight(&self, state: StateId) -> TropicalWeight {
@@ -223,8 +223,7 @@ where
 
     #[inline]
     fn is_valid_state(&self, state: StateId) -> bool {
-        let (dict_node, automaton_state) =
-            state_encoding::decode(state, self.max_automaton_states);
+        let (dict_node, automaton_state) = state_encoding::decode(state, self.max_automaton_states);
         automaton_state < self.max_automaton_states || dict_node == 0
     }
 }
@@ -332,8 +331,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
     use crate::transducer::universal::Standard;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
     #[test]
     fn test_universal_levenshtein_wfst_creation() {
@@ -350,8 +349,7 @@ mod tests {
         let wfst = UniversalLevenshteinWfst::<Standard, _>::new(&dict, "helo", 2);
 
         let start = wfst.start();
-        let (dict_node, auto_state) =
-            state_encoding::decode(start, wfst.max_automaton_states);
+        let (dict_node, auto_state) = state_encoding::decode(start, wfst.max_automaton_states);
         assert_eq!(dict_node, 0);
         assert_eq!(auto_state, 0);
     }

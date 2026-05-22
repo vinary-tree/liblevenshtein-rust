@@ -99,12 +99,13 @@ pub fn extract_text_from_sheet(data: &[u8], sheet_name: &str) -> GrepResult<Stri
             message: format!("Spreadsheet parsing failed: {}", e),
         })?;
 
-    let range = workbook
-        .worksheet_range(sheet_name)
-        .map_err(|e| GrepError::DocumentExtraction {
-            file_path: std::path::PathBuf::from("<memory>"),
-            message: format!("Sheet '{}' not found or invalid: {}", sheet_name, e),
-        })?;
+    let range =
+        workbook
+            .worksheet_range(sheet_name)
+            .map_err(|e| GrepError::DocumentExtraction {
+                file_path: std::path::PathBuf::from("<memory>"),
+                message: format!("Sheet '{}' not found or invalid: {}", sheet_name, e),
+            })?;
 
     let mut all_text = Vec::new();
 

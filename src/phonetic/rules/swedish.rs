@@ -146,11 +146,7 @@ mod tests {
         let rules = base();
         // å → O → o (normalized to lowercase)
         let result = rules.apply("å");
-        assert!(
-            result.contains('ɔ'),
-            "å should become o, got: {}",
-            result
-        );
+        assert!(result.contains('ɔ'), "å should become o, got: {}", result);
     }
 
     #[test]
@@ -170,11 +166,7 @@ mod tests {
         let rules = base();
         // ö → OE
         let result = rules.apply("ö");
-        assert!(
-            result.contains("ø"),
-            "ö should become OE, got: {}",
-            result
-        );
+        assert!(result.contains("ø"), "ö should become OE, got: {}", result);
     }
 
     #[test]
@@ -182,11 +174,7 @@ mod tests {
         let rules = base();
         // dj → J
         let result = rules.apply("dj");
-        assert!(
-            result.contains('j'),
-            "dj should become J, got: {}",
-            result
-        );
+        assert!(result.contains('j'), "dj should become J, got: {}", result);
     }
 
     #[test]
@@ -194,11 +182,7 @@ mod tests {
         let rules = base();
         // hj → J
         let result = rules.apply("hj");
-        assert!(
-            result.contains('j'),
-            "hj should become J, got: {}",
-            result
-        );
+        assert!(result.contains('j'), "hj should become J, got: {}", result);
     }
 
     #[test]
@@ -225,5 +209,4 @@ mod tests {
             result
         );
     }
-
 }

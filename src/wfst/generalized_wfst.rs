@@ -32,15 +32,14 @@
 //! ```
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, Wfst,
-    WeightedTransition,
+    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, WeightedTransition, Wfst,
 };
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::generalized::GeneralizedAutomaton;
 use crate::transducer::{OperationSet, OperationSetBuilder};
+use libdictenstein::{Dictionary, DictionaryNode};
 
 /// Cached state information for the Generalized WFST.
 #[derive(Clone)]
@@ -123,8 +122,7 @@ where
         // Full implementation would track dictionary position + automaton state
         if state_id == 0 {
             let query_chars: Vec<char> = self.query.chars().collect();
-            let (is_final, final_weight, transitions) =
-                self.compute_start_state(&query_chars);
+            let (is_final, final_weight, transitions) = self.compute_start_state(&query_chars);
 
             self.cache.insert(
                 state_id,
@@ -141,7 +139,11 @@ where
     fn compute_start_state(
         &mut self,
         query_chars: &[char],
-    ) -> (bool, TropicalWeight, SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>) {
+    ) -> (
+        bool,
+        TropicalWeight,
+        SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>,
+    ) {
         let mut transitions = SmallVec::new();
         let root = self.dictionary.root();
         let max_dist = self.automaton.max_distance();
@@ -227,10 +229,7 @@ where
     }
 
     fn is_final(&self, state: StateId) -> bool {
-        self.cache
-            .get(&state)
-            .map(|s| s.is_final)
-            .unwrap_or(false)
+        self.cache.get(&state).map(|s| s.is_final).unwrap_or(false)
     }
 
     fn final_weight(&self, state: StateId) -> TropicalWeight {

@@ -40,9 +40,9 @@ static TAMIL_VOWELS: &[char] = &[
     'ஓ', // oo (long)
     'ஔ', // au
     // Dependent vowels (உயிர் குறி)
-    'ா', // aa matra
+    'ா',  // aa matra
     'ி', // i matra
-    'ீ', // ii matra
+    'ீ',  // ii matra
     'ு', // u matra
     'ூ', // uu matra
     'ெ', // e matra

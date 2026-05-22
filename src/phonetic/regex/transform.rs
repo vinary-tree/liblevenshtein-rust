@@ -268,9 +268,9 @@ fn apply_flags_with_context(
         } => {
             let pattern_transformed = apply_flags_with_context(pattern, inherited, result);
             let replacement_transformed = apply_flags_with_context(replacement, inherited, result);
-            let context_transformed = context.as_ref().map(|ctx| {
-                Box::new(transform_context_predicate(ctx, inherited, result))
-            });
+            let context_transformed = context
+                .as_ref()
+                .map(|ctx| Box::new(transform_context_predicate(ctx, inherited, result)));
             Regex::RewriteRule {
                 pattern: Box::new(pattern_transformed),
                 replacement: Box::new(replacement_transformed),
@@ -316,8 +316,14 @@ fn transform_context_predicate(
     result: &mut TransformResult,
 ) -> ContextPredicate {
     ContextPredicate {
-        left: ctx.left.as_ref().map(|e| transform_context_expr(e, inherited, result)),
-        right: ctx.right.as_ref().map(|e| transform_context_expr(e, inherited, result)),
+        left: ctx
+            .left
+            .as_ref()
+            .map(|e| transform_context_expr(e, inherited, result)),
+        right: ctx
+            .right
+            .as_ref()
+            .map(|e| transform_context_expr(e, inherited, result)),
         syllable: ctx.syllable.clone(),
     }
 }
@@ -333,18 +339,14 @@ fn transform_context_expr(
             ContextExpr::Pattern(apply_flags_with_context(regex, inherited, result))
         }
         ContextExpr::WordBoundary => ContextExpr::WordBoundary,
-        ContextExpr::And(a, b) => {
-            ContextExpr::And(
-                Box::new(transform_context_expr(a, inherited, result)),
-                Box::new(transform_context_expr(b, inherited, result)),
-            )
-        }
-        ContextExpr::Or(a, b) => {
-            ContextExpr::Or(
-                Box::new(transform_context_expr(a, inherited, result)),
-                Box::new(transform_context_expr(b, inherited, result)),
-            )
-        }
+        ContextExpr::And(a, b) => ContextExpr::And(
+            Box::new(transform_context_expr(a, inherited, result)),
+            Box::new(transform_context_expr(b, inherited, result)),
+        ),
+        ContextExpr::Or(a, b) => ContextExpr::Or(
+            Box::new(transform_context_expr(a, inherited, result)),
+            Box::new(transform_context_expr(b, inherited, result)),
+        ),
         ContextExpr::Not(inner) => {
             ContextExpr::Not(Box::new(transform_context_expr(inner, inherited, result)))
         }
@@ -352,7 +354,12 @@ fn transform_context_expr(
 }
 
 /// Expand a single character based on flags.
-fn expand_char(c: char, case_insensitive: bool, accent_insensitive: bool, feature_based: bool) -> Regex {
+fn expand_char(
+    c: char,
+    case_insensitive: bool,
+    accent_insensitive: bool,
+    feature_based: bool,
+) -> Regex {
     let mut chars = vec![c];
 
     // Collect all variants
@@ -691,7 +698,12 @@ mod tests {
             match expanded {
                 Regex::CharClass(class) => {
                     assert!(class.matches(voiceless), "Expected {} in class", voiceless);
-                    assert!(class.matches(voiced), "Expected {} in class for {}", voiced, voiceless);
+                    assert!(
+                        class.matches(voiced),
+                        "Expected {} in class for {}",
+                        voiced,
+                        voiceless
+                    );
                 }
                 _ => panic!("Expected CharClass for {}", voiceless),
             }
@@ -714,14 +726,17 @@ mod tests {
         let regex = parse("(?u:NFC:test)").expect("should parse");
         let result = apply_flags(&regex);
 
-        assert_eq!(result.unicode_normalization, Some(UnicodeNormalization::NFC));
+        assert_eq!(
+            result.unicode_normalization,
+            Some(UnicodeNormalization::NFC)
+        );
     }
 
     #[test]
     fn test_normalize_input() {
         // Composed vs decomposed é
-        let composed = "café";  // é as single codepoint
-        let decomposed = "cafe\u{0301}";  // e + combining acute
+        let composed = "café"; // é as single codepoint
+        let decomposed = "cafe\u{0301}"; // e + combining acute
 
         let normalized_composed = normalize_input(composed, UnicodeNormalization::NFC);
         let normalized_decomposed = normalize_input(decomposed, UnicodeNormalization::NFC);
@@ -765,7 +780,11 @@ mod tests {
         // Check that the result is not just empty - it should contain the pattern
         let regex_str = format!("{}", result.regex);
         // Should contain character classes for case-insensitive matching
-        assert!(regex_str.contains('['), "Expected character classes in: {}", regex_str);
+        assert!(
+            regex_str.contains('['),
+            "Expected character classes in: {}",
+            regex_str
+        );
         assert!(!regex_str.is_empty(), "Result should not be empty");
     }
 
@@ -793,7 +812,10 @@ mod tests {
         let regex = parse("(?m)^test$").expect("should parse");
         let result = apply_flags(&regex);
 
-        assert!(result.multiline, "Multiline flag should be extracted from inline (?m)");
+        assert!(
+            result.multiline,
+            "Multiline flag should be extracted from inline (?m)"
+        );
     }
 
     #[test]
@@ -802,7 +824,10 @@ mod tests {
         let regex = parse("(?s)a.b").expect("should parse");
         let result = apply_flags(&regex);
 
-        assert!(result.dotall, "Dotall flag should be extracted from inline (?s)");
+        assert!(
+            result.dotall,
+            "Dotall flag should be extracted from inline (?s)"
+        );
     }
 
     #[test]
@@ -811,8 +836,11 @@ mod tests {
         let regex = parse("(?u:NFC)test").expect("should parse");
         let result = apply_flags(&regex);
 
-        assert_eq!(result.unicode_normalization, Some(UnicodeNormalization::NFC),
-            "Unicode normalization should be extracted from inline (?u:NFC)");
+        assert_eq!(
+            result.unicode_normalization,
+            Some(UnicodeNormalization::NFC),
+            "Unicode normalization should be extracted from inline (?u:NFC)"
+        );
     }
 
     #[test]
@@ -821,8 +849,11 @@ mod tests {
         let regex = parse("(?;2:test)").expect("should parse");
         let result = apply_flags(&regex);
 
-        assert_eq!(result.local_distance, Some(2),
-            "Local distance should be extracted from scoped (?;2:...)");
+        assert_eq!(
+            result.local_distance,
+            Some(2),
+            "Local distance should be extracted from scoped (?;2:...)"
+        );
     }
 
     #[test]
@@ -831,8 +862,11 @@ mod tests {
         let regex = parse("(?;1)test").expect("should parse");
         let result = apply_flags(&regex);
 
-        assert_eq!(result.local_distance, Some(1),
-            "Local distance should be extracted from inline (?;N)");
+        assert_eq!(
+            result.local_distance,
+            Some(1),
+            "Local distance should be extracted from inline (?;N)"
+        );
     }
 
     #[test]
@@ -841,11 +875,17 @@ mod tests {
         let regex = parse("(?i;0:test)").expect("should parse");
         let result = apply_flags(&regex);
 
-        assert_eq!(result.local_distance, Some(0),
-            "Local distance should be extracted from combined flags");
+        assert_eq!(
+            result.local_distance,
+            Some(0),
+            "Local distance should be extracted from combined flags"
+        );
         // The pattern should also be case-insensitive expanded
         let display = format!("{}", result.regex);
-        assert!(display.contains("[tT]") || display.contains("Tt"),
-            "Case insensitive flag should also apply: {}", display);
+        assert!(
+            display.contains("[tT]") || display.contains("Tt"),
+            "Case insensitive flag should also apply: {}",
+            display
+        );
     }
 }

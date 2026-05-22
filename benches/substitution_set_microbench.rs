@@ -30,7 +30,9 @@ fn generate_byte_pairs(count: usize, seed: u64) -> Vec<(u8, u8)> {
 /// Generate random char pairs for testing
 fn generate_char_pairs(count: usize, seed: u64) -> Vec<(char, char)> {
     let mut rng = StdRng::seed_from_u64(seed);
-    let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzαβγδεζηθικλμνξοπρστυφχψω".chars().collect();
+    let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzαβγδεζηθικλμνξοπρστυφχψω"
+        .chars()
+        .collect();
     (0..count)
         .map(|_| {
             let a = chars[rng.gen_range(0..chars.len())];
@@ -65,17 +67,13 @@ fn bench_contains_varying_sizes(c: &mut Criterion) {
             .collect();
 
         group.throughput(Throughput::Elements(100));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    for &(a, c) in &test_queries {
-                        black_box(set.contains(black_box(a), black_box(c)));
-                    }
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| {
+                for &(a, c) in &test_queries {
+                    black_box(set.contains(black_box(a), black_box(c)));
+                }
+            });
+        });
     }
     group.finish();
 }
@@ -128,19 +126,15 @@ fn bench_insertion_byte(c: &mut Criterion) {
         let pairs = generate_byte_pairs(*size, 42);
 
         group.throughput(Throughput::Elements(*size as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    let mut set = SubstitutionSet::new();
-                    for &(a, c) in &pairs {
-                        set.allow_byte(black_box(a), black_box(c));
-                    }
-                    black_box(set)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| {
+                let mut set = SubstitutionSet::new();
+                for &(a, c) in &pairs {
+                    set.allow_byte(black_box(a), black_box(c));
+                }
+                black_box(set)
+            });
+        });
     }
     group.finish();
 }
@@ -153,19 +147,15 @@ fn bench_insertion_char(c: &mut Criterion) {
         let pairs = generate_char_pairs(*size, 42);
 
         group.throughput(Throughput::Elements(*size as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    let mut set = SubstitutionSetChar::new();
-                    for &(a, c) in &pairs {
-                        set.allow(black_box(a), black_box(c));
-                    }
-                    black_box(set)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| {
+                let mut set = SubstitutionSetChar::new();
+                for &(a, c) in &pairs {
+                    set.allow(black_box(a), black_box(c));
+                }
+                black_box(set)
+            });
+        });
     }
     group.finish();
 }
@@ -192,7 +182,6 @@ fn bench_preset_builders_byte(c: &mut Criterion) {
 
     group.finish();
 }
-
 
 /// Benchmark: Preset builder initialization for char
 fn bench_preset_builders_char(c: &mut Criterion) {
@@ -240,17 +229,13 @@ fn bench_contains_char_varying_sizes(c: &mut Criterion) {
             .collect();
 
         group.throughput(Throughput::Elements(100));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    for &(a, c) in &test_queries {
-                        black_box(set.contains(black_box(a), black_box(c)));
-                    }
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| {
+                for &(a, c) in &test_queries {
+                    black_box(set.contains(black_box(a), black_box(c)));
+                }
+            });
+        });
     }
     group.finish();
 }

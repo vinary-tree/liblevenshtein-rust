@@ -84,7 +84,11 @@ mod tests {
         let rules = base();
         // ciao → t͡ʃao (IPA voiceless postalveolar affricate)
         let result = rules.apply("ciao");
-        assert!(result.contains("t͡ʃ") || result.contains("tsh"), "c before i should become t͡ʃ, got: {}", result);
+        assert!(
+            result.contains("t͡ʃ") || result.contains("tsh"),
+            "c before i should become t͡ʃ, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -92,7 +96,11 @@ mod tests {
         let rules = base();
         // cena → t͡ʃena (IPA voiceless postalveolar affricate)
         let result = rules.apply("cena");
-        assert!(result.contains("t͡ʃ") || result.contains("tsh"), "c before e should become t͡ʃ, got: {}", result);
+        assert!(
+            result.contains("t͡ʃ") || result.contains("tsh"),
+            "c before e should become t͡ʃ, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -100,7 +108,11 @@ mod tests {
         let rules = base();
         // casa → kasa
         let result = rules.apply("casa");
-        assert!(result.starts_with('k'), "c before a should be k, got: {}", result);
+        assert!(
+            result.starts_with('k'),
+            "c before a should be k, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -108,7 +120,11 @@ mod tests {
         let rules = base();
         // che → ke
         let result = rules.apply("che");
-        assert!(result.starts_with('k'), "ch before e should be k, got: {}", result);
+        assert!(
+            result.starts_with('k'),
+            "ch before e should be k, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -116,7 +132,11 @@ mod tests {
         let rules = base();
         // gelato → DZHelato (DZH represents /dʒ/)
         let result = rules.apply("gelato");
-        assert!(result.contains("d͡ʒ"), "g before e should become DZH, got: {}", result);
+        assert!(
+            result.contains("d͡ʒ"),
+            "g before e should become DZH, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -124,7 +144,11 @@ mod tests {
         let rules = base();
         // giorno → DZHorno (DZH represents /dʒ/)
         let result = rules.apply("giorno");
-        assert!(result.contains("d͡ʒ"), "g before i should become DZH, got: {}", result);
+        assert!(
+            result.contains("d͡ʒ"),
+            "g before i should become DZH, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -132,7 +156,11 @@ mod tests {
         let rules = base();
         // ghetto → Getto (capital G prevents soft G rule)
         let result = rules.apply("ghetto");
-        assert!(result.starts_with('G'), "gh before e should be G (hard), got: {}", result);
+        assert!(
+            result.starts_with('G'),
+            "gh before e should be G (hard), got: {}",
+            result
+        );
     }
 
     #[test]
@@ -140,7 +168,11 @@ mod tests {
         let rules = base();
         // pesce → peshe
         let result = rules.apply("pesce");
-        assert!(result.contains("ʃ"), "sc before e should become sh, got: {}", result);
+        assert!(
+            result.contains("ʃ"),
+            "sc before e should become sh, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -148,7 +180,11 @@ mod tests {
         let rules = base();
         // scimmia → shimmia
         let result = rules.apply("scimmia");
-        assert!(result.contains("ʃ"), "sc before i should become sh, got: {}", result);
+        assert!(
+            result.contains("ʃ"),
+            "sc before i should become sh, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -172,7 +208,11 @@ mod tests {
         let rules = base();
         // figlio → fiLYo (LY represents palatalized lateral /ʎ/)
         let result = rules.apply("figlio");
-        assert!(result.contains("ʎ"), "gli should become LY, got: {}", result);
+        assert!(
+            result.contains("ʎ"),
+            "gli should become LY, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -180,7 +220,11 @@ mod tests {
         let rules = base();
         // questo → kvesto or kwesto
         let result = rules.apply("questo");
-        assert!(result.contains("kv") || result.contains("kw"), "qu should become kv or kw, got: {}", result);
+        assert!(
+            result.contains("kv") || result.contains("kw"),
+            "qu should become kv or kw, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -205,7 +249,11 @@ mod tests {
         // fatto - geminate tt may or may not be simplified depending on rule design
         let result = rules.apply("fatto");
         // Check that the word is processed (contains key consonants)
-        assert!(result.contains('f') && result.contains('t'), "double consonants should process correctly, got: {}", result);
+        assert!(
+            result.contains('f') && result.contains('t'),
+            "double consonants should process correctly, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -213,7 +261,11 @@ mod tests {
         let rules = base();
         // ciabatta → t͡ʃabatta (IPA)
         let result = rules.apply("ciabatta");
-        assert!(result.contains("t͡ʃa") || result.contains("tsha"), "cia should become t͡ʃa, got: {}", result);
+        assert!(
+            result.contains("t͡ʃa") || result.contains("tsha"),
+            "cia should become t͡ʃa, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -221,7 +273,11 @@ mod tests {
         let rules = base();
         // città → tshitta
         let result = rules.apply("città");
-        assert!(!result.contains('à'), "accents should be normalized, got: {}", result);
+        assert!(
+            !result.contains('à'),
+            "accents should be normalized, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -229,14 +285,21 @@ mod tests {
         let rules = base();
         // jazz → DZHatts (DZH represents /dʒ/)
         let result = rules.apply("jazz");
-        assert!(result.contains("d͡ʒ"), "j should become DZH, got: {}", result);
+        assert!(
+            result.contains("d͡ʒ"),
+            "j should become DZH, got: {}",
+            result
+        );
     }
 
     #[test]
     fn test_combined_alias() {
         let base_rules = base();
         let combined_rules = combined();
-        assert_eq!(base_rules.len(), combined_rules.len(),
-            "combined() should be alias for base()");
+        assert_eq!(
+            base_rules.len(),
+            combined_rules.len(),
+            "combined() should be alias for base()"
+        );
     }
 }

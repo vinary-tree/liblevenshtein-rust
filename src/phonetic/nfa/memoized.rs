@@ -99,10 +99,13 @@ impl MemoizedMatcherChar {
         let result = self.product.accepts(input);
 
         // Store in cache
-        self.insert_cache(key, CacheEntryChar {
-            result,
-            min_distance: None,
-        });
+        self.insert_cache(
+            key,
+            CacheEntryChar {
+                result,
+                min_distance: None,
+            },
+        );
 
         result
     }
@@ -126,10 +129,13 @@ impl MemoizedMatcherChar {
         let result = min_dist.is_some();
 
         // Update cache
-        self.insert_cache(key, CacheEntryChar {
-            result,
-            min_distance: min_dist,
-        });
+        self.insert_cache(
+            key,
+            CacheEntryChar {
+                result,
+                min_distance: min_dist,
+            },
+        );
 
         min_dist
     }
@@ -234,10 +240,13 @@ impl MemoizedMatcher {
         self.misses += 1;
         let result = self.product.accepts(input);
 
-        self.insert_cache(key, CacheEntry {
-            result,
-            min_distance: None,
-        });
+        self.insert_cache(
+            key,
+            CacheEntry {
+                result,
+                min_distance: None,
+            },
+        );
 
         result
     }
@@ -258,10 +267,13 @@ impl MemoizedMatcher {
         let min_dist = self.product.min_distance(input);
         let result = min_dist.is_some();
 
-        self.insert_cache(key, CacheEntry {
-            result,
-            min_distance: min_dist,
-        });
+        self.insert_cache(
+            key,
+            CacheEntry {
+                result,
+                min_distance: min_dist,
+            },
+        );
 
         min_dist
     }
@@ -538,7 +550,8 @@ mod tests {
 
     #[test]
     fn test_memoized_matcher_accepts() {
-        let nfa = compile(&parse("(ph|f)one").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let nfa = compile(&parse("(ph|f)one").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
         let product = ProductAutomatonChar::new(nfa, 1);
         let mut cache = MemoizedMatcherChar::new(product, 100);
 
@@ -558,7 +571,8 @@ mod tests {
 
     #[test]
     fn test_memoized_matcher_min_distance() {
-        let nfa = compile(&parse("phone").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let nfa = compile(&parse("phone").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
         let product = ProductAutomatonChar::new(nfa, 2);
         let mut cache = MemoizedMatcherChar::new(product, 100);
 
@@ -573,7 +587,8 @@ mod tests {
 
     #[test]
     fn test_memoized_matcher_lru_eviction() {
-        let nfa = compile(&parse("test").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let nfa = compile(&parse("test").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
         let product = ProductAutomatonChar::new(nfa, 1);
         let mut cache = MemoizedMatcherChar::new(product, 3);
 
@@ -595,7 +610,8 @@ mod tests {
 
     #[test]
     fn test_memoized_matcher_clear() {
-        let nfa = compile(&parse("test").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let nfa = compile(&parse("test").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
         let product = ProductAutomatonChar::new(nfa, 1);
         let mut cache = MemoizedMatcherChar::new(product, 100);
 
@@ -612,7 +628,8 @@ mod tests {
 
     #[test]
     fn test_memoized_lazy_dfa() {
-        let nfa = compile(&parse("hello").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let nfa = compile(&parse("hello").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
         let dfa = LazyDFAChar::new(nfa);
         let mut cache = MemoizedLazyDFAChar::new(dfa, 100);
 
@@ -627,7 +644,8 @@ mod tests {
 
     #[test]
     fn test_memoized_bytes() {
-        let nfa = compile_bytes(&parse_bytes(b"test").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let nfa = compile_bytes(&parse_bytes(b"test").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
         let product = ProductAutomaton::new(nfa, 1);
         let mut cache = MemoizedMatcher::new(product, 100);
 
@@ -638,7 +656,8 @@ mod tests {
 
     #[test]
     fn test_memoized_lazy_dfa_bytes() {
-        let nfa = compile_bytes(&parse_bytes(b"world").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let nfa = compile_bytes(&parse_bytes(b"world").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
         let dfa = LazyDFA::new(nfa);
         let mut cache = MemoizedLazyDFA::new(dfa, 100);
 
@@ -649,7 +668,8 @@ mod tests {
 
     #[test]
     fn test_hit_rate_calculation() {
-        let nfa = compile(&parse("x").expect("test fixture: parse must be Ok")).expect("test fixture: compile must be Ok");
+        let nfa = compile(&parse("x").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
         let product = ProductAutomatonChar::new(nfa, 0);
         let mut cache = MemoizedMatcherChar::new(product, 100);
 

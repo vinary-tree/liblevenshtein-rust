@@ -53,10 +53,12 @@ fn levenshtein_distance_scalar(a: &str, b: &str) -> usize {
         curr[0] = i;
 
         for j in 1..=n {
-            let cost = if a_chars[i - 1] == b_chars[j - 1] { 0 } else { 1 };
-            curr[j] = (prev[j] + 1)
-                .min(curr[j - 1] + 1)
-                .min(prev[j - 1] + cost);
+            let cost = if a_chars[i - 1] == b_chars[j - 1] {
+                0
+            } else {
+                1
+            };
+            curr[j] = (prev[j] + 1).min(curr[j - 1] + 1).min(prev[j - 1] + cost);
         }
 
         std::mem::swap(&mut prev, &mut curr);
@@ -77,7 +79,10 @@ struct BKTree {
 
 impl BKTree {
     fn new() -> Self {
-        Self { root: None, size: 0 }
+        Self {
+            root: None,
+            size: 0,
+        }
     }
 
     fn insert(&mut self, value: String) {
@@ -202,8 +207,8 @@ impl OldPhoneticNormalizedDict {
 // NEW IMPLEMENTATION: FuzzyMultiMap
 // ============================================================================
 
-use liblevenshtein::cache::multimap::FuzzyMultiMap;
 use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+use liblevenshtein::cache::multimap::FuzzyMultiMap;
 use liblevenshtein::transducer::Algorithm;
 
 struct NewPhoneticNormalizedDict {
@@ -216,17 +221,15 @@ impl NewPhoneticNormalizedDict {
         let dict = DynamicDawgChar::<HashSet<String>>::new();
 
         for (original, normalized) in pairs {
-            dict.update_or_insert(
-                &normalized,
-                HashSet::from([original.clone()]),
-                |set| {
-                    set.insert(original);
-                },
-            );
+            dict.update_or_insert(&normalized, HashSet::from([original.clone()]), |set| {
+                set.insert(original);
+            });
         }
 
         let normalized_multimap = FuzzyMultiMap::new(dict, Algorithm::Standard);
-        Self { normalized_multimap }
+        Self {
+            normalized_multimap,
+        }
     }
 
     fn query(&self, normalized_query: &str, max_distance: usize) -> Vec<(String, usize, String)> {
@@ -237,9 +240,10 @@ impl NewPhoneticNormalizedDict {
         let mut results: Vec<(String, usize, String)> = fuzzy_results
             .into_iter()
             .flat_map(|(normalized_form, distance, originals)| {
-                originals.into_iter().filter(|t| !t.is_empty()).map(
-                    move |term| (term, distance, normalized_form.clone()),
-                )
+                originals
+                    .into_iter()
+                    .filter(|t| !t.is_empty())
+                    .map(move |term| (term, distance, normalized_form.clone()))
             })
             .collect();
 
@@ -296,23 +300,135 @@ fn load_dictionary_words() -> Vec<String> {
 
     // Fallback: embedded word list (subset of common English words)
     vec![
-        "the", "and", "that", "have", "for", "not", "with", "you", "this", "but",
-        "his", "from", "they", "say", "her", "she", "will", "one", "all", "would",
-        "there", "their", "what", "out", "about", "who", "get", "which", "make",
-        "can", "like", "time", "just", "him", "know", "take", "people", "into",
-        "year", "your", "good", "some", "could", "them", "see", "other", "than",
-        "then", "now", "look", "only", "come", "its", "over", "think", "also",
-        "back", "after", "use", "two", "how", "our", "work", "first", "well",
-        "way", "even", "new", "want", "because", "any", "these", "give", "day",
-        "most", "phone", "elephant", "knight", "psychology", "pneumonia", "through",
-        "though", "thought", "enough", "cough", "rough", "tough", "bought",
-        "brought", "caught", "daughter", "laughter", "slaughter", "nation",
-        "station", "action", "fiction", "section", "mention", "attention",
-        "write", "wrong", "wrist", "wrap", "wrestle", "wreck", "wrench",
-        "knife", "know", "knee", "knock", "knit", "knot", "knowledge",
-        "photograph", "telephone", "microphone", "saxophone", "symphony",
-        "pharmacy", "phantom", "phase", "phenomenon", "philosophy", "physical",
-    ].into_iter().map(String::from).collect()
+        "the",
+        "and",
+        "that",
+        "have",
+        "for",
+        "not",
+        "with",
+        "you",
+        "this",
+        "but",
+        "his",
+        "from",
+        "they",
+        "say",
+        "her",
+        "she",
+        "will",
+        "one",
+        "all",
+        "would",
+        "there",
+        "their",
+        "what",
+        "out",
+        "about",
+        "who",
+        "get",
+        "which",
+        "make",
+        "can",
+        "like",
+        "time",
+        "just",
+        "him",
+        "know",
+        "take",
+        "people",
+        "into",
+        "year",
+        "your",
+        "good",
+        "some",
+        "could",
+        "them",
+        "see",
+        "other",
+        "than",
+        "then",
+        "now",
+        "look",
+        "only",
+        "come",
+        "its",
+        "over",
+        "think",
+        "also",
+        "back",
+        "after",
+        "use",
+        "two",
+        "how",
+        "our",
+        "work",
+        "first",
+        "well",
+        "way",
+        "even",
+        "new",
+        "want",
+        "because",
+        "any",
+        "these",
+        "give",
+        "day",
+        "most",
+        "phone",
+        "elephant",
+        "knight",
+        "psychology",
+        "pneumonia",
+        "through",
+        "though",
+        "thought",
+        "enough",
+        "cough",
+        "rough",
+        "tough",
+        "bought",
+        "brought",
+        "caught",
+        "daughter",
+        "laughter",
+        "slaughter",
+        "nation",
+        "station",
+        "action",
+        "fiction",
+        "section",
+        "mention",
+        "attention",
+        "write",
+        "wrong",
+        "wrist",
+        "wrap",
+        "wrestle",
+        "wreck",
+        "wrench",
+        "knife",
+        "know",
+        "knee",
+        "knock",
+        "knit",
+        "knot",
+        "knowledge",
+        "photograph",
+        "telephone",
+        "microphone",
+        "saxophone",
+        "symphony",
+        "pharmacy",
+        "phantom",
+        "phase",
+        "phenomenon",
+        "philosophy",
+        "physical",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
 }
 
 /// Global dictionary cache to avoid repeated file I/O
@@ -375,14 +491,18 @@ fn benchmark_construction(c: &mut Criterion) {
             });
         });
 
-        group.bench_with_input(BenchmarkId::new("fuzzy_multimap", size), &data, |b, data| {
-            b.iter(|| {
-                let dict = NewPhoneticNormalizedDict::from_normalized_pairs(
-                    data.iter().map(|(o, n)| (o.clone(), n.clone())),
-                );
-                black_box(dict)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("fuzzy_multimap", size),
+            &data,
+            |b, data| {
+                b.iter(|| {
+                    let dict = NewPhoneticNormalizedDict::from_normalized_pairs(
+                        data.iter().map(|(o, n)| (o.clone(), n.clone())),
+                    );
+                    black_box(dict)
+                });
+            },
+        );
     }
 
     group.finish();

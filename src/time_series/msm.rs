@@ -63,7 +63,11 @@ impl MsmConfig {
     /// ```
     #[inline]
     pub fn new(c: f64) -> Self {
-        assert!(c >= 0.0, "Split/merge cost c must be non-negative, got {}", c);
+        assert!(
+            c >= 0.0,
+            "Split/merge cost c must be non-negative, got {}",
+            c
+        );
         Self { c }
     }
 

@@ -208,7 +208,10 @@ impl OperationCostsF64 {
         split: f64,
         merge: f64,
     ) -> Self {
-        assert!(substitution >= 0.0, "Substitution cost must be non-negative");
+        assert!(
+            substitution >= 0.0,
+            "Substitution cost must be non-negative"
+        );
         assert!(insertion >= 0.0, "Insertion cost must be non-negative");
         assert!(deletion >= 0.0, "Deletion cost must be non-negative");
         assert!(
@@ -280,7 +283,10 @@ impl OperationCostsF64 {
             .iter()
             .copied()
             .filter(|&c| c > 0.0)
-            .min_by(|a, b| a.partial_cmp(b).expect("OperationCostsF64: costs are finite (filtered > 0.0)"))
+            .min_by(|a, b| {
+                a.partial_cmp(b)
+                    .expect("OperationCostsF64: costs are finite (filtered > 0.0)")
+            })
             .unwrap_or(1.0)
     }
 

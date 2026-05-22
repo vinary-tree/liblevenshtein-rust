@@ -5,10 +5,10 @@
 
 #![cfg(feature = "pathmap-backend")]
 
-use liblevenshtein::cache::eviction::{Age, Lfu, Lru, Ttl};
-use liblevenshtein::cache::multimap::FuzzyMultiMap;
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::MappedDictionary;
+use liblevenshtein::cache::eviction::{Age, Lfu, Lru, Ttl};
+use liblevenshtein::cache::multimap::FuzzyMultiMap;
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
 use std::thread;

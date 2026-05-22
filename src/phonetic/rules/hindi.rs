@@ -129,32 +129,16 @@ mod tests {
         let rules = base();
         // अ → a
         let result = rules.apply("अ");
-        assert!(
-            result.contains('a'),
-            "अ should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "अ should become a, got: {}", result);
         // आ → aː (long vowel)
         let result = rules.apply("आ");
-        assert!(
-            result.contains("aː"),
-            "आ should become aː, got: {}",
-            result
-        );
+        assert!(result.contains("aː"), "आ should become aː, got: {}", result);
         // इ → i
         let result = rules.apply("इ");
-        assert!(
-            result.contains('i'),
-            "इ should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "इ should become i, got: {}", result);
         // ऊ → uː (long vowel)
         let result = rules.apply("ऊ");
-        assert!(
-            result.contains("uː"),
-            "ऊ should become uː, got: {}",
-            result
-        );
+        assert!(result.contains("uː"), "ऊ should become uː, got: {}", result);
     }
 
     #[test]
@@ -162,32 +146,16 @@ mod tests {
         let rules = base();
         // क → k
         let result = rules.apply("क");
-        assert!(
-            result.contains('k'),
-            "क should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "क should become k, got: {}", result);
         // ख → kh (aspirated voiceless velar stop)
         let result = rules.apply("ख");
-        assert!(
-            result.contains("kh"),
-            "ख should become kh, got: {}",
-            result
-        );
+        assert!(result.contains("kh"), "ख should become kh, got: {}", result);
         // ग → ɡ (IPA voiced velar stop)
         let result = rules.apply("ग");
-        assert!(
-            result.contains('ɡ'),
-            "ग should become ɡ, got: {}",
-            result
-        );
+        assert!(result.contains('ɡ'), "ग should become ɡ, got: {}", result);
         // घ → gh (aspirated voiced velar stop)
         let result = rules.apply("घ");
-        assert!(
-            result.contains("gh"),
-            "घ should become gh, got: {}",
-            result
-        );
+        assert!(result.contains("gh"), "घ should become gh, got: {}", result);
     }
 
     #[test]
@@ -195,25 +163,13 @@ mod tests {
         let rules = base();
         // ट → TT
         let result = rules.apply("ट");
-        assert!(
-            result.contains("ʈ"),
-            "ट should become TT, got: {}",
-            result
-        );
+        assert!(result.contains("ʈ"), "ट should become TT, got: {}", result);
         // ड → DD
         let result = rules.apply("ड");
-        assert!(
-            result.contains("ɖ"),
-            "ड should become DD, got: {}",
-            result
-        );
+        assert!(result.contains("ɖ"), "ड should become DD, got: {}", result);
         // ण → NN
         let result = rules.apply("ण");
-        assert!(
-            result.contains("ɳ"),
-            "ण should become NN, got: {}",
-            result
-        );
+        assert!(result.contains("ɳ"), "ण should become NN, got: {}", result);
     }
 
     #[test]
@@ -221,25 +177,13 @@ mod tests {
         let rules = base();
         // त → t
         let result = rules.apply("त");
-        assert!(
-            result.contains('t'),
-            "त should become t, got: {}",
-            result
-        );
+        assert!(result.contains('t'), "त should become t, got: {}", result);
         // द → d
         let result = rules.apply("द");
-        assert!(
-            result.contains('d'),
-            "द should become d, got: {}",
-            result
-        );
+        assert!(result.contains('d'), "द should become d, got: {}", result);
         // न → n
         let result = rules.apply("न");
-        assert!(
-            result.contains('n'),
-            "न should become n, got: {}",
-            result
-        );
+        assert!(result.contains('n'), "न should become n, got: {}", result);
     }
 
     #[test]
@@ -247,25 +191,13 @@ mod tests {
         let rules = base();
         // प → p
         let result = rules.apply("प");
-        assert!(
-            result.contains('p'),
-            "प should become p, got: {}",
-            result
-        );
+        assert!(result.contains('p'), "प should become p, got: {}", result);
         // ब → b
         let result = rules.apply("ब");
-        assert!(
-            result.contains('b'),
-            "ब should become b, got: {}",
-            result
-        );
+        assert!(result.contains('b'), "ब should become b, got: {}", result);
         // म → m
         let result = rules.apply("म");
-        assert!(
-            result.contains('m'),
-            "म should become m, got: {}",
-            result
-        );
+        assert!(result.contains('m'), "म should become m, got: {}", result);
     }
 
     #[test]
@@ -273,25 +205,13 @@ mod tests {
         let rules = base();
         // श → SH
         let result = rules.apply("श");
-        assert!(
-            result.contains("ʃ"),
-            "श should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "श should become SH, got: {}", result);
         // ष → SS
         let result = rules.apply("ष");
-        assert!(
-            result.contains("ʂ"),
-            "ष should become SS, got: {}",
-            result
-        );
+        assert!(result.contains("ʂ"), "ष should become SS, got: {}", result);
         // स → s
         let result = rules.apply("स");
-        assert!(
-            result.contains('s'),
-            "स should become s, got: {}",
-            result
-        );
+        assert!(result.contains('s'), "स should become s, got: {}", result);
     }
 
     #[test]
@@ -335,25 +255,13 @@ mod tests {
         let rules = base();
         // ा (aa matra) → aː
         let result = rules.apply("ा");
-        assert!(
-            result.contains("aː"),
-            "ा should become aː, got: {}",
-            result
-        );
+        assert!(result.contains("aː"), "ा should become aː, got: {}", result);
         // ि (i matra) → i
         let result = rules.apply("ि");
-        assert!(
-            result.contains('i'),
-            "ि should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "ि should become i, got: {}", result);
         // ै (ai matra) → ɛː (IPA representation)
         let result = rules.apply("ै");
-        assert!(
-            result.contains("ɛː"),
-            "ै should become ɛː, got: {}",
-            result
-        );
+        assert!(result.contains("ɛː"), "ै should become ɛː, got: {}", result);
     }
 
     #[test]
@@ -361,25 +269,13 @@ mod tests {
         let rules = base();
         // ० → 0
         let result = rules.apply("०");
-        assert!(
-            result.contains('0'),
-            "० should become 0, got: {}",
-            result
-        );
+        assert!(result.contains('0'), "० should become 0, got: {}", result);
         // ५ → 5
         let result = rules.apply("५");
-        assert!(
-            result.contains('5'),
-            "५ should become 5, got: {}",
-            result
-        );
+        assert!(result.contains('5'), "५ should become 5, got: {}", result);
         // ९ → 9
         let result = rules.apply("९");
-        assert!(
-            result.contains('9'),
-            "९ should become 9, got: {}",
-            result
-        );
+        assert!(result.contains('9'), "९ should become 9, got: {}", result);
     }
 
     #[test]
@@ -407,5 +303,4 @@ mod tests {
             result
         );
     }
-
 }

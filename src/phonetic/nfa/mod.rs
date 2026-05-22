@@ -79,6 +79,7 @@ pub mod types;
 mod tests;
 
 // Re-export main types (character-level)
+pub use char_nfa::NFAChar;
 pub use compiler::{
     compile, compile_rewrite, compile_with_flags, CompileResultChar, CompiledRewriteChar,
     NFACompilerChar,
@@ -86,25 +87,20 @@ pub use compiler::{
 pub use context::{
     BoundaryKind, ContextMatcherChar, ContextPatternChar, ContextualRewriteRuleChar,
 };
-pub use incremental::{
-    IncrementalMatcherChar, IncrementalProductMatcherChar, MatcherSnapshotChar,
-};
+pub use incremental::{IncrementalMatcherChar, IncrementalProductMatcherChar, MatcherSnapshotChar};
 pub use lazy_dfa::{CacheStats, DFAStateChar, LazyDFAChar};
 pub use memoized::{MemoizedLazyDFAChar, MemoizedMatcherChar, MemoizedStats};
-pub use char_nfa::NFAChar;
 pub use product::{ProductAutomatonChar, ProductStateChar};
 pub use thompson::ThompsonBuilderChar;
-pub use types::{
-    CharClassChar, NFAState, StateId, TransitionChar, TransitionLabelChar,
-};
+pub use types::{CharClassChar, NFAState, StateId, TransitionChar, TransitionLabelChar};
 
 // Re-export byte-level types
+pub use byte_nfa::NFA;
 pub use compiler::{compile_bytes, compile_rewrite_bytes, CompiledRewrite, NFACompilerByte};
 pub use context::{ContextMatcher, ContextPattern, ContextualRewriteRule};
 pub use incremental::{IncrementalMatcher, MatcherSnapshot};
 pub use lazy_dfa::{DFAState, LazyDFA};
 pub use memoized::{MemoizedLazyDFA, MemoizedMatcher};
-pub use byte_nfa::NFA;
 pub use product::{ProductAutomaton, ProductState};
 pub use thompson::ThompsonBuilder;
 pub use types::{CharClass, Transition, TransitionLabel};
@@ -113,4 +109,4 @@ pub use types::{CharClass, Transition, TransitionLabel};
 pub use state_set::StateSet;
 
 // Re-export optimizer types
-pub use optimizer::{NfaOptimizerChar, NfaOptimizer, OptimizationConfig, OptimizationStats};
+pub use optimizer::{NfaOptimizer, NfaOptimizerChar, OptimizationConfig, OptimizationStats};

@@ -17,7 +17,10 @@ fn main() {
     println!("--- Example 1: Latin Diacritics ---\n");
 
     let diacritics = SubstitutionSetChar::diacritics_latin();
-    println!("Created diacritics_latin() preset with {} pairs\n", diacritics.len());
+    println!(
+        "Created diacritics_latin() preset with {} pairs\n",
+        diacritics.len()
+    );
 
     println!("Diacritic equivalences included:");
     println!("  - é, è, ê, ë ↔ e");
@@ -40,15 +43,28 @@ fn main() {
     println!("Testing substitution equivalences:\n");
     for (a, b, should_match) in latin_tests {
         let matches = diacritics.contains(a, b);
-        let status = if matches == should_match { "✓" } else { "✗" };
-        println!("  {} {} ↔ {} : {}", status, a, b, if matches { "allowed" } else { "not allowed" });
+        let status = if matches == should_match {
+            "✓"
+        } else {
+            "✗"
+        };
+        println!(
+            "  {} {} ↔ {} : {}",
+            status,
+            a,
+            b,
+            if matches { "allowed" } else { "not allowed" }
+        );
     }
 
     // Example 2: Greek case-insensitive
     println!("\n--- Example 2: Greek Case-Insensitive ---\n");
 
     let greek = SubstitutionSetChar::greek_case_insensitive();
-    println!("Created greek_case_insensitive() preset with {} pairs\n", greek.len());
+    println!(
+        "Created greek_case_insensitive() preset with {} pairs\n",
+        greek.len()
+    );
 
     println!("Greek case equivalences:");
     println!("  - Α ↔ α (Alpha)");
@@ -69,15 +85,28 @@ fn main() {
     println!("Testing Greek case equivalences:\n");
     for (a, b, should_match) in greek_tests {
         let matches = greek.contains(a, b);
-        let status = if matches == should_match { "✓" } else { "✗" };
-        println!("  {} {} ↔ {} : {}", status, a, b, if matches { "allowed" } else { "not allowed" });
+        let status = if matches == should_match {
+            "✓"
+        } else {
+            "✗"
+        };
+        println!(
+            "  {} {} ↔ {} : {}",
+            status,
+            a,
+            b,
+            if matches { "allowed" } else { "not allowed" }
+        );
     }
 
     // Example 3: Cyrillic case-insensitive
     println!("\n--- Example 3: Cyrillic Case-Insensitive ---\n");
 
     let cyrillic = SubstitutionSetChar::cyrillic_case_insensitive();
-    println!("Created cyrillic_case_insensitive() preset with {} pairs\n", cyrillic.len());
+    println!(
+        "Created cyrillic_case_insensitive() preset with {} pairs\n",
+        cyrillic.len()
+    );
 
     println!("Cyrillic case equivalences:");
     println!("  - А ↔ а");
@@ -96,15 +125,28 @@ fn main() {
     println!("Testing Cyrillic case equivalences:\n");
     for (a, b, should_match) in cyrillic_tests {
         let matches = cyrillic.contains(a, b);
-        let status = if matches == should_match { "✓" } else { "✗" };
-        println!("  {} {} ↔ {} : {}", status, a, b, if matches { "allowed" } else { "not allowed" });
+        let status = if matches == should_match {
+            "✓"
+        } else {
+            "✗"
+        };
+        println!(
+            "  {} {} ↔ {} : {}",
+            status,
+            a,
+            b,
+            if matches { "allowed" } else { "not allowed" }
+        );
     }
 
     // Example 4: Japanese Hiragana/Katakana
     println!("\n--- Example 4: Japanese Hiragana ↔ Katakana ---\n");
 
     let japanese = SubstitutionSetChar::japanese_hiragana_katakana();
-    println!("Created japanese_hiragana_katakana() preset with {} pairs\n", japanese.len());
+    println!(
+        "Created japanese_hiragana_katakana() preset with {} pairs\n",
+        japanese.len()
+    );
 
     println!("Hiragana/Katakana equivalences (sample):");
     println!("  - あ ↔ ア (a)");
@@ -113,18 +155,28 @@ fn main() {
     println!("  - (... and more)\n");
 
     let japanese_tests = vec![
-        ('あ', 'ア', true), // a
-        ('ア', 'あ', true), // a (reverse)
-        ('か', 'カ', true), // ka
-        ('さ', 'サ', true), // sa
+        ('あ', 'ア', true),  // a
+        ('ア', 'あ', true),  // a (reverse)
+        ('か', 'カ', true),  // ka
+        ('さ', 'サ', true),  // sa
         ('あ', 'か', false), // Different syllables
     ];
 
     println!("Testing Hiragana↔Katakana equivalences:\n");
     for (a, b, should_match) in japanese_tests {
         let matches = japanese.contains(a, b);
-        let status = if matches == should_match { "✓" } else { "✗" };
-        println!("  {} {} ↔ {} : {}", status, a, b, if matches { "allowed" } else { "not allowed" });
+        let status = if matches == should_match {
+            "✓"
+        } else {
+            "✗"
+        };
+        println!(
+            "  {} {} ↔ {} : {}",
+            status,
+            a,
+            b,
+            if matches { "allowed" } else { "not allowed" }
+        );
     }
 
     // Example 5: Custom Unicode set

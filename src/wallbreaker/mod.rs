@@ -72,9 +72,9 @@ pub use extension::{BidirectionalExtension, ExtensionState};
 pub use pattern_splitter::{PatternPiece, PatternSplitter};
 pub use query_iterator::{WallBreakerQuery, WallBreakerResult};
 
+use crate::transducer::Algorithm;
 use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
 use libdictenstein::Dictionary;
-use crate::transducer::Algorithm;
 
 /// WallBreaker approximate string matcher.
 ///
@@ -286,7 +286,13 @@ mod tests {
 
     #[test]
     fn test_wallbreaker_multiple_terms() {
-        let terms = vec!["cathedral", "category", "catering", "catastrophe", "catalog"];
+        let terms = vec![
+            "cathedral",
+            "category",
+            "catering",
+            "catastrophe",
+            "catalog",
+        ];
         let dict = Scdawg::<()>::from_terms(terms);
         let wb = WallBreaker::new(&dict, 2);
 

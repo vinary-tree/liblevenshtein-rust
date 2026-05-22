@@ -101,11 +101,7 @@ where
             return Err(format!("unknown named class '{}'", name));
         };
 
-        let final_chars = if *negated {
-            negate_set(&chars)
-        } else {
-            chars
-        };
+        let final_chars = if *negated { negate_set(&chars) } else { chars };
 
         char_sets.push(final_chars);
     }

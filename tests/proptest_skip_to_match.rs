@@ -5,7 +5,6 @@
 /// - i_skip_to_match_formula
 /// - m_skip_to_match_preserves_invariant
 /// - m_skip_to_match_formula
-
 use liblevenshtein::transducer::generalized::GeneralizedPosition;
 use proptest::prelude::*;
 

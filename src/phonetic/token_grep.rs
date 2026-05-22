@@ -684,8 +684,7 @@ impl TokenGrep {
                             {
                                 word_idx = try_idx;
                                 found = true;
-                                total_distance =
-                                    total_distance.saturating_add(detail.distance);
+                                total_distance = total_distance.saturating_add(detail.distance);
                                 token_matches.push(detail);
                                 break;
                             }
@@ -737,15 +736,15 @@ impl TokenGrep {
         let (start, word, end) = words[word_idx];
         let normalized = self.normalize(word);
 
-        product.min_distance(&normalized).map(|distance| {
-            TokenMatchDetail {
+        product
+            .min_distance(&normalized)
+            .map(|distance| TokenMatchDetail {
                 token_index: token_idx,
                 byte_range: (start, end),
                 original_text: word.to_string(),
                 normalized_text: normalized,
                 distance,
-            }
-        })
+            })
     }
 
     /// Normalize text using phonetic rules if available.

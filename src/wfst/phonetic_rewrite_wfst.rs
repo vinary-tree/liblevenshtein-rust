@@ -24,8 +24,7 @@
 //! ```
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, Wfst,
-    WeightedTransition,
+    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition, Wfst,
 };
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
@@ -135,7 +134,11 @@ impl RewriteWfst {
 
     /// Create a rewrite WFST with the given rules.
     pub fn with_rules(rules: Vec<RewriteRule>) -> Self {
-        let max_input_len = rules.iter().map(|r| r.input.chars().count()).max().unwrap_or(0);
+        let max_input_len = rules
+            .iter()
+            .map(|r| r.input.chars().count())
+            .max()
+            .unwrap_or(0);
         Self {
             rules,
             max_input_len,
@@ -188,7 +191,11 @@ impl RewriteWfst {
     fn compute_transitions(
         &self,
         state_id: StateId,
-    ) -> (bool, TropicalWeight, SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>) {
+    ) -> (
+        bool,
+        TropicalWeight,
+        SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>,
+    ) {
         let mut transitions = SmallVec::new();
 
         // State 0 is the initial/accepting state
@@ -256,7 +263,9 @@ impl RewriteWfst {
             // Add wildcard identity for any printable character
             for c in ('a'..='z').chain('A'..='Z').chain('0'..='9') {
                 // Check if this character is not already covered by a rule
-                let covered = transitions.iter().any(|t: &WeightedTransition<char, TropicalWeight>| t.input == Some(c));
+                let covered = transitions
+                    .iter()
+                    .any(|t: &WeightedTransition<char, TropicalWeight>| t.input == Some(c));
                 if !covered {
                     transitions.push(WeightedTransition::new(
                         state_id,
@@ -287,7 +296,11 @@ impl RewriteWfst {
         };
 
         if let lling_llang::wfst::CachePolicy::Lru { max_states } = self.cache_policy {
-            let limit = if max_states > 0 { max_states } else { self.max_cache_size };
+            let limit = if max_states > 0 {
+                max_states
+            } else {
+                self.max_cache_size
+            };
             if self.cache.len() >= limit {
                 let to_remove = (self.cache.len() / 10).max(1);
                 let keys: Vec<_> = self.cache.keys().take(to_remove).copied().collect();
@@ -505,7 +518,10 @@ mod tests {
         // Should have transition for 'a' -> 'b'
         let a_trans = transitions.iter().find(|t| t.input == Some('a'));
         assert!(a_trans.is_some());
-        assert_eq!(a_trans.expect("expected Some a_trans in test").output, Some('b'));
+        assert_eq!(
+            a_trans.expect("expected Some a_trans in test").output,
+            Some('b')
+        );
     }
 
     #[test]
@@ -518,7 +534,10 @@ mod tests {
         // Should have identity transitions for unrewritten characters
         let z_trans = transitions.iter().find(|t| t.input == Some('z'));
         assert!(z_trans.is_some());
-        assert_eq!(z_trans.expect("expected Some z_trans in test").output, Some('z'));
+        assert_eq!(
+            z_trans.expect("expected Some z_trans in test").output,
+            Some('z')
+        );
     }
 
     #[test]
@@ -538,7 +557,10 @@ mod tests {
 
         let sch_rule = rules.iter().find(|r| r.input == "sch");
         assert!(sch_rule.is_some());
-        assert_eq!(sch_rule.expect("expected Some sch_rule in test").output, "sh");
+        assert_eq!(
+            sch_rule.expect("expected Some sch_rule in test").output,
+            "sh"
+        );
     }
 
     #[test]

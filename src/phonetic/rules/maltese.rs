@@ -107,11 +107,7 @@ mod tests {
         let rules = base();
         // ie → i
         let result = rules.apply("ie");
-        assert!(
-            result.contains('i'),
-            "ie should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "ie should become i, got: {}", result);
     }
 
     // ============================================================
@@ -123,11 +119,7 @@ mod tests {
         let rules = base();
         // ċ → ch
         let result = rules.apply("ċ");
-        assert!(
-            result.contains("t͡ʃ"),
-            "ċ should become ch, got: {}",
-            result
-        );
+        assert!(result.contains("t͡ʃ"), "ċ should become ch, got: {}", result);
     }
 
     #[test]
@@ -135,11 +127,7 @@ mod tests {
         let rules = base();
         // ġ → d͡ʒ (voiced postalveolar affricate, like English "j")
         let result = rules.apply("ġ");
-        assert!(
-            result.contains("d͡ʒ"),
-            "ġ should become d͡ʒ, got: {}",
-            result
-        );
+        assert!(result.contains("d͡ʒ"), "ġ should become d͡ʒ, got: {}", result);
     }
 
     #[test]
@@ -159,11 +147,7 @@ mod tests {
         let rules = base();
         // ż → z
         let result = rules.apply("ż");
-        assert!(
-            result.contains('z'),
-            "ż should become z, got: {}",
-            result
-        );
+        assert!(result.contains('z'), "ż should become z, got: {}", result);
     }
 
     #[test]
@@ -171,11 +155,7 @@ mod tests {
         let rules = base();
         // x → sh
         let result = rules.apply("x");
-        assert!(
-            result.contains("ʃ"),
-            "x should become sh, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "x should become sh, got: {}", result);
     }
 
     #[test]
@@ -201,7 +181,10 @@ mod tests {
         let result = rules.apply_full("Malta");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('m') && lower.contains('a') && lower.contains('l') && lower.contains('t'),
+            lower.contains('m')
+                && lower.contains('a')
+                && lower.contains('l')
+                && lower.contains('t'),
             "Malta should contain m, a, l, t, got: {}",
             result
         );
@@ -214,7 +197,10 @@ mod tests {
         let result = rules.apply_full("Malti");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('m') && lower.contains('l') && lower.contains('t') && lower.contains('i'),
+            lower.contains('m')
+                && lower.contains('l')
+                && lower.contains('t')
+                && lower.contains('i'),
             "Malti should contain m, l, t, i, got: {}",
             result
         );
@@ -228,7 +214,10 @@ mod tests {
         let lower = result.to_lowercase();
         // għ should be silent, x → sh
         assert!(
-            lower.contains('a') && lower.contains('w') && lower.contains('d') && lower.contains("ʃ"),
+            lower.contains('a')
+                && lower.contains('w')
+                && lower.contains('d')
+                && lower.contains("ʃ"),
             "Għawdex should have silent għ and x → sh, got: {}",
             result
         );
@@ -241,7 +230,11 @@ mod tests {
         let result = rules.apply_full("Valletta");
         let lower = result.to_lowercase();
         assert!(
-            lower.contains('v') && lower.contains('a') && lower.contains('l') && lower.contains('e') && lower.contains('t'),
+            lower.contains('v')
+                && lower.contains('a')
+                && lower.contains('l')
+                && lower.contains('e')
+                && lower.contains('t'),
             "Valletta should contain v, a, l, e, t, got: {}",
             result
         );
@@ -263,5 +256,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

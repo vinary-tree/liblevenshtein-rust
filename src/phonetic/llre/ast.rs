@@ -165,7 +165,11 @@ impl ImportDirective {
     }
 
     /// Create an import directive with an alias.
-    pub fn with_alias(path: impl Into<String>, alias: impl Into<String>, position: Position) -> Self {
+    pub fn with_alias(
+        path: impl Into<String>,
+        alias: impl Into<String>,
+        position: Position,
+    ) -> Self {
         Self {
             path: path.into(),
             alias: Some(alias.into()),
@@ -262,7 +266,12 @@ impl SymbolTable {
     }
 
     /// Add a character class symbol.
-    pub fn add_char_class(&mut self, name: impl Into<String>, chars: Vec<char>, source: Option<PathBuf>) {
+    pub fn add_char_class(
+        &mut self,
+        name: impl Into<String>,
+        chars: Vec<char>,
+        source: Option<PathBuf>,
+    ) {
         let name = name.into();
         if let Some(src) = source {
             self.symbol_sources.insert(name.clone(), src);
@@ -271,7 +280,12 @@ impl SymbolTable {
     }
 
     /// Add a pattern symbol.
-    pub fn add_pattern(&mut self, name: impl Into<String>, pattern: Regex, source: Option<PathBuf>) {
+    pub fn add_pattern(
+        &mut self,
+        name: impl Into<String>,
+        pattern: Regex,
+        source: Option<PathBuf>,
+    ) {
         let name = name.into();
         if let Some(src) = source {
             self.symbol_sources.insert(name.clone(), src);
@@ -412,7 +426,9 @@ mod tests {
         assert!(table.contains("VOWEL"));
         assert!(!table.contains("CONSONANT"));
 
-        let vowels = table.get_char_class("VOWEL").expect("expected Some VOWEL class in test");
+        let vowels = table
+            .get_char_class("VOWEL")
+            .expect("expected Some VOWEL class in test");
         assert_eq!(vowels.len(), 5);
         assert!(vowels.contains(&'a'));
     }
@@ -431,6 +447,11 @@ mod tests {
         assert!(table1.contains("A"));
         assert!(table1.contains("B"));
         // table2's A should take precedence
-        assert_eq!(table1.get_char_class("A").expect("expected Some A class in test"), &vec!['x']);
+        assert_eq!(
+            table1
+                .get_char_class("A")
+                .expect("expected Some A class in test"),
+            &vec!['x']
+        );
     }
 }

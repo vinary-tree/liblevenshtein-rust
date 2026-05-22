@@ -148,11 +148,7 @@ mod tests {
         let rules = base();
         // zs → ʒ (voiced postalveolar fricative, like French "j")
         let result = rules.apply("zs");
-        assert!(
-            result.contains('ʒ'),
-            "zs should become ʒ, got: {}",
-            result
-        );
+        assert!(result.contains('ʒ'), "zs should become ʒ, got: {}", result);
     }
 
     #[test]
@@ -160,11 +156,7 @@ mod tests {
         let rules = base();
         // gy → GY (palatalized d)
         let result = rules.apply("gy");
-        assert!(
-            result.contains("ɟ"),
-            "gy should become GY, got: {}",
-            result
-        );
+        assert!(result.contains("ɟ"), "gy should become GY, got: {}", result);
     }
 
     #[test]
@@ -172,11 +164,7 @@ mod tests {
         let rules = base();
         // ny → NY (like Spanish ñ)
         let result = rules.apply("ny");
-        assert!(
-            result.contains("ɲ"),
-            "ny should become NY, got: {}",
-            result
-        );
+        assert!(result.contains("ɲ"), "ny should become NY, got: {}", result);
     }
 
     #[test]
@@ -184,11 +172,7 @@ mod tests {
         let rules = base();
         // ly → j (palatal approximant, pronounced as [j] in modern Hungarian)
         let result = rules.apply("ly");
-        assert!(
-            result.contains('j'),
-            "ly should become j, got: {}",
-            result
-        );
+        assert!(result.contains('j'), "ly should become j, got: {}", result);
     }
 
     #[test]
@@ -220,25 +204,13 @@ mod tests {
         let rules = base();
         // á → aː (long a)
         let result = rules.apply("á");
-        assert!(
-            result.contains("aː"),
-            "á should become aː, got: {}",
-            result
-        );
+        assert!(result.contains("aː"), "á should become aː, got: {}", result);
         // é → eː (long e)
         let result = rules.apply("é");
-        assert!(
-            result.contains("eː"),
-            "é should become eː, got: {}",
-            result
-        );
+        assert!(result.contains("eː"), "é should become eː, got: {}", result);
         // ó → oː (long o)
         let result = rules.apply("ó");
-        assert!(
-            result.contains("oː"),
-            "ó should become oː, got: {}",
-            result
-        );
+        assert!(result.contains("oː"), "ó should become oː, got: {}", result);
     }
 
     #[test]
@@ -246,18 +218,10 @@ mod tests {
         let rules = base();
         // ö → ø (short front rounded o)
         let result = rules.apply("ö");
-        assert!(
-            result.contains('ø'),
-            "ö should become ø, got: {}",
-            result
-        );
+        assert!(result.contains('ø'), "ö should become ø, got: {}", result);
         // ő → øː (long front rounded o, double acute)
         let result = rules.apply("ő");
-        assert!(
-            result.contains("øː"),
-            "ő should become øː, got: {}",
-            result
-        );
+        assert!(result.contains("øː"), "ő should become øː, got: {}", result);
         // ü → y (short front rounded u, IPA), but y → i at word end (Beider-Morse rule)
         // When ü is standalone (at word end), it becomes y, then y → i
         let result = rules.apply("ü");
@@ -268,11 +232,7 @@ mod tests {
         );
         // ű → yː (long front rounded u, double acute)
         let result = rules.apply("ű");
-        assert!(
-            result.contains("yː"),
-            "ű should become yː, got: {}",
-            result
-        );
+        assert!(result.contains("yː"), "ű should become yː, got: {}", result);
     }
 
     #[test]
@@ -320,5 +280,4 @@ mod tests {
             result
         );
     }
-
 }

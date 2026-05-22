@@ -4,9 +4,9 @@
 //! batch operations using Rayon, comparing against sequential implementations.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::cache::eviction::Lru;
 use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::MappedDictionary;
+use liblevenshtein::cache::eviction::Lru;
 
 // Sample dictionary data
 fn create_test_dict(size: usize) -> PathMapDictionary<i32> {

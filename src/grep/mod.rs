@@ -48,11 +48,11 @@
 //! }
 //! ```
 
-pub mod error;
 pub mod compression;
-pub mod source;
+pub mod error;
 pub mod position_tracker;
 pub mod result;
+pub mod source;
 
 #[cfg(any(feature = "tar", feature = "zip"))]
 pub mod archive;
@@ -67,11 +67,11 @@ pub mod archive;
 pub mod document;
 
 // Re-export main types at module level for convenient access
-pub use error::{GrepError, GrepResult};
 pub use compression::CompressionFormat;
-pub use source::GrepPath;
+pub use error::{GrepError, GrepResult};
 pub use position_tracker::PositionTracker;
-pub use result::{SourceId, MatchLocation, GrepMatchResult};
+pub use result::{GrepMatchResult, MatchLocation, SourceId};
+pub use source::GrepPath;
 
 #[cfg(any(feature = "tar", feature = "zip"))]
 pub use archive::ArchiveFormat;
@@ -83,7 +83,7 @@ pub use archive::ArchiveFormat;
     feature = "grep-epub",
     feature = "grep-odt"
 ))]
-pub use document::{DocumentFormat, DocumentExtractor, DocumentExtractorConfig};
+pub use document::{DocumentExtractor, DocumentExtractorConfig, DocumentFormat};
 
 use std::fs::File;
 use std::io::{self, BufReader, Read};
@@ -325,25 +325,19 @@ impl GrepSource {
                 self.open_plain_file(fs_path, compression)
             }
             #[cfg(feature = "tar")]
-            ArchiveFormat::Tar { compression: tar_compression } => {
-                self.open_tar_archive(fs_path, tar_compression, filter)
-            }
+            ArchiveFormat::Tar {
+                compression: tar_compression,
+            } => self.open_tar_archive(fs_path, tar_compression, filter),
             #[cfg(not(feature = "tar"))]
-            ArchiveFormat::Tar { .. } => {
-                Err(GrepError::FeatureNotEnabled {
-                    feature: "tar".to_string(),
-                })
-            }
+            ArchiveFormat::Tar { .. } => Err(GrepError::FeatureNotEnabled {
+                feature: "tar".to_string(),
+            }),
             #[cfg(feature = "zip")]
-            ArchiveFormat::Zip => {
-                self.open_zip_archive(fs_path, filter)
-            }
+            ArchiveFormat::Zip => self.open_zip_archive(fs_path, filter),
             #[cfg(not(feature = "zip"))]
-            ArchiveFormat::Zip => {
-                Err(GrepError::FeatureNotEnabled {
-                    feature: "zip".to_string(),
-                })
-            }
+            ArchiveFormat::Zip => Err(GrepError::FeatureNotEnabled {
+                feature: "zip".to_string(),
+            }),
         }
 
         #[cfg(not(any(feature = "tar", feature = "zip")))]
@@ -397,10 +391,7 @@ impl GrepSource {
         }
 
         let source_id = SourceId::file(path);
-        let entries = vec![GrepEntry {
-            source_id,
-            content,
-        }];
+        let entries = vec![GrepEntry { source_id, content }];
 
         Ok(GrepEntryIterator {
             inner: GrepEntryIteratorInner::Single(entries.into_iter()),
@@ -426,10 +417,7 @@ impl GrepSource {
         // Collect entries (tar is streaming, but we need the content)
         let collected: Vec<GrepResult<GrepEntry>> = entries
             .map(|result| {
-                result.map(|(source_id, _meta, content)| GrepEntry {
-                    source_id,
-                    content,
-                })
+                result.map(|(source_id, _meta, content)| GrepEntry { source_id, content })
             })
             .collect();
 
@@ -456,10 +444,7 @@ impl GrepSource {
         // Collect entries
         let collected: Vec<GrepResult<GrepEntry>> = entries
             .map(|result| {
-                result.map(|(source_id, _meta, content)| GrepEntry {
-                    source_id,
-                    content,
-                })
+                result.map(|(source_id, _meta, content)| GrepEntry { source_id, content })
             })
             .collect();
 

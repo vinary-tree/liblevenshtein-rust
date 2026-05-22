@@ -102,9 +102,9 @@ impl StateSet {
             }
         } else {
             // Overflow to hash set
-            let overflow = self.overflow.get_or_insert_with(|| {
-                Box::new(FxHashSet::default())
-            });
+            let overflow = self
+                .overflow
+                .get_or_insert_with(|| Box::new(FxHashSet::default()));
             overflow.insert(state)
         }
     }
@@ -183,9 +183,9 @@ impl StateSet {
 
         // Handle overflow
         if let Some(ref other_overflow) = other.overflow {
-            let overflow = self.overflow.get_or_insert_with(|| {
-                Box::new(FxHashSet::default())
-            });
+            let overflow = self
+                .overflow
+                .get_or_insert_with(|| Box::new(FxHashSet::default()));
             overflow.extend(other_overflow.iter().copied());
         }
     }
@@ -320,7 +320,9 @@ impl<'a> Iterator for StateSetIter<'a> {
         }
 
         // Fall through to overflow iterator
-        self.overflow_iter.as_mut().and_then(|it| it.next().copied())
+        self.overflow_iter
+            .as_mut()
+            .and_then(|it| it.next().copied())
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -400,8 +402,8 @@ mod tests {
         let mut set = StateSet::new();
 
         // Test across word boundaries
-        set.insert(63);  // Last bit of word 0
-        set.insert(64);  // First bit of word 1
+        set.insert(63); // Last bit of word 0
+        set.insert(64); // First bit of word 1
         set.insert(127); // Last bit of word 1
         set.insert(128); // First bit of word 2
         set.insert(255); // Last bit of word 3

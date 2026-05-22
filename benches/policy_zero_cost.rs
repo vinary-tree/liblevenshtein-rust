@@ -1,11 +1,11 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use liblevenshtein::prelude::*;
-use liblevenshtein::transducer::{SubstitutionSet, Restricted};
+use liblevenshtein::transducer::{Restricted, SubstitutionSet};
 
 fn benchmark_unrestricted_policy(c: &mut Criterion) {
     let dict = DoubleArrayTrie::from_terms(vec![
-        "test", "testing", "tester", "best", "rest", "nest",
-        "cat", "dog", "bird", "fish", "mouse", "elephant"
+        "test", "testing", "tester", "best", "rest", "nest", "cat", "dog", "bird", "fish", "mouse",
+        "elephant",
     ]);
 
     // Standard transducer (uses Unrestricted by default)
@@ -13,9 +13,7 @@ fn benchmark_unrestricted_policy(c: &mut Criterion) {
 
     c.bench_function("query_unrestricted", |b| {
         b.iter(|| {
-            let results: Vec<String> = transducer
-                .query(black_box("test"), black_box(1))
-                .collect();
+            let results: Vec<String> = transducer.query(black_box("test"), black_box(1)).collect();
             black_box(results)
         })
     });
@@ -23,8 +21,8 @@ fn benchmark_unrestricted_policy(c: &mut Criterion) {
 
 fn benchmark_restricted_policy(c: &mut Criterion) {
     let dict = DoubleArrayTrie::from_terms(vec![
-        "test", "testing", "tester", "best", "rest", "nest",
-        "cat", "dog", "bird", "fish", "mouse", "elephant"
+        "test", "testing", "tester", "best", "rest", "nest", "cat", "dog", "bird", "fish", "mouse",
+        "elephant",
     ]);
 
     // Create a policy with some substitutions
@@ -39,13 +37,15 @@ fn benchmark_restricted_policy(c: &mut Criterion) {
 
     c.bench_function("query_restricted", |b| {
         b.iter(|| {
-            let results: Vec<String> = transducer
-                .query(black_box("test"), black_box(1))
-                .collect();
+            let results: Vec<String> = transducer.query(black_box("test"), black_box(1)).collect();
             black_box(results)
         })
     });
 }
 
-criterion_group!(benches, benchmark_unrestricted_policy, benchmark_restricted_policy);
+criterion_group!(
+    benches,
+    benchmark_unrestricted_policy,
+    benchmark_restricted_policy
+);
 criterion_main!(benches);

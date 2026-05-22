@@ -179,40 +179,20 @@ mod tests {
     fn test_retroflex_consonants() {
         let rules = base();
         let result = rules.apply("ટ");
-        assert!(
-            result.contains("ʈ"),
-            "ટ should become TT, got: {}",
-            result
-        );
+        assert!(result.contains("ʈ"), "ટ should become TT, got: {}", result);
         let result = rules.apply("ડ");
-        assert!(
-            result.contains("ɖ"),
-            "ડ should become DD, got: {}",
-            result
-        );
+        assert!(result.contains("ɖ"), "ડ should become DD, got: {}", result);
         let result = rules.apply("ણ");
-        assert!(
-            result.contains("ɳ"),
-            "ણ should become NN, got: {}",
-            result
-        );
+        assert!(result.contains("ɳ"), "ણ should become NN, got: {}", result);
     }
 
     #[test]
     fn test_sibilants() {
         let rules = base();
         let result = rules.apply("શ");
-        assert!(
-            result.contains("ʃ"),
-            "શ should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "શ should become SH, got: {}", result);
         let result = rules.apply("ષ");
-        assert!(
-            result.contains("ʂ"),
-            "ષ should become SS, got: {}",
-            result
-        );
+        assert!(result.contains("ʂ"), "ષ should become SS, got: {}", result);
         let result = rules.apply("સ");
         assert!(result.contains('s'), "સ should become s, got: {}", result);
     }
@@ -297,5 +277,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

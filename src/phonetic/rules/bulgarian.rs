@@ -88,7 +88,10 @@ mod tests {
     #[test]
     fn test_base_loads() {
         let rules = base();
-        assert!(!rules.is_empty(), "Bulgarian base rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Bulgarian base rules should not be empty"
+        );
         assert!(
             rules.len() >= 40,
             "expected >=40 base rules, got {}",
@@ -125,11 +128,7 @@ mod tests {
         let rules = base();
         // Ж → zh
         let result = rules.apply("ж");
-        assert!(
-            result.contains("ʒ"),
-            "ж should become zh, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ж should become zh, got: {}", result);
     }
 
     #[test]
@@ -137,11 +136,7 @@ mod tests {
         let rules = base();
         // Ш → sh
         let result = rules.apply("ш");
-        assert!(
-            result.contains("ʃ"),
-            "ш should become sh, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ш should become sh, got: {}", result);
     }
 
     #[test]
@@ -149,11 +144,7 @@ mod tests {
         let rules = base();
         // Ц → ts
         let result = rules.apply("ц");
-        assert!(
-            result.contains("t͡s"),
-            "ц should become ts, got: {}",
-            result
-        );
+        assert!(result.contains("t͡s"), "ц should become ts, got: {}", result);
     }
 
     #[test]
@@ -161,11 +152,7 @@ mod tests {
         let rules = base();
         // Ч → ch
         let result = rules.apply("ч");
-        assert!(
-            result.contains("t͡ʃ"),
-            "ч should become ch, got: {}",
-            result
-        );
+        assert!(result.contains("t͡ʃ"), "ч should become ch, got: {}", result);
     }
 
     #[test]
@@ -173,11 +160,7 @@ mod tests {
         let rules = base();
         // Х → kh
         let result = rules.apply("х");
-        assert!(
-            result.contains("x"),
-            "х should become kh, got: {}",
-            result
-        );
+        assert!(result.contains("x"), "х should become kh, got: {}", result);
     }
 
     #[test]
@@ -185,11 +168,7 @@ mod tests {
         let rules = base();
         // Ю → yu
         let result = rules.apply("ю");
-        assert!(
-            result.contains("ju"),
-            "ю should become yu, got: {}",
-            result
-        );
+        assert!(result.contains("ju"), "ю should become yu, got: {}", result);
     }
 
     #[test]
@@ -197,11 +176,7 @@ mod tests {
         let rules = base();
         // Я → ya
         let result = rules.apply("я");
-        assert!(
-            result.contains("ja"),
-            "я should become ya, got: {}",
-            result
-        );
+        assert!(result.contains("ja"), "я should become ya, got: {}", result);
     }
 
     #[test]
@@ -209,11 +184,7 @@ mod tests {
         let rules = base();
         // А → a
         let result = rules.apply("а");
-        assert!(
-            result.contains('a'),
-            "а should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "а should become a, got: {}", result);
     }
 
     #[test]
@@ -221,11 +192,7 @@ mod tests {
         let rules = base();
         // Б → b
         let result = rules.apply("б");
-        assert!(
-            result.contains('b'),
-            "б should become b, got: {}",
-            result
-        );
+        assert!(result.contains('b'), "б should become b, got: {}", result);
     }
 
     #[test]
@@ -236,7 +203,9 @@ mod tests {
         let lower = result.to_lowercase();
         // Note: г -> ɡ (IPA g U+0261), not ASCII 'g'
         assert!(
-            lower.contains('b') && lower.contains('l') && (lower.contains('ɡ') || lower.contains('g')),
+            lower.contains('b')
+                && lower.contains('l')
+                && (lower.contains('ɡ') || lower.contains('g')),
             "българия should contain b, l, ɡ/g, got: {}",
             result
         );
@@ -266,5 +235,4 @@ mod tests {
             result
         );
     }
-
 }

@@ -99,7 +99,10 @@ use super::common::syllable::SyllableExpr;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serialization", serde(bound = "U: Serialize + for<'a> Deserialize<'a>"))]
+#[cfg_attr(
+    feature = "serialization",
+    serde(bound = "U: Serialize + for<'a> Deserialize<'a>")
+)]
 pub enum Phone<U: PhoneticUnit> {
     /// A vowel sound
     Vowel(U),
@@ -308,7 +311,10 @@ impl<U: PhoneticUnit> std::fmt::Display for Phone<U> {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serialization", serde(bound = "U: Serialize + for<'a> Deserialize<'a>"))]
+#[cfg_attr(
+    feature = "serialization",
+    serde(bound = "U: Serialize + for<'a> Deserialize<'a>")
+)]
 pub enum Context<U: PhoneticUnit> {
     /// At the beginning of a word
     Initial,
@@ -442,7 +448,10 @@ impl<U: PhoneticUnit> std::fmt::Display for Context<U> {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serialization", serde(bound = "U: Serialize + for<'a> Deserialize<'a>"))]
+#[cfg_attr(
+    feature = "serialization",
+    serde(bound = "U: Serialize + for<'a> Deserialize<'a>")
+)]
 pub struct RewriteRule<U: PhoneticUnit> {
     /// Unique identifier for the rule
     pub rule_id: usize,
@@ -620,17 +629,11 @@ mod tests {
         assert!(!Context::<u8>::BeforeVowel(vec![b'a']).is_position_dependent());
 
         // And propagates
-        let ctx = Context::<u8>::And(
-            Box::new(Context::Initial),
-            Box::new(Context::Final),
-        );
+        let ctx = Context::<u8>::And(Box::new(Context::Initial), Box::new(Context::Final));
         assert!(ctx.is_position_dependent());
 
         // Or propagates
-        let ctx = Context::<u8>::Or(
-            Box::new(Context::Initial),
-            Box::new(Context::Final),
-        );
+        let ctx = Context::<u8>::Or(Box::new(Context::Initial), Box::new(Context::Final));
         assert!(ctx.is_position_dependent());
 
         // Not propagates
@@ -707,10 +710,7 @@ mod tests {
 
     #[test]
     fn test_compound_context_or_byte() {
-        let ctx: Context<u8> = Context::Or(
-            Box::new(Context::Initial),
-            Box::new(Context::Final),
-        );
+        let ctx: Context<u8> = Context::Or(Box::new(Context::Initial), Box::new(Context::Final));
         assert_eq!(ctx.to_string(), "Or(Initial, Final)");
         // Position-dependent because Final is
         assert!(ctx.is_position_dependent());
@@ -718,7 +718,9 @@ mod tests {
 
     #[test]
     fn test_compound_context_not_byte() {
-        let ctx: Context<u8> = Context::Not(Box::new(Context::BeforeVowel(vec![b'a', b'e', b'i', b'o', b'u'])));
+        let ctx: Context<u8> = Context::Not(Box::new(Context::BeforeVowel(vec![
+            b'a', b'e', b'i', b'o', b'u',
+        ])));
         assert_eq!(ctx.to_string(), "Not(BeforeVowel(aeiou))");
         // Not position-dependent
         assert!(!ctx.is_position_dependent());
@@ -728,7 +730,9 @@ mod tests {
     fn test_nested_compound_context() {
         // (!BeforeVowel) & (AfterVowel | Final)
         let ctx: Context<u8> = Context::And(
-            Box::new(Context::Not(Box::new(Context::BeforeVowel(vec![b'a', b'e'])))),
+            Box::new(Context::Not(Box::new(Context::BeforeVowel(vec![
+                b'a', b'e',
+            ])))),
             Box::new(Context::Or(
                 Box::new(Context::AfterVowel(vec![b'a', b'e'])),
                 Box::new(Context::Final),
@@ -753,17 +757,16 @@ mod tests {
 
     #[test]
     fn test_compound_context_or_char() {
-        let ctx: Context<char> = Context::Or(
-            Box::new(Context::Initial),
-            Box::new(Context::Final),
-        );
+        let ctx: Context<char> = Context::Or(Box::new(Context::Initial), Box::new(Context::Final));
         assert_eq!(ctx.to_string(), "Or(Initial, Final)");
         assert!(ctx.is_position_dependent());
     }
 
     #[test]
     fn test_compound_context_not_char() {
-        let ctx: Context<char> = Context::Not(Box::new(Context::BeforeVowel(vec!['a', 'e', 'i', 'o', 'u'])));
+        let ctx: Context<char> = Context::Not(Box::new(Context::BeforeVowel(vec![
+            'a', 'e', 'i', 'o', 'u',
+        ])));
         assert_eq!(ctx.to_string(), "Not(BeforeVowel(aeiou))");
         assert!(!ctx.is_position_dependent());
     }

@@ -108,11 +108,7 @@ mod tests {
         let rules = base();
         // š → SH
         let result = rules.apply("š");
-        assert!(
-            result.contains("ʃ"),
-            "š should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "š should become SH, got: {}", result);
     }
 
     #[test]
@@ -120,11 +116,7 @@ mod tests {
         let rules = base();
         // ž → ZH
         let result = rules.apply("ž");
-        assert!(
-            result.contains("ʒ"),
-            "ž should become ZH, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ž should become ZH, got: {}", result);
     }
 
     #[test]
@@ -132,11 +124,7 @@ mod tests {
         let rules = base();
         // ř → RZH (unique Czech sound)
         let result = rules.apply("ř");
-        assert!(
-            result.contains("r̝"),
-            "ř should become RZH, got: {}",
-            result
-        );
+        assert!(result.contains("r̝"), "ř should become RZH, got: {}", result);
     }
 
     #[test]
@@ -169,11 +157,7 @@ mod tests {
         let rules = base();
         // ň → NJ
         let result = rules.apply("ň");
-        assert!(
-            result.contains("ɲ"),
-            "ň should become NJ, got: {}",
-            result
-        );
+        assert!(result.contains("ɲ"), "ň should become NJ, got: {}", result);
     }
 
     #[test]
@@ -205,11 +189,7 @@ mod tests {
         let rules = base();
         // y → i (same pronunciation in Czech)
         let result = rules.apply("y");
-        assert!(
-            result.contains('i'),
-            "y should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "y should become i, got: {}", result);
     }
 
     #[test]
@@ -236,5 +216,4 @@ mod tests {
             result
         );
     }
-
 }

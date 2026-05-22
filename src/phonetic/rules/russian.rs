@@ -87,10 +87,18 @@ mod tests {
         let rules = base();
         // а → a or ɐ (reduced in unstressed position)
         let result = rules.apply("а");
-        assert!(result.contains('a') || result.contains('ɐ'), "а should become a or ɐ, got: {}", result);
+        assert!(
+            result.contains('a') || result.contains('ɐ'),
+            "а should become a or ɐ, got: {}",
+            result
+        );
         // о → ɔ or o or ɐ
         let result = rules.apply("о");
-        assert!(result.contains('ɔ') || result.contains('o') || result.contains('ɐ'), "о should become ɔ or o, got: {}", result);
+        assert!(
+            result.contains('ɔ') || result.contains('o') || result.contains('ɐ'),
+            "о should become ɔ or o, got: {}",
+            result
+        );
         // у → u
         let result = rules.apply("у");
         assert!(result.contains('u'), "у should become u, got: {}", result);
@@ -153,11 +161,7 @@ mod tests {
         let rules = base();
         // ж → ʒ (IPA voiced postalveolar fricative)
         let result = rules.apply("жить");
-        assert!(
-            result.contains('ʒ'),
-            "ж should become ʒ, got: {}",
-            result
-        );
+        assert!(result.contains('ʒ'), "ж should become ʒ, got: {}", result);
     }
 
     #[test]
@@ -165,11 +169,7 @@ mod tests {
         let rules = base();
         // ш → ʃ (IPA voiceless postalveolar fricative)
         let result = rules.apply("школа");
-        assert!(
-            result.contains('ʃ'),
-            "ш should become ʃ, got: {}",
-            result
-        );
+        assert!(result.contains('ʃ'), "ш should become ʃ, got: {}", result);
     }
 
     #[test]
@@ -177,11 +177,7 @@ mod tests {
         let rules = base();
         // ч → t͡ʃ (IPA voiceless postalveolar affricate)
         let result = rules.apply("чай");
-        assert!(
-            result.contains("t͡ʃ"),
-            "ч should become t͡ʃ, got: {}",
-            result
-        );
+        assert!(result.contains("t͡ʃ"), "ч should become t͡ʃ, got: {}", result);
     }
 
     #[test]
@@ -189,11 +185,7 @@ mod tests {
         let rules = base();
         // ц → t͡s (IPA voiceless alveolar affricate)
         let result = rules.apply("царь");
-        assert!(
-            result.contains("t͡s"),
-            "ц should become t͡s, got: {}",
-            result
-        );
+        assert!(result.contains("t͡s"), "ц should become t͡s, got: {}", result);
     }
 
     #[test]
@@ -201,11 +193,7 @@ mod tests {
         let rules = base();
         // х → x (IPA voiceless velar fricative)
         let result = rules.apply("хлеб");
-        assert!(
-            result.contains('x'),
-            "х should become x, got: {}",
-            result
-        );
+        assert!(result.contains('x'), "х should become x, got: {}", result);
     }
 
     #[test]
@@ -344,9 +332,11 @@ mod tests {
         let rules = base();
 
         // Check we have devoicing rules with Final context
-        let final_devoicing_count = rules.rules.iter().filter(|r| {
-            matches!(r.context, ContextChar::Final)
-        }).count();
+        let final_devoicing_count = rules
+            .rules
+            .iter()
+            .filter(|r| matches!(r.context, ContextChar::Final))
+            .count();
 
         assert!(
             final_devoicing_count >= 6,

@@ -11,12 +11,14 @@
 
 use std::sync::Arc;
 
-use lling_llang::prelude::{LazyState, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition};
+use lling_llang::prelude::{
+    LazyState, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition,
+};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::Algorithm;
+use libdictenstein::{Dictionary, DictionaryNode};
 
 use super::state_encoding;
 
@@ -191,7 +193,11 @@ where
         &self,
         dict_node_id: u32,
         query_pos: u32,
-    ) -> (bool, TropicalWeight, SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>) {
+    ) -> (
+        bool,
+        TropicalWeight,
+        SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>,
+    ) {
         let registry = self.node_registry.read().expect("Lock poisoned");
 
         let dict_node = match registry.get_node(dict_node_id) {
@@ -218,11 +224,8 @@ where
                 registry.register_node(child_node.clone(), path_hash)
             };
 
-            let from_state = state_encoding::encode(
-                dict_node_id,
-                query_pos,
-                self.max_automaton_states,
-            );
+            let from_state =
+                state_encoding::encode(dict_node_id, query_pos, self.max_automaton_states);
 
             // Match or Substitute: consume dict_char and advance query position
             if pos < self.query_chars.len() {
@@ -231,11 +234,8 @@ where
 
                 // Only add if within distance threshold
                 // (We check this lazily during composition, but can prune here too)
-                let target_state = state_encoding::encode(
-                    child_node_id,
-                    query_pos + 1,
-                    self.max_automaton_states,
-                );
+                let target_state =
+                    state_encoding::encode(child_node_id, query_pos + 1, self.max_automaton_states);
 
                 transitions.push(WeightedTransition::new(
                     from_state,
@@ -283,16 +283,13 @@ where
         // We emit them as transitions that stay at the same dict node
         if pos < self.query_chars.len() {
             let delete_target = state_encoding::encode(
-                dict_node_id, // Stay at same dict node
+                dict_node_id,  // Stay at same dict node
                 query_pos + 1, // Advance query position
                 self.max_automaton_states,
             );
 
-            let from_state = state_encoding::encode(
-                dict_node_id,
-                query_pos,
-                self.max_automaton_states,
-            );
+            let from_state =
+                state_encoding::encode(dict_node_id, query_pos, self.max_automaton_states);
 
             // Epsilon transition (no input/output label)
             transitions.push(WeightedTransition::new(

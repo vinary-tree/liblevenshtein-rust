@@ -12,14 +12,16 @@
 
 use std::sync::Arc;
 
-use lling_llang::prelude::{LazyState, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition};
+use lling_llang::prelude::{
+    LazyState, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition,
+};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::universal::{
     CharacteristicVector, PositionVariant, UniversalAutomaton, UniversalState,
 };
+use libdictenstein::{Dictionary, DictionaryNode};
 
 use super::state_encoding;
 
@@ -234,7 +236,11 @@ where
         &self,
         dict_node_id: u32,
         automaton_state_id: u32,
-    ) -> (bool, TropicalWeight, SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>) {
+    ) -> (
+        bool,
+        TropicalWeight,
+        SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>,
+    ) {
         let node_registry = self.node_registry.read().expect("Lock poisoned");
         let state_registry = self.state_registry.read().expect("Lock poisoned");
 
@@ -283,7 +289,8 @@ where
                 let bit_vector = CharacteristicVector::new(dict_char, &subword);
 
                 // Compute next automaton state
-                if let Some(next_auto_state) = automaton_state.transition(&bit_vector, current_pos) {
+                if let Some(next_auto_state) = automaton_state.transition(&bit_vector, current_pos)
+                {
                     // Register the new automaton state
                     let next_auto_id = {
                         let mut registry = self.state_registry.write().expect("Lock poisoned");
@@ -412,8 +419,8 @@ fn compute_path_hash(parent_id: u32, edge_label: char) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
     use crate::transducer::universal::Standard;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
     #[test]
     fn test_universal_state_registry_creation() {

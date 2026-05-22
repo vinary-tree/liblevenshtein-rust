@@ -38,16 +38,44 @@ fn generate_synthetic_dictionary(size: usize) -> Vec<String> {
     use std::collections::HashSet;
 
     let base_words = [
-        "algorithm", "structure", "computer", "science", "program",
-        "function", "variable", "constant", "iterator", "reference",
-        "pattern", "matching", "distance", "automaton", "transducer",
-        "dictionary", "benchmark", "performance", "optimization", "implementation",
-        "cathedral", "category", "catering", "catastrophe", "catalyst",
-        "application", "approximation", "acceleration", "authentication", "authorization",
+        "algorithm",
+        "structure",
+        "computer",
+        "science",
+        "program",
+        "function",
+        "variable",
+        "constant",
+        "iterator",
+        "reference",
+        "pattern",
+        "matching",
+        "distance",
+        "automaton",
+        "transducer",
+        "dictionary",
+        "benchmark",
+        "performance",
+        "optimization",
+        "implementation",
+        "cathedral",
+        "category",
+        "catering",
+        "catastrophe",
+        "catalyst",
+        "application",
+        "approximation",
+        "acceleration",
+        "authentication",
+        "authorization",
     ];
 
-    let suffixes = ["", "s", "ed", "ing", "er", "est", "ly", "tion", "ment", "ness"];
-    let prefixes = ["", "un", "re", "pre", "mis", "dis", "over", "under", "out", "sub"];
+    let suffixes = [
+        "", "s", "ed", "ing", "er", "est", "ly", "tion", "ment", "ness",
+    ];
+    let prefixes = [
+        "", "un", "re", "pre", "mis", "dis", "over", "under", "out", "sub",
+    ];
 
     let mut words = HashSet::new();
 
@@ -174,22 +202,30 @@ impl EdgeDistributionStats {
         }
 
         // SIMD threshold analysis
-        let nodes_12_plus: usize = self.edge_counts
+        let nodes_12_plus: usize = self
+            .edge_counts
             .iter()
             .filter(|(&k, _)| k >= 12)
             .map(|(_, &v)| v)
             .sum();
         let pct_12_plus = nodes_12_plus as f64 / self.total_nodes as f64 * 100.0;
-        eprintln!("\nNodes with 12+ edges (SIMD threshold): {} ({:.1}%)", nodes_12_plus, pct_12_plus);
+        eprintln!(
+            "\nNodes with 12+ edges (SIMD threshold): {} ({:.1}%)",
+            nodes_12_plus, pct_12_plus
+        );
 
         // 4 or fewer (SmallVec inline)
-        let nodes_4_or_less: usize = self.edge_counts
+        let nodes_4_or_less: usize = self
+            .edge_counts
             .iter()
             .filter(|(&k, _)| k <= 4)
             .map(|(_, &v)| v)
             .sum();
         let pct_4_or_less = nodes_4_or_less as f64 / self.total_nodes as f64 * 100.0;
-        eprintln!("Nodes with ≤4 edges (SmallVec inline): {} ({:.1}%)", nodes_4_or_less, pct_4_or_less);
+        eprintln!(
+            "Nodes with ≤4 edges (SmallVec inline): {} ({:.1}%)",
+            nodes_4_or_less, pct_4_or_less
+        );
     }
 }
 
@@ -254,7 +290,11 @@ impl HitMissStats {
         eprintln!("\n=== Hit/Miss Ratio Summary ===");
         eprintln!("Total lookups: {}", self.total());
         eprintln!("Hits: {} ({:.1}%)", self.hits, self.hit_ratio() * 100.0);
-        eprintln!("Misses: {} ({:.1}%)", self.misses, self.miss_ratio() * 100.0);
+        eprintln!(
+            "Misses: {} ({:.1}%)",
+            self.misses,
+            self.miss_ratio() * 100.0
+        );
     }
 }
 
@@ -272,7 +312,10 @@ fn bench_substring_search_baseline(c: &mut Criterion) {
         let actual_size = dict_words.len();
 
         if actual_size < dict_size / 2 {
-            eprintln!("Warning: Only loaded {} words for target {}", actual_size, dict_size);
+            eprintln!(
+                "Warning: Only loaded {} words for target {}",
+                actual_size, dict_size
+            );
             continue;
         }
 
@@ -456,9 +499,8 @@ fn bench_edge_distribution_analysis(c: &mut Criterion) {
         hm_stats.print_summary();
 
         // Random patterns (more misses expected)
-        let random_patterns: Vec<String> = (0..1000)
-            .map(|i| generate_query(10, i * 1009))
-            .collect();
+        let random_patterns: Vec<String> =
+            (0..1000).map(|i| generate_query(10, i * 1009)).collect();
         eprintln!("\nHit/Miss for RANDOM patterns (len 10):");
         let random_hm_stats = measure_hit_miss_ratio(&scdawg, &random_patterns);
         random_hm_stats.print_summary();
@@ -486,9 +528,6 @@ criterion_group!(
     bench_wallbreaker_baseline,
 );
 
-criterion_group!(
-    analysis_benches,
-    bench_edge_distribution_analysis,
-);
+criterion_group!(analysis_benches, bench_edge_distribution_analysis,);
 
 criterion_main!(baseline_benches, analysis_benches);

@@ -318,7 +318,11 @@ mod tests {
         // Philosophie → filosofi
         let result = rules.apply("Philosophie");
         assert!(result.contains('f'), "ph should become f, got: {}", result);
-        assert!(!result.contains("ph"), "ph should not remain, got: {}", result);
+        assert!(
+            !result.contains("ph"),
+            "ph should not remain, got: {}",
+            result
+        );
     }
 
     #[test]

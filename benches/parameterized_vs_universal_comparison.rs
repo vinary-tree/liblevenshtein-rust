@@ -112,8 +112,8 @@ fn bench_batch_queries_parameterized_vs_universal(c: &mut Criterion) {
 
     // Query words to test
     let query_words: Vec<String> = vec![
-        "word100", "word200", "word300", "word400", "word500",
-        "word600", "word700", "word800", "word900", "test",
+        "word100", "word200", "word300", "word400", "word500", "word600", "word700", "word800",
+        "word900", "test",
     ]
     .into_iter()
     .map(|s| s.to_string())
@@ -156,7 +156,9 @@ fn bench_batch_queries_parameterized_vs_universal(c: &mut Criterion) {
                     for query in &queries {
                         let results: Vec<&str> = terms
                             .iter()
-                            .filter(|dict_word| automaton.accepts(black_box(dict_word), black_box(query)))
+                            .filter(|dict_word| {
+                                automaton.accepts(black_box(dict_word), black_box(query))
+                            })
                             .map(|s| s.as_str())
                             .collect();
                         black_box(results);
@@ -205,7 +207,9 @@ fn bench_distance_scaling_parameterized_vs_universal(c: &mut Criterion) {
                 b.iter(|| {
                     let results: Vec<&str> = terms
                         .iter()
-                        .filter(|dict_word| automaton.accepts(black_box(dict_word), black_box(query_word)))
+                        .filter(|dict_word| {
+                            automaton.accepts(black_box(dict_word), black_box(query_word))
+                        })
                         .map(|s| s.as_str())
                         .collect();
                     black_box(results);
@@ -234,36 +238,30 @@ fn bench_dictionary_size_scaling_parameterized_vs_universal(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*size as u64));
 
         // Parameterized
-        group.bench_with_input(
-            BenchmarkId::new("parameterized", size),
-            size,
-            |b, _| {
-                let transducer = Transducer::new(dict.clone(), Algorithm::Standard);
-                b.iter(|| {
-                    let results: Vec<_> = transducer
-                        .query(black_box(query_word), black_box(distance))
-                        .collect();
-                    black_box(results);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("parameterized", size), size, |b, _| {
+            let transducer = Transducer::new(dict.clone(), Algorithm::Standard);
+            b.iter(|| {
+                let results: Vec<_> = transducer
+                    .query(black_box(query_word), black_box(distance))
+                    .collect();
+                black_box(results);
+            });
+        });
 
         // Universal
-        group.bench_with_input(
-            BenchmarkId::new("universal", size),
-            size,
-            |b, _| {
-                let automaton = UniversalAutomaton::<UniversalStandard>::new(distance as u8);
-                b.iter(|| {
-                    let results: Vec<&str> = terms
-                        .iter()
-                        .filter(|dict_word| automaton.accepts(black_box(dict_word), black_box(query_word)))
-                        .map(|s| s.as_str())
-                        .collect();
-                    black_box(results);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("universal", size), size, |b, _| {
+            let automaton = UniversalAutomaton::<UniversalStandard>::new(distance as u8);
+            b.iter(|| {
+                let results: Vec<&str> = terms
+                    .iter()
+                    .filter(|dict_word| {
+                        automaton.accepts(black_box(dict_word), black_box(query_word))
+                    })
+                    .map(|s| s.as_str())
+                    .collect();
+                black_box(results);
+            });
+        });
     }
 
     group.finish();

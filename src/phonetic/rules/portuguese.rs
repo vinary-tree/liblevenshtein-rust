@@ -107,8 +107,9 @@ pub fn brazilian() -> &'static RuleSetChar {
         let content = include_str!("../../../data/rules/portuguese/brazilian.llev");
         let file = crate::phonetic::llev::parse_str(content)
             .expect("Invalid embedded portuguese/brazilian.llev - this is a bug in liblevenshtein");
-        RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Brazilian Portuguese rules - this is a bug in liblevenshtein")
+        RuleSetChar::from_llev(&file).expect(
+            "Failed to compile Brazilian Portuguese rules - this is a bug in liblevenshtein",
+        )
     })
 }
 
@@ -161,36 +162,63 @@ mod tests {
     #[test]
     fn test_base_loads() {
         let rules = base();
-        assert!(!rules.is_empty(), "Portuguese base rules should not be empty");
-        assert!(rules.len() > 40, "expected >40 base rules, got {}", rules.len());
+        assert!(
+            !rules.is_empty(),
+            "Portuguese base rules should not be empty"
+        );
+        assert!(
+            rules.len() > 40,
+            "expected >40 base rules, got {}",
+            rules.len()
+        );
     }
 
     #[test]
     fn test_european_loads() {
         let rules = european();
-        assert!(!rules.is_empty(), "European Portuguese rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "European Portuguese rules should not be empty"
+        );
     }
 
     #[test]
     fn test_brazilian_loads() {
         let rules = brazilian();
-        assert!(!rules.is_empty(), "Brazilian Portuguese rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Brazilian Portuguese rules should not be empty"
+        );
     }
 
     #[test]
     fn test_combined_european_loads() {
         let rules = combined_european();
-        assert!(!rules.is_empty(), "Combined European Portuguese rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Combined European Portuguese rules should not be empty"
+        );
         let total = base().len() + european().len();
-        assert_eq!(rules.len(), total, "combined_european should have all rules");
+        assert_eq!(
+            rules.len(),
+            total,
+            "combined_european should have all rules"
+        );
     }
 
     #[test]
     fn test_combined_brazilian_loads() {
         let rules = combined_brazilian();
-        assert!(!rules.is_empty(), "Combined Brazilian Portuguese rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Combined Brazilian Portuguese rules should not be empty"
+        );
         let total = base().len() + brazilian().len();
-        assert_eq!(rules.len(), total, "combined_brazilian should have all rules");
+        assert_eq!(
+            rules.len(),
+            total,
+            "combined_brazilian should have all rules"
+        );
     }
 
     #[test]
@@ -256,7 +284,11 @@ mod tests {
         let rules = combined_brazilian();
         // Brasil → Brasiw
         let result = rules.apply("brasil");
-        assert!(result.ends_with('w'), "final l should become w in Brazilian, got: {}", result);
+        assert!(
+            result.ends_with('w'),
+            "final l should become w in Brazilian, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -277,7 +309,11 @@ mod tests {
         let rules = combined_brazilian();
         // dia → DZHia (DZH to avoid j→zh rule)
         let result = rules.apply("dia");
-        assert!(result.contains("d͡ʒ"), "di should palatalize in Brazilian, got: {}", result);
+        assert!(
+            result.contains("d͡ʒ"),
+            "di should palatalize in Brazilian, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -300,7 +336,11 @@ mod tests {
         let rules = combined_european();
         // esta → eshta
         let result = rules.apply("esta");
-        assert!(result.contains("ʃ"), "s before t should become sh in European, got: {}", result);
+        assert!(
+            result.contains("ʃ"),
+            "s before t should become sh in European, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -312,9 +352,11 @@ mod tests {
         let brasil_pt = european_rules.apply("brasil");
         let brasil_br = brazilian_rules.apply("brasil");
 
-        assert_ne!(brasil_pt, brasil_br,
+        assert_ne!(
+            brasil_pt, brasil_br,
             "Dialects should normalize 'brasil' differently: pt='{}', br='{}'",
-            brasil_pt, brasil_br);
+            brasil_pt, brasil_br
+        );
     }
 
     #[test]
@@ -355,7 +397,11 @@ mod tests {
         let rules = base();
         // casa → kasa (c before a → k)
         let result = rules.apply("casa");
-        assert!(result.starts_with('k'), "c before a should become k, got: {}", result);
+        assert!(
+            result.starts_with('k'),
+            "c before a should become k, got: {}",
+            result
+        );
     }
 
     #[test]

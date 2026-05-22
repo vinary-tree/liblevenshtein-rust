@@ -415,7 +415,10 @@ fn test_parse_symbol_ref_undefined_with_suggestions() {
     if let ParseErrorKind::UndefinedSymbol { name, available } = &err.kind {
         assert_eq!(name, "UNDEFINED");
         // Available should contain our defined symbols
-        assert!(available.contains(&"VOWEL".to_string()) || available.contains(&"CONSONANT".to_string()));
+        assert!(
+            available.contains(&"VOWEL".to_string())
+                || available.contains(&"CONSONANT".to_string())
+        );
     } else {
         panic!("Expected UndefinedSymbol error");
     }
@@ -618,7 +621,11 @@ fn test_triple_negation() {
     let s = triple.to_string();
 
     // Should be negated (odd count of negations)
-    assert!(s.starts_with("[^"), "Triple negation should result in negated: {}", s);
+    assert!(
+        s.starts_with("[^"),
+        "Triple negation should result in negated: {}",
+        s
+    );
 }
 
 #[test]
@@ -628,7 +635,11 @@ fn test_quadruple_negation() {
     let s = quad.to_string();
 
     // Should NOT be negated (even count of negations)
-    assert!(!s.starts_with("[^"), "Quadruple negation should be positive: {}", s);
+    assert!(
+        !s.starts_with("[^"),
+        "Quadruple negation should be positive: {}",
+        s
+    );
     // Should contain vowels
     assert!(s.contains('a'), "Should contain 'a'");
     assert!(s.contains('e'), "Should contain 'e'");
@@ -657,7 +668,10 @@ fn test_parse_shortcut_vowel_negated() {
     // Should NOT contain vowels, should contain consonants
     assert!(!s.contains('a'), "Should NOT contain 'a'");
     assert!(!s.contains('e'), "Should NOT contain 'e'");
-    assert!(s.contains('p') || s.contains('b') || s.contains('t'), "Should contain some consonants");
+    assert!(
+        s.contains('p') || s.contains('b') || s.contains('t'),
+        "Should contain some consonants"
+    );
 }
 
 #[test]
@@ -845,7 +859,10 @@ fn test_parse_undefined_group_reference_error() {
     let result = parse("(?&undefined)");
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(matches!(err.kind, ParseErrorKind::UndefinedGroupReference(_)));
+    assert!(matches!(
+        err.kind,
+        ParseErrorKind::UndefinedGroupReference(_)
+    ));
 }
 
 #[test]
@@ -1012,12 +1029,12 @@ fn contains_variant(regex: &Regex, predicate: &dyn Fn(&Regex) -> bool) -> bool {
         Regex::RepeatExact(inner, _) | Regex::RepeatRange(inner, _, _) => {
             contains_variant(inner, predicate)
         }
-        Regex::CapturingGroup(_, inner) | Regex::NonCapturingGroup(inner) | Regex::NamedGroup(_, inner) => {
-            contains_variant(inner, predicate)
-        }
-        Regex::FlagsGroup { inner: Some(inner), .. } => {
-            contains_variant(inner, predicate)
-        }
+        Regex::CapturingGroup(_, inner)
+        | Regex::NonCapturingGroup(inner)
+        | Regex::NamedGroup(_, inner) => contains_variant(inner, predicate),
+        Regex::FlagsGroup {
+            inner: Some(inner), ..
+        } => contains_variant(inner, predicate),
         _ => false,
     }
 }
@@ -1044,7 +1061,8 @@ fn test_parse_start_of_line_anchor() {
     // Check that the leftmost element is StartOfLine
     assert!(
         matches!(leftmost(&regex), Regex::StartOfLine),
-        "Expected StartOfLine at start, got {:?}", regex
+        "Expected StartOfLine at start, got {:?}",
+        regex
     );
 }
 
@@ -1054,7 +1072,8 @@ fn test_parse_end_of_line_anchor() {
     // Check that the rightmost element is EndOfLine
     assert!(
         matches!(rightmost(&regex), Regex::EndOfLine),
-        "Expected EndOfLine at end, got {:?}", regex
+        "Expected EndOfLine at end, got {:?}",
+        regex
     );
 }
 
@@ -1076,7 +1095,8 @@ fn test_parse_start_of_input_anchor() {
     let regex = parse(r"\Ahello").expect("test: parse \\Ahello");
     assert!(
         matches!(leftmost(&regex), Regex::StartOfInput),
-        "Expected StartOfInput at start, got {:?}", regex
+        "Expected StartOfInput at start, got {:?}",
+        regex
     );
 }
 
@@ -1085,7 +1105,8 @@ fn test_parse_end_of_input_anchor() {
     let regex = parse(r"hello\Z").expect("test: parse hello\\Z");
     assert!(
         matches!(rightmost(&regex), Regex::EndOfInput),
-        "Expected EndOfInput at end, got {:?}", regex
+        "Expected EndOfInput at end, got {:?}",
+        regex
     );
 }
 
@@ -1094,7 +1115,8 @@ fn test_parse_end_of_input_strict_anchor() {
     let regex = parse(r"hello\z").expect("test: parse hello\\z");
     assert!(
         matches!(rightmost(&regex), Regex::EndOfInputStrict),
-        "Expected EndOfInputStrict at end, got {:?}", regex
+        "Expected EndOfInputStrict at end, got {:?}",
+        regex
     );
 }
 
@@ -1103,8 +1125,16 @@ fn test_parse_anchors_roundtrip() {
     // Test that anchors are correctly represented in Display
     let regex = parse("^hello$").expect("test: parse ^hello$ display");
     let display = regex.to_string();
-    assert!(display.contains('^'), "Display should contain ^: {}", display);
-    assert!(display.contains('$'), "Display should contain $: {}", display);
+    assert!(
+        display.contains('^'),
+        "Display should contain ^: {}",
+        display
+    );
+    assert!(
+        display.contains('$'),
+        "Display should contain $: {}",
+        display
+    );
 }
 
 // ========================================================================
@@ -1115,9 +1145,7 @@ fn test_parse_anchors_roundtrip() {
 fn find_flags_group(regex: &Regex) -> Option<&RegexFlags> {
     match regex {
         Regex::FlagsGroup { flags, .. } => Some(flags),
-        Regex::Concat(left, right) => {
-            find_flags_group(left).or_else(|| find_flags_group(right))
-        }
+        Regex::Concat(left, right) => find_flags_group(left).or_else(|| find_flags_group(right)),
         _ => None,
     }
 }
@@ -1128,7 +1156,10 @@ fn test_parse_multiline_flag() {
     // Pattern should contain FlagsGroup with multiline=true
     let flags = find_flags_group(&regex);
     assert!(flags.is_some(), "Expected FlagsGroup in {:?}", regex);
-    assert_eq!(flags.expect("test: flags is_some for multiline").multiline, Some(true));
+    assert_eq!(
+        flags.expect("test: flags is_some for multiline").multiline,
+        Some(true)
+    );
 }
 
 #[test]
@@ -1136,7 +1167,10 @@ fn test_parse_dotall_flag() {
     let regex = parse("(?s).*").expect("test: parse (?s).*");
     let flags = find_flags_group(&regex);
     assert!(flags.is_some(), "Expected FlagsGroup in {:?}", regex);
-    assert_eq!(flags.expect("test: flags is_some for dotall").dotall, Some(true));
+    assert_eq!(
+        flags.expect("test: flags is_some for dotall").dotall,
+        Some(true)
+    );
 }
 
 #[test]
@@ -1154,7 +1188,10 @@ fn test_parse_scoped_multiline() {
     let regex = parse("(?m:^line$)").expect("test: parse (?m:^line$)");
     // Should be FlagsGroup with inner pattern containing anchors
     match &regex {
-        Regex::FlagsGroup { flags, inner: Some(inner) } => {
+        Regex::FlagsGroup {
+            flags,
+            inner: Some(inner),
+        } => {
             assert_eq!(flags.multiline, Some(true));
             // Inner should contain anchors
             assert!(

@@ -94,11 +94,7 @@ mod tests {
         let rules = base();
         // wijn → ʋɛin (w→ʋ, ij→ɛi)
         let result = rules.apply("wijn");
-        assert!(
-            result.contains('ɛ'),
-            "ij should become ɛi, got: {}",
-            result
-        );
+        assert!(result.contains('ɛ'), "ij should become ɛi, got: {}", result);
     }
 
     #[test]
@@ -154,11 +150,7 @@ mod tests {
         let rules = base();
         // boek → buk (oe→u)
         let result = rules.apply("boek");
-        assert!(
-            result.contains('u'),
-            "oe should become u, got: {}",
-            result
-        );
+        assert!(result.contains('u'), "oe should become u, got: {}", result);
     }
 
     #[test]
@@ -166,11 +158,7 @@ mod tests {
         let rules = base();
         // neus → nøs (eu→ø)
         let result = rules.apply("neus");
-        assert!(
-            result.contains('ø'),
-            "eu should become ø, got: {}",
-            result
-        );
+        assert!(result.contains('ø'), "eu should become ø, got: {}", result);
     }
 
     #[test]
@@ -178,11 +166,7 @@ mod tests {
         let rules = base();
         // huis → hœys (ui→œy)
         let result = rules.apply("huis");
-        assert!(
-            result.contains('œ'),
-            "ui should become œy, got: {}",
-            result
-        );
+        assert!(result.contains('œ'), "ui should become œy, got: {}", result);
     }
 
     #[test]
@@ -262,11 +246,7 @@ mod tests {
         let rules = base();
         // klein → klɛin (ei→ɛi)
         let result = rules.apply("klein");
-        assert!(
-            result.contains('ɛ'),
-            "ei should become ɛi, got: {}",
-            result
-        );
+        assert!(result.contains('ɛ'), "ei should become ɛi, got: {}", result);
     }
 
     #[test]
@@ -274,11 +254,7 @@ mod tests {
         let rules = base();
         // blauw → blɔuʋ (au→ɔu, w→ʋ)
         let result = rules.apply("blauw");
-        assert!(
-            result.contains('ɔ'),
-            "au should become ɔu, got: {}",
-            result
-        );
+        assert!(result.contains('ɔ'), "au should become ɔu, got: {}", result);
     }
 
     #[test]
@@ -286,11 +262,7 @@ mod tests {
         let rules = base();
         // oud → ɔut (ou→ɔu, d→t at end)
         let result = rules.apply("oud");
-        assert!(
-            result.contains('ɔ'),
-            "ou should become ɔu, got: {}",
-            result
-        );
+        assert!(result.contains('ɔ'), "ou should become ɔu, got: {}", result);
     }
 
     #[test]

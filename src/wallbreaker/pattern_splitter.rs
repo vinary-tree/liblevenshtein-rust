@@ -47,7 +47,12 @@ pub struct PatternPiece {
 
 impl PatternPiece {
     /// Create a new pattern piece.
-    pub fn new(content: String, start_offset: usize, end_offset: usize, piece_index: usize) -> Self {
+    pub fn new(
+        content: String,
+        start_offset: usize,
+        end_offset: usize,
+        piece_index: usize,
+    ) -> Self {
         PatternPiece {
             content,
             start_offset,
@@ -273,7 +278,7 @@ mod tests {
         // First 2 pieces get extra char
         assert_eq!(pieces[0].content, "he"); // 2 chars
         assert_eq!(pieces[1].content, "ll"); // 2 chars
-        assert_eq!(pieces[2].content, "o");  // 1 char
+        assert_eq!(pieces[2].content, "o"); // 1 char
     }
 
     #[test]
@@ -334,9 +339,9 @@ mod tests {
         // Standard algorithm with k=2 → 3 pieces
         let splitter = PatternSplitter::standard(2);
 
-        assert_eq!(splitter.min_piece_length(9), 3);  // 9/3 = 3
+        assert_eq!(splitter.min_piece_length(9), 3); // 9/3 = 3
         assert_eq!(splitter.min_piece_length(10), 3); // 10/3 = 3
-        assert_eq!(splitter.min_piece_length(2), 1);  // short query
+        assert_eq!(splitter.min_piece_length(2), 1); // short query
     }
 
     // Algorithm-specific piece count tests (formally verified in WallBreakerPigeonhole.v)
@@ -353,19 +358,43 @@ mod tests {
     #[test]
     fn test_num_pieces_transposition() {
         // Transposition: 2k+1 pieces (proven in WallBreakerPigeonhole.v)
-        assert_eq!(PatternSplitter::new(0, Algorithm::Transposition).num_pieces(), 1);
-        assert_eq!(PatternSplitter::new(1, Algorithm::Transposition).num_pieces(), 3);
-        assert_eq!(PatternSplitter::new(2, Algorithm::Transposition).num_pieces(), 5);
-        assert_eq!(PatternSplitter::new(5, Algorithm::Transposition).num_pieces(), 11);
+        assert_eq!(
+            PatternSplitter::new(0, Algorithm::Transposition).num_pieces(),
+            1
+        );
+        assert_eq!(
+            PatternSplitter::new(1, Algorithm::Transposition).num_pieces(),
+            3
+        );
+        assert_eq!(
+            PatternSplitter::new(2, Algorithm::Transposition).num_pieces(),
+            5
+        );
+        assert_eq!(
+            PatternSplitter::new(5, Algorithm::Transposition).num_pieces(),
+            11
+        );
     }
 
     #[test]
     fn test_num_pieces_merge_and_split() {
         // MergeAndSplit: 2k+1 pieces (proven in WallBreakerPigeonhole.v)
-        assert_eq!(PatternSplitter::new(0, Algorithm::MergeAndSplit).num_pieces(), 1);
-        assert_eq!(PatternSplitter::new(1, Algorithm::MergeAndSplit).num_pieces(), 3);
-        assert_eq!(PatternSplitter::new(2, Algorithm::MergeAndSplit).num_pieces(), 5);
-        assert_eq!(PatternSplitter::new(5, Algorithm::MergeAndSplit).num_pieces(), 11);
+        assert_eq!(
+            PatternSplitter::new(0, Algorithm::MergeAndSplit).num_pieces(),
+            1
+        );
+        assert_eq!(
+            PatternSplitter::new(1, Algorithm::MergeAndSplit).num_pieces(),
+            3
+        );
+        assert_eq!(
+            PatternSplitter::new(2, Algorithm::MergeAndSplit).num_pieces(),
+            5
+        );
+        assert_eq!(
+            PatternSplitter::new(5, Algorithm::MergeAndSplit).num_pieces(),
+            11
+        );
     }
 
     #[test]
@@ -380,7 +409,7 @@ mod tests {
         assert_eq!(pieces[1].content, "th"); // 2 chars
         assert_eq!(pieces[2].content, "ed"); // 2 chars
         assert_eq!(pieces[3].content, "ra"); // 2 chars
-        assert_eq!(pieces[4].content, "l");  // 1 char
+        assert_eq!(pieces[4].content, "l"); // 1 char
     }
 
     #[test]
@@ -404,7 +433,10 @@ mod tests {
         assert!(matches!(standard.algorithm(), Algorithm::Standard));
 
         let transposition = PatternSplitter::new(2, Algorithm::Transposition);
-        assert!(matches!(transposition.algorithm(), Algorithm::Transposition));
+        assert!(matches!(
+            transposition.algorithm(),
+            Algorithm::Transposition
+        ));
 
         let merge_split = PatternSplitter::new(2, Algorithm::MergeAndSplit);
         assert!(matches!(merge_split.algorithm(), Algorithm::MergeAndSplit));
@@ -417,6 +449,6 @@ mod tests {
 
         assert_eq!(splitter.min_piece_length(10), 2); // 10/5 = 2
         assert_eq!(splitter.min_piece_length(15), 3); // 15/5 = 3
-        assert_eq!(splitter.min_piece_length(4), 1);  // short query
+        assert_eq!(splitter.min_piece_length(4), 1); // short query
     }
 }

@@ -332,8 +332,11 @@ impl PhoneticGrep {
     /// Vector of matches found within the line.
     pub fn find_in_line(&self, line: &str) -> Vec<GrepMatch> {
         let mut matches = Vec::new();
-        let product =
-            ProductAutomatonChar::with_algorithm(self.nfa.clone(), self.effective_distance(), self.algorithm);
+        let product = ProductAutomatonChar::with_algorithm(
+            self.nfa.clone(),
+            self.effective_distance(),
+            self.algorithm,
+        );
 
         // Scan through all words in the line
         for (start_byte, word, end_byte) in WordBoundaryIterator::new(line) {
@@ -373,8 +376,11 @@ impl PhoneticGrep {
             candidate.to_string()
         };
         let normalized = self.normalize(&candidate);
-        let product =
-            ProductAutomatonChar::with_algorithm(self.nfa.clone(), self.effective_distance(), self.algorithm);
+        let product = ProductAutomatonChar::with_algorithm(
+            self.nfa.clone(),
+            self.effective_distance(),
+            self.algorithm,
+        );
         product.min_distance(&normalized)
     }
 
@@ -411,13 +417,9 @@ impl PhoneticGrep {
     /// # Returns
     ///
     /// Iterator over matching words with their distances.
-    pub fn grep_words<'a>(
-        &'a self,
-        content: &'a str,
-    ) -> impl Iterator<Item = (&'a str, u8)> + 'a {
-        WordBoundaryIterator::new(content).filter_map(move |(_, word, _)| {
-            self.matches(word).map(|d| (word, d))
-        })
+    pub fn grep_words<'a>(&'a self, content: &'a str) -> impl Iterator<Item = (&'a str, u8)> + 'a {
+        WordBoundaryIterator::new(content)
+            .filter_map(move |(_, word, _)| self.matches(word).map(|d| (word, d)))
     }
 
     /// Normalize text using unicode normalization and phonetic rules if available.
@@ -485,7 +487,15 @@ impl PhoneticGrep {
                                     s.push(*c5);
                                     s.push(*c6);
                                 }
-                                crate::phonetic::PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                                crate::phonetic::PhoneChar::Heptagraph(
+                                    c1,
+                                    c2,
+                                    c3,
+                                    c4,
+                                    c5,
+                                    c6,
+                                    c7,
+                                ) => {
                                     s.push(*c1);
                                     s.push(*c2);
                                     s.push(*c3);
@@ -679,7 +689,10 @@ mod tests {
 
         // Should match with and without accents
         assert!(grep.matches("cafe").is_some(), "should match base word");
-        assert!(grep.matches("café").is_some(), "should match accented variant");
+        assert!(
+            grep.matches("café").is_some(),
+            "should match accented variant"
+        );
     }
 
     #[test]
@@ -743,12 +756,22 @@ mod tests {
 
         // Verify local_distance is set
         assert_eq!(grep.local_distance(), Some(0), "local_distance should be 0");
-        assert_eq!(grep.effective_distance(), 0, "effective_distance should be 0");
+        assert_eq!(
+            grep.effective_distance(),
+            0,
+            "effective_distance should be 0"
+        );
 
         // Only exact matches should work
         assert!(grep.matches("test").is_some(), "exact match should work");
-        assert!(grep.matches("tset").is_none(), "1-edit should NOT match with ;0");
-        assert!(grep.matches("tes").is_none(), "1-edit should NOT match with ;0");
+        assert!(
+            grep.matches("tset").is_none(),
+            "1-edit should NOT match with ;0"
+        );
+        assert!(
+            grep.matches("tes").is_none(),
+            "1-edit should NOT match with ;0"
+        );
     }
 
     #[test]
@@ -758,7 +781,11 @@ mod tests {
 
         // Verify local_distance overrides CLI
         assert_eq!(grep.local_distance(), Some(2), "local_distance should be 2");
-        assert_eq!(grep.effective_distance(), 2, "effective_distance should be 2");
+        assert_eq!(
+            grep.effective_distance(),
+            2,
+            "effective_distance should be 2"
+        );
 
         // Should allow up to 2 edits
         assert!(grep.matches("test").is_some(), "exact match");
@@ -774,12 +801,19 @@ mod tests {
 
         // Verify local_distance is not set
         assert_eq!(grep.local_distance(), None, "local_distance should be None");
-        assert_eq!(grep.effective_distance(), 1, "effective_distance should use max_distance");
+        assert_eq!(
+            grep.effective_distance(),
+            1,
+            "effective_distance should use max_distance"
+        );
 
         // Should use max_distance = 1
         assert!(grep.matches("test").is_some(), "exact match");
         assert!(grep.matches("tes").is_some(), "1-edit match");
-        assert!(grep.matches("te").is_none(), "2-edit should NOT match with max_distance=1");
+        assert!(
+            grep.matches("te").is_none(),
+            "2-edit should NOT match with max_distance=1"
+        );
     }
 
     #[test]
@@ -789,7 +823,11 @@ mod tests {
 
         // Verify both flags work
         assert_eq!(grep.local_distance(), Some(0), "local_distance should be 0");
-        assert_eq!(grep.effective_distance(), 0, "effective_distance should be 0");
+        assert_eq!(
+            grep.effective_distance(),
+            0,
+            "effective_distance should be 0"
+        );
 
         // Case-insensitive exact matches should work
         assert!(grep.matches("test").is_some(), "lowercase exact match");
@@ -797,8 +835,14 @@ mod tests {
         assert!(grep.matches("Test").is_some(), "mixed case exact match");
 
         // But fuzzy matches should NOT work
-        assert!(grep.matches("tset").is_none(), "fuzzy match should NOT work with ;0");
-        assert!(grep.matches("TSET").is_none(), "uppercase fuzzy should NOT work");
+        assert!(
+            grep.matches("tset").is_none(),
+            "fuzzy match should NOT work with ;0"
+        );
+        assert!(
+            grep.matches("TSET").is_none(),
+            "uppercase fuzzy should NOT work"
+        );
     }
 
     #[test]
@@ -812,6 +856,9 @@ mod tests {
         // Only "hello" should match (exact), not "helo" (1 edit away)
         assert_eq!(results.len(), 1, "should have 1 matching line");
         assert_eq!(results[0].matches.len(), 1, "should have 1 match in line");
-        assert_eq!(results[0].matches[0].matched_text, "hello", "only exact match");
+        assert_eq!(
+            results[0].matches[0].matched_text, "hello",
+            "only exact match"
+        );
     }
 }

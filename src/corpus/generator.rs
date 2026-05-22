@@ -134,8 +134,7 @@ impl TypoGenerator {
 
     fn apply_random_edit(&mut self, word: &str) -> String {
         if word.is_empty() {
-            return self.alphabet[self.rng.gen_range(0..self.alphabet.len())]
-                .to_string();
+            return self.alphabet[self.rng.gen_range(0..self.alphabet.len())].to_string();
         }
 
         let chars: Vec<char> = word.chars().collect();
@@ -286,7 +285,9 @@ impl QueryWorkload {
         let mut queries = Vec::with_capacity(num_queries);
 
         for _ in 0..num_queries {
-            let word = words.choose(&mut rng).expect("uniform query gen requires non-empty word list");
+            let word = words
+                .choose(&mut rng)
+                .expect("uniform query gen requires non-empty word list");
             queries.push((word.clone(), 1));
         }
 
@@ -384,11 +385,7 @@ mod tests {
 
     #[test]
     fn test_query_workload_uniform() {
-        let words = vec![
-            "hello".to_string(),
-            "world".to_string(),
-            "test".to_string(),
-        ];
+        let words = vec!["hello".to_string(), "world".to_string(), "test".to_string()];
 
         let workload = QueryWorkload::uniform(&words, 100, 42);
 

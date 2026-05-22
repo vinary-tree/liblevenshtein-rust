@@ -120,9 +120,7 @@ impl OnlinePhoneticTransducerChar {
             // Initial and Anywhere don't need lookahead
             ContextChar::Initial | ContextChar::Anywhere => 0,
             // Compound contexts: max of children
-            ContextChar::And(a, b) => {
-                Self::context_lookahead(a).max(Self::context_lookahead(b))
-            }
+            ContextChar::And(a, b) => Self::context_lookahead(a).max(Self::context_lookahead(b)),
             ContextChar::Or(a, b) => Self::context_lookahead(a).max(Self::context_lookahead(b)),
             ContextChar::Not(inner) => Self::context_lookahead(inner),
         }
@@ -182,9 +180,7 @@ impl OnlinePhoneticTransducerChar {
                 // Try to apply a rule at this position
                 if let Some((rule_idx, pattern_len)) = self.find_matching_rule(pos) {
                     // Collect characters to emit before the match point
-                    let prefix_chars: Vec<char> = (0..pos)
-                        .map(|i| self.input_buffer[i])
-                        .collect();
+                    let prefix_chars: Vec<char> = (0..pos).map(|i| self.input_buffer[i]).collect();
 
                     // Collect replacement characters
                     let replacement_chars: Vec<char> = self.rules[rule_idx]
@@ -269,7 +265,9 @@ impl OnlinePhoneticTransducerChar {
 
         // For streaming, we may need to defer context evaluation
         // if we don't have enough lookahead
-        if let Some(ctx_result) = self.context_matches_in_buffer(&rule.context, phones, pos, rule.pattern.len()) {
+        if let Some(ctx_result) =
+            self.context_matches_in_buffer(&rule.context, phones, pos, rule.pattern.len())
+        {
             ctx_result
         } else {
             // Need more context - can't determine yet
@@ -371,10 +369,9 @@ impl OnlinePhoneticTransducerChar {
                 }
             }
 
-            ContextChar::Not(inner) => {
-                self.context_matches_in_buffer(inner, phones, pos, pattern_len)
-                    .map(|b| !b)
-            }
+            ContextChar::Not(inner) => self
+                .context_matches_in_buffer(inner, phones, pos, pattern_len)
+                .map(|b| !b),
         }
     }
 
@@ -560,11 +557,17 @@ mod tests {
         RewriteRuleChar {
             rule_id: 0,
             rule_name: format!("{} -> {}", pattern, replacement),
-            pattern: pattern.chars().map(OnlinePhoneticTransducerChar::char_to_phone).collect(),
-            replacement: replacement.chars().map(OnlinePhoneticTransducerChar::char_to_phone).collect(),
+            pattern: pattern
+                .chars()
+                .map(OnlinePhoneticTransducerChar::char_to_phone)
+                .collect(),
+            replacement: replacement
+                .chars()
+                .map(OnlinePhoneticTransducerChar::char_to_phone)
+                .collect(),
             context,
             weight: 1.0,
-        syllable_condition: None,
+            syllable_condition: None,
         }
     }
 

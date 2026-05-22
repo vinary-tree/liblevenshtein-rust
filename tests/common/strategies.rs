@@ -196,9 +196,9 @@ pub fn parent_child_strategy() -> impl Strategy<Value = (usize, usize)> {
 /// Produces (insert_cost, delete_cost, substitute_cost) tuples with valid ranges.
 pub fn operation_costs_f64_strategy() -> impl Strategy<Value = (f64, f64, f64)> {
     (
-        0.1f64..=10.0,  // insert cost
-        0.1f64..=10.0,  // delete cost
-        0.1f64..=10.0,  // substitute cost
+        0.1f64..=10.0, // insert cost
+        0.1f64..=10.0, // delete cost
+        0.1f64..=10.0, // substitute cost
     )
 }
 
@@ -207,9 +207,9 @@ pub fn operation_costs_f64_strategy() -> impl Strategy<Value = (f64, f64, f64)> 
 /// Produces costs where insert != delete, useful for testing asymmetric distance.
 pub fn asymmetric_costs_f64_strategy() -> impl Strategy<Value = (f64, f64, f64)> {
     (
-        0.5f64..=5.0,   // insert cost
-        1.0f64..=10.0,  // delete cost (different range)
-        0.1f64..=2.0,   // substitute cost
+        0.5f64..=5.0,  // insert cost
+        1.0f64..=10.0, // delete cost (different range)
+        0.1f64..=2.0,  // substitute cost
     )
 }
 
@@ -240,7 +240,10 @@ pub fn position_strategy(max_pos: usize) -> impl Strategy<Value = usize> {
 ///
 /// * `max_pos` - Maximum position value
 /// * `max_errors` - Maximum error count
-pub fn position_error_strategy(max_pos: usize, max_errors: usize) -> impl Strategy<Value = (usize, usize)> {
+pub fn position_error_strategy(
+    max_pos: usize,
+    max_errors: usize,
+) -> impl Strategy<Value = (usize, usize)> {
     (0usize..max_pos, 0usize..=max_errors)
 }
 
@@ -298,9 +301,8 @@ pub fn char_class_pattern_strategy() -> impl Strategy<Value = String> {
 ///
 /// Produces (start_char, end_char) pairs where start <= end.
 pub fn char_range_strategy() -> impl Strategy<Value = (char, char)> {
-    prop::char::range('a', 'z').prop_flat_map(|start| {
-        prop::char::range(start, 'z').prop_map(move |end| (start, end))
-    })
+    prop::char::range('a', 'z')
+        .prop_flat_map(|start| prop::char::range(start, 'z').prop_map(move |end| (start, end)))
 }
 
 /// Generate NFA state IDs.
@@ -379,9 +381,7 @@ pub fn quantization_bins_strategy() -> impl Strategy<Value = u32> {
 ///
 /// Produces (min, max) pairs where min < max.
 pub fn quantization_range_strategy() -> impl Strategy<Value = (f64, f64)> {
-    (-100.0f64..0.0).prop_flat_map(|min| {
-        (0.0f64..100.0).prop_map(move |max| (min, max))
-    })
+    (-100.0f64..0.0).prop_flat_map(|min| (0.0f64..100.0).prop_map(move |max| (min, max)))
 }
 
 /// Generate pairs of time series for distance testing.
@@ -392,11 +392,14 @@ pub fn time_series_pair_strategy(len: Range<usize>) -> impl Strategy<Value = (Ve
 /// Generate time series with similar patterns.
 ///
 /// Produces (original, noisy_copy) pairs where noisy_copy has small perturbations.
-pub fn similar_time_series_strategy(len: Range<usize>) -> impl Strategy<Value = (Vec<f64>, Vec<f64>)> {
+pub fn similar_time_series_strategy(
+    len: Range<usize>,
+) -> impl Strategy<Value = (Vec<f64>, Vec<f64>)> {
     time_series_strategy(len).prop_flat_map(|original| {
         let noise_range = -0.5f64..0.5f64;
         prop::collection::vec(noise_range, original.len()).prop_map(move |noise| {
-            let noisy: Vec<f64> = original.iter()
+            let noisy: Vec<f64> = original
+                .iter()
                 .zip(noise.iter())
                 .map(|(v, n)| v + n)
                 .collect();
@@ -421,7 +424,5 @@ pub fn context_weight_strategy() -> impl Strategy<Value = f64> {
 
 /// Generate context path (sequence of context IDs from root to leaf).
 pub fn context_path_strategy(max_depth: usize) -> impl Strategy<Value = Vec<usize>> {
-    (1usize..=max_depth).prop_flat_map(|depth| {
-        prop::collection::vec(context_id_strategy(), depth)
-    })
+    (1usize..=max_depth).prop_flat_map(|depth| prop::collection::vec(context_id_strategy(), depth))
 }

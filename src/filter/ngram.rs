@@ -278,9 +278,7 @@ impl NgramIndex {
         // Filter by minimum overlap and collect results
         term_counts
             .into_iter()
-            .filter(|&(id, count)| {
-                count >= min_overlap && !self.terms[id].is_empty()
-            })
+            .filter(|&(id, count)| count >= min_overlap && !self.terms[id].is_empty())
             .map(|(id, _)| self.terms[id].as_str())
             .collect()
     }
@@ -319,9 +317,7 @@ impl NgramIndex {
 
         let mut results: Vec<_> = term_counts
             .into_iter()
-            .filter(|&(id, count)| {
-                count >= min_overlap && !self.terms[id].is_empty()
-            })
+            .filter(|&(id, count)| count >= min_overlap && !self.terms[id].is_empty())
             .map(|(id, count)| (self.terms[id].as_str(), count))
             .collect();
 
@@ -356,7 +352,10 @@ impl NgramIndex {
 
     /// Iterate over all indexed terms.
     pub fn iter(&self) -> impl Iterator<Item = &str> {
-        self.terms.iter().filter(|t| !t.is_empty()).map(String::as_str)
+        self.terms
+            .iter()
+            .filter(|t| !t.is_empty())
+            .map(String::as_str)
     }
 }
 

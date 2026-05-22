@@ -144,7 +144,10 @@ impl<D> CostAware<D> {
     /// Records an entry access with size tracking.
     fn record_access<V: DictionaryValue>(&self, term: &str, _value: &V) {
         let size = std::mem::size_of::<V>();
-        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self
+            .metadata
+            .write()
+            .expect("poisoned RwLock; only fatal if writer panicked");
         metadata
             .entry(term.to_string())
             .and_modify(|m| m.increment())
@@ -155,7 +158,10 @@ impl<D> CostAware<D> {
     ///
     /// Returns `None` if the entry has never been accessed.
     pub fn cost_score(&self, term: &str) -> Option<f64> {
-        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self
+            .metadata
+            .read()
+            .expect("poisoned RwLock; only fatal if writer panicked");
         metadata.get(term).map(|m| m.cost_score())
     }
 
@@ -163,7 +169,10 @@ impl<D> CostAware<D> {
     ///
     /// Returns the term with the highest cost score (most likely to evict).
     pub fn find_highest_cost(&self, terms: &[&str]) -> Option<String> {
-        let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self
+            .metadata
+            .read()
+            .expect("poisoned RwLock; only fatal if writer panicked");
         terms
             .iter()
             .filter_map(|&term| metadata.get(term).map(|m| (term, m.cost_score())))
@@ -180,7 +189,10 @@ impl<D> CostAware<D> {
     /// Returns the evicted term if any.
     pub fn evict_highest_cost(&self, terms: &[&str]) -> Option<String> {
         if let Some(high_cost_term) = self.find_highest_cost(terms) {
-            let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+            let mut metadata = self
+                .metadata
+                .write()
+                .expect("poisoned RwLock; only fatal if writer panicked");
             metadata.remove(&high_cost_term);
             Some(high_cost_term)
         } else {
@@ -190,7 +202,10 @@ impl<D> CostAware<D> {
 
     /// Clears all metadata.
     pub fn clear_metadata(&self) {
-        let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self
+            .metadata
+            .write()
+            .expect("poisoned RwLock; only fatal if writer panicked");
         metadata.clear();
     }
 }
@@ -339,13 +354,17 @@ mod tests {
 
         // Access foo once
         assert_eq!(cost_aware.get_value("foo"), Some(42));
-        let score1 = cost_aware.cost_score("foo").expect("expected Some score in test");
+        let score1 = cost_aware
+            .cost_score("foo")
+            .expect("expected Some score in test");
 
         // Wait to increase age
         thread::sleep(Duration::from_millis(10));
 
         // Score should increase with age
-        let score2 = cost_aware.cost_score("foo").expect("expected Some score in test");
+        let score2 = cost_aware
+            .cost_score("foo")
+            .expect("expected Some score in test");
         assert!(score2 > score1);
     }
 
@@ -359,7 +378,9 @@ mod tests {
         // First access
         assert_eq!(cost_aware.get_value("foo"), Some(42));
         thread::sleep(Duration::from_millis(10));
-        let score1 = cost_aware.cost_score("foo").expect("expected Some score in test");
+        let score1 = cost_aware
+            .cost_score("foo")
+            .expect("expected Some score in test");
 
         // Multiple additional accesses
         for _ in 0..5 {
@@ -367,7 +388,9 @@ mod tests {
         }
 
         // More hits should lower the cost score (despite increased age)
-        let score2 = cost_aware.cost_score("foo").expect("expected Some score in test");
+        let score2 = cost_aware
+            .cost_score("foo")
+            .expect("expected Some score in test");
         assert!(score2 < score1);
     }
 
@@ -416,7 +439,10 @@ mod tests {
         assert!(evicted.is_some());
 
         // Evicted term should have no metadata
-        assert_eq!(cost_aware.cost_score(&evicted.expect("expected Some evicted in test")), None);
+        assert_eq!(
+            cost_aware.cost_score(&evicted.expect("expected Some evicted in test")),
+            None
+        );
     }
 
     #[test]
@@ -448,10 +474,18 @@ mod tests {
         assert!(!root.is_final());
 
         // Traverse 'h' -> 'e' -> 'l' -> 'p'
-        let h = root.transition(b'h').expect("expected Some transition h in test");
-        let e = h.transition(b'e').expect("expected Some transition e in test");
-        let l = e.transition(b'l').expect("expected Some transition l in test");
-        let p = l.transition(b'p').expect("expected Some transition p in test");
+        let h = root
+            .transition(b'h')
+            .expect("expected Some transition h in test");
+        let e = h
+            .transition(b'e')
+            .expect("expected Some transition e in test");
+        let l = e
+            .transition(b'l')
+            .expect("expected Some transition l in test");
+        let p = l
+            .transition(b'p')
+            .expect("expected Some transition p in test");
 
         assert!(p.is_final()); // "help"
     }

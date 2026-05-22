@@ -5,13 +5,13 @@
 use crate::cli::args::SerializationFormat;
 use crate::commands::core::QueryParams;
 use crate::commands::handlers::query::execute_query;
+use crate::transducer::Algorithm;
+use anyhow::Result;
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::suffix_automaton::SuffixAutomaton;
 use libdictenstein::{Dictionary, DictionaryNode};
-use crate::transducer::Algorithm;
-use anyhow::Result;
 use std::path::Path;
 
 // NOTE: For caching, use the eviction wrappers from cache::eviction module.

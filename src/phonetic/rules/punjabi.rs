@@ -155,11 +155,7 @@ mod tests {
         let rules = gurmukhi();
         // ਸ਼ → ʃ (IPA voiceless postalveolar fricative)
         let result = rules.apply("ਸ਼");
-        assert!(
-            result.contains("ʃ"),
-            "ਸ਼ should become ʃ, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ਸ਼ should become ʃ, got: {}", result);
         // ੜ → ɽ (IPA retroflex flap)
         let result = rules.apply("ੜ");
         assert!(
@@ -203,7 +199,9 @@ mod tests {
         let result = rules.apply_full("ਪੰਜਾਬੀ");
         // ਪ→p, ੰ→̃ (nasalization), ਜ→j, ਾ→aː, ਬ→b, ੀ→iː
         assert!(
-            result.contains('p') && (result.contains('j') || result.contains('ʝ')) && result.contains('b'),
+            result.contains('p')
+                && (result.contains('j') || result.contains('ʝ'))
+                && result.contains('b'),
             "ਪੰਜਾਬੀ should contain p, j, b, got: {}",
             result
         );
@@ -257,11 +255,7 @@ mod tests {
         let result = rules.apply("ب");
         assert!(result.contains('b'), "ب should become b, got: {}", result);
         let result = rules.apply("ش");
-        assert!(
-            result.contains("ʃ"),
-            "ش should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ش should become SH, got: {}", result);
     }
 
     #[test]
@@ -269,11 +263,7 @@ mod tests {
         let rules = shahmukhi();
         // ٹ → ʈ (IPA retroflex stop)
         let result = rules.apply("ٹ");
-        assert!(
-            result.contains("ʈ"),
-            "ٹ should become ʈ, got: {}",
-            result
-        );
+        assert!(result.contains("ʈ"), "ٹ should become ʈ, got: {}", result);
         // ڑ → ɽ (IPA retroflex flap)
         let result = rules.apply("ڑ");
         assert!(
@@ -290,7 +280,9 @@ mod tests {
         let result = rules.apply_full("پنجابی");
         // پ→p, ن→n, ج→j, ا→a, ب→b, ی→y
         assert!(
-            result.contains('p') && result.contains('n') && (result.contains('j') || result.contains('ʝ')),
+            result.contains('p')
+                && result.contains('n')
+                && (result.contains('j') || result.contains('ʝ')),
             "پنجابی should contain p, n, j, got: {}",
             result
         );
@@ -299,6 +291,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TESTS
     // ============================================================
-
-
 }

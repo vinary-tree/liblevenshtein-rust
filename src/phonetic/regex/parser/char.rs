@@ -348,7 +348,8 @@ impl<'a> Parser<'a> {
                 self.expect_token(Token::GroupEnd)?;
 
                 // Register the named group
-                self.named_groups.insert(name.clone(), (group_num, inner.clone()));
+                self.named_groups
+                    .insert(name.clone(), (group_num, inner.clone()));
 
                 Ok(Regex::named_group(name, inner))
             }
@@ -356,7 +357,8 @@ impl<'a> Parser<'a> {
             // Group reference (subroutine call): (?&name)
             Token::GroupReference(name) => {
                 // Record for deferred validation
-                self.group_refs_to_validate.push((name.clone(), self.lexer.position()));
+                self.group_refs_to_validate
+                    .push((name.clone(), self.lexer.position()));
                 Ok(Regex::group_ref(name))
             }
 
@@ -379,9 +381,10 @@ impl<'a> Parser<'a> {
             Token::Hash => Ok(Regex::word_boundary()),
             Token::Char(c) => Ok(Regex::char(c)),
             Token::SymbolRef(name) => self.expand_symbol_ref(&name),
-            Token::PhoneticShortcut { class_name, negated } => {
-                self.expand_phonetic_shortcut(&class_name, negated)
-            }
+            Token::PhoneticShortcut {
+                class_name,
+                negated,
+            } => self.expand_phonetic_shortcut(&class_name, negated),
 
             // Anchors
             Token::StartOfLine => Ok(Regex::StartOfLine),
@@ -448,7 +451,10 @@ impl<'a> Parser<'a> {
                     // Symbol not found - provide helpful error with available symbols
                     let available: Vec<String> = symbols.keys().cloned().collect();
                     Err(ParseError::new(
-                        ParseErrorKind::UndefinedSymbol { name: name.to_string(), available },
+                        ParseErrorKind::UndefinedSymbol {
+                            name: name.to_string(),
+                            available,
+                        },
                         self.lexer.position(),
                     ))
                 }
@@ -570,7 +576,10 @@ impl<'a> Parser<'a> {
                     let symbol_chars = self.get_symbol_chars(&name)?;
                     chars.extend(symbol_chars);
                 }
-                Token::PhoneticShortcut { class_name, negated } => {
+                Token::PhoneticShortcut {
+                    class_name,
+                    negated,
+                } => {
                     // Expand phonetic shortcut into chars
                     use crate::phonetic::named_classes::get_chars_only;
                     let shortcut_chars = get_chars_only(class_name).ok_or_else(|| {
@@ -1177,8 +1186,8 @@ impl<'a> Parser<'a> {
             Token::SymbolRef(_) => '$',
             Token::StartOfLine => '^',
             Token::EndOfLine => '$',
-            Token::StartOfInput => '\\', // \A
-            Token::EndOfInput => '\\',   // \Z
+            Token::StartOfInput => '\\',     // \A
+            Token::EndOfInput => '\\',       // \Z
             Token::EndOfInputStrict => '\\', // \z
             Token::Eof => '\0',
         }
@@ -1200,10 +1209,7 @@ impl<'a> SyllableParser for Parser<'a> {
         position: Position,
     ) -> Self::Error {
         ParseError::new(
-            ParseErrorKind::InvalidContext(format!(
-                "expected {}, got {:?}",
-                expected, found
-            )),
+            ParseErrorKind::InvalidContext(format!("expected {}, got {:?}", expected, found)),
             position,
         )
     }

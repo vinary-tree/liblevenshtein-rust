@@ -40,7 +40,9 @@ impl LinearSubstitutionSet {
 
     #[inline]
     fn contains(&self, dict_char: u8, query_char: u8) -> bool {
-        self.pairs.iter().any(|&(a, b)| a == dict_char && b == query_char)
+        self.pairs
+            .iter()
+            .any(|&(a, b)| a == dict_char && b == query_char)
     }
 
     fn from_pairs(pairs: &[(u8, u8)]) -> Self {
@@ -51,7 +53,7 @@ impl LinearSubstitutionSet {
 }
 
 /// SmallVec-based implementation (inline storage)
-use smallvec::{SmallVec, smallvec};
+use smallvec::{smallvec, SmallVec};
 
 /// SmallVec with 8-element inline capacity
 #[derive(Clone, Debug)]
@@ -70,7 +72,9 @@ impl SmallVec8SubstitutionSet {
 
     #[inline]
     fn contains(&self, dict_char: u8, query_char: u8) -> bool {
-        self.pairs.iter().any(|&(a, b)| a == dict_char && b == query_char)
+        self.pairs
+            .iter()
+            .any(|&(a, b)| a == dict_char && b == query_char)
     }
 
     fn from_pairs(pairs: &[(u8, u8)]) -> Self {
@@ -97,7 +101,9 @@ impl SmallVec16SubstitutionSet {
 
     #[inline]
     fn contains(&self, dict_char: u8, query_char: u8) -> bool {
-        self.pairs.iter().any(|&(a, b)| a == dict_char && b == query_char)
+        self.pairs
+            .iter()
+            .any(|&(a, b)| a == dict_char && b == query_char)
     }
 
     fn from_pairs(pairs: &[(u8, u8)]) -> Self {
@@ -143,53 +149,37 @@ fn bench_crossover_point(c: &mut Criterion) {
 
         group.throughput(Throughput::Elements(100));
 
-        group.bench_with_input(
-            BenchmarkId::new("hash", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    for &(a, c) in &test_queries {
-                        black_box(hash_set.contains(black_box(a), black_box(c)));
-                    }
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("hash", size), size, |b, _| {
+            b.iter(|| {
+                for &(a, c) in &test_queries {
+                    black_box(hash_set.contains(black_box(a), black_box(c)));
+                }
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("linear", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    for &(a, c) in &test_queries {
-                        black_box(linear_set.contains(black_box(a), black_box(c)));
-                    }
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("linear", size), size, |b, _| {
+            b.iter(|| {
+                for &(a, c) in &test_queries {
+                    black_box(linear_set.contains(black_box(a), black_box(c)));
+                }
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("smallvec8", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    for &(a, c) in &test_queries {
-                        black_box(smallvec8_set.contains(black_box(a), black_box(c)));
-                    }
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("smallvec8", size), size, |b, _| {
+            b.iter(|| {
+                for &(a, c) in &test_queries {
+                    black_box(smallvec8_set.contains(black_box(a), black_box(c)));
+                }
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("smallvec16", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    for &(a, c) in &test_queries {
-                        black_box(smallvec16_set.contains(black_box(a), black_box(c)));
-                    }
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("smallvec16", size), size, |b, _| {
+            b.iter(|| {
+                for &(a, c) in &test_queries {
+                    black_box(smallvec16_set.contains(black_box(a), black_box(c)));
+                }
+            });
+        });
     }
     group.finish();
 }
@@ -257,47 +247,35 @@ fn bench_init_small(c: &mut Criterion) {
 
         group.throughput(Throughput::Elements(*size as u64));
 
-        group.bench_with_input(
-            BenchmarkId::new("hash", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    let mut set = SubstitutionSet::new();
-                    for &(a, c) in &pairs {
-                        set.allow_byte(black_box(a), black_box(c));
-                    }
-                    black_box(set)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("hash", size), size, |b, _| {
+            b.iter(|| {
+                let mut set = SubstitutionSet::new();
+                for &(a, c) in &pairs {
+                    set.allow_byte(black_box(a), black_box(c));
+                }
+                black_box(set)
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("linear", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    let mut set = LinearSubstitutionSet::new();
-                    for &(a, c) in &pairs {
-                        set.allow_byte(black_box(a), black_box(c));
-                    }
-                    black_box(set)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("linear", size), size, |b, _| {
+            b.iter(|| {
+                let mut set = LinearSubstitutionSet::new();
+                for &(a, c) in &pairs {
+                    set.allow_byte(black_box(a), black_box(c));
+                }
+                black_box(set)
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("smallvec8", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    let mut set = SmallVec8SubstitutionSet::new();
-                    for &(a, c) in &pairs {
-                        set.allow_byte(black_box(a), black_box(c));
-                    }
-                    black_box(set)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("smallvec8", size), size, |b, _| {
+            b.iter(|| {
+                let mut set = SmallVec8SubstitutionSet::new();
+                for &(a, c) in &pairs {
+                    set.allow_byte(black_box(a), black_box(c));
+                }
+                black_box(set)
+            });
+        });
     }
     group.finish();
 }
@@ -319,29 +297,17 @@ fn bench_single_lookup_small(c: &mut Criterion) {
 
         let (test_a, test_b) = pairs[0];
 
-        group.bench_with_input(
-            BenchmarkId::new("hash/hit", size),
-            size,
-            |b, _| {
-                b.iter(|| black_box(hash_set.contains(black_box(test_a), black_box(test_b))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("hash/hit", size), size, |b, _| {
+            b.iter(|| black_box(hash_set.contains(black_box(test_a), black_box(test_b))));
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("linear/hit", size),
-            size,
-            |b, _| {
-                b.iter(|| black_box(linear_set.contains(black_box(test_a), black_box(test_b))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("linear/hit", size), size, |b, _| {
+            b.iter(|| black_box(linear_set.contains(black_box(test_a), black_box(test_b))));
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("smallvec/hit", size),
-            size,
-            |b, _| {
-                b.iter(|| black_box(smallvec_set.contains(black_box(test_a), black_box(test_b))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("smallvec/hit", size), size, |b, _| {
+            b.iter(|| black_box(smallvec_set.contains(black_box(test_a), black_box(test_b))));
+        });
     }
     group.finish();
 }

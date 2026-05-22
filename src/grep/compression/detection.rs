@@ -175,7 +175,9 @@ mod tests {
     #[test]
     fn test_is_binary_high_non_printable() {
         // More than 10% non-printable (need > 10 bytes for this check to trigger)
-        let data = [0x01, 0x02, 0x03, b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h'];
+        let data = [
+            0x01, 0x02, 0x03, b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h',
+        ];
         assert!(is_binary(&data));
     }
 }

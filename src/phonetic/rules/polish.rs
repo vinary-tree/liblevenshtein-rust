@@ -187,11 +187,7 @@ mod tests {
         );
         // ó → u
         let result = rules.apply("ó");
-        assert!(
-            result.contains('u'),
-            "ó should become u, got: {}",
-            result
-        );
+        assert!(result.contains('u'), "ó should become u, got: {}", result);
         // ń → ɲ (IPA palatal nasal)
         let result = rules.apply("ń");
         assert!(
@@ -206,17 +202,21 @@ mod tests {
         let rules = base();
         // c → t͡s (IPA voiceless alveolar affricate)
         let result = rules.apply("c");
-        assert!(
-            result.contains("t͡s"),
-            "c should become t͡s, got: {}",
-            result
-        );
+        assert!(result.contains("t͡s"), "c should become t͡s, got: {}", result);
         // j → j (IPA palatal approximant - stays as j)
         let result = rules.apply("j");
-        assert!(result.contains('j') || result.contains('y'), "j should become j or y, got: {}", result);
+        assert!(
+            result.contains('j') || result.contains('y'),
+            "j should become j or y, got: {}",
+            result
+        );
         // w → f/v (can be devoiced to f in some contexts)
         let result = rules.apply("w");
-        assert!(result.contains('v') || result.contains('f'), "w should become v/f, got: {}", result);
+        assert!(
+            result.contains('v') || result.contains('f'),
+            "w should become v/f, got: {}",
+            result
+        );
         // h → x (IPA voiceless velar fricative)
         let result = rules.apply("h");
         assert!(
@@ -233,7 +233,9 @@ mod tests {
         let result = rules.apply("Warszawa");
         // Should contain v (from W→w→v), a, r, ʃ (from sz), a, v (from w), a
         assert!(
-            result.contains('v') && (result.contains('ʃ') || result.contains('S')) && result.contains('a'),
+            result.contains('v')
+                && (result.contains('ʃ') || result.contains('S'))
+                && result.contains('a'),
             "Warszawa should normalize properly, got: {}",
             result
         );
@@ -259,10 +261,10 @@ mod tests {
         let result = rules.apply("Szczecin");
         // Should have ʃ (from sz) and t͡ʃ (from cz)
         assert!(
-            (result.contains('ʃ') || result.contains('S')) && (result.contains("t͡ʃ") || result.contains('C')),
+            (result.contains('ʃ') || result.contains('S'))
+                && (result.contains("t͡ʃ") || result.contains('C')),
             "Szczecin should have ʃ and t͡ʃ markers, got: {}",
             result
         );
     }
-
 }

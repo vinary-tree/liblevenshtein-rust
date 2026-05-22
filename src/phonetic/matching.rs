@@ -23,7 +23,7 @@
 //! All functions are direct translations of Coq functions with proven properties.
 
 use super::common::phonetic_unit::PhoneticUnit;
-use super::types::{Context, Phone, PhoneByte, PhoneChar, ContextChar};
+use super::types::{Context, ContextChar, Phone, PhoneByte, PhoneChar};
 
 // ============================================================================
 // Generic Functions
@@ -443,11 +443,11 @@ mod tests {
         // Test: x -> gz when after vowel AND before vowel (exact -> egzact)
         // String: e x a c t (positions 0-4)
         let s: Vec<Phone<u8>> = vec![
-            Phone::Vowel(b'e'),      // pos 0
-            Phone::Consonant(b'x'),  // pos 1
-            Phone::Vowel(b'a'),      // pos 2
-            Phone::Consonant(b'c'),  // pos 3
-            Phone::Consonant(b't'),  // pos 4
+            Phone::Vowel(b'e'),     // pos 0
+            Phone::Consonant(b'x'), // pos 1
+            Phone::Vowel(b'a'),     // pos 2
+            Phone::Consonant(b'c'), // pos 3
+            Phone::Consonant(b't'), // pos 4
         ];
 
         // The x->gz rule with pattern 'x' (length 1) at position 1:
@@ -462,8 +462,8 @@ mod tests {
 
         // Clear test for AND with vowel sequence:
         let s2: Vec<Phone<u8>> = vec![
-            Phone::Vowel(b'a'),      // pos 0
-            Phone::Vowel(b'e'),      // pos 1
+            Phone::Vowel(b'a'), // pos 0
+            Phone::Vowel(b'e'), // pos 1
         ];
 
         // Pattern at position 1 with length 1:
@@ -482,9 +482,9 @@ mod tests {
 
         // Test where AND succeeds: vowel-consonant-vowel pattern
         let s3: Vec<Phone<u8>> = vec![
-            Phone::Vowel(b'a'),      // pos 0
-            Phone::Consonant(b'x'),  // pos 1
-            Phone::Vowel(b'e'),      // pos 2
+            Phone::Vowel(b'a'),     // pos 0
+            Phone::Consonant(b'x'), // pos 1
+            Phone::Vowel(b'e'),     // pos 2
         ];
         // Pattern at position 1 with length 1:
         // - AfterVowel checks s[0] = 'a'
@@ -501,10 +501,7 @@ mod tests {
         let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a')];
 
         // Either initial OR final
-        let ctx: Context<u8> = Context::Or(
-            Box::new(Context::Initial),
-            Box::new(Context::Final),
-        );
+        let ctx: Context<u8> = Context::Or(Box::new(Context::Initial), Box::new(Context::Final));
 
         // Pattern at position 0 with length 1: Initial matches (0 == 0)
         assert!(context_matches(&ctx, &s, 0, 1));
@@ -530,9 +527,9 @@ mod tests {
     #[test]
     fn test_context_matches_nested_compound() {
         let s: Vec<Phone<u8>> = vec![
-            Phone::Vowel(b'a'),      // pos 0
-            Phone::Consonant(b'k'),  // pos 1
-            Phone::Vowel(b'e'),      // pos 2
+            Phone::Vowel(b'a'),     // pos 0
+            Phone::Consonant(b'k'), // pos 1
+            Phone::Vowel(b'e'),     // pos 2
         ];
 
         // (NOT Initial) AND (AfterVowel OR BeforeVowel)
@@ -569,9 +566,9 @@ mod tests {
     fn test_context_matches_char_and() {
         // vowel-consonant-vowel sequence
         let s: Vec<PhoneChar> = vec![
-            PhoneChar::Vowel('a'),      // pos 0
-            PhoneChar::Consonant('x'),  // pos 1
-            PhoneChar::Vowel('e'),      // pos 2
+            PhoneChar::Vowel('a'),     // pos 0
+            PhoneChar::Consonant('x'), // pos 1
+            PhoneChar::Vowel('e'),     // pos 2
         ];
 
         let ctx: ContextChar = ContextChar::And(
@@ -589,10 +586,8 @@ mod tests {
     fn test_context_matches_char_or() {
         let s: Vec<PhoneChar> = vec![PhoneChar::Consonant('k'), PhoneChar::Vowel('a')];
 
-        let ctx: ContextChar = ContextChar::Or(
-            Box::new(ContextChar::Initial),
-            Box::new(ContextChar::Final),
-        );
+        let ctx: ContextChar =
+            ContextChar::Or(Box::new(ContextChar::Initial), Box::new(ContextChar::Final));
 
         // Pattern at position 0 with length 1: Initial matches
         assert!(context_matches_char(&ctx, &s, 0, 1));

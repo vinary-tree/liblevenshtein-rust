@@ -43,10 +43,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     add_class(NamedClass {
         name: "alpha",
         aliases: &[],
-        patterns: ('a'..='z')
-            .chain('A'..='Z')
-            .map(Char)
-            .collect(),
+        patterns: ('a'..='z').chain('A'..='Z').map(Char).collect(),
         description: "Alphabetic characters (a-z, A-Z)",
     });
 
@@ -121,8 +118,16 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             // ASCII vowels
-            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
-            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
+            Char('a'),
+            Char('e'),
+            Char('i'),
+            Char('o'),
+            Char('u'),
+            Char('A'),
+            Char('E'),
+            Char('I'),
+            Char('O'),
+            Char('U'),
             // IPA vowels
             Char('ə'), // schwa
             Char('ɪ'), // near-close near-front unrounded (bit)
@@ -144,8 +149,13 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "front_vowel",
         aliases: &[],
         patterns: vec![
-            Char('e'), Char('i'), Char('E'), Char('I'),
-            Char('ɪ'), Char('ɛ'), Char('æ'),
+            Char('e'),
+            Char('i'),
+            Char('E'),
+            Char('I'),
+            Char('ɪ'),
+            Char('ɛ'),
+            Char('æ'),
         ],
         description: "Front vowels (e, i and IPA equivalents)",
     });
@@ -155,8 +165,16 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "back_vowel",
         aliases: &[],
         patterns: vec![
-            Char('a'), Char('o'), Char('u'), Char('A'), Char('O'), Char('U'),
-            Char('ʊ'), Char('ɔ'), Char('ɑ'), Char('ɒ'),
+            Char('a'),
+            Char('o'),
+            Char('u'),
+            Char('A'),
+            Char('O'),
+            Char('U'),
+            Char('ʊ'),
+            Char('ɔ'),
+            Char('ɑ'),
+            Char('ɒ'),
         ],
         description: "Back vowels (a, o, u and IPA equivalents)",
     });
@@ -166,8 +184,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "high_vowel",
         aliases: &[],
         patterns: vec![
-            Char('i'), Char('u'), Char('I'), Char('U'),
-            Char('ɪ'), Char('ʊ'),
+            Char('i'),
+            Char('u'),
+            Char('I'),
+            Char('U'),
+            Char('ɪ'),
+            Char('ʊ'),
         ],
         description: "High vowels (i, u and IPA equivalents)",
     });
@@ -177,8 +199,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "low_vowel",
         aliases: &[],
         patterns: vec![
-            Char('a'), Char('A'),
-            Char('æ'), Char('ɑ'), Char('ɒ'), Char('ɐ'),
+            Char('a'),
+            Char('A'),
+            Char('æ'),
+            Char('ɑ'),
+            Char('ɒ'),
+            Char('ɐ'),
         ],
         description: "Low vowels (a and IPA equivalents)",
     });
@@ -188,8 +214,15 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "mid_vowel",
         aliases: &[],
         patterns: vec![
-            Char('e'), Char('o'), Char('E'), Char('O'),
-            Char('ə'), Char('ɛ'), Char('ɔ'), Char('ʌ'), Char('ɜ'),
+            Char('e'),
+            Char('o'),
+            Char('E'),
+            Char('O'),
+            Char('ə'),
+            Char('ɛ'),
+            Char('ɔ'),
+            Char('ʌ'),
+            Char('ɜ'),
         ],
         description: "Mid vowels (e, o and IPA equivalents)",
     });
@@ -220,14 +253,48 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             // ASCII consonants
-            Char('b'), Char('c'), Char('d'), Char('f'), Char('g'),
-            Char('h'), Char('j'), Char('k'), Char('l'), Char('m'),
-            Char('n'), Char('p'), Char('q'), Char('r'), Char('s'),
-            Char('t'), Char('v'), Char('w'), Char('x'), Char('y'), Char('z'),
-            Char('B'), Char('C'), Char('D'), Char('F'), Char('G'),
-            Char('H'), Char('J'), Char('K'), Char('L'), Char('M'),
-            Char('N'), Char('P'), Char('Q'), Char('R'), Char('S'),
-            Char('T'), Char('V'), Char('W'), Char('X'), Char('Y'), Char('Z'),
+            Char('b'),
+            Char('c'),
+            Char('d'),
+            Char('f'),
+            Char('g'),
+            Char('h'),
+            Char('j'),
+            Char('k'),
+            Char('l'),
+            Char('m'),
+            Char('n'),
+            Char('p'),
+            Char('q'),
+            Char('r'),
+            Char('s'),
+            Char('t'),
+            Char('v'),
+            Char('w'),
+            Char('x'),
+            Char('y'),
+            Char('z'),
+            Char('B'),
+            Char('C'),
+            Char('D'),
+            Char('F'),
+            Char('G'),
+            Char('H'),
+            Char('J'),
+            Char('K'),
+            Char('L'),
+            Char('M'),
+            Char('N'),
+            Char('P'),
+            Char('Q'),
+            Char('R'),
+            Char('S'),
+            Char('T'),
+            Char('V'),
+            Char('W'),
+            Char('X'),
+            Char('Y'),
+            Char('Z'),
             // IPA consonants
             Char('ŋ'), // velar nasal (sing)
             Char('θ'), // voiceless dental fricative (thin)
@@ -249,8 +316,18 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "stop",
         aliases: &["plosive"],
         patterns: vec![
-            Char('p'), Char('b'), Char('t'), Char('d'), Char('k'), Char('g'),
-            Char('P'), Char('B'), Char('T'), Char('D'), Char('K'), Char('G'),
+            Char('p'),
+            Char('b'),
+            Char('t'),
+            Char('d'),
+            Char('k'),
+            Char('g'),
+            Char('P'),
+            Char('B'),
+            Char('T'),
+            Char('D'),
+            Char('K'),
+            Char('G'),
             Char('ʔ'), // glottal stop
         ],
         description: "Stop consonants (plosives)",
@@ -262,16 +339,31 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             // Single chars
-            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
-            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
-            Char('ʃ'), Char('ʒ'), Char('θ'), Char('ð'), Char('ɬ'),
+            Char('f'),
+            Char('v'),
+            Char('s'),
+            Char('z'),
+            Char('h'),
+            Char('F'),
+            Char('V'),
+            Char('S'),
+            Char('Z'),
+            Char('H'),
+            Char('ʃ'),
+            Char('ʒ'),
+            Char('θ'),
+            Char('ð'),
+            Char('ɬ'),
             // Digraphs
             Digraph('s', 'h'), // sh -> ʃ
-            Digraph('S', 'h'), Digraph('S', 'H'),
+            Digraph('S', 'h'),
+            Digraph('S', 'H'),
             Digraph('z', 'h'), // zh -> ʒ
-            Digraph('Z', 'h'), Digraph('Z', 'H'),
+            Digraph('Z', 'h'),
+            Digraph('Z', 'H'),
             Digraph('t', 'h'), // th -> θ/ð
-            Digraph('T', 'h'), Digraph('T', 'H'),
+            Digraph('T', 'h'),
+            Digraph('T', 'H'),
         ],
         description: "Fricative consonants (includes sh, th, zh digraphs)",
     });
@@ -281,10 +373,14 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "nasal",
         aliases: &[],
         patterns: vec![
-            Char('m'), Char('n'), Char('M'), Char('N'),
+            Char('m'),
+            Char('n'),
+            Char('M'),
+            Char('N'),
             Char('ŋ'),
             Digraph('n', 'g'), // ng -> ŋ
-            Digraph('N', 'g'), Digraph('N', 'G'),
+            Digraph('N', 'g'),
+            Digraph('N', 'G'),
         ],
         description: "Nasal consonants (includes ng digraph)",
     });
@@ -294,8 +390,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "liquid",
         aliases: &[],
         patterns: vec![
-            Char('l'), Char('r'), Char('L'), Char('R'),
-            Char('ɹ'), Char('ɾ'),
+            Char('l'),
+            Char('r'),
+            Char('L'),
+            Char('R'),
+            Char('ɹ'),
+            Char('ɾ'),
         ],
         description: "Liquid consonants (l, r)",
     });
@@ -305,8 +405,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "glide",
         aliases: &["semivowel"],
         patterns: vec![
-            Char('w'), Char('y'), Char('W'), Char('Y'),
-            Char('j'), Char('J'), // IPA j = English y
+            Char('w'),
+            Char('y'),
+            Char('W'),
+            Char('Y'),
+            Char('j'),
+            Char('J'), // IPA j = English y
             Char('ʍ'), // voiceless labialized velar approximant (U+028D) - "which" vs "witch"
         ],
         description: "Glides/semivowels (w, y, ʍ)",
@@ -318,7 +422,8 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             Digraph('c', 'h'), // ch -> tʃ
-            Digraph('C', 'h'), Digraph('C', 'H'),
+            Digraph('C', 'h'),
+            Digraph('C', 'H'),
             Digraph('t', 's'), // ts
             Digraph('d', 'z'), // dz
             Digraph('d', 'j'), // dj (sometimes dʒ)
@@ -345,11 +450,30 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "voiced",
         aliases: &[],
         patterns: vec![
-            Char('b'), Char('d'), Char('g'), Char('v'), Char('z'),
-            Char('B'), Char('D'), Char('G'), Char('V'), Char('Z'),
-            Char('l'), Char('m'), Char('n'), Char('r'), Char('w'),
-            Char('L'), Char('M'), Char('N'), Char('R'), Char('W'),
-            Char('ð'), Char('ʒ'), Char('ŋ'), Char('ɹ'),
+            Char('b'),
+            Char('d'),
+            Char('g'),
+            Char('v'),
+            Char('z'),
+            Char('B'),
+            Char('D'),
+            Char('G'),
+            Char('V'),
+            Char('Z'),
+            Char('l'),
+            Char('m'),
+            Char('n'),
+            Char('r'),
+            Char('w'),
+            Char('L'),
+            Char('M'),
+            Char('N'),
+            Char('R'),
+            Char('W'),
+            Char('ð'),
+            Char('ʒ'),
+            Char('ŋ'),
+            Char('ɹ'),
             Digraph('z', 'h'),
             Digraph('n', 'g'),
         ],
@@ -361,11 +485,27 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "voiceless",
         aliases: &[],
         patterns: vec![
-            Char('p'), Char('t'), Char('k'), Char('f'), Char('s'), Char('h'),
-            Char('P'), Char('T'), Char('K'), Char('F'), Char('S'), Char('H'),
-            Char('c'), Char('q'), Char('x'),
-            Char('C'), Char('Q'), Char('X'),
-            Char('θ'), Char('ʃ'), Char('ʔ'),
+            Char('p'),
+            Char('t'),
+            Char('k'),
+            Char('f'),
+            Char('s'),
+            Char('h'),
+            Char('P'),
+            Char('T'),
+            Char('K'),
+            Char('F'),
+            Char('S'),
+            Char('H'),
+            Char('c'),
+            Char('q'),
+            Char('x'),
+            Char('C'),
+            Char('Q'),
+            Char('X'),
+            Char('θ'),
+            Char('ʃ'),
+            Char('ʔ'),
             Digraph('s', 'h'),
             Digraph('t', 'h'),
             Digraph('c', 'h'),
@@ -385,27 +525,65 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             // Stops
-            Char('p'), Char('b'), Char('t'), Char('d'), Char('k'), Char('g'),
-            Char('P'), Char('B'), Char('T'), Char('D'), Char('K'), Char('G'),
+            Char('p'),
+            Char('b'),
+            Char('t'),
+            Char('d'),
+            Char('k'),
+            Char('g'),
+            Char('P'),
+            Char('B'),
+            Char('T'),
+            Char('D'),
+            Char('K'),
+            Char('G'),
             Char('ʔ'), // glottal stop
-            Char('q'), Char('Q'), // uvular stop
-            Char('ʈ'), Char('ɖ'), // retroflex stops
-            Char('c'), Char('ɟ'), // palatal stops
+            Char('q'),
+            Char('Q'), // uvular stop
+            Char('ʈ'),
+            Char('ɖ'), // retroflex stops
+            Char('c'),
+            Char('ɟ'), // palatal stops
             // Fricatives
-            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
-            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
-            Char('ʃ'), Char('ʒ'), Char('θ'), Char('ð'), Char('ɬ'), Char('ɮ'),
-            Char('x'), Char('ɣ'), Char('χ'), Char('ʁ'), // velar/uvular fricatives
-            Char('ɕ'), Char('ʑ'), // alveo-palatal fricatives
-            Char('ʂ'), Char('ʐ'), // retroflex fricatives
-            Char('ç'), Char('ʝ'), // palatal fricatives
-            Char('ħ'), Char('ʕ'), // pharyngeal fricatives
-            Char('ɸ'), Char('β'), // bilabial fricatives
+            Char('f'),
+            Char('v'),
+            Char('s'),
+            Char('z'),
+            Char('h'),
+            Char('F'),
+            Char('V'),
+            Char('S'),
+            Char('Z'),
+            Char('H'),
+            Char('ʃ'),
+            Char('ʒ'),
+            Char('θ'),
+            Char('ð'),
+            Char('ɬ'),
+            Char('ɮ'),
+            Char('x'),
+            Char('ɣ'),
+            Char('χ'),
+            Char('ʁ'), // velar/uvular fricatives
+            Char('ɕ'),
+            Char('ʑ'), // alveo-palatal fricatives
+            Char('ʂ'),
+            Char('ʐ'), // retroflex fricatives
+            Char('ç'),
+            Char('ʝ'), // palatal fricatives
+            Char('ħ'),
+            Char('ʕ'), // pharyngeal fricatives
+            Char('ɸ'),
+            Char('β'), // bilabial fricatives
             // Affricates (as digraphs)
-            Digraph('t', 'ʃ'), Digraph('d', 'ʒ'), // postalveolar affricates
-            Digraph('t', 's'), Digraph('d', 'z'), // alveolar affricates
-            Digraph('t', 'ɕ'), Digraph('d', 'ʑ'), // alveo-palatal affricates
-            Digraph('c', 'h'), Digraph('C', 'h'),
+            Digraph('t', 'ʃ'),
+            Digraph('d', 'ʒ'), // postalveolar affricates
+            Digraph('t', 's'),
+            Digraph('d', 'z'), // alveolar affricates
+            Digraph('t', 'ɕ'),
+            Digraph('d', 'ʑ'), // alveo-palatal affricates
+            Digraph('c', 'h'),
+            Digraph('C', 'h'),
         ],
         description: "Obstruents: stops + fricatives + affricates (obstruct airflow)",
     });
@@ -416,27 +594,66 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             // Nasals
-            Char('m'), Char('n'), Char('M'), Char('N'),
-            Char('ŋ'), Char('ɲ'), Char('ɴ'), // velar, palatal, uvular nasals
+            Char('m'),
+            Char('n'),
+            Char('M'),
+            Char('N'),
+            Char('ŋ'),
+            Char('ɲ'),
+            Char('ɴ'), // velar, palatal, uvular nasals
             Char('ɱ'), // labiodental nasal
             Char('ɳ'), // retroflex nasal
             // Liquids (laterals + rhotics)
-            Char('l'), Char('r'), Char('L'), Char('R'),
-            Char('ɹ'), Char('ɾ'), Char('ɻ'), // approximant and tap rhotics
-            Char('ʀ'), Char('ʙ'), // uvular and bilabial trills
-            Char('ɭ'), Char('ɽ'), // retroflex lateral and flap
+            Char('l'),
+            Char('r'),
+            Char('L'),
+            Char('R'),
+            Char('ɹ'),
+            Char('ɾ'),
+            Char('ɻ'), // approximant and tap rhotics
+            Char('ʀ'),
+            Char('ʙ'), // uvular and bilabial trills
+            Char('ɭ'),
+            Char('ɽ'), // retroflex lateral and flap
             Char('ʎ'), // palatal lateral
             Char('ɫ'), // velarized lateral (dark L)
             // Glides
-            Char('w'), Char('y'), Char('W'), Char('Y'),
-            Char('j'), Char('J'), Char('ʍ'),
+            Char('w'),
+            Char('y'),
+            Char('W'),
+            Char('Y'),
+            Char('j'),
+            Char('J'),
+            Char('ʍ'),
             Char('ɥ'), // labial-palatal approximant
             // Vowels (all vowels are sonorants)
-            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
-            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
-            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
-            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
-            Char('y'), Char('ø'), Char('œ'), Char('ɯ'), Char('ɨ'), Char('ʉ'),
+            Char('a'),
+            Char('e'),
+            Char('i'),
+            Char('o'),
+            Char('u'),
+            Char('A'),
+            Char('E'),
+            Char('I'),
+            Char('O'),
+            Char('U'),
+            Char('ə'),
+            Char('ɪ'),
+            Char('ʊ'),
+            Char('ɛ'),
+            Char('ɔ'),
+            Char('æ'),
+            Char('ʌ'),
+            Char('ɑ'),
+            Char('ɒ'),
+            Char('ɜ'),
+            Char('ɐ'),
+            Char('y'),
+            Char('ø'),
+            Char('œ'),
+            Char('ɯ'),
+            Char('ɨ'),
+            Char('ʉ'),
         ],
         description: "Sonorants: nasals + approximants + vowels (spontaneous voicing)",
     });
@@ -448,25 +665,83 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             // Fricatives
-            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
-            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
-            Char('ʃ'), Char('ʒ'), Char('θ'), Char('ð'), Char('ɬ'), Char('ɮ'),
-            Char('x'), Char('ɣ'), Char('χ'), Char('ʁ'),
-            Char('ɕ'), Char('ʑ'), Char('ʂ'), Char('ʐ'),
-            Char('ç'), Char('ʝ'), Char('ħ'), Char('ʕ'),
-            Char('ɸ'), Char('β'),
+            Char('f'),
+            Char('v'),
+            Char('s'),
+            Char('z'),
+            Char('h'),
+            Char('F'),
+            Char('V'),
+            Char('S'),
+            Char('Z'),
+            Char('H'),
+            Char('ʃ'),
+            Char('ʒ'),
+            Char('θ'),
+            Char('ð'),
+            Char('ɬ'),
+            Char('ɮ'),
+            Char('x'),
+            Char('ɣ'),
+            Char('χ'),
+            Char('ʁ'),
+            Char('ɕ'),
+            Char('ʑ'),
+            Char('ʂ'),
+            Char('ʐ'),
+            Char('ç'),
+            Char('ʝ'),
+            Char('ħ'),
+            Char('ʕ'),
+            Char('ɸ'),
+            Char('β'),
             // Approximants (liquids + glides)
-            Char('l'), Char('r'), Char('L'), Char('R'),
-            Char('ɹ'), Char('ɾ'), Char('ɻ'),
-            Char('ɭ'), Char('ʎ'), Char('ɫ'),
-            Char('w'), Char('y'), Char('W'), Char('Y'),
-            Char('j'), Char('J'), Char('ʍ'), Char('ɥ'),
+            Char('l'),
+            Char('r'),
+            Char('L'),
+            Char('R'),
+            Char('ɹ'),
+            Char('ɾ'),
+            Char('ɻ'),
+            Char('ɭ'),
+            Char('ʎ'),
+            Char('ɫ'),
+            Char('w'),
+            Char('y'),
+            Char('W'),
+            Char('Y'),
+            Char('j'),
+            Char('J'),
+            Char('ʍ'),
+            Char('ɥ'),
             // Vowels
-            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
-            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
-            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
-            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
-            Char('y'), Char('ø'), Char('œ'), Char('ɯ'), Char('ɨ'), Char('ʉ'),
+            Char('a'),
+            Char('e'),
+            Char('i'),
+            Char('o'),
+            Char('u'),
+            Char('A'),
+            Char('E'),
+            Char('I'),
+            Char('O'),
+            Char('U'),
+            Char('ə'),
+            Char('ɪ'),
+            Char('ʊ'),
+            Char('ɛ'),
+            Char('ɔ'),
+            Char('æ'),
+            Char('ʌ'),
+            Char('ɑ'),
+            Char('ɒ'),
+            Char('ɜ'),
+            Char('ɐ'),
+            Char('y'),
+            Char('ø'),
+            Char('œ'),
+            Char('ɯ'),
+            Char('ɨ'),
+            Char('ʉ'),
         ],
         description: "Continuants: fricatives + approximants + vowels (continuous airflow)",
     });
@@ -476,9 +751,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "voiceless_fricative",
         aliases: &[],
         patterns: vec![
-            Char('f'), Char('F'),
-            Char('s'), Char('S'),
-            Char('h'), Char('H'),
+            Char('f'),
+            Char('F'),
+            Char('s'),
+            Char('S'),
+            Char('h'),
+            Char('H'),
             Char('θ'), // voiceless dental fricative
             Char('ʃ'), // voiceless postalveolar fricative
             Char('ɬ'), // voiceless lateral fricative
@@ -489,8 +767,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Char('ç'), // voiceless palatal fricative
             Char('ħ'), // voiceless pharyngeal fricative
             Char('ɸ'), // voiceless bilabial fricative
-            Digraph('s', 'h'), Digraph('S', 'h'), Digraph('S', 'H'),
-            Digraph('t', 'h'), Digraph('T', 'h'), Digraph('T', 'H'),
+            Digraph('s', 'h'),
+            Digraph('S', 'h'),
+            Digraph('S', 'H'),
+            Digraph('t', 'h'),
+            Digraph('T', 'h'),
+            Digraph('T', 'H'),
         ],
         description: "Voiceless fricatives (for voicing assimilation)",
     });
@@ -500,8 +782,10 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "voiced_fricative",
         aliases: &[],
         patterns: vec![
-            Char('v'), Char('V'),
-            Char('z'), Char('Z'),
+            Char('v'),
+            Char('V'),
+            Char('z'),
+            Char('Z'),
             Char('ð'), // voiced dental fricative
             Char('ʒ'), // voiced postalveolar fricative
             Char('ɮ'), // voiced lateral fricative
@@ -512,7 +796,9 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Char('ʝ'), // voiced palatal fricative
             Char('ʕ'), // voiced pharyngeal fricative
             Char('β'), // voiced bilabial fricative
-            Digraph('z', 'h'), Digraph('Z', 'h'), Digraph('Z', 'H'),
+            Digraph('z', 'h'),
+            Digraph('Z', 'h'),
+            Digraph('Z', 'H'),
         ],
         description: "Voiced fricatives (for voicing assimilation)",
     });
@@ -523,16 +809,24 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &["sibilant"],
         patterns: vec![
             // Alveolar sibilants
-            Char('s'), Char('z'), Char('S'), Char('Z'),
+            Char('s'),
+            Char('z'),
+            Char('S'),
+            Char('Z'),
             // Postalveolar sibilants
-            Char('ʃ'), Char('ʒ'),
+            Char('ʃ'),
+            Char('ʒ'),
             // Retroflex sibilants
-            Char('ʂ'), Char('ʐ'),
+            Char('ʂ'),
+            Char('ʐ'),
             // Alveo-palatal sibilants
-            Char('ɕ'), Char('ʑ'),
+            Char('ɕ'),
+            Char('ʑ'),
             // Digraphs
-            Digraph('s', 'h'), Digraph('S', 'h'),
-            Digraph('z', 'h'), Digraph('Z', 'h'),
+            Digraph('s', 'h'),
+            Digraph('S', 'h'),
+            Digraph('z', 'h'),
+            Digraph('Z', 'h'),
         ],
         description: "Sibilant fricatives (for sibilant harmony)",
     });
@@ -545,8 +839,16 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "ascii_vowel",
         aliases: &[],
         patterns: vec![
-            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
-            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
+            Char('a'),
+            Char('e'),
+            Char('i'),
+            Char('o'),
+            Char('u'),
+            Char('A'),
+            Char('E'),
+            Char('I'),
+            Char('O'),
+            Char('U'),
         ],
         description: "ASCII vowels only (a, e, i, o, u)",
     });
@@ -555,14 +857,48 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "ascii_consonant",
         aliases: &[],
         patterns: vec![
-            Char('b'), Char('c'), Char('d'), Char('f'), Char('g'),
-            Char('h'), Char('j'), Char('k'), Char('l'), Char('m'),
-            Char('n'), Char('p'), Char('q'), Char('r'), Char('s'),
-            Char('t'), Char('v'), Char('w'), Char('x'), Char('y'), Char('z'),
-            Char('B'), Char('C'), Char('D'), Char('F'), Char('G'),
-            Char('H'), Char('J'), Char('K'), Char('L'), Char('M'),
-            Char('N'), Char('P'), Char('Q'), Char('R'), Char('S'),
-            Char('T'), Char('V'), Char('W'), Char('X'), Char('Y'), Char('Z'),
+            Char('b'),
+            Char('c'),
+            Char('d'),
+            Char('f'),
+            Char('g'),
+            Char('h'),
+            Char('j'),
+            Char('k'),
+            Char('l'),
+            Char('m'),
+            Char('n'),
+            Char('p'),
+            Char('q'),
+            Char('r'),
+            Char('s'),
+            Char('t'),
+            Char('v'),
+            Char('w'),
+            Char('x'),
+            Char('y'),
+            Char('z'),
+            Char('B'),
+            Char('C'),
+            Char('D'),
+            Char('F'),
+            Char('G'),
+            Char('H'),
+            Char('J'),
+            Char('K'),
+            Char('L'),
+            Char('M'),
+            Char('N'),
+            Char('P'),
+            Char('Q'),
+            Char('R'),
+            Char('S'),
+            Char('T'),
+            Char('V'),
+            Char('W'),
+            Char('X'),
+            Char('Y'),
+            Char('Z'),
         ],
         description: "ASCII consonants only",
     });
@@ -570,9 +906,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     add_class(NamedClass {
         name: "ascii_front",
         aliases: &[],
-        patterns: vec![
-            Char('e'), Char('i'), Char('E'), Char('I'),
-        ],
+        patterns: vec![Char('e'), Char('i'), Char('E'), Char('I')],
         description: "ASCII front vowels only (e, i)",
     });
 
@@ -580,7 +914,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "ascii_back",
         aliases: &[],
         patterns: vec![
-            Char('a'), Char('o'), Char('u'), Char('A'), Char('O'), Char('U'),
+            Char('a'),
+            Char('o'),
+            Char('u'),
+            Char('A'),
+            Char('O'),
+            Char('U'),
         ],
         description: "ASCII back vowels only (a, o, u)",
     });
@@ -593,8 +932,17 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "ipa_vowel",
         aliases: &[],
         patterns: vec![
-            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
-            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
+            Char('ə'),
+            Char('ɪ'),
+            Char('ʊ'),
+            Char('ɛ'),
+            Char('ɔ'),
+            Char('æ'),
+            Char('ʌ'),
+            Char('ɑ'),
+            Char('ɒ'),
+            Char('ɜ'),
+            Char('ɐ'),
         ],
         description: "IPA vowels only (non-ASCII)",
     });
@@ -603,8 +951,15 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "ipa_consonant",
         aliases: &[],
         patterns: vec![
-            Char('ŋ'), Char('θ'), Char('ð'), Char('ʃ'), Char('ʒ'),
-            Char('ɹ'), Char('ɾ'), Char('ʔ'), Char('ɬ'),
+            Char('ŋ'),
+            Char('θ'),
+            Char('ð'),
+            Char('ʃ'),
+            Char('ʒ'),
+            Char('ɹ'),
+            Char('ɾ'),
+            Char('ʔ'),
+            Char('ɬ'),
         ],
         description: "IPA consonants only (non-ASCII)",
     });
@@ -703,8 +1058,10 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "velar",
         aliases: &[],
         patterns: vec![
-            Char('k'), Char('K'),
-            Char('g'), Char('G'),
+            Char('k'),
+            Char('K'),
+            Char('g'),
+            Char('G'),
             Char('ŋ'), // velar nasal (U+014B)
             Char('x'), // voiceless velar fricative
             Char('ɣ'), // voiced velar fricative (U+0263)
@@ -719,13 +1076,22 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "alveolar",
         aliases: &[],
         patterns: vec![
-            Char('t'), Char('T'), Char('d'), Char('D'),
-            Char('n'), Char('N'),
-            Char('s'), Char('S'), Char('z'), Char('Z'),
+            Char('t'),
+            Char('T'),
+            Char('d'),
+            Char('D'),
+            Char('n'),
+            Char('N'),
+            Char('s'),
+            Char('S'),
+            Char('z'),
+            Char('Z'),
             Char('ɹ'), // alveolar approximant (U+0279)
             Char('ɾ'), // alveolar tap (U+027E)
-            Char('r'), Char('R'), // alveolar trill
-            Char('l'), Char('L'),
+            Char('r'),
+            Char('R'), // alveolar trill
+            Char('l'),
+            Char('L'),
             Char('ɬ'), // voiceless alveolar lateral fricative (U+026C)
             Char('ɮ'), // voiced alveolar lateral fricative (U+026E)
         ],
@@ -737,8 +1103,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "bilabial",
         aliases: &[],
         patterns: vec![
-            Char('p'), Char('P'), Char('b'), Char('B'),
-            Char('m'), Char('M'),
+            Char('p'),
+            Char('P'),
+            Char('b'),
+            Char('B'),
+            Char('m'),
+            Char('M'),
             Char('ɸ'), // voiceless bilabial fricative (U+0278)
             Char('β'), // voiced bilabial fricative (U+03B2)
             Char('ʙ'), // bilabial trill (U+0299)
@@ -751,7 +1121,10 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "labiodental",
         aliases: &[],
         patterns: vec![
-            Char('f'), Char('F'), Char('v'), Char('V'),
+            Char('f'),
+            Char('F'),
+            Char('v'),
+            Char('V'),
             Char('ɱ'), // labiodental nasal (U+0271)
             Char('ⱱ'), // labiodental flap (U+2C71)
             Char('ʋ'), // labiodental approximant (U+028B)
@@ -794,7 +1167,8 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "trill",
         aliases: &[],
         patterns: vec![
-            Char('r'), Char('R'), // alveolar trill
+            Char('r'),
+            Char('R'), // alveolar trill
             Char('ʙ'), // bilabial trill (U+0299)
             Char('ʀ'), // uvular trill (U+0280)
         ],
@@ -821,7 +1195,8 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Char('ɹ'), // alveolar approximant (U+0279)
             Char('ɻ'), // retroflex approximant (U+027B)
             Char('j'), // palatal approximant
-            Char('w'), Char('W'), // labio-velar approximant
+            Char('w'),
+            Char('W'), // labio-velar approximant
             Char('ɰ'), // velar approximant (U+0270)
             Char('ʋ'), // labiodental approximant (U+028B)
             Char('ʍ'), // voiceless labialized velar approximant (U+028D)
@@ -834,7 +1209,8 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "lateral",
         aliases: &[],
         patterns: vec![
-            Char('l'), Char('L'),
+            Char('l'),
+            Char('L'),
             Char('ɭ'), // retroflex lateral (U+026D)
             Char('ʎ'), // palatal lateral (U+028E)
             Char('ʟ'), // velar lateral (U+029F)
@@ -894,7 +1270,8 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Tetragraph('ŋ', 'ɡ', 'ǃ', 'ʷ'), // ŋɡǃʷ - prenasalized voiced postalveolar + labialization
             Tetragraph('ŋ', 'ɡ', 'ǁ', 'ʷ'), // ŋɡǁʷ - prenasalized voiced lateral + labialization
         ],
-        description: "Prenasalized clicks (Xhosa aspirated, Zulu voiced, Khoisan labialized/glottalized)",
+        description:
+            "Prenasalized clicks (Xhosa aspirated, Zulu voiced, Khoisan labialized/glottalized)",
     });
 
     // Implosive consonants
@@ -920,7 +1297,10 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "rounded",
         aliases: &["rounded_vowel"],
         patterns: vec![
-            Char('o'), Char('O'), Char('u'), Char('U'),
+            Char('o'),
+            Char('O'),
+            Char('u'),
+            Char('U'),
             Char('ʊ'), // near-close back rounded (U+028A)
             Char('ɔ'), // open-mid back rounded (U+0254)
             Char('ɒ'), // open back rounded (U+0252)
@@ -940,8 +1320,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "unrounded",
         aliases: &["unrounded_vowel"],
         patterns: vec![
-            Char('i'), Char('I'), Char('e'), Char('E'),
-            Char('a'), Char('A'),
+            Char('i'),
+            Char('I'),
+            Char('e'),
+            Char('E'),
+            Char('a'),
+            Char('A'),
             Char('ɪ'), // near-close front unrounded (U+026A)
             Char('ɛ'), // open-mid front unrounded (U+025B)
             Char('æ'), // near-open front unrounded (U+00E6)
@@ -979,7 +1363,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         patterns: vec![
             Char('ɚ'), // schwa with hook (mid central) (U+025A)
             Char('ɝ'), // open-mid central with hook (U+025D)
-            // Note: syllabic r (ɹ + combining vertical line) would need digraph support
+                       // Note: syllabic r (ɹ + combining vertical line) would need digraph support
         ],
         description: "Rhotic/r-colored vowels (American English 'er')",
     });
@@ -1139,29 +1523,100 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &["ipa_all"],
         patterns: vec![
             // IPA vowels
-            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
-            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'),
-            Char('ɐ'), Char('ɚ'), Char('ɝ'), Char('ʏ'), Char('ø'),
-            Char('œ'), Char('ɶ'), Char('ɵ'), Char('ɞ'), Char('ɯ'),
-            Char('ɤ'), Char('ɨ'), Char('ɘ'),
+            Char('ə'),
+            Char('ɪ'),
+            Char('ʊ'),
+            Char('ɛ'),
+            Char('ɔ'),
+            Char('æ'),
+            Char('ʌ'),
+            Char('ɑ'),
+            Char('ɒ'),
+            Char('ɜ'),
+            Char('ɐ'),
+            Char('ɚ'),
+            Char('ɝ'),
+            Char('ʏ'),
+            Char('ø'),
+            Char('œ'),
+            Char('ɶ'),
+            Char('ɵ'),
+            Char('ɞ'),
+            Char('ɯ'),
+            Char('ɤ'),
+            Char('ɨ'),
+            Char('ɘ'),
             // IPA consonants
-            Char('ŋ'), Char('θ'), Char('ð'), Char('ʃ'), Char('ʒ'),
-            Char('ɹ'), Char('ɾ'), Char('ʔ'), Char('ɬ'), Char('ɮ'), Char('ʍ'),
-            Char('ʈ'), Char('ɖ'), Char('ɳ'), Char('ɽ'), Char('ʂ'),
-            Char('ʐ'), Char('ɻ'), Char('ɭ'), Char('ɢ'), Char('ɴ'),
-            Char('ʀ'), Char('χ'), Char('ʁ'), Char('ħ'), Char('ʕ'),
-            Char('ɦ'), Char('ɟ'), Char('ɲ'), Char('ç'), Char('ʝ'),
-            Char('ʎ'), Char('ɣ'), Char('ɰ'), Char('ʟ'), Char('ɸ'),
-            Char('β'), Char('ʙ'), Char('ɱ'), Char('ⱱ'), Char('ʋ'),
+            Char('ŋ'),
+            Char('θ'),
+            Char('ð'),
+            Char('ʃ'),
+            Char('ʒ'),
+            Char('ɹ'),
+            Char('ɾ'),
+            Char('ʔ'),
+            Char('ɬ'),
+            Char('ɮ'),
+            Char('ʍ'),
+            Char('ʈ'),
+            Char('ɖ'),
+            Char('ɳ'),
+            Char('ɽ'),
+            Char('ʂ'),
+            Char('ʐ'),
+            Char('ɻ'),
+            Char('ɭ'),
+            Char('ɢ'),
+            Char('ɴ'),
+            Char('ʀ'),
+            Char('χ'),
+            Char('ʁ'),
+            Char('ħ'),
+            Char('ʕ'),
+            Char('ɦ'),
+            Char('ɟ'),
+            Char('ɲ'),
+            Char('ç'),
+            Char('ʝ'),
+            Char('ʎ'),
+            Char('ɣ'),
+            Char('ɰ'),
+            Char('ʟ'),
+            Char('ɸ'),
+            Char('β'),
+            Char('ʙ'),
+            Char('ɱ'),
+            Char('ⱱ'),
+            Char('ʋ'),
             // Click consonants
-            Char('ʘ'), Char('ǀ'), Char('ǃ'), Char('ǂ'), Char('ǁ'),
+            Char('ʘ'),
+            Char('ǀ'),
+            Char('ǃ'),
+            Char('ǂ'),
+            Char('ǁ'),
             // Implosives
-            Char('ɓ'), Char('ɗ'), Char('ʄ'), Char('ɠ'), Char('ʛ'),
+            Char('ɓ'),
+            Char('ɗ'),
+            Char('ʄ'),
+            Char('ɠ'),
+            Char('ʛ'),
             // Affricates
-            Char('ʧ'), Char('ʤ'), Char('ʦ'), Char('ʣ'), Char('ʨ'), Char('ʥ'),
+            Char('ʧ'),
+            Char('ʤ'),
+            Char('ʦ'),
+            Char('ʣ'),
+            Char('ʨ'),
+            Char('ʥ'),
             // Suprasegmentals
-            Char('ˈ'), Char('ˌ'), Char('ː'), Char('ˑ'),
-            Char('˥'), Char('˦'), Char('˧'), Char('˨'), Char('˩'),
+            Char('ˈ'),
+            Char('ˌ'),
+            Char('ː'),
+            Char('ˑ'),
+            Char('˥'),
+            Char('˦'),
+            Char('˧'),
+            Char('˨'),
+            Char('˩'),
         ],
         description: "All IPA characters (comprehensive phonetic alphabet)",
     });
@@ -1518,7 +1973,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
             Digraph('l', 'ʱ'),
             Digraph('r', 'ʱ'),
             // Breathy voice modifier
-            Char('ʱ'), // modifier letter small h with hook U+02B1
+            Char('ʱ'),        // modifier letter small h with hook U+02B1
             Char('\u{0324}'), // combining diaeresis below (breathy marker)
         ],
         description: "Breathy voiced consonants (Hindi, Gujarati murmured stops)",
@@ -1559,27 +2014,90 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             // Fricatives (continuous turbulent airflow)
-            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
-            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
-            Char('θ'), Char('ð'), Char('ʃ'), Char('ʒ'), Char('ɬ'), Char('ɮ'),
-            Char('x'), Char('ɣ'), Char('χ'), Char('ʁ'), Char('ħ'), Char('ʕ'),
-            Char('ç'), Char('ʝ'), Char('ɸ'), Char('β'), Char('ɦ'),
-            Char('ʂ'), Char('ʐ'), Char('ɕ'), Char('ʑ'), // retroflex & alveopalatal
+            Char('f'),
+            Char('v'),
+            Char('s'),
+            Char('z'),
+            Char('h'),
+            Char('F'),
+            Char('V'),
+            Char('S'),
+            Char('Z'),
+            Char('H'),
+            Char('θ'),
+            Char('ð'),
+            Char('ʃ'),
+            Char('ʒ'),
+            Char('ɬ'),
+            Char('ɮ'),
+            Char('x'),
+            Char('ɣ'),
+            Char('χ'),
+            Char('ʁ'),
+            Char('ħ'),
+            Char('ʕ'),
+            Char('ç'),
+            Char('ʝ'),
+            Char('ɸ'),
+            Char('β'),
+            Char('ɦ'),
+            Char('ʂ'),
+            Char('ʐ'),
+            Char('ɕ'),
+            Char('ʑ'), // retroflex & alveopalatal
             // Approximants (continuous non-turbulent airflow)
-            Char('w'), Char('W'), Char('j'), Char('J'), Char('y'), Char('Y'),
-            Char('ɹ'), Char('ɻ'), Char('ɰ'), Char('ʋ'),
-            Char('l'), Char('L'), Char('ɭ'), Char('ʎ'), Char('ʟ'),
-            Char('r'), Char('R'), Char('ɾ'), Char('ɽ'), // rhotics
+            Char('w'),
+            Char('W'),
+            Char('j'),
+            Char('J'),
+            Char('y'),
+            Char('Y'),
+            Char('ɹ'),
+            Char('ɻ'),
+            Char('ɰ'),
+            Char('ʋ'),
+            Char('l'),
+            Char('L'),
+            Char('ɭ'),
+            Char('ʎ'),
+            Char('ʟ'),
+            Char('r'),
+            Char('R'),
+            Char('ɾ'),
+            Char('ɽ'), // rhotics
             // Vowels (maximal continuancy)
-            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
-            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
-            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
-            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
-            Char('y'), Char('ʏ'), Char('ø'), Char('œ'), Char('ɯ'), Char('ɤ'),
+            Char('a'),
+            Char('e'),
+            Char('i'),
+            Char('o'),
+            Char('u'),
+            Char('A'),
+            Char('E'),
+            Char('I'),
+            Char('O'),
+            Char('U'),
+            Char('ə'),
+            Char('ɪ'),
+            Char('ʊ'),
+            Char('ɛ'),
+            Char('ɔ'),
+            Char('æ'),
+            Char('ʌ'),
+            Char('ɑ'),
+            Char('ɒ'),
+            Char('ɜ'),
+            Char('ɐ'),
+            Char('y'),
+            Char('ʏ'),
+            Char('ø'),
+            Char('œ'),
+            Char('ɯ'),
+            Char('ɤ'),
             // Labialized velar approximant (voiceless)
             Char('ʍ'), // U+028D - "which" vs "witch" distinction
         ],
-        description: "Continuants: sounds with continuous airflow (fricatives + approximants + vowels)",
+        description:
+            "Continuants: sounds with continuous airflow (fricatives + approximants + vowels)",
     });
 
     // Obstruent: sounds with complete or partial oral obstruction (stops + fricatives + affricates)
@@ -1589,21 +2107,64 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &[],
         patterns: vec![
             // Stops (complete obstruction)
-            Char('p'), Char('b'), Char('t'), Char('d'), Char('k'), Char('g'),
-            Char('P'), Char('B'), Char('T'), Char('D'), Char('K'), Char('G'),
+            Char('p'),
+            Char('b'),
+            Char('t'),
+            Char('d'),
+            Char('k'),
+            Char('g'),
+            Char('P'),
+            Char('B'),
+            Char('T'),
+            Char('D'),
+            Char('K'),
+            Char('G'),
             Char('ʔ'), // glottal stop
-            Char('c'), Char('ɟ'), // palatal stops
-            Char('q'), Char('ɢ'), // uvular stops
-            Char('ʈ'), Char('ɖ'), // retroflex stops
+            Char('c'),
+            Char('ɟ'), // palatal stops
+            Char('q'),
+            Char('ɢ'), // uvular stops
+            Char('ʈ'),
+            Char('ɖ'), // retroflex stops
             // Fricatives (partial obstruction with turbulence)
-            Char('f'), Char('v'), Char('s'), Char('z'), Char('h'),
-            Char('F'), Char('V'), Char('S'), Char('Z'), Char('H'),
-            Char('θ'), Char('ð'), Char('ʃ'), Char('ʒ'), Char('ɬ'), Char('ɮ'),
-            Char('x'), Char('ɣ'), Char('χ'), Char('ʁ'), Char('ħ'), Char('ʕ'),
-            Char('ç'), Char('ʝ'), Char('ɸ'), Char('β'), Char('ɦ'),
-            Char('ʂ'), Char('ʐ'), Char('ɕ'), Char('ʑ'), // retroflex & alveopalatal
+            Char('f'),
+            Char('v'),
+            Char('s'),
+            Char('z'),
+            Char('h'),
+            Char('F'),
+            Char('V'),
+            Char('S'),
+            Char('Z'),
+            Char('H'),
+            Char('θ'),
+            Char('ð'),
+            Char('ʃ'),
+            Char('ʒ'),
+            Char('ɬ'),
+            Char('ɮ'),
+            Char('x'),
+            Char('ɣ'),
+            Char('χ'),
+            Char('ʁ'),
+            Char('ħ'),
+            Char('ʕ'),
+            Char('ç'),
+            Char('ʝ'),
+            Char('ɸ'),
+            Char('β'),
+            Char('ɦ'),
+            Char('ʂ'),
+            Char('ʐ'),
+            Char('ɕ'),
+            Char('ʑ'), // retroflex & alveopalatal
             // Affricates (stop + fricative)
-            Char('ʧ'), Char('ʤ'), Char('ʦ'), Char('ʣ'), Char('ʨ'), Char('ʥ'),
+            Char('ʧ'),
+            Char('ʤ'),
+            Char('ʦ'),
+            Char('ʣ'),
+            Char('ʨ'),
+            Char('ʥ'),
         ],
         description: "Obstruents: sounds with oral obstruction (stops + fricatives + affricates)",
     });
@@ -1615,21 +2176,71 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &["resonant"],
         patterns: vec![
             // Nasals (resonant with nasal airflow)
-            Char('m'), Char('n'), Char('M'), Char('N'),
-            Char('ŋ'), Char('ɲ'), Char('ɳ'), Char('ɴ'), Char('ɱ'),
+            Char('m'),
+            Char('n'),
+            Char('M'),
+            Char('N'),
+            Char('ŋ'),
+            Char('ɲ'),
+            Char('ɳ'),
+            Char('ɴ'),
+            Char('ɱ'),
             // Approximants/liquids (oral resonance)
-            Char('w'), Char('W'), Char('j'), Char('J'), Char('y'), Char('Y'),
-            Char('l'), Char('L'), Char('r'), Char('R'),
-            Char('ɹ'), Char('ɻ'), Char('ɾ'), Char('ɽ'), Char('ɰ'), Char('ʋ'),
-            Char('ɭ'), Char('ʎ'), Char('ʟ'),
-            Char('ʀ'), Char('ʙ'), // trills
+            Char('w'),
+            Char('W'),
+            Char('j'),
+            Char('J'),
+            Char('y'),
+            Char('Y'),
+            Char('l'),
+            Char('L'),
+            Char('r'),
+            Char('R'),
+            Char('ɹ'),
+            Char('ɻ'),
+            Char('ɾ'),
+            Char('ɽ'),
+            Char('ɰ'),
+            Char('ʋ'),
+            Char('ɭ'),
+            Char('ʎ'),
+            Char('ʟ'),
+            Char('ʀ'),
+            Char('ʙ'), // trills
             // Vowels (maximal sonority)
-            Char('a'), Char('e'), Char('i'), Char('o'), Char('u'),
-            Char('A'), Char('E'), Char('I'), Char('O'), Char('U'),
-            Char('ə'), Char('ɪ'), Char('ʊ'), Char('ɛ'), Char('ɔ'),
-            Char('æ'), Char('ʌ'), Char('ɑ'), Char('ɒ'), Char('ɜ'), Char('ɐ'),
-            Char('y'), Char('ʏ'), Char('ø'), Char('œ'), Char('ɯ'), Char('ɤ'),
-            Char('ɨ'), Char('ʉ'), Char('ɘ'), Char('ɵ'), Char('ɜ'), Char('ɞ'),
+            Char('a'),
+            Char('e'),
+            Char('i'),
+            Char('o'),
+            Char('u'),
+            Char('A'),
+            Char('E'),
+            Char('I'),
+            Char('O'),
+            Char('U'),
+            Char('ə'),
+            Char('ɪ'),
+            Char('ʊ'),
+            Char('ɛ'),
+            Char('ɔ'),
+            Char('æ'),
+            Char('ʌ'),
+            Char('ɑ'),
+            Char('ɒ'),
+            Char('ɜ'),
+            Char('ɐ'),
+            Char('y'),
+            Char('ʏ'),
+            Char('ø'),
+            Char('œ'),
+            Char('ɯ'),
+            Char('ɤ'),
+            Char('ɨ'),
+            Char('ʉ'),
+            Char('ɘ'),
+            Char('ɵ'),
+            Char('ɜ'),
+            Char('ɞ'),
         ],
         description: "Sonorants: sounds with continuous resonance (nasals + approximants + vowels)",
     });
@@ -1644,9 +2255,12 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "voiceless_fricative",
         aliases: &[],
         patterns: vec![
-            Char('f'), Char('F'),
-            Char('s'), Char('S'),
-            Char('h'), Char('H'),
+            Char('f'),
+            Char('F'),
+            Char('s'),
+            Char('S'),
+            Char('h'),
+            Char('H'),
             Char('θ'), // voiceless dental
             Char('ʃ'), // voiceless postalveolar
             Char('ɬ'), // voiceless lateral
@@ -1669,8 +2283,10 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "voiced_fricative",
         aliases: &[],
         patterns: vec![
-            Char('v'), Char('V'),
-            Char('z'), Char('Z'),
+            Char('v'),
+            Char('V'),
+            Char('z'),
+            Char('Z'),
             Char('ð'), // voiced dental
             Char('ʒ'), // voiced postalveolar
             Char('ɮ'), // voiced lateral
@@ -1694,19 +2310,24 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &["sibilant_fricative"],
         patterns: vec![
             // Voiceless sibilants
-            Char('s'), Char('S'),
+            Char('s'),
+            Char('S'),
             Char('ʃ'), // postalveolar
             Char('ʂ'), // retroflex
             Char('ɕ'), // alveopalatal
             // Voiced sibilants
-            Char('z'), Char('Z'),
+            Char('z'),
+            Char('Z'),
             Char('ʒ'), // postalveolar
             Char('ʐ'), // retroflex
             Char('ʑ'), // alveopalatal
             // Sibilant affricates
-            Char('ʦ'), Char('ʣ'), // alveolar
-            Char('ʧ'), Char('ʤ'), // postalveolar
-            Char('ʨ'), Char('ʥ'), // alveopalatal
+            Char('ʦ'),
+            Char('ʣ'), // alveolar
+            Char('ʧ'),
+            Char('ʤ'), // postalveolar
+            Char('ʨ'),
+            Char('ʥ'), // alveopalatal
             Digraph('s', 'h'),
             Digraph('z', 'h'),
             Digraph('t', 's'),
@@ -1771,7 +2392,8 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         name: "low_front",
         aliases: &[],
         patterns: vec![
-            Char('a'), Char('A'), // open front (varies by language)
+            Char('a'),
+            Char('A'), // open front (varies by language)
             Char('æ'), // near-open front unrounded (cat)
         ],
         description: "Low front vowels (cat, trap)",
@@ -1787,7 +2409,7 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
         aliases: &["voiceless_semivowel"],
         patterns: vec![
             Char('ʍ'), // voiceless labialized velar approximant (U+028D)
-            // Note: ʍ represents "wh" in "which" vs "witch" distinction
+                       // Note: ʍ represents "wh" in "which" vs "witch" distinction
         ],
         description: "Voiceless glides/semivowels (wh as in 'which')",
     });

@@ -186,9 +186,10 @@ impl SubstitutionSet {
             }
         } else {
             Self {
-                inner: SubstitutionSetImpl::Large(
-                    FxHashSet::with_capacity_and_hasher(capacity, Default::default())
-                ),
+                inner: SubstitutionSetImpl::Large(FxHashSet::with_capacity_and_hasher(
+                    capacity,
+                    Default::default(),
+                )),
                 multi_char: MultiCharSubstitutionImpl::Small(Vec::new()),
             }
         }
@@ -250,10 +251,8 @@ impl SubstitutionSet {
             }
             SubstitutionSetImpl::Small(vec) => {
                 // Exceeded threshold - upgrade to hash set
-                let mut set = FxHashSet::with_capacity_and_hasher(
-                    vec.len() + 1,
-                    Default::default()
-                );
+                let mut set =
+                    FxHashSet::with_capacity_and_hasher(vec.len() + 1, Default::default());
                 for &pair in vec.iter() {
                     set.insert(pair);
                 }
@@ -413,16 +412,22 @@ impl SubstitutionSet {
     /// Phonetic substitutions as a const array.
     const PHONETIC_PAIRS: &[(u8, u8)] = &[
         // f/ph equivalence (bidirectional)
-        (b'f', b'p'), (b'p', b'f'),
+        (b'f', b'p'),
+        (b'p', b'f'),
         // c/k equivalence (bidirectional)
-        (b'c', b'k'), (b'k', b'c'),
+        (b'c', b'k'),
+        (b'k', b'c'),
         // c/s equivalence (bidirectional)
-        (b'c', b's'), (b's', b'c'),
+        (b'c', b's'),
+        (b's', b'c'),
         // s/z equivalence (bidirectional)
-        (b's', b'z'), (b'z', b's'),
+        (b's', b'z'),
+        (b'z', b's'),
         // Common vowel confusions
-        (b'a', b'e'), (b'e', b'a'),
-        (b'i', b'y'), (b'y', b'i'),
+        (b'a', b'e'),
+        (b'e', b'a'),
+        (b'i', b'y'),
+        (b'y', b'i'),
         // Silent letters (allow omission)
         (b'h', b'\0'),
         (b'k', b'\0'),
@@ -431,75 +436,127 @@ impl SubstitutionSet {
     /// QWERTY keyboard substitutions as a const array.
     const KEYBOARD_PAIRS: &[(u8, u8)] = &[
         // Top row
-        (b'q', b'w'), (b'w', b'q'),
-        (b'w', b'e'), (b'e', b'w'),
-        (b'e', b'r'), (b'r', b'e'),
-        (b'r', b't'), (b't', b'r'),
-        (b't', b'y'), (b'y', b't'),
-        (b'y', b'u'), (b'u', b'y'),
-        (b'u', b'i'), (b'i', b'u'),
-        (b'i', b'o'), (b'o', b'i'),
-        (b'o', b'p'), (b'p', b'o'),
+        (b'q', b'w'),
+        (b'w', b'q'),
+        (b'w', b'e'),
+        (b'e', b'w'),
+        (b'e', b'r'),
+        (b'r', b'e'),
+        (b'r', b't'),
+        (b't', b'r'),
+        (b't', b'y'),
+        (b'y', b't'),
+        (b'y', b'u'),
+        (b'u', b'y'),
+        (b'u', b'i'),
+        (b'i', b'u'),
+        (b'i', b'o'),
+        (b'o', b'i'),
+        (b'o', b'p'),
+        (b'p', b'o'),
         // Middle row
-        (b'a', b's'), (b's', b'a'),
-        (b's', b'd'), (b'd', b's'),
-        (b'd', b'f'), (b'f', b'd'),
-        (b'f', b'g'), (b'g', b'f'),
-        (b'g', b'h'), (b'h', b'g'),
-        (b'h', b'j'), (b'j', b'h'),
-        (b'j', b'k'), (b'k', b'j'),
-        (b'k', b'l'), (b'l', b'k'),
+        (b'a', b's'),
+        (b's', b'a'),
+        (b's', b'd'),
+        (b'd', b's'),
+        (b'd', b'f'),
+        (b'f', b'd'),
+        (b'f', b'g'),
+        (b'g', b'f'),
+        (b'g', b'h'),
+        (b'h', b'g'),
+        (b'h', b'j'),
+        (b'j', b'h'),
+        (b'j', b'k'),
+        (b'k', b'j'),
+        (b'k', b'l'),
+        (b'l', b'k'),
         // Bottom row
-        (b'z', b'x'), (b'x', b'z'),
-        (b'x', b'c'), (b'c', b'x'),
-        (b'c', b'v'), (b'v', b'c'),
-        (b'v', b'b'), (b'b', b'v'),
-        (b'b', b'n'), (b'n', b'b'),
-        (b'n', b'm'), (b'm', b'n'),
+        (b'z', b'x'),
+        (b'x', b'z'),
+        (b'x', b'c'),
+        (b'c', b'x'),
+        (b'c', b'v'),
+        (b'v', b'c'),
+        (b'v', b'b'),
+        (b'b', b'v'),
+        (b'b', b'n'),
+        (b'n', b'b'),
+        (b'n', b'm'),
+        (b'm', b'n'),
         // Vertical adjacencies (selected)
-        (b'q', b'a'), (b'a', b'q'),
-        (b'w', b's'), (b's', b'w'),
-        (b'e', b'd'), (b'd', b'e'),
-        (b'r', b'f'), (b'f', b'r'),
-        (b't', b'g'), (b'g', b't'),
-        (b'y', b'h'), (b'h', b'y'),
-        (b'u', b'j'), (b'j', b'u'),
-        (b'i', b'k'), (b'k', b'i'),
-        (b'o', b'l'), (b'l', b'o'),
+        (b'q', b'a'),
+        (b'a', b'q'),
+        (b'w', b's'),
+        (b's', b'w'),
+        (b'e', b'd'),
+        (b'd', b'e'),
+        (b'r', b'f'),
+        (b'f', b'r'),
+        (b't', b'g'),
+        (b'g', b't'),
+        (b'y', b'h'),
+        (b'h', b'y'),
+        (b'u', b'j'),
+        (b'j', b'u'),
+        (b'i', b'k'),
+        (b'k', b'i'),
+        (b'o', b'l'),
+        (b'l', b'o'),
     ];
 
     /// Leetspeak substitutions as a const array.
     const LEET_PAIRS: &[(u8, u8)] = &[
-        (b'e', b'3'), (b'3', b'e'),
-        (b'a', b'@'), (b'@', b'a'),
-        (b'a', b'4'), (b'4', b'a'),
-        (b'o', b'0'), (b'0', b'o'),
-        (b'i', b'1'), (b'1', b'i'),
-        (b'l', b'1'), (b'1', b'l'),
-        (b's', b'$'), (b'$', b's'),
-        (b's', b'5'), (b'5', b's'),
-        (b't', b'7'), (b'7', b't'),
-        (b'b', b'8'), (b'8', b'b'),
-        (b'g', b'9'), (b'9', b'g'),
+        (b'e', b'3'),
+        (b'3', b'e'),
+        (b'a', b'@'),
+        (b'@', b'a'),
+        (b'a', b'4'),
+        (b'4', b'a'),
+        (b'o', b'0'),
+        (b'0', b'o'),
+        (b'i', b'1'),
+        (b'1', b'i'),
+        (b'l', b'1'),
+        (b'1', b'l'),
+        (b's', b'$'),
+        (b'$', b's'),
+        (b's', b'5'),
+        (b'5', b's'),
+        (b't', b'7'),
+        (b'7', b't'),
+        (b'b', b'8'),
+        (b'8', b'b'),
+        (b'g', b'9'),
+        (b'9', b'g'),
     ];
 
     /// OCR-friendly substitutions as a const array.
     const OCR_PAIRS: &[(u8, u8)] = &[
         // 0/O confusion
-        (b'0', b'O'), (b'O', b'0'),
-        (b'0', b'o'), (b'o', b'0'),
+        (b'0', b'O'),
+        (b'O', b'0'),
+        (b'0', b'o'),
+        (b'o', b'0'),
         // 1/I/l confusion
-        (b'1', b'I'), (b'I', b'1'),
-        (b'1', b'l'), (b'l', b'1'),
-        (b'I', b'l'), (b'l', b'I'),
+        (b'1', b'I'),
+        (b'I', b'1'),
+        (b'1', b'l'),
+        (b'l', b'1'),
+        (b'I', b'l'),
+        (b'l', b'I'),
         // 8/B confusion
-        (b'8', b'B'), (b'B', b'8'),
+        (b'8', b'B'),
+        (b'B', b'8'),
         // 5/S confusion
-        (b'5', b'S'), (b'S', b'5'),
+        (b'5', b'S'),
+        (b'S', b'5'),
         // 6/G confusion
-        (b'6', b'G'), (b'G', b'6'),
+        (b'6', b'G'),
+        (b'G', b'6'),
         // 2/Z confusion
-        (b'2', b'Z'), (b'Z', b'2'),
+        (b'2', b'Z'),
+        (b'Z', b'2'),
     ];
 
     /// Common phonetic equivalences for English.
@@ -688,7 +745,9 @@ impl SubstitutionSet {
 
                 for (src, tgt) in vec.drain(..) {
                     map.entry(src)
-                        .or_insert_with(|| FxHashSet::with_capacity_and_hasher(1, Default::default()))
+                        .or_insert_with(|| {
+                            FxHashSet::with_capacity_and_hasher(1, Default::default())
+                        })
                         .insert(tgt);
                 }
 
@@ -752,7 +811,8 @@ impl SubstitutionSet {
         match &self.multi_char {
             MultiCharSubstitutionImpl::Small(vec) => {
                 // Linear scan for small sets
-                vec.iter().any(|(x, y)| x.as_ref() == a_str && y.as_ref() == b_str)
+                vec.iter()
+                    .any(|(x, y)| x.as_ref() == a_str && y.as_ref() == b_str)
             }
             MultiCharSubstitutionImpl::Large(map) => {
                 // Hash lookup for large sets
@@ -805,9 +865,7 @@ impl SubstitutionSet {
         if source.len() == 1 {
             let src_byte = source[0];
             let found_in_single = match &self.inner {
-                SubstitutionSetImpl::Small(vec) => {
-                    vec.iter().any(|(s, _)| *s == src_byte)
-                }
+                SubstitutionSetImpl::Small(vec) => vec.iter().any(|(s, _)| *s == src_byte),
                 SubstitutionSetImpl::Large(set) => {
                     // FxHashSet doesn't support partial key lookup, so iterate
                     set.iter().any(|(s, _)| *s == src_byte)
@@ -826,9 +884,7 @@ impl SubstitutionSet {
 
         // Check multi-char storage (for all sources, regardless of length)
         match &self.multi_char {
-            MultiCharSubstitutionImpl::Small(vec) => {
-                vec.iter().any(|(s, _)| s.as_ref() == src_str)
-            }
+            MultiCharSubstitutionImpl::Small(vec) => vec.iter().any(|(s, _)| s.as_ref() == src_str),
             MultiCharSubstitutionImpl::Large(map) => {
                 // HashMap has sources as keys - O(1) lookup!
                 map.contains_key(src_str)
@@ -907,9 +963,9 @@ impl SubstitutionSet {
                 map.get(src_str)
                     .map(|target_set| {
                         // target_set is FxHashSet<Box<str>>
-                        target_set.iter().any(|target| {
-                            target.chars().next() == Some(first_char)
-                        })
+                        target_set
+                            .iter()
+                            .any(|target| target.chars().next() == Some(first_char))
                     })
                     .unwrap_or(false)
             }
@@ -992,11 +1048,7 @@ mod tests {
 
     #[test]
     fn test_from_pairs() {
-        let set = SubstitutionSet::from_pairs(&[
-            ('a', 'b'),
-            ('c', 'd'),
-            ('e', 'f'),
-        ]);
+        let set = SubstitutionSet::from_pairs(&[('a', 'b'), ('c', 'd'), ('e', 'f')]);
 
         assert_eq!(set.len(), 3);
         assert!(set.contains(b'a', b'b'));
@@ -1153,10 +1205,7 @@ mod tests {
         assert!(!set.contains_str(b"k", b"ch"));
 
         // Test from_str_pairs
-        let set2 = SubstitutionSet::from_str_pairs(&[
-            ("ph", "f"),
-            ("ch", "k"),
-        ]);
+        let set2 = SubstitutionSet::from_str_pairs(&[("ph", "f"), ("ch", "k")]);
 
         assert!(set2.contains_str(b"ph", b"f"));
         assert!(set2.contains_str(b"ch", b"k"));
@@ -1168,7 +1217,7 @@ mod tests {
 
         // English phonetic digraphs (ASCII only)
         set.allow_str("ph", "f");
-        set.allow_str("ch", "k");  // Use ASCII instead of ç
+        set.allow_str("ch", "k"); // Use ASCII instead of ç
         set.allow_str("sh", "$");
         set.allow_str("th", "+");
 
@@ -1187,7 +1236,7 @@ mod tests {
         let mut set = SubstitutionSet::new();
 
         // Trigraphs (ASCII only)
-        set.allow_str("eau", "o");  // Use ASCII instead of ö
+        set.allow_str("eau", "o"); // Use ASCII instead of ö
         set.allow_str("ght", "t");
 
         assert!(set.contains_str(b"eau", b"o"));
@@ -1211,8 +1260,8 @@ mod tests {
         let mut set = SubstitutionSet::new();
 
         // Mix single and multi-character substitutions
-        set.allow('f', 'p');  // Single-char
-        set.allow_str("ph", "f");  // Multi-char
+        set.allow('f', 'p'); // Single-char
+        set.allow_str("ph", "f"); // Multi-char
 
         // Both should work
         assert!(set.contains(b'f', b'p'));
@@ -1231,7 +1280,7 @@ mod tests {
         set.allow_str("ch", "k");
         set.allow_str("sh", "$");
         set.allow_str("th", "+");
-        set.allow_str("wh", "w");  // 5th pair - should trigger upgrade
+        set.allow_str("wh", "w"); // 5th pair - should trigger upgrade
 
         // All should still be accessible
         assert!(set.contains_str(b"ph", b"f"));
@@ -1246,7 +1295,7 @@ mod tests {
         let mut set = SubstitutionSet::new();
 
         set.allow_str("ph", "f");
-        set.allow_str("ph", "f");  // Duplicate
+        set.allow_str("ph", "f"); // Duplicate
 
         // Should be deduplicated (implementation uses FxHashSet for targets)
         assert!(set.contains_str(b"ph", b"f"));
@@ -1272,8 +1321,8 @@ mod tests {
         let mut set = SubstitutionSet::new();
 
         // Non-ASCII should be ignored
-        set.allow_str("α", "β");  // Greek
-        set.allow_str("你", "好");  // Chinese
+        set.allow_str("α", "β"); // Greek
+        set.allow_str("你", "好"); // Chinese
 
         // Nothing should be added
         assert!(!set.contains_str("α".as_bytes(), "β".as_bytes()));
@@ -1285,7 +1334,7 @@ mod tests {
         let mut set = SubstitutionSet::new();
 
         // Empty strings should not cause panics and are handled gracefully
-        set.allow_str("", "");  // Neither stored in single-char nor multi-char
+        set.allow_str("", ""); // Neither stored in single-char nor multi-char
         set.allow_str("a", ""); // Only 'a' is single-char, empty target is not stored
         set.allow_str("", "b"); // Empty source means nothing to match
 
@@ -1311,7 +1360,7 @@ mod tests {
         assert!(set.has_source(b"f"));
         assert!(set.has_source(b"k"));
         assert!(!set.has_source(b"a"));
-        assert!(!set.has_source(b"p"));  // 'p' is a target, not a source
+        assert!(!set.has_source(b"p")); // 'p' is a target, not a source
     }
 
     #[test]
@@ -1327,8 +1376,8 @@ mod tests {
         assert!(set.has_source(b"ph"));
         assert!(set.has_source(b"ch"));
         assert!(set.has_source(b"k"));
-        assert!(!set.has_source(b"f"));   // 'f' is a target, not a source
-        assert!(!set.has_source(b"th"));  // 'th' doesn't exist as source
+        assert!(!set.has_source(b"f")); // 'f' is a target, not a source
+        assert!(!set.has_source(b"th")); // 'th' doesn't exist as source
     }
 
     #[test]
@@ -1341,10 +1390,10 @@ mod tests {
         set.allow_str("k", "ch");
 
         // Test both single and multi-char sources
-        assert!(set.has_source(b"f"));   // Single-char source
-        assert!(set.has_source(b"ph"));  // Multi-char source
-        assert!(set.has_source(b"k"));   // Single-char source
-        assert!(!set.has_source(b"p"));  // Target, not source
+        assert!(set.has_source(b"f")); // Single-char source
+        assert!(set.has_source(b"ph")); // Multi-char source
+        assert!(set.has_source(b"k")); // Single-char source
+        assert!(!set.has_source(b"p")); // Target, not source
         assert!(!set.has_source(b"ch")); // Target, not source
     }
 
@@ -1357,7 +1406,7 @@ mod tests {
         set.allow_str("c", "d");
         set.allow_str("e", "f");
         set.allow_str("g", "h");
-        set.allow_str("i", "j");  // 5th pair - triggers upgrade
+        set.allow_str("i", "j"); // 5th pair - triggers upgrade
 
         // All sources should still be found after upgrade
         assert!(set.has_source(b"a"));
@@ -1365,7 +1414,7 @@ mod tests {
         assert!(set.has_source(b"e"));
         assert!(set.has_source(b"g"));
         assert!(set.has_source(b"i"));
-        assert!(!set.has_source(b"b"));  // Target, not source
+        assert!(!set.has_source(b"b")); // Target, not source
     }
 
     #[test]
@@ -1388,10 +1437,10 @@ mod tests {
         set.allow_str("t", "th");
 
         // Test which single characters can be split
-        assert!(set.has_source(b"k"));  // k→ch
-        assert!(set.has_source(b"s"));  // s→sh
-        assert!(set.has_source(b"f"));  // f→ph
-        assert!(set.has_source(b"t"));  // t→th
+        assert!(set.has_source(b"k")); // k→ch
+        assert!(set.has_source(b"s")); // s→sh
+        assert!(set.has_source(b"f")); // f→ph
+        assert!(set.has_source(b"t")); // t→th
         assert!(!set.has_source(b"a")); // a cannot be split
         assert!(!set.has_source(b"e")); // e cannot be split
     }
@@ -1490,8 +1539,8 @@ mod tests {
         set.allow_str("th", "t");
 
         // Test split targets (input char should match first char of target)
-        assert!(set.has_target_starting_with(b"k", 'c'));  // k→ch, need 'c' then 'h'
-        assert!(set.has_target_starting_with(b"t", 't'));  // t→th, need 't' then 'h'
+        assert!(set.has_target_starting_with(b"k", 'c')); // k→ch, need 'c' then 'h'
+        assert!(set.has_target_starting_with(b"t", 't')); // t→th, need 't' then 'h'
         assert!(!set.has_target_starting_with(b"t", 'a')); // t→th, 'a' not valid first char
         assert!(!set.has_target_starting_with(b"k", 'a')); // k→ch, 'a' not valid first char
 
@@ -1500,4 +1549,3 @@ mod tests {
         assert!(set.has_target_starting_with(b"th", 't')); // th→t
     }
 }
-

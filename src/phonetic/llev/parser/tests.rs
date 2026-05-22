@@ -9,15 +9,13 @@ fn test_parse_simple_expression() {
     let expr = parse_expression("abc").expect("test: parse_expression abc");
     // Should be Concat(Concat(Char('a'), Char('b')), Char('c'))
     match expr {
-        Expression::Concat(left, right) => {
-            match (*left, *right) {
-                (Expression::Concat(ll, lr), Expression::Char('c')) => {
-                    assert!(matches!(*ll, Expression::Char('a')));
-                    assert!(matches!(*lr, Expression::Char('b')));
-                }
-                _ => panic!("unexpected structure"),
+        Expression::Concat(left, right) => match (*left, *right) {
+            (Expression::Concat(ll, lr), Expression::Char('c')) => {
+                assert!(matches!(*ll, Expression::Char('a')));
+                assert!(matches!(*lr, Expression::Char('b')));
             }
-        }
+            _ => panic!("unexpected structure"),
+        },
         _ => panic!("expected Concat"),
     }
 }
@@ -982,7 +980,10 @@ fn test_parse_define_lowercase_symbol_rejected() {
     let result = parse_str(input);
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(matches!(err.kind, LLevErrorKind::SymbolNameMustBeUppercase { .. }));
+    assert!(matches!(
+        err.kind,
+        LLevErrorKind::SymbolNameMustBeUppercase { .. }
+    ));
 }
 
 #[test]
@@ -990,9 +991,9 @@ fn test_parse_define_uppercase_required() {
     // Test that only UPPERCASE symbol names are accepted
     // These should fail (contain lowercase)
     let invalid_inputs = vec![
-        "@define vowel = [aeiou]",  // all lowercase
-        "@define Vowel = [aeiou]",  // mixed case
-        "@define alpha = [abc]",    // all lowercase
+        "@define vowel = [aeiou]", // all lowercase
+        "@define Vowel = [aeiou]", // mixed case
+        "@define alpha = [abc]",   // all lowercase
     ];
 
     for input in invalid_inputs {
@@ -1001,7 +1002,8 @@ fn test_parse_define_uppercase_required() {
         let err = result.unwrap_err();
         assert!(
             matches!(err.kind, LLevErrorKind::SymbolNameMustBeUppercase { .. }),
-            "expected SymbolNameMustBeUppercase for: {}", input
+            "expected SymbolNameMustBeUppercase for: {}",
+            input
         );
     }
 
@@ -1014,7 +1016,12 @@ fn test_parse_define_uppercase_required() {
 
     for input in valid_inputs {
         let result = parse_str(input);
-        assert!(result.is_ok(), "should succeed for: {}, got: {:?}", input, result.err());
+        assert!(
+            result.is_ok(),
+            "should succeed for: {}, got: {:?}",
+            input,
+            result.err()
+        );
     }
 }
 
@@ -1612,7 +1619,8 @@ fn test_feature_bundle_single_negated() {
 #[test]
 fn test_feature_bundle_three_features() {
     // [:high front vowel:] should give high front vowels only
-    let file = parse_str("[:high_vowel front_vowel vowel:] -> I").expect("test: parse multi-feature class");
+    let file = parse_str("[:high_vowel front_vowel vowel:] -> I")
+        .expect("test: parse multi-feature class");
     let rule = &file.rules[0].rule;
     if let Expression::CharClass { chars, negated } = &rule.pattern {
         assert!(!negated);
@@ -1633,7 +1641,8 @@ fn test_feature_bundle_three_features() {
 #[test]
 fn test_feature_bundle_nested_syntax() {
     // Nested syntax [[:voiced stop:]] should also work
-    let file = parse_str("[x[[:voiced stop:]]] -> X").expect("test: parse [x[[:voiced stop:]]] -> X");
+    let file =
+        parse_str("[x[[:voiced stop:]]] -> X").expect("test: parse [x[[:voiced stop:]]] -> X");
     let rule = &file.rules[0].rule;
     if let Expression::CharClass { chars, negated } = &rule.pattern {
         assert!(!negated);
@@ -1689,7 +1698,10 @@ fn test_parse_scoped_flags_case_sensitive_c() {
         } else if let Expression::Char(_) = **inner {
             // Single char also ok for short patterns
         } else {
-            panic!("expected Concat or Char inside ScopedFlags, got {:?}", inner);
+            panic!(
+                "expected Concat or Char inside ScopedFlags, got {:?}",
+                inner
+            );
         }
     } else {
         panic!("expected ScopedFlags, got {:?}", rule.pattern);

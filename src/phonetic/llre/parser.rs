@@ -11,9 +11,7 @@
 use crate::phonetic::common::Position;
 use crate::phonetic::regex::{self, Regex as RegexAst};
 
-use super::ast::{
-    Directive, FileMetadata, ImportDirective, LLreFile, LLreFlags, SymbolTable,
-};
+use super::ast::{Directive, FileMetadata, ImportDirective, LLreFile, LLreFlags, SymbolTable};
 use super::error::{LLreError, LLreErrorKind, LLreResult};
 
 /// Parser for `.llre` files.
@@ -610,7 +608,10 @@ impl<'a> Parser<'a> {
             if potential.eq_ignore_ascii_case(keyword) {
                 // Make sure it's followed by a non-identifier character
                 let after = remaining.chars().nth(keyword.len());
-                if after.map(|c| !c.is_alphanumeric() && c != '_').unwrap_or(true) {
+                if after
+                    .map(|c| !c.is_alphanumeric() && c != '_')
+                    .unwrap_or(true)
+                {
                     // Advance past the keyword
                     for _ in 0..keyword.len() {
                         self.advance();

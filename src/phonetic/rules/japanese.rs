@@ -92,7 +92,10 @@ mod tests {
     #[test]
     fn test_romaji_loads() {
         let rules = romaji();
-        assert!(!rules.is_empty(), "Japanese romaji rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Japanese romaji rules should not be empty"
+        );
         assert!(
             rules.len() > 35,
             "expected >35 romaji rules, got {}",
@@ -261,5 +264,4 @@ mod tests {
             result
         );
     }
-
 }

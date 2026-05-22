@@ -44,14 +44,14 @@ static DEVANAGARI_VOWELS: &[char] = &[
     'ा', // aa matra
     'ि', // i matra
     'ी', // ii matra
-    'ु', // u matra
-    'ू', // uu matra
-    'ृ', // r matra
-    'ॄ', // rr matra
-    'ॢ', // l matra
-    'ॣ', // ll matra
-    'े', // e matra
-    'ै', // ai matra
+    'ु',  // u matra
+    'ू',  // uu matra
+    'ृ',  // r matra
+    'ॄ',  // rr matra
+    'ॢ',  // l matra
+    'ॣ',  // ll matra
+    'े',  // e matra
+    'ै',  // ai matra
     'ो', // o matra
     'ौ', // au matra
 ];
@@ -189,7 +189,7 @@ mod tests {
         assert!(c.is_consonant('क')); // ka (base for qa)
         assert!(c.is_consonant('ड')); // da (base for dda)
         assert!(c.is_consonant('ढ')); // dha (base for ddha)
-        // Nukta itself is neither vowel nor consonant
+                                      // Nukta itself is neither vowel nor consonant
         assert!(!c.is_vowel('\u{093C}')); // nukta
     }
 }

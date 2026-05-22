@@ -198,20 +198,18 @@ pub mod corpus;
 
 /// Common imports for convenient usage
 pub mod prelude {
+    pub use crate::transducer::{
+        Algorithm, Candidate, QueryBuilder, Transducer, TransducerBuilder,
+    };
     pub use libdictenstein::double_array_trie::DoubleArrayTrie;
     pub use libdictenstein::dynamic_dawg::DynamicDawg;
-    pub use libdictenstein::factory::{
-        DictionaryBackend, DictionaryContainer, DictionaryFactory,
-    };
+    pub use libdictenstein::factory::{DictionaryBackend, DictionaryContainer, DictionaryFactory};
     #[cfg(feature = "pathmap-backend")]
     pub use libdictenstein::pathmap::PathMapDictionary;
     #[cfg(feature = "persistent-artrie")]
     pub use libdictenstein::persistent_artrie::{PersistentARTrie, PersistentARTrieZipper};
     pub use libdictenstein::suffix_automaton::SuffixAutomaton;
     pub use libdictenstein::{Dictionary, DictionaryNode, SyncStrategy};
-    pub use crate::transducer::{
-        Algorithm, Candidate, QueryBuilder, Transducer, TransducerBuilder,
-    };
 
     #[cfg(feature = "serialization")]
     pub use crate::serialization::{
@@ -236,18 +234,18 @@ pub mod prelude {
     // This module remains in liblevenshtein since it depends on phonetic NFAs
     #[cfg(feature = "phonetic-rules")]
     pub use crate::dictionary::phonetic_normalized::{
-        PhoneticNormalizedCandidate, PhoneticNormalizedDictionary, PhoneticNormalizedDictionaryChar,
-        PhoneticNormalizedNode, PhoneticNormalizedZipper, RegexQueryError,
+        PhoneticNormalizedCandidate, PhoneticNormalizedDictionary,
+        PhoneticNormalizedDictionaryChar, PhoneticNormalizedNode, PhoneticNormalizedZipper,
+        RegexQueryError,
     };
 
     // WallBreaker for large error bounds
+    pub use crate::wallbreaker::{
+        PatternPiece, PatternSplitter, WallBreaker, WallBreakerQuery, WallBreakerResult,
+    };
     pub use libdictenstein::scdawg::Scdawg;
     pub use libdictenstein::scdawg_char::ScdawgChar;
     pub use libdictenstein::substring::{
         BidirectionalDictionaryNode, SubstringDictionary, SubstringMatch,
     };
-    pub use crate::wallbreaker::{
-        PatternPiece, PatternSplitter, WallBreaker, WallBreakerQuery, WallBreakerResult,
-    };
-
 }

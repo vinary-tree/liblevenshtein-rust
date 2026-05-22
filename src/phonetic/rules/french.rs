@@ -157,35 +157,59 @@ mod tests {
     fn test_base_loads() {
         let rules = base();
         assert!(!rules.is_empty(), "French base rules should not be empty");
-        assert!(rules.len() > 50, "expected >50 base rules, got {}", rules.len());
+        assert!(
+            rules.len() > 50,
+            "expected >50 base rules, got {}",
+            rules.len()
+        );
     }
 
     #[test]
     fn test_standard_loads() {
         let rules = standard();
-        assert!(!rules.is_empty(), "Standard French rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Standard French rules should not be empty"
+        );
     }
 
     #[test]
     fn test_canadian_loads() {
         let rules = canadian();
-        assert!(!rules.is_empty(), "Canadian French rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Canadian French rules should not be empty"
+        );
     }
 
     #[test]
     fn test_combined_standard_loads() {
         let rules = combined_standard();
-        assert!(!rules.is_empty(), "Combined Standard French rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Combined Standard French rules should not be empty"
+        );
         let total = base().len() + standard().len();
-        assert_eq!(rules.len(), total, "combined_standard should have all rules");
+        assert_eq!(
+            rules.len(),
+            total,
+            "combined_standard should have all rules"
+        );
     }
 
     #[test]
     fn test_combined_canadian_loads() {
         let rules = combined_canadian();
-        assert!(!rules.is_empty(), "Combined Canadian French rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Combined Canadian French rules should not be empty"
+        );
         let total = base().len() + canadian().len();
-        assert_eq!(rules.len(), total, "combined_canadian should have all rules");
+        assert_eq!(
+            rules.len(),
+            total,
+            "combined_canadian should have all rules"
+        );
     }
 
     #[test]
@@ -217,7 +241,11 @@ mod tests {
         let rules = base();
         // bon → bɔ̃ (nasal vowel in IPA)
         let result = rules.apply("bon");
-        assert!(result.contains("ɔ̃"), "on should become nasal ɔ̃, got: {}", result);
+        assert!(
+            result.contains("ɔ̃"),
+            "on should become nasal ɔ̃, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -227,8 +255,11 @@ mod tests {
         // But the actual output depends on rule order
         let result = rules.apply("moi");
         // Accept either "wa" (if w->v not applied) or "va" (if w->v applied)
-        assert!(result.contains("wa") || result.contains("va"),
-            "oi should become wa or va, got: {}", result);
+        assert!(
+            result.contains("wa") || result.contains("va"),
+            "oi should become wa or va, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -236,7 +267,11 @@ mod tests {
         let rules = base();
         // petit → peti (silent t)
         let result = rules.apply("petit");
-        assert!(!result.ends_with('t'), "final t should be silent, got: {}", result);
+        assert!(
+            !result.ends_with('t'),
+            "final t should be silent, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -244,7 +279,11 @@ mod tests {
         let rules = base();
         // centre → sentre
         let result = rules.apply("centre");
-        assert!(result.starts_with('s'), "c before e should become s, got: {}", result);
+        assert!(
+            result.starts_with('s'),
+            "c before e should become s, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -252,7 +291,11 @@ mod tests {
         let rules = base();
         // geste → ZHeste (capitals to avoid re-matching)
         let result = rules.apply("geste");
-        assert!(result.contains("ʒ"), "g before e should become ZH, got: {}", result);
+        assert!(
+            result.contains("ʒ"),
+            "g before e should become ZH, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -260,7 +303,11 @@ mod tests {
         let rules = combined_canadian();
         // tu → tsu (affrication in Québécois)
         let result = rules.apply("tu");
-        assert!(result.contains("t͡s"), "t before u should affricate in Québécois, got: {}", result);
+        assert!(
+            result.contains("t͡s"),
+            "t before u should affricate in Québécois, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -269,7 +316,11 @@ mod tests {
         // tu → tu (no affrication in Standard French)
         let result = rules.apply("tu");
         // Standard French should NOT have affrication
-        assert!(!result.contains("t͡s"), "Standard French should not affricate, got: {}", result);
+        assert!(
+            !result.contains("t͡s"),
+            "Standard French should not affricate, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -283,9 +334,12 @@ mod tests {
 
         // The difference may be subtle due to rule ordering
         // At minimum, Canadian should have some affrication marker
-        assert!(petit_ca.contains("t͡s") || petit_fr != petit_ca,
+        assert!(
+            petit_ca.contains("t͡s") || petit_fr != petit_ca,
             "Dialects should normalize 'petit' differently: fr='{}', fr-ca='{}'",
-            petit_fr, petit_ca);
+            petit_fr,
+            petit_ca
+        );
     }
 
     #[test]
@@ -317,6 +371,10 @@ mod tests {
         let rules = base();
         // nation → nasjɔ̃ (tion -> sjɔ̃ in IPA)
         let result = rules.apply("nation");
-        assert!(result.contains("sjɔ̃"), "tion should become sjɔ̃, got: {}", result);
+        assert!(
+            result.contains("sjɔ̃"),
+            "tion should become sjɔ̃, got: {}",
+            result
+        );
     }
 }

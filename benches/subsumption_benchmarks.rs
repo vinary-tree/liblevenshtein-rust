@@ -85,7 +85,11 @@ fn bench_batch_subsumption(c: &mut Criterion) {
                             }
 
                             // Then remove subsumed positions (simulating unsubsume)
-                            batch_unsubsume(&mut state_positions, black_box(*algorithm), query_length);
+                            batch_unsubsume(
+                                &mut state_positions,
+                                black_box(*algorithm),
+                                query_length,
+                            );
 
                             // Sort (like C++ does)
                             state_positions.sort();

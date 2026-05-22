@@ -15,14 +15,7 @@ fn main() {
     println!("=== Phonetic Matching with Restricted Substitutions ===\n");
 
     // Create a dictionary of correctly spelled words
-    let terms = vec![
-        "phone",
-        "center",
-        "cat",
-        "dogs",
-        "philosophy",
-        "circle",
-    ];
+    let terms = vec!["phone", "center", "cat", "dogs", "philosophy", "circle"];
 
     let dict = DoubleArrayTrie::from_terms(terms.clone());
     println!("Dictionary terms: {:?}\n", terms);
@@ -41,12 +34,12 @@ fn main() {
 
     // Test phonetic queries
     let test_queries = vec![
-        ("fone", "phone"),         // f↔p (ph sound)
+        ("fone", "phone"),          // f↔p (ph sound)
         ("filosofy", "philosophy"), // f↔p, f↔p
-        ("kat", "cat"),            // k↔c
-        ("senter", "center"),      // s↔c
-        ("dogz", "dogs"),          // z↔s
-        ("sirkle", "circle"),      // s↔c, k↔c
+        ("kat", "cat"),             // k↔c
+        ("senter", "center"),       // s↔c
+        ("dogz", "dogs"),           // z↔s
+        ("sirkle", "circle"),       // s↔c, k↔c
     ];
 
     println!("Testing phonetic queries (max distance = 2):\n");
@@ -54,10 +47,7 @@ fn main() {
     for (query, expected) in test_queries {
         print!("Query: {:8} → ", query);
 
-        let results: Vec<String> = transducer
-            .query(query, 2)
-            .take(5)
-            .collect();
+        let results: Vec<String> = transducer.query(query, 2).take(5).collect();
 
         if results.contains(&expected.to_string()) {
             println!("✓ Found '{}' (matches: {:?})", expected, results);

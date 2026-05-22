@@ -347,7 +347,7 @@ impl OperationType {
 
         // Check restriction set if present
         match &self.restriction {
-            None => true,  // Unrestricted operation
+            None => true, // Unrestricted operation
             Some(set) => set.contains_str(dict_chars, query_chars),
         }
     }
@@ -407,7 +407,7 @@ impl OperationType {
 
         // Check restriction set if present
         match &self.restriction {
-            None => true,  // Unrestricted operation can apply to any source
+            None => true, // Unrestricted operation can apply to any source
             Some(set) => set.has_source(dict_chars),
         }
     }
@@ -476,7 +476,7 @@ impl OperationType {
 
         // Check restriction set if present
         match &self.restriction {
-            None => false,  // Unrestricted operations don't have specific targets to check
+            None => false, // Unrestricted operations don't have specific targets to check
             Some(set) => set.has_target_starting_with(dict_chars, first_target_char),
         }
     }
@@ -609,8 +609,8 @@ mod tests {
         let split_op = OperationType::with_restriction(1, 2, 0.15, phonetic, "split");
 
         // Sources that exist in restriction set
-        assert!(split_op.can_apply_to_source(b"k"));  // k→ch
-        assert!(split_op.can_apply_to_source(b"t"));  // t→th
+        assert!(split_op.can_apply_to_source(b"k")); // k→ch
+        assert!(split_op.can_apply_to_source(b"t")); // t→th
 
         // Sources that don't exist in restriction set
         assert!(!split_op.can_apply_to_source(b"a"));
@@ -618,7 +618,7 @@ mod tests {
         assert!(!split_op.can_apply_to_source(b"s"));
 
         // Wrong length
-        assert!(!split_op.can_apply_to_source(b"ch"));  // Target, not source, and wrong length
+        assert!(!split_op.can_apply_to_source(b"ch")); // Target, not source, and wrong length
     }
 
     #[test]
@@ -631,8 +631,8 @@ mod tests {
         let merge_op = OperationType::with_restriction(2, 1, 0.15, phonetic, "merge");
 
         // Multi-char sources that exist
-        assert!(merge_op.can_apply_to_source(b"ch"));  // ch→k
-        assert!(merge_op.can_apply_to_source(b"sh"));  // sh→s
+        assert!(merge_op.can_apply_to_source(b"ch")); // ch→k
+        assert!(merge_op.can_apply_to_source(b"sh")); // sh→s
 
         // Sources that don't exist
         assert!(!merge_op.can_apply_to_source(b"ph"));
@@ -655,7 +655,7 @@ mod tests {
 
         // can_apply checks both source AND target
         assert!(split_op.can_apply(b"k", b"ch"));
-        assert!(!split_op.can_apply(b"k", b"sh"));  // Wrong target
+        assert!(!split_op.can_apply(b"k", b"sh")); // Wrong target
 
         // Source doesn't exist
         assert!(!split_op.can_apply_to_source(b"a"));

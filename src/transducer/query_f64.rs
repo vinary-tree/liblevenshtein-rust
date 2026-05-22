@@ -142,8 +142,11 @@ impl<N: DictionaryNode, R: QueryResultF64> QueryIteratorF64<N, R, Unrestricted> 
     }
 }
 
-impl<N: DictionaryNode, R: QueryResultF64, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
-    QueryIteratorF64<N, R, P>
+impl<
+        N: DictionaryNode,
+        R: QueryResultF64,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    > QueryIteratorF64<N, R, P>
 {
     /// Create a new float-weighted query iterator with custom substitution policy.
     pub fn with_policy(
@@ -254,8 +257,11 @@ impl<N: DictionaryNode, R: QueryResultF64, P: SubstitutionPolicy + SubstitutionP
     }
 }
 
-impl<N: DictionaryNode, R: QueryResultF64, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
-    Iterator for QueryIteratorF64<N, R, P>
+impl<
+        N: DictionaryNode,
+        R: QueryResultF64,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    > Iterator for QueryIteratorF64<N, R, P>
 {
     type Item = R;
 
@@ -286,8 +292,13 @@ mod tests {
     fn test_query_exact_match() {
         let dict = DoubleArrayTrie::from_terms(vec!["test"]);
         let costs = OperationCostsF64::standard();
-        let query: QueryIteratorF64<_, String> =
-            QueryIteratorF64::new(dict.root(), "test".to_string(), 0.0, Algorithm::Standard, costs);
+        let query: QueryIteratorF64<_, String> = QueryIteratorF64::new(
+            dict.root(),
+            "test".to_string(),
+            0.0,
+            Algorithm::Standard,
+            costs,
+        );
 
         let result: Vec<_> = query.collect();
         assert_eq!(result, vec!["test"]);
@@ -369,9 +380,13 @@ mod tests {
 
         let candidates: Vec<_> = query.collect();
         // "the" should match exactly (distance 0)
-        assert!(candidates.iter().any(|c| c.term == "the" && c.distance.abs() < EPSILON));
+        assert!(candidates
+            .iter()
+            .any(|c| c.term == "the" && c.distance.abs() < EPSILON));
         // "teh" requires transposition (cost 0.5 in typo_friendly)
-        assert!(candidates.iter().any(|c| c.term == "teh" && (c.distance - 0.5).abs() < EPSILON));
+        assert!(candidates
+            .iter()
+            .any(|c| c.term == "teh" && (c.distance - 0.5).abs() < EPSILON));
     }
 
     #[test]
@@ -406,13 +421,8 @@ mod tests {
         let dict = DoubleArrayTrie::from_terms(vec!["a", "ab"]);
         let costs = OperationCostsF64::standard();
 
-        let query = CandidateIteratorF64::new(
-            dict.root(),
-            "".to_string(),
-            1.0,
-            Algorithm::Standard,
-            costs,
-        );
+        let query =
+            CandidateIteratorF64::new(dict.root(), "".to_string(), 1.0, Algorithm::Standard, costs);
 
         let candidates: Vec<_> = query.collect();
         // Empty query with max_cost 1.0 should match single-char words

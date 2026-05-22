@@ -218,7 +218,11 @@ impl State {
             }
 
             // Scalar fallback for len > 8 or when SIMD unavailable
-            self.positions.iter().map(|p| p.num_errors).min().expect("State::min_distance: positions non-empty (first exists)")
+            self.positions
+                .iter()
+                .map(|p| p.num_errors)
+                .min()
+                .expect("State::min_distance: positions non-empty (first exists)")
         })
     }
 

@@ -71,7 +71,11 @@ const MANNER_DISTANCES: &[(PhoneticFeature, PhoneticFeature, f64)] = &[
     (PhoneticFeature::Stop, PhoneticFeature::Approximant, 0.4),
     // Fricative related
     (PhoneticFeature::Fricative, PhoneticFeature::Affricate, 0.2),
-    (PhoneticFeature::Fricative, PhoneticFeature::Approximant, 0.3),
+    (
+        PhoneticFeature::Fricative,
+        PhoneticFeature::Approximant,
+        0.3,
+    ),
     // Nasal related
     (PhoneticFeature::Nasal, PhoneticFeature::Approximant, 0.3),
     // Approximant related
@@ -448,7 +452,11 @@ mod tests {
 
         // Single substitution with similar sounds
         let dist = articulatory_edit_distance("pat", "bat");
-        assert!(dist > 0.0 && dist < 1.0, "pat-bat should have fractional distance: {}", dist);
+        assert!(
+            dist > 0.0 && dist < 1.0,
+            "pat-bat should have fractional distance: {}",
+            dist
+        );
 
         // Single substitution with different sounds
         let dist2 = articulatory_edit_distance("pat", "hat");

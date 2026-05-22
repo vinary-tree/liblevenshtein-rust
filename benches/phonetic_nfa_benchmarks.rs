@@ -240,7 +240,9 @@ fn bench_verified_rules(c: &mut Criterion) {
     let zompist_nfa = zompist_nfa_char();
 
     // Pattern recognition
-    let patterns = ["ch", "sh", "ph", "gh", "th", "qu", "kw", "c", "g", "e", "x", "y"];
+    let patterns = [
+        "ch", "sh", "ph", "gh", "th", "qu", "kw", "c", "g", "e", "x", "y",
+    ];
 
     group.throughput(Throughput::Elements(patterns.len() as u64));
     group.bench_function("pattern_recognition", |b| {
@@ -262,9 +264,8 @@ fn bench_phonetic_transducer(c: &mut Criterion) {
     let mut group = c.benchmark_group("phonetic_transducer");
 
     // Small dictionary
-    let small_dict = DoubleArrayTrieChar::from_terms([
-        "phone", "phones", "phoned", "phoning", "fone", "fones",
-    ]);
+    let small_dict =
+        DoubleArrayTrieChar::from_terms(["phone", "phones", "phoned", "phoning", "fone", "fones"]);
 
     // Medium dictionary
     let medium_terms: Vec<_> = (0..1000).map(|i| format!("word{}", i)).collect();

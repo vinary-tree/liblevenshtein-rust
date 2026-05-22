@@ -168,10 +168,7 @@ impl<'a> SyllableParser for Parser<'a> {
         position: Position,
     ) -> Self::Error {
         LLevError::with_position(
-            LLevErrorKind::InvalidPattern(format!(
-                "expected {}, got {:?}",
-                expected, found
-            )),
+            LLevErrorKind::InvalidPattern(format!("expected {}, got {:?}", expected, found)),
             position,
         )
     }

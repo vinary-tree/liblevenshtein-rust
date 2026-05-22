@@ -184,9 +184,9 @@ impl<N: DictionaryNode> Clone for Intersection<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transducer::Position;
     use libdictenstein::double_array_trie::DoubleArrayTrie;
     use libdictenstein::Dictionary;
-    use crate::transducer::Position;
 
     #[test]
     fn test_intersection_creation() {
@@ -205,7 +205,9 @@ mod tests {
         let root = dict.root();
 
         // Build path: t -> e -> s using PathNode
-        let t_node = root.transition(b't').expect("test fixture: 't' exists in dictionary root");
+        let t_node = root
+            .transition(b't')
+            .expect("test fixture: 't' exists in dictionary root");
         let _i2 = Intersection::with_parent(
             b't',
             t_node.clone(),
@@ -213,7 +215,9 @@ mod tests {
             None, // Root parent
         );
 
-        let e_node = t_node.transition(b'e').expect("test fixture: 'e' exists at t-node");
+        let e_node = t_node
+            .transition(b'e')
+            .expect("test fixture: 'e' exists at t-node");
         let _i3 = Intersection::with_parent(
             b'e',
             e_node.clone(),
@@ -221,7 +225,9 @@ mod tests {
             Some(Box::new(PathNode::new(b't', None))), // t -> root
         );
 
-        let s_node = e_node.transition(b's').expect("test fixture: 's' exists at e-node");
+        let s_node = e_node
+            .transition(b's')
+            .expect("test fixture: 's' exists at e-node");
         let i4 = Intersection::with_parent(
             b's',
             s_node,

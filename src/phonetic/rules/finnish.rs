@@ -96,11 +96,7 @@ mod tests {
         let rules = base();
         // ä → AE
         let result = rules.apply("ä");
-        assert!(
-            result.contains("æ"),
-            "ä should become AE, got: {}",
-            result
-        );
+        assert!(result.contains("æ"), "ä should become AE, got: {}", result);
     }
 
     #[test]
@@ -108,11 +104,7 @@ mod tests {
         let rules = base();
         // ö → OE
         let result = rules.apply("ö");
-        assert!(
-            result.contains("ø"),
-            "ö should become OE, got: {}",
-            result
-        );
+        assert!(result.contains("ø"), "ö should become OE, got: {}", result);
     }
 
     #[test]
@@ -156,11 +148,7 @@ mod tests {
         let rules = base();
         // b → p (loanwords)
         let result = rules.apply("b");
-        assert!(
-            result.contains('p'),
-            "b should become p, got: {}",
-            result
-        );
+        assert!(result.contains('p'), "b should become p, got: {}", result);
     }
 
     #[test]
@@ -168,11 +156,7 @@ mod tests {
         let rules = base();
         // z → ts (loanwords)
         let result = rules.apply("z");
-        assert!(
-            result.contains("t͡s"),
-            "z should become ts, got: {}",
-            result
-        );
+        assert!(result.contains("t͡s"), "z should become ts, got: {}", result);
     }
 
     #[test]
@@ -211,5 +195,4 @@ mod tests {
             result
         );
     }
-
 }

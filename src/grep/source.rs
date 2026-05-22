@@ -100,7 +100,10 @@ impl GrepPath {
         let (path_str, filter) = Self::split_path_filter(input)?;
 
         if path_str.is_empty() {
-            return Err(GrepError::invalid_path(input, "filesystem path cannot be empty"));
+            return Err(GrepError::invalid_path(
+                input,
+                "filesystem path cannot be empty",
+            ));
         }
 
         let path = PathBuf::from(path_str);
@@ -277,7 +280,12 @@ mod tests {
         assert_eq!(path.filesystem_path, PathBuf::from("archive.tar"));
         assert!(path.archive_filter.is_none());
         assert_eq!(path.compression, CompressionFormat::None);
-        assert!(matches!(path.archive, ArchiveFormat::Tar { compression: CompressionFormat::None }));
+        assert!(matches!(
+            path.archive,
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::None
+            }
+        ));
         assert!(path.is_archive());
     }
 
@@ -288,7 +296,12 @@ mod tests {
         assert_eq!(path.filesystem_path, PathBuf::from("archive.tar.gz"));
         assert!(path.archive_filter.is_none());
         assert_eq!(path.compression, CompressionFormat::Gzip);
-        assert!(matches!(path.archive, ArchiveFormat::Tar { compression: CompressionFormat::Gzip }));
+        assert!(matches!(
+            path.archive,
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Gzip
+            }
+        ));
     }
 
     #[cfg(any(feature = "tar", feature = "zip"))]

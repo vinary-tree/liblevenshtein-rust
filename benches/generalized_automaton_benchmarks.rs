@@ -21,21 +21,12 @@ fn bench_state_transition_by_input_length(c: &mut Criterion) {
     // Test with different input lengths: 3, 5, 8, 12, 15 characters
     for input_len in [3, 5, 8, 12, 15].iter() {
         let word = "benchmark".chars().take(*input_len).collect::<String>();
-        let input = "bencmark".chars().take(*input_len).collect::<String>();  // 1 error (h missing)
+        let input = "bencmark".chars().take(*input_len).collect::<String>(); // 1 error (h missing)
 
         group.throughput(Throughput::Elements(*input_len as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(input_len),
-            input_len,
-            |b, _| {
-                b.iter(|| {
-                    black_box(automaton.accepts(
-                        black_box(&word),
-                        black_box(&input)
-                    ))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(input_len), input_len, |b, _| {
+            b.iter(|| black_box(automaton.accepts(black_box(&word), black_box(&input))));
+        });
     }
 
     group.finish();
@@ -46,7 +37,7 @@ fn bench_state_transition_by_distance(c: &mut Criterion) {
     let mut group = c.benchmark_group("state_transition/by_distance");
 
     let word = "benchmark";
-    let input = "bencmark";  // 1 error
+    let input = "bencmark"; // 1 error
 
     // Test with different maximum distances: 0, 1, 2, 3
     for max_distance in [0, 1, 2, 3].iter() {
@@ -56,12 +47,7 @@ fn bench_state_transition_by_distance(c: &mut Criterion) {
             max_distance,
             |b, &dist| {
                 let automaton = GeneralizedAutomaton::new(dist);
-                b.iter(|| {
-                    black_box(automaton.accepts(
-                        black_box(word),
-                        black_box(input)
-                    ))
-                });
+                b.iter(|| black_box(automaton.accepts(black_box(word), black_box(input))));
             },
         );
     }
@@ -79,12 +65,7 @@ fn bench_input_scenarios(c: &mut Criterion) {
 
     // Best case: exact match (distance 0)
     group.bench_function("exact_match", |b| {
-        b.iter(|| {
-            black_box(automaton.accepts(
-                black_box(word),
-                black_box("benchmark")
-            ))
-        });
+        b.iter(|| black_box(automaton.accepts(black_box(word), black_box("benchmark"))));
     });
 
     // Average case: 1 error
@@ -92,7 +73,7 @@ fn bench_input_scenarios(c: &mut Criterion) {
         b.iter(|| {
             black_box(automaton.accepts(
                 black_box(word),
-                black_box("bencmark")  // missing 'h'
+                black_box("bencmark"), // missing 'h'
             ))
         });
     });
@@ -102,7 +83,7 @@ fn bench_input_scenarios(c: &mut Criterion) {
         b.iter(|| {
             black_box(automaton.accepts(
                 black_box(word),
-                black_box("bencmrk")  // missing 'h' and 'a'
+                black_box("bencmrk"), // missing 'h' and 'a'
             ))
         });
     });
@@ -112,7 +93,7 @@ fn bench_input_scenarios(c: &mut Criterion) {
         b.iter(|| {
             black_box(automaton.accepts(
                 black_box(word),
-                black_box("bncmrk")  // missing 'e', 'h', 'a' (3 errors)
+                black_box("bncmrk"), // missing 'e', 'h', 'a' (3 errors)
             ))
         });
     });
@@ -130,21 +111,12 @@ fn bench_word_length_scaling(c: &mut Criterion) {
     // Test with increasing word lengths
     for word_len in [5, 10, 15, 20].iter() {
         let word = "a".repeat(*word_len);
-        let input = "a".repeat(*word_len - 1);  // 1 deletion
+        let input = "a".repeat(*word_len - 1); // 1 deletion
 
         group.throughput(Throughput::Elements(*word_len as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(word_len),
-            word_len,
-            |b, _| {
-                b.iter(|| {
-                    black_box(automaton.accepts(
-                        black_box(&word),
-                        black_box(&input)
-                    ))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(word_len), word_len, |b, _| {
+            b.iter(|| black_box(automaton.accepts(black_box(&word), black_box(&input))));
+        });
     }
 
     group.finish();
@@ -159,12 +131,7 @@ fn bench_operation_types(c: &mut Criterion) {
 
     // Match operation (0 errors)
     group.bench_function("match", |b| {
-        b.iter(|| {
-            black_box(automaton.accepts(
-                black_box("test"),
-                black_box("test")
-            ))
-        });
+        b.iter(|| black_box(automaton.accepts(black_box("test"), black_box("test"))));
     });
 
     // Delete operation
@@ -172,7 +139,7 @@ fn bench_operation_types(c: &mut Criterion) {
         b.iter(|| {
             black_box(automaton.accepts(
                 black_box("test"),
-                black_box("tes")  // delete 't'
+                black_box("tes"), // delete 't'
             ))
         });
     });
@@ -182,7 +149,7 @@ fn bench_operation_types(c: &mut Criterion) {
         b.iter(|| {
             black_box(automaton.accepts(
                 black_box("test"),
-                black_box("tesst")  // insert 's'
+                black_box("tesst"), // insert 's'
             ))
         });
     });
@@ -192,7 +159,7 @@ fn bench_operation_types(c: &mut Criterion) {
         b.iter(|| {
             black_box(automaton.accepts(
                 black_box("test"),
-                black_box("tezt")  // substitute 's' with 'z'
+                black_box("tezt"), // substitute 's' with 'z'
             ))
         });
     });
@@ -209,7 +176,7 @@ fn bench_state_size_impact(c: &mut Criterion) {
 
     for max_distance in [1, 2, 3].iter() {
         let automaton = GeneralizedAutomaton::new(*max_distance);
-        let word = "abcdefghij";  // 10 chars
+        let word = "abcdefghij"; // 10 chars
         let input = "abcdefghij";
 
         group.throughput(Throughput::Elements(word.len() as u64));
@@ -217,12 +184,7 @@ fn bench_state_size_impact(c: &mut Criterion) {
             BenchmarkId::new("exact_match", max_distance),
             max_distance,
             |b, _| {
-                b.iter(|| {
-                    black_box(automaton.accepts(
-                        black_box(word),
-                        black_box(input)
-                    ))
-                });
+                b.iter(|| black_box(automaton.accepts(black_box(word), black_box(input))));
             },
         );
     }
@@ -230,20 +192,15 @@ fn bench_state_size_impact(c: &mut Criterion) {
     // Test with inputs that maximize state size (all positions non-subsumed)
     for max_distance in [1, 2, 3].iter() {
         let automaton = GeneralizedAutomaton::new(*max_distance);
-        let word = "aaaaaaaaaa";  // Repetitive word
-        let input = "bbbbbbbbbb";  // All mismatches
+        let word = "aaaaaaaaaa"; // Repetitive word
+        let input = "bbbbbbbbbb"; // All mismatches
 
         group.throughput(Throughput::Elements(word.len() as u64));
         group.bench_with_input(
             BenchmarkId::new("max_state", max_distance),
             max_distance,
             |b, _| {
-                b.iter(|| {
-                    black_box(automaton.accepts(
-                        black_box(word),
-                        black_box(input)
-                    ))
-                });
+                b.iter(|| black_box(automaton.accepts(black_box(word), black_box(input))));
             },
         );
     }
@@ -259,21 +216,16 @@ fn bench_realistic_words(c: &mut Criterion) {
     let automaton = GeneralizedAutomaton::new(max_distance);
 
     let test_cases = vec![
-        ("color", "colour", "color_colour"),      // 1 insert
-        ("gray", "grey", "gray_grey"),             // 1 substitute
-        ("theater", "theatre", "theater_theatre"), // 1 substitute
-        ("organize", "organise", "organize_organise"), // 1 substitute
+        ("color", "colour", "color_colour"),                   // 1 insert
+        ("gray", "grey", "gray_grey"),                         // 1 substitute
+        ("theater", "theatre", "theater_theatre"),             // 1 substitute
+        ("organize", "organise", "organize_organise"),         // 1 substitute
         ("definitely", "definately", "definitely_definately"), // 2 substitutes
     ];
 
     for (word, input, name) in test_cases {
         group.bench_function(name, |b| {
-            b.iter(|| {
-                black_box(automaton.accepts(
-                    black_box(word),
-                    black_box(input)
-                ))
-            });
+            b.iter(|| black_box(automaton.accepts(black_box(word), black_box(input))));
         });
     }
 

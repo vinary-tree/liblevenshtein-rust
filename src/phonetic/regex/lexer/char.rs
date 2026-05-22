@@ -300,7 +300,8 @@ impl<'a> Lexer<'a> {
             // Restore to state before tokenizing for peek
             self.in_char_class = saved_in_char_class;
             self.in_weight = saved_in_weight;
-            self.peeked.push((token, pos, new_in_char_class, new_in_weight));
+            self.peeked
+                .push((token, pos, new_in_char_class, new_in_weight));
         }
         Ok(&self.peeked.last().expect("just pushed").0)
     }
@@ -411,8 +412,8 @@ impl<'a> Lexer<'a> {
             Token::SymbolRef(_) => '$',
             Token::StartOfLine => '^',
             Token::EndOfLine => '$',
-            Token::StartOfInput => '\\', // \A
-            Token::EndOfInput => '\\',   // \Z
+            Token::StartOfInput => '\\',     // \A
+            Token::EndOfInput => '\\',       // \Z
             Token::EndOfInputStrict => '\\', // \z
             Token::Eof => '\0',
         }
@@ -468,9 +469,8 @@ impl<'a> Lexer<'a> {
                 None => return Err(ParseError::unexpected_eof(self.position)),
             }
         }
-        char::from_u32(value).ok_or_else(|| {
-            ParseError::new(ParseErrorKind::InvalidCodePoint(value), self.position)
-        })
+        char::from_u32(value)
+            .ok_or_else(|| ParseError::new(ParseErrorKind::InvalidCodePoint(value), self.position))
     }
 
     /// Parse an escape sequence, returning a shortcut token for class escapes.
@@ -486,116 +486,191 @@ impl<'a> Lexer<'a> {
             // Standard regex class shortcuts
             Some('d') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "digit", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "digit",
+                    negated: false,
+                })
             }
             Some('D') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "digit", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "digit",
+                    negated: true,
+                })
             }
             Some('w') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "word", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "word",
+                    negated: false,
+                })
             }
             Some('W') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "word", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "word",
+                    negated: true,
+                })
             }
             Some('s') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "space", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "space",
+                    negated: false,
+                })
             }
             Some('S') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "space", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "space",
+                    negated: true,
+                })
             }
             // Phonetic class shortcuts
             // v/V - vowel
             Some('v') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "vowel",
+                    negated: false,
+                })
             }
             Some('V') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "vowel",
+                    negated: true,
+                })
             }
             // c/C - consonant
             Some('c') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "consonant", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "consonant",
+                    negated: false,
+                })
             }
             Some('C') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "consonant", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "consonant",
+                    negated: true,
+                })
             }
             // f/F - front_vowel
             Some('f') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "front_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "front_vowel",
+                    negated: false,
+                })
             }
             Some('F') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "front_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "front_vowel",
+                    negated: true,
+                })
             }
             // k/K - back_vowel (can't use b/B - word boundary)
             Some('k') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "back_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "back_vowel",
+                    negated: false,
+                })
             }
             Some('K') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "back_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "back_vowel",
+                    negated: true,
+                })
             }
             // h/H - high_vowel
             Some('h') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "high_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "high_vowel",
+                    negated: false,
+                })
             }
             Some('H') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "high_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "high_vowel",
+                    negated: true,
+                })
             }
             // l/L - low_vowel
             Some('l') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "low_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "low_vowel",
+                    negated: false,
+                })
             }
             Some('L') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "low_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "low_vowel",
+                    negated: true,
+                })
             }
             // m/M - mid_vowel
             Some('m') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "mid_vowel", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "mid_vowel",
+                    negated: false,
+                })
             }
             Some('M') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "mid_vowel", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "mid_vowel",
+                    negated: true,
+                })
             }
             // p/P - stop/plosive (can't use s/S - whitespace)
             Some('p') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "stop", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "stop",
+                    negated: false,
+                })
             }
             Some('P') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "stop", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "stop",
+                    negated: true,
+                })
             }
             // g/G - glide
             Some('g') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "glide", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "glide",
+                    negated: false,
+                })
             }
             Some('G') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "glide", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "glide",
+                    negated: true,
+                })
             }
             // z - nasal (inside char class) or EndOfInputStrict anchor (outside)
             Some('z') => {
                 self.advance();
                 // \z is EndOfInputStrict anchor outside char class, nasal inside
                 if self.in_char_class {
-                    Ok(Token::PhoneticShortcut { class_name: "nasal", negated: false })
+                    Ok(Token::PhoneticShortcut {
+                        class_name: "nasal",
+                        negated: false,
+                    })
                 } else {
                     Ok(Token::EndOfInputStrict)
                 }
@@ -603,40 +678,64 @@ impl<'a> Lexer<'a> {
             // q/Q - liquid (can't use l/L - low_vowel)
             Some('q') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "liquid", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "liquid",
+                    negated: false,
+                })
             }
             Some('Q') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "liquid", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "liquid",
+                    negated: true,
+                })
             }
             // o/O - voiced
             Some('o') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "voiced", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "voiced",
+                    negated: false,
+                })
             }
             Some('O') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "voiced", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "voiced",
+                    negated: true,
+                })
             }
             // e/E - fricative
             Some('e') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "fricative", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "fricative",
+                    negated: false,
+                })
             }
             Some('E') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "fricative", negated: true })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "fricative",
+                    negated: true,
+                })
             }
             // a/A - affricate (inside char class) or anchor (outside)
             Some('a') => {
                 self.advance();
-                Ok(Token::PhoneticShortcut { class_name: "affricate", negated: false })
+                Ok(Token::PhoneticShortcut {
+                    class_name: "affricate",
+                    negated: false,
+                })
             }
             Some('A') => {
                 self.advance();
                 // \A is StartOfInput anchor outside char class, affricate negation inside
                 if self.in_char_class {
-                    Ok(Token::PhoneticShortcut { class_name: "affricate", negated: true })
+                    Ok(Token::PhoneticShortcut {
+                        class_name: "affricate",
+                        negated: true,
+                    })
                 } else {
                     Ok(Token::StartOfInput)
                 }
@@ -646,7 +745,10 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 // \Z is EndOfInput anchor outside char class, nasal negation inside
                 if self.in_char_class {
-                    Ok(Token::PhoneticShortcut { class_name: "nasal", negated: true })
+                    Ok(Token::PhoneticShortcut {
+                        class_name: "nasal",
+                        negated: true,
+                    })
                 } else {
                     Ok(Token::EndOfInput)
                 }
@@ -708,7 +810,9 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     if name.is_empty() {
                         return Err(ParseError::with_context(
-                            ParseErrorKind::InvalidCharClass("empty symbol name in ${...}".to_string()),
+                            ParseErrorKind::InvalidCharClass(
+                                "empty symbol name in ${...}".to_string(),
+                            ),
                             pos,
                             "expected symbol name",
                         ));
@@ -719,7 +823,10 @@ impl<'a> Lexer<'a> {
                     name.push(c);
                 } else {
                     return Err(ParseError::with_context(
-                        ParseErrorKind::InvalidCharClass(format!("invalid character '{}' in symbol name", c)),
+                        ParseErrorKind::InvalidCharClass(format!(
+                            "invalid character '{}' in symbol name",
+                            c
+                        )),
                         self.position,
                         "symbol names must be alphanumeric",
                     ));
@@ -775,7 +882,7 @@ impl<'a> Lexer<'a> {
                 '^' => Ok(Token::Caret),
                 '-' => Ok(Token::Dash),
                 '\\' => self.parse_escape_or_shortcut(),
-                _ => Ok(Token::Char(c)),  // $ falls through here as literal
+                _ => Ok(Token::Char(c)), // $ falls through here as literal
             };
         }
 
@@ -933,24 +1040,29 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 self.parse_group_reference()
             }
-            Some(c) if c == 'i' || c == 'm' || c == 's' || c == 'u' || c == 'f' || c == 'a' || c == '-' || c == ';' => {
+            Some(c)
+                if c == 'i'
+                    || c == 'm'
+                    || c == 's'
+                    || c == 'u'
+                    || c == 'f'
+                    || c == 'a'
+                    || c == '-'
+                    || c == ';' =>
+            {
                 // Flags: (?i), (?m), (?s), (?-i), (?i:...), (?u:NFC:...), (?;N), (?i;N:...), etc.
                 self.parse_flags_group()
             }
-            Some(c) => {
-                Err(ParseError::with_context(
-                    ParseErrorKind::InvalidGroupSyntax(format!("unexpected '{}' after '(?'", c)),
-                    pos,
-                    "expected ':', '<', '&', or flag (i, m, s, u, f, a, -, ;N)",
-                ))
-            }
-            None => {
-                Err(ParseError::with_context(
-                    ParseErrorKind::UnexpectedEof,
-                    pos,
-                    "unexpected end of input after '(?'",
-                ))
-            }
+            Some(c) => Err(ParseError::with_context(
+                ParseErrorKind::InvalidGroupSyntax(format!("unexpected '{}' after '(?'", c)),
+                pos,
+                "expected ':', '<', '&', or flag (i, m, s, u, f, a, -, ;N)",
+            )),
+            None => Err(ParseError::with_context(
+                ParseErrorKind::UnexpectedEof,
+                pos,
+                "unexpected end of input after '(?'",
+            )),
         }
     }
 
@@ -976,7 +1088,10 @@ impl<'a> Lexer<'a> {
                 name.push(c);
             } else {
                 return Err(ParseError::with_context(
-                    ParseErrorKind::InvalidGroupName(format!("invalid character '{}' in group name", c)),
+                    ParseErrorKind::InvalidGroupName(format!(
+                        "invalid character '{}' in group name",
+                        c
+                    )),
                     self.position,
                     "group names must be alphanumeric or underscore",
                 ));
@@ -1012,7 +1127,10 @@ impl<'a> Lexer<'a> {
                 name.push(c);
             } else {
                 return Err(ParseError::with_context(
-                    ParseErrorKind::InvalidGroupReference(format!("invalid character '{}' in group reference", c)),
+                    ParseErrorKind::InvalidGroupReference(format!(
+                        "invalid character '{}' in group reference",
+                        c
+                    )),
                     self.position,
                     "group reference names must be alphanumeric or underscore",
                 ));
@@ -1095,7 +1213,9 @@ impl<'a> Lexer<'a> {
                         flags.unicode_normalization = Some(norm_form);
                     } else {
                         return Err(ParseError::with_context(
-                            ParseErrorKind::InvalidFlag("expected ':' after 'u' for normalization form".to_string()),
+                            ParseErrorKind::InvalidFlag(
+                                "expected ':' after 'u' for normalization form".to_string(),
+                            ),
                             self.position,
                             "use (?u:NFC:...) or (?u:NFD:...) syntax",
                         ));
@@ -1201,10 +1321,14 @@ impl<'a> Lexer<'a> {
             let mut chars_copy = self.chars.clone();
             chars_copy.next(); // skip '['
             if let Some((_, c)) = chars_copy.peek() {
-                c.is_ascii_digit() || (*c == '-' && {
-                    chars_copy.next();
-                    chars_copy.peek().map(|(_, c)| c.is_ascii_digit()).unwrap_or(false)
-                })
+                c.is_ascii_digit()
+                    || (*c == '-' && {
+                        chars_copy.next();
+                        chars_copy
+                            .peek()
+                            .map(|(_, c)| c.is_ascii_digit())
+                            .unwrap_or(false)
+                    })
             } else {
                 false
             }

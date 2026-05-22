@@ -985,59 +985,59 @@ fn rule_y_to_z() -> RewriteRuleByte {
 pub fn orthography_rules() -> Vec<RewriteRuleByte> {
     vec![
         // Phase 1: Specific multi-character patterns (HIGH PRIORITY)
-        rule_tion_ending(),     // ID 110
-        rule_sion_ending(),     // ID 111
-        rule_cious_ending(),    // ID 112
-        rule_tious_ending(),    // ID 113
-        rule_ough_pattern(),    // ID 36
-        rule_aught_pattern(),   // ID 37
-        rule_ought_pattern(),   // ID 38
-        rule_tch_simplify(),    // ID 130
-        rule_dge_simplify(),    // ID 131
+        rule_tion_ending(),   // ID 110
+        rule_sion_ending(),   // ID 111
+        rule_cious_ending(),  // ID 112
+        rule_tious_ending(),  // ID 113
+        rule_ough_pattern(),  // ID 36
+        rule_aught_pattern(), // ID 37
+        rule_ought_pattern(), // ID 38
+        rule_tch_simplify(),  // ID 130
+        rule_dge_simplify(),  // ID 131
         // Phase 2: GH rules (before generic gh deletion)
         rule_gh_before_vowel(), // ID 35
         // Phase 3: Digraph conversions
-        rule_ch_to_tsh(),       // ID 1
-        rule_sh_to_sh(),        // ID 2
-        rule_ph_to_f(),         // ID 3
+        rule_ch_to_tsh(), // ID 1
+        rule_sh_to_sh(),  // ID 2
+        rule_ph_to_f(),   // ID 3
         // Phase 4: Initial cluster simplifications
-        rule_wr_initial(),      // ID 4
-        rule_wh_initial(),      // ID 5
-        rule_gn_initial(),      // ID 6
-        rule_kn_initial(),      // ID 7
-        rule_mn_initial(),      // ID 8
-        rule_pt_initial(),      // ID 9
-        rule_ps_initial(),      // ID 10
-        rule_tm_initial(),      // ID 11
+        rule_wr_initial(), // ID 4
+        rule_wh_initial(), // ID 5
+        rule_gn_initial(), // ID 6
+        rule_kn_initial(), // ID 7
+        rule_mn_initial(), // ID 8
+        rule_pt_initial(), // ID 9
+        rule_ps_initial(), // ID 10
+        rule_tm_initial(), // ID 11
         // Phase 5: X pronunciation (compound context first)
-        rule_x_to_gz_voiced(),  // ID 41 - must come before ID 40
-        rule_x_to_ks(),         // ID 40
+        rule_x_to_gz_voiced(), // ID 41 - must come before ID 40
+        rule_x_to_ks(),        // ID 40
         // Phase 6: Contextual single-character rules
         rule_c_to_s_before_front(), // ID 20
         rule_c_to_k_elsewhere(),    // ID 21
         rule_g_to_j_before_front(), // ID 22
         // Phase 7: Additional orthographic rules
-        rule_ck_simplify(),     // ID 132
-        rule_mb_final(),        // ID 133
-        rule_bt_silent(),       // ID 134
-        rule_mn_final(),        // ID 135
+        rule_ck_simplify(), // ID 132
+        rule_mb_final(),    // ID 133
+        rule_bt_silent(),   // ID 134
+        rule_mn_final(),    // ID 135
         // Phase 8: Double consonant simplification
-        rule_bb_simplify(),     // ID 80
-        rule_cc_simplify(),     // ID 81
-        rule_dd_simplify(),     // ID 82
-        rule_ff_simplify(),     // ID 83
-        rule_gg_simplify(),     // ID 84
-        rule_ll_simplify(),     // ID 85
-        rule_mm_simplify(),     // ID 86
-        rule_nn_simplify(),     // ID 87
-        rule_pp_simplify(),     // ID 88
-        rule_rr_simplify(),     // ID 89
-        rule_ss_simplify(),     // ID 90
-        rule_tt_simplify(),     // ID 91
-        rule_zz_simplify(),     // ID 92
+        rule_bb_simplify(), // ID 80
+        rule_cc_simplify(), // ID 81
+        rule_dd_simplify(), // ID 82
+        rule_ff_simplify(), // ID 83
+        rule_gg_simplify(), // ID 84
+        rule_ll_simplify(), // ID 85
+        rule_mm_simplify(), // ID 86
+        rule_nn_simplify(), // ID 87
+        rule_pp_simplify(), // ID 88
+        rule_rr_simplify(), // ID 89
+        rule_ss_simplify(), // ID 90
+        rule_tt_simplify(), // ID 91
+        rule_zz_simplify(), // ID 92
         // Phase 9: Default/fallback rules (LOW PRIORITY)
-        rule_silent_e_final(),  // ID 33
-        rule_gh_silent(),       // ID 34
+        rule_silent_e_final(), // ID 33
+        rule_gh_silent(),      // ID 34
     ]
 }
 
@@ -1046,18 +1046,18 @@ pub fn orthography_rules() -> Vec<RewriteRuleByte> {
 /// Contains rules for vowel digraph normalization.
 pub fn vowel_digraph_rules() -> Vec<RewriteRuleByte> {
     vec![
-        rule_ea_digraph(),      // ID 50
-        rule_ee_digraph(),      // ID 51
-        rule_ai_digraph(),      // ID 52
-        rule_ay_digraph(),      // ID 53
-        rule_oa_digraph(),      // ID 54
-        rule_oe_digraph(),      // ID 55
-        rule_ou_digraph(),      // ID 56
-        rule_oi_digraph(),      // ID 58
-        rule_ey_digraph(),      // ID 59
-        rule_ie_digraph(),      // ID 60
-        rule_oo_digraph(),      // ID 61
-        rule_ue_final(),        // ID 62
+        rule_ea_digraph(), // ID 50
+        rule_ee_digraph(), // ID 51
+        rule_ai_digraph(), // ID 52
+        rule_ay_digraph(), // ID 53
+        rule_oa_digraph(), // ID 54
+        rule_oe_digraph(), // ID 55
+        rule_ou_digraph(), // ID 56
+        rule_oi_digraph(), // ID 58
+        rule_ey_digraph(), // ID 59
+        rule_ie_digraph(), // ID 60
+        rule_oo_digraph(), // ID 61
+        rule_ue_final(),   // ID 62
     ]
 }
 
@@ -1067,11 +1067,7 @@ pub fn vowel_digraph_rules() -> Vec<RewriteRuleByte> {
 ///
 /// Contains 3 rules for phonetic approximations.
 pub fn phonetic_rules() -> Vec<RewriteRuleByte> {
-    vec![
-        phonetic_th_to_t(),
-        phonetic_qu_to_kw(),
-        phonetic_kw_to_qu(),
-    ]
+    vec![phonetic_th_to_t(), phonetic_qu_to_kw(), phonetic_kw_to_qu()]
 }
 
 /// Test rules: for demonstrating non-commutativity

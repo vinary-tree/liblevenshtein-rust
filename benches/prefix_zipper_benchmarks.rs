@@ -102,20 +102,13 @@ fn bench_selectivity_throughput(c: &mut Criterion) {
     ];
 
     for (prefix, desc, expected) in test_cases {
-        group.bench_with_input(
-            BenchmarkId::new(desc, expected),
-            &prefix,
-            |b, &prefix| {
-                b.iter(|| {
-                    let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
-                    let count = zipper
-                        .with_prefix(prefix.as_bytes())
-                        .unwrap()
-                        .count();
-                    black_box(count);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new(desc, expected), &prefix, |b, &prefix| {
+            b.iter(|| {
+                let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
+                let count = zipper.with_prefix(prefix.as_bytes()).unwrap().count();
+                black_box(count);
+            });
+        });
     }
 
     group.finish();
@@ -138,10 +131,7 @@ fn bench_dictionary_size(c: &mut Criterion) {
             |b, dict| {
                 b.iter(|| {
                     let zipper = DoubleArrayTrieZipper::new_from_dict(dict);
-                    let count = zipper
-                        .with_prefix(b"test")
-                        .unwrap()
-                        .count();
+                    let count = zipper.with_prefix(b"test").unwrap().count();
                     black_box(count);
                 });
             },
@@ -165,10 +155,7 @@ fn bench_backend_comparison(c: &mut Criterion) {
     group.bench_function("DoubleArrayTrie", |b| {
         b.iter(|| {
             let zipper = DoubleArrayTrieZipper::new_from_dict(&dat);
-            let count = zipper
-                .with_prefix(b"test")
-                .unwrap()
-                .count();
+            let count = zipper.with_prefix(b"test").unwrap().count();
             black_box(count);
         });
     });
@@ -178,10 +165,7 @@ fn bench_backend_comparison(c: &mut Criterion) {
     group.bench_function("DynamicDawg", |b| {
         b.iter(|| {
             let zipper = DynamicDawgZipper::new_from_dict(&dawg);
-            let count = zipper
-                .with_prefix(b"test")
-                .unwrap()
-                .count();
+            let count = zipper.with_prefix(b"test").unwrap().count();
             black_box(count);
         });
     });
@@ -200,20 +184,13 @@ fn bench_tree_depth(c: &mut Criterion) {
         let terms = generate_deep_tree(max_depth);
         let dict = DoubleArrayTrie::from_terms(terms.iter());
 
-        group.bench_with_input(
-            BenchmarkId::new("depth", max_depth),
-            &dict,
-            |b, dict| {
-                b.iter(|| {
-                    let zipper = DoubleArrayTrieZipper::new_from_dict(dict);
-                    let count = zipper
-                        .with_prefix(b"a")
-                        .unwrap()
-                        .count();
-                    black_box(count);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("depth", max_depth), &dict, |b, dict| {
+            b.iter(|| {
+                let zipper = DoubleArrayTrieZipper::new_from_dict(dict);
+                let count = zipper.with_prefix(b"a").unwrap().count();
+                black_box(count);
+            });
+        });
     }
 
     group.finish();
@@ -233,10 +210,7 @@ fn bench_collection_overhead(c: &mut Criterion) {
     group.bench_function("count_only", |b| {
         b.iter(|| {
             let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
-            let count = zipper
-                .with_prefix(b"test")
-                .unwrap()
-                .count();
+            let count = zipper.with_prefix(b"test").unwrap().count();
             black_box(count);
         });
     });
@@ -322,10 +296,7 @@ fn bench_iteration_only(c: &mut Criterion) {
         b.iter(|| {
             // Clone iterator to allow repeated benchmarking
             let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
-            let count = zipper
-                .with_prefix(b"test")
-                .unwrap()
-                .count();
+            let count = zipper.with_prefix(b"test").unwrap().count();
             black_box(count);
         });
     });

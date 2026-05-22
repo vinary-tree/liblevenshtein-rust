@@ -44,15 +44,39 @@ fn load_dictionary(target_size: usize) -> Vec<String> {
 /// Generate synthetic dictionary for systems without /usr/share/dict/words
 fn generate_synthetic_dictionary(size: usize) -> Vec<String> {
     let base_words = [
-        "algorithm", "structure", "computer", "science", "program",
-        "function", "variable", "constant", "iterator", "reference",
-        "pattern", "matching", "distance", "automaton", "transducer",
-        "dictionary", "benchmark", "performance", "optimization", "implementation",
-        "cathedral", "category", "catering", "catastrophe", "catalyst",
+        "algorithm",
+        "structure",
+        "computer",
+        "science",
+        "program",
+        "function",
+        "variable",
+        "constant",
+        "iterator",
+        "reference",
+        "pattern",
+        "matching",
+        "distance",
+        "automaton",
+        "transducer",
+        "dictionary",
+        "benchmark",
+        "performance",
+        "optimization",
+        "implementation",
+        "cathedral",
+        "category",
+        "catering",
+        "catastrophe",
+        "catalyst",
     ];
 
-    let suffixes = ["", "s", "ed", "ing", "er", "est", "ly", "tion", "ment", "ness"];
-    let prefixes = ["", "un", "re", "pre", "mis", "dis", "over", "under", "out", "sub"];
+    let suffixes = [
+        "", "s", "ed", "ing", "er", "est", "ly", "tion", "ment", "ness",
+    ];
+    let prefixes = [
+        "", "un", "re", "pre", "mis", "dis", "over", "under", "out", "sub",
+    ];
 
     let mut words = HashSet::new();
 
@@ -82,10 +106,12 @@ fn generate_synthetic_dictionary(size: usize) -> Vec<String> {
 /// Generate a query based on a dictionary word with modifications
 fn generate_realistic_query(dict: &[String], seed: usize, target_len: usize) -> String {
     if dict.is_empty() {
-        return (0..target_len).map(|i| {
-            let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
-            chars[(seed * 31 + i * 17) % chars.len()]
-        }).collect();
+        return (0..target_len)
+            .map(|i| {
+                let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
+                chars[(seed * 31 + i * 17) % chars.len()]
+            })
+            .collect();
     }
 
     let word = &dict[seed % dict.len()];
@@ -193,7 +219,8 @@ fn bench_fuzzy_queries(c: &mut Criterion) {
             // - MergeAndSplit: 2k+1 pieces (proven in WallBreakerPigeonhole.v)
             {
                 let scdawg = Scdawg::<()>::from_terms(dict_words.iter().map(|s| s.as_str()));
-                let wallbreaker = WallBreaker::with_algorithm(&scdawg, max_dist as usize, algorithm);
+                let wallbreaker =
+                    WallBreaker::with_algorithm(&scdawg, max_dist as usize, algorithm);
 
                 group.bench_function(BenchmarkId::new("WallBreaker", ""), |b| {
                     b.iter(|| {

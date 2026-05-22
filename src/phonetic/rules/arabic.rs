@@ -120,32 +120,16 @@ mod tests {
         let rules = base();
         // ب → b
         let result = rules.apply("ب");
-        assert!(
-            result.contains('b'),
-            "ب should become b, got: {}",
-            result
-        );
+        assert!(result.contains('b'), "ب should become b, got: {}", result);
         // ت → t
         let result = rules.apply("ت");
-        assert!(
-            result.contains('t'),
-            "ت should become t, got: {}",
-            result
-        );
+        assert!(result.contains('t'), "ت should become t, got: {}", result);
         // س → s
         let result = rules.apply("س");
-        assert!(
-            result.contains('s'),
-            "س should become s, got: {}",
-            result
-        );
+        assert!(result.contains('s'), "س should become s, got: {}", result);
         // ك → k
         let result = rules.apply("ك");
-        assert!(
-            result.contains('k'),
-            "ك should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "ك should become k, got: {}", result);
     }
 
     #[test]
@@ -153,32 +137,16 @@ mod tests {
         let rules = base();
         // ش → SH
         let result = rules.apply("ش");
-        assert!(
-            result.contains("ʃ"),
-            "ش should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ش should become SH, got: {}", result);
         // خ → KH
         let result = rules.apply("خ");
-        assert!(
-            result.contains("x"),
-            "خ should become KH, got: {}",
-            result
-        );
+        assert!(result.contains("x"), "خ should become KH, got: {}", result);
         // ث → TH
         let result = rules.apply("ث");
-        assert!(
-            result.contains("θ"),
-            "ث should become TH, got: {}",
-            result
-        );
+        assert!(result.contains("θ"), "ث should become TH, got: {}", result);
         // غ → GH
         let result = rules.apply("غ");
-        assert!(
-            result.contains("ɣ"),
-            "غ should become GH, got: {}",
-            result
-        );
+        assert!(result.contains("ɣ"), "غ should become GH, got: {}", result);
     }
 
     #[test]
@@ -238,18 +206,10 @@ mod tests {
         let rules = base();
         // أ → a (hamza on alif above)
         let result = rules.apply("أ");
-        assert!(
-            result.contains('a'),
-            "أ should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "أ should become a, got: {}", result);
         // إ → i (hamza on alif below)
         let result = rules.apply("إ");
-        assert!(
-            result.contains('i'),
-            "إ should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "إ should become i, got: {}", result);
     }
 
     #[test]
@@ -264,11 +224,7 @@ mod tests {
         );
         // ة → a (ta marbuta)
         let result = rules.apply("ة");
-        assert!(
-            result.contains('a'),
-            "ة should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "ة should become a, got: {}", result);
     }
 
     #[test]
@@ -276,25 +232,13 @@ mod tests {
         let rules = base();
         // ٠ → 0
         let result = rules.apply("٠");
-        assert!(
-            result.contains('0'),
-            "٠ should become 0, got: {}",
-            result
-        );
+        assert!(result.contains('0'), "٠ should become 0, got: {}", result);
         // ٥ → 5
         let result = rules.apply("٥");
-        assert!(
-            result.contains('5'),
-            "٥ should become 5, got: {}",
-            result
-        );
+        assert!(result.contains('5'), "٥ should become 5, got: {}", result);
         // ٩ → 9
         let result = rules.apply("٩");
-        assert!(
-            result.contains('9'),
-            "٩ should become 9, got: {}",
-            result
-        );
+        assert!(result.contains('9'), "٩ should become 9, got: {}", result);
     }
 
     #[test]
@@ -304,7 +248,10 @@ mod tests {
         let result = rules.apply("مرحبا");
         // م→m, ر→r, ح→ħ, ب→b, ا→a
         assert!(
-            result.contains('m') && result.contains('r') && result.contains('ħ') && result.contains('b'),
+            result.contains('m')
+                && result.contains('r')
+                && result.contains('ħ')
+                && result.contains('b'),
             "مرحبا should contain m, r, ħ, b, got: {}",
             result
         );
@@ -317,10 +264,12 @@ mod tests {
         let result = rules.apply("سلام");
         // س→s, ل→l, ا→a, م→m
         assert!(
-            result.contains('s') && result.contains('l') && result.contains('a') && result.contains('m'),
+            result.contains('s')
+                && result.contains('l')
+                && result.contains('a')
+                && result.contains('m'),
             "سلام should contain s, l, a, m, got: {}",
             result
         );
     }
-
 }

@@ -6,7 +6,7 @@
 // These tests validate foundational properties critical for anti-chain
 // state minimization in Levenshtein automata.
 
-use liblevenshtein::transducer::generalized::{GeneralizedPosition, subsumes};
+use liblevenshtein::transducer::generalized::{subsumes, GeneralizedPosition};
 use proptest::prelude::*;
 
 // ============================================================================
@@ -15,11 +15,13 @@ use proptest::prelude::*;
 
 /// Generate positions that might subsume each other
 fn subsumable_positions() -> impl Strategy<Value = (GeneralizedPosition, GeneralizedPosition, u8)> {
-    (2u8..10).prop_flat_map(|max_distance| {  // Start at 2 to allow errors1 < max_distance
+    (2u8..10).prop_flat_map(|max_distance| {
+        // Start at 2 to allow errors1 < max_distance
         // Generate two I-type positions with same variant
         let max_d = max_distance as i32;
 
-        (0u8..max_distance).prop_flat_map(move |errors1| {  // errors1 < max_distance
+        (0u8..max_distance).prop_flat_map(move |errors1| {
+            // errors1 < max_distance
             let e1 = errors1 as i32;
             let min_offset1 = (-max_d).max(-e1);
             let max_offset1 = max_d.min(e1);
@@ -32,8 +34,10 @@ fn subsumable_positions() -> impl Strategy<Value = (GeneralizedPosition, General
                     let max_offset2 = max_d.min(e2);
 
                     (min_offset2..=max_offset2).prop_map(move |offset2| {
-                        let p1 = GeneralizedPosition::new_i(offset1, errors1, max_distance).unwrap();
-                        let p2 = GeneralizedPosition::new_i(offset2, errors2, max_distance).unwrap();
+                        let p1 =
+                            GeneralizedPosition::new_i(offset1, errors1, max_distance).unwrap();
+                        let p2 =
+                            GeneralizedPosition::new_i(offset2, errors2, max_distance).unwrap();
                         (p1, p2, max_distance)
                     })
                 })

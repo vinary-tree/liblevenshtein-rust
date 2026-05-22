@@ -9,20 +9,17 @@
 
 mod common;
 
-use liblevenshtein::transducer::{
-    Algorithm, OperationCostsF64, PositionF64, StateF64, StatePoolF64,
-};
 use liblevenshtein::transducer::generalized::{
     CharacteristicVector as GeneralizedCV, GeneralizedPosition, GeneralizedState,
 };
+use liblevenshtein::transducer::universal::position::{MergeSplitState, TranspositionState};
 use liblevenshtein::transducer::universal::{
-    MergeAndSplit, Standard, Transposition, UniversalPosition,
-    CharacteristicVector as UniversalCV,
-};
-use liblevenshtein::transducer::universal::position::{
-    MergeSplitState, TranspositionState,
+    CharacteristicVector as UniversalCV, MergeAndSplit, Standard, Transposition, UniversalPosition,
 };
 use liblevenshtein::transducer::OperationSet;
+use liblevenshtein::transducer::{
+    Algorithm, OperationCostsF64, PositionF64, StateF64, StatePoolF64,
+};
 use proptest::prelude::*;
 
 // ============================================================================
@@ -302,8 +299,7 @@ fn test_transition_f64_ocr_friendly_costs() {
 #[test]
 fn test_successors_i_type_match() {
     let max_distance: u8 = 2;
-    let pos = GeneralizedPosition::new_i(0, 0, max_distance)
-        .expect("valid I-position");
+    let pos = GeneralizedPosition::new_i(0, 0, max_distance).expect("valid I-position");
 
     let mut state = GeneralizedState::new(max_distance);
     state.add_position(pos);
@@ -313,7 +309,9 @@ fn test_successors_i_type_match() {
     let cv = GeneralizedCV::new('a', "$$abc");
     let word_chars: Vec<char> = "abc".chars().collect();
 
-    if let Some(next) = state.transition(&operations, &cv, "abc", Some(&word_chars), "$$abc", 'a', 1) {
+    if let Some(next) =
+        state.transition(&operations, &cv, "abc", Some(&word_chars), "$$abc", 'a', 1)
+    {
         assert!(!next.is_empty());
     }
 }
@@ -322,8 +320,7 @@ fn test_successors_i_type_match() {
 #[test]
 fn test_successors_i_type_no_match() {
     let max_distance: u8 = 2;
-    let pos = GeneralizedPosition::new_i(0, 0, max_distance)
-        .expect("valid I-position");
+    let pos = GeneralizedPosition::new_i(0, 0, max_distance).expect("valid I-position");
 
     let mut state = GeneralizedState::new(max_distance);
     state.add_position(pos);
@@ -333,7 +330,8 @@ fn test_successors_i_type_no_match() {
     let cv = GeneralizedCV::new('x', "abc");
     let word_chars: Vec<char> = "abc".chars().collect();
 
-    if let Some(next) = state.transition(&operations, &cv, "abc", Some(&word_chars), "abc", 'x', 1) {
+    if let Some(next) = state.transition(&operations, &cv, "abc", Some(&word_chars), "abc", 'x', 1)
+    {
         // Should have delete/insert/substitute successors
         assert!(!next.is_empty());
     }
@@ -343,8 +341,8 @@ fn test_successors_i_type_no_match() {
 #[test]
 fn test_successors_i_type_at_max_errors() {
     let max_distance: u8 = 2;
-    let pos = GeneralizedPosition::new_i(0, 2, max_distance)
-        .expect("valid I-position at max errors");
+    let pos =
+        GeneralizedPosition::new_i(0, 2, max_distance).expect("valid I-position at max errors");
 
     let mut state = GeneralizedState::new(max_distance);
     state.add_position(pos);
@@ -372,8 +370,7 @@ fn test_successors_i_type_at_max_errors() {
 #[test]
 fn test_successors_m_type_match() {
     let max_distance: u8 = 2;
-    let pos = GeneralizedPosition::new_m(0, 0, max_distance)
-        .expect("valid M-position");
+    let pos = GeneralizedPosition::new_m(0, 0, max_distance).expect("valid M-position");
 
     let mut state = GeneralizedState::new(max_distance);
     state.add_position(pos);
@@ -387,8 +384,7 @@ fn test_successors_m_type_offset_calculation() {
     let max_distance: u8 = 2;
 
     // M-type with negative offset
-    let pos = GeneralizedPosition::new_m(-1, 1, max_distance)
-        .expect("valid M-position");
+    let pos = GeneralizedPosition::new_m(-1, 1, max_distance).expect("valid M-position");
 
     assert_eq!(pos.offset(), -1);
     assert_eq!(pos.errors(), 1);
@@ -494,7 +490,9 @@ fn test_i_splitting_position() {
     let split = GeneralizedPosition::new_i_splitting(0, 1, max_distance, 't');
 
     if let Ok(pos) = split {
-        assert!(matches!(pos, GeneralizedPosition::ISplitting { entry_char, .. } if entry_char == 't'));
+        assert!(
+            matches!(pos, GeneralizedPosition::ISplitting { entry_char, .. } if entry_char == 't')
+        );
     }
 }
 
@@ -506,7 +504,9 @@ fn test_m_splitting_position() {
     let split = GeneralizedPosition::new_m_splitting(0, 1, max_distance, 'h');
 
     if let Ok(pos) = split {
-        assert!(matches!(pos, GeneralizedPosition::MSplitting { entry_char, .. } if entry_char == 'h'));
+        assert!(
+            matches!(pos, GeneralizedPosition::MSplitting { entry_char, .. } if entry_char == 'h')
+        );
     }
 }
 
@@ -521,8 +521,7 @@ fn test_m_splitting_position() {
 /// Test Standard variant I-type position creation
 #[test]
 fn test_universal_standard_i_type() {
-    let pos = UniversalPosition::<Standard>::new_i(0, 0, 2)
-        .expect("valid I-position");
+    let pos = UniversalPosition::<Standard>::new_i(0, 0, 2).expect("valid I-position");
 
     assert_eq!(pos.offset(), 0);
     assert_eq!(pos.errors(), 0);
@@ -532,8 +531,7 @@ fn test_universal_standard_i_type() {
 /// Test Standard variant M-type position creation
 #[test]
 fn test_universal_standard_m_type() {
-    let pos = UniversalPosition::<Standard>::new_m(0, 0, 2)
-        .expect("valid M-position");
+    let pos = UniversalPosition::<Standard>::new_m(0, 0, 2).expect("valid M-position");
 
     assert_eq!(pos.offset(), 0);
     assert_eq!(pos.errors(), 0);
@@ -568,8 +566,7 @@ fn test_universal_standard_successors_no_match() {
 /// Test Transposition variant with usual state
 #[test]
 fn test_universal_transposition_usual() {
-    let pos = UniversalPosition::<Transposition>::new_i(0, 0, 2)
-        .expect("valid I-position");
+    let pos = UniversalPosition::<Transposition>::new_i(0, 0, 2).expect("valid I-position");
 
     assert!(matches!(pos.variant_state(), TranspositionState::Usual));
 }
@@ -577,9 +574,9 @@ fn test_universal_transposition_usual() {
 /// Test Transposition entry with bit vector match at next position
 #[test]
 fn test_universal_transposition_entry() {
-    let pos = UniversalPosition::<Transposition>::new_i_with_state(
-        0, 0, 2, TranspositionState::Usual
-    ).unwrap();
+    let pos =
+        UniversalPosition::<Transposition>::new_i_with_state(0, 0, 2, TranspositionState::Usual)
+            .unwrap();
 
     // Bit vector with match at position 1 (for transposition entry)
     let cv = UniversalCV::new('b', "$$abc");
@@ -593,8 +590,12 @@ fn test_universal_transposition_entry() {
 #[test]
 fn test_universal_transposition_completion() {
     let pos = UniversalPosition::<Transposition>::new_i_with_state(
-        -1, 1, 2, TranspositionState::Transposing
-    ).unwrap();
+        -1,
+        1,
+        2,
+        TranspositionState::Transposing,
+    )
+    .unwrap();
 
     // Bit vector with match at current position
     let cv = UniversalCV::new('a', "$$abc");
@@ -610,8 +611,7 @@ fn test_universal_transposition_completion() {
 /// Test MergeAndSplit variant with usual state
 #[test]
 fn test_universal_merge_split_usual() {
-    let pos = UniversalPosition::<MergeAndSplit>::new_i(0, 0, 2)
-        .expect("valid I-position");
+    let pos = UniversalPosition::<MergeAndSplit>::new_i(0, 0, 2).expect("valid I-position");
 
     assert!(matches!(pos.variant_state(), MergeSplitState::Usual));
 }
@@ -619,9 +619,8 @@ fn test_universal_merge_split_usual() {
 /// Test MergeAndSplit split entry
 #[test]
 fn test_universal_merge_split_entry() {
-    let pos = UniversalPosition::<MergeAndSplit>::new_i_with_state(
-        0, 0, 2, MergeSplitState::Usual
-    ).unwrap();
+    let pos = UniversalPosition::<MergeAndSplit>::new_i_with_state(0, 0, 2, MergeSplitState::Usual)
+        .unwrap();
 
     let cv = UniversalCV::new('a', "$$abc");
 
@@ -633,9 +632,9 @@ fn test_universal_merge_split_entry() {
 /// Test MergeAndSplit split completion
 #[test]
 fn test_universal_merge_split_completion() {
-    let pos = UniversalPosition::<MergeAndSplit>::new_i_with_state(
-        -1, 1, 2, MergeSplitState::Splitting
-    ).unwrap();
+    let pos =
+        UniversalPosition::<MergeAndSplit>::new_i_with_state(-1, 1, 2, MergeSplitState::Splitting)
+            .unwrap();
 
     let cv = UniversalCV::new('a', "$$abc");
 
@@ -954,8 +953,7 @@ fn test_single_char_query() {
 #[test]
 fn test_max_distance_zero() {
     // At distance 0, only exact matches
-    let pos = GeneralizedPosition::new_i(0, 0, 0)
-        .expect("valid at distance 0");
+    let pos = GeneralizedPosition::new_i(0, 0, 0).expect("valid at distance 0");
 
     assert_eq!(pos.offset(), 0);
     assert_eq!(pos.errors(), 0);

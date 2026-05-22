@@ -183,8 +183,8 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
 
 #[cfg(test)]
 mod tests {
-    use libdictenstein::double_array_trie::DoubleArrayTrie;
     use crate::transducer::{Algorithm, Transducer};
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
 
     #[test]
     fn test_query_builder_basic() {

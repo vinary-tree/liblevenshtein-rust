@@ -467,9 +467,18 @@ mod tests {
 
     #[test]
     fn test_document_format_case_insensitive() {
-        assert_eq!(DocumentFormat::from_extension_str("PDF"), DocumentFormat::Pdf);
-        assert_eq!(DocumentFormat::from_extension_str("DOCX"), DocumentFormat::Docx);
-        assert_eq!(DocumentFormat::from_extension_str("Epub"), DocumentFormat::Epub);
+        assert_eq!(
+            DocumentFormat::from_extension_str("PDF"),
+            DocumentFormat::Pdf
+        );
+        assert_eq!(
+            DocumentFormat::from_extension_str("DOCX"),
+            DocumentFormat::Docx
+        );
+        assert_eq!(
+            DocumentFormat::from_extension_str("Epub"),
+            DocumentFormat::Epub
+        );
     }
 
     #[test]
@@ -501,9 +510,8 @@ mod tests {
 
     #[test]
     fn test_document_extractor_size_limit() {
-        let extractor = DocumentExtractor::with_config(
-            DocumentExtractorConfig::new().with_max_size(10),
-        );
+        let extractor =
+            DocumentExtractor::with_config(DocumentExtractorConfig::new().with_max_size(10));
 
         // Large data should fail
         let large_data = vec![0u8; 100];

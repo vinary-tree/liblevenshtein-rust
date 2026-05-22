@@ -19,6 +19,7 @@ mod automaton_zipper;
 pub mod builder;
 mod builder_api;
 pub mod costs_f64;
+pub mod generalized;
 pub mod helpers;
 mod intersection;
 mod intersection_f64;
@@ -27,13 +28,13 @@ pub mod operation_set;
 pub mod operation_type;
 mod ordered_query;
 pub mod phonetic;
-mod priority_query;
 #[cfg(feature = "phonetic-rules")]
 pub mod phonetic_transducer;
 mod pool;
 mod pool_f64;
 mod position;
 mod position_f64;
+mod priority_query;
 mod query;
 mod query_f64;
 mod query_result;
@@ -45,7 +46,6 @@ pub mod substitution_set_char;
 pub mod transition;
 pub mod transition_f64;
 pub mod universal;
-pub mod generalized;
 mod value_filtered_query;
 mod zipper_query_iterator;
 
@@ -64,11 +64,11 @@ pub use intersection_zipper::IntersectionZipper;
 pub use operation_set::{OperationSet, OperationSetBuilder};
 pub use operation_type::OperationType;
 pub use ordered_query::{OrderedCandidate, OrderedQueryIterator};
-pub use priority_query::{priority_query, PriorityCandidate, PriorityQueryIterator};
 pub use pool::StatePool;
 pub use pool_f64::StatePoolF64;
 pub use position::Position;
 pub use position_f64::PositionF64;
+pub use priority_query::{priority_query, PriorityCandidate, PriorityQueryIterator};
 pub use query::{Candidate, CandidateIterator, QueryIterator, StringQueryIterator};
 pub use query_f64::{
     CandidateF64, CandidateIteratorF64, QueryIteratorF64, QueryResultF64, StringQueryIteratorF64,
@@ -77,7 +77,8 @@ pub use query_result::QueryResult;
 pub use state::State;
 pub use state_f64::StateF64;
 pub use substitution_policy::{
-    Restricted, RestrictedChar, SubstitutionPolicy, SubstitutionPolicyChar, SubstitutionPolicyFor, Unrestricted,
+    Restricted, RestrictedChar, SubstitutionPolicy, SubstitutionPolicyChar, SubstitutionPolicyFor,
+    Unrestricted,
 };
 pub use substitution_set::SubstitutionSet;
 pub use substitution_set_char::SubstitutionSetChar;
@@ -270,7 +271,11 @@ where
 }
 
 // Generic methods (work with any policy)
-impl<D: Dictionary, P: SubstitutionPolicy + SubstitutionPolicyFor<<D::Node as DictionaryNode>::Unit>> Transducer<D, P> {
+impl<
+        D: Dictionary,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<<D::Node as DictionaryNode>::Unit>,
+    > Transducer<D, P>
+{
     /// Create a transducer with a custom substitution policy.
     ///
     /// This allows you to restrict which character substitutions are allowed
@@ -444,7 +449,11 @@ impl<D: Dictionary, P: SubstitutionPolicy + SubstitutionPolicyFor<<D::Node as Di
     ///     println!("{}", candidate.term);
     /// }
     /// ```
-    pub fn query_ordered(&self, term: &str, max_distance: usize) -> OrderedQueryIterator<D::Node, P> {
+    pub fn query_ordered(
+        &self,
+        term: &str,
+        max_distance: usize,
+    ) -> OrderedQueryIterator<D::Node, P> {
         OrderedQueryIterator::with_policy_and_substring(
             self.dictionary.root(),
             term.to_string(),
@@ -472,7 +481,11 @@ impl<D: Dictionary, P: SubstitutionPolicy + SubstitutionPolicyFor<<D::Node as Di
     ///     println!("Match: {}", term);
     /// }
     /// ```
-    pub fn query_terms(&self, term: &str, max_distance: usize) -> QueryIterator<D::Node, String, P> {
+    pub fn query_terms(
+        &self,
+        term: &str,
+        max_distance: usize,
+    ) -> QueryIterator<D::Node, String, P> {
         self.query(term, max_distance)
     }
 
@@ -518,7 +531,11 @@ impl<D: Dictionary, P: SubstitutionPolicy + SubstitutionPolicyFor<<D::Node as Di
     ///     println!("{}: distance {}", candidate.term, candidate.distance);
     /// }
     /// ```
-    pub fn query_ranked(&self, term: &str, max_distance: usize) -> OrderedQueryIterator<D::Node, P> {
+    pub fn query_ranked(
+        &self,
+        term: &str,
+        max_distance: usize,
+    ) -> OrderedQueryIterator<D::Node, P> {
         self.query_ordered(term, max_distance)
     }
 }

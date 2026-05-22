@@ -99,13 +99,7 @@ pub fn all_builtin_class_names() -> Vec<&'static str> {
 ///
 /// Useful when you need to build a simple character class without digraphs.
 pub fn get_chars_only(name: &str) -> Option<Vec<char>> {
-    get_named_class(name).map(|class| {
-        class
-            .patterns
-            .iter()
-            .filter_map(|p| p.as_char())
-            .collect()
-    })
+    get_named_class(name).map(|class| class.patterns.iter().filter_map(|p| p.as_char()).collect())
 }
 
 /// Get only the digraph patterns from a named class.

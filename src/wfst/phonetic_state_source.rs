@@ -21,9 +21,9 @@ use lling_llang::prelude::{
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use libdictenstein::{Dictionary, DictionaryNode};
 #[cfg(feature = "phonetic-rules")]
 use crate::phonetic::nfa::{NFAChar, ProductAutomatonChar, ProductStateChar};
+use libdictenstein::{Dictionary, DictionaryNode};
 
 use super::state_encoding;
 
@@ -200,7 +200,8 @@ where
         max_distance: u8,
         phonetic_weight: f64,
     ) -> Self {
-        let product = ProductAutomatonChar::with_phonetic_weight(nfa, max_distance, phonetic_weight);
+        let product =
+            ProductAutomatonChar::with_phonetic_weight(nfa, max_distance, phonetic_weight);
         let initial_state = product.initial_state();
 
         // Estimate max product states based on NFA size and max distance
@@ -236,7 +237,11 @@ where
         &self,
         dict_node_id: u32,
         product_state_id: u32,
-    ) -> (bool, TropicalWeight, SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>) {
+    ) -> (
+        bool,
+        TropicalWeight,
+        SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>,
+    ) {
         let node_registry = self.node_registry.read().expect("Lock poisoned");
         let product_registry = self.product_state_registry.read().expect("Lock poisoned");
 
@@ -289,17 +294,11 @@ where
                     self.phonetic_weight
                 };
 
-                let from_state = state_encoding::encode(
-                    dict_node_id,
-                    product_state_id,
-                    self.max_product_states,
-                );
+                let from_state =
+                    state_encoding::encode(dict_node_id, product_state_id, self.max_product_states);
 
-                let target_state = state_encoding::encode(
-                    child_node_id,
-                    successor_id,
-                    self.max_product_states,
-                );
+                let target_state =
+                    state_encoding::encode(child_node_id, successor_id, self.max_product_states);
 
                 transitions.push(WeightedTransition::new(
                     from_state,
@@ -372,9 +371,9 @@ fn compute_path_hash(parent_id: u32, edge_label: char) -> u64 {
 #[cfg(feature = "phonetic-rules")]
 mod tests {
     use super::*;
-    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
     use crate::phonetic::nfa::compiler::compile;
     use crate::phonetic::regex::parse;
+    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 
     #[test]
     fn test_phonetic_state_source_creation() {

@@ -99,10 +99,7 @@ mod tests {
     #[test]
     fn test_base_loads() {
         let rules = base();
-        assert!(
-            !rules.is_empty(),
-            "Armenian base rules should not be empty"
-        );
+        assert!(!rules.is_empty(), "Armenian base rules should not be empty");
         assert!(
             rules.len() >= 50,
             "expected >=50 base rules, got {}",
@@ -132,11 +129,19 @@ mod tests {
     fn test_lowercase_vowels() {
         let rules = base();
         let result = rules.apply("\u{0561}");
-        assert!(result.contains('a'), " delays should become a, got: {}", result);
+        assert!(
+            result.contains('a'),
+            " delays should become a, got: {}",
+            result
+        );
         let result = rules.apply("\u{0565}");
         assert!(result.contains('e'), "ե should become e, got: {}", result);
         let result = rules.apply("\u{056B}");
-        assert!(result.contains('i'), " delays should become i, got: {}", result);
+        assert!(
+            result.contains('i'),
+            " delays should become i, got: {}",
+            result
+        );
         // U+0578 ( delays) maps to 'o', U+0585 (օ) maps to 'ɔ' which simplifies to 'o'
         let result = rules.apply("\u{0578}");
         assert!(result.contains('o'), "ո should become o, got: {}", result);
@@ -154,7 +159,11 @@ mod tests {
         let result = rules.apply("\u{0533}");
         assert!(result.contains('ɡ'), "Գ should become g, got: {}", result);
         let result = rules.apply("\u{0534}");
-        assert!(result.contains('d'), "Delays should become d, got: {}", result);
+        assert!(
+            result.contains('d'),
+            "Delays should become d, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -162,11 +171,23 @@ mod tests {
         let rules = base();
         // Note: Aspirated markers (T, P, K) are simplified to lowercase
         let result = rules.apply("\u{0539}");
-        assert!(result.contains('t'), "U+0539 (to) should become t (T simplified), got: {}", result);
+        assert!(
+            result.contains('t'),
+            "U+0539 (to) should become t (T simplified), got: {}",
+            result
+        );
         let result = rules.apply("\u{0553}");
-        assert!(result.contains('p'), "U+0553 (piwr) should become p (P simplified), got: {}", result);
+        assert!(
+            result.contains('p'),
+            "U+0553 (piwr) should become p (P simplified), got: {}",
+            result
+        );
         let result = rules.apply("\u{0554}");
-        assert!(result.contains('k'), "U+0554 (ke) should become k (K simplified), got: {}", result);
+        assert!(
+            result.contains('k'),
+            "U+0554 (ke) should become k (K simplified), got: {}",
+            result
+        );
     }
 
     #[test]
@@ -177,7 +198,11 @@ mod tests {
         let result = rules.apply("\u{054A}");
         assert!(result.contains('p'), "Պ should become p, got: {}", result);
         let result = rules.apply("\u{053F}");
-        assert!(result.contains('k'), "Delays should become k, got: {}", result);
+        assert!(
+            result.contains('k'),
+            "Delays should become k, got: {}",
+            result
+        );
     }
 
     // ============================================================
@@ -217,9 +242,17 @@ mod tests {
     fn test_sibilants() {
         let rules = base();
         let result = rules.apply("\u{0536}");
-        assert!(result.contains('z'), "U+0536 (za) should become z, got: {}", result);
+        assert!(
+            result.contains('z'),
+            "U+0536 (za) should become z, got: {}",
+            result
+        );
         let result = rules.apply("\u{054D}");
-        assert!(result.contains('s'), "U+054D (se) should become s, got: {}", result);
+        assert!(
+            result.contains('s'),
+            "U+054D (se) should become s, got: {}",
+            result
+        );
         // Note: SH and ZH are simplified to lowercase
         let result = rules.apply("\u{0547}");
         assert!(
@@ -239,9 +272,17 @@ mod tests {
     fn test_other_fricatives() {
         let rules = base();
         let result = rules.apply("\u{0540}");
-        assert!(result.contains('h'), "U+0540 (ho) should become h, got: {}", result);
+        assert!(
+            result.contains('h'),
+            "U+0540 (ho) should become h, got: {}",
+            result
+        );
         let result = rules.apply("\u{053D}");
-        assert!(result.contains('x'), "U+053D (xe) should become x, got: {}", result);
+        assert!(
+            result.contains('x'),
+            "U+053D (xe) should become x, got: {}",
+            result
+        );
         // Note: GH is simplified to lowercase
         let result = rules.apply("\u{0542}");
         assert!(
@@ -259,7 +300,11 @@ mod tests {
     fn test_nasals() {
         let rules = base();
         let result = rules.apply("\u{0544}");
-        assert!(result.contains('m'), "Delays should become m, got: {}", result);
+        assert!(
+            result.contains('m'),
+            "Delays should become m, got: {}",
+            result
+        );
         let result = rules.apply("\u{0546}");
         assert!(result.contains('n'), "Ն should become n, got: {}", result);
     }
@@ -268,9 +313,17 @@ mod tests {
     fn test_liquids() {
         let rules = base();
         let result = rules.apply("\u{053C}");
-        assert!(result.contains('l'), "U+053C (liwn) should become l, got: {}", result);
+        assert!(
+            result.contains('l'),
+            "U+053C (liwn) should become l, got: {}",
+            result
+        );
         let result = rules.apply("\u{0550}");
-        assert!(result.contains('r'), "U+0550 (re) should become r, got: {}", result);
+        assert!(
+            result.contains('r'),
+            "U+0550 (re) should become r, got: {}",
+            result
+        );
         // U+054C (Ռ ra) maps to RR (trilled r)
         let result = rules.apply("\u{054C}");
         assert!(
@@ -284,9 +337,17 @@ mod tests {
     fn test_approximants() {
         let rules = base();
         let result = rules.apply("\u{054E}");
-        assert!(result.contains('v'), "Delays should become v, got: {}", result);
+        assert!(
+            result.contains('v'),
+            "Delays should become v, got: {}",
+            result
+        );
         let result = rules.apply("\u{0545}");
-        assert!(result.contains('y'), "Delays should become y, got: {}", result);
+        assert!(
+            result.contains('y'),
+            "Delays should become y, got: {}",
+            result
+        );
     }
 
     // ============================================================
@@ -322,5 +383,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TEST
     // ============================================================
-
 }

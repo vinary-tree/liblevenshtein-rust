@@ -47,12 +47,12 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
                     file_path: std::path::PathBuf::from("<memory>"),
                     message: format!("content.xml not found in ODT: {}", e),
                 })?;
-        content_file
-            .read_to_string(&mut content_xml)
-            .map_err(|e| GrepError::DocumentExtraction {
+        content_file.read_to_string(&mut content_xml).map_err(|e| {
+            GrepError::DocumentExtraction {
                 file_path: std::path::PathBuf::from("<memory>"),
                 message: format!("Failed to read content.xml: {}", e),
-            })?;
+            }
+        })?;
     }
 
     // Parse the XML and extract text

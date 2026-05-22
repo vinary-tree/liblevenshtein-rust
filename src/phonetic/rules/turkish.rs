@@ -216,7 +216,9 @@ mod tests {
         let result = rules.apply("dağ");
         // d stays, a stays, ğ→ɣ
         assert!(
-            (result.contains('ɣ') || result.contains('G')) && result.contains('d') && result.contains('a'),
+            (result.contains('ɣ') || result.contains('G'))
+                && result.contains('d')
+                && result.contains('a'),
             "dağ should have ɣ (from ğ), got: {}",
             result
         );
@@ -234,5 +236,4 @@ mod tests {
             result
         );
     }
-
 }

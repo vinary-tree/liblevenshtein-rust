@@ -23,7 +23,6 @@ pub struct Cli {
     // ========================================================================
     // Global options
     // ========================================================================
-
     /// Custom configuration file path
     #[arg(short = 'c', long = "config")]
     pub config_file: Option<PathBuf>,
@@ -31,7 +30,6 @@ pub struct Cli {
     // ========================================================================
     // Operation flags (mutually exclusive)
     // ========================================================================
-
     /// Compile phonetic rules from .llev to binary format
     #[arg(short = 'C', long)]
     pub compile: bool,
@@ -95,7 +93,6 @@ pub struct Cli {
     // ========================================================================
     // Input/output arguments (shared across operations)
     // ========================================================================
-
     /// Input file (for --compile, --convert)
     #[arg(long)]
     pub input: Option<PathBuf>,
@@ -123,7 +120,6 @@ pub struct Cli {
     // ========================================================================
     // Compile-specific options
     // ========================================================================
-
     /// Use character-level (Unicode) rules (default: true)
     #[arg(long, default_value = "true")]
     pub unicode: bool,
@@ -139,7 +135,6 @@ pub struct Cli {
     // ========================================================================
     // Regex options (for --compile-regex, --match-regex)
     // ========================================================================
-
     /// Enable multiline mode for regex (^ and $ match line boundaries)
     #[arg(long)]
     pub multiline: bool,
@@ -151,7 +146,6 @@ pub struct Cli {
     // ========================================================================
     // Grep options (for --grep)
     // ========================================================================
-
     /// Pattern to search for (regex or literal) in grep mode
     #[arg(long)]
     pub pattern: Option<String>,
@@ -223,7 +217,6 @@ pub struct Cli {
     // ========================================================================
     // Dictionary options
     // ========================================================================
-
     /// Dictionary backend (auto-detected if not specified)
     #[arg(short = 'b', long)]
     pub backend: Option<DictionaryBackend>,
@@ -259,7 +252,6 @@ pub struct Cli {
     // ========================================================================
     // Convert-specific options
     // ========================================================================
-
     /// Input backend (auto-detected if not specified)
     #[arg(long)]
     pub from_backend: Option<DictionaryBackend>,
@@ -279,7 +271,6 @@ pub struct Cli {
     // ========================================================================
     // Settings-specific options
     // ========================================================================
-
     /// Set default dictionary path
     #[arg(long)]
     pub set_dict: Option<PathBuf>,
@@ -307,7 +298,6 @@ pub struct Cli {
     // ========================================================================
     // Config management options
     // ========================================================================
-
     /// Switch to a different config file (updates app config)
     #[arg(long)]
     pub switch: Option<PathBuf>,

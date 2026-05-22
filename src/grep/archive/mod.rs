@@ -126,9 +126,7 @@ impl ArchiveFormat {
     pub fn is_available(&self) -> bool {
         match self {
             Self::None => true,
-            Self::Tar { compression } => {
-                cfg!(feature = "tar") && compression.is_available()
-            }
+            Self::Tar { compression } => cfg!(feature = "tar") && compression.is_available(),
             Self::Zip => cfg!(feature = "zip"),
         }
     }
@@ -163,7 +161,9 @@ mod tests {
     fn test_tar_detection() {
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("archive.tar")),
-            ArchiveFormat::Tar { compression: CompressionFormat::None }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::None
+            }
         ));
     }
 
@@ -171,11 +171,15 @@ mod tests {
     fn test_tar_gz_detection() {
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("archive.tar.gz")),
-            ArchiveFormat::Tar { compression: CompressionFormat::Gzip }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Gzip
+            }
         ));
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("archive.tgz")),
-            ArchiveFormat::Tar { compression: CompressionFormat::Gzip }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Gzip
+            }
         ));
     }
 
@@ -183,7 +187,9 @@ mod tests {
     fn test_tar_zst_detection() {
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("archive.tar.zst")),
-            ArchiveFormat::Tar { compression: CompressionFormat::Zstd }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Zstd
+            }
         ));
     }
 
@@ -191,11 +197,15 @@ mod tests {
     fn test_tar_xz_detection() {
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("archive.tar.xz")),
-            ArchiveFormat::Tar { compression: CompressionFormat::Xz }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Xz
+            }
         ));
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("archive.txz")),
-            ArchiveFormat::Tar { compression: CompressionFormat::Xz }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Xz
+            }
         ));
     }
 
@@ -203,11 +213,15 @@ mod tests {
     fn test_tar_bz2_detection() {
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("archive.tar.bz2")),
-            ArchiveFormat::Tar { compression: CompressionFormat::Bzip2 }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Bzip2
+            }
         ));
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("archive.tbz2")),
-            ArchiveFormat::Tar { compression: CompressionFormat::Bzip2 }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Bzip2
+            }
         ));
     }
 
@@ -243,7 +257,9 @@ mod tests {
     fn test_case_insensitive() {
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("ARCHIVE.TAR.GZ")),
-            ArchiveFormat::Tar { compression: CompressionFormat::Gzip }
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Gzip
+            }
         ));
         assert!(matches!(
             ArchiveFormat::from_path(Path::new("Archive.ZIP")),
@@ -255,11 +271,17 @@ mod tests {
     fn test_format_name() {
         assert_eq!(ArchiveFormat::None.name(), "plain");
         assert_eq!(
-            ArchiveFormat::Tar { compression: CompressionFormat::None }.name(),
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::None
+            }
+            .name(),
             "tar"
         );
         assert_eq!(
-            ArchiveFormat::Tar { compression: CompressionFormat::Gzip }.name(),
+            ArchiveFormat::Tar {
+                compression: CompressionFormat::Gzip
+            }
+            .name(),
             "tar.gz"
         );
         assert_eq!(ArchiveFormat::Zip.name(), "zip");

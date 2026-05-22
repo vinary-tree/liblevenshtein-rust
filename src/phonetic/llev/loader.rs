@@ -190,7 +190,9 @@ impl Loader {
 
         // Parse the content
         let mut parser = Parser::new(&content);
-        let mut file = parser.parse_file().map_err(|e| e.in_file(path.to_path_buf()))?;
+        let mut file = parser
+            .parse_file()
+            .map_err(|e| e.in_file(path.to_path_buf()))?;
         file.source_file = Some(path.to_path_buf());
 
         // Resolve includes
@@ -215,7 +217,8 @@ impl Loader {
 
         for include in includes {
             // Resolve the include path
-            let include_path = self.resolve_include_path(&include.path, file.source_file.as_deref())?;
+            let include_path =
+                self.resolve_include_path(&include.path, file.source_file.as_deref())?;
 
             match include_path {
                 Some(resolved_path) => {
@@ -235,11 +238,9 @@ impl Loader {
                 None => {
                     // Report include not found
                     let search_paths = self.get_search_paths(file.source_file.as_deref());
-                    return Err(
-                        LLevError::include_not_found(&include.path, search_paths)
-                            .at_position(include.position)
-                            .in_file(file.source_file.clone().unwrap_or_default()),
-                    );
+                    return Err(LLevError::include_not_found(&include.path, search_paths)
+                        .at_position(include.position)
+                        .in_file(file.source_file.clone().unwrap_or_default()));
                 }
             }
         }
@@ -250,7 +251,11 @@ impl Loader {
     /// Resolve an include path to an absolute path.
     ///
     /// Returns `None` if the file cannot be found.
-    fn resolve_include_path(&self, path: &str, source_file: Option<&Path>) -> LLevResult<Option<PathBuf>> {
+    fn resolve_include_path(
+        &self,
+        path: &str,
+        source_file: Option<&Path>,
+    ) -> LLevResult<Option<PathBuf>> {
         let include_path = Path::new(path);
 
         // If absolute, use directly
@@ -301,21 +306,23 @@ impl Loader {
 
     /// Read a file's contents.
     fn read_file(&self, path: &Path) -> LLevResult<String> {
-        fs::read_to_string(path).map_err(|e| {
-            match e.kind() {
-                io::ErrorKind::NotFound => LLevError::file_not_found(path.display().to_string()),
-                io::ErrorKind::PermissionDenied => {
-                    LLevError::new(LLevErrorKind::PermissionDenied(path.display().to_string()))
-                }
-                _ => LLevError::io_error(format!("{}: {}", path.display(), e)),
+        fs::read_to_string(path).map_err(|e| match e.kind() {
+            io::ErrorKind::NotFound => LLevError::file_not_found(path.display().to_string()),
+            io::ErrorKind::PermissionDenied => {
+                LLevError::new(LLevErrorKind::PermissionDenied(path.display().to_string()))
             }
+            _ => LLevError::io_error(format!("{}: {}", path.display(), e)),
         })
     }
 
     /// Canonicalize a path for consistent comparison.
     fn canonicalize_path(&self, path: &Path) -> LLevResult<PathBuf> {
         path.canonicalize().map_err(|e| {
-            LLevError::io_error(format!("failed to canonicalize path {}: {}", path.display(), e))
+            LLevError::io_error(format!(
+                "failed to canonicalize path {}: {}",
+                path.display(),
+                e
+            ))
         })
     }
 }
@@ -369,7 +376,8 @@ mod tests {
     fn create_test_file(dir: &TempDir, name: &str, content: &str) -> PathBuf {
         let path = dir.path().join(name);
         let mut file = File::create(&path).expect("Failed to create test file");
-        file.write_all(content.as_bytes()).expect("Failed to write test file");
+        file.write_all(content.as_bytes())
+            .expect("Failed to write test file");
         path
     }
 
@@ -502,7 +510,9 @@ gh -> g
 
         let config = LoaderConfig::new().with_allow_missing_includes(true);
         let loader = Loader::with_config(config);
-        let file = loader.load(&path).expect("Should succeed with missing include");
+        let file = loader
+            .load(&path)
+            .expect("Should succeed with missing include");
 
         // Should have rules from main file only
         assert_eq!(file.rules.len(), 2);
@@ -526,7 +536,9 @@ ph -> f
         // Load with include path
         let config = LoaderConfig::new().with_include_path(include_dir.path());
         let loader = Loader::with_config(config);
-        let file = loader.load(&main_path).expect("Failed to load with include path");
+        let file = loader
+            .load(&main_path)
+            .expect("Failed to load with include path");
 
         assert_eq!(file.rules.len(), 2);
     }
@@ -545,7 +557,9 @@ ph -> f
         let main_path = create_test_file(&dir, "main.llev", main_content);
 
         let loader = Loader::new();
-        let file = loader.load(&main_path).expect("Failed to load nested includes");
+        let file = loader
+            .load(&main_path)
+            .expect("Failed to load nested includes");
 
         // Should have rules from all three files
         assert_eq!(file.rules.len(), 3);

@@ -142,11 +142,7 @@ mod tests {
         let rules = base();
         // x → SH
         let result = rules.apply("x");
-        assert!(
-            result.contains("ʃ"),
-            "x should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "x should become SH, got: {}", result);
     }
 
     #[test]
@@ -166,11 +162,7 @@ mod tests {
         let rules = base();
         // ñ → NY
         let result = rules.apply("ñ");
-        assert!(
-            result.contains("ɲ"),
-            "ñ should become NY, got: {}",
-            result
-        );
+        assert!(result.contains("ɲ"), "ñ should become NY, got: {}", result);
     }
 
     #[test]
@@ -208,5 +200,4 @@ mod tests {
             result
         );
     }
-
 }

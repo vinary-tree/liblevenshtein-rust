@@ -333,7 +333,7 @@ fn myers_transposition_core(pattern: &[u8], text: &[u8]) -> usize {
     let standard_dist = score;
     let trans_dist = crate::distance::transposition_distance(
         std::str::from_utf8(pattern).unwrap_or(""),
-        std::str::from_utf8(text).unwrap_or("")
+        std::str::from_utf8(text).unwrap_or(""),
     );
 
     standard_dist.min(trans_dist)
@@ -382,10 +382,7 @@ mod tests {
     #[test]
     fn test_myers_symmetry() {
         // Distance should be symmetric
-        assert_eq!(
-            myers_distance("abc", "def"),
-            myers_distance("def", "abc")
-        );
+        assert_eq!(myers_distance("abc", "def"), myers_distance("def", "abc"));
         assert_eq!(
             myers_distance("kitten", "sitting"),
             myers_distance("sitting", "kitten")

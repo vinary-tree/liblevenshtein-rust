@@ -323,11 +323,7 @@ mod tests {
 
     #[test]
     fn test_jaro_symmetry() {
-        let pairs = [
-            ("hello", "world"),
-            ("abc", "xyz"),
-            ("test", "tset"),
-        ];
+        let pairs = [("hello", "world"), ("abc", "xyz"), ("test", "tset")];
 
         for (a, b) in pairs {
             let sim1 = jaro_similarity(a, b);
@@ -335,7 +331,12 @@ mod tests {
             assert!(
                 (sim1 - sim2).abs() < EPSILON,
                 "jaro({}, {}) = {} != {} = jaro({}, {})",
-                a, b, sim1, sim2, b, a
+                a,
+                b,
+                sim1,
+                sim2,
+                b,
+                a
             );
         }
     }
@@ -355,9 +356,9 @@ mod tests {
     fn test_jaro_winkler_prefix_bonus() {
         // Jaro-Winkler should be >= Jaro for strings with common prefix
         let pairs = [
-            ("MARTHA", "MARHTA"),  // Common prefix "MAR"
-            ("hello", "helo"),     // Common prefix "hel"
-            ("test", "tset"),      // Common prefix "t"
+            ("MARTHA", "MARHTA"), // Common prefix "MAR"
+            ("hello", "helo"),    // Common prefix "hel"
+            ("test", "tset"),     // Common prefix "t"
         ];
 
         for (a, b) in pairs {
@@ -366,7 +367,10 @@ mod tests {
             assert!(
                 jw >= jaro - EPSILON,
                 "JW({}, {}) = {} should be >= Jaro = {}",
-                a, b, jw, jaro
+                a,
+                b,
+                jw,
+                jaro
             );
         }
     }
@@ -380,11 +384,7 @@ mod tests {
 
     #[test]
     fn test_jaro_winkler_symmetry() {
-        let pairs = [
-            ("hello", "world"),
-            ("abc", "xyz"),
-            ("test", "tset"),
-        ];
+        let pairs = [("hello", "world"), ("abc", "xyz"), ("test", "tset")];
 
         for (a, b) in pairs {
             let sim1 = jaro_winkler_similarity(a, b);
@@ -392,7 +392,12 @@ mod tests {
             assert!(
                 (sim1 - sim2).abs() < EPSILON,
                 "jw({}, {}) = {} != {} = jw({}, {})",
-                a, b, sim1, sim2, b, a
+                a,
+                b,
+                sim1,
+                sim2,
+                b,
+                a
             );
         }
     }
@@ -406,7 +411,8 @@ mod tests {
         assert!(
             sim_scaled > sim_default,
             "scaled {} should be > default {}",
-            sim_scaled, sim_default
+            sim_scaled,
+            sim_default
         );
     }
 

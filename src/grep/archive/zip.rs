@@ -36,9 +36,8 @@ impl ZipArchiveReader {
 
         // Verify it's a valid zip
         let file = File::open(path)?;
-        let _ = ZipArchive::new(file).map_err(|e| {
-            GrepError::archive(path, format!("invalid zip archive: {}", e))
-        })?;
+        let _ = ZipArchive::new(file)
+            .map_err(|e| GrepError::archive(path, format!("invalid zip archive: {}", e)))?;
 
         Ok(Self {
             path: path.to_path_buf(),
@@ -66,9 +65,8 @@ impl ZipArchiveReader {
     /// Get the number of entries in the archive.
     pub fn entry_count(&self) -> GrepResult<usize> {
         let file = File::open(&self.path)?;
-        let archive = ZipArchive::new(file).map_err(|e| {
-            GrepError::archive(&self.path, e.to_string())
-        })?;
+        let archive =
+            ZipArchive::new(file).map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
         Ok(archive.len())
     }
 
@@ -76,11 +74,12 @@ impl ZipArchiveReader {
     ///
     /// Returns an iterator that yields `(SourceId, ArchiveEntryMeta, content)` tuples.
     /// Only regular files are returned; directories are skipped.
-    pub fn entries(&self) -> GrepResult<impl Iterator<Item = GrepResult<(SourceId, ArchiveEntryMeta, Vec<u8>)>>> {
+    pub fn entries(
+        &self,
+    ) -> GrepResult<impl Iterator<Item = GrepResult<(SourceId, ArchiveEntryMeta, Vec<u8>)>>> {
         let file = File::open(&self.path)?;
-        let archive = ZipArchive::new(file).map_err(|e| {
-            GrepError::archive(&self.path, e.to_string())
-        })?;
+        let archive =
+            ZipArchive::new(file).map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
         Ok(ZipEntryIterator {
             archive,
@@ -93,9 +92,8 @@ impl ZipArchiveReader {
     /// Read a specific entry by path.
     pub fn read_entry(&self, entry_path: &str) -> GrepResult<(ArchiveEntryMeta, Vec<u8>)> {
         let file = File::open(&self.path)?;
-        let mut archive = ZipArchive::new(file).map_err(|e| {
-            GrepError::archive(&self.path, e.to_string())
-        })?;
+        let mut archive =
+            ZipArchive::new(file).map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
         let mut entry = archive.by_name(entry_path).map_err(|e| match e {
             zip::result::ZipError::FileNotFound => GrepError::EntryNotFound {
@@ -115,13 +113,12 @@ impl ZipArchiveReader {
     /// Read a specific entry by index.
     pub fn read_entry_by_index(&self, index: usize) -> GrepResult<(ArchiveEntryMeta, Vec<u8>)> {
         let file = File::open(&self.path)?;
-        let mut archive = ZipArchive::new(file).map_err(|e| {
-            GrepError::archive(&self.path, e.to_string())
-        })?;
+        let mut archive =
+            ZipArchive::new(file).map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
-        let mut entry = archive.by_index(index).map_err(|e| {
-            GrepError::archive(&self.path, e.to_string())
-        })?;
+        let mut entry = archive
+            .by_index(index)
+            .map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
         let meta = zip_file_to_meta(&entry);
         let mut content = Vec::with_capacity(entry.size() as usize);
@@ -133,20 +130,18 @@ impl ZipArchiveReader {
     /// List all entries (for debugging/display).
     pub fn list_entries(&self) -> GrepResult<Vec<ArchiveEntryMeta>> {
         let file = File::open(&self.path)?;
-        let archive = ZipArchive::new(file).map_err(|e| {
-            GrepError::archive(&self.path, e.to_string())
-        })?;
+        let archive =
+            ZipArchive::new(file).map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
         let mut entries = Vec::with_capacity(archive.len());
         for i in 0..archive.len() {
             let file = File::open(&self.path)?;
-            let mut archive = ZipArchive::new(file).map_err(|e| {
-                GrepError::archive(&self.path, e.to_string())
-            })?;
+            let mut archive =
+                ZipArchive::new(file).map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
-            let entry = archive.by_index(i).map_err(|e| {
-                GrepError::archive(&self.path, e.to_string())
-            })?;
+            let entry = archive
+                .by_index(i)
+                .map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
             entries.push(zip_file_to_meta(&entry));
         }
@@ -228,10 +223,7 @@ impl<R: Read + Seek> Iterator for ZipEntryIterator<R> {
                 return Some(Err(GrepError::Io(e)));
             }
 
-            let source_id = SourceId::archive_entry(
-                self.archive_path.clone(),
-                path,
-            );
+            let source_id = SourceId::archive_entry(self.archive_path.clone(), path);
 
             return Some(Ok((source_id, meta, content)));
         }
@@ -299,7 +291,8 @@ mod tests {
         zip.start_file("file1.txt", options).expect("start file1");
         zip.write_all(b"hello").expect("write file1");
 
-        zip.start_file("dir/file2.txt", options).expect("start file2");
+        zip.start_file("dir/file2.txt", options)
+            .expect("start file2");
         zip.write_all(b"world").expect("write file2");
 
         zip.finish().expect("finish zip");

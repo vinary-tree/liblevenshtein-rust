@@ -139,19 +139,19 @@ mod tests {
     #[test]
     fn test_to_operation_set_standard() {
         let ops = Algorithm::Standard.to_operation_set();
-        assert_eq!(ops.len(), 4);  // Match, Substitute, Insert, Delete
+        assert_eq!(ops.len(), 4); // Match, Substitute, Insert, Delete
     }
 
     #[test]
     fn test_to_operation_set_transposition() {
         let ops = Algorithm::Transposition.to_operation_set();
-        assert_eq!(ops.len(), 5);  // Standard + Transposition
+        assert_eq!(ops.len(), 5); // Standard + Transposition
     }
 
     #[test]
     fn test_to_operation_set_merge_split() {
         let ops = Algorithm::MergeAndSplit.to_operation_set();
-        assert_eq!(ops.len(), 6);  // Standard + Merge + Split
+        assert_eq!(ops.len(), 6); // Standard + Merge + Split
     }
 
     #[test]

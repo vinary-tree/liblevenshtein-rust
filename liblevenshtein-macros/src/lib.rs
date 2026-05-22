@@ -182,11 +182,7 @@ pub fn llre_file(input: TokenStream) -> TokenStream {
     let file = match liblevenshtein::phonetic::llre::load_file(&full_path) {
         Ok(f) => f,
         Err(e) => {
-            let msg = format!(
-                "Failed to load .llre file '{}': {}",
-                full_path.display(),
-                e
-            );
+            let msg = format!("Failed to load .llre file '{}': {}", full_path.display(), e);
             return syn::Error::new(path_lit.span(), msg)
                 .to_compile_error()
                 .into();
@@ -309,9 +305,7 @@ pub fn llre_with_symbols(input: TokenStream) -> TokenStream {
     // Build symbol table from llev file
     let mut symbol_table = SymbolTable::new();
     for symbol in &llev_file.symbols {
-        if let liblevenshtein::phonetic::llev::Expression::CharClass { chars, .. } =
-            &symbol.value
-        {
+        if let liblevenshtein::phonetic::llev::Expression::CharClass { chars, .. } = &symbol.value {
             symbol_table.add_char_class(&symbol.name, chars.clone(), None);
         }
     }
@@ -387,10 +381,7 @@ impl syn::parse::Parse for MacroArgs {
         // Parse "import"
         let import_ident: syn::Ident = input.parse()?;
         if import_ident != "import" {
-            return Err(syn::Error::new(
-                import_ident.span(),
-                "expected 'import'",
-            ));
+            return Err(syn::Error::new(import_ident.span(), "expected 'import'"));
         }
 
         // Parse "="
@@ -407,10 +398,7 @@ impl syn::parse::Parse for MacroArgs {
         // Parse "pattern"
         let pattern_ident: syn::Ident = input.parse()?;
         if pattern_ident != "pattern" {
-            return Err(syn::Error::new(
-                pattern_ident.span(),
-                "expected 'pattern'",
-            ));
+            return Err(syn::Error::new(pattern_ident.span(), "expected 'pattern'"));
         }
 
         // Parse "="
@@ -577,11 +565,7 @@ pub fn llev_file(input: TokenStream) -> TokenStream {
     let file = match liblevenshtein::phonetic::llev::load_file(&full_path) {
         Ok(f) => f,
         Err(e) => {
-            let msg = format!(
-                "Failed to load .llev file '{}': {}",
-                full_path.display(),
-                e
-            );
+            let msg = format!("Failed to load .llev file '{}': {}", full_path.display(), e);
             return syn::Error::new(path_lit.span(), msg)
                 .to_compile_error()
                 .into();

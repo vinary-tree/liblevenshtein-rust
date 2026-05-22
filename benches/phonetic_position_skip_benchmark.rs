@@ -383,7 +383,11 @@ fn bench_position_skipping_comparison(c: &mut Criterion) {
             &(&phon_rules, &input, fuel),
             |b, (rules, input, fuel)| {
                 b.iter(|| {
-                    apply_rules_seq_optimized(black_box(*rules), black_box(*input), black_box(*fuel))
+                    apply_rules_seq_optimized(
+                        black_box(*rules),
+                        black_box(*input),
+                        black_box(*fuel),
+                    )
                 })
             },
         );
@@ -433,7 +437,11 @@ fn bench_position_skipping_localized(c: &mut Criterion) {
             &(&phon_rules, &input, fuel),
             |b, (rules, input, fuel)| {
                 b.iter(|| {
-                    apply_rules_seq_optimized(black_box(*rules), black_box(*input), black_box(*fuel))
+                    apply_rules_seq_optimized(
+                        black_box(*rules),
+                        black_box(*input),
+                        black_box(*fuel),
+                    )
                 })
             },
         );
@@ -472,7 +480,11 @@ fn bench_position_skipping_simple(c: &mut Criterion) {
             &(&phon_rules, &input, fuel),
             |b, (rules, input, fuel)| {
                 b.iter(|| {
-                    apply_rules_seq_optimized(black_box(*rules), black_box(*input), black_box(*fuel))
+                    apply_rules_seq_optimized(
+                        black_box(*rules),
+                        black_box(*input),
+                        black_box(*fuel),
+                    )
                 })
             },
         );
@@ -628,7 +640,11 @@ fn bench_dictionary_position_skipping(c: &mut Criterion) {
                 b.iter(|| {
                     for word in *words {
                         let fuel = word.len() * 100;
-                        black_box(apply_rules_seq(black_box(*rules), black_box(word), black_box(fuel)));
+                        black_box(apply_rules_seq(
+                            black_box(*rules),
+                            black_box(word),
+                            black_box(fuel),
+                        ));
                     }
                 })
             },
@@ -670,8 +686,14 @@ fn bench_compound_phrases_position_skipping(c: &mut Criterion) {
         (20, string_to_phones("spell_checker_module")),
         (25, string_to_phones("internationalization_api")),
         (30, string_to_phones("the_quick_brown_fox_jumps_ov")),
-        (40, string_to_phones("internationalization_standards_committee")),
-        (50, string_to_phones("counterrevolutionary_internationalization_")),
+        (
+            40,
+            string_to_phones("internationalization_standards_committee"),
+        ),
+        (
+            50,
+            string_to_phones("counterrevolutionary_internationalization_"),
+        ),
     ];
 
     let mut group = c.benchmark_group("phonetic_compound_phrases_position_skipping");
@@ -697,7 +719,11 @@ fn bench_compound_phrases_position_skipping(c: &mut Criterion) {
             &(&phon_rules, phrase, fuel),
             |b, (rules, input, fuel)| {
                 b.iter(|| {
-                    apply_rules_seq_optimized(black_box(*rules), black_box(*input), black_box(*fuel))
+                    apply_rules_seq_optimized(
+                        black_box(*rules),
+                        black_box(*input),
+                        black_box(*fuel),
+                    )
                 })
             },
         );

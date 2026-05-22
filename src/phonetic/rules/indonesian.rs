@@ -74,7 +74,10 @@ mod tests {
     #[test]
     fn test_base_loads() {
         let rules = base();
-        assert!(!rules.is_empty(), "Indonesian base rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Indonesian base rules should not be empty"
+        );
         assert!(
             rules.len() >= 5,
             "expected >=5 base rules, got {}",
@@ -87,11 +90,7 @@ mod tests {
         let rules = base();
         // ng → NG
         let result = rules.apply("ng");
-        assert!(
-            result.contains("ŋ"),
-            "ng should become NG, got: {}",
-            result
-        );
+        assert!(result.contains("ŋ"), "ng should become NG, got: {}", result);
     }
 
     #[test]
@@ -99,11 +98,7 @@ mod tests {
         let rules = base();
         // ny → NY
         let result = rules.apply("ny");
-        assert!(
-            result.contains("ɲ"),
-            "ny should become NY, got: {}",
-            result
-        );
+        assert!(result.contains("ɲ"), "ny should become NY, got: {}", result);
     }
 
     #[test]
@@ -111,11 +106,7 @@ mod tests {
         let rules = base();
         // sy → SH
         let result = rules.apply("sy");
-        assert!(
-            result.contains("ʃ"),
-            "sy should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "sy should become SH, got: {}", result);
     }
 
     #[test]
@@ -123,11 +114,7 @@ mod tests {
         let rules = base();
         // kh → KH
         let result = rules.apply("kh");
-        assert!(
-            result.contains("x"),
-            "kh should become KH, got: {}",
-            result
-        );
+        assert!(result.contains("x"), "kh should become KH, got: {}", result);
     }
 
     #[test]
@@ -135,11 +122,7 @@ mod tests {
         let rules = base();
         // c → CH (always like English "ch")
         let result = rules.apply("c");
-        assert!(
-            result.contains("t͡ʃ"),
-            "c should become CH, got: {}",
-            result
-        );
+        assert!(result.contains("t͡ʃ"), "c should become CH, got: {}", result);
     }
 
     #[test]
@@ -147,11 +130,7 @@ mod tests {
         let rules = base();
         // v → f (common Indonesian pronunciation)
         let result = rules.apply("v");
-        assert!(
-            result.contains('f'),
-            "v should become f, got: {}",
-            result
-        );
+        assert!(result.contains('f'), "v should become f, got: {}", result);
     }
 
     #[test]
@@ -190,5 +169,4 @@ mod tests {
             result
         );
     }
-
 }

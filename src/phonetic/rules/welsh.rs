@@ -106,11 +106,7 @@ mod tests {
         let rules = base();
         // dd → DH
         let result = rules.apply("dd");
-        assert!(
-            result.contains("ð"),
-            "dd should become DH, got: {}",
-            result
-        );
+        assert!(result.contains("ð"), "dd should become DH, got: {}", result);
     }
 
     #[test]
@@ -154,11 +150,7 @@ mod tests {
         let rules = base();
         // c → k (always hard in Welsh)
         let result = rules.apply("c");
-        assert!(
-            result.contains('k'),
-            "c should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "c should become k, got: {}", result);
     }
 
     #[test]
@@ -166,11 +158,7 @@ mod tests {
         let rules = base();
         // w is a vowel in Welsh
         let result = rules.apply("w");
-        assert!(
-            result.contains('w'),
-            "w should remain w, got: {}",
-            result
-        );
+        assert!(result.contains('w'), "w should remain w, got: {}", result);
     }
 
     #[test]
@@ -178,11 +166,7 @@ mod tests {
         let rules = base();
         // y is a vowel in Welsh
         let result = rules.apply("y");
-        assert!(
-            result.contains('y'),
-            "y should remain y, got: {}",
-            result
-        );
+        assert!(result.contains('y'), "y should remain y, got: {}", result);
     }
 
     #[test]
@@ -190,11 +174,7 @@ mod tests {
         let rules = base();
         // â → a
         let result = rules.apply("â");
-        assert!(
-            result.contains('a'),
-            "â should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "â should become a, got: {}", result);
     }
 
     #[test]
@@ -202,11 +182,7 @@ mod tests {
         let rules = base();
         // ŵ → w
         let result = rules.apply("ŵ");
-        assert!(
-            result.contains('w'),
-            "ŵ should become w, got: {}",
-            result
-        );
+        assert!(result.contains('w'), "ŵ should become w, got: {}", result);
     }
 
     #[test]
@@ -214,11 +190,7 @@ mod tests {
         let rules = base();
         // Cymru (Wales) - test c→k transformation
         let result = rules.apply("c");
-        assert!(
-            result.contains('k'),
-            "c should become k, got: {}",
-            result
-        );
+        assert!(result.contains('k'), "c should become k, got: {}", result);
         // Test y is preserved as vowel
         let result_y = rules.apply("y");
         assert!(
@@ -240,5 +212,4 @@ mod tests {
             result
         );
     }
-
 }

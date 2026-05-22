@@ -6,7 +6,9 @@
 // Each test corresponds to a proven Coq theorem and validates that the Rust
 // implementation correctly preserves position invariants during transitions.
 
-use liblevenshtein::transducer::generalized::{GeneralizedPosition, GeneralizedState, CharacteristicVector};
+use liblevenshtein::transducer::generalized::{
+    CharacteristicVector, GeneralizedPosition, GeneralizedState,
+};
 use liblevenshtein::transducer::OperationSet;
 use proptest::prelude::*;
 

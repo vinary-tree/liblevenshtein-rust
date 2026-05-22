@@ -578,13 +578,11 @@ impl<'a, U: PhoneticUnit> RuleConverter<'a, U> {
     fn char_to_phone(&self, c: char, pos: Position, case_fold: bool) -> LLevResult<Phone<U>> {
         // Apply case folding if requested
         let c_folded = if case_fold {
-            U::to_lowercase(U::from_char(c).ok_or_else(|| {
-                LLevError::non_ascii_in_byte_level(c, None, pos)
-            })?)
+            U::to_lowercase(
+                U::from_char(c).ok_or_else(|| LLevError::non_ascii_in_byte_level(c, None, pos))?,
+            )
         } else {
-            U::from_char(c).ok_or_else(|| {
-                LLevError::non_ascii_in_byte_level(c, None, pos)
-            })?
+            U::from_char(c).ok_or_else(|| LLevError::non_ascii_in_byte_level(c, None, pos))?
         };
 
         // Classify as vowel or consonant
@@ -717,9 +715,8 @@ impl<'a, U: PhoneticUnit> RuleConverter<'a, U> {
                 }
                 let mut units = Vec::with_capacity(chars.len());
                 for &c in chars {
-                    let unit = U::from_char(c).ok_or_else(|| {
-                        LLevError::non_ascii_in_byte_level(c, None, pos)
-                    })?;
+                    let unit = U::from_char(c)
+                        .ok_or_else(|| LLevError::non_ascii_in_byte_level(c, None, pos))?;
                     // Lowercase for case-insensitive matching
                     units.push(U::to_lowercase(unit));
                 }
@@ -730,9 +727,8 @@ impl<'a, U: PhoneticUnit> RuleConverter<'a, U> {
                 // Convert range to character class
                 let mut units = Vec::new();
                 for c in *start..=*end {
-                    let unit = U::from_char(c).ok_or_else(|| {
-                        LLevError::non_ascii_in_byte_level(c, None, pos)
-                    })?;
+                    let unit = U::from_char(c)
+                        .ok_or_else(|| LLevError::non_ascii_in_byte_level(c, None, pos))?;
                     // Lowercase for case-insensitive matching
                     units.push(U::to_lowercase(unit));
                 }
@@ -764,10 +760,7 @@ impl<'a, U: PhoneticUnit> RuleConverter<'a, U> {
 /// Check if a character is an English vowel.
 #[inline]
 fn is_vowel_char(c: char) -> bool {
-    matches!(
-        c,
-        'a' | 'e' | 'i' | 'o' | 'u' | 'A' | 'E' | 'I' | 'O' | 'U'
-    )
+    matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'A' | 'E' | 'I' | 'O' | 'U')
 }
 
 // ============================================================================

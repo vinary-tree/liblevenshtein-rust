@@ -82,7 +82,12 @@ impl<'a> ParserByte<'a> {
 
         let weight = 0.0; // Simplified for byte-level
 
-        Ok(RegexByte::rewrite_rule(pattern, replacement, context, weight))
+        Ok(RegexByte::rewrite_rule(
+            pattern,
+            replacement,
+            context,
+            weight,
+        ))
     }
 
     /// Parse an alternation.
@@ -465,7 +470,9 @@ impl<'a> ParserByte<'a> {
             TokenByte::OpenSyllable => Ok(SyllableExpr::cond(SyllableCondition::OpenSyllable)),
             TokenByte::ClosedSyllable => Ok(SyllableExpr::cond(SyllableCondition::ClosedSyllable)),
             TokenByte::FinalSyllable => Ok(SyllableExpr::cond(SyllableCondition::FinalSyllable)),
-            TokenByte::InitialSyllable => Ok(SyllableExpr::cond(SyllableCondition::InitialSyllable)),
+            TokenByte::InitialSyllable => {
+                Ok(SyllableExpr::cond(SyllableCondition::InitialSyllable))
+            }
             TokenByte::GroupStart => {
                 let inner = self.parse_syllable_expr()?;
                 self.expect_token(TokenByte::GroupEnd)?;
@@ -581,10 +588,7 @@ impl<'a> SyllableParser for ParserByte<'a> {
         position: Position,
     ) -> Self::Error {
         ParseError::new(
-            ParseErrorKind::InvalidContext(format!(
-                "expected {}, got {:?}",
-                expected, found
-            )),
+            ParseErrorKind::InvalidContext(format!("expected {}, got {:?}", expected, found)),
             position,
         )
     }

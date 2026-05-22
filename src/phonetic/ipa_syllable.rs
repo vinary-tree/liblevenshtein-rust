@@ -54,7 +54,8 @@ const SYLLABLE_BOUNDARY: char = '.';
 #[inline]
 pub fn is_ipa_vowel(c: char) -> bool {
     // Use match for common vowels (fast path)
-    matches!(c,
+    matches!(
+        c,
         // Basic vowels
         'a' | 'e' | 'i' | 'o' | 'u' |
         'A' | 'E' | 'I' | 'O' | 'U' |
@@ -226,7 +227,9 @@ pub fn ipa_syllable_boundaries(ipa: &str) -> Vec<usize> {
 
         // Skip to end of first vowel group (handle diphthongs)
         let mut v1_end = v1;
-        while v1_end + 1 < v2 && (is_ipa_vowel(chars[v1_end + 1]) || is_length_marker(chars[v1_end + 1])) {
+        while v1_end + 1 < v2
+            && (is_ipa_vowel(chars[v1_end + 1]) || is_length_marker(chars[v1_end + 1]))
+        {
             v1_end += 1;
         }
 
@@ -383,17 +386,17 @@ mod tests {
 
     #[test]
     fn test_syllable_count_monosyllables() {
-        assert_eq!(ipa_syllable_count("kæt"), 1);  // cat
-        assert_eq!(ipa_syllable_count("dɔg"), 1);  // dog
-        assert_eq!(ipa_syllable_count("rʌn"), 1);  // run
+        assert_eq!(ipa_syllable_count("kæt"), 1); // cat
+        assert_eq!(ipa_syllable_count("dɔg"), 1); // dog
+        assert_eq!(ipa_syllable_count("rʌn"), 1); // run
         assert_eq!(ipa_syllable_count("flaɪ"), 1); // fly (diphthong)
     }
 
     #[test]
     fn test_syllable_count_disyllables() {
-        assert_eq!(ipa_syllable_count("hæpi"), 2);    // happy
-        assert_eq!(ipa_syllable_count("wɔːtər"), 2);  // water
-        assert_eq!(ipa_syllable_count("rʌnɪŋ"), 2);   // running
+        assert_eq!(ipa_syllable_count("hæpi"), 2); // happy
+        assert_eq!(ipa_syllable_count("wɔːtər"), 2); // water
+        assert_eq!(ipa_syllable_count("rʌnɪŋ"), 2); // running
     }
 
     #[test]
@@ -411,17 +414,17 @@ mod tests {
 
     #[test]
     fn test_syllable_count_with_length_markers() {
-        assert_eq!(ipa_syllable_count("biː"), 1);     // "bee" - long vowel
-        assert_eq!(ipa_syllable_count("siː"), 1);     // "see"
-        assert_eq!(ipa_syllable_count("wɔːtər"), 2);  // "water" with long vowel
+        assert_eq!(ipa_syllable_count("biː"), 1); // "bee" - long vowel
+        assert_eq!(ipa_syllable_count("siː"), 1); // "see"
+        assert_eq!(ipa_syllable_count("wɔːtər"), 2); // "water" with long vowel
     }
 
     #[test]
     fn test_syllable_count_diphthongs() {
-        assert_eq!(ipa_syllable_count("haʊs"), 1);  // house
-        assert_eq!(ipa_syllable_count("kɔɪn"), 1);  // coin
-        assert_eq!(ipa_syllable_count("baɪ"), 1);   // buy
-        assert_eq!(ipa_syllable_count("goʊ"), 1);   // go
+        assert_eq!(ipa_syllable_count("haʊs"), 1); // house
+        assert_eq!(ipa_syllable_count("kɔɪn"), 1); // coin
+        assert_eq!(ipa_syllable_count("baɪ"), 1); // buy
+        assert_eq!(ipa_syllable_count("goʊ"), 1); // go
     }
 
     #[test]

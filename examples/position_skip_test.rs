@@ -15,8 +15,9 @@ fn main() {
 #[cfg(feature = "phonetic-rules")]
 fn find_first_match_baseline(rule: &RewriteRuleByte, s: &[PhoneByte]) -> Option<usize> {
     for pos in 0..=s.len() {
-        if context_matches(&rule.context, s, pos, rule.pattern.len()) &&
-           pattern_matches_at(&rule.pattern, s, pos) {
+        if context_matches(&rule.context, s, pos, rule.pattern.len())
+            && pattern_matches_at(&rule.pattern, s, pos)
+        {
             return Some(pos);
         }
     }
@@ -24,7 +25,11 @@ fn find_first_match_baseline(rule: &RewriteRuleByte, s: &[PhoneByte]) -> Option<
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn apply_rules_seq_baseline(rules: &[RewriteRuleByte], s: &[PhoneByte], fuel: usize) -> Option<Vec<PhoneByte>> {
+fn apply_rules_seq_baseline(
+    rules: &[RewriteRuleByte],
+    s: &[PhoneByte],
+    fuel: usize,
+) -> Option<Vec<PhoneByte>> {
     let mut current = s.to_vec();
     let mut remaining_fuel = fuel;
 
@@ -53,12 +58,17 @@ fn apply_rules_seq_baseline(rules: &[RewriteRuleByte], s: &[PhoneByte], fuel: us
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn find_first_match_from(rule: &RewriteRuleByte, s: &[PhoneByte], start_pos: usize) -> Option<usize> {
+fn find_first_match_from(
+    rule: &RewriteRuleByte,
+    s: &[PhoneByte],
+    start_pos: usize,
+) -> Option<usize> {
     // Scan from start_pos to end
     for pos in start_pos..=s.len() {
         // Inline can_apply_at check
-        if context_matches(&rule.context, s, pos, rule.pattern.len()) &&
-           pattern_matches_at(&rule.pattern, s, pos) {
+        if context_matches(&rule.context, s, pos, rule.pattern.len())
+            && pattern_matches_at(&rule.pattern, s, pos)
+        {
             return Some(pos);
         }
     }
@@ -66,7 +76,11 @@ fn find_first_match_from(rule: &RewriteRuleByte, s: &[PhoneByte], start_pos: usi
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn apply_rules_seq_optimized(rules: &[RewriteRuleByte], s: &[PhoneByte], fuel: usize) -> Option<Vec<PhoneByte>> {
+fn apply_rules_seq_optimized(
+    rules: &[RewriteRuleByte],
+    s: &[PhoneByte],
+    fuel: usize,
+) -> Option<Vec<PhoneByte>> {
     let mut current = s.to_vec();
     let mut remaining_fuel = fuel;
     let mut last_pos = 0;
@@ -103,18 +117,13 @@ fn main() {
 
     let ortho_rules = orthography_rules();
 
-    let test_words = [
-        "phone",
-        "phonetics",
-        "phonograph",
-        "telephone",
-        "symphony",
-    ];
+    let test_words = ["phone", "phonetics", "phonograph", "telephone", "symphony"];
 
     let mut all_match = true;
 
     for word in &test_words {
-        let phones: Vec<PhoneByte> = word.bytes()
+        let phones: Vec<PhoneByte> = word
+            .bytes()
             .map(|b| {
                 if matches!(b, b'a' | b'e' | b'i' | b'o' | b'u') {
                     PhoneByte::Vowel(b)
@@ -136,10 +145,7 @@ fn main() {
             "❌ MISMATCH"
         };
 
-        println!("{}: {}",
-            match_status,
-            word
-        );
+        println!("{}: {}", match_status, word);
 
         if baseline_result != optimized_result {
             println!("  Baseline:  {:?}", baseline_result);

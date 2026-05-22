@@ -689,10 +689,7 @@ impl Regex {
     ///
     /// Applies flags to subsequent patterns in the same scope.
     pub fn inline_flags(flags: RegexFlags) -> Self {
-        Regex::FlagsGroup {
-            flags,
-            inner: None,
-        }
+        Regex::FlagsGroup { flags, inner: None }
     }
 
     /// Create a word boundary assertion.
@@ -755,9 +752,7 @@ impl Regex {
             | Regex::CapturingGroup(_, inner)
             | Regex::NamedGroup(_, inner) => 1 + inner.size(),
             Regex::RepeatExact(inner, _) | Regex::RepeatRange(inner, _, _) => 1 + inner.size(),
-            Regex::FlagsGroup { inner, .. } => {
-                1 + inner.as_ref().map_or(0, |i| i.size())
-            }
+            Regex::FlagsGroup { inner, .. } => 1 + inner.as_ref().map_or(0, |i| i.size()),
             Regex::RewriteRule {
                 pattern,
                 replacement,
@@ -834,12 +829,10 @@ impl fmt::Display for Regex {
             Regex::NonCapturingGroup(inner) => write!(f, "(?:{})", inner),
             Regex::NamedGroup(name, inner) => write!(f, "(?<{}>{})", name, inner),
             Regex::GroupRef(name) => write!(f, "(?&{})", name),
-            Regex::FlagsGroup { flags, inner } => {
-                match inner {
-                    Some(inner) => write!(f, "(?{}:{})", flags, inner),
-                    None => write!(f, "(?{})", flags),
-                }
-            }
+            Regex::FlagsGroup { flags, inner } => match inner {
+                Some(inner) => write!(f, "(?{}:{})", flags, inner),
+                None => write!(f, "(?{})", flags),
+            },
             Regex::WordBoundary => write!(f, "#"),
             Regex::StartOfLine => write!(f, "^"),
             Regex::EndOfLine => write!(f, "$"),
@@ -1233,10 +1226,7 @@ impl RegexByte {
 
     /// Create inline flags (no inner pattern).
     pub fn inline_flags(flags: RegexFlags) -> Self {
-        RegexByte::FlagsGroup {
-            flags,
-            inner: None,
-        }
+        RegexByte::FlagsGroup { flags, inner: None }
     }
 
     /// Create a word boundary assertion.
@@ -1294,9 +1284,7 @@ impl RegexByte {
             RegexByte::RepeatExact(inner, _) | RegexByte::RepeatRange(inner, _, _) => {
                 1 + inner.size()
             }
-            RegexByte::FlagsGroup { inner, .. } => {
-                1 + inner.as_ref().map_or(0, |i| i.size())
-            }
+            RegexByte::FlagsGroup { inner, .. } => 1 + inner.as_ref().map_or(0, |i| i.size()),
             RegexByte::RewriteRule {
                 pattern,
                 replacement,
@@ -1391,12 +1379,10 @@ impl fmt::Display for RegexByte {
             RegexByte::NonCapturingGroup(inner) => write!(f, "(?:{})", inner),
             RegexByte::NamedGroup(name, inner) => write!(f, "(?<{}>{})", name, inner),
             RegexByte::GroupRef(name) => write!(f, "(?&{})", name),
-            RegexByte::FlagsGroup { flags, inner } => {
-                match inner {
-                    Some(inner) => write!(f, "(?{}:{})", flags, inner),
-                    None => write!(f, "(?{})", flags),
-                }
-            }
+            RegexByte::FlagsGroup { flags, inner } => match inner {
+                Some(inner) => write!(f, "(?{}:{})", flags, inner),
+                None => write!(f, "(?{})", flags),
+            },
             RegexByte::WordBoundary => write!(f, "#"),
             RegexByte::StartOfLine => write!(f, "^"),
             RegexByte::EndOfLine => write!(f, "$"),
@@ -1532,12 +1518,7 @@ mod tests {
     #[test]
     fn test_regex_rewrite_rule_simple() {
         // ph -> f
-        let r = Regex::rewrite_rule(
-            Regex::literal("ph"),
-            Regex::char('f'),
-            None,
-            0.0,
-        );
+        let r = Regex::rewrite_rule(Regex::literal("ph"), Regex::char('f'), None, 0.0);
         assert!(r.is_rewrite_rule());
         assert_eq!(r.to_string(), "ph -> f");
     }
@@ -1547,24 +1528,14 @@ mod tests {
         // c -> s / _[ei]
         let vowels = CharClassChar::from_chars(&['e', 'i']);
         let context = ContextPredicate::lookahead(Regex::char_class(vowels));
-        let r = Regex::rewrite_rule(
-            Regex::char('c'),
-            Regex::char('s'),
-            Some(context),
-            0.0,
-        );
+        let r = Regex::rewrite_rule(Regex::char('c'), Regex::char('s'), Some(context), 0.0);
         assert_eq!(r.to_string(), "c -> s / _[ei]");
     }
 
     #[test]
     fn test_regex_rewrite_rule_with_weight() {
         // th -> t [0.15]
-        let r = Regex::rewrite_rule(
-            Regex::literal("th"),
-            Regex::char('t'),
-            None,
-            0.15,
-        );
+        let r = Regex::rewrite_rule(Regex::literal("th"), Regex::char('t'), None, 0.15);
         assert_eq!(r.to_string(), "th -> t [0.15]");
     }
 
@@ -1572,12 +1543,7 @@ mod tests {
     fn test_regex_rewrite_rule_word_end() {
         // e -> (empty) / _#  (silent e at word end)
         let context = ContextPredicate::word_end();
-        let r = Regex::rewrite_rule(
-            Regex::char('e'),
-            Regex::empty(),
-            Some(context),
-            0.0,
-        );
+        let r = Regex::rewrite_rule(Regex::char('e'), Regex::empty(), Some(context), 0.0);
         assert_eq!(r.to_string(), "e ->  / _#");
     }
 
@@ -1624,12 +1590,8 @@ mod tests {
     #[test]
     fn test_regex_byte_rewrite_rule() {
         // ph -> f
-        let r = RegexByte::rewrite_rule(
-            RegexByte::literal(b"ph"),
-            RegexByte::byte(b'f'),
-            None,
-            0.0,
-        );
+        let r =
+            RegexByte::rewrite_rule(RegexByte::literal(b"ph"), RegexByte::byte(b'f'), None, 0.0);
         assert!(r.is_rewrite_rule());
         assert_eq!(r.to_string(), "ph -> f");
     }

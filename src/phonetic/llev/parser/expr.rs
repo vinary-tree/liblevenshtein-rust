@@ -184,7 +184,10 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            Token::PhoneticShortcut { class_name, negated } => {
+            Token::PhoneticShortcut {
+                class_name,
+                negated,
+            } => {
                 // Expand phonetic shortcut to character class
                 // e.g., \v expands to [:vowel:], \V expands to [^:vowel:]
                 use crate::phonetic::named_classes::get_chars_only;
@@ -265,9 +268,10 @@ impl<'a> Parser<'a> {
                                 chars.push(ch);
                             }
                         } else {
-                            return Err(LLevError::new(LLevErrorKind::InvalidPattern(
-                                format!("invalid character range starting with '{}'", c),
-                            ))
+                            return Err(LLevError::new(LLevErrorKind::InvalidPattern(format!(
+                                "invalid character range starting with '{}'",
+                                c
+                            )))
                             .at_position(self.lexer.position()));
                         }
                     } else {
@@ -306,8 +310,7 @@ impl<'a> Parser<'a> {
                         }
                     } else {
                         // Undefined symbol
-                        let defined: Vec<&str> =
-                            self.symbols.keys().map(|s| s.as_str()).collect();
+                        let defined: Vec<&str> = self.symbols.keys().map(|s| s.as_str()).collect();
                         return Err(LLevError::undefined_symbol_with_suggestion(
                             &name,
                             &defined,
@@ -316,7 +319,10 @@ impl<'a> Parser<'a> {
                     }
                 }
 
-                Token::PhoneticShortcut { class_name, negated } => {
+                Token::PhoneticShortcut {
+                    class_name,
+                    negated,
+                } => {
                     // Phonetic shortcut inside character class: [\v] expands vowels, [\V] expands non-vowels
                     use crate::phonetic::named_classes::get_chars_only;
 
@@ -337,10 +343,8 @@ impl<'a> Parser<'a> {
                 }
 
                 Token::Eof => {
-                    return Err(
-                        LLevError::new(LLevErrorKind::UnclosedCharClass)
-                            .at_position(self.lexer.position()),
-                    );
+                    return Err(LLevError::new(LLevErrorKind::UnclosedCharClass)
+                        .at_position(self.lexer.position()));
                 }
 
                 other => {
@@ -457,10 +461,8 @@ impl<'a> Parser<'a> {
                             Token::Colon => chars.push(':'),
                             Token::Dash => chars.push('-'),
                             Token::Eof => {
-                                return Err(
-                                    LLevError::new(LLevErrorKind::UnclosedCharClass)
-                                        .at_position(self.lexer.position()),
-                                );
+                                return Err(LLevError::new(LLevErrorKind::UnclosedCharClass)
+                                    .at_position(self.lexer.position()));
                             }
                             _ => {} // Ignore other tokens in fallback mode
                         }
@@ -701,9 +703,10 @@ impl<'a> Parser<'a> {
                                 nested_chars.push(ch);
                             }
                         } else {
-                            return Err(LLevError::new(LLevErrorKind::InvalidPattern(
-                                format!("invalid character range starting with '{}'", c),
-                            ))
+                            return Err(LLevError::new(LLevErrorKind::InvalidPattern(format!(
+                                "invalid character range starting with '{}'",
+                                c
+                            )))
                             .at_position(self.lexer.position()));
                         }
                     } else {
@@ -735,8 +738,7 @@ impl<'a> Parser<'a> {
                             }
                         }
                     } else {
-                        let defined: Vec<&str> =
-                            self.symbols.keys().map(|s| s.as_str()).collect();
+                        let defined: Vec<&str> = self.symbols.keys().map(|s| s.as_str()).collect();
                         return Err(LLevError::undefined_symbol_with_suggestion(
                             &name,
                             &defined,
@@ -745,7 +747,10 @@ impl<'a> Parser<'a> {
                     }
                 }
 
-                Token::PhoneticShortcut { class_name, negated } => {
+                Token::PhoneticShortcut {
+                    class_name,
+                    negated,
+                } => {
                     // Phonetic shortcut \v, \V, \c, \C, etc.
                     use crate::phonetic::named_classes::get_chars_only;
                     if let Some(class_chars) = get_chars_only(&class_name) {
@@ -765,10 +770,8 @@ impl<'a> Parser<'a> {
                 }
 
                 Token::Eof => {
-                    return Err(
-                        LLevError::new(LLevErrorKind::UnclosedCharClass)
-                            .at_position(self.lexer.position()),
-                    );
+                    return Err(LLevError::new(LLevErrorKind::UnclosedCharClass)
+                        .at_position(self.lexer.position()));
                 }
 
                 other => {

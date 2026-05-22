@@ -122,9 +122,9 @@ impl<N: DictionaryNode> Clone for IntersectionF64<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transducer::PositionF64;
     use libdictenstein::double_array_trie::DoubleArrayTrie;
     use libdictenstein::Dictionary;
-    use crate::transducer::PositionF64;
 
     #[test]
     fn test_intersection_creation() {
@@ -143,9 +143,15 @@ mod tests {
         let root = dict.root();
 
         // Build path: t -> e -> s using PathNode
-        let t_node = root.transition(b't').expect("test fixture: 't' exists in dictionary root");
-        let e_node = t_node.transition(b'e').expect("test fixture: 'e' exists at t-node");
-        let s_node = e_node.transition(b's').expect("test fixture: 's' exists at e-node");
+        let t_node = root
+            .transition(b't')
+            .expect("test fixture: 't' exists in dictionary root");
+        let e_node = t_node
+            .transition(b'e')
+            .expect("test fixture: 'e' exists at t-node");
+        let s_node = e_node
+            .transition(b's')
+            .expect("test fixture: 's' exists at e-node");
 
         let i4 = IntersectionF64::with_parent(
             b's',

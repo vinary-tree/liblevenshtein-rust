@@ -2,10 +2,10 @@
 
 #[cfg(feature = "pathmap-backend")]
 mod pathmap_tests {
-    use liblevenshtein::contextual::{ContextId, DynamicContextualCompletionEngine};
     use libdictenstein::pathmap::PathMapDictionary;
     use libdictenstein::pathmap_char::PathMapDictionaryChar;
     use libdictenstein::{Dictionary, MutableMappedDictionary};
+    use liblevenshtein::contextual::{ContextId, DynamicContextualCompletionEngine};
     use liblevenshtein::transducer::{Algorithm, Transducer};
 
     #[test]

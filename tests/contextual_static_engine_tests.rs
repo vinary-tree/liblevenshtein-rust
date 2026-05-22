@@ -22,7 +22,8 @@ fn test_engine_construction() {
     builder.insert_with_value("test", Some(vec![0]));
     let dict = builder.build();
 
-    let _engine = StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
+    let _engine =
+        StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
 }
 
 #[test]
@@ -32,7 +33,9 @@ fn test_engine_with_empty_dictionary() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Should handle empty dictionary gracefully
     let results = engine.complete(ctx, "anything", 2);
@@ -55,7 +58,9 @@ fn test_basic_completion_from_static_dict() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Query should find matches from static dictionary
     // "hel" -> "help" = 1 edit (insert 'p')
@@ -75,10 +80,14 @@ fn test_completion_with_finalized_terms() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Finalize a new term using the proper workflow
-    engine.insert_str(ctx, "dynamic_term").expect("insert_str failed");
+    engine
+        .insert_str(ctx, "dynamic_term")
+        .expect("insert_str failed");
     engine.finalize(ctx).expect("finalize failed");
 
     // Should find finalized term
@@ -86,7 +95,10 @@ fn test_completion_with_finalized_terms() {
     let results = engine.complete(ctx, "dynamic", 5).expect("complete failed");
     let terms: Vec<&str> = results.iter().map(|c| c.term.as_str()).collect();
 
-    assert!(terms.contains(&"dynamic_term"), "Should find finalized term");
+    assert!(
+        terms.contains(&"dynamic_term"),
+        "Should find finalized term"
+    );
 }
 
 #[test]
@@ -97,7 +109,9 @@ fn test_exact_match_completion() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Exact match with distance 0
     let results = engine.complete(ctx, "exact", 0).expect("complete failed");
@@ -116,7 +130,9 @@ fn test_draft_insert_chars() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Insert characters one by one
     engine.insert_char(ctx, 't').expect("insert failed");
@@ -135,7 +151,9 @@ fn test_draft_insert_string() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     engine.insert_str(ctx, "hello").expect("insert_str failed");
 
@@ -150,7 +168,9 @@ fn test_draft_delete_char() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     engine.insert_str(ctx, "test").expect("insert_str failed");
 
@@ -172,9 +192,13 @@ fn test_draft_clear() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
-    engine.insert_str(ctx, "content").expect("insert_str failed");
+    engine
+        .insert_str(ctx, "content")
+        .expect("insert_str failed");
     engine.clear_draft(ctx).expect("clear_draft failed");
 
     let draft = engine.get_draft(ctx).expect("get_draft failed");
@@ -188,10 +212,14 @@ fn test_draft_finalize() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Build draft and finalize
-    engine.insert_str(ctx, "newterm").expect("insert_str failed");
+    engine
+        .insert_str(ctx, "newterm")
+        .expect("insert_str failed");
     engine.finalize(ctx).expect("finalize failed");
 
     // Draft should be cleared after finalize
@@ -218,8 +246,12 @@ fn test_create_root_context() {
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
 
-    let ctx1 = engine.create_root_context(0).expect("create_root_context failed");
-    let ctx2 = engine.create_root_context(1).expect("create_root_context failed");
+    let ctx1 = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
+    let ctx2 = engine
+        .create_root_context(1)
+        .expect("create_root_context failed");
 
     assert_eq!(ctx1, 0);
     assert_eq!(ctx2, 1);
@@ -233,7 +265,9 @@ fn test_create_child_context() {
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
 
-    let parent = engine.create_root_context(0).expect("create_root_context failed");
+    let parent = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
     // API is create_child_context(child_id, parent_id)
     let child = engine
         .create_child_context(1, parent)
@@ -251,7 +285,9 @@ fn test_deep_context_hierarchy() {
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
 
     // Create a chain: root -> child -> grandchild
-    let root = engine.create_root_context(0).expect("create_root_context failed");
+    let root = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
     let child = engine
         .create_child_context(1, root)
         .expect("create_child failed");
@@ -274,7 +310,9 @@ fn test_context_visibility_inheritance() {
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
 
-    let root = engine.create_root_context(0).expect("create_root_context failed");
+    let root = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
     let child = engine
         .create_child_context(1, root)
         .expect("create_child failed");
@@ -298,11 +336,11 @@ fn test_transposition_algorithm() {
     builder.insert_with_value("test", Some(vec![0]));
     let dict = builder.build();
 
-    let engine = StaticContextualCompletionEngine::with_double_array_trie(
-        dict,
-        Algorithm::Transposition,
-    );
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let engine =
+        StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Transposition);
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // "tset" is "test" with 's' and 'e' transposed
     let results = engine.complete(ctx, "tset", 1).expect("complete failed");
@@ -318,11 +356,11 @@ fn test_merge_and_split_algorithm() {
     builder.insert_with_value("hello", Some(vec![0]));
     let dict = builder.build();
 
-    let engine = StaticContextualCompletionEngine::with_double_array_trie(
-        dict,
-        Algorithm::MergeAndSplit,
-    );
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let engine =
+        StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::MergeAndSplit);
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Should find hello with standard edits
     let results = engine.complete(ctx, "helo", 1).expect("complete failed");
@@ -346,7 +384,10 @@ fn test_create_child_of_nonexistent_parent() {
 
     // Try to create child of non-existent parent (child_id, parent_id)
     let result = engine.create_child_context(1, 999);
-    assert!(result.is_err(), "Should fail to create child of non-existent parent");
+    assert!(
+        result.is_err(),
+        "Should fail to create child of non-existent parent"
+    );
 }
 
 #[test]
@@ -356,12 +397,18 @@ fn test_finalize_empty_draft() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Finalize with empty draft
     let result = engine.finalize(ctx);
     assert!(result.is_ok(), "Finalize should succeed with empty draft");
-    assert_eq!(result.unwrap(), "", "Finalized empty draft should return empty string");
+    assert_eq!(
+        result.unwrap(),
+        "",
+        "Finalized empty draft should return empty string"
+    );
 }
 
 #[test]
@@ -371,7 +418,9 @@ fn test_multiple_finalize_operations() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Finalize multiple terms
     engine.insert_str(ctx, "term1").expect("insert failed");
@@ -399,7 +448,9 @@ fn test_draft_in_completion_results() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Insert draft without finalizing
     engine.insert_str(ctx, "draft_term").expect("insert failed");
@@ -410,7 +461,10 @@ fn test_draft_in_completion_results() {
     let draft_result = results.iter().find(|c| c.term == "draft_term");
 
     assert!(draft_result.is_some(), "Draft should appear in completion");
-    assert!(draft_result.unwrap().is_draft, "Draft should be marked as draft");
+    assert!(
+        draft_result.unwrap().is_draft,
+        "Draft should be marked as draft"
+    );
 }
 
 #[test]
@@ -421,7 +475,9 @@ fn test_clone_engine() {
 
     let engine =
         StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
-    let ctx = engine.create_root_context(0).expect("create_root_context failed");
+    let ctx = engine
+        .create_root_context(0)
+        .expect("create_root_context failed");
 
     // Clone the engine
     let engine_clone = engine.clone();
@@ -432,5 +488,8 @@ fn test_clone_engine() {
     let draft_original = engine.get_draft(ctx).expect("get_draft failed");
     let draft_clone = engine_clone.get_draft(ctx).expect("get_draft failed");
 
-    assert_eq!(draft_original, draft_clone, "Cloned engine should share state");
+    assert_eq!(
+        draft_original, draft_clone,
+        "Cloned engine should share state"
+    );
 }

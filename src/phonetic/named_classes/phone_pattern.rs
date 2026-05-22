@@ -136,7 +136,10 @@ impl PhonePattern {
 
     /// Create a sequence pattern (for 8+ character patterns).
     pub fn sequence(chars: Vec<char>) -> Self {
-        debug_assert!(chars.len() >= 8, "Sequence should have 8+ characters; use fixed-size variants for shorter patterns");
+        debug_assert!(
+            chars.len() >= 8,
+            "Sequence should have 8+ characters; use fixed-size variants for shorter patterns"
+        );
         PhonePattern::Sequence(chars)
     }
 

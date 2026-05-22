@@ -359,8 +359,16 @@ mod tests {
 
     fn test_terms() -> Vec<String> {
         vec![
-            "apple", "application", "apply", "appeal", "banana", "cherry",
-            "hello", "help", "world", "helm",
+            "apple",
+            "application",
+            "apply",
+            "appeal",
+            "banana",
+            "cherry",
+            "hello",
+            "help",
+            "world",
+            "helm",
         ]
         .into_iter()
         .map(String::from)
@@ -405,7 +413,11 @@ mod tests {
         let apple_result = results.iter().find(|(t, _)| *t == "apple");
         assert!(apple_result.is_some());
         let (_, score) = apple_result.expect("expected Some apple_result in test");
-        assert!(*score > 0.99, "Exact match should have score ~1.0, got {}", score);
+        assert!(
+            *score > 0.99,
+            "Exact match should have score ~1.0, got {}",
+            score
+        );
     }
 
     #[test]
@@ -444,9 +456,7 @@ mod tests {
 
     #[test]
     fn test_builder_ngram_only() {
-        let matcher = HybridMatcherBuilder::new()
-            .ngram_only()
-            .build(test_terms());
+        let matcher = HybridMatcherBuilder::new().ngram_only().build(test_terms());
 
         // Should work without Jaro-Winkler
         let candidates = matcher.filter_candidates("apple", 1);

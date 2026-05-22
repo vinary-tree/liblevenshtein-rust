@@ -366,7 +366,10 @@ fn test_msm_identical_series() {
     let config = test_config();
     let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
     let distance = config.distance(&x, &x);
-    assert!(distance.abs() < 1e-9, "Identical series should have distance 0");
+    assert!(
+        distance.abs() < 1e-9,
+        "Identical series should have distance 0"
+    );
 }
 
 #[test]
@@ -375,7 +378,10 @@ fn test_msm_single_element() {
     let x = vec![1.0];
     let y = vec![2.0];
     let distance = config.distance(&x, &y);
-    assert!((distance - 1.0).abs() < 1e-9, "Distance should be |1-2| = 1");
+    assert!(
+        (distance - 1.0).abs() < 1e-9,
+        "Distance should be |1-2| = 1"
+    );
 }
 
 #[test]
@@ -386,7 +392,10 @@ fn test_msm_length_difference() {
 
     // Distance should account for length difference
     let distance = config.distance(&x, &y);
-    assert!(distance > 0.0, "Different length series should have non-zero distance");
+    assert!(
+        distance > 0.0,
+        "Different length series should have non-zero distance"
+    );
 }
 
 #[test]
@@ -395,7 +404,10 @@ fn test_msm_constant_series() {
     let x = vec![5.0, 5.0, 5.0, 5.0];
     let y = vec![5.0, 5.0, 5.0, 5.0];
     let distance = config.distance(&x, &y);
-    assert!(distance.abs() < 1e-9, "Identical constant series should have distance 0");
+    assert!(
+        distance.abs() < 1e-9,
+        "Identical constant series should have distance 0"
+    );
 }
 
 #[test]
@@ -406,7 +418,10 @@ fn test_msm_shifted_series() {
 
     let distance = config.distance(&x, &y);
     // Each element differs by 1, so with 3 elements the distance depends on optimal alignment
-    assert!(distance > 0.0, "Shifted series should have non-zero distance");
+    assert!(
+        distance > 0.0,
+        "Shifted series should have non-zero distance"
+    );
     assert!(distance < 10.0, "Distance should be reasonable");
 }
 
@@ -433,9 +448,18 @@ fn test_wavefront_threshold_pruning() {
 fn test_lb_identical_series() {
     let x = vec![1.0, 2.0, 3.0];
 
-    assert!(euclidean_lb(&x, &x).abs() < 1e-9, "Euclidean LB for identical should be 0");
-    assert!(length_lb(&x, &x, 1.0).abs() < 1e-9, "Length LB for identical should be 0");
-    assert!(combined_lb(&x, &x, 1.0).abs() < 1e-9, "Combined LB for identical should be 0");
+    assert!(
+        euclidean_lb(&x, &x).abs() < 1e-9,
+        "Euclidean LB for identical should be 0"
+    );
+    assert!(
+        length_lb(&x, &x, 1.0).abs() < 1e-9,
+        "Length LB for identical should be 0"
+    );
+    assert!(
+        combined_lb(&x, &x, 1.0).abs() < 1e-9,
+        "Combined LB for identical should be 0"
+    );
 }
 
 #[test]
@@ -445,7 +469,10 @@ fn test_lb_length_difference() {
 
     let lb = length_lb(&x, &y, TEST_C_CONST);
     // Length difference is 3, so LB should be at least 3 * c_const
-    assert!(lb >= 3.0 * TEST_C_CONST - 1e-9, "Length LB should account for length difference");
+    assert!(
+        lb >= 3.0 * TEST_C_CONST - 1e-9,
+        "Length LB should account for length difference"
+    );
 }
 
 // ============================================================================
@@ -460,7 +487,11 @@ fn test_c_function_between_values() {
     // When a is between b and c, cost should be just c_const
     // C(2, 1, 3) = 1.0 because 1 <= 2 <= 3
     let cost = config.c_func(2.0, 1.0, 3.0);
-    assert!((cost - 1.0).abs() < 1e-9, "C(2,1,3) should be c_const=1.0, got {}", cost);
+    assert!(
+        (cost - 1.0).abs() < 1e-9,
+        "C(2,1,3) should be c_const=1.0, got {}",
+        cost
+    );
 }
 
 #[test]
@@ -471,7 +502,11 @@ fn test_c_function_outside_values() {
     // When a is outside, cost should be c_const + min(|a-b|, |a-c|)
     // C(0, 2, 4) = 1.0 + min(|0-2|, |0-4|) = 1.0 + 2.0 = 3.0
     let cost = config.c_func(0.0, 2.0, 4.0);
-    assert!((cost - 3.0).abs() < 1e-9, "C(0,2,4) should be 3.0, got {}", cost);
+    assert!(
+        (cost - 3.0).abs() < 1e-9,
+        "C(0,2,4) should be 3.0, got {}",
+        cost
+    );
 }
 
 // ============================================================================

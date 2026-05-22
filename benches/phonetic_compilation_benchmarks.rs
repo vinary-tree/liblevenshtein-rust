@@ -16,8 +16,8 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 #[cfg(feature = "phonetic-rules")]
 mod benchmarks {
     use super::*;
-    use liblevenshtein::phonetic::llev::{load_file, parse_str, LLevFile};
     use liblevenshtein::phonetic::llev::lexer::{Lexer, Token};
+    use liblevenshtein::phonetic::llev::{load_file, parse_str, LLevFile};
     use liblevenshtein::phonetic::RuleSetChar;
 
     /// Rule files to benchmark
@@ -130,20 +130,24 @@ mod benchmarks {
 
             group.throughput(Throughput::Bytes(content_len));
 
-            group.bench_with_input(BenchmarkId::new("tokenize", name), &content, |b, content| {
-                b.iter(|| {
-                    let mut lexer = Lexer::new(black_box(content));
-                    let mut count = 0usize;
-                    loop {
-                        match lexer.next_token() {
-                            Ok(Token::Eof) => break,
-                            Ok(_) => count += 1,
-                            Err(_) => break,
+            group.bench_with_input(
+                BenchmarkId::new("tokenize", name),
+                &content,
+                |b, content| {
+                    b.iter(|| {
+                        let mut lexer = Lexer::new(black_box(content));
+                        let mut count = 0usize;
+                        loop {
+                            match lexer.next_token() {
+                                Ok(Token::Eof) => break,
+                                Ok(_) => count += 1,
+                                Err(_) => break,
+                            }
                         }
-                    }
-                    black_box(count)
-                });
-            });
+                        black_box(count)
+                    });
+                },
+            );
         }
 
         group.finish();
@@ -165,5 +169,7 @@ criterion_main!(benchmarks::benches);
 #[cfg(not(feature = "phonetic-rules"))]
 fn main() {
     eprintln!("This benchmark requires the 'phonetic-rules' feature.");
-    eprintln!("Run with: cargo bench --bench phonetic_compilation_benchmarks --features phonetic-rules");
+    eprintln!(
+        "Run with: cargo bench --bench phonetic_compilation_benchmarks --features phonetic-rules"
+    );
 }

@@ -327,9 +327,7 @@ impl<'a> LexerByte<'a> {
                 let n = self.parse_number(b)?;
                 Ok(TokenByte::Number(n))
             }
-            b if b.is_ascii_alphabetic() => {
-                self.parse_keyword_or_byte(b)
-            }
+            b if b.is_ascii_alphabetic() => self.parse_keyword_or_byte(b),
             _ => Ok(TokenByte::Byte(b)),
         }
     }

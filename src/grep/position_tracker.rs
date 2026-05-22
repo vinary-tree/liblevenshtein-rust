@@ -156,7 +156,9 @@ impl PositionTracker {
             return None;
         }
         // line_number is 1-indexed
-        self.lines.get(line_number.saturating_sub(1)).map(|s| s.as_str())
+        self.lines
+            .get(line_number.saturating_sub(1))
+            .map(|s| s.as_str())
     }
 
     /// Get the text of the line containing a byte offset.

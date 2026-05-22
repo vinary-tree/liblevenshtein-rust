@@ -114,11 +114,7 @@ mod tests {
         let rules = base();
         // š → SH
         let result = rules.apply("š");
-        assert!(
-            result.contains("ʃ"),
-            "š should become SH, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "š should become SH, got: {}", result);
     }
 
     #[test]
@@ -126,11 +122,7 @@ mod tests {
         let rules = base();
         // ž → ZH
         let result = rules.apply("ž");
-        assert!(
-            result.contains("ʒ"),
-            "ž should become ZH, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ž should become ZH, got: {}", result);
     }
 
     #[test]
@@ -138,11 +130,7 @@ mod tests {
         let rules = base();
         // ľ → LJ (Slovak specific)
         let result = rules.apply("ľ");
-        assert!(
-            result.contains("ʎ"),
-            "ľ should become LJ, got: {}",
-            result
-        );
+        assert!(result.contains("ʎ"), "ľ should become LJ, got: {}", result);
     }
 
     #[test]
@@ -198,11 +186,7 @@ mod tests {
         let rules = base();
         // y → i
         let result = rules.apply("y");
-        assert!(
-            result.contains('i'),
-            "y should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "y should become i, got: {}", result);
     }
 
     #[test]
@@ -230,5 +214,4 @@ mod tests {
             result
         );
     }
-
 }

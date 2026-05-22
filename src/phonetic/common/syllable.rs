@@ -236,9 +236,15 @@ mod tests {
         assert_eq!(SyllableCondition::Monosyllable.as_str(), "monosyllable");
         assert_eq!(SyllableCondition::Polysyllable.as_str(), "polysyllable");
         assert_eq!(SyllableCondition::OpenSyllable.as_str(), "open_syllable");
-        assert_eq!(SyllableCondition::ClosedSyllable.as_str(), "closed_syllable");
+        assert_eq!(
+            SyllableCondition::ClosedSyllable.as_str(),
+            "closed_syllable"
+        );
         assert_eq!(SyllableCondition::FinalSyllable.as_str(), "final_syllable");
-        assert_eq!(SyllableCondition::InitialSyllable.as_str(), "initial_syllable");
+        assert_eq!(
+            SyllableCondition::InitialSyllable.as_str(),
+            "initial_syllable"
+        );
     }
 
     #[test]

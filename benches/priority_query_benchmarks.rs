@@ -17,11 +17,15 @@ use liblevenshtein::transducer::{Algorithm, OrderedQueryIterator, PriorityQueryI
 
 /// Generate a synthetic dictionary of given size
 fn generate_dictionary(size: usize) -> Vec<String> {
-    let prefixes = ["pre", "un", "re", "dis", "over", "mis", "out", "sub", "trans", "inter"];
+    let prefixes = [
+        "pre", "un", "re", "dis", "over", "mis", "out", "sub", "trans", "inter",
+    ];
     let roots = [
         "act", "form", "port", "duct", "ject", "tract", "struct", "scribe", "spect", "vert",
     ];
-    let suffixes = ["ion", "ive", "ment", "ness", "able", "ible", "ous", "ful", "less", "ly"];
+    let suffixes = [
+        "ion", "ive", "ment", "ness", "able", "ible", "ous", "ful", "less", "ly",
+    ];
 
     let mut words = Vec::with_capacity(size);
 
@@ -85,7 +89,11 @@ fn bench_first_result(c: &mut Criterion) {
     let mut group = c.benchmark_group("query_iterator/first_result");
 
     let sizes = [1_000, 10_000];
-    let queries = [("exact", "preact"), ("typo", "preeact"), ("distant", "preeeact")];
+    let queries = [
+        ("exact", "preact"),
+        ("typo", "preeact"),
+        ("distant", "preeeact"),
+    ];
 
     for size in sizes {
         let dictionary = generate_dictionary(size);
@@ -311,16 +319,9 @@ fn bench_distance_thresholds(c: &mut Criterion) {
 // Criterion Groups
 // ============================================================================
 
-criterion_group!(
-    first_k_benches,
-    bench_first_result,
-    bench_first_k_results,
-);
+criterion_group!(first_k_benches, bench_first_result, bench_first_k_results,);
 
-criterion_group!(
-    exhaustive_benches,
-    bench_exhaustive_iteration,
-);
+criterion_group!(exhaustive_benches, bench_exhaustive_iteration,);
 
 criterion_group!(
     variant_benches,

@@ -28,7 +28,8 @@ fn bench_construction_varying_corpus_size(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(total_chars as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
-                let dict: SuffixAutomaton<()> = SuffixAutomaton::from_texts(black_box(texts.clone()));
+                let dict: SuffixAutomaton<()> =
+                    SuffixAutomaton::from_texts(black_box(texts.clone()));
                 black_box(dict);
             });
         });

@@ -318,7 +318,11 @@ impl LLevError {
     }
 
     /// Create an "expected token" error.
-    pub fn expected_token(expected: impl Into<String>, found: impl Into<String>, position: Position) -> Self {
+    pub fn expected_token(
+        expected: impl Into<String>,
+        found: impl Into<String>,
+        position: Position,
+    ) -> Self {
         Self::with_position(
             LLevErrorKind::ExpectedToken {
                 expected: expected.into(),
@@ -559,8 +563,7 @@ impl fmt::Display for LLevErrorKind {
                 write!(
                     f,
                     "non-ASCII character '{}' (U+{:04X}) in byte-level rule",
-                    character,
-                    *character as u32
+                    character, *character as u32
                 )?;
                 if let Some(name) = rule_name {
                     write!(f, " '{}'", name)?;
@@ -736,17 +739,17 @@ mod tests {
     #[test]
     fn test_error_display_simple() {
         let err = LLevError::unexpected_char('x', Position::new(1, 5, 4));
-        assert_eq!(err.to_string(), "line 1, column 5: unexpected character 'x'");
+        assert_eq!(
+            err.to_string(),
+            "line 1, column 5: unexpected character 'x'"
+        );
     }
 
     #[test]
     fn test_error_display_with_file() {
         let err = LLevError::unexpected_char('x', Position::new(1, 5, 4))
             .in_file(PathBuf::from("test.llev"));
-        assert_eq!(
-            err.to_string(),
-            "test.llev:1:5: unexpected character 'x'"
-        );
+        assert_eq!(err.to_string(), "test.llev:1:5: unexpected character 'x'");
     }
 
     #[test]
@@ -808,13 +811,22 @@ mod tests {
         let symbols = &["FRONT_VOWEL", "BACK_VOWEL", "CONSONANT"];
 
         // Exact match (after lowercase comparison)
-        assert_eq!(find_closest_symbol("front_vowel", symbols), Some("FRONT_VOWEL"));
+        assert_eq!(
+            find_closest_symbol("front_vowel", symbols),
+            Some("FRONT_VOWEL")
+        );
 
         // Close match (1 character difference)
-        assert_eq!(find_closest_symbol("FRONT_VOWL", symbols), Some("FRONT_VOWEL"));
+        assert_eq!(
+            find_closest_symbol("FRONT_VOWL", symbols),
+            Some("FRONT_VOWEL")
+        );
 
         // Close match (case difference + typo)
-        assert_eq!(find_closest_symbol("front_vowl", symbols), Some("FRONT_VOWEL"));
+        assert_eq!(
+            find_closest_symbol("front_vowl", symbols),
+            Some("FRONT_VOWEL")
+        );
 
         // No match (too different)
         assert_eq!(find_closest_symbol("xyz", symbols), None);
@@ -840,11 +852,8 @@ mod tests {
     #[test]
     fn test_undefined_symbol_no_suggestion() {
         let symbols = &["FRONT_VOWEL", "BACK_VOWEL", "CONSONANT"];
-        let err = LLevError::undefined_symbol_with_suggestion(
-            "xyz",
-            symbols,
-            Position::new(10, 5, 100),
-        );
+        let err =
+            LLevError::undefined_symbol_with_suggestion("xyz", symbols, Position::new(10, 5, 100));
 
         let s = err.to_string();
         assert!(s.contains("undefined symbol: xyz"));
@@ -865,8 +874,11 @@ mod tests {
 
     #[test]
     fn test_non_ascii_in_byte_level_with_rule_name() {
-        let err =
-            LLevError::non_ascii_in_byte_level('é', Some("french-vowels".to_string()), Position::new(5, 10, 50));
+        let err = LLevError::non_ascii_in_byte_level(
+            'é',
+            Some("french-vowels".to_string()),
+            Position::new(5, 10, 50),
+        );
         let s = err.to_string();
 
         // Check error message includes rule name

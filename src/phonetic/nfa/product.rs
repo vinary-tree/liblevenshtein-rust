@@ -37,9 +37,9 @@
 //! assert!(!product.accepts("xyz"));    // too far from any NFA match
 //! ```
 
-use super::{NFAChar, NFA};
 use super::state_set::StateSet;
 use super::types::StateId;
+use super::{NFAChar, NFA};
 use crate::transducer::articulatory_costs::ArticulatoryCosts;
 use crate::transducer::Algorithm;
 use rustc_hash::FxHashSet;
@@ -951,12 +951,7 @@ impl ProductAutomaton {
     }
 
     /// Step NFA treating two input bytes as merged.
-    fn nfa_step_merged(
-        &self,
-        states: &FxHashSet<StateId>,
-        _b1: u8,
-        _b2: u8,
-    ) -> FxHashSet<StateId> {
+    fn nfa_step_merged(&self, states: &FxHashSet<StateId>, _b1: u8, _b2: u8) -> FxHashSet<StateId> {
         self.nfa_advance(states)
     }
 
@@ -1280,35 +1275,37 @@ mod tests {
         assert!(product.accepts("phone"));
 
         // One insertion
-        assert!(product.accepts("phones"));   // +s
+        assert!(product.accepts("phones")); // +s
 
         // One deletion
-        assert!(product.accepts("phon"));     // -e
+        assert!(product.accepts("phon")); // -e
 
         // One substitution
-        assert!(product.accepts("phome"));    // n→m
+        assert!(product.accepts("phome")); // n→m
 
         // Two edits
-        assert!(product.accepts("phon"));     // -e, -e... wait, that's just one
-        assert!(product.accepts("fone"));     // ph→f is 2 edits (delete h, substitute p→f)
+        assert!(product.accepts("phon")); // -e, -e... wait, that's just one
+        assert!(product.accepts("fone")); // ph→f is 2 edits (delete h, substitute p→f)
     }
 
     #[test]
     fn test_product_phonetic_pattern() {
         // Pattern: (ph|f)one - matches "phone" or "fone"
-        let nfa = compile(&parse("(ph|f)one").expect("test: parse (ph|f)one")).expect("test: compile nfa");
+        let nfa = compile(&parse("(ph|f)one").expect("test: parse (ph|f)one"))
+            .expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 1);
 
         assert!(product.accepts("phone"));
         assert!(product.accepts("fone"));
         assert!(product.accepts("phones")); // +s (insertion)
-        assert!(product.accepts("fones"));  // +s (insertion)
-        // "bone" is within distance 1 of "fone" (b→f substitution)
+        assert!(product.accepts("fones")); // +s (insertion)
+                                           // "bone" is within distance 1 of "fone" (b→f substitution)
         assert!(product.accepts("bone"));
 
         // With max_distance=0, only exact matches
         let product_exact = ProductAutomatonChar::new(
-            compile(&parse("(ph|f)one").expect("test: parse (ph|f)one")).expect("test: compile nfa"),
+            compile(&parse("(ph|f)one").expect("test: parse (ph|f)one"))
+                .expect("test: compile nfa"),
             0,
         );
         assert!(product_exact.accepts("phone"));
@@ -1321,11 +1318,11 @@ mod tests {
         let nfa = compile(&parse("a*").expect("test: parse a*")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 1);
 
-        assert!(product.accepts(""));       // 0 a's
-        assert!(product.accepts("a"));      // 1 a
-        assert!(product.accepts("aa"));     // 2 a's
-        assert!(product.accepts("b"));      // 1 edit (substitute a for b or insert b)
-        assert!(product.accepts("ab"));     // 1 edit
+        assert!(product.accepts("")); // 0 a's
+        assert!(product.accepts("a")); // 1 a
+        assert!(product.accepts("aa")); // 2 a's
+        assert!(product.accepts("b")); // 1 edit (substitute a for b or insert b)
+        assert!(product.accepts("ab")); // 1 edit
     }
 
     #[test]
@@ -1341,14 +1338,15 @@ mod tests {
 
     #[test]
     fn test_product_char_class() {
-        let nfa = compile(&parse("[aeiou]+").expect("test: parse [aeiou]+")).expect("test: compile nfa");
+        let nfa =
+            compile(&parse("[aeiou]+").expect("test: parse [aeiou]+")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 1);
 
         assert!(product.accepts("a"));
         assert!(product.accepts("aeiou"));
-        assert!(product.accepts("b"));  // 1 subst (b→a)
+        assert!(product.accepts("b")); // 1 subst (b→a)
         assert!(product.accepts("ab")); // 1 error (b→a subst or b deletion)
-        // Empty string IS within distance 1 of a vowel (insert any vowel)
+                                        // Empty string IS within distance 1 of a vowel (insert any vowel)
         assert!(product.accepts(""));
 
         // With max_distance=0, only exact matches
@@ -1358,7 +1356,7 @@ mod tests {
         );
         assert!(product_exact.accepts("a"));
         assert!(product_exact.accepts("aeiou"));
-        assert!(!product_exact.accepts(""));  // empty doesn't match [aeiou]+
+        assert!(!product_exact.accepts("")); // empty doesn't match [aeiou]+
         assert!(!product_exact.accepts("b")); // b doesn't match any vowel
     }
 
@@ -1367,10 +1365,10 @@ mod tests {
         let nfa = compile(&parse("abc").expect("test: parse abc")).expect("test: compile nfa");
         let product = ProductAutomatonChar::new(nfa, 1);
 
-        assert!(product.accepts("abc"));    // exact
-        assert!(product.accepts("ab"));     // 1 deletion
-        assert!(product.accepts("abcd"));   // 1 insertion
-        assert!(!product.accepts("xyz"));   // 3 substitutions > budget
+        assert!(product.accepts("abc")); // exact
+        assert!(product.accepts("ab")); // 1 deletion
+        assert!(product.accepts("abcd")); // 1 insertion
+        assert!(!product.accepts("xyz")); // 3 substitutions > budget
     }
 
     // ============================================================================
@@ -1379,7 +1377,8 @@ mod tests {
 
     #[test]
     fn test_product_bytes_exact() {
-        let nfa = compile_bytes(&parse_bytes(b"phone").expect("test: parse phone bytes")).expect("test: compile nfa bytes");
+        let nfa = compile_bytes(&parse_bytes(b"phone").expect("test: parse phone bytes"))
+            .expect("test: compile nfa bytes");
         let product = ProductAutomaton::new(nfa, 2);
 
         assert!(product.accepts(b"phone"));
@@ -1388,7 +1387,8 @@ mod tests {
 
     #[test]
     fn test_product_bytes_with_edits() {
-        let nfa = compile_bytes(&parse_bytes(b"abc").expect("test: parse abc bytes")).expect("test: compile nfa bytes");
+        let nfa = compile_bytes(&parse_bytes(b"abc").expect("test: parse abc bytes"))
+            .expect("test: compile nfa bytes");
         let product = ProductAutomaton::new(nfa, 1);
 
         assert!(product.accepts(b"abc"));
@@ -1399,7 +1399,8 @@ mod tests {
 
     #[test]
     fn test_product_bytes_min_distance() {
-        let nfa = compile_bytes(&parse_bytes(b"phone").expect("test: parse phone bytes")).expect("test: compile nfa bytes");
+        let nfa = compile_bytes(&parse_bytes(b"phone").expect("test: parse phone bytes"))
+            .expect("test: compile nfa bytes");
         let product = ProductAutomaton::new(nfa, 3);
 
         assert_eq!(product.min_distance(b"phone"), Some(0));
@@ -1492,7 +1493,8 @@ mod tests {
         let standard = ProductAutomatonChar::new(nfa.clone(), 1);
         assert_eq!(standard.algorithm(), Algorithm::Standard);
 
-        let transposition = ProductAutomatonChar::with_algorithm(nfa.clone(), 1, Algorithm::Transposition);
+        let transposition =
+            ProductAutomatonChar::with_algorithm(nfa.clone(), 1, Algorithm::Transposition);
         assert_eq!(transposition.algorithm(), Algorithm::Transposition);
 
         let merge_split = ProductAutomatonChar::with_algorithm(nfa, 1, Algorithm::MergeAndSplit);
@@ -1501,7 +1503,8 @@ mod tests {
 
     #[test]
     fn test_byte_level_transposition() {
-        let nfa = compile_bytes(&parse_bytes(b"ab").expect("test: parse ab bytes")).expect("test: compile nfa bytes");
+        let nfa = compile_bytes(&parse_bytes(b"ab").expect("test: parse ab bytes"))
+            .expect("test: compile nfa bytes");
 
         let standard = ProductAutomaton::new(nfa.clone(), 1);
         assert!(!standard.accepts(b"ba")); // distance 2 with standard
@@ -1522,7 +1525,8 @@ mod tests {
         /// Test that articulatory costs constructor works properly.
         #[test]
         fn test_articulatory_costs_constructor() {
-            let nfa = compile(&parse("test").expect("test: parse test")).expect("test: compile nfa");
+            let nfa =
+                compile(&parse("test").expect("test: parse test")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
             let product = ProductAutomatonChar::with_articulatory_costs(
@@ -1544,19 +1548,19 @@ mod tests {
             let nfa = compile(&parse("p").expect("test: parse p")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
-            let product = ProductAutomatonChar::with_articulatory_costs(
-                nfa,
-                2.0,
-                Algorithm::Standard,
-                costs,
-            );
+            let product =
+                ProductAutomatonChar::with_articulatory_costs(nfa, 2.0, Algorithm::Standard, costs);
 
             // p→b (voicing only) should cost less than p→k (different place)
             let pb_cost = product.substitution_cost('b', Some('p'));
             let pk_cost = product.substitution_cost('k', Some('p'));
 
-            assert!(pb_cost < pk_cost,
-                "p→b ({}) should be cheaper than p→k ({})", pb_cost, pk_cost);
+            assert!(
+                pb_cost < pk_cost,
+                "p→b ({}) should be cheaper than p→k ({})",
+                pb_cost,
+                pk_cost
+            );
 
             // p→p should be free
             let pp_cost = product.substitution_cost('p', Some('p'));
@@ -1570,38 +1574,43 @@ mod tests {
             let nfa = compile(&parse("p").expect("test: parse p")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
-            let product = ProductAutomatonChar::with_articulatory_costs(
-                nfa,
-                2.0,
-                Algorithm::Standard,
-                costs,
-            );
+            let product =
+                ProductAutomatonChar::with_articulatory_costs(nfa, 2.0, Algorithm::Standard, costs);
 
             let initial = product.initial_state();
 
             // Transition with exact match 'p' - no cost
             let match_successors = product.transition(&initial, 'p');
-            let match_state = match_successors.iter()
+            let match_state = match_successors
+                .iter()
                 .find(|s| s.accumulated_cost < 0.01)
                 .expect("should find match state with zero cost");
-            assert!(match_state.accumulated_cost < 0.01,
-                "Exact match should have near-zero cost, got {}", match_state.accumulated_cost);
+            assert!(
+                match_state.accumulated_cost < 0.01,
+                "Exact match should have near-zero cost, got {}",
+                match_state.accumulated_cost
+            );
 
             // Transition with 'b' - should have low articulatory cost (voicing pair)
             let b_successors = product.transition(&initial, 'b');
-            let b_subst_state = b_successors.iter()
+            let b_subst_state = b_successors
+                .iter()
                 .find(|s| s.accumulated_cost > 0.01 && s.accumulated_cost < 0.5)
                 .expect("should find substitution state with low cost for 'b'");
 
             // Transition with 'k' - should have higher articulatory cost
             let k_successors = product.transition(&initial, 'k');
-            let k_subst_state = k_successors.iter()
+            let k_subst_state = k_successors
+                .iter()
                 .find(|s| s.accumulated_cost > 0.3)
                 .expect("should find substitution state with higher cost for 'k'");
 
-            assert!(b_subst_state.accumulated_cost < k_subst_state.accumulated_cost,
+            assert!(
+                b_subst_state.accumulated_cost < k_subst_state.accumulated_cost,
                 "p→b ({}) should be cheaper than p→k ({})",
-                b_subst_state.accumulated_cost, k_subst_state.accumulated_cost);
+                b_subst_state.accumulated_cost,
+                k_subst_state.accumulated_cost
+            );
         }
 
         /// Test accumulated cost across multiple transitions.
@@ -1612,29 +1621,37 @@ mod tests {
 
             let product = ProductAutomatonChar::with_articulatory_costs(
                 nfa,
-                3.0,  // Allow up to 3.0 total cost
+                3.0, // Allow up to 3.0 total cost
                 Algorithm::Standard,
                 costs,
             );
 
             let initial = product.initial_state();
-            assert!(initial.accumulated_cost.abs() < 1e-9, "Initial cost should be 0");
+            assert!(
+                initial.accumulated_cost.abs() < 1e-9,
+                "Initial cost should be 0"
+            );
 
             // Transition with 'a' (exact match)
             let after_a = product.transition(&initial, 'a');
-            let match_a = after_a.iter()
+            let match_a = after_a
+                .iter()
                 .find(|s| s.accumulated_cost < 0.01)
                 .expect("should find exact match for 'a'");
 
             // Transition with 'd' instead of 'b' (substitution)
             let after_d = product.transition(match_a, 'd');
             // Should have accumulated some cost from the substitution
-            let subst_state = after_d.iter()
+            let subst_state = after_d
+                .iter()
                 .find(|s| s.accumulated_cost > 0.1)
                 .expect("should find state with accumulated substitution cost");
 
-            assert!(subst_state.accumulated_cost > 0.1,
-                "Accumulated cost should reflect substitution, got {}", subst_state.accumulated_cost);
+            assert!(
+                subst_state.accumulated_cost > 0.1,
+                "Accumulated cost should reflect substitution, got {}",
+                subst_state.accumulated_cost
+            );
         }
 
         /// Test that without articulatory costs, fixed cost (1.0) is used.
@@ -1652,13 +1669,21 @@ mod tests {
             let k_successors = product.transition(&initial, 'k');
 
             // Find substitution states (with cost = 1.0)
-            let b_subst = b_successors.iter()
+            let b_subst = b_successors
+                .iter()
                 .find(|s| (s.accumulated_cost - 1.0).abs() < 0.01);
-            let k_subst = k_successors.iter()
+            let k_subst = k_successors
+                .iter()
                 .find(|s| (s.accumulated_cost - 1.0).abs() < 0.01);
 
-            assert!(b_subst.is_some(), "Should find substitution with cost 1.0 for 'b'");
-            assert!(k_subst.is_some(), "Should find substitution with cost 1.0 for 'k'");
+            assert!(
+                b_subst.is_some(),
+                "Should find substitution with cost 1.0 for 'b'"
+            );
+            assert!(
+                k_subst.is_some(),
+                "Should find substitution with cost 1.0 for 'k'"
+            );
         }
 
         /// Test that edit_distance() rounds up fractional costs.
@@ -1688,12 +1713,8 @@ mod tests {
             let nfa = compile(&parse("p").expect("test: parse p")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
-            let product = ProductAutomatonChar::with_articulatory_costs(
-                nfa,
-                2.0,
-                Algorithm::Standard,
-                costs,
-            );
+            let product =
+                ProductAutomatonChar::with_articulatory_costs(nfa, 2.0, Algorithm::Standard, costs);
 
             // Test with IPA characters (if supported)
             // ʃ (voiceless postalveolar fricative) vs s (voiceless alveolar fricative)
@@ -1702,8 +1723,12 @@ mod tests {
             let sh_p_cost = product.substitution_cost('ʃ', Some('p'));
 
             // ʃ→s should be cheaper than ʃ→p (fricative vs stop)
-            assert!(sh_cost < sh_p_cost,
-                "ʃ→s ({}) should be cheaper than ʃ→p ({})", sh_cost, sh_p_cost);
+            assert!(
+                sh_cost < sh_p_cost,
+                "ʃ→s ({}) should be cheaper than ʃ→p ({})",
+                sh_cost,
+                sh_p_cost
+            );
         }
 
         /// Test that max_cost threshold is respected.
@@ -1715,7 +1740,7 @@ mod tests {
             // Very low max_cost - should prune expensive substitutions
             let product = ProductAutomatonChar::with_articulatory_costs(
                 nfa,
-                0.5,  // Only allow 0.5 total cost
+                0.5, // Only allow 0.5 total cost
                 Algorithm::Standard,
                 costs,
             );
@@ -1727,8 +1752,11 @@ mod tests {
 
             // All successor states should have cost <= 0.5
             for state in &z_successors {
-                assert!(state.accumulated_cost <= 0.5 + 1e-9,
-                    "State cost {} exceeds max_cost 0.5", state.accumulated_cost);
+                assert!(
+                    state.accumulated_cost <= 0.5 + 1e-9,
+                    "State cost {} exceeds max_cost 0.5",
+                    state.accumulated_cost
+                );
             }
         }
 
@@ -1740,7 +1768,7 @@ mod tests {
 
             let product = ProductAutomatonChar::with_articulatory_costs(
                 nfa,
-                1.0,  // max cost 1.0
+                1.0, // max cost 1.0
                 Algorithm::Standard,
                 costs,
             );
@@ -1749,18 +1777,25 @@ mod tests {
 
             // After matching 'p', should accept
             let after_p = product.transition(&initial, 'p');
-            let match_state = after_p.iter()
+            let match_state = after_p
+                .iter()
                 .find(|s| s.accumulated_cost < 0.01)
                 .expect("should find match state");
-            assert!(product.is_accepting(match_state), "Should accept after matching 'p'");
+            assert!(
+                product.is_accepting(match_state),
+                "Should accept after matching 'p'"
+            );
 
             // After substituting with similar sound 'b', might still accept if cost < 1.0
             let after_b = product.transition(&initial, 'b');
-            let subst_state = after_b.iter()
+            let subst_state = after_b
+                .iter()
                 .find(|s| s.accumulated_cost > 0.01 && s.accumulated_cost <= 1.0);
             if let Some(state) = subst_state {
-                assert!(product.is_accepting(state),
-                    "Should accept similar substitution within cost budget");
+                assert!(
+                    product.is_accepting(state),
+                    "Should accept similar substitution within cost budget"
+                );
             }
         }
     }

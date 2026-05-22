@@ -42,12 +42,14 @@ impl CompiledNFA {
     /// - `^pattern$` matches the entire string
     /// - `pattern` matches anywhere in the string
     pub fn matches(&self, input: &str) -> bool {
-        self.nfa.search_with_flags(input, self.multiline, self.dotall)
+        self.nfa
+            .search_with_flags(input, self.multiline, self.dotall)
     }
 
     /// Check if the NFA accepts the entire input string (full-match semantics).
     pub fn matches_full(&self, input: &str) -> bool {
-        self.nfa.accepts_with_flags(input, self.multiline, self.dotall)
+        self.nfa
+            .accepts_with_flags(input, self.multiline, self.dotall)
     }
 
     /// Check if the NFA accepts the input string (alias for matches).
@@ -161,10 +163,7 @@ pub fn compile_with_options(file: &LLreFile, options: &CompileOptions) -> LLreRe
 ///
 /// Note: Pattern symbols (Regex AST nodes) are handled separately by
 /// `expand_pattern_symbols()` before NFA compilation.
-fn add_symbols_to_compiler(
-    compiler: &mut NFACompilerChar,
-    table: &SymbolTable,
-) -> LLreResult<()> {
+fn add_symbols_to_compiler(compiler: &mut NFACompilerChar, table: &SymbolTable) -> LLreResult<()> {
     // Add character class symbols
     for (name, chars) in &table.char_classes {
         compiler.add_symbol(name, chars.clone());
@@ -188,9 +187,9 @@ pub fn compile_pattern_with_flags(pattern: &str, flags: &RegexFlags) -> LLreResu
     compiler.set_flags(flags.clone());
 
     // Compile
-    let nfa = compiler.compile(&regex).map_err(|e| {
-        LLreError::new(LLreErrorKind::NfaCompilationFailed(e.to_string()))
-    })?;
+    let nfa = compiler
+        .compile(&regex)
+        .map_err(|e| LLreError::new(LLreErrorKind::NfaCompilationFailed(e.to_string())))?;
 
     Ok(CompiledNFA {
         nfa,
@@ -235,10 +234,13 @@ mod tests {
 
     #[test]
     fn test_compile_with_multiline() {
-        let file = parse_str(r#"
+        let file = parse_str(
+            r#"
             @flags multiline
             ^hello$
-        "#).expect("Failed to parse");
+        "#,
+        )
+        .expect("Failed to parse");
 
         let compiled = compile(&file).expect("Failed to compile");
         assert!(compiled.multiline);
@@ -276,7 +278,8 @@ mod tests {
         let mut file = parse_str("^[a-z]+$").expect("Failed to parse");
 
         // Add symbols manually (normally from imports)
-        file.symbol_table.add_char_class("VOWEL", vec!['a', 'e', 'i', 'o', 'u'], None);
+        file.symbol_table
+            .add_char_class("VOWEL", vec!['a', 'e', 'i', 'o', 'u'], None);
 
         let compiled = compile(&file).expect("Failed to compile");
         assert!(compiled.matches("hello"));
@@ -290,7 +293,13 @@ mod tests {
         let result = compile_with_options(&file, &options);
         // This might fail if the NFA exceeds 5 states
         // The actual behavior depends on NFA construction
-        assert!(result.is_ok() || matches!(result.unwrap_err().kind, LLreErrorKind::PatternTooComplex { .. }));
+        assert!(
+            result.is_ok()
+                || matches!(
+                    result.unwrap_err().kind,
+                    LLreErrorKind::PatternTooComplex { .. }
+                )
+        );
     }
 
     #[test]

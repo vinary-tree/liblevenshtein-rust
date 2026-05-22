@@ -7,7 +7,10 @@
 //! This ordering enables efficient "top-k" queries and take-while patterns.
 
 use super::transition::{initial_state, transition_state_pooled};
-use super::{Algorithm, Intersection, PathNode, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
+use super::{
+    Algorithm, Intersection, PathNode, StatePool, SubstitutionPolicy, SubstitutionPolicyFor,
+    Unrestricted,
+};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
 
@@ -98,11 +101,20 @@ impl<N: DictionaryNode> OrderedQueryIterator<N, Unrestricted> {
         algorithm: Algorithm,
         substring_mode: bool,
     ) -> Self {
-        Self::with_policy_and_substring(root, query, max_distance, algorithm, Unrestricted, substring_mode)
+        Self::with_policy_and_substring(
+            root,
+            query,
+            max_distance,
+            algorithm,
+            Unrestricted,
+            substring_mode,
+        )
     }
 }
 
-impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> OrderedQueryIterator<N, P> {
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    OrderedQueryIterator<N, P>
+{
     /// Create a new ordered query iterator with custom substitution policy
     pub fn with_policy(
         root: N,
@@ -332,7 +344,9 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
     }
 }
 
-impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> Iterator for OrderedQueryIterator<N, P> {
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> Iterator
+    for OrderedQueryIterator<N, P>
+{
     type Item = OrderedCandidate;
 
     #[inline]
@@ -353,7 +367,8 @@ where
     predicate: F,
 }
 
-impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>, F> Iterator for FilteredOrderedQueryIterator<N, P, F>
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>, F> Iterator
+    for FilteredOrderedQueryIterator<N, P, F>
 where
     F: Fn(&OrderedCandidate) -> bool,
 {
@@ -382,7 +397,9 @@ pub struct PrefixOrderedQueryIterator<N: DictionaryNode, P: SubstitutionPolicy =
     inner: OrderedQueryIterator<N, P>,
 }
 
-impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> PrefixOrderedQueryIterator<N, P> {
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    PrefixOrderedQueryIterator<N, P>
+{
     /// Advance to the next prefix match in order
     #[inline]
     fn advance_prefix(&mut self) -> Option<OrderedCandidate> {
@@ -413,7 +430,10 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
                 // Return the result if it's a complete word matching our prefix
                 if should_return {
                     let term = intersection.term();
-                    let distance = intersection.state.infer_prefix_distance(query_len).expect("ordered query: state qualifies as prefix match (checked above)");
+                    let distance = intersection
+                        .state
+                        .infer_prefix_distance(query_len)
+                        .expect("ordered query: state qualifies as prefix match (checked above)");
                     return Some(OrderedCandidate { distance, term });
                 }
             } else {
@@ -426,7 +446,9 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
     }
 }
 
-impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> Iterator for PrefixOrderedQueryIterator<N, P> {
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> Iterator
+    for PrefixOrderedQueryIterator<N, P>
+{
     type Item = OrderedCandidate;
 
     #[inline]
@@ -846,12 +868,23 @@ mod tests {
         // Prefix match + filter for lowercase
         let results: Vec<_> = query
             .prefix()
-            .filter(|c| c.term.chars().next().expect("test fixture: candidate term is non-empty").is_lowercase())
+            .filter(|c| {
+                c.term
+                    .chars()
+                    .next()
+                    .expect("test fixture: candidate term is non-empty")
+                    .is_lowercase()
+            })
             .collect();
 
         // Should only include lowercase-starting matches
         for candidate in &results {
-            assert!(candidate.term.chars().next().expect("test fixture: candidate term is non-empty").is_lowercase());
+            assert!(candidate
+                .term
+                .chars()
+                .next()
+                .expect("test fixture: candidate term is non-empty")
+                .is_lowercase());
         }
 
         assert!(results.iter().any(|c| c.term == "testMethod"));

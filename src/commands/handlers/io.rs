@@ -8,7 +8,9 @@ use std::path::Path;
 
 use crate::cli::args::SerializationFormat;
 use crate::cli::detect::{detect_format, DictFormat};
-use crate::commands::core::{DeserializeParams, DeserializeResult, DictInfo, SerializeParams, SerializeResult};
+use crate::commands::core::{
+    DeserializeParams, DeserializeResult, DictInfo, SerializeParams, SerializeResult,
+};
 use crate::repl::state::{DictContainer, DictionaryBackend};
 
 #[cfg(feature = "serialization")]
@@ -149,9 +151,7 @@ fn save_json_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> {
     let file = std::fs::File::create(path)?;
     match container {
         DictContainer::PathMap(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
-        DictContainer::DoubleArrayTrie(d) => {
-            GzipSerializer::<JsonSerializer>::serialize(d, file)?
-        }
+        DictContainer::DoubleArrayTrie(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
         DictContainer::DynamicDawg(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
         DictContainer::SuffixAutomaton(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
     }

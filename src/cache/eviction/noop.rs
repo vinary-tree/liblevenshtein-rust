@@ -233,27 +233,39 @@ mod tests {
         assert!(!root.is_final());
 
         // Traverse 'h'
-        let h_node = root.transition(b'h').expect("expected Some transition h in test");
+        let h_node = root
+            .transition(b'h')
+            .expect("expected Some transition h in test");
         assert!(!h_node.is_final());
 
         // Traverse 'e'
-        let e_node = h_node.transition(b'e').expect("expected Some transition e in test");
+        let e_node = h_node
+            .transition(b'e')
+            .expect("expected Some transition e in test");
         assert!(!e_node.is_final());
 
         // Traverse 'l'
-        let l_node = e_node.transition(b'l').expect("expected Some transition l in test");
+        let l_node = e_node
+            .transition(b'l')
+            .expect("expected Some transition l in test");
         assert!(!l_node.is_final());
 
         // Traverse 'p' -> "help"
-        let p_node = l_node.transition(b'p').expect("expected Some transition p in test");
+        let p_node = l_node
+            .transition(b'p')
+            .expect("expected Some transition p in test");
         assert!(p_node.is_final());
 
         // Traverse 'l' -> "hell" (not final, part of "hello")
-        let l2_node = l_node.transition(b'l').expect("expected Some transition l2 in test");
+        let l2_node = l_node
+            .transition(b'l')
+            .expect("expected Some transition l2 in test");
         assert!(!l2_node.is_final());
 
         // Traverse 'o' -> "hello"
-        let o_node = l2_node.transition(b'o').expect("expected Some transition o in test");
+        let o_node = l2_node
+            .transition(b'o')
+            .expect("expected Some transition o in test");
         assert!(o_node.is_final());
     }
 

@@ -38,8 +38,7 @@
 //! ```
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, Wfst,
-    WeightedTransition,
+    LazyState, LazyWfst, StateId, StateSource, TropicalWeight, WeightedTransition, Wfst,
 };
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
@@ -155,17 +154,17 @@ impl MsmWfst {
             .target_series
             .iter()
             .filter(|(_, target)| !target.is_empty())
-            .map(|(series_id, target)| {
-                (*series_id, target[0], target.len())
-            })
+            .map(|(series_id, target)| (*series_id, target[0], target.len()))
             .collect();
 
         for (series_id, first_target_value, target_len) in series_info {
-            let state = MsmCompositeState::initial(series_id, first_query_value, first_target_value);
+            let state =
+                MsmCompositeState::initial(series_id, first_query_value, first_target_value);
             let id = self.state_registry.get_or_create(state);
 
             // Initialize MSM weight for this state
-            let weight = MsmWeight::initial(first_query_value, first_target_value, self.msm_config.c);
+            let weight =
+                MsmWeight::initial(first_query_value, first_target_value, self.msm_config.c);
             self.state_weights.insert(state.key(), weight);
 
             // Cache the initial state
@@ -277,11 +276,15 @@ impl MsmWfst {
                 self.state_weights.insert(new_state.key(), new_weight);
 
                 // Epsilon transition for merge (no output consumed)
-                let cost = self.msm_config.c_func(qv, current_weight.last_query_value(), current_weight.last_target_value());
+                let cost = self.msm_config.c_func(
+                    qv,
+                    current_weight.last_query_value(),
+                    current_weight.last_target_value(),
+                );
                 transitions.push(WeightedTransition::new(
                     _state_id,
-                    None,  // Epsilon on input
-                    None,  // Epsilon on output
+                    None, // Epsilon on input
+                    None, // Epsilon on output
                     new_id,
                     TropicalWeight::new(cost),
                 ));
@@ -304,7 +307,11 @@ impl MsmWfst {
 
                 // Epsilon on input (only target consumed)
                 let label = quantize_value(tv, 0.0, 100.0);
-                let cost = self.msm_config.c_func(tv, current_weight.last_query_value(), current_weight.last_target_value());
+                let cost = self.msm_config.c_func(
+                    tv,
+                    current_weight.last_query_value(),
+                    current_weight.last_target_value(),
+                );
                 transitions.push(WeightedTransition::new(
                     _state_id,
                     None,        // Epsilon on input
@@ -356,7 +363,11 @@ impl MsmWfst {
 
         // Apply cache eviction if needed
         if let lling_llang::wfst::CachePolicy::Lru { max_states } = self.cache_policy {
-            let limit = if max_states > 0 { max_states } else { self.max_cache_size };
+            let limit = if max_states > 0 {
+                max_states
+            } else {
+                self.max_cache_size
+            };
             if self.cache.len() >= limit {
                 let to_remove = (self.cache.len() / 10).max(1);
                 let keys: Vec<_> = self.cache.keys().take(to_remove).copied().collect();
@@ -406,10 +417,7 @@ impl Wfst<u8, TropicalWeight> for MsmWfst {
     }
 
     fn is_final(&self, state: StateId) -> bool {
-        self.cache
-            .get(&state)
-            .map(|s| s.is_final)
-            .unwrap_or(false)
+        self.cache.get(&state).map(|s| s.is_final).unwrap_or(false)
     }
 
     fn final_weight(&self, state: StateId) -> TropicalWeight {

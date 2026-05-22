@@ -41,12 +41,12 @@ static BENGALI_VOWELS: &[char] = &[
     'ও', // o
     'ঔ', // ou (diphthong)
     // Dependent vowels (matra)
-    'া', // a matra
+    'া',  // a matra
     'ি', // i matra
     'ী', // ii matra
-    'ু', // u matra
-    'ূ', // uu matra
-    'ৃ', // ri matra
+    'ু',  // u matra
+    'ূ',  // uu matra
+    'ৃ',  // ri matra
     'ে', // e matra
     'ৈ', // oi matra
     'ো', // o matra
@@ -167,7 +167,7 @@ mod tests {
         assert!(c.is_consonant('\u{09A1}')); // ড (da) - base of ড়
         assert!(c.is_consonant('\u{09A2}')); // ঢ (dha) - base of ঢ়
         assert!(c.is_consonant('\u{09AF}')); // য (ya) - base of য়
-        // The nukta (U+09BC) is a combining mark, not a consonant
+                                             // The nukta (U+09BC) is a combining mark, not a consonant
         assert!(!c.is_consonant('\u{09BC}')); // nukta
     }
 

@@ -91,10 +91,10 @@ fn bench_is_free_substitution(c: &mut Criterion) {
     let mut group = c.benchmark_group("articulatory/is_free_substitution");
 
     let pairs = [
-        ("voicing_pb", 'p', 'b'), // Should be free (similar)
-        ("voicing_td", 't', 'd'), // Should be free (similar)
+        ("voicing_pb", 'p', 'b'),   // Should be free (similar)
+        ("voicing_td", 't', 'd'),   // Should be free (similar)
         ("different_ph", 'p', 'h'), // Should not be free
-        ("identical", 'p', 'p'), // Should be free
+        ("identical", 'p', 'p'),    // Should be free
     ];
 
     for (name, c1, c2) in pairs {
@@ -117,9 +117,13 @@ fn bench_articulatory_edit_distance(c: &mut Criterion) {
         let bytes = (s1.len() + s2.len()) as u64;
         group.throughput(Throughput::Bytes(bytes));
 
-        group.bench_with_input(BenchmarkId::new("articulatory", name), &(s1, s2), |b, (s1, s2)| {
-            b.iter(|| articulatory_edit_distance(black_box(s1), black_box(s2)));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("articulatory", name),
+            &(s1, s2),
+            |b, (s1, s2)| {
+                b.iter(|| articulatory_edit_distance(black_box(s1), black_box(s2)));
+            },
+        );
     }
 
     group.finish();
@@ -141,9 +145,13 @@ fn bench_articulatory_vs_standard(c: &mut Criterion) {
 
     for (name, s1, s2) in pairs {
         // Standard distance
-        group.bench_with_input(BenchmarkId::new("standard", name), &(s1, s2), |b, (s1, s2)| {
-            b.iter(|| standard_distance(black_box(s1), black_box(s2)));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("standard", name),
+            &(s1, s2),
+            |b, (s1, s2)| {
+                b.iter(|| standard_distance(black_box(s1), black_box(s2)));
+            },
+        );
 
         // Articulatory distance
         group.bench_with_input(
@@ -248,56 +256,40 @@ fn bench_product_automaton_articulatory(c: &mut Criterion) {
 
     // Create both product automaton variants
     let product_fixed = ProductAutomatonChar::new(nfa.clone(), 2);
-    let product_articulatory = ProductAutomatonChar::with_articulatory_costs(
-        nfa.clone(),
-        2.0,
-        Algorithm::Standard,
-        costs,
-    );
+    let product_articulatory =
+        ProductAutomatonChar::with_articulatory_costs(nfa.clone(), 2.0, Algorithm::Standard, costs);
 
     // Benchmark transition with exact match
     group.bench_function("fixed/transition_match", |b| {
         let initial = product_fixed.initial_state();
-        b.iter(|| {
-            product_fixed.transition(black_box(&initial), black_box('p'))
-        });
+        b.iter(|| product_fixed.transition(black_box(&initial), black_box('p')));
     });
 
     group.bench_function("articulatory/transition_match", |b| {
         let initial = product_articulatory.initial_state();
-        b.iter(|| {
-            product_articulatory.transition(black_box(&initial), black_box('p'))
-        });
+        b.iter(|| product_articulatory.transition(black_box(&initial), black_box('p')));
     });
 
     // Benchmark transition with substitution (similar sound: p→b)
     group.bench_function("fixed/transition_sub_similar", |b| {
         let initial = product_fixed.initial_state();
-        b.iter(|| {
-            product_fixed.transition(black_box(&initial), black_box('b'))
-        });
+        b.iter(|| product_fixed.transition(black_box(&initial), black_box('b')));
     });
 
     group.bench_function("articulatory/transition_sub_similar", |b| {
         let initial = product_articulatory.initial_state();
-        b.iter(|| {
-            product_articulatory.transition(black_box(&initial), black_box('b'))
-        });
+        b.iter(|| product_articulatory.transition(black_box(&initial), black_box('b')));
     });
 
     // Benchmark transition with substitution (different sound: p→k)
     group.bench_function("fixed/transition_sub_different", |b| {
         let initial = product_fixed.initial_state();
-        b.iter(|| {
-            product_fixed.transition(black_box(&initial), black_box('k'))
-        });
+        b.iter(|| product_fixed.transition(black_box(&initial), black_box('k')));
     });
 
     group.bench_function("articulatory/transition_sub_different", |b| {
         let initial = product_articulatory.initial_state();
-        b.iter(|| {
-            product_articulatory.transition(black_box(&initial), black_box('k'))
-        });
+        b.iter(|| product_articulatory.transition(black_box(&initial), black_box('k')));
     });
 
     group.finish();
@@ -311,12 +303,8 @@ fn bench_product_automaton_accepts(c: &mut Criterion) {
     let costs = ArticulatoryCosts::default();
 
     let product_fixed = ProductAutomatonChar::new(nfa.clone(), 2);
-    let product_articulatory = ProductAutomatonChar::with_articulatory_costs(
-        nfa.clone(),
-        2.0,
-        Algorithm::Standard,
-        costs,
-    );
+    let product_articulatory =
+        ProductAutomatonChar::with_articulatory_costs(nfa.clone(), 2.0, Algorithm::Standard, costs);
 
     // Exact match
     group.bench_function("fixed/exact_match", |b| {
@@ -364,22 +352,18 @@ fn bench_substitution_cost_overhead(c: &mut Criterion) {
     let nfa = compile(&parse("p").unwrap()).unwrap();
     let costs = ArticulatoryCosts::default();
 
-    let product = ProductAutomatonChar::with_articulatory_costs(
-        nfa,
-        2.0,
-        Algorithm::Standard,
-        costs,
-    );
+    let product =
+        ProductAutomatonChar::with_articulatory_costs(nfa, 2.0, Algorithm::Standard, costs);
 
     // Test various input characters (pattern expects 'p')
     let chars = [
-        ("identical", 'p'),       // Matches pattern
-        ("voicing_pair", 'b'),    // p→b voicing
-        ("adjacent_place", 't'),  // p→t adjacent place
-        ("distant_place", 'k'),   // p→k distant place
-        ("different_manner", 's'),// p→s different manner
-        ("vowel", 'a'),           // Completely different
-        ("non_ipa", 'x'),         // Non-IPA
+        ("identical", 'p'),        // Matches pattern
+        ("voicing_pair", 'b'),     // p→b voicing
+        ("adjacent_place", 't'),   // p→t adjacent place
+        ("distant_place", 'k'),    // p→k distant place
+        ("different_manner", 's'), // p→s different manner
+        ("vowel", 'a'),            // Completely different
+        ("non_ipa", 'x'),          // Non-IPA
     ];
 
     for (name, input_char) in chars {
@@ -425,4 +409,9 @@ criterion_group!(
     bench_substitution_cost_overhead,
 );
 
-criterion_main!(char_benches, edit_benches, throughput_benches, product_benches);
+criterion_main!(
+    char_benches,
+    edit_benches,
+    throughput_benches,
+    product_benches
+);

@@ -157,7 +157,9 @@ impl<D> PhoneticPipelineBuilder<D> {
 
     /// Add a rewrite rule.
     pub fn add_rewrite_rule(mut self, input: &str, output: &str, cost: f64) -> Self {
-        self.config.rewrite_rules.push(RewriteRule::with_cost(input, output, cost));
+        self.config
+            .rewrite_rules
+            .push(RewriteRule::with_cost(input, output, cost));
         self
     }
 
@@ -203,7 +205,10 @@ impl<D> PhoneticPipelineBuilder<D> {
     ///
     /// This creates a phonetic NFA WFST from the pattern.
     pub fn build_phonetic_nfa(&self) -> Result<super::phonetic_nfa_wfst::PhoneticNfaWfst, String> {
-        let pattern = self.config.pattern.as_ref()
+        let pattern = self
+            .config
+            .pattern
+            .as_ref()
             .ok_or_else(|| "No phonetic pattern specified".to_string())?;
 
         use crate::phonetic::nfa::compiler::compile;
@@ -212,10 +217,12 @@ impl<D> PhoneticPipelineBuilder<D> {
         let ast = parse(pattern).map_err(|e| format!("Parse error: {:?}", e))?;
         let nfa = compile(&ast).map_err(|e| format!("Compile error: {:?}", e))?;
 
-        Ok(super::phonetic_nfa_wfst::PhoneticNfaWfst::with_phonetic_weight(
-            nfa,
-            self.config.phonetic_weight,
-        ))
+        Ok(
+            super::phonetic_nfa_wfst::PhoneticNfaWfst::with_phonetic_weight(
+                nfa,
+                self.config.phonetic_weight,
+            ),
+        )
     }
 }
 
@@ -232,10 +239,15 @@ where
     /// This creates a PhoneticWfst that integrates the phonetic NFA,
     /// Levenshtein automaton, and dictionary.
     pub fn build(&self) -> Result<super::phonetic_wfst::PhoneticWfst<D>, String> {
-        let dictionary = self.dictionary.as_ref()
+        let dictionary = self
+            .dictionary
+            .as_ref()
             .ok_or_else(|| "No dictionary specified".to_string())?;
 
-        let pattern = self.config.pattern.as_ref()
+        let pattern = self
+            .config
+            .pattern
+            .as_ref()
             .ok_or_else(|| "No phonetic pattern specified".to_string())?;
 
         use crate::phonetic::nfa::compiler::compile;

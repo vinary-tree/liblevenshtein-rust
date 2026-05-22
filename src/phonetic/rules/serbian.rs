@@ -191,11 +191,7 @@ mod tests {
         let rules = base();
         // Ж → zh
         let result = rules.apply("ж");
-        assert!(
-            result.contains("ʒ"),
-            "ж should become zh, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ж should become zh, got: {}", result);
     }
 
     #[test]
@@ -203,11 +199,7 @@ mod tests {
         let rules = base();
         // Ш → sh
         let result = rules.apply("ш");
-        assert!(
-            result.contains("ʃ"),
-            "ш should become sh, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ш should become sh, got: {}", result);
     }
 
     #[test]
@@ -215,11 +207,7 @@ mod tests {
         let rules = base();
         // Ч → ch
         let result = rules.apply("ч");
-        assert!(
-            result.contains("t͡ʃ"),
-            "ч should become ch, got: {}",
-            result
-        );
+        assert!(result.contains("t͡ʃ"), "ч should become ch, got: {}", result);
     }
 
     #[test]
@@ -267,11 +255,7 @@ mod tests {
         let rules = latin();
         // č → ch
         let result = rules.apply("č");
-        assert!(
-            result.contains("t͡ʃ"),
-            "č should become ch, got: {}",
-            result
-        );
+        assert!(result.contains("t͡ʃ"), "č should become ch, got: {}", result);
     }
 
     #[test]
@@ -291,11 +275,7 @@ mod tests {
         let rules = latin();
         // š → sh
         let result = rules.apply("š");
-        assert!(
-            result.contains("ʃ"),
-            "š should become sh, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "š should become sh, got: {}", result);
     }
 
     #[test]
@@ -303,11 +283,7 @@ mod tests {
         let rules = latin();
         // ž → zh
         let result = rules.apply("ž");
-        assert!(
-            result.contains("ʒ"),
-            "ž should become zh, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ž should become zh, got: {}", result);
     }
 
     #[test]
@@ -362,6 +338,4 @@ mod tests {
     // ============================================================
     // WEIGHT ORDERING TESTS
     // ============================================================
-
-
 }

@@ -8,9 +8,9 @@
 use libdictenstein::zipper::DictZipper;
 use libdictenstein::Dictionary;
 use liblevenshtein::prelude::*;
+use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::sync::Arc;
-use parking_lot::RwLock;
 use tempfile::TempDir;
 
 /// Make an empty PersistentARTrie backed by a leaked TempDir.
@@ -21,7 +21,7 @@ use tempfile::TempDir;
 /// reaps the directory at process exit.
 fn make_empty_dict() -> PersistentARTrie<()> {
     let tmp: &'static TempDir = Box::leak(Box::new(
-        tempfile::tempdir().expect("tempdir for test PersistentARTrie")
+        tempfile::tempdir().expect("tempdir for test PersistentARTrie"),
     ));
     let path = tmp.path().join("dict.artrie");
     PersistentARTrie::create(path).expect("create disk-backed PersistentARTrie")
@@ -168,8 +168,10 @@ fn test_persistent_artrie_edges() {
     // NOTE: The current bucket implementation groups by first byte after the common prefix
     let c = root.transition(b'c').unwrap();
     let c_edges: HashSet<u8> = c.edges().map(|(b, _)| b).collect();
-    assert!(c_edges.contains(&b'a') || c_edges.contains(&b'o'),
-        "Should have at least one child edge");
+    assert!(
+        c_edges.contains(&b'a') || c_edges.contains(&b'o'),
+        "Should have at least one child edge"
+    );
 }
 
 // ============================================================================
@@ -256,7 +258,10 @@ fn test_persistent_artrie_high_distance() {
 
     // Should find the term with high distance allowed
     let results: HashSet<_> = transducer.query("test", 10).collect();
-    assert!(results.contains("test"), "Should find 'test' with distance 10");
+    assert!(
+        results.contains("test"),
+        "Should find 'test' with distance 10"
+    );
 }
 
 // ============================================================================
@@ -433,5 +438,8 @@ fn test_persistent_artrie_query_builder() {
         .collect();
 
     // Should find exact match
-    assert!(results.contains(&"hello".to_string()), "Should find 'hello'");
+    assert!(
+        results.contains(&"hello".to_string()),
+        "Should find 'hello'"
+    );
 }

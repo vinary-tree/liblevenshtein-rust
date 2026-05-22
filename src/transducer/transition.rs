@@ -58,8 +58,8 @@ fn characteristic_vector<'a, U: CharUnit, P: SubstitutionPolicy + SubstitutionPo
         let query_idx = offset + i;
         if query_idx < query.len() {
             let query_unit = query[query_idx];
-            *item = query_unit == dict_unit
-                || is_substitution_allowed(&policy, dict_unit, query_unit);
+            *item =
+                query_unit == dict_unit || is_substitution_allowed(&policy, dict_unit, query_unit);
         } else {
             *item = false;
         }
@@ -597,7 +597,14 @@ pub fn transition_state<U: CharUnit, P: SubstitutionPolicy + SubstitutionPolicyF
 
     for position in expanded_state.positions() {
         let offset = position.term_index;
-        let cv = characteristic_vector(policy, dict_unit, query, window_size, offset, &mut cv_buffer);
+        let cv = characteristic_vector(
+            policy,
+            dict_unit,
+            query,
+            window_size,
+            offset,
+            &mut cv_buffer,
+        );
 
         let next_positions = transition_position(
             position,
@@ -681,7 +688,14 @@ pub fn transition_state_pooled<U: CharUnit, P: SubstitutionPolicy + Substitution
 
     for position in expanded_state.positions() {
         let offset = position.term_index;
-        let cv = characteristic_vector(policy, dict_unit, query, window_size, offset, &mut cv_buffer);
+        let cv = characteristic_vector(
+            policy,
+            dict_unit,
+            query,
+            window_size,
+            offset,
+            &mut cv_buffer,
+        );
 
         let next_positions = transition_position(
             position,

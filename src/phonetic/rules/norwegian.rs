@@ -85,7 +85,10 @@ mod tests {
     #[test]
     fn test_base_loads() {
         let rules = base();
-        assert!(!rules.is_empty(), "Norwegian base rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Norwegian base rules should not be empty"
+        );
         assert!(
             rules.len() >= 30,
             "expected >=30 base rules, got {}",
@@ -98,11 +101,7 @@ mod tests {
         let rules = base();
         // æ → AE
         let result = rules.apply("æ");
-        assert!(
-            result.contains("æ"),
-            "æ should become AE, got: {}",
-            result
-        );
+        assert!(result.contains("æ"), "æ should become AE, got: {}", result);
     }
 
     #[test]
@@ -110,11 +109,7 @@ mod tests {
         let rules = base();
         // ø → OE
         let result = rules.apply("ø");
-        assert!(
-            result.contains("ø"),
-            "ø should become OE, got: {}",
-            result
-        );
+        assert!(result.contains("ø"), "ø should become OE, got: {}", result);
     }
 
     #[test]
@@ -122,11 +117,7 @@ mod tests {
         let rules = base();
         // å → O → o (normalized to lowercase)
         let result = rules.apply("å");
-        assert!(
-            result.contains('ɔ'),
-            "å should become o, got: {}",
-            result
-        );
+        assert!(result.contains('ɔ'), "å should become o, got: {}", result);
     }
 
     #[test]
@@ -134,11 +125,7 @@ mod tests {
         let rules = base();
         // kj → KJ
         let result = rules.apply("kj");
-        assert!(
-            result.contains("ç"),
-            "kj should become KJ, got: {}",
-            result
-        );
+        assert!(result.contains("ç"), "kj should become KJ, got: {}", result);
     }
 
     #[test]
@@ -146,11 +133,7 @@ mod tests {
         let rules = base();
         // sj → SJ
         let result = rules.apply("sj");
-        assert!(
-            result.contains("ʃ"),
-            "sj should become SJ, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "sj should become SJ, got: {}", result);
     }
 
     #[test]
@@ -182,11 +165,7 @@ mod tests {
         let rules = base();
         // hj → J
         let result = rules.apply("hj");
-        assert!(
-            result.contains('j'),
-            "hj should become J, got: {}",
-            result
-        );
+        assert!(result.contains('j'), "hj should become J, got: {}", result);
     }
 
     #[test]
@@ -212,5 +191,4 @@ mod tests {
             result
         );
     }
-
 }

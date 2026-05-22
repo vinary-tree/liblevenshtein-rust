@@ -1,8 +1,8 @@
 //! Shared query command handler
 
 use crate::commands::core::{CommandResult, QueryParams};
-use libdictenstein::Dictionary;
 use crate::transducer::Transducer;
+use libdictenstein::Dictionary;
 
 /// Execute a query against a dictionary
 ///
@@ -88,8 +88,8 @@ pub fn query_and_format<D: Dictionary + Clone>(dict: &D, params: &QueryParams) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libdictenstein::double_array_trie::DoubleArrayTrie;
     use crate::transducer::Algorithm;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
 
     #[test]
     fn test_execute_query_exact() {

@@ -43,19 +43,19 @@ static TELUGU_VOWELS: &[char] = &[
     'ఓ', // oo (long)
     'ఔ', // au
     // Dependent vowels (మాత్రలు)
-    'ా', // aa matra
-    'ి', // i matra
-    'ీ', // ii matra
+    'ా',  // aa matra
+    'ి',  // i matra
+    'ీ',  // ii matra
     'ు', // u matra
     'ూ', // uu matra
     'ృ', // ri matra
     'ౄ', // rii matra
-    'ె', // e matra
-    'ే', // ee matra
-    'ై', // ai matra
-    'ొ', // o matra
-    'ో', // oo matra
-    'ౌ', // au matra
+    'ె',  // e matra
+    'ే',  // ee matra
+    'ై',  // ai matra
+    'ొ',  // o matra
+    'ో',  // oo matra
+    'ౌ',  // au matra
 ];
 
 impl VowelClassifier for TeluguClassifier {

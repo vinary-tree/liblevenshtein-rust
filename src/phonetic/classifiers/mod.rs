@@ -45,9 +45,11 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 pub mod arabic;
+pub mod armenian;
 pub mod bengali;
 pub mod cyrillic;
 pub mod devanagari;
+pub mod georgian;
 pub mod greek;
 pub mod gujarati;
 pub mod gurmukhi;
@@ -55,8 +57,6 @@ pub mod hangul;
 pub mod hanzi;
 pub mod hebrew;
 pub mod latin;
-pub mod armenian;
-pub mod georgian;
 pub mod tamil;
 pub mod telugu;
 pub mod thai;
@@ -331,13 +331,14 @@ pub fn classifier_for_language(lang: &str) -> DynClassifier {
     match lang_lower.as_str() {
         // Latin script languages
         "en" | "english" | "de" | "german" | "fr" | "french" | "es" | "spanish" | "pt"
-        | "portuguese" | "it" | "italian" | "nl" | "dutch" | "pl" | "polish" | "tr"
-        | "turkish" | "tl" | "tagalog" | "filipino" | "ja-latn" | "romaji" | "zh-latn"
-        | "pinyin" => DynClassifier::latin(),
+        | "portuguese" | "it" | "italian" | "nl" | "dutch" | "pl" | "polish" | "tr" | "turkish"
+        | "tl" | "tagalog" | "filipino" | "ja-latn" | "romaji" | "zh-latn" | "pinyin" => {
+            DynClassifier::latin()
+        }
 
         // Cyrillic script languages
-        "ru" | "russian" | "uk" | "ukrainian" | "bg" | "bulgarian" | "be" | "belarusian"
-        | "sr" | "serbian" => DynClassifier::cyrillic(),
+        "ru" | "russian" | "uk" | "ukrainian" | "bg" | "bulgarian" | "be" | "belarusian" | "sr"
+        | "serbian" => DynClassifier::cyrillic(),
 
         // Greek
         "el" | "greek" => DynClassifier::greek(),
@@ -438,10 +439,7 @@ mod tests {
         assert_eq!(classifier_for_language("te").script_name(), "Telugu");
         assert_eq!(classifier_for_language("ta").script_name(), "Tamil");
         assert_eq!(classifier_for_language("pa").script_name(), "Gurmukhi");
-        assert_eq!(
-            classifier_for_language("pa-arab").script_name(),
-            "Arabic"
-        );
+        assert_eq!(classifier_for_language("pa-arab").script_name(), "Arabic");
         assert_eq!(classifier_for_language("th").script_name(), "Thai");
         assert_eq!(classifier_for_language("ka").script_name(), "Georgian");
         assert_eq!(classifier_for_language("hy").script_name(), "Armenian");

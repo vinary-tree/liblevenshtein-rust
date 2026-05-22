@@ -153,9 +153,9 @@ pub use hybrid_search::{HybridSearchIndex, HybridSearchIndexBuilder, HybridSearc
 pub use trie_index::{TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats};
 
 // Lower bound exports
+#[cfg(feature = "rayon")]
+pub use lower_bounds::search_with_lb_parallel;
 pub use lower_bounds::{
     combined_lb, euclidean_lb, filter_by_lower_bound, l1_lb, length_lb, search_with_lb,
     search_with_lb_stats, LowerBoundConfig, LowerBoundStats, LowerBoundType,
 };
-#[cfg(feature = "rayon")]
-pub use lower_bounds::search_with_lb_parallel;

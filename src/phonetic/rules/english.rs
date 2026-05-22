@@ -145,7 +145,11 @@ mod tests {
         let rules = base();
         // Should have rules (62 minus disabled ones)
         assert!(!rules.is_empty(), "base rules should not be empty");
-        assert!(rules.len() > 50, "expected >50 base rules, got {}", rules.len());
+        assert!(
+            rules.len() > 50,
+            "expected >50 base rules, got {}",
+            rules.len()
+        );
     }
 
     #[test]
@@ -166,8 +170,11 @@ mod tests {
         // phone -> foʊn (ph -> f, o_e -> oʊ with magic e)
         // Note: IPA output includes diphthong /oʊ/
         let result = rules.apply("phone");
-        assert!(result.contains("f") && (result.contains("oʊn") || result.contains("on")),
-            "expected 'f' and 'oʊn' or 'on' in result, got: {}", result);
+        assert!(
+            result.contains("f") && (result.contains("oʊn") || result.contains("on")),
+            "expected 'f' and 'oʊn' or 'on' in result, got: {}",
+            result
+        );
     }
 
     #[test]

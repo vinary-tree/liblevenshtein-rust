@@ -21,16 +21,15 @@ use libdictenstein::Dictionary;
 /// Generate a word list of common English words for benchmarking.
 fn common_words() -> Vec<&'static str> {
     vec![
-        "the", "be", "to", "of", "and", "a", "in", "that", "have", "I",
-        "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
-        "this", "but", "his", "by", "from", "they", "we", "say", "her", "she",
-        "or", "an", "will", "my", "one", "all", "would", "there", "their", "what",
-        "so", "up", "out", "if", "about", "who", "get", "which", "go", "me",
-        "when", "make", "can", "like", "time", "no", "just", "him", "know", "take",
-        "people", "into", "year", "your", "good", "some", "could", "them", "see", "other",
-        "than", "then", "now", "look", "only", "come", "its", "over", "think", "also",
-        "back", "after", "use", "two", "how", "our", "work", "first", "well", "way",
-        "even", "new", "want", "because", "any", "these", "give", "day", "most", "us",
+        "the", "be", "to", "of", "and", "a", "in", "that", "have", "I", "it", "for", "not", "on",
+        "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we",
+        "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their",
+        "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when",
+        "make", "can", "like", "time", "no", "just", "him", "know", "take", "people", "into",
+        "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now",
+        "look", "only", "come", "its", "over", "think", "also", "back", "after", "use", "two",
+        "how", "our", "work", "first", "well", "way", "even", "new", "want", "because", "any",
+        "these", "give", "day", "most", "us",
     ]
 }
 
@@ -55,14 +54,9 @@ fn extended_words(count: usize) -> Vec<String> {
 /// Words specifically chosen for phonetic variation.
 fn phonetic_words() -> Vec<&'static str> {
     vec![
-        "phone", "fone", "elephant", "elefant",
-        "knight", "night", "nite",
-        "through", "thru", "threw",
-        "color", "colour",
-        "enough", "enuf",
-        "cough", "rough", "tough",
-        "accept", "except",
-        "affect", "effect",
+        "phone", "fone", "elephant", "elefant", "knight", "night", "nite", "through", "thru",
+        "threw", "color", "colour", "enough", "enuf", "cough", "rough", "tough", "accept",
+        "except", "affect", "effect",
     ]
 }
 
@@ -241,9 +235,7 @@ fn bench_mutation(c: &mut Criterion) {
     group.bench_function("insert_single_1k", |b| {
         b.iter_batched(
             || PhoneticNormalizedDictionary::<()>::from_terms(&base_words),
-            |dict| {
-                black_box(dict.insert(black_box("newword")))
-            },
+            |dict| black_box(dict.insert(black_box("newword"))),
             criterion::BatchSize::SmallInput,
         );
     });

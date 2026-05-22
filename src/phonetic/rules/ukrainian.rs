@@ -87,7 +87,10 @@ mod tests {
     #[test]
     fn test_base_loads() {
         let rules = base();
-        assert!(!rules.is_empty(), "Ukrainian base rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Ukrainian base rules should not be empty"
+        );
         assert!(
             rules.len() >= 40,
             "expected >=40 base rules, got {}",
@@ -100,11 +103,7 @@ mod tests {
         let rules = base();
         // ї → yi
         let result = rules.apply("ї");
-        assert!(
-            result.contains("yi"),
-            "ї should become yi, got: {}",
-            result
-        );
+        assert!(result.contains("yi"), "ї should become yi, got: {}", result);
     }
 
     #[test]
@@ -124,11 +123,7 @@ mod tests {
         let rules = base();
         // і → i
         let result = rules.apply("і");
-        assert!(
-            result.contains('i'),
-            "і should become i, got: {}",
-            result
-        );
+        assert!(result.contains('i'), "і should become i, got: {}", result);
     }
 
     #[test]
@@ -136,11 +131,7 @@ mod tests {
         let rules = base();
         // ґ → g (plosive g)
         let result = rules.apply("ґ");
-        assert!(
-            result.contains('ɡ'),
-            "ґ should become g, got: {}",
-            result
-        );
+        assert!(result.contains('ɡ'), "ґ should become g, got: {}", result);
     }
 
     #[test]
@@ -179,18 +170,10 @@ mod tests {
         );
         // ж → zh (test with following vowel to avoid word-final devoicing)
         let result = rules.apply("жа");
-        assert!(
-            result.contains("ʒ"),
-            "ж should become zh, got: {}",
-            result
-        );
+        assert!(result.contains("ʒ"), "ж should become zh, got: {}", result);
         // ш → sh
         let result = rules.apply("ш");
-        assert!(
-            result.contains("ʃ"),
-            "ш should become sh, got: {}",
-            result
-        );
+        assert!(result.contains("ʃ"), "ш should become sh, got: {}", result);
     }
 
     #[test]
@@ -198,18 +181,10 @@ mod tests {
         let rules = base();
         // ю → yu
         let result = rules.apply("ю");
-        assert!(
-            result.contains("ju"),
-            "ю should become yu, got: {}",
-            result
-        );
+        assert!(result.contains("ju"), "ю should become yu, got: {}", result);
         // я → ya
         let result = rules.apply("я");
-        assert!(
-            result.contains("ja"),
-            "я should become ya, got: {}",
-            result
-        );
+        assert!(result.contains("ja"), "я should become ya, got: {}", result);
     }
 
     #[test]
@@ -217,11 +192,7 @@ mod tests {
         let rules = base();
         // а → a
         let result = rules.apply("а");
-        assert!(
-            result.contains('a'),
-            "а should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "а should become a, got: {}", result);
         // о → o (IPA may use 'o' or 'ɔ')
         let result = rules.apply("о");
         assert!(
@@ -231,11 +202,7 @@ mod tests {
         );
         // у → u
         let result = rules.apply("у");
-        assert!(
-            result.contains('u'),
-            "у should become u, got: {}",
-            result
-        );
+        assert!(result.contains('u'), "у should become u, got: {}", result);
     }
 
     #[test]
@@ -263,5 +230,4 @@ mod tests {
             result
         );
     }
-
 }

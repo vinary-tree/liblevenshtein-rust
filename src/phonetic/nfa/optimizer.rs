@@ -40,11 +40,9 @@ use std::collections::{HashMap, VecDeque};
 
 use rustc_hash::FxHashSet;
 
-use super::{NFAChar, NFA};
 use super::state_set::StateSet;
-use super::types::{
-    StateId, TransitionChar, TransitionLabelChar, Transition, TransitionLabel,
-};
+use super::types::{StateId, Transition, TransitionChar, TransitionLabel, TransitionLabelChar};
+use super::{NFAChar, NFA};
 
 // ============================================================================
 // Configuration
@@ -423,9 +421,7 @@ fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
 
     // Update final states: state is final if any state in its epsilon closure is final
     for state_id in 0..nfa.num_states() as StateId {
-        let is_final = closures[state_id as usize]
-            .iter()
-            .any(|s| nfa.is_final(s));
+        let is_final = closures[state_id as usize].iter().any(|s| nfa.is_final(s));
         new_nfa.set_final(state_id, is_final);
     }
 
@@ -548,8 +544,8 @@ fn build_nfa_with_states_char(nfa: &NFAChar, keep_states: &FxHashSet<StateId>) -
 
 /// Simple hash function for transition labels (for deduplication).
 fn hash_label_char(label: &TransitionLabelChar) -> u64 {
-    use std::hash::{Hash, Hasher};
     use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
 
     let mut hasher = DefaultHasher::new();
     // Hash based on discriminant and content
@@ -655,9 +651,7 @@ fn eliminate_epsilon(nfa: NFA) -> NFA {
     }
 
     for state_id in 0..nfa.num_states() as StateId {
-        let is_final = closures[state_id as usize]
-            .iter()
-            .any(|s| nfa.is_final(s));
+        let is_final = closures[state_id as usize].iter().any(|s| nfa.is_final(s));
         new_nfa.set_final(state_id, is_final);
     }
 
@@ -756,8 +750,8 @@ fn build_nfa_with_states(nfa: &NFA, keep_states: &FxHashSet<StateId>) -> NFA {
 
 /// Simple hash function for byte-level transition labels.
 fn hash_label(label: &TransitionLabel) -> u64 {
-    use std::hash::{Hash, Hasher};
     use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
 
     let mut hasher = DefaultHasher::new();
     match label {
@@ -851,12 +845,18 @@ mod tests {
         let nfa = builder.kleene_star(a);
 
         let before_epsilon = count_epsilon_transitions_char(&nfa);
-        assert!(before_epsilon > 0, "kleene_star should have epsilon transitions");
+        assert!(
+            before_epsilon > 0,
+            "kleene_star should have epsilon transitions"
+        );
 
         let optimized = eliminate_epsilon_char(nfa.clone());
         let after_epsilon = count_epsilon_transitions_char(&optimized);
 
-        assert_eq!(after_epsilon, 0, "epsilon elimination should remove all epsilon transitions");
+        assert_eq!(
+            after_epsilon, 0,
+            "epsilon elimination should remove all epsilon transitions"
+        );
 
         // Verify language preservation
         assert!(nfa.accepts(""));

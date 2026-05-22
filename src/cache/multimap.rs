@@ -36,8 +36,8 @@
 //! assert_eq!(result, Some(HashSet::from([3, 4, 5])));
 //! ```
 
-use libdictenstein::{DictionaryValue, MappedDictionary, MutableMappedDictionary};
 use crate::transducer::{Algorithm, Transducer};
+use libdictenstein::{DictionaryValue, MappedDictionary, MutableMappedDictionary};
 use std::collections::{BTreeSet, HashSet};
 use std::hash::Hash;
 
@@ -479,10 +479,10 @@ where
     where
         F: FnOnce(&mut C),
     {
-        self.dictionary.update_or_insert(term, default_value, update_fn)
+        self.dictionary
+            .update_or_insert(term, default_value, update_fn)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -556,7 +556,9 @@ mod tests {
 
         let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
 
-        let result = fuzzy.query("hello", 0).expect("expected Some result in test");
+        let result = fuzzy
+            .query("hello", 0)
+            .expect("expected Some result in test");
         assert_eq!(result, HashSet::from([1, 2, 3]));
     }
 
@@ -589,7 +591,9 @@ mod tests {
         let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Transposition);
 
         // Query with transposition distance
-        let result = fuzzy.query("hello", 2).expect("expected Some result in test");
+        let result = fuzzy
+            .query("hello", 2)
+            .expect("expected Some result in test");
         // Should at least match "hello" (exact)
         assert!(result.contains(&1));
     }

@@ -11,8 +11,7 @@
 //! - **Custom pipelines**: Build complex matching pipelines with explicit composition
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, Wfst,
-    WeightedTransition,
+    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition, Wfst,
 };
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
@@ -144,7 +143,11 @@ impl PhoneticNfaWfst {
     fn compute_nfa_transitions(
         &mut self,
         state_id: StateId,
-    ) -> (bool, TropicalWeight, SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>) {
+    ) -> (
+        bool,
+        TropicalWeight,
+        SmallVec<[WeightedTransition<char, TropicalWeight>; 4]>,
+    ) {
         let state_set = match self.id_to_state_set.get(state_id as usize) {
             Some(set) => set.clone(),
             None => return (false, TropicalWeight::zero(), SmallVec::new()),
@@ -242,7 +245,11 @@ impl PhoneticNfaWfst {
 
         // Apply cache eviction if using LRU and over limit
         if let lling_llang::wfst::CachePolicy::Lru { max_states } = self.cache_policy {
-            let limit = if max_states > 0 { max_states } else { self.max_cache_size };
+            let limit = if max_states > 0 {
+                max_states
+            } else {
+                self.max_cache_size
+            };
             if self.cache.len() >= limit {
                 let to_remove = (self.cache.len() / 10).max(1);
                 let keys: Vec<_> = self.cache.keys().take(to_remove).copied().collect();
@@ -271,10 +278,7 @@ impl Wfst<char, TropicalWeight> for PhoneticNfaWfst {
     }
 
     fn is_final(&self, state: StateId) -> bool {
-        self.cache
-            .get(&state)
-            .map(|s| s.is_final)
-            .unwrap_or(false)
+        self.cache.get(&state).map(|s| s.is_final).unwrap_or(false)
     }
 
     fn final_weight(&self, state: StateId) -> TropicalWeight {

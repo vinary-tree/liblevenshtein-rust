@@ -35,9 +35,9 @@
 //! matcher.reset();
 //! ```
 
-use super::{NFAChar, NFA};
 use super::state_set::StateSet;
 use super::types::StateId;
+use super::{NFAChar, NFA};
 use rustc_hash::FxHashSet;
 
 // ============================================================================
@@ -63,8 +63,7 @@ pub struct IncrementalMatcherChar {
 impl IncrementalMatcherChar {
     /// Create a new incremental matcher from an NFA.
     pub fn new(nfa: NFAChar) -> Self {
-        let current_states: FxHashSet<StateId> =
-            nfa.epsilon_closure_single(nfa.start()).into();
+        let current_states: FxHashSet<StateId> = nfa.epsilon_closure_single(nfa.start()).into();
 
         Self {
             nfa,
@@ -222,8 +221,7 @@ pub struct IncrementalMatcher {
 impl IncrementalMatcher {
     /// Create a new incremental matcher from an NFA.
     pub fn new(nfa: NFA) -> Self {
-        let current_states: FxHashSet<StateId> =
-            nfa.epsilon_closure_single(nfa.start()).into();
+        let current_states: FxHashSet<StateId> = nfa.epsilon_closure_single(nfa.start()).into();
 
         Self {
             nfa,

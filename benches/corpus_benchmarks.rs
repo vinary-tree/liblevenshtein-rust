@@ -24,8 +24,8 @@
 //! 3. **Validation Queries**: Performance on real spelling errors (Holbrook/Aspell)
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::corpus::{BigTxtCorpus, MittonCorpus, QueryWorkload};
 use libdictenstein::double_array_trie::DoubleArrayTrie;
+use liblevenshtein::corpus::{BigTxtCorpus, MittonCorpus, QueryWorkload};
 use liblevenshtein::prelude::*;
 use std::path::Path;
 use std::time::Duration;
@@ -37,7 +37,10 @@ fn load_big_txt() -> Option<BigTxtCorpus> {
     if Path::new(path).exists() {
         BigTxtCorpus::load(path).ok()
     } else {
-        eprintln!("Warning: {} not found. Run: ./scripts/download_corpora.sh", path);
+        eprintln!(
+            "Warning: {} not found. Run: ./scripts/download_corpora.sh",
+            path
+        );
         None
     }
 }
@@ -99,7 +102,8 @@ fn construction_benchmarks(c: &mut Criterion) {
             &subset,
             |b, words| {
                 b.iter(|| {
-                    let dict: DynamicDawg = DynamicDawg::from_terms(black_box(words.iter().copied()));
+                    let dict: DynamicDawg =
+                        DynamicDawg::from_terms(black_box(words.iter().copied()));
                     black_box(dict);
                 });
             },

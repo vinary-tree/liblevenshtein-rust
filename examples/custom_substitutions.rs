@@ -87,9 +87,9 @@ fn main() {
     let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
 
     let combined_queries = vec![
-        ("hwllo", "hello"),  // Keyboard: e→w
-        ("fone", "phone"),   // Phonetic: f↔p
-        ("workd", "world"),  // Keyboard: l→k (not in set, won't match perfectly)
+        ("hwllo", "hello"), // Keyboard: e→w
+        ("fone", "phone"),  // Phonetic: f↔p
+        ("workd", "world"), // Keyboard: l→k (not in set, won't match perfectly)
     ];
 
     for (query, expected) in combined_queries {
@@ -149,7 +149,7 @@ fn main() {
         } else if !results.is_empty() {
             println!("? Got: {:?} (expected '{}')", results, expected);
         } else {
-            println!("✗ No matches", );
+            println!("✗ No matches",);
         }
     }
 
@@ -166,7 +166,10 @@ fn main() {
     ];
 
     let vowel_set = SubstitutionSet::from_pairs(&vowel_pairs);
-    println!("Created vowel substitution set with {} pairs:", vowel_set.len());
+    println!(
+        "Created vowel substitution set with {} pairs:",
+        vowel_set.len()
+    );
     println!("  - a ↔ e");
     println!("  - i ↔ y");
     println!("  - o ↔ u");
@@ -177,9 +180,9 @@ fn main() {
     let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
 
     let vowel_queries = vec![
-        ("tast", "test"),    // e→a
-        ("happi", "happy"),  // y→i
-        ("cular", "color"),  // o→u (in 'co'), o→a (in 'or')
+        ("tast", "test"),   // e→a
+        ("happi", "happy"), // y→i
+        ("cular", "color"), // o→u (in 'co'), o→a (in 'or')
     ];
 
     for (query, expected) in vowel_queries {

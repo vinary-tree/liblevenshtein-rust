@@ -33,10 +33,8 @@ impl CyrillicClassifier {
 /// Static list of Cyrillic vowels.
 static CYRILLIC_VOWELS: &[char] = &[
     // Russian vowels (lowercase)
-    'а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я',
-    // Russian vowels (uppercase)
-    'А', 'Е', 'Ё', 'И', 'О', 'У', 'Ы', 'Э', 'Ю', 'Я',
-    // Ukrainian specific
+    'а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я', // Russian vowels (uppercase)
+    'А', 'Е', 'Ё', 'И', 'О', 'У', 'Ы', 'Э', 'Ю', 'Я', // Ukrainian specific
     'і', 'ї', 'є', 'І', 'Ї', 'Є',
 ];
 

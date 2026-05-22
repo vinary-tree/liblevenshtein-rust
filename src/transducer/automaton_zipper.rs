@@ -513,8 +513,12 @@ mod tests {
         let mut pool = StatePool::new();
 
         // Transition through "te" (2 characters)
-        let z1 = zipper.transition(b't', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
-        let z2 = z1.transition(b'e', &mut pool).expect("test fixture: transition on valid dictionary path");
+        let z1 = zipper
+            .transition(b't', &mut pool)
+            .expect("doc/test fixture: transition on valid dictionary path");
+        let z2 = z1
+            .transition(b'e', &mut pool)
+            .expect("test fixture: transition on valid dictionary path");
 
         // After consuming "te", we're at position 2 with 0 errors
         // If the dictionary term "te" ends here (term_length=2),

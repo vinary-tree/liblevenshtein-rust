@@ -434,10 +434,16 @@ impl fmt::Display for LLreErrorKind {
 
             // Pattern Errors
             LLreErrorKind::MissingPattern => {
-                write!(f, "missing regex pattern (each .llre file must contain exactly one pattern)")
+                write!(
+                    f,
+                    "missing regex pattern (each .llre file must contain exactly one pattern)"
+                )
             }
             LLreErrorKind::MultiplePatterns => {
-                write!(f, "multiple patterns found (only one pattern allowed per .llre file)")
+                write!(
+                    f,
+                    "multiple patterns found (only one pattern allowed per .llre file)"
+                )
             }
             LLreErrorKind::InvalidPattern(msg) => {
                 write!(f, "invalid pattern: {}", msg)
@@ -448,7 +454,11 @@ impl fmt::Display for LLreErrorKind {
 
             // Flag Errors
             LLreErrorKind::InvalidFlag(flag) => {
-                write!(f, "invalid flag '{}' (valid: multiline, dotall, case_insensitive)", flag)
+                write!(
+                    f,
+                    "invalid flag '{}' (valid: multiline, dotall, case_insensitive)",
+                    flag
+                )
             }
             LLreErrorKind::DuplicateFlag(flag) => {
                 write!(f, "duplicate flag '{}'", flag)
@@ -466,7 +476,11 @@ impl fmt::Display for LLreErrorKind {
                         f,
                         "undefined symbol '${}'; available: {}",
                         name,
-                        available.iter().map(|s| format!("${}", s)).collect::<Vec<_>>().join(", ")
+                        available
+                            .iter()
+                            .map(|s| format!("${}", s))
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     )
                 }
             }

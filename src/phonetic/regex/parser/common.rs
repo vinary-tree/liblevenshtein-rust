@@ -20,9 +20,7 @@ pub(super) fn resolve_feature_bundle_chars(
     terms: &[(String, bool)],
     symbols: Option<&SymbolTable>,
 ) -> Result<Vec<char>, String> {
-    use crate::phonetic::named_classes::{
-        get_chars_only, intersect_char_sets, negate_char_set,
-    };
+    use crate::phonetic::named_classes::{get_chars_only, intersect_char_sets, negate_char_set};
 
     let mut char_sets: Vec<Vec<char>> = Vec::new();
 

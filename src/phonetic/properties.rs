@@ -16,9 +16,7 @@
 mod tests {
     use super::super::application::{apply_rule_at, apply_rules_seq, MAX_EXPANSION_FACTOR};
     use super::super::rules::{orthography_rules, phonetic_rules, test_rules, zompist_rules};
-    use super::super::types::{
-        ContextByte, Phone, PhoneByte, RewriteRuleByte,
-    };
+    use super::super::types::{ContextByte, Phone, PhoneByte, RewriteRuleByte};
     use proptest::prelude::*;
 
     // ========================================================================
@@ -48,14 +46,26 @@ mod tests {
         prop_oneof![
             Just(ContextByte::Initial),
             Just(ContextByte::Final),
-            prop::collection::vec(any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127), 0..5)
-                .prop_map(ContextByte::BeforeVowel),
-            prop::collection::vec(any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127), 0..5)
-                .prop_map(ContextByte::AfterConsonant),
-            prop::collection::vec(any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127), 0..5)
-                .prop_map(ContextByte::BeforeConsonant),
-            prop::collection::vec(any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127), 0..5)
-                .prop_map(ContextByte::AfterVowel),
+            prop::collection::vec(
+                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
+                0..5
+            )
+            .prop_map(ContextByte::BeforeVowel),
+            prop::collection::vec(
+                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
+                0..5
+            )
+            .prop_map(ContextByte::AfterConsonant),
+            prop::collection::vec(
+                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
+                0..5
+            )
+            .prop_map(ContextByte::BeforeConsonant),
+            prop::collection::vec(
+                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
+                0..5
+            )
+            .prop_map(ContextByte::AfterVowel),
             Just(ContextByte::Anywhere),
         ]
     }
@@ -149,10 +159,10 @@ mod tests {
 
         // Test with various inputs
         let test_inputs = vec![
-            vec![Phone::Consonant(b'x')],                              // Test rule x→yy
-            vec![Phone::Consonant(b'g'), Phone::Consonant(b'h')],      // Test gh→∅
-            vec![Phone::Consonant(b'p'), Phone::Consonant(b'h')],      // Test ph→f
-            vec![Phone::Consonant(b'q'), Phone::Consonant(b'u')],      // Test qu→kw
+            vec![Phone::Consonant(b'x')],                         // Test rule x→yy
+            vec![Phone::Consonant(b'g'), Phone::Consonant(b'h')], // Test gh→∅
+            vec![Phone::Consonant(b'p'), Phone::Consonant(b'h')], // Test ph→f
+            vec![Phone::Consonant(b'q'), Phone::Consonant(b'u')], // Test qu→kw
         ];
 
         for rule in &rules {
@@ -239,7 +249,8 @@ mod tests {
         // Order 2: Apply y→z first, then x→yy
         let temp2 = apply_rule_at(rule_y_to_z, &input, 1).expect("y→z should apply");
         // temp2 = [x, z] (keeping x, y→z)
-        let result2 = apply_rules_seq(&[rule_x_expand.clone()], &temp2, 10).expect("Should succeed");
+        let result2 =
+            apply_rules_seq(&[rule_x_expand.clone()], &temp2, 10).expect("Should succeed");
 
         // Results should differ (non-confluence)
         assert_ne!(
@@ -264,7 +275,11 @@ mod tests {
             vec![],
             vec![Phone::Consonant(b'a')],
             vec![Phone::Consonant(b'x'), Phone::Consonant(b'y')],
-            vec![Phone::Consonant(b'p'), Phone::Consonant(b'h'), Phone::Vowel(b'o')],
+            vec![
+                Phone::Consonant(b'p'),
+                Phone::Consonant(b'h'),
+                Phone::Vowel(b'o'),
+            ],
         ];
 
         for input in test_inputs {
@@ -315,7 +330,7 @@ mod tests {
         let test_inputs = vec![
             vec![Phone::Consonant(b'p'), Phone::Consonant(b'h')], // ph→f
             vec![Phone::Consonant(b'c'), Phone::Consonant(b'h')], // ch→ç
-            vec![Phone::Vowel(b'e')],                             // Final e→silent (but not at final)
+            vec![Phone::Vowel(b'e')], // Final e→silent (but not at final)
         ];
 
         for input in test_inputs {

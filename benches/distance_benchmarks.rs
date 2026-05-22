@@ -8,7 +8,7 @@
 //! - Iterative vs recursive implementations
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::distance::{*, myers};
+use liblevenshtein::distance::{myers, *};
 
 // ============================================================================
 // Test Data Generation
@@ -377,7 +377,11 @@ fn bench_myers_distance(c: &mut Criterion) {
         ("medium_similar", "programming", "programing"),
         ("classic_kitten", "kitten", "sitting"),
         ("classic_saturday", "saturday", "sunday"),
-        ("long_32", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+        (
+            "long_32",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        ),
     ];
 
     for (name, source, target) in test_cases {
@@ -434,7 +438,9 @@ fn bench_myers_bounded(c: &mut Criterion) {
 
     for (name, source, target, threshold) in test_cases {
         group.bench_function(name, |b| {
-            b.iter(|| myers::myers_distance_bounded(black_box(source), black_box(target), threshold));
+            b.iter(|| {
+                myers::myers_distance_bounded(black_box(source), black_box(target), threshold)
+            });
         });
     }
 

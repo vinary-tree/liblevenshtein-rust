@@ -40,9 +40,7 @@ use std::fmt;
 use rustc_hash::FxHashSet;
 
 use super::state_set::StateSet;
-use super::types::{
-    CharClassChar, NFAState, StateId, TransitionChar, TransitionLabelChar,
-};
+use super::types::{CharClassChar, NFAState, StateId, TransitionChar, TransitionLabelChar};
 
 // ============================================================================
 // Transitions Iterator Types (H9)
@@ -388,7 +386,8 @@ impl NFAChar {
             self.finals.insert(id);
         }
         // Extend offsets array for new state (H9)
-        self.transition_offsets.push(self.transition_offsets.last().copied().unwrap_or(0));
+        self.transition_offsets
+            .push(self.transition_offsets.last().copied().unwrap_or(0));
         id
     }
 
@@ -713,10 +712,7 @@ impl NFAChar {
         let mut current = self.epsilon_closure_single(self.start);
 
         // Calculate byte position for the starting character position
-        let start_byte_pos: usize = chars[..start_char_pos]
-            .iter()
-            .map(|c| c.len_utf8())
-            .sum();
+        let start_byte_pos: usize = chars[..start_char_pos].iter().map(|c| c.len_utf8()).sum();
 
         // Process anchors at start position
         loop {
@@ -1164,7 +1160,10 @@ impl NFAChar {
 
     /// Count the number of epsilon transitions in this NFA.
     pub fn count_epsilon_transitions(&self) -> usize {
-        self.transitions.iter().filter(|t| t.label.is_epsilon()).count()
+        self.transitions
+            .iter()
+            .filter(|t| t.label.is_epsilon())
+            .count()
     }
 }
 

@@ -22,10 +22,12 @@
 use std::collections::HashMap;
 
 use super::context::{BoundaryKind, ContextPattern, ContextPatternChar};
-use super::{NFAChar, NFA};
-use super::optimizer::{OptimizationConfig, NfaOptimizerChar};
+use super::optimizer::{NfaOptimizerChar, OptimizationConfig};
 use super::thompson::{ThompsonBuilder, ThompsonBuilderChar};
-use crate::phonetic::regex::ast::{ContextExpr, ContextExprByte, Regex, RegexByte, RegexFlags, UnicodeNormalization};
+use super::{NFAChar, NFA};
+use crate::phonetic::regex::ast::{
+    ContextExpr, ContextExprByte, Regex, RegexByte, RegexFlags, UnicodeNormalization,
+};
 use crate::phonetic::regex::error::{ParseError, ParseErrorKind, ParseResult, Position};
 use crate::phonetic::regex::transform::apply_flags;
 
@@ -549,9 +551,7 @@ impl NFACompilerChar {
                 self.compile_regex_recursive(inner)
             }
             // Non-capturing group: (?:...)
-            Regex::NonCapturingGroup(inner) => {
-                self.compile_regex_recursive(inner)
-            }
+            Regex::NonCapturingGroup(inner) => self.compile_regex_recursive(inner),
             // Named group: (?<name>...)
             Regex::NamedGroup(_, inner) => {
                 // Named groups compile like regular groups for now
@@ -719,7 +719,10 @@ impl NFACompilerChar {
             | Regex::NamedGroup(_, inner) => {
                 work_stack.push(CompileWork::Compile(inner));
             }
-            Regex::FlagsGroup { inner: Some(inner_regex), .. } => {
+            Regex::FlagsGroup {
+                inner: Some(inner_regex),
+                ..
+            } => {
                 work_stack.push(CompileWork::Compile(inner_regex));
             }
             Regex::FlagsGroup { inner: None, .. } => {
@@ -759,9 +762,10 @@ impl NFACompilerChar {
             | Regex::NonCapturingGroup(inner)
             | Regex::NamedGroup(_, inner) => self.regex_to_literal(inner),
             // Flags group with inner pattern
-            Regex::FlagsGroup { inner: Some(inner_regex), .. } => {
-                self.regex_to_literal(inner_regex)
-            }
+            Regex::FlagsGroup {
+                inner: Some(inner_regex),
+                ..
+            } => self.regex_to_literal(inner_regex),
             // Flags group without inner (inline flags)
             Regex::FlagsGroup { inner: None, .. } => Ok(Vec::new()),
             _ => Err(ParseError::new(
@@ -854,9 +858,7 @@ impl NFACompilerByte {
                 nfa.finalize();
                 Ok(ContextPattern::Nfa(nfa))
             }
-            ContextExprByte::WordBoundary => {
-                Ok(ContextPattern::Boundary(BoundaryKind::WordStart))
-            }
+            ContextExprByte::WordBoundary => Ok(ContextPattern::Boundary(BoundaryKind::WordStart)),
             ContextExprByte::And(a, b) => {
                 let left = self.compile_context_expr(a)?;
                 let right = self.compile_context_expr(b)?;
@@ -972,9 +974,10 @@ impl NFACompilerByte {
             | RegexByte::NonCapturingGroup(inner)
             | RegexByte::NamedGroup(_, inner) => self.regex_to_literal(inner),
             // Flags group with inner pattern
-            RegexByte::FlagsGroup { inner: Some(inner_regex), .. } => {
-                self.regex_to_literal(inner_regex)
-            }
+            RegexByte::FlagsGroup {
+                inner: Some(inner_regex),
+                ..
+            } => self.regex_to_literal(inner_regex),
             // Flags group without inner (inline flags)
             RegexByte::FlagsGroup { inner: None, .. } => Ok(Vec::new()),
             _ => Err(ParseError::new(
@@ -1108,7 +1111,9 @@ mod tests {
         assert_eq!(rewrite.replacement, vec!['s']);
         assert!(rewrite.left_context.is_none());
         assert!(rewrite.right_context.is_some());
-        let right = rewrite.right_context.expect("test: right_context is_some checked above");
+        let right = rewrite
+            .right_context
+            .expect("test: right_context is_some checked above");
         assert!(right.accepts("e"));
         assert!(right.accepts("i"));
         assert!(!right.accepts("a"));
@@ -1153,7 +1158,8 @@ mod tests {
 
     #[test]
     fn test_compile_bytes_rewrite() {
-        let regex = crate::phonetic::regex::parse_rule_bytes(b"ph -> f").expect("test: parse_rule_bytes ph -> f");
+        let regex = crate::phonetic::regex::parse_rule_bytes(b"ph -> f")
+            .expect("test: parse_rule_bytes ph -> f");
         let rewrite = compile_rewrite_bytes(&regex).expect("test: compile_rewrite_bytes");
         assert!(rewrite.source.accepts(b"ph"));
         assert_eq!(rewrite.replacement, vec![b'f']);
@@ -1221,13 +1227,22 @@ mod tests {
         assert!(!compiler.is_trampolining(), "default should be recursive");
 
         compiler.set_trampolining(true);
-        assert!(compiler.is_trampolining(), "should be trampolining after set");
+        assert!(
+            compiler.is_trampolining(),
+            "should be trampolining after set"
+        );
 
         compiler.set_trampolining(false);
-        assert!(!compiler.is_trampolining(), "should be recursive after unset");
+        assert!(
+            !compiler.is_trampolining(),
+            "should be recursive after unset"
+        );
 
         let compiler2 = NFACompilerChar::new().with_trampolining();
-        assert!(compiler2.is_trampolining(), "builder should enable trampolining");
+        assert!(
+            compiler2.is_trampolining(),
+            "builder should enable trampolining"
+        );
     }
 
     #[test]
@@ -1311,7 +1326,9 @@ mod tests {
 
         // Compile with trampolining
         let mut compiler = NFACompilerChar::new().with_trampolining();
-        let nfa = compiler.compile(&regex).expect("trampolined compile of deep pattern");
+        let nfa = compiler
+            .compile(&regex)
+            .expect("trampolined compile of deep pattern");
 
         // Verify it works correctly
         assert!(nfa.accepts("a"), "should accept 'a'");
@@ -1337,7 +1354,9 @@ mod tests {
         let regex = parse(&pattern).expect("parse deeply nested alternation");
 
         let mut compiler = NFACompilerChar::new().with_trampolining();
-        let nfa = compiler.compile(&regex).expect("trampolined compile of deep alternation");
+        let nfa = compiler
+            .compile(&regex)
+            .expect("trampolined compile of deep alternation");
 
         // Should accept any single letter
         assert!(nfa.accepts("a"));
@@ -1362,14 +1381,20 @@ mod tests {
         let regex = parse(&pattern).expect("parse deeply concatenated pattern");
 
         let mut compiler = NFACompilerChar::new().with_trampolining();
-        let nfa = compiler.compile(&regex).expect("trampolined compile of deep concat");
+        let nfa = compiler
+            .compile(&regex)
+            .expect("trampolined compile of deep concat");
 
         // Should accept exactly 'depth' 'a' characters
         let expected: String = std::iter::repeat('a').take(depth).collect();
         assert!(nfa.accepts(&expected), "should accept {} 'a' chars", depth);
 
         let too_short: String = std::iter::repeat('a').take(depth - 1).collect();
-        assert!(!nfa.accepts(&too_short), "should reject {} 'a' chars", depth - 1);
+        assert!(
+            !nfa.accepts(&too_short),
+            "should reject {} 'a' chars",
+            depth - 1
+        );
 
         // Verify equivalence with recursive
         let nfa_recursive = compile(&regex).expect("recursive compile");

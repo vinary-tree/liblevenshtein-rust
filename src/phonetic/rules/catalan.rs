@@ -100,11 +100,7 @@ mod tests {
         let rules = base();
         // l·l → L (geminated l normalized to single L)
         let result = rules.apply("l·l");
-        assert!(
-            result.contains('L'),
-            "l·l should become L, got: {}",
-            result
-        );
+        assert!(result.contains('L'), "l·l should become L, got: {}", result);
     }
 
     #[test]
@@ -172,11 +168,7 @@ mod tests {
         let rules = base();
         // v → b
         let result = rules.apply("v");
-        assert!(
-            result.contains('b'),
-            "v should become b, got: {}",
-            result
-        );
+        assert!(result.contains('b'), "v should become b, got: {}", result);
     }
 
     #[test]
@@ -184,18 +176,10 @@ mod tests {
         let rules = base();
         // à → a
         let result = rules.apply("à");
-        assert!(
-            result.contains('a'),
-            "à should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "à should become a, got: {}", result);
         // é → e
         let result = rules.apply("é");
-        assert!(
-            result.contains('e'),
-            "é should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "é should become e, got: {}", result);
         // ó → o
         let result = rules.apply("ó");
         assert!(
@@ -229,5 +213,4 @@ mod tests {
             result
         );
     }
-
 }

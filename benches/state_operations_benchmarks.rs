@@ -21,7 +21,11 @@ fn generate_state_with_errors(positions: &[(usize, usize)]) -> State {
     let mut state = State::new();
     let query_length = 20; // Reasonable query length for benchmarks
     for &(term_index, num_errors) in positions {
-        state.insert(Position::new(term_index, num_errors), Algorithm::Standard, query_length);
+        state.insert(
+            Position::new(term_index, num_errors),
+            Algorithm::Standard,
+            query_length,
+        );
     }
     state
 }
@@ -315,7 +319,11 @@ fn bench_realistic_query_pattern(c: &mut Criterion) {
 
                     // Simulate adding a few transitions
                     for i in 1..=3 {
-                        state.insert(Position::new(i, (i - 1) % (max_d + 1)), Algorithm::Standard, query_length);
+                        state.insert(
+                            Position::new(i, (i - 1) % (max_d + 1)),
+                            Algorithm::Standard,
+                            query_length,
+                        );
                     }
 
                     // Query distance

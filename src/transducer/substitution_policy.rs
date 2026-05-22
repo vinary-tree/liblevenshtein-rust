@@ -431,8 +431,11 @@ mod tests {
 
     #[test]
     fn test_unrestricted_size_is_zero() {
-        assert_eq!(std::mem::size_of::<Unrestricted>(), 0,
-            "Unrestricted must be zero-sized for ZST optimization");
+        assert_eq!(
+            std::mem::size_of::<Unrestricted>(),
+            0,
+            "Unrestricted must be zero-sized for ZST optimization"
+        );
     }
 
     #[test]
@@ -564,8 +567,14 @@ mod tests {
         assert!(policy.is_allowed_for('e', 'e'), "e==e should be allowed");
 
         // Should NOT allow other substitutions
-        assert!(!policy.is_allowed_for('a', 'b'), "a->b should NOT be allowed");
-        assert!(!policy.is_allowed_for('é', 'x'), "é->x should NOT be allowed");
+        assert!(
+            !policy.is_allowed_for('a', 'b'),
+            "a->b should NOT be allowed"
+        );
+        assert!(
+            !policy.is_allowed_for('é', 'x'),
+            "é->x should NOT be allowed"
+        );
     }
 
     #[test]

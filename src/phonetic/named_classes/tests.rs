@@ -476,8 +476,7 @@ fn test_prenasalized_click_class() {
         get_named_class("prenasalized_click").expect("prenasalized_click class should exist");
 
     // Test alias lookup
-    let nasal_click =
-        get_named_class("nasal_click").expect("nasal_click alias should work");
+    let nasal_click = get_named_class("nasal_click").expect("nasal_click alias should work");
     assert_eq!(prenasalized.patterns.len(), nasal_click.patterns.len());
 
     // Test trigraphs (prenasalized aspirated clicks - Xhosa)

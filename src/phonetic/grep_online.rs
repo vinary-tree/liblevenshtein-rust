@@ -187,8 +187,7 @@ impl PhoneticGrepOnline {
         rules_path: &Path,
         max_distance: u8,
     ) -> Result<Self, GrepError> {
-        let llev_file =
-            load_file(rules_path).map_err(|e| GrepError::RuleLoad(e.to_string()))?;
+        let llev_file = load_file(rules_path).map_err(|e| GrepError::RuleLoad(e.to_string()))?;
         let ruleset =
             RuleSetChar::from_llev(&llev_file).map_err(|e| GrepError::RuleLoad(e.to_string()))?;
 
@@ -596,9 +595,7 @@ impl PhoneticGrepOnline {
                     Some((best_dist, _, _)) if distance < *best_dist => {
                         best_match = Some((distance, end, candidate_str));
                     }
-                    Some((best_dist, best_end, _))
-                        if distance == *best_dist && end > *best_end =>
-                    {
+                    Some((best_dist, best_end, _)) if distance == *best_dist && end > *best_end => {
                         // Prefer longer match at same distance
                         best_match = Some((distance, end, candidate_str));
                     }
@@ -968,7 +965,7 @@ mod tests {
             replacement: replacement.chars().map(char_to_phone).collect(),
             context,
             weight: 1.0,
-        syllable_condition: None,
+            syllable_condition: None,
         }
     }
 
@@ -1185,7 +1182,10 @@ mod tests {
         let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
 
         let matches = grep.scan_parallel("xyz");
-        assert!(matches.is_empty(), "parallel: should not match unrelated text");
+        assert!(
+            matches.is_empty(),
+            "parallel: should not match unrelated text"
+        );
     }
 
     #[cfg(feature = "parallel-grep")]
@@ -1195,7 +1195,10 @@ mod tests {
         let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
 
         let matches = grep.scan_parallel("");
-        assert!(matches.is_empty(), "parallel: empty document has no matches");
+        assert!(
+            matches.is_empty(),
+            "parallel: empty document has no matches"
+        );
     }
 
     #[cfg(feature = "parallel-grep")]
@@ -1259,11 +1262,7 @@ mod tests {
         let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
 
         // Use exact matches since the scanner matches entire documents
-        let documents = vec![
-            ("doc1", "phone"),
-            ("doc2", "fone"),
-            ("doc3", "hello"),
-        ];
+        let documents = vec![("doc1", "phone"), ("doc2", "fone"), ("doc3", "hello")];
 
         let results = grep.scan_documents_parallel(documents);
 
@@ -1294,10 +1293,7 @@ mod tests {
         let rules = vec![make_rule("ph", "f", ContextChar::Anywhere)];
         let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
 
-        let documents = vec![
-            ("doc1", "phone"),
-            ("doc2", "fone"),
-        ];
+        let documents = vec![("doc1", "phone"), ("doc2", "fone")];
 
         let results = grep.scan_documents_parallel_nested(documents);
 
@@ -1346,23 +1342,34 @@ mod tests {
         let rules = vec![make_rule("ph", "f", ContextChar::Anywhere)];
         let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
 
-        let documents = vec![
-            ("doc1", "phone"),
-            ("doc2", "no match"),
-            ("doc3", "fone"),
-        ];
+        let documents = vec![("doc1", "phone"), ("doc2", "no match"), ("doc3", "fone")];
 
         let results = grep.count_documents_parallel(documents);
 
         assert_eq!(results.len(), 3, "should return counts for all documents");
 
-        let doc1_count = results.iter().find(|(id, _)| *id == "doc1").map(|(_, c)| *c);
-        let doc2_count = results.iter().find(|(id, _)| *id == "doc2").map(|(_, c)| *c);
-        let doc3_count = results.iter().find(|(id, _)| *id == "doc3").map(|(_, c)| *c);
+        let doc1_count = results
+            .iter()
+            .find(|(id, _)| *id == "doc1")
+            .map(|(_, c)| *c);
+        let doc2_count = results
+            .iter()
+            .find(|(id, _)| *id == "doc2")
+            .map(|(_, c)| *c);
+        let doc3_count = results
+            .iter()
+            .find(|(id, _)| *id == "doc3")
+            .map(|(_, c)| *c);
 
-        assert!(doc1_count.map_or(false, |c| c >= 1), "doc1 should have >= 1 match");
+        assert!(
+            doc1_count.map_or(false, |c| c >= 1),
+            "doc1 should have >= 1 match"
+        );
         assert_eq!(doc2_count, Some(0), "doc2 should have 0 matches");
-        assert!(doc3_count.map_or(false, |c| c >= 1), "doc3 should have >= 1 match");
+        assert!(
+            doc3_count.map_or(false, |c| c >= 1),
+            "doc3 should have >= 1 match"
+        );
     }
 
     #[cfg(feature = "parallel-grep")]
@@ -1374,7 +1381,10 @@ mod tests {
         let documents: Vec<(&str, &str)> = vec![];
         let results = grep.scan_documents_parallel(documents);
 
-        assert!(results.is_empty(), "empty input should produce empty output");
+        assert!(
+            results.is_empty(),
+            "empty input should produce empty output"
+        );
     }
 
     #[cfg(feature = "parallel-grep")]

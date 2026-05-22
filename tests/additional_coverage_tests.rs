@@ -11,7 +11,7 @@ use proptest::prelude::*;
 // ============================================================================
 
 mod time_series_msm_coverage {
-    use liblevenshtein::time_series::{MsmConfig, msm_distance_wavefront};
+    use liblevenshtein::time_series::{msm_distance_wavefront, MsmConfig};
 
     // --- MsmConfig Tests ---
 
@@ -76,7 +76,10 @@ mod time_series_msm_coverage {
         let y = vec![1.0, 2.0];
 
         let d = config.distance(&x, &y);
-        assert!(d > 0.0, "Different length series should have positive distance");
+        assert!(
+            d > 0.0,
+            "Different length series should have positive distance"
+        );
     }
 
     #[test]
@@ -206,7 +209,11 @@ mod time_series_encoding_coverage {
 
         // Middle value should be around bin 128
         let bin = config.quantize(50.0);
-        assert!(bin >= 125 && bin <= 130, "50.0 should quantize to ~128, got {}", bin);
+        assert!(
+            bin >= 125 && bin <= 130,
+            "50.0 should quantize to ~128, got {}",
+            bin
+        );
     }
 
     #[test]
@@ -299,7 +306,7 @@ mod time_series_encoding_coverage {
 
 mod time_series_lower_bounds_coverage {
     use liblevenshtein::time_series::{
-        euclidean_lb, length_lb, l1_lb, combined_lb, LowerBoundConfig, MsmConfig,
+        combined_lb, euclidean_lb, l1_lb, length_lb, LowerBoundConfig, MsmConfig,
     };
 
     #[test]
@@ -412,17 +419,13 @@ mod time_series_lower_bounds_coverage {
 
 mod time_series_index_coverage {
     use liblevenshtein::time_series::{
-        QuantizationConfig, TimeSeriesIndex, TimeSeriesIndexBuilder,
-        HybridSearchIndex, MsmConfig,
+        HybridSearchIndex, MsmConfig, QuantizationConfig, TimeSeriesIndex, TimeSeriesIndexBuilder,
     };
 
     #[test]
     fn test_time_series_index_creation() {
         let config = QuantizationConfig::uniform(0.0, 100.0, 256);
-        let series = vec![
-            vec![10.0, 20.0, 30.0],
-            vec![15.0, 25.0, 35.0],
-        ];
+        let series = vec![vec![10.0, 20.0, 30.0], vec![15.0, 25.0, 35.0]];
 
         let index: TimeSeriesIndex<usize> = TimeSeriesIndex::from_series(config, &series);
         assert_eq!(index.len(), 2);
@@ -502,8 +505,7 @@ mod time_series_index_coverage {
 
     #[test]
     fn test_time_series_index_builder() {
-        let builder = TimeSeriesIndexBuilder::new()
-            .quantization(0.0, 100.0, 256);
+        let builder = TimeSeriesIndexBuilder::new().quantization(0.0, 100.0, 256);
 
         let index: TimeSeriesIndex<usize> = builder.build();
         assert_eq!(index.len(), 0);
@@ -606,21 +608,27 @@ mod filter_ngram_coverage {
 
 mod filter_jaro_winkler_coverage {
     use liblevenshtein::filter::{
-        jaro_similarity, jaro_winkler_similarity, jaro_winkler_similarity_scaled,
-        is_similar, distance_to_similarity_approx, similarity_to_distance_approx,
+        distance_to_similarity_approx, is_similar, jaro_similarity, jaro_winkler_similarity,
+        jaro_winkler_similarity_scaled, similarity_to_distance_approx,
     };
 
     #[test]
     fn test_jaro_identical() {
         let sim = jaro_similarity("hello", "hello");
-        assert!((sim - 1.0).abs() < 1e-9, "Identical strings should have similarity 1.0");
+        assert!(
+            (sim - 1.0).abs() < 1e-9,
+            "Identical strings should have similarity 1.0"
+        );
     }
 
     #[test]
     fn test_jaro_empty() {
         // Both empty
         let sim1 = jaro_similarity("", "");
-        assert!((sim1 - 1.0).abs() < 1e-9, "Both empty should have similarity 1.0");
+        assert!(
+            (sim1 - 1.0).abs() < 1e-9,
+            "Both empty should have similarity 1.0"
+        );
 
         // One empty
         let sim2 = jaro_similarity("hello", "");
@@ -633,7 +641,10 @@ mod filter_jaro_winkler_coverage {
     #[test]
     fn test_jaro_completely_different() {
         let sim = jaro_similarity("abc", "xyz");
-        assert!(sim < 0.5, "Completely different strings should have low similarity");
+        assert!(
+            sim < 0.5,
+            "Completely different strings should have low similarity"
+        );
     }
 
     #[test]
@@ -667,7 +678,10 @@ mod filter_jaro_winkler_coverage {
         assert!(is_similar("hello", "hello", 0.5));
 
         let result = is_similar("hello", "world", 0.95);
-        assert!(!result, "Very different strings shouldn't be similar at high threshold");
+        assert!(
+            !result,
+            "Very different strings shouldn't be similar at high threshold"
+        );
     }
 
     #[test]
@@ -748,7 +762,7 @@ mod filter_hybrid_coverage {
         let terms = ["apple", "banana", "cherry"];
         let matcher = HybridMatcher::with_config(
             terms.iter().map(|s| s.to_string()),
-            2, // bigrams
+            2,   // bigrams
             0.7, // jaro threshold
         );
 
@@ -767,11 +781,7 @@ mod filter_hybrid_coverage {
     #[test]
     fn test_hybrid_matcher_exact() {
         let terms = ["exact", "extract", "example"];
-        let matcher = HybridMatcher::with_config(
-            terms.iter().map(|s| s.to_string()),
-            2,
-            0.9,
-        );
+        let matcher = HybridMatcher::with_config(terms.iter().map(|s| s.to_string()), 2, 0.9);
 
         let results = matcher.filter_candidates("exact", 0);
         assert!(results.iter().any(|r| *r == "exact"));
@@ -780,11 +790,7 @@ mod filter_hybrid_coverage {
     #[test]
     fn test_hybrid_matcher_no_matches() {
         let terms = ["hello", "world"];
-        let matcher = HybridMatcher::with_config(
-            terms.iter().map(|s| s.to_string()),
-            2,
-            0.99,
-        );
+        let matcher = HybridMatcher::with_config(terms.iter().map(|s| s.to_string()), 2, 0.99);
 
         let results = matcher.filter_candidates("zzzzz", 0);
         let _ = results;
@@ -793,10 +799,7 @@ mod filter_hybrid_coverage {
     #[test]
     fn test_hybrid_matcher_skip_jaro() {
         let terms = ["apple", "application", "apply"];
-        let matcher = HybridMatcher::ngram_only(
-            terms.iter().map(|s| s.to_string()),
-            2,
-        );
+        let matcher = HybridMatcher::ngram_only(terms.iter().map(|s| s.to_string()), 2);
 
         let results = matcher.filter_candidates("aple", 2);
         let _ = results;
@@ -809,10 +812,8 @@ mod filter_hybrid_coverage {
 
 mod proptest_additional {
     use super::*;
-    use liblevenshtein::time_series::{
-        MsmConfig, euclidean_lb, QuantizationConfig,
-    };
     use liblevenshtein::filter::jaro_similarity;
+    use liblevenshtein::time_series::{euclidean_lb, MsmConfig, QuantizationConfig};
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(50))]

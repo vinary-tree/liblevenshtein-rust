@@ -262,7 +262,10 @@ impl<D> LruOptimized<D> {
             #[cfg(feature = "eviction-parking-lot")]
             let mut metadata = self.metadata.write();
             #[cfg(not(feature = "eviction-parking-lot"))]
-            let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+            let mut metadata = self
+                .metadata
+                .write()
+                .expect("poisoned RwLock; only fatal if writer panicked");
 
             metadata
                 .entry(make_key(term))
@@ -291,7 +294,10 @@ impl<D> LruOptimized<D> {
             #[cfg(feature = "eviction-parking-lot")]
             let metadata = self.metadata.read();
             #[cfg(not(feature = "eviction-parking-lot"))]
-            let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
+            let metadata = self
+                .metadata
+                .read()
+                .expect("poisoned RwLock; only fatal if writer panicked");
 
             metadata.get(term).map(|m| m.recency_score())
         }
@@ -321,7 +327,10 @@ impl<D> LruOptimized<D> {
             #[cfg(feature = "eviction-parking-lot")]
             let metadata = self.metadata.read();
             #[cfg(not(feature = "eviction-parking-lot"))]
-            let metadata = self.metadata.read().expect("poisoned RwLock; only fatal if writer panicked");
+            let metadata = self
+                .metadata
+                .read()
+                .expect("poisoned RwLock; only fatal if writer panicked");
 
             terms
                 .iter()
@@ -354,7 +363,10 @@ impl<D> LruOptimized<D> {
                 #[cfg(feature = "eviction-parking-lot")]
                 let mut metadata = self.metadata.write();
                 #[cfg(not(feature = "eviction-parking-lot"))]
-                let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+                let mut metadata = self
+                    .metadata
+                    .write()
+                    .expect("poisoned RwLock; only fatal if writer panicked");
 
                 metadata.remove(lru_term.as_str());
             }
@@ -379,7 +391,10 @@ impl<D> LruOptimized<D> {
             #[cfg(feature = "eviction-parking-lot")]
             let mut metadata = self.metadata.write();
             #[cfg(not(feature = "eviction-parking-lot"))]
-            let mut metadata = self.metadata.write().expect("poisoned RwLock; only fatal if writer panicked");
+            let mut metadata = self
+                .metadata
+                .write()
+                .expect("poisoned RwLock; only fatal if writer panicked");
 
             metadata.clear();
         }

@@ -277,11 +277,9 @@ impl LowerBoundConfig {
             LowerBoundType::LengthOnly => length_lb(x, y, self.c),
             LowerBoundType::EuclideanOnly => euclidean_lb(x, y),
             LowerBoundType::L1Only => l1_lb(x, y),
-            LowerBoundType::Combined => {
-                euclidean_lb(x, y)
-                    .max(length_lb(x, y, self.c))
-                    .max(l1_lb(x, y))
-            }
+            LowerBoundType::Combined => euclidean_lb(x, y)
+                .max(length_lb(x, y, self.c))
+                .max(l1_lb(x, y)),
         }
     }
 }

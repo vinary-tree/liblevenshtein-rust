@@ -199,7 +199,8 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
         // A MSM threshold of T allows value changes totaling T
         // In the worst case, each bin difference of 1 corresponds to bin_width value difference
         // So trie_threshold ≈ msm_threshold / bin_width * multiplier
-        let threshold = (msm_threshold / bin_width * self.trie_threshold_multiplier).ceil() as usize;
+        let threshold =
+            (msm_threshold / bin_width * self.trie_threshold_multiplier).ceil() as usize;
         // Ensure at least 1 for any non-zero MSM threshold
         threshold.max(1)
     }
@@ -322,11 +323,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
     }
 
     /// Get statistics about a search operation.
-    pub fn search_stats(
-        &self,
-        query: &[f64],
-        msm_threshold: f64,
-    ) -> HybridSearchStats {
+    pub fn search_stats(&self, query: &[f64], msm_threshold: f64) -> HybridSearchStats {
         let trie_threshold = self.compute_trie_threshold(msm_threshold);
         let candidates = self.trie_index.search(query, trie_threshold);
         let num_candidates = candidates.len();
@@ -528,9 +525,7 @@ impl HybridSearchIndexBuilder {
     ///
     /// Panics if quantization config or MSM config is not set.
     pub fn build<V: DictionaryValue + std::hash::Hash + Eq + Copy>(self) -> HybridSearchIndex<V> {
-        let quant_config = self
-            .quant_config
-            .expect("Quantization config must be set");
+        let quant_config = self.quant_config.expect("Quantization config must be set");
         let msm_config = self.msm_config.expect("MSM config must be set");
 
         let mut index = HybridSearchIndex::new(quant_config, msm_config);
@@ -579,7 +574,10 @@ mod tests {
 
         let original = index.get_original(&0);
         assert!(original.is_some());
-        assert_eq!(original.expect("expected Some original in test"), series.as_slice());
+        assert_eq!(
+            original.expect("expected Some original in test"),
+            series.as_slice()
+        );
     }
 
     #[test]
@@ -687,7 +685,11 @@ mod tests {
         let mut index = HybridSearchIndex::new(quant_config, msm_config);
 
         for i in 0..10 {
-            let series = vec![i as f64 * 10.0, i as f64 * 10.0 + 10.0, i as f64 * 10.0 + 20.0];
+            let series = vec![
+                i as f64 * 10.0,
+                i as f64 * 10.0 + 10.0,
+                i as f64 * 10.0 + 20.0,
+            ];
             index.insert(i, &series);
         }
 

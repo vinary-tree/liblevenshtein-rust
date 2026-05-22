@@ -140,7 +140,10 @@ impl LLevFile {
     /// Extract characters from an Expression (if it's a CharClass).
     fn extract_chars(expr: &Expression) -> Option<Vec<char>> {
         match expr {
-            Expression::CharClass { chars, negated: false } => Some(chars.clone()),
+            Expression::CharClass {
+                chars,
+                negated: false,
+            } => Some(chars.clone()),
             Expression::Char(c) => Some(vec![*c]),
             _ => None, // Other expression types not supported for symbol tables
         }
@@ -1193,10 +1196,7 @@ mod tests {
 
     #[test]
     fn test_expression_complex_has_symbol_refs() {
-        let expr = Expression::concat(
-            Expression::literal("c"),
-            Expression::symbol_ref("VOWEL"),
-        );
+        let expr = Expression::concat(Expression::literal("c"), Expression::symbol_ref("VOWEL"));
         assert!(expr.has_symbol_refs());
 
         let expr2 = Expression::literal("cat");
@@ -1229,10 +1229,7 @@ mod tests {
 
     #[test]
     fn test_rewrite_rule_ast_simple() {
-        let rule = RewriteRuleAST::simple(
-            Expression::literal("ph"),
-            Expression::char('f'),
-        );
+        let rule = RewriteRuleAST::simple(Expression::literal("ph"), Expression::char('f'));
         assert!(rule.context.is_none());
         assert!(rule.weight.is_none());
         assert_eq!(rule.to_string(), "ph -> f");
@@ -1332,7 +1329,8 @@ mod tests {
 
     #[test]
     fn test_context_expr_pattern() {
-        let expr = ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
+        let expr =
+            ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
         assert!(expr.is_simple());
         assert!(expr.as_expression().is_some());
         assert_eq!(expr.to_string(), "[aeiou]");
@@ -1348,7 +1346,8 @@ mod tests {
 
     #[test]
     fn test_context_expr_and() {
-        let left = ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
+        let left =
+            ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
         let right = ContextExpr::pattern(Expression::char_class(vec!['b', 'c', 'd', 'f'], false));
         let expr = ContextExpr::and(left, right);
         assert!(!expr.is_simple());
@@ -1366,7 +1365,8 @@ mod tests {
 
     #[test]
     fn test_context_expr_not() {
-        let inner = ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
+        let inner =
+            ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
         let expr = ContextExpr::not(inner);
         assert!(!expr.is_simple());
         assert_eq!(expr.to_string(), "![aeiou]");
@@ -1383,12 +1383,30 @@ mod tests {
 
     #[test]
     fn test_syllable_condition_from_str() {
-        assert_eq!(SyllableCondition::from_str("monosyllable"), Some(SyllableCondition::Monosyllable));
-        assert_eq!(SyllableCondition::from_str("polysyllable"), Some(SyllableCondition::Polysyllable));
-        assert_eq!(SyllableCondition::from_str("open_syllable"), Some(SyllableCondition::OpenSyllable));
-        assert_eq!(SyllableCondition::from_str("closed_syllable"), Some(SyllableCondition::ClosedSyllable));
-        assert_eq!(SyllableCondition::from_str("final_syllable"), Some(SyllableCondition::FinalSyllable));
-        assert_eq!(SyllableCondition::from_str("initial_syllable"), Some(SyllableCondition::InitialSyllable));
+        assert_eq!(
+            SyllableCondition::from_str("monosyllable"),
+            Some(SyllableCondition::Monosyllable)
+        );
+        assert_eq!(
+            SyllableCondition::from_str("polysyllable"),
+            Some(SyllableCondition::Polysyllable)
+        );
+        assert_eq!(
+            SyllableCondition::from_str("open_syllable"),
+            Some(SyllableCondition::OpenSyllable)
+        );
+        assert_eq!(
+            SyllableCondition::from_str("closed_syllable"),
+            Some(SyllableCondition::ClosedSyllable)
+        );
+        assert_eq!(
+            SyllableCondition::from_str("final_syllable"),
+            Some(SyllableCondition::FinalSyllable)
+        );
+        assert_eq!(
+            SyllableCondition::from_str("initial_syllable"),
+            Some(SyllableCondition::InitialSyllable)
+        );
         assert_eq!(SyllableCondition::from_str("invalid"), None);
     }
 
@@ -1454,7 +1472,8 @@ mod tests {
 
     #[test]
     fn test_rewrite_rule_ast_with_compound_context() {
-        let left = ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
+        let left =
+            ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
         let right = ContextExpr::and(
             ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false)),
             ContextExpr::not(ContextExpr::pattern(Expression::char('y'))),

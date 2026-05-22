@@ -61,7 +61,6 @@ impl VowelClassifier for HebrewClassifier {
             // Note: Dagesh (0x05BC) is NOT a vowel - it's a consonant modifier
 
             // Meteg (0x05BD) is a cantillation mark, not a vowel
-
             _ => false,
         }
     }

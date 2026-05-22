@@ -178,7 +178,10 @@ fn main() {
         println!("\n✓ Property 2: Bounded expansion");
         println!("  Input length: {}", test.len());
         println!("  Output length: {}", result.len());
-        println!("  Expansion: {} ≤ MAX_EXPANSION_FACTOR({})", expansion, MAX_EXPANSION_FACTOR);
+        println!(
+            "  Expansion: {} ≤ MAX_EXPANSION_FACTOR({})",
+            expansion, MAX_EXPANSION_FACTOR
+        );
     }
 
     // Property 3: Non-confluence
@@ -211,7 +214,10 @@ fn main() {
     // Summary
     // ========================================================================
     println!("\n\n=== Summary ===");
-    println!("✓ Orthography rules: {} (exact transformations)", ortho_rules.len());
+    println!(
+        "✓ Orthography rules: {} (exact transformations)",
+        ortho_rules.len()
+    );
     println!("✓ Phonetic rules: {} (fuzzy matching)", phon_rules.len());
     println!("✓ Test rules: {} (non-confluence proof)", test_rules.len());
     println!("✓ Total: {} formally verified rules", zompist_rules().len());

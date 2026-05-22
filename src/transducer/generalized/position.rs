@@ -67,7 +67,11 @@ pub enum PositionError {
 impl fmt::Display for PositionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PositionError::InvalidIPosition { offset, errors, max_distance } => {
+            PositionError::InvalidIPosition {
+                offset,
+                errors,
+                max_distance,
+            } => {
                 write!(
                     f,
                     "Invalid I-position: I + {}#{} with n={}. \
@@ -75,7 +79,11 @@ impl fmt::Display for PositionError {
                     offset, errors, max_distance
                 )
             }
-            PositionError::InvalidMPosition { offset, errors, max_distance } => {
+            PositionError::InvalidMPosition {
+                offset,
+                errors,
+                max_distance,
+            } => {
                 write!(
                     f,
                     "Invalid M-position: M + {}#{} with n={}. \
@@ -276,10 +284,7 @@ impl GeneralizedPosition {
             true
         } else {
             // Standard invariant
-            offset.abs() <= errors as i32
-                && offset >= -n
-                && offset <= n
-                && errors <= max_distance
+            offset.abs() <= errors as i32 && offset >= -n && offset <= n && errors <= max_distance
         };
 
         if invariant_satisfied {
@@ -316,10 +321,7 @@ impl GeneralizedPosition {
         let n = max_distance as i32;
 
         // Check invariant: errors ≥ -offset - n ∧ -2n ≤ offset ≤ 0 ∧ 0 ≤ errors ≤ n
-        if errors as i32 >= -offset - n
-            && offset >= -2 * n
-            && offset <= 0
-            && errors <= max_distance
+        if errors as i32 >= -offset - n && offset >= -2 * n && offset <= 0 && errors <= max_distance
         {
             Ok(GeneralizedPosition::MFinal { offset, errors })
         } else {
@@ -345,7 +347,11 @@ impl GeneralizedPosition {
     /// # Invariant
     ///
     /// `|offset| ≤ errors ∧ -n ≤ offset ≤ n ∧ 0 ≤ errors ≤ n` (same as INonFinal)
-    pub fn new_i_transposing(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
+    pub fn new_i_transposing(
+        offset: i32,
+        errors: u8,
+        max_distance: u8,
+    ) -> Result<Self, PositionError> {
         let n = max_distance as i32;
 
         // Phase 3b: Relaxed invariant for fractional-weight operations
@@ -355,10 +361,7 @@ impl GeneralizedPosition {
             offset >= -n && errors <= max_distance
         } else {
             // Standard invariant
-            offset.abs() <= errors as i32
-                && offset >= -n
-                && offset <= n
-                && errors <= max_distance
+            offset.abs() <= errors as i32 && offset >= -n && offset <= n && errors <= max_distance
         };
 
         if invariant_satisfied {
@@ -386,14 +389,15 @@ impl GeneralizedPosition {
     /// # Invariant
     ///
     /// `errors ≥ -offset - n ∧ -2n ≤ offset ≤ 0 ∧ 0 ≤ errors ≤ n` (same as MFinal)
-    pub fn new_m_transposing(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
+    pub fn new_m_transposing(
+        offset: i32,
+        errors: u8,
+        max_distance: u8,
+    ) -> Result<Self, PositionError> {
         let n = max_distance as i32;
 
         // Same invariant as MFinal
-        if errors as i32 >= -offset - n
-            && offset >= -2 * n
-            && offset <= 0
-            && errors <= max_distance
+        if errors as i32 >= -offset - n && offset >= -2 * n && offset <= 0 && errors <= max_distance
         {
             Ok(GeneralizedPosition::MTransposing { offset, errors })
         } else {
@@ -420,7 +424,12 @@ impl GeneralizedPosition {
     /// # Invariant
     ///
     /// `|offset| ≤ errors ∧ -n ≤ offset ≤ n ∧ 0 ≤ errors ≤ n` (same as INonFinal)
-    pub fn new_i_splitting(offset: i32, errors: u8, max_distance: u8, entry_char: char) -> Result<Self, PositionError> {
+    pub fn new_i_splitting(
+        offset: i32,
+        errors: u8,
+        max_distance: u8,
+        entry_char: char,
+    ) -> Result<Self, PositionError> {
         let n = max_distance as i32;
 
         // Phase 4: Relaxed invariant for splitting states
@@ -439,7 +448,11 @@ impl GeneralizedPosition {
             && errors <= max_distance;
 
         if invariant_satisfied {
-            Ok(GeneralizedPosition::ISplitting { offset, errors, entry_char })
+            Ok(GeneralizedPosition::ISplitting {
+                offset,
+                errors,
+                entry_char,
+            })
         } else {
             Err(PositionError::InvalidIPosition {
                 offset,
@@ -464,7 +477,12 @@ impl GeneralizedPosition {
     /// # Invariant
     ///
     /// `errors ≥ -offset - n ∧ -2n ≤ offset ≤ 0 ∧ 0 ≤ errors ≤ n` (same as MFinal)
-    pub fn new_m_splitting(offset: i32, errors: u8, max_distance: u8, entry_char: char) -> Result<Self, PositionError> {
+    pub fn new_m_splitting(
+        offset: i32,
+        errors: u8,
+        max_distance: u8,
+        entry_char: char,
+    ) -> Result<Self, PositionError> {
         let n = max_distance as i32;
 
         // Phase 4: Slightly relaxed invariant for M-type splitting states
@@ -475,7 +493,11 @@ impl GeneralizedPosition {
             && offset <= 0
             && errors <= max_distance
         {
-            Ok(GeneralizedPosition::MSplitting { offset, errors, entry_char })
+            Ok(GeneralizedPosition::MSplitting {
+                offset,
+                errors,
+                entry_char,
+            })
         } else {
             Err(PositionError::InvalidMPosition {
                 offset,
@@ -488,24 +510,24 @@ impl GeneralizedPosition {
     /// Get the offset value
     pub fn offset(&self) -> i32 {
         match self {
-            GeneralizedPosition::INonFinal { offset, .. } |
-            GeneralizedPosition::MFinal { offset, .. } |
-            GeneralizedPosition::ITransposing { offset, .. } |
-            GeneralizedPosition::MTransposing { offset, .. } |
-            GeneralizedPosition::ISplitting { offset, .. } |
-            GeneralizedPosition::MSplitting { offset, .. } => *offset,
+            GeneralizedPosition::INonFinal { offset, .. }
+            | GeneralizedPosition::MFinal { offset, .. }
+            | GeneralizedPosition::ITransposing { offset, .. }
+            | GeneralizedPosition::MTransposing { offset, .. }
+            | GeneralizedPosition::ISplitting { offset, .. }
+            | GeneralizedPosition::MSplitting { offset, .. } => *offset,
         }
     }
 
     /// Get the error count
     pub fn errors(&self) -> u8 {
         match self {
-            GeneralizedPosition::INonFinal { errors, .. } |
-            GeneralizedPosition::MFinal { errors, .. } |
-            GeneralizedPosition::ITransposing { errors, .. } |
-            GeneralizedPosition::MTransposing { errors, .. } |
-            GeneralizedPosition::ISplitting { errors, .. } |
-            GeneralizedPosition::MSplitting { errors, .. } => *errors,
+            GeneralizedPosition::INonFinal { errors, .. }
+            | GeneralizedPosition::MFinal { errors, .. }
+            | GeneralizedPosition::ITransposing { errors, .. }
+            | GeneralizedPosition::MTransposing { errors, .. }
+            | GeneralizedPosition::ISplitting { errors, .. }
+            | GeneralizedPosition::MSplitting { errors, .. } => *errors,
         }
     }
 
@@ -515,9 +537,9 @@ impl GeneralizedPosition {
     pub fn is_non_final(&self) -> bool {
         matches!(
             self,
-            GeneralizedPosition::INonFinal { .. } |
-            GeneralizedPosition::ITransposing { .. } |
-            GeneralizedPosition::ISplitting { .. }
+            GeneralizedPosition::INonFinal { .. }
+                | GeneralizedPosition::ITransposing { .. }
+                | GeneralizedPosition::ISplitting { .. }
         )
     }
 
@@ -527,9 +549,9 @@ impl GeneralizedPosition {
     pub fn is_final(&self) -> bool {
         matches!(
             self,
-            GeneralizedPosition::MFinal { .. } |
-            GeneralizedPosition::MTransposing { .. } |
-            GeneralizedPosition::MSplitting { .. }
+            GeneralizedPosition::MFinal { .. }
+                | GeneralizedPosition::MTransposing { .. }
+                | GeneralizedPosition::MSplitting { .. }
         )
     }
 }
@@ -566,18 +588,21 @@ mod tests {
     #[test]
     fn test_new_i_valid() {
         // I + 0#0 (initial state)
-        let pos = GeneralizedPosition::new_i(0, 0, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos = GeneralizedPosition::new_i(0, 0, 2)
+            .expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(pos.is_non_final());
 
         // I + 1#1
-        let pos = GeneralizedPosition::new_i(1, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos = GeneralizedPosition::new_i(1, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert_eq!(pos.offset(), 1);
         assert_eq!(pos.errors(), 1);
 
         // I + (-2)#2
-        let pos = GeneralizedPosition::new_i(-2, 2, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos = GeneralizedPosition::new_i(-2, 2, 2)
+            .expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert_eq!(pos.offset(), -2);
         assert_eq!(pos.errors(), 2);
     }
@@ -600,18 +625,21 @@ mod tests {
     #[test]
     fn test_new_m_valid() {
         // M + 0#0
-        let pos = GeneralizedPosition::new_m(0, 0, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
+        let pos = GeneralizedPosition::new_m(0, 0, 2)
+            .expect("test fixture: GeneralizedPosition::new_m with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(pos.is_final());
 
         // M + (-1)#1
-        let pos = GeneralizedPosition::new_m(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
+        let pos = GeneralizedPosition::new_m(-1, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_m with valid args");
         assert_eq!(pos.offset(), -1);
         assert_eq!(pos.errors(), 1);
 
         // M + (-4)#2
-        let pos = GeneralizedPosition::new_m(-4, 2, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
+        let pos = GeneralizedPosition::new_m(-4, 2, 2)
+            .expect("test fixture: GeneralizedPosition::new_m with valid args");
         assert_eq!(pos.offset(), -4);
         assert_eq!(pos.errors(), 2);
     }
@@ -633,10 +661,14 @@ mod tests {
 
     #[test]
     fn test_ordering() {
-        let pos1 = GeneralizedPosition::new_i(0, 0, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
-        let pos2 = GeneralizedPosition::new_i(1, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
-        let pos3 = GeneralizedPosition::new_i(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
-        let pos4 = GeneralizedPosition::new_m(0, 0, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
+        let pos1 = GeneralizedPosition::new_i(0, 0, 2)
+            .expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos2 = GeneralizedPosition::new_i(1, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos3 = GeneralizedPosition::new_i(-1, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos4 = GeneralizedPosition::new_m(0, 0, 2)
+            .expect("test fixture: GeneralizedPosition::new_m with valid args");
 
         // Sort by errors first
         assert!(pos1 < pos2);
@@ -652,10 +684,12 @@ mod tests {
 
     #[test]
     fn test_display() {
-        let pos1 = GeneralizedPosition::new_i(1, 2, 3).expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let pos1 = GeneralizedPosition::new_i(1, 2, 3)
+            .expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert_eq!(format!("{}", pos1), "I + 1#2");
 
-        let pos2 = GeneralizedPosition::new_m(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
+        let pos2 = GeneralizedPosition::new_m(-1, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_m with valid args");
         assert_eq!(format!("{}", pos2), "M + -1#1");
     }
 
@@ -663,14 +697,16 @@ mod tests {
 
     #[test]
     fn test_new_i_transposing_valid() {
-        let pos = GeneralizedPosition::new_i_transposing(0, 1, 2).expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
+        let pos = GeneralizedPosition::new_i_transposing(0, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 1);
         assert!(pos.is_non_final());
         assert!(!pos.is_final());
 
         // Test with negative offset
-        let pos = GeneralizedPosition::new_i_transposing(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
+        let pos = GeneralizedPosition::new_i_transposing(-1, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
         assert_eq!(pos.offset(), -1);
         assert_eq!(pos.errors(), 1);
     }
@@ -684,13 +720,15 @@ mod tests {
 
     #[test]
     fn test_new_m_transposing_valid() {
-        let pos = GeneralizedPosition::new_m_transposing(0, 0, 2).expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
+        let pos = GeneralizedPosition::new_m_transposing(0, 0, 2)
+            .expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(!pos.is_non_final());
         assert!(pos.is_final());
 
-        let pos = GeneralizedPosition::new_m_transposing(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
+        let pos = GeneralizedPosition::new_m_transposing(-1, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
         assert_eq!(pos.offset(), -1);
         assert_eq!(pos.errors(), 1);
     }
@@ -699,18 +737,20 @@ mod tests {
     fn test_new_m_transposing_invalid() {
         // Same invariants as MFinal
         assert!(GeneralizedPosition::new_m_transposing(-4, 1, 2).is_err()); // errors < -offset - n
-        assert!(GeneralizedPosition::new_m_transposing(1, 1, 2).is_err());  // offset > 0
+        assert!(GeneralizedPosition::new_m_transposing(1, 1, 2).is_err()); // offset > 0
     }
 
     #[test]
     fn test_new_i_splitting_valid() {
-        let pos = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
+        let pos = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a')
+            .expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 1);
         assert!(pos.is_non_final());
         assert!(!pos.is_final());
 
-        let pos = GeneralizedPosition::new_i_splitting(-2, 2, 2, 'b').expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
+        let pos = GeneralizedPosition::new_i_splitting(-2, 2, 2, 'b')
+            .expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
         assert_eq!(pos.offset(), -2);
         assert_eq!(pos.errors(), 2);
     }
@@ -724,13 +764,15 @@ mod tests {
 
     #[test]
     fn test_new_m_splitting_valid() {
-        let pos = GeneralizedPosition::new_m_splitting(0, 0, 2, 'a').expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
+        let pos = GeneralizedPosition::new_m_splitting(0, 0, 2, 'a')
+            .expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
         assert_eq!(pos.offset(), 0);
         assert_eq!(pos.errors(), 0);
         assert!(!pos.is_non_final());
         assert!(pos.is_final());
 
-        let pos = GeneralizedPosition::new_m_splitting(-2, 2, 2, 'b').expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
+        let pos = GeneralizedPosition::new_m_splitting(-2, 2, 2, 'b')
+            .expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
         assert_eq!(pos.offset(), -2);
         assert_eq!(pos.errors(), 2);
     }
@@ -739,35 +781,45 @@ mod tests {
     fn test_new_m_splitting_invalid() {
         // Same invariants as MFinal
         assert!(GeneralizedPosition::new_m_splitting(-5, 2, 2, 'a').is_err()); // offset < -2n
-        assert!(GeneralizedPosition::new_m_splitting(1, 1, 2, 'a').is_err());  // offset > 0
+        assert!(GeneralizedPosition::new_m_splitting(1, 1, 2, 'a').is_err()); // offset > 0
     }
 
     #[test]
     fn test_display_transposing() {
-        let pos = GeneralizedPosition::new_i_transposing(1, 2, 3).expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
+        let pos = GeneralizedPosition::new_i_transposing(1, 2, 3)
+            .expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
         assert_eq!(format!("{}", pos), "I + 1#2_t");
 
-        let pos = GeneralizedPosition::new_m_transposing(-1, 1, 2).expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
+        let pos = GeneralizedPosition::new_m_transposing(-1, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
         assert_eq!(format!("{}", pos), "M + -1#1_t");
     }
 
     #[test]
     fn test_display_splitting() {
-        let pos = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
+        let pos = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a')
+            .expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
         assert_eq!(format!("{}", pos), "I + 0#1_s");
 
-        let pos = GeneralizedPosition::new_m_splitting(-2, 2, 2, 'a').expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
+        let pos = GeneralizedPosition::new_m_splitting(-2, 2, 2, 'a')
+            .expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
         assert_eq!(format!("{}", pos), "M + -2#2_s");
     }
 
     #[test]
     fn test_ordering_with_new_variants() {
-        let i_normal = GeneralizedPosition::new_i(0, 1, 2).expect("test fixture: GeneralizedPosition::new_i with valid args");
-        let i_transposing = GeneralizedPosition::new_i_transposing(0, 1, 2).expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
-        let i_splitting = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
-        let m_normal = GeneralizedPosition::new_m(0, 1, 2).expect("test fixture: GeneralizedPosition::new_m with valid args");
-        let m_transposing = GeneralizedPosition::new_m_transposing(0, 1, 2).expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
-        let m_splitting = GeneralizedPosition::new_m_splitting(0, 1, 2, 'a').expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
+        let i_normal = GeneralizedPosition::new_i(0, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_i with valid args");
+        let i_transposing = GeneralizedPosition::new_i_transposing(0, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_i_transposing with valid args");
+        let i_splitting = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a')
+            .expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
+        let m_normal = GeneralizedPosition::new_m(0, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_m with valid args");
+        let m_transposing = GeneralizedPosition::new_m_transposing(0, 1, 2)
+            .expect("test fixture: GeneralizedPosition::new_m_transposing with valid args");
+        let m_splitting = GeneralizedPosition::new_m_splitting(0, 1, 2, 'a')
+            .expect("test fixture: GeneralizedPosition::new_m_splitting with valid args");
 
         // I-types come before M-types
         assert!(i_normal < m_normal);

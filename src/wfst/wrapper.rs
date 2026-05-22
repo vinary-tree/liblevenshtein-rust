@@ -9,14 +9,13 @@
 //! character (not byte) counts as one unit for edit distance calculation.
 
 use lling_llang::prelude::{
-    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, Wfst,
-    WeightedTransition,
+    LazyState, LazyWfst, Semiring, StateId, StateSource, TropicalWeight, WeightedTransition, Wfst,
 };
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
-use libdictenstein::{Dictionary, DictionaryNode};
 use crate::transducer::Algorithm;
+use libdictenstein::{Dictionary, DictionaryNode};
 
 use super::state_encoding;
 use super::state_source::LevenshteinStateSource;
@@ -122,12 +121,8 @@ where
         max_distance: usize,
         algorithm: Algorithm,
     ) -> Self {
-        let state_source = LevenshteinStateSource::with_algorithm(
-            dictionary,
-            query,
-            max_distance,
-            algorithm,
-        );
+        let state_source =
+            LevenshteinStateSource::with_algorithm(dictionary, query, max_distance, algorithm);
 
         let query_len = query.chars().count();
         let max_automaton_states =
@@ -199,7 +194,11 @@ where
         // Apply cache eviction if using LRU and over limit
         if let lling_llang::wfst::CachePolicy::Lru { max_states } = self.cache_policy {
             // Use max_states from policy, falling back to max_cache_size if 0
-            let limit = if max_states > 0 { max_states } else { self.max_cache_size };
+            let limit = if max_states > 0 {
+                max_states
+            } else {
+                self.max_cache_size
+            };
             if self.cache.len() >= limit {
                 // Simple eviction: remove ~10% of entries
                 // A more sophisticated implementation would track access order
@@ -229,10 +228,7 @@ where
     }
 
     fn is_final(&self, state: StateId) -> bool {
-        self.cache
-            .get(&state)
-            .map(|s| s.is_final)
-            .unwrap_or(false)
+        self.cache.get(&state).map(|s| s.is_final).unwrap_or(false)
     }
 
     fn final_weight(&self, state: StateId) -> TropicalWeight {
@@ -267,8 +263,7 @@ where
     #[inline]
     fn is_valid_state(&self, state: StateId) -> bool {
         // Decode and check if both components are within reasonable bounds
-        let (dict_node, automaton_state) =
-            state_encoding::decode(state, self.max_automaton_states);
+        let (dict_node, automaton_state) = state_encoding::decode(state, self.max_automaton_states);
 
         // The automaton state is always valid if < max_automaton_states
         // The dict_node is valid if it's in our registry or is the root (0)
@@ -334,8 +329,7 @@ mod tests {
 
         // Start state should be (0, 0) encoded
         let start = wfst.start();
-        let (dict_node, auto_state) =
-            state_encoding::decode(start, wfst.max_automaton_states);
+        let (dict_node, auto_state) = state_encoding::decode(start, wfst.max_automaton_states);
         assert_eq!(dict_node, 0);
         assert_eq!(auto_state, 0);
     }
@@ -343,8 +337,7 @@ mod tests {
     #[test]
     fn test_levenshtein_wfst_with_algorithm() {
         let dict = DynamicDawgChar::<()>::from_terms(vec!["test"]);
-        let wfst =
-            LevenshteinWfst::with_algorithm(&dict, "tset", 2, Algorithm::Transposition);
+        let wfst = LevenshteinWfst::with_algorithm(&dict, "tset", 2, Algorithm::Transposition);
 
         assert_eq!(wfst.algorithm(), Algorithm::Transposition);
     }
@@ -386,10 +379,16 @@ mod tests {
         let mut wfst = LevenshteinWfst::new(&dict, "test", 1);
 
         // Default should be CacheAll
-        assert!(matches!(wfst.cache_policy(), lling_llang::wfst::CachePolicy::CacheAll));
+        assert!(matches!(
+            wfst.cache_policy(),
+            lling_llang::wfst::CachePolicy::CacheAll
+        ));
 
         // Can change to LRU
         wfst.set_cache_policy(lling_llang::wfst::CachePolicy::Lru { max_states: 1000 });
-        assert!(matches!(wfst.cache_policy(), lling_llang::wfst::CachePolicy::Lru { .. }));
+        assert!(matches!(
+            wfst.cache_policy(),
+            lling_llang::wfst::CachePolicy::Lru { .. }
+        ));
     }
 }

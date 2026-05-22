@@ -161,14 +161,17 @@ pub fn to_bytes(compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
     buffer.push(VERSION);
 
     // Write flags
-    let flags_byte = flags_to_byte(compiled.multiline, compiled.dotall, compiled.case_insensitive);
+    let flags_byte = flags_to_byte(
+        compiled.multiline,
+        compiled.dotall,
+        compiled.case_insensitive,
+    );
     buffer.push(flags_byte);
 
     // Serialize metadata
     let metadata = CompiledMetadata::from(compiled);
-    let metadata_bytes = bincode::serialize(&metadata).map_err(|e| {
-        LLreError::new(LLreErrorKind::SerializationFailed(e.to_string()))
-    })?;
+    let metadata_bytes = bincode::serialize(&metadata)
+        .map_err(|e| LLreError::new(LLreErrorKind::SerializationFailed(e.to_string())))?;
 
     // Write metadata length and data
     let metadata_len = metadata_bytes.len() as u32;
@@ -177,9 +180,8 @@ pub fn to_bytes(compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
 
     // Serialize symbol table (empty for now - symbols are baked into NFA)
     let symbols = SerializedSymbols::default();
-    let symbols_bytes = bincode::serialize(&symbols).map_err(|e| {
-        LLreError::new(LLreErrorKind::SerializationFailed(e.to_string()))
-    })?;
+    let symbols_bytes = bincode::serialize(&symbols)
+        .map_err(|e| LLreError::new(LLreErrorKind::SerializationFailed(e.to_string())))?;
 
     // Write symbols length and data
     let symbols_len = symbols_bytes.len() as u32;
@@ -187,9 +189,8 @@ pub fn to_bytes(compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
     buffer.extend_from_slice(&symbols_bytes);
 
     // Serialize NFA
-    let nfa_bytes = bincode::serialize(&compiled.nfa).map_err(|e| {
-        LLreError::new(LLreErrorKind::SerializationFailed(e.to_string()))
-    })?;
+    let nfa_bytes = bincode::serialize(&compiled.nfa)
+        .map_err(|e| LLreError::new(LLreErrorKind::SerializationFailed(e.to_string())))?;
     buffer.extend_from_slice(&nfa_bytes);
 
     Ok(buffer)
@@ -249,10 +250,8 @@ pub fn from_bytes(bytes: &[u8]) -> LLreResult<CompiledNFA> {
             "truncated metadata".into(),
         )));
     }
-    let metadata: CompiledMetadata =
-        bincode::deserialize(&bytes[cursor..cursor + metadata_len]).map_err(|e| {
-            LLreError::new(LLreErrorKind::DeserializationFailed(e.to_string()))
-        })?;
+    let metadata: CompiledMetadata = bincode::deserialize(&bytes[cursor..cursor + metadata_len])
+        .map_err(|e| LLreError::new(LLreErrorKind::DeserializationFailed(e.to_string())))?;
     cursor += metadata_len;
 
     // Read symbols length
@@ -278,9 +277,8 @@ pub fn from_bytes(bytes: &[u8]) -> LLreResult<CompiledNFA> {
     cursor += symbols_len;
 
     // Read NFA
-    let nfa = bincode::deserialize(&bytes[cursor..]).map_err(|e| {
-        LLreError::new(LLreErrorKind::DeserializationFailed(e.to_string()))
-    })?;
+    let nfa = bincode::deserialize(&bytes[cursor..])
+        .map_err(|e| LLreError::new(LLreErrorKind::DeserializationFailed(e.to_string())))?;
 
     Ok(CompiledNFA {
         nfa,
@@ -331,10 +329,13 @@ mod tests {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let path = temp_dir.path().join("test.llre.bin");
 
-        let file = parse_str(r#"
+        let file = parse_str(
+            r#"
             @name "Test Pattern"
             ^[a-z]+$
-        "#).expect("Failed to parse");
+        "#,
+        )
+        .expect("Failed to parse");
         let compiled = compile(&file).expect("Failed to compile");
 
         save(&compiled, &path).expect("Failed to save");
@@ -347,10 +348,13 @@ mod tests {
 
     #[test]
     fn test_flags_roundtrip() {
-        let file = parse_str(r#"
+        let file = parse_str(
+            r#"
             @flags multiline, dotall
             ^hello$
-        "#).expect("Failed to parse");
+        "#,
+        )
+        .expect("Failed to parse");
         let compiled = compile(&file).expect("Failed to compile");
 
         assert!(compiled.multiline);
@@ -377,8 +381,8 @@ mod tests {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(MAGIC);
         bytes.push(99); // Invalid version
-        bytes.push(0);  // Flags
-        // ... rest would be needed for a real test
+        bytes.push(0); // Flags
+                       // ... rest would be needed for a real test
 
         // This will fail with version mismatch
         let result = from_bytes(&bytes);
@@ -387,10 +391,13 @@ mod tests {
 
     #[test]
     fn test_complex_pattern() {
-        let file = parse_str(r#"
+        let file = parse_str(
+            r#"
             @name "Email"
             ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
-        "#).expect("Failed to parse");
+        "#,
+        )
+        .expect("Failed to parse");
         let compiled = compile(&file).expect("Failed to compile");
 
         let bytes = to_bytes(&compiled).expect("Failed to serialize");

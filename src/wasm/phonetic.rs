@@ -53,8 +53,7 @@ impl WasmRuleSet {
     #[wasm_bindgen]
     pub fn parse(source: &str) -> Result<WasmRuleSet, JsValue> {
         // Parse the LLEV file
-        let file = parse_str(source)
-            .map_err(|e: LLevError| JsValue::from_str(&e.to_string()))?;
+        let file = parse_str(source).map_err(|e: LLevError| JsValue::from_str(&e.to_string()))?;
 
         // Convert to runtime rule set
         let inner = RuleSetChar::from_llev(&file)

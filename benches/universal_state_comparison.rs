@@ -105,12 +105,11 @@ impl<V: liblevenshtein::transducer::universal::PositionVariant> SmallVecState<V>
         }
 
         // Remove positions subsumed by new position
-        self.positions.retain(|p| !subsumes(&pos, p, self.max_distance));
+        self.positions
+            .retain(|p| !subsumes(&pos, p, self.max_distance));
 
         // Insert in sorted position (binary search)
-        let insert_pos = self.positions
-            .binary_search(&pos)
-            .unwrap_or_else(|pos| pos);
+        let insert_pos = self.positions.binary_search(&pos).unwrap_or_else(|pos| pos);
         self.positions.insert(insert_pos, pos);
     }
 }

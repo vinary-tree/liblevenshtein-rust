@@ -163,7 +163,10 @@ mod tests {
     #[test]
     fn test_pinyin_loads() {
         let rules = pinyin();
-        assert!(!rules.is_empty(), "Chinese pinyin rules should not be empty");
+        assert!(
+            !rules.is_empty(),
+            "Chinese pinyin rules should not be empty"
+        );
         assert!(
             rules.len() > 35,
             "expected >35 pinyin rules, got {}",
@@ -176,17 +179,9 @@ mod tests {
         let rules = pinyin();
         // First tone (macron)
         let result = rules.apply("ā");
-        assert!(
-            result.contains('a'),
-            "ā should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "ā should become a, got: {}", result);
         let result = rules.apply("ē");
-        assert!(
-            result.contains('e'),
-            "ē should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "ē should become e, got: {}", result);
     }
 
     #[test]
@@ -194,17 +189,9 @@ mod tests {
         let rules = pinyin();
         // Second tone (acute accent)
         let result = rules.apply("á");
-        assert!(
-            result.contains('a'),
-            "á should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "á should become a, got: {}", result);
         let result = rules.apply("é");
-        assert!(
-            result.contains('e'),
-            "é should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "é should become e, got: {}", result);
     }
 
     #[test]
@@ -212,17 +199,9 @@ mod tests {
         let rules = pinyin();
         // Third tone (caron)
         let result = rules.apply("ǎ");
-        assert!(
-            result.contains('a'),
-            "ǎ should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "ǎ should become a, got: {}", result);
         let result = rules.apply("ě");
-        assert!(
-            result.contains('e'),
-            "ě should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "ě should become e, got: {}", result);
     }
 
     #[test]
@@ -230,17 +209,9 @@ mod tests {
         let rules = pinyin();
         // Fourth tone (grave accent)
         let result = rules.apply("à");
-        assert!(
-            result.contains('a'),
-            "à should become a, got: {}",
-            result
-        );
+        assert!(result.contains('a'), "à should become a, got: {}", result);
         let result = rules.apply("è");
-        assert!(
-            result.contains('e'),
-            "è should become e, got: {}",
-            result
-        );
+        assert!(result.contains('e'), "è should become e, got: {}", result);
     }
 
     #[test]
@@ -319,11 +290,7 @@ mod tests {
         let rules = pinyin();
         // c → TS
         let result = rules.apply("c");
-        assert!(
-            result.contains("t͡s"),
-            "c should become TS, got: {}",
-            result
-        );
+        assert!(result.contains("t͡s"), "c should become TS, got: {}", result);
     }
 
     #[test]
@@ -333,7 +300,11 @@ mod tests {
         let result = rules.apply("nǐhǎo");
         // n stays, ǐ→i, h stays, ǎ→a, o stays
         assert!(
-            result.contains('n') && result.contains('i') && result.contains('h') && result.contains('a') && result.contains('o'),
+            result.contains('n')
+                && result.contains('i')
+                && result.contains('h')
+                && result.contains('a')
+                && result.contains('o'),
             "nǐhǎo should normalize to nihao-like, got: {}",
             result
         );
@@ -346,7 +317,8 @@ mod tests {
         let result = rules.apply("zhōngguó");
         // zh→ʈ͡ʂ or Z, tones stripped
         assert!(
-            (result.contains("ʈ͡ʂ") || result.contains('Z')) && (result.contains('o') || result.contains('ɔ')),
+            (result.contains("ʈ͡ʂ") || result.contains('Z'))
+                && (result.contains('o') || result.contains('ɔ')),
             "zhōngguó should have ʈ͡ʂ (from zh), got: {}",
             result
         );
@@ -364,7 +336,6 @@ mod tests {
             result
         );
     }
-
 
     // ============================================================
     // Character Rules Tests
@@ -564,5 +535,4 @@ mod tests {
             result
         );
     }
-
 }

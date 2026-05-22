@@ -339,11 +339,7 @@ fn test_query_not_in_dictionary() {
 
 #[test]
 fn test_single_character_words() {
-    let dict = DoubleArrayTrie::from_terms(vec![
-        "a".to_string(),
-        "b".to_string(),
-        "c".to_string(),
-    ]);
+    let dict = DoubleArrayTrie::from_terms(vec!["a".to_string(), "b".to_string(), "c".to_string()]);
     let transducer = Transducer::new(dict, Algorithm::Standard);
 
     // Exact match
@@ -501,9 +497,7 @@ proptest! {
 #[test]
 fn test_large_dictionary() {
     // Generate a larger dictionary
-    let dict_words: Vec<String> = (0..1000)
-        .map(|i| format!("word{:04}", i))
-        .collect();
+    let dict_words: Vec<String> = (0..1000).map(|i| format!("word{:04}", i)).collect();
 
     let dict = DoubleArrayTrie::from_terms(dict_words);
     let transducer = Transducer::new(dict, Algorithm::Standard);
@@ -595,10 +589,7 @@ fn test_query_returns_all_matches_regression() {
     );
 
     // Collect query_ordered() results into a set
-    let ordered_results: HashSet<_> = transducer
-        .query_ordered("ar", 1)
-        .map(|c| c.term)
-        .collect();
+    let ordered_results: HashSet<_> = transducer.query_ordered("ar", 1).map(|c| c.term).collect();
 
     // Both methods must return the same set of results
     assert_eq!(
@@ -617,10 +608,7 @@ fn test_query_finds_exact_match_with_prefix() {
     let transducer = Transducer::new(dict, Algorithm::Standard);
 
     let query_results: HashSet<_> = transducer.query("ab", 1).collect();
-    let ordered_results: HashSet<_> = transducer
-        .query_ordered("ab", 1)
-        .map(|c| c.term)
-        .collect();
+    let ordered_results: HashSet<_> = transducer.query_ordered("ab", 1).map(|c| c.term).collect();
 
     assert!(
         query_results.contains("ab"),
@@ -637,18 +625,12 @@ fn test_query_finds_all_single_char_matches() {
     use std::collections::HashSet;
 
     // Test case: single character words with extensions
-    let dict = DoubleArrayTrie::from_terms(vec![
-        "a".to_string(),
-        "ab".to_string(),
-        "abc".to_string(),
-    ]);
+    let dict =
+        DoubleArrayTrie::from_terms(vec!["a".to_string(), "ab".to_string(), "abc".to_string()]);
     let transducer = Transducer::new(dict, Algorithm::Standard);
 
     let query_results: HashSet<_> = transducer.query("a", 1).collect();
-    let ordered_results: HashSet<_> = transducer
-        .query_ordered("a", 1)
-        .map(|c| c.term)
-        .collect();
+    let ordered_results: HashSet<_> = transducer.query_ordered("a", 1).map(|c| c.term).collect();
 
     assert!(
         query_results.contains("a"),

@@ -664,7 +664,9 @@ pub fn transition_state_f64<U: CharUnit, P: SubstitutionPolicy + SubstitutionPol
 ) -> Option<StateF64> {
     let min_cost = costs.min_nonzero_cost();
     let window_size = if min_cost > 0.0 {
-        ((max_cost / min_cost).ceil() as usize).saturating_add(1).min(8)
+        ((max_cost / min_cost).ceil() as usize)
+            .saturating_add(1)
+            .min(8)
     } else {
         8 // If all costs are 0, use max window
     };
@@ -672,7 +674,13 @@ pub fn transition_state_f64<U: CharUnit, P: SubstitutionPolicy + SubstitutionPol
 
     // First, expand state with epsilon closure (deletions)
     let mut expanded_state = state.clone();
-    epsilon_closure_mut_f64(&mut expanded_state, query_length, max_cost, algorithm, costs);
+    epsilon_closure_mut_f64(
+        &mut expanded_state,
+        query_length,
+        max_cost,
+        algorithm,
+        costs,
+    );
 
     let mut next_state = StateF64::new();
 
@@ -680,7 +688,14 @@ pub fn transition_state_f64<U: CharUnit, P: SubstitutionPolicy + SubstitutionPol
 
     for position in expanded_state.positions() {
         let offset = position.term_index;
-        let cv = characteristic_vector(policy, dict_unit, query, window_size, offset, &mut cv_buffer);
+        let cv = characteristic_vector(
+            policy,
+            dict_unit,
+            query,
+            window_size,
+            offset,
+            &mut cv_buffer,
+        );
 
         let next_positions = transition_position_f64(
             position,
@@ -709,7 +724,10 @@ pub fn transition_state_f64<U: CharUnit, P: SubstitutionPolicy + SubstitutionPol
 /// This is the pool-aware version that eliminates State cloning overhead
 /// by reusing allocations from the pool.
 #[inline]
-pub fn transition_state_pooled_f64<U: CharUnit, P: SubstitutionPolicy + SubstitutionPolicyFor<U>>(
+pub fn transition_state_pooled_f64<
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+>(
     state: &StateF64,
     pool: &mut StatePoolF64,
     policy: P,
@@ -722,7 +740,9 @@ pub fn transition_state_pooled_f64<U: CharUnit, P: SubstitutionPolicy + Substitu
 ) -> Option<StateF64> {
     let min_cost = costs.min_nonzero_cost();
     let window_size = if min_cost > 0.0 {
-        ((max_cost / min_cost).ceil() as usize).saturating_add(1).min(8)
+        ((max_cost / min_cost).ceil() as usize)
+            .saturating_add(1)
+            .min(8)
     } else {
         8
     };
@@ -746,7 +766,14 @@ pub fn transition_state_pooled_f64<U: CharUnit, P: SubstitutionPolicy + Substitu
 
     for position in expanded_state.positions() {
         let offset = position.term_index;
-        let cv = characteristic_vector(policy, dict_unit, query, window_size, offset, &mut cv_buffer);
+        let cv = characteristic_vector(
+            policy,
+            dict_unit,
+            query,
+            window_size,
+            offset,
+            &mut cv_buffer,
+        );
 
         let next_positions = transition_position_f64(
             position,
@@ -828,7 +855,9 @@ mod tests {
         let next = transition_standard_f64(&pos, &cv, 4, 2.0, &costs, false);
 
         // Should advance with no error on match
-        assert!(next.iter().any(|p| p.term_index == 1 && p.accumulated_cost.abs() < EPSILON));
+        assert!(next
+            .iter()
+            .any(|p| p.term_index == 1 && p.accumulated_cost.abs() < EPSILON));
     }
 
     #[test]
@@ -839,7 +868,9 @@ mod tests {
         let next = transition_standard_f64(&pos, &cv, 4, 2.0, &costs, false);
 
         // Should include insertion at (1, 1.0)
-        assert!(next.iter().any(|p| p.term_index == 1 && (p.accumulated_cost - 1.0).abs() < EPSILON));
+        assert!(next
+            .iter()
+            .any(|p| p.term_index == 1 && (p.accumulated_cost - 1.0).abs() < EPSILON));
     }
 
     #[test]
@@ -850,12 +881,12 @@ mod tests {
         let next = transition_standard_f64(&pos, &cv, 4, 3.0, &costs, false);
 
         // Should have insertion at (0, 0.5) and substitution at (1, 1.5)
-        let has_insertion = next.iter().any(|p| {
-            p.term_index == 0 && (p.accumulated_cost - 0.5).abs() < EPSILON
-        });
-        let has_substitution = next.iter().any(|p| {
-            p.term_index == 1 && (p.accumulated_cost - 1.5).abs() < EPSILON
-        });
+        let has_insertion = next
+            .iter()
+            .any(|p| p.term_index == 0 && (p.accumulated_cost - 0.5).abs() < EPSILON);
+        let has_substitution = next
+            .iter()
+            .any(|p| p.term_index == 1 && (p.accumulated_cost - 1.5).abs() < EPSILON);
         assert!(has_insertion, "Should have insertion at cost 0.5");
         assert!(has_substitution, "Should have substitution at cost 1.5");
     }
@@ -868,7 +899,10 @@ mod tests {
         // With Standard subsumption, (0,0.0) subsumes positions reachable via deletions
         // similar to integer version
         assert!(!state.is_empty());
-        assert!(state.positions().iter().any(|p| p.term_index == 0 && p.accumulated_cost.abs() < EPSILON));
+        assert!(state
+            .positions()
+            .iter()
+            .any(|p| p.term_index == 0 && p.accumulated_cost.abs() < EPSILON));
     }
 
     #[test]

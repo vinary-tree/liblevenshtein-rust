@@ -27,9 +27,7 @@ use super::rules::romance::{
     european_portuguese_rules, italian_rules, latin_american_spanish_rules, romanian_rules,
     standard_french_rules,
 };
-use super::rules::semitic::{
-    arabic_rules, hebrew_rules, maltese_rules, persian_rules, urdu_rules,
-};
+use super::rules::semitic::{arabic_rules, hebrew_rules, maltese_rules, persian_rules, urdu_rules};
 use super::rules::slavic::{
     belarusian_rules, bulgarian_rules, croatian_rules, czech_rules, polish_rules, russian_rules,
     serbian_latin_rules, serbian_rules, slovak_rules, ukrainian_rules,
@@ -321,18 +319,27 @@ fn test_supported_languages() {
     assert!(languages.contains(&"filipino"), "should contain 'filipino'");
     // Ukrainian
     assert!(languages.contains(&"uk"), "should contain 'uk'");
-    assert!(languages.contains(&"ukrainian"), "should contain 'ukrainian'");
+    assert!(
+        languages.contains(&"ukrainian"),
+        "should contain 'ukrainian'"
+    );
     assert!(
         languages.contains(&"українська"),
         "should contain 'українська'"
     );
     // Hungarian
     assert!(languages.contains(&"hu"), "should contain 'hu'");
-    assert!(languages.contains(&"hungarian"), "should contain 'hungarian'");
+    assert!(
+        languages.contains(&"hungarian"),
+        "should contain 'hungarian'"
+    );
     assert!(languages.contains(&"magyar"), "should contain 'magyar'");
     // Indonesian
     assert!(languages.contains(&"id"), "should contain 'id'");
-    assert!(languages.contains(&"indonesian"), "should contain 'indonesian'");
+    assert!(
+        languages.contains(&"indonesian"),
+        "should contain 'indonesian'"
+    );
     assert!(
         languages.contains(&"bahasa indonesia"),
         "should contain 'bahasa indonesia'"
@@ -369,7 +376,10 @@ fn test_default_language() {
 #[test]
 fn test_american_english_rules_not_empty() {
     let rules = american_english_rules();
-    assert!(!rules.is_empty(), "American English rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "American English rules should not be empty"
+    );
     // Should have rules from zompist + american + homophones + text_speak
     assert!(
         rules.len() > 100,
@@ -381,7 +391,10 @@ fn test_american_english_rules_not_empty() {
 #[test]
 fn test_british_english_rules_not_empty() {
     let rules = british_english_rules();
-    assert!(!rules.is_empty(), "British English rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "British English rules should not be empty"
+    );
     // Should have rules from zompist + british + homophones + text_speak
     assert!(
         rules.len() > 150,
@@ -409,7 +422,10 @@ fn test_english_dialects_have_different_rule_counts() {
 #[test]
 fn test_castilian_spanish_rules_not_empty() {
     let rules = castilian_spanish_rules();
-    assert!(!rules.is_empty(), "Castilian Spanish rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "Castilian Spanish rules should not be empty"
+    );
     assert!(
         rules.len() > 30,
         "Castilian rules should have >30 rules, got {}",
@@ -436,10 +452,7 @@ fn test_spanish_dialects_both_exist() {
     let castilian = castilian_spanish_rules();
     let latin_american = latin_american_spanish_rules();
     // Both dialects should have rules
-    assert!(
-        !castilian.is_empty(),
-        "Castilian rules should not be empty"
-    );
+    assert!(!castilian.is_empty(), "Castilian rules should not be empty");
     assert!(
         !latin_american.is_empty(),
         "Latin American rules should not be empty"
@@ -454,7 +467,10 @@ fn test_spanish_dialects_both_exist() {
 #[test]
 fn test_standard_french_rules_not_empty() {
     let rules = standard_french_rules();
-    assert!(!rules.is_empty(), "Standard French rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "Standard French rules should not be empty"
+    );
     assert!(
         rules.len() > 60,
         "Standard French rules should have >60 rules, got {}",
@@ -465,7 +481,10 @@ fn test_standard_french_rules_not_empty() {
 #[test]
 fn test_canadian_french_rules_not_empty() {
     let rules = canadian_french_rules();
-    assert!(!rules.is_empty(), "Canadian French rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "Canadian French rules should not be empty"
+    );
     assert!(
         rules.len() > 60,
         "Canadian French rules should have >60 rules, got {}",
@@ -912,7 +931,10 @@ fn test_turkish_alias_turkce() {
 #[test]
 fn test_japanese_romaji_rules_not_empty() {
     let rules = japanese_romaji_rules();
-    assert!(!rules.is_empty(), "Japanese romaji rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "Japanese romaji rules should not be empty"
+    );
     assert!(
         rules.len() > 35,
         "Japanese romaji rules should have >35 rules, got {}",
@@ -925,7 +947,10 @@ fn test_japanese_via_rules_for_language() {
     let rules = rules_for_language("ja-latn");
     assert!(rules.is_some(), "ja-latn should be supported");
     let rules = rules.expect("should have rules");
-    assert!(!rules.is_empty(), "Japanese romaji rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "Japanese romaji rules should not be empty"
+    );
 }
 
 #[test]
@@ -947,7 +972,10 @@ fn test_japanese_alias_native() {
 #[test]
 fn test_chinese_pinyin_rules_not_empty() {
     let rules = chinese_pinyin_rules();
-    assert!(!rules.is_empty(), "Chinese pinyin rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "Chinese pinyin rules should not be empty"
+    );
     assert!(
         rules.len() > 35,
         "Chinese pinyin rules should have >35 rules, got {}",
@@ -960,7 +988,10 @@ fn test_chinese_via_rules_for_language() {
     let rules = rules_for_language("zh-latn");
     assert!(rules.is_some(), "zh-latn should be supported");
     let rules = rules.expect("should have rules");
-    assert!(!rules.is_empty(), "Chinese pinyin rules should not be empty");
+    assert!(
+        !rules.is_empty(),
+        "Chinese pinyin rules should not be empty"
+    );
 }
 
 #[test]
@@ -1106,10 +1137,7 @@ fn test_chinese_hanzi_via_rules_for_language() {
     let rules = rules_for_language("zh");
     assert!(rules.is_some(), "zh should be supported");
     let rules = rules.expect("should have rules");
-    assert!(
-        !rules.is_empty(),
-        "Chinese Hanzi rules should not be empty"
-    );
+    assert!(!rules.is_empty(), "Chinese Hanzi rules should not be empty");
 }
 
 #[test]
@@ -1521,4 +1549,3 @@ fn test_every_aggregator_returns_non_empty_rule_set() {
         assert!(!rules.is_empty(), "{name}_rules() returned empty Vec");
     }
 }
-

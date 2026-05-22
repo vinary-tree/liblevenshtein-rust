@@ -423,12 +423,7 @@ impl AdaptiveMsmBuilder {
     }
 
     /// Add training data (query, target, actual_cost).
-    pub fn add_training_sample(
-        mut self,
-        query: Vec<f64>,
-        target: Vec<f64>,
-        cost: f64,
-    ) -> Self {
+    pub fn add_training_sample(mut self, query: Vec<f64>, target: Vec<f64>, cost: f64) -> Self {
         self.training_data.push((query, target, cost));
         self
     }
