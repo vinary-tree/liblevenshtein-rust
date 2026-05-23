@@ -1,0 +1,54 @@
+# status	profile	kind	path	notes
+# status:
+#   trusted  - included in no-Admitted/no-unreviewed-assumption gates
+#   partial  - known proof debt; audited and reported, not trusted as complete
+#   legacy   - reference material superseded by another trusted/partial module
+#   debug    - temporary proof experiments or diagnostics
+#
+# profile:
+#   light        <= 8G RSS/cgroup memory
+#   standard     <= 32G RSS/cgroup memory
+#   heavy        <= 96G RSS/cgroup memory
+#   exceptional  <= 128G RSS/cgroup memory, serial only
+#
+# kind:
+#   coq, tla, doc
+#
+# This manifest is intentionally conservative. Files with any active
+# Admitted., Axiom, Parameter, Conjecture, or Hypothesis remain partial until
+# their assumptions are either eliminated or entered into ASSUMPTIONS.tsv with
+# citations and narrow usage notes.
+trusted	light	coq	docs/verification/core/theories/Core/Definitions.v	core base definitions; no active assumptions
+trusted	light	coq	docs/verification/core/theories/Core/MinLemmas.v	min3/substitution-cost helper lemmas; no active assumptions
+trusted	standard	coq	docs/verification/core/theories/Core/LevDistance.v	Levenshtein distance definition and basic unfolding lemmas
+trusted	standard	coq	docs/verification/core/theories/Core/MetricProperties.v	core Levenshtein metric properties; no active assumptions
+trusted	light	coq	docs/verification/core/theories/Triangle/SubstCostTriangle.v	substitution-cost triangle helper
+trusted	light	coq	docs/verification/articulatory/theories/FeatureDistance.v	articulatory distance symmetry, identity, boundedness, and checked examples
+trusted	standard	coq	docs/verification/wallbreaker/theories/Pigeonhole/WallBreakerPigeonhole.v	WallBreaker pigeonhole piece-count proofs
+partial	exceptional	coq	docs/verification/core/_CoqProject	core project contains Automaton, MergeSplit, and legacy proof debt
+partial	exceptional	coq	docs/verification/core/theories/_CoqProject	modular core project; automaton and merge/split gaps remain
+partial	exceptional	coq	docs/verification/phonetic/_CoqProject	phonetic project has legacy axioms and memory-heavy pattern proofs
+partial	heavy	coq	docs/verification/grammar/_CoqProject	grammar proof layer is axiom-heavy
+partial	heavy	coq	docs/verification/grammar/theories/NFA/_CoqProject	grammar NFA soundness/completeness proof debt remains
+partial	standard	coq	docs/verification/llre/theories/_CoqProject	LLRE symbol expansion and Thompson construction use axioms
+partial	standard	coq	docs/verification/myers/theories/_CoqProject	Myers equivalence proof is still axiomatized
+partial	standard	coq	docs/verification/product/theories/_CoqProject	product automaton proof is still axiomatized
+partial	standard	coq	docs/verification/msm/_CoqProject	MSM metric and indexing proofs still use axioms
+partial	standard	tla	docs/verification/tla/OnlineScanner.tla	TLA+ model still abstracts matching and omits NoMissedMatches
+partial	standard	tla	docs/verification/tla/ProductAutomaton.tla	TLA+ model uses placeholder NFA transitions
+partial	standard	tla	docs/verification/tla/PriorityQuery.tla	TLA+ model abstracts heap and dictionary transitions
+partial	light	tla	docs/verification/tla/Subsumption.tla	TLA+ model uses simplified completion semantics
+partial	light	doc	docs/verification/PROOF_COMPLETION_PLAN.md	ordered closure plan for remaining proof debt
+legacy	exceptional	coq	docs/verification/core/theories/Distance.v	deprecated monolith; use modular core files where possible
+legacy	exceptional	coq	docs/verification/core/theories/TraceLowerBound.v	decomposed into LowerBound modules
+legacy	standard	coq	rocq/liblevenshtein	older formal-verification tree; audit before trusting
+debug	light	coq	docs/verification/phonetic/test_debug.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_debug2.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_debug3.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_debug4.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_phone_eqb.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_phone_sym.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_rule_unique_fix.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_rule_unique_local.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_rule_unique_standalone.v	debug-only proof scratch file
+debug	light	coq	docs/verification/phonetic/test_rule_unique_v2.v	debug-only proof scratch file

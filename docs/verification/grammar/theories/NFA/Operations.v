@@ -22,19 +22,14 @@ Import ListNotations.
 
 Require Import Liblevenshtein.Grammar.Verification.NFA.Types.
 
-(** * Axioms for Operation Properties *)
-
-(** When can_apply succeeds, the characters at the positions match
-    the operation's expected characters. *)
-Axiom can_apply_chars_match_ax : forall op s1 s2 i j,
+Definition can_apply_chars_match_contract : Prop := forall op s1 s2 i j,
   can_apply op s1 s2 i j = true ->
   let chars1 := substring i (op_consume_x op) s1 in
   let chars2 := substring j (op_consume_y op) s2 in
   list_ascii_of_string chars1 = op_chars_x op /\
   list_ascii_of_string chars2 = op_chars_y op.
 
-(** Context matching depends only on the prefix up to the current position. *)
-Axiom context_matches_monotone_ax : forall ctx s1 s2 pos,
+Definition context_matches_monotone_contract : Prop := forall ctx s1 s2 pos,
   substring 0 pos s1 = substring 0 pos s2 ->
   context_matches ctx s1 pos = context_matches ctx s2 pos.
 
@@ -370,14 +365,15 @@ Qed.
 
 (** If an operation can apply, it consumes the expected characters *)
 Lemma can_apply_chars_match : forall op s1 s2 i j,
+  can_apply_chars_match_contract ->
   can_apply op s1 s2 i j = true ->
   let chars1 := substring i (op_consume_x op) s1 in
   let chars2 := substring j (op_consume_y op) s2 in
   list_ascii_of_string chars1 = op_chars_x op /\
   list_ascii_of_string chars2 = op_chars_y op.
 Proof.
-  intros op s1 s2 i j Happ.
-  apply can_apply_chars_match_ax. assumption.
+  intros op s1 s2 i j Hcontract Happ.
+  apply Hcontract. assumption.
 Qed.
 
 (** If operation applies, sufficient characters remain *)
@@ -396,11 +392,12 @@ Qed.
 
 (** Context matching is monotone *)
 Lemma context_matches_monotone : forall ctx s1 s2 pos,
+  context_matches_monotone_contract ->
   substring 0 pos s1 = substring 0 pos s2 ->
   context_matches ctx s1 pos = context_matches ctx s2 pos.
 Proof.
-  intros ctx s1 s2 pos Heq.
-  apply context_matches_monotone_ax. assumption.
+  intros ctx s1 s2 pos Hcontract Heq.
+  apply Hcontract. assumption.
 Qed.
 
 (** ** Operation Composition Properties *)
@@ -542,8 +539,7 @@ Proof.
     ring.
 Qed.
 
-(** Phonetic paths have lower cost than standard edit paths of same length. *)
-Axiom phonetic_path_cheaper_ax : forall phonetic_ops standard_ops,
+Definition phonetic_path_cheaper_contract : Prop := forall phonetic_ops standard_ops,
   Forall (fun op => In op phonetic_ops_phase1) phonetic_ops ->
   length phonetic_ops = length standard_ops ->
   Forall (fun op => op_weight op = 1%Q) standard_ops ->
@@ -553,16 +549,17 @@ Axiom phonetic_path_cheaper_ax : forall phonetic_ops standard_ops,
 (** Phonetic paths are cheaper than standard edit paths.
     Note: Requires non-empty lists because 0 < 0 is false for empty lists. *)
 Theorem phonetic_path_cheaper : forall phonetic_ops standard_ops,
+  phonetic_path_cheaper_contract ->
   Forall (fun op => In op phonetic_ops_phase1) phonetic_ops ->
   length phonetic_ops = length standard_ops ->
   Forall (fun op => op_weight op = 1%Q) standard_ops ->
   length phonetic_ops > 0 ->  (* Required: empty case has equal costs *)
   (path_cost phonetic_ops < path_cost standard_ops)%Q.
 Proof.
-  intros ph st Hph Hlen Hst Hnonempty.
+  intros ph st Hcontract Hph Hlen Hst Hnonempty.
   destruct ph.
   - (* Empty case: contradicts Hnonempty *)
     simpl in Hnonempty. lia.
   - (* Non-empty case: use axiom *)
-    apply phonetic_path_cheaper_ax; auto; simpl; lia.
+    apply Hcontract; auto; simpl; lia.
 Qed.

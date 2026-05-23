@@ -5,8 +5,7 @@
 //! in src/transducer/simd.rs that uses x86_64 intrinsics directly.
 //!
 //! To see the actual SIMD implementation, check:
-//! - src/transducer/simd.rs
-//! - Enable with: cargo build --features simd
+//! - src/transducer/simd.rs (always compiled on x86_64 targets)
 
 fn main() {
     println!("=== SIMD Prototype (Disabled) ===\n");
@@ -14,10 +13,10 @@ fn main() {
     println!(
         "The liblevenshtein library has its own SIMD implementation using x86_64 intrinsics.\n"
     );
-    println!("To use SIMD in liblevenshtein:");
-    println!("  1. Build with: cargo build --features simd");
-    println!("  2. The SIMD code is in: src/transducer/simd.rs");
-    println!("  3. Run benchmarks with: cargo bench --features simd\n");
+    println!("SIMD in liblevenshtein:");
+    println!("  - Automatic on x86_64 targets (no feature flag required)");
+    println!("  - The SIMD code lives in: src/transducer/simd.rs");
+    println!("  - Runtime CPU detection chooses AVX2/SSE4.1/scalar at call time");
     println!("If you want to enable this example, add `pulp` to Cargo.toml dependencies.");
 }
 
@@ -25,7 +24,7 @@ fn main() {
 // which is not currently a dependency. Uncomment if you add pulp to Cargo.toml.
 
 /*
-#[cfg(feature = "simd")]
+#[cfg(target_arch = "x86_64")]
 fn test_vectorized_add() {
     use pulp::{Arch, Simd, WithSimd};
 
@@ -65,7 +64,7 @@ fn test_vectorized_add() {
     println!("Expected: [9, 9, 9, 9, 9, 9, 9, 9]\n");
 }
 
-#[cfg(feature = "simd")]
+#[cfg(target_arch = "x86_64")]
 fn test_vectorized_min() {
     use pulp::{Arch, Simd, WithSimd};
 

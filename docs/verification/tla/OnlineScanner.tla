@@ -238,7 +238,7 @@ EventuallyComplete == <>(position = INPUT_LENGTH)
 
 \* PROP3: Matches are recorded at correct positions
 MatchesRecordedCorrectly ==
-    [](Cardinality(completed_matches) <= (position + 1) * (position + 2) \div 2)
+    [](Cardinality(completed_matches) <= ((position + 1) * (position + 2)) \div 2)
 
 (***************************************************************************)
 (* Theorems (to be verified by TLC)                                         *)

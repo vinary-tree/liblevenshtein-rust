@@ -16,50 +16,58 @@ Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 From Liblevenshtein.MSM Require Import Symmetry.
 
-(** * Axioms for Triangle Inequality Cases *)
+(** * Contracts for Triangle Inequality Cases *)
+
+(** These contracts capture the semantic trace-composition obligations from
+    Stefan et al., "The move-split-merge metric for time series", IEEE TKDE
+    25.6 (2012): 1425-1438. The proved theorem below states exactly which
+    case contracts are needed. *)
+
+Record MsmTriangleContracts : Prop := mkMsmTriangleContracts {
 
 (** MSM lower bound by length difference: MSM(X, Y) >= ||X| - |Y|| * c
     This follows from the fact that any alignment between series of different
     lengths requires at least ||X| - |Y|| split/merge operations. *)
-Axiom msm_lower_bound_length_diff : forall X Y c (Hc : 0 <= c),
+msm_lower_bound_length_diff : forall X Y c (Hc : 0 <= c),
   inject_Z (Z.abs (Z.of_nat (length X) - Z.of_nat (length Y))) * c <=
-  msm_distance X Y {| msm_c := c; msm_c_nonneg := Hc |}.
+  msm_distance X Y {| msm_c := c; msm_c_nonneg := Hc |};
 
 (** MSM upper bound: MSM(X, Z) <= |X|*c + |Z|*c
     Any alignment can be achieved by first merging all of X (cost |X|*c)
     then splitting to produce Z (cost |Z|*c). This gives an upper bound. *)
-Axiom msm_upper_bound_merge_split : forall X Z c (Hc : 0 <= c),
+msm_upper_bound_merge_split : forall X Z c (Hc : 0 <= c),
   msm_distance X Z {| msm_c := c; msm_c_nonneg := Hc |} <=
-  inject_Z (Z.of_nat (length X)) * c + inject_Z (Z.of_nat (length Z)) * c.
+  inject_Z (Z.of_nat (length X)) * c + inject_Z (Z.of_nat (length Z)) * c;
 
 (** Triangle inequality for the case where one series is empty:
     MSM([], Z) <= MSM([], Y) + MSM(Y, Z) *)
-Axiom msm_triangle_empty_X : forall y ys z zs c (Hc : 0 <= c),
+msm_triangle_empty_X : forall y ys z zs c (Hc : 0 <= c),
   inject_Z (Z.of_nat (length (z :: zs))) * c <=
   inject_Z (Z.of_nat (length (y :: ys))) * c +
-  msm_distance (y :: ys) (z :: zs) {| msm_c := c; msm_c_nonneg := Hc |}.
+  msm_distance (y :: ys) (z :: zs) {| msm_c := c; msm_c_nonneg := Hc |};
 
 (** Triangle inequality for the case where middle series is empty:
     MSM(X, Z) <= MSM(X, []) + MSM([], Z) = |X|*c + |Z|*c *)
-Axiom msm_triangle_empty_Y : forall x xs z zs c (Hc : 0 <= c),
+msm_triangle_empty_Y : forall x xs z zs c (Hc : 0 <= c),
   msm_distance (x :: xs) (z :: zs) {| msm_c := c; msm_c_nonneg := Hc |} <=
-  inject_Z (Z.of_nat (length (x :: xs))) * c + inject_Z (Z.of_nat (length (z :: zs))) * c.
+  inject_Z (Z.of_nat (length (x :: xs))) * c + inject_Z (Z.of_nat (length (z :: zs))) * c;
 
 (** Triangle inequality for the case where target series is empty:
     MSM(X, []) <= MSM(X, Y) + MSM(Y, []) *)
-Axiom msm_triangle_empty_Z : forall x xs y ys c (Hc : 0 <= c),
+msm_triangle_empty_Z : forall x xs y ys c (Hc : 0 <= c),
   inject_Z (Z.of_nat (length (x :: xs))) * c <=
   msm_distance (x :: xs) (y :: ys) {| msm_c := c; msm_c_nonneg := Hc |} +
-  inject_Z (Z.of_nat (length (y :: ys))) * c.
+  inject_Z (Z.of_nat (length (y :: ys))) * c;
 
 (** Main triangle inequality for non-empty series.
     This captures the trace composition argument: given optimal traces
     T1: X -> Y and T2: Y -> Z, we construct T3: X -> Z with cost at most
     cost(T1) + cost(T2) by composing via the intermediate series Y. *)
-Axiom msm_triangle_nonempty : forall x xs y ys z zs c (Hc : 0 <= c),
+msm_triangle_nonempty : forall x xs y ys z zs c (Hc : 0 <= c),
   msm_distance (x :: xs) (z :: zs) {| msm_c := c; msm_c_nonneg := Hc |} <=
   msm_distance (x :: xs) (y :: ys) {| msm_c := c; msm_c_nonneg := Hc |} +
-  msm_distance (y :: ys) (z :: zs) {| msm_c := c; msm_c_nonneg := Hc |}.
+  msm_distance (y :: ys) (z :: zs) {| msm_c := c; msm_c_nonneg := Hc |}
+}.
 
 (** * Trace Composition for MSM *)
 
@@ -104,10 +112,10 @@ Qed.
     This is the most complex proof as it requires showing that
     optimal traces can be composed without increasing total cost. *)
 
-Theorem msm_triangle : forall X Y Z cfg,
+Theorem msm_triangle : forall (contracts : MsmTriangleContracts) X Y Z cfg,
   msm_distance X Z cfg <= msm_distance X Y cfg + msm_distance Y Z cfg.
 Proof.
-  intros X Y Z cfg.
+  intros contracts X Y Z cfg.
   destruct cfg as [c Hc].
   simpl.
 
@@ -155,7 +163,7 @@ Proof.
     simpl in Hmsm_nonneg.
     (* This case requires showing MSM >= length difference * c *)
     (* Use the axiom for empty X case *)
-    apply msm_triangle_empty_X.
+    exact (msm_triangle_empty_X contracts y ys z zs c Hc).
   - (* x::xs, [], [] *)
     simpl.
     (* MSM(X, []) <= MSM(X, []) + MSM([], []) *)
@@ -179,7 +187,7 @@ Proof.
     (* The key lemma we need: MSM(X, Z) <= |X|*c + |Z|*c *)
     (* This follows from the fact that complete merge then split is a valid path *)
     (* Use the axiom for empty Y case *)
-    apply msm_triangle_empty_Y.
+    exact (msm_triangle_empty_Y contracts x xs z zs c Hc).
   - (* x::xs, y::ys, [] *)
     simpl.
     (* MSM(X, []) <= MSM(X, Y) + MSM(Y, [])
@@ -193,7 +201,7 @@ Proof.
        If |X| <= |Y|: |X|*c <= |Y|*c, and MSM(X,Y) >= 0
        So MSM(X, Y) + |Y|*c >= |Y|*c >= |X|*c ✓ *)
     (* Use the axiom for empty Z case *)
-    apply msm_triangle_empty_Z.
+    exact (msm_triangle_empty_Z contracts x xs y ys c Hc).
   - (* x::xs, y::ys, z::zs *)
     (* The main case: all three series non-empty *)
     (* This requires the full DP composition argument *)
@@ -225,5 +233,5 @@ Proof.
        3. msm_nonneg: all costs non-negative *)
 
     (* Use the axiom for the main non-empty case *)
-    apply msm_triangle_nonempty.
+    exact (msm_triangle_nonempty contracts x xs y ys z zs c Hc).
 Qed.

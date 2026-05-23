@@ -379,7 +379,6 @@ unsafe fn min3_avx2(a: __m256i, b: __m256i, c: __m256i) -> __m256i {
 ///
 /// This function uses AVX2 to compare 8 characters at once when finding
 /// common prefixes and suffixes, achieving 4-6x speedup over scalar comparison.
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
 pub fn strip_common_affixes_simd(a: &str, b: &str) -> (usize, usize, usize) {
     use smallvec::SmallVec;
 
@@ -647,18 +646,6 @@ unsafe fn find_common_suffix_sse41(
     suffix_len
 }
 
-#[cfg(not(target_arch = "x86_64"))]
-pub fn standard_distance_simd(source: &str, target: &str) -> usize {
-    // Non-x86_64 platforms fall back to scalar implementation
-    crate::distance::standard_distance_impl(source, target)
-}
-
-#[cfg(not(all(target_arch = "x86_64", feature = "simd")))]
-pub fn strip_common_affixes_simd(a: &str, b: &str) -> (usize, usize, usize) {
-    // Non-SIMD platforms fall back to scalar implementation
-    crate::distance::strip_common_affixes(a, b)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -694,7 +681,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
     fn test_strip_common_affixes_simd() {
         let test_cases = vec![
             // (string_a, string_b, expected (prefix_len, adj_a_len, adj_b_len))

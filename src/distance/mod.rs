@@ -23,7 +23,7 @@ use rustc_hash::FxHashMap;
 
 use smallvec::SmallVec;
 
-#[cfg(feature = "simd")]
+#[cfg(target_arch = "x86_64")]
 pub mod simd;
 
 pub mod myers;
@@ -250,12 +250,12 @@ pub fn standard_distance(source: &str, target: &str) -> usize {
         return myers::myers_distance(source, target);
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(target_arch = "x86_64")]
     {
         simd::standard_distance_simd(source, target)
     }
 
-    #[cfg(not(feature = "simd"))]
+    #[cfg(not(target_arch = "x86_64"))]
     {
         standard_distance_impl(source, target)
     }

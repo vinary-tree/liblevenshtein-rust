@@ -58,8 +58,7 @@ for candidate in transducer.query_with_distance("tset", 2) {
 [dependencies]
 liblevenshtein = "0.8"
 
-# With SIMD acceleration (x86_64 only):
-liblevenshtein = { version = "0.8", features = ["simd"] }
+# SIMD (AVX2/SSE4.1) is automatic on x86_64 targets with runtime CPU detection.
 
 # With phonetic rules:
 liblevenshtein = { version = "0.8", features = ["phonetic-rules"] }
@@ -256,9 +255,8 @@ let dict = DynamicDawg::with_config(
 **SIMD Acceleration**: Vectorized transition lookups with AVX2/SSE4.1:
 
 ```rust
-// Enable with feature flag
-// Cargo.toml: features = ["simd"]
-// Provides 20-64% faster queries automatically
+// Automatic on x86_64 targets (runtime-detected via is_x86_feature_detected!)
+// Provides 20-64% faster queries; no feature flag required
 ```
 
 #### PathMap Backend (Alternative Dynamic Dictionary)
@@ -1369,7 +1367,7 @@ Requires `serialization` and `compression` features.
 
 | Optimization | Effect | Feature |
 |--------------|--------|---------|
-| **SIMD** | 20-64% faster queries | `simd` |
+| **SIMD** | 20-64% faster queries | automatic on x86_64 |
 | **Bloom Filter** | 88-93% faster contains() | Built-in |
 | **StatePool** | Reduced allocations | Built-in |
 | **Arc Path Sharing** | Eliminated cloning | Built-in |
@@ -1434,7 +1432,6 @@ Construction and query times for 10,000 words:
 
 | Feature | Description |
 |---------|-------------|
-| `simd` | AVX2/SSE4.1 acceleration (x86_64 only) |
 | `phonetic-rules` | LLev/LLRE phonetic pattern languages |
 | `pathmap-backend` | PathMap dictionary backend |
 | `wfst` | lling-llang WFST integration |

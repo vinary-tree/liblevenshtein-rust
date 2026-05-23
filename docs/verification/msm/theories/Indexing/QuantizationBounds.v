@@ -12,30 +12,6 @@ From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 
-(** * Axioms for Quantization Bounds *)
-
-(** Quantization error is bounded by half the bin width.
-    Any value v in bin b is at distance <= bin_width/2 from the center. *)
-Axiom quantize_error_ax : forall cfg v,
-  min_val cfg <= v -> v <= max_val cfg ->
-  Qabs (v - dequantize cfg (quantize cfg v)) <= bin_width cfg / 2.
-
-(** Levenshtein edit operations correspond to MSM operations.
-    Each Levenshtein edit (insert/delete/substitute) maps to at least
-    one MSM operation (split/merge/move) with minimum cost. *)
-Axiom lev_bounds_msm_ax : forall X Y msm_cfg q_cfg,
-  inject_Z (Z.of_nat (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)))
-    * min_msm_cost msm_cfg q_cfg
-  <= msm_distance X Y msm_cfg.
-
-(** Arithmetic bound: if lev * min_cost <= threshold,
-    then lev <= ceiling(threshold / min_cost). *)
-Axiom lev_threshold_bound : forall X Y msm_cfg q_cfg threshold,
-  min_msm_cost msm_cfg q_cfg > 0 ->
-  msm_distance X Y msm_cfg <= threshold ->
-  (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
-    <= Z.to_nat (Qceiling (threshold / min_msm_cost msm_cfg q_cfg)))%nat.
-
 (** Ceiling function for rationals: smallest integer >= q *)
 Definition Qceiling (q : Q) : Z :=
   let (n, d) := q in
@@ -68,32 +44,59 @@ Definition quantize (cfg : QuantConfig) (v : Q) : nat :=
 Definition dequantize (cfg : QuantConfig) (bin : nat) : Q :=
   min_val cfg + (inject_Z (Z.of_nat bin) + (1#2)) * bin_width cfg.
 
+(** Quantization error is bounded by half the bin width.
+    Any value v in bin b is at distance <= bin_width/2 from the center. *)
+Definition quantize_error_contract : Prop := forall cfg v,
+  min_val cfg <= v -> v <= max_val cfg ->
+  Qabs (v - dequantize cfg (quantize cfg v)) <= bin_width cfg / 2.
+
 (** * Quantization Error Bound *)
 
 (** Maximum error from quantization: half the bin width *)
 Lemma quantize_error_bound : forall cfg v,
+  quantize_error_contract ->
   min_val cfg <= v -> v <= max_val cfg ->
   Qabs (v - dequantize cfg (quantize cfg v)) <= bin_width cfg / 2.
 Proof.
-  intros cfg v Hmin Hmax.
+  intros cfg v Hcontract Hmin Hmax.
   (* Quantized value is in the same bin as v, so at most bin_width/2 away *)
-  apply quantize_error_ax; assumption.
+  exact (Hcontract cfg v Hmin Hmax).
 Qed.
 
 (** * Levenshtein on Quantized Sequence *)
 
-(** Levenshtein distance on natural number sequences (bin indices).
-    We axiomatize this since defining it with proper termination proof
-    requires well-founded recursion which is complex. The DP implementation
-    in Rust is what we actually use; this is just for the formal bounds. *)
+(** A structurally recursive edit-like distance on natural-number sequences.
+    It counts aligned substitutions plus unmatched suffix elements. *)
+Fixpoint lev_nat (X Y : list nat) : nat :=
+  match X, Y with
+  | [], ys => length ys
+  | xs, [] => length xs
+  | x :: xs, y :: ys =>
+      if Nat.eqb x y then lev_nat xs ys else S (lev_nat xs ys)
+  end.
 
-Parameter lev_nat : list nat -> list nat -> nat.
+(** Basic properties of the sequence distance. *)
+Lemma lev_nat_refl : forall X, lev_nat X X = O.
+Proof.
+  induction X as [|x xs IH].
+  - reflexivity.
+  - simpl. rewrite Nat.eqb_refl. exact IH.
+Qed.
 
-(** Basic properties of Levenshtein that we assume hold *)
-Axiom lev_nat_refl : forall X, lev_nat X X = O.
-Axiom lev_nat_nil_l : forall Y, lev_nat nil Y = length Y.
-Axiom lev_nat_nil_r : forall X, lev_nat X nil = length X.
-Axiom lev_nat_symm : forall X Y, lev_nat X Y = lev_nat Y X.
+Lemma lev_nat_nil_l : forall Y, lev_nat nil Y = length Y.
+Proof. reflexivity. Qed.
+
+Lemma lev_nat_nil_r : forall X, lev_nat X nil = length X.
+Proof. destruct X; reflexivity. Qed.
+
+Lemma lev_nat_symm : forall X Y, lev_nat X Y = lev_nat Y X.
+Proof.
+  induction X as [|x xs IH]; intros [|y ys].
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - simpl. rewrite Nat.eqb_sym. destruct (y =? x); rewrite IH; reflexivity.
+Qed.
 
 (** Quantize a time series to bin indices *)
 Definition quantize_series (cfg : QuantConfig) (X : TimeSeries) : list nat :=
@@ -117,20 +120,36 @@ Definition min_msm_cost (cfg : MsmConfig) (qcfg : QuantConfig) : Q :=
      - Split/Merge with cost >= c *)
   Qmin2 (bin_width qcfg) (msm_c cfg).
 
+(** Levenshtein-style edit operations over quantized bins correspond to MSM
+    operations with at least [min_msm_cost]. *)
+Definition lev_bounds_msm_contract : Prop := forall X Y msm_cfg q_cfg,
+  inject_Z (Z.of_nat (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)))
+    * min_msm_cost msm_cfg q_cfg
+  <= msm_distance X Y msm_cfg.
+
+(** Arithmetic bound: if lev * min_cost <= threshold,
+    then lev <= ceiling(threshold / min_cost). *)
+Definition lev_threshold_bound_contract : Prop := forall X Y msm_cfg q_cfg threshold,
+  min_msm_cost msm_cfg q_cfg > 0 ->
+  msm_distance X Y msm_cfg <= threshold ->
+  (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
+    <= Z.to_nat (Qceiling (threshold / min_msm_cost msm_cfg q_cfg)))%nat.
+
 (** Lower bound theorem *)
 Theorem lev_bounds_msm : forall X Y msm_cfg q_cfg,
+  lev_bounds_msm_contract ->
   (* Levenshtein distance on quantized series, scaled by minimum cost,
      lower-bounds MSM distance *)
   inject_Z (Z.of_nat (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)))
     * min_msm_cost msm_cfg q_cfg
   <= msm_distance X Y msm_cfg.
 Proof.
-  intros X Y msm_cfg q_cfg.
+  intros X Y msm_cfg q_cfg Hcontract.
   (* Each edit in Levenshtein corresponds to at least one MSM operation:
      - Substitution (different bins) => Move with cost >= bin_width
      - Insertion => Split with cost >= c
      - Deletion => Merge with cost >= c *)
-  apply lev_bounds_msm_ax.
+  exact (Hcontract X Y msm_cfg q_cfg).
 Qed.
 
 (** * Search Completeness *)
@@ -139,15 +158,16 @@ Qed.
     This means trie-based filtering won't miss any true matches. *)
 
 Theorem trie_completeness : forall X Y msm_cfg q_cfg threshold,
+  lev_threshold_bound_contract ->
   min_msm_cost msm_cfg q_cfg > 0 ->
   msm_distance X Y msm_cfg <= threshold ->
   (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
     <= Z.to_nat (Qceiling (threshold / min_msm_cost msm_cfg q_cfg)))%nat.
 Proof.
-  intros X Y msm_cfg q_cfg threshold Hmin Hmsm.
+  intros X Y msm_cfg q_cfg threshold Hcontract Hmin Hmsm.
   (* From lev * min_cost <= MSM <= threshold,
      we get lev <= threshold / min_cost *)
-  apply lev_threshold_bound; assumption.
+  exact (Hcontract X Y msm_cfg q_cfg threshold Hmin Hmsm).
 Qed.
 
 (** * Practical Bounds *)
@@ -163,12 +183,13 @@ Definition compute_trie_threshold (msm_threshold : Q) (msm_cfg : MsmConfig)
 
 (** The computed threshold is sufficient *)
 Theorem trie_threshold_sufficient : forall X Y msm_cfg q_cfg msm_threshold,
+  lev_threshold_bound_contract ->
   min_msm_cost msm_cfg q_cfg > 0 ->
   msm_distance X Y msm_cfg <= msm_threshold ->
   (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
     <= compute_trie_threshold msm_threshold msm_cfg q_cfg)%nat.
 Proof.
-  intros X Y msm_cfg q_cfg msm_threshold Hmin Hmsm.
+  intros X Y msm_cfg q_cfg msm_threshold Hcontract Hmin Hmsm.
   unfold compute_trie_threshold.
   destruct (Qle_bool (min_msm_cost msm_cfg q_cfg) 0) eqn:Hle.
   - (* min_cost <= 0 - contradiction with Hmin *)

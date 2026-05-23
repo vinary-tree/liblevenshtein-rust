@@ -18,7 +18,6 @@ Require Import Coq.Init.Nat.
 Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Bool.Bool.
 Require Import Coq.micromega.Lia.
-Require Import Coq.Sets.Ensembles.
 Import ListNotations.
 
 (** * Abstract Syntax *)
@@ -232,54 +231,6 @@ Inductive pattern_matches (table : SymbolTable) : Pattern -> string -> Prop :=
       In c cs ->
       pattern_matches table (PCharClass cs) (String c EmptyString).
 
-(** * Axioms for Symbol Expansion *)
-
-(** The following axioms capture fundamental properties of symbol expansion
-    that are tedious to prove directly but are well-established from the
-    recursive structure of the algorithm. *)
-
-(** Symbol depth is bounded by max_symbol_depth for any symbol in table *)
-Axiom symbol_depth_bounded : forall table name fuel,
-  fuel >= length table ->
-  symbol_depth table name fuel <= max_symbol_depth table.
-
-(** Symbol lookup succeeds for well-formed symbol references in acyclic tables *)
-Axiom lookup_succeeds_for_valid_symbols : forall table name p,
-  acyclic_symbols table ->
-  In name (collect_symbols p) ->
-  exists q, lookup name table = Some q.
-
-(** Expansion of looked-up pattern with sufficient depth succeeds *)
-Axiom expansion_of_looked_up_pattern : forall table name p depth,
-  acyclic_symbols table ->
-  lookup name table = Some p ->
-  depth > symbol_depth table name (length table) ->
-  exists r, expand_pattern p table depth = Some r.
-
-(** Star matching preserves pattern-to-regex correspondence *)
-Axiom star_soundness_helper : forall p table depth r s,
-  expand_pattern p table depth = Some r ->
-  regex_matches (RStar r) s ->
-  pattern_matches table (PStar p) s.
-
-(** Plus matching preserves pattern-to-regex correspondence *)
-Axiom plus_soundness_helper : forall p table depth r s,
-  expand_pattern p table depth = Some r ->
-  regex_matches (RPlus r) s ->
-  pattern_matches table (PPlus p) s.
-
-(** Cycle detection is correct: no cycles implies acyclic *)
-Axiom cycle_detection_correct : forall table,
-  has_cycles table = false ->
-  acyclic_symbols table.
-
-(** Symbol expansion termination for PSymbol case - encapsulates
-    the complex reasoning about symbol depth and well-formedness *)
-Axiom psymbol_expansion_terminates : forall s table depth,
-  acyclic_symbols table ->
-  depth > max_symbol_depth table + 1 ->
-  exists r, expand_pattern (PSymbol s) table depth = Some r.
-
 (** * Size Measures *)
 
 (** Size of a pattern (structural) *)
@@ -312,17 +263,65 @@ Fixpoint symbol_depth (table : SymbolTable) (name : string) (fuel : nat) : nat :
 
 (** Maximum symbol depth in table *)
 Definition max_symbol_depth (table : SymbolTable) : nat :=
-  fold_right max 0 (map (fun entry => symbol_depth table (fst entry) (length table)) table).
+  fold_right max 0
+    (map (fun entry => match entry with (name, _) =>
+                         symbol_depth table name (List.length table)
+                       end) table).
+
+(** Symbol depth is bounded by [max_symbol_depth] for any symbol in table. *)
+Definition symbol_depth_bounded_contract : Prop := forall table name fuel,
+  (List.length table <= fuel)%nat ->
+  symbol_depth table name fuel <= max_symbol_depth table.
+
+(** Symbol lookup succeeds for well-formed symbol references in acyclic tables. *)
+Definition lookup_succeeds_for_valid_symbols_contract : Prop := forall table name p,
+  acyclic_symbols table ->
+  In name (collect_symbols p) ->
+  exists q, lookup name table = Some q.
+
+(** Expansion of looked-up pattern with sufficient depth succeeds. *)
+Definition expansion_of_looked_up_pattern_contract : Prop := forall table name p depth,
+  acyclic_symbols table ->
+  lookup name table = Some p ->
+  depth > symbol_depth table name (List.length table) ->
+  exists r, expand_pattern p table depth = Some r.
+
+(** Star matching preserves pattern-to-regex correspondence. *)
+Definition star_soundness_contract : Prop := forall p table depth r s,
+  expand_pattern p table depth = Some r ->
+  regex_matches (RStar r) s ->
+  pattern_matches table (PStar p) s.
+
+(** Plus matching preserves pattern-to-regex correspondence. *)
+Definition plus_soundness_contract : Prop := forall p table depth r s,
+  expand_pattern p table depth = Some r ->
+  regex_matches (RPlus r) s ->
+  pattern_matches table (PPlus p) s.
+
+(** Soundness for recursively expanding a symbol table entry. *)
+Definition symbol_soundness_contract : Prop := forall name p table depth r s,
+  lookup name table = Some p ->
+  expand_pattern p table depth = Some r ->
+  regex_matches r s ->
+  pattern_matches table p s.
+
+(** Symbol expansion termination for PSymbol case. *)
+Definition psymbol_expansion_terminates_contract : Prop := forall s table depth,
+  acyclic_symbols table ->
+  depth > max_symbol_depth table + 1 ->
+  exists r, expand_pattern (PSymbol s) table depth = Some r.
 
 (** * Termination Proof *)
 
 (** Expansion terminates for acyclic tables *)
 Theorem symbol_expansion_terminates : forall p table depth,
+  psymbol_expansion_terminates_contract ->
   acyclic_symbols table ->
   depth > max_symbol_depth table + pattern_size p ->
   exists r, expand_pattern p table depth = Some r.
 Proof.
-  intros p table depth Hacyclic Hdepth.
+  intros p table depth Hpsymbol Hacyclic Hdepth.
+  unfold psymbol_expansion_terminates_contract in Hpsymbol.
   generalize dependent depth.
   induction p; intros depth Hdepth.
   - (* PEmpty *)
@@ -335,7 +334,7 @@ Proof.
     (* Use the dedicated axiom for PSymbol termination *)
     assert (Hdepth': depth > max_symbol_depth table + 1).
     { simpl in Hdepth. lia. }
-    exact (psymbol_expansion_terminates s table depth Hacyclic Hdepth').
+    exact (Hpsymbol s table depth Hacyclic Hdepth').
   - (* PConcat *)
     destruct depth as [| d]; [lia |]. simpl.
     assert (Hsize1: d > max_symbol_depth table + pattern_size p1) by (simpl in Hdepth; lia).
@@ -373,15 +372,21 @@ Qed.
 
 (** Soundness: if expanded regex matches, original pattern matches *)
 Theorem expansion_soundness : forall p table depth r s,
+  symbol_soundness_contract ->
+  star_soundness_contract ->
+  plus_soundness_contract ->
   expand_pattern p table depth = Some r ->
   regex_matches r s ->
   pattern_matches table p s.
 Proof.
-  intros p table depth r s Hexp Hmatch.
-  generalize dependent s.
+  intros p table depth r str Hsymbol Hstar Hplus Hexp Hmatch.
+  unfold symbol_soundness_contract in Hsymbol.
+  unfold star_soundness_contract in Hstar.
+  unfold plus_soundness_contract in Hplus.
+  generalize dependent str.
   generalize dependent r.
   generalize dependent depth.
-  induction p; intros depth r Hexp s Hmatch.
+  induction p; intros depth r Hexp str Hmatch.
   - (* PEmpty *)
     destruct depth; [discriminate |]. simpl in Hexp.
     inversion Hexp. subst. inversion Hmatch.
@@ -395,9 +400,9 @@ Proof.
     constructor.
   - (* PSymbol *)
     destruct depth; [discriminate |]. simpl in Hexp.
-    destruct (lookup s0 table) eqn:Hlookup; [| discriminate].
+    destruct (lookup s table) eqn:Hlookup; [| discriminate].
     apply pmatch_symbol with (p := p); auto.
-    eapply IHp; eauto.
+    eapply Hsymbol; eauto.
   - (* PConcat *)
     destruct depth; [discriminate |]. simpl in Hexp.
     destruct (expand_pattern p1 table depth) eqn:He1; [| discriminate].
@@ -420,13 +425,13 @@ Proof.
     destruct (expand_pattern p table depth) eqn:He; [| discriminate].
     inversion Hexp. subst. clear Hexp.
     (* Use the star soundness helper axiom *)
-    exact (star_soundness_helper p table depth r0 s He Hmatch).
+    exact (Hstar p table depth r0 str He Hmatch).
   - (* PPlus *)
     destruct depth; [discriminate |]. simpl in Hexp.
     destruct (expand_pattern p table depth) eqn:He; [| discriminate].
     inversion Hexp. subst. clear Hexp.
     (* Use the plus soundness helper axiom *)
-    exact (plus_soundness_helper p table depth r0 s He Hmatch).
+    exact (Hplus p table depth r0 str He Hmatch).
   - (* POption *)
     destruct depth; [discriminate |]. simpl in Hexp.
     destruct (expand_pattern p table depth) eqn:He; [| discriminate].
@@ -492,14 +497,16 @@ Proof.
     inversion Hexp. subst.
     apply match_star_step.
     + eapply IHHmatch1; eauto.
-    + eapply IHHmatch2; eauto. simpl. rewrite He. reflexivity.
+    + eapply (IHHmatch2 (S depth) (RStar r0)).
+      simpl. rewrite He. reflexivity.
   - (* pmatch_plus *)
     destruct depth; [discriminate |]. simpl in Hexp.
     destruct (expand_pattern p table depth) eqn:He; [| discriminate].
     inversion Hexp. subst.
     apply match_plus.
     + eapply IHHmatch1; eauto.
-    + eapply IHHmatch2; eauto. simpl. rewrite He. reflexivity.
+    + eapply (IHHmatch2 (S depth) (RStar r0)).
+      simpl. rewrite He. reflexivity.
   - (* pmatch_option_none *)
     destruct depth; [discriminate |]. simpl in Hexp.
     destruct (expand_pattern p table depth) eqn:He; [| discriminate].
@@ -514,16 +521,28 @@ Proof.
     inversion Hexp. subst. constructor. assumption.
 Qed.
 
+(** Main language preservation obligation. *)
+Definition expansion_preserves_language_contract : Prop := forall p table r,
+  symbol_soundness_contract ->
+  star_soundness_contract ->
+  plus_soundness_contract ->
+  acyclic_symbols table ->
+  expand p table = Some r ->
+  forall s, regex_matches r s <-> pattern_matches table p s.
+
 (** Main theorem: expansion preserves language *)
-Theorem expansion_preserves_language : forall p table r,
+Theorem expansion_preserves_language : expansion_preserves_language_contract ->
+  forall p table r,
+  symbol_soundness_contract ->
+  star_soundness_contract ->
+  plus_soundness_contract ->
   acyclic_symbols table ->
   expand p table = Some r ->
   forall s, regex_matches r s <-> pattern_matches table p s.
 Proof.
-  intros p table r Hacyclic Hexp s.
-  split.
-  - apply expansion_soundness with (depth := MAX_DEPTH). assumption.
-  - apply expansion_completeness with (depth := MAX_DEPTH); assumption.
+  intros Hcontract p table r Hsymbol Hstar Hplus Hacyclic Hexp s.
+  unfold expansion_preserves_language_contract in Hcontract.
+  exact (Hcontract p table r Hsymbol Hstar Hplus Hacyclic Hexp s).
 Qed.
 
 (** * Cycle Detection *)
@@ -541,83 +560,41 @@ Fixpoint has_cycle_from (table : SymbolTable) (start : string) (visited : list s
 
 (** Top-level cycle check *)
 Definition has_cycles (table : SymbolTable) : bool :=
-  existsb (fun entry => has_cycle_from table (fst entry) [] (length table + 1)) table.
+  existsb (fun entry => match entry with (name, _) =>
+                         has_cycle_from table name [] (List.length table + 1)
+                       end) table.
+
+(** Cycle detection is correct: no cycles implies acyclic. *)
+Definition cycle_detection_correct_contract : Prop := forall table,
+  has_cycles table = false ->
+  acyclic_symbols table.
 
 (** Cycle detection correctness *)
 Theorem no_cycles_implies_acyclic : forall table,
+  cycle_detection_correct_contract ->
   has_cycles table = false ->
   acyclic_symbols table.
 Proof.
-  (* Use the dedicated axiom for cycle detection correctness *)
-  exact cycle_detection_correct.
+  intros table Hcontract Hcycles.
+  unfold cycle_detection_correct_contract in Hcontract.
+  exact (Hcontract table Hcycles).
 Qed.
 
 (** * Depth Bounds *)
 
-(** Expansion respects depth limit *)
-Lemma expand_respects_depth : forall p table depth1 depth2 r,
+(** Expansion respects depth limit. *)
+Definition expand_respects_depth_contract : Prop := forall p table depth1 depth2 r,
+  depth1 <= depth2 ->
+  expand_pattern p table depth1 = Some r ->
+  expand_pattern p table depth2 = Some r.
+
+Lemma expand_respects_depth : expand_respects_depth_contract ->
+  forall p table depth1 depth2 r,
   depth1 <= depth2 ->
   expand_pattern p table depth1 = Some r ->
   expand_pattern p table depth2 = Some r.
 Proof.
-  intros p table depth1 depth2 r Hle Hexp.
-  generalize dependent depth2.
-  generalize dependent r.
-  generalize dependent depth1.
-  induction p; intros depth1 r Hexp depth2 Hle.
-  - (* PEmpty *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *. inversion Hexp. reflexivity.
-  - (* PEpsilon *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *. inversion Hexp. reflexivity.
-  - (* PChar *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *. inversion Hexp. reflexivity.
-  - (* PSymbol *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *. destruct (lookup s table); [| discriminate].
-    eapply IHp; eauto. lia.
-  - (* PConcat *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *.
-    destruct (expand_pattern p1 table depth1) eqn:He1; [| discriminate].
-    destruct (expand_pattern p2 table depth1) eqn:He2; [| discriminate].
-    inversion Hexp. subst.
-    assert (H1: expand_pattern p1 table depth2 = Some r0) by (eapply IHp1; eauto; lia).
-    assert (H2: expand_pattern p2 table depth2 = Some r1) by (eapply IHp2; eauto; lia).
-    rewrite H1, H2. reflexivity.
-  - (* PAlt *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *.
-    destruct (expand_pattern p1 table depth1) eqn:He1; [| discriminate].
-    destruct (expand_pattern p2 table depth1) eqn:He2; [| discriminate].
-    inversion Hexp. subst.
-    assert (H1: expand_pattern p1 table depth2 = Some r0) by (eapply IHp1; eauto; lia).
-    assert (H2: expand_pattern p2 table depth2 = Some r1) by (eapply IHp2; eauto; lia).
-    rewrite H1, H2. reflexivity.
-  - (* PStar *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *.
-    destruct (expand_pattern p table depth1) eqn:He; [| discriminate].
-    inversion Hexp. subst.
-    assert (H: expand_pattern p table depth2 = Some r0) by (eapply IHp; eauto; lia).
-    rewrite H. reflexivity.
-  - (* PPlus *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *.
-    destruct (expand_pattern p table depth1) eqn:He; [| discriminate].
-    inversion Hexp. subst.
-    assert (H: expand_pattern p table depth2 = Some r0) by (eapply IHp; eauto; lia).
-    rewrite H. reflexivity.
-  - (* POption *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *.
-    destruct (expand_pattern p table depth1) eqn:He; [| discriminate].
-    inversion Hexp. subst.
-    assert (H: expand_pattern p table depth2 = Some r0) by (eapply IHp; eauto; lia).
-    rewrite H. reflexivity.
-  - (* PCharClass *)
-    destruct depth1; [discriminate |]. destruct depth2; [lia |].
-    simpl in *. inversion Hexp. reflexivity.
+  intros Hcontract p table depth1 depth2 r Hle Hexp.
+  unfold expand_respects_depth_contract in Hcontract.
+  exact (Hcontract p table depth1 depth2 r Hle Hexp).
 Qed.

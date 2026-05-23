@@ -1,13 +1,13 @@
 #![cfg_attr(
-    not(all(target_arch = "x86_64", feature = "simd")),
+    not(target_arch = "x86_64"),
     allow(unused_variables)
 )]
 
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 use criterion::BenchmarkId;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 use liblevenshtein::transducer::simd::find_edge_label_simd;
 
 /// Benchmark SIMD edge lookup vs scalar across various edge counts.
@@ -15,7 +15,7 @@ use liblevenshtein::transducer::simd::find_edge_label_simd;
 /// This measures the raw performance of the SIMD edge lookup function
 /// compared to scalar linear search, validating our threshold choices.
 fn bench_edge_lookup_simd_vs_scalar(c: &mut Criterion) {
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     {
         let mut group = c.benchmark_group("edge_lookup_simd_vs_scalar");
 
@@ -66,7 +66,7 @@ fn bench_edge_lookup_simd_vs_scalar(c: &mut Criterion) {
         group.finish();
     }
 
-    #[cfg(not(all(target_arch = "x86_64", feature = "simd")))]
+    #[cfg(not(target_arch = "x86_64"))]
     {
         println!("SIMD benchmarks require x86_64 architecture and simd feature");
     }
@@ -77,7 +77,7 @@ fn bench_edge_lookup_simd_vs_scalar(c: &mut Criterion) {
 /// This validates that SIMD maintains consistent performance regardless of
 /// where the target label appears in the sorted edge list.
 fn bench_edge_lookup_position_variance(c: &mut Criterion) {
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     {
         let mut group = c.benchmark_group("edge_lookup_position");
 
@@ -112,7 +112,7 @@ fn bench_edge_lookup_position_variance(c: &mut Criterion) {
 /// This simulates actual dictionary traversal where nodes have different
 /// numbers of edges. Most nodes have 1-5 edges, but some have 10+.
 fn bench_edge_lookup_realistic_workload(c: &mut Criterion) {
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     {
         let mut group = c.benchmark_group("edge_lookup_realistic");
 

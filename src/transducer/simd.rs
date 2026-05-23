@@ -24,7 +24,7 @@ use std::arch::x86_64::*;
 ///
 /// # Returns
 /// Slice of booleans indicating matches at each position in window.
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 pub fn characteristic_vector_simd<'a>(
     dict_char: u8,
     query: &[u8],
@@ -155,24 +155,12 @@ unsafe fn characteristic_vector_sse41<'a>(
     &buffer[..len]
 }
 
-/// Non-x86_64 platforms use scalar implementation
-#[cfg(not(all(target_arch = "x86_64", feature = "simd")))]
-pub fn characteristic_vector_simd<'a>(
-    dict_char: u8,
-    query: &[u8],
-    window_size: usize,
-    offset: usize,
-    buffer: &'a mut [bool; 8],
-) -> &'a [bool] {
-    characteristic_vector_scalar(dict_char, query, window_size.min(8), offset, buffer)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_characteristic_vector_simd() {
         let test_cases = vec![
             // (dict_char, query, window_size, offset, expected)
@@ -263,7 +251,7 @@ mod tests {
 /// - AVX2: Processes 8 pairs simultaneously (3-4x speedup)
 /// - SSE4.1: Processes 4 pairs simultaneously (2-3x speedup)
 /// - Scalar fallback for count < 4 or when SIMD unavailable
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 pub fn check_subsumption_simd<'a>(
     lhs_term_indices: &[usize],
     lhs_errors: &[usize],
@@ -475,32 +463,13 @@ unsafe fn check_subsumption_sse41<'a>(
     &results[..count]
 }
 
-/// Non-x86_64 platforms use scalar implementation
-#[cfg(not(all(target_arch = "x86_64", feature = "simd")))]
-pub fn check_subsumption_simd<'a>(
-    lhs_term_indices: &[usize],
-    lhs_errors: &[usize],
-    rhs_term_indices: &[usize],
-    rhs_errors: &[usize],
-    count: usize,
-    results: &'a mut [bool; 8],
-) -> &'a [bool] {
-    check_subsumption_scalar(
-        lhs_term_indices,
-        lhs_errors,
-        rhs_term_indices,
-        rhs_errors,
-        count,
-        results,
-    )
-}
 
 #[cfg(test)]
 mod subsumption_tests {
     use super::*;
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_subsumption_simd_basic() {
         // Test cases from position.rs tests
         let test_cases = vec![
@@ -548,7 +517,7 @@ mod subsumption_tests {
     }
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_subsumption_simd_batch() {
         // Test processing multiple pairs at once (AVX2: 8 pairs)
         let lhs_indices = [5, 5, 3, 3, 10, 10, 0, 0];
@@ -577,7 +546,7 @@ mod subsumption_tests {
     }
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_subsumption_simd_vs_scalar() {
         // Comprehensive comparison of SIMD vs scalar implementation
         let test_cases = vec![
@@ -617,7 +586,7 @@ mod subsumption_tests {
     }
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_subsumption_simd_edge_cases() {
         // Test edge cases: large indices, zero errors, etc.
 
@@ -679,7 +648,7 @@ mod subsumption_tests {
     }
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_subsumption_simd_partial_batches() {
         // Test with count < 8 (SSE4.1 path or scalar)
         let lhs_indices = [5, 5, 3, 3, 10];
@@ -764,7 +733,7 @@ mod subsumption_tests {
 /// - AVX2: Processes 8 values with horizontal minimum (~5-7 ns)
 /// - SSE4.1: Processes 4-8 values with horizontal minimum (~4-6 ns)
 /// - Scalar fallback for count < 4 or when SIMD unavailable
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 pub fn find_minimum_simd(values: &[usize], count: usize) -> usize {
     debug_assert!(count > 0 && count <= 8, "count must be in range 1..=8");
     debug_assert!(values.len() >= count);
@@ -869,18 +838,12 @@ unsafe fn find_minimum_sse41(values: &[usize], count: usize) -> usize {
     min_val
 }
 
-/// Non-x86_64 platforms use scalar implementation
-#[cfg(not(all(target_arch = "x86_64", feature = "simd")))]
-pub fn find_minimum_simd(values: &[usize], count: usize) -> usize {
-    find_minimum_scalar(values, count)
-}
-
 #[cfg(test)]
 mod minimum_tests {
     use super::*;
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_find_minimum_simd_basic() {
         // Test cases: (values, count, expected_min)
         let test_cases = vec![
@@ -912,7 +875,7 @@ mod minimum_tests {
     }
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_find_minimum_simd_vs_scalar() {
         // Comprehensive comparison of SIMD vs scalar
         let test_cases = vec![
@@ -938,7 +901,7 @@ mod minimum_tests {
     }
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_find_minimum_edge_cases() {
         // Edge case: All values the same
         let values = vec![42, 42, 42, 42, 42, 42, 42, 42];
@@ -961,7 +924,7 @@ mod minimum_tests {
     }
 
     #[test]
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     fn test_find_minimum_real_world() {
         // Simulate real error counts from Levenshtein automaton positions
         // Typical state might have 2-5 positions with errors in range 0-10
@@ -1135,7 +1098,7 @@ mod minimum_tests {
 /// assert_eq!(find_edge_label_simd(&edges, b'e'), Some(2));
 /// assert_eq!(find_edge_label_simd(&edges, b'z'), None);
 /// ```
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 pub fn find_edge_label_simd<T>(edges: &[(u8, T)], target_label: u8) -> Option<usize> {
     let count = edges.len();
 
@@ -1190,7 +1153,7 @@ fn find_edge_label_scalar<T>(edges: &[(u8, T)], target_label: u8) -> Option<usiz
 ///
 /// Requires SSE4.1 CPU feature. Caller must verify with
 /// `is_x86_feature_detected!("sse4.1")` before calling.
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "sse4.1")]
 unsafe fn find_edge_label_sse41<T>(
     edges: &[(u8, T)],
@@ -1257,7 +1220,7 @@ unsafe fn find_edge_label_sse41<T>(
 /// dominates. Kept for future optimization when pre-extracted label arrays
 /// are implemented. See docs/BATCH2B_PERFORMANCE_ANALYSIS.md for details.
 #[allow(dead_code)]
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 unsafe fn find_edge_label_avx2<T>(
     edges: &[(u8, T)],
@@ -1294,12 +1257,6 @@ unsafe fn find_edge_label_avx2<T>(
     }
 
     None
-}
-
-// Provide a non-SIMD version for when the simd feature is disabled
-#[cfg(not(all(target_arch = "x86_64", feature = "simd")))]
-pub fn find_edge_label_simd<T>(edges: &[(u8, T)], target_label: u8) -> Option<usize> {
-    edges.iter().position(|(label, _)| *label == target_label)
 }
 
 #[cfg(test)]

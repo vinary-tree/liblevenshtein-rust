@@ -18,15 +18,16 @@ From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 
-(** * Axioms for Symmetry Property *)
+(** * Contract for Symmetry Property *)
 
 (** The key insight is that reversing all operations in an optimal trace
     gives a trace of equal cost for the reversed input pair.
     This axiom captures the semantic property that the DP computation
     correctly reflects this trace bijection. *)
 
-Axiom msm_symmetric_nonempty : forall x xs y ys cfg,
-  msm_distance (x :: xs) (y :: ys) cfg == msm_distance (y :: ys) (x :: xs) cfg.
+Definition msm_symmetric_nonempty_contract : Prop :=
+  forall x xs y ys cfg,
+    msm_distance (x :: xs) (y :: ys) cfg == msm_distance (y :: ys) (x :: xs) cfg.
 
 (** * Symmetry of Base Operations *)
 
@@ -181,10 +182,10 @@ Proof.
 Qed.
 
 (** We state symmetry in terms of the existence of equal-cost traces *)
-Theorem msm_symmetric : forall X Y cfg,
+Theorem msm_symmetric : forall (contracts : msm_symmetric_nonempty_contract) X Y cfg,
   msm_distance X Y cfg == msm_distance Y X cfg.
 Proof.
-  intros X Y cfg.
+  intros contracts X Y cfg.
   (* The proof proceeds by showing that for any optimal trace from X to Y,
      its reversal is a valid trace from Y to X with the same cost.
      Since MSM takes the minimum over all traces, symmetry follows. *)
@@ -265,5 +266,5 @@ Proof.
        - Trace reversal preserves cost *)
 
     (* Use the axiom for non-empty case *)
-    apply msm_symmetric_nonempty.
+    apply contracts.
 Qed.

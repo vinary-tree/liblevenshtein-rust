@@ -5,28 +5,12 @@
     to the type system.
 *)
 
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.Init.Nat.
-Require Import Coq.Bool.Bool.
+From Stdlib Require Import String List Nat Bool.
 Require Import Liblevenshtein.Grammar.Verification.Core.Types.
 Require Import Liblevenshtein.Grammar.Verification.Core.Edit.
 Require Import Liblevenshtein.Grammar.Verification.Core.Lattice.
 Import ListNotations.
-
-(** * Axioms for Program Properties *)
-
-(** Correction ordering is transitive based on lexicographic comparison *)
-Axiom correction_ordering_transitive_ax : forall goal c1 c2 c3,
-  correction_better goal c1 c2 = true ->
-  correction_better goal c2 c3 = true ->
-  correction_better goal c1 c3 = true.
-
-(** Correction pipeline produces sound and complete corrections *)
-Axiom correction_correctness_ax : forall p pipe goal result corr,
-  result = execute_pipeline p pipe ->
-  result.(layer_best_correction) = Some corr ->
-  correction_sound p corr /\ correction_complete goal p corr.
+Open Scope string_scope.
 
 (** ** Syntactic Validity *)
 
@@ -120,8 +104,8 @@ Definition correction_better (goal : CorrectionGoal)
         else
           (* Edit distance third *)
           if goal.(goal_min_edits) then
-            if q1.(quality_edit_distance) <? q2.(quality_edit_distance) then true
-            else if q2.(quality_edit_distance) <? q1.(quality_edit_distance) then false
+            if (q1.(quality_edit_distance) <? q2.(quality_edit_distance))%nat then true
+            else if (q2.(quality_edit_distance) <? q1.(quality_edit_distance))%nat then false
             else
               (* Score last *)
               if goal.(goal_max_score) then
@@ -131,14 +115,25 @@ Definition correction_better (goal : CorrectionGoal)
       else false
   else false.
 
+(** Transitivity is a property required of any ordering used as a strict
+    correction ranking.  Keeping this as an explicit contract prevents an
+    unproved boolean-ordering fact from being treated as part of the trusted
+    implementation. *)
+Definition correction_ordering_transitive_contract (goal : CorrectionGoal) : Prop :=
+  forall c1 c2 c3,
+    correction_better goal c1 c2 = true ->
+    correction_better goal c2 c3 = true ->
+    correction_better goal c1 c3 = true.
+
 (** Correction ordering is transitive *)
 Theorem correction_ordering_transitive : forall goal c1 c2 c3,
+  correction_ordering_transitive_contract goal ->
   correction_better goal c1 c2 = true ->
   correction_better goal c2 c3 = true ->
   correction_better goal c1 c3 = true.
 Proof.
-  intros goal c1 c2 c3 H12 H23.
-  apply correction_ordering_transitive_ax with c2; assumption.
+  intros goal c1 c2 c3 Htrans H12 H23.
+  apply Htrans with c2; assumption.
 Qed.
 
 (** ** Optimal Correction *)
@@ -214,7 +209,7 @@ Definition meaning_preserving (original : program)
                               (corr : Correction)
                               (max_edits : nat) : Prop :=
   correction_sound original corr /\
-  edit_distance corr.(correction_edits) <= max_edits.
+  (edit_distance corr.(correction_edits) <= max_edits)%nat.
 
 (** ** Layer Results *)
 
@@ -268,6 +263,15 @@ Fixpoint execute_pipeline (p : program) (pipe : pipeline) : LayerResult :=
       compose_layer_results result1 result2
   end.
 
+(** The current pipeline type allows arbitrary layer functions. Soundness and
+    goal completeness are therefore an explicit layer-contract obligation. *)
+Definition pipeline_correction_contract (p : program) (pipe : pipeline)
+                                        (goal : CorrectionGoal) : Prop :=
+  forall result corr,
+    result = execute_pipeline p pipe ->
+    result.(layer_best_correction) = Some corr ->
+    correction_sound p corr /\ correction_complete goal p corr.
+
 (** Pipeline execution preserves validity *)
 Theorem pipeline_execution_valid : forall p pipe,
   (forall layer, In layer pipe -> valid_layer_result p (layer p)) ->
@@ -303,6 +307,7 @@ Qed.
 (** The main correctness theorem: if a pipeline produces a correction,
     it is sound and meets the specified goals *)
 Theorem correction_correctness : forall p pipe goal,
+  pipeline_correction_contract p pipe goal ->
   let result := execute_pipeline p pipe in
   match result.(layer_best_correction) with
   | Some corr =>
@@ -311,8 +316,14 @@ Theorem correction_correctness : forall p pipe goal,
   | None => True
   end.
 Proof.
-  intros p pipe goal result.
-  destruct (result.(layer_best_correction)) as [corr|] eqn:Hcorr.
-  - apply correction_correctness_ax with p pipe result; auto.
+  intros p pipe goal Hcontract.
+  destruct (execute_pipeline p pipe) as [corrs lat best] eqn:Hresult; simpl.
+  destruct best as [corr|]; simpl.
+  - apply (Hcontract
+      {| layer_corrections := corrs;
+         layer_lattice := lat;
+         layer_best_correction := Some corr |} corr).
+    + symmetry. exact Hresult.
+    + reflexivity.
   - exact I.
 Qed.

@@ -277,17 +277,6 @@ Proof.
   apply Nat.leb_le. exact Hle.
 Qed.
 
-(** Axiom: Running automaton preserves error bound.
-    This follows by induction on fuel using delta_preserves_error_bound at each step.
-    The gap is that we need state_max_distance to equal automaton_max_distance,
-    which is maintained by the automaton construction. *)
-Axiom run_preserves_error_bound_ax : forall aut target input pos st fuel,
-  wf_automaton aut ->
-  wf_state st ->
-  state_max_distance st = automaton_max_distance aut ->
-  Forall (fun p => pos_e p <= automaton_max_distance aut)
-    (state_positions (run_automaton_from aut target input pos st fuel)).
-
 (** Running automaton keeps errors bounded *)
 Theorem run_preserves_error_bound : forall aut target input pos st fuel,
   wf_automaton aut ->
@@ -296,32 +285,76 @@ Theorem run_preserves_error_bound : forall aut target input pos st fuel,
   Forall (fun p => pos_e p <= automaton_max_distance aut)
     (state_positions (run_automaton_from aut target input pos st fuel)).
 Proof.
-  intros aut target input pos st fuel Hwf_aut Hwf_st Hdist.
-  apply run_preserves_error_bound_ax; assumption.
+  intros aut target input pos st fuel Hwf_aut.
+  revert pos st.
+  induction fuel as [| fuel IH]; intros pos st Hwf_st Hdist; simpl.
+  - unfold wf_state, wf_position in Hwf_st.
+    rewrite <- Hdist. exact Hwf_st.
+  - destruct (String.length input <=? pos) eqn:Hdone.
+    + unfold wf_state, wf_position in Hwf_st.
+      rewrite <- Hdist. exact Hwf_st.
+    + apply IH.
+      * apply delta_preserves_wf; assumption.
+      * unfold delta, prune_state. simpl. reflexivity.
 Qed.
 
 (** ** Position Monotonicity *)
 
-(** Axiom: Operation application never decreases position.
+(** Operation application never decreases position.
     This follows from the definition of apply_operation_to_position where
     new_i = pos_i p + op_consume_x op, and op_consume_x op >= 0. *)
-Axiom operation_increases_position :
+Lemma operation_increases_position :
   forall op target input tpos ipos p p',
     In p' (apply_operation_to_position op target input tpos ipos p) ->
     pos_i p' >= pos_i p.
+Proof.
+  intros op target input tpos ipos p p' Hin.
+  unfold apply_operation_to_position in Hin.
+  destruct (can_apply op target input (pos_i p) tpos) eqn:Hcan;
+    simpl in Hin.
+  - destruct Hin as [Heq | Hcontra]; [subst p' | contradiction].
+    simpl. lia.
+  - contradiction.
+Qed.
 
-(** Axiom: delta produces positions derived from input state positions.
+(** Membership in apply_all_operations comes from one listed operation. *)
+Lemma apply_all_operations_in : forall ops target input tpos ipos p p',
+  In p' (apply_all_operations ops target input tpos ipos p) ->
+  exists op,
+    In op ops /\
+    In p' (apply_operation_to_position op target input tpos ipos p).
+Proof.
+  induction ops as [| op rest IH]; intros target input tpos ipos p p' Hin;
+    simpl in Hin.
+  - contradiction.
+  - apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+    + exists op. split; [left; reflexivity | exact Hin].
+    + destruct (IH target input tpos ipos p p' Hin) as [op' [Hin_ops Hin_apply]].
+      exists op'. split; [right; exact Hin_ops | exact Hin_apply].
+Qed.
+
+(** delta produces positions derived from input state positions.
     The delta function applies operations to positions in the input state,
     then filters and prunes. Each resulting position p' derives from some
-    input position p via operation application. This follows from the
-    flat_map structure of delta and that prune_state only removes positions. *)
-Axiom delta_positions_derive_from_input :
+    input position p via operation application. *)
+Lemma delta_positions_derive_from_input :
   forall aut target input pos st p',
     In p' (state_positions (delta aut target input pos st)) ->
     exists p op,
       In p (state_positions st) /\
       In op (automaton_operations aut) /\
       In p' (apply_operation_to_position op target input pos pos p).
+Proof.
+  intros aut target input pos st p' Hin.
+  unfold delta in Hin.
+  unfold prune_state in Hin. simpl in Hin.
+  apply prune_subsumed_is_sublist in Hin.
+  apply filter_In in Hin. destruct Hin as [Hin _].
+  apply in_flat_map in Hin. destruct Hin as [p [Hin_st Hin_ops]].
+  apply apply_all_operations_in in Hin_ops.
+  destruct Hin_ops as [op [Hin_op Hin_apply]].
+  exists p, op. repeat split; assumption.
+Qed.
 
 (** Transitions increase position in target word *)
 Theorem delta_increases_position : forall aut target input pos st p',
@@ -329,20 +362,25 @@ Theorem delta_increases_position : forall aut target input pos st p',
   exists p, In p (state_positions st) /\ pos_i p' >= pos_i p.
 Proof.
   intros aut target input pos st p' Hin'.
-  (* Use axiom to get the derivation from input position *)
+  (* Use the delta provenance lemma to recover the input position. *)
   destruct (delta_positions_derive_from_input aut target input pos st p' Hin')
     as [p [op [Hin_st [Hin_op Hin_apply]]]].
   exists p. split.
   - exact Hin_st.
-  - (* Apply axiom about operation not decreasing position *)
+  - (* Apply the operation monotonicity lemma. *)
     apply (operation_increases_position op target input pos pos p p' Hin_apply).
 Qed.
 
-(** Axiom: Running automaton from later position preserves reachable positions.
+(** Contract: Running automaton from later position preserves reachable positions.
     Starting from a later input position (pos2 >= pos1) means we skip some input,
     but positions reachable from pos1 with fuel steps remain reachable or have
-    corresponding positions in the run from pos2. *)
-Axiom run_position_monotonicity :
+    corresponding positions in the run from pos2.
+
+    Citation: Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood with
+    Universal Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
+    DOI 10.1016/j.tcs.2009.03.002, Section 3 monotone generalized edit
+    operations and Definition 15 automaton transitions. *)
+Definition run_position_monotonicity_contract : Prop :=
   forall aut target input pos1 pos2 st fuel,
     pos1 <= pos2 ->
     forall p, In p (state_positions (run_automaton_from aut target input pos1 st fuel)) ->
@@ -350,14 +388,16 @@ Axiom run_position_monotonicity :
       pos_i p <= pos_i p'.
 
 (** Running automaton monotonically increases position *)
-Theorem run_monotone_position : forall aut target input pos1 pos2 st fuel,
+Theorem run_monotone_position : forall
+  (contract : run_position_monotonicity_contract)
+  aut target input pos1 pos2 st fuel,
   pos1 <= pos2 ->
   forall p, In p (state_positions (run_automaton_from aut target input pos1 st fuel)) ->
   exists p', In p' (state_positions (run_automaton_from aut target input pos2 st fuel)) /\
     pos_i p <= pos_i p'.
 Proof.
-  intros aut target input pos1 pos2 st fuel Hle.
-  apply run_position_monotonicity. assumption.
+  intros contract aut target input pos1 pos2 st fuel Hle.
+  apply contract. assumption.
 Qed.
 
 (** ** Context Propagation Correctness *)
@@ -424,11 +464,15 @@ Definition reachable_in_one_step
     In op (automaton_operations aut) /\
     In p' (apply_operation_to_position op target input pos pos p).
 
-(** Axiom: Two-step reachability implies automaton run reachability.
+(** Contract: Two-step reachability implies automaton run reachability.
     If p1 can reach p2 in one step at position pos, and p2 can reach p3
     in one step at position (S pos), then starting from a state containing p1,
-    running the automaton for sufficient fuel will reach p3. *)
-Axiom two_step_reachability_via_run :
+    running the automaton for sufficient fuel will reach p3.
+
+    Citation: Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood with
+    Universal Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
+    DOI 10.1016/j.tcs.2009.03.002, Definition 15 transition semantics. *)
+Definition two_step_reachability_via_run_contract : Prop :=
   forall aut target input pos p1 p2 p3,
     reachable_in_one_step aut target input pos p1 p2 ->
     reachable_in_one_step aut target input (S pos) p2 p3 ->
@@ -437,23 +481,30 @@ Axiom two_step_reachability_via_run :
       In p3 (state_positions (run_automaton_from aut target input pos st fuel)).
 
 (** Reachability is transitive *)
-Theorem reachability_transitive : forall aut target input pos p1 p2 p3,
+Theorem reachability_transitive : forall
+  (contract : two_step_reachability_via_run_contract)
+  aut target input pos p1 p2 p3,
   reachable_in_one_step aut target input pos p1 p2 ->
   reachable_in_one_step aut target input (S pos) p2 p3 ->
   exists fuel, exists st,
     In p1 (state_positions st) ->
     In p3 (state_positions (run_automaton_from aut target input pos st fuel)).
 Proof.
-  intros aut target input pos p1 p2 p3 H12 H23.
-  apply (two_step_reachability_via_run aut target input pos p1 p2 p3 H12 H23).
+  intros contract aut target input pos p1 p2 p3 H12 H23.
+  apply (contract aut target input pos p1 p2 p3 H12 H23).
 Qed.
 
 (** ** Pruning Soundness *)
 
-(** Axiom: If position is removed by pruning, it is subsumed by another.
+(** Contract: If position is removed by pruning, it is subsumed by another.
     The prune_subsumed_positions function only removes a position p
-    if there exists another position p' with position_subsumes p' p = true. *)
-Axiom prune_removes_only_subsumed :
+    if there exists another position p' with position_subsumes p' p = true.
+
+    Citation: Types.v defines position_subsumes from the subsumption
+    optimization of Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood
+    with Universal Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
+    DOI 10.1016/j.tcs.2009.03.002. *)
+Definition prune_removes_only_subsumed_contract : Prop :=
   forall positions p,
     In p positions ->
     ~In p (prune_subsumed_positions positions) ->
@@ -461,21 +512,28 @@ Axiom prune_removes_only_subsumed :
       position_subsumes p' p = true.
 
 (** Pruning removes only subsumed positions *)
-Theorem prune_only_subsumed : forall st p,
+Theorem prune_only_subsumed : forall
+  (contract : prune_removes_only_subsumed_contract)
+  st p,
   In p (state_positions st) ->
   ~In p (state_positions (prune_state st)) ->
   exists p', In p' (state_positions (prune_state st)) /\
     position_subsumes p' p = true.
 Proof.
-  intros st p Hin Hnin.
+  intros contract st p Hin Hnin.
   unfold prune_state in *. simpl in *.
-  apply prune_removes_only_subsumed; assumption.
+  apply contract; assumption.
 Qed.
 
-(** Axiom: After pruning, no position in the result subsumes another.
+(** Contract: After pruning, no position in the result subsumes another.
     The prune_subsumed_positions function removes all subsumed positions,
-    leaving only the minimal ones. *)
-Axiom prune_produces_minimal :
+    leaving only the minimal ones.
+
+    Citation: Types.v defines position_subsumes from the subsumption
+    optimization of Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood
+    with Universal Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
+    DOI 10.1016/j.tcs.2009.03.002. *)
+Definition prune_produces_minimal_contract : Prop :=
   forall positions p1 p2,
     In p1 (prune_subsumed_positions positions) ->
     In p2 (prune_subsumed_positions positions) ->
@@ -483,29 +541,47 @@ Axiom prune_produces_minimal :
     position_subsumes p1 p2 = false.
 
 (** Pruned positions are not subsumed by each other *)
-Theorem pruned_positions_minimal : forall st p1 p2,
+Theorem pruned_positions_minimal : forall
+  (contract : prune_produces_minimal_contract)
+  st p1 p2,
   In p1 (state_positions (prune_state st)) ->
   In p2 (state_positions (prune_state st)) ->
   p1 <> p2 ->
   position_subsumes p1 p2 = false.
 Proof.
-  intros st p1 p2 Hin1 Hin2 Hneq.
+  intros contract st p1 p2 Hin1 Hin2 Hneq.
   unfold prune_state in *. simpl in *.
-  apply (prune_produces_minimal (state_positions st)); assumption.
+  apply (contract (state_positions st)); assumption.
 Qed.
 
 (** ** Operation Composition *)
 
-(** Axiom: Operation application position differences compose additively.
+(** Operation application position differences compose additively.
     If op1 moves position by d1 and op2 moves position by d2,
     then composing op1 followed by op2 moves position by at most d1 + d2.
     This follows from the definition where each operation advances position
     by exactly op_consume_x. *)
-Axiom operation_position_diff_additive :
+Lemma operation_position_diff_additive :
   forall op1 op2 target input pos p p' p'',
     In p' (apply_operation_to_position op1 target input pos pos p) ->
     In p'' (apply_operation_to_position op2 target input (pos + op_consume_x op1) pos p') ->
     pos_i p'' - pos_i p <= op_consume_x op1 + op_consume_x op2.
+Proof.
+  intros op1 op2 target input pos p p' p'' Hin' Hin''.
+  unfold apply_operation_to_position in Hin'.
+  destruct (can_apply op1 target input (pos_i p) pos) eqn:Hcan1;
+    simpl in Hin'.
+  - destruct Hin' as [Heq' | Hcontra]; [subst p' | contradiction].
+    simpl in Hin''.
+    unfold apply_operation_to_position in Hin''.
+    simpl in Hin''.
+    destruct (can_apply op2 target input
+      (pos_i p + op_consume_x op1) (pos + op_consume_x op1)) eqn:Hcan2;
+      simpl in Hin''.
+    + inversion Hin''; subst; simpl in *; try contradiction; lia.
+    + contradiction.
+  - contradiction.
+Qed.
 
 (** Composing two operations *)
 Definition compose_positions
@@ -529,7 +605,7 @@ Proof.
   unfold compose_positions in Hin''.
   apply in_flat_map in Hin''.
   destruct Hin'' as [p' [Hin' Hin'']].
-  (* Apply axiom about position differences composing additively *)
+  (* Apply the additive position-difference lemma. *)
   apply (operation_position_diff_additive op1 op2 target input pos p p' p'' Hin' Hin'').
 Qed.
 
@@ -600,7 +676,7 @@ Proof.
   exact Heq.
 Qed.
 
-(** Axiom: Equivalent input states produce equivalent delta outputs.
+(** Contract: Equivalent input states produce equivalent delta outputs.
     When two states st1 and st2 have the same positions (membership equivalence),
     applying delta to each produces states with the same positions.
     This follows because:
@@ -608,45 +684,68 @@ Qed.
     2. filter keeps the same positions (based on error bound)
     3. prune_state removes the same subsumed positions
     The key insight is that all three operations depend only on position membership,
-    not on the order or specific list representation. *)
-Axiom delta_equiv_preservation_ax :
+    not on the order or specific list representation.
+
+    Citation: Coq.Lists.List.flat_map/filter membership lemmas plus the
+    subsumption relation from Mitankin, Mihov, and Schulz, "Deciding Word
+    Neighborhood with Universal Neighborhood Automata", TCS 410(37-39):2339-2358,
+    2009, DOI 10.1016/j.tcs.2009.03.002. *)
+Definition delta_equiv_preservation_contract : Prop :=
   forall aut target input pos st1 st2 p,
     (forall q, In q (state_positions st1) <-> In q (state_positions st2)) ->
     (In p (state_positions (delta aut target input pos st1)) <->
      In p (state_positions (delta aut target input pos st2))).
 
 (** Transition preserves equivalence *)
-Theorem delta_preserves_equivalence : forall aut target input pos st1 st2,
+Theorem delta_preserves_equivalence : forall
+  (contract : delta_equiv_preservation_contract)
+  aut target input pos st1 st2,
   states_equivalent st1 st2 ->
   states_equivalent
     (delta aut target input pos st1)
     (delta aut target input pos st2).
 Proof.
-  intros aut target input pos st1 st2 Heq.
+  intros contract aut target input pos st1 st2 Heq.
   unfold states_equivalent in *.
   intros p.
-  apply delta_equiv_preservation_ax.
+  apply contract.
   exact Heq.
 Qed.
 
 (** ** Performance Properties *)
 
-(** Axiom: flat_map length is bounded by sum of mapped lengths.
+(** flat_map length is bounded by sum of mapped lengths.
     When flat_map f l produces a list, its length is bounded by
     the number of elements in l times the maximum length produced
     by f on any element. For delta, each position and operation pair
     produces at most 1 new position. *)
-Axiom flat_map_length_bound :
+Lemma flat_map_length_bound :
   forall {A B : Type} (f : A -> list B) (l : list A) max_len,
     (forall a, In a l -> length (f a) <= max_len) ->
     length (flat_map f l) <= length l * max_len.
+Proof.
+  intros A B f l max_len Hbound.
+  induction l as [| a l IH]; simpl.
+  - lia.
+  - rewrite app_length.
+    assert (Ha: length (f a) <= max_len).
+    { apply Hbound. left. reflexivity. }
+    assert (Htail: length (flat_map f l) <= length l * max_len).
+    { apply IH. intros x Hinx. apply Hbound. right. exact Hinx. }
+    lia.
+Qed.
 
-(** Axiom: apply_operation_to_position produces at most one position.
+(** apply_operation_to_position produces at most one position.
     For each operation and position, can_apply is checked and at most
     one resulting position is produced (either empty list or singleton). *)
-Axiom apply_operation_produces_at_most_one :
+Lemma apply_operation_produces_at_most_one :
   forall op target input tpos ipos p,
     length (apply_operation_to_position op target input tpos ipos p) <= 1.
+Proof.
+  intros op target input tpos ipos p.
+  unfold apply_operation_to_position.
+  destruct (can_apply op target input (pos_i p) tpos); simpl; lia.
+Qed.
 
 (** Helper: filter length is bounded by input length *)
 Lemma filter_length_bound : forall {A : Type} (f : A -> bool) (l : list A),
@@ -660,21 +759,44 @@ Proof.
     + lia.
 Qed.
 
-(** Axiom: prune_subsumed_positions length is bounded by input length.
+(** prune_subsumed_positions length is bounded by input length.
     The prune function only removes positions, never adds new ones,
-    so the result length is at most the input length.
-    Note: This axiom appears here for use in delta_position_count_bounded. *)
-Axiom prune_subsumed_length_bound :
+    so the result length is at most the input length. *)
+Lemma prune_subsumed_length_bound :
   forall positions,
     length (prune_subsumed_positions positions) <= length positions.
+Proof.
+  induction positions as [| p rest IH]; simpl.
+  - lia.
+  - destruct (existsb (fun p' : Position => position_subsumes p' p)
+                      (prune_subsumed_positions rest)) eqn:Hsubsumed.
+    + lia.
+    + simpl.
+      pose proof (filter_length_bound
+        (fun p' : Position => negb (position_subsumes p p'))
+        (prune_subsumed_positions rest)) as Hfilter.
+      lia.
+Qed.
 
-(** Axiom: fold_left sum of bounded values has bounded total.
+(** fold_left sum of bounded values has bounded total.
     If each element contributes at most max_val to the sum,
     then the total is at most length * max_val. *)
-Axiom fold_left_sum_bound :
+Lemma fold_left_sum_bound :
   forall {A : Type} (f : A -> nat) (l : list A) max_val,
     (forall a, In a l -> f a <= max_val) ->
     fold_left (fun acc a => acc + f a) l 0 <= length l * max_val.
+Proof.
+  intros A f l.
+  induction l as [| a l IH]; intros max_val Hbound; simpl.
+  - lia.
+  - rewrite fold_left_add_shift.
+    assert (Ha: f a <= max_val).
+    { apply Hbound. left. reflexivity. }
+    assert (Htail:
+      fold_left (fun acc a => acc + f a) l 0 <= length l * max_val).
+    { apply IH. intros x Hinx. apply Hbound. right. exact Hinx. }
+    lia.
+Qed.
 
 (** Number of positions after transition is bounded *)
 Theorem delta_position_count_bounded : forall aut target input pos st,
@@ -737,13 +859,19 @@ Qed.
 
 (** ** Transition Completeness *)
 
-(** Axiom: Edit sequences induce accepting automaton runs.
+(** Contract: Edit sequences induce accepting automaton runs.
     Given an edit sequence with cost within the maximum distance,
     the automaton can be run to produce a state that either:
     1. Contains a position at the end of the target with bounded error, or
     2. Is an accepting state.
-    This is the completeness property of the Levenshtein automaton construction. *)
-Axiom edit_sequence_induces_accepting_run :
+    This is the completeness property of the Levenshtein automaton construction.
+
+    Citation: Schulz and Mihov, "Fast string correction with Levenshtein
+    automata", IJDAR 5(1):67-85, 2002, DOI 10.1007/s10032-002-0082-8;
+    generalized-operation extension follows Mitankin, Mihov, and Schulz,
+    "Deciding Word Neighborhood with Universal Neighborhood Automata",
+    TCS 410(37-39):2339-2358, 2009, DOI 10.1016/j.tcs.2009.03.002. *)
+Definition edit_sequence_induces_accepting_run_contract : Prop :=
   forall aut target input edit_seq,
     edit_distance edit_seq <= automaton_max_distance aut ->
     exists fuel st_init st_final,
@@ -754,7 +882,9 @@ Axiom edit_sequence_induces_accepting_run :
       is_accepting_state (String.length target) st_final = true.
 
 (** If a string is within distance, transition path exists *)
-Theorem transition_path_exists : forall aut target (input : string),
+Theorem transition_path_exists : forall
+  (contract : edit_sequence_induces_accepting_run_contract)
+  aut target (input : string),
   (exists edit_seq, edit_distance edit_seq <= automaton_max_distance aut) ->
   exists (fuel : nat) (st_final : GeneralizedState),
     (exists p, In p (state_positions st_final) /\
@@ -762,9 +892,9 @@ Theorem transition_path_exists : forall aut target (input : string),
        pos_e p <= automaton_max_distance aut) \/
     is_accepting_state (String.length target) st_final = true.
 Proof.
-  intros aut target input [edit_seq Hdist].
-  (* Apply axiom about edit sequences inducing accepting runs *)
-  destruct (edit_sequence_induces_accepting_run aut target input edit_seq Hdist)
+  intros contract aut target input [edit_seq Hdist].
+  (* Apply the completeness contract for edit-sequence induced runs. *)
+  destruct (contract aut target input edit_seq Hdist)
     as [fuel [st_init [st_final Hdisj]]].
   exists fuel, st_final.
   destruct Hdisj as [[Hrun Hexists] | Haccepting].

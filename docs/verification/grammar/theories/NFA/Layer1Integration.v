@@ -15,41 +15,38 @@ Definition layer1_with_phonetic (max_dist : nat) (use_phonetic : bool) :=
   then phonetic_automaton max_dist
   else standard_automaton max_dist.
 
-(** * Axioms for Layer 1 Integration *)
-
-(** Layer 1 with phonetic is complete: any phonetic edit sequence within
-    max_dist is accepted by the phonetic automaton. *)
-Axiom layer1_phonetic_completeness_ax : forall max_dist target input,
+Definition layer1_phonetic_completeness_contract : Prop := forall max_dist target input,
   (exists edits,
     Forall (fun op => In op phonetic_ops_phase1) edits /\
     edit_sequence_cost edits <= max_dist) ->
   accepts (phonetic_automaton max_dist) target input = true.
 
-(** Layer 1 is sound: acceptance implies an edit sequence exists. *)
-Axiom layer1_phonetic_soundness_ax : forall max_dist target input use_phonetic,
+Definition layer1_phonetic_soundness_contract : Prop := forall max_dist target input use_phonetic,
   accepts (layer1_with_phonetic max_dist use_phonetic) target input = true ->
   exists edits, edit_sequence_cost edits <= max_dist.
 
 (** Layer 1 completeness with phonetic flag *)
 Theorem layer1_phonetic_completeness : forall max_dist target input use_phonetic,
+  layer1_phonetic_completeness_contract ->
   use_phonetic = true ->
   (exists edits,
     Forall (fun op => In op phonetic_ops_phase1) edits /\
     edit_sequence_cost edits <= max_dist) ->
   accepts (layer1_with_phonetic max_dist use_phonetic) target input = true.
 Proof.
-  intros max_dist target input use_phonetic Hphon Hedits.
+  intros max_dist target input use_phonetic Hcontract Hphon Hedits.
   unfold layer1_with_phonetic. rewrite Hphon.
-  apply layer1_phonetic_completeness_ax. assumption.
+  apply Hcontract. assumption.
 Qed.
 
 (** Layer 1 soundness with phonetic flag *)
 Theorem layer1_phonetic_soundness : forall max_dist target input use_phonetic,
+  layer1_phonetic_soundness_contract ->
   accepts (layer1_with_phonetic max_dist use_phonetic) target input = true ->
   exists edits, edit_sequence_cost edits <= max_dist.
 Proof.
-  intros max_dist target input use_phonetic Hacc.
-  exact (layer1_phonetic_soundness_ax max_dist target input use_phonetic Hacc).
+  intros max_dist target input use_phonetic Hcontract Hacc.
+  exact (Hcontract max_dist target input use_phonetic Hacc).
 Qed.
 
 (** Lattice construction from NFA states *)

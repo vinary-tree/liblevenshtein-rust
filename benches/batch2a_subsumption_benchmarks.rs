@@ -1,13 +1,13 @@
 #![cfg_attr(
-    not(all(target_arch = "x86_64", feature = "simd")),
+    not(target_arch = "x86_64"),
     allow(unused_variables)
 )]
 
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 use criterion::{black_box, BenchmarkId};
 use criterion::{criterion_group, criterion_main, Criterion};
 
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 use liblevenshtein::transducer::simd::check_subsumption_simd;
 
 /// Benchmark subsumption checking with SIMD vs scalar
@@ -16,7 +16,7 @@ use liblevenshtein::transducer::simd::check_subsumption_simd;
 /// position subsumption checking, which is critical for the Standard algorithm's
 /// state insertion operation.
 fn bench_subsumption_simd_vs_scalar(c: &mut Criterion) {
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     {
         let mut group = c.benchmark_group("subsumption_simd_vs_scalar");
 
@@ -83,7 +83,7 @@ fn bench_subsumption_simd_vs_scalar(c: &mut Criterion) {
         group.finish();
     }
 
-    #[cfg(not(all(target_arch = "x86_64", feature = "simd")))]
+    #[cfg(not(target_arch = "x86_64"))]
     {
         println!("SIMD benchmarks require x86_64 architecture and simd feature");
     }
@@ -94,7 +94,7 @@ fn bench_subsumption_simd_vs_scalar(c: &mut Criterion) {
 /// This simulates the typical usage pattern: checking multiple candidate positions
 /// against existing state positions during state insertion.
 fn bench_subsumption_realistic_workload(c: &mut Criterion) {
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     {
         let mut group = c.benchmark_group("subsumption_realistic_workload");
 
@@ -173,7 +173,7 @@ fn bench_subsumption_realistic_workload(c: &mut Criterion) {
 /// This benchmark measures the performance of SIMD horizontal reduction
 /// for finding the minimum error count across positions in a state.
 fn bench_minimum_distance_simd(c: &mut Criterion) {
-    #[cfg(all(target_arch = "x86_64", feature = "simd"))]
+    #[cfg(target_arch = "x86_64")]
     {
         use liblevenshtein::transducer::simd::find_minimum_simd;
 

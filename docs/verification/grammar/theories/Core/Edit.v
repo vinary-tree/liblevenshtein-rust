@@ -1,86 +1,80 @@
 (** * Edit Operations and Levenshtein Distance
 
-    This module defines edit operations and proves properties about
-    Levenshtein distance, including optimality and triangle inequality.
+    This module defines grammar-level edit operations and connects the
+    grammar verification stack to the trusted core Levenshtein distance.
 *)
 
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Lists.List.
-Require Import Coq.Init.Nat.
-Require Import Coq.Arith.PeanoNat.
-Require Import Coq.Bool.Bool.
-Require Import Coq.omega.Omega.
+From Stdlib Require Import String Ascii List Nat PeanoNat Bool Lia.
+From Liblevenshtein.Core Require Import Core.Definitions.
+From Liblevenshtein.Core Require Import Core.LevDistance.
+From Liblevenshtein.Core Require Import Core.MetricProperties.
+From Liblevenshtein.Core Require Import Triangle.TriangleInequality.
 Require Import Liblevenshtein.Grammar.Verification.Core.Types.
+
 Import ListNotations.
 
-(** * Axioms for Edit Distance Properties *)
+(** ** String/List Bridges *)
 
-(** Levenshtein distance is symmetric - reversing source and target gives same distance *)
-Axiom levenshtein_symmetric_ax : forall s1 s2, levenshtein s1 s2 = levenshtein s2 s1.
+Lemma list_ascii_of_string_length : forall s,
+  List.length (list_ascii_of_string s) = String.length s.
+Proof.
+  induction s as [| c s IH]; simpl; [reflexivity | now rewrite IH].
+Qed.
 
-(** Triangle inequality for edit distance *)
-Axiom levenshtein_triangle_ax : forall s1 s2 s3,
-  levenshtein s1 s3 <= levenshtein s1 s2 + levenshtein s2 s3.
-
-(** Zero distance implies equality *)
-Axiom levenshtein_zero_eq_ax : forall s1 s2,
-  levenshtein s1 s2 = 0 -> s1 = s2.
-
-(** Equal strings have zero distance *)
-Axiom levenshtein_eq_zero_ax : forall s,
-  levenshtein s s = 0.
-
-(** Existence of optimal edit sequence - there always exists a sequence
-    that achieves the Levenshtein distance *)
-Axiom optimal_edit_exists_ax : forall s1 s2,
-  exists edits, optimal_edit_sequence s1 s2 edits.
-
-(** Composition of edit sequences is correct *)
-Axiom compose_edits_correct_ax : forall s1 s2 s3 e1 e2,
-  apply_edits s1 e1 = s2 ->
-  apply_edits s2 e2 = s3 ->
-  apply_edits s1 (compose_edits e1 e2) = s3.
-
-(** Upper bound on edit distance *)
-Axiom levenshtein_upper_bound_ax : forall s1 s2,
-  levenshtein s1 s2 <= max (length s1) (length s2).
-
-(** Lower bound on edit distance by length difference *)
-Axiom levenshtein_lower_bound_ax : forall s1 s2,
-  levenshtein s1 s2 >= Nat.abs_sub (length s1) (length s2).
-
-(** Weighted distance equals standard Levenshtein with unit costs *)
-Axiom weighted_distance_unit_ax : forall s1 s2,
-  weighted_distance s1 s2 1 1 (fun c1 c2 => if ascii_dec c1 c2 then 0 else 1) =
-  levenshtein s1 s2.
-
-(** Valid edit sequence always exists *)
-Axiom valid_edit_sequence_exists_ax : forall s1 s2,
-  exists edits, valid_edit_sequence s1 s2 edits.
+Lemma list_ascii_of_string_inj : forall s1 s2,
+  list_ascii_of_string s1 = list_ascii_of_string s2 -> s1 = s2.
+Proof.
+  intros s1 s2 H.
+  rewrite <- (string_of_list_ascii_of_string s1).
+  rewrite <- (string_of_list_ascii_of_string s2).
+  now rewrite H.
+Qed.
 
 (** ** Edit Operation Application *)
 
-(** Apply a single edit operation to a string *)
-Definition apply_edit (s : string) (op : EditOp) : string :=
-  match op with
-  | Insertion c pos =>
-      (* Insert c at position pos *)
-      (* Simplified: append to end *)
-      String.append s (String c EmptyString)
-  | Deletion c pos =>
-      (* Delete c at position pos *)
-      (* Simplified: remove first occurrence *)
-      s  (* TODO: implement proper deletion *)
-  | Substitution old_c new_c pos =>
-      (* Replace old_c with new_c at position pos *)
-      s  (* TODO: implement proper substitution *)
-  | Transposition c1 c2 pos =>
-      (* Swap c1 and c2 at position pos *)
-      s  (* TODO: implement proper transposition *)
+Definition edit_pos_index (pos : Position) : nat := pos.(pos_col).
+
+Fixpoint insert_at (idx : nat) (c : ascii) (s : string) : string :=
+  match idx, s with
+  | O, _ => String c s
+  | S idx', EmptyString => String c EmptyString
+  | S idx', String h rest => String h (insert_at idx' c rest)
   end.
 
-(** Apply a sequence of edits *)
+Fixpoint delete_at (idx : nat) (s : string) : string :=
+  match idx, s with
+  | O, EmptyString => EmptyString
+  | O, String _ rest => rest
+  | S idx', EmptyString => EmptyString
+  | S idx', String h rest => String h (delete_at idx' rest)
+  end.
+
+Fixpoint substitute_at (idx : nat) (new_c : ascii) (s : string) : string :=
+  match idx, s with
+  | O, EmptyString => EmptyString
+  | O, String _ rest => String new_c rest
+  | S idx', EmptyString => EmptyString
+  | S idx', String h rest => String h (substitute_at idx' new_c rest)
+  end.
+
+Fixpoint transpose_at (idx : nat) (s : string) : string :=
+  match idx, s with
+  | O, String c1 (String c2 rest) => String c2 (String c1 rest)
+  | O, _ => s
+  | S idx', EmptyString => EmptyString
+  | S idx', String h rest => String h (transpose_at idx' rest)
+  end.
+
+(** Apply a single edit operation to a string. *)
+Definition apply_edit (s : string) (op : EditOp) : string :=
+  match op with
+  | Insertion c pos => insert_at (edit_pos_index pos) c s
+  | Deletion _ pos => delete_at (edit_pos_index pos) s
+  | Substitution _ new_c pos => substitute_at (edit_pos_index pos) new_c s
+  | Transposition _ _ pos => transpose_at (edit_pos_index pos) s
+  end.
+
+(** Apply a sequence of edits. *)
 Fixpoint apply_edits (s : string) (edits : edit_sequence) : string :=
   match edits with
   | [] => s
@@ -89,98 +83,106 @@ Fixpoint apply_edits (s : string) (edits : edit_sequence) : string :=
 
 (** ** Levenshtein Distance *)
 
-(** Compute minimum of three natural numbers *)
-Definition min3 (a b c : nat) : nat :=
-  min a (min b c).
-
-(** Levenshtein distance between two strings (recursive definition) *)
-Fixpoint levenshtein_rec (s1 s2 : string) (n1 n2 : nat) : nat :=
-  match n1, n2 with
-  | 0, _ => n2
-  | _, 0 => n1
-  | S m1, S m2 =>
-      (* Get last characters *)
-      let c1 := get (length s1 - S m1) s1 in
-      let c2 := get (length s2 - S m2) s2 in
-      let cost := if ascii_dec c1 c2 then 0 else 1 in
-      min3
-        (S (levenshtein_rec s1 s2 m1 n2))        (* deletion *)
-        (S (levenshtein_rec s1 s2 n1 m2))        (* insertion *)
-        (cost + levenshtein_rec s1 s2 m1 m2)     (* substitution *)
-  end.
-
-(** Main Levenshtein distance function *)
 Definition levenshtein (s1 s2 : string) : nat :=
-  levenshtein_rec s1 s2 (length s1) (length s2).
+  lev_distance (list_ascii_of_string s1) (list_ascii_of_string s2).
 
 (** ** Properties of Edit Distance *)
 
-(** Edit distance is symmetric *)
 Theorem levenshtein_symmetric : forall s1 s2,
   levenshtein s1 s2 = levenshtein s2 s1.
 Proof.
   intros s1 s2.
-  apply levenshtein_symmetric_ax.
+  unfold levenshtein.
+  apply lev_distance_symmetry.
 Qed.
 
-(** Edit distance satisfies triangle inequality *)
+Lemma lev_distance_zero_eq : forall s1 s2,
+  lev_distance s1 s2 = 0 -> s1 = s2.
+Proof.
+  induction s1 as [| c1 s1 IH]; intros s2 Hdist.
+  - rewrite lev_distance_empty_left in Hdist.
+    destruct s2 as [| c2 s2]; [reflexivity | discriminate].
+  - destruct s2 as [| c2 s2].
+    + rewrite lev_distance_empty_right in Hdist.
+      discriminate.
+    + rewrite lev_distance_cons in Hdist.
+      unfold min3 in Hdist.
+      assert (Hsub : lev_distance s1 s2 + subst_cost c1 c2 = 0) by lia.
+      assert (Htail : lev_distance s1 s2 = 0) by lia.
+      assert (Hcost : subst_cost c1 c2 = 0) by lia.
+      unfold subst_cost, char_eq in Hcost.
+      destruct (ascii_dec c1 c2) as [Heq | Hneq].
+      * subst c2. f_equal. now apply IH.
+      * discriminate.
+Qed.
+
 Theorem levenshtein_triangle : forall s1 s2 s3,
   levenshtein s1 s3 <= levenshtein s1 s2 + levenshtein s2 s3.
 Proof.
   intros s1 s2 s3.
-  apply levenshtein_triangle_ax.
+  unfold levenshtein.
+  apply lev_distance_triangle_inequality.
 Qed.
 
-(** Edit distance is zero iff strings are equal *)
 Theorem levenshtein_zero_iff_eq : forall s1 s2,
   levenshtein s1 s2 = 0 <-> s1 = s2.
 Proof.
   intros s1 s2. split; intro H.
-  - (* levenshtein s1 s2 = 0 -> s1 = s2 *)
-    apply levenshtein_zero_eq_ax. assumption.
-  - (* s1 = s2 -> levenshtein s1 s2 = 0 *)
-    subst. apply levenshtein_eq_zero_ax.
+  - apply list_ascii_of_string_inj.
+    apply lev_distance_zero_eq.
+    exact H.
+  - subst. unfold levenshtein. apply lev_distance_identity.
 Qed.
 
-(** Edit distance is non-negative (trivial from nat) *)
 Theorem levenshtein_nonneg : forall s1 s2,
   0 <= levenshtein s1 s2.
 Proof.
-  intros. omega.
+  intros. lia.
 Qed.
 
 (** ** Optimal Edit Sequence *)
 
-(** An edit sequence is optimal if its length equals the Levenshtein distance *)
 Definition optimal_edit_sequence (s1 s2 : string) (edits : edit_sequence) : Prop :=
   apply_edits s1 edits = s2 /\
   edit_distance edits = levenshtein s1 s2.
 
-(** Existence of optimal edit sequence *)
+Definition optimal_edit_exists_contract : Prop :=
+  forall s1 s2, exists edits, optimal_edit_sequence s1 s2 edits.
+
 Theorem optimal_edit_exists : forall s1 s2,
+  optimal_edit_exists_contract ->
   exists edits, optimal_edit_sequence s1 s2 edits.
 Proof.
-  intros s1 s2.
-  apply optimal_edit_exists_ax.
+  intros s1 s2 Hcontract.
+  apply Hcontract.
 Qed.
 
 (** ** Edit Sequence Composition *)
 
-(** Composing edit sequences *)
 Definition compose_edits (e1 e2 : edit_sequence) : edit_sequence :=
   e1 ++ e2.
 
-(** Composition preserves correctness *)
+Lemma apply_edits_app : forall s e1 e2,
+  apply_edits s (e1 ++ e2) = apply_edits (apply_edits s e1) e2.
+Proof.
+  intros s e1.
+  revert s.
+  induction e1 as [| op rest IH]; intros s e2; simpl.
+  - reflexivity.
+  - apply IH.
+Qed.
+
 Theorem compose_edits_correct : forall s1 s2 s3 e1 e2,
   apply_edits s1 e1 = s2 ->
   apply_edits s2 e2 = s3 ->
   apply_edits s1 (compose_edits e1 e2) = s3.
 Proof.
   intros s1 s2 s3 e1 e2 H1 H2.
-  apply compose_edits_correct_ax with s2; assumption.
+  unfold compose_edits.
+  rewrite apply_edits_app.
+  now rewrite H1.
 Qed.
 
-(** Composed distance is at most sum of individual distances *)
 Theorem compose_edits_distance : forall s1 s2 s3,
   levenshtein s1 s3 <= levenshtein s1 s2 + levenshtein s2 s3.
 Proof.
@@ -189,33 +191,35 @@ Qed.
 
 (** ** Edit Distance Bounds *)
 
-(** Edit distance is bounded by maximum string length *)
 Theorem levenshtein_upper_bound : forall s1 s2,
-  levenshtein s1 s2 <= max (length s1) (length s2).
+  levenshtein s1 s2 <= max (String.length s1) (String.length s2).
 Proof.
   intros s1 s2.
-  apply levenshtein_upper_bound_ax.
+  unfold levenshtein.
+  rewrite <- !list_ascii_of_string_length.
+  apply lev_distance_upper_bound.
 Qed.
 
-(** Edit distance is bounded below by length difference *)
+Definition length_abs_diff (s1 s2 : string) : nat :=
+  abs_diff (String.length s1) (String.length s2).
+
 Theorem levenshtein_lower_bound : forall s1 s2,
-  levenshtein s1 s2 >= Nat.abs_sub (length s1) (length s2).
+  levenshtein s1 s2 >= length_abs_diff s1 s2.
 Proof.
   intros s1 s2.
-  apply levenshtein_lower_bound_ax.
+  unfold levenshtein, length_abs_diff.
+  rewrite <- !list_ascii_of_string_length.
+  apply lev_distance_length_diff_lower.
 Qed.
 
 (** ** Phonetic and Keyboard Distance *)
 
-(** Keyboard distance between two characters (simplified) *)
 Definition keyboard_distance (c1 c2 : ascii) : nat :=
   if ascii_dec c1 c2 then 0 else 1.
 
-(** Phonetic similarity (simplified) *)
 Definition phonetic_similar (c1 c2 : ascii) : bool :=
-  ascii_dec c1 c2.  (* Simplified: only equal chars are similar *)
+  if ascii_dec c1 c2 then true else false.
 
-(** Weighted edit cost using keyboard distance *)
 Definition edit_cost_keyboard (op : EditOp) : nat :=
   match op with
   | Insertion _ _ => 1
@@ -224,7 +228,6 @@ Definition edit_cost_keyboard (op : EditOp) : nat :=
   | Transposition _ _ _ => 1
   end.
 
-(** Total cost of edit sequence *)
 Fixpoint edit_sequence_cost (cost_fn : EditOp -> nat) (edits : edit_sequence) : nat :=
   match edits with
   | [] => 0
@@ -233,52 +236,107 @@ Fixpoint edit_sequence_cost (cost_fn : EditOp -> nat) (edits : edit_sequence) : 
 
 (** ** Edit Distance with Custom Costs *)
 
-(** Generalized edit distance with custom cost function *)
-Fixpoint weighted_distance_rec (s1 s2 : string) (n1 n2 : nat)
+Fixpoint weighted_distance_fuel (fuel : nat) (s1 s2 : string) (n1 n2 : nat)
                                 (cost_ins cost_del : nat)
                                 (cost_sub : ascii -> ascii -> nat) : nat :=
-  match n1, n2 with
-  | 0, _ => n2 * cost_ins
-  | _, 0 => n1 * cost_del
-  | S m1, S m2 =>
-      let c1 := get (length s1 - S m1) s1 in
-      let c2 := get (length s2 - S m2) s2 in
-      let cost := cost_sub c1 c2 in
-      min3
-        (cost_del + weighted_distance_rec s1 s2 m1 n2 cost_ins cost_del cost_sub)
-        (cost_ins + weighted_distance_rec s1 s2 n1 m2 cost_ins cost_del cost_sub)
-        (cost + weighted_distance_rec s1 s2 m1 m2 cost_ins cost_del cost_sub)
+  match fuel with
+  | O => 0
+  | S fuel' =>
+      match n1, n2 with
+      | O, _ => n2 * cost_ins
+      | _, O => n1 * cost_del
+      | S m1, S m2 =>
+          let c1 :=
+            match get (String.length s1 - S m1) s1 with
+            | Some c => c
+            | None => default_char
+            end in
+          let c2 :=
+            match get (String.length s2 - S m2) s2 with
+            | Some c => c
+            | None => default_char
+            end in
+          let cost := cost_sub c1 c2 in
+          min3
+            (cost_del + weighted_distance_fuel fuel' s1 s2 m1 n2 cost_ins cost_del cost_sub)
+            (cost_ins + weighted_distance_fuel fuel' s1 s2 n1 m2 cost_ins cost_del cost_sub)
+            (cost + weighted_distance_fuel fuel' s1 s2 m1 m2 cost_ins cost_del cost_sub)
+      end
   end.
+
+Definition weighted_distance_rec (s1 s2 : string) (n1 n2 : nat)
+                                 (cost_ins cost_del : nat)
+                                 (cost_sub : ascii -> ascii -> nat) : nat :=
+  weighted_distance_fuel (n1 + n2) s1 s2 n1 n2 cost_ins cost_del cost_sub.
 
 Definition weighted_distance (s1 s2 : string)
                              (cost_ins cost_del : nat)
                              (cost_sub : ascii -> ascii -> nat) : nat :=
-  weighted_distance_rec s1 s2 (length s1) (length s2) cost_ins cost_del cost_sub.
+  weighted_distance_rec s1 s2 (String.length s1) (String.length s2)
+    cost_ins cost_del cost_sub.
 
-(** Weighted distance reduces to standard Levenshtein with unit costs *)
+Definition weighted_distance_unit_contract : Prop := forall s1 s2,
+  weighted_distance s1 s2 1 1 (fun c1 c2 => if ascii_dec c1 c2 then 0 else 1) =
+  levenshtein s1 s2.
+
 Theorem weighted_distance_unit_costs : forall s1 s2,
+  weighted_distance_unit_contract ->
   weighted_distance s1 s2 1 1 (fun c1 c2 => if ascii_dec c1 c2 then 0 else 1) =
   levenshtein s1 s2.
 Proof.
-  intros s1 s2.
-  apply weighted_distance_unit_ax.
+  intros s1 s2 Hcontract.
+  apply Hcontract.
 Qed.
 
 (** ** Correctness of Edit Operations *)
 
-(** An edit sequence is valid if applying it produces the target string *)
 Definition valid_edit_sequence (s1 s2 : string) (edits : edit_sequence) : Prop :=
   apply_edits s1 edits = s2.
 
-(** Every pair of strings has a valid edit sequence *)
+Definition zero_pos : Position := {| pos_line := 0; pos_col := 0 |}.
+
+Fixpoint delete_all_edits (s : string) : edit_sequence :=
+  match s with
+  | EmptyString => []
+  | String c rest => Deletion c zero_pos :: delete_all_edits rest
+  end.
+
+Fixpoint insert_front_edits (s : string) : edit_sequence :=
+  match s with
+  | EmptyString => []
+  | String c rest => insert_front_edits rest ++ [Insertion c zero_pos]
+  end.
+
+Definition valid_witness_edits (s1 s2 : string) : edit_sequence :=
+  delete_all_edits s1 ++ insert_front_edits s2.
+
+Lemma delete_all_edits_empty : forall s,
+  apply_edits s (delete_all_edits s) = EmptyString.
+Proof.
+  induction s as [| c rest IH]; simpl; [reflexivity | exact IH].
+Qed.
+
+Lemma apply_insert_front_edits_empty : forall s,
+  apply_edits EmptyString (insert_front_edits s) = s.
+Proof.
+  induction s as [| c rest IH]; simpl.
+  - reflexivity.
+  - rewrite apply_edits_app.
+    simpl.
+    now rewrite IH.
+Qed.
+
 Theorem valid_edit_sequence_exists : forall s1 s2,
   exists edits, valid_edit_sequence s1 s2 edits.
 Proof.
   intros s1 s2.
-  apply valid_edit_sequence_exists_ax.
+  exists (valid_witness_edits s1 s2).
+  unfold valid_edit_sequence, valid_witness_edits.
+  rewrite apply_edits_app.
+  rewrite delete_all_edits_empty.
+  apply apply_insert_front_edits_empty.
 Qed.
 
-(** Optimal edit sequences are valid *)
 Theorem optimal_implies_valid : forall s1 s2 edits,
   optimal_edit_sequence s1 s2 edits ->
   valid_edit_sequence s1 s2 edits.

@@ -116,17 +116,7 @@ Inductive AlgoState : list RewriteRule -> PhoneticString -> nat -> Prop :=
     (* Restart from position 0 with transformed string *)
     AlgoState rules s' 0.
 
-(** * Axioms *)
-
-(** ** Rule Identity *)
-
-(** Axiom: rule_id uniquely identifies rules in the Zompist phonetic system.
-    This reflects the implementation where each rule has a distinct numeric identifier.
-    See: src/phonetic/rules.rs - all rules have unique IDs (1, 2, 3, 20, 21, 22, 33, 34, 100, 101, 102, 200, 201)
-*)
-Axiom rule_id_unique :
-  forall r1 r2 : RewriteRule,
-    rule_id r1 = rule_id r2 -> r1 = r2.
+(** * Contracts *)
 
 (** ** Algorithm Correctness Axiom *)
 
@@ -139,7 +129,7 @@ Axiom rule_id_unique :
     Status: This axiom represents a key property that needs formal proof.
     See AXIOM1_COMPLETION_GUIDE.md for the proof strategy.
 *)
-Axiom find_first_match_in_algorithm_implies_no_earlier_matches :
+Definition find_first_match_no_earlier_matches_contract : Prop :=
   forall rules r_head s pos,
     (forall r, In r rules -> wf_rule r) ->
     In r_head rules ->
@@ -148,22 +138,29 @@ Axiom find_first_match_in_algorithm_implies_no_earlier_matches :
        in the list matched at any position before pos in this iteration *)
     no_rules_match_before rules s pos.
 
+Lemma find_first_match_in_algorithm_implies_no_earlier_matches :
+  find_first_match_no_earlier_matches_contract ->
+  forall rules r_head s pos,
+    (forall r, In r rules -> wf_rule r) ->
+    In r_head rules ->
+    find_first_match r_head s (length s) = Some pos ->
+    no_rules_match_before rules s pos.
+Proof.
+  intros contract rules r_head s pos Hwf Hin Hfind.
+  exact (contract rules r_head s pos Hwf Hin Hfind).
+Qed.
+
 (** * Decidable Equality for RewriteRule *)
 
-(** Decidable equality for RewriteRule based on rule_id.
-    This is sound because rule_id is unique for each rule in the Zompist system.
-*)
 Definition RewriteRule_eq_dec (r1 r2 : RewriteRule) : {r1 = r2} + {r1 <> r2}.
 Proof.
-  destruct (Nat.eq_dec (rule_id r1) (rule_id r2)) as [H_id_eq | H_id_neq].
-  - (* rule_id r1 = rule_id r2 *)
-    (* By axiom rule_id_unique, equal IDs imply equal rules *)
-    left.
-    apply rule_id_unique.
-    exact H_id_eq.
-  - (* rule_id r1 ≠ rule_id r2, so r1 ≠ r2 *)
-    right.
-    intro H_contra.
-    subst r2.
-    contradiction.
+  destruct r1 as [id1 name1 pat1 repl1 ctx1 wt1].
+  destruct r2 as [id2 name2 pat2 repl2 ctx2 wt2].
+  destruct (Nat.eq_dec id1 id2); [| right; congruence].
+  destruct (string_eq_dec name1 name2); [| right; congruence].
+  destruct (PhoneticString_eq_dec pat1 pat2); [| right; congruence].
+  destruct (PhoneticString_eq_dec repl1 repl2); [| right; congruence].
+  destruct (Context_eq_dec ctx1 ctx2); [| right; congruence].
+  destruct (Q_leibniz_eq_dec wt1 wt2); [| right; congruence].
+  left. subst. reflexivity.
 Defined.

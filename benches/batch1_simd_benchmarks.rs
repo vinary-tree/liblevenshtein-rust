@@ -2,13 +2,13 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use liblevenshtein::distance::standard_distance;
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 use liblevenshtein::distance::standard_distance_impl;
 
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 use liblevenshtein::distance::simd::{standard_distance_simd, strip_common_affixes_simd};
 
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 fn bench_sse41_vs_avx2(c: &mut Criterion) {
     let mut group = c.benchmark_group("sse41_vs_avx2");
 
@@ -39,7 +39,7 @@ fn bench_sse41_vs_avx2(c: &mut Criterion) {
     group.finish();
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 fn bench_affix_stripping(c: &mut Criterion) {
     let mut group = c.benchmark_group("affix_stripping");
 
@@ -106,7 +106,7 @@ fn bench_integrated_distance(c: &mut Criterion) {
     group.finish();
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "simd"))]
+#[cfg(target_arch = "x86_64")]
 criterion_group!(
     benches,
     bench_sse41_vs_avx2,
@@ -114,7 +114,7 @@ criterion_group!(
     bench_integrated_distance
 );
 
-#[cfg(not(all(target_arch = "x86_64", feature = "simd")))]
+#[cfg(not(target_arch = "x86_64"))]
 criterion_group!(benches, bench_integrated_distance);
 
 criterion_main!(benches);

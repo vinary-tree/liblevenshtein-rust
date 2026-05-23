@@ -175,39 +175,39 @@ Definition wf_automaton (aut : GeneralizedAutomaton) : Prop :=
   wf_operation_set (automaton_operations aut) /\
   operation_set_bounded 1 (automaton_operations aut).
 
-(** * Axioms for Automaton Properties *)
+(** * Automaton Contracts *)
 
-(** After pruning, state size is bounded by O(n²). *)
-Axiom state_size_bounded_ax : forall st,
-  length (state_positions (prune_state st)) <= (state_max_distance st + 1) * (state_max_distance st + 1).
+Definition state_size_bounded_contract (st : GeneralizedState) : Prop :=
+  length (state_positions (prune_state st)) <=
+  (state_max_distance st + 1) * (state_max_distance st + 1).
 
-(** Pruning preserves acceptance: if original state accepts, so does pruned. *)
-Axiom prune_preserves_acceptance_ax : forall st word_length,
+Definition prune_preserves_acceptance_contract (st : GeneralizedState)
+                                               (word_length : nat) : Prop :=
   is_accepting_state word_length st = true ->
   is_accepting_state word_length (prune_state st) = true.
 
-(** With distance 0, only exact matches are accepted. *)
-Axiom distance_zero_exact_match_ax : forall target input,
+Definition distance_zero_exact_match_contract : Prop := forall target input,
   accepts (standard_automaton 0) target input = true ->
   target = input.
 
-(** Increasing max distance allows more acceptances (monotonicity). *)
-Axiom distance_monotone_ax : forall aut1 aut2 target input,
+Definition distance_monotone_contract : Prop := forall aut1 aut2 target input,
   automaton_operations aut1 = automaton_operations aut2 ->
   automaton_max_distance aut1 <= automaton_max_distance aut2 ->
   accepts aut1 target input = true ->
   accepts aut2 target input = true.
 
-(** Adding operations preserves existing acceptances. *)
-Axiom operations_monotone_ax : forall aut target input ops_extra,
+Definition operations_monotone_contract : Prop := forall aut target input ops_extra,
   wf_operation_set ops_extra ->
   accepts aut target input = true ->
   accepts (mkAutomaton (automaton_max_distance aut) (automaton_operations aut ++ ops_extra)) target input = true.
 
-(** Phonetic automaton can accept strings that standard automaton rejects. *)
-Axiom phonetic_accepts_more_ax :
+Definition phonetic_accepts_more_contract : Prop :=
   accepts (standard_automaton 1) "phone" "fone" = false /\
   accepts (phonetic_automaton 1) "phone" "fone" = true.
+
+Definition empty_target_empty_input_contract : Prop := forall input,
+  accepts (standard_automaton 0) EmptyString input = true ->
+  input = EmptyString.
 
 (** ** Theorems and Proofs *)
 
@@ -284,22 +284,24 @@ Definition max_positions (n : nat) : nat :=
 
 (** After pruning, state size is bounded *)
 Theorem state_size_bounded : forall st,
+  state_size_bounded_contract st ->
   length (state_positions (prune_state st)) <= max_positions (state_max_distance st).
 Proof.
-  intros st.
+  intros st Hcontract.
   unfold max_positions.
-  apply state_size_bounded_ax.
+  exact Hcontract.
 Qed.
 
 (** ** Subsumption Correctness *)
 
 (** Pruning preserves acceptance *)
 Theorem prune_preserves_acceptance : forall st word_length,
+  prune_preserves_acceptance_contract st word_length ->
   is_accepting_state word_length st = true ->
   is_accepting_state word_length (prune_state st) = true.
 Proof.
-  intros st word_length Hacc.
-  apply prune_preserves_acceptance_ax. assumption.
+  intros st word_length Hcontract Hacc.
+  apply Hcontract. assumption.
 Qed.
 
 (** ** Operation Application Properties *)
@@ -342,22 +344,28 @@ Proof.
     lia.
 Qed.
 
-(* Applying multiple operations accumulates results.
-   This lemma is used for state space analysis but not critical for soundness.
-   Axiomatized to avoid complex fold_left arithmetic proofs. *)
-Axiom apply_all_operations_accumulates_ax : forall ops target input tpos ipos p,
-  length (apply_all_operations ops target input tpos ipos p) =
-  fold_left (fun acc op =>
-    acc + length (apply_operation_to_position op target input tpos ipos p)
-  ) ops 0.
-
 Lemma apply_all_operations_accumulates : forall ops target input tpos ipos p,
   length (apply_all_operations ops target input tpos ipos p) =
   fold_left (fun acc op =>
     acc + length (apply_operation_to_position op target input tpos ipos p)
   ) ops 0.
 Proof.
-  exact apply_all_operations_accumulates_ax.
+  induction ops as [| op rest IH]; intros target input tpos ipos p; simpl.
+  - reflexivity.
+  - rewrite app_length.
+    rewrite IH.
+    replace (fold_left
+      (fun (acc : nat) (op0 : OperationType) =>
+         acc + length (apply_operation_to_position op0 target input tpos ipos p))
+      rest (length (apply_operation_to_position op target input tpos ipos p)))
+      with
+      (length (apply_operation_to_position op target input tpos ipos p) +
+       fold_left
+         (fun (acc : nat) (op0 : OperationType) =>
+            acc + length (apply_operation_to_position op0 target input tpos ipos p))
+         rest 0).
+    + lia.
+    + symmetry. apply fold_left_add_shift.
 Qed.
 
 (** ** Determinism Properties *)
@@ -392,44 +400,41 @@ Qed.
 
 (** If max distance is 0, only exact matches accepted *)
 Theorem distance_zero_exact_match : forall target input,
+  distance_zero_exact_match_contract ->
   accepts (standard_automaton 0) target input = true ->
   target = input.
 Proof.
-  intros target input Hacc.
-  apply distance_zero_exact_match_ax. assumption.
+  intros target input Hcontract Hacc.
+  apply Hcontract. assumption.
 Qed.
-
-(** Axiom: Empty target with distance 0 only accepts empty input.
-    This follows from the automaton construction: with empty target and
-    distance 0, no insertions are allowed, so only empty input matches. *)
-Axiom empty_target_empty_input_ax : forall input,
-  accepts (standard_automaton 0) EmptyString input = true ->
-  input = EmptyString.
 
 (** If target is empty, only empty input accepted (with distance 0) *)
 Theorem empty_target_empty_input : forall input,
+  empty_target_empty_input_contract ->
   accepts (standard_automaton 0) EmptyString input = true ->
   input = EmptyString.
 Proof.
-  intros input Hacc.
-  apply empty_target_empty_input_ax. exact Hacc.
+  intros input Hcontract Hacc.
+  apply Hcontract. exact Hacc.
 Qed.
 
 (** ** Monotonicity *)
 
 (** Increasing distance allows more acceptances *)
 Theorem distance_monotone : forall aut1 aut2 target input,
+  distance_monotone_contract ->
   automaton_operations aut1 = automaton_operations aut2 ->
   automaton_max_distance aut1 <= automaton_max_distance aut2 ->
   accepts aut1 target input = true ->
   accepts aut2 target input = true.
 Proof.
-  intros aut1 aut2 target input Hops Hdist Hacc1.
-  apply distance_monotone_ax with aut1; assumption.
+  intros aut1 aut2 target input Hcontract Hops Hdist Hacc1.
+  apply Hcontract with aut1; assumption.
 Qed.
 
 (** Adding operations preserves existing acceptances *)
 Theorem operations_monotone : forall aut target input ops_extra,
+  operations_monotone_contract ->
   wf_operation_set ops_extra ->
   accepts aut target input = true ->
   accepts
@@ -438,22 +443,23 @@ Theorem operations_monotone : forall aut target input ops_extra,
       (automaton_operations aut ++ ops_extra))
     target input = true.
 Proof.
-  intros aut target input ops_extra Hwf_extra Hacc.
-  apply operations_monotone_ax; assumption.
+  intros aut target input ops_extra Hcontract Hwf_extra Hacc.
+  apply Hcontract; assumption.
 Qed.
 
 (** ** Phonetic Automaton Properties *)
 
 (** Phonetic automaton accepts all strings standard automaton accepts *)
 Theorem phonetic_subsumes_standard : forall max_dist target input,
+  operations_monotone_contract ->
   accepts (standard_automaton max_dist) target input = true ->
   accepts (phonetic_automaton max_dist) target input = true.
 Proof.
-  intros max_dist target input Hacc.
+  intros max_dist target input Hcontract Hacc.
   (* phonetic_automaton = mkAutomaton max_dist (standard_ops ++ phonetic_ops_phase1)
      standard_automaton = mkAutomaton max_dist standard_ops *)
   unfold standard_automaton, phonetic_automaton.
-  apply (operations_monotone_ax
+  apply (Hcontract
            (mkAutomaton max_dist standard_ops)
            target input phonetic_ops_phase1).
   - apply phonetic_phase1_well_formed.
@@ -461,11 +467,12 @@ Proof.
 Qed.
 
 (** Phonetic automaton can accept strings standard automaton rejects *)
-Example phonetic_accepts_more :
+Theorem phonetic_accepts_more :
+  phonetic_accepts_more_contract ->
   accepts (standard_automaton 1) "phone" "fone" = false /\
   accepts (phonetic_automaton 1) "phone" "fone" = true.
 Proof.
-  apply phonetic_accepts_more_ax.
+  intros Hcontract. exact Hcontract.
 Qed.
 
 (** ** Context-Sensitive Operation Properties *)

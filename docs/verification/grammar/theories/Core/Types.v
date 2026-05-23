@@ -11,9 +11,11 @@ Require Import Coq.Lists.List.
 Require Import Coq.Init.Nat.
 Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Bool.Bool.
+Require Import Coq.micromega.Lia.
 Require Import Coq.QArith.QArith.
 Require Import Coq.QArith.Qround.
 Import ListNotations.
+Open Scope nat_scope.
 
 (** ** Basic Types *)
 
@@ -120,22 +122,22 @@ Fixpoint has_parse_errors (tree : parse_tree) : bool :=
 
 (** ** Type System *)
 
-(** Types in the type system (simplified for Rholang) *)
-Inductive Type : Type :=
+(** Types in the object language type system (simplified for Rholang) *)
+Inductive GType : Type :=
   | TyUnit
   | TyBool
   | TyInt
   | TyString
   | TyName
   | TyProcess
-  | TyChannel (t : Type)
-  | TyList (t : Type)
-  | TyTuple (ts : list Type)
+  | TyChannel (t : GType)
+  | TyList (t : GType)
+  | TyTuple (arity : nat)
   | TyUnknown
   | TyError.
 
 (** Type environment maps variables to types *)
-Definition type_env := list (string * Type).
+Definition type_env := list (string * GType).
 
 (** Type error *)
 Record TypeError := {
@@ -145,7 +147,7 @@ Record TypeError := {
 
 (** Type checking result *)
 Inductive TypeResult : Type :=
-  | TypeOk (t : Type)
+  | TypeOk (t : GType)
   | TypeErrors (errors : list TypeError).
 
 (** ** Lattice Structures *)
@@ -195,7 +197,7 @@ Definition position_eqb (p1 p2 : Position) : bool :=
   (p1.(pos_line) =? p2.(pos_line)) && (p1.(pos_col) =? p2.(pos_col)).
 
 (** Type equality (simplified) *)
-Fixpoint type_eqb (t1 t2 : Type) : bool :=
+Fixpoint type_eqb (t1 t2 : GType) : bool :=
   match t1, t2 with
   | TyUnit, TyUnit => true
   | TyBool, TyBool => true
@@ -205,9 +207,7 @@ Fixpoint type_eqb (t1 t2 : Type) : bool :=
   | TyProcess, TyProcess => true
   | TyChannel t1', TyChannel t2' => type_eqb t1' t2'
   | TyList t1', TyList t2' => type_eqb t1' t2'
-  | TyTuple ts1, TyTuple ts2 =>
-      (length ts1 =? length ts2) &&
-      forallb (fun '(t1, t2) => type_eqb t1 t2) (combine ts1 ts2)
+  | TyTuple n1, TyTuple n2 => n1 =? n2
   | TyUnknown, TyUnknown => true
   | TyError, TyError => true
   | _, _ => false
@@ -242,14 +242,14 @@ Qed.
 
 (** Edit distance is always non-negative *)
 Lemma edit_distance_nonneg : forall edits,
-  0 <= edit_distance edits.
+  (0 <= edit_distance edits)%nat.
 Proof.
   intros. induction edits; simpl; lia.
 Qed.
 
 (** Edit distance of concatenated sequences *)
 Lemma edit_distance_app : forall e1 e2,
-  edit_distance (e1 ++ e2) = edit_distance e1 + edit_distance e2.
+  edit_distance (e1 ++ e2) = (edit_distance e1 + edit_distance e2)%nat.
 Proof.
   intros e1 e2. induction e1; simpl.
   - reflexivity.
@@ -261,12 +261,10 @@ Lemma type_eqb_refl : forall t,
   type_eqb t t = true.
 Proof.
   induction t; simpl; auto.
-  - (* TyChannel *) apply IHt.
-  - (* TyList *) apply IHt.
-  - (* TyTuple *)
-    induction l; simpl; auto.
-    rewrite IHl. simpl.
-    destruct a. rewrite H. simpl. apply andb_true_intro. split; auto.
+  all: try match goal with
+           | H : type_eqb _ _ = true |- type_eqb _ _ = true => exact H
+           end.
+  apply Nat.eqb_refl.
 Qed.
 
 (** ** Well-formedness Conditions *)

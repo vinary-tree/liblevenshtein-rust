@@ -13,14 +13,6 @@ From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 
-(** * Axioms for Identity Property *)
-
-(** Zero distance implies equal length *)
-Axiom msm_zero_implies_same_length_ax : forall X Y cfg,
-  0 < msm_c cfg ->
-  msm_distance X Y cfg == 0 ->
-  length X = length Y.
-
 (** * Reflexivity: MSM(X, X) = 0 *)
 
 (** When X = Y, the optimal alignment uses only Move operations.
@@ -35,10 +27,11 @@ Proof.
 Qed.
 
 (** MSM is reflexive - use the lemma from MsmDistance *)
-Theorem msm_reflexive' : forall X cfg,
+Theorem msm_reflexive' : forall (contracts : MsmDistanceContracts) X cfg,
   msm_distance X X cfg == 0.
 Proof.
-  apply msm_reflexive.
+  intros contracts X cfg.
+  apply (msm_reflexive contracts).
 Qed.
 
 (** * Partial Converse: MSM(X, Y) = 0 -> X = Y (for non-empty series) *)
@@ -48,37 +41,39 @@ Qed.
     - If Split/Merge is used, cost >= c > 0
     - Therefore, if total cost is 0, only Moves were used with matching values *)
 
-Lemma msm_zero_implies_same_length' : forall X Y cfg,
+Lemma msm_zero_implies_same_length' : forall (contracts : MsmDistanceContracts) X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
   length X = length Y.
 Proof.
-  (* Use the dedicated axiom *)
-  exact msm_zero_implies_same_length_ax.
+  intros contracts X Y cfg Hc Hzero.
+  f_equal.
+  apply (msm_zero_implies_equal contracts) with cfg; assumption.
 Qed.
 
-Lemma msm_zero_implies_equal' : forall X Y cfg,
+Lemma msm_zero_implies_equal' : forall (contracts : MsmDistanceContracts) X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
   X = Y.
 Proof.
-  (* Use the lemma from MsmDistance *)
-  apply msm_zero_implies_equal.
+  intros contracts X Y cfg Hc Hzero.
+  exact (msm_zero_implies_equal contracts X Y cfg Hc Hzero).
 Qed.
 
 (** * Main Identity Theorem *)
 
-Theorem msm_identity : forall X Y cfg,
+Theorem msm_identity : forall (contracts : MsmDistanceContracts) X Y cfg,
   0 < msm_c cfg ->
   (msm_distance X Y cfg == 0 <-> X = Y).
 Proof.
-  intros X Y cfg Hc.
+  intros contracts X Y cfg Hc.
   split.
   - (* MSM(X, Y) = 0 -> X = Y *)
-    apply msm_zero_implies_equal. assumption.
+    intros Hzero.
+    exact (msm_zero_implies_equal contracts X Y cfg Hc Hzero).
   - (* X = Y -> MSM(X, Y) = 0 *)
     intros Heq. subst Y.
-    apply msm_reflexive.
+    apply (msm_reflexive contracts).
 Qed.
 
 (** * Non-negativity *)

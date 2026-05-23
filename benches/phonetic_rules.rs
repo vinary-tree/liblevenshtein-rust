@@ -14,7 +14,7 @@ use liblevenshtein::phonetic::*;
 // Benchmark Fixtures
 // ============================================================================
 
-fn sample_phonetic_strings() -> Vec<Vec<Phone>> {
+fn sample_phonetic_strings() -> Vec<Vec<Phone<u8>>> {
     vec![
         // Short strings
         vec![
@@ -142,7 +142,7 @@ fn bench_throughput_by_input_size(c: &mut Criterion) {
     let rules = orthography_rules();
 
     for size in [5, 10, 20, 50].iter() {
-        let input: Vec<Phone> = (0..*size)
+        let input: Vec<Phone<u8>> = (0..*size)
             .map(|i| {
                 if i % 2 == 0 {
                     Phone::Consonant(b'c')
@@ -257,6 +257,7 @@ fn bench_context_matching(c: &mut Criterion) {
                         black_box(context),
                         black_box(&test_string),
                         black_box(pos),
+                        black_box(1),
                     ));
                 }
             });

@@ -188,7 +188,7 @@ Scalar DP processes one cell at a time. Modern CPUs can process 4-8 values in pa
 Vectorize DP operations using AVX2 (256-bit) or SSE4.1 (128-bit) intrinsics.
 
 ```rust
-#[cfg(feature = "simd")]
+#[cfg(target_arch = "x86_64")]
 pub fn standard_distance_simd(source: &str, target: &str) -> usize {
     // Short strings: SIMD overhead dominates, use scalar
     let source_len = source.chars().count();

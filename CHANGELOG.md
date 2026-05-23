@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+#### `simd`, `scdawg-bloom`, `scdawg-simd` Cargo Features Removed (2026-05-22)
+- **Removed:** `simd`, `scdawg-bloom`, `scdawg-simd` Cargo features.
+  - SIMD code is now always compiled on `x86_64` targets and dispatched at runtime via
+    `is_x86_feature_detected!("avx2")` / `"sse4.1"`, with same-module scalar fallbacks.
+    The Cargo feature was redundant — it gated whether the always-correct code compiled
+    at all, not whether SIMD ran (which has always been a runtime decision).
+  - The `scdawg-bloom` and `scdawg-simd` features had no source-level gates in this
+    crate; they were pass-through delegations to `libdictenstein`, which removed them
+    in `4b17b43`. Their continued presence here had already broken `--features simd`
+    builds.
+  - The `#[cfg(feature = "simd")]` gates throughout the source tree were converted to
+    `#[cfg(target_arch = "x86_64")]`. The `simd` modules (`src/distance/simd.rs`,
+    `src/transducer/simd.rs`) are now compiled exclusively on x86_64; the dead
+    non-x86_64 scalar fallbacks inside them have been removed (call sites already
+    select the scalar implementation on non-x86_64).
+- **Migration:** users with `features = ["simd"]` in their `Cargo.toml` should drop it.
+  No behavior change on x86_64; non-x86_64 targets continue to use the scalar
+  implementation automatically.
+
+#### `phonetic::language::rules` and `dispatch` are now feature-gated on `embedded-rules`
+- The per-language rule aggregator submodule (`phonetic::language::rules::*`) and the
+  dispatch entry points (`rules_for_language`, `default_language`, `is_supported`,
+  `supported_languages`) require the `embedded-rules` Cargo feature. They depend on
+  the per-language phonetic rule modules under `phonetic::rules::*`, which have always
+  been gated on `embedded-rules`. Builds without this feature previously failed with
+  unresolved-import errors; they now compile cleanly with the language dispatcher
+  simply absent.
+
 #### DawgDictionary and OptimizedDawg Deprecated and Removed (2025-12-28)
 - **DawgDictionary and OptimizedDawg removed in favor of DynamicDawg and DoubleArrayTrie**
   - Static DAWG implementations superseded by superior alternatives:

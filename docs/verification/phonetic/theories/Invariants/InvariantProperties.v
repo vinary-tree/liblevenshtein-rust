@@ -496,14 +496,15 @@ Qed.
     We introduce a minimal axiom capturing just this algorithmic property:
 *)
 
-Axiom find_first_match_in_algorithm_implies_no_earlier_matches :
+Record InvariantPreservationContracts : Prop := mkInvariantPreservationContracts {
+  invariant_find_first_match_contract :
   forall rules r_head s pos,
     (forall r, In r rules -> wf_rule r) ->
     In r_head rules ->
     find_first_match r_head s (length s) = Some pos ->
     (* Then: in the context of apply_rules_seq execution, we know that no rules
        in the list matched at any position before pos in this iteration *)
-    no_rules_match_before rules s pos.
+    no_rules_match_before rules s pos;
 
 (** Axiomatic Gap: Pattern Overlap Preservation (Axiom 2)
 
@@ -515,7 +516,7 @@ Axiom find_first_match_in_algorithm_implies_no_earlier_matches :
     is compiled after this one, we declare it here as well.
 *)
 
-Axiom pattern_overlap_preservation :
+  invariant_pattern_overlap_preservation :
   forall r s pos s' r' p,
     wf_rule r ->
     wf_rule r' ->
@@ -524,7 +525,8 @@ Axiom pattern_overlap_preservation :
     (p < pos)%nat ->
     (pos < p + length (pattern r'))%nat ->  (* Pattern overlaps transformation *)
     can_apply_at r' s p = false ->
-    can_apply_at r' s' p = false.
+    can_apply_at r' s' p = false
+}.
 
 (** Theorem: Multi-rule invariant for position-independent contexts
 
@@ -533,7 +535,7 @@ Axiom pattern_overlap_preservation :
     is preserved after transformation.
 *)
 Theorem no_rules_match_before_first_match_preserved :
-  forall rules r rest s pos s' p,
+  forall (contracts : InvariantPreservationContracts) rules r rest s pos s' p,
     rules = r :: rest ->
     (forall r0, In r0 rules -> wf_rule r0) ->
     (forall r0, In r0 rules -> position_dependent_context (context r0) = false) ->
@@ -542,11 +544,11 @@ Theorem no_rules_match_before_first_match_preserved :
     (p < pos)%nat ->
     (forall r0, In r0 rules -> can_apply_at r0 s' p = false).
 Proof.
-  intros rules r rest s pos s' p H_rules H_wf_all H_indep_all H_find H_apply H_p_lt.
+  intros contracts rules r rest s pos s' p H_rules H_wf_all H_indep_all H_find H_apply H_p_lt.
 
   (* Step 1: Establish that no rules match before pos in s *)
   assert (H_no_match_s: no_rules_match_before rules s pos).
-  { eapply find_first_match_in_algorithm_implies_no_earlier_matches.
+  { eapply (invariant_find_first_match_contract contracts).
     - intros r0 H_in. apply H_wf_all. exact H_in.
     - subst rules. left. reflexivity.
     - exact H_find.
@@ -578,7 +580,7 @@ Proof.
     + exact H_no_match_r0_s.
 
   - (* Pattern overlaps: use overlap preservation axiom *)
-    eapply pattern_overlap_preservation.
+    eapply (invariant_pattern_overlap_preservation contracts).
     + (* wf_rule r - the rule that was applied *)
       subst rules. apply H_wf_all. left. reflexivity.
     + (* wf_rule r0 - the rule we're checking *)

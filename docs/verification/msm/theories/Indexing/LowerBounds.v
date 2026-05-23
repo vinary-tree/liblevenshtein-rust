@@ -16,42 +16,6 @@ From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 
-(** * Axioms for Lower Bounds *)
-
-(** L1 distance is lower bounded by MSM when the DP uses the diagonal path.
-    The diagonal path has cost exactly L1 for same-length series. *)
-Axiom l1_lower_bound_inductive : forall x xs y ys cfg,
-  length xs = length ys ->
-  l1_dist xs ys <= msm_distance xs ys cfg ->
-  Qabs (x - y) + l1_dist xs ys <=
-  msm_distance (x :: xs) (y :: ys) cfg.
-
-(** Split operations are needed when |Y| > |X|.
-    Each split costs at least c, giving lower bound (|Y| - |X|) * c. *)
-Axiom length_lb_splits : forall X Y c (Hc : 0 <= c),
-  (length X <= length Y)%nat ->
-  inject_Z (Z.of_nat (length Y - length X)) * c <=
-  msm_distance X Y {| msm_c := c; msm_c_nonneg := Hc |}.
-
-(** Merge operations are needed when |X| > |Y|.
-    Each merge costs at least c, giving lower bound (|X| - |Y|) * c. *)
-Axiom length_lb_merges : forall X Y c (Hc : 0 <= c),
-  (length Y <= length X)%nat ->
-  inject_Z (Z.of_nat (length X - length Y)) * c <=
-  msm_distance X Y {| msm_c := c; msm_c_nonneg := Hc |}.
-
-(** L1 is still a lower bound even for different length series
-    (when we consider only the aligned prefix). *)
-Axiom l1_lower_bound_diff_length : forall X Y cfg,
-  length X <> length Y ->
-  l1_dist X Y <= msm_distance X Y cfg.
-
-(** The diagonal path achieves exactly L1 distance when it is optimal. *)
-Axiom l1_bound_tight_ax : forall X Y cfg,
-  length X = length Y ->
-  (* When diagonal is optimal: *)
-  l1_dist X Y == msm_distance X Y cfg.
-
 (** * Euclidean Distance as Lower Bound *)
 
 (** Helper: zip two lists and apply a function (like map2) *)
@@ -72,6 +36,24 @@ Definition l2_squared (X Y : TimeSeries) : Q :=
 Definition l1_dist (X Y : TimeSeries) : Q :=
   fold_right Qplus 0 (zip_with (fun x y => Qabs (x - y)) X Y).
 
+(** L1 distance is lower bounded by MSM when the DP uses the diagonal path. *)
+Definition l1_lower_bound_inductive_contract : Prop := forall x xs y ys cfg,
+  length xs = length ys ->
+  l1_dist xs ys <= msm_distance xs ys cfg ->
+  Qabs (x - y) + l1_dist xs ys <=
+  msm_distance (x :: xs) (y :: ys) cfg.
+
+(** L1 is still a lower bound even for different length series
+    when we consider only the aligned prefix. *)
+Definition l1_lower_bound_diff_length_contract : Prop := forall X Y cfg,
+  length X <> length Y ->
+  l1_dist X Y <= msm_distance X Y cfg.
+
+(** The diagonal path achieves exactly L1 distance when it is optimal. *)
+Definition l1_bound_tight_contract : Prop := forall X Y cfg,
+  length X = length Y ->
+  l1_dist X Y == msm_distance X Y cfg.
+
 (** L1 distance is a lower bound for MSM when series have the same length.
 
     Proof intuition: In the best case, MSM uses only Move operations,
@@ -80,10 +62,12 @@ Definition l1_dist (X Y : TimeSeries) : Q :=
 *)
 
 Lemma l1_lower_bound_same_length : forall X Y cfg,
+  l1_lower_bound_inductive_contract ->
   length X = length Y ->
   l1_dist X Y <= msm_distance X Y cfg.
 Proof.
-  intros X Y cfg Hlen.
+  intros X Y cfg Hcontract Hlen.
+  unfold l1_lower_bound_inductive_contract in Hcontract.
   (* The diagonal path in the DP matrix uses only Move operations.
      Cost of diagonal = sum of |x_i - y_i| = L1 distance.
      MSM takes minimum over all paths, so MSM <= diagonal.
@@ -101,9 +85,10 @@ Proof.
       simpl.
       (* L1(x::xs, y::ys) = |x-y| + L1(xs, ys) *)
       (* MSM(x::xs, y::ys) >= |x-y| + MSM(xs, ys) >= |x-y| + L1(xs, ys) *)
-      apply l1_lower_bound_inductive.
+      apply Hcontract.
       * exact Hlen'.
-      * apply IH. exact Hlen'.
+      * apply IH.
+        exact Hlen'.
 Qed.
 
 (** * Length Difference as Lower Bound *)
@@ -120,11 +105,27 @@ Definition nat_abs_diff (n m : nat) : nat :=
 Definition length_lb' (X Y : TimeSeries) (c : Q) : Q :=
   inject_Z (Z.of_nat (nat_abs_diff (length X) (length Y))) * c.
 
+(** Split operations are needed when |Y| > |X|. *)
+Definition length_lb_splits_contract : Prop := forall X Y c (Hc : 0 <= c),
+  (length X <= length Y)%nat ->
+  inject_Z (Z.of_nat (length Y - length X)) * c <=
+  msm_distance X Y {| msm_c := c; msm_c_nonneg := Hc |}.
+
+(** Merge operations are needed when |X| > |Y|. *)
+Definition length_lb_merges_contract : Prop := forall X Y c (Hc : 0 <= c),
+  (length Y <= length X)%nat ->
+  inject_Z (Z.of_nat (length X - length Y)) * c <=
+  msm_distance X Y {| msm_c := c; msm_c_nonneg := Hc |}.
+
 (** Length lower bound is valid *)
 Lemma length_lower_bound : forall X Y cfg,
+  length_lb_splits_contract ->
+  length_lb_merges_contract ->
   length_lb' X Y (msm_c cfg) <= msm_distance X Y cfg.
 Proof.
-  intros X Y cfg.
+  intros X Y cfg Hsplits Hmerges.
+  unfold length_lb_splits_contract in Hsplits.
+  unfold length_lb_merges_contract in Hmerges.
   (* If |X| > |Y|, we need at least (|X| - |Y|) merge operations.
      Each merge costs at least c (from c_func_ge_c).
      Similarly for splits if |Y| > |X|. *)
@@ -137,7 +138,7 @@ Proof.
       rewrite Nat.min_l by lia.
       destruct cfg as [c Hc].
       simpl.
-      apply length_lb_splits. lia.
+      apply Hsplits. lia.
     + apply leb_complete_conv in Hcmp. lia.
   - (* |X| > |Y|, need merges *)
     unfold length_lb', nat_abs_diff.
@@ -148,7 +149,7 @@ Proof.
       rewrite Nat.min_r by lia.
       destruct cfg as [c Hc].
       simpl.
-      apply length_lb_merges. lia.
+      apply Hmerges. lia.
 Qed.
 
 (** * Combined Lower Bound *)
@@ -159,31 +160,40 @@ Definition combined_lb (X Y : TimeSeries) (c : Q) : Q :=
 
 (** Combined lower bound is valid *)
 Theorem combined_lower_bound : forall X Y cfg,
+  l1_lower_bound_inductive_contract ->
+  l1_lower_bound_diff_length_contract ->
+  length_lb_splits_contract ->
+  length_lb_merges_contract ->
   combined_lb X Y (msm_c cfg) <= msm_distance X Y cfg.
 Proof.
-  intros X Y cfg.
+  intros X Y cfg Hl1ind Hl1diff Hsplits Hmerges.
+  unfold l1_lower_bound_diff_length_contract in Hl1diff.
   unfold combined_lb.
   apply Q.max_lub.
   - (* L1 bound case *)
     destruct (Nat.eq_dec (length X) (length Y)) as [Heq | Hneq].
-    + apply l1_lower_bound_same_length. assumption.
+    + eapply l1_lower_bound_same_length; eauto.
     + (* Different lengths - L1 still lower bound but proof more complex *)
-      apply l1_lower_bound_diff_length. assumption.
+      exact (Hl1diff X Y cfg Hneq).
   - (* Length bound case *)
-    apply length_lower_bound.
+    eapply length_lower_bound; eauto.
 Qed.
 
 (** * Search Correctness *)
 
 (** Using lower bounds for search is sound: if LB > threshold, skip the candidate *)
 Theorem lb_prune_sound : forall X Y cfg threshold,
+  l1_lower_bound_inductive_contract ->
+  l1_lower_bound_diff_length_contract ->
+  length_lb_splits_contract ->
+  length_lb_merges_contract ->
   threshold < combined_lb X Y (msm_c cfg) ->
   threshold < msm_distance X Y cfg.
 Proof.
-  intros X Y cfg threshold Hlb.
+  intros X Y cfg threshold Hl1ind Hl1diff Hsplits Hmerges Hlb.
   apply Qlt_le_trans with (y := combined_lb X Y (msm_c cfg)).
   - assumption.
-  - apply combined_lower_bound.
+  - eapply combined_lower_bound; eauto.
 Qed.
 
 (** * Tightness Analysis *)
@@ -192,16 +202,17 @@ Qed.
     alignment is purely diagonal (only Move operations). *)
 
 Lemma l1_bound_tight_diagonal : forall X Y cfg,
+  l1_bound_tight_contract ->
   length X = length Y ->
   (* Additional condition: no split/merge is beneficial *)
   (* (This would require formalizing the DP optimality condition) *)
   l1_dist X Y == msm_distance X Y cfg.
 Proof.
-  intros X Y cfg Hlen.
+  intros X Y cfg Hcontract Hlen.
+  unfold l1_bound_tight_contract in Hcontract.
   (* This is only true when the diagonal path IS optimal.
      In general, split/merge might give a better alignment. *)
-  (* Use the axiom for tightness *)
-  apply l1_bound_tight_ax. assumption.
+  exact (Hcontract X Y cfg Hlen).
 Qed.
 
 (** The length bound is tight when series have very different values,

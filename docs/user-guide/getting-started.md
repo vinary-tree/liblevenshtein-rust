@@ -14,10 +14,10 @@ Add to your `Cargo.toml`:
 ```toml
 [dependencies]
 liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", tag = "v0.4.0" }
-
-# Or with SIMD acceleration (x86_64 only, requires SSE4.1/AVX2):
-liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", tag = "v0.4.0", features = ["simd"] }
 ```
+
+SIMD (AVX2/SSE4.1) is enabled automatically on x86_64 targets via runtime CPU
+feature detection — no feature flag required.
 
 ### Installing the CLI Tool
 

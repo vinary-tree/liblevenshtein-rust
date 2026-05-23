@@ -346,16 +346,15 @@ fn main() {
 }
 ```
 
-### Example 5: SIMD Acceleration (Feature-Gated)
+### Example 5: SIMD Acceleration (Automatic on x86_64)
 
 ```rust
-// Cargo.toml: features = ["simd"]
-#[cfg(feature = "simd")]
 use liblevenshtein::distance::standard_distance;
 
-#[cfg(feature = "simd")]
 fn main() {
-    // Automatically uses AVX2 if available, else SSE4.1, else scalar
+    // On x86_64 targets, automatically uses AVX2 if available, else SSE4.1,
+    // else scalar. CPU feature selection happens at runtime via
+    // is_x86_feature_detected!. On other architectures the scalar path runs.
     let long_string_a = "a".repeat(100);
     let long_string_b = "b".repeat(100);
 
@@ -365,11 +364,6 @@ fn main() {
     // For short strings, SIMD overhead is skipped
     let distance_short = standard_distance("test", "best");
     assert_eq!(distance_short, 1);  // Uses scalar implementation
-}
-
-#[cfg(not(feature = "simd"))]
-fn main() {
-    println!("SIMD feature not enabled. Use: cargo build --features simd");
 }
 ```
 
@@ -569,7 +563,6 @@ let d = standard_distance_recursive("test", "best", &cache);
 use liblevenshtein::distance::merge_and_split_distance;
 let d = merge_and_split_distance("m", "rn", &cache);
 
-// SIMD-accelerated (feature="simd", auto-selects best)
-#[cfg(feature = "simd")]
+// SIMD-accelerated (automatic on x86_64; runtime selects AVX2/SSE4.1/scalar)
 let d = standard_distance("long_string_a", "long_string_b");
 ```

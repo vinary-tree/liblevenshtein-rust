@@ -17,12 +17,40 @@
 *)
 
 From Stdlib Require Import List Nat Arith Lia.
+From Stdlib Require Import micromega.Lra.
 From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 From Liblevenshtein.MSM Require Import Identity Symmetry TriangleInequality.
 
-(** * Axioms for Main Theorem *)
+Record MsmMetricContracts : Prop := mkMsmMetricContracts {
+  msm_metric_distance_contracts : MsmDistanceContracts;
+  msm_metric_symmetry_contract : msm_symmetric_nonempty_contract;
+  msm_metric_triangle_contracts : MsmTriangleContracts
+}.
+
+Lemma q_sub_lower_from_triangle : forall a b c : Q,
+  b <= a + c ->
+  - c <= a - b.
+Proof.
+  intros a b c H.
+  apply (proj1 (Qplus_le_l (- c) (a - b) b)).
+  setoid_replace (- c + b) with (b - c) by ring.
+  setoid_replace (a - b + b) with a by ring.
+  apply (proj1 (Qplus_le_l (b - c) a c)).
+  setoid_replace (b - c + c) with b by ring.
+  exact H.
+Qed.
+
+Lemma q_sub_upper_from_triangle : forall a b c : Q,
+  a <= c + b ->
+  a - b <= c.
+Proof.
+  intros a b c H.
+  apply (proj1 (Qplus_le_l (a - b) c b)).
+  setoid_replace (a - b + b) with a by ring.
+  exact H.
+Qed.
 
 (** Reverse triangle inequality: |d(X,Y) - d(Y,Z)| <= d(X,Z)
     This follows from the standard triangle inequality applied twice:
@@ -30,8 +58,29 @@ From Liblevenshtein.MSM Require Import Identity Symmetry TriangleInequality.
     => d(X,Y) - d(Y,Z) <= d(X,Z)
     And similarly d(Y,Z) - d(X,Y) <= d(X,Z)
     => |d(X,Y) - d(Y,Z)| <= d(X,Z) *)
-Axiom msm_reverse_triangle_ax : forall X Y Z cfg,
+Lemma msm_reverse_triangle_ax : forall (contracts : MsmMetricContracts) X Y Z cfg,
   Qabs (msm_distance X Y cfg - msm_distance Y Z cfg) <= msm_distance X Z cfg.
+Proof.
+  intros contracts X Y Z cfg.
+  apply Qabs_Qle_condition.
+  split.
+  - pose proof (msm_triangle (msm_metric_triangle_contracts contracts) Y X Z cfg) as Htri.
+    pose proof (msm_symmetric (msm_metric_symmetry_contract contracts) X Y cfg) as Hsym.
+    rewrite <- Hsym in Htri.
+    exact (q_sub_lower_from_triangle
+             (msm_distance X Y cfg)
+             (msm_distance Y Z cfg)
+             (msm_distance X Z cfg)
+             Htri).
+  - pose proof (msm_triangle (msm_metric_triangle_contracts contracts) X Z Y cfg) as Htri.
+    pose proof (msm_symmetric (msm_metric_symmetry_contract contracts) Y Z cfg) as Hsym.
+    rewrite <- Hsym in Htri.
+    exact (q_sub_upper_from_triangle
+             (msm_distance X Y cfg)
+             (msm_distance Y Z cfg)
+             (msm_distance X Z cfg)
+             Htri).
+Qed.
 
 (** * Metric Space Definition *)
 
@@ -66,36 +115,36 @@ Proof.
 Qed.
 
 (** MSM satisfies identity (left direction) *)
-Lemma msm_metric_identity_l : forall cfg X,
+Lemma msm_metric_identity_l : forall (contracts : MsmMetricContracts) cfg X,
   msm_metric_fn cfg X X == 0.
 Proof.
-  intros cfg X. unfold msm_metric_fn.
-  apply msm_reflexive.
+  intros contracts cfg X. unfold msm_metric_fn.
+  apply (msm_reflexive (msm_metric_distance_contracts contracts)).
 Qed.
 
 (** MSM satisfies identity (right direction) *)
-Lemma msm_metric_identity_r : forall cfg X Y,
+Lemma msm_metric_identity_r : forall (contracts : MsmMetricContracts) cfg X Y,
   0 < msm_c cfg ->
   msm_metric_fn cfg X Y == 0 -> X = Y.
 Proof.
-  intros cfg X Y Hc Heq. unfold msm_metric_fn in Heq.
-  apply msm_zero_implies_equal with cfg; assumption.
+  intros contracts cfg X Y Hc Heq. unfold msm_metric_fn in Heq.
+  exact (msm_zero_implies_equal (msm_metric_distance_contracts contracts) X Y cfg Hc Heq).
 Qed.
 
 (** MSM satisfies symmetry *)
-Lemma msm_metric_symm : forall cfg X Y,
+Lemma msm_metric_symm : forall (contracts : MsmMetricContracts) cfg X Y,
   msm_metric_fn cfg X Y == msm_metric_fn cfg Y X.
 Proof.
-  intros cfg X Y. unfold msm_metric_fn.
-  apply msm_symmetric.
+  intros contracts cfg X Y. unfold msm_metric_fn.
+  apply (msm_symmetric (msm_metric_symmetry_contract contracts)).
 Qed.
 
 (** MSM satisfies triangle inequality *)
-Lemma msm_metric_triangle : forall cfg X Y Z,
+Lemma msm_metric_triangle : forall (contracts : MsmMetricContracts) cfg X Y Z,
   msm_metric_fn cfg X Z <= msm_metric_fn cfg X Y + msm_metric_fn cfg Y Z.
 Proof.
-  intros cfg X Y Z. unfold msm_metric_fn.
-  apply msm_triangle.
+  intros contracts cfg X Y Z. unfold msm_metric_fn.
+  apply (msm_triangle (msm_metric_triangle_contracts contracts)).
 Qed.
 
 (** * Main Theorem *)
@@ -107,19 +156,19 @@ Qed.
     can have distance 0 (if they differ only by splits/merges).
 *)
 
-Theorem msm_is_metric : forall cfg,
+Theorem msm_is_metric : forall (contracts : MsmMetricContracts) cfg,
   0 < msm_c cfg ->
   exists (m : Metric TimeSeries),
     forall X Y, metric_fn _ m X Y == msm_distance X Y cfg.
 Proof.
-  intros cfg Hc.
+  intros contracts cfg Hc.
   exists (mkMetric TimeSeries
            (msm_metric_fn cfg)
            (msm_metric_nonneg cfg)
-           (msm_metric_identity_l cfg)
-           (fun X Y => msm_metric_identity_r cfg X Y Hc)
-           (msm_metric_symm cfg)
-           (msm_metric_triangle cfg)).
+           (msm_metric_identity_l contracts cfg)
+           (fun X Y => msm_metric_identity_r contracts cfg X Y Hc)
+           (msm_metric_symm contracts cfg)
+           (msm_metric_triangle contracts cfg)).
   intros X Y.
   unfold msm_metric_fn.
   reflexivity.
@@ -130,9 +179,12 @@ Qed.
 (** From being a metric, we get several useful properties "for free": *)
 
 (** Distance to self is always 0 *)
-Corollary msm_self_zero : forall X cfg,
+Corollary msm_self_zero : forall (contracts : MsmMetricContracts) X cfg,
   msm_distance X X cfg == 0.
-Proof. apply msm_reflexive. Qed.
+Proof.
+  intros contracts X cfg.
+  apply (msm_reflexive (msm_metric_distance_contracts contracts)).
+Qed.
 
 (** Distance is always non-negative *)
 Corollary msm_always_nonneg : forall X Y cfg,
@@ -140,19 +192,22 @@ Corollary msm_always_nonneg : forall X Y cfg,
 Proof. apply msm_nonneg. Qed.
 
 (** Distance is symmetric *)
-Corollary msm_dist_symm : forall X Y cfg,
+Corollary msm_dist_symm : forall (contracts : MsmMetricContracts) X Y cfg,
   msm_distance X Y cfg == msm_distance Y X cfg.
-Proof. apply msm_symmetric. Qed.
+Proof.
+  intros contracts X Y cfg.
+  apply (msm_symmetric (msm_metric_symmetry_contract contracts)).
+Qed.
 
 (** Triangle inequality in reverse form *)
-Corollary msm_triangle_diff : forall X Y Z cfg,
+Corollary msm_triangle_diff : forall (contracts : MsmMetricContracts) X Y Z cfg,
   Qabs (msm_distance X Y cfg - msm_distance Y Z cfg) <= msm_distance X Z cfg.
 Proof.
-  intros X Y Z cfg.
+  intros contracts X Y Z cfg.
   (* From triangle: d(X,Y) - d(Y,Z) <= d(X,Z) follows from
      d(X,Y) <= d(X,Z) + d(Z,Y) (triangle with Z as intermediate)
      Use the axiom for reverse triangle inequality *)
-  apply msm_reverse_triangle_ax.
+  apply (msm_reverse_triangle_ax contracts).
 Qed.
 
 (** * Summary *)

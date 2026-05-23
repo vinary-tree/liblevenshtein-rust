@@ -128,13 +128,16 @@
 //! let results = dict.query("fone", 2);
 //! ```
 
+#[cfg(feature = "embedded-rules")]
 pub mod dispatch;
+#[cfg(feature = "embedded-rules")]
 pub mod rules;
 pub mod tags;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "embedded-rules"))]
 mod tests;
 
 // Re-export the public dispatch API so existing call sites
 // (`crate::phonetic::language::rules_for_language`, etc.) keep working.
+#[cfg(feature = "embedded-rules")]
 pub use dispatch::{default_language, is_supported, rules_for_language, supported_languages};

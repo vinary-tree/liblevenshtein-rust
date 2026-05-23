@@ -21,7 +21,7 @@ From Liblevenshtein.Phonetic.Verification Require Import Core.Rules.
 From Liblevenshtein.Phonetic.Verification Require Import Invariants.InvariantProperties.
 Import ListNotations.
 
-(** * Axioms for Algorithm State *)
+(** * Contracts for Algorithm State *)
 
 (** Axiom: find_first_match for a rule in a rule list implies AlgoState.
 
@@ -34,7 +34,8 @@ Import ListNotations.
     This is exactly the AlgoState invariant at position pos. The axiom bridges
     the semantic gap between the abstract find_first_match function and the
     concrete algorithm execution trace. *)
-Axiom find_first_match_implies_algo_state_ax : forall rules r_head s pos,
+Definition find_first_match_implies_algo_state_contract : Prop :=
+  forall rules r_head s pos,
   (forall r, In r rules -> wf_rule r) ->
   In r_head rules ->
   find_first_match r_head s (length s) = Some pos ->
@@ -117,15 +118,14 @@ Qed.
     analysis documents.
 *)
 Lemma find_first_match_implies_algo_state :
-  forall rules r_head s pos,
+  forall (contract : find_first_match_implies_algo_state_contract) rules r_head s pos,
     (forall r, In r rules -> wf_rule r) ->
     In r_head rules ->
     find_first_match r_head s (length s) = Some pos ->
     AlgoState rules s pos.
 Proof.
-  intros rules r_head s pos H_wf H_in H_find.
-  (* Apply the axiom that captures the algorithm execution semantics *)
-  apply find_first_match_implies_algo_state_ax with r_head; assumption.
+  intros contract rules r_head s pos H_wf H_in H_find.
+  exact (contract rules r_head s pos H_wf H_in H_find).
 Qed.
 
 (** * Helper Lemmas for State Construction *)

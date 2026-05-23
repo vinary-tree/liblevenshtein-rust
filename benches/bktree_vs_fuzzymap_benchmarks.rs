@@ -16,13 +16,13 @@ use std::collections::{HashMap, HashSet};
 // ============================================================================
 
 /// Levenshtein distance computation (used by BK-tree)
-/// Uses SIMD-accelerated version when `simd` feature is enabled.
-#[cfg(feature = "simd")]
+/// Uses SIMD-accelerated version on x86_64 targets.
+#[cfg(target_arch = "x86_64")]
 fn levenshtein_distance(a: &str, b: &str) -> usize {
     liblevenshtein::distance::standard_distance(a, b)
 }
 
-#[cfg(not(feature = "simd"))]
+#[cfg(not(target_arch = "x86_64"))]
 fn levenshtein_distance(a: &str, b: &str) -> usize {
     levenshtein_distance_scalar(a, b)
 }

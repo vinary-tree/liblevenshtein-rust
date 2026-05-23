@@ -14,22 +14,18 @@ Require Import Liblevenshtein.Grammar.Verification.Layers.Layer2.
 Require Import Liblevenshtein.Grammar.Verification.Composition.Forward.
 Import ListNotations.
 
-(** ** Axioms for Pipeline Properties *)
+(** ** Pipeline Contracts *)
 
-(** Axiom: All layers in a well-formed correction pipeline produce valid results.
-    This captures the design invariant that our correction layers are sound. *)
-Axiom pipeline_layers_valid_ax : forall p layer,
-  valid_layer_result p (layer p).
+Definition pipeline_layers_valid (input : program) (pipe : pipeline) : Prop :=
+  forall layer, In layer pipe -> valid_layer_result input (layer input).
 
-(** Axiom: If layer_best_correction is Some, then layer_corrections is non-empty.
-    This captures the invariant that best_correction is selected from corrections. *)
-Axiom best_correction_from_corrections_ax : forall result corr,
-  result.(layer_best_correction) = Some corr ->
-  In corr result.(layer_corrections).
+Definition best_correction_from_corrections (result : LayerResult) : Prop :=
+  forall corr,
+    result.(layer_best_correction) = Some corr ->
+    In corr result.(layer_corrections).
 
-(** Axiom: Corrections in pipeline results are ordered by edit distance.
-    When goal_min_edits is true, corrections appear in non-decreasing order. *)
-Axiom corrections_ordered_by_edits_ax : forall input pipe goal,
+Definition corrections_ordered_by_edits (input : program) (pipe : pipeline)
+                                      (goal : CorrectionGoal) : Prop :=
   goal.(goal_min_edits) = true ->
   let result := execute_pipeline input pipe in
   match result.(layer_best_correction) with
@@ -49,6 +45,7 @@ Theorem grammar_correction_correctness :
     let layer1 := execute_layer1 config1 in
     let layer2 := fun p r => execute_layer2 config2 p r in
     let pipe := [layer1; fun p => layer2 p (layer1 p)] in
+    pipeline_correction_contract input pipe goal ->
     let result := execute_pipeline input pipe in
     match result.(layer_best_correction) with
     | Some corr =>
@@ -57,24 +54,25 @@ Theorem grammar_correction_correctness :
     | None => True
     end.
 Proof.
-  intros input config1 config2 goal layer1 layer2 pipe result.
+  intros input config1 config2 goal layer1 layer2 pipe Hcontract result.
   (* Apply the general correction_correctness theorem *)
   apply correction_correctness.
+  exact Hcontract.
 Qed.
 
 (** ** Soundness: All Corrections Transform Input Correctly *)
 
 Theorem all_corrections_sound :
   forall input pipe,
+    pipeline_layers_valid input pipe ->
     let result := execute_pipeline input pipe in
     Forall (correction_sound input) result.(layer_corrections).
 Proof.
-  intros input pipe result.
+  intros input pipe Hlayers result.
   unfold result.
-  (* Apply pipeline_execution_valid with the axiom that all layers are valid *)
   apply pipeline_execution_valid.
   intros layer Hin.
-  apply pipeline_layers_valid_ax.
+  apply Hlayers. exact Hin.
 Qed.
 
 (** ** Termination: Pipeline Always Terminates *)
@@ -91,6 +89,7 @@ Qed.
 Theorem best_correction_optimal :
   forall input pipe goal,
     goal.(goal_min_edits) = true ->
+    corrections_ordered_by_edits input pipe goal ->
     let result := execute_pipeline input pipe in
     match result.(layer_best_correction) with
     | Some best =>
@@ -101,10 +100,9 @@ Theorem best_correction_optimal :
     | None => True
     end.
 Proof.
-  intros input pipe goal Hgoal result.
+  intros input pipe goal Hgoal Hordered result.
   unfold result.
-  (* Use the axiom that corrections are ordered by edit distance *)
-  apply corrections_ordered_by_edits_ax.
+  apply Hordered.
   exact Hgoal.
 Qed.
 
@@ -113,19 +111,18 @@ Qed.
 Theorem pipeline_makes_progress :
   forall input pipe,
     length pipe > 0 ->
+    best_correction_from_corrections (execute_pipeline input pipe) ->
     let result := execute_pipeline input pipe in
     result.(layer_corrections) <> [] \/
     result.(layer_best_correction) = None.
 Proof.
-  intros input pipe Hlen result.
+  intros input pipe Hlen Hbest_from_corrections result.
   unfold result.
   (* Case analysis on whether there's a best correction *)
   destruct (execute_pipeline input pipe).(layer_best_correction) as [best|] eqn:Hbest.
   - (* Some best - must have corrections *)
     left.
-    (* If there's a best correction, it came from the corrections list *)
-    pose proof (best_correction_from_corrections_ax
-                  (execute_pipeline input pipe) best Hbest) as Hin.
+    pose proof (Hbest_from_corrections best Hbest) as Hin.
     (* A list containing an element is non-empty *)
     intro Hempty.
     rewrite Hempty in Hin.

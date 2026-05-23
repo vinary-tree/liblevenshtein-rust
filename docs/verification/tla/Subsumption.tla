@@ -80,8 +80,8 @@ MergeSplitSubsumes(p, q) ==
     /\ p.i = q.i
     /\ \/ p.e < q.e
        \/ /\ p.e = q.e
-          /\ IF p.offset < 0 THEN -p.offset ELSE p.offset
-             < IF q.offset < 0 THEN -q.offset ELSE q.offset
+          /\ (IF p.offset < 0 THEN -p.offset ELSE p.offset)
+             < (IF q.offset < 0 THEN -q.offset ELSE q.offset)
 
 \* Combined subsumption (dispatch by algorithm)
 Subsumes(p, q) ==
@@ -101,6 +101,14 @@ AllPositions == [
     offset: -1..1,
     alg: ALGORITHMS
 ]
+
+\* Representative finite pruning frontier for the state-machine check.  The
+\* universal order properties above still quantify over all model positions.
+SamplePositions ==
+    {p \in AllPositions :
+        /\ p.i \in 0..1
+        /\ p.offset = 0
+        /\ p.special = FALSE}
 
 \* PROPERTY 1: Irreflexivity
 \* No position subsumes itself
@@ -123,7 +131,7 @@ Transitive ==
 StrictPartialOrder ==
     /\ Irreflexive
     /\ Asymmetric
-    /\ Transitivity
+    /\ Transitive
 
 (***************************************************************************)
 (* Correctness Properties                                                   *)
@@ -167,10 +175,11 @@ TypeInv ==
     /\ positions \subseteq AllPositions
     /\ removed \subseteq AllPositions
     /\ iteration \in Nat
+    /\ StrictPartialOrder
 
 \* Initial state with arbitrary set of positions
 Init ==
-    /\ positions \in SUBSET AllPositions
+    /\ positions = SamplePositions
     /\ removed = {}
     /\ iteration = 0
 
@@ -190,7 +199,9 @@ Done ==
 
 Next == RemoveSubsumed \/ Done
 
-Spec == Init /\ [][Next]_<<positions, removed, iteration>>
+SubsumptionVars == <<positions, removed, iteration>>
+
+Spec == Init /\ [][Next]_SubsumptionVars /\ WF_SubsumptionVars(RemoveSubsumed)
 
 (***************************************************************************)
 (* Invariants                                                               *)

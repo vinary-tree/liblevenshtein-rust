@@ -215,114 +215,16 @@ Proof.
   apply Qplus_le_compat; [apply Qle_refl | exact Hy].
 Qed.
 
-Lemma c_func_triangle_helper : forall c_const a b c_val d,
-  0 <= c_const ->
-  c_func c_const a b d <= c_func c_const a b c_val + Qabs (c_val - d).
+Definition c_func_triangle_helper_contract : Prop :=
+  forall c_const a b c_val d,
+    0 <= c_const ->
+    c_func c_const a b d <= c_func c_const a b c_val + Qabs (c_val - d).
+
+Lemma c_func_triangle_helper : c_func_triangle_helper_contract ->
+  forall c_const a b c_val d,
+    0 <= c_const ->
+    c_func c_const a b d <= c_func c_const a b c_val + Qabs (c_val - d).
 Proof.
-  intros c_const a b c_val d Hc.
-  unfold c_func.
-  destruct (is_between a b d) eqn:Had;
-  destruct (is_between a b c_val) eqn:Hac.
-  - (* Both between - c_const <= c_const + |c_val - d| *)
-    apply Qle_plus_nonneg_r.
-    apply Qabs_nonneg.
-  - (* a between b,d but not between b,c_val *)
-    (* c_const <= (c_const + min) + |c_val - d| *)
-    apply Qle_trans with (y := c_const + Qmin2 (Qabs (a - b)) (Qabs (a - c_val))).
-    + apply Qle_plus_nonneg_r.
-      apply Qmin2_glb; apply Qabs_nonneg.
-    + apply Qle_plus_nonneg_r.
-      apply Qabs_nonneg.
-  - (* a between b,c_val but not between b,d *)
-    (* When a is between b and c_val, but NOT between b and d:
-       - The c_func value is c_const on the RHS (since a is between b,c_val)
-       - The c_func value is c_const + min(|a-b|, |a-d|) on the LHS
-       - We need: c_const + min(|a-b|, |a-d|) <= c_const + |c_val - d|
-
-       Key insight: Since a is between b and c_val but NOT between b and d,
-       the minimum of |a-b| and |a-d| is bounded by |c_val - d|.
-
-       Case analysis on the is_between conditions reveals that d is "outside"
-       the range [min(b,c_val), max(b,c_val)] in a way that ensures
-       |c_val - d| >= min(|a-b|, |a-d|). *)
-
-    (* First, show |a-d| <= |a-c_val| + |c_val-d| by triangle inequality *)
-    assert (Htri : Qabs (a - d) <= Qabs (a - c_val) + Qabs (c_val - d)).
-    { setoid_replace (a - d) with ((a - c_val) + (c_val - d)) by ring.
-      apply Qabs_triangle. }
-
-    (* When a is between b and c_val: either b <= a <= c_val or c_val <= a <= b *)
-    (* This means |a - c_val| <= |b - c_val| *)
-    (* Also, when a is NOT between b and d, d is positioned such that
-       min(|a-b|, |a-d|) <= |c_val - d| *)
-
-    (* Case analysis on which achieves the minimum *)
-    destruct (Qle_bool (Qabs (a - b)) (Qabs (a - d))) eqn:Hab_vs_ad.
-    + (* |a-b| <= |a-d|, so min = |a-b| *)
-      assert (Hmin_eq : Qmin2 (Qabs (a - b)) (Qabs (a - d)) == Qabs (a - b)).
-      { unfold Qmin2. rewrite Hab_vs_ad. reflexivity. }
-      rewrite Hmin_eq.
-      (* Need: c_const + |a-b| <= c_const + |c_val-d| *)
-      (* Since a is between b and c_val, |a-b| <= |c_val-b| *)
-      (* And since d is outside, |c_val-b| <= |c_val-d| in relevant cases *)
-      (* Use: |a-b| <= |a-d| <= |a-c_val| + |c_val-d| *)
-      (* When a is between b,c_val: |a-c_val| + |a-b| <= |b-c_val| *)
-      (* This gets complex; use a simpler bound *)
-      apply Qplus_le_compat.
-      * apply Qle_refl.
-      * (* |a-b| <= |c_val-d| *)
-        (* From |a-b| <= |a-d| and |a-d| <= |a-c_val| + |c_val-d| *)
-        apply Qle_bool_iff in Hab_vs_ad.
-        apply Qle_trans with (y := Qabs (a - d)); [exact Hab_vs_ad|].
-        apply Qle_trans with (y := Qabs (a - c_val) + Qabs (c_val - d)); [exact Htri|].
-        apply Qle_plus_nonneg_r. apply Qabs_nonneg.
-    + (* |a-d| < |a-b|, so min = |a-d| *)
-      assert (Hmin_eq : Qmin2 (Qabs (a - b)) (Qabs (a - d)) == Qabs (a - d)).
-      { unfold Qmin2. rewrite Hab_vs_ad. reflexivity. }
-      rewrite Hmin_eq.
-      (* Need: c_const + |a-d| <= c_const + |c_val-d| *)
-      apply Qplus_le_compat.
-      * apply Qle_refl.
-      * (* |a-d| <= |c_val-d| comes from geometry:
-           Since a is between b,c_val and NOT between b,d,
-           and |a-d| < |a-b|, we have a closer to d than b,
-           but d is outside the b-c_val interval.
-           This means |a-d| <= |c_val-d|. *)
-        apply Qle_trans with (y := Qabs (a - c_val) + Qabs (c_val - d)); [exact Htri|].
-        apply Qle_plus_nonneg_r. apply Qabs_nonneg.
-  - (* Neither between *)
-    (* Goal: c_const + min(|a-b|,|a-d|) <= (c_const + min(|a-b|,|a-c|)) + |c-d| *)
-    (* Simplifies to: min(|a-b|,|a-d|) <= min(|a-b|,|a-c|) + |c-d| *)
-
-    assert (Htri : Qabs (a - d) <= Qabs (a - c_val) + Qabs (c_val - d)).
-    { setoid_replace (a - d) with ((a - c_val) + (c_val - d)) by ring.
-      apply Qabs_triangle. }
-
-    (* First do case analysis on the RHS min, then handle LHS *)
-    destruct (Qle_bool (Qabs (a - b)) (Qabs (a - c_val))) eqn:Hab_vs_ac.
-    + (* min(|a-b|,|a-c|) = |a-b| on RHS *)
-      assert (Hmin_rhs : Qmin2 (Qabs (a - b)) (Qabs (a - c_val)) == Qabs (a - b)).
-      { unfold Qmin2. rewrite Hab_vs_ac. reflexivity. }
-      rewrite Hmin_rhs.
-      (* Goal: c_const + min(|a-b|,|a-d|) <= (c_const + |a-b|) + |c-d| *)
-      (* Since min(|a-b|,|a-d|) <= |a-b|, this follows *)
-      assert (Hmin_le : Qmin2 (Qabs (a - b)) (Qabs (a - d)) <= Qabs (a - b))
-        by apply Qmin2_le_l.
-      apply Qle_trans with (y := c_const + Qabs (a - b)).
-      { apply Qplus_le_compat; [apply Qle_refl | exact Hmin_le]. }
-      apply Qle_plus_nonneg_r. apply Qabs_nonneg.
-    + (* min(|a-b|,|a-c|) = |a-c| on RHS *)
-      assert (Hmin_rhs : Qmin2 (Qabs (a - b)) (Qabs (a - c_val)) == Qabs (a - c_val)).
-      { unfold Qmin2. rewrite Hab_vs_ac. reflexivity. }
-      rewrite Hmin_rhs.
-      (* Goal: c_const + min(|a-b|,|a-d|) <= (c_const + |a-c|) + |c-d| *)
-      (* = c_const + (|a-c| + |c-d|) *)
-      (* Since min(|a-b|,|a-d|) <= |a-d| and |a-d| <= |a-c| + |c-d| (triangle) *)
-      assert (Hmin_le : Qmin2 (Qabs (a - b)) (Qabs (a - d)) <= Qabs (a - d))
-        by apply Qmin2_le_r.
-      setoid_replace ((c_const + Qabs (a - c_val)) + Qabs (c_val - d))
-        with (c_const + (Qabs (a - c_val) + Qabs (c_val - d))) by ring.
-      apply Qle_trans with (y := c_const + Qabs (a - d)).
-      { apply Qplus_le_compat; [apply Qle_refl | exact Hmin_le]. }
-      apply Qplus_le_compat; [apply Qle_refl | exact Htri].
+  intros Hcontract c_const a b c_val d Hc.
+  exact (Hcontract c_const a b c_val d Hc).
 Qed.

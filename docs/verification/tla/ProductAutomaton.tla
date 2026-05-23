@@ -33,6 +33,7 @@ VARIABLES
     product_states,     \* Current set of product states
     input_position,     \* Current position in input
     accepted,           \* Whether input has been accepted
+    accepted_witnesses, \* Accepting states observed so far
     cost_map            \* Map from product state to minimum cost
 
 (***************************************************************************)
@@ -163,7 +164,7 @@ NFAStatesValid ==
 
 \* INV4: Acceptance implies reaching final NFA state with bounded cost
 AcceptanceValid ==
-    accepted => \E ps \in product_states :
+    accepted => \E ps \in accepted_witnesses :
         /\ ps.nfa_state \in FINAL_NFA_STATES
         /\ ps.error_count <= MAX_COST
 
@@ -174,6 +175,7 @@ PatternPositionValid ==
 \* Type invariant
 TypeInvariant ==
     /\ product_states \subseteq ProductState
+    /\ accepted_witnesses \subseteq ProductState
     /\ input_position \in 0..INPUT_LENGTH
     /\ accepted \in BOOLEAN
 
@@ -191,6 +193,7 @@ Init ==
     /\ product_states = {InitialProductState}
     /\ input_position = 0
     /\ accepted = FALSE
+    /\ accepted_witnesses = {}
     /\ cost_map = [ps \in {InitialProductState} |-> 0]
     /\ nfa_delta = InitNFADelta
 
@@ -216,11 +219,14 @@ ProcessCharacter(c) ==
            pruned == ApplySubsumption(alive)
 
            \* Check for acceptance
-           new_accepted == accepted \/ \E ps \in pruned : IsAccepting(ps)
+           new_witnesses == {ps \in pruned : IsAccepting(ps)}
+           all_witnesses == accepted_witnesses \cup new_witnesses
+           new_accepted == accepted \/ new_witnesses # {}
        IN
            /\ product_states' = pruned
            /\ input_position' = input_position + 1
            /\ accepted' = new_accepted
+           /\ accepted_witnesses' = all_witnesses
            /\ cost_map' = [ps \in pruned |-> ps.error_count]
            /\ UNCHANGED nfa_delta
 
@@ -233,14 +239,16 @@ CheckAcceptance ==
            final_states == product_states \cup with_epsilon
 
            \* Check for accepting states
-           final_accepted == \E ps \in final_states : IsAccepting(ps)
+           final_witnesses == {ps \in final_states : IsAccepting(ps)}
+           final_accepted == final_witnesses # {}
        IN
            /\ accepted' = accepted \/ final_accepted
+           /\ accepted_witnesses' = accepted_witnesses \cup final_witnesses
            /\ UNCHANGED <<product_states, input_position, cost_map, nfa_delta>>
 
 \* Stuttering (no change)
 Stutter ==
-    /\ UNCHANGED <<product_states, input_position, accepted, cost_map, nfa_delta>>
+    /\ UNCHANGED <<product_states, input_position, accepted, accepted_witnesses, cost_map, nfa_delta>>
 
 \* Next state relation
 Next ==
@@ -252,10 +260,11 @@ Next ==
 (* Fairness                                                                 *)
 (***************************************************************************)
 
-Fairness == WF_<<product_states, input_position, accepted, cost_map, nfa_delta>>(
-    \E c \in ALPHABET : ProcessCharacter(c))
+FairVars == <<product_states, input_position, accepted, accepted_witnesses, cost_map, nfa_delta>>
 
-Spec == Init /\ [][Next]_<<product_states, input_position, accepted, cost_map, nfa_delta>> /\ Fairness
+Fairness == WF_FairVars(\E c \in ALPHABET : ProcessCharacter(c))
+
+Spec == Init /\ [][Next]_FairVars /\ Fairness
 
 (***************************************************************************)
 (* Temporal Properties                                                      *)

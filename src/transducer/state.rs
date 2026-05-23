@@ -207,7 +207,7 @@ impl State {
             }
 
             // SIMD path: use vectorized horizontal minimum for 4-8 positions
-            #[cfg(feature = "simd")]
+            #[cfg(target_arch = "x86_64")]
             {
                 let len = self.positions.len();
                 if (4..=8).contains(&len) {

@@ -20,40 +20,7 @@ Require Import Coq.Init.Nat.
 Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Bool.Bool.
 Require Import Coq.micromega.Lia.
-Require Import Coq.Sets.Ensembles.
 Import ListNotations.
-
-(** * Axioms for Product State Properties *)
-
-(** Product soundness: if product accepts, there exists an NFA word within distance *)
-Axiom product_soundness_ax : forall nfa pattern max_errors input,
-  product_accepts nfa pattern max_errors input ->
-  exists nfa_word,
-    nfa_accepts nfa nfa_word /\
-    exists dist, dist <= max_errors /\ True.
-
-(** Product completeness: if NFA word exists within distance, product accepts *)
-Axiom product_completeness_ax : forall nfa pattern max_errors input,
-  (exists nfa_word,
-    nfa_accepts nfa nfa_word /\
-    exists dist, dist <= max_errors /\ True) ->
-  product_accepts nfa pattern max_errors input.
-
-(** Subsumption preserves reachability *)
-Axiom subsumption_reachability_ax :
-  forall nfa pattern max_errors ps1 ps2 input psf,
-  product_subsumes ps1 ps2 ->
-  product_run nfa pattern max_errors ps2 input psf ->
-  lev_e (prod_lev_pos psf) <= max_errors ->
-  exists psf',
-    product_run nfa pattern max_errors ps1 input psf' /\
-    lev_e (prod_lev_pos psf') <= lev_e (prod_lev_pos psf).
-
-(** Epsilon closure is sound *)
-Axiom epsilon_closure_sound_ax : forall nfa pattern max_errors states fuel ps,
-  In ps (product_epsilon_closure_step nfa pattern max_errors states fuel) ->
-  exists ps0, In ps0 states /\
-    product_run nfa pattern max_errors ps0 EmptyString ps.
 
 (** * NFA Definition *)
 
@@ -243,41 +210,61 @@ Definition product_accepts (nfa : NFA) (pattern : string) (max_errors : nat)
     product_run nfa pattern max_errors (initial_product_state nfa) input psf /\
     is_final_product nfa pattern_len max_errors psf = true.
 
+(** Product soundness: if product accepts, there exists an NFA word within distance. *)
+Definition product_soundness_contract : Prop := forall nfa pattern max_errors input,
+  product_accepts nfa pattern max_errors input ->
+  exists nfa_word,
+    nfa_accepts nfa nfa_word /\
+    exists dist, dist <= max_errors /\ True.
+
+(** Product completeness: if NFA word exists within distance, product accepts. *)
+Definition product_completeness_contract : Prop := forall nfa pattern max_errors input,
+  (exists nfa_word,
+    nfa_accepts nfa nfa_word /\
+    exists dist, dist <= max_errors /\ True) ->
+  product_accepts nfa pattern max_errors input.
+
 (** * Correctness Theorem *)
 
 (** Product acceptance implies NFA accepts some string within distance *)
 Theorem product_soundness : forall nfa pattern max_errors input,
+  product_soundness_contract ->
   product_accepts nfa pattern max_errors input ->
   exists nfa_word,
     nfa_accepts nfa nfa_word /\
     exists dist, dist <= max_errors /\ True. (* dist = levenshtein pattern input *)
 Proof.
-  intros nfa pattern max_errors input Hacc.
-  apply product_soundness_ax. assumption.
+  intros nfa pattern max_errors input Hcontract Hacc.
+  unfold product_soundness_contract in Hcontract.
+  exact (Hcontract nfa pattern max_errors input Hacc).
 Qed.
 
 (** NFA acceptance with bounded distance implies product acceptance *)
 Theorem product_completeness : forall nfa pattern max_errors input,
+  product_completeness_contract ->
   (exists nfa_word,
     nfa_accepts nfa nfa_word /\
     exists dist, dist <= max_errors /\ True) -> (* dist = levenshtein pattern input *)
   product_accepts nfa pattern max_errors input.
 Proof.
-  intros nfa pattern max_errors input H.
-  apply product_completeness_ax. assumption.
+  intros nfa pattern max_errors input Hcontract H.
+  unfold product_completeness_contract in Hcontract.
+  exact (Hcontract nfa pattern max_errors input H).
 Qed.
 
 (** Main correctness theorem *)
 Theorem product_correctness : forall nfa pattern max_errors input,
+  product_soundness_contract ->
+  product_completeness_contract ->
   product_accepts nfa pattern max_errors input <->
   exists nfa_word,
     nfa_accepts nfa nfa_word /\
     exists dist, dist <= max_errors /\ True.
 Proof.
-  intros nfa pattern max_errors input.
+  intros nfa pattern max_errors input Hsound Hcomplete.
   split.
-  - apply product_soundness.
-  - apply product_completeness.
+  - eapply product_soundness; eauto.
+  - eapply product_completeness; eauto.
 Qed.
 
 (** * State Space Bounds *)
@@ -312,6 +299,16 @@ Definition product_subsumes (ps1 ps2 : ProductState) : Prop :=
   lev_i (prod_lev_pos ps1) = lev_i (prod_lev_pos ps2) /\
   lev_e (prod_lev_pos ps1) < lev_e (prod_lev_pos ps2).
 
+(** Subsumption preserves reachability. *)
+Definition subsumption_reachability_contract : Prop :=
+  forall nfa pattern max_errors ps1 ps2 input psf,
+  product_subsumes ps1 ps2 ->
+  product_run nfa pattern max_errors ps2 input psf ->
+  lev_e (prod_lev_pos psf) <= max_errors ->
+  exists psf',
+    product_run nfa pattern max_errors ps1 input psf' /\
+    lev_e (prod_lev_pos psf') <= lev_e (prod_lev_pos psf).
+
 (** Subsumption is irreflexive *)
 Lemma product_subsumes_irrefl : forall ps,
   ~product_subsumes ps ps.
@@ -337,6 +334,7 @@ Qed.
 (** Subsuming state can complete any path that subsumed state can *)
 Theorem subsumption_preserves_reachability :
   forall nfa pattern max_errors ps1 ps2 input psf,
+  subsumption_reachability_contract ->
   product_subsumes ps1 ps2 ->
   product_run nfa pattern max_errors ps2 input psf ->
   lev_e (prod_lev_pos psf) <= max_errors ->
@@ -344,8 +342,9 @@ Theorem subsumption_preserves_reachability :
     product_run nfa pattern max_errors ps1 input psf' /\
     lev_e (prod_lev_pos psf') <= lev_e (prod_lev_pos psf).
 Proof.
-  intros nfa pattern max_errors ps1 ps2 input psf Hsub Hrun Hbound.
-  apply subsumption_reachability_ax with ps2; assumption.
+  intros nfa pattern max_errors ps1 ps2 input psf Hcontract Hsub Hrun Hbound.
+  unfold subsumption_reachability_contract in Hcontract.
+  exact (Hcontract nfa pattern max_errors ps1 ps2 input psf Hsub Hrun Hbound).
 Qed.
 
 (** * Epsilon Closure *)
@@ -368,18 +367,26 @@ Fixpoint product_epsilon_closure_step (nfa : NFA) (pattern : string) (max_errors
           end
         ) (nfa_transitions nfa)
       ) states in
-      let all_new := concat new_states in
+      let all_new := List.concat new_states in
       let combined := states ++ all_new in
       (* Remove duplicates - simplified *)
       product_epsilon_closure_step nfa pattern max_errors combined f
   end.
 
+(** Epsilon closure is sound. *)
+Definition epsilon_closure_sound_contract : Prop := forall nfa pattern max_errors states fuel ps,
+  In ps (product_epsilon_closure_step nfa pattern max_errors states fuel) ->
+  exists ps0, In ps0 states /\
+    product_run nfa pattern max_errors ps0 EmptyString ps.
+
 (** Epsilon closure is sound *)
 Lemma epsilon_closure_sound : forall nfa pattern max_errors states fuel ps,
+  epsilon_closure_sound_contract ->
   In ps (product_epsilon_closure_step nfa pattern max_errors states fuel) ->
   exists ps0, In ps0 states /\
     product_run nfa pattern max_errors ps0 EmptyString ps.
 Proof.
-  intros nfa pattern max_errors states fuel ps Hin.
-  apply epsilon_closure_sound_ax. assumption.
+  intros nfa pattern max_errors states fuel ps Hcontract Hin.
+  unfold epsilon_closure_sound_contract in Hcontract.
+  exact (Hcontract nfa pattern max_errors states fuel ps Hin).
 Qed.

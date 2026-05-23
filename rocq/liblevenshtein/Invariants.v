@@ -565,33 +565,23 @@ Proof.
 Qed.
 
 (**
-  LEMMA: M-type positions with zero errors must be at term end
+  LEMMA: M-type positions with zero errors remain within the reachable
+  overshoot interval.
 
-  INTUITION: errors ≥ -offset - n, so errors=0 → offset = -n
-             (exactly at term end after consuming all characters)
+  The stronger historical claim `offset = -max_distance` is not implied by
+  `m_invariant`: zero-error M positions may have any offset in the allowed
+  interval as long as the reachability lower bound is satisfied.
 *)
-Lemma m_zero_errors_at_end : forall p,
+Lemma m_zero_errors_reachable_bounds : forall p,
   m_invariant p ->
   errors p = 0%nat ->
-  offset p = -Z.of_nat (max_distance p).
+  -Z.of_nat (max_distance p) <= offset p <= 0.
 Proof.
   intros p [_ [Hreach [Hbounds _]]] Hzero.
   rewrite Hzero in Hreach.
   simpl in Hreach.
-  (* 0 ≥ -offset - n, so offset ≥ -n *)
-  (* Combined with offset ≤ -n (no inserts past end), we get offset = -n *)
-  (* Actually, let me reconsider... *)
-  (* For M-type: offset ≤ 0 always *)
-  (* errors ≥ -offset - n *)
-  (* If errors = 0: 0 ≥ -offset - n, so -offset ≤ n, so offset ≥ -n *)
-  (* But we also know offset ≤ 0 *)
-  (* This doesn't force offset = -n; we need additional constraints *)
-  (* Let me re-examine the M-type semantics... *)
-
-  (* Actually, this lemma may not be true in general *)
-  (* M-type with errors=0 could have various offsets depending on deletions *)
-  (* Let me prove a weaker property *)
-Admitted.  (* TODO: Revisit this lemma with correct statement *)
+  lia.
+Qed.
 
 (******************************************************************************)
 (* END OF INVARIANTS.V                                                        *)

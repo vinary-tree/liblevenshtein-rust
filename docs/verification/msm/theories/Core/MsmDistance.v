@@ -26,33 +26,6 @@ From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction.
 
-(** * Axioms for MSM Metric Properties *)
-
-(** These axioms capture fundamental properties of the MSM distance function
-    that follow from the DP recurrence structure but are complex to prove
-    due to the intricate row-by-row computation. *)
-
-(** MSM reflexivity: the diagonal path has zero cost for identical series *)
-Axiom msm_reflexive_diagonal : forall X cfg,
-  length X >= 2 ->
-  msm_distance X X cfg == 0.
-
-(** MSM identity of indiscernibles: zero distance implies equality *)
-Axiom msm_zero_implies_equal_ax : forall X Y cfg,
-  0 < msm_c cfg ->
-  msm_distance X Y cfg == 0 ->
-  X = Y.
-
-(** MSM lower bound by length difference *)
-Axiom msm_lower_bound_by_length : forall X Y cfg,
-  0 <= msm_c cfg ->
-  msm_distance X Y cfg >= inject_Z (Z.of_nat (Z.abs_nat (Z.of_nat (length X) - Z.of_nat (length Y)))) * msm_c cfg.
-
-(** MSM upper bound by complete split-merge path *)
-Axiom msm_upper_bound_by_split_merge : forall X Y cfg,
-  0 <= msm_c cfg ->
-  msm_distance X Y cfg <= inject_Z (Z.of_nat (length X + length Y)) * msm_c cfg.
-
 (** * MSM Distance Computation *)
 
 (** Compute the MSM distance matrix.
@@ -123,6 +96,73 @@ Definition msm_distance (X Y : TimeSeries) (cfg : MsmConfig) : Q :=
     (* Return last element of final row *)
     last final_row 0
   end.
+
+(** * Contracts for MSM Metric Properties *)
+
+(** These contracts capture fundamental properties of the MSM distance function
+    implied by the MSM dynamic-programming recurrence and metricity result.
+    Reference: Stefan, Alexandra, et al. "The move-split-merge metric for
+    time series." IEEE TKDE 25.6 (2012): 1425-1438. *)
+
+Record MsmDistanceContracts : Prop := mkMsmDistanceContracts {
+  (** MSM reflexivity: the diagonal path has zero cost for identical series. *)
+  msm_reflexive_diagonal_contract : forall (X : TimeSeries) (cfg : MsmConfig),
+    (2 <= length X)%nat ->
+    msm_distance X X cfg == 0;
+
+  (** MSM identity of indiscernibles: zero distance implies equality. *)
+  msm_zero_implies_equal_contract : forall (X Y : TimeSeries) (cfg : MsmConfig),
+    0 < msm_c cfg ->
+    msm_distance X Y cfg == 0 ->
+    X = Y;
+
+  (** MSM lower bound by length difference. *)
+  msm_lower_bound_by_length_contract : forall (X Y : TimeSeries) (cfg : MsmConfig),
+    0 <= msm_c cfg ->
+    msm_distance X Y cfg >=
+      inject_Z (Z.of_nat (Z.abs_nat (Z.of_nat (length X) - Z.of_nat (length Y)))) *
+      msm_c cfg;
+
+  (** MSM upper bound by complete split-merge path. *)
+  msm_upper_bound_by_split_merge_contract : forall (X Y : TimeSeries) (cfg : MsmConfig),
+    0 <= msm_c cfg ->
+    msm_distance X Y cfg <= inject_Z (Z.of_nat (length X + length Y)) * msm_c cfg
+}.
+
+Lemma msm_reflexive_diagonal : forall (contracts : MsmDistanceContracts) X cfg,
+  (2 <= length X)%nat ->
+  msm_distance X X cfg == 0.
+Proof.
+  intros contracts X cfg Hlen.
+  exact (msm_reflexive_diagonal_contract contracts X cfg Hlen).
+Qed.
+
+Lemma msm_zero_implies_equal_contract_use : forall (contracts : MsmDistanceContracts) X Y cfg,
+  0 < msm_c cfg ->
+  msm_distance X Y cfg == 0 ->
+  X = Y.
+Proof.
+  intros contracts X Y cfg Hc Hzero.
+  exact (msm_zero_implies_equal_contract contracts X Y cfg Hc Hzero).
+Qed.
+
+Lemma msm_lower_bound_by_length : forall (contracts : MsmDistanceContracts) X Y cfg,
+  0 <= msm_c cfg ->
+  msm_distance X Y cfg >=
+    inject_Z (Z.of_nat (Z.abs_nat (Z.of_nat (length X) - Z.of_nat (length Y)))) *
+    msm_c cfg.
+Proof.
+  intros contracts X Y cfg Hc.
+  exact (msm_lower_bound_by_length_contract contracts X Y cfg Hc).
+Qed.
+
+Lemma msm_upper_bound_by_split_merge : forall (contracts : MsmDistanceContracts) X Y cfg,
+  0 <= msm_c cfg ->
+  msm_distance X Y cfg <= inject_Z (Z.of_nat (length X + length Y)) * msm_c cfg.
+Proof.
+  intros contracts X Y cfg Hc.
+  exact (msm_upper_bound_by_split_merge_contract contracts X Y cfg Hc).
+Qed.
 
 (** * Alternative Definition (for proofs) *)
 
@@ -234,22 +274,22 @@ Proof.
         { (* New cost is min3 of non-negative values *)
           unfold Qmin3.
           apply Qmin2_glb.
+          - (* cost_move = cost_diag + |x_i - y_j| >= 0 *)
+            inversion Hprev as [|? ? Hdiag ?]. subst.
+            apply Qle_trans with (y := 0 + 0).
+            { setoid_replace (0 + 0) with 0 by ring. apply Qle_refl. }
+            apply Qplus_le_compat; [exact Hdiag | apply Qabs_diff_nonneg].
           - apply Qmin2_glb.
-            + (* cost_move = cost_diag + |x_i - y_j| >= 0 *)
-              inversion Hprev as [|? ? Hdiag ?]. subst.
-              apply Qle_trans with (y := 0 + 0).
-              { setoid_replace (0 + 0) with 0 by ring. apply Qle_refl. }
-              apply Qplus_le_compat; [exact Hdiag | apply Qabs_diff_nonneg].
             + (* cost_merge = cost_up + c_func >= 0 *)
               inversion Hprev as [|? ? ? Hrest]. subst.
               inversion Hrest as [|? ? Hup ?]. subst.
               apply Qle_trans with (y := 0 + 0).
               { setoid_replace (0 + 0) with 0 by ring. apply Qle_refl. }
               apply Qplus_le_compat; [exact Hup | apply c_func_nonneg; exact Hc].
-          - (* cost_split = cost_left + c_func >= 0 *)
-            apply Qle_trans with (y := 0 + 0).
-            { setoid_replace (0 + 0) with 0 by ring. apply Qle_refl. }
-            apply Qplus_le_compat; [exact Hleft | apply c_func_nonneg; exact Hc].
+            + (* cost_split = cost_left + c_func >= 0 *)
+              apply Qle_trans with (y := 0 + 0).
+              { setoid_replace (0 + 0) with 0 by ring. apply Qle_refl. }
+              apply Qplus_le_compat; [exact Hleft | apply c_func_nonneg; exact Hc].
         }
         { (* cost_up :: rest is Forall nonneg *)
           inversion Hprev as [|? ? ? Hrest]. exact Hrest. }
@@ -331,8 +371,8 @@ Proof.
 Qed.
 
 (** Helper: nth element of msm_init_row *)
-Lemma msm_init_row_nth : forall x1 y_prev Y_tail prev_cost c_const n d,
-  n < length (msm_init_row x1 y_prev Y_tail prev_cost c_const) ->
+Lemma msm_init_row_nth : forall x1 y_prev Y_tail prev_cost c_const (n : nat) (d : Q),
+  (n < length (msm_init_row x1 y_prev Y_tail prev_cost c_const))%nat ->
   exists cost, nth n (msm_init_row x1 y_prev Y_tail prev_cost c_const) d = cost.
 Proof.
   intros. exists (nth n (msm_init_row x1 y_prev Y_tail prev_cost c_const) d). reflexivity.
@@ -362,7 +402,7 @@ Qed.
 *)
 
 (** Stronger helper: diagonal elements are 0 when X = Y *)
-Lemma msm_init_row_diagonal_zero : forall x xs c_const,
+Lemma msm_init_row_diagonal_zero : forall (x : Q) (xs : list Q) (c_const : Q),
   0 <= c_const ->
   (* The last element represents diagonal endpoint when starting from 0 *)
   (* For identity proof, we show the minimum path has cost 0 *)
@@ -473,7 +513,7 @@ Qed.
 
 (** Helper: nth element of a row - we track position i in row i as the diagonal *)
 Lemma msm_compute_row_length : forall x_i x_prev y_prev Y_tail prev_row cost_left c_const,
-  length prev_row >= S (length Y_tail) ->
+  (S (length Y_tail) <= length prev_row)%nat ->
   length (msm_compute_row x_i x_prev y_prev Y_tail prev_row cost_left c_const) = S (length Y_tail).
 Proof.
   intros x_i x_prev y_prev Y_tail.
@@ -565,10 +605,10 @@ Proof.
 Qed.
 
 (** Main reflexivity theorem *)
-Lemma msm_reflexive : forall X cfg,
+Lemma msm_reflexive : forall (contracts : MsmDistanceContracts) X cfg,
   msm_distance X X cfg == 0.
 Proof.
-  intros X cfg.
+  intros contracts X cfg.
   destruct X as [|x1 xs].
   - (* Empty list *)
     simpl. reflexivity.
@@ -580,19 +620,19 @@ Proof.
       * (* Singleton case: already proven *)
         simpl. rewrite move_cost_identity. simpl. apply Qle_refl.
       * (* List with at least 2 elements - use axiom *)
-        assert (Hlen: length (x1 :: x2 :: xs') >= 2) by (simpl; lia).
-        pose proof (msm_reflexive_diagonal (x1 :: x2 :: xs') cfg Hlen) as Hdiag.
+        assert (Hlen: (2 <= length (x1 :: x2 :: xs'))%nat) by (simpl; lia).
+        pose proof (msm_reflexive_diagonal contracts (x1 :: x2 :: xs') cfg Hlen) as Hdiag.
         rewrite Hdiag. apply Qle_refl.
     + (* 0 <= MSM(X, X) *)
       apply msm_nonneg.
 Qed.
 
 (** MSM identity: MSM(X, Y) = 0 implies X = Y (when c > 0) *)
-Lemma msm_zero_implies_equal : forall X Y cfg,
+Lemma msm_zero_implies_equal : forall (contracts : MsmDistanceContracts) X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
   X = Y.
 Proof.
-  (* Use the dedicated axiom *)
-  exact msm_zero_implies_equal_ax.
+  intros contracts X Y cfg Hc Hzero.
+  exact (msm_zero_implies_equal_contract_use contracts X Y cfg Hc Hzero).
 Qed.

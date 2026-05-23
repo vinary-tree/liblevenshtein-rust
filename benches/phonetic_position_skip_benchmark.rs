@@ -14,7 +14,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::phonetic::{
-    apply_rules_seq, apply_rules_seq_opt, apply_rules_seq_optimized, orthography_rules,
+    apply_rules_seq, apply_rules_seq_optimized, orthography_rules,
     phonetic_rules, test_rules, zompist_rules, Context, Phone, RewriteRule,
 };
 use std::fs::File;
@@ -30,7 +30,7 @@ use std::io::{BufRead, BufReader};
 /// - Digraph candidates (ch, sh, ph, gh, th, qu)
 /// - Context-sensitive patterns (c before e/i, g before e/i)
 /// - Word boundaries (for Final context testing)
-fn generate_phonetic_string(len: usize) -> Vec<Phone> {
+fn generate_phonetic_string(len: usize) -> Vec<Phone<u8>> {
     // Pattern that exercises many rules: contains digraphs, context-sensitive letters
     let pattern = [
         // "church" pattern - exercises ch digraph
@@ -80,7 +80,7 @@ fn generate_phonetic_string(len: usize) -> Vec<Phone> {
 }
 
 /// Generate a simple repetitive pattern for worst-case analysis.
-fn generate_simple_string(len: usize) -> Vec<Phone> {
+fn generate_simple_string(len: usize) -> Vec<Phone<u8>> {
     // Simple alternating consonant-vowel pattern
     let pattern = [Phone::Consonant(b't'), Phone::Vowel(b'e')];
     pattern.iter().cycle().take(len).cloned().collect()
@@ -90,7 +90,7 @@ fn generate_simple_string(len: usize) -> Vec<Phone> {
 ///
 /// This is the best case for position skipping: rules repeatedly apply
 /// near the same position, so skipping [0, last_pos) saves iterations.
-fn generate_localized_transformations(len: usize) -> Vec<Phone> {
+fn generate_localized_transformations(len: usize) -> Vec<Phone<u8>> {
     // Create a string where transformations cluster near the beginning
     let mut result = Vec::with_capacity(len);
 
@@ -124,21 +124,21 @@ fn generate_localized_transformations(len: usize) -> Vec<Phone> {
 ///
 /// Only `Context::Final` is position-dependent because it matches when
 /// `pos == s.len()`, which changes when strings are shortened.
-fn has_final_context(rules: &[RewriteRule]) -> bool {
+fn has_final_context(rules: &[RewriteRule<u8>]) -> bool {
     rules.iter().any(|r| matches!(r.context, Context::Final))
 }
 
 /// Create a safe rule set (no Context::Final).
 ///
 /// Uses phonetic rules only, which have no position-dependent contexts.
-fn safe_rules() -> Vec<RewriteRule> {
+fn safe_rules() -> Vec<RewriteRule<u8>> {
     phonetic_rules()
 }
 
 /// Create an unsafe rule set (contains Context::Final).
 ///
 /// Uses orthography rules, which include `rule_silent_e_final` with `Context::Final`.
-fn unsafe_rules() -> Vec<RewriteRule> {
+fn unsafe_rules() -> Vec<RewriteRule<u8>> {
     orthography_rules()
 }
 
@@ -244,7 +244,7 @@ fn bench_apply_rules_combined(c: &mut Criterion) {
     );
 
     // Safe subset: only phonetic + test (no Final context)
-    let mut safe_combined: Vec<RewriteRule> = phonetic_rules();
+    let mut safe_combined: Vec<RewriteRule<u8>> = phonetic_rules();
     safe_combined.extend(test_rules());
     assert!(
         !has_final_context(&safe_combined),
@@ -349,7 +349,7 @@ fn bench_apply_rules_rule_count(c: &mut Criterion) {
 /// Compares:
 /// - `apply_rules_seq` - Standard implementation (always scans from position 0)
 /// - `apply_rules_seq_optimized` - Optimized implementation (position skipping)
-/// - `apply_rules_seq_opt` - Auto-detecting wrapper
+/// - `apply_rules_seq_optimized` - Auto-detecting wrapper
 ///
 /// Uses phonetic rules (no Context::Final) where optimization is safe.
 fn bench_position_skipping_comparison(c: &mut Criterion) {
@@ -398,7 +398,7 @@ fn bench_position_skipping_comparison(c: &mut Criterion) {
             &(&phon_rules, &input, fuel),
             |b, (rules, input, fuel)| {
                 b.iter(|| {
-                    apply_rules_seq_opt(black_box(*rules), black_box(*input), black_box(*fuel))
+                    apply_rules_seq_optimized(black_box(*rules), black_box(*input), black_box(*fuel))
                 })
             },
         );
@@ -575,7 +575,7 @@ fn load_dictionary_words() -> Option<Vec<(WordCategory, Vec<String>)>> {
 }
 
 /// Convert a string to a Phone vector for rule application.
-fn string_to_phones(s: &str) -> Vec<Phone> {
+fn string_to_phones(s: &str) -> Vec<Phone<u8>> {
     s.bytes()
         .map(|b| {
             if b"aeiouAEIOU".contains(&b) {
@@ -624,7 +624,7 @@ fn bench_dictionary_position_skipping(c: &mut Criterion) {
         }
 
         // Convert words to Phone vectors
-        let phone_words: Vec<Vec<Phone>> = words.iter().map(|w| string_to_phones(w)).collect();
+        let phone_words: Vec<Vec<Phone<u8>>> = words.iter().map(|w| string_to_phones(w)).collect();
 
         // Calculate average length for the category
         let avg_len: usize = phone_words.iter().map(|w| w.len()).sum::<usize>() / phone_words.len();
@@ -682,7 +682,7 @@ fn bench_compound_phrases_position_skipping(c: &mut Criterion) {
     let phon_rules = phonetic_rules();
 
     // Create compound phrases of varying lengths
-    let phrases: Vec<(usize, Vec<Phone>)> = vec![
+    let phrases: Vec<(usize, Vec<Phone<u8>>)> = vec![
         (20, string_to_phones("spell_checker_module")),
         (25, string_to_phones("internationalization_api")),
         (30, string_to_phones("the_quick_brown_fox_jumps_ov")),

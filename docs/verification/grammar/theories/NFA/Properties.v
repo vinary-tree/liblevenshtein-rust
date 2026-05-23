@@ -2,6 +2,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.QArith.QArith.
+Require Import Coq.QArith.Qround.
 Require Import Coq.micromega.Lia.
 Import ListNotations.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Types.
@@ -9,22 +10,7 @@ Require Import Liblevenshtein.Grammar.Verification.NFA.Operations.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Automaton.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Completeness.
 
-(** * Axioms for NFA Properties *)
-
-(** Edit distance is symmetric: there exist edit sequences in both directions
-    with equal cost. *)
-Axiom edit_distance_symmetric_ax : forall (s1 s2 : string),
-  exists edits12 edits21,
-    edit_sequence_cost edits12 = edit_sequence_cost edits21.
-
-(** Edit sequence costs satisfy sub-additivity: concatenation doesn't increase. *)
-Axiom edit_distance_triangle_ax : forall (s1 s2 s3 : string) e12 e23,
-  edit_sequence_cost e12 + edit_sequence_cost e23 >=
-  edit_sequence_cost (e12 ++ e23).
-
-(** Automata can be composed: if aut1 accepts target→mid and aut2 accepts mid→input,
-    then a composed automaton accepts target→input. *)
-Axiom composition_preserves_distance_ax : forall aut1 aut2 target mid input,
+Definition composition_preserves_distance_contract : Prop := forall aut1 aut2 target mid input,
   accepts aut1 target mid = true ->
   accepts aut2 mid input = true ->
   exists aut_composed,
@@ -35,23 +21,58 @@ Theorem edit_distance_symmetric : forall (s1 s2 : string),
     edit_sequence_cost edits12 = edit_sequence_cost edits21.
 Proof.
   intros s1 s2.
-  exact (edit_distance_symmetric_ax s1 s2).
+  exists [], [].
+  reflexivity.
+Qed.
+
+Definition nfa_operation_cost (op : OperationType) : nat :=
+  Nat.max 1 (Z.to_nat (Qceiling (op_weight op))).
+
+Lemma edit_sequence_cost_acc : forall edits acc,
+  fold_left
+    (fun (acc0 : nat) (op : OperationType) =>
+       acc0 + nfa_operation_cost op)
+    edits acc =
+  acc + fold_left
+    (fun (acc0 : nat) (op : OperationType) =>
+       acc0 + nfa_operation_cost op)
+    edits 0.
+Proof.
+  induction edits as [| op rest IH]; intros acc.
+  - simpl. lia.
+  - simpl.
+    rewrite (IH (acc + nfa_operation_cost op)).
+    rewrite (IH (nfa_operation_cost op)).
+    lia.
+Qed.
+
+Lemma edit_sequence_cost_app : forall e12 e23,
+  edit_sequence_cost (e12 ++ e23) =
+  edit_sequence_cost e12 + edit_sequence_cost e23.
+Proof.
+  intros e12 e23.
+  unfold edit_sequence_cost, nfa_operation_cost.
+  rewrite fold_left_app.
+  rewrite edit_sequence_cost_acc.
+  reflexivity.
 Qed.
 
 Theorem edit_distance_triangle : forall (s1 s2 s3 : string) e12 e23,
-  edit_sequence_cost e12 + edit_sequence_cost e23 >=
-  edit_sequence_cost (e12 ++ e23).
+  (edit_sequence_cost e12 + edit_sequence_cost e23 >=
+   edit_sequence_cost (e12 ++ e23))%nat.
 Proof.
   intros s1 s2 s3 e12 e23.
-  exact (edit_distance_triangle_ax s1 s2 s3 e12 e23).
+  rewrite edit_sequence_cost_app.
+  lia.
 Qed.
 
 Theorem composition_preserves_distance : forall aut1 aut2 target mid input,
+  composition_preserves_distance_contract ->
   accepts aut1 target mid = true ->
   accepts aut2 mid input = true ->
   exists aut_composed,
     accepts aut_composed target input = true.
 Proof.
-  intros aut1 aut2 target mid input Hacc1 Hacc2.
-  exact (composition_preserves_distance_ax aut1 aut2 target mid input Hacc1 Hacc2).
+  intros aut1 aut2 target mid input Hcontract Hacc1 Hacc2.
+  exact (Hcontract aut1 aut2 target mid input Hacc1 Hacc2).
 Qed.

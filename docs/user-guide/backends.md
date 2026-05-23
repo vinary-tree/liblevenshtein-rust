@@ -329,7 +329,7 @@ Query performance relative to DoubleArrayTrie (100K terms, distance 2):
 | SCDAWG | 0.90× (substring: 1.2×) | 14.2 |
 | PersistentARTrie | 0.88× | Disk + cache |
 
-**Note**: All backends benefit from SIMD acceleration (20-64% faster with `simd` feature).
+**Note**: All backends benefit from SIMD acceleration (20-64% faster, automatic on x86_64 with AVX2/SSE4.1).
 
 ## Decision Guide
 

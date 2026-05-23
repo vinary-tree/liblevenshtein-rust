@@ -348,15 +348,24 @@ Definition prune_state_spec (st : GeneralizedState) : Prop :=
   (forall wl, prune_preserves_acceptance wl st) /\
   prune_subsumed_complete st.
 
-(** Axiom: prune_state satisfies its specification.
-    This is provable by induction on prune_subsumed_positions but complex. *)
-Axiom prune_state_satisfies_spec_ax : forall st,
+Definition prune_state_satisfies_spec_contract : Prop := forall st,
   Forall (fun p => pos_e p <= state_max_distance st) (state_positions st) ->
   prune_state_spec st.
 
-(** Axiom: prune_subsumed_positions returns a sublist of the input *)
-Axiom prune_subsumed_is_sublist : forall positions p,
+(** prune_subsumed_positions returns a sublist of the input. *)
+Lemma prune_subsumed_is_sublist : forall positions p,
   In p (prune_subsumed_positions positions) -> In p positions.
+Proof.
+  induction positions as [| h rest IH]; intros p Hin; simpl in *.
+  - contradiction.
+  - destruct (existsb (fun p' : Position => position_subsumes p' h)
+                      (prune_subsumed_positions rest)) eqn:Hsubsumed.
+    + right. apply IH. exact Hin.
+    + destruct Hin as [Heq | Hin].
+      * left. exact Heq.
+      * apply filter_In in Hin as [Hin _].
+        right. apply IH. exact Hin.
+Qed.
 
 (** Corollaries that follow from the specification *)
 

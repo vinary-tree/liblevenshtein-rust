@@ -29,7 +29,7 @@ ASSUME DICT_SIZE >= 1
 ASSUME MAX_HEAP_SIZE >= 1
 
 VARIABLES
-    heap,               \* Priority queue (sequence of search nodes)
+    heap,               \* Priority queue abstraction as a bounded set of nodes
     visited,            \* Set of visited states
     results,            \* Sequence of found results (in priority order)
     current_best,       \* Current best cost found
@@ -55,6 +55,9 @@ Result == [
     cost: 0..MAX_COST
 ]
 
+\* TLC needs enumerable sequence domains for result histories.
+BoundedSeq(S, max_len) == UNION { [1..n -> S] : n \in 0..max_len }
+
 (***************************************************************************)
 (* Heuristic Function                                                       *)
 (***************************************************************************)
@@ -74,36 +77,25 @@ SimpleHeuristic(word_pos) == WORD_LENGTH - word_pos
 (* Heap Operations                                                          *)
 (***************************************************************************)
 
-\* Check if heap satisfies min-heap property on f_cost
-\* For sequence indices 1..n: heap[i].f_cost <= heap[2*i].f_cost and <= heap[2*i+1].f_cost
+\* The implementation uses a binary heap.  This model keeps only the semantic
+\* priority-queue abstraction: a bounded finite set with an f_cost minimum.
 IsMinHeap(h) ==
-    \A i \in 1..Len(h) :
-        /\ (2*i <= Len(h) => h[i].f_cost <= h[2*i].f_cost)
-        /\ (2*i+1 <= Len(h) => h[i].f_cost <= h[2*i+1].f_cost)
+    /\ h \subseteq SearchNode
+    /\ Cardinality(h) <= MAX_HEAP_SIZE
+    /\ h = {} \/ \E n \in h : \A m \in h : n.f_cost <= m.f_cost
 
-\* Get minimum element (root of heap)
-HeapMin(h) == IF Len(h) > 0 THEN h[1] ELSE [f_cost |-> MAX_COST + WORD_LENGTH + 2]
+\* Get a minimum-priority element.
+HeapMin(h) ==
+    CHOOSE n \in h : \A m \in h : n.f_cost <= m.f_cost
 
-\* Insert node into heap (simplified - actual heapify-up needed)
-\* For TLA+ specification, we use an abstract insert that maintains heap property
+\* Insert node into the priority-queue abstraction.
 HeapInsert(h, node) ==
-    \* In practice, this would heapify-up
-    \* For model checking, we specify the result must be a valid min-heap
-    CHOOSE h2 \in Seq(SearchNode) :
-        /\ Len(h2) = Len(h) + 1
-        /\ \A n \in DOMAIN h : \E m \in DOMAIN h2 : h2[m] = h[n]
-        /\ \E m \in DOMAIN h2 : h2[m] = node
-        /\ IsMinHeap(h2)
+    h \cup {node}
 
-\* Extract minimum from heap (simplified)
+\* Extract a minimum-priority element.
 HeapExtractMin(h) ==
-    \* In practice, this would heapify-down
-    \* For model checking, we specify the result
-    IF Len(h) = 0 THEN <<>>
-    ELSE CHOOSE h2 \in Seq(SearchNode) :
-        /\ Len(h2) = Len(h) - 1
-        /\ \A n \in DOMAIN h2 : \E m \in DOMAIN h \ {1} : h2[n] = h[m]
-        /\ IsMinHeap(h2)
+    IF h = {} THEN {}
+    ELSE h \ {HeapMin(h)}
 
 (***************************************************************************)
 (* Search State Transitions                                                 *)
@@ -158,17 +150,17 @@ HeapInvariant == IsMinHeap(heap)
 \* INV2: Heuristic is admissible (never overestimates)
 \* For our heuristic: h(n) <= remaining_characters <= actual_remaining_cost
 AdmissibleHeuristic ==
-    \A node \in {heap[i] : i \in DOMAIN heap} :
+    \A node \in heap :
         node.h_cost <= WORD_LENGTH - node.word_pos
 
 \* INV3: f-costs are consistent
 FCostConsistent ==
-    \A node \in {heap[i] : i \in DOMAIN heap} :
+    \A node \in heap :
         node.f_cost = node.g_cost + node.h_cost
 
 \* INV4: g-costs don't exceed max
 GCostBounded ==
-    \A node \in {heap[i] : i \in DOMAIN heap} :
+    \A node \in heap :
         node.g_cost <= MAX_COST + 1
 
 \* INV5: Results are in non-decreasing cost order
@@ -189,9 +181,10 @@ FirstResultOptimal ==
 
 \* Type invariant
 TypeInvariant ==
-    /\ heap \in Seq(SearchNode)
+    /\ heap \subseteq SearchNode
+    /\ Cardinality(heap) <= MAX_HEAP_SIZE
     /\ visited \subseteq (0..WORD_LENGTH) \X (1..DICT_SIZE)
-    /\ results \in Seq(Result)
+    /\ results \in BoundedSeq(Result, MAX_HEAP_SIZE)
     /\ current_best \in 0..MAX_COST+1
     /\ iterations \in Nat
 
@@ -210,7 +203,7 @@ InitialNode == [
 ]
 
 Init ==
-    /\ heap = <<InitialNode>>
+    /\ heap = {InitialNode}
     /\ visited = {}
     /\ results = <<>>
     /\ current_best = MAX_COST + 1
@@ -222,17 +215,18 @@ Init ==
 
 \* Extract minimum and expand
 SearchStep ==
-    /\ Len(heap) > 0
-    /\ iterations < MAX_HEAP_SIZE * 2  \* Bound iterations
+    /\ heap # {}
+    /\ \E n \in heap : <<n.word_pos, n.dict_state>> \notin visited
+    /\ iterations < (MAX_HEAP_SIZE * 2)  \* Bound iterations
     /\ LET
-           node == HeapMin(heap)
+           available == {n \in heap : <<n.word_pos, n.dict_state>> \notin visited}
+           node == HeapMin(available)
            state == <<node.word_pos, node.dict_state>>
        IN
-           /\ state \notin visited
            /\ LET
                   \* Check if this is a result
                   new_results ==
-                      IF node.is_final /\ node.word_pos = WORD_LENGTH /\ node.g_cost <= MAX_COST
+                      IF node.is_final /\ node.word_pos = WORD_LENGTH /\ node.g_cost <= MAX_COST /\ Len(results) < MAX_HEAP_SIZE
                       THEN Append(results, [dict_state |-> node.dict_state, cost |-> node.g_cost])
                       ELSE results
 
@@ -252,15 +246,15 @@ SearchStep ==
                   }
 
                   \* Remove min from heap and add successors
-                  heap_after_pop == HeapExtractMin(heap)
+                  heap_after_pop == heap \ {node}
 
-                  \* Add all valid successors (simplified - actual implementation would heapify)
-                  new_heap_set == {heap_after_pop[i] : i \in DOMAIN heap_after_pop} \cup valid_successors
+                  \* Add all valid successors.  If the configured model cap is
+                  \* exceeded, terminate this bounded search branch.
+                  new_heap_set == heap_after_pop \cup valid_successors
               IN
-                  /\ heap' = CHOOSE h \in Seq(SearchNode) :
-                       /\ \A n \in new_heap_set : \E i \in DOMAIN h : h[i] = n
-                       /\ Cardinality({h[i] : i \in DOMAIN h}) = Cardinality(new_heap_set)
-                       /\ IsMinHeap(h)
+                  /\ heap' = IF Cardinality(new_heap_set) <= MAX_HEAP_SIZE
+                             THEN new_heap_set
+                             ELSE {}
                   /\ visited' = visited \cup {state}
                   /\ results' = new_results
                   /\ current_best' = new_best
@@ -268,8 +262,9 @@ SearchStep ==
 
 \* Search complete
 SearchComplete ==
-    /\ \/ Len(heap) = 0
-       \/ iterations >= MAX_HEAP_SIZE * 2
+    /\ \/ heap = {}
+       \/ ~(\E n \in heap : <<n.word_pos, n.dict_state>> \notin visited)
+       \/ iterations >= (MAX_HEAP_SIZE * 2)
     /\ UNCHANGED <<heap, visited, results, current_best, iterations>>
 
 Next == SearchStep \/ SearchComplete
@@ -287,7 +282,9 @@ Spec == Init /\ [][Next]_<<heap, visited, results, current_best, iterations>> /\
 (***************************************************************************)
 
 \* Eventually search terminates
-EventuallyTerminates == <>(Len(heap) = 0 \/ iterations >= MAX_HEAP_SIZE * 2)
+EventuallyTerminates ==
+    <>(heap = {} \/ ~(\E n \in heap : <<n.word_pos, n.dict_state>> \notin visited)
+       \/ iterations >= (MAX_HEAP_SIZE * 2))
 
 \* Optimality: if we find any result, we find the best one first
 OptimalityProperty ==

@@ -24,6 +24,7 @@ Require Import Coq.Bool.Bool.
 Require Import Coq.QArith.QArith.
 Require Import Coq.QArith.Qabs.
 Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lra.
 Import ListNotations.
 
 (** * Articulatory Features *)
@@ -141,6 +142,7 @@ Definition place_distance (p1 p2 : Place) : Q :=
   | Glottal, Palatal => 2#10
   | Glottal, Velar => 1#10
 
+  | UnknownPlace, UnknownPlace => 0
   | UnknownPlace, _ => 1
   | _, UnknownPlace => 1
   end.
@@ -190,6 +192,7 @@ Definition manner_distance (m1 m2 : Manner) : Q :=
   | Lateral, Affricate => 3#10
   | Lateral, Approximant => 1#10
 
+  | UnknownManner, UnknownManner => 0
   | UnknownManner, _ => 1
   | _, UnknownManner => 1
   end.
@@ -201,6 +204,7 @@ Definition voice_distance (v1 v2 : Voice) : Q :=
   | Voiceless, Voiceless => 0
   | Voiced, Voiceless => 2#10
   | Voiceless, Voiced => 2#10
+  | UnknownVoice, UnknownVoice => 0
   | UnknownVoice, _ => 1
   | _, UnknownVoice => 1
   end.
@@ -258,6 +262,27 @@ Qed.
 
 (** * Identity Proof *)
 
+(** Component identities, including the public char-level behavior where an
+    unknown character compared with itself has distance zero before feature
+    lookup falls back to maximum distance for unknown non-identical chars. *)
+Lemma place_distance_identity : forall p,
+  place_distance p p = 0.
+Proof.
+  intros p. destruct p; reflexivity.
+Qed.
+
+Lemma manner_distance_identity : forall m,
+  manner_distance m m = 0.
+Proof.
+  intros m. destruct m; reflexivity.
+Qed.
+
+Lemma voice_distance_identity : forall v,
+  voice_distance v v = 0.
+Proof.
+  intros v. destruct v; reflexivity.
+Qed.
+
 (** Same phoneme has distance 0 *)
 Theorem articulatory_identity : forall f,
   articulatory_distance f f == 0.
@@ -265,16 +290,10 @@ Proof.
   intros f.
   unfold articulatory_distance.
   destruct f as [p m v].
-  (* place_distance p p = 0 *)
-  assert (Hp: place_distance p p = 0).
-  { destruct p; reflexivity. }
-  (* manner_distance m m = 0 *)
-  assert (Hm: manner_distance m m = 0).
-  { destruct m; reflexivity. }
-  (* voice_distance v v = 0 *)
-  assert (Hv: voice_distance v v = 0).
-  { destruct v; reflexivity. }
-  rewrite Hp, Hm, Hv.
+  cbn.
+  rewrite (place_distance_identity p).
+  rewrite (manner_distance_identity m).
+  rewrite (voice_distance_identity v).
   ring.
 Qed.
 
@@ -321,41 +340,35 @@ Proof.
   destruct (voice_distance_bounded (feat_voice f1) (feat_voice f2)) as [Hv_lo Hv_hi].
   split.
   - (* 0 <= distance *)
-    apply Qplus_le_0_compat.
-    apply Qplus_le_0_compat.
-    + apply Qmult_le_0_compat.
-      * unfold place_weight. discriminate.
-      * exact Hp_lo.
-    + apply Qmult_le_0_compat.
-      * unfold manner_weight. discriminate.
-      * exact Hm_lo.
-    + apply Qmult_le_0_compat.
-      * unfold voice_weight. discriminate.
-      * exact Hv_lo.
+    replace 0 with (0 + 0)%Q by reflexivity.
+    apply Qplus_le_compat.
+    + replace 0 with (0 + 0)%Q by reflexivity.
+      apply Qplus_le_compat.
+      * apply Qmult_le_0_compat; [unfold place_weight; discriminate | exact Hp_lo].
+      * apply Qmult_le_0_compat; [unfold manner_weight; discriminate | exact Hm_lo].
+    + apply Qmult_le_0_compat; [unfold voice_weight; discriminate | exact Hv_lo].
   - (* distance <= 1 *)
-    (* Each weighted term is bounded by its weight times 1 *)
-    (* Sum of weights = 1, so total <= 1 *)
     setoid_replace 1 with (place_weight * 1 + manner_weight * 1 + voice_weight * 1).
     + apply Qplus_le_compat.
-      apply Qplus_le_compat.
-      * apply Qmult_le_compat_l; [assumption | unfold place_weight; discriminate].
-      * apply Qmult_le_compat_l; [assumption | unfold manner_weight; discriminate].
-      * apply Qmult_le_compat_l; [assumption | unfold voice_weight; discriminate].
-    + rewrite !Qmult_1_r. exact weights_sum_to_one.
+      * apply Qplus_le_compat.
+        -- apply Qmult_le_compat_nonneg.
+           ++ split; [unfold place_weight; discriminate | apply Qle_refl].
+           ++ split; [exact Hp_lo | exact Hp_hi].
+        -- apply Qmult_le_compat_nonneg.
+           ++ split; [unfold manner_weight; discriminate | apply Qle_refl].
+           ++ split; [exact Hm_lo | exact Hm_hi].
+      * apply Qmult_le_compat_nonneg.
+        -- split; [unfold voice_weight; discriminate | apply Qle_refl].
+        -- split; [exact Hv_lo | exact Hv_hi].
+    + unfold place_weight, manner_weight, voice_weight. ring.
 Qed.
 
 (** * Triangle Inequality Analysis *)
 
-(** Triangle inequality does NOT generally hold for articulatory distance.
-    This is because the feature space is not a metric space in the traditional sense.
-
-    Counter-example:
-    - p: bilabial plosive voiced (b)
-    - k: velar plosive voiceless (k)
-    - t: alveolar plosive voiceless (t)
-
-    d(b, k) might be > d(b, t) + d(t, k) depending on weights.
-*)
+(** This module proves symmetry, identity, and boundedness only.  It does not
+    claim a metric-space triangle theorem for the full articulatory model.  The
+    common b/t/k sanity check below is a tight triangle case, not a
+    counterexample. *)
 
 (** Example phonemes for counter-example *)
 Definition phoneme_b := mkFeatures Bilabial Plosive Voiced.
@@ -363,26 +376,23 @@ Definition phoneme_k := mkFeatures Velar Plosive Voiceless.
 Definition phoneme_t := mkFeatures Alveolar Plosive Voiceless.
 
 (** Compute specific distances *)
-Example dist_b_k : articulatory_distance phoneme_b phoneme_k = 32#100.
-Proof. reflexivity. Qed.
+Example dist_b_k : articulatory_distance phoneme_b phoneme_k == 28#100.
+Proof. compute. reflexivity. Qed.
 
-Example dist_b_t : articulatory_distance phoneme_b phoneme_t = 16#100.
-Proof. reflexivity. Qed.
+Example dist_b_t : articulatory_distance phoneme_b phoneme_t == 16#100.
+Proof. compute. reflexivity. Qed.
 
-Example dist_t_k : articulatory_distance phoneme_t phoneme_k = 12#100.
-Proof. reflexivity. Qed.
+Example dist_t_k : articulatory_distance phoneme_t phoneme_k == 12#100.
+Proof. compute. reflexivity. Qed.
 
-(** Triangle inequality DOES hold in this case: 32/100 <= 16/100 + 12/100 = 28/100
-    This is actually False! Let me check... 32 > 28, so triangle fails! *)
-Example triangle_fails :
-  ~(articulatory_distance phoneme_b phoneme_k <=
+(** The b/t/k triple is tight: 28/100 = 16/100 + 12/100. *)
+Example triangle_b_t_k_tight :
+  articulatory_distance phoneme_b phoneme_k ==
     articulatory_distance phoneme_b phoneme_t +
-    articulatory_distance phoneme_t phoneme_k).
+    articulatory_distance phoneme_t phoneme_k.
 Proof.
   compute.
-  (* 32/100 <= 28/100 is false *)
-  intros H.
-  discriminate.
+  reflexivity.
 Qed.
 
 (** * Cost Blending *)
@@ -400,21 +410,26 @@ Lemma blended_cost_bounded : forall art_dist std_cost blend,
 Proof.
   intros art_dist std_cost blend [Ha_lo Ha_hi] [Hs_lo Hs_hi] [Hb_lo Hb_hi].
   unfold blended_cost.
+  assert (Hone_minus_blend_lo : 0 <= 1 - blend).
+  { apply (proj1 (Qle_minus_iff blend 1)). exact Hb_hi. }
   split.
   - (* 0 <= blended_cost *)
-    apply Qplus_le_0_compat.
+    replace 0 with (0 + 0)%Q by reflexivity.
+    apply Qplus_le_compat.
     + apply Qmult_le_0_compat; assumption.
-    + apply Qmult_le_0_compat.
-      * apply Qle_minus_iff. rewrite Qplus_0_l. assumption.
-      * assumption.
+    + apply Qmult_le_0_compat; assumption.
   - (* blended_cost <= 1 *)
-    setoid_replace 1 with (blend * 1 + (1 - blend) * 1).
+    eapply Qle_trans.
     + apply Qplus_le_compat.
-      * apply Qmult_le_compat_l; assumption.
-      * apply Qmult_le_compat_l.
-        -- assumption.
-        -- apply Qle_minus_iff. rewrite Qplus_0_l. assumption.
-    + ring.
+      * apply Qmult_le_compat_nonneg.
+        -- split; [exact Hb_lo | apply Qle_refl].
+        -- split; [exact Ha_lo | exact Ha_hi].
+      * apply Qmult_le_compat_nonneg.
+        -- split; [exact Hone_minus_blend_lo | apply Qle_refl].
+        -- split; [exact Hs_lo | exact Hs_hi].
+    + setoid_replace (blend * 1 + (1 - blend) * 1) with 1.
+      * apply Qle_refl.
+      * ring.
 Qed.
 
 (** Blending is symmetric in first argument (from articulatory) *)
@@ -435,20 +450,20 @@ Qed.
 Definition char_to_features (c : ascii) : option PhonemeFeatures :=
   (* Using ASCII codes - simplified *)
   match nat_of_ascii c with
-  | 98  => Some (mkFeatures Bilabial Plosive Voiced)      (* b *)
-  | 100 => Some (mkFeatures Alveolar Plosive Voiced)      (* d *)
-  | 102 => Some (mkFeatures Labiodental Fricative Voiceless) (* f *)
-  | 103 => Some (mkFeatures Velar Plosive Voiced)         (* g *)
-  | 107 => Some (mkFeatures Velar Plosive Voiceless)      (* k *)
-  | 108 => Some (mkFeatures Alveolar Lateral Voiced)      (* l *)
-  | 109 => Some (mkFeatures Bilabial Nasal Voiced)        (* m *)
-  | 110 => Some (mkFeatures Alveolar Nasal Voiced)        (* n *)
-  | 112 => Some (mkFeatures Bilabial Plosive Voiceless)   (* p *)
-  | 114 => Some (mkFeatures Alveolar Approximant Voiced)  (* r *)
-  | 115 => Some (mkFeatures Alveolar Fricative Voiceless) (* s *)
-  | 116 => Some (mkFeatures Alveolar Plosive Voiceless)   (* t *)
-  | 118 => Some (mkFeatures Labiodental Fricative Voiced) (* v *)
-  | 122 => Some (mkFeatures Alveolar Fricative Voiced)    (* z *)
+  | 98%nat  => Some (mkFeatures Bilabial Plosive Voiced)      (* b *)
+  | 100%nat => Some (mkFeatures Alveolar Plosive Voiced)      (* d *)
+  | 102%nat => Some (mkFeatures Labiodental Fricative Voiceless) (* f *)
+  | 103%nat => Some (mkFeatures Velar Plosive Voiced)         (* g *)
+  | 107%nat => Some (mkFeatures Velar Plosive Voiceless)      (* k *)
+  | 108%nat => Some (mkFeatures Alveolar Lateral Voiced)      (* l *)
+  | 109%nat => Some (mkFeatures Bilabial Nasal Voiced)        (* m *)
+  | 110%nat => Some (mkFeatures Alveolar Nasal Voiced)        (* n *)
+  | 112%nat => Some (mkFeatures Bilabial Plosive Voiceless)   (* p *)
+  | 114%nat => Some (mkFeatures Alveolar Approximant Voiced)  (* r *)
+  | 115%nat => Some (mkFeatures Alveolar Fricative Voiceless) (* s *)
+  | 116%nat => Some (mkFeatures Alveolar Plosive Voiceless)   (* t *)
+  | 118%nat => Some (mkFeatures Labiodental Fricative Voiced) (* v *)
+  | 122%nat => Some (mkFeatures Alveolar Fricative Voiced)    (* z *)
   | _ => None
   end.
 

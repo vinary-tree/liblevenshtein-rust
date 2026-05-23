@@ -105,7 +105,14 @@ docs/verification/**/.Makefile.d
 *.perf.data.old
 perf.data*
 flamegraph.svg
+
+# Coq/Rocq arithmetic-tactic caches (lia, nia, nra)
 .lia.cache
+.nia.cache
+.nra.cache
+**/.lia.cache
+**/.nia.cache
+**/.nra.cache
 
 *.bak
 # Generated optimization artifacts

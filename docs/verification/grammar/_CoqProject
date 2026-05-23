@@ -1,3 +1,4 @@
+-Q ../core/theories Liblevenshtein.Core
 -Q theories Liblevenshtein.Grammar.Verification
 -arg -w -arg -notation-overridden
 -arg -w -arg -deprecated-syntactic-definition

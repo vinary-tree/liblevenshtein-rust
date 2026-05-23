@@ -14,7 +14,8 @@ Import ListNotations.
 
 (** ** Sequential Composition *)
 
-Definition compose_forward (layer1 layer2 : program -> LayerResult)
+Definition compose_forward (layer1 : program -> LayerResult)
+                           (layer2 : program -> LayerResult -> LayerResult)
                           (input : program) : LayerResult :=
   let result1 := layer1 input in
   layer2 input result1.

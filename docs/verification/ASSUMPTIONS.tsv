@@ -1,0 +1,18 @@
+# status	domain	symbol	file	citation	rationale
+# status:
+#   allowed    - may appear in trusted theorem assumptions
+#   candidate  - known assumption candidate, not allowed in trusted theorem closure
+#   retired    - historical assumption that should no longer be used
+#
+# Axioms are acceptable only when they are narrow, citation-backed, and not a
+# disguised local correctness theorem. Keep this file small. Add broad or
+# implementation-specific facts as candidate until they are decomposed or proven.
+#
+# The verification runner treats an empty allowed set as "no trusted axioms".
+# Current trusted files are expected to be axiom-free.
+candidate	core	levenshtein_triangle_standard	docs/verification/grammar/theories/Core/Edit.v	https://doi.org/10.1137/0203030	Classic edit-distance metric property; should be replaced by importing the repo's proven modular Levenshtein theorem instead of a fresh axiom.
+candidate	core	transition_state_positions_epsilon_closed	docs/verification/core/theories/Automaton/Completeness.v	https://doi.org/10.1007/s10032-002-0082-8	Levenshtein automata use epsilon/delete closure to preserve deletion-reachable states; local fold_left state_insert origin preservation still must be proven before this can be allowed.
+candidate	core	automaton_run_nonempty_epsilon_closed	docs/verification/core/theories/Automaton/Completeness.v	https://doi.org/10.1007/s10032-002-0082-8	Run-level closure follows from per-transition epsilon closure in the standard automaton model; local induction through transition_state and state_insert still must be proven before this can be allowed.
+candidate	core	automaton_distance_correct	docs/verification/core/theories/Automaton/MainTheorem.v	https://doi.org/10.1007/s10032-002-0082-8	Schulz-Mihov establish the automaton-language characterization for bounded Levenshtein distance; local minimum-distance extraction and completeness must be proven before this implementation theorem can be allowed.
+candidate	msm	msm_metric_properties	docs/verification/msm/theories/Metric/MainTheorem.v	https://doi.org/10.1109/TKDE.2012.88	MSM is published as a metric, but local Coq definitions must be checked against the paper before this can be allowed.
+candidate	tla	tlc_finite_state_exhaustiveness	docs/verification/tla/README.md	https://lamport.azurewebsites.net/tla/book.html	Industry-standard model-checking assumption: TLC exhaustively checks the configured finite state space, not the unbounded algorithm.

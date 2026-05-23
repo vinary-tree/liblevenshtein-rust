@@ -17,13 +17,14 @@ Definition default_layer3_config : Layer3Config := {|
   strict_mode := true
 |}.
 
-Parameter type_check_program : parse_tree -> TypeResult.
+Definition type_check_program (_ : parse_tree) : TypeResult := TypeErrors [].
 
 Definition execute_layer3 (config : Layer3Config) (input : program)
                          (layer2_result : LayerResult)
     : LayerResult :=
   layer2_result.  (* Placeholder *)
 
-Theorem layer3_soundness : forall config input layer2_result,
+Theorem layer3_soundness :
+  forall (config : Layer3Config) (input : program) (layer2_result : LayerResult),
   True.
 Proof. trivial. Qed.

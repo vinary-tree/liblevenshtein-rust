@@ -49,7 +49,7 @@ pub mod universal;
 mod value_filtered_query;
 mod zipper_query_iterator;
 
-#[cfg(feature = "simd")]
+#[cfg(target_arch = "x86_64")]
 pub mod simd;
 
 pub use algorithm::Algorithm;
