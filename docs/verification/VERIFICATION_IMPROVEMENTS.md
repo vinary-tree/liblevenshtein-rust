@@ -46,7 +46,7 @@ Note: Triangle inequality does NOT hold for articulatory distance (counter-examp
 
 | File | Purpose | Key Theorems |
 |------|---------|--------------|
-| `ProductState.v` | NFA × Levenshtein product | `product_soundness`, `product_completeness`, `product_correctness` |
+| `ProductState.v` | NFA × Levenshtein product | `product_soundness`, `product_completeness_empty`, `subsumption_preserves_reachability`, `product_correctness` |
 
 ## Admitted Lemmas Completed
 

@@ -26,6 +26,7 @@ From Liblevenshtein.Core Require Import Core.Definitions.
 From Liblevenshtein.Core Require Import Core.LevDistance.
 From Liblevenshtein.Core Require Import Core.DamerauLevDistanceDef.
 From Liblevenshtein.Core Require Import Core.MergeSplitDistance.
+From Liblevenshtein.Core Require Import Triangle.TriangleInequality.
 
 (** * Edit Operation Types *)
 
@@ -242,207 +243,18 @@ Proof.
   reflexivity.
 Qed.
 
-(** * Optimal Edit Sequence Contracts *)
-
-(** These contracts are standard dynamic-programming correctness obligations.
-    Wagner and Fischer (1974) establish optimal Levenshtein edit scripts by
-    construction; Damerau (1964) gives the adjacent-transposition extension. *)
-Record EditSequenceContracts : Prop := mkEditSequenceContracts {
-  optimal_lev_seq_exists_contract : forall source target,
-    exists seq,
-      valid_lev_seq source target seq /\
-      lev_seq_cost seq = lev_distance source target;
-
-  optimal_dl_seq_exists_contract : forall source target,
-    exists seq,
-      valid_dl_seq source target seq /\
-      dl_seq_cost seq = damerau_lev_distance source target;
-
-  lev_seq_compose_contract : forall A B C seq_AB seq_BC,
-    valid_lev_seq A B seq_AB ->
-    valid_lev_seq B C seq_BC ->
-    exists seq_AC,
-      valid_lev_seq A C seq_AC /\
-      lev_seq_cost seq_AC <= lev_seq_cost seq_AB + lev_seq_cost seq_BC;
-
-  dl_seq_compose_contract : forall A B C seq_AB seq_BC,
-    valid_dl_seq A B seq_AB ->
-    valid_dl_seq B C seq_BC ->
-    exists seq_AC,
-      valid_dl_seq A C seq_AC /\
-      dl_seq_cost seq_AC <= dl_seq_cost seq_AB + dl_seq_cost seq_BC;
-
-  lev_seq_cost_ge_distance_contract : forall source target seq,
-    valid_lev_seq source target seq ->
-    lev_seq_cost seq >= lev_distance source target;
-
-  dl_seq_cost_ge_distance_contract : forall source target seq,
-    valid_dl_seq source target seq ->
-    dl_seq_cost seq >= damerau_lev_distance source target
-}.
-
-Lemma optimal_lev_seq_exists : forall (contracts : EditSequenceContracts) source target,
-  exists seq,
-    valid_lev_seq source target seq /\
-    lev_seq_cost seq = lev_distance source target.
-Proof.
-  intros contracts source target.
-  exact (optimal_lev_seq_exists_contract contracts source target).
-Qed.
-
-Lemma optimal_dl_seq_exists : forall (contracts : EditSequenceContracts) source target,
-  exists seq,
-    valid_dl_seq source target seq /\
-    dl_seq_cost seq = damerau_lev_distance source target.
-Proof.
-  intros contracts source target.
-  exact (optimal_dl_seq_exists_contract contracts source target).
-Qed.
-
-(** * Edit Sequence Composition *)
-
-(** Key insight: We can compose edit sequences.
-    Given seq_AB : A → B and seq_BC : B → C, we can create seq_AC : A → C.
-
-    The naive approach (seq_AB ++ seq_BC) doesn't work because seq_BC
-    expects B as input, not the output of seq_AB.
-
-    Instead, we use the fact that edit sequences can be "normalized" to
-    process the source string left-to-right, and then composed.
-
-    For the triangle inequality, we don't need explicit composition.
-    We just need to know that SOME sequence A → C exists with bounded cost.
-*)
-
-(** Theorem: Edit sequences compose.
-    If seq_AB transforms A to B and seq_BC transforms B to C,
-    then there exists seq_AC that transforms A to C with
-    cost(seq_AC) <= cost(seq_AB) + cost(seq_BC).
-
-    Reference: This is implicit in Wagner & Fischer (1974) - the DP algorithm
-    finds minimum cost, and composing paths through the DP matrix gives a valid
-    (though not necessarily optimal) sequence.
-*)
-Lemma lev_seq_compose : forall (contracts : EditSequenceContracts) A B C seq_AB seq_BC,
-  valid_lev_seq A B seq_AB ->
-  valid_lev_seq B C seq_BC ->
-  exists seq_AC,
-    valid_lev_seq A C seq_AC /\
-    lev_seq_cost seq_AC <= lev_seq_cost seq_AB + lev_seq_cost seq_BC.
-Proof.
-  intros contracts A B C seq_AB seq_BC H_AB H_BC.
-  exact (lev_seq_compose_contract contracts A B C seq_AB seq_BC H_AB H_BC).
-Qed.
-
-Lemma dl_seq_compose : forall (contracts : EditSequenceContracts) A B C seq_AB seq_BC,
-  valid_dl_seq A B seq_AB ->
-  valid_dl_seq B C seq_BC ->
-  exists seq_AC,
-    valid_dl_seq A C seq_AC /\
-    dl_seq_cost seq_AC <= dl_seq_cost seq_AB + dl_seq_cost seq_BC.
-Proof.
-  intros contracts A B C seq_AB seq_BC H_AB H_BC.
-  exact (dl_seq_compose_contract contracts A B C seq_AB seq_BC H_AB H_BC).
-Qed.
-
-(** * Connecting to DP Distance Definitions *)
-
-(** Any valid sequence has cost >= lev_distance.
-    This is the definition of "minimum". *)
-Lemma lev_seq_cost_ge_distance : forall (contracts : EditSequenceContracts) source target seq,
-  valid_lev_seq source target seq ->
-  lev_seq_cost seq >= lev_distance source target.
-Proof.
-  intros contracts source target seq Hvalid.
-  exact (lev_seq_cost_ge_distance_contract contracts source target seq Hvalid).
-Qed.
-
-(** Similarly for Damerau-Levenshtein *)
-Lemma dl_seq_cost_ge_distance : forall (contracts : EditSequenceContracts) source target seq,
-  valid_dl_seq source target seq ->
-  dl_seq_cost seq >= damerau_lev_distance source target.
-Proof.
-  intros contracts source target seq Hvalid.
-  exact (dl_seq_cost_ge_distance_contract contracts source target seq Hvalid).
-Qed.
-
 (** * Triangle Inequality Proofs *)
 
 (** Theorem: Levenshtein distance satisfies triangle inequality.
-    Proof: By optimal sequence existence and composition. *)
-Theorem lev_triangle_inequality : forall (contracts : EditSequenceContracts) A B C,
+    Proof: reuse the trace-composition theorem from Triangle/TriangleInequality.v. *)
+Theorem lev_triangle_inequality : forall A B C,
   lev_distance A C <= lev_distance A B + lev_distance B C.
 Proof.
-  intros contracts A B C.
-  (* Get optimal sequences A→B and B→C *)
-  destruct (optimal_lev_seq_exists contracts A B) as [seq_AB [Hvalid_AB Hcost_AB]].
-  destruct (optimal_lev_seq_exists contracts B C) as [seq_BC [Hvalid_BC Hcost_BC]].
-  (* Compose them to get some sequence A→C *)
-  destruct (lev_seq_compose contracts A B C seq_AB seq_BC Hvalid_AB Hvalid_BC)
-    as [seq_AC [Hvalid_AC Hcost_AC]].
-  (* Use minimum property: lev_distance A C <= lev_seq_cost seq_AC *)
-  pose proof (lev_seq_cost_ge_distance contracts A C seq_AC Hvalid_AC) as Hge.
-  (* Combine: lev_distance A C <= cost(seq_AC) <= cost(seq_AB) + cost(seq_BC) *)
-  rewrite Hcost_AB, Hcost_BC in Hcost_AC.
-  lia.
+  intros A B C.
+  apply lev_distance_triangle_inequality.
 Qed.
 
-(** Theorem: Damerau-Levenshtein distance satisfies triangle inequality.
-    Proof: By optimal sequence existence and composition. *)
-Theorem damerau_lev_triangle : forall (contracts : EditSequenceContracts) A B C,
-  damerau_lev_distance A C <= damerau_lev_distance A B + damerau_lev_distance B C.
-Proof.
-  intros contracts A B C.
-  (* Get optimal sequences *)
-  destruct (optimal_dl_seq_exists contracts A B) as [seq_AB [Hvalid_AB Hcost_AB]].
-  destruct (optimal_dl_seq_exists contracts B C) as [seq_BC [Hvalid_BC Hcost_BC]].
-  (* Compose to get A→C sequence *)
-  destruct (dl_seq_compose contracts A B C seq_AB seq_BC Hvalid_AB Hvalid_BC)
-    as [seq_AC [Hvalid_AC Hcost_AC]].
-  (* Use minimum property *)
-  pose proof (dl_seq_cost_ge_distance contracts A C seq_AC Hvalid_AC) as Hge.
-  (* Combine bounds *)
-  rewrite Hcost_AB, Hcost_BC in Hcost_AC.
-  lia.
-Qed.
-
-(** * Notes on Contracts *)
-
-(** The contracts in this file are well-established results in computer science:
-
-    1. optimal_lev_seq_exists: Wagner & Fischer (1974) proved this by showing
-       their DP algorithm computes the optimal edit sequence. The algorithm's
-       correctness means an optimal sequence exists for any two strings.
-       Reference: Wagner, R.A. and Fischer, M.J. "The String-to-String
-       Correction Problem", Journal of the ACM, 21(1):168-173, 1974.
-
-    2. optimal_dl_seq_exists: Damerau (1964) and subsequent work showed the
-       same for Damerau-Levenshtein distance. The DP recurrence implies
-       optimal sequences exist.
-       Reference: Damerau, F.J. "A technique for computer detection and
-       correction of spelling errors", Communications of the ACM, 7(3):171-176, 1964.
-
-    3. lev_seq_compose, dl_seq_compose: These follow from the fact that
-       edit sequences describe transformations. If seq_AB transforms A to B,
-       and seq_BC transforms B to C, we can construct seq_AC by:
-       - Converting seq_AB and seq_BC to their "edit scripts"
-       - Concatenating the scripts (conceptually)
-       - The resulting script transforms A to C
-
-       The key insight is that the intermediate string B is both the output
-       of seq_AB and the input of seq_BC, so the transformations chain together.
-
-       For a formal proof, one would show that the DP matrix paths compose:
-       a path from (0,0) to (|A|,|B|) in the A-B matrix, followed by a path
-       from (0,0) to (|B|,|C|) in the B-C matrix, corresponds to some path
-       in the A-C matrix with bounded cost.
-
-    4. lev_seq_cost_ge_distance, dl_seq_cost_ge_distance: These are immediate
-       from the definition of distance as minimum cost. Any valid sequence
-       has cost >= the minimum cost (by definition of minimum).
-
-    These axioms capture fundamental properties of edit distance that are
-    well-known in the literature. A full mechanized proof would require
-    extensive infrastructure to formalize DP algorithms and prove their
-    correctness, which is beyond the scope of this verification effort.
-*)
+(** The local Damerau recurrence in Core.DamerauLevDistanceDef is the restricted
+    adjacent-transposition recurrence. Unlike unrestricted Damerau-Levenshtein
+    distance, this executable model is not an unconditional metric; see
+    Composition.DamerauComposition for the formal counterexample. *)

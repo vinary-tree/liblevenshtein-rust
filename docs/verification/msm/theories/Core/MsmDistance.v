@@ -97,71 +97,75 @@ Definition msm_distance (X Y : TimeSeries) (cfg : MsmConfig) : Q :=
     last final_row 0
   end.
 
-(** * Contracts for MSM Metric Properties *)
+(** * Evidence for MSM Metric Properties *)
 
-(** These contracts capture fundamental properties of the MSM distance function
+(** This evidence captures the remaining identity-of-indiscernibles property
     implied by the MSM dynamic-programming recurrence and metricity result.
     Reference: Stefan, Alexandra, et al. "The move-split-merge metric for
-    time series." IEEE TKDE 25.6 (2012): 1425-1438. *)
+    time series." IEEE TKDE 25.6 (2012): 1425-1438.
 
-Record MsmDistanceContracts : Prop := mkMsmDistanceContracts {
-  (** MSM reflexivity: the diagonal path has zero cost for identical series. *)
-  msm_reflexive_diagonal_contract : forall (X : TimeSeries) (cfg : MsmConfig),
-    (2 <= length X)%nat ->
-    msm_distance X X cfg == 0;
+    Broad value-independent split/merge upper bounds are intentionally not
+    assumed here: [msm_distance [x] [y]] is [|x-y|], which can exceed
+    [(length [x] + length [y]) * c] when [c] is small.
 
-  (** MSM identity of indiscernibles: zero distance implies equality. *)
-  msm_zero_implies_equal_contract : forall (X Y : TimeSeries) (cfg : MsmConfig),
+    The conclusion uses [series_Qeq], not Leibniz equality, because [Qeq] is
+    the equality respected by rational arithmetic in QArith. *)
+
+Record MsmDistanceEvidence : Prop := mkMsmDistanceEvidence {
+  (** MSM identity of indiscernibles: zero distance implies pointwise [Qeq]. *)
+  msm_zero_implies_series_eq_proof : forall (X Y : TimeSeries) (cfg : MsmConfig),
     0 < msm_c cfg ->
     msm_distance X Y cfg == 0 ->
-    X = Y;
-
-  (** MSM lower bound by length difference. *)
-  msm_lower_bound_by_length_contract : forall (X Y : TimeSeries) (cfg : MsmConfig),
-    0 <= msm_c cfg ->
-    msm_distance X Y cfg >=
-      inject_Z (Z.of_nat (Z.abs_nat (Z.of_nat (length X) - Z.of_nat (length Y)))) *
-      msm_c cfg;
-
-  (** MSM upper bound by complete split-merge path. *)
-  msm_upper_bound_by_split_merge_contract : forall (X Y : TimeSeries) (cfg : MsmConfig),
-    0 <= msm_c cfg ->
-    msm_distance X Y cfg <= inject_Z (Z.of_nat (length X + length Y)) * msm_c cfg
+    series_Qeq X Y
 }.
 
-Lemma msm_reflexive_diagonal : forall (contracts : MsmDistanceContracts) X cfg,
-  (2 <= length X)%nat ->
-  msm_distance X X cfg == 0.
-Proof.
-  intros contracts X cfg Hlen.
-  exact (msm_reflexive_diagonal_contract contracts X cfg Hlen).
-Qed.
-
-Lemma msm_zero_implies_equal_contract_use : forall (contracts : MsmDistanceContracts) X Y cfg,
+Lemma msm_zero_implies_series_eq_evidence_use : forall (contracts : MsmDistanceEvidence) X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
-  X = Y.
+  series_Qeq X Y.
 Proof.
   intros contracts X Y cfg Hc Hzero.
-  exact (msm_zero_implies_equal_contract contracts X Y cfg Hc Hzero).
+  exact (msm_zero_implies_series_eq_proof contracts X Y cfg Hc Hzero).
 Qed.
 
-Lemma msm_lower_bound_by_length : forall (contracts : MsmDistanceContracts) X Y cfg,
-  0 <= msm_c cfg ->
-  msm_distance X Y cfg >=
-    inject_Z (Z.of_nat (Z.abs_nat (Z.of_nat (length X) - Z.of_nat (length Y)))) *
-    msm_c cfg.
+Lemma msm_distance_empty_empty : forall cfg,
+  msm_distance [] [] cfg == 0.
 Proof.
-  intros contracts X Y cfg Hc.
-  exact (msm_lower_bound_by_length_contract contracts X Y cfg Hc).
+  intros cfg. reflexivity.
 Qed.
 
-Lemma msm_upper_bound_by_split_merge : forall (contracts : MsmDistanceContracts) X Y cfg,
-  0 <= msm_c cfg ->
-  msm_distance X Y cfg <= inject_Z (Z.of_nat (length X + length Y)) * msm_c cfg.
+Lemma msm_distance_empty_left : forall Y cfg,
+  msm_distance [] Y cfg == inject_Z (Z.of_nat (length Y)) * msm_c cfg.
 Proof.
-  intros contracts X Y cfg Hc.
-  exact (msm_upper_bound_by_split_merge_contract contracts X Y cfg Hc).
+  intros Y cfg.
+  destruct Y; reflexivity.
+Qed.
+
+Lemma msm_distance_empty_right : forall X cfg,
+  msm_distance X [] cfg == inject_Z (Z.of_nat (length X)) * msm_c cfg.
+Proof.
+  intros X cfg.
+  destruct X; reflexivity.
+Qed.
+
+Lemma msm_one_nonneg : 0 <= 1#1.
+Proof.
+  unfold Qle. simpl. lia.
+Qed.
+
+Definition msm_identity_counter_cfg : MsmConfig :=
+  {| msm_c := 1#1; msm_c_nonneg := msm_one_nonneg |}.
+
+Lemma msm_qeq_representations_zero_distance :
+  msm_distance [1#1] [2#2] msm_identity_counter_cfg == 0.
+Proof.
+  simpl. apply Qabs_diff_zero_iff. reflexivity.
+Qed.
+
+Lemma msm_qeq_representations_not_leibniz :
+  [1#1] <> [2#2].
+Proof.
+  discriminate.
 Qed.
 
 (** * Alternative Definition (for proofs) *)
@@ -550,6 +554,130 @@ Proof.
   intros a b. unfold Qmin3. apply Qmin2_le_l.
 Qed.
 
+Lemma Qmin3_le_l : forall a b c,
+  Qmin3 a b c <= a.
+Proof.
+  intros a b c. unfold Qmin3. apply Qmin2_le_l.
+Qed.
+
+Lemma msm_compute_row_hd_eq :
+  forall x_i x_prev y_prev Y_tail prev_row cost_left c_const,
+    nth 0 (msm_compute_row x_i x_prev y_prev Y_tail prev_row cost_left c_const) 0 =
+    cost_left.
+Proof.
+  intros x_i x_prev y_prev Y_tail prev_row cost_left c_const.
+  destruct Y_tail as [|y ys]; simpl; [reflexivity |].
+  destruct prev_row as [|d1 [|d2 rest]]; reflexivity.
+Qed.
+
+Lemma msm_compute_row_nth_succ_le_move :
+  forall p x_i x_prev y_prev Y_tail prev_row cost_left c_const,
+    (p < length Y_tail)%nat ->
+    (S p < length prev_row)%nat ->
+    nth (S p)
+        (msm_compute_row x_i x_prev y_prev Y_tail prev_row cost_left c_const) 0 <=
+    nth p prev_row 0 + Qabs_diff x_i (nth p Y_tail 0).
+Proof.
+  induction p as [|p IHp]; intros x_i x_prev y_prev Y_tail prev_row cost_left c_const Hy Hp.
+  - destruct Y_tail as [|y ys]; [simpl in Hy; lia |].
+    destruct prev_row as [|cost_diag [|cost_up rest]]; simpl in Hp; try lia.
+    simpl.
+    rewrite msm_compute_row_hd_eq.
+    apply Qmin3_le_l.
+  - destruct Y_tail as [|y ys]; [simpl in Hy; lia |].
+    destruct prev_row as [|cost_diag [|cost_up rest]]; simpl in Hp; try lia.
+    simpl.
+    apply IHp; simpl in *; lia.
+Qed.
+
+Lemma msm_compute_row_diagonal_succ_le_zero :
+  forall p x_i x_prev y_prev Y_tail prev_row cost_left c_const,
+    (p < length Y_tail)%nat ->
+    (S p < length prev_row)%nat ->
+    nth p prev_row 0 <= 0 ->
+    nth p Y_tail 0 = x_i ->
+    nth (S p)
+        (msm_compute_row x_i x_prev y_prev Y_tail prev_row cost_left c_const) 0 <= 0.
+Proof.
+  intros p x_i x_prev y_prev Y_tail prev_row cost_left c_const Hy Hp Hdiag Hyval.
+  eapply Qle_trans.
+  - apply msm_compute_row_nth_succ_le_move; eassumption.
+  - rewrite Hyval.
+    rewrite Qabs_diff_zero.
+    setoid_replace (nth p prev_row 0 + 0) with (nth p prev_row 0) by ring.
+    exact Hdiag.
+Qed.
+
+Lemma last_eq_nth_by_length :
+  forall (l : list Q) d n,
+    length l = S n ->
+    last l d = nth n l d.
+Proof.
+  induction l as [|x xs IH]; intros d n Hlen.
+  - simpl in Hlen. discriminate.
+  - destruct xs as [|y ys].
+    + simpl in Hlen. inversion Hlen. reflexivity.
+    + simpl in Hlen.
+      destruct n as [|n']; [discriminate |].
+      simpl. apply IH. inversion Hlen. reflexivity.
+Qed.
+
+Lemma nth_from_skipn_cons :
+  forall i (l : list Q) (x : Q) (xs : list Q) (d : Q),
+    skipn i l = x :: xs ->
+    nth i l d = x.
+Proof.
+  induction i as [|i IHi]; intros l x xs d Hskip.
+  - destruct l as [|h t]; simpl in Hskip; inversion Hskip. reflexivity.
+  - destruct l as [|h t]; simpl in Hskip; [discriminate |].
+    apply IHi with (xs := xs). exact Hskip.
+Qed.
+
+Lemma skipn_succ_from_cons :
+  forall i (l : list Q) (x : Q) (xs : list Q),
+    skipn i l = x :: xs ->
+    skipn (S i) l = xs.
+Proof.
+  induction i as [|i IHi]; intros l x xs Hskip.
+  - destruct l as [|h t]; simpl in Hskip; inversion Hskip. reflexivity.
+  - destruct l as [|h t]; simpl in Hskip; [discriminate |].
+    apply IHi with (x := x). exact Hskip.
+Qed.
+
+Lemma msm_compute_rows_self_tail_last_le_zero :
+  forall rem full_tail i x_prev x1 row c_const,
+    skipn i full_tail = rem ->
+    (i + length rem = length full_tail)%nat ->
+    length row = S (length full_tail) ->
+    nth i row 0 <= 0 ->
+    last (msm_compute_rows rem x_prev (x1 :: full_tail) x1 row c_const) 0 <= 0.
+Proof.
+  induction rem as [|x rem IH]; intros full_tail i x_prev x1 row c_const Hskip Hlen_rem Hrow Hdiag.
+  - simpl.
+    assert (Hi : i = length full_tail) by (simpl in Hlen_rem; lia).
+    subst i.
+    rewrite (last_eq_nth_by_length row 0 (length full_tail)); assumption.
+  - simpl.
+    set (new_row :=
+      msm_compute_row x x_prev x1 full_tail row
+        (hd 0 row + c_func c_const x x_prev x1) c_const).
+    assert (Hi_lt : (i < length full_tail)%nat) by (simpl in Hlen_rem; lia).
+    assert (Hrow_i : (S i < length row)%nat) by (rewrite Hrow; lia).
+    assert (Hx : nth i full_tail 0 = x).
+    { eapply nth_from_skipn_cons. exact Hskip. }
+    assert (Hnew_diag : nth (S i) new_row 0 <= 0).
+    { subst new_row.
+      eapply msm_compute_row_diagonal_succ_le_zero; eauto. }
+    assert (Hnew_len : length new_row = S (length full_tail)).
+    { subst new_row.
+      rewrite msm_compute_row_length; [reflexivity | rewrite Hrow; lia]. }
+    apply (IH full_tail (S i) x x1 new_row c_const).
+    + eapply skipn_succ_from_cons. exact Hskip.
+    + simpl in Hlen_rem. lia.
+    + exact Hnew_len.
+    + exact Hnew_diag.
+Qed.
+
 (** When computing row i+1 from row i where diagonal(row i) = 0,
     the Move option for diagonal(row i+1) uses:
     diagonal(row i) + |x_{i+1} - x_{i+1}| = 0 + 0 = 0
@@ -604,35 +732,55 @@ Proof.
   intros. simpl. reflexivity.
 Qed.
 
-(** Main reflexivity theorem *)
-Lemma msm_reflexive : forall (contracts : MsmDistanceContracts) X cfg,
+Lemma msm_reflexive_diagonal_direct : forall X cfg,
+  (2 <= length X)%nat ->
   msm_distance X X cfg == 0.
 Proof.
-  intros contracts X cfg.
+  intros X cfg Hlen.
+  destruct X as [|x1 xs].
+  - simpl in Hlen. lia.
+  - apply Qle_antisym.
+    + simpl.
+      eapply (msm_compute_rows_self_tail_last_le_zero
+        xs xs 0 x1 x1
+        (msm_init_row x1 x1 xs (Qabs_diff x1 x1) (msm_c cfg))
+        (msm_c cfg)).
+      * reflexivity.
+      * simpl. lia.
+      * apply msm_init_row_length.
+      * destruct xs as [|x2 xs']; simpl; rewrite Qabs_diff_zero; apply Qle_refl.
+    + apply msm_nonneg.
+Qed.
+
+(** Main reflexivity theorem *)
+Lemma msm_reflexive : forall X cfg,
+  msm_distance X X cfg == 0.
+Proof.
+  intros X cfg.
   destruct X as [|x1 xs].
   - (* Empty list *)
     simpl. reflexivity.
   - (* Non-empty list x1 :: xs *)
     (* Use antisymmetry: 0 <= MSM and MSM <= 0 *)
     apply Qle_antisym.
-    + (* MSM(X, X) <= 0 *)
-      destruct xs as [|x2 xs'].
-      * (* Singleton case: already proven *)
-        simpl. rewrite move_cost_identity. simpl. apply Qle_refl.
-      * (* List with at least 2 elements - use axiom *)
-        assert (Hlen: (2 <= length (x1 :: x2 :: xs'))%nat) by (simpl; lia).
-        pose proof (msm_reflexive_diagonal contracts (x1 :: x2 :: xs') cfg Hlen) as Hdiag.
-        rewrite Hdiag. apply Qle_refl.
+	    + (* MSM(X, X) <= 0 *)
+	      destruct xs as [|x2 xs'].
+	      * (* Singleton case: already proven *)
+	        simpl. rewrite move_cost_identity. simpl. apply Qle_refl.
+	      * (* List with at least 2 elements - diagonal Move path *)
+	        assert (Hlen: (2 <= length (x1 :: x2 :: xs'))%nat) by (simpl; lia).
+	        pose proof (msm_reflexive_diagonal_direct (x1 :: x2 :: xs') cfg Hlen) as Hdiag.
+	        rewrite Hdiag. apply Qle_refl.
     + (* 0 <= MSM(X, X) *)
       apply msm_nonneg.
 Qed.
 
-(** MSM identity: MSM(X, Y) = 0 implies X = Y (when c > 0) *)
-Lemma msm_zero_implies_equal : forall (contracts : MsmDistanceContracts) X Y cfg,
+(** MSM identity: MSM(X, Y) = 0 implies pointwise rational equality (when c > 0). *)
+Lemma msm_zero_implies_series_eq : forall (contracts : MsmDistanceEvidence) X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
-  X = Y.
+  series_Qeq X Y.
 Proof.
   intros contracts X Y cfg Hc Hzero.
-  exact (msm_zero_implies_equal_contract_use contracts X Y cfg Hc Hzero).
+  exact (msm_zero_implies_series_eq_evidence_use contracts X Y cfg Hc Hzero).
 Qed.

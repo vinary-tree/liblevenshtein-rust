@@ -44,23 +44,19 @@ Definition quantize (cfg : QuantConfig) (v : Q) : nat :=
 Definition dequantize (cfg : QuantConfig) (bin : nat) : Q :=
   min_val cfg + (inject_Z (Z.of_nat bin) + (1#2)) * bin_width cfg.
 
-(** Quantization error is bounded by half the bin width.
-    Any value v in bin b is at distance <= bin_width/2 from the center. *)
-Definition quantize_error_contract : Prop := forall cfg v,
-  min_val cfg <= v -> v <= max_val cfg ->
-  Qabs (v - dequantize cfg (quantize cfg v)) <= bin_width cfg / 2.
+(** The current executable model has a placeholder quantizer. It maps every
+    value to bin 0, so nontrivial quantization-error bounds are intentionally
+    not claimed here. *)
+Lemma quantize_current_model_zero : forall cfg v,
+  quantize cfg v = 0%nat.
+Proof. reflexivity. Qed.
 
-(** * Quantization Error Bound *)
-
-(** Maximum error from quantization: half the bin width *)
-Lemma quantize_error_bound : forall cfg v,
-  quantize_error_contract ->
-  min_val cfg <= v -> v <= max_val cfg ->
-  Qabs (v - dequantize cfg (quantize cfg v)) <= bin_width cfg / 2.
+Lemma dequantize_quantize_current_model : forall cfg v,
+  dequantize cfg (quantize cfg v) == dequantize cfg 0.
 Proof.
-  intros cfg v Hcontract Hmin Hmax.
-  (* Quantized value is in the same bin as v, so at most bin_width/2 away *)
-  exact (Hcontract cfg v Hmin Hmax).
+  intros cfg v.
+  rewrite quantize_current_model_zero.
+  reflexivity.
 Qed.
 
 (** * Levenshtein on Quantized Sequence *)
@@ -104,14 +100,9 @@ Definition quantize_series (cfg : QuantConfig) (X : TimeSeries) : list nat :=
 
 (** * Main Bound: Levenshtein Bounds MSM *)
 
-(** Key insight: If we quantize two series and compute Levenshtein distance,
-    we get a lower bound (up to scaling) on the MSM distance.
-
-    More precisely:
-    - Each quantized edit corresponds to at least one MSM operation
-    - Quantization error is bounded by bin_width/2
-    - So: lev(Q(X), Q(Y)) * min_cost <= MSM(X, Y) + quantization_error
-*)
+(** With the placeholder quantizer, all values collapse into the same bin.
+    The nontrivial MSM indexing theorem is therefore deferred until [quantize]
+    is replaced by an executable binning function with a proved error bound. *)
 
 (** Minimum cost of a non-matching operation in MSM *)
 Definition min_msm_cost (cfg : MsmConfig) (qcfg : QuantConfig) : Q :=
@@ -120,36 +111,31 @@ Definition min_msm_cost (cfg : MsmConfig) (qcfg : QuantConfig) : Q :=
      - Split/Merge with cost >= c *)
   Qmin2 (bin_width qcfg) (msm_c cfg).
 
-(** Levenshtein-style edit operations over quantized bins correspond to MSM
-    operations with at least [min_msm_cost]. *)
-Definition lev_bounds_msm_contract : Prop := forall X Y msm_cfg q_cfg,
-  inject_Z (Z.of_nat (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)))
-    * min_msm_cost msm_cfg q_cfg
-  <= msm_distance X Y msm_cfg.
+(** Same-length series have zero quantized edit distance in the current model. *)
+Lemma lev_nat_quantize_same_length_zero : forall X Y q_cfg,
+  length X = length Y ->
+  lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y) = 0%nat.
+Proof.
+  induction X as [|x xs IH]; intros [|y ys] q_cfg Hlen; simpl in *; try discriminate.
+  - reflexivity.
+  - rewrite IH by lia.
+    reflexivity.
+Qed.
 
-(** Arithmetic bound: if lev * min_cost <= threshold,
-    then lev <= ceiling(threshold / min_cost). *)
-Definition lev_threshold_bound_contract : Prop := forall X Y msm_cfg q_cfg threshold,
-  min_msm_cost msm_cfg q_cfg > 0 ->
-  msm_distance X Y msm_cfg <= threshold ->
-  (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
-    <= Z.to_nat (Qceiling (threshold / min_msm_cost msm_cfg q_cfg)))%nat.
-
-(** Lower bound theorem *)
-Theorem lev_bounds_msm : forall X Y msm_cfg q_cfg,
-  lev_bounds_msm_contract ->
-  (* Levenshtein distance on quantized series, scaled by minimum cost,
-     lower-bounds MSM distance *)
+(** Lower bound theorem for the current placeholder quantizer. For same-length
+    series the scaled trie distance is 0, so the bound follows from MSM
+    non-negativity. *)
+Theorem lev_bounds_msm_same_length_current_model : forall X Y msm_cfg q_cfg,
+  length X = length Y ->
   inject_Z (Z.of_nat (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)))
     * min_msm_cost msm_cfg q_cfg
   <= msm_distance X Y msm_cfg.
 Proof.
-  intros X Y msm_cfg q_cfg Hcontract.
-  (* Each edit in Levenshtein corresponds to at least one MSM operation:
-     - Substitution (different bins) => Move with cost >= bin_width
-     - Insertion => Split with cost >= c
-     - Deletion => Merge with cost >= c *)
-  exact (Hcontract X Y msm_cfg q_cfg).
+  intros X Y msm_cfg q_cfg Hlen.
+  rewrite (lev_nat_quantize_same_length_zero X Y q_cfg Hlen).
+  simpl.
+  setoid_replace (0 * min_msm_cost msm_cfg q_cfg) with 0 by ring.
+  apply msm_nonneg.
 Qed.
 
 (** * Search Completeness *)
@@ -157,17 +143,14 @@ Qed.
 (** If MSM(X, Y) <= threshold, then lev(Q(X), Q(Y)) is also bounded.
     This means trie-based filtering won't miss any true matches. *)
 
-Theorem trie_completeness : forall X Y msm_cfg q_cfg threshold,
-  lev_threshold_bound_contract ->
-  min_msm_cost msm_cfg q_cfg > 0 ->
-  msm_distance X Y msm_cfg <= threshold ->
+Theorem trie_completeness_same_length_current_model : forall X Y msm_cfg q_cfg threshold,
+  length X = length Y ->
   (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
     <= Z.to_nat (Qceiling (threshold / min_msm_cost msm_cfg q_cfg)))%nat.
 Proof.
-  intros X Y msm_cfg q_cfg threshold Hcontract Hmin Hmsm.
-  (* From lev * min_cost <= MSM <= threshold,
-     we get lev <= threshold / min_cost *)
-  exact (Hcontract X Y msm_cfg q_cfg threshold Hmin Hmsm).
+  intros X Y msm_cfg q_cfg threshold Hlen.
+  rewrite (lev_nat_quantize_same_length_zero X Y q_cfg Hlen).
+  lia.
 Qed.
 
 (** * Practical Bounds *)
@@ -182,43 +165,24 @@ Definition compute_trie_threshold (msm_threshold : Q) (msm_cfg : MsmConfig)
     Z.to_nat (Qceiling (msm_threshold / min_cost)).
 
 (** The computed threshold is sufficient *)
-Theorem trie_threshold_sufficient : forall X Y msm_cfg q_cfg msm_threshold,
-  lev_threshold_bound_contract ->
-  min_msm_cost msm_cfg q_cfg > 0 ->
-  msm_distance X Y msm_cfg <= msm_threshold ->
+Theorem trie_threshold_sufficient_same_length_current_model : forall X Y msm_cfg q_cfg msm_threshold,
+  length X = length Y ->
   (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
     <= compute_trie_threshold msm_threshold msm_cfg q_cfg)%nat.
 Proof.
-  intros X Y msm_cfg q_cfg msm_threshold Hcontract Hmin Hmsm.
+  intros X Y msm_cfg q_cfg msm_threshold Hlen.
+  rewrite (lev_nat_quantize_same_length_zero X Y q_cfg Hlen).
   unfold compute_trie_threshold.
-  destruct (Qle_bool (min_msm_cost msm_cfg q_cfg) 0) eqn:Hle.
-  - (* min_cost <= 0 - contradiction with Hmin *)
-    apply Qle_bool_iff in Hle.
-    exfalso.
-    (* We have Hmin: 0 < min_msm_cost and Hle: min_msm_cost <= 0 *)
-    (* These are contradictory: 0 < x and x <= 0 *)
-    apply (Qlt_irrefl 0).
-    apply Qlt_le_trans with (y := min_msm_cost msm_cfg q_cfg); assumption.
-  - (* min_cost > 0 *)
-    apply trie_completeness; assumption.
+  destruct (Qle_bool (min_msm_cost msm_cfg q_cfg) 0); lia.
 Qed.
 
 (** * Summary *)
 
-(** We have proven the key theorems for trie-based MSM indexing:
+(** Current status for trie-based MSM indexing:
 
-    1. Quantization introduces bounded error (bin_width/2)
-    2. Levenshtein on quantized series lower-bounds MSM (up to scaling)
-    3. Trie-based filtering is complete (no false negatives)
-
-    Algorithm:
-    1. Quantize database series and build trie
-    2. For query X with MSM threshold T:
-       a. Compute trie threshold = ceiling(T / min_cost)
-       b. Search trie for candidates within trie threshold
-       c. Verify candidates with exact MSM
-    3. Return verified matches
-
-    Correctness: All true matches (MSM <= T) will be found as candidates
-    by Theorem trie_threshold_sufficient.
+    1. The placeholder quantizer maps every value to bin 0.
+    2. Same-length quantized series therefore have zero trie distance.
+    3. A nontrivial no-false-negative indexing theorem should be reinstated
+       only after [quantize] is replaced by executable binning with a proved
+       error bound.
 *)

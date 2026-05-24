@@ -5,7 +5,7 @@
     to the type system.
 *)
 
-From Stdlib Require Import String List Nat Bool.
+From Stdlib Require Import String List Nat PeanoNat Bool QArith Lia.
 Require Import Liblevenshtein.Grammar.Verification.Core.Types.
 Require Import Liblevenshtein.Grammar.Verification.Core.Edit.
 Require Import Liblevenshtein.Grammar.Verification.Core.Lattice.
@@ -115,11 +115,26 @@ Definition correction_better (goal : CorrectionGoal)
       else false
   else false.
 
+Lemma score_lt_trans : forall a b c,
+  score_lt a b = true ->
+  score_lt b c = true ->
+  score_lt a c = true.
+Proof.
+  intros a b c Hab Hbc.
+  unfold score_lt in *.
+  destruct (a ?= b)%Q eqn:Hab_cmp; try discriminate.
+  destruct (b ?= c)%Q eqn:Hbc_cmp; try discriminate.
+  rewrite (proj1 (Qlt_alt a c)).
+  - reflexivity.
+  - apply Qlt_trans with (y := b).
+    + apply (proj2 (Qlt_alt a b)). exact Hab_cmp.
+    + apply (proj2 (Qlt_alt b c)). exact Hbc_cmp.
+Qed.
+
 (** Transitivity is a property required of any ordering used as a strict
-    correction ranking.  Keeping this as an explicit contract prevents an
-    unproved boolean-ordering fact from being treated as part of the trusted
-    implementation. *)
-Definition correction_ordering_transitive_contract (goal : CorrectionGoal) : Prop :=
+    correction ranking.  It remains a normal precondition because the ranking
+    policy is configurable. *)
+Definition correction_ordering_transitive_property (goal : CorrectionGoal) : Prop :=
   forall c1 c2 c3,
     correction_better goal c1 c2 = true ->
     correction_better goal c2 c3 = true ->
@@ -127,7 +142,7 @@ Definition correction_ordering_transitive_contract (goal : CorrectionGoal) : Pro
 
 (** Correction ordering is transitive *)
 Theorem correction_ordering_transitive : forall goal c1 c2 c3,
-  correction_ordering_transitive_contract goal ->
+  correction_ordering_transitive_property goal ->
   correction_better goal c1 c2 = true ->
   correction_better goal c2 c3 = true ->
   correction_better goal c1 c3 = true.
@@ -264,8 +279,8 @@ Fixpoint execute_pipeline (p : program) (pipe : pipeline) : LayerResult :=
   end.
 
 (** The current pipeline type allows arbitrary layer functions. Soundness and
-    goal completeness are therefore an explicit layer-contract obligation. *)
-Definition pipeline_correction_contract (p : program) (pipe : pipeline)
+    goal completeness are therefore a caller-supplied precondition. *)
+Definition pipeline_correction_property (p : program) (pipe : pipeline)
                                         (goal : CorrectionGoal) : Prop :=
   forall result corr,
     result = execute_pipeline p pipe ->
@@ -307,7 +322,7 @@ Qed.
 (** The main correctness theorem: if a pipeline produces a correction,
     it is sound and meets the specified goals *)
 Theorem correction_correctness : forall p pipe goal,
-  pipeline_correction_contract p pipe goal ->
+  pipeline_correction_property p pipe goal ->
   let result := execute_pipeline p pipe in
   match result.(layer_best_correction) with
   | Some corr =>

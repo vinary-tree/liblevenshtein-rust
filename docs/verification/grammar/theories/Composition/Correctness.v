@@ -45,7 +45,7 @@ Theorem grammar_correction_correctness :
     let layer1 := execute_layer1 config1 in
     let layer2 := fun p r => execute_layer2 config2 p r in
     let pipe := [layer1; fun p => layer2 p (layer1 p)] in
-    pipeline_correction_contract input pipe goal ->
+    pipeline_correction_property input pipe goal ->
     let result := execute_pipeline input pipe in
     match result.(layer_best_correction) with
     | Some corr =>

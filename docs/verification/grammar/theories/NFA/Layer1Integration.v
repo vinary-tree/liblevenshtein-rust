@@ -15,38 +15,44 @@ Definition layer1_with_phonetic (max_dist : nat) (use_phonetic : bool) :=
   then phonetic_automaton max_dist
   else standard_automaton max_dist.
 
-Definition layer1_phonetic_completeness_contract : Prop := forall max_dist target input,
-  (exists edits,
-    Forall (fun op => In op phonetic_ops_phase1) edits /\
-    edit_sequence_cost edits <= max_dist) ->
-  accepts (phonetic_automaton max_dist) target input = true.
-
-Definition layer1_phonetic_soundness_contract : Prop := forall max_dist target input use_phonetic,
-  accepts (layer1_with_phonetic max_dist use_phonetic) target input = true ->
-  exists edits, edit_sequence_cost edits <= max_dist.
-
 (** Layer 1 completeness with phonetic flag *)
-Theorem layer1_phonetic_completeness : forall max_dist target input use_phonetic,
-  layer1_phonetic_completeness_contract ->
+Theorem layer1_phonetic_completeness : forall
+  (contracts : NFACompletenessEvidence)
+  max_dist target input use_phonetic edits,
   use_phonetic = true ->
-  (exists edits,
-    Forall (fun op => In op phonetic_ops_phase1) edits /\
-    edit_sequence_cost edits <= max_dist) ->
+  Forall (fun op => In op phonetic_ops_phase1) edits ->
+  apply_edit_sequence target edits = input ->
+  edit_sequence_cost edits <= max_dist ->
   accepts (layer1_with_phonetic max_dist use_phonetic) target input = true.
 Proof.
-  intros max_dist target input use_phonetic Hcontract Hphon Hedits.
+  intros contracts max_dist target input use_phonetic edits Hphon Hall Happly Hcost.
   unfold layer1_with_phonetic. rewrite Hphon.
-  apply Hcontract. assumption.
+  apply (phonetic_completeness contracts) with (edits := edits); auto.
+  apply Forall_impl with (P := fun op => In op phonetic_ops_phase1);
+    [| exact Hall].
+  intros op Hin. unfold phonetic_edit. apply phonetic_cost_less_than_standard.
+  exact Hin.
 Qed.
 
 (** Layer 1 soundness with phonetic flag *)
-Theorem layer1_phonetic_soundness : forall max_dist target input use_phonetic,
-  layer1_phonetic_soundness_contract ->
+Theorem layer1_phonetic_soundness : forall
+  (contracts : NFASoundnessEvidence)
+  max_dist target input use_phonetic,
   accepts (layer1_with_phonetic max_dist use_phonetic) target input = true ->
   exists edits, edit_sequence_cost edits <= max_dist.
 Proof.
-  intros max_dist target input use_phonetic Hcontract Hacc.
-  exact (Hcontract max_dist target input use_phonetic Hacc).
+  intros contracts max_dist target input use_phonetic Hacc.
+  assert (Hwf : wf_automaton (layer1_with_phonetic max_dist use_phonetic)).
+  { unfold layer1_with_phonetic.
+    destruct use_phonetic.
+    - apply phonetic_automaton_wf.
+    - apply standard_automaton_wf_c. }
+  destruct (nfa_soundness contracts
+              (layer1_with_phonetic max_dist use_phonetic)
+              target input Hwf Hacc) as [edits [_ [_ Hcost]]].
+  exists edits.
+  unfold layer1_with_phonetic in Hcost.
+  destruct use_phonetic; simpl in Hcost; exact Hcost.
 Qed.
 
 (** Lattice construction from NFA states *)

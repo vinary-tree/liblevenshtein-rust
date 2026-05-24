@@ -21,6 +21,36 @@ Import ListNotations.
 (** A time series is a list of rational values. *)
 Definition TimeSeries := list Q.
 
+(** Pointwise rational equality for time series.
+
+    Coq's [Q] has a setoid equality [(==)] distinct from Leibniz equality:
+    unreduced rationals can denote the same value without being syntactically
+    equal. MSM identity over rational-valued series must therefore conclude
+    this relation rather than raw list equality. *)
+Fixpoint series_Qeq (X Y : TimeSeries) : Prop :=
+  match X, Y with
+  | [], [] => True
+  | x :: xs, y :: ys => x == y /\ series_Qeq xs ys
+  | _, _ => False
+  end.
+
+Lemma series_Qeq_refl : forall X, series_Qeq X X.
+Proof.
+  induction X as [|x xs IH].
+  - exact I.
+  - simpl. split; [reflexivity | exact IH].
+Qed.
+
+Lemma series_Qeq_length : forall X Y,
+  series_Qeq X Y -> length X = length Y.
+Proof.
+  induction X as [|x xs IH]; intros Y Hxy.
+  - destruct Y; [reflexivity | contradiction].
+  - destruct Y as [|y ys]; [contradiction |].
+    simpl in Hxy. destruct Hxy as [_ Htail].
+    simpl. f_equal. apply IH. exact Htail.
+Qed.
+
 (** MSM configuration: the split/merge cost constant c. *)
 Record MsmConfig := mkMsmConfig {
   msm_c : Q;          (* Split/merge cost constant *)

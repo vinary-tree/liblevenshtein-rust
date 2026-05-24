@@ -21,26 +21,6 @@ From Liblevenshtein.Phonetic.Verification Require Import Core.Rules.
 From Liblevenshtein.Phonetic.Verification Require Import Invariants.InvariantProperties.
 Import ListNotations.
 
-(** * Contracts for Algorithm State *)
-
-(** Axiom: find_first_match for a rule in a rule list implies AlgoState.
-
-    This axiom captures the execution semantics of the sequential rule application
-    algorithm. When find_first_match finds position pos for rule r_head that is
-    in the rules list, it implies:
-    1. The algorithm searched positions 0 through pos-1 without any rule matching
-    2. At position pos, rule r_head (or an earlier rule) matched
-
-    This is exactly the AlgoState invariant at position pos. The axiom bridges
-    the semantic gap between the abstract find_first_match function and the
-    concrete algorithm execution trace. *)
-Definition find_first_match_implies_algo_state_contract : Prop :=
-  forall rules r_head s pos,
-  (forall r, In r rules -> wf_rule r) ->
-  In r_head rules ->
-  find_first_match r_head s (length s) = Some pos ->
-  AlgoState rules s pos.
-
 (** * Algorithm State Model *)
 
 (** The AlgoState inductive type is already defined in Auxiliary.Types.v:
@@ -99,33 +79,6 @@ Proof.
   - (* Step: match and restart to position 0 *)
     (* After restart, pos = 0, invariant holds trivially *)
     apply no_rules_match_before_zero.
-Qed.
-
-(** * Connection to find_first_match *)
-
-(** Lemma: If find_first_match finds a position for a rule in the list,
-    then there exists an AlgoState at that position
-
-    This lemma represents a fundamental gap in the proof. It requires
-    reasoning about the full execution semantics of apply_rules_seq,
-    which cannot be derived from find_first_match alone.
-
-    The issue is that find_first_match only tells us about one rule's
-    behavior, but AlgoState requires knowing that ALL rules in the list
-    were checked at each position before the match position and all failed.
-
-    This is exactly the semantic gap identified in the Axiom 1 critical
-    analysis documents.
-*)
-Lemma find_first_match_implies_algo_state :
-  forall (contract : find_first_match_implies_algo_state_contract) rules r_head s pos,
-    (forall r, In r rules -> wf_rule r) ->
-    In r_head rules ->
-    find_first_match r_head s (length s) = Some pos ->
-    AlgoState rules s pos.
-Proof.
-  intros contract rules r_head s pos H_wf H_in H_find.
-  exact (contract rules r_head s pos H_wf H_in H_find).
 Qed.
 
 (** * Helper Lemmas for State Construction *)

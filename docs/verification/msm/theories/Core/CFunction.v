@@ -214,17 +214,3 @@ Proof.
   setoid_replace x with (x + 0) at 1 by ring.
   apply Qplus_le_compat; [apply Qle_refl | exact Hy].
 Qed.
-
-Definition c_func_triangle_helper_contract : Prop :=
-  forall c_const a b c_val d,
-    0 <= c_const ->
-    c_func c_const a b d <= c_func c_const a b c_val + Qabs (c_val - d).
-
-Lemma c_func_triangle_helper : c_func_triangle_helper_contract ->
-  forall c_const a b c_val d,
-    0 <= c_const ->
-    c_func c_const a b d <= c_func c_const a b c_val + Qabs (c_val - d).
-Proof.
-  intros Hcontract c_const a b c_val d Hc.
-  exact (Hcontract c_const a b c_val d Hc).
-Qed.

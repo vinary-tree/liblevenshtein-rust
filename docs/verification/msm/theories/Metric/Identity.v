@@ -3,7 +3,7 @@
     This module proves the identity property of the MSM metric:
 
     1. MSM(X, X) = 0  (reflexivity)
-    2. MSM(X, Y) = 0 -> X = Y  (identity of indiscernibles, partially)
+    2. MSM(X, Y) = 0 -> X == Y pointwise as rational values
 
     Part of: Liblevenshtein.MSM
 *)
@@ -27,53 +27,54 @@ Proof.
 Qed.
 
 (** MSM is reflexive - use the lemma from MsmDistance *)
-Theorem msm_reflexive' : forall (contracts : MsmDistanceContracts) X cfg,
+Theorem msm_reflexive' : forall X cfg,
   msm_distance X X cfg == 0.
 Proof.
-  intros contracts X cfg.
-  apply (msm_reflexive contracts).
+  intros X cfg.
+  apply msm_reflexive.
 Qed.
 
-(** * Partial Converse: MSM(X, Y) = 0 -> X = Y (for non-empty series) *)
+(** * Partial Converse: MSM(X, Y) = 0 -> pointwise rational equality *)
 
 (** This direction requires showing that:
     - If Move cost is 0, then x_i = y_j
     - If Split/Merge is used, cost >= c > 0
     - Therefore, if total cost is 0, only Moves were used with matching values *)
 
-Lemma msm_zero_implies_same_length' : forall (contracts : MsmDistanceContracts) X Y cfg,
+Lemma msm_zero_implies_same_length' : forall (contracts : MsmDistanceEvidence) X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
   length X = length Y.
 Proof.
   intros contracts X Y cfg Hc Hzero.
-  f_equal.
-  apply (msm_zero_implies_equal contracts) with cfg; assumption.
+  apply series_Qeq_length.
+  apply (msm_zero_implies_series_eq contracts) with cfg; assumption.
 Qed.
 
-Lemma msm_zero_implies_equal' : forall (contracts : MsmDistanceContracts) X Y cfg,
+Lemma msm_zero_implies_series_eq' : forall (contracts : MsmDistanceEvidence) X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
-  X = Y.
+  series_Qeq X Y.
 Proof.
   intros contracts X Y cfg Hc Hzero.
-  exact (msm_zero_implies_equal contracts X Y cfg Hc Hzero).
+  exact (msm_zero_implies_series_eq contracts X Y cfg Hc Hzero).
 Qed.
 
 (** * Main Identity Theorem *)
 
-Theorem msm_identity : forall (contracts : MsmDistanceContracts) X Y cfg,
+Theorem msm_identity : forall (contracts : MsmDistanceEvidence) X Y cfg,
   0 < msm_c cfg ->
-  (msm_distance X Y cfg == 0 <-> X = Y).
+  (msm_distance X Y cfg == 0 -> series_Qeq X Y) /\
+  (X = Y -> msm_distance X Y cfg == 0).
 Proof.
   intros contracts X Y cfg Hc.
   split.
-  - (* MSM(X, Y) = 0 -> X = Y *)
+  - (* MSM(X, Y) = 0 -> X and Y are pointwise Qeq *)
     intros Hzero.
-    exact (msm_zero_implies_equal contracts X Y cfg Hc Hzero).
-  - (* X = Y -> MSM(X, Y) = 0 *)
+    exact (msm_zero_implies_series_eq contracts X Y cfg Hc Hzero).
+  - (* Leibniz equality is enough for MSM(X, Y) = 0 *)
     intros Heq. subst Y.
-    apply (msm_reflexive contracts).
+    apply msm_reflexive.
 Qed.
 
 (** * Non-negativity *)

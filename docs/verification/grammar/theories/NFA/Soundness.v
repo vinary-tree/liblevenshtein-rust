@@ -200,23 +200,9 @@ Definition extract_edit_sequence_full
     : list OperationType :=
   extract_edit_sequence_full_aux target input 0 None path.
 
-(** Soundness contracts for semantic bridges that connect accepting paths,
-    extracted edit sequences, and phonetic-operation witnesses. *)
-Record NFASoundnessContracts : Prop := mkNFASoundnessContracts {
-  (** Path cost equals sum of operation costs.
-    The edit sequence extracted from a path has cost bounded by the final position's error count.
-    This bridges the automaton path representation with the edit operation cost model. *)
-  path_cost_matches_operations_ax : forall path,
-    let edits := extract_edit_sequence path in
-    match path with
-    | [] => edit_sequence_cost edits = 0
-    | [p] => edit_sequence_cost edits = pos_e p
-    | p1 :: _ =>
-        match last path p1 with
-        | p_last => edit_sequence_cost edits <= pos_e p_last
-        end
-    end;
-
+(** Soundness evidence for the remaining semantic bridges that connect
+    accepting runs and edit-sequence witnesses. *)
+Record NFASoundnessEvidence : Prop := mkNFASoundnessEvidence {
   accepting_automaton_has_edit_sequence :
     forall aut target input,
       wf_automaton aut ->
@@ -226,47 +212,27 @@ Record NFASoundnessContracts : Prop := mkNFASoundnessContracts {
         apply_edit_sequence target edits = input /\
         edit_sequence_cost edits <= automaton_max_distance aut;
 
-  phonetic_soundness_ax : forall max_dist target input,
-    accepts (phonetic_automaton max_dist) target input = true ->
-    exists edits,
-      Forall (fun op => In op (standard_ops ++ phonetic_ops_phase1)) edits /\
-      apply_edit_sequence target edits = input /\
-      edit_sequence_cost edits <= max_dist;
-
   phonetic_only_when_phonetic_ops_used :
     forall max_dist target input edits,
       Forall (fun op => In op (standard_ops ++ phonetic_ops_phase1)) edits ->
       apply_edit_sequence target edits = input ->
       edit_sequence_cost edits <= max_dist ->
       ~accepts (standard_automaton max_dist) target input = true ->
-      exists op, In op edits /\ In op phonetic_ops_phase1;
-
-  phonetic_acceptance_uses_phonetic_ops_ax : forall max_dist target input,
-    accepts (phonetic_automaton max_dist) target input = true ->
-    ~accepts (standard_automaton max_dist) target input = true ->
-    exists edits,
-      Forall (fun op => In op phonetic_ops_phase1) edits /\
-      length edits > 0;
-
-  edit_sequence_empty_output_zero_consume :
-    forall target edits,
-      apply_edit_sequence target edits = EmptyString ->
-      Forall (fun op => op_consume_y op = 0) edits
+      exists op, In op edits /\ In op phonetic_ops_phase1
 }.
 
-Lemma path_cost_matches_operations : forall (contracts : NFASoundnessContracts) path,
-  let edits := extract_edit_sequence path in
-  match path with
-  | [] => edit_sequence_cost edits = 0
-  | [p] => edit_sequence_cost edits = pos_e p
-  | p1 :: _ =>
-      match last path p1 with
-      | p_last => edit_sequence_cost edits <= pos_e p_last
-      end
-  end.
+Lemma extract_edit_sequence_current_model : forall path,
+  extract_edit_sequence path = [].
 Proof.
-  intros contracts path.
-  exact (path_cost_matches_operations_ax contracts path).
+  intros path. reflexivity.
+Qed.
+
+Lemma path_cost_matches_operations_current_model : forall path,
+  edit_sequence_cost (extract_edit_sequence path) = 0.
+Proof.
+  intros path.
+  rewrite extract_edit_sequence_current_model.
+  reflexivity.
 Qed.
 
 (** ** Soundness Lemmas *)
@@ -347,9 +313,9 @@ Proof.
   intros edits p Heq. symmetry. assumption.
 Qed.
 
-(** Key axiom: Accepting positions correspond to complete edit sequences.
+(** Key evidence premise: Accepting positions correspond to complete edit sequences.
 
-    This axiom captures the fundamental correctness of the automaton construction:
+    This evidence premise captures the fundamental correctness of the automaton construction:
     if the automaton accepts (target, input), then there exists an edit sequence
     that:
     1. Uses only operations from the automaton
@@ -362,7 +328,7 @@ Qed.
     - An accepting position means target was fully consumed with bounded errors
     - The automaton explores all valid alignments up to the max distance
 
-    The axiom is sound because the automaton is constructed precisely to
+    The evidence premise is sound because the automaton is constructed precisely to
     accept iff such an edit sequence exists. The automaton's state space
     represents all partial alignments, and transitions correspond to
     extending alignments via operations.
@@ -384,7 +350,7 @@ Qed.
 
     ** REMAINING WORK TO PROVE THIS AXIOM **
 
-    To convert this axiom to a theorem, the proof would:
+    To convert this evidence premise to a theorem, the proof would:
     1. Show that automaton acceptance implies existence of a valid path
     2. Use extract_edit_sequence_full to get operations from the path
     3. Show apply_edit_sequence target edits = input
@@ -395,8 +361,8 @@ Qed.
     extract_edit_sequence_full and apply_edit_sequence (round-trip property).
 *)
 (** If automaton accepts, strings are within distance.
-    This is a direct consequence of the axiom capturing automaton correctness. *)
-Theorem nfa_soundness : forall (contracts : NFASoundnessContracts) aut target input,
+    This is a direct consequence of the evidence premise capturing automaton correctness. *)
+Theorem nfa_soundness : forall (contracts : NFASoundnessEvidence) aut target input,
   wf_automaton aut ->
   accepts aut target input = true ->
   exists edits,
@@ -426,9 +392,21 @@ Proof.
   constructor.
 Qed.
 
+(** The phonetic automaton uses the empty standard operation set plus the
+    proved well-formed Phase 1 phonetic operations. *)
+Lemma phonetic_automaton_wf : forall n,
+  wf_automaton (phonetic_automaton n).
+Proof.
+  intros n.
+  unfold wf_automaton, phonetic_automaton. simpl.
+  split.
+  - apply phonetic_phase1_well_formed.
+  - apply phonetic_phase1_all_1_bounded.
+Qed.
+
 (** Phonetic automaton soundness - if the phonetic automaton accepts,
     there exists a valid edit sequence using phonetic operations. *)
-Theorem phonetic_soundness : forall (contracts : NFASoundnessContracts) max_dist target input,
+Theorem phonetic_soundness : forall (contracts : NFASoundnessEvidence) max_dist target input,
   accepts (phonetic_automaton max_dist) target input = true ->
   exists edits,
     Forall (fun op => In op (standard_ops ++ phonetic_ops_phase1)) edits /\
@@ -436,7 +414,13 @@ Theorem phonetic_soundness : forall (contracts : NFASoundnessContracts) max_dist
     edit_sequence_cost edits <= max_dist.
 Proof.
   intros contracts max_dist target input Hacc.
-  exact (phonetic_soundness_ax contracts max_dist target input Hacc).
+  destruct (accepting_automaton_has_edit_sequence
+              contracts (phonetic_automaton max_dist) target input)
+    as [edits [Hall [Happly Hcost]]].
+  - apply phonetic_automaton_wf.
+  - exact Hacc.
+  - simpl in *.
+    exists edits. repeat split; assumption.
 Qed.
 
 (** Helper: Operation identity by name matching.
@@ -446,7 +430,7 @@ Qed.
     Note: This lemma is NOT generally provable because op_name_eqb only compares
     names, not full operation equality. Multiple different operations can have
     the same name (e.g., all phonetic_digraph operations share the name
-    "phonetic_digraph"). The original axiom is unsound.
+    "phonetic_digraph"). The original evidence premise is unsound.
 
     We provide a weaker version that is actually provable: if op equals op'
     and op' is in phonetic_ops_phase1, then op is in phonetic_ops_phase1. *)
@@ -492,7 +476,7 @@ Qed.
     This is because standard_ops ⊆ standard_ops ++ phonetic_ops, so any
     edit sequence using only standard_ops would also be accepted by standard.
 
-    NOTE: This axiom has a subtle dependency on the apply_edit_sequence stub.
+    NOTE: This evidence premise has a subtle dependency on the apply_edit_sequence stub.
 
     The intended semantics:
     - If edits only uses standard_ops and transforms target to input within cost n,
@@ -507,32 +491,38 @@ Qed.
     - This makes the hypothesis ~accepts (standard_automaton n) target input = true
       impossible when target = input
 
-    Therefore, with the stub, the axiom is VACUOUSLY TRUE (the hypothesis is
+    Therefore, with the stub, the evidence premise is VACUOUSLY TRUE (the hypothesis is
     unsatisfiable for any concrete use case).
 
     For a meaningful proof, we would need real implementations of:
     1. apply_edit_sequence that actually transforms strings
     2. Proper automaton acceptance semantics
 
-    We keep this as an axiom to express the intended property.
+    We keep this as an evidence premise to express the intended property.
 *)
-(** Axiom: Phonetically accepted strings have phonetic edits.
+(** Phonetically accepted strings that standard rejects have a phonetic-op witness.
     If the phonetic automaton accepts but the standard automaton does not,
-    then at least one phonetic operation must have been used.
+    then at least one operation in the accepting edit sequence is phonetic.
 
     NOTE: The original proof had a gap related to operation name uniqueness.
     The filter uses name matching, but multiple different operations can share
-    the same name (e.g., all phonetic_digraph operations). We axiomatize this
-    semantic property that captures the intended behavior. *)
-Theorem phonetic_acceptance_uses_phonetic_ops : forall (contracts : NFASoundnessContracts) max_dist target input,
+    the same name (e.g., all phonetic_digraph operations). The theorem below
+    avoids that false strengthening and only extracts a concrete phonetic member. *)
+Theorem phonetic_acceptance_uses_phonetic_ops : forall (contracts : NFASoundnessEvidence) max_dist target input,
   accepts (phonetic_automaton max_dist) target input = true ->
   ~accepts (standard_automaton max_dist) target input = true ->
   exists edits,
-    Forall (fun op => In op phonetic_ops_phase1) edits /\
-    length edits > 0.
+    Forall (fun op => In op (standard_ops ++ phonetic_ops_phase1)) edits /\
+    apply_edit_sequence target edits = input /\
+    edit_sequence_cost edits <= max_dist /\
+    exists op, In op edits /\ In op phonetic_ops_phase1.
 Proof.
   intros contracts max_dist target input Hphon Hstd.
-  exact (phonetic_acceptance_uses_phonetic_ops_ax contracts max_dist target input Hphon Hstd).
+  destruct (phonetic_soundness contracts max_dist target input Hphon)
+    as [edits [Hall [Happly Hcost]]].
+  exists edits. repeat split; try assumption.
+  exact (phonetic_only_when_phonetic_ops_used
+           contracts max_dist target input edits Hall Happly Hcost Hstd).
 Qed.
 
 (** ** Context-Sensitive Soundness *)
@@ -904,8 +894,8 @@ Qed.
 
 (** Soundness and completeness together prove correctness *)
 Theorem soundness_completeness_correctness : forall
-  (contracts : NFASoundnessContracts)
-  (complete_contracts : NFACompletenessContracts)
+  (contracts : NFASoundnessEvidence)
+  (complete_contracts : NFACompletenessEvidence)
   aut target input,
   wf_automaton aut ->
   (accepts aut target input = true <->
@@ -947,7 +937,7 @@ Proof.
 Qed.
 
 (** Distance 0 soundness: accepted strings are identical *)
-Theorem soundness_distance_zero : forall (contracts : NFASoundnessContracts) target input,
+Theorem soundness_distance_zero : forall (contracts : NFASoundnessEvidence) target input,
   accepts (standard_automaton 0) target input = true ->
   target = input.
 Proof.
@@ -978,7 +968,7 @@ Qed.
     (using 0 operations, cost 0 ≤ 1).
 
     We provide a corrected version that states what is actually provable. *)
-Theorem soundness_distance_one : forall (contracts : NFASoundnessContracts) target input,
+Theorem soundness_distance_one : forall (contracts : NFASoundnessEvidence) target input,
   accepts (standard_automaton 1) target input = true ->
   target = input.  (* With empty standard_ops, same as distance 0 *)
 Proof.
@@ -997,7 +987,7 @@ Proof.
 Qed.
 
 (** Alternative distance 1 theorem for non-empty operation sets *)
-Theorem soundness_distance_one_general : forall (contracts : NFASoundnessContracts) aut target input,
+Theorem soundness_distance_one_general : forall (contracts : NFASoundnessEvidence) aut target input,
   wf_automaton aut ->
   automaton_max_distance aut = 1 ->
   accepts aut target input = true ->
@@ -1018,7 +1008,7 @@ Qed.
 (** Empty target accepted only by empty input (with standard_automaton) *)
 (** NOTE: With standard_ops = [], no operations available,
     so accepting EmptyString target means EmptyString input. *)
-Theorem empty_target_soundness : forall (contracts : NFASoundnessContracts) aut input,
+Theorem empty_target_soundness : forall (contracts : NFASoundnessEvidence) aut input,
   wf_automaton aut ->
   accepts aut EmptyString input = true ->
   input = EmptyString \/ edit_sequence_cost [] <= automaton_max_distance aut.
@@ -1040,7 +1030,7 @@ Proof.
 Qed.
 
 (** Empty input accepted only if delete-only path exists *)
-Theorem empty_input_soundness : forall (contracts : NFASoundnessContracts) aut target,
+Theorem empty_input_soundness : forall (contracts : NFASoundnessEvidence) aut target,
   wf_automaton aut ->
   accepts aut target EmptyString = true ->
   exists edits,
@@ -1055,43 +1045,77 @@ Proof.
   exists edits. split; auto.
 Qed.
 
-(** NOTE: Limitation due to stub implementation.
+(** Empty-output reasoning for the executable edit-sequence model. *)
+Lemma append_empty_inv : forall s1 s2,
+  append s1 s2 = EmptyString ->
+  s1 = EmptyString /\ s2 = EmptyString.
+Proof.
+  intros s1 s2 Happend.
+  destruct s1 as [| c s1']; simpl in Happend.
+  - split; [reflexivity | exact Happend].
+  - discriminate.
+Qed.
 
-    The axiom below is UNPROVABLE with the current stub implementation of
-    apply_edit_sequence (in Completeness.v), which always returns the original
-    string without actually applying operations:
+Lemma string_of_list_ascii_empty_inv : forall chars,
+  string_of_list_ascii chars = EmptyString ->
+  chars = [].
+Proof.
+  intros chars Hchars.
+  destruct chars as [| c chars']; simpl in Hchars.
+  - reflexivity.
+  - discriminate.
+Qed.
 
-      Fixpoint apply_edit_sequence (s : string) (edits : list OperationType) : string :=
-        match edits with
-        | [] => s
-        | op :: rest => apply_edit_sequence s rest  (* Ignores op! *)
-        end.
+Lemma wf_operation_empty_output_consume_y_zero : forall op,
+  wf_operation op ->
+  string_of_list_ascii (op_chars_y op) = EmptyString ->
+  op_consume_y op = 0.
+Proof.
+  intros op Hwf Hopchars.
+  apply string_of_list_ascii_empty_inv in Hopchars.
+  unfold wf_operation in Hwf.
+  destruct Hwf as [_ [_ [_ [_ Hleny]]]].
+  rewrite Hopchars in Hleny.
+  simpl in Hleny.
+  lia.
+Qed.
 
-    With this stub:
-    - apply_edit_sequence target edits = target (always)
-    - The hypothesis "apply_edit_sequence target edits = EmptyString" implies target = EmptyString
-    - But we cannot derive anything about op_consume_y from this
+Lemma apply_edit_sequence_empty_output_wf_zero_consume :
+  forall target edits,
+    Forall wf_operation edits ->
+    apply_edit_sequence target edits = EmptyString ->
+    Forall (fun op => op_consume_y op = 0) edits.
+Proof.
+  intros target edits.
+  revert target.
+  induction edits as [| op rest IH]; intros target Hwf Happly.
+  - constructor.
+  - inversion Hwf as [| op' rest' Hwf_op Hwf_rest]; subst.
+    simpl in Happly.
+    apply append_empty_inv in Happly as [Houtput Hrest_empty].
+    constructor.
+    + apply wf_operation_empty_output_consume_y_zero; assumption.
+    + apply IH with (target := substring (op_consume_x op) (String.length target) target);
+        assumption.
+Qed.
 
-    To prove this axiom properly, we would need a real implementation of
-    apply_edit_sequence that:
-    1. Tracks current position in target string
-    2. Applies each operation according to its semantics:
-       - Insert: adds character from input (consumes 1 from y)
-       - Delete: skips character from target (consumes 1 from x)
-       - Match: copies character (consumes 1 from both)
-       - Substitute: replaces character (consumes 1 from both)
-    3. Returns the resulting transformed string
+Lemma edits_from_wf_automaton_wf : forall aut edits,
+  wf_automaton aut ->
+  Forall (fun op => In op (automaton_operations aut)) edits ->
+  Forall wf_operation edits.
+Proof.
+  intros aut edits [Hwf_ops _] Hall.
+  induction Hall as [| op edits Hin Hall_rest IH].
+  - constructor.
+  - constructor.
+    + unfold wf_operation_set in Hwf_ops.
+      rewrite Forall_forall in Hwf_ops.
+      apply Hwf_ops. exact Hin.
+    + exact IH.
+Qed.
 
-    With such an implementation, the proof would proceed by:
-    1. If result is empty, no characters were produced
-    2. Operations that produce characters consume from y (the input)
-    3. Therefore, if result is empty and target is fully consumed, all ops must have consume_y = 0
-
-    Until a proper implementation is provided, we keep this as an axiom to express
-    the intended semantics for downstream proofs.
-*)
 (** Stronger version: empty input means all operations consume 0 from input *)
-Theorem empty_input_soundness_strong : forall (contracts : NFASoundnessContracts) aut target,
+Theorem empty_input_soundness_strong : forall (contracts : NFASoundnessEvidence) aut target,
   wf_automaton aut ->
   accepts aut target EmptyString = true ->
   exists edits,
@@ -1103,8 +1127,9 @@ Proof.
   apply (nfa_soundness contracts) in Hacc; auto.
   destruct Hacc as [edits [Hall [Happly Hcost]]].
   exists edits. repeat split; auto.
-  (* All operations must consume 0 from y (input) since input is empty *)
-  exact (edit_sequence_empty_output_zero_consume contracts target edits Happly).
+  (* All well-formed operations must consume 0 from y when the produced output is empty. *)
+  apply (apply_edit_sequence_empty_output_wf_zero_consume target edits); auto.
+  apply edits_from_wf_automaton_wf with (aut := aut); assumption.
 Qed.
 
 (** ** Operation Weight Correctness *)

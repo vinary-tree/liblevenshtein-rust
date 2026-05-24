@@ -13,11 +13,21 @@ ASSUME_RE='^\s*(Axiom\s+|Parameter\s+|Conjecture\s+|Hypothesis\s+)'
 
 profile_memory() {
   case "$1" in
-    light) echo "8G" ;;
-    standard) echo "32G" ;;
-    heavy) echo "96G" ;;
-    exceptional) echo "128G" ;;
-    *) echo "32G" ;;
+    light) echo "2G" ;;
+    standard) echo "4G" ;;
+    heavy) echo "12G" ;;
+    exceptional) echo "24G" ;;
+    *) echo "4G" ;;
+  esac
+}
+
+profile_rss_kb() {
+  case "$1" in
+    light) echo "$((2 * 1024 * 1024))" ;;
+    standard) echo "$((4 * 1024 * 1024))" ;;
+    heavy) echo "$((12 * 1024 * 1024))" ;;
+    exceptional) echo "$((24 * 1024 * 1024))" ;;
+    *) echo "$((4 * 1024 * 1024))" ;;
   esac
 }
 
@@ -25,14 +35,98 @@ profile_memory_bytes() {
   case "$1" in
     # OCaml 5/Rocq reserves substantial virtual address space for domain
     # heaps even when actual RSS stays well below the cgroup MemoryMax.
-    # prlimit --as is only a non-cgroup fallback, so keep it conservative
-    # enough to allow Rocq startup while still bounding runaway processes.
+    # prlimit --as is not an RSS limit. Keep it large enough for Rocq startup;
+    # run_rss_monitored below enforces the actual RSS cap when systemd-run is
+    # unavailable.
     light) echo "$((64 * 1024 * 1024 * 1024))" ;;
     standard) echo "$((64 * 1024 * 1024 * 1024))" ;;
     heavy) echo "$((96 * 1024 * 1024 * 1024))" ;;
     exceptional) echo "$((128 * 1024 * 1024 * 1024))" ;;
     *) echo "$((32 * 1024 * 1024 * 1024))" ;;
   esac
+}
+
+rss_tree_kb() {
+  local root="$1"
+  ps -eo pid=,ppid=,rss= | awk -v root="$root" '
+    {
+      pid = $1
+      parent[pid] = $2
+      rss[pid] = $3
+      pids[++n] = pid
+    }
+    function is_descendant(pid, cur, seen) {
+      cur = pid
+      seen = 0
+      while (cur != "" && cur != 0 && seen++ < 4096) {
+        if (cur == root) return 1
+        cur = parent[cur]
+      }
+      return 0
+    }
+    END {
+      total = 0
+      for (i = 1; i <= n; i++) {
+        if (is_descendant(pids[i])) total += rss[pids[i]]
+      }
+      print total + 0
+    }'
+}
+
+terminate_process_tree() {
+  local pid="$1"
+  if command -v setsid >/dev/null 2>&1; then
+    kill -TERM "-$pid" >/dev/null 2>&1 || kill -TERM "$pid" >/dev/null 2>&1 || true
+    sleep 2
+    kill -KILL "-$pid" >/dev/null 2>&1 || kill -KILL "$pid" >/dev/null 2>&1 || true
+  else
+    kill -TERM "$pid" >/dev/null 2>&1 || true
+    sleep 2
+    kill -KILL "$pid" >/dev/null 2>&1 || true
+  fi
+}
+
+run_rss_monitored() {
+  local profile="$1"
+  shift
+  local rss_limit_kb exceeded_file pid monitor status
+  rss_limit_kb="$(profile_rss_kb "$profile")"
+  exceeded_file="$(mktemp)"
+  rm -f "$exceeded_file"
+
+  if command -v setsid >/dev/null 2>&1; then
+    setsid "$@" &
+  else
+    "$@" &
+  fi
+  pid="$!"
+
+  (
+    local rss_kb
+    while kill -0 "$pid" >/dev/null 2>&1; do
+      rss_kb="$(rss_tree_kb "$pid")"
+      if [[ "$rss_kb" -gt "$rss_limit_kb" ]]; then
+        printf '%s\n' "$rss_kb" > "$exceeded_file"
+        echo "error: RSS cap exceeded for profile '$profile': ${rss_kb}KiB > ${rss_limit_kb}KiB" >&2
+        terminate_process_tree "$pid"
+        break
+      fi
+      sleep 1
+    done
+  ) &
+  monitor="$!"
+
+  status=0
+  wait "$pid" || status="$?"
+  kill "$monitor" >/dev/null 2>&1 || true
+  wait "$monitor" >/dev/null 2>&1 || true
+
+  if [[ -s "$exceeded_file" ]]; then
+    rm -f "$exceeded_file"
+    return 137
+  fi
+  rm -f "$exceeded_file"
+  return "$status"
 }
 
 profile_cpu() {
@@ -79,8 +173,8 @@ run_capped() {
       -p "TasksMax=$tasks" \
       /usr/bin/time -v "$@"
   elif command -v prlimit >/dev/null 2>&1; then
-    echo "warning: systemd-run scope unavailable; using prlimit --as=$mem_bytes fallback" >&2
-    prlimit --as="$mem_bytes" /usr/bin/time -v "$@"
+    echo "warning: systemd-run scope unavailable; using prlimit --as=$mem_bytes plus RSS monitor cap=$mem fallback" >&2
+    run_rss_monitored "$profile" prlimit --as="$mem_bytes" /usr/bin/time -v "$@"
   elif [[ "${FORMAL_VERIFY_ALLOW_UNCAPPED:-}" == "1" ]]; then
     echo "warning: running uncapped because FORMAL_VERIFY_ALLOW_UNCAPPED=1" >&2
     /usr/bin/time -v "$@"
@@ -106,6 +200,16 @@ allowed_symbols() {
   awk -F '\t' '
     $0 !~ /^#/ && NF >= 6 && $1 == "allowed" { print $3 }
   ' "$ASSUMPTIONS"
+}
+
+contract_symbol_allowed() {
+  local symbol="$1"
+  allowed_symbols | grep -Fxq "$symbol"
+}
+
+evidence_symbol_allowed() {
+  local symbol="$1"
+  allowed_symbols | grep -Fxq "$symbol"
 }
 
 audit_manifest() {
@@ -227,6 +331,226 @@ audit_gaps_tsv() {
       done
 }
 
+audit_contracts_tsv() {
+  printf 'status\tkind\tsymbol\tpath\tline\tclassification\tnote\n'
+
+  find "$ROOT/docs/verification" "$ROOT/rocq" -name '*.v' -print0 \
+    | while IFS= read -r -d '' file; do
+        awk -v file="$file" -v root="$ROOT/" '
+          function emit(kind, symbol, note) {
+            rel = file
+            sub(root, "", rel)
+            status = "partial"
+            classification = "prove"
+            printf "%s\t%s\t%s\t%s\t%d\t%s\t%s\n",
+              status, kind, symbol, rel, NR, classification, note
+          }
+          {
+            line = $0
+            out = ""
+            i = 1
+            while (i <= length(line)) {
+              two = substr(line, i, 2)
+              if (depth > 0) {
+                if (two == "(*") {
+                  depth++
+                  i += 2
+                } else if (two == "*)") {
+                  depth--
+                  i += 2
+                } else {
+                  i++
+                }
+              } else if (two == "(*") {
+                depth++
+                i += 2
+              } else {
+                out = out substr(line, i, 1)
+                i++
+              }
+            }
+
+            if (out ~ /^[[:space:]]*Definition[[:space:]]+[A-Za-z0-9_]*_contract[[:space:]]+/) {
+              symbol = out
+              sub(/^[[:space:]]*Definition[[:space:]]+/, "", symbol)
+              sub(/[[:space:]:\(].*/, "", symbol)
+              emit("Definition", symbol, "explicit proof contract")
+            } else if (out ~ /^[[:space:]]*Record[[:space:]]+[A-Za-z0-9_]*Contracts[[:space:]]*[:{]/) {
+              symbol = out
+              sub(/^[[:space:]]*Record[[:space:]]+/, "", symbol)
+              sub(/[[:space:]:{].*/, "", symbol)
+              emit("Record", symbol, "record of explicit proof contracts")
+            } else if (out ~ /^[[:space:]]*[A-Za-z0-9_]+_contract[[:space:]]*:/) {
+              symbol = out
+              sub(/^[[:space:]]*/, "", symbol)
+              sub(/[[:space:]:].*/, "", symbol)
+              emit("Field", symbol, "contract field in proof-obligation record")
+            } else if (out ~ /^[[:space:]]*[A-Za-z0-9_]+_ax[[:space:]]*:/) {
+              symbol = out
+              sub(/^[[:space:]]*/, "", symbol)
+              sub(/[[:space:]:].*/, "", symbol)
+              emit("Field", symbol, "axiom-shaped field in proof-obligation record")
+            } else if (out ~ /^[[:space:]]*(Lemma|Theorem|Corollary)[[:space:]]+[A-Za-z0-9_]+_ax[[:space:]]*:/) {
+              symbol = out
+              sub(/^[[:space:]]*(Lemma|Theorem|Corollary)[[:space:]]+/, "", symbol)
+              sub(/[[:space:]:].*/, "", symbol)
+              emit("NamedTheorem", symbol, "axiom-shaped theorem name")
+            }
+          }
+        ' "$file"
+      done \
+    | while IFS=$'\t' read -r status kind symbol path line classification note; do
+        if contract_symbol_allowed "$symbol"; then
+          printf 'allowed\t%s\t%s\t%s\t%s\tassumption\tallowlisted cited contract\n' \
+            "$kind" "$symbol" "$path" "$line"
+        else
+          printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+            "$status" "$kind" "$symbol" "$path" "$line" "$classification" "$note"
+        fi
+      done
+}
+
+audit_contracts() {
+  echo "== Explicit proof contracts across docs/verification and rocq =="
+  local tmp_hits
+  tmp_hits="$(mktemp)"
+  audit_contracts_tsv | awk -F '\t' 'NR > 1 && $1 != "allowed" { print }' > "$tmp_hits"
+  if [[ -s "$tmp_hits" ]]; then
+    cat "$tmp_hits"
+  else
+    echo "No unallowlisted explicit proof contracts found."
+  fi
+  echo
+  echo "== Contract counts by file =="
+  cut -f4 "$tmp_hits" | sort | uniq -c | sort -nr || true
+  rm -f "$tmp_hits"
+}
+
+audit_evidence_tsv() {
+  printf 'status\tkind\tsymbol\tpath\tline\tclassification\tnote\n'
+
+  find "$ROOT/docs/verification" "$ROOT/rocq" -name '*.v' -print0 \
+    | while IFS= read -r -d '' file; do
+        awk -v file="$file" -v root="$ROOT/" '
+          function emit(kind, symbol, note) {
+            rel = file
+            sub(root, "", rel)
+            printf "partial\t%s\t%s\t%s\t%d\tprove\t%s\n",
+              kind, symbol, rel, NR, note
+          }
+          {
+            line = $0
+            out = ""
+            i = 1
+            while (i <= length(line)) {
+              two = substr(line, i, 2)
+              if (depth > 0) {
+                if (two == "(*") {
+                  depth++
+                  i += 2
+                } else if (two == "*)") {
+                  depth--
+                  i += 2
+                } else {
+                  i++
+                }
+              } else if (two == "(*") {
+                depth++
+                i += 2
+              } else {
+                out = out substr(line, i, 1)
+                i++
+              }
+            }
+
+            if (out ~ /^[[:space:]]*Record[[:space:]]+[A-Za-z0-9_]*Evidence[[:space:]]*[:{]/) {
+              symbol = out
+              sub(/^[[:space:]]*Record[[:space:]]+/, "", symbol)
+              sub(/[[:space:]:{].*/, "", symbol)
+              emit("Record", symbol, "neutral evidence record")
+            } else if (out ~ /^[[:space:]]*Definition[[:space:]]+[A-Za-z0-9_]*_premise[[:space:]]*[:=]/) {
+              symbol = out
+              sub(/^[[:space:]]*Definition[[:space:]]+/, "", symbol)
+              sub(/[[:space:]:\(].*/, "", symbol)
+              emit("Definition", symbol, "explicit premise parameter")
+            } else if (out ~ /^[[:space:]]*[A-Za-z0-9_]+_(proof|bridge|premise)[[:space:]]*:/) {
+              symbol = out
+              sub(/^[[:space:]]*/, "", symbol)
+              sub(/[[:space:]:].*/, "", symbol)
+              emit("Field", symbol, "field in evidence or premise record")
+            }
+          }
+        ' "$file"
+      done \
+    | while IFS=$'\t' read -r status kind symbol path line classification note; do
+        if evidence_symbol_allowed "$symbol"; then
+          printf 'allowed\t%s\t%s\t%s\t%s\tassumption\tallowlisted cited evidence\n' \
+            "$kind" "$symbol" "$path" "$line"
+        else
+          printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+            "$status" "$kind" "$symbol" "$path" "$line" "$classification" "$note"
+        fi
+      done
+}
+
+audit_evidence() {
+  echo "== Explicit evidence and premise surfaces across docs/verification and rocq =="
+  local tmp_hits
+  tmp_hits="$(mktemp)"
+  audit_evidence_tsv | awk -F '\t' 'NR > 1 && $1 != "allowed" { print }' > "$tmp_hits"
+  if [[ -s "$tmp_hits" ]]; then
+    cat "$tmp_hits"
+  else
+    echo "No unallowlisted evidence or premise surfaces found."
+  fi
+  echo
+  echo "== Evidence counts by file =="
+  cut -f4 "$tmp_hits" | sort | uniq -c | sort -nr || true
+  rm -f "$tmp_hits"
+}
+
+check_trusted_evidence() {
+  local tmp_hits failed
+  tmp_hits="$(mktemp)"
+  failed=0
+  audit_evidence_tsv | awk -F '\t' 'NR > 1 && $1 != "allowed" { print }' > "$tmp_hits"
+
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    local matches
+    matches="$(awk -F '\t' -v rel="$rel" '$4 == rel { print }' "$tmp_hits")"
+    if [[ -n "$matches" ]]; then
+      printf '%s\n' "$matches"
+      echo "trusted file contains unallowlisted evidence or premise surface: $rel" >&2
+      failed=1
+    fi
+  done < <(trusted_files)
+
+  rm -f "$tmp_hits"
+  return "$failed"
+}
+
+check_trusted_contracts() {
+  local tmp_hits failed
+  tmp_hits="$(mktemp)"
+  failed=0
+  audit_contracts_tsv | awk -F '\t' 'NR > 1 && $1 != "allowed" { print }' > "$tmp_hits"
+
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    local matches
+    matches="$(awk -F '\t' -v rel="$rel" '$4 == rel { print }' "$tmp_hits")"
+    if [[ -n "$matches" ]]; then
+      printf '%s\n' "$matches"
+      echo "trusted file contains unallowlisted explicit proof contract: $rel" >&2
+      failed=1
+    fi
+  done < <(trusted_files)
+
+  rm -f "$tmp_hits"
+  return "$failed"
+}
+
 check_trusted_no_admitted() {
   local failed=0
   while IFS= read -r rel; do
@@ -345,15 +669,35 @@ case "$MODE" in
     audit_manifest >/dev/null
     audit_gaps_tsv
     ;;
+  audit-contracts)
+    audit_manifest
+    audit_contracts
+    ;;
+  audit-contracts-tsv)
+    audit_manifest >/dev/null
+    audit_contracts_tsv
+    ;;
+  audit-evidence)
+    audit_manifest
+    audit_evidence
+    ;;
+  audit-evidence-tsv)
+    audit_manifest >/dev/null
+    audit_evidence_tsv
+    ;;
   trusted)
     audit_manifest
     check_trusted_no_admitted
     check_trusted_assumptions
+    check_trusted_contracts
+    check_trusted_evidence
     ;;
   coq-trusted)
     audit_manifest
     check_trusted_no_admitted
     check_trusted_assumptions
+    check_trusted_contracts
+    check_trusted_evidence
     coq_compile_trusted
     ;;
   coq-file)
@@ -375,7 +719,7 @@ case "$MODE" in
     ;;
   *)
     cat >&2 <<USAGE
-usage: scripts/verify-formal.sh [audit|audit-tsv|trusted|coq-trusted|coq-file|tla|all]
+usage: scripts/verify-formal.sh [audit|audit-tsv|audit-contracts|audit-contracts-tsv|audit-evidence|audit-evidence-tsv|trusted|coq-trusted|coq-file|tla|all]
 
 All proof/model execution is memory-capped with systemd-run unless
 FORMAL_VERIFY_ALLOW_UNCAPPED=1 is set.

@@ -1,7 +1,4 @@
-#![cfg_attr(
-    not(target_arch = "x86_64"),
-    allow(unused_variables)
-)]
+#![cfg_attr(not(target_arch = "x86_64"), allow(unused_variables))]
 
 #[cfg(target_arch = "x86_64")]
 use criterion::BenchmarkId;

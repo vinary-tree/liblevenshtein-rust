@@ -377,27 +377,25 @@ Qed.
     corresponding positions in the run from pos2.
 
     Citation: Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood with
-    Universal Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
-    DOI 10.1016/j.tcs.2009.03.002, Section 3 monotone generalized edit
+    Universal Neighborhood Automata", TCS 412(22):2340-2355, 2011,
+    DOI 10.1016/j.tcs.2011.01.013, Section 3 monotone generalized edit
     operations and Definition 15 automaton transitions. *)
-Definition run_position_monotonicity_contract : Prop :=
-  forall aut target input pos1 pos2 st fuel,
-    pos1 <= pos2 ->
-    forall p, In p (state_positions (run_automaton_from aut target input pos1 st fuel)) ->
-    exists p', In p' (state_positions (run_automaton_from aut target input pos2 st fuel)) /\
-      pos_i p <= pos_i p'.
-
 (** Running automaton monotonically increases position *)
 Theorem run_monotone_position : forall
-  (contract : run_position_monotonicity_contract)
+  (run_position_monotone :
+    forall aut target input pos1 pos2 st fuel,
+      pos1 <= pos2 ->
+      forall p, In p (state_positions (run_automaton_from aut target input pos1 st fuel)) ->
+      exists p', In p' (state_positions (run_automaton_from aut target input pos2 st fuel)) /\
+        pos_i p <= pos_i p')
   aut target input pos1 pos2 st fuel,
   pos1 <= pos2 ->
   forall p, In p (state_positions (run_automaton_from aut target input pos1 st fuel)) ->
   exists p', In p' (state_positions (run_automaton_from aut target input pos2 st fuel)) /\
     pos_i p <= pos_i p'.
 Proof.
-  intros contract aut target input pos1 pos2 st fuel Hle.
-  apply contract. assumption.
+  intros run_position_monotone aut target input pos1 pos2 st fuel Hle.
+  apply run_position_monotone. assumption.
 Qed.
 
 (** ** Context Propagation Correctness *)
@@ -470,19 +468,17 @@ Definition reachable_in_one_step
     running the automaton for sufficient fuel will reach p3.
 
     Citation: Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood with
-    Universal Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
-    DOI 10.1016/j.tcs.2009.03.002, Definition 15 transition semantics. *)
-Definition two_step_reachability_via_run_contract : Prop :=
-  forall aut target input pos p1 p2 p3,
-    reachable_in_one_step aut target input pos p1 p2 ->
-    reachable_in_one_step aut target input (S pos) p2 p3 ->
-    exists fuel st,
-      In p1 (state_positions st) ->
-      In p3 (state_positions (run_automaton_from aut target input pos st fuel)).
-
+    Universal Neighborhood Automata", TCS 412(22):2340-2355, 2011,
+    DOI 10.1016/j.tcs.2011.01.013, Definition 15 transition semantics. *)
 (** Reachability is transitive *)
 Theorem reachability_transitive : forall
-  (contract : two_step_reachability_via_run_contract)
+  (two_step_reachable :
+    forall aut target input pos p1 p2 p3,
+      reachable_in_one_step aut target input pos p1 p2 ->
+      reachable_in_one_step aut target input (S pos) p2 p3 ->
+      exists fuel st,
+        In p1 (state_positions st) ->
+        In p3 (state_positions (run_automaton_from aut target input pos st fuel)))
   aut target input pos p1 p2 p3,
   reachable_in_one_step aut target input pos p1 p2 ->
   reachable_in_one_step aut target input (S pos) p2 p3 ->
@@ -490,68 +486,106 @@ Theorem reachability_transitive : forall
     In p1 (state_positions st) ->
     In p3 (state_positions (run_automaton_from aut target input pos st fuel)).
 Proof.
-  intros contract aut target input pos p1 p2 p3 H12 H23.
-  apply (contract aut target input pos p1 p2 p3 H12 H23).
+  intros two_step_reachable aut target input pos p1 p2 p3 H12 H23.
+  apply (two_step_reachable aut target input pos p1 p2 p3 H12 H23).
 Qed.
 
 (** ** Pruning Soundness *)
 
-(** Contract: If position is removed by pruning, it is subsumed by another.
-    The prune_subsumed_positions function only removes a position p
-    if there exists another position p' with position_subsumes p' p = true.
-
-    Citation: Types.v defines position_subsumes from the subsumption
-    optimization of Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood
-    with Universal Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
-    DOI 10.1016/j.tcs.2009.03.002. *)
-Definition prune_removes_only_subsumed_contract : Prop :=
-  forall positions p,
-    In p positions ->
-    ~In p (prune_subsumed_positions positions) ->
-    exists p', In p' (prune_subsumed_positions positions) /\
-      position_subsumes p' p = true.
+Lemma prune_subsumed_positions_retains_or_subsumed : forall positions p,
+  In p positions ->
+  In p (prune_subsumed_positions positions) \/
+  exists p', In p' (prune_subsumed_positions positions) /\
+    position_subsumes p' p = true.
+Proof.
+  induction positions as [| h rest IH]; intros p Hin; simpl in *.
+  - contradiction.
+  - destruct (existsb (fun p' : Position => position_subsumes p' h)
+                      (prune_subsumed_positions rest)) eqn:Hsubsumed.
+    + destruct Hin as [Heq | Hin].
+      * subst h.
+        right.
+        apply existsb_exists in Hsubsumed.
+        destruct Hsubsumed as [p' [Hin' Hsub]].
+        exists p'. split; assumption.
+      * destruct (IH p Hin) as [Hin_pruned | [p' [Hin' Hsub]]].
+        -- left. exact Hin_pruned.
+        -- right. exists p'. split; assumption.
+    + destruct Hin as [Heq | Hin].
+      * subst h. left. left. reflexivity.
+      * destruct (IH p Hin) as [Hin_pruned | [p' [Hin' Hsub]]].
+        -- destruct (position_subsumes h p) eqn:Hhp.
+           ++ right. exists h. split; [left; reflexivity | exact Hhp].
+           ++ left. right. apply filter_In. split.
+              ** exact Hin_pruned.
+              ** rewrite Hhp. reflexivity.
+        -- destruct (position_subsumes h p') eqn:Hhp'.
+           ++ right. exists h. split; [left; reflexivity |].
+              eapply position_subsumes_trans; eauto.
+           ++ right. exists p'. split.
+              ** right. apply filter_In. split.
+                 --- exact Hin'.
+                 --- rewrite Hhp'. reflexivity.
+              ** exact Hsub.
+Qed.
 
 (** Pruning removes only subsumed positions *)
-Theorem prune_only_subsumed : forall
-  (contract : prune_removes_only_subsumed_contract)
-  st p,
+Theorem prune_only_subsumed : forall st p,
   In p (state_positions st) ->
   ~In p (state_positions (prune_state st)) ->
   exists p', In p' (state_positions (prune_state st)) /\
     position_subsumes p' p = true.
 Proof.
-  intros contract st p Hin Hnin.
+  intros st p Hin Hnin.
   unfold prune_state in *. simpl in *.
-  apply contract; assumption.
+  destruct (prune_subsumed_positions_retains_or_subsumed
+              (state_positions st) p Hin) as [Hin_pruned | Hsub].
+  - exfalso. apply Hnin. exact Hin_pruned.
+  - exact Hsub.
 Qed.
 
-(** Contract: After pruning, no position in the result subsumes another.
-    The prune_subsumed_positions function removes all subsumed positions,
-    leaving only the minimal ones.
-
-    Citation: Types.v defines position_subsumes from the subsumption
-    optimization of Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood
-    with Universal Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
-    DOI 10.1016/j.tcs.2009.03.002. *)
-Definition prune_produces_minimal_contract : Prop :=
-  forall positions p1 p2,
-    In p1 (prune_subsumed_positions positions) ->
-    In p2 (prune_subsumed_positions positions) ->
-    p1 <> p2 ->
-    position_subsumes p1 p2 = false.
+Lemma prune_subsumed_positions_minimal : forall positions p1 p2,
+  In p1 (prune_subsumed_positions positions) ->
+  In p2 (prune_subsumed_positions positions) ->
+  p1 <> p2 ->
+  position_subsumes p1 p2 = false.
+Proof.
+  induction positions as [| h rest IH]; intros p1 p2 Hin1 Hin2 Hneq; simpl in *.
+  - contradiction.
+  - destruct (existsb (fun p' : Position => position_subsumes p' h)
+                      (prune_subsumed_positions rest)) eqn:Hsubsumed.
+    + eapply IH; eauto.
+    + destruct Hin1 as [Heq1 | Hin1];
+      destruct Hin2 as [Heq2 | Hin2].
+      * subst p1 p2. contradiction.
+      * subst p1.
+        apply filter_In in Hin2 as [_ Hnot_sub].
+        destruct (position_subsumes h p2); simpl in Hnot_sub; congruence.
+      * subst p2.
+        apply filter_In in Hin1 as [Hin1_pruned _].
+        destruct (position_subsumes p1 h) eqn:Hsub.
+        -- exfalso.
+           assert (Hexists :
+             existsb (fun p' : Position => position_subsumes p' h)
+               (prune_subsumed_positions rest) = true).
+           { apply existsb_exists. exists p1. split; assumption. }
+           congruence.
+        -- reflexivity.
+      * apply filter_In in Hin1 as [Hin1_pruned _].
+        apply filter_In in Hin2 as [Hin2_pruned _].
+        eapply IH; eauto.
+Qed.
 
 (** Pruned positions are not subsumed by each other *)
-Theorem pruned_positions_minimal : forall
-  (contract : prune_produces_minimal_contract)
-  st p1 p2,
+Theorem pruned_positions_minimal : forall st p1 p2,
   In p1 (state_positions (prune_state st)) ->
   In p2 (state_positions (prune_state st)) ->
   p1 <> p2 ->
   position_subsumes p1 p2 = false.
 Proof.
-  intros contract st p1 p2 Hin1 Hin2 Hneq.
+  intros st p1 p2 Hin1 Hin2 Hneq.
   unfold prune_state in *. simpl in *.
-  apply (contract (state_positions st)); assumption.
+  apply (prune_subsumed_positions_minimal (state_positions st)); assumption.
 Qed.
 
 (** ** Operation Composition *)
@@ -688,27 +722,25 @@ Qed.
 
     Citation: Coq.Lists.List.flat_map/filter membership lemmas plus the
     subsumption relation from Mitankin, Mihov, and Schulz, "Deciding Word
-    Neighborhood with Universal Neighborhood Automata", TCS 410(37-39):2339-2358,
-    2009, DOI 10.1016/j.tcs.2009.03.002. *)
-Definition delta_equiv_preservation_contract : Prop :=
-  forall aut target input pos st1 st2 p,
-    (forall q, In q (state_positions st1) <-> In q (state_positions st2)) ->
-    (In p (state_positions (delta aut target input pos st1)) <->
-     In p (state_positions (delta aut target input pos st2))).
-
+    Neighborhood with Universal Neighborhood Automata", TCS 412(22):2340-2355,
+    2011, DOI 10.1016/j.tcs.2011.01.013. *)
 (** Transition preserves equivalence *)
 Theorem delta_preserves_equivalence : forall
-  (contract : delta_equiv_preservation_contract)
+  (delta_equiv_preservation :
+    forall aut target input pos st1 st2 p,
+      (forall q, In q (state_positions st1) <-> In q (state_positions st2)) ->
+      (In p (state_positions (delta aut target input pos st1)) <->
+       In p (state_positions (delta aut target input pos st2))))
   aut target input pos st1 st2,
   states_equivalent st1 st2 ->
   states_equivalent
     (delta aut target input pos st1)
     (delta aut target input pos st2).
 Proof.
-  intros contract aut target input pos st1 st2 Heq.
+  intros delta_equiv_preservation aut target input pos st1 st2 Heq.
   unfold states_equivalent in *.
   intros p.
-  apply contract.
+  apply delta_equiv_preservation.
   exact Heq.
 Qed.
 
@@ -870,20 +902,18 @@ Qed.
     automata", IJDAR 5(1):67-85, 2002, DOI 10.1007/s10032-002-0082-8;
     generalized-operation extension follows Mitankin, Mihov, and Schulz,
     "Deciding Word Neighborhood with Universal Neighborhood Automata",
-    TCS 410(37-39):2339-2358, 2009, DOI 10.1016/j.tcs.2009.03.002. *)
-Definition edit_sequence_induces_accepting_run_contract : Prop :=
-  forall aut target input edit_seq,
-    edit_distance edit_seq <= automaton_max_distance aut ->
-    exists fuel st_init st_final,
-      st_final = run_automaton_from aut target input 0 st_init fuel /\
-      (exists p, In p (state_positions st_final) /\
-         pos_i p = String.length target /\
-         pos_e p <= automaton_max_distance aut) \/
-      is_accepting_state (String.length target) st_final = true.
-
+    TCS 412(22):2340-2355, 2011, DOI 10.1016/j.tcs.2011.01.013. *)
 (** If a string is within distance, transition path exists *)
 Theorem transition_path_exists : forall
-  (contract : edit_sequence_induces_accepting_run_contract)
+  (edit_sequence_induces_accepting_run :
+    forall aut target input edit_seq,
+      edit_distance edit_seq <= automaton_max_distance aut ->
+      exists fuel st_init st_final,
+        st_final = run_automaton_from aut target input 0 st_init fuel /\
+        (exists p, In p (state_positions st_final) /\
+           pos_i p = String.length target /\
+           pos_e p <= automaton_max_distance aut) \/
+        is_accepting_state (String.length target) st_final = true)
   aut target (input : string),
   (exists edit_seq, edit_distance edit_seq <= automaton_max_distance aut) ->
   exists (fuel : nat) (st_final : GeneralizedState),
@@ -892,9 +922,8 @@ Theorem transition_path_exists : forall
        pos_e p <= automaton_max_distance aut) \/
     is_accepting_state (String.length target) st_final = true.
 Proof.
-  intros contract aut target input [edit_seq Hdist].
-  (* Apply the completeness contract for edit-sequence induced runs. *)
-  destruct (contract aut target input edit_seq Hdist)
+  intros edit_sequence_induces_accepting_run aut target input [edit_seq Hdist].
+  destruct (edit_sequence_induces_accepting_run aut target input edit_seq Hdist)
     as [fuel [st_init [st_final Hdisj]]].
   exists fuel, st_final.
   destruct Hdisj as [[Hrun Hexists] | Haccepting].

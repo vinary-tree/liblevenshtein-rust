@@ -479,120 +479,35 @@ Proof.
   - exact H_r0_no_match_s.
 Qed.
 
-(** * Multi-Rule Invariant Preservation *)
-
-(** Axiomatic Gap: Algorithm Semantic Property
-
-    The core challenge in proving the multi-rule invariant is establishing that when
-    find_first_match returns a position for rule r, we know not just that r doesn't
-    match earlier, but that in the execution of apply_rules_seq, NO rules in the entire
-    list have matched at earlier positions.
-
-    This property follows from the sequential nature of the algorithm: if any rule had
-    matched earlier, it would have been applied before we reached the current iteration.
-    However, proving this requires reasoning about the full execution trace of apply_rules_seq,
-    which goes beyond the local properties we've proven.
-
-    We introduce a minimal axiom capturing just this algorithmic property:
-*)
-
-Record InvariantPreservationContracts : Prop := mkInvariantPreservationContracts {
-  invariant_find_first_match_contract :
-  forall rules r_head s pos,
-    (forall r, In r rules -> wf_rule r) ->
-    In r_head rules ->
-    find_first_match r_head s (length s) = Some pos ->
-    (* Then: in the context of apply_rules_seq execution, we know that no rules
-       in the list matched at any position before pos in this iteration *)
-    no_rules_match_before rules s pos;
-
-(** Axiomatic Gap: Pattern Overlap Preservation (Axiom 2)
-
-    This is the fundamental gap identified in the Axiom 2 proof attempt.
-    When a pattern overlaps with the transformation region, we cannot currently
-    prove that a non-match is preserved after transformation.
-
-    This axiom is proven in PatternOverlap.v (Axiom 2), but since that module
-    is compiled after this one, we declare it here as well.
-*)
-
-  invariant_pattern_overlap_preservation :
-  forall r s pos s' r' p,
-    wf_rule r ->
-    wf_rule r' ->
-    position_dependent_context (context r') = false ->
-    apply_rule_at r s pos = Some s' ->
-    (p < pos)%nat ->
-    (pos < p + length (pattern r'))%nat ->  (* Pattern overlaps transformation *)
-    can_apply_at r' s p = false ->
-    can_apply_at r' s' p = false
-}.
-
 (** Theorem: Multi-rule invariant for position-independent contexts
 
-    When find_first_match finds a position for the first rule, all earlier positions
-    were checked and found not to match. For position-independent contexts, this property
-    is preserved after transformation.
+    If the caller supplies the execution invariant that no rule matched before
+    the application position, and the checked pattern fits wholly before that
+    position, then the non-match is preserved after transformation.
 *)
 Theorem no_rules_match_before_first_match_preserved :
-  forall (contracts : InvariantPreservationContracts) rules r rest s pos s' p,
+  forall rules r rest s pos s' p,
     rules = r :: rest ->
     (forall r0, In r0 rules -> wf_rule r0) ->
     (forall r0, In r0 rules -> position_dependent_context (context r0) = false) ->
-    find_first_match r s (length s) = Some pos ->
+    no_rules_match_before rules s pos ->
+    (forall r0, In r0 rules -> (p + length (pattern r0) <= pos)%nat) ->
     apply_rule_at r s pos = Some s' ->
     (p < pos)%nat ->
     (forall r0, In r0 rules -> can_apply_at r0 s' p = false).
 Proof.
-  intros contracts rules r rest s pos s' p H_rules H_wf_all H_indep_all H_find H_apply H_p_lt.
-
-  (* Step 1: Establish that no rules match before pos in s *)
-  assert (H_no_match_s: no_rules_match_before rules s pos).
-  { eapply (invariant_find_first_match_contract contracts).
-    - intros r0 H_in. apply H_wf_all. exact H_in.
-    - subst rules. left. reflexivity.
-    - exact H_find.
-  }
-
-  (* Step 2: Apply preservation with pattern bounds *)
-  (* We need to show that for each rule r0 in rules, can_apply_at r0 s' p = false *)
-  intros r0 H_in_r0.
-
-  (* Get properties of r0 *)
+  intros rules r rest s pos s' p H_rules H_wf_all H_indep_all
+         H_no_match_s H_pattern_bounds H_apply H_p_lt r0 H_in_r0.
   assert (H_wf_r0: wf_rule r0) by (apply H_wf_all; exact H_in_r0).
   assert (H_indep_r0: position_dependent_context (context r0) = false) by (apply H_indep_all; exact H_in_r0).
-
-  (* r0 doesn't match at p in s *)
   assert (H_no_match_r0_s: can_apply_at r0 s p = false).
   { apply H_no_match_s; assumption. }
-
-  (* Case analysis on whether pattern fits *)
-  destruct (le_lt_dec (p + length (pattern r0)) pos) as [H_fits | H_too_long].
-
-  - (* Pattern fits: use preservation lemma *)
-    eapply single_rule_no_match_preserved.
-    + subst rules. apply H_wf_all. left. reflexivity.
-    + exact H_wf_r0.
-    + exact H_indep_r0.
-    + exact H_apply.
-    + exact H_p_lt.
-    + exact H_fits.
-    + exact H_no_match_r0_s.
-
-  - (* Pattern overlaps: use overlap preservation axiom *)
-    eapply (invariant_pattern_overlap_preservation contracts).
-    + (* wf_rule r - the rule that was applied *)
-      subst rules. apply H_wf_all. left. reflexivity.
-    + (* wf_rule r0 - the rule we're checking *)
-      exact H_wf_r0.
-    + (* position_dependent_context (context r0) = false *)
-      exact H_indep_r0.
-    + (* apply_rule_at r s pos = Some s' *)
-      exact H_apply.
-    + (* p < pos *)
-      exact H_p_lt.
-    + (* pos < p + length (pattern r0) - pattern overlaps *)
-      exact H_too_long.
-    + (* can_apply_at r0 s p = false *)
-      exact H_no_match_r0_s.
+  eapply single_rule_no_match_preserved.
+  - subst rules. apply H_wf_all. left. reflexivity.
+  - exact H_wf_r0.
+  - exact H_indep_r0.
+  - exact H_apply.
+  - exact H_p_lt.
+  - apply H_pattern_bounds. exact H_in_r0.
+  - exact H_no_match_r0_s.
 Qed.

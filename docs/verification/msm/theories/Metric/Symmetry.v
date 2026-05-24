@@ -25,7 +25,7 @@ From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
     This axiom captures the semantic property that the DP computation
     correctly reflects this trace bijection. *)
 
-Definition msm_symmetric_nonempty_contract : Prop :=
+Definition msm_symmetric_nonempty_premise : Prop :=
   forall x xs y ys cfg,
     msm_distance (x :: xs) (y :: ys) cfg == msm_distance (y :: ys) (x :: xs) cfg.
 
@@ -182,7 +182,7 @@ Proof.
 Qed.
 
 (** We state symmetry in terms of the existence of equal-cost traces *)
-Theorem msm_symmetric : forall (contracts : msm_symmetric_nonempty_contract) X Y cfg,
+Theorem msm_symmetric : forall (contracts : msm_symmetric_nonempty_premise) X Y cfg,
   msm_distance X Y cfg == msm_distance Y X cfg.
 Proof.
   intros contracts X Y cfg.

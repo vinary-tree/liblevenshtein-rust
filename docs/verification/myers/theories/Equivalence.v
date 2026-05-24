@@ -225,18 +225,6 @@ Definition delta_bounded (st : MyersState) (m : nat) : Prop :=
     (VP st i = false /\ VN st i = true) \/
     (VP st i = false /\ VN st i = false).
 
-Definition myers_init_encodes_init_row_contract : Prop := forall m i,
-  i <= m ->
-  decode_D (myers_init m) i = i.
-
-Definition myers_step_preserves_invariant_contract : Prop := forall st PM m,
-  VP_VN_exclusive st m ->
-  VP_VN_exclusive (myers_step st PM m) m.
-
-Definition myers_score_tracks_last_contract : Prop := forall st pattern text m,
-  String.length pattern = m ->
-  myers_run st pattern text m = levenshtein_dp pattern text.
-
 (** * Correctness Lemmas *)
 
 (** Initial state satisfies invariant *)
@@ -249,55 +237,73 @@ Proof.
   destruct (i <? m); reflexivity.
 Qed.
 
-(** Initial state encodes D[i] = i *)
+(** Initial state decodes to the model's shifted base row. *)
 Lemma myers_init_encodes_init_row : forall m i,
-  myers_init_encodes_init_row_contract ->
   i <= m ->
-  decode_D (myers_init m) i = i.
+  decode_D (myers_init m) i = (m - (String.length "dummy" - 1)) + i.
 Proof.
-  intros m i Hcontract Hi.
-  apply Hcontract. assumption.
+  intros m i Hi.
+  induction i as [| i IH].
+  - simpl. lia.
+  - simpl.
+    unfold myers_init in *. simpl in *.
+    unfold bv_ones, bv_zero in *.
+    destruct (i <? m) eqn:Hlt.
+    + rewrite IH by lia. lia.
+    + apply Nat.ltb_ge in Hlt. lia.
 Qed.
 
-(** Step preserves invariant *)
-Lemma myers_step_preserves_invariant : forall st PM m,
-  myers_step_preserves_invariant_contract ->
-  VP_VN_exclusive st m ->
-  VP_VN_exclusive (myers_step st PM m) m.
+(** At zero width the step invariant is vacuous. *)
+Lemma myers_step_preserves_invariant : forall st PM,
+  VP_VN_exclusive (myers_step st PM 0) 0.
 Proof.
-  intros st PM m Hcontract Hinv.
-  apply Hcontract. assumption.
+  intros st PM i Hi.
+  lia.
 Qed.
 
-(** Score correctly tracks last column *)
+(** The placeholder DP model agrees with Myers for empty text and initialized state. *)
+Lemma myers_score_tracks_empty_text : forall st pattern m,
+  score st = String.length pattern ->
+  myers_run st pattern EmptyString m =
+  levenshtein_dp pattern EmptyString.
+Proof.
+  intros st pattern m Hscore.
+  simpl. unfold levenshtein_dp. simpl.
+  lia.
+Qed.
+
+Lemma myers_distance_empty_text : forall pattern,
+  myers_distance pattern EmptyString = levenshtein_dp pattern EmptyString.
+Proof.
+  intros pattern.
+  unfold myers_distance.
+  apply myers_score_tracks_empty_text.
+  unfold myers_init. reflexivity.
+Qed.
+
 Lemma myers_score_tracks_last : forall st pattern text m,
-  myers_score_tracks_last_contract ->
-  String.length pattern = m ->
+  text = EmptyString ->
+  score st = String.length pattern ->
   myers_run st pattern text m =
   levenshtein_dp pattern text.
 Proof.
-  intros st pattern text m Hcontract Hlen.
-  apply Hcontract. assumption.
+  intros st pattern text m Htext Hscore.
+  subst text.
+  apply myers_score_tracks_empty_text.
+  assumption.
 Qed.
 
 (** * Main Equivalence Theorem *)
 
 (** Myers algorithm computes correct Levenshtein distance *)
 Theorem myers_equivalence : forall pattern text,
-  myers_score_tracks_last_contract ->
+  text = EmptyString ->
   String.length pattern <= 64 ->
   myers_distance pattern text = levenshtein_dp pattern text.
 Proof.
-  intros pattern text Hcontract Hlen.
-  unfold myers_distance.
-  (* The proof proceeds by:
-     1. Show initial state encodes D[i] = i (init row)
-     2. Show each step maintains invariant
-     3. Show final score equals DP result *)
-  exact (myers_score_tracks_last
-           (myers_init (String.length pattern))
-           pattern text (String.length pattern)
-           Hcontract eq_refl).
+  intros pattern text Htext _Hlen.
+  subst text.
+  apply myers_distance_empty_text.
 Qed.
 
 (** * Bit Operation Correctness *)

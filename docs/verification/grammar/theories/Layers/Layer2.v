@@ -47,12 +47,6 @@ Proof.
   discriminate.
 Qed.
 
-Definition layer2_progress_contract (_config : Layer2Config) (_input : program)
-                                    (layer1_result : LayerResult) : Prop :=
-  exists corr,
-    In corr layer1_result.(layer_corrections) /\
-    parse_program corr.(correction_program) <> None.
-
 (** ** Layer 2 Execution *)
 
 Definition execute_layer2 (config : Layer2Config) (input : program)
@@ -99,12 +93,12 @@ Qed.
 
 (** ** Progress *)
 
-Theorem layer2_progress : forall config input layer1_result,
-  layer1_result.(layer_corrections) <> [] ->
-  layer2_progress_contract config input layer1_result ->
-  exists corr,
-    parse_program corr.(correction_program) <> None.
+Theorem layer2_no_parse_results : forall config input layer1_result,
+  (execute_layer2 config input layer1_result).(layer_corrections) = [].
 Proof.
-  intros config input layer1_result _ [corr [_ Hparse]].
-  exists corr. exact Hparse.
+  intros config input [corrections lat best].
+  unfold execute_layer2, parse_program. simpl.
+  induction corrections as [| corr rest IH]; simpl.
+  - reflexivity.
+  - exact IH.
 Qed.

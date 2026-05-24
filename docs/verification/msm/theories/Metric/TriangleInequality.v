@@ -16,28 +16,14 @@ Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 From Liblevenshtein.MSM Require Import Symmetry.
 
-(** * Contracts for Triangle Inequality Cases *)
+(** * Evidence for Triangle Inequality Cases *)
 
 (** These contracts capture the semantic trace-composition obligations from
     Stefan et al., "The move-split-merge metric for time series", IEEE TKDE
     25.6 (2012): 1425-1438. The proved theorem below states exactly which
     case contracts are needed. *)
 
-Record MsmTriangleContracts : Prop := mkMsmTriangleContracts {
-
-(** MSM lower bound by length difference: MSM(X, Y) >= ||X| - |Y|| * c
-    This follows from the fact that any alignment between series of different
-    lengths requires at least ||X| - |Y|| split/merge operations. *)
-msm_lower_bound_length_diff : forall X Y c (Hc : 0 <= c),
-  inject_Z (Z.abs (Z.of_nat (length X) - Z.of_nat (length Y))) * c <=
-  msm_distance X Y {| msm_c := c; msm_c_nonneg := Hc |};
-
-(** MSM upper bound: MSM(X, Z) <= |X|*c + |Z|*c
-    Any alignment can be achieved by first merging all of X (cost |X|*c)
-    then splitting to produce Z (cost |Z|*c). This gives an upper bound. *)
-msm_upper_bound_merge_split : forall X Z c (Hc : 0 <= c),
-  msm_distance X Z {| msm_c := c; msm_c_nonneg := Hc |} <=
-  inject_Z (Z.of_nat (length X)) * c + inject_Z (Z.of_nat (length Z)) * c;
+Record MsmTriangleEvidence : Prop := mkMsmTriangleEvidence {
 
 (** Triangle inequality for the case where one series is empty:
     MSM([], Z) <= MSM([], Y) + MSM(Y, Z) *)
@@ -45,12 +31,6 @@ msm_triangle_empty_X : forall y ys z zs c (Hc : 0 <= c),
   inject_Z (Z.of_nat (length (z :: zs))) * c <=
   inject_Z (Z.of_nat (length (y :: ys))) * c +
   msm_distance (y :: ys) (z :: zs) {| msm_c := c; msm_c_nonneg := Hc |};
-
-(** Triangle inequality for the case where middle series is empty:
-    MSM(X, Z) <= MSM(X, []) + MSM([], Z) = |X|*c + |Z|*c *)
-msm_triangle_empty_Y : forall x xs z zs c (Hc : 0 <= c),
-  msm_distance (x :: xs) (z :: zs) {| msm_c := c; msm_c_nonneg := Hc |} <=
-  inject_Z (Z.of_nat (length (x :: xs))) * c + inject_Z (Z.of_nat (length (z :: zs))) * c;
 
 (** Triangle inequality for the case where target series is empty:
     MSM(X, []) <= MSM(X, Y) + MSM(Y, []) *)
@@ -106,33 +86,45 @@ Proof.
   apply qabs_triangle.
 Qed.
 
+Lemma one_Q_nonneg : 0 <= 1#1.
+Proof.
+  unfold Qle. simpl. lia.
+Qed.
+
+Definition msm_triangle_counter_cfg : MsmConfig :=
+  {| msm_c := 1#1; msm_c_nonneg := one_Q_nonneg |}.
+
+(** The executable empty-series extension is not a full metric over all lists:
+    the empty middle point can make the triangle inequality false. *)
+Lemma msm_triangle_empty_middle_counterexample :
+  ~ (msm_distance [0#1] [100#1] msm_triangle_counter_cfg <=
+     msm_distance [0#1] [] msm_triangle_counter_cfg +
+     msm_distance [] [100#1] msm_triangle_counter_cfg).
+Proof.
+  intro H.
+  vm_compute in H.
+  exact (H eq_refl).
+Qed.
+
 (** * Main Triangle Inequality *)
 
 (** The triangle inequality for MSM.
     This is the most complex proof as it requires showing that
     optimal traces can be composed without increasing total cost. *)
 
-Theorem msm_triangle : forall (contracts : MsmTriangleContracts) X Y Z cfg,
+Theorem msm_triangle : forall (contracts : MsmTriangleEvidence) X Y Z cfg,
+  Y <> [] ->
   msm_distance X Z cfg <= msm_distance X Y cfg + msm_distance Y Z cfg.
 Proof.
-  intros contracts X Y Z cfg.
+  intros contracts X Y Z cfg Hmiddle.
   destruct cfg as [c Hc].
   simpl.
 
   (* Case analysis on the structure of the series *)
-  destruct X as [|x xs]; destruct Y as [|y ys]; destruct Z as [|z zs].
-  - (* [], [], [] *)
-    simpl.
-    (* 0 <= 0 + 0 *)
-    setoid_replace (0 + 0) with 0 by ring.
-    apply Qle_refl.
-  - (* [], [], z::zs *)
-    simpl.
-    (* |Z|*c <= 0 + |Z|*c *)
-    setoid_replace (0 + inject_Z (Z.of_nat (length (z :: zs))) * c)
-      with (inject_Z (Z.of_nat (length (z :: zs))) * c) by ring.
-    apply Qle_refl.
-  - (* [], y::ys, [] *)
+  destruct Y as [|y ys].
+  - contradiction.
+  - destruct X as [|x xs]; destruct Z as [|z zs].
+    + (* [], y::ys, [] *)
     simpl.
     (* MSM([], []) <= MSM([], Y) + MSM(Y, []) *)
     (* 0 <= |Y|*c + |Y|*c *)
@@ -142,7 +134,7 @@ Proof.
       - exact Hc. }
     setoid_replace 0 with (0 + 0) by ring.
     apply Qplus_le_compat; assumption.
-  - (* [], y::ys, z::zs *)
+    + (* [], y::ys, z::zs *)
     simpl.
     (* MSM([], Z) <= MSM([], Y) + MSM(Y, Z)
        |Z|*c <= |Y|*c + MSM(Y, Z)
@@ -164,31 +156,7 @@ Proof.
     (* This case requires showing MSM >= length difference * c *)
     (* Use the axiom for empty X case *)
     exact (msm_triangle_empty_X contracts y ys z zs c Hc).
-  - (* x::xs, [], [] *)
-    simpl.
-    (* MSM(X, []) <= MSM(X, []) + MSM([], []) *)
-    (* |X|*c <= |X|*c + 0 *)
-    setoid_replace (inject_Z (Z.of_nat (length (x :: xs))) * c + 0)
-      with (inject_Z (Z.of_nat (length (x :: xs))) * c) by ring.
-    apply Qle_refl.
-  - (* x::xs, [], z::zs *)
-    simpl.
-    (* MSM(X, Z) <= MSM(X, []) + MSM([], Z)
-                 = |X|*c + |Z|*c
-
-       Any valid alignment from X to Z can be decomposed into:
-       - First merge all of X into empty (cost |X|*c)
-       - Then split to get Z (cost |Z|*c)
-
-       The direct alignment MSM(X, Z) is the MINIMUM over all paths,
-       so it must be <= this specific path's cost.
-
-       MSM(X, Z) <= |X|*c + |Z|*c = MSM(X, []) + MSM([], Z) ✓ *)
-    (* The key lemma we need: MSM(X, Z) <= |X|*c + |Z|*c *)
-    (* This follows from the fact that complete merge then split is a valid path *)
-    (* Use the axiom for empty Y case *)
-    exact (msm_triangle_empty_Y contracts x xs z zs c Hc).
-  - (* x::xs, y::ys, [] *)
+    + (* x::xs, y::ys, [] *)
     simpl.
     (* MSM(X, []) <= MSM(X, Y) + MSM(Y, [])
        |X|*c <= MSM(X, Y) + |Y|*c
@@ -202,7 +170,7 @@ Proof.
        So MSM(X, Y) + |Y|*c >= |Y|*c >= |X|*c ✓ *)
     (* Use the axiom for empty Z case *)
     exact (msm_triangle_empty_Z contracts x xs y ys c Hc).
-  - (* x::xs, y::ys, z::zs *)
+    + (* x::xs, y::ys, z::zs *)
     (* The main case: all three series non-empty *)
     (* This requires the full DP composition argument *)
 

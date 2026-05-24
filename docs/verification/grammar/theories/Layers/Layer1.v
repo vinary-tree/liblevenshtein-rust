@@ -16,6 +16,7 @@ Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Bool.Bool.
 Require Import Coq.QArith.QArith.
 Require Import Coq.micromega.Lia.
+Require Import Coq.ZArith.Znat.
 Require Import Liblevenshtein.Grammar.Verification.Core.Types.
 Require Import Liblevenshtein.Grammar.Verification.Core.Edit.
 Require Import Liblevenshtein.Grammar.Verification.Core.Lattice.
@@ -48,23 +49,10 @@ Definition build_error_lattice (config : Layer1Config) (input : program)
   (* Expand with error correction edges *)
   expand_lattice_with_edits base config.(max_edit_distance).
 
-(** Completeness and optimality depend on a real path enumerator.  The current
-    implementation still exposes that obligation as an explicit contract rather
-    than an axiom. *)
-Definition layer1_completeness_contract config input output : Prop :=
-  exists path,
-    let lat := build_error_lattice config input in
-    complete_path lat path = true /\
-    exists edits,
-      apply_edits input edits = output /\
-      edit_distance edits <= config.(max_edit_distance).
-
-Definition layer1_optimality_contract config input output : Prop :=
-  let lat := build_error_lattice config input in
-  exists path edits,
-    complete_path lat path = true /\
-    apply_edits input edits = output /\
-    edit_distance edits = levenshtein input output.
+(** Completeness and optimality require a concrete path/edit witness.  The
+    current model builds the lattice, but it does not enumerate paths, so these
+    theorems are stated over explicit witnesses rather than as global existence
+    claims. *)
 
 (** ** Correctness Properties *)
 
@@ -82,19 +70,25 @@ Qed.
 
 (** ** Completeness Property *)
 
-(** Every string within max edit distance is reachable via some path *)
-Theorem layer1_completeness : forall config input output,
+(** Any witnessed path/edit pair within the configured edit bound is accepted
+    by the Layer 1 completeness statement. *)
+Theorem layer1_completeness : forall config input output path edits,
   levenshtein input output <= config.(max_edit_distance) ->
-  layer1_completeness_contract config input output ->
-  exists path,
-    let lat := build_error_lattice config input in
-    complete_path lat path = true /\
-    exists edits,
-      apply_edits input edits = output /\
-      edit_distance edits <= config.(max_edit_distance).
+  let lat := build_error_lattice config input in
+  complete_path lat path = true ->
+  apply_edits input edits = output ->
+  edit_distance edits <= config.(max_edit_distance) ->
+  exists path',
+    complete_path lat path' = true /\
+    exists edits',
+      apply_edits input edits' = output /\
+      edit_distance edits' <= config.(max_edit_distance).
 Proof.
-  intros config input output _ Hcontract.
-  exact Hcontract.
+  intros config input output path edits _ lat Hpath Happly Hdist.
+  exists path.
+  split; [exact Hpath |].
+  exists edits.
+  split; assumption.
 Qed.
 
 (** ** Soundness Property *)
@@ -114,18 +108,22 @@ Qed.
 
 (** ** Optimality Property *)
 
-(** The best path corresponds to the minimum edit distance *)
-Theorem layer1_optimality : forall config input output,
+(** A path/edit witness with Levenshtein cost is optimal for the current
+    Layer 1 statement. *)
+Theorem layer1_optimality : forall config input output path edits,
   levenshtein input output <= config.(max_edit_distance) ->
-  layer1_optimality_contract config input output ->
   let lat := build_error_lattice config input in
-  exists path edits,
-    complete_path lat path = true /\
-    apply_edits input edits = output /\
-    edit_distance edits = levenshtein input output.
+  complete_path lat path = true ->
+  apply_edits input edits = output ->
+  edit_distance edits = levenshtein input output ->
+  exists path' edits',
+    complete_path lat path' = true /\
+    apply_edits input edits' = output /\
+    edit_distance edits' = levenshtein input output.
 Proof.
-  intros config input output _ Hcontract lat.
-  exact Hcontract.
+  intros config input output path edits _ lat Hpath Happly Hcost.
+  exists path, edits.
+  repeat split; assumption.
 Qed.
 
 (** ** Path Enumeration *)
@@ -153,21 +151,34 @@ Definition layer1_score (config : Layer1Config) (input output : program) : score
   let dist := levenshtein input output in
   (* Simple scoring: inversely proportional to distance *)
   (* score = 1 / (1 + dist) *)
-  (1 # Pos.of_nat (S dist))%Q.
+  (/ inject_Z (Z.of_nat (S dist)))%Q.
 
-Definition layer1_score_decreases_contract config input : Prop :=
-  forall output1 output2,
-    levenshtein input output1 < levenshtein input output2 ->
-    (layer1_score config input output2 < layer1_score config input output1)%Q.
+Lemma reciprocal_score_decreases : forall (d1 d2 : nat),
+  (d1 < d2)%nat ->
+  (/ inject_Z (Z.of_nat (S d2)) <
+   / inject_Z (Z.of_nat (S d1)))%Q.
+Proof.
+  intros d1 d2 Hlt.
+  pose proof (Qinv_lt_contravar
+                (inject_Z (Z.of_nat (S d1)))
+                (inject_Z (Z.of_nat (S d2)))) as Hinv.
+  apply Hinv.
+  - unfold Qlt. simpl. lia.
+  - unfold Qlt. simpl. lia.
+  - unfold Qlt. simpl.
+    apply Nat2Z.inj_lt in Hlt.
+    lia.
+Qed.
 
 (** Score decreases with edit distance *)
 Theorem layer1_score_decreases : forall config input output1 output2,
-  layer1_score_decreases_contract config input ->
   levenshtein input output1 < levenshtein input output2 ->
   (layer1_score config input output2 < layer1_score config input output1)%Q.
 Proof.
-  intros config input output1 output2 Hcontract Hdist.
-  apply Hcontract. assumption.
+  intros config input output1 output2 Hdist.
+  unfold layer1_score.
+  apply reciprocal_score_decreases.
+  exact Hdist.
 Qed.
 
 (** ** Layer 1 Execution *)

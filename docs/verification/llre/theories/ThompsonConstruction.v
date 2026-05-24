@@ -11,13 +11,14 @@
     Corresponds to: src/phonetic/llre/nfa_compiler.rs
 *)
 
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Init.Nat.
-Require Import Coq.Arith.PeanoNat.
-Require Import Coq.Bool.Bool.
-Require Import Coq.micromega.Lia.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import Strings.String.
+From Stdlib Require Import Strings.Ascii.
+From Stdlib Require Import Init.Nat.
+From Stdlib Require Import Arith.PeanoNat.
+From Stdlib Require Import Bool.Bool.
+From Stdlib Require Import micromega.Lia.
+From Stdlib Require Import Program.Equality.
 Import ListNotations.
 
 (** * Regex Definition (from SymbolExpansion) *)
@@ -84,6 +85,60 @@ Inductive nfa_run (nfa : NFA) : NFAState -> string -> NFAState -> Prop :=
       nfa_step nfa s1 (Some c) s2 ->
       nfa_run nfa s2 str s3 ->
       nfa_run nfa s1 (String c str) s3.
+
+(** A run trace exposes the finite sequence of transition labels used by a
+    run. This is proof-only infrastructure for decomposing Thompson runs
+    without changing the accepted-language semantics. *)
+Inductive nfa_run_trace (nfa : NFA) :
+  NFAState -> list (option ascii) -> string -> NFAState -> Prop :=
+  | trace_empty : forall s,
+      nfa_run_trace nfa s [] EmptyString s
+  | trace_epsilon : forall s1 s2 s3 labels str,
+      nfa_step nfa s1 None s2 ->
+      nfa_run_trace nfa s2 labels str s3 ->
+      nfa_run_trace nfa s1 (None :: labels) str s3
+  | trace_char : forall s1 c s2 s3 labels str,
+      nfa_step nfa s1 (Some c) s2 ->
+      nfa_run_trace nfa s2 labels str s3 ->
+      nfa_run_trace nfa s1 (Some c :: labels) (String c str) s3.
+
+Lemma nfa_run_trace_sound : forall nfa s labels str t,
+  nfa_run_trace nfa s labels str t ->
+  nfa_run nfa s str t.
+Proof.
+  intros nfa s labels str t Htrace.
+  induction Htrace.
+  - constructor.
+  - apply run_epsilon with (s2 := s2); assumption.
+  - apply run_char with (s2 := s2); assumption.
+Qed.
+
+Lemma nfa_run_trace_complete : forall nfa s str t,
+  nfa_run nfa s str t ->
+  exists labels, nfa_run_trace nfa s labels str t.
+Proof.
+  intros nfa s str t Hrun.
+  induction Hrun.
+  - exists []. constructor.
+  - destruct IHHrun as [labels Htrace].
+    exists (None :: labels).
+    apply trace_epsilon with (s2 := s2); assumption.
+  - destruct IHHrun as [labels Htrace].
+    exists (Some c :: labels).
+    apply trace_char with (s2 := s2); assumption.
+Qed.
+
+Lemma nfa_run_trace_append : forall nfa s1 labels1 str1 s2 labels2 str2 s3,
+  nfa_run_trace nfa s1 labels1 str1 s2 ->
+  nfa_run_trace nfa s2 labels2 str2 s3 ->
+  nfa_run_trace nfa s1 (labels1 ++ labels2) (str1 ++ str2) s3.
+Proof.
+  intros nfa s1 labels1 str1 s2 labels2 str2 s3 Hrun1 Hrun2.
+  induction Hrun1.
+  - simpl. exact Hrun2.
+  - simpl. eapply trace_epsilon; [eassumption|exact (IHHrun1 Hrun2)].
+  - simpl. eapply trace_char; [eassumption|exact (IHHrun1 Hrun2)].
+Qed.
 
 (** NFA accepts a string *)
 Definition nfa_accepts (nfa : NFA) (s : string) : Prop :=
@@ -234,29 +289,14 @@ Fixpoint regex_size (r : Regex) : nat :=
 
 (** * Thompson Construction Contracts *)
 
-(** Contracts for the primitive NFA fragments and the combinator run
-    decompositions follow the standard Thompson construction semantics.
+(** Evidence for the remaining combinator run decompositions follows the
+    standard Thompson construction semantics. Construction/completeness cases
+    are proved locally below for arbitrary fresh-state counters.
     Citation: Thompson, K. (1968), "Programming Techniques: Regular
     expression search algorithm", Communications of the ACM 11(6),
     419-422, DOI 10.1145/363347.363387. *)
 
-Record ThompsonContracts : Prop := mkThompsonContracts {
-  empty_accepts_sound : forall s,
-    nfa_accepts (mkNFA 0 1 [] 1) s ->
-    regex_matches REmpty s;
-
-  epsilon_accepts_sound : forall s,
-    nfa_accepts (mkNFA 0 1 [TransEpsilon 0 1] 1) s ->
-    regex_matches REpsilon s;
-
-  char_accepts_sound : forall c s,
-    nfa_accepts (mkNFA 0 1 [TransChar 0 c 1] 1) s ->
-    regex_matches (RChar c) s;
-
-  charclass_accepts_sound : forall cs s,
-    nfa_accepts (mkNFA 0 1 [TransClass 0 cs 1] 1) s ->
-    regex_matches (RCharClass cs) s;
-
+Record ThompsonEvidence : Prop := mkThompsonEvidence {
   concat_run_decomposition : forall r1 r2 nfa1 nfa2 c1 c2 s,
     compile_nfa r1 0 = (nfa1, c1) ->
     compile_nfa r2 c1 = (nfa2, c2) ->
@@ -313,89 +353,7 @@ Record ThompsonContracts : Prop := mkThompsonContracts {
                       [TransEpsilon (nfa_final nfa1) c1])
                      (max (nfa_max_state nfa1) c1) in
     nfa_accepts nfa s ->
-    regex_matches (ROption r) s;
-
-  concat_run_construction : forall r1 r2 nfa1 nfa2 c1 c2 s1 s2,
-    compile_nfa r1 0 = (nfa1, c1) ->
-    compile_nfa r2 c1 = (nfa2, c2) ->
-    regex_matches r1 s1 ->
-    regex_matches r2 s2 ->
-    let nfa := mkNFA (nfa_start nfa1) (nfa_final nfa2)
-                     (nfa_transitions nfa1 ++
-                      [TransEpsilon (nfa_final nfa1) (nfa_start nfa2)] ++
-                      nfa_transitions nfa2)
-                     (max (nfa_max_state nfa1) (nfa_max_state nfa2)) in
-    nfa_accepts nfa (s1 ++ s2)%string;
-
-  alt_run_construction_left : forall r1 r2 nfa1 nfa2 c1 c2 s,
-    compile_nfa r1 1 = (nfa1, c1) ->
-    compile_nfa r2 c1 = (nfa2, c2) ->
-    regex_matches r1 s ->
-    let nfa := mkNFA 0 c2
-                     ([TransEpsilon 0 (nfa_start nfa1);
-                       TransEpsilon 0 (nfa_start nfa2)] ++
-                      nfa_transitions nfa1 ++
-                      nfa_transitions nfa2 ++
-                      [TransEpsilon (nfa_final nfa1) c2;
-                       TransEpsilon (nfa_final nfa2) c2])
-                     (max (max (nfa_max_state nfa1) (nfa_max_state nfa2)) c2) in
-    nfa_accepts nfa s;
-
-  alt_run_construction_right : forall r1 r2 nfa1 nfa2 c1 c2 s,
-    compile_nfa r1 1 = (nfa1, c1) ->
-    compile_nfa r2 c1 = (nfa2, c2) ->
-    regex_matches r2 s ->
-    let nfa := mkNFA 0 c2
-                     ([TransEpsilon 0 (nfa_start nfa1);
-                       TransEpsilon 0 (nfa_start nfa2)] ++
-                      nfa_transitions nfa1 ++
-                      nfa_transitions nfa2 ++
-                      [TransEpsilon (nfa_final nfa1) c2;
-                       TransEpsilon (nfa_final nfa2) c2])
-                     (max (max (nfa_max_state nfa1) (nfa_max_state nfa2)) c2) in
-    nfa_accepts nfa s;
-
-  star_run_construction : forall r nfa1 c1 s,
-    compile_nfa r 1 = (nfa1, c1) ->
-    regex_matches (RStar r) s ->
-    let nfa := mkNFA 0 c1
-                     ([TransEpsilon 0 (nfa_start nfa1);
-                       TransEpsilon 0 c1] ++
-                      nfa_transitions nfa1 ++
-                      [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
-                       TransEpsilon (nfa_final nfa1) c1])
-                     (max (nfa_max_state nfa1) c1) in
-    nfa_accepts nfa s;
-
-  plus_run_construction : forall r nfa1 c1 s,
-    compile_nfa r 0 = (nfa1, c1) ->
-    regex_matches (RPlus r) s ->
-    let nfa := mkNFA (nfa_start nfa1) c1
-                     (nfa_transitions nfa1 ++
-                      [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
-                       TransEpsilon (nfa_final nfa1) c1])
-                     (max (nfa_max_state nfa1) c1) in
-    nfa_accepts nfa s;
-
-  option_run_construction : forall r nfa1 c1 s,
-    compile_nfa r 1 = (nfa1, c1) ->
-    regex_matches (ROption r) s ->
-    let nfa := mkNFA 0 c1
-                     ([TransEpsilon 0 (nfa_start nfa1);
-                       TransEpsilon 0 c1] ++
-                      nfa_transitions nfa1 ++
-                      [TransEpsilon (nfa_final nfa1) c1])
-                     (max (nfa_max_state nfa1) c1) in
-    nfa_accepts nfa s;
-
-  compile_nfa_size_generalized : forall r counter nfa counter',
-    compile_nfa r counter = (nfa, counter') ->
-    nfa_max_state nfa < counter' /\
-    counter' - counter <= 2 * regex_size r;
-
-  compile_nfa_trans_count_generalized : forall r counter nfa counter',
-    compile_nfa r counter = (nfa, counter') ->
-    List.length (nfa_transitions nfa) <= 4 * regex_size r
+    regex_matches (ROption r) s
 }.
 
 (** * Helper Lemmas *)
@@ -443,6 +401,224 @@ Proof.
     lia.
   - (* RCharClass *)
     inversion Heq. lia.
+Qed.
+
+Lemma compile_start_eq : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
+  nfa_start nfa = counter.
+Proof.
+  induction r; intros counter nfa counter' Heq; simpl in Heq.
+  - inversion Heq. reflexivity.
+  - inversion Heq. reflexivity.
+  - inversion Heq. reflexivity.
+  - destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. subst. simpl.
+    apply IHr1 in Hnfa1. exact Hnfa1.
+  - destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. reflexivity.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. reflexivity.
+  - destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    apply IHr in Hnfa1. exact Hnfa1.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. reflexivity.
+  - inversion Heq. reflexivity.
+Qed.
+
+Lemma compile_final_succ_eq : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
+  S (nfa_final nfa) = counter'.
+Proof.
+  induction r; intros counter nfa counter' Heq; simpl in Heq.
+  - inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+  - destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. subst. simpl.
+    apply IHr2 in Hnfa2. exact Hnfa2.
+  - destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. simpl. lia.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. simpl. lia.
+  - destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. simpl. lia.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+Qed.
+
+Definition trans_source (tr : NFATransition) : NFAState :=
+  match tr with
+  | TransChar s _ _ => s
+  | TransEpsilon s _ => s
+  | TransClass s _ _ => s
+  end.
+
+Definition trans_target (tr : NFATransition) : NFAState :=
+  match tr with
+  | TransChar _ _ t => t
+  | TransEpsilon _ t => t
+  | TransClass _ _ t => t
+  end.
+
+Lemma transition_bounds_weaken :
+  forall lower_from lower_to upper_from upper_to transitions,
+  lower_to <= lower_from ->
+  upper_from <= upper_to ->
+  Forall (fun tr => lower_from <= trans_source tr /\ trans_target tr < upper_from)
+         transitions ->
+  Forall (fun tr => lower_to <= trans_source tr /\ trans_target tr < upper_to)
+         transitions.
+Proof.
+  intros lower_from lower_to upper_from upper_to transitions Hlower Hupper Hbounds.
+  induction Hbounds as [|tr rest [Hsrc Hdst] Hrest IH].
+  - constructor.
+  - constructor.
+    + split; lia.
+    + exact IH.
+Qed.
+
+Lemma compile_transition_bounds : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
+  Forall (fun tr => counter <= trans_source tr /\ trans_target tr < counter')
+         (nfa_transitions nfa).
+Proof.
+  induction r; intros counter nfa counter' Heq; simpl in Heq.
+  - inversion Heq. constructor.
+  - inversion Heq. subst. simpl.
+    constructor; [simpl; lia|constructor].
+  - inversion Heq. subst. simpl.
+    constructor; [simpl; lia|constructor].
+  - destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. subst. simpl.
+    rewrite Forall_app. split.
+    + pose proof (compile_counter_increases r2 c1 nfa2 counter' Hnfa2) as Hinc2.
+      eapply (transition_bounds_weaken counter counter c1 counter').
+      * lia.
+      * lia.
+      * apply IHr1. exact Hnfa1.
+    + constructor.
+      * pose proof (compile_final_succ_eq r1 counter nfa1 c1 Hnfa1) as Hfinal1.
+        pose proof (compile_start_eq r2 c1 nfa2 counter' Hnfa2) as Hstart2.
+        pose proof (compile_counter_increases r1 counter nfa1 c1 Hnfa1) as Hinc1.
+        pose proof (compile_counter_increases r2 c1 nfa2 counter' Hnfa2) as Hinc2.
+        simpl. lia.
+      * pose proof (compile_counter_increases r1 counter nfa1 c1 Hnfa1) as Hinc1.
+        eapply (transition_bounds_weaken c1 counter counter' counter').
+        -- lia.
+        -- lia.
+        -- apply IHr2. exact Hnfa2.
+  - destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. subst. simpl.
+    constructor.
+    + simpl.
+      pose proof (compile_start_eq r1 (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+      split; lia.
+    + constructor.
+      * simpl.
+        pose proof (compile_start_eq r2 c1 nfa2 c2 Hnfa2) as Hstart2.
+        pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+        split; lia.
+      * rewrite Forall_app. split.
+        -- pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+           eapply (transition_bounds_weaken (counter + 1) counter c1 (c2 + 1)).
+           ++ lia.
+           ++ lia.
+           ++ apply IHr1. exact Hnfa1.
+        -- rewrite Forall_app. split.
+           ++ pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+              eapply (transition_bounds_weaken c1 counter c2 (c2 + 1)).
+              ** lia.
+              ** lia.
+              ** apply IHr2. exact Hnfa2.
+           ++ simpl. constructor.
+              ** simpl.
+                 pose proof (compile_final_succ_eq r1 (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+                 pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+                 split; lia.
+              ** constructor.
+                 --- simpl.
+                     pose proof (compile_final_succ_eq r2 c1 nfa2 c2 Hnfa2) as Hfinal2.
+                     pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+                     pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+                     split; lia.
+                 --- constructor.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    constructor.
+    + simpl.
+      pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      split; lia.
+    + constructor.
+      * simpl. split; lia.
+      * rewrite Forall_app. split.
+        -- eapply (transition_bounds_weaken (counter + 1) counter c1 (c1 + 1)).
+           ++ lia.
+           ++ lia.
+           ++ apply IHr. exact Hnfa1.
+        -- simpl. constructor.
+           ++ simpl.
+              pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+              pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+              pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+              split; lia.
+           ++ constructor.
+              ** simpl.
+                 pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+                 pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+                 split; lia.
+              ** constructor.
+  - destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    rewrite Forall_app. split.
+    + eapply (transition_bounds_weaken counter counter c1 (c1 + 1)).
+      * lia.
+      * lia.
+      * apply IHr. exact Hnfa1.
+    + simpl. constructor.
+      * simpl.
+        pose proof (compile_final_succ_eq r counter nfa1 c1 Hnfa1) as Hfinal1.
+        pose proof (compile_start_eq r counter nfa1 c1 Hnfa1) as Hstart1.
+        pose proof (compile_counter_increases r counter nfa1 c1 Hnfa1) as Hinc1.
+        split; lia.
+      * constructor.
+        -- simpl.
+           pose proof (compile_final_succ_eq r counter nfa1 c1 Hnfa1) as Hfinal1.
+           pose proof (compile_counter_increases r counter nfa1 c1 Hnfa1) as Hinc1.
+           split; lia.
+        -- constructor.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    constructor.
+    + simpl.
+      pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      split; lia.
+    + constructor.
+      * simpl. split; lia.
+      * rewrite Forall_app. split.
+        -- eapply (transition_bounds_weaken (counter + 1) counter c1 (c1 + 1)).
+           ++ lia.
+           ++ lia.
+           ++ apply IHr. exact Hnfa1.
+        -- simpl. constructor.
+           ++ simpl.
+              pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+              pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+              split; lia.
+           ++ constructor.
+  - inversion Heq. subst. simpl.
+    constructor; [simpl; lia|constructor].
 Qed.
 
 (** NFA states are bounded by counter *)
@@ -501,6 +677,90 @@ Proof.
     inversion Heq. simpl. lia.
 Qed.
 
+(** Generalized size bound for compiled NFAs. *)
+Lemma compile_nfa_size_generalized : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
+  nfa_max_state nfa < counter' /\
+  counter' - counter <= 2 * regex_size r.
+Proof.
+  intros r.
+  induction r; intros counter nfa counter' Heq; simpl in Heq.
+  - inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+  - destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    specialize (IHr1 counter nfa1 c1 Hnfa1).
+    specialize (IHr2 c1 nfa2 c2 Hnfa2).
+    pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    inversion Heq. subst. simpl.
+    destruct IHr1 as [Hmax1 Hdiff1].
+    destruct IHr2 as [Hmax2 Hdiff2].
+    split; lia.
+  - destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    specialize (IHr1 (counter + 1) nfa1 c1 Hnfa1).
+    specialize (IHr2 c1 nfa2 c2 Hnfa2).
+    pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    inversion Heq. subst. simpl.
+    destruct IHr1 as [Hmax1 Hdiff1].
+    destruct IHr2 as [Hmax2 Hdiff2].
+    split; lia.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    specialize (IHr (counter + 1) nfa1 c1 Hnfa1).
+    inversion Heq. subst. simpl.
+    destruct IHr as [Hmax Hdiff].
+    split; lia.
+  - destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    specialize (IHr counter nfa1 c1 Hnfa1).
+    inversion Heq. subst. simpl.
+    destruct IHr as [Hmax Hdiff].
+    split; lia.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    specialize (IHr (counter + 1) nfa1 c1 Hnfa1).
+    inversion Heq. subst. simpl.
+    destruct IHr as [Hmax Hdiff].
+    split; lia.
+  - inversion Heq. simpl. lia.
+Qed.
+
+(** Generalized transition-count bound for compiled NFAs. *)
+Lemma compile_nfa_trans_count_generalized : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
+  List.length (nfa_transitions nfa) <= 4 * regex_size r.
+Proof.
+  intros r.
+  induction r; intros counter nfa counter' Heq; simpl in Heq.
+  - inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+  - destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    specialize (IHr1 counter nfa1 c1 Hnfa1).
+    specialize (IHr2 c1 nfa2 c2 Hnfa2).
+    inversion Heq. subst. simpl.
+    repeat rewrite length_app. simpl. lia.
+  - destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    specialize (IHr1 (counter + 1) nfa1 c1 Hnfa1).
+    specialize (IHr2 c1 nfa2 c2 Hnfa2).
+    inversion Heq. subst. simpl.
+    repeat rewrite length_app. simpl. lia.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    specialize (IHr (counter + 1) nfa1 c1 Hnfa1).
+    inversion Heq. subst. simpl.
+    repeat rewrite length_app. simpl. lia.
+  - destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    specialize (IHr counter nfa1 c1 Hnfa1).
+    inversion Heq. subst. simpl.
+    repeat rewrite length_app. simpl. lia.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    specialize (IHr (counter + 1) nfa1 c1 Hnfa1).
+    inversion Heq. subst. simpl.
+    repeat rewrite length_app. simpl. lia.
+  - inversion Heq. simpl. lia.
+Qed.
+
 (** Run concatenation *)
 Lemma nfa_run_append : forall nfa s1 s2 s3 str1 str2,
   nfa_run nfa s1 str1 s2 ->
@@ -517,10 +777,332 @@ Proof.
     simpl. apply run_char with (s2 := s2); auto.
 Qed.
 
+Lemma string_append_empty_r : forall s,
+  (s ++ EmptyString)%string = s.
+Proof.
+  induction s as [|c s IH].
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+Lemma nfa_step_incl : forall nfa1 nfa2 s lbl t,
+  incl (nfa_transitions nfa1) (nfa_transitions nfa2) ->
+  nfa_step nfa1 s lbl t ->
+  nfa_step nfa2 s lbl t.
+Proof.
+  intros nfa1 nfa2 s lbl t Hincl Hstep.
+  inversion Hstep; subst.
+  - constructor. apply Hincl. assumption.
+  - constructor. apply Hincl. assumption.
+  - eapply step_class.
+    + apply Hincl. eassumption.
+    + assumption.
+Qed.
+
+Lemma nfa_run_incl : forall nfa1 nfa2 s str t,
+  incl (nfa_transitions nfa1) (nfa_transitions nfa2) ->
+  nfa_run nfa1 s str t ->
+  nfa_run nfa2 s str t.
+Proof.
+  intros nfa1 nfa2 s str t Hincl Hrun.
+  induction Hrun.
+  - constructor.
+  - apply run_epsilon with (s2 := s2).
+    + eapply nfa_step_incl; eassumption.
+    + assumption.
+  - apply run_char with (s2 := s2).
+    + eapply nfa_step_incl; eassumption.
+    + assumption.
+Qed.
+
+Lemma nfa_run_epsilon_tail : forall nfa s1 str s2 s3,
+  nfa_run nfa s1 str s2 ->
+  nfa_step nfa s2 None s3 ->
+  nfa_run nfa s1 str s3.
+Proof.
+  intros nfa s1 str s2 s3 Hrun Hstep.
+  rewrite <- (string_append_empty_r str).
+  eapply nfa_run_append.
+  - exact Hrun.
+  - apply run_epsilon with (s2 := s3).
+    + exact Hstep.
+    + constructor.
+Qed.
+
+Local Ltac thompson_transition_in :=
+  simpl; repeat rewrite in_app_iff; simpl; intuition congruence.
+
+Lemma thompson_star_loop_accepts : forall r nfa1 start final,
+  (forall s, regex_matches r s -> nfa_accepts nfa1 s) ->
+  forall s,
+  regex_matches (RStar r) s ->
+  let nfa := mkNFA start final
+                   ([TransEpsilon start (nfa_start nfa1);
+                     TransEpsilon start final] ++
+                    nfa_transitions nfa1 ++
+                    [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+                     TransEpsilon (nfa_final nfa1) final])
+                   (max (nfa_max_state nfa1) final) in
+  nfa_run nfa (nfa_final nfa1) s final.
+Proof.
+  intros r nfa1 start final Hbody s Hmatch.
+  remember (RStar r) as star_regex eqn:Hstar.
+  induction Hmatch; inversion Hstar; subst; simpl.
+  - apply run_epsilon with (s2 := final).
+    + apply step_epsilon. thompson_transition_in.
+    + constructor.
+  - apply run_epsilon with (s2 := nfa_start nfa1).
+    + apply step_epsilon. thompson_transition_in.
+    + eapply nfa_run_append.
+      * eapply (nfa_run_incl nfa1
+          (mkNFA start final
+                 ([TransEpsilon start (nfa_start nfa1);
+                   TransEpsilon start final] ++
+                  nfa_transitions nfa1 ++
+                  [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+                   TransEpsilon (nfa_final nfa1) final])
+                 (max (nfa_max_state nfa1) final))).
+        -- unfold incl. intros tr Htr.
+           first [ exact Htr | simpl; right; right; rewrite in_app_iff; left; exact Htr ].
+        -- exact (Hbody s1 Hmatch1).
+      * apply IHHmatch2. reflexivity.
+Qed.
+
+Lemma thompson_star_accepts : forall r nfa1 start final,
+  (forall s, regex_matches r s -> nfa_accepts nfa1 s) ->
+  forall s,
+  regex_matches (RStar r) s ->
+  let nfa := mkNFA start final
+                   ([TransEpsilon start (nfa_start nfa1);
+                     TransEpsilon start final] ++
+                    nfa_transitions nfa1 ++
+                    [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+                     TransEpsilon (nfa_final nfa1) final])
+                   (max (nfa_max_state nfa1) final) in
+  nfa_accepts nfa s.
+Proof.
+  intros r nfa1 start final Hbody s Hmatch.
+  remember (RStar r) as star_regex eqn:Hstar.
+  induction Hmatch; inversion Hstar; subst; simpl.
+  - apply run_epsilon with (s2 := final).
+    + apply step_epsilon. thompson_transition_in.
+    + constructor.
+  - apply run_epsilon with (s2 := nfa_start nfa1).
+    + apply step_epsilon. thompson_transition_in.
+    + eapply nfa_run_append.
+      * eapply (nfa_run_incl nfa1
+          (mkNFA start final
+                 ([TransEpsilon start (nfa_start nfa1);
+                   TransEpsilon start final] ++
+                  nfa_transitions nfa1 ++
+                  [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+                   TransEpsilon (nfa_final nfa1) final])
+                 (max (nfa_max_state nfa1) final))).
+        -- unfold incl. intros tr Htr.
+           first [ exact Htr | simpl; right; right; rewrite in_app_iff; left; exact Htr ].
+        -- exact (Hbody s1 Hmatch1).
+      * eapply thompson_star_loop_accepts.
+        -- exact Hbody.
+        -- exact Hmatch2.
+Qed.
+
+Lemma thompson_plus_loop_accepts : forall r nfa1 final,
+  (forall s, regex_matches r s -> nfa_accepts nfa1 s) ->
+  forall s,
+  regex_matches (RStar r) s ->
+  let nfa := mkNFA (nfa_start nfa1) final
+                   (nfa_transitions nfa1 ++
+                    [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+                     TransEpsilon (nfa_final nfa1) final])
+                   (max (nfa_max_state nfa1) final) in
+  nfa_run nfa (nfa_final nfa1) s final.
+Proof.
+  intros r nfa1 final Hbody s Hmatch.
+  remember (RStar r) as star_regex eqn:Hstar.
+  induction Hmatch; inversion Hstar; subst; simpl.
+  - apply run_epsilon with (s2 := final).
+    + apply step_epsilon. thompson_transition_in.
+    + constructor.
+  - apply run_epsilon with (s2 := nfa_start nfa1).
+    + apply step_epsilon. thompson_transition_in.
+    + eapply nfa_run_append.
+      * eapply (nfa_run_incl nfa1
+          (mkNFA (nfa_start nfa1) final
+                 (nfa_transitions nfa1 ++
+                  [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+                   TransEpsilon (nfa_final nfa1) final])
+                 (max (nfa_max_state nfa1) final))).
+        -- unfold incl. intros tr Htr.
+           first [ exact Htr | simpl; rewrite in_app_iff; left; exact Htr ].
+        -- exact (Hbody s1 Hmatch1).
+      * apply IHHmatch2. reflexivity.
+Qed.
+
+Lemma thompson_plus_accepts : forall r nfa1 final,
+  (forall s, regex_matches r s -> nfa_accepts nfa1 s) ->
+  forall s,
+  regex_matches (RPlus r) s ->
+  let nfa := mkNFA (nfa_start nfa1) final
+                   (nfa_transitions nfa1 ++
+                    [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+                     TransEpsilon (nfa_final nfa1) final])
+                   (max (nfa_max_state nfa1) final) in
+  nfa_accepts nfa s.
+Proof.
+  intros r nfa1 final Hbody s Hmatch.
+  inversion Hmatch; subst; simpl.
+  eapply nfa_run_append.
+  - eapply (nfa_run_incl nfa1
+      (mkNFA (nfa_start nfa1) final
+             (nfa_transitions nfa1 ++
+              [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+               TransEpsilon (nfa_final nfa1) final])
+             (max (nfa_max_state nfa1) final))).
+    + unfold incl. intros tr Htr.
+      first [ exact Htr | simpl; rewrite in_app_iff; left; exact Htr ].
+    + exact (Hbody s1 H0).
+  - eapply thompson_plus_loop_accepts.
+    + exact Hbody.
+    + exact H1.
+Qed.
+
+(** Primitive Thompson fragments have direct semantics. *)
+Lemma empty_fragment_run_same_state : forall s1 s s2,
+  nfa_run (mkNFA 0 1 [] 1) s1 s s2 ->
+  s1 = s2.
+Proof.
+  intros s1 s s2 Hrun.
+  induction Hrun.
+  - reflexivity.
+  - inversion H; subst; simpl in *; contradiction.
+  - inversion H; subst; simpl in *; contradiction.
+Qed.
+
+Lemma empty_fragment_no_accepts : forall s,
+  ~ nfa_accepts (mkNFA 0 1 [] 1) s.
+Proof.
+  intros s Haccept.
+  pose proof (empty_fragment_run_same_state 0 s 1 Haccept) as Hsame.
+  discriminate Hsame.
+Qed.
+
+Lemma empty_accepts_sound : forall s,
+  nfa_accepts (mkNFA 0 1 [] 1) s ->
+  regex_matches REmpty s.
+Proof.
+  intros s Haccept.
+  exfalso. exact (empty_fragment_no_accepts s Haccept).
+Qed.
+
+Lemma epsilon_fragment_run_consumes_empty : forall s1 s2 s,
+  nfa_run (mkNFA 0 1 [TransEpsilon 0 1] 1) s1 s s2 ->
+  s = EmptyString.
+Proof.
+  intros s1 s2 s Hrun.
+  induction Hrun.
+  - reflexivity.
+  - exact IHHrun.
+  - inversion H; subst; cbn in *; intuition discriminate.
+Qed.
+
+Lemma epsilon_accepts_sound : forall s,
+  nfa_accepts (mkNFA 0 1 [TransEpsilon 0 1] 1) s ->
+  regex_matches REpsilon s.
+Proof.
+  intros s Haccept.
+  pose proof (epsilon_fragment_run_consumes_empty _ _ _ Haccept) as Hempty.
+  subst. constructor.
+Qed.
+
+Lemma char_fragment_final_run_empty : forall c s final,
+  nfa_run (mkNFA 0 1 [TransChar 0 c 1] 1) 1 s final ->
+  final = 1 ->
+  s = EmptyString.
+Proof.
+  intros c s final Hrun Hfinal.
+  dependent induction Hrun.
+  - reflexivity.
+  - inversion H; subst; cbn in *; intuition discriminate.
+  - inversion H; subst; cbn in *; intuition discriminate.
+Qed.
+
+Lemma char_accepts_sound : forall c s,
+  nfa_accepts (mkNFA 0 1 [TransChar 0 c 1] 1) s ->
+  regex_matches (RChar c) s.
+Proof.
+  intros c s Haccept.
+  unfold nfa_accepts in Haccept; cbn in Haccept.
+  change (nfa_run (mkNFA 0 1 [TransChar 0 c 1] 1) 0 s 1) in Haccept.
+  inversion Haccept; subst.
+  - inversion H; subst; cbn in *;
+      repeat match goal with
+      | HIn : _ \/ False |- _ => destruct HIn as [? | []]
+      end;
+      discriminate.
+  - inversion H; subst; cbn in *;
+      repeat match goal with
+      | HIn : _ \/ False |- _ => destruct HIn as [? | []]
+      end;
+      try discriminate;
+      repeat match goal with
+      | Hedge : TransChar _ _ _ = TransChar _ _ _ |- _ =>
+          inversion Hedge; subst; clear Hedge
+      end.
+    match goal with
+    | Hrun : nfa_run (mkNFA 0 1 [TransChar 0 ?ch 1] 1) 1 ?tail 1 |- _ =>
+        pose proof (char_fragment_final_run_empty ch tail 1 Hrun eq_refl) as Hstr
+    end.
+    subst. constructor.
+Qed.
+
+Lemma charclass_fragment_final_run_empty : forall cs s final,
+  nfa_run (mkNFA 0 1 [TransClass 0 cs 1] 1) 1 s final ->
+  final = 1 ->
+  s = EmptyString.
+Proof.
+  intros cs s final Hrun Hfinal.
+  dependent induction Hrun.
+  - reflexivity.
+  - inversion H; subst; cbn in *; intuition discriminate.
+  - inversion H; subst; cbn in *; intuition discriminate.
+Qed.
+
+Lemma charclass_accepts_sound : forall cs s,
+  nfa_accepts (mkNFA 0 1 [TransClass 0 cs 1] 1) s ->
+  regex_matches (RCharClass cs) s.
+Proof.
+  intros cs s Haccept.
+  unfold nfa_accepts in Haccept; cbn in Haccept.
+  change (nfa_run (mkNFA 0 1 [TransClass 0 cs 1] 1) 0 s 1) in Haccept.
+  inversion Haccept; subst.
+  - inversion H; subst; cbn in *;
+      repeat match goal with
+      | HIn : _ \/ False |- _ => destruct HIn as [? | []]
+      end;
+      discriminate.
+  - inversion H; subst; cbn in *;
+      repeat match goal with
+      | HIn : _ \/ False |- _ => destruct HIn as [? | []]
+      end;
+      try discriminate;
+      repeat match goal with
+      | Hedge : TransClass _ _ _ = TransClass _ _ _ |- _ =>
+          inversion Hedge; subst; clear Hedge
+      end.
+    match goal with
+    | Hrun : nfa_run (mkNFA 0 1 [TransClass 0 ?classes 1] 1) 1 ?tail 1 |- _ =>
+        pose proof (charclass_fragment_final_run_empty classes tail 1 Hrun eq_refl) as Hstr
+    end.
+    subst. constructor.
+    match goal with
+    | Hin : In _ _ |- _ => exact Hin
+    end.
+Qed.
+
 (** * Soundness Theorem *)
 
 (** If NFA accepts, regex matches *)
-Theorem thompson_soundness : forall (contracts : ThompsonContracts) r nfa counter,
+Theorem thompson_soundness : forall (contracts : ThompsonEvidence) r nfa counter,
   compile_nfa r 0 = (nfa, counter) ->
   forall s, nfa_accepts nfa s -> regex_matches r s.
 Proof.
@@ -528,20 +1110,20 @@ Proof.
   induction r; intros nfa counter Hcompile s Haccepts.
   - (* REmpty *)
     simpl in Hcompile. inversion Hcompile. subst.
-    exact (empty_accepts_sound contracts s Haccepts).
+    exact (empty_accepts_sound s Haccepts).
   - (* REpsilon *)
     simpl in Hcompile. inversion Hcompile. subst.
-    exact (epsilon_accepts_sound contracts s Haccepts).
+    exact (epsilon_accepts_sound s Haccepts).
   - (* RChar *)
     simpl in Hcompile. inversion Hcompile. subst.
-    exact (char_accepts_sound contracts a s Haccepts).
+    exact (char_accepts_sound a s Haccepts).
   - (* RConcat *)
     simpl in Hcompile.
     destruct (compile_nfa r1 0) as [nfa1 c1] eqn:Hnfa1.
     destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
     inversion Hcompile. subst. clear Hcompile.
     unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the run decomposition axiom *)
+    (* Use the run decomposition evidence premise *)
     destruct (concat_run_decomposition contracts r1 r2 nfa1 nfa2 c1 counter s Hnfa1 Hnfa2 Haccepts)
       as [s1 [s2 [Hseq [Hmatch1 Hmatch2]]]].
     rewrite Hseq.
@@ -552,7 +1134,7 @@ Proof.
     destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
     inversion Hcompile. subst. clear Hcompile.
     unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the alternation decomposition axiom *)
+    (* Use the alternation decomposition evidence premise *)
     destruct (alt_run_decomposition contracts r1 r2 nfa1 nfa2 c1 c2 s Hnfa1 Hnfa2 Haccepts) as [Hleft | Hright].
     + apply match_alt_left. assumption.
     + apply match_alt_right. assumption.
@@ -561,110 +1143,191 @@ Proof.
     destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst. clear Hcompile.
     unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the star decomposition axiom *)
+    (* Use the star decomposition evidence premise *)
     exact (star_run_decomposition contracts r nfa1 c1 s Hnfa1 Haccepts).
   - (* RPlus *)
     simpl in Hcompile.
     destruct (compile_nfa r 0) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst. clear Hcompile.
     unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the plus decomposition axiom *)
+    (* Use the plus decomposition evidence premise *)
     exact (plus_run_decomposition contracts r nfa1 c1 s Hnfa1 Haccepts).
   - (* ROption *)
     simpl in Hcompile.
     destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst. clear Hcompile.
     unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the option decomposition axiom *)
+    (* Use the option decomposition evidence premise *)
     exact (option_run_decomposition contracts r nfa1 c1 s Hnfa1 Haccepts).
   - (* RCharClass *)
     simpl in Hcompile. inversion Hcompile. subst.
-    exact (charclass_accepts_sound contracts l s Haccepts).
+    exact (charclass_accepts_sound l s Haccepts).
 Qed.
 
 (** * Completeness Theorem *)
 
-(** If regex matches, NFA accepts *)
-Theorem thompson_completeness : forall (contracts : ThompsonContracts) r nfa counter,
-  compile_nfa r 0 = (nfa, counter) ->
+(** Completeness holds for fragments compiled at any fresh-state counter. *)
+Theorem thompson_completeness_general : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
   forall s, regex_matches r s -> nfa_accepts nfa s.
 Proof.
-  intros contracts r.
-  induction r; intros nfa counter Hcompile s Hmatch.
+  induction r; intros counter nfa counter' Hcompile s Hmatch; simpl in Hcompile.
   - (* REmpty - regex never matches *)
     inversion Hmatch.
   - (* REpsilon *)
     inversion Hmatch. subst.
-    simpl in Hcompile. inversion Hcompile. subst.
+    inversion Hcompile. subst.
     unfold nfa_accepts. simpl.
-    apply run_epsilon with (s2 := 1).
-    + constructor. left. reflexivity.
+    apply run_epsilon with (s2 := counter + 1).
+    + constructor. simpl. left. reflexivity.
     + constructor.
   - (* RChar *)
     inversion Hmatch. subst.
-    simpl in Hcompile. inversion Hcompile. subst.
+    inversion Hcompile. subst.
     unfold nfa_accepts. simpl.
-    apply run_char with (s2 := 1).
-    + constructor. left. reflexivity.
+    apply run_char with (s2 := counter + 1).
+    + constructor. simpl. left. reflexivity.
     + constructor.
   - (* RConcat *)
     inversion Hmatch. subst.
-    simpl in Hcompile.
-    destruct (compile_nfa r1 0) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
     destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
-    inversion Hcompile. subst.
-    (* Use the concatenation construction axiom *)
+    inversion Hcompile. subst. clear Hcompile.
     match goal with
-    | Hm1 : regex_matches r1 s1, Hm2 : regex_matches r2 s2 |- _ =>
-        exact (concat_run_construction contracts r1 r2 nfa1 nfa2 c1 counter s1 s2 Hnfa1 Hnfa2 Hm1 Hm2)
+    | Hm1 : regex_matches r1 ?s1, Hm2 : regex_matches r2 ?s2 |- _ =>
+        pose proof (IHr1 counter nfa1 c1 Hnfa1 s1 Hm1) as Hrun1;
+        pose proof (IHr2 c1 nfa2 counter' Hnfa2 s2 Hm2) as Hrun2
     end.
+    unfold nfa_accepts in *. simpl in *.
+    eapply nfa_run_append.
+    + eapply (nfa_run_incl nfa1
+        (mkNFA (nfa_start nfa1) (nfa_final nfa2)
+               (nfa_transitions nfa1 ++
+                [TransEpsilon (nfa_final nfa1) (nfa_start nfa2)] ++
+                nfa_transitions nfa2)
+               (max (nfa_max_state nfa1) (nfa_max_state nfa2)))).
+      * unfold incl. intros tr Htr. simpl.
+        rewrite in_app_iff. left. exact Htr.
+      * exact Hrun1.
+    + apply run_epsilon with (s2 := nfa_start nfa2).
+      * apply step_epsilon. thompson_transition_in.
+      * eapply (nfa_run_incl nfa2
+          (mkNFA (nfa_start nfa1) (nfa_final nfa2)
+                 (nfa_transitions nfa1 ++
+                  [TransEpsilon (nfa_final nfa1) (nfa_start nfa2)] ++
+                  nfa_transitions nfa2)
+                 (max (nfa_max_state nfa1) (nfa_max_state nfa2)))).
+        -- unfold incl. intros tr Htr. thompson_transition_in.
+        -- exact Hrun2.
   - (* RAlt *)
-    simpl in Hcompile.
-    destruct (compile_nfa r1 1) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
     destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
-    inversion Hcompile. subst.
+    inversion Hcompile. subst. clear Hcompile.
     inversion Hmatch; subst.
     + (* Left alternative *)
-      (* Use the left alternation construction axiom *)
       match goal with
       | Hleft : regex_matches r1 s |- _ =>
-          exact (alt_run_construction_left contracts r1 r2 nfa1 nfa2 c1 c2 s Hnfa1 Hnfa2 Hleft)
+          pose proof (IHr1 (counter + 1) nfa1 c1 Hnfa1 s Hleft) as Hrun
       end.
+      unfold nfa_accepts in *. simpl in *.
+      apply run_epsilon with (s2 := nfa_start nfa1).
+      * apply step_epsilon. thompson_transition_in.
+      * eapply nfa_run_epsilon_tail.
+        -- eapply (nfa_run_incl nfa1
+            (mkNFA counter c2
+                   ([TransEpsilon counter (nfa_start nfa1);
+                     TransEpsilon counter (nfa_start nfa2)] ++
+                    nfa_transitions nfa1 ++
+                    nfa_transitions nfa2 ++
+                    [TransEpsilon (nfa_final nfa1) c2;
+                     TransEpsilon (nfa_final nfa2) c2])
+                   (max (max (nfa_max_state nfa1) (nfa_max_state nfa2)) c2))).
+           ++ unfold incl. intros tr Htr. simpl.
+              right. right. rewrite in_app_iff. left. exact Htr.
+           ++ exact Hrun.
+        -- apply step_epsilon. thompson_transition_in.
     + (* Right alternative *)
-      (* Use the right alternation construction axiom *)
       match goal with
       | Hright : regex_matches r2 s |- _ =>
-          exact (alt_run_construction_right contracts r1 r2 nfa1 nfa2 c1 c2 s Hnfa1 Hnfa2 Hright)
+          pose proof (IHr2 c1 nfa2 c2 Hnfa2 s Hright) as Hrun
       end.
+      unfold nfa_accepts in *. simpl in *.
+      apply run_epsilon with (s2 := nfa_start nfa2).
+      * apply step_epsilon. thompson_transition_in.
+      * eapply nfa_run_epsilon_tail.
+        -- eapply (nfa_run_incl nfa2
+            (mkNFA counter c2
+                   ([TransEpsilon counter (nfa_start nfa1);
+                     TransEpsilon counter (nfa_start nfa2)] ++
+                    nfa_transitions nfa1 ++
+                    nfa_transitions nfa2 ++
+                    [TransEpsilon (nfa_final nfa1) c2;
+                     TransEpsilon (nfa_final nfa2) c2])
+                   (max (max (nfa_max_state nfa1) (nfa_max_state nfa2)) c2))).
+           ++ unfold incl. intros tr Htr. simpl.
+              right. right. rewrite in_app_iff. right.
+              rewrite in_app_iff. left. exact Htr.
+           ++ exact Hrun.
+        -- apply step_epsilon. thompson_transition_in.
   - (* RStar *)
-    simpl in Hcompile.
-    destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
-    inversion Hcompile. subst.
-    (* Use the star construction axiom *)
-    exact (star_run_construction contracts r nfa1 c1 s Hnfa1 Hmatch).
+    destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Hcompile. subst. clear Hcompile.
+    eapply thompson_star_accepts.
+    + intros t Ht. exact (IHr (counter + 1) nfa1 c1 Hnfa1 t Ht).
+    + exact Hmatch.
   - (* RPlus *)
-    simpl in Hcompile.
-    destruct (compile_nfa r 0) as [nfa1 c1] eqn:Hnfa1.
-    inversion Hcompile. subst.
-    (* Use the plus construction axiom *)
-    exact (plus_run_construction contracts r nfa1 c1 s Hnfa1 Hmatch).
+    destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    inversion Hcompile. subst. clear Hcompile.
+    eapply thompson_plus_accepts.
+    + intros t Ht. exact (IHr counter nfa1 c1 Hnfa1 t Ht).
+    + exact Hmatch.
   - (* ROption *)
-    simpl in Hcompile.
-    destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
-    inversion Hcompile. subst.
-    (* Use the option construction axiom *)
-    exact (option_run_construction contracts r nfa1 c1 s Hnfa1 Hmatch).
+    destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Hcompile. subst. clear Hcompile.
+    inversion Hmatch; subst.
+    + (* None *)
+      unfold nfa_accepts. simpl.
+      apply run_epsilon with (s2 := c1).
+      * apply step_epsilon. thompson_transition_in.
+      * constructor.
+    + (* Some *)
+      match goal with
+      | Hsome : regex_matches r s |- _ =>
+          pose proof (IHr (counter + 1) nfa1 c1 Hnfa1 s Hsome) as Hrun
+      end.
+      unfold nfa_accepts in *. simpl in *.
+      apply run_epsilon with (s2 := nfa_start nfa1).
+      * apply step_epsilon. thompson_transition_in.
+      * eapply nfa_run_epsilon_tail.
+        -- eapply (nfa_run_incl nfa1
+            (mkNFA counter c1
+                   ([TransEpsilon counter (nfa_start nfa1);
+                     TransEpsilon counter c1] ++
+                    nfa_transitions nfa1 ++
+                    [TransEpsilon (nfa_final nfa1) c1])
+                   (max (nfa_max_state nfa1) c1))).
+           ++ unfold incl. intros tr Htr. simpl.
+              right. right. rewrite in_app_iff. left. exact Htr.
+           ++ exact Hrun.
+        -- apply step_epsilon. thompson_transition_in.
   - (* RCharClass *)
     inversion Hmatch. subst.
-    simpl in Hcompile. inversion Hcompile. subst.
+    inversion Hcompile. subst.
     unfold nfa_accepts. simpl.
-    apply run_char with (s2 := 1).
+    apply run_char with (s2 := counter + 1).
     + apply step_class with (cs := l).
-      * left. reflexivity.
-      * match goal with
-        | Hin : In _ l |- _ => exact Hin
-        end.
+      * simpl. left. reflexivity.
+      * assumption.
     + constructor.
+Qed.
+
+(** If regex matches, NFA accepts *)
+Theorem thompson_completeness : forall r nfa counter,
+  compile_nfa r 0 = (nfa, counter) ->
+  forall s, regex_matches r s -> nfa_accepts nfa s.
+Proof.
+  intros r nfa counter Hcompile s Hmatch.
+  exact (thompson_completeness_general r 0 nfa counter Hcompile s Hmatch).
 Qed.
 
 (** * Size Bound *)
@@ -678,11 +1341,11 @@ Definition nfa_trans_count (nfa : NFA) : nat :=
   List.length (nfa_transitions nfa).
 
 (** Thompson construction produces O(|r|) states *)
-Theorem thompson_state_bound : forall (contracts : ThompsonContracts) r nfa counter,
+Theorem thompson_state_bound : forall r nfa counter,
   compile_nfa r 0 = (nfa, counter) ->
   nfa_size nfa <= 2 * regex_size r.
 Proof.
-  intros contracts r.
+  intros r.
   induction r; intros nfa counter Hcompile; simpl in Hcompile.
   - (* REmpty *)
     inversion Hcompile. unfold nfa_size. simpl. lia.
@@ -695,50 +1358,50 @@ Proof.
     destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
     inversion Hcompile. subst.
     unfold nfa_size. simpl.
-    (* Use the generalized size bound axiom *)
-    destruct (compile_nfa_size_generalized contracts r1 0 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
-    destruct (compile_nfa_size_generalized contracts r2 c1 nfa2 counter Hnfa2) as [Hmax2 Hdiff2].
+    (* Use the generalized size bound evidence premise *)
+    destruct (compile_nfa_size_generalized r1 0 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
+    destruct (compile_nfa_size_generalized r2 c1 nfa2 counter Hnfa2) as [Hmax2 Hdiff2].
     lia.
   - (* RAlt *)
     destruct (compile_nfa r1 1) as [nfa1 c1] eqn:Hnfa1.
     destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
     inversion Hcompile. subst.
     unfold nfa_size. simpl.
-    (* Use the generalized size bound axiom *)
-    destruct (compile_nfa_size_generalized contracts r1 1 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
-    destruct (compile_nfa_size_generalized contracts r2 c1 nfa2 c2 Hnfa2) as [Hmax2 Hdiff2].
+    (* Use the generalized size bound evidence premise *)
+    destruct (compile_nfa_size_generalized r1 1 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
+    destruct (compile_nfa_size_generalized r2 c1 nfa2 c2 Hnfa2) as [Hmax2 Hdiff2].
     lia.
   - (* RStar *)
     destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst.
     unfold nfa_size. simpl.
-    (* Use the generalized size bound axiom *)
-    destruct (compile_nfa_size_generalized contracts r 1 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
+    (* Use the generalized size bound evidence premise *)
+    destruct (compile_nfa_size_generalized r 1 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
     lia.
   - (* RPlus *)
     destruct (compile_nfa r 0) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst.
     unfold nfa_size. simpl.
-    (* Use the generalized size bound axiom *)
-    destruct (compile_nfa_size_generalized contracts r 0 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
+    (* Use the generalized size bound evidence premise *)
+    destruct (compile_nfa_size_generalized r 0 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
     lia.
   - (* ROption *)
     destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst.
     unfold nfa_size. simpl.
-    (* Use the generalized size bound axiom *)
-    destruct (compile_nfa_size_generalized contracts r 1 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
+    (* Use the generalized size bound evidence premise *)
+    destruct (compile_nfa_size_generalized r 1 nfa1 c1 Hnfa1) as [Hmax1 Hdiff1].
     lia.
   - (* RCharClass *)
     inversion Hcompile. unfold nfa_size. simpl. lia.
 Qed.
 
 (** Thompson construction produces O(|r|) transitions *)
-Theorem thompson_trans_bound : forall (contracts : ThompsonContracts) r nfa counter,
+Theorem thompson_trans_bound : forall r nfa counter,
   compile_nfa r 0 = (nfa, counter) ->
   nfa_trans_count nfa <= 4 * regex_size r.
 Proof.
-  intros contracts r.
+  intros r.
   induction r; intros nfa counter Hcompile; simpl in Hcompile.
   - (* REmpty *)
     inversion Hcompile. unfold nfa_trans_count. simpl. lia.
@@ -752,9 +1415,9 @@ Proof.
     inversion Hcompile. subst.
     unfold nfa_trans_count. simpl.
     repeat rewrite length_app. simpl.
-    (* Use the generalized transition count axiom *)
-    pose proof (compile_nfa_trans_count_generalized contracts r1 0 nfa1 c1 Hnfa1) as Htrans1.
-    pose proof (compile_nfa_trans_count_generalized contracts r2 c1 nfa2 counter Hnfa2) as Htrans2.
+    (* Use the generalized transition count evidence premise *)
+    pose proof (compile_nfa_trans_count_generalized r1 0 nfa1 c1 Hnfa1) as Htrans1.
+    pose proof (compile_nfa_trans_count_generalized r2 c1 nfa2 counter Hnfa2) as Htrans2.
     lia.
   - (* RAlt *)
     destruct (compile_nfa r1 1) as [nfa1 c1] eqn:Hnfa1.
@@ -762,40 +1425,40 @@ Proof.
     inversion Hcompile. subst.
     unfold nfa_trans_count. simpl.
     repeat rewrite length_app. simpl.
-    (* Use the generalized transition count axiom *)
-    pose proof (compile_nfa_trans_count_generalized contracts r1 1 nfa1 c1 Hnfa1) as Htrans1.
-    pose proof (compile_nfa_trans_count_generalized contracts r2 c1 nfa2 c2 Hnfa2) as Htrans2.
+    (* Use the generalized transition count evidence premise *)
+    pose proof (compile_nfa_trans_count_generalized r1 1 nfa1 c1 Hnfa1) as Htrans1.
+    pose proof (compile_nfa_trans_count_generalized r2 c1 nfa2 c2 Hnfa2) as Htrans2.
     lia.
   - (* RStar *)
     destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst.
     unfold nfa_trans_count. simpl.
     repeat rewrite length_app. simpl.
-    (* Use the generalized transition count axiom *)
-    pose proof (compile_nfa_trans_count_generalized contracts r 1 nfa1 c1 Hnfa1) as Htrans1.
+    (* Use the generalized transition count evidence premise *)
+    pose proof (compile_nfa_trans_count_generalized r 1 nfa1 c1 Hnfa1) as Htrans1.
     lia.
   - (* RPlus *)
     destruct (compile_nfa r 0) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst.
     unfold nfa_trans_count. simpl.
     repeat rewrite length_app. simpl.
-    (* Use the generalized transition count axiom *)
-    pose proof (compile_nfa_trans_count_generalized contracts r 0 nfa1 c1 Hnfa1) as Htrans1.
+    (* Use the generalized transition count evidence premise *)
+    pose proof (compile_nfa_trans_count_generalized r 0 nfa1 c1 Hnfa1) as Htrans1.
     lia.
   - (* ROption *)
     destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
     inversion Hcompile. subst.
     unfold nfa_trans_count. simpl.
     repeat rewrite length_app. simpl.
-    (* Use the generalized transition count axiom *)
-    pose proof (compile_nfa_trans_count_generalized contracts r 1 nfa1 c1 Hnfa1) as Htrans1.
+    (* Use the generalized transition count evidence premise *)
+    pose proof (compile_nfa_trans_count_generalized r 1 nfa1 c1 Hnfa1) as Htrans1.
     lia.
   - (* RCharClass *)
     inversion Hcompile. unfold nfa_trans_count. simpl. lia.
 Qed.
 
 (** Main correctness theorem *)
-Theorem thompson_correctness : forall (contracts : ThompsonContracts) r s,
+Theorem thompson_correctness : forall (contracts : ThompsonEvidence) r s,
   let nfa := compile r in
   nfa_accepts nfa s <-> regex_matches r s.
 Proof.
@@ -805,5 +1468,5 @@ Proof.
   simpl.
   split.
   - exact (thompson_soundness contracts r nfa counter Hcompile s).
-  - exact (thompson_completeness contracts r nfa counter Hcompile s).
+  - exact (thompson_completeness r nfa counter Hcompile s).
 Qed.

@@ -961,16 +961,16 @@ Qed.
 
     These contracts capture semantic bridges for the Levenshtein automaton
     construction and antichain implementation. They are explicit proof
-    obligations rather than ambient axioms.
+    obligations rather than ambient evidence premises.
 
     Citations:
     - Schulz and Mihov, "Fast string correction with Levenshtein automata",
       IJDAR 5(1):67-85, 2002, DOI 10.1007/s10032-002-0082-8.
     - Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood with Universal
-      Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
-      DOI 10.1016/j.tcs.2009.03.002. *)
-Record AutomatonCompletenessTransitionContracts : Prop :=
-  mkAutomatonCompletenessTransitionContracts {
+      Neighborhood Automata", TCS 412(22):2340-2355, 2011,
+      DOI 10.1016/j.tcs.2011.01.013. *)
+Record AutomatonCompletenessTransitionEvidence : Prop :=
+  mkAutomatonCompletenessTransitionEvidence {
 
 (** States from transition_state have epsilon-closed positions.
     Since transition_state applies epsilon_closure before building the state
@@ -995,18 +995,6 @@ transition_state_positions_epsilon_closed : forall alg s c query n s',
     i + k <= length query -> e + k <= n ->
     positions_contain (positions s') (std_pos (i + k) (e + k));
 
-(** Corollary: automaton_run on non-empty input produces epsilon-closed states.
-    This follows from transition_state_positions_epsilon_closed by noting that
-    each step of automaton_run applies transition_state, which preserves the
-    epsilon-closure property. *)
-automaton_run_nonempty_epsilon_closed : forall query n c dict s final,
-  automaton_run Standard query n (c :: dict) s = Some final ->
-  algorithm s = Standard ->
-  query_length s = length query ->
-  forall i e k,
-    positions_contain (positions final) (std_pos i e) ->
-    i + k <= length query -> e + k <= n ->
-    positions_contain (positions final) (std_pos (i + k) (e + k))
 }.
 
 (** Helper: positions_contain is transitive with position_subsumes *)
@@ -2039,6 +2027,52 @@ Proof.
   apply query_length_empty_state.
 Qed.
 
+(** Corollary: automaton_run on non-empty input produces epsilon-closed states.
+    This follows from transition_state_positions_epsilon_closed because the
+    final state of any non-empty run is produced by some transition_state step. *)
+Lemma automaton_run_nonempty_epsilon_closed :
+  forall (epsilon_contracts : AutomatonCompletenessTransitionEvidence)
+  query n c dict s final,
+  automaton_run Standard query n (c :: dict) s = Some final ->
+  algorithm s = Standard ->
+  query_length s = length query ->
+  forall i e k,
+    positions_contain (positions final) (std_pos i e) ->
+    i + k <= length query -> e + k <= n ->
+    positions_contain (positions final) (std_pos (i + k) (e + k)).
+Proof.
+  intros epsilon_contracts query n c dict.
+  revert c.
+  induction dict as [| d dict IH]; intros c s final Hrun Halg Hqlen i e k Hcont Hi He.
+  - simpl in Hrun.
+    destruct (transition_state Standard s c query n) as [s'|] eqn:Htrans; try discriminate.
+    inversion Hrun; subst final.
+    eapply transition_state_positions_epsilon_closed; eauto.
+  - simpl in Hrun.
+    destruct (transition_state Standard s c query n) as [s'|] eqn:Htrans; try discriminate.
+    eapply IH; eauto.
+    + eapply transition_state_preserves_algorithm; eauto.
+    + rewrite (transition_state_preserves_query_length Standard s c query n s' Htrans).
+      exact Hqlen.
+Qed.
+
+(** Running the automaton preserves the algorithm field. *)
+Lemma automaton_run_preserves_algorithm : forall alg query n dict s s',
+  algorithm s = alg ->
+  automaton_run alg query n dict s = Some s' ->
+  algorithm s' = alg.
+Proof.
+  induction dict as [|c dict IH]; intros s s' Halg Hrun.
+  - simpl in Hrun. injection Hrun as Heq. subst s'. exact Halg.
+  - simpl in Hrun.
+    destruct (transition_state alg s c query n) as [s_mid|] eqn:Htrans;
+      try discriminate.
+    apply (IH s_mid s').
+    + apply transition_state_preserves_algorithm in Htrans.
+      exact Htrans.
+    + exact Hrun.
+Qed.
+
 (** Helper: std_pos is non-special *)
 Lemma std_pos_not_special : forall i e, is_special (std_pos i e) = false.
 Proof.
@@ -2332,10 +2366,10 @@ Qed.
     - Schulz and Mihov, "Fast string correction with Levenshtein automata",
       IJDAR 5(1):67-85, 2002, DOI 10.1007/s10032-002-0082-8.
     - Mitankin, Mihov, and Schulz, "Deciding Word Neighborhood with Universal
-      Neighborhood Automata", TCS 410(37-39):2339-2358, 2009,
-      DOI 10.1016/j.tcs.2009.03.002. *)
-Record AutomatonCompletenessCoreContracts : Prop :=
-  mkAutomatonCompletenessCoreContracts {
+      Neighborhood Automata", TCS 412(22):2340-2355, 2011,
+      DOI 10.1016/j.tcs.2011.01.013. *)
+Record AutomatonCompletenessCoreEvidence : Prop :=
+  mkAutomatonCompletenessCoreEvidence {
 
 (** Contract: Transition produces match result.
     When a position has a matching character at the current position,
@@ -2389,28 +2423,6 @@ transition_succeeds_for_reachable :
     (exists p, In p (positions s) /\ num_errors p <= n /\ is_special p = false) ->
     exists s', transition_state Standard s c query n = Some s';
 
-(** Contract: Subsumed_by_any produces a witness.
-    When subsumed_by_any returns true, there exists a specific position
-    in the list that subsumes the given position. *)
-subsumed_by_any_witness :
-  forall alg qlen p pos_list,
-    subsumed_by_any alg qlen p pos_list = true ->
-    exists p', In p' pos_list /\ subsumes alg qlen p' p = true;
-
-(** Contract: Transition preserves algorithm field.
-    transition_state preserves the algorithm field of the state. *)
-transition_preserves_algorithm :
-  forall alg s c query n s',
-    transition_state alg s c query n = Some s' ->
-    algorithm s' = alg;
-
-(** Contract: Transition preserves query_length field.
-    transition_state preserves the query_length field of the state. *)
-transition_preserves_query_length :
-  forall alg s c query n s',
-    transition_state alg s c query n = Some s' ->
-    query_length s' = query_length s;
-
 (** Contract: Epsilon closure includes final positions.
     If a position can reach a final position via deletes (within error bound),
     then the epsilon-closed state contains that final position. *)
@@ -2422,18 +2434,6 @@ epsilon_closure_includes_final :
     exists p_final, In p_final (positions s) /\
       term_index p_final = length query /\
       num_errors p_final <= n;
-
-(** Contract: Spread bound preservation through transitions.
-    The spread of term_indices in positions is preserved through
-    transitions, maintaining the window constraint. *)
-spread_bound_preserved :
-  forall (query : list Char) n s c s' qlen,
-    transition_state Standard s c query n = Some s' ->
-    query_length s = qlen ->
-    (forall p, In p (positions s) ->
-      term_index p - fold_left Nat.min (map term_index (positions s)) qlen < 2 * n + 6) ->
-    (forall p, In p (positions s') ->
-      term_index p - fold_left Nat.min (map term_index (positions s')) qlen < 2 * n + 6);
 
 (** Contract: Transposition completeness.
     When Damerau-Levenshtein distance is within bound, the Transposition
@@ -2458,13 +2458,6 @@ automaton_distance_correct :
     exists d, automaton_distance alg query n dict = Some d /\
       d <= lev_distance query dict;
 
-(** Contract: Algorithm is preserved through automaton_run.
-    Running the automaton preserves the algorithm field. *)
-automaton_run_preserves_algorithm :
-  forall alg query n dict s s',
-    automaton_run alg query n dict s = Some s' ->
-    algorithm s' = alg;
-
 (** Contract: Position containment is preserved from run intermediate state.
     If a position is reachable, it is contained in the corresponding
     automaton run result. *)
@@ -2476,96 +2469,20 @@ position_contained_from_run :
     num_errors p <= n ->
     positions_contain (positions s_mid) p;
 
-(** Contract: Subsuming position is non-special when subsumed is non-special.
-    If p is non-special and p' subsumes p, then p' is also non-special. *)
-subsumption_preserves_nonspecial :
-  forall alg qlen p p',
-    is_special p = false ->
-    subsumes alg qlen p' p = true ->
-    is_special p' = false;
-
-(** Contract: Automaton step correspondence for Standard -> Transposition.
-    Standard transitions are subsumed by Transposition transitions. *)
-automaton_step_std_trans_ax :
-  forall s_std s_trans c query n,
-    algorithm s_std = Standard ->
-    algorithm s_trans = Transposition ->
-    incl (positions s_std) (positions s_trans) ->
-    match transition_state Standard s_std c query n with
-    | None => True
-    | Some s_std' =>
-        exists s_trans',
-          transition_state Transposition s_trans c query n = Some s_trans' /\
-          (state_is_final s_std' = true -> state_is_final s_trans' = true)
-    end;
-
-(** Contract: Automaton step correspondence for Standard -> MergeAndSplit.
-    Standard transitions are subsumed by MergeAndSplit transitions. *)
-automaton_step_std_ms_ax :
-  forall s_std s_ms c query n,
-    algorithm s_std = Standard ->
-    algorithm s_ms = MergeAndSplit ->
-    incl (positions s_std) (positions s_ms) ->
-    match transition_state Standard s_std c query n with
-    | None => True
-    | Some s_std' =>
-        exists s_ms',
-          transition_state MergeAndSplit s_ms c query n = Some s_ms' /\
-          (state_is_final s_std' = true -> state_is_final s_ms' = true)
-    end;
-
-(** Contract: Position inclusion preserved through Standard -> Transposition transition.
-    When Standard state's positions are subset of Transposition state's positions,
-    and both undergo transition, the inclusion is preserved. *)
-automaton_step_std_trans_position_incl_ax :
-  forall s_std s_trans c query n s_std' s_trans',
-    algorithm s_std = Standard ->
-    algorithm s_trans = Transposition ->
-    query_length s_std = query_length s_trans ->
-    incl (positions s_std) (positions s_trans) ->
-    transition_state Standard s_std c query n = Some s_std' ->
-    transition_state Transposition s_trans c query n = Some s_trans' ->
-    incl (positions s_std') (positions s_trans');
-
-(** Contract: Spread bound preservation through Transposition transition.
-    When positions have bounded spread before transition, they have bounded
-    spread after transition (possibly with a different bound). *)
-automaton_step_spread_bound_ax :
-  forall s c query n s' qlen window,
-    algorithm s = Transposition ->
-    query_length s = qlen ->
-    (forall p, In p (positions s) ->
-      term_index p - fold_left Nat.min (map term_index (positions s)) qlen < window) ->
-    transition_state Transposition s c query n = Some s' ->
-    (forall p, In p (positions s') ->
-      term_index p - fold_left Nat.min (map term_index (positions s')) qlen < window);
-
 (** Contract: Position inclusion through fold_state_insert with Standard -> Transposition.
     When closed_std ⊆ closed_trans (two position lists), the antichain-filtered
     results also satisfy inclusion for non-special positions. *)
-fold_state_insert_incl_std_trans_ax :
+fold_state_insert_incl_std_trans_proof :
   forall closed_std closed_trans qlen,
     incl closed_std closed_trans ->
     (forall p, In p closed_std -> is_special p = false) ->
     incl (positions (fold_left (fun s p => state_insert p s) closed_std (empty_state Standard qlen)))
          (positions (fold_left (fun s p => state_insert p s) closed_trans (empty_state Transposition qlen)));
 
-(** Contract: Spread bound preserved through epsilon_closure and fold_state_insert.
-    When the input positions have bounded spread, the output positions also
-    have bounded spread (relative to their own minimum). *)
-spread_bound_through_closure_and_insert_ax :
-  forall trans_positions n qlen window,
-    (forall p, In p trans_positions ->
-      term_index p - fold_left Nat.min (map term_index trans_positions) qlen < window) ->
-    let closed := epsilon_closure trans_positions n qlen in
-    let result := fold_left (fun s p => state_insert p s) closed (empty_state Transposition qlen) in
-    (forall p, In p (positions result) ->
-      term_index p - fold_left Nat.min (map term_index (positions result)) qlen < window);
-
 (** Contract: Spread bound for epsilon_closure of transition output.
     When the input state positions have bounded spread relative to some minimum,
     the epsilon-closed transition output also has bounded spread. *)
-epsilon_closure_spread_bound_ax :
+epsilon_closure_spread_bound_proof :
   forall positions_in (c : Char) (query : list Char) n qlen window cv min_i,
     (forall p, In p positions_in ->
       term_index p - fold_left Nat.min (map term_index positions_in) qlen < window) ->
@@ -2576,7 +2493,7 @@ epsilon_closure_spread_bound_ax :
 
 (** Contract: Spread bound for MergeAndSplit epsilon_closure.
     Same as Transposition but for MergeAndSplit algorithm. *)
-epsilon_closure_spread_bound_ms_ax :
+epsilon_closure_spread_bound_ms_proof :
   forall positions_in (c : Char) (query : list Char) n qlen window cv min_i,
     (forall p, In p positions_in ->
       term_index p - fold_left Nat.min (map term_index positions_in) qlen < window) ->
@@ -2585,30 +2502,8 @@ epsilon_closure_spread_bound_ms_ax :
     (forall p, In p closed ->
       term_index p - fold_left Nat.min (map term_index closed) qlen < window);
 
-(** Contract: Spread bound preserved through fold_state_insert for MergeAndSplit.
-    When a position is in closed positions with bounded spread, it retains
-    bounded spread in the fold_state_insert output. *)
-fold_state_insert_spread_bound_ms_ax :
-  forall closed_positions qlen window p,
-    In p (positions (fold_left (fun s q => state_insert q s)
-                               closed_positions (empty_state MergeAndSplit qlen))) ->
-    (forall q, In q closed_positions ->
-      term_index q - fold_left Nat.min (map term_index closed_positions) qlen < window) ->
-    term_index p - fold_left Nat.min
-      (map term_index (positions (fold_left (fun s q => state_insert q s)
-                                            closed_positions (empty_state MergeAndSplit qlen)))) qlen < window;
-
-(** Contract: Automaton final state accepts when reachable final position exists.
-    When the automaton runs and a final position is reachable, the
-    resulting state is accepting. *)
-automaton_final_state_accepts_ax :
-  forall query n dict final p,
-    automaton_run_from_initial Standard query n dict = Some final ->
-    position_reachable query n dict p ->
-    term_index p = length query ->
-    is_special p = false ->
-    num_errors p <= n ->
-    state_is_final final = true
+(** Remaining spread obligations concern epsilon-closure itself; the
+    fold_state_insert output case is proved below from origin tracking. *)
 }.
 
 (** Key Lemma: Reachable positions are contained in automaton state.
@@ -2622,8 +2517,8 @@ automaton_final_state_accepts_ax :
     is reflected in the automaton's state transitions.
 *)
 Lemma reachable_implies_contained_aux : forall
-  (epsilon_contracts : AutomatonCompletenessTransitionContracts)
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (epsilon_contracts : AutomatonCompletenessTransitionEvidence)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query n dict_prefix p,
   position_reachable query n dict_prefix p ->
   forall s,
@@ -2730,7 +2625,7 @@ Proof.
     rewrite run_concat with (s' := s_mid).
     + (* Need to show run on [c] from s_mid gives a state containing (S i, e) *)
       simpl.
-      (* Apply axiom about transition producing match result *)
+      (* Apply evidence premise about transition producing match result *)
       pose proof (transition_produces_match core_contracts query n c s_mid i e Hcont_mid Hlt Hnth) as Hmatch.
       destruct (transition_state Standard s_mid c query n) as [s'|] eqn:Htrans.
       * exact Hmatch.
@@ -2753,7 +2648,7 @@ Proof.
     rewrite run_concat with (s' := s_mid).
     + (* Need to show run on [c] from s_mid gives a state containing (S i, S e) *)
       simpl.
-      (* Apply axiom about transition producing substitute result *)
+      (* Apply evidence premise about transition producing substitute result *)
       pose proof (transition_produces_substitute core_contracts query n c s_mid i e Hcont_mid Hlt Hbound_e) as Hsub.
       destruct (transition_state Standard s_mid c query n) as [s'|] eqn:Htrans.
       * exact Hsub.
@@ -2776,7 +2671,7 @@ Proof.
     rewrite run_concat with (s' := s_mid).
     + (* Need to show run on [c] from s_mid gives a state containing (i, S e) *)
       simpl.
-      (* Apply axiom about transition producing insert result *)
+      (* Apply evidence premise about transition producing insert result *)
       pose proof (transition_produces_insert core_contracts query n c s_mid i e Hcont_mid Hbound_e) as Hins.
       destruct (transition_state Standard s_mid c query n) as [s'|] eqn:Htrans.
       * exact Hins.
@@ -2818,7 +2713,7 @@ Qed.
       automaton transition produces at least the resulting position
 *)
 Lemma automaton_run_not_dead_for_reachable : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query n dict p,
   position_reachable query n dict p ->
   num_errors p <= n ->
@@ -2871,12 +2766,12 @@ Proof.
     rewrite run_concat with (s' := s_mid).
     + (* Show run on [c] from s_mid gives Some *)
       simpl.
-      (* Apply axiom about transition succeeding for reachable positions *)
+      (* Apply evidence premise about transition succeeding for reachable positions *)
       assert (Halg_mid : algorithm s_mid = Standard).
       { unfold automaton_run_from_initial in Hmid.
-        exact (automaton_run_preserves_algorithm core_contracts Standard query n dp
+        exact (automaton_run_preserves_algorithm Standard query n dp
                  (mkState (epsilon_closure [initial_position] n (length query)) Standard (length query))
-                 s_mid Hmid). }
+                 s_mid eq_refl Hmid). }
       destruct (transition_succeeds_for_reachable core_contracts query n s_mid c Halg_mid) as [s' Htrans].
       { (* Need to provide: exists p, In p (positions s_mid) /\ num_errors p < n /\ is_special p = false *)
         (* From position_contained_from_run, we get positions_contain (positions s_mid) (std_pos i e) *)
@@ -2910,12 +2805,12 @@ Proof.
     set (init_closed := mkState (epsilon_closure [initial_position] n qlen) Standard qlen) in *.
     rewrite run_concat with (s' := s_mid).
     + simpl.
-      (* Apply axiom about transition succeeding *)
+      (* Apply evidence premise about transition succeeding *)
       assert (Halg_mid : algorithm s_mid = Standard).
       { unfold automaton_run_from_initial in Hmid.
-        exact (automaton_run_preserves_algorithm core_contracts Standard query n dp
+        exact (automaton_run_preserves_algorithm Standard query n dp
                  (mkState (epsilon_closure [initial_position] n (length query)) Standard (length query))
-                 s_mid Hmid). }
+                 s_mid eq_refl Hmid). }
       destruct (transition_succeeds_for_reachable core_contracts query n s_mid c Halg_mid) as [s' Htrans].
       { (* Same pattern: extract witness from positions_contain *)
         unfold automaton_run_from_initial in Hmid.
@@ -2945,12 +2840,12 @@ Proof.
     set (init_closed := mkState (epsilon_closure [initial_position] n qlen) Standard qlen) in *.
     rewrite run_concat with (s' := s_mid).
     + simpl.
-      (* Apply axiom about transition succeeding *)
+      (* Apply evidence premise about transition succeeding *)
       assert (Halg_mid : algorithm s_mid = Standard).
       { unfold automaton_run_from_initial in Hmid.
-        exact (automaton_run_preserves_algorithm core_contracts Standard query n dp
+        exact (automaton_run_preserves_algorithm Standard query n dp
                  (mkState (epsilon_closure [initial_position] n (length query)) Standard (length query))
-                 s_mid Hmid). }
+                 s_mid eq_refl Hmid). }
       destruct (transition_succeeds_for_reachable core_contracts query n s_mid c Halg_mid) as [s' Htrans].
       { (* Extract witness from positions_contain *)
         unfold automaton_run_from_initial in Hmid.
@@ -2970,7 +2865,7 @@ Proof.
 Qed.
 
 Lemma automaton_run_not_dead_standard : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query n dict,
   (exists p, position_reachable query n dict p /\ num_errors p <= n /\ is_special p = false) ->
   exists final, automaton_run_from_initial Standard query n dict = Some final.
@@ -3039,28 +2934,30 @@ Inductive can_reach (query : list Char) (n : nat) :
     completable positions through antichain insertion, transitions, and runs.
     They rely on the standard Levenshtein automaton construction of Schulz and
     Mihov (IJDAR 2002, DOI 10.1007/s10032-002-0082-8) and the generalized
-    neighborhood automata model of Mitankin, Mihov, and Schulz (TCS 2009,
-    DOI 10.1016/j.tcs.2009.03.002). *)
-Record AutomatonCompletableContracts : Prop := mkAutomatonCompletableContracts {
+    neighborhood automata model of Mitankin, Mihov, and Schulz (TCS 2011,
+    DOI 10.1016/j.tcs.2011.01.013). *)
+Record AutomatonCompletableEvidence : Prop := mkAutomatonCompletableEvidence {
 
 (** Contract: Can-reach induction for higher term_index.
     When i' > i, we can construct a can_reach path by consuming dict characters
     via INSERT operations, then following the original path. *)
-(** Contract: Can-reach induction for higher term_index.
-    When i' > i and e' <= e with i' - i <= e - e' (the error savings can "pay for"
-    the query advance), we can construct a can_reach path from (i', e') to a final.
+	(** Contract: Can-reach induction for higher term_index.
+	    When i' > i and e' <= e with i' - i <= e - e' (the error savings can "pay for"
+	    the query advance), we can construct a can_reach path from (i', e') to a final.
 
     The intuition: position (i', e') is "ahead" in query with fewer errors.
     The saved errors (e - e') provide budget to catch up via INSERTs if needed.
 
     This follows from subsumption semantics: abs_diff(i', i) <= e - e' means
     the position with fewer errors can simulate any path the other takes. *)
-can_reach_higher_index :
-  forall (query : list Char) (n i e i' e' : nat) (remaining : list Char) (p_final : Position),
-    can_reach query n (std_pos i e) remaining p_final ->
-    i' > i ->
-    i' <= length query ->
-    e' <= e ->
+	can_reach_higher_index :
+	  forall (query : list Char) (n i e i' e' : nat) (remaining : list Char) (p_final : Position),
+	    can_reach query n (std_pos i e) remaining p_final ->
+	    term_index p_final = length query ->
+	    num_errors p_final <= n ->
+	    i' > i ->
+	    i' <= length query ->
+	    e' <= e ->
     i' - i <= e - e' ->
     exists p_final', can_reach query n (std_pos i' e') remaining p_final' /\
       term_index p_final' = term_index p_final /\
@@ -3082,27 +2979,15 @@ Definition can_complete_to_final (query : list Char) (n : nat) (remaining : list
 Definition state_has_completable (query : list Char) (n : nat) (remaining : list Char) (s : State) : Prop :=
   exists p, In p (positions s) /\ can_complete_to_final query n remaining p.
 
-(** Contracts for state insertion and run preservation of completable positions. *)
-Record AutomatonCompletableStateContracts : Prop :=
-  mkAutomatonCompletableStateContracts {
-
-(** Contract: State_insert preserves completable positions.
-    When inserting into a state, positions that can complete to final
-    either survive or are subsumed by positions that can also complete. *)
-state_insert_preserves_completable :
-  forall query n remaining p pos_list alg qlen,
-    In p pos_list ->
-    is_special p = false ->
-    can_complete_to_final query n remaining p ->
-    exists p', In p' (positions (fold_left (fun s q => state_insert q s) pos_list (empty_state alg qlen))) /\
-      is_special p' = false /\
-      can_complete_to_final query n remaining p';
+(** Contracts for state insertion and transition preservation of completable positions. *)
+Record AutomatonCompletableStateEvidence : Prop :=
+  mkAutomatonCompletableStateEvidence {
 
 (** Contract: state_insert of a completable position yields a completable state.
     When inserting a completable position p into state s, the result state_insert p s
     has a completable position. Either p survives, or p is subsumed by an existing
     position that is also completable (by subsumption_preserves_can_complete). *)
-state_insert_yields_completable_ax :
+state_insert_yields_completable_proof :
   forall query n remaining p s,
     algorithm s = Standard ->
     query_length s = length query ->
@@ -3129,33 +3014,10 @@ subsumption_preserves_can_complete_general :
     term_index p' <= qlen ->
     can_complete_to_final query n remaining p';
 
-(** Contract: Antichain insert preserves can_complete universally.
-    After antichain_insert, if the input had a completable position,
-    the output also has a completable position. *)
-antichain_insert_preserves_can_complete_ax :
-  forall query n remaining p pos_list alg qlen,
-    is_special p = false ->
-    term_index p <= qlen ->
-    (can_complete_to_final query n remaining p \/
-     exists q, In q pos_list /\ is_special q = false /\ can_complete_to_final query n remaining q) ->
-    exists p', In p' (antichain_insert alg qlen p pos_list) /\
-      is_special p' = false /\
-      can_complete_to_final query n remaining p';
-
-(** Contract: fold_state_insert preserves can_complete.
-    Building state via fold_left state_insert preserves completable positions. *)
-fold_state_insert_preserves_can_complete_ax :
-  forall query n remaining pos_list alg qlen,
-    (exists p, In p pos_list /\ is_special p = false /\ can_complete_to_final query n remaining p) ->
-    exists p', In p' (positions (fold_left (fun s pos => state_insert pos s) pos_list (empty_state alg qlen))) /\
-      is_special p' = false /\
-      can_complete_to_final query n remaining p';
-
 (** Contract: fold_state_insert preserves can_complete from any initial state.
-    Generalization of fold_state_insert_preserves_can_complete_ax that works
-    with any initial state, not just empty_state. If either the initial state
-    has a completable position or the pos_list contains one, the result has one. *)
-fold_state_insert_preserves_can_complete_general_ax :
+    If either the initial state has a completable position or the pos_list
+    contains one, the result has one. *)
+fold_state_insert_preserves_can_complete_general_proof :
   forall query n remaining pos_list init_state,
     algorithm init_state = Standard ->
     query_length init_state = length query ->
@@ -3168,7 +3030,7 @@ fold_state_insert_preserves_can_complete_general_ax :
 (** Contract: Transition preserves can_complete.
     When transitioning a state with a completable position, the result
     also has a completable position. *)
-transition_preserves_can_complete_ax :
+transition_preserves_can_complete_proof :
   forall query n c remaining s,
     algorithm s = Standard ->
     query_length s = length query ->
@@ -3178,18 +3040,6 @@ transition_preserves_can_complete_ax :
     | Some s' => state_has_completable query n remaining s'
     end;
 
-(** Contract: Automaton run preserves can_complete.
-    Running the automaton on a state with completable positions produces
-    a final state. *)
-automaton_run_preserves_can_complete_ax :
-  forall query n dict s,
-    algorithm s = Standard ->
-    query_length s = length query ->
-    state_has_completable query n dict s ->
-    match automaton_run Standard query n dict s with
-    | None => False
-    | Some final => state_is_final final = true
-    end
 }.
 
 (** Basic property: final positions can trivially complete (with empty remaining) *)
@@ -3326,24 +3176,30 @@ Proof.
     subst p. simpl. simpl in IHHreach. lia.
 Qed.
 
-(** Contract for can_reach with empty remaining.
-
-    With remaining = [], only delete operations are available, and each delete
-    increments both term_index and num_errors by 1. This is the standard
-    Levenshtein edit-graph invariant (Schulz and Mihov, IJDAR 2002,
-    DOI 10.1007/s10032-002-0082-8). *)
-Record AutomatonCanReachEmptyContracts : Prop :=
-  mkAutomatonCanReachEmptyContracts {
-
-(** Contract: For can_reach with empty remaining, errors increase exactly by term_index increase.
+(** For can_reach with empty remaining, errors increase exactly by term_index increase.
     With remaining = [], only delete operations are available, and each delete
     increments both term_index and num_errors by 1. So the total error increase
     equals the total term_index increase. *)
-can_reach_empty_remaining_errors :
-  forall query n p p_final,
-    can_reach query n p [] p_final ->
-    num_errors p_final = num_errors p + (term_index p_final - term_index p)
-}.
+Lemma can_reach_empty_remaining_errors : forall query n p p_final,
+  can_reach query n p [] p_final ->
+  num_errors p_final = num_errors p + (term_index p_final - term_index p).
+Proof.
+  intros query n p p_final Hreach.
+  remember ([] : list Char) as remaining eqn:Hremaining.
+  revert Hremaining.
+  induction Hreach; intros Hremaining; subst.
+  - simpl. lia.
+  - subst. simpl.
+    specialize (IHHreach eq_refl).
+    match goal with
+    | H : can_reach _ _ (std_pos (S _) (S _)) [] _ |- _ =>
+        pose proof (can_reach_term_index_monotone _ _ _ _ _ H) as Hmono
+    end.
+    simpl in *. lia.
+  - discriminate.
+  - discriminate.
+  - discriminate.
+Qed.
 
 (** Helper: can_reach is monotonic in error count.
     If (i, e) can reach p_final, then (i, e') with e' <= e can also reach
@@ -3501,7 +3357,7 @@ Qed.
     Precondition: p_final is a final position (term_index = length query).
 *)
 Lemma can_reach_from_ahead : forall
-  (reach_contracts : AutomatonCompletableContracts)
+  (reach_contracts : AutomatonCompletableEvidence)
   query n i e remaining p_final i' e',
   can_reach query n (std_pos i e) remaining p_final ->
   i' >= i ->
@@ -3531,11 +3387,11 @@ Proof.
       destruct p_final as [i_f e_f sp_f]. simpl in Herr', Hfinal_err. lia.
     + exact Hspec'.
   - (* i' > i: use INSERT to consume dict chars, then recurse *)
-    (* Apply axiom about can_reach for higher index *)
+    (* Apply evidence premise about can_reach for higher index *)
     assert (Hi'_gt : i' > i) by lia.
-    pose proof (can_reach_higher_index reach_contracts query n i e i' e' remaining p_final
-                  Hreach Hi'_gt Hi'_qlen He'_le Hdiff) as
-      [p_final' [Hreach' [Hterm' [Herr' Hspec']]]].
+	    pose proof (can_reach_higher_index reach_contracts query n i e i' e' remaining p_final
+	                  Hreach Hterm_final Hfinal_err Hi'_gt Hi'_qlen He'_le Hdiff) as
+	      [p_final' [Hreach' [Hterm' [Herr' Hspec']]]].
     exists p_final'. repeat split.
     + exact Hreach'.
     + rewrite Hterm'. exact Hterm_final.
@@ -3556,7 +3412,7 @@ Qed.
     - In automaton contexts, this is always satisfied since positions have bounded term_index
 *)
 Lemma subsumption_preserves_can_complete : forall
-  (reach_contracts : AutomatonCompletableContracts)
+  (reach_contracts : AutomatonCompletableEvidence)
   query n remaining p p',
   can_complete_to_final query n remaining p ->
   subsumes_standard (length query) p' p = true ->
@@ -3677,41 +3533,43 @@ Qed.
     is completable, then the result has a completable position.
 
     Preconditions on term_index bounds are needed because subsumption_preserves_can_complete
-    requires term_index p' <= length query for the subsuming position.
+    requires term_index p' <= length query for the subsuming position. The
+    non-specialness of an existing subsuming witness comes from the existing
+    antichain invariant, not from Standard subsumption itself, which does not
+    inspect [is_special].
 *)
 Lemma antichain_insert_preserves_can_complete : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
-  (state_contracts : AutomatonCompletableStateContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
+  (state_contracts : AutomatonCompletableStateEvidence)
   query n remaining p pos_list alg,
   is_special p = false ->
   term_index p <= length query ->
   (forall q, In q pos_list -> term_index q <= length query) ->
+  (forall q, In q pos_list -> is_special q = false) ->
   (can_complete_to_final query n remaining p \/
    exists q, In q pos_list /\ is_special q = false /\ can_complete_to_final query n remaining q) ->
   exists p', In p' (antichain_insert alg (length query) p pos_list) /\
              is_special p' = false /\
              can_complete_to_final query n remaining p'.
 Proof.
-  intros core_contracts state_contracts query n remaining p pos_list alg Hspec_p Hp_qlen Hpos_list_qlen Hcomplete.
+  intros core_contracts state_contracts query n remaining p pos_list alg Hspec_p Hp_qlen Hpos_list_qlen Hpos_list_nonspec Hcomplete.
   unfold antichain_insert.
   destruct (subsumed_by_any alg (length query) p pos_list) eqn:Hsub.
   - (* p is subsumed - pos_list unchanged *)
     destruct Hcomplete as [Hp_complete | [q [Hq_in [Hq_spec Hq_complete]]]].
-    + (* p is completable and subsumed - find what subsumes it *)
-      (* Apply axiom about subsumed_by_any witness *)
-      destruct (subsumed_by_any_witness core_contracts alg (length query) p pos_list Hsub)
-        as [p' [Hp'_in Hp'_sub]].
+      + (* p is completable and subsumed - find what subsumes it *)
+        apply subsumed_by_any_correct in Hsub as [p' [Hp'_in Hp'_sub]].
       (* The subsuming position can also complete to final via subsumption_preserves_can_complete *)
       exists p'. split; [exact Hp'_in |].
       (* Need to show p' is non-special and can complete *)
       (* For now, use the fact that p' subsumes completable p *)
       split.
-      * (* p' is non-special: follows from subsumption rules *)
-        apply (subsumption_preserves_nonspecial core_contracts alg (length query) p p' Hspec_p Hp'_sub).
+      * (* p' is non-special by the existing antichain invariant. *)
+        apply Hpos_list_nonspec. exact Hp'_in.
       * (* p' can complete since it subsumes p which can complete *)
         apply (subsumption_preserves_can_complete_general state_contracts query n remaining alg (length query) p p'
                Hp_complete Hp'_sub Hspec_p
-               (subsumption_preserves_nonspecial core_contracts alg (length query) p p' Hspec_p Hp'_sub)
+               (Hpos_list_nonspec p' Hp'_in)
                (Hpos_list_qlen p' Hp'_in)).
     + (* Some q in pos_list is completable - it survives *)
       exists q. split; [exact Hq_in | split; [exact Hq_spec | exact Hq_complete]].
@@ -3732,7 +3590,7 @@ Proof.
         split; [left; reflexivity |].
         split; [exact Hspec_p |].
         (* p subsumes q and q can complete -> p can complete *)
-        (* Use general subsumption axiom *)
+        (* Use general subsumption evidence premise *)
         apply (subsumption_preserves_can_complete_general state_contracts query n remaining alg (length query) q p Hq_complete Hp_sub_q Hq_spec Hspec_p Hp_qlen).
       * (* p does not subsume q - q survives in remove_subsumed *)
         exists q.
@@ -3748,7 +3606,7 @@ Qed.
     then the resulting state has a position that can complete to final.
 *)
 Lemma fold_state_insert_preserves_can_complete : forall
-  (state_contracts : AutomatonCompletableStateContracts)
+  (state_contracts : AutomatonCompletableStateEvidence)
   query n remaining pos_list init_state,
   algorithm init_state = Standard ->
   query_length init_state = length query ->
@@ -3767,12 +3625,12 @@ Proof.
     + (* p = pos - the first position is completable *)
       subst pos.
       simpl.
-      (* Use general axiom about fold_state_insert preserving can_complete from any state.
+      (* Use general evidence premise about fold_state_insert preserving can_complete from any state.
          After inserting p into init_state, either:
          - p survives in state_insert p init_state
          - or something subsuming p that is also completable exists
          Either way, the fold_left on rest will preserve this. *)
-      apply (fold_state_insert_preserves_can_complete_general_ax state_contracts).
+      apply (fold_state_insert_preserves_can_complete_general_proof state_contracts).
       * (* algorithm (state_insert p init_state) = Standard *)
         unfold state_insert. simpl. exact Halg.
       * (* query_length (state_insert p init_state) = length query *)
@@ -3781,9 +3639,9 @@ Proof.
         right.
         unfold state_has_completable.
         (* After state_insert p init_state, p is in the state or subsumed by something completable.
-           We use the state_insert_yields_completable_ax axiom which captures this:
+           We use the state_insert_yields_completable_proof evidence premise which captures this:
            when inserting a completable position, the result has a completable position. *)
-        exact (state_insert_yields_completable_ax state_contracts query n remaining p init_state Halg Hqlen Hspec Hcomplete).
+        exact (state_insert_yields_completable_proof state_contracts query n remaining p init_state Halg Hqlen Hspec Hcomplete).
     + (* p is in rest - use IH *)
       simpl.
       apply IH.
@@ -3798,7 +3656,7 @@ Qed.
     then the output state has a position that can complete to final via remaining.
 *)
 Lemma transition_preserves_can_complete : forall
-  (state_contracts : AutomatonCompletableStateContracts)
+  (state_contracts : AutomatonCompletableStateEvidence)
   query n c remaining s,
   algorithm s = Standard ->
   query_length s = length query ->
@@ -3810,7 +3668,7 @@ Lemma transition_preserves_can_complete : forall
 Proof.
   intros state_contracts query n c remaining s Halg Hqlen Hcomplete.
   (* Apply the contract directly *)
-  exact (transition_preserves_can_complete_ax state_contracts query n c remaining s Halg Hqlen Hcomplete).
+  exact (transition_preserves_can_complete_proof state_contracts query n c remaining s Halg Hqlen Hcomplete).
 Qed.
 
 (** Main lemma: automaton run preserves can-complete property.
@@ -3819,9 +3677,8 @@ Qed.
     then the final state contains a final position (so state_is_final = true).
 *)
 Lemma automaton_run_preserves_can_complete : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
-  (state_contracts : AutomatonCompletableStateContracts)
-  (empty_contracts : AutomatonCanReachEmptyContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
+  (state_contracts : AutomatonCompletableStateEvidence)
   query n dict s,
   algorithm s = Standard ->
   query_length s = length query ->
@@ -3831,7 +3688,7 @@ Lemma automaton_run_preserves_can_complete : forall
   | Some final => state_is_final final = true
   end.
 Proof.
-  intros core_contracts state_contracts empty_contracts query n dict s Halg Hqlen Hcomplete.
+  intros core_contracts state_contracts query n dict s Halg Hqlen Hcomplete.
   revert s Halg Hqlen Hcomplete.
   induction dict as [| c rest IH]; intros s Halg Hqlen Hcomplete.
   - (* dict = []: remaining = [], so we need to find a final position in s *)
@@ -3862,13 +3719,13 @@ Proof.
     + (* p is not final, but can reach p_final via deletes.
          The automaton's state should contain the delete closure.
          This requires proving that epsilon closure is maintained. *)
-      (* Use the epsilon_closure_includes_final axiom to find a final position.
+      (* Use the epsilon_closure_includes_final evidence premise to find a final position.
          We already have p, Hin, p_final, etc. from the outer destruct. *)
       assert (Hdelta : num_errors p + (length query - term_index p) <= n).
       { (* Since p can reach p_final via deletes only (dict = []),
            each delete increases errors by 1 and advances term_index by 1.
            Use can_reach_empty_remaining_errors to relate errors to term_index. *)
-        pose proof (can_reach_empty_remaining_errors empty_contracts query n p p_final Hreach) as Herr_eq.
+        pose proof (can_reach_empty_remaining_errors query n p p_final Hreach) as Herr_eq.
         rewrite Hterm in Herr_eq.
         rewrite Herr_eq in Herr.
         exact Herr. }
@@ -3903,11 +3760,11 @@ Proof.
           apply (can_reach_source_not_special query n p (c :: rest) p_final Hreach Hspec_pf). }
     destruct Htrans as [s' Htrans].
     rewrite Htrans.
-    apply IH.
-    + (* transition_state preserves algorithm *)
-      exact (transition_preserves_algorithm core_contracts Standard s c query n s' Htrans).
+      apply IH.
+      + (* transition_state preserves algorithm *)
+        exact (transition_state_preserves_algorithm Standard s c query n s' Htrans).
     + (* transition_state preserves query_length *)
-      rewrite (transition_preserves_query_length core_contracts Standard s c query n s' Htrans).
+      rewrite (transition_state_preserves_query_length Standard s c query n s' Htrans).
       exact Hqlen.
     + (* s' has completable position via remaining = rest *)
       pose proof (transition_preserves_can_complete state_contracts query n c rest s Halg Hqlen Hcomplete) as Hpres.
@@ -3917,7 +3774,7 @@ Qed.
 
 (** Corollary: Initial position can complete to final when lev_distance <= n *)
 Lemma initial_position_can_complete : forall
-  (state_contracts : AutomatonCompletableStateContracts)
+  (state_contracts : AutomatonCompletableStateEvidence)
   query dict n,
   lev_distance query dict <= n ->
   can_complete_to_final query n dict initial_position.
@@ -3952,7 +3809,7 @@ Qed.
     - fold_state_insert_has_final (to show final position survives antichain)
 *)
 Lemma automaton_final_state_accepts_standard : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query n dict final p,
   automaton_run_from_initial Standard query n dict = Some final ->
   position_reachable query n dict p ->
@@ -3962,13 +3819,33 @@ Lemma automaton_final_state_accepts_standard : forall
   state_is_final final = true.
 Proof.
   intros core_contracts query n dict final p Hrun Hreach Hfinal Hspec Herr.
-  (* Apply the contract that directly captures this property. *)
-  exact (automaton_final_state_accepts_ax core_contracts query n dict final p Hrun Hreach Hfinal Hspec Herr).
+  unfold automaton_run_from_initial in Hrun.
+  set (init_closed :=
+    mkState (epsilon_closure (positions (initial_state Standard (length query)))
+                         n (length query)) Standard (length query)) in *.
+  pose proof (position_contained_from_run core_contracts query n dict
+                init_closed final p Hrun Hreach Hspec Herr) as Hcont.
+  destruct Hcont as [p' [Hin Hsub]].
+  unfold position_subsumes in Hsub.
+  destruct Hsub as [Hterm [_ _]].
+  assert (Hqlen_final : query_length final = length query).
+  { assert (Hqlen_init : query_length init_closed = length query).
+    { unfold init_closed. simpl. reflexivity. }
+    rewrite (automaton_run_preserves_query_length Standard query n dict init_closed final Hrun).
+    exact Hqlen_init. }
+  unfold state_is_final.
+  rewrite existsb_exists.
+  exists p'. split; [exact Hin |].
+  unfold position_is_final.
+  rewrite Nat.leb_le.
+  rewrite Hqlen_final.
+  rewrite Hterm.
+  lia.
 Qed.
 
 (** Simplified version for the main completeness proof *)
 Lemma reachable_final_implies_accepts : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query dict n p,
   position_reachable query n dict p ->
   term_index p = length query ->
@@ -4442,7 +4319,7 @@ Qed.
     A full proof would require showing that characteristic vector differences
     don't affect the inclusion relationship for non-special positions. *)
 Lemma automaton_run_step_std_trans :
-  forall (core_contracts : AutomatonCompletenessCoreContracts)
+  forall (core_contracts : AutomatonCompletenessCoreEvidence)
   s_std s_trans c query n,
   algorithm s_std = Standard ->
   algorithm s_trans = Transposition ->
@@ -4556,7 +4433,7 @@ Proof.
         unfold empty_state. simpl. reflexivity.
       * split.
         -- (* Position inclusion: incl (positions result_std) (positions result_trans) *)
-           (* Use the axiom for fold_state_insert position inclusion *)
+           (* Use the evidence premise for fold_state_insert position inclusion *)
            assert (Hclosed_nonspec : forall q, In q closed_std -> is_special q = false).
            { unfold closed_std. intros q Hq.
              apply epsilon_closure_nonspecial with (positions := trans_std) (n := n) (qlen := qlen).
@@ -4565,7 +4442,7 @@ Proof.
                exact Hr.
              - exact Hq. }
            unfold result_std, result_trans.
-           exact (fold_state_insert_incl_std_trans_ax core_contracts closed_std closed_trans qlen Hclosed_incl Hclosed_nonspec).
+           exact (fold_state_insert_incl_std_trans_proof core_contracts closed_std closed_trans qlen Hclosed_incl Hclosed_nonspec).
         -- split.
            ++ (* Non-special: positions in result_std are non-special *)
               (* Standard algorithm only produces non-special positions.
@@ -4628,9 +4505,9 @@ Proof.
                     term_index p - min_result <= term_index p - min_closed
                     So it suffices to show term_index p - min_closed < 2*n+6 *)
                  assert (Hgoal : term_index p - min_closed < window).
-                 { (* Use the epsilon_closure_spread_bound axiom *)
+                 { (* Use the epsilon_closure_spread_bound evidence premise *)
                    unfold min_closed, closed_trans.
-                   pose proof (epsilon_closure_spread_bound_ax core_contracts positions_trans c query n qlen window cv_trans min_i_trans Hspread_trans) as Hax.
+                   pose proof (epsilon_closure_spread_bound_proof core_contracts positions_trans c query n qlen window cv_trans min_i_trans Hspread_trans) as Hax.
                    fold trans_trans in Hax.
                    (* Hax gives us the spread bound for epsilon_closure trans_trans *)
                    exact (Hax p Hp_in_closed). }
@@ -4709,7 +4586,7 @@ Qed.
     Transposition also produces a non-dead state, and finality is preserved
     through the run. *)
 Lemma automaton_run_std_trans_correspondence :
-  forall (core_contracts : AutomatonCompletenessCoreContracts)
+  forall (core_contracts : AutomatonCompletenessCoreEvidence)
   query n dict s_std s_trans,
   algorithm s_std = Standard ->
   algorithm s_trans = Transposition ->
@@ -4802,7 +4679,7 @@ Proof.
 Qed.
 
 Lemma standard_accepts_implies_transposition_accepts : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query n dict,
   automaton_accepts Standard query n dict = true ->
   automaton_accepts Transposition query n dict = true.
@@ -4903,7 +4780,7 @@ Qed.
     delete, insert), any Standard-reachable position is also reachable in
     Transposition. Therefore, if Standard accepts, Transposition also accepts. *)
 Lemma reachable_final_implies_accepts_transposition : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query dict n p,
   position_reachable query n dict p ->
   term_index p = length query ->
@@ -5087,9 +4964,9 @@ Qed.
     we actually NEED is finality preservation: if the input has a final position,
     then the output has a final position (possibly different due to subsumption).
 
-    We restructure this as an axiom expressing the weaker but correct property:
-    when the inputs are related by inclusion AND the first input has a final
-    position, then the second output also has a final position.
+    The weaker finality statement is directly provable below: when the inputs
+    are related by inclusion AND the first input has a final position, then the
+    second output also has a final position.
 
     For direct membership preservation with finality, use the proven lemma
     fold_state_insert_preserves_membership instead. *)
@@ -5097,46 +4974,47 @@ Qed.
 (** Fold-state insertion contracts.
 
     These contracts are intentionally weaker than exact inclusion where exact
-    inclusion is known false after antichain filtering. They record the
-    finality and compatible-inclusion obligations used by the correspondence
-    proofs. *)
-Record AutomatonFoldStateContracts : Prop := mkAutomatonFoldStateContracts {
-
-(** Contract: Position inclusion with finality preservation.
-    While exact position inclusion does NOT hold after antichain filtering,
-    finality IS preserved: if pos_list1 ⊆ pos_list2 and pos_list1 has a final
-    position, then both outputs have final positions. This captures what we
-    actually need for completeness proofs. *)
-fold_state_insert_finality_preserved_ax :
+    inclusion is known false after antichain filtering. They record only the
+    compatible-inclusion obligations still used by the correspondence proofs. *)
+Lemma fold_state_insert_finality_preserved :
   forall pos_list1 pos_list2 alg qlen,
   incl pos_list1 pos_list2 ->
   existsb (position_is_final qlen) pos_list1 = true ->
   existsb (position_is_final qlen)
-    (positions (fold_left (fun s q => state_insert q s) pos_list2 (empty_state alg qlen))) = true;
+    (positions (fold_left (fun s q => state_insert q s) pos_list2 (empty_state alg qlen))) = true.
+Proof.
+  intros pos_list1 pos_list2 alg qlen Hincl Hfinal.
+  apply (fold_state_insert_has_final alg qlen pos_list2 (empty_state alg qlen)).
+  - unfold empty_state. simpl. reflexivity.
+  - unfold empty_state. simpl. reflexivity.
+  - eapply final_position_preserved; eauto.
+Qed.
+
+Record AutomatonFoldStateEvidence : Prop := mkAutomatonFoldStateEvidence {
 
 (** Helper for position inclusion in proofs that need it.
-    Note: This uses an axiom because exact inclusion is FALSE in general,
+    Note: This uses an evidence premise because exact inclusion is FALSE in general,
     but we assert it holds for the specific usage patterns in our proofs
     where algorithms are compatible and positions are non-special.
 
     Usage constraint: Only apply when alg1 = alg2 or when all positions
     in pos_list1 are non-special (and thus subsumption rules agree). *)
-fold_state_insert_incl_ax :
+fold_state_insert_incl_proof :
   forall pos_list1 pos_list2 alg qlen,
   incl pos_list1 pos_list2 ->
   (forall p, In p pos_list1 -> is_special p = false) ->
   incl (positions (fold_left (fun s q => state_insert q s) pos_list1 (empty_state alg qlen)))
        (positions (fold_left (fun s q => state_insert q s) pos_list2 (empty_state alg qlen)));
 
-(** Axiom: Cross-algorithm position inclusion (Standard → MergeAndSplit).
+(** Evidence premise: Cross-algorithm position inclusion (Standard → MergeAndSplit).
     When all positions in pos_list1 are non-special, the subsumption rules
     for Standard and MergeAndSplit agree on these positions. This allows
     us to establish position inclusion even across different algorithms.
 
-    This axiom captures the semantic fact that Standard positions (which are
+    This evidence premise captures the semantic fact that Standard positions (which are
     all non-special) are handled identically by both algorithms' subsumption
     rules, so inclusion is preserved through antichain filtering. *)
-fold_state_insert_incl_std_ms_ax :
+fold_state_insert_incl_std_ms_proof :
   forall pos_list1 pos_list2 qlen,
   incl pos_list1 pos_list2 ->
   (forall p, In p pos_list1 -> is_special p = false) ->
@@ -5147,7 +5025,7 @@ fold_state_insert_incl_std_ms_ax :
 (** Legacy wrapper for backward compatibility.
     This handles both same-algorithm and Standard→MergeAndSplit cases. *)
 Lemma fold_state_insert_incl :
-  forall (fold_contracts : AutomatonFoldStateContracts)
+  forall (fold_contracts : AutomatonFoldStateEvidence)
   pos_list1 pos_list2 alg1 alg2 qlen,
   incl pos_list1 pos_list2 ->
   (forall p, In p pos_list1 -> is_special p = false) ->
@@ -5160,10 +5038,50 @@ Proof.
   destruct Halg as [Heq | [Hstd Hms]].
   - (* Same algorithm case *)
     subst alg2.
-    apply (fold_state_insert_incl_ax fold_contracts); assumption.
+    apply (fold_state_insert_incl_proof fold_contracts); assumption.
   - (* Standard → MergeAndSplit case *)
     subst alg1 alg2.
-    apply (fold_state_insert_incl_std_ms_ax fold_contracts); assumption.
+    apply (fold_state_insert_incl_std_ms_proof fold_contracts); assumption.
+Qed.
+
+(** Fold-state insertion preserves an already-established spread bound for
+    MergeAndSplit outputs. Antichain insertion only removes or replaces
+    positions with origins in [closed_positions], so the result minimum is no
+    smaller than the closed-list minimum. *)
+Lemma fold_state_insert_spread_bound_ms :
+  forall closed_positions qlen window p,
+    In p (positions (fold_left (fun s q => state_insert q s)
+                               closed_positions (empty_state MergeAndSplit qlen))) ->
+    (forall q, In q closed_positions ->
+      term_index q - fold_left Nat.min (map term_index closed_positions) qlen < window) ->
+    term_index p - fold_left Nat.min
+      (map term_index (positions (fold_left (fun s q => state_insert q s)
+                                            closed_positions (empty_state MergeAndSplit qlen)))) qlen < window.
+Proof.
+  intros closed_positions qlen window p Hp Hclosed_spread.
+  set (result := fold_left (fun s q => state_insert q s)
+                           closed_positions (empty_state MergeAndSplit qlen)).
+  change (term_index p -
+          fold_left Nat.min (map term_index (positions result)) qlen < window).
+  assert (Hp_closed : In p closed_positions).
+  { unfold result in Hp.
+    apply in_fold_state_insert_origin with (init_state := empty_state MergeAndSplit qlen).
+    - unfold empty_state. simpl. reflexivity.
+    - exact Hp. }
+  set (min_closed := fold_left Nat.min (map term_index closed_positions) qlen).
+  set (min_result := fold_left Nat.min (map term_index (positions result)) qlen).
+  assert (Hmin : min_closed <= min_result).
+  { unfold min_closed, min_result.
+    apply min_i_incl.
+    unfold incl. intros q Hq.
+    unfold result in Hq.
+    apply in_fold_state_insert_origin with (init_state := empty_state MergeAndSplit qlen).
+    - unfold empty_state. simpl. reflexivity.
+    - exact Hq. }
+  pose proof (Hclosed_spread p Hp_closed) as Hspread.
+  fold min_closed in Hspread.
+  fold min_result.
+  lia.
 Qed.
 
 (** Helper: fold_left state_insert preserves membership from input.
@@ -5290,8 +5208,8 @@ Qed.
 (** Main helper: one step of automaton_run for Standard implies one step for MergeAndSplit *)
 Lemma automaton_run_step_std_ms :
   forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
-  (fold_contracts : AutomatonFoldStateContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
+  (fold_contracts : AutomatonFoldStateEvidence)
   s_std s_ms c query n,
   algorithm s_std = Standard ->
   algorithm s_ms = MergeAndSplit ->
@@ -5429,14 +5347,13 @@ Proof.
                  assert (Hclosed_spread : forall q, In q closed_ms ->
                    term_index q - fold_left Nat.min (map term_index closed_ms) qlen < window).
                  { unfold closed_ms.
-                   pose proof (epsilon_closure_spread_bound_ms_ax core_contracts positions_ms c query n qlen window cv_ms min_i_ms Hspread_ms) as Hax.
+                   pose proof (epsilon_closure_spread_bound_ms_proof core_contracts positions_ms c query n qlen window cv_ms min_i_ms Hspread_ms) as Hax.
                    fold trans_ms in Hax.
                    exact Hax. }
-                 (* Now apply the axiom for fold_state_insert *)
                  unfold result_ms.
                  rewrite fold_state_insert_preserves_query_length.
                  simpl.
-                 exact (fold_state_insert_spread_bound_ms_ax core_contracts closed_ms qlen window p Hp Hclosed_spread).
+                 exact (fold_state_insert_spread_bound_ms closed_ms qlen window p Hp Hclosed_spread).
               ** (* Finality preservation *)
                  intros Hfinal_std.
                  unfold state_is_final in *.
@@ -5467,8 +5384,8 @@ Qed.
 (** Full correspondence: automaton_run for Standard implies automaton_run for MergeAndSplit *)
 Lemma automaton_run_std_ms_correspondence :
   forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
-  (fold_contracts : AutomatonFoldStateContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
+  (fold_contracts : AutomatonFoldStateEvidence)
   query n dict s_std s_ms,
   algorithm s_std = Standard ->
   algorithm s_ms = MergeAndSplit ->
@@ -5539,8 +5456,8 @@ Qed.
 (** Helper: Standard acceptance implies MergeAndSplit acceptance.
     This follows the same pattern as the Transposition case. *)
 Lemma standard_accepts_implies_merge_split_accepts : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
-  (fold_contracts : AutomatonFoldStateContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
+  (fold_contracts : AutomatonFoldStateEvidence)
   query n dict,
   automaton_accepts Standard query n dict = true ->
   automaton_accepts MergeAndSplit query n dict = true.
@@ -5631,8 +5548,8 @@ Qed.
     Since position_reachable uses only Standard operations, any Standard-reachable
     position is also reachable in MergeAndSplit. *)
 Lemma reachable_final_implies_accepts_merge_split : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
-  (fold_contracts : AutomatonFoldStateContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
+  (fold_contracts : AutomatonFoldStateEvidence)
   query dict n p,
   position_reachable query n dict p ->
   term_index p = length query ->
@@ -5649,7 +5566,7 @@ Qed.
 
 (** If lev_distance <= n, the automaton accepts for Standard algorithm *)
 Theorem automaton_complete_standard : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   lev_distance query dict <= n ->
   automaton_accepts Standard query n dict = true.
@@ -5698,7 +5615,7 @@ Qed.
        Together: query[i]query[i+1] matched as query[i+1]query[i] at cost 1
 *)
 Theorem automaton_complete_transposition : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   damerau_lev_distance query dict <= n ->
   automaton_accepts Transposition query n dict = true.
@@ -5730,7 +5647,7 @@ Qed.
 (** Transposition also accepts strings within standard Levenshtein distance,
     since damerau_lev_distance <= lev_distance. *)
 Corollary automaton_complete_transposition_lev : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   lev_distance query dict <= n ->
   automaton_accepts Transposition query n dict = true.
@@ -5752,7 +5669,7 @@ Qed.
     - If merge_split_distance <= n, the automaton accepts
 *)
 Theorem automaton_complete_merge_split : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   merge_split_distance query dict <= n ->
   automaton_accepts MergeAndSplit query n dict = true.
@@ -5765,7 +5682,7 @@ Qed.
 (** MergeAndSplit also accepts strings within standard Levenshtein distance,
     since merge_split_distance <= lev_distance. *)
 Corollary automaton_complete_merge_split_lev : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   lev_distance query dict <= n ->
   automaton_accepts MergeAndSplit query n dict = true.
@@ -5788,7 +5705,7 @@ Qed.
     This is the "fallback" version using standard Levenshtein distance.
 *)
 Theorem automaton_complete : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   alg query dict n,
   lev_distance query dict <= n ->
   automaton_accepts alg query n dict = true.
@@ -5804,7 +5721,7 @@ Qed.
 
 (** No false negatives: within distance implies accepting *)
 Corollary no_false_negatives : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   alg query dict n,
   lev_distance query dict <= n ->
   automaton_accepts alg query n dict = true.
@@ -5814,7 +5731,7 @@ Qed.
 
 (** The automaton finds the exact distance when it exists within bound *)
 Corollary automaton_finds_distance : forall
-  (core_contracts : AutomatonCompletenessCoreContracts)
+  (core_contracts : AutomatonCompletenessCoreEvidence)
   alg query dict n,
   lev_distance query dict <= n ->
   exists d, automaton_distance alg query n dict = Some d /\

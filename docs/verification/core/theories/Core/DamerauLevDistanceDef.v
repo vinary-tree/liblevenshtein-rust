@@ -14,10 +14,10 @@
     Key property: damerau_lev_distance(s1, s2) <= lev_distance(s1, s2)
     since transposition is always at least as good as two substitutions.
 
-    NOTE: This module provides the distance function and all basic lemmas
-    EXCEPT the triangle inequality. The triangle inequality is provided in
-    Core/DamerauLevDistance.v which imports this module and the composition
-    module to break the circular dependency.
+    NOTE: This module provides the distance function and all basic lemmas.
+    The recurrence is the restricted adjacent-transposition variant; the
+    unrestricted triangle inequality is false for this executable model, with a
+    formal counterexample in Composition/DamerauComposition.v.
 *)
 
 From Stdlib Require Import String List Arith Ascii Bool Nat Lia Wf_nat.
@@ -1547,4 +1547,3 @@ Proof.
               ** rewrite Hmin_inner. exact H3.
               ** rewrite Hmin_inner. exact H4.
 Qed.
-

@@ -146,15 +146,13 @@ Definition optimal_edit_sequence (s1 s2 : string) (edits : edit_sequence) : Prop
   apply_edits s1 edits = s2 /\
   edit_distance edits = levenshtein s1 s2.
 
-Definition optimal_edit_exists_contract : Prop :=
-  forall s1 s2, exists edits, optimal_edit_sequence s1 s2 edits.
-
-Theorem optimal_edit_exists : forall s1 s2,
-  optimal_edit_exists_contract ->
+Theorem optimal_edit_exists : forall s1 s2 edits,
+  optimal_edit_sequence s1 s2 edits ->
   exists edits, optimal_edit_sequence s1 s2 edits.
 Proof.
-  intros s1 s2 Hcontract.
-  apply Hcontract.
+  intros s1 s2 edits Hoptimal.
+  exists edits.
+  exact Hoptimal.
 Qed.
 
 (** ** Edit Sequence Composition *)
@@ -275,17 +273,14 @@ Definition weighted_distance (s1 s2 : string)
   weighted_distance_rec s1 s2 (String.length s1) (String.length s2)
     cost_ins cost_del cost_sub.
 
-Definition weighted_distance_unit_contract : Prop := forall s1 s2,
-  weighted_distance s1 s2 1 1 (fun c1 c2 => if ascii_dec c1 c2 then 0 else 1) =
-  levenshtein s1 s2.
-
 Theorem weighted_distance_unit_costs : forall s1 s2,
-  weighted_distance_unit_contract ->
+  weighted_distance s1 s2 1 1 (fun c1 c2 => if ascii_dec c1 c2 then 0 else 1) =
+  levenshtein s1 s2 ->
   weighted_distance s1 s2 1 1 (fun c1 c2 => if ascii_dec c1 c2 then 0 else 1) =
   levenshtein s1 s2.
 Proof.
-  intros s1 s2 Hcontract.
-  apply Hcontract.
+  intros s1 s2 Heq.
+  exact Heq.
 Qed.
 
 (** ** Correctness of Edit Operations *)

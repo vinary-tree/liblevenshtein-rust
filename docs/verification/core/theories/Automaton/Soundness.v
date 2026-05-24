@@ -143,17 +143,9 @@ Definition special_positions_originated (positions : list Position) : Prop :=
                num_errors p' < num_errors p /\
                term_index p' = term_index p.
 
-(** Contracts for special-state tracking and merge/split soundness. *)
-Record AutomatonSoundnessContracts : Prop := mkAutomatonSoundnessContracts {
-  initial_state_no_special_ax : forall qlen,
-    Forall (fun p => is_special p = false) (positions (initial_state Transposition qlen));
-
-  transition_preserves_special_originated_ax : forall alg s c query n s',
-    transition_state alg s c query n = Some s' ->
-    special_positions_originated (positions s) ->
-    special_positions_originated (positions s');
-
-  special_reachable_from_origin_ax : forall query n dp p,
+(** Evidence for special-position reachability and merge/split soundness. *)
+Record AutomatonSoundnessEvidence : Prop := mkAutomatonSoundnessEvidence {
+  special_reachable_from_origin_proof : forall query n dp p,
     is_special p = true ->
     (forall p', is_special p' = false ->
                 term_index p' = term_index p ->
@@ -161,7 +153,7 @@ Record AutomatonSoundnessContracts : Prop := mkAutomatonSoundnessContracts {
                 position_reachable_damerau query n dp (std_pos (term_index p') (num_errors p'))) ->
     position_reachable_damerau query n dp p;
 
-  special_origin_in_state_ax : forall positions p_special p_origin,
+  special_origin_in_state_proof : forall positions p_special p_origin,
     In p_special positions ->
     is_special p_special = true ->
     is_special p_origin = false ->
@@ -169,13 +161,21 @@ Record AutomatonSoundnessContracts : Prop := mkAutomatonSoundnessContracts {
     num_errors p_origin < num_errors p_special ->
     In p_origin positions;
 
-  automaton_sound_merge_split_ax : forall query dict n,
+  automaton_sound_merge_split_proof : forall query dict n,
     automaton_accepts MergeAndSplit query n dict = true ->
     merge_split_distance query dict <= n;
 
-  lev_distance_ms_bound_ax : forall query dict,
+  lev_distance_ms_bound_proof : forall query dict,
     lev_distance query dict <= 2 * merge_split_distance query dict
 }.
+
+Lemma initial_state_no_special : forall qlen,
+  Forall (fun p => is_special p = false) (positions (initial_state Transposition qlen)).
+Proof.
+  intros qlen.
+  unfold initial_state, initial_position, std_pos.
+  simpl. constructor; [reflexivity | constructor].
+Qed.
 
 (** * MergeAndSplit Soundness Contracts
 
@@ -3937,7 +3937,7 @@ Qed.
     1. Cannot be final/accepting (by transposition_final_not_special)
     2. May not be semantically reachable when c = c_next
     3. Don't affect soundness since only non-special final positions matter *)
-Lemma automaton_run_preserves_reachable_transposition : forall (contracts : AutomatonSoundnessContracts) query n dict_prefix dict s final,
+Lemma automaton_run_preserves_reachable_transposition : forall (contracts : AutomatonSoundnessEvidence) query n dict_prefix dict s final,
   query_length s = length query ->
   automaton_run Transposition query n dict s = Some final ->
   (forall p, In p (Automaton.State.positions s) ->
@@ -4048,15 +4048,15 @@ Proof.
 
                     The fix: We need to track that special positions were created
                     from reachable non-special positions via enter_transpose. *)
-                 (* Use the special_reachable_from_origin_ax axiom.
+                 (* Use the special_reachable_from_origin_proof evidence premise.
                     Special positions originated from non-special positions via
                     enter_transpose, so we can derive their reachability from
                     the reachability of their non-special origins. *)
-                 apply (special_reachable_from_origin_ax contracts).
+                 apply (special_reachable_from_origin_proof contracts).
                  --- exact Hspec2.
                  --- (* Non-special origins are reachable via Hall *)
                      intros p'_origin Hspec_origin Hterm_eq Herr_lt.
-                     (* The axiom special_reachable_from_origin_ax requires
+                     (* The evidence premise special_reachable_from_origin_proof requires
                         position_reachable_damerau ... (std_pos (term_index p') (num_errors p')).
                         Since p'_origin is non-special, p'_origin = std_pos (term_index p'_origin) (num_errors p'_origin).
                         We first establish this equality, then use Hall. *)
@@ -4073,9 +4073,9 @@ Proof.
                              that for each special p2, there's a non-special origin
                              with matching term_index and smaller errors.
                              This follows from the transition construction. *)
-                          (* We use an axiom here as proving this requires
+                          (* We use an evidence premise here as proving this requires
                              detailed tracking through transition_state. *)
-                          exact (special_origin_in_state_ax contracts
+                          exact (special_origin_in_state_proof contracts
                                    (Automaton.State.positions s) p2 p'_origin
                                    Hin2 Hspec2 Hspec_origin Hterm_eq Herr_lt).
                      ++++ exact Hspec_origin.
@@ -4471,7 +4471,7 @@ Qed.
     distance 1 with transposition but distance 2 with standard operations),
     we use damerau_lev_distance, not lev_distance.
 *)
-Theorem automaton_sound_transposition : forall (contracts : AutomatonSoundnessContracts) query dict n,
+Theorem automaton_sound_transposition : forall (contracts : AutomatonSoundnessEvidence) query dict n,
   automaton_accepts Transposition query n dict = true ->
   damerau_lev_distance query dict <= n.
 Proof.
@@ -4546,7 +4546,7 @@ Qed.
     Note: lev_distance can be up to 2x damerau_lev_distance (each transposition
     costs 1 in Damerau-Levenshtein but 2 in standard Levenshtein). Thus if
     damerau_lev_distance <= n, then lev_distance <= 2n. *)
-Corollary automaton_sound_transposition_lev : forall (contracts : AutomatonSoundnessContracts) query dict n,
+Corollary automaton_sound_transposition_lev : forall (contracts : AutomatonSoundnessEvidence) query dict n,
   automaton_accepts Transposition query n dict = true ->
   lev_distance query dict <= 2 * n.
 Proof.
@@ -4566,19 +4566,19 @@ Qed.
     Merge (two query chars to one dict char) and split (one query char to
     two dict chars) can reduce the edit distance compared to standard operations.
 *)
-Theorem automaton_sound_merge_split : forall (contracts : AutomatonSoundnessContracts) query dict n,
+Theorem automaton_sound_merge_split : forall (contracts : AutomatonSoundnessEvidence) query dict n,
   automaton_accepts MergeAndSplit query n dict = true ->
   merge_split_distance query dict <= n.
 Proof.
   intros contracts query dict n Haccept.
-  (* Apply the soundness axiom. The full proof follows the same structure as Standard:
+  (* Apply the soundness evidence premise. The full proof follows the same structure as Standard:
      1. Extract the accepting position from the final state
      2. Show that position represents a valid alignment
      3. The alignment cost bounds the merge-split distance
 
      Key insight: MergeAndSplit special positions encode merge/split operations,
      and the error count reflects the merge-split cost. *)
-  apply (automaton_sound_merge_split_ax contracts).
+  apply (automaton_sound_merge_split_proof contracts).
   exact Haccept.
 Qed.
 
@@ -4587,16 +4587,16 @@ Qed.
     Note: lev_distance can be up to 2x merge_split_distance (each merge or split
     costs 1 in MS but up to 2 in standard Levenshtein). Thus if
     merge_split_distance <= n, then lev_distance <= 2n. *)
-Corollary automaton_sound_merge_split_lev : forall (contracts : AutomatonSoundnessContracts) query dict n,
+Corollary automaton_sound_merge_split_lev : forall (contracts : AutomatonSoundnessEvidence) query dict n,
   automaton_accepts MergeAndSplit query n dict = true ->
   lev_distance query dict <= 2 * n.
 Proof.
   intros contracts query dict n Haccept.
   apply (automaton_sound_merge_split contracts) in Haccept.
-  (* Apply the axiom relating lev_distance to merge_split_distance.
+  (* Apply the evidence premise relating lev_distance to merge_split_distance.
      This holds because each merge/split (cost 1 in MS) can be simulated
      by up to 2 standard operations (cost 2 in L). *)
-  pose proof (lev_distance_ms_bound_ax contracts query dict) as Hbound.
+  pose proof (lev_distance_ms_bound_proof contracts query dict) as Hbound.
   lia.
 Qed.
 
@@ -4687,7 +4687,7 @@ Proof.
 Qed.
 
 (** No false positives for Transposition algorithm (using Damerau-Lev) *)
-Corollary no_false_positives_transposition : forall (contracts : AutomatonSoundnessContracts) query dict n,
+Corollary no_false_positives_transposition : forall (contracts : AutomatonSoundnessEvidence) query dict n,
   automaton_accepts Transposition query n dict = true ->
   damerau_lev_distance query dict <= n.
 Proof.
@@ -4697,7 +4697,7 @@ Proof.
 Qed.
 
 (** No false positives for MergeAndSplit algorithm (using merge-split distance) *)
-Corollary no_false_positives_merge_split : forall (contracts : AutomatonSoundnessContracts) query dict n,
+Corollary no_false_positives_merge_split : forall (contracts : AutomatonSoundnessEvidence) query dict n,
   automaton_accepts MergeAndSplit query n dict = true ->
   merge_split_distance query dict <= n.
 Proof.

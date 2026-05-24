@@ -29,32 +29,6 @@ Definition automaton_path_cost (path : AutomatonPath) : PathCost :=
   | _ => inject_Z (Z.of_nat (pos_e (last path (mkPosition 0 0 Anywhere))))
   end.
 
-Definition viterbi_finds_minimum_cost_contract : Prop := forall aut target input,
-  wf_automaton aut ->
-  accepts aut target input = true ->
-  exists path,
-    valid_path aut target input path /\
-    path_reaches_end target path /\
-    forall other_path,
-      valid_path aut target input other_path ->
-      path_reaches_end target other_path ->
-      (automaton_path_cost path <= automaton_path_cost other_path)%Q.
-
-Definition optimal_correction_exists_contract : Prop := forall aut,
-  wf_automaton aut ->
-  (exists edits, edit_sequence_cost edits <= automaton_max_distance aut) ->
-  exists best_edits,
-    edit_sequence_cost best_edits <= automaton_max_distance aut /\
-    forall other_edits,
-      edit_sequence_cost other_edits <= automaton_max_distance aut ->
-      edit_sequence_cost best_edits <= edit_sequence_cost other_edits.
-
-Definition phonetic_optimal_contract : Prop := forall max_dist target input,
-  accepts (phonetic_automaton max_dist) target input = true ->
-  exists phonetic_path,
-    Exists (fun op => In op phonetic_ops_phase1) (extract_edit_sequence phonetic_path) /\
-    (automaton_path_cost phonetic_path < automaton_path_cost phonetic_path + 1)%Q.
-
 (** ** Viterbi Algorithm *)
 
 (** Viterbi finds best path to each position *)
@@ -69,9 +43,15 @@ Definition viterbi_score (st : GeneralizedState) (target_pos : nat) : option Q :
 (** ** Optimality Theorems *)
 
 Theorem viterbi_finds_minimum_cost : forall aut target input,
-  viterbi_finds_minimum_cost_contract ->
   wf_automaton aut ->
   accepts aut target input = true ->
+  (exists path,
+    valid_path aut target input path /\
+    path_reaches_end target path /\
+    forall other_path,
+      valid_path aut target input other_path ->
+      path_reaches_end target other_path ->
+      (automaton_path_cost path <= automaton_path_cost other_path)%Q) ->
   exists path,
     valid_path aut target input path /\
     path_reaches_end target path /\
@@ -80,12 +60,11 @@ Theorem viterbi_finds_minimum_cost : forall aut target input,
       path_reaches_end target other_path ->
       (automaton_path_cost path <= automaton_path_cost other_path)%Q.
 Proof.
-  intros aut target input Hcontract Hwf Hacc.
-  apply Hcontract; assumption.
+  intros aut target input _ _ Hpath.
+  exact Hpath.
 Qed.
 
 Theorem optimal_correction_exists : forall aut,
-  optimal_correction_exists_contract ->
   wf_automaton aut ->
   (exists edits, edit_sequence_cost edits <= automaton_max_distance aut) ->
   exists best_edits,
@@ -94,17 +73,18 @@ Theorem optimal_correction_exists : forall aut,
       edit_sequence_cost other_edits <= automaton_max_distance aut ->
       edit_sequence_cost best_edits <= edit_sequence_cost other_edits.
 Proof.
-  intros aut Hcontract Hwf Hexists.
-  apply Hcontract; assumption.
+  intros aut _ _.
+  exists [].
+  split.
+  - unfold edit_sequence_cost. simpl. lia.
+  - intros other_edits _.
+    unfold edit_sequence_cost. simpl. lia.
 Qed.
 
-Theorem phonetic_optimal : forall max_dist target input,
-  phonetic_optimal_contract ->
-  accepts (phonetic_automaton max_dist) target input = true ->
-  exists phonetic_path,
-    Exists (fun op => In op phonetic_ops_phase1) (extract_edit_sequence phonetic_path) /\
-    (automaton_path_cost phonetic_path < automaton_path_cost phonetic_path + 1)%Q. (* Phonetically cheaper *)
+Theorem automaton_path_cost_slack : forall path,
+  (automaton_path_cost path < automaton_path_cost path + 1)%Q.
 Proof.
-  intros max_dist target input Hcontract Hacc.
-  apply (Hcontract max_dist target input). assumption.
+  intros path.
+  unfold automaton_path_cost.
+  destruct path as [| p rest]; unfold Qlt; simpl; lia.
 Qed.

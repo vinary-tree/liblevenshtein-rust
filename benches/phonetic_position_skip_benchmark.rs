@@ -14,8 +14,8 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::phonetic::{
-    apply_rules_seq, apply_rules_seq_optimized, orthography_rules,
-    phonetic_rules, test_rules, zompist_rules, Context, Phone, RewriteRule,
+    apply_rules_seq, apply_rules_seq_optimized, orthography_rules, phonetic_rules, test_rules,
+    zompist_rules, Context, Phone, RewriteRule,
 };
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -398,7 +398,11 @@ fn bench_position_skipping_comparison(c: &mut Criterion) {
             &(&phon_rules, &input, fuel),
             |b, (rules, input, fuel)| {
                 b.iter(|| {
-                    apply_rules_seq_optimized(black_box(*rules), black_box(*input), black_box(*fuel))
+                    apply_rules_seq_optimized(
+                        black_box(*rules),
+                        black_box(*input),
+                        black_box(*fuel),
+                    )
                 })
             },
         );

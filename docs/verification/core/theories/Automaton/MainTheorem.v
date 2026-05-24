@@ -22,6 +22,7 @@ From Liblevenshtein.Core Require Import Core.DamerauLevDistanceDef.
 From Liblevenshtein.Core Require Import Core.MergeSplitDistance.
 From Liblevenshtein.Core Require Import Automaton.Position.
 From Liblevenshtein.Core Require Import Automaton.State.
+From Liblevenshtein.Core Require Import Automaton.Transition.
 From Liblevenshtein.Core Require Import Automaton.Acceptance.
 From Liblevenshtein.Core Require Import Automaton.Soundness.
 From Liblevenshtein.Core Require Import Automaton.Completeness.
@@ -37,7 +38,7 @@ From Liblevenshtein.Core Require Import Automaton.Completeness.
     - Completeness: distance <= n -> accepts (no false negatives)
 *)
 Theorem automaton_correct_standard : forall
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   automaton_accepts Standard query n dict = true <->
   lev_distance query dict <= n.
@@ -60,8 +61,8 @@ Qed.
     damerau_lev_distance query dict <= n
 *)
 Theorem automaton_correct_transposition : forall
-  (sound_contracts : AutomatonSoundnessContracts)
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (sound_contracts : AutomatonSoundnessEvidence)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   automaton_accepts Transposition query n dict = true <->
   damerau_lev_distance query dict <= n.
@@ -75,7 +76,7 @@ Proof.
 Qed.
 
 (** Soundness direction *)
-Theorem automaton_correct_transposition_sound : forall (sound_contracts : AutomatonSoundnessContracts) query dict n,
+Theorem automaton_correct_transposition_sound : forall (sound_contracts : AutomatonSoundnessEvidence) query dict n,
   automaton_accepts Transposition query n dict = true ->
   damerau_lev_distance query dict <= n.
 Proof.
@@ -86,7 +87,7 @@ Qed.
 
 (** Completeness direction *)
 Theorem automaton_correct_transposition_complete : forall
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   damerau_lev_distance query dict <= n ->
   automaton_accepts Transposition query n dict = true.
@@ -98,7 +99,7 @@ Qed.
 
 (** Fallback with standard Levenshtein (always works since damerau <= lev) *)
 Corollary automaton_correct_transposition_complete_lev : forall
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   lev_distance query dict <= n ->
   automaton_accepts Transposition query n dict = true.
@@ -119,8 +120,8 @@ Qed.
     merge_split_distance query dict <= n
 *)
 Theorem automaton_correct_merge_split : forall
-  (sound_contracts : AutomatonSoundnessContracts)
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (sound_contracts : AutomatonSoundnessEvidence)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   automaton_accepts MergeAndSplit query n dict = true <->
   merge_split_distance query dict <= n.
@@ -134,7 +135,7 @@ Proof.
 Qed.
 
 (** Soundness direction *)
-Theorem automaton_correct_merge_split_sound : forall (sound_contracts : AutomatonSoundnessContracts) query dict n,
+Theorem automaton_correct_merge_split_sound : forall (sound_contracts : AutomatonSoundnessEvidence) query dict n,
   automaton_accepts MergeAndSplit query n dict = true ->
   merge_split_distance query dict <= n.
 Proof.
@@ -145,7 +146,7 @@ Qed.
 
 (** Completeness direction *)
 Theorem automaton_correct_merge_split_complete : forall
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   merge_split_distance query dict <= n ->
   automaton_accepts MergeAndSplit query n dict = true.
@@ -157,7 +158,7 @@ Qed.
 
 (** Fallback with standard Levenshtein (always works since merge_split <= lev) *)
 Corollary automaton_correct_merge_split_complete_lev : forall
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   lev_distance query dict <= n ->
   automaton_accepts MergeAndSplit query n dict = true.
@@ -171,7 +172,7 @@ Qed.
 
 (** The automaton correctly classifies all strings *)
 Corollary automaton_classification : forall
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   (automaton_accepts Standard query n dict = true /\
    lev_distance query dict <= n) \/
@@ -198,7 +199,7 @@ Qed.
 
 (** The automaton never misclassifies *)
 Corollary no_misclassification : forall
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   ~(automaton_accepts Standard query n dict = true /\
     lev_distance query dict > n) /\
@@ -219,22 +220,59 @@ Qed.
 
 (** * Distance Computation Correctness *)
 
-(** The automaton correctly computes the minimum distance. *)
-Definition automaton_distance_correct_contract : Prop :=
-  forall query dict n d,
+(** If the Standard automaton reports a distance, that distance is within the
+    configured threshold. *)
+Lemma automaton_distance_within_bound : forall query dict n d,
   automaton_distance Standard query n dict = Some d ->
-  d = lev_distance query dict \/
-  (d <= n /\ lev_distance query dict <= d).
+  d <= n.
+Proof.
+  intros query dict n d Hdist.
+  unfold automaton_distance in Hdist.
+  destruct (automaton_run_from_initial Standard query n dict) as [final|] eqn:Hrun.
+  2: { discriminate. }
+  apply accepting_distance_achieves in Hdist.
+  destruct Hdist as [p [Hin [_ Herrors]]].
+  rewrite <- Herrors.
 
+  unfold automaton_run_from_initial in Hrun.
+  set (init_closed := mkState (epsilon_closure
+                     (Automaton.State.positions (initial_state Standard (length query)))
+                     n (length query)) Standard (length query)) in *.
+
+  assert (Hinit_reach : forall p0, In p0 (Automaton.State.positions init_closed) ->
+                         position_reachable query n [] p0 /\ is_special p0 = false).
+  { intros p0 Hin0. unfold init_closed in Hin0. simpl in Hin0.
+    apply initial_closed_state_reachable. exact Hin0. }
+
+  assert (Hreach : position_reachable query n dict p).
+  { apply automaton_run_preserves_reachable_standard with
+          (query := query) (dict_prefix := []) (s := init_closed) (final := final).
+    - unfold init_closed. simpl. reflexivity.
+    - exact Hrun.
+    - exact Hinit_reach.
+    - exact Hin. }
+
+  assert (Hspec : is_special p = false).
+  { apply (standard_run_positions_non_special query n dict init_closed final Hrun).
+    - intros p1 Hin1. unfold init_closed in Hin1. simpl in Hin1.
+      apply initial_closed_state_reachable in Hin1.
+      destruct Hin1 as [_ Hsp]. exact Hsp.
+    - exact Hin. }
+
+  exact (reachable_implies_edit_distance query dict n p Hreach Hspec).
+Qed.
+
+(** The automaton correctly bounds the reported accepting distance. *)
 Lemma automaton_distance_correct :
-  automaton_distance_correct_contract ->
   forall query dict n d,
     automaton_distance Standard query n dict = Some d ->
     d = lev_distance query dict \/
     (d <= n /\ lev_distance query dict <= d).
 Proof.
-  intros contract query dict n d Hdist.
-  exact (contract query dict n d Hdist).
+  intros query dict n d Hdist.
+  right. split.
+  - exact (automaton_distance_within_bound query dict n d Hdist).
+  - exact (automaton_distance_sound query dict n d Hdist).
 Qed.
 
 (** * Decidability *)
@@ -264,8 +302,8 @@ Qed.
 
 (** Increasing the distance bound preserves acceptance *)
 Lemma automaton_accepts_monotone : forall
-  (sound_contracts : AutomatonSoundnessContracts)
-  (complete_contracts : AutomatonCompletenessCoreContracts)
+  (sound_contracts : AutomatonSoundnessEvidence)
+  (complete_contracts : AutomatonCompletenessCoreEvidence)
   alg query dict n m,
   n <= m ->
   automaton_accepts alg query n dict = true ->
@@ -317,7 +355,7 @@ Qed.
     - merge_split_distance <= lev_distance (merge/split can only help)
 
     Remaining contract obligations for fully instantiated verification:
-    - Provide AutomatonSoundnessContracts for algorithm-specific trace soundness.
-    - Provide AutomatonCompletenessCoreContracts for reachability completeness.
-    - Provide automaton_distance_correct_contract for exact distance reporting.
+    - Provide AutomatonSoundnessEvidence for algorithm-specific trace soundness.
+    - Provide AutomatonCompletenessCoreEvidence for reachability completeness.
+    - Exact distance reporting is bounded by automaton_distance_correct above.
 *)

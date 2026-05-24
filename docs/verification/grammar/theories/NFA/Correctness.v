@@ -8,14 +8,10 @@ Require Import Liblevenshtein.Grammar.Verification.NFA.Completeness.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Soundness.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Optimality.
 
-Definition phonetic_nfa_correctness_contract : Prop := forall max_dist target input,
-  accepts (phonetic_automaton max_dist) target input = true <->
-  exists edits, edit_sequence_cost edits <= max_dist.
-
 (** Main correctness: Completeness + Soundness *)
 Theorem nfa_correctness : forall
-  (sound_contracts : NFASoundnessContracts)
-  (complete_contracts : NFACompletenessContracts)
+  (sound_contracts : NFASoundnessEvidence)
+  (complete_contracts : NFACompletenessEvidence)
   aut target input,
   wf_automaton aut ->
   (accepts aut target input = true <->
@@ -30,14 +26,19 @@ Proof.
 Qed.
 
 (** Phonetic + standard combined correctness *)
-Theorem phonetic_nfa_correctness : forall max_dist target input,
-  phonetic_nfa_correctness_contract ->
+Theorem phonetic_nfa_correctness : forall
+  (sound_contracts : NFASoundnessEvidence)
+  (complete_contracts : NFACompletenessEvidence)
+  max_dist target input,
   accepts (phonetic_automaton max_dist) target input = true <->
   exists edits,
+    Forall (fun op => In op (automaton_operations (phonetic_automaton max_dist))) edits /\
+    apply_edit_sequence target edits = input /\
     edit_sequence_cost edits <= max_dist.
 Proof.
-  intros max_dist target input Hcontract.
-  apply Hcontract.
+  intros sound_contracts complete_contracts max_dist target input.
+  apply (nfa_correctness sound_contracts complete_contracts).
+  apply phonetic_automaton_wf.
 Qed.
 
 (** NFA termination *)

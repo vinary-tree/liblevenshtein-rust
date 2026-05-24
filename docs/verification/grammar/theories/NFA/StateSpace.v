@@ -1,17 +1,9 @@
 (** * State Space Complexity with Concrete Constants *)
 Require Import Coq.Init.Nat.
+Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Types.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Automaton.
-
-Definition state_space_bounded_contract : Prop := forall aut n st,
-  automaton_max_distance aut = n ->
-  wf_state st ->
-  length (state_positions st) <= 7 * (n + 1) * (n + 1) * 9.
-
-Definition pruned_state_space_contract : Prop := forall st n,
-  state_max_distance st = n ->
-  length (state_positions (prune_state st)) <= (n + 1) * (n + 1).
 
 (** Concrete constant for state space bound: C₁ = 7 *)
 Definition C1_state_space : nat := 7.
@@ -19,25 +11,23 @@ Definition C1_state_space : nat := 7.
 (** Number of contexts *)
 Definition num_contexts := 9. (* Initial, Final, Anywhere, + 6 context types *)
 
-(** State space theorem with concrete constant *)
-Theorem state_space_bounded_concrete : forall aut n,
-  state_space_bounded_contract ->
-  automaton_max_distance aut = n ->
-  forall st,
-    wf_state st ->
-    length (state_positions st) <= C1_state_space * (n + 1) * (n + 1) * num_contexts.
+(** wf_state bounds every state's error component by the automaton distance.
+    A cardinality bound needs additional no-duplicate and target-index bounds,
+    so the former broad contract has been replaced by this direct invariant. *)
+Theorem state_space_errors_bounded : forall st n,
+  state_max_distance st = n ->
+  wf_state st ->
+  Forall (fun p => pos_e p <= n) (state_positions st).
 Proof.
-  intros aut n Hcontract Haut st Hwf.
-  unfold C1_state_space, num_contexts.
-  apply (Hcontract aut n st); assumption.
+  intros st n Hmax Hwf.
+  subst n.
+  exact Hwf.
 Qed.
 
-(** After pruning, state space is O(n²) *)
-Theorem pruned_state_space : forall st n,
-  pruned_state_space_contract ->
-  state_max_distance st = n ->
-  length (state_positions (prune_state st)) <= (n + 1) * (n + 1).
+(** Pruning never increases the represented state list. *)
+Theorem pruned_state_space : forall st,
+  length (state_positions (prune_state st)) <= length (state_positions st).
 Proof.
-  intros st n Hcontract Hmax.
-  apply Hcontract; assumption.
+  intros st.
+  apply state_size_bounded.
 Qed.

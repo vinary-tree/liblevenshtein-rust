@@ -463,7 +463,6 @@ unsafe fn check_subsumption_sse41<'a>(
     &results[..count]
 }
 
-
 #[cfg(test)]
 mod subsumption_tests {
     use super::*;

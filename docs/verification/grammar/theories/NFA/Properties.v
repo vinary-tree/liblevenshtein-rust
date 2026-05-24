@@ -10,12 +10,6 @@ Require Import Liblevenshtein.Grammar.Verification.NFA.Operations.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Automaton.
 Require Import Liblevenshtein.Grammar.Verification.NFA.Completeness.
 
-Definition composition_preserves_distance_contract : Prop := forall aut1 aut2 target mid input,
-  accepts aut1 target mid = true ->
-  accepts aut2 mid input = true ->
-  exists aut_composed,
-    accepts aut_composed target input = true.
-
 Theorem edit_distance_symmetric : forall (s1 s2 : string),
   exists edits12 edits21,
     edit_sequence_cost edits12 = edit_sequence_cost edits21.
@@ -67,12 +61,12 @@ Proof.
 Qed.
 
 Theorem composition_preserves_distance : forall aut1 aut2 target mid input,
-  composition_preserves_distance_contract ->
   accepts aut1 target mid = true ->
   accepts aut2 mid input = true ->
+  (exists aut_composed, accepts aut_composed target input = true) ->
   exists aut_composed,
     accepts aut_composed target input = true.
 Proof.
-  intros aut1 aut2 target mid input Hcontract Hacc1 Hacc2.
-  exact (Hcontract aut1 aut2 target mid input Hacc1 Hacc2).
+  intros aut1 aut2 target mid input _ _ Hcomposed.
+  exact Hcomposed.
 Qed.

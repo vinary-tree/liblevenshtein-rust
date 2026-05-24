@@ -17,21 +17,11 @@ Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Bool.Bool.
 Require Import Coq.QArith.QArith.
 Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lqa.
 Require Import Coq.ZArith.Znat.
 Import ListNotations.
 
 Require Import Liblevenshtein.Grammar.Verification.NFA.Types.
-
-Definition can_apply_chars_match_contract : Prop := forall op s1 s2 i j,
-  can_apply op s1 s2 i j = true ->
-  let chars1 := substring i (op_consume_x op) s1 in
-  let chars2 := substring j (op_consume_y op) s2 in
-  list_ascii_of_string chars1 = op_chars_x op /\
-  list_ascii_of_string chars2 = op_chars_y op.
-
-Definition context_matches_monotone_contract : Prop := forall ctx s1 s2 pos,
-  substring 0 pos s1 = substring 0 pos s2 ->
-  context_matches ctx s1 pos = context_matches ctx s2 pos.
 
 (** ** Phonetic Consonant Digraphs *)
 
@@ -363,17 +353,44 @@ Qed.
 
 (** ** Operation Application Properties *)
 
+(** The boolean list comparison used by [can_apply] is sound. *)
+Lemma list_ascii_eqb_correct : forall l1 l2,
+  list_ascii_eqb l1 l2 = true ->
+  l1 = l2.
+Proof.
+  intros l1.
+  induction l1 as [| c1 l1' IH]; intros l2 Heq.
+  - destruct l2 as [| c2 l2']; [reflexivity |].
+    unfold list_ascii_eqb in Heq. simpl in Heq. discriminate.
+  - destruct l2 as [| c2 l2'].
+    + unfold list_ascii_eqb in Heq. simpl in Heq. discriminate.
+    + unfold list_ascii_eqb in Heq. simpl in Heq.
+      apply andb_true_iff in Heq as [Hlen Hchars].
+      simpl in Hchars.
+      apply andb_true_iff in Hchars as [Hhead Htail].
+      apply Ascii.eqb_eq in Hhead.
+      subst c2.
+      f_equal.
+      apply IH.
+      unfold list_ascii_eqb.
+      rewrite Hlen, Htail.
+      reflexivity.
+Qed.
+
 (** If an operation can apply, it consumes the expected characters *)
 Lemma can_apply_chars_match : forall op s1 s2 i j,
-  can_apply_chars_match_contract ->
   can_apply op s1 s2 i j = true ->
   let chars1 := substring i (op_consume_x op) s1 in
   let chars2 := substring j (op_consume_y op) s2 in
   list_ascii_of_string chars1 = op_chars_x op /\
   list_ascii_of_string chars2 = op_chars_y op.
 Proof.
-  intros op s1 s2 i j Hcontract Happ.
-  apply Hcontract. assumption.
+  intros op s1 s2 i j Happ.
+  unfold can_apply in Happ.
+  apply andb_true_iff in Happ as [_ Hrest].
+  apply andb_true_iff in Hrest as [Hchars _].
+  apply andb_true_iff in Hchars as [Hchars1 Hchars2].
+  split; apply list_ascii_eqb_correct; assumption.
 Qed.
 
 (** If operation applies, sufficient characters remain *)
@@ -392,12 +409,23 @@ Qed.
 
 (** Context matching is monotone *)
 Lemma context_matches_monotone : forall ctx s1 s2 pos,
-  context_matches_monotone_contract ->
-  substring 0 pos s1 = substring 0 pos s2 ->
+  String.length s1 = String.length s2 ->
+  (forall k, k <= pos -> get k s1 = get k s2) ->
   context_matches ctx s1 pos = context_matches ctx s2 pos.
 Proof.
-  intros ctx s1 s2 pos Hcontract Heq.
-  apply Hcontract. assumption.
+  intros ctx s1 s2 pos Hlen Hget.
+  destruct ctx; simpl; try reflexivity.
+  - rewrite Hlen. reflexivity.
+  - rewrite (Hget pos); [reflexivity | lia].
+  - destruct pos as [| pos']; [reflexivity |].
+    rewrite (Hget pos'); [reflexivity | lia].
+  - rewrite (Hget pos); [reflexivity | lia].
+  - destruct pos as [| pos']; [reflexivity |].
+    rewrite (Hget pos'); [reflexivity | lia].
+  - destruct pos as [| pos']; [reflexivity |].
+    rewrite (Hget pos'); [| lia].
+    rewrite (Hget (S pos')); [reflexivity | lia].
+  - rewrite (Hget pos); [reflexivity | lia].
 Qed.
 
 (** ** Operation Composition Properties *)
@@ -539,27 +567,33 @@ Proof.
     ring.
 Qed.
 
-Definition phonetic_path_cheaper_contract : Prop := forall phonetic_ops standard_ops,
-  Forall (fun op => In op phonetic_ops_phase1) phonetic_ops ->
-  length phonetic_ops = length standard_ops ->
-  Forall (fun op => op_weight op = 1%Q) standard_ops ->
-  length phonetic_ops > 0 ->
-  (path_cost phonetic_ops < path_cost standard_ops)%Q.
-
 (** Phonetic paths are cheaper than standard edit paths.
     Note: Requires non-empty lists because 0 < 0 is false for empty lists. *)
 Theorem phonetic_path_cheaper : forall phonetic_ops standard_ops,
-  phonetic_path_cheaper_contract ->
   Forall (fun op => In op phonetic_ops_phase1) phonetic_ops ->
   length phonetic_ops = length standard_ops ->
   Forall (fun op => op_weight op = 1%Q) standard_ops ->
   length phonetic_ops > 0 ->  (* Required: empty case has equal costs *)
   (path_cost phonetic_ops < path_cost standard_ops)%Q.
 Proof.
-  intros ph st Hcontract Hph Hlen Hst Hnonempty.
-  destruct ph.
-  - (* Empty case: contradicts Hnonempty *)
-    simpl in Hnonempty. lia.
-  - (* Non-empty case: use axiom *)
-    apply Hcontract; auto; simpl; lia.
+  induction phonetic_ops as [| ph_op ph_tail IH]; intros standard_ops Hph Hlen Hst Hnonempty.
+  - simpl in Hnonempty. lia.
+  - destruct standard_ops as [| st_op st_tail].
+    + simpl in Hlen. discriminate.
+    + inversion Hph as [| ? ? Hph_op Hph_tail]; subst.
+      inversion Hst as [| ? ? Hst_op Hst_tail]; subst.
+      simpl in Hlen.
+      apply Nat.succ_inj in Hlen.
+      rewrite path_cost_cons.
+      rewrite path_cost_cons.
+      pose proof (phonetic_cost_less_than_standard ph_op Hph_op) as Hph_lt.
+      destruct ph_tail as [| ph_next ph_tail'].
+      * destruct st_tail as [| st_next st_tail']; [| simpl in Hlen; discriminate].
+        rewrite path_cost_nil.
+        rewrite Hst_op.
+        lra.
+      * destruct st_tail as [| st_next st_tail']; [simpl in Hlen; discriminate |].
+        pose proof (IH (st_next :: st_tail') Hph_tail Hlen Hst_tail ltac:(simpl; lia)) as Htail_lt.
+        rewrite Hst_op.
+        lra.
 Qed.

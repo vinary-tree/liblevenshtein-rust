@@ -116,40 +116,6 @@ Inductive AlgoState : list RewriteRule -> PhoneticString -> nat -> Prop :=
     (* Restart from position 0 with transformed string *)
     AlgoState rules s' 0.
 
-(** * Contracts *)
-
-(** ** Algorithm Correctness Axiom *)
-
-(** Axiom 1: If find_first_match finds a position for a rule in the algorithm's execution,
-    then no rules matched before that position.
-
-    This axiom connects the behavior of find_first_match to the no_rules_match_before property,
-    which is essential for proving that position skipping preserves semantics.
-
-    Status: This axiom represents a key property that needs formal proof.
-    See AXIOM1_COMPLETION_GUIDE.md for the proof strategy.
-*)
-Definition find_first_match_no_earlier_matches_contract : Prop :=
-  forall rules r_head s pos,
-    (forall r, In r rules -> wf_rule r) ->
-    In r_head rules ->
-    find_first_match r_head s (length s) = Some pos ->
-    (* Then: in the context of apply_rules_seq execution, we know that no rules
-       in the list matched at any position before pos in this iteration *)
-    no_rules_match_before rules s pos.
-
-Lemma find_first_match_in_algorithm_implies_no_earlier_matches :
-  find_first_match_no_earlier_matches_contract ->
-  forall rules r_head s pos,
-    (forall r, In r rules -> wf_rule r) ->
-    In r_head rules ->
-    find_first_match r_head s (length s) = Some pos ->
-    no_rules_match_before rules s pos.
-Proof.
-  intros contract rules r_head s pos Hwf Hin Hfind.
-  exact (contract rules r_head s pos Hwf Hin Hfind).
-Qed.
-
 (** * Decidable Equality for RewriteRule *)
 
 Definition RewriteRule_eq_dec (r1 r2 : RewriteRule) : {r1 = r2} + {r1 <> r2}.

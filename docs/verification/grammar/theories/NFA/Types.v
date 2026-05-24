@@ -348,10 +348,6 @@ Definition prune_state_spec (st : GeneralizedState) : Prop :=
   (forall wl, prune_preserves_acceptance wl st) /\
   prune_subsumed_complete st.
 
-Definition prune_state_satisfies_spec_contract : Prop := forall st,
-  Forall (fun p => pos_e p <= state_max_distance st) (state_positions st) ->
-  prune_state_spec st.
-
 (** prune_subsumed_positions returns a sublist of the input. *)
 Lemma prune_subsumed_is_sublist : forall positions p,
   In p (prune_subsumed_positions positions) -> In p positions.
@@ -501,6 +497,117 @@ Proof.
   apply Nat.leb_le in He12. apply Nat.leb_le in He23.
   subst. rewrite Nat.eqb_refl. simpl.
   apply Nat.leb_le. lia.
+Qed.
+
+Lemma position_subsumes_same_index : forall p1 p2,
+  position_subsumes p1 p2 = true ->
+  pos_i p1 = pos_i p2.
+Proof.
+  intros [i1 e1 ctx1] [i2 e2 ctx2] Hsub.
+  unfold position_subsumes in Hsub. simpl in Hsub.
+  apply andb_true_iff in Hsub as [Hi _].
+  apply Nat.eqb_eq in Hi.
+  exact Hi.
+Qed.
+
+Lemma prune_subsumed_retains_or_subsumed : forall positions p,
+  In p positions ->
+  In p (prune_subsumed_positions positions) \/
+  exists p', In p' (prune_subsumed_positions positions) /\
+    position_subsumes p' p = true.
+Proof.
+  induction positions as [| h rest IH]; intros p Hin; simpl in *.
+  - contradiction.
+  - destruct (existsb (fun p' : Position => position_subsumes p' h)
+                      (prune_subsumed_positions rest)) eqn:Hsubsumed.
+    + destruct Hin as [Heq | Hin].
+      * subst h.
+        right.
+        apply existsb_exists in Hsubsumed.
+        destruct Hsubsumed as [p' [Hin' Hsub]].
+        exists p'. split; assumption.
+      * destruct (IH p Hin) as [Hin_pruned | [p' [Hin' Hsub]]].
+        -- left. exact Hin_pruned.
+        -- right. exists p'. split; assumption.
+    + destruct Hin as [Heq | Hin].
+      * subst h. left. left. reflexivity.
+      * destruct (IH p Hin) as [Hin_pruned | [p' [Hin' Hsub]]].
+        -- destruct (position_subsumes h p) eqn:Hhp.
+           ++ right. exists h. split; [left; reflexivity | exact Hhp].
+           ++ left. right. apply filter_In. split.
+              ** exact Hin_pruned.
+              ** rewrite Hhp. reflexivity.
+        -- destruct (position_subsumes h p') eqn:Hhp'.
+           ++ right. exists h. split; [left; reflexivity |].
+              eapply position_subsumes_trans; eauto.
+           ++ right. exists p'. split.
+              ** right. apply filter_In. split.
+                 --- exact Hin'.
+                 --- rewrite Hhp'. reflexivity.
+              ** exact Hsub.
+Qed.
+
+Lemma prune_subsumed_preserves_forall : forall (P : Position -> Prop) positions,
+  Forall P positions ->
+  Forall P (prune_subsumed_positions positions).
+Proof.
+  intros P positions Hall.
+  apply Forall_forall.
+  intros p Hin.
+  apply prune_subsumed_is_sublist in Hin.
+  rewrite Forall_forall in Hall.
+  exact (Hall p Hin).
+Qed.
+
+Lemma prune_subsumed_preserves_acceptance : forall positions word_length,
+  existsb (fun p => pos_i p =? word_length) positions = true ->
+  existsb (fun p => pos_i p =? word_length)
+          (prune_subsumed_positions positions) = true.
+Proof.
+  intros positions word_length Hacc.
+  apply existsb_exists in Hacc as [p [Hin Hp]].
+  destruct (prune_subsumed_retains_or_subsumed positions p Hin)
+    as [Hin_pruned | [p' [Hin_pruned Hsub]]].
+  - apply existsb_exists.
+    exists p. split; assumption.
+  - apply existsb_exists.
+    exists p'. split; [exact Hin_pruned |].
+    apply Nat.eqb_eq.
+    apply Nat.eqb_eq in Hp.
+    rewrite (position_subsumes_same_index p' p Hsub).
+    exact Hp.
+Qed.
+
+Lemma prune_subsumed_complete_holds : forall positions p,
+  In p positions ->
+  ~In p (prune_subsumed_positions positions) ->
+  exists p', In p' (prune_subsumed_positions positions) /\
+    position_subsumes p' p = true.
+Proof.
+  intros positions p Hin Hnotin.
+  destruct (prune_subsumed_retains_or_subsumed positions p Hin)
+    as [Hin_pruned | Hsub].
+  - exfalso. apply Hnotin. exact Hin_pruned.
+  - exact Hsub.
+Qed.
+
+Theorem prune_state_satisfies_spec : forall st,
+  Forall (fun p => pos_e p <= state_max_distance st) (state_positions st) ->
+  prune_state_spec st.
+Proof.
+  intros st Hbounded.
+  unfold prune_state_spec.
+  repeat split.
+  - apply prune_state_incl_holds.
+  - unfold prune_preserves_error_bound, prune_state. simpl.
+    apply prune_subsumed_preserves_forall.
+    exact Hbounded.
+  - intros word_length.
+    unfold prune_preserves_acceptance, prune_state. simpl.
+    apply prune_subsumed_preserves_acceptance.
+  - unfold prune_subsumed_complete, prune_state. simpl.
+    intros p Hin Hnotin.
+    apply prune_subsumed_complete_holds; assumption.
 Qed.
 
 (** Standard operations are 1-bounded *)

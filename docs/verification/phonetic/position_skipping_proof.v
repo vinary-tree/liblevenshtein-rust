@@ -2118,36 +2118,6 @@ Proof.
   apply execution_context_implies_no_earlier_matches; auto.
 Qed.
 
-(** Legacy compatibility: The original statement without execution context.
-
-    New proofs should use the theorem version above with explicit execution
-    context. This legacy form is kept as an explicit contract rather than a
-    global axiom.
-
-    The contract captures the semantic property that in the ALGORITHM'S execution,
-    when we reach position pos, all rules were already checked at earlier positions.
-    This is implicitly true by the algorithm's structure but not derivable from
-    find_first_match alone.
-*)
-Definition find_first_match_no_earlier_matches_legacy_contract : Prop :=
-  forall rules r_head s pos,
-    (forall r, In r rules -> wf_rule r) ->
-    In r_head rules ->
-    find_first_match r_head s (length s) = Some pos ->
-    no_rules_match_before rules s pos.
-
-Lemma find_first_match_in_algorithm_implies_no_earlier_matches_legacy :
-  find_first_match_no_earlier_matches_legacy_contract ->
-  forall rules r_head s pos,
-    (forall r, In r rules -> wf_rule r) ->
-    In r_head rules ->
-    find_first_match r_head s (length s) = Some pos ->
-    no_rules_match_before rules s pos.
-Proof.
-  intros contract rules r_head s pos Hwf Hin Hfind.
-  exact (contract rules r_head s pos Hwf Hin Hfind).
-Qed.
-
 (** ** Helper Lemmas for Pattern Overlap Preservation *)
 
 (** Lemma: If pattern_matches_at returns false, there exists a position where matching fails *)
