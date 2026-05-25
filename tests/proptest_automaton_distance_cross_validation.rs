@@ -522,6 +522,27 @@ mod regression_tests {
         );
     }
 
+    /// Regression for a leading delete followed by a match.
+    ///
+    /// This is the small executable case behind the Standard completeness
+    /// antichain proof obligation: query "ab" should accept dictionary "b"
+    /// at distance 1 by deleting the leading 'a' before matching 'b'.
+    #[test]
+    fn test_standard_leading_delete_then_match() {
+        let dict_words = vec!["b".to_string()];
+        let query = "ab";
+        let max_dist = 1;
+
+        let linear_results = linear_scan_standard(&dict_words, query, max_dist);
+        let automaton_results = automaton_query(&dict_words, query, max_dist, Algorithm::Standard);
+
+        assert_eq!(
+            automaton_results, linear_results,
+            "Leading-delete case: Standard automaton should match linear scan"
+        );
+        assert!(automaton_results.contains("b"));
+    }
+
     /// Test specific transposition case
     #[test]
     fn test_transposition_specific_case() {

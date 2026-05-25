@@ -1,7 +1,42 @@
 # Automaton Proofs Status
 
-**Date**: December 18, 2025 (Session 6 Update)
-**Build Status**: ✅ Compiles successfully
+**Current Status Date**: May 25, 2026
+**Build Status**: Compiles successfully under the focused formal runner
+
+## Current Live Status
+
+The source-level admission scan is clean for the automaton Coq files: there are
+no active `Admitted.`, `admit.`, `Axiom`, or `Parameter` declarations in the
+current automaton proof surface.
+
+The remaining automaton completeness debt is explicit and conditional. In the
+automaton files, `./scripts/verify-formal.sh audit-evidence-tsv` reports
+`AutomatonCompletenessCoreEvidence` in `Completeness.v`, with these three fields
+still requiring local proofs:
+
+- `position_subsumed_from_run` for Standard antichain representation.
+- `transposition_completeness` for direct Damerau/Transposition completeness.
+- `merge_split_completeness` for direct MergeAndSplit completeness.
+
+Recent local progress toward retiring `position_subsumed_from_run`:
+
+- Exact same-index containment was replaced by executable Standard subsumption;
+  `standard_exact_positions_contain_counterexample` documents why exact
+  containment is false.
+- Empty-prefix representation is proved by
+  `position_subsumed_from_empty_run`.
+- Delete-successor representation arithmetic is factored through
+  `subsumes_standard_delete_successor_chain`, including the final-position case
+  where non-final representatives cannot directly subsume final positions.
+- Insert representation through a Standard transition is now factored through
+  `subsumes_standard_insert_successor` and
+  `transition_state_standard_represents_insert_represented`.
+- The same represented-insert step is lifted to the can-complete invariant by
+  `transition_state_standard_preserves_can_complete_insert_represented`.
+- The executable delete-prefix case `query = "ab"`, `dict = "b"`,
+  `max_dist = 1` is covered by a focused Rust regression test.
+
+The historical notes below are retained for context only.
 
 > Update (2026-05-24): this is historical status. The false exact
 > fold-state correspondence path has since been removed:

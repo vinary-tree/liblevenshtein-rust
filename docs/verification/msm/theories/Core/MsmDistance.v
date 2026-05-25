@@ -122,39 +122,14 @@ Qed.
     the equality respected by rational arithmetic in QArith. *)
 
 Record MsmDistanceEvidence : Prop := mkMsmDistanceEvidence {
-  (** MSM identity of indiscernibles for the non-empty DP case. *)
-  msm_zero_implies_series_eq_proof : forall x xs y ys (cfg : MsmConfig),
+  (** MSM identity of indiscernibles for the recursive non-empty DP case.
+      Singleton edge cases are proved locally below. *)
+  msm_zero_implies_series_eq_proof :
+    forall x x_next xs y y_next ys (cfg : MsmConfig),
     0 < msm_c cfg ->
-    msm_distance (x :: xs) (y :: ys) cfg == 0 ->
-    series_Qeq (x :: xs) (y :: ys)
+    msm_distance (x :: x_next :: xs) (y :: y_next :: ys) cfg == 0 ->
+    series_Qeq (x :: x_next :: xs) (y :: y_next :: ys)
 }.
-
-Lemma msm_zero_implies_series_eq_evidence_use : forall (contracts : MsmDistanceEvidence) X Y cfg,
-  0 < msm_c cfg ->
-  msm_distance X Y cfg == 0 ->
-  series_Qeq X Y.
-Proof.
-  intros contracts X Y cfg Hc Hzero.
-  destruct X as [|x xs]; destruct Y as [|y ys].
-  - exact I.
-  - simpl in Hzero.
-    exfalso.
-    assert (Hlen_pos : (0 < length (y :: ys))%nat) by (simpl; lia).
-    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (y :: ys)))).
-    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
-    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (y :: ys))) * msm_c cfg).
-    { apply Qmult_lt_0_compat; assumption. }
-    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
-  - simpl in Hzero.
-    exfalso.
-    assert (Hlen_pos : (0 < length (x :: xs))%nat) by (simpl; lia).
-    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (x :: xs)))).
-    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
-    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (x :: xs))) * msm_c cfg).
-    { apply Qmult_lt_0_compat; assumption. }
-    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
-  - exact (msm_zero_implies_series_eq_proof contracts x xs y ys cfg Hc Hzero).
-Qed.
 
 Lemma msm_distance_empty_empty : forall cfg,
   msm_distance [] [] cfg == 0.
@@ -482,6 +457,275 @@ Lemma c_func_identity : forall c_const a c_val,
   c_func c_const a a c_val == c_const.
 Proof.
   intros. apply c_func_a_eq_b.
+Qed.
+
+(** Positive split/merge costs cannot participate in a zero-cost path. *)
+Lemma c_func_pos : forall c_const a b c_val,
+  0 < c_const ->
+  0 < c_func c_const a b c_val.
+Proof.
+  intros c_const a b c_val Hc.
+  eapply Qlt_le_trans.
+  - exact Hc.
+  - apply c_func_ge_c.
+    apply Qlt_le_weak. exact Hc.
+Qed.
+
+Lemma Qplus_nonneg_pos : forall a b,
+  0 <= a ->
+  0 < b ->
+  0 < a + b.
+Proof.
+  intros a b Ha Hb.
+  setoid_replace 0 with (0 + 0) by ring.
+  setoid_replace (a + b) with (b + a) by ring.
+  apply Qplus_lt_le_compat; assumption.
+Qed.
+
+Lemma Qplus_nonneg_pos_not_zero : forall a b,
+  0 <= a ->
+  0 < b ->
+  ~ (a + b == 0).
+Proof.
+  intros a b Ha Hb Hzero.
+  pose proof (Qplus_nonneg_pos a b Ha Hb) as Hpos.
+  apply (Qlt_not_eq 0 (a + b) Hpos).
+  symmetry. exact Hzero.
+Qed.
+
+Lemma Qplus_nonneg_eq_zero : forall a b,
+  0 <= a ->
+  0 <= b ->
+  a + b == 0 ->
+  a == 0 /\ b == 0.
+Proof.
+  intros a b Ha Hb Hsum.
+  split.
+  - destruct (Qle_lt_or_eq 0 a Ha) as [Ha_pos | Ha_zero].
+    + exfalso.
+      setoid_replace (a + b) with (b + a) in Hsum by ring.
+      apply (Qplus_nonneg_pos_not_zero b a Hb Ha_pos).
+      exact Hsum.
+    + symmetry. exact Ha_zero.
+  - destruct (Qle_lt_or_eq 0 b Hb) as [Hb_pos | Hb_zero].
+    + exfalso.
+      apply (Qplus_nonneg_pos_not_zero a b Ha Hb_pos).
+      exact Hsum.
+    + symmetry. exact Hb_zero.
+Qed.
+
+Lemma Qmin2_eq_zero_choice : forall a b,
+  Qmin2 a b == 0 ->
+  a == 0 \/ b == 0.
+Proof.
+  intros a b Hmin.
+  unfold Qmin2 in Hmin.
+  destruct (Qle_bool a b); [left | right]; exact Hmin.
+Qed.
+
+Lemma Qmin3_eq_zero_choice : forall a b c,
+  Qmin3 a b c == 0 ->
+  a == 0 \/ b == 0 \/ c == 0.
+Proof.
+  intros a b c Hmin.
+  unfold Qmin3 in Hmin.
+  destruct (Qmin2_eq_zero_choice a (Qmin2 b c) Hmin) as [Ha | Hbc].
+  - left. exact Ha.
+  - right.
+    apply Qmin2_eq_zero_choice. exact Hbc.
+Qed.
+
+Lemma msm_init_row_last_zero_singleton : forall x1 y_prev Y_tail prev_cost c_const,
+  0 < c_const ->
+  0 <= prev_cost ->
+  last (msm_init_row x1 y_prev Y_tail prev_cost c_const) 0 == 0 ->
+  Y_tail = [] /\ prev_cost == 0.
+Proof.
+  intros x1 y_prev Y_tail.
+  revert y_prev.
+  induction Y_tail as [|y ys IH]; intros y_prev prev_cost c_const Hc Hprev Hlast.
+  - simpl in Hlast. split; [reflexivity | exact Hlast].
+  - simpl in Hlast.
+    assert (Hnext_nonneg : 0 <= prev_cost + c_func c_const y x1 y_prev).
+    { apply Qlt_le_weak.
+      apply Qplus_nonneg_pos.
+      - exact Hprev.
+      - apply c_func_pos. exact Hc. }
+    destruct ys as [|y_next ys'].
+    + simpl in Hlast.
+      exfalso.
+      apply (Qplus_nonneg_pos_not_zero prev_cost
+               (c_func c_const y x1 y_prev)).
+      * exact Hprev.
+      * apply c_func_pos. exact Hc.
+      * exact Hlast.
+    + simpl in Hlast.
+      destruct (IH y (prev_cost + c_func c_const y x1 y_prev)
+                   c_const Hc Hnext_nonneg Hlast) as [_ Hnext_zero].
+      exfalso.
+      apply (Qplus_nonneg_pos_not_zero prev_cost
+               (c_func c_const y x1 y_prev)).
+      * exact Hprev.
+      * apply c_func_pos. exact Hc.
+      * exact Hnext_zero.
+Qed.
+
+Lemma msm_distance_singleton_left_zero : forall x y ys cfg,
+  0 < msm_c cfg ->
+  msm_distance [x] (y :: ys) cfg == 0 ->
+  ys = [] /\ x == y.
+Proof.
+  intros x y ys cfg Hc Hzero.
+  simpl in Hzero.
+  destruct (msm_init_row_last_zero_singleton
+              x y ys (Qabs_diff x y) (msm_c cfg)
+              Hc (Qabs_diff_nonneg x y) Hzero) as [Hys Habs].
+  split.
+  - exact Hys.
+  - apply Qabs_diff_zero_iff. exact Habs.
+Qed.
+
+Lemma msm_compute_rows_singleton_from_positive : forall xs x_prev y cost c_const,
+  0 < c_const ->
+  0 < cost ->
+  0 < last (msm_compute_rows xs x_prev [y] y [cost] c_const) 0.
+Proof.
+  induction xs as [|x_next xs IH]; intros x_prev y cost c_const Hc Hcost.
+  - simpl. exact Hcost.
+  - change (0 <
+      last (msm_compute_rows xs x_next [y] y
+              [cost + c_func c_const x_next x_prev y] c_const) 0).
+    eapply IH.
+    + exact Hc.
+    + apply Qplus_nonneg_pos.
+      * apply Qlt_le_weak.
+        exact Hcost.
+      * apply c_func_pos. exact Hc.
+Qed.
+
+Lemma msm_distance_singleton_right_zero : forall x xs y cfg,
+  0 < msm_c cfg ->
+  msm_distance (x :: xs) [y] cfg == 0 ->
+  xs = [] /\ x == y.
+Proof.
+  intros x xs y cfg Hc Hzero.
+  destruct xs as [|x2 xs'].
+  - simpl in Hzero.
+    split; [reflexivity |].
+    apply Qabs_diff_zero_iff. exact Hzero.
+  - simpl in Hzero.
+    exfalso.
+    assert (Hstart_pos : 0 < Qabs_diff x y + c_func (msm_c cfg) x2 x y).
+    { apply Qplus_nonneg_pos.
+      - apply Qabs_diff_nonneg.
+      - apply c_func_pos. exact Hc. }
+    pose proof (msm_compute_rows_singleton_from_positive
+                  xs' x2 y
+                  (Qabs_diff x y + c_func (msm_c cfg) x2 x y)
+                  (msm_c cfg) Hc) as Hpos.
+    specialize (Hpos Hstart_pos).
+    apply (Qlt_not_eq 0 _ Hpos).
+    symmetry. exact Hzero.
+Qed.
+
+Lemma msm_distance_two_two_zero : forall x x_next y y_next cfg,
+  0 < msm_c cfg ->
+  msm_distance [x; x_next] [y; y_next] cfg == 0 ->
+  x == y /\ x_next == y_next.
+Proof.
+  intros x x_next y y_next cfg Hc Hzero.
+  simpl in Hzero.
+  destruct (Qmin3_eq_zero_choice
+              (Qabs_diff x y + Qabs_diff x_next y_next)
+              (Qabs_diff x y + c_func (msm_c cfg) y_next x y +
+                 c_func (msm_c cfg) x_next x y_next)
+              (Qabs_diff x y + c_func (msm_c cfg) x_next x y +
+                 c_func (msm_c cfg) y_next x_next y)
+              Hzero) as [Hmove | [Hmerge | Hsplit]].
+  - destruct (Qplus_nonneg_eq_zero
+                (Qabs_diff x y) (Qabs_diff x_next y_next)
+                (Qabs_diff_nonneg x y)
+                (Qabs_diff_nonneg x_next y_next)
+                Hmove) as [Hxy Hnext].
+    split.
+    + apply Qabs_diff_zero_iff. exact Hxy.
+    + apply Qabs_diff_zero_iff. exact Hnext.
+  - exfalso.
+    assert (Hprefix_pos :
+      0 < Qabs_diff x y + c_func (msm_c cfg) y_next x y).
+    { apply Qplus_nonneg_pos.
+      - apply Qabs_diff_nonneg.
+      - apply c_func_pos. exact Hc. }
+    assert (Hmerge_pos :
+      0 < Qabs_diff x y + c_func (msm_c cfg) y_next x y +
+            c_func (msm_c cfg) x_next x y_next).
+    { apply Qplus_nonneg_pos.
+      - apply Qlt_le_weak. exact Hprefix_pos.
+      - apply c_func_pos. exact Hc. }
+    apply (Qlt_not_eq 0 _ Hmerge_pos).
+    symmetry. exact Hmerge.
+  - exfalso.
+    assert (Hprefix_pos :
+      0 < Qabs_diff x y + c_func (msm_c cfg) x_next x y).
+    { apply Qplus_nonneg_pos.
+      - apply Qabs_diff_nonneg.
+      - apply c_func_pos. exact Hc. }
+    assert (Hsplit_pos :
+      0 < Qabs_diff x y + c_func (msm_c cfg) x_next x y +
+            c_func (msm_c cfg) y_next x_next y).
+    { apply Qplus_nonneg_pos.
+      - apply Qlt_le_weak. exact Hprefix_pos.
+      - apply c_func_pos. exact Hc. }
+    apply (Qlt_not_eq 0 _ Hsplit_pos).
+    symmetry. exact Hsplit.
+Qed.
+
+Lemma msm_zero_implies_series_eq_evidence_use : forall (contracts : MsmDistanceEvidence) X Y cfg,
+  0 < msm_c cfg ->
+  msm_distance X Y cfg == 0 ->
+  series_Qeq X Y.
+Proof.
+  intros contracts X Y cfg Hc Hzero.
+  destruct X as [|x xs]; destruct Y as [|y ys].
+  - exact I.
+  - simpl in Hzero.
+    exfalso.
+    assert (Hlen_pos : (0 < length (y :: ys))%nat) by (simpl; lia).
+    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (y :: ys)))).
+    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
+    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (y :: ys))) * msm_c cfg).
+    { apply Qmult_lt_0_compat; assumption. }
+    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
+  - simpl in Hzero.
+    exfalso.
+    assert (Hlen_pos : (0 < length (x :: xs))%nat) by (simpl; lia).
+    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (x :: xs)))).
+    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
+    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (x :: xs))) * msm_c cfg).
+    { apply Qmult_lt_0_compat; assumption. }
+    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
+  - destruct xs as [|x_next xs']; destruct ys as [|y_next ys'].
+    + simpl in Hzero.
+      simpl. split.
+      * apply Qabs_diff_zero_iff. exact Hzero.
+      * exact I.
+    + destruct (msm_distance_singleton_left_zero x y (y_next :: ys') cfg Hc Hzero)
+        as [Htail_empty _].
+      discriminate Htail_empty.
+    + destruct (msm_distance_singleton_right_zero x (x_next :: xs') y cfg Hc Hzero)
+        as [Htail_empty _].
+      discriminate Htail_empty.
+    + destruct xs' as [|x_third xs'']; destruct ys' as [|y_third ys''].
+      * simpl.
+        destruct (msm_distance_two_two_zero x x_next y y_next cfg Hc Hzero)
+          as [Hxy Hnext].
+        repeat split; assumption.
+      * exact (msm_zero_implies_series_eq_proof contracts
+                 x x_next [] y y_next (y_third :: ys'') cfg Hc Hzero).
+      * exact (msm_zero_implies_series_eq_proof contracts
+                 x x_next (x_third :: xs'') y y_next [] cfg Hc Hzero).
+      * exact (msm_zero_implies_series_eq_proof contracts
+                 x x_next (x_third :: xs'') y y_next (y_third :: ys'') cfg Hc Hzero).
 Qed.
 
 (** For reflexivity, the key insight is that the minimum cost path

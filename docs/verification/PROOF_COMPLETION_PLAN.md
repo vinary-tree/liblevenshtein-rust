@@ -251,6 +251,14 @@ supported by the current executable model:
   non-empty DP identity case. Empty/empty is immediate, and empty/non-empty
   mismatch cases are now proved locally from `c > 0` and positivity of
   `inject_Z (Z.of_nat (length _)) * c`.
+- `MSM/Core/MsmDistance.v`: proved positive split/merge cost lemmas, zero
+  decomposition for `Qmin2`/`Qmin3`, and both singleton zero-distance edge
+  cases. `MsmDistanceEvidence` now covers only the recursive DP identity case
+  where both inputs have length at least two.
+- `MSM/Core/MsmDistance.v`: proved the exact two-point/two-point zero-distance
+  case directly from the executable DP recurrence; the public zero-distance
+  wrapper now discharges that edge case before falling back to the remaining
+  recursive DP evidence.
 - `Automaton/Completeness.v`: narrowed `can_reach_higher_index` to the only
   model-accurate form used by callers, requiring the original `can_reach`
   witness to end at `term_index = length query` with bounded final errors. The
@@ -285,6 +293,15 @@ supported by the current executable model:
   reachability, Standard non-special preservation, and the characteristic-vector
   spread/window lemmas. The core completeness record no longer contains a
   transition-success field.
+- `Automaton/Completeness.v`: added the next Standard representation facts for
+  retiring `position_subsumed_from_run`: delete-successor chain arithmetic for
+  final-position cases, represented insert preservation through `state_insert`,
+  and the corresponding can-complete insert preservation lemma.
+- `Automaton/Completeness.v`: added epsilon-closure source tracking and
+  delete-chain closure for folded Standard transition outputs. Successful
+  Standard runs now expose `state_delete_chain_represented`, and represented
+  predecessor delete successors are proved directly from the run instead of
+  needing a new evidence field.
 - `Automaton/Completeness.v`: replaced the exact same-index
   `position_contained_from_run` bridge with `position_subsumed_from_run`, which
   uses the executable `subsumes Standard` antichain relation. The file now also
