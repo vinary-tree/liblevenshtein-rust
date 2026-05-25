@@ -61,27 +61,26 @@ Qed.
     damerau_lev_distance query dict <= n
 *)
 Theorem automaton_correct_transposition : forall
-  (sound_contracts : AutomatonSoundnessEvidence)
   (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   automaton_accepts Transposition query n dict = true <->
   damerau_lev_distance query dict <= n.
 Proof.
-  intros sound_contracts complete_contracts query dict n.
+  intros complete_contracts query dict n.
   split.
   - (* Soundness *)
-    apply (automaton_sound_transposition sound_contracts).
+    apply automaton_sound_transposition.
   - (* Completeness *)
     apply (automaton_complete_transposition complete_contracts).
 Qed.
 
 (** Soundness direction *)
-Theorem automaton_correct_transposition_sound : forall (sound_contracts : AutomatonSoundnessEvidence) query dict n,
+Theorem automaton_correct_transposition_sound : forall query dict n,
   automaton_accepts Transposition query n dict = true ->
   damerau_lev_distance query dict <= n.
 Proof.
-  intros sound_contracts query dict n Haccept.
-  apply (automaton_sound_transposition sound_contracts).
+  intros query dict n Haccept.
+  apply automaton_sound_transposition.
   exact Haccept.
 Qed.
 
@@ -120,27 +119,26 @@ Qed.
     merge_split_distance query dict <= n
 *)
 Theorem automaton_correct_merge_split : forall
-  (sound_contracts : AutomatonSoundnessEvidence)
   (complete_contracts : AutomatonCompletenessCoreEvidence)
   query dict n,
   automaton_accepts MergeAndSplit query n dict = true <->
   merge_split_distance query dict <= n.
 Proof.
-  intros sound_contracts complete_contracts query dict n.
+  intros complete_contracts query dict n.
   split.
   - (* Soundness *)
-    apply (automaton_sound_merge_split sound_contracts).
+    apply automaton_sound_merge_split.
   - (* Completeness *)
     apply (automaton_complete_merge_split complete_contracts).
 Qed.
 
 (** Soundness direction *)
-Theorem automaton_correct_merge_split_sound : forall (sound_contracts : AutomatonSoundnessEvidence) query dict n,
+Theorem automaton_correct_merge_split_sound : forall query dict n,
   automaton_accepts MergeAndSplit query n dict = true ->
   merge_split_distance query dict <= n.
 Proof.
-  intros sound_contracts query dict n Haccept.
-  apply (automaton_sound_merge_split sound_contracts).
+  intros query dict n Haccept.
+  apply automaton_sound_merge_split.
   exact Haccept.
 Qed.
 
@@ -302,25 +300,24 @@ Qed.
 
 (** Increasing the distance bound preserves acceptance *)
 Lemma automaton_accepts_monotone : forall
-  (sound_contracts : AutomatonSoundnessEvidence)
   (complete_contracts : AutomatonCompletenessCoreEvidence)
   alg query dict n m,
   n <= m ->
   automaton_accepts alg query n dict = true ->
   automaton_accepts alg query m dict = true.
 Proof.
-  intros sound_contracts complete_contracts alg query dict n m Hle Hacc.
+  intros complete_contracts alg query dict n m Hle Hacc.
   destruct alg.
   - (* Standard *)
     apply (proj1 (automaton_correct_standard complete_contracts query dict n)) in Hacc.
     apply (proj2 (automaton_correct_standard complete_contracts query dict m)).
     lia.
   - (* Transposition *)
-    apply (automaton_correct_transposition_sound sound_contracts) in Hacc.
+    apply automaton_correct_transposition_sound in Hacc.
     apply (automaton_correct_transposition_complete complete_contracts).
     lia.
   - (* MergeAndSplit *)
-    apply (automaton_correct_merge_split_sound sound_contracts) in Hacc.
+    apply automaton_correct_merge_split_sound in Hacc.
     apply (automaton_correct_merge_split_complete complete_contracts).
     lia.
 Qed.
@@ -354,8 +351,7 @@ Qed.
     - damerau_lev_distance <= lev_distance (transposition can only help)
     - merge_split_distance <= lev_distance (merge/split can only help)
 
-    Remaining contract obligations for fully instantiated verification:
-    - Provide AutomatonSoundnessEvidence for algorithm-specific trace soundness.
-    - Provide AutomatonCompletenessCoreEvidence for reachability completeness.
-    - Exact distance reporting is bounded by automaton_distance_correct above.
+	Remaining contract obligations for fully instantiated verification:
+	- Provide AutomatonCompletenessCoreEvidence for reachability completeness.
+	- Exact distance reporting is bounded by automaton_distance_correct above.
 *)

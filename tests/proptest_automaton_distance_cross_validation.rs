@@ -555,4 +555,40 @@ mod regression_tests {
             "Merge/split case: automaton should match linear scan"
         );
     }
+
+    /// Generic MergeAndSplit permits any two query chars to merge into one dict char.
+    #[test]
+    fn test_merge_split_generic_two_to_one_acceptance() {
+        let dict_words = vec!["c".to_string()];
+        let query = "ab";
+        let max_dist = 1;
+        let cache = create_memo_cache();
+
+        assert_eq!(merge_and_split_distance(query, "c", &cache), 1);
+
+        let linear_results = linear_scan_merge_split(&dict_words, query, max_dist);
+        let automaton_results =
+            automaton_query(&dict_words, query, max_dist, Algorithm::MergeAndSplit);
+
+        assert_eq!(automaton_results, linear_results);
+        assert!(automaton_results.contains("c"));
+    }
+
+    /// Generic MergeAndSplit permits any one query char to split into two dict chars.
+    #[test]
+    fn test_merge_split_generic_one_to_two_acceptance() {
+        let dict_words = vec!["bc".to_string()];
+        let query = "a";
+        let max_dist = 1;
+        let cache = create_memo_cache();
+
+        assert_eq!(merge_and_split_distance(query, "bc", &cache), 1);
+
+        let linear_results = linear_scan_merge_split(&dict_words, query, max_dist);
+        let automaton_results =
+            automaton_query(&dict_words, query, max_dist, Algorithm::MergeAndSplit);
+
+        assert_eq!(automaton_results, linear_results);
+        assert!(automaton_results.contains("bc"));
+    }
 }

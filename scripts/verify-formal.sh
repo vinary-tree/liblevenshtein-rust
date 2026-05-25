@@ -468,16 +468,26 @@ audit_evidence_tsv() {
               sub(/^[[:space:]]*Record[[:space:]]+/, "", symbol)
               sub(/[[:space:]:{].*/, "", symbol)
               emit("Record", symbol, "neutral evidence record")
+              in_evidence_record = 1
             } else if (out ~ /^[[:space:]]*Definition[[:space:]]+[A-Za-z0-9_]*_premise[[:space:]]*[:=]/) {
               symbol = out
               sub(/^[[:space:]]*Definition[[:space:]]+/, "", symbol)
               sub(/[[:space:]:\(].*/, "", symbol)
               emit("Definition", symbol, "explicit premise parameter")
+            } else if (in_evidence_record && out ~ /^[[:space:]]*[A-Za-z0-9_]+[[:space:]]*:/) {
+              symbol = out
+              sub(/^[[:space:]]*/, "", symbol)
+              sub(/[[:space:]:].*/, "", symbol)
+              emit("Field", symbol, "field in evidence record")
             } else if (out ~ /^[[:space:]]*[A-Za-z0-9_]+_(proof|bridge|premise)[[:space:]]*:/) {
               symbol = out
               sub(/^[[:space:]]*/, "", symbol)
               sub(/[[:space:]:].*/, "", symbol)
               emit("Field", symbol, "field in evidence or premise record")
+            }
+
+            if (in_evidence_record && out ~ /^[[:space:]]*}\./) {
+              in_evidence_record = 0
             }
           }
         ' "$file"

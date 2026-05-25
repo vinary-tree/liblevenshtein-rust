@@ -351,26 +351,19 @@ Proof.
   reflexivity.
 Qed.
 
-(** Regression examples for character-aware MergeAndSplit merge edges. *)
-Definition ms_demo_merge_left : Char :=
-  Ascii false false true true false false true false.
+(** Regression examples for generic MergeAndSplit merge edges. *)
+Definition ms_generic_merge_left : Char := "a"%char.
+Definition ms_generic_merge_right : Char := "b"%char.
+Definition ms_generic_merge_target : Char := "c"%char.
 
-Definition ms_demo_merge_right : Char :=
-  Ascii true false true false false false true false.
-
-Definition ms_demo_merge_target : Char :=
-  Ascii false true true false false false true false.
-
-Example merge_split_accepts_closed_world_merge :
+Example merge_split_accepts_generic_merge :
+  can_merge ms_generic_merge_left ms_generic_merge_right ms_generic_merge_target = true /\
+  merge_split_distance [ms_generic_merge_left; ms_generic_merge_right]
+                       [ms_generic_merge_target] = 1 /\
   automaton_accepts MergeAndSplit
-    [ms_demo_merge_left; ms_demo_merge_right] 1 [ms_demo_merge_target] = true.
-Proof. reflexivity. Qed.
-
-Example merge_split_rejects_unlisted_merge_at_one :
-  can_merge ms_demo_merge_left ms_demo_merge_right default_char = false /\
-  merge_split_distance [ms_demo_merge_left; ms_demo_merge_right] [default_char] = 2 /\
-  automaton_accepts MergeAndSplit
-    [ms_demo_merge_left; ms_demo_merge_right] 1 [default_char] = false.
+    [ms_generic_merge_left; ms_generic_merge_right]
+    1
+    [ms_generic_merge_target] = true.
 Proof. repeat split; reflexivity. Qed.
 
 (** Example: Same single-char word should be accepted.

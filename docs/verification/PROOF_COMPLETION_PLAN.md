@@ -155,9 +155,9 @@ supported by the current executable model:
   executable acceptance or edit-sequence witness hypotheses. Downstream NFA
   correctness and Layer 1 integration theorems now expose those hypotheses
   directly instead of hiding them in evidence records.
-- `Automaton/Soundness.v`: removed `initial_state_no_special_proof` from
-  `AutomatonSoundnessEvidence`; the transposition initial state is
-  `[std_pos 0 0]`, so non-specialness is now a direct lemma.
+- `Automaton/Soundness.v`: removed the earlier initial-state specialness
+  premise; the transposition initial state is `[std_pos 0 0]`, so
+  non-specialness is now a direct lemma.
 - `MSM/Core/CFunction.v`: removed an unused contract-shaped triangle helper;
   `MSM/Metric/MainTheorem.v`: renamed the already-proved reverse triangle lemma
   so it no longer appears as an axiom-shaped theorem.
@@ -214,13 +214,12 @@ supported by the current executable model:
   and unused can-complete preservation fields. The replacements are local
   lemmas with capped compile coverage.
 - `Automaton/Soundness.v`: removed the unused special-origin transition
-  preservation field from `AutomatonSoundnessEvidence`; the remaining soundness
-  fields are the ones still consumed by downstream proofs.
+  preservation field. The soundness evidence record has since been retired
+  completely after local Transposition and MergeAndSplit soundness proofs.
 - `Core/MergeSplitDistance.v` and `Automaton/Soundness.v`: proved
   `lev_distance_ms_bound` from optimal merge-split edit sequences. The
-  `lev_distance_ms_bound_proof` field was removed from
-  `AutomatonSoundnessEvidence`; MergeAndSplit Levenshtein fallback soundness now
-  uses the local sequence-simulation theorem directly.
+  `lev_distance_ms_bound_proof` field was removed; MergeAndSplit Levenshtein
+  fallback soundness now uses the local sequence-simulation theorem directly.
 - `Automaton/Completeness.v`: removed the false broad
   `subsumption_preserves_nonspecial` evidence field. The only caller now uses
   the explicit antichain invariant that existing positions are non-special;
@@ -239,7 +238,7 @@ supported by the current executable model:
   reachable-position error bound.
 - `Automaton/Completeness.v`: removed
   `automaton_final_state_accepts_proof`; final-state acceptance is now derived
-  from `position_contained_from_run` plus query-length preservation. Also
+  from `position_subsumed_from_run` plus query-length preservation. Also
   removed `fold_state_insert_spread_bound_ms_proof`; the folded MergeAndSplit
   spread bound follows from origin tracking and monotonicity of the folded
   minimum.
@@ -269,7 +268,7 @@ supported by the current executable model:
   `AutomatonCompletenessTransitionEvidence` route and the dead
   `reachable_implies_contained_aux` wrapper. The exact epsilon-closure field was
   over-strong for antichain-filtered states; active completeness relies on the
-  narrower `position_contained_from_run` field in core evidence.
+  narrower `position_subsumed_from_run` field in core evidence.
 - `Automaton/Completeness.v`: removed the false exact fold-state inclusion
   surfaces (`AutomatonFoldStateEvidence`, the Standard-to-Transposition fold
   field, and both special-algorithm spread fields). The Standard-to-Transposition
@@ -279,36 +278,46 @@ supported by the current executable model:
 - `Automaton/Completeness.v`: deleted unused core completeness fields for
   exact transition production, epsilon-closure final inclusion, and local
   distance tracking, plus the dead `automaton_finds_distance` corollary. The
-  active core record now tracks only position containment and
+  active core record now tracks only Standard antichain representation and
   algorithm-specific completeness.
 - `Automaton/Completeness.v`: proved the remaining exact-match transition
-  success obligation from `position_contained_from_run`, Standard run
+  success obligation from the Standard run representation bridge, Standard run
   reachability, Standard non-special preservation, and the characteristic-vector
   spread/window lemmas. The core completeness record no longer contains a
   transition-success field.
-- `Automaton/Transition.v` and `Automaton/Acceptance.v`: repaired the
-  executable MergeAndSplit merge edge so it requires the closed-world
-  `can_merge` predicate for the consumed dictionary character. The checked
-  regression now rejects the unlisted two-to-one merge at threshold 1 while
-  preserving acceptance for the listed finite merge rule.
-- `Automaton/Soundness.v`: removed the false-shaped special-origin soundness
-  fields. Special-state origins are not guaranteed to remain in the same
-  antichain state after transition/filtering, so the remaining extended
-  soundness obligations are now direct algorithm-level trace soundness fields
-  for Transposition and MergeAndSplit.
+- `Automaton/Completeness.v`: replaced the exact same-index
+  `position_contained_from_run` bridge with `position_subsumed_from_run`, which
+  uses the executable `subsumes Standard` antichain relation. The file now also
+  proves a concrete counterexample showing exact `positions_contain` is false
+  for query `[default_char]`, dict `[default_char]`, and threshold 1.
+- `Core/MergeSplitDistance.v`, `Automaton/Transition.v`, and
+  `Automaton/Acceptance.v`: aligned MergeAndSplit with the executable Rust
+  semantics, where every 2-to-1 merge and 1-to-2 split is available at cost 1.
+  The Coq predicates `can_merge` and `can_split` now preserve the older proof
+  interface while returning `true` for all character triples, and the checked
+  regression proves an arbitrary two-to-one merge is accepted at threshold 1.
+- `Automaton/Soundness.v`: removed `AutomatonSoundnessEvidence` entirely.
+  Standard, Transposition, and MergeAndSplit soundness are now proved locally;
+  MergeAndSplit uses a dedicated semantic reachability relation plus the
+  merge/split edit-sequence bounds in `Core/MergeSplitDistance.v`.
 - `ASSUMPTIONS.tsv`: split the broad MSM metric candidate into narrow allowed
   assumptions for MSM identity, symmetry, and the non-empty-domain triangle
   theorem, all cited to Stefan et al. MSM reflexivity has since been retired
   from the allowed set after the local row-diagonal proof. `ThompsonEvidence`
   has also been retired after local Kleene star/plus decomposition proofs.
+- `ASSUMPTIONS.tsv` and `scripts/verify-formal.sh`: the evidence audit now
+  reports every field inside `*Evidence` records, not only fields whose names
+  end in `_proof`, `_bridge`, or `_premise`. The MSM triangle fields are
+  explicitly allowlisted so the remaining unallowlisted audit output points at
+  active core automaton obligations.
 - `ASSUMPTIONS.tsv`: retired stale candidates for the old grammar
   Levenshtein-triangle shell and the now-removed
   `automaton_run_nonempty_epsilon_closed` wrapper.
 
 | Area | Remaining unallowlisted evidence surface |
 |---|---|
-| Core automaton soundness | `AutomatonSoundnessEvidence` |
-| Core automaton completeness | `AutomatonCompletenessCoreEvidence` |
+| Core automaton soundness | none |
+| Core automaton completeness | `AutomatonCompletenessCoreEvidence`, `transposition_completeness`, `merge_split_completeness`, `position_subsumed_from_run` |
 
 `docs/verification/core/theories/Distance.v` remains a legacy monolith. Use the
 decomposed modules (`OptimalTrace/*`, `Triangle/*`, `LowerBound/*`,
@@ -324,12 +333,12 @@ reference material and is not the memory-efficient target.
 
 2. Prove core automaton contracts.
 
-   Close the remaining core records by proving or further decomposing the
-   active `automaton_sound_transposition_proof`,
-   `automaton_sound_merge_split_proof`, `position_contained_from_run`,
-   `transposition_completeness`, and `merge_split_completeness` fields. Exact
-   antichain inclusion and special-origin-in-same-state obligations have been
-   removed because they are false for the executable filtering model.
+   Close the remaining core completeness record by proving or further
+   decomposing `position_subsumed_from_run`, `transposition_completeness`, and
+   `merge_split_completeness`. Core automaton soundness no longer has an
+   evidence record. Exact antichain inclusion and special-origin-in-same-state
+   obligations have been removed because they are false for the executable
+   filtering model.
 
 3. Rebuild grammar NFA equivalence on traced runs.
 
@@ -349,10 +358,10 @@ reference material and is not the memory-efficient target.
 
    For product, prove state-transition simulations against the trusted core
    distance model. For MSM, use the cited paper only for mathematical context;
-   local Coq definitions still need reflexivity, identity, symmetry, and
-   non-empty-domain triangle proofs. Do not reinstate all-list metric claims
-   without changing the empty-series model; the current file contains a proved
-   counterexample for an empty middle series.
+   local Coq definitions still need identity of indiscernibles, symmetry, and
+   non-empty-domain triangle proofs. Reflexivity is already local. Do not
+   reinstate all-list metric claims without changing the empty-series model;
+   the current file contains a proved counterexample for an empty middle series.
 
 6. Review phonetic proofs.
 

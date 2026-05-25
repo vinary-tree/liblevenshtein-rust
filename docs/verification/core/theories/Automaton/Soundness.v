@@ -108,7 +108,6 @@ Inductive position_reachable_damerau (query : list Char) (n : nat) :
       S i < length query ->  (* Need at least 2 more query chars *)
       nth_error query (S i) = Some c ->  (* c matches query[i+1] *)
       nth_error query i = Some c_next ->  (* save query[i] for later check *)
-      c <> c_next ->  (* c doesn't match query[i], otherwise would be match *)
       e < n ->
       position_reachable_damerau query n (dp ++ [c]) (special_pos i (S e))
   | reach_damerau_complete_transpose : forall dp c i e,
@@ -117,6 +116,50 @@ Inductive position_reachable_damerau (query : list Char) (n : nat) :
       i < length query ->
       nth_error query i = Some c ->  (* c matches query[i], completing swap *)
       position_reachable_damerau query n (dp ++ [c]) (std_pos (S (S i)) e).
+
+(** MergeSplit reachability.
+
+    Special positions represent a split-in-progress: the first output
+    dictionary character has been consumed and the split cost has already been
+    paid; the next transition may consume the second output character and
+    advance the query by one. *)
+Inductive position_reachable_merge_split (query : list Char) (n : nat) :
+  list Char -> Position -> Prop :=
+  | reach_ms_initial :
+      position_reachable_merge_split query n [] initial_position
+  | reach_ms_delete : forall dp i e,
+      position_reachable_merge_split query n dp (std_pos i e) ->
+      S i <= length query ->
+      e < n ->
+      position_reachable_merge_split query n dp (std_pos (S i) (S e))
+  | reach_ms_match : forall dp c i e,
+      position_reachable_merge_split query n dp (std_pos i e) ->
+      i < length query ->
+      nth_error query i = Some c ->
+      position_reachable_merge_split query n (dp ++ [c]) (std_pos (S i) e)
+  | reach_ms_substitute : forall dp c c' i e,
+      position_reachable_merge_split query n dp (std_pos i e) ->
+      i < length query ->
+      nth_error query i = Some c' ->
+      e < n ->
+      position_reachable_merge_split query n (dp ++ [c]) (std_pos (S i) (S e))
+  | reach_ms_insert : forall dp c i e,
+      position_reachable_merge_split query n dp (std_pos i e) ->
+      e < n ->
+      position_reachable_merge_split query n (dp ++ [c]) (std_pos i (S e))
+  | reach_ms_merge : forall dp c i e,
+      position_reachable_merge_split query n dp (std_pos i e) ->
+      S i < length query ->
+      e < n ->
+      position_reachable_merge_split query n (dp ++ [c]) (std_pos (S (S i)) (S e))
+  | reach_ms_enter_split : forall dp c i e,
+      position_reachable_merge_split query n dp (std_pos i e) ->
+      e < n ->
+      position_reachable_merge_split query n (dp ++ [c]) (special_pos i (S e))
+  | reach_ms_complete_split : forall dp c i e,
+      position_reachable_merge_split query n dp (special_pos i e) ->
+      i < length query ->
+      position_reachable_merge_split query n (dp ++ [c]) (std_pos (S i) e).
 
 (** * Special Position Tracking Infrastructure
 
@@ -142,24 +185,6 @@ Definition special_positions_originated (positions : list Position) : Prop :=
     exists p', is_special p' = false /\
                num_errors p' < num_errors p /\
                term_index p' = term_index p.
-
-(** Evidence for algorithm-specific soundness.
-
-    The Standard automaton soundness theorem below is proved locally.  The
-    extended algorithms still need trace-level soundness evidence connecting
-    their special states to the corresponding distance recurrences.  Keeping
-    these as direct algorithm-level obligations avoids the earlier false shape
-    that required special-state origins to remain present in the same antichain
-    state after a transition. *)
-Record AutomatonSoundnessEvidence : Prop := mkAutomatonSoundnessEvidence {
-  automaton_sound_transposition_proof : forall query dict n,
-    automaton_accepts Transposition query n dict = true ->
-    damerau_lev_distance query dict <= n;
-
-  automaton_sound_merge_split_proof : forall query dict n,
-    automaton_accepts MergeAndSplit query n dict = true ->
-    merge_split_distance query dict <= n
-}.
 
 Lemma initial_state_no_special : forall qlen,
   Forall (fun p => is_special p = false) (positions (initial_state Transposition qlen)).
@@ -539,7 +564,7 @@ Proof.
   induction Hreach as [
     | dp' i e Hreach' IH Hle He
     | dp' c i e Hreach' IH Hi Hnth
-    | dp' c c' i e Hreach' IH Hi Hnth Hneq He
+    | dp' c c' i e Hreach' IH Hi Hnth He
     | dp' c i e Hreach' IH He
   ]; intros Hspec.
   - (* reach_initial: position (0, 0), dp = [] *)
@@ -616,6 +641,163 @@ Lemma reachable_final_to_distance : forall query dict n p,
 Proof.
   intros query dict n p Hreach Hspec Hfinal.
   apply (reachable_partial_to_full query n dict p Hreach Hspec Hfinal).
+Qed.
+
+(** MergeSplit-reachable positions have bounded error counts. *)
+Lemma reachable_merge_split_implies_edit_distance : forall query n dp p,
+  position_reachable_merge_split query n dp p ->
+  num_errors p <= n.
+Proof.
+  intros query n dp p Hreach.
+  induction Hreach; simpl in *; try lia; exact IHHreach.
+Qed.
+
+(** MergeSplit-reachable positions never advance past the query. *)
+Lemma reachable_merge_split_term_index_bound_query : forall query n dict_prefix p,
+  position_reachable_merge_split query n dict_prefix p ->
+  term_index p <= length query.
+Proof.
+  intros query n dict_prefix p Hreach.
+  induction Hreach.
+  - unfold initial_position. simpl. lia.
+  - simpl. exact H.
+  - simpl. lia.
+  - simpl. lia.
+  - simpl. exact IHHreach.
+  - simpl. lia.
+  - simpl. exact IHHreach.
+  - simpl. lia.
+Qed.
+
+(** MergeSplit partial-distance invariant.
+
+    For ordinary positions, [num_errors] bounds the merge-split distance between
+    the consumed query prefix and dictionary prefix. For split-in-progress
+    special positions, the second conjunct records the predecessor before the
+    first split output character; this is what lets complete-split consume the
+    second output character without adding another error. *)
+Lemma reachable_merge_split_partial_distance_strong : forall query n dp p,
+  position_reachable_merge_split query n dp p ->
+  merge_split_distance (firstn (term_index p) query) dp <= num_errors p /\
+  (is_special p = true ->
+   forall q,
+     nth_error query (term_index p) = Some q ->
+     exists dp0 d1 e0,
+       dp = dp0 ++ [d1] /\
+       p = special_pos (term_index p) (S e0) /\
+       num_errors p = S e0 /\
+       merge_split_distance (firstn (term_index p) query) dp0 <= e0).
+Proof.
+  intros query n dp p Hreach.
+  induction Hreach as [
+    | dp' i e Hreach' IH Hle He
+    | dp' c i e Hreach' IH Hi Hnth
+    | dp' c c' i e Hreach' IH Hi Hnth He
+    | dp' c i e Hreach' IH He
+    | dp' c i e Hreach' IH Hi He
+    | dp' c i e Hreach' IH He
+    | dp' c i e Hreach' IH Hi
+  ].
+  - split.
+    + unfold initial_position, std_pos. simpl. rewrite ms_empty_left. reflexivity.
+    + intros Hspec. simpl in Hspec. discriminate.
+  - destruct IH as [IHdist _].
+    simpl term_index in IHdist. simpl num_errors in IHdist.
+    split.
+    + simpl term_index. simpl num_errors.
+      assert (Hlt : i < length query) by lia.
+      destruct (term_index_bound query i Hlt) as [q Hnth].
+      rewrite (firstn_S_snoc_nth_error query i q Hnth).
+      eapply Nat.le_trans.
+      * apply ms_distance_delete_last.
+      * lia.
+    + intros Hspec. simpl in Hspec. discriminate.
+  - destruct IH as [IHdist _].
+    simpl term_index in IHdist. simpl num_errors in IHdist.
+    split.
+    + simpl term_index. simpl num_errors.
+      rewrite (firstn_S_snoc_nth_error query i c Hnth).
+      eapply Nat.le_trans.
+      * apply ms_distance_match_last.
+      * exact IHdist.
+    + intros Hspec. simpl in Hspec. discriminate.
+  - destruct IH as [IHdist _].
+    simpl term_index in IHdist. simpl num_errors in IHdist.
+    split.
+    + simpl term_index. simpl num_errors.
+      rewrite (firstn_S_snoc_nth_error query i c' Hnth).
+      eapply Nat.le_trans.
+      * apply ms_distance_subst_last.
+      * pose proof (subst_cost_le_one c' c). lia.
+    + intros Hspec. simpl in Hspec. discriminate.
+  - destruct IH as [IHdist _].
+    simpl term_index in IHdist. simpl num_errors in IHdist.
+    split.
+    + simpl term_index. simpl num_errors.
+      eapply Nat.le_trans.
+      * apply ms_distance_insert_last.
+      * lia.
+    + intros Hspec. simpl in Hspec. discriminate.
+  - destruct IH as [IHdist _].
+    simpl term_index in IHdist. simpl num_errors in IHdist.
+    split.
+    + simpl term_index. simpl num_errors.
+      destruct (term_index_bound query i) as [q1 Hnth1]; [lia|].
+      destruct (term_index_bound query (S i)) as [q2 Hnth2]; [lia|].
+      replace (firstn (S (S i)) query) with (firstn i query ++ [q1; q2]).
+      * eapply Nat.le_trans.
+        -- apply ms_distance_merge_last.
+        -- lia.
+      * rewrite (firstn_S_snoc_nth_error query (S i) q2 Hnth2).
+        rewrite (firstn_S_snoc_nth_error query i q1 Hnth1).
+        rewrite <- app_assoc. reflexivity.
+    + intros Hspec. simpl in Hspec. discriminate.
+  - destruct IH as [IHdist _].
+    simpl term_index in IHdist. simpl num_errors in IHdist.
+    split.
+    + simpl term_index. simpl num_errors.
+      eapply Nat.le_trans.
+      * apply ms_distance_insert_last.
+      * lia.
+    + intros _ q Hnth.
+      exists dp', c, e.
+      repeat split; simpl; try reflexivity.
+      exact IHdist.
+  - destruct IH as [_ IHspecial].
+    split.
+    + simpl term_index. simpl num_errors.
+      destruct (term_index_bound query i Hi) as [q Hnth].
+      specialize (IHspecial eq_refl q Hnth) as [dp0 [d1 [e0 [Hdp [Hp [Herr Hprev]]]]]].
+      simpl in Hp, Herr.
+      simpl term_index in Hprev.
+      subst e.
+      rewrite Hdp.
+      rewrite (firstn_S_snoc_nth_error query i q Hnth).
+      replace ((dp0 ++ [d1]) ++ [c]) with (dp0 ++ [d1; c]) by (rewrite <- app_assoc; reflexivity).
+      eapply Nat.le_trans.
+      * apply ms_distance_split_last.
+      * lia.
+    + intros Hspec. simpl in Hspec. discriminate.
+Qed.
+
+Lemma reachable_merge_split_partial_distance : forall query n dp p,
+  position_reachable_merge_split query n dp p ->
+  merge_split_distance (firstn (term_index p) query) dp <= num_errors p.
+Proof.
+  intros query n dp p Hreach.
+  apply (proj1 (reachable_merge_split_partial_distance_strong query n dp p Hreach)).
+Qed.
+
+Lemma reachable_merge_split_final_to_distance : forall query dict n p,
+  position_reachable_merge_split query n dict p ->
+  term_index p = length query ->
+  merge_split_distance query dict <= num_errors p.
+Proof.
+  intros query dict n p Hreach Hfinal.
+  rewrite <- (firstn_all query).
+  rewrite <- Hfinal.
+  apply reachable_merge_split_partial_distance with (n := n).
+  exact Hreach.
 Qed.
 
 (** * Min Bound Helper Lemmas *)
@@ -1909,7 +2091,6 @@ Lemma reachable_damerau_partial_distance_strong : forall query n dp p,
      S (term_index p) < length query /\
      nth_error query (S (term_index p)) = Some c /\
      nth_error query (term_index p) = Some c' /\
-     c <> c' /\
      damerau_lev_distance (firstn (term_index p) query) dp0 <= num_errors p - 1).
 Proof.
   intros query n dp p Hreach.
@@ -1918,7 +2099,7 @@ Proof.
     | dp' c i e Hreach' IH Hi Hnth
     | dp' c c' i e Hreach' IH Hi Hnth Hneq He
     | dp' c i e Hreach' IH He
-    | dp' c c_next i e Hreach' IH Hsi Hnth_next Hnth Hneq_c He
+    | dp' c c_next i e Hreach' IH Hsi Hnth_next Hnth He
     | dp' c i e Hreach' IH Hi Hnth
   ].
   - (* reach_damerau_initial: position (0, 0), dp = [] *)
@@ -1978,7 +2159,6 @@ Proof.
       split. exact Hsi.
       split. exact Hnth_next.
       split. exact Hnth.
-      split. exact Hneq_c.
       (* Need: dam(firstn i query, dp') <= S e - 1 = e *)
       destruct IH as [IH_nonspec _].
       assert (Hspec_prev : is_special (std_pos i e) = false) by reflexivity.
@@ -1992,7 +2172,7 @@ Proof.
       destruct IH as [_ IH_spec].
       assert (Hspec_prev : is_special (special_pos i e) = true) by reflexivity.
       specialize (IH_spec Hspec_prev).
-      destruct IH_spec as [dp0 [c_enter [c_next' [Hdp [Hlen [Hnth_enter [Hnth_next' [Hneq' Hdam]]]]]]]].
+      destruct IH_spec as [dp0 [c_enter [c_next' [Hdp [Hlen [Hnth_enter [Hnth_next' Hdam]]]]]]].
       (* dp' = dp0 ++ [c_enter], c_enter = query[S i] = query[i+1] *)
       (* dp = dp' ++ [c] = dp0 ++ [c_enter] ++ [c] = dp0 ++ [c_enter; c] *)
       (* c = query[i] by Hnth, so c = c_next' *)
@@ -2001,7 +2181,6 @@ Proof.
       assert (Hc_eq : c = c_next').
       { rewrite Hnth in Hnth_next'. inversion Hnth_next'. reflexivity. }
       subst c_next'.
-      (* Now we have: c_enter ≠ c (= query[i] ≠ query[i+1]) *)
       (* firstn (S (S i)) query = firstn i query ++ [query[i]; query[i+1]]
                                 = firstn i query ++ [c; c_enter] *)
       assert (Hi_bound : i < length query) by lia.
@@ -2023,26 +2202,28 @@ Proof.
       assert (Hassoc2 : (dp0 ++ [c_enter]) ++ [c] = dp0 ++ [c_enter; c]) by
         (rewrite <- app_assoc; reflexivity).
       rewrite Hassoc1, Hassoc2.
-      (* Now apply transpose_snoc *)
-      apply Nat.le_trans with (damerau_lev_distance (firstn i query) dp0 + 1).
-      * (* dam(firstn i query ++ [c; c_enter], dp0 ++ [c_enter; c]) <=
-           dam(firstn i query, dp0) + 1 *)
-        apply damerau_lev_distance_transpose_snoc.
-        intro Heq. symmetry in Heq. exact (Hneq' Heq).
-      * (* dam(firstn i query, dp0) + 1 <= e - 1 + 1 = e *)
-        (* Need e >= 1. Special positions only come from reach_damerau_start_transpose
-           which creates special_pos i (S e'), so e >= 1 for any reachable special position *)
-        destruct e as [| e'].
-        -- (* e = 0: This case is impossible - special positions have e >= 1 *)
-           simpl in Hdam.
-           exfalso.
-           (* The predecessor Hreach' has special_pos i 0, but by inversion,
-              special positions can only be created with S e errors.
-              Inversion on Hreach' with target special_pos i 0 should fail
-              since reach_damerau_start_transpose creates special_pos i (S e') *)
-           inversion Hreach'.
-        -- (* e = S e': Now we can prove the goal *)
-           lia.
+      (* The executable automaton may enter a special state even when the two
+         adjacent query characters are equal.  Distinct characters use the
+         transposition branch; equal characters are bounded by two ordinary
+         matching suffix steps. *)
+      destruct (Ascii.ascii_dec c c_enter) as [Heq_chars | Hneq_chars].
+      * subst c_enter.
+        replace (firstn i query ++ [c; c]) with ((firstn i query ++ [c]) ++ [c])
+          by (rewrite <- app_assoc; reflexivity).
+        replace (dp0 ++ [c; c]) with ((dp0 ++ [c]) ++ [c])
+          by (rewrite <- app_assoc; reflexivity).
+        apply Nat.le_trans with
+            (damerau_lev_distance (firstn i query ++ [c]) (dp0 ++ [c])).
+        -- apply damerau_lev_distance_match_last.
+        -- apply Nat.le_trans with (damerau_lev_distance (firstn i query) dp0).
+           ++ apply damerau_lev_distance_match_last.
+           ++ lia.
+      * apply Nat.le_trans with (damerau_lev_distance (firstn i query) dp0 + 1).
+        -- apply damerau_lev_distance_transpose_snoc.
+           exact Hneq_chars.
+        -- destruct e as [| e'].
+           ++ simpl in Hdam. exfalso. inversion Hreach'.
+           ++ lia.
     + intros Hspec. simpl is_special in Hspec. discriminate.
 Qed.
 
@@ -3735,10 +3916,9 @@ Lemma transition_positions_reachable_transposition : forall query n dict_prefix 
   let min_i := fold_left Nat.min (map term_index (Automaton.State.positions s)) (query_length s) in
   let cv := characteristic_vector c query min_i (2 * n + 6) in
   In p' (transition_state_positions Transposition (Automaton.State.positions s) cv min_i n (query_length s)) ->
-  is_special p' = false ->
   position_reachable_damerau query n (dict_prefix ++ [c]) p'.
 Proof.
-  intros query n dict_prefix c s p' Hqlen Hall min_i cv Hin Hspec_p'.
+  intros query n dict_prefix c s p' Hqlen Hall min_i cv Hin.
   unfold transition_state_positions in Hin.
   rewrite in_flat_map in Hin.
   destruct Hin as [p [Hin_p Hin_p']].
@@ -3882,15 +4062,208 @@ Proof.
         -- exact Hreach.
         -- exact Herr.
     + (* Enter special state for transposition *)
-      (* The enter_special transition generates a special_pos, which contradicts
-         our hypothesis Hspec_p' : is_special p' = false *)
       destruct ((term_index p + 1 <? query_length s) && (num_errors p <? n)) eqn:Hcond;
         try (simpl in Hin_enter; contradiction).
       destruct (cv_at cv (S offset)) eqn:Hcv; try (simpl in Hin_enter; contradiction).
       simpl in Hin_enter. destruct Hin_enter as [Heq | []]. subst.
-      (* p' = special_pos (term_index p) (S (num_errors p)), so is_special p' = true *)
-      (* This contradicts Hspec_p' : is_special p' = false *)
-      unfold special_pos in Hspec_p'. simpl in Hspec_p'. discriminate.
+      apply Bool.andb_true_iff in Hcond.
+      destruct Hcond as [Hlt_next Herr].
+      apply Nat.ltb_lt in Hlt_next.
+      apply Nat.ltb_lt in Herr.
+      rewrite Hqlen in Hlt_next.
+      assert (Hp : p = std_pos (term_index p) (num_errors p)).
+      { destruct p as [ti ne sp].
+        unfold is_special in Hspec. simpl in Hspec.
+        destruct sp; try discriminate.
+        unfold std_pos. simpl. reflexivity. }
+      rewrite Hp in Hreach.
+      assert (Hmin_le : min_i <= term_index p).
+      { apply min_i_le_term_index. exact Hin_p. }
+      assert (Hoffset_bound : S offset < 2 * n + 6).
+      { pose proof (cv_at_true_in_bounds cv (S offset) Hcv) as Hbound.
+        unfold cv in Hbound. rewrite char_vector_length in Hbound.
+        exact Hbound. }
+      assert (Hcv_matches : cv_at cv (S offset) = char_matches_at c query (min_i + S offset)).
+      { apply cv_at_char_matches. exact Hoffset_bound. }
+      assert (Hsum : min_i + S offset = S (term_index p)).
+      { unfold offset. lia. }
+      rewrite Hsum in Hcv_matches.
+      rewrite Hcv_matches in Hcv.
+      apply char_matches_at_iff in Hcv.
+      destruct Hcv as [c_at_next [Hnth_next Heq_next]]. subst c_at_next.
+      destruct (term_index_bound query (term_index p)) as [c_next Hnth_cur].
+      { lia. }
+      apply reach_damerau_enter_transpose with (c_next := c_next).
+      * exact Hreach.
+      * lia.
+      * exact Hnth_next.
+      * exact Hnth_cur.
+	      * exact Herr.
+Qed.
+
+Lemma transition_positions_reachable_merge_split : forall query n dict_prefix c s p',
+  query_length s = length query ->
+  (forall p, In p (Automaton.State.positions s) ->
+             position_reachable_merge_split query n dict_prefix p) ->
+  let min_i := fold_left Nat.min (map term_index (Automaton.State.positions s)) (query_length s) in
+  let cv := characteristic_vector c query min_i (2 * n + 6) in
+  In p' (transition_state_positions MergeAndSplit (Automaton.State.positions s) cv min_i n (query_length s)) ->
+  position_reachable_merge_split query n (dict_prefix ++ [c]) p'.
+Proof.
+  intros query n dict_prefix c s p' Hqlen Hall min_i cv Hin.
+  unfold transition_state_positions in Hin.
+  rewrite in_flat_map in Hin.
+  destruct Hin as [p [Hin_p Hin_p']].
+  pose proof (Hall p Hin_p) as Hreach.
+  unfold transition_position in Hin_p'. simpl in Hin_p'.
+  unfold transition_position_merge_split in Hin_p'.
+  set (offset := term_index p - min_i) in *.
+  destruct (is_special p) eqn:Hspec.
+  - (* Complete split. *)
+    destruct (term_index p <? query_length s) eqn:Hlt; try (simpl in Hin_p'; contradiction).
+    apply Nat.ltb_lt in Hlt. rewrite Hqlen in Hlt.
+    simpl in Hin_p'. destruct Hin_p' as [Heq | []]. subst.
+    assert (Hp : p = special_pos (term_index p) (num_errors p)).
+    { destruct p as [ti ne sp].
+      unfold is_special in Hspec. simpl in Hspec.
+      destruct sp; try discriminate.
+      unfold special_pos. simpl. reflexivity. }
+    rewrite Hp in Hreach.
+    apply reach_ms_complete_split.
+    + exact Hreach.
+    + exact Hlt.
+  - (* Standard transitions, merge, or enter split. *)
+    apply in_app_or in Hin_p'.
+    destruct Hin_p' as [Hin_std | Hin_extra].
+    + unfold transition_position_standard in Hin_std.
+      rewrite Hspec in Hin_std.
+      apply in_app_or in Hin_std.
+      destruct Hin_std as [Hin_diag | Hin_ins].
+      * destruct (term_index p <? query_length s) eqn:Hlt; try (simpl in Hin_diag; contradiction).
+        apply Nat.ltb_lt in Hlt. rewrite Hqlen in Hlt.
+        destruct (cv_at cv offset) eqn:Hcv.
+        -- fold offset in Hin_diag.
+           rewrite Hcv in Hin_diag. simpl in Hin_diag.
+           destruct Hin_diag as [Heq | []]. subst.
+           assert (Hp : p = std_pos (term_index p) (num_errors p)).
+           { destruct p as [ti ne sp].
+             unfold is_special in Hspec. simpl in Hspec.
+             destruct sp; try discriminate.
+             unfold std_pos. simpl. reflexivity. }
+           rewrite Hp in Hreach.
+           assert (Hoffset_bound : offset < 2 * n + 6).
+           { pose proof (cv_at_true_in_bounds cv offset Hcv) as Hbound.
+             unfold cv in Hbound. rewrite char_vector_length in Hbound.
+             exact Hbound. }
+           assert (Hcv_matches : cv_at cv offset = char_matches_at c query (min_i + offset)).
+           { apply cv_at_char_matches. exact Hoffset_bound. }
+           assert (Hmin_le : min_i <= term_index p).
+           { apply min_i_le_term_index. exact Hin_p. }
+           assert (Hsum : min_i + offset = term_index p).
+           { unfold offset. lia. }
+           rewrite Hsum in Hcv_matches.
+           rewrite Hcv_matches in Hcv.
+           apply char_matches_at_iff in Hcv.
+           destruct Hcv as [c' [Hnth Heq']]. subst c'.
+           apply reach_ms_match with (c := c); assumption.
+        -- fold offset in Hin_diag.
+           rewrite Hcv in Hin_diag. simpl in Hin_diag.
+           destruct (num_errors p <? n) eqn:Herr; simpl in Hin_diag; try contradiction.
+           destruct Hin_diag as [Heq | []]. subst.
+           apply Nat.ltb_lt in Herr.
+           assert (Hp : p = std_pos (term_index p) (num_errors p)).
+           { destruct p as [ti ne sp].
+             unfold is_special in Hspec. simpl in Hspec.
+             destruct sp; try discriminate.
+             unfold std_pos. simpl. reflexivity. }
+           rewrite Hp in Hreach.
+           destruct (term_index_bound query (term_index p) Hlt) as [c' Hnth].
+           apply reach_ms_substitute with (c' := c'); assumption.
+      * destruct (num_errors p <? n) eqn:Herr; simpl in Hin_ins; try contradiction.
+        destruct Hin_ins as [Heq | []]. subst.
+        apply Nat.ltb_lt in Herr.
+        assert (Hp : p = std_pos (term_index p) (num_errors p)).
+        { destruct p as [ti ne sp].
+          unfold is_special in Hspec. simpl in Hspec.
+          destruct sp; try discriminate.
+          unfold std_pos. simpl. reflexivity. }
+        rewrite Hp in Hreach.
+        apply reach_ms_insert; assumption.
+    + apply in_app_or in Hin_extra.
+      destruct Hin_extra as [Hin_merge | Hin_split].
+      * destruct ((term_index p + 1 <? query_length s) && (num_errors p <? n)) eqn:Hcond;
+          try (simpl in Hin_merge; contradiction).
+        simpl in Hin_merge. destruct Hin_merge as [Heq | []]. subst.
+        apply Bool.andb_true_iff in Hcond.
+        destruct Hcond as [Hlt_next Herr].
+        apply Nat.ltb_lt in Hlt_next.
+        apply Nat.ltb_lt in Herr.
+        rewrite Hqlen in Hlt_next.
+        assert (Hp : p = std_pos (term_index p) (num_errors p)).
+        { destruct p as [ti ne sp].
+          unfold is_special in Hspec. simpl in Hspec.
+          destruct sp; try discriminate.
+          unfold std_pos. simpl. reflexivity. }
+        rewrite Hp in Hreach.
+        apply reach_ms_merge; [exact Hreach | lia | exact Herr].
+      * destruct (num_errors p <? n) eqn:Herr; simpl in Hin_split; try contradiction.
+        destruct Hin_split as [Heq | []]. subst.
+        apply Nat.ltb_lt in Herr.
+        assert (Hp : p = std_pos (term_index p) (num_errors p)).
+        { destruct p as [ti ne sp].
+          unfold is_special in Hspec. simpl in Hspec.
+          destruct sp; try discriminate.
+          unfold std_pos. simpl. reflexivity. }
+        rewrite Hp in Hreach.
+        apply reach_ms_enter_split; assumption.
+Qed.
+
+Lemma epsilon_closure_preserves_reachable_merge_split : forall query n dict_prefix positions p,
+  (forall p0, In p0 positions -> position_reachable_merge_split query n dict_prefix p0) ->
+  In p (epsilon_closure positions n (length query)) ->
+  position_reachable_merge_split query n dict_prefix p.
+Proof.
+  intros query n dict_prefix positions p Hall Hin.
+  unfold epsilon_closure in Hin.
+  remember (S n) as fuel.
+  clear Heqfuel.
+  revert positions Hall Hin.
+  induction fuel as [| fuel' IH]; intros positions Hall Hin.
+  - simpl in Hin. apply Hall. exact Hin.
+  - simpl in Hin.
+    destruct (is_nil _) eqn:Hnil.
+    + apply Hall. exact Hin.
+    + apply IH in Hin.
+      * exact Hin.
+      * intros p0 Hin0.
+        apply in_app_or in Hin0.
+        destruct Hin0 as [Hin0 | Hin0].
+        -- apply Hall. exact Hin0.
+        -- rewrite in_flat_map in Hin0.
+           destruct Hin0 as [p1 [Hin1 Hin0]].
+           destruct (delete_step p1 n (length query)) as [p_del|] eqn:Hdel.
+           ++ simpl in Hin0. destruct Hin0 as [Heq | []]. subst.
+              unfold delete_step in Hdel.
+              destruct (is_special p1) eqn:Hspec; try discriminate.
+              destruct ((S (term_index p1) <=? length query) && (num_errors p1 <? n)) eqn:Hcond;
+                try discriminate.
+              inversion Hdel. subst. clear Hdel.
+              apply Bool.andb_true_iff in Hcond.
+              destruct Hcond as [Hle Herr].
+              apply Nat.leb_le in Hle.
+              apply Nat.ltb_lt in Herr.
+              assert (Hp : p1 = std_pos (term_index p1) (num_errors p1)).
+              { destruct p1 as [ti ne sp].
+                unfold is_special in Hspec. simpl in Hspec.
+                destruct sp; try discriminate.
+                unfold std_pos. simpl. reflexivity. }
+              pose proof (Hall p1 Hin1) as Hreach.
+              rewrite Hp in Hreach.
+              apply reach_ms_delete.
+              ** exact Hreach.
+              ** exact Hle.
+              ** exact Herr.
+           ++ simpl in Hin0. contradiction.
 Qed.
 
 (** ** Query Length Preservation
@@ -3915,11 +4288,120 @@ Proof.
   rewrite Hfold_pres. unfold empty_state. simpl. reflexivity.
 Qed.
 
-(** The earlier attempt to prove Transposition run reachability tracked special
-    positions by requiring their non-special origins to remain in the same
-    antichain state. That obligation is not stable under transition and
-    antichain construction, so Transposition soundness is now exposed as the
-    direct trace-level evidence field above. *)
+(** Transposition run reachability.
+
+    The invariant tracks semantic Damerau reachability for every position that
+    survives the antichain. Special positions no longer need their origin to
+    remain in the same state: [position_reachable_damerau] itself records the
+    pending transposition step, and antichain filtering only keeps positions
+    produced by the transition/closure pipeline. *)
+Lemma automaton_run_preserves_reachable_damerau_transposition :
+  forall query n dict_prefix dict s final,
+  query_length s = length query ->
+  automaton_run Transposition query n dict s = Some final ->
+  (forall p, In p (Automaton.State.positions s) ->
+             position_reachable_damerau query n dict_prefix p) ->
+  (forall p, In p (Automaton.State.positions final) ->
+             position_reachable_damerau query n (dict_prefix ++ dict) p).
+Proof.
+  intros query n dict_prefix dict.
+  revert dict_prefix.
+  induction dict as [| c rest IH]; intros dict_prefix s final Hqlen Hrun Hall.
+  - simpl in Hrun. inversion Hrun. subst.
+    intros p Hin.
+    rewrite app_nil_r.
+    apply Hall. exact Hin.
+  - simpl in Hrun.
+    destruct (transition_state Transposition s c query n) as [s'|] eqn:Htrans.
+    2: { discriminate. }
+    intros p Hin.
+    assert (Heq : dict_prefix ++ c :: rest = (dict_prefix ++ [c]) ++ rest).
+    { rewrite <- app_assoc. simpl. reflexivity. }
+    rewrite Heq.
+    assert (Hqlen' : query_length s' = length query).
+    { rewrite (transition_state_preserves_query_length Transposition s c query n s' Htrans).
+      exact Hqlen. }
+    apply (IH (dict_prefix ++ [c]) s' final Hqlen' Hrun).
+    intros p0 Hin0.
+    unfold transition_state in Htrans.
+    set (min_i := fold_left Nat.min (map term_index (Automaton.State.positions s)) (query_length s)) in *.
+    set (cv := characteristic_vector c query min_i (2 * n + 6)) in *.
+    set (trans_pos := transition_state_positions Transposition (Automaton.State.positions s) cv min_i n (query_length s)) in *.
+    set (closed_pos := epsilon_closure trans_pos n (query_length s)) in *.
+    destruct (is_nil closed_pos) eqn:Hnil; [discriminate|].
+    inversion Htrans. subst. clear Htrans.
+    simpl in Hin0.
+    apply fold_state_insert_positions in Hin0.
+    destruct Hin0 as [Hin_empty | Hin_closed].
+    + contradiction.
+    + unfold closed_pos in Hin_closed.
+      rewrite Hqlen in Hin_closed.
+      apply epsilon_closure_preserves_reachable_damerau with (positions := trans_pos).
+      * intros p1 Hin1.
+        unfold trans_pos in Hin1.
+        apply transition_positions_reachable_transposition with (s := s).
+        -- exact Hqlen.
+        -- exact Hall.
+        -- exact Hin1.
+      * exact Hin_closed.
+	  + exact Hin.
+Qed.
+
+(** MergeAndSplit run reachability.
+
+    This mirrors the transposition invariant but uses the merge/split semantic
+    reachability relation, including split-in-progress special positions. *)
+Lemma automaton_run_preserves_reachable_merge_split :
+  forall query n dict_prefix dict s final,
+  query_length s = length query ->
+  automaton_run MergeAndSplit query n dict s = Some final ->
+  (forall p, In p (Automaton.State.positions s) ->
+             position_reachable_merge_split query n dict_prefix p) ->
+  (forall p, In p (Automaton.State.positions final) ->
+             position_reachable_merge_split query n (dict_prefix ++ dict) p).
+Proof.
+  intros query n dict_prefix dict.
+  revert dict_prefix.
+  induction dict as [| c rest IH]; intros dict_prefix s final Hqlen Hrun Hall.
+  - simpl in Hrun. inversion Hrun. subst.
+    intros p Hin.
+    rewrite app_nil_r.
+    apply Hall. exact Hin.
+  - simpl in Hrun.
+    destruct (transition_state MergeAndSplit s c query n) as [s'|] eqn:Htrans.
+    2: { discriminate. }
+    intros p Hin.
+    assert (Heq : dict_prefix ++ c :: rest = (dict_prefix ++ [c]) ++ rest).
+    { rewrite <- app_assoc. simpl. reflexivity. }
+    rewrite Heq.
+    assert (Hqlen' : query_length s' = length query).
+    { rewrite (transition_state_preserves_query_length MergeAndSplit s c query n s' Htrans).
+      exact Hqlen. }
+    apply (IH (dict_prefix ++ [c]) s' final Hqlen' Hrun).
+    intros p0 Hin0.
+    unfold transition_state in Htrans.
+    set (min_i := fold_left Nat.min (map term_index (Automaton.State.positions s)) (query_length s)) in *.
+    set (cv := characteristic_vector c query min_i (2 * n + 6)) in *.
+    set (trans_pos := transition_state_positions MergeAndSplit (Automaton.State.positions s) cv min_i n (query_length s)) in *.
+    set (closed_pos := epsilon_closure trans_pos n (query_length s)) in *.
+    destruct (is_nil closed_pos) eqn:Hnil; [discriminate|].
+    inversion Htrans. subst. clear Htrans.
+    simpl in Hin0.
+    apply fold_state_insert_positions in Hin0.
+    destruct Hin0 as [Hin_empty | Hin_closed].
+    + contradiction.
+    + unfold closed_pos in Hin_closed.
+      rewrite Hqlen in Hin_closed.
+      apply epsilon_closure_preserves_reachable_merge_split with (positions := trans_pos).
+      * intros p1 Hin1.
+        unfold trans_pos in Hin1.
+        apply transition_positions_reachable_merge_split with (s := s).
+        -- exact Hqlen.
+        -- exact Hall.
+        -- exact Hin1.
+      * exact Hin_closed.
+    + exact Hin.
+Qed.
 
 (** * Main Soundness Theorem *)
 
@@ -4304,13 +4786,63 @@ Qed.
     distance 1 with transposition but distance 2 with standard operations),
     we use damerau_lev_distance, not lev_distance.
 *)
-Theorem automaton_sound_transposition : forall (contracts : AutomatonSoundnessEvidence) query dict n,
+Theorem automaton_sound_transposition : forall query dict n,
   automaton_accepts Transposition query n dict = true ->
   damerau_lev_distance query dict <= n.
 Proof.
-  intros contracts query dict n Haccept.
-  apply (automaton_sound_transposition_proof contracts).
-  exact Haccept.
+  intros query dict n Haccept.
+  unfold automaton_accepts in Haccept.
+  destruct (automaton_run_from_initial Transposition query n dict) as [final|] eqn:Hrun.
+  2: { discriminate. }
+  apply state_final_has_final_position in Haccept.
+  destruct Haccept as [p [Hin Hfinal]].
+
+  assert (Hreach : position_reachable_damerau query n dict p).
+  { unfold automaton_run_from_initial in Hrun.
+    set (init_closed := mkState (epsilon_closure
+                         (Automaton.State.positions (initial_state Transposition (length query)))
+                         n (length query)) Transposition (length query)) in *.
+    assert (Hinit_reach : forall p0, In p0 (Automaton.State.positions init_closed) ->
+                            position_reachable_damerau query n [] p0).
+    { intros p0 Hin0.
+      unfold init_closed in Hin0. simpl in Hin0.
+      unfold initial_state in Hin0. simpl in Hin0.
+      apply epsilon_closure_preserves_reachable_damerau with (positions := [initial_position]).
+      - intros p1 Hin1.
+        destruct Hin1 as [Heq | []]. subst.
+        unfold initial_position, std_pos.
+        apply reach_damerau_initial.
+      - exact Hin0. }
+    apply automaton_run_preserves_reachable_damerau_transposition with
+        (query := query) (dict_prefix := []) (s := init_closed) (final := final).
+    - unfold init_closed. simpl. reflexivity.
+    - exact Hrun.
+    - exact Hinit_reach.
+    - exact Hin. }
+
+  assert (Hspec : is_special p = false).
+  { eapply transposition_final_not_special; eauto. }
+
+  apply position_final_iff in Hfinal.
+  assert (Hqlen_final : query_length final = length query).
+  { unfold automaton_run_from_initial in Hrun.
+    set (init_closed := mkState (epsilon_closure
+                         (Automaton.State.positions (initial_state Transposition (length query)))
+                         n (length query)) Transposition (length query)) in *.
+    rewrite (automaton_run_preserves_query_length Transposition query n dict init_closed final Hrun).
+    unfold init_closed. simpl. reflexivity. }
+
+  assert (Hterm : term_index p = length query).
+  { assert (Hbound : term_index p <= length query).
+    { apply reachable_damerau_term_index_bound_query with (n := n) (dict_prefix := dict).
+      exact Hreach. }
+    rewrite Hqlen_final in Hfinal.
+    lia. }
+
+  apply Nat.le_trans with (num_errors p).
+  - apply reachable_damerau_final_to_distance with (n := n); assumption.
+  - apply reachable_damerau_implies_edit_distance with (query := query) (dp := dict).
+    exact Hreach.
 Qed.
 
 (** Fallback: Standard Levenshtein bound from transposition acceptance.
@@ -4318,12 +4850,12 @@ Qed.
     Note: lev_distance can be up to 2x damerau_lev_distance (each transposition
     costs 1 in Damerau-Levenshtein but 2 in standard Levenshtein). Thus if
     damerau_lev_distance <= n, then lev_distance <= 2n. *)
-Corollary automaton_sound_transposition_lev : forall (contracts : AutomatonSoundnessEvidence) query dict n,
+Corollary automaton_sound_transposition_lev : forall query dict n,
   automaton_accepts Transposition query n dict = true ->
   lev_distance query dict <= 2 * n.
 Proof.
-  intros contracts query dict n Haccept.
-  apply (automaton_sound_transposition contracts) in Haccept.
+  intros query dict n Haccept.
+  apply automaton_sound_transposition in Haccept.
   (* By soundness, damerau_lev_distance query dict <= n *)
   (* By lev_le_double_damerau, lev_distance <= 2 * damerau_lev_distance *)
   (* Therefore lev_distance <= 2 * n *)
@@ -4338,20 +4870,60 @@ Qed.
     Merge (two query chars to one dict char) and split (one query char to
     two dict chars) can reduce the edit distance compared to standard operations.
 *)
-Theorem automaton_sound_merge_split : forall (contracts : AutomatonSoundnessEvidence) query dict n,
+Theorem automaton_sound_merge_split : forall query dict n,
   automaton_accepts MergeAndSplit query n dict = true ->
   merge_split_distance query dict <= n.
 Proof.
-  intros contracts query dict n Haccept.
-  (* Apply the soundness evidence premise. The full proof follows the same structure as Standard:
-     1. Extract the accepting position from the final state
-     2. Show that position represents a valid alignment
-     3. The alignment cost bounds the merge-split distance
+  intros query dict n Haccept.
+  unfold automaton_accepts in Haccept.
+  destruct (automaton_run_from_initial MergeAndSplit query n dict) as [final|] eqn:Hrun.
+  2: { discriminate. }
+  apply state_final_has_final_position in Haccept.
+  destruct Haccept as [p [Hin Hfinal]].
 
-     Key insight: MergeAndSplit special positions encode merge/split operations,
-     and the error count reflects the merge-split cost. *)
-  apply (automaton_sound_merge_split_proof contracts).
-  exact Haccept.
+  assert (Hreach : position_reachable_merge_split query n dict p).
+  { unfold automaton_run_from_initial in Hrun.
+    set (init_closed := mkState (epsilon_closure
+                         (Automaton.State.positions (initial_state MergeAndSplit (length query)))
+                         n (length query)) MergeAndSplit (length query)) in *.
+    assert (Hinit_reach : forall p0, In p0 (Automaton.State.positions init_closed) ->
+                            position_reachable_merge_split query n [] p0).
+    { intros p0 Hin0.
+      unfold init_closed in Hin0. simpl in Hin0.
+      unfold initial_state in Hin0. simpl in Hin0.
+      apply epsilon_closure_preserves_reachable_merge_split with (positions := [initial_position]).
+      - intros p1 Hin1.
+        destruct Hin1 as [Heq | []]. subst.
+        unfold initial_position, std_pos.
+        apply reach_ms_initial.
+      - exact Hin0. }
+    apply automaton_run_preserves_reachable_merge_split with
+        (query := query) (dict_prefix := []) (s := init_closed) (final := final).
+    - unfold init_closed. simpl. reflexivity.
+    - exact Hrun.
+    - exact Hinit_reach.
+    - exact Hin. }
+
+  apply position_final_iff in Hfinal.
+  assert (Hqlen_final : query_length final = length query).
+  { unfold automaton_run_from_initial in Hrun.
+    set (init_closed := mkState (epsilon_closure
+                         (Automaton.State.positions (initial_state MergeAndSplit (length query)))
+                         n (length query)) MergeAndSplit (length query)) in *.
+    rewrite (automaton_run_preserves_query_length MergeAndSplit query n dict init_closed final Hrun).
+    unfold init_closed. simpl. reflexivity. }
+
+  assert (Hterm : term_index p = length query).
+  { assert (Hbound : term_index p <= length query).
+    { apply reachable_merge_split_term_index_bound_query with (n := n) (dict_prefix := dict).
+      exact Hreach. }
+    rewrite Hqlen_final in Hfinal.
+    lia. }
+
+  apply Nat.le_trans with (num_errors p).
+  - apply reachable_merge_split_final_to_distance with (n := n); assumption.
+  - apply reachable_merge_split_implies_edit_distance with (query := query) (dp := dict).
+    exact Hreach.
 Qed.
 
 (** Fallback: Standard Levenshtein bound from MergeAndSplit acceptance.
@@ -4359,12 +4931,12 @@ Qed.
     Note: lev_distance can be up to 2x merge_split_distance (each merge or split
     costs 1 in MS but up to 2 in standard Levenshtein). Thus if
     merge_split_distance <= n, then lev_distance <= 2n. *)
-Corollary automaton_sound_merge_split_lev : forall (contracts : AutomatonSoundnessEvidence) query dict n,
+Corollary automaton_sound_merge_split_lev : forall query dict n,
   automaton_accepts MergeAndSplit query n dict = true ->
   lev_distance query dict <= 2 * n.
 Proof.
-  intros contracts query dict n Haccept.
-  apply (automaton_sound_merge_split contracts) in Haccept.
+  intros query dict n Haccept.
+  apply automaton_sound_merge_split in Haccept.
   (* Each merge-split operation is simulated by at most two standard
      Levenshtein operations. *)
   pose proof (lev_distance_ms_bound query dict) as Hbound.
@@ -4458,21 +5030,21 @@ Proof.
 Qed.
 
 (** No false positives for Transposition algorithm (using Damerau-Lev) *)
-Corollary no_false_positives_transposition : forall (contracts : AutomatonSoundnessEvidence) query dict n,
+Corollary no_false_positives_transposition : forall query dict n,
   automaton_accepts Transposition query n dict = true ->
   damerau_lev_distance query dict <= n.
 Proof.
-  intros contracts query dict n Haccept.
-  apply (automaton_sound_transposition contracts).
+  intros query dict n Haccept.
+  apply automaton_sound_transposition.
   exact Haccept.
 Qed.
 
 (** No false positives for MergeAndSplit algorithm (using merge-split distance) *)
-Corollary no_false_positives_merge_split : forall (contracts : AutomatonSoundnessEvidence) query dict n,
+Corollary no_false_positives_merge_split : forall query dict n,
   automaton_accepts MergeAndSplit query n dict = true ->
   merge_split_distance query dict <= n.
 Proof.
-  intros contracts query dict n Haccept.
-  apply (automaton_sound_merge_split contracts).
+  intros query dict n Haccept.
+  apply automaton_sound_merge_split.
   exact Haccept.
 Qed.

@@ -707,6 +707,578 @@ Definition position_subsumes (p1 p2 : Position) : Prop :=
 Definition positions_contain (ps : list Position) (p : Position) : Prop :=
   exists p', In p' ps /\ position_subsumes p' p.
 
+(** A position list represents another position under the executable
+    algorithm-specific antichain subsumption relation. This is weaker than
+    [positions_contain]: Standard subsumption may represent a position at a
+    nearby query index when the saved error budget pays for the offset. *)
+Definition positions_subsume (alg : Algorithm) (qlen : nat) (ps : list Position) (p : Position) : Prop :=
+  exists p', In p' ps /\ subsumes alg qlen p' p = true.
+
+(** Exact membership gives executable Standard representation. *)
+Lemma positions_subsume_standard_refl_in : forall qlen ps p,
+  In p ps ->
+  positions_subsume Standard qlen ps p.
+Proof.
+  intros qlen ps p Hin.
+  exists p. split; [exact Hin |].
+  simpl. apply subsumes_standard_refl.
+Qed.
+
+(** Standard subsumption is stable across one non-final delete successor.
+    The final-position guard is the only reason for the explicit
+    [S i < qlen] premise: non-final representatives are intentionally not
+    allowed to subsume final positions. *)
+Lemma subsumes_standard_delete_successor_nonfinal : forall qlen p i e,
+  subsumes Standard qlen p (std_pos i e) = true ->
+  S i < qlen ->
+  subsumes Standard qlen p (std_pos (S i) (S e)) = true.
+Proof.
+  intros qlen [j e' sp] i e Hsub Hnonfinal.
+  unfold subsumes in *. simpl in *.
+  unfold subsumes_standard in *.
+  unfold position_is_final_for_subsumption in *.
+  simpl in *.
+  destruct (qlen <=? j) eqn:Hj_final; simpl in *.
+  - rewrite Bool.andb_true_iff in Hsub.
+    destruct Hsub as [Herr Hdist].
+    apply Nat.leb_le in Herr.
+    apply Nat.leb_le in Hdist.
+    rewrite Bool.andb_true_iff.
+    split.
+    + apply Nat.leb_le. lia.
+    + apply Nat.leb_le.
+      assert (Htri : abs_diff j (S i) <= abs_diff j i + 1).
+      { unfold abs_diff.
+        destruct (j <=? i) eqn:Hji, (j <=? S i) eqn:HjSi;
+          apply Nat.leb_le in Hji || apply Nat.leb_gt in Hji;
+          apply Nat.leb_le in HjSi || apply Nat.leb_gt in HjSi;
+          lia. }
+      eapply Nat.le_trans; [exact Htri |].
+      destruct e' as [|e0]; simpl in *; lia.
+  - destruct (qlen <=? i) eqn:Hi_final; simpl in *; [discriminate|].
+    assert (Hsucc_nonfinal : (qlen <=? S i) = false).
+    { apply Nat.leb_gt. lia. }
+    rewrite Hsucc_nonfinal. simpl.
+    rewrite Bool.andb_true_iff in Hsub.
+    destruct Hsub as [Herr Hdist].
+    apply Nat.leb_le in Herr.
+    apply Nat.leb_le in Hdist.
+    rewrite Bool.andb_true_iff.
+    split.
+    + apply Nat.leb_le. lia.
+    + apply Nat.leb_le.
+      assert (Htri : abs_diff j (S i) <= abs_diff j i + 1).
+      { unfold abs_diff.
+        destruct (j <=? i) eqn:Hji, (j <=? S i) eqn:HjSi;
+          apply Nat.leb_le in Hji || apply Nat.leb_gt in Hji;
+          apply Nat.leb_le in HjSi || apply Nat.leb_gt in HjSi;
+          lia. }
+      eapply Nat.le_trans; [exact Htri |].
+      destruct e' as [|e0]; simpl in *; lia.
+Qed.
+
+Lemma positions_subsume_standard_delete_successor_nonfinal : forall qlen ps i e,
+  positions_subsume Standard qlen ps (std_pos i e) ->
+  S i < qlen ->
+  positions_subsume Standard qlen ps (std_pos (S i) (S e)).
+Proof.
+  intros qlen ps i e [p [Hin Hsub]] Hnonfinal.
+  exists p. split; [exact Hin |].
+  exact (subsumes_standard_delete_successor_nonfinal qlen p i e Hsub Hnonfinal).
+Qed.
+
+(** Inserting a Standard position represents the inserted position: either it
+    survives insertion, or an existing antichain member subsumes it. *)
+Lemma state_insert_represents_inserted_standard : forall qlen q s,
+  algorithm s = Standard ->
+  query_length s = qlen ->
+  positions_subsume Standard qlen (positions (state_insert q s)) q.
+Proof.
+  intros qlen q s Halg Hqlen.
+  unfold positions_subsume.
+  unfold state_insert. simpl.
+  rewrite Halg, Hqlen.
+  unfold antichain_insert.
+  destruct (subsumed_by_any Standard qlen q (positions s)) eqn:Hsub.
+  - apply subsumed_by_any_correct in Hsub as [p' [Hin Hsub']].
+    exists p'. split.
+    + apply fold_right_sorted_insert_preserves_In. exact Hin.
+    + exact Hsub'.
+  - exists q. split.
+    + apply fold_right_sorted_insert_preserves_In. simpl. left. reflexivity.
+    + simpl. apply subsumes_standard_refl.
+Qed.
+
+(** Standard antichain insertion preserves representation of any previously
+    represented position. If the new position removes the old witness, the new
+    position subsumes that witness and Standard transitivity preserves the
+    representation. *)
+Lemma state_insert_preserves_positions_subsume_standard : forall qlen q s p,
+  algorithm s = Standard ->
+  query_length s = qlen ->
+  positions_subsume Standard qlen (positions s) p ->
+  positions_subsume Standard qlen (positions (state_insert q s)) p.
+Proof.
+  intros qlen q s p Halg Hqlen [r [Hin Hrsub]].
+  unfold positions_subsume.
+  unfold state_insert. simpl.
+  rewrite Halg, Hqlen.
+  unfold antichain_insert.
+  destruct (subsumed_by_any Standard qlen q (positions s)) eqn:Hsub_q.
+  - exists r. split.
+    + apply fold_right_sorted_insert_preserves_In. exact Hin.
+    + exact Hrsub.
+  - destruct (subsumes Standard qlen q r) eqn:Hqsubr.
+    + exists q. split.
+      * apply fold_right_sorted_insert_preserves_In. simpl. left. reflexivity.
+      * eapply subsumes_trans_standard; eauto.
+    + exists r. split.
+      * apply fold_right_sorted_insert_preserves_In.
+        simpl. right.
+        apply in_remove_subsumed_if_not_subsumed; [exact Hin | exact Hqsubr].
+      * exact Hrsub.
+Qed.
+
+(** Folding [state_insert] over more Standard positions preserves any existing
+    executable representation. *)
+Lemma fold_state_insert_preserves_positions_subsume_standard : forall qlen inserts s p,
+  algorithm s = Standard ->
+  query_length s = qlen ->
+  positions_subsume Standard qlen (positions s) p ->
+  positions_subsume Standard qlen
+    (positions (fold_left (fun s0 q => state_insert q s0) inserts s)) p.
+Proof.
+  induction inserts as [|q rest IH]; intros s p Halg Hqlen Hsub.
+  - simpl. exact Hsub.
+  - simpl.
+    apply IH.
+    + unfold state_insert. simpl. exact Halg.
+    + unfold state_insert. simpl. exact Hqlen.
+    + apply state_insert_preserves_positions_subsume_standard with
+        (qlen := qlen); assumption.
+Qed.
+
+(** Folding [state_insert] over a list represents every inserted member. *)
+Lemma fold_state_insert_represents_member_standard : forall qlen inserts s p,
+  algorithm s = Standard ->
+  query_length s = qlen ->
+  In p inserts ->
+  positions_subsume Standard qlen
+    (positions (fold_left (fun s0 q => state_insert q s0) inserts s)) p.
+Proof.
+  induction inserts as [|q rest IH]; intros s p Halg Hqlen Hin.
+  - inversion Hin.
+  - simpl in Hin |- *.
+    destruct Hin as [Heq | Hin_rest].
+    + subst q.
+      apply fold_state_insert_preserves_positions_subsume_standard.
+      * unfold state_insert. simpl. exact Halg.
+      * unfold state_insert. simpl. exact Hqlen.
+      * apply state_insert_represents_inserted_standard with (qlen := qlen);
+          assumption.
+    + apply (IH (state_insert q s) p).
+      * unfold state_insert. simpl. exact Halg.
+      * unfold state_insert. simpl. exact Hqlen.
+      * exact Hin_rest.
+Qed.
+
+(** After a Standard transition, every member of the epsilon-closed candidate
+    list is represented in the folded antichain output state. *)
+Lemma transition_state_standard_represents_closed_position : forall s c query n s' p,
+  transition_state Standard s c query n = Some s' ->
+  In p
+    (epsilon_closure
+       (transition_state_positions Standard (positions s)
+          (characteristic_vector c query
+             (fold_left Nat.min (map term_index (positions s)) (query_length s))
+             (2 * n + 6))
+          (fold_left Nat.min (map term_index (positions s)) (query_length s))
+          n (query_length s))
+       n (query_length s)) ->
+  positions_subsume Standard (query_length s) (positions s') p.
+Proof.
+  intros s c query n s' p Htrans Hin.
+  unfold transition_state in Htrans.
+  set (min_i := fold_left Nat.min (map term_index (positions s)) (query_length s)) in *.
+  set (cv := characteristic_vector c query min_i (2 * n + 6)) in *.
+  set (trans_positions :=
+    transition_state_positions Standard (positions s) cv min_i n (query_length s)) in *.
+  set (closed_positions := epsilon_closure trans_positions n (query_length s)) in *.
+  fold min_i in Hin.
+  fold cv in Hin.
+  fold trans_positions in Hin.
+  fold closed_positions in Hin.
+  destruct (is_nil closed_positions) eqn:Hnil; [discriminate|].
+  injection Htrans as Hs'. subst s'.
+  apply fold_state_insert_represents_member_standard.
+  - unfold empty_state. reflexivity.
+  - unfold empty_state. reflexivity.
+  - exact Hin.
+Qed.
+
+Lemma transition_state_standard_represents_match_cv : forall s c query n s' i e,
+  transition_state Standard s c query n = Some s' ->
+  In (std_pos i e) (positions s) ->
+  i < query_length s ->
+  cv_at
+    (characteristic_vector c query
+       (fold_left Nat.min (map term_index (positions s)) (query_length s))
+       (2 * n + 6))
+    (i - fold_left Nat.min (map term_index (positions s)) (query_length s)) = true ->
+  positions_subsume Standard (query_length s) (positions s') (std_pos (S i) e).
+Proof.
+  intros s c query n s' i e Htrans Hin Hi_lt Hcv.
+  apply (transition_state_standard_represents_closed_position s c query n s').
+  - exact Htrans.
+  - apply epsilon_closure_includes_input.
+    unfold transition_state_positions.
+    apply in_flat_map.
+    exists (std_pos i e). split; [exact Hin |].
+    unfold transition_position.
+    apply transition_standard_produces_match.
+    + exact Hi_lt.
+    + change i with (term_index (std_pos i e)).
+      apply min_i_le_term_index. exact Hin.
+    + exact Hcv.
+Qed.
+
+Lemma transition_state_standard_represents_substitute_cv : forall s c query n s' i e,
+  transition_state Standard s c query n = Some s' ->
+  In (std_pos i e) (positions s) ->
+  i < query_length s ->
+  e < n ->
+  cv_at
+    (characteristic_vector c query
+       (fold_left Nat.min (map term_index (positions s)) (query_length s))
+       (2 * n + 6))
+    (i - fold_left Nat.min (map term_index (positions s)) (query_length s)) = false ->
+  positions_subsume Standard (query_length s) (positions s') (std_pos (S i) (S e)).
+Proof.
+  intros s c query n s' i e Htrans Hin Hi_lt He_lt Hcv.
+  apply (transition_state_standard_represents_closed_position s c query n s').
+  - exact Htrans.
+  - apply epsilon_closure_includes_input.
+    unfold transition_state_positions.
+    apply in_flat_map.
+    exists (std_pos i e). split; [exact Hin |].
+    unfold transition_position.
+    apply transition_standard_produces_substitute.
+    + exact Hi_lt.
+    + change i with (term_index (std_pos i e)).
+      apply min_i_le_term_index. exact Hin.
+    + exact Hcv.
+    + exact He_lt.
+Qed.
+
+Lemma transition_state_standard_represents_insert_exact : forall s c query n s' i e,
+  transition_state Standard s c query n = Some s' ->
+  In (std_pos i e) (positions s) ->
+  e < n ->
+  positions_subsume Standard (query_length s) (positions s') (std_pos i (S e)).
+Proof.
+  intros s c query n s' i e Htrans Hin He_lt.
+  apply (transition_state_standard_represents_closed_position s c query n s').
+  - exact Htrans.
+  - apply epsilon_closure_includes_input.
+    unfold transition_state_positions.
+    apply in_flat_map.
+    exists (std_pos i e). split; [exact Hin |].
+    unfold transition_position.
+    apply transition_standard_produces_insert.
+    exact He_lt.
+Qed.
+
+Lemma transition_state_standard_represents_match_exact : forall
+  query n dict s c s' i e,
+  query_length s = length query ->
+  (forall p0, In p0 (positions s) -> position_reachable query n dict p0) ->
+  (forall p0, In p0 (positions s) -> is_special p0 = false) ->
+  transition_state Standard s c query n = Some s' ->
+  In (std_pos i e) (positions s) ->
+  i < length query ->
+  nth_error query i = Some c ->
+  positions_subsume Standard (query_length s) (positions s') (std_pos (S i) e).
+Proof.
+  intros query n dict s c s' i e Hqlen Hall_reach Hall_spec Htrans Hin Hlt Hnth.
+  set (min_i := fold_left Nat.min (map term_index (positions s)) (query_length s)).
+  assert (Hoffset_bound : i - min_i < 2 * n + 6).
+  { assert (Hbounded : i - min_i <= 2 * n).
+    { unfold min_i.
+      change i with (term_index (std_pos i e)).
+      apply term_index_minus_min_bounded with
+        (query := query) (dict_prefix := dict) (positions := positions s).
+      - exact Hall_reach.
+      - exact Hall_spec.
+      - rewrite Hqlen. exact Hlt.
+      - exact Hin.
+      - intro Hempty. rewrite Hempty in Hin. contradiction. }
+    lia. }
+  assert (Hcv :
+    cv_at
+      (characteristic_vector c query
+         (fold_left Nat.min (map term_index (positions s)) (query_length s))
+         (2 * n + 6))
+      (i - fold_left Nat.min (map term_index (positions s)) (query_length s)) = true).
+  { fold min_i.
+    rewrite cv_at_char_matches by exact Hoffset_bound.
+    assert (Hmin_le : min_i <= i).
+    { unfold min_i.
+      change i with (term_index (std_pos i e)).
+      apply min_i_le_term_index. exact Hin. }
+    assert (Hsum : min_i + (i - min_i) = i) by lia.
+    rewrite Hsum.
+    unfold char_matches_at.
+    rewrite Hnth.
+    apply char_eq_refl. }
+  eapply (transition_state_standard_represents_match_cv s c query n s' i e).
+  - exact Htrans.
+  - exact Hin.
+  - rewrite Hqlen. exact Hlt.
+  - exact Hcv.
+Qed.
+
+Lemma transition_state_standard_represents_substitute_exact : forall
+  query n dict s c c' s' i e,
+  query_length s = length query ->
+  (forall p0, In p0 (positions s) -> position_reachable query n dict p0) ->
+  (forall p0, In p0 (positions s) -> is_special p0 = false) ->
+  transition_state Standard s c query n = Some s' ->
+  In (std_pos i e) (positions s) ->
+  i < length query ->
+  nth_error query i = Some c' ->
+  c <> c' ->
+  e < n ->
+  positions_subsume Standard (query_length s) (positions s') (std_pos (S i) (S e)).
+Proof.
+  intros query n dict s c c' s' i e Hqlen Hall_reach Hall_spec
+         Htrans Hin Hlt Hnth Hneq He_lt.
+  set (min_i := fold_left Nat.min (map term_index (positions s)) (query_length s)).
+  assert (Hoffset_bound : i - min_i < 2 * n + 6).
+  { assert (Hbounded : i - min_i <= 2 * n).
+    { unfold min_i.
+      change i with (term_index (std_pos i e)).
+      apply term_index_minus_min_bounded with
+        (query := query) (dict_prefix := dict) (positions := positions s).
+      - exact Hall_reach.
+      - exact Hall_spec.
+      - rewrite Hqlen. exact Hlt.
+      - exact Hin.
+      - intro Hempty. rewrite Hempty in Hin. contradiction. }
+    lia. }
+  assert (Hcv :
+    cv_at
+      (characteristic_vector c query
+         (fold_left Nat.min (map term_index (positions s)) (query_length s))
+         (2 * n + 6))
+      (i - fold_left Nat.min (map term_index (positions s)) (query_length s)) = false).
+  { fold min_i.
+    rewrite cv_at_char_matches by exact Hoffset_bound.
+    assert (Hmin_le : min_i <= i).
+    { unfold min_i.
+      change i with (term_index (std_pos i e)).
+      apply min_i_le_term_index. exact Hin. }
+    assert (Hsum : min_i + (i - min_i) = i) by lia.
+    rewrite Hsum.
+    apply char_matches_at_false_iff.
+    intros [q [Hnth_q Heq]].
+    rewrite Hnth in Hnth_q.
+    injection Hnth_q as Hq. subst q.
+    apply Hneq. exact Heq. }
+  eapply (transition_state_standard_represents_substitute_cv s c query n s' i e).
+  - exact Htrans.
+  - exact Hin.
+  - rewrite Hqlen. exact Hlt.
+  - exact He_lt.
+  - exact Hcv.
+Qed.
+
+(** Exact Standard successors are present in the epsilon-closed transition
+    candidate list before antichain pruning. These lemmas are the concrete
+    counterpart to the [positions_subsume] representation lemmas above. *)
+Lemma transition_state_standard_closed_insert_exact : forall
+  s c query n i e,
+  In (std_pos i e) (positions s) ->
+  e < n ->
+  In (std_pos i (S e))
+    (epsilon_closure
+       (transition_state_positions Standard (positions s)
+          (characteristic_vector c query
+             (fold_left Nat.min (map term_index (positions s)) (query_length s))
+             (2 * n + 6))
+          (fold_left Nat.min (map term_index (positions s)) (query_length s))
+          n (query_length s))
+       n (query_length s)).
+Proof.
+  intros s c query n i e Hin He_lt.
+  apply epsilon_closure_includes_input.
+  unfold transition_state_positions.
+  apply in_flat_map.
+  exists (std_pos i e). split; [exact Hin |].
+  unfold transition_position.
+  apply transition_standard_produces_insert.
+  exact He_lt.
+Qed.
+
+Lemma transition_state_standard_closed_match_exact : forall
+  query n dict s c i e,
+  query_length s = length query ->
+  (forall p0, In p0 (positions s) -> position_reachable query n dict p0) ->
+  (forall p0, In p0 (positions s) -> is_special p0 = false) ->
+  In (std_pos i e) (positions s) ->
+  i < length query ->
+  nth_error query i = Some c ->
+  In (std_pos (S i) e)
+    (epsilon_closure
+       (transition_state_positions Standard (positions s)
+          (characteristic_vector c query
+             (fold_left Nat.min (map term_index (positions s)) (query_length s))
+             (2 * n + 6))
+          (fold_left Nat.min (map term_index (positions s)) (query_length s))
+          n (query_length s))
+       n (query_length s)).
+Proof.
+  intros query n dict s c i e Hqlen Hall_reach Hall_spec Hin Hlt Hnth.
+  set (min_i := fold_left Nat.min (map term_index (positions s)) (query_length s)).
+  assert (Hoffset_bound : i - min_i < 2 * n + 6).
+  { assert (Hbounded : i - min_i <= 2 * n).
+    { unfold min_i.
+      change i with (term_index (std_pos i e)).
+      apply term_index_minus_min_bounded with
+        (query := query) (dict_prefix := dict) (positions := positions s).
+      - exact Hall_reach.
+      - exact Hall_spec.
+      - rewrite Hqlen. exact Hlt.
+      - exact Hin.
+      - intro Hempty. rewrite Hempty in Hin. contradiction. }
+    lia. }
+  assert (Hcv :
+    cv_at
+      (characteristic_vector c query
+         (fold_left Nat.min (map term_index (positions s)) (query_length s))
+         (2 * n + 6))
+      (i - fold_left Nat.min (map term_index (positions s)) (query_length s)) = true).
+  { fold min_i.
+    rewrite cv_at_char_matches by exact Hoffset_bound.
+    assert (Hmin_le : min_i <= i).
+    { unfold min_i.
+      change i with (term_index (std_pos i e)).
+      apply min_i_le_term_index. exact Hin. }
+    assert (Hsum : min_i + (i - min_i) = i) by lia.
+    rewrite Hsum.
+    unfold char_matches_at.
+    rewrite Hnth.
+    apply char_eq_refl. }
+  apply epsilon_closure_includes_input.
+  unfold transition_state_positions.
+  apply in_flat_map.
+  exists (std_pos i e). split; [exact Hin |].
+  unfold transition_position.
+  apply transition_standard_produces_match.
+  - rewrite Hqlen. exact Hlt.
+  - change i with (term_index (std_pos i e)).
+    apply min_i_le_term_index. exact Hin.
+  - exact Hcv.
+Qed.
+
+Lemma transition_state_standard_closed_substitute_exact : forall
+  query n dict s c c' i e,
+  query_length s = length query ->
+  (forall p0, In p0 (positions s) -> position_reachable query n dict p0) ->
+  (forall p0, In p0 (positions s) -> is_special p0 = false) ->
+  In (std_pos i e) (positions s) ->
+  i < length query ->
+  nth_error query i = Some c' ->
+  c <> c' ->
+  e < n ->
+  In (std_pos (S i) (S e))
+    (epsilon_closure
+       (transition_state_positions Standard (positions s)
+          (characteristic_vector c query
+             (fold_left Nat.min (map term_index (positions s)) (query_length s))
+             (2 * n + 6))
+          (fold_left Nat.min (map term_index (positions s)) (query_length s))
+          n (query_length s))
+       n (query_length s)).
+Proof.
+  intros query n dict s c c' i e Hqlen Hall_reach Hall_spec
+         Hin Hlt Hnth Hneq He_lt.
+  set (min_i := fold_left Nat.min (map term_index (positions s)) (query_length s)).
+  assert (Hoffset_bound : i - min_i < 2 * n + 6).
+  { assert (Hbounded : i - min_i <= 2 * n).
+    { unfold min_i.
+      change i with (term_index (std_pos i e)).
+      apply term_index_minus_min_bounded with
+        (query := query) (dict_prefix := dict) (positions := positions s).
+      - exact Hall_reach.
+      - exact Hall_spec.
+      - rewrite Hqlen. exact Hlt.
+      - exact Hin.
+      - intro Hempty. rewrite Hempty in Hin. contradiction. }
+    lia. }
+  assert (Hcv :
+    cv_at
+      (characteristic_vector c query
+         (fold_left Nat.min (map term_index (positions s)) (query_length s))
+         (2 * n + 6))
+      (i - fold_left Nat.min (map term_index (positions s)) (query_length s)) = false).
+  { fold min_i.
+    rewrite cv_at_char_matches by exact Hoffset_bound.
+    assert (Hmin_le : min_i <= i).
+    { unfold min_i.
+      change i with (term_index (std_pos i e)).
+      apply min_i_le_term_index. exact Hin. }
+    assert (Hsum : min_i + (i - min_i) = i) by lia.
+    rewrite Hsum.
+    apply char_matches_at_false_iff.
+    intros [q [Hnth_q Heq]].
+    rewrite Hnth in Hnth_q.
+    injection Hnth_q as Hq. subst q.
+    apply Hneq. exact Heq. }
+  apply epsilon_closure_includes_input.
+  unfold transition_state_positions.
+  apply in_flat_map.
+  exists (std_pos i e). split; [exact Hin |].
+  unfold transition_position.
+  apply transition_standard_produces_substitute.
+  - rewrite Hqlen. exact Hlt.
+  - change i with (term_index (std_pos i e)).
+    apply min_i_le_term_index. exact Hin.
+  - exact Hcv.
+  - exact He_lt.
+Qed.
+
+(** Exact same-index containment is not preserved by Standard antichain
+    insertion. The insert position [(0,1)] is reachable after consuming a
+    matching one-character dictionary, but [(1,0)] subsumes it and remains as
+    the only state position. *)
+Lemma standard_exact_positions_contain_counterexample :
+  exists query dict n s_mid p,
+    automaton_run_from_initial Standard query n dict = Some s_mid /\
+    position_reachable query n dict p /\
+    is_special p = false /\
+    num_errors p <= n /\
+    ~ positions_contain (positions s_mid) p.
+Proof.
+  exists [default_char], [default_char], 1,
+         (mkState [std_pos 1 0] Standard 1),
+         (std_pos 0 1).
+  split.
+  - vm_compute. reflexivity.
+  - split.
+    + change [default_char] with ([] ++ [default_char]).
+      apply reach_insert.
+      * apply reach_initial.
+      * simpl. lia.
+    + split.
+      * unfold std_pos. simpl. reflexivity.
+      * split.
+        -- simpl. lia.
+        -- intros [p' [Hin Hsub]].
+           simpl in Hin.
+           destruct Hin as [Heq | []]. subst p'.
+           unfold position_subsumes in Hsub. simpl in Hsub. lia.
+Qed.
+
 (** * Helper Lemmas for Containment Proofs *)
 
 (** position_subsumes is reflexive *)
@@ -1540,6 +2112,97 @@ Proof.
   apply Nat.leb_le. exact He.
 Qed.
 
+(** If a Standard subsumer represents a different query index, it must have
+    strictly fewer errors; the saved error budget pays for the index offset. *)
+Lemma subsumes_standard_diff_index_lt_errors : forall qlen p' i e,
+  subsumes Standard qlen p' (std_pos i e) = true ->
+  term_index p' <> i ->
+  num_errors p' < e.
+Proof.
+  intros qlen [i' e' sp'] i e Hsub Hdiff.
+  simpl in Hdiff.
+  unfold subsumes in Hsub. simpl in Hsub.
+  unfold subsumes_standard in Hsub. simpl in Hsub.
+  destruct ((negb (position_is_final_for_subsumption qlen {| term_index := i'; num_errors := e'; is_special := sp' |}))
+            && (position_is_final_for_subsumption qlen (std_pos i e))) eqn:Hfinal;
+    [discriminate|].
+  rewrite Bool.andb_true_iff in Hsub.
+  destruct Hsub as [Herr Hoffset].
+  apply Nat.leb_le in Herr.
+  apply Nat.leb_le in Hoffset.
+  assert (Habs_pos : 0 < abs_diff i' i).
+  { unfold abs_diff.
+    destruct (i' <=? i) eqn:Hle.
+    - apply Nat.leb_le in Hle. lia.
+    - apply Nat.leb_gt in Hle. lia. }
+  assert (Herr_gap : 0 < e - e') by lia.
+  assert (Hneq_err : e' <> e).
+  { intro Heq. subst. rewrite Nat.sub_diag in Herr_gap. lia. }
+  destruct (Nat.lt_ge_cases e' e) as [Hlt | Hge].
+  - exact Hlt.
+  - assert (Heq : e' = e) by lia. contradiction.
+Qed.
+
+(** A represented predecessor with spare error budget is enough to make the
+    next Standard transition non-dead. *)
+Lemma transition_state_not_dead_standard_represented_error_lt : forall
+  query n s c i e,
+  algorithm s = Standard ->
+  query_length s = length query ->
+  (forall p0, In p0 (positions s) -> is_special p0 = false) ->
+  positions_subsume Standard (length query) (positions s) (std_pos i e) ->
+  e < n ->
+  exists s', transition_state Standard s c query n = Some s'.
+Proof.
+  intros query n s c i e Halg Hqlen Hall_spec Hrep Herr.
+  destruct Hrep as [p' [Hin' Hsub']].
+  assert (Hspec' : is_special p' = false).
+  { apply Hall_spec. exact Hin'. }
+  assert (Herr' : num_errors p' < n).
+  { unfold subsumes in Hsub'. simpl in Hsub'.
+    apply subsumes_standard_errors in Hsub'. simpl in Hsub'. lia. }
+  apply (transition_state_not_dead_standard s c query n Halg Hqlen).
+  exists p'. repeat split; assumption.
+Qed.
+
+(** A represented exact-match predecessor is enough to make the next Standard
+    transition non-dead, even when the represented position has no spare error
+    budget. If the representative is at a different query index, Standard
+    subsumption guarantees it has strictly fewer errors and can take an insert
+    transition instead. *)
+Lemma transition_state_not_dead_standard_represented_match : forall
+  query n dict s c i e,
+  algorithm s = Standard ->
+  query_length s = length query ->
+  (forall p0, In p0 (positions s) -> position_reachable query n dict p0) ->
+  (forall p0, In p0 (positions s) -> is_special p0 = false) ->
+  positions_subsume Standard (length query) (positions s) (std_pos i e) ->
+  e <= n ->
+  i < length query ->
+  nth_error query i = Some c ->
+  exists s', transition_state Standard s c query n = Some s'.
+Proof.
+  intros query n dict s c i e Halg Hqlen Hall_reach Hall_spec Hrep Herr Hlt Hnth.
+  destruct Hrep as [p' [Hin' Hsub']].
+  assert (Hspec' : is_special p' = false).
+  { apply Hall_spec. exact Hin'. }
+  destruct (Nat.eq_dec (term_index p') i) as [Hsame | Hdiff].
+  - apply (transition_state_not_dead_standard_match query n dict s c p').
+    + exact Hqlen.
+    + exact Hall_reach.
+    + exact Hall_spec.
+    + exact Hin'.
+    + exact Hspec'.
+    + rewrite Hsame. exact Hlt.
+    + rewrite Hsame. exact Hnth.
+  - assert (Herr_lt : num_errors p' < n).
+    { assert (Hlt_err : num_errors p' < e).
+      { eapply subsumes_standard_diff_index_lt_errors; eauto. }
+      lia. }
+    apply (transition_state_not_dead_standard s c query n Halg Hqlen).
+    exists p'. repeat split; assumption.
+Qed.
+
 (** Helper: antichain_insert preserves min error bound.
     If positions has a position with errors <= e, and p has errors <= e,
     then antichain_insert result has a position with errors <= e. *)
@@ -2190,6 +2853,97 @@ Proof.
   exact Hp_trans.
 Qed.
 
+(** Standard transitions do not advance past [qlen] when their inputs are
+    already query-bounded. *)
+Lemma transition_standard_term_bounded : forall p cv min_i n qlen p',
+  term_index p <= qlen ->
+  In p' (transition_position_standard p cv min_i n qlen) ->
+  term_index p' <= qlen.
+Proof.
+  intros p cv min_i n qlen p' Hp_bound Hin.
+  unfold transition_position_standard in Hin.
+  destruct (is_special p); [inversion Hin|].
+  apply in_app_or in Hin.
+  destruct Hin as [Hin | Hin].
+  - destruct (term_index p <? qlen) eqn:Hlt; [| inversion Hin].
+    apply Nat.ltb_lt in Hlt.
+    destruct (cv_at cv (term_index p - min_i)) eqn:Hcv.
+    + destruct Hin as [Heq | []]. subst p'. simpl. lia.
+    + destruct (num_errors p <? n) eqn:Herr; [| inversion Hin].
+      destruct Hin as [Heq | []]. subst p'. simpl. lia.
+  - destruct (num_errors p <? n) eqn:Herr; [| inversion Hin].
+    destruct Hin as [Heq | []]. subst p'. simpl. exact Hp_bound.
+Qed.
+
+Lemma delete_step_term_bounded : forall p n qlen p',
+  delete_step p n qlen = Some p' ->
+  term_index p' <= qlen.
+Proof.
+  intros p n qlen p' Hdel.
+  unfold delete_step in Hdel.
+  destruct (is_special p); [discriminate|].
+  destruct ((S (term_index p) <=? qlen) && (num_errors p <? n)) eqn:Hcond;
+    [| discriminate].
+  apply andb_prop in Hcond. destruct Hcond as [Hle _].
+  apply Nat.leb_le in Hle.
+  injection Hdel as Heq. subst p'. simpl. exact Hle.
+Qed.
+
+Lemma epsilon_closure_aux_term_bounded : forall fuel positions n qlen p,
+  (forall q, In q positions -> term_index q <= qlen) ->
+  In p (epsilon_closure_aux positions n qlen fuel) ->
+  term_index p <= qlen.
+Proof.
+  induction fuel as [|fuel' IH]; intros positions n qlen p Hbound Hin.
+  - simpl in Hin. apply Hbound. exact Hin.
+  - simpl in Hin.
+    set (new := flat_map (fun p0 => match delete_step p0 n qlen with
+                                    | Some p' => [p']
+                                    | None => []
+                                    end) positions) in *.
+    destruct (is_nil new) eqn:Hnil.
+    + apply Hbound. exact Hin.
+    + apply IH with (positions := positions ++ new) (n := n).
+      * intros q Hq.
+        apply in_app_or in Hq.
+        destruct Hq as [Hq_old | Hq_new].
+        -- apply Hbound. exact Hq_old.
+        -- unfold new in Hq_new.
+           apply in_flat_map in Hq_new.
+           destruct Hq_new as [q0 [Hq0_in Hq_del]].
+           destruct (delete_step q0 n qlen) as [q'|] eqn:Hdel.
+           ++ destruct Hq_del as [Heq | []]. subst q.
+              apply delete_step_term_bounded with (p := q0) (n := n).
+              exact Hdel.
+           ++ inversion Hq_del.
+      * exact Hin.
+Qed.
+
+Lemma epsilon_closure_term_bounded : forall positions n qlen p,
+  (forall q, In q positions -> term_index q <= qlen) ->
+  In p (epsilon_closure positions n qlen) ->
+  term_index p <= qlen.
+Proof.
+  intros positions n qlen p Hbound Hin.
+  unfold epsilon_closure in Hin.
+  eapply epsilon_closure_aux_term_bounded; eauto.
+Qed.
+
+Lemma transition_state_positions_standard_term_bounded : forall positions cv min_i n qlen p,
+  (forall q, In q positions -> term_index q <= qlen) ->
+  In p (transition_state_positions Standard positions cv min_i n qlen) ->
+  term_index p <= qlen.
+Proof.
+  intros positions cv min_i n qlen p Hbound Hin.
+  unfold transition_state_positions in Hin.
+  apply in_flat_map in Hin.
+  destruct Hin as [q [Hq_in Hp_trans]].
+  unfold transition_position in Hp_trans.
+  eapply transition_standard_term_bounded.
+  - apply Hbound. exact Hq_in.
+  - exact Hp_trans.
+Qed.
+
 (** Key lemma: transition preserves "has position with bounded errors".
     If input has position with errors e < n, output has position with errors <= e + 1.
     This is critical for the induction in automaton_run_with_slack. *)
@@ -2322,7 +3076,7 @@ Qed.
     removed because its statement was too strong - it claimed the automaton never
     goes dead for ANY dictionary, but when errors + dict_length > n and all remaining
     characters mismatch, the automaton must die. Current completeness uses the
-    narrower [position_contained_from_run] evidence field for reachable runs. *)
+	    narrower [position_subsumed_from_run] evidence field for reachable runs. *)
 
 (** Helper: Positions reachable via empty dictionary prefix are on the diagonal.
 
@@ -2357,6 +3111,65 @@ Proof.
     destruct dp'; discriminate.
 Qed.
 
+(** The Standard representation bridge is fully local for the empty dictionary
+    prefix: the initial epsilon closure contains exactly the delete chain from
+    the origin, so every empty-prefix reachable position is represented by
+    reflexive Standard subsumption. *)
+Lemma position_subsumed_from_empty_run : forall query n s_mid p,
+  automaton_run_from_initial Standard query n [] = Some s_mid ->
+  position_reachable query n [] p ->
+  is_special p = false ->
+  num_errors p <= n ->
+  positions_subsume Standard (length query) (positions s_mid) p.
+Proof.
+  intros query n s_mid [i e sp] Hrun Hreach Hspec Herr.
+  unfold automaton_run_from_initial in Hrun.
+  simpl in Hrun.
+  injection Hrun as Hs_mid. subst s_mid.
+  simpl in Hspec. destruct sp; try discriminate.
+  simpl in *.
+  assert (Hdiag : i = e).
+  { apply (reachable_empty_prefix_diagonal query n i e). exact Hreach. }
+  subst i.
+  apply positions_subsume_standard_refl_in.
+  simpl.
+  replace e with (0 + e) at 1 by lia.
+  replace e with (0 + e) at 2 by lia.
+  apply epsilon_closure_reaches_deletes.
+  - simpl. left. reflexivity.
+  - pose proof (reachable_term_index_bound_query query n [] (std_pos e e) Hreach) as Hbound.
+    simpl in Hbound. lia.
+  - exact Herr.
+Qed.
+
+(** Successful Standard runs only contain query-bounded positions. *)
+Lemma standard_run_positions_term_bounded : forall query n dict final,
+  automaton_run_from_initial Standard query n dict = Some final ->
+  forall p,
+    In p (positions final) ->
+    term_index p <= length query.
+Proof.
+  intros query n dict final Hrun p Hin.
+  unfold automaton_run_from_initial in Hrun.
+  set (init_closed :=
+    mkState
+      (epsilon_closure (positions (initial_state Standard (length query))) n (length query))
+      Standard (length query)) in *.
+  assert (Hqlen_init : query_length init_closed = length query).
+  { unfold init_closed. simpl. reflexivity. }
+  assert (Hinit_reach : forall p0, In p0 (positions init_closed) ->
+    position_reachable query n [] p0 /\ is_special p0 = false).
+  { intros p0 Hin0.
+    unfold init_closed in Hin0. simpl in Hin0.
+    apply initial_closed_state_reachable. exact Hin0. }
+  assert (Hreach : position_reachable query n dict p).
+  { pose proof (automaton_run_preserves_reachable_standard
+      query n [] dict init_closed final Hqlen_init Hrun Hinit_reach p Hin) as Hp.
+    simpl in Hp. exact Hp. }
+  apply reachable_term_index_bound_query with (n := n) (dict_prefix := dict).
+  exact Hreach.
+Qed.
+
 (** ** Core Completeness Contracts
 
     These contracts capture fundamental properties of the Levenshtein automaton
@@ -2388,16 +3201,18 @@ merge_split_completeness :
     merge_split_distance query dict <= n ->
     automaton_accepts MergeAndSplit query n dict = true;
 
-(** Contract: Position containment is preserved from run intermediate state.
-    If a position is reachable, it is contained in the corresponding
-    automaton run result. *)
-position_contained_from_run :
-  forall query n dict s s_mid p,
-    automaton_run Standard query n dict s = Some s_mid ->
+(** Contract: Standard run antichain representation.
+    Exact same-index containment is false for Standard antichains: for example,
+    query ["a"], dict ["a"], and n = 1 generate the reachable insert position
+    (0,1), but it is pruned because (1,0) subsumes it. The true bridge is
+    representation under the executable [subsumes Standard] relation. *)
+  position_subsumed_from_run :
+  forall query n dict s_mid p,
+    automaton_run_from_initial Standard query n dict = Some s_mid ->
     position_reachable query n dict p ->
     is_special p = false ->
     num_errors p <= n ->
-    positions_contain (positions s_mid) p
+    positions_subsume Standard (length query) (positions s_mid) p
 }.
 
 (** Exact-match reachable predecessor transitions are non-dead.
@@ -2408,10 +3223,7 @@ position_contained_from_run :
 Lemma reachable_match_transition_succeeds_from_containment : forall
   (core_contracts : AutomatonCompletenessCoreEvidence)
   query n dict s_mid c i e,
-  automaton_run Standard query n dict
-    (mkState
-       (epsilon_closure (positions (initial_state Standard (length query))) n (length query))
-       Standard (length query)) = Some s_mid ->
+  automaton_run_from_initial Standard query n dict = Some s_mid ->
   position_reachable query n dict (std_pos i e) ->
   e <= n ->
   i < length query ->
@@ -2448,20 +3260,29 @@ Proof.
     exact Hspec0. }
   assert (Hstd_spec : is_special (std_pos i e) = false).
   { unfold std_pos. simpl. reflexivity. }
-  pose proof (position_contained_from_run core_contracts query n dict
-                init_closed s_mid (std_pos i e) Hrun Hreach Hstd_spec Herr) as Hcont.
+  assert (Halg_mid : algorithm s_mid = Standard).
+  { exact (automaton_run_preserves_algorithm Standard query n dict
+             init_closed s_mid eq_refl Hrun). }
+  pose proof (position_subsumed_from_run core_contracts query n dict
+                s_mid (std_pos i e) Hrun Hreach Hstd_spec Herr) as Hcont.
   destruct Hcont as [p' [Hin' Hsub']].
-  unfold position_subsumes in Hsub'.
-  destruct Hsub' as [Hterm' [Hspec' _]].
-  simpl in Hterm', Hspec'.
-  apply (transition_state_not_dead_standard_match query n dict s_mid c p').
-  - exact Hqlen_mid.
-  - exact Hall_reach.
-  - exact Hall_spec.
-  - exact Hin'.
-  - exact Hspec'.
-  - rewrite Hterm'. exact Hlt.
-  - rewrite Hterm'. exact Hnth.
+  assert (Hspec' : is_special p' = false).
+  { apply Hall_spec. exact Hin'. }
+  destruct (Nat.eq_dec (term_index p') i) as [Hsame | Hdiff].
+  - apply (transition_state_not_dead_standard_match query n dict s_mid c p').
+    + exact Hqlen_mid.
+    + exact Hall_reach.
+    + exact Hall_spec.
+    + exact Hin'.
+    + exact Hspec'.
+    + rewrite Hsame. exact Hlt.
+    + rewrite Hsame. exact Hnth.
+  - assert (Herr_lt : num_errors p' < n).
+    { assert (Hlt_err : num_errors p' < e).
+      { eapply subsumes_standard_diff_index_lt_errors; eauto. }
+      lia. }
+    apply (transition_state_not_dead_standard s_mid c query n Halg_mid Hqlen_mid).
+    exists p'. repeat split; assumption.
 Qed.
 
 (** Helper: automaton never goes dead if a reachable position has bounded errors.
@@ -2569,6 +3390,7 @@ Proof.
     { unfold std_pos. simpl. reflexivity. }
     specialize (IH Herr_pred Hspec_pred).
     destruct IH as [s_mid Hmid].
+    assert (Hmid_from_initial := Hmid).
     unfold automaton_run_from_initial in *.
     set (qlen := length query) in *.
     set (init_closed := mkState (epsilon_closure [initial_position] n qlen) Standard qlen) in *.
@@ -2587,18 +3409,25 @@ Proof.
                    s_mid Hmid).
         reflexivity. }
       unfold automaton_run_from_initial in Hmid.
-      pose proof (position_contained_from_run core_contracts query n dp
-                   (mkState (epsilon_closure [initial_position] n (length query)) Standard (length query))
-                   s_mid (std_pos i e) Hmid Hreach' Hspec_pred Herr_pred) as Hcont.
-      destruct Hcont as [p' [Hin' Hsub']].
-      unfold position_subsumes in Hsub'.
-      destruct Hsub' as [_ [Hspec' Herr']].
-      simpl in Hspec', Herr'.
-      destruct (transition_state_not_dead_standard s_mid c query n Halg_mid Hqlen_mid) as [s' Htrans].
-      { exists p'. repeat split.
-        - exact Hin'.
-        - exact Hspec'.
-        - lia. }
+	      pose proof (position_subsumed_from_run core_contracts query n dp
+	                   s_mid (std_pos i e) Hmid_from_initial Hreach' Hspec_pred Herr_pred) as Hcont.
+	      destruct Hcont as [p' [Hin' Hsub']].
+	      assert (Hspec' : is_special p' = false).
+	      { apply (standard_run_positions_non_special query n dp
+	                 (mkState (epsilon_closure [initial_position] n (length query))
+	                          Standard (length query)) s_mid Hmid_from_initial).
+	        - intros p0 Hin0.
+	          apply initial_closed_state_reachable in Hin0.
+	          destruct Hin0 as [_ Hsp]. exact Hsp.
+	        - exact Hin'. }
+	      assert (Herr' : num_errors p' <= e).
+	      { unfold subsumes in Hsub'. simpl in Hsub'.
+	        apply subsumes_standard_errors in Hsub'. exact Hsub'. }
+	      destruct (transition_state_not_dead_standard s_mid c query n Halg_mid Hqlen_mid) as [s' Htrans].
+	      { exists p'. repeat split.
+	        - exact Hin'.
+	        - exact Hspec'.
+	        - lia. }
       rewrite Htrans. exists s'. reflexivity.
     + exact Hmid.
 
@@ -2610,6 +3439,7 @@ Proof.
     { unfold std_pos. simpl. reflexivity. }
     specialize (IH Herr_pred Hspec_pred).
     destruct IH as [s_mid Hmid].
+    assert (Hmid_from_initial := Hmid).
     unfold automaton_run_from_initial in *.
     set (qlen := length query) in *.
     set (init_closed := mkState (epsilon_closure [initial_position] n qlen) Standard qlen) in *.
@@ -2628,16 +3458,23 @@ Proof.
                    s_mid Hmid).
         reflexivity. }
       unfold automaton_run_from_initial in Hmid.
-      pose proof (position_contained_from_run core_contracts query n dp
-                   (mkState (epsilon_closure [initial_position] n (length query)) Standard (length query))
-                   s_mid (std_pos i e) Hmid Hreach' Hspec_pred Herr_pred) as Hcont.
-      destruct Hcont as [p' [Hin' Hsub']].
-      unfold position_subsumes in Hsub'.
-      destruct Hsub' as [_ [Hspec' Herr']].
-      simpl in Hspec', Herr'.
-      destruct (transition_state_not_dead_standard s_mid c query n Halg_mid Hqlen_mid) as [s' Htrans].
-      { exists p'. repeat split.
-        - exact Hin'.
+	      pose proof (position_subsumed_from_run core_contracts query n dp
+	                   s_mid (std_pos i e) Hmid_from_initial Hreach' Hspec_pred Herr_pred) as Hcont.
+	      destruct Hcont as [p' [Hin' Hsub']].
+	      assert (Hspec' : is_special p' = false).
+	      { apply (standard_run_positions_non_special query n dp
+	                 (mkState (epsilon_closure [initial_position] n (length query))
+	                          Standard (length query)) s_mid Hmid_from_initial).
+	        - intros p0 Hin0.
+	          apply initial_closed_state_reachable in Hin0.
+	          destruct Hin0 as [_ Hsp]. exact Hsp.
+	        - exact Hin'. }
+	      assert (Herr' : num_errors p' <= e).
+	      { unfold subsumes in Hsub'. simpl in Hsub'.
+	        apply subsumes_standard_errors in Hsub'. exact Hsub'. }
+	      destruct (transition_state_not_dead_standard s_mid c query n Halg_mid Hqlen_mid) as [s' Htrans].
+	      { exists p'. repeat split.
+	        - exact Hin'.
         - exact Hspec'.
         - lia. }
       rewrite Htrans. exists s'. reflexivity.
@@ -3402,6 +4239,313 @@ Proof.
         -- split; [exact Hq_spec | exact Hq_complete].
 Qed.
 
+(** Lifting the antichain can-complete invariant through [state_insert].
+    This packages the sorted-list wrapper around [antichain_insert], so later
+    transition proofs can reason at the state level. *)
+Lemma state_insert_preserves_can_complete_standard : forall
+  query n remaining p s,
+  algorithm s = Standard ->
+  query_length s = length query ->
+  is_special p = false ->
+  term_index p <= length query ->
+  (forall q, In q (positions s) -> term_index q <= length query) ->
+  (forall q, In q (positions s) -> is_special q = false) ->
+  (can_complete_to_final query n remaining p \/
+   exists q, In q (positions s) /\ is_special q = false /\
+             can_complete_to_final query n remaining q) ->
+  exists q, In q (positions (state_insert p s)) /\
+            is_special q = false /\
+            can_complete_to_final query n remaining q.
+Proof.
+  intros query n remaining p s Halg Hqlen Hp_spec Hp_bound
+         Hstate_bound Hstate_spec Hcomplete.
+  destruct (antichain_insert_preserves_can_complete
+              query n remaining p (positions s)
+              Hp_spec Hp_bound Hstate_bound Hstate_spec Hcomplete)
+    as [q [Hq_in [Hq_spec Hq_complete]]].
+  exists q. split.
+  - rewrite positions_state_insert.
+    rewrite Halg, Hqlen.
+    apply fold_right_sorted_insert_preserves_In.
+    exact Hq_in.
+  - split; assumption.
+Qed.
+
+Lemma state_insert_preserves_state_has_completable_standard : forall
+  query n remaining p s,
+  algorithm s = Standard ->
+  query_length s = length query ->
+  is_special p = false ->
+  term_index p <= length query ->
+  (forall q, In q (positions s) -> term_index q <= length query) ->
+  (forall q, In q (positions s) -> is_special q = false) ->
+  state_has_completable query n remaining s ->
+  state_has_completable query n remaining (state_insert p s).
+Proof.
+  intros query n remaining p s Halg Hqlen Hp_spec Hp_bound
+         Hstate_bound Hstate_spec [q [Hq_in Hq_complete]].
+  unfold state_has_completable.
+  destruct (state_insert_preserves_can_complete_standard
+              query n remaining p s Halg Hqlen Hp_spec Hp_bound
+              Hstate_bound Hstate_spec) as [r [Hr_in [_ Hr_complete]]].
+  - right.
+    exists q. repeat split.
+    + exact Hq_in.
+    + apply Hstate_spec. exact Hq_in.
+    + exact Hq_complete.
+  - exists r. split; assumption.
+Qed.
+
+Lemma state_insert_adds_can_complete_standard : forall
+  query n remaining p s,
+  algorithm s = Standard ->
+  query_length s = length query ->
+  is_special p = false ->
+  term_index p <= length query ->
+  (forall q, In q (positions s) -> term_index q <= length query) ->
+  (forall q, In q (positions s) -> is_special q = false) ->
+  can_complete_to_final query n remaining p ->
+  state_has_completable query n remaining (state_insert p s).
+Proof.
+  intros query n remaining p s Halg Hqlen Hp_spec Hp_bound
+         Hstate_bound Hstate_spec Hp_complete.
+  unfold state_has_completable.
+  destruct (state_insert_preserves_can_complete_standard
+              query n remaining p s Halg Hqlen Hp_spec Hp_bound
+              Hstate_bound Hstate_spec) as [q [Hq_in [_ Hq_complete]]].
+  - left. exact Hp_complete.
+  - exists q. split; assumption.
+Qed.
+
+Lemma fold_state_insert_preserves_state_has_completable_standard : forall
+  query n remaining inserts s,
+  algorithm s = Standard ->
+  query_length s = length query ->
+  (forall p, In p inserts -> is_special p = false) ->
+  (forall p, In p inserts -> term_index p <= length query) ->
+  (forall p, In p (positions s) -> is_special p = false) ->
+  (forall p, In p (positions s) -> term_index p <= length query) ->
+  state_has_completable query n remaining s ->
+  state_has_completable query n remaining
+    (fold_left (fun s0 p => state_insert p s0) inserts s).
+Proof.
+  induction inserts as [|p rest IH]; intros s Halg Hqlen Hinserts_spec
+         Hinserts_bound Hstate_spec Hstate_bound Hcomplete.
+  - simpl. exact Hcomplete.
+  - simpl.
+    apply IH.
+    + rewrite algorithm_state_insert. exact Halg.
+    + rewrite query_length_state_insert. exact Hqlen.
+    + intros q Hq. apply Hinserts_spec. simpl. right. exact Hq.
+    + intros q Hq. apply Hinserts_bound. simpl. right. exact Hq.
+    + intros q Hq.
+      apply in_state_insert_origin in Hq.
+      destruct Hq as [Heq | Hq_old].
+      * subst q. apply Hinserts_spec. simpl. left. reflexivity.
+      * apply Hstate_spec. exact Hq_old.
+    + intros q Hq.
+      apply in_state_insert_origin in Hq.
+      destruct Hq as [Heq | Hq_old].
+      * subst q. apply Hinserts_bound. simpl. left. reflexivity.
+      * apply Hstate_bound. exact Hq_old.
+    + apply state_insert_preserves_state_has_completable_standard.
+      * exact Halg.
+      * exact Hqlen.
+      * apply Hinserts_spec. simpl. left. reflexivity.
+      * apply Hinserts_bound. simpl. left. reflexivity.
+      * exact Hstate_bound.
+      * exact Hstate_spec.
+      * exact Hcomplete.
+Qed.
+
+Lemma fold_state_insert_has_can_complete_member_standard : forall
+  query n remaining inserts s p,
+  algorithm s = Standard ->
+  query_length s = length query ->
+  (forall q, In q inserts -> is_special q = false) ->
+  (forall q, In q inserts -> term_index q <= length query) ->
+  (forall q, In q (positions s) -> is_special q = false) ->
+  (forall q, In q (positions s) -> term_index q <= length query) ->
+  In p inserts ->
+  can_complete_to_final query n remaining p ->
+  state_has_completable query n remaining
+    (fold_left (fun s0 q => state_insert q s0) inserts s).
+Proof.
+  induction inserts as [|q rest IH]; intros s p Halg Hqlen Hinserts_spec
+         Hinserts_bound Hstate_spec Hstate_bound Hp_in Hp_complete.
+  - inversion Hp_in.
+  - simpl in Hp_in |- *.
+    destruct Hp_in as [Hp_eq | Hp_in_rest].
+    + subst q.
+      apply fold_state_insert_preserves_state_has_completable_standard.
+      * rewrite algorithm_state_insert. exact Halg.
+      * rewrite query_length_state_insert. exact Hqlen.
+      * intros r Hr. apply Hinserts_spec. simpl. right. exact Hr.
+      * intros r Hr. apply Hinserts_bound. simpl. right. exact Hr.
+      * intros r Hr.
+        apply in_state_insert_origin in Hr.
+        destruct Hr as [Heq | Hr_old].
+        -- subst r. apply Hinserts_spec. simpl. left. reflexivity.
+        -- apply Hstate_spec. exact Hr_old.
+      * intros r Hr.
+        apply in_state_insert_origin in Hr.
+        destruct Hr as [Heq | Hr_old].
+        -- subst r. apply Hinserts_bound. simpl. left. reflexivity.
+        -- apply Hstate_bound. exact Hr_old.
+      * apply state_insert_adds_can_complete_standard.
+        -- exact Halg.
+        -- exact Hqlen.
+        -- apply Hinserts_spec. simpl. left. reflexivity.
+        -- apply Hinserts_bound. simpl. left. reflexivity.
+        -- exact Hstate_bound.
+        -- exact Hstate_spec.
+        -- exact Hp_complete.
+    + apply (IH (state_insert q s) p).
+      * rewrite algorithm_state_insert. exact Halg.
+      * rewrite query_length_state_insert. exact Hqlen.
+      * intros r Hr. apply Hinserts_spec. simpl. right. exact Hr.
+      * intros r Hr. apply Hinserts_bound. simpl. right. exact Hr.
+      * intros r Hr.
+        apply in_state_insert_origin in Hr.
+        destruct Hr as [Heq | Hr_old].
+        -- subst r. apply Hinserts_spec. simpl. left. reflexivity.
+        -- apply Hstate_spec. exact Hr_old.
+      * intros r Hr.
+        apply in_state_insert_origin in Hr.
+        destruct Hr as [Heq | Hr_old].
+        -- subst r. apply Hinserts_bound. simpl. left. reflexivity.
+        -- apply Hstate_bound. exact Hr_old.
+      * exact Hp_in_rest.
+      * exact Hp_complete.
+Qed.
+
+(** If a Standard transition succeeds and one of its epsilon-closed generated
+    positions can complete on the remaining suffix, the folded output state
+    keeps some completable representative. *)
+Lemma transition_state_standard_has_can_complete_closed_member : forall
+  query n remaining s c s' p,
+  query_length s = length query ->
+  (forall q, In q (positions s) -> term_index q <= length query) ->
+  transition_state Standard s c query n = Some s' ->
+  In p
+    (epsilon_closure
+       (transition_state_positions Standard (positions s)
+          (characteristic_vector c query
+             (fold_left Nat.min (map term_index (positions s)) (query_length s))
+             (2 * n + 6))
+          (fold_left Nat.min (map term_index (positions s)) (query_length s))
+          n (query_length s))
+       n (query_length s)) ->
+  can_complete_to_final query n remaining p ->
+  state_has_completable query n remaining s'.
+Proof.
+  intros query n remaining s c s' p Hqlen Hstate_bound Htrans Hin Hp_complete.
+  unfold transition_state in Htrans.
+  set (min_i := fold_left Nat.min (map term_index (positions s)) (query_length s)) in *.
+  set (cv := characteristic_vector c query min_i (2 * n + 6)) in *.
+  set (trans_positions := transition_state_positions Standard (positions s) cv min_i n (query_length s)) in *.
+  set (closed_positions := epsilon_closure trans_positions n (query_length s)) in *.
+  fold min_i in Hin.
+  fold cv in Hin.
+  fold trans_positions in Hin.
+  fold closed_positions in Hin.
+  destruct (is_nil closed_positions) eqn:Hnil; [discriminate|].
+  injection Htrans as Hs'. subst s'.
+  apply (fold_state_insert_has_can_complete_member_standard
+           query n remaining closed_positions
+           (empty_state Standard (query_length s)) p).
+  - unfold empty_state. reflexivity.
+  - unfold empty_state. simpl. exact Hqlen.
+  - intros q Hq.
+    unfold closed_positions in Hq.
+    eapply epsilon_closure_nonspecial; [| exact Hq].
+    intros q0 Hq0.
+    unfold trans_positions in Hq0.
+    eapply transition_state_positions_standard_nonspecial. exact Hq0.
+  - intros q Hq.
+    rewrite <- Hqlen.
+    unfold closed_positions in Hq.
+    eapply epsilon_closure_term_bounded; [| exact Hq].
+    intros q0 Hq0.
+    unfold trans_positions in Hq0.
+    eapply transition_state_positions_standard_term_bounded.
+    + intros q1 Hq1. rewrite Hqlen. apply Hstate_bound. exact Hq1.
+    + exact Hq0.
+  - intros q Hq. unfold empty_state in Hq. simpl in Hq. contradiction.
+  - intros q Hq. unfold empty_state in Hq. simpl in Hq. contradiction.
+  - exact Hin.
+  - exact Hp_complete.
+Qed.
+
+Lemma transition_state_standard_preserves_can_complete_insert_exact : forall
+  query n remaining s c s' i e,
+  query_length s = length query ->
+  (forall q, In q (positions s) -> term_index q <= length query) ->
+  transition_state Standard s c query n = Some s' ->
+  In (std_pos i e) (positions s) ->
+  e < n ->
+  can_complete_to_final query n remaining (std_pos i (S e)) ->
+  state_has_completable query n remaining s'.
+Proof.
+  intros query n remaining s c s' i e Hqlen Hstate_bound Htrans Hin He_lt Hcomplete.
+  eapply transition_state_standard_has_can_complete_closed_member.
+  - exact Hqlen.
+  - exact Hstate_bound.
+  - exact Htrans.
+  - apply transition_state_standard_closed_insert_exact.
+    + exact Hin.
+    + exact He_lt.
+  - exact Hcomplete.
+Qed.
+
+Lemma transition_state_standard_preserves_can_complete_match_exact : forall
+  query n dict remaining s c s' i e,
+  query_length s = length query ->
+  (forall q, In q (positions s) -> position_reachable query n dict q) ->
+  (forall q, In q (positions s) -> is_special q = false) ->
+  (forall q, In q (positions s) -> term_index q <= length query) ->
+  transition_state Standard s c query n = Some s' ->
+  In (std_pos i e) (positions s) ->
+  i < length query ->
+  nth_error query i = Some c ->
+  can_complete_to_final query n remaining (std_pos (S i) e) ->
+  state_has_completable query n remaining s'.
+Proof.
+  intros query n dict remaining s c s' i e Hqlen Hall_reach Hall_spec
+         Hstate_bound Htrans Hin Hlt Hnth Hcomplete.
+  eapply transition_state_standard_has_can_complete_closed_member.
+  - exact Hqlen.
+  - exact Hstate_bound.
+  - exact Htrans.
+  - eapply transition_state_standard_closed_match_exact; eauto.
+  - exact Hcomplete.
+Qed.
+
+Lemma transition_state_standard_preserves_can_complete_substitute_exact : forall
+  query n dict remaining s c c' s' i e,
+  query_length s = length query ->
+  (forall q, In q (positions s) -> position_reachable query n dict q) ->
+  (forall q, In q (positions s) -> is_special q = false) ->
+  (forall q, In q (positions s) -> term_index q <= length query) ->
+  transition_state Standard s c query n = Some s' ->
+  In (std_pos i e) (positions s) ->
+  i < length query ->
+  nth_error query i = Some c' ->
+  c <> c' ->
+  e < n ->
+  can_complete_to_final query n remaining (std_pos (S i) (S e)) ->
+  state_has_completable query n remaining s'.
+Proof.
+  intros query n dict remaining s c c' s' i e Hqlen Hall_reach Hall_spec
+         Hstate_bound Htrans Hin Hlt Hnth Hneq He_lt Hcomplete.
+  eapply transition_state_standard_has_can_complete_closed_member.
+  - exact Hqlen.
+  - exact Hstate_bound.
+  - exact Htrans.
+  - eapply transition_state_standard_closed_substitute_exact; eauto.
+  - exact Hcomplete.
+Qed.
+
 (** Now we can prove the main completeness property using Option C approach *)
 
 (** Helper: if automaton produces a state, and a final position was reachable,
@@ -3414,7 +4558,7 @@ Qed.
 
     Proof outline:
     1. Position p (with term_index = qlen) is reachable with errors ≤ n
-    2. The automaton's final state contains p (via position_contained_from_run)
+    2. The automaton's final state represents p via Standard subsumption
     3. When building the antichain, p cannot be removed by a non-final position
        because non_final_cannot_subsume_final ensures subsumption fails
     4. Either p survives, or p is subsumed by another FINAL position
@@ -3422,7 +4566,7 @@ Qed.
     6. Therefore state_is_final = true
 
     This proof depends on:
-    - position_contained_from_run (to show p is represented in the final state)
+    - position_subsumed_from_run (to show p is represented in the final state)
     - fold_state_insert_has_final (to show final position survives antichain)
 *)
 Lemma automaton_final_state_accepts_standard : forall
@@ -3436,15 +4580,14 @@ Lemma automaton_final_state_accepts_standard : forall
   state_is_final final = true.
 Proof.
   intros core_contracts query n dict final p Hrun Hreach Hfinal Hspec Herr.
+  assert (Hrun_from_initial := Hrun).
   unfold automaton_run_from_initial in Hrun.
   set (init_closed :=
     mkState (epsilon_closure (positions (initial_state Standard (length query)))
                          n (length query)) Standard (length query)) in *.
-  pose proof (position_contained_from_run core_contracts query n dict
-                init_closed final p Hrun Hreach Hspec Herr) as Hcont.
+  pose proof (position_subsumed_from_run core_contracts query n dict
+                final p Hrun_from_initial Hreach Hspec Herr) as Hcont.
   destruct Hcont as [p' [Hin Hsub]].
-  unfold position_subsumes in Hsub.
-  destruct Hsub as [Hterm [_ _]].
   assert (Hqlen_final : query_length final = length query).
   { assert (Hqlen_init : query_length init_closed = length query).
     { unfold init_closed. simpl. reflexivity. }
@@ -3456,8 +4599,16 @@ Proof.
   unfold position_is_final.
   rewrite Nat.leb_le.
   rewrite Hqlen_final.
-  rewrite Hterm.
-  lia.
+  destruct (position_is_final_for_subsumption (length query) p') eqn:Hp'_final.
+  - unfold position_is_final_for_subsumption in Hp'_final.
+    apply Nat.leb_le in Hp'_final. exact Hp'_final.
+  - exfalso.
+    assert (Hp_final : position_is_final_for_subsumption (length query) p = true).
+    { unfold position_is_final_for_subsumption.
+      rewrite Nat.leb_le. rewrite Hfinal. exact (Nat.le_refl (length query)). }
+    pose proof (non_final_cannot_subsume_final Standard (length query) p' p
+                  Hp'_final Hp_final) as Hnot_sub.
+    rewrite Hsub in Hnot_sub. discriminate.
 Qed.
 
 (** Simplified version for the main completeness proof *)

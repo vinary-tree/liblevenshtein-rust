@@ -10,10 +10,13 @@
 > `AutomatonFoldStateEvidence` no longer exist in `Completeness.v`. The
 > Standard exact-match transition-success bridge is also now proved from
 > containment and Standard run invariants, so no transition-success field remains
-> in `AutomatonCompletenessCoreEvidence`. The MergeAndSplit transition now gates
-> merge edges with the closed-world `can_merge` predicate, and the former
-> same-state special-origin soundness fields were removed because they did not
-> survive antichain filtering. Use
+> in `AutomatonCompletenessCoreEvidence`. The MergeAndSplit transition has since
+> been restored to the generic 2-to-1/1-to-2 semantics used by the Rust
+> `merge_and_split_distance` implementation, and automaton soundness no longer
+> needs an evidence record. The exact same-index `position_contained_from_run`
+> bridge was replaced by `position_subsumed_from_run`, matching Standard
+> antichain subsumption; `Completeness.v` contains a concrete counterexample for
+> the old exact-containment shape. Use
 > `docs/verification/PROOF_COMPLETION_PLAN.md` and
 > `./scripts/verify-formal.sh audit-evidence-tsv` for the current gap list.
 
