@@ -287,75 +287,6 @@ Fixpoint regex_size (r : Regex) : nat :=
   | RCharClass _ => 1
   end.
 
-(** * Thompson Construction Contracts *)
-
-(** Evidence for the remaining combinator run decompositions follows the
-    standard Thompson construction semantics. Construction/completeness cases
-    are proved locally below for arbitrary fresh-state counters.
-    Citation: Thompson, K. (1968), "Programming Techniques: Regular
-    expression search algorithm", Communications of the ACM 11(6),
-    419-422, DOI 10.1145/363347.363387. *)
-
-Record ThompsonEvidence : Prop := mkThompsonEvidence {
-  concat_run_decomposition : forall r1 r2 nfa1 nfa2 c1 c2 s,
-    compile_nfa r1 0 = (nfa1, c1) ->
-    compile_nfa r2 c1 = (nfa2, c2) ->
-    let nfa := mkNFA (nfa_start nfa1) (nfa_final nfa2)
-                     (nfa_transitions nfa1 ++
-                      [TransEpsilon (nfa_final nfa1) (nfa_start nfa2)] ++
-                      nfa_transitions nfa2)
-                     (max (nfa_max_state nfa1) (nfa_max_state nfa2)) in
-    nfa_accepts nfa s ->
-    exists s1 s2, s = (s1 ++ s2)%string /\ regex_matches r1 s1 /\ regex_matches r2 s2;
-
-  alt_run_decomposition : forall r1 r2 nfa1 nfa2 c1 c2 s,
-    compile_nfa r1 1 = (nfa1, c1) ->
-    compile_nfa r2 c1 = (nfa2, c2) ->
-    let nfa := mkNFA 0 c2
-                     ([TransEpsilon 0 (nfa_start nfa1);
-                       TransEpsilon 0 (nfa_start nfa2)] ++
-                      nfa_transitions nfa1 ++
-                      nfa_transitions nfa2 ++
-                      [TransEpsilon (nfa_final nfa1) c2;
-                       TransEpsilon (nfa_final nfa2) c2])
-                     (max (max (nfa_max_state nfa1) (nfa_max_state nfa2)) c2) in
-    nfa_accepts nfa s ->
-    regex_matches r1 s \/ regex_matches r2 s;
-
-  star_run_decomposition : forall r nfa1 c1 s,
-    compile_nfa r 1 = (nfa1, c1) ->
-    let nfa := mkNFA 0 c1
-                     ([TransEpsilon 0 (nfa_start nfa1);
-                       TransEpsilon 0 c1] ++
-                      nfa_transitions nfa1 ++
-                      [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
-                       TransEpsilon (nfa_final nfa1) c1])
-                     (max (nfa_max_state nfa1) c1) in
-    nfa_accepts nfa s ->
-    regex_matches (RStar r) s;
-
-  plus_run_decomposition : forall r nfa1 c1 s,
-    compile_nfa r 0 = (nfa1, c1) ->
-    let nfa := mkNFA (nfa_start nfa1) c1
-                     (nfa_transitions nfa1 ++
-                      [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
-                       TransEpsilon (nfa_final nfa1) c1])
-                     (max (nfa_max_state nfa1) c1) in
-    nfa_accepts nfa s ->
-    regex_matches (RPlus r) s;
-
-  option_run_decomposition : forall r nfa1 c1 s,
-    compile_nfa r 1 = (nfa1, c1) ->
-    let nfa := mkNFA 0 c1
-                     ([TransEpsilon 0 (nfa_start nfa1);
-                       TransEpsilon 0 c1] ++
-                      nfa_transitions nfa1 ++
-                      [TransEpsilon (nfa_final nfa1) c1])
-                     (max (nfa_max_state nfa1) c1) in
-    nfa_accepts nfa s ->
-    regex_matches (ROption r) s
-}.
-
 (** * Helper Lemmas *)
 
 (** State counter increases *)
@@ -449,6 +380,41 @@ Proof.
     inversion Heq. simpl. lia.
   - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
     inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+Qed.
+
+Lemma compile_final_ge_counter : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
+  counter <= nfa_final nfa.
+Proof.
+  induction r; intros counter nfa counter' Heq; simpl in Heq.
+  - inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+  - inversion Heq. simpl. lia.
+  - destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    pose proof (compile_counter_increases r1 counter nfa1 c1 Hnfa1) as Hinc1.
+    pose proof (IHr2 c1 nfa2 c2 Hnfa2) as Hge2.
+    inversion Heq. subst. simpl.
+    lia.
+  - destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. subst. simpl.
+    pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+    pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    lia.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+    lia.
+  - destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    pose proof (compile_counter_increases r counter nfa1 c1 Hnfa1) as Hinc.
+    lia.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+    lia.
   - inversion Heq. simpl. lia.
 Qed.
 
@@ -619,6 +585,1328 @@ Proof.
            ++ constructor.
   - inversion Heq. subst. simpl.
     constructor; [simpl; lia|constructor].
+Qed.
+
+Lemma transition_full_bounds_weaken :
+  forall lower_from lower_to upper_from upper_to transitions,
+  lower_to <= lower_from ->
+  upper_from <= upper_to ->
+  Forall
+    (fun tr =>
+      lower_from <= trans_source tr /\ trans_source tr < upper_from /\
+      lower_from <= trans_target tr /\ trans_target tr < upper_from)
+    transitions ->
+  Forall
+    (fun tr =>
+      lower_to <= trans_source tr /\ trans_source tr < upper_to /\
+      lower_to <= trans_target tr /\ trans_target tr < upper_to)
+    transitions.
+Proof.
+  intros lower_from lower_to upper_from upper_to transitions Hlower Hupper Hbounds.
+  induction Hbounds as [|tr rest [Hsrc_lo [Hsrc_hi [Hdst_lo Hdst_hi]]] Hrest IH].
+  - constructor.
+  - constructor.
+    + repeat split; lia.
+    + exact IH.
+Qed.
+
+Lemma compile_transition_full_bounds : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
+  Forall
+    (fun tr =>
+      counter <= trans_source tr /\ trans_source tr < counter' /\
+      counter <= trans_target tr /\ trans_target tr < counter')
+    (nfa_transitions nfa).
+Proof.
+  induction r; intros counter nfa counter' Heq; simpl in Heq.
+  - inversion Heq. constructor.
+  - inversion Heq. subst. simpl.
+    constructor; [simpl; repeat split; lia|constructor].
+  - inversion Heq. subst. simpl.
+    constructor; [simpl; repeat split; lia|constructor].
+  - destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. subst. simpl.
+    rewrite Forall_app. split.
+    + pose proof (compile_counter_increases r2 c1 nfa2 counter' Hnfa2) as Hinc2.
+      eapply (transition_full_bounds_weaken counter counter c1 counter').
+      * lia.
+      * lia.
+      * apply IHr1. exact Hnfa1.
+    + constructor.
+      * simpl.
+        pose proof (compile_final_succ_eq r1 counter nfa1 c1 Hnfa1) as Hfinal1.
+        pose proof (compile_start_eq r2 c1 nfa2 counter' Hnfa2) as Hstart2.
+        pose proof (compile_counter_increases r1 counter nfa1 c1 Hnfa1) as Hinc1.
+        pose proof (compile_counter_increases r2 c1 nfa2 counter' Hnfa2) as Hinc2.
+        repeat split; lia.
+      * pose proof (compile_counter_increases r1 counter nfa1 c1 Hnfa1) as Hinc1.
+        eapply (transition_full_bounds_weaken c1 counter counter' counter').
+        -- lia.
+        -- lia.
+        -- apply IHr2. exact Hnfa2.
+  - destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Heq. subst. simpl.
+    constructor.
+    + simpl.
+      pose proof (compile_start_eq r1 (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+      repeat split; lia.
+    + constructor.
+      * simpl.
+        pose proof (compile_start_eq r2 c1 nfa2 c2 Hnfa2) as Hstart2.
+        pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+        pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+        repeat split; lia.
+      * rewrite Forall_app. split.
+        -- pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+           eapply (transition_full_bounds_weaken (counter + 1) counter c1 (c2 + 1)).
+           ++ lia.
+           ++ lia.
+           ++ apply IHr1. exact Hnfa1.
+        -- rewrite Forall_app. split.
+           ++ pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+              eapply (transition_full_bounds_weaken c1 counter c2 (c2 + 1)).
+              ** lia.
+              ** lia.
+              ** apply IHr2. exact Hnfa2.
+           ++ simpl. constructor.
+              ** simpl.
+                 pose proof (compile_final_succ_eq r1 (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+                 pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+                 pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+                 repeat split; lia.
+              ** constructor.
+                 --- simpl.
+                     pose proof (compile_final_succ_eq r2 c1 nfa2 c2 Hnfa2) as Hfinal2.
+                     pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+                     pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+                     repeat split; lia.
+                 --- constructor.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    constructor.
+    + simpl.
+      pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      repeat split; lia.
+    + constructor.
+      * simpl.
+        pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+        repeat split; lia.
+      * rewrite Forall_app. split.
+        -- eapply (transition_full_bounds_weaken (counter + 1) counter c1 (c1 + 1)).
+           ++ lia.
+           ++ lia.
+           ++ apply IHr. exact Hnfa1.
+        -- simpl. constructor.
+           ++ simpl.
+              pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+              pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+              pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+              repeat split; lia.
+           ++ constructor.
+              ** simpl.
+                 pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+                 pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+                 repeat split; lia.
+              ** constructor.
+  - destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    rewrite Forall_app. split.
+    + eapply (transition_full_bounds_weaken counter counter c1 (c1 + 1)).
+      * lia.
+      * lia.
+      * apply IHr. exact Hnfa1.
+    + simpl. constructor.
+      * simpl.
+        pose proof (compile_final_succ_eq r counter nfa1 c1 Hnfa1) as Hfinal1.
+        pose proof (compile_start_eq r counter nfa1 c1 Hnfa1) as Hstart1.
+        pose proof (compile_counter_increases r counter nfa1 c1 Hnfa1) as Hinc1.
+        repeat split; lia.
+      * constructor.
+        -- simpl.
+           pose proof (compile_final_succ_eq r counter nfa1 c1 Hnfa1) as Hfinal1.
+           pose proof (compile_counter_increases r counter nfa1 c1 Hnfa1) as Hinc1.
+           repeat split; lia.
+        -- constructor.
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Heq. subst. simpl.
+    constructor.
+    + simpl.
+      pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      repeat split; lia.
+    + constructor.
+      * simpl.
+        pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+        repeat split; lia.
+      * rewrite Forall_app. split.
+        -- eapply (transition_full_bounds_weaken (counter + 1) counter c1 (c1 + 1)).
+           ++ lia.
+           ++ lia.
+           ++ apply IHr. exact Hnfa1.
+        -- simpl. constructor.
+           ++ simpl.
+              pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+              pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+              repeat split; lia.
+           ++ constructor.
+  - inversion Heq. subst. simpl.
+    constructor; [simpl; repeat split; lia|constructor].
+Qed.
+
+Lemma compile_transition_in_interval : forall r counter nfa counter' tr,
+  compile_nfa r counter = (nfa, counter') ->
+  In tr (nfa_transitions nfa) ->
+  counter <= trans_source tr /\ trans_source tr < counter' /\
+  counter <= trans_target tr /\ trans_target tr < counter'.
+Proof.
+  intros r counter nfa counter' tr Hcompile Hin.
+  pose proof (compile_transition_full_bounds r counter nfa counter' Hcompile) as Hbounds.
+  rewrite Forall_forall in Hbounds.
+  exact (Hbounds tr Hin).
+Qed.
+
+Lemma compile_step_in_interval : forall r counter nfa counter' s lbl t,
+  compile_nfa r counter = (nfa, counter') ->
+  nfa_step nfa s lbl t ->
+  counter <= s /\ s < counter' /\ counter <= t /\ t < counter'.
+Proof.
+  intros r counter nfa counter' s lbl t Hcompile Hstep.
+  inversion Hstep; subst.
+  - pose proof (compile_transition_in_interval r counter nfa counter'
+                  (TransChar s c t) Hcompile H) as Hbounds.
+    simpl in Hbounds. exact Hbounds.
+  - pose proof (compile_transition_in_interval r counter nfa counter'
+                  (TransEpsilon s t) Hcompile H) as Hbounds.
+    simpl in Hbounds. exact Hbounds.
+  - pose proof (compile_transition_in_interval r counter nfa counter'
+                  (TransClass s cs t) Hcompile H) as Hbounds.
+    simpl in Hbounds. exact Hbounds.
+Qed.
+
+Definition concat_nfa (nfa1 nfa2 : NFA) : NFA :=
+  mkNFA (nfa_start nfa1) (nfa_final nfa2)
+        (nfa_transitions nfa1 ++
+         [TransEpsilon (nfa_final nfa1) (nfa_start nfa2)] ++
+         nfa_transitions nfa2)
+        (max (nfa_max_state nfa1) (nfa_max_state nfa2)).
+
+Definition alt_nfa (start final : NFAState) (nfa1 nfa2 : NFA) : NFA :=
+  mkNFA start final
+        ([TransEpsilon start (nfa_start nfa1);
+          TransEpsilon start (nfa_start nfa2)] ++
+         nfa_transitions nfa1 ++
+         nfa_transitions nfa2 ++
+         [TransEpsilon (nfa_final nfa1) final;
+          TransEpsilon (nfa_final nfa2) final])
+        (max (max (nfa_max_state nfa1) (nfa_max_state nfa2)) final).
+
+Definition option_nfa (start final : NFAState) (nfa1 : NFA) : NFA :=
+  mkNFA start final
+        ([TransEpsilon start (nfa_start nfa1);
+          TransEpsilon start final] ++
+         nfa_transitions nfa1 ++
+         [TransEpsilon (nfa_final nfa1) final])
+        (max (nfa_max_state nfa1) final).
+
+Definition star_nfa (start final : NFAState) (nfa1 : NFA) : NFA :=
+  mkNFA start final
+        ([TransEpsilon start (nfa_start nfa1);
+          TransEpsilon start final] ++
+         nfa_transitions nfa1 ++
+         [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+          TransEpsilon (nfa_final nfa1) final])
+        (max (nfa_max_state nfa1) final).
+
+Definition plus_nfa (final : NFAState) (nfa1 : NFA) : NFA :=
+  mkNFA (nfa_start nfa1) final
+        (nfa_transitions nfa1 ++
+         [TransEpsilon (nfa_final nfa1) (nfa_start nfa1);
+          TransEpsilon (nfa_final nfa1) final])
+        (max (nfa_max_state nfa1) final).
+
+Lemma nfa_run_from_dead_state_empty : forall nfa s str t,
+  (forall lbl u, ~ nfa_step nfa s lbl u) ->
+  nfa_run nfa s str t ->
+  t = s /\ str = EmptyString.
+Proof.
+  intros nfa s str t Hdead Hrun.
+  inversion Hrun; subst.
+  - split; reflexivity.
+  - exfalso. exact (Hdead None s2 H).
+  - exfalso. exact (Hdead (Some c) s2 H).
+Qed.
+
+Lemma alt_transition_source_lt_final :
+  forall r1 r2 counter nfa1 nfa2 c1 c2 tr,
+  compile_nfa r1 (counter + 1) = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  In tr (nfa_transitions (alt_nfa counter c2 nfa1 nfa2)) ->
+  trans_source tr < c2.
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 tr Hnfa1 Hnfa2 Hin.
+  unfold alt_nfa in Hin; simpl in Hin.
+  repeat rewrite in_app_iff in Hin.
+  simpl in Hin.
+  destruct Hin as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]].
+  - subst. simpl.
+    pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+    pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    lia.
+  - subst. simpl.
+    pose proof (compile_start_eq r2 c1 nfa2 c2 Hnfa2) as Hstart2.
+    pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+    pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    lia.
+  - pose proof (compile_transition_in_interval r1 (counter + 1) nfa1 c1 tr Hnfa1 Hin1)
+      as [_ [Hsrc_hi _]].
+    pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    lia.
+  - pose proof (compile_transition_in_interval r2 c1 nfa2 c2 tr Hnfa2 Hin2)
+      as [_ [Hsrc_hi _]].
+    lia.
+  - subst. simpl.
+    pose proof (compile_final_succ_eq r1 (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+    pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    lia.
+  - subst. simpl.
+    pose proof (compile_final_succ_eq r2 c1 nfa2 c2 Hnfa2) as Hfinal2.
+    lia.
+Qed.
+
+Lemma option_transition_source_lt_final :
+  forall r counter nfa1 c1 tr,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  In tr (nfa_transitions (option_nfa counter c1 nfa1)) ->
+  trans_source tr < c1.
+Proof.
+  intros r counter nfa1 c1 tr Hnfa1 Hin.
+  unfold option_nfa in Hin; simpl in Hin.
+  repeat rewrite in_app_iff in Hin.
+  simpl in Hin.
+  destruct Hin as [Hedge | [Hedge | [Hin1 | [Hedge | []]]]].
+  - subst. simpl.
+    pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+    lia.
+  - subst. simpl.
+    pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+    lia.
+  - pose proof (compile_transition_in_interval r (counter + 1) nfa1 c1 tr Hnfa1 Hin1)
+      as [_ [Hsrc_hi _]].
+    lia.
+  - subst. simpl.
+    pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+    lia.
+Qed.
+
+Lemma alt_final_dead :
+  forall r1 r2 counter nfa1 nfa2 c1 c2 lbl t,
+  compile_nfa r1 (counter + 1) = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  ~ nfa_step (alt_nfa counter c2 nfa1 nfa2) c2 lbl t.
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 lbl t Hnfa1 Hnfa2 Hstep.
+  inversion Hstep; subst;
+    match goal with
+    | Hin : In ?tr (nfa_transitions (alt_nfa counter c2 nfa1 nfa2)) |- _ =>
+        pose proof (alt_transition_source_lt_final r1 r2 counter nfa1 nfa2 c1 c2
+                      tr Hnfa1 Hnfa2 Hin) as Hlt;
+        simpl in Hlt; lia
+    end.
+Qed.
+
+Lemma option_final_dead :
+  forall r counter nfa1 c1 lbl t,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  ~ nfa_step (option_nfa counter c1 nfa1) c1 lbl t.
+Proof.
+  intros r counter nfa1 c1 lbl t Hnfa1 Hstep.
+  inversion Hstep; subst;
+    match goal with
+    | Hin : In ?tr (nfa_transitions (option_nfa counter c1 nfa1)) |- _ =>
+        pose proof (option_transition_source_lt_final r counter nfa1 c1
+                      tr Hnfa1 Hin) as Hlt;
+        simpl in Hlt; lia
+    end.
+Qed.
+
+Lemma alt_initial_step_classify :
+  forall r1 r2 counter nfa1 nfa2 c1 c2 lbl t,
+  compile_nfa r1 (counter + 1) = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  nfa_step (alt_nfa counter c2 nfa1 nfa2) counter lbl t ->
+  (lbl = None /\ t = nfa_start nfa1) \/
+  (lbl = None /\ t = nfa_start nfa2).
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 lbl t Hnfa1 Hnfa2 Hstep.
+  inversion Hstep; subst; unfold alt_nfa in H; simpl in H;
+    repeat rewrite in_app_iff in H; simpl in H.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]];
+      try discriminate.
+    + pose proof (compile_transition_in_interval r1 (counter + 1) nfa1 c1
+                    (TransChar counter c t) Hnfa1 Hin1) as [Hsrc_lo _].
+      simpl in Hsrc_lo. lia.
+    + pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                    (TransChar counter c t) Hnfa2 Hin2) as [Hsrc_lo _].
+      simpl in Hsrc_lo.
+      pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      lia.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]].
+    + left. inversion Hedge; subst. split; reflexivity.
+    + right. inversion Hedge; subst. split; reflexivity.
+    + pose proof (compile_transition_in_interval r1 (counter + 1) nfa1 c1
+                    (TransEpsilon counter t) Hnfa1 Hin1) as [Hsrc_lo _].
+      simpl in Hsrc_lo. lia.
+    + pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                    (TransEpsilon counter t) Hnfa2 Hin2) as [Hsrc_lo _].
+      simpl in Hsrc_lo.
+      pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      lia.
+    + pose proof (compile_final_ge_counter r1 (counter + 1) nfa1 c1 Hnfa1) as Hfinal_ge.
+      inversion Hedge; subst.
+      lia.
+    + pose proof (compile_final_ge_counter r2 c1 nfa2 c2 Hnfa2) as Hfinal_ge.
+      pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      inversion Hedge; subst.
+      lia.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]];
+      try discriminate.
+    + pose proof (compile_transition_in_interval r1 (counter + 1) nfa1 c1
+                    (TransClass counter cs t) Hnfa1 Hin1) as [Hsrc_lo _].
+      simpl in Hsrc_lo. lia.
+    + pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                    (TransClass counter cs t) Hnfa2 Hin2) as [Hsrc_lo _].
+      simpl in Hsrc_lo.
+      pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      lia.
+Qed.
+
+Lemma option_initial_step_classify :
+  forall r counter nfa1 c1 lbl t,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  nfa_step (option_nfa counter c1 nfa1) counter lbl t ->
+  (lbl = None /\ t = nfa_start nfa1) \/
+  (lbl = None /\ t = c1).
+Proof.
+  intros r counter nfa1 c1 lbl t Hnfa1 Hstep.
+  inversion Hstep; subst; unfold option_nfa in H; simpl in H;
+    repeat rewrite in_app_iff in H; simpl in H.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | []]]]];
+      try discriminate.
+    pose proof (compile_transition_in_interval r (counter + 1) nfa1 c1
+                  (TransChar counter c t) Hnfa1 Hin1) as [Hsrc_lo _].
+    simpl in Hsrc_lo. lia.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | []]]]].
+    + left. inversion Hedge; subst. split; reflexivity.
+    + right. inversion Hedge; subst. split; reflexivity.
+    + pose proof (compile_transition_in_interval r (counter + 1) nfa1 c1
+                    (TransEpsilon counter t) Hnfa1 Hin1) as [Hsrc_lo _].
+      simpl in Hsrc_lo. lia.
+    + pose proof (compile_final_ge_counter r (counter + 1) nfa1 c1 Hnfa1) as Hfinal_ge.
+      inversion Hedge; subst.
+      lia.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | []]]]];
+      try discriminate.
+    pose proof (compile_transition_in_interval r (counter + 1) nfa1 c1
+                  (TransClass counter cs t) Hnfa1 Hin1) as [Hsrc_lo _].
+    simpl in Hsrc_lo. lia.
+Qed.
+
+Lemma alt_step_from_left_classify :
+  forall r1 r2 counter nfa1 nfa2 c1 c2 s lbl t,
+  compile_nfa r1 (counter + 1) = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  counter + 1 <= s ->
+  s < c1 ->
+  nfa_step (alt_nfa counter c2 nfa1 nfa2) s lbl t ->
+  nfa_step nfa1 s lbl t \/
+    (lbl = None /\ s = nfa_final nfa1 /\ t = c2).
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s lbl t Hnfa1 Hnfa2 Hlo Hhi Hstep.
+  inversion Hstep; subst; unfold alt_nfa in H; simpl in H;
+    repeat rewrite in_app_iff in H; simpl in H.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]];
+      try discriminate.
+    + left. apply step_char. exact Hin1.
+    + pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                    (TransChar s c t) Hnfa2 Hin2) as [Hsrc_lo _].
+      simpl in Hsrc_lo. lia.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]].
+    + pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      inversion Hedge; subst. lia.
+    + pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      inversion Hedge; subst.
+      lia.
+    + left. apply step_epsilon. exact Hin1.
+    + pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                    (TransEpsilon s t) Hnfa2 Hin2) as [Hsrc_lo _].
+      simpl in Hsrc_lo. lia.
+    + right. inversion Hedge; subst. repeat split; reflexivity.
+    + pose proof (compile_final_ge_counter r2 c1 nfa2 c2 Hnfa2) as Hfinal_ge.
+      inversion Hedge; subst. lia.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]];
+      try discriminate.
+    + left. eapply step_class; eauto.
+    + pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                    (TransClass s cs t) Hnfa2 Hin2) as [Hsrc_lo _].
+      simpl in Hsrc_lo. lia.
+Qed.
+
+Lemma alt_step_from_right_classify :
+  forall r1 r2 counter nfa1 nfa2 c1 c2 s lbl t,
+  compile_nfa r1 (counter + 1) = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  c1 <= s ->
+  s < c2 ->
+  nfa_step (alt_nfa counter c2 nfa1 nfa2) s lbl t ->
+  nfa_step nfa2 s lbl t \/
+    (lbl = None /\ s = nfa_final nfa2 /\ t = c2).
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s lbl t Hnfa1 Hnfa2 Hlo Hhi Hstep.
+  inversion Hstep; subst; unfold alt_nfa in H; simpl in H;
+    repeat rewrite in_app_iff in H; simpl in H.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]];
+      try discriminate.
+    + pose proof (compile_transition_in_interval r1 (counter + 1) nfa1 c1
+                    (TransChar s c t) Hnfa1 Hin1) as [_ [Hsrc_hi _]].
+      simpl in Hsrc_hi. lia.
+    + left. apply step_char. exact Hin2.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]].
+    + pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      inversion Hedge; subst.
+      lia.
+    + pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+      inversion Hedge; subst. lia.
+    + pose proof (compile_transition_in_interval r1 (counter + 1) nfa1 c1
+                    (TransEpsilon s t) Hnfa1 Hin1) as [_ [Hsrc_hi _]].
+      simpl in Hsrc_hi. lia.
+    + left. apply step_epsilon. exact Hin2.
+    + pose proof (compile_final_succ_eq r1 (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+      inversion Hedge; subst. lia.
+    + right. inversion Hedge; subst. repeat split; reflexivity.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hin2 | [Hedge | [Hedge | []]]]]]];
+      try discriminate.
+    + pose proof (compile_transition_in_interval r1 (counter + 1) nfa1 c1
+                    (TransClass s cs t) Hnfa1 Hin1) as [_ [Hsrc_hi _]].
+      simpl in Hsrc_hi. lia.
+    + left. eapply step_class; eauto.
+Qed.
+
+Lemma option_step_from_body_classify :
+  forall r counter nfa1 c1 s lbl t,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  counter + 1 <= s ->
+  s < c1 ->
+  nfa_step (option_nfa counter c1 nfa1) s lbl t ->
+  nfa_step nfa1 s lbl t \/
+    (lbl = None /\ s = nfa_final nfa1 /\ t = c1).
+Proof.
+  intros r counter nfa1 c1 s lbl t Hnfa1 Hlo Hhi Hstep.
+  inversion Hstep; subst; unfold option_nfa in H; simpl in H;
+    repeat rewrite in_app_iff in H; simpl in H.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | []]]]];
+      try discriminate.
+    left. apply step_char. exact Hin1.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | []]]]].
+    + inversion Hedge; subst. lia.
+    + inversion Hedge; subst. lia.
+    + left. apply step_epsilon. exact Hin1.
+    + right. inversion Hedge; subst. repeat split; reflexivity.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | []]]]];
+      try discriminate.
+    left. eapply step_class; eauto.
+Qed.
+
+Lemma alt_run_from_left_to_final :
+  forall r1 r2 counter nfa1 nfa2 c1 c2 s str,
+  compile_nfa r1 (counter + 1) = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  counter + 1 <= s ->
+  s < c1 ->
+  nfa_run (alt_nfa counter c2 nfa1 nfa2) s str c2 ->
+  nfa_run nfa1 s str (nfa_final nfa1).
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s str Hnfa1 Hnfa2 Hlo Hhi Hrun.
+  dependent induction Hrun.
+  - pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    lia.
+  - match goal with
+    | Hstep : nfa_step _ ?src None ?dst |- _ =>
+        pose proof (alt_step_from_left_classify r1 r2 counter nfa1 nfa2 c1 c2
+                      src None dst Hnfa1 Hnfa2 Hlo Hhi Hstep) as Hclass
+    end.
+    destruct Hclass as [Hstep1 | [_ [Hsource Htarget]]].
+    + pose proof (compile_step_in_interval r1 (counter + 1) nfa1 c1
+                    _ None _ Hnfa1 Hstep1) as [_ [_ [Htarget_lo Htarget_hi]]].
+      eapply run_epsilon.
+      * exact Hstep1.
+      * eapply (IHHrun s2 Htarget_hi c2 nfa2 Hnfa2 nfa1 counter Hnfa1 Htarget_lo);
+          reflexivity.
+    + subst.
+      pose proof (nfa_run_from_dead_state_empty
+                    (alt_nfa counter c2 nfa1 nfa2) c2 str c2
+                    (fun lbl u => alt_final_dead r1 r2 counter nfa1 nfa2 c1 c2
+                                    lbl u Hnfa1 Hnfa2)
+                    Hrun) as [_ Hempty].
+      subst. constructor.
+  - match goal with
+    | Hstep : nfa_step _ ?src (Some ?ch) ?dst |- _ =>
+        pose proof (alt_step_from_left_classify r1 r2 counter nfa1 nfa2 c1 c2
+                      src (Some ch) dst Hnfa1 Hnfa2 Hlo Hhi Hstep) as Hclass
+    end.
+    destruct Hclass as [Hstep1 | [Hnone _]].
+    + pose proof (compile_step_in_interval r1 (counter + 1) nfa1 c1
+                    _ _ _ Hnfa1 Hstep1) as [_ [_ [Htarget_lo Htarget_hi]]].
+      eapply run_char.
+      * exact Hstep1.
+      * eapply (IHHrun s2 Htarget_hi c2 nfa2 Hnfa2 nfa1 counter Hnfa1 Htarget_lo);
+          reflexivity.
+    + discriminate Hnone.
+Qed.
+
+Lemma alt_run_from_right_to_final :
+  forall r1 r2 counter nfa1 nfa2 c1 c2 s str,
+  compile_nfa r1 (counter + 1) = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  c1 <= s ->
+  s < c2 ->
+  nfa_run (alt_nfa counter c2 nfa1 nfa2) s str c2 ->
+  nfa_run nfa2 s str (nfa_final nfa2).
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s str Hnfa1 Hnfa2 Hlo Hhi Hrun.
+  dependent induction Hrun.
+  - lia.
+  - match goal with
+    | Hstep : nfa_step _ ?src None ?dst |- _ =>
+        pose proof (alt_step_from_right_classify r1 r2 counter nfa1 nfa2 c1 c2
+                      src None dst Hnfa1 Hnfa2 Hlo Hhi Hstep) as Hclass
+    end.
+    destruct Hclass as [Hstep2 | [_ [Hsource Htarget]]].
+    + pose proof (compile_step_in_interval r2 c1 nfa2 c2
+                    _ None _ Hnfa2 Hstep2) as [_ [_ [Htarget_lo Htarget_hi]]].
+      eapply run_epsilon.
+      * exact Hstep2.
+      * eapply IHHrun; eauto.
+    + subst.
+      pose proof (nfa_run_from_dead_state_empty
+                    (alt_nfa counter c2 nfa1 nfa2) c2 str c2
+                    (fun lbl u => alt_final_dead r1 r2 counter nfa1 nfa2 c1 c2
+                                    lbl u Hnfa1 Hnfa2)
+                    Hrun) as [_ Hempty].
+      subst. constructor.
+  - match goal with
+    | Hstep : nfa_step _ ?src (Some ?ch) ?dst |- _ =>
+        pose proof (alt_step_from_right_classify r1 r2 counter nfa1 nfa2 c1 c2
+                      src (Some ch) dst Hnfa1 Hnfa2 Hlo Hhi Hstep) as Hclass
+    end.
+    destruct Hclass as [Hstep2 | [Hnone _]].
+    + pose proof (compile_step_in_interval r2 c1 nfa2 c2
+                    _ _ _ Hnfa2 Hstep2) as [_ [_ [Htarget_lo Htarget_hi]]].
+      eapply run_char.
+      * exact Hstep2.
+      * eapply IHHrun; eauto.
+    + discriminate Hnone.
+Qed.
+
+Lemma option_run_from_body_to_final :
+  forall r counter nfa1 c1 s str,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  counter + 1 <= s ->
+  s < c1 ->
+  nfa_run (option_nfa counter c1 nfa1) s str c1 ->
+  nfa_run nfa1 s str (nfa_final nfa1).
+Proof.
+  intros r counter nfa1 c1 s str Hnfa1 Hlo Hhi Hrun.
+  dependent induction Hrun.
+  - lia.
+  - match goal with
+    | Hstep : nfa_step _ ?src None ?dst |- _ =>
+        pose proof (option_step_from_body_classify r counter nfa1 c1
+                      src None dst Hnfa1 Hlo Hhi Hstep) as Hclass
+    end.
+    destruct Hclass as [Hstep1 | [_ [Hsource Htarget]]].
+    + pose proof (compile_step_in_interval r (counter + 1) nfa1 c1
+                    _ None _ Hnfa1 Hstep1) as [_ [_ [Htarget_lo Htarget_hi]]].
+      eapply run_epsilon.
+      * exact Hstep1.
+      * eapply IHHrun; eauto.
+    + subst.
+      pose proof (nfa_run_from_dead_state_empty
+                    (option_nfa counter c1 nfa1) c1 str c1
+                    (fun lbl u => option_final_dead r counter nfa1 c1
+                                    lbl u Hnfa1)
+                    Hrun) as [_ Hempty].
+      subst. constructor.
+  - match goal with
+    | Hstep : nfa_step _ ?src (Some ?ch) ?dst |- _ =>
+        pose proof (option_step_from_body_classify r counter nfa1 c1
+                      src (Some ch) dst Hnfa1 Hlo Hhi Hstep) as Hclass
+    end.
+    destruct Hclass as [Hstep1 | [Hnone _]].
+    + pose proof (compile_step_in_interval r (counter + 1) nfa1 c1
+                    _ _ _ Hnfa1 Hstep1) as [_ [_ [Htarget_lo Htarget_hi]]].
+      eapply run_char.
+      * exact Hstep1.
+      * eapply IHHrun; eauto.
+    + discriminate Hnone.
+Qed.
+
+Lemma alt_accepts_split_proved : forall r1 r2 counter nfa1 nfa2 c1 c2 s,
+  compile_nfa r1 (counter + 1) = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  nfa_accepts (alt_nfa counter c2 nfa1 nfa2) s ->
+  nfa_accepts nfa1 s \/ nfa_accepts nfa2 s.
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s Hnfa1 Hnfa2 Haccept.
+  unfold nfa_accepts in Haccept.
+  change (nfa_run (alt_nfa counter c2 nfa1 nfa2) counter s c2) in Haccept.
+  pose proof (compile_counter_increases r1 (counter + 1) nfa1 c1 Hnfa1) as Hinc1.
+  pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+  inversion Haccept; subst.
+  - lia.
+  - pose proof (alt_initial_step_classify r1 r2 counter nfa1 nfa2 c1 c2
+                  None s2 Hnfa1 Hnfa2 H) as Hclass.
+    destruct Hclass as [[_ Htarget] | [_ Htarget]].
+    + left. unfold nfa_accepts.
+      pose proof (compile_start_eq r1 (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      match goal with
+      | Htail : nfa_run _ s2 s c2 |- _ =>
+          rewrite Htarget in Htail;
+          exact (alt_run_from_left_to_final r1 r2 counter nfa1 nfa2 c1 c2
+                   (nfa_start nfa1) s Hnfa1 Hnfa2 ltac:(lia) ltac:(lia) Htail)
+      end.
+    + right. unfold nfa_accepts.
+      pose proof (compile_start_eq r2 c1 nfa2 c2 Hnfa2) as Hstart2.
+      match goal with
+      | Htail : nfa_run _ s2 s c2 |- _ =>
+          rewrite Htarget in Htail;
+          exact (alt_run_from_right_to_final r1 r2 counter nfa1 nfa2 c1 c2
+                   (nfa_start nfa2) s Hnfa1 Hnfa2 ltac:(lia) ltac:(lia) Htail)
+      end.
+  - pose proof (alt_initial_step_classify r1 r2 counter nfa1 nfa2 c1 c2
+                  (Some c) s2 Hnfa1 Hnfa2 H) as Hclass.
+    destruct Hclass as [[Hnone _] | [Hnone _]]; discriminate Hnone.
+Qed.
+
+Lemma option_accepts_split_proved : forall r counter nfa1 c1 s,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  nfa_accepts (option_nfa counter c1 nfa1) s ->
+  s = EmptyString \/ nfa_accepts nfa1 s.
+Proof.
+  intros r counter nfa1 c1 s Hnfa1 Haccept.
+  unfold nfa_accepts in Haccept.
+  change (nfa_run (option_nfa counter c1 nfa1) counter s c1) in Haccept.
+  pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+  inversion Haccept; subst.
+  - lia.
+  - pose proof (option_initial_step_classify r counter nfa1 c1
+                  None s2 Hnfa1 H) as Hclass.
+    destruct Hclass as [[_ Htarget] | [_ Htarget]].
+    + right. unfold nfa_accepts.
+      pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      match goal with
+      | Htail : nfa_run _ s2 s c1 |- _ =>
+          rewrite Htarget in Htail;
+          exact (option_run_from_body_to_final r counter nfa1 c1
+                   (nfa_start nfa1) s Hnfa1 ltac:(lia) ltac:(lia) Htail)
+      end.
+    + left.
+      match goal with
+      | Htail : nfa_run _ s2 s c1 |- _ =>
+          rewrite Htarget in Htail;
+          pose proof (nfa_run_from_dead_state_empty
+                        (option_nfa counter c1 nfa1) c1 s c1
+                        (fun lbl u => option_final_dead r counter nfa1 c1
+                                        lbl u Hnfa1)
+                        Htail) as [_ Hempty];
+          exact Hempty
+      end.
+  - pose proof (option_initial_step_classify r counter nfa1 c1
+                  (Some c) s2 Hnfa1 H) as Hclass.
+    destruct Hclass as [[Hnone _] | [Hnone _]]; discriminate Hnone.
+Qed.
+
+Lemma star_transition_source_lt_final :
+  forall r counter nfa1 c1 tr,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  In tr (nfa_transitions (star_nfa counter c1 nfa1)) ->
+  trans_source tr < c1.
+Proof.
+  intros r counter nfa1 c1 tr Hnfa1 Hin.
+  unfold star_nfa in Hin; simpl in Hin.
+  repeat rewrite in_app_iff in Hin.
+  simpl in Hin.
+  destruct Hin as [Hedge | [Hedge | [Hin1 | [Hedge | [Hedge | []]]]]].
+  - subst. simpl.
+    pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+    lia.
+  - subst. simpl.
+    pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+    lia.
+  - pose proof (compile_transition_in_interval r (counter + 1) nfa1 c1 tr Hnfa1 Hin1)
+      as [_ [Hsrc_hi _]].
+    lia.
+  - subst. simpl.
+    pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+    lia.
+  - subst. simpl.
+    pose proof (compile_final_succ_eq r (counter + 1) nfa1 c1 Hnfa1) as Hfinal1.
+    lia.
+Qed.
+
+Lemma plus_transition_source_lt_final :
+  forall r counter nfa1 c1 tr,
+  compile_nfa r counter = (nfa1, c1) ->
+  In tr (nfa_transitions (plus_nfa c1 nfa1)) ->
+  trans_source tr < c1.
+Proof.
+  intros r counter nfa1 c1 tr Hnfa1 Hin.
+  unfold plus_nfa in Hin; simpl in Hin.
+  repeat rewrite in_app_iff in Hin.
+  simpl in Hin.
+  destruct Hin as [Hin1 | [Hedge | [Hedge | []]]].
+  - pose proof (compile_transition_in_interval r counter nfa1 c1 tr Hnfa1 Hin1)
+      as [_ [Hsrc_hi _]].
+    lia.
+  - subst. simpl.
+    pose proof (compile_final_succ_eq r counter nfa1 c1 Hnfa1) as Hfinal1.
+    lia.
+  - subst. simpl.
+    pose proof (compile_final_succ_eq r counter nfa1 c1 Hnfa1) as Hfinal1.
+    lia.
+Qed.
+
+Lemma star_final_dead :
+  forall r counter nfa1 c1 lbl t,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  ~ nfa_step (star_nfa counter c1 nfa1) c1 lbl t.
+Proof.
+  intros r counter nfa1 c1 lbl t Hnfa1 Hstep.
+  inversion Hstep; subst;
+    match goal with
+    | Hin : In ?tr (nfa_transitions (star_nfa counter c1 nfa1)) |- _ =>
+        pose proof (star_transition_source_lt_final r counter nfa1 c1
+                      tr Hnfa1 Hin) as Hlt;
+        simpl in Hlt; lia
+    end.
+Qed.
+
+Lemma plus_final_dead :
+  forall r counter nfa1 c1 lbl t,
+  compile_nfa r counter = (nfa1, c1) ->
+  ~ nfa_step (plus_nfa c1 nfa1) c1 lbl t.
+Proof.
+  intros r counter nfa1 c1 lbl t Hnfa1 Hstep.
+  inversion Hstep; subst;
+    match goal with
+    | Hin : In ?tr (nfa_transitions (plus_nfa c1 nfa1)) |- _ =>
+        pose proof (plus_transition_source_lt_final r counter nfa1 c1
+                      tr Hnfa1 Hin) as Hlt;
+        simpl in Hlt; lia
+    end.
+Qed.
+
+Lemma star_initial_step_classify :
+  forall r counter nfa1 c1 lbl t,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  nfa_step (star_nfa counter c1 nfa1) counter lbl t ->
+  (lbl = None /\ t = nfa_start nfa1) \/
+  (lbl = None /\ t = c1).
+Proof.
+  intros r counter nfa1 c1 lbl t Hnfa1 Hstep.
+  inversion Hstep; subst; unfold star_nfa in H; simpl in H;
+    repeat rewrite in_app_iff in H; simpl in H.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | [Hedge | []]]]]];
+      try discriminate.
+    pose proof (compile_transition_in_interval r (counter + 1) nfa1 c1
+                  (TransChar counter c t) Hnfa1 Hin1) as [Hsrc_lo _].
+    simpl in Hsrc_lo. lia.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | [Hedge | []]]]]].
+    + left. inversion Hedge; subst. split; reflexivity.
+    + right. inversion Hedge; subst. split; reflexivity.
+    + pose proof (compile_transition_in_interval r (counter + 1) nfa1 c1
+                    (TransEpsilon counter t) Hnfa1 Hin1) as [Hsrc_lo _].
+      simpl in Hsrc_lo. lia.
+    + pose proof (compile_final_ge_counter r (counter + 1) nfa1 c1 Hnfa1) as Hfinal_ge.
+      inversion Hedge; subst. lia.
+    + pose proof (compile_final_ge_counter r (counter + 1) nfa1 c1 Hnfa1) as Hfinal_ge.
+      inversion Hedge; subst. lia.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | [Hedge | []]]]]];
+      try discriminate.
+    pose proof (compile_transition_in_interval r (counter + 1) nfa1 c1
+                  (TransClass counter cs t) Hnfa1 Hin1) as [Hsrc_lo _].
+    simpl in Hsrc_lo. lia.
+Qed.
+
+Lemma star_step_from_body_classify :
+  forall r counter nfa1 c1 s lbl t,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  counter + 1 <= s ->
+  s < c1 ->
+  nfa_step (star_nfa counter c1 nfa1) s lbl t ->
+  nfa_step nfa1 s lbl t \/
+  (lbl = None /\ s = nfa_final nfa1 /\ t = nfa_start nfa1) \/
+  (lbl = None /\ s = nfa_final nfa1 /\ t = c1).
+Proof.
+  intros r counter nfa1 c1 s lbl t Hnfa1 Hlo Hhi Hstep.
+  inversion Hstep; subst; unfold star_nfa in H; simpl in H;
+    repeat rewrite in_app_iff in H; simpl in H.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | [Hedge | []]]]]];
+      try discriminate.
+    left. apply step_char. exact Hin1.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | [Hedge | []]]]]].
+    + inversion Hedge; subst. lia.
+    + inversion Hedge; subst. lia.
+    + left. apply step_epsilon. exact Hin1.
+    + right. left. inversion Hedge; subst. repeat split; reflexivity.
+    + right. right. inversion Hedge; subst. repeat split; reflexivity.
+  - destruct H as [Hedge | [Hedge | [Hin1 | [Hedge | [Hedge | []]]]]];
+      try discriminate.
+    left. eapply step_class; eauto.
+Qed.
+
+Lemma plus_step_from_body_classify :
+  forall r counter nfa1 c1 s lbl t,
+  compile_nfa r counter = (nfa1, c1) ->
+  counter <= s ->
+  s < c1 ->
+  nfa_step (plus_nfa c1 nfa1) s lbl t ->
+  nfa_step nfa1 s lbl t \/
+  (lbl = None /\ s = nfa_final nfa1 /\ t = nfa_start nfa1) \/
+  (lbl = None /\ s = nfa_final nfa1 /\ t = c1).
+Proof.
+  intros r counter nfa1 c1 s lbl t Hnfa1 Hlo Hhi Hstep.
+  inversion Hstep; subst; unfold plus_nfa in H; simpl in H;
+    repeat rewrite in_app_iff in H; simpl in H.
+  - destruct H as [Hin1 | [Hedge | [Hedge | []]]];
+      try discriminate.
+    left. apply step_char. exact Hin1.
+  - destruct H as [Hin1 | [Hedge | [Hedge | []]]].
+    + left. apply step_epsilon. exact Hin1.
+    + right. left. inversion Hedge; subst. repeat split; reflexivity.
+    + right. right. inversion Hedge; subst. repeat split; reflexivity.
+  - destruct H as [Hin1 | [Hedge | [Hedge | []]]];
+      try discriminate.
+    left. eapply step_class; eauto.
+Qed.
+
+Lemma star_run_from_body_decompose_sound :
+  forall r counter nfa1 c1 s str,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  (forall s0, nfa_accepts nfa1 s0 -> regex_matches r s0) ->
+  counter + 1 <= s ->
+  s < c1 ->
+  nfa_run (star_nfa counter c1 nfa1) s str c1 ->
+  exists prefix suffix,
+    str = (prefix ++ suffix)%string /\
+    nfa_run nfa1 s prefix (nfa_final nfa1) /\
+    regex_matches (RStar r) suffix.
+Proof.
+  intros r counter nfa1 c1 s str Hnfa1 Hbody_sound Hlo Hhi Hrun.
+  revert Hlo Hhi.
+  dependent induction Hrun; intros Hlo Hhi.
+  - lia.
+  - match goal with
+    | Hstep : nfa_step (star_nfa counter c1 nfa1) ?src None ?dst,
+      Htail : nfa_run (star_nfa counter c1 nfa1) ?dst ?tail c1 |- _ =>
+        pose proof (star_step_from_body_classify r counter nfa1 c1
+                      src None dst Hnfa1 Hlo Hhi Hstep) as Hclass;
+        destruct Hclass as [Hstep1 | [[_ [Hsource Htarget]] | [_ [Hsource Htarget]]]]
+    end.
+    + match goal with
+      | Hstep1 : nfa_step nfa1 ?src None ?dst |- _ =>
+          pose proof (compile_step_in_interval r (counter + 1) nfa1 c1
+                        src None dst Hnfa1 Hstep1) as [_ [_ [Htarget_lo Htarget_hi]]]
+      end.
+      destruct (IHHrun counter nfa1 c1 s2 Hnfa1 Hbody_sound
+                  eq_refl JMeq_refl JMeq_refl
+                  Htarget_lo Htarget_hi) as
+        [prefix [suffix [Hstr [Hrun1 Hstar]]]].
+      exists prefix, suffix.
+      split; [exact Hstr|].
+      split.
+      * eapply run_epsilon; eauto.
+      * exact Hstar.
+    + subst.
+      pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+      destruct (IHHrun counter nfa1 c1 (nfa_start nfa1) Hnfa1 Hbody_sound
+                  eq_refl JMeq_refl JMeq_refl
+                  ltac:(lia) ltac:(lia)) as
+        [prefix [suffix [Hstr [Hrun1 Hstar]]]].
+      exists EmptyString, str.
+      split; [reflexivity|].
+      split; [constructor|].
+      rewrite Hstr.
+      apply match_star_step.
+      * exact (Hbody_sound prefix Hrun1).
+      * exact Hstar.
+    + subst.
+      pose proof (nfa_run_from_dead_state_empty
+                    (star_nfa counter c1 nfa1) c1 str c1
+                    (fun lbl u => star_final_dead r counter nfa1 c1 lbl u Hnfa1)
+                    Hrun) as [_ Hempty].
+      subst.
+      exists EmptyString, EmptyString.
+      split; [reflexivity|].
+      split; [constructor|constructor].
+  - match goal with
+    | Hstep : nfa_step (star_nfa counter c1 nfa1) ?src (Some ?ch) ?dst |- _ =>
+        pose proof (star_step_from_body_classify r counter nfa1 c1
+                      src (Some ch) dst Hnfa1 Hlo Hhi Hstep) as Hclass;
+        destruct Hclass as [Hstep1 | [[Hnone _] | [Hnone _]]]
+    end.
+    + match goal with
+      | Hstep1 : nfa_step nfa1 ?src (Some ?ch) ?dst |- _ =>
+          pose proof (compile_step_in_interval r (counter + 1) nfa1 c1
+                        src (Some ch) dst Hnfa1 Hstep1) as [_ [_ [Htarget_lo Htarget_hi]]]
+      end.
+      destruct (IHHrun counter nfa1 c1 s2 Hnfa1 Hbody_sound
+                  eq_refl JMeq_refl JMeq_refl
+                  Htarget_lo Htarget_hi) as
+        [prefix [suffix [Hstr [Hrun1 Hstar]]]].
+      exists (String c prefix), suffix.
+      split.
+      * simpl. rewrite Hstr. reflexivity.
+      * split.
+        -- eapply run_char; eauto.
+        -- exact Hstar.
+    + discriminate Hnone.
+    + discriminate Hnone.
+Qed.
+
+Lemma plus_run_from_body_decompose_sound :
+  forall r counter nfa1 c1 s str,
+  compile_nfa r counter = (nfa1, c1) ->
+  (forall s0, nfa_accepts nfa1 s0 -> regex_matches r s0) ->
+  counter <= s ->
+  s < c1 ->
+  nfa_run (plus_nfa c1 nfa1) s str c1 ->
+  exists prefix suffix,
+    str = (prefix ++ suffix)%string /\
+    nfa_run nfa1 s prefix (nfa_final nfa1) /\
+    regex_matches (RStar r) suffix.
+Proof.
+  intros r counter nfa1 c1 s str Hnfa1 Hbody_sound Hlo Hhi Hrun.
+  revert Hlo Hhi.
+  dependent induction Hrun; intros Hlo Hhi.
+  - lia.
+  - match goal with
+    | Hstep : nfa_step (plus_nfa c1 nfa1) ?src None ?dst,
+      Htail : nfa_run (plus_nfa c1 nfa1) ?dst ?tail c1 |- _ =>
+        pose proof (plus_step_from_body_classify r counter nfa1 c1
+                      src None dst Hnfa1 Hlo Hhi Hstep) as Hclass;
+        destruct Hclass as [Hstep1 | [[_ [Hsource Htarget]] | [_ [Hsource Htarget]]]]
+    end.
+    + match goal with
+      | Hstep1 : nfa_step nfa1 ?src None ?dst |- _ =>
+          pose proof (compile_step_in_interval r counter nfa1 c1
+                        src None dst Hnfa1 Hstep1) as [_ [_ [Htarget_lo Htarget_hi]]]
+      end.
+      destruct (IHHrun nfa1 c1 s2 Hnfa1 Hbody_sound
+                  eq_refl JMeq_refl JMeq_refl
+                  Htarget_lo Htarget_hi) as
+        [prefix [suffix [Hstr [Hrun1 Hstar]]]].
+      exists prefix, suffix.
+      split; [exact Hstr|].
+      split.
+      * eapply run_epsilon; eauto.
+      * exact Hstar.
+    + subst.
+      pose proof (compile_start_eq r counter nfa1 c1 Hnfa1) as Hstart1.
+      pose proof (compile_counter_increases r counter nfa1 c1 Hnfa1) as Hinc.
+      destruct (IHHrun nfa1 c1 (nfa_start nfa1) Hnfa1 Hbody_sound
+                  eq_refl JMeq_refl JMeq_refl
+                  ltac:(lia) ltac:(lia)) as
+        [prefix [suffix [Hstr [Hrun1 Hstar]]]].
+      exists EmptyString, str.
+      split; [reflexivity|].
+      split; [constructor|].
+      rewrite Hstr.
+      apply match_star_step.
+      * exact (Hbody_sound prefix Hrun1).
+      * exact Hstar.
+    + subst.
+      pose proof (nfa_run_from_dead_state_empty
+                    (plus_nfa c1 nfa1) c1 str c1
+                    (fun lbl u => plus_final_dead r counter nfa1 c1 lbl u Hnfa1)
+                    Hrun) as [_ Hempty].
+      subst.
+      exists EmptyString, EmptyString.
+      split; [reflexivity|].
+      split; [constructor|constructor].
+  - match goal with
+    | Hstep : nfa_step (plus_nfa c1 nfa1) ?src (Some ?ch) ?dst |- _ =>
+        pose proof (plus_step_from_body_classify r counter nfa1 c1
+                      src (Some ch) dst Hnfa1 Hlo Hhi Hstep) as Hclass;
+        destruct Hclass as [Hstep1 | [[Hnone _] | [Hnone _]]]
+    end.
+    + match goal with
+      | Hstep1 : nfa_step nfa1 ?src (Some ?ch) ?dst |- _ =>
+          pose proof (compile_step_in_interval r counter nfa1 c1
+                        src (Some ch) dst Hnfa1 Hstep1) as [_ [_ [Htarget_lo Htarget_hi]]]
+      end.
+      destruct (IHHrun nfa1 c1 s2 Hnfa1 Hbody_sound
+                  eq_refl JMeq_refl JMeq_refl
+                  Htarget_lo Htarget_hi) as
+        [prefix [suffix [Hstr [Hrun1 Hstar]]]].
+      exists (String c prefix), suffix.
+      split.
+      * simpl. rewrite Hstr. reflexivity.
+      * split.
+        -- eapply run_char; eauto.
+        -- exact Hstar.
+    + discriminate Hnone.
+    + discriminate Hnone.
+Qed.
+
+Lemma star_accepts_sound_proved : forall r counter nfa1 c1 s,
+  compile_nfa r (counter + 1) = (nfa1, c1) ->
+  (forall s0, nfa_accepts nfa1 s0 -> regex_matches r s0) ->
+  nfa_accepts (star_nfa counter c1 nfa1) s ->
+  regex_matches (RStar r) s.
+Proof.
+  intros r counter nfa1 c1 s Hnfa1 Hbody_sound Haccept.
+  unfold nfa_accepts in Haccept.
+  change (nfa_run (star_nfa counter c1 nfa1) counter s c1) in Haccept.
+  pose proof (compile_counter_increases r (counter + 1) nfa1 c1 Hnfa1) as Hinc.
+  inversion Haccept; subst.
+  - lia.
+  - pose proof (star_initial_step_classify r counter nfa1 c1
+                  None s2 Hnfa1 H) as Hclass.
+    destruct Hclass as [[_ Htarget] | [_ Htarget]].
+    + pose proof (compile_start_eq r (counter + 1) nfa1 c1 Hnfa1) as Hstart1.
+      match goal with
+      | Htail : nfa_run _ s2 s c1 |- _ =>
+          rewrite Htarget in Htail;
+          destruct (star_run_from_body_decompose_sound r counter nfa1 c1
+                      (nfa_start nfa1) s Hnfa1 Hbody_sound
+                      ltac:(lia) ltac:(lia) Htail) as
+            [prefix [suffix [Hstr [Hrun1 Hstar]]]];
+          rewrite Hstr;
+          apply match_star_step;
+          [exact (Hbody_sound prefix Hrun1)|exact Hstar]
+      end.
+    + match goal with
+      | Htail : nfa_run _ s2 s c1 |- _ =>
+          rewrite Htarget in Htail;
+          pose proof (nfa_run_from_dead_state_empty
+                        (star_nfa counter c1 nfa1) c1 s c1
+                        (fun lbl u => star_final_dead r counter nfa1 c1
+                                        lbl u Hnfa1)
+                        Htail) as [_ Hempty];
+          subst; constructor
+      end.
+  - pose proof (star_initial_step_classify r counter nfa1 c1
+                  (Some c) s2 Hnfa1 H) as Hclass.
+    destruct Hclass as [[Hnone _] | [Hnone _]]; discriminate Hnone.
+Qed.
+
+Lemma plus_accepts_sound_proved : forall r counter nfa1 c1 s,
+  compile_nfa r counter = (nfa1, c1) ->
+  (forall s0, nfa_accepts nfa1 s0 -> regex_matches r s0) ->
+  nfa_accepts (plus_nfa c1 nfa1) s ->
+  regex_matches (RPlus r) s.
+Proof.
+  intros r counter nfa1 c1 s Hnfa1 Hbody_sound Haccept.
+  unfold nfa_accepts in Haccept.
+  change (nfa_run (plus_nfa c1 nfa1) (nfa_start nfa1) s c1) in Haccept.
+  pose proof (compile_start_eq r counter nfa1 c1 Hnfa1) as Hstart1.
+  pose proof (compile_counter_increases r counter nfa1 c1 Hnfa1) as Hinc.
+  destruct (plus_run_from_body_decompose_sound r counter nfa1 c1
+              (nfa_start nfa1) s Hnfa1 Hbody_sound
+              ltac:(lia) ltac:(lia) Haccept) as
+    [prefix [suffix [Hstr [Hrun1 Hstar]]]].
+  rewrite Hstr.
+  apply match_plus.
+  - exact (Hbody_sound prefix Hrun1).
+  - exact Hstar.
+Qed.
+
+Lemma concat_step_from_right_in_right : forall r1 r2 counter nfa1 nfa2 c1 c2 s lbl t,
+  compile_nfa r1 counter = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  c1 <= s ->
+  nfa_step (concat_nfa nfa1 nfa2) s lbl t ->
+  nfa_step nfa2 s lbl t.
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s lbl t Hnfa1 Hnfa2 Hright Hstep.
+  inversion Hstep; subst; unfold concat_nfa in *; simpl in *.
+  - rewrite in_app_iff in H.
+    destruct H as [Hin1 | Hrest].
+    + pose proof (compile_transition_in_interval r1 counter nfa1 c1
+                    (TransChar s c t) Hnfa1 Hin1) as [_ [Hsrc_hi _]].
+      simpl in Hsrc_hi. lia.
+    + destruct Hrest as [Hconnector | Hin2].
+      * discriminate Hconnector.
+      * apply step_char. exact Hin2.
+  - rewrite in_app_iff in H.
+    destruct H as [Hin1 | Hrest].
+    + pose proof (compile_transition_in_interval r1 counter nfa1 c1
+                    (TransEpsilon s t) Hnfa1 Hin1) as [_ [Hsrc_hi _]].
+      simpl in Hsrc_hi. lia.
+    + destruct Hrest as [Hconnector | Hin2].
+      * inversion Hconnector; subst.
+        pose proof (compile_final_succ_eq r1 counter nfa1 c1 Hnfa1) as Hfinal1.
+        lia.
+      * apply step_epsilon. exact Hin2.
+  - rewrite in_app_iff in H.
+    destruct H as [Hin1 | Hrest].
+    + pose proof (compile_transition_in_interval r1 counter nfa1 c1
+                    (TransClass s cs t) Hnfa1 Hin1) as [_ [Hsrc_hi _]].
+      simpl in Hsrc_hi. lia.
+    + destruct Hrest as [Hconnector | Hin2].
+      * discriminate Hconnector.
+      * eapply step_class; eauto.
+Qed.
+
+Lemma concat_run_from_right_in_right : forall r1 r2 counter nfa1 nfa2 c1 c2 s str t,
+  compile_nfa r1 counter = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  c1 <= s ->
+  nfa_run (concat_nfa nfa1 nfa2) s str t ->
+  nfa_run nfa2 s str t.
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s str t Hnfa1 Hnfa2 Hright Hrun.
+  induction Hrun.
+  - constructor.
+  - pose proof (concat_step_from_right_in_right r1 r2 counter nfa1 nfa2 c1 c2
+                  s1 None s2 Hnfa1 Hnfa2 Hright H) as Hstep2.
+    pose proof (compile_step_in_interval r2 c1 nfa2 c2 s1 None s2 Hnfa2 Hstep2)
+      as [_ [_ [Htarget_lo _]]].
+    eapply run_epsilon.
+    + exact Hstep2.
+    + apply IHHrun. exact Htarget_lo.
+  - pose proof (concat_step_from_right_in_right r1 r2 counter nfa1 nfa2 c1 c2
+                  s1 (Some c) s2 Hnfa1 Hnfa2 Hright H) as Hstep2.
+    pose proof (compile_step_in_interval r2 c1 nfa2 c2 s1 (Some c) s2 Hnfa2 Hstep2)
+      as [_ [_ [Htarget_lo _]]].
+    eapply run_char.
+    + exact Hstep2.
+    + apply IHHrun. exact Htarget_lo.
+Qed.
+
+Lemma concat_step_from_left_classify : forall r1 r2 counter nfa1 nfa2 c1 c2 s lbl t,
+  compile_nfa r1 counter = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  s < c1 ->
+  nfa_step (concat_nfa nfa1 nfa2) s lbl t ->
+  nfa_step nfa1 s lbl t \/
+    (lbl = None /\ s = nfa_final nfa1 /\ t = nfa_start nfa2).
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s lbl t Hnfa1 Hnfa2 Hleft Hstep.
+  inversion Hstep; subst; unfold concat_nfa in *; simpl in *.
+  - rewrite in_app_iff in H.
+    destruct H as [Hin1 | Hrest].
+    + left. apply step_char. exact Hin1.
+    + destruct Hrest as [Hconnector | Hin2].
+      * discriminate Hconnector.
+      * pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                      (TransChar s c t) Hnfa2 Hin2) as [Hsrc_lo _].
+        simpl in Hsrc_lo. lia.
+  - rewrite in_app_iff in H.
+    destruct H as [Hin1 | Hrest].
+    + left. apply step_epsilon. exact Hin1.
+    + destruct Hrest as [Hconnector | Hin2].
+      * right. inversion Hconnector; subst.
+        repeat split; reflexivity.
+      * pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                      (TransEpsilon s t) Hnfa2 Hin2) as [Hsrc_lo _].
+        simpl in Hsrc_lo. lia.
+  - rewrite in_app_iff in H.
+    destruct H as [Hin1 | Hrest].
+    + left. eapply step_class; eauto.
+    + destruct Hrest as [Hconnector | Hin2].
+      * discriminate Hconnector.
+      * pose proof (compile_transition_in_interval r2 c1 nfa2 c2
+                      (TransClass s cs t) Hnfa2 Hin2) as [Hsrc_lo _].
+        simpl in Hsrc_lo. lia.
+Qed.
+
+Lemma concat_run_decompose_from_left :
+  forall r1 r2 counter nfa1 nfa2 c1 c2 s str,
+  compile_nfa r1 counter = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  s < c1 ->
+  nfa_run (concat_nfa nfa1 nfa2) s str (nfa_final nfa2) ->
+  exists str1 str2,
+    str = (str1 ++ str2)%string /\
+    nfa_run nfa1 s str1 (nfa_final nfa1) /\
+    nfa_run nfa2 (nfa_start nfa2) str2 (nfa_final nfa2).
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s str Hnfa1 Hnfa2 Hleft Hrun.
+  remember (nfa_final nfa2) as final2 eqn:Hfinal2.
+  induction Hrun; subst.
+  - pose proof (compile_final_succ_eq r2 c1 nfa2 c2 Hnfa2) as Hfinal2_succ.
+    pose proof (compile_counter_increases r2 c1 nfa2 c2 Hnfa2) as Hinc2.
+    lia.
+  - pose proof (concat_step_from_left_classify r1 r2 counter nfa1 nfa2 c1 c2
+                  s1 None s2 Hnfa1 Hnfa2 Hleft H) as Hclass.
+    destruct Hclass as [Hstep1 | [_ [Hsource Htarget]]].
+    + pose proof (compile_step_in_interval r1 counter nfa1 c1 s1 None s2 Hnfa1 Hstep1)
+        as [_ [_ [_ Htarget_hi]]].
+      destruct (IHHrun Htarget_hi eq_refl) as
+        [str1 [str2 [Hstr [Hrun1 Hrun2]]]].
+      exists str1, str2.
+      split.
+      * exact Hstr.
+      * split.
+        -- eapply run_epsilon; eauto.
+        -- exact Hrun2.
+    + subst.
+      pose proof (compile_start_eq r2 c1 nfa2 c2 Hnfa2) as Hstart2.
+      exists EmptyString, str.
+      split.
+      * reflexivity.
+      * split.
+        -- constructor.
+        -- apply concat_run_from_right_in_right with
+             (r1 := r1) (r2 := r2) (counter := counter) (nfa1 := nfa1) (nfa2 := nfa2)
+             (c1 := c1) (c2 := c2).
+           ++ exact Hnfa1.
+           ++ exact Hnfa2.
+           ++ lia.
+           ++ exact Hrun.
+  - pose proof (concat_step_from_left_classify r1 r2 counter nfa1 nfa2 c1 c2
+                  s1 (Some c) s2 Hnfa1 Hnfa2 Hleft H) as Hclass.
+    destruct Hclass as [Hstep1 | [Hnone _]].
+    + pose proof (compile_step_in_interval r1 counter nfa1 c1 s1 (Some c) s2 Hnfa1 Hstep1)
+        as [_ [_ [_ Htarget_hi]]].
+      destruct (IHHrun Htarget_hi eq_refl) as
+        [str1 [str2 [Hstr [Hrun1 Hrun2]]]].
+      exists (String c str1), str2.
+      split.
+      * simpl. rewrite Hstr. reflexivity.
+      * split.
+        -- eapply run_char; eauto.
+        -- exact Hrun2.
+    + discriminate Hnone.
+Qed.
+
+Lemma concat_run_decomposition_proved : forall r1 r2 counter nfa1 nfa2 c1 c2 s,
+  compile_nfa r1 counter = (nfa1, c1) ->
+  compile_nfa r2 c1 = (nfa2, c2) ->
+  nfa_accepts (concat_nfa nfa1 nfa2) s ->
+  exists s1 s2,
+    s = (s1 ++ s2)%string /\
+    nfa_accepts nfa1 s1 /\
+    nfa_accepts nfa2 s2.
+Proof.
+  intros r1 r2 counter nfa1 nfa2 c1 c2 s Hnfa1 Hnfa2 Haccept.
+  unfold nfa_accepts in Haccept.
+  change (nfa_run (concat_nfa nfa1 nfa2) (nfa_start nfa1) s (nfa_final nfa2)) in Haccept.
+  pose proof (compile_start_eq r1 counter nfa1 c1 Hnfa1) as Hstart1.
+  pose proof (compile_counter_increases r1 counter nfa1 c1 Hnfa1) as Hinc1.
+  destruct (concat_run_decompose_from_left r1 r2 counter nfa1 nfa2 c1 c2
+              (nfa_start nfa1) s Hnfa1 Hnfa2) as [s1 [s2 [Hstr [Hrun1 Hrun2]]]].
+  - lia.
+  - exact Haccept.
+  - exists s1, s2.
+    repeat split; try assumption.
 Qed.
 
 (** NFA states are bounded by counter *)
@@ -1099,69 +2387,230 @@ Proof.
     end.
 Qed.
 
+Lemma no_transition_run_same_state : forall start final max_state s1 s s2,
+  nfa_run (mkNFA start final [] max_state) s1 s s2 ->
+  s1 = s2.
+Proof.
+  intros start final max_state s1 s s2 Hrun.
+  induction Hrun.
+  - reflexivity.
+  - inversion H; subst; simpl in *; contradiction.
+  - inversion H; subst; simpl in *; contradiction.
+Qed.
+
+Lemma empty_accepts_sound_general : forall start final max_state s,
+  start <> final ->
+  nfa_accepts (mkNFA start final [] max_state) s ->
+  regex_matches REmpty s.
+Proof.
+  intros start final max_state s Hneq Haccept.
+  exfalso.
+  unfold nfa_accepts in Haccept; simpl in Haccept.
+  pose proof (no_transition_run_same_state start final max_state start s final Haccept)
+    as Hsame.
+  exact (Hneq Hsame).
+Qed.
+
+Lemma epsilon_only_run_consumes_empty : forall start final max_state s1 s s2,
+  nfa_run (mkNFA start final [TransEpsilon start final] max_state) s1 s s2 ->
+  s = EmptyString.
+Proof.
+  intros start final max_state s1 s s2 Hrun.
+  induction Hrun.
+  - reflexivity.
+  - exact IHHrun.
+  - inversion H; subst; cbn in *; intuition discriminate.
+Qed.
+
+Lemma epsilon_accepts_sound_general : forall start final max_state s,
+  nfa_accepts (mkNFA start final [TransEpsilon start final] max_state) s ->
+  regex_matches REpsilon s.
+Proof.
+  intros start final max_state s Haccept.
+  pose proof (epsilon_only_run_consumes_empty start final max_state start s final Haccept)
+    as Hempty.
+  subst. constructor.
+Qed.
+
+Lemma char_fragment_final_run_empty_general : forall start final max_state c s t,
+  start <> final ->
+  nfa_run (mkNFA start final [TransChar start c final] max_state) final s t ->
+  t = final ->
+  s = EmptyString.
+Proof.
+  intros start final max_state c s t Hneq Hrun Hfinal.
+  dependent induction Hrun.
+  - reflexivity.
+  - inversion H; subst; cbn in *; intuition discriminate.
+  - inversion H; subst; cbn in *;
+      repeat match goal with
+      | HIn : _ \/ False |- _ => destruct HIn as [? | []]
+      end;
+      try discriminate;
+      repeat match goal with
+      | Hedge : TransChar _ _ _ = TransChar _ _ _ |- _ =>
+          inversion Hedge; subst; clear Hedge
+      end;
+      congruence.
+Qed.
+
+Lemma char_accepts_sound_general : forall start final max_state c s,
+  start <> final ->
+  nfa_accepts (mkNFA start final [TransChar start c final] max_state) s ->
+  regex_matches (RChar c) s.
+Proof.
+  intros start final max_state c s Hneq Haccept.
+  unfold nfa_accepts in Haccept; cbn in Haccept.
+  change (nfa_run (mkNFA start final [TransChar start c final] max_state)
+                  start s final) in Haccept.
+  inversion Haccept; subst.
+  - contradiction Hneq. reflexivity.
+  - inversion H; subst; cbn in *; intuition discriminate.
+  - inversion H; subst; cbn in *;
+      repeat match goal with
+      | HIn : _ \/ False |- _ => destruct HIn as [? | []]
+      end;
+      try discriminate;
+      repeat match goal with
+      | Hedge : TransChar _ _ _ = TransChar _ _ _ |- _ =>
+          inversion Hedge; subst; clear Hedge
+      end.
+    match goal with
+    | Hneq0 : ?st <> ?fi,
+      Htail : nfa_run (mkNFA ?st ?fi [TransChar ?st ?ch ?fi] ?max0)
+                       ?fi ?tail ?fi |- _ =>
+        pose proof (char_fragment_final_run_empty_general st fi max0 ch
+                      tail fi Hneq0 Htail eq_refl) as Hstr
+    end.
+    subst. constructor.
+Qed.
+
+Lemma charclass_fragment_final_run_empty_general : forall start final max_state cs s t,
+  start <> final ->
+  nfa_run (mkNFA start final [TransClass start cs final] max_state) final s t ->
+  t = final ->
+  s = EmptyString.
+Proof.
+  intros start final max_state cs s t Hneq Hrun Hfinal.
+  dependent induction Hrun.
+  - reflexivity.
+  - inversion H; subst; cbn in *; intuition discriminate.
+  - inversion H; subst; cbn in *;
+      repeat match goal with
+      | HIn : _ \/ False |- _ => destruct HIn as [? | []]
+      end;
+      try discriminate;
+      repeat match goal with
+      | Hedge : TransClass _ _ _ = TransClass _ _ _ |- _ =>
+          inversion Hedge; subst; clear Hedge
+      end;
+      congruence.
+Qed.
+
+Lemma charclass_accepts_sound_general : forall start final max_state cs s,
+  start <> final ->
+  nfa_accepts (mkNFA start final [TransClass start cs final] max_state) s ->
+  regex_matches (RCharClass cs) s.
+Proof.
+  intros start final max_state cs s Hneq Haccept.
+  unfold nfa_accepts in Haccept; cbn in Haccept.
+  change (nfa_run (mkNFA start final [TransClass start cs final] max_state)
+                  start s final) in Haccept.
+  inversion Haccept; subst.
+  - contradiction Hneq. reflexivity.
+  - inversion H; subst; cbn in *; intuition discriminate.
+  - inversion H; subst; cbn in *;
+      repeat match goal with
+      | HIn : _ \/ False |- _ => destruct HIn as [? | []]
+      end;
+      try discriminate;
+      repeat match goal with
+      | Hedge : TransClass _ _ _ = TransClass _ _ _ |- _ =>
+          inversion Hedge; subst; clear Hedge
+      end.
+    match goal with
+    | Hneq0 : ?st <> ?fi,
+      Htail : nfa_run (mkNFA ?st ?fi [TransClass ?st ?classes ?fi] ?max0)
+                       ?fi ?tail ?fi |- _ =>
+        pose proof (charclass_fragment_final_run_empty_general st fi max0 classes
+                      tail fi Hneq0 Htail eq_refl) as Hstr
+    end.
+    subst. constructor.
+    match goal with
+    | Hin : In _ _ |- _ => exact Hin
+    end.
+Qed.
+
 (** * Soundness Theorem *)
 
-(** If NFA accepts, regex matches *)
-Theorem thompson_soundness : forall (contracts : ThompsonEvidence) r nfa counter,
+(** If an arbitrary-counter Thompson NFA accepts, the regex matches. *)
+Theorem thompson_soundness_general : forall r counter nfa counter',
+  compile_nfa r counter = (nfa, counter') ->
+  forall s, nfa_accepts nfa s -> regex_matches r s.
+Proof.
+  intros r.
+  induction r; intros counter nfa counter' Hcompile s Haccepts; simpl in Hcompile.
+  - inversion Hcompile. subst.
+    exact (empty_accepts_sound_general counter (counter + 1) (counter + 1)
+             s ltac:(lia) Haccepts).
+  - inversion Hcompile. subst.
+    exact (epsilon_accepts_sound_general counter (counter + 1) (counter + 1)
+             s Haccepts).
+  - inversion Hcompile. subst.
+    exact (char_accepts_sound_general counter (counter + 1) (counter + 1)
+             a s ltac:(lia) Haccepts).
+  - destruct (compile_nfa r1 counter) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Hcompile. subst. clear Hcompile.
+    change (nfa_accepts (concat_nfa nfa1 nfa2) s) in Haccepts.
+    destruct (concat_run_decomposition_proved r1 r2 counter nfa1 nfa2 c1 counter'
+                s Hnfa1 Hnfa2 Haccepts) as [s1 [s2 [Hseq [Hrun1 Hrun2]]]].
+    rewrite Hseq.
+    apply match_concat.
+    + exact (IHr1 counter nfa1 c1 Hnfa1 s1 Hrun1).
+    + exact (IHr2 c1 nfa2 counter' Hnfa2 s2 Hrun2).
+  - destruct (compile_nfa r1 (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
+    inversion Hcompile. subst. clear Hcompile.
+    change (nfa_accepts (alt_nfa counter c2 nfa1 nfa2) s) in Haccepts.
+    destruct (alt_accepts_split_proved r1 r2 counter nfa1 nfa2 c1 c2
+                s Hnfa1 Hnfa2 Haccepts) as [Hrun1 | Hrun2].
+    + apply match_alt_left.
+      exact (IHr1 (counter + 1) nfa1 c1 Hnfa1 s Hrun1).
+    + apply match_alt_right.
+      exact (IHr2 c1 nfa2 c2 Hnfa2 s Hrun2).
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Hcompile. subst. clear Hcompile.
+    change (nfa_accepts (star_nfa counter c1 nfa1) s) in Haccepts.
+    exact (star_accepts_sound_proved r counter nfa1 c1 s Hnfa1
+             (fun t Hrun => IHr (counter + 1) nfa1 c1 Hnfa1 t Hrun)
+             Haccepts).
+  - destruct (compile_nfa r counter) as [nfa1 c1] eqn:Hnfa1.
+    inversion Hcompile. subst. clear Hcompile.
+    change (nfa_accepts (plus_nfa c1 nfa1) s) in Haccepts.
+    exact (plus_accepts_sound_proved r counter nfa1 c1 s Hnfa1
+             (fun t Hrun => IHr counter nfa1 c1 Hnfa1 t Hrun)
+             Haccepts).
+  - destruct (compile_nfa r (counter + 1)) as [nfa1 c1] eqn:Hnfa1.
+    inversion Hcompile. subst. clear Hcompile.
+    change (nfa_accepts (option_nfa counter c1 nfa1) s) in Haccepts.
+    destruct (option_accepts_split_proved r counter nfa1 c1 s Hnfa1 Haccepts)
+      as [Hempty | Hrun].
+    + subst. apply match_option_none.
+    + apply match_option_some.
+      exact (IHr (counter + 1) nfa1 c1 Hnfa1 s Hrun).
+  - inversion Hcompile. subst.
+    exact (charclass_accepts_sound_general counter (counter + 1) (counter + 1)
+             l s ltac:(lia) Haccepts).
+Qed.
+
+(** Top-level soundness is the arbitrary-counter theorem at counter zero. *)
+Theorem thompson_soundness : forall r nfa counter,
   compile_nfa r 0 = (nfa, counter) ->
   forall s, nfa_accepts nfa s -> regex_matches r s.
 Proof.
-  intros contracts r.
-  induction r; intros nfa counter Hcompile s Haccepts.
-  - (* REmpty *)
-    simpl in Hcompile. inversion Hcompile. subst.
-    exact (empty_accepts_sound s Haccepts).
-  - (* REpsilon *)
-    simpl in Hcompile. inversion Hcompile. subst.
-    exact (epsilon_accepts_sound s Haccepts).
-  - (* RChar *)
-    simpl in Hcompile. inversion Hcompile. subst.
-    exact (char_accepts_sound a s Haccepts).
-  - (* RConcat *)
-    simpl in Hcompile.
-    destruct (compile_nfa r1 0) as [nfa1 c1] eqn:Hnfa1.
-    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
-    inversion Hcompile. subst. clear Hcompile.
-    unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the run decomposition evidence premise *)
-    destruct (concat_run_decomposition contracts r1 r2 nfa1 nfa2 c1 counter s Hnfa1 Hnfa2 Haccepts)
-      as [s1 [s2 [Hseq [Hmatch1 Hmatch2]]]].
-    rewrite Hseq.
-    apply match_concat; assumption.
-  - (* RAlt *)
-    simpl in Hcompile.
-    destruct (compile_nfa r1 1) as [nfa1 c1] eqn:Hnfa1.
-    destruct (compile_nfa r2 c1) as [nfa2 c2] eqn:Hnfa2.
-    inversion Hcompile. subst. clear Hcompile.
-    unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the alternation decomposition evidence premise *)
-    destruct (alt_run_decomposition contracts r1 r2 nfa1 nfa2 c1 c2 s Hnfa1 Hnfa2 Haccepts) as [Hleft | Hright].
-    + apply match_alt_left. assumption.
-    + apply match_alt_right. assumption.
-  - (* RStar *)
-    simpl in Hcompile.
-    destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
-    inversion Hcompile. subst. clear Hcompile.
-    unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the star decomposition evidence premise *)
-    exact (star_run_decomposition contracts r nfa1 c1 s Hnfa1 Haccepts).
-  - (* RPlus *)
-    simpl in Hcompile.
-    destruct (compile_nfa r 0) as [nfa1 c1] eqn:Hnfa1.
-    inversion Hcompile. subst. clear Hcompile.
-    unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the plus decomposition evidence premise *)
-    exact (plus_run_decomposition contracts r nfa1 c1 s Hnfa1 Haccepts).
-  - (* ROption *)
-    simpl in Hcompile.
-    destruct (compile_nfa r 1) as [nfa1 c1] eqn:Hnfa1.
-    inversion Hcompile. subst. clear Hcompile.
-    unfold nfa_accepts in Haccepts. simpl in Haccepts.
-    (* Use the option decomposition evidence premise *)
-    exact (option_run_decomposition contracts r nfa1 c1 s Hnfa1 Haccepts).
-  - (* RCharClass *)
-    simpl in Hcompile. inversion Hcompile. subst.
-    exact (charclass_accepts_sound l s Haccepts).
+  intros r nfa counter Hcompile s Haccepts.
+  exact (thompson_soundness_general r 0 nfa counter Hcompile s Haccepts).
 Qed.
 
 (** * Completeness Theorem *)
@@ -1458,15 +2907,15 @@ Proof.
 Qed.
 
 (** Main correctness theorem *)
-Theorem thompson_correctness : forall (contracts : ThompsonEvidence) r s,
+Theorem thompson_correctness : forall r s,
   let nfa := compile r in
   nfa_accepts nfa s <-> regex_matches r s.
 Proof.
-  intros contracts r s.
+  intros r s.
   unfold compile.
   destruct (compile_nfa r 0) as [nfa counter] eqn:Hcompile.
   simpl.
   split.
-  - exact (thompson_soundness contracts r nfa counter Hcompile s).
+  - exact (thompson_soundness r nfa counter Hcompile s).
   - exact (thompson_completeness r nfa counter Hcompile s).
 Qed.

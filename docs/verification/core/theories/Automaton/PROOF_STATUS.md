@@ -3,6 +3,17 @@
 **Date**: December 18, 2025 (Session 6 Update)
 **Build Status**: ✅ Compiles successfully
 
+> Update (2026-05-24): this is historical status. The false exact
+> fold-state correspondence path has since been removed:
+> `automaton_run_step_std_trans`, `automaton_run_std_trans_correspondence`,
+> `automaton_run_step_std_ms`, `automaton_run_std_ms_correspondence`, and
+> `AutomatonFoldStateEvidence` no longer exist in `Completeness.v`. The
+> Standard exact-match transition-success bridge is also now proved from
+> containment and Standard run invariants, so no transition-success field remains
+> in `AutomatonCompletenessCoreEvidence`. Use
+> `docs/verification/PROOF_COMPLETION_PLAN.md` and
+> `./scripts/verify-formal.sh audit-evidence-tsv` for the current gap list.
+
 ## Summary
 
 The Automaton verification module contains proofs for soundness and completeness of Levenshtein automata supporting three algorithms: Standard, Transposition (Damerau), and Merge/Split. The build compiles but has **21 admitted lemmas** across multiple files:

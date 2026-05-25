@@ -163,10 +163,7 @@ Record AutomatonSoundnessEvidence : Prop := mkAutomatonSoundnessEvidence {
 
   automaton_sound_merge_split_proof : forall query dict n,
     automaton_accepts MergeAndSplit query n dict = true ->
-    merge_split_distance query dict <= n;
-
-  lev_distance_ms_bound_proof : forall query dict,
-    lev_distance query dict <= 2 * merge_split_distance query dict
+    merge_split_distance query dict <= n
 }.
 
 Lemma initial_state_no_special : forall qlen,
@@ -4593,10 +4590,9 @@ Corollary automaton_sound_merge_split_lev : forall (contracts : AutomatonSoundne
 Proof.
   intros contracts query dict n Haccept.
   apply (automaton_sound_merge_split contracts) in Haccept.
-  (* Apply the evidence premise relating lev_distance to merge_split_distance.
-     This holds because each merge/split (cost 1 in MS) can be simulated
-     by up to 2 standard operations (cost 2 in L). *)
-  pose proof (lev_distance_ms_bound_proof contracts query dict) as Hbound.
+  (* Each merge-split operation is simulated by at most two standard
+     Levenshtein operations. *)
+  pose proof (lev_distance_ms_bound query dict) as Hbound.
   lia.
 Qed.
 

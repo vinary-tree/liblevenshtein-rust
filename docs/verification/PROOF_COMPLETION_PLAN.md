@@ -97,8 +97,27 @@ supported by the current executable model:
 - `LLRE/ThompsonConstruction.v`: added memory-small run-trace infrastructure
   (`nfa_run_trace`, trace completeness/soundness, and trace append) plus
   proved compile start/final and per-transition state interval bounds. These
-  lemmas are the next foundation for replacing the remaining Thompson accepted-run
-  decomposition evidence used by soundness.
+  lemmas are the foundation for replacing Thompson accepted-run decomposition
+  evidence used by soundness.
+- `LLRE/ThompsonConstruction.v`: strengthened the per-transition bounds to full
+  source/target interval bounds, added step-level interval corollaries, and
+  proved arbitrary-counter concat run splitting into left and right sub-NFA
+  accepting runs. The remaining Thompson soundness evidence then needed the same
+  splitter treatment for alternation, option, star, and plus.
+- `LLRE/ThompsonConstruction.v`: added proof-only constructors for the
+  alternation and option Thompson NFAs, a generic dead-state run lemma, and a
+  `compile_final_ge_counter` bound. These are kept separate from soundness
+  wiring so the next splitter proofs can reuse them without increasing proof
+  term size in the existing capped compile.
+- `LLRE/ThompsonConstruction.v`: proved accepted-run splitters for alternation
+  and option using branch-state interval classifiers and final-dead lemmas.
+  Thompson soundness is now arbitrary-counter, so concat, alternation, and
+  option soundness use local sub-NFA accepting-run proofs plus the induction
+  hypothesis instead of `ThompsonEvidence`.
+- `LLRE/ThompsonConstruction.v`: proved star/plus loop step classifiers,
+  body-run decomposition, and accepted-run soundness for Kleene star and plus.
+  `ThompsonEvidence` is retired; Thompson soundness and correctness are now
+  unconditional local theorems.
 - `MSM/Core/MsmDistance.v`: `msm_reflexive_diagonal_proof` was removed from
   `MsmDistanceEvidence`. Reflexivity for identical series is now proved locally
   with a memory-small row-diagonal invariant showing each diagonal cell is bounded
@@ -112,8 +131,7 @@ supported by the current executable model:
   `has_cycle_from`.
 - Grammar core/layer/NFA wrapper contracts that depended on missing enumerators,
   composed automata, Viterbi paths, or arbitrary pipeline layers were narrowed
-  to explicit witness or precondition theorems. The remaining grammar backlog is
-  now the NFA soundness/completeness records.
+  to explicit witness or precondition theorems.
 - `NFA/Completeness.v`: removed the false broad theorem that `"phone"`→`"fone"`
   is accepted by the current automata. The replacement theorem records the
   executable fact that both the standard and phonetic automata currently reject
@@ -130,6 +148,13 @@ supported by the current executable model:
   singleton accepting witness at `String.length target`, so only the
   valid-path-to-acceptance bridge remains; the full edit-sequence acceptance
   theorem is now derived from that narrower bridge.
+- `NFA/Completeness.v` and `NFA/Soundness.v`: retired
+  `NFACompletenessEvidence` and `NFASoundnessEvidence`. The current
+  path/edit-sequence models are not anchored enough to prove broad acceptance
+  equivalence, so the remaining broad NFA theorems were narrowed to explicit
+  executable acceptance or edit-sequence witness hypotheses. Downstream NFA
+  correctness and Layer 1 integration theorems now expose those hypotheses
+  directly instead of hiding them in evidence records.
 - `Automaton/Soundness.v`: removed `initial_state_no_special_proof` from
   `AutomatonSoundnessEvidence`; the transposition initial state is
   `[std_pos 0 0]`, so non-specialness is now a direct lemma.
@@ -191,6 +216,11 @@ supported by the current executable model:
 - `Automaton/Soundness.v`: removed the unused special-origin transition
   preservation field from `AutomatonSoundnessEvidence`; the remaining soundness
   fields are the ones still consumed by downstream proofs.
+- `Core/MergeSplitDistance.v` and `Automaton/Soundness.v`: proved
+  `lev_distance_ms_bound` from optimal merge-split edit sequences. The
+  `lev_distance_ms_bound_proof` field was removed from
+  `AutomatonSoundnessEvidence`; MergeAndSplit Levenshtein fallback soundness now
+  uses the local sequence-simulation theorem directly.
 - `Automaton/Completeness.v`: removed the false broad
   `subsumption_preserves_nonspecial` evidence field. The only caller now uses
   the explicit antichain invariant that existing positions are non-special;
@@ -218,26 +248,57 @@ supported by the current executable model:
   identity target from raw Coq list equality over `Q` to pointwise rational
   setoid equality `series_Qeq`. The old statement is not provable over QArith:
   `[1#1]` and `[2#2]` have zero MSM distance but are not Leibniz-equal.
+- `MSM/Core/MsmDistance.v`: narrowed `MsmDistanceEvidence` further to the
+  non-empty DP identity case. Empty/empty is immediate, and empty/non-empty
+  mismatch cases are now proved locally from `c > 0` and positivity of
+  `inject_Z (Z.of_nat (length _)) * c`.
 - `Automaton/Completeness.v`: narrowed `can_reach_higher_index` to the only
   model-accurate form used by callers, requiring the original `can_reach`
   witness to end at `term_index = length query` with bounded final errors. The
   broader non-final statement was false.
+- `Automaton/Completeness.v`: proved the narrowed `can_reach_higher_index`
+  obligation locally by induction over `can_reach` and removed the standalone
+  `AutomatonCompletableEvidence` record. Ahead-in-query positions now simulate
+  consumed dictionary characters with `INSERT` steps paid for by the saved
+  error budget.
+- `Automaton/Completeness.v`: removed the unused
+  `AutomatonCompletableStateEvidence` record and its dead wrapper lemmas. The
+  only reusable subsumption helper now uses the local Standard proof directly
+  instead of a broad algorithm-parameterized evidence field.
+- `Automaton/Completeness.v`: removed the unused
+  `AutomatonCompletenessTransitionEvidence` route and the dead
+  `reachable_implies_contained_aux` wrapper. The exact epsilon-closure field was
+  over-strong for antichain-filtered states; active completeness relies on the
+  narrower `position_contained_from_run` field in core evidence.
+- `Automaton/Completeness.v`: removed the false exact fold-state inclusion
+  surfaces (`AutomatonFoldStateEvidence`, the Standard-to-Transposition fold
+  field, and both special-algorithm spread fields). The Standard-to-Transposition
+  and Standard-to-MergeSplit acceptance bridges now use proved Standard
+  soundness plus `damerau_lev_le_standard`/`ms_le_standard`, then discharge the
+  target with the existing algorithm-specific completeness contracts.
+- `Automaton/Completeness.v`: deleted unused core completeness fields for
+  exact transition production, epsilon-closure final inclusion, and local
+  distance tracking, plus the dead `automaton_finds_distance` corollary. The
+  active core record now tracks only position containment and
+  algorithm-specific completeness.
+- `Automaton/Completeness.v`: proved the remaining exact-match transition
+  success obligation from `position_contained_from_run`, Standard run
+  reachability, Standard non-special preservation, and the characteristic-vector
+  spread/window lemmas. The core completeness record no longer contains a
+  transition-success field.
 - `ASSUMPTIONS.tsv`: split the broad MSM metric candidate into narrow allowed
   assumptions for MSM identity, symmetry, and the non-empty-domain triangle
   theorem, all cited to Stefan et al. MSM reflexivity has since been retired
-  from the allowed set after the local row-diagonal proof. `ThompsonEvidence` is also
-  allowlisted against Thompson's original construction because the remaining
-  fields are the standard run decomposition laws used by soundness; construction,
-  primitive fragments, and size/count bounds remain local proofs.
+  from the allowed set after the local row-diagonal proof. `ThompsonEvidence`
+  has also been retired after local Kleene star/plus decomposition proofs.
 - `ASSUMPTIONS.tsv`: retired stale candidates for the old grammar
-  Levenshtein-triangle shell and the now-proved
-  `automaton_run_nonempty_epsilon_closed` lemma.
+  Levenshtein-triangle shell and the now-removed
+  `automaton_run_nonempty_epsilon_closed` wrapper.
 
 | Area | Remaining unallowlisted evidence surface |
 |---|---|
 | Core automaton soundness | `AutomatonSoundnessEvidence` |
-| Core automaton completeness | `AutomatonCompletenessTransitionEvidence`, `AutomatonCompletenessCoreEvidence`, `AutomatonCompletableEvidence`, `AutomatonCompletableStateEvidence`, `AutomatonFoldStateEvidence` |
-| Grammar NFA soundness/completeness | `NFASoundnessEvidence`, `NFACompletenessEvidence` |
+| Core automaton completeness | `AutomatonCompletenessCoreEvidence` |
 
 `docs/verification/core/theories/Distance.v` remains a legacy monolith. Use the
 decomposed modules (`OptimalTrace/*`, `Triangle/*`, `LowerBound/*`,
@@ -253,31 +314,24 @@ reference material and is not the memory-efficient target.
 
 2. Prove core automaton contracts.
 
-   Close the remaining one-step epsilon-closure evidence first
-   (`transition_state_positions_epsilon_closed`), then the transition
-   production/success fields, spread-bound preservation, can-complete
-   preservation, fold/state insertion inclusion, finality, and
-   algorithm-specific completeness. Keep each group in its own capped module
-   before wiring it back into `Automaton/Completeness.v`. Continue replacing
-   exact antichain inclusion claims with invariant-backed coverage or finality
-   statements where exact inclusion is false.
+   Close the remaining core record by proving or further decomposing the active
+   `position_contained_from_run`, `transposition_completeness`, and
+   `merge_split_completeness` fields. Exact antichain inclusion has been removed
+   because it is false for the executable filtering model.
 
-3. Prove grammar NFA contracts.
+3. Rebuild grammar NFA equivalence on traced runs.
 
-   Close transition monotonicity, two-step reachability, pruning preservation,
-   delta preservation, edit-sequence acceptance, path extension, and context
-   sensitivity as separate lemmas. Only then instantiate
-   `NFACompletenessEvidence` and `NFASoundnessEvidence`.
+   The evidence records are retired. To restore unconditional NFA equivalence,
+   introduce a generated-run path relation that is anchored to
+   `run_automaton_from`, prove it erases to `accepts`, and prove traced runs
+   produce edit sequences with bounded cost. Only then strengthen the narrowed
+   witness-based theorems back to unconditional completeness/soundness.
 
-4. Close LLRE construction.
+4. Keep LLRE construction closed.
 
-   Replace the run decomposition/construction axioms with structural induction
-   over regex syntax. The next proof step is to use `nfa_run_trace` plus
-   `compile_transition_bounds` to split accepted traces at the unique connector
-   transitions for concat/alternation/option, then reuse the same trace-splitting
-   machinery with a well-founded trace-length measure for star/plus loops. Keep
-   size/count proofs separate from language-equivalence proofs to avoid large
-   proof terms.
+   Thompson construction no longer has evidence parameters. Keep size/count
+   proofs separate from language-equivalence proofs and continue compiling the
+   file with the standard capped profile before promoting related changes.
 
 5. Close product and MSM.
 

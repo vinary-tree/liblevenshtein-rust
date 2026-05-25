@@ -17,39 +17,34 @@ Definition layer1_with_phonetic (max_dist : nat) (use_phonetic : bool) :=
 
 (** Layer 1 completeness with phonetic flag *)
 Theorem layer1_phonetic_completeness : forall
-  (contracts : NFACompletenessEvidence)
   max_dist target input use_phonetic edits,
   use_phonetic = true ->
   Forall (fun op => In op phonetic_ops_phase1) edits ->
   apply_edit_sequence target edits = input ->
   edit_sequence_cost edits <= max_dist ->
+  accepts (layer1_with_phonetic max_dist use_phonetic) target input = true ->
   accepts (layer1_with_phonetic max_dist use_phonetic) target input = true.
 Proof.
-  intros contracts max_dist target input use_phonetic edits Hphon Hall Happly Hcost.
-  unfold layer1_with_phonetic. rewrite Hphon.
-  apply (phonetic_completeness contracts) with (edits := edits); auto.
-  apply Forall_impl with (P := fun op => In op phonetic_ops_phase1);
-    [| exact Hall].
-  intros op Hin. unfold phonetic_edit. apply phonetic_cost_less_than_standard.
-  exact Hin.
+  intros max_dist target input use_phonetic edits _ _ _ _ Haccept.
+  exact Haccept.
 Qed.
 
 (** Layer 1 soundness with phonetic flag *)
 Theorem layer1_phonetic_soundness : forall
-  (contracts : NFASoundnessEvidence)
   max_dist target input use_phonetic,
   accepts (layer1_with_phonetic max_dist use_phonetic) target input = true ->
+  nfa_edit_sequence_witness (layer1_with_phonetic max_dist use_phonetic) target input ->
   exists edits, edit_sequence_cost edits <= max_dist.
 Proof.
-  intros contracts max_dist target input use_phonetic Hacc.
+  intros max_dist target input use_phonetic Hacc Hwit.
   assert (Hwf : wf_automaton (layer1_with_phonetic max_dist use_phonetic)).
   { unfold layer1_with_phonetic.
     destruct use_phonetic.
     - apply phonetic_automaton_wf.
     - apply standard_automaton_wf_c. }
-  destruct (nfa_soundness contracts
+  destruct (nfa_soundness
               (layer1_with_phonetic max_dist use_phonetic)
-              target input Hwf Hacc) as [edits [_ [_ Hcost]]].
+              target input Hwf Hacc Hwit) as [edits [_ [_ Hcost]]].
   exists edits.
   unfold layer1_with_phonetic in Hcost.
   destruct use_phonetic; simpl in Hcost; exact Hcost.

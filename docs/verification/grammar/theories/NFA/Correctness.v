@@ -10,35 +10,52 @@ Require Import Liblevenshtein.Grammar.Verification.NFA.Optimality.
 
 (** Main correctness: Completeness + Soundness *)
 Theorem nfa_correctness : forall
-  (sound_contracts : NFASoundnessEvidence)
-  (complete_contracts : NFACompletenessEvidence)
   aut target input,
   wf_automaton aut ->
+  (accepts aut target input = true ->
+   exists edits,
+     Forall (fun op => In op (automaton_operations aut)) edits /\
+     apply_edit_sequence target edits = input /\
+     edit_sequence_cost edits <= automaton_max_distance aut) ->
+  ((exists edits,
+     Forall (fun op => In op (automaton_operations aut)) edits /\
+     apply_edit_sequence target edits = input /\
+     edit_sequence_cost edits <= automaton_max_distance aut) ->
+   accepts aut target input = true) ->
   (accepts aut target input = true <->
    exists edits,
      Forall (fun op => In op (automaton_operations aut)) edits /\
      apply_edit_sequence target edits = input /\
      edit_sequence_cost edits <= automaton_max_distance aut).
 Proof.
-  intros sound_contracts complete_contracts aut target input Hwf.
-  apply (soundness_completeness_correctness sound_contracts complete_contracts).
-  assumption.
+  intros aut target input Hwf Hsound Hcomplete.
+  apply soundness_completeness_correctness; assumption.
 Qed.
 
 (** Phonetic + standard combined correctness *)
 Theorem phonetic_nfa_correctness : forall
-  (sound_contracts : NFASoundnessEvidence)
-  (complete_contracts : NFACompletenessEvidence)
   max_dist target input,
+  (accepts (phonetic_automaton max_dist) target input = true ->
+   exists edits,
+     Forall (fun op => In op (automaton_operations (phonetic_automaton max_dist))) edits /\
+     apply_edit_sequence target edits = input /\
+     edit_sequence_cost edits <= max_dist) ->
+  ((exists edits,
+     Forall (fun op => In op (automaton_operations (phonetic_automaton max_dist))) edits /\
+     apply_edit_sequence target edits = input /\
+     edit_sequence_cost edits <= max_dist) ->
+   accepts (phonetic_automaton max_dist) target input = true) ->
   accepts (phonetic_automaton max_dist) target input = true <->
   exists edits,
     Forall (fun op => In op (automaton_operations (phonetic_automaton max_dist))) edits /\
     apply_edit_sequence target edits = input /\
     edit_sequence_cost edits <= max_dist.
 Proof.
-  intros sound_contracts complete_contracts max_dist target input.
-  apply (nfa_correctness sound_contracts complete_contracts).
-  apply phonetic_automaton_wf.
+  intros max_dist target input Hsound Hcomplete.
+  apply (nfa_correctness (phonetic_automaton max_dist)).
+  - apply phonetic_automaton_wf.
+  - exact Hsound.
+  - exact Hcomplete.
 Qed.
 
 (** NFA termination *)

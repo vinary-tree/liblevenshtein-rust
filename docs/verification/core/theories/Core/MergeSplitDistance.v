@@ -1562,6 +1562,150 @@ Proof.
     lia.
 Qed.
 
+(** Standard Levenshtein can simulate every merge-split operation with at
+    most twice its merge-split cost. *)
+
+Lemma subst_cost_le_one : forall c d, subst_cost c d <= 1.
+Proof.
+  intros c d.
+  unfold subst_cost.
+  destruct (char_eq c d); lia.
+Qed.
+
+Lemma merge_cost_at_least_one : forall c1 c2 d, 1 <= merge_cost c1 c2 d.
+Proof.
+  intros c1 c2 d.
+  unfold merge_cost.
+  destruct (can_merge c1 c2 d); lia.
+Qed.
+
+Lemma split_cost_at_least_one : forall c d1 d2, 1 <= split_cost c d1 d2.
+Proof.
+  intros c d1 d2.
+  unfold split_cost.
+  destruct (can_split c d1 d2); lia.
+Qed.
+
+Lemma lev_delete_step_bound : forall c s1 s2,
+  lev_distance (c :: s1) s2 <= 1 + lev_distance s1 s2.
+Proof.
+  intros c s1 s2.
+  destruct s2 as [| d s2].
+  - rewrite lev_distance_empty_right.
+    rewrite lev_distance_empty_right.
+    simpl. lia.
+  - rewrite lev_distance_cons.
+    unfold min3. lia.
+Qed.
+
+Lemma lev_insert_step_bound : forall d s1 s2,
+  lev_distance s1 (d :: s2) <= 1 + lev_distance s1 s2.
+Proof.
+  intros d s1 s2.
+  rewrite lev_distance_symmetry.
+  rewrite (lev_distance_symmetry s1 s2).
+  apply lev_delete_step_bound.
+Qed.
+
+Lemma lev_subst_step_bound : forall c d s1 s2,
+  lev_distance (c :: s1) (d :: s2) <= subst_cost c d + lev_distance s1 s2.
+Proof.
+  intros c d s1 s2.
+  rewrite lev_distance_cons.
+  unfold min3. lia.
+Qed.
+
+Lemma lev_merge_step_bound : forall c1 c2 d s1 s2,
+  lev_distance (c1 :: c2 :: s1) (d :: s2) <= 2 + lev_distance s1 s2.
+Proof.
+  intros c1 c2 d s1 s2.
+  pose proof (lev_subst_step_bound c1 d (c2 :: s1) s2) as Hsub.
+  pose proof (lev_delete_step_bound c2 s1 s2) as Hdel.
+  pose proof (subst_cost_le_one c1 d) as Hcost.
+  lia.
+Qed.
+
+Lemma lev_split_step_bound : forall c d1 d2 s1 s2,
+  lev_distance (c :: s1) (d1 :: d2 :: s2) <= 2 + lev_distance s1 s2.
+Proof.
+  intros c d1 d2 s1 s2.
+  pose proof (lev_subst_step_bound c d1 s1 (d2 :: s2)) as Hsub.
+  pose proof (lev_insert_step_bound d2 s1 s2) as Hins.
+  pose proof (subst_cost_le_one c d1) as Hcost.
+  lia.
+Qed.
+
+Lemma lev_ms_op_step_bound : forall op s1 s2 s1' s2',
+  apply_ms_op op s1 s2 = Some (s1', s2') ->
+  lev_distance s1 s2 <= 2 * ms_op_cost op + lev_distance s1' s2'.
+Proof.
+  intros op s1 s2 s1' s2' Hop.
+  destruct op as [c | d | c d | c1 c2 d | c d1 d2].
+  - destruct s1 as [| a s1_tail]; simpl in Hop; try discriminate.
+    destruct (char_eq c a) eqn:Hca; try discriminate.
+    injection Hop as Hs1 Hs2. subst s1' s2'.
+    pose proof (lev_delete_step_bound a s1_tail s2) as Hdel.
+    simpl. lia.
+  - destruct s2 as [| b s2_tail]; simpl in Hop; try discriminate.
+    destruct (char_eq d b) eqn:Hdb; try discriminate.
+    injection Hop as Hs1 Hs2. subst s1' s2'.
+    pose proof (lev_insert_step_bound b s1 s2_tail) as Hins.
+    simpl. lia.
+  - destruct s1 as [| a s1_tail]; simpl in Hop; try discriminate.
+    destruct s2 as [| b s2_tail]; simpl in Hop; try discriminate.
+    destruct (andb (char_eq c a) (char_eq d b)) eqn:Hchars; try discriminate.
+    apply andb_true_iff in Hchars as [Hca Hdb].
+    apply char_eq_true in Hca.
+    apply char_eq_true in Hdb.
+    subst c d.
+    injection Hop as Hs1 Hs2. subst s1' s2'.
+    pose proof (lev_subst_step_bound a b s1_tail s2_tail) as Hsub.
+    simpl. lia.
+  - destruct s1 as [| a [| a2 s1_rest]]; simpl in Hop; try discriminate.
+    destruct s2 as [| b s2_tail]; simpl in Hop; try discriminate.
+    destruct (andb (andb (char_eq c1 a) (char_eq c2 a2)) (char_eq d b)) eqn:Hchars; try discriminate.
+    injection Hop as Hs1 Hs2. subst s1' s2'.
+    pose proof (lev_merge_step_bound a a2 b s1_rest s2_tail) as Hmerge.
+    pose proof (merge_cost_at_least_one c1 c2 d) as Hcost.
+    simpl. lia.
+  - destruct s1 as [| a s1_tail]; simpl in Hop; try discriminate.
+    destruct s2 as [| b [| b2 s2_rest]]; simpl in Hop; try discriminate.
+    destruct (andb (andb (char_eq c a) (char_eq d1 b)) (char_eq d2 b2)) eqn:Hchars; try discriminate.
+    injection Hop as Hs1 Hs2. subst s1' s2'.
+    pose proof (lev_split_step_bound a b b2 s1_tail s2_rest) as Hsplit.
+    pose proof (split_cost_at_least_one c d1 d2) as Hcost.
+    simpl. lia.
+Qed.
+
+Lemma lev_distance_ms_seq_bound : forall ops s1 s2,
+  ms_seq_valid ops s1 s2 ->
+  lev_distance s1 s2 <= 2 * ms_seq_cost ops.
+Proof.
+  induction ops as [| op ops IH]; intros s1 s2 Hvalid.
+  - apply ms_seq_empty_valid in Hvalid as [Hs1 Hs2].
+    subst s1 s2.
+    rewrite lev_distance_empty_left.
+    simpl. lia.
+  - unfold ms_seq_valid in Hvalid.
+    simpl in Hvalid.
+    destruct (apply_ms_op op s1 s2) as [[s1' s2']|] eqn:Hop; try discriminate.
+    assert (Hrest : ms_seq_valid ops s1' s2').
+    { unfold ms_seq_valid. exact Hvalid. }
+    pose proof (IH s1' s2' Hrest) as IHbound.
+    pose proof (lev_ms_op_step_bound op s1 s2 s1' s2' Hop) as Hstep.
+    simpl. lia.
+Qed.
+
+Theorem lev_distance_ms_bound : forall query dict,
+  lev_distance query dict <= 2 * merge_split_distance query dict.
+Proof.
+  intros query dict.
+  destruct (ms_seq_exists query dict) as [ops [Hvalid Hcost]].
+  pose proof (lev_distance_ms_seq_bound ops query dict Hvalid) as Hbound.
+  rewrite <- Hcost.
+  exact Hbound.
+Qed.
+
 (** *** ADMITTED - MAIN CASE ONLY (BASE CASES PROVEN) ***
 
     Triangle inequality: ms(s1, s3) <= ms(s1, s2) + ms(s2, s3)

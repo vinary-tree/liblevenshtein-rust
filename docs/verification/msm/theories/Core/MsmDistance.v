@@ -97,10 +97,20 @@ Definition msm_distance (X Y : TimeSeries) (cfg : MsmConfig) : Q :=
     last final_row 0
   end.
 
+(** Helper: inject_Z of a positive nat is positive. *)
+Lemma inject_Z_of_nat_pos : forall n, (0 < n)%nat -> 0 < inject_Z (Z.of_nat n).
+Proof.
+  intros n Hn.
+  unfold Qlt. simpl.
+  rewrite Z.mul_1_r.
+  apply (proj2 (Z.compare_lt_iff 0 (Z.of_nat n))).
+  apply (proj1 (Nat2Z.inj_lt 0 n)). exact Hn.
+Qed.
+
 (** * Evidence for MSM Metric Properties *)
 
-(** This evidence captures the remaining identity-of-indiscernibles property
-    implied by the MSM dynamic-programming recurrence and metricity result.
+(** This evidence captures the remaining non-empty identity-of-indiscernibles
+    property implied by the MSM dynamic-programming recurrence and metricity result.
     Reference: Stefan, Alexandra, et al. "The move-split-merge metric for
     time series." IEEE TKDE 25.6 (2012): 1425-1438.
 
@@ -112,11 +122,11 @@ Definition msm_distance (X Y : TimeSeries) (cfg : MsmConfig) : Q :=
     the equality respected by rational arithmetic in QArith. *)
 
 Record MsmDistanceEvidence : Prop := mkMsmDistanceEvidence {
-  (** MSM identity of indiscernibles: zero distance implies pointwise [Qeq]. *)
-  msm_zero_implies_series_eq_proof : forall (X Y : TimeSeries) (cfg : MsmConfig),
+  (** MSM identity of indiscernibles for the non-empty DP case. *)
+  msm_zero_implies_series_eq_proof : forall x xs y ys (cfg : MsmConfig),
     0 < msm_c cfg ->
-    msm_distance X Y cfg == 0 ->
-    series_Qeq X Y
+    msm_distance (x :: xs) (y :: ys) cfg == 0 ->
+    series_Qeq (x :: xs) (y :: ys)
 }.
 
 Lemma msm_zero_implies_series_eq_evidence_use : forall (contracts : MsmDistanceEvidence) X Y cfg,
@@ -125,7 +135,25 @@ Lemma msm_zero_implies_series_eq_evidence_use : forall (contracts : MsmDistanceE
   series_Qeq X Y.
 Proof.
   intros contracts X Y cfg Hc Hzero.
-  exact (msm_zero_implies_series_eq_proof contracts X Y cfg Hc Hzero).
+  destruct X as [|x xs]; destruct Y as [|y ys].
+  - exact I.
+  - simpl in Hzero.
+    exfalso.
+    assert (Hlen_pos : (0 < length (y :: ys))%nat) by (simpl; lia).
+    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (y :: ys)))).
+    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
+    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (y :: ys))) * msm_c cfg).
+    { apply Qmult_lt_0_compat; assumption. }
+    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
+  - simpl in Hzero.
+    exfalso.
+    assert (Hlen_pos : (0 < length (x :: xs))%nat) by (simpl; lia).
+    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (x :: xs)))).
+    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
+    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (x :: xs))) * msm_c cfg).
+    { apply Qmult_lt_0_compat; assumption. }
+    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
+  - exact (msm_zero_implies_series_eq_proof contracts x xs y ys cfg Hc Hzero).
 Qed.
 
 Lemma msm_distance_empty_empty : forall cfg,
