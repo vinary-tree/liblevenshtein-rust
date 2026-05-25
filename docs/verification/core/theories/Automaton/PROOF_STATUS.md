@@ -10,7 +10,10 @@
 > `AutomatonFoldStateEvidence` no longer exist in `Completeness.v`. The
 > Standard exact-match transition-success bridge is also now proved from
 > containment and Standard run invariants, so no transition-success field remains
-> in `AutomatonCompletenessCoreEvidence`. Use
+> in `AutomatonCompletenessCoreEvidence`. The MergeAndSplit transition now gates
+> merge edges with the closed-world `can_merge` predicate, and the former
+> same-state special-origin soundness fields were removed because they did not
+> survive antichain filtering. Use
 > `docs/verification/PROOF_COMPLETION_PLAN.md` and
 > `./scripts/verify-formal.sh audit-evidence-tsv` for the current gap list.
 

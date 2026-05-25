@@ -19,10 +19,11 @@
     - run_deterministic
 *)
 
-From Stdlib Require Import Arith Bool List Nat Lia.
+From Stdlib Require Import Arith Ascii Bool List Nat Lia.
 Import ListNotations.
 
 From Liblevenshtein.Core Require Import Core.Definitions.
+From Liblevenshtein.Core Require Import Core.MergeSplitDistance.
 From Liblevenshtein.Core Require Import Automaton.Position.
 From Liblevenshtein.Core Require Import Automaton.State.
 From Liblevenshtein.Core Require Import Automaton.Transition.
@@ -350,6 +351,28 @@ Proof.
   reflexivity.
 Qed.
 
+(** Regression examples for character-aware MergeAndSplit merge edges. *)
+Definition ms_demo_merge_left : Char :=
+  Ascii false false true true false false true false.
+
+Definition ms_demo_merge_right : Char :=
+  Ascii true false true false false false true false.
+
+Definition ms_demo_merge_target : Char :=
+  Ascii false true true false false false true false.
+
+Example merge_split_accepts_closed_world_merge :
+  automaton_accepts MergeAndSplit
+    [ms_demo_merge_left; ms_demo_merge_right] 1 [ms_demo_merge_target] = true.
+Proof. reflexivity. Qed.
+
+Example merge_split_rejects_unlisted_merge_at_one :
+  can_merge ms_demo_merge_left ms_demo_merge_right default_char = false /\
+  merge_split_distance [ms_demo_merge_left; ms_demo_merge_right] [default_char] = 2 /\
+  automaton_accepts MergeAndSplit
+    [ms_demo_merge_left; ms_demo_merge_right] 1 [default_char] = false.
+Proof. repeat split; reflexivity. Qed.
+
 (** Example: Same single-char word should be accepted.
     This would require expanding transition_state which involves
     complex case analysis. Instead, we rely on the soundness/completeness
@@ -360,4 +383,3 @@ Qed.
     2. Showing the final state contains a position (1, 0)
     3. Showing this position is final for query of length 1
 *)
-

@@ -286,6 +286,16 @@ supported by the current executable model:
   reachability, Standard non-special preservation, and the characteristic-vector
   spread/window lemmas. The core completeness record no longer contains a
   transition-success field.
+- `Automaton/Transition.v` and `Automaton/Acceptance.v`: repaired the
+  executable MergeAndSplit merge edge so it requires the closed-world
+  `can_merge` predicate for the consumed dictionary character. The checked
+  regression now rejects the unlisted two-to-one merge at threshold 1 while
+  preserving acceptance for the listed finite merge rule.
+- `Automaton/Soundness.v`: removed the false-shaped special-origin soundness
+  fields. Special-state origins are not guaranteed to remain in the same
+  antichain state after transition/filtering, so the remaining extended
+  soundness obligations are now direct algorithm-level trace soundness fields
+  for Transposition and MergeAndSplit.
 - `ASSUMPTIONS.tsv`: split the broad MSM metric candidate into narrow allowed
   assumptions for MSM identity, symmetry, and the non-empty-domain triangle
   theorem, all cited to Stefan et al. MSM reflexivity has since been retired
@@ -314,10 +324,12 @@ reference material and is not the memory-efficient target.
 
 2. Prove core automaton contracts.
 
-   Close the remaining core record by proving or further decomposing the active
-   `position_contained_from_run`, `transposition_completeness`, and
-   `merge_split_completeness` fields. Exact antichain inclusion has been removed
-   because it is false for the executable filtering model.
+   Close the remaining core records by proving or further decomposing the
+   active `automaton_sound_transposition_proof`,
+   `automaton_sound_merge_split_proof`, `position_contained_from_run`,
+   `transposition_completeness`, and `merge_split_completeness` fields. Exact
+   antichain inclusion and special-origin-in-same-state obligations have been
+   removed because they are false for the executable filtering model.
 
 3. Rebuild grammar NFA equivalence on traced runs.
 

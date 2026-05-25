@@ -24,6 +24,7 @@ From Stdlib Require Import Arith Bool List Nat Lia.
 Import ListNotations.
 
 From Liblevenshtein.Core Require Import Core.Definitions.
+From Liblevenshtein.Core Require Import Core.MergeSplitDistance.
 From Liblevenshtein.Core Require Import Automaton.Position.
 From Liblevenshtein.Core Require Import Automaton.Subsumption.
 From Liblevenshtein.Core Require Import Automaton.AntiChain.
@@ -127,12 +128,25 @@ Definition transition_position_transposition (p : Position) (cv : list bool) (mi
 
 (** * MergeAndSplit Algorithm Transitions *)
 
+(** Character-aware merge predicate at query index [i]. *)
+Definition merge_matches_at (query : list Char) (i : nat) (c : Char) : bool :=
+  match nth_error query i, nth_error query (S i) with
+  | Some c1, Some c2 => can_merge c1 c2 c
+  | _, _ => false
+  end.
+
 (** For MergeAndSplit, we add:
     - Merge: (i, e) → (i+2, e+1) - two query chars matched by one dict char
     - Enter split: (i, e) → (i, e+1)_special
     - Complete split: (i, e)_special → (i+1, e) - one query char matched by two dict chars
 
     Note: min_i is the minimum term_index used when creating the cv.
+
+    This cv-only helper is kept for standard-transition inclusion lemmas. It
+    deliberately omits the merge edge because a sound merge requires the
+    consumed dictionary character; [transition_state] uses
+    [transition_position_merge_split_checked] below for the executable
+    MergeAndSplit automaton.
 *)
 Definition transition_position_merge_split (p : Position) (cv : list bool) (min_i n qlen : nat) : list Position :=
   let i := term_index p in
@@ -146,18 +160,42 @@ Definition transition_position_merge_split (p : Position) (cv : list bool) (min_
       else []
     else []
   else
-    (* Normal position: standard transitions + merge + enter split *)
+    (* Normal position: standard transitions + enter split *)
     let standard := transition_position_standard p cv min_i n qlen in
-    let merge :=
-      if (i + 1 <? qlen) && (e <? n) then
-        (* Merge: two query chars to one dict char *)
-        [std_pos (S (S i)) (S e)]
-      else []
-    in
     let enter_split :=
       if e <? n then
         [special_pos i (S e)]  (* Enter split state *)
       else []
+    in standard ++ enter_split.
+
+(** Character-aware MergeAndSplit transition used by the executable automaton.
+    The merge edge is generated only when the closed-world [can_merge]
+    predicate holds for the two query characters and the consumed dictionary
+    character. *)
+Definition transition_position_merge_split_checked
+    (p : Position) (c : Char) (query : list Char)
+    (cv : list bool) (min_i n qlen : nat) : list Position :=
+  let i := term_index p in
+  let e := num_errors p in
+  let offset := i - min_i in
+  if is_special p then
+    (* Special position: complete split.  With the current bool-only
+       special state this covers the insertion+match case soundly; true
+       split completeness remains a separate evidence obligation. *)
+    if i <? qlen then
+      if cv_at cv offset then
+        [std_pos (S i) e]
+      else []
+    else []
+  else
+    let standard := transition_position_standard p cv min_i n qlen in
+    let merge :=
+      if ((i + 1 <? qlen) && (e <? n)) && merge_matches_at query i c then
+        [std_pos (S (S i)) (S e)]
+      else []
+    in
+    let enter_split :=
+      if e <? n then [special_pos i (S e)] else []
     in standard ++ merge ++ enter_split.
 
 (** * Unified Transition Function *)
@@ -228,7 +266,14 @@ Definition transition_state (alg : Algorithm) (s : State) (c : Char) (query : li
   let window := 2 * n + 6 in
   let cv := characteristic_vector c query min_i window in
   (* Compute transitions - pass min_i so each position uses correct cv offset *)
-  let trans_positions := transition_state_positions alg positions cv min_i n qlen in
+  let trans_positions :=
+    match alg with
+    | MergeAndSplit =>
+        flat_map
+          (fun p => transition_position_merge_split_checked p c query cv min_i n qlen)
+          positions
+    | _ => transition_state_positions alg positions cv min_i n qlen
+    end in
   (* Apply epsilon closure *)
   let closed_positions := epsilon_closure trans_positions n qlen in
   (* Build new state (antichain_insert handles subsumption) *)

@@ -61,12 +61,14 @@ From Liblevenshtein.Core Require Import Core.MetricProperties.
 (** Can characters c1, c2 merge to form target character d?
     Returns true for known merge pairs, false otherwise. *)
 Definition can_merge (c1 c2 d : Char) : bool :=
-  (* Common phonetic merges - extend as needed *)
+  (* Common phonetic merges - extend as needed.
+     The current demo rule is intentionally closed-world and uses explicit
+     ascii constructors rather than character notation. *)
   match c1, c2, d with
-  (* Ligatures *)
-  | Ascii false false true true false false true false,    (* 'a' = 97 *)
-    Ascii true false true false false false true false,    (* 'e' = 101 *)
-    Ascii false true true false false false true false     (* 'æ' approximation, using 'b' = 98 for demo *)
+  (* Demo ligature rule. *)
+  | Ascii false false true true false false true false,
+    Ascii true false true false false false true false,
+    Ascii false true true false false false true false
     => true
   (* Add more merge rules as needed *)
   | _, _, _ => false
