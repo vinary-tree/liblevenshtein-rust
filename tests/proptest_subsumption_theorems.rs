@@ -282,3 +282,69 @@ mod partial_order_properties {
         }
     }
 }
+
+// ============================================================================
+// THEOREM: completion-preservation (subsumption pruning is language-safe)
+// ============================================================================
+
+/// Subsumption justifies anti-chain pruning: a subsumed position may be
+/// discarded without losing any accepting completion. This is the TLA+
+/// `Subsumption` model's `CompletionPreservation` property. We validate it at
+/// two levels — the position-level domination that makes pruning safe, and the
+/// language-level effect that pruning preserves the accepted language exactly.
+#[cfg(test)]
+mod completion_preservation {
+    use super::*;
+    use liblevenshtein::distance::standard_distance;
+    use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
+
+    fn arb_ascii() -> impl Strategy<Value = String> {
+        prop::string::string_regex("[a-c]{0,8}").unwrap()
+    }
+
+    proptest! {
+        /// Position-level necessary condition: a subsuming position has strictly
+        /// fewer errors and stays within the offset spread its error budget can
+        /// cover. This is exactly what lets the subsumed position be discarded —
+        /// it is always re-reachable from the subsumer within the spare budget.
+        #[test]
+        fn subsumer_dominates_errors_and_offset(
+            (p1, p2, max_dist) in subsumable_positions()
+        ) {
+            prop_assume!(p1.is_non_final() == p2.is_non_final());
+            if subsumes(&p1, &p2, max_dist) {
+                prop_assert!(
+                    p1.errors() < p2.errors(),
+                    "subsumer must have strictly fewer errors: {:?} vs {:?}", p1, p2
+                );
+                let offset_spread = (p2.offset() - p1.offset()).unsigned_abs();
+                let error_budget = (p2.errors() - p1.errors()) as u32;
+                prop_assert!(
+                    offset_spread <= error_budget,
+                    "offset spread {} exceeds error budget {}", offset_spread, error_budget
+                );
+            }
+        }
+
+        /// Language-level completion-preservation: the generalized automaton —
+        /// which prunes subsumed positions from every state's anti-chain — accepts
+        /// a term iff it is within `max_distance` of the input. Equality with the
+        /// brute-force edit-distance oracle shows the pruning loses no accepting
+        /// completion (soundness and completeness of the pruned search).
+        #[test]
+        fn pruned_automaton_accepts_exactly_within_distance(
+            word in arb_ascii(),
+            input in arb_ascii(),
+            max_distance in 0u8..=3,
+        ) {
+            let automaton = GeneralizedAutomaton::new(max_distance);
+            let accepted = automaton.accepts(&word, &input);
+            let within = standard_distance(&word, &input) <= max_distance as usize;
+            prop_assert_eq!(
+                accepted, within,
+                "accepts({:?}, {:?}) = {} but (standard_distance <= {}) = {}",
+                word, input, accepted, max_distance, within
+            );
+        }
+    }
+}
