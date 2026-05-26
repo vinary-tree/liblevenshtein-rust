@@ -86,6 +86,8 @@ rocq/**/.Makefile.d
 
 # Rocq/Coq verification artifacts
 docs/verification/**/.lia.cache
+docs/verification/**/.csdp.cache
+docs/verification/**/trace
 docs/verification/**/*.vo
 docs/verification/**/*.vok
 docs/verification/**/*.vos

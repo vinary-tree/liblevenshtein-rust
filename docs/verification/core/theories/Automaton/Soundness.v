@@ -2302,6 +2302,99 @@ Qed.
 (** Transition preserves reachability - case analysis on transition type.
     Here we use a per-position characteristic vector: cv is created starting at
     term_index p, so min_i = term_index p and the offset = i - min_i = 0. *)
+Lemma position_reachable_delete_chain_match : forall query n dict_prefix c i e d,
+  position_reachable query n dict_prefix (std_pos i e) ->
+  i + d < length query ->
+  nth_error query (i + d) = Some c ->
+  e + d <= n ->
+  position_reachable query n (dict_prefix ++ [c])
+    (std_pos (S (i + d)) (e + d)).
+Proof.
+  intros query n dict_prefix c i e d.
+  revert i e.
+  induction d as [|d IH]; intros i e Hreach Hbound Hnth Herr.
+  - replace (i + 0) with i in * by lia.
+    replace (e + 0) with e by lia.
+    apply reach_match with (c := c); assumption.
+  - replace (i + S d) with (S i + d) in * by lia.
+    replace (S (i + S d)) with (S (S i + d)) by lia.
+    replace (e + S d) with (S e + d) by lia.
+    apply IH.
+    + apply reach_delete.
+      * exact Hreach.
+      * lia.
+      * lia.
+    + exact Hbound.
+    + exact Hnth.
+	    + lia.
+Qed.
+
+Lemma position_reachable_damerau_delete_chain_match : forall query n dict_prefix c i e d,
+  position_reachable_damerau query n dict_prefix (std_pos i e) ->
+  i + d < length query ->
+  nth_error query (i + d) = Some c ->
+  e + d <= n ->
+  position_reachable_damerau query n (dict_prefix ++ [c])
+    (std_pos (S (i + d)) (e + d)).
+Proof.
+  intros query n dict_prefix c i e d.
+  revert i e.
+  induction d as [|d IH]; intros i e Hreach Hbound Hnth Herr.
+  - replace (i + 0) with i in * by lia.
+    replace (e + 0) with e by lia.
+    apply reach_damerau_match with (c := c); assumption.
+  - replace (i + S d) with (S i + d) in * by lia.
+    replace (S (i + S d)) with (S (S i + d)) by lia.
+    replace (e + S d) with (S e + d) by lia.
+    apply IH.
+    + apply reach_damerau_delete.
+      * exact Hreach.
+      * lia.
+      * lia.
+    + exact Hbound.
+    + exact Hnth.
+    + lia.
+Qed.
+
+Lemma position_reachable_ms_delete_chain_match : forall query n dict_prefix c i e d,
+  position_reachable_merge_split query n dict_prefix (std_pos i e) ->
+  i + d < length query ->
+  nth_error query (i + d) = Some c ->
+  e + d <= n ->
+  position_reachable_merge_split query n (dict_prefix ++ [c])
+    (std_pos (S (i + d)) (e + d)).
+Proof.
+  intros query n dict_prefix c i e d.
+  revert i e.
+  induction d as [|d IH]; intros i e Hreach Hbound Hnth Herr.
+  - replace (i + 0) with i in * by lia.
+    replace (e + 0) with e by lia.
+    apply reach_ms_match with (c := c); assumption.
+  - replace (i + S d) with (S i + d) in * by lia.
+    replace (S (i + S d)) with (S (S i + d)) by lia.
+    replace (e + S d) with (S e + d) by lia.
+    apply IH.
+    + apply reach_ms_delete.
+      * exact Hreach.
+      * lia.
+      * lia.
+    + exact Hbound.
+    + exact Hnth.
+    + lia.
+Qed.
+
+Lemma cv_match_nth_error : forall c query i window j,
+  j < window ->
+  cv_at (characteristic_vector c query i window) j = true ->
+  nth_error query (i + j) = Some c.
+Proof.
+  intros c query i window j Hj Hcv.
+  unfold cv_at in Hcv.
+  rewrite char_vector_correct in Hcv by exact Hj.
+  apply char_matches_at_iff in Hcv.
+  destruct Hcv as [c' [Hnth Heq]]. subst c'. exact Hnth.
+Qed.
+
 Lemma transition_preserves_reachable_standard : forall query n dict_prefix c p p',
   position_reachable query n dict_prefix p ->
   is_special p = false ->
@@ -2309,58 +2402,115 @@ Lemma transition_preserves_reachable_standard : forall query n dict_prefix c p p
   position_reachable query n (dict_prefix ++ [c]) p'.
 Proof.
   intros query n dict_prefix c p p' Hreach Hspec Hin_trans.
+  destruct p as [i e s]. simpl in *.
+  subst s.
   unfold transition_position_standard in Hin_trans.
-  rewrite Hspec in Hin_trans.
+  simpl in Hin_trans.
   (* The cv is characteristic_vector c query (term_index p) (2*n+6) with min_i = term_index p.
      So offset = term_index p - term_index p = 0.
      The cv check at offset 0 tells us char_matches_at c query (term_index p). *)
-  set (cv := characteristic_vector c query (term_index p) (2 * n + 6)) in *.
+  set (cv := characteristic_vector c query i (2 * n + 6)) in *.
   (* offset = term_index p - term_index p simplifies to 0 *)
-  replace (term_index p - term_index p) with 0 in Hin_trans by lia.
+  replace (i - i) with 0 in Hin_trans by lia.
   apply in_app_or in Hin_trans.
   destruct Hin_trans as [Hin | Hin].
   - (* Match or Substitute - depends on cv_at *)
-    destruct (term_index p <? length query) eqn:Hlt.
+    destruct (i <? length query) eqn:Hlt.
     2: { simpl in Hin. contradiction. }
-    destruct (cv_at cv 0) eqn:Hcv.
-    + (* Match case *)
-      destruct Hin as [Heq | []]. subst p'.
-      destruct p as [i e s]. simpl in *.
-      subst s.  (* s = false from Hspec *)
-      apply reach_match with (c := c).
-      * exact Hreach.
-      * apply Nat.ltb_lt. exact Hlt.
-      * unfold cv_at in Hcv. unfold cv in Hcv.
-        rewrite char_vector_correct in Hcv by lia.
-        rewrite Nat.add_0_r in Hcv.
-        apply char_matches_at_iff in Hcv.
-        destruct Hcv as [c' [Hnth Heq]]. subst. exact Hnth.
-    + (* Substitute case *)
-      destruct (num_errors p <? n) eqn:He.
-      2: { simpl in Hin. contradiction. }
-      destruct Hin as [Heq | []]. subst p'.
-      destruct p as [i e s]. simpl in *.
-      subst s.  (* s = false from Hspec *)
-      destruct (nth_error query i) as [c'|] eqn:Hnth.
-      * apply reach_substitute with (c' := c').
+	    destruct (e <? n) eqn:He.
+	    + set (limit := Nat.min (n - e + 1) (length cv - 0)) in *.
+	      change (In p'
+	        match index_of_match cv 0 limit with
+	        | Some 0 => [std_pos (S i) e]
+	        | Some (S j0) =>
+	            [std_pos (S i) (S e); std_pos (i + S (S j0)) (e + S j0)]
+	        | None => [std_pos (S i) (S e)]
+	        end) in Hin.
+	      destruct (index_of_match cv 0 limit) as [[|j]|] eqn:Hidx;
+	        simpl in Hin.
+	      * destruct Hin as [Heq | []]. subst p'.
+	        apply reach_match with (c := c).
         -- exact Hreach.
         -- apply Nat.ltb_lt. exact Hlt.
-        -- exact Hnth.
-        -- intro Heq. subst c'.
-           unfold cv_at in Hcv. unfold cv in Hcv.
-           rewrite char_vector_correct in Hcv by lia.
-           rewrite Nat.add_0_r in Hcv.
-           unfold char_matches_at in Hcv. rewrite Hnth in Hcv.
-           rewrite char_eq_refl in Hcv. discriminate.
-        -- apply Nat.ltb_lt. exact He.
-      * apply nth_error_None in Hnth.
-        apply Nat.ltb_lt in Hlt. lia.
+	        -- pose proof (index_of_match_zero_cv_at cv 0 limit Hidx) as Hcv0.
+	           unfold cv in Hcv0.
+	           pose proof (cv_match_nth_error c query i (2 * n + 6) 0 ltac:(lia) Hcv0)
+	             as Hnth0.
+	           rewrite Nat.add_0_r in Hnth0.
+	           exact Hnth0.
+	      * destruct Hin as [Heq | [Heq | []]].
+	        -- subst p'.
+	           pose proof (index_of_match_successor_cv_at_false cv 0 limit j Hidx)
+	             as Hcv0_false.
+           destruct (nth_error query i) as [c'|] eqn:Hnth.
+           ++ apply reach_substitute with (c' := c').
+              ** exact Hreach.
+              ** apply Nat.ltb_lt. exact Hlt.
+              ** exact Hnth.
+              ** intro Heq. subst c'.
+                 unfold cv in Hcv0_false.
+                 assert (Hcv0_true : cv_at (characteristic_vector c query i (2 * n + 6)) 0 = true).
+                 { unfold cv_at.
+                   rewrite char_vector_correct by lia.
+                   rewrite Nat.add_0_r.
+                   unfold char_matches_at. rewrite Hnth. apply char_eq_refl. }
+                 rewrite Hcv0_true in Hcv0_false. discriminate.
+              ** apply Nat.ltb_lt. exact He.
+           ++ apply nth_error_None in Hnth.
+              apply Nat.ltb_lt in Hlt. lia.
+	        -- subst p'.
+	           pose proof (index_of_match_lt_limit cv 0 limit (S j) Hidx) as Hj_limit.
+           assert (Hj_window : S j < 2 * n + 6).
+           { unfold limit, cv in Hj_limit. rewrite char_vector_length in Hj_limit. lia. }
+           assert (Hj_err : e + S j <= n).
+           { unfold limit, cv in Hj_limit. rewrite char_vector_length in Hj_limit.
+             apply Nat.ltb_lt in He. lia. }
+           assert (Hnth : nth_error query (i + S j) = Some c).
+           { pose proof (index_of_match_some_cv_at cv 0 limit (S j) Hidx) as Hcvj.
+             unfold cv in Hcvj.
+             replace (0 + S j) with (S j) in Hcvj by lia.
+             apply cv_match_nth_error with (window := 2 * n + 6); assumption. }
+	           assert (Hj_query : i + S j < length query).
+	           { apply nth_error_Some. rewrite Hnth. discriminate. }
+	           replace (i + S (S j)) with (S (i + S j)) by lia.
+	           exact (position_reachable_delete_chain_match
+	                    query n dict_prefix c i e (S j) Hreach Hj_query Hnth Hj_err).
+	      * destruct Hin as [Heq | []]. subst p'.
+	        assert (Hlimit_pos : 0 < limit).
+        { unfold limit, cv. rewrite char_vector_length.
+          apply Nat.ltb_lt in He. lia. }
+        pose proof (index_of_match_none_head_false cv 0 limit Hlimit_pos Hidx)
+          as Hcv0_false.
+        destruct (nth_error query i) as [c'|] eqn:Hnth.
+        -- apply reach_substitute with (c' := c').
+           ++ exact Hreach.
+           ++ apply Nat.ltb_lt. exact Hlt.
+           ++ exact Hnth.
+           ++ intro Heq. subst c'.
+              unfold cv in Hcv0_false.
+              assert (Hcv0_true : cv_at (characteristic_vector c query i (2 * n + 6)) 0 = true).
+              { unfold cv_at.
+                rewrite char_vector_correct by lia.
+                rewrite Nat.add_0_r.
+                unfold char_matches_at. rewrite Hnth. apply char_eq_refl. }
+              rewrite Hcv0_true in Hcv0_false. discriminate.
+           ++ apply Nat.ltb_lt. exact He.
+        -- apply nth_error_None in Hnth.
+           apply Nat.ltb_lt in Hlt. lia.
+	    + change (In p' (if cv_at cv 0 then [std_pos (S i) e] else [])) in Hin.
+	      destruct (cv_at cv 0) eqn:Hcv.
+	      * destruct Hin as [Heq | []]. subst p'.
+	        apply reach_match with (c := c).
+        -- exact Hreach.
+        -- apply Nat.ltb_lt. exact Hlt.
+        -- unfold cv in Hcv.
+           replace i with (i + 0) by lia.
+           apply cv_match_nth_error with (window := 2 * n + 6); [lia | exact Hcv].
+      * simpl in Hin. contradiction.
   - (* Insert case *)
-    destruct (num_errors p <? n) eqn:He.
+    destruct (e <? n) eqn:He.
     2: { simpl in Hin. contradiction. }
-    destruct Hin as [Heq | []]. subst p'.
-    destruct p as [i e s]. simpl in *.
-    subst s.  (* s = false from Hspec *)
+	    destruct Hin as [Heq | []]. subst p'.
     apply reach_insert.
     * exact Hreach.
     * apply Nat.ltb_lt. exact He.
@@ -2609,9 +2759,15 @@ Proof.
     destruct Hin as [Hin | Hin].
     + (* Match/Substitute case *)
       destruct (term_index p <? qlen) eqn:Hlt; simpl in Hin; try contradiction.
-      destruct (cv_at cv (term_index p - min_i)) eqn:Hcv.
-      * destruct Hin as [Heq | []]. subst. unfold std_pos. simpl. reflexivity.
-      * destruct (num_errors p <? n) eqn:He; simpl in Hin; try contradiction.
+      destruct (num_errors p <? n) eqn:He.
+      * destruct (index_of_match cv (term_index p - min_i)
+            (Nat.min (n - num_errors p + 1)
+               (length cv - (term_index p - min_i)))) as [[|j]|] eqn:Hidx;
+          simpl in Hin.
+        -- destruct Hin as [Heq | []]. subst. unfold std_pos. simpl. reflexivity.
+        -- destruct Hin as [Heq | [Heq | []]]; subst; unfold std_pos; simpl; reflexivity.
+        -- destruct Hin as [Heq | []]. subst. unfold std_pos. simpl. reflexivity.
+      * destruct (cv_at cv (term_index p - min_i)) eqn:Hcv; simpl in Hin; try contradiction.
         destruct Hin as [Heq | []]. subst. unfold std_pos. simpl. reflexivity.
     + (* Insert case *)
       destruct (num_errors p <? n) eqn:He; simpl in Hin; try contradiction.
@@ -3320,109 +3476,132 @@ Proof.
   unfold transition_position_standard in Hin_p'.
   destruct (is_special p) eqn:Hspec'; try contradiction.
   set (offset := term_index p - min_i) in *.
-  apply in_app_or in Hin_p'.
-  destruct Hin_p' as [Hin_match | Hin_ins].
-  - (* Match or Substitute case *)
-    destruct (term_index p <? query_length s) eqn:Hlt; try (simpl in Hin_match; contradiction).
-    apply Nat.ltb_lt in Hlt. rewrite Hqlen in Hlt.
-    destruct (cv_at cv offset) eqn:Hcv.
-    + (* Match case - cv indicates character matches at query[term_index p] *)
-      simpl in Hin_match. destruct Hin_match as [Heq | []]. subst.
-      (* cv_at cv offset = true means char_matches_at c query (min_i + offset) = true
-         = char_matches_at c query (term_index p) = true (since offset = term_index p - min_i)
-         So c matches query[term_index p]. Use reach_match. *)
-      assert (Hp : p = std_pos (term_index p) (num_errors p)).
-      { destruct p as [ti ne sp].
-        unfold is_special in Hspec'. simpl in Hspec'.
-        destruct sp; try discriminate.
-        unfold std_pos. simpl. reflexivity. }
-      rewrite Hp in Hreach.
-      apply reach_match with (c := c).
-      * exact Hreach.
-      * exact Hlt.
-      * (* Need: nth_error query (term_index p) = Some c *)
-        (* From Hcv: cv_at cv offset = true *)
-        (* Since offset = term_index p - min_i and we have min_i <= term_index p for positions in state *)
-        (* Step 1: min_i <= term_index p *)
-        assert (Hmin_le : min_i <= term_index p).
-        { apply min_i_le_term_index. exact Hin_p. }
-        (* Step 2: offset < 2*n+2 (window size) *)
-        assert (Hoffset_bound : offset < 2 * n + 2).
-        { unfold offset. apply window_sufficient.
-          - exact Hmin_le.
-          - (* Use the spread bound lemma *)
-            apply term_index_minus_min_bounded with
-              (query := query) (dict_prefix := dict_prefix)
-              (positions := Automaton.State.positions s).
-            + intros p0 Hin0. apply Hall in Hin0. destruct Hin0 as [H _]. exact H.
-            + intros p0 Hin0. apply Hall in Hin0. destruct Hin0 as [_ H]. exact H.
-            + rewrite Hqlen. exact Hlt.  (* term_index p < length query = query_length s = init *)
-            + exact Hin_p.
-            + intro Hcontra. rewrite Hcontra in Hin_p. contradiction. }
-        (* Step 3: Use cv_at_char_matches *)
-        assert (Hcv_matches : cv_at cv offset = char_matches_at c query (min_i + offset)).
-        { apply cv_at_char_matches. lia. }
-        (* Step 4: Simplify min_i + offset = term_index p *)
-        assert (Hsum : min_i + offset = term_index p).
-        { unfold offset. lia. }
-        rewrite Hsum in Hcv_matches.
-        (* Step 5: char_matches_at c query (term_index p) = true *)
-        rewrite Hcv_matches in Hcv.
-        (* Step 6: Use char_matches_at_iff *)
-        apply char_matches_at_iff in Hcv.
-        destruct Hcv as [c' [Hnth Heq]].
-        subst c'. exact Hnth.
-    + (* Substitute case - cv indicates no match at query[term_index p] *)
-      destruct (num_errors p <? n) eqn:Herr; simpl in Hin_match; try contradiction.
-      destruct Hin_match as [Heq | []]. subst.
-      apply Nat.ltb_lt in Herr.
-      (* cv_at cv offset = false means char_matches_at c query (term_index p) = false
-         So c ≠ query[term_index p]. Use reach_substitute. *)
-      assert (Hp : p = std_pos (term_index p) (num_errors p)).
-      { destruct p as [ti ne sp].
-        unfold is_special in Hspec'. simpl in Hspec'.
-        destruct sp; try discriminate.
-        unfold std_pos. simpl. reflexivity. }
-      destruct (nth_error query (term_index p)) as [c'|] eqn:Hnth.
-      * apply reach_substitute with (c' := c').
-        -- rewrite Hp in Hreach. exact Hreach.
-        -- exact Hlt.
-        -- exact Hnth.
-        -- (* Need: c ≠ c' *)
-           intro Heq. subst c'.
-           (* cv_at cv offset = false but nth_error query (term_index p) = Some c
-              means char_matches_at c query (term_index p) should be true - contradiction *)
-           (* Step 1: min_i <= term_index p *)
-           assert (Hmin_le : min_i <= term_index p).
-           { apply min_i_le_term_index. exact Hin_p. }
-           (* Step 2: offset < 2*n+2 *)
-           assert (Hoffset_bound : offset < 2 * n + 2).
-           { unfold offset. apply window_sufficient.
-             - exact Hmin_le.
-             - (* Use the spread bound lemma *)
-               apply term_index_minus_min_bounded with
-                 (query := query) (dict_prefix := dict_prefix)
-                 (positions := Automaton.State.positions s).
-               + intros p0 Hin0. apply Hall in Hin0. destruct Hin0 as [H _]. exact H.
-               + intros p0 Hin0. apply Hall in Hin0. destruct Hin0 as [_ H]. exact H.
-               + rewrite Hqlen. exact Hlt.  (* term_index p < length query = query_length s = init *)
-               + exact Hin_p.
-               + intro Hcontra. rewrite Hcontra in Hin_p. contradiction. }
-           (* Step 3: cv_at cv offset = char_matches_at c query (min_i + offset) *)
-           assert (Hcv_matches : cv_at cv offset = char_matches_at c query (min_i + offset)).
-           { apply cv_at_char_matches. lia. }
-           (* Step 4: min_i + offset = term_index p *)
-           assert (Hsum : min_i + offset = term_index p).
-           { unfold offset. lia. }
-           rewrite Hsum in Hcv_matches.
-           (* Step 5: char_matches_at c query (term_index p) should be true *)
-           assert (Hmatch_true : char_matches_at c query (term_index p) = true).
-           { unfold char_matches_at. rewrite Hnth. apply char_eq_refl. }
-           (* Step 6: But cv_at cv offset = false, so we have false = true - contradiction *)
-           rewrite Hcv_matches in Hcv. rewrite Hmatch_true in Hcv. discriminate.
-        -- exact Herr.
-      * (* nth_error query (term_index p) = None - contradiction with Hlt *)
-        apply nth_error_None in Hnth. lia.
+	  apply in_app_or in Hin_p'.
+	  destruct Hin_p' as [Hin_match | Hin_ins].
+	  - (* Match or Substitute case *)
+	    destruct (term_index p <? query_length s) eqn:Hlt; try (simpl in Hin_match; contradiction).
+	    apply Nat.ltb_lt in Hlt. rewrite Hqlen in Hlt.
+	    assert (Hp : p = std_pos (term_index p) (num_errors p)).
+	    { destruct p as [ti ne sp].
+	      unfold is_special in Hspec'. simpl in Hspec'.
+	      destruct sp; try discriminate.
+	      unfold std_pos. simpl. reflexivity. }
+	    assert (Hmin_le : min_i <= term_index p).
+	    { apply min_i_le_term_index. exact Hin_p. }
+	    assert (Hoffset_bound : offset < 2 * n + 2).
+	    { unfold offset. apply window_sufficient.
+	      - exact Hmin_le.
+	      - apply term_index_minus_min_bounded with
+	          (query := query) (dict_prefix := dict_prefix)
+	          (positions := Automaton.State.positions s).
+	        + intros p0 Hin0. apply Hall in Hin0. destruct Hin0 as [H _]. exact H.
+	        + intros p0 Hin0. apply Hall in Hin0. destruct Hin0 as [_ H]. exact H.
+	        + rewrite Hqlen. exact Hlt.
+	        + exact Hin_p.
+	        + intro Hcontra. rewrite Hcontra in Hin_p. contradiction. }
+	    destruct (num_errors p <? n) eqn:Herr.
+	    + apply Nat.ltb_lt in Herr.
+	      set (limit := Nat.min (n - num_errors p + 1) (length cv - offset)) in *.
+	      change (In p'
+	        match index_of_match cv offset limit with
+	        | Some 0 => [std_pos (S (term_index p)) (num_errors p)]
+	        | Some (S j0) =>
+	            [std_pos (S (term_index p)) (S (num_errors p));
+	             std_pos (term_index p + S (S j0)) (num_errors p + S j0)]
+	        | None => [std_pos (S (term_index p)) (S (num_errors p))]
+	        end) in Hin_match.
+	      destruct (index_of_match cv offset limit) as [[|j]|] eqn:Hidx;
+	        simpl in Hin_match.
+	      * destruct Hin_match as [Heq | []]. subst p'.
+	        rewrite Hp in Hreach.
+	        apply reach_match with (c := c).
+	        -- exact Hreach.
+	        -- exact Hlt.
+	        -- pose proof (index_of_match_zero_cv_at cv offset limit Hidx) as Hcv0.
+	           pose proof (cv_at_true_in_bounds cv offset Hcv0) as Hwin.
+	           unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	           unfold cv in Hcv0.
+	           pose proof (cv_match_nth_error c query min_i (2 * n + 6) offset Hwin Hcv0)
+	             as Hnth0.
+	           replace (min_i + offset) with (term_index p) in Hnth0 by (unfold offset; lia).
+	           exact Hnth0.
+	      * destruct Hin_match as [Heq | [Heq | []]].
+	        -- subst p'.
+	           pose proof (index_of_match_successor_cv_at_false cv offset limit j Hidx)
+	             as Hcv_false.
+	           destruct (nth_error query (term_index p)) as [c'|] eqn:Hnth.
+	           ++ apply reach_substitute with (c' := c').
+	              ** rewrite Hp in Hreach. exact Hreach.
+	              ** exact Hlt.
+	              ** exact Hnth.
+	              ** intro Heq. subst c'.
+	                 assert (Hcv_true : cv_at cv offset = true).
+	                 { unfold cv, cv_at.
+	                   rewrite char_vector_correct by lia.
+	                   replace (min_i + offset) with (term_index p) by (unfold offset; lia).
+	                   unfold char_matches_at. rewrite Hnth. apply char_eq_refl. }
+	                 rewrite Hcv_true in Hcv_false. discriminate.
+	              ** exact Herr.
+	           ++ apply nth_error_None in Hnth. lia.
+	        -- subst p'.
+	           pose proof (index_of_match_lt_limit cv offset limit (S j) Hidx)
+	             as Hj_limit.
+	           assert (Hj_err : num_errors p + S j <= n).
+	           { unfold limit in Hj_limit. lia. }
+	           assert (Hnth : nth_error query (term_index p + S j) = Some c).
+	           { pose proof (index_of_match_some_cv_at cv offset limit (S j) Hidx)
+	               as Hcvj.
+	             pose proof (cv_at_true_in_bounds cv (offset + S j) Hcvj)
+	               as Hwin.
+	             unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	             unfold cv in Hcvj.
+	             pose proof (cv_match_nth_error c query min_i (2 * n + 6)
+	                          (offset + S j) Hwin Hcvj) as Hnthj.
+	             replace (min_i + (offset + S j)) with (term_index p + S j) in Hnthj
+	               by (unfold offset; lia).
+	             exact Hnthj. }
+	           assert (Hj_query : term_index p + S j < length query).
+	           { apply nth_error_Some. rewrite Hnth. discriminate. }
+	           rewrite Hp in Hreach.
+	           replace (term_index p + S (S j)) with (S (term_index p + S j)) by lia.
+	           exact (position_reachable_delete_chain_match
+	                    query n dict_prefix c (term_index p) (num_errors p) (S j)
+	                    Hreach Hj_query Hnth Hj_err).
+	      * destruct Hin_match as [Heq | []]. subst p'.
+	        assert (Hlimit_pos : 0 < limit).
+	        { unfold limit, cv. rewrite char_vector_length. lia. }
+	        pose proof (index_of_match_none_head_false cv offset limit Hlimit_pos Hidx)
+	          as Hcv_false.
+	        destruct (nth_error query (term_index p)) as [c'|] eqn:Hnth.
+	        -- apply reach_substitute with (c' := c').
+	           ++ rewrite Hp in Hreach. exact Hreach.
+	           ++ exact Hlt.
+	           ++ exact Hnth.
+	           ++ intro Heq. subst c'.
+	              assert (Hcv_true : cv_at cv offset = true).
+	              { unfold cv, cv_at.
+	                rewrite char_vector_correct by lia.
+	                replace (min_i + offset) with (term_index p) by (unfold offset; lia).
+	                unfold char_matches_at. rewrite Hnth. apply char_eq_refl. }
+	              rewrite Hcv_true in Hcv_false. discriminate.
+	           ++ exact Herr.
+	        -- apply nth_error_None in Hnth. lia.
+	    + change (In p' (if cv_at cv offset then
+	                       [std_pos (S (term_index p)) (num_errors p)]
+	                     else [])) in Hin_match.
+	      destruct (cv_at cv offset) eqn:Hcv; simpl in Hin_match; try contradiction.
+	      destruct Hin_match as [Heq | []]. subst p'.
+	      rewrite Hp in Hreach.
+	      apply reach_match with (c := c).
+	      * exact Hreach.
+	      * exact Hlt.
+	      * pose proof (cv_at_true_in_bounds cv offset Hcv) as Hwin.
+	        unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	        unfold cv in Hcv.
+	        pose proof (cv_match_nth_error c query min_i (2 * n + 6) offset Hwin Hcv)
+	          as Hnth0.
+	        replace (min_i + offset) with (term_index p) in Hnth0 by (unfold offset; lia).
+	        exact Hnth0.
   - (* Insert case *)
     destruct (num_errors p <? n) eqn:Herr; simpl in Hin_ins; try contradiction.
     destruct Hin_ins as [Heq | []]. subst.
@@ -3642,20 +3821,8 @@ Lemma transition_position_standard_non_special : forall p cv min_i n qlen p',
   is_special p' = false.
 Proof.
   intros p cv min_i n qlen p' Hin.
-  unfold transition_position_standard in Hin.
-  destruct (is_special p) eqn:Hspec.
-  - simpl in Hin. contradiction.
-  - apply in_app_or in Hin.
-    destruct Hin as [Hin | Hin].
-    + (* Match/Substitute case *)
-      destruct (term_index p <? qlen) eqn:Hlt; simpl in Hin; try contradiction.
-      destruct (cv_at cv (term_index p - min_i)) eqn:Hcv.
-      * destruct Hin as [Heq | []]. subst. unfold std_pos. simpl. reflexivity.
-      * destruct (num_errors p <? n) eqn:He; simpl in Hin; try contradiction.
-        destruct Hin as [Heq | []]. subst. unfold std_pos. simpl. reflexivity.
-    + (* Insert case *)
-      destruct (num_errors p <? n) eqn:He; simpl in Hin; try contradiction.
-      destruct Hin as [Heq | []]. subst. unfold std_pos. simpl. reflexivity.
+  apply transition_position_standard_non_special' in Hin.
+  exact Hin.
 Qed.
 
 (** Transition state positions are non-special for Standard *)
@@ -3965,89 +4132,134 @@ Proof.
   - (* Non-special position: standard transitions + enter special *)
     apply in_app_or in Hin_p'.
     destruct Hin_p' as [Hin_std | Hin_enter].
-    + (* Standard transition - reuse standard logic but with Damerau reachability *)
-      (* The standard transitions (match/substitute/insert) correspond to
-         reach_damerau_match/substitute/insert *)
-      unfold transition_position_standard in Hin_std.
-      rewrite Hspec in Hin_std.
-      apply in_app_or in Hin_std.
-      destruct Hin_std as [Hin_ms | Hin_ins].
-      * (* Match or Substitute case *)
-        destruct (term_index p <? query_length s) eqn:Hlt; try (simpl in Hin_ms; contradiction).
-        apply Nat.ltb_lt in Hlt. rewrite Hqlen in Hlt.
-        destruct (cv_at cv offset) eqn:Hcv.
-        -- (* Match case *)
-           (* Need to fold abbreviations before rewriting *)
-           fold offset in Hin_ms.
-           rewrite Hcv in Hin_ms. simpl in Hin_ms. destruct Hin_ms as [Heq | []]. subst.
-           assert (Hp : p = std_pos (term_index p) (num_errors p)).
-           { destruct p as [ti ne sp].
-             unfold is_special in Hspec. simpl in Hspec.
-             destruct sp; try discriminate.
-             unfold std_pos. simpl. reflexivity. }
-           rewrite Hp in Hreach.
-           (* Need: nth_error query (term_index p) = Some c *)
-           assert (Hmin_le : min_i <= term_index p).
-           { apply min_i_le_term_index. exact Hin_p. }
-           (* Derive offset bound from the fact that cv_at returned true *)
-           assert (Hoffset_bound : offset < 2 * n + 6).
-           { pose proof (cv_at_true_in_bounds cv offset Hcv) as Hbound.
-             unfold cv in Hbound. rewrite char_vector_length in Hbound.
-             exact Hbound. }
-           assert (Hcv_matches : cv_at cv offset = char_matches_at c query (min_i + offset)).
-           { apply cv_at_char_matches. exact Hoffset_bound. }
-           assert (Hsum : min_i + offset = term_index p).
-           { unfold offset. lia. }
-           rewrite Hsum in Hcv_matches.
-           rewrite Hcv_matches in Hcv.
-           apply char_matches_at_iff in Hcv.
-           destruct Hcv as [c' [Hnth Heq']]. subst c'.
-           apply reach_damerau_match with (c := c).
-           ++ exact Hreach.
-           ++ exact Hlt.
-           ++ exact Hnth.
-        -- (* Substitute case *)
-           fold offset in Hin_ms.
-           rewrite Hcv in Hin_ms. simpl in Hin_ms.
-           destruct (num_errors p <? n) eqn:Herr; simpl in Hin_ms; try contradiction.
-           destruct Hin_ms as [Heq | []]. subst.
-           apply Nat.ltb_lt in Herr.
-           assert (Hp : p = std_pos (term_index p) (num_errors p)).
-           { destruct p as [ti ne sp].
-             unfold is_special in Hspec. simpl in Hspec.
-             destruct sp; try discriminate.
-             unfold std_pos. simpl. reflexivity. }
-           rewrite Hp in Hreach.
-           destruct (nth_error query (term_index p)) as [c'|] eqn:Hnth.
-           ++ apply reach_damerau_substitute with (c' := c').
-              ** exact Hreach.
-              ** exact Hlt.
-              ** exact Hnth.
-              ** (* Need: c ≠ c' *)
-                 intro Heq. subst c'.
-                 assert (Hmin_le : min_i <= term_index p).
-                 { apply min_i_le_term_index. exact Hin_p. }
-                 (* Derive offset bound using Damerau spread lemma *)
-                 assert (Hoffset_bound : offset < 2 * n + 6).
-                 { unfold offset. apply window_sufficient_damerau.
-                   - exact Hmin_le.
-                   - apply term_index_minus_min_bounded_damerau with
-                       (query := query) (dict_prefix := dict_prefix)
-                       (positions := Automaton.State.positions s).
-                     + exact Hall.
-                     + rewrite Hqlen. exact Hlt.
-                     + exact Hin_p.
-                     + intro Hcontra. rewrite Hcontra in Hin_p. contradiction. }
-                 assert (Hcv_matches : cv_at cv offset = char_matches_at c query (min_i + offset)).
-                 { apply cv_at_char_matches. exact Hoffset_bound. }
-                 assert (Hsum : min_i + offset = term_index p).
-                 { unfold offset. lia. }
-                 rewrite Hsum in Hcv_matches.
-                 assert (Hmatch_true : char_matches_at c query (term_index p) = true).
-                 { unfold char_matches_at. rewrite Hnth. apply char_eq_refl. }
-                 rewrite Hcv_matches in Hcv. rewrite Hmatch_true in Hcv. discriminate.
-              ** exact Herr.
-           ++ apply nth_error_None in Hnth. lia.
+	    + (* Standard transition - reuse standard logic but with Damerau reachability *)
+	      unfold transition_position_standard in Hin_std.
+	      rewrite Hspec in Hin_std.
+	      apply in_app_or in Hin_std.
+	      destruct Hin_std as [Hin_ms | Hin_ins].
+	      * (* Match or Substitute case *)
+	        destruct (term_index p <? query_length s) eqn:Hlt; try (simpl in Hin_ms; contradiction).
+	        apply Nat.ltb_lt in Hlt. rewrite Hqlen in Hlt.
+	        assert (Hp : p = std_pos (term_index p) (num_errors p)).
+	        { destruct p as [ti ne sp].
+	          unfold is_special in Hspec. simpl in Hspec.
+	          destruct sp; try discriminate.
+	          unfold std_pos. simpl. reflexivity. }
+	        assert (Hmin_le : min_i <= term_index p).
+	        { apply min_i_le_term_index. exact Hin_p. }
+	        assert (Hoffset_bound : offset < 2 * n + 6).
+	        { unfold offset. apply window_sufficient_damerau.
+	          - exact Hmin_le.
+	          - apply term_index_minus_min_bounded_damerau with
+	              (query := query) (dict_prefix := dict_prefix)
+	              (positions := Automaton.State.positions s).
+	            + exact Hall.
+	            + rewrite Hqlen. exact Hlt.
+	            + exact Hin_p.
+	            + intro Hcontra. rewrite Hcontra in Hin_p. contradiction. }
+	        destruct (num_errors p <? n) eqn:Herr.
+	        -- apply Nat.ltb_lt in Herr.
+	           set (limit := Nat.min (n - num_errors p + 1) (length cv - offset)) in *.
+	           change (In p'
+	             match index_of_match cv offset limit with
+	             | Some 0 => [std_pos (S (term_index p)) (num_errors p)]
+	             | Some (S j0) =>
+	                 [std_pos (S (term_index p)) (S (num_errors p));
+	                  std_pos (term_index p + S (S j0)) (num_errors p + S j0)]
+	             | None => [std_pos (S (term_index p)) (S (num_errors p))]
+	             end) in Hin_ms.
+	           destruct (index_of_match cv offset limit) as [[|j]|] eqn:Hidx;
+	             simpl in Hin_ms.
+	           ++ destruct Hin_ms as [Heq | []]. subst p'.
+	              rewrite Hp in Hreach.
+	              apply reach_damerau_match with (c := c).
+	              ** exact Hreach.
+	              ** exact Hlt.
+	              ** pose proof (index_of_match_zero_cv_at cv offset limit Hidx) as Hcv0.
+	                 pose proof (cv_at_true_in_bounds cv offset Hcv0) as Hwin.
+	                 unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	                 unfold cv in Hcv0.
+	                 pose proof (cv_match_nth_error c query min_i (2 * n + 6) offset Hwin Hcv0)
+	                   as Hnth0.
+	                 replace (min_i + offset) with (term_index p) in Hnth0 by (unfold offset; lia).
+	                 exact Hnth0.
+	           ++ destruct Hin_ms as [Heq | [Heq | []]].
+	              ** subst p'.
+	                 pose proof (index_of_match_successor_cv_at_false cv offset limit j Hidx)
+	                   as Hcv_false.
+	                 destruct (nth_error query (term_index p)) as [c'|] eqn:Hnth.
+	                 --- apply reach_damerau_substitute with (c' := c').
+	                     +++ rewrite Hp in Hreach. exact Hreach.
+	                     +++ exact Hlt.
+	                     +++ exact Hnth.
+	                     +++ intro Heq. subst c'.
+	                         assert (Hcv_true : cv_at cv offset = true).
+	                         { unfold cv, cv_at.
+	                           rewrite char_vector_correct by exact Hoffset_bound.
+	                           replace (min_i + offset) with (term_index p) by (unfold offset; lia).
+	                           unfold char_matches_at. rewrite Hnth. apply char_eq_refl. }
+	                         rewrite Hcv_true in Hcv_false. discriminate.
+	                     +++ exact Herr.
+	                 --- apply nth_error_None in Hnth. lia.
+	              ** subst p'.
+	                 pose proof (index_of_match_lt_limit cv offset limit (S j) Hidx)
+	                   as Hj_limit.
+	                 assert (Hj_err : num_errors p + S j <= n).
+	                 { unfold limit in Hj_limit. lia. }
+	                 assert (Hnth : nth_error query (term_index p + S j) = Some c).
+	                 { pose proof (index_of_match_some_cv_at cv offset limit (S j) Hidx)
+	                     as Hcvj.
+	                   pose proof (cv_at_true_in_bounds cv (offset + S j) Hcvj)
+	                     as Hwin.
+	                   unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	                   unfold cv in Hcvj.
+	                   pose proof (cv_match_nth_error c query min_i (2 * n + 6)
+	                                (offset + S j) Hwin Hcvj) as Hnthj.
+	                   replace (min_i + (offset + S j)) with (term_index p + S j) in Hnthj
+	                     by (unfold offset; lia).
+	                   exact Hnthj. }
+	                 assert (Hj_query : term_index p + S j < length query).
+	                 { apply nth_error_Some. rewrite Hnth. discriminate. }
+	                 rewrite Hp in Hreach.
+	                 replace (term_index p + S (S j)) with (S (term_index p + S j)) by lia.
+	                 exact (position_reachable_damerau_delete_chain_match
+	                          query n dict_prefix c (term_index p) (num_errors p) (S j)
+	                          Hreach Hj_query Hnth Hj_err).
+	           ++ destruct Hin_ms as [Heq | []]. subst p'.
+	              assert (Hlimit_pos : 0 < limit).
+	              { unfold limit, cv. rewrite char_vector_length. lia. }
+	              pose proof (index_of_match_none_head_false cv offset limit Hlimit_pos Hidx)
+	                as Hcv_false.
+	              destruct (nth_error query (term_index p)) as [c'|] eqn:Hnth.
+	              ** apply reach_damerau_substitute with (c' := c').
+	                 --- rewrite Hp in Hreach. exact Hreach.
+	                 --- exact Hlt.
+	                 --- exact Hnth.
+	                 --- intro Heq. subst c'.
+	                     assert (Hcv_true : cv_at cv offset = true).
+	                     { unfold cv, cv_at.
+	                       rewrite char_vector_correct by exact Hoffset_bound.
+	                       replace (min_i + offset) with (term_index p) by (unfold offset; lia).
+	                       unfold char_matches_at. rewrite Hnth. apply char_eq_refl. }
+	                     rewrite Hcv_true in Hcv_false. discriminate.
+	                 --- exact Herr.
+	              ** apply nth_error_None in Hnth. lia.
+	        -- change (In p' (if cv_at cv offset then
+	                            [std_pos (S (term_index p)) (num_errors p)]
+	                          else [])) in Hin_ms.
+	           destruct (cv_at cv offset) eqn:Hcv; simpl in Hin_ms; try contradiction.
+	           destruct Hin_ms as [Heq | []]. subst p'.
+	           rewrite Hp in Hreach.
+	           apply reach_damerau_match with (c := c).
+	           ++ exact Hreach.
+	           ++ exact Hlt.
+	           ++ pose proof (cv_at_true_in_bounds cv offset Hcv) as Hwin.
+	              unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	              unfold cv in Hcv.
+	              pose proof (cv_match_nth_error c query min_i (2 * n + 6) offset Hwin Hcv)
+	                as Hnth0.
+	              replace (min_i + offset) with (term_index p) in Hnth0 by (unfold offset; lia).
+	              exact Hnth0.
       * (* Insert case *)
         destruct (num_errors p <? n) eqn:Herr; simpl in Hin_ins; try contradiction.
         destruct Hin_ins as [Heq | []]. subst.
@@ -4139,46 +4351,90 @@ Proof.
       rewrite Hspec in Hin_std.
       apply in_app_or in Hin_std.
       destruct Hin_std as [Hin_diag | Hin_ins].
-      * destruct (term_index p <? query_length s) eqn:Hlt; try (simpl in Hin_diag; contradiction).
-        apply Nat.ltb_lt in Hlt. rewrite Hqlen in Hlt.
-        destruct (cv_at cv offset) eqn:Hcv.
-        -- fold offset in Hin_diag.
-           rewrite Hcv in Hin_diag. simpl in Hin_diag.
-           destruct Hin_diag as [Heq | []]. subst.
-           assert (Hp : p = std_pos (term_index p) (num_errors p)).
-           { destruct p as [ti ne sp].
-             unfold is_special in Hspec. simpl in Hspec.
-             destruct sp; try discriminate.
-             unfold std_pos. simpl. reflexivity. }
-           rewrite Hp in Hreach.
-           assert (Hoffset_bound : offset < 2 * n + 6).
-           { pose proof (cv_at_true_in_bounds cv offset Hcv) as Hbound.
-             unfold cv in Hbound. rewrite char_vector_length in Hbound.
-             exact Hbound. }
-           assert (Hcv_matches : cv_at cv offset = char_matches_at c query (min_i + offset)).
-           { apply cv_at_char_matches. exact Hoffset_bound. }
-           assert (Hmin_le : min_i <= term_index p).
-           { apply min_i_le_term_index. exact Hin_p. }
-           assert (Hsum : min_i + offset = term_index p).
-           { unfold offset. lia. }
-           rewrite Hsum in Hcv_matches.
-           rewrite Hcv_matches in Hcv.
-           apply char_matches_at_iff in Hcv.
-           destruct Hcv as [c' [Hnth Heq']]. subst c'.
-           apply reach_ms_match with (c := c); assumption.
-        -- fold offset in Hin_diag.
-           rewrite Hcv in Hin_diag. simpl in Hin_diag.
-           destruct (num_errors p <? n) eqn:Herr; simpl in Hin_diag; try contradiction.
-           destruct Hin_diag as [Heq | []]. subst.
-           apply Nat.ltb_lt in Herr.
-           assert (Hp : p = std_pos (term_index p) (num_errors p)).
-           { destruct p as [ti ne sp].
-             unfold is_special in Hspec. simpl in Hspec.
-             destruct sp; try discriminate.
-             unfold std_pos. simpl. reflexivity. }
-           rewrite Hp in Hreach.
-           destruct (term_index_bound query (term_index p) Hlt) as [c' Hnth].
-           apply reach_ms_substitute with (c' := c'); assumption.
+	      * destruct (term_index p <? query_length s) eqn:Hlt; try (simpl in Hin_diag; contradiction).
+	        apply Nat.ltb_lt in Hlt. rewrite Hqlen in Hlt.
+	        assert (Hp : p = std_pos (term_index p) (num_errors p)).
+	        { destruct p as [ti ne sp].
+	          unfold is_special in Hspec. simpl in Hspec.
+	          destruct sp; try discriminate.
+	          unfold std_pos. simpl. reflexivity. }
+	        assert (Hmin_le : min_i <= term_index p).
+	        { apply min_i_le_term_index. exact Hin_p. }
+	        destruct (num_errors p <? n) eqn:Herr.
+	        -- apply Nat.ltb_lt in Herr.
+	           set (limit := Nat.min (n - num_errors p + 1) (length cv - offset)) in *.
+	           change (In p'
+	             match index_of_match cv offset limit with
+	             | Some 0 => [std_pos (S (term_index p)) (num_errors p)]
+	             | Some (S j0) =>
+	                 [std_pos (S (term_index p)) (S (num_errors p));
+	                  std_pos (term_index p + S (S j0)) (num_errors p + S j0)]
+	             | None => [std_pos (S (term_index p)) (S (num_errors p))]
+	             end) in Hin_diag.
+	           destruct (index_of_match cv offset limit) as [[|j]|] eqn:Hidx;
+	             simpl in Hin_diag.
+	           ++ destruct Hin_diag as [Heq | []]. subst p'.
+	              rewrite Hp in Hreach.
+	              apply reach_ms_match with (c := c).
+	              ** exact Hreach.
+	              ** exact Hlt.
+	              ** pose proof (index_of_match_zero_cv_at cv offset limit Hidx) as Hcv0.
+	                 pose proof (cv_at_true_in_bounds cv offset Hcv0) as Hwin.
+	                 unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	                 unfold cv in Hcv0.
+	                 pose proof (cv_match_nth_error c query min_i (2 * n + 6) offset Hwin Hcv0)
+	                   as Hnth0.
+	                 replace (min_i + offset) with (term_index p) in Hnth0 by (unfold offset; lia).
+	                 exact Hnth0.
+	           ++ destruct Hin_diag as [Heq | [Heq | []]].
+	              ** subst p'.
+	                 destruct (term_index_bound query (term_index p) Hlt) as [c' Hnth].
+	                 rewrite Hp in Hreach.
+	                 apply reach_ms_substitute with (c' := c'); assumption.
+	              ** subst p'.
+	                 pose proof (index_of_match_lt_limit cv offset limit (S j) Hidx)
+	                   as Hj_limit.
+	                 assert (Hj_err : num_errors p + S j <= n).
+	                 { unfold limit in Hj_limit. lia. }
+	                 assert (Hnth : nth_error query (term_index p + S j) = Some c).
+	                 { pose proof (index_of_match_some_cv_at cv offset limit (S j) Hidx)
+	                     as Hcvj.
+	                   pose proof (cv_at_true_in_bounds cv (offset + S j) Hcvj)
+	                     as Hwin.
+	                   unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	                   unfold cv in Hcvj.
+	                   pose proof (cv_match_nth_error c query min_i (2 * n + 6)
+	                                (offset + S j) Hwin Hcvj) as Hnthj.
+	                   replace (min_i + (offset + S j)) with (term_index p + S j) in Hnthj
+	                     by (unfold offset; lia).
+	                   exact Hnthj. }
+	                 assert (Hj_query : term_index p + S j < length query).
+	                 { apply nth_error_Some. rewrite Hnth. discriminate. }
+	                 rewrite Hp in Hreach.
+	                 replace (term_index p + S (S j)) with (S (term_index p + S j)) by lia.
+	                 exact (position_reachable_ms_delete_chain_match
+	                          query n dict_prefix c (term_index p) (num_errors p) (S j)
+	                          Hreach Hj_query Hnth Hj_err).
+	           ++ destruct Hin_diag as [Heq | []]. subst p'.
+	              destruct (term_index_bound query (term_index p) Hlt) as [c' Hnth].
+	              rewrite Hp in Hreach.
+	              apply reach_ms_substitute with (c' := c'); assumption.
+	        -- change (In p' (if cv_at cv offset then
+	                            [std_pos (S (term_index p)) (num_errors p)]
+	                          else [])) in Hin_diag.
+	           destruct (cv_at cv offset) eqn:Hcv; simpl in Hin_diag; try contradiction.
+	           destruct Hin_diag as [Heq | []]. subst p'.
+	           rewrite Hp in Hreach.
+	           apply reach_ms_match with (c := c).
+	           ++ exact Hreach.
+	           ++ exact Hlt.
+	           ++ pose proof (cv_at_true_in_bounds cv offset Hcv) as Hwin.
+	              unfold cv in Hwin. rewrite char_vector_length in Hwin.
+	              unfold cv in Hcv.
+	              pose proof (cv_match_nth_error c query min_i (2 * n + 6) offset Hwin Hcv)
+	                as Hnth0.
+	              replace (min_i + offset) with (term_index p) in Hnth0 by (unfold offset; lia).
+	              exact Hnth0.
       * destruct (num_errors p <? n) eqn:Herr; simpl in Hin_ins; try contradiction.
         destruct Hin_ins as [Heq | []]. subst.
         apply Nat.ltb_lt in Herr.

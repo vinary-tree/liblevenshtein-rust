@@ -18,11 +18,13 @@
 # Core definitions (base layer)
 theories/Core/MsmDefinitions.v
 theories/Core/CFunction.v
+theories/Core/CFunctionBounds.v
 theories/Core/MsmDistance.v
 
 # Metric property proofs
 theories/Metric/Identity.v
 theories/Metric/Symmetry.v
+theories/Metric/TriangleAllTailSupport.v
 theories/Metric/TriangleInequality.v
 theories/Metric/MainTheorem.v
 

@@ -72,14 +72,15 @@ impl Position {
     /// - Otherwise: standard formula
     ///
     /// # MergeAndSplit Algorithm
-    /// - If lhs special but not rhs: cannot subsume
-    /// - Otherwise: standard formula
+    /// - Positions with different special-state variants cannot subsume
+    /// - Final split-in-progress positions cannot subsume non-final positions
+    /// - Otherwise: standard formula with strictly fewer errors
     ///
     /// Based on C++ implementation in subsumes.cpp
     ///
     /// # Parameters
     /// - `query_length`: Length of the query term (n in C++/Java code)
-    pub fn subsumes(&self, other: &Position, algorithm: Algorithm, _query_length: usize) -> bool {
+    pub fn subsumes(&self, other: &Position, algorithm: Algorithm, query_length: usize) -> bool {
         let i = self.term_index;
         let e = self.num_errors;
         let s = self.is_special;
@@ -153,31 +154,33 @@ impl Position {
             }
 
             Algorithm::MergeAndSplit => {
-                // Based on formal definition from Schulz & Mihov paper:
-                // 1. (i,e,false) subsumes (j,f,false) iff e < f and |j-i| <= f-e
-                // 2. (i,e,false) subsumes (j,f,true) iff e < f and |j-i| <= f-e
-                // 3. (i,e,true) subsumes (j,f,true) iff e < f and |j-i| <= f-e
-                // 4. (i,e,true) cannot subsume (j,f,false) [not in paper, but implied]
-                //
-                // Key: Must have STRICTLY FEWER errors (e < f), not equal!
-                // The C++/Java implementations incorrectly allow e == f.
-
-                // Special position cannot subsume non-special
-                if s && !t {
+                // MergeAndSplit positions can only represent positions in the
+                // same variant state. A pending split and a normal position have
+                // different continuations.
+                if s != t {
                     return false;
                 }
 
-                // Must have strictly fewer errors to subsume (critical for merge/split!)
-                // When e == f, positions at same index should NOT subsume each other
-                // This allows (i,e,false) and (i,e,true) to coexist
+                // The automaton never generates representatives past the query.
+                if i > query_length {
+                    return false;
+                }
+
+                // A final pending split cannot consume the second split
+                // character required by a non-final pending split.
+                if s && i >= query_length && j < query_length {
+                    return false;
+                }
+
+                // Must have strictly fewer errors to subsume. This allows
+                // (i,e,false) and (i,e,true) to coexist when needed.
                 if e >= f {
                     return false;
                 }
 
-                // Standard distance-based formula
-                let index_diff = i.abs_diff(j);
-                let error_diff = f - e;
-                index_diff <= error_diff
+                // Keep pruning same-index only. Cross-index pruning can erase
+                // delete-closure witnesses needed by split/merge completions.
+                i == j
             }
         }
     }
@@ -329,28 +332,44 @@ mod tests {
     #[test]
     fn test_position_subsumption_merge_split() {
         // MergeAndSplit subsumption tests
-        let max_distance = 3; // Max distance for tests
+        let query_length = 5;
 
-        // lhs special but not rhs: cannot subsume
+        // Different variant states cannot subsume each other.
         let p1 = Position::new_special(5, 2);
         let p2 = Position::new(5, 3);
         assert!(
-            !p1.subsumes(&p2, Algorithm::MergeAndSplit, max_distance),
+            !p1.subsumes(&p2, Algorithm::MergeAndSplit, query_length),
             "special(5,2) should NOT subsume normal(5,3) for MergeAndSplit"
         );
 
-        // Both special or both normal: standard formula
+        let p2a = Position::new(5, 2);
+        let p2b = Position::new_special(4, 3);
+        assert!(
+            !p2a.subsumes(&p2b, Algorithm::MergeAndSplit, query_length),
+            "normal(5,2) should NOT subsume special(4,3) for MergeAndSplit"
+        );
+
+        // Final split-in-progress states cannot prune non-final pending splits.
+        let p2c = Position::new_special(5, 1);
+        let p2d = Position::new_special(4, 2);
+        assert!(
+            !p2c.subsumes(&p2d, Algorithm::MergeAndSplit, query_length),
+            "final special(5,1) should NOT subsume non-final special(4,2)"
+        );
+
+        // Cross-index pruning is intentionally disabled for MergeAndSplit.
         let p3 = Position::new(5, 2);
         let p4 = Position::new(4, 3);
         assert!(
-            p3.subsumes(&p4, Algorithm::MergeAndSplit, max_distance),
-            "normal(5,2) should subsume normal(4,3)"
+            !p3.subsumes(&p4, Algorithm::MergeAndSplit, query_length),
+            "normal(5,2) should NOT subsume normal(4,3)"
         );
 
+        // Same variant, same index, strictly fewer errors can prune.
         let p5 = Position::new_special(5, 2);
         let p6 = Position::new_special(5, 3);
         assert!(
-            p5.subsumes(&p6, Algorithm::MergeAndSplit, max_distance),
+            p5.subsumes(&p6, Algorithm::MergeAndSplit, query_length),
             "special(5,2) should subsume special(5,3)"
         );
     }

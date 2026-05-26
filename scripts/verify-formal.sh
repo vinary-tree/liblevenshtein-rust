@@ -11,7 +11,32 @@ GAP_RE='^\s*(Axiom\s+|Admitted\.|admit\.|Parameter\s+|Conjecture\s+|Hypothesis\s
 ADMIT_RE='^\s*(Admitted\.|admit\.)'
 ASSUME_RE='^\s*(Axiom\s+|Parameter\s+|Conjecture\s+|Hypothesis\s+)'
 
+validate_rss_override() {
+  [[ -z "${FORMAL_VERIFY_RSS_MB:-}" ]] && return
+  if [[ ! "$FORMAL_VERIFY_RSS_MB" =~ ^[1-9][0-9]*$ ]]; then
+    echo "error: FORMAL_VERIFY_RSS_MB must be a positive integer number of MiB" >&2
+    exit 2
+  fi
+  if [[ -n "${FORMAL_VERIFY_RSS_GUARD_PERCENT:-}" ]] &&
+     ! [[ "$FORMAL_VERIFY_RSS_GUARD_PERCENT" =~ ^[1-9][0-9]?$|^100$ ]]; then
+    echo "error: FORMAL_VERIFY_RSS_GUARD_PERCENT must be an integer from 1 to 100" >&2
+    exit 2
+  fi
+}
+
+validate_rss_override
+
+rss_override_mb() {
+  [[ -n "${FORMAL_VERIFY_RSS_MB:-}" ]] || return 1
+  echo "$FORMAL_VERIFY_RSS_MB"
+}
+
 profile_memory() {
+  local rss_mb
+  if rss_mb="$(rss_override_mb)"; then
+    echo "${rss_mb}M"
+    return
+  fi
   case "$1" in
     light) echo "2G" ;;
     standard) echo "4G" ;;
@@ -22,6 +47,11 @@ profile_memory() {
 }
 
 profile_rss_kb() {
+  local rss_mb
+  if rss_mb="$(rss_override_mb)"; then
+    echo "$((rss_mb * 1024))"
+    return
+  fi
   case "$1" in
     light) echo "$((2 * 1024 * 1024))" ;;
     standard) echo "$((4 * 1024 * 1024))" ;;
@@ -89,8 +119,11 @@ terminate_process_tree() {
 run_rss_monitored() {
   local profile="$1"
   shift
-  local rss_limit_kb exceeded_file pid monitor status
+  local rss_limit_kb rss_guard_percent rss_kill_kb exceeded_file pid monitor status
   rss_limit_kb="$(profile_rss_kb "$profile")"
+  rss_guard_percent="${FORMAL_VERIFY_RSS_GUARD_PERCENT:-80}"
+  rss_kill_kb="$((rss_limit_kb * rss_guard_percent / 100))"
+  [[ "$rss_kill_kb" -gt 0 ]] || rss_kill_kb="$rss_limit_kb"
   exceeded_file="$(mktemp)"
   rm -f "$exceeded_file"
 
@@ -105,13 +138,13 @@ run_rss_monitored() {
     local rss_kb
     while kill -0 "$pid" >/dev/null 2>&1; do
       rss_kb="$(rss_tree_kb "$pid")"
-      if [[ "$rss_kb" -gt "$rss_limit_kb" ]]; then
+      if [[ "$rss_kb" -gt "$rss_kill_kb" ]]; then
         printf '%s\n' "$rss_kb" > "$exceeded_file"
-        echo "error: RSS cap exceeded for profile '$profile': ${rss_kb}KiB > ${rss_limit_kb}KiB" >&2
+        echo "error: RSS guard exceeded for profile '$profile': ${rss_kb}KiB > ${rss_kill_kb}KiB (${rss_guard_percent}% of ${rss_limit_kb}KiB cap)" >&2
         terminate_process_tree "$pid"
         break
       fi
-      sleep 1
+      sleep "${FORMAL_VERIFY_RSS_POLL_SECONDS:-0.05}"
     done
   ) &
   monitor="$!"

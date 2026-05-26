@@ -165,7 +165,7 @@ impl PositionF64 {
     /// |-----------|-----------------|
     /// | Standard | Basic formula |
     /// | Transposition | Special position compatibility |
-    /// | MergeAndSplit | Special cannot subsume non-special |
+    /// | MergeAndSplit | Only same variant-state positions subsume each other |
     ///
     /// # Parameters
     ///
@@ -242,8 +242,20 @@ impl PositionF64 {
             }
 
             Algorithm::MergeAndSplit => {
-                // Special position cannot subsume non-special
-                if s && !t {
+                // MergeAndSplit normal and split-in-progress positions have
+                // different continuations, so they cannot subsume each other.
+                if s != t {
+                    return false;
+                }
+
+                // The automaton never generates representatives past the query.
+                if i > query_length {
+                    return false;
+                }
+
+                // A final pending split cannot consume the second split
+                // character required by a non-final pending split.
+                if s && i >= query_length && j < query_length {
                     return false;
                 }
 
@@ -253,9 +265,9 @@ impl PositionF64 {
                     return false;
                 }
 
-                // Standard distance-based formula
-                let index_diff = i.abs_diff(j) as f64;
-                index_diff <= cost_slack + EPSILON
+                // Keep pruning same-index only. Cross-index pruning can erase
+                // delete-closure witnesses needed by split/merge completions.
+                i == j
             }
         }
     }
@@ -427,22 +439,43 @@ mod tests {
 
     #[test]
     fn test_subsumption_merge_split() {
-        let max_distance = 5;
+        let query_length = 5;
 
-        // Special cannot subsume non-special
+        // Different variant states cannot subsume each other.
         let p1 = PositionF64::new_special(5, 2.0);
         let p2 = PositionF64::new(5, 3.0);
         assert!(
-            !p1.subsumes(&p2, Algorithm::MergeAndSplit, max_distance),
+            !p1.subsumes(&p2, Algorithm::MergeAndSplit, query_length),
             "special cannot subsume non-special in merge-split"
         );
 
-        // Non-special can subsume non-special with strictly lower cost
+        let p2a = PositionF64::new(5, 2.0);
+        let p2b = PositionF64::new_special(4, 3.0);
+        assert!(
+            !p2a.subsumes(&p2b, Algorithm::MergeAndSplit, query_length),
+            "normal cannot subsume special in merge-split"
+        );
+
+        let p2c = PositionF64::new_special(5, 1.0);
+        let p2d = PositionF64::new_special(4, 2.0);
+        assert!(
+            !p2c.subsumes(&p2d, Algorithm::MergeAndSplit, query_length),
+            "final special cannot subsume non-final special in merge-split"
+        );
+
+        // Cross-index pruning is intentionally disabled for MergeAndSplit.
         let p3 = PositionF64::new(5, 2.0);
         let p4 = PositionF64::new(4, 3.0);
         assert!(
-            p3.subsumes(&p4, Algorithm::MergeAndSplit, max_distance),
-            "normal(5, 2.0) should subsume normal(4, 3.0)"
+            !p3.subsumes(&p4, Algorithm::MergeAndSplit, query_length),
+            "normal(5, 2.0) should NOT subsume normal(4, 3.0)"
+        );
+
+        let p5 = PositionF64::new_special(5, 2.0);
+        let p6 = PositionF64::new_special(5, 3.0);
+        assert!(
+            p5.subsumes(&p6, Algorithm::MergeAndSplit, query_length),
+            "special(5, 2.0) should subsume special(5, 3.0)"
         );
     }
 

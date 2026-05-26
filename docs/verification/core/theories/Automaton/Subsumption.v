@@ -64,7 +64,7 @@ Definition subsumes_standard (qlen : nat) (p1 p2 : Position) : bool :=
     - i#e_t ≤^t_s j#f_t   ⇔ false (transposition positions never subsume each other)
 
     Rules:
-    - Normal ⊑ Normal: same as Standard (with e ≤ f and distance check)
+    - Normal ⊑ Normal: same query index and e ≤ f
     - Special ⊑ Special: only if same position and e ≤ f
     - Normal CANNOT subsume Special
     - Special CANNOT subsume Normal
@@ -89,8 +89,10 @@ Definition subsumes_transposition (p1 p2 : Position) (query_length : nat) : bool
       (* Both special: must be at same position *)
       i =? j
     else
-      (* Neither special: standard formula *)
-      abs_diff i j <=? f - e
+      (* Neither special: keep Transposition pruning same-index.  Cross-index
+         pruning can erase the ordinary position needed to enter/complete a
+         future adjacent transposition. *)
+      i =? j
   else
     (* Different variant_state: no subsumption *)
     false.
@@ -98,7 +100,10 @@ Definition subsumes_transposition (p1 p2 : Position) (query_length : nat) : bool
 (** MergeAndSplit algorithm subsumption.
     Key difference: Requires e < f (STRICT) to allow both (i,e,false) and
     (i,e,true) to coexist in the same state.
-    - Special cannot subsume non-special
+    - Representatives beyond the query length are rejected; executable
+      MergeAndSplit transitions never generate them
+    - Normal and split-in-progress positions cannot subsume each other
+    - Final special positions cannot subsume non-final split states
     - Non-final cannot subsume final (critical for correctness)
 *)
 Definition subsumes_merge_split (qlen : nat) (p1 p2 : Position) : bool :=
@@ -110,14 +115,19 @@ Definition subsumes_merge_split (qlen : nat) (p1 p2 : Position) : bool :=
   let t := is_special p2 in
   let p1_final := position_is_final_for_subsumption qlen p1 in
   let p2_final := position_is_final_for_subsumption qlen p2 in
+  (* CRITICAL: MergeAndSplit never generates representatives past qlen. *)
+  if qlen <? i then false
   (* CRITICAL: Non-final cannot subsume final *)
-  if (negb p1_final) && p2_final then false
-  (* Special position cannot subsume non-special *)
-  else if s && negb t then false
+  else if (negb p1_final) && p2_final then false
+  (* CRITICAL: A final split-in-progress position has no completion transition. *)
+  else if s && p1_final && negb p2_final then false
+  (* Variant states represent different continuations. *)
+  else if negb (Bool.eqb s t) then false
   (* Must have strictly fewer errors *)
   else if negb (e <? f) then false
-  (* Standard distance check *)
-  else abs_diff i j <=? f - e.
+  (* MergeAndSplit pruning is kept same-index only. Cross-index pruning can
+     erase delete-closure witnesses needed by split/merge completions. *)
+  else i =? j.
 
 (** Unified subsumption that dispatches to the appropriate algorithm *)
 Definition subsumes (alg : Algorithm) (query_length : nat) (p1 p2 : Position) : bool :=
@@ -150,6 +160,7 @@ Lemma subsumes_merge_split_irrefl : forall qlen p,
 Proof.
   intros qlen [i e s].
   unfold subsumes_merge_split, position_is_final_for_subsumption. simpl.
+  destruct (qlen <? i); simpl; [reflexivity|].
   destruct (qlen <=? i); simpl.
   - (* Final: same finality, falls through to strict error check *)
     destruct s; simpl; rewrite Nat.ltb_irrefl; reflexivity.
@@ -259,8 +270,8 @@ Proof.
   simpl in Hs. subst s.
   (* With same position, finality check passes (negb x && x = false for any x) *)
   destruct (qlen <=? i); simpl.
-  - rewrite Nat.leb_refl, abs_diff_self. reflexivity.
-  - rewrite Nat.leb_refl, abs_diff_self. reflexivity.
+  - rewrite Nat.leb_refl, Nat.eqb_refl. reflexivity.
+  - rewrite Nat.leb_refl, Nat.eqb_refl. reflexivity.
 Qed.
 
 Lemma subsumes_transposition_special_refl : forall p query_length,
@@ -361,8 +372,8 @@ Example subsumes_trans_example_4 :
 Proof. reflexivity. Qed.
 
 Example subsumes_trans_example_5 :
-  (* Two non-final normal positions: standard formula applies *)
-  subsumes_transposition (std_pos 2 1) (std_pos 3 2) 5 = true.
+  (* Cross-index normal positions are not pruned for Transposition. *)
+  subsumes_transposition (std_pos 2 1) (std_pos 3 2) 5 = false.
 Proof. reflexivity. Qed.
 
 (** * Critical Lemma: Non-Final Cannot Subsume Final *)
@@ -398,6 +409,7 @@ Lemma non_final_cannot_subsume_final_merge_split : forall qlen p1 p2,
 Proof.
   intros qlen p1 p2 Hp1_non_final Hp2_final.
   unfold subsumes_merge_split.
+  destruct (qlen <? term_index p1); simpl; [reflexivity|].
   rewrite Hp1_non_final, Hp2_final. simpl. reflexivity.
 Qed.
 
@@ -414,26 +426,20 @@ Proof.
   - apply non_final_cannot_subsume_final_merge_split; assumption.
 Qed.
 
-(** For non-special positions, Standard and Transposition subsumption are equivalent.
-    This is key for proving that Standard acceptance implies Transposition acceptance. *)
+(** For non-special positions, Transposition subsumption is a conservative
+    subset of Standard subsumption. *)
 Lemma subsumes_nonspecial_std_trans : forall qlen p1 p2,
   is_special p1 = false ->
   is_special p2 = false ->
-  subsumes_standard qlen p1 p2 = subsumes_transposition p1 p2 qlen.
+  subsumes_transposition p1 p2 qlen = true ->
+  subsumes_standard qlen p1 p2 = true.
 Proof.
-  intros qlen [i1 e1 s1] [i2 e2 s2] Hs1 Hs2.
-  unfold subsumes_standard, subsumes_transposition, position_is_final_for_subsumption.
-  simpl in *. subst s1 s2. simpl.
-  (* For non-special positions, Bool.eqb false false = true *)
-  (* The transposition branch becomes: if negb (e1 <=? e2) then false else abs_diff ... *)
-  (* The standard formula is: (e1 <=? e2) && (abs_diff ...) *)
-  destruct (qlen <=? i1) eqn:Hi1, (qlen <=? i2) eqn:Hi2; simpl.
-  - (* Both final *)
-    destruct (e1 <=? e2) eqn:He; simpl; reflexivity.
-  - (* p1 final, p2 non-final *)
-    destruct (e1 <=? e2) eqn:He; simpl; reflexivity.
-  - (* p1 non-final, p2 final: returns false for both *)
-    reflexivity.
-  - (* Both non-final *)
-    destruct (e1 <=? e2) eqn:He; simpl; reflexivity.
+  intros qlen [i1 e1 s1] [i2 e2 s2] Hs1 Hs2 Hsub.
+  unfold subsumes_standard, subsumes_transposition, position_is_final_for_subsumption in *.
+  simpl in *. subst s1 s2. simpl in *.
+  destruct (qlen <=? i1) eqn:Hi1, (qlen <=? i2) eqn:Hi2; simpl in *;
+    try discriminate.
+  all: destruct (e1 <=? e2) eqn:He; simpl in *; try discriminate.
+  all: apply Nat.eqb_eq in Hsub; subst i2.
+  all: try rewrite He; rewrite abs_diff_self; simpl; reflexivity.
 Qed.

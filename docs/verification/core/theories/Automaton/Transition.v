@@ -49,6 +49,114 @@ Proof.
   - exact Hlt.
 Qed.
 
+(** Find the first [true] entry at or after [start], searching at most [limit]
+    positions.  The result is the relative offset from [start], matching the
+    Rust [index_of_match] helper used by the Standard transition. *)
+Fixpoint index_of_match (cv : list bool) (start limit : nat) : option nat :=
+  match limit with
+  | 0 => None
+  | S limit' =>
+      if cv_at cv start then Some 0
+      else option_map S (index_of_match cv (S start) limit')
+  end.
+
+Lemma index_of_match_lt_limit : forall cv start limit j,
+  index_of_match cv start limit = Some j ->
+  j < limit.
+Proof.
+  intros cv start limit.
+  revert start.
+  induction limit as [|limit' IH]; intros start j Hidx.
+  - simpl in Hidx. discriminate.
+  - simpl in Hidx.
+    destruct (cv_at cv start) eqn:Hcv.
+    + injection Hidx as Hj. subst j. lia.
+    + destruct (index_of_match cv (S start) limit') as [j'|] eqn:Hnext;
+        [| discriminate].
+      injection Hidx as Hj. subst j.
+      pose proof (IH (S start) j' Hnext). lia.
+Qed.
+
+Lemma index_of_match_zero_cv_at : forall cv start limit,
+  index_of_match cv start limit = Some 0 ->
+  cv_at cv start = true.
+Proof.
+  intros cv start limit Hidx.
+  destruct limit as [|limit']; simpl in Hidx; [discriminate|].
+  destruct (cv_at cv start) eqn:Hcv.
+  - reflexivity.
+  - destruct (index_of_match cv (S start) limit'); discriminate.
+Qed.
+
+Lemma index_of_match_some_cv_at : forall cv start limit j,
+  index_of_match cv start limit = Some j ->
+  cv_at cv (start + j) = true.
+Proof.
+  intros cv start limit.
+  revert start.
+  induction limit as [|limit' IH]; intros start j Hidx.
+  - simpl in Hidx. discriminate.
+  - simpl in Hidx.
+    destruct (cv_at cv start) eqn:Hcv.
+    + injection Hidx as Hj. subst j.
+      replace (start + 0) with start by lia. exact Hcv.
+    + destruct (index_of_match cv (S start) limit') as [j'|] eqn:Hnext;
+        [| discriminate].
+      injection Hidx as Hj. subst j.
+      replace (start + S j') with (S start + j') by lia.
+      apply IH. exact Hnext.
+Qed.
+
+Lemma index_of_match_finds_at_or_before : forall cv start limit d,
+  d < limit ->
+  cv_at cv (start + d) = true ->
+  exists j,
+    index_of_match cv start limit = Some j /\
+    j <= d.
+Proof.
+  intros cv start limit.
+  revert start.
+  induction limit as [|limit' IH]; intros start d Hd Hcv.
+  - lia.
+  - simpl.
+    destruct (cv_at cv start) eqn:Hhead.
+    + exists 0. split; [reflexivity | lia].
+    + destruct d as [|d'].
+      * rewrite Nat.add_0_r in Hcv.
+        rewrite Hhead in Hcv. discriminate.
+      * assert (Hd' : d' < limit') by lia.
+        assert (Hcv' : cv_at cv (S start + d') = true).
+        { replace (S start + d') with (start + S d') by lia.
+          exact Hcv. }
+        destruct (IH (S start) d' Hd' Hcv') as [j [Hidx Hj]].
+        rewrite Hidx.
+        exists (S j). split; [reflexivity | lia].
+Qed.
+
+Lemma index_of_match_successor_cv_at_false : forall cv start limit j,
+  index_of_match cv start limit = Some (S j) ->
+  cv_at cv start = false.
+Proof.
+  intros cv start limit j Hidx.
+  destruct limit as [|limit']; simpl in Hidx; [discriminate|].
+  destruct (cv_at cv start) eqn:Hcv.
+  - discriminate.
+  - reflexivity.
+Qed.
+
+Lemma index_of_match_none_head_false : forall cv start limit,
+  0 < limit ->
+  index_of_match cv start limit = None ->
+  cv_at cv start = false.
+Proof.
+  intros cv start limit Hpos Hidx.
+  destruct limit as [|limit']; [lia|].
+  simpl in Hidx.
+  destruct (cv_at cv start) eqn:Hcv.
+  - discriminate.
+  - reflexivity.
+Qed.
+
 (** Check if we can advance query index (not past query length) *)
 Definition can_advance (i qlen : nat) : bool :=
   i <? qlen.
@@ -81,10 +189,17 @@ Definition transition_position_standard (p : Position) (cv : list bool) (min_i n
     let candidates :=
       (* Match or Substitute *)
       (if i <? qlen then
-        if cv_at cv offset then
-          [std_pos (S i) e]  (* Match: advance both, no error *)
-        else if e <? n then
-          [std_pos (S i) (S e)]  (* Substitute: advance both, +1 error *)
+        if e <? n then
+          let limit := Nat.min (n - e + 1) (length cv - offset) in
+          match index_of_match cv offset limit with
+          | Some 0 => [std_pos (S i) e]  (* Immediate match *)
+          | Some (S j) =>
+              [std_pos (S i) (S e);
+               std_pos (i + S (S j)) (e + S j)]
+          | None => [std_pos (S i) (S e)]
+          end
+        else if cv_at cv offset then
+          [std_pos (S i) e]
         else []
       else [])
       ++
@@ -250,15 +365,23 @@ Proof.
     destruct Hin as [Hin | Hin].
     + (* Match or Substitute *)
       destruct (term_index p <? qlen) eqn:Hlt; simpl in Hin; try contradiction.
-      destruct (cv_at cv (term_index p - min_i)) eqn:Hcv.
-      * (* Match: errors unchanged *)
-        simpl in Hin. destruct Hin as [Heq | Hin]; try contradiction.
-        subst. simpl. exact Hbound.
-      * (* Substitute: errors + 1, but only if e < n *)
-        destruct (num_errors p <? n) eqn:He; simpl in Hin; try contradiction.
-        destruct Hin as [Heq | Hin]; try contradiction.
-        subst. simpl.
-        apply Nat.ltb_lt in He. lia.
+      destruct (num_errors p <? n) eqn:He.
+      * set (limit := Nat.min (n - num_errors p + 1)
+                            (length cv - (term_index p - min_i))) in *.
+        destruct (index_of_match cv (term_index p - min_i) limit) as [[|j]|] eqn:Hidx;
+          simpl in Hin.
+        -- destruct Hin as [Heq | []]. subst. simpl. exact Hbound.
+        -- destruct Hin as [Heq | [Heq | []]]; subst; simpl.
+           ++ apply Nat.ltb_lt in He. lia.
+           ++ pose proof (index_of_match_lt_limit cv (term_index p - min_i)
+                            limit (S j) Hidx) as Hj_lt.
+              unfold limit in Hj_lt.
+              apply Nat.ltb_lt in He. lia.
+        -- destruct Hin as [Heq | []]. subst. simpl.
+           apply Nat.ltb_lt in He. lia.
+      * destruct (cv_at cv (term_index p - min_i)) eqn:Hcv; simpl in Hin;
+          try contradiction.
+        destruct Hin as [Heq | []]. subst. simpl. exact Hbound.
     + (* Insert *)
       destruct (num_errors p <? n) eqn:He; simpl in Hin; try contradiction.
       destruct Hin as [Heq | Hin]; try contradiction.
@@ -564,10 +687,42 @@ Proof.
   (* i <? qlen = true by Hi_lt *)
   assert (Hi_lt_b : (i <? qlen) = true) by (apply Nat.ltb_lt; exact Hi_lt).
   rewrite Hi_lt_b.
-  (* cv_at cv (i - min_i) = true by Hcv *)
-  rewrite Hcv.
-  (* Match result is first in the list *)
-  left. reflexivity.
+  destruct (e <? n) eqn:He_lt.
+  - set (limit := Nat.min (n - e + 1) (length cv - (i - min_i))).
+    assert (Hlimit_pos : 0 < limit).
+    { unfold limit.
+      pose proof (cv_at_true_in_bounds cv (i - min_i) Hcv) as Hoff.
+      apply Nat.ltb_lt in He_lt. lia. }
+    destruct limit as [|limit']; [lia|].
+    simpl. rewrite Hcv. left. reflexivity.
+  - rewrite Hcv. left. reflexivity.
+Qed.
+
+(** If the Standard lookahead search finds a match at relative offset [j],
+    the executable transition emits the skip-to-match successor. The [j = 0]
+    case is the ordinary match transition. *)
+Lemma transition_standard_produces_index_match : forall i e cv min_i n qlen j,
+  i < qlen ->
+  e < n ->
+  index_of_match cv (i - min_i)
+    (Nat.min (n - e + 1) (length cv - (i - min_i))) = Some j ->
+  In (std_pos (S (i + j)) (e + j))
+     (transition_position_standard (std_pos i e) cv min_i n qlen).
+Proof.
+  intros i e cv min_i n qlen j Hi_lt He_lt Hidx.
+  unfold transition_position_standard, std_pos. simpl.
+  assert (Hi_lt_b : (i <? qlen) = true) by (apply Nat.ltb_lt; exact Hi_lt).
+  rewrite Hi_lt_b.
+  assert (He_lt_b : (e <? n) = true) by (apply Nat.ltb_lt; exact He_lt).
+  rewrite He_lt_b.
+  rewrite Hidx.
+  destruct j as [|j'].
+  - simpl. replace (S (i + 0)) with (S i) by lia.
+    replace (e + 0) with e by lia.
+    left. reflexivity.
+  - simpl. replace (S (i + S j')) with (i + S (S j')) by lia.
+    replace (e + S j') with (e + S j') by lia.
+    right. left. reflexivity.
 Qed.
 
 (** Standard transition produces substitute result when CV indicates mismatch and e < n *)
@@ -582,9 +737,13 @@ Proof.
   unfold transition_position_standard, std_pos. simpl.
   assert (Hi_lt_b : (i <? qlen) = true) by (apply Nat.ltb_lt; exact Hi_lt).
   assert (He_lt_b : (e <? n) = true) by (apply Nat.ltb_lt; exact He_lt).
-  rewrite Hi_lt_b, Hcv, He_lt_b.
-  (* Substitute result is first in the list *)
-  left. reflexivity.
+  rewrite Hi_lt_b, He_lt_b.
+  set (limit := Nat.min (n - e + 1) (length cv - (i - min_i))).
+  destruct (index_of_match cv (i - min_i) limit) as [[|j]|] eqn:Hidx.
+  - pose proof (index_of_match_zero_cv_at cv (i - min_i) limit Hidx) as Hzero.
+    rewrite Hcv in Hzero. discriminate.
+  - simpl. left. reflexivity.
+  - simpl. left. reflexivity.
 Qed.
 
 (** Standard transition produces insert result when e < n *)
@@ -597,17 +756,13 @@ Proof.
   assert (He_lt_b : (e <? n) = true) by (apply Nat.ltb_lt; exact He_lt).
   destruct (i <? qlen) eqn:Hi_lt.
   - (* i < qlen *)
-    destruct (cv_at cv (i - min_i)) eqn:Hcv.
-    + (* cv_at = true (match branch) *)
-      (* Insert is second in [match] ++ [insert] *)
-      right. rewrite He_lt_b. left. reflexivity.
-    + (* cv_at = false *)
-      destruct (e <? n) eqn:He_lt'.
-      * (* e < n (substitute branch) *)
-        (* Insert is second in [substitute] ++ [insert] *)
-        right. left. reflexivity.
-      * (* e >= n - contradiction with He_lt *)
-        apply Nat.ltb_ge in He_lt'. lia.
+    rewrite He_lt_b.
+    destruct (index_of_match cv (i - min_i)
+                (Nat.min (n - e + 1) (length cv - (i - min_i)))) as [[|j]|] eqn:Hidx;
+      simpl.
+    + right. left. reflexivity.
+    + right. right. left. reflexivity.
+    + right. left. reflexivity.
   - (* i >= qlen *)
     (* Insert is only element in [] ++ [insert] *)
     rewrite He_lt_b. left. reflexivity.

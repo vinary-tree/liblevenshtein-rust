@@ -230,8 +230,8 @@ supported by the current executable model:
   `automaton_step_std_ms_proof`,
   `automaton_step_std_trans_position_incl_proof`,
   `automaton_step_spread_bound_proof`, `spread_bound_preserved`, and
-  `spread_bound_through_closure_and_insert_proof`). The remaining fields are
-  referenced by active proofs.
+  `spread_bound_through_closure_and_insert_proof`). The record has since been
+  retired completely.
 - `Automaton/MainTheorem.v`: removed `automaton_distance_correct_premise`.
   Reported Standard automaton distances are now bounded directly from the
   accepting-distance witness, standard run reachability, and the existing
@@ -247,18 +247,22 @@ supported by the current executable model:
   identity target from raw Coq list equality over `Q` to pointwise rational
   setoid equality `series_Qeq`. The old statement is not provable over QArith:
   `[1#1]` and `[2#2]` have zero MSM distance but are not Leibniz-equal.
-- `MSM/Core/MsmDistance.v`: narrowed `MsmDistanceEvidence` further to the
-  non-empty DP identity case. Empty/empty is immediate, and empty/non-empty
-  mismatch cases are now proved locally from `c > 0` and positivity of
-  `inject_Z (Z.of_nat (length _)) * c`.
+- `MSM/Core/MsmDistance.v`: before retiring it completely, narrowed
+  `MsmDistanceEvidence` to the non-empty DP identity case. Empty/empty is
+  immediate, and empty/non-empty mismatch cases are proved locally from `c > 0`
+  and positivity of `inject_Z (Z.of_nat (length _)) * c`.
 - `MSM/Core/MsmDistance.v`: proved positive split/merge cost lemmas, zero
   decomposition for `Qmin2`/`Qmin3`, and both singleton zero-distance edge
-  cases. `MsmDistanceEvidence` now covers only the recursive DP identity case
-  where both inputs have length at least two.
+  cases, reducing the former `MsmDistanceEvidence` obligation to the recursive
+  DP identity case where both inputs have length at least two.
 - `MSM/Core/MsmDistance.v`: proved the exact two-point/two-point zero-distance
   case directly from the executable DP recurrence; the public zero-distance
-  wrapper now discharges that edge case before falling back to the remaining
-  recursive DP evidence.
+  wrapper now discharges that edge case before the general row proof.
+- `MSM/Core/MsmDistance.v`: retired `MsmDistanceEvidence` completely. The
+  remaining identity direction is now proved by a row-zero invariant: every
+  zero DP cell must be reached through a zero-cost Move branch, while Merge and
+  Split branches are impossible because `c_func` is strictly positive when
+  `msm_c cfg > 0`.
 - `Automaton/Completeness.v`: narrowed `can_reach_higher_index` to the only
   model-accurate form used by callers, requiring the original `can_reach`
   witness to end at `term_index = length query` with bounded final errors. The
@@ -317,6 +321,26 @@ supported by the current executable model:
   Standard, Transposition, and MergeAndSplit soundness are now proved locally;
   MergeAndSplit uses a dedicated semantic reachability relation plus the
   merge/split edit-sequence bounds in `Core/MergeSplitDistance.v`.
+- `Automaton/Completeness.v` and `Automaton/MainTheorem.v`: removed
+  `AutomatonCompletenessCoreEvidence` entirely. Transposition completeness is
+  now proved from the executable Damerau recurrence via
+  `transposition_reachable_final`, and the public Transposition correctness and
+  monotonicity theorems are unconditional.
+- `MSM/Core/MsmDistance.v` and `MSM/Metric/TriangleInequality.v`: proved
+  executable DP length lower bounds in both directions. The empty-source and
+  empty-target triangle cases with a non-empty middle series now use those
+  local lower bounds, so `msm_triangle_empty_X` and `msm_triangle_empty_Z` have
+  been removed from `MsmTriangleEvidence`. The all-singleton non-empty triangle
+  case is also proved locally from rational absolute-value triangle. The
+  singleton-target source-tail case is proved by a decomposed C-function
+  potential identity in `MSM/Core/CFunctionBounds.v` plus a one-dimensional
+  executable DP invariant. The singleton-middle source-target-tail case is
+  proved by a target-snoc potential invariant using the same C-function
+  identity; the symmetric target-tail case is derived from MSM symmetry.
+- `MSM/Metric/Symmetry.v`: proved singleton-vs-series symmetry directly from
+  the executable first-row/first-column recurrences and `c_func_symm_bc`, then
+  proved the full executable matrix-cell transpose invariant. The
+  `msm_symmetric_nonempty_premise` surface has been retired.
 - `ASSUMPTIONS.tsv`: split the broad MSM metric candidate into narrow allowed
   assumptions for MSM identity, symmetry, and the non-empty-domain triangle
   theorem, all cited to Stefan et al. MSM reflexivity has since been retired
@@ -324,17 +348,31 @@ supported by the current executable model:
   has also been retired after local Kleene star/plus decomposition proofs.
 - `ASSUMPTIONS.tsv` and `scripts/verify-formal.sh`: the evidence audit now
   reports every field inside `*Evidence` records, not only fields whose names
-  end in `_proof`, `_bridge`, or `_premise`. The MSM triangle fields are
-  explicitly allowlisted so the remaining unallowlisted audit output points at
-  active core automaton obligations.
+  end in `_proof`, `_bridge`, or `_premise`. The MSM triangle fields were
+  explicitly allowlisted while the all-tail case was still delegated.
+- `MSM/Metric/TriangleAllTailSupport.v`, `TriangleInequality.v`, `MainTheorem.v`:
+  **retired the last MSM evidence surface.** The all-tail (all three series
+  non-empty) triangle case is now proved unconditionally. A per-cell potential
+  `msm_cell_potential = matrix_cell - half_abs(endpoints)` is shown to be triangle
+  subadditive across the three DP matrices: nine operation-pair potential
+  inequalities (move/merge/split × move/merge/split) feed a single strong
+  induction on `i + j + k` (`msm_triangle_cell_potential_bound_all`), where the
+  hard merge/split combinations route through the corresponding matrix step lemma
+  plus `merge_potential_target_irrelevant`/`split_potential_source_irrelevant`
+  rather than the false `move ≤ merge + split`. `msm_triangle_all_tails` then
+  bridges the corner cell to `msm_distance` via `msm_distance_matrix_cell_last`.
+  The `MsmTriangleEvidence` record and `MsmTriangleRemainingCase` index were
+  removed; `msm_triangle` and `msm_is_metric_on_nonempty_series` are now
+  unconditional, and the evidence audit reports an empty MSM surface.
 - `ASSUMPTIONS.tsv`: retired stale candidates for the old grammar
   Levenshtein-triangle shell and the now-removed
   `automaton_run_nonempty_epsilon_closed` wrapper.
 
-| Area | Remaining unallowlisted evidence surface |
+| Area | Remaining evidence surface |
 |---|---|
 | Core automaton soundness | none |
-| Core automaton completeness | `AutomatonCompletenessCoreEvidence`, `transposition_completeness`, `merge_split_completeness`, `position_subsumed_from_run` |
+| Core automaton completeness | none |
+| MSM metric | none |
 
 `docs/verification/core/theories/Distance.v` remains a legacy monolith. Use the
 decomposed modules (`OptimalTrace/*`, `Triangle/*`, `LowerBound/*`,
@@ -348,14 +386,11 @@ reference material and is not the memory-efficient target.
    Keep using the decomposed core Levenshtein modules for metric facts. Do not
    re-promote `Distance.v`; it is slower and duplicates the modular proof tree.
 
-2. Prove core automaton contracts.
+2. Keep core automaton contracts closed.
 
-   Close the remaining core completeness record by proving or further
-   decomposing `position_subsumed_from_run`, `transposition_completeness`, and
-   `merge_split_completeness`. Core automaton soundness no longer has an
-   evidence record. Exact antichain inclusion and special-origin-in-same-state
-   obligations have been removed because they are false for the executable
-   filtering model.
+   Core automaton soundness and completeness no longer have evidence records.
+   Exact antichain inclusion and special-origin-in-same-state obligations have
+   been removed because they are false for the executable filtering model.
 
 3. Rebuild grammar NFA equivalence on traced runs.
 
@@ -371,14 +406,25 @@ reference material and is not the memory-efficient target.
    proofs separate from language-equivalence proofs and continue compiling the
    file with the standard capped profile before promoting related changes.
 
-5. Close product and MSM.
+5. Close product (MSM is now closed).
 
    For product, prove state-transition simulations against the trusted core
-   distance model. For MSM, use the cited paper only for mathematical context;
-   local Coq definitions still need identity of indiscernibles, symmetry, and
-   non-empty-domain triangle proofs. Reflexivity is already local. Do not
-   reinstate all-list metric claims without changing the empty-series model;
-   the current file contains a proved counterexample for an empty middle series.
+   distance model.
+
+   MSM is fully closed: the last evidence surface (`MsmTriangleEvidence` and its
+   `msm_triangle_nonempty` field) has been **retired**. The all-tail
+   non-empty-series triangle case is now proved unconditionally by
+   `msm_triangle_all_tails`, which reduces the three distances to corner cells via
+   `msm_distance_matrix_cell_last` and closes the matrix-cell triangle bound with
+   `msm_triangle_cell_potential_bound_all` (a potential-function/amortized argument
+   in `Metric/TriangleAllTailSupport.v`: per-operation move/merge/split potentials,
+   nine operation-pair inequalities, and a single strong induction on `i + j + k`
+   over the three DP matrices). `msm_triangle` and
+   `msm_is_metric_on_nonempty_series` are now unconditional. The reflexivity,
+   identity-of-indiscernibles, symmetry, and empty-side (non-empty-middle) cases
+   were already local. Do not reinstate all-list metric claims without changing
+   the empty-series model; the file retains a proved counterexample for an empty
+   middle series (the only domain restriction that remains, by design).
 
 6. Review phonetic proofs.
 

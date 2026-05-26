@@ -41,37 +41,37 @@ Qed.
     - If Split/Merge is used, cost >= c > 0
     - Therefore, if total cost is 0, only Moves were used with matching values *)
 
-Lemma msm_zero_implies_same_length' : forall (contracts : MsmDistanceEvidence) X Y cfg,
+Lemma msm_zero_implies_same_length' : forall X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
   length X = length Y.
 Proof.
-  intros contracts X Y cfg Hc Hzero.
+  intros X Y cfg Hc Hzero.
   apply series_Qeq_length.
-  apply (msm_zero_implies_series_eq contracts) with cfg; assumption.
+  apply (msm_zero_implies_series_eq X Y cfg); assumption.
 Qed.
 
-Lemma msm_zero_implies_series_eq' : forall (contracts : MsmDistanceEvidence) X Y cfg,
+Lemma msm_zero_implies_series_eq' : forall X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
   series_Qeq X Y.
 Proof.
-  intros contracts X Y cfg Hc Hzero.
-  exact (msm_zero_implies_series_eq contracts X Y cfg Hc Hzero).
+  intros X Y cfg Hc Hzero.
+  exact (msm_zero_implies_series_eq X Y cfg Hc Hzero).
 Qed.
 
 (** * Main Identity Theorem *)
 
-Theorem msm_identity : forall (contracts : MsmDistanceEvidence) X Y cfg,
+Theorem msm_identity : forall X Y cfg,
   0 < msm_c cfg ->
   (msm_distance X Y cfg == 0 -> series_Qeq X Y) /\
   (X = Y -> msm_distance X Y cfg == 0).
 Proof.
-  intros contracts X Y cfg Hc.
+  intros X Y cfg Hc.
   split.
   - (* MSM(X, Y) = 0 -> X and Y are pointwise Qeq *)
     intros Hzero.
-    exact (msm_zero_implies_series_eq contracts X Y cfg Hc Hzero).
+    exact (msm_zero_implies_series_eq X Y cfg Hc Hzero).
   - (* Leibniz equality is enough for MSM(X, Y) = 0 *)
     intros Heq. subst Y.
     apply msm_reflexive.

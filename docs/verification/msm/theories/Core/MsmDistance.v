@@ -107,30 +107,6 @@ Proof.
   apply (proj1 (Nat2Z.inj_lt 0 n)). exact Hn.
 Qed.
 
-(** * Evidence for MSM Metric Properties *)
-
-(** This evidence captures the remaining non-empty identity-of-indiscernibles
-    property implied by the MSM dynamic-programming recurrence and metricity result.
-    Reference: Stefan, Alexandra, et al. "The move-split-merge metric for
-    time series." IEEE TKDE 25.6 (2012): 1425-1438.
-
-    Broad value-independent split/merge upper bounds are intentionally not
-    assumed here: [msm_distance [x] [y]] is [|x-y|], which can exceed
-    [(length [x] + length [y]) * c] when [c] is small.
-
-    The conclusion uses [series_Qeq], not Leibniz equality, because [Qeq] is
-    the equality respected by rational arithmetic in QArith. *)
-
-Record MsmDistanceEvidence : Prop := mkMsmDistanceEvidence {
-  (** MSM identity of indiscernibles for the recursive non-empty DP case.
-      Singleton edge cases are proved locally below. *)
-  msm_zero_implies_series_eq_proof :
-    forall x x_next xs y y_next ys (cfg : MsmConfig),
-    0 < msm_c cfg ->
-    msm_distance (x :: x_next :: xs) (y :: y_next :: ys) cfg == 0 ->
-    series_Qeq (x :: x_next :: xs) (y :: y_next :: ys)
-}.
-
 Lemma msm_distance_empty_empty : forall cfg,
   msm_distance [] [] cfg == 0.
 Proof.
@@ -680,54 +656,6 @@ Proof.
     symmetry. exact Hsplit.
 Qed.
 
-Lemma msm_zero_implies_series_eq_evidence_use : forall (contracts : MsmDistanceEvidence) X Y cfg,
-  0 < msm_c cfg ->
-  msm_distance X Y cfg == 0 ->
-  series_Qeq X Y.
-Proof.
-  intros contracts X Y cfg Hc Hzero.
-  destruct X as [|x xs]; destruct Y as [|y ys].
-  - exact I.
-  - simpl in Hzero.
-    exfalso.
-    assert (Hlen_pos : (0 < length (y :: ys))%nat) by (simpl; lia).
-    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (y :: ys)))).
-    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
-    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (y :: ys))) * msm_c cfg).
-    { apply Qmult_lt_0_compat; assumption. }
-    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
-  - simpl in Hzero.
-    exfalso.
-    assert (Hlen_pos : (0 < length (x :: xs))%nat) by (simpl; lia).
-    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (x :: xs)))).
-    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
-    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (x :: xs))) * msm_c cfg).
-    { apply Qmult_lt_0_compat; assumption. }
-    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
-  - destruct xs as [|x_next xs']; destruct ys as [|y_next ys'].
-    + simpl in Hzero.
-      simpl. split.
-      * apply Qabs_diff_zero_iff. exact Hzero.
-      * exact I.
-    + destruct (msm_distance_singleton_left_zero x y (y_next :: ys') cfg Hc Hzero)
-        as [Htail_empty _].
-      discriminate Htail_empty.
-    + destruct (msm_distance_singleton_right_zero x (x_next :: xs') y cfg Hc Hzero)
-        as [Htail_empty _].
-      discriminate Htail_empty.
-    + destruct xs' as [|x_third xs'']; destruct ys' as [|y_third ys''].
-      * simpl.
-        destruct (msm_distance_two_two_zero x x_next y y_next cfg Hc Hzero)
-          as [Hxy Hnext].
-        repeat split; assumption.
-      * exact (msm_zero_implies_series_eq_proof contracts
-                 x x_next [] y y_next (y_third :: ys'') cfg Hc Hzero).
-      * exact (msm_zero_implies_series_eq_proof contracts
-                 x x_next (x_third :: xs'') y y_next [] cfg Hc Hzero).
-      * exact (msm_zero_implies_series_eq_proof contracts
-                 x x_next (x_third :: xs'') y y_next (y_third :: ys'') cfg Hc Hzero).
-Qed.
-
 (** For reflexivity, the key insight is that the minimum cost path
     from (0,0) to (n-1, n-1) when X = Y is the diagonal path where
     each step is a Move with cost |x_i - x_i| = 0.
@@ -1047,12 +975,971 @@ Proof.
       apply msm_nonneg.
 Qed.
 
+(** ** Zero-distance row invariant for identity of indiscernibles *)
+
+Definition row_zero_sound (Xpref Y : list Q) (row : list Q) : Prop :=
+  forall j,
+    (j < length row)%nat ->
+    nth j row 0 == 0 ->
+    length Xpref = S j /\ series_Qeq Xpref (firstn (S j) Y).
+
+Lemma Qmin3_nonneg : forall a b c,
+  0 <= a ->
+  0 <= b ->
+  0 <= c ->
+  0 <= Qmin3 a b c.
+Proof.
+  intros a b c Ha Hb Hc.
+  unfold Qmin3.
+  apply Qmin2_glb.
+  - exact Ha.
+  - apply Qmin2_glb; assumption.
+Qed.
+
+Lemma series_Qeq_snoc : forall X Y x y,
+  series_Qeq X Y ->
+  x == y ->
+  series_Qeq (X ++ [x]) (Y ++ [y]).
+Proof.
+  induction X as [|xh xt IH]; intros Y x y Hxy Hlast.
+  - destruct Y as [|yh yt]; [| contradiction].
+    simpl. split; [exact Hlast | exact I].
+  - destruct Y as [|yh yt]; [contradiction |].
+    simpl in Hxy. destruct Hxy as [Hh Ht].
+    simpl. split.
+    + exact Hh.
+    + apply IH; assumption.
+Qed.
+
+Lemma firstn_S_snoc_Q : forall (l : list Q) n,
+  (n < length l)%nat ->
+  firstn (S n) l = firstn n l ++ [nth n l 0].
+Proof.
+  intros l n Hlt.
+  revert l Hlt.
+  induction n as [|n IH]; intros l Hlt.
+  - destruct l as [|x xs]; [simpl in Hlt; lia | reflexivity].
+  - destruct l as [|x xs]; [simpl in Hlt; lia |].
+    simpl. f_equal.
+    apply IH. simpl in Hlt. lia.
+Qed.
+
+Lemma msm_init_row_nth_zero_start : forall x1 y_prev Y_tail prev_cost c_const j,
+  0 < c_const ->
+  0 <= prev_cost ->
+  (j < length (msm_init_row x1 y_prev Y_tail prev_cost c_const))%nat ->
+  nth j (msm_init_row x1 y_prev Y_tail prev_cost c_const) 0 == 0 ->
+  j = O /\ prev_cost == 0.
+Proof.
+  intros x1 y_prev Y_tail.
+  revert y_prev.
+  induction Y_tail as [|y ys IH]; intros y_prev prev_cost c_const j Hc Hprev Hj Hnth.
+  - simpl in Hj, Hnth.
+    destruct j as [|j']; [split; [reflexivity | exact Hnth] | lia].
+  - simpl in Hj, Hnth.
+    destruct j as [|j'].
+    + split; [reflexivity | exact Hnth].
+    + assert (Hnext_nonneg : 0 <= prev_cost + c_func c_const y x1 y_prev).
+      { apply Qlt_le_weak.
+        apply Qplus_nonneg_pos.
+        - exact Hprev.
+        - apply c_func_pos. exact Hc. }
+      destruct (IH y (prev_cost + c_func c_const y x1 y_prev)
+                   c_const j' Hc Hnext_nonneg) as [_ Hnext_zero].
+      * lia.
+      * exact Hnth.
+      * exfalso.
+        apply (Qplus_nonneg_pos_not_zero prev_cost
+                 (c_func c_const y x1 y_prev)).
+        -- exact Hprev.
+        -- apply c_func_pos. exact Hc.
+        -- exact Hnext_zero.
+Qed.
+
+Lemma msm_init_row_zero_sound : forall x y ys c_const,
+  0 < c_const ->
+  row_zero_sound [x] (y :: ys)
+    (msm_init_row x y ys (Qabs_diff x y) c_const).
+Proof.
+  intros x y ys c_const Hc.
+  unfold row_zero_sound.
+  intros j Hj Hzero.
+  destruct (msm_init_row_nth_zero_start
+              x y ys (Qabs_diff x y) c_const j
+              Hc (Qabs_diff_nonneg x y) Hj Hzero) as [Hj0 Habs].
+  subst j.
+  simpl.
+  split; [reflexivity |].
+  split.
+  - apply Qabs_diff_zero_iff. exact Habs.
+  - exact I.
+Qed.
+
+Lemma msm_compute_row_nth_succ_zero_move :
+  forall p x_i x_prev y_prev Y_tail prev_row cost_left c_const,
+    0 < c_const ->
+    0 <= cost_left ->
+    Forall (fun x => 0 <= x) prev_row ->
+    (p < length Y_tail)%nat ->
+    (S p < length prev_row)%nat ->
+    nth (S p)
+        (msm_compute_row x_i x_prev y_prev Y_tail prev_row cost_left c_const) 0 == 0 ->
+    nth p prev_row 0 == 0 /\ x_i == nth p Y_tail 0.
+Proof.
+  induction p as [|p IH]; intros x_i x_prev y_prev Y_tail prev_row cost_left c_const
+                                Hc Hleft Hprev Hp_tail Hp_row Hzero.
+  - destruct Y_tail as [|y ys]; [simpl in Hp_tail; lia |].
+    destruct prev_row as [|cost_diag [|cost_up rest]]; simpl in Hp_row; try lia.
+    simpl in Hzero.
+    rewrite msm_compute_row_hd_eq in Hzero.
+    inversion Hprev as [|? ? Hdiag Hprev_tail]. subst.
+    inversion Hprev_tail as [|? ? Hup _]. subst.
+    destruct (Qmin3_eq_zero_choice
+                (cost_diag + Qabs_diff x_i y)
+                (cost_up + c_func c_const x_i x_prev y)
+                (cost_left + c_func c_const y x_i y_prev)
+                Hzero) as [Hmove | [Hmerge | Hsplit]].
+    + destruct (Qplus_nonneg_eq_zero
+                  cost_diag (Qabs_diff x_i y)
+                  Hdiag (Qabs_diff_nonneg x_i y)
+                  Hmove) as [Hdiag_zero Habs_zero].
+      split.
+      * exact Hdiag_zero.
+      * apply Qabs_diff_zero_iff. exact Habs_zero.
+    + exfalso.
+      apply (Qplus_nonneg_pos_not_zero cost_up
+               (c_func c_const x_i x_prev y)).
+      * exact Hup.
+      * apply c_func_pos. exact Hc.
+      * exact Hmerge.
+    + exfalso.
+      apply (Qplus_nonneg_pos_not_zero cost_left
+               (c_func c_const y x_i y_prev)).
+      * exact Hleft.
+      * apply c_func_pos. exact Hc.
+      * exact Hsplit.
+  - destruct Y_tail as [|y ys]; [simpl in Hp_tail; lia |].
+    destruct prev_row as [|cost_diag [|cost_up rest]]; simpl in Hp_row; try lia.
+    simpl in Hzero.
+    inversion Hprev as [|? ? Hdiag Hprev_tail]. subst.
+    inversion Hprev_tail as [|? ? Hup Hrest]. subst.
+    set (cost_j := Qmin3 (cost_diag + Qabs_diff x_i y)
+                        (cost_up + c_func c_const x_i x_prev y)
+                        (cost_left + c_func c_const y x_i y_prev)).
+    assert (Hcost_j_nonneg : 0 <= cost_j).
+    { subst cost_j.
+      apply Qmin3_nonneg.
+      - setoid_replace 0 with (0 + 0) by ring.
+        apply Qplus_le_compat; [exact Hdiag | apply Qabs_diff_nonneg].
+      - setoid_replace 0 with (0 + 0) by ring.
+        apply Qplus_le_compat.
+        + exact Hup.
+        + apply c_func_nonneg. apply Qlt_le_weak. exact Hc.
+      - setoid_replace 0 with (0 + 0) by ring.
+        apply Qplus_le_compat.
+        + exact Hleft.
+        + apply c_func_nonneg. apply Qlt_le_weak. exact Hc. }
+    pose proof (IH x_i x_prev y ys (cost_up :: rest) cost_j c_const
+                  Hc Hcost_j_nonneg Hprev_tail) as Hrec.
+    simpl in Hp_tail, Hp_row.
+    apply Hrec.
+    + lia.
+    + simpl. lia.
+    + subst cost_j. exact Hzero.
+Qed.
+
+Lemma msm_compute_row_zero_sound :
+  forall Xpref x_i x_prev y1 Y_tail prev_row c_const,
+    0 < c_const ->
+    Forall (fun x => 0 <= x) prev_row ->
+    row_zero_sound Xpref (y1 :: Y_tail) prev_row ->
+    length prev_row = S (length Y_tail) ->
+    row_zero_sound (Xpref ++ [x_i]) (y1 :: Y_tail)
+      (msm_compute_row x_i x_prev y1 Y_tail prev_row
+         (hd 0 prev_row + c_func c_const x_i x_prev y1) c_const).
+Proof.
+  intros Xpref x_i x_prev y1 Y_tail prev_row c_const
+         Hc Hprev_nonneg Hsound Hrow_len.
+  unfold row_zero_sound in *.
+  intros j Hj Hzero.
+  destruct j as [|k].
+  - rewrite msm_compute_row_hd_eq in Hzero.
+    exfalso.
+    apply (Qplus_nonneg_pos_not_zero
+             (hd 0 prev_row)
+             (c_func c_const x_i x_prev y1)).
+    + apply hd_nonneg.
+      * apply Qle_refl.
+      * exact Hprev_nonneg.
+    + apply c_func_pos. exact Hc.
+    + exact Hzero.
+  - assert (Hk_tail : (k < length Y_tail)%nat).
+    { rewrite msm_compute_row_length in Hj by (rewrite Hrow_len; lia).
+      simpl in Hj. lia. }
+    assert (Hk_prev : (S k < length prev_row)%nat).
+    { rewrite Hrow_len. lia. }
+    destruct (msm_compute_row_nth_succ_zero_move
+                k x_i x_prev y1 Y_tail prev_row
+                (hd 0 prev_row + c_func c_const x_i x_prev y1)
+                c_const Hc) as [Hprev_zero Hxi].
+    + apply Qlt_le_weak.
+      apply Qplus_nonneg_pos.
+      * apply hd_nonneg; [apply Qle_refl | exact Hprev_nonneg].
+      * apply c_func_pos. exact Hc.
+    + exact Hprev_nonneg.
+    + exact Hk_tail.
+    + exact Hk_prev.
+    + exact Hzero.
+    + destruct (Hsound k) as [Hlen_pref Hseries_pref].
+      * rewrite Hrow_len. lia.
+      * exact Hprev_zero.
+      * split.
+        -- rewrite length_app. simpl. lia.
+        -- rewrite (firstn_S_snoc_Q (y1 :: Y_tail) (S k)).
+           ++ simpl.
+              replace (nth (S k) (y1 :: Y_tail) 0) with (nth k Y_tail 0)
+                by reflexivity.
+              change (series_Qeq (Xpref ++ [x_i])
+                        (firstn (S k) (y1 :: Y_tail) ++ [nth k Y_tail 0])).
+              apply series_Qeq_snoc; assumption.
+           ++ simpl. lia.
+Qed.
+
+Lemma msm_compute_rows_length : forall X_tail x_prev y1 Y_tail row c_const,
+  length row = S (length Y_tail) ->
+  length (msm_compute_rows X_tail x_prev (y1 :: Y_tail) y1 row c_const) =
+  S (length Y_tail).
+Proof.
+  induction X_tail as [|x xs IH]; intros x_prev y1 Y_tail row c_const Hlen.
+  - simpl. exact Hlen.
+  - simpl.
+    apply IH.
+    apply msm_compute_row_length.
+    rewrite Hlen. lia.
+Qed.
+
+(** ** Length lower bounds
+
+    Each split or merge changes the prefix-length difference by at most one
+    and costs at least [c].  The following row invariants capture that fact
+    directly over the executable row DP.
+*)
+
+Definition qnat_mul (n : nat) (c : Q) : Q :=
+  inject_Z (Z.of_nat n) * c.
+
+Lemma qnat_mul_succ : forall n c,
+  qnat_mul (S n) c == qnat_mul n c + c.
+Proof.
+  intros n c.
+  unfold qnat_mul.
+  rewrite Nat2Z.inj_succ.
+  replace (Z.succ (Z.of_nat n)) with (Z.of_nat n + 1)%Z by lia.
+  rewrite inject_Z_plus.
+  simpl.
+  ring.
+Qed.
+
+Lemma qnat_mul_nonneg : forall n c,
+  0 <= c ->
+  0 <= qnat_mul n c.
+Proof.
+  intros n c Hc.
+  unfold qnat_mul.
+  apply Qmult_le_0_compat.
+  - apply inject_Z_of_nat_nonneg.
+  - exact Hc.
+Qed.
+
+Lemma qnat_mul_le_mono : forall i j c,
+  (i <= j)%nat ->
+  0 <= c ->
+  qnat_mul i c <= qnat_mul j c.
+Proof.
+  intros i j c Hij Hc.
+  unfold qnat_mul.
+  apply Qmult_le_compat_r.
+  - rewrite <- Zle_Qle.
+    apply Nat2Z.inj_le. exact Hij.
+  - exact Hc.
+Qed.
+
+Lemma Qmin3_glb : forall a b c d,
+  d <= a ->
+  d <= b ->
+  d <= c ->
+  d <= Qmin3 a b c.
+Proof.
+  intros a b c d Ha Hb Hc.
+  unfold Qmin3.
+  apply Qmin2_glb.
+  - exact Ha.
+  - apply Qmin2_glb; assumption.
+Qed.
+
+Lemma Qplus_Qmin3_glb : forall base a b c d,
+  d <= base + a ->
+  d <= base + b ->
+  d <= base + c ->
+  d <= base + Qmin3 a b c.
+Proof.
+  intros base a b c d Ha Hb Hc.
+  assert (Ha' : d - base <= a).
+  { apply (proj1 (Qplus_le_l (d - base) a base)).
+    ring_simplify. exact Ha. }
+  assert (Hb' : d - base <= b).
+  { apply (proj1 (Qplus_le_l (d - base) b base)).
+    ring_simplify. exact Hb. }
+  assert (Hc' : d - base <= c).
+  { apply (proj1 (Qplus_le_l (d - base) c base)).
+    ring_simplify. exact Hc. }
+  assert (Hmin : d - base <= Qmin3 a b c).
+  { apply Qmin3_glb; assumption. }
+  apply (proj1 (Qplus_le_l d (base + Qmin3 a b c) (- base))).
+  ring_simplify. exact Hmin.
+Qed.
+
+Lemma qnat_bound_step_target : forall target source cost extra c,
+  qnat_mul target c <= qnat_mul source c + cost ->
+  c <= extra ->
+  qnat_mul (S target) c <= qnat_mul source c + (cost + extra).
+Proof.
+  intros target source cost extra c Hbound Hextra.
+  rewrite qnat_mul_succ.
+  setoid_replace (qnat_mul source c + (cost + extra))
+    with ((qnat_mul source c + cost) + extra) by ring.
+  apply Qplus_le_compat; assumption.
+Qed.
+
+Lemma qnat_bound_step_both : forall target source cost extra c,
+  qnat_mul target c <= qnat_mul source c + cost ->
+  0 <= extra ->
+  qnat_mul (S target) c <= qnat_mul (S source) c + (cost + extra).
+Proof.
+  intros target source cost extra c Hbound Hextra.
+  rewrite !qnat_mul_succ.
+  setoid_replace (qnat_mul source c + c + (cost + extra))
+    with ((qnat_mul source c + cost) + (c + extra)) by ring.
+  apply Qplus_le_compat.
+  - exact Hbound.
+  - apply Qle_plus_nonneg_r. exact Hextra.
+Qed.
+
+Lemma qnat_bound_shift_source_rhs : forall target source cost extra c,
+  qnat_mul target c <= qnat_mul source c + cost ->
+  0 <= c ->
+  0 <= extra ->
+  qnat_mul target c <= qnat_mul (S source) c + (cost + extra).
+Proof.
+  intros target source cost extra c Hbound Hc Hextra.
+  eapply Qle_trans.
+  - exact Hbound.
+  - rewrite qnat_mul_succ.
+    setoid_replace (qnat_mul source c + c + (cost + extra))
+      with ((qnat_mul source c + cost) + (c + extra)) by ring.
+    apply Qle_plus_nonneg_r.
+    setoid_replace 0 with (0 + 0) by ring.
+    apply Qplus_le_compat; assumption.
+Qed.
+
+Lemma qnat_bound_shift_target_rhs : forall source target cost extra c,
+  qnat_mul source c <= qnat_mul target c + cost ->
+  0 <= c ->
+  0 <= extra ->
+  qnat_mul source c <= qnat_mul (S target) c + (cost + extra).
+Proof.
+  intros source target cost extra c Hbound Hc Hextra.
+  eapply Qle_trans.
+  - exact Hbound.
+  - rewrite qnat_mul_succ.
+    setoid_replace (qnat_mul target c + c + (cost + extra))
+      with ((qnat_mul target c + cost) + (c + extra)) by ring.
+    apply Qle_plus_nonneg_r.
+    setoid_replace 0 with (0 + 0) by ring.
+    apply Qplus_le_compat; assumption.
+Qed.
+
+Lemma qnat_bound_step_source : forall source target cost extra c,
+  qnat_mul source c <= qnat_mul target c + cost ->
+  c <= extra ->
+  qnat_mul (S source) c <= qnat_mul target c + (cost + extra).
+Proof.
+  intros source target cost extra c Hbound Hextra.
+  rewrite qnat_mul_succ.
+  setoid_replace (qnat_mul target c + (cost + extra))
+    with ((qnat_mul target c + cost) + extra) by ring.
+  apply Qplus_le_compat; assumption.
+Qed.
+
+Definition row_target_lower_bound_from
+    (source_len target_start : nat) (row : list Q) (c : Q) : Prop :=
+  forall j,
+    (j < length row)%nat ->
+    qnat_mul (target_start + j) c <=
+      qnat_mul source_len c + nth j row 0.
+
+Definition row_source_lower_bound_from
+    (source_len target_start : nat) (row : list Q) (c : Q) : Prop :=
+  forall j,
+    (j < length row)%nat ->
+    qnat_mul source_len c <=
+      qnat_mul (target_start + j) c + nth j row 0.
+
+Lemma msm_init_row_target_lower_bound_from :
+  forall x1 y_prev Y_tail prev_cost c source_len target_start,
+    0 <= c ->
+    0 <= prev_cost ->
+    qnat_mul target_start c <= qnat_mul source_len c + prev_cost ->
+    row_target_lower_bound_from source_len target_start
+      (msm_init_row x1 y_prev Y_tail prev_cost c) c.
+Proof.
+  intros x1 y_prev Y_tail.
+  revert y_prev.
+  induction Y_tail as [|y ys IH]; intros y_prev prev_cost c source_len target_start
+                                    Hc Hprev Hstart.
+  - unfold row_target_lower_bound_from.
+    intros j Hj.
+    destruct j as [|j'].
+    + replace (target_start + 0)%nat with target_start by lia.
+      simpl. exact Hstart.
+    + simpl in Hj. lia.
+  - unfold row_target_lower_bound_from in *.
+    intros j Hj.
+    simpl in Hj.
+    destruct j as [|j'].
+    + replace (target_start + 0)%nat with target_start by lia.
+      simpl. exact Hstart.
+    + simpl.
+      replace (target_start + S j')%nat with (S target_start + j')%nat by lia.
+      apply (IH y (prev_cost + c_func c y x1 y_prev) c source_len (S target_start)).
+      * exact Hc.
+      * change (0 + 0 <= prev_cost + c_func c y x1 y_prev).
+        apply Qplus_le_compat.
+        -- exact Hprev.
+        -- apply c_func_nonneg. exact Hc.
+      * apply qnat_bound_step_target.
+        -- exact Hstart.
+        -- apply c_func_ge_c. exact Hc.
+      * lia.
+Qed.
+
+Lemma msm_init_row_source_lower_bound_from :
+  forall x1 y_prev Y_tail prev_cost c source_len target_start,
+    0 <= c ->
+    0 <= prev_cost ->
+    qnat_mul source_len c <= qnat_mul target_start c + prev_cost ->
+    row_source_lower_bound_from source_len target_start
+      (msm_init_row x1 y_prev Y_tail prev_cost c) c.
+Proof.
+  intros x1 y_prev Y_tail.
+  revert y_prev.
+  induction Y_tail as [|y ys IH]; intros y_prev prev_cost c source_len target_start
+                                    Hc Hprev Hstart.
+  - unfold row_source_lower_bound_from.
+    intros j Hj.
+    destruct j as [|j'].
+    + replace (target_start + 0)%nat with target_start by lia.
+      simpl. exact Hstart.
+    + simpl in Hj. lia.
+  - unfold row_source_lower_bound_from in *.
+    intros j Hj.
+    simpl in Hj.
+    destruct j as [|j'].
+    + replace (target_start + 0)%nat with target_start by lia.
+      simpl. exact Hstart.
+    + simpl.
+      replace (target_start + S j')%nat with (S target_start + j')%nat by lia.
+      apply (IH y (prev_cost + c_func c y x1 y_prev) c source_len (S target_start)).
+      * exact Hc.
+      * change (0 + 0 <= prev_cost + c_func c y x1 y_prev).
+        apply Qplus_le_compat.
+        -- exact Hprev.
+        -- apply c_func_nonneg. exact Hc.
+      * apply qnat_bound_shift_target_rhs.
+        -- exact Hstart.
+        -- exact Hc.
+        -- apply c_func_nonneg. exact Hc.
+      * lia.
+Qed.
+
+Lemma msm_compute_row_target_lower_bound_from :
+  forall x_i x_prev y_prev Y_tail prev_row cost_left c source_len target_start,
+    0 <= c ->
+    Forall (fun x => 0 <= x) prev_row ->
+    0 <= cost_left ->
+    row_target_lower_bound_from source_len target_start prev_row c ->
+    qnat_mul target_start c <= qnat_mul (S source_len) c + cost_left ->
+    row_target_lower_bound_from (S source_len) target_start
+      (msm_compute_row x_i x_prev y_prev Y_tail prev_row cost_left c) c.
+Proof.
+  intros x_i x_prev y_prev Y_tail.
+  revert y_prev.
+  induction Y_tail as [|y ys IH]; intros y_prev prev_row cost_left c source_len target_start
+                                    Hc Hprev_nonneg Hleft_nonneg Hprev_bound Hleft_bound.
+  - unfold row_target_lower_bound_from.
+    intros j Hj.
+    destruct j as [|j'].
+    + replace (target_start + 0)%nat with target_start by lia.
+      simpl. exact Hleft_bound.
+    + simpl in Hj. lia.
+  - unfold row_target_lower_bound_from in *.
+    intros j Hj.
+    destruct prev_row as [|cost_diag [|cost_up rest]].
+    + simpl in Hj.
+      destruct j as [|j'].
+      * replace (target_start + 0)%nat with target_start by lia.
+        simpl. exact Hleft_bound.
+      * lia.
+    + simpl in Hj.
+      destruct j as [|j'].
+      * replace (target_start + 0)%nat with target_start by lia.
+        simpl. exact Hleft_bound.
+      * lia.
+    + simpl in Hj.
+      destruct j as [|j'].
+      * replace (target_start + 0)%nat with target_start by lia.
+        simpl. exact Hleft_bound.
+      * simpl.
+        inversion Hprev_nonneg as [|? ? Hdiag Htail_nonneg]. subst.
+        inversion Htail_nonneg as [|? ? Hup Hrest_nonneg]. subst.
+        set (cost_j := Qmin3 (cost_diag + Qabs_diff x_i y)
+                            (cost_up + c_func c x_i x_prev y)
+                            (cost_left + c_func c y x_i y_prev)).
+        assert (Hcost_j_nonneg : 0 <= cost_j).
+        { subst cost_j.
+          apply Qmin3_nonneg.
+          - setoid_replace 0 with (0 + 0) by ring.
+            apply Qplus_le_compat; [exact Hdiag | apply Qabs_diff_nonneg].
+          - setoid_replace 0 with (0 + 0) by ring.
+            apply Qplus_le_compat; [exact Hup | apply c_func_nonneg; exact Hc].
+          - setoid_replace 0 with (0 + 0) by ring.
+            apply Qplus_le_compat; [exact Hleft_nonneg | apply c_func_nonneg; exact Hc]. }
+        assert (Hcost_j_bound :
+          qnat_mul (S target_start) c <= qnat_mul (S source_len) c + cost_j).
+        { subst cost_j.
+          apply Qplus_Qmin3_glb.
+          - replace (S target_start) with (S (target_start + 0%nat)) by lia.
+            eapply qnat_bound_step_both.
+            + specialize (Hprev_bound 0%nat ltac:(simpl; lia)).
+              simpl in Hprev_bound. exact Hprev_bound.
+            + apply Qabs_diff_nonneg.
+          - replace (S target_start) with (S target_start + 0%nat)%nat by lia.
+            eapply qnat_bound_shift_source_rhs.
+            + specialize (Hprev_bound 1%nat ltac:(simpl; lia)).
+              simpl in Hprev_bound.
+              replace (target_start + 1)%nat with (S target_start + 0%nat)%nat
+                in Hprev_bound by lia.
+              exact Hprev_bound.
+            + exact Hc.
+            + apply c_func_nonneg. exact Hc.
+          - apply qnat_bound_step_target.
+            + exact Hleft_bound.
+            + apply c_func_ge_c. exact Hc. }
+        replace (target_start + S j')%nat with (S target_start + j')%nat by lia.
+        apply (IH y (cost_up :: rest) cost_j c source_len (S target_start)).
+        -- exact Hc.
+        -- exact Htail_nonneg.
+        -- exact Hcost_j_nonneg.
+        -- intros k Hk.
+           replace (S target_start + k)%nat with (target_start + S k)%nat by lia.
+           assert (HSk : (S k < length (cost_diag :: cost_up :: rest))%nat)
+             by (simpl in Hk; simpl; lia).
+           specialize (Hprev_bound (S k) HSk).
+           simpl in Hprev_bound. exact Hprev_bound.
+        -- exact Hcost_j_bound.
+        -- apply Nat.succ_lt_mono. exact Hj.
+Qed.
+
+Lemma msm_compute_row_source_lower_bound_from :
+  forall x_i x_prev y_prev Y_tail prev_row cost_left c source_len target_start,
+    0 <= c ->
+    Forall (fun x => 0 <= x) prev_row ->
+    0 <= cost_left ->
+    row_source_lower_bound_from source_len target_start prev_row c ->
+    qnat_mul (S source_len) c <= qnat_mul target_start c + cost_left ->
+    row_source_lower_bound_from (S source_len) target_start
+      (msm_compute_row x_i x_prev y_prev Y_tail prev_row cost_left c) c.
+Proof.
+  intros x_i x_prev y_prev Y_tail.
+  revert y_prev.
+  induction Y_tail as [|y ys IH]; intros y_prev prev_row cost_left c source_len target_start
+                                    Hc Hprev_nonneg Hleft_nonneg Hprev_bound Hleft_bound.
+  - unfold row_source_lower_bound_from.
+    intros j Hj.
+    destruct j as [|j'].
+    + replace (target_start + 0)%nat with target_start by lia.
+      simpl. exact Hleft_bound.
+    + simpl in Hj. lia.
+  - unfold row_source_lower_bound_from in *.
+    intros j Hj.
+    destruct prev_row as [|cost_diag [|cost_up rest]].
+    + simpl in Hj.
+      destruct j as [|j'].
+      * replace (target_start + 0)%nat with target_start by lia.
+        simpl. exact Hleft_bound.
+      * lia.
+    + simpl in Hj.
+      destruct j as [|j'].
+      * replace (target_start + 0)%nat with target_start by lia.
+        simpl. exact Hleft_bound.
+      * lia.
+    + simpl in Hj.
+      destruct j as [|j'].
+      * replace (target_start + 0)%nat with target_start by lia.
+        simpl. exact Hleft_bound.
+      * simpl.
+        inversion Hprev_nonneg as [|? ? Hdiag Htail_nonneg]. subst.
+        inversion Htail_nonneg as [|? ? Hup Hrest_nonneg]. subst.
+        set (cost_j := Qmin3 (cost_diag + Qabs_diff x_i y)
+                            (cost_up + c_func c x_i x_prev y)
+                            (cost_left + c_func c y x_i y_prev)).
+        assert (Hcost_j_nonneg : 0 <= cost_j).
+        { subst cost_j.
+          apply Qmin3_nonneg.
+          - setoid_replace 0 with (0 + 0) by ring.
+            apply Qplus_le_compat; [exact Hdiag | apply Qabs_diff_nonneg].
+          - setoid_replace 0 with (0 + 0) by ring.
+            apply Qplus_le_compat; [exact Hup | apply c_func_nonneg; exact Hc].
+          - setoid_replace 0 with (0 + 0) by ring.
+            apply Qplus_le_compat; [exact Hleft_nonneg | apply c_func_nonneg; exact Hc]. }
+        assert (Hcost_j_bound :
+          qnat_mul (S source_len) c <= qnat_mul (S target_start) c + cost_j).
+        { subst cost_j.
+          apply Qplus_Qmin3_glb.
+          - replace (S target_start) with (S (target_start + 0%nat)) by lia.
+            eapply qnat_bound_step_both.
+            + specialize (Hprev_bound 0%nat ltac:(simpl; lia)).
+              simpl in Hprev_bound. exact Hprev_bound.
+            + apply Qabs_diff_nonneg.
+          - replace (S target_start) with (S target_start + 0%nat)%nat by lia.
+            apply qnat_bound_step_source.
+            + specialize (Hprev_bound 1%nat ltac:(simpl; lia)).
+              simpl in Hprev_bound.
+              replace (target_start + 1)%nat with (S target_start + 0%nat)%nat
+                in Hprev_bound by lia.
+              exact Hprev_bound.
+            + apply c_func_ge_c. exact Hc.
+          - eapply qnat_bound_shift_target_rhs.
+            + exact Hleft_bound.
+            + exact Hc.
+            + apply c_func_nonneg. exact Hc. }
+        replace (target_start + S j')%nat with (S target_start + j')%nat by lia.
+        apply (IH y (cost_up :: rest) cost_j c source_len (S target_start)).
+        -- exact Hc.
+        -- exact Htail_nonneg.
+        -- exact Hcost_j_nonneg.
+        -- intros k Hk.
+           replace (S target_start + k)%nat with (target_start + S k)%nat by lia.
+           assert (HSk : (S k < length (cost_diag :: cost_up :: rest))%nat)
+             by (simpl in Hk; simpl; lia).
+           specialize (Hprev_bound (S k) HSk).
+           simpl in Hprev_bound. exact Hprev_bound.
+        -- exact Hcost_j_bound.
+        -- apply Nat.succ_lt_mono. exact Hj.
+Qed.
+
+Lemma msm_compute_rows_target_lower_bound_from :
+  forall X_tail x_prev y1 Y_tail row c source_len,
+    0 <= c ->
+    Forall (fun x => 0 <= x) row ->
+    length row = S (length Y_tail) ->
+    row_target_lower_bound_from source_len 1 row c ->
+    row_target_lower_bound_from (source_len + length X_tail) 1
+      (msm_compute_rows X_tail x_prev (y1 :: Y_tail) y1 row c) c.
+Proof.
+  induction X_tail as [|x xs IH]; intros x_prev y1 Y_tail row c source_len
+                                      Hc Hrow_nonneg Hrow_len Hbound.
+  - simpl.
+    replace (source_len + 0)%nat with source_len by lia.
+    exact Hbound.
+  - simpl.
+    set (cost_left := hd 0 row + c_func c x x_prev y1).
+    set (new_row := msm_compute_row x x_prev y1 Y_tail row cost_left c).
+    replace (source_len + S (length xs))%nat
+      with (S source_len + length xs)%nat by (simpl; lia).
+    apply (IH x y1 Y_tail new_row c (S source_len)).
+    + exact Hc.
+    + subst new_row cost_left.
+      apply msm_compute_row_nonneg.
+      * exact Hc.
+      * change (0 + 0 <= hd 0 row + c_func c x x_prev y1).
+        apply Qplus_le_compat.
+        -- apply hd_nonneg; [apply Qle_refl | exact Hrow_nonneg].
+        -- apply c_func_nonneg. exact Hc.
+      * exact Hrow_nonneg.
+    + subst new_row.
+      apply msm_compute_row_length.
+      rewrite Hrow_len. lia.
+    + subst new_row cost_left.
+      apply msm_compute_row_target_lower_bound_from.
+      * exact Hc.
+      * exact Hrow_nonneg.
+      * change (0 + 0 <= hd 0 row + c_func c x x_prev y1).
+        apply Qplus_le_compat.
+        -- apply hd_nonneg; [apply Qle_refl | exact Hrow_nonneg].
+        -- apply c_func_nonneg. exact Hc.
+      * exact Hbound.
+      * eapply Qle_trans.
+        -- apply qnat_mul_le_mono; [apply le_n_S; apply Nat.le_0_l | exact Hc].
+        -- apply Qle_plus_nonneg_r.
+           change (0 + 0 <= hd 0 row + c_func c x x_prev y1).
+           apply Qplus_le_compat.
+           ++ apply hd_nonneg; [apply Qle_refl | exact Hrow_nonneg].
+           ++ apply c_func_nonneg. exact Hc.
+Qed.
+
+Lemma msm_compute_rows_source_lower_bound_from :
+  forall X_tail x_prev y1 Y_tail row c source_len,
+    0 <= c ->
+    Forall (fun x => 0 <= x) row ->
+    length row = S (length Y_tail) ->
+    row_source_lower_bound_from source_len 1 row c ->
+    row_source_lower_bound_from (source_len + length X_tail) 1
+      (msm_compute_rows X_tail x_prev (y1 :: Y_tail) y1 row c) c.
+Proof.
+  induction X_tail as [|x xs IH]; intros x_prev y1 Y_tail row c source_len
+                                      Hc Hrow_nonneg Hrow_len Hbound.
+  - simpl.
+    replace (source_len + 0)%nat with source_len by lia.
+    exact Hbound.
+  - simpl.
+    set (cost_left := hd 0 row + c_func c x x_prev y1).
+    set (new_row := msm_compute_row x x_prev y1 Y_tail row cost_left c).
+    replace (source_len + S (length xs))%nat
+      with (S source_len + length xs)%nat by (simpl; lia).
+    apply (IH x y1 Y_tail new_row c (S source_len)).
+    + exact Hc.
+    + subst new_row cost_left.
+      apply msm_compute_row_nonneg.
+      * exact Hc.
+      * change (0 + 0 <= hd 0 row + c_func c x x_prev y1).
+        apply Qplus_le_compat.
+        -- apply hd_nonneg; [apply Qle_refl | exact Hrow_nonneg].
+        -- apply c_func_nonneg. exact Hc.
+      * exact Hrow_nonneg.
+    + subst new_row.
+      apply msm_compute_row_length.
+      rewrite Hrow_len. lia.
+    + subst new_row cost_left.
+      apply msm_compute_row_source_lower_bound_from.
+      * exact Hc.
+      * exact Hrow_nonneg.
+      * change (0 + 0 <= hd 0 row + c_func c x x_prev y1).
+        apply Qplus_le_compat.
+        -- apply hd_nonneg; [apply Qle_refl | exact Hrow_nonneg].
+        -- apply c_func_nonneg. exact Hc.
+      * exact Hbound.
+      * apply qnat_bound_step_source.
+        -- specialize (Hbound 0%nat ltac:(rewrite Hrow_len; lia)).
+           simpl in Hbound.
+           replace (1 + 0)%nat with 1%nat in Hbound by lia.
+           replace (nth 0 row 0) with (hd 0 row) in Hbound
+             by (destruct row; reflexivity).
+           exact Hbound.
+        -- apply c_func_ge_c. exact Hc.
+Qed.
+
+Lemma msm_distance_length_target_lower : forall X Y cfg,
+  qnat_mul (length Y) (msm_c cfg) <=
+  qnat_mul (length X) (msm_c cfg) + msm_distance X Y cfg.
+Proof.
+  intros X Y cfg.
+  destruct X as [|x xs]; destruct Y as [|y ys].
+  - simpl. unfold qnat_mul. simpl. ring_simplify. apply Qle_refl.
+  - simpl. unfold qnat_mul. simpl.
+    ring_simplify.
+    apply Qle_refl.
+  - simpl.
+    unfold qnat_mul at 1. simpl.
+    setoid_replace (0 * msm_c cfg) with 0 by ring.
+    change (0 <= qnat_mul (S (length xs)) (msm_c cfg) +
+                 qnat_mul (S (length xs)) (msm_c cfg)).
+    setoid_replace 0 with (0 + 0) by ring.
+    apply Qplus_le_compat.
+    + apply qnat_mul_nonneg. apply msm_c_nonneg.
+    + apply qnat_mul_nonneg. apply msm_c_nonneg.
+  - simpl.
+    set (first_row := msm_init_row x y ys (Qabs_diff x y) (msm_c cfg)).
+    set (final_row := msm_compute_rows xs x (y :: ys) y first_row (msm_c cfg)).
+    assert (Hfirst_len : length first_row = S (length ys)).
+    { subst first_row. apply msm_init_row_length. }
+    assert (Hfinal_len : length final_row = S (length ys)).
+    { subst final_row. apply msm_compute_rows_length. exact Hfirst_len. }
+    assert (Hfirst_nonneg : Forall (fun x => 0 <= x) first_row).
+    { subst first_row.
+      apply msm_init_row_nonneg.
+      - apply msm_c_nonneg.
+      - apply Qabs_diff_nonneg. }
+    assert (Hfirst_bound :
+      row_target_lower_bound_from 1 1 first_row (msm_c cfg)).
+    { subst first_row.
+      apply msm_init_row_target_lower_bound_from.
+      - apply msm_c_nonneg.
+      - apply Qabs_diff_nonneg.
+      - apply Qle_plus_nonneg_r. apply Qabs_diff_nonneg. }
+    assert (Hfinal_bound :
+      row_target_lower_bound_from (1 + length xs) 1 final_row (msm_c cfg)).
+    { subst final_row.
+      apply msm_compute_rows_target_lower_bound_from.
+      - apply msm_c_nonneg.
+      - exact Hfirst_nonneg.
+      - exact Hfirst_len.
+      - exact Hfirst_bound. }
+    rewrite (last_eq_nth_by_length final_row 0 (length ys) Hfinal_len).
+    specialize (Hfinal_bound (length ys) ltac:(rewrite Hfinal_len; lia)).
+    replace (1 + length ys)%nat with (length (y :: ys)) in Hfinal_bound by reflexivity.
+    replace (1 + length xs)%nat with (length (x :: xs)) in Hfinal_bound by reflexivity.
+    exact Hfinal_bound.
+Qed.
+
+Lemma msm_distance_length_source_lower : forall X Y cfg,
+  qnat_mul (length X) (msm_c cfg) <=
+  qnat_mul (length Y) (msm_c cfg) + msm_distance X Y cfg.
+Proof.
+  intros X Y cfg.
+  destruct X as [|x xs]; destruct Y as [|y ys].
+  - simpl. unfold qnat_mul. simpl. ring_simplify. apply Qle_refl.
+  - simpl.
+    unfold qnat_mul at 1. simpl.
+    setoid_replace (0 * msm_c cfg) with 0 by ring.
+    change (0 <= qnat_mul (S (length ys)) (msm_c cfg) +
+                 qnat_mul (S (length ys)) (msm_c cfg)).
+    setoid_replace 0 with (0 + 0) by ring.
+    apply Qplus_le_compat.
+    + apply qnat_mul_nonneg. apply msm_c_nonneg.
+    + apply qnat_mul_nonneg. apply msm_c_nonneg.
+  - simpl. unfold qnat_mul. simpl.
+    ring_simplify.
+    apply Qle_refl.
+  - simpl.
+    set (first_row := msm_init_row x y ys (Qabs_diff x y) (msm_c cfg)).
+    set (final_row := msm_compute_rows xs x (y :: ys) y first_row (msm_c cfg)).
+    assert (Hfirst_len : length first_row = S (length ys)).
+    { subst first_row. apply msm_init_row_length. }
+    assert (Hfinal_len : length final_row = S (length ys)).
+    { subst final_row. apply msm_compute_rows_length. exact Hfirst_len. }
+    assert (Hfirst_nonneg : Forall (fun x => 0 <= x) first_row).
+    { subst first_row.
+      apply msm_init_row_nonneg.
+      - apply msm_c_nonneg.
+      - apply Qabs_diff_nonneg. }
+    assert (Hfirst_bound :
+      row_source_lower_bound_from 1 1 first_row (msm_c cfg)).
+    { subst first_row.
+      apply msm_init_row_source_lower_bound_from.
+      - apply msm_c_nonneg.
+      - apply Qabs_diff_nonneg.
+      - apply Qle_plus_nonneg_r. apply Qabs_diff_nonneg. }
+    assert (Hfinal_bound :
+      row_source_lower_bound_from (1 + length xs) 1 final_row (msm_c cfg)).
+    { subst final_row.
+      apply msm_compute_rows_source_lower_bound_from.
+      - apply msm_c_nonneg.
+      - exact Hfirst_nonneg.
+      - exact Hfirst_len.
+      - exact Hfirst_bound. }
+    rewrite (last_eq_nth_by_length final_row 0 (length ys) Hfinal_len).
+    specialize (Hfinal_bound (length ys) ltac:(rewrite Hfinal_len; lia)).
+    replace (1 + length ys)%nat with (length (y :: ys)) in Hfinal_bound by reflexivity.
+    replace (1 + length xs)%nat with (length (x :: xs)) in Hfinal_bound by reflexivity.
+    exact Hfinal_bound.
+Qed.
+
+Lemma msm_compute_rows_zero_sound : forall X_tail Xpref x_prev y1 Y_tail row c_const,
+  0 < c_const ->
+  Forall (fun x => 0 <= x) row ->
+  row_zero_sound Xpref (y1 :: Y_tail) row ->
+  length row = S (length Y_tail) ->
+  row_zero_sound (Xpref ++ X_tail) (y1 :: Y_tail)
+    (msm_compute_rows X_tail x_prev (y1 :: Y_tail) y1 row c_const).
+Proof.
+  induction X_tail as [|x xs IH]; intros Xpref x_prev y1 Y_tail row c_const
+                                      Hc Hrow_nonneg Hsound Hrow_len.
+  - simpl.
+    rewrite app_nil_r.
+    exact Hsound.
+  - simpl.
+    set (new_row :=
+      msm_compute_row x x_prev y1 Y_tail row
+        (hd 0 row + c_func c_const x x_prev y1) c_const).
+    replace (Xpref ++ x :: xs) with ((Xpref ++ [x]) ++ xs)
+      by (rewrite <- app_assoc; reflexivity).
+    apply IH.
+    + exact Hc.
+    + subst new_row.
+      apply msm_compute_row_nonneg.
+      * apply Qlt_le_weak. exact Hc.
+      * apply Qlt_le_weak.
+        apply Qplus_nonneg_pos.
+        -- apply hd_nonneg; [apply Qle_refl | exact Hrow_nonneg].
+        -- apply c_func_pos. exact Hc.
+      * exact Hrow_nonneg.
+    + subst new_row.
+      apply msm_compute_row_zero_sound; assumption.
+    + subst new_row.
+      apply msm_compute_row_length.
+      rewrite Hrow_len. lia.
+Qed.
+
+Lemma msm_distance_nonempty_zero_sound : forall x xs y ys cfg,
+  0 < msm_c cfg ->
+  msm_distance (x :: xs) (y :: ys) cfg == 0 ->
+  series_Qeq (x :: xs) (y :: ys).
+Proof.
+  intros x xs y ys cfg Hc Hzero.
+  simpl in Hzero.
+  set (first_row := msm_init_row x y ys (Qabs_diff x y) (msm_c cfg)) in *.
+  set (final_row := msm_compute_rows xs x (y :: ys) y first_row (msm_c cfg)) in *.
+  assert (Hfirst_len : length first_row = S (length ys)).
+  { subst first_row. apply msm_init_row_length. }
+  assert (Hfinal_len : length final_row = S (length ys)).
+  { subst final_row. apply msm_compute_rows_length. exact Hfirst_len. }
+  assert (Hsound :
+    row_zero_sound ([x] ++ xs) (y :: ys) final_row).
+  { subst final_row.
+    apply msm_compute_rows_zero_sound.
+    - exact Hc.
+    - subst first_row.
+      apply msm_init_row_nonneg.
+      + apply Qlt_le_weak. exact Hc.
+      + apply Qabs_diff_nonneg.
+    - subst first_row.
+      apply msm_init_row_zero_sound. exact Hc.
+    - exact Hfirst_len. }
+  rewrite (last_eq_nth_by_length final_row 0 (length ys) Hfinal_len) in Hzero.
+  destruct (Hsound (length ys)) as [Hlen Hseries].
+  - rewrite Hfinal_len. lia.
+  - exact Hzero.
+  - simpl in Hlen.
+    change (S (length ys)) with (length (y :: ys)) in Hseries.
+    rewrite firstn_all in Hseries.
+    exact Hseries.
+Qed.
+
 (** MSM identity: MSM(X, Y) = 0 implies pointwise rational equality (when c > 0). *)
-Lemma msm_zero_implies_series_eq : forall (contracts : MsmDistanceEvidence) X Y cfg,
+Lemma msm_zero_implies_series_eq : forall X Y cfg,
   0 < msm_c cfg ->
   msm_distance X Y cfg == 0 ->
   series_Qeq X Y.
 Proof.
-  intros contracts X Y cfg Hc Hzero.
-  exact (msm_zero_implies_series_eq_evidence_use contracts X Y cfg Hc Hzero).
+  intros X Y cfg Hc Hzero.
+  destruct X as [|x xs]; destruct Y as [|y ys].
+  - exact I.
+  - simpl in Hzero.
+    exfalso.
+    assert (Hlen_pos : (0 < length (y :: ys))%nat) by (simpl; lia).
+    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (y :: ys)))).
+    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
+    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (y :: ys))) * msm_c cfg).
+    { apply Qmult_lt_0_compat; assumption. }
+    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
+  - simpl in Hzero.
+    exfalso.
+    assert (Hlen_pos : (0 < length (x :: xs))%nat) by (simpl; lia).
+    assert (Hpos_len : 0 < inject_Z (Z.of_nat (length (x :: xs)))).
+    { apply inject_Z_of_nat_pos. exact Hlen_pos. }
+    assert (Hpos_dist : 0 < inject_Z (Z.of_nat (length (x :: xs))) * msm_c cfg).
+    { apply Qmult_lt_0_compat; assumption. }
+    apply (Qlt_not_eq 0 _ Hpos_dist). symmetry. exact Hzero.
+  - apply msm_distance_nonempty_zero_sound with (cfg := cfg); assumption.
 Qed.

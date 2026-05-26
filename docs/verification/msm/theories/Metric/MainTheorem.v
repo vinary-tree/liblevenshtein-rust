@@ -55,25 +55,24 @@ Qed.
     And similarly d(Y,Z) - d(X,Y) <= d(X,Z)
     => |d(X,Y) - d(Y,Z)| <= d(X,Z) *)
 Lemma msm_reverse_triangle :
-  forall (symmetry_contract : msm_symmetric_nonempty_premise)
-         (triangle_contracts : MsmTriangleEvidence) X Y Z cfg,
+  forall X Y Z cfg,
   X <> [] ->
   Z <> [] ->
   Qabs (msm_distance X Y cfg - msm_distance Y Z cfg) <= msm_distance X Z cfg.
 Proof.
-  intros symmetry_contract triangle_contracts X Y Z cfg HX HZ.
+  intros X Y Z cfg HX HZ.
   apply Qabs_Qle_condition.
   split.
-  - pose proof (msm_triangle triangle_contracts Y X Z cfg HX) as Htri.
-    pose proof (msm_symmetric symmetry_contract X Y cfg) as Hsym.
+  - pose proof (msm_triangle Y X Z cfg HX) as Htri.
+    pose proof (msm_symmetric X Y cfg) as Hsym.
     rewrite <- Hsym in Htri.
     exact (q_sub_lower_from_triangle
              (msm_distance X Y cfg)
              (msm_distance Y Z cfg)
              (msm_distance X Z cfg)
              Htri).
-  - pose proof (msm_triangle triangle_contracts X Z Y cfg HZ) as Htri.
-    pose proof (msm_symmetric symmetry_contract Y Z cfg) as Hsym.
+  - pose proof (msm_triangle X Z Y cfg HZ) as Htri.
+    pose proof (msm_symmetric Y Z cfg) as Hsym.
     rewrite <- Hsym in Htri.
     exact (q_sub_upper_from_triangle
              (msm_distance X Y cfg)
@@ -132,29 +131,29 @@ Proof.
 Qed.
 
 (** MSM satisfies identity (right direction) *)
-Lemma msm_metric_identity_r : forall (distance_contracts : MsmDistanceEvidence) cfg X Y,
+Lemma msm_metric_identity_r : forall cfg X Y,
   0 < msm_c cfg ->
   msm_metric_fn cfg X Y == 0 -> series_Qeq X Y.
 Proof.
-  intros distance_contracts cfg X Y Hc Heq. unfold msm_metric_fn in Heq.
-  exact (msm_zero_implies_series_eq distance_contracts X Y cfg Hc Heq).
+  intros cfg X Y Hc Heq. unfold msm_metric_fn in Heq.
+  exact (msm_zero_implies_series_eq X Y cfg Hc Heq).
 Qed.
 
 (** MSM satisfies symmetry *)
-Lemma msm_metric_symm : forall (symmetry_contract : msm_symmetric_nonempty_premise) cfg X Y,
+Lemma msm_metric_symm : forall cfg X Y,
   msm_metric_fn cfg X Y == msm_metric_fn cfg Y X.
 Proof.
-  intros symmetry_contract cfg X Y. unfold msm_metric_fn.
-  apply (msm_symmetric symmetry_contract).
+  intros cfg X Y. unfold msm_metric_fn.
+  apply msm_symmetric.
 Qed.
 
 (** MSM satisfies triangle inequality when the middle series is non-empty. *)
-Lemma msm_metric_triangle : forall (triangle_contracts : MsmTriangleEvidence) cfg X Y Z,
+Lemma msm_metric_triangle : forall cfg X Y Z,
   Y <> [] ->
   msm_metric_fn cfg X Z <= msm_metric_fn cfg X Y + msm_metric_fn cfg Y Z.
 Proof.
-  intros triangle_contracts cfg X Y Z HY. unfold msm_metric_fn.
-  apply (msm_triangle triangle_contracts); exact HY.
+  intros cfg X Y Z HY. unfold msm_metric_fn.
+  apply msm_triangle; exact HY.
 Qed.
 
 (** MSM satisfies metric laws on the non-empty-series subtype. *)
@@ -172,31 +171,31 @@ Proof.
   apply msm_reflexive.
 Qed.
 
-Lemma msm_nonempty_metric_identity_r : forall (distance_contracts : MsmDistanceEvidence) cfg X Y,
+Lemma msm_nonempty_metric_identity_r : forall cfg X Y,
   0 < msm_c cfg ->
   msm_nonempty_metric_fn cfg X Y == 0 -> nonempty_series_Qeq X Y.
 Proof.
-  intros distance_contracts cfg X Y Hc Heq.
+  intros cfg X Y Hc Heq.
   unfold msm_nonempty_metric_fn in Heq.
   unfold nonempty_series_Qeq.
-  exact (msm_zero_implies_series_eq distance_contracts (proj1_sig X) (proj1_sig Y) cfg Hc Heq).
+  exact (msm_zero_implies_series_eq (proj1_sig X) (proj1_sig Y) cfg Hc Heq).
 Qed.
 
-Lemma msm_nonempty_metric_symm : forall (symmetry_contract : msm_symmetric_nonempty_premise) cfg X Y,
+Lemma msm_nonempty_metric_symm : forall cfg X Y,
   msm_nonempty_metric_fn cfg X Y == msm_nonempty_metric_fn cfg Y X.
 Proof.
-  intros symmetry_contract cfg X Y. unfold msm_nonempty_metric_fn.
-  apply (msm_symmetric symmetry_contract).
+  intros cfg X Y. unfold msm_nonempty_metric_fn.
+  apply msm_symmetric.
 Qed.
 
-Lemma msm_nonempty_metric_triangle : forall (triangle_contracts : MsmTriangleEvidence) cfg X Y Z,
+Lemma msm_nonempty_metric_triangle : forall cfg X Y Z,
   msm_nonempty_metric_fn cfg X Z <=
   msm_nonempty_metric_fn cfg X Y + msm_nonempty_metric_fn cfg Y Z.
 Proof.
-  intros triangle_contracts cfg X Y Z.
+  intros cfg X Y Z.
   destruct Y as [Y HY].
   unfold msm_nonempty_metric_fn. simpl.
-  apply (msm_triangle triangle_contracts); exact HY.
+  apply msm_triangle; exact HY.
 Qed.
 
 (** * Main Theorem *)
@@ -209,21 +208,19 @@ Qed.
 *)
 
 Theorem msm_is_metric_on_nonempty_series :
-  forall (distance_contracts : MsmDistanceEvidence)
-         (symmetry_contract : msm_symmetric_nonempty_premise)
-         (triangle_contracts : MsmTriangleEvidence) cfg,
+  forall cfg,
   0 < msm_c cfg ->
   exists (m : Metric NonEmptyTimeSeries nonempty_series_Qeq),
     forall X Y, metric_fn _ _ m X Y == msm_distance (proj1_sig X) (proj1_sig Y) cfg.
 Proof.
-  intros distance_contracts symmetry_contract triangle_contracts cfg Hc.
+  intros cfg Hc.
   exists (mkMetric NonEmptyTimeSeries nonempty_series_Qeq
            (msm_nonempty_metric_fn cfg)
            (msm_nonempty_metric_nonneg cfg)
            (msm_nonempty_metric_identity_l cfg)
-           (fun X Y => msm_nonempty_metric_identity_r distance_contracts cfg X Y Hc)
-           (msm_nonempty_metric_symm symmetry_contract cfg)
-           (msm_nonempty_metric_triangle triangle_contracts cfg)).
+           (fun X Y => msm_nonempty_metric_identity_r cfg X Y Hc)
+           (msm_nonempty_metric_symm cfg)
+           (msm_nonempty_metric_triangle cfg)).
   intros X Y.
   unfold msm_nonempty_metric_fn.
   reflexivity.
@@ -247,23 +244,22 @@ Corollary msm_always_nonneg : forall X Y cfg,
 Proof. apply msm_nonneg. Qed.
 
 (** Distance is symmetric *)
-Corollary msm_dist_symm : forall (symmetry_contract : msm_symmetric_nonempty_premise) X Y cfg,
+Corollary msm_dist_symm : forall X Y cfg,
   msm_distance X Y cfg == msm_distance Y X cfg.
 Proof.
-  intros symmetry_contract X Y cfg.
-  apply (msm_symmetric symmetry_contract).
+  intros X Y cfg.
+  apply msm_symmetric.
 Qed.
 
 (** Triangle inequality in reverse form *)
 Corollary msm_triangle_diff :
-  forall (symmetry_contract : msm_symmetric_nonempty_premise)
-         (triangle_contracts : MsmTriangleEvidence) X Y Z cfg,
+  forall X Y Z cfg,
   X <> [] ->
   Z <> [] ->
   Qabs (msm_distance X Y cfg - msm_distance Y Z cfg) <= msm_distance X Z cfg.
 Proof.
-  intros symmetry_contract triangle_contracts X Y Z cfg HX HZ.
-  apply (msm_reverse_triangle symmetry_contract triangle_contracts); assumption.
+  intros X Y Z cfg HX HZ.
+  apply msm_reverse_triangle; assumption.
 Qed.
 
 (** * Summary *)
@@ -281,8 +277,6 @@ Qed.
     - msm_symmetric: MSM(X, Y) = MSM(Y, X)
     - msm_triangle: MSM(X, Z) <= MSM(X, Y) + MSM(Y, Z), when Y is non-empty
 
-    Remaining evidence requires careful treatment of:
-    1. The DP recurrence structure
-    2. Trace composition for triangle inequality
-    3. List induction for identity property
+    Remaining evidence requires careful treatment of the trace-composition
+    argument for the non-empty triangle inequality.
 *)

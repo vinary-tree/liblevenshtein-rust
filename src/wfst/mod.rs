@@ -76,7 +76,6 @@ mod phonetic_state_source;
 mod phonetic_wfst;
 
 // Time Series MSM WFST module
-pub mod msm;
 
 // Generalized and WallBreaker WFST modules
 mod generalized_wfst;

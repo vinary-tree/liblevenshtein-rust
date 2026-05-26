@@ -1,6 +1,6 @@
 # Automaton Proofs Status
 
-**Current Status Date**: May 25, 2026
+**Current Status Date**: May 26, 2026
 **Build Status**: Compiles successfully under the focused formal runner
 
 ## Current Live Status
@@ -9,16 +9,14 @@ The source-level admission scan is clean for the automaton Coq files: there are
 no active `Admitted.`, `admit.`, `Axiom`, or `Parameter` declarations in the
 current automaton proof surface.
 
-The remaining automaton completeness debt is explicit and conditional. In the
-automaton files, `./scripts/verify-formal.sh audit-evidence-tsv` reports
-`AutomatonCompletenessCoreEvidence` in `Completeness.v`, with these three fields
-still requiring local proofs:
+The automaton evidence debt has been retired. In the automaton files,
+`./scripts/verify-formal.sh audit-evidence-tsv` no longer reports
+`AutomatonCompletenessCoreEvidence` or any automaton `*Evidence` record.
+Transposition completeness is now proved directly from the executable Damerau
+recurrence, and MergeAndSplit soundness/completeness no longer exposes record
+fields at the public theorem boundary.
 
-- `position_subsumed_from_run` for Standard antichain representation.
-- `transposition_completeness` for direct Damerau/Transposition completeness.
-- `merge_split_completeness` for direct MergeAndSplit completeness.
-
-Recent local progress toward retiring `position_subsumed_from_run`:
+Recent local progress that retired the Standard representation evidence:
 
 - Exact same-index containment was replaced by executable Standard subsumption;
   `standard_exact_positions_contain_counterexample` documents why exact
@@ -33,6 +31,14 @@ Recent local progress toward retiring `position_subsumed_from_run`:
   `transition_state_standard_represents_insert_represented`.
 - The same represented-insert step is lifted to the can-complete invariant by
   `transition_state_standard_preserves_can_complete_insert_represented`.
+- Standard completeness is now proved unconditionally via the
+  `state_has_completable` invariant and
+  `automaton_complete_standard_can_complete`; the public Standard correctness
+  theorem no longer consumes `AutomatonCompletenessCoreEvidence`.
+- Transposition completeness is now proved unconditionally by
+  `transposition_reachable_final` and `automaton_complete_transposition`; the
+  public Transposition correctness theorem no longer consumes
+  `AutomatonCompletenessCoreEvidence`.
 - The executable delete-prefix case `query = "ab"`, `dict = "b"`,
   `max_dist = 1` is covered by a focused Rust regression test.
 
@@ -45,7 +51,7 @@ The historical notes below are retained for context only.
 > `AutomatonFoldStateEvidence` no longer exist in `Completeness.v`. The
 > Standard exact-match transition-success bridge is also now proved from
 > containment and Standard run invariants, so no transition-success field remains
-> in `AutomatonCompletenessCoreEvidence`. The MergeAndSplit transition has since
+> in the old core completeness evidence. The MergeAndSplit transition has since
 > been restored to the generic 2-to-1/1-to-2 semantics used by the Rust
 > `merge_and_split_distance` implementation, and automaton soundness no longer
 > needs an evidence record. The exact same-index `position_contained_from_run`
@@ -55,16 +61,14 @@ The historical notes below are retained for context only.
 > `docs/verification/PROOF_COMPLETION_PLAN.md` and
 > `./scripts/verify-formal.sh audit-evidence-tsv` for the current gap list.
 
-## Summary
+## Historical Summary
 
-The Automaton verification module contains proofs for soundness and completeness of Levenshtein automata supporting three algorithms: Standard, Transposition (Damerau), and Merge/Split. The build compiles but has **21 admitted lemmas** across multiple files:
-- Completeness.v: 9
-- Soundness.v: 3 (reduced from 4 - deleted orphan `pseudo_reachable_nonspecial_implies_reachable`)
-- OptimalTrace/MergeSplitConstruction.v: 4
-- Composition/DamerauComposition.v: 2
-- Core/MergeSplitDistance.v: 2
-- Composition/MergeSplitComposition.v: 1
-- MainTheorem.v: 1
+The Automaton verification module contains proofs for soundness and
+completeness of Levenshtein automata supporting three algorithms: Standard,
+Transposition (Damerau), and Merge/Split. The admitted-lemma counts below are
+historical notes from the pre-cleanup proof tree; the current automaton source
+scan is clean and the current evidence audit reports no automaton evidence
+records.
 
 ### Recent Progress (December 18, 2025)
 
