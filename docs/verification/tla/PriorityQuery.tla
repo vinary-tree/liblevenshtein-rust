@@ -13,6 +13,18 @@
 (* 4. Completeness: All matches within bound are eventually found           *)
 (*                                                                          *)
 (* Corresponds to: src/transducer/priority_query.rs                         *)
+(*                                                                          *)
+(* MODEL-vs-IMPLEMENTATION NOTE (verified by property tests, see            *)
+(* tests/proptest_priority_query.rs): this model is an IDEALIZED admissible  *)
+(* A* whose Optimality/AdmissibleHeuristic/ResultsOrdered/FirstResultOptimal *)
+(* hold by construction. The Rust `PriorityQueryIterator`, however, uses an  *)
+(* INADMISSIBLE heuristic (h = query_len - max_consumed_chars,               *)
+(* priority_query.rs:173) and is documented as "Distance-first (approximate  *)
+(* lex)" for fast first-k results - it does NOT guarantee optimal ordering.  *)
+(* The implementation that actually realizes this model's optimal/ordered    *)
+(* guarantees is `OrderedQueryIterator` (Transducer::query_ordered, a        *)
+(* distance-layer BFS). Read this spec as the contract of OrderedQuery /     *)
+(* an idealized admissible A*, not of the approximate PriorityQueryIterator. *)
 (***************************************************************************)
 
 EXTENDS Integers, Sequences, FiniteSets, TLC

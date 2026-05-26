@@ -6,6 +6,40 @@ This directory contains TLA+ specifications for verifying state machine properti
 
 TLA+ is used for model checking concurrent and stateful algorithms where exhaustive state space exploration is valuable. These specifications complement the Rocq/Coq proofs by verifying operational properties that are easier to express as state machines.
 
+## Model-checking status
+
+All four models model-check with **no errors** under the bounds in their `.cfg`
+files (`scripts/verify-formal.sh tla`). A captured transcript lives in
+[`states/tlc-results-2026-05-26.txt`](states/). Coverage was tightened so the
+configs check the properties the modules define:
+
+- **OnlineScanner** now checks `NoMissedMatches` (reference-free form: no
+  reachable final state is dropped without being recorded) and
+  `MatchesRecordedCorrectly`, in addition to the structural invariants.
+- **Subsumption** now checks `Irreflexive`, `Asymmetric`, `Transitive`,
+  `CompletionPreservationInv`, and `NoFalseRemoval` explicitly (previously only
+  `TypeInv`, which folded in the order properties).
+- **ProductAutomaton** now checks `PatternPositionValid`.
+
+Two known limitations remain, each reconciled against the Rust tests that cover
+the gap:
+
+- **ProductAutomaton** uses a *placeholder* (total) NFA transition relation, so
+  `ProductCorrectness` and `CostMonotonicity` cannot be model-checked against a
+  concrete NFA. They are verified on the real construction by
+  `tests/proptest_product_automaton.rs` (acceptance / `min_distance` vs the exact
+  edit-distance oracle, plus cost monotonicity).
+- **PriorityQuery** models an *idealized admissible* A*. The Rust
+  `PriorityQueryIterator` actually uses an **inadmissible** heuristic
+  (`query_len - max_consumed`) and only guarantees an approximate, fast-first-k
+  ordering; the model's optimal/ordered guarantees are realized by
+  `OrderedQueryIterator` (`Transducer::query_ordered`), as verified by
+  `tests/proptest_priority_query.rs`.
+
+`tlc_finite_state_exhaustiveness` (TLC checks the configured finite bounds, not
+the unbounded algorithm) remains the one acknowledged TLA assumption in
+`docs/verification/ASSUMPTIONS.tsv`.
+
 ## Specifications
 
 ### OnlineScanner.tla

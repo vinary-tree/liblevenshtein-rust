@@ -183,7 +183,18 @@ TypeInvariant ==
 (* Initial State                                                            *)
 (***************************************************************************)
 
-\* Initialize NFA transitions (abstract model)
+\* Initialize NFA transitions (abstract model).
+\*
+\* LIMITATION: this is a placeholder total transition relation (every state goes
+\* to every state on every character), so the model checks structural invariants
+\* (TypeInvariant, ErrorCountsValid, StateSpaceBounded, NFAStatesValid,
+\* AcceptanceValid, PatternPositionValid) but cannot meaningfully verify
+\* ProductCorrectness ("accepts iff the NFA accepts AND cost <= max_cost") or
+\* CostMonotonicity against a concrete NFA. Those two header goals are instead
+\* verified on the real Rust construction by
+\* tests/proptest_product_automaton.rs, which checks acceptance/min_distance
+\* against the exact edit-distance oracle and cost monotonicity for a literal
+\* NFA. Promoting this model to faithful transitions is future work.
 InitNFADelta ==
     \* In a real model, this would define the NFA structure
     \* Here we use a simple placeholder

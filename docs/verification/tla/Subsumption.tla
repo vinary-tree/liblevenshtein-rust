@@ -155,6 +155,12 @@ CompletionPreservation(word_length) ==
             (Subsumes(p, q) /\ CanComplete(q, remaining)) =>
             CanComplete(p, remaining)
 
+\* Nullary wrapper so CompletionPreservation can be checked as an INVARIANT.
+\* (CanComplete here is the model's simplified completion semantics; the Rust
+\* counterpart is exercised at the language level by
+\* tests/proptest_subsumption_theorems.rs::completion_preservation.)
+CompletionPreservationInv == CompletionPreservation(MAX_POSITION)
+
 \* Subsumption preserves antichain minimality
 \* After subsumption, the remaining set is an antichain
 FormAntichain(positions) ==

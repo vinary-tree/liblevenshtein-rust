@@ -1,0 +1,252 @@
+== TLC [standard]: OnlineScanner.tla ==
+TLC2 Version 2.20 of Day Month 20?? (rev: bb62e53)
+Warning: Please run the Java VM, which executes TLC with a throughput optimized garbage collector, by passing the "-XX:+UseParallelGC" property.
+(Use the -nowarning option to disable this warning.)
+Running breadth-first search Model-Checking with fp 47 and seed -2188505588231720705 with 1 worker on 8 cores with 4096MB heap and 64MB offheap memory [pid: 3378917] (Linux 7.0.7-arch1-1 amd64, Arch Linux 26.0.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/OnlineScanner.tla
+Parsing file /tmp/tlc-12052571494992455517/Integers.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-12052571494992455517/Sequences.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-12052571494992455517/FiniteSets.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-12052571494992455517/TLC.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-12052571494992455517/_TLCTrace.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-12052571494992455517/Naturals.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-12052571494992455517/TLCExt.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module OnlineScanner
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module OnlineScanner
+Starting... (2026-05-26 19:44:19)
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-05-26 19:44:19.
+Progress(4) at 2026-05-26 19:44:19: 23 states generated, 15 distinct states found, 0 states left on queue.
+Checking temporal properties for the complete state space with 15 total distinct states at (2026-05-26 19:44:19)
+Finished checking temporal properties in 00s at 2026-05-26 19:44:19
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 6.5E-18
+23 states generated, 15 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 4.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 2 and the 95th percentile is 2).
+Finished in 00s at (2026-05-26 19:44:19)
+	Command being timed: "java -Xmx4G -jar /home/dylon/.tla/tla2tools.jar -config /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/OnlineScanner.cfg /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/OnlineScanner.tla"
+	User time (seconds): 1.04
+	System time (seconds): 0.08
+	Percent of CPU this job got: 146%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.77
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 112508
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 24110
+	Voluntary context switches: 4108
+	Involuntary context switches: 240
+	Swaps: 0
+	File system inputs: 4664
+	File system outputs: 16
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+== TLC [standard]: PriorityQuery.tla ==
+TLC2 Version 2.20 of Day Month 20?? (rev: bb62e53)
+Warning: Please run the Java VM, which executes TLC with a throughput optimized garbage collector, by passing the "-XX:+UseParallelGC" property.
+(Use the -nowarning option to disable this warning.)
+Running breadth-first search Model-Checking with fp 63 and seed -2012583626532219468 with 1 worker on 8 cores with 4096MB heap and 64MB offheap memory [pid: 3378973] (Linux 7.0.7-arch1-1 amd64, Arch Linux 26.0.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/PriorityQuery.tla
+Parsing file /tmp/tlc-13921132680012583576/Integers.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-13921132680012583576/Sequences.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-13921132680012583576/FiniteSets.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-13921132680012583576/TLC.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-13921132680012583576/_TLCTrace.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-13921132680012583576/Naturals.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-13921132680012583576/TLCExt.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module PriorityQuery
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module PriorityQuery
+Starting... (2026-05-26 19:44:20)
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-05-26 19:44:20.
+Progress(2) at 2026-05-26 19:44:20: 4 states generated, 2 distinct states found, 0 states left on queue.
+Checking temporal properties for the complete state space with 2 total distinct states at (2026-05-26 19:44:20)
+Finished checking temporal properties in 00s at 2026-05-26 19:44:20
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 2.2E-19
+4 states generated, 2 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 2.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 1 and the 95th percentile is 1).
+Finished in 00s at (2026-05-26 19:44:20)
+	Command being timed: "java -Xmx4G -jar /home/dylon/.tla/tla2tools.jar -config /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/PriorityQuery.cfg /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/PriorityQuery.tla"
+	User time (seconds): 1.01
+	System time (seconds): 0.09
+	Percent of CPU this job got: 145%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.76
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 115376
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 24451
+	Voluntary context switches: 3905
+	Involuntary context switches: 390
+	Swaps: 0
+	File system inputs: 216
+	File system outputs: 24
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+== TLC [standard]: ProductAutomaton.tla ==
+TLC2 Version 2.20 of Day Month 20?? (rev: bb62e53)
+Warning: Please run the Java VM, which executes TLC with a throughput optimized garbage collector, by passing the "-XX:+UseParallelGC" property.
+(Use the -nowarning option to disable this warning.)
+Running breadth-first search Model-Checking with fp 28 and seed -5004832201951569955 with 1 worker on 8 cores with 4096MB heap and 64MB offheap memory [pid: 3379027] (Linux 7.0.7-arch1-1 amd64, Arch Linux 26.0.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/ProductAutomaton.tla
+Parsing file /tmp/tlc-2483054211785185695/Integers.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-2483054211785185695/Sequences.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-2483054211785185695/FiniteSets.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-2483054211785185695/TLC.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-2483054211785185695/_TLCTrace.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-2483054211785185695/Naturals.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-2483054211785185695/TLCExt.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module ProductAutomaton
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module ProductAutomaton
+Starting... (2026-05-26 19:44:21)
+Implied-temporal checking--satisfiability problem has 2 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-05-26 19:44:21.
+Progress(3) at 2026-05-26 19:44:21: 9 states generated, 3 distinct states found, 0 states left on queue.
+Checking 2 branches of temporal properties for the complete state space with 6 total distinct states at (2026-05-26 19:44:21)
+Finished checking temporal properties in 00s at 2026-05-26 19:44:21
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 9.8E-19
+9 states generated, 3 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 3.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 1 and the 95th percentile is 1).
+Finished in 00s at (2026-05-26 19:44:21)
+	Command being timed: "java -Xmx4G -jar /home/dylon/.tla/tla2tools.jar -config /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/ProductAutomaton.cfg /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/ProductAutomaton.tla"
+	User time (seconds): 0.95
+	System time (seconds): 0.09
+	Percent of CPU this job got: 143%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.73
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 113780
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 23779
+	Voluntary context switches: 3963
+	Involuntary context switches: 142
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 40
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+== TLC [light]: Subsumption.tla ==
+TLC2 Version 2.20 of Day Month 20?? (rev: bb62e53)
+Warning: Please run the Java VM, which executes TLC with a throughput optimized garbage collector, by passing the "-XX:+UseParallelGC" property.
+(Use the -nowarning option to disable this warning.)
+Running breadth-first search Model-Checking with fp 73 and seed 8199678528344872325 with 1 worker on 4 cores with 2048MB heap and 64MB offheap memory [pid: 3379082] (Linux 7.0.7-arch1-1 amd64, Arch Linux 26.0.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/Subsumption.tla
+Parsing file /tmp/tlc-5445401158707397326/Integers.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-5445401158707397326/FiniteSets.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-5445401158707397326/TLC.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-5445401158707397326/_TLCTrace.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-5445401158707397326/Naturals.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-5445401158707397326/Sequences.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-5445401158707397326/TLCExt.tla (jar:file:/home/dylon/.tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module Subsumption
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module Subsumption
+Starting... (2026-05-26 19:44:22)
+Warning: The invariant Irreflexive is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+Warning: The invariant Asymmetric is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+Warning: The invariant Transitive is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+Warning: The invariant CompletionPreservationInv is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-05-26 19:44:22.
+Progress(7) at 2026-05-26 19:44:23: 321 states generated, 64 distinct states found, 0 states left on queue.
+Checking temporal properties for the complete state space with 64 total distinct states at (2026-05-26 19:44:23)
+Finished checking temporal properties in 00s at 2026-05-26 19:44:23
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 8.9E-16
+321 states generated, 64 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 7.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 6 and the 95th percentile is 4).
+Finished in 01s at (2026-05-26 19:44:23)
+	Command being timed: "java -Xmx2G -jar /home/dylon/.tla/tla2tools.jar -config /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/Subsumption.cfg /home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/docs/verification/tla/Subsumption.tla"
+	User time (seconds): 2.70
+	System time (seconds): 0.17
+	Percent of CPU this job got: 162%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:01.77
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 296800
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 69962
+	Voluntary context switches: 3930
+	Involuntary context switches: 370
+	Swaps: 0
+	File system inputs: 216
+	File system outputs: 40
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

@@ -232,9 +232,18 @@ Spec == Init /\ [][Next]_<<position, active_matches, completed_matches, input_co
 \* PROP1: Eventually processing completes
 EventuallyComplete == <>(position = INPUT_LENGTH)
 
-\* PROP2: No missed matches - if a valid match exists, it's eventually found
-\* (This would require a reference implementation to check against)
-\* NoMissedMatches == ...
+\* PROP2: No missed (dropped) matches. The model abstracts character matching,
+\* so rather than a reference implementation we check the reference-free form:
+\* no reachable final state is silently dropped. Every active final state has a
+\* recorded completed match of no greater cost, because ProcessChar emits the
+\* completed match (in new_completed) from the alive successors BEFORE
+\* subsumption pruning (ApplySubsumption) can discard the state.
+NoMissedMatches ==
+    \A s \in active_matches :
+        IsFinal(s) =>
+            \E m \in completed_matches :
+                /\ m.start_pos = s.start_pos
+                /\ m.cost <= s.errors
 
 \* PROP3: Matches are recorded at correct positions
 MatchesRecordedCorrectly ==
