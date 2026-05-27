@@ -384,7 +384,13 @@ Qed.
     in each row is 0.
 *)
 
-(** Stronger helper: diagonal elements are 0 when X = Y *)
+(** Disabled: [msm_init_row_diagonal_zero] was a stub whose statement was the
+    trivial proposition [True] (a vacuous placeholder flagged by
+    `scripts/verify-formal.sh audit-vacuous`). It is unused — the MSM reflexivity
+    proof goes through [msm_reflexive_diagonal_direct] — so it is retained here,
+    commented out, only to record the original intent. Re-enable only with a real
+    statement (e.g. the row-minimum/diagonal-zero fact it gestures at). *)
+(*
 Lemma msm_init_row_diagonal_zero : forall (x : Q) (xs : list Q) (c_const : Q),
   0 <= c_const ->
   (* The last element represents diagonal endpoint when starting from 0 *)
@@ -397,6 +403,7 @@ Lemma msm_init_row_diagonal_zero : forall (x : Q) (xs : list Q) (c_const : Q),
 Proof.
   trivial.
 Qed.
+*)
 
 (** For reflexivity proof: We use a different approach.
     Instead of tracking exact values, we show:

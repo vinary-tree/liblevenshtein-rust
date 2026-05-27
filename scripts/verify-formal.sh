@@ -312,6 +312,59 @@ audit_all_gaps() {
   rm -f "$tmp_hits"
 }
 
+# Advisory: flag statements whose conclusion is the trivial proposition True.
+# The gap audit (GAP_RE) only catches Axiom/Admitted/admit/Parameter/etc.; a
+# theorem can still be vacuous if its goal is True (e.g. "... -> True", a bare
+# "True." goal closed by trivial, "... /\ True", or ":= True"). Such proofs pass
+# the gap audit while proving nothing, so they are surfaced here for review.
+audit_vacuous() {
+  echo "== Vacuous / placeholder (True) conclusions across docs/verification and rocq =="
+  echo "(advisory) These pass the gap audit but prove nothing; replace with a real"
+  echo "statement or remove."
+  echo
+  local tmp_hits
+  tmp_hits="$(mktemp)"
+
+  find "$ROOT/docs/verification" "$ROOT/rocq" -name '*.v' -print0 \
+    | while IFS= read -r -d '' file; do
+        awk -v file="$file" '
+          {
+            line = $0
+            out = ""
+            i = 1
+            while (i <= length(line)) {
+              two = substr(line, i, 2)
+              if (depth > 0) {
+                if (two == "(*") { depth++; i += 2 }
+                else if (two == "*)") { depth--; i += 2 }
+                else { i++ }
+              } else if (two == "(*") { depth++; i += 2 }
+              else { out = out substr(line, i, 1); i++ }
+            }
+            if (out ~ /(\/\\|->|\\\/)[[:space:]]*True([^[:alnum:]_]|$)/ \
+                || out ~ /^[[:space:]]*True\.[[:space:]]*$/ \
+                || out ~ /:=[[:space:]]*True([^[:alnum:]_]|$)/) {
+              print file ":" NR ":" out
+            }
+          }
+        ' "$file"
+      done > "$tmp_hits"
+
+  if [[ -s "$tmp_hits" ]]; then
+    cat "$tmp_hits"
+  else
+    echo "No vacuous placeholder conclusions found."
+  fi
+  echo
+  echo "== Vacuous-conclusion counts by file =="
+  cut -d: -f1 "$tmp_hits" \
+    | sed "s#^$ROOT/##" \
+    | sort \
+    | uniq -c \
+    | sort -nr || true
+  rm -f "$tmp_hits"
+}
+
 audit_gaps_tsv() {
   printf 'status\tkind\tsymbol\tpath\tline\tclassification\tnote\n'
 
@@ -728,6 +781,9 @@ case "$MODE" in
     audit_manifest >/dev/null
     audit_evidence_tsv
     ;;
+  audit-vacuous)
+    audit_vacuous
+    ;;
   trusted)
     audit_manifest
     check_trusted_no_admitted
@@ -762,7 +818,7 @@ case "$MODE" in
     ;;
   *)
     cat >&2 <<USAGE
-usage: scripts/verify-formal.sh [audit|audit-tsv|audit-contracts|audit-contracts-tsv|audit-evidence|audit-evidence-tsv|trusted|coq-trusted|coq-file|tla|all]
+usage: scripts/verify-formal.sh [audit|audit-tsv|audit-contracts|audit-contracts-tsv|audit-evidence|audit-evidence-tsv|audit-vacuous|trusted|coq-trusted|coq-file|tla|all]
 
 All proof/model execution is memory-capped with systemd-run unless
 FORMAL_VERIFY_ALLOW_UNCAPPED=1 is set.

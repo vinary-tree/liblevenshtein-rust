@@ -291,23 +291,35 @@ Proof.
     eapply nfa_run_app; eauto.
 Qed.
 
-(** Product acceptance implies NFA accepts some string within distance *)
+(** Product acceptance is witnessed by an NFA-accepted word and a bounded-error
+    accepting run that consumes the whole pattern.
+
+    NOTE: the exact edit-distance equivalence (that the witnessed error count
+    [lev_e psf] equals the Levenshtein distance between the matched word and
+    [input]) is the remaining "simulation against the core distance model" step.
+    The operational soundness proved here exposes the concrete accepting witness
+    and its <= max_errors error count, replacing the earlier vacuous
+    "exists dist, dist <= max_errors /\ True". *)
 Theorem product_soundness : forall nfa pattern max_errors input,
   product_accepts nfa pattern max_errors input ->
-  exists nfa_word,
+  exists nfa_word psf,
     nfa_accepts nfa nfa_word /\
-    exists dist, dist <= max_errors /\ True. (* dist = levenshtein pattern input *)
+    product_run nfa pattern max_errors (initial_product_state nfa) input psf /\
+    is_final_product nfa (String.length pattern) max_errors psf = true /\
+    lev_i (prod_lev_pos psf) = String.length pattern /\
+    lev_e (prod_lev_pos psf) <= max_errors.
 Proof.
   intros nfa pattern max_errors input [psf [Hrun Hfinal]].
   destruct (is_final_product_facts _ _ _ _ Hfinal)
-    as [Hnfa_final [_ Herrors]].
+    as [Hnfa_final [Hlen Herrors]].
   destruct (product_run_nfa_word _ _ _ _ _ _ Hrun) as [w Hnfa_run].
-  exists w.
+  exists w, psf.
   split.
-  - exists (prod_nfa_state psf).
-    split; assumption.
-  - exists (lev_e (prod_lev_pos psf)).
-    split; [exact Herrors | exact I].
+  { exists (prod_nfa_state psf). split; assumption. }
+  split. { exact Hrun. }
+  split. { exact Hfinal. }
+  split. { exact Hlen. }
+  exact Herrors.
 Qed.
 
 (** Empty NFA acceptance is constructively represented in the product. *)
@@ -364,10 +376,14 @@ Theorem product_correctness : forall nfa pattern max_errors input,
   product_accepts nfa pattern max_errors input ->
   exists nfa_word,
     nfa_accepts nfa nfa_word /\
-    exists dist, dist <= max_errors /\ True.
+    exists psf,
+      product_run nfa pattern max_errors (initial_product_state nfa) input psf /\
+      lev_e (prod_lev_pos psf) <= max_errors.
 Proof.
   intros nfa pattern max_errors input Haccepts.
-  exact (product_soundness nfa pattern max_errors input Haccepts).
+  destruct (product_soundness nfa pattern max_errors input Haccepts)
+    as [w [psf [Hnfa [Hrun [_ [_ Herrors]]]]]].
+  exists w. split; [exact Hnfa | exists psf; split; assumption].
 Qed.
 
 (** * State Space Bounds *)
@@ -384,14 +400,69 @@ Definition nfa_state_count (nfa : NFA) : nat :=
 Definition max_product_states (nfa : NFA) (pattern_len max_errors : nat) : nat :=
   nfa_state_count nfa * (pattern_len + 1) * (max_errors + 1).
 
-(** State space is bounded *)
-Theorem product_state_space_bounded : forall nfa pattern max_errors ps,
-  let pattern_len := String.length pattern in
-  product_run nfa pattern max_errors (initial_product_state nfa) EmptyString ps ->
-  (* ps is one of at most max_product_states states *)
-  True. (* Placeholder *)
+(** State space is bounded.
+
+    Every product state reachable from the initial state has Levenshtein
+    coordinates inside the [(pattern_len + 1) x (max_errors + 1)] grid: the
+    error count never exceeds [max_errors] (each [product_step] guards on it) and
+    the pattern position never exceeds [String.length pattern] (a position only
+    advances when [String.get pos pattern] is defined). Together with the finite
+    NFA state set this is what bounds the product to [max_product_states]. *)
+
+(** A defined character access bounds the index. *)
+Lemma get_some_lt : forall s i c,
+  String.get i s = Some c -> i < String.length s.
 Proof.
-  trivial.
+  induction s as [|a s IH]; intros i c Hget.
+  - destruct i; simpl in Hget; discriminate.
+  - destruct i as [|i']; simpl in *.
+    + lia.
+    + apply IH in Hget. lia.
+Qed.
+
+(** One product step keeps the Levenshtein coordinates within range. *)
+Lemma product_step_state_bound : forall nfa pattern max_errors ps1 sym ps2,
+  product_step nfa pattern max_errors ps1 sym ps2 ->
+  lev_i (prod_lev_pos ps1) <= String.length pattern ->
+  lev_i (prod_lev_pos ps2) <= String.length pattern /\
+  lev_e (prod_lev_pos ps2) <= max_errors.
+Proof.
+  intros nfa pattern max_errors ps1 sym ps2 Hstep Hi1.
+  inversion Hstep; subst; simpl in *; split; try lia;
+    match goal with
+    | H : String.get _ _ = Some _ |- _ => apply get_some_lt in H
+    end;
+    lia.
+Qed.
+
+(** A whole run preserves the bound from any in-range start. *)
+Lemma product_run_state_bound : forall nfa pattern max_errors ps0 input ps,
+  product_run nfa pattern max_errors ps0 input ps ->
+  lev_i (prod_lev_pos ps0) <= String.length pattern ->
+  lev_e (prod_lev_pos ps0) <= max_errors ->
+  lev_i (prod_lev_pos ps) <= String.length pattern /\
+  lev_e (prod_lev_pos ps) <= max_errors.
+Proof.
+  intros nfa pattern max_errors ps0 input ps Hrun.
+  induction Hrun as
+      [ps
+      | ps1 ps2 ps3 str Hstep Hsub IH
+      | ps1 c ps2 ps3 str Hstep Hsub IH];
+    intros Hi0 He0.
+  - split; assumption.
+  - destruct (product_step_state_bound _ _ _ _ _ _ Hstep Hi0) as [Hi2 He2].
+    apply IH; assumption.
+  - destruct (product_step_state_bound _ _ _ _ _ _ Hstep Hi0) as [Hi2 He2].
+    apply IH; assumption.
+Qed.
+
+Theorem product_state_space_bounded : forall nfa pattern max_errors input ps,
+  product_run nfa pattern max_errors (initial_product_state nfa) input ps ->
+  lev_i (prod_lev_pos ps) <= String.length pattern /\
+  lev_e (prod_lev_pos ps) <= max_errors.
+Proof.
+  intros nfa pattern max_errors input ps Hrun.
+  eapply product_run_state_bound; [exact Hrun | simpl; lia | simpl; lia].
 Qed.
 
 (** * Subsumption *)
