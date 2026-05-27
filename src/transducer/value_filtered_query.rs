@@ -234,6 +234,140 @@ where
     }
 }
 
+/// Iterator that yields `(term, distance, value)` for every match within the
+/// edit-distance threshold, reading each final node's value *during* traversal
+/// so the caller needs no second dictionary lookup. Final nodes whose value is
+/// `None` are skipped (they terminate no stored entry).
+pub struct ValueYieldingQueryIterator<N>
+where
+    N: MappedDictionaryNode,
+{
+    /// Query units (bytes or chars)
+    query: Vec<N::Unit>,
+    /// Maximum edit distance
+    max_distance: usize,
+    /// Algorithm (Standard or Transposition)
+    algorithm: Algorithm,
+    /// Queue of pending intersections to explore
+    pending: VecDeque<Box<Intersection<N>>>,
+    /// Set of seen terms (for deduplication)
+    seen: HashSet<String>,
+    /// State pool for efficient state allocation reuse
+    state_pool: StatePool,
+    /// Iterator finished flag
+    finished: bool,
+}
+
+impl<N> ValueYieldingQueryIterator<N>
+where
+    N: MappedDictionaryNode,
+{
+    /// Create a new value-yielding query iterator.
+    pub fn new(root: N, term: String, max_distance: usize, algorithm: Algorithm) -> Self {
+        let query_units = N::Unit::from_str(&term);
+        let initial = initial_state(query_units.len(), max_distance, algorithm);
+
+        let mut pending = VecDeque::new();
+        pending.push_back(Box::new(Intersection::new(root, initial)));
+
+        Self {
+            query: query_units,
+            max_distance,
+            algorithm,
+            pending,
+            seen: HashSet::new(),
+            state_pool: StatePool::new(),
+            finished: false,
+        }
+    }
+}
+
+impl<N> Iterator for ValueYieldingQueryIterator<N>
+where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    Unrestricted: SubstitutionPolicyFor<N::Unit>,
+{
+    type Item = (String, usize, N::Value);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.finished {
+            return None;
+        }
+
+        while let Some(intersection) = self.pending.pop_front() {
+            if intersection.is_final() {
+                let distance = intersection
+                    .state
+                    .infer_distance(self.query.len())
+                    .unwrap_or(usize::MAX);
+
+                if distance <= self.max_distance {
+                    let term = intersection.term();
+                    // Deduplicate by term; children are queued exactly once,
+                    // on the first visit of each term (matching the
+                    // value-filtered iterator's discipline).
+                    if self.seen.insert(term.clone()) {
+                        self.queue_children(&intersection);
+                        // Read the value during traversal — no second lookup.
+                        if let Some(value) = intersection.node.value() {
+                            return Some((term, distance, value));
+                        }
+                        // Final but valueless: keep exploring.
+                    }
+                } else {
+                    // Too far, but its children may still be in range.
+                    self.queue_children(&intersection);
+                }
+            } else {
+                self.queue_children(&intersection);
+            }
+        }
+
+        self.finished = true;
+        None
+    }
+}
+
+impl<N> ValueYieldingQueryIterator<N>
+where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    Unrestricted: SubstitutionPolicyFor<N::Unit>,
+{
+    /// Queue child intersections for exploration (identical traversal to the
+    /// value-filtered iterator).
+    #[inline]
+    fn queue_children(&mut self, intersection: &Intersection<N>) {
+        for (label, child_node) in intersection.node.edges() {
+            if let Some(next_state) = transition_state_pooled(
+                &intersection.state,
+                &mut self.state_pool,
+                Unrestricted,
+                label,
+                &self.query,
+                self.max_distance,
+                self.algorithm,
+                false,
+            ) {
+                let parent_path = intersection.label.map(|current_label| {
+                    Box::new(PathNode::new(current_label, intersection.parent.clone()))
+                });
+
+                let child = Box::new(Intersection::with_parent(
+                    label,
+                    child_node,
+                    next_state,
+                    parent_path,
+                ));
+
+                self.pending.push_back(child);
+            }
+        }
+    }
+}
+
 /// Iterator that yields candidates filtered by value set membership.
 ///
 /// Optimized for checking if a value is in a set (e.g., hierarchical scope visibility).
@@ -511,5 +645,137 @@ mod tests {
 
         let results: Vec<_> = iter.collect();
         assert_eq!(results.len(), 0);
+    }
+}
+
+/// Tests for the value-yielding query iterator (`Transducer::query_values` /
+/// [`ValueYieldingQueryIterator`]).
+///
+/// Unlike the sibling [`ValueFilteredQueryIterator`] tests above (which need the
+/// `pathmap-backend` feature), these use [`DoubleArrayTrie`], which is always
+/// compiled — so they run under the default `cargo test`. They pin the behavior
+/// that is *new* relative to the value-filtered iterator: yielding
+/// `(term, distance, value)` with the value read during traversal, and skipping
+/// final nodes whose value is `None`.
+#[cfg(test)]
+mod value_yielding_tests {
+    use crate::transducer::{Algorithm, Transducer};
+    use libdictenstein::double_array_trie::{DoubleArrayTrie, DoubleArrayTrieBuilder};
+    use std::collections::HashSet;
+
+    fn sorted(mut v: Vec<(String, usize, u32)>) -> Vec<(String, usize, u32)> {
+        v.sort();
+        v
+    }
+
+    #[test]
+    fn test_value_yielding_query_basic() {
+        let dict: DoubleArrayTrie<u32> = DoubleArrayTrie::from_terms_with_values(vec![
+            ("test", 1u32),
+            ("tests", 1),
+            ("testing", 2),
+            ("tester", 1),
+        ]);
+        let transducer = Transducer::new(dict, Algorithm::Standard);
+
+        let results = sorted(transducer.query_values("test", 1).collect());
+
+        // "test" (dist 0) and "tests" (dist 1, insert 's'); "tester" (dist 2) and
+        // "testing" (dist 3) are out of range. Values come back UNFILTERED — the
+        // distinction from the value-filtered iterator.
+        assert_eq!(
+            results,
+            vec![("test".to_string(), 0, 1u32), ("tests".to_string(), 1, 1)]
+        );
+    }
+
+    #[test]
+    fn test_value_yielding_query_distance_zero() {
+        let dict: DoubleArrayTrie<u32> =
+            DoubleArrayTrie::from_terms_with_values(vec![("test", 7u32), ("tests", 8)]);
+        let transducer = Transducer::new(dict, Algorithm::Standard);
+
+        let results = sorted(transducer.query_values("test", 0).collect());
+        assert_eq!(results, vec![("test".to_string(), 0, 7u32)]);
+    }
+
+    #[test]
+    fn test_value_yielding_query_dedup() {
+        // "abc" is reachable from query "abd" by substitution, "ab" by deletion;
+        // the BFS may revisit a term via multiple states. Assert each term once.
+        let dict: DoubleArrayTrie<u32> =
+            DoubleArrayTrie::from_terms_with_values(vec![("ab", 7u32), ("abc", 8), ("abd", 9)]);
+        let transducer = Transducer::new(dict, Algorithm::Standard);
+
+        let results: Vec<(String, usize, u32)> = transducer.query_values("abc", 2).collect();
+        let unique: HashSet<&String> = results.iter().map(|(t, _, _)| t).collect();
+        assert_eq!(
+            unique.len(),
+            results.len(),
+            "no term may be yielded twice: {results:?}"
+        );
+    }
+
+    #[test]
+    fn test_value_yielding_query_empty_result() {
+        let dict: DoubleArrayTrie<u32> =
+            DoubleArrayTrie::from_terms_with_values(vec![("test", 1u32), ("testing", 1)]);
+        let transducer = Transducer::new(dict, Algorithm::Standard);
+
+        let results: Vec<(String, usize, u32)> = transducer.query_values("zzzz", 1).collect();
+        assert!(results.is_empty(), "no match within distance 1: {results:?}");
+    }
+
+    #[test]
+    fn test_value_yielding_skips_valueless_final() {
+        // "a" is a FINAL node with NO value (inserted via insert_with_value(_, None));
+        // "ab" is final WITH a value. `query_values` must skip "a" (valueless) yet
+        // still descend through it to reach "ab" — proving children are queued
+        // before the None short-circuit.
+        let mut builder = DoubleArrayTrieBuilder::<u32>::new();
+        builder.insert_with_value("a", None);
+        builder.insert_with_value("ab", Some(100));
+        let dict = builder.build();
+        let transducer = Transducer::new(dict, Algorithm::Standard);
+
+        let yielded = sorted(transducer.query_values("a", 1).collect());
+        assert_eq!(
+            yielded,
+            vec![("ab".to_string(), 1, 100u32)],
+            "valueless final 'a' must be skipped; 'ab' must still be reached"
+        );
+
+        // Contrast: the plain query yields BOTH "a" and "ab" (it does not read values).
+        let plain: HashSet<String> = transducer.query("a", 1).collect();
+        assert!(
+            plain.contains("a") && plain.contains("ab"),
+            "plain query should yield both finals: {plain:?}"
+        );
+        // query_values set == plain set minus the valueless term.
+        let valued: HashSet<String> = yielded.iter().map(|(t, _, _)| t.clone()).collect();
+        let mut diff: Vec<String> = plain.difference(&valued).cloned().collect();
+        diff.sort();
+        assert_eq!(diff, vec!["a".to_string()]);
+    }
+
+    #[test]
+    fn test_value_yielding_matches_get_value() {
+        let dict: DoubleArrayTrie<u32> = DoubleArrayTrie::from_terms_with_values(vec![
+            ("test", 11u32),
+            ("tests", 22),
+            ("tester", 33),
+        ]);
+        let transducer = Transducer::new(dict, Algorithm::Standard);
+
+        let mut count = 0;
+        for (term, _dist, value) in transducer.query_values("test", 2) {
+            assert_eq!(
+                Some(value),
+                transducer.dictionary().get_value(&term),
+                "yielded value for {term:?} must equal a fresh dictionary lookup"
+            );
+            count += 1;
+        }
+        assert!(count > 0, "expected at least one match to validate");
     }
 }

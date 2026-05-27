@@ -38,9 +38,10 @@ The verification infrastructure combines two complementary approaches:
 
 | File | Purpose | Key Theorems |
 |------|---------|--------------|
-| `FeatureDistance.v` | Phoneme feature distance | `articulatory_symmetric`, `articulatory_bounded`, `articulatory_identity` |
+| `FeatureDistance.v` | Phoneme feature distance, parameterized by a `FeatureWeights` record | `articulatory_w_symmetric`, `articulatory_w_identity`, `articulatory_w_nonneg`, `articulatory_w_bounded_by_sum`, `articulatory_w_monotone`; standard-weight corollaries `articulatory_symmetric`/`_identity`/`articulatory_bounded` |
+| `FeatureDistanceWeighted.v` | Faithful 7-dimension model (vowel path + `Qmin` cap, mirrors Rust `FeatureDistanceWeights`) | `fsd7_symmetric`, `fsd7_identity`, `fsd7_nonneg`, `fsd7_bounded`, `fsd7_monotone` |
 
-Note: Triangle inequality does NOT hold for articulatory distance (counter-example provided in proof).
+Note: the module does **not** assert a metric-space triangle theorem for articulatory distance; the b/t/k triple is a *tight* (equality) triangle case, not a counterexample (see Key Insights below).
 
 #### Product Module (`docs/verification/product/theories/`)
 
@@ -163,21 +164,26 @@ systemd-run --user --scope -p MemoryMax=126G -p CPUQuota=1800% \
 
 ### Triangle Inequality for Articulatory Distance
 
-The articulatory feature distance does **not** satisfy the triangle inequality in general. This is proven in `FeatureDistance.v` with a concrete counter-example:
+The articulatory feature distance is **not asserted to be a metric**: `FeatureDistance.v` proves
+symmetry, identity, and boundedness, but no metric-space triangle theorem. The commonly-cited b/t/k
+triple is a *tight* (equality) triangle case, **not** a counterexample:
 
 ```
 phoneme_b = (Bilabial, Plosive, Voiced)      -- "b"
 phoneme_k = (Velar, Plosive, Voiceless)      -- "k"
 phoneme_t = (Alveolar, Plosive, Voiceless)   -- "t"
 
-d(b, k) = 32/100
-d(b, t) = 16/100
-d(t, k) = 12/100
+d(b, k) = 28/100   (place 0.4*0.6 + voice 0.2*0.2)
+d(b, t) = 16/100   (place 0.4*0.3 + voice 0.2*0.2)
+d(t, k) = 12/100   (place 0.4*0.3)
 
-32/100 > 16/100 + 12/100 = 28/100  -- Triangle inequality FAILS
+28/100 = 16/100 + 12/100   -- triangle holds with EQUALITY (theorem triangle_b_t_k_tight)
 ```
 
-This is expected because articulatory distance measures phonetic similarity based on feature overlap, not metric distance.
+Because the module proves no triangle theorem, algorithms that *require* the triangle inequality
+(e.g. A* with an admissible articulatory heuristic) still have no metric guarantee — but this rests
+on the absence of a proof plus a tight example, not on a proven counterexample. (An earlier draft
+mis-stated `d(b,k) = 32/100`; the correct value is `0.4*0.6 + 0.2*0.2 = 0.28`.)
 
 ### Myers Algorithm Constraint
 

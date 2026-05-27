@@ -85,7 +85,9 @@ pub use substitution_set_char::SubstitutionSetChar;
 pub use transition_f64::{
     initial_state_f64, transition_position_f64, transition_state_f64, transition_state_pooled_f64,
 };
-pub use value_filtered_query::{ValueFilteredQueryIterator, ValueSetFilteredQueryIterator};
+pub use value_filtered_query::{
+    ValueFilteredQueryIterator, ValueSetFilteredQueryIterator, ValueYieldingQueryIterator,
+};
 pub use zipper_query_iterator::ZipperQueryIterator;
 
 #[cfg(feature = "phonetic-rules")]
@@ -606,6 +608,22 @@ where
             max_distance,
             self.algorithm,
             filter,
+        )
+    }
+
+    /// Query yielding `(term, distance, value)` for each match within
+    /// `max_distance`, reading each match's value during traversal so the
+    /// caller avoids a second dictionary lookup per result.
+    pub fn query_values(
+        &self,
+        term: &str,
+        max_distance: usize,
+    ) -> ValueYieldingQueryIterator<D::Node> {
+        ValueYieldingQueryIterator::new(
+            self.dictionary.root(),
+            term.to_string(),
+            max_distance,
+            self.algorithm,
         )
     }
 

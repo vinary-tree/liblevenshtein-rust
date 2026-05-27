@@ -1,3 +1,4 @@
 -R . Liblevenshtein.Articulatory
 
 FeatureDistance.v
+FeatureDistanceWeighted.v

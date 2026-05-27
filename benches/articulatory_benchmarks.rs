@@ -8,7 +8,8 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::distance::standard_distance;
 use liblevenshtein::phonetic::feature_distance::{
-    articulatory_distance, articulatory_edit_distance, is_free_substitution,
+    articulatory_distance, articulatory_distance_weighted, articulatory_edit_distance,
+    articulatory_edit_distance_weighted, is_free_substitution, FeatureDistanceWeights,
 };
 
 // ============================================================================
@@ -381,6 +382,105 @@ fn bench_substitution_cost_overhead(c: &mut Criterion) {
 }
 
 // ============================================================================
+// Weighted Variant Benchmarks (G4)
+// ============================================================================
+
+/// Quantify the overhead of routing through the per-dimension weighted leaf.
+/// With `FeatureDistanceWeights::standard()` the weighted path is numerically
+/// identical to the unweighted one (the unweighted fns delegate to it), so this
+/// measures only the `&weights` indirection — expected to be ~zero.
+fn bench_articulatory_weighted(c: &mut Criterion) {
+    let mut group = c.benchmark_group("articulatory/weighted");
+    let standard = FeatureDistanceWeights::standard();
+    // A configuration that emphasizes place differences.
+    let custom = FeatureDistanceWeights {
+        place_step: 0.3,
+        ..FeatureDistanceWeights::standard()
+    };
+
+    for (name, c1, c2) in ipa_char_pairs() {
+        group.bench_with_input(BenchmarkId::new("unweighted", name), &(c1, c2), |b, &(c1, c2)| {
+            b.iter(|| articulatory_distance(black_box(c1), black_box(c2)));
+        });
+        group.bench_with_input(
+            BenchmarkId::new("weighted_standard", name),
+            &(c1, c2),
+            |b, &(c1, c2)| {
+                b.iter(|| articulatory_distance_weighted(black_box(c1), black_box(c2), &standard));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("weighted_custom", name),
+            &(c1, c2),
+            |b, &(c1, c2)| {
+                b.iter(|| articulatory_distance_weighted(black_box(c1), black_box(c2), &custom));
+            },
+        );
+    }
+
+    group.finish();
+}
+
+/// Weighted edit distance vs the unweighted (default-weight) baseline.
+fn bench_articulatory_edit_distance_weighted(c: &mut Criterion) {
+    let mut group = c.benchmark_group("articulatory/edit_distance_weighted");
+    let standard = FeatureDistanceWeights::standard();
+
+    for (name, s1, s2) in edit_distance_pairs() {
+        let bytes = (s1.len() + s2.len()) as u64;
+        group.throughput(Throughput::Bytes(bytes));
+
+        group.bench_with_input(BenchmarkId::new("unweighted", name), &(s1, s2), |b, (s1, s2)| {
+            b.iter(|| articulatory_edit_distance(black_box(s1), black_box(s2)));
+        });
+        group.bench_with_input(
+            BenchmarkId::new("weighted_standard", name),
+            &(s1, s2),
+            |b, (s1, s2)| {
+                b.iter(|| {
+                    articulatory_edit_distance_weighted(black_box(s1), black_box(s2), &standard)
+                });
+            },
+        );
+    }
+
+    group.finish();
+}
+
+/// `ArticulatoryCosts::with_feature_weights` substitution-cost path.
+fn bench_articulatory_costs_with_weights(c: &mut Criterion) {
+    let mut group = c.benchmark_group("articulatory/costs_with_feature_weights");
+
+    let default_costs = ArticulatoryCosts::default();
+    let heavy_place = ArticulatoryCosts::with_feature_weights(FeatureDistanceWeights {
+        place_step: 0.4,
+        ..FeatureDistanceWeights::standard()
+    });
+
+    let pairs = [
+        ("voicing_pb", 'p', 'b'),
+        ("place_pt", 'p', 't'),
+        ("manner_pm", 'p', 'm'),
+        ("vowel_ai", 'a', 'i'),
+    ];
+
+    for (name, from, to) in pairs {
+        group.bench_with_input(BenchmarkId::new("default", name), &(from, to), |b, &(from, to)| {
+            b.iter(|| default_costs.substitution_cost(black_box(from), black_box(to)));
+        });
+        group.bench_with_input(
+            BenchmarkId::new("heavy_place", name),
+            &(from, to),
+            |b, &(from, to)| {
+                b.iter(|| heavy_place.substitution_cost(black_box(from), black_box(to)));
+            },
+        );
+    }
+
+    group.finish();
+}
+
+// ============================================================================
 // Criterion Groups
 // ============================================================================
 
@@ -409,9 +509,17 @@ criterion_group!(
     bench_substitution_cost_overhead,
 );
 
+criterion_group!(
+    weighted_benches,
+    bench_articulatory_weighted,
+    bench_articulatory_edit_distance_weighted,
+    bench_articulatory_costs_with_weights,
+);
+
 criterion_main!(
     char_benches,
     edit_benches,
     throughput_benches,
-    product_benches
+    product_benches,
+    weighted_benches
 );

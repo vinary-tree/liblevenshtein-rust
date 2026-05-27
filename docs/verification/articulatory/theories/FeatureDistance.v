@@ -4,15 +4,29 @@
     distance between phonemes. Unlike standard edit distance, this measures
     phonetic similarity based on articulatory features.
 
-    Key Theorems:
-    1. Symmetry: articulatory_distance(a, b) = articulatory_distance(b, a)
-    2. Boundedness: 0 <= articulatory_distance(a, b) <= 1
-    3. Identity: articulatory_distance(a, a) = 0
+    The distance is parameterized by a [FeatureWeights] record (generalizing the
+    formerly-hardcoded place/manner/voice weights), mirroring the Rust
+    [FeatureDistanceWeights] struct. [standard_weights] reproduces the built-in
+    IPA weights and [articulatory_distance] is the derived standard instance.
 
-    Note: Triangle inequality may NOT hold for articulatory distance.
+    Key Theorems (the *_w forms hold for ALL weights unless noted):
+    1. Symmetry: articulatory_w_symmetric — d w a b = d w b a
+    2. Identity: articulatory_w_identity — d w a a = 0
+    3. Non-negativity: articulatory_w_nonneg — 0 <= d w a b   (non-negative weights)
+    4. Boundedness: articulatory_w_bounded_by_sum — d w a b <= w_place+w_manner+w_voice
+       (non-negative weights); articulatory_bounded recovers 0 <= d a b <= 1 for
+       standard_weights via standard_weights_sum_to_one.
+    5. Monotonicity: articulatory_w_monotone (+ per-dimension corollaries) —
+       raising weights componentwise never decreases the distance. This is the
+       formal backing of the Rust [weighted_*_monotonic] tests.
+
+    Note: Triangle inequality may NOT hold for articulatory distance; the b/t/k
+    triple below is a *tight* (equality) triangle case, not a counterexample.
 
     Corresponds to: src/phonetic/feature_distance.rs
                     src/transducer/articulatory_costs.rs
+    See also:       FeatureDistanceWeighted.v (faithful 7-dimension model with the
+                    vowel path and the [Qmin] cap).
 *)
 
 Require Import Coq.Lists.List.
@@ -211,16 +225,39 @@ Definition voice_distance (v1 v2 : Voice) : Q :=
 
 (** * Articulatory Distance *)
 
-(** Feature weights for combining distances *)
-Definition place_weight : Q := 4#10.
-Definition manner_weight : Q := 4#10.
-Definition voice_weight : Q := 2#10.
+(** Per-dimension feature weights.
 
-(** Combined articulatory distance *)
+    This record generalizes the previously-hardcoded place/manner/voice weights
+    into a parameter, mirroring the Rust [FeatureDistanceWeights] struct
+    (src/phonetic/feature_distance.rs). The proofs below establish that the
+    additive weight parameterization preserves symmetry and identity for ALL
+    weights, and non-negativity / boundedness-by-sum / per-dimension monotonicity
+    for non-negative weights. *)
+Record FeatureWeights : Type := mkWeights {
+  w_place  : Q;
+  w_manner : Q;
+  w_voice  : Q
+}.
+
+(** The built-in IPA weights: the place/manner/voicing magnitudes of the Rust
+    [FeatureDistanceWeights::standard], normalized so the three sum to one. *)
+Definition standard_weights : FeatureWeights := mkWeights (4#10) (4#10) (2#10).
+
+(** A weights record is admissible when each component is non-negative. *)
+Definition weights_nonneg (w : FeatureWeights) : Prop :=
+  0 <= w_place w /\ 0 <= w_manner w /\ 0 <= w_voice w.
+
+(** Weighted articulatory distance: the additive combination of the three
+    (weight-free) component distances, each scaled by its per-dimension weight. *)
+Definition articulatory_distance_w (w : FeatureWeights) (f1 f2 : PhonemeFeatures) : Q :=
+  w_place  w * place_distance  (feat_place  f1) (feat_place  f2) +
+  w_manner w * manner_distance (feat_manner f1) (feat_manner f2) +
+  w_voice  w * voice_distance  (feat_voice  f1) (feat_voice  f2).
+
+(** The standard (default-weight) articulatory distance, preserved as a derived
+    instance so all existing examples and downstream lemmas keep working. *)
 Definition articulatory_distance (f1 f2 : PhonemeFeatures) : Q :=
-  place_weight * place_distance (feat_place f1) (feat_place f2) +
-  manner_weight * manner_distance (feat_manner f1) (feat_manner f2) +
-  voice_weight * voice_distance (feat_voice f1) (feat_voice f2).
+  articulatory_distance_w standard_weights f1 f2.
 
 (** * Symmetry Proof *)
 
@@ -248,17 +285,23 @@ Proof.
   destruct v1; destruct v2; reflexivity.
 Qed.
 
-(** Main symmetry theorem *)
-Theorem articulatory_symmetric : forall f1 f2,
-  articulatory_distance f1 f2 = articulatory_distance f2 f1.
+(** Main symmetry theorem — holds for ALL weights, since each component
+    distance is symmetric and the terms are accumulated in the same order. *)
+Theorem articulatory_w_symmetric : forall w f1 f2,
+  articulatory_distance_w w f1 f2 = articulatory_distance_w w f2 f1.
 Proof.
-  intros f1 f2.
-  unfold articulatory_distance.
+  intros w f1 f2.
+  unfold articulatory_distance_w.
   rewrite place_distance_symmetric.
   rewrite manner_distance_symmetric.
   rewrite voice_distance_symmetric.
   reflexivity.
 Qed.
+
+(** Standard-weight corollary (preserves the original theorem name). *)
+Corollary articulatory_symmetric : forall f1 f2,
+  articulatory_distance f1 f2 = articulatory_distance f2 f1.
+Proof. intros f1 f2. apply articulatory_w_symmetric. Qed.
 
 (** * Identity Proof *)
 
@@ -283,12 +326,13 @@ Proof.
   intros v. destruct v; reflexivity.
 Qed.
 
-(** Same phoneme has distance 0 *)
-Theorem articulatory_identity : forall f,
-  articulatory_distance f f == 0.
+(** Same phoneme has distance 0 — holds for ALL weights (each component
+    distance is 0 on the diagonal, so every weighted term vanishes). *)
+Theorem articulatory_w_identity : forall w f,
+  articulatory_distance_w w f f == 0.
 Proof.
-  intros f.
-  unfold articulatory_distance.
+  intros w f.
+  unfold articulatory_distance_w.
   destruct f as [p m v].
   cbn.
   rewrite (place_distance_identity p).
@@ -296,6 +340,11 @@ Proof.
   rewrite (voice_distance_identity v).
   ring.
 Qed.
+
+(** Standard-weight corollary (preserves the original theorem name). *)
+Corollary articulatory_identity : forall f,
+  articulatory_distance f f == 0.
+Proof. intros f. apply articulatory_w_identity. Qed.
 
 (** * Boundedness Proof *)
 
@@ -321,46 +370,131 @@ Proof.
   destruct v1; destruct v2; split; discriminate || reflexivity.
 Qed.
 
-(** Weights sum to 1 *)
-Lemma weights_sum_to_one :
-  place_weight + manner_weight + voice_weight == 1.
+(** The standard weights are non-negative. *)
+Lemma standard_weights_nonneg : weights_nonneg standard_weights.
 Proof.
-  unfold place_weight, manner_weight, voice_weight.
+  unfold weights_nonneg, standard_weights; cbn.
+  repeat split; discriminate.
+Qed.
+
+(** The standard weights sum to 1 (recovering the historical unit bound). *)
+Lemma standard_weights_sum_to_one :
+  w_place standard_weights + w_manner standard_weights + w_voice standard_weights == 1.
+Proof.
+  unfold standard_weights; cbn.
   reflexivity.
 Qed.
 
-(** Main boundedness theorem *)
-Theorem articulatory_bounded : forall f1 f2,
-  0 <= articulatory_distance f1 f2 <= 1.
+(** Non-negativity for any non-negative weights: every weighted term is a
+    product of two non-negative factors. *)
+Theorem articulatory_w_nonneg : forall w f1 f2,
+  weights_nonneg w -> 0 <= articulatory_distance_w w f1 f2.
 Proof.
-  intros f1 f2.
-  unfold articulatory_distance.
+  intros w f1 f2 [Hp [Hm Hv]].
+  unfold articulatory_distance_w.
+  destruct (place_distance_bounded (feat_place f1) (feat_place f2)) as [Hp_lo _].
+  destruct (manner_distance_bounded (feat_manner f1) (feat_manner f2)) as [Hm_lo _].
+  destruct (voice_distance_bounded (feat_voice f1) (feat_voice f2)) as [Hv_lo _].
+  replace 0 with (0 + 0)%Q by reflexivity.
+  apply Qplus_le_compat.
+  - replace 0 with (0 + 0)%Q by reflexivity.
+    apply Qplus_le_compat.
+    + apply Qmult_le_0_compat; [exact Hp | exact Hp_lo].
+    + apply Qmult_le_0_compat; [exact Hm | exact Hm_lo].
+  - apply Qmult_le_0_compat; [exact Hv | exact Hv_lo].
+Qed.
+
+(** Boundedness by the weight sum (generalizes the historical [<= 1], which
+    relied on the standard weights summing to one). Each component distance is
+    in [0,1], so each weighted term is at most its weight. *)
+Theorem articulatory_w_bounded_by_sum : forall w f1 f2,
+  weights_nonneg w ->
+  articulatory_distance_w w f1 f2 <= w_place w + w_manner w + w_voice w.
+Proof.
+  intros w f1 f2 [Hp [Hm Hv]].
+  unfold articulatory_distance_w.
   destruct (place_distance_bounded (feat_place f1) (feat_place f2)) as [Hp_lo Hp_hi].
   destruct (manner_distance_bounded (feat_manner f1) (feat_manner f2)) as [Hm_lo Hm_hi].
   destruct (voice_distance_bounded (feat_voice f1) (feat_voice f2)) as [Hv_lo Hv_hi].
-  split.
-  - (* 0 <= distance *)
-    replace 0 with (0 + 0)%Q by reflexivity.
-    apply Qplus_le_compat.
-    + replace 0 with (0 + 0)%Q by reflexivity.
-      apply Qplus_le_compat.
-      * apply Qmult_le_0_compat; [unfold place_weight; discriminate | exact Hp_lo].
-      * apply Qmult_le_0_compat; [unfold manner_weight; discriminate | exact Hm_lo].
-    + apply Qmult_le_0_compat; [unfold voice_weight; discriminate | exact Hv_lo].
-  - (* distance <= 1 *)
-    setoid_replace 1 with (place_weight * 1 + manner_weight * 1 + voice_weight * 1).
-    + apply Qplus_le_compat.
-      * apply Qplus_le_compat.
-        -- apply Qmult_le_compat_nonneg.
-           ++ split; [unfold place_weight; discriminate | apply Qle_refl].
-           ++ split; [exact Hp_lo | exact Hp_hi].
-        -- apply Qmult_le_compat_nonneg.
-           ++ split; [unfold manner_weight; discriminate | apply Qle_refl].
-           ++ split; [exact Hm_lo | exact Hm_hi].
-      * apply Qmult_le_compat_nonneg.
-        -- split; [unfold voice_weight; discriminate | apply Qle_refl].
-        -- split; [exact Hv_lo | exact Hv_hi].
-    + unfold place_weight, manner_weight, voice_weight. ring.
+  setoid_replace (w_place w + w_manner w + w_voice w)
+    with (w_place w * 1 + w_manner w * 1 + w_voice w * 1) by ring.
+  apply Qplus_le_compat.
+  - apply Qplus_le_compat.
+    + apply Qmult_le_compat_nonneg.
+      * split; [exact Hp | apply Qle_refl].
+      * split; [exact Hp_lo | exact Hp_hi].
+    + apply Qmult_le_compat_nonneg.
+      * split; [exact Hm | apply Qle_refl].
+      * split; [exact Hm_lo | exact Hm_hi].
+  - apply Qmult_le_compat_nonneg.
+    + split; [exact Hv | apply Qle_refl].
+    + split; [exact Hv_lo | exact Hv_hi].
+Qed.
+
+(** Per-dimension monotonicity: raising weights componentwise (component
+    distances being non-negative) cannot decrease the distance. This is the
+    formal backing of the Rust [weighted_*_monotonic] tests. *)
+Theorem articulatory_w_monotone : forall w w' f1 f2,
+  w_place w <= w_place w' ->
+  w_manner w <= w_manner w' ->
+  w_voice w <= w_voice w' ->
+  articulatory_distance_w w f1 f2 <= articulatory_distance_w w' f1 f2.
+Proof.
+  intros w w' f1 f2 Hp Hm Hv.
+  unfold articulatory_distance_w.
+  destruct (place_distance_bounded (feat_place f1) (feat_place f2)) as [Hp_lo _].
+  destruct (manner_distance_bounded (feat_manner f1) (feat_manner f2)) as [Hm_lo _].
+  destruct (voice_distance_bounded (feat_voice f1) (feat_voice f2)) as [Hv_lo _].
+  apply Qplus_le_compat.
+  - apply Qplus_le_compat.
+    + apply Qmult_le_compat_r; [exact Hp | exact Hp_lo].
+    + apply Qmult_le_compat_r; [exact Hm | exact Hm_lo].
+  - apply Qmult_le_compat_r; [exact Hv | exact Hv_lo].
+Qed.
+
+(** Single-dimension monotonicity corollaries (one weight rises, the others are
+    held fixed) — the direct analogues of the per-dimension Rust unit tests. *)
+Corollary articulatory_w_monotone_place : forall w w' f1 f2,
+  w_place w <= w_place w' -> w_manner w = w_manner w' -> w_voice w = w_voice w' ->
+  articulatory_distance_w w f1 f2 <= articulatory_distance_w w' f1 f2.
+Proof.
+  intros w w' f1 f2 Hp Hm Hv. apply articulatory_w_monotone.
+  - exact Hp.
+  - rewrite Hm. apply Qle_refl.
+  - rewrite Hv. apply Qle_refl.
+Qed.
+
+Corollary articulatory_w_monotone_manner : forall w w' f1 f2,
+  w_place w = w_place w' -> w_manner w <= w_manner w' -> w_voice w = w_voice w' ->
+  articulatory_distance_w w f1 f2 <= articulatory_distance_w w' f1 f2.
+Proof.
+  intros w w' f1 f2 Hp Hm Hv. apply articulatory_w_monotone.
+  - rewrite Hp. apply Qle_refl.
+  - exact Hm.
+  - rewrite Hv. apply Qle_refl.
+Qed.
+
+Corollary articulatory_w_monotone_voice : forall w w' f1 f2,
+  w_place w = w_place w' -> w_manner w = w_manner w' -> w_voice w <= w_voice w' ->
+  articulatory_distance_w w f1 f2 <= articulatory_distance_w w' f1 f2.
+Proof.
+  intros w w' f1 f2 Hp Hm Hv. apply articulatory_w_monotone.
+  - rewrite Hp. apply Qle_refl.
+  - rewrite Hm. apply Qle_refl.
+  - exact Hv.
+Qed.
+
+(** Main boundedness theorem (standard weights), recovered as a corollary of the
+    general sum bound together with [standard_weights_sum_to_one]. Preserves the
+    original theorem name. *)
+Corollary articulatory_bounded : forall f1 f2,
+  0 <= articulatory_distance f1 f2 <= 1.
+Proof.
+  intros f1 f2. unfold articulatory_distance. split.
+  - apply articulatory_w_nonneg. exact standard_weights_nonneg.
+  - eapply Qle_trans.
+    + apply articulatory_w_bounded_by_sum. exact standard_weights_nonneg.
+    + rewrite standard_weights_sum_to_one. apply Qle_refl.
 Qed.
 
 (** * Triangle Inequality Analysis *)

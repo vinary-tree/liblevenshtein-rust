@@ -1,7 +1,7 @@
 # Formal Verification Status Report
 
-**Last Updated**: 2025-11-17 (Updated after I-type completion)
-**Session**: Phase 3 - I-type complete, M-type next
+**Last Updated**: 2026-05-27 (weighted articulatory distance + value-yielding query verification)
+**Session**: Phase 3 - I-type complete, M-type next; G4/G9 verification added (see 2026-05-27 update)
 **Token Usage**: 84k/200k (42%)
 
 ---
@@ -11,6 +11,26 @@
 **Completed**: Phases 1 & 2 (Foundation + Invariants), Phase 3 I-Type Operations ✅
 **In Progress**: Phase 3 M-Type Operations
 **Achievements**: 26 theorems proven across 4 files, 0 bugs found, 3 simplifications identified
+
+---
+
+## 2026-05-27 Update — Weighted Articulatory Distance (G4) + Value-Yielding Query (G9)
+
+- **Articulatory distance is now proven for arbitrary non-negative per-dimension weights.**
+  `docs/verification/articulatory/theories/FeatureDistance.v` was generalized to a `FeatureWeights`
+  record (mirroring the Rust `FeatureDistanceWeights`): symmetry and identity hold for **all** weights;
+  non-negativity, bound-by-weight-sum, and **per-dimension monotonicity** hold for non-negative
+  weights; the standard-weight `0 <= d <= 1` bound is recovered as a corollary. A faithful
+  7-dimension model (vowel path + `.min(1.0)` cap via `Qmin`) is added in `FeatureDistanceWeighted.v`.
+  Both files are **admission-free** and build under the `light` profile.
+- **Value-yielding query (`Transducer::query_values`)** is modeled in
+  `docs/verification/tla/ValueYieldingQuery.tla` and TLC-checked (`ValueCorrectness`, `Soundness`,
+  `NoValuelessYielded`, `DedupInv`, `CompletenessInv`, termination); evidence in
+  `docs/verification/tla/states/tlc-results-2026-05-27.txt`. Cross-validated by Rust property tests.
+- **Correction:** the articulatory module does **not** prove a triangle-inequality counterexample; the
+  b/t/k triple is a *tight equality* case (`triangle_b_t_k_tight`). Stale "triangle failure" / "1
+  Admitted" wording in `FINDINGS_LEDGER.md` and `VERIFICATION_IMPROVEMENTS.md` has been corrected.
+- See `docs/verification/FINDINGS_LEDGER.md` Finding 16 for the full hypothesis→experiment→result record.
 
 ---
 

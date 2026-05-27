@@ -97,6 +97,55 @@ const VOWEL_HEIGHT_STEP: f64 = 0.15; // high/mid/low
 const VOWEL_BACKNESS_STEP: f64 = 0.15; // front/central/back
 const VOWEL_ROUNDING_DIFF: f64 = 0.1; // rounded/unrounded
 
+/// Per-dimension articulatory base-distance weights.
+///
+/// Each field is the base distance (cost) contributed by one feature dimension.
+/// `Default` reproduces the module's built-in IPA constants exactly, so the
+/// `*_weighted` functions called with `FeatureDistanceWeights::default()` are
+/// identical to their unweighted counterparts (and all existing behavior /
+/// tests are preserved). The curated manner-distance *table* keeps its relative
+/// structure; `manner_table_scale` scales its magnitude uniformly.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FeatureDistanceWeights {
+    /// Cost of a voicing difference between two consonants. Default 0.1.
+    pub voicing: f64,
+    /// Cost per place-of-articulation step (adjacent places). Default 0.15.
+    pub place_step: f64,
+    /// Fallback cost when a manner pair is not in the curated table (and the
+    /// place fallback when place features are absent). Default 0.5.
+    pub manner_default: f64,
+    /// Multiplier on the curated manner-distance table entries. Default 1.0.
+    pub manner_table_scale: f64,
+    /// Cost per vowel-height step (high/mid/low). Default 0.15.
+    pub vowel_height_step: f64,
+    /// Cost per vowel-backness step (front/central/back). Default 0.15.
+    pub vowel_backness_step: f64,
+    /// Cost of a vowel rounding difference. Default 0.1.
+    pub vowel_rounding: f64,
+}
+
+impl FeatureDistanceWeights {
+    /// The built-in IPA constants as a `const` value (usable in `const fn`
+    /// contexts such as `ArticulatoryCosts::new`). Equivalent to `default()`.
+    pub const fn standard() -> Self {
+        Self {
+            voicing: VOICING_DISTANCE,
+            place_step: PLACE_STEP_DISTANCE,
+            manner_default: DEFAULT_MANNER_DISTANCE,
+            manner_table_scale: 1.0,
+            vowel_height_step: VOWEL_HEIGHT_STEP,
+            vowel_backness_step: VOWEL_BACKNESS_STEP,
+            vowel_rounding: VOWEL_ROUNDING_DIFF,
+        }
+    }
+}
+
+impl Default for FeatureDistanceWeights {
+    fn default() -> Self {
+        Self::standard()
+    }
+}
+
 /// Compute articulatory distance between two characters.
 ///
 /// Returns a value in [0.0, 1.0] where:
@@ -114,6 +163,12 @@ const VOWEL_ROUNDING_DIFF: f64 = 0.1; // rounded/unrounded
 ///
 /// Normalized articulatory distance
 pub fn articulatory_distance(c1: char, c2: char) -> f64 {
+    articulatory_distance_weighted(c1, c2, &FeatureDistanceWeights::default())
+}
+
+/// Weighted variant of [`articulatory_distance`] using caller-supplied
+/// per-dimension [`FeatureDistanceWeights`].
+pub fn articulatory_distance_weighted(c1: char, c2: char, weights: &FeatureDistanceWeights) -> f64 {
     if c1 == c2 {
         return 0.0;
     }
@@ -126,7 +181,7 @@ pub fn articulatory_distance(c1: char, c2: char) -> f64 {
         return 1.0;
     }
 
-    feature_set_distance(&f1, &f2)
+    feature_set_distance_weighted(&f1, &f2, weights)
 }
 
 /// Compute distance between two feature sets.
@@ -139,6 +194,15 @@ pub fn articulatory_distance(c1: char, c2: char) -> f64 {
 pub fn feature_set_distance(
     f1: &FxHashSet<PhoneticFeature>,
     f2: &FxHashSet<PhoneticFeature>,
+) -> f64 {
+    feature_set_distance_weighted(f1, f2, &FeatureDistanceWeights::default())
+}
+
+/// Weighted variant of [`feature_set_distance`].
+pub fn feature_set_distance_weighted(
+    f1: &FxHashSet<PhoneticFeature>,
+    f2: &FxHashSet<PhoneticFeature>,
+    weights: &FeatureDistanceWeights,
 ) -> f64 {
     let mut distance = 0.0;
 
@@ -153,38 +217,42 @@ pub fn feature_set_distance(
 
     if v1_vowel {
         // Both vowels: compare vowel features
-        distance += vowel_distance(f1, f2);
+        distance += vowel_distance(f1, f2, weights);
     } else {
         // Both consonants: compare consonant features
         // Voicing difference
         let v1_voiced = f1.contains(&PhoneticFeature::Voiced);
         let v2_voiced = f2.contains(&PhoneticFeature::Voiced);
         if v1_voiced != v2_voiced {
-            distance += VOICING_DISTANCE;
+            distance += weights.voicing;
         }
 
         // Place difference
-        distance += place_distance(f1, f2);
+        distance += place_distance(f1, f2, weights);
 
         // Manner difference
-        distance += manner_distance(f1, f2);
+        distance += manner_distance(f1, f2, weights);
     }
 
     distance.min(1.0) // Cap at 1.0
 }
 
 /// Compute place of articulation distance.
-fn place_distance(f1: &FxHashSet<PhoneticFeature>, f2: &FxHashSet<PhoneticFeature>) -> f64 {
+fn place_distance(
+    f1: &FxHashSet<PhoneticFeature>,
+    f2: &FxHashSet<PhoneticFeature>,
+    weights: &FeatureDistanceWeights,
+) -> f64 {
     let pos1 = find_place_position(f1);
     let pos2 = find_place_position(f2);
 
     match (pos1, pos2) {
         (Some(p1), Some(p2)) => {
             let diff = (p1 as i32 - p2 as i32).unsigned_abs() as f64;
-            diff * PLACE_STEP_DISTANCE
+            diff * weights.place_step
         }
         // If one or both don't have place features, use default
-        _ => DEFAULT_MANNER_DISTANCE,
+        _ => weights.manner_default,
     }
 }
 
@@ -199,7 +267,11 @@ fn find_place_position(features: &FxHashSet<PhoneticFeature>) -> Option<usize> {
 }
 
 /// Compute manner of articulation distance.
-fn manner_distance(f1: &FxHashSet<PhoneticFeature>, f2: &FxHashSet<PhoneticFeature>) -> f64 {
+fn manner_distance(
+    f1: &FxHashSet<PhoneticFeature>,
+    f2: &FxHashSet<PhoneticFeature>,
+    weights: &FeatureDistanceWeights,
+) -> f64 {
     let manner1 = find_manner(f1);
     let manner2 = find_manner(f2);
 
@@ -209,18 +281,18 @@ fn manner_distance(f1: &FxHashSet<PhoneticFeature>, f2: &FxHashSet<PhoneticFeatu
                 return 0.0;
             }
 
-            // Look up in manner distance table
+            // Look up in manner distance table (scaled to preserve structure)
             for &(a, b, dist) in MANNER_DISTANCES {
                 if (a == m1 && b == m2) || (a == m2 && b == m1) {
-                    return dist;
+                    return dist * weights.manner_table_scale;
                 }
             }
 
             // Default for unspecified pairs
-            DEFAULT_MANNER_DISTANCE
+            weights.manner_default
         }
         // If manner not found, use default
-        _ => DEFAULT_MANNER_DISTANCE,
+        _ => weights.manner_default,
     }
 }
 
@@ -247,24 +319,28 @@ fn find_manner(features: &FxHashSet<PhoneticFeature>) -> Option<PhoneticFeature>
 }
 
 /// Compute distance between vowels.
-fn vowel_distance(f1: &FxHashSet<PhoneticFeature>, f2: &FxHashSet<PhoneticFeature>) -> f64 {
+fn vowel_distance(
+    f1: &FxHashSet<PhoneticFeature>,
+    f2: &FxHashSet<PhoneticFeature>,
+    weights: &FeatureDistanceWeights,
+) -> f64 {
     let mut distance = 0.0;
 
     // Height difference
     let h1 = vowel_height(f1);
     let h2 = vowel_height(f2);
-    distance += (h1 - h2).abs() as f64 * VOWEL_HEIGHT_STEP;
+    distance += (h1 - h2).abs() as f64 * weights.vowel_height_step;
 
     // Backness difference
     let b1 = vowel_backness(f1);
     let b2 = vowel_backness(f2);
-    distance += (b1 - b2).abs() as f64 * VOWEL_BACKNESS_STEP;
+    distance += (b1 - b2).abs() as f64 * weights.vowel_backness_step;
 
     // Rounding difference
     let r1 = f1.contains(&PhoneticFeature::Rounded);
     let r2 = f2.contains(&PhoneticFeature::Rounded);
     if r1 != r2 {
-        distance += VOWEL_ROUNDING_DIFF;
+        distance += weights.vowel_rounding;
     }
 
     distance
@@ -327,6 +403,16 @@ pub fn is_free_substitution(c1: char, c2: char) -> bool {
 /// Weighted edit distance where substitutions are weighted by
 /// articulatory similarity.
 pub fn articulatory_edit_distance(source: &str, target: &str) -> f64 {
+    articulatory_edit_distance_weighted(source, target, &FeatureDistanceWeights::default())
+}
+
+/// Weighted variant of [`articulatory_edit_distance`]: substitution costs use
+/// [`articulatory_distance_weighted`] with the supplied weights.
+pub fn articulatory_edit_distance_weighted(
+    source: &str,
+    target: &str,
+    weights: &FeatureDistanceWeights,
+) -> f64 {
     let source_chars: Vec<char> = source.chars().collect();
     let target_chars: Vec<char> = target.chars().collect();
 
@@ -347,7 +433,8 @@ pub fn articulatory_edit_distance(source: &str, target: &str) -> f64 {
     for i in 1..=m {
         curr_row[0] = i as f64;
         for j in 1..=n {
-            let sub_cost = articulatory_distance(source_chars[i - 1], target_chars[j - 1]);
+            let sub_cost =
+                articulatory_distance_weighted(source_chars[i - 1], target_chars[j - 1], weights);
             curr_row[j] = (prev_row[j] + 1.0) // deletion
                 .min(curr_row[j - 1] + 1.0) // insertion
                 .min(prev_row[j - 1] + sub_cost); // substitution
@@ -484,5 +571,235 @@ mod tests {
 
         let dist_theta_eth = articulatory_distance('θ', 'ð'); // th voiced/voiceless
         assert!(dist_theta_eth > 0.0 && dist_theta_eth < 0.2);
+    }
+
+    #[test]
+    fn weighted_default_matches_unweighted() {
+        // Default weights reproduce the built-in constants exactly.
+        let w = FeatureDistanceWeights::default();
+        for (a, b) in [
+            ('p', 'b'),
+            ('p', 'k'),
+            ('a', 'e'),
+            ('s', 'z'),
+            ('p', 'h'),
+            ('t', 'd'),
+            ('a', 'i'),
+        ] {
+            assert_eq!(
+                articulatory_distance(a, b),
+                articulatory_distance_weighted(a, b, &w),
+                "default-weighted must match unweighted for {a}-{b}"
+            );
+        }
+        assert_eq!(
+            articulatory_edit_distance("receive", "recieve"),
+            articulatory_edit_distance_weighted("receive", "recieve", &w)
+        );
+    }
+
+    #[test]
+    fn weighted_voicing_scales_monotonically() {
+        // p↔b differ only in voicing; the distance equals the voicing weight, so
+        // raising it raises the distance.
+        let low = FeatureDistanceWeights {
+            voicing: 0.05,
+            ..Default::default()
+        };
+        let high = FeatureDistanceWeights {
+            voicing: 0.5,
+            ..Default::default()
+        };
+        let d_low = articulatory_distance_weighted('p', 'b', &low);
+        let d_high = articulatory_distance_weighted('p', 'b', &high);
+        assert!(
+            d_high > d_low,
+            "higher voicing weight must increase p-b distance: {d_low} vs {d_high}"
+        );
+        assert!((d_low - 0.05).abs() < 1e-9);
+        assert!((d_high - 0.5).abs() < 1e-9);
+    }
+
+    // --- Per-dimension weight tests ---------------------------------------
+    //
+    // Each pair below is chosen to ISOLATE one weight dimension while keeping
+    // the pre-cap distance well under 1.0, so a weight increase is observable
+    // (the final `.min(1.0)` cap would otherwise saturate it). Feature sets
+    // (verified in `features.rs`): p=[Stop,Bilabial,Voiceless],
+    // b=[Stop,Bilabial,Voiced], t=[Stop,Alveolar,Voiceless],
+    // m=[Nasal,Bilabial,Voiced], e=[Vowel,Mid,Front,Unrounded],
+    // i=[Vowel,High,Front,Unrounded], ɨ=[Vowel,High,Central,Unrounded],
+    // ø=[Vowel,Mid,Front,Rounded]. Place indices: Bilabial=0, Alveolar=3.
+    //
+    // "Monotone": raising the relevant weight strictly increases the distance.
+    // "Isolated": raising an irrelevant weight leaves the distance unchanged.
+
+    #[test]
+    fn weighted_voicing_isolated() {
+        // p/b differ only in voicing → distance == voicing (0.1 by default).
+        let base = FeatureDistanceWeights::default();
+        let d = articulatory_distance_weighted('p', 'b', &base);
+        assert!((d - 0.1).abs() < 1e-9, "p/b expected 0.1, got {d}");
+        // Same place (diff 0), same manner (Stop), not vowels: nothing else applies.
+        for w in [
+            FeatureDistanceWeights { place_step: 0.9, ..base },
+            FeatureDistanceWeights { manner_default: 0.9, ..base },
+            FeatureDistanceWeights { manner_table_scale: 5.0, ..base },
+            FeatureDistanceWeights { vowel_height_step: 0.9, ..base },
+            FeatureDistanceWeights { vowel_backness_step: 0.9, ..base },
+            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+        ] {
+            assert_eq!(articulatory_distance_weighted('p', 'b', &w), d);
+        }
+    }
+
+    #[test]
+    fn weighted_place_step_monotonic_and_isolated() {
+        // p/t: voiceless stops differing only in place (Bilabial 0 vs Alveolar 3)
+        // → distance == 3 * place_step (= 0.45 by default).
+        let base = FeatureDistanceWeights::default();
+        let d = articulatory_distance_weighted('p', 't', &base);
+        assert!((d - 0.45).abs() < 1e-9, "p/t expected 0.45, got {d}");
+        let lo = FeatureDistanceWeights { place_step: 0.10, ..base };
+        let hi = FeatureDistanceWeights { place_step: 0.20, ..base };
+        assert!(
+            articulatory_distance_weighted('p', 't', &hi)
+                > articulatory_distance_weighted('p', 't', &lo),
+            "raising place_step must increase p/t distance"
+        );
+        for w in [
+            FeatureDistanceWeights { voicing: 0.9, ..base },
+            FeatureDistanceWeights { manner_table_scale: 5.0, ..base },
+            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+        ] {
+            assert_eq!(articulatory_distance_weighted('p', 't', &w), d);
+        }
+    }
+
+    #[test]
+    fn weighted_manner_table_scale_monotonic_and_isolated() {
+        // p/m: both Bilabial; Stop↔Nasal is a curated table entry (0.3). They also
+        // differ in voicing, so distance = voicing + 0.3*manner_table_scale (= 0.4).
+        // The additive structure makes it strictly increasing in manner_table_scale.
+        let base = FeatureDistanceWeights::default();
+        let d = articulatory_distance_weighted('p', 'm', &base);
+        assert!((d - 0.4).abs() < 1e-9, "p/m expected 0.4, got {d}");
+        let lo = FeatureDistanceWeights { manner_table_scale: 0.5, ..base };
+        let hi = FeatureDistanceWeights { manner_table_scale: 2.0, ..base };
+        assert!(
+            articulatory_distance_weighted('p', 'm', &hi)
+                > articulatory_distance_weighted('p', 'm', &lo),
+            "raising manner_table_scale must increase p/m distance"
+        );
+        for w in [
+            FeatureDistanceWeights { vowel_height_step: 0.9, ..base },
+            FeatureDistanceWeights { vowel_backness_step: 0.9, ..base },
+            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+        ] {
+            assert_eq!(articulatory_distance_weighted('p', 'm', &w), d);
+        }
+    }
+
+    #[test]
+    fn weighted_manner_default_monotonic() {
+        // Hand-built consonant feature sets where f1 lacks a manner feature, forcing
+        // the `manner_default` fallback in manner_distance. Same place (Bilabial,
+        // diff 0), neither voiced → distance is exactly `manner_default`.
+        let mut f1 = FxHashSet::default();
+        f1.insert(PhoneticFeature::Consonant);
+        f1.insert(PhoneticFeature::Bilabial);
+        let mut f2 = FxHashSet::default();
+        f2.insert(PhoneticFeature::Consonant);
+        f2.insert(PhoneticFeature::Bilabial);
+        f2.insert(PhoneticFeature::Stop);
+
+        let lo = FeatureDistanceWeights { manner_default: 0.3, ..Default::default() };
+        let hi = FeatureDistanceWeights { manner_default: 0.7, ..Default::default() };
+        let d_lo = feature_set_distance_weighted(&f1, &f2, &lo);
+        let d_hi = feature_set_distance_weighted(&f1, &f2, &hi);
+        assert!((d_lo - 0.3).abs() < 1e-9, "expected manner_default 0.3, got {d_lo}");
+        assert!((d_hi - 0.7).abs() < 1e-9, "expected manner_default 0.7, got {d_hi}");
+        assert!(d_hi > d_lo, "raising manner_default must increase the distance");
+    }
+
+    #[test]
+    fn weighted_vowel_height_monotonic_and_isolated() {
+        // e/i: both Front, Unrounded; differ only in height → distance == vowel_height_step.
+        let base = FeatureDistanceWeights::default();
+        let d = articulatory_distance_weighted('e', 'i', &base);
+        assert!((d - 0.15).abs() < 1e-9, "e/i expected 0.15, got {d}");
+        let lo = FeatureDistanceWeights { vowel_height_step: 0.10, ..base };
+        let hi = FeatureDistanceWeights { vowel_height_step: 0.30, ..base };
+        assert!(
+            articulatory_distance_weighted('e', 'i', &hi)
+                > articulatory_distance_weighted('e', 'i', &lo),
+            "raising vowel_height_step must increase e/i distance"
+        );
+        for w in [
+            FeatureDistanceWeights { vowel_backness_step: 0.9, ..base },
+            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+            FeatureDistanceWeights { voicing: 0.9, ..base },
+            FeatureDistanceWeights { place_step: 0.9, ..base },
+        ] {
+            assert_eq!(articulatory_distance_weighted('e', 'i', &w), d);
+        }
+    }
+
+    #[test]
+    fn weighted_vowel_backness_monotonic_and_isolated() {
+        // i/ɨ: both High, Unrounded; differ only in backness → distance == vowel_backness_step.
+        let base = FeatureDistanceWeights::default();
+        let d = articulatory_distance_weighted('i', 'ɨ', &base);
+        assert!((d - 0.15).abs() < 1e-9, "i/ɨ expected 0.15, got {d}");
+        let lo = FeatureDistanceWeights { vowel_backness_step: 0.10, ..base };
+        let hi = FeatureDistanceWeights { vowel_backness_step: 0.30, ..base };
+        assert!(
+            articulatory_distance_weighted('i', 'ɨ', &hi)
+                > articulatory_distance_weighted('i', 'ɨ', &lo),
+            "raising vowel_backness_step must increase i/ɨ distance"
+        );
+        for w in [
+            FeatureDistanceWeights { vowel_height_step: 0.9, ..base },
+            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+        ] {
+            assert_eq!(articulatory_distance_weighted('i', 'ɨ', &w), d);
+        }
+    }
+
+    #[test]
+    fn weighted_vowel_rounding_monotonic_and_isolated() {
+        // e/ø: both Mid, Front; differ only in rounding → distance == vowel_rounding.
+        let base = FeatureDistanceWeights::default();
+        let d = articulatory_distance_weighted('e', 'ø', &base);
+        assert!((d - 0.1).abs() < 1e-9, "e/ø expected 0.1, got {d}");
+        let lo = FeatureDistanceWeights { vowel_rounding: 0.05, ..base };
+        let hi = FeatureDistanceWeights { vowel_rounding: 0.40, ..base };
+        assert!(
+            articulatory_distance_weighted('e', 'ø', &hi)
+                > articulatory_distance_weighted('e', 'ø', &lo),
+            "raising vowel_rounding must increase e/ø distance"
+        );
+        for w in [
+            FeatureDistanceWeights { vowel_height_step: 0.9, ..base },
+            FeatureDistanceWeights { vowel_backness_step: 0.9, ..base },
+        ] {
+            assert_eq!(articulatory_distance_weighted('e', 'ø', &w), d);
+        }
+    }
+
+    #[test]
+    fn weighted_standard_equals_default() {
+        assert_eq!(
+            FeatureDistanceWeights::standard(),
+            FeatureDistanceWeights::default()
+        );
+        let w = FeatureDistanceWeights::standard();
+        assert_eq!(w.voicing, VOICING_DISTANCE);
+        assert_eq!(w.place_step, PLACE_STEP_DISTANCE);
+        assert_eq!(w.manner_default, DEFAULT_MANNER_DISTANCE);
+        assert_eq!(w.manner_table_scale, 1.0);
+        assert_eq!(w.vowel_height_step, VOWEL_HEIGHT_STEP);
+        assert_eq!(w.vowel_backness_step, VOWEL_BACKNESS_STEP);
+        assert_eq!(w.vowel_rounding, VOWEL_ROUNDING_DIFF);
     }
 }

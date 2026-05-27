@@ -23,7 +23,8 @@ trusted	light	coq	docs/verification/core/theories/Core/MinLemmas.v	min3/substitu
 trusted	standard	coq	docs/verification/core/theories/Core/LevDistance.v	Levenshtein distance definition and basic unfolding lemmas
 trusted	standard	coq	docs/verification/core/theories/Core/MetricProperties.v	core Levenshtein metric properties; no active assumptions
 trusted	light	coq	docs/verification/core/theories/Triangle/SubstCostTriangle.v	substitution-cost triangle helper
-trusted	light	coq	docs/verification/articulatory/theories/FeatureDistance.v	articulatory distance symmetry, identity, boundedness, and checked examples
+trusted	light	coq	docs/verification/articulatory/theories/FeatureDistance.v	articulatory distance parameterized by FeatureWeights record; symmetry/identity (all weights), non-negativity/bound-by-sum/per-dimension monotonicity (non-negative weights), standard-weight <=1 corollary; checked examples
+trusted	light	coq	docs/verification/articulatory/theories/FeatureDistanceWeighted.v	faithful 7-dimension weighted articulatory model (vowel path + Qmin cap, mirrors Rust FeatureDistanceWeights); symmetry/identity/non-negativity/boundedness(<=1)/per-dimension monotonicity; checked examples
 trusted	standard	coq	docs/verification/wallbreaker/theories/Pigeonhole/WallBreakerPigeonhole.v	WallBreaker pigeonhole piece-count proofs
 partial	exceptional	coq	docs/verification/core/_CoqProject	core project contains Automaton, MergeSplit, and legacy proof debt
 partial	exceptional	coq	docs/verification/core/theories/_CoqProject	modular core project; automaton and merge/split gaps remain
@@ -38,6 +39,7 @@ partial	standard	tla	docs/verification/tla/OnlineScanner.tla	TLA+ model abstract
 partial	standard	tla	docs/verification/tla/ProductAutomaton.tla	TLA+ model uses placeholder NFA transitions; now checks PatternPositionValid; ProductCorrectness/CostMonotonicity verified on the Rust construction by tests/proptest_product_automaton.rs
 partial	standard	tla	docs/verification/tla/PriorityQuery.tla	TLA+ model is an idealized admissible A* (matches OrderedQueryIterator; PriorityQueryIterator's heuristic is inadmissible -> approximate ordering, see tests/proptest_priority_query.rs); abstracts heap/dictionary
 partial	light	tla	docs/verification/tla/Subsumption.tla	TLA+ model uses simplified completion semantics; now checks Irreflexive/Asymmetric/Transitive/CompletionPreservationInv/NoFalseRemoval explicitly
+partial	light	tla	docs/verification/tla/ValueYieldingQuery.tla	TLA+ model of Transducer::query_values over a concrete dictionary (valued/valueless and in-range/out-of-range finals + shared-term dedup case); checks ValueCorrectness/Soundness/NoValuelessYielded/DedupInv/CompletenessInv and termination; cross-validated on the real dictionary by tests/proptest_value_yielding_query.rs
 partial	light	doc	docs/verification/PROOF_COMPLETION_PLAN.md	ordered closure plan for remaining proof debt
 legacy	exceptional	coq	docs/verification/core/theories/Distance.v	deprecated monolith; use modular core files where possible
 legacy	exceptional	coq	docs/verification/core/theories/TraceLowerBound.v	decomposed into LowerBound modules

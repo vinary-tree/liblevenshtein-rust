@@ -47,6 +47,11 @@
 use std::fmt;
 
 use super::costs_f64::OperationCostsF64;
+// `crate::phonetic` (hence `FeatureDistanceWeights`) is gated behind
+// `phonetic-rules`; this module is always compiled, so the per-feature weight
+// support is itself gated behind the same feature.
+#[cfg(feature = "phonetic-rules")]
+use crate::phonetic::feature_distance::FeatureDistanceWeights;
 
 /// Weight for articulatory distance in substitution cost blending.
 /// 0.0 = use base cost only, 1.0 = use articulatory distance only.
@@ -94,6 +99,12 @@ pub struct ArticulatoryCosts {
     /// If articulatory distance is below this threshold, the sounds are
     /// considered nearly identical and substitution cost is reduced to near-zero.
     pub free_substitution_threshold: f64,
+
+    /// Per-dimension articulatory feature weights used when computing the
+    /// articulatory distance for substitution costs. `Default`/`standard`
+    /// reproduces liblevenshtein's built-in IPA constants.
+    #[cfg(feature = "phonetic-rules")]
+    pub feature_weights: FeatureDistanceWeights,
 }
 
 impl ArticulatoryCosts {
@@ -115,6 +126,8 @@ impl ArticulatoryCosts {
             base: OperationCostsF64::standard(),
             articulation_weight: DEFAULT_ARTICULATION_WEIGHT,
             free_substitution_threshold: FREE_SUBSTITUTION_THRESHOLD,
+            #[cfg(feature = "phonetic-rules")]
+            feature_weights: FeatureDistanceWeights::standard(),
         }
     }
 
@@ -146,6 +159,8 @@ impl ArticulatoryCosts {
             base: OperationCostsF64::standard(),
             articulation_weight: weight,
             free_substitution_threshold: FREE_SUBSTITUTION_THRESHOLD,
+            #[cfg(feature = "phonetic-rules")]
+            feature_weights: FeatureDistanceWeights::standard(),
         }
     }
 
@@ -168,6 +183,8 @@ impl ArticulatoryCosts {
             base,
             articulation_weight: DEFAULT_ARTICULATION_WEIGHT,
             free_substitution_threshold: FREE_SUBSTITUTION_THRESHOLD,
+            #[cfg(feature = "phonetic-rules")]
+            feature_weights: FeatureDistanceWeights::standard(),
         }
     }
 
@@ -197,6 +214,20 @@ impl ArticulatoryCosts {
             base,
             articulation_weight,
             free_substitution_threshold: free_threshold,
+            #[cfg(feature = "phonetic-rules")]
+            feature_weights: FeatureDistanceWeights::standard(),
+        }
+    }
+
+    /// Create articulatory costs with custom per-dimension feature weights
+    /// (otherwise default base costs / articulation weight / free threshold).
+    #[cfg(feature = "phonetic-rules")]
+    pub fn with_feature_weights(feature_weights: FeatureDistanceWeights) -> Self {
+        Self {
+            base: OperationCostsF64::standard(),
+            articulation_weight: DEFAULT_ARTICULATION_WEIGHT,
+            free_substitution_threshold: FREE_SUBSTITUTION_THRESHOLD,
+            feature_weights,
         }
     }
 
@@ -235,7 +266,11 @@ impl ArticulatoryCosts {
             return 0.0;
         }
 
-        let art_dist = crate::phonetic::feature_distance::articulatory_distance(from, to);
+        let art_dist = crate::phonetic::feature_distance::articulatory_distance_weighted(
+            from,
+            to,
+            &self.feature_weights,
+        );
 
         // Check for free substitution (very similar sounds)
         if art_dist < self.free_substitution_threshold {
@@ -280,8 +315,11 @@ impl ArticulatoryCosts {
         if from == to {
             return true;
         }
-        crate::phonetic::feature_distance::articulatory_distance(from, to)
-            < self.free_substitution_threshold
+        crate::phonetic::feature_distance::articulatory_distance_weighted(
+            from,
+            to,
+            &self.feature_weights,
+        ) < self.free_substitution_threshold
     }
 
     /// Check if substitution is free (fallback without phonetic-rules).
@@ -486,5 +524,31 @@ mod tests {
         let s = format!("{}", costs);
         assert!(s.contains("weight=0.60"));
         assert!(s.contains("threshold=0.15"));
+    }
+
+    #[cfg(feature = "phonetic-rules")]
+    #[test]
+    fn articulatory_costs_responds_to_feature_weights() {
+        // p/t (voiceless stops, place diff 3) has default articulatory distance
+        // 3*0.15 = 0.45 (above the 0.15 free threshold, so it takes the blend
+        // branch). Raising `place_step` to 0.4 pushes that distance to the 1.0 cap,
+        // which must raise the blended substitution cost.
+        let default_costs = ArticulatoryCosts::default();
+        let heavy_place = ArticulatoryCosts::with_feature_weights(FeatureDistanceWeights {
+            place_step: 0.4,
+            ..Default::default()
+        });
+
+        let base_cost = default_costs.substitution_cost('p', 't');
+        let heavy_cost = heavy_place.substitution_cost('p', 't');
+        assert!(
+            heavy_cost > base_cost,
+            "heavier place_step must raise p/t substitution cost: {base_cost} vs {heavy_cost}"
+        );
+
+        // The builder leaves the other configuration knobs at their defaults.
+        assert!((heavy_place.articulation_weight - 0.6).abs() < EPSILON);
+        assert!((heavy_place.free_substitution_threshold - 0.15).abs() < EPSILON);
+        assert!(heavy_place.is_valid());
     }
 }

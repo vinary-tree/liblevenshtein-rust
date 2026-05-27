@@ -8,10 +8,12 @@ TLA+ is used for model checking concurrent and stateful algorithms where exhaust
 
 ## Model-checking status
 
-All four models model-check with **no errors** under the bounds in their `.cfg`
-files (`scripts/verify-formal.sh tla`). A captured transcript lives in
-[`states/tlc-results-2026-05-26.txt`](states/). Coverage was tightened so the
-configs check the properties the modules define:
+All five models model-check with **no errors** under the bounds in their `.cfg`
+files (`scripts/verify-formal.sh tla`). Captured transcripts live in
+[`states/tlc-results-2026-05-26.txt`](states/) and
+[`states/tlc-results-2026-05-27.txt`](states/) (the latter includes
+`ValueYieldingQuery`). Coverage was tightened so the configs check the
+properties the modules define:
 
 - **OnlineScanner** now checks `NoMissedMatches` (reference-free form: no
   reachable final state is dropped without being recorded) and
@@ -90,6 +92,26 @@ Specifies the A* priority queue search for efficient fuzzy matching.
 
 **Corresponds to:** `src/transducer/priority_query.rs`
 
+### ValueYieldingQuery.tla
+
+Specifies the value-yielding transducer query (`Transducer::query_values`): a BFS over the
+dictionary×automaton intersection that yields `(term, distance, value)` for each match within the
+edit-distance threshold, reading the value during traversal and skipping valueless finals. The model
+runs over a concrete dictionary that includes valued and valueless finals, in-range and out-of-range
+finals, and a shared-term (dedup) case; the nondeterministic processing order makes TLC verify the
+invariants are order-independent.
+
+**Key Properties:**
+- `ValueCorrectness`: every yielded value equals the dictionary's stored value for that term
+- `Soundness`: every yielded distance is within the threshold
+- `NoValuelessYielded`: valueless finals are never emitted
+- `DedupInv`: each term is yielded at most once
+- `CompletenessInv`: every processed in-range valued final has its term in the results
+- `EventuallyTerminates`: the traversal terminates
+
+**Corresponds to:** `src/transducer/value_filtered_query.rs`, `src/transducer/mod.rs`
+(cross-validated on the real dictionary by `tests/proptest_value_yielding_query.rs`).
+
 ## Running TLC Model Checker
 
 ### Prerequisites
@@ -129,6 +151,7 @@ java -jar tla2tools.jar -config ProductAutomaton.cfg ProductAutomaton.tla
 | ProductAutomaton | MAX_COST=2, INPUT_LENGTH=4 | ~10^5 |
 | Subsumption | MAX_POSITION=3, MAX_ERRORS=2 | ~10^3 |
 | PriorityQuery | MAX_COST=2, WORD_LENGTH=3, DICT_SIZE=4 | ~10^4 |
+| ValueYieldingQuery | MaxDistance=1, NoVal=999 (7-node dictionary) | ~30 |
 
 ## Configuration Files
 

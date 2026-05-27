@@ -73,6 +73,28 @@ Triangle check: 0.32 > 0.16 + 0.12 = 0.28 ✗ FAILS
 ### Recommendation
 Document this limitation in the API. For applications requiring metric properties, use standard Levenshtein distance or a metric-compatible phonetic distance.
 
+### Correction (2026-05-27)
+The "Results" block above is internally inconsistent and its conclusion is **superseded**.
+The recalculation at lines 51–63 claims `d(b,k) = 0.32` and a triangle *failure*, but the
+arithmetic is wrong: with `place_distance(Bilabial,Velar) = 6/10`, voice `2/10`, and the stated
+weights, `d(b,k) = 0.4·0.6 + 0.4·0 + 0.2·0.2 = 0.24 + 0.04 = 0.28` — exactly matching the *first*
+computation (0.28) and `d(b,t) + d(t,k) = 0.16 + 0.12 = 0.28`. So the b/t/k triple is a **tight
+(equality) triangle case, not a counterexample**, and there is **no `triangle_fails` example** in
+`FeatureDistance.v`.
+
+The current proof state (verified 2026-05-27, Rocq 9.1):
+- `FeatureDistance.v` proves `dist_b_k == 28#100`, `dist_b_t == 16#100`, `dist_t_k == 12#100`, and
+  `triangle_b_t_k_tight : d(b,k) == d(b,t) + d(t,k)` (the tight equality). It does **not** assert a
+  metric-space triangle theorem (none is claimed), and it does **not** exhibit a counterexample.
+- The module is **admission-free (0 Admitted / 0 Axiom)**, superseding any earlier "1 Admitted"
+  accounting for this file.
+
+The substantive implication is unchanged and still correct: articulatory distance is **not asserted
+to be a metric**, so algorithms that *require* the triangle inequality (e.g. A* with an admissible
+articulatory heuristic) have no metric guarantee. What is corrected is only the *evidence* — it is
+the absence of a proof plus a tight example, not a proven counterexample. See Finding 16 for the
+generalization of this module to arbitrary weights.
+
 ---
 
 ## Finding 2: Symbol Expansion Termination
@@ -419,7 +441,8 @@ The `standard_ops_complete` theorem has an incorrect statement. Since `standard_
 | SymbolExpansion | 4 | 1 | 3 | Termination, language preservation |
 | ThompsonConstruction | 5 | 2 | 3 | Soundness, completeness |
 | Myers Equivalence | 3 | 0 | 3 | Main equivalence |
-| FeatureDistance | 6 | 5 | 1 | Triangle failure proven! |
+| FeatureDistance | 13 | 13 | 0 | Weighted (FeatureWeights); sym/id/nonneg/bound-by-sum/monotone; b/t/k is a TIGHT equality, not a failure (see Finding 1 correction, Finding 16) |
+| FeatureDistanceWeighted | 5 | 5 | 0 | Faithful 7-dim model: vowel path + Qmin cap; sym/id/nonneg/bound(<=1)/monotone |
 | ProductState | 4 | 1 | 3 | Correctness, subsumption |
 | Types.v | 11 | 11 | 0 | All completed |
 | Soundness.v | 19 | 13 | 6 | 7 admits converted to Qed |
@@ -745,3 +768,77 @@ The remaining admits require significant mathematical work and/or architectural 
 - Compilation errors fixed: ~25
 - Files successfully compiled: 6 (all Grammar/NFA)
 - Admits remaining: 37 (down from 39)
+
+---
+
+## Date: 2026-05-27
+
+## Finding 16: Additive Weight Parameterization Preserves Symmetry / Identity / Monotonicity (G4 + G9 verification)
+
+Context: HEAD commit `7304a33` added (G4) a weighted articulatory distance — a
+`FeatureDistanceWeights` struct of per-dimension `f64` base costs whose `Default`/`standard`
+reproduces the built-in IPA constants — and (G9) a value-yielding transducer query
+`Transducer::query_values`. This session brought both to a formally-verified standard.
+
+### Hypothesis
+1. Replacing the three hardcoded articulatory weights with a `FeatureWeights` parameter preserves
+   symmetry and identity for **all** weights, and (for non-negative weights) non-negativity and
+   boundedness-by-weight-sum; and the distance is **per-dimension monotone** (non-decreasing in each
+   weight). The historical `<= 1` bound is recoverable for the standard weights (which sum to one).
+2. The full 7-dimension Rust model (consonant voicing/place/manner + vowel height/backness/rounding,
+   with the `.min(1.0)` cap) satisfies the same properties, with boundedness `<= 1` holding for **all**
+   non-negative weights because the cap enforces it.
+3. `query_values` reads each match's value during traversal so that the yielded value equals the
+   dictionary's stored value (no second lookup), skips valueless finals, and is sound / complete /
+   deduplicating like the underlying query.
+
+### Experiment
+- **Coq (Rocq 9.1, admission-free, `light` profile):**
+  - Generalized `docs/verification/articulatory/theories/FeatureDistance.v`: introduced
+    `Record FeatureWeights`, `standard_weights`, `weights_nonneg`, and `articulatory_distance_w`;
+    re-proved `articulatory_w_symmetric`, `articulatory_w_identity`, `articulatory_w_nonneg`,
+    `articulatory_w_bounded_by_sum`, `articulatory_w_monotone` (+ per-dimension corollaries), and
+    recovered `articulatory_bounded` (`0 <= d <= 1`) for `standard_weights` via
+    `standard_weights_sum_to_one`. The historical `articulatory_symmetric`/`_identity` names are kept
+    as standard-weight corollaries; the b/t/k examples and `triangle_b_t_k_tight` are unchanged.
+  - Added `docs/verification/articulatory/theories/FeatureDistanceWeighted.v`: a faithful 7-dimension
+    model with the vowel path and the explicit cap via `Qmin`, mirroring Rust `FeatureDistanceWeights`
+    field-for-field; proved `fsd7_symmetric`, `fsd7_identity`, `fsd7_nonneg`, `fsd7_bounded` (for all
+    weights, from the cap), and `fsd7_monotone` (non-strict, through the cap), with non-vacuity examples.
+- **TLA+ (TLC):** Added `docs/verification/tla/ValueYieldingQuery.tla` (+ `.cfg`) modeling the
+  `query_values` BFS over a concrete dictionary with valued/valueless and in-range/out-of-range finals
+  and a shared-term dedup case; checked `ValueCorrectness`, `Soundness`, `NoValuelessYielded`,
+  `DedupInv`, `CompletenessInv`, and `EventuallyTerminates`.
+- **Rust property tests (proptest):** `tests/proptest_articulatory_weighted.rs` (symmetry/identity/
+  non-negativity/boundedness/default-parity/per-dimension monotonicity over arbitrary weights;
+  weighted edit-distance default-parity + symmetry) and `tests/proptest_value_yielding_query.rs`
+  (value-parity, set-parity vs `query_with_distance`, soundness, completeness, dedup, mixed-skip).
+
+### Results
+- Both Coq files compile clean under the capped build and are **admission-free** (`0 Admitted /
+  0 Axiom`, verified by grep and the `coq-file light` build). FeatureDistance.v: 13 theorems/
+  corollaries; FeatureDistanceWeighted.v: 5 main theorems + supporting lemmas + 3 examples.
+- TLC: `Model checking completed. No error has been found.` (31 distinct states, depth 8); the model
+  emits no constant-level-formula warnings (invariants reference variables → non-vacuous). Evidence
+  committed to `docs/verification/tla/states/tlc-results-2026-05-27.txt`.
+- All new Rust tests pass (`--features phonetic-rules` for G4; default + `--features pathmap-backend`
+  for G9). The existing suite stays green (the unweighted functions delegate to the weighted leaf with
+  `Default` weights, preserving behavior).
+
+### Conclusion
+**CONFIRMED.** The additive weight parameterization preserves the metric-shaped properties
+(symmetry, identity) for all weights and is non-negative, bounded, and per-dimension monotone for
+non-negative weights; the capped 7-dimension model is bounded by 1 for all non-negative weights. The
+monotonicity is non-strict (the cap saturates increases) — which is exactly why the Rust proptest
+monotonicity property is stated with `>=`, and the per-dimension unit tests use cap-safe character
+pairs for strict monotonicity. For G9, the value-yielding query's new surface (value read during
+traversal, valueless-skip) is verified by the TLA+ `ValueCorrectness`/`NoValuelessYielded` invariants
+and the value-parity property test against the real dictionary.
+
+### Correspondence
+- Coq `FeatureWeights{w_place,w_manner,w_voice}` / `FeatureWeights7{...}` ↔ Rust
+  `FeatureDistanceWeights`; `standard_weights*` ↔ `FeatureDistanceWeights::standard()`.
+- `articulatory_w_monotone*` / `fsd7_monotone` ↔ Rust `weighted_*_monotonic` unit tests and
+  `weighted_per_dimension_monotonicity` proptest.
+- TLA+ `ValueCorrectness` ↔ Rust `prop_value_yielding_value_parity`; `NoValuelessYielded` ↔
+  `test_value_yielding_skips_valueless_final` / `prop_value_yielding_mixed_skip`.
