@@ -240,30 +240,30 @@ Qed.
 
 (** ** Phonetic Support *)
 
-(** If phonetic similarity is enabled, phonetically similar substitutions
-    have higher scores *)
+(** PENDING (disabled): phonetic- and keyboard-aware scoring. [layer1_score] is
+    currently distance-only ([1 / (1 + dist)], see [layer1_score_decreases]); it
+    does not yet read phonetic/keyboard similarity, so there is no real "higher
+    score for similar substitutions" property to prove. The previous theorems
+    concluded [True] (vacuous, flagged by `verify-formal.sh audit-vacuous`); they
+    are disabled here until [layer1_score] incorporates similarity weighting, at
+    which point the intended statements become:
+      use_phonetic=true /\ phonetic_similar c1 c2 ->
+        score(phonetic substitution) > score(arbitrary substitution);
+      use_keyboard=true /\ keyboard_distance c1 c2 = 1 ->
+        score(adjacent-key substitution) > score(arbitrary substitution). *)
+(*
 Theorem layer1_phonetic_scoring :
   forall (config : Layer1Config) (input output : program) (c1 c2 : char),
   config.(use_phonetic) = true ->
   phonetic_similar c1 c2 = true ->
-  (* Phonetic substitution has higher score than arbitrary substitution *)
-  True.  (* Simplified *)
-Proof.
-  intros. trivial.
-Qed.
+  True.
 
-(** ** Keyboard Distance Support *)
-
-(** If keyboard distance is enabled, nearby keys have higher scores *)
 Theorem layer1_keyboard_scoring :
   forall (config : Layer1Config) (input output : program) (c1 c2 : char),
   config.(use_keyboard) = true ->
   keyboard_distance c1 c2 = 1 ->
-  (* Adjacent key substitution has higher score *)
-  True.  (* Simplified *)
-Proof.
-  intros. trivial.
-Qed.
+  True.
+*)
 
 (** ** Incremental Lattice Construction *)
 

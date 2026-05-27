@@ -444,3 +444,47 @@ reference material and is not the memory-efficient target.
   the runner refuses uncapped proof execution unless explicitly overridden.
 - Use `scripts/verify-formal.sh coq-file <profile> <path>` for targeted
   capped compiles of partial files while closing the backlog.
+
+## Vacuous-placeholder remediation (audit-vacuous)
+
+The gap audit (`Axiom`/`Admitted`/`admit`/`Parameter`/...) does not catch a
+theorem whose *conclusion* is the trivial proposition `True`. Such proofs pass
+the gate yet prove nothing. `scripts/verify-formal.sh audit-vacuous` (advisory)
+now flags them (`-> True`, `/\ True`, `\/ True`, a bare `True.` goal, `:= True`).
+
+Initial inventory: 15 flags across product, myers, grammar Layers, the MSM core,
+and the legacy `rocq/` tree. Remediation:
+
+- **product** (`product/theories/ProductState.v`) — CLOSED with genuine proofs:
+  `product_state_space_bounded` (reachable states satisfy `lev_i <= |pattern|`
+  and `lev_e <= max_errors`), and `product_soundness`/`product_correctness` now
+  expose the real accepting witness instead of `/\ True`. Remaining deeper step:
+  the exact edit-distance equivalence `lev_e = Levenshtein(matched word, input)`
+  (a simulation against the trusted core distance model).
+- **grammar Layers 3/4/5** (`grammar/theories/Layers/Layer{3,4,5}.v`) — CLOSED:
+  the `execute_layerN` passes are unimplemented identity stubs, so the vacuous
+  `layerN_soundness : True` is replaced by the honest, provable
+  `layerN_is_passthrough` (`execute_layerN ... = prev_result`). Real soundness
+  awaits real layer implementations (type checking, semantic repair, process
+  calculus).
+- **grammar Layer1** (`Layer1.v`) — DISABLED with PENDING note:
+  `layer1_phonetic_scoring` / `layer1_keyboard_scoring` claimed similarity-aware
+  scoring, but `layer1_score` is distance-only (`1/(1+dist)`), so there is no
+  real property to prove yet; commented out until scoring incorporates
+  similarity weighting.
+- **MSM core** (`msm/theories/Core/MsmDistance.v`) — the unused stub
+  `msm_init_row_diagonal_zero : True` is commented out; reflexivity goes through
+  `msm_reflexive_diagonal_direct`.
+- **myers** (`myers/theories/Equivalence.v`) — PARTIAL, honestly scoped:
+  `myers_equivalence` is proved only for empty text (kept with that hypothesis,
+  not overstated); the bit-vector correspondence `myers_HP_HN_correct` and the
+  `True` word-size lemma are disabled with PENDING notes. General Myers
+  equivalence (HP/HN encode the DP column deltas) is research-grade and remains.
+- **legacy `rocq/liblevenshtein/Operations.v`** — 3 flags remain, INTENTIONAL:
+  `has_match` is deliberately axiomatized (`:= True`) per an in-source design
+  note; left as advisory flags in the `legacy` tree.
+
+Remaining genuine (research-grade) proof debt: general Myers bit-parallel
+equivalence; product edit-distance equivalence (core-model simulation); grammar
+NFA soundness/completeness on traced runs; real implementations + soundness for
+grammar Layers 3-5.

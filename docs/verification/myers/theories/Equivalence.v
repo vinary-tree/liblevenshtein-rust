@@ -295,7 +295,15 @@ Qed.
 
 (** * Main Equivalence Theorem *)
 
-(** Myers algorithm computes correct Levenshtein distance *)
+(** Myers algorithm computes the correct Levenshtein distance.
+
+    PARTIAL: this is currently established only for empty text, where
+    [myers_distance pattern "" = |pattern| = levenshtein_dp pattern ""]. The
+    general equivalence for arbitrary [text] (with [|pattern| <= 64]) is the
+    remaining research-grade step: it needs the bit-vector correspondence (the
+    disabled [myers_HP_HN_correct] below) showing the horizontal deltas HP/HN
+    encode the DP column differences. The hypothesis [text = EmptyString] is kept
+    so the statement does not overstate what is proved. *)
 Theorem myers_equivalence : forall pattern text,
   text = EmptyString ->
   String.length pattern <= 64 ->
@@ -308,33 +316,34 @@ Qed.
 
 (** * Bit Operation Correctness *)
 
-(** The core Myers update computes correct HP, HN values *)
+(** PENDING (disabled): the core Myers update should compute HP/HN values that
+    encode the DP horizontal column differences, i.e.
+      HP[i] = 1  iff  D[i][j] - D[i][j-1] = +1
+      HN[i] = 1  iff  D[i][j] - D[i][j-1] = -1.
+    The previous version concluded only "HP i = true -> True", a vacuous
+    placeholder flagged by `scripts/verify-formal.sh audit-vacuous`. It is
+    disabled here (rather than left masquerading as proven) until the real
+    DP-vs-bitvector correspondence is proved; that proof is the crux of general
+    [myers_equivalence]. *)
+(*
 Lemma myers_HP_HN_correct : forall VP VN PM m,
   let D0 := bv_or PM VN in
   let D0_plus_VP := bv_add D0 VP m in
   let D0' := bv_xor D0_plus_VP VP in
   let HP := bv_or VN (bv_not (bv_or D0' VP)) in
   let HN := bv_and D0' VP in
-  (* HP[i] = 1 iff D[i][j] - D[i][j-1] = +1 *)
-  (* HN[i] = 1 iff D[i][j] - D[i][j-1] = -1 *)
   forall i, i < m ->
-    (HP i = true -> True) /\ (* placeholder for actual DP relation *)
-    (HN i = true -> True).
-Proof.
-  intros VP VN PM m D0 D0_plus_VP D0' HP HN i Hi.
-  split; intros; trivial.
-Qed.
+    (HP i = true -> <D[i][j] - D[i][j-1] = +1>) /\
+    (HN i = true -> <D[i][j] - D[i][j-1] = -1>).
+*)
 
 (** * Word Size Constraint *)
 
-(** The algorithm requires pattern length <= word size *)
-Lemma myers_requires_bounded_pattern : forall (pattern text : string),
-  String.length pattern > 64 ->
-  (* Algorithm may give incorrect results *)
-  True. (* We don't prove correctness beyond 64 *)
-Proof.
-  trivial.
-Qed.
+(** Myers' 64-bit word-parallel form is valid only for [|pattern| <= 64]; longer
+    patterns require a block-based decomposition (out of scope). This was
+    previously a lemma concluding [True] (vacuous); the constraint is
+    documentation, not a theorem, so it is recorded here as a comment rather than
+    a fake lemma. *)
 
 (** For longer patterns, use block-based approach *)
 (** This is out of scope for the basic equivalence proof *)

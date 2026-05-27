@@ -22,6 +22,8 @@ Definition execute_layer4 (config : Layer4Config) (input : program)
     : LayerResult :=
   layer3_result.  (* Placeholder *)
 
-Theorem layer4_soundness : forall config input layer3_result,
-  True.
-Proof. trivial. Qed.
+(** Layer 4 (semantic repair) is not yet implemented: [execute_layer4] is the
+    identity passthrough. We state exactly that instead of a vacuous [True]. *)
+Theorem layer4_is_passthrough : forall config input layer3_result,
+  execute_layer4 config input layer3_result = layer3_result.
+Proof. reflexivity. Qed.

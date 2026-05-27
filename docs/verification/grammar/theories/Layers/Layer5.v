@@ -24,6 +24,9 @@ Definition execute_layer5 (config : Layer5Config) (input : program)
     : LayerResult :=
   layer4_result.  (* Placeholder *)
 
-Theorem layer5_soundness : forall config input layer4_result,
-  True.
-Proof. trivial. Qed.
+(** Layer 5 (process-calculus verification) is not yet implemented:
+    [execute_layer5] is the identity passthrough. We state exactly that instead
+    of a vacuous [True]. *)
+Theorem layer5_is_passthrough : forall config input layer4_result,
+  execute_layer5 config input layer4_result = layer4_result.
+Proof. reflexivity. Qed.

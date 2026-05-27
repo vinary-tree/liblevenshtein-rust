@@ -24,7 +24,11 @@ Definition execute_layer3 (config : Layer3Config) (input : program)
     : LayerResult :=
   layer2_result.  (* Placeholder *)
 
-Theorem layer3_soundness :
+(** The Layer 3 type-checking pass is not yet implemented: [execute_layer3] is
+    currently the identity on the incoming [LayerResult]. We record exactly that,
+    rather than a vacuous [True] "soundness" claim; real type-soundness awaits a
+    real [type_check_program]. *)
+Theorem layer3_is_passthrough :
   forall (config : Layer3Config) (input : program) (layer2_result : LayerResult),
-  True.
-Proof. trivial. Qed.
+    execute_layer3 config input layer2_result = layer2_result.
+Proof. reflexivity. Qed.
