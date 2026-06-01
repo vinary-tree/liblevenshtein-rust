@@ -306,6 +306,50 @@ impl QuantizationConfig {
         self.min_value + (bin as f64 + 0.5) * self.bin_width
     }
 
+    /// Return the value interval `[lo, hi]` covering every concrete value that
+    /// quantizes to `bin`. This is the admissible per-bin bound consumed by the
+    /// interval-MSM transducer ([`crate::time_series::msm_interval`]): for any
+    /// `v` with `self.quantize(v) == bin`, the interval satisfies `lo <= v <= hi`.
+    ///
+    /// Because [`quantize`](Self::quantize) folds out-of-range inputs into the
+    /// extreme bins (everything `<= min_value` → bin `0`; everything `>=
+    /// max_value` → bin `num_bins - 1`), those extreme bins must extend to ±∞
+    /// for the bound to stay *sound* — otherwise a query value below `min_value`
+    /// (which legitimately quantizes to bin 0) would be reported as outside
+    /// bin 0's interval, inflating the lower bound and risking a dropped true
+    /// match (a false negative). Interior bins use the tight half-open span
+    /// `[min + bin·w, min + (bin+1)·w)`; the closed upper endpoint returned here
+    /// is a harmless over-approximation (it only ever *loosens* the bound).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use liblevenshtein::time_series::QuantizationConfig;
+    ///
+    /// let config = QuantizationConfig::uniform(0.0, 100.0, 100);
+    /// // Interior bin 50 spans [50.0, 51.0].
+    /// let (lo, hi) = config.bin_bounds(50);
+    /// assert!((lo - 50.0).abs() < 1e-9 && (hi - 51.0).abs() < 1e-9);
+    /// // Extreme bins absorb outliers, so they extend to infinity.
+    /// assert_eq!(config.bin_bounds(0).0, f64::NEG_INFINITY);
+    /// assert_eq!(config.bin_bounds(99).1, f64::INFINITY);
+    /// ```
+    #[inline]
+    pub fn bin_bounds(&self, bin: u32) -> (f64, f64) {
+        let bin = bin.min(self.num_bins - 1);
+        let lo = if bin == 0 {
+            f64::NEG_INFINITY
+        } else {
+            self.min_value + bin as f64 * self.bin_width
+        };
+        let hi = if bin == self.num_bins - 1 {
+            f64::INFINITY
+        } else {
+            self.min_value + (bin as f64 + 1.0) * self.bin_width
+        };
+        (lo, hi)
+    }
+
     /// Encode a time series as u8 bytes.
     ///
     /// For use with `DynamicDawg`.
@@ -610,7 +654,7 @@ pub mod sax_encoding {
 
     /// Get SAX breakpoints for a given alphabet size.
     pub fn get_breakpoints(alphabet_size: usize) -> Option<&'static [f64]> {
-        if alphabet_size >= 2 && alphabet_size <= 10 {
+        if (2..=10).contains(&alphabet_size) {
             Some(SAX_BREAKPOINTS[alphabet_size - 2])
         } else {
             None
@@ -790,6 +834,59 @@ mod tests {
 
         assert_eq!(config.quantize(-10.0), 0);
         assert_eq!(config.quantize(110.0), 99);
+    }
+
+    #[test]
+    fn test_bin_bounds_interior() {
+        let config = QuantizationConfig::uniform(0.0, 100.0, 100);
+        // Interior bin 50 spans [50.0, 51.0].
+        let (lo, hi) = config.bin_bounds(50);
+        assert!(approx_eq(lo, 50.0) && approx_eq(hi, 51.0));
+    }
+
+    #[test]
+    fn test_bin_bounds_extreme_bins_are_infinite() {
+        let config = QuantizationConfig::uniform(0.0, 100.0, 100);
+        // Bin 0 absorbs everything <= min_value, so its lower bound is -inf.
+        assert_eq!(config.bin_bounds(0).0, f64::NEG_INFINITY);
+        assert!(approx_eq(config.bin_bounds(0).1, 1.0));
+        // The last bin absorbs everything >= max_value, so its upper bound is +inf.
+        assert!(approx_eq(config.bin_bounds(99).0, 99.0));
+        assert_eq!(config.bin_bounds(99).1, f64::INFINITY);
+    }
+
+    #[test]
+    fn test_bin_bounds_single_bin_is_unbounded_both_sides() {
+        // With one bin, bin 0 is simultaneously first and last, so it must cover
+        // the whole real line.
+        let config = QuantizationConfig::uniform(0.0, 100.0, 1);
+        let (lo, hi) = config.bin_bounds(0);
+        assert_eq!(lo, f64::NEG_INFINITY);
+        assert_eq!(hi, f64::INFINITY);
+    }
+
+    #[test]
+    fn test_bin_bounds_clamps_out_of_range_index() {
+        let config = QuantizationConfig::uniform(0.0, 100.0, 100);
+        // A bin index >= num_bins is clamped to the last bin (defensive).
+        assert_eq!(config.bin_bounds(1000), config.bin_bounds(99));
+    }
+
+    proptest::proptest! {
+        /// Soundness: every concrete value lies within the interval of the bin it
+        /// quantizes to. This is the Rust mirror of the Coq `quantize_in_bin_bounds`
+        /// theorem; it is the property the interval-MSM lower bounds depend on.
+        #[test]
+        fn prop_bin_bounds_contains_quantized_value(
+            v in -500.0f64..500.0,
+            num_bins in 1u32..=256,
+        ) {
+            let config = QuantizationConfig::uniform(0.0, 100.0, num_bins);
+            let bin = config.quantize(v);
+            let (lo, hi) = config.bin_bounds(bin);
+            proptest::prop_assert!(lo <= v, "lo {lo} > v {v} (bin {bin}, num_bins {num_bins})");
+            proptest::prop_assert!(v <= hi, "v {v} > hi {hi} (bin {bin}, num_bins {num_bins})");
+        }
     }
 
     #[test]

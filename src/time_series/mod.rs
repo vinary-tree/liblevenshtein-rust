@@ -130,8 +130,10 @@ mod encoding;
 mod hybrid_search;
 mod lower_bounds;
 mod msm;
+pub mod msm_interval;
 mod msm_position;
 mod msm_state;
+mod msm_transducer;
 mod msm_transition;
 mod trie_index;
 
@@ -150,6 +152,7 @@ pub use encoding::{delta_encoding, float_encoding, sax_encoding};
 
 // Indexing exports
 pub use hybrid_search::{HybridSearchIndex, HybridSearchIndexBuilder, HybridSearchStats};
+pub use msm_transducer::MsmTransducer;
 pub use trie_index::{TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats};
 
 // Lower bound exports

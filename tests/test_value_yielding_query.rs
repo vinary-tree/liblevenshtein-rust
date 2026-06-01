@@ -102,11 +102,15 @@ fn test_query_values_char_level_unicode() {
 
     // "cafe" (distance 0) and "café" (distance 1, é↔e); the CJK terms are far away.
     assert!(
-        results.iter().any(|(t, d, v)| t == "cafe" && *d == 0 && *v == 1),
+        results
+            .iter()
+            .any(|(t, d, v)| t == "cafe" && *d == 0 && *v == 1),
         "expected (cafe, 0, 1) in {results:?}"
     );
     assert!(
-        results.iter().any(|(t, d, v)| t == "café" && *d == 1 && *v == 1),
+        results
+            .iter()
+            .any(|(t, d, v)| t == "café" && *d == 1 && *v == 1),
         "expected (café, 1, 1) in {results:?}"
     );
     assert!(

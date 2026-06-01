@@ -30,4 +30,7 @@ theories/Metric/MainTheorem.v
 
 # Lower bound proofs (for indexing)
 theories/Indexing/LowerBounds.v
+# Interval-relaxed MSM bounds (must precede QuantizationBounds, which imports it)
+theories/Indexing/IntervalCost.v
 theories/Indexing/QuantizationBounds.v
+theories/Indexing/IntervalColumn.v

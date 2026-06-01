@@ -399,9 +399,13 @@ fn bench_articulatory_weighted(c: &mut Criterion) {
     };
 
     for (name, c1, c2) in ipa_char_pairs() {
-        group.bench_with_input(BenchmarkId::new("unweighted", name), &(c1, c2), |b, &(c1, c2)| {
-            b.iter(|| articulatory_distance(black_box(c1), black_box(c2)));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("unweighted", name),
+            &(c1, c2),
+            |b, &(c1, c2)| {
+                b.iter(|| articulatory_distance(black_box(c1), black_box(c2)));
+            },
+        );
         group.bench_with_input(
             BenchmarkId::new("weighted_standard", name),
             &(c1, c2),
@@ -430,9 +434,13 @@ fn bench_articulatory_edit_distance_weighted(c: &mut Criterion) {
         let bytes = (s1.len() + s2.len()) as u64;
         group.throughput(Throughput::Bytes(bytes));
 
-        group.bench_with_input(BenchmarkId::new("unweighted", name), &(s1, s2), |b, (s1, s2)| {
-            b.iter(|| articulatory_edit_distance(black_box(s1), black_box(s2)));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("unweighted", name),
+            &(s1, s2),
+            |b, (s1, s2)| {
+                b.iter(|| articulatory_edit_distance(black_box(s1), black_box(s2)));
+            },
+        );
         group.bench_with_input(
             BenchmarkId::new("weighted_standard", name),
             &(s1, s2),
@@ -465,9 +473,13 @@ fn bench_articulatory_costs_with_weights(c: &mut Criterion) {
     ];
 
     for (name, from, to) in pairs {
-        group.bench_with_input(BenchmarkId::new("default", name), &(from, to), |b, &(from, to)| {
-            b.iter(|| default_costs.substitution_cost(black_box(from), black_box(to)));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("default", name),
+            &(from, to),
+            |b, &(from, to)| {
+                b.iter(|| default_costs.substitution_cost(black_box(from), black_box(to)));
+            },
+        );
         group.bench_with_input(
             BenchmarkId::new("heavy_place", name),
             &(from, to),

@@ -120,3 +120,5 @@ flamegraph.svg
 # Generated optimization artifacts
 docs/optimization/*.txt
 perf.data*
+
+.pgmcp.toml

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Exact MSM-bounded retrieval: `MsmTransducer` (2026-05-28)
+- **Added:** `time_series::MsmTransducer`, an exact Move-Split-Merge similarity index
+  over a trie of quantized reference series. `search_range(query, tau)` returns exactly
+  `{ id : MSM(query, ref_id) <= tau }` (no false negatives, no false positives) and
+  `search_knn(query, k, initial_threshold)` the exact `k` nearest by MSM distance. It
+  walks the trie with an interval-relaxed MSM dynamic program (`time_series::msm_interval`),
+  prunes subtrees by an admissible column lower bound, and re-scores survivors against the
+  stored full-precision originals — closing the completeness gap of
+  `HybridSearchIndex::search_exact`, whose lossy Levenshtein pre-filter can drop true
+  MSM-near neighbors.
+- **Added:** `QuantizationConfig::bin_bounds(bin) -> (f64, f64)`, the admissible per-bin
+  value interval `[lo, hi]` (extreme bins extend to ±∞), consumed by the interval-MSM
+  bounds.
+- **Verification:** the admissibility, column-admissibility, and pruning-soundness
+  claims are proved axiom-free in Coq/Rocq
+  (`docs/verification/msm/theories/Indexing/{IntervalCost,QuantizationBounds,IntervalColumn}.v`)
+  and the trie-walk soundness/completeness is model-checked in TLA+
+  (`docs/verification/tla/MsmTrieSearch.tla`). See `docs/verification/msm/INTERVAL_MSM.md`.
+
 ### Removed
 
 #### `simd`, `scdawg-bloom`, `scdawg-simd` Cargo Features Removed (2026-05-22)

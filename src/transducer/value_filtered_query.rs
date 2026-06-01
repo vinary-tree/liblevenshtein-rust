@@ -723,7 +723,10 @@ mod value_yielding_tests {
         let transducer = Transducer::new(dict, Algorithm::Standard);
 
         let results: Vec<(String, usize, u32)> = transducer.query_values("zzzz", 1).collect();
-        assert!(results.is_empty(), "no match within distance 1: {results:?}");
+        assert!(
+            results.is_empty(),
+            "no match within distance 1: {results:?}"
+        );
     }
 
     #[test]

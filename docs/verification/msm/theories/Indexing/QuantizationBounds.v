@@ -1,188 +1,189 @@
 (** * Quantization Bounds for MSM Indexing
 
-    This module proves bounds relating quantized (discrete) distance
-    to exact MSM distance. These bounds justify using trie-based
-    approximate search as a candidate filter for exact MSM verification.
+    Executable uniform binning with the per-bin interval [bin_bounds] consumed by
+    the interval-MSM transducer, and the soundness theorem [quantize_in_bin_bounds]:
+    every value lies inside the interval of the bin it quantizes to.
+
+    This replaces the earlier placeholder quantizer (which mapped everything to
+    bin 0). With a real binning function and a proved per-bin error bound, the
+    no-false-negative indexing theorem deferred by that placeholder is now
+    discharged: [bin_bounds] feeds [Indexing.IntervalColumn] (whose
+    [interval_cell_le_matrix] needs exactly [in_itv (target value) (its bin)]),
+    so interval pruning over the trie never drops a true MSM match.
+
+    The extreme bins extend to +/- infinity (modelled as [None] endpoints in
+    [Qitv]): everything at or below [min_val] folds into bin 0 (no lower bound),
+    everything at or above [max_val] folds into the last bin (no upper bound).
+    Interior bins use the closed span [[min + b*w, min + (b+1)*w]]; the closed
+    upper endpoint is a harmless over-approximation, matching the Rust
+    `QuantizationConfig::bin_bounds`.
 
     Part of: Liblevenshtein.MSM
 *)
 
-From Stdlib Require Import List Nat Arith Lia ZArith.
-From Stdlib Require Import QArith Qabs Qminmax.
+From Stdlib Require Import List Nat Arith Lia ZArith Psatz.
+From Stdlib Require Import QArith Qabs Qminmax Qround.
 Import ListNotations.
-From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
+From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance IntervalCost.
 
-(** Ceiling function for rationals: smallest integer >= q *)
-Definition Qceiling (q : Q) : Z :=
-  let (n, d) := q in
-  if Z.eqb (n mod (Zpos d)) 0%Z then
-    (n / Zpos d)%Z
-  else
-    (n / Zpos d + 1)%Z.
-
-(** * Quantization Configuration *)
-
-(** Quantization maps continuous values to discrete bins *)
+(** Quantization configuration: [num_bins] uniform bins over [[min_val, max_val]]. *)
 Record QuantConfig := mkQuantConfig {
-  num_bins : nat;                 (* Number of bins (e.g., 256 for u8) *)
-  min_val : Q;                    (* Minimum value in range *)
-  max_val : Q;                    (* Maximum value in range *)
-  range_positive : min_val < max_val
+  num_bins : nat;
+  min_val : Q;
+  max_val : Q;
+  range_positive : min_val < max_val;
+  bins_positive : (0 < num_bins)%nat
 }.
 
-(** Width of each bin *)
 Definition bin_width (cfg : QuantConfig) : Q :=
   (max_val cfg - min_val cfg) / inject_Z (Z.of_nat (num_bins cfg)).
 
-(** Quantize a value to its bin index *)
+(** Quantize to a bin index, folding out-of-range values into the extreme bins. *)
 Definition quantize (cfg : QuantConfig) (v : Q) : nat :=
-  (* In Coq, we'd need careful handling of floor/conversion *)
-  (* Simplified: assume v is clamped to [min, max] *)
-  0. (* Placeholder *)
+  if Qle_bool v (min_val cfg) then 0%nat
+  else if Qle_bool (max_val cfg) v then (num_bins cfg - 1)%nat
+  else Z.to_nat (Qfloor ((v - min_val cfg) / bin_width cfg)).
 
-(** Dequantize: get center value of a bin *)
-Definition dequantize (cfg : QuantConfig) (bin : nat) : Q :=
-  min_val cfg + (inject_Z (Z.of_nat bin) + (1#2)) * bin_width cfg.
+(** Per-bin interval [[lo, hi]] (extreme bins unbounded), as a [Qitv]. *)
+Definition bin_bounds (cfg : QuantConfig) (b : nat) : Qitv :=
+  ((if Nat.eqb b 0 then None
+    else Some (min_val cfg + inject_Z (Z.of_nat b) * bin_width cfg)),
+   (if Nat.eqb b (num_bins cfg - 1) then None
+    else Some (min_val cfg + inject_Z (Z.of_nat (S b)) * bin_width cfg))).
 
-(** The current executable model has a placeholder quantizer. It maps every
-    value to bin 0, so nontrivial quantization-error bounds are intentionally
-    not claimed here. *)
-Lemma quantize_current_model_zero : forall cfg v,
-  quantize cfg v = 0%nat.
-Proof. reflexivity. Qed.
+(** * Arithmetic facts *)
 
-Lemma dequantize_quantize_current_model : forall cfg v,
-  dequantize cfg (quantize cfg v) == dequantize cfg 0.
+Lemma num_bins_Q_pos : forall cfg, 0 < inject_Z (Z.of_nat (num_bins cfg)).
+Proof.
+  intro cfg. pose proof (bins_positive cfg) as Hnb.
+  unfold Qlt; simpl; lia.
+Qed.
+
+Lemma num_bins_Q_nonzero : forall cfg, ~ inject_Z (Z.of_nat (num_bins cfg)) == 0.
+Proof.
+  intros cfg H. pose proof (bins_positive cfg) as Hnb.
+  unfold Qeq in H; simpl in H; lia.
+Qed.
+
+Lemma range_pos : forall cfg, 0 < max_val cfg - min_val cfg.
+Proof. intro cfg. pose proof (range_positive cfg). psatz Q. Qed.
+
+Lemma bin_width_pos : forall cfg, 0 < bin_width cfg.
+Proof.
+  intro cfg. unfold bin_width.
+  apply Qlt_shift_div_l.
+  - apply num_bins_Q_pos.
+  - rewrite Qmult_0_l. apply range_pos.
+Qed.
+
+Lemma bin_width_nonneg : forall cfg, 0 <= bin_width cfg.
+Proof. intro cfg. apply Qlt_le_weak. apply bin_width_pos. Qed.
+
+Lemma bin_width_ne0 : forall cfg, ~ bin_width cfg == 0.
+Proof.
+  intro cfg. apply Qnot_eq_sym. apply Qlt_not_eq. apply bin_width_pos.
+Qed.
+
+(** [a / b * b == a] for nonzero [b]. *)
+Lemma div_mult_cancel : forall a b, ~ b == 0 -> a / b * b == a.
+Proof.
+  intros a b Hb. unfold Qdiv.
+  rewrite <- Qmult_assoc.
+  rewrite (Qmult_comm (/ b) b).
+  rewrite Qmult_inv_r by exact Hb.
+  ring.
+Qed.
+
+Lemma num_bins_times_width : forall cfg,
+  inject_Z (Z.of_nat (num_bins cfg)) * bin_width cfg == max_val cfg - min_val cfg.
+Proof.
+  intro cfg. unfold bin_width.
+  rewrite Qmult_comm. apply div_mult_cancel. apply num_bins_Q_nonzero.
+Qed.
+
+Lemma min_plus_all_bins : forall cfg,
+  min_val cfg + inject_Z (Z.of_nat (num_bins cfg)) * bin_width cfg == max_val cfg.
+Proof.
+  intro cfg. rewrite num_bins_times_width. ring.
+Qed.
+
+Lemma Qfloor_nonneg : forall r, 0 <= r -> (0 <= Qfloor r)%Z.
+Proof.
+  intros r Hr. destruct (Z_lt_le_dec (Qfloor r) 0) as [Hlt | Hle]; [| exact Hle].
+  exfalso.
+  pose proof (Qlt_floor r) as Hf.
+  assert (Hle0 : inject_Z (Qfloor r + 1) <= 0) by (unfold Qle; simpl; lia).
+  apply (Qlt_not_le r 0); [| exact Hr].
+  apply Qlt_le_trans with (inject_Z (Qfloor r + 1)); assumption.
+Qed.
+
+(** * Soundness: a value lies in the interval of the bin it quantizes to *)
+
+Theorem quantize_in_bin_bounds : forall cfg v,
+  in_itv v (bin_bounds cfg (quantize cfg v)).
 Proof.
   intros cfg v.
-  rewrite quantize_current_model_zero.
-  reflexivity.
+  pose proof (bin_width_pos cfg) as Hw.
+  pose proof (bin_width_nonneg cfg) as Hw0.
+  pose proof (bin_width_ne0 cfg) as Hwne.
+  pose proof (bins_positive cfg) as Hnb.
+  unfold quantize.
+  destruct (Qle_bool v (min_val cfg)) eqn:Hmin.
+  - (* v <= min => bin 0 *)
+    apply Qle_bool_iff in Hmin.
+    unfold bin_bounds, in_itv. cbn [fst snd].
+    split; [ exact I |].
+    destruct (Nat.eqb 0 (num_bins cfg - 1)); [ exact I |].
+    apply Qle_trans with (min_val cfg); [ exact Hmin |].
+    rewrite <- (Qplus_0_r (min_val cfg)) at 1.
+    apply Qplus_le_compat; [ apply Qle_refl |].
+    change (Z.of_nat 1) with 1%Z. rewrite Qmult_1_l. exact Hw0.
+  - destruct (Qle_bool (max_val cfg) v) eqn:Hmax.
+    + (* max <= v => bin num_bins - 1 *)
+      apply Qle_bool_iff in Hmax.
+      unfold bin_bounds, in_itv. cbn [fst snd].
+      split.
+      * destruct (Nat.eqb (num_bins cfg - 1) 0); [ exact I |].
+        apply Qle_trans with (max_val cfg); [| exact Hmax ].
+        rewrite <- min_plus_all_bins.
+        apply Qplus_le_compat; [ apply Qle_refl |].
+        apply Qmult_le_compat_r; [| exact Hw0 ].
+        unfold Qle; simpl; lia.
+      * rewrite Nat.eqb_refl. exact I.
+    + (* interior: min < v < max *)
+      assert (Hvmin : min_val cfg < v).
+      { destruct (Qlt_le_dec (min_val cfg) v) as [Hlt | Hle]; [ exact Hlt |].
+        assert (Qle_bool v (min_val cfg) = true) by (apply Qle_bool_iff; exact Hle).
+        rewrite Hmin in H. discriminate. }
+      assert (Hvmax : v < max_val cfg).
+      { destruct (Qlt_le_dec v (max_val cfg)) as [Hlt | Hle]; [ exact Hlt |].
+        assert (Qle_bool (max_val cfg) v = true) by (apply Qle_bool_iff; exact Hle).
+        rewrite Hmax in H. discriminate. }
+      set (r := (v - min_val cfg) / bin_width cfg).
+      assert (Hr0 : 0 <= r).
+      { unfold r. apply Qle_shift_div_l; [ exact Hw |]. rewrite Qmult_0_l. psatz Q. }
+      set (b := Z.to_nat (Qfloor r)).
+      assert (Hbz : inject_Z (Z.of_nat b) == inject_Z (Qfloor r)).
+      { unfold b. rewrite Z2Nat.id; [ reflexivity | apply Qfloor_nonneg; exact Hr0 ]. }
+      assert (Hcancel : r * bin_width cfg == v - min_val cfg).
+      { unfold r. apply div_mult_cancel. exact Hwne. }
+      assert (Hlow : min_val cfg + inject_Z (Z.of_nat b) * bin_width cfg <= v).
+      { rewrite Hbz.
+        apply Qle_trans with (min_val cfg + r * bin_width cfg).
+        - apply Qplus_le_compat; [ apply Qle_refl |].
+          apply Qmult_le_compat_r; [ apply Qfloor_le | exact Hw0 ].
+        - rewrite Hcancel. psatz Q. }
+      assert (Hhigh : v <= min_val cfg + inject_Z (Z.of_nat (S b)) * bin_width cfg).
+      { rewrite Nat2Z.inj_succ. unfold Z.succ. rewrite inject_Z_plus. rewrite Hbz.
+        apply Qle_trans with (min_val cfg + r * bin_width cfg).
+        - rewrite Hcancel. psatz Q.
+        - apply Qplus_le_compat; [ apply Qle_refl |].
+          apply Qmult_le_compat_r; [| exact Hw0 ].
+          apply Qle_trans with (inject_Z (Qfloor r + 1)).
+          + apply Qlt_le_weak. apply Qlt_floor.
+          + rewrite inject_Z_plus. apply Qle_refl. }
+      unfold bin_bounds, in_itv. cbn [fst snd].
+      split.
+      * destruct (Nat.eqb b 0); [ exact I | exact Hlow ].
+      * destruct (Nat.eqb b (num_bins cfg - 1)); [ exact I | exact Hhigh ].
 Qed.
-
-(** * Levenshtein on Quantized Sequence *)
-
-(** A structurally recursive edit-like distance on natural-number sequences.
-    It counts aligned substitutions plus unmatched suffix elements. *)
-Fixpoint lev_nat (X Y : list nat) : nat :=
-  match X, Y with
-  | [], ys => length ys
-  | xs, [] => length xs
-  | x :: xs, y :: ys =>
-      if Nat.eqb x y then lev_nat xs ys else S (lev_nat xs ys)
-  end.
-
-(** Basic properties of the sequence distance. *)
-Lemma lev_nat_refl : forall X, lev_nat X X = O.
-Proof.
-  induction X as [|x xs IH].
-  - reflexivity.
-  - simpl. rewrite Nat.eqb_refl. exact IH.
-Qed.
-
-Lemma lev_nat_nil_l : forall Y, lev_nat nil Y = length Y.
-Proof. reflexivity. Qed.
-
-Lemma lev_nat_nil_r : forall X, lev_nat X nil = length X.
-Proof. destruct X; reflexivity. Qed.
-
-Lemma lev_nat_symm : forall X Y, lev_nat X Y = lev_nat Y X.
-Proof.
-  induction X as [|x xs IH]; intros [|y ys].
-  - reflexivity.
-  - reflexivity.
-  - reflexivity.
-  - simpl. rewrite Nat.eqb_sym. destruct (y =? x); rewrite IH; reflexivity.
-Qed.
-
-(** Quantize a time series to bin indices *)
-Definition quantize_series (cfg : QuantConfig) (X : TimeSeries) : list nat :=
-  map (quantize cfg) X.
-
-(** * Main Bound: Levenshtein Bounds MSM *)
-
-(** With the placeholder quantizer, all values collapse into the same bin.
-    The nontrivial MSM indexing theorem is therefore deferred until [quantize]
-    is replaced by an executable binning function with a proved error bound. *)
-
-(** Minimum cost of a non-matching operation in MSM *)
-Definition min_msm_cost (cfg : MsmConfig) (qcfg : QuantConfig) : Q :=
-  (* The minimum cost when symbols differ is either:
-     - Move with |x - y| >= bin_width (different bins)
-     - Split/Merge with cost >= c *)
-  Qmin2 (bin_width qcfg) (msm_c cfg).
-
-(** Same-length series have zero quantized edit distance in the current model. *)
-Lemma lev_nat_quantize_same_length_zero : forall X Y q_cfg,
-  length X = length Y ->
-  lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y) = 0%nat.
-Proof.
-  induction X as [|x xs IH]; intros [|y ys] q_cfg Hlen; simpl in *; try discriminate.
-  - reflexivity.
-  - rewrite IH by lia.
-    reflexivity.
-Qed.
-
-(** Lower bound theorem for the current placeholder quantizer. For same-length
-    series the scaled trie distance is 0, so the bound follows from MSM
-    non-negativity. *)
-Theorem lev_bounds_msm_same_length_current_model : forall X Y msm_cfg q_cfg,
-  length X = length Y ->
-  inject_Z (Z.of_nat (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)))
-    * min_msm_cost msm_cfg q_cfg
-  <= msm_distance X Y msm_cfg.
-Proof.
-  intros X Y msm_cfg q_cfg Hlen.
-  rewrite (lev_nat_quantize_same_length_zero X Y q_cfg Hlen).
-  simpl.
-  setoid_replace (0 * min_msm_cost msm_cfg q_cfg) with 0 by ring.
-  apply msm_nonneg.
-Qed.
-
-(** * Search Completeness *)
-
-(** If MSM(X, Y) <= threshold, then lev(Q(X), Q(Y)) is also bounded.
-    This means trie-based filtering won't miss any true matches. *)
-
-Theorem trie_completeness_same_length_current_model : forall X Y msm_cfg q_cfg threshold,
-  length X = length Y ->
-  (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
-    <= Z.to_nat (Qceiling (threshold / min_msm_cost msm_cfg q_cfg)))%nat.
-Proof.
-  intros X Y msm_cfg q_cfg threshold Hlen.
-  rewrite (lev_nat_quantize_same_length_zero X Y q_cfg Hlen).
-  lia.
-Qed.
-
-(** * Practical Bounds *)
-
-(** For practical search, we need the trie distance threshold *)
-Definition compute_trie_threshold (msm_threshold : Q) (msm_cfg : MsmConfig)
-                                   (q_cfg : QuantConfig) : nat :=
-  let min_cost := min_msm_cost msm_cfg q_cfg in
-  if Qle_bool min_cost 0 then
-    0  (* Fallback for degenerate case *)
-  else
-    Z.to_nat (Qceiling (msm_threshold / min_cost)).
-
-(** The computed threshold is sufficient *)
-Theorem trie_threshold_sufficient_same_length_current_model : forall X Y msm_cfg q_cfg msm_threshold,
-  length X = length Y ->
-  (lev_nat (quantize_series q_cfg X) (quantize_series q_cfg Y)
-    <= compute_trie_threshold msm_threshold msm_cfg q_cfg)%nat.
-Proof.
-  intros X Y msm_cfg q_cfg msm_threshold Hlen.
-  rewrite (lev_nat_quantize_same_length_zero X Y q_cfg Hlen).
-  unfold compute_trie_threshold.
-  destruct (Qle_bool (min_msm_cost msm_cfg q_cfg) 0); lia.
-Qed.
-
-(** * Summary *)
-
-(** Current status for trie-based MSM indexing:
-
-    1. The placeholder quantizer maps every value to bin 0.
-    2. Same-length quantized series therefore have zero trie distance.
-    3. A nontrivial no-false-negative indexing theorem should be reinstated
-       only after [quantize] is replaced by executable binning with a proved
-       error bound.
-*)

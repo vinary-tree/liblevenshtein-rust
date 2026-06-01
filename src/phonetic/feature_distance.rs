@@ -642,12 +642,30 @@ mod tests {
         assert!((d - 0.1).abs() < 1e-9, "p/b expected 0.1, got {d}");
         // Same place (diff 0), same manner (Stop), not vowels: nothing else applies.
         for w in [
-            FeatureDistanceWeights { place_step: 0.9, ..base },
-            FeatureDistanceWeights { manner_default: 0.9, ..base },
-            FeatureDistanceWeights { manner_table_scale: 5.0, ..base },
-            FeatureDistanceWeights { vowel_height_step: 0.9, ..base },
-            FeatureDistanceWeights { vowel_backness_step: 0.9, ..base },
-            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+            FeatureDistanceWeights {
+                place_step: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                manner_default: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                manner_table_scale: 5.0,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_height_step: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_backness_step: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_rounding: 0.9,
+                ..base
+            },
         ] {
             assert_eq!(articulatory_distance_weighted('p', 'b', &w), d);
         }
@@ -660,17 +678,32 @@ mod tests {
         let base = FeatureDistanceWeights::default();
         let d = articulatory_distance_weighted('p', 't', &base);
         assert!((d - 0.45).abs() < 1e-9, "p/t expected 0.45, got {d}");
-        let lo = FeatureDistanceWeights { place_step: 0.10, ..base };
-        let hi = FeatureDistanceWeights { place_step: 0.20, ..base };
+        let lo = FeatureDistanceWeights {
+            place_step: 0.10,
+            ..base
+        };
+        let hi = FeatureDistanceWeights {
+            place_step: 0.20,
+            ..base
+        };
         assert!(
             articulatory_distance_weighted('p', 't', &hi)
                 > articulatory_distance_weighted('p', 't', &lo),
             "raising place_step must increase p/t distance"
         );
         for w in [
-            FeatureDistanceWeights { voicing: 0.9, ..base },
-            FeatureDistanceWeights { manner_table_scale: 5.0, ..base },
-            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+            FeatureDistanceWeights {
+                voicing: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                manner_table_scale: 5.0,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_rounding: 0.9,
+                ..base
+            },
         ] {
             assert_eq!(articulatory_distance_weighted('p', 't', &w), d);
         }
@@ -684,17 +717,32 @@ mod tests {
         let base = FeatureDistanceWeights::default();
         let d = articulatory_distance_weighted('p', 'm', &base);
         assert!((d - 0.4).abs() < 1e-9, "p/m expected 0.4, got {d}");
-        let lo = FeatureDistanceWeights { manner_table_scale: 0.5, ..base };
-        let hi = FeatureDistanceWeights { manner_table_scale: 2.0, ..base };
+        let lo = FeatureDistanceWeights {
+            manner_table_scale: 0.5,
+            ..base
+        };
+        let hi = FeatureDistanceWeights {
+            manner_table_scale: 2.0,
+            ..base
+        };
         assert!(
             articulatory_distance_weighted('p', 'm', &hi)
                 > articulatory_distance_weighted('p', 'm', &lo),
             "raising manner_table_scale must increase p/m distance"
         );
         for w in [
-            FeatureDistanceWeights { vowel_height_step: 0.9, ..base },
-            FeatureDistanceWeights { vowel_backness_step: 0.9, ..base },
-            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+            FeatureDistanceWeights {
+                vowel_height_step: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_backness_step: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_rounding: 0.9,
+                ..base
+            },
         ] {
             assert_eq!(articulatory_distance_weighted('p', 'm', &w), d);
         }
@@ -713,13 +761,28 @@ mod tests {
         f2.insert(PhoneticFeature::Bilabial);
         f2.insert(PhoneticFeature::Stop);
 
-        let lo = FeatureDistanceWeights { manner_default: 0.3, ..Default::default() };
-        let hi = FeatureDistanceWeights { manner_default: 0.7, ..Default::default() };
+        let lo = FeatureDistanceWeights {
+            manner_default: 0.3,
+            ..Default::default()
+        };
+        let hi = FeatureDistanceWeights {
+            manner_default: 0.7,
+            ..Default::default()
+        };
         let d_lo = feature_set_distance_weighted(&f1, &f2, &lo);
         let d_hi = feature_set_distance_weighted(&f1, &f2, &hi);
-        assert!((d_lo - 0.3).abs() < 1e-9, "expected manner_default 0.3, got {d_lo}");
-        assert!((d_hi - 0.7).abs() < 1e-9, "expected manner_default 0.7, got {d_hi}");
-        assert!(d_hi > d_lo, "raising manner_default must increase the distance");
+        assert!(
+            (d_lo - 0.3).abs() < 1e-9,
+            "expected manner_default 0.3, got {d_lo}"
+        );
+        assert!(
+            (d_hi - 0.7).abs() < 1e-9,
+            "expected manner_default 0.7, got {d_hi}"
+        );
+        assert!(
+            d_hi > d_lo,
+            "raising manner_default must increase the distance"
+        );
     }
 
     #[test]
@@ -728,18 +791,36 @@ mod tests {
         let base = FeatureDistanceWeights::default();
         let d = articulatory_distance_weighted('e', 'i', &base);
         assert!((d - 0.15).abs() < 1e-9, "e/i expected 0.15, got {d}");
-        let lo = FeatureDistanceWeights { vowel_height_step: 0.10, ..base };
-        let hi = FeatureDistanceWeights { vowel_height_step: 0.30, ..base };
+        let lo = FeatureDistanceWeights {
+            vowel_height_step: 0.10,
+            ..base
+        };
+        let hi = FeatureDistanceWeights {
+            vowel_height_step: 0.30,
+            ..base
+        };
         assert!(
             articulatory_distance_weighted('e', 'i', &hi)
                 > articulatory_distance_weighted('e', 'i', &lo),
             "raising vowel_height_step must increase e/i distance"
         );
         for w in [
-            FeatureDistanceWeights { vowel_backness_step: 0.9, ..base },
-            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
-            FeatureDistanceWeights { voicing: 0.9, ..base },
-            FeatureDistanceWeights { place_step: 0.9, ..base },
+            FeatureDistanceWeights {
+                vowel_backness_step: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_rounding: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                voicing: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                place_step: 0.9,
+                ..base
+            },
         ] {
             assert_eq!(articulatory_distance_weighted('e', 'i', &w), d);
         }
@@ -751,16 +832,28 @@ mod tests {
         let base = FeatureDistanceWeights::default();
         let d = articulatory_distance_weighted('i', 'ɨ', &base);
         assert!((d - 0.15).abs() < 1e-9, "i/ɨ expected 0.15, got {d}");
-        let lo = FeatureDistanceWeights { vowel_backness_step: 0.10, ..base };
-        let hi = FeatureDistanceWeights { vowel_backness_step: 0.30, ..base };
+        let lo = FeatureDistanceWeights {
+            vowel_backness_step: 0.10,
+            ..base
+        };
+        let hi = FeatureDistanceWeights {
+            vowel_backness_step: 0.30,
+            ..base
+        };
         assert!(
             articulatory_distance_weighted('i', 'ɨ', &hi)
                 > articulatory_distance_weighted('i', 'ɨ', &lo),
             "raising vowel_backness_step must increase i/ɨ distance"
         );
         for w in [
-            FeatureDistanceWeights { vowel_height_step: 0.9, ..base },
-            FeatureDistanceWeights { vowel_rounding: 0.9, ..base },
+            FeatureDistanceWeights {
+                vowel_height_step: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_rounding: 0.9,
+                ..base
+            },
         ] {
             assert_eq!(articulatory_distance_weighted('i', 'ɨ', &w), d);
         }
@@ -772,16 +865,28 @@ mod tests {
         let base = FeatureDistanceWeights::default();
         let d = articulatory_distance_weighted('e', 'ø', &base);
         assert!((d - 0.1).abs() < 1e-9, "e/ø expected 0.1, got {d}");
-        let lo = FeatureDistanceWeights { vowel_rounding: 0.05, ..base };
-        let hi = FeatureDistanceWeights { vowel_rounding: 0.40, ..base };
+        let lo = FeatureDistanceWeights {
+            vowel_rounding: 0.05,
+            ..base
+        };
+        let hi = FeatureDistanceWeights {
+            vowel_rounding: 0.40,
+            ..base
+        };
         assert!(
             articulatory_distance_weighted('e', 'ø', &hi)
                 > articulatory_distance_weighted('e', 'ø', &lo),
             "raising vowel_rounding must increase e/ø distance"
         );
         for w in [
-            FeatureDistanceWeights { vowel_height_step: 0.9, ..base },
-            FeatureDistanceWeights { vowel_backness_step: 0.9, ..base },
+            FeatureDistanceWeights {
+                vowel_height_step: 0.9,
+                ..base
+            },
+            FeatureDistanceWeights {
+                vowel_backness_step: 0.9,
+                ..base
+            },
         ] {
             assert_eq!(articulatory_distance_weighted('e', 'ø', &w), d);
         }
