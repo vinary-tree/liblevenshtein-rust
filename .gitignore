@@ -122,3 +122,5 @@ docs/optimization/*.txt
 perf.data*
 
 .pgmcp.toml
+
+.#*

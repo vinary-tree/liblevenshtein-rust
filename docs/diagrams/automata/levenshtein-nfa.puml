@@ -1,0 +1,52 @@
+@startuml levenshtein-nfa
+' Standard Levenshtein NFA for the word W = "ab" with error bound k = 1.
+' A state ⟨i,e⟩ means: i characters of W consumed, e edits used so far (e ≤ k).
+' The NFA reads a candidate string; it accepts iff d(W, candidate) ≤ k.
+' Edge colors (the four elementary edits):
+'   green  = match        (cost 0)
+'   purple = substitution (+1)
+'   orange = insertion    (+1)
+'   red    = deletion     (+1, ε-move: advance W without reading input)
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+hide empty description
+skinparam state {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontColor #0D47A1
+}
+
+title Levenshtein NFA — W = "ab",  k = 1   (state ⟨i,e⟩ = ⟨W chars consumed, edits used⟩)
+
+state "⟨0,0⟩" as q00
+state "⟨1,0⟩" as q10
+state "⟨2,0⟩ ✓" as q20 #C8E6C9
+state "⟨0,1⟩" as q01
+state "⟨1,1⟩" as q11
+state "⟨2,1⟩ ✓" as q21 #C8E6C9
+
+[*] --> q00
+
+' match (cost 0)
+q00 -[#2E7D32,thickness=2]-> q10 : a
+q10 -[#2E7D32,thickness=2]-> q20 : b
+q01 -[#2E7D32,thickness=2]-> q11 : a
+q11 -[#2E7D32,thickness=2]-> q21 : b
+
+' substitution (+1)
+q00 -[#6A1B9A]-> q11 : x≠a
+q10 -[#6A1B9A]-> q21 : x≠b
+
+' insertion (+1)
+q00 -[#EF6C00]-> q01 : any
+q10 -[#EF6C00]-> q11 : any
+q20 -[#EF6C00]-> q21 : any
+
+' deletion (+1, ε)
+q00 -[#C62828]-> q11 : ε
+q10 -[#C62828]-> q21 : ε
+
+q20 --> [*]
+q21 --> [*]
+@enduml

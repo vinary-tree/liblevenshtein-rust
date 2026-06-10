@@ -1,0 +1,45 @@
+@startuml component-stack
+' liblevenshtein — component architecture (3 layers, built bottom-up)
+' Color legend:
+'   green  = dictionary backends (libdictenstein)
+'   blue   = core Levenshtein transducer & automata
+'   purple = higher-level engines built on the core
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title liblevenshtein — Component Architecture
+
+rectangle "Higher-level engines" as L3 #E1BEE7 {
+  rectangle "Phonetic\nLLev · LLRE · NFA×Lev · Articulatory" as ph #F3E5F5
+  rectangle "Time series\nMSM · MsmTransducer" as ts #F3E5F5
+  rectangle "WallBreaker\nlarge error bound k" as wb #F3E5F5
+  rectangle "Contextual completion\nscoped drafts · undo" as cc #F3E5F5
+  rectangle "Fuzzy maps & cache\neviction policies" as ca #F3E5F5
+  rectangle "WFST adapters\nlling-llang composition" as wf #F3E5F5
+}
+
+rectangle "Core — Levenshtein transducer & automata" as L2 #BBDEFB {
+  rectangle "Transducer\nquery · query_with_distance · query_values\nquery_ordered · query_filtered · query_by_value_set" as tr #E3F2FD
+  rectangle "Universal & Generalized automata\nOperationSet · SubstitutionSet · OperationCostsF64" as au #E3F2FD
+}
+
+rectangle "libdictenstein — dictionary backends" as L1 #C8E6C9 {
+  rectangle "DoubleArrayTrie(Char)\nstatic · O(1) transitions" as dat #E8F5E9
+  rectangle "DynamicDawg(Char/U64)\nupdatable · SIMD + Bloom" as dg #E8F5E9
+  rectangle "SuffixAutomaton(Char)\nsubstring search" as sa #E8F5E9
+  rectangle "Scdawg(Char)\nbidirectional · WallBreaker" as sc #E8F5E9
+  rectangle "PersistentARTrie(Char)\nmmap · zero-copy" as art #E8F5E9
+  rectangle "PathMapDictionary(Char)\npersistent backend" as pm #E8F5E9
+}
+
+L3 -[#6A1B9A,thickness=3]down-> L2 : builds on
+L2 -[#1565C0,thickness=3]down-> L1 : traverses
+@enduml

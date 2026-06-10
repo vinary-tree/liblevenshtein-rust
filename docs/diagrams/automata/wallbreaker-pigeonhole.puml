@@ -1,0 +1,44 @@
+@startuml wallbreaker-pigeonhole
+' WallBreaker beats the "wall effect" for large k via the pigeonhole principle.
+' Color legend:
+'   teal   = input pattern        amber  = split step
+'   green  = error-free piece / accepted candidate
+'   red    = piece that absorbed an edit
+'   purple = bidirectional verification
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 12
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title WallBreaker — pigeonhole filtering   (shown: k = 2 ⇒ k+1 = 3 pieces)
+
+rectangle "Pattern  P   (|P| = m)" as P #B2EBF2
+
+together {
+  rectangle "P₁\n(exact)" as p1 #C8E6C9
+  rectangle "P₂\n(1 edit)" as p2 #FFCDD2
+  rectangle "P₃\n(exact)" as p3 #C8E6C9
+}
+note right of p3
+  With ≤ k edits spread across k+1 disjoint pieces,
+  by the pigeonhole principle at least one piece (here P₁, P₃)
+  must be error-free.
+end note
+
+rectangle "Locate the error-free piece exactly in the SCDAWG\nO(|Pᵢ|) — no wall, no prefix blow-up" as M #C8E6C9
+rectangle "Extend the match bidirectionally\n(left ← and → right) within the remaining edit budget" as E #E1BEE7
+rectangle "Verify total edits ≤ k\n→ candidate (term, distance)" as V #C8E6C9
+
+P -[#00838F]down-> p2 : "split into k+1 pieces"
+p1 -[hidden]right- p2
+p2 -[hidden]right- p3
+p2 -[#EF6C00]down-> M
+M -[#6A1B9A]down-> E
+E -[#2E7D32]down-> V
+@enduml
