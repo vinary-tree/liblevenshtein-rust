@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-10
+
+### Removed
+
+- **BREAKING: WFST adapters moved to the new [`duallity`](https://github.com/f1r3fly-io/duallity) crate.**
+  The `wfst` feature and the `liblevenshtein::wfst::*` module — `LevenshteinWfst`,
+  `DictionaryBackend`, and the universal / WallBreaker / generalized / phonetic WFST
+  variants — were extracted into `duallity` (which depends on both liblevenshtein and
+  lling-llang), breaking the liblevenshtein ⇄ lling-llang dependency cycle. Migrate
+  `use liblevenshtein::wfst::X` → `use duallity::X`, and depend on `duallity` instead of
+  enabling the `wfst` feature. (No crates.io consumer is affected: the old `wfst` feature
+  was unusable from the registry because its `lling-llang` dependency was a path dependency.)
+
 ### Added
 
 #### Exact MSM-bounded retrieval: `MsmTransducer` (2026-05-28)

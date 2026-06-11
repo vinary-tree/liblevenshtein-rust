@@ -5,12 +5,13 @@ resolver = "2"
 
 [package]
 name = "liblevenshtein"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 rust-version = "1.70"
 authors = ["Dylon Edwards <dylon.devo@gmail.com>"]
 license = "Apache-2.0"
-repository = "https://github.com/universal-automata/liblevenshtein-rust"
+repository = "https://github.com/vinary-tree/liblevenshtein-rust"
+exclude = ["docs/", "examples/"]
 description = "Levenshtein/Universal Automata for approximate string matching using various dictionary backends"
 keywords = ["levenshtein", "edit-distance", "spell-checking", "fuzzy-search", "automata"]
 categories = ["algorithms", "data-structures", "text-processing"]
@@ -18,7 +19,7 @@ readme = "README.md"
 
 [dependencies]
 # Dictionary implementations (extracted to libdictenstein crate)
-libdictenstein = { path = "../libdictenstein", features = ["parking_lot"] }
+libdictenstein = { path = "../libdictenstein", version = "0.1", features = ["parking_lot"] }
 
 # PathMap as an optional dictionary backend
 # NOTE: PathMap uses a git dependency and is NOT available when installing from crates.io
@@ -87,9 +88,6 @@ serde-wasm-bindgen = { version = "0.6", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 getrandom = { version = "0.2", features = ["js"], optional = true }
 js-sys = { version = "0.3", optional = true }
-
-# WFST integration with lling-llang (optional)
-lling-llang = { path = "../lling-llang", optional = true }
 
 [dev-dependencies]
 criterion = "0.5"
@@ -413,9 +411,6 @@ wasm-phonetic = ["wasm", "phonetic-rules"]
 ffi = []
 # Combined WASM + FFI
 wasm-ffi = ["wasm", "ffi"]
-
-# WFST integration - exposes Levenshtein automata as lling-llang WFSTs for composition
-wfst = ["lling-llang", "rand"]
 
 [package.metadata.generate-rpm]
 assets = [

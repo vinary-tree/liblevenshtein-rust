@@ -8,7 +8,7 @@
 
 **Approximate string matching that scales with matches, not dictionary size.** Instead of computing an edit distance against every entry, `liblevenshtein` represents the query `W` and an error bound `k` as a **Levenshtein automaton** — the set of still-viable `⟨position, errors⟩` states that together accept exactly the strings within distance `k` of `W` — and walks it **in lock-step** with the dictionary (a trie/DAWG), advancing both together and pruning a branch the instant no automaton state survives. The automaton is **simulated on the fly**, never built as a standalone table. Per-query setup is `𝒪(∣W∣)`; each automaton step costs `𝒪(k)` — a constant for fixed `k` — so total work tracks the explored near-match frontier rather than the size of the dictionary.
 
-On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted/weighted edits, **phonetic** matching (53 built-in languages), **time-series** similarity (Move–Split–Merge), the **WallBreaker** filter for very large error bounds, IDE-style **contextual completion**, composable fuzzy **caches**, and **WFST** adapters for language-model composition. Every dictionary is `Send + Sync` and cheap to share across threads; reads run concurrently — lock-free on the static backends and `DynamicDawgU64`, reader-locked on the `RwLock`-backed dynamic ones.
+On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted/weighted edits, **phonetic** matching (53 built-in languages), **time-series** similarity (Move–Split–Merge), the **WallBreaker** filter for very large error bounds, IDE-style **contextual completion**, composable fuzzy **caches**, and **WFST** adapters for language-model composition (in the companion **duallity** crate). Every dictionary is `Send + Sync` and cheap to share across threads; reads run concurrently — lock-free on the static backends and `DynamicDawgU64`, reader-locked on the `RwLock`-backed dynamic ones.
 
 > Based on Schulz & Mihov, *Fast String Correction with Levenshtein-Automata* (2002) [[1]](#references), and the universal construction of Mitankin, Mihov & Schulz (2009) [[2]](#references).
 
@@ -119,7 +119,7 @@ for candidate in transducer.query_with_distance("tset", 2) {
 [dependencies]
 liblevenshtein = "0.8"
 
-# Phonetic rules, time-series, WFST, persistence, etc. are opt-in features:
+# Phonetic rules, time-series, persistence, etc. are opt-in features:
 # liblevenshtein = { version = "0.8", features = ["phonetic-rules"] }
 ```
 
@@ -135,7 +135,7 @@ Three layers, built bottom-up: dictionary backends (`libdictenstein`) → the co
 
 ![liblevenshtein component architecture: dictionary backends, the core Levenshtein transducer and automata, and the higher-level engines built on them.](docs/diagrams/architectures/component-stack.svg)
 
-You pick a **dictionary** for your access pattern, wrap it in a **`Transducer`** with an **`Algorithm`**, and either query directly or reach for a higher-level engine (phonetic, time-series, completion, cache, WFST).
+You pick a **dictionary** for your access pattern, wrap it in a **`Transducer`** with an **`Algorithm`**, and either query directly or reach for a higher-level engine (phonetic, time-series, completion, cache).
 
 ---
 
@@ -155,7 +155,7 @@ You pick a **dictionary** for your access pattern, wrap it in a **`Transducer`**
 | **Large error bounds** (`k ≥ 5`) | WallBreaker with SCDAWG | [WallBreaker](#wallbreaker-large-error-bounds) |
 | **Substring / infix fuzzy search** | SuffixAutomaton / SCDAWG | [Dictionary Types](#dictionary-types) |
 | **Persistent / mmap dictionaries** | Memory-mapped ARTrie | [Dictionary Types](#dictionary-types) |
-| **Language-model composition** | WFST adapters (lling-llang) | [WFST Integration](#wfst-integration) |
+| **Language-model composition** | WFST adapters (`duallity` crate) | [WFST Integration](#wfst-integration) |
 | **Caching with eviction** | Composable TTL / LRU / LFU / cost-aware policies | [Fuzzy Maps & Caching](#fuzzy-maps--caching) |
 
 ---
@@ -383,9 +383,9 @@ Two complementary ways to go beyond unit-cost edits.
 
 **Discrete operations** — choose *which* edits exist at runtime via an `OperationSet`, then run a generalized automaton or compose it as a [WFST](#wfst-integration):
 
-```rust
-// requires features = ["wfst"]
-use liblevenshtein::wfst::GeneralizedWfstBuilder;
+```rust,ignore
+// `GeneralizedWfstBuilder` lives in the companion `duallity` crate.
+use duallity::GeneralizedWfstBuilder;
 use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
 let dict: DynamicDawgChar = DynamicDawgChar::from_terms(vec!["example", "examples"]);
 
@@ -576,34 +576,21 @@ assert!(!pattern.matches("bone"));   // b  ∉ fricative
 
 ## WFST Integration
 
-The `wfst` feature exposes the automata as lazy **Weighted Finite-State Transducers** for composition with language models via [lling-llang](https://github.com/f1r3fly-io/lling-llang).
+liblevenshtein's automata can be exposed as lazy **Weighted Finite-State Transducers** (WFSTs) for composition with language models — phonetic rewrites, n-gram LMs, and more. As of liblevenshtein 0.9, these adapters live in the companion **[`duallity`](https://github.com/f1r3fly-io/duallity)** crate, which depends on both liblevenshtein and [lling-llang](https://github.com/f1r3fly-io/lling-llang):
 
-```rust
-// requires features = ["wfst"]
-use liblevenshtein::wfst::{LevenshteinWfst, PhoneticWfstBuilder, WallBreakerWfstBuilder};
+```rust,ignore
+use duallity::{LevenshteinWfst, PhoneticWfstBuilder, WallBreakerWfstBuilder};
 use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+use lling_llang::composition::compose;
 
 let dict: DynamicDawgChar = DynamicDawgChar::from_terms(vec!["hello", "help", "world"]);
 
 // Levenshtein × dictionary product, ready to compose with an n-gram LM.
 let lev = LevenshteinWfst::new(&dict, "helo", 2);
-
-// Phonetic pattern pipeline (takes the dictionary by value).
-let phon = PhoneticWfstBuilder::new(dict.clone(), 2)
-    .build_from_pattern("(ph|f)one")
-    .expect("build failed");
-
-// Large-error-bound search as a WFST.
-let scdawg: libdictenstein::scdawg::Scdawg =
-    libdictenstein::scdawg::Scdawg::from_terms(vec!["example", "examples"]);
-let wb = WallBreakerWfstBuilder::new(&scdawg)
-    .query("exmaple")
-    .max_distance(5)
-    .build()
-    .expect("build failed");
+let composed = compose(lev, language_model);
 ```
 
-`GeneralizedWfst` (custom `OperationSet`) is shown under [Weighted & Generalized Automata](#weighted--generalized-automata). See [`docs/wfst/`](docs/wfst/README.md) for composition recipes.
+See the **[`duallity`](https://github.com/f1r3fly-io/duallity)** crate for the phonetic / WallBreaker / generalized WFST builders and composition recipes.
 
 ---
 
