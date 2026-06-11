@@ -766,7 +766,7 @@ See [`docs/formal-verification/README.md`](docs/formal-verification/README.md) f
 12. V. Leis, A. Kemper, and T. Neumann. "The adaptive radix tree: ARTful indexing for main-memory databases." *IEEE ICDE 2013*, pp. 38–49. [doi:10.1109/ICDE.2013.6544812](https://doi.org/10.1109/ICDE.2013.6544812)
 13. B. H. Bloom. "Space/time trade-offs in hash coding with allowable errors." *Communications of the ACM*, 13(7):422–426, 1970. [doi:10.1145/362686.362692](https://doi.org/10.1145/362686.362692)
 
-**Project documentation:** [algorithm research](docs/research/levenshtein-automata/README.md) · [implementation mapping](docs/research/levenshtein-automata/implementation-mapping.md) · [architecture](docs/developer-guide/architecture.md) · [benchmarks](docs/benchmarks/README.md) · [formal verification](docs/verification/README.md). Upstream: [original C++ implementation](https://github.com/universal-automata/liblevenshtein-cpp).
+**Project documentation:** [algorithm research](docs/research/levenshtein-automata/README.md) · [implementation mapping](docs/research/levenshtein-automata/implementation-mapping.md) · [architecture](docs/developer-guide/architecture.md) · [benchmarks](docs/benchmarks/README.md) · [formal verification](docs/verification/README.md). Upstream: [original Java implementation](https://github.com/universal-automata/liblevenshtein-java).
 
 ---
 
