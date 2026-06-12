@@ -161,17 +161,18 @@ Defined.
 (* Characteristic vectors encode which positions in the word match the       *)
 (* current input character. This is the "bit vector" in the Rust code.      *)
 (*                                                                            *)
-(* AXIOMATIZATION: We axiomatize characteristic vectors rather than          *)
-(* implementing them fully. This is reasonable because:                      *)
+(* ABSTRACTION: We model characteristic vectors by their lookup predicate    *)
+(* rather than by their packed implementation. This is reasonable because:   *)
 (*   1. Implementation details (SIMD, bit packing) are out of scope          *)
 (*   2. Only the interface matters for correctness                           *)
-(*   3. Similar to axiomatizing hash table operations in Rholang proofs      *)
+(*   3. The Rust bit vector is validated separately at the representation    *)
+(*      boundary                                                             *)
 (*                                                                            *)
 (* RUST: src/transducer/bit_vector.rs:CharacteristicVector                  *)
 (******************************************************************************)
 
 (**
-  Characteristic vector type (axiomatized)
+  Characteristic vector type (abstracted)
 
   INTUITION: For input character 'a' and word "banana":
              χ(a, banana) = [false, true, false, true, false, true]
@@ -191,22 +192,21 @@ Definition CharacteristicVector : Type := nat -> Prop.
 
   PROPERTY: This is a pure function of the word, input char, and index
 *)
-Definition has_match (_cv : CharacteristicVector) (_i : nat) : Prop := True.
+Definition has_match (cv : CharacteristicVector) (i : nat) : Prop := cv i.
 
 (**
-  Characteristic vector correctness axiom
+  Characteristic vector lookup correctness
 
-  If we construct χ for word w and character c, then has_match
-  correctly reports whether w[i] = c.
+  Since the legacy model abstracts a characteristic vector as the lookup
+  predicate itself, has_match unfolds directly to that predicate.
 
-  NOTE: We axiomatize correctness rather than proving it from construction.
-  Alternative would be to define CharacteristicVector as a function
-  and prove has_match correct, but that adds complexity without insight.
+  A full construction theorem from a concrete word and character belongs at the
+  representation boundary, not in this operation-semantics file.
 *)
 Lemma characteristic_vector_correct : forall (cv : CharacteristicVector) (i : nat),
-  has_match cv i <-> True.  (* Placeholder - in real system would check word[i] *)
+  has_match cv i <-> cv i.
 Proof.
-  intros cv i. split; trivial.
+  intros cv i. unfold has_match. split; intro H; exact H.
 Qed.
 
 (******************************************************************************)
@@ -305,11 +305,12 @@ Definition error_op_applicable (errors : nat) (max_distance : nat) : Prop :=
   Unlike error-introducing operations, match doesn't need budget check.
   This is an optimization point in the implementation.
 *)
-Lemma match_independent_of_budget : forall cv idx,
+Lemma match_independent_of_budget : forall cv idx (errors max_distance : nat),
   match_applicable cv idx ->
-  True.  (* Match can always be applied if characters match *)
+  match_applicable cv idx /\ operation_cost OpMatch = 0%nat.
 Proof.
-  intros. trivial.
+  intros cv idx errors max_distance Hmatch.
+  split; [exact Hmatch | reflexivity].
 Qed.
 
 (**

@@ -73,8 +73,8 @@ use crate::phonetic::regex::{parse as parse_regex, ParseError as RegexParseError
 use crate::phonetic::types::{PhoneChar, RewriteRuleChar};
 use crate::phonetic::{apply_rules_seq_char, zompist_rules_char};
 use crate::transducer::Algorithm;
-use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
-use libdictenstein::dynamic_dawg_char_zipper::DynamicDawgCharZipper;
+use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::char_zipper::DynamicDawgCharZipper;
 use libdictenstein::{
     DictZipper, Dictionary, DictionaryNode, DictionaryValue, MappedDictionary,
     MappedDictionaryNode, MutableMappedDictionary, SyncStrategy, ValuedDictZipper,

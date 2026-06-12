@@ -1,12 +1,23 @@
-(** * MSM Lower Bounds
+(** * MSM Lower Bounds and Heuristic Counterexamples
 
-    This module proves that various lower bounds are valid for the MSM metric.
-    These lower bounds enable efficient pruning during similarity search.
+    This module proves the currently checked MSM lower bounds and records
+    executable counterexamples for tempting pointwise heuristic bounds that are
+    not valid for general MSM pruning.
 
     Lower bounds proven in this executable model:
     1. Trivial L1 lower bounds for empty-side alignments
     2. Length difference (weighted by c) for empty-side alignments
     3. Combined pruning bounds for empty-side alignments
+
+    Note: [MsmDistance.v] models one-empty distances as finite repeated
+    split/merge costs, while the Rust [MsmConfig::distance] returns +infinity
+    for one-empty inputs. These empty-side lemmas are therefore model-local and
+    are not used to justify Rust's empty-query branch. The non-empty
+    counterexamples below apply to both semantics.
+
+    Counterexamples recorded here:
+    1. Broad non-empty L1 pruning is not sound for MSM.
+    2. Broad non-empty combined pruning is not sound when it includes L1.
 
     Part of: Liblevenshtein.MSM
 *)
@@ -16,13 +27,14 @@ From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
 
-(** * Euclidean Distance as Lower Bound *)
+(** * Pointwise Distances *)
 
 (** Helper: zip two lists and apply a function (like map2) *)
 Definition zip_with {A B C : Type} (f : A -> B -> C) (l1 : list A) (l2 : list B) : list C :=
   map (fun p => f (fst p) (snd p)) (combine l1 l2).
 
-(** Euclidean distance between two series of the same length *)
+(** Squared prefix Euclidean score. This module does not prove it is a general
+    MSM lower bound. *)
 Definition euclidean_dist (X Y : TimeSeries) : Q :=
   let squared_diffs := zip_with (fun x y => (x - y) * (x - y)) X Y in
   (* We'd need sqrt, so we use squared distance for now *)
@@ -40,6 +52,19 @@ Definition l1_dist (X Y : TimeSeries) : Q :=
     split/merge paths can be cheaper than a pointwise diagonal path. The current
     executable proof keeps only the empty-side facts that follow directly from
     [msm_distance] non-negativity. *)
+
+Definition heuristic_counter_cfg : MsmConfig :=
+  {| msm_c := 1#1; msm_c_nonneg := msm_one_nonneg |}.
+
+Definition heuristic_counter_x : TimeSeries := [0#1; 100#1].
+Definition heuristic_counter_y : TimeSeries := [0#1; 0#1; 100#1].
+
+Lemma l1_not_general_msm_lower_bound :
+  msm_distance heuristic_counter_x heuristic_counter_y heuristic_counter_cfg <
+  l1_dist heuristic_counter_x heuristic_counter_y.
+Proof.
+  vm_compute. reflexivity.
+Qed.
 
 Lemma l1_lower_bound_empty_left : forall Y cfg,
   l1_dist [] Y <= msm_distance [] Y cfg.
@@ -108,6 +133,13 @@ Qed.
 Definition combined_lb (X Y : TimeSeries) (c : Q) : Q :=
   Qmax (l1_dist X Y) (length_lb' X Y c).
 
+Lemma combined_not_general_msm_lower_bound :
+  msm_distance heuristic_counter_x heuristic_counter_y heuristic_counter_cfg <
+  combined_lb heuristic_counter_x heuristic_counter_y (msm_c heuristic_counter_cfg).
+Proof.
+  vm_compute. reflexivity.
+Qed.
+
 (** Combined lower bounds for empty-side cases. *)
 Theorem combined_lower_bound_empty_left : forall Y cfg,
   combined_lb [] Y (msm_c cfg) <= msm_distance [] Y cfg.
@@ -172,6 +204,8 @@ Qed.
 
     1. Empty-side L1 and length lower bounds are proved directly.
     2. Empty-side combined pruning is sound.
-    3. Broad L1/combined lower bounds for non-empty MSM series need a
-       trace-optimality development before they can be reinstated.
+    3. Broad L1/combined lower bounds for non-empty MSM series are false under
+       the executable MSM semantics; [l1_not_general_msm_lower_bound] and
+       [combined_not_general_msm_lower_bound] record a concrete split-path
+       counterexample.
 *)

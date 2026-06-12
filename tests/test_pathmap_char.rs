@@ -1,6 +1,6 @@
 #[cfg(feature = "pathmap-backend")]
 mod pathmap_char_tests {
-    use libdictenstein::pathmap_char::PathMapDictionaryChar;
+    use libdictenstein::pathmap::char::PathMapDictionaryChar;
     use libdictenstein::Dictionary;
     use liblevenshtein::prelude::*;
 

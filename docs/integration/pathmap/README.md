@@ -31,6 +31,40 @@
 
 ---
 
+## Current Architecture — TrieRef Rework
+
+> **Status (2026):** The PathMap integration was reworked onto pathmap's
+> lock-free `TrieRef` node handles. The authoritative design is
+> [`docs/design/pathmap-trieref-rework.md`](../../design/pathmap-trieref-rework.md);
+> a runnable demo is [`examples/mork_fuzzy_query.rs`](../../../examples/mork_fuzzy_query.rs).
+> Sections further down that describe a *lock-per-operation, path-replay* node or
+> zipper (e.g. **Shared Zipper Pattern**, **PathMapDictionary Implementation**)
+> document the **superseded** design and are retained for history; their perf
+> tables predate the rework (post-rework numbers will land in
+> [`docs/benchmarks/pathmap-trieref-rework.md`](../../benchmarks/pathmap-trieref-rework.md)).
+
+**What changed.** `PathMapNode` / `PathMapNodeChar` / `PathMapZipper` are now
+thin, lock-free handles over pathmap `TrieRef` nodes
+(`libdictenstein::pathmap::core`). Descending one byte is `𝒪(1)` from the focus —
+no per-operation lock and no replay of the path from the root. `root()` takes an
+`𝒪(1)` copy-on-write snapshot, so queries run lock-free over a consistent view
+(snapshot isolation), replacing the former `𝒪(n²)`-per-walk path-replay node.
+
+**Zero-plumbing entry points (MORK).** A caller already holding a bare `PathMap`
+can fuzzy-query it with no copy and no lock:
+
+| Entry point | Cost | Use |
+|·············|······|·····|
+| `PathMapRef::from_map(&space.btm)` | zero-copy borrow | query the live map |
+| `PathMapSnapshot::from_map_ref(&space.btm)` | `𝒪(1)` CoW | decouple from later writes |
+| `PathMapRef::from_trie_ref(space.btm.trie_ref_at_path(prefix))` | zero-copy | scope to a subtrie |
+
+```rust
+use libdictenstein::pathmap::PathMapRef;
+let dict = PathMapRef::from_map(&space.btm);            // borrowed; no copy, no lock
+Transducer::new(dict, Algorithm::Standard).query("fooo", 1);
+```
+
 ## Overview
 
 PathMap is a trie-based prefix-compressed key-value store that serves as the shared storage layer for three integrated projects:

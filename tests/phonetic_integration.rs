@@ -9,7 +9,7 @@
 
 #![cfg(feature = "phonetic-rules")]
 
-use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
 use liblevenshtein::phonetic::nfa::{
     compile, IncrementalMatcherChar, LazyDFAChar, MemoizedMatcherChar, ProductAutomatonChar,
 };

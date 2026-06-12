@@ -212,7 +212,7 @@ proptest! {
         query in unicode_word_strategy(),
         max_dist in 0usize..=2
     ) {
-        use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
+        use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
 
         let linear_results = linear_scan_standard(&dict_words, &query, max_dist);
 

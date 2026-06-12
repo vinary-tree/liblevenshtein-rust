@@ -18,10 +18,10 @@
 //! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use libdictenstein::double_array_trie::zipper::DoubleArrayTrieZipper;
 use libdictenstein::double_array_trie::DoubleArrayTrie;
-use libdictenstein::double_array_trie_zipper::DoubleArrayTrieZipper;
+use libdictenstein::dynamic_dawg::zipper::DynamicDawgZipper;
 use libdictenstein::dynamic_dawg::DynamicDawg;
-use libdictenstein::dynamic_dawg_zipper::DynamicDawgZipper;
 use libdictenstein::prefix_zipper::PrefixZipper;
 
 // ============================================================================

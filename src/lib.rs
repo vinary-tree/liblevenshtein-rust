@@ -162,7 +162,6 @@ pub mod wasm;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 
-
 /// Test corpus utilities
 ///
 /// This module provides parsers and generators for standard spelling
@@ -218,8 +217,8 @@ pub mod prelude {
     pub use crate::wallbreaker::{
         PatternPiece, PatternSplitter, WallBreaker, WallBreakerQuery, WallBreakerResult,
     };
+    pub use libdictenstein::scdawg::char::ScdawgChar;
     pub use libdictenstein::scdawg::Scdawg;
-    pub use libdictenstein::scdawg_char::ScdawgChar;
     pub use libdictenstein::substring::{
         BidirectionalDictionaryNode, SubstringDictionary, SubstringMatch,
     };

@@ -102,6 +102,12 @@ docs/verification/**/Makefile.coq.conf
 docs/verification/**/.Makefile.coq.d
 docs/verification/**/.Makefile.d
 
+# TLA+ TLC model-checker working state — timestamped checkpoint / disk-queue
+# directories (regenerable scratch, e.g. states/26-06-11-19-12-19.400/ holding
+# MsmTrieSearch.st, nodes_*, ptrs_*). Committed TLC evidence lives in
+# docs/verification/tla/states/tlc-results-*.txt and is deliberately NOT ignored.
+docs/verification/**/states/[0-9]*/
+
 # Profiling artifacts
 *.perf.data
 *.perf.data.old

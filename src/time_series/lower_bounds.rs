@@ -1,58 +1,50 @@
-//! Lower bound functions for MSM distance.
+//! Lower-bound and heuristic prefilter functions for MSM distance.
 //!
-//! Lower bounds enable efficient pruning during similarity search:
-//! if `lower_bound(X, Y) > threshold`, then `msm(X, Y) > threshold`,
-//! allowing us to skip the expensive full MSM computation.
+//! A pruning lower bound must satisfy `lb(X, Y) <= MSM(X, Y)`. If such a bound
+//! exceeds a threshold, the candidate can be skipped without changing exact
+//! range-search results.
 //!
 //! # Theory
 //!
-//! For a lower bound function `lb` to be valid for MSM, it must satisfy:
+//! MSM split/merge paths can be much cheaper than pointwise diagonal matching.
+//! Therefore prefix Euclidean and L1 distances are useful heuristics, but they
+//! are not general correctness-preserving lower bounds for MSM. For example,
+//! with `c = 1`, `[0, 100]` and `[0, 0, 100]` have MSM distance `1` via a split,
+//! while prefix Euclidean/L1 are `100`.
 //!
-//! ```text
-//! lb(X, Y) <= MSM(X, Y)  for all X, Y
-//! ```
+//! # Available Bounds
 //!
-//! The tighter the bound (closer to MSM), the more effective pruning becomes.
-//!
-//! # Available Lower Bounds
-//!
-//! | Function | Complexity | Tightness | Best For |
-//! |----------|------------|-----------|----------|
-//! | `euclidean_lb` | O(min(m,n)) | Medium | Same-length series |
-//! | `length_lb` | O(1) | Weak | Quick pre-filter |
-//! | `combined_lb` | O(min(m,n)) | Best | General use |
+//! | Function | Complexity | Pruning status |
+//! |----------|------------|----------------|
+//! | `length_lb` | O(1) | correctness-preserving |
+//! | `euclidean_lb` | O(min(m,n)) | heuristic only |
+//! | `l1_lb` | O(min(m,n)) | heuristic only |
+//! | `combined_lb` | O(min(m,n)) | heuristic only because it includes heuristic bounds |
 //!
 //! # Example
 //!
 //! ```rust
-//! use liblevenshtein::time_series::{MsmConfig, euclidean_lb, length_lb};
+//! use liblevenshtein::time_series::{MsmConfig, length_lb};
 //!
 //! let x = vec![1.0, 2.0, 3.0, 4.0];
 //! let y = vec![1.5, 2.5, 3.5, 4.5];
 //! let c = 1.0;
 //!
-//! let lb_euclidean = euclidean_lb(&x, &y);
 //! let lb_length = length_lb(&x, &y, c);
 //!
-//! // Both bounds are valid (less than or equal to actual MSM)
+//! // The length bound is safe for pruning.
 //! let config = MsmConfig::new(c);
 //! let actual_msm = config.distance(&x, &y);
 //!
-//! assert!(lb_euclidean <= actual_msm);
 //! assert!(lb_length <= actual_msm);
 //! ```
 
 use super::msm::MsmConfig;
 
-/// Euclidean distance lower bound for MSM.
+/// Prefix Euclidean distance heuristic for MSM.
 ///
-/// When series have the same length, the Euclidean distance (L2 norm)
-/// is a lower bound for MSM because MSM's move operation has cost
-/// `|x_i - y_j|`, and the optimal alignment for equal-length series
-/// uses only move operations when values differ.
-///
-/// For different-length series, we compute the Euclidean distance over
-/// the minimum length prefix, which is still a valid lower bound.
+/// This is not a correctness-preserving lower bound for general MSM because
+/// split/merge paths can avoid large pointwise prefix differences.
 ///
 /// # Arguments
 ///
@@ -61,24 +53,12 @@ use super::msm::MsmConfig;
 ///
 /// # Returns
 ///
-/// Lower bound on MSM distance.
+/// A heuristic score. Do not use it for exact pruning unless false negatives
+/// are acceptable.
 ///
 /// # Complexity
 ///
 /// O(min(len(x), len(y)))
-///
-/// # Proof of Validity
-///
-/// For equal-length series X = (x_1, ..., x_n) and Y = (y_1, ..., y_n):
-///
-/// - Euclidean distance: `E(X,Y) = sqrt(sum((x_i - y_i)^2))`
-/// - Sum of absolute differences: `S(X,Y) = sum(|x_i - y_i|)`
-/// - By the triangle inequality: `E(X,Y) <= S(X,Y)`
-/// - Any MSM alignment costs at least `S(X,Y)` for moves alone
-/// - Therefore: `E(X,Y) <= MSM(X,Y)`
-///
-/// For unequal-length series, we use the prefix property: the distance
-/// for a prefix is at most the distance for the full series.
 ///
 /// # Example
 ///
@@ -167,9 +147,9 @@ pub fn length_lb(x: &[f64], y: &[f64], c: f64) -> f64 {
     len_diff as f64 * c
 }
 
-/// Combined lower bound using both Euclidean and length bounds.
+/// Combined heuristic using Euclidean and length scores.
 ///
-/// Takes the maximum of available lower bounds for the tightest result.
+/// This is heuristic-only because it includes [`euclidean_lb`].
 ///
 /// # Arguments
 ///
@@ -179,7 +159,7 @@ pub fn length_lb(x: &[f64], y: &[f64], c: f64) -> f64 {
 ///
 /// # Returns
 ///
-/// Maximum of all applicable lower bounds.
+/// Maximum of the component scores.
 ///
 /// # Complexity
 ///
@@ -201,10 +181,9 @@ pub fn combined_lb(x: &[f64], y: &[f64], c: f64) -> f64 {
     euclidean_lb(x, y).max(length_lb(x, y, c))
 }
 
-/// Sum of absolute differences lower bound.
+/// Prefix sum-of-absolute-differences heuristic.
 ///
-/// For equal-length series, this is typically tighter than Euclidean
-/// because it directly represents the move costs without the square root.
+/// This is not a correctness-preserving lower bound for general MSM.
 ///
 /// ```text
 /// L1(X, Y) = sum(|x_i - y_i|)
@@ -240,26 +219,34 @@ pub fn l1_lb(x: &[f64], y: &[f64]) -> f64 {
         .sum()
 }
 
-/// Configuration for lower bound-based pruning.
+/// Configuration for lower-bound or heuristic pruning.
 #[derive(Debug, Clone, Copy)]
 pub struct LowerBoundConfig {
     /// The MSM split/merge cost constant
     pub c: f64,
-    /// Which lower bounds to use
+    /// Which bound/heuristic to use
     pub bounds: LowerBoundType,
 }
 
-/// Which lower bounds to compute.
+/// Which bound or heuristic to compute.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LowerBoundType {
-    /// Use only length-based bound (fastest, weakest)
+    /// Use only length-based bound (fastest, correctness-preserving)
     LengthOnly,
-    /// Use only Euclidean bound
+    /// Use only prefix Euclidean heuristic (can cause false negatives)
     EuclideanOnly,
-    /// Use only L1 bound
+    /// Use only prefix L1 heuristic (can cause false negatives)
     L1Only,
-    /// Use combined bounds (max of all, tightest)
+    /// Use combined heuristic (can cause false negatives)
     Combined,
+}
+
+impl LowerBoundType {
+    /// Whether this type is safe to use for correctness-preserving pruning.
+    #[inline]
+    pub fn is_proven_safe_for_pruning(self) -> bool {
+        matches!(self, LowerBoundType::LengthOnly)
+    }
 }
 
 impl LowerBoundConfig {
@@ -267,11 +254,11 @@ impl LowerBoundConfig {
     pub fn new(c: f64) -> Self {
         Self {
             c,
-            bounds: LowerBoundType::Combined,
+            bounds: LowerBoundType::LengthOnly,
         }
     }
 
-    /// Compute the lower bound based on configuration.
+    /// Compute the configured bound or heuristic score.
     pub fn lower_bound(&self, x: &[f64], y: &[f64]) -> f64 {
         match self.bounds {
             LowerBoundType::LengthOnly => length_lb(x, y, self.c),
@@ -284,20 +271,22 @@ impl LowerBoundConfig {
     }
 }
 
-/// Filter candidates using lower bound pruning.
+/// Filter candidates using the configured bound or heuristic.
 ///
-/// Returns only candidates whose lower bound distance is at or below threshold.
+/// Returns only candidates whose configured score is at or below threshold.
+/// Exact callers should use a [`LowerBoundConfig`] whose
+/// [`LowerBoundType::is_proven_safe_for_pruning`] is `true`.
 ///
 /// # Arguments
 ///
 /// * `query` - The query time series
 /// * `candidates` - Iterator of (value, series) pairs to filter
 /// * `threshold` - Maximum MSM distance threshold
-/// * `lb_config` - Lower bound configuration
+/// * `lb_config` - Bound/heuristic configuration
 ///
 /// # Returns
 ///
-/// Iterator of candidates that pass the lower bound filter.
+/// Iterator of candidates that pass the configured prefilter.
 pub fn filter_by_lower_bound<'a, V: Clone + 'a>(
     query: &'a [f64],
     candidates: impl Iterator<Item = (V, &'a [f64])> + 'a,
@@ -307,10 +296,9 @@ pub fn filter_by_lower_bound<'a, V: Clone + 'a>(
     candidates.filter(move |(_, series)| lb_config.lower_bound(query, series) <= threshold)
 }
 
-/// Brute-force search with lower bound pruning (sequential).
+/// Brute-force search with safe lower-bound pruning (sequential).
 ///
-/// Uses lower bounds to skip computing full MSM for candidates
-/// that cannot possibly be within the threshold.
+/// Uses the default [`LowerBoundConfig`], which is correctness-preserving.
 ///
 /// # Arguments
 ///
@@ -333,7 +321,7 @@ pub fn search_with_lb<V: Clone>(
     let mut results: Vec<(V, f64)> = database
         .iter()
         .filter_map(|(value, series)| {
-            // First check lower bound
+            // First check the safe length lower bound.
             if lb_config.lower_bound(query, series) > threshold {
                 return None;
             }
@@ -352,9 +340,9 @@ pub fn search_with_lb<V: Clone>(
     results
 }
 
-/// Brute-force search with lower bound pruning (parallel with Rayon).
+/// Brute-force search with safe lower-bound pruning (parallel with Rayon).
 ///
-/// Parallelizes both lower bound filtering and MSM computation.
+/// Parallelizes both safe lower-bound filtering and MSM computation.
 ///
 /// # Arguments
 ///
@@ -380,7 +368,7 @@ pub fn search_with_lb_parallel<V: Clone + Send + Sync>(
     let mut results: Vec<(V, f64)> = database
         .par_iter()
         .filter_map(|(value, series)| {
-            // First check lower bound
+            // First check the safe length lower bound.
             if lb_config.lower_bound(query, series) > threshold {
                 return None;
             }
@@ -399,14 +387,14 @@ pub fn search_with_lb_parallel<V: Clone + Send + Sync>(
     results
 }
 
-/// Statistics from lower bound pruning.
+/// Statistics from lower-bound pruning.
 #[derive(Debug, Clone)]
 pub struct LowerBoundStats {
     /// Total candidates evaluated
     pub total_candidates: usize,
-    /// Candidates pruned by lower bound
+    /// Candidates pruned by the safe lower bound
     pub pruned_by_lb: usize,
-    /// Candidates that passed lower bound
+    /// Candidates that passed the safe lower bound
     pub passed_lb: usize,
     /// Candidates that passed exact MSM
     pub passed_exact: usize,
@@ -433,7 +421,7 @@ pub fn search_with_lb_stats<V: Clone>(
     let mut results: Vec<(V, f64)> = Vec::new();
 
     for (value, series) in database {
-        // Check lower bound
+        // Check the safe length lower bound.
         if lb_config.lower_bound(query, series) > threshold {
             pruned_by_lb += 1;
             continue;
@@ -474,8 +462,8 @@ impl std::fmt::Display for LowerBoundStats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Lower Bound Pruning Statistics:")?;
         writeln!(f, "  Total candidates: {}", self.total_candidates)?;
-        writeln!(f, "  Pruned by LB: {}", self.pruned_by_lb)?;
-        writeln!(f, "  Passed LB: {}", self.passed_lb)?;
+        writeln!(f, "  Pruned by safe bound: {}", self.pruned_by_lb)?;
+        writeln!(f, "  Passed safe bound: {}", self.passed_lb)?;
         writeln!(f, "  Passed exact: {}", self.passed_exact)?;
         writeln!(f, "  Pruning rate: {:.1}%", self.pruning_rate * 100.0)?;
         writeln!(
@@ -497,10 +485,6 @@ mod tests {
             return a.signum() == b.signum();
         }
         (a - b).abs() < EPSILON
-    }
-
-    fn approx_le(a: f64, b: f64) -> bool {
-        a <= b + EPSILON
     }
 
     #[test]
@@ -591,56 +575,17 @@ mod tests {
     }
 
     #[test]
-    fn test_lb_validity_vs_msm() {
+    fn test_heuristic_bounds_are_not_general_msm_lower_bounds() {
         let config = MsmConfig::new(1.0);
-        let test_cases = vec![
-            (vec![1.0, 2.0, 3.0], vec![1.0, 2.0, 3.0]),
-            (vec![1.0, 2.0, 3.0], vec![2.0, 3.0, 4.0]),
-            (vec![1.0, 2.0, 3.0], vec![1.0, 2.0]),
-            (vec![1.0, 2.0], vec![1.0, 2.0, 3.0]),
-            (vec![1.0, 5.0, 2.0], vec![1.0, 2.0, 5.0]),
-        ];
+        let x = vec![0.0, 100.0];
+        let y = vec![0.0, 0.0, 100.0];
+        let msm = config.distance(&x, &y);
 
-        for (x, y) in test_cases {
-            let msm = config.distance(&x, &y);
-            let euclidean = euclidean_lb(&x, &y);
-            let length = length_lb(&x, &y, 1.0);
-            let l1 = l1_lb(&x, &y);
-            let combined = combined_lb(&x, &y, 1.0);
-
-            assert!(
-                approx_le(euclidean, msm),
-                "Euclidean LB {} > MSM {} for {:?} vs {:?}",
-                euclidean,
-                msm,
-                x,
-                y
-            );
-            assert!(
-                approx_le(length, msm),
-                "Length LB {} > MSM {} for {:?} vs {:?}",
-                length,
-                msm,
-                x,
-                y
-            );
-            assert!(
-                approx_le(l1, msm),
-                "L1 LB {} > MSM {} for {:?} vs {:?}",
-                l1,
-                msm,
-                x,
-                y
-            );
-            assert!(
-                approx_le(combined, msm),
-                "Combined LB {} > MSM {} for {:?} vs {:?}",
-                combined,
-                msm,
-                x,
-                y
-            );
-        }
+        assert!(approx_eq(msm, 1.0));
+        assert!(euclidean_lb(&x, &y) > msm);
+        assert!(l1_lb(&x, &y) > msm);
+        assert!(combined_lb(&x, &y, config.c) > msm);
+        assert!(length_lb(&x, &y, config.c) <= msm + EPSILON);
     }
 
     #[test]
@@ -669,16 +614,16 @@ mod tests {
         let config = MsmConfig::new(1.0);
         let database: Vec<(usize, Vec<f64>)> = vec![
             (0, vec![1.0, 2.0, 3.0]),
-            (1, vec![100.0, 200.0, 300.0]), // Will be pruned by LB
+            (1, vec![100.0, 200.0, 300.0, 400.0, 500.0, 600.0]), // length-pruned
             (2, vec![1.5, 2.5, 3.5]),
-            (3, vec![50.0, 60.0, 70.0]), // Will be pruned by LB
+            (3, vec![50.0, 60.0, 70.0]),
         ];
 
         let query = vec![1.0, 2.0, 3.0];
         let (results, stats) = search_with_lb_stats(&query, &database, 2.0, &config);
 
         assert_eq!(stats.total_candidates, 4);
-        assert!(stats.pruned_by_lb >= 1); // At least some pruning happened
+        assert!(stats.pruned_by_lb >= 1); // At least one safe length prune happened
         assert!(results.len() >= 1);
     }
 
@@ -718,7 +663,10 @@ mod tests {
             (2, vec![1.5, 2.5, 3.5]),       // Close
         ];
 
-        let lb_config = LowerBoundConfig::new(1.0);
+        let lb_config = LowerBoundConfig {
+            c: 1.0,
+            bounds: LowerBoundType::Combined,
+        };
         let candidate_refs: Vec<(usize, &[f64])> = candidates
             .iter()
             .map(|(id, series)| (*id, series.as_slice()))
@@ -745,10 +693,7 @@ mod tests {
 
         assert!(l1 > euclidean);
 
-        // Both should still be valid lower bounds
-        let config = MsmConfig::new(1.0);
-        let msm = config.distance(&x, &y);
-        assert!(l1 <= msm + EPSILON);
-        assert!(euclidean <= msm + EPSILON);
+        // This relation is only between the heuristics themselves; neither is
+        // used as a general correctness-preserving MSM pruning bound.
     }
 }

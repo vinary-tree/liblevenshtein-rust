@@ -3,13 +3,13 @@
 //! These tests verify:
 //! - MSM metric properties (symmetry, identity, triangle inequality)
 //! - Wavefront vs automaton implementation consistency
-//! - Lower bound validity (LB <= MSM)
+//! - Proven lower-bound validity plus heuristic counterexamples
 //! - Quantization/encoding correctness
 
 mod common;
 
 use liblevenshtein::time_series::{
-    combined_lb, euclidean_lb, length_lb, msm_distance_automaton, msm_distance_wavefront,
+    combined_lb, euclidean_lb, l1_lb, length_lb, msm_distance_automaton, msm_distance_wavefront,
     MsmConfig, QuantizationConfig,
 };
 use proptest::prelude::*;
@@ -199,36 +199,6 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(300))]
 
-    /// Euclidean lower bound: LB_euclidean(x, y) <= MSM(x, y)
-    #[test]
-    fn prop_euclidean_lb_valid(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
-    ) {
-        if x.is_empty() || y.is_empty() {
-            return Ok(());
-        }
-
-        let config = test_config();
-        let msm_dist = config.distance(&x, &y);
-        let lb = euclidean_lb(&x, &y);
-
-        prop_assert!(
-            lb <= msm_dist + 1e-9,
-            "Euclidean LB invalid: {} > MSM {}",
-            lb, msm_dist
-        );
-    }
-
-    // NOTE: L1 lower bound (l1_lb) is NOT a valid lower bound for MSM distance.
-    // MSM allows move/split/merge operations that can achieve distances lower than
-    // the element-wise L1 distance. The l1_lb function is provided for heuristic
-    // filtering but should not be used as a guaranteed lower bound.
-    //
-    // A proper lower bound for MSM would need to account for the cost structure
-    // of the move/split/merge operations. This is documented in the lower_bounds
-    // module for users to be aware of this limitation.
-
     /// Length-based lower bound: LB_length(x, y) <= MSM(x, y)
     #[test]
     fn prop_length_lb_valid(
@@ -250,28 +220,7 @@ proptest! {
         );
     }
 
-    /// Combined lower bound: LB_combined(x, y) <= MSM(x, y)
-    #[test]
-    fn prop_combined_lb_valid(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
-    ) {
-        if x.is_empty() || y.is_empty() {
-            return Ok(());
-        }
-
-        let config = test_config();
-        let msm_dist = config.distance(&x, &y);
-        let lb = combined_lb(&x, &y, TEST_C_CONST);
-
-        prop_assert!(
-            lb <= msm_dist + 1e-9,
-            "Combined LB invalid: {} > MSM {}",
-            lb, msm_dist
-        );
-    }
-
-    /// Lower bounds should be non-negative
+    /// Bound and heuristic scores should be non-negative
     #[test]
     fn prop_lb_non_negative(
         x in common::strategies::short_time_series_strategy(),
@@ -285,6 +234,19 @@ proptest! {
         prop_assert!(length_lb(&x, &y, TEST_C_CONST) >= 0.0, "Length LB negative");
         prop_assert!(combined_lb(&x, &y, TEST_C_CONST) >= 0.0, "Combined LB negative");
     }
+}
+
+#[test]
+fn euclidean_l1_and_combined_are_heuristics_not_general_lower_bounds() {
+    let config = test_config();
+    let x = vec![0.0, 100.0];
+    let y = vec![0.0, 0.0, 100.0];
+    let msm_dist = config.distance(&x, &y);
+
+    assert!((msm_dist - 1.0).abs() < 1e-9);
+    assert!(euclidean_lb(&x, &y) > msm_dist);
+    assert!(l1_lb(&x, &y) > msm_dist);
+    assert!(combined_lb(&x, &y, TEST_C_CONST) > msm_dist);
 }
 
 // ============================================================================

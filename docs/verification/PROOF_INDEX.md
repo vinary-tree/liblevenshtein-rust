@@ -1,7 +1,8 @@
 # Levenshtein Verification Proof Index
 
 **Generated:** 2025-12-01
-**Status:** ✅ All theorems proven with Qed - No Admitted lemmas in modular Core
+**Status:** Historical index. For current trusted scope and proof-gap status,
+use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 
 ## Quick Statistics
 

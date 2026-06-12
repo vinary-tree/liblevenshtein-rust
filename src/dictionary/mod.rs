@@ -30,7 +30,7 @@
 //! ## Quick Start
 //!
 //! - **General use**: [`DoubleArrayTrie`](libdictenstein::double_array_trie::DoubleArrayTrie)
-//! - **Unicode text**: [`DoubleArrayTrieChar`](libdictenstein::double_array_trie_char::DoubleArrayTrieChar)
+//! - **Unicode text**: [`DoubleArrayTrieChar`](libdictenstein::double_array_trie::char::DoubleArrayTrieChar)
 //! - **Insert + Remove**: [`DynamicDawg`](libdictenstein::dynamic_dawg::DynamicDawg)
 //! - **Substring search**: [`SuffixAutomaton`](libdictenstein::suffix_automaton::SuffixAutomaton)
 
@@ -61,21 +61,21 @@ pub use libdictenstein::double_array_trie;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::double_array_trie_char directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::double_array_trie::char directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::double_array_trie_char;
+pub use libdictenstein::double_array_trie::char as double_array_trie_char;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::double_array_trie_char_zipper directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::double_array_trie::char_zipper directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::double_array_trie_char_zipper;
+pub use libdictenstein::double_array_trie::char_zipper as double_array_trie_char_zipper;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::double_array_trie_zipper directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::double_array_trie::zipper directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::double_array_trie_zipper;
+pub use libdictenstein::double_array_trie::zipper as double_array_trie_zipper;
 
 #[deprecated(
     since = "0.9.0",
@@ -85,33 +85,33 @@ pub use libdictenstein::dynamic_dawg;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::dynamic_dawg_char directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::dynamic_dawg::char directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::dynamic_dawg_char;
+pub use libdictenstein::dynamic_dawg::char as dynamic_dawg_char;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::dynamic_dawg_char_zipper directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::dynamic_dawg::char_zipper directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::dynamic_dawg_char_zipper;
+pub use libdictenstein::dynamic_dawg::char_zipper as dynamic_dawg_char_zipper;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::dynamic_dawg_u64 directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::dynamic_dawg::u64 directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::dynamic_dawg_u64;
+pub use libdictenstein::dynamic_dawg::u64 as dynamic_dawg_u64;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::dynamic_dawg_u64_zipper directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::dynamic_dawg::u64_zipper directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::dynamic_dawg_u64_zipper;
+pub use libdictenstein::dynamic_dawg::u64_zipper as dynamic_dawg_u64_zipper;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::dynamic_dawg_zipper directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::dynamic_dawg::zipper directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::dynamic_dawg_zipper;
+pub use libdictenstein::dynamic_dawg::zipper as dynamic_dawg_zipper;
 
 #[deprecated(
     since = "0.9.0",
@@ -135,16 +135,16 @@ pub use libdictenstein::pathmap;
 #[cfg(feature = "pathmap-backend")]
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::pathmap_char directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::pathmap::char directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::pathmap_char;
+pub use libdictenstein::pathmap::char as pathmap_char;
 
 #[cfg(feature = "pathmap-backend")]
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::pathmap_zipper directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::pathmap::zipper directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::pathmap_zipper;
+pub use libdictenstein::pathmap::zipper as pathmap_zipper;
 
 #[cfg(feature = "persistent-artrie")]
 #[deprecated(
@@ -156,9 +156,9 @@ pub use libdictenstein::persistent_artrie;
 #[cfg(feature = "persistent-artrie")]
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::persistent_artrie_char directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::persistent_artrie::char directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::persistent_artrie_char;
+pub use libdictenstein::persistent_artrie::char as persistent_artrie_char;
 
 #[deprecated(
     since = "0.9.0",
@@ -174,9 +174,9 @@ pub use libdictenstein::scdawg;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::scdawg_char directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::scdawg::char directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::scdawg_char;
+pub use libdictenstein::scdawg::char as scdawg_char;
 
 #[deprecated(
     since = "0.9.0",
@@ -192,21 +192,21 @@ pub use libdictenstein::suffix_automaton;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::suffix_automaton_char directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::suffix_automaton::char directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::suffix_automaton_char;
+pub use libdictenstein::suffix_automaton::char as suffix_automaton_char;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::suffix_automaton_char_zipper directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::suffix_automaton::char_zipper directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::suffix_automaton_char_zipper;
+pub use libdictenstein::suffix_automaton::char_zipper as suffix_automaton_char_zipper;
 
 #[deprecated(
     since = "0.9.0",
-    note = "Use libdictenstein::suffix_automaton_zipper directly. This re-export will be removed in version 1.0."
+    note = "Use libdictenstein::suffix_automaton::zipper directly. This re-export will be removed in version 1.0."
 )]
-pub use libdictenstein::suffix_automaton_zipper;
+pub use libdictenstein::suffix_automaton::zipper as suffix_automaton_zipper;
 
 #[deprecated(
     since = "0.9.0",

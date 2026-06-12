@@ -207,7 +207,7 @@ impl OldPhoneticNormalizedDict {
 // NEW IMPLEMENTATION: FuzzyMultiMap
 // ============================================================================
 
-use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
 use liblevenshtein::cache::multimap::FuzzyMultiMap;
 use liblevenshtein::transducer::Algorithm;
 

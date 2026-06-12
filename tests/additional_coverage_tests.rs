@@ -306,7 +306,7 @@ mod time_series_encoding_coverage {
 
 mod time_series_lower_bounds_coverage {
     use liblevenshtein::time_series::{
-        combined_lb, euclidean_lb, l1_lb, length_lb, LowerBoundConfig, MsmConfig,
+        combined_lb, euclidean_lb, l1_lb, length_lb, LowerBoundConfig, LowerBoundType, MsmConfig,
     };
 
     #[test]
@@ -379,9 +379,9 @@ mod time_series_lower_bounds_coverage {
     }
 
     #[test]
-    fn test_combined_lb_vs_actual() {
-        let x = vec![1.0, 2.0, 3.0, 4.0];
-        let y = vec![1.5, 2.5, 3.5, 4.5];
+    fn test_combined_lb_is_heuristic_not_general_lower_bound() {
+        let x = vec![0.0, 100.0];
+        let y = vec![0.0, 0.0, 100.0];
         let c = 1.0;
 
         let lb = combined_lb(&x, &y, c);
@@ -389,8 +389,8 @@ mod time_series_lower_bounds_coverage {
         let actual = config.distance(&x, &y);
 
         assert!(
-            lb <= actual + 1e-9,
-            "Lower bound {} should not exceed actual distance {}",
+            lb > actual,
+            "Combined heuristic {} should exceed actual distance {} on this counterexample",
             lb,
             actual
         );
@@ -400,6 +400,7 @@ mod time_series_lower_bounds_coverage {
     fn test_lower_bound_config_new() {
         let config = LowerBoundConfig::new(1.0);
         assert_eq!(config.c, 1.0);
+        assert_eq!(config.bounds, LowerBoundType::LengthOnly);
     }
 
     #[test]
@@ -856,9 +857,9 @@ mod proptest_additional {
             x in prop::collection::vec(-50.0f64..50.0, 2..8),
             y in prop::collection::vec(-50.0f64..50.0, 2..8)
         ) {
-            // Euclidean lower bound should always be non-negative
+            // Euclidean heuristic should always be non-negative
             let lb = euclidean_lb(&x, &y);
-            prop_assert!(lb >= 0.0, "Euclidean lower bound should be non-negative, got {}", lb);
+            prop_assert!(lb >= 0.0, "Euclidean heuristic should be non-negative, got {}", lb);
         }
 
         #[test]

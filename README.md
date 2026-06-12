@@ -448,7 +448,7 @@ Cost(i, j) = min(
 
 where `splitmerge(a, b, c) = c` when `a` lies between `b` and `c`, else `c + min(∣a−b∣, ∣a−c∣)`.
 
-**`MsmTransducer`** indexes a set of reference series in a *quantized trie* and answers **exact** range and `k`-NN queries by walking that trie with an *interval-relaxed* MSM dynamic program. Its column lower bounds are admissible — so no true neighbor within the threshold is ever pruned — and surviving candidates are re-scored at full precision:
+**`MsmTransducer`** indexes a set of reference series in a *quantized trie* and answers **exact** range and `k`-NN queries. Non-empty queries walk the trie with an *interval-relaxed* MSM dynamic program; empty queries use the exact empty-series branch directly. Its column lower bounds are admissible — so no true neighbor within the threshold is ever pruned — and surviving candidates are re-scored at full precision:
 
 ```rust
 use liblevenshtein::time_series::{MsmConfig, MsmTransducer, QuantizationConfig};
@@ -716,6 +716,28 @@ Measured backend comparison — 10,000-word dictionary, AMD Ryzen Threadripper P
 
 For static dictionaries, `DoubleArrayTrie` is the clear leader (38–175× faster fuzzy matching than the alternatives here). Bloom-filter pre-filtering and runtime SIMD further accelerate the dynamic backends; methodology and more metrics are in [`docs/benchmarks/`](docs/benchmarks/README.md).
 
+### PathMap TrieRef rework (2026-06-11)
+
+The PathMap backend was rebuilt on pathmap's lock-free `TrieRef` node handles ([design](docs/design/pathmap-trieref-rework.md)): `root()` takes an `𝒪(1)` copy-on-write snapshot and traversal descends `𝒪(1)` per byte from the focus — no per-operation lock and no replay of the path from the root. Measured directly against the frozen pre-rework (path-replay) node, same bench (`backend_fuzzy_comparison`, `Standard`, `taskset -c 2`, sub-1% CIs):
+
+| `Standard` | old PathMap | **new PathMap** | speedup | new vs `DynamicDawg` |
+|------------|------------:|----------------:|--------:|---------------------:|
+| `k=1` | 4.77 ms | **3.17 ms** | 1.5× | 1.01× |
+| `k=2` | 45.7 ms | **28.8 ms** | 1.6× | 1.00× |
+
+The rework yields a **≈1.5–1.6× full-query speedup** and **closes the gap to `DynamicDawg` from ≈1.5× to ≈1.0×** — PathMap is now on par with the dynamic DAWG (`DoubleArrayTrie` stays the static-dictionary leader for read-only sets). Subtracting the backend-independent automaton floor (every backend shares the `Transducer`; `DoubleArrayTrie` ≈ floor), the node cost the rework *actually controls* drops **2.27×** (2.86 → 1.26 ms at `k=1`, now ≈ DynamicDawg's node); the full-query figure is that gain diluted by the ~1.9 ms shared floor.
+
+Node-level micro-benchmarks (`pathmap_node_ops_benchmark`, run on **both** trees for a direct pre/post) pin down *why*. The first pass used compression-degenerate inputs (a single `"a"`-chain that pathmap path-compresses, plus root-depth nodes) and read flat/below-threshold — so the experiments were rebuilt with **comb** structures (a branch at every level) that defeat compression and reach the depth regime the hypotheses target. There the old path-replay node is `𝒪(depth)` — it re-walks the path from the root, per operation and (for `edges()`) per child — while the TrieRef node is `𝒪(1)` from its focus:
+
+| node op (branching / deep) | old (path-replay) | new (TrieRef) | speedup |
+|----------------------------|------------------:|--------------:|--------:|
+| `transition()` @ depth 40 | 182 ns (`𝒪(depth)`) | 27 ns (`𝒪(1)`) | **6.7×** |
+| `edges()` @ depth 32, fanout 8 | 1632 ns (`𝒪(w·depth)`) | 185 ns (`𝒪(w)`) | **8.8×** |
+| char `edges()` @ depth 32, width 8 | 4.78 µs (`𝒪(w·depth)`) | 914 ns (`𝒪(w)`) | **5.2×** |
+| `root()` snapshot | 7.6 ns | 47 ns | 0.16× |
+
+The `root()` row is the rework's lone regression — an `𝒪(1)` copy-on-write snapshot taken once per query, the one-time price that makes every subsequent op lock-free (≪ 1 µs, < 0.01 % of a query). The two readings are complementary: on **compressed / shallow** structure the rework is a 1.4–2.4× constant-factor win (lock + per-op zipper re-creation removed); on **branching / deep** structure it is an unbounded `𝒪(depth)` win; a real dictionary is the blend that yields the 2.27× node-overhead reduction above. The rework also lets a caller fuzzy-query a borrowed or `𝒪(1)`-snapshotted `PathMap` (e.g. MORK's `Space.btm`) with no copy and no lock — see [`examples/mork_fuzzy_query.rs`](examples/mork_fuzzy_query.rs). Full ledger: [`docs/benchmarks/pathmap-trieref-rework.md`](docs/benchmarks/pathmap-trieref-rework.md).
+
 ---
 
 ## Formal Verification
@@ -726,10 +748,10 @@ Selected components carry machine-checked proofs (Coq/Rocq) and model-checked sp
 |-----------|----------|--------|
 | **MSM indexing** (interval cost, quantization & column lower bounds) | `docs/verification/msm/theories/Indexing/*.v` | **admit-free** Coq/Rocq |
 | **Articulatory distance** (metric & per-dimension monotonicity) | `docs/verification/articulatory/theories/*.v` | **admit-free** Coq/Rocq |
-| **WallBreaker piece counts** (*k+1* / *2k+1*) | `docs/verification/wallbreaker/.../WallBreakerPigeonhole.v` | proved; one `Nat.divmod` arithmetic helper admitted |
+| **WallBreaker piece counts** (*k+1* / *2k+1*) | `docs/verification/wallbreaker/.../WallBreakerPigeonhole.v` | **admit-free** Coq/Rocq |
 | **Query iterators, product automaton, online scanner, MSM trie search** | `docs/verification/tla/*.tla` (Subsumption, ValueYieldingQuery, PriorityQuery, ProductAutomaton, OnlineScanner, MsmTrieSearch) | TLC model-checked |
 
-See [`docs/formal-verification/README.md`](docs/formal-verification/README.md) for scope and methodology.
+See [`docs/verification/README_FORMAL_GATES.md`](docs/verification/README_FORMAL_GATES.md) for scope and methodology.
 
 ---
 

@@ -100,7 +100,7 @@ mod serialization_tests {
 
     #[test]
     fn test_dynamic_dawg_char_bincode_roundtrip() {
-        use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+        use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
 
         let terms = test_terms();
         let dict: DynamicDawgChar<()> = DynamicDawgChar::from_terms(terms.clone());
@@ -230,7 +230,7 @@ mod serialization_tests {
 
     #[test]
     fn test_dynamic_dawg_char_json_roundtrip() {
-        use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+        use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
 
         let terms = test_terms();
         let dict: DynamicDawgChar<()> = DynamicDawgChar::from_terms(terms.clone());

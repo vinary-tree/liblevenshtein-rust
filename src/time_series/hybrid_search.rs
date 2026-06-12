@@ -44,8 +44,8 @@ use std::collections::HashMap;
 /// # Architecture
 ///
 /// ```text
-/// Query → Quantize → Trie Search → Candidates → LB Prune → MSM Verify → Results
-///                      (fast)        (approx)     (fast)      (exact)
+/// Query → Quantize → Trie Search → Candidates → Bound/Heuristic → MSM Verify → Results
+///                      (fast)        (approx)        (fast)       (exact)
 /// ```
 ///
 /// # Performance Trade-offs
@@ -55,7 +55,7 @@ use std::collections::HashMap;
 /// | More bins | Fewer candidates | Better filtering |
 /// | Larger trie threshold | More candidates | Fewer missed results |
 /// | Smaller MSM threshold | Fewer final results | More selective |
-/// | Lower bound type | Varies | No effect (valid LB) |
+/// | Bound type | Varies | `LengthOnly` is safe; heuristic types can miss matches |
 #[derive(Debug)]
 pub struct HybridSearchIndex<V: DictionaryValue = usize> {
     /// Quantization-based trie index for candidate generation
@@ -71,10 +71,10 @@ pub struct HybridSearchIndex<V: DictionaryValue = usize> {
     /// trie_threshold = msm_threshold * trie_threshold_multiplier / bin_width
     trie_threshold_multiplier: f64,
 
-    /// Lower bound configuration for pruning
+    /// Lower-bound or heuristic configuration for pruning
     lb_config: LowerBoundConfig,
 
-    /// Whether to use lower bound pruning
+    /// Whether to use lower-bound or heuristic pruning
     use_lower_bounds: bool,
 }
 
@@ -108,36 +108,37 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
         self.trie_threshold_multiplier = multiplier;
     }
 
-    /// Enable or disable lower bound pruning.
+    /// Enable or disable lower-bound / heuristic pruning.
     ///
-    /// When enabled, candidates are filtered using lower bounds before
-    /// computing the expensive full MSM distance.
+    /// With the default `LengthOnly` bound this preserves exact verification of
+    /// the generated candidate set. Euclidean, L1, and Combined are heuristic
+    /// filters and may drop true MSM-near candidates.
     ///
     /// Default: enabled
     pub fn set_use_lower_bounds(&mut self, enable: bool) {
         self.use_lower_bounds = enable;
     }
 
-    /// Set the lower bound type to use for pruning.
+    /// Set the bound or heuristic type to use for pruning.
     ///
     /// # Options
     ///
-    /// - `LengthOnly`: Fastest, weakest pruning (O(1))
-    /// - `EuclideanOnly`: Medium speed and pruning (O(n))
-    /// - `L1Only`: Similar to Euclidean (O(n))
-    /// - `Combined`: Slowest but tightest pruning (O(n))
+    /// - `LengthOnly`: Fastest, correctness-preserving pruning (O(1))
+    /// - `EuclideanOnly`: Heuristic pruning (O(n), can miss true MSM matches)
+    /// - `L1Only`: Heuristic pruning (O(n), can miss true MSM matches)
+    /// - `Combined`: Heuristic pruning (O(n), can miss true MSM matches)
     ///
-    /// Default: `Combined`
+    /// Default: `LengthOnly`
     pub fn set_lower_bound_type(&mut self, lb_type: LowerBoundType) {
         self.lb_config.bounds = lb_type;
     }
 
-    /// Get the current lower bound configuration.
+    /// Get the current lower-bound / heuristic configuration.
     pub fn lower_bound_config(&self) -> &LowerBoundConfig {
         &self.lb_config
     }
 
-    /// Check if lower bound pruning is enabled.
+    /// Check if lower-bound / heuristic pruning is enabled.
     pub fn uses_lower_bounds(&self) -> bool {
         self.use_lower_bounds
     }
@@ -209,7 +210,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
     ///
     /// Pipeline:
     /// 1. Uses trie to find candidate series within approximate distance
-    /// 2. (Optional) Filters candidates using lower bounds
+    /// 2. (Optional) Filters candidates using the configured bound/heuristic
     /// 3. Computes exact MSM distance on remaining candidates
     /// 4. Returns only candidates within the exact threshold
     ///
@@ -227,17 +228,17 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
         let trie_threshold = self.compute_trie_threshold(msm_threshold);
         let candidates = self.trie_index.search(query, trie_threshold);
 
-        // Phase 2: Apply lower bound filtering (if enabled) and verify with MSM
+        // Phase 2: Apply configured prefiltering and verify with MSM.
         let mut results: Vec<(V, f64)> = candidates
             .into_iter()
             .filter_map(|(value, _approx_dist)| {
                 let original = self.originals.get(&value)?;
 
-                // Phase 2a: Lower bound pruning
+                // Phase 2a: Lower-bound / heuristic pruning.
                 if self.use_lower_bounds {
                     let lb = self.lb_config.lower_bound(query, original);
                     if lb > msm_threshold {
-                        return None; // Prune - LB exceeds threshold
+                        return None; // Prune - configured score exceeds threshold.
                     }
                 }
 
@@ -338,7 +339,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
                 None => continue,
             };
 
-            // Check lower bound if enabled
+            // Check bound / heuristic if enabled.
             if self.use_lower_bounds {
                 let lb = self.lb_config.lower_bound(query, original);
                 if lb > msm_threshold {
@@ -380,7 +381,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
         }
     }
 
-    /// Get detailed statistics including lower bound breakdown.
+    /// Get detailed statistics including prefilter breakdown.
     pub fn search_stats_detailed(
         &self,
         query: &[f64],
@@ -413,10 +414,10 @@ pub struct HybridSearchStats {
     /// Number of candidates from trie search
     pub num_candidates: usize,
 
-    /// Number of candidates pruned by lower bounds
+    /// Number of candidates pruned by the configured bound/heuristic
     pub pruned_by_lb: usize,
 
-    /// Number of candidates that passed lower bound filter
+    /// Number of candidates that passed the configured prefilter
     pub passed_lb: usize,
 
     /// Number of candidates that passed exact MSM threshold
@@ -425,10 +426,10 @@ pub struct HybridSearchStats {
     /// Trie pruning rate: 1 - (candidates / total)
     pub trie_pruning_rate: f64,
 
-    /// Lower bound pruning rate: pruned_by_lb / candidates
+    /// Bound/heuristic pruning rate: pruned_by_lb / candidates
     pub lb_pruning_rate: f64,
 
-    /// False positive rate after LB: (passed_lb - passed_exact) / passed_lb
+    /// False positive rate after bound/heuristic filtering
     pub false_positive_rate: f64,
 }
 
@@ -438,15 +439,19 @@ impl std::fmt::Display for HybridSearchStats {
         writeln!(f, "  Total series: {}", self.total_series)?;
         writeln!(f, "  Trie threshold: {}", self.trie_threshold)?;
         writeln!(f, "  Candidates from trie: {}", self.num_candidates)?;
-        writeln!(f, "  Pruned by lower bounds: {}", self.pruned_by_lb)?;
-        writeln!(f, "  Passed LB filter: {}", self.passed_lb)?;
+        writeln!(f, "  Pruned by configured prefilter: {}", self.pruned_by_lb)?;
+        writeln!(f, "  Passed configured prefilter: {}", self.passed_lb)?;
         writeln!(f, "  Passed exact MSM: {}", self.passed_exact)?;
         writeln!(
             f,
             "  Trie pruning rate: {:.1}%",
             self.trie_pruning_rate * 100.0
         )?;
-        writeln!(f, "  LB pruning rate: {:.1}%", self.lb_pruning_rate * 100.0)?;
+        writeln!(
+            f,
+            "  Configured prefilter pruning rate: {:.1}%",
+            self.lb_pruning_rate * 100.0
+        )?;
         writeln!(
             f,
             "  False positive rate: {:.1}%",
@@ -473,7 +478,7 @@ impl HybridSearchIndexBuilder {
             msm_config: None,
             trie_threshold_multiplier: 2.0,
             use_lower_bounds: true,
-            lb_type: LowerBoundType::Combined,
+            lb_type: LowerBoundType::LengthOnly,
         }
     }
 
@@ -507,13 +512,13 @@ impl HybridSearchIndexBuilder {
         self
     }
 
-    /// Enable or disable lower bound pruning.
+    /// Enable or disable lower-bound / heuristic pruning.
     pub fn use_lower_bounds(mut self, enable: bool) -> Self {
         self.use_lower_bounds = enable;
         self
     }
 
-    /// Set the lower bound type.
+    /// Set the bound or heuristic type.
     pub fn lower_bound_type(mut self, lb_type: LowerBoundType) -> Self {
         self.lb_type = lb_type;
         self
@@ -712,14 +717,14 @@ mod tests {
         index.insert(1usize, &[11.0, 21.0, 31.0]); // Close
         index.insert(2usize, &[50.0, 60.0, 70.0]); // Far
 
-        // Search with LB enabled (default)
+        // Search with safe lower-bound pruning enabled (default)
         let results_with_lb = index.search_exact(&[10.0, 20.0, 30.0], 5.0);
 
-        // Disable LB and search again
+        // Disable lower-bound pruning and search again
         index.set_use_lower_bounds(false);
         let results_without_lb = index.search_exact(&[10.0, 20.0, 30.0], 5.0);
 
-        // Results should be the same (LB doesn't change results, only pruning)
+        // Results should be the same for the safe default bound.
         assert_eq!(results_with_lb.len(), results_without_lb.len());
     }
 
@@ -729,15 +734,15 @@ mod tests {
         let msm_config = MsmConfig::new(1.0);
         let mut index: HybridSearchIndex<usize> = HybridSearchIndex::new(quant_config, msm_config);
 
-        // Default should be Combined
-        assert_eq!(index.lower_bound_config().bounds, LowerBoundType::Combined);
-
-        // Change to LengthOnly
-        index.set_lower_bound_type(LowerBoundType::LengthOnly);
+        // Default should be the correctness-preserving bound.
         assert_eq!(
             index.lower_bound_config().bounds,
             LowerBoundType::LengthOnly
         );
+
+        // Heuristic filters remain opt-in.
+        index.set_lower_bound_type(LowerBoundType::Combined);
+        assert_eq!(index.lower_bound_config().bounds, LowerBoundType::Combined);
     }
 
     #[test]

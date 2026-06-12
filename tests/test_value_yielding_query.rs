@@ -87,7 +87,7 @@ fn test_query_values_matches_query_plus_get_value() {
 #[cfg(feature = "pathmap-backend")]
 #[test]
 fn test_query_values_char_level_unicode() {
-    use libdictenstein::pathmap_char::PathMapDictionaryChar;
+    use libdictenstein::pathmap::char::PathMapDictionaryChar;
 
     let dict: PathMapDictionaryChar<u32> = PathMapDictionaryChar::from_terms_with_values(vec![
         ("café", 1u32),

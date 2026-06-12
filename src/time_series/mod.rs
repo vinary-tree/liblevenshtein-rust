@@ -92,33 +92,36 @@
 //! | Delta encoding | Variable | Bounded local variation |
 //! | SAX | Symbolic | Time series motifs |
 //!
-//! # Lower Bound Pruning
+//! # Lower-Bound and Heuristic Pruning
 //!
-//! For efficient search over large databases, lower bounds allow pruning
-//! candidates without computing the expensive full MSM distance:
+//! For efficient search over large databases, a proved lower bound can prune
+//! candidates without computing the expensive full MSM distance. Prefix
+//! Euclidean, L1, and Combined scores are also exported, but they are heuristics
+//! for MSM: split/merge paths can be cheaper than pointwise prefix matching.
 //!
 //! ```rust
 //! use liblevenshtein::time_series::{
-//!     MsmConfig, euclidean_lb, length_lb, combined_lb,
+//!     MsmConfig, length_lb, euclidean_lb,
 //! };
 //!
 //! let x = vec![1.0, 2.0, 3.0, 4.0];
 //! let y = vec![1.5, 2.5, 3.5, 4.5];
 //! let c = 1.0;
 //!
-//! // Fast lower bounds
-//! let lb_euclidean = euclidean_lb(&x, &y);
+//! // Correctness-preserving lower bound.
 //! let lb_length = length_lb(&x, &y, c);
-//! let lb_combined = combined_lb(&x, &y, c);
 //!
-//! // If lower bound exceeds threshold, skip expensive MSM computation
+//! // If the proved lower bound exceeds the threshold, skip exact MSM.
 //! let threshold = 2.0;
-//! if lb_combined > threshold {
-//!     println!("Pruned: LB {} > threshold {}", lb_combined, threshold);
+//! if lb_length > threshold {
+//!     println!("Pruned: LB {} > threshold {}", lb_length, threshold);
 //! } else {
 //!     let msm = MsmConfig::new(c).distance(&x, &y);
 //!     println!("MSM distance: {}", msm);
 //! }
+//!
+//! // Heuristic scores can be useful for approximate workflows.
+//! let _heuristic = euclidean_lb(&x, &y);
 //! ```
 //!
 //! # References

@@ -23,14 +23,19 @@ exhibits exactly this: at `tau = 100`, `HybridSearchIndex` returns `{0,1,3}` whi
 the exact set is `{0,1,2,3}`.
 
 `MsmTransducer::search_range(query, τ)` returns **exactly** `{ id : MSM(query,
-ref_id) ≤ τ }` — no false negatives and no false positives — by walking the trie
-with an MSM dynamic program evaluated on the per-element **bin intervals**, using
-admissible lower bounds for pruning and exact full-precision re-scoring at finals.
+ref_id) ≤ τ }` — no false negatives and no false positives. For non-empty
+queries it walks the trie with an MSM dynamic program evaluated on the
+per-element **bin intervals**, using admissible lower bounds for pruning and
+exact full-precision re-scoring at finals. Empty-query edge cases are handled
+directly by `MsmConfig::distance`: empty references are returned at distance 0,
+and non-empty references are excluded because the Rust MSM semantics give them
+infinite distance.
 
 ## 2. The MSM recurrence
 
-For query `x` (rows `i`, length `m`) and target `y` (columns `j`, length `n`),
-the MSM DP (Stefan et al. 2012; [`msm.rs`](../../../src/time_series/msm.rs)) is
+For non-empty query `x` (rows `i`, length `m`) and non-empty target `y` (columns
+`j`, length `n`), the MSM DP (Stefan et al. 2012;
+[`msm.rs`](../../../src/time_series/msm.rs)) is
 
 ```
 cost[i][j] = min{ cost[i-1][j-1] + |x_i − y_j|,            (Move)
@@ -109,8 +114,8 @@ exactness additionally certifies the bound is the tightest possible.
 
 ### TLA+ (`docs/verification/tla/MsmTrieSearch.tla`, TLC-checked)
 
-Models the trie walk over an abstracted finite distance/bound table. The Coq
-admissibility theorem is assumed as a table constraint
+Models the non-empty trie walk over an abstracted finite distance/bound table.
+The Coq admissibility theorem is assumed as a table constraint
 (`ASSUME AdmissibleTable` / `MonotoneDownEdges`); TLC verifies the *operational*
 consequences of the traversal: `NoFalsePositives`, `NoMissedMatches`,
 `PruneSound`, and `EventuallyTerminates`. Nondeterministic node order makes these
@@ -122,8 +127,9 @@ order-independent. `Model checking completed. No error has been found.`
   for each bound, `degenerate_bins_reproduce_scalar_dp`,
   `interval_column_lower_bounds_concrete`, `prop_range_exact`, `prop_knn_exact`.
 * Integration (`tests/msm_transducer_tests.rs`): public-API smoke, empty/single/
-  length-mismatch, `k > len`, threshold boundary, out-of-range (±∞ bins),
-  collisions, `transducer_is_exact_and_supersets_hybrid`, concurrent queries,
+  length-mismatch, empty-query/empty-reference semantics, `k > len`, threshold
+  boundary, out-of-range (±∞ bins), collisions,
+  `transducer_is_exact_and_supersets_hybrid`, concurrent queries,
   `prop_range_exact_with_outliers`.
 * `bin_bounds` soundness: `prop_bin_bounds_contains_quantized_value` in
   `encoding.rs` (Rust mirror of `quantize_in_bin_bounds`).
@@ -131,16 +137,16 @@ order-independent. `Model checking completed. No error has been found.`
 ## 6. Reproduce the proofs
 
 ```sh
-# Coq (capped per CLAUDE.md):
+# Coq:
 scripts/verify-formal.sh coq-file standard docs/verification/msm/theories/Indexing/IntervalCost.v
 scripts/verify-formal.sh coq-file standard docs/verification/msm/theories/Indexing/QuantizationBounds.v
 scripts/verify-formal.sh coq-file heavy    docs/verification/msm/theories/Indexing/IntervalColumn.v
-# whole MSM project:
-systemd-run --user --scope -p MemoryMax=126G -p CPUQuota=1800% -p IOWeight=40 -p TasksMax=200 make -C docs/verification/msm -j1
 # TLA+:
 scripts/verify-formal.sh tla        # discovers MsmTrieSearch.cfg
 # gates:
-scripts/verify-formal.sh trusted && scripts/verify-formal.sh audit-vacuous
+scripts/verify-formal.sh trusted
+scripts/verify-formal.sh coq-trusted
+scripts/verify-formal.sh audit-vacuous
 ```
 
 Loom is intentionally not used: the transducer is immutable after construction

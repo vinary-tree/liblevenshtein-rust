@@ -11,6 +11,8 @@ GAP_RE='^\s*(Axiom\s+|Admitted\.|admit\.|Parameter\s+|Conjecture\s+|Hypothesis\s
 ADMIT_RE='^\s*(Admitted\.|admit\.)'
 ASSUME_RE='^\s*(Axiom\s+|Parameter\s+|Conjecture\s+|Hypothesis\s+)'
 
+declare -A CLEANED_COQ_DIRS=()
+
 validate_rss_override() {
   [[ -z "${FORMAL_VERIFY_RSS_MB:-}" ]] && return
   if [[ ! "$FORMAL_VERIFY_RSS_MB" =~ ^[1-9][0-9]*$ ]]; then
@@ -686,12 +688,53 @@ check_trusted_assumptions() {
   return "$failed"
 }
 
+clean_coq_artifacts_under() {
+  local dir="$1"
+  [[ -d "$dir" ]] || return 0
+  find "$dir" -type f \( \
+    -name '*.vo' -o \
+    -name '*.vos' -o \
+    -name '*.vok' -o \
+    -name '*.glob' -o \
+    -name '.*.aux' -o \
+    -name '.lia.cache' -o \
+    -name '.nia.cache' -o \
+    -name '.nra.cache' -o \
+    -name 'Makefile.coq' -o \
+    -name 'Makefile.coq.conf' -o \
+    -name '.Makefile.coq.d' \
+  \) -delete
+}
+
+clean_coq_artifacts_once() {
+  local dir="$1"
+  [[ -z "${CLEANED_COQ_DIRS[$dir]:-}" ]] || return 0
+  clean_coq_artifacts_under "$dir"
+  CLEANED_COQ_DIRS["$dir"]=1
+}
+
+clean_trusted_coq_artifacts() {
+  clean_coq_artifacts_once "$ROOT/docs/verification/core/theories"
+  clean_coq_artifacts_once "$ROOT/docs/verification/articulatory/theories"
+  clean_coq_artifacts_once "$ROOT/docs/verification/wallbreaker"
+}
+
 coq_compile_trusted() {
   while IFS=$'\t' read -r profile rel; do
     [[ -z "$rel" ]] && continue
     echo "== Coq trusted compile [$profile]: $rel =="
     coq_compile_file "$profile" "$rel"
   done < <(trusted_entries)
+}
+
+coq_project_target() {
+  local profile="$1"
+  local project_dir="$2"
+  local coq_project="$3"
+  local target_v="$4"
+  local target_vo="${target_v%.v}.vo"
+  clean_coq_artifacts_once "$project_dir"
+  run_capped "$profile" bash -lc "cd '$project_dir' && coq_makefile -f '$coq_project' -o Makefile.coq >/dev/null && make -f Makefile.coq -j1 '$target_vo'"
 }
 
 coq_compile_file() {
@@ -716,7 +759,7 @@ coq_compile_file() {
       ;;
     docs/verification/msm/theories/*)
       local file="${rel#docs/verification/msm/}"
-      run_capped "$profile" bash -lc "cd '$ROOT/docs/verification/msm' && coqc -R theories Liblevenshtein.MSM '$file'"
+      coq_project_target "$profile" "$ROOT/docs/verification/msm" "_CoqProject" "$file"
       ;;
     docs/verification/phonetic/*)
       local file="${rel#docs/verification/phonetic/}"
@@ -797,6 +840,7 @@ case "$MODE" in
     check_trusted_assumptions
     check_trusted_contracts
     check_trusted_evidence
+    clean_trusted_coq_artifacts
     coq_compile_trusted
     ;;
   coq-file)

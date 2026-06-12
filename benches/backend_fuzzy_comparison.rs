@@ -17,6 +17,7 @@
 //!   cargo bench --bench backend_fuzzy_comparison -- --save-baseline backend-baseline
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::scdawg::Scdawg;
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::Algorithm;
@@ -227,6 +228,22 @@ fn bench_fuzzy_queries(c: &mut Criterion) {
                         let mut total = 0usize;
                         for q in &queries {
                             total += black_box(wallbreaker.query(q).count());
+                        }
+                        total
+                    })
+                });
+            }
+
+            // ============ PathMapDictionary + Transducer (TrieRef snapshot) ============
+            {
+                let pm = PathMapDictionary::<()>::from_terms(dict_words.iter().map(|s| s.as_str()));
+                let transducer = Transducer::new(pm, algorithm);
+
+                group.bench_function(BenchmarkId::new("PathMap", ""), |b| {
+                    b.iter(|| {
+                        let mut total = 0usize;
+                        for q in &queries {
+                            total += black_box(transducer.query(q, max_dist as usize).count());
                         }
                         total
                     })

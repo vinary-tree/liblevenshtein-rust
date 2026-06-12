@@ -360,8 +360,8 @@ where
 mod tests {
     use super::*;
     use crate::transducer::Algorithm;
+    use libdictenstein::pathmap::zipper::PathMapZipper;
     use libdictenstein::pathmap::PathMapDictionary;
-    use libdictenstein::pathmap_zipper::PathMapZipper;
 
     #[test]
     fn test_new_creates_root() {

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **MORK-style zero-plumbing fuzzy queries over a bare `PathMap`.**
+  `examples/mork_fuzzy_query.rs` runs a `Transducer` over libdictenstein's new
+  `PathMapSnapshot` / `PathMapRef` (borrowed, zero-copy) and a subtrie-scoped
+  `from_trie_ref` — no trie copy, no lock. `tests/pathmap_snapshot_tests.rs`
+  proves the **borrowed** dictionary drives the full query stack with no hidden
+  `'static` bound, plus transducer-level snapshot isolation and Unicode.
+- `benches/pathmap_node_ops_benchmark.rs` — node-op micro-benchmarks (transition
+  by depth, edges by fanout, root-snapshot cost, mixed-width char edges) plus
+  **comb/deep-node variants** (`transition_at_depth_branching`,
+  `edges_at_depth_branching`, `char_edges_at_depth`) that defeat pathmap's path
+  compression to measure the `𝒪(depth)→𝒪(1)` node behaviour directly against the
+  frozen pre-rework tree.
+
+### Changed
+
+- PathMap-backed dictionaries are now **lock-free over an `𝒪(1)` copy-on-write
+  snapshot** (libdictenstein's TrieRef rework): queries no longer re-walk the
+  path from the root under a per-operation lock. Existing `PathMapDictionary{,Char}`
+  usage is behaviorally identical; in-flight queries gain snapshot isolation.
+- libdictenstein reorganized its dictionary families into directory submodules;
+  the deprecated `liblevenshtein::dictionary::*` re-exports were repointed to the
+  new submodule paths (their names are unchanged).
+
+### Dependencies
+
+- `pathmap` requirement widened to `>=0.2.2, <0.4` (resolves to 0.2.2 on
+  crates.io; compiles against a local PathMap 0.3.0).
+
 ## [0.9.0] - 2026-06-10
 
 ### Removed

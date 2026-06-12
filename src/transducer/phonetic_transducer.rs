@@ -502,7 +502,7 @@ mod tests {
     use super::*;
     use crate::phonetic::nfa::compiler::compile;
     use crate::phonetic::regex::parse;
-    use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;
+    use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
 
     #[test]
     fn test_phonetic_candidate_ordering() {

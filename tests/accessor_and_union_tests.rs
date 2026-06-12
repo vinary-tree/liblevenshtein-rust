@@ -2,8 +2,8 @@
 
 #[cfg(feature = "pathmap-backend")]
 mod pathmap_tests {
+    use libdictenstein::pathmap::char::PathMapDictionaryChar;
     use libdictenstein::pathmap::PathMapDictionary;
-    use libdictenstein::pathmap_char::PathMapDictionaryChar;
     use libdictenstein::{Dictionary, MutableMappedDictionary};
     use liblevenshtein::contextual::{ContextId, DynamicContextualCompletionEngine};
     use liblevenshtein::transducer::{Algorithm, Transducer};
@@ -230,8 +230,8 @@ mod pathmap_tests {
 
 #[cfg(test)]
 mod dynamic_dawg_tests {
+    use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
     use libdictenstein::dynamic_dawg::DynamicDawg;
-    use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
     use libdictenstein::{Dictionary, MutableMappedDictionary};
 
     #[test]

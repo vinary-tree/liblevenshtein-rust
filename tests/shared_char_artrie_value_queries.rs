@@ -12,7 +12,7 @@
 //! exercise the unlocked queries over Unicode keys.
 
 use libdictenstein::artrie_trait::ARTrie;
-use libdictenstein::persistent_artrie_char::SharedCharARTrie;
+use libdictenstein::persistent_artrie::char::SharedCharARTrie;
 use libdictenstein::{MappedDictionary, MutableMappedDictionary};
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;

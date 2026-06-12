@@ -4,7 +4,7 @@
 //! at the character level (not byte level), providing correct Levenshtein distances
 //! for multi-byte UTF-8 sequences while supporting dynamic insert and remove operations.
 
-use libdictenstein::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
 use liblevenshtein::prelude::*;
 
 // ===== Basic Dictionary Operations =====

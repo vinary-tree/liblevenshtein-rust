@@ -157,8 +157,8 @@ where
 #[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
+    use libdictenstein::pathmap::zipper::PathMapZipper;
     use libdictenstein::pathmap::PathMapDictionary;
-    use libdictenstein::pathmap_zipper::PathMapZipper;
 
     #[test]
     fn test_exact_match() {

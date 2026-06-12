@@ -35,6 +35,7 @@ partial	standard	coq	docs/verification/llre/theories/_CoqProject	LLRE symbol exp
 partial	standard	coq	docs/verification/myers/theories/_CoqProject	Myers equivalence proof is still axiomatized
 partial	standard	coq	docs/verification/product/theories/_CoqProject	product automaton proof is still axiomatized
 partial	standard	coq	docs/verification/msm/_CoqProject	MSM metric and indexing proofs still use axioms
+trusted	standard	coq	docs/verification/msm/theories/Indexing/LowerBounds.v	model-local empty-side MSM lower bounds plus executable non-empty counterexamples showing broad L1/combined pruning is not sound; Rust one-empty semantics are covered by direct code/tests; no active assumptions
 trusted	standard	coq	docs/verification/msm/theories/Indexing/IntervalCost.v	interval-relaxed MSM per-element lower bounds (move/merge/split) over option-Q (+/-inf) bin endpoints; admissibility AND exactness (tightness) for all three bounds; no active assumptions
 trusted	standard	coq	docs/verification/msm/theories/Indexing/QuantizationBounds.v	executable uniform binning + bin_bounds; quantize_in_bin_bounds soundness (extreme bins -> unbounded option endpoints), replacing the former placeholder quantizer; no active assumptions
 trusted	heavy	coq	docs/verification/msm/theories/Indexing/IntervalColumn.v	interval-column admissibility (interval_cell <= msm_matrix_cell by i+j strong induction) + final and deeper-column pruning soundness (lb_prune_sound_msm, column_lb_le_deeper); no active assumptions

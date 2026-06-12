@@ -1,10 +1,17 @@
 # Formal Verification with Rocq
 
-This directory contains the Rocq (formerly Coq) formal verification of the liblevenshtein-rust fuzzy matching system, including phonetic transformations, regular expression matching, and structural context-free grammar operations.
+This directory contains the Rocq (formerly Coq) and TLA+ verification material
+for liblevenshtein-rust. It includes completed proof islands and older
+in-progress proof trees; use `FORMAL_VERIFICATION_MANIFEST.tsv` and
+`README_FORMAL_GATES.md` as the source of truth for which artifacts currently
+support public correctness claims.
 
 ## Overview
 
-We use Rocq to **prove correctness** of all core algorithms before implementation. Each Rust module has corresponding Rocq proofs, and QuickCheck property tests that mirror the proven theorems.
+Trusted files are gate-checked for active `Admitted.`, unallowlisted
+assumptions, stale contracts, and evidence links. Debug, legacy, and partial
+files are still audited, but they do not support library correctness claims
+until promoted in the manifest.
 
 ### Verification Workflow
 
@@ -16,8 +23,8 @@ We use Rocq to **prove correctness** of all core algorithms before implementatio
          │
          ▼
 ┌─────────────────┐
-│ 2. Prove        │  Prove all theorems
-│    Theorems     │  No Admitted allowed!
+│ 2. Prove        │  Prove trusted theorems
+│    Theorems     │  No Admitted in trusted scope
 └────────┬────────┘
          │
          ▼

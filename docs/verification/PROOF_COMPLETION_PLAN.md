@@ -480,9 +480,11 @@ and the legacy `rocq/` tree. Remediation:
   not overstated); the bit-vector correspondence `myers_HP_HN_correct` and the
   `True` word-size lemma are disabled with PENDING notes. General Myers
   equivalence (HP/HN encode the DP column deltas) is research-grade and remains.
-- **legacy `rocq/liblevenshtein/Operations.v`** — 3 flags remain, INTENTIONAL:
-  `has_match` is deliberately axiomatized (`:= True`) per an in-source design
-  note; left as advisory flags in the `legacy` tree.
+- **legacy `rocq/liblevenshtein/Operations.v`** — CLOSED:
+  `has_match` now unfolds to the abstract characteristic-vector predicate
+  (`cv i`), `characteristic_vector_correct` states that real lookup contract,
+  and `match_independent_of_budget` proves a non-vacuous budget-independence
+  fact for match applicability.
 
 Remaining genuine (research-grade) proof debt: general Myers bit-parallel
 equivalence; product edit-distance equivalence (core-model simulation); grammar

@@ -13,7 +13,8 @@ scripts/verify-formal.sh audit
 # Trusted-file gate: no Admitted. and no unallowlisted assumptions in trusted files.
 scripts/verify-formal.sh trusted
 
-# Build trusted Coq files through cgroup memory caps.
+# Build trusted Coq files through cgroup memory caps. Generated Coq artifacts
+# are cleaned first; MSM indexing targets are built through docs/verification/msm/_CoqProject.
 scripts/verify-formal.sh coq-trusted
 
 # Build one Coq file through a selected memory profile.

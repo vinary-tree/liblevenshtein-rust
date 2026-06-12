@@ -71,7 +71,7 @@ fn public_api_smoke_range_and_knn() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn empty_query_returns_empty() {
+fn empty_query_returns_empty_when_only_non_empty_references_exist() {
     let series = vec![vec![1.0, 2.0, 3.0]];
     let idx = MsmTransducer::from_series(
         QuantizationConfig::for_u8(0.0, 10.0),
@@ -80,6 +80,31 @@ fn empty_query_returns_empty() {
     );
     assert!(idx.search_range(&[], 100.0).is_empty());
     assert!(idx.search_knn(&[], 5, 1.0).is_empty());
+}
+
+#[test]
+fn empty_query_returns_empty_references_exactly() {
+    let series = vec![Vec::new(), vec![1.0, 2.0, 3.0], Vec::new()];
+    let idx = MsmTransducer::from_series(
+        QuantizationConfig::for_u8(0.0, 10.0),
+        MsmConfig::new(1.0),
+        &series,
+    );
+
+    let range = idx.search_range(&[], 0.0);
+    assert_eq!(ids(&range), HashSet::from([0, 2]));
+    assert!(range.iter().all(|(_, distance)| distance.abs() < EPS));
+
+    assert!(idx.search_range(&[], -2.0 * EPS).is_empty());
+
+    let knn_one = idx.search_knn(&[], 1, 1.0);
+    assert_eq!(knn_one.len(), 1);
+    assert!(matches!(knn_one[0].0, 0 | 2));
+    assert!(knn_one[0].1.abs() < EPS);
+
+    let knn_all = idx.search_knn(&[], 5, 1.0);
+    assert_eq!(ids(&knn_all), HashSet::from([0, 2]));
+    assert!(knn_all.iter().all(|(_, distance)| distance.abs() < EPS));
 }
 
 #[test]

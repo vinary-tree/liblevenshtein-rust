@@ -209,9 +209,8 @@ Qed.
     - Inductive case (S p'): Regardless of whether remainder > 0,
       we prepend one element and recurse with p' pieces.
 
-    The proof is technical due to Rocq's aggressive unfolding of
-    Nat.divmod. We admit it here as the main theorems about piece
-    counts are the focus of this verification. *)
+    The proof is intentionally small: after unfolding one constructor, both
+    modulo branches prepend one element and recurse on the remaining pieces. *)
 Lemma compute_piece_sizes_length : forall len num_pieces,
   length (compute_piece_sizes len num_pieces) = num_pieces.
 Proof.

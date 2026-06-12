@@ -145,8 +145,11 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
     /// false negatives and no false positives.
     pub fn search_range(&self, query: &[f64], tau: f64) -> Vec<(V, f64)> {
         let m = query.len();
-        if m == 0 || self.is_empty() {
+        if self.is_empty() {
             return Vec::new();
+        }
+        if m == 0 {
+            return self.search_empty_query(tau);
         }
         let root = self.dawg.root();
         let root_col = vec![f64::INFINITY; m + 1];
@@ -158,6 +161,23 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
         out.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
         let mut seen: HashMap<V, ()> = HashMap::with_capacity(out.len());
         out.retain(|(v, _)| seen.insert(v.clone(), ()).is_none());
+        out
+    }
+
+    fn search_empty_query(&self, tau: f64) -> Vec<(V, f64)> {
+        let mut out: Vec<(V, f64)> = self
+            .originals
+            .iter()
+            .filter_map(|(id, original)| {
+                let exact = self.msm.distance(&[], original);
+                if exact <= tau + COST_EPSILON {
+                    Some((id.clone(), exact))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        out.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
         out
     }
 
@@ -220,12 +240,15 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
     ///
     /// Layers exact [`Self::search_range`] with geometric threshold growth
     /// (the idiom used by [`super::HybridSearchIndex::search_knn`]): start at
-    /// `initial_threshold`, doubling until at least `k` exact matches are found
-    /// or the search space is exhausted. Because each range pass is exact, the
-    /// `k` returned are exactly the `k` smallest MSM distances.
+    /// `initial_threshold`, doubling until at least `k` finite exact matches
+    /// are found or the search space is exhausted. Because each range pass is
+    /// exact, the returned finite results are the smallest MSM distances.
     pub fn search_knn(&self, query: &[f64], k: usize, initial_threshold: f64) -> Vec<(V, f64)> {
-        if k == 0 || self.is_empty() || query.is_empty() {
+        if k == 0 || self.is_empty() {
             return Vec::new();
+        }
+        if query.is_empty() {
+            return self.search_empty_query(0.0).into_iter().take(k).collect();
         }
         let mut threshold = if initial_threshold > 0.0 {
             initial_threshold

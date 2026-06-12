@@ -25,7 +25,7 @@ libdictenstein = { path = "../libdictenstein", version = "0.1", features = ["par
 # NOTE: PathMap uses a git dependency and is NOT available when installing from crates.io
 # To use PathMap, build from source: cargo install --git <repo-url> --features pathmap-backend
 # pathmap = { git = "https://github.com/Adam-Vandervorst/PathMap.git", branch = "master", optional = true }
-pathmap = { version = "0.2", optional = true }
+pathmap = { version = ">=0.2.2, <0.4", optional = true }
 # SmallVec for stack-allocated vectors (performance optimization)
 smallvec = { version = "1.13", features = ["serde"] }
 # Arena allocation for PathNode (performance optimization)
@@ -502,3 +502,13 @@ required-features = ["phonetic-rules"]
 [[bench]]
 name = "workspace_indexing_benchmark"
 harness = false
+
+[[example]]
+name = "mork_fuzzy_query"
+required-features = ["pathmap-backend"]
+
+[[bench]]
+name = "pathmap_node_ops_benchmark"
+harness = false
+required-features = ["pathmap-backend"]
+
