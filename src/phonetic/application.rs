@@ -1,8 +1,10 @@
 //! Rule application for phonetic rewrite systems.
 //!
 //! This module implements the rule application logic for phonetic rewrite rules,
-//! directly translated from the Coq/Rocq verification in
-//! `docs/verification/phonetic/rewrite_rules.v`.
+//! with the core loop shape modeled in
+//! `docs/verification/phonetic/rewrite_rules.v`. The current implementation
+//! uses span-aware contexts and runtime extensions beyond the legacy proof
+//! subset.
 //!
 //! # Functions
 //!
@@ -12,14 +14,15 @@
 //!
 //! # Constants
 //!
-//! - [`MAX_EXPANSION_FACTOR`] - Maximum string expansion (from Theorem 2)
+//! - [`MAX_EXPANSION_FACTOR`] - Runtime per-application expansion guard
 //!
 //! # Formal Guarantees
 //!
-//! These functions implement algorithms with proven properties:
+//! The legacy Rocq model proves theorem-shaped properties for its modeled
+//! subset. The expanded Rust rule set is additionally checked by tests.
 //!
 //! - **Bounded Expansion** (Theorem 2, `zompist_rules.v:425`):
-//!   Output length ≤ input length + [`MAX_EXPANSION_FACTOR`]
+//!   Output length is bounded for modeled rules
 //!
 //! - **Termination** (Theorem 4, `zompist_rules.v:569`):
 //!   Sequential application always terminates with sufficient fuel
@@ -135,18 +138,19 @@ pub fn reset_perf_stats() {
     ALLOCATIONS.store(0, Ordering::Relaxed);
 }
 
-/// Maximum expansion factor for phonetic rewrite rules.
+/// Maximum per-application expansion allowance for phonetic rewrite rules.
 ///
-/// **Formal Specification**: Theorem 2, `docs/verification/phonetic/zompist_rules.v:425`
+/// **Legacy Formal Specification**: Theorem 2,
+/// `docs/verification/phonetic/zompist_rules.v:425`
 ///
 /// This constant bounds the maximum string growth from any single rule application.
-/// For all well-formed rules in the zompist rule set:
+/// Runtime tests assert that every current built-in Zompist rule stays within it:
 ///
 /// ```text
 /// length(output) ≤ length(input) + MAX_EXPANSION_FACTOR
 /// ```
 ///
-/// The value 20 is proven sufficient for all 56 zompist rules.
+/// The legacy Rocq theorem proves the analogous property for the modeled subset.
 pub const MAX_EXPANSION_FACTOR: usize = 20;
 
 /// Maximum total expansion allowed during normalization.
@@ -242,7 +246,8 @@ pub fn can_apply_at<U: PhoneticUnit>(rule: &RewriteRule<U>, s: &[Phone<U>], pos:
 
 /// Apply a rewrite rule at a specific position if possible.
 ///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:177-187`
+/// **Legacy Formal Specification**:
+/// `docs/verification/phonetic/rewrite_rules.v` (`apply_rule_at_span`)
 ///
 /// Attempts to apply a rule at the given position in the phonetic string.
 /// Returns `Some(new_string)` if the rule applies, `None` otherwise.
@@ -401,9 +406,11 @@ pub fn find_first_match_from<U: PhoneticUnit>(
 /// # Returns
 ///
 /// - `Some(result)` with the transformed string
-/// - `None` if fuel is exhausted (shouldn't happen with sufficient fuel)
+/// - `Some(current)` if fuel is exhausted before a fixed point is reached
 ///
 /// # Fuel Calculation
+///
+/// The legacy proof model uses this sufficient-fuel shape:
 ///
 /// Sufficient fuel is:
 /// ```text

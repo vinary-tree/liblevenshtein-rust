@@ -1025,7 +1025,10 @@ pub fn test_rules_char() -> Vec<RewriteRuleChar> {
     vec![rule_x_expand_char(), rule_y_to_z_char()]
 }
 
-/// Character-level complete rule set: all 62 rules
+/// Character-level complete runtime rule set: all 62 rules.
+///
+/// The legacy Rocq file defines a smaller closed-world set. This runtime
+/// aggregate is checked by Rust correspondence tests.
 ///
 /// Combined set of orthography + vowel digraph + phonetic + test rules.
 pub fn zompist_rules_char() -> Vec<RewriteRuleChar> {

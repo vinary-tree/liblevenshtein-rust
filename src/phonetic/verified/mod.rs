@@ -1,18 +1,19 @@
 //! Verified rules integration with NFA compilation.
 //!
-//! This module provides the bridge between Coq-verified phonetic rules
-//! (defined in `src/phonetic/rules.rs`) and NFA-based pattern matching.
+//! This module provides the bridge between phonetic rules and NFA-based pattern
+//! matching.
 //!
 //! # Design
 //!
 //! Rather than Coq→JSON→Rust code generation, we compile the existing Rust
-//! rules directly to NFA representation. The verification guarantee is:
+//! rules directly to NFA representation. The current verification boundary is:
 //!
 //! 1. Rust rules in `rules.rs` are the implementation
-//! 2. Coq proofs in `docs/verification/phonetic/zompist_rules.v` verify properties
-//! 3. NFA compilation preserves semantics (pattern matching behavior)
+//! 2. Rocq proofs in `docs/verification/phonetic/zompist_rules.v` verify
+//!    properties for the legacy modeled subset
+//! 3. Rust tests cover full 62-rule NFA compilation behavior
 //!
-//! # Properties Verified in Coq
+//! # Properties Verified in Rocq for the Legacy Subset
 //!
 //! - **Well-formedness**: Patterns are non-empty
 //! - **Bounded expansion**: Replacement length is bounded

@@ -1,8 +1,10 @@
 //! Phonetic rewrite rules for approximate string matching.
 //!
-//! This module implements verified phonetic transformation rules based on
-//! Zompist's English spelling rules, with formal correctness guarantees from
-//! Coq/Rocq proofs.
+//! This module implements phonetic transformation rules based on Zompist's
+//! English spelling rules. The legacy byte-level rewrite core has partial
+//! Rocq coverage in `docs/verification/phonetic/`; the current runtime also
+//! includes expanded rule sets, compound contexts, syllable conditions, and
+//! Unicode-oriented variants that are validated by Rust tests.
 //!
 //! # Rule Application Functions
 //!
@@ -18,18 +20,22 @@
 //!
 //! # Formal Verification
 //!
-//! All algorithms in this module are proven correct in Coq/Rocq. The proofs
-//! establish five critical properties:
+//! The authoritative verification status is
+//! `docs/verification/FORMAL_VERIFICATION_MANIFEST.tsv`. The phonetic proof
+//! tree is currently marked partial: it proves theorem-shaped properties for a
+//! legacy modeled subset, while Rust tests cover the expanded runtime API.
+//!
+//! The legacy proof model establishes these properties for its closed-world
+//! rule set:
 //!
 //! 1. **Well-formedness** (Theorem 1, `docs/verification/phonetic/zompist_rules.v:285`)
-//!    - All rules satisfy structural constraints
+//!    - Modeled rules satisfy structural constraints
 //!    - Pattern and replacement sequences are valid
 //!    - Context specifications are well-formed
 //!
 //! 2. **Bounded Expansion** (Theorem 2, `docs/verification/phonetic/zompist_rules.v:425`)
 //!    - String length growth is bounded by a constant factor
-//!    - Maximum expansion: `length(output) ≤ length(input) + 20`
-//!    - Prevents unbounded memory growth
+//!    - Prevents unbounded growth in the modeled subset
 //!
 //! 3. **Non-Confluence** (Theorem 3, `docs/verification/phonetic/zompist_rules.v:491`)
 //!    - Rule application order matters
@@ -37,11 +43,9 @@
 //!    - Sequential application is the canonical approach
 //!
 //! 4. **Termination** (Theorem 4, `docs/verification/phonetic/zompist_rules.v:569`)
-//!    - Sequential application always terminates
-//!    - No infinite rewrite loops
-//!    - Guaranteed to reach a fixed point
+//!    - Sequential application is fuel-bounded
 //!
-//! 5. **Idempotence** (Theorem 5, `docs/verification/phonetic/zompist_rules.v:615`)
+//! 5. **Fixed-point stability** (Theorem 5, `docs/verification/phonetic/zompist_rules.v:615`)
 //!    - Fixed points remain unchanged
 //!    - Applying rules to the output produces the same output
 //!    - Stable transformation semantics

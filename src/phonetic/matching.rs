@@ -1,7 +1,7 @@
 //! Pattern and context matching for phonetic rewrite rules.
 //!
 //! This module implements the matching logic for phonetic rewrite rules,
-//! directly translated from the Coq/Rocq verification in
+//! following the span-aware semantics documented in
 //! `docs/verification/phonetic/rewrite_rules.v`.
 //!
 //! # Generic Functions
@@ -20,7 +20,9 @@
 //!
 //! # Formal Specification
 //!
-//! All functions are direct translations of Coq functions with proven properties.
+//! The Rocq file contains a legacy single-position context model and an
+//! additive span-aware model for current Rust placement semantics. Compound
+//! contexts are a Rust extension covered by tests.
 
 use super::common::phonetic_unit::PhoneticUnit;
 use super::types::{Context, ContextChar, Phone, PhoneByte, PhoneChar};
@@ -31,7 +33,8 @@ use super::types::{Context, ContextChar, Phone, PhoneByte, PhoneChar};
 
 /// Check if a context is satisfied at a position in a phonetic string.
 ///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:117-157`
+/// **Formal Specification**:
+/// `docs/verification/phonetic/rewrite_rules.v` (`context_matches_at_span`)
 ///
 /// This is the generic implementation that works with any `PhoneticUnit` type.
 ///

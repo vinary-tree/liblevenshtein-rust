@@ -28,7 +28,7 @@ trusted	light	coq	docs/verification/articulatory/theories/FeatureDistanceWeighte
 trusted	standard	coq	docs/verification/wallbreaker/theories/Pigeonhole/WallBreakerPigeonhole.v	WallBreaker pigeonhole piece-count proofs
 partial	exceptional	coq	docs/verification/core/_CoqProject	core project contains Automaton, MergeSplit, and legacy proof debt
 partial	exceptional	coq	docs/verification/core/theories/_CoqProject	modular core project; automaton and merge/split gaps remain
-partial	exceptional	coq	docs/verification/phonetic/_CoqProject	phonetic project has legacy axioms and memory-heavy pattern proofs
+partial	exceptional	coq	docs/verification/phonetic/_CoqProject	phonetic project has legacy axioms, memory-heavy pattern proofs, and a legacy rule/context model that does not yet cover the full Rust 62-rule API
 partial	heavy	coq	docs/verification/grammar/_CoqProject	grammar proof layer is axiom-heavy
 partial	heavy	coq	docs/verification/grammar/theories/NFA/_CoqProject	grammar NFA soundness/completeness proof debt remains
 partial	standard	coq	docs/verification/llre/theories/_CoqProject	LLRE symbol expansion and Thompson construction use axioms

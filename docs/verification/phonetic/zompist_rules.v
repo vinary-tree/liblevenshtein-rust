@@ -1,10 +1,12 @@
 (** * Zompist English Spelling-to-Pronunciation Rules
 
-    Implementation of the 56 spelling rules from https://zompist.com/spell.html
+    Legacy proof model for a 13-rule subset of the Zompist-style English
+    spelling-to-pronunciation rules used by the Rust implementation.
 
     These rules transform English orthography to a phonetic representation.
-    The rules must be applied in order (1-56) as some rules depend on
-    transformations made by earlier rules.
+    The current Rust runtime contains a larger 62-rule set plus compound
+    contexts. This file proves properties only for the closed-world rule set
+    defined below.
 *)
 
 Require Import String List Ascii QArith Lia.
@@ -629,7 +631,7 @@ Qed.
 
 (** * Rule ID Uniqueness (Closed-World Proof) *)
 
-(** Complete list of all Zompist rules *)
+(** Complete list of all rules in this legacy proof model. *)
 Definition all_zompist_rules : list RewriteRule :=
   [ rule_ch_to_tsh; rule_sh_to_sh; rule_ph_to_f;
     rule_c_to_s_before_front; rule_c_to_k_elsewhere; rule_g_to_j_before_front;

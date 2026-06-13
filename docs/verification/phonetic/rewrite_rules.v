@@ -1,14 +1,22 @@
 (** * Verified Phonetic Rewrite Rules
 
     Formal specification and correctness proofs for phonetic rewrite rules,
-    specifically the zompist.com English spelling-to-pronunciation rules.
+    specifically the legacy zompist.com English spelling-to-pronunciation
+    rule subset.
 
-    This module proves:
+    This module proves properties for the model defined here:
     - Well-formedness of all rewrite rules
     - Bounded string expansion
     - Non-confluence (ordering matters)
     - Termination of sequential application
     - Idempotence (fixed point property)
+
+    The current Rust implementation has since grown additional rule
+    constructors, compound contexts, syllable conditions, and a larger runtime
+    rule set. The span-aware definitions below model the current Rust placement
+    semantics for this legacy Context subset; the broader Rust API is covered by
+    Rust tests until the phonetic proof tree is promoted from partial status in
+    FORMAL_VERIFICATION_MANIFEST.tsv.
 
     Reference: https://zompist.com/spell.html
 *)
@@ -75,7 +83,7 @@ Defined.
 (** A phonetic rewrite rule transforms a pattern to a replacement
     in a specific context, with an associated weight (cost). *)
 Record RewriteRule : Set := mkRule {
-  rule_id : nat;                    (** Unique identifier (1-56 for zompist) *)
+  rule_id : nat;                    (** Unique identifier within a rule set *)
   rule_name : string;               (** Human-readable name *)
   pattern : list Phone;             (** Input pattern to match *)
   replacement : list Phone;         (** Output pattern to produce *)
@@ -92,6 +100,7 @@ Definition PhoneticString := list Phone.
 
 (** ASCII constants for vowels *)
 Definition a_char : ascii := "097".  (* 'a' *)
+Definition c_char : ascii := "099".  (* 'c' *)
 Definition e_char : ascii := "101".  (* 'e' *)
 Definition i_char : ascii := "105".  (* 'i' *)
 Definition o_char : ascii := "111".  (* 'o' *)
@@ -231,7 +240,10 @@ Definition is_Some {A : Type} (o : option A) : bool :=
 
 (** * Context Matching *)
 
-(** Check if a context is satisfied at a position in a string *)
+(** Check if a context is satisfied at a position in a string.
+
+    This is the legacy single-position model used by the original proof tree:
+    before/final contexts inspect [pos] directly. *)
 Fixpoint context_matches (ctx : Context) (s : PhoneticString) (pos : nat) : bool :=
   match ctx with
   | Initial =>
@@ -274,6 +286,89 @@ Fixpoint context_matches (ctx : Context) (s : PhoneticString) (pos : nat) : bool
   | Anywhere => true
   end.
 
+(** Span-aware context matching used by the current Rust implementation.
+
+    Rust passes both the start of the matched pattern and its length:
+    - Initial/After* contexts inspect the match start.
+    - Final/Before* contexts inspect the end of the matched pattern.
+
+    This definition intentionally preserves the legacy [Context] constructors
+    above. Compound contexts and syllable conditions are runtime extensions not
+    yet represented in this Rocq model. *)
+Definition context_matches_at_span
+  (ctx : Context) (s : PhoneticString) (match_start pattern_len : nat) : bool :=
+  let match_end := (match_start + pattern_len)%nat in
+  match ctx with
+  | Initial =>
+      match match_start with
+      | O => true
+      | _ => false
+      end
+  | Final =>
+      (match_end =? length s)%nat
+  | BeforeVowel vowels =>
+      match nth_error s match_end with
+      | Some (Vowel v) => existsb (Ascii.eqb v) vowels
+      | _ => false
+      end
+  | AfterConsonant consonants =>
+      match match_start with
+      | O => false
+      | S pos' =>
+          match nth_error s pos' with
+          | Some (Consonant c) => existsb (Ascii.eqb c) consonants
+          | Some (Digraph c1 c2) => existsb (Ascii.eqb c1) consonants
+          | _ => false
+          end
+      end
+  | BeforeConsonant consonants =>
+      match nth_error s match_end with
+      | Some (Consonant c) => existsb (Ascii.eqb c) consonants
+      | Some (Digraph c1 c2) => existsb (Ascii.eqb c1) consonants
+      | _ => false
+      end
+  | AfterVowel vowels =>
+      match match_start with
+      | O => false
+      | S pos' =>
+          match nth_error s pos' with
+          | Some (Vowel v) => existsb (Ascii.eqb v) vowels
+          | _ => false
+          end
+      end
+  | Anywhere => true
+  end.
+
+(** Regression examples documenting the semantic difference between the legacy
+    single-position model and the current Rust span model. *)
+Example span_before_vowel_checks_pattern_end :
+  context_matches_at_span
+    (BeforeVowel [e_char])
+    [Consonant c_char; Vowel e_char]
+    0 1 = true.
+Proof. reflexivity. Qed.
+
+Example legacy_before_vowel_checks_start_position :
+  context_matches
+    (BeforeVowel [e_char])
+    [Consonant c_char; Vowel e_char]
+    0 = false.
+Proof. reflexivity. Qed.
+
+Example span_final_checks_pattern_end :
+  context_matches_at_span
+    Final
+    [Consonant c_char; Vowel e_char]
+    1 1 = true.
+Proof. reflexivity. Qed.
+
+Example legacy_final_checks_start_position :
+  context_matches
+    Final
+    [Consonant c_char; Vowel e_char]
+    1 = false.
+Proof. reflexivity. Qed.
+
 (** * Rule Application *)
 
 (** Check if a pattern matches at a position *)
@@ -295,6 +390,21 @@ Fixpoint pattern_matches_at (pat : list Phone) (s : PhoneticString) (pos : nat) 
 Definition apply_rule_at (r : RewriteRule) (s : PhoneticString) (pos : nat)
   : option PhoneticString :=
   if context_matches (context r) s pos then
+    if pattern_matches_at (pattern r) s pos then
+      let prefix := firstn pos s in
+      let suffix := skipn (pos + length (pattern r))%nat s in
+      Some (prefix ++ replacement r ++ suffix)
+    else
+      None
+  else
+    None.
+
+(** Span-aware rule application corresponding to current Rust [apply_rule_at]
+    for the legacy Context subset. Existing theorems keep using [apply_rule_at]
+    until they are migrated to the span-aware model. *)
+Definition apply_rule_at_span (r : RewriteRule) (s : PhoneticString) (pos : nat)
+  : option PhoneticString :=
+  if context_matches_at_span (context r) s pos (length (pattern r)) then
     if pattern_matches_at (pattern r) s pos then
       let prefix := firstn pos s in
       let suffix := skipn (pos + length (pattern r))%nat s in
@@ -366,7 +476,7 @@ Definition rules_commute (r1 r2 : RewriteRule) : Prop :=
     apply_rule_at r1 s2 pos1 = Some s2' ->
     s1' = s2'.
 
-(** Define maximum expansion factor based on zompist rules *)
+(** Define maximum expansion factor based on the legacy modeled rule subset. *)
 Definition max_expansion_factor : nat := 3.
 
 (** * Extraction *)
@@ -389,6 +499,8 @@ Extract Inductive Context => "Context.t"
 Recursive Extraction
   apply_rules_seq
   apply_rule_at
+  apply_rule_at_span
   find_first_match
   context_matches
+  context_matches_at_span
   pattern_matches_at.

@@ -1,8 +1,9 @@
 //! Concrete phonetic rewrite rule definitions.
 //!
 //! This module contains the actual rule definitions from the Zompist English
-//! spelling-to-pronunciation system, directly translated from the Coq/Rocq
-//! verification in `docs/verification/phonetic/zompist_rules.v`.
+//! spelling-to-pronunciation system. The legacy Rocq file
+//! `docs/verification/phonetic/zompist_rules.v` proves properties for a
+//! 13-rule subset; the current Rust aggregate contains 62 rules.
 //!
 //! # Rule Sets
 //!
@@ -34,10 +35,10 @@
 //!
 //! # Formal Specification
 //!
-//! All rules are proven well-formed in `docs/verification/phonetic/zompist_rules.v`:
-//! - Pattern is non-empty
-//! - Weight is non-negative
-//! - Bounded expansion property holds
+//! The first legacy subset is represented in
+//! `docs/verification/phonetic/zompist_rules.v`. Current aggregate rule-set
+//! invariants, including count, unique IDs, and expansion limits, are enforced
+//! by Rust tests.
 //!
 //! # Reference
 //!

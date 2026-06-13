@@ -1,8 +1,8 @@
-//! Property-based tests mirroring the 5 Coq theorems.
+//! Property-based tests and correspondence checks for phonetic rewrite rules.
 //!
-//! This module uses proptest to verify that the Rust implementation maintains
-//! the formal properties proven in Coq/Rocq. Each property test corresponds
-//! to one of the 5 theorems in `docs/verification/phonetic/zompist_rules.v`.
+//! The Rocq proof tree covers a legacy modeled subset. These tests keep the
+//! theorem-shaped properties executable against the current Rust runtime and
+//! add coverage for runtime extensions that are not yet modeled in Rocq.
 //!
 //! # Theorems Tested
 //!
@@ -15,9 +15,11 @@
 #[cfg(test)]
 mod tests {
     use super::super::application::{apply_rule_at, apply_rules_seq, MAX_EXPANSION_FACTOR};
+    use super::super::matching::context_matches;
     use super::super::rules::{orthography_rules, phonetic_rules, test_rules, zompist_rules};
     use super::super::types::{ContextByte, Phone, PhoneByte, RewriteRuleByte};
     use proptest::prelude::*;
+    use std::collections::HashSet;
 
     // ========================================================================
     // Proptest Generators
@@ -96,6 +98,111 @@ mod tests {
     /// Generate phonetic strings (sequences of phones)
     fn arb_phonetic_string() -> impl Strategy<Value = Vec<PhoneByte>> {
         prop::collection::vec(arb_phone(), 0..20)
+    }
+
+    // ========================================================================
+    // Current Runtime Correspondence
+    // ========================================================================
+
+    #[test]
+    fn test_current_zompist_runtime_shape() {
+        let rules = zompist_rules();
+        assert_eq!(rules.len(), 62, "current runtime aggregate changed size");
+
+        let mut ids = HashSet::with_capacity(rules.len());
+        for rule in &rules {
+            assert!(
+                ids.insert(rule.rule_id),
+                "duplicate rule ID {} ({})",
+                rule.rule_id,
+                rule.rule_name
+            );
+        }
+
+        assert!(
+            rules
+                .iter()
+                .any(|rule| matches!(&rule.context, ContextByte::And(_, _))),
+            "expected at least one compound context in the runtime rule set"
+        );
+    }
+
+    #[test]
+    fn test_current_zompist_rules_within_runtime_expansion_bound() {
+        for rule in zompist_rules() {
+            let expansion = rule.replacement.len().saturating_sub(rule.pattern.len());
+            assert!(
+                expansion <= MAX_EXPANSION_FACTOR,
+                "Rule {} expands by {} phones (max {})",
+                rule.rule_name,
+                expansion,
+                MAX_EXPANSION_FACTOR
+            );
+        }
+    }
+
+    #[test]
+    fn test_before_and_final_contexts_use_pattern_end() {
+        let s = vec![Phone::Consonant(b'c'), Phone::Vowel(b'e')];
+
+        assert!(context_matches(
+            &ContextByte::BeforeVowel(vec![b'e']),
+            &s,
+            0,
+            1
+        ));
+        assert!(!context_matches(
+            &ContextByte::BeforeVowel(vec![b'e']),
+            &s,
+            0,
+            0
+        ));
+
+        assert!(context_matches(&ContextByte::Final, &s, 1, 1));
+        assert!(!context_matches(&ContextByte::Final, &s, 1, 0));
+    }
+
+    #[test]
+    fn test_apply_rule_at_uses_span_aware_context() {
+        let rule = RewriteRuleByte {
+            rule_id: 900,
+            rule_name: "gh before o".to_string(),
+            pattern: vec![Phone::Consonant(b'g'), Phone::Consonant(b'h')],
+            replacement: vec![Phone::Consonant(b'g')],
+            context: ContextByte::BeforeVowel(vec![b'o']),
+            weight: 0.0,
+            syllable_condition: None,
+        };
+        let s = vec![
+            Phone::Consonant(b'g'),
+            Phone::Consonant(b'h'),
+            Phone::Vowel(b'o'),
+        ];
+
+        assert_eq!(
+            apply_rule_at(&rule, &s, 0),
+            Some(vec![Phone::Consonant(b'g'), Phone::Vowel(b'o')])
+        );
+    }
+
+    #[test]
+    fn test_compound_contexts_match_runtime_model() {
+        let s = vec![
+            Phone::Vowel(b'a'),
+            Phone::Consonant(b'x'),
+            Phone::Vowel(b'e'),
+        ];
+        let between_vowels = ContextByte::And(
+            Box::new(ContextByte::AfterVowel(vec![b'a'])),
+            Box::new(ContextByte::BeforeVowel(vec![b'e'])),
+        );
+
+        assert!(context_matches(&between_vowels, &s, 1, 1));
+        assert!(!context_matches(&between_vowels, &s, 0, 1));
+
+        let not_final = ContextByte::Not(Box::new(ContextByte::Final));
+        assert!(context_matches(&not_final, &s, 1, 1));
+        assert!(!context_matches(&not_final, &s, 2, 1));
     }
 
     // ========================================================================

@@ -13,8 +13,9 @@
 //! These are re-exported from `crate::phonetic::rules` so external call sites
 //! continue to resolve `crate::phonetic::rules::orthography_rules` etc.
 //!
-//! See `docs/verification/phonetic/zompist_rules.v` for the formal Coq/Rocq
-//! verification of the rules defined here.
+//! See `docs/verification/phonetic/zompist_rules.v` for the legacy Rocq proof
+//! model covering the original 13-rule subset. The full 62-rule runtime set is
+//! guarded by Rust tests.
 
 use crate::phonetic::types::{Context, Phone, RewriteRule, RewriteRuleByte};
 
@@ -978,7 +979,7 @@ fn rule_y_to_z() -> RewriteRuleByte {
 
 /// Orthography rules: exact transformations (weight=0.0)
 ///
-/// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:209-218`
+/// **Legacy Formal Subset**: `docs/verification/phonetic/zompist_rules.v:209-218`
 ///
 /// Contains all orthography rules for standard English transformations.
 /// Rules are ordered by priority - more specific patterns come first.
@@ -1081,7 +1082,8 @@ pub fn test_rules() -> Vec<RewriteRuleByte> {
 
 /// Complete Zompist rule set: all 62 rules
 ///
-/// **Formal Specification**: `docs/verification/phonetic/zompist_rules.v:234-235`
+/// The legacy Rocq file defines a smaller closed-world set. This runtime
+/// aggregate is checked by Rust correspondence tests.
 ///
 /// Combined set of orthography + vowel digraph + phonetic + test rules.
 pub fn zompist_rules() -> Vec<RewriteRuleByte> {

@@ -1,11 +1,18 @@
 # Rust Implementation Status
 
 **Date**: 2025-11-18
-**Status**: ✅ **ALL PHASES COMPLETE** (Implementation, Tests, Benchmarks, Integration)
+**Status**: Historical snapshot; not authoritative for current formal coverage.
+
+> Current status: use `FORMAL_VERIFICATION_MANIFEST.tsv` and
+> `README_FORMAL_GATES.md` as the source of truth. The phonetic Rocq tree is
+> partial and models a legacy subset; the current Rust runtime has 62 Zompist
+> rules plus compound contexts and other extensions covered by Rust tests.
 
 ## Summary
 
-Successfully implemented the phonetic rewrite rule system in Rust, directly translated from the Coq/Rocq formal verification. All algorithms are proven correct with 5 theorems (100% proven, zero Admitted).
+This document records the original phonetic Rust implementation milestone. Its
+older statements that all phonetic functionality is mathematically proven are no
+longer accurate for the current code base.
 
 ## Implementation Progress
 
@@ -259,6 +266,10 @@ Performance profiling for:
 
 ## Traceability Matrix
 
+This matrix is historical. Current Rust types and matching logic extend the
+legacy Rocq definitions; the full 62-rule aggregate is not the same closed-world
+set as `zompist_rule_set` in `zompist_rules.v`.
+
 | Coq Definition | Rust Implementation | Test Coverage |
 |----------------|---------------------|---------------|
 | `Phone` (rewrite_rules.v:25-29) | `types::Phone` | ✅ types::tests |
@@ -271,7 +282,7 @@ Performance profiling for:
 | `apply_rules_seq` (rewrite_rules.v:203-227) | `application::apply_rules_seq` | ✅ application::tests |
 | `orthography_rules` (zompist_rules.v:209-218) | `rules::orthography_rules` | ✅ rules::tests |
 | `phonetic_rules` (zompist_rules.v:221-225) | `rules::phonetic_rules` | ✅ rules::tests |
-| `zompist_rule_set` (zompist_rules.v:234-235) | `rules::zompist_rules` | ✅ rules::tests |
+| `zompist_rule_set` (legacy subset, zompist_rules.v:234-235) | represented within the runtime aggregate | ✅ rules/properties tests |
 
 ## Design Decisions
 
@@ -376,15 +387,14 @@ Total: ~1,931 lines, 73 tests, 100% passing
 
 ## Conclusion
 
-Successfully implemented a **mathematically verified** phonetic rewrite rule system in Rust, with:
+Historical milestone: the original phonetic rewrite implementation landed with
+Rocq-backed proof islands and Rust tests. Current status is more nuanced:
 
-- ✅ **100% proven correct** (5 Coq theorems with Qed)
-- ✅ **100% test coverage** (87 tests passing: 73 unit + 14 property)
-- ✅ **Complete traceability** (every function → Coq definition)
-- ✅ **Dual u8/char support** (following codebase patterns, equivalent performance)
-- ✅ **Comprehensive documentation** (formal specification references)
-- ✅ **Performance benchmarked** (sub-microsecond to low-microsecond, production ready)
-- ✅ **README integration** (feature fully documented and discoverable)
+- The phonetic formal tree remains partial in `FORMAL_VERIFICATION_MANIFEST.tsv`.
+- Rocq covers a legacy modeled subset and now documents the span-aware context
+  semantics needed by current Rust.
+- Rust tests cover the current 62-rule aggregate, unique IDs, expansion bounds,
+  span-aware contexts, and compound contexts.
 
 The implementation is **production-ready** for integration with the Levenshtein automaton fuzzy matching system, with excellent performance characteristics (sub-microsecond rule application, ~1 µs for complete orthography transformation).
 

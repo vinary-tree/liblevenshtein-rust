@@ -2,14 +2,19 @@
 
 **Total Documentation**: 2,900+ lines
 **Last Updated**: 2025-11-18
-**Phase**: 1 - Phonetic Rewrite Rules ✅ **COMPLETE**
+**Phase**: Historical snapshot; see `FORMAL_VERIFICATION_MANIFEST.tsv` for
+current trusted/partial/legacy status.
+
+> The phonetic proof tree is partial. It contains useful proof islands for a
+> legacy modeled subset, but it does not yet cover the full current Rust
+> phonetic API or 62-rule runtime aggregate.
 
 ## Quick Navigation
 
 ### 📚 Start Here
 - **New to this project?** → Read [README.md](README.md) first
 - **Want the full design?** → Read [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Need current status?** → Check [PROGRESS.md](PROGRESS.md)
+- **Need current status?** → Check [README_FORMAL_GATES.md](README_FORMAL_GATES.md)
 - **Want a summary?** → See [SUMMARY.md](SUMMARY.md)
 
 ### 🔬 Formal Proofs

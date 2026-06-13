@@ -2,7 +2,12 @@
 
 **Last Updated**: 2025-01-18
 **Phase**: 1 - Phonetic Rewrite Rules
-**Status**: 🟡 In Progress (Week 1)
+**Status**: Historical snapshot; see `FORMAL_VERIFICATION_MANIFEST.tsv` for
+current trusted/partial/legacy status.
+
+> The phonetic proof tree is currently partial. It contains useful proof islands
+> for a legacy modeled subset, but it does not yet cover the full current Rust
+> phonetic API or 62-rule runtime aggregate.
 
 ## Overview
 

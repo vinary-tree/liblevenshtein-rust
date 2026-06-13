@@ -1,7 +1,7 @@
 //! Type definitions for phonetic rewrite rules.
 //!
 //! This module provides the core types for representing phonetic rewrite rules,
-//! directly translated from the Coq/Rocq verification in
+//! extending the legacy Rocq model in
 //! `docs/verification/phonetic/rewrite_rules.v`.
 //!
 //! # Generic Types
@@ -24,7 +24,9 @@
 //!
 //! # Formal Specification
 //!
-//! These types are direct translations of the Coq definitions:
+//! The legacy proof model defines the smaller subset shown below. The Rust
+//! runtime extends it with longer phone variants, compound contexts, and
+//! optional syllable conditions:
 //!
 //! ```coq
 //! Inductive Phone : Type :=
@@ -66,7 +68,7 @@ use super::common::syllable::SyllableExpr;
 
 /// A phonetic unit representing a single sound.
 ///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:30-34`
+/// **Legacy Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:30-34`
 ///
 /// This type is generic over the character unit type `U: PhoneticUnit`,
 /// enabling both byte-level (`u8`) and character-level (`char`) representations.
@@ -274,7 +276,7 @@ impl<U: PhoneticUnit> std::fmt::Display for Phone<U> {
 
 /// Context specification for when a rule applies.
 ///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:48-55`
+/// **Legacy Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:48-55`
 ///
 /// This type is generic over the character unit type `U: PhoneticUnit`,
 /// enabling both byte-level (`u8`) and character-level (`char`) representations.
@@ -406,7 +408,7 @@ impl<U: PhoneticUnit> std::fmt::Display for Context<U> {
 
 /// A phonetic rewrite rule.
 ///
-/// **Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:62-68`
+/// **Legacy Formal Specification**: `docs/verification/phonetic/rewrite_rules.v:62-68`
 ///
 /// Represents a transformation from a pattern of phones to a replacement
 /// sequence, applicable in a specific context.
@@ -426,9 +428,10 @@ impl<U: PhoneticUnit> std::fmt::Display for Context<U> {
 ///
 /// # Formal Properties
 ///
-/// Well-formed rules satisfy (Theorem 1, `zompist_rules.v:285`):
+/// In the legacy proof subset, well-formed rules satisfy
+/// (Theorem 1, `zompist_rules.v:285`):
 /// - Pattern is non-empty: `pattern.len() > 0`
-/// - Replacement is bounded: `replacement.len() <= pattern.len() + MAX_EXPANSION_FACTOR`
+/// - Weight is non-negative
 ///
 /// # Examples
 ///
