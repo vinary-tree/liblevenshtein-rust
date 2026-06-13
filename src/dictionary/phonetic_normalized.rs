@@ -344,7 +344,7 @@ where
                 &normalized,
                 HashSet::from([term_string.clone()]),
                 |set| {
-                    set.insert(term_string);
+                    set.insert(term_string.clone());
                 },
             );
         }
@@ -354,7 +354,7 @@ where
 
     fn update_or_insert<F>(&self, term: &str, default_value: Self::Value, update_fn: F) -> bool
     where
-        F: FnOnce(&mut Self::Value),
+        F: Fn(&mut Self::Value),
     {
         // Check if this is a new term
         let existed = self.originals.get_value(term).is_some();
@@ -373,7 +373,7 @@ where
                 &normalized,
                 HashSet::from([term_string.clone()]),
                 |set| {
-                    set.insert(term_string);
+                    set.insert(term_string.clone());
                 },
             );
         }
@@ -397,7 +397,7 @@ where
                 &normalized,
                 HashSet::from([term.clone()]),
                 |set| {
-                    set.insert(term);
+                    set.insert(term.clone());
                 },
             );
         }
@@ -502,7 +502,7 @@ where
                 &normalized,
                 HashSet::from([term_string.clone()]),
                 |set| {
-                    set.insert(term_string);
+                    set.insert(term_string.clone());
                 },
             );
         }
@@ -537,7 +537,7 @@ where
                 &normalized,
                 HashSet::from([term_string.clone()]),
                 |set| {
-                    set.insert(term_string);
+                    set.insert(term_string.clone());
                 },
             );
         }

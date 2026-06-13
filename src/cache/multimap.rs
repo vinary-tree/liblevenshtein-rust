@@ -477,7 +477,7 @@ where
     /// ```
     pub fn update_or_insert<F>(&self, term: &str, default_value: C, update_fn: F) -> bool
     where
-        F: FnOnce(&mut C),
+        F: Fn(&mut C),
     {
         self.dictionary
             .update_or_insert(term, default_value, update_fn)
