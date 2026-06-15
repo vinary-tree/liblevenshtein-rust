@@ -53,6 +53,9 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Pin dictionary crates to crates.io
+        uses: ./.github/actions/pin-siblings-cratesio
+
       - name: Register Tesseract Repository (Linux)
         if: runner.os == 'Linux'
         run: sudo add-apt-repository ppa:alex-p/tesseract-ocr5
@@ -147,6 +150,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Pin dictionary crates to crates.io
+        uses: ./.github/actions/pin-siblings-cratesio
+
       - name: Download Linux x86_64 build
         uses: actions/download-artifact@v4
         with:
@@ -237,6 +243,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Pin dictionary crates to crates.io
+        uses: ./.github/actions/pin-siblings-cratesio
 
       - name: Download Linux x86_64 build
         uses: actions/download-artifact@v4
@@ -485,6 +494,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Pin dictionary crates to crates.io
+        uses: ./.github/actions/pin-siblings-cratesio
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1

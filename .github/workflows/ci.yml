@@ -35,6 +35,9 @@ jobs:
       with:
         fetch-depth: 1
 
+    - name: Checkout dev sibling crates
+      uses: ./.github/actions/checkout-dev-siblings
+
     - name: Register Tesseract Repository (Linux)
       if: runner.os == 'Linux'
       run: sudo add-apt-repository ppa:alex-p/tesseract-ocr5
@@ -202,6 +205,9 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 1
+
+    - name: Checkout dev sibling crates
+      uses: ./.github/actions/checkout-dev-siblings
 
     - name: Install protobuf compiler
       run: sudo apt-get update && sudo apt-get install -y protobuf-compiler

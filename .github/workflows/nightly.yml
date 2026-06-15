@@ -39,6 +39,9 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Checkout dev sibling crates
+        uses: ./.github/actions/checkout-dev-siblings
+
       - name: Register Tesseract Repository (Linux)
         if: runner.os == 'Linux'
         run: sudo add-apt-repository ppa:alex-p/tesseract-ocr5
@@ -170,6 +173,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Checkout dev sibling crates
+        uses: ./.github/actions/checkout-dev-siblings
+
       - name: Register Tesseract Repository (Linux)
         if: runner.os == 'Linux'
         run: sudo add-apt-repository ppa:alex-p/tesseract-ocr5
@@ -229,6 +235,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Checkout dev sibling crates
+        uses: ./.github/actions/checkout-dev-siblings
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
