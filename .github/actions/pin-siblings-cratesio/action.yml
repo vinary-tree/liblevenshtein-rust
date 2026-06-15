@@ -1,0 +1,34 @@
+name: Pin dictionary crates to crates.io
+description: >
+  Drop the development-only local `path` override from the `libdictenstein`
+  dependency so production builds and packaging resolve it — and transitively
+  `llattice` — from the published crates.io versions via the `version = "0.1"`
+  requirement. For release / production workflows only; development and CI use
+  the sibling checkouts instead (see the `checkout-dev-siblings` action).
+
+runs:
+  using: composite
+  steps:
+    - name: Strip dev-only path override from libdictenstein dependency
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - <<'PY'
+        import pathlib
+
+        manifest = pathlib.Path("Cargo.toml")
+        before = manifest.read_text()
+        after = before.replace(
+            'libdictenstein = { path = "../libdictenstein", version = "0.1"',
+            'libdictenstein = { version = "0.1"',
+        )
+        if after == before:
+            raise SystemExit(
+                "ERROR: expected the dev `path` override on the libdictenstein "
+                "dependency, but it was not found. The manifest form changed — "
+                "update .github/actions/pin-siblings-cratesio/action.yml."
+            )
+        manifest.write_text(after)
+        PY
+        echo "libdictenstein dependency now resolves from crates.io:"
+        grep -n 'libdictenstein =' Cargo.toml
