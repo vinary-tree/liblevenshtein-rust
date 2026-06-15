@@ -8,7 +8,6 @@
 use libdictenstein::zipper::DictZipper;
 use libdictenstein::Dictionary;
 use liblevenshtein::prelude::*;
-use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tempfile::TempDir;
@@ -36,9 +35,12 @@ fn create_test_dict(terms: &[&str]) -> PersistentARTrie<()> {
     dict
 }
 
-/// Wrap a PersistentARTrie in a shared wrapper for zipper creation
-fn wrap_dict(dict: PersistentARTrie<()>) -> Arc<RwLock<PersistentARTrie<()>>> {
-    Arc::new(RwLock::new(dict))
+/// Wrap a PersistentARTrie in a shared handle (`SharedARTrie<()>`) for zipper
+/// creation. The RwLock is now internal to `PersistentARTrie` (transparent
+/// `.read()`/`.write()` guards), so the shared handle is a plain
+/// `Arc<PersistentARTrie<()>>`.
+fn wrap_dict(dict: PersistentARTrie<()>) -> Arc<PersistentARTrie<()>> {
+    Arc::new(dict)
 }
 
 // ============================================================================
