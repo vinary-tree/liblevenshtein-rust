@@ -506,7 +506,20 @@ jobs:
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --verbose --allow-dirty
+        run: |
+          set -o pipefail
+          # Idempotent publish: re-running a release (e.g. rebuilding packages for
+          # an already-published version) must not fail. If `cargo publish` fails
+          # solely because this version is already on crates.io, treat it as
+          # success; any other failure is a real error.
+          if cargo publish --verbose --allow-dirty 2>&1 | tee /tmp/cargo-publish.log; then
+            echo "✅ Published to crates.io."
+          elif grep -qiE 'already (uploaded|exists)' /tmp/cargo-publish.log; then
+            echo "ℹ️  This version is already on crates.io — treating as success (idempotent re-release)."
+          else
+            echo "❌ cargo publish failed for a reason other than an already-published version." >&2
+            exit 1
+          fi
 
   test-crates-io:
     name: Test crates.io package
