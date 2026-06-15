@@ -526,6 +526,11 @@ jobs:
     needs: publish-crates-io
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    env:
+      # gxhash (pulled in via pathmap-backend) requires AES + SSE2 intrinsics.
+      # `cargo install` from crates.io does not see the repo's .cargo/config.toml,
+      # so set the baseline x86_64 features here (ubuntu-latest is x86_64).
+      RUSTFLAGS: "-C target-feature=+aes,+sse2"
     steps:
       - name: Wait for crates.io to update
         run: |
