@@ -28,6 +28,7 @@ fn make_rule(pattern: &str, replacement: &str, context: ContextChar) -> RewriteR
         replacement: replacement.chars().map(char_to_phone).collect(),
         context,
         weight: 1.0,
+        syllable_condition: None,
     }
 }
 

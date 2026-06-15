@@ -8,7 +8,7 @@
 //! - Query fusion (both drafts and finalized)
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use liblevenshtein::contextual::ContextualCompletionEngine;
+use liblevenshtein::contextual::DynamicContextualCompletionEngine as ContextualCompletionEngine;
 use liblevenshtein::transducer::Algorithm;
 
 /// Benchmark character-level insertion into draft buffers

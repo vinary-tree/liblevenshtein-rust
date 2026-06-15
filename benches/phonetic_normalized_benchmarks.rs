@@ -11,7 +11,7 @@
 //! Used as the baseline for scientific optimization of the PhoneticNormalizedDictionary.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use libdictenstein::phonetic_normalized::PhoneticNormalizedDictionary;
+use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
 use libdictenstein::Dictionary;
 
 // ============================================================================

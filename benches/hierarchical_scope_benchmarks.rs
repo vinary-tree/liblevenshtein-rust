@@ -186,9 +186,16 @@ fn approach2_bitmask(
 // ============================================================================
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialization", derive(serde::Serialize, serde::Deserialize))]
 enum HybridScopeData {
     Mask(u64),         // For scopes 0-63
     Set(HashSet<u32>), // For overflow or when >64 scopes exist
+}
+
+impl Default for HybridScopeData {
+    fn default() -> Self {
+        HybridScopeData::Mask(0)
+    }
 }
 
 // Implement DictionaryValue trait for HybridScopeData

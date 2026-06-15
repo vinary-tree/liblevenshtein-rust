@@ -222,7 +222,7 @@ impl NewPhoneticNormalizedDict {
 
         for (original, normalized) in pairs {
             dict.update_or_insert(&normalized, HashSet::from([original.clone()]), |set| {
-                set.insert(original);
+                set.insert(original.clone());
             });
         }
 
