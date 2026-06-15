@@ -101,6 +101,12 @@ jobs:
         env:
           RUSTFLAGS: ${{ matrix.platform.rustflags }}
         run: |
+          # Compile-check benches first: the `| tee` below masks a `cargo bench`
+          # compile failure (tee exits 0), so a stale bench would silently pass.
+          # `--no-run` fails the step on a compile error; its artifacts are reused.
+          echo "::group::Compiling benchmarks"
+          cargo bench --all-features --target ${{ matrix.platform.target }} --no-run
+          echo "::endgroup::"
           echo "::group::Running benchmarks"
           cargo bench --all-features --target ${{ matrix.platform.target }} --no-fail-fast -- --output-format bencher | tee benchmark-results.txt
           echo "::endgroup::"

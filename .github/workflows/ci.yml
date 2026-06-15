@@ -221,6 +221,12 @@ jobs:
 
     - name: Run benchmarks
       run: |
+        # Compile-check benches first: the `| tee` below masks a `cargo bench`
+        # compile failure (tee exits 0), so a stale bench would silently pass CI.
+        # `--no-run` fails the step on a compile error; its artifacts are reused.
+        echo "::group::Compiling benchmarks"
+        cargo bench --all-features --target x86_64-unknown-linux-gnu --no-run
+        echo "::endgroup::"
         echo "::group::Running benchmarks"
         cargo bench --all-features --target x86_64-unknown-linux-gnu --no-fail-fast -- --output-format bencher | tee output.txt
         echo "::endgroup::"
