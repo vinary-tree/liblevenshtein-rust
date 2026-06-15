@@ -577,20 +577,28 @@ jobs:
 
       - name: Create test project
         run: |
-          # Create a new cargo project to test library usage
+          # New cargo project exercising downstream usage of the published crates.
+          # Dictionaries come from libdictenstein (their canonical home); the fuzzy
+          # Transducer/query comes from liblevenshtein.
           cargo new --lib test-liblevenshtein
           cd test-liblevenshtein
 
-          # Add liblevenshtein as dependency
-          cat >> Cargo.toml <<EOF
+          # Overwrite the generated manifest (cargo new already emits an empty
+          # [dependencies] table; appending another would duplicate the key).
+          cat > Cargo.toml <<EOF
+          [package]
+          name = "test-liblevenshtein"
+          version = "0.1.0"
+          edition = "2021"
 
           [dependencies]
           liblevenshtein = "${{ steps.version.outputs.version }}"
+          libdictenstein = "0.2"
           EOF
 
-          # Create a test file
           cat > src/lib.rs <<'EOF'
-          use liblevenshtein::prelude::*;
+          use libdictenstein::double_array_trie::{DoubleArrayTrie, DoubleArrayTrieChar};
+          use liblevenshtein::prelude::{Algorithm, Transducer};
 
           #[test]
           fn test_basic_usage() {
@@ -629,7 +637,8 @@ jobs:
         run: |
           cd test-liblevenshtein
 
-          # Update Cargo.toml to include serialization
+          # Serialization lives in liblevenshtein (it re-exports libdictenstein's);
+          # the dictionary itself comes from libdictenstein.
           cat > Cargo.toml <<EOF
           [package]
           name = "test-liblevenshtein"
@@ -638,12 +647,13 @@ jobs:
 
           [dependencies]
           liblevenshtein = { version = "${{ steps.version.outputs.version }}", features = ["serialization"] }
+          libdictenstein = "0.2"
           EOF
 
           # Test serialization
           cat > src/lib.rs <<'EOF'
-          use liblevenshtein::prelude::*;
-          use liblevenshtein::serialization::{DictionarySerializer, Format};
+          use libdictenstein::double_array_trie::DoubleArrayTrie;
+          use liblevenshtein::serialization::{BincodeSerializer, DictionarySerializer};
 
           #[test]
           fn test_serialization() {
@@ -651,13 +661,12 @@ jobs:
 
               // Serialize to bytes
               let mut buffer = Vec::new();
-              dict.serialize(&mut buffer, Format::Bincode).unwrap();
+              BincodeSerializer::serialize(&dict, &mut buffer).unwrap();
 
               assert!(!buffer.is_empty(), "Should serialize to non-empty buffer");
 
               // Deserialize
-              let loaded: DoubleArrayTrie =
-                  DoubleArrayTrie::deserialize(&buffer[..], Format::Bincode).unwrap();
+              let loaded: DoubleArrayTrie = BincodeSerializer::deserialize(&buffer[..]).unwrap();
 
               assert_eq!(loaded.len(), Some(2), "Should have 2 terms after deserialization");
           }

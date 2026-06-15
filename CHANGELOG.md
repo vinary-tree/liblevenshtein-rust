@@ -7,8 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-06-15
+
 ### Added
 
+- **UTF-8 dictionary types now re-exported from the prelude.**
+  `DoubleArrayTrieChar`, `DynamicDawgChar`, and `SuffixAutomatonChar` are now
+  reachable via `liblevenshtein::prelude` (previously only their ASCII
+  counterparts and `ScdawgChar` were), closing a gap where the UTF-8 dictionaries
+  were unreachable through liblevenshtein's public surface.
 - **MORK-style zero-plumbing fuzzy queries over a bare `PathMap`.**
   `examples/mork_fuzzy_query.rs` runs a `Transducer` over libdictenstein's new
   `PathMapSnapshot` / `PathMapRef` (borrowed, zero-copy) and a subtrie-scoped
@@ -31,9 +38,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - libdictenstein reorganized its dictionary families into directory submodules;
   the deprecated `liblevenshtein::dictionary::*` re-exports were repointed to the
   new submodule paths (their names are unchanged).
+- **Deprecated liblevenshtein's `libdictenstein` re-exports** in the prelude
+  (the dictionary types, the `Dictionary` traits, and the `factory`/`substring`
+  re-exports). Import these from `libdictenstein` directly; the convenience
+  re-exports remain available but will be removed in a future release.
+- **CI/release dependency resolution split by workflow.** Development/CI builds
+  clone the in-development sibling crates (`llattice`, `libdictenstein`) so the
+  `path` dependencies resolve against dev versions; release builds, packaging,
+  and the crates.io publish resolve them from their published versions. The
+  crates.io publish step is now idempotent on re-release.
 
 ### Dependencies
 
+- **`libdictenstein` requirement bumped `0.1` → `0.2`** — its dictionary-family
+  submodule reorg is a breaking module-path change, published as libdictenstein
+  0.2.0.
 - `pathmap` requirement widened to `>=0.2.2, <0.4` (resolves to 0.2.2 on
   crates.io; compiles against a local PathMap 0.3.0).
 

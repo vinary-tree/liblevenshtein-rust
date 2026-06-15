@@ -175,14 +175,51 @@ pub mod prelude {
     pub use crate::transducer::{
         Algorithm, Candidate, QueryBuilder, Transducer, TransducerBuilder,
     };
-    pub use libdictenstein::double_array_trie::DoubleArrayTrie;
-    pub use libdictenstein::dynamic_dawg::DynamicDawg;
+    // ----------------------------------------------------------------------
+    // Legacy dictionary re-exports (deprecated since 0.9.1).
+    //
+    // The dictionary data structures live in the `libdictenstein` crate. These
+    // re-exports are a backwards-compatibility convenience; depend on
+    // `libdictenstein` directly and import each type from its canonical module
+    // (named in the deprecation notes below). They will be removed in a future
+    // release.
+    // ----------------------------------------------------------------------
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein::double_array_trie` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
+    pub use libdictenstein::double_array_trie::{DoubleArrayTrie, DoubleArrayTrieChar};
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein::dynamic_dawg` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
+    pub use libdictenstein::dynamic_dawg::{DynamicDawg, DynamicDawgChar};
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein::factory` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
     pub use libdictenstein::factory::{DictionaryBackend, DictionaryContainer, DictionaryFactory};
     #[cfg(feature = "pathmap-backend")]
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein::pathmap` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
     pub use libdictenstein::pathmap::PathMapDictionary;
     #[cfg(feature = "persistent-artrie")]
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein::persistent_artrie` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
     pub use libdictenstein::persistent_artrie::{PersistentARTrie, PersistentARTrieZipper};
-    pub use libdictenstein::suffix_automaton::SuffixAutomaton;
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein::suffix_automaton` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
+    pub use libdictenstein::suffix_automaton::{SuffixAutomaton, SuffixAutomatonChar};
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
     pub use libdictenstein::{Dictionary, DictionaryNode, SyncStrategy};
 
     #[cfg(feature = "serialization")]
@@ -217,8 +254,15 @@ pub mod prelude {
     pub use crate::wallbreaker::{
         PatternPiece, PatternSplitter, WallBreaker, WallBreakerQuery, WallBreakerResult,
     };
-    pub use libdictenstein::scdawg::char::ScdawgChar;
-    pub use libdictenstein::scdawg::Scdawg;
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein::scdawg` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
+    pub use libdictenstein::scdawg::{char::ScdawgChar, Scdawg};
+    #[deprecated(
+        since = "0.9.1",
+        note = "import from `libdictenstein::substring` instead; liblevenshtein's dictionary re-exports are deprecated and will be removed"
+    )]
     pub use libdictenstein::substring::{
         BidirectionalDictionaryNode, SubstringDictionary, SubstringMatch,
     };
