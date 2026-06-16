@@ -96,70 +96,18 @@ jobs:
           cargo test --all-features --target ${{ matrix.platform.target }} --verbose -- --nocapture
           echo "::endgroup::"
 
-      - name: Run benchmarks
+      - name: Compile-check benchmarks
         if: runner.os == 'Linux'
         env:
           RUSTFLAGS: ${{ matrix.platform.rustflags }}
-        run: |
-          # Compile-check benches first: the `| tee` below masks a `cargo bench`
-          # compile failure (tee exits 0), so a stale bench would silently pass.
-          # `--no-run` fails the step on a compile error; its artifacts are reused.
-          echo "::group::Compiling benchmarks"
-          cargo bench --all-features --target ${{ matrix.platform.target }} --no-run
-          echo "::endgroup::"
-          echo "::group::Running benchmarks"
-          cargo bench --all-features --target ${{ matrix.platform.target }} --no-fail-fast -- --output-format bencher | tee benchmark-results.txt
-          echo "::endgroup::"
+        # Build every bench target (dev profile, no LTO) to catch bench rot.
+        # The full statistical `cargo bench` run is release+LTO over ~50 benches
+        # and takes hours (far beyond this job's timeout), so it is intentionally
+        # not run in CI; perf measurement is done deliberately and CPU-pinned
+        # locally (see the project's benchmarking methodology).
+        run: cargo build --benches --all-features --target ${{ matrix.platform.target }}
 
-      - name: Parse and format benchmark results
-        if: runner.os == 'Linux'
-        run: |
-          echo "## Benchmark Results - ${{ matrix.platform.name }}" > benchmark-summary.md
-          echo "" >> benchmark-summary.md
-          echo "| Benchmark | Time | Throughput |" >> benchmark-summary.md
-          echo "|-----------|------|------------|" >> benchmark-summary.md
-
-          # Parse bencher output format: test name ... bench: <time> ns/iter (+/- <variance>)
-          grep "bench:" benchmark-results.txt | while read -r line; do
-            # Extract benchmark name (everything before '...') and trim whitespace
-            name=$(echo "$line" | sed 's/test \(.*\) \.\.\..*/\1/' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
-            # Extract time and unit
-            time=$(echo "$line" | grep -oP '[\d,]+ ns/iter' | head -1)
-
-            # Calculate throughput if available
-            if [[ "$time" =~ ([0-9,]+) ]]; then
-              ns="${BASH_REMATCH[1]//,/}"
-              if [ "$ns" -gt 0 ]; then
-                ops_per_sec=$(( 1000000000 / ns ))
-                # Format with thousand separators
-                throughput=$(printf "%'d ops/s" $ops_per_sec)
-              else
-                throughput="-"
-              fi
-            else
-              throughput="-"
-            fi
-
-            echo "| \`$name\` | $time | $throughput |" >> benchmark-summary.md
-          done
-
-          echo "" >> benchmark-summary.md
-          echo "**Note:** Benchmarks are run on GitHub Actions runners and may vary." >> benchmark-summary.md
-          echo "" >> benchmark-summary.md
-          echo "Full results available in artifacts." >> benchmark-summary.md
-
-      - name: Upload benchmark results
-        if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-benchmarks-${{ matrix.platform.name }}
-          path: |
-            benchmark-results.txt
-            benchmark-summary.md
-          retention-days: 30
-
-      - name: Check for performance regressions
+      - name: Report nightly failure
         if: runner.os == 'Linux' && failure()
         uses: actions/github-script@v7
         with:

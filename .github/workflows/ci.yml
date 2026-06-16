@@ -224,63 +224,13 @@ jobs:
         target: x86_64-unknown-linux-gnu
         components: rustfmt, clippy
 
-    - name: Run benchmarks
-      run: |
-        # Compile-check benches first: the `| tee` below masks a `cargo bench`
-        # compile failure (tee exits 0), so a stale bench would silently pass CI.
-        # `--no-run` fails the step on a compile error; its artifacts are reused.
-        echo "::group::Compiling benchmarks"
-        cargo bench --all-features --target x86_64-unknown-linux-gnu --no-run
-        echo "::endgroup::"
-        echo "::group::Running benchmarks"
-        cargo bench --all-features --target x86_64-unknown-linux-gnu --no-fail-fast -- --output-format bencher | tee output.txt
-        echo "::endgroup::"
-
-    - name: Parse and format benchmark results
-      run: |
-        echo "## Benchmark Results" > benchmark-summary.md
-        echo "" >> benchmark-summary.md
-        echo "| Benchmark | Time | Throughput |" >> benchmark-summary.md
-        echo "|-----------|------|------------|" >> benchmark-summary.md
-
-        # Parse bencher output format: test name ... bench: <time> ns/iter (+/- <variance>)
-        grep "bench:" output.txt | while read -r line; do
-          # Extract benchmark name (everything before '...') and trim whitespace
-          name=$(echo "$line" | sed 's/test \(.*\) \.\.\..*/\1/' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
-          # Extract time and unit
-          time=$(echo "$line" | grep -oP '[\d,]+ ns/iter' | head -1)
-
-          # Calculate throughput if available
-          if [[ "$time" =~ ([0-9,]+) ]]; then
-            ns="${BASH_REMATCH[1]//,/}"
-            if [ "$ns" -gt 0 ]; then
-              ops_per_sec=$(( 1000000000 / ns ))
-              # Format with thousand separators
-              throughput=$(printf "%'d ops/s" $ops_per_sec)
-            else
-              throughput="-"
-            fi
-          else
-            throughput="-"
-          fi
-
-          echo "| \`$name\` | $time | $throughput |" >> benchmark-summary.md
-        done
-
-        echo "" >> benchmark-summary.md
-        echo "**Note:** Benchmarks are run on GitHub Actions runners and may vary." >> benchmark-summary.md
-        echo "" >> benchmark-summary.md
-        echo "Full results available in artifacts." >> benchmark-summary.md
-
-    - name: Upload benchmark results
-      uses: actions/upload-artifact@v4
-      with:
-        name: benchmark-results
-        path: |
-          output.txt
-          benchmark-summary.md
-        retention-days: 30
+    - name: Compile-check benchmarks
+      # Build every bench target (dev profile, no LTO) to catch bench rot against
+      # the current API — fast (minutes). The full statistical `cargo bench` run
+      # is release+LTO over ~50 benches and takes hours, so it is intentionally
+      # NOT run in CI; perf measurement is done deliberately and CPU-pinned
+      # locally (see the project's benchmarking methodology).
+      run: cargo build --benches --all-features --target x86_64-unknown-linux-gnu
 
   test-report:
     name: Test Report Summary
