@@ -1,9 +1,12 @@
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::prelude::{Algorithm, Transducer};
 use std::alloc::{GlobalAlloc, Layout, System};
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
+use std::fs::File;
 use std::hint::black_box;
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
@@ -16,8 +19,6 @@ use liblevenshtein::phonetic::language::rules_for_language;
 use liblevenshtein::phonetic::llev::{load_file_with_includes, parse_str, RuleSetChar};
 #[cfg(feature = "phonetic-rules")]
 use liblevenshtein::phonetic::types::{PhoneChar, RewriteRuleChar};
-#[cfg(feature = "phonetic-rules")]
-use std::collections::{HashMap, HashSet};
 
 struct CountingAllocator;
 
@@ -52,6 +53,9 @@ struct Options {
     warmups: usize,
     workload: Workload,
     birkbeck_dir: Option<PathBuf>,
+    mitton_corpus_paths: Vec<PathBuf>,
+    text_corpus_paths: Vec<PathBuf>,
+    openslr_lexicon_paths: Vec<PathBuf>,
     cmudict_path: Option<PathBuf>,
     corpus_limit: usize,
     max_distance: usize,
@@ -71,6 +75,9 @@ enum Workload {
     LevOrdered,
     PhoneticNormalized,
     BirkbeckFawthrop,
+    MittonSpelling,
+    TextCorpusLev,
+    OpenSlrLexicon,
     CmudictPhonetic,
     CmudictPhoneticDiagnostic,
     PhoneticTargetedRules,
@@ -131,6 +138,9 @@ impl Options {
             warmups: 3,
             workload: Workload::All,
             birkbeck_dir: None,
+            mitton_corpus_paths: Vec::new(),
+            text_corpus_paths: Vec::new(),
+            openslr_lexicon_paths: Vec::new(),
             cmudict_path: None,
             corpus_limit: 512,
             max_distance: 2,
@@ -166,17 +176,32 @@ impl Options {
                         "lev-ordered" => Workload::LevOrdered,
                         "phonetic-normalized" => Workload::PhoneticNormalized,
                         "birkbeck-fawthrop" => Workload::BirkbeckFawthrop,
+                        "mitton-spelling" => Workload::MittonSpelling,
+                        "text-corpus-lev" | "pizza-chili-text" => Workload::TextCorpusLev,
+                        "openslr-lexicon" | "wfst-lexicon" => Workload::OpenSlrLexicon,
                         "cmudict-phonetic" => Workload::CmudictPhonetic,
                         "cmudict-phonetic-diagnostic" => Workload::CmudictPhoneticDiagnostic,
                         "phonetic-targeted-rules" => Workload::PhoneticTargetedRules,
                         other => panic!(
-                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, phonetic-normalized, birkbeck-fawthrop, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
+                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, phonetic-normalized, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
                         ),
                     };
                 }
                 "--birkbeck-dir" => {
                     let value = args.next().expect("--birkbeck-dir requires a path");
                     opts.birkbeck_dir = Some(PathBuf::from(value));
+                }
+                "--mitton-corpus" => {
+                    let value = args.next().expect("--mitton-corpus requires a path");
+                    opts.mitton_corpus_paths.push(PathBuf::from(value));
+                }
+                "--text-corpus" => {
+                    let value = args.next().expect("--text-corpus requires a path");
+                    opts.text_corpus_paths.push(PathBuf::from(value));
+                }
+                "--openslr-lexicon" | "--wfst-lexicon" => {
+                    let value = args.next().expect("--openslr-lexicon requires a path");
+                    opts.openslr_lexicon_paths.push(PathBuf::from(value));
                 }
                 "--cmudict" => {
                     let value = args.next().expect("--cmudict requires a path");
@@ -241,7 +266,7 @@ impl Options {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|phonetic-normalized|birkbeck-fawthrop|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
+                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|phonetic-normalized|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
                     );
                     std::process::exit(0);
                 }
@@ -506,6 +531,321 @@ fn run_birkbeck_fawthrop(
             case_index,
         }
     });
+}
+
+fn read_mitton_pairs(path: &Path, out: &mut Vec<SpellingCase>) {
+    let file = File::open(path)
+        .unwrap_or_else(|err| panic!("failed to open Mitton corpus {}: {err}", path.display()));
+    let reader = BufReader::new(file);
+    let mut current_correct = None;
+
+    for line in reader.lines() {
+        let line = line
+            .unwrap_or_else(|err| panic!("failed to read Mitton corpus {}: {err}", path.display()));
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if let Some(correct) = trimmed.strip_prefix('$') {
+            current_correct = normalize_ascii_word(correct);
+            continue;
+        }
+
+        let Some(correct) = current_correct.as_ref() else {
+            continue;
+        };
+        let Some(misspelling) = trimmed
+            .split_whitespace()
+            .next()
+            .and_then(normalize_ascii_word)
+        else {
+            continue;
+        };
+        if correct != &misspelling {
+            out.push(SpellingCase {
+                correct: correct.clone(),
+                misspelling,
+            });
+        }
+    }
+}
+
+fn load_mitton_spelling(paths: &[PathBuf], limit: usize) -> Vec<SpellingCase> {
+    assert!(
+        !paths.is_empty(),
+        "mitton-spelling requires at least one --mitton-corpus PATH"
+    );
+
+    let mut cases = Vec::new();
+    for path in paths {
+        read_mitton_pairs(path, &mut cases);
+    }
+    cases.sort_by(|a, b| {
+        a.misspelling
+            .cmp(&b.misspelling)
+            .then_with(|| a.correct.cmp(&b.correct))
+    });
+    cases.dedup_by(|a, b| a.correct == b.correct && a.misspelling == b.misspelling);
+    cases.truncate(limit);
+    assert!(
+        !cases.is_empty(),
+        "Mitton loader found no spelling pairs in {}",
+        paths
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    cases
+}
+
+fn run_mitton_spelling(
+    paths: &[PathBuf],
+    samples: usize,
+    warmups: usize,
+    limit: usize,
+    max_distance: usize,
+    recall_k: usize,
+) {
+    let cases = load_mitton_spelling(paths, limit);
+    let mut terms: Vec<String> = cases.iter().map(|case| case.correct.clone()).collect();
+    terms.sort();
+    terms.dedup();
+
+    let dict = DoubleArrayTrie::from_terms(terms);
+    let transducer = Transducer::new(dict, Algorithm::Standard);
+
+    measure("mitton_spelling_ordered", samples, warmups, |sample| {
+        let case_index = sample % cases.len();
+        let case = &cases[case_index];
+        let candidates: Vec<_> = transducer
+            .query_ordered(black_box(&case.misspelling), black_box(max_distance))
+            .collect();
+        let rank = candidates
+            .iter()
+            .position(|candidate| candidate.term == case.correct)
+            .map(|idx| idx + 1);
+        let matched_count = usize::from(rank.is_some_and(|idx| idx <= recall_k));
+
+        MeasureOutcome {
+            result_count: candidates.len(),
+            expected_count: 1,
+            matched_count,
+            recall_at_k: matched_count as f64,
+            reciprocal_rank: rank.map_or(0.0, |idx| 1.0 / idx as f64),
+            case_index,
+        }
+    });
+}
+
+fn record_ascii_tokens(line: &str, frequencies: &mut HashMap<String, usize>) {
+    let mut token = String::new();
+
+    for ch in line.chars() {
+        if ch.is_ascii_alphabetic() {
+            token.push(ch.to_ascii_lowercase());
+        } else if token.len() >= 2 {
+            *frequencies.entry(std::mem::take(&mut token)).or_insert(0) += 1;
+        } else {
+            token.clear();
+        }
+    }
+
+    if token.len() >= 2 {
+        *frequencies.entry(token).or_insert(0) += 1;
+    }
+}
+
+fn load_text_corpus_terms(paths: &[PathBuf], limit: usize) -> Vec<String> {
+    assert!(
+        !paths.is_empty(),
+        "text-corpus-lev requires at least one --text-corpus PATH"
+    );
+
+    let mut frequencies = HashMap::new();
+    for path in paths {
+        let file = File::open(path)
+            .unwrap_or_else(|err| panic!("failed to open text corpus {}: {err}", path.display()));
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            let line = line.unwrap_or_else(|err| {
+                panic!("failed to read text corpus {}: {err}", path.display())
+            });
+            record_ascii_tokens(&line, &mut frequencies);
+        }
+    }
+
+    let mut terms: Vec<(String, usize)> = frequencies.into_iter().collect();
+    terms.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    terms.truncate(limit);
+
+    let mut terms: Vec<String> = terms.into_iter().map(|(term, _)| term).collect();
+    terms.sort();
+    assert!(
+        !terms.is_empty(),
+        "text corpus loader found no ASCII word terms in {}",
+        paths
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    terms
+}
+
+fn load_openslr_lexicon_terms(paths: &[PathBuf], limit: usize) -> Vec<String> {
+    assert!(
+        !paths.is_empty(),
+        "openslr-lexicon requires at least one --openslr-lexicon PATH"
+    );
+
+    let mut terms = HashSet::new();
+    for path in paths {
+        let file = File::open(path)
+            .unwrap_or_else(|err| panic!("failed to open lexicon {}: {err}", path.display()));
+        let reader = BufReader::new(file);
+
+        for line in reader.lines() {
+            let line = line
+                .unwrap_or_else(|err| panic!("failed to read lexicon {}: {err}", path.display()));
+            let trimmed = line.split('#').next().unwrap_or("").trim();
+            if trimmed.is_empty() || trimmed.starts_with(';') || trimmed.starts_with('\\') {
+                continue;
+            }
+
+            let Some(raw_word) = trimmed.split_whitespace().next() else {
+                continue;
+            };
+            if raw_word.starts_with('<') || raw_word.starts_with('[') {
+                continue;
+            }
+            if let Some(word) = normalize_ascii_word(raw_word) {
+                terms.insert(word);
+            }
+        }
+    }
+
+    let mut terms: Vec<String> = terms.into_iter().collect();
+    terms.sort();
+    terms.truncate(limit);
+    assert!(
+        !terms.is_empty(),
+        "OpenSLR lexicon loader found no ASCII lexicon terms in {}",
+        paths
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    terms
+}
+
+fn deterministic_query(term: &str, sample: usize, max_distance: usize) -> String {
+    if max_distance == 0 {
+        return term.to_string();
+    }
+
+    let mut chars: Vec<char> = term.chars().collect();
+    if chars.len() < 2 {
+        return term.to_string();
+    }
+
+    match sample % 4 {
+        0 => {
+            chars.remove(sample % chars.len());
+            chars.into_iter().collect()
+        }
+        1 => {
+            let idx = sample % chars.len();
+            chars[idx] = if chars[idx] == 'a' { 'e' } else { 'a' };
+            chars.into_iter().collect()
+        }
+        2 => {
+            let idx = sample % (chars.len() - 1);
+            chars.swap(idx, idx + 1);
+            chars.into_iter().collect()
+        }
+        _ => {
+            let idx = sample % (chars.len() + 1);
+            chars.insert(idx, 'x');
+            chars.into_iter().collect()
+        }
+    }
+}
+
+fn run_dictionary_terms_ordered(
+    workload: &str,
+    terms: Vec<String>,
+    samples: usize,
+    warmups: usize,
+    max_distance: usize,
+    recall_k: usize,
+) {
+    let cases = terms.clone();
+    let dict = DoubleArrayTrie::from_terms(terms);
+    let transducer = Transducer::new(dict, Algorithm::Standard);
+
+    measure(workload, samples, warmups, |sample| {
+        let case_index = sample % cases.len();
+        let expected = &cases[case_index];
+        let query = deterministic_query(expected, sample, max_distance);
+        let candidates: Vec<_> = transducer
+            .query_ordered(black_box(&query), black_box(max_distance))
+            .collect();
+        let rank = candidates
+            .iter()
+            .position(|candidate| candidate.term == *expected)
+            .map(|idx| idx + 1);
+        let matched_count = usize::from(rank.is_some_and(|idx| idx <= recall_k));
+
+        MeasureOutcome {
+            result_count: candidates.len(),
+            expected_count: 1,
+            matched_count,
+            recall_at_k: matched_count as f64,
+            reciprocal_rank: rank.map_or(0.0, |idx| 1.0 / idx as f64),
+            case_index,
+        }
+    });
+}
+
+fn run_text_corpus_lev(
+    paths: &[PathBuf],
+    samples: usize,
+    warmups: usize,
+    limit: usize,
+    max_distance: usize,
+    recall_k: usize,
+) {
+    let terms = load_text_corpus_terms(paths, limit);
+    run_dictionary_terms_ordered(
+        "text_corpus_lev_ordered",
+        terms,
+        samples,
+        warmups,
+        max_distance,
+        recall_k,
+    );
+}
+
+fn run_openslr_lexicon(
+    paths: &[PathBuf],
+    samples: usize,
+    warmups: usize,
+    limit: usize,
+    max_distance: usize,
+    recall_k: usize,
+) {
+    let terms = load_openslr_lexicon_terms(paths, limit);
+    run_dictionary_terms_ordered(
+        "openslr_lexicon_lev_ordered",
+        terms,
+        samples,
+        warmups,
+        max_distance,
+        recall_k,
+    );
 }
 
 #[cfg(feature = "phonetic-rules")]
@@ -1168,6 +1508,42 @@ fn main() {
             .expect("birkbeck-fawthrop requires --birkbeck-dir DIR");
         run_birkbeck_fawthrop(
             dir,
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            opts.max_distance,
+            opts.recall_k,
+        );
+    }
+    if matches!(opts.workload, Workload::MittonSpelling)
+        || (matches!(opts.workload, Workload::All) && !opts.mitton_corpus_paths.is_empty())
+    {
+        run_mitton_spelling(
+            &opts.mitton_corpus_paths,
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            opts.max_distance,
+            opts.recall_k,
+        );
+    }
+    if matches!(opts.workload, Workload::TextCorpusLev)
+        || (matches!(opts.workload, Workload::All) && !opts.text_corpus_paths.is_empty())
+    {
+        run_text_corpus_lev(
+            &opts.text_corpus_paths,
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            opts.max_distance,
+            opts.recall_k,
+        );
+    }
+    if matches!(opts.workload, Workload::OpenSlrLexicon)
+        || (matches!(opts.workload, Workload::All) && !opts.openslr_lexicon_paths.is_empty())
+    {
+        run_openslr_lexicon(
+            &opts.openslr_lexicon_paths,
             opts.samples,
             opts.warmups,
             opts.corpus_limit,
