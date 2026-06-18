@@ -1,10 +1,9 @@
 //! Lazy query iterators for approximate string matching.
 
 use super::query_result::QueryResult;
+use super::state::State;
 use super::transition::{initial_state, transition_state_pooled};
-use super::{
-    Algorithm, Intersection, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted,
-};
+use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
@@ -16,6 +15,72 @@ pub struct Candidate {
     pub term: String,
     /// Edit distance from query
     pub distance: usize,
+}
+
+const NO_PATH: u32 = u32::MAX;
+
+struct QueryPathNode<U: CharUnit> {
+    label: U,
+    depth: u16,
+    parent: u32,
+}
+
+struct QueryIntersection<N: DictionaryNode> {
+    label: Option<N::Unit>,
+    node: N,
+    state: State,
+    parent: u32,
+}
+
+impl<N: DictionaryNode> QueryIntersection<N> {
+    #[inline]
+    fn new(node: N, state: State) -> Self {
+        Self {
+            label: None,
+            node,
+            state,
+            parent: NO_PATH,
+        }
+    }
+
+    #[inline]
+    fn with_parent(label: N::Unit, node: N, state: State, parent: u32) -> Self {
+        Self {
+            label: Some(label),
+            node,
+            state,
+            parent,
+        }
+    }
+
+    fn term(&self, path_arena: &[QueryPathNode<N::Unit>]) -> String {
+        let parent_depth = if self.parent == NO_PATH {
+            0
+        } else {
+            path_arena[self.parent as usize].depth as usize
+        };
+        let capacity = parent_depth + usize::from(self.label.is_some());
+        let mut units = Vec::with_capacity(capacity);
+
+        if let Some(label) = self.label {
+            units.push(label);
+        }
+
+        let mut current = self.parent;
+        while current != NO_PATH {
+            let node = &path_arena[current as usize];
+            units.push(node.label);
+            current = node.parent;
+        }
+
+        units.reverse();
+        N::Unit::to_string(&units)
+    }
+
+    #[inline(always)]
+    fn is_final(&self) -> bool {
+        self.node.is_final()
+    }
 }
 
 /// Lazy iterator over query matches with configurable result type.
@@ -72,11 +137,12 @@ pub struct QueryIterator<
     R: QueryResult = String,
     P: SubstitutionPolicy = Unrestricted,
 > {
-    pending: VecDeque<Box<Intersection<N>>>,
+    pending: VecDeque<QueryIntersection<N>>,
     query: Vec<N::Unit>,
     max_distance: usize,
     algorithm: Algorithm,
     policy: P, // Substitution policy for matching
+    path_arena: Vec<QueryPathNode<N::Unit>>,
     finished: bool,
     state_pool: StatePool,        // Pool for State allocation reuse
     substring_mode: bool,         // Enable substring matching (for suffix automata)
@@ -138,7 +204,7 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
 
         // Always add root to pending queue - it will be checked for finality in advance()
         // and its children will be queued normally
-        pending.push_back(Box::new(Intersection::new(root, initial)));
+        pending.push_back(QueryIntersection::new(root, initial));
 
         Self {
             pending,
@@ -146,6 +212,7 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
             max_distance,
             algorithm,
             policy,
+            path_arena: Vec::with_capacity(64),
             finished: false,
             state_pool: StatePool::new(), // Create pool for this query
             substring_mode,
@@ -171,7 +238,7 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
                 };
 
                 if distance <= self.max_distance {
-                    let term = intersection.term();
+                    let term = intersection.term(&self.path_arena);
 
                     // Queue children for further exploration
                     self.queue_children(&intersection);
@@ -197,7 +264,9 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
     }
 
     /// Queue child intersections for exploration
-    fn queue_children(&mut self, intersection: &Intersection<N>) {
+    fn queue_children(&mut self, intersection: &QueryIntersection<N>) {
+        let mut child_parent_path = None;
+
         for (label, child_node) in intersection.node.edges() {
             if let Some(next_state) = transition_state_pooled(
                 &intersection.state,
@@ -209,25 +278,43 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
                 self.algorithm,
                 self.substring_mode, // Use prefix_mode=true only for substring matching
             ) {
-                // ✅ Create lightweight PathNode (no Arc clone!)
-                // Only stores label and parent chain - dictionary node not needed in parent
-                let parent_path = intersection.label.map(|current_label| {
-                    Box::new(super::intersection::PathNode::new(
-                        current_label,
-                        intersection.parent.clone(), // Clone PathNode chain (cheap)
-                    ))
-                });
+                let parent_path = match child_parent_path {
+                    Some(path) => path,
+                    None => {
+                        let path = match intersection.label {
+                            Some(current_label) => {
+                                self.push_path_node(current_label, intersection.parent)
+                            }
+                            None => NO_PATH,
+                        };
+                        child_parent_path = Some(path);
+                        path
+                    }
+                };
 
-                let child = Box::new(Intersection::with_parent(
-                    label,
-                    child_node,
-                    next_state,
-                    parent_path, // ← Lightweight path, no node cloning!
-                ));
+                let child =
+                    QueryIntersection::with_parent(label, child_node, next_state, parent_path);
 
                 self.pending.push_back(child);
             }
         }
+    }
+
+    #[inline]
+    fn push_path_node(&mut self, label: N::Unit, parent: u32) -> u32 {
+        assert!(self.path_arena.len() < u32::MAX as usize);
+        let depth = if parent == NO_PATH {
+            1
+        } else {
+            self.path_arena[parent as usize].depth.saturating_add(1)
+        };
+        let index = self.path_arena.len() as u32;
+        self.path_arena.push(QueryPathNode {
+            label,
+            depth,
+            parent,
+        });
+        index
     }
 }
 

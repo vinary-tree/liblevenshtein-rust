@@ -8,8 +8,7 @@
 
 use super::transition::{initial_state, transition_state_pooled};
 use super::{
-    Algorithm, Intersection, PathNode, StatePool, SubstitutionPolicy, SubstitutionPolicyFor,
-    Unrestricted,
+    state::State, Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted,
 };
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
@@ -21,6 +20,72 @@ pub struct OrderedCandidate {
     pub distance: usize,
     /// The matching term (secondary sort key - lexicographic)
     pub term: String,
+}
+
+const NO_PATH: u32 = u32::MAX;
+
+struct OrderedPathNode<U: CharUnit> {
+    label: U,
+    depth: u16,
+    parent: u32,
+}
+
+struct OrderedIntersection<N: DictionaryNode> {
+    label: Option<N::Unit>,
+    node: N,
+    state: State,
+    parent: u32,
+}
+
+impl<N: DictionaryNode> OrderedIntersection<N> {
+    #[inline]
+    fn new(node: N, state: State) -> Self {
+        Self {
+            label: None,
+            node,
+            state,
+            parent: NO_PATH,
+        }
+    }
+
+    #[inline]
+    fn with_parent(label: N::Unit, node: N, state: State, parent: u32) -> Self {
+        Self {
+            label: Some(label),
+            node,
+            state,
+            parent,
+        }
+    }
+
+    fn term(&self, path_arena: &[OrderedPathNode<N::Unit>]) -> String {
+        let parent_depth = if self.parent == NO_PATH {
+            0
+        } else {
+            path_arena[self.parent as usize].depth as usize
+        };
+        let capacity = parent_depth + usize::from(self.label.is_some());
+        let mut units = Vec::with_capacity(capacity);
+
+        if let Some(label) = self.label {
+            units.push(label);
+        }
+
+        let mut current = self.parent;
+        while current != NO_PATH {
+            let node = &path_arena[current as usize];
+            units.push(node.label);
+            current = node.parent;
+        }
+
+        units.reverse();
+        N::Unit::to_string(&units)
+    }
+
+    #[inline(always)]
+    fn is_final(&self) -> bool {
+        self.node.is_final()
+    }
 }
 
 /// Lazy iterator that returns candidates in distance-first, lexicographic order.
@@ -66,7 +131,7 @@ pub struct OrderedCandidate {
 /// ```
 pub struct OrderedQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unrestricted> {
     /// Pending intersections grouped by minimum distance
-    pending_by_distance: Vec<VecDeque<Box<Intersection<N>>>>,
+    pending_by_distance: Vec<VecDeque<OrderedIntersection<N>>>,
     /// Current distance level being explored
     current_distance: usize,
     /// Maximum distance to explore
@@ -79,6 +144,8 @@ pub struct OrderedQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unres
     policy: P,
     /// State pool for allocation reuse
     state_pool: StatePool,
+    /// Per-query parent-path arena for reconstructing candidate terms.
+    path_arena: Vec<OrderedPathNode<N::Unit>>,
     /// Substring matching mode (for suffix automata)
     substring_mode: bool,
     /// Sorted buffer for current distance level (ensures lexicographic ordering)
@@ -145,7 +212,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             .collect();
 
         // Start with root at distance 0 - it will be checked for finality in advance()
-        pending_by_distance[0].push_back(Box::new(Intersection::new(root, initial)));
+        pending_by_distance[0].push_back(OrderedIntersection::new(root, initial));
 
         Self {
             pending_by_distance,
@@ -155,6 +222,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             algorithm,
             policy,
             state_pool: StatePool::new(),
+            path_arena: Vec::with_capacity(64),
             substring_mode,
             sorted_buffer: Vec::with_capacity(64), // Heuristic: typical max results per distance
             buffer_index: 0,
@@ -199,7 +267,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                     if distance <= self.max_distance {
                         if distance == self.current_distance {
                             // Distance matches current level - add to buffer
-                            let term = intersection.term();
+                            let term = intersection.term(&self.path_arena);
                             self.sorted_buffer.push(OrderedCandidate { distance, term });
 
                             // Queue children for further exploration
@@ -260,7 +328,9 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
     /// Queue child intersections into appropriate distance buckets
     #[inline]
-    fn queue_children(&mut self, intersection: &Intersection<N>) {
+    fn queue_children(&mut self, intersection: &OrderedIntersection<N>) {
+        let mut child_parent_path = None;
+
         // Edges are iterated in sorted order (lexicographic) thanks to DAWG construction
         for (label, child_node) in intersection.node.edges() {
             if let Some(next_state) = transition_state_pooled(
@@ -276,17 +346,26 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                 // Determine minimum possible distance from this state
                 if let Some(min_dist) = next_state.min_distance() {
                     if min_dist <= self.max_distance {
-                        // Create lightweight PathNode for parent chain
-                        let parent_path = intersection.label.map(|current_label| {
-                            Box::new(PathNode::new(current_label, intersection.parent.clone()))
-                        });
+                        let parent_path = match child_parent_path {
+                            Some(path) => path,
+                            None => {
+                                let path = match intersection.label {
+                                    Some(current_label) => {
+                                        self.push_path_node(current_label, intersection.parent)
+                                    }
+                                    None => NO_PATH,
+                                };
+                                child_parent_path = Some(path);
+                                path
+                            }
+                        };
 
-                        let child = Box::new(Intersection::with_parent(
+                        let child = OrderedIntersection::with_parent(
                             label,
                             child_node,
                             next_state,
                             parent_path,
-                        ));
+                        );
 
                         // Add to the appropriate distance bucket
                         self.pending_by_distance[min_dist].push_back(child);
@@ -294,6 +373,23 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                 }
             }
         }
+    }
+
+    #[inline]
+    fn push_path_node(&mut self, label: N::Unit, parent: u32) -> u32 {
+        assert!(self.path_arena.len() < u32::MAX as usize);
+        let depth = if parent == NO_PATH {
+            1
+        } else {
+            self.path_arena[parent as usize].depth.saturating_add(1)
+        };
+        let index = self.path_arena.len() as u32;
+        self.path_arena.push(OrderedPathNode {
+            label,
+            depth,
+            parent,
+        });
+        index
     }
 
     /// Add a filter predicate to this iterator.
@@ -429,7 +525,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
                 // Return the result if it's a complete word matching our prefix
                 if should_return {
-                    let term = intersection.term();
+                    let term = intersection.term(&self.inner.path_arena);
                     let distance = intersection
                         .state
                         .infer_prefix_distance(query_len)
