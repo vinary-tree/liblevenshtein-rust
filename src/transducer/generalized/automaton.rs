@@ -342,19 +342,6 @@ impl GeneralizedAutomaton {
             // From thesis page 51: s_n(w, i) = w_{i-n}...w_{min(|w|, i+n+1)}
             let subword = self.relevant_subword(word, i + 1);
 
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "\n[DEBUG] === Input position i={}, char='{}' ===",
-                i, input_char
-            );
-            #[cfg(debug_assertions)]
-            eprintln!("  Subword: {:?}", subword);
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "  State before transition: {} positions",
-                state.positions().count()
-            );
-
             // Compute characteristic vector β(x_i, s_n(w, i))
             let bit_vector = CharacteristicVector::new(input_char, &subword);
 
@@ -370,16 +357,9 @@ impl GeneralizedAutomaton {
                 input_char,
                 i + 1,
             ) {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "  State after transition: {} positions",
-                    next_state.positions().count()
-                );
                 state = next_state;
             } else {
                 // Transition failed, reject
-                #[cfg(debug_assertions)]
-                eprintln!("  ✗ Transition failed, rejecting");
                 return false;
             }
         }
@@ -387,16 +367,7 @@ impl GeneralizedAutomaton {
         // Check acceptance using Proposition 11 criterion (thesis page 24)
         // A position i#e is accepting if: p - i ≤ n - e
         // (remaining characters ≤ remaining error budget)
-        #[cfg(debug_assertions)]
-        {
-            eprintln!("\n[DEBUG] Final state positions:");
-            for pos in state.positions() {
-                eprintln!("[DEBUG]   {}", pos);
-            }
-        }
         let accepted = self.is_accepting(&state, word.len(), input.len());
-        #[cfg(debug_assertions)]
-        eprintln!("[DEBUG] Accepted: {}", accepted);
         accepted
     }
 
@@ -459,32 +430,17 @@ mod tests {
         assert_eq!(automaton.max_distance(), 2);
     }
 
-    #[test]
-    fn test_debug_identical() {
-        let automaton = GeneralizedAutomaton::new(2);
-        let word = "test";
-        let input = "test";
-
-        // Manual step-through
+    fn manual_transition_accepts(
+        automaton: &GeneralizedAutomaton,
+        word: &str,
+        input: &str,
+    ) -> bool {
         let mut state = automaton.initial_state();
-        eprintln!("\nDEBUG: Initial state = {}", state);
-
-        // H2 Optimization: Pre-compute character vector
         let word_chars: Vec<char> = word.chars().collect();
 
         for (i, ch) in input.chars().enumerate() {
-            eprintln!(
-                "\nDEBUG: Processing char {} ('{}') at input position {}",
-                i + 1,
-                ch,
-                i
-            );
-
             let subword = automaton.relevant_subword(word, i + 1);
-            eprintln!("DEBUG: Relevant subword = '{}'", subword);
-
             let bit_vector = CharacteristicVector::new(ch, &subword);
-            eprintln!("DEBUG: Bit vector length = {}", bit_vector.len());
 
             match state.transition(
                 &automaton.operations,
@@ -495,40 +451,19 @@ mod tests {
                 ch,
                 i + 1,
             ) {
-                Some(next) => {
-                    eprintln!("DEBUG: Next state = {}", next);
-                    state = next;
-                }
-                None => {
-                    panic!("Transition failed at position {}", i);
-                }
+                Some(next) => state = next,
+                None => return false,
             }
         }
 
-        eprintln!("\nDEBUG: Final state = {}", state);
-        eprintln!(
-            "DEBUG: Word length = {}, Input length = {}",
-            word.len(),
-            input.len()
-        );
+        automaton.is_accepting(&state, word.len(), input.len())
+    }
 
-        // Check acceptance
-        let is_accepting = automaton.is_accepting(&state, word.len(), input.len());
-        eprintln!("DEBUG: is_accepting = {}", is_accepting);
+    #[test]
+    fn test_manual_transition_identical() {
+        let automaton = GeneralizedAutomaton::new(2);
 
-        if !is_accepting {
-            eprintln!("\nDEBUG: Checking each position:");
-            for pos in state.positions() {
-                let current_word_pos = input.len() as i32 + pos.offset();
-                let remaining_chars = word.len() as i32 - current_word_pos;
-                let remaining_errors = automaton.max_distance() as i32 - pos.errors() as i32;
-                eprintln!("  Position {}: current_word_pos={}, remaining_chars={}, remaining_errors={}, accepting={}",
-                         pos, current_word_pos, remaining_chars, remaining_errors,
-                         remaining_chars >= 0 && remaining_chars <= remaining_errors);
-            }
-        }
-
-        assert!(is_accepting, "Should accept identical strings");
+        assert!(manual_transition_accepts(&automaton, "test", "test"));
     }
 
     #[test]
@@ -547,101 +482,10 @@ mod tests {
     }
 
     #[test]
-    fn test_debug_one_insertion() {
+    fn test_manual_transition_one_insertion() {
         let automaton = GeneralizedAutomaton::new(2);
-        let word = "test";
-        let input = "tests";
 
-        eprintln!(
-            "\nDEBUG: Testing insertion word='{}', input='{}', max_distance={}",
-            word,
-            input,
-            automaton.max_distance()
-        );
-
-        let mut state = automaton.initial_state();
-        eprintln!("Initial state: {}", state);
-
-        // H2 Optimization: Pre-compute character vector
-        let word_chars: Vec<char> = word.chars().collect();
-
-        for (i, ch) in input.chars().enumerate() {
-            eprintln!(
-                "\n--- Processing char {} ('{}') at position {} ---",
-                i + 1,
-                ch,
-                i + 1
-            );
-
-            let subword = automaton.relevant_subword(word, i + 1);
-            eprintln!("Relevant subword: '{}'", subword);
-
-            let bit_vector = CharacteristicVector::new(ch, &subword);
-            eprintln!("Bit vector length: {}", bit_vector.len());
-
-            match state.transition(
-                &automaton.operations,
-                &bit_vector,
-                word,
-                Some(&word_chars),
-                &subword,
-                ch,
-                i + 1,
-            ) {
-                Some(next) => {
-                    eprintln!("Next state: {}", next);
-                    state = next;
-                }
-                None => {
-                    eprintln!("Transition failed!");
-                    panic!("Should not fail at position {}", i + 1);
-                }
-            }
-        }
-
-        eprintln!("\n--- Final state check ---");
-        eprintln!("Final state: {}", state);
-        eprintln!("Word length: {}", word.len());
-        eprintln!("Input length: {}", input.len());
-
-        let n = automaton.max_distance() as i32;
-        for pos in state.positions() {
-            let current_word_pos = input.len() as i32 + pos.offset();
-            let remaining_chars = word.len() as i32 - current_word_pos;
-            let remaining_errors = n - (pos.errors() as i32);
-
-            eprintln!("\nPosition: {}", pos);
-            eprintln!(
-                "  current_word_pos = {} + {} = {}",
-                input.len(),
-                pos.offset(),
-                current_word_pos
-            );
-            eprintln!(
-                "  remaining_chars = {} - {} = {}",
-                word.len(),
-                current_word_pos,
-                remaining_chars
-            );
-            eprintln!(
-                "  remaining_errors = {} - {} = {}",
-                n,
-                pos.errors(),
-                remaining_errors
-            );
-            eprintln!(
-                "  Accept? {} >= 0 && {} <= {} = {}",
-                remaining_chars,
-                remaining_chars,
-                remaining_errors,
-                remaining_chars >= 0 && remaining_chars <= remaining_errors
-            );
-        }
-
-        let is_accepting = automaton.is_accepting(&state, word.len(), input.len());
-        eprintln!("\nFinal is_accepting result: {}", is_accepting);
-
-        assert!(is_accepting, "Should accept insertion");
+        assert!(manual_transition_accepts(&automaton, "test", "tests"));
     }
 
     #[test]
@@ -688,134 +532,10 @@ mod tests {
     }
 
     #[test]
-    fn test_debug_deletion_middle() {
+    fn test_manual_transition_deletion_middle() {
         let automaton = GeneralizedAutomaton::new(1);
-        let word = "test";
-        let input = "tst"; // Missing 'e' in middle
 
-        eprintln!(
-            "\nDEBUG: Testing deletion in middle: word='{}', input='{}', max_distance={}",
-            word,
-            input,
-            automaton.max_distance()
-        );
-        eprintln!("Expected: true (1 deletion)");
-
-        // Manual step-through
-        let mut state = automaton.initial_state();
-        eprintln!("\nInitial state: {}", state);
-
-        // H2 Optimization: Pre-compute character vector
-        let word_chars: Vec<char> = word.chars().collect();
-
-        for (i, ch) in input.chars().enumerate() {
-            eprintln!(
-                "\n--- Processing char {} ('{}') at position {} ---",
-                i + 1,
-                ch,
-                i + 1
-            );
-
-            let subword = automaton.relevant_subword(word, i + 1);
-            eprintln!("Relevant subword: '{}'", subword);
-
-            let bit_vector = CharacteristicVector::new(ch, &subword);
-            eprintln!("Bit vector length: {}", bit_vector.len());
-
-            match state.transition(
-                &automaton.operations,
-                &bit_vector,
-                word,
-                Some(&word_chars),
-                &subword,
-                ch,
-                i + 1,
-            ) {
-                Some(next) => {
-                    eprintln!("Next state: {}", next);
-                    state = next;
-                }
-                None => {
-                    eprintln!("Transition failed - no successor state!");
-                    panic!("Should not fail at position {}", i + 1);
-                }
-            }
-        }
-
-        eprintln!("\n--- Final state check ---");
-        eprintln!("Final state: {}", state);
-        eprintln!("Word length: {}", word.len());
-        eprintln!("Input length: {}", input.len());
-
-        // Check is_accepting manually for each position
-        let n = automaton.max_distance() as i32;
-        eprintln!("\nChecking acceptance for each position:");
-
-        use crate::transducer::generalized::GeneralizedPosition;
-        for pos in state.positions() {
-            match pos {
-                GeneralizedPosition::MFinal { offset, errors } => {
-                    eprintln!("\nM-type position: offset={}, errors={}", offset, errors);
-                    eprintln!(
-                        "  M-type accepting? offset <= 0 && errors <= {}: {} <= 0 && {} <= {} = {}",
-                        n,
-                        offset,
-                        errors,
-                        n,
-                        *offset <= 0 && *errors <= n as u8
-                    );
-                }
-                GeneralizedPosition::INonFinal { offset, errors } => {
-                    let current_word_pos = input.len() as i32 + offset;
-                    let remaining_chars = word.len() as i32 - current_word_pos;
-                    let remaining_errors = n - (*errors as i32);
-
-                    eprintln!("\nI-type position: offset={}, errors={}", offset, errors);
-                    eprintln!(
-                        "  current_word_pos = {} + {} = {}",
-                        input.len(),
-                        offset,
-                        current_word_pos
-                    );
-                    eprintln!(
-                        "  remaining_chars = {} - {} = {}",
-                        word.len(),
-                        current_word_pos,
-                        remaining_chars
-                    );
-                    eprintln!(
-                        "  remaining_errors = {} - {} = {}",
-                        n, errors, remaining_errors
-                    );
-                    eprintln!(
-                        "  Accept? {} >= 0 && {} <= {} = {}",
-                        remaining_chars,
-                        remaining_chars,
-                        remaining_errors,
-                        remaining_chars >= 0 && remaining_chars <= remaining_errors
-                    );
-                }
-                // Phase 2d: Debug output for transposing/splitting positions
-                GeneralizedPosition::ITransposing { offset, errors } => {
-                    eprintln!("\nI-type transposing: offset={}, errors={} (not accepting - intermediate state)", offset, errors);
-                }
-                GeneralizedPosition::MTransposing { offset, errors } => {
-                    eprintln!("\nM-type transposing: offset={}, errors={} (not accepting - intermediate state)", offset, errors);
-                }
-                GeneralizedPosition::ISplitting { offset, errors, .. } => {
-                    eprintln!("\nI-type splitting: offset={}, errors={} (not accepting - intermediate state)", offset, errors);
-                }
-                GeneralizedPosition::MSplitting { offset, errors, .. } => {
-                    eprintln!("\nM-type splitting: offset={}, errors={} (not accepting - intermediate state)", offset, errors);
-                }
-            }
-        }
-
-        let result = automaton.accepts(word, input);
-        eprintln!("\n=== Final result: {} ===", result);
-        eprintln!("Expected: true");
-
-        assert!(result, "Should accept deletion in middle");
+        assert!(manual_transition_accepts(&automaton, "test", "tst"));
     }
 
     #[test]
@@ -1398,34 +1118,19 @@ mod tests {
     // ============================================================================
 
     #[test]
-    fn test_phonetic_debug_simple() {
+    fn test_phonetic_simple_digraph_accepts() {
         // Simple phonetic operation smoke test.
         let ops = crate::transducer::phonetic::consonant_digraphs();
-
-        // Check operation set has the right operations
-        eprintln!("Operation set has {} operations", ops.operations().len());
-        for op in ops.operations() {
-            eprintln!(
-                "  Operation: consume_x={}, consume_y={}, weight={}",
-                op.consume_x(),
-                op.consume_y(),
-                op.weight()
-            );
-        }
+        assert!(!ops.operations().is_empty());
 
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
-
-        // Test simplest case: "ph" → "f"
-        eprintln!("\n=== Testing 'ph' → 'f' ===");
-
-        // Debug: check what relevant_subword looks like
         let subword = automaton.relevant_subword("ph", 1);
-        eprintln!("Relevant subword at position 1: '{}'", subword);
-        eprintln!("Subword chars: {:?}", subword.chars().collect::<Vec<_>>());
 
-        let result = automaton.accepts("ph", "f");
-        eprintln!("Result: {}", result);
-        assert!(result, "Expected 'ph' → 'f' to be accepted");
+        assert!(subword.contains("ph") || subword.contains('p'));
+        assert!(
+            automaton.accepts("ph", "f"),
+            "Expected 'ph' → 'f' to be accepted"
+        );
     }
 
     #[test]
