@@ -62,10 +62,13 @@ state:
 | `phon-011-llre-import-composite-llev-symbols` | `triage` | Accepted liblevenshtein conformance gate. |
 | `phon-012-llev-compound-context-integration-coverage` | `verifying` | Accepted liblevenshtein conformance gate. |
 
-Two lifecycle reconciliation attempts were made after the evidence was recorded:
+Three lifecycle reconciliation attempts were made after the evidence was
+recorded:
 
 - Bulk `set_status` from `triage` to `in_progress` for the six triage rows
   failed for each row with `no transition 'triage' -> 'in_progress' exists`.
+- Bulk `set_status` from `triage` to `ready` for the same six rows failed for
+  each row with `no transition 'triage' -> 'ready' exists`.
 - Direct `set_status` from `verifying` to `claimed_done` for
   `phon-012-llev-compound-context-integration-coverage` failed with
   `no transition 'verifying' -> 'claimed_done' exists`.
