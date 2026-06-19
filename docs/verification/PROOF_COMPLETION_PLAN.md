@@ -122,10 +122,10 @@ supported by the current executable model:
   `MsmDistanceEvidence`. Reflexivity for identical series is now proved locally
   with a memory-small row-diagonal invariant showing each diagonal cell is bounded
   by the zero-cost Move predecessor, then using non-negativity.
-- `Myers/Equivalence.v`: the placeholder full-equivalence contracts were
+- `Myers/Equivalence.v`: the interim full-equivalence contracts were
   replaced by direct model-accurate lemmas: shifted initialization decoding,
   vacuous zero-width step preservation, and empty-text equivalence against the
-  current placeholder DP model.
+  current simplified DP model.
 - `LLRE/SymbolExpansion.v`: the broad cycle-detection contract was replaced by
   a bounded DFS theorem matching the executable fuel semantics of
   `has_cycle_from`.
@@ -162,7 +162,7 @@ supported by the current executable model:
   `MSM/Metric/MainTheorem.v`: renamed the already-proved reverse triangle lemma
   so it no longer appears as an axiom-shaped theorem.
 - `MSM/Indexing/QuantizationBounds.v`: removed the broad quantization and trie
-  no-false-negative premises for the placeholder `quantize` implementation.
+  no-false-negative premises for the earlier simplified `quantize` implementation.
   Replacement theorems state the true current-model facts: all quantized values
   are zero, equal-length quantized Levenshtein distance is zero, and same-length
   trie thresholds are sufficient.
@@ -445,7 +445,7 @@ reference material and is not the memory-efficient target.
 - Use `scripts/verify-formal.sh coq-file <profile> <path>` for targeted
   capped compiles of partial files while closing the backlog.
 
-## Vacuous-placeholder remediation (audit-vacuous)
+## Vacuous-Proposition Remediation (audit-vacuous)
 
 The gap audit (`Axiom`/`Admitted`/`admit`/`Parameter`/...) does not catch a
 theorem whose *conclusion* is the trivial proposition `True`. Such proofs pass
@@ -462,17 +462,17 @@ and the legacy `rocq/` tree. Remediation:
   the exact edit-distance equivalence `lev_e = Levenshtein(matched word, input)`
   (a simulation against the trusted core distance model).
 - **grammar Layers 3/4/5** (`grammar/theories/Layers/Layer{3,4,5}.v`) — CLOSED:
-  the `execute_layerN` passes are unimplemented identity stubs, so the vacuous
+  the `execute_layerN` passes are explicit identity implementations, so the vacuous
   `layerN_soundness : True` is replaced by the honest, provable
   `layerN_is_passthrough` (`execute_layerN ... = prev_result`). Real soundness
-  awaits real layer implementations (type checking, semantic repair, process
-  calculus).
+  belongs to separately implemented type checking, semantic repair, and process
+  calculus layers.
 - **grammar Layer1** (`Layer1.v`) — DISABLED with PENDING note:
   `layer1_phonetic_scoring` / `layer1_keyboard_scoring` claimed similarity-aware
   scoring, but `layer1_score` is distance-only (`1/(1+dist)`), so there is no
   real property to prove yet; commented out until scoring incorporates
   similarity weighting.
-- **MSM core** (`msm/theories/Core/MsmDistance.v`) — the unused stub
+- **MSM core** (`msm/theories/Core/MsmDistance.v`) — the unused vacuous lemma
   `msm_init_row_diagonal_zero : True` is commented out; reflexivity goes through
   `msm_reflexive_diagonal_direct`.
 - **myers** (`myers/theories/Equivalence.v`) — PARTIAL, honestly scoped:

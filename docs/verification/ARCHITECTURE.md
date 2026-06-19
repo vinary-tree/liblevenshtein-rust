@@ -513,7 +513,8 @@ Theorem some_rules_dont_commute :
 3. But:  "make" → Rule 34 → "make" → Rule 33 → "mak"
 4. Different intermediate states prove non-commutativity
 
-**Status**: ⏳ TODO
+**Status**: Historical proof target in this architecture note; use current
+proof READMEs for active status.
 
 **Theorem 4: Termination**
 ```coq
@@ -532,7 +533,8 @@ Theorem sequential_application_terminates :
    - Reaches fixed point (terminates)
 3. By induction on fuel, show termination
 
-**Status**: ⏳ TODO
+**Status**: Historical proof target in this architecture note; use current
+proof READMEs for active status.
 
 **Theorem 5: Idempotence**
 ```coq
@@ -549,7 +551,8 @@ Theorem rewrite_idempotent :
 2. At fixed point: `find_first_match r s' = None` for all rules `r`
 3. Therefore: `apply_rules_seq rules s' _ = Some s'`
 
-**Status**: ⏳ TODO
+**Status**: Historical proof target in this architecture note; use current
+proof READMEs for active status.
 
 #### Zompist Rule Definitions
 

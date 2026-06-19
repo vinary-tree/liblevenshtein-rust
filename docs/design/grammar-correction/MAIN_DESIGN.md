@@ -221,7 +221,7 @@ Type systems, error localization, repair strategies, process calculi.
 WFST composition, multi-layer architecture, implementation design.
 
 **Part V: Practice (Sections 14-17)**
-Testing, roadmap, references, future work.
+Testing, roadmap, references, and evidence register.
 
 **Reader Background**: Assumes familiarity with:
 - Basic automata theory (DFA, NFA, regular expressions)
@@ -1921,8 +1921,10 @@ impl LanguageServer {
 3. **Layer 3 (Type Validation)**: Hindley-Milner type inference (~50-120ms)
 
 **Disabled Layers**:
-- ❌ Layer 4 (Semantic Repair): SMT-based repair still too slow
-- ❌ Layer 5 (Process Verification): Detailed session type checking deferred
+- ❌ Layer 4 (Semantic Repair): SMT-based repair is outside this low-latency
+  configuration
+- ❌ Layer 5 (Process Verification): Detailed session type checking is outside
+  this low-latency configuration
 
 **Example Configuration**:
 

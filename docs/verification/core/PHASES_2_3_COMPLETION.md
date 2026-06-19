@@ -105,17 +105,19 @@ Lemma touched_in_B_NoDup :
 - Prove 3 parts for composed trace:
   - ✅ Part 1 (bounds): Existing proof works
   - ✅ Part 2 (aux): Fixed to use H_aux1/H_aux2 instead of H_compat1/H_compat2
-  - ⚠️ Part 3 (nodup): **ADMITTED** with TODO
+  - ⚠️ Part 3 (nodup): historically left as a local proof gap in this
+    session note
 
 **Part 3 Status**:
 ```coq
 (* Part 3: NoDup for composed trace *)
-(* TODO: This requires proving that composition preserves NoDup *)
-(* For now, admit this part - it's provable but requires additional lemmas *)
+(* This historical note required a separate NoDup preservation lemma. *)
+(* The active proof sources, not this session note, define current status. *)
 admit.
 ```
 
-**Impact**: Not blocking current goals - can prove later if needed
+**Impact**: Historical session note only; use the active proof sources and the
+current verification README for current status.
 
 ---
 

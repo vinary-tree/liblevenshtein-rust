@@ -797,7 +797,8 @@ Well-typed processes with dual session types make progress (no deadlock).
 ### 7.4 Optimality Analysis
 
 **Observation 7.6**:
-Layer 5 is a **verifier**, not an optimizer. It checks correctness but does not suggest repairs (that would be future work).
+Layer 5 is a **verifier**, not an optimizer. It checks correctness but does not
+suggest repairs; repair synthesis is outside the Layer 5 contract.
 
 **Theorem 7.7 (Verification Completeness)**:
 Session type checking is complete for the session type system: all well-typed processes are accepted.

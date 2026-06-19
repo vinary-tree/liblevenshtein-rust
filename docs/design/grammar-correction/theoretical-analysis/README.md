@@ -105,7 +105,7 @@ This directory contains a comprehensive theoretical analysis of the multi-layer 
 - Counter-examples (detailed)
 - Verification of hypotheses
 - Key findings (8 findings with evidence)
-- Limitations and future work
+- Limitations and evidence boundaries
 - Scientific record for reproducibility
 
 **Key Sections**:

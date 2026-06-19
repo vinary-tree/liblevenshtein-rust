@@ -151,7 +151,9 @@ Create a Coq verification framework that formally proves correctness properties 
 ### Status
 
 - ✅ **Framework complete**: All definitions and theorem statements
-- ⚠️ **Proofs**: ~35 admitted (placeholders), ~5 complete (basic properties)
+- ⚠️ **Proofs**: this historical snapshot reported about 35 admitted proof
+  bodies and about 5 completed basic properties; current proof status is
+  recorded under `docs/verification/grammar/README.md`.
 - ⚠️ **Compilation**: Minor issues with Q comparison operators
 
 ### Statistics
