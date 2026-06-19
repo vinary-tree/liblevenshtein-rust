@@ -71,7 +71,7 @@ use crate::distance::standard_distance;
 use crate::phonetic::expansion::expand_phonetic_alternatives_char;
 use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar, ProductStateChar};
 use crate::phonetic::regex::{parse as parse_regex, ParseError as RegexParseError};
-use crate::phonetic::types::{PhoneChar, RewriteRuleChar};
+use crate::phonetic::types::{ContextChar, PhoneChar, RewriteRuleChar};
 use crate::phonetic::{apply_rules_seq_char, zompist_rules_char};
 use crate::transducer::Algorithm;
 use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
@@ -80,7 +80,7 @@ use libdictenstein::{
     DictZipper, Dictionary, DictionaryNode, DictionaryValue, MappedDictionary,
     MappedDictionaryNode, MutableMappedDictionary, SyncStrategy, ValuedDictZipper,
 };
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Result of a phonetic normalized query.
@@ -206,6 +206,108 @@ fn sort_candidates_by_relevance(
         .into_iter()
         .map(|(_, _, candidate)| candidate)
         .collect()
+}
+
+fn is_exact_whole_word_context(context: &ContextChar) -> bool {
+    match context {
+        ContextChar::And(left, right) => {
+            matches!(
+                (left.as_ref(), right.as_ref()),
+                (ContextChar::Initial, ContextChar::Final)
+                    | (ContextChar::Final, ContextChar::Initial)
+            )
+        }
+        _ => false,
+    }
+}
+
+fn phone_chars_from_input(input: &str) -> Vec<PhoneChar> {
+    input
+        .chars()
+        .map(|c| {
+            if is_vowel(c) {
+                PhoneChar::Vowel(c)
+            } else {
+                PhoneChar::Consonant(c)
+            }
+        })
+        .collect()
+}
+
+fn phone_chars_to_string(phones: &[PhoneChar]) -> String {
+    let mut output = String::with_capacity(phones.len());
+    for phone in phones {
+        match phone {
+            PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => output.push(*c),
+            PhoneChar::Digraph(c1, c2) => {
+                output.push(*c1);
+                output.push(*c2);
+            }
+            PhoneChar::Trigraph(c1, c2, c3) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+            }
+            PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+                output.push(*c4);
+            }
+            PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+                output.push(*c4);
+                output.push(*c5);
+            }
+            PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+                output.push(*c4);
+                output.push(*c5);
+                output.push(*c6);
+            }
+            PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+                output.push(*c4);
+                output.push(*c5);
+                output.push(*c6);
+                output.push(*c7);
+            }
+            PhoneChar::Sequence(chars) => {
+                for c in chars {
+                    output.push(*c);
+                }
+            }
+            PhoneChar::Silent => {}
+        }
+    }
+    output
+}
+
+fn normalized_forms_char(input: &str, rules: &[RewriteRuleChar], fuel: usize) -> Vec<String> {
+    let primary = normalize_string_char(input, rules, fuel);
+    if rules.is_empty() {
+        return vec![primary];
+    }
+
+    let input_phones = phone_chars_from_input(input);
+    let mut forms = vec![primary];
+
+    for rule in rules {
+        if rule.pattern == input_phones && is_exact_whole_word_context(&rule.context) {
+            let replacement = phone_chars_to_string(&rule.replacement);
+            if !forms.contains(&replacement) {
+                forms.push(replacement);
+            }
+        }
+    }
+
+    forms
 }
 
 // ============================================================================
@@ -360,17 +462,16 @@ where
 
         if is_new {
             // 2. Update normalized multimap
-            let normalized = self.normalize(term);
             let term_string = term.to_string();
-
-            // Use update_or_insert to add term to the HashSet
-            self.normalized_multimap.update_or_insert(
-                &normalized,
-                HashSet::from([term_string.clone()]),
-                |set| {
-                    set.insert(term_string.clone());
-                },
-            );
+            for normalized in normalized_forms_char(term, &self.rules, self.fuel) {
+                self.normalized_multimap.update_or_insert(
+                    &normalized,
+                    HashSet::from([term_string.clone()]),
+                    |set| {
+                        set.insert(term_string.clone());
+                    },
+                );
+            }
         }
 
         is_new
@@ -390,16 +491,16 @@ where
 
         // If newly inserted, also update normalized multimap
         if is_new && !existed {
-            let normalized = self.normalize(term);
             let term_string = term.to_string();
-
-            self.normalized_multimap.update_or_insert(
-                &normalized,
-                HashSet::from([term_string.clone()]),
-                |set| {
-                    set.insert(term_string.clone());
-                },
-            );
+            for normalized in normalized_forms_char(term, &self.rules, self.fuel) {
+                self.normalized_multimap.update_or_insert(
+                    &normalized,
+                    HashSet::from([term_string.clone()]),
+                    |set| {
+                        set.insert(term_string.clone());
+                    },
+                );
+            }
         }
 
         is_new
@@ -415,15 +516,15 @@ where
 
         // Update normalized multimap with new terms
         for (term, _) in other.iter_terms() {
-            let normalized = self.normalize(&term);
-
-            self.normalized_multimap.update_or_insert(
-                &normalized,
-                HashSet::from([term.clone()]),
-                |set| {
-                    set.insert(term.clone());
-                },
-            );
+            for normalized in normalized_forms_char(&term, &self.rules, self.fuel) {
+                self.normalized_multimap.update_or_insert(
+                    &normalized,
+                    HashSet::from([term.clone()]),
+                    |set| {
+                        set.insert(term.clone());
+                    },
+                );
+            }
         }
 
         count
@@ -518,17 +619,18 @@ where
             let term = term.as_ref();
             originals.insert_with_value(term, V::default());
 
-            let normalized = normalize_string_char(term, &rules, fuel);
             let term_string = term.to_string();
 
             // Use update_or_insert to add term to the HashSet for this normalized form
-            normalized_dict.update_or_insert(
-                &normalized,
-                HashSet::from([term_string.clone()]),
-                |set| {
-                    set.insert(term_string.clone());
-                },
-            );
+            for normalized in normalized_forms_char(term, &rules, fuel) {
+                normalized_dict.update_or_insert(
+                    &normalized,
+                    HashSet::from([term_string.clone()]),
+                    |set| {
+                        set.insert(term_string.clone());
+                    },
+                );
+            }
         }
 
         Self {
@@ -554,16 +656,17 @@ where
             let term = term.as_ref();
             originals.insert_with_value(term, value);
 
-            let normalized = normalize_string_char(term, &rules, fuel);
             let term_string = term.to_string();
 
-            normalized_dict.update_or_insert(
-                &normalized,
-                HashSet::from([term_string.clone()]),
-                |set| {
-                    set.insert(term_string.clone());
-                },
-            );
+            for normalized in normalized_forms_char(term, &rules, fuel) {
+                normalized_dict.update_or_insert(
+                    &normalized,
+                    HashSet::from([term_string.clone()]),
+                    |set| {
+                        set.insert(term_string.clone());
+                    },
+                );
+            }
         }
 
         Self {
@@ -673,29 +776,23 @@ where
     ///
     /// `true` if the term was in the normalized index, `false` otherwise.
     pub fn remove(&self, term: &str) -> bool {
-        // Check if term exists and get its normalized form
-        let normalized = self.normalize(term);
+        let mut removed = false;
+        for normalized in normalized_forms_char(term, &self.rules, self.fuel) {
+            if let Some(originals) = self.normalized_multimap.dictionary().get_value(&normalized) {
+                if originals.contains(term) {
+                    let mut new_originals = originals.clone();
+                    new_originals.remove(term);
 
-        // Get the current set of originals for this normalized form
-        if let Some(originals) = self.normalized_multimap.dictionary().get_value(&normalized) {
-            if originals.contains(term) {
-                // Create a new set without this term
-                let mut new_originals = originals.clone();
-                new_originals.remove(term);
-
-                if new_originals.is_empty() {
-                    // Remove the entry entirely
-                    // Note: DynamicDawgChar doesn't have a remove method,
-                    // so we just insert an empty set (which effectively marks it as removed)
-                    self.normalized_multimap.insert(&normalized, HashSet::new());
-                } else {
-                    // Update with the new set (without the removed term)
-                    self.normalized_multimap.insert(&normalized, new_originals);
+                    if new_originals.is_empty() {
+                        self.normalized_multimap.insert(&normalized, HashSet::new());
+                    } else {
+                        self.normalized_multimap.insert(&normalized, new_originals);
+                    }
+                    removed = true;
                 }
-                return true;
             }
         }
-        false
+        removed
     }
 }
 
@@ -713,6 +810,7 @@ where
     /// Note: This iterates over the normalized multimap, which tracks all inserted terms.
     pub fn iter_terms(&self) -> impl Iterator<Item = (String, String)> + '_ {
         // Iterate over the underlying dictionary and flatten the HashSets
+        let mut seen = HashSet::new();
         let pairs: Vec<_> = self
             .normalized_multimap
             .dictionary()
@@ -724,6 +822,7 @@ where
                     .map(move |term| (term.clone(), normalized.clone()))
                     .collect::<Vec<_>>()
             })
+            .filter(|(term, _)| seen.insert(term.clone()))
             .collect();
         pairs.into_iter()
     }
@@ -857,51 +956,63 @@ where
     /// - `distance`: Edit distance between normalized query and normalized term
     /// - `normalized_form`: The normalized form that matched
     pub fn query(&self, query: &str, max_distance: usize) -> Vec<PhoneticNormalizedCandidate> {
-        let normalized_query = self.normalize(query);
+        let normalized_queries = normalized_forms_char(query, &self.rules, self.fuel);
 
         // Fast path for exact match (d=0): Direct trie lookup is 100-300× faster
         // than automaton traversal (benchmark: 2µs vs 600µs for 100 queries)
         if max_distance == 0 {
-            if let Some(originals) = self
-                .normalized_multimap
-                .dictionary()
-                .get_value(&normalized_query)
-            {
-                let results = originals
-                    .iter()
-                    .filter(|term| !term.is_empty()) // Skip entries from removed terms
-                    .map(|term| PhoneticNormalizedCandidate {
-                        term: term.clone(),
-                        distance: 0,
-                        normalized_form: normalized_query.clone(),
-                    })
-                    .collect();
-                return sort_candidates_by_relevance(query, results);
+            let mut by_term = HashMap::new();
+            for normalized_query in &normalized_queries {
+                if let Some(originals) = self
+                    .normalized_multimap
+                    .dictionary()
+                    .get_value(normalized_query)
+                {
+                    for term in originals.iter().filter(|term| !term.is_empty()) {
+                        by_term.entry(term.clone()).or_insert_with(|| {
+                            PhoneticNormalizedCandidate {
+                                term: term.clone(),
+                                distance: 0,
+                                normalized_form: normalized_query.clone(),
+                            }
+                        });
+                    }
+                }
             }
-            return Vec::new();
+            return sort_candidates_by_relevance(query, by_term.into_values().collect());
         }
 
         // Fuzzy path (d≥1): Use Levenshtein automaton for efficient trie pruning
-        let fuzzy_results = self
-            .normalized_multimap
-            .query_with_distance(&normalized_query, max_distance);
+        let mut by_term: HashMap<String, PhoneticNormalizedCandidate> = HashMap::new();
+        for normalized_query in &normalized_queries {
+            let fuzzy_results = self
+                .normalized_multimap
+                .query_with_distance(normalized_query, max_distance);
 
-        // Convert results to PhoneticNormalizedCandidate
-        let results: Vec<PhoneticNormalizedCandidate> = fuzzy_results
-            .into_iter()
-            .flat_map(|(normalized_form, distance, originals)| {
-                originals
-                    .into_iter()
-                    .filter(|term| !term.is_empty()) // Skip entries from removed terms
-                    .map(move |term| PhoneticNormalizedCandidate {
-                        term,
-                        distance,
-                        normalized_form: normalized_form.clone(),
-                    })
-            })
-            .collect();
+            for (normalized_form, distance, originals) in fuzzy_results {
+                for term in originals.into_iter().filter(|term| !term.is_empty()) {
+                    match by_term.get_mut(&term) {
+                        Some(existing) if distance < existing.distance => {
+                            existing.distance = distance;
+                            existing.normalized_form = normalized_form.clone();
+                        }
+                        Some(_) => {}
+                        None => {
+                            by_term.insert(
+                                term.clone(),
+                                PhoneticNormalizedCandidate {
+                                    term,
+                                    distance,
+                                    normalized_form: normalized_form.clone(),
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+        }
 
-        sort_candidates_by_relevance(query, results)
+        sort_candidates_by_relevance(query, by_term.into_values().collect())
     }
 
     /// Query using a regex pattern (grep-like semantics).
@@ -1423,6 +1534,52 @@ mod tests {
         // Query should no longer return "phone" in normalized results
         let results = dict.query("phone", 0);
         assert!(!results.iter().any(|c| c.term == "phone"));
+    }
+
+    fn exact_word_rule(id: usize, pattern: &str, replacement: &str) -> RewriteRuleChar {
+        RewriteRuleChar {
+            rule_id: id,
+            rule_name: format!("{pattern}_to_{replacement}"),
+            pattern: phone_chars_from_input(pattern),
+            replacement: replacement.chars().map(PhoneChar::Consonant).collect(),
+            context: ContextChar::And(Box::new(ContextChar::Initial), Box::new(ContextChar::Final)),
+            weight: 0.0,
+            syllable_condition: None,
+        }
+    }
+
+    #[test]
+    fn test_whole_word_alternate_normalized_forms() {
+        let rules = vec![
+            exact_word_rule(1, "read", "RED"),
+            exact_word_rule(2, "read", "REED"),
+            exact_word_rule(3, "red", "RED"),
+            exact_word_rule(4, "reed", "REED"),
+        ];
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+            ["read", "red", "reed"],
+            rules,
+        );
+
+        let results = dict.query("read", 0);
+        let terms: HashSet<_> = results
+            .iter()
+            .map(|candidate| candidate.term.as_str())
+            .collect();
+
+        assert!(terms.contains("read"));
+        assert!(terms.contains("red"));
+        assert!(terms.contains("reed"));
+
+        assert!(dict.remove("read"));
+        assert!(!dict
+            .query("red", 0)
+            .iter()
+            .any(|candidate| candidate.term == "read"));
+        assert!(!dict
+            .query("reed", 0)
+            .iter()
+            .any(|candidate| candidate.term == "read"));
     }
 
     #[test]
