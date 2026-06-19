@@ -129,6 +129,7 @@
 //! - Stefan, Alexandra, et al. "The move-split-merge metric for time series."
 //!   IEEE transactions on Knowledge and Data Engineering 25.6 (2012): 1425-1438.
 
+mod approx_msm;
 mod encoding;
 mod hybrid_search;
 mod lower_bounds;
@@ -141,6 +142,7 @@ mod msm_transition;
 mod trie_index;
 
 // MSM metric exports
+pub use approx_msm::{paa_features, ApproxMsmConfig, ApproxMsmIndex};
 pub use msm::{MsmConfig, MsmResult};
 pub use msm_position::{msm_subsumes, MsmPosition};
 pub use msm_state::MsmState;

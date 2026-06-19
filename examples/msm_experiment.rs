@@ -7,13 +7,16 @@
 //! cargo run --release --example msm_experiment -- exact-range 33 3
 //! cargo run --release --example msm_experiment -- exact-knn 33 3
 //! cargo run --release --example msm_experiment -- variable-range 33 3
+//! cargo run --release --example msm_experiment -- approx-control-knn 33 3
+//! cargo run --release --example msm_experiment -- approx-paa-knn 33 3
 //! ```
 
 use std::env;
 use std::time::Instant;
 
 use liblevenshtein::time_series::{
-    msm_distance_automaton, msm_distance_wavefront, MsmConfig, MsmTransducer, QuantizationConfig,
+    msm_distance_automaton, msm_distance_wavefront, ApproxMsmConfig, ApproxMsmIndex, MsmConfig,
+    MsmTransducer, QuantizationConfig,
 };
 
 fn generate_series(len: usize, seed: u64) -> Vec<f64> {
@@ -91,6 +94,71 @@ fn build_variable_case() -> (MsmTransducer<usize>, Vec<f64>, f64) {
     (index, query, 8.0)
 }
 
+fn generate_approx_database(db_size: usize, len: usize) -> Vec<Vec<f64>> {
+    (0..db_size)
+        .map(|i| {
+            let phase = (i % 32) as f64 * 0.07;
+            let amplitude = 15.0 + (i % 11) as f64 * 0.35;
+            let offset = 50.0 + ((i / 32) % 7) as f64 * 0.8;
+            (0..len)
+                .map(|j| {
+                    let t = j as f64 / len as f64;
+                    let wave = (t * std::f64::consts::TAU * 3.0 + phase).sin();
+                    let harmonic = (t * std::f64::consts::TAU * 7.0 + phase * 0.5).cos() * 2.0;
+                    (offset + amplitude * wave + harmonic).clamp(0.0, 100.0)
+                })
+                .collect()
+        })
+        .collect()
+}
+
+fn exact_brute_knn(
+    database: &[Vec<f64>],
+    query: &[f64],
+    msm: MsmConfig,
+    k: usize,
+) -> Vec<(usize, f64)> {
+    let mut out: Vec<(usize, f64)> = database
+        .iter()
+        .enumerate()
+        .map(|(idx, series)| (idx, msm.distance(query, series)))
+        .filter(|(_, distance)| distance.is_finite())
+        .collect();
+    out.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    out.truncate(k);
+    out
+}
+
+fn recall_at_k(approx: &[(usize, f64)], exact: &[(usize, f64)]) -> f64 {
+    if exact.is_empty() {
+        return 1.0;
+    }
+    let hits = approx
+        .iter()
+        .filter(|(id, _)| exact.iter().any(|(exact_id, _)| exact_id == id))
+        .count();
+    hits as f64 / exact.len() as f64
+}
+
+fn build_approx_case() -> (
+    ApproxMsmIndex<usize>,
+    Vec<Vec<f64>>,
+    Vec<f64>,
+    Vec<(usize, f64)>,
+) {
+    let database = generate_approx_database(1024, 96);
+    let mut query = database[321].clone();
+    for (i, value) in query.iter_mut().enumerate() {
+        if i % 9 == 0 {
+            *value = (*value + 0.25).clamp(0.0, 100.0);
+        }
+    }
+    let msm = MsmConfig::new(1.0);
+    let exact = exact_brute_knn(&database, &query, msm, 8);
+    let index = ApproxMsmIndex::from_series(ApproxMsmConfig::new(16, 128, msm), &database);
+    (index, database, query, exact)
+}
+
 fn measure_legacy_ratio(scenario: &str) -> f64 {
     let x = generate_series(24, 12345);
     let y = generate_series(24, 67890);
@@ -141,6 +209,7 @@ fn main() {
 
     let (index, query) = build_case();
     let (variable_index, variable_query, variable_threshold) = build_variable_case();
+    let approx_case = scenario.starts_with("approx-").then(build_approx_case);
     let threshold = 24.0;
     let k = 8;
 
@@ -171,6 +240,30 @@ fn main() {
                     acc + *id as f64 * 0.001 + *distance
                 });
                 (elapsed_ms, results.len(), checksum)
+            }
+            "approx-control-knn" => {
+                let (_, database, approx_query, _) = approx_case.as_ref().unwrap();
+                let results = exact_brute_knn(database, approx_query, MsmConfig::new(1.0), k);
+                let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+                let checksum = results.iter().fold(0.0, |acc, (id, distance)| {
+                    acc + *id as f64 * 0.001 + *distance
+                });
+                (elapsed_ms, results.len(), checksum)
+            }
+            "approx-paa-knn" => {
+                let (approx_index, _, approx_query, _) = approx_case.as_ref().unwrap();
+                let results = approx_index.search_knn(approx_query, k);
+                let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+                let checksum = results.iter().fold(0.0, |acc, (id, distance)| {
+                    acc + *id as f64 * 0.001 + *distance
+                });
+                (elapsed_ms, results.len(), checksum)
+            }
+            "approx-paa-recall" => {
+                let (approx_index, _, approx_query, exact) = approx_case.as_ref().unwrap();
+                let results = approx_index.search_knn(approx_query, k);
+                let recall = recall_at_k(&results, exact);
+                (recall, results.len(), recall)
             }
             "legacy-wavefront-ratio" | "legacy-automaton-ratio" => {
                 let ratio = measure_legacy_ratio(&scenario);
