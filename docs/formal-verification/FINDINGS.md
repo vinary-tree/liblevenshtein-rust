@@ -663,21 +663,21 @@ The initial formalization made an incorrect assumption that skip-to-match could 
 
 | Coq Theorem | Rust Code | Match | Property Test | Status |
 |-------------|-----------|-------|---------------|--------|
-| `i_match_preserves_invariant` | state.rs:280-295 | ✅ Exact | ⏳ TODO | Proven |
-| `i_delete_preserves_invariant` | state.rs:297-314 | ✅ Exact | ⏳ TODO | Proven |
-| `i_insert_preserves_invariant` | state.rs:315-329 | ✅ Exact | ⏳ TODO | Proven |
-| `i_substitute_preserves_invariant` | state.rs:330-348 | ✅ Exact | ⏳ TODO | Proven |
-| `i_successor_cost_correct` | All I-type ops | ✅ Verified | ⏳ TODO | Proven |
+| `i_match_preserves_invariant` | state.rs:280-295 | ✅ Exact | ✅ `tests/proptest_transitions.rs` | Proven |
+| `i_delete_preserves_invariant` | state.rs:297-314 | ✅ Exact | ✅ `tests/proptest_transitions.rs` | Proven |
+| `i_insert_preserves_invariant` | state.rs:315-329 | ✅ Exact | ✅ `tests/proptest_transitions.rs` | Proven |
+| `i_substitute_preserves_invariant` | state.rs:330-348 | ✅ Exact | ✅ `tests/proptest_transitions.rs` | Proven |
+| `i_successor_cost_correct` | All I-type ops | ✅ Verified | ✅ `tests/proptest_transitions.rs` | Proven |
 
 **M-Type**:
 
 | Coq Theorem | Rust Code | Match | Property Test | Status |
 |-------------|-----------|-------|---------------|--------|
-| `m_match_preserves_invariant` | state.rs:583-595 | ✅ Exact | ⏳ TODO | Proven |
-| `m_delete_preserves_invariant` | state.rs:596-610 | ✅ Exact | ⏳ TODO | Proven |
-| `m_insert_preserves_invariant` | state.rs:611-622 | ✅ Exact | ⏳ TODO | Proven |
-| `m_substitute_preserves_invariant` | state.rs:623-638 | ✅ Exact | ⏳ TODO | Proven |
-| `m_successor_cost_correct` | All M-type ops | ✅ Verified | ⏳ TODO | Proven |
+| `m_match_preserves_invariant` | state.rs:583-595 | ✅ Exact | ✅ `tests/proptest_transitions.rs` | Proven |
+| `m_delete_preserves_invariant` | state.rs:596-610 | ✅ Exact | ✅ `tests/proptest_transitions.rs` | Proven |
+| `m_insert_preserves_invariant` | state.rs:611-622 | ✅ Exact | ✅ `tests/proptest_transitions.rs` | Proven |
+| `m_substitute_preserves_invariant` | state.rs:623-638 | ✅ Exact | ✅ `tests/proptest_transitions.rs` | Proven |
+| `m_successor_cost_correct` | All M-type ops | ✅ Verified | ✅ `tests/proptest_transitions.rs` | Proven |
 
 **Cross-Cutting**:
 
@@ -709,9 +709,27 @@ Based on I-type analysis, we expect for M-type:
 
 ---
 
-## Property-Based Tests TODO
+## Property-Based Test Coverage
 
-From theorems proven, need to add tests for:
+The following theorem families are covered by `tests/proptest_transitions.rs`.
+The capped validation command passed on 2026-06-19:
+
+```bash
+systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0 \
+  env CARGO_BUILD_JOBS=1 cargo test -j1 --test proptest_transitions -- --test-threads=1
+```
+
+It ran 8 tests successfully:
+- `i_successors_preserve_invariant`
+- `m_successors_preserve_invariant`
+- `i_successor_cost_matches_operation`
+- `m_successor_cost_matches_operation`
+- `i_delete_preserves_invariant`
+- `m_delete_preserves_invariant`
+- `i_type_offset_changes_are_valid`
+- `m_type_offset_increases_or_stays`
+
+The test shapes correspond to these proof obligations:
 
 1. **Invariant preservation**:
    ```rust

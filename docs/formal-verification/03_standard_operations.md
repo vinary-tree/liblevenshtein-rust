@@ -417,16 +417,16 @@ See [FINDINGS.md](FINDINGS.md) for detailed analysis. Summary:
 
 | Coq Theorem | Rust Code | Match | Property Test | Status |
 |-------------|-----------|-------|---------------|--------|
-| `i_match_preserves_invariant` | state.rs:280-295 | ✅ | ⏳ TODO | Proven |
-| `i_delete_preserves_invariant` | state.rs:297-314 | ✅ | ⏳ TODO | Proven |
-| `i_insert_preserves_invariant` | state.rs:315-329 | ✅ | ⏳ TODO | Proven |
-| `i_substitute_preserves_invariant` | state.rs:330-348 | ✅ | ⏳ TODO | Proven |
+| `i_match_preserves_invariant` | state.rs:280-295 | ✅ | ✅ `tests/proptest_transitions.rs` | Proven |
+| `i_delete_preserves_invariant` | state.rs:297-314 | ✅ | ✅ `tests/proptest_transitions.rs` | Proven |
+| `i_insert_preserves_invariant` | state.rs:315-329 | ✅ | ✅ `tests/proptest_transitions.rs` | Proven |
+| `i_substitute_preserves_invariant` | state.rs:330-348 | ✅ | ✅ `tests/proptest_transitions.rs` | Proven |
 | `i_skip_to_match_preserves_invariant` | state.rs:504-521 | ✅ | ✅ PASSING | Proven |
 | `i_skip_to_match_formula` | state.rs:504-521 | ✅ | ✅ PASSING | Proven |
-| `m_match_preserves_invariant` | state.rs:583-595 | ✅ | ⏳ TODO | Proven |
-| `m_delete_preserves_invariant` | state.rs:596-610 | ✅ | ⏳ TODO | Proven |
-| `m_insert_preserves_invariant` | state.rs:611-622 | ✅ | ⏳ TODO | Proven |
-| `m_substitute_preserves_invariant` | state.rs:623-638 | ✅ | ⏳ TODO | Proven |
+| `m_match_preserves_invariant` | state.rs:583-595 | ✅ | ✅ `tests/proptest_transitions.rs` | Proven |
+| `m_delete_preserves_invariant` | state.rs:596-610 | ✅ | ✅ `tests/proptest_transitions.rs` | Proven |
+| `m_insert_preserves_invariant` | state.rs:611-622 | ✅ | ✅ `tests/proptest_transitions.rs` | Proven |
+| `m_substitute_preserves_invariant` | state.rs:623-638 | ✅ | ✅ `tests/proptest_transitions.rs` | Proven |
 | `m_skip_to_match_preserves_invariant` | (M-type logic) | ✅ | ✅ PASSING | Proven |
 | `m_skip_to_match_formula` | (M-type logic) | ✅ | ✅ PASSING | Proven |
 
