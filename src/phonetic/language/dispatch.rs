@@ -11,8 +11,8 @@ use super::rules::cjk::{
     korean_rules,
 };
 use super::rules::germanic::{
-    american_english_rules, british_english_rules, danish_rules, dutch_rules, german_rules,
-    icelandic_rules, norwegian_rules, swedish_rules,
+    american_english_cmudict_rules, american_english_rules, british_english_rules, danish_rules,
+    dutch_rules, german_rules, icelandic_rules, norwegian_rules, swedish_rules,
 };
 use super::rules::indic::{
     bengali_rules, gujarati_rules, hindi_rules, marathi_rules, punjabi_gurmukhi_rules,
@@ -47,6 +47,7 @@ use crate::phonetic::types::RewriteRuleChar;
 ///
 /// ## English
 /// - `"en"`, `"en-us"`, `"english"`, `"american"` - American English
+/// - `"en-us-cmudict"`, `"en-cmudict"`, `"english-cmudict"` - American English plus broad CMUdict homophones
 /// - `"en-gb"`, `"british"` - British English (RP)
 ///
 /// ## Spanish
@@ -141,6 +142,9 @@ pub fn rules_for_language(tag: &str) -> Option<Vec<RewriteRuleChar>> {
     match normalized.as_str() {
         // English
         "en" | "en-us" | "english" | "american" => Some(american_english_rules()),
+        "en-us-cmudict" | "en-cmudict" | "english-cmudict" | "american-cmudict" => {
+            Some(american_english_cmudict_rules())
+        }
         "en-gb" | "british" => Some(british_english_rules()),
 
         // Spanish
@@ -362,6 +366,10 @@ pub fn supported_languages() -> &'static [&'static str] {
         "en-gb",
         "english",
         "american",
+        "en-us-cmudict",
+        "en-cmudict",
+        "english-cmudict",
+        "american-cmudict",
         "british",
         // Spanish
         "es",

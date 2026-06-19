@@ -7,6 +7,7 @@
 //!
 //! - [`base()`] - Comprehensive phonetic transformations (62 rules)
 //! - [`homophones()`] - Words that sound alike
+//! - [`cmudict_homophones()`] - Broad CMUdict-derived American homophone coverage
 //! - [`text_speak()`] - SMS/text abbreviations (2 -> to, u -> you, etc.)
 //!
 //! # Example
@@ -69,6 +70,23 @@ pub fn homophones() -> &'static RuleSetChar {
             .expect("Invalid embedded homophones.llev - this is a bug in liblevenshtein");
         RuleSetChar::from_llev(&file)
             .expect("Failed to compile homophones rules - this is a bug in liblevenshtein")
+    })
+}
+
+/// Broad CMUdict-derived American English homophone rules.
+///
+/// Maps alphabetic CMUdict homophone spellings to canonical ARPAbet-derived
+/// pronunciation keys. This is intentionally separate from [`american()`] and
+/// [`homophones()`] because it adds a large lexical layer for recall-sensitive
+/// applications.
+pub fn cmudict_homophones() -> &'static RuleSetChar {
+    static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
+    RULESET.get_or_init(|| {
+        let content = include_str!("../../../data/rules/english/cmudict_homophones.llev");
+        let file = crate::phonetic::llev::parse_str(content)
+            .expect("Invalid embedded cmudict_homophones.llev - this is a bug in liblevenshtein");
+        RuleSetChar::from_llev(&file)
+            .expect("Failed to compile CMUdict homophone rules - this is a bug in liblevenshtein")
     })
 }
 
@@ -159,6 +177,16 @@ mod tests {
     }
 
     #[test]
+    fn test_cmudict_homophones_loads() {
+        let rules = cmudict_homophones();
+        assert!(
+            rules.len() > 25_000,
+            "CMUdict homophone rules should contain broad lexical coverage, got {}",
+            rules.len()
+        );
+    }
+
+    #[test]
     fn test_text_speak_loads() {
         let rules = text_speak();
         assert!(!rules.is_empty(), "text_speak rules should not be empty");
@@ -183,6 +211,15 @@ mod tests {
         // too -> to
         let result = rules.apply("too");
         assert_eq!(result, "to", "expected 'to', got: {}", result);
+    }
+
+    #[test]
+    fn test_cmudict_homophones_apply_exact_pronunciation_key() {
+        let rules = cmudict_homophones();
+        let abel = rules.apply("abel");
+        let able = rules.apply("able");
+        assert_eq!(abel, able, "CMUdict homophones should normalize together");
+        assert_eq!(able, "EYBAHL");
     }
 
     #[test]

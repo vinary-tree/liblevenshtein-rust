@@ -11,8 +11,8 @@ use super::rules::cjk::{
     korean_rules,
 };
 use super::rules::germanic::{
-    american_english_rules, british_english_rules, danish_rules, dutch_rules, german_rules,
-    icelandic_rules, norwegian_rules, swedish_rules,
+    american_english_cmudict_rules, american_english_rules, british_english_rules, danish_rules,
+    dutch_rules, german_rules, icelandic_rules, norwegian_rules, swedish_rules,
 };
 use super::rules::indic::{
     bengali_rules, gujarati_rules, hindi_rules, marathi_rules, punjabi_gurmukhi_rules,
@@ -36,6 +36,7 @@ use super::rules::southeast_asian::{
     indonesian_rules, tagalog_rules, thai_rules, vietnamese_rules,
 };
 use super::tags;
+use crate::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
 
 #[test]
 fn test_rules_for_language_en_us() {
@@ -61,6 +62,18 @@ fn test_rules_for_language_english() {
 fn test_rules_for_language_en_gb() {
     let rules = rules_for_language("en-gb");
     assert!(rules.is_some(), "en-gb should be supported");
+}
+
+#[test]
+fn test_rules_for_language_en_us_cmudict() {
+    let rules = rules_for_language("en-us-cmudict");
+    assert!(rules.is_some(), "en-us-cmudict should be supported");
+    let rules = rules.expect("should have rules");
+    assert!(
+        rules.len() > 25_000,
+        "en-us-cmudict should include broad CMUdict coverage, got {} rules",
+        rules.len()
+    );
 }
 
 #[test]
@@ -386,6 +399,15 @@ fn test_american_english_rules_not_empty() {
         "American rules should have >100 rules (zompist + american + more), got {}",
         rules.len()
     );
+}
+
+#[test]
+fn test_american_english_cmudict_rules_include_exact_homophones() {
+    let rules = american_english_cmudict_rules();
+    let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["abel", "able"], rules);
+
+    assert_eq!(dict.normalize("abel"), "EYBAHL");
+    assert_eq!(dict.normalize("able"), "EYBAHL");
 }
 
 #[test]
@@ -1485,6 +1507,7 @@ fn test_every_aggregator_returns_non_empty_rule_set() {
     use crate::phonetic::types::RewriteRuleChar;
     let aggregators: &[(&str, fn() -> Vec<RewriteRuleChar>)] = &[
         ("american_english", american_english_rules),
+        ("american_english_cmudict", american_english_cmudict_rules),
         ("british_english", british_english_rules),
         ("german", german_rules),
         ("dutch", dutch_rules),

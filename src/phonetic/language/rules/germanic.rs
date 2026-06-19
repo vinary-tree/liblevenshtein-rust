@@ -23,6 +23,20 @@ pub(crate) fn american_english_rules() -> Vec<RewriteRuleChar> {
     rules
 }
 
+/// Combine American English rules with broad CMUdict homophone coverage.
+///
+/// This includes [`american_english_rules`] plus the large CMUdict-derived
+/// lexical homophone layer. Use this profile when recall over American
+/// dictionary homophones is more important than the extra embedded rule-set
+/// size and first-use parse cost.
+pub(crate) fn american_english_cmudict_rules() -> Vec<RewriteRuleChar> {
+    use crate::phonetic::rules::english;
+
+    let mut rules = american_english_rules();
+    rules.extend(english::cmudict_homophones().rules.iter().cloned());
+    rules
+}
+
 /// Combine British English rule sets into a single vector.
 ///
 /// This includes:
