@@ -68,7 +68,7 @@
 
 use crate::cache::multimap::FuzzyMultiMap;
 use crate::phonetic::expansion::expand_phonetic_alternatives_char;
-use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar};
+use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar, ProductStateChar};
 use crate::phonetic::regex::{parse as parse_regex, ParseError as RegexParseError};
 use crate::phonetic::types::{PhoneChar, RewriteRuleChar};
 use crate::phonetic::{apply_rules_seq_char, zompist_rules_char};
@@ -938,6 +938,17 @@ where
         &self,
         product: &ProductAutomatonChar,
     ) -> Vec<PhoneticNormalizedCandidate> {
+        if product.supports_incremental_trie_intersection() {
+            return self.query_with_product_trie(product);
+        }
+
+        self.query_with_product_scan(product)
+    }
+
+    fn query_with_product_scan(
+        &self,
+        product: &ProductAutomatonChar,
+    ) -> Vec<PhoneticNormalizedCandidate> {
         let mut results = Vec::new();
 
         for (normalized, originals) in self.normalized_multimap.dictionary().iter() {
@@ -957,6 +968,68 @@ where
 
         results.sort_by_key(|c| c.distance);
         results
+    }
+
+    fn query_with_product_trie(
+        &self,
+        product: &ProductAutomatonChar,
+    ) -> Vec<PhoneticNormalizedCandidate> {
+        let mut results = Vec::new();
+        let mut normalized_form = String::new();
+        let frontier = product.initial_frontier();
+
+        self.collect_product_trie_matches(
+            product,
+            self.normalized_multimap.dictionary().root(),
+            frontier,
+            &mut normalized_form,
+            &mut results,
+        );
+
+        results.sort_by_key(|c| c.distance);
+        results
+    }
+
+    fn collect_product_trie_matches<N>(
+        &self,
+        product: &ProductAutomatonChar,
+        node: N,
+        frontier: Vec<ProductStateChar>,
+        normalized_form: &mut String,
+        results: &mut Vec<PhoneticNormalizedCandidate>,
+    ) where
+        N: DictionaryNode<Unit = char> + MappedDictionaryNode<Value = HashSet<String>>,
+    {
+        if let Some(distance) = product.min_accepting_distance(&frontier) {
+            if let Some(originals) = node.value() {
+                if !originals.is_empty() {
+                    for term in originals.iter().filter(|term| !term.is_empty()) {
+                        results.push(PhoneticNormalizedCandidate {
+                            term: term.clone(),
+                            distance: distance as usize,
+                            normalized_form: normalized_form.clone(),
+                        });
+                    }
+                }
+            }
+        }
+
+        for (label, child) in node.edges() {
+            let child_frontier = product.transition_frontier(&frontier, label);
+            if child_frontier.is_empty() {
+                continue;
+            }
+
+            normalized_form.push(label);
+            self.collect_product_trie_matches(
+                product,
+                child,
+                child_frontier,
+                normalized_form,
+                results,
+            );
+            normalized_form.pop();
+        }
     }
 
     /// Query with automatic phonetic pattern expansion.
@@ -1395,6 +1468,32 @@ mod tests {
         // Should now also match "card" and "care" (1 extra char)
         assert!(results.iter().any(|c| c.term == "card"));
         assert!(results.iter().any(|c| c.term == "care"));
+    }
+
+    #[test]
+    fn test_query_with_product_trie_matches_scan() {
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+            ["cat", "car", "card", "care", "cart", "bat", "bar"],
+            vec![],
+        );
+        let ast = parse_regex("ca.").expect("regex should parse");
+        let nfa = compile_nfa(&ast).expect("nfa should compile");
+        let product = ProductAutomatonChar::with_algorithm(nfa, 1, Algorithm::Standard);
+
+        let mut trie_results: Vec<_> = dict
+            .query_with_product(&product)
+            .into_iter()
+            .map(|c| (c.term, c.distance, c.normalized_form))
+            .collect();
+        let mut scan_results: Vec<_> = dict
+            .query_with_product_scan(&product)
+            .into_iter()
+            .map(|c| (c.term, c.distance, c.normalized_form))
+            .collect();
+        trie_results.sort();
+        scan_results.sort();
+
+        assert_eq!(trie_results, scan_results);
     }
 
     #[test]

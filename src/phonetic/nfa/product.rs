@@ -261,6 +261,17 @@ impl ProductAutomatonChar {
         self.algorithm
     }
 
+    /// Returns true when this product automaton can be advanced incrementally
+    /// over a trie frontier without falling back to full-string matching.
+    ///
+    /// The incremental API currently mirrors the standard integer-cost
+    /// Levenshtein semantics used by [`Self::min_distance`]. Algorithms that
+    /// need adjacent input lookahead, such as transposition and merge/split,
+    /// keep using the exact full-string matcher.
+    pub fn supports_incremental_trie_intersection(&self) -> bool {
+        self.algorithm == Algorithm::Standard && self.articulatory_costs.is_none()
+    }
+
     /// Get the initial state of the product automaton.
     ///
     /// The initial state is the epsilon closure of the NFA start state
@@ -269,6 +280,94 @@ impl ProductAutomatonChar {
         let initial_closure: FxHashSet<StateId> =
             self.nfa.epsilon_closure_single(self.nfa.start()).into();
         ProductStateChar::new(initial_closure, 0.0)
+    }
+
+    /// Get the initial frontier for incremental trie/product traversal.
+    ///
+    /// This includes deletion closure from the regex side, matching the cases
+    /// where the pattern can advance before any dictionary character is
+    /// consumed.
+    pub fn initial_frontier(&self) -> Vec<ProductStateChar> {
+        self.deletion_closure(vec![self.initial_state()])
+    }
+
+    /// Advance an incremental product frontier by one dictionary character.
+    ///
+    /// The returned frontier contains all product states reachable after
+    /// consuming `c`, including deletion closure from the regex side. An empty
+    /// frontier means no completion below the current trie edge can match within
+    /// the configured distance bound.
+    pub fn transition_frontier(
+        &self,
+        frontier: &[ProductStateChar],
+        c: char,
+    ) -> Vec<ProductStateChar> {
+        let mut next = Vec::new();
+
+        for state in frontier {
+            if state.accumulated_cost > self.max_cost {
+                continue;
+            }
+
+            let current_states: FxHashSet<StateId> = state.nfa_states.iter().copied().collect();
+
+            let match_states = self.nfa_step(&current_states, c);
+            if !match_states.is_empty() {
+                next.push(ProductStateChar::new(match_states, state.accumulated_cost));
+            }
+
+            if state.accumulated_cost < self.max_cost {
+                let next_cost = state.accumulated_cost + 1.0;
+
+                let subst_states = self.nfa_advance(&current_states);
+                if !subst_states.is_empty() && next_cost <= self.max_cost {
+                    next.push(ProductStateChar::new(subst_states, next_cost));
+                }
+
+                if next_cost <= self.max_cost {
+                    next.push(ProductStateChar::new(current_states, next_cost));
+                }
+            }
+        }
+
+        self.deletion_closure(next)
+    }
+
+    /// Minimum accepting distance represented by an incremental frontier.
+    pub fn min_accepting_distance(&self, frontier: &[ProductStateChar]) -> Option<u8> {
+        frontier
+            .iter()
+            .filter(|state| self.is_accepting(state))
+            .map(ProductStateChar::edit_distance)
+            .min()
+    }
+
+    fn deletion_closure(&self, seeds: Vec<ProductStateChar>) -> Vec<ProductStateChar> {
+        let mut visited: FxHashSet<ProductStateChar> = FxHashSet::default();
+        let mut queue: VecDeque<ProductStateChar> = seeds.into();
+        let mut closure = Vec::new();
+
+        while let Some(state) = queue.pop_front() {
+            if state.accumulated_cost > self.max_cost {
+                continue;
+            }
+            if !visited.insert(state.clone()) {
+                continue;
+            }
+
+            if state.accumulated_cost < self.max_cost {
+                let current_states: FxHashSet<StateId> = state.nfa_states.iter().copied().collect();
+                let deleted_states = self.nfa_advance(&current_states);
+                let next_cost = state.accumulated_cost + 1.0;
+                if !deleted_states.is_empty() && next_cost <= self.max_cost {
+                    queue.push_back(ProductStateChar::new(deleted_states, next_cost));
+                }
+            }
+
+            closure.push(state);
+        }
+
+        closure
     }
 
     /// Check if a product state is accepting.
