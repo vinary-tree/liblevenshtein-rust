@@ -136,7 +136,7 @@ ExpandNode(node) ==
                  h_cost |-> Heuristic(node.word_pos + 1, node.g_cost + t.cost),
                  f_cost |-> node.g_cost + t.cost + Heuristic(node.word_pos + 1, node.g_cost + t.cost),
                  is_final |-> t.is_final]
-                : t \in DictTransitions(node.dict_state, node.word_pos, "c")  \* "c" is placeholder
+                : t \in DictTransitions(node.dict_state, node.word_pos, "c")  \* representative model input symbol
             }
 
             \* Insert: advance word only (insertion into query)

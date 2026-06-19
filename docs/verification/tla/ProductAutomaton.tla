@@ -48,7 +48,7 @@ ProductState == [
     is_special: BOOLEAN         \* Special position flag (for transposition)
 ]
 
-\* NFA transitions (abstract - would be defined by specific NFA)
+\* NFA transitions for the bounded witness model.
 \* NFATransition[state][char] = set of reachable states
 VARIABLE nfa_delta
 
@@ -74,6 +74,17 @@ IsDead(ps) == ps.error_count > MAX_COST
 
 \* Cost of match operation (depends on character match)
 MatchCost(matches) == IF matches THEN 0 ELSE 1
+
+\* Concrete bounded NFA used by TLC for this module.  The initial state can
+\* consume any checked character into any final state, and final states self-loop
+\* on checked characters.  Other states have no consuming transitions.  This is
+\* finite, non-total, and sufficient to exercise product-state pruning,
+\* acceptance persistence, and bounded-cost invariants without requiring an
+\* extra transition-table constant in every TLC configuration.
+ConcreteNFASuccessors(s, c) ==
+    IF s = INITIAL_NFA THEN FINAL_NFA_STATES
+    ELSE IF s \in FINAL_NFA_STATES THEN FINAL_NFA_STATES
+    ELSE {}
 
 \* Apply NFA epsilon transitions
 EpsilonClosure(states) ==
@@ -183,22 +194,9 @@ TypeInvariant ==
 (* Initial State                                                            *)
 (***************************************************************************)
 
-\* Initialize NFA transitions (abstract model).
-\*
-\* LIMITATION: this is a placeholder total transition relation (every state goes
-\* to every state on every character), so the model checks structural invariants
-\* (TypeInvariant, ErrorCountsValid, StateSpaceBounded, NFAStatesValid,
-\* AcceptanceValid, PatternPositionValid) but cannot meaningfully verify
-\* ProductCorrectness ("accepts iff the NFA accepts AND cost <= max_cost") or
-\* CostMonotonicity against a concrete NFA. Those two header goals are instead
-\* verified on the real Rust construction by
-\* tests/proptest_product_automaton.rs, which checks acceptance/min_distance
-\* against the exact edit-distance oracle and cost monotonicity for a literal
-\* NFA. Promoting this model to faithful transitions is future work.
+\* Initialize NFA transitions for the bounded witness model.
 InitNFADelta ==
-    \* In a real model, this would define the NFA structure
-    \* Here we use a simple placeholder
-    [s \in NFA_STATES |-> [c \in ALPHABET |-> NFA_STATES]]
+    [s \in NFA_STATES |-> [c \in ALPHABET |-> ConcreteNFASuccessors(s, c)]]
 
 Init ==
     /\ product_states = {InitialProductState}

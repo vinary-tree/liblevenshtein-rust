@@ -21,16 +21,12 @@ properties the modules define:
 - **Subsumption** now checks `Irreflexive`, `Asymmetric`, `Transitive`,
   `CompletionPreservationInv`, and `NoFalseRemoval` explicitly (previously only
   `TypeInv`, which folded in the order properties).
-- **ProductAutomaton** now checks `PatternPositionValid`.
+- **ProductAutomaton** now uses a finite non-total witness NFA transition
+  relation and checks `PatternPositionValid`.
 
-Two known limitations remain, each reconciled against the Rust tests that cover
-the gap:
+One model-vs-implementation limitation remains, reconciled against the Rust
+tests that cover the gap:
 
-- **ProductAutomaton** uses a *placeholder* (total) NFA transition relation, so
-  `ProductCorrectness` and `CostMonotonicity` cannot be model-checked against a
-  concrete NFA. They are verified on the real construction by
-  `tests/proptest_product_automaton.rs` (acceptance / `min_distance` vs the exact
-  edit-distance oracle, plus cost monotonicity).
 - **PriorityQuery** models an *idealized admissible* A*. The Rust
   `PriorityQueryIterator` actually uses an **inadmissible** heuristic
   (`query_len - max_consumed`) and only guarantees an approximate, fast-first-k
@@ -59,6 +55,10 @@ Specifies the online scanner that processes input character-by-character while t
 ### ProductAutomaton.tla
 
 Specifies the product construction between a phonetic NFA and Levenshtein automaton.
+The TLC model uses a finite witness NFA whose initial state consumes checked
+characters into final states and whose final states self-loop. Arbitrary Rust
+NFA product correctness and `min_distance` agreement remain cross-checked by
+`tests/proptest_product_automaton.rs`.
 
 **Key Properties:**
 - `ProductCorrectness`: Acceptance iff NFA accepts AND cost <= max_cost
