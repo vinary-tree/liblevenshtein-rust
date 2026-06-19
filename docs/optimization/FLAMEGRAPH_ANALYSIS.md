@@ -301,7 +301,7 @@ let term = self.sorted_buffer[i].1.term();
 - Dictionary scaling: Sub-linear (excellent)
 - Early termination: Highly efficient
 
-### Flame Graph Analysis TODO
+### Flame Graph Follow-up Analysis
 
 To complete Option 3, perform the following analysis:
 

@@ -897,27 +897,18 @@ mod tests {
 
 #### 1. Perfect Hashing for Static Sets
 
-```rust
-use phf::Map;
+**Current implementation decision**: `SubstitutionSet::keyboard_qwerty()`
+uses a const pair table plus the measured hybrid storage strategy:
 
-// Compile-time perfect hash map for QWERTY preset
-static QWERTY_PAIRS: Map<(char, char), ()> = phf_map! {
-    ('q', 'w') => (),
-    ('w', 'q') => (),
-    // ... all pairs
-};
+- `Small(Vec<(u8, u8)>)` for tiny sets where linear scan wins on cache and
+  hashing overhead.
+- `Large(FxHashSet<(u8, u8)>)` once the set exceeds the empirically measured
+  crossover.
 
-impl SubstitutionSet {
-    /// Optimized QWERTY set using perfect hashing.
-    ///
-    /// Faster lookup than HashSet (no hash collisions).
-    pub fn qwerty_optimized() -> Self {
-        // Convert phf::Map to HashSet for uniform interface
-        // Or: implement separate PhfSubstitutionSet variant
-        unimplemented!("Phase 4 optimization")
-    }
-}
-```
+**Alternative to evaluate**: a dedicated static-membership backend could use a
+compile-time perfect hash table for read-only presets, but it should only be
+accepted if a Criterion comparison shows a real latency improvement without
+increasing code size or complicating the generic substitution-set API.
 
 #### 2. Bit Vector for ASCII
 

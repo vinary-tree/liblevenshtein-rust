@@ -98,7 +98,7 @@ pub enum UniversalPosition<V: PositionVariant> {
     INonFinal {
         offset: i32,  // t in I + t#k  (-n ≤ t ≤ n)
         errors: u8,   // k in I + t#k  (0 ≤ k ≤ n)
-        variant: PhantomData<V>,
+        variant_state: V::State,
     },
 
     /// M-type (final): M + offset#errors
@@ -106,18 +106,31 @@ pub enum UniversalPosition<V: PositionVariant> {
     MFinal {
         offset: i32,  // t in M + t#k  (-2n ≤ t ≤ 0)
         errors: u8,   // k in M + t#k  (0 ≤ k ≤ n)
-        variant: PhantomData<V>,
+        variant_state: V::State,
     },
 }
 
 /// Position variant (usual, transposition, split)
-pub trait PositionVariant: Clone + Debug {
-    type ConcretePosition;
+pub trait PositionVariant: Clone + Debug + Eq + Hash {
+    type State: Clone + Debug + Eq + Hash + Default;
 
-    /// Convert universal position to concrete position
-    /// d(I + t#e, i) = (i + t)#e
-    /// d(M + t#e, p) = (p + t)#e
-    fn to_concrete(&self, param_value: usize) -> Self::ConcretePosition;
+    fn variant_name() -> &'static str;
+
+    fn compute_i_successors(
+        offset: i32,
+        errors: u8,
+        variant_state: &Self::State,
+        bit_vector: &CharacteristicVector,
+        max_distance: u8,
+    ) -> Vec<UniversalPosition<Self>>;
+
+    fn compute_m_successors(
+        offset: i32,
+        errors: u8,
+        variant_state: &Self::State,
+        bit_vector: &CharacteristicVector,
+        max_distance: u8,
+    ) -> Vec<UniversalPosition<Self>>;
 }
 
 /// Standard positions (usual type only)
@@ -125,11 +138,40 @@ pub trait PositionVariant: Clone + Debug {
 pub struct Standard;
 
 impl PositionVariant for Standard {
-    type ConcretePosition = (usize, u8);  // (position, errors)
+    type State = ();
 
-    fn to_concrete(&self, param_value: usize) -> (usize, u8) {
-        // Implementation of d() function from Def. 18
-        unimplemented!()
+    fn variant_name() -> &'static str {
+        "Standard"
+    }
+
+    fn compute_i_successors(
+        offset: i32,
+        errors: u8,
+        _variant_state: &Self::State,
+        bit_vector: &CharacteristicVector,
+        max_distance: u8,
+    ) -> Vec<UniversalPosition<Self>> {
+        UniversalPosition::<Self>::successors_i_type_standard(
+            offset,
+            errors,
+            bit_vector,
+            max_distance,
+        )
+    }
+
+    fn compute_m_successors(
+        offset: i32,
+        errors: u8,
+        _variant_state: &Self::State,
+        bit_vector: &CharacteristicVector,
+        max_distance: u8,
+    ) -> Vec<UniversalPosition<Self>> {
+        UniversalPosition::<Self>::successors_m_type_standard(
+            offset,
+            errors,
+            bit_vector,
+            max_distance,
+        )
     }
 }
 
@@ -827,4 +869,3 @@ This implementation mapping provides:
 **Document Status**: ✅ Complete implementation mapping
 **Last Updated**: 2025-11-11
 **Ready For**: Implementation Phase 1
-

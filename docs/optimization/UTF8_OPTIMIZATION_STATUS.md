@@ -252,12 +252,18 @@ for seq_idx in 1..seq_len {
 
 **Location**: `src/distance/simd.rs:38-44`
 
-**Current Status**: TODO - falls back to scalar on non-AVX2 CPUs
+**Current Status**: Completed - runtime dispatch now uses AVX2, then SSE4.1,
+then scalar fallback.
 
-**TODO Comment**:
+**Current implementation**:
 ```rust
-// Lines 38-44: "TODO: Add SSE4.1 implementation for broader compatibility"
-// Currently: if !is_x86_feature_detected!("avx2") { return scalar_distance() }
+if is_x86_feature_detected!("avx2") {
+    unsafe { standard_distance_avx2(source, target) }
+} else if is_x86_feature_detected!("sse4.1") {
+    unsafe { standard_distance_sse41(source, target) }
+} else {
+    crate::distance::standard_distance_impl(source, target)
+}
 ```
 
 **Implementation**:
@@ -282,12 +288,15 @@ for seq_idx in 1..seq_len {
 
 #### **4. Investigate minimize() vs compact() Discrepancy**
 
-**Location**: `src/dictionary/dynamic_dawg_char.rs:1625`
+**Historical Location**: `src/dictionary/dynamic_dawg_char.rs:1625`
 
-**TODO Comment**:
+**Current Status**: Historical note. The referenced `dynamic_dawg_char.rs`
+path is no longer present in the current source tree, so this is not an active
+code marker.
+
+**Original note**:
 ```rust
-// Line 1625: "TODO: Investigate why minimize() and compact()
-//              produce different node counts"
+// Investigate why minimize() and compact() produce different node counts.
 ```
 
 **Issue**: Two minimization methods yield different results
@@ -484,13 +493,14 @@ Fuzzy Distance 2:
 ## Risk Assessment
 
 ### Low Risk, Good ROI ✅
-- SSE4.1 fallback (compatibility win, straightforward)
+- SSE4.1 fallback (compatibility win, implemented)
 - PathMapChar batch validation (localized change, measurable gain)
 - Inline hints (trivial, compiler may already do it)
 
 ### Medium Risk, High Potential ROI ⚠️
 - Fix suffix sharing bug (complex, 20-40% memory if successful)
-- Investigate minimize() discrepancy (correctness concern)
+- Re-evaluate any remaining minimization/compaction discrepancies against the
+  current dictionary backends before treating the historical DAWG note as active
 
 ### High Risk, Uncertain ROI ⛔
 - SIMD batch lookups (may not vectorize, complex implementation)
@@ -501,12 +511,13 @@ Fuzzy Distance 2:
 
 ### Priority: Correctness 🎯
 1. Fix suffix sharing bug in DynamicDawgChar
-2. Investigate minimize() vs compact() discrepancy
+2. Re-run minimization/compaction checks only for dictionary backends still
+   present in `src/dictionary`
 3. Add comprehensive correctness tests
 4. Verify all edge cases for Unicode handling
 
 ### Priority: Compatibility 🌐
-1. Implement SSE4.1 fallback
+1. Maintain SSE4.1 fallback coverage
 2. Test on wider range of CPU architectures
 3. Add CPU feature detection warnings
 4. Document performance on different hardware
@@ -539,7 +550,7 @@ The codebase has undergone extensive, high-quality optimization work:
 
 **Top 3 Priorities**:
 1. ✅ Fix suffix sharing bug (if time permits - correctness + memory)
-2. ✅ Implement SSE4.1 fallback (good compatibility win)
+2. ✅ Maintain SSE4.1 fallback tests and architecture coverage
 3. ✅ Document optimization status (this document)
 
 **Skip**:
@@ -553,7 +564,7 @@ The **~5-10% UTF-8 overhead is acceptable** and represents an **inherent trade-o
 
 **Focus on**:
 - Correctness (fix suffix sharing bug)
-- Completeness (SSE4.1 implementation)
+- Completeness (keep AVX2/SSE4.1/scalar dispatch covered)
 - Stability (comprehensive testing)
 - Documentation (this analysis)
 

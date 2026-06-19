@@ -201,8 +201,7 @@ function update_text_for_elements(elements) {
     // reading attributes, and one pass of mutating attributes. See
     // https://web.dev/avoid-large-complex-layouts-and-layout-thrashing/ for details.
 
-    // Fall back to inefficient calculation, if we're variable-width font.
-    // TODO This should be optimized somehow too.
+    // Fall back to the variable-width font calculation path.
     if (known_font_width === 0) {
         for (var i = 0; i < elements.length; i++) {
             update_text(elements[i]);
