@@ -31,6 +31,8 @@ use crate::phonetic::regex::ast::{
 use crate::phonetic::regex::error::{ParseError, ParseErrorKind, ParseResult, Position};
 use crate::phonetic::regex::transform::apply_flags;
 
+const MAX_GROUP_EXPANSION_DEPTH: usize = 100;
+
 /// Result of compiling a regex with flag support.
 ///
 /// Contains both the compiled NFA and runtime settings extracted from flags.
@@ -206,6 +208,590 @@ enum CompileWork<'a> {
     DoRepeatRange(usize, Option<usize>),
 }
 
+fn prepare_regex_for_compile(regex: &Regex) -> ParseResult<Regex> {
+    let mut named_groups = HashMap::new();
+    collect_named_groups(regex, &mut named_groups)?;
+    expand_group_refs(regex, &named_groups, &mut Vec::new(), 0)
+}
+
+fn collect_named_groups(
+    regex: &Regex,
+    named_groups: &mut HashMap<String, Regex>,
+) -> ParseResult<()> {
+    match regex {
+        Regex::Concat(a, b) | Regex::Alt(a, b) => {
+            collect_named_groups(a, named_groups)?;
+            collect_named_groups(b, named_groups)?;
+        }
+        Regex::Star(inner)
+        | Regex::Plus(inner)
+        | Regex::Optional(inner)
+        | Regex::RepeatExact(inner, _)
+        | Regex::RepeatRange(inner, _, _)
+        | Regex::CapturingGroup(_, inner)
+        | Regex::NonCapturingGroup(inner) => {
+            collect_named_groups(inner, named_groups)?;
+        }
+        Regex::NamedGroup(name, inner) => {
+            if named_groups
+                .insert(name.clone(), inner.as_ref().clone())
+                .is_some()
+            {
+                return Err(ParseError::new(
+                    ParseErrorKind::DuplicateGroupName(name.clone()),
+                    Position::start(),
+                ));
+            }
+            collect_named_groups(inner, named_groups)?;
+        }
+        Regex::FlagsGroup {
+            inner: Some(inner), ..
+        } => {
+            collect_named_groups(inner, named_groups)?;
+        }
+        Regex::RewriteRule {
+            pattern,
+            replacement,
+            context,
+            ..
+        } => {
+            collect_named_groups(pattern, named_groups)?;
+            collect_named_groups(replacement, named_groups)?;
+            if let Some(context) = context {
+                collect_named_groups_context(context.left.as_ref(), named_groups)?;
+                collect_named_groups_context(context.right.as_ref(), named_groups)?;
+            }
+        }
+        Regex::Empty
+        | Regex::Char(_)
+        | Regex::CharClass(_)
+        | Regex::Any
+        | Regex::GroupRef(_)
+        | Regex::FlagsGroup { inner: None, .. }
+        | Regex::WordBoundary
+        | Regex::StartOfLine
+        | Regex::EndOfLine
+        | Regex::StartOfInput
+        | Regex::EndOfInput
+        | Regex::EndOfInputStrict => {}
+    }
+
+    Ok(())
+}
+
+fn collect_named_groups_context(
+    expr: Option<&ContextExpr>,
+    named_groups: &mut HashMap<String, Regex>,
+) -> ParseResult<()> {
+    let Some(expr) = expr else {
+        return Ok(());
+    };
+
+    match expr {
+        ContextExpr::Pattern(regex) => collect_named_groups(regex, named_groups),
+        ContextExpr::WordBoundary => Ok(()),
+        ContextExpr::And(a, b) | ContextExpr::Or(a, b) => {
+            collect_named_groups_context(Some(a.as_ref()), named_groups)?;
+            collect_named_groups_context(Some(b.as_ref()), named_groups)
+        }
+        ContextExpr::Not(inner) => collect_named_groups_context(Some(inner.as_ref()), named_groups),
+    }
+}
+
+fn expand_group_refs(
+    regex: &Regex,
+    named_groups: &HashMap<String, Regex>,
+    stack: &mut Vec<String>,
+    depth: usize,
+) -> ParseResult<Regex> {
+    if depth > MAX_GROUP_EXPANSION_DEPTH {
+        return Err(ParseError::new(
+            ParseErrorKind::InvalidGroupReference(format!(
+                "group reference expansion exceeded maximum depth {}",
+                MAX_GROUP_EXPANSION_DEPTH
+            )),
+            Position::start(),
+        ));
+    }
+
+    match regex {
+        Regex::GroupRef(name) => {
+            if stack.iter().any(|active| active == name) {
+                let mut chain = stack.join(" -> ");
+                if !chain.is_empty() {
+                    chain.push_str(" -> ");
+                }
+                chain.push_str(name);
+                return Err(ParseError::new(
+                    ParseErrorKind::InvalidGroupReference(format!(
+                        "cyclic group reference expansion: {}",
+                        chain
+                    )),
+                    Position::start(),
+                ));
+            }
+
+            let Some(inner) = named_groups.get(name) else {
+                return Err(ParseError::new(
+                    ParseErrorKind::UndefinedGroupReference(name.clone()),
+                    Position::start(),
+                ));
+            };
+
+            stack.push(name.clone());
+            let expanded = expand_group_refs(inner, named_groups, stack, depth + 1)?;
+            stack.pop();
+
+            Ok(Regex::NonCapturingGroup(Box::new(expanded)))
+        }
+        Regex::Concat(a, b) => Ok(Regex::Concat(
+            Box::new(expand_group_refs(a, named_groups, stack, depth)?),
+            Box::new(expand_group_refs(b, named_groups, stack, depth)?),
+        )),
+        Regex::Alt(a, b) => Ok(Regex::Alt(
+            Box::new(expand_group_refs(a, named_groups, stack, depth)?),
+            Box::new(expand_group_refs(b, named_groups, stack, depth)?),
+        )),
+        Regex::Star(inner) => Ok(Regex::Star(Box::new(expand_group_refs(
+            inner,
+            named_groups,
+            stack,
+            depth,
+        )?))),
+        Regex::Plus(inner) => Ok(Regex::Plus(Box::new(expand_group_refs(
+            inner,
+            named_groups,
+            stack,
+            depth,
+        )?))),
+        Regex::Optional(inner) => Ok(Regex::Optional(Box::new(expand_group_refs(
+            inner,
+            named_groups,
+            stack,
+            depth,
+        )?))),
+        Regex::RepeatExact(inner, n) => Ok(Regex::RepeatExact(
+            Box::new(expand_group_refs(inner, named_groups, stack, depth)?),
+            *n,
+        )),
+        Regex::RepeatRange(inner, min, max) => Ok(Regex::RepeatRange(
+            Box::new(expand_group_refs(inner, named_groups, stack, depth)?),
+            *min,
+            *max,
+        )),
+        Regex::CapturingGroup(n, inner) => Ok(Regex::CapturingGroup(
+            *n,
+            Box::new(expand_group_refs(inner, named_groups, stack, depth)?),
+        )),
+        Regex::NonCapturingGroup(inner) => Ok(Regex::NonCapturingGroup(Box::new(
+            expand_group_refs(inner, named_groups, stack, depth)?,
+        ))),
+        Regex::NamedGroup(name, inner) => Ok(Regex::NamedGroup(
+            name.clone(),
+            Box::new(expand_group_refs(inner, named_groups, stack, depth)?),
+        )),
+        Regex::FlagsGroup { flags, inner } => Ok(Regex::FlagsGroup {
+            flags: flags.clone(),
+            inner: inner
+                .as_ref()
+                .map(|inner| expand_group_refs(inner, named_groups, stack, depth).map(Box::new))
+                .transpose()?,
+        }),
+        Regex::RewriteRule {
+            pattern,
+            replacement,
+            context,
+            weight,
+        } => Ok(Regex::RewriteRule {
+            pattern: Box::new(expand_group_refs(pattern, named_groups, stack, depth)?),
+            replacement: Box::new(expand_group_refs(replacement, named_groups, stack, depth)?),
+            context: context
+                .as_ref()
+                .map(|context| expand_group_refs_context(context, named_groups, stack, depth))
+                .transpose()?
+                .map(Box::new),
+            weight: *weight,
+        }),
+        Regex::Empty
+        | Regex::Char(_)
+        | Regex::CharClass(_)
+        | Regex::Any
+        | Regex::WordBoundary
+        | Regex::StartOfLine
+        | Regex::EndOfLine
+        | Regex::StartOfInput
+        | Regex::EndOfInput
+        | Regex::EndOfInputStrict => Ok(regex.clone()),
+    }
+}
+
+fn expand_group_refs_context(
+    context: &crate::phonetic::regex::ast::ContextPredicate,
+    named_groups: &HashMap<String, Regex>,
+    stack: &mut Vec<String>,
+    depth: usize,
+) -> ParseResult<crate::phonetic::regex::ast::ContextPredicate> {
+    Ok(crate::phonetic::regex::ast::ContextPredicate {
+        left: context
+            .left
+            .as_ref()
+            .map(|expr| expand_group_refs_context_expr(expr, named_groups, stack, depth))
+            .transpose()?,
+        right: context
+            .right
+            .as_ref()
+            .map(|expr| expand_group_refs_context_expr(expr, named_groups, stack, depth))
+            .transpose()?,
+        syllable: context.syllable.clone(),
+    })
+}
+
+fn expand_group_refs_context_expr(
+    expr: &ContextExpr,
+    named_groups: &HashMap<String, Regex>,
+    stack: &mut Vec<String>,
+    depth: usize,
+) -> ParseResult<ContextExpr> {
+    match expr {
+        ContextExpr::Pattern(regex) => Ok(ContextExpr::Pattern(expand_group_refs(
+            regex,
+            named_groups,
+            stack,
+            depth,
+        )?)),
+        ContextExpr::WordBoundary => Ok(ContextExpr::WordBoundary),
+        ContextExpr::And(a, b) => Ok(ContextExpr::And(
+            Box::new(expand_group_refs_context_expr(
+                a,
+                named_groups,
+                stack,
+                depth,
+            )?),
+            Box::new(expand_group_refs_context_expr(
+                b,
+                named_groups,
+                stack,
+                depth,
+            )?),
+        )),
+        ContextExpr::Or(a, b) => Ok(ContextExpr::Or(
+            Box::new(expand_group_refs_context_expr(
+                a,
+                named_groups,
+                stack,
+                depth,
+            )?),
+            Box::new(expand_group_refs_context_expr(
+                b,
+                named_groups,
+                stack,
+                depth,
+            )?),
+        )),
+        ContextExpr::Not(inner) => Ok(ContextExpr::Not(Box::new(expand_group_refs_context_expr(
+            inner,
+            named_groups,
+            stack,
+            depth,
+        )?))),
+    }
+}
+
+fn prepare_byte_regex_for_compile(regex: &RegexByte) -> ParseResult<RegexByte> {
+    let mut named_groups = HashMap::new();
+    collect_byte_named_groups(regex, &mut named_groups)?;
+    expand_byte_group_refs(regex, &named_groups, &mut Vec::new(), 0)
+}
+
+fn collect_byte_named_groups(
+    regex: &RegexByte,
+    named_groups: &mut HashMap<String, RegexByte>,
+) -> ParseResult<()> {
+    match regex {
+        RegexByte::Concat(a, b) | RegexByte::Alt(a, b) => {
+            collect_byte_named_groups(a, named_groups)?;
+            collect_byte_named_groups(b, named_groups)?;
+        }
+        RegexByte::Star(inner)
+        | RegexByte::Plus(inner)
+        | RegexByte::Optional(inner)
+        | RegexByte::RepeatExact(inner, _)
+        | RegexByte::RepeatRange(inner, _, _)
+        | RegexByte::CapturingGroup(_, inner)
+        | RegexByte::NonCapturingGroup(inner) => {
+            collect_byte_named_groups(inner, named_groups)?;
+        }
+        RegexByte::NamedGroup(name, inner) => {
+            if named_groups
+                .insert(name.clone(), inner.as_ref().clone())
+                .is_some()
+            {
+                return Err(ParseError::new(
+                    ParseErrorKind::DuplicateGroupName(name.clone()),
+                    Position::start(),
+                ));
+            }
+            collect_byte_named_groups(inner, named_groups)?;
+        }
+        RegexByte::FlagsGroup {
+            inner: Some(inner), ..
+        } => {
+            collect_byte_named_groups(inner, named_groups)?;
+        }
+        RegexByte::RewriteRule {
+            pattern,
+            replacement,
+            context,
+            ..
+        } => {
+            collect_byte_named_groups(pattern, named_groups)?;
+            collect_byte_named_groups(replacement, named_groups)?;
+            if let Some(context) = context {
+                collect_byte_named_groups_context(context.left.as_ref(), named_groups)?;
+                collect_byte_named_groups_context(context.right.as_ref(), named_groups)?;
+            }
+        }
+        RegexByte::Empty
+        | RegexByte::Byte(_)
+        | RegexByte::ByteClass(_)
+        | RegexByte::Any
+        | RegexByte::GroupRef(_)
+        | RegexByte::FlagsGroup { inner: None, .. }
+        | RegexByte::WordBoundary
+        | RegexByte::StartOfLine
+        | RegexByte::EndOfLine
+        | RegexByte::StartOfInput
+        | RegexByte::EndOfInput
+        | RegexByte::EndOfInputStrict => {}
+    }
+
+    Ok(())
+}
+
+fn collect_byte_named_groups_context(
+    expr: Option<&ContextExprByte>,
+    named_groups: &mut HashMap<String, RegexByte>,
+) -> ParseResult<()> {
+    let Some(expr) = expr else {
+        return Ok(());
+    };
+
+    match expr {
+        ContextExprByte::Pattern(regex) => collect_byte_named_groups(regex, named_groups),
+        ContextExprByte::WordBoundary => Ok(()),
+        ContextExprByte::And(a, b) | ContextExprByte::Or(a, b) => {
+            collect_byte_named_groups_context(Some(a.as_ref()), named_groups)?;
+            collect_byte_named_groups_context(Some(b.as_ref()), named_groups)
+        }
+        ContextExprByte::Not(inner) => {
+            collect_byte_named_groups_context(Some(inner.as_ref()), named_groups)
+        }
+    }
+}
+
+fn expand_byte_group_refs(
+    regex: &RegexByte,
+    named_groups: &HashMap<String, RegexByte>,
+    stack: &mut Vec<String>,
+    depth: usize,
+) -> ParseResult<RegexByte> {
+    if depth > MAX_GROUP_EXPANSION_DEPTH {
+        return Err(ParseError::new(
+            ParseErrorKind::InvalidGroupReference(format!(
+                "group reference expansion exceeded maximum depth {}",
+                MAX_GROUP_EXPANSION_DEPTH
+            )),
+            Position::start(),
+        ));
+    }
+
+    match regex {
+        RegexByte::GroupRef(name) => {
+            if stack.iter().any(|active| active == name) {
+                let mut chain = stack.join(" -> ");
+                if !chain.is_empty() {
+                    chain.push_str(" -> ");
+                }
+                chain.push_str(name);
+                return Err(ParseError::new(
+                    ParseErrorKind::InvalidGroupReference(format!(
+                        "cyclic group reference expansion: {}",
+                        chain
+                    )),
+                    Position::start(),
+                ));
+            }
+
+            let Some(inner) = named_groups.get(name) else {
+                return Err(ParseError::new(
+                    ParseErrorKind::UndefinedGroupReference(name.clone()),
+                    Position::start(),
+                ));
+            };
+
+            stack.push(name.clone());
+            let expanded = expand_byte_group_refs(inner, named_groups, stack, depth + 1)?;
+            stack.pop();
+
+            Ok(RegexByte::NonCapturingGroup(Box::new(expanded)))
+        }
+        RegexByte::Concat(a, b) => Ok(RegexByte::Concat(
+            Box::new(expand_byte_group_refs(a, named_groups, stack, depth)?),
+            Box::new(expand_byte_group_refs(b, named_groups, stack, depth)?),
+        )),
+        RegexByte::Alt(a, b) => Ok(RegexByte::Alt(
+            Box::new(expand_byte_group_refs(a, named_groups, stack, depth)?),
+            Box::new(expand_byte_group_refs(b, named_groups, stack, depth)?),
+        )),
+        RegexByte::Star(inner) => Ok(RegexByte::Star(Box::new(expand_byte_group_refs(
+            inner,
+            named_groups,
+            stack,
+            depth,
+        )?))),
+        RegexByte::Plus(inner) => Ok(RegexByte::Plus(Box::new(expand_byte_group_refs(
+            inner,
+            named_groups,
+            stack,
+            depth,
+        )?))),
+        RegexByte::Optional(inner) => Ok(RegexByte::Optional(Box::new(expand_byte_group_refs(
+            inner,
+            named_groups,
+            stack,
+            depth,
+        )?))),
+        RegexByte::RepeatExact(inner, n) => Ok(RegexByte::RepeatExact(
+            Box::new(expand_byte_group_refs(inner, named_groups, stack, depth)?),
+            *n,
+        )),
+        RegexByte::RepeatRange(inner, min, max) => Ok(RegexByte::RepeatRange(
+            Box::new(expand_byte_group_refs(inner, named_groups, stack, depth)?),
+            *min,
+            *max,
+        )),
+        RegexByte::CapturingGroup(n, inner) => Ok(RegexByte::CapturingGroup(
+            *n,
+            Box::new(expand_byte_group_refs(inner, named_groups, stack, depth)?),
+        )),
+        RegexByte::NonCapturingGroup(inner) => Ok(RegexByte::NonCapturingGroup(Box::new(
+            expand_byte_group_refs(inner, named_groups, stack, depth)?,
+        ))),
+        RegexByte::NamedGroup(name, inner) => Ok(RegexByte::NamedGroup(
+            name.clone(),
+            Box::new(expand_byte_group_refs(inner, named_groups, stack, depth)?),
+        )),
+        RegexByte::FlagsGroup { flags, inner } => Ok(RegexByte::FlagsGroup {
+            flags: flags.clone(),
+            inner: inner
+                .as_ref()
+                .map(|inner| {
+                    expand_byte_group_refs(inner, named_groups, stack, depth).map(Box::new)
+                })
+                .transpose()?,
+        }),
+        RegexByte::RewriteRule {
+            pattern,
+            replacement,
+            context,
+            weight,
+        } => Ok(RegexByte::RewriteRule {
+            pattern: Box::new(expand_byte_group_refs(pattern, named_groups, stack, depth)?),
+            replacement: Box::new(expand_byte_group_refs(
+                replacement,
+                named_groups,
+                stack,
+                depth,
+            )?),
+            context: context
+                .as_ref()
+                .map(|context| expand_byte_group_refs_context(context, named_groups, stack, depth))
+                .transpose()?
+                .map(Box::new),
+            weight: *weight,
+        }),
+        RegexByte::Empty
+        | RegexByte::Byte(_)
+        | RegexByte::ByteClass(_)
+        | RegexByte::Any
+        | RegexByte::WordBoundary
+        | RegexByte::StartOfLine
+        | RegexByte::EndOfLine
+        | RegexByte::StartOfInput
+        | RegexByte::EndOfInput
+        | RegexByte::EndOfInputStrict => Ok(regex.clone()),
+    }
+}
+
+fn expand_byte_group_refs_context(
+    context: &crate::phonetic::regex::ast::ContextPredicateByte,
+    named_groups: &HashMap<String, RegexByte>,
+    stack: &mut Vec<String>,
+    depth: usize,
+) -> ParseResult<crate::phonetic::regex::ast::ContextPredicateByte> {
+    Ok(crate::phonetic::regex::ast::ContextPredicateByte {
+        left: context
+            .left
+            .as_ref()
+            .map(|expr| expand_byte_group_refs_context_expr(expr, named_groups, stack, depth))
+            .transpose()?,
+        right: context
+            .right
+            .as_ref()
+            .map(|expr| expand_byte_group_refs_context_expr(expr, named_groups, stack, depth))
+            .transpose()?,
+        syllable: context.syllable.clone(),
+    })
+}
+
+fn expand_byte_group_refs_context_expr(
+    expr: &ContextExprByte,
+    named_groups: &HashMap<String, RegexByte>,
+    stack: &mut Vec<String>,
+    depth: usize,
+) -> ParseResult<ContextExprByte> {
+    match expr {
+        ContextExprByte::Pattern(regex) => Ok(ContextExprByte::Pattern(expand_byte_group_refs(
+            regex,
+            named_groups,
+            stack,
+            depth,
+        )?)),
+        ContextExprByte::WordBoundary => Ok(ContextExprByte::WordBoundary),
+        ContextExprByte::And(a, b) => Ok(ContextExprByte::And(
+            Box::new(expand_byte_group_refs_context_expr(
+                a,
+                named_groups,
+                stack,
+                depth,
+            )?),
+            Box::new(expand_byte_group_refs_context_expr(
+                b,
+                named_groups,
+                stack,
+                depth,
+            )?),
+        )),
+        ContextExprByte::Or(a, b) => Ok(ContextExprByte::Or(
+            Box::new(expand_byte_group_refs_context_expr(
+                a,
+                named_groups,
+                stack,
+                depth,
+            )?),
+            Box::new(expand_byte_group_refs_context_expr(
+                b,
+                named_groups,
+                stack,
+                depth,
+            )?),
+        )),
+        ContextExprByte::Not(inner) => Ok(ContextExprByte::Not(Box::new(
+            expand_byte_group_refs_context_expr(inner, named_groups, stack, depth)?,
+        ))),
+    }
+}
+
 /// Character-level NFA compiler.
 pub struct NFACompilerChar {
     builder: ThompsonBuilderChar,
@@ -350,7 +936,8 @@ impl NFACompilerChar {
     pub fn compile(&mut self, regex: &Regex) -> ParseResult<NFAChar> {
         // Apply flag transformations before compilation
         let transform_result = apply_flags(regex);
-        let nfa = self.compile_regex(&transform_result.regex)?;
+        let prepared = prepare_regex_for_compile(&transform_result.regex)?;
+        let nfa = self.compile_regex(&prepared)?;
 
         // Apply optimization if configured
         let mut nfa = if let Some(ref config) = self.optimization {
@@ -373,7 +960,8 @@ impl NFACompilerChar {
     pub fn compile_with_flags(&mut self, regex: &Regex) -> ParseResult<CompileResultChar> {
         // Apply flag transformations before compilation
         let transform_result = apply_flags(regex);
-        let nfa = self.compile_regex(&transform_result.regex)?;
+        let prepared = prepare_regex_for_compile(&transform_result.regex)?;
+        let nfa = self.compile_regex(&prepared)?;
 
         // Apply optimization if configured
         let nfa = if let Some(ref config) = self.optimization {
@@ -401,7 +989,8 @@ impl NFACompilerChar {
     ///
     /// The source pattern NFA is automatically optimized if optimization is enabled.
     pub fn compile_rewrite(&mut self, regex: &Regex) -> ParseResult<CompiledRewriteChar> {
-        match regex {
+        let prepared = prepare_regex_for_compile(regex)?;
+        match &prepared {
             Regex::RewriteRule {
                 pattern,
                 replacement,
@@ -558,18 +1147,13 @@ impl NFACompilerChar {
                 self.compile_regex_recursive(inner)
             }
             // Group reference: (?&name)
-            Regex::GroupRef(name) => {
-                // Group references require the named group's pattern to be available.
-                // For now, return an error - in a future phase, we would expand
-                // the group reference inline or implement proper subroutine semantics.
-                Err(ParseError::new(
-                    ParseErrorKind::InvalidGroupReference(format!(
-                        "group reference (?&{}) cannot be compiled - subroutine expansion not yet implemented",
-                        name
-                    )),
-                    Position::start(),
-                ))
-            }
+            Regex::GroupRef(name) => Err(ParseError::new(
+                ParseErrorKind::InvalidGroupReference(format!(
+                    "unexpanded group reference (?&{}) reached recursive NFA compilation",
+                    name
+                )),
+                Position::start(),
+            )),
             // Flags group: (?flags:...) or (?flags)
             Regex::FlagsGroup { inner, .. } => {
                 // For now, ignore flags and compile the inner pattern if present
@@ -736,7 +1320,7 @@ impl NFACompilerChar {
             Regex::GroupRef(name) => {
                 return Err(ParseError::new(
                     ParseErrorKind::InvalidGroupReference(format!(
-                        "group reference (?&{}) cannot be compiled - subroutine expansion not yet implemented",
+                        "unexpanded group reference (?&{}) reached trampolined NFA compilation",
                         name
                     )),
                     Position::start(),
@@ -799,7 +1383,8 @@ impl NFACompilerByte {
 
     /// Compile a regex AST to an NFA.
     pub fn compile(&mut self, regex: &RegexByte) -> ParseResult<NFA> {
-        let mut nfa = self.compile_regex(regex)?;
+        let prepared = prepare_byte_regex_for_compile(regex)?;
+        let mut nfa = self.compile_regex(&prepared)?;
         // H9: Finalize CSR transition table
         nfa.finalize();
         Ok(nfa)
@@ -807,7 +1392,8 @@ impl NFACompilerByte {
 
     /// Compile a rewrite rule.
     pub fn compile_rewrite(&mut self, regex: &RegexByte) -> ParseResult<CompiledRewrite> {
-        match regex {
+        let prepared = prepare_byte_regex_for_compile(regex)?;
+        match &prepared {
             RegexByte::RewriteRule {
                 pattern,
                 replacement,
@@ -915,46 +1501,32 @@ impl NFACompilerByte {
                 Ok(self.builder.repeat_range(nfa, *min, *max))
             }
             // Capturing group: (...)
-            RegexByte::CapturingGroup(_, inner) => {
-                self.compile_regex(inner)
-            }
+            RegexByte::CapturingGroup(_, inner) => self.compile_regex(inner),
             // Non-capturing group: (?:...)
-            RegexByte::NonCapturingGroup(inner) => {
-                self.compile_regex(inner)
-            }
+            RegexByte::NonCapturingGroup(inner) => self.compile_regex(inner),
             // Named group: (?<name>...)
-            RegexByte::NamedGroup(_, inner) => {
-                self.compile_regex(inner)
-            }
+            RegexByte::NamedGroup(_, inner) => self.compile_regex(inner),
             // Group reference: (?&name)
-            RegexByte::GroupRef(name) => {
-                Err(ParseError::new(
-                    ParseErrorKind::InvalidGroupReference(format!(
-                        "group reference (?&{}) cannot be compiled - subroutine expansion not yet implemented",
-                        name
-                    )),
-                    Position::start(),
-                ))
-            }
+            RegexByte::GroupRef(name) => Err(ParseError::new(
+                ParseErrorKind::InvalidGroupReference(format!(
+                    "unexpanded group reference (?&{}) reached byte NFA compilation",
+                    name
+                )),
+                Position::start(),
+            )),
             // Flags group: (?flags:...) or (?flags)
-            RegexByte::FlagsGroup { inner, .. } => {
-                match inner {
-                    Some(inner_regex) => self.compile_regex(inner_regex),
-                    None => Ok(self.builder.epsilon()),
-                }
-            }
-            RegexByte::WordBoundary => {
-                Ok(self.builder.epsilon())
-            }
+            RegexByte::FlagsGroup { inner, .. } => match inner {
+                Some(inner_regex) => self.compile_regex(inner_regex),
+                None => Ok(self.builder.epsilon()),
+            },
+            RegexByte::WordBoundary => Ok(self.builder.epsilon()),
             // Anchor assertions (zero-width)
             RegexByte::StartOfLine => Ok(self.builder.start_of_line()),
             RegexByte::EndOfLine => Ok(self.builder.end_of_line()),
             RegexByte::StartOfInput => Ok(self.builder.start_of_input()),
             RegexByte::EndOfInput => Ok(self.builder.end_of_input()),
             RegexByte::EndOfInputStrict => Ok(self.builder.end_of_input_strict()),
-            RegexByte::RewriteRule { pattern, .. } => {
-                self.compile_regex(pattern)
-            }
+            RegexByte::RewriteRule { pattern, .. } => self.compile_regex(pattern),
         }
     }
 
@@ -1025,6 +1597,62 @@ mod tests {
         assert!(nfa.accepts("phone"));
         assert!(nfa.accepts("fone"));
         assert!(!nfa.accepts("bone"));
+    }
+
+    #[test]
+    fn test_compile_named_group_reference() {
+        let regex = parse("(?<digit>[0-9])(?&digit)").expect("test: parse named group reference");
+        let nfa = compile(&regex).expect("test: compile named group reference");
+
+        assert!(nfa.accepts("42"));
+        assert!(nfa.accepts("00"));
+        assert!(!nfa.accepts("4"));
+        assert!(!nfa.accepts("4a"));
+    }
+
+    #[test]
+    fn test_compile_forward_named_group_reference() {
+        let regex = parse("(?&pair)(?<pair>ab|cd)").expect("test: parse forward group reference");
+        let nfa = compile(&regex).expect("test: compile forward group reference");
+
+        assert!(nfa.accepts("abab"));
+        assert!(nfa.accepts("cdab"));
+        assert!(!nfa.accepts("ab"));
+        assert!(!nfa.accepts("abcdx"));
+    }
+
+    #[test]
+    fn test_compile_named_group_reference_with_trampolining() {
+        let regex =
+            parse("(?<unit>ab|cd)(?&unit)+").expect("test: parse named group reference with plus");
+        let mut compiler = NFACompilerChar::new().with_trampolining();
+        let nfa = compiler
+            .compile(&regex)
+            .expect("test: trampolined compile named group reference");
+
+        assert!(nfa.accepts("abab"));
+        assert!(nfa.accepts("abcdcd"));
+        assert!(!nfa.accepts("ab"));
+        assert!(!nfa.accepts("abef"));
+    }
+
+    #[test]
+    fn test_compile_named_group_reference_cycle_error() {
+        let regex = Regex::NamedGroup("self".to_string(), Box::new(Regex::group_ref("self")));
+        let err = compile(&regex).expect_err("recursive group reference should fail");
+
+        assert!(matches!(err.kind, ParseErrorKind::InvalidGroupReference(_)));
+    }
+
+    #[test]
+    fn test_compile_manual_undefined_group_reference_error() {
+        let err = compile(&Regex::group_ref("missing"))
+            .expect_err("undefined manual group reference should fail");
+
+        assert!(matches!(
+            err.kind,
+            ParseErrorKind::UndefinedGroupReference(_)
+        ));
     }
 
     #[test]
@@ -1154,6 +1782,22 @@ mod tests {
         let nfa = compile_bytes(&regex).expect("test: compile_bytes nfa");
         assert!(nfa.accepts(b"ph"));
         assert!(nfa.accepts(b"f"));
+    }
+
+    #[test]
+    fn test_compile_bytes_named_group_reference() {
+        let regex = RegexByte::Concat(
+            Box::new(RegexByte::NamedGroup(
+                "x".to_string(),
+                Box::new(RegexByte::Byte(b'a')),
+            )),
+            Box::new(RegexByte::GroupRef("x".to_string())),
+        );
+        let nfa = compile_bytes(&regex).expect("test: compile byte group reference");
+
+        assert!(nfa.accepts(b"aa"));
+        assert!(!nfa.accepts(b"a"));
+        assert!(!nfa.accepts(b"ab"));
     }
 
     #[test]
