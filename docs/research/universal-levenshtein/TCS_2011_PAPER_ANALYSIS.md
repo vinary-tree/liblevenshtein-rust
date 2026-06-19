@@ -25,7 +25,7 @@ This 2011 TCS paper **significantly extends** the 2005 Mitankin thesis work (see
 ### Relevance to Current Implementation
 
 - **Validates SmallVec optimization**: Bounded diagonal property explains why inline size=8 works
-- **Identifies critical bug**: Diagonal crossing detection needs explicit `m` tracking
+- **Resolved integration issue**: Diagonal crossing detection needed explicit `m` tracking; the current state API now carries `length_diff`
 - **Enables future extensions**: Generalized framework supports Unicode normalization, OCR corrections, phonetic matching
 - **Provides theoretical foundation**: Your implementation is sound, but can be enhanced
 
@@ -604,14 +604,15 @@ Zero-weighted operations MUST be length preserving
 
 ---
 
-## 8. Critical Bugs and Fixes
+## 8. Bugs and Fixes
 
-### 8.1 Diagonal Crossing Bug 🔴
+### 8.1 Diagonal Crossing Bug ✅
 
-**Current Code** (`src/transducer/universal/state.rs:325-360`):
+**Historical Code** (`src/transducer/universal/state.rs:325-360`):
 
 ```rust
-// Currently disabled due to premature conversions
+// Historical inactive integration: lacked consumption metadata and could
+// trigger premature conversions.
 // if let Some(rm_pos) = right_most(next_state.positions()) {
 //     if diagonal_crossed(&rm_pos, input_length, self.max_distance) {
 //         // Apply m_n conversion
@@ -628,29 +629,33 @@ f_n(rm(Δ), k) checks if right-most position crosses diagonal
 m_n(Δ, k) converts I-type → M-type positions when crossing occurs
 ```
 
-**Recommended Fix**:
+**Implemented Resolution**:
 
 ```rust
 pub struct UniversalState<V: PositionVariant> {
     positions: SmallVec<[UniversalPosition<V>; 8]>,
-    length_diff: i8,     // NEW: m ∈ [-c, +c]
     max_distance: u8,
+    length_diff: i8,
 }
 
 impl<V: PositionVariant> UniversalState<V> {
-    pub fn transition(...) -> Option<Self> {
-        // ...
-
-        // Check diagonal crossing using paper's criterion
-        if new_state.length_diff.abs() > self.max_distance as i8 {
-            // Apply m_n conversion: I-type → M-type
-            new_state.convert_i_to_m_positions();
-        }
-
-        // ...
+    pub fn transition_with_consumption(
+        &self,
+        bit_vector: &CharacteristicVector,
+        consumed_query: bool,
+        consumed_dict: bool,
+    ) -> Option<Self> {
+        // Updates length_diff from consumption metadata and converts positions
+        // when |length_diff| > max_distance.
     }
 }
 ```
+
+The compatibility `transition()` API intentionally skips diagonal crossing
+because it cannot infer side-specific consumption. Use
+`transition_with_consumption()` for callers that require I/M conversion.
+
+**Verification**: `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0 env CARGO_BUILD_JOBS=1 cargo test -j1 --lib transducer::universal::state::tests -- --test-threads=1` passed 36/36 universal state tests on 2026-06-19.
 
 ### 8.2 Testing Acceptance Criterion
 
@@ -875,7 +880,7 @@ Update `README.md` in `docs/research/universal-levenshtein/`:
 | **Operation Set** Υ | Section 3.4 | `AlgorithmVariant` enum | 🟡 Enhance |
 | **Replacement Relation** op^r | Section 3.2 | Planned `SubstitutionSet` | 🚧 Design |
 | **Bounded Diagonal** c | Theorem 8.2 | Implicit in `max_distance` | 📄 Document |
-| **Length Difference** m | Section 9.1 | Not tracked explicitly | 🔴 Fix |
+| **Length Difference** m | Section 9.1 | `UniversalState::length_diff` | ✅ Done |
 | **Extensor** e_k | Definition 9.3 | Implicit in positions | 🟡 Consider |
 | **State** ⟨m, ⟨e₁,...,e_d⟩⟩ | Definition 9.7 | `UniversalState` | 🟡 Enhance |
 | **Characteristic Vector** χ[Op,r] | Definition 9.9 | `CharacteristicVector` | ✅ Done |
@@ -884,26 +889,25 @@ Update `README.md` in `docs/research/universal-levenshtein/`:
 | **Alphabet Independence** | Section 7 | Bit vectors | ✅ Done |
 | **Subsumption** ⊔ | Implicit | `UniversalState::add_position` | ✅ Done |
 | **Anti-chain Property** | Implicit | Subsumption logic | ✅ Done |
-| **Diagonal Crossing** f_n, m_n | Section 9.2 | Commented out (buggy) | 🔴 Fix |
+| **Diagonal Crossing** f_n, m_n | Section 9.2 | `transition_with_consumption()` | ✅ Done |
 | **Acceptance Criterion** | Proposition 11 | `is_match` method | ✅ Done |
 
 **Legend**:
 - ✅ **Done**: Correctly implemented
 - 🟡 **Enhance**: Works but can be generalized/improved
 - 🚧 **Design**: Planned but not yet implemented
-- 🔴 **Fix**: Critical bug needs fixing
 - 📄 **Document**: Needs documentation/comments
 
 ---
 
 ## 13. Priority Action Items
 
-### 🔴 Critical (Fix Immediately)
+### ✅ Completed Critical Fix
 
-1. **Fix Diagonal Crossing** (`src/transducer/universal/state.rs:325-360`)
-   - Add `length_diff: i8` to `UniversalState`
-   - Implement paper's f_n and m_n functions
-   - Test with acceptance criterion
+1. **Fix Diagonal Crossing**
+   - Added `length_diff: i8` to `UniversalState`
+   - Added consumption-aware transition path for I/M conversion
+   - Added focused universal state tests for length-difference updates and conversion boundaries
 
 ### 📄 High Priority (Document)
 
@@ -952,10 +956,10 @@ Update `README.md` in `docs/research/universal-levenshtein/`:
    - Alphabet independence correctly achieved
    - Subsumption logic matches paper's framework
 
-2. **Critical Bug Identified**
-   - Diagonal crossing needs explicit `m` tracking
-   - Current code is disabled/buggy
-   - Paper provides clear solution (Section 9.2)
+2. **Critical Bug Resolved**
+   - Diagonal crossing uses explicit `m`/`length_diff` tracking
+   - The consumption-aware transition path performs conversion at the boundary
+   - Paper provided the solution shape (Section 9.2)
 
 3. **Generalization Path Clear**
    - Type-based operation framework enables powerful extensions
