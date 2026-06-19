@@ -475,6 +475,7 @@ struct SpellingCase {
 struct HomophoneCase {
     query: String,
     expected: Vec<String>,
+    pronunciation_key: String,
 }
 
 #[cfg(feature = "phonetic-rules")]
@@ -1182,10 +1183,31 @@ fn cmudict_base_word(raw: &str) -> Option<String> {
 }
 
 #[cfg(feature = "phonetic-rules")]
+fn cmudict_pronunciation_key(pronunciation: &str) -> Option<String> {
+    let mut key = String::new();
+    for phone in pronunciation.split_whitespace() {
+        let mut emitted = false;
+        for ch in phone.chars().filter(|ch| ch.is_ascii_alphabetic()) {
+            key.push(ch.to_ascii_uppercase());
+            emitted = true;
+        }
+        if !emitted {
+            return None;
+        }
+    }
+
+    if key.len() < 2 {
+        None
+    } else {
+        Some(key)
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
 fn load_cmudict_homophones(path: &Path, limit: usize) -> Vec<HomophoneCase> {
     let text = fs::read_to_string(path)
         .unwrap_or_else(|err| panic!("failed to read CMUdict file {}: {err}", path.display()));
-    let mut by_pronunciation: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut by_pronunciation: HashMap<String, (String, HashSet<String>)> = HashMap::new();
 
     for line in text.lines() {
         let line = line.split('#').next().unwrap_or("").trim();
@@ -1198,30 +1220,31 @@ fn load_cmudict_homophones(path: &Path, limit: usize) -> Vec<HomophoneCase> {
             continue;
         };
         let pronunciation = parts.collect::<Vec<_>>().join(" ");
-        if pronunciation.is_empty() {
+        let Some(pronunciation_key) = cmudict_pronunciation_key(&pronunciation) else {
             continue;
-        }
+        };
         by_pronunciation
             .entry(pronunciation)
-            .or_default()
+            .or_insert_with(|| (pronunciation_key, HashSet::new()))
+            .1
             .insert(word);
     }
 
-    let mut groups: Vec<Vec<String>> = by_pronunciation
+    let mut groups: Vec<(String, Vec<String>)> = by_pronunciation
         .into_values()
-        .filter_map(|set| {
+        .filter_map(|(pronunciation_key, set)| {
             if set.len() < 2 {
                 return None;
             }
             let mut group: Vec<String> = set.into_iter().collect();
             group.sort();
-            Some(group)
+            Some((pronunciation_key, group))
         })
         .collect();
-    groups.sort_by(|a, b| a[0].cmp(&b[0]).then_with(|| a.len().cmp(&b.len())));
+    groups.sort_by(|a, b| a.1[0].cmp(&b.1[0]).then_with(|| a.1.len().cmp(&b.1.len())));
 
     let mut cases = Vec::new();
-    for group in groups {
+    for (pronunciation_key, group) in groups {
         for query in &group {
             let expected: Vec<String> = group
                 .iter()
@@ -1232,6 +1255,7 @@ fn load_cmudict_homophones(path: &Path, limit: usize) -> Vec<HomophoneCase> {
                 cases.push(HomophoneCase {
                     query: query.clone(),
                     expected,
+                    pronunciation_key: pronunciation_key.clone(),
                 });
             }
             if cases.len() >= limit {
@@ -1495,6 +1519,13 @@ fn run_cmudict_phonetic_diagnostic(
     phonetic_rule_extension_order: RuleExtensionOrder,
 ) {
     let cases = load_cmudict_homophones(path, limit.max(diagnostic_limit));
+    let mut query_case_counts = HashMap::new();
+    for case in &cases {
+        *query_case_counts
+            .entry(case.query.clone())
+            .or_insert(0usize) += 1;
+    }
+
     let mut terms = HashSet::new();
     for case in &cases {
         terms.insert(case.query.clone());
@@ -1543,10 +1574,28 @@ fn run_cmudict_phonetic_diagnostic(
             .filter(|candidate| candidate.term != case.query)
             .map(|candidate| candidate.term.as_str())
             .collect();
+        let expected_terms: HashSet<&str> = case.expected.iter().map(String::as_str).collect();
+        let matched_expected_top_k_count = candidates
+            .iter()
+            .filter(|candidate| candidate.term != case.query)
+            .take(recall_k)
+            .filter(|candidate| expected_terms.contains(candidate.term.as_str()))
+            .count();
+        let top_k_ceiling = recall_k.min(case.expected.len());
+        let query_case_count = query_case_counts
+            .get(&case.query)
+            .copied()
+            .unwrap_or_default();
 
         for expected in &case.expected {
             let expected_normalized = dict.normalize(expected);
             let normalized_distance = levenshtein_distance(&query_normalized, &expected_normalized);
+            let off_pronunciation_top_k_count = candidates
+                .iter()
+                .filter(|candidate| candidate.term != case.query)
+                .take(recall_k)
+                .filter(|candidate| candidate.normalized_form != case.pronunciation_key)
+                .count();
             let matched_rank = candidates
                 .iter()
                 .filter(|candidate| candidate.term != case.query)
@@ -1556,6 +1605,14 @@ fn run_cmudict_phonetic_diagnostic(
             let in_full_results = full_result_terms.contains(expected.as_str());
             let root_cause = if matched_top_k {
                 "retrieved"
+            } else if in_full_results
+                && case.expected.len() > recall_k
+                && matched_expected_top_k_count >= top_k_ceiling
+            {
+                "top_k_ceiling"
+            } else if in_full_results && (query_case_count > 1 || off_pronunciation_top_k_count > 0)
+            {
+                "ambiguous_query_pronunciation_ranking"
             } else if in_full_results {
                 "ranking_or_limit"
             } else if normalized_distance <= max_distance {
@@ -1565,11 +1622,13 @@ fn run_cmudict_phonetic_diagnostic(
             };
 
             println!(
-                "{{\"workload\":\"cmudict_phonetic_diagnostic\",\"phonetic_dialect\":\"{escaped_label}\",\"case_index\":{case_index},\"query\":\"{}\",\"expected\":\"{}\",\"query_normalized\":\"{}\",\"expected_normalized\":\"{}\",\"normalized_distance\":{normalized_distance},\"max_distance\":{max_distance},\"recall_k\":{recall_k},\"matched_top_k\":{matched_top_k},\"matched_rank\":{},\"in_full_results\":{in_full_results},\"root_cause\":\"{root_cause}\",\"top_terms\":{},\"candidate_count\":{},\"rule_count\":{rule_count},\"term_count\":{},\"normalized_count\":{normalized_count},\"elapsed_us\":{},\"allocated_bytes\":{allocated_bytes},\"allocation_count\":{allocation_count},\"live_bytes\":{live_bytes}}}",
+                "{{\"workload\":\"cmudict_phonetic_diagnostic\",\"phonetic_dialect\":\"{escaped_label}\",\"case_index\":{case_index},\"query\":\"{}\",\"expected\":\"{}\",\"case_pronunciation_key\":\"{}\",\"query_normalized\":\"{}\",\"expected_normalized\":\"{}\",\"normalized_distance\":{normalized_distance},\"max_distance\":{max_distance},\"recall_k\":{recall_k},\"expected_count\":{},\"matched_expected_top_k_count\":{matched_expected_top_k_count},\"top_k_ceiling\":{top_k_ceiling},\"query_case_count\":{query_case_count},\"off_pronunciation_top_k_count\":{off_pronunciation_top_k_count},\"matched_top_k\":{matched_top_k},\"matched_rank\":{},\"in_full_results\":{in_full_results},\"root_cause\":\"{root_cause}\",\"top_terms\":{},\"candidate_count\":{},\"rule_count\":{rule_count},\"term_count\":{},\"normalized_count\":{normalized_count},\"elapsed_us\":{},\"allocated_bytes\":{allocated_bytes},\"allocation_count\":{allocation_count},\"live_bytes\":{live_bytes}}}",
                 json_escape(&case.query),
                 json_escape(expected),
+                json_escape(&case.pronunciation_key),
                 json_escape(&query_normalized),
                 json_escape(&expected_normalized),
+                case.expected.len(),
                 matched_rank.map_or_else(|| "null".to_string(), |rank| rank.to_string()),
                 json_string_array(&top_terms),
                 candidate_count,
