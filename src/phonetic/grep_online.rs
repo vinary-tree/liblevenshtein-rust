@@ -846,15 +846,15 @@ impl PhoneticGrepOnline {
     /// # Example
     ///
     /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("TODO", rules, 0);
+    /// let grep = PhoneticGrepOnline::with_rules("needle", rules, 0);
     ///
     /// let source_files: Vec<_> = files.iter()
     ///     .map(|f| (f.path(), f.content()))
     ///     .collect();
     ///
-    /// let todo_counts = grep.count_documents_parallel(source_files);
-    /// let total: usize = todo_counts.iter().map(|(_, c)| c).sum();
-    /// println!("Total TODOs: {}", total);
+    /// let match_counts = grep.count_documents_parallel(source_files);
+    /// let total: usize = match_counts.iter().map(|(_, c)| c).sum();
+    /// println!("Total matches: {}", total);
     /// ```
     #[cfg(feature = "parallel-grep")]
     pub fn count_documents_parallel<'a, I, D>(&self, documents: I) -> Vec<(D, usize)>
