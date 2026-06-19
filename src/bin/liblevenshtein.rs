@@ -245,6 +245,23 @@ fn run_repl(
                     println!("{}", output);
                 }
 
+                let mut follow_up = transition.follow_up;
+                while let Some(event) = follow_up {
+                    match state_machine.process_event(event) {
+                        Ok(follow_up_transition) => {
+                            if let Some(output) = follow_up_transition.output {
+                                println!("{}", output);
+                            }
+                            follow_up = follow_up_transition.follow_up;
+                        }
+                        Err(e) => {
+                            eprintln!("{}: State machine error: {}", "Error".red().bold(), e);
+                            state_machine.reset();
+                            follow_up = None;
+                        }
+                    }
+                }
+
                 // Handle command execution if in Executing phase
                 if let liblevenshtein::repl::ReplPhase::Executing { ref command } =
                     state_machine.phase()
@@ -294,16 +311,6 @@ fn run_repl(
                                 }
                             }
                         }
-                    }
-                }
-
-                // Process follow-up event if any
-                if let Some(follow_up) = transition.follow_up {
-                    // Follow-up events will be processed in next loop iteration
-                    // For now, we'll handle them inline for CommandParsed events
-                    if matches!(follow_up, ReplEvent::CommandParsed { .. }) {
-                        // Continue to command execution in next iteration
-                        continue;
                     }
                 }
             }

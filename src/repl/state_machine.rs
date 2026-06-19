@@ -288,6 +288,12 @@ impl ReplStateMachine {
             ),
 
             // Executing state transitions
+            (ReplPhase::Executing { .. }, ReplEvent::CommandParsed { command }) => {
+                Transition::to(ReplPhase::Executing {
+                    command: command.clone(),
+                })
+            }
+
             (ReplPhase::Executing { .. }, ReplEvent::CommandExecuted { result }) => match result {
                 CommandResult::Continue(output) => {
                     if output.is_empty() {
@@ -382,6 +388,39 @@ mod tests {
             line: "help".to_string(),
         });
         assert!(result.is_ok());
+        assert!(matches!(sm.phase(), ReplPhase::Executing { .. }));
+    }
+
+    #[test]
+    fn test_ready_to_executing_emits_command_parsed_follow_up() {
+        let mut sm = ReplStateMachine::new();
+
+        let transition = sm
+            .process_event(ReplEvent::LineSubmitted {
+                line: "help".to_string(),
+            })
+            .expect("help should parse");
+
+        assert!(matches!(
+            transition.follow_up,
+            Some(ReplEvent::CommandParsed { .. })
+        ));
+    }
+
+    #[test]
+    fn test_command_parsed_follow_up_preserves_executing_phase() {
+        let mut sm = ReplStateMachine::new();
+
+        let transition = sm
+            .process_event(ReplEvent::LineSubmitted {
+                line: "help".to_string(),
+            })
+            .expect("help should parse");
+
+        let follow_up = transition.follow_up.expect("expected CommandParsed event");
+        sm.process_event(follow_up)
+            .expect("CommandParsed follow-up should be accepted");
+
         assert!(matches!(sm.phase(), ReplPhase::Executing { .. }));
     }
 
