@@ -161,7 +161,8 @@ pub fn transition_position(
 /// This corresponds to the `index_of` function in the C++ implementation.
 #[inline]
 fn index_of_match(cv: &[bool], start: usize, limit: usize) -> Option<usize> {
-    (0..limit).find(|&j| cv.get(start + j).copied().unwrap_or(false))
+    let end = start.saturating_add(limit).min(cv.len());
+    cv.get(start..end)?.iter().position(|&matched| matched)
 }
 
 /// Standard Levenshtein position transition function.
