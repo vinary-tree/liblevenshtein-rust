@@ -6,6 +6,7 @@
 //! ```text
 //! cargo run --release --example msm_experiment -- exact-range 33 3
 //! cargo run --release --example msm_experiment -- exact-knn 33 3
+//! cargo run --release --example msm_experiment -- variable-range 33 3
 //! ```
 
 use std::env;
@@ -62,6 +63,34 @@ fn build_case() -> (MsmTransducer<usize>, Vec<f64>) {
     (index, query)
 }
 
+fn generate_variable_length_database(db_size: usize, query_len: usize) -> Vec<Vec<f64>> {
+    let base = generate_series(query_len, 2026);
+    (0..db_size)
+        .map(|i| {
+            let len = query_len + (i % 96);
+            let mut series = Vec::with_capacity(len);
+            for j in 0..len {
+                let anchor = base[j.min(query_len - 1)];
+                let drift = ((i as f64 + 0.25) * (j as f64 + 1.0)).cos() * 0.01;
+                series.push((anchor + drift).clamp(0.0, 100.0));
+            }
+            series
+        })
+        .collect()
+}
+
+fn build_variable_case() -> (MsmTransducer<usize>, Vec<f64>, f64) {
+    let query_len = 16;
+    let database = generate_variable_length_database(768, query_len);
+    let query = database[0][..query_len].to_vec();
+    let index = MsmTransducer::from_series(
+        QuantizationConfig::for_u8(0.0, 100.0),
+        MsmConfig::new(1.0),
+        &database,
+    );
+    (index, query, 8.0)
+}
+
 fn measure_legacy_ratio(scenario: &str) -> f64 {
     let x = generate_series(24, 12345);
     let y = generate_series(24, 67890);
@@ -111,6 +140,7 @@ fn main() {
     let total_runs = warmup_runs + measured_runs;
 
     let (index, query) = build_case();
+    let (variable_index, variable_query, variable_threshold) = build_variable_case();
     let threshold = 24.0;
     let k = 8;
 
@@ -128,6 +158,14 @@ fn main() {
             }
             "exact-range" => {
                 let results = index.search_range(&query, threshold);
+                let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+                let checksum = results.iter().fold(0.0, |acc, (id, distance)| {
+                    acc + *id as f64 * 0.001 + *distance
+                });
+                (elapsed_ms, results.len(), checksum)
+            }
+            "variable-range" => {
+                let results = variable_index.search_range(&variable_query, variable_threshold);
                 let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
                 let checksum = results.iter().fold(0.0, |acc, (id, distance)| {
                     acc + *id as f64 * 0.001 + *distance
