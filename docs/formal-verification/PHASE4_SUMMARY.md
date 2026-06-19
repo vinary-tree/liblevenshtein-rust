@@ -1,28 +1,37 @@
 # Phase 4: Phonetic Operations - Implementation Summary
 
 **Date**: November 17, 2025
-**Status**: ✅ Core implementation complete, 2 edge case tests remaining
+**Status**: ✅ Core implementation complete; focused phonetic split tests passing
 
 ## Executive Summary
 
-Phase 4 successfully implemented phonetic split operations using a formal-verification-first approach. All theorems were proven in Coq without admits, critical preconditions were discovered through proof attempts, and the Rust implementation was derived from the proven formal model. **22 out of 24 phonetic tests now pass** (91.7% success rate), with only 2 edge case failures involving multiple consecutive splits.
+Phase 4 successfully implemented phonetic split operations using a formal-verification-first approach. The active Rocq model proves lifecycle invariants, split-plus-standard composition, consecutive split preservation, and additive cost accounting without admits. The Rust implementation was derived from the proven formal model and the focused phonetic split regression suite now passes **7 out of 7 tests**, including consecutive splits and split plus standard operations.
 
 ## Key Achievements
 
 ### 1. Formal Model Complete (✅ All Proofs with Qed)
 
-**File**: `rocq/liblevenshtein/PhoneticOperations.v` (315 lines)
+**File**: `rocq/liblevenshtein/PhoneticOperations.v` (483 lines)
 
 **Theorems Proven**:
 - ✅ `i_split_entry_preserves_invariant` - Entry maintains I-splitting invariant
 - ✅ `i_split_completion_preserves_invariant` - Completion restores I-type or M-type invariant
 - ✅ `i_phonetic_split_preserves_invariant` - Full split operation preserves invariants
+- ✅ `m_split_entry_preserves_invariant` - M-type entry maintains M-splitting invariant
+- ✅ `m_split_completion_preserves_invariant` - M-type completion restores M-type invariant
+- ✅ `m_phonetic_split_preserves_invariant` - Full M-type split operation preserves invariants
+- ✅ `i_phonetic_split_composes_with_i_successor` - I split composes with standard I successor
+- ✅ `m_phonetic_split_composes_with_m_successor` - M split composes with standard M successor
+- ✅ `consecutive_i_phonetic_splits_preserve_invariant` - Consecutive I splits preserve invariants
+- ✅ `consecutive_m_phonetic_splits_preserve_invariant` - Consecutive M splits preserve invariants
+- ✅ `i_phonetic_split_cost_correct` / `m_phonetic_split_cost_correct` - Split cost accounting is exact
+- ✅ `i_phonetic_split_then_i_successor_cost_correct` / `m_phonetic_split_then_m_successor_cost_correct` - Split-plus-standard cost accounting is additive
 
 **Critical Preconditions Discovered**:
 
 1. **Offset Lower Bound**: `offset > -n`
    - **Why**: Ensures `offset - 1 ≥ -n` after entry decrement
-   - **Discovery**: Proof blocked on `offset - 1 >= -n` when precondition was `offset >= -n`
+   - **Discovery**: Proof exposed `offset - 1 >= -n` when precondition was only `offset >= -n`
    - **Fix**: Changed to strict inequality `offset > -n`
 
 2. **Fractional Cost Budget**: `split_cost = 0 → |offset| < errors`
@@ -114,20 +123,24 @@ if can_phonetic_split {
 
 ### 3. Test Results
 
-**Overall Phonetic Tests**: 22/24 passing (91.7%)
-
-**Phonetic Split Tests**: 5/7 passing (71.4%)
+**Focused Phonetic Split Tests**: 7/7 passing
 
 **Passing Tests** ✅:
 - `test_phonetic_split_f_to_ph` - "graf" → "graph" ✅
 - `test_phonetic_split_k_to_ch` - "kan" → "chan" ✅
 - `test_phonetic_split_s_to_sh` - "sip" → "ship" ✅
 - `test_phonetic_split_t_to_th` - "tank" → "thank" ✅
+- `test_phonetic_split_multiple` - "kat" → "chath" ✅
+- `test_phonetic_split_with_standard_ops` - "graf" → "graphe" ✅
 - `test_phonetic_split_distance_constraints` - Distance limits enforced ✅
 
-**Failing Tests** ❌:
-1. `test_phonetic_split_multiple` - "kat" → "chath" (two splits: k→ch, t→th) ❌
-2. `test_phonetic_split_with_standard_ops` - "graf" → "graphe" (split + insert) ❌
+**Verification command**:
+```bash
+systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0 \
+  env CARGO_BUILD_JOBS=1 cargo test -j1 --lib test_phonetic_split -- --test-threads=1
+```
+
+This command passed on 2026-06-19 with all seven focused split tests passing.
 
 **All Other Phonetic Tests Passing** ✅:
 - ✅ All 2-to-1 digraph tests (ph→f, ch→k, th→t, sh→s)
@@ -138,11 +151,13 @@ if can_phonetic_split {
 
 ## Improvements to Formal Model
 
-The Rust implementation revealed that the formal model needs updates:
+The Rust implementation revealed that the initial formal model needed a relaxed
+splitting invariant for intermediate states. The active Rocq model has been
+updated and re-proven against that semantics.
 
 ### 1. Update Splitting Invariant Definitions
 
-**Current** (PhoneticOperations.v:196-213):
+**Initial model**:
 ```coq
 Definition i_splitting_invariant (p : Position) : Prop :=
   variant p = VarISplitting /\
@@ -154,7 +169,7 @@ Definition i_splitting_invariant (p : Position) : Prop :=
   (errors <= n)%nat.
 ```
 
-**Should Be**:
+**Current model**:
 ```coq
 Definition i_splitting_invariant (p : Position) : Prop :=
   variant p = VarISplitting /\
@@ -176,14 +191,11 @@ The entry relation already has the correct preconditions discovered through proo
 
 These remain correct and were validated by the Rust implementation.
 
-### 3. Re-prove Theorems with Relaxed Invariant
+### 3. Re-proved Theorems with Relaxed Invariant
 
-After updating splitting invariants, re-prove:
-- `i_split_entry_preserves_invariant` - Should be easier (relaxed target invariant)
-- `i_split_completion_preserves_invariant` - Need to show relaxed invariant implies standard invariant after `offset + 1`
-- M-type equivalents
-
-**Expected Difficulty**: Low. The proofs should become simpler because the target invariant is more permissive.
+After updating splitting invariants, the active Rocq model re-proves the I-type
+and M-type entry/completion/full-split theorems and extends them with
+composition and cost-accounting theorems.
 
 ## Lessons Learned
 
@@ -205,34 +217,24 @@ Encoding invariant checks in constructors (`new_i_splitting`, `new_m_splitting`)
 
 ### 5. Test-Driven Invariant Discovery
 
-The failing tests revealed that the formal model's splitting invariant was too restrictive. Without tests expecting splits from I+0#0, we wouldn't have discovered the need for the +1 buffer.
+The regression tests revealed that the formal model's splitting invariant was too restrictive. Without tests expecting splits from I+0#0, we wouldn't have discovered the need for the +1 buffer.
 
-## Remaining Work
+## Completed Follow-ups And Remaining Evaluation
 
-### 1. Debug Failing Tests (High Priority)
+### 1. Previously Failing Tests
 
-**Test**: `test_phonetic_split_multiple`
-- **Input**: "kat" → "chath"
-- **Operations**: k→ch (cost 0), a→a (match), t→th (cost 0)
-- **Expected**: Should work at max_distance=1 (total cost=0)
-- **Hypothesis**: Two consecutive splits might exceed the +1 buffer in some state?
-- **Investigation Needed**: Trace state transitions step-by-step
+Both previous edge cases now pass:
+- `test_phonetic_split_multiple` covers "kat" → "chath" using two splits.
+- `test_phonetic_split_with_standard_ops` covers "graf" → "graphe" using a split plus insertion.
 
-**Test**: `test_phonetic_split_with_standard_ops`
-- **Input**: "graf" → "graphe"
-- **Operations**: f→ph (cost 0), insert 'e' (cost 1)
-- **Expected**: Should work at max_distance=2 (total cost=1)
-- **Hypothesis**: Combination of split + standard op might have interaction bug?
-- **Investigation Needed**: Check if split completion properly enables subsequent operations
+### 2. Formal Model Follow-up
 
-### 2. Update Formal Model (Medium Priority)
+1. ✅ Changed splitting invariants to use the `+1` intermediate-state buffer.
+2. ✅ Re-proved theorems with relaxed invariants.
+3. ✅ Added composition theorems for split plus standard successors.
+4. ✅ Proved cost accounting for split plus standard operations.
 
-1. ✅ Change splitting invariants to use `+1` buffer
-2. ⏳ Re-prove all theorems with relaxed invariants
-3. ⏳ Add composition theorem: Can two splits compose?
-4. ⏳ Prove cost accounting for split + standard operations
-
-### 3. Property-Based Tests (Medium Priority)
+### 3. Property-Based Tests
 
 Create proptest suite for phonetic operations:
 ```rust
@@ -254,7 +256,7 @@ fn phonetic_split_net_effect_is_identity() {
 }
 ```
 
-### 4. Performance Validation (Low Priority)
+### 4. Performance Validation
 
 - Benchmark phonetic operations vs standard operations
 - Ensure fractional costs don't add overhead
@@ -263,21 +265,19 @@ fn phonetic_split_net_effect_is_identity() {
 ## Files Changed
 
 ### Coq/Rocq
-- ✅ `rocq/liblevenshtein/PhoneticOperations.v` - Complete formal model (315 lines)
+- ✅ `rocq/liblevenshtein/PhoneticOperations.v` - Complete active phonetic operation model (483 lines)
 - ✅ `rocq/liblevenshtein/_CoqProject` - Added PhoneticOperations.v to build
-- ⏳ **TODO**: Update splitting invariants and re-prove
 
 ### Rust Implementation
 - ✅ `src/transducer/generalized/state.rs` - Entry logic with preconditions
 - ✅ `src/transducer/generalized/position.rs` - Relaxed splitting invariants
 
 ### Documentation
-- ✅ `docs/formal-verification/04_phonetic_operations.md` - Insights and design (315 lines)
+- ✅ `docs/formal-verification/04_phonetic_operations.md` - Insights and design
 - ✅ `docs/formal-verification/PHASE4_SUMMARY.md` - This document
 
 ### Tests
-- ✅ 22/24 phonetic tests passing
-- ⏳ 2 tests need investigation (multiple splits, split + standard ops)
+- ✅ Focused phonetic split tests passing: 7/7
 
 ## Conclusion
 
@@ -290,14 +290,13 @@ Phase 4 demonstrates the power of formal-verification-first development:
 5. **Iterated on formal model** - Updated invariants based on implementation insights
 
 **Results**:
-- **Formal model**: All theorems proven without admits
-- **Implementation**: 91.7% test success rate (22/24)
-- **Documentation**: Complete design rationale and insights captured
+- **Formal model**: Active phonetic operation theorems proven without admits
+- **Implementation**: Focused split regression coverage passes for single split, consecutive split, split plus standard operation, and distance constraints
+- **Documentation**: Design rationale, proof obligations, and refreshed evidence captured
 
 **Next Steps**:
-1. Debug the 2 failing edge case tests
-2. Update formal model with relaxed splitting invariants
-3. Add property-based tests to validate theorems empirically
-4. Consider whether multiple consecutive fractional-cost operations need special handling
+1. Add property-based tests to validate theorems empirically.
+2. Benchmark split-entry and split-completion paths against standard-operation hot paths.
+3. Consider whether arbitrary overlapping split chains need additional formal bounds.
 
-Phase 4 is **functionally complete** for single phonetic splits, with edge cases for multiple splits remaining.
+Phase 4 is functionally complete for the focused phonetic split paths currently covered by Rust tests and Rocq invariants.
