@@ -14,9 +14,9 @@
 1. **Diminishing returns**: Expected gains <3% vs already achieved 9-46%
 2. **Complexity cost**: Platform-specific code, feature gating, maintenance burden
 3. **Current state**: Already excellent performance with H1 + H3
-4. **ROI insufficient**: Cost/benefit analysis strongly favors deferring
+4. **ROI insufficient**: Cost/benefit analysis strongly favors rejection
 
-**Decision**: Keep H4-H6 deferred unless production profiling reveals new bottlenecks
+**Decision**: Reject H4-H6 for the current architecture unless production profiling reveals new bottlenecks
 
 ---
 
@@ -378,7 +378,7 @@ H4-H6 should ONLY be reconsidered if:
    - Zero-overhead perfect hashing technique
    - Hash function breakthrough
 
-**Current Status**: None of these conditions are met → **DEFER INDEFINITELY**
+**Current Status**: None of these conditions are met → **REJECT FOR CURRENT ARCHITECTURE**
 
 ---
 
@@ -418,7 +418,7 @@ The SubstitutionSet optimization project has successfully delivered two producti
 2. **Excellent current state**: Already achieved major wins
 3. **Better alternatives**: Monitor production, address real bottlenecks
 
-**Final Decision**: ❌ **DEFER H4-H6 INDEFINITELY**
+**Final Decision**: ❌ **REJECT H4-H6 FOR CURRENT ARCHITECTURE**
 
 **Status**: Optimization project **COMPLETE** - Mission accomplished with H1 + H3 ✅
 
@@ -427,4 +427,4 @@ The SubstitutionSet optimization project has successfully delivered two producti
 **Document Version**: 1.0
 **Last Updated**: 2025-11-12
 **Author**: Claude Code (Anthropic AI Assistant)
-**Decision**: H4-H6 deferred indefinitely, optimization project closed successfully
+**Decision**: H4-H6 rejected for the current architecture; optimization project closed successfully

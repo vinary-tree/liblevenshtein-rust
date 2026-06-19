@@ -33,7 +33,7 @@ Following the scientific method to identify and optimize performance bottlenecks
 - `benchmarks.rs`: Requires `pathmap-backend` feature
 - `comprehensive_profiling.rs`: Requires `pathmap-backend` feature
 
-**Conclusion**: NO working generalized automaton benchmarks exist. Must create new benchmarks.
+**Historical conclusion**: at the start of this investigation, no maintained generalized automaton benchmark covered the target surface, so a fresh benchmark target was created.
 
 **Documentation**: `docs/optimization/PHASE1_BASELINE.md`
 
@@ -41,7 +41,7 @@ Following the scientific method to identify and optimize performance bottlenecks
 
 ### ✅ Phase 1.2: New Benchmark Creation (COMPLETE)
 
-Created 4 new benchmark files:
+Created the generalized automaton benchmark target and identified the maintained phonetic follow-up targets:
 
 #### 1. `benches/generalized_automaton_benchmarks.rs` ✅ **COMPLETE**
 
@@ -56,43 +56,24 @@ Created 4 new benchmark files:
 6. **subsumption/state_size** - O(n²) subsumption hypothesis testing
 7. **realistic/word_pairs** - Real-world examples (color/colour, gray/grey, etc.)
 
-**Status**: Running baseline benchmarks (in progress)
+**Status**: Baseline data captured; see `docs/optimization/baseline_generalized_automaton.txt`.
 
-#### 2. `benches/phonetic_operations_benchmarks.rs` ⏳ **STUB**
+#### 2. Maintained Phonetic Benchmark Targets
 
-**Purpose**: Test phonetic operations (H4, H5, H6)
+**Purpose**: Test phonetic operation compilation, NFA behavior, normalized lookup, and rewrite throughput.
 
-**Planned**:
-- Operation set sizes (standard, +consonant_digraphs, +full phonetic)
-- can_apply() overhead measurement
-- Multi-char operation completion (split, transpose, merge)
-- Fractional weight impact
+**Targets**:
+- `benches/phonetic_rules.rs`
+- `benches/phonetic_position_skip_benchmark.rs`
+- `benches/phonetic_nfa_benchmarks.rs`
+- `benches/phonetic_grep_parallel_benchmarks.rs`
+- `benches/phonetic_compilation_benchmarks.rs`
+- `benches/phonetic_normalized_benchmarks.rs`
 
-**Status**: Placeholder created, to be implemented
-
-#### 3. `benches/phonetic_acceptance_benchmarks.rs` ⏳ **STUB**
-
-**Purpose**: End-to-end acceptance with phonetic operations
-
-**Planned**:
-- Short/medium/long words at different distances
-- Phonetic-heavy scenarios (multiple splits, transposes)
-
-**Status**: Placeholder created, to be implemented
-
-#### 4. `benches/generalized_memory_benchmarks.rs` ⏳ **STUB**
-
-**Purpose**: Memory profiling and allocation tracking
-
-**Planned**:
-- Allocation frequency
-- SmallVec heap overflow measurement
-- Peak memory usage
-
-**Status**: Placeholder created, to be implemented
+**Status**: Maintained targets are registered in `Cargo.toml` and used by the focused phonetic optimization journals.
 
 **Files Modified**:
-- Added 4 benchmark entries to `Cargo.toml`
+- Added the generalized benchmark target and later reconciled phonetic benchmark references to the maintained targets.
 
 ---
 
@@ -195,9 +176,9 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 | **H1**: Successor generation dominates (60-80%) | ✅ **Partial** | 60-80% | ~10-15% | Largest component but not dominant |
 | **H2**: char().collect() overhead (10-15%) | ✅ **Confirmed** | 10-15% | **8.47%** | Within range (collect 4.08% + free 4.39%) |
 | **H3**: Subsumption O(n²) bottleneck | ❌ **Rejected** | Major issue | **0.71%** | Not a bottleneck for typical workloads |
-| **H4**: can_apply() allocations (5-10%) | ⏳ **Partial** | 5-10% | 0.79% | Lower than predicted; needs phonetic testing |
-| **H5**: Phonetic 2-3x slowdown | ⏳ **Pending** | 2-3x | - | Phase 2 |
-| **H6**: Phonetic split 20-30% slower | ⏳ **Pending** | 20-30% | - | Phase 2 |
+| **H4**: can_apply() allocations (5-10%) | Carried forward | 5-10% | 0.79% | Lower than predicted; later phonetic journals cover targeted rule costs |
+| **H5**: Phonetic 2-3x slowdown | Migrated | 2-3x | See focused journals | Tracked by `docs/optimization/phonetic/` |
+| **H6**: Phonetic split 20-30% slower | Migrated | 20-30% | See focused journals | Tracked by `docs/optimization/phonetic/` |
 
 **Key Insights**:
 
@@ -217,7 +198,7 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 1. **H2** (cache character vectors) - **8.47%** target, simple fix
 2. **H1** (optimize successors_i_type) - **2.75%** target, largest single function
 3. **SmallVec tuning** - Reduce allocations
-4. **H3** (subsumption) - **DEFERRED** (edge case optimization)
+4. **H3** (subsumption) - **REJECTED AS A PRIMARY OPTIMIZATION** (edge-case-only optimization)
 
 ---
 
@@ -234,7 +215,7 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 2. ✅ Collected baseline performance data across all distances and word lengths
 3. ✅ Generated flamegraph with 639K samples and 2.09T cycles profiled
 4. ✅ Identified top 5 hotspots with precise percentages
-5. ✅ Validated 3 hypotheses, rejected 1, deferred 2 to Phase 2
+5. ✅ Validated 3 hypotheses, rejected 1, and carried 2 into the dedicated phonetic optimization journals
 6. ✅ Documented all findings in 4 comprehensive markdown files
 
 **Key Discoveries**:
@@ -251,21 +232,20 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 - ✅ All 725+ tests passing
 
 **Deliverables**:
-- 4 new benchmark files (1 complete, 3 stubs for Phase 2)
+- 1 new generalized automaton benchmark plus dedicated follow-up phonetic benchmark coverage in the maintained `phonetic_*` targets
 - 5 documentation files (PHASE1_BASELINE.md, PHASE1_FLAMEGRAPH_ANALYSIS.md, PROGRESS.md, etc.)
 - baseline_standard.svg (369 KB interactive flamegraph)
 - 2 benchmark result files (substitution + generalized automaton)
 
 ---
 
-## Phase 2: Phonetic Operations & Additional Profiling (PENDING)
+## Phase 2: Phonetic Operations & Additional Profiling (MIGRATED TO FOCUSED JOURNALS)
 
 **Planned Steps**:
-1. Implement phonetic_operations_benchmarks.rs (currently stub)
-2. Implement phonetic_acceptance_benchmarks.rs (currently stub)
-3. Generate flamegraph for phonetic scenarios
-4. Cache analysis with perf stat
-5. Validate H4, H5, H6
+1. Use the maintained phonetic benchmark targets (`phonetic_rules`, `phonetic_nfa_benchmarks`, `phonetic_compilation_benchmarks`, `phonetic_normalized_benchmarks`) for operation and acceptance coverage
+2. Generate flamegraphs for phonetic scenarios when profiling new rule sets
+3. Run cache analysis with perf stat for accepted implementation candidates
+4. Validate H4, H5, H6 in the focused phonetic journals under `docs/optimization/phonetic/`
 
 **Tools Ready**:
 - ✅ `cargo-flamegraph` installed
@@ -273,11 +253,11 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 - ✅ CPU pinned to core 0
 - ✅ Performance governor active
 
-**Status**: Ready to begin after Phase 1 completion
+**Status**: Superseded by focused phonetic optimization journals under `docs/optimization/phonetic/`.
 
 ---
 
-## Phase 3: Targeted Optimization (PENDING)
+## Phase 3: Targeted Optimization (RECORDED IN H1/H2 RESULT REPORTS)
 
 **Planned Optimizations** (in order):
 1. Cache character vectors (H2)
@@ -296,11 +276,11 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 6. Accept/reject optimization
 7. Document in OPTIMIZATION_LOG.md
 
-**Status**: Not started
+**Status**: Superseded by `docs/optimization/H2_RESULTS.md`, `docs/optimization/H1_RESULTS.md`, and later optimization result reports.
 
 ---
 
-## Phase 4: Validation & Comparison (PENDING)
+## Phase 4: Validation & Comparison (RECORDED IN RESULT REPORTS)
 
 **Planned**:
 - Run complete benchmark suite
@@ -308,18 +288,18 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 - Run full test suite (725+ tests)
 - Create performance comparison tables
 
-**Status**: Not started
+**Status**: Superseded by the benchmark/result reports in this directory.
 
 ---
 
-## Phase 5: Documentation & Knowledge Transfer (PENDING)
+## Phase 5: Documentation & Knowledge Transfer (INTEGRATED INTO SPECIALIZED REPORTS)
 
 **Planned Documents**:
 - OPTIMIZATION_REPORT.md (comprehensive results)
 - BENCHMARK_GUIDE.md (how to use benchmarks)
 - Update function documentation with performance notes
 
-**Status**: Not started
+**Status**: Superseded by focused optimization reports and benchmark guides.
 
 ---
 
@@ -382,15 +362,15 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 
 ## Timeline
 
-**Phase 1**: 1-2 hours (in progress - 75% complete)
-**Phase 2**: 2-3 hours (pending)
-**Phase 3**: 4-6 hours (pending)
-**Phase 4**: 1-2 hours (pending)
-**Phase 5**: 1 hour (pending)
+**Phase 1**: complete; baseline and flamegraph captured
+**Phase 2**: migrated to focused phonetic journals
+**Phase 3**: recorded in H1/H2 result reports
+**Phase 4**: recorded in result reports
+**Phase 5**: integrated into specialized reports
 
 **Total Estimated**: 9-14 hours
 
-**Actual Progress**: ~2 hours (Phase 1)
+**Actual Progress**: historical Phase 1 record; later phases are recorded in focused result reports
 
 ---
 
@@ -399,14 +379,14 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 ### Documentation
 - ✅ `docs/optimization/PHASE1_BASELINE.md` (comprehensive baseline)
 - ✅ `docs/optimization/PROGRESS.md` (this file)
-- ⏳ `docs/optimization/baseline_generalized_automaton.txt` (running)
+- ✅ `docs/optimization/baseline_generalized_automaton.txt`
 - ✅ `docs/optimization/baseline_substitution_micro.txt`
 
 ### Benchmarks
 - ✅ `benches/generalized_automaton_benchmarks.rs` (393 lines)
-- ✅ `benches/phonetic_operations_benchmarks.rs` (stub)
-- ✅ `benches/phonetic_acceptance_benchmarks.rs` (stub)
-- ✅ `benches/generalized_memory_benchmarks.rs` (stub)
+- ✅ Maintained phonetic benchmark targets in `Cargo.toml`: `phonetic_rules`, `phonetic_position_skip_benchmark`, `phonetic_nfa_benchmarks`, `phonetic_grep_parallel_benchmarks`, `phonetic_compilation_benchmarks`, and `phonetic_normalized_benchmarks`
+- ✅ Generalized automaton benchmark target: `benches/generalized_automaton_benchmarks.rs`
+- ✅ Memory-sensitive generalized measurements captured through the generalized/state/query benchmark targets and optimization result files
 
 ### Configuration
 - ✅ `Cargo.toml` (added 4 benchmark entries)
@@ -419,17 +399,16 @@ taskset -c 0 cargo flamegraph --bench generalized_automaton_benchmarks
 
 ## Conclusion
 
-**Phase 1 is 75% complete**. We've successfully:
+**Phase 1 is complete**. This investigation successfully:
 1. Assessed and documented the state of existing benchmarks
 2. Created comprehensive new benchmark suite for generalized automaton
-3. Started collecting baseline performance data
+3. Collected baseline performance data
 4. Documented 6 hypotheses for testing
 
 **Key Insight**: The lack of working benchmarks explains why performance issues may have gone unnoticed. Our new benchmark suite provides comprehensive coverage of core operations.
 
-**Ready to proceed** with flamegraph generation and profiling once baseline benchmarks complete.
+Follow-up profiling and optimization decisions are recorded in the focused result reports under `docs/optimization/`.
 
 ---
 
-**Last Updated**: November 18, 2025, 00:05 EST
-**Next Update**: After baseline benchmarks complete
+**Last Reconciled**: June 19, 2026

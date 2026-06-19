@@ -220,7 +220,7 @@ Based on flamegraph data, revised optimization order:
 **Expected Improvement**: 1-2% speedup
 **Effort**: Low (configuration changes + benchmarks)
 
-### Priority 4: **Subsumption Optimization (H3)** - **DEFERRED**
+### Priority 4: **Subsumption Optimization (H3)** - **REJECTED AS PRIMARY WORK**
 **Target**: 0.71% (typical) to 19x edge case
 **Reasoning**: Not impactful for typical workloads
 **Implementation**: Only if edge cases become priority
@@ -256,9 +256,9 @@ Based on flamegraph data, revised optimization order:
 3. ⏳ Move to Phase 2: Phonetic operations profiling
 
 ### Phase 2 (Phonetic Operations)
-1. Implement phonetic operations benchmarks (currently stubs)
+1. Use the maintained `phonetic_*` benchmark targets for operation and acceptance scenarios
 2. Generate flamegraph for phonetic scenarios
-3. Validate H4, H5, H6
+3. Validate H4, H5, H6 in focused phonetic optimization journals
 
 ### Phase 3 (Optimization Implementation)
 1. Implement H2 (cache character vectors)

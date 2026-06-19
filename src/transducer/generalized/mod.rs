@@ -30,11 +30,11 @@
 //!
 //! // Standard operations
 //! let ops = OperationSet::standard();
-//! let automaton = GeneralizedAutomaton::new(2, ops);
+//! let automaton = GeneralizedAutomaton::with_operations(2, ops);
 //!
 //! // Phonetic operations
 //! let ops = phonetic_english_basic();
-//! let automaton = GeneralizedAutomaton::new(2, ops);
+//! let automaton = GeneralizedAutomaton::with_operations(2, ops);
 //! ```
 //!
 //! # Implementation Status

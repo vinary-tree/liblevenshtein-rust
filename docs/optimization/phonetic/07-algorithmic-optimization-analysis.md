@@ -1,7 +1,7 @@
 # Phase 7: Algorithmic Optimization Analysis (Position Skipping)
 
 **Date**: 2025-11-18
-**Status**: DEFERRED - Safety concerns identified
+**Status**: REJECTED FOR CURRENT RELEASE - Safety concerns identified
 **Hypothesis**: Position-based early termination can reduce O(n^1.5) complexity impact
 
 ## Investigation Summary
@@ -129,7 +129,7 @@ WITHOUT position skipping:
 
 ## Decision
 
-### Status: **DEFERRED**
+### Status: **REJECTED FOR CURRENT RELEASE**
 
 **Reasons**:
 1. **Safety concerns**: Theoretical counterexample with `Context::Final`
@@ -217,7 +217,7 @@ if let Some(pos) = find_first_match_in_range(rule, &current, window_start, windo
 | Hypothesis | Tested | Overhead | Status | Optimization |
 |------------|--------|----------|--------|--------------|
 | H1 (Allocations in find_first_match) | ✅ | 27% | Fixed | ✅ v0.8.0 |
-| H2 (Algorithmic complexity) | ✅ | O(n^1.5) | Identified | ⏸️ Deferred |
+| H2 (Algorithmic complexity) | ✅ | O(n^1.5) | Identified | Rejected for current release |
 | H3 (Cache misses) | ✅ | <2% | Optimal | ❌ None needed |
 | H4 (Slice copying) | ✅ | 2-3% | Efficient | ❌ None needed |
 | H5 (Iteration count) | ✅ | O(√n) | Proven | N/A (fundamental) |
@@ -249,7 +249,7 @@ if let Some(pos) = find_first_match_in_range(rule, &current, window_start, windo
 
 **O(n^1.5) Scaling**: This is expected behavior for sequential rewrite systems, NOT a bug!
 
-**Further optimization** (targeting O(n^1.5)) deferred to v0.9.0+ pending:
+**Further optimization** (targeting O(n^1.5)) rejected for the current release unless these conditions change:
 - Real-world usage data showing bottlenecks
 - Formal safety proofs for position-based optimizations
 - Comprehensive test coverage for Context::Final edge cases

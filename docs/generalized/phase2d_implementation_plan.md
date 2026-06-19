@@ -33,7 +33,7 @@ This document provides a comprehensive implementation plan for adding multi-char
 
 ### 1.1 Context
 
-Phase 2d was previously deferred (see `phase2d_analysis.md`) pending completion of Universal automaton transposition and merge/split implementations. Those implementations are now complete:
+Phase 2d was previously paused (see `phase2d_analysis.md`) until Universal automaton transposition and merge/split implementations were complete. Those implementations are now complete:
 
 - **Universal Phase 2 (Transposition)**: Complete - 168/168 tests passing
 - **Universal Phase 3 (Merge/Split)**: Complete - 181/181 tests passing

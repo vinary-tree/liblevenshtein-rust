@@ -239,10 +239,10 @@ enum SubstitutionSetImpl {
 - [x] Integration tests validated
 - [x] Documentation written
 - [x] Code reviewed (self-review via documentation)
-- [ ] Merge to master (pending)
-- [ ] Update CHANGELOG.md (pending)
-- [ ] Deploy to production (pending)
-- [ ] Monitor real-world metrics (pending)
+- Merge to master branch
+- Update CHANGELOG.md
+- Deploy to production
+- Monitor real-world metrics
 
 ---
 
@@ -286,37 +286,37 @@ H3's 50-79% memory reduction for small sets is a secondary benefit that enhances
 
 ## Future Optimization Opportunities
 
-### H4: SIMD Lookup for Small Sets (Deferred)
+### H4: SIMD Lookup for Small Sets (Rejected)
 
 **Hypothesis**: For very small sets (≤8 pairs), SIMD parallel comparison (AVX2) could outperform linear scan.
 
 **Expected Impact**: 1-3% improvement for tiny sets
 
-**Status**: **DEFERRED** - Diminishing returns
+**Status**: **REJECTED** - Diminishing returns
 - H3 already achieves 9-46% for small sets
 - SIMD adds complexity (platform-specific, feature gating)
 - Benefit likely marginal compared to effort
 - Consider only if profiling reveals new bottleneck
 
-### H5: Perfect Hashing for Presets (Deferred)
+### H5: Perfect Hashing for Presets (Rejected)
 
 **Hypothesis**: Compile-time perfect hash function for fixed presets eliminates runtime hash computation entirely.
 
 **Expected Impact**: 1-2% improvement for preset lookups
 
-**Status**: **DEFERRED** - Marginal benefit
+**Status**: **REJECTED** - Marginal benefit
 - H1 already optimizes preset initialization
 - H3 handles small custom sets
 - Perfect hashing adds build-time complexity
 - Benefit likely <1% given current state
 
-### H6: Custom Hasher Optimization (Deferred)
+### H6: Custom Hasher Optimization (Rejected)
 
 **Hypothesis**: Specialized hasher for (u8, u8) pairs could reduce collisions and improve performance.
 
 **Expected Impact**: 1-2% improvement
 
-**Status**: **DEFERRED** - Minimal ROI
+**Status**: **REJECTED** - Minimal ROI
 - FxHasher is already optimized for small keys
 - (u8, u8) pairs have low collision rate
 - Custom hasher adds maintenance burden

@@ -150,8 +150,16 @@ impl GeneralizedAutomaton {
     /// );
     ///
     /// // Automaton with custom phonetic operations
-    /// let mut ops = OperationSet::standard();
-    /// ops.add_merge("ph", "f", 0);  // "ph" → "f" with no cost
+    /// use liblevenshtein::transducer::{OperationSetBuilder, OperationType, SubstitutionSet};
+    ///
+    /// let mut phonetic = SubstitutionSet::new();
+    /// phonetic.allow_str("ph", "f");
+    /// let ops = OperationSetBuilder::new()
+    ///     .with_standard_ops()
+    ///     .with_operation(OperationType::with_restriction(
+    ///         2, 1, 0.15, phonetic, "ph_to_f"
+    ///     ))
+    ///     .build();
     /// let automaton = GeneralizedAutomaton::with_operations(2, ops);
     /// ```
     #[must_use]

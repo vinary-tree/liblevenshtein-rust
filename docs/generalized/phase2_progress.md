@@ -1,11 +1,11 @@
 # Phase 2 Progress Report: Runtime-Configurable Operations
 
 **Date**: 2025-11-13
-**Status**: PHASE 2 COMPLETE (with Phase 2d deferred)
+**Status**: HISTORICAL SNAPSHOT; PHASE 2 COMPLETE AND SUPERSEDED BY PHASE 2D/3 IMPLEMENTATION
 
 ## Summary
 
-Phase 2 adds runtime-configurable operation support to GeneralizedAutomaton, enabling custom edit distance metrics including transposition, phonetic corrections, and multi-character operations.
+Phase 2 added runtime-configurable operation support to GeneralizedAutomaton. Later Phase 2d/3 implementation connected that infrastructure to transposition, merge, split, and restricted phonetic operations; see `src/transducer/generalized/automaton.rs`, `src/transducer/generalized/position.rs`, and `src/transducer/generalized/mod.rs` for the current implementation surface.
 
 ## Completed Work
 
@@ -332,41 +332,34 @@ Phase 2 is complete when:
 - [x] Backward compatibility maintained
 - [x] Implementation plan documented
 - [x] OperationSet used in successor generation ✅ (Phase 2c complete)
-- [~] Multi-character operations work (Phase 2d - DEFERRED)
-- [~] Transposition tests pass (Phase 2d - DEFERRED)
-- [~] Cross-validation succeeds (Phase 2d - DEFERRED - blocked on Universal automaton)
+- [x] Multi-character operations work (Phase 2d/3 evidence: generalized merge, split, transpose, and phonetic tests)
+- [x] Transposition tests pass (Phase 2d/3 evidence: adjacent swap and distance-boundary tests)
+- [x] Cross-validation succeeds for standard operations and focused phonetic cases
 - [x] Documentation updated ✅
 
-### Phase 2d Deferral Rationale
+### Historical Phase 2d Pause Rationale (Superseded)
 
-After analyzing the Universal automaton codebase, I discovered that:
+At the time of this snapshot, the Universal automaton implementation and context-passing API were still stabilizing. Current code has since resolved those blockers:
 
-1. **Transposition is not yet implemented in UniversalAutomaton**
-   - The `Transposition` variant exists but successor generation is missing
-   - No reference implementation to validate against
-   - See `docs/generalized/phase2d_analysis.md` for detailed analysis
+1. **Transposition support**
+   - `GeneralizedPosition` includes `ITransposing` and `MTransposing` states
+   - `GeneralizedAutomaton::with_operations(..., OperationSet::with_transposition())` accepts adjacent swaps
+   - The generalized unit slice covers start, middle, end, repeated, and distance-boundary cases
 
-2. **Multi-character operations require significant API changes**
-   - Need to pass word/input context to successor generation
-   - Current bit vector abstraction insufficient for multi-char matching
-   - Breaking changes to public API
+2. **Multi-character context support**
+   - Successor generation now receives word/input context for restricted operations
+   - Split states retain `entry_char` so two-input-character phonetic operations can validate the complete pair
+   - Merge, split, and transpose are covered by focused generalized tests
 
-3. **Current Phase 2 achievements are substantial**
+3. **Phase 2 achievements remain valid**
    - Runtime-configurable operation sets ✅
    - Dynamic operation iteration ✅
    - Custom operation weights ✅
    - Multiple operations of same type ✅
    - Full backward compatibility ✅
 
-4. **Best to defer until Universal automaton provides reference**
-   - Can cross-validate transposition implementation
-   - Learn from Universal's design decisions
-   - Avoid premature architectural choices
-
-**Phase 2d tasks moved to Phase 3 planning**. See `docs/generalized/phase2d_analysis.md` for implementation strategy when ready.
+The historical analysis remains useful for design rationale, but it no longer describes the active implementation state.
 
 ## Notes
 
-This is foundational work for a flexible, composable edit distance system. The infrastructure is in place; now we need to connect it to the successor generation logic.
-
-The refactoring from Phase 2a → 2b is substantial but well-defined. The implementation plan provides a clear roadmap.
+This is foundational work for a flexible, composable edit distance system. The infrastructure is now connected to successor generation, and later reports should treat this file as a historical snapshot rather than the active implementation plan.
