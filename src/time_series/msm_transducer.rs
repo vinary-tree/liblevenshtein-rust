@@ -32,8 +32,8 @@
 //!   best) contains no admissible match and is safely skipped.
 //! * **Exact verification (no false positives).** At each final node whose
 //!   column lower bound is within threshold, the candidate is re-scored against
-//!   the stored **full-precision** original with [`MsmConfig::distance`]; only
-//!   genuine matches are emitted.
+//!   the stored **full-precision** original with
+//!   [`MsmConfig::distance_with_cutoff`]; only genuine matches are emitted.
 //!
 //! See `msm_interval`'s property tests for the admissibility proofs and the
 //! tests at the bottom of this file for the end-to-end exactness gates.
@@ -42,7 +42,7 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
 use libdictenstein::dynamic_dawg::DynamicDawg;
-use libdictenstein::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode, MappedDictionaryNode};
 
 use super::encoding::QuantizationConfig;
 use super::msm::MsmConfig;
@@ -55,7 +55,6 @@ struct KnnQueueNode<N> {
     node: N,
     column: Vec<f64>,
     last_interval: Option<(f64, f64)>,
-    path: Vec<u8>,
 }
 
 impl<N> PartialEq for KnnQueueNode<N> {
@@ -90,9 +89,8 @@ impl<N> Ord for KnnQueueNode<N> {
 #[derive(Debug)]
 pub struct MsmTransducer<V: Eq + std::hash::Hash + Clone = usize> {
     /// Prefix-sharing trie over the u8-quantized reference sequences. The
-    /// stored value is unused; final resolution goes through `key_to_values`
-    /// so that quantization collisions (distinct ids, identical key) are all
-    /// recovered.
+    /// stored value is the final bucket id for all references that quantize to
+    /// that byte key.
     dawg: DynamicDawg<usize>,
     /// Quantization configuration (defines the per-bin intervals).
     quant: QuantizationConfig,
@@ -100,8 +98,8 @@ pub struct MsmTransducer<V: Eq + std::hash::Hash + Clone = usize> {
     msm: MsmConfig,
     /// Precomputed quantization-bin intervals for hot trie-edge traversal.
     bin_bounds: Vec<(f64, f64)>,
-    /// Quantized key → all reference ids sharing that key.
-    key_to_values: HashMap<Vec<u8>, Vec<V>>,
+    /// Final bucket id → all reference ids sharing that quantized key.
+    buckets: Vec<Vec<V>>,
     /// Reference id → full-precision original series (for exact verification).
     originals: HashMap<V, Vec<f64>>,
 }
@@ -125,7 +123,7 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
             quant,
             msm,
             bin_bounds,
-            key_to_values: HashMap::new(),
+            buckets: Vec::new(),
             originals: HashMap::new(),
         }
     }
@@ -135,14 +133,17 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
     /// Returns `true` if `value` was not previously present.
     pub fn insert(&mut self, value: V, series: &[f64]) -> bool {
         let key = self.quant.encode_u8(series);
-        // The stored value is unused; resolution is via `key_to_values`.
-        let _ = self
-            .dawg
-            .insert_bytes_with_value(&key, self.originals.len());
-        self.key_to_values
-            .entry(key)
-            .or_default()
-            .push(value.clone());
+        let bucket_id = match self.dawg.get_bytes_value(&key) {
+            Some(existing) => existing,
+            None => {
+                let bucket_id = self.buckets.len();
+                self.buckets.push(Vec::new());
+                let inserted = self.dawg.insert_bytes_with_value(&key, bucket_id);
+                debug_assert!(inserted, "new MSM bucket key should insert exactly once");
+                bucket_id
+            }
+        };
+        self.buckets[bucket_id].push(value.clone());
         self.originals.insert(value, series.to_vec()).is_none()
     }
 
@@ -193,17 +194,7 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
         let root = self.dawg.root();
         let mut columns = vec![vec![f64::INFINITY; m + 1]];
         let mut out: Vec<(V, f64)> = Vec::new();
-        let mut path: Vec<u8> = Vec::with_capacity(32);
-        self.walk_range(
-            &root,
-            0,
-            None,
-            &mut path,
-            query,
-            tau,
-            &mut out,
-            &mut columns,
-        );
+        self.walk_range(&root, 0, None, query, tau, &mut out, &mut columns);
 
         // Defensive dedup by id (keep the smallest distance), then sort.
         out.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
@@ -241,24 +232,26 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
     /// consumed to reach `node` (`None` at the root). Generic over the node type
     /// so the same logic applies to any byte-unit dictionary backend.
     #[allow(clippy::too_many_arguments)]
-    fn walk_range<N: DictionaryNode<Unit = u8>>(
+    fn walk_range<N>(
         &self,
         node: &N,
         depth: usize,
         last_interval: Option<(f64, f64)>,
-        path: &mut Vec<u8>,
         query: &[f64],
         tau: f64,
         out: &mut Vec<(V, f64)>,
         columns: &mut Vec<Vec<f64>>,
-    ) {
+    ) where
+        N: DictionaryNode<Unit = u8> + MappedDictionaryNode<Value = usize>,
+    {
         let m = query.len();
 
         // A final node at depth >= 1 marks a complete reference of length
         // `depth`; col[m] is the admissible lower bound on its MSM distance.
         let col_at_query_end = columns[depth][m];
         if depth >= 1 && node.is_final() && col_at_query_end <= tau + COST_EPSILON {
-            if let Some(ids) = self.key_to_values.get(path) {
+            if let Some(bucket_id) = node.value() {
+                let ids = &self.buckets[bucket_id];
                 for id in ids {
                     if let Some(orig) = self.originals.get(id) {
                         if let Some(exact) = self.msm.distance_with_cutoff(query, orig, tau) {
@@ -290,18 +283,15 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
                 column_lower_bound(&child_columns[0])
             };
             if child_lower_bound <= tau + COST_EPSILON {
-                path.push(unit);
                 self.walk_range(
                     &child,
                     child_depth,
                     Some((lo, hi)),
-                    path,
                     query,
                     tau,
                     out,
                     columns,
                 );
-                path.pop();
             }
         }
     }
@@ -334,7 +324,6 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
             node: self.dawg.root(),
             column: vec![f64::INFINITY; m + 1],
             last_interval: None,
-            path: Vec::with_capacity(32),
         });
 
         while let Some(current) = queue.pop() {
@@ -346,7 +335,8 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
                 && current.node.is_final()
                 && current.column[m] <= kth_distance + COST_EPSILON
             {
-                if let Some(ids) = self.key_to_values.get(&current.path) {
+                if let Some(bucket_id) = current.node.value() {
+                    let ids = &self.buckets[bucket_id];
                     for id in ids {
                         if let Some(orig) = self.originals.get(id) {
                             if let Some(exact) =
@@ -373,8 +363,6 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
                 );
                 let lower_bound = column_lower_bound(&child_column);
                 if best.len() < k || lower_bound <= kth_distance + COST_EPSILON {
-                    let mut child_path = current.path.clone();
-                    child_path.push(unit);
                     sequence = sequence.wrapping_add(1);
                     queue.push(KnnQueueNode {
                         lower_bound,
@@ -383,7 +371,6 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
                         node: child,
                         column: child_column,
                         last_interval: Some((lo, hi)),
-                        path: child_path,
                     });
                 }
             }
