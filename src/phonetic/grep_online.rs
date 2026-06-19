@@ -67,6 +67,7 @@ use super::nfa::product::ProductAutomatonChar;
 #[cfg(feature = "parallel-grep")]
 use super::nfa::thompson::ThompsonBuilderChar;
 use super::online_scanner::{OnlinePhoneticScannerChar, ScanMatch, ScannerStats};
+#[cfg(feature = "parallel-grep")]
 use super::online_transducer::OnlinePhoneticTransducerChar;
 use super::types::RewriteRuleChar;
 

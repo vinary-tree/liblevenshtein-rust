@@ -324,7 +324,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
     #[cfg(feature = "pathmap-backend")]

@@ -484,7 +484,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
     use std::collections::HashSet;

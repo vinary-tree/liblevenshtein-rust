@@ -427,6 +427,7 @@ mod tests {
 
 // Stub implementations when serialization feature is disabled
 #[cfg(not(feature = "serialization"))]
+/// Return an error because LLRE binary serialization is not enabled.
 pub fn save<P: AsRef<std::path::Path>>(_compiled: &CompiledNFA, _path: P) -> LLreResult<()> {
     Err(LLreError::new(LLreErrorKind::SerializationFailed(
         "serialization feature not enabled".into(),
@@ -434,6 +435,7 @@ pub fn save<P: AsRef<std::path::Path>>(_compiled: &CompiledNFA, _path: P) -> LLr
 }
 
 #[cfg(not(feature = "serialization"))]
+/// Return an error because LLRE binary deserialization is not enabled.
 pub fn load<P: AsRef<std::path::Path>>(_path: P) -> LLreResult<CompiledNFA> {
     Err(LLreError::new(LLreErrorKind::DeserializationFailed(
         "serialization feature not enabled".into(),
@@ -441,6 +443,7 @@ pub fn load<P: AsRef<std::path::Path>>(_path: P) -> LLreResult<CompiledNFA> {
 }
 
 #[cfg(not(feature = "serialization"))]
+/// Return an error because LLRE byte serialization is not enabled.
 pub fn to_bytes(_compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
     Err(LLreError::new(LLreErrorKind::SerializationFailed(
         "serialization feature not enabled".into(),
@@ -448,6 +451,7 @@ pub fn to_bytes(_compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
 }
 
 #[cfg(not(feature = "serialization"))]
+/// Return an error because LLRE byte deserialization is not enabled.
 pub fn from_bytes(_bytes: &[u8]) -> LLreResult<CompiledNFA> {
     Err(LLreError::new(LLreErrorKind::DeserializationFailed(
         "serialization feature not enabled".into(),
