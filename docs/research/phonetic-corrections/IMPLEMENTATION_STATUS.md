@@ -1,8 +1,8 @@
 # Generalized Operations Framework: Implementation Status
 
 **Date**: 2025-11-12
-**Last Updated**: 2025-11-12 (Phase 1 phonetic operations completed)
-**Status**: 🟢 **CORE IMPLEMENTATION COMPLETE** - Framework + Phase 1 phonetics ready, automata integration pending
+**Last Updated**: 2026-06-19 (UTF-8 multi-character substitution support verified)
+**Status**: 🟢 **CORE IMPLEMENTATION COMPLETE** - Framework, Phase 1 phonetics, UTF-8 multi-character substitutions, and direct matching APIs are implemented
 
 ---
 
@@ -17,10 +17,10 @@ The generalized operations framework from TCS 2011 has been successfully impleme
 - ✅ Backward compatibility layer (Algorithm → OperationSet)
 - ✅ Comprehensive test coverage (50+ tests, 100% passing)
 
-**What's blocked:**
-- ❌ Universal automata integration (requires architectural redesign)
-- ❌ End-to-end phonetic string matching (depends on automata integration)
-- ❌ Runtime-based transition system (depends on automata integration)
+**Remaining integration boundaries:**
+- Universal automata integration is a separate architecture track.
+- End-to-end phonetic string matching is available through the phonetic automata/rule-stack APIs; OperationSet-driven universal transition integration remains separate.
+- Runtime transition specialization needs benchmark-driven evaluation before replacing existing specialized hot paths.
 
 ---
 
@@ -45,9 +45,9 @@ let match_op = OperationType::new(1, 1, 0.0, "match");
 // Custom weighted operation for OCR
 let ocr_op = OperationType::new(1, 1, 0.2, "ocr_o_zero");
 
-// Phonetic digraph (placeholder - requires full multi-char support)
+// Phonetic digraph through real multi-character storage
 let mut phonetic = SubstitutionSet::new();
-phonetic.allow_str("ph", "f");  // Currently uses placeholder
+phonetic.allow_str("ph", "f");
 let ph_op = OperationType::with_restriction(2, 1, 0.15, phonetic, "ph_to_f");
 ```
 
@@ -108,53 +108,38 @@ let ops: OperationSet = Algorithm::Transposition.into();
 
 ---
 
-## Pending Work
+## Current Capability And Remaining Work
 
 ### Critical Path Items
 
 #### 1. Multi-Character SubstitutionSet Storage
 
-**Status**: 🔴 **BLOCKED** - Required for phonetic operations
-**Effort**: 1-2 weeks
+**Status**: ✅ **IMPLEMENTED AND VERIFIED**
+**Evidence**: `src/transducer/substitution_set.rs`; regression coverage includes `test_multi_char_utf8_substitutions`
 **Files**: `src/transducer/substitution_set.rs`
 
 **Current State**:
-- `SubstitutionSet::allow_str()` has placeholder implementation
-- `SubstitutionSet::contains_str()` has placeholder implementation
-- Only single-character pairs work correctly
+- `SubstitutionSet::allow_str()` stores ASCII, UTF-8, and multi-character pairs.
+- `SubstitutionSet::contains_str()` checks optimized single-byte storage first and multi-character storage for longer or UTF-8 pairs.
+- `has_source()` and `has_target_starting_with()` include multi-character storage.
+- Single-byte ASCII pairs still use optimized byte storage.
+- Multi-character pairs use a small-vector representation that upgrades to a hash map for larger sets.
 
-**Required**:
-- Separate storage for multi-character pairs (e.g., `Vec<(String, String)>` or `HashMap<String, HashSet<String>>`)
-- Efficient lookup for variable-length character sequences
-- Memory-efficient representation (SmallString optimization?)
-- Integration with existing single-char bitmap/hash storage
-
-**Design Considerations**:
+**Implemented Representation**:
 ```rust
 pub struct SubstitutionSet {
-    // Existing: Single-character pairs (optimized)
-    single_char_pairs: /* current implementation */,
-
-    // NEW: Multi-character pairs
-    multi_char_pairs: HashMap<String, HashSet<String>>,
-    // OR: Vec<(SmallString, SmallString)> for better cache locality
+    byte_table: /* optimized single-byte representation */,
+    multi_char: MultiCharSubstitutionImpl,
 }
 
 impl SubstitutionSet {
     pub fn allow_str(&mut self, a: &str, b: &str) {
-        if a.len() == 1 && b.len() == 1 {
-            // Use optimized single-char path
-        } else {
-            // Store in multi-char structure
-        }
+        // ASCII one-byte pairs use byte storage.
+        // UTF-8 and multi-character pairs use string storage.
     }
 
     pub fn contains_str(&self, a: &[u8], b: &[u8]) -> bool {
-        if a.len() == 1 && b.len() == 1 {
-            // Fast single-char lookup
-        } else {
-            // Multi-char lookup
-        }
+        // Fast-path single-byte lookup, then multi-character lookup.
     }
 }
 ```
@@ -163,7 +148,7 @@ impl SubstitutionSet {
 
 #### 2. Universal Automata Integration
 
-**Status**: 🔴 **BLOCKED** - Requires architectural redesign
+**Status**: 🟡 **SEPARATE ARCHITECTURE TRACK**
 **Effort**: 3-4 weeks (complex)
 **Files**: `src/transducer/universal/*`
 
@@ -173,7 +158,7 @@ impl SubstitutionSet {
 - Works with single-character operations only
 - Bit-vector encoding assumes single-character consumption
 
-**Required for Full Integration**:
+**Required for OperationSet-Driven Universal Integration**:
 1. **Runtime-based transition system**:
    - Accept `OperationSet` as parameter
    - Data-driven transition logic instead of compile-time specialization
@@ -252,15 +237,15 @@ The current `PositionVariant` trait provides **compile-time specialization** for
 - `test_can_apply_initial_clusters` - Tests wr↔r, kn↔n matching
 - `test_operation_weights` - Verifies weight hierarchy
 
-### Missing Tests
+### Additional Test Coverage
 
-- Integration tests with universal automata (blocked on automata integration)
+- Integration tests for OperationSet-driven universal automata once that architecture is selected
 - Performance benchmarks for phonetic operation matching
-- End-to-end phonetic string matching tests (requires automata integration)
+- End-to-end phonetic string matching tests for every selected frontend path
 
 ---
 
-## Technical Debt & TODOs
+## Resolved And Remaining Work
 
 ### Immediate (< 1 week)
 
@@ -284,11 +269,10 @@ The current `PositionVariant` trait provides **compile-time specialization** for
    - Choose compile-time vs runtime approach
    - Create proof-of-concept for multi-char transitions
 
-4. **Implement Phase 1 phonetic operations**
-   - After multi-char `SubstitutionSet` is complete
-   - Create `phonetic.rs` module
-   - Implement helper functions for digraphs
-   - Write comprehensive tests
+4. **Expand phonetic rule coverage**
+   - Add dialect-specific rule packs where benchmark evidence shows missing coverage
+   - Keep OperationSet phonetic helpers aligned with LLev/LLRE rule-stack behavior
+   - Write targeted tests for each accepted rule expansion
 
 ### Long-term (1-3 months)
 
@@ -366,19 +350,14 @@ let ops: OperationSet = Algorithm::Standard.into();
 
 ### Immediate Next Steps
 
-1. **Prioritize multi-character `SubstitutionSet`** implementation
-   - This unblocks phonetic operations
-   - Relatively self-contained change
-   - High value for low complexity
-
-2. **Design universal automata integration architecture**
+1. **Design universal automata integration architecture**
    - Analyze trade-offs between compile-time and runtime approaches
    - Create detailed design document before implementation
    - Consider hybrid approach for backward compatibility
 
-3. **Document current limitations** in API docs
-   - Note that multi-char restrictions are placeholder
-   - Warn users about pending universal automata integration
+2. **Document current OperationSet integration boundaries** in API docs
+   - State that multi-character restrictions are implemented
+   - Distinguish direct phonetic/rule-stack APIs from OperationSet-driven universal automata integration
 
 ### Long-term Strategy
 
