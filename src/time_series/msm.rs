@@ -360,6 +360,37 @@ mod tests {
         (a - b).abs() < EPSILON
     }
 
+    fn assert_msm_case(config: &MsmConfig, x: &[f64], y: &[f64], expected: f64) {
+        let standard = config.distance(x, y);
+        let optimized = config.distance_optimized(x, y);
+        let reverse = config.distance(y, x);
+
+        assert!(
+            approx_eq(standard, expected),
+            "MSM({:?}, {:?}) = {}, expected {}",
+            x,
+            y,
+            standard,
+            expected
+        );
+        assert!(
+            approx_eq(optimized, expected),
+            "optimized MSM({:?}, {:?}) = {}, expected {}",
+            x,
+            y,
+            optimized,
+            expected
+        );
+        assert!(
+            approx_eq(reverse, expected),
+            "reverse MSM({:?}, {:?}) = {}, expected {}",
+            y,
+            x,
+            reverse,
+            expected
+        );
+    }
+
     #[test]
     fn test_identical_series() {
         let config = MsmConfig::new(1.0);
@@ -490,21 +521,12 @@ mod tests {
     }
 
     #[test]
-    fn test_paper_example() {
-        // Example from the paper (if we can find specific test cases)
-        // For now, test with simple known cases
-
+    fn test_known_optimal_operation_cases() {
         let config = MsmConfig::new(1.0);
 
-        // Two-element series
-        let x = vec![1.0, 2.0];
-        let y = vec![1.0, 2.0];
-        assert!(approx_eq(config.distance(&x, &y), 0.0));
-
-        // Shift all values by 1
-        let x = vec![1.0, 2.0, 3.0];
-        let y = vec![2.0, 3.0, 4.0];
-        // Optimal: move each element by 1, cost = 1+1+1 = 3
-        assert!(approx_eq(config.distance(&x, &y), 3.0));
+        assert_msm_case(&config, &[1.0, 2.0], &[1.0, 2.0], 0.0);
+        assert_msm_case(&config, &[1.0, 2.0, 3.0], &[2.0, 3.0, 4.0], 3.0);
+        assert_msm_case(&config, &[0.0, 100.0], &[0.0, 0.0, 100.0], 1.0);
+        assert_msm_case(&config, &[0.0, 100.0], &[0.0, 100.0, 100.0], 1.0);
     }
 }
