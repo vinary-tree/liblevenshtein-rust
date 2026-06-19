@@ -4,8 +4,8 @@
 //! runtime-configurable operations via `OperationSet`. This enables:
 //! - Phonetic corrections (ph↔f, ch↔k, etc.)
 //! - Custom edit distance metrics
-//! - Weighted operations (future)
-//! - Multi-character operations (future)
+//! - Weighted operations represented by operation costs
+//! - Multi-character operations such as transposition, merge, and split
 //!
 //! # Design Philosophy
 //!
@@ -39,16 +39,13 @@
 //!
 //! # Implementation Status
 //!
-//! **Phase 1 (Current):**
-//! - ✅ GeneralizedPosition (no PositionVariant generic)
-//! - 🔄 GeneralizedState (in progress)
-//! - 🔄 GeneralizedAutomaton (in progress)
-//! - ⏳ Basic accepts() functionality
-//!
-//! **Phase 2 (Future):**
-//! - Multi-character operations (⟨m,n,w⟩ where m>1 or n>1)
-//! - Weighted operations (fractional costs)
-//! - Performance optimizations
+//! **Current:**
+//! - Generalized positions and states with same-variant subsumption.
+//! - Runtime `OperationSet` support for standard, transposition, merge, split,
+//!   and restricted phonetic operations.
+//! - `accepts()` support for configurable operations over UTF-8 input.
+//! - Focused performance work remains ongoing for heavily weighted and
+//!   corpus-scale workloads.
 //!
 //! See: `docs/design/generalized-automaton.md`
 

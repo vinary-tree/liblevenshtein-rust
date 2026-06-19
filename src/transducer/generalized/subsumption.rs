@@ -18,12 +18,12 @@
 //! 1. f > e (more errors available at j)
 //! 2. |j - i| ≤ f - e (positions close enough given error difference)
 //!
-//! # Phase 1 Implementation
+//! # Generalized Implementation
 //!
-//! Current implementation supports standard operations only (match, substitute, insert, delete).
-//! This means we use the standard subsumption rule above.
-//!
-//! Future phases will add runtime OperationSet-specific subsumption rules.
+//! Generalized positions include usual states and intermediate transposition or
+//! splitting states. The standard offset/error subsumption rule applies only
+//! within the same position variant; cross-variant subsumption is intentionally
+//! rejected because intermediate states have different futures.
 
 use super::position::GeneralizedPosition;
 
@@ -46,10 +46,11 @@ use super::position::GeneralizedPosition;
 /// - pos2 must have more errors available (f > e)
 /// - Positions must be close enough (|j - i| ≤ f - e)
 ///
-/// # Phase 1: Standard Operations Only
+/// # Generalized Variant Rule
 ///
-/// This implementation uses the standard subsumption rule. Future phases
-/// will extend this to support custom operation sets.
+/// The standard offset/error subsumption rule is applied only to positions of
+/// the same variant. This keeps transposition and split intermediates from
+/// being collapsed into usual states with incompatible continuation semantics.
 ///
 /// # Example
 ///

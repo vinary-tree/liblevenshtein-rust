@@ -4,13 +4,11 @@
 //! Based on Definition 15 from Mitankin's thesis (pages 38-39), but without
 //! compile-time variant specialization.
 //!
-//! # Phase 1 Limitations
+//! # Operation Support
 //!
-//! Current implementation supports **standard operations only** (match, substitute, insert, delete).
-//! Future phases will add:
-//! - Runtime OperationSet parameter
-//! - Multi-character operations
-//! - Custom operation sets
+//! The state transition logic consumes a runtime `OperationSet`, including
+//! standard edit operations, transposition, merge, split, and restricted
+//! phonetic multi-character operations.
 //!
 //! # Theory Background
 //!
@@ -699,9 +697,9 @@ impl GeneralizedState {
             && (bit_index as usize) < bit_vector.len()
             && bit_vector.is_match(bit_index as usize);
 
-        // Iterate over all operations
+        // Iterate over single-character operations; multi-character
+        // operations are handled by the dedicated sections below.
         for op in operations.operations() {
-            // Skip multi-char operations for now (Phase 2c will add multi-char)
             if op.consume_x() > 1 || op.consume_y() > 1 {
                 continue;
             }

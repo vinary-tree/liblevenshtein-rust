@@ -12,18 +12,15 @@
 //!   - Fixed operation sets
 //!   - Perfect for standard Levenshtein variants
 //!
-//! - **GeneralizedAutomaton**: Runtime operations (Phase 1: standard only)
+//! - **GeneralizedAutomaton**: Runtime operations via `OperationSet`
 //!   - Small runtime overhead (+10-20% estimate)
-//!   - Future: Custom operation sets
+//!   - Custom operation sets
 //!   - Perfect for phonetic corrections and custom metrics
 //!
-//! # Phase 1 Implementation
+//! # Operation Support
 //!
-//! Current implementation supports **standard operations only** (match, substitute, insert, delete).
-//! Future phases will add:
-//! - Runtime OperationSet parameter
-//! - Multi-character operations
-//! - Custom operation sets
+//! The automaton supports runtime-configurable standard operations,
+//! transposition, merge/split operations, and restricted phonetic operations.
 //!
 //! # Theory Background
 //!
@@ -271,9 +268,9 @@ impl GeneralizedAutomaton {
     ///    - Apply transition: state := δ^∀,χ_n(state, β)
     /// 3. Check if final state is accepting
     ///
-    /// # Phase 1 Note
+    /// # Operation Note
     ///
-    /// Uses standard operations only (match, substitute, insert, delete).
+    /// Uses this automaton's configured `OperationSet`.
     ///
     /// # Examples
     ///
@@ -1077,9 +1074,7 @@ mod tests {
         let ops = crate::transducer::OperationSet::with_merge_split();
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
-        // "ct" → "cct" (match 'c', then split: word 'c' matches input 'cc', then match 't')
-        // Wait, that's wrong - we already consumed word 'c'. Let me use different chars.
-        // "cat" → "caat" (match 'c', split: word 'a' matches input 'aa', match 't')
+        // "cat" → "caat" (match 'c', split word 'a' into input "aa", match 't')
         assert!(automaton.accepts("cat", "caat"));
     }
 
@@ -1385,15 +1380,11 @@ mod tests {
         // transpose then split
         assert!(automaton.accepts("abc", "baac")); // transpose "ab", then split 'a'
 
-        // split then transpose
-        assert!(automaton.accepts("abc", "abba")); // split 'b', then transpose... wait, this doesn't make sense
-
-        // Let me use clearer examples:
         // "ab" → "ba" (transpose) → "baa" (split second 'a')
         assert!(automaton.accepts("ab", "baa"));
 
-        // "ab" → "aab" (split first 'a') → "aba" (transpose)
-        // Actually, the input is fixed, so let me think differently
+        // Historical mixed-operation acceptance case.
+        assert!(automaton.accepts("abc", "abba"));
 
         // The point is: regardless of the order operations are discovered,
         // the same transformations should be accepted
@@ -1408,7 +1399,7 @@ mod tests {
 
     #[test]
     fn test_phonetic_debug_simple() {
-        // Simple debug test for phonetic operations
+        // Simple phonetic operation smoke test.
         let ops = crate::transducer::phonetic::consonant_digraphs();
 
         // Check operation set has the right operations
