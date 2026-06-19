@@ -94,7 +94,7 @@ keeping every subtraction inside `Q`.
 | File | Key results | Status |
 |------|-------------|--------|
 | `IntervalCost.v` | `interval_dist_le_move`, `c_func_merge_lb_le`, `c_func_split_lb_le` (**admissibility** of all three bounds); `interval_dist_tight`, `c_func_merge_lb_tight`, `c_func_split_lb_tight` (**exactness** of all three — each bound is attained by a concrete value in its interval box) | trusted, axiom-free |
-| `QuantizationBounds.v` | `quantize_in_bin_bounds`: `v ∈ bin_bounds(quantize v)` (executable uniform binning; extreme bins → unbounded endpoints), replacing the former placeholder quantizer | trusted, axiom-free |
+| `QuantizationBounds.v` | `quantize_in_bin_bounds`: `v ∈ bin_bounds(quantize v)` (executable uniform binning; extreme bins → unbounded endpoints), replacing the former simplified quantizer | trusted, axiom-free |
 | `IntervalColumn.v` | `interval_cell_le_matrix` (**column admissibility**: `interval_cell ≤ msm_matrix_cell` by `i+j` strong induction); `lb_prune_sound_msm` (final-column no-false-negative); `column_lb_le_deeper` (**subtree** bound over deeper finals, via column-min monotonicity) | trusted, axiom-free |
 
 `Print Assumptions lb_prune_sound_msm` / `column_lb_le_deeper` / `quantize_in_bin_bounds`

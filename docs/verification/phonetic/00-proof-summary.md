@@ -109,7 +109,7 @@ Theorem position_skip_safe_for_local_contexts :
 **Status**: Main safety theorem. Proof strategy:
 1. For position-independent contexts (not `Final`), matches don't appear at earlier positions after transformation
 2. Therefore position skipping is safe
-3. Requires extensive case analysis (future work)
+3. Requires extensive case analysis in a dedicated proof session
 
 ---
 
@@ -378,7 +378,8 @@ fn apply_rules_seq_hybrid(rules: &[RewriteRule], s: &[Phone], fuel: usize) -> Op
 - ✅ Core safety properties formally verified (termination, conditional safety)
 - ✅ File compiles successfully with zero errors
 - ⚠️ Main theorems admitted but proof strategies documented
-- ✅ Identified specific gaps (non-empty pattern axiom) for future work
+- ✅ Identified specific gaps (non-empty pattern axiom) for dedicated proof
+  sessions
 - **Recommendation**: Position skipping optimization remains DEFERRED for v0.8.0 due to unproven edge cases
 
 ---
@@ -479,5 +480,7 @@ The core challenge is proving that for position-independent contexts, applying a
 - Separate assertions for each direction of the equality chain
 - Proper application of `nth_error_app1` and `nth_error_firstn` from Coq's List library
 
-**Remaining Work**: Only 1 theorem remains admitted (`position_skip_safe_for_local_contexts`), which requires extensive case analysis on all context types. The optimization remains correctly deferred for v0.8.0, with a clear path forward for v0.9.0+ if performance profiling shows it's needed.
-
+**Archival Gap**: One theorem was still admitted in this summary
+(`position_skip_safe_for_local_contexts`), requiring extensive case analysis on
+all context types. The optimization stayed outside the v0.8.0 acceptance scope;
+reviving it requires fresh profiling and a proof-session plan.

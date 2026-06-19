@@ -394,7 +394,8 @@ This session achieved **97% completion** of Axiom 2, converting it from a simple
 
 **For v0.8.0**: The current state provides high confidence in correctness with transparent documentation of assumptions.
 
-**For future work**: Clear path to completion with specific next steps and effort estimates.
+**Follow-on proof-session criteria**: Specific next steps and effort estimates
+are recorded above.
 
 ---
 

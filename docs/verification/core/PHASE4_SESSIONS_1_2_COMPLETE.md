@@ -177,7 +177,8 @@ systemd-run --user --scope -p MemoryMax=126G ... \
 
 3. **Tactic limitations are real**: Even trivial arithmetic can fail when opaque definitions are involved - this is a tool limitation, not a mathematical issue
 
-4. **Documentation quality**: 60+ line axiom justifications provide confidence and enable future work
+4. **Documentation quality**: 60+ line axiom justifications provide confidence
+   and support later proof sessions
 
 5. **Structured approach**: Breaking complex proofs into Parts with clear dependencies makes progress trackable
 

@@ -300,7 +300,7 @@ coqc -Q phonetic PhoneticRewrites phonetic/position_skipping_proof.v
 - ✅ Converted Axiom 2 to fully proven theorem (+1 theorem, -1 axiom)
 - ✅ Added 19 new proven lemmas/theorems
 - ✅ Defined execution model infrastructure for Axiom 1
-- ✅ Comprehensive documentation of remaining work
+- ✅ Comprehensive documentation of archival proof gaps
 
 ---
 

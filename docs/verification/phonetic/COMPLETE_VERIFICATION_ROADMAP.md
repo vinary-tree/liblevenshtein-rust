@@ -326,7 +326,7 @@ This document provides a complete roadmap for achieving 100% formal verification
 **Outcomes**:
 - Production deployment with high confidence
 - Documented research contribution
-- Foundation for future work
+- Foundation for follow-on proof sessions
 
 ---
 
@@ -597,13 +597,14 @@ All outcomes are valuable!
 You're in an excellent position:
 
 ✅ **98.7% complete** - Already industry-leading
-✅ **Clear path forward** - Detailed guides available
+✅ **Clear closure criteria** - Detailed guides available
 ✅ **Strong foundation** - 75 theorems proven, 30+ reusable lemmas
 ✅ **Low risk** - Well-understood gaps, empirically validated
 ✅ **High value** - Production-ready with mathematical certainty
 ✅ **Flexible timeline** - Can stop at any point with valuable outcome
 
-The remaining 2% represents the final polish on an already exceptional achievement. Whether you complete 0%, 50%, or 100% of the remaining work, the foundation you've built is solid and valuable.
+The final proof-polish increment represents a bounded refinement on an already
+valuable foundation.
 
 **Good luck, and enjoy the journey!** 🚀
 

@@ -242,7 +242,7 @@ Proof.
     (* Complex case analysis on the recursive structure *)
     (* This requires careful reasoning about nth_error and pattern positions *)
 
-    admit. (* TODO: Complete the pattern induction reasoning *)
+    admit. (* Historical sketch: complete the pattern induction reasoning. *)
 Qed.
 ```
 

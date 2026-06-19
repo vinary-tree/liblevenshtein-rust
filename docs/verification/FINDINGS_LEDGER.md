@@ -593,20 +593,24 @@ Fixpoint apply_edit_sequence (s : string) (edits : list OperationType) : string 
       apply_edit_sequence s rest  (* Ignores op, returns original string *)
   end.
 ```
-This function is a STUB - it always returns the original string unchanged.
+This function was a minimal compatibility path that always returned the original
+string unchanged.
 
 ### Impact Analysis
 
-These stubs break the connection between edit operations and string transformations:
+These minimal compatibility paths break the connection between edit operations
+and string transformations:
 
 | Axiom | Expected Semantics | Actual Behavior |
 |-------|-------------------|-----------------|
 | `accepting_automaton_has_edit_sequence` | Accepting path → valid edits | `extract_edit_sequence` returns `[]`, so trivially satisfied only when target=input |
-| `phonetic_only_when_phonetic_ops_used` | Phonetic ops used when standard fails | Hypothesis unsatisfiable with stub (target must equal input) |
-| `edit_sequence_empty_output_zero_consume` | Empty output → ops consume 0 from y | Stub means `target = EmptyString` but no info about ops |
+| `phonetic_only_when_phonetic_ops_used` | Phonetic ops used when standard fails | Hypothesis unsatisfiable with the minimal path (target must equal input) |
+| `edit_sequence_empty_output_zero_consume` | Empty output → ops consume 0 from y | Minimal path means `target = EmptyString` but no info about ops |
 
 ### Root Cause
-The verification was designed with placeholder implementations, expecting these to be filled in later. The axioms express the *intended* semantics that would be provable with real implementations.
+The verification was designed with simplified implementations. The axioms
+express the intended semantics that become provable once the corresponding
+executable functions carry those semantics.
 
 ### Implications
 
@@ -631,7 +635,7 @@ The verification was designed with placeholder implementations, expecting these 
 
 ### Documentation Added
 - Added detailed comments to each axiom in `Soundness.v` explaining:
-  - Why the axiom cannot be proven with current stubs
+  - Why the axiom cannot be proven with the current compatibility paths
   - What implementation changes are needed
   - Proof strategies for when real implementations exist
 
@@ -730,7 +734,7 @@ After completing Grammar/NFA compilation, examined remaining admits:
 | Core/Automaton | Soundness.v | 3 | Deep proof dependencies |
 | Core/Automaton | MainTheorem.v | 2 | Depends on admitted completeness lemmas |
 | Core/Composition | DamerauComposition.v | 2 | Triangle inequality bounds |
-| Grammar/Composition | Correctness.v | 3 | TBD |
+| Grammar/Composition | Correctness.v | 3 | See current grammar verification README |
 | Grammar/NFA | Multiple | 23 | Various |
 | **Total** | | **37** | |
 

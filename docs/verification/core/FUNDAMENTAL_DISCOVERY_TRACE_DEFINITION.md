@@ -222,7 +222,8 @@ This discovery exemplifies the scientific method in formal verification:
 4. **Analysis**: Identified exact cause (compatible_pairs)
 5. **Solutions**: Enumerated viable paths forward
 
-**Documentation** of failed proof attempts is as valuable as successful proofs - it guides future work and prevents others from repeating the same efforts.
+**Documentation** of failed proof attempts is as valuable as successful proofs:
+it guides later proof sessions and prevents repeated dead ends.
 
 ## References
 

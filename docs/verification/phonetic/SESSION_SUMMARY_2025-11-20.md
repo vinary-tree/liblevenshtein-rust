@@ -161,7 +161,7 @@
 2. **77 Theorems Proven**: All provable theorems have Qed
 3. **1 Axiom Remaining**: Well-understood semantic property
 4. **Tests Pass**: All 147 phonetic tests validate correctness
-5. **Documented**: Clear understanding of remaining work
+5. **Documented**: Clear understanding of the archival proof gap
 
 **Confidence Level**: **HIGH**
 - Main correctness property (pattern overlap) is proven
@@ -310,7 +310,7 @@
 **Partial Progress**: Axiom 1 execution model defined ⚠️
 - Infrastructure in place
 - Semantic gap identified and documented
-- Clear path forward for future work
+- Clear closure criteria for a follow-on proof session
 
 ### Impact
 

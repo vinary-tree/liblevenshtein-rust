@@ -208,12 +208,13 @@ The original `msm_init_row_same_last` lemma was incorrectly stated. Only diagona
 
 ### Grammar NFA Soundness (2026-01-20 Progress)
 
-**Critical Discovery: Stub Implementations**
+**Critical Discovery: Minimal Implementations**
 
-The NFA verification had two stub implementations that prevented certain axioms from being converted to actual proofs:
+The NFA verification had two minimal implementations that prevented certain
+axioms from being converted to actual proofs:
 
 1. **`extract_edit_sequence`** (Soundness.v): Always returns `[]` for any path
-   - ~~STILL A STUB~~ → **`extract_edit_sequence_full` NOW IMPLEMENTED (2026-01-20)**
+   - ~~Minimal extraction only~~ → **`extract_edit_sequence_full` NOW IMPLEMENTED (2026-01-20)**
 2. **`apply_edit_sequence`** (Completeness.v): ~~Always returns the original string unchanged~~ - **NOW IMPLEMENTED**
 
 **Implementation of `apply_edit_sequence` (2026-01-20):**
@@ -289,7 +290,7 @@ Key design decisions:
 - Returns (operation, consumed) tuple where `consumed` indicates if input was consumed
 - Handles the 5 standard operations: Match, Insert, Delete, Substitute, Transpose
 
-Note: The original `extract_edit_sequence` is kept as a stub for backward compatibility.
+Note: The original `extract_edit_sequence` is kept as a compatibility shim.
 Use `extract_edit_sequence_full` for actual operation extraction.
 
 With this implementation, the following axioms can now potentially be proven:

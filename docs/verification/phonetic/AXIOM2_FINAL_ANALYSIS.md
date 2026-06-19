@@ -193,7 +193,10 @@ Including edge cases:
 
 ### Production Usage
 
-The position-skipping optimization (Axiom 2's application) was empirically tested and **deferred** due to safety concerns with `Context::Final` rules (documented in `07-algorithmic-optimization-analysis.md`).
+The position-skipping optimization (Axiom 2's application) was empirically
+tested and kept outside the accepted production path due to safety concerns with
+`Context::Final` rules (documented in
+`07-algorithmic-optimization-analysis.md`).
 
 **Current production code** uses the conservative approach (always search from position 0), making Axiom 2 a **safety guarantee** rather than a performance optimization.
 

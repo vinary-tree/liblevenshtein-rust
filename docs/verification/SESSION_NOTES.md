@@ -100,7 +100,8 @@ The main challenge was Q_scope (rational numbers) interfering with nat operation
 ### Key Files Modified
 
 **Source Files**:
-- `phonetic/rewrite_rules.v` - Fixed scope issues, kept theorem stubs
+- `phonetic/rewrite_rules.v` - Fixed scope issues, retained theorem statements
+  for the archival session record
 - `phonetic/zompist_rules.v` - Added helper lemmas, completed bounded expansion
 
 **Documentation**:

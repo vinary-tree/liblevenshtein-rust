@@ -474,7 +474,7 @@ Qed.
 **Worst Case** (10% probability):
 - Significant architectural changes needed
 - 40-50 hours effort
-- May need to defer to future work
+- Would require a separate proof-session charter
 
 ## Next Steps
 

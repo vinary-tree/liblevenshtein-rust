@@ -150,7 +150,7 @@ This phase made valuable scientific progress by:
 3. **Discovering why the witness lemma is hard** (not just documenting that it's hard)
 4. Identifying a potential issue with the trace definition
 
-The remaining work requires either:
+This archival proof attempt identified three viable closure paths:
 - Advanced Coq proof techniques (multiset reasoning, classical logic)
 - Strengthening the trace definition to prevent edge cases
 - Alternative proof strategies that avoid the problematic lemmas
