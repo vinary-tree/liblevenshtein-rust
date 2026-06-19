@@ -1,5 +1,7 @@
 use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::Dictionary;
 use liblevenshtein::prelude::{Algorithm, Transducer};
+use liblevenshtein::transducer::PriorityQueryIterator;
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::{HashMap, HashSet};
 use std::env;
@@ -77,6 +79,7 @@ enum Workload {
     All,
     LevUnordered,
     LevOrdered,
+    PriorityQueryFirstK,
     PhoneticNormalized,
     PhoneticRegexProduct,
     PhoneticRegexProductScan,
@@ -180,6 +183,7 @@ impl Options {
                         "all" => Workload::All,
                         "lev-unordered" => Workload::LevUnordered,
                         "lev-ordered" => Workload::LevOrdered,
+                        "priority-query-first-k" => Workload::PriorityQueryFirstK,
                         "phonetic-normalized" => Workload::PhoneticNormalized,
                         "phonetic-regex-product" => Workload::PhoneticRegexProduct,
                         "phonetic-regex-product-scan" => Workload::PhoneticRegexProductScan,
@@ -191,7 +195,7 @@ impl Options {
                         "cmudict-phonetic-diagnostic" => Workload::CmudictPhoneticDiagnostic,
                         "phonetic-targeted-rules" => Workload::PhoneticTargetedRules,
                         other => panic!(
-                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, phonetic-normalized, phonetic-regex-product, phonetic-regex-product-scan, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
+                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, priority-query-first-k, phonetic-normalized, phonetic-regex-product, phonetic-regex-product-scan, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
                         ),
                     };
                 }
@@ -274,7 +278,7 @@ impl Options {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|phonetic-normalized|phonetic-regex-product|phonetic-regex-product-scan|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
+                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|priority-query-first-k|phonetic-normalized|phonetic-regex-product|phonetic-regex-product-scan|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
                     );
                     std::process::exit(0);
                 }
@@ -431,6 +435,32 @@ fn run_lev_ordered(samples: usize, warmups: usize) {
                 .collect::<Vec<_>>()
                 .len(),
         )
+    });
+}
+
+fn run_priority_query_first_k(
+    samples: usize,
+    warmups: usize,
+    limit: usize,
+    max_distance: usize,
+    k: usize,
+) {
+    let dict = create_dictionary(limit.max(1_000));
+    let queries = ["test500", "best500", "rest500", "word500", "term500"];
+    let workload = format!("priority_query_first_k_{}_d{}", k, max_distance);
+
+    measure(&workload, samples, warmups, |sample| {
+        let query = queries[sample % queries.len()];
+        let candidates: Vec<_> = PriorityQueryIterator::new(
+            dict.root(),
+            black_box(query),
+            black_box(max_distance),
+            Algorithm::Standard,
+        )
+        .take(black_box(k))
+        .collect();
+
+        MeasureOutcome::synthetic(candidates.len())
     });
 }
 
@@ -1590,6 +1620,15 @@ fn main() {
     }
     if matches!(opts.workload, Workload::All | Workload::LevOrdered) {
         run_lev_ordered(opts.samples, opts.warmups);
+    }
+    if matches!(opts.workload, Workload::All | Workload::PriorityQueryFirstK) {
+        run_priority_query_first_k(
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            opts.max_distance,
+            opts.recall_k,
+        );
     }
     if matches!(opts.workload, Workload::All | Workload::PhoneticNormalized) {
         run_phonetic_normalized(

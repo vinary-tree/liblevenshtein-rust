@@ -46,6 +46,8 @@ use std::collections::BinaryHeap;
 struct SearchEntry<N: DictionaryNode> {
     /// Current intersection (state + node + path)
     intersection: Box<Intersection<N>>,
+    /// Cached path units for deterministic heap tie-breaking.
+    term_units: Vec<N::Unit>,
     /// Actual cost so far (minimum errors in state)
     g_cost: usize,
     /// f-cost = g-cost + heuristic, used for priority ordering
@@ -53,9 +55,15 @@ struct SearchEntry<N: DictionaryNode> {
 }
 
 impl<N: DictionaryNode> SearchEntry<N> {
-    fn new(intersection: Box<Intersection<N>>, g_cost: usize, h_cost: usize) -> Self {
+    fn new(
+        intersection: Box<Intersection<N>>,
+        term_units: Vec<N::Unit>,
+        g_cost: usize,
+        h_cost: usize,
+    ) -> Self {
         Self {
             intersection,
+            term_units,
             g_cost,
             f_cost: g_cost.saturating_add(h_cost),
         }
@@ -70,7 +78,7 @@ impl<N: DictionaryNode> Ord for SearchEntry<N> {
         // Tertiary: lexicographic on term for determinism
         match other.f_cost.cmp(&self.f_cost) {
             Ordering::Equal => match other.g_cost.cmp(&self.g_cost) {
-                Ordering::Equal => self.intersection.term().cmp(&other.intersection.term()),
+                Ordering::Equal => self.term_units.cmp(&other.term_units),
                 ord => ord,
             },
             ord => ord,
@@ -88,7 +96,7 @@ impl<N: DictionaryNode> PartialEq for SearchEntry<N> {
     fn eq(&self, other: &Self) -> bool {
         self.f_cost == other.f_cost
             && self.g_cost == other.g_cost
-            && self.intersection.term() == other.intersection.term()
+            && self.term_units == other.term_units
     }
 }
 
@@ -153,7 +161,12 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
         let g_cost = 0; // No errors yet at root
         let h_cost = query_len; // Must consume all query characters
 
-        queue.push(SearchEntry::new(root_intersection, g_cost, h_cost));
+        queue.push(SearchEntry::new(
+            root_intersection,
+            Vec::new(),
+            g_cost,
+            h_cost,
+        ));
 
         Self {
             queue,
@@ -199,7 +212,7 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
                     self.expand_children(&entry);
 
                     return Some(PriorityCandidate {
-                        term: entry.intersection.term(),
+                        term: N::Unit::to_string(&entry.term_units),
                         distance,
                     });
                 }
@@ -254,8 +267,15 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
                     parent_path,
                 ));
 
-                self.queue
-                    .push(SearchEntry::new(child_intersection, g_cost, h_cost));
+                let mut child_term_units = entry.term_units.clone();
+                child_term_units.push(label);
+
+                self.queue.push(SearchEntry::new(
+                    child_intersection,
+                    child_term_units,
+                    g_cost,
+                    h_cost,
+                ));
             }
         }
     }
