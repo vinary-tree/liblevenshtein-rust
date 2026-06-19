@@ -9,15 +9,24 @@
 //! cargo run --release --example msm_experiment -- variable-range 33 3
 //! cargo run --release --example msm_experiment -- approx-control-knn 33 3
 //! cargo run --release --example msm_experiment -- approx-paa-knn 33 3
+//! cargo run --release --example msm_experiment -- ucr-1nn-latency 5 1 target/msm-corpora/ItalyPowerDemand ItalyPowerDemand
 //! ```
 
 use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use liblevenshtein::time_series::{
     msm_distance_automaton, msm_distance_wavefront, ApproxMsmConfig, ApproxMsmIndex, MsmConfig,
     MsmTransducer, QuantizationConfig,
 };
+
+#[derive(Debug, Clone)]
+struct LabeledSeries {
+    label: String,
+    series: Vec<f64>,
+}
 
 fn generate_series(len: usize, seed: u64) -> Vec<f64> {
     let mut state = seed;
@@ -159,6 +168,136 @@ fn build_approx_case() -> (
     (index, database, query, exact)
 }
 
+fn parse_ucr_ts(path: &Path) -> Result<Vec<LabeledSeries>, String> {
+    let content =
+        fs::read_to_string(path).map_err(|err| format!("failed to read {path:?}: {err}"))?;
+    let mut in_data = false;
+    let mut rows = Vec::new();
+    for (line_no, line) in content.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if !in_data {
+            if line.eq_ignore_ascii_case("@data") {
+                in_data = true;
+            }
+            continue;
+        }
+
+        let (values, label) = line
+            .rsplit_once(':')
+            .ok_or_else(|| format!("{path:?}:{} missing ':' label separator", line_no + 1))?;
+        let series = values
+            .split(',')
+            .map(|value| {
+                value.trim().parse::<f64>().map_err(|err| {
+                    format!(
+                        "{path:?}:{} invalid numeric value {value:?}: {err}",
+                        line_no + 1
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        rows.push(LabeledSeries {
+            label: label.trim().to_string(),
+            series,
+        });
+    }
+    Ok(rows)
+}
+
+fn parse_ucr_txt(path: &Path) -> Result<Vec<LabeledSeries>, String> {
+    let content =
+        fs::read_to_string(path).map_err(|err| format!("failed to read {path:?}: {err}"))?;
+    let mut rows = Vec::new();
+    for (line_no, line) in content.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut fields = line.split_whitespace();
+        let label = fields
+            .next()
+            .ok_or_else(|| format!("{path:?}:{} missing label", line_no + 1))?;
+        let series = fields
+            .map(|value| {
+                value.parse::<f64>().map_err(|err| {
+                    format!(
+                        "{path:?}:{} invalid numeric value {value:?}: {err}",
+                        line_no + 1
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        rows.push(LabeledSeries {
+            label: label.to_string(),
+            series,
+        });
+    }
+    Ok(rows)
+}
+
+fn find_ucr_split_paths(
+    dataset_dir: &Path,
+    dataset_name: &str,
+) -> Result<(PathBuf, PathBuf), String> {
+    for extension in ["ts", "txt"] {
+        let train = dataset_dir.join(format!("{dataset_name}_TRAIN.{extension}"));
+        let test = dataset_dir.join(format!("{dataset_name}_TEST.{extension}"));
+        if train.exists() && test.exists() {
+            return Ok((train, test));
+        }
+    }
+    Err(format!(
+        "could not find {dataset_name}_TRAIN/{{ts,txt}} and {dataset_name}_TEST/{{ts,txt}} under {dataset_dir:?}"
+    ))
+}
+
+fn load_ucr_dataset(
+    dataset_dir: &Path,
+    dataset_name: &str,
+) -> Result<(Vec<LabeledSeries>, Vec<LabeledSeries>), String> {
+    let (train_path, test_path) = find_ucr_split_paths(dataset_dir, dataset_name)?;
+    let parse = |path: &Path| match path.extension().and_then(|ext| ext.to_str()) {
+        Some("ts") => parse_ucr_ts(path),
+        Some("txt") => parse_ucr_txt(path),
+        other => Err(format!("unsupported UCR extension for {path:?}: {other:?}")),
+    };
+    Ok((parse(&train_path)?, parse(&test_path)?))
+}
+
+fn ucr_1nn_accuracy(
+    train: &[LabeledSeries],
+    test: &[LabeledSeries],
+    msm: MsmConfig,
+) -> (usize, usize, f64) {
+    let mut correct = 0usize;
+    for probe in test {
+        let predicted = train
+            .iter()
+            .map(|candidate| {
+                (
+                    candidate.label.as_str(),
+                    msm.distance(&probe.series, &candidate.series),
+                )
+            })
+            .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(label, _)| label)
+            .unwrap_or("");
+        if predicted == probe.label {
+            correct += 1;
+        }
+    }
+    let total = test.len();
+    let accuracy = if total == 0 {
+        0.0
+    } else {
+        correct as f64 / total as f64
+    };
+    (correct, total, accuracy)
+}
+
 fn measure_legacy_ratio(scenario: &str) -> f64 {
     let x = generate_series(24, 12345);
     let y = generate_series(24, 67890);
@@ -210,6 +349,20 @@ fn main() {
     let (index, query) = build_case();
     let (variable_index, variable_query, variable_threshold) = build_variable_case();
     let approx_case = scenario.starts_with("approx-").then(build_approx_case);
+    let ucr_case = if scenario.starts_with("ucr-") {
+        let dataset_dir = args
+            .next()
+            .unwrap_or_else(|| "target/msm-corpora/ItalyPowerDemand".to_string());
+        let dataset_name = args
+            .next()
+            .unwrap_or_else(|| "ItalyPowerDemand".to_string());
+        Some(
+            load_ucr_dataset(Path::new(&dataset_dir), &dataset_name)
+                .unwrap_or_else(|err| panic!("failed to load UCR dataset: {err}")),
+        )
+    } else {
+        None
+    };
     let threshold = 24.0;
     let k = 8;
 
@@ -264,6 +417,17 @@ fn main() {
                 let results = approx_index.search_knn(approx_query, k);
                 let recall = recall_at_k(&results, exact);
                 (recall, results.len(), recall)
+            }
+            "ucr-1nn-latency" => {
+                let (train, test) = ucr_case.as_ref().unwrap();
+                let (correct, _, accuracy) = ucr_1nn_accuracy(train, test, MsmConfig::new(1.0));
+                let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+                (elapsed_ms, correct, accuracy)
+            }
+            "ucr-1nn-accuracy" => {
+                let (train, test) = ucr_case.as_ref().unwrap();
+                let (correct, _, accuracy) = ucr_1nn_accuracy(train, test, MsmConfig::new(1.0));
+                (accuracy, correct, accuracy)
             }
             "legacy-wavefront-ratio" | "legacy-automaton-ratio" => {
                 let ratio = measure_legacy_ratio(&scenario);
