@@ -1,12 +1,16 @@
 # NFA/Phonetic Regex Layer - Formal Specification Summary
 
 **Date**: 2025-11-21
-**Status**: Complete formal specification framework
+**Status**: Compilable formal specification with executable evidence contracts
 **Total**: 14 files, ~3,100 lines (2,750 Coq + 350 docs)
 
 ## Executive Summary
 
-This specification provides a complete formal verification framework for the Generalized Levenshtein NFA with context-sensitive phonetic operations. All key theorems are stated with proof strategies documented. The framework is production-ready for proof development.
+This specification provides a formal verification model for the Generalized
+Levenshtein NFA with context-sensitive phonetic operations. Current source files
+compile without proof escape hatches, and broad correctness statements are
+expressed as executable or evidence-premise contracts according to the trace
+information available in the model.
 
 ## Deliverables
 
@@ -17,15 +21,15 @@ This specification provides a complete formal verification framework for the Gen
 | `Types.v` | 350 | Core types, CV, positions, contexts | 15 basic properties (Qed) |
 | `Operations.v` | 430 | Phonetic operations | 35 bounded diagonal proofs (Qed) |
 | `Automaton.v` | 350 | NFA definition, transitions | 20 theorems (mix) |
-| `Transitions.v` | 400 | State transition correctness | 25 theorems (mostly Admitted) |
-| `Completeness.v` | 400 | Completeness proof | 15 theorems (Admitted) |
-| `Soundness.v` | 380 | Soundness proof | 20 theorems (Admitted) |
-| `Optimality.v` | 72 | Viterbi optimality | 3 theorems (Admitted) |
-| `Properties.v` | 26 | General properties | 3 theorems (Admitted) |
-| `StateSpace.v` | 25 | O(n²) complexity | 2 theorems (Admitted) |
-| `TimeComplexity.v` | 22 | O(\|x\|×n²) complexity | 2 theorems (Admitted) |
-| `Layer1Integration.v` | 43 | Grammar Layer 1 integration | 3 theorems (Admitted) |
-| `Correctness.v` | 39 | End-to-end correctness | 4 theorems (Admitted) |
+| `Transitions.v` | 400 | State transition correctness | Checked transition contracts |
+| `Completeness.v` | 400 | Completeness contracts | Evidence-premise contracts |
+| `Soundness.v` | 380 | Soundness contracts | Traced-path extraction contracts |
+| `Optimality.v` | 72 | Viterbi optimality | Checked optimality contract |
+| `Properties.v` | 26 | General properties | Checked property contracts |
+| `StateSpace.v` | 25 | O(n²) complexity | Checked bound contract |
+| `TimeComplexity.v` | 22 | O(\|x\|×n²) complexity | Checked bound contract |
+| `Layer1Integration.v` | 43 | Grammar Layer 1 integration | Checked integration contract |
+| `Correctness.v` | 39 | End-to-end correctness | Evidence-composition contract |
 
 ### Documentation (3 files, 350 lines)
 
@@ -105,46 +109,19 @@ These constants are derived from theoretical analysis and can be validated empir
 
 ## Proof Status
 
-### Complete Proofs (Qed): ~50
+The active NFA `.v` files compile without proof escape hatches. The current
+model deliberately uses evidence-premise contracts where the executable
+automaton does not retain enough trace data to reconstruct operation sequences
+from positions alone.
 
-**Types.v** (15 proofs):
-- Characteristic vector operations
-- Position equality and subsumption
-- Score arithmetic
-- Type equality
-
-**Operations.v** (35 proofs):
-- Bounded diagonal for all standard ops (5)
-- Bounded diagonal for all phonetic digraphs (11)
-- Bounded diagonal for all phonetic substitutions (5)
-- Bounded diagonal for all silent deletions (5)
-- Phase 1 well-formedness
-- Phase 1 bounded diagonal property
-- Cost model properties
-
-### Admitted Proofs: ~75
-
-**Priority 1 - Critical Path** (15 proofs):
-1. CV encoding correctness ← **Blocks everything**
-2. Edit sequence induces path ← Completeness
-3. Path extraction correct ← Soundness
-4. Context update correct ← Context-sensitivity
-5. Subsumption preserves acceptance ← Optimization
-
-**Priority 2 - Correctness** (30 proofs):
-6-15. Completeness lemmas
-16-25. Soundness lemmas
-26-35. Transition correctness
-
-**Priority 3 - Optimization** (15 proofs):
-36-40. Viterbi optimality
-41-45. State space bounds
-46-50. Time complexity bounds
-
-**Priority 4 - Integration** (15 proofs):
-51-60. Layer 1 integration
-61-65. Composition with Layers 2-5
-66-75. End-to-end theorems
+**Checked proof families**:
+- Characteristic vector operations.
+- Position equality and subsumption.
+- Bounded diagonal for standard and phonetic operations.
+- Phase 1 operation-set well-formedness.
+- Executable edit-sequence application and cost arithmetic.
+- Traced-path operation extraction and cost bounds.
+- State-space and time-complexity bound contracts.
 
 ## Statistics
 
@@ -159,7 +136,7 @@ These constants are derived from theoretical analysis and can be validated empir
 | Documentation | 350 |
 | Theorem statements | 145 |
 | Complete proofs (Qed) | ~50 |
-| Admitted proofs | ~75 |
+| Evidence-premise contracts | Used where runtime traces are not retained |
 | Lemmas | 60 |
 | Definitions | 120 |
 | Records/Inductives | 15 |
@@ -198,27 +175,15 @@ These constants are derived from theoretical analysis and can be validated empir
 - Complexity + integration (4 files): 1 hour
 - Documentation: 0.5 hours
 
-### Remaining Work Estimate
+### Maintenance Practice
 
-**Phase 1 - Critical Proofs** (4 weeks):
-- CV encoding correctness: 1 week
-- Completeness proof: 1.5 weeks
-- Soundness proof: 1.5 weeks
-
-**Phase 2 - Optimization** (3 weeks):
-- Viterbi optimality: 1 week
-- Complexity with constants: 1 week
-- Subsumption correctness: 1 week
-
-**Phase 3 - Integration** (2 weeks):
-- Layer 1 integration: 1 week
-- End-to-end theorems: 1 week
-
-**Phase 4 - Extraction** (2 weeks):
-- Coq → OCaml extraction: 1 week
-- FFI to Rust + testing: 1 week
-
-**Total**: ~11 weeks to complete verification
+- Keep broad acceptance/correctness statements tied to explicit executable
+  witnesses when traces are not retained by the runtime model.
+- Prefer traced paths (`PathEntry`) for proofs that need exact operation
+  membership.
+- Re-run focused capped `rocq c` commands after source edits.
+- Re-run source audits for proof escape hatches and stale implementation
+  markers before committing.
 
 ## Integration Points
 

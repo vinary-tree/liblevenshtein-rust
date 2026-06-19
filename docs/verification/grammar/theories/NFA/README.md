@@ -1,12 +1,15 @@
 # NFA/Phonetic Regex Layer - Formal Verification
 
-**Status**: Complete formal specification with theorem statements
+**Status**: Compilable formal specification with executable evidence contracts
 **Date**: 2025-11-21
 **Total**: 12 Coq files, ~2,750 lines
 
 ## Overview
 
-This directory contains a complete Coq verification of the Generalized Levenshtein NFA with context-sensitive phonetic operations. The formalization proves correctness, complexity bounds, and integration with the grammar correction pipeline.
+This directory contains a Coq/Rocq verification model of the Generalized
+Levenshtein NFA with context-sensitive phonetic operations. The formalization
+uses executable definitions where the model has enough information, and explicit
+evidence-premise contracts where runtime acceptance does not retain traces.
 
 ## Architecture
 
@@ -176,34 +179,27 @@ make
 
 ## Proof Status
 
-**Theorem Statements**: 80+
-**Completed Proofs (Qed)**: ~15 (basic properties)
-**Admitted Proofs**: ~65 (framework placeholders)
+The active `.v` sources compile without proof escape hatches. Current broad
+contracts are structured as evidence-premise theorems when the executable
+automaton does not retain enough trace data to reconstruct operations directly.
 
-### Complete Proofs
+### Completed Proof Families
 
-- Characteristic vector basic operations
-- Position subsumption reflexivity and transitivity
-- Bounded diagonal for all standard operations
-- Bounded diagonal for all phonetic operations (30+ lemmas)
-- Operation set well-formedness
-- State well-formedness preservation
+- Characteristic vector operations and core position properties.
+- Bounded diagonal and well-formedness for standard and phonetic operations.
+- State well-formedness, transition, and termination properties.
+- Executable edit-sequence application and cost arithmetic.
+- Traced-path operation-membership and cost-bound extraction in `Soundness.v`.
+- Complexity bound statements with checked arithmetic contracts.
 
-### Admitted Proofs (High Priority)
+### Evidence-Premise Contracts
 
-1. **Completeness**: Edit sequence induces accepting path
-2. **Soundness**: Accepting path yields valid edit sequence
-3. **CV Encoding**: Bit vector ↔ character position correspondence
-4. **Context Propagation**: Context updates preserve correctness
-5. **Subsumption**: Pruning preserves acceptance
-
-### Admitted Proofs (Lower Priority)
-
-6. Viterbi finds optimal path
-7. State space O(n²) with concrete constant
-8. Time complexity O(|x|×n²×|ops|) with concrete constant
-9. Layer 1 lattice construction from NFA states
-10. Composition with grammar Layers 2-5
+- `Completeness.v`: edit-sequence contracts imply acceptance when an executable
+  acceptance witness is supplied.
+- `Soundness.v`: acceptance implies an edit witness when the witness is supplied
+  explicitly, and traced paths preserve exact operation membership.
+- `Correctness.v`: end-to-end equivalence is expressed over supplied soundness
+  and completeness directions.
 
 ## Integration with Rust Implementation
 
