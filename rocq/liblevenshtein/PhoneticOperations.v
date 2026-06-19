@@ -96,8 +96,8 @@ Inductive i_split_entry : Position -> ascii -> nat -> Position -> Prop :=
  * =======================
  *
  * Defines progression within splitting state (consuming additional input).
- * For now, this is identity - we don't model intermediate states.
- * A real implementation would validate character sequences here.
+ * Progress consumes one input character while retaining the splitting state;
+ * entry and completion carry the operation identity and budget accounting.
  *)
 
 Inductive i_split_progress : Position -> ascii -> Position -> Prop :=
