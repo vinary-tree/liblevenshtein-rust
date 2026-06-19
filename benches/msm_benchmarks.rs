@@ -8,8 +8,9 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::time_series::{
-    combined_lb, euclidean_lb, length_lb, search_with_lb, HybridSearchIndex, LowerBoundType,
-    MsmConfig, QuantizationConfig,
+    combined_lb, euclidean_lb, length_lb, msm_distance_automaton, msm_distance_wavefront,
+    search_with_lb, HybridSearchIndex, LowerBoundType, MsmConfig, MsmTransducer,
+    QuantizationConfig,
 };
 
 /// Generate a random time series
@@ -240,6 +241,135 @@ fn bench_quantization_levels(c: &mut Criterion) {
     group.finish();
 }
 
+fn generate_prefix_shared_database(db_size: usize, len: usize) -> Vec<Vec<f64>> {
+    let base = generate_series(len, 42);
+    (0..db_size)
+        .map(|i| {
+            let mut series = base.clone();
+            let pivot = len.saturating_mul(3) / 4;
+            for (j, value) in series.iter_mut().enumerate().skip(pivot) {
+                let perturb = ((i as f64 + 1.0) * (j as f64 + 0.5)).sin() * 2.0;
+                *value = (*value + perturb).clamp(0.0, 100.0);
+            }
+            series
+        })
+        .collect()
+}
+
+fn bench_exact_msm_transducer(c: &mut Criterion) {
+    let mut group = c.benchmark_group("exact_msm_transducer");
+    group.sample_size(30);
+
+    for db_size in [128, 512].iter() {
+        let series_len = 48;
+        let database = generate_prefix_shared_database(*db_size, series_len);
+        let query = database[0]
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                if i % 7 == 0 {
+                    (*v + 1.5).clamp(0.0, 100.0)
+                } else {
+                    *v
+                }
+            })
+            .collect::<Vec<_>>();
+        let database_pairs = database
+            .iter()
+            .cloned()
+            .enumerate()
+            .collect::<Vec<(usize, Vec<f64>)>>();
+        let quant_config = QuantizationConfig::for_u8(0.0, 100.0);
+        let msm_config = MsmConfig::new(1.0);
+        let threshold = 24.0;
+
+        let transducer = MsmTransducer::from_series(quant_config.clone(), msm_config, &database);
+        let mut hybrid = HybridSearchIndex::new(quant_config, msm_config);
+        for (i, series) in database.iter().enumerate() {
+            hybrid.insert(i, series);
+        }
+
+        group.bench_with_input(
+            BenchmarkId::new("brute_force_lb_range", db_size),
+            db_size,
+            |b, _| {
+                b.iter(|| {
+                    search_with_lb(
+                        black_box(&query),
+                        black_box(&database_pairs),
+                        black_box(threshold),
+                        black_box(&msm_config),
+                    )
+                });
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("exact_transducer_range", db_size),
+            db_size,
+            |b, _| {
+                b.iter(|| transducer.search_range(black_box(&query), black_box(threshold)));
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("exact_transducer_knn", db_size),
+            db_size,
+            |b, _| {
+                b.iter(|| transducer.search_knn(black_box(&query), black_box(8), black_box(1.0)));
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("hybrid_exact", db_size),
+            db_size,
+            |b, _| {
+                b.iter(|| hybrid.search_exact(black_box(&query), black_box(threshold)));
+            },
+        );
+    }
+
+    group.finish();
+}
+
+fn bench_legacy_msm_automata(c: &mut Criterion) {
+    let mut group = c.benchmark_group("legacy_msm_automata");
+    group.sample_size(20);
+    let config = MsmConfig::new(1.0);
+
+    for len in [12, 24].iter() {
+        let x = generate_series(*len, 12345);
+        let y = generate_series(*len, 67890);
+
+        group.throughput(Throughput::Elements(*len as u64));
+        group.bench_with_input(BenchmarkId::new("optimized_dp", len), len, |b, _| {
+            b.iter(|| config.distance_optimized(black_box(&x), black_box(&y)));
+        });
+        group.bench_with_input(BenchmarkId::new("wavefront", len), len, |b, _| {
+            b.iter(|| {
+                msm_distance_wavefront(
+                    black_box(&x),
+                    black_box(&y),
+                    black_box(&config),
+                    black_box(f64::INFINITY),
+                )
+            });
+        });
+        group.bench_with_input(BenchmarkId::new("automaton", len), len, |b, _| {
+            b.iter(|| {
+                msm_distance_automaton(
+                    black_box(&x),
+                    black_box(&y),
+                    black_box(&config),
+                    black_box(f64::INFINITY),
+                )
+            });
+        });
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_msm_dp,
@@ -249,5 +379,7 @@ criterion_group!(
     bench_brute_force_vs_indexed,
     bench_lb_type_comparison,
     bench_quantization_levels,
+    bench_exact_msm_transducer,
+    bench_legacy_msm_automata,
 );
 criterion_main!(benches);
