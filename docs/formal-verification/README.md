@@ -89,23 +89,23 @@ Traditional debugging has been expensive and inconclusive. These failures likely
 ```
 rocq/liblevenshtein/           # Rocq proof files
 ├── Core.v                     # Foundational definitions ✓
-├── Invariants.v               # Position invariant proofs (TODO)
-├── Operations.v               # Standard operations (TODO)
-├── Transitions.v              # State transitions (TODO)
-├── State.v                    # Anti-chain preservation (TODO)
+├── Invariants.v               # Position invariant proofs ✓
+├── Operations.v               # Standard operations ✓
+├── Transitions.v              # State transitions ✓
+├── PhoneticOperations.v       # Phonetic split operations ✓
+├── SubwordOperations.v        # Subword operation model ✓
 └── _CoqProject                # Build configuration
 
 docs/formal-verification/      # Human-readable documentation
 ├── README.md                  # This file
-├── SPECIFICATION.md           # Extracted formal spec (TODO)
-├── DISCREPANCIES.md           # Rust vs Coq differences (TODO)
-├── IMPLEMENTATION_GUIDE.md    # Maintenance guide (TODO)
+├── STATUS.md                  # Current proof status
+├── VALIDATION_MATRIX.md       # Rust/proof validation matrix
+├── FINDINGS.md                # Formal audit findings
+├── 03_standard_operations.md  # Standard operation proof notes
+├── 04_phonetic_operations.md  # Phonetic operation proof notes
 └── proofs/                    # Detailed proof documentation
     ├── 01_subsumption_properties.md  # Phase 1 ✓
-    ├── 02_position_invariants.md     # Phase 2 (TODO)
-    ├── 03_standard_operations.md     # Phase 3 (TODO)
-    ├── 04_multi_step_operations.md   # Phase 4 (TODO)
-    ├── 05_state_management.md        # Phase 5 (TODO)
+    ├── 02_position_invariants.md     # Phase 2 ✓
     └── 06_contextual_completion/      # Phase 9 ✓
         ├── README.md                  # Category overview
         ├── 01_context_visibility.md   # Context tree visibility
@@ -487,8 +487,8 @@ mod formal_verification_tests {
 
 **Verification Status**:
 - Documentation: ✅ Complete (7 theorems + category README)
-- Coq formalization: ⏳ TODO (Phase 9.2)
-- Property-based tests: ⏳ TODO (Phase 9.3)
+- Coq formalization: ⏳ Planned (Phase 9.2)
+- Property-based tests: ⏳ Planned (Phase 9.3)
 
 **Files Created**:
 - `proofs/06_contextual_completion/README.md`
