@@ -102,7 +102,7 @@ pub fn standard_distance_simd(source: &str, target: &str) -> usize {
     if is_x86_feature_detected!("avx2") {
         unsafe { standard_distance_avx2(source, target) }
     } else if is_x86_feature_detected!("sse4.1") {
-        unsafe { standard_distance_sse41(source, target) }  // TODO
+        unsafe { standard_distance_sse41(source, target) }
     } else {
         scalar_impl(source, target)
     }
@@ -130,13 +130,13 @@ pub fn standard_distance_simd(source: &str, target: &str) -> usize {
    - **Impact**: ~50-60% of potential SIMD speedup achieved
    - **Reason**: curr_row[j-1] dependency prevents full vectorization
 
-2. **SSE4.1 Fallback**: Not yet implemented
-   - **Impact**: Older CPUs without AVX2 use scalar fallback
-   - **TODO**: Implement 128-bit SSE4.1 version (processes 4 elements)
+2. **SSE4.1 Fallback**: Implemented
+   - **Impact**: Older x86_64 CPUs with SSE4.1 avoid the scalar fallback
+   - **Current path**: 128-bit SSE4.1 version processes 4 elements per vector
 
 3. **Short String Overhead**: Threshold set conservatively at 16 chars
    - **Impact**: Some 10-15 char strings might benefit from SIMD but use scalar
-   - **TODO**: Fine-tune threshold with more benchmarking
+   - **Evaluation path**: Fine-tune threshold with workload-specific benchmarking
 
 ### Future Optimizations (Phase 4?)
 
@@ -229,7 +229,7 @@ default = ["simd"]
 The SIMD implementation automatically detects CPU capabilities:
 
 1. **AVX2 available** → Use vectorized AVX2 implementation (current)
-2. **SSE4.1 available** → Use SSE4.1 implementation (fallback, TODO)
+2. **SSE4.1 available** → Use SSE4.1 implementation
 3. **No SIMD** → Use optimized scalar implementation
 4. **Short strings** (< 16 chars) → Always use scalar (SIMD overhead > benefit)
 

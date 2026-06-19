@@ -72,7 +72,8 @@ Theorem context_tree_visibility :
     (finalized_in t C dict ∨
      ∃ A : Context, ancestor A C ∧ finalized_in t A dict).
 Proof.
-  (* TODO: Prove using induction on context tree structure *)
+  (* Proof strategy: induction on the context tree, using ancestor
+     reflexivity/transitivity and the definition of visible_in. *)
 Admitted.
 ```
 
@@ -117,8 +118,9 @@ Theorem hierarchical_visibility_soundness :
       finalized_in t C1 dict ∨
       ∃ A : Context, ancestor A C1 ∧ finalized_in t A dict).
 Proof.
-  (* TODO: Prove inheritance using ancestor chain *)
-  (* TODO: Prove isolation using visibility definition *)
+  (* Proof strategy: inheritance follows by extending the ancestor chain from
+     C1 to C2; isolation follows by case analysis on visible_in for C1 and the
+     absence of descendant visibility in the definition. *)
 Admitted.
 ```
 

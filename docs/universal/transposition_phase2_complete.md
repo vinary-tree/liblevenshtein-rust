@@ -191,21 +191,28 @@ impl PositionVariant for MergeAndSplit {
         bit_vector: &crate::transducer::universal::CharacteristicVector,
         max_distance: u8,
     ) -> Vec<UniversalPosition<Self>> {
-        // TODO: Implement merge/split logic in Phase 3
-        // For now, just delegate to standard successors
-        UniversalPosition::<Self>::successors_i_type_standard(
+        let mut successors = UniversalPosition::<Self>::successors_i_type_standard(
             offset,
             errors,
             bit_vector,
             max_distance,
-        )
+        );
+
+        // Phase 3 adds inline merge and split successors to this standard
+        // baseline:
+        // - split completion from `MergeSplitState::Splitting`
+        // - merge entry using the next match bit
+        // - split entry using the current match bit
+        successors
     }
 
     // ... similar for compute_m_successors
 }
 ```
 
-**Rationale**: Phase 3 will implement merge and split operations. For now, placeholder delegates to standard logic.
+**Current status**: Phase 3 subsequently implemented merge and split successor
+logic in `src/transducer/universal/position.rs`; this Phase 2 note is a
+historical milestone rather than the current implementation state.
 
 ### 5. Updated Generic successors() Method
 
@@ -328,7 +335,7 @@ PositionVariant Trait
 Implementations:
   ├─ Standard: delegates to successors_i/m_type_standard()
   ├─ Transposition: implements transposition logic ✅
-  └─ MergeAndSplit: placeholder (Phase 3)
+  └─ MergeAndSplit: implements merge and split successor logic ✅
 
 UniversalPosition<V>::successors()
   └─ Calls V::compute_i_successors() or V::compute_m_successors()
@@ -350,7 +357,7 @@ UniversalPosition<V>::successors()
 - **Lines 93-125**: Extended `PositionVariant` trait with `compute_i_successors()` and `compute_m_successors()` methods
 - **Lines 133-169**: Implemented trait methods for `Standard` variant
 - **Lines 195-323**: Implemented transposition successor logic for `Transposition` variant
-- **Lines 347-387**: Added placeholder implementations for `MergeAndSplit` variant
+- **Lines 347-387**: Added the Phase 2 `MergeAndSplit` dispatch shell; Phase 3 later filled in merge and split successor generation
 - **Lines 684-698**: Updated generic `successors()` method to use trait dispatch
 
 ## Next Steps
@@ -430,7 +437,7 @@ Phase 2 (Complete):
 - [x] Extended `PositionVariant` trait with successor computation methods
 - [x] Implemented trait methods for `Standard` variant
 - [x] Implemented transposition successor logic for `Transposition` variant
-- [x] Added placeholder for `MergeAndSplit` variant
+- [x] Added the `MergeAndSplit` variant dispatch shell for Phase 3 completion
 - [x] Updated generic `successors()` to use trait dispatch
 - [x] All 156 tests pass
 - [x] Zero overhead for Standard variant

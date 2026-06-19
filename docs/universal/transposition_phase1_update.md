@@ -119,22 +119,22 @@ pub fn successors(
 ) -> Vec<Self> {
     match self {
         Self::INonFinal { offset, errors, variant_state } => {
-            // Dispatch based on variant type
-            if std::any::TypeId::of::<V>() == std::any::TypeId::of::<Transposition>() {
-                // Transposition-specific logic
-                // Match on variant_state: TranspositionState::Usual vs Transposing
-                todo!("Implement transposition logic")
-            } else if std::any::TypeId::of::<V>() == std::any::TypeId::of::<MergeAndSplit>() {
-                // Merge/split-specific logic
-                todo!("Implement merge/split logic")
-            } else {
-                // Standard logic
-                Self::successors_i_type_standard(*offset, *errors, bit_vector, max_distance)
-            }
+            V::compute_i_successors(
+                *offset,
+                *errors,
+                variant_state,
+                bit_vector,
+                max_distance,
+            )
         }
-        Self::MFinal { .. } => {
-            // Similar for M-type
-            todo!()
+        Self::MFinal { offset, errors, variant_state } => {
+            V::compute_m_successors(
+                *offset,
+                *errors,
+                variant_state,
+                bit_vector,
+                max_distance,
+            )
         }
     }
 }

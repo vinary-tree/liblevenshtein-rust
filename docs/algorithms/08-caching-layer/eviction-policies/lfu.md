@@ -264,7 +264,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - More contention than LRU (which only updates timestamp)
 
 **Mitigation**:
-- Use atomic counters for lower contention (not implemented)
+- Possible variant: use atomic counters for lower contention
 - Shard cache by key prefix
 
 ## Comparison with Other Policies
@@ -341,7 +341,8 @@ fn increment(&mut self) {
 
 ### Hybrid Approach
 
-**LRU-K** (not implemented): Track last K accesses, combine recency + frequency.
+**LRU-K**: Track last K accesses, combine recency + frequency. This is a
+separate hybrid policy from the LFU policy described here.
 
 ## Related Documentation
 

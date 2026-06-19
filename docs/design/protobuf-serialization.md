@@ -288,7 +288,8 @@ Large dictionary (1000 terms, DAWG structure):
 
 See:
 - `examples/serialization.rs` - Basic usage
-- `tests/serialization/protobuf_interop.rs` - Cross-language compatibility tests [TODO]
+- `src/commands/handlers/io.rs` - Feature-gated protobuf round-trip tests for
+  PathMap, suffix automaton, and compressed protobuf dictionaries
 
 ## References
 

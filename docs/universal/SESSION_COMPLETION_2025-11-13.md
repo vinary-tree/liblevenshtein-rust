@@ -136,7 +136,8 @@ Transposition is an ADDITIVE operation, not a replacement:
 - Consider git commit for Phase 2 completion
 
 ### Future Work
-- **Phase 3**: Implement Merge/Split successor logic (placeholder exists)
+- **Phase 3**: Merge/Split successor logic was subsequently implemented in
+  `src/transducer/universal/position.rs`
 - **Phase 5**: Integrate Universal transposition with GeneralizedAutomaton Phase 2d
 
 ## Lessons Learned

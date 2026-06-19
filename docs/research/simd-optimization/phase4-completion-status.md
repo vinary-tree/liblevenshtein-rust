@@ -138,7 +138,9 @@ Phase 4 SIMD optimization has been **successfully completed** with comprehensive
 
 **Testing**: Existing distance benchmarks
 
-**Note**: Transposition and Merge-and-Split distance SIMD were not implemented as they are less commonly used and would provide marginal benefits given their algorithmic complexity.
+**Note**: Transposition and Merge-and-Split distance currently stay on their
+exact scalar DP paths because their dependency structure makes SIMD less
+attractive for the expected return on complexity.
 
 ---
 

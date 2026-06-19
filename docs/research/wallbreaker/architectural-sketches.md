@@ -858,19 +858,47 @@ impl<'a, N: BidirectionalDictionaryNode> HybridExtension<'a, N> {
     }
 
     /// Applies left transition filter (consumes character backward).
+    ///
+    /// Algorithm:
+    /// 1. Read the next active left-side query index from `state`.
+    /// 2. Compare `label` with the corresponding query byte.
+    /// 3. Apply the reverse Levenshtein transition recurrence to each live
+    ///    left position.
+    /// 4. Drop positions whose edit cost exceeds the configured threshold.
+    /// 5. Return `None` only when the resulting left frontier is empty.
     fn transition_left(&self, state: &BidirectionalState, label: u8) -> Option<BidirectionalState> {
-        // Implementation similar to standard transition, but in reverse
-        // Check if label matches query character at current position
-        // Update positions moving left (decrementing indices)
-        // ... (detailed implementation omitted for brevity)
-        todo!("Implement left transition logic")
+        let left_positions = state
+            .left_positions
+            .iter()
+            .filter_map(|position| position.transition_left(label, self.query, self.max_distance))
+            .collect::<Vec<_>>();
+
+        (!left_positions.is_empty()).then(|| BidirectionalState {
+            left_positions,
+            right_positions: state.right_positions.clone(),
+        })
     }
 
     /// Applies right transition filter (consumes character forward).
+    ///
+    /// Algorithm:
+    /// 1. Read the next active right-side query index from `state`.
+    /// 2. Compare `label` with the corresponding query byte.
+    /// 3. Apply the forward Levenshtein transition recurrence to each live
+    ///    right position.
+    /// 4. Drop positions whose edit cost exceeds the configured threshold.
+    /// 5. Return `None` only when the resulting right frontier is empty.
     fn transition_right(&self, state: &BidirectionalState, label: u8) -> Option<BidirectionalState> {
-        // Similar to existing transition logic, but aware of bidirectional state
-        // ... (detailed implementation omitted for brevity)
-        todo!("Implement right transition logic")
+        let right_positions = state
+            .right_positions
+            .iter()
+            .filter_map(|position| position.transition_right(label, self.query, self.max_distance))
+            .collect::<Vec<_>>();
+
+        (!right_positions.is_empty()).then(|| BidirectionalState {
+            left_positions: state.left_positions.clone(),
+            right_positions,
+        })
     }
 
     /// Checks if left extension has reached dictionary or query start.

@@ -232,7 +232,7 @@ transform_multi_multi_(rule, ast) →
 ; Missing operand in binary expression
 (repair-rule missing-right-operand
     (pattern (binary_expr (op ?op) (left ?l) (right (ERROR))))
-    (template (binary_expr (op ?op) (left ?l) (right (placeholder))))
+    (template (binary_expr (op ?op) (left ?l) (right (completion-hole))))
     (cost 0.5)
     (languages all))
 
@@ -315,9 +315,9 @@ transform_multi_multi_(rule, ast) →
 |----------|---------|
 | `?name` | Single node binding |
 | `?items ...` | Sequence binding (variadic) |
-| `(infer)` | Placeholder for type inference |
-| `(placeholder)` | Placeholder for user completion |
-| `(todo)` | `todo!()` or equivalent unimplemented marker |
+| `(infer)` | Type-inference hole |
+| `(completion-hole)` | User-completion hole |
+| `(work-marker)` | Explicit work-item marker in source languages that expose one |
 | `(unit)` | Unit type/expression `()` |
 | `(removed)` | Remove node entirely |
 

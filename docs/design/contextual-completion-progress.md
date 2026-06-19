@@ -24,7 +24,8 @@
 ## Phase 1: Core Zipper Traits and Basic Implementations
 
 **Status**: ✅ Complete
-**Progress**: 3/3 tasks complete (DoubleArrayTrieZipper deferred - not needed for primary use case)
+**Progress**: 3/3 tasks complete (read-only DoubleArrayTrie contextual
+completion is handled by `StaticContextualCompletionEngine`)
 
 ### Tasks
 
@@ -40,11 +41,12 @@
   - Completed: 2025-10-31
   - Notes: Implemented with lock-per-operation pattern, Arc-based path sharing, all tests passing
 
-- [ ] **1.3: Implement DoubleArrayTrieZipper**
-  - File: `src/dictionary/dat_zipper.rs`
-  - Status: Deferred
-  - Assignee: -
-  - Notes: DoubleArrayTrie is read-only; not needed for contextual completion (which requires insert). Can be added later if needed.
+- [x] **1.3: Cover read-only DoubleArrayTrie completion**
+  - File: `src/contextual/static_engine.rs`
+  - Status: ✅ Complete
+  - Notes: Dynamic contextual completion uses mutable dictionaries such as
+    `PathMapDictionary`; read-only DoubleArrayTrie contextual completion is
+    covered by `StaticContextualCompletionEngine`.
 
 - [x] **1.4: Update Module Exports**
   - Files: `src/dictionary/mod.rs`
@@ -66,7 +68,7 @@
   - `test_path_reconstruction` ✅
   - `test_clone_independence` ✅
   - `test_empty_dictionary` ✅
-- [ ] `tests/dat_zipper_test.rs` - Deferred (not implemented)
+- [x] `tests/contextual_static_engine_tests.rs` - DoubleArrayTrie-backed static contextual completion
 
 ---
 
@@ -383,7 +385,7 @@
 - ✅ Updated module exports (`src/dictionary/mod.rs`)
 - ✅ All tests passing (285 total tests, 0 failures)
 - ✅ All doctests passing (82 passed, 44 ignored)
-- ℹ️ Deferred `DoubleArrayTrieZipper` (read-only backend not needed for contextual completion)
+- ℹ️ DoubleArrayTrie-backed read-only completion is covered by `StaticContextualCompletionEngine`
 
 ---
 
@@ -394,7 +396,8 @@
 - **Checkpoints**: Store (position, context) snapshots
 - **Hierarchical visibility**: Child contexts see parent drafts via ContextTree
 - **Lock strategy**: Lock-per-operation for PathMap, DashMap for drafts
-- **Backend targets**: PathMapDictionary (primary), DoubleArrayTrie (deferred - read-only)
+- **Backend targets**: PathMapDictionary for dynamic completion,
+  DoubleArrayTrie for static read-only completion
 - **Zipper nomenclature**: Use `DictZipper` prefix to distinguish from future AutomatonZipper, IntersectionZipper, etc.
 - **PathMapZipper design**: Arc<Vec<u8>> for paths (cheap cloning), lock-per-operation pattern for concurrency
 

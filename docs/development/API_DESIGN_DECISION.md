@@ -180,27 +180,32 @@ impl<D: Dictionary> Transducer<D> {
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DynamicDawg::from_terms(vec!["cat", "bat"]);
-    /// let transducer = Transducer::new(dict, Algorithm::Standard);
-    ///
     /// // Custom policy: allow 'c' ↔ 'k' substitution
     /// let mut policy_set = SubstitutionSet::new();
     /// policy_set.allow('c', 'k');
     /// let policy = Restricted::new(&policy_set);
+    /// let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
     ///
     /// // "kat" will match "cat" with distance 1 (c↔k allowed)
     /// // but "bat" won't match (b↔k not allowed)
-    /// let results: Vec<_> = transducer
-    ///     .query_with_policy("kat", 1, policy)
-    ///     .collect();
+    /// let results: Vec<_> = transducer.query("kat", 1).collect();
     /// ```
-    pub fn query_with_policy<P: SubstitutionPolicy>(
-        &self,
-        term: &str,
-        max_distance: usize,
-        policy: P,
-    ) -> QueryIterator<D::Node, String, P> {
-        // Implementation will use policy in transitions
-        todo!("Implement when transition logic supports policy")
+    pub fn with_policy(dictionary: D, algorithm: Algorithm, policy: P) -> Self {
+        Self {
+            dictionary,
+            algorithm,
+            policy,
+        }
+    }
+
+    pub fn query(&self, term: &str, max_distance: usize) -> QueryIterator<D::Node, String, P> {
+        QueryIterator::with_policy(
+            self.dictionary.root(),
+            term.to_owned(),
+            max_distance,
+            self.algorithm,
+            self.policy,
+        )
     }
 }
 ```

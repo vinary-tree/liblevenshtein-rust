@@ -93,7 +93,8 @@ pub fn split_pattern(pattern: &[u8], max_distance: usize) -> Vec<Vec<u8>> {
     let num_pieces = max_distance + 1;
     let piece_size = pattern.len() / num_pieces;
 
-    // TODO: Optimize split points based on:
+    // Baseline: equal-size pieces. Future scientific variants can choose
+    // split points based on:
     // - Character frequency
     // - Expected match likelihood
     // - Boundary conditions

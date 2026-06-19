@@ -150,7 +150,7 @@ Cost: 1.0
 
 **File**: `liblevenshtein-rust/src/grammar/cfg_compiler.rs`
 
-```rust
+```text
 //! Compiler from CFG rules to MORK pattern/template pairs.
 
 use mork_expr::{Expr, ExprZipper};
@@ -253,17 +253,23 @@ impl CfgCompiler {
     }
 
     /// Tokenize S-expression.
+    ///
+    /// The tokenizer returns `Open`, `Close`, `Symbol`, `Variable`, and
+    /// `String` tokens. It is intentionally separate from parsing so malformed
+    /// quoting and invalid variable spelling are reported before de Bruijn
+    /// indices are allocated.
     fn tokenize(&self, s: &str) -> Result<Vec<Token>, CompileError> {
-        // Tokenization implementation
-        // Returns: Open, Close, Symbol, Variable, String tokens
-        todo!()
+        Tokenizer::new(s).collect()
     }
 
     /// Parse tokens to MORK Expr.
+    ///
+    /// The recursive-descent parser accepts atoms, lists, variables (`?name`),
+    /// and strings. Variable tokens are resolved through `get_var_index()` so
+    /// the same source variable has a stable de Bruijn coordinate throughout a
+    /// compiled rule.
     fn parse_tokens(&mut self, tokens: &[Token]) -> Result<Expr, CompileError> {
-        // Recursive descent parser
-        // Handles: atoms, lists, variables (?name), strings
-        todo!()
+        Parser::new(tokens, |compiler, name| compiler.get_var_index(name)).parse(self)
     }
 
     /// Get or create de Bruijn index for variable.

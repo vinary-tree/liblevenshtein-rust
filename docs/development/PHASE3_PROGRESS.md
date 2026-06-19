@@ -15,7 +15,8 @@ Successfully integrated substitution policy parameter into the lazy (parameteriz
 
 **Changes**:
 - Added generic `P: SubstitutionPolicy` parameter
-- Added TODO note: Policy-based matching will require changes to transition logic, not characteristic vector
+- Kept characteristic vectors as exact-match indicators
+- Routed policy-based substitution decisions through transition cost logic
 - Maintained exact character matching semantics (baseline behavior)
 
 **Rationale**: Initially attempted to integrate policy into characteristic vector, but after testing, determined that the characteristic vector should remain an exact match indicator. The policy check should be applied in the transition logic itself when computing substitution costs.
