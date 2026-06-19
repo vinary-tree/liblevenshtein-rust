@@ -8,31 +8,41 @@ use liblevenshtein::transducer::substitution_policy::Restricted;
 use liblevenshtein::transducer::SubstitutionSet;
 
 #[test]
-fn test_phonetic_substitution_f_ph() {
-    // Create a substitution set where 'f' and 'ph' are phonetically equivalent
+fn test_single_byte_substitution_p_f() {
+    // Create a substitution set where 'p' and 'f' are interchangeable.
     let mut set = SubstitutionSet::new();
-    set.allow('f', 'p'); // First character of 'ph'
-    set.allow('p', 'f'); // Bidirectional
+    set.allow('p', 'f');
+    set.allow('f', 'p'); // Bidirectional
 
     let policy = Restricted::new(&set);
 
-    // Build dictionary with "phone"
-    let dict = DoubleArrayTrie::from_terms(vec!["phone"]);
-
-    // Create transducer with restricted substitutions
+    let dict = DoubleArrayTrie::from_terms(vec!["pane"]);
     let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
 
-    // Query for "fone" - should match "phone" if 'p'↔'f' is treated as cost-free
+    let results: Vec<String> = transducer.query("fane", 0).collect();
+
+    assert!(
+        results.contains(&"pane".to_string()),
+        "Expected 'pane' to match 'fane' with p↔f as a zero-cost byte substitution"
+    );
+}
+
+#[test]
+fn test_byte_substitution_does_not_model_ph_to_f() {
+    let mut set = SubstitutionSet::new();
+    set.allow('p', 'f');
+    set.allow('f', 'p');
+
+    let policy = Restricted::new(&set);
+
+    let dict = DoubleArrayTrie::from_terms(vec!["phone"]);
+    let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
+
     let results: Vec<String> = transducer.query("fone", 0).collect();
 
-    // With max_distance=0 and p↔f as cost-free substitution, we expect to find "phone"
-    // Actually, this won't work because "ph" is TWO characters and we're only matching 'p'↔'f'
-    // Let me reconsider the test...
-
-    // For now, let's just verify the feature compiles and runs without error
     assert!(
-        results.is_empty() || !results.is_empty(),
-        "Test executed successfully"
+        results.is_empty(),
+        "Byte-level restricted substitutions must not hide the extra 'h' in 'phone'"
     );
 }
 

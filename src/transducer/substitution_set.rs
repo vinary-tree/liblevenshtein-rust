@@ -212,10 +212,8 @@ impl SubstitutionSet {
     /// ```rust
     /// # use liblevenshtein::transducer::SubstitutionSet;
     /// let mut set = SubstitutionSet::new();
-    /// set.allow('f', 'p');  // 'f' in dict can match 'p' in query
-    /// set.allow('p', 'h');  // 'p' in dict can match 'h' in query
-    ///
-    /// // This enables "phone" to match "fone" via f→p substitution
+    /// set.allow('p', 'f');  // 'p' in dict can match 'f' in query
+    /// set.allow('f', 'p');  // Add the reverse direction explicitly
     /// ```
     #[inline]
     pub fn allow(&mut self, a: char, b: char) {
