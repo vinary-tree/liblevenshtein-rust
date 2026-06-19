@@ -24,6 +24,177 @@
 @define CONSONANT = [bcdfghjklmnpqrstvwxyz]
 
 // ============================================================
+// Phase 0: CMUdict-derived name homophone variants
+// Normalize high-frequency proper-name spelling variants before
+// generic NYSIIS-style vowel and final-letter cleanup.
+// ============================================================
+
+[id: 2900, name: "aalen to alan", weight: 0.0, group: cmudict_name_homophones]
+aalen -> ælən / #_#;
+
+[id: 2901, name: "ahlen to alan", weight: 0.0, group: cmudict_name_homophones]
+ahlen -> ælən / #_#;
+
+[id: 2902, name: "olen to alan", weight: 0.0, group: cmudict_name_homophones]
+olen -> ælən / #_#;
+
+[id: 2903, name: "aancor to encore", weight: 0.0, group: cmudict_name_homophones]
+aancor -> ɑnkɔɹ / #_#;
+
+[id: 2904, name: "aaron to aron", weight: 0.0, group: cmudict_name_homophones]
+aaron -> ɛɹən / #_#;
+
+[id: 2905, name: "aarons to aron", weight: 0.0, group: cmudict_name_homophones]
+aarons -> ɛɹən / #_#;
+
+[id: 2906, name: "ehren to aron", weight: 0.0, group: cmudict_name_homophones]
+ehren -> ɛɹən / #_#;
+
+[id: 2907, name: "arens to aron", weight: 0.0, group: cmudict_name_homophones]
+arens -> ɛɹən / #_#;
+
+[id: 2908, name: "aase to os", weight: 0.0, group: cmudict_name_homophones]
+aase -> ɑs / #_#;
+
+[id: 2909, name: "aasen to osten", weight: 0.0, group: cmudict_name_homophones]
+aasen -> ɑsən / #_#;
+
+[id: 2910, name: "abbe to abie", weight: 0.0, group: cmudict_name_homophones]
+abbe -> æbi / #_#;
+
+[id: 2911, name: "abbey to abie", weight: 0.0, group: cmudict_name_homophones]
+abbey -> æbi / #_#;
+
+[id: 2912, name: "abbie to abie", weight: 0.0, group: cmudict_name_homophones]
+abbie -> æbi / #_#;
+
+[id: 2913, name: "abby to abie", weight: 0.0, group: cmudict_name_homophones]
+abby -> æbi / #_#;
+
+[id: 2914, name: "abboud to abood", weight: 0.0, group: cmudict_name_homophones]
+abboud -> əbud / #_#;
+
+[id: 2915, name: "abdallah to abdalla", weight: 0.0, group: cmudict_name_homophones]
+abdallah -> æbdælə / #_#;
+
+[id: 2916, name: "alan to alan phonetic", weight: 0.0, group: cmudict_name_homophones]
+alan -> ælən / #_#;
+
+[id: 2917, name: "allan to alan phonetic", weight: 0.0, group: cmudict_name_homophones]
+allan -> ælən / #_#;
+
+[id: 2918, name: "allen to alan phonetic", weight: 0.0, group: cmudict_name_homophones]
+allen -> ælən / #_#;
+
+[id: 2919, name: "encore to aancor phonetic", weight: 0.0, group: cmudict_name_homophones]
+encore -> ɑnkɔɹ / #_#;
+
+[id: 2920, name: "oncor to aancor phonetic", weight: 0.0, group: cmudict_name_homophones]
+oncor -> ɑnkɔɹ / #_#;
+
+[id: 2921, name: "aran to aaron phonetic", weight: 0.0, group: cmudict_name_homophones]
+aran -> ɛɹən / #_#;
+
+[id: 2922, name: "aron to aaron phonetic", weight: 0.0, group: cmudict_name_homophones]
+aron -> ɛɹən / #_#;
+
+[id: 2923, name: "os to aase phonetic", weight: 0.0, group: cmudict_name_homophones]
+os -> ɑs / #_#;
+
+[id: 2924, name: "osten to aasen phonetic", weight: 0.0, group: cmudict_name_homophones]
+osten -> ɑsən / #_#;
+
+[id: 2925, name: "abie to abbe phonetic", weight: 0.0, group: cmudict_name_homophones]
+abie -> æbi / #_#;
+
+[id: 2926, name: "abood to abboud phonetic", weight: 0.0, group: cmudict_name_homophones]
+abood -> əbud / #_#;
+
+[id: 2927, name: "abdalla to abdallah phonetic", weight: 0.0, group: cmudict_name_homophones]
+abdalla -> æbdælə / #_#;
+
+[id: 2928, name: "aaker to ocker phonetic", weight: 0.0, group: cmudict_name_homophones]
+aaker -> ɑkɚ / #_#;
+
+[id: 2929, name: "ocker to aaker phonetic", weight: 0.0, group: cmudict_name_homophones]
+ocker -> ɑkɚ / #_#;
+
+[id: 2930, name: "abel to able phonetic", weight: 0.0, group: cmudict_name_homophones]
+abel -> eɪbəl / #_#;
+
+[id: 2931, name: "abell to able phonetic", weight: 0.0, group: cmudict_name_homophones]
+abell -> eɪbəl / #_#;
+
+[id: 2932, name: "able to abel phonetic", weight: 0.0, group: cmudict_name_homophones]
+able -> eɪbəl / #_#;
+
+[id: 2933, name: "abels to ables phonetic", weight: 0.0, group: cmudict_name_homophones]
+abels -> eɪbəlz / #_#;
+
+[id: 2934, name: "ables to abels phonetic", weight: 0.0, group: cmudict_name_homophones]
+ables -> eɪbəlz / #_#;
+
+[id: 2935, name: "accouterment to accoutrement phonetic", weight: 0.0, group: cmudict_name_homophones]
+accouterment -> əkutɚmənt / #_#;
+
+[id: 2936, name: "accoutrement to accouterment phonetic", weight: 0.0, group: cmudict_name_homophones]
+accoutrement -> əkutɚmənt / #_#;
+
+[id: 2937, name: "accouterments to accoutrements phonetic", weight: 0.0, group: cmudict_name_homophones]
+accouterments -> əkutɚmənts / #_#;
+
+[id: 2938, name: "accoutrements to accouterments phonetic", weight: 0.0, group: cmudict_name_homophones]
+accoutrements -> əkutɚmənts / #_#;
+
+[id: 2939, name: "aced to aist phonetic", weight: 0.0, group: cmudict_name_homophones]
+aced -> eɪst / #_#;
+
+[id: 2940, name: "aist to aced phonetic", weight: 0.0, group: cmudict_name_homophones]
+aist -> eɪst / #_#;
+
+[id: 2941, name: "ache to ake phonetic", weight: 0.0, group: cmudict_name_homophones]
+ache -> eɪk / #_#;
+
+[id: 2942, name: "ake to ache phonetic", weight: 0.0, group: cmudict_name_homophones]
+ake -> eɪk / #_#;
+
+[id: 2943, name: "aches to aix phonetic", weight: 0.0, group: cmudict_name_homophones]
+aches -> eɪks / #_#;
+
+[id: 2944, name: "aix to aches phonetic", weight: 0.0, group: cmudict_name_homophones]
+aix -> eɪks / #_#;
+
+[id: 2945, name: "achor to acre phonetic", weight: 0.0, group: cmudict_name_homophones]
+achor -> eɪkɚ / #_#;
+
+[id: 2946, name: "acre to achor phonetic", weight: 0.0, group: cmudict_name_homophones]
+acre -> eɪkɚ / #_#;
+
+[id: 2947, name: "aker to acre phonetic", weight: 0.0, group: cmudict_name_homophones]
+aker -> eɪkɚ / #_#;
+
+[id: 2948, name: "achy to aikey phonetic", weight: 0.0, group: cmudict_name_homophones]
+achy -> eɪki / #_#;
+
+[id: 2949, name: "aikey to achy phonetic", weight: 0.0, group: cmudict_name_homophones]
+aikey -> eɪki / #_#;
+
+[id: 2950, name: "ack to akc phonetic", weight: 0.0, group: cmudict_name_homophones]
+ack -> æk / #_#;
+
+[id: 2951, name: "akc to ack phonetic", weight: 0.0, group: cmudict_name_homophones]
+akc -> æk / #_#;
+
+[id: 2952, name: "aren non-ehren vowel", weight: 0.0, group: cmudict_name_homophones]
+aren -> ɑɹən / #_#;
+
+[id: 2953, name: "aber to aybar phonetic", weight: 0.0, group: cmudict_name_homophones]
+aber -> eɪbaɹ / #_#;
+
+[id: 2954, name: "aybar to aber phonetic", weight: 0.0, group: cmudict_name_homophones]
+aybar -> eɪbaɹ / #_#;
+
+// ============================================================
 // Phase 1: Initial Prefix Transformations
 // Handle common name prefixes from various origins
 // ============================================================

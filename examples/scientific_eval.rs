@@ -157,7 +157,7 @@ impl Options {
             phonetic_dialect: "zompist-default".to_string(),
             phonetic_rules_file: None,
             phonetic_rule_extensions: Vec::new(),
-            phonetic_rule_extension_order: RuleExtensionOrder::AfterPrimary,
+            phonetic_rule_extension_order: RuleExtensionOrder::BeforePrimary,
             phonetic_target_files: Vec::new(),
             diagnostic_limit: 30,
         };
@@ -960,6 +960,7 @@ fn rules_from_llev_files(
         )
     });
 
+    let primary_rule_ids = rule_ids(&file);
     let mut extension_files = Vec::new();
     for extension in extensions {
         let text = fs::read_to_string(extension).unwrap_or_else(|err| {
@@ -974,6 +975,7 @@ fn rules_from_llev_files(
                 extension.display()
             )
         });
+        let extension_file = without_rule_ids(extension_file, &primary_rule_ids);
         extension_files.push(extension_file);
     }
 
@@ -994,6 +996,28 @@ fn rules_from_llev_files(
     let ruleset = RuleSetChar::from_llev(&file)
         .unwrap_or_else(|err| panic!("failed to convert LLev rule set: {err}"));
     ruleset.rules
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn rule_ids(file: &liblevenshtein::phonetic::llev::LLevFile) -> HashSet<usize> {
+    file.rules
+        .iter()
+        .filter_map(|rule| rule.metadata.id)
+        .collect()
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn without_rule_ids(
+    mut file: liblevenshtein::phonetic::llev::LLevFile,
+    excluded_rule_ids: &HashSet<usize>,
+) -> liblevenshtein::phonetic::llev::LLevFile {
+    file.rules.retain(|rule| {
+        !rule
+            .metadata
+            .id
+            .is_some_and(|id| excluded_rule_ids.contains(&id))
+    });
+    file
 }
 
 #[cfg(feature = "phonetic-rules")]
@@ -1351,15 +1375,26 @@ fn run_cmudict_phonetic(
             let mut matched = HashSet::new();
             let mut first_rank = None;
 
-            for (idx, candidate) in candidates.iter().take(recall_k).enumerate() {
+            let mut rank = 0;
+            for candidate in candidates
+                .iter()
+                .filter(|candidate| candidate.term != case.query)
+            {
+                rank += 1;
+                if rank > recall_k {
+                    break;
+                }
                 if expected.contains(candidate.term.as_str()) {
                     matched.insert(candidate.term.as_str());
-                    first_rank.get_or_insert(idx + 1);
+                    first_rank.get_or_insert(rank);
                 }
             }
 
             MeasureOutcome {
-                result_count: candidates.len(),
+                result_count: candidates
+                    .iter()
+                    .filter(|candidate| candidate.term != case.query)
+                    .count(),
                 expected_count: expected.len(),
                 matched_count: matched.len(),
                 recall_at_k: matched.len() as f64 / expected.len() as f64,
@@ -1495,11 +1530,17 @@ fn run_cmudict_phonetic_diagnostic(
         let query_normalized = dict.normalize(&case.query);
         let top_terms: Vec<String> = candidates
             .iter()
+            .filter(|candidate| candidate.term != case.query)
             .take(recall_k)
             .map(|candidate| candidate.term.clone())
             .collect();
+        let candidate_count = candidates
+            .iter()
+            .filter(|candidate| candidate.term != case.query)
+            .count();
         let full_result_terms: HashSet<&str> = candidates
             .iter()
+            .filter(|candidate| candidate.term != case.query)
             .map(|candidate| candidate.term.as_str())
             .collect();
 
@@ -1508,6 +1549,7 @@ fn run_cmudict_phonetic_diagnostic(
             let normalized_distance = levenshtein_distance(&query_normalized, &expected_normalized);
             let matched_rank = candidates
                 .iter()
+                .filter(|candidate| candidate.term != case.query)
                 .position(|candidate| candidate.term == *expected)
                 .map(|idx| idx + 1);
             let matched_top_k = matched_rank.is_some_and(|rank| rank <= recall_k);
@@ -1530,7 +1572,7 @@ fn run_cmudict_phonetic_diagnostic(
                 json_escape(&expected_normalized),
                 matched_rank.map_or_else(|| "null".to_string(), |rank| rank.to_string()),
                 json_string_array(&top_terms),
-                candidates.len(),
+                candidate_count,
                 terms.len(),
                 elapsed.as_nanos() as f64 / 1000.0
             );

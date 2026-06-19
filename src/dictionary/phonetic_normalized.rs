@@ -67,6 +67,7 @@
 //! - [`crate::phonetic`] module for phonetic rule definitions
 
 use crate::cache::multimap::FuzzyMultiMap;
+use crate::distance::standard_distance;
 use crate::phonetic::expansion::expand_phonetic_alternatives_char;
 use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar, ProductStateChar};
 use crate::phonetic::regex::{parse as parse_regex, ParseError as RegexParseError};
@@ -183,6 +184,29 @@ pub struct PhoneticNormalizedDictionary<V: DictionaryValue = (), D: Dictionary =
 /// semantics with accented characters, CJK, emoji, etc.
 pub type PhoneticNormalizedDictionaryChar<V = ()> =
     PhoneticNormalizedDictionary<V, DynamicDawgChar<V>>;
+
+fn sort_candidates_by_relevance(
+    query: &str,
+    results: Vec<PhoneticNormalizedCandidate>,
+) -> Vec<PhoneticNormalizedCandidate> {
+    let mut ranked = Vec::with_capacity(results.len());
+    for candidate in results {
+        let original_distance = standard_distance(query, &candidate.term);
+        ranked.push((candidate.distance, original_distance, candidate));
+    }
+
+    ranked.sort_by(|left, right| {
+        left.0
+            .cmp(&right.0)
+            .then_with(|| left.1.cmp(&right.1))
+            .then_with(|| left.2.term.cmp(&right.2.term))
+    });
+
+    ranked
+        .into_iter()
+        .map(|(_, _, candidate)| candidate)
+        .collect()
+}
 
 // ============================================================================
 // NODE WRAPPER
@@ -843,7 +867,7 @@ where
                 .dictionary()
                 .get_value(&normalized_query)
             {
-                return originals
+                let results = originals
                     .iter()
                     .filter(|term| !term.is_empty()) // Skip entries from removed terms
                     .map(|term| PhoneticNormalizedCandidate {
@@ -852,6 +876,7 @@ where
                         normalized_form: normalized_query.clone(),
                     })
                     .collect();
+                return sort_candidates_by_relevance(query, results);
             }
             return Vec::new();
         }
@@ -862,7 +887,7 @@ where
             .query_with_distance(&normalized_query, max_distance);
 
         // Convert results to PhoneticNormalizedCandidate
-        let mut results: Vec<PhoneticNormalizedCandidate> = fuzzy_results
+        let results: Vec<PhoneticNormalizedCandidate> = fuzzy_results
             .into_iter()
             .flat_map(|(normalized_form, distance, originals)| {
                 originals
@@ -876,8 +901,7 @@ where
             })
             .collect();
 
-        results.sort_by_key(|c| c.distance);
-        results
+        sort_candidates_by_relevance(query, results)
     }
 
     /// Query using a regex pattern (grep-like semantics).
