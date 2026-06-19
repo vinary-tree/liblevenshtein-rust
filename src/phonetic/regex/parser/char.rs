@@ -373,7 +373,7 @@ impl<'a> Parser<'a> {
 
             // Group reference (subroutine call): (?&name)
             Token::GroupReference(name) => {
-                // Record for deferred validation
+                // Record for validation after all named groups have been parsed.
                 self.group_refs_to_validate
                     .push((name.clone(), self.lexer.position()));
                 Ok(Regex::group_ref(name))

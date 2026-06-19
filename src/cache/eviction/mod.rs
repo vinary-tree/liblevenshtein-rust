@@ -148,7 +148,7 @@
 //!
 //! // Create dictionary with lazy initializer for missing values
 //! let dict: PathMapDictionary<i32> = PathMapDictionary::from_terms_with_values([
-//!     ("deferred", 42),
+//!     ("lazy_value", 42),
 //! ]);
 //!
 //! // Wrap dictionary with lazy initializer
@@ -157,7 +157,7 @@
 //! });
 //!
 //! // Access existing value
-//! assert_eq!(lazy.get_value("deferred"), Some(42));
+//! assert_eq!(lazy.get_value("lazy_value"), Some(42));
 //! ```
 //!
 //! # Use Cases
