@@ -71,7 +71,7 @@ docs/verification/grammar/
 **Key Functions**:
 - `valid_path`, `complete_path` - path validation
 - `path_score` - compute path probability
-- `best_path_score` - Viterbi algorithm (placeholder)
+- `best_path_score` - bounded complete-path enumeration with maximum-score selection
 - `top_k_paths` - k-best paths enumeration
 - `beam_search` - beam search with fixed width
 - `expand_lattice_with_edits` - add error correction edges
@@ -139,9 +139,9 @@ Theorem correction_correctness : forall p pipe goal,
 
 **Framework Phase**: All definitions complete, key theorem statements provided
 
-**Admitted Proofs** (placeholders for future work): ~35 proofs
+**Admitted Proof Obligations**: ~35 currently admitted theorems
 - Edit distance properties (symmetry, triangle inequality, zero iff equal)
-- Lattice path enumeration and Viterbi algorithm
+- Remaining lattice expansion and k-best path proof obligations
 - Layer 1 completeness, soundness, and optimality
 - Pipeline composition and correctness
 

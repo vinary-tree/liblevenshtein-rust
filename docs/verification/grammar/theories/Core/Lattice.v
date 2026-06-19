@@ -62,6 +62,84 @@ Fixpoint path_score (lat : Lattice) (path : lattice_path) : score :=
       score_mult (get_edge_weight lat n1 n2) (path_score lat tail)
   end.
 
+(** Outgoing edges for a node. *)
+Definition outgoing_edges (lat : Lattice) (from : nat) : list LatticeEdge :=
+  filter (fun e => e.(edge_from) =? from) lat.(lattice_edges).
+
+(** Enumerate complete paths from [current] to the lattice end using at most
+    [fuel] edges.  The fuel is a structural bound, not an optimality claim:
+    callers choose it from the finite node set so the function always
+    terminates even if the lattice contains cycles. *)
+Fixpoint enumerate_paths_from
+    (lat : Lattice) (fuel current : nat) : list lattice_path :=
+  if current =? lat.(lattice_end) then
+    [[current]]
+  else
+    match fuel with
+    | 0 => []
+    | S fuel' =>
+        flat_map
+          (fun e =>
+             map (fun suffix => current :: suffix)
+                 (enumerate_paths_from lat fuel' e.(edge_to)))
+          (outgoing_edges lat current)
+    end.
+
+(** Bounded complete paths through a lattice. *)
+Definition bounded_complete_paths (lat : Lattice) : list lattice_path :=
+  filter (complete_path lat)
+         (enumerate_paths_from
+            lat
+            (length lat.(lattice_nodes))
+            lat.(lattice_start)).
+
+(** Maximum score helper. *)
+Definition score_max (left right : score) : score :=
+  if score_lt left right then right else left.
+
+(** Maximum score over a finite path list. *)
+Fixpoint max_path_score (lat : Lattice) (paths : list lattice_path) : score :=
+  match paths with
+  | [] => score_zero
+  | [path] => path_score lat path
+  | path :: rest => score_max (path_score lat path) (max_path_score lat rest)
+  end.
+
+Lemma max_path_score_achievable : forall lat paths,
+  paths <> [] ->
+  exists path,
+    In path paths /\
+    path_score lat path == max_path_score lat paths.
+Proof.
+  intros lat paths Hnonempty.
+  destruct paths as [| path rest]; [contradiction |].
+  revert path Hnonempty.
+  induction rest as [| next rest IH]; intros path _.
+  - exists path. split; [left; reflexivity | reflexivity].
+  - simpl.
+    destruct (score_lt (path_score lat path)
+                       (max_path_score lat (next :: rest))) eqn:Hlt.
+    + destruct (IH next ltac:(discriminate)) as [best [Hin Hscore]].
+      exists best.
+      split; [right; exact Hin |].
+      replace (match rest with
+               | [] => path_score lat next
+               | _ :: _ => score_max (path_score lat next)
+                                    (max_path_score lat rest)
+               end)
+        with (max_path_score lat (next :: rest)) by reflexivity.
+      unfold score_max. rewrite Hlt. exact Hscore.
+    + exists path.
+      split; [left; reflexivity |].
+      replace (match rest with
+               | [] => path_score lat next
+               | _ :: _ => score_max (path_score lat next)
+                                    (max_path_score lat rest)
+               end)
+        with (max_path_score lat (next :: rest)) by reflexivity.
+      unfold score_max. rewrite Hlt. reflexivity.
+Qed.
+
 (** ** Lattice Construction *)
 
 (** Build a simple linear lattice (no corrections) *)
@@ -141,23 +219,36 @@ Qed.
 
 (** ** Best Path (Viterbi Algorithm) *)
 
-(** Find the highest-scoring complete path *)
+(** Find the highest-scoring bounded complete path. *)
 Definition best_path_score (lat : Lattice) : score :=
-  (* This would implement the Viterbi algorithm *)
-  (* For now, we provide a simplified placeholder *)
-  score_zero.
+  max_path_score lat (bounded_complete_paths lat).
 
-(** The placeholder [best_path_score] does not compute Viterbi yet.  The
-    achievable-score theorem is therefore stated against the explicit
-    algorithm contract it needs. *)
 Definition best_path_score_achievable (lat : Lattice) : Prop :=
   exists path,
+    In path (bounded_complete_paths lat) /\
     complete_path lat path = true /\
     path_score lat path == best_path_score lat.
 
 Theorem best_path_achievable : forall lat,
+  bounded_complete_paths lat <> [] ->
+  best_path_score_achievable lat.
+Proof.
+  intros lat Hnonempty.
+  unfold best_path_score_achievable, best_path_score.
+  destruct (max_path_score_achievable lat (bounded_complete_paths lat) Hnonempty)
+    as [path [Hin Hscore]].
+  exists path.
+  repeat split.
+  - exact Hin.
+  - apply filter_In in Hin as [_ Hcomplete].
+    exact Hcomplete.
+  - exact Hscore.
+Qed.
+
+Theorem best_path_achievable_explicit : forall lat,
   best_path_score_achievable lat ->
   exists path,
+    In path (bounded_complete_paths lat) /\
     complete_path lat path = true /\
     path_score lat path == best_path_score lat.
 Proof.
