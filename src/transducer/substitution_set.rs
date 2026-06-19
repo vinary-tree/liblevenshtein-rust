@@ -92,9 +92,10 @@ enum MultiCharSubstitutionImpl {
 
 /// Set of allowed character substitutions.
 ///
-/// A `SubstitutionSet` defines which character pairs can be substituted
-/// for each other during fuzzy matching. Only ASCII characters (0-127)
-/// are currently supported.
+/// A `SubstitutionSet` defines which character or string pairs can be
+/// substituted for each other during fuzzy matching. Single-byte ASCII pairs
+/// use compact byte storage; multi-byte UTF-8 or multi-character pairs use
+/// string storage.
 ///
 /// ## Performance
 ///
@@ -197,7 +198,9 @@ impl SubstitutionSet {
 
     /// Allow substituting character `a` with character `b`.
     ///
-    /// Only ASCII characters are supported. Non-ASCII characters are silently ignored.
+    /// This single-character convenience API stores only ASCII scalar values in
+    /// the compact byte table. Use [`allow_str()`](Self::allow_str) for
+    /// multi-byte UTF-8 substitutions.
     ///
     /// # Parameters
     ///
@@ -223,14 +226,14 @@ impl SubstitutionSet {
 
     /// Allow substituting byte `a` with byte `b` (low-level API).
     ///
-    /// This is the low-level API that works directly with bytes. It's
-    /// slightly faster than [`allow()`](Self::allow) since it skips
-    /// the ASCII check, but requires the caller to ensure ASCII validity.
+    /// This is the low-level API that works directly with raw bytes. It's
+    /// slightly faster than [`allow()`](Self::allow) since it skips scalar-value
+    /// checks. Use [`allow_str()`](Self::allow_str) for UTF-8 strings.
     ///
     /// # Parameters
     ///
-    /// - `a`: Dictionary byte (source, 0-127)
-    /// - `b`: Query byte (target, 0-127)
+    /// - `a`: Dictionary byte (source)
+    /// - `b`: Query byte (target)
     ///
     /// # Example
     ///
@@ -680,8 +683,8 @@ impl SubstitutionSet {
 
     /// Allow substituting string `a` with string `b`.
     ///
-    /// This method supports multi-character substitutions for generalized operations.
-    /// Only ASCII characters are supported.
+    /// This method supports multi-byte UTF-8 and multi-character substitutions
+    /// for generalized operations.
     ///
     /// # Parameters
     ///
@@ -702,9 +705,8 @@ impl SubstitutionSet {
     ///
     /// # Note
     ///
-    /// For multi-character strings (length > 1), this currently stores them
-    /// as a hash of the byte sequences. Single-character strings use the
-    /// optimized single-byte storage.
+    /// Single-byte ASCII pairs use optimized byte storage. Multi-byte UTF-8
+    /// or multi-character strings use separate string storage.
     pub fn allow_str(&mut self, a: &str, b: &str) {
         // Reject empty strings - they're not valid substitution pairs
         if a.is_empty() || b.is_empty() {
@@ -719,12 +721,6 @@ impl SubstitutionSet {
                     return;
                 }
             }
-        }
-
-        // Slow path: Multi-char pairs use separate storage
-        // Only ASCII strings are supported for now
-        if !a.is_ascii() || !b.is_ascii() {
-            return;
         }
 
         // Convert to Box<str> for memory efficiency
@@ -797,14 +793,13 @@ impl SubstitutionSet {
             return self.contains(a[0], b[0]);
         }
 
-        // Slow path: Multi-char pairs query separate storage
-        // Convert to str for lookup (only valid UTF-8 ASCII strings are stored)
+        // Slow path: Multi-byte and multi-character pairs query string storage.
         let a_str = match std::str::from_utf8(a) {
-            Ok(s) if s.is_ascii() => s,
+            Ok(s) => s,
             _ => return false,
         };
         let b_str = match std::str::from_utf8(b) {
-            Ok(s) if s.is_ascii() => s,
+            Ok(s) => s,
             _ => return false,
         };
 
@@ -857,7 +852,7 @@ impl SubstitutionSet {
     pub fn has_source(&self, source: &[u8]) -> bool {
         // Convert source to string for multi-char storage check
         let src_str = match std::str::from_utf8(source) {
-            Ok(s) if s.is_ascii() => s,
+            Ok(s) => s,
             _ => return false,
         };
 
@@ -909,7 +904,7 @@ impl SubstitutionSet {
     pub fn has_target_starting_with(&self, source: &[u8], first_char: char) -> bool {
         // Convert source to string for multi-char storage check
         let src_str = match std::str::from_utf8(source) {
-            Ok(s) if s.is_ascii() => s,
+            Ok(s) => s,
             _ => return false,
         };
 
@@ -1023,6 +1018,11 @@ mod tests {
         let set = SubstitutionSet::new();
         assert_eq!(set.len(), 0);
         assert!(set.is_empty());
+    }
+
+    #[test]
+    fn test_storage_layout_size_budget() {
+        assert!(std::mem::size_of::<SubstitutionSet>() <= 128);
     }
 
     #[test]
@@ -1317,16 +1317,26 @@ mod tests {
     }
 
     #[test]
-    fn test_multi_char_non_ascii_ignored() {
+    fn test_multi_char_utf8_substitutions() {
         let mut set = SubstitutionSet::new();
 
-        // Non-ASCII should be ignored
-        set.allow_str("α", "β"); // Greek
-        set.allow_str("你", "好"); // Chinese
+        set.allow_str("α", "β");
+        set.allow_str("你", "好");
+        set.allow_str("é", "e");
+        set.allow_str("sch", "š");
 
-        // Nothing should be added
-        assert!(!set.contains_str("α".as_bytes(), "β".as_bytes()));
-        assert!(!set.contains_str("你".as_bytes(), "好".as_bytes()));
+        assert!(set.contains_str("α".as_bytes(), "β".as_bytes()));
+        assert!(set.contains_str("你".as_bytes(), "好".as_bytes()));
+        assert!(set.contains_str("é".as_bytes(), b"e"));
+        assert!(set.contains_str(b"sch", "š".as_bytes()));
+
+        assert!(set.has_source("α".as_bytes()));
+        assert!(set.has_source("你".as_bytes()));
+        assert!(set.has_source("é".as_bytes()));
+        assert!(set.has_target_starting_with("sch".as_bytes(), 'š'));
+
+        assert!(!set.contains_str("α".as_bytes(), "γ".as_bytes()));
+        assert!(!set.has_target_starting_with("sch".as_bytes(), 's'));
     }
 
     #[test]

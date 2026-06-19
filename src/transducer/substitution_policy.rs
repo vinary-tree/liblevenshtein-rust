@@ -8,7 +8,7 @@
 //! The [`Unrestricted`] policy is a zero-sized type that compiles to identical
 //! machine code as the pre-generic implementation. When the compiler sees
 //! `Unrestricted::is_allowed()`, it inlines the function and optimizes away
-//! the `true` constant, resulting in zero runtime overhead.
+//! the `false` constant, resulting in zero runtime overhead.
 //!
 //! ## Usage
 //!
@@ -51,9 +51,9 @@ use libdictenstein::CharUnit;
 ///
 /// ## Character Type Support
 ///
-/// The policy currently works with byte-level (`u8`) dictionaries only.
-/// Support for character-level (`char`) policies (via `SubstitutionSetChar`) is planned
-/// for future releases to enable full Unicode substitution support.
+/// [`SubstitutionPolicy`] itself is the byte-level (`u8`) interface. For
+/// character-level (`char`) dictionaries, use [`SubstitutionPolicyChar`] or
+/// [`SubstitutionPolicyFor<char>`] with [`RestrictedChar`].
 pub trait SubstitutionPolicy: Copy + Clone {
     /// Check if substituting `dict_char` with `query_char` is allowed as a zero-cost operation.
     ///
@@ -74,8 +74,9 @@ pub trait SubstitutionPolicy: Copy + Clone {
     ///
     /// # Type Parameter
     ///
-    /// Currently only `u8` is supported. Future versions will support `char` via a separate
-    /// `SubstitutionPolicyChar` trait or generic parameter.
+    /// This method is the byte-level (`u8`) interface. Use
+    /// [`SubstitutionPolicyChar::is_allowed`] or
+    /// [`SubstitutionPolicyFor::is_allowed_for`] for character-level matching.
     ///
     /// # Implementation Note
     ///

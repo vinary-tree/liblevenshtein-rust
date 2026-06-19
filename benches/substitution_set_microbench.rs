@@ -183,6 +183,58 @@ fn bench_preset_builders_byte(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark: allow_str() for ASCII and UTF-8 string substitutions
+fn bench_allow_str_encoding(c: &mut Criterion) {
+    let mut group = c.benchmark_group("substitution_set/allow_str/encoding");
+
+    for (name, source, target) in [
+        ("ascii_multi_to_single", "ph", "f"),
+        ("utf8_single_scalar", "α", "β"),
+        ("utf8_cjk", "你", "好"),
+        ("ascii_to_utf8", "sch", "š"),
+    ] {
+        group.bench_function(name, |b| {
+            b.iter(|| {
+                let mut set = SubstitutionSet::new();
+                set.allow_str(black_box(source), black_box(target));
+                black_box(set)
+            });
+        });
+    }
+
+    group.finish();
+}
+
+/// Benchmark: contains_str() for ASCII and UTF-8 string substitutions
+fn bench_contains_str_encoding(c: &mut Criterion) {
+    let mut group = c.benchmark_group("substitution_set/contains_str/encoding");
+
+    let mut set = SubstitutionSet::new();
+    set.allow_str("ph", "f");
+    set.allow_str("α", "β");
+    set.allow_str("你", "好");
+    set.allow_str("sch", "š");
+
+    for (name, source, target) in [
+        ("ascii_multi_hit", "ph", "f"),
+        ("utf8_single_scalar_hit", "α", "β"),
+        ("utf8_cjk_hit", "你", "好"),
+        ("ascii_to_utf8_hit", "sch", "š"),
+        ("ascii_miss", "ph", "v"),
+        ("utf8_miss", "α", "γ"),
+    ] {
+        group.bench_function(name, |b| {
+            b.iter(|| {
+                black_box(
+                    set.contains_str(black_box(source.as_bytes()), black_box(target.as_bytes())),
+                )
+            });
+        });
+    }
+
+    group.finish();
+}
+
 /// Benchmark: Preset builder initialization for char
 fn bench_preset_builders_char(c: &mut Criterion) {
     let mut group = c.benchmark_group("substitution_set/presets/char");
@@ -269,6 +321,8 @@ criterion_group!(
     bench_insertion_byte,
     bench_insertion_char,
     bench_preset_builders_byte,
+    bench_allow_str_encoding,
+    bench_contains_str_encoding,
     bench_preset_builders_char,
     bench_contains_char_varying_sizes,
     bench_single_lookup,

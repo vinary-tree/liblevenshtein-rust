@@ -576,6 +576,26 @@ mod tests {
     }
 
     #[test]
+    fn test_restricted_operation_utf8_strings() {
+        let mut rules = SubstitutionSet::new();
+        rules.allow_str("α", "β");
+        rules.allow_str("sch", "š");
+
+        let greek =
+            OperationType::with_restriction("α".len(), "β".len(), 0.2, rules.clone(), "greek");
+        assert!(greek.can_apply("α".as_bytes(), "β".as_bytes()));
+        assert!(greek.can_apply_to_source("α".as_bytes()));
+        assert!(!greek.can_apply("α".as_bytes(), "γ".as_bytes()));
+
+        let palatal =
+            OperationType::with_restriction("sch".len(), "š".len(), 0.2, rules, "palatal");
+        assert!(palatal.can_apply(b"sch", "š".as_bytes()));
+        assert!(palatal.can_apply_to_source(b"sch"));
+        assert!(palatal.matches_first_target_char(b"sch", 'š'));
+        assert!(!palatal.matches_first_target_char(b"sch", 's'));
+    }
+
+    #[test]
     fn test_display() {
         let op = OperationType::new(2, 1, 0.15, "ph_to_f");
         let display = format!("{}", op);
