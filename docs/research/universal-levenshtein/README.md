@@ -1,7 +1,7 @@
 # Universal Levenshtein Automata - Complete Documentation
 
-**Last Updated**: 2025-11-11
-**Status**: ✅ **Implemented** - SmallVec-based Universal transducers (Standard + Transposition)
+**Last Updated**: 2026-06-19
+**Status**: ✅ **Implemented** - SmallVec-based Universal transducers with consumption-aware diagonal crossing
 **Implementation**: src/transducer/universal/ (commit ce7ccca, 2025-11-11)
 
 ---
@@ -55,7 +55,7 @@ This directory contains **complete documentation** of Universal Levenshtein Auto
    - **Bounded diagonal property** (Theorem 8.2) - validates SmallVec optimization
    - Matrix-state construction with extensors
    - Empirical evaluation: **2.77-5× speedup** over dynamic programming
-   - **Critical bug identification**: Diagonal crossing fix needed
+   - **Resolved diagonal-crossing integration**: explicit `length_diff` tracking with consumption-aware transitions
    - Enhancement opportunities and implementation roadmap
    - **Use this** for understanding theoretical foundations and optimization opportunities
 
@@ -97,7 +97,7 @@ This directory contains **complete documentation** of Universal Levenshtein Auto
    - Maps theoretical concepts to **both lazy and universal** implementations
    - Shows what applies to each architecture (9 major concepts analyzed)
    - File location reference table for quick navigation
-   - Implementation status tracking (✅ complete, 🚧 in progress, 🐛 buggy, ❌ N/A)
+   - Implementation status tracking (✅ complete, 🚧 in progress, ❌ N/A)
    - Priority action items with specific file:line references
    - **Use this** when implementing paper concepts or understanding code structure
 
