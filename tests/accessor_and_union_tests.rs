@@ -208,8 +208,7 @@ mod pathmap_tests {
 
     #[test]
     fn test_serialization_after_extraction() {
-        let dict: PathMapDictionary<u32> =
-            PathMapDictionary::from_terms_with_values(vec![("hello", 1), ("world", 2)]);
+        let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(vec!["hello", "world"]);
 
         let transducer = Transducer::new(dict.clone(), Algorithm::Standard);
 
@@ -217,12 +216,26 @@ mod pathmap_tests {
         let extracted_dict = transducer.into_inner();
 
         // Verify we can still access and use the dictionary
-        assert_eq!(extracted_dict.get_value("hello"), Some(1));
-        assert_eq!(extracted_dict.get_value("world"), Some(2));
+        assert!(extracted_dict.contains("hello"));
+        assert!(extracted_dict.contains("world"));
 
-        // In a real scenario, we could serialize extracted_dict here
-        // For now, just verify it's usable
-        let new_transducer = Transducer::new(extracted_dict, Algorithm::Standard);
+        let mut serialized = Vec::new();
+        extracted_dict
+            .serialize_paths(&mut serialized)
+            .expect("failed to serialize extracted PathMap dictionary");
+        assert!(
+            !serialized.is_empty(),
+            "serialized PathMap payload should not be empty"
+        );
+
+        let deserialized: PathMapDictionary<()> =
+            PathMapDictionary::deserialize_paths(&serialized[..])
+                .expect("failed to deserialize extracted PathMap dictionary");
+        assert!(deserialized.contains("hello"));
+        assert!(deserialized.contains("world"));
+        assert_eq!(deserialized.term_count(), 2);
+
+        let new_transducer = Transducer::new(deserialized, Algorithm::Standard);
         let results: Vec<_> = new_transducer.query("helo", 1).collect();
         assert!(results.contains(&"hello".to_string()));
     }
