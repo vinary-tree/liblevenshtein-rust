@@ -66,9 +66,18 @@ The issue might be:
 
 ## Diagonal Crossing
 
-Diagonal crossing integration is currently DISABLED (commented out in state.rs lines 307-342) because it was triggering too early and causing position conversions that violated invariants.
+Diagonal crossing integration is now available through `UniversalState::transition_with_consumption()`, which carries explicit `length_diff` metadata and performs conversion when the tracked difference crosses the configured distance bound.
 
-This needs to be fixed once the acceptance logic is working correctly. The diagonal crossing should only apply when we've actually crossed the diagonal (input position > word length + offset adjustments).
+The older `transition()` method remains a compatibility path and intentionally does not perform diagonal crossing because it cannot infer whether the query side, dictionary side, both sides, or neither side consumed a character.
+
+Focused verification passed on 2026-06-19:
+
+```bash
+systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0 \
+  env CARGO_BUILD_JOBS=1 cargo test -j1 --lib transducer::universal::state::tests -- --test-threads=1
+```
+
+Result: 36/36 universal state tests passed, including length-difference updates and I/M conversion boundary tests.
 
 ## Code Changes Made
 
@@ -81,7 +90,7 @@ This needs to be fixed once the acceptance logic is working correctly. The diago
 
 3. `src/transducer/universal/state.rs`:
    - Removed debug output
-   - Diagonal crossing remains disabled (commented out)
+   - Added `length_diff` tracking and consumption-aware diagonal crossing
 
 ## Documentation Created
 

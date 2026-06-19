@@ -1,20 +1,21 @@
-# Diagonal Crossing Bug Analysis and Fix Plan
+# Diagonal Crossing Bug Analysis and Resolution Notes
 
 **Date**: 2025-11-12
-**Status**: 🐛 **CRITICAL BUG** - Documented, fix planned but not implemented
-**Affected Component**: Universal Levenshtein Automata (`src/transducer/universal/state.rs:310-360`)
-**Current State**: Diagonal crossing logic **disabled** (commented out) to prevent invalid conversions
+**Last Updated**: 2026-06-19
+**Status**: ✅ **RESOLVED FOR THE LENGTH-DIFF API** - explicit `length_diff` tracking and capped regression tests are in place
+**Affected Component**: Universal Levenshtein Automata (`src/transducer/universal/state.rs`)
+**Current State**: `transition_with_consumption()` performs length-difference-aware diagonal crossing; the older `transition()` API intentionally preserves backward-compatible behavior without crossing because it lacks consumption metadata.
 
 ---
 
 ## Executive Summary
 
-The universal Levenshtein automaton implementation has a critical bug in diagonal crossing detection that causes **premature I-type to M-type position conversions**, violating position invariants and producing incorrect results. The diagonal crossing logic is currently disabled (lines 310-360 in `state.rs`) to prevent these invalid conversions.
+The original universal Levenshtein automaton implementation had a diagonal-crossing integration bug that caused **premature I-type to M-type position conversions**, violating position invariants and producing incorrect results. The current implementation resolves that integration path by making length-difference tracking explicit in `UniversalState` and routing diagonal crossing through `transition_with_consumption()`.
 
-**Root Cause**: Missing explicit `length_diff` (m) tracking in state representation
-**Impact**: Universal automaton cannot correctly detect when to convert I → M positions
-**Workaround**: Diagonal crossing disabled; automaton still functional but may have suboptimal performance
-**Fix Complexity**: High - requires architectural changes to state representation and API
+**Root Cause**: Missing explicit `length_diff` (m) tracking in the original state representation
+**Resolution**: `UniversalState` now carries `length_diff`, and `transition_with_consumption()` updates it from query/dictionary consumption before applying conversion.
+**Compatibility Note**: `transition()` still does not perform diagonal crossing because it has no way to know which side consumed a character; callers that need diagonal crossing must use `transition_with_consumption()`.
+**Verification**: `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0 env CARGO_BUILD_JOBS=1 cargo test -j1 --lib transducer::universal::state::tests -- --test-threads=1` passed 36/36 state tests on 2026-06-19.
 
 ---
 
@@ -23,7 +24,7 @@ The universal Levenshtein automaton implementation has a critical bug in diagona
 1. [Background: What is Diagonal Crossing?](#1-background-what-is-diagonal-crossing)
 2. [The Bug: Symptoms and Behavior](#2-the-bug-symptoms-and-behavior)
 3. [Root Cause Analysis](#3-root-cause-analysis)
-4. [Current Implementation (Disabled)](#4-current-implementation-disabled)
+4. [Historical Inactive Implementation](#4-historical-inactive-implementation)
 5. [Proposed Fix: Add length_diff Tracking](#5-proposed-fix-add-length_diff-tracking)
 6. [Implementation Plan](#6-implementation-plan)
 7. [Testing Strategy](#7-testing-strategy)
@@ -107,7 +108,7 @@ let next = state.transition(&bit_vector, 1);
 
 ### Code Location
 
-**File**: `src/transducer/universal/state.rs:310-360`
+**Historical File Location**: `src/transducer/universal/state.rs:310-360`
 
 ```rust
 // Diagonal crossing check: f_n(rm(Δ), |x|)
@@ -115,12 +116,12 @@ let next = state.transition(&bit_vector, 1);
 // NOTE: Currently this is producing invalid position conversions in some cases.
 // The diagonal crossing functions (rm, f_n, m_n) are fully implemented and tested,
 // but the integration here needs adjustment based on actual word/input lengths.
-// Keeping this commented out until Phase 4 provides proper context.
+// This was kept inactive until Phase 4 provided proper context.
 
-// TODO: Diagonal crossing integration needs fixing
-// The diagonal crossing logic is causing premature conversions that violate invariants.
-// Disabling for now until the proper semantics are understood.
-// See PHASE4_BUG_ANALYSIS.md for details.
+// Historical note:
+// Diagonal crossing integration originally lived here without consumption
+// metadata. The active implementation now uses transition_with_consumption()
+// and length_diff-aware conversion.
 
 /*
 if let Some(rm_pos) = crate::transducer::universal::diagonal::right_most(
@@ -218,7 +219,7 @@ At k=2 (processed "ab"):
 
 ---
 
-## 4. Current Implementation (Disabled)
+## 4. Historical Inactive Implementation
 
 ### Diagonal Module (Correct Implementation)
 
@@ -279,7 +280,7 @@ pub fn convert_position<V: PositionVariant>(
 
 **Status**: ✅ **Formulas correct, tests passing**
 
-### Integration Issue (Buggy)
+### Historical Integration Issue
 
 The problem is in `state.rs` where these functions are called:
 
@@ -291,11 +292,11 @@ pub fn transition(&self, bit_vector: &CharacteristicVector, _input_length: usize
     // We use input_length as 'k', but it doesn't have proper word context
     // This causes diagonal_crossed() to return true too early
 
-    // [DISABLED CODE]
+    // [historical inactive code]
 }
 ```
 
-**Status**: 🐛 **Integration buggy, disabled**
+**Status**: ✅ **Resolved by length-diff-aware transition support**
 
 ---
 
@@ -786,13 +787,13 @@ impl<V: PositionVariant> UniversalState<V> {
 ### Code References
 
 **Current Implementation**:
-- `src/transducer/universal/state.rs:310-360` - Disabled diagonal crossing
+- `src/transducer/universal/state.rs` - `length_diff` state, `transition_with_consumption()`, and length-diff-aware conversion
 - `src/transducer/universal/diagonal.rs` - Correct formulas (rm, f_n, m_n)
 - `src/transducer/universal/position.rs` - Position types and invariants
 
 **Tests**:
 - `src/transducer/universal/diagonal.rs:201-376` - Unit tests (passing)
-- `src/transducer/universal/state.rs:386-910` - State transition tests
+- `src/transducer/universal/state.rs` - State transition, consumption tracking, and diagonal conversion tests
 
 ---
 
@@ -800,29 +801,23 @@ impl<V: PositionVariant> UniversalState<V> {
 
 ### Current Status
 
-- 🐛 **Bug**: Documented and analyzed
-- 📋 **Fix Plan**: Detailed implementation plan created
-- ⏸️ **Implementation**: Pending (requires architectural changes)
-- ✅ **Workaround**: Diagonal crossing disabled, automaton still functional
+- ✅ **Bug**: Root cause documented and fixed for the consumption-aware API
+- ✅ **Architecture**: `length_diff` field added to `UniversalState`
+- ✅ **Implementation**: `transition_with_consumption()` updates `length_diff` and performs conversion when `|m| > n`
+- ✅ **Tests**: Universal state module passed 36/36 capped tests on 2026-06-19
 
-### Recommended Next Steps
+### Remaining Follow-up
 
-1. **Review this document** with project stakeholders
-2. **Get approval** for breaking API changes
-3. **Create feature branch**: `fix/diagonal-crossing-bug`
-4. **Implement Phase 1**: Add length_diff field
-5. **Run full test suite** to identify all breaking changes
-6. **Implement Phases 2-4**: Update transition logic, diagonal module, call sites
-7. **Add comprehensive tests** (Phase 5)
-8. **Benchmark performance**: Verify no regressions
-9. **Update documentation**: API changes, migration guide
-10. **Merge to main** after review
+1. Prefer `transition_with_consumption()` in any caller that needs diagonal crossing.
+2. Keep `transition()` documented as a compatibility API that cannot infer consumption.
+3. Add higher-level automaton tests if a future caller wires consumption-aware transitions into query execution.
+4. Benchmark the length-diff conversion branch if it becomes hot in end-to-end universal automata workloads.
 
 ### Estimated Effort
 
-- **Implementation**: 2-3 days
-- **Testing**: 1-2 days
-- **Documentation**: 1 day
+- **Core implementation**: Complete
+- **Focused state testing**: Complete
+- **End-to-end caller adoption**: depends on the selected universal-automata frontend
 - **Review/QA**: 1 day
 - **Total**: ~5-7 days
 

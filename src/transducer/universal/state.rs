@@ -1072,6 +1072,64 @@ mod tests {
     }
 
     #[test]
+    fn test_transition_with_consumption_updates_length_diff() {
+        use crate::transducer::universal::CharacteristicVector;
+
+        let state = UniversalState::<Standard>::initial(2);
+        let bv = CharacteristicVector::new('a', "abc");
+
+        let both = state
+            .transition_with_consumption(&bv, true, true)
+            .expect("matching consumption should have a successor");
+        assert_eq!(both.length_diff(), 0);
+
+        let query_only = state
+            .transition_with_consumption(&bv, true, false)
+            .expect("query-only consumption should have a successor");
+        assert_eq!(query_only.length_diff(), -1);
+
+        let dict_only = state
+            .transition_with_consumption(&bv, false, true)
+            .expect("dict-only consumption should have a successor");
+        assert_eq!(dict_only.length_diff(), 1);
+    }
+
+    #[test]
+    fn test_transition_with_consumption_converts_i_to_m_after_diagonal_crossing() {
+        use crate::transducer::universal::CharacteristicVector;
+
+        let mut state = UniversalState::<Standard>::initial(1);
+        state.length_diff = 1;
+        let bv = CharacteristicVector::new('a', "a");
+
+        let next = state
+            .transition_with_consumption(&bv, false, true)
+            .expect("diagonal-crossing transition should have a successor");
+
+        assert_eq!(next.length_diff(), 2);
+        assert!(
+            next.positions().any(UniversalPosition::is_m_type),
+            "I-type positions should convert to M-type after crossing m > n"
+        );
+    }
+
+    #[test]
+    fn test_length_diff_conversion_converts_m_to_i_after_reverse_crossing() {
+        let pos = UniversalPosition::<Standard>::new_m(0, 0, 1)
+            .expect("test fixture: UniversalPosition::new_m with valid args");
+
+        let converted = convert_position_with_length_diff(&pos, -2, 1)
+            .expect("reverse diagonal crossing should produce a valid I-type position");
+
+        assert!(
+            !converted.is_m_type(),
+            "M-type positions should convert to I-type after crossing m < -n"
+        );
+        assert_eq!(converted.offset(), 0);
+        assert_eq!(converted.errors(), 0);
+    }
+
+    #[test]
     fn test_transition_from_m_type_state() {
         // Test transition from M-type state
         use crate::transducer::universal::CharacteristicVector;

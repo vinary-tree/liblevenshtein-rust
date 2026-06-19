@@ -26,15 +26,14 @@ This document provides a concrete mapping between theoretical concepts from the 
 | Matrix-State Construction | [§5](#5-matrix-state-construction) | ❌ N/A | ✅ Implemented |
 | Preprocessing χ[Op,r] | [§6](#6-preprocessing-function-χopr) | ❌ N/A | ✅ Implemented |
 | Restricted Substitutions (op^r) | [§7](#7-restricted-substitutions-opr) | 🚧 In Progress | 🚧 In Progress |
-| Diagonal Crossing (f_n, m_n) | [§8](#8-diagonal-crossing-f_n-m_n-rm) | ❌ N/A | 🐛 Buggy |
+| Diagonal Crossing (f_n, m_n) | [§8](#8-diagonal-crossing-f_n-m_n-rm) | ❌ N/A | ✅ Consumption-aware |
 | Characteristic Vector β | [§9](#9-characteristic-vector-β) | ❌ N/A | ✅ Implemented |
 
 **Legend**:
 - ✅ Fully implemented
 - ⚠️ Partially implemented (hardcoded, not generalized)
 - 🚧 Work in progress
-- 🐛 Implemented but buggy
-- ❌ Not applicable or not implemented
+- ❌ Not applicable or absent by design
 
 ---
 
@@ -774,76 +773,45 @@ There's no diagonal crossing check because finality is determined by comparing `
 
 ### Universal Implementation
 
-**Status**: 🐛 **Implemented but buggy** — Currently disabled due to premature conversions
+**Status**: ✅ **Implemented for the consumption-aware state API**
 
-**File**: `src/transducer/universal/diagonal.rs:1-200`
+**Files**:
+- `src/transducer/universal/diagonal.rs` - thesis-level `rm`, `f_n`, and `m_n` helpers
+- `src/transducer/universal/state.rs` - `length_diff` state and `transition_with_consumption()`
 
 ```rust
-/// Check if diagonal has been crossed (f_n)
-///
-/// From thesis page 48: f_n(rm(Δ), |x|) checks if rightmost position
-/// has crossed the diagonal at input length |x|.
-pub fn diagonal_crossed(pos: &UniversalPosition<impl PositionVariant>,
-                        input_length: usize,
-                        max_distance: u8) -> bool {
-    // Implementation based on offset and input_length comparison
-    // FIXME: Currently produces false positives in some cases
+pub struct UniversalState<V: PositionVariant> {
+    positions: SmallVec<[UniversalPosition<V>; 8]>,
+    max_distance: u8,
+    length_diff: i8,
 }
 
-/// Convert position from I-type to M-type (m_n)
-///
-/// From thesis page 48: m_n(Δ, |x|) converts all positions when
-/// diagonal crossing is detected.
-pub fn convert_position(pos: &UniversalPosition<impl PositionVariant>,
-                        input_length: usize,
-                        max_distance: u8) -> Option<UniversalPosition<impl PositionVariant>> {
-    match pos {
-        UniversalPosition::INonFinal { offset, errors, .. } => {
-            // Convert to M-type
-            UniversalPosition::new_m(*offset - input_length as i8, *errors, max_distance).ok()
-        }
-        _ => Some(pos.clone()),  // Already M-type
+impl<V: PositionVariant> UniversalState<V> {
+    pub fn transition_with_consumption(
+        &self,
+        bit_vector: &CharacteristicVector,
+        consumed_query: bool,
+        consumed_dict: bool,
+    ) -> Option<Self> {
+        // Updates length_diff from consumption metadata, computes successors,
+        // and converts positions when |length_diff| > max_distance.
     }
-}
-
-/// Find rightmost position (rm)
-pub fn right_most<'a, V: PositionVariant>(
-    positions: impl Iterator<Item = &'a UniversalPosition<V>>
-) -> Option<UniversalPosition<V>> {
-    positions.max_by_key(|p| p.offset()).cloned()
 }
 ```
 
-**Integration in State Transition**: `src/transducer/universal/state.rs:310-360`
+**Compatibility Note**: the older `transition()` API does not perform diagonal
+crossing because it has no consumption metadata. Use
+`transition_with_consumption()` for callers that need I/M conversion.
 
-```rust
-// TODO: Diagonal crossing integration needs fixing
-// Currently disabled due to premature conversions
+**Verification**: 36/36 universal state tests passed under a 4G RSS cap on
+2026-06-19, including length-difference updates and I/M conversion boundary
+tests.
 
-/*
-if let Some(rm_pos) = diagonal::right_most(next_state.positions()) {
-    if diagonal::diagonal_crossed(&rm_pos, input_length, self.max_distance) {
-        // Apply m_n conversion to all positions
-        let mut converted_state = Self::new(self.max_distance);
-        for pos in &next_state.positions {
-            if let Some(converted) = diagonal::convert_position(pos, input_length, self.max_distance) {
-                converted_state.add_position(converted);
-            }
-        }
-
-        if !converted_state.is_empty() {
-            next_state = converted_state;
-        }
-    }
-}
-*/
-```
-
-**Bug Description** (from `TCS_2011_PAPER_ANALYSIS.md` Section 8):
-- **Problem**: Diagonal crossing detection triggers premature I→M conversions
+**Historical Bug Description** (from `TCS_2011_PAPER_ANALYSIS.md` Section 8):
+- **Problem**: Diagonal crossing detection triggered premature I→M conversions
 - **Root Cause**: Missing explicit `length_diff` (m) tracking in state
-- **Consequence**: Violates position invariants, producing invalid conversions
-- **Status**: Commented out until proper context (word lengths) available
+- **Consequence**: Violated position invariants, producing invalid conversions
+- **Current Status**: Resolved for the consumption-aware API. `UniversalState` now stores `length_diff`, and `transition_with_consumption()` updates it before applying diagonal conversion.
 
 **Proposed Fix** (from paper Section 9.2):
 
@@ -858,17 +826,18 @@ pub struct UniversalState<V: PositionVariant> {
 With explicit `length_diff`, diagonal crossing can be correctly detected:
 - `length_diff = |w| - |x|` (word length difference)
 - Crossing occurs when `length_diff` exceeds bounds [-c, +c]
+- Backward-compatible `transition()` intentionally skips diagonal crossing because it has no consumption metadata.
 
 ### Comparison
 
 | Aspect | Lazy | Universal |
 |--------|------|-----------|
-| **Diagonal Crossing** | ❌ Not applicable | 🐛 Implemented but buggy |
-| **I/M Conversion** | ❌ Not needed | 🐛 Disabled due to bug |
-| **Finality Detection** | ✅ Direct index comparison | 🚧 Requires diagonal check |
-| **Status** | Working correctly | Needs fix (see Section 8) |
+| **Diagonal Crossing** | ❌ Not applicable | ✅ Via `transition_with_consumption()` |
+| **I/M Conversion** | ❌ Not needed | ✅ Length-diff-aware conversion |
+| **Finality Detection** | ✅ Direct index comparison | ✅ Requires consumption-aware transition path |
+| **Status** | Working correctly | Core state support verified |
 
-**Action Required**: Fix diagonal crossing bug in universal implementation (high priority).
+**Verification**: `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0 env CARGO_BUILD_JOBS=1 cargo test -j1 --lib transducer::universal::state::tests -- --test-threads=1` passed 36/36 universal state tests on 2026-06-19.
 
 ---
 
@@ -995,7 +964,7 @@ impl<V: PositionVariant> UniversalPosition<V> {
 | Matrix-State | ❌ N/A | ✅ Implemented | Complete |
 | Preprocessing χ | ❌ N/A | ✅ Implemented | Complete |
 | Restricted Substitutions | 🚧 In Progress | 🚧 In Progress | High |
-| Diagonal Crossing | ❌ N/A | 🐛 Buggy | Critical |
+| Diagonal Crossing | ❌ N/A | ✅ Consumption-aware | Complete |
 | Characteristic Vector | ❌ N/A | ✅ Implemented | Complete |
 
 ### File Location Reference
