@@ -4,7 +4,7 @@
 
 This directory contains a **Coq formalization** of the 5-layer grammar correction pipeline designed for the Rholang programming language. The verification establishes correctness, soundness, completeness, and optimality properties for the error correction system.
 
-**Status**: Initial framework complete (Core types + Layer proofs + Composition theorems)
+**Status**: Active grammar proof suite with checked core, layer, composition, and NFA modules. The current `.v` sources have no active `Admitted`, `Axiom`, `Parameter`, `Conjecture`, or `Hypothesis` proof escapes.
 
 **Related Design Document**: [`docs/design/grammar-correction/MAIN_DESIGN.md`](../../design/grammar-correction/MAIN_DESIGN.md)
 
@@ -14,7 +14,7 @@ The verification is organized into three main categories:
 
 ### Core Modules (`theories/Core/`)
 
-**1. `Types.v`** (280 lines)
+**1. `Types.v`**
 - Foundational type definitions
 - Programs, characters, positions, spans
 - Scores and probabilities (using `Q` rationals)
@@ -25,7 +25,7 @@ The verification is organized into three main categories:
 - Correction candidates
 - Well-formedness conditions
 
-**2. `Edit.v`** (260 lines)
+**2. `Edit.v`**
 - Edit operation application
 - Levenshtein distance computation
 - Edit distance properties:
@@ -36,7 +36,7 @@ The verification is organized into three main categories:
 - Edit sequence composition
 - Weighted edit distance (keyboard, phonetic)
 
-**3. `Lattice.v`** (360 lines)
+**3. `Lattice.v`**
 - Lattice path definitions
 - Path validation and completeness
 - Path score computation
@@ -48,7 +48,7 @@ The verification is organized into three main categories:
 - Beam search
 - Lattice minimization
 
-**4. `Program.v`** (310 lines)
+**4. `Program.v`**
 - Syntactic and semantic validity
 - Correction goals and quality metrics
 - Correction ordering and optimality
@@ -60,7 +60,7 @@ The verification is organized into three main categories:
 
 ### Layer Modules (`theories/Layers/`)
 
-**Layer 1: `Layer1.v`** (Levenshtein Lattice) - 330 lines
+**Layer 1: `Layer1.v`** (Levenshtein Lattice)
 - **Configuration**: max edit distance, transposition, phonetic, keyboard
 - **Properties**:
   - **Completeness**: Every string within max edit distance is reachable
@@ -74,7 +74,7 @@ The verification is organized into three main categories:
 - **Performance**: Candidate count bounded by O(n^d × σ^d)
 - **Features**: Transposition support, phonetic similarity, keyboard distance
 
-**Layer 2: `Layer2.v`** (Tree-sitter Parsing) - 90 lines
+**Layer 2: `Layer2.v`** (Tree-sitter Parsing)
 - **Configuration**: accept partial parses, error node penalty
 - **Abstract parsing function** (implemented via Tree-sitter FFI)
 - **Properties**:
@@ -84,34 +84,34 @@ The verification is organized into three main categories:
   - `layer2_soundness`: Parse trees are valid
   - `parse_program_deterministic`: Parsing is deterministic
 
-**Layer 3: `Layer3.v`** (Type Checking) - 25 lines
+**Layer 3: `Layer3.v`** (Type Checking)
 - **Configuration**: strict mode
-- **Type checking function** (abstract)
-- **Properties**: Type-checked programs are semantically valid
+- **Type checking function**: simplified executable type result over parse trees
+- **Properties**: type annotation preserves correction soundness and layer-result validity
 
-**Layer 4: `Layer4.v`** (Semantic Repair) - 25 lines
+**Layer 4: `Layer4.v`** (Semantic Repair)
 - **Configuration**: max repairs
-- **Repair operations**: Type error fixing through program transformations
+- **Proof role**: validity-preserving semantic boundary
 
-**Layer 5: `Layer5.v`** (Process Calculus) - 25 lines
-- **Configuration**: check deadlocks, check race conditions
-- **Verification**: Deadlock freedom, race condition detection
+**Layer 5: `Layer5.v`** (Process Calculus)
+- **Configuration**: deadlock and race-condition checks
+- **Proof role**: validity-preserving process-calculus boundary
 
 ### Composition Modules (`theories/Composition/`)
 
-**1. `Forward.v`** (Sequential Composition) - 25 lines
+**1. `Forward.v`** (Sequential Composition)
 - Forward composition of layers
 - **Theorem**: `forward_composition_valid` - composition preserves validity
 
-**2. `Backward.v`** (Feedback) - 10 lines
+**2. `Backward.v`** (Feedback)
 - Backward feedback for layer rescoring
 - Improves scores based on later layer results
 
-**3. `Pipeline.v`** (Pipeline Execution) - 15 lines
+**3. `Pipeline.v`** (Pipeline Execution)
 - Pipeline execution semantics
 - **Theorem**: `pipeline_always_produces_result` - termination guarantee
 
-**4. `Correctness.v`** (End-to-End) - 80 lines
+**4. `Correctness.v`** (End-to-End)
 - **Main Theorem**: `grammar_correction_correctness`
   - If pipeline produces a correction, it is sound and complete
 - **Soundness**: `all_corrections_sound` - all corrections are valid transformations
@@ -230,26 +230,24 @@ coq_makefile -f _CoqProject -o Makefile
 make
 ```
 
-This will compile all `.v` files and produce `.vo` object files.
+This compiles all configured `.v` files and produces `.vo` object files. For agent or CI runs on memory-constrained machines, prefer a capped invocation:
+
+```bash
+systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 \
+  make -C docs/verification/grammar -j1
+```
 
 ### Compilation Status
 
-**Current Status**: Framework defined, many theorems admitted (placeholder proofs)
+**Current Status**: checked proof suite. Recent capped verification compiled the active grammar core, layer, composition, and NFA slices; targeted escape-hatch scans over `docs/verification/grammar/theories/**/*.v` found no active `Admitted`, `Axiom`, `Parameter`, `Conjecture`, or `Hypothesis`.
 
 The current codebase provides:
-- ✅ Complete type definitions
-- ✅ All layer structures defined
-- ✅ Composition framework
-- ✅ Main correctness theorem statements
-- ⚠️ Many proofs are `Admitted` (placeholders for future completion)
-
-**Next Steps for Full Verification**:
-1. Complete proofs in `Edit.v` (Levenshtein properties)
-2. Complete proofs in `Lattice.v` (path enumeration, Viterbi)
-3. Complete proofs in `Layer1.v` (completeness, soundness, optimality)
-4. Implement Layer 2-5 execution functions
-5. Complete composition proofs
-6. Prove main correctness theorem
+- Complete type definitions
+- Checked edit-distance, lattice, layer, pipeline, and NFA proof families
+- Bounded executable best-path scoring for lattices
+- Executable Layer 1 identity candidate construction
+- Validity-preserving Layer 3/4/5 boundaries
+- NFA path extraction and bounded-cost soundness evidence
 
 ## Proof Strategy
 
@@ -307,51 +305,38 @@ The current codebase provides:
 
 ## Correspondence with Implementation
 
-The Coq verification models the Rust implementation in `src/`:
+The Rocq verification models the architectural contracts used by the Rust implementation and by the WFST/lattice design work:
 
 | Coq Module | Rust Module |
 |------------|-------------|
-| `Core/Types.v` | `src/correction/types.rs` |
-| `Core/Edit.v` | `src/levenshtein/` |
-| `Core/Lattice.v` | `src/lattice/` |
-| `Layers/Layer1.v` | `src/correction/layer1.rs` |
-| `Layers/Layer2.v` | `src/correction/layer2.rs` |
-| `Layers/Layer3.v` | `src/correction/layer3.rs` |
-| `Composition/Pipeline.v` | `src/correction/pipeline.rs` |
+| `Core/Types.v` | correction/lattice data model used by the design docs |
+| `Core/Edit.v` | edit operations and distance contracts |
+| `Core/Lattice.v` | lattice-path scoring and expansion contracts |
+| `Layers/Layer1.v` | Levenshtein lattice layer contract |
+| `Layers/Layer2.v` | parser-validity layer contract |
+| `Layers/Layer3.v` | type-annotation preservation contract |
+| `Composition/Pipeline.v` | pipeline execution and result contract |
+| `NFA/*.v` | phonetic/grammar NFA soundness and path-extraction contracts |
 
 The verification focuses on **algorithmic correctness**, not Rust-specific concerns (memory safety, concurrency). Those are handled by Rust's type system.
 
 ## Statistics
 
-- **Total Files**: 13 Coq files
-- **Core Modules**: 4 files, ~1,210 lines
-- **Layer Modules**: 5 files, ~495 lines
-- **Composition Modules**: 4 files, ~130 lines
-- **Total Lines**: ~1,835 lines of Coq
-- **Theorems**: 40+ theorem statements
-- **Admitted Proofs**: ~35 (framework phase)
-- **Complete Proofs**: ~5 (basic properties)
+- **Total `.v` Files**: 26
+- **Core Modules**: `Core/*.v`
+- **Layer Modules**: `Layers/*.v`
+- **Composition Modules**: `Composition/*.v`
+- **NFA Modules**: `NFA/*.v`
+- **Active Proof Escapes**: 0 found by the current grammar-theories scan
 
-## Future Work
+## Maintenance Gates
 
-### Short Term
-1. Complete basic lemmas (score arithmetic, edit distance bounds)
-2. Prove Levenshtein triangle inequality
-3. Implement Viterbi algorithm proof
-4. Complete Layer 1 completeness proof
+Before changing this proof suite:
 
-### Medium Term
-1. Implement Layer 2-5 execution functions
-2. Prove layer soundness theorems
-3. Complete composition proofs
-4. Prove main correctness theorem
-
-### Long Term
-1. Extract verified Coq code to OCaml
-2. Interface with Rust implementation via FFI
-3. Add complexity analysis (time/space bounds)
-4. Verify beam search approximation quality
-5. Extend to multi-file analysis
+1. Compile the touched dependency slice under `systemd-run --user --scope` with `MemoryMax` and `MemorySwapMax=0`.
+2. Run `rg -n "\\bAdmitted\\b|\\badmit\\b|\\bAxiom\\b|\\bParameter\\b|\\bConjecture\\b|\\bHypothesis\\b" docs/verification/grammar/theories -g '*.v'`.
+3. Run the stale-marker scan for implementation language in touched docs and proof files.
+4. Remove generated `.vo`, `.glob`, `.vok`, `.vos`, `.aux`, `.lia.cache`, and makefile dependency artifacts unless they are intentionally tracked.
 
 ## Related Documents
 

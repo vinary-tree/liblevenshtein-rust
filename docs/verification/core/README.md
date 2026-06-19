@@ -1,267 +1,115 @@
 # Liblevenshtein Core Verification Library
 
-**Status**: In Progress
-**Date**: 2025-11-21
 **Namespace**: `Liblevenshtein.Core.Verification`
 
 ## Overview
 
-This library contains reusable formal proofs for core algorithms and data structures used across multiple liblevenshtein components (contextual completion, phonetic transformation, transducer operations).
+This directory contains the reusable Rocq proof library for liblevenshtein's
+edit-distance, automaton, trace, composition, lower-bound, and optimal-trace
+contracts. Domain-specific verification work, including grammar and phonetic
+automata, imports these modules instead of duplicating low-level distance and
+transition reasoning.
 
-The core library emphasizes **reusability**: proofs established here are imported by domain-specific verification modules (`docs/verification/contextual/`, `docs/verification/phonetic/`, `docs/verification/transducer/`) to avoid duplication.
+The current active proof sources under `docs/verification/core/theories/` have
+no top-level `Admitted.`, `admit.`, `Axiom`, `Parameter`, `Conjecture`, or
+`Hypothesis` lines in the maintained `.v` files.
 
 ## Structure
 
-```
+```text
 docs/verification/core/
-├── _CoqProject          # Build configuration, namespace definitions
-├── README.md            # This file
-└── theories/
-    ├── Distance.v       # Levenshtein distance (Wagner-Fischer DP)
-    ├── Strings.v        # UTF-8 string operations (TODO)
-    ├── Trees.v          # Generic tree operations, well-formedness (TODO)
-    └── Checkpoints.v    # Undo/redo stack with LIFO semantics (TODO)
+|-- _CoqProject
+|-- Makefile
+|-- README.md
+|-- ADMITTED_LEMMAS_STATUS.md
+|-- COMPLETION_SUMMARY.md
+`-- theories/
+    |-- Automaton/          universal automaton states, transitions, soundness
+    |-- Cardinality/        NoDup and inclusion preservation
+    |-- Composition/        edit-sequence composition and cost bounds
+    |-- Core/               distance definitions and metric properties
+    |-- DPMatrix/           matrix operations and DP correctness support
+    |-- LowerBound/         pigeonhole and shift-trace lower bounds
+    |-- OptimalTrace/       optimal trace construction and validity
+    |-- Trace/              Damerau, merge/split, and generic traces
+    |-- Triangle/           triangle-inequality proof support
+    |-- Distance.v          historical aggregate distance proof file
+    |-- MainTheorems.v
+    `-- TraceLowerBound.v
 ```
 
-## Modules
+## Proof Families
 
-### 1. Distance.v - Levenshtein Distance
+| Family | Representative modules | Contract |
+|--------|------------------------|----------|
+| Edit distance | `Core/LevDistance.v`, `Core/MetricProperties.v`, `Distance.v` | Levenshtein distance, identity, symmetry, triangle structure, and trace equivalence |
+| Transposition and merge/split | `Core/DamerauLevDistance.v`, `Core/MergeSplitDistance.v`, `Trace/DamerauTrace.v`, `Trace/MergeSplitTrace.v` | Operation-specific traces and cost accounting |
+| Automata | `Automaton/*.v` | Universal automaton states, transitions, antichains, acceptance, soundness, and completeness |
+| Composition | `Composition/*.v` | Edit-sequence composition, witness preservation, cardinality, and cost bounds |
+| Lower bounds | `LowerBound/*.v`, `TraceLowerBound.v` | Pigeonhole and trace-derived pruning bounds |
+| Optimal traces | `OptimalTrace/*.v` | Construction, validity, and cost equality for optimal edit traces |
+| Triangle support | `Triangle/*.v` | Local cost lemmas used by triangle-inequality proofs |
 
-**Status**: ✅ Initial framework complete (1 theorem proven, 4 admitted)
-**Lines**: 372 lines
-**Compilation**: Successful (2 deprecation warnings only)
+## Build
 
-**Purpose**: Proves correctness of the Wagner-Fischer dynamic programming algorithm for computing edit distance between strings.
-
-**Key Components**:
-- **Recursive definition**: Axiomatized Wagner-Fischer recurrence relation
-- **Matrix-based DP**: Iterative algorithm formalization
-- **Metric properties**:
-  - ✅ **Identity**: `lev_distance s s = 0` (PROVEN)
-  - ⏳ **Symmetry**: `lev_distance s1 s2 = lev_distance s2 s1` (admitted)
-  - ⏳ **Triangle inequality**: `d(s1,s3) ≤ d(s1,s2) + d(s2,s3)` (admitted)
-  - ⏳ **Upper bound**: `d(s1,s2) ≤ max(|s1|, |s2|)` (admitted)
-  - ⏳ **DP correctness**: Matrix algorithm equals recursive definition (admitted)
-
-**Dependencies**:
-- Coq/Rocq Standard Library: `List`, `Arith`, `Ascii`, `Bool`, `Nat`, `Lia`
-
-**Usage Example** (from contextual completion):
-```coq
-From Liblevenshtein.Core.Verification Require Import Distance.
-
-Theorem query_fusion_distance_filter :
-  forall (query term : list Char) (max_dist : nat),
-    lev_distance query term <= max_dist ->
-    (* term should be included in completion results *)
-```
-
-**Next Steps**:
-1. Prove `lev_distance_symmetry` using edit operation inverse correspondence
-2. Prove `lev_distance_triangle_inequality` using edit sequence concatenation
-3. Prove `dp_matrix_correctness` using strong induction on matrix cells
-4. Consider implementing well-founded recursion for `lev_distance` to replace axioms
-
-### 2. Strings.v - UTF-8 String Operations
-
-**Status**: ⏳ TODO
-**Est. Lines**: ~250 lines
-**Priority**: High (required for contextual completion Theorem 2)
-
-**Purpose**: Formalize UTF-8 buffer operations (insertion, deletion) with validity preservation.
-
-**Planned Content**:
-- **Axioms**: Rust's `char` type guarantees (Unicode scalar values)
-- **Operations**: `insert`, `delete` with validity preservation
-- **Properties**: Reversibility, length tracking, consistency
-
-**Extracted From**: `docs/formal-verification/proofs/06_contextual_completion/02_draft_consistency.md`
-
-### 3. Trees.v - Generic Tree Operations
-
-**Status**: ⏳ TODO
-**Est. Lines**: ~400 lines
-**Priority**: Medium (required for contextual completion Theorems 1, 6)
-
-**Purpose**: Generic tree well-formedness, acyclicity, ancestor/descendant relations, visibility predicates.
-
-**Planned Content**:
-- **Well-formedness**: `acyclic`, `valid_parent_pointers`
-- **Relations**: `is_ancestor`, `is_descendant`, `lca` (lowest common ancestor)
-- **Traversal**: `visible_contexts` (ancestor chain), ordering guarantees
-
-**Extracted From**:
-- `docs/formal-verification/proofs/06_contextual_completion/01_context_visibility.md`
-- `docs/formal-verification/proofs/06_contextual_completion/06_hierarchical_visibility.md`
-
-### 4. Checkpoints.v - Undo/Redo Stack
-
-**Status**: ⏳ TODO
-**Est. Lines**: ~200 lines
-**Priority**: Low (required for contextual completion Theorem 3)
-
-**Purpose**: LIFO stack semantics for checkpoint-based undo/redo operations.
-
-**Planned Content**:
-- **Operations**: `push`, `pop`, `peek`, `clear`
-- **Properties**: LIFO ordering, stack invariants, history preservation
-
-**Extracted From**: `docs/formal-verification/proofs/06_contextual_completion/03_checkpoint_stack.md`
-
-## Compilation
-
-### Prerequisites
-- **Coq/Rocq**: 9.0+ (tested with Rocq 9.1.0)
-- **Build tool**: `coqc` or `make`
-
-### Build Instructions
+Use memory-capped builds for agent runs and CI-like local verification. The
+complete core proof suite is large: a 2 GiB capped build reaches
+`DPMatrix/SnocLemmas.v` and is killed by the unit memory cap; a 4 GiB capped
+build compiles past `DPMatrix/SnocLemmas.v` and reaches the trace layer; an
+8 GiB capped build reaches `Trace/DamerauTrace.v` and is killed by that cap
+while checking the trace proof. These are proof-compilation memory results from
+`systemd-run --user --scope`, not runtime benchmark failures.
 
 ```bash
-cd docs/verification/core
-
-# Single file compilation
-coqc -R theories Liblevenshtein.Core.Verification theories/Distance.v
-
-# Full build (when Makefile is added)
-make
-
-# Clean build artifacts
-make clean
+systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 \
+  make -C docs/verification/core/theories -j1
 ```
 
-### Expected Output
-```
-File "./theories/Distance.v", line 15, characters 0-61:
-Warning: "From Coq" has been replaced by "From Stdlib".
-[deprecated-from-Coq,deprecated-since-9.0,deprecated,default]
-File "./theories/Distance.v", line 42, characters 0-105:
-Warning: Not a truly recursive fixpoint. [non-recursive,fixpoints,default]
-```
+For focused changes, compile the touched dependency slice directly and pick a
+cap appropriate for that slice. Example:
 
-**Status**: Compiles successfully ✅ (warnings only, no errors)
-
-## Design Philosophy
-
-### 1. Reusability Over Specificity
-
-**Bad**: Proofs tightly coupled to one use case (e.g., "Contextual Completion Distance")
-**Good**: Generic proofs applicable to multiple domains (e.g., "Levenshtein Distance - Core Algorithm")
-
-Example:
-```coq
-(* ❌ Too specific *)
-Theorem contextual_completion_distance_correct : ...
-
-(* ✅ Reusable *)
-Theorem levenshtein_distance_correctness : ...
-  (* Can be imported by contextual/, phonetic/, transducer/ *)
+```bash
+systemd-run --user --scope -p MemoryMax=2G -p MemorySwapMax=0 \
+  rocq c -Q docs/verification/core/theories Liblevenshtein.Core.Verification \
+  docs/verification/core/theories/Triangle/TriangleInequality.v
 ```
 
-### 2. Axioms for Initial Framework
+## Maintenance Gates
 
-For complex recursive definitions that require well-founded recursion (e.g., `lev_distance`), we:
-1. **Axiomatize** the function and its key properties
-2. **Prove** metric properties using the axioms
-3. **Defer** well-founded recursion implementation to later refinement
+Before committing changes in this directory:
 
-**Rationale**: Allows rapid progress on higher-level proofs while maintaining correctness guarantees.
+1. Compile the touched Rocq slice under `systemd-run --user --scope`.
+2. Run:
 
-### 3. Admitted Proofs as Placeholders
+   ```bash
+   rg -n "^\s*(Admitted\.|admit\.|Axiom |Parameter |Conjecture |Hypothesis )" \
+     docs/verification/core/theories -g '*.v'
+   ```
 
-Proofs marked `Admitted` indicate:
-- The theorem statement is correct
-- The proof infrastructure (lemmas, definitions) is in place
-- The proof is standard/well-established in the literature
-- Implementation is deferred for time management
+3. For full-suite status changes, record the `systemd-run` memory cap, unit
+   result, peak memory, and last compiled Rocq file.
+4. Run a stale-marker scan for changed docs and proof files.
+5. Remove generated proof artifacts unless they are intentionally tracked by
+   this repository.
 
-**NOT** a correctness compromise - all admitted proofs will be completed.
+## Status Documents
 
-## Integration with Domain-Specific Libraries
+- `ADMITTED_LEMMAS_STATUS.md` records the Distance.v axiom-elimination audit.
+- `COMPLETION_SUMMARY.md` records the major trace and triangle proof milestones.
+- `PHASE*_*.md` files are historical session reports. Prefer this README and the
+  active `.v` sources for current build status.
 
-### Contextual Completion
-```coq
-From Liblevenshtein.Core.Verification Require Import Distance Strings Trees.
-From Liblevenshtein.Contextual.Verification Require Import ContextTree QueryFusion.
+## Design Rationale
 
-Theorem query_fusion_correctness :
-  forall (tree : ContextTree) (dict : Dictionary) (query : string) (max_dist : nat),
-    well_formed tree ->
-    (* Uses core/Distance.v for levenshtein_distance correctness *)
-    (* Uses core/Trees.v for well_formed tree property *)
-    (* Uses core/Strings.v for UTF-8 validity *)
-    ...
-```
+The library separates reusable mathematics from domain-specific correction
+pipelines:
 
-### Phonetic Transformation
-```coq
-From Liblevenshtein.Core.Verification Require Import Distance.
-From Liblevenshtein.Phonetic.Verification Require Import Patterns.
+- Distance and trace proofs are independent of any dictionary implementation.
+- Automaton proofs expose generic state and transition contracts.
+- Composition proofs isolate the algebra needed to combine operation traces.
+- Lower-bound proofs support pruning without coupling to a particular search
+  engine.
 
-Theorem phonetic_similarity_metric :
-  forall (s1 s2 : list Phone),
-    (* Reuses levenshtein_distance metric properties *)
-    lev_distance (to_phonetic s1) (to_phonetic s2) = ...
-```
-
-### Transducer Operations (Future)
-```coq
-From Liblevenshtein.Core.Verification Require Import Distance Trees.
-From Liblevenshtein.Transducer.Verification Require Import NFA DFA.
-
-Theorem transducer_distance_bounded :
-  forall (nfa : NFA) (s1 s2 : string),
-    (* Reuses distance upper bound theorem *)
-    ...
-```
-
-## Proof Status Summary
-
-| Module | Total Theorems | Proven | Admitted | % Complete |
-|--------|---------------|--------|----------|------------|
-| Distance.v | 5 | 1 | 4 | 20% |
-| Strings.v | - | - | - | 0% (TODO) |
-| Trees.v | - | - | - | 0% (TODO) |
-| Checkpoints.v | - | - | - | 0% (TODO) |
-| **TOTAL** | 5 | 1 | 4 | **20%** |
-
-## Development Timeline
-
-### Week 1-2 (Current)
-- ✅ Create directory structure
-- ✅ Set up `_CoqProject`
-- ✅ Formalize Distance.v with axioms
-- ✅ Prove `lev_distance_identity`
-- ⏳ Create README (this document)
-
-### Week 3-4
-- Create Strings.v (UTF-8 operations)
-- Create Trees.v (tree well-formedness)
-- Create Checkpoints.v (undo/redo stack)
-
-### Week 5-6
-- Prove admitted theorems in Distance.v
-- Add Makefile for full builds
-- Add .gitignore for build artifacts
-
-### Week 7-8
-- Begin contextual verification library
-- Import core proofs into contextual modules
-- Create QueryFusion.v using core/Distance.v
-
-## References
-
-- **Wagner-Fischer Algorithm**: Original DP formulation for edit distance
-- **Contextual Completion Specs**: `docs/formal-verification/proofs/06_contextual_completion/`
-- **Phonetic Verification**: `docs/verification/phonetic/`
-- **Coq Standard Library**: https://coq.inria.fr/doc/master/stdlib/
-- **Rocq/Coq 9.x**: https://rocq-prover.org/
-
-## Contributors
-
-- Formal Verification Team
-- Date: 2025-11-21
-
----
-
-**Last Updated**: 2025-11-21
-**Next Review**: After Strings.v implementation (Week 3-4)
+This separation lets grammar, phonetic, and WFST-oriented work reuse the same
+proof obligations while keeping implementation-specific concerns in Rust tests
+and integration benchmarks.
