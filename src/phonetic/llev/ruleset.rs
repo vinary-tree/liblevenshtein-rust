@@ -230,130 +230,78 @@ impl RuleSetChar {
         // Apply rules with generous fuel
         let fuel = input.len() * 10 + 100;
         if let Some(result) = crate::phonetic::apply_rules_seq(&self.rules, &phones, fuel) {
-            // Convert back to string
-            result
-                .iter()
-                .filter_map(|p| match p {
-                    Phone::Vowel(c) | Phone::Consonant(c) => Some(*c),
-                    Phone::Digraph(_c1, _c2) => {
-                        // For now, output both chars; could be refined
-                        None // Skip digraphs in string output
-                    }
-                    Phone::Trigraph(_c1, _c2, _c3) => {
-                        // For now, skip trigraphs in string output
-                        None
-                    }
-                    Phone::Tetragraph(_c1, _c2, _c3, _c4) => {
-                        // For now, skip tetragraphs in string output
-                        None
-                    }
-                    Phone::Pentagraph(_c1, _c2, _c3, _c4, _c5) => {
-                        // For now, skip pentagraphs in string output
-                        None
-                    }
-                    Phone::Hexagraph(_c1, _c2, _c3, _c4, _c5, _c6) => {
-                        // For now, skip hexagraphs in string output
-                        None
-                    }
-                    Phone::Heptagraph(_c1, _c2, _c3, _c4, _c5, _c6, _c7) => {
-                        // For now, skip heptagraphs in string output
-                        None
-                    }
-                    Phone::Sequence(_) => {
-                        // For now, skip sequences in string output
-                        None
-                    }
-                    Phone::Silent => None,
-                })
-                .collect()
+            phones_to_string(&result)
         } else {
             // Fuel exhausted - return input unchanged
             input.to_string()
         }
     }
 
-    /// Apply rules to a string with digraph support.
+    /// Apply rules to a string with multi-symbol output expansion.
     ///
-    /// Like [`apply`], but properly handles digraph output by expanding
-    /// them to their constituent characters.
+    /// This is retained as an explicit name for callers that want to emphasize
+    /// that graph and sequence phones are expanded to their constituent
+    /// characters. It has the same semantics as [`apply`](Self::apply).
     ///
     /// Matching is case-insensitive by default (same as [`apply`]).
     pub fn apply_full(&self, input: &str) -> String {
-        // Convert string to PhoneChar array with case folding for matching
-        let phones: Vec<Phone<char>> = input
-            .chars()
-            .map(|c| {
-                // Lowercase for case-insensitive matching
-                let c_lower = c.to_lowercase().next().unwrap_or(c);
-                if is_vowel_char(c_lower) {
-                    Phone::Vowel(c_lower)
-                } else {
-                    Phone::Consonant(c_lower)
-                }
-            })
-            .collect();
+        self.apply(input)
+    }
+}
 
-        // Apply rules with generous fuel
-        let fuel = input.len() * 10 + 100;
-        if let Some(result) = crate::phonetic::apply_rules_seq(&self.rules, &phones, fuel) {
-            // Convert back to string with digraph/trigraph/tetragraph/sequence expansion
-            let mut output = String::with_capacity(result.len() * 4);
-            for p in result.iter() {
-                match p {
-                    Phone::Vowel(c) | Phone::Consonant(c) => output.push(*c),
-                    Phone::Digraph(c1, c2) => {
-                        output.push(*c1);
-                        output.push(*c2);
-                    }
-                    Phone::Trigraph(c1, c2, c3) => {
-                        output.push(*c1);
-                        output.push(*c2);
-                        output.push(*c3);
-                    }
-                    Phone::Tetragraph(c1, c2, c3, c4) => {
-                        output.push(*c1);
-                        output.push(*c2);
-                        output.push(*c3);
-                        output.push(*c4);
-                    }
-                    Phone::Pentagraph(c1, c2, c3, c4, c5) => {
-                        output.push(*c1);
-                        output.push(*c2);
-                        output.push(*c3);
-                        output.push(*c4);
-                        output.push(*c5);
-                    }
-                    Phone::Hexagraph(c1, c2, c3, c4, c5, c6) => {
-                        output.push(*c1);
-                        output.push(*c2);
-                        output.push(*c3);
-                        output.push(*c4);
-                        output.push(*c5);
-                        output.push(*c6);
-                    }
-                    Phone::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
-                        output.push(*c1);
-                        output.push(*c2);
-                        output.push(*c3);
-                        output.push(*c4);
-                        output.push(*c5);
-                        output.push(*c6);
-                        output.push(*c7);
-                    }
-                    Phone::Sequence(s) => {
-                        for c in s {
-                            output.push(*c);
-                        }
-                    }
-                    Phone::Silent => {}
+fn phones_to_string(phones: &[Phone<char>]) -> String {
+    let mut output = String::with_capacity(phones.len() * 4);
+    for phone in phones {
+        match phone {
+            Phone::Vowel(c) | Phone::Consonant(c) => output.push(*c),
+            Phone::Digraph(c1, c2) => {
+                output.push(*c1);
+                output.push(*c2);
+            }
+            Phone::Trigraph(c1, c2, c3) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+            }
+            Phone::Tetragraph(c1, c2, c3, c4) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+                output.push(*c4);
+            }
+            Phone::Pentagraph(c1, c2, c3, c4, c5) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+                output.push(*c4);
+                output.push(*c5);
+            }
+            Phone::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+                output.push(*c4);
+                output.push(*c5);
+                output.push(*c6);
+            }
+            Phone::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+                output.push(*c1);
+                output.push(*c2);
+                output.push(*c3);
+                output.push(*c4);
+                output.push(*c5);
+                output.push(*c6);
+                output.push(*c7);
+            }
+            Phone::Sequence(s) => {
+                for c in s {
+                    output.push(*c);
                 }
             }
-            output
-        } else {
-            // Fuel exhausted - return input unchanged
-            input.to_string()
+            Phone::Silent => {}
         }
     }
+    output
 }
 
 // ============================================================================
@@ -807,6 +755,15 @@ mod tests {
         let rule = &ruleset.rules[0];
         assert_eq!(rule.pattern.len(), 2);
         assert!(rule.replacement.is_empty());
+    }
+
+    #[test]
+    fn test_apply_expands_multi_symbol_outputs() {
+        let file = parse_str("x -> ks;").expect("parse failed");
+        let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.apply("box"), "boks");
+        assert_eq!(ruleset.apply_full("box"), "boks");
     }
 
     #[test]

@@ -31,6 +31,8 @@ pub struct Parser<'a> {
     /// Deferred validation: group references that need to be validated after parsing
     /// Stores (name, position) for each reference found.
     group_refs_to_validate: Vec<(String, Position)>,
+    /// Whether undefined group references should be rejected after parsing.
+    validate_group_refs: bool,
 }
 
 impl<'a> Parser<'a> {
@@ -42,6 +44,7 @@ impl<'a> Parser<'a> {
             next_group_number: 1,
             named_groups: HashMap::new(),
             group_refs_to_validate: Vec::new(),
+            validate_group_refs: true,
         }
     }
 
@@ -69,7 +72,19 @@ impl<'a> Parser<'a> {
             next_group_number: 1,
             named_groups: HashMap::new(),
             group_refs_to_validate: Vec::new(),
+            validate_group_refs: true,
         }
+    }
+
+    /// Allow group references that are not defined as local named groups.
+    ///
+    /// This is used by higher-level formats such as LLRE, where `(?&NAME)` can
+    /// refer to an imported pattern symbol that is resolved after the file-level
+    /// parser has loaded imports. Standalone regex parsing remains strict by
+    /// default.
+    pub fn allow_external_group_refs(mut self) -> Self {
+        self.validate_group_refs = false;
+        self
     }
 
     /// Parse a complete regex pattern.
@@ -88,7 +103,9 @@ impl<'a> Parser<'a> {
         }
 
         // Validate all group references (Phase 3)
-        self.validate_group_references()?;
+        if self.validate_group_refs {
+            self.validate_group_references()?;
+        }
 
         // Check complexity
         let size = result.size();

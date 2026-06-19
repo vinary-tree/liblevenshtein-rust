@@ -866,6 +866,16 @@ fn test_parse_undefined_group_reference_error() {
 }
 
 #[test]
+fn test_parse_allows_external_group_reference_when_configured() {
+    let mut parser = Parser::new("(?&IMPORTED_PATTERN)").allow_external_group_refs();
+    let regex = parser
+        .parse()
+        .expect("external group refs should be allowed in opt-in mode");
+
+    assert_eq!(regex, Regex::GroupRef("IMPORTED_PATTERN".to_string()));
+}
+
+#[test]
 fn test_parse_forward_reference() {
     // Forward references are allowed (reference before definition)
     // The validation happens after parsing, so this pattern should parse

@@ -516,12 +516,11 @@ fn build_nfa_with_states_char(nfa: &NFAChar, keep_states: &FxHashSet<StateId>) -
         new_nfa.add_state(false);
     }
 
-    // Set start state
-    // Note: start state should always be in keep_states
-    let _new_start = *old_to_new.get(&nfa.start()).unwrap_or(&0);
-    // NFAChar doesn't have set_start, start is always 0
-    // We need to handle the case where start might not be 0
-    // For now, assume start is always 0 after optimization
+    debug_assert_eq!(
+        nfa.start(),
+        0,
+        "NFAChar currently stores a fixed start state at q0"
+    );
 
     // Set final states
     for &old_id in nfa.finals() {

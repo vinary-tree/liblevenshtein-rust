@@ -731,15 +731,11 @@ fn test_llev_x_to_ks_default() {
 
 #[test]
 fn test_llev_x_to_gz_between_vowels() {
-    // Note: Compound contexts like [aeiou]_[aeiou] are not yet supported in
-    // LLev-to-RuleSet conversion. They work at the regex/NFA level but not in
-    // the simple rule application. For now, test simple x → ks.
-    //
-    // The full compound context support is available through the verified rules
-    // in rules.rs which use Context::And directly.
+    // This smoke test covers the simple default x -> ks behavior. Compound
+    // contexts are covered by dedicated RuleSet conversion tests.
     let file = parse_str(
         r#"
-        // x → ks (simplified, compound context not yet supported in LLev conversion)
+        // Fallback x -> ks rule.
         x -> ks;
         "#,
     )
@@ -1228,12 +1224,11 @@ fn test_llev_rule_ordering_multi_character() {
 
 #[test]
 fn test_llev_comprehensive_zompist_rules() {
-    // Test a comprehensive set of Zompist-style rules
-    // Note: Compound contexts (x -> gz / [aeiou]_[aeiou]) are not yet supported
-    // in LLev-to-RuleSet conversion, so we use x -> ks for all cases here.
+    // Test a comprehensive set of Zompist-style rules.
     //
     // IMPORTANT: Rule ordering matters! In this test:
     // - "tion -> shun" produces "nashun", then "sh -> s" converts it to "nasun"
+    // - "x -> gz / [aeiou]_[aeiou]" must precede fallback "x -> ks"
     // - This demonstrates the non-confluent nature of phonetic rules
     let file = parse_str(
         r#"
@@ -1256,7 +1251,8 @@ fn test_llev_comprehensive_zompist_rules() {
         kn -> n / #_;
         wr -> r / #_;
 
-        // Phase 5: X rules (simplified - compound context not supported in LLev conversion)
+        // Phase 5: X rules
+        x -> gz / [aeiou]_[aeiou];
         x -> ks;
 
         // Phase 6: Additional ortho (ck before c -> k to avoid "back" -> "bakk")
@@ -1295,8 +1291,8 @@ fn test_llev_comprehensive_zompist_rules() {
     assert_eq!(ruleset.apply("phone"), "fon");
     assert_eq!(ruleset.apply("knife"), "nif");
     assert_eq!(ruleset.apply("write"), "rit");
-    // Note: "exact" → "eksakt" (not "egzakt") because compound context not supported
-    assert_eq!(ruleset.apply("exact"), "eksakt");
+    assert_eq!(ruleset.apply("exact"), "egzakt");
+    assert_eq!(ruleset.apply("exam"), "egzam");
     assert_eq!(ruleset.apply("box"), "boks");
     assert_eq!(ruleset.apply("city"), "sity");
     assert_eq!(ruleset.apply("cat"), "kat");
@@ -1316,27 +1312,26 @@ fn test_llev_comprehensive_zompist_rules() {
 
 #[test]
 fn test_llev_context_after_and_before() {
-    // Note: Compound contexts like [aeiou]_[aeiou] (after vowel AND before vowel)
-    // are supported in the types system (Context::And) and in rules.rs, but not
-    // yet in LLev-to-RuleSet conversion. The parser correctly identifies these
-    // patterns but they require NFA-based matching.
-    //
-    // For LLev file format, use simpler single-side contexts:
     let file = parse_str(
         r#"
-        // Simple context: after vowel
-        x -> gz / [aeiou]_;
+        // x is voiced only between vowels.
+        x -> gz / [aeiou]_[aeiou];
+        x -> ks;
         "#,
     )
     .expect("parse failed");
     let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
 
-    // x after vowel (vowel precedes x, so x → gz)
+    // x between vowels: x -> gz
+    assert_eq!(ruleset.apply("exact"), "egzact");
     assert_eq!(ruleset.apply("exam"), "egzam");
     assert_eq!(ruleset.apply("exit"), "egzit");
-    assert_eq!(ruleset.apply("next"), "negzt"); // e before x
-    assert_eq!(ruleset.apply("fox"), "fogz"); // o before x
-    assert_eq!(ruleset.apply("box"), "bogz"); // o before x
+
+    // x outside the between-vowels context: fallback x -> ks
+    assert_eq!(ruleset.apply("next"), "nekst");
+    assert_eq!(ruleset.apply("fox"), "foks");
+    assert_eq!(ruleset.apply("box"), "boks");
+    assert_eq!(ruleset.apply("xenon"), "ksenon");
 }
 
 // ============================================================================

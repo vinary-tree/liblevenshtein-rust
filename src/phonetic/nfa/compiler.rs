@@ -1156,17 +1156,17 @@ impl NFACompilerChar {
             )),
             // Flags group: (?flags:...) or (?flags)
             Regex::FlagsGroup { inner, .. } => {
-                // For now, ignore flags and compile the inner pattern if present
-                // Flag-based matching (case-insensitive, etc.) would be implemented
-                // by transforming the AST before compilation in a future phase
+                // Public compile entry points apply flag transformations before
+                // recursive Thompson construction. If a flag wrapper remains
+                // here, its inner structure is already the matchable portion.
                 match inner {
                     Some(inner_regex) => self.compile_regex_recursive(inner_regex),
                     None => Ok(self.builder.epsilon()),
                 }
             }
             Regex::WordBoundary => {
-                // Word boundary is handled specially in context matching
-                // For now, return epsilon (will be handled by context logic)
+                // Word boundary is a zero-width assertion in this NFA layer.
+                // Context matching carries directional boundary semantics.
                 Ok(self.builder.epsilon())
             }
             // Anchor assertions (zero-width)

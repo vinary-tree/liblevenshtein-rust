@@ -351,9 +351,8 @@ impl<'a> QueryParser<'a> {
                 ' ' | '\t' | '\n' | '\r' => break,
                 // Stop at special characters that start other constructs
                 ':' => {
-                    // Check if this is followed by a digit (distance specifier)
-                    // If not, it could be part of the literal (but we need lookahead)
-                    // For now, stop at colon
+                    // A raw colon starts the :N distance suffix. Use `\:` for a
+                    // literal colon inside a token.
                     break;
                 }
                 '(' | ')' | '|' | '"' => break,

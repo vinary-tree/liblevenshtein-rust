@@ -6,7 +6,10 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use crate::phonetic::common::flags::ParsedFlags;
 use crate::phonetic::llev::{self, LLevFile};
+use crate::phonetic::nfa::types::CharClassChar;
+use crate::phonetic::regex::ast::{Regex, RegexFlags, UnicodeNormalization};
 
 use super::ast::{ImportDirective, LLreFile, ResolvedImport, SymbolTable};
 use super::error::{LLreError, LLreErrorKind, LLreResult};
@@ -243,26 +246,115 @@ impl Loader {
                 symbol.name.clone()
             };
 
-            // Convert the symbol expression to a character class
-            // This is a simplified extraction - full implementation would
-            // evaluate the expression properly
-            match &symbol.value {
-                llev::Expression::CharClass { chars, .. } => {
-                    table.add_char_class(name, chars.clone(), source.clone());
-                }
-                llev::Expression::Char(c) => {
-                    // Single character as a one-element class
-                    table.add_char_class(name, vec![*c], source.clone());
-                }
-                _ => {
-                    // For complex expressions, we'd need to evaluate them
-                    // For now, skip or convert to simple form
-                }
+            if let Some(chars) = expression_to_char_class(&symbol.value) {
+                table.add_char_class(name, chars, source.clone());
+            } else {
+                let pattern = llev_expression_to_regex(&symbol.value, alias).map_err(|err| {
+                    err.with_context(format!("while importing LLev symbol '{}'", symbol.name))
+                })?;
+                table.add_pattern(name, pattern, source.clone());
             }
         }
 
         Ok(table)
     }
+}
+
+fn expression_to_char_class(expr: &llev::Expression) -> Option<Vec<char>> {
+    match expr {
+        llev::Expression::Char(c) => Some(vec![*c]),
+        llev::Expression::CharClass {
+            chars,
+            negated: false,
+        } => Some(chars.clone()),
+        llev::Expression::Alt(left, right) => {
+            let mut chars = expression_to_char_class(left)?;
+            chars.extend(expression_to_char_class(right)?);
+            chars.sort_unstable();
+            chars.dedup();
+            Some(chars)
+        }
+        llev::Expression::Group(inner) => expression_to_char_class(inner),
+        _ => None,
+    }
+}
+
+fn llev_expression_to_regex(expr: &llev::Expression, alias: Option<&str>) -> LLreResult<Regex> {
+    match expr {
+        llev::Expression::Empty => Ok(Regex::empty()),
+        llev::Expression::Char(c) => Ok(Regex::char(*c)),
+        llev::Expression::CharClass { chars, negated } => {
+            let class = CharClassChar::from_chars(chars);
+            Ok(Regex::char_class(if *negated {
+                class.negated()
+            } else {
+                class
+            }))
+        }
+        llev::Expression::CharRange { start, end } => {
+            Ok(Regex::char_class(CharClassChar::from_range(*start, *end)))
+        }
+        llev::Expression::Any => Ok(Regex::any()),
+        llev::Expression::Concat(left, right) => Ok(Regex::concat(
+            llev_expression_to_regex(left, alias)?,
+            llev_expression_to_regex(right, alias)?,
+        )),
+        llev::Expression::Alt(left, right) => Ok(Regex::alt(
+            llev_expression_to_regex(left, alias)?,
+            llev_expression_to_regex(right, alias)?,
+        )),
+        llev::Expression::Star(inner) => Ok(Regex::star(llev_expression_to_regex(inner, alias)?)),
+        llev::Expression::Plus(inner) => Ok(Regex::plus(llev_expression_to_regex(inner, alias)?)),
+        llev::Expression::Optional(inner) => {
+            Ok(Regex::optional(llev_expression_to_regex(inner, alias)?))
+        }
+        llev::Expression::RepeatExact(inner, count) => Ok(Regex::repeat_exact(
+            llev_expression_to_regex(inner, alias)?,
+            *count,
+        )),
+        llev::Expression::RepeatRange { inner, min, max } => Ok(Regex::repeat_range(
+            llev_expression_to_regex(inner, alias)?,
+            *min,
+            *max,
+        )),
+        llev::Expression::Group(inner) => Ok(Regex::non_capturing_group(llev_expression_to_regex(
+            inner, alias,
+        )?)),
+        llev::Expression::ScopedFlags { flags, inner } => Ok(Regex::flags_group(
+            parsed_flags_to_regex_flags(flags)?,
+            llev_expression_to_regex(inner, alias)?,
+        )),
+        llev::Expression::WordBoundary => Ok(Regex::word_boundary()),
+        llev::Expression::SymbolRef(name) => Ok(Regex::group_ref(match alias {
+            Some(alias) => format!("{}_{}", alias, name),
+            None => name.clone(),
+        })),
+    }
+}
+
+fn parsed_flags_to_regex_flags(parsed: &ParsedFlags) -> LLreResult<RegexFlags> {
+    let unicode_normalization = parsed
+        .unicode_normalization
+        .as_deref()
+        .map(|norm| {
+            norm.parse::<UnicodeNormalization>().map_err(|err| {
+                LLreError::new(LLreErrorKind::InvalidFlag(format!(
+                    "{} in imported LLev scoped flag",
+                    err
+                )))
+            })
+        })
+        .transpose()?;
+
+    Ok(RegexFlags {
+        case_insensitive: parsed.case_insensitive,
+        unicode_normalization,
+        feature_based: parsed.feature_based,
+        accent_insensitive: parsed.accent_insensitive,
+        multiline: parsed.multiline,
+        dotall: parsed.dotall,
+        local_distance: parsed.levenshtein_distance,
+    })
 }
 
 impl Default for Loader {
@@ -392,6 +484,83 @@ mod tests {
         // The symbol should be prefixed with the alias
         assert!(file.symbol_table.contains("en_VOWEL"));
         assert!(!file.symbol_table.contains("VOWEL"));
+    }
+
+    #[test]
+    fn test_load_imports_composite_llev_symbol_as_pattern() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        let llev_path = temp_dir.path().join("symbols.llev");
+        let llev_content = r#"
+            @name "Symbols"
+            @define PHONE_START = (ph|f)o+
+        "#;
+        std::fs::write(&llev_path, llev_content).expect("Failed to write llev file");
+
+        let llre_path = temp_dir.path().join("test.llre");
+        let llre_content = r#"
+            @import "symbols.llev"
+            ^(?&PHONE_START)ne$
+        "#;
+        std::fs::write(&llre_path, llre_content).expect("Failed to write llre file");
+
+        let config = LoaderConfig {
+            search_paths: vec![temp_dir.path().to_path_buf()],
+            ..Default::default()
+        };
+
+        let file = load_file_with_config(&llre_path, config).expect("Failed to load file");
+        let pattern = file
+            .symbol_table
+            .get_pattern("PHONE_START")
+            .expect("composite symbol should import as a pattern");
+
+        assert!(matches!(pattern, Regex::Concat(_, _)));
+        assert!(file.symbol_table.get_char_class("PHONE_START").is_none());
+
+        let compiled =
+            crate::phonetic::llre::compile(&file).expect("imported pattern should compile");
+        assert!(compiled.matches_full("phone"));
+        assert!(compiled.matches_full("fone"));
+        assert!(!compiled.matches_full("pone"));
+    }
+
+    #[test]
+    fn test_load_imports_llev_range_symbol_without_expanding_to_vec() {
+        let expr = llev::Expression::CharRange {
+            start: 'a',
+            end: 'z',
+        };
+
+        assert!(expression_to_char_class(&expr).is_none());
+
+        let regex = llev_expression_to_regex(&expr, None).expect("range should convert");
+        match regex {
+            Regex::CharClass(class) => {
+                assert_eq!(class.ranges, vec![('a', 'z')]);
+                assert!(!class.negated);
+            }
+            other => panic!("expected compact char class range, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_load_aliased_composite_symbol_rewrites_internal_refs() {
+        let expr = llev::Expression::Concat(
+            Box::new(llev::Expression::SymbolRef("VOWEL".to_string())),
+            Box::new(llev::Expression::Char('r')),
+        );
+
+        let regex =
+            llev_expression_to_regex(&expr, Some("en")).expect("symbol refs should convert");
+
+        match regex {
+            Regex::Concat(left, right) => {
+                assert!(matches!(*left, Regex::GroupRef(ref name) if name == "en_VOWEL"));
+                assert_eq!(*right, Regex::Char('r'));
+            }
+            other => panic!("expected concat, got {:?}", other),
+        }
     }
 
     #[test]

@@ -173,15 +173,8 @@ impl<'a> Parser<'a> {
     /// Check if the upcoming '[' starts a metadata block (not a char class pattern).
     /// This uses lookahead to check if the pattern is `[ identifier :`.
     fn is_metadata_block_start(&mut self) -> LLevResult<bool> {
-        // We need to check if after '[' we have identifier followed by ':'
-        // This is tricky - we'll use the lexer's raw input to look ahead
-
-        // For now, use a simpler heuristic: if we're at TopLevel and see '[',
-        // check if the character after '[' could start a metadata key (letter)
-        // and if there's a ':' before the next ']' or newline
-
-        // Actually, the safest approach is to look at the raw characters
-        // Let's check the next few characters after '['
+        // Use raw input lookahead in TopLevel mode so metadata probes do not
+        // consume pattern characters through lexer tokenization.
         let remaining = self.lexer.remaining_input();
 
         if !remaining.starts_with('[') {

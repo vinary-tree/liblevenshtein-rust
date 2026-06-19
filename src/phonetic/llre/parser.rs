@@ -9,7 +9,7 @@
 //! The regex pattern itself is parsed using the regex parser from the `regex` module.
 
 use crate::phonetic::common::Position;
-use crate::phonetic::regex::{self, Regex as RegexAst};
+use crate::phonetic::regex::{Parser as RegexParser, Regex as RegexAst};
 
 use super::ast::{Directive, FileMetadata, ImportDirective, LLreFile, LLreFlags, SymbolTable};
 use super::error::{LLreError, LLreErrorKind, LLreResult};
@@ -503,20 +503,23 @@ impl<'a> Parser<'a> {
 
     /// Parse the pattern using the regex parser.
     fn parse_pattern(&self, source: &str, position: Position) -> LLreResult<RegexAst> {
-        regex::parse(source).map_err(|e| {
-            LLreError::with_position(
-                LLreErrorKind::PatternParseError(e.to_string()),
-                Position::new(
-                    position.line + e.position.line.saturating_sub(1),
-                    if e.position.line == 1 {
-                        position.column + e.position.column.saturating_sub(1)
-                    } else {
-                        e.position.column
-                    },
-                    position.offset + e.position.offset,
-                ),
-            )
-        })
+        RegexParser::new(source)
+            .allow_external_group_refs()
+            .parse()
+            .map_err(|e| {
+                LLreError::with_position(
+                    LLreErrorKind::PatternParseError(e.to_string()),
+                    Position::new(
+                        position.line + e.position.line.saturating_sub(1),
+                        if e.position.line == 1 {
+                            position.column + e.position.column.saturating_sub(1)
+                        } else {
+                            e.position.column
+                        },
+                        position.offset + e.position.offset,
+                    ),
+                )
+            })
     }
 
     /// Check if we've reached the end of input.

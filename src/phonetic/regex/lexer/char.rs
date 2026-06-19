@@ -911,9 +911,8 @@ impl<'a> Lexer<'a> {
         // Normal context
         match c {
             '[' => {
-                // Check if this starts a weight (after a rewrite rule)
-                // For now, treat all [ as character class start
-                // The parser will handle weight context
+                // The parser distinguishes character classes from rewrite-rule
+                // weight suffixes based on syntactic context.
                 self.in_char_class = true;
                 Ok(Token::CharClassStart)
             }
