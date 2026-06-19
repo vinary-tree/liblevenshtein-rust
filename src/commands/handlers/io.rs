@@ -15,6 +15,8 @@ use crate::repl::state::{DictContainer, DictionaryBackend};
 
 #[cfg(feature = "serialization")]
 use crate::serialization::{BincodeSerializer, DictionarySerializer, JsonSerializer};
+#[cfg(feature = "protobuf")]
+use crate::serialization::{ProtobufSerializer, SuffixAutomatonProtobufSerializer};
 
 // ============================================================================
 // Serialization (Save) Operations
@@ -75,17 +77,13 @@ fn save_dictionary_impl(
         #[cfg(feature = "serialization")]
         SerializationFormat::Json => save_json_dict(container, path),
         #[cfg(all(feature = "protobuf", feature = "serialization"))]
-        SerializationFormat::Protobuf => {
-            bail!("Protobuf format not yet implemented for saving")
-        }
+        SerializationFormat::Protobuf => save_protobuf_dict(container, path),
         #[cfg(feature = "compression")]
         SerializationFormat::BincodeGzip => save_bincode_gzip_dict(container, path),
         #[cfg(feature = "compression")]
         SerializationFormat::JsonGzip => save_json_gzip_dict(container, path),
         #[cfg(all(feature = "protobuf", feature = "compression"))]
-        SerializationFormat::ProtobufGzip => {
-            bail!("Protobuf-Gzip format not yet implemented for saving")
-        }
+        SerializationFormat::ProtobufGzip => save_protobuf_gzip_dict(container, path),
         SerializationFormat::PathsNative => save_paths_native_dict(container, path),
         #[cfg(not(feature = "serialization"))]
         _ => bail!("Serialization feature not enabled"),
@@ -126,6 +124,20 @@ fn save_json_dict(container: &DictContainer, path: &Path) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "protobuf")]
+fn save_protobuf_dict(container: &DictContainer, path: &Path) -> Result<()> {
+    let file = std::fs::File::create(path)?;
+    match container {
+        DictContainer::PathMap(d) => ProtobufSerializer::serialize(d, file)?,
+        DictContainer::DoubleArrayTrie(d) => ProtobufSerializer::serialize(d, file)?,
+        DictContainer::DynamicDawg(d) => ProtobufSerializer::serialize(d, file)?,
+        DictContainer::SuffixAutomaton(d) => {
+            SuffixAutomatonProtobufSerializer::serialize_suffix_automaton(d, file)?
+        }
+    }
+    Ok(())
+}
+
 #[cfg(feature = "compression")]
 fn save_bincode_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> {
     use crate::serialization::GzipSerializer;
@@ -154,6 +166,28 @@ fn save_json_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> {
         DictContainer::DoubleArrayTrie(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
         DictContainer::DynamicDawg(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
         DictContainer::SuffixAutomaton(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
+    }
+    Ok(())
+}
+
+#[cfg(all(feature = "protobuf", feature = "compression"))]
+fn save_protobuf_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> {
+    use crate::serialization::GzipSerializer;
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+
+    let file = std::fs::File::create(path)?;
+    match container {
+        DictContainer::PathMap(d) => GzipSerializer::<ProtobufSerializer>::serialize(d, file)?,
+        DictContainer::DoubleArrayTrie(d) => {
+            GzipSerializer::<ProtobufSerializer>::serialize(d, file)?
+        }
+        DictContainer::DynamicDawg(d) => GzipSerializer::<ProtobufSerializer>::serialize(d, file)?,
+        DictContainer::SuffixAutomaton(d) => {
+            let mut encoder = GzEncoder::new(file, Compression::default());
+            SuffixAutomatonProtobufSerializer::serialize_suffix_automaton(d, &mut encoder)?;
+            encoder.finish()?;
+        }
     }
     Ok(())
 }
@@ -214,17 +248,13 @@ fn load_dictionary_impl(path: &Path, format: DictFormat) -> Result<DictContainer
         #[cfg(feature = "serialization")]
         SerializationFormat::Json => load_json_dict(path, format.backend),
         #[cfg(all(feature = "protobuf", feature = "serialization"))]
-        SerializationFormat::Protobuf => {
-            bail!("Protobuf format not yet implemented for loading")
-        }
+        SerializationFormat::Protobuf => load_protobuf_dict(path, format.backend),
         #[cfg(feature = "compression")]
         SerializationFormat::BincodeGzip => load_bincode_gzip_dict(path, format.backend),
         #[cfg(feature = "compression")]
         SerializationFormat::JsonGzip => load_json_gzip_dict(path, format.backend),
         #[cfg(all(feature = "protobuf", feature = "compression"))]
-        SerializationFormat::ProtobufGzip => {
-            bail!("Protobuf-Gzip format not yet implemented for loading")
-        }
+        SerializationFormat::ProtobufGzip => load_protobuf_gzip_dict(path, format.backend),
         SerializationFormat::PathsNative => load_paths_native_dict(path),
         #[cfg(not(feature = "serialization"))]
         _ => bail!("Serialization feature not enabled"),
@@ -316,6 +346,34 @@ fn load_json_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContain
     Ok(container)
 }
 
+#[cfg(feature = "protobuf")]
+fn load_protobuf_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContainer> {
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::dynamic_dawg::DynamicDawg;
+    use libdictenstein::pathmap::PathMapDictionary;
+
+    let file = std::fs::File::open(path)?;
+    let container = match backend {
+        DictionaryBackend::PathMap => {
+            let dict: PathMapDictionary = ProtobufSerializer::deserialize(file)?;
+            DictContainer::PathMap(dict)
+        }
+        DictionaryBackend::DoubleArrayTrie => {
+            let dict: DoubleArrayTrie = ProtobufSerializer::deserialize(file)?;
+            DictContainer::DoubleArrayTrie(dict)
+        }
+        DictionaryBackend::DynamicDawg => {
+            let dict: DynamicDawg = ProtobufSerializer::deserialize(file)?;
+            DictContainer::DynamicDawg(dict)
+        }
+        DictionaryBackend::SuffixAutomaton => {
+            let dict = SuffixAutomatonProtobufSerializer::deserialize_suffix_automaton(file)?;
+            DictContainer::SuffixAutomaton(dict)
+        }
+    };
+    Ok(container)
+}
+
 #[cfg(feature = "compression")]
 fn load_bincode_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContainer> {
     use crate::serialization::GzipSerializer;
@@ -370,6 +428,37 @@ fn load_json_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<DictCo
         }
         DictionaryBackend::SuffixAutomaton => {
             let dict: SuffixAutomaton = GzipSerializer::<JsonSerializer>::deserialize(file)?;
+            DictContainer::SuffixAutomaton(dict)
+        }
+    };
+    Ok(container)
+}
+
+#[cfg(all(feature = "protobuf", feature = "compression"))]
+fn load_protobuf_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContainer> {
+    use crate::serialization::GzipSerializer;
+    use flate2::read::GzDecoder;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::dynamic_dawg::DynamicDawg;
+    use libdictenstein::pathmap::PathMapDictionary;
+
+    let file = std::fs::File::open(path)?;
+    let container = match backend {
+        DictionaryBackend::PathMap => {
+            let dict: PathMapDictionary = GzipSerializer::<ProtobufSerializer>::deserialize(file)?;
+            DictContainer::PathMap(dict)
+        }
+        DictionaryBackend::DoubleArrayTrie => {
+            let dict: DoubleArrayTrie = GzipSerializer::<ProtobufSerializer>::deserialize(file)?;
+            DictContainer::DoubleArrayTrie(dict)
+        }
+        DictionaryBackend::DynamicDawg => {
+            let dict: DynamicDawg = GzipSerializer::<ProtobufSerializer>::deserialize(file)?;
+            DictContainer::DynamicDawg(dict)
+        }
+        DictionaryBackend::SuffixAutomaton => {
+            let decoder = GzDecoder::new(file);
+            let dict = SuffixAutomatonProtobufSerializer::deserialize_suffix_automaton(decoder)?;
             DictContainer::SuffixAutomaton(dict)
         }
     };
@@ -574,5 +663,100 @@ mod tests {
 
         let result = execute_serialize(&container, &params);
         assert!(result.is_err());
+    }
+
+    #[cfg(feature = "protobuf")]
+    #[test]
+    fn test_save_and_load_protobuf_pathmap_dict() {
+        use libdictenstein::pathmap::PathMapDictionary;
+
+        let terms = vec!["alpha", "beta", "gamma"];
+        let dict = PathMapDictionary::from_terms(terms.iter().cloned());
+        let container = DictContainer::PathMap(dict);
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let path = temp_file.path().to_path_buf();
+
+        let save_params = SerializeParams {
+            path: path.clone(),
+            format: SerializationFormat::Protobuf,
+            overwrite: true,
+        };
+        execute_serialize(&container, &save_params).expect("Failed to serialize protobuf");
+
+        let load_params = DeserializeParams {
+            path,
+            backend: Some(DictionaryBackend::PathMap),
+            format: Some(SerializationFormat::Protobuf),
+        };
+        let (loaded, result) =
+            execute_deserialize(&load_params).expect("Failed to deserialize protobuf");
+
+        assert_eq!(result.term_count, 3);
+        assert!(loaded.contains("alpha"));
+        assert!(loaded.contains("beta"));
+        assert!(loaded.contains("gamma"));
+    }
+
+    #[cfg(feature = "protobuf")]
+    #[test]
+    fn test_save_and_load_protobuf_suffix_automaton_dict() {
+        use libdictenstein::suffix_automaton::SuffixAutomaton;
+
+        let container =
+            DictContainer::SuffixAutomaton(SuffixAutomaton::from_texts(["abracadabra", "banana"]));
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let path = temp_file.path().to_path_buf();
+
+        let save_params = SerializeParams {
+            path: path.clone(),
+            format: SerializationFormat::Protobuf,
+            overwrite: true,
+        };
+        execute_serialize(&container, &save_params)
+            .expect("Failed to serialize suffix automaton protobuf");
+
+        let load_params = DeserializeParams {
+            path,
+            backend: Some(DictionaryBackend::SuffixAutomaton),
+            format: Some(SerializationFormat::Protobuf),
+        };
+        let (loaded, result) = execute_deserialize(&load_params)
+            .expect("Failed to deserialize suffix automaton protobuf");
+
+        assert_eq!(result.term_count, 2);
+        assert!(loaded.contains("abra"));
+        assert!(loaded.contains("nana"));
+    }
+
+    #[cfg(all(feature = "protobuf", feature = "compression"))]
+    #[test]
+    fn test_save_and_load_protobuf_gzip_pathmap_dict() {
+        use libdictenstein::pathmap::PathMapDictionary;
+
+        let terms = vec!["delta", "epsilon", "zeta"];
+        let dict = PathMapDictionary::from_terms(terms.iter().cloned());
+        let container = DictContainer::PathMap(dict);
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let path = temp_file.path().to_path_buf();
+
+        let save_params = SerializeParams {
+            path: path.clone(),
+            format: SerializationFormat::ProtobufGzip,
+            overwrite: true,
+        };
+        execute_serialize(&container, &save_params).expect("Failed to serialize protobuf gzip");
+
+        let load_params = DeserializeParams {
+            path,
+            backend: Some(DictionaryBackend::PathMap),
+            format: Some(SerializationFormat::ProtobufGzip),
+        };
+        let (loaded, result) =
+            execute_deserialize(&load_params).expect("Failed to deserialize protobuf gzip");
+
+        assert_eq!(result.term_count, 3);
+        assert!(loaded.contains("delta"));
+        assert!(loaded.contains("epsilon"));
+        assert!(loaded.contains("zeta"));
     }
 }
