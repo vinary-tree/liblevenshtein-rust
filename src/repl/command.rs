@@ -554,6 +554,9 @@ impl Command {
                         Err(e) => return Err(e),
                     }
                 }
+                if inserted > 0 {
+                    state.invalidate_cache();
+                }
 
                 let msg = if skipped > 0 {
                     format!(
@@ -578,6 +581,9 @@ impl Command {
                         Ok(false) => not_found += 1,
                         Err(e) => return Err(e),
                     }
+                }
+                if deleted > 0 {
+                    state.invalidate_cache();
                 }
 
                 let msg = if not_found > 0 {
@@ -651,6 +657,9 @@ impl Command {
                         Err(e) => return Err(e),
                     }
                 }
+                if inserted > 0 {
+                    state.invalidate_cache();
+                }
 
                 let msg = if skipped > 0 {
                     format!(
@@ -684,6 +693,9 @@ impl Command {
                         Ok(false) => not_found += 1,
                         Err(e) => return Err(e),
                     }
+                }
+                if removed > 0 {
+                    state.invalidate_cache();
                 }
 
                 let msg = if not_found > 0 {
@@ -730,6 +742,7 @@ impl Command {
                 for term in terms {
                     state.dictionary.insert(&term)?;
                 }
+                state.invalidate_cache();
 
                 let msg = format!(
                     "Replaced {} term(s) with {} term(s) from {}",
@@ -766,6 +779,7 @@ impl Command {
 
             Self::Algorithm { algorithm } => {
                 state.algorithm = *algorithm;
+                state.invalidate_cache();
 
                 // Save config after algorithm change
                 #[cfg(feature = "cli")]
@@ -780,6 +794,7 @@ impl Command {
 
             Self::Distance { distance } => {
                 state.max_distance = *distance;
+                state.invalidate_cache();
 
                 // Save config after distance change
                 #[cfg(feature = "cli")]
@@ -795,6 +810,7 @@ impl Command {
             Self::PrefixMode { enable } => {
                 let new_state = enable.unwrap_or(!state.prefix_mode);
                 state.prefix_mode = new_state;
+                state.invalidate_cache();
 
                 // Save config after prefix mode change
                 #[cfg(feature = "cli")]
@@ -832,6 +848,7 @@ impl Command {
 
             Self::Limit { limit } => {
                 state.result_limit = *limit;
+                state.invalidate_cache();
 
                 // Save config after limit change
                 #[cfg(feature = "cli")]
@@ -945,12 +962,14 @@ impl Command {
                 }
 
                 state.dictionary.clear()?;
+                state.invalidate_cache();
                 let msg = format!("Cleared {} term(s)", count.to_string().green().bold());
                 Ok(CommandResult::Continue(msg))
             }
 
             Self::Compact => {
                 state.dictionary.compact()?;
+                state.invalidate_cache();
                 let msg = "Dictionary compacted/minimized".green().to_string();
                 Ok(CommandResult::Continue(msg))
             }
@@ -1106,6 +1125,7 @@ impl Command {
                         new_config.show_distances.unwrap_or(state.show_distances);
                     state.result_limit = new_config.result_limit.unwrap_or(state.result_limit);
                     state.auto_sync = new_config.auto_sync.unwrap_or(state.auto_sync);
+                    state.invalidate_cache();
 
                     // Load dictionary from config's path if set
                     if let Some(ref dict_path) = new_config.dict_path {
@@ -1118,6 +1138,7 @@ impl Command {
                                             state.dictionary = container;
                                             state.backend = detection.format.backend;
                                             state.auto_sync_path = Some(dict_path.clone());
+                                            state.invalidate_cache();
                                             println!(
                                                 "  Loaded {} term(s) from {}",
                                                 count.to_string().green(),
@@ -1176,35 +1197,31 @@ impl Command {
                 Ok(CommandResult::Continue(help_text))
             }
 
-            Self::CacheEnable {
-                strategy: _,
-                max_size: _,
-            } => {
-                // NOTE: Cache functionality disabled - needs refactoring for new cache API
-                Err(anyhow::anyhow!(
-                    "Cache feature temporarily disabled pending API refactoring"
-                ))
+            Self::CacheEnable { strategy, max_size } => {
+                state.enable_cache(strategy, *max_size)?;
+                Ok(CommandResult::Continue(format!(
+                    "Cache enabled: strategy={}, capacity={}",
+                    strategy.green().bold(),
+                    max_size.unwrap_or(1000).to_string().green().bold()
+                )))
             }
 
             Self::CacheDisable => {
-                // NOTE: Cache functionality disabled - needs refactoring for new cache API
-                Err(anyhow::anyhow!(
-                    "Cache feature temporarily disabled pending API refactoring"
-                ))
+                let was_enabled = state.cache_enabled();
+                state.disable_cache();
+                let msg = if was_enabled {
+                    "Cache disabled".red().to_string()
+                } else {
+                    "Cache already disabled".yellow().to_string()
+                };
+                Ok(CommandResult::Continue(msg))
             }
 
-            Self::CacheStats => {
-                // NOTE: Cache functionality disabled - needs refactoring for new cache API
-                Err(anyhow::anyhow!(
-                    "Cache feature temporarily disabled pending API refactoring"
-                ))
-            }
+            Self::CacheStats => Ok(CommandResult::Continue(state.cache_stats())),
 
             Self::CacheClear => {
-                // NOTE: Cache functionality disabled - needs refactoring for new cache API
-                Err(anyhow::anyhow!(
-                    "Cache feature temporarily disabled pending API refactoring"
-                ))
+                state.clear_cache()?;
+                Ok(CommandResult::Continue("Cache cleared".green().to_string()))
             }
 
             Self::Exit => Ok(CommandResult::Exit),

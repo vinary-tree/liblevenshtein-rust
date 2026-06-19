@@ -3,7 +3,7 @@
 #[cfg(feature = "cli")]
 mod repl_integration_tests {
     use liblevenshtein::repl::state::DictionaryBackend;
-    use liblevenshtein::repl::{Command, ReplState};
+    use liblevenshtein::repl::{Command, CommandResult, ReplState};
     use liblevenshtein::transducer::Algorithm;
 
     #[test]
@@ -115,6 +115,30 @@ mod repl_integration_tests {
             }
             _ => panic!("Expected Config command with path"),
         }
+    }
+
+    #[test]
+    fn test_parse_cache_command() {
+        match Command::parse("cache enable lru 17").unwrap() {
+            Command::CacheEnable { strategy, max_size } => {
+                assert_eq!(strategy, "lru");
+                assert_eq!(max_size, Some(17));
+            }
+            _ => panic!("Expected cache enable command"),
+        }
+
+        assert!(matches!(
+            Command::parse("cache disable").unwrap(),
+            Command::CacheDisable
+        ));
+        assert!(matches!(
+            Command::parse("cache stats").unwrap(),
+            Command::CacheStats
+        ));
+        assert!(matches!(
+            Command::parse("cache clear").unwrap(),
+            Command::CacheClear
+        ));
     }
 
     #[test]
@@ -253,5 +277,103 @@ mod repl_integration_tests {
         assert_eq!(state.dictionary.len(), 1);
         assert!(!state.dictionary.contains("hello"));
         assert!(state.dictionary.contains("world"));
+    }
+
+    #[test]
+    fn test_cache_commands_record_hits_and_clear() {
+        let mut state = ReplState::new();
+        Command::parse("insert test tent toast")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap();
+        Command::parse("cache enable lru 2")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap();
+
+        state.query("test");
+        state.query("test");
+
+        match Command::parse("cache stats")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap()
+        {
+            CommandResult::Continue(output) => {
+                assert!(output.contains("Cache Status: Enabled"));
+                assert!(output.contains("Strategy: lru"));
+                assert!(output.contains("Hits: 1"));
+                assert!(output.contains("Misses: 1"));
+                assert!(output.contains("Current Size: 1"));
+            }
+            _ => panic!("Expected cache stats output"),
+        }
+
+        Command::parse("cache clear")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap();
+        assert!(state.cache_stats().contains("Current Size: 0"));
+
+        Command::parse("cache disable")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap();
+        assert_eq!(state.cache_stats(), "Cache Status: Disabled");
+    }
+
+    #[test]
+    fn test_cache_enables_all_documented_strategies() {
+        for strategy in [
+            "lru",
+            "lfu",
+            "ttl",
+            "age",
+            "cost-aware",
+            "memory-pressure",
+            "manual",
+        ] {
+            let mut state = ReplState::new();
+            Command::parse(&format!("cache enable {} 2", strategy))
+                .unwrap()
+                .execute(&mut state)
+                .unwrap();
+
+            let stats = state.cache_stats();
+            assert!(stats.contains("Cache Status: Enabled"));
+            assert!(stats.contains(&format!("Strategy: {}", strategy)));
+            assert!(stats.contains("Capacity: 2"));
+        }
+    }
+
+    #[test]
+    fn test_cache_invalidates_after_dictionary_mutation() {
+        let mut state = ReplState::new();
+        Command::parse("insert test")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap();
+        Command::parse("distance 0")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap();
+        Command::parse("cache enable lru 4")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap();
+
+        assert!(state.query("tent").is_empty());
+        assert!(state.cache_stats().contains("Current Size: 1"));
+
+        Command::parse("insert tent")
+            .unwrap()
+            .execute(&mut state)
+            .unwrap();
+        assert!(state.cache_stats().contains("Current Size: 0"));
+
+        let results = state.query("tent");
+        assert!(results
+            .iter()
+            .any(|(term, distance)| term == "tent" && *distance == 0));
     }
 }

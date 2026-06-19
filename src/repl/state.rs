@@ -12,11 +12,10 @@ use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::suffix_automaton::SuffixAutomaton;
 use libdictenstein::{Dictionary, DictionaryNode};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::Path;
-
-// NOTE: For caching, use the eviction wrappers from cache::eviction module.
-// Example: Lru<PathMapDictionary>, Ttl<DynamicDawg>, etc.
-// See src/cache/eviction/mod.rs for available wrappers.
+use std::time::{Duration, Instant};
 
 /// Helper to extract all terms from any dictionary using DFS
 fn extract_terms<D>(dict: &D) -> Vec<String>
@@ -52,7 +51,7 @@ where
 }
 
 /// Dictionary backend type
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "cli",
     derive(clap::ValueEnum, serde::Serialize, serde::Deserialize)
@@ -94,6 +93,247 @@ impl std::str::FromStr for DictionaryBackend {
             )),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum QueryCacheStrategy {
+    Lru,
+    Lfu,
+    Ttl,
+    Age,
+    CostAware,
+    MemoryPressure,
+    Manual,
+}
+
+impl QueryCacheStrategy {
+    fn parse(strategy: &str) -> Result<Self> {
+        match strategy.to_lowercase().as_str() {
+            "lru" => Ok(Self::Lru),
+            "lfu" => Ok(Self::Lfu),
+            "ttl" => Ok(Self::Ttl),
+            "age" => Ok(Self::Age),
+            "cost-aware" | "cost" => Ok(Self::CostAware),
+            "memory-pressure" | "memory" => Ok(Self::MemoryPressure),
+            "manual" | "fifo" => Ok(Self::Manual),
+            _ => Err(anyhow::anyhow!(
+                "Unknown cache strategy: '{}'. Valid: lru, lfu, ttl, age, cost-aware, memory-pressure, manual",
+                strategy
+            )),
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Lru => "lru",
+            Self::Lfu => "lfu",
+            Self::Ttl => "ttl",
+            Self::Age => "age",
+            Self::CostAware => "cost-aware",
+            Self::MemoryPressure => "memory-pressure",
+            Self::Manual => "manual",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct QueryCacheKey {
+    term: String,
+    max_distance: usize,
+    algorithm: Algorithm,
+    prefix_mode: bool,
+    result_limit: Option<usize>,
+    backend: DictionaryBackend,
+    term_count: usize,
+}
+
+#[derive(Debug)]
+struct QueryCacheEntry {
+    results: Vec<(String, usize)>,
+    inserted_at: Instant,
+    last_accessed: Instant,
+    access_count: u64,
+    estimated_bytes: usize,
+}
+
+#[derive(Debug, Default)]
+struct QueryCacheMetrics {
+    hits: u64,
+    misses: u64,
+    evictions: u64,
+    clears: u64,
+}
+
+#[derive(Debug)]
+struct QueryCache {
+    strategy: QueryCacheStrategy,
+    capacity: usize,
+    entries: HashMap<QueryCacheKey, QueryCacheEntry>,
+    metrics: QueryCacheMetrics,
+    ttl: Duration,
+}
+
+impl QueryCache {
+    fn new(strategy: QueryCacheStrategy, capacity: usize) -> Self {
+        Self {
+            strategy,
+            capacity,
+            entries: HashMap::with_capacity(capacity.min(1024)),
+            metrics: QueryCacheMetrics::default(),
+            ttl: Duration::from_secs(300),
+        }
+    }
+
+    fn get(&mut self, key: &QueryCacheKey) -> Option<Vec<(String, usize)>> {
+        if self.strategy == QueryCacheStrategy::Ttl && self.is_expired(key) {
+            self.entries.remove(key);
+            self.metrics.evictions += 1;
+        }
+
+        match self.entries.get_mut(key) {
+            Some(entry) => {
+                entry.last_accessed = Instant::now();
+                entry.access_count += 1;
+                self.metrics.hits += 1;
+                Some(entry.results.clone())
+            }
+            None => {
+                self.metrics.misses += 1;
+                None
+            }
+        }
+    }
+
+    fn insert(&mut self, key: QueryCacheKey, results: Vec<(String, usize)>) {
+        if self.entries.contains_key(&key) {
+            let now = Instant::now();
+            let estimated_bytes = estimate_results_bytes(&results);
+            self.entries.insert(
+                key,
+                QueryCacheEntry {
+                    results,
+                    inserted_at: now,
+                    last_accessed: now,
+                    access_count: 1,
+                    estimated_bytes,
+                },
+            );
+            return;
+        }
+
+        while self.entries.len() >= self.capacity {
+            if !self.evict_one() {
+                break;
+            }
+        }
+
+        let now = Instant::now();
+        let estimated_bytes = estimate_results_bytes(&results);
+        self.entries.insert(
+            key,
+            QueryCacheEntry {
+                results,
+                inserted_at: now,
+                last_accessed: now,
+                access_count: 1,
+                estimated_bytes,
+            },
+        );
+    }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+        self.metrics.clears += 1;
+    }
+
+    fn stats(&self) -> String {
+        let total = self.metrics.hits + self.metrics.misses;
+        let hit_rate = if total == 0 {
+            0.0
+        } else {
+            (self.metrics.hits as f64 / total as f64) * 100.0
+        };
+        let bytes = self.total_estimated_bytes();
+
+        format!(
+            "Cache Status: Enabled\nStrategy: {}\nCapacity: {}\nCurrent Size: {}\nEstimated Bytes: {}\nHits: {}\nMisses: {}\nEvictions: {}\nClears: {}\nHit Rate: {:.2}%",
+            self.strategy.label(),
+            self.capacity,
+            self.entries.len(),
+            bytes,
+            self.metrics.hits,
+            self.metrics.misses,
+            self.metrics.evictions,
+            self.metrics.clears,
+            hit_rate
+        )
+    }
+
+    fn is_expired(&self, key: &QueryCacheKey) -> bool {
+        self.entries
+            .get(key)
+            .map(|entry| entry.inserted_at.elapsed() >= self.ttl)
+            .unwrap_or(false)
+    }
+
+    fn evict_one(&mut self) -> bool {
+        let key = match self.strategy {
+            QueryCacheStrategy::Lru | QueryCacheStrategy::Ttl => self
+                .entries
+                .iter()
+                .min_by_key(|(_, entry)| entry.last_accessed)
+                .map(|(key, _)| key.clone()),
+            QueryCacheStrategy::Lfu => self
+                .entries
+                .iter()
+                .min_by(|(_, a), (_, b)| {
+                    a.access_count
+                        .cmp(&b.access_count)
+                        .then_with(|| a.last_accessed.cmp(&b.last_accessed))
+                })
+                .map(|(key, _)| key.clone()),
+            QueryCacheStrategy::Age | QueryCacheStrategy::Manual => self
+                .entries
+                .iter()
+                .min_by_key(|(_, entry)| entry.inserted_at)
+                .map(|(key, _)| key.clone()),
+            QueryCacheStrategy::CostAware => self
+                .entries
+                .iter()
+                .max_by_key(|(_, entry)| entry.estimated_bytes)
+                .map(|(key, _)| key.clone()),
+            QueryCacheStrategy::MemoryPressure => self
+                .entries
+                .iter()
+                .max_by_key(|(_, entry)| {
+                    let reuse_discount = entry.access_count.max(1) as usize;
+                    entry.estimated_bytes / reuse_discount
+                })
+                .map(|(key, _)| key.clone()),
+        };
+
+        if let Some(key) = key {
+            self.entries.remove(&key);
+            self.metrics.evictions += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn total_estimated_bytes(&self) -> usize {
+        self.entries
+            .values()
+            .map(|entry| entry.estimated_bytes)
+            .sum()
+    }
+}
+
+fn estimate_results_bytes(results: &[(String, usize)]) -> usize {
+    results
+        .iter()
+        .map(|(term, _)| term.len() + std::mem::size_of::<usize>())
+        .sum()
 }
 
 /// Unified dictionary container
@@ -271,6 +511,7 @@ pub struct ReplState {
     pub auto_sync_path: Option<std::path::PathBuf>,
     /// Custom config file path
     pub config_file_path: Option<std::path::PathBuf>,
+    query_cache: RefCell<Option<QueryCache>>,
 }
 
 impl ReplState {
@@ -294,6 +535,7 @@ impl ReplState {
             auto_sync: false,
             auto_sync_path: None,
             config_file_path: None,
+            query_cache: RefCell::new(None),
         }
     }
 
@@ -315,6 +557,7 @@ impl ReplState {
             self.backend = detection.format.backend;
 
             let count = self.dictionary.len();
+            self.invalidate_cache();
             Ok(count)
         }
 
@@ -358,6 +601,7 @@ impl ReplState {
             };
 
             self.backend = backend;
+            self.invalidate_cache();
             Ok(term_count)
         }
     }
@@ -394,40 +638,45 @@ impl ReplState {
 
         self.dictionary = self.dictionary.migrate_to(backend)?;
         self.backend = backend;
+        self.invalidate_cache();
         Ok(())
     }
 
     /// Query the dictionary
     pub fn query(&self, term: &str) -> Vec<(String, usize)> {
-        // NOTE: Cache functionality disabled - needs refactoring for new cache API
-        #[cfg(all(feature = "pathmap-backend", not(feature = "pathmap-backend")))]
-        if let (Some(cache), DictContainer::PathMap(_)) = (&self.cache, &self.dictionary) {
-            // Use cache.query() which returns Vec<Candidate>
-            let candidates = match cache {
-                CacheContainer::Lru(c) => c.query(term, self.max_distance),
-                CacheContainer::Lfu(c) => c.query(term, self.max_distance),
-                CacheContainer::Ttl(c) => c.query(term, self.max_distance),
-                CacheContainer::Age(c) => c.query(term, self.max_distance),
-                CacheContainer::CostAware(c) => c.query(term, self.max_distance),
-                CacheContainer::MemoryPressure(c) => c.query(term, self.max_distance),
-                CacheContainer::Manual(c) => c.query(term, self.max_distance),
-            };
+        let key = self.query_cache_key(term);
 
-            // Convert Candidate to (String, usize) and apply limit
-            let mut results: Vec<(String, usize)> = candidates
-                .into_iter()
-                .map(|c| (c.term, c.distance))
-                .collect();
-
-            // Apply result limit if set
-            if let Some(limit) = self.result_limit {
-                results.truncate(limit);
-            }
-
+        if let Some(results) = self
+            .query_cache
+            .borrow_mut()
+            .as_mut()
+            .and_then(|cache| cache.get(&key))
+        {
             return results;
         }
 
-        // Fall back to direct dictionary query
+        let results = self.query_uncached(term);
+
+        if let Some(cache) = self.query_cache.borrow_mut().as_mut() {
+            cache.insert(key, results.clone());
+        }
+
+        results
+    }
+
+    fn query_cache_key(&self, term: &str) -> QueryCacheKey {
+        QueryCacheKey {
+            term: term.to_string(),
+            max_distance: self.max_distance,
+            algorithm: self.algorithm,
+            prefix_mode: self.prefix_mode,
+            result_limit: self.result_limit,
+            backend: self.backend,
+            term_count: self.dictionary.len(),
+        }
+    }
+
+    fn query_uncached(&self, term: &str) -> Vec<(String, usize)> {
         let params = QueryParams {
             term: term.to_string(),
             max_distance: self.max_distance,
@@ -463,125 +712,52 @@ impl ReplState {
         }
     }
 
-    /// Enable fuzzy cache with specified strategy
-    /// NOTE: Cache functionality disabled - needs refactoring for new cache API
-    #[cfg(all(feature = "pathmap-backend", not(feature = "pathmap-backend")))]
+    /// Enable fuzzy query-result cache with specified strategy.
     pub fn enable_cache(&mut self, strategy: &str, max_size: Option<usize>) -> Result<()> {
-        use std::time::Duration;
-
         let default_max_size = 1000;
         let max_size = max_size.unwrap_or(default_max_size);
+        if max_size == 0 {
+            return Err(anyhow::anyhow!("Cache max-size must be greater than zero"));
+        }
 
-        let cache = match strategy.to_lowercase().as_str() {
-            "lru" => {
-                let c = FuzzyCacheBuilder::<String>::new()
-                    .max_size(max_size)
-                    .algorithm(self.algorithm)
-                    .lru();
-                CacheContainer::Lru(c)
-            }
-            "lfu" => {
-                let c = FuzzyCacheBuilder::<String>::new()
-                    .max_size(max_size)
-                    .algorithm(self.algorithm)
-                    .lfu();
-                CacheContainer::Lfu(c)
-            }
-            "ttl" => {
-                let c = FuzzyCacheBuilder::<String>::new()
-                    .max_size(max_size)
-                    .algorithm(self.algorithm)
-                    .ttl(Duration::from_secs(300));
-                CacheContainer::Ttl(c)
-            }
-            "age" => {
-                let c = FuzzyCacheBuilder::<String>::new()
-                    .max_size(max_size)
-                    .algorithm(self.algorithm)
-                    .age();
-                CacheContainer::Age(c)
-            }
-            "cost-aware" | "cost" => {
-                let c = FuzzyCacheBuilder::<String>::new()
-                    .max_size(max_size)
-                    .algorithm(self.algorithm)
-                    .cost_aware();
-                CacheContainer::CostAware(c)
-            }
-            "memory-pressure" | "memory" => {
-                let c = FuzzyCacheBuilder::<String>::new()
-                    .max_size(max_size)
-                    .algorithm(self.algorithm)
-                    .memory_pressure();
-                CacheContainer::MemoryPressure(c)
-            }
-            "manual" | "fifo" => {
-                let c = FuzzyCacheBuilder::<String>::new()
-                    .max_size(max_size)
-                    .algorithm(self.algorithm)
-                    .manual();
-                CacheContainer::Manual(c)
-            }
-            _ => {
-                return Err(anyhow::anyhow!(
-                    "Unknown cache strategy: '{}'. Valid: lru, lfu, ttl, age, cost-aware, memory-pressure, manual",
-                    strategy
-                ));
-            }
-        };
-
-        self.cache = Some(cache);
+        let strategy = QueryCacheStrategy::parse(strategy)?;
+        *self.query_cache.borrow_mut() = Some(QueryCache::new(strategy, max_size));
         Ok(())
     }
 
-    /// Disable fuzzy cache
-    /// NOTE: Cache functionality disabled - needs refactoring for new cache API
-    #[cfg(all(feature = "pathmap-backend", not(feature = "pathmap-backend")))]
+    /// Disable fuzzy query-result cache.
     pub fn disable_cache(&mut self) {
-        self.cache = None;
+        *self.query_cache.borrow_mut() = None;
     }
 
-    /// Get cache statistics
-    /// NOTE: Cache functionality disabled - needs refactoring for new cache API
-    #[cfg(all(feature = "pathmap-backend", not(feature = "pathmap-backend")))]
+    /// Check whether the fuzzy query-result cache is enabled.
+    pub fn cache_enabled(&self) -> bool {
+        self.query_cache.borrow().is_some()
+    }
+
+    /// Get cache statistics.
     pub fn cache_stats(&self) -> String {
-        if let Some(cache) = &self.cache {
-            let (capacity, size, metrics_report) = match cache {
-                CacheContainer::Lru(c) => (c.capacity(), c.len(), c.metrics().report()),
-                CacheContainer::Lfu(c) => (c.capacity(), c.len(), c.metrics().report()),
-                CacheContainer::Ttl(c) => (c.capacity(), c.len(), c.metrics().report()),
-                CacheContainer::Age(c) => (c.capacity(), c.len(), c.metrics().report()),
-                CacheContainer::CostAware(c) => (c.capacity(), c.len(), c.metrics().report()),
-                CacheContainer::MemoryPressure(c) => (c.capacity(), c.len(), c.metrics().report()),
-                CacheContainer::Manual(c) => (c.capacity(), c.len(), c.metrics().report()),
-            };
-
-            format!(
-                "Cache Status: Enabled\nCapacity: {}\nCurrent Size: {}\n\n{}",
-                capacity, size, metrics_report
-            )
-        } else {
-            "Cache Status: Disabled".to_string()
-        }
+        self.query_cache
+            .borrow()
+            .as_ref()
+            .map(QueryCache::stats)
+            .unwrap_or_else(|| "Cache Status: Disabled".to_string())
     }
 
-    /// Clear cache
-    /// NOTE: Cache functionality disabled - needs refactoring for new cache API
-    #[cfg(all(feature = "pathmap-backend", not(feature = "pathmap-backend")))]
+    /// Clear cache.
     pub fn clear_cache(&mut self) -> Result<()> {
-        if let Some(cache) = &mut self.cache {
-            match cache {
-                CacheContainer::Lru(c) => c.clear(),
-                CacheContainer::Lfu(c) => c.clear(),
-                CacheContainer::Ttl(c) => c.clear(),
-                CacheContainer::Age(c) => c.clear(),
-                CacheContainer::CostAware(c) => c.clear(),
-                CacheContainer::MemoryPressure(c) => c.clear(),
-                CacheContainer::Manual(c) => c.clear(),
-            }
+        if let Some(cache) = self.query_cache.borrow_mut().as_mut() {
+            cache.clear();
             Ok(())
         } else {
             Err(anyhow::anyhow!("Cache is not enabled"))
+        }
+    }
+
+    /// Invalidate cached query results while keeping cache configuration active.
+    pub fn invalidate_cache(&self) {
+        if let Some(cache) = self.query_cache.borrow_mut().as_mut() {
+            cache.clear();
         }
     }
 
