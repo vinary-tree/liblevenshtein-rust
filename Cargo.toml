@@ -75,6 +75,7 @@ docx-rs = { version = "0.4", optional = true }
 epub = { version = "2.1", optional = true }
 quick-xml = { version = "0.37", optional = true }
 leptess = { version = "0.14", optional = true }
+tempfile = { version = "3.8", optional = true }
 # Unicode normalization for accent-insensitive matching and (?u:NFC) flag
 unicode-normalization = { version = "0.1", optional = true }
 # Memory-mapped I/O for persistent data structures
@@ -396,7 +397,7 @@ grep-full = ["phonetic-rules", "parallel-grep", "grep-compression", "grep-archiv
 
 # Document extraction features for grep
 grep-pdf = ["pdf-extract", "gag"]
-grep-pdf-ocr = ["grep-pdf", "leptess"]
+grep-pdf-ocr = ["grep-pdf", "leptess", "tempfile"]
 grep-docx = ["docx-rs"]
 grep-xlsx = ["calamine"]
 grep-epub = ["epub"]
@@ -511,4 +512,3 @@ required-features = ["pathmap-backend"]
 name = "pathmap_node_ops_benchmark"
 harness = false
 required-features = ["pathmap-backend"]
-

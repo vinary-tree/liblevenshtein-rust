@@ -517,6 +517,7 @@ enum GrepEntryIteratorInner {
     /// Single plain file entry.
     Single(std::vec::IntoIter<GrepEntry>),
     /// Archive entries (collected).
+    #[cfg(any(feature = "tar", feature = "zip"))]
     Archive(std::vec::IntoIter<GrepResult<GrepEntry>>),
 }
 
@@ -526,6 +527,7 @@ impl Iterator for GrepEntryIterator {
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.inner {
             GrepEntryIteratorInner::Single(iter) => iter.next().map(Ok),
+            #[cfg(any(feature = "tar", feature = "zip"))]
             GrepEntryIteratorInner::Archive(iter) => iter.next(),
         }
     }

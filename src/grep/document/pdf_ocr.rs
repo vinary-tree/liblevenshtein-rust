@@ -1,9 +1,17 @@
-//! PDF OCR text extraction using Tesseract via leptess.
+//! PDF OCR text extraction using Poppler and Tesseract.
 //!
 //! This module provides OCR-based text extraction for image-based PDFs
 //! where regular text extraction returns empty or minimal content.
 
 use crate::grep::error::{GrepError, GrepResult};
+use std::ffi::OsStr;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Output};
+
+const PDF_RENDERER: &str = "pdftoppm";
+const TESSERACT_CLI: &str = "tesseract";
+const RENDER_DPI: i32 = 200;
 
 /// Extract text from PDF document bytes using OCR.
 ///
@@ -20,6 +28,11 @@ use crate::grep::error::{GrepError, GrepResult};
 ///
 /// The extracted text content, or an error if OCR fails.
 ///
+/// # Runtime Requirements
+///
+/// This path requires Poppler's `pdftoppm` executable for page rendering and
+/// Tesseract language data for the requested `language`.
+///
 /// # Example
 ///
 /// ```ignore
@@ -32,39 +45,126 @@ use crate::grep::error::{GrepError, GrepResult};
 pub fn extract_text_ocr(data: &[u8], language: &str) -> GrepResult<String> {
     use leptess::LepTess;
 
-    // First, we need to render PDF pages to images
-    // This requires pdf-image or similar crate, but for now we'll use a simpler approach
-    // by attempting to use leptess directly on the PDF (which won't work for most PDFs)
-
-    // For a proper implementation, we would:
-    // 1. Use pdfium or pdf-image to render each page to PNG
-    // 2. Run OCR on each rendered image
-    // 3. Concatenate the results
-
-    // For now, return a helpful error since full PDF-to-image rendering
-    // requires additional dependencies not currently in Cargo.toml
-    let _ = (data, language); // Suppress unused warnings
-
-    // Try to initialize Tesseract to check if it's available
-    match LepTess::new(None, language) {
-        Ok(_) => {
-            // Tesseract is available, but we can't render PDF pages without additional deps
-            Err(GrepError::OcrError {
-                file_path: std::path::PathBuf::from("<memory>"),
-                message: format!(
-                    "PDF OCR requires PDF-to-image rendering. \
-                     Consider converting to images first, or use the pdf feature for text-based PDFs. \
-                     Language '{}' is available in Tesseract.",
-                    language
-                ),
-            })
-        }
-        Err(e) => Err(GrepError::OcrNotAvailable(format!(
+    let mut tesseract = LepTess::new(None, language).map_err(|e| {
+        GrepError::OcrNotAvailable(format!(
             "Tesseract initialization failed for language '{}': {}. \
              Ensure Tesseract is installed and the language pack is available.",
             language, e
-        ))),
+        ))
+    })?;
+
+    let temp_dir = tempfile::tempdir()?;
+    let pdf_path = temp_dir.path().join("input.pdf");
+    fs::write(&pdf_path, data)?;
+
+    let image_prefix = temp_dir.path().join("page");
+    render_pdf_pages(&pdf_path, &image_prefix)?;
+
+    let page_images = rendered_page_images(temp_dir.path())?;
+    if page_images.is_empty() {
+        return Err(GrepError::DocumentEmpty(PathBuf::from("<memory>")));
     }
+
+    let mut text = String::new();
+    for (page_index, image_path) in page_images.iter().enumerate() {
+        tesseract
+            .set_image(image_path)
+            .map_err(|e| GrepError::OcrError {
+                file_path: image_path.clone(),
+                message: format!("failed to load rendered page image for OCR: {e}"),
+            })?;
+        tesseract.set_source_resolution(RENDER_DPI);
+
+        let page_text = tesseract.get_utf8_text().map_err(|e| GrepError::OcrError {
+            file_path: image_path.clone(),
+            message: format!("Tesseract returned invalid UTF-8: {e}"),
+        })?;
+
+        if page_index > 0 && !text.ends_with('\n') {
+            text.push('\n');
+        }
+        text.push_str(&page_text);
+    }
+
+    if text.trim().is_empty() {
+        Err(GrepError::DocumentEmpty(PathBuf::from("<memory>")))
+    } else {
+        Ok(text)
+    }
+}
+
+fn render_pdf_pages(pdf_path: &Path, image_prefix: &Path) -> GrepResult<()> {
+    let output = Command::new(PDF_RENDERER)
+        .arg("-q")
+        .arg("-r")
+        .arg(RENDER_DPI.to_string())
+        .arg("-png")
+        .arg("-forcenum")
+        .arg(pdf_path)
+        .arg(image_prefix)
+        .output()
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                GrepError::OcrNotAvailable(format!(
+                    "PDF OCR requires Poppler's `{PDF_RENDERER}` executable to render pages"
+                ))
+            } else {
+                GrepError::Io(e)
+            }
+        })?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(renderer_error(pdf_path, output))
+    }
+}
+
+fn renderer_error(pdf_path: &Path, output: Output) -> GrepError {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let message = if stderr.trim().is_empty() {
+        stdout.trim()
+    } else {
+        stderr.trim()
+    };
+
+    GrepError::OcrError {
+        file_path: pdf_path.to_path_buf(),
+        message: if message.is_empty() {
+            format!("{PDF_RENDERER} failed with status {}", output.status)
+        } else {
+            format!(
+                "{PDF_RENDERER} failed with status {}: {message}",
+                output.status
+            )
+        },
+    }
+}
+
+fn rendered_page_images(dir: &Path) -> GrepResult<Vec<PathBuf>> {
+    let mut pages = Vec::new();
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension() == Some(OsStr::new("png"))
+            && path
+                .file_stem()
+                .and_then(OsStr::to_str)
+                .is_some_and(|stem| stem.starts_with("page-"))
+        {
+            pages.push(path);
+        }
+    }
+
+    pages.sort_by_key(|path| {
+        path.file_stem()
+            .and_then(OsStr::to_str)
+            .and_then(|stem| stem.strip_prefix("page-"))
+            .and_then(|num| num.parse::<usize>().ok())
+            .unwrap_or(usize::MAX)
+    });
+    Ok(pages)
 }
 
 /// Check if Tesseract OCR is available with the specified language.
@@ -81,22 +181,37 @@ pub fn is_ocr_available(language: &str) -> bool {
     LepTess::new(None, language).is_ok()
 }
 
+/// Check if Poppler's PDF page renderer is available.
+///
+/// # Returns
+///
+/// `true` if `pdftoppm` can be executed, `false` otherwise.
+pub fn is_pdf_renderer_available() -> bool {
+    Command::new(PDF_RENDERER)
+        .arg("-v")
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+
 /// Get list of available Tesseract languages.
 ///
 /// # Returns
 ///
 /// A vector of available language codes, or an empty vector if Tesseract is not available.
 pub fn available_languages() -> Vec<String> {
-    // leptess doesn't provide a way to list languages, so we check common ones
-    let common_languages = [
-        "eng", "deu", "fra", "spa", "ita", "por", "nld", "pol", "rus", "chi_sim", "chi_tra", "jpn",
-        "kor", "ara", "hin", "tha", "vie",
-    ];
+    let output = match Command::new(TESSERACT_CLI).arg("--list-langs").output() {
+        Ok(output) if output.status.success() => output,
+        _ => return Vec::new(),
+    };
 
-    common_languages
-        .iter()
-        .filter(|lang| is_ocr_available(lang))
-        .map(|s| s.to_string())
+    let mut combined = String::from_utf8_lossy(&output.stdout).into_owned();
+    combined.push_str(&String::from_utf8_lossy(&output.stderr));
+
+    combined
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with("List of available languages"))
+        .map(ToOwned::to_owned)
         .collect()
 }
 
@@ -119,11 +234,89 @@ mod tests {
     }
 
     #[test]
+    fn test_pdf_renderer_availability_check() {
+        let _ = is_pdf_renderer_available();
+    }
+
+    #[test]
     fn test_extract_text_ocr_error() {
-        // PDF OCR currently returns an error since we can't render PDF pages
         let fake_pdf = b"%PDF-1.4 fake pdf data";
         let result = extract_text_ocr(fake_pdf, "eng");
-        // Should return either OcrError or OcrNotAvailable
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extract_text_ocr_simple_pdf_when_tools_available() {
+        if !is_pdf_renderer_available() || !is_ocr_available("eng") {
+            return;
+        }
+
+        let pdf = simple_text_pdf("HELLO OCR");
+        let text = extract_text_ocr(&pdf, "eng").expect("OCR should extract rendered PDF text");
+        let normalized = text.to_uppercase();
+
+        assert!(
+            normalized.contains("HELLO") && normalized.contains("OCR"),
+            "OCR output did not contain expected text: {text:?}"
+        );
+    }
+
+    fn simple_text_pdf(text: &str) -> Vec<u8> {
+        fn escape_pdf_text(text: &str) -> String {
+            text.chars().fold(String::new(), |mut escaped, ch| {
+                match ch {
+                    '(' | ')' | '\\' => {
+                        escaped.push('\\');
+                        escaped.push(ch);
+                    }
+                    _ => escaped.push(ch),
+                }
+                escaped
+            })
+        }
+
+        let stream = format!(
+            "BT\n/F1 72 Tf\n72 500 Td\n({}) Tj\nET\n",
+            escape_pdf_text(text)
+        );
+        let objects = [
+            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n".to_string(),
+            "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n".to_string(),
+            concat!(
+                "3 0 obj\n",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ",
+                "/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\n",
+                "endobj\n"
+            )
+            .to_string(),
+            "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n".to_string(),
+            format!(
+                "5 0 obj\n<< /Length {} >>\nstream\n{}endstream\nendobj\n",
+                stream.len(),
+                stream
+            ),
+        ];
+
+        let mut pdf = Vec::from("%PDF-1.4\n".as_bytes());
+        let mut offsets = vec![0usize];
+        for object in objects {
+            offsets.push(pdf.len());
+            pdf.extend_from_slice(object.as_bytes());
+        }
+
+        let xref_start = pdf.len();
+        pdf.extend_from_slice(format!("xref\n0 {}\n", offsets.len()).as_bytes());
+        pdf.extend_from_slice(b"0000000000 65535 f \n");
+        for offset in offsets.iter().skip(1) {
+            pdf.extend_from_slice(format!("{offset:010} 00000 n \n").as_bytes());
+        }
+        pdf.extend_from_slice(
+            format!(
+                "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF\n",
+                offsets.len()
+            )
+            .as_bytes(),
+        );
+        pdf
     }
 }
