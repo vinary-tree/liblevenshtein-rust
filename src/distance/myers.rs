@@ -27,6 +27,11 @@
 //! assert_eq!(myers_distance("test", "test"), 0);
 //! ```
 
+use smallvec::SmallVec;
+
+const SHORT_TRANSPOSITION_DP_BYTE_LIMIT: usize = 8;
+const STACK_TRANSPOSITION_ROW_LIMIT: usize = 32;
+
 /// Pattern equivalence table for Myers algorithm.
 ///
 /// Pre-computes bitmasks where bit i is set if the pattern character
@@ -229,13 +234,13 @@ pub fn myers_distance_bounded(source: &str, target: &str, max_distance: usize) -
     }
 }
 
-/// Compute edit distance with transposition support using Myers' algorithm.
+/// Compute edit distance with adjacent transposition support.
 ///
-/// This extends the standard Myers algorithm to also consider transposition
-/// (swapping two adjacent characters) as a single edit operation.
-///
-/// Note: This is an approximation that may not perfectly match the optimal
-/// Damerau-Levenshtein distance in all cases.
+/// The ordinary Myers recurrence does not carry the extra predecessor state
+/// needed for exact adjacent transpositions. This function therefore uses the
+/// same optimal-string-alignment recurrence as [`crate::distance::transposition_distance`],
+/// with fixed-size stack rows for the common short-string case that Myers users
+/// typically care about.
 ///
 /// # Example
 ///
@@ -246,97 +251,123 @@ pub fn myers_distance_bounded(source: &str, target: &str, max_distance: usize) -
 /// assert_eq!(myers_transposition_distance("test", "tset"), 1);
 /// ```
 pub fn myers_transposition_distance(source: &str, target: &str) -> usize {
-    let source_bytes = source.as_bytes();
-    let target_bytes = target.as_bytes();
-
-    // Handle trivial cases
-    if source_bytes.is_empty() {
-        return target_bytes.len();
+    if source.is_empty() {
+        return target.chars().count();
     }
-    if target_bytes.is_empty() {
-        return source_bytes.len();
+    if target.is_empty() {
+        return source.chars().count();
     }
-    if source_bytes == target_bytes {
+    if source == target {
         return 0;
     }
 
-    // Use shorter string as pattern
-    let (pattern, text) = if source_bytes.len() <= target_bytes.len() {
-        (source_bytes, target_bytes)
-    } else {
-        (target_bytes, source_bytes)
-    };
-
-    // For patterns > 64, fall back to standard DP transposition
-    if pattern.len() > 64 {
+    // Criterion measurements show the shared DP is faster for tiny inputs; the
+    // optimized row recurrence pulls ahead once strings are larger than this.
+    if source.len().max(target.len()) <= SHORT_TRANSPOSITION_DP_BYTE_LIMIT {
         return crate::distance::transposition_distance(source, target);
     }
 
-    myers_transposition_core(pattern, text)
+    let source_chars: SmallVec<[char; STACK_TRANSPOSITION_ROW_LIMIT]> = source.chars().collect();
+    let target_chars: SmallVec<[char; STACK_TRANSPOSITION_ROW_LIMIT]> = target.chars().collect();
+
+    transposition_distance_chars(&source_chars, &target_chars)
 }
 
-/// Core Myers algorithm with transposition support.
-fn myers_transposition_core(pattern: &[u8], text: &[u8]) -> usize {
-    let m = pattern.len();
-    let masks = PatternMasks::new(pattern);
-
-    // Standard Myers state
-    let mut vp: u64 = !0;
-    let mut vn: u64 = 0;
-    let mut score = m;
-
-    // Previous character's equivalence mask (for transposition detection)
-    let mut prev_eq: u64 = 0;
-
-    let high_bit = 1u64 << (m - 1);
-
-    for (i, &text_char) in text.iter().enumerate() {
-        let eq = masks.peq[text_char as usize];
-
-        // Standard Myers computation
-        let xv = eq | vn;
-        let xh = ((eq & vp).wrapping_add(vp)) ^ vp | eq;
-
-        let hp = vn | !(xh | vp);
-        let hn = xh & vp;
-
-        // Check for potential transposition
-        // If previous char matches current pattern position and current char
-        // matches previous pattern position, we might have a transposition
-        if i > 0 && m > 1 {
-            // Transposition detection: look for pattern[j] == text[i-1] && pattern[j-1] == text[i]
-            // This is approximated by checking shifted equivalence masks
-            let trans_match = (prev_eq >> 1) & eq;
-            if trans_match != 0 {
-                // Potential transposition found - this is a heuristic optimization
-                // For exact Damerau-Levenshtein, full DP is needed
-            }
-        }
-
-        // Update score
-        if hp & high_bit != 0 {
-            score += 1;
-        }
-        if hn & high_bit != 0 {
-            score -= 1;
-        }
-
-        // Update state
-        vp = (hn << 1) | !(xv | (hp << 1));
-        vn = (hp << 1) & xv;
-
-        prev_eq = eq;
+fn transposition_distance_chars(source: &[char], target: &[char]) -> usize {
+    if source.is_empty() {
+        return target.len();
+    }
+    if target.is_empty() {
+        return source.len();
+    }
+    if source == target {
+        return 0;
     }
 
-    // For now, fall back to exact computation for transposition
-    // Myers alone doesn't handle transposition optimally
-    let standard_dist = score;
-    let trans_dist = crate::distance::transposition_distance(
-        std::str::from_utf8(pattern).unwrap_or(""),
-        std::str::from_utf8(text).unwrap_or(""),
-    );
+    let (rows, cols) = if source.len() >= target.len() {
+        (source, target)
+    } else {
+        (target, source)
+    };
 
-    standard_dist.min(trans_dist)
+    if cols.len() <= STACK_TRANSPOSITION_ROW_LIMIT {
+        transposition_distance_chars_stack(rows, cols)
+    } else {
+        transposition_distance_chars_heap(rows, cols)
+    }
+}
+
+fn transposition_distance_chars_stack(rows: &[char], cols: &[char]) -> usize {
+    let m = rows.len();
+    let n = cols.len();
+    debug_assert!(n <= STACK_TRANSPOSITION_ROW_LIMIT);
+
+    let mut two_ago = [0usize; STACK_TRANSPOSITION_ROW_LIMIT + 1];
+    let mut prev_row = [0usize; STACK_TRANSPOSITION_ROW_LIMIT + 1];
+    let mut curr_row = [0usize; STACK_TRANSPOSITION_ROW_LIMIT + 1];
+
+    for (j, cell) in prev_row.iter_mut().take(n + 1).enumerate() {
+        *cell = j;
+    }
+
+    for i in 1..=m {
+        curr_row[0] = i;
+
+        for j in 1..=n {
+            let substitution_cost = usize::from(rows[i - 1] != cols[j - 1]);
+
+            let mut best = (prev_row[j] + 1)
+                .min(curr_row[j - 1] + 1)
+                .min(prev_row[j - 1] + substitution_cost);
+
+            if i > 1 && j > 1 && rows[i - 1] == cols[j - 2] && rows[i - 2] == cols[j - 1] {
+                best = best.min(two_ago[j - 2] + 1);
+            }
+
+            curr_row[j] = best;
+        }
+
+        std::mem::swap(&mut two_ago, &mut prev_row);
+        std::mem::swap(&mut prev_row, &mut curr_row);
+    }
+
+    prev_row[n]
+}
+
+fn transposition_distance_chars_heap(rows: &[char], cols: &[char]) -> usize {
+    let m = rows.len();
+    let n = cols.len();
+
+    let mut two_ago = vec![0usize; n + 1];
+    let mut prev_row = vec![0usize; n + 1];
+    let mut curr_row = vec![0usize; n + 1];
+
+    for (j, cell) in prev_row.iter_mut().enumerate() {
+        *cell = j;
+    }
+
+    for i in 1..=m {
+        curr_row[0] = i;
+
+        for j in 1..=n {
+            let substitution_cost = usize::from(rows[i - 1] != cols[j - 1]);
+
+            let mut best = (prev_row[j] + 1)
+                .min(curr_row[j - 1] + 1)
+                .min(prev_row[j - 1] + substitution_cost);
+
+            if i > 1 && j > 1 && rows[i - 1] == cols[j - 2] && rows[i - 2] == cols[j - 1] {
+                best = best.min(two_ago[j - 2] + 1);
+            }
+
+            curr_row[j] = best;
+        }
+
+        std::mem::swap(&mut two_ago, &mut prev_row);
+        std::mem::swap(&mut prev_row, &mut curr_row);
+    }
+
+    prev_row[n]
 }
 
 #[cfg(test)]
@@ -464,6 +495,9 @@ mod tests {
             ("abc", "acb"),
             ("", ""),
             ("a", "a"),
+            ("日本", "本日"),
+            ("café", "cafe"),
+            ("naïve", "naïve"),
         ];
 
         for (a, b) in test_cases {
@@ -475,6 +509,18 @@ mod tests {
                 a, b, myers_dist, dp_dist
             );
         }
+    }
+
+    #[test]
+    fn test_myers_transposition_heap_path_matches_dp() {
+        let source = format!("{}ab{}", "x".repeat(70), "y".repeat(5));
+        let target = format!("{}ba{}", "x".repeat(70), "y".repeat(5));
+
+        assert_eq!(myers_transposition_distance(&source, &target), 1);
+        assert_eq!(
+            myers_transposition_distance(&source, &target),
+            crate::distance::transposition_distance(&source, &target)
+        );
     }
 
     #[test]

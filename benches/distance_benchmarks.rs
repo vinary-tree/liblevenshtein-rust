@@ -447,6 +447,61 @@ fn bench_myers_bounded(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_myers_transposition(c: &mut Criterion) {
+    let mut group = c.benchmark_group("myers_transposition");
+
+    let adjacent_case = |prefix_len: usize| {
+        (
+            format!("{}ab{}", "x".repeat(prefix_len), "y".repeat(5)),
+            format!("{}ba{}", "x".repeat(prefix_len), "y".repeat(5)),
+        )
+    };
+
+    let (len8_source, len8_target) = adjacent_case(1);
+    let (len12_source, len12_target) = adjacent_case(5);
+    let (len16_source, len16_target) = adjacent_case(9);
+    let (len32_source, len32_target) = adjacent_case(25);
+    let (len33_source, len33_target) = adjacent_case(26);
+    let (len64_source, len64_target) = adjacent_case(57);
+    let (heap_source, heap_target) = adjacent_case(70);
+
+    let test_cases: Vec<(&str, String, String)> = vec![
+        ("short_adjacent", "test".to_string(), "tset".to_string()),
+        (
+            "short_non_transpose",
+            "kitten".to_string(),
+            "sitting".to_string(),
+        ),
+        ("unicode_adjacent", "日本".to_string(), "本日".to_string()),
+        ("len8_adjacent", len8_source, len8_target),
+        ("len12_adjacent", len12_source, len12_target),
+        ("len16_adjacent", len16_source, len16_target),
+        ("len32_adjacent", len32_source, len32_target),
+        ("len33_adjacent", len33_source, len33_target),
+        ("len64_adjacent", len64_source, len64_target),
+        ("heap_path", heap_source, heap_target),
+    ];
+
+    for (name, source, target) in test_cases {
+        group.bench_function(format!("{}/myers_transposition", name), |b| {
+            b.iter(|| {
+                myers::myers_transposition_distance(
+                    black_box(source.as_str()),
+                    black_box(target.as_str()),
+                )
+            });
+        });
+
+        group.bench_function(format!("{}/dp_transposition", name), |b| {
+            b.iter(|| {
+                transposition_distance(black_box(source.as_str()), black_box(target.as_str()))
+            });
+        });
+    }
+
+    group.finish();
+}
+
 // ============================================================================
 // Criterion Configuration
 // ============================================================================
@@ -466,6 +521,7 @@ criterion_group!(
     bench_myers_distance,
     bench_myers_vs_dp,
     bench_myers_bounded,
+    bench_myers_transposition,
 );
 
 criterion_main!(benches);
