@@ -168,8 +168,14 @@ pub struct PhoneticNormalizedDictionary<V: DictionaryValue = (), D: Dictionary =
     /// O(k log n) complexity vs O(n) linear scan
     normalized_multimap: FuzzyMultiMap<HashSet<String>, DynamicDawgChar<HashSet<String>>>,
 
-    /// Phonetic rules for normalization
+    /// Complete phonetic rules for introspection and pattern expansion.
     rules: Vec<RewriteRuleChar>,
+
+    /// Rules that still need sequential rewrite application.
+    sequential_rules: Vec<RewriteRuleChar>,
+
+    /// Exact whole-word lexical normalizations keyed by original spelling.
+    whole_word_normalizations: HashMap<String, Vec<String>>,
 
     /// Fuel for rule application (prevents infinite loops)
     fuel: usize,
@@ -221,6 +227,7 @@ fn is_exact_whole_word_context(context: &ContextChar) -> bool {
     }
 }
 
+#[cfg(test)]
 fn phone_chars_from_input(input: &str) -> Vec<PhoneChar> {
     input
         .chars()
@@ -289,25 +296,43 @@ fn phone_chars_to_string(phones: &[PhoneChar]) -> String {
     output
 }
 
-fn normalized_forms_char(input: &str, rules: &[RewriteRuleChar], fuel: usize) -> Vec<String> {
-    let primary = normalize_string_char(input, rules, fuel);
-    if rules.is_empty() {
-        return vec![primary];
-    }
-
-    let input_phones = phone_chars_from_input(input);
-    let mut forms = vec![primary];
-
+fn split_normalization_rules(
+    rules: &[RewriteRuleChar],
+) -> (Vec<RewriteRuleChar>, HashMap<String, Vec<String>>) {
+    let mut sequential_rules = Vec::with_capacity(rules.len());
+    let mut map: HashMap<String, Vec<String>> = HashMap::new();
     for rule in rules {
-        if rule.pattern == input_phones && is_exact_whole_word_context(&rule.context) {
+        if is_exact_whole_word_context(&rule.context) {
+            let pattern = phone_chars_to_string(&rule.pattern);
             let replacement = phone_chars_to_string(&rule.replacement);
-            if !forms.contains(&replacement) {
-                forms.push(replacement);
+            let replacements = map.entry(pattern).or_default();
+            if !replacements.contains(&replacement) {
+                replacements.push(replacement);
             }
+        } else {
+            sequential_rules.push(rule.clone());
         }
     }
+    (sequential_rules, map)
+}
 
-    forms
+fn normalized_forms_char_with_map(
+    input: &str,
+    sequential_rules: &[RewriteRuleChar],
+    fuel: usize,
+    whole_word_normalizations: &HashMap<String, Vec<String>>,
+) -> Vec<String> {
+    if let Some(replacements) = whole_word_normalizations.get(input) {
+        let mut forms: Vec<String> = Vec::with_capacity(replacements.len());
+        for replacement in replacements {
+            if !forms.contains(replacement) {
+                forms.push(replacement.clone());
+            }
+        }
+        return forms;
+    }
+
+    vec![normalize_string_char(input, sequential_rules, fuel)]
 }
 
 // ============================================================================
@@ -463,7 +488,7 @@ where
         if is_new {
             // 2. Update normalized multimap
             let term_string = term.to_string();
-            for normalized in normalized_forms_char(term, &self.rules, self.fuel) {
+            for normalized in self.normalized_forms(term) {
                 self.normalized_multimap.update_or_insert(
                     &normalized,
                     HashSet::from([term_string.clone()]),
@@ -492,7 +517,7 @@ where
         // If newly inserted, also update normalized multimap
         if is_new && !existed {
             let term_string = term.to_string();
-            for normalized in normalized_forms_char(term, &self.rules, self.fuel) {
+            for normalized in self.normalized_forms(term) {
                 self.normalized_multimap.update_or_insert(
                     &normalized,
                     HashSet::from([term_string.clone()]),
@@ -516,7 +541,7 @@ where
 
         // Update normalized multimap with new terms
         for (term, _) in other.iter_terms() {
-            for normalized in normalized_forms_char(&term, &self.rules, self.fuel) {
+            for normalized in self.normalized_forms(&term) {
                 self.normalized_multimap.update_or_insert(
                     &normalized,
                     HashSet::from([term.clone()]),
@@ -554,11 +579,14 @@ where
     /// Create an empty dictionary with custom rules and algorithm.
     pub fn with_rules_and_algorithm(rules: Vec<RewriteRuleChar>, algorithm: Algorithm) -> Self {
         let fuel = Self::compute_fuel(&rules);
+        let (sequential_rules, whole_word_normalizations) = split_normalization_rules(&rules);
         let normalized_dict = DynamicDawgChar::<HashSet<String>>::new();
         Self {
             originals: DynamicDawgChar::new(),
             normalized_multimap: FuzzyMultiMap::new(normalized_dict, algorithm),
             rules,
+            sequential_rules,
+            whole_word_normalizations,
             fuel,
             _value: std::marker::PhantomData,
         }
@@ -612,6 +640,7 @@ where
         S: AsRef<str>,
     {
         let fuel = Self::compute_fuel(&rules);
+        let (sequential_rules, whole_word_normalizations) = split_normalization_rules(&rules);
         let originals = DynamicDawgChar::new();
         let normalized_dict = DynamicDawgChar::<HashSet<String>>::new();
 
@@ -622,7 +651,12 @@ where
             let term_string = term.to_string();
 
             // Use update_or_insert to add term to the HashSet for this normalized form
-            for normalized in normalized_forms_char(term, &rules, fuel) {
+            for normalized in normalized_forms_char_with_map(
+                term,
+                &sequential_rules,
+                fuel,
+                &whole_word_normalizations,
+            ) {
                 normalized_dict.update_or_insert(
                     &normalized,
                     HashSet::from([term_string.clone()]),
@@ -637,6 +671,8 @@ where
             originals,
             normalized_multimap: FuzzyMultiMap::new(normalized_dict, algorithm),
             rules,
+            sequential_rules,
+            whole_word_normalizations,
             fuel,
             _value: std::marker::PhantomData,
         }
@@ -649,6 +685,7 @@ where
         S: AsRef<str>,
     {
         let fuel = Self::compute_fuel(&rules);
+        let (sequential_rules, whole_word_normalizations) = split_normalization_rules(&rules);
         let originals = DynamicDawgChar::new();
         let normalized_dict = DynamicDawgChar::<HashSet<String>>::new();
 
@@ -658,7 +695,12 @@ where
 
             let term_string = term.to_string();
 
-            for normalized in normalized_forms_char(term, &rules, fuel) {
+            for normalized in normalized_forms_char_with_map(
+                term,
+                &sequential_rules,
+                fuel,
+                &whole_word_normalizations,
+            ) {
                 normalized_dict.update_or_insert(
                     &normalized,
                     HashSet::from([term_string.clone()]),
@@ -673,6 +715,8 @@ where
             originals,
             normalized_multimap: FuzzyMultiMap::new(normalized_dict, Algorithm::Standard),
             rules,
+            sequential_rules,
+            whole_word_normalizations,
             fuel,
             _value: std::marker::PhantomData,
         }
@@ -704,7 +748,19 @@ where
 
     /// Normalize a string using the rules.
     pub fn normalize(&self, term: &str) -> String {
-        normalize_string_char(term, &self.rules, self.fuel)
+        self.normalized_forms(term)
+            .into_iter()
+            .next()
+            .unwrap_or_default()
+    }
+
+    fn normalized_forms(&self, term: &str) -> Vec<String> {
+        normalized_forms_char_with_map(
+            term,
+            &self.sequential_rules,
+            self.fuel,
+            &self.whole_word_normalizations,
+        )
     }
 
     /// Get the phonetic rules being used.
@@ -777,7 +833,7 @@ where
     /// `true` if the term was in the normalized index, `false` otherwise.
     pub fn remove(&self, term: &str) -> bool {
         let mut removed = false;
-        for normalized in normalized_forms_char(term, &self.rules, self.fuel) {
+        for normalized in self.normalized_forms(term) {
             if let Some(originals) = self.normalized_multimap.dictionary().get_value(&normalized) {
                 if originals.contains(term) {
                     let mut new_originals = originals.clone();
@@ -956,7 +1012,7 @@ where
     /// - `distance`: Edit distance between normalized query and normalized term
     /// - `normalized_form`: The normalized form that matched
     pub fn query(&self, query: &str, max_distance: usize) -> Vec<PhoneticNormalizedCandidate> {
-        let normalized_queries = normalized_forms_char(query, &self.rules, self.fuel);
+        let normalized_queries = self.normalized_forms(query);
 
         // Fast path for exact match (d=0): Direct trie lookup is 100-300× faster
         // than automaton traversal (benchmark: 2µs vs 600µs for 100 queries)
