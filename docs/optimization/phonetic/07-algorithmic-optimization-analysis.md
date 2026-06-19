@@ -142,7 +142,7 @@ WITHOUT position skipping:
 
 **For v0.8.0**: Accept current performance (27% improvement from H1)
 
-**For future work** (v0.9.0+):
+**Acceptance criteria for any revived treatment**:
 1. Add comprehensive tests specifically targeting Context::Final edge cases
 2. Prove safety formally or implement conservative variant:
    - Track minimum safe starting position based on context types

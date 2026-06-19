@@ -25,7 +25,8 @@ This far exceeded the expected 0.5-1.0% target by **20-40×**, making it one of 
 
 ### H1 Phase 1 (String Allocation Elimination)
 
-**Baseline**: H2 conditional optimization (commit: TBD)
+**Baseline**: H2 conditional optimization; see `docs/optimization/H2_RESULTS.md`
+for the retained H2 baseline and optimized commit identifiers.
 
 | Distance | H2 Baseline | H1 Phase 1 | Change | Speedup |
 |----------|-------------|------------|--------|---------|

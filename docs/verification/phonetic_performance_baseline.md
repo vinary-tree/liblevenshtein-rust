@@ -240,9 +240,10 @@ for pos in 0..=s.len() {
 4. **No u8 vs char penalty**: Both implementations equally fast
 5. **Optimized allocation pattern**: Minimal allocations during rule scanning
 
-### Potential Future Optimizations (v0.9.0+)
+### Candidate Treatments Requiring New Evidence
 
-**Note**: Current performance is production-ready. Further optimization deferred pending real-world usage data.
+**Note**: Current performance is production-ready. Additional optimizations
+require a new measured treatment and safety review before adoption.
 
 **Option 1: Algorithmic Restructuring** (High Risk, High Complexity)
 - **Observation**: O(n^1.5) complexity is fundamental to sequential rewrite algorithm

@@ -451,7 +451,8 @@ for op in operations.operations() {
    - **Answer via**: Benchmark with capacities 4, 8, 16 and measure
 
 3. **Post-H2 Hotspots**: Are there new bottlenecks after H2?
-   - **Answer via**: Generate post-H2 flamegraph (deferred per user request)
+   - **Answer via**: Use the retained H1/H2 result reports; a post-H2
+     flamegraph is outside this report's measured artifact set.
 
 4. **can_apply() Internals**: Can we optimize the operation matching logic?
    - **Answer via**: Profile `OperationType::can_apply` after Strategy 1 implemented

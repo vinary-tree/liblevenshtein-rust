@@ -101,7 +101,7 @@
 ㅅ -> s;
 
 // ㅇ (ieung) → silent initially, ŋ finally
-// When initial, it's a placeholder (silent)
+// When initial, it is a silent onset carrier
 // When final, it represents velar nasal
 [id: 2077, name: "ieung", weight: 0.15, group: korean_consonants, ipa: "/ŋ/"]
 ㅇ -> ŋ;
@@ -289,7 +289,7 @@ ae -> e;
 // ------------------------------
 // ㅇ (ieung) position rules
 // ------------------------------
-// Initial ㅇ is silent (placeholder for vowel-initial syllables)
+// Initial ㅇ is silent as a vowel-initial onset carrier
 // Final ㅇ is /ŋ/ (already covered in basic rules)
 
 // ieung is silent at word start (before vowel)
@@ -408,4 +408,3 @@ d -> n / _ [nm];
 // p/b before n/m becomes m
 [id: 2170, name: "bilabial nasalization", weight: 0.02, group: korean_position]
 b -> m / _ [nm];
-

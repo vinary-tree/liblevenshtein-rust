@@ -248,7 +248,9 @@ The restricted substitutions feature is fully implemented and tested:
 5. ✅ **Fully Tested**: 6/6 integration tests pass, 492/492 library tests pass
 6. ✅ **Type Safe**: No lossy conversions, compile-time checks for byte-level dictionaries
 
-**Ready for**: Documentation updates, benchmarking, and potential future work on `SubstitutionSetChar` for Unicode support.
+**Current follow-up scope**: Documentation updates, benchmarking, and any
+Unicode-specific `SubstitutionSetChar` work should be tracked as separate
+measured changes.
 
 ---
 

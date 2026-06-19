@@ -310,7 +310,7 @@ mod tests {
     fn test_can_reach_acceptance() {
         let pos = MsmPosition::new(2, 2, 1.0, 1.0, 2.0);
 
-        // No remaining work, cost 1.0 <= 2.0
+        // At both sequence ends, cost 1.0 <= 2.0.
         assert!(pos.can_reach_acceptance(2, 2, 2.0, 1.0));
 
         // 1 extra query element, needs at least 1.0 more cost

@@ -129,7 +129,9 @@ pub struct QueryIterator<N: DictionaryNode, R: QueryResult = String> {
 }
 ```
 
-**No change needed!** Query iterators already use `Unrestricted` internally. The policy is for when we actually implement policy-based matching logic (future work).
+**No change needed!** Query iterators already use `Unrestricted` internally.
+Policy-specific matching belongs in a separately measured transition-logic
+treatment.
 
 **Alternative (if we want policy in iterators)**:
 ```rust

@@ -271,9 +271,9 @@ Benchmark: iteration_only/iterate_100_results
 ### Total Allocation Budget
 
 **For medium_selectivity benchmark** (100 results):
-- Estimated allocations: TBD count
-- Estimated bytes: TBD bytes
-- Peak memory: TBD bytes
+- Allocation-tracker counts were not retained in this baseline report.
+- Byte totals were not retained in this baseline report.
+- Peak-memory totals were not retained in this baseline report.
 
 ## Bottleneck Identification
 

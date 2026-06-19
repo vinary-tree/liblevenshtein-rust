@@ -364,7 +364,8 @@ Both lazy and eager automata follow identical patterns:
 
 ### 4. Documentation Pays Dividends
 **Investment**: ~40% of time spent on documentation
-**Benefit**: Clear progress tracking, design rationale preserved, easier future work
+**Benefit**: Clear progress tracking, design rationale preserved, easier
+follow-on evaluation
 
 ### 5. Scientific Method Works for Software
 **Process**: Hypothesis → Implementation → Testing → Verification

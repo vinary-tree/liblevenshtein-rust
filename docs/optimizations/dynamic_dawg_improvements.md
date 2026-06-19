@@ -51,7 +51,10 @@ This document tracks the performance improvements made to the DynamicDawg implem
 - Better performance under contention
 
 **Expected:** 5-10% improvement
-**Actual:** TBD
+**Actual:** Not isolated in this historical phase note. Use
+`docs/optimizations/dynamic_dawg_optimization_results.md` and
+`docs/optimizations/all_optimizations_final_report.md` for the later measured
+DynamicDawg decisions.
 
 ---
 
@@ -90,7 +93,10 @@ pub struct DynamicDawgNode {
 - Slightly larger node structure (~40 bytes additional per node during traversal)
 
 **Expected:** 30-40% improvement
-**Actual:** TBD
+**Actual:** Not isolated in this historical phase note. Later DynamicDawg
+benchmark decisions are recorded in
+`docs/optimizations/dynamic_dawg_optimization_results.md` and
+`docs/optimizations/all_optimizations_final_report.md`.
 
 ---
 
@@ -117,7 +123,8 @@ pub struct DynamicDawgNode {
 - Only benefits nodes with ≤4 edges
 
 **Expected:** 3-7% improvement
-**Actual:** TBD
+**Actual:** Not isolated in this historical phase note. Later DynamicDawg
+benchmark decisions are recorded in the session-level optimization reports.
 
 ---
 
@@ -127,7 +134,9 @@ pub struct DynamicDawgNode {
 
 ### Benchmark Results
 
-**TBD - Will run benchmarks to measure actual improvements**
+This early phase note did not retain a combined benchmark table. Treat the
+session-level optimization reports as the measured evidence for DynamicDawg
+performance decisions.
 
 ---
 

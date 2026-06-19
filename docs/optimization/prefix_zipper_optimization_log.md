@@ -24,7 +24,8 @@ For each optimization attempt:
 
 ### Benchmark Results
 
-*(To be filled after initial benchmark run completes)*
+This initial log was superseded by the measured baseline in
+`docs/optimization/prefix_zipper_baseline.md`.
 
 ```
 Benchmark Group: prefix_selectivity
@@ -62,19 +63,19 @@ Benchmark Group: prefix_navigation
 
 ### Flamegraph Analysis
 
-*(To be filled after flamegraph generation)*
+The retained flamegraph analysis is in
+`docs/optimization/prefix_zipper_baseline.md`.
 
 **Hot paths** (>5% of execution time):
-1. TBD
-2. TBD
-3. TBD
+1. See `docs/optimization/prefix_zipper_baseline.md` for the ranked hot paths.
 
 **Key findings**:
-- TBD
+- See `docs/optimization/prefix_zipper_baseline.md` for the retained findings.
 
 ### Allocation Profile
 
-*(To be filled after profiling)*
+The allocation profile retained for this optimization line is in
+`docs/optimization/prefix_zipper_baseline.md`.
 
 **Per-iteration allocations**:
 - Path clones: ? count, ? bytes

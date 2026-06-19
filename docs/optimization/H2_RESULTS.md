@@ -50,9 +50,9 @@
 | Scenario        | Baseline (µs) | Optimized (µs) | Change |
 |-----------------|---------------|----------------|--------|
 | Exact match     | 5.790         | 3.911          | **-32.5%** |
-| One error       | 8.023         | TBD            | TBD |
-| Two errors      | 7.267         | TBD            | TBD |
-| Reject (dist 3) | 5.294         | TBD            | TBD |
+| One error       | 8.023         | Not isolated in this final table | See distance-specific results above |
+| Two errors      | 7.267         | Not isolated in this final table | See distance-specific results above |
+| Reject (dist 3) | 5.294         | Not isolated in this final table | See distance-specific results above |
 
 ## Implementation Changes
 
