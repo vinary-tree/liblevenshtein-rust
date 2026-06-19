@@ -39,14 +39,47 @@
 //! tests at the bottom of this file for the end-to-end exactness gates.
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::{Dictionary, DictionaryNode};
 
 use super::encoding::QuantizationConfig;
 use super::msm::MsmConfig;
-use super::msm_interval::{column_lower_bound, step_interval_column, COST_EPSILON};
+use super::msm_interval::{column_lower_bound, step_interval_column_into, COST_EPSILON};
+
+struct KnnQueueNode<N> {
+    lower_bound: f64,
+    sequence: usize,
+    depth: usize,
+    node: N,
+    column: Vec<f64>,
+    last_interval: Option<(f64, f64)>,
+    path: Vec<u8>,
+}
+
+impl<N> PartialEq for KnnQueueNode<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.lower_bound.to_bits() == other.lower_bound.to_bits() && self.sequence == other.sequence
+    }
+}
+
+impl<N> Eq for KnnQueueNode<N> {}
+
+impl<N> PartialOrd for KnnQueueNode<N> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<N> Ord for KnnQueueNode<N> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other
+            .lower_bound
+            .total_cmp(&self.lower_bound)
+            .then_with(|| other.sequence.cmp(&self.sequence))
+    }
+}
 
 /// An exact MSM similarity index over quantized reference series.
 ///
@@ -65,6 +98,8 @@ pub struct MsmTransducer<V: Eq + std::hash::Hash + Clone = usize> {
     quant: QuantizationConfig,
     /// MSM configuration for the exact verification step.
     msm: MsmConfig,
+    /// Precomputed quantization-bin intervals for hot trie-edge traversal.
+    bin_bounds: Vec<(f64, f64)>,
     /// Quantized key → all reference ids sharing that key.
     key_to_values: HashMap<Vec<u8>, Vec<V>>,
     /// Reference id → full-precision original series (for exact verification).
@@ -82,10 +117,14 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
             "MsmTransducer uses a byte-quantized trie; num_bins ({}) must be <= 256",
             quant.num_bins
         );
+        let bin_bounds = (0..quant.num_bins)
+            .map(|bin| quant.bin_bounds(bin))
+            .collect();
         Self {
             dawg: DynamicDawg::new(),
             quant,
             msm,
+            bin_bounds,
             key_to_values: HashMap::new(),
             originals: HashMap::new(),
         }
@@ -152,10 +191,19 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
             return self.search_empty_query(tau);
         }
         let root = self.dawg.root();
-        let root_col = vec![f64::INFINITY; m + 1];
+        let mut columns = vec![vec![f64::INFINITY; m + 1]];
         let mut out: Vec<(V, f64)> = Vec::new();
         let mut path: Vec<u8> = Vec::with_capacity(32);
-        self.walk_range(&root, 0, &root_col, None, &mut path, query, tau, &mut out);
+        self.walk_range(
+            &root,
+            0,
+            None,
+            &mut path,
+            query,
+            tau,
+            &mut out,
+            &mut columns,
+        );
 
         // Defensive dedup by id (keep the smallest distance), then sort.
         out.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
@@ -169,16 +217,21 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
             .originals
             .iter()
             .filter_map(|(id, original)| {
-                let exact = self.msm.distance(&[], original);
-                if exact <= tau + COST_EPSILON {
-                    Some((id.clone(), exact))
-                } else {
-                    None
-                }
+                self.msm
+                    .distance_with_cutoff(&[], original, tau)
+                    .map(|exact| (id.clone(), exact))
             })
             .collect();
         out.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
         out
+    }
+
+    #[inline]
+    fn bin_bounds_for(&self, unit: u8) -> (f64, f64) {
+        self.bin_bounds
+            .get(unit as usize)
+            .copied()
+            .unwrap_or_else(|| self.quant.bin_bounds(unit as u32))
     }
 
     /// Recursive interval-pruned trie walk used by [`Self::search_range`].
@@ -192,24 +245,26 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
         &self,
         node: &N,
         depth: usize,
-        col: &[f64],
         last_interval: Option<(f64, f64)>,
         path: &mut Vec<u8>,
         query: &[f64],
         tau: f64,
         out: &mut Vec<(V, f64)>,
+        columns: &mut Vec<Vec<f64>>,
     ) {
         let m = query.len();
 
         // A final node at depth >= 1 marks a complete reference of length
         // `depth`; col[m] is the admissible lower bound on its MSM distance.
-        if depth >= 1 && node.is_final() && col[m] <= tau + COST_EPSILON {
+        let col_at_query_end = columns[depth][m];
+        if depth >= 1 && node.is_final() && col_at_query_end <= tau + COST_EPSILON {
             if let Some(ids) = self.key_to_values.get(path) {
                 for id in ids {
                     if let Some(orig) = self.originals.get(id) {
-                        let exact = self.msm.distance(query, orig);
-                        if exact <= tau + COST_EPSILON {
-                            out.push((id.clone(), exact));
+                        if let Some(exact) = self.msm.distance_with_cutoff(query, orig, tau) {
+                            if exact <= tau + COST_EPSILON {
+                                out.push((id.clone(), exact));
+                            }
                         }
                     }
                 }
@@ -217,19 +272,34 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
         }
 
         for (unit, child) in node.edges() {
-            let (lo, hi) = self.quant.bin_bounds(unit as u32);
-            let new_col = step_interval_column(col, query, (lo, hi), last_interval, self.msm.c);
-            if column_lower_bound(&new_col) <= tau + COST_EPSILON {
+            let child_depth = depth + 1;
+            if columns.len() <= child_depth {
+                columns.resize_with(child_depth + 1, Vec::new);
+            }
+            let (lo, hi) = self.bin_bounds_for(unit);
+            let child_lower_bound = {
+                let (prev_columns, child_columns) = columns.split_at_mut(child_depth);
+                step_interval_column_into(
+                    &prev_columns[depth],
+                    query,
+                    (lo, hi),
+                    last_interval,
+                    self.msm.c,
+                    &mut child_columns[0],
+                );
+                column_lower_bound(&child_columns[0])
+            };
+            if child_lower_bound <= tau + COST_EPSILON {
                 path.push(unit);
                 self.walk_range(
                     &child,
-                    depth + 1,
-                    &new_col,
+                    child_depth,
                     Some((lo, hi)),
                     path,
                     query,
                     tau,
                     out,
+                    columns,
                 );
                 path.pop();
             }
@@ -238,33 +308,111 @@ impl<V: Eq + std::hash::Hash + Clone> MsmTransducer<V> {
 
     /// Exact k-nearest-neighbor search by MSM distance.
     ///
-    /// Layers exact [`Self::search_range`] with geometric threshold growth
-    /// (the idiom used by [`super::HybridSearchIndex::search_knn`]): start at
-    /// `initial_threshold`, doubling until at least `k` finite exact matches
-    /// are found or the search space is exhausted. Because each range pass is
-    /// exact, the returned finite results are the smallest MSM distances.
+    /// Uses a single best-first trie traversal keyed by the admissible
+    /// interval-column lower bound. Once `k` exact candidates have been found,
+    /// every queued subtree whose lower bound exceeds the current kth exact
+    /// distance is safely pruned. `initial_threshold` is retained for API
+    /// compatibility; exactness and result ordering do not depend on it.
     pub fn search_knn(&self, query: &[f64], k: usize, initial_threshold: f64) -> Vec<(V, f64)> {
+        let _ = initial_threshold;
         if k == 0 || self.is_empty() {
             return Vec::new();
         }
         if query.is_empty() {
             return self.search_empty_query(0.0).into_iter().take(k).collect();
         }
-        let mut threshold = if initial_threshold > 0.0 {
-            initial_threshold
+
+        let m = query.len();
+        let mut best: Vec<(V, f64)> = Vec::with_capacity(k.min(self.len()));
+        let mut kth_distance = f64::INFINITY;
+        let mut sequence = 0usize;
+        let mut queue = BinaryHeap::new();
+        queue.push(KnnQueueNode {
+            lower_bound: 0.0,
+            sequence,
+            depth: 0,
+            node: self.dawg.root(),
+            column: vec![f64::INFINITY; m + 1],
+            last_interval: None,
+            path: Vec::with_capacity(32),
+        });
+
+        while let Some(current) = queue.pop() {
+            if best.len() >= k && current.lower_bound > kth_distance + COST_EPSILON {
+                break;
+            }
+
+            if current.depth >= 1
+                && current.node.is_final()
+                && current.column[m] <= kth_distance + COST_EPSILON
+            {
+                if let Some(ids) = self.key_to_values.get(&current.path) {
+                    for id in ids {
+                        if let Some(orig) = self.originals.get(id) {
+                            if let Some(exact) =
+                                self.msm.distance_with_cutoff(query, orig, kth_distance)
+                            {
+                                Self::insert_knn_result(&mut best, id.clone(), exact, k);
+                                kth_distance = Self::knn_cutoff(&best, k);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (unit, child) in current.node.edges() {
+                let (lo, hi) = self.bin_bounds_for(unit);
+                let mut child_column = Vec::with_capacity(m + 1);
+                step_interval_column_into(
+                    &current.column,
+                    query,
+                    (lo, hi),
+                    current.last_interval,
+                    self.msm.c,
+                    &mut child_column,
+                );
+                let lower_bound = column_lower_bound(&child_column);
+                if best.len() < k || lower_bound <= kth_distance + COST_EPSILON {
+                    let mut child_path = current.path.clone();
+                    child_path.push(unit);
+                    sequence = sequence.wrapping_add(1);
+                    queue.push(KnnQueueNode {
+                        lower_bound,
+                        sequence,
+                        depth: current.depth + 1,
+                        node: child,
+                        column: child_column,
+                        last_interval: Some((lo, hi)),
+                        path: child_path,
+                    });
+                }
+            }
+        }
+
+        best.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
+        best.truncate(k);
+        best
+    }
+
+    fn insert_knn_result(best: &mut Vec<(V, f64)>, id: V, distance: f64, k: usize) {
+        if let Some((_, existing)) = best.iter_mut().find(|(existing_id, _)| existing_id == &id) {
+            if distance < *existing {
+                *existing = distance;
+            }
         } else {
-            1.0
-        };
-        loop {
-            let results = self.search_range(query, threshold);
-            if results.len() >= k {
-                return results.into_iter().take(k).collect();
-            }
-            if threshold >= 1e10 {
-                // Search space exhausted; return everything found.
-                return results;
-            }
-            threshold *= 2.0;
+            best.push((id, distance));
+        }
+        best.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
+        if best.len() > k {
+            best.truncate(k);
+        }
+    }
+
+    fn knn_cutoff(best: &[(V, f64)], k: usize) -> f64 {
+        if best.len() >= k {
+            best[k - 1].1
+        } else {
+            f64::INFINITY
         }
     }
 }

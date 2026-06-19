@@ -21,6 +21,8 @@
 
 use std::fmt;
 
+const CUTOFF_EPSILON: f64 = 1e-9;
+
 /// Configuration for MSM distance computation.
 ///
 /// # Fields
@@ -220,6 +222,75 @@ impl MsmConfig {
         }
 
         prev[n]
+    }
+
+    /// Compute the MSM distance only when it is at most `max_cost`.
+    ///
+    /// This is the exact two-row dynamic program with a safe early-abandon
+    /// check: if every live cell in a completed row exceeds `max_cost`, all
+    /// future paths must also exceed it because MSM operation costs are
+    /// non-negative. Returns `None` exactly when the distance is greater than
+    /// a finite cutoff; a `+∞` cutoff returns the same value as
+    /// [`Self::distance_optimized`].
+    pub fn distance_with_cutoff(&self, x: &[f64], y: &[f64], max_cost: f64) -> Option<f64> {
+        if max_cost.is_nan() || max_cost < -CUTOFF_EPSILON {
+            return None;
+        }
+        if max_cost.is_infinite() && max_cost.is_sign_positive() {
+            return Some(self.distance_optimized(x, y));
+        }
+
+        // Ensure x is the longer series for space optimization.
+        if x.len() < y.len() {
+            return self.distance_with_cutoff(y, x, max_cost);
+        }
+
+        let m = x.len();
+        let n = y.len();
+        let cutoff = max_cost + CUTOFF_EPSILON;
+
+        if m == 0 && n == 0 {
+            return (0.0 <= cutoff).then_some(0.0);
+        }
+        if n == 0 {
+            return None;
+        }
+
+        let mut prev = vec![f64::INFINITY; n + 1];
+        let mut curr = vec![f64::INFINITY; n + 1];
+
+        prev[1] = (x[0] - y[0]).abs();
+        let mut row_min = prev[1];
+        for j in 2..=n {
+            prev[j] = prev[j - 1] + self.c_func(y[j - 1], x[0], y[j - 2]);
+            row_min = row_min.min(prev[j]);
+        }
+        if row_min > cutoff {
+            return None;
+        }
+
+        for i in 2..=m {
+            curr[1] = prev[1] + self.c_func(x[i - 1], x[i - 2], y[0]);
+            row_min = curr[1];
+
+            for j in 2..=n {
+                let move_cost = prev[j - 1] + (x[i - 1] - y[j - 1]).abs();
+                let merge_cost = prev[j] + self.c_func(x[i - 1], x[i - 2], y[j - 1]);
+                let split_cost = curr[j - 1] + self.c_func(y[j - 1], x[i - 1], y[j - 2]);
+
+                curr[j] = move_cost.min(merge_cost).min(split_cost);
+                row_min = row_min.min(curr[j]);
+            }
+
+            if row_min > cutoff {
+                return None;
+            }
+
+            std::mem::swap(&mut prev, &mut curr);
+        }
+
+        let distance = prev[n];
+        (distance <= cutoff).then_some(distance)
     }
 
     /// Compute the MSM distance and return the full DP matrix for debugging.
@@ -482,6 +553,43 @@ mod tests {
             d1,
             d2
         );
+    }
+
+    #[test]
+    fn test_cutoff_matches_standard_when_within_threshold() {
+        let config = MsmConfig::new(1.0);
+        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let y = vec![1.5, 2.5, 3.5, 4.5];
+        let expected = config.distance(&x, &y);
+
+        let got = config.distance_with_cutoff(&x, &y, expected);
+        assert!(
+            got.is_some_and(|d| approx_eq(d, expected)),
+            "cutoff result {got:?} did not match exact {expected}"
+        );
+
+        let reversed = config.distance_with_cutoff(&y, &x, expected);
+        assert!(
+            reversed.is_some_and(|d| approx_eq(d, expected)),
+            "reversed cutoff result {reversed:?} did not match exact {expected}"
+        );
+    }
+
+    #[test]
+    fn test_cutoff_rejects_distances_above_threshold() {
+        let config = MsmConfig::new(1.0);
+        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let y = vec![8.0, 9.0, 10.0, 11.0, 12.0];
+        let exact = config.distance(&x, &y);
+
+        assert!(config.distance_with_cutoff(&x, &y, exact - 0.5).is_none());
+        assert_eq!(config.distance_with_cutoff(&[], &[1.0], 100.0), None);
+        assert_eq!(
+            config.distance_with_cutoff(&[], &[1.0], f64::INFINITY),
+            Some(f64::INFINITY)
+        );
+        assert_eq!(config.distance_with_cutoff(&[], &[], 0.0), Some(0.0));
+        assert_eq!(config.distance_with_cutoff(&[], &[], -1.0), None);
     }
 
     #[test]

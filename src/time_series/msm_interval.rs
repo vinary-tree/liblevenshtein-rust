@@ -146,10 +146,29 @@ pub fn step_interval_column(
     prev: Option<(f64, f64)>,
     c_const: f64,
 ) -> Vec<f64> {
+    let mut col = Vec::with_capacity(query.len() + 1);
+    step_interval_column_into(prev_col, query, curr, prev, c_const, &mut col);
+    col
+}
+
+/// Compute the next interval-relaxed MSM DP column into a reusable buffer.
+///
+/// This is the allocation-reuse companion to [`step_interval_column`]. The
+/// buffer is resized to `query.len() + 1` and fully overwritten, so callers may
+/// safely reuse one column per trie depth during exact MSM-over-trie traversal.
+pub fn step_interval_column_into(
+    prev_col: &[f64],
+    query: &[f64],
+    curr: (f64, f64),
+    prev: Option<(f64, f64)>,
+    c_const: f64,
+    col: &mut Vec<f64>,
+) {
     let m = query.len();
     assert!(m > 0, "step_interval_column requires a non-empty query");
     let (clo, chi) = curr;
-    let mut col = vec![f64::INFINITY; m + 1];
+    col.clear();
+    col.resize(m + 1, f64::INFINITY);
 
     match prev {
         // depth == 1: the first target element. Base case + first column.
@@ -193,8 +212,6 @@ pub fn step_interval_column(
             }
         }
     }
-
-    col
 }
 
 /// The admissible subtree lower bound carried by a trie node holding `col`:

@@ -32,6 +32,19 @@ fn brute_range(series: &[Vec<f64>], query: &[f64], msm: &MsmConfig, tau: f64) ->
     v
 }
 
+/// Brute-force reference: the k nearest series, sorted ascending by distance.
+fn brute_knn(series: &[Vec<f64>], query: &[f64], msm: &MsmConfig, k: usize) -> Vec<(usize, f64)> {
+    let mut v: Vec<(usize, f64)> = series
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (i, msm.distance(query, s)))
+        .filter(|(_, d)| d.is_finite())
+        .collect();
+    v.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
+    v.truncate(k);
+    v
+}
+
 fn ids(results: &[(usize, f64)]) -> HashSet<usize> {
     results.iter().map(|(i, _)| *i).collect()
 }
@@ -58,7 +71,9 @@ fn public_api_smoke_range_and_knn() {
     assert_eq!(ids(&range), ids(&brute_range(&series, &query, &msm, 10.0)));
 
     let knn = idx.search_knn(&query, 2, 1.0);
+    let want_knn = brute_knn(&series, &query, &msm, 2);
     assert_eq!(knn.len(), 2);
+    assert_eq!(ids(&knn), ids(&want_knn));
     // Returned ascending and exact.
     assert!(knn[0].1 <= knn[1].1 + EPS);
     for (i, d) in &knn {
@@ -175,7 +190,9 @@ fn knn_k_exceeds_len_returns_all_sorted() {
     let idx = MsmTransducer::from_series(quant, msm, &series);
     let query = vec![1.0, 2.0];
     let got = idx.search_knn(&query, 100, 1.0);
+    let want = brute_knn(&series, &query, &msm, 100);
     assert_eq!(got.len(), series.len(), "k>len returns every series");
+    assert_eq!(ids(&got), ids(&want));
     for w in got.windows(2) {
         assert!(w[0].1 <= w[1].1 + EPS, "results must be ascending");
     }
