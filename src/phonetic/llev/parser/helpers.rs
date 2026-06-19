@@ -23,6 +23,30 @@ impl<'a> Parser<'a> {
         self.lexer.peek().ok() == Some(expected)
     }
 
+    /// Check whether the next raw token sequence is an inline rule weight suffix.
+    pub(super) fn next_token_is_weight_suffix(&mut self) -> bool {
+        matches!(self.lexer.peek().ok(), Some(Token::CharClassStart))
+            && self.peek_weight_suffix().is_some()
+    }
+
+    /// Return the numeric value of an upcoming inline rule weight suffix, if present.
+    pub(super) fn peek_weight_suffix(&mut self) -> Option<f64> {
+        let remaining = self.lexer.remaining_input();
+        let Some(after_open) = remaining.strip_prefix('[') else {
+            return None;
+        };
+        let close = after_open.find(']')?;
+        let value = after_open[..close].trim();
+        if !is_inline_weight_literal(value) {
+            return None;
+        }
+
+        value
+            .parse::<f64>()
+            .ok()
+            .filter(|weight| weight.is_finite() && *weight >= 0.0)
+    }
+
     /// Expect and consume a specific token.
     pub(super) fn expect(&mut self, expected: &Token) -> LLevResult<Token> {
         let token = self.advance()?;
@@ -151,6 +175,26 @@ impl<'a> Parser<'a> {
             }
         }
     }
+}
+
+fn is_inline_weight_literal(value: &str) -> bool {
+    let mut chars = value.chars().peekable();
+    let mut saw_digit = false;
+
+    while chars.peek().is_some_and(|c| c.is_ascii_digit()) {
+        saw_digit = true;
+        chars.next();
+    }
+
+    if chars.peek() == Some(&'.') {
+        chars.next();
+        while chars.peek().is_some_and(|c| c.is_ascii_digit()) {
+            saw_digit = true;
+            chars.next();
+        }
+    }
+
+    saw_digit && chars.next().is_none()
 }
 
 impl<'a> SyllableParser for Parser<'a> {

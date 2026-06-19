@@ -444,7 +444,13 @@ impl<'a> Lexer<'a> {
     pub fn remaining_input(&mut self) -> &'a str {
         // If there are peeked tokens, return from the start of the first peeked token.
         // We also need to reset the lexer to re-lex from that position.
-        if let Some((_, pos, _)) = self.peeked.first() {
+        if let Some((token, pos, _)) = self.peeked.first() {
+            if matches!(token, Token::Eof) {
+                self.peeked.clear();
+                self.reset_to_offset(self.input.len());
+                return "";
+            }
+
             let offset = pos.offset;
             // Return remaining input from the peeked position
             // Don't skip whitespace - just return the raw remaining input

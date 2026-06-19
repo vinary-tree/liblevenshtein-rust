@@ -296,7 +296,7 @@ impl<'a> Parser<'a> {
         let replacement = if self.check_replacement_end() {
             Expression::Empty
         } else {
-            self.parse_alternation()?
+            self.parse_replacement_expression()?
         };
 
         // Parse optional context (may include syllable clause)
@@ -308,16 +308,8 @@ impl<'a> Parser<'a> {
             None
         };
 
-        // Parse optional weight suffix
-        let weight = if self.check(&Token::CharClassStart) {
-            // Could be weight suffix [0.5] - but need to distinguish from char class
-            // Weight suffix would be followed by a number
-            // For simplicity, we'll skip weight suffix parsing in patterns
-            // and rely on metadata block for weights
-            None
-        } else {
-            None
-        };
+        // Parse optional inline weight suffix: `pattern -> replacement [0.5]`.
+        let weight = self.parse_weight_suffix()?;
 
         Ok(RewriteRuleAST {
             pattern,
@@ -327,18 +319,71 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_weight_suffix(&mut self) -> LLevResult<Option<f64>> {
+        if !self.next_token_is_weight_suffix() {
+            return Ok(None);
+        }
+
+        self.expect(&Token::CharClassStart)?;
+        let weight = self.expect_weight_suffix_number()?;
+        self.expect(&Token::CharClassEnd)?;
+
+        if !weight.is_finite() || weight < 0.0 {
+            return Err(LLevError::new(LLevErrorKind::InvalidWeight(format!(
+                "expected non-negative finite weight, got {}",
+                weight
+            )))
+            .at_position(self.lexer.position()));
+        }
+
+        Ok(Some(weight))
+    }
+
+    fn expect_weight_suffix_number(&mut self) -> LLevResult<f64> {
+        match self.advance()? {
+            Token::Float(f) => Ok(f),
+            Token::Number(n) => Ok(n as f64),
+            Token::Char(c) if c.is_ascii_digit() => {
+                let mut number = String::from(c);
+                let mut seen_dot = false;
+
+                loop {
+                    match self.lexer.peek() {
+                        Ok(Token::Char(next)) if next.is_ascii_digit() => {
+                            number.push(*next);
+                            self.advance()?;
+                        }
+                        Ok(Token::Dot) if !seen_dot => {
+                            seen_dot = true;
+                            number.push('.');
+                            self.advance()?;
+                        }
+                        _ => break,
+                    }
+                }
+
+                number.parse::<f64>().map_err(|_| {
+                    LLevError::new(LLevErrorKind::InvalidWeight(format!(
+                        "could not parse inline weight '{}'",
+                        number
+                    )))
+                    .at_position(self.lexer.position())
+                })
+            }
+            other => Err(LLevError::expected_token(
+                "inline weight number".to_string(),
+                format!("{:?}", other),
+                self.lexer.position(),
+            )),
+        }
+    }
+
     /// Check if we're at the end of a replacement (arrow, slash, semicolon, newline, eof).
     fn check_replacement_end(&mut self) -> bool {
         matches!(
             self.lexer.peek().ok(),
-            Some(
-                Token::Slash
-                    | Token::Semicolon
-                    | Token::Newline
-                    | Token::Eof
-                    | Token::CharClassStart
-            )
-        )
+            Some(Token::Slash | Token::Semicolon | Token::Newline | Token::Eof)
+        ) || self.next_token_is_weight_suffix()
     }
 }
 

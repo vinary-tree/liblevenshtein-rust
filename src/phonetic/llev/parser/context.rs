@@ -33,7 +33,10 @@ impl<'a> Parser<'a> {
         self.expect(&Token::Underscore)?;
 
         // Parse right context (after '_')
-        if !self.check_context_end() && !self.check(&Token::KeywordIf) {
+        if !self.check_context_end()
+            && !self.check(&Token::KeywordIf)
+            && !self.next_token_is_weight_suffix()
+        {
             let expr = self.parse_context_or()?;
             right = Some(expr);
         }
@@ -44,6 +47,7 @@ impl<'a> Parser<'a> {
             self.advance()?;
             self.lexer.enter_top_level();
             let result = self.parse_syllable_or()?;
+            let _ = self.lexer.remaining_input();
             self.lexer.enter_pattern(); // Switch back for any following parsing
             Some(result)
         } else {
@@ -110,7 +114,7 @@ impl<'a> Parser<'a> {
         }
 
         // Otherwise parse as a pattern expression (concatenation)
-        let expr = self.parse_concatenation()?;
+        let expr = self.parse_concatenation_before_weight_suffix()?;
         Ok(ContextExpr::Pattern(expr))
     }
 

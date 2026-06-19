@@ -330,6 +330,112 @@ tsch -> tsh"#;
 }
 
 #[test]
+fn test_parse_inline_weight_suffix() {
+    let file = parse_str("c -> s [0.3];").expect("test: parse_str input");
+
+    assert_eq!(file.rules.len(), 1);
+    assert_eq!(file.rules[0].rule.weight, Some(0.3));
+}
+
+#[test]
+fn test_parse_inline_weight_suffix_without_terminator() {
+    let file = parse_str("c -> s [0.3]").expect("test: parse_str input");
+
+    assert_eq!(file.rules.len(), 1);
+    assert_eq!(file.rules[0].rule.weight, Some(0.3));
+}
+
+#[test]
+fn test_parse_replacement_without_terminator_after_weight_lookahead() {
+    let file = parse_str("ph -> f").expect("test: parse_str input");
+
+    assert_eq!(file.rules.len(), 1);
+    assert!(matches!(
+        file.rules[0].rule.replacement,
+        Expression::Char('f')
+    ));
+    assert!(file.rules[0].rule.weight.is_none());
+}
+
+#[test]
+fn test_parse_inline_weight_suffix_after_context() {
+    let file = parse_str("c -> s / _[ei] [0.25];").expect("test: parse_str input");
+
+    assert_eq!(file.rules.len(), 1);
+    assert_eq!(file.rules[0].rule.weight, Some(0.25));
+    assert!(file.rules[0].rule.context.is_some());
+}
+
+#[test]
+fn test_parse_inline_weight_suffix_after_empty_right_context() {
+    let file = parse_str("e ->  / _ [0.125];").expect("test: parse_str input");
+
+    assert_eq!(file.rules.len(), 1);
+    assert_eq!(file.rules[0].rule.weight, Some(0.125));
+    let context = file.rules[0]
+        .rule
+        .context
+        .as_ref()
+        .expect("rule should have context");
+    assert!(context.left.is_none());
+    assert!(context.right.is_none());
+}
+
+#[test]
+fn test_parse_inline_weight_suffix_after_syllable_context() {
+    let file = parse_str("e ->  / _ if final_syllable [0.2];").expect("test: parse_str input");
+
+    assert_eq!(file.rules.len(), 1);
+    assert_eq!(file.rules[0].rule.weight, Some(0.2));
+    let context = file.rules[0]
+        .rule
+        .context
+        .as_ref()
+        .expect("rule should have context");
+    assert!(matches!(
+        context.syllable,
+        Some(SyllableExpr::Cond(SyllableCondition::FinalSyllable))
+    ));
+}
+
+#[test]
+fn test_digit_leading_char_classes_are_not_weights() {
+    let file = parse_str("d -> [0-9] / _[0-9];").expect("test: parse_str input");
+
+    assert_eq!(file.rules.len(), 1);
+    assert!(file.rules[0].rule.weight.is_none());
+    assert!(matches!(
+        file.rules[0].rule.replacement,
+        Expression::CharClass { .. }
+    ));
+
+    let context = file.rules[0]
+        .rule
+        .context
+        .as_ref()
+        .expect("rule should have context");
+    assert!(matches!(
+        context.right.as_deref(),
+        Some(ContextExpr::Pattern(Expression::CharClass { .. }))
+    ));
+}
+
+#[test]
+fn test_parse_inline_weight_keeps_metadata_weight_separate() {
+    let file = parse_str(
+        r#"
+        [weight: 0.9]
+        c -> s [0.3];
+        "#,
+    )
+    .expect("test: parse_str input");
+
+    assert_eq!(file.rules.len(), 1);
+    assert_eq!(file.rules[0].metadata.weight, Some(0.9));
+    assert_eq!(file.rules[0].rule.weight, Some(0.3));
+}
+
+#[test]
 fn test_parse_escaped_uppercase_literal() {
     // Test that \B in a pattern becomes a literal 'B' character
     // Note: Using \B because \A is now the affricate shortcut

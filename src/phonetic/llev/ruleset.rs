@@ -880,13 +880,32 @@ mod tests {
     }
 
     #[test]
-    fn test_rule_with_metadata_weight() {
-        // Note: Inline weight syntax `[0.3]` after replacement is not yet implemented
-        // in the parser. For now, weights must be specified in metadata blocks.
+    fn test_rule_with_inline_weight() {
+        let file = parse_str("c -> s [0.3];").expect("parse failed");
+        let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.len(), 1);
+        let rule = &ruleset.rules[0];
+        assert!((rule.weight - 0.3).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_rule_with_context_and_inline_weight() {
+        let file = parse_str("c -> s / _[ei] [0.25];").expect("parse failed");
+        let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
+
+        assert_eq!(ruleset.len(), 1);
+        let rule = &ruleset.rules[0];
+        assert!((rule.weight - 0.25).abs() < 1e-10);
+        assert!(matches!(rule.context, Context::BeforeVowel(_)));
+    }
+
+    #[test]
+    fn test_inline_weight_overrides_metadata_weight() {
         let file = parse_str(
             r#"
-            [weight: 0.3]
-            c -> s;
+            [weight: 0.9]
+            c -> s [0.3];
             "#,
         )
         .expect("parse failed");

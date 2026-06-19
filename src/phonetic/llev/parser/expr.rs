@@ -33,6 +33,19 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Parse a replacement expression, stopping before an inline weight suffix.
+    pub(super) fn parse_replacement_expression(&mut self) -> LLevResult<Expression> {
+        let mut left = self.parse_concatenation_before_weight_suffix()?;
+
+        while self.check(&Token::Pipe) {
+            self.advance()?;
+            let right = self.parse_concatenation_before_weight_suffix()?;
+            left = Expression::Alt(Box::new(left), Box::new(right));
+        }
+
+        Ok(left)
+    }
+
     /// Parse concatenation: `quantified*`
     pub(super) fn parse_concatenation(&mut self) -> LLevResult<Expression> {
         let mut terms = Vec::new();
@@ -47,6 +60,27 @@ impl<'a> Parser<'a> {
             1 => Ok(terms.remove(0)),
             _ => {
                 // Build left-associative concatenation
+                let mut result = terms.remove(0);
+                for term in terms {
+                    result = Expression::Concat(Box::new(result), Box::new(term));
+                }
+                Ok(result)
+            }
+        }
+    }
+
+    pub(super) fn parse_concatenation_before_weight_suffix(&mut self) -> LLevResult<Expression> {
+        let mut terms = Vec::new();
+
+        while !self.next_token_is_weight_suffix() && self.can_start_primary() {
+            let term = self.parse_quantified()?;
+            terms.push(term);
+        }
+
+        match terms.len() {
+            0 => Ok(Expression::Empty),
+            1 => Ok(terms.remove(0)),
+            _ => {
                 let mut result = terms.remove(0);
                 for term in terms {
                     result = Expression::Concat(Box::new(result), Box::new(term));
