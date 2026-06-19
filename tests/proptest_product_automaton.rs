@@ -2,7 +2,7 @@
 //!
 //! These mirror the TLA+ `ProductAutomaton` model (`docs/verification/tla/`),
 //! which models the product construction's correctness and cost monotonicity
-//! but uses placeholder NFA transitions. Here we exercise the real Rust
+//! over an abstract NFA transition relation. Here we exercise the real Rust
 //! construction (`src/phonetic/nfa/product.rs`).
 //!
 //! Key idea for a brute-force oracle: when the phonetic NFA recognizes a single

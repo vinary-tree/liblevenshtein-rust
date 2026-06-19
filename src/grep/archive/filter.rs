@@ -2,7 +2,9 @@
 //!
 //! This module provides utilities to filter archive entries by glob patterns.
 
-use crate::grep::error::{GrepError, GrepResult};
+#[cfg(feature = "globset")]
+use crate::grep::error::GrepError;
+use crate::grep::error::GrepResult;
 
 #[cfg(feature = "globset")]
 use globset::{GlobBuilder, GlobMatcher};

@@ -5,7 +5,7 @@
 //! - Microsoft Office files (DOCX, XLSX)
 //! - E-book formats (EPUB)
 //! - Open Document formats (ODT)
-//! - DjVu files (placeholder)
+//! - DjVu files via DjVuLibre's `djvutxt`
 //!
 //! # Features
 //!
@@ -121,7 +121,7 @@ impl DocumentFormat {
                 return true;
                 false
             }
-            Self::DjVu => false, // Placeholder, not yet implemented
+            Self::DjVu => djvu::is_available(),
         }
     }
 
