@@ -258,19 +258,69 @@ Qed.
 
 (** ** Top-K Paths *)
 
-(** Find k highest-scoring paths *)
+(** Select the highest-scoring path from a finite list. *)
+Fixpoint best_path_by_score
+    (lat : Lattice)
+    (paths : list lattice_path)
+    : option lattice_path :=
+  match paths with
+  | [] => None
+  | path :: rest =>
+      match best_path_by_score lat rest with
+      | None => Some path
+      | Some best =>
+          if score_lt (path_score lat path) (path_score lat best) then
+            Some best
+          else
+            Some path
+      end
+  end.
+
+Lemma best_path_by_score_in : forall lat paths best,
+  best_path_by_score lat paths = Some best ->
+  In best paths.
+Proof.
+  intros lat paths.
+  induction paths as [| path rest IH]; intros best Hbest.
+  - simpl in Hbest. discriminate.
+  - simpl in Hbest.
+    destruct (best_path_by_score lat rest) as [rest_best |] eqn:Hrest.
+    + destruct (score_lt (path_score lat path)
+                         (path_score lat rest_best)) eqn:Hlt.
+      * inversion Hbest; subst.
+        right. apply IH. reflexivity.
+      * inversion Hbest; subst.
+        left. reflexivity.
+    + inversion Hbest; subst.
+      left. reflexivity.
+Qed.
+
+(** Find the highest-scoring bounded complete path when [k] is nonzero. *)
 Definition top_k_paths (lat : Lattice) (k : nat) : list lattice_path :=
-  (* This would implement k-best paths algorithm *)
-  [].
+  match k with
+  | 0 => []
+  | S _ =>
+      match best_path_by_score lat (bounded_complete_paths lat) with
+      | Some path => [path]
+      | None => []
+      end
+  end.
 
 (** All top-k paths are complete *)
 Theorem top_k_paths_complete : forall lat k,
   wf_lattice lat ->
   Forall (fun p => complete_path lat p = true) (top_k_paths lat k).
 Proof.
-  intros lat k Hwf.
+  intros lat k _.
   unfold top_k_paths.
-  apply Forall_nil.
+  destruct k as [| k']; [constructor |].
+  destruct (best_path_by_score lat (bounded_complete_paths lat)) as [path |] eqn:Hbest.
+  - constructor.
+    + apply best_path_by_score_in in Hbest.
+      apply filter_In in Hbest as [_ Hcomplete].
+      exact Hcomplete.
+    + constructor.
+  - constructor.
 Qed.
 
 (** Top-k paths are sorted by score *)
@@ -282,18 +332,55 @@ Theorem top_k_paths_sorted : forall lat k,
 Proof.
   intros lat k.
   unfold top_k_paths.
-  simpl.
-  intros i j Hij.
-  exfalso. lia.
+  destruct k as [| k']; simpl.
+  - intros i j Hij. exfalso. lia.
+  - destruct (best_path_by_score lat (bounded_complete_paths lat)) as [path |] eqn:Hbest; simpl;
+      intros i j Hij; exfalso; lia.
 Qed.
 
 (** ** Lattice Expansion with Edits *)
 
-(** Add error correction edges to a lattice *)
+(** Skip edges model single deletions in the current edge-only lattice
+    representation.  They preserve the node set and add an extra way to advance
+    by two positions when edits are enabled. *)
+Definition edit_skip_edges (lat : Lattice) (max_edits : nat) : list LatticeEdge :=
+  if max_edits =? 0 then
+    []
+  else
+    map
+      (fun i =>
+         {| edge_from := i;
+            edge_to := i + 2;
+            edge_weight := score_one |})
+      (seq 0 (Nat.pred (Nat.pred (length lat.(lattice_nodes))))).
+
+Lemma edit_skip_edges_valid : forall lat max_edits e,
+  In e (edit_skip_edges lat max_edits) ->
+  e.(edge_from) < length lat.(lattice_nodes) /\
+  e.(edge_to) < length lat.(lattice_nodes) /\
+  wf_score e.(edge_weight).
+Proof.
+  intros lat max_edits e Hin.
+  unfold edit_skip_edges in Hin.
+  destruct (max_edits =? 0) eqn:Hmax; [contradiction |].
+  apply in_map_iff in Hin as [i [Heq Hinseq]].
+  subst e. simpl.
+  apply in_seq in Hinseq.
+  remember (length lat.(lattice_nodes)) as node_count eqn:Hnodes.
+  destruct node_count as [| [| node_count']]; simpl in Hinseq; try lia.
+  split.
+  - lia.
+  - split.
+    + lia.
+    + unfold wf_score, score_zero, score_one; lra.
+Qed.
+
+(** Add error correction edges to a lattice. *)
 Definition expand_lattice_with_edits (lat : Lattice) (max_edits : nat) : Lattice :=
-  (* This would add edges for insertions, deletions, substitutions *)
-  (* For now, return the original lattice *)
-  lat.
+  {| lattice_nodes := lat.(lattice_nodes);
+     lattice_edges := lat.(lattice_edges) ++ edit_skip_edges lat max_edits;
+     lattice_start := lat.(lattice_start);
+     lattice_end := lat.(lattice_end) |}.
 
 (** Expansion preserves well-formedness *)
 Theorem expand_lattice_wf : forall lat max_edits,
@@ -302,7 +389,39 @@ Theorem expand_lattice_wf : forall lat max_edits,
 Proof.
   intros lat max_edits Hwf.
   unfold expand_lattice_with_edits.
-  exact Hwf.
+  unfold wf_lattice in *; simpl in *.
+  destruct Hwf as [Hstart [Hend [Hedges Hnodes]]].
+  repeat split; try assumption.
+  apply Forall_app.
+  split; [exact Hedges |].
+  apply Forall_forall.
+  intros e Hin.
+  apply edit_skip_edges_valid in Hin.
+  exact Hin.
+Qed.
+
+(** Existing valid paths remain valid after edit-edge expansion. *)
+Lemma valid_path_expand_preserved : forall lat max_edits path,
+  valid_path lat path = true ->
+  valid_path (expand_lattice_with_edits lat max_edits) path = true.
+Proof.
+  intros lat max_edits path.
+  induction path as [| n rest IH]; intros Hvalid.
+  - exact Hvalid.
+  - destruct rest as [| n2 rest'].
+    + exact Hvalid.
+    + simpl in Hvalid.
+      apply andb_true_iff in Hvalid as [Hprefix Htail].
+      apply andb_true_iff in Hprefix as [Hbounds Hedge].
+      apply andb_true_iff in Hbounds as [Hn Hn2].
+      simpl.
+      rewrite Hn, Hn2.
+      rewrite existsb_app, Hedge.
+      simpl.
+      pose proof (IH Htail) as Htail_expanded.
+      simpl in Htail_expanded.
+      rewrite Hn2 in Htail_expanded.
+      exact Htail_expanded.
 Qed.
 
 (** Expansion adds paths *)
@@ -313,8 +432,18 @@ Theorem expand_lattice_adds_paths : forall lat max_edits,
     complete_path (expand_lattice_with_edits lat max_edits) path = true.
 Proof.
   intros lat max_edits Hwf path Hpath.
-  unfold expand_lattice_with_edits.
-  exact Hpath.
+  unfold complete_path in *.
+  destruct path as [| n rest]; [exact Hpath |].
+  simpl in *.
+  apply andb_true_iff in Hpath as [Hprefix Hvalid].
+  apply andb_true_iff in Hprefix as [Hstart Hend].
+  rewrite Hstart, Hend.
+  simpl.
+  destruct rest as [| n2 rest']; [reflexivity |].
+  change (valid_path (expand_lattice_with_edits lat max_edits)
+                     (n :: n2 :: rest') = true).
+  apply valid_path_expand_preserved.
+  exact Hvalid.
 Qed.
 
 (** ** Lattice Composition *)
@@ -441,7 +570,8 @@ Theorem beam_search_bounded : forall lat beam_width,
 Proof.
   intros lat beam_width.
   unfold beam_search, top_k_paths.
-  simpl. lia.
+  destruct beam_width as [| beam_width']; simpl; [lia |].
+  destruct (best_path_by_score lat (bounded_complete_paths lat)); simpl; lia.
 Qed.
 
 (** Beam search paths are complete *)
