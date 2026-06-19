@@ -64,25 +64,6 @@ Fixpoint extract_edit_sequence_with_ops (path : list PathEntry) : list Operation
       end
   end.
 
-(** Simplified extract for backward compatibility.
-
-    NOTE: This function returns an empty list because AutomatonPath = list Position
-    does not contain operation information. Positions only track:
-    - pos_i: position in target string
-    - pos_e: error count
-    - pos_ctx: context
-
-    Without tracking the input position or the actual operations used,
-    we cannot reconstruct the edit sequence from positions alone.
-
-    For proper operation extraction, use either:
-    1. extract_edit_sequence_with_ops with list PathEntry (operations recorded)
-    2. extract_edit_sequence_full with target, input strings (operations inferred)
-*)
-(* Since path doesn't contain operation info, returns empty list.
-   The recursion was needed before when operations were tracked. *)
-Definition extract_edit_sequence (path : AutomatonPath) : list OperationType := [].
-
 (** ** Full Operation Extraction with String Context *)
 
 (** Get character at position in string, or None if out of bounds *)
@@ -200,6 +181,17 @@ Definition extract_edit_sequence_full
     : list OperationType :=
   extract_edit_sequence_full_aux target input 0 None path.
 
+(** Position-only automaton paths do not record the operation chosen for each
+    edge.  The compatibility extractor therefore requires the source and input
+    strings, and delegates to the string-context extractor above.  For proofs
+    that need exact operation membership, use [PathEntry] traces with recorded
+    operations. *)
+Definition extract_edit_sequence
+    (target input : string)
+    (path : AutomatonPath)
+    : list OperationType :=
+  extract_edit_sequence_full target input path.
+
 (** The current executable automaton does not retain operation traces in
     [accepts]. Until traced runs are introduced, soundness theorems that need an
     edit sequence take the sequence as an explicit witness. *)
@@ -209,17 +201,18 @@ Definition nfa_edit_sequence_witness aut target input : Prop :=
     apply_edit_sequence target edits = input /\
     edit_sequence_cost edits <= automaton_max_distance aut.
 
-Lemma extract_edit_sequence_current_model : forall path,
-  extract_edit_sequence path = [].
+Lemma extract_edit_sequence_matches_full : forall target input path,
+  extract_edit_sequence target input path =
+  extract_edit_sequence_full target input path.
 Proof.
-  intros path. reflexivity.
+  intros target input path. reflexivity.
 Qed.
 
-Lemma path_cost_matches_operations_current_model : forall path,
-  edit_sequence_cost (extract_edit_sequence path) = 0.
+Lemma path_cost_matches_full_extraction : forall target input path,
+  edit_sequence_cost (extract_edit_sequence target input path) =
+  edit_sequence_cost (extract_edit_sequence_full target input path).
 Proof.
-  intros path.
-  rewrite extract_edit_sequence_current_model.
+  intros target input path.
   reflexivity.
 Qed.
 
@@ -455,35 +448,11 @@ Proof.
   exact (op_name_match_exists_in_phonetic op op' Heqb Hin).
 Qed.
 
-(** Helper: If standard automaton rejects but phonetic accepts, then at least
-    one phonetic operation must have been used in the accepting edit sequence.
-    This is because standard_ops ⊆ standard_ops ++ phonetic_ops, so any
-    edit sequence using only standard_ops would also be accepted by standard.
-
-    NOTE: This evidence premise has a subtle dependency on the apply_edit_sequence stub.
-
-    The intended semantics:
-    - If edits only uses standard_ops and transforms target to input within cost n,
-      then standard_automaton would accept (target, input)
-    - Contrapositive: if standard_automaton rejects but phonetic accepts,
-      the accepting edit sequence must use at least one phonetic operation
-
-    With the current stub:
-    - apply_edit_sequence target edits = target (always)
-    - So "apply_edit_sequence target edits = input" implies target = input
-    - When target = input, both automata would accept with cost 0 (identity)
-    - This makes the hypothesis ~accepts (standard_automaton n) target input = true
-      impossible when target = input
-
-    Therefore, with the stub, the evidence premise is VACUOUSLY TRUE (the hypothesis is
-    unsatisfiable for any concrete use case).
-
-    For a meaningful proof, we would need real implementations of:
-    1. apply_edit_sequence that actually transforms strings
-    2. Proper automaton acceptance semantics
-
-    We keep this as an evidence premise to express the intended property.
-*)
+(** Helper: If the phonetic automaton accepts a pair that the standard
+    automaton rejects, then a supplied accepting edit witness must contain at
+    least one phonetic operation.  The executable [apply_edit_sequence] model
+    now performs the string transformation directly; the remaining assumption is
+    the standard-vs-phonetic acceptance witness rather than edit application. *)
 (** Phonetically accepted strings that standard rejects have a phonetic-op witness.
     If the phonetic automaton accepts but the standard automaton does not,
     then at least one operation in the accepting edit sequence is phonetic.
@@ -754,65 +723,79 @@ Proof.
   apply Hbounded. assumption.
 Qed.
 
-(** Operations extracted from a valid path are from the automaton.
-    Note: The current extract_edit_sequence is a stub that returns [],
-    so this is trivially true. A full implementation would need to track
-    operations in path entries and prove this from valid_path's structure. *)
+(** ** Traced Path Extraction *)
+
+(** Position-only paths can infer an edit sequence from string context, but they
+    cannot prove exact membership in [automaton_operations] because the selected
+    operation is not stored on each edge.  Traced paths carry that operation
+    evidence explicitly. *)
+Definition traced_path_uses_automaton_ops
+    (aut : GeneralizedAutomaton)
+    (path : list PathEntry)
+    : Prop :=
+  Forall
+    (fun pe =>
+       match pe_operation pe with
+       | Some op => In op (automaton_operations aut)
+       | None => True
+       end)
+    path.
+
+Definition traced_path_cost (path : list PathEntry) : nat :=
+  edit_sequence_cost (extract_edit_sequence_with_ops path).
+
+Definition valid_traced_path
+    (aut : GeneralizedAutomaton)
+    (path : list PathEntry)
+    : Prop :=
+  traced_path_uses_automaton_ops aut path /\
+  traced_path_cost path <= automaton_max_distance aut.
+
+(** Operations extracted from a traced path are from the automaton. *)
 Lemma extract_ops_from_automaton :
-  forall aut target input path,
-    valid_path aut target input path ->
-    Forall (fun op => In op (automaton_operations aut)) (extract_edit_sequence path).
+  forall aut path,
+    traced_path_uses_automaton_ops aut path ->
+    Forall
+      (fun op => In op (automaton_operations aut))
+      (extract_edit_sequence_with_ops path).
 Proof.
-  intros aut target input path Hvalid.
-  (* extract_edit_sequence is a stub that returns [] for any path *)
-  induction path as [| p1 path' IH].
-  - (* Empty path *)
-    simpl. constructor.
-  - (* Non-empty path p1 :: path' *)
-    destruct path' as [| p2 path''].
-    + (* Singleton [p1] *)
-      simpl. constructor.
-    + (* p1 :: p2 :: path'' *)
-      simpl in Hvalid.
-      destruct Hvalid as [_ [_ Hvalid_rest]].
-      simpl. apply IH. assumption.
+  intros aut path Huses.
+  induction path as [| pe rest IH].
+  - constructor.
+  - inversion Huses as [| ? ? Hentry Hrest]; subst.
+    simpl.
+    destruct (pe_operation pe) as [op |].
+    + constructor; [exact Hentry |].
+      apply IH. exact Hrest.
+    + apply IH. exact Hrest.
 Qed.
 
-(** The cost of operations extracted from a valid path is bounded.
-    Note: Since extract_edit_sequence returns [] for any path structure,
-    the cost is always 0, which is bounded by any max_distance. *)
+(** The cost of operations extracted from a traced path is bounded by its
+    explicit traced-path invariant. *)
 Lemma extract_ops_cost_bounded :
-  forall aut target input path,
-    wf_automaton aut ->
-    valid_path aut target input path ->
-    edit_sequence_cost (extract_edit_sequence path) <= automaton_max_distance aut.
+  forall aut path,
+    valid_traced_path aut path ->
+    edit_sequence_cost (extract_edit_sequence_with_ops path) <=
+    automaton_max_distance aut.
 Proof.
-  intros aut target input path Hwf_aut Hvalid.
-  (* extract_edit_sequence returns [] for any path, so cost is 0 *)
-  assert (Hextract_nil: forall p, extract_edit_sequence p = []).
-  { induction p as [| p1 path' IH].
-    - simpl. reflexivity.
-    - destruct path' as [| p2 path''].
-      + simpl. reflexivity.
-      + simpl. apply IH. }
-  rewrite Hextract_nil.
-  unfold edit_sequence_cost. simpl. lia.
+  intros aut path [_ Hcost].
+  exact Hcost.
 Qed.
 
 (** Edit sequence from path respects bound *)
-Theorem path_edit_sequence_bounded : forall aut target input path,
-  wf_automaton aut ->
-  valid_path aut target input path ->
-  let edits := extract_edit_sequence path in
+Theorem path_edit_sequence_bounded : forall aut path,
+  valid_traced_path aut path ->
+  let edits := extract_edit_sequence_with_ops path in
   Forall (fun op => In op (automaton_operations aut)) edits /\
   edit_sequence_cost edits <= automaton_max_distance aut.
 Proof.
-  intros aut target input path Hwf_aut Hvalid.
+  intros aut path Hvalid.
   split.
   - (* All operations in automaton *)
-    exact (extract_ops_from_automaton aut target input path Hvalid).
+    apply extract_ops_from_automaton.
+    exact (proj1 Hvalid).
   - (* Cost bounded *)
-    exact (extract_ops_cost_bounded aut target input path Hwf_aut Hvalid).
+    exact (extract_ops_cost_bounded aut path Hvalid).
 Qed.
 
 (** ** Deterministic Soundness *)
