@@ -408,9 +408,8 @@ fn test_persistent_artrie_long_term() {
 fn test_persistent_artrie_many_terms() {
     let mut dict: PersistentARTrie<()> = make_empty_dict();
 
-    // Insert 200 terms (within bucket capacity limits)
-    // NOTE: Current implementation has bucket capacity limits; larger dictionaries
-    // will be supported in Phase 5 with improved bucket splitting
+    // Insert 200 terms, keeping this integration test within the current
+    // bucket-capacity envelope exercised by the persistent ARTrie backend.
     for i in 0..200 {
         dict.insert(&format!("term{:03}", i));
     }

@@ -1135,15 +1135,16 @@ impl NFACompilerChar {
             }
             // Capturing group: (...)
             Regex::CapturingGroup(_, inner) => {
-                // Capturing groups compile like regular groups for now
-                // (capture semantics would be added in a future phase)
+                // Captures are parse-time structure here; the Thompson NFA
+                // accepts the group's language without exposing capture spans.
                 self.compile_regex_recursive(inner)
             }
             // Non-capturing group: (?:...)
             Regex::NonCapturingGroup(inner) => self.compile_regex_recursive(inner),
             // Named group: (?<name>...)
             Regex::NamedGroup(_, inner) => {
-                // Named groups compile like regular groups for now
+                // Named references are expanded by prepare_regex_for_compile();
+                // the named group itself contributes only its inner language.
                 self.compile_regex_recursive(inner)
             }
             // Group reference: (?&name)

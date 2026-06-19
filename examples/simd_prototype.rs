@@ -41,7 +41,7 @@ fn test_vectorized_add() {
 
         #[inline(always)]
         fn with_simd<S: Simd>(mut self, simd: S) -> Self::Output {
-            // Simple scalar addition for now (pulp u32 operations are more complex)
+            // Simple scalar addition; pulp u32 operations are more complex.
             for i in 0..8 {
                 self.result[i] = self.a[i] + self.b[i];
             }

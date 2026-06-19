@@ -243,7 +243,8 @@ impl<V: PositionVariant> UniversalState<V> {
     /// From the thesis, this means the state contains a position subsuming M + 0#k
     /// for some k ≤ n.
     ///
-    /// For simplicity in Phase 1, we check if there exists an M-type position with offset ≤ 0.
+    /// The implementation checks for an `MFinal` position whose offset is at
+    /// or before the accepting boundary.
     ///
     /// # Example
     ///

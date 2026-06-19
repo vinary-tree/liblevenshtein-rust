@@ -178,7 +178,8 @@ pub fn to_bytes(compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
     buffer.extend_from_slice(&metadata_len.to_le_bytes());
     buffer.extend_from_slice(&metadata_bytes);
 
-    // Serialize symbol table (empty for now - symbols are baked into NFA)
+    // Keep the symbol-table section in the binary format; LLRE symbols are
+    // expanded into the NFA before serialization.
     let symbols = SerializedSymbols::default();
     let symbols_bytes = bincode::serialize(&symbols)
         .map_err(|e| LLreError::new(LLreErrorKind::SerializationFailed(e.to_string())))?;

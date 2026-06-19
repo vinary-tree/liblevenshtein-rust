@@ -38,7 +38,8 @@ pub struct DawgNode {
 }
 
 /// Extract nodes from DoubleArrayTrie for direct testing
-/// This is a bit hacky but allows us to test different thresholds
+/// Rebuilds a benchmark-local node view so threshold variants can be compared
+/// without exposing DoubleArrayTrie internals.
 #[allow(dead_code)]
 fn extract_nodes(dict: &DoubleArrayTrie) -> Vec<DawgNode> {
     // We can't directly access the internal arrays since they're private
@@ -59,7 +60,8 @@ fn extract_nodes(dict: &DoubleArrayTrie) -> Vec<DawgNode> {
         let idx = nodes.len();
         visited.insert(node_id, idx);
 
-        // Create placeholder
+        // Insert the node before visiting children so shared descendants can
+        // refer back to the already allocated benchmark-local index.
         nodes.push(DawgNode {
             edges: Vec::new(),
             is_final: node.is_final(),

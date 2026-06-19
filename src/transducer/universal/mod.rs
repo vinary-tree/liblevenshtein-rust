@@ -26,20 +26,21 @@
 //! - THEORETICAL_FOUNDATIONS.md - Proofs and mathematical foundations
 //! - IMPLEMENTATION_MAPPING.md - Theory-to-Rust mapping guide
 //!
-//! # Phase 1 Status
+//! # Implementation Status
 //!
-//! Currently implementing:
-//! - Core position types (UniversalPosition<V>)
-//! - Subsumption relation (≤^χ_s)
-//! - State management (UniversalState<V>)
+//! Implemented components:
+//! - Core position types (`UniversalPosition<V>`)
+//! - Subsumption relation (`≤^χ_s`)
+//! - State management (`UniversalState<V>`)
+//! - Acceptance for standard, adjacent-transposition, and merge/split variants
 //!
-//! # Example (Future API)
+//! # Example
 //!
 //! ```ignore
 //! use liblevenshtein::transducer::universal::UniversalAutomaton;
 //!
-//! // Precompute once for maximum distance n=2
-//! let automaton = UniversalAutomaton::<Standard, 2>::build();
+//! // Construct once for maximum distance n=2.
+//! let automaton = UniversalAutomaton::<Standard>::new(2);
 //!
 //! // Use for any word
 //! assert!(automaton.accepts("test", "text"));  // distance 1

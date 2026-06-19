@@ -369,7 +369,7 @@ mod tests {
         let dict = Scdawg::<()>::from_terms(vec!["hello", "world", "help"]);
         let wb = WallBreaker::with_algorithm(&dict, 1, Algorithm::Transposition);
 
-        // Should still find matches (using Standard distance verification for now)
+        // Should find matches using the configured transposition verifier.
         let results: Vec<_> = wb.query("helo").collect();
         assert!(!results.is_empty());
     }
@@ -379,7 +379,7 @@ mod tests {
         let dict = Scdawg::<()>::from_terms(vec!["hello", "world", "help"]);
         let wb = WallBreaker::with_algorithm(&dict, 1, Algorithm::MergeAndSplit);
 
-        // Should still find matches (using Standard distance verification for now)
+        // Should find matches using the configured merge/split verifier.
         let results: Vec<_> = wb.query("helo").collect();
         assert!(!results.is_empty());
     }

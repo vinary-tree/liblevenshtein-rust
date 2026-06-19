@@ -1010,11 +1010,22 @@ fn test_compile_flags_group() {
 #[test]
 fn test_compile_inline_flags() {
     use crate::phonetic::nfa::compiler::compile;
-    // Inline flags produce epsilon for now
+    // Inline flags without an inner pattern produce epsilon after flag extraction.
     let regex = parse("(?i)").expect("test: parse (?i)");
     let nfa = compile(&regex).expect("test: compile (?i)");
     // Should accept empty string (epsilon)
     assert!(nfa.accepts(""));
+}
+
+#[test]
+fn test_compile_scoped_case_insensitive_flags() {
+    use crate::phonetic::nfa::compiler::compile;
+    let regex = parse("(?i:abc)def").expect("test: parse (?i:abc)def");
+    let nfa = compile(&regex).expect("test: compile scoped case-insensitive flag");
+
+    assert!(nfa.accepts("ABCdef"));
+    assert!(nfa.accepts("AbCdef"));
+    assert!(!nfa.accepts("ABCDEF"));
 }
 
 // ========================================================================
