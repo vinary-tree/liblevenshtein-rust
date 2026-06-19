@@ -1032,9 +1032,15 @@ Qed.
 (* - M-type positions track from beginning of word, not end *)
 (* - M-type offset is non-positive, moving toward 0 *)
 (* *)
-(* If skip-to-match exists for M-type, it should keep offset unchanged *)
-(* like M-type DELETE, only consuming errors. *)
-(* TODO: Verify if M-type skip-to-match is actually implemented in Rust *)
+(* Rust audit, 2026-06-19:
+   - src/transducer/universal/position.rs implements M-type skip-to-match in
+     successors_m_type_standard for the "0 < b" case.
+   - That universal-backend skip advances offset to the first matching bit
+     using offset + j + 1 and charges j errors.
+   - The primitive below models the older generalized M-type coalesced-delete
+     shape, where offset is unchanged and only the error budget is consumed.
+     It is kept as a local invariant-preservation lemma for that primitive,
+     not as a claim that the universal backend uses this exact transition. *)
 
 (* Definition: M-type skip as primitive (if it exists) *)
 Inductive m_skip_to_match : Position -> nat -> CharacteristicVector -> Position -> Prop :=

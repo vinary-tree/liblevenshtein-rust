@@ -14,6 +14,7 @@ From Stdlib Require Import Lia.
 From Stdlib Require Import Ascii.
 Require Import Core.
 Require Import Operations.
+Require Import Transitions.
 
 Open Scope Z_scope.
 
@@ -182,6 +183,9 @@ Inductive m_split_completion : Position -> Position -> Prop :=
   | MSplitComplete : forall offset errors n entry_char result_offset,
       (* UPDATED: offset unchanged (like MATCH operations) *)
       result_offset = offset ->
+      (* Completion is allowed only when the resulting M-type position is valid. *)
+      (Z.of_nat errors >= -result_offset - Z.of_nat n) ->
+      (-Z.of_nat (2 * n) <= result_offset <= 0) ->
       m_split_completion
         (mkPosition VarMSplitting offset errors n (Some entry_char))
         (mkPosition VarMFinal result_offset errors n None).
@@ -316,11 +320,164 @@ Proof.
   eapply i_split_completion_preserves_invariant; eauto.
 Qed.
 
+(* Theorem: Entering an M-type split preserves the relaxed splitting invariant *)
+Theorem m_split_entry_preserves_invariant : forall p entry_char cost p',
+  m_invariant p ->
+  m_split_entry p entry_char cost p' ->
+  m_splitting_invariant p'.
+Proof.
+  intros p entry_char cost p' Hinv Hentry.
+  inversion Hentry; subst.
+  unfold m_splitting_invariant. simpl.
+  split; [reflexivity | ].
+  split.
+  - (* Reachability: source reachability remains true after adding split cost. *)
+    lia.
+  - split.
+    + assumption.
+    + assumption.
+Qed.
+
+(* Theorem: Completing an M-type split restores the ordinary M invariant *)
+Theorem m_split_completion_preserves_invariant : forall p p',
+  m_splitting_invariant p ->
+  m_split_completion p p' ->
+  m_invariant p'.
+Proof.
+  intros p p' Hinv Hcompletion.
+  inversion Hcompletion; subst.
+  unfold m_splitting_invariant in Hinv.
+  destruct Hinv as [_ [_ [_ Hbudget]]].
+  unfold m_invariant. simpl.
+  split; [reflexivity | ].
+  split.
+  - assumption.
+  - split; [assumption | exact Hbudget].
+Qed.
+
+(* Theorem: M-type phonetic split preserves invariants *)
+Theorem m_phonetic_split_preserves_invariant : forall p entry_char cost p',
+  m_invariant p ->
+  m_phonetic_split p entry_char cost p' ->
+  m_invariant p'.
+Proof.
+  intros p entry_char cost p' Hinv Hsplit.
+  inversion Hsplit; subst.
+  assert (Hsplitting: m_splitting_invariant p2) by
+    (eapply m_split_entry_preserves_invariant; eauto).
+  eapply m_split_completion_preserves_invariant; eauto.
+Qed.
+
 (*
  * Theorems: Composition Properties
  * ================================
  *)
 
-(* TODO: Prove that phonetic splits compose with standard operations *)
-(* TODO: Prove that multiple splits can be applied consecutively *)
-(* TODO: Prove cost accounting correctness *)
+(* Phonetic I-splits compose with ordinary I-successor transitions. *)
+Theorem i_phonetic_split_composes_with_i_successor : forall p entry_char cost p_split op cv p',
+  i_invariant p ->
+  i_phonetic_split p entry_char cost p_split ->
+  i_successor p_split op cv p' ->
+  i_invariant p'.
+Proof.
+  intros p entry_char cost p_split op cv p' Hinv Hsplit Hsucc.
+  pose proof (i_phonetic_split_preserves_invariant
+                p entry_char cost p_split Hinv Hsplit) as Hsplit_inv.
+  destruct Hsplit_inv as [Hi | Hm].
+  - eapply i_successor_preserves_invariant; eauto.
+  - unfold m_invariant in Hm.
+    destruct Hm as [Hvariant _].
+    inversion Hsucc; subst; simpl in Hvariant; discriminate.
+Qed.
+
+(* Phonetic M-splits compose with ordinary M-successor transitions. *)
+Theorem m_phonetic_split_composes_with_m_successor : forall p entry_char cost p_split op cv p',
+  m_invariant p ->
+  m_phonetic_split p entry_char cost p_split ->
+  m_successor p_split op cv p' ->
+  m_invariant p'.
+Proof.
+  intros p entry_char cost p_split op cv p' Hinv Hsplit Hsucc.
+  pose proof (m_phonetic_split_preserves_invariant
+                p entry_char cost p_split Hinv Hsplit) as Hsplit_inv.
+  eapply m_successor_preserves_invariant; eauto.
+Qed.
+
+(* Consecutive I-type phonetic splits preserve invariants when the intermediate
+   split completes back to I-type, which is the only state where another I-split
+   can start. *)
+Theorem consecutive_i_phonetic_splits_preserve_invariant :
+  forall p entry1 cost1 p_mid entry2 cost2 p',
+    i_invariant p ->
+    i_phonetic_split p entry1 cost1 p_mid ->
+    i_invariant p_mid ->
+    i_phonetic_split p_mid entry2 cost2 p' ->
+    (i_invariant p' \/ m_invariant p').
+Proof.
+  intros p entry1 cost1 p_mid entry2 cost2 p' Hinv Hsplit1 Hmid Hsplit2.
+  eapply i_phonetic_split_preserves_invariant; eauto.
+Qed.
+
+(* Consecutive M-type phonetic splits preserve the M invariant. *)
+Theorem consecutive_m_phonetic_splits_preserve_invariant :
+  forall p entry1 cost1 p_mid entry2 cost2 p',
+    m_invariant p ->
+    m_phonetic_split p entry1 cost1 p_mid ->
+    m_phonetic_split p_mid entry2 cost2 p' ->
+    m_invariant p'.
+Proof.
+  intros p entry1 cost1 p_mid entry2 cost2 p' Hinv Hsplit1 Hsplit2.
+  assert (Hmid: m_invariant p_mid) by
+    (eapply m_phonetic_split_preserves_invariant; eauto).
+  eapply m_phonetic_split_preserves_invariant; eauto.
+Qed.
+
+(* Cost accounting for a complete I-type phonetic split. *)
+Theorem i_phonetic_split_cost_correct : forall p entry_char cost p',
+  i_phonetic_split p entry_char cost p' ->
+  errors p' = (errors p + cost)%nat.
+Proof.
+  intros p entry_char cost p' Hsplit.
+  destruct Hsplit as [p1 p2 p3 entry split_cost n Hentry Hcompletion].
+  inversion Hentry; subst.
+  inversion Hcompletion; subst; reflexivity.
+Qed.
+
+(* Cost accounting for a complete M-type phonetic split. *)
+Theorem m_phonetic_split_cost_correct : forall p entry_char cost p',
+  m_phonetic_split p entry_char cost p' ->
+  errors p' = (errors p + cost)%nat.
+Proof.
+  intros p entry_char cost p' Hsplit.
+  destruct Hsplit as [p1 p2 p3 entry split_cost Hentry Hcompletion].
+  inversion Hentry; subst.
+  inversion Hcompletion; subst; reflexivity.
+Qed.
+
+(* Additive accounting across an I-type phonetic split followed by a standard
+   transition. *)
+Theorem i_phonetic_split_then_i_successor_cost_correct :
+  forall p entry_char cost p_split op cv p',
+    i_phonetic_split p entry_char cost p_split ->
+    i_successor p_split op cv p' ->
+    errors p' = (errors p + cost + operation_cost op)%nat.
+Proof.
+  intros p entry_char cost p_split op cv p' Hsplit Hsucc.
+  rewrite (i_successor_cost_correct p_split op cv p' Hsucc).
+  rewrite (i_phonetic_split_cost_correct p entry_char cost p_split Hsplit).
+  lia.
+Qed.
+
+(* Additive accounting across an M-type phonetic split followed by a standard
+   transition. *)
+Theorem m_phonetic_split_then_m_successor_cost_correct :
+  forall p entry_char cost p_split op cv p',
+    m_phonetic_split p entry_char cost p_split ->
+    m_successor p_split op cv p' ->
+    errors p' = (errors p + cost + operation_cost op)%nat.
+Proof.
+  intros p entry_char cost p_split op cv p' Hsplit Hsucc.
+  rewrite (m_successor_cost_correct p_split op cv p' Hsucc).
+  rewrite (m_phonetic_split_cost_correct p entry_char cost p_split Hsplit).
+  lia.
+Qed.
