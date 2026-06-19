@@ -97,19 +97,16 @@ impl SubstitutionSet {
         SubstitutionSet { allowed: set }
     }
 
-    pub fn azerty() -> Self {
-        // Similar but for AZERTY layout
-        // Row 1: a z e r t y u i o p
-        // Row 2: q s d f g h j k l m
-        // Row 3: w x c v b n
-        todo!("Implement AZERTY layout")
-    }
-
-    pub fn dvorak() -> Self {
-        // Dvorak layout adjacencies
-        todo!("Implement Dvorak layout")
-    }
 }
+```
+
+The library also provides ready-made proximity sets for additional layouts:
+
+```rust
+use liblevenshtein::transducer::SubstitutionSet;
+
+let azerty = SubstitutionSet::keyboard_azerty();
+let dvorak = SubstitutionSet::keyboard_dvorak();
 ```
 
 ### Usage Example
@@ -283,12 +280,16 @@ impl SubstitutionSet {
         SubstitutionSet { allowed: set }
     }
 
-    pub fn soundex_compatible() -> Self {
-        // Compatible with Soundex encoding
-        // Groups phonetically similar consonants
-        todo!("Implement Soundex-compatible set")
-    }
 }
+```
+
+For a traditional Soundex consonant-class approximation, use the built-in
+preset:
+
+```rust
+use liblevenshtein::transducer::SubstitutionSet;
+
+let soundex = SubstitutionSet::soundex_compatible();
 ```
 
 ### Usage Example
@@ -365,11 +366,16 @@ impl SubstitutionSet {
         SubstitutionSet { allowed: set }
     }
 
-    pub fn handwriting_print() -> Self {
-        // Print/block letter shape similarities
-        todo!("Implement print handwriting set")
-    }
 }
+```
+
+For block-letter and digit confusions, use the built-in print-handwriting
+preset:
+
+```rust
+use liblevenshtein::transducer::SubstitutionSet;
+
+let print = SubstitutionSet::handwriting_print();
 ```
 
 ### Usage Example

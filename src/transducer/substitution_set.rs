@@ -562,6 +562,73 @@ impl SubstitutionSet {
         (b'Z', b'2'),
     ];
 
+    /// Print handwriting substitutions as a const array.
+    const HANDWRITING_PRINT_PAIRS: &[(u8, u8)] = &[
+        (b'0', b'O'),
+        (b'O', b'0'),
+        (b'1', b'I'),
+        (b'I', b'1'),
+        (b'1', b'l'),
+        (b'l', b'1'),
+        (b'2', b'Z'),
+        (b'Z', b'2'),
+        (b'5', b'S'),
+        (b'S', b'5'),
+        (b'6', b'G'),
+        (b'G', b'6'),
+        (b'8', b'B'),
+        (b'B', b'8'),
+        (b'C', b'G'),
+        (b'G', b'C'),
+        (b'U', b'V'),
+        (b'V', b'U'),
+        (b'v', b'u'),
+        (b'u', b'v'),
+    ];
+
+    fn keyboard_from_rows(rows: &[&[u8]]) -> Self {
+        let mut set = Self::new();
+
+        for row in rows {
+            for pair in row.windows(2) {
+                set.allow_byte(pair[0], pair[1]);
+                set.allow_byte(pair[1], pair[0]);
+            }
+        }
+
+        for adjacent_rows in rows.windows(2) {
+            let upper = adjacent_rows[0];
+            let lower = adjacent_rows[1];
+
+            for (upper_index, &upper_key) in upper.iter().enumerate() {
+                for (lower_index, &lower_key) in lower.iter().enumerate() {
+                    if upper_index.abs_diff(lower_index) <= 1 {
+                        set.allow_byte(upper_key, lower_key);
+                        set.allow_byte(lower_key, upper_key);
+                    }
+                }
+            }
+        }
+
+        set
+    }
+
+    fn equivalence_groups(groups: &[&[u8]]) -> Self {
+        let mut set = Self::new();
+
+        for group in groups {
+            for &source in *group {
+                for &target in *group {
+                    if source != target {
+                        set.allow_byte(source, target);
+                    }
+                }
+            }
+        }
+
+        set
+    }
+
     /// Common phonetic equivalences for English.
     ///
     /// Includes bidirectional substitutions for phonetically similar sounds:
@@ -625,6 +692,22 @@ impl SubstitutionSet {
         set
     }
 
+    /// AZERTY keyboard proximity substitutions.
+    ///
+    /// Builds horizontal and near-vertical adjacencies for a common French
+    /// AZERTY layout.
+    pub fn keyboard_azerty() -> Self {
+        Self::keyboard_from_rows(&[b"azertyuiop", b"qsdfghjklm", b"wxcvbn"])
+    }
+
+    /// Dvorak keyboard proximity substitutions.
+    ///
+    /// Builds horizontal and near-vertical adjacencies for the ANSI Dvorak
+    /// letter rows.
+    pub fn keyboard_dvorak() -> Self {
+        Self::keyboard_from_rows(&[b"',.pyfgcrl", b"aoeuidhtns", b";qjkxbmwvz"])
+    }
+
     /// Common leetspeak substitutions.
     ///
     /// Allows common character-to-number substitutions used in leetspeak:
@@ -676,6 +759,26 @@ impl SubstitutionSet {
     pub fn ocr_friendly() -> Self {
         let mut set = Self::with_capacity(Self::OCR_PAIRS.len());
         for &(a, b) in Self::OCR_PAIRS {
+            set.allow_byte(a, b);
+        }
+        set
+    }
+
+    /// Soundex-compatible consonant-class substitutions.
+    ///
+    /// Allows substitutions inside the traditional Soundex consonant groups:
+    /// `b/f/p/v`, `c/g/j/k/q/s/x/z`, `d/t`, `l`, `m/n`, and `r`.
+    pub fn soundex_compatible() -> Self {
+        Self::equivalence_groups(&[b"bfpv", b"cgjkqsxz", b"dt", b"l", b"mn", b"r"])
+    }
+
+    /// Print handwriting visual-confusion substitutions.
+    ///
+    /// Covers common block-letter and digit confusions such as `0/O`, `1/I/l`,
+    /// `5/S`, and `8/B`.
+    pub fn handwriting_print() -> Self {
+        let mut set = Self::with_capacity(Self::HANDWRITING_PRINT_PAIRS.len());
+        for &(a, b) in Self::HANDWRITING_PRINT_PAIRS {
             set.allow_byte(a, b);
         }
         set
@@ -1105,6 +1208,32 @@ mod tests {
     }
 
     #[test]
+    fn test_keyboard_azerty() {
+        let keyboard = SubstitutionSet::keyboard_azerty();
+
+        assert!(!keyboard.is_empty());
+        assert!(keyboard.contains(b'a', b'z'));
+        assert!(keyboard.contains(b'z', b'a'));
+        assert!(keyboard.contains(b'a', b'q'));
+        assert!(keyboard.contains(b'q', b'a'));
+        assert!(keyboard.contains(b'z', b's'));
+        assert!(keyboard.contains(b's', b'z'));
+    }
+
+    #[test]
+    fn test_keyboard_dvorak() {
+        let keyboard = SubstitutionSet::keyboard_dvorak();
+
+        assert!(!keyboard.is_empty());
+        assert!(keyboard.contains(b'a', b'o'));
+        assert!(keyboard.contains(b'o', b'a'));
+        assert!(keyboard.contains(b'p', b'y'));
+        assert!(keyboard.contains(b'y', b'p'));
+        assert!(keyboard.contains(b'a', b'\''));
+        assert!(keyboard.contains(b'\'', b'a'));
+    }
+
+    #[test]
     fn test_leet_speak() {
         let leet = SubstitutionSet::leet_speak();
 
@@ -1137,6 +1266,34 @@ mod tests {
         assert!(ocr.contains(b'1', b'I'));
         assert!(ocr.contains(b'1', b'l'));
         assert!(ocr.contains(b'I', b'l'));
+    }
+
+    #[test]
+    fn test_soundex_compatible() {
+        let soundex = SubstitutionSet::soundex_compatible();
+
+        assert!(!soundex.is_empty());
+        assert!(soundex.contains(b'b', b'v'));
+        assert!(soundex.contains(b'v', b'b'));
+        assert!(soundex.contains(b'c', b'z'));
+        assert!(soundex.contains(b'z', b'c'));
+        assert!(soundex.contains(b'd', b't'));
+        assert!(soundex.contains(b't', b'd'));
+        assert!(soundex.contains(b'm', b'n'));
+        assert!(!soundex.contains(b'b', b'c'));
+    }
+
+    #[test]
+    fn test_handwriting_print() {
+        let handwriting = SubstitutionSet::handwriting_print();
+
+        assert!(!handwriting.is_empty());
+        assert!(handwriting.contains(b'0', b'O'));
+        assert!(handwriting.contains(b'O', b'0'));
+        assert!(handwriting.contains(b'1', b'l'));
+        assert!(handwriting.contains(b'l', b'1'));
+        assert!(handwriting.contains(b'8', b'B'));
+        assert!(handwriting.contains(b'B', b'8'));
     }
 
     #[test]
