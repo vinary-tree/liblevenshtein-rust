@@ -11,7 +11,9 @@
 use std::env;
 use std::time::Instant;
 
-use liblevenshtein::time_series::{MsmConfig, MsmTransducer, QuantizationConfig};
+use liblevenshtein::time_series::{
+    msm_distance_automaton, msm_distance_wavefront, MsmConfig, MsmTransducer, QuantizationConfig,
+};
 
 fn generate_series(len: usize, seed: u64) -> Vec<f64> {
     let mut state = seed;
@@ -60,6 +62,41 @@ fn build_case() -> (MsmTransducer<usize>, Vec<f64>) {
     (index, query)
 }
 
+fn measure_legacy_ratio(scenario: &str) -> f64 {
+    let x = generate_series(24, 12345);
+    let y = generate_series(24, 67890);
+    let config = MsmConfig::new(1.0);
+    let iterations = 128;
+
+    let started = Instant::now();
+    let mut optimized_checksum = 0.0;
+    for _ in 0..iterations {
+        optimized_checksum += config.distance_optimized(&x, &y);
+    }
+    let optimized_ms = started.elapsed().as_secs_f64() * 1000.0;
+
+    let started = Instant::now();
+    let mut candidate_checksum = 0.0;
+    for _ in 0..iterations {
+        candidate_checksum += match scenario {
+            "legacy-wavefront-ratio" => {
+                msm_distance_wavefront(&x, &y, &config, f64::INFINITY).unwrap()
+            }
+            "legacy-automaton-ratio" => {
+                msm_distance_automaton(&x, &y, &config, f64::INFINITY).unwrap()
+            }
+            other => panic!("unknown legacy scenario: {other}"),
+        };
+    }
+    let candidate_ms = started.elapsed().as_secs_f64() * 1000.0;
+
+    assert!(
+        (optimized_checksum - candidate_checksum).abs() < 1e-6,
+        "legacy path diverged from optimized DP"
+    );
+    candidate_ms / optimized_ms
+}
+
 fn main() {
     let mut args = env::args().skip(1);
     let scenario = args.next().unwrap_or_else(|| "exact-range".to_string());
@@ -80,25 +117,37 @@ fn main() {
     println!("scenario,phase,run,elapsed_ms,result_len,checksum");
     for run in 0..total_runs {
         let started = Instant::now();
-        let results = match scenario.as_str() {
-            "exact-knn" => index.search_knn(&query, k, 1.0),
-            "exact-range" => index.search_range(&query, threshold),
+        let (metric_value, result_len, checksum) = match scenario.as_str() {
+            "exact-knn" => {
+                let results = index.search_knn(&query, k, 1.0);
+                let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+                let checksum = results.iter().fold(0.0, |acc, (id, distance)| {
+                    acc + *id as f64 * 0.001 + *distance
+                });
+                (elapsed_ms, results.len(), checksum)
+            }
+            "exact-range" => {
+                let results = index.search_range(&query, threshold);
+                let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+                let checksum = results.iter().fold(0.0, |acc, (id, distance)| {
+                    acc + *id as f64 * 0.001 + *distance
+                });
+                (elapsed_ms, results.len(), checksum)
+            }
+            "legacy-wavefront-ratio" | "legacy-automaton-ratio" => {
+                let ratio = measure_legacy_ratio(&scenario);
+                (ratio, 1, ratio)
+            }
             other => panic!("unknown scenario: {other}"),
         };
-        let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
-        let checksum = results.iter().fold(0.0, |acc, (id, distance)| {
-            acc + *id as f64 * 0.001 + *distance
-        });
         let phase = if run < warmup_runs {
             "warmup"
         } else {
             "measure"
         };
         println!(
-            "{scenario},{phase},{},{elapsed_ms:.6},{},{}",
+            "{scenario},{phase},{},{metric_value:.6},{result_len},{checksum}",
             run.saturating_sub(warmup_runs),
-            results.len(),
-            checksum
         );
     }
 }
