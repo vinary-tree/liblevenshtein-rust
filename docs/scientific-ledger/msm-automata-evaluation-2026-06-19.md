@@ -49,8 +49,8 @@ stable checksum.
 | `msm-003-interval-column-reuse` | accepted | Same exact range treatment accepted; reusable interval columns and precomputed bin intervals retained. | `046c5ab` |
 | `msm-004-best-first-knn` | accepted | Exact kNN mean latency improved from `7.034 ms` to `0.980 ms`; pgmcp `p=3.38e-80`. | `046c5ab` |
 | `msm-005-bin-path-storage` | partially accepted | Precomputed bin bounds retained; path/bucket interning was not retained because it was not isolated as a bottleneck. | `046c5ab` |
-| `msm-008-approximate-msm-ann` | accepted as an opt-in approximate API | `ApproxMsmIndex` uses PAA feature ranking plus exact MSM reranking; deterministic harness coverage now checks a recall floor without changing exact `MsmTransducer` semantics. | this commit |
-| academic UCR/UEA harness | accepted as adapter coverage | `examples/msm_experiment.rs` loads UCR `.txt` and UEA-style `.ts` train/test splits and reports MSM 1-NN latency, accuracy, and per-case outcomes; repo-local tests cover both parsers and deterministic 1-NN outcomes. | this commit |
+| `msm-008-approximate-msm-ann` | accepted as an opt-in approximate API | `ApproxMsmIndex` uses PAA feature ranking plus exact MSM reranking; deterministic harness coverage now checks a recall floor without changing exact `MsmTransducer` semantics. | `dd534ae` |
+| academic UCR/UEA harness | accepted as adapter coverage | `examples/msm_experiment.rs` loads UCR `.txt` and UEA-style `.ts` train/test splits and reports MSM 1-NN latency, accuracy, and per-case outcomes; repo-local tests cover both parsers and deterministic 1-NN outcomes. | `dd534ae` |
 
 The retained code changes are:
 

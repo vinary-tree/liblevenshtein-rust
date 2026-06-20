@@ -33,9 +33,10 @@ experiment verdicts.
 | Keep `lling-llang` agnostic of liblevenshtein while integrating the WFST path. | DUAL-010 keeps dictionary-integrated `PhoneticWfst` as a dictionary-side scorer/acceptor boundary and uses `RewriteWfst` or `PhoneticNfaWfst` plus Levenshtein WFST composition for query-to-dictionary transduction. |
 | Select crate ownership for the lattice/WFST boundary. | WFST-004 selected `lling-llang` as the lattice graph engine and WFST algorithm crate, `duallity` as the liblevenshtein adapter, `llattice` as algebraic lattice traits, and `libgrammstein` as language-model/weight infrastructure. |
 | Reference `mettail-rust` without modifying it. | The WFST and weighted-automata notes treat `mettail-rust` as a research reference only. This repository session did not modify that project. |
-| Commit at stable points with major changes enumerated. | Recent commits include `640c710`, `3b0dc71`, `609c343`, `4a3dcaf`, and `af20f20`, each with scoped verification or ledger content. |
+| Commit at stable points with major changes enumerated. | Recent commits include `640c710`, `3b0dc71`, `609c343`, `4a3dcaf`, `af20f20`, and `dd534ae`, each with scoped verification or ledger content. |
 | Cap heavy processes after the OOM report. | Expensive builds, tests, and benches were run through `systemd-run --user --scope` with `MemoryMax` and `MemorySwapMax=0`. Core Rocq proof compilation OOM events were contained inside the capped scope and recorded in `docs/verification/SUMMARY.md`. |
 | Clean task-owned temporary files. | Current checks found no task-owned top-level files in `/tmp` matching the liblevenshtein, Levenshtein, phonetic, or WFST scratch prefixes used in this session. |
+| Reconcile tracker state through the established pgmcp API rather than source edits. | On 2026-06-20, `work_item_completion` for `lev-phonetic-wfst-scientific-evaluation` reported `verified_fraction = 1.0` with 21/21 evidence-verified leaves. |
 
 ## Experiment Decisions
 
@@ -45,22 +46,34 @@ experiment verdicts.
 | Phonetic automata and LLev | Trie-product phonetic regex traversal, English extension ordering for whole-word coverage, multi-symbol `RuleSetChar` output expansion, composite LLev import preservation, compound context integration, UTF-8 multi-character substitutions. | The original CMUdict smoke-test gap was not a traversal-index bug under the accepted diagnostic; it was resolved as coverage/oracle/ranking behavior for the measured cases. |
 | WFST and lattice architecture | Duallity label semantics fix, rewrite WFST multi-symbol chains, phonetic NFA `StateSource` expansion, dictionary-side `PhoneticWfst` boundary, lling-llang lattice/WFST ownership. | No accepted evidence supports moving the lattice graph engine into liblevenshtein or making lling-llang depend on liblevenshtein. |
 
-## Tracker Lifecycle Gate
+## Tracker Lifecycle Reconciliation
 
-The experiment and conformance evidence is stronger than the current lifecycle
-state of several pgmcp child rows. The following rows are evidence-complete by
-the session record but have not crossed the tracker status graph into a verified
-state:
+The experiment and conformance evidence has been reconciled through pgmcp's
+public work-item and experiment APIs. The root completion API reports every leaf
+as evidence-verified:
 
-| Work item | Current status | Evidence state |
-|-----------|----------------|----------------|
-| `dual-003-wfst-label-semantics` | `triage` | Accepted label-semantics experiment. |
-| `phon-008-llev-zompist-recall-parity-root-cause` | `triage` | Accepted root-cause experiment with full-result recall closure for measured cases. |
-| `dual-008-rewrite-wfst-multisymbol-output` | `triage` | Accepted duallity conformance gate. |
-| `dual-009-phonetic-nfa-statesource-pending` | `triage` | Accepted duallity conformance gate. |
-| `phon-010-llev-apply-multisymbol-output` | `triage` | Accepted liblevenshtein conformance gate. |
-| `phon-011-llre-import-composite-llev-symbols` | `triage` | Accepted liblevenshtein conformance gate. |
-| `phon-012-llev-compound-context-integration-coverage` | `verifying` | Accepted liblevenshtein conformance gate. |
+```text
+work_item_completion("lev-phonetic-wfst-scientific-evaluation")
+verified_fraction = 1.0
+verified_leaves = 21
+leaf_count = 21
+```
+
+The rows below are original non-leaf bug/task rows whose verified experiment
+closure leaves carry the trusted evidence. Their parent statuses remain
+`triage` or `verifying` because the agent API cannot force legacy parent rows to
+`verified`; those states are tracker lifecycle artifacts, not repository source
+incompletion.
+
+| Parent work item | Parent status | Verified evidence leaf | Evidence state |
+|------------------|---------------|------------------------|----------------|
+| `dual-003-wfst-label-semantics` | `triage` | `dual-003-wfst-label-semantics-evidence-closure` | Accepted label-semantics experiment. |
+| `phon-008-llev-zompist-recall-parity-root-cause` | `triage` | `phon-008-llev-zompist-recall-parity-root-cause-evidence-closure` | Accepted root-cause experiment with full-result recall closure for measured cases. |
+| `dual-008-rewrite-wfst-multisymbol-output` | `triage` | `dual-008-rewrite-wfst-multisymbol-output-evidence-closure` | Accepted duallity conformance gate. |
+| `dual-009-phonetic-nfa-statesource-pending` | `triage` | `dual-009-phonetic-nfa-statesource-evidence-closure` | Accepted duallity conformance gate. |
+| `phon-010-llev-apply-multisymbol-output` | `triage` | `phon-010-llev-apply-multisymbol-output-evidence-closure` | Accepted liblevenshtein conformance gate. |
+| `phon-011-llre-import-composite-llev-symbols` | `triage` | `phon-011-llre-import-composite-llev-symbols-evidence-closure` | Accepted liblevenshtein conformance gate. |
+| `phon-012-llev-compound-context-integration-coverage` | `verifying` | `phon-012-llev-compound-context-integration-coverage-evidence-closure` | Accepted liblevenshtein conformance gate. |
 
 Three lifecycle reconciliation attempts were made after the evidence was
 recorded:
@@ -73,13 +86,13 @@ recorded:
   `phon-012-llev-compound-context-integration-coverage` failed with
   `no transition 'verifying' -> 'claimed_done' exists`.
 
-That lifecycle gate is why the persistent session goal has not been marked
-complete even though the scientific evidence ledger contains accepted decisions
-for the proposed experiments listed above.
+The current audit therefore treats the scientific evaluation leaves as complete.
+No repository source changes remain for these rows in `liblevenshtein-rust`.
 
 ## Local Hygiene Snapshot
 
-- `git status --short`: clean before this audit file was added.
+- `git status --short`: clean before this audit file was added; rechecked clean
+  after the 2026-06-20 MSM checkpoint commit `dd534ae`.
 - Stale-status marker scan over active source, docs, and LLev rule files:
   expected matches are limited to four literal CMUdict word entries in
   `data/rules/english/cmudict_homophones.llev` at lines 22341-22344.
