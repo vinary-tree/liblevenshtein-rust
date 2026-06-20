@@ -6,7 +6,7 @@
 //! ## Features Demonstrated
 //!
 //! - **Character-level insertion**: Build identifiers incrementally
-//! - **Draft management**: Temporary in-progress text per context
+//! - **Draft management**: In-progress text per context
 //! - **Checkpoints**: Create undo points and restore previous states
 //! - **Hierarchical contexts**: Child scopes see parent scope identifiers
 //! - **Query fusion**: Search both drafts and finalized terms
@@ -185,7 +185,7 @@ fn main() {
             );
         }
     }
-    println!("\nNote: Child scopes see parent terms, but parents don't see children");
+    println!("\nScope rule: children see parent terms, but parents don't see children");
 
     // Scenario 7: Draft override
     println!("Scenario 7: Draft overrides finalized");
@@ -205,7 +205,7 @@ fn main() {
     }
 
     // The draft version should appear first due to sorting
-    println!("\nNote: Drafts are deduplicated - only one 'hello*' appears");
+    println!("\nDrafts are deduplicated - only one 'hello*' appears");
 
     // Clean up
     engine.discard(block).unwrap();
@@ -223,7 +223,7 @@ fn main() {
     println!("Visible from function scope (1): 5 terms (not 'hello')");
     println!("Visible from global scope (0): 3 terms (only global)");
 
-    println!("\n\nPerformance Notes");
+    println!("\n\nPerformance Details");
     println!("=================");
     println!("- Draft matching: O(n*m) naive Levenshtein (small n)");
     println!("- Finalized matching: O(k) automaton-based (k = matches)");

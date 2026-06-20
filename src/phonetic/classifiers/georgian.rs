@@ -83,7 +83,7 @@ impl VowelClassifier for GeorgianClassifier {
         let code = c as u32;
         match code {
             // Mkhedruli consonants (28 consonants)
-            // Note: Georgian consonants are at non-contiguous code points
+            // Georgian consonants are at non-contiguous code points.
 
             // Letters before ა (ani)
             // (none - ა is first)

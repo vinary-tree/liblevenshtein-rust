@@ -5,7 +5,7 @@ use liblevenshtein::dictionary::{Dictionary, DictionaryNode};
 use liblevenshtein::transducer::{Algorithm, Transducer};
 
 fn main() {
-    // Use simple text first for debugging
+    // Use simple text first for inspection
     let text = "ab";
     let dict = SuffixAutomaton::<()>::from_text(text);
 

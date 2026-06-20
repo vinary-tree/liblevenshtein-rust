@@ -1,4 +1,4 @@
-//! Detailed trace test for debugging insertion issues
+//! Detailed trace test for diagnosing insertion issues
 
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::transition::{initial_state, transition_state};

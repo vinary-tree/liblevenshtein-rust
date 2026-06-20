@@ -14,11 +14,11 @@
 //! - **From/to string conversion** - For parsing and serialization
 //! - **Case folding** - For case-insensitive matching
 //! - **Vowel/consonant classification** - For context-dependent rules
-//! - **Display formatting** - For error messages and debugging
+//! - **Display formatting** - For error messages and diagnostics
 //!
 //! # ASCII vs Unicode
 //!
-//! - `u8` implementation: Optimized for ASCII text, single-byte operations
+//! - `u8` implementation: Tuned for ASCII text, single-byte operations
 //! - `char` implementation: Full Unicode support, multi-byte characters
 //!
 //! Choose `u8` when processing ASCII-only text for better performance.
@@ -37,7 +37,7 @@ use std::hash::Hash;
 /// Implementations must satisfy:
 /// - `Copy + Clone` - Efficient value semantics
 /// - `Eq + PartialEq + Ord + Hash` - Comparison and collection support
-/// - `Debug + Display` - Formatting for errors and debugging
+/// - `Debug + Display` - Formatting for errors and diagnostics
 /// - `Send + Sync + 'static` - Thread safety for shared rule sets
 ///
 /// # Examples
@@ -112,7 +112,7 @@ pub trait PhoneticUnit:
 
     /// Check if this unit is an English vowel (a, e, i, o, u).
     ///
-    /// Note: For multi-script support, use the `VowelClassifier` trait instead.
+    /// For multi-script support, use the `VowelClassifier` trait instead.
     /// This method provides a quick default for English/Latin text.
     ///
     /// # Arguments

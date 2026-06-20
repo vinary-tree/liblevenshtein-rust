@@ -100,7 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("8. Cleaning up...");
     std::fs::remove_file("dict.bin")?;
     std::fs::remove_file("dict.json")?;
-    println!("   Removed temporary files\n");
+    println!("   Removed scratch files\n");
 
     println!("✓ Serialization example completed successfully!");
     println!("\nKey takeaways:");
@@ -108,9 +108,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "- Bincode is more compact ({} bytes vs {} bytes JSON)",
         bincode_size, json_size
     );
-    println!("- JSON is human-readable and easier to debug");
+    println!("- JSON is human-readable and easier to inspect");
     println!("- Both formats preserve dictionary functionality perfectly");
-    println!("- Use bincode for production, JSON for development/debugging");
+    println!("- Use bincode for production, JSON for development/inspection");
 
     Ok(())
 }

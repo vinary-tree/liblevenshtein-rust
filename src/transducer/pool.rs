@@ -214,7 +214,7 @@ mod tests {
         let max_distance = 2;
 
         // Acquire a state and add positions
-        // Note: (1,0) subsumes (2,1) with Standard subsumption: |1-2|=1 <= (1-0)=1
+        // (1,0) subsumes (2,1) with Standard subsumption: |1-2|=1 <= (1-0)=1
         let mut state = pool.acquire();
         state.insert(Position::new(1, 0), Algorithm::Standard, max_distance);
         state.insert(Position::new(2, 1), Algorithm::Standard, max_distance); // Subsumed by (1,0)

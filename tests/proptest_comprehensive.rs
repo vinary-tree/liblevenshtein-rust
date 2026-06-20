@@ -220,7 +220,7 @@ proptest! {
         let results: Vec<_> = transducer.query("acbd", 1).collect();
 
         // Should find "abcd" if transposition is working
-        // Note: this is a best-effort test, may not always trigger
+        // This is a best-effort test and may not always trigger.
         if results.contains(&"abcd".to_string()) {
             // Transposition working
             prop_assert!(true);

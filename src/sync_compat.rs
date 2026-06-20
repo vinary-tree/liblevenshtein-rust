@@ -104,7 +104,7 @@ mod tests {
     fn test_rwlock_multiple_readers() {
         let lock = RwLock::new(42);
         let r1 = lock.read();
-        // Note: Can't get multiple read guards simultaneously in single-threaded test
+        // Single-threaded tests cannot hold multiple read guards simultaneously.
         // because std::sync::RwLock doesn't support that in this pattern
         assert_eq!(*r1, 42);
     }

@@ -16,7 +16,7 @@ use gag::Gag;
 ///
 /// The extracted text content, or an error if extraction fails.
 ///
-/// # Note
+/// # Behavior
 ///
 /// Stdout is suppressed during extraction to hide pdf-extract's font mapping warnings
 /// (e.g., "missing char 81 in unicode map..."). These warnings are informational and
@@ -51,7 +51,7 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
 ///
 /// The extracted text content, or an error if extraction fails.
 ///
-/// # Note
+/// # Behavior
 ///
 /// Stdout is suppressed during extraction to hide pdf-extract's font mapping warnings.
 pub fn extract_text_from_file(path: &std::path::Path) -> GrepResult<String> {
@@ -75,5 +75,5 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // Note: Integration tests with real PDF files would go in tests/
+    // Integration tests with real PDF files belong in tests/.
 }

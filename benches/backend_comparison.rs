@@ -51,7 +51,7 @@ fn sample_queries() -> Vec<&'static str> {
         "aproximate", // approximate with typo
         "performnce", // performance with typo
         "algoritm",   // algorithm with typo
-        "optimizd",   // optimized with typo
+        "optimizd",   // misspelled target
         "structre",   // structure with typo
         "eficiency",  // efficiency with typo
     ]

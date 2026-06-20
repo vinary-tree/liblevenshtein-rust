@@ -1,6 +1,6 @@
 //! Helper functions for common fuzzy matching patterns.
 //!
-//! This module provides optimized implementations for hierarchical scope
+//! This module provides tuned implementations for hierarchical scope
 //! filtering and other value-based query patterns.
 
 /// Checks if two sorted vectors have any common elements.
@@ -37,7 +37,7 @@
 /// # Use Case: Code Completion with Hierarchical Scopes
 ///
 /// ```ignore
-/// // Note: This example requires the "pathmap-backend" feature
+/// // This example requires the "pathmap-backend" feature
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::transducer::helpers::sorted_vec_intersection;
 ///
@@ -137,7 +137,7 @@ pub fn sorted_vec_intersection(a: &[u32], b: &[u32]) -> bool {
 /// # Use Case: Fast Code Completion (≤64 scopes)
 ///
 /// ```ignore
-/// // Note: This example requires the "pathmap-backend" feature
+/// // This example requires the "pathmap-backend" feature
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::transducer::helpers::bitmask_intersection;
 ///

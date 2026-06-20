@@ -6,7 +6,7 @@ fn analyze_edge_distribution(dict: &DoubleArrayTrie) -> EdgeDistribution {
     let mut distribution = EdgeDistribution::new();
 
     // Traverse all nodes and count edge distributions
-    // Note: We need to access internals, so this will analyze via node traversal
+    // This analysis uses node traversal because the benchmark needs internals.
     fn traverse_and_count(node: &impl DictionaryNode, dist: &mut EdgeDistribution) {
         if let Some(edge_count) = node.edge_count() {
             dist.record(edge_count);
@@ -110,7 +110,7 @@ fn bench_threshold_values(c: &mut Criterion) {
         let dist = analyze_edge_distribution(&dict);
         dist.print_stats();
 
-        // Note: We can't directly test different thresholds without modifying the source
+        // Different thresholds are not directly testable without modifying the source.
         // This benchmark measures the current implementation's performance
         // We'll need to modify the threshold in source code and re-run
 

@@ -5,7 +5,7 @@
 //! - Pool reuse patterns
 //! - Pool pre-warming effectiveness
 //!
-//! Note: PathNode and Intersection benchmarks are internal-only since those
+//! PathNode and Intersection benchmarks are internal-only since those
 //! types are in private modules. They are tested via integration tests.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};

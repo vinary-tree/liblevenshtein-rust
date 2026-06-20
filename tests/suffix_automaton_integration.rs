@@ -210,6 +210,6 @@ fn test_unicode_text() {
     assert!(!results.is_empty());
     assert!(results.iter().any(|term| term == "hello"));
 
-    // Note: Unicode support is byte-based, so multi-byte characters
+    // Unicode support is byte-based, so multi-byte characters
     // may not work as expected without grapheme cluster support
 }
