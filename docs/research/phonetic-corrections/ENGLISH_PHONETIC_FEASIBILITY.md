@@ -58,7 +58,7 @@ This document analyzes the feasibility of modeling English phonetic spelling cor
 9. [Performance and Complexity Analysis](#9-performance-and-complexity-analysis)
 10. [Recommended Implementation Strategy](#10-recommended-implementation-strategy)
 11. [Evaluation Metrics](#11-evaluation-metrics)
-12. [Limitations and Workarounds](#12-limitations-and-workarounds)
+12. [Limitations and Mitigations](#12-limitations-and-mitigations)
 13. [Future Research Directions](#13-future-research-directions)
 
 ---
@@ -402,7 +402,7 @@ OperationType::with_restriction(
 
 **Limitation**: Cannot distinguish final-e from non-final-e without position information.
 
-**Workaround**: Allow e-deletion everywhere with low weight. Edit distance threshold filters out incorrect matches.
+**Mitigation**: Allow e-deletion everywhere with low weight. Edit distance threshold filters out incorrect matches.
 
 **Theoretical Justification**:
 - Bounded: ⟨1,0,w⟩ is a standard deletion
@@ -843,7 +843,7 @@ OperationType::with_restriction(
 
 **Problem**: "right" → "rït" requires "igh" → "ï", but conceptually the gh "lengthens" the i.
 
-**Workaround**: Treat "igh" as a unit
+**Mitigation**: Treat "igh" as a unit
 
 ```rust
 OperationType::with_restriction(
@@ -1063,7 +1063,7 @@ M[i,j] depends on M[i+k, j+k] for arbitrary k
 
 This violates the bounded diagonal property where `M[i,j]` can only depend on neighbors within distance c.
 
-**Workaround**: Pre-encode complete patterns (as done in Section 5.3):
+**Mitigation**: Pre-encode complete patterns (as done in Section 5.3):
 
 ```rust
 // Instead of: i + gh → ï + ∅ (retroactive)
@@ -1125,7 +1125,7 @@ BUT:
 
 Syllable boundaries can depend on characters **arbitrarily far away**, violating bounded window.
 
-**Workaround**: None practical. This requires full phonological analysis.
+**Mitigation**: None practical. This requires full phonological analysis.
 
 ### 6.3 Morphological Context Rules
 
@@ -1158,7 +1158,7 @@ How to distinguish? Requires knowing:
 
 Morphological structure is a **global property** of the word, not determinable by local character patterns.
 
-**Workaround**:
+**Mitigation**:
 - Allow suffix transformations everywhere (accept false positives)
 - Use morphological analyzer as **pre-processing step** (outside automaton)
 - Filter results with dictionary lookup **post-processing**
@@ -1180,7 +1180,7 @@ Stress patterns are **prosodic features** not encoded in spelling. They depend o
 
 **Cannot be determined from bounded character context.**
 
-**Workaround**: Use probabilistic reduction rules (all vowels can→@ with medium weight).
+**Mitigation**: Use probabilistic reduction rules (all vowels can→@ with medium weight).
 
 ### 6.5 Homophone Disambiguation
 
@@ -1200,11 +1200,11 @@ Disambiguation requires:
 
 **Completely outside scope of string edit distance.**
 
-**Workaround**: Allow both pronunciations (edit distance matches both).
+**Mitigation**: Allow both pronunciations (edit distance matches both).
 
 ### 6.6 Summary: Not Modelable Rules
 
-| Rule Category | Why Not Modelable | Workaround |
+| Rule Category | Why Not Modelable | Mitigation |
 |---------------|-------------------|------------|
 | Retroactive Modifications | Violates left-to-right processing | Pre-encode patterns |
 | Syllable Structure | Requires unbounded lookahead | None (NLP tool needed) |
@@ -1485,7 +1485,7 @@ Total cost: 0 + 0.3 + 1.0 + 1.0 + 0 = 2.3
 - Requires n=3 for match (threshold 3.0) ✓
 - **Demonstrates limitation**: Rare exceptions increase edit distance
 
-**Workaround**: Pre-encode "acht→òt" as exception pattern:
+**Mitigation**: Pre-encode "acht→òt" as exception pattern:
 
 ```rust
 OperationType::with_restriction(
@@ -1838,7 +1838,7 @@ Context checking adds:
 
 **Phase 2** (2-3 weeks):
 - Bi-directional context for lazy
-- Pre-encoded patterns for universal (workaround)
+- Pre-encoded patterns for universal (mitigation)
 - Integration testing
 
 **Total Estimated Effort**: 5-7 weeks implementation + 1-2 weeks testing
@@ -2619,7 +2619,7 @@ F1 = 2 × (0.33 × 1.0) / (0.33 + 1.0) = 50%
 
 ---
 
-## 12. Limitations and Workarounds
+## 12. Limitations and Mitigations
 
 ### 12.1 Inherent Limitations
 
@@ -2629,7 +2629,7 @@ F1 = 2 × (0.33 × 1.0) / (0.33 + 1.0) = 50%
 
 **Example**: "gh" lengthening preceding vowel in "right" → "rït"
 
-**Workaround**: Pre-encode complete patterns ("igh" → "ï")
+**Mitigation**: Pre-encode complete patterns ("igh" → "ï")
 
 **Impact**: Limited to enumerated patterns; cannot generalize.
 
@@ -2639,7 +2639,7 @@ F1 = 2 × (0.33 × 1.0) / (0.33 + 1.0) = 50%
 
 **Example**: Intervocalic consonants (V-C-V pattern) require scanning entire word.
 
-**Workaround**: None practical within framework. Use external NLP tools.
+**Mitigation**: None practical within framework. Use external NLP tools.
 
 **Impact**: ~15-20% of rules unmodeblable.
 
@@ -2649,7 +2649,7 @@ F1 = 2 × (0.33 × 1.0) / (0.33 + 1.0) = 50%
 
 **Example**: "table" vs "capable" (-able suffix)
 
-**Workaround**: Allow transformations everywhere, filter false positives post-hoc.
+**Mitigation**: Allow transformations everywhere, filter false positives post-hoc.
 
 **Impact**: Lower precision (~10-15% false positives).
 
@@ -2659,13 +2659,13 @@ F1 = 2 × (0.33 × 1.0) / (0.33 + 1.0) = 50%
 
 **Example**: "photograph" vs "photography" (different vowels reduce)
 
-**Workaround**: Allow all vowels to reduce to schwa (@) with medium weight.
+**Mitigation**: Allow all vowels to reduce to schwa (@) with medium weight.
 
 **Impact**: Some incorrect reductions, but edit distance threshold filters most.
 
-### 12.2 Practical Workarounds
+### 12.2 Practical Mitigations
 
-#### Workaround 1: Exception Dictionary
+#### Mitigation 1: Exception Dictionary
 
 **Implementation**:
 
@@ -2700,7 +2700,7 @@ let exceptions = hashmap! {
 
 **Coverage Improvement**: +5-10% for high-frequency irregular words.
 
-#### Workaround 2: Hybrid Approach (Automaton + NLP)
+#### Mitigation 2: Hybrid Approach (Automaton + NLP)
 
 **Architecture**:
 
@@ -2729,7 +2729,7 @@ impl HybridPhoneticMatcher {
 - 20% complex cases handled by NLP (acceptable latency)
 - Overall better coverage than either approach alone
 
-#### Workaround 3: Machine Learning Weights
+#### Mitigation 3: Machine Learning Weights
 
 **Idea**: Learn operation weights from corpus of (spelling, phonetic) pairs.
 
@@ -2780,7 +2780,7 @@ impl LearnedPhoneticMatcher {
 
 **Drawback**: Requires labeled training data.
 
-#### Workaround 4: User Feedback Loop
+#### Mitigation 4: User Feedback Loop
 
 **Interactive Spell Checker**:
 
