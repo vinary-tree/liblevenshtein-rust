@@ -478,14 +478,50 @@ pub fn from_bytes_char(data: &[u8]) -> LLevResult<RuleSetChar> {
 mod tests {
     use super::*;
     use crate::phonetic::llev::parser::parse_str;
-    use tempfile::tempdir;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static SCRATCH_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    struct ScratchDir {
+        path: PathBuf,
+    }
+
+    impl ScratchDir {
+        fn new() -> Self {
+            let id = SCRATCH_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let path = PathBuf::from("target")
+                .join("test-scratch")
+                .join("llev-compiled")
+                .join(format!("{}-{}", std::process::id(), id));
+            let _ = std::fs::remove_dir_all(&path);
+            std::fs::create_dir_all(&path).expect("failed to create scratch dir");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for ScratchDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+            if let Some(parent) = self.path.parent() {
+                let _ = std::fs::remove_dir(parent);
+                if let Some(root) = parent.parent() {
+                    let _ = std::fs::remove_dir(root);
+                }
+            }
+        }
+    }
 
     #[test]
     fn test_save_load_roundtrip() {
         let file = parse_str("ph -> f; gh -> ;").expect("parse failed");
         let ruleset = RuleSet::from_llev(&file).expect("conversion failed");
 
-        let dir = tempdir().expect("failed to create temp dir");
+        let dir = ScratchDir::new();
         let path = dir.path().join("test.llev.bin");
 
         save(&ruleset, &path).expect("save failed");
@@ -499,7 +535,7 @@ mod tests {
         let file = parse_str("ph -> f; gh -> ;").expect("parse failed");
         let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
 
-        let dir = tempdir().expect("failed to create temp dir");
+        let dir = ScratchDir::new();
         let path = dir.path().join("test.llev.bin");
 
         save_char(&ruleset, &path).expect("save failed");

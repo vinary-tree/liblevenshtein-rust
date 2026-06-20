@@ -3,17 +3,53 @@
 #[cfg(feature = "cli")]
 mod cli_integration_tests {
     use std::fs;
-    use tempfile::TempDir;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use liblevenshtein::cli::args::SerializationFormat;
     use liblevenshtein::cli::detect::{detect_format, DetectionMethod};
     use liblevenshtein::cli::paths::{file_extension, PersistentConfig};
     use liblevenshtein::repl::state::DictionaryBackend;
 
+    static SCRATCH_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    struct ScratchDir {
+        path: PathBuf,
+    }
+
+    impl ScratchDir {
+        fn new() -> Self {
+            let id = SCRATCH_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let path = PathBuf::from("target")
+                .join("test-scratch")
+                .join("cli-tests")
+                .join(format!("{}-{}", std::process::id(), id));
+            let _ = fs::remove_dir_all(&path);
+            fs::create_dir_all(&path).expect("failed to create scratch dir");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for ScratchDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+            if let Some(parent) = self.path.parent() {
+                let _ = fs::remove_dir(parent);
+                if let Some(root) = parent.parent() {
+                    let _ = fs::remove_dir(root);
+                }
+            }
+        }
+    }
+
     #[test]
     fn test_detect_text_format() {
-        let temp_dir = TempDir::new().unwrap();
-        let dict_path = temp_dir.path().join("test.txt");
+        let scratch = ScratchDir::new();
+        let dict_path = scratch.path().join("test.txt");
         fs::write(&dict_path, "hello\nworld\ntest\n").unwrap();
 
         let detection = detect_format(&dict_path, None, None).unwrap();
@@ -26,8 +62,8 @@ mod cli_integration_tests {
 
     #[test]
     fn test_detect_format_by_extension() {
-        let temp_dir = TempDir::new().unwrap();
-        let dict_path = temp_dir.path().join("test.json");
+        let scratch = ScratchDir::new();
+        let dict_path = scratch.path().join("test.json");
         fs::write(&dict_path, "[]").unwrap();
 
         let detection = detect_format(&dict_path, None, None).unwrap();
@@ -36,8 +72,8 @@ mod cli_integration_tests {
 
     #[test]
     fn test_user_specified_format_override() {
-        let temp_dir = TempDir::new().unwrap();
-        let dict_path = temp_dir.path().join("test.txt");
+        let scratch = ScratchDir::new();
+        let dict_path = scratch.path().join("test.txt");
         fs::write(&dict_path, "hello\nworld\n").unwrap();
 
         let detection = detect_format(
