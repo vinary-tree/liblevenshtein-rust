@@ -1,9 +1,9 @@
-# Hypothesis H5: Offset Calculation Bug in Transposition Completion
+# Hypothesis H5: Offset Calculation Defect in Transposition Completion
 
 **Date**: 2025-11-13
-**Status**: Active investigation
+**Status**: Resolved historical investigation
 
-## The Bug
+## The Defect
 
 For "ab" → "ba" with n=1:
 
@@ -63,7 +63,7 @@ So when we create a successor position I+offset'#e', we need to think about:
 - Universal needs: offset' such that offset' + (k+1) = i + 2 = (offset + k) + 2
 - Therefore: offset' = (offset + k + 2) - (k+1) = offset + 1
 
-**But I was using offset + 3!** That's the bug!
+**But I was using offset + 3!** That's the defect.
 
 ## The Fix
 

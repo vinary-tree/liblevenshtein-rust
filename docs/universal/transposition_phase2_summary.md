@@ -13,9 +13,9 @@ Successfully implemented transposition support for the Universal Levenshtein Aut
 2. **Transposition trait**: Implements PositionVariant with State = TranspositionState
 3. **compute_i_successors / compute_m_successors**: Generate both standard and transposition-specific transitions
 
-### Critical Bug Fix (Hypothesis H5)
+### Critical Defect Fix (Hypothesis H5)
 
-**Bug**: Transposition completion used incorrect offset calculation (`offset + 3` instead of `offset + 1`)
+**Defect**: Transposition completion used incorrect offset calculation (`offset + 3` instead of `offset + 1`)
 
 **Root Cause**: Misunderstanding of how Universal automaton offsets work. Offsets are relative to input position when evaluated, not absolute like lazy automaton positions.
 
@@ -64,7 +64,7 @@ This confirms the Universal mapping:
 
 ## Documentation Created
 
-- `hypothesis_h5_offset_completion_bug.md`: Detailed analysis of the main bug fix
+- `hypothesis_h5_offset_completion_defect.md`: Detailed analysis of the main defect fix
 - `lazy_to_universal_mapping.md`: Cross-validation with lazy automaton
 - `transposition_fix_needed.md`: Debugging notes
 - `transposition_hypothesis_h3.md`: Earlier hypothesis (incorrect)

@@ -1,11 +1,11 @@
 # Hypothesis H6: Test Assertions May Be Incorrect
 
 **Date**: 2025-11-13
-**Status**: Investigating
+**Status**: Resolved historical investigation
 
 ## Summary
 
-After fixing the main transposition offset bug (H5), 10 out of 12 tests pass. The 2 remaining failures may not indicate bugs in the implementation, but rather incorrect test assertions.
+After fixing the main transposition offset defect (H5), 10 out of 12 tests passed. The 2 remaining failures were later resolved as incorrect test assertions; see `transposition_phase2_summary.md`.
 
 ## Failing Test 1: `test_transposition_empty_and_single_char`
 
@@ -30,9 +30,9 @@ The comment "Would need substitution" suggests the test author believed transpos
 
 **The test assertion is incorrect.** The Transposition variant correctly accepts standard operations, so "a" → "b" with n=1 SHOULD accept via substitution.
 
-### Verification Needed
+### Verification Resolution
 
-Check Mitankin's thesis to confirm that Transposition variant includes standard operations.
+Mitankin's thesis and the lazy automaton transition logic confirm that the transposition variant includes standard operations.
 
 ---
 
@@ -97,11 +97,11 @@ At Input[2], we complete and jump to word position 1+2=3?
 
 Wait - I need to trace this more carefully to understand the transposition semantics.
 
-### Verification Needed
+### Verification Resolution
 
-1. Manually trace "aabb" vs "baab" through the lazy automaton
-2. If lazy accepts, then Universal should too - indicating a bug in our implementation
-3. If lazy rejects, then the test assertion is wrong
+1. The lazy automaton rejects "aabb" vs "baab" as a non-adjacent transposition case.
+2. The Universal automaton rejection is therefore correct.
+3. The test assertion was wrong and was corrected in the Phase 2 summary.
 
 ---
 
@@ -114,16 +114,11 @@ Wait - I need to trace this more carefully to understand the transposition seman
    - Compare with "aabb" vs "abab" which we know works
    - Identify the specific semantic difference
 
-3. **Decision Matrix**:
-   - If lazy accepts both cases → Universal implementation has bugs
-   - If lazy rejects Test 1 → Test 1 assertion is wrong, fix assertion
-   - If lazy rejects Test 2 → Test 2 assertion is wrong, fix assertion
-   - If lazy accepts Test 2 but Universal rejects → Need to debug Universal further
+3. **Decision Matrix Resolution**:
+   - Test 1 assertion was wrong because standard substitution is valid.
+   - Test 2 assertion was wrong because the requested transformation is not adjacent.
+   - No Universal implementation defect remained for these cases.
 
-## Next Steps
+## Resolution
 
-Since we have 10/12 tests passing and the core logic is verified against the lazy implementation, I recommend:
-
-1. Test the lazy automaton with these exact cases
-2. Document findings
-3. Either fix implementation bugs OR fix test assertions based on evidence
+The lazy automaton comparison was completed, findings were documented, and the two incorrect assertions were corrected.

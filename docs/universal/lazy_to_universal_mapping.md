@@ -109,7 +109,7 @@ We want to check if current input matches word position i-1:
 
 ❌ My implementation checks n + offset (wrong!)
 
-## The Bug!
+## The Defect
 
 In Transposing state, I should check `match_index - 1` not `match_index`:
 
@@ -171,12 +171,12 @@ The position represents word position i where we haven't advanced yet!
 
 But wait, then why is it failing?
 
-## The Real Bug: Position Creation
+## The Real Defect: Position Creation
 
 Looking at my code at line 229-233:
 ```rust
 if let Ok(trans) = UniversalPosition::new_i_with_state(
-    offset + 1,  // ← BUG HERE?
+    offset + 1,  // ← defect candidate
     errors + 1,
     max_distance,
     TranspositionState::Transposing,
@@ -189,7 +189,7 @@ Let me check: if we're at I+offset#errors (word position i = k+offset), and we e
 - Lazy creates: i#(e+1)_t (same i, one more error)
 - Universal should create: I+offset#(errors+1)_t (same offset!)
 
-**The bug is that I'm incrementing offset when entering transposition!**
+**The defect is that I'm incrementing offset when entering transposition!**
 
 It should be:
 ```rust

@@ -20,7 +20,7 @@ The Universal Levenshtein Automaton is a parameter-free automaton that efficient
 
 ### Technical Analysis
 - **[lazy_to_universal_mapping.md](lazy_to_universal_mapping.md)** - Cross-validation between Universal and lazy automaton
-- **[hypothesis_h5_offset_completion_bug.md](hypothesis_h5_offset_completion_bug.md)** - Critical bug fix: transposition completion offset
+- **[hypothesis_h5_offset_completion_defect.md](hypothesis_h5_offset_completion_defect.md)** - Critical defect fix: transposition completion offset
 - **[hypothesis_h6_test_assertions.md](hypothesis_h6_test_assertions.md)** - Test assertion corrections
 - **[merge_split_analysis.md](merge_split_analysis.md)** - Phase 3 research: merge/split operations analysis and offset calculations
 
