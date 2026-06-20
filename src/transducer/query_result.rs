@@ -4,7 +4,7 @@
 //! to return different result types (just the term, or term + distance) without
 //! code duplication or performance overhead.
 //!
-//! This design mirrors the C++ template specialization approach and Java's
+//! This design mirrors the C++ type-specialization approach and Java's
 //! factory pattern, providing zero-cost abstraction through Rust's
 //! monomorphization.
 
