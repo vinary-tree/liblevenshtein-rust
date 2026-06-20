@@ -1,54 +1,141 @@
-# PathMap Thread Safety Analysis
+# Dictionary Thread Safety
 
-The diagram below summarizes the concurrency model: how reads, writes, and snapshots
-are coordinated across the backend wrappers (`RwLock`-guarded, `ArcSwap` copy-on-write,
-and persistent lock-free variants).
+Every dictionary backend in liblevenshtein (via `libdictenstein`) is `Send + Sync`
+and cheap to share across threads — a clone is an `Arc` bump, not a deep copy. What
+differs between backends is **how concurrent reads and writes are coordinated**: some
+reads are lock-free (a reader never blocks), others take a `parking_lot` reader–writer
+lock (a reader blocks only while a writer holds the exclusive lock).
 
-![Concurrency model: how reader threads, writer threads, and snapshot readers coordinate through RwLock guards, ArcSwap copy-on-write, and persistent structural sharing](../diagrams/concurrency/concurrency-model.svg)
+![Concurrency model: every dictionary backend grouped by how reads are coordinated — lock-free/wait-free reads (immutable arrays, ArcSwap RCU, persistent copy-on-write snapshots, and the disk-persisted CAS/ArcSwap overlay family) versus parking_lot RwLock readers (the in-memory dynamic DAWG/automaton backends, PathMapDictionary, and BijectiveMap).](../diagrams/concurrency/concurrency-model.svg)
 
-*Concurrency model: the coordination strategies available to dictionary backends.*
+*Concurrency model — dictionary reads grouped by synchronization strategy.*
 
-## Current Understanding
+## The `SyncStrategy` contract
 
-### PathMap's Internal Structure
+Each backend reports a `SyncStrategy` from `dictionary.sync_strategy()`, telling the
+caller what coordination it provides:
+
+| `SyncStrategy` | Meaning |
+|---|---|
+| `Persistent` | An immutable / structural-sharing snapshot. **Reads need no synchronization;** writes (if any) publish a new version atomically. |
+| `InternalSync` | The backend is internally synchronized for concurrent access — atomic operations or lock-free structures. **Reads are lock-free.** |
+| `ExternalSync` | The backend uses interior mutability guarded by an internal lock (a `parking_lot::RwLock`). **Reads take a shared lock** and block only against an active writer. |
+
+> The enum is a coarse hint, not a precise read-cost model. For example
+> `DoubleArrayTrie` reports `ExternalSync` (the trait default) yet is immutable after
+> build, so its reads never block. The grouping below is by **actual read behaviour**.
+
+## Per-backend concurrency model
+
+| Backend | Read path | Reads block? | Writes | Kind |
+|---|---|:---:|---|---|
+| **`DoubleArrayTrie(Char)`** | immutable `base`/`check` arrays | No | build-time only (`&mut self`) | static |
+| **`DynamicDawgU64`** | per-node `ArcSwap<EdgeList>` load | No | lock-free `compare_exchange` (`&self`) | dynamic |
+| **`PathMapSnapshot(Char)` / `PathMapRef(Char)`** | persistent copy-on-write snapshot | No | — (immutable view) | static snapshot |
+| **`PersistentARTrie(Char / U64)`** | lock-free CAS overlay over a memory-mapped trie | No | lock-free CAS (`&self`) | dynamic · disk |
+| **`PersistentScdawg(Char)`** | `ArcSwap` graph load | No | `ArcSwap` publish (`&self`) | dynamic · disk |
+| **`PersistentSuffixAutomaton(Char)`** | `ArcSwap` graph load | No | `ArcSwap` publish (`&self`) | dynamic · disk |
+| **`PersistentSuffixTree(Char)`** | `ArcSwap` graph load | No | `ArcSwap` publish (`&self`) | dynamic · disk |
+| **`PersistentVocabARTrie`** | lock-free overlay | No | lock-free overlay (`&self`) | dynamic · disk |
+| **`DynamicDawg(Char)`** | `Arc<RwLock<DawgCore>>` → `.read()` | **Yes** | `.write()` (`&self`) | dynamic |
+| **`SuffixAutomaton(Char)`** | `Arc<RwLock<…>>` → `.read()` | **Yes** | `.write()` (`&self`) | dynamic |
+| **`Scdawg(Char)`** | `Arc<RwLock<…>>` → `.read()` | **Yes** | `.write()` (`&self`) | dynamic |
+| **`PathMapDictionary(Char)`** | brief `.read()` to grab an `𝒪(1)` snapshot, then lock-free traversal | momentarily | `.write()` (`&self`) | dynamic |
+| **`BijectiveMap`** | two `RwLock`s (forward `DynamicDawgChar` + reverse `HashMap`) | **Yes** | both `.write()` (`&self`) | dynamic |
+
+### Lock-free / wait-free reads
+
+A reader never blocks on these — choose them when many threads query under heavy
+concurrent writes:
+
+- **`DoubleArrayTrie(Char)`** — immutable after build; reads touch read-only arrays.
+- **`DynamicDawgU64`** — per-node `ArcSwap` RCU; reads `load()` a snapshot, writes
+  `compare_exchange` a new node, all lock-free.
+- **PathMap snapshots** (`PathMapSnapshot(Char)`, `PathMapRef(Char)`) — a persistent,
+  copy-on-write view that holds no lock.
+- **The disk-persisted `Persistent*` family** — `PersistentARTrie(Char/U64)`,
+  `PersistentScdawg(Char)`, `PersistentSuffixAutomaton(Char)`,
+  `PersistentSuffixTree(Char)`, `PersistentVocabARTrie` — all read through a lock-free
+  CAS / `ArcSwap` overlay over memory-mapped storage (durable *and* lock-free).
+
+### `RwLock` readers
+
+These guard their state with a `parking_lot::RwLock` (the default;
+`std::sync::RwLock` is the WASM/no-`parking_lot` fallback). Multiple readers run
+concurrently; a writer briefly excludes all readers while it holds the write lock:
+
+- **`DynamicDawg(Char)`**, **`SuffixAutomaton(Char)`**, **`Scdawg(Char)`** — the
+  in-memory dynamic DAWG / automaton backends.
+- **`PathMapDictionary(Char)`** — takes the lock only to clone an `𝒪(1)` copy-on-write
+  snapshot, then walks the snapshot lock-free; readers are blocked only for that
+  snapshot grab.
+- **`BijectiveMap`** — holds two locks (a forward `DynamicDawgChar` and a reverse
+  `Arc<RwLock<HashMap>>`) to keep both directions consistent.
+
+> **Intended direction.** The three in-memory RwLock backends (`DynamicDawg`,
+> `SuffixAutomaton`, `Scdawg`) are slated to adopt the lock-free reader model already
+> shipping on `DynamicDawgU64` and the `Persistent*` family. Until then, their reads
+> take a shared lock — accurate as of the current release.
+
+## The two read paths
+
+The contrast between the lock-free and lock-guarded read paths:
+
+![Two read paths contrasted: the wait-free ArcSwap path (reader atomic-loads an Arc snapshot and never blocks; a writer builds a new Arc and atomically swaps it) versus the parking_lot RwLock path (reader acquires a shared read guard that may block on a writer; a writer takes the exclusive write guard).](../diagrams/concurrency/arcswap-vs-rwlock.svg)
+
+*Wait-free `ArcSwap` reads (used by `DynamicDawgU64` and the `Persistent*` family) vs.
+`parking_lot` `RwLock` reads (used by the in-memory dynamic DAWG/automaton backends).*
+
+## Using a dictionary across threads
+
+Any backend can be shared and queried concurrently — clone the `Transducer` (an `Arc`
+bump) and move clones into threads:
 
 ```rust
-pub struct PathMap<V: Clone + Send + Sync, A: Allocator = GlobalAlloc> {
-    pub(crate) root: UnsafeCell<Option<TrieNodeODRc<V, A>>>,
-    pub(crate) root_val: UnsafeCell<Option<V>>,
-    pub(crate) alloc: A,
-}
+use liblevenshtein::prelude::*;
+use std::thread;
 
-unsafe impl<V: Clone + Send + Sync, A: Allocator> Send for PathMap<V, A> {}
-unsafe impl<V: Clone + Send + Sync, A: Allocator> Sync for PathMap<V, A> {}
+let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tester"]);
+let transducer = Transducer::new(dict, Algorithm::Standard);
+
+let handles: Vec<_> = ["tset", "tesing", "testr"]
+    .into_iter()
+    .map(|q| {
+        let t = transducer.clone(); // cheap: Arc clone
+        thread::spawn(move || t.query(q, 2).collect::<Vec<_>>())
+    })
+    .collect();
+
+for h in handles {
+    for term in h.join().expect("query thread") {
+        println!("{term}");
+    }
+}
 ```
 
-### Key Observations
+On a lock-free backend (`DoubleArrayTrie`, `DynamicDawgU64`, a `Persistent*` type)
+those queries never block one another. On an `ExternalSync` backend
+(`DynamicDawg`, `SuffixAutomaton`, `Scdawg`) the readers share a read lock and only
+stall while a concurrent writer holds the write lock.
 
-1. **Uses `UnsafeCell`**: Interior mutability without built-in synchronization
-2. **Manual `Send + Sync`**: Authors explicitly marked it thread-safe
-3. **README states**: "optimized for large data sets and can be used efficiently in a multi-threaded environment"
-4. **Structural sharing**: Clone is cheap (shares nodes via reference counting)
+### Concurrent reads with writes
 
-## Thread Safety Guarantees (Current Knowledge)
+Dynamic backends accept writes through `&self` (interior mutability), so a shared
+handle can be mutated while others query:
 
-### What We Know
-- PathMap implements `Send` and `Sync`
-- Can be shared across threads
-- Uses reference-counted nodes (`TrieNodeODRc` - "On-Demand Reference Counted")
-- Designed for "multi-threaded environment" per README
+```rust
+let dict = DynamicDawg::from_terms(vec!["alpha", "beta"]);
+let writer = dict.clone();
+thread::spawn(move || { writer.insert("gamma"); }); // takes the write lock briefly
 
-### What's Unclear
-- **Concurrent writes**: Not documented whether `insert()`/`remove()` are thread-safe
-- **Read-write concurrency**: Not documented whether reads can happen during writes
-- **Internal synchronization**: No visible locks/atomics in the PathMap struct itself
-- **Persistence semantics**: Whether mutations create new versions or modify in-place
+// Other threads keep querying; on DynamicDawg they observe the update once the
+// write lock is released. On DynamicDawgU64 the swap is lock-free and immediate.
+for term in dict.query("gama", 1) { println!("{term}"); }
+```
 
-## Our Current Implementation: RwLock Wrapper
+### Measured behaviour (PathMapDictionary, RwLock)
 
-### Why We Use `Arc<RwLock<PathMap<()>>>`
-
-**Conservative approach** until we have more information:
+`PathMapDictionary` wraps the upstream PathMap in `Arc<RwLock<…>>`:
 
 ```rust
 pub struct PathMapDictionary {
@@ -57,157 +144,27 @@ pub struct PathMapDictionary {
 }
 ```
 
-### Benefits of RwLock Approach
+Its concurrency tests (`tests/concurrency_test.rs`) measure **~3.82× read throughput
+on 8 threads** (readers do not block one another), with queries proceeding during
+interleaved writes — the expected profile of a reader–writer lock whose write
+critical section is short.
 
-✅ **Proven thread-safe**: Rust's type system guarantees safety
-✅ **Multiple concurrent reads**: Verified via tests (3.82x parallelism)
-✅ **Safe writes**: Exclusive access prevents data races
-✅ **No undefined behavior**: Even if PathMap has internal UnsafeCell issues
+## Choosing for concurrency
 
-### Performance Characteristics (Measured)
-
-From `tests/concurrency_test.rs`:
-- **Parallelism ratio**: 3.82x (8 threads)
-- **Read contention**: Minimal (readers don't block each other)
-- **Write blocking**: 50 queries completed during 10 writes
-- **Lock overhead**: Acceptable for most use cases
-
-## Alternative Approaches
-
-### Option 1: Arc-Swap (Copy-on-Write)
-
-If PathMap is truly persistent/immutable internally:
-
-```rust
-use arc_swap::ArcSwap;
-
-pub struct PathMapDictionary {
-    map: Arc<ArcSwap<PathMap<()>>>,
-    term_count: AtomicUsize,
-}
-
-impl PathMapDictionary {
-    pub fn insert(&self, term: &str) -> bool {
-        loop {
-            let current = self.map.load();
-            let mut new_map = (**current).clone(); // Structural sharing
-
-            if new_map.insert(term.as_bytes(), ()).is_none() {
-                // Atomic swap - readers see old or new version atomically
-                self.map.store(Arc::new(new_map));
-                self.term_count.fetch_add(1, Ordering::SeqCst);
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-}
-```
-
-**Pros**:
-- Lock-free reads (zero overhead)
-- Writers don't block readers
-- Readers see consistent snapshots
-
-**Cons**:
-- Clone creates new root (even with structural sharing)
-- Potential ABA problem without careful design
-- Memory overhead (old versions retained until all readers release)
-
-### Option 2: Direct PathMap Usage (If Truly Thread-Safe)
-
-If PathMap's UnsafeCell usage is internally synchronized:
-
-```rust
-pub struct PathMapDictionary {
-    map: Arc<PathMap<()>>,
-    term_count: AtomicUsize,
-}
-
-// Direct calls without locks
-impl PathMapDictionary {
-    pub fn insert(&self, term: &str) -> bool {
-        // If PathMap is thread-safe internally
-        let bytes = term.as_bytes();
-        if self.map.insert(bytes, ()).is_none() {
-            self.term_count.fetch_add(1, Ordering::SeqCst);
-            true
-        } else {
-            false
-        }
-    }
-}
-```
-
-**Pros**:
-- Zero locking overhead
-- Maximum concurrency
-
-**Cons**:
-- **Requires confirmation** that PathMap is internally thread-safe
-- Undefined behavior if assumption is wrong
-
-## Recommended Path Forward
-
-### Near Term: Keep RwLock (Current Implementation)
-
-**Rationale**:
-- Proven safe and working
-- Acceptable performance (3.82x parallelism)
-- No risk of undefined behavior
-- Easy to understand and maintain
-
-### Medium Term: Investigate PathMap Internals
-
-**Next steps**:
-1. Contact PathMap authors about thread safety guarantees
-2. Review PathMap's reference counting implementation
-3. Check if `TrieNodeODRc` uses `Arc` (thread-safe) or `Rc` (not thread-safe)
-4. Test concurrent mutations without locks (in isolated test)
-
-### Long Term: Optimize Based on Findings
-
-**If PathMap is internally thread-safe**:
-- Switch to `Arc<PathMap<()>>` (no locks)
-- Or use `Arc-Swap` for lock-free snapshots
-
-**If PathMap is NOT thread-safe**:
-- Keep RwLock (current approach)
-- Or propose/contribute thread-safe version to PathMap
-
-## Testing Strategy
-
-### Current Tests ✅
-
-- `test_parallel_reads`: Verified concurrent read parallelism
-- `test_read_during_write`: Verified reads during writes
-- `test_pathmap_dictionary_concurrent_operations`: Basic multi-threading
-
-### Additional Tests Needed
-
-1. **Concurrent writes** without locks (to test PathMap's guarantees)
-2. **Stress test**: Many threads reading + writing simultaneously
-3. **Memory leak test**: Verify structural sharing doesn't leak
-4. **Correctness test**: Linearizability of operations
-
-## Conclusion
-
-**Current implementation is correct and performant** using RwLock.
-
-Future optimization possibilities exist if we can verify PathMap's internal thread-safety guarantees, but the current approach is:
-- ✅ Safe
-- ✅ Fast enough (proven via benchmarks)
-- ✅ Maintainable
-- ✅ Well-documented
-
-**Recommendation**: Ship with RwLock, optimize later with data.
+- **Many readers, heavy concurrent writes → lock-free reads:** `DynamicDawgU64` (in
+  memory) or a `Persistent*` type (durable). Writers never block readers.
+- **Static dictionary → wait-free:** `DoubleArrayTrie` (immutable after build).
+- **General dynamic use:** `DynamicDawg` is fine — its `RwLock` write section is short;
+  readers stall only momentarily during a write.
+- **Substring search under concurrency:** `SuffixAutomaton` / `Scdawg` (RwLock) in
+  memory, or `PersistentSuffixAutomaton` / `PersistentScdawg` (lock-free) on disk.
 
 ## Related Documentation
 
-- [Backends](backends.md) - Dictionary backend comparison
-- [Features](features.md) - Full feature overview
-- [Getting Started](getting-started.md) - Basic usage
+- [Backends](backends.md) — dictionary backend comparison
+- [Architecture (concurrency)](../developer-guide/architecture.md#thread-safety) — the intra-crate concurrency design
+- [Getting Started](getting-started.md) — backend selection table
+- [GLOSSARY → RwLock](../GLOSSARY.md) — terminology
 
 ---
 

@@ -342,7 +342,7 @@ Before changing this proof suite:
 
 - **Design**: [`docs/design/grammar-correction/MAIN_DESIGN.md`](../../design/grammar-correction/MAIN_DESIGN.md)
 - **Design README**: [`docs/design/grammar-correction/README.md`](../../design/grammar-correction/README.md)
-- **Phonetic Verification**: [`docs/verification/phonetic/`](../phonetic/)
+- **Phonetic Verification**: [`docs/verification/phonetic/`](../phonetic/README.md)
 
 ## References
 

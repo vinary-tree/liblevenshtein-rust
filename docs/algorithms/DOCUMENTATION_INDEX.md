@@ -82,7 +82,7 @@ Comprehensive documentation in [09-value-storage/README.md](09-value-storage/REA
 
 ### Contextual Completion
 
-Comprehensive implementation for IDE-style code completion in [docs/design](../design/):
+Comprehensive implementation for IDE-style code completion in [docs/design](../design/README.md):
 
 | Document | Coverage | Location |
 |----------|----------|----------|
@@ -108,7 +108,7 @@ Comprehensive implementation for IDE-style code completion in [docs/design](../d
 | **Intersection/Traversal** | ⭐ Complete | [03-intersection-traversal/README.md](03-intersection-traversal/README.md) |
 | **SIMD Optimization** | ⭐ Complete | [05-simd-optimization/README.md](05-simd-optimization/README.md) |
 | **Distance Calculation** | 📝 Covered in Automata README | [02-levenshtein-automata/README.md](02-levenshtein-automata/README.md) |
-| **Contextual Completion** | ⭐ Complete (feature flag) | [docs/design/contextual-completion-*.md](../design/) |
+| **Contextual Completion** | ⭐ Complete (feature flag) | [docs/design/contextual-completion-*.md](../design/README.md) |
 
 ## Documentation by Component
 

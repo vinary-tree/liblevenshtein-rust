@@ -128,8 +128,8 @@ for result in wb.query("cathedrel") {
 ## Related Documentation
 
 ### Library Documentation
-- [Levenshtein Automata](/docs/algorithms/02-levenshtein-automata/README.md) - Current automata implementation
-- [Dictionary Layer](/docs/algorithms/01-dictionary-layer/) - Available dictionary backends
+- [Levenshtein Automata](../../algorithms/02-levenshtein-automata/README.md) - Current automata implementation
+- [Dictionary Layer](../../algorithms/01-dictionary-layer/README.md) - Available dictionary backends
 
 ### Code Locations
 - `/src/wallbreaker/` - WallBreaker implementation

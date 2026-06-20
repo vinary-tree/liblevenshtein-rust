@@ -6,8 +6,8 @@ The dictionary layer provides efficient storage and traversal of term
 collections. Each document here covers one concrete backend: its node
 representation, construction, query characteristics, memory profile, and the
 workloads it is best suited for. Use this index to pick a backend; see the
-[layer overview](../) for cross-cutting theory and the
-[performance comparison](../performance/benchmarks.md) for head-to-head numbers.
+[layer overview](../README.md) for cross-cutting theory and the
+performance comparison for head-to-head numbers.
 
 ## Implementations
 

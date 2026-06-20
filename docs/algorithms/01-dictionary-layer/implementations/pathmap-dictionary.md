@@ -1446,7 +1446,7 @@ Consider switching to specialized dictionaries when:
 - [Dictionary Layer](../README.md) - Overview of all dictionary types
 - [DoubleArrayTrie](double-array-trie.md) - Faster alternative
 - [DynamicDawg](dynamic-dawg.md) - Faster dynamic alternative
-- [PathMapDictionaryChar](pathmap-dictionary-char.md) - Unicode variant
+- PathMapDictionaryChar - Unicode variant
 - [Value Storage](../../09-value-storage/README.md) - Using values
 
 ## References
@@ -1480,7 +1480,7 @@ Consider switching to specialized dictionaries when:
 
 - **Performance**: Compare with [DoubleArrayTrie](double-array-trie.md)
 - **Dynamic**: Explore [DynamicDawg](dynamic-dawg.md)
-- **Unicode**: Check [PathMapDictionaryChar](pathmap-dictionary-char.md)
+- **Unicode**: Check PathMapDictionaryChar
 - **Values**: Learn about [Value Storage](../../09-value-storage/README.md)
 
 ---

@@ -41,6 +41,6 @@ Release and publishing procedures:
 
 ## Related Documentation
 
-- [Design Documents](../design/) - Algorithm and feature designs
-- [Bug Reports](../bug-reports/) - Known issues and fixes
-- [Research](../research/) - Optimization research and experiments
+- [Design Documents](../design/README.md) - Algorithm and feature designs
+- [Bug Reports](../bug-reports/README.md) - Known issues and fixes
+- [Research](../research/README.md) - Optimization research and experiments

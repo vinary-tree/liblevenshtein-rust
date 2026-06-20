@@ -1,16 +1,14 @@
 @startuml concurrency-model
-' liblevenshtein — read/write concurrency model, grouped by synchronization strategy.
-' Every dictionary backend is Send + Sync and cheap to share via Arc; what differs
-' is HOW concurrent readers and writers are coordinated.
+' liblevenshtein — read/write concurrency model, grouped by how READS are coordinated.
+' Every dictionary backend is Send + Sync and cheap to share via Arc; what differs is
+' whether a reader can proceed without blocking a concurrent writer.
 ' Color legend:
-'   concurrency  #CFD8DC / #ECEFF1 / #455A64  = the two sync-strategy groups
-'   dictionary   #E8F5E9 (green tint)         = the dictionary backends themselves
-'   border/arrow #455A64 (slate)              = concurrency borders & arrows
-' Strategies (per the SyncStrategy enum):
-'   Wait-free / lock-free reads — readers never block: an immutable snapshot
-'     (DoubleArrayTrie), ArcSwap RCU (DynamicDawgU64), or lock-free CAS over a
-'     memory-mapped overlay (PersistentARTrie — dynamic AND disk-persisted)
-'   RwLock readers — parking_lot read guards; readers block only a concurrent writer
+'   concurrency  #CFD8DC (blue-grey)  = the two read-coordination groups
+'   in-memory    #E8F5E9 (green)      = in-memory backends
+'   disk         #E0F2F1 (teal)       = disk-persisted (durable) backends
+'   border/arrow #455A64 (slate)
+' Grouping is by actual read behaviour, not the (sometimes coarse) SyncStrategy enum —
+' e.g. DoubleArrayTrie reports ExternalSync yet is immutable, so its reads never block.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "DejaVu Sans"
@@ -19,6 +17,10 @@ skinparam rectangle {
   BorderColor #455A64
   FontColor #102027
 }
+skinparam note {
+  BackgroundColor #FFF3E0
+  BorderColor #EF6C00
+}
 skinparam ArrowColor #37474F
 skinparam ArrowThickness 2
 
@@ -26,17 +28,30 @@ title Concurrency model — dictionary reads grouped by synchronization strategy
 
 rectangle "All dictionaries: Send + Sync · Arc cheap-clone" as banner #CFD8DC
 
-rectangle "Wait-free / lock-free reads (immutable · ArcSwap · CAS)" as gfree #CFD8DC {
-  rectangle "DoubleArrayTrie\nimmutable array · O(1) reads · static" as dat #E8F5E9
-  rectangle "DynamicDawgU64 (ArcSwap RCU)\nper-node copy-on-write · CAS writes" as ddu64 #E8F5E9
-  rectangle "PersistentARTrie (mmap, disk-persisted)\ndynamic · lock-free CAS reads + writes" as art #E8F5E9
+rectangle "Lock-free / wait-free reads — readers never block a writer" as gfree #CFD8DC {
+  rectangle "DoubleArrayTrie(Char)\nimmutable array · 𝒪(1) reads · static" as dat #E8F5E9
+  rectangle "DynamicDawgU64\nper-node ArcSwap RCU · CAS writes" as ddu64 #E8F5E9
+  rectangle "PathMapSnapshot / PathMapRef(Char)\npersistent copy-on-write snapshot" as pms #E8F5E9
+  rectangle "PersistentARTrie(Char / U64)\nlock-free CAS overlay · mmap" as part #E0F2F1
+  rectangle "PersistentScdawg / PersistentSuffixAutomaton /\nPersistentSuffixTree(Char)\nArcSwap graph · disk-persisted" as psub #E0F2F1
+  rectangle "PersistentVocabARTrie\nlock-free overlay · term ↔ id · disk" as pv #E0F2F1
 }
 
-rectangle "RwLock readers (parking_lot)" as glock #CFD8DC {
-  rectangle "DynamicDawg" as dd #E8F5E9
-  rectangle "SuffixAutomaton" as sa #E8F5E9
-  rectangle "Scdawg" as sc #E8F5E9
+rectangle "RwLock readers (parking_lot · ExternalSync) — reads block only a concurrent writer" as glock #CFD8DC {
+  rectangle "DynamicDawg(Char)\nArc<RwLock<DawgCore>> · SIMD + bloom" as dd #E8F5E9
+  rectangle "SuffixAutomaton(Char)\nArc<RwLock<…>> · substring" as sa #E8F5E9
+  rectangle "Scdawg(Char)\nArc<RwLock<…>> · bidirectional" as sc #E8F5E9
+  rectangle "PathMapDictionary(Char)\nbrief RwLock → snapshot, then lock-free walk" as pmd #E8F5E9
+  rectangle "BijectiveMap\ntwo RwLocks: forward DAWG + reverse HashMap" as bij #E8F5E9
 }
+
+note bottom of glock
+  Intended direction: the in-memory RwLock-guarded dynamic backends
+  (DynamicDawg · SuffixAutomaton · Scdawg) are slated to adopt the
+  lock-free reader model already shipping on DynamicDawgU64 and the
+  Persistent* family. PathMapDictionary only locks to grab an 𝒪(1)
+  snapshot, then traverses lock-free.
+end note
 
 banner -[#455A64,thickness=3]down-> gfree
 banner -[#455A64,thickness=3]down-> glock

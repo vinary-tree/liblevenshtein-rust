@@ -6,7 +6,7 @@ These documents cover *direct* string-to-string distance computation: the
 classical dynamic-programming and memoized-recursive methods used when you have
 two strings to compare without a dictionary. They serve direct comparison,
 validation of automaton results, and benchmarking. For dictionary-driven
-matching, see [Layer 2](../../02-levenshtein-automata/) instead.
+matching, see [Layer 2](../../02-levenshtein-automata/README.md) instead.
 
 ## Algorithms
 

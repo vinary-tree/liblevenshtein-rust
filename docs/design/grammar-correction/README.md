@@ -376,8 +376,8 @@ For integrating grammar correction with MeTTa pattern matching:
 
 Formal correctness proofs for the grammar correction layers:
 
-- [Grammar Verification](../../verification/grammar/) - Coq/Rocq proofs for CFG correctness
-- [Completeness Proofs](../../verification/core/) - Core algorithm verification
+- [Grammar Verification](../../verification/grammar/README.md) - Coq/Rocq proofs for CFG correctness
+- [Completeness Proofs](../../verification/core/README.md) - Core algorithm verification
 
 ---
 

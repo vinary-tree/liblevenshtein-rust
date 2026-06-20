@@ -39,6 +39,6 @@ The distance optimization research focused on improving the performance of Leven
 
 ## Related Documentation
 
-- [SIMD Optimization](../simd-optimization/) - SIMD-based optimization attempts
-- [Benchmarks](../../benchmarks/) - Performance measurements
+- [SIMD Optimization](../simd-optimization/README.md) - SIMD-based optimization attempts
+- [Benchmarks](../../benchmarks/README.md) - Performance measurements
 - [Developer Guide](../../developer-guide/performance.md) - Performance optimization guide

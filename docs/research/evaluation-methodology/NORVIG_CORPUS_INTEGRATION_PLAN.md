@@ -1938,4 +1938,4 @@ test-report:
 **Related Documentation:**
 - [Evaluation Methodology](../evaluation-methodology/README.md) - Overall evaluation framework
 - [Weight Learning](../weighted-levenshtein-automata/WEIGHT_LEARNING.md) - Optimal cost derivation
-- [Algorithm Documentation](../../algorithms/) - Implementation details
+- [Algorithm Documentation](../../algorithms/README.md) - Implementation details

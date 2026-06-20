@@ -692,7 +692,7 @@ This avoids the **O(K^N)** path enumeration of naive approaches.
 
 ## References
 
-- [CFG Grammar Correction Design](../../wfst/cfg_grammar_correction.md)
+- CFG Grammar Correction Design
 - [Grammar Correction Main Design](../../design/grammar-correction/MAIN_DESIGN.md)
 - [Phase C: WFST Composition](./wfst_composition.md)
-- [MORK Space Documentation](../../../MORK/kernel/src/space.rs)
+- [MORK Space Documentation](../../../../MORK/kernel/src/space.rs)

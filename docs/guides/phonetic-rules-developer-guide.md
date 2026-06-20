@@ -1352,7 +1352,7 @@ ff -> f;
 
 - [EBNF Grammar: LLev](../grammar/llev.ebnf)
 - [EBNF Grammar: Regex](../grammar/regex.ebnf)
-- [Example: Phonetic Spellcheck](../../examples/phonetic_spellcheck/)
+- [Example: Phonetic Spellcheck](../../examples/phonetic_spellcheck/README.md)
 - [Example LLev Rule Sets](../../examples/phonetic_spellcheck/rules/) (`base.llev`, `homophones.llev`, `text_speak.llev`)
 - [Built-in Zompist Rules (source)](../../src/phonetic/rules/zompist_char.rs)
 

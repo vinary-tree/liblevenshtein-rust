@@ -72,6 +72,6 @@ The SIMD optimization research explored vectorization of Levenshtein distance co
 
 ## Related Documentation
 
-- [Research Overview](../) - Other research areas
-- [Benchmarks](../../benchmarks/) - Performance measurements
-- [Distance Optimization](../distance-optimization/) - Related distance computation research
+- [Research Overview](../README.md) - Other research areas
+- [Benchmarks](../../benchmarks/README.md) - Performance measurements
+- [Distance Optimization](../distance-optimization/README.md) - Related distance computation research

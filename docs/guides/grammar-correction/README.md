@@ -4,8 +4,8 @@
 
 This directory documents how to turn the theoretical guarantees of the grammar
 correction pipeline into working code. It is the practical companion to the
-grammar-correction research in [../../research/grammar-correction/](../../research/grammar-correction/)
-and the multi-tier correction WFST design in [../../mettail/correction-wfst/](../../mettail/correction-wfst/).
+grammar-correction research in [../../research/grammar-correction/](../../research/grammar-correction/README.md)
+and the multi-tier correction WFST design in [../../mettail/correction-wfst/](../../mettail/correction-wfst/README.md).
 
 ## Guides
 

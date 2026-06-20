@@ -1357,7 +1357,7 @@ The unified correction architecture compares favorably with industry systems:
 4. **Rust native performance** (zero-cost abstractions)
 5. **Composable architecture** (NFA ∩ FST ∩ CFG)
 
-**See**: [WFST Architecture - Industry Comparison](../../wfst/architecture.md#comparison-with-industry-systems) for detailed analysis.
+**See**: WFST Architecture - Industry Comparison for detailed analysis.
 
 ---
 
@@ -1413,7 +1413,7 @@ let config = PipelineConfig {
 
 **Use Cases**: Professional writing tools, academic paper correction, high-quality editing
 
-**See**: [WFST Architecture - Deployment Modes](../../wfst/architecture.md#deployment-modes) for detailed configurations.
+**See**: WFST Architecture - Deployment Modes for detailed configurations.
 
 ---
 

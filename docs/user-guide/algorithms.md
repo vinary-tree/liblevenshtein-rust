@@ -321,7 +321,7 @@ for candidate in transducer.query_with_distance("cafe", 1) {
 - [Code Completion Guide](code-completion.md) - Building code completion
 - [Glossary](../GLOSSARY.md) - Definitions of terms used throughout the docs
 - [Architecture Overview](../architecture/overview.md) - How the crates fit together
-- [Benchmarks](../benchmarks/) - Performance measurements
+- [Benchmarks](../benchmarks/README.md) - Performance measurements
 
 ## References
 

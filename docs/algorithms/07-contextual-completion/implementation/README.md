@@ -7,7 +7,7 @@ completion. These documents describe its constituent components: the engine that
 fuses draft and finalized queries, the lexical-scope context tree, the
 in-memory draft buffer, and the checkpoint stack that enables time-travel
 undo/redo. For consumer-facing scenarios, see the
-[use-cases](../use-cases/) directory.
+[use-cases](../use-cases/README.md) directory.
 
 ## Components
 

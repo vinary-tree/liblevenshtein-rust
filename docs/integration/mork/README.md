@@ -679,10 +679,10 @@ pub trait Semiring: Clone + Copy + PartialEq {
 
 ### In liblevenshtein-rust
 
-- [WFST Architecture](../wfst/architecture.md) - Overall WFST design
-- [Lattice Data Structures](../wfst/lattice_data_structures.md) - Lattice implementation spec
-- [CFG Grammar Correction](../wfst/cfg_grammar_correction.md) - Grammar-based correction
-- [Grammar Correction Design](../design/grammar-correction/MAIN_DESIGN.md) - Full correction pipeline
+- WFST Architecture - Overall WFST design
+- Lattice Data Structures - Lattice implementation spec
+- CFG Grammar Correction - Grammar-based correction
+- [Grammar Correction Design](../../design/grammar-correction/MAIN_DESIGN.md) - Full correction pipeline
 
 ### In MORK
 

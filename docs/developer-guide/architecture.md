@@ -295,8 +295,8 @@ Remaining exploratory directions:
 3. **GPU acceleration** (research) — large-scale parallel queries over very large
    dictionaries.
 
-Recorded design explorations live under [`docs/research/`](../research/) (an
-append-only record) and [`docs/design/`](../design/).
+Recorded design explorations live under [`docs/research/`](../research/README.md) (an
+append-only record) and [`docs/design/`](../design/README.md).
 
 ---
 

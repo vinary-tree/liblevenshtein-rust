@@ -36,7 +36,7 @@ documentation series explains:
 
 ## Documentation Structure
 
-### [Theoretical Foundations](./theoretical-foundations/)
+### [Theoretical Foundations](./theoretical-foundations/README.md)
 
 These documents explain the mathematical foundations required to understand semantic
 type checking for MeTTa.
@@ -54,7 +54,7 @@ type checking for MeTTa.
 and (06) next. Then either (02) for full OSLF theory or (03) for the simpler Gph-enriched
 approach. Document (04) explains how RHO calculus reflection bridges to Rholang.
 
-### [Implementation](./implementation/)
+### [Implementation](./implementation/README.md)
 
 These documents describe the existing prototypes and the path forward.
 
@@ -65,7 +65,7 @@ These documents describe the existing prototypes and the path forward.
 | [03-rholang-integration.md](./implementation/03-rholang-integration.md) | Current MeTTa-Rholang bridge via mettatron |
 | [04-implementation-roadmap.md](./implementation/04-implementation-roadmap.md) | Layered approach to full semantic type checking |
 
-### [MeTTa Ecosystem](./metta-ecosystem/)
+### [MeTTa Ecosystem](./metta-ecosystem/README.md)
 
 These documents describe the broader MeTTa ecosystem and implementation architectures.
 
@@ -76,7 +76,7 @@ These documents describe the broader MeTTa ecosystem and implementation architec
 | [03-mettatron.md](./metta-ecosystem/03-mettatron.md) | F1R3FLY.io's MeTTaTron compiler architecture |
 | [04-mork-pathmap-integration.md](./metta-ecosystem/04-mork-pathmap-integration.md) | MORK and PathMap storage layer integration |
 
-### [Correction WFST](./correction-wfst/)
+### [Correction WFST](./correction-wfst/README.md)
 
 These documents describe the unified three-tier correction WFST architecture that
 integrates liblevenshtein with MeTTaIL for semantic type-aware correction.
@@ -90,7 +90,7 @@ integrates liblevenshtein with MeTTaIL for semantic type-aware correction.
 | [05-data-flow.md](./correction-wfst/05-data-flow.md) | Complete data flow through the stack |
 | [06-integration-possibilities.md](./correction-wfst/06-integration-possibilities.md) | Cross-language, ASR, IDE integrations |
 
-### [Reference](./reference/)
+### [Reference](./reference/README.md)
 
 Quick-reference materials and supporting documentation.
 

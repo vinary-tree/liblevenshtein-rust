@@ -95,7 +95,7 @@ Cargo packages or analysis harnesses rather than library demos — noted in thei
 
 | Example | Purpose | Features |
 |---|---|---|
-| [`phonetic_spellcheck/`](../../examples/phonetic_spellcheck/) | Standalone project: `PhoneticNormalizedDictionary` over ~124k words (fuzzy, regex, pattern expansion) | `phonetic-rules`, `pathmap-backend`, `embedded-rules` |
+| [`phonetic_spellcheck/`](../../examples/phonetic_spellcheck/README.md) | Standalone project: `PhoneticNormalizedDictionary` over ~124k words (fuzzy, regex, pattern expansion) | `phonetic-rules`, `pathmap-backend`, `embedded-rules` |
 | [`phonetic_fuzzy_matching.rs`](../../examples/phonetic_fuzzy_matching.rs) | Comprehensive phonetic rewrite × Levenshtein fuzzy matching | `phonetic-rules` |
 | [`phonetic_rewrite.rs`](../../examples/phonetic_rewrite.rs) | Apply `.llev` phonetic rewrite rules to transform text | `phonetic-rules` |
 | [`phonetic_iteration_analysis.rs`](../../examples/phonetic_iteration_analysis.rs) | Measure iteration counts inside `apply_rules_seq()` | `phonetic-rules` |

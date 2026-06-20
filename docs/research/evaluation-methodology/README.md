@@ -1618,8 +1618,8 @@ This framework enables:
 
 For questions or contributions, see:
 - [Main README](../../README.md) - Project overview
-- [Algorithm Documentation](../../algorithms/) - Implementation details
-- [SIMD Optimization Guide](../../optimization/simd/) - Performance tuning
+- [Algorithm Documentation](../../algorithms/README.md) - Implementation details
+- SIMD Optimization Guide - Performance tuning
 
 ---
 

@@ -94,5 +94,5 @@ All benchmarks are run using Criterion.rs with:
 
 ## Related Documentation
 
-- [Research](../research/) - Research that led to optimizations
+- [Research](../research/README.md) - Research that led to optimizations
 - [Developer Guide](../developer-guide/performance.md) - Performance optimization guide

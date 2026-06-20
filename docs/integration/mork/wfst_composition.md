@@ -1121,5 +1121,5 @@ mod tests {
 
 - [Mohri et al., "Weighted Finite-State Transducers in Speech Recognition"](http://www.cs.nyu.edu/~mohri/pub/hbka.pdf)
 - [Phase B: Lattice Integration](./lattice_integration.md)
-- [Phonetic Rules Verification](../../verification/phonetic/)
-- [WFST Architecture](../wfst/architecture.md)
+- [Phonetic Rules Verification](../../verification/phonetic/README.md)
+- WFST Architecture

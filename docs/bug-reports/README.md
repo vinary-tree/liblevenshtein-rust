@@ -53,5 +53,5 @@ Test coverage analysis for cross-validation:
 
 ## Related Documentation
 
-- [Developer Guide](../developer-guide/) - Contributing bug reports
-- [Completion Reports](../completion-reports/) - Feature completion status
+- [Developer Guide](../developer-guide/README.md) - Contributing bug reports
+- [Completion Reports](../completion-reports/README.md) - Feature completion status

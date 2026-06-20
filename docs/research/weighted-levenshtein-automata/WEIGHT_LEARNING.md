@@ -1254,8 +1254,8 @@ Retrieved with threshold ≈ 3.0 ✓
 ### Cross-References
 
 - [README.md](./README.md) - Discretization methodology
-- [/docs/research/universal-levenshtein/](../universal-levenshtein/) - Restricted substitutions
-- [/docs/algorithms/02-levenshtein-automata/](../../algorithms/02-levenshtein-automata/) - Core algorithm
+- [/docs/research/universal-levenshtein/](../universal-levenshtein/README.md) - Restricted substitutions
+- [/docs/algorithms/02-levenshtein-automata/](../../algorithms/02-levenshtein-automata/README.md) - Core algorithm
 
 ---
 

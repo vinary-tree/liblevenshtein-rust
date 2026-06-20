@@ -163,7 +163,7 @@ make
 
 This verification complements:
 - **Design**: [`docs/design/grammar-correction/MAIN_DESIGN.md`](../../design/grammar-correction/MAIN_DESIGN.md) (5,143 lines)
-- **Phonetic Verification**: [`docs/verification/phonetic/`](../phonetic/) (active development)
+- **Phonetic Verification**: [`docs/verification/phonetic/`](../phonetic/README.md) (active development)
 - **Implementation**: `src/correction/` (Rust, to be implemented)
 
 ## Maintenance Checks

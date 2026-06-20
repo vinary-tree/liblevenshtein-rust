@@ -1013,9 +1013,9 @@ if is_x86_feature_detected!("avx2") {
 - Write operations block all readers
 - Lock contention on high write frequency
 
-**Used in:** DynamicDawg, PathMapDictionary
+**Used in:** DynamicDawg, SuffixAutomaton, Scdawg, PathMapDictionary, BijectiveMap (the `ExternalSync` backends)
 
-**Code:** Standard library `std::sync::RwLock`
+**Code:** `parking_lot::RwLock` by default (via `libdictenstein`'s `sync_compat`); `std::sync::RwLock` is the WASM / no-`parking_lot` fallback
 
 **See also:** Thread-Safe Interior Mutability, DashMap, Dynamic DAWG
 
@@ -1559,7 +1559,7 @@ The terms below cover subsystems introduced or substantially expanded after the
 #### Phonetic Algorithms (Soundex · Metaphone · NYSIIS · Caverphone · Cologne · Daitch–Mokotoff · Beider–Morse)
 **Categories:** [Algorithm]
 
-**Definition:** Classical phonetic-encoding schemes that map a word to a code approximating its pronunciation, enabling sound-alike grouping. Each has a dedicated reference under [`docs/phonetic-extraction/`](phonetic-extraction/).
+**Definition:** Classical phonetic-encoding schemes that map a word to a code approximating its pronunciation, enabling sound-alike grouping. Each has a dedicated reference under [`docs/phonetic-extraction/`](phonetic-extraction/README.md).
 
 **See also:** Phonetic Normalization
 
@@ -1596,7 +1596,7 @@ The terms below cover subsystems introduced or substantially expanded after the
 #### EBNF (Extended Backus–Naur Form)
 **Categories:** [API]
 
-**Definition:** The metasyntax used to specify the `.llev`, `.llre`, and regex grammars under [`docs/grammar/`](grammar/).
+**Definition:** The metasyntax used to specify the `.llev`, `.llre`, and regex grammars under [`docs/grammar/`](grammar/README.md).
 
 **See also:** `.llev`, `.llre`
 
@@ -1658,7 +1658,7 @@ The terms below cover subsystems introduced or substantially expanded after the
 
 **Definition:** The formal-verification toolchain. **Rocq** (formerly Coq) machine-checked `.v` theories prove metric and algorithmic properties; **TLA+** specifications model-check concurrent and query behaviour. The verification **profile** (trusted / partial / legacy) recorded in [`FORMAL_VERIFICATION_MANIFEST.tsv`](verification/FORMAL_VERIFICATION_MANIFEST.tsv) is the declared source of truth for what is proved versus assumed.
 
-**See also:** [Verification](verification/)
+**See also:** [Verification](verification/README.md)
 
 ---
 

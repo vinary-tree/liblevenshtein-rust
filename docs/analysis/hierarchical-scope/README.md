@@ -58,7 +58,7 @@ Hierarchical scope completion enables contextual code completion that respects l
 ## Implementation Files
 
 ### Helper Functions
-**Location**: [src/transducer/helpers.rs](../../src/transducer/helpers.rs)
+**Location**: [src/transducer/helpers.rs](../../../src/transducer/helpers.rs)
 
 Provides two optimized intersection implementations:
 
@@ -68,7 +68,7 @@ Provides two optimized intersection implementations:
 **Tests**: 9 comprehensive tests (all passing)
 
 ### Working Example
-**Location**: [examples/hierarchical_scope_completion.rs](../../examples/hierarchical_scope_completion.rs)
+**Location**: [examples/hierarchical_scope_completion.rs](../../../examples/hierarchical_scope_completion.rs)
 
 Demonstrates:
 - Scope-aware code completion engine
@@ -77,7 +77,7 @@ Demonstrates:
 - Performance characteristics
 
 ### Benchmarks
-**Location**: [benches/hierarchical_scope_benchmarks.rs](../../benches/hierarchical_scope_benchmarks.rs)
+**Location**: [benches/hierarchical_scope_benchmarks.rs](../../../benches/hierarchical_scope_benchmarks.rs)
 
 - **540+ lines** of comprehensive testing
 - **5 approaches** benchmarked
@@ -194,6 +194,6 @@ Potential optimizations (not currently needed):
 ## Related Documentation
 
 - **Main README**: [../../README.md](../../README.md)
-- **Optimization Work**: [../optimization/](../optimization/)
-- **Fuzzy Maps Analysis**: [../fuzzy-maps/](../fuzzy-maps/)
-- **Architecture**: [../../ARCHITECTURE.md](../../ARCHITECTURE.md)
+- **Optimization Work**: [../optimization/](../../optimization/README.md)
+- **Fuzzy Maps Analysis**: [../fuzzy-maps/](../fuzzy-maps/README.md)
+- **Architecture**: [../../ARCHITECTURE.md](../../developer-guide/architecture.md)

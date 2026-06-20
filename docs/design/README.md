@@ -69,5 +69,5 @@ Comprehensive performance analysis of zipper-based vs node-based query iteration
 
 ## Related Documentation
 
-- [Developer Guide](../developer-guide/) - Implementation guidelines
-- [Research](../research/) - Performance research and analysis
+- [Developer Guide](../developer-guide/README.md) - Implementation guidelines
+- [Research](../research/README.md) - Performance research and analysis

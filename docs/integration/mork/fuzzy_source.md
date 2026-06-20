@@ -1157,9 +1157,9 @@ Factors affecting latency:
 
 ## References
 
-- [MORK Source Trait](../../../MORK/kernel/src/sources.rs)
-- [PhoneticNormalizedDictionary](../../src/dictionary/phonetic_normalized/mod.rs)
-- [PhoneticNormalizedCandidate](../../src/dictionary/phonetic_normalized/candidate.rs)
-- [English Phonetic Rules](../../src/phonetic/rules/english.rs)
-- [PathMap Dictionary Backend](../../src/dictionary/pathmap.rs)
-- [PathMap Zipper Traits](../../../PathMap/src/zipper.rs)
+- [MORK Source Trait](../../../../MORK/kernel/src/sources.rs)
+- [PhoneticNormalizedDictionary](../../../src/dictionary/phonetic_normalized.rs)
+- [PhoneticNormalizedCandidate](../../../src/dictionary/phonetic_normalized.rs)
+- [English Phonetic Rules](../../../src/phonetic/rules/english.rs)
+- PathMap Dictionary Backend
+- [PathMap Zipper Traits](../../../../PathMap/src/zipper.rs)

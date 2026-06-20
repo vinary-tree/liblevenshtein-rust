@@ -27,8 +27,8 @@
 ### Recommendation
 
 **DO NOT IMPLEMENT** bimachines. Instead:
-1. ✅ Implement **Universal Levenshtein Automata** (restricted substitutions) - [documented](../universal-levenshtein/)
-2. ✅ Prototype **weighted operations** via discretization - [documented](../weighted-levenshtein-automata/)
+1. ✅ Implement **Universal Levenshtein Automata** (restricted substitutions) - [documented](../universal-levenshtein/README.md)
+2. ✅ Prototype **weighted operations** via discretization - [documented](../weighted-levenshtein-automata/README.md)
 3. ✅ Continue optimizing current Levenshtein automata architecture
 
 ---
@@ -357,7 +357,7 @@ Would require:
 ### Universal Levenshtein Automata (Documented, Ready)
 
 **Paper:** Mitankin, Mihov, Schulz (2005)
-**Status:** Documented in [`/docs/research/universal-levenshtein/`](../universal-levenshtein/)
+**Status:** Documented in [`/docs/research/universal-levenshtein/`](../universal-levenshtein/README.md)
 **Problem:** Restricted substitutions (only specific character pairs allowed)
 
 **Examples:**
@@ -370,7 +370,7 @@ Would require:
 
 ### Weighted Levenshtein (Methodology Documented)
 
-**Status:** Documented in [`/docs/research/weighted-levenshtein-automata/`](../weighted-levenshtein-automata/)
+**Status:** Documented in [`/docs/research/weighted-levenshtein-automata/`](../weighted-levenshtein-automata/README.md)
 **Problem:** Variable operation costs (keyboard distance, frequency-based)
 
 **Solution:** Discretization approach
@@ -384,7 +384,7 @@ Complexity: O(|W| × max_cost/precision)
 
 ### WallBreaker (Pattern Splitting)
 
-**Status:** Documented in [`/docs/research/wallbreaker/`](../wallbreaker/)
+**Status:** Documented in [`/docs/research/wallbreaker/`](../wallbreaker/README.md)
 **Problem:** Efficiency for large error bounds (n > 2)
 
 **Solution:** Split query into patterns, merge results
@@ -581,8 +581,8 @@ The fact that the same authors developed both approaches and chose Levenshtein a
 ### Project Documentation
 
 - [Levenshtein Automata Documentation](../levenshtein-automata/README.md)
-- [Universal Levenshtein Automata (Ready to Implement)](../universal-levenshtein/)
-- [Weighted Levenshtein Automata (Methodology)](../weighted-levenshtein-automata/)
+- [Universal Levenshtein Automata (Ready to Implement)](../universal-levenshtein/README.md)
+- [Weighted Levenshtein Automata (Methodology)](../weighted-levenshtein-automata/README.md)
 - [Implementation Mapping (Paper to Code)](../levenshtein-automata/implementation-mapping.md)
 - [Technical Glossary](../../GLOSSARY.md)
 

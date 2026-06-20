@@ -20,5 +20,5 @@ Current status of UTF-8 implementation:
 
 ## Related Documentation
 
-- [Completion Reports](../completion-reports/) - Phase completion milestones
-- [Developer Guide](../developer-guide/) - Implementation guidelines
+- [Completion Reports](../completion-reports/README.md) - Phase completion milestones
+- [Developer Guide](../developer-guide/README.md) - Implementation guidelines

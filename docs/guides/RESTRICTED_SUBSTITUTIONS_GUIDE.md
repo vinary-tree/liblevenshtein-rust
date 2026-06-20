@@ -686,7 +686,7 @@ Restricted substitutions provide powerful, flexible, and **zero-cost** (when unu
 **Next Steps**:
 - Try the [examples](../../examples/)
 - Read the [API documentation](https://docs.rs/liblevenshtein)
-- Explore [performance benchmarks](../optimization/)
+- Explore [performance benchmarks](../optimization/README.md)
 
 ---
 

@@ -28,27 +28,27 @@ Exploration of potential future enhancements:
 
 ### Research Areas
 
-#### [SIMD Optimization](simd-optimization/)
+#### [SIMD Optimization](simd-optimization/README.md)
 Research and implementation of SIMD optimizations:
 - Vectorization opportunities
 - Performance measurements
 - Implementation phases
 - Results and conclusions
 
-#### [Distance Optimization](distance-optimization/)
+#### [Distance Optimization](distance-optimization/README.md)
 Levenshtein distance computation optimization research:
 - Algorithm improvements
 - Implementation techniques
 - Benchmark results
 - Roadmap for future work
 
-#### [Comparative Analysis](comparative-analysis/)
+#### [Comparative Analysis](comparative-analysis/README.md)
 Comparative analysis of different approaches and implementations:
 - Algorithm comparisons
 - Backend performance analysis
 - Trade-off evaluations
 
-#### [Eviction Wrapper](eviction-wrapper/)
+#### [Eviction Wrapper](eviction-wrapper/README.md)
 Cache eviction strategy research and design:
 - Eviction policy evaluation
 - Implementation architecture
@@ -56,6 +56,6 @@ Cache eviction strategy research and design:
 
 ## Related Documentation
 
-- [Design Documents](../design/) - Specifications derived from research
-- [Benchmarks](../benchmarks/) - Performance measurement results
+- [Design Documents](../design/README.md) - Specifications derived from research
+- [Benchmarks](../benchmarks/README.md) - Performance measurement results
 - [Developer Guide](../developer-guide/performance.md) - Performance optimization guide

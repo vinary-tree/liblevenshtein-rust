@@ -5,7 +5,7 @@
 > **Note**: The dictionary implementations have been extracted to the
 > [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate for
 > independent use. For comprehensive dictionary documentation, see:
-> - [libdictenstein/docs/algorithms/](../../../../libdictenstein/docs/algorithms/) - Implementation guides
+> - [libdictenstein/docs/algorithms/](../../../../libdictenstein/docs/algorithms/README.md) - Implementation guides
 > - [libdictenstein/docs/theory/](../../../../libdictenstein/docs/theory/) - SCDAWG and disk-trie theory
 >
 > This document focuses on how liblevenshtein integrates dictionaries with Levenshtein transducers.

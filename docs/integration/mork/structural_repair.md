@@ -1024,9 +1024,9 @@ pub fn parallel_repair(ast: &Ast, rules: &[RepairRule]) -> Vec<RepairCandidate> 
 ## Related Documentation
 
 - [Grammar Correction via MORK](./grammar_correction.md) - Phase D foundation
-- [WFST Architecture](../../wfst/architecture.md) - Three-tier pipeline
+- WFST Architecture - Three-tier pipeline
 - [MORK Pattern Matching](https://github.com/your-org/MORK/docs/pattern_matching.md) - MORK `match2()` reference
-- [Tree-sitter Integration](../../wfst/tree_sitter_integration.md) - Parser integration
+- Tree-sitter Integration - Parser integration
 
 ---
 

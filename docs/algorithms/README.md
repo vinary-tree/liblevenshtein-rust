@@ -119,7 +119,7 @@ let results: Vec<String> = dict
 
 ## Algorithmic Layers
 
-### [Layer 1: Dictionary Layer](01-dictionary-layer/)
+### [Layer 1: Dictionary Layer](01-dictionary-layer/README.md)
 
 **Purpose:** Efficient storage and traversal of term collections
 
@@ -147,7 +147,7 @@ let results: Vec<String> = dict
 
 ---
 
-### [Layer 2: Levenshtein Automata](02-levenshtein-automata/)
+### [Layer 2: Levenshtein Automata](02-levenshtein-automata/README.md)
 
 **Purpose:** Finite state machines for approximate string matching
 
@@ -170,7 +170,7 @@ let results: Vec<String> = dict
 
 ---
 
-### [Layer 3: Intersection & Traversal](03-intersection-traversal/)
+### [Layer 3: Intersection & Traversal](03-intersection-traversal/README.md)
 
 **Purpose:** Execute queries by traversing Dictionary × Automaton
 
@@ -195,7 +195,7 @@ let results: Vec<String> = dict
 
 ---
 
-### [Layer 4: Distance Calculation](04-distance-calculation/)
+### [Layer 4: Distance Calculation](04-distance-calculation/README.md)
 
 **Purpose:** Direct string distance computation (non-automaton approach)
 
@@ -211,7 +211,7 @@ let results: Vec<String> = dict
 
 ---
 
-### [Layer 5: SIMD Optimization](05-simd-optimization/)
+### [Layer 5: SIMD Optimization](05-simd-optimization/README.md)
 
 **Purpose:** Vectorize hot paths for 20-64% performance gains
 
@@ -232,7 +232,7 @@ let results: Vec<String> = dict
 
 ---
 
-### [Layer 6: Zipper Navigation](06-zipper-navigation/)
+### [Layer 6: Zipper Navigation](06-zipper-navigation/README.md)
 
 **Purpose:** Functional, context-preserving traversal of data structures
 
@@ -251,7 +251,7 @@ let results: Vec<String> = dict
 
 ---
 
-### [Layer 7: Contextual Completion](07-contextual-completion/)
+### [Layer 7: Contextual Completion](07-contextual-completion/README.md)
 
 **Purpose:** Scope-aware, hierarchical code completion
 
@@ -274,7 +274,7 @@ let results: Vec<String> = dict
 
 ---
 
-### [Layer 8: Caching](08-caching-layer/)
+### [Layer 8: Caching](08-caching-layer/README.md)
 
 **Purpose:** Query result caching with configurable eviction
 
@@ -292,7 +292,7 @@ let results: Vec<String> = dict
 
 ---
 
-### [Layer 9: Value Storage](09-value-storage/)
+### [Layer 9: Value Storage](09-value-storage/README.md)
 
 **Purpose:** Associate arbitrary data with dictionary terms (fuzzy maps)
 
@@ -467,25 +467,25 @@ See the complete reference list for more papers and resources.
 ## Navigation
 
 **By Layer:**
-- [01-dictionary-layer/](01-dictionary-layer/)
-- [02-levenshtein-automata/](02-levenshtein-automata/)
-- [03-intersection-traversal/](03-intersection-traversal/)
-- [04-distance-calculation/](04-distance-calculation/)
-- [05-simd-optimization/](05-simd-optimization/)
-- [06-zipper-navigation/](06-zipper-navigation/)
-- [07-contextual-completion/](07-contextual-completion/)
-- [08-caching-layer/](08-caching-layer/)
-- [09-value-storage/](09-value-storage/)
+- [01-dictionary-layer/](01-dictionary-layer/README.md)
+- [02-levenshtein-automata/](02-levenshtein-automata/README.md)
+- [03-intersection-traversal/](03-intersection-traversal/README.md)
+- [04-distance-calculation/](04-distance-calculation/README.md)
+- [05-simd-optimization/](05-simd-optimization/README.md)
+- [06-zipper-navigation/](06-zipper-navigation/README.md)
+- [07-contextual-completion/](07-contextual-completion/README.md)
+- [08-caching-layer/](08-caching-layer/README.md)
+- [09-value-storage/](09-value-storage/README.md)
 
 **By Topic:**
 - Theory Documents (All layers)
-- [Implementation Guides](01-dictionary-layer/implementations/) (All layers)
-- [Usage Examples](../examples/)
+- [Implementation Guides](01-dictionary-layer/implementations/README.md) (All layers)
+- [Usage Examples](../examples/README.md)
 - Performance Analysis
-- [Diagrams & Visualizations](../diagrams/)
+- [Diagrams & Visualizations](../diagrams/README.md)
 
 **Quick Links:**
-- [Value Storage Guide](09-value-storage/) (NEW in Phase 6!)
+- [Value Storage Guide](09-value-storage/README.md) (NEW in Phase 6!)
 - [DoubleArrayTrie Guide](01-dictionary-layer/implementations/double-array-trie.md) (Recommended)
 - [Unicode Support](01-dictionary-layer/implementations/double-array-trie-char.md)
 - Algorithm Comparison

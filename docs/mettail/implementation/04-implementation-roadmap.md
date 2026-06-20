@@ -1479,7 +1479,7 @@ project priorities.
 - See [gap-analysis.md](../reference/gap-analysis.md) for detailed gap analysis
 - See [use-cases.md](../reference/use-cases.md) for validation examples
 - See [bibliography.md](../reference/bibliography.md) for complete references
-- See [correction-wfst/](../correction-wfst/) for WFST architecture details
-- See [dialogue/](../dialogue/) for dialogue context layer details
-- See [llm-integration/](../llm-integration/) for LLM integration details
-- See [agent-learning/](../agent-learning/) for agent learning details
+- See [correction-wfst/](../correction-wfst/README.md) for WFST architecture details
+- See [dialogue/](../dialogue/README.md) for dialogue context layer details
+- See [llm-integration/](../llm-integration/README.md) for LLM integration details
+- See [agent-learning/](../agent-learning/README.md) for agent learning details

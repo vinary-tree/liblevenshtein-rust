@@ -66,6 +66,6 @@ Concurrent access patterns:
 ## Additional Resources
 
 - Main [README](../../README.md) - Project overview and quick examples
-- [Developer Guide](../developer-guide/) - Contributing and architecture
-- [Design Documents](../design/) - Technical specifications
-- [Benchmarks](../benchmarks/) - Performance measurements
+- [Developer Guide](../developer-guide/README.md) - Contributing and architecture
+- [Design Documents](../design/README.md) - Technical specifications
+- [Benchmarks](../benchmarks/README.md) - Performance measurements

@@ -11,8 +11,8 @@ How liblevenshtein is structured, at two levels:
   *intra-crate* view: the `src/` module map, core traits, design principles,
   concurrency model, and the diagrams for each.
 
-See also the [Algorithm Reference](../algorithms/) for the layered (01–09)
-architecture, bottom-up, and the [Diagrams](../diagrams/) suite.
+See also the [Algorithm Reference](../algorithms/README.md) for the layered (01–09)
+architecture, bottom-up, and the [Diagrams](../diagrams/README.md) suite.
 
 ---
 

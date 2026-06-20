@@ -1231,6 +1231,6 @@ mod tests {
 
 ## References
 
-- [Lattice Data Structures Specification](../wfst/lattice_data_structures.md)
+- Lattice Data Structures Specification
 - [Phase A: FuzzySource](./fuzzy_source.md)
 - [Phase C: WFST Composition](./wfst_composition.md)

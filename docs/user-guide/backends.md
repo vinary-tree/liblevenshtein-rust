@@ -478,7 +478,7 @@ See [Developer Guide](../developer-guide/architecture.md) for more details on cu
 - [Serialization](serialization.md) - Save and load dictionaries
 - [Glossary](../GLOSSARY.md) - Definitions of terms used throughout the docs
 - [Architecture Overview](../architecture/overview.md) - How libdictenstein and liblevenshtein fit together
-- [Benchmarks](../benchmarks/) - Detailed performance measurements
+- [Benchmarks](../benchmarks/README.md) - Detailed performance measurements
 
 ## References
 

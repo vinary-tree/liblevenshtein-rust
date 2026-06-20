@@ -181,7 +181,7 @@ The phonetic rules are proven correct in Coq/Rocq with five theorems —
 **well-formedness**, **bounded expansion** (output ≤ input + 20 chars), **non-confluence**
 (rule order matters, shown constructively), **termination** (sequential application always
 halts), and **idempotence** (fixed points are stable). The complete proofs live under
-[`docs/verification/phonetic/`](../../verification/phonetic/). This is what lets the
+[`docs/verification/phonetic/`](../../verification/phonetic/README.md). This is what lets the
 dictionary treat normalization as a total, bounded function.
 
 ---

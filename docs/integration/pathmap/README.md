@@ -6,7 +6,7 @@
 
 > **Note**: PathMap dictionary implementation details have been extracted to the
 > [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate.
-> See [libdictenstein/docs/integration/pathmap/](../../../../libdictenstein/docs/integration/pathmap/)
+> See [libdictenstein/docs/integration/pathmap/](../../../../libdictenstein/docs/integration/pathmap/README.md)
 > for PathMap dictionary internals.
 >
 > This document focuses on how liblevenshtein integrates PathMap with Levenshtein

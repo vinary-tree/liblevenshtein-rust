@@ -254,3 +254,19 @@ all dynamic, lock-free overlay). **Fixes:**
   PersistentARTrie row (lock-free, dynamic), expanded the backend tables with the persistent
   family + BijectiveMap, and added a "persistent ≠ static" note.
 - Verified: all 49 diagrams render + in sync; no error graphics; link gate 0 errors.
+
+### 2026-06-20 — Repo-wide broken-link audit ✅
+
+Scanned **all 573 markdown files** (custom resolver + `lychee --offline`):
+- **176 directory links → `README.md`**: rewrote `](dir/)` / `](dir)` to `](dir/README.md)`
+  across 53 files wherever the directory has a README (the index, layer cross-links, etc.).
+- **44 broken links fixed** across ~22 files: 21 remaps (absolute `/docs/…`,`/src/…` → relative;
+  wrong-depth `../../…` → `../../../…`, incl. the cross-repo `MORK`/`PathMap` sibling refs and
+  `src/transducer/helpers.rs`; renames `PERFORMANCE.md`→`developer-guide/performance.md`,
+  `ARCHITECTURE.md`→`developer-guide/architecture.md`, `FUTURE_ENHANCEMENTS.md`→`research/future-enhancements.md`,
+  `phonetic_normalized/mod.rs`→`phonetic_normalized.rs`) and 20 neutralizations (dead `../wfst/…`
+  forward-references to a never-created tree, the moved `pathmap.rs`, unwritten sub-pages).
+- **Deliberately left untouched** (not real links): math notation in mettail category-theory docs
+  (`[…](n, |(.(in(m…)`), rustdoc `crate::…` paths in a completion report, the fenced embedding
+  *examples* in `diagrams/README.md`, and the gitignored generated `pkg/README.md`.
+- **Result:** `lychee --offline docs` over the entire docs tree (3,344 links) → **0 errors**.

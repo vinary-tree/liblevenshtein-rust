@@ -97,7 +97,7 @@ Their grammars and a worked walkthrough are in the
 ## 5 · Where to read next
 
 - [Developer Guide → Architecture](../developer-guide/architecture.md) — intra-crate module map and traits.
-- [Algorithm Reference](../algorithms/) — the layered architecture (01–09), bottom-up.
+- [Algorithm Reference](../algorithms/README.md) — the layered architecture (01–09), bottom-up.
 - [Security & threat model](../SECURITY.md) — the trust boundaries across these crates.
 - [Concepts → Lazy vs. Eager Automata](../concepts/LAZY_VS_EAGER_AUTOMATA.md) — the query model in depth.
 

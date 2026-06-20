@@ -2,7 +2,7 @@
 
 > **Note**: This disk-trie theory documentation has been moved to the
 > [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate.
-> See [libdictenstein/docs/theory/disk-tries/](../../../../libdictenstein/docs/theory/disk-tries/)
+> See [libdictenstein/docs/theory/disk-tries/](../../../../libdictenstein/docs/theory/disk-tries/README.md)
 > for the complete documentation.
 >
 > This document remains for reference on how PersistentARTrie integrates with
@@ -101,5 +101,5 @@ Primary sources underlying this documentation:
 
 ## Related Documentation
 
-- [SCDAWG Theory](../scdawg/) - Symmetric Compact Directed Acyclic Word Graph
-- [Levenshtein Automata](../../algorithms/) - Fuzzy string matching algorithms
+- [SCDAWG Theory](../scdawg/README.md) - Symmetric Compact Directed Acyclic Word Graph
+- [Levenshtein Automata](../../algorithms/README.md) - Fuzzy string matching algorithms

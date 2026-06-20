@@ -6,7 +6,7 @@ The caching layer stores query results behind a lock-free concurrent map and
 evicts entries according to a pluggable policy. Each document here describes one
 policy: its eviction criterion, the metadata it tracks, and the access patterns
 it serves best. For the layer overview and integration, see the
-[caching layer](../) index.
+[caching layer](../README.md) index.
 
 ## Policies
 

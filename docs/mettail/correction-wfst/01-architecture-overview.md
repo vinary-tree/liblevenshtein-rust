@@ -25,12 +25,12 @@ for dialogue context, LLM integration, and adaptive learning.
 - [Simplification Transpiler](../simplification/README.md) - Post-correction source-to-source optimization
 
 **Original WFST Documentation** (detailed implementation specs):
-- [WFST Architecture](../../wfst/architecture.md) - Complete system design (~2400 lines)
-- [CFG Grammar Correction](../../wfst/cfg_grammar_correction.md) - Error grammar formalism (~1900 lines)
-- [Lattice Parsing](../../wfst/lattice_parsing.md) - Earley parsing on lattices (~1050 lines)
-- [Lattice Data Structures](../../wfst/lattice_data_structures.md) - Rust implementations (~550 lines)
-- [NFA Phonetic Regex](../../wfst/nfa_phonetic_regex.md) - Phonetic pattern matching
-- [References](../../wfst/references/papers.md) - 35+ cited papers
+- WFST Architecture - Complete system design (~2400 lines)
+- CFG Grammar Correction - Error grammar formalism (~1900 lines)
+- Lattice Parsing - Earley parsing on lattices (~1050 lines)
+- Lattice Data Structures - Rust implementations (~550 lines)
+- NFA Phonetic Regex - Phonetic pattern matching
+- References - 35+ cited papers
 
 **Programming Language Correction** (5-layer design with SMT repair):
 - [Grammar Correction Design](../../design/grammar-correction/README.md) - Navigation guide

@@ -4998,7 +4998,7 @@ export function activate(context: vscode.ExtensionContext) {
 2. **Incremental Computation**: Reuse previous results for file edits
 3. **Multi-File Analysis**: Cross-file type checking and repair
 4. **User Feedback Loop**: Learn from user acceptances/rejections
-5. **Formal Verification**: Coq proofs for all layers (see [`docs/verification/grammar/`](../../verification/grammar/))
+5. **Formal Verification**: Coq proofs for all layers (see [`docs/verification/grammar/`](../../verification/grammar/README.md))
 
 ### 14.2 Research Directions
 
@@ -5053,8 +5053,8 @@ This design document is part of a larger correction architecture:
 - [PathMap Integration](../../integration/pathmap/README.md) - Shared trie-based storage
 
 **Verification Framework**:
-- [Grammar Verification](../../verification/grammar/) - Coq/Rocq proofs for CFG properties
-- [Core Completeness Proofs](../../verification/core/) - Levenshtein algorithm correctness
+- [Grammar Verification](../../verification/grammar/README.md) - Coq/Rocq proofs for CFG properties
+- [Core Completeness Proofs](../../verification/core/README.md) - Levenshtein algorithm correctness
 
 ---
 

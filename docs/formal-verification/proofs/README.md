@@ -12,7 +12,7 @@ see the verification manifest at
 
 - [01_subsumption_properties.md](01_subsumption_properties.md) — Subsumption Properties — Formal Proof Documentation
 - [02_position_invariants.md](02_position_invariants.md) — Position Invariants — Formal Proof Documentation
-- [06_contextual_completion/](06_contextual_completion/) — Contextual completion proofs (context visibility, draft consistency, checkpoint stack, query fusion, distance correctness, hierarchical visibility, finalization)
+- [06_contextual_completion/](06_contextual_completion/README.md) — Contextual completion proofs (context visibility, draft consistency, checkpoint stack, query fusion, distance correctness, hierarchical visibility, finalization)
 - [07_dictionary_backends/](07_dictionary_backends/) — Dictionary-backend proofs (collection)
 - [08_zipper_operations/](08_zipper_operations/) — Zipper-operation proofs (collection)
 - [09_concurrency/](09_concurrency/) — Concurrency proofs (collection)

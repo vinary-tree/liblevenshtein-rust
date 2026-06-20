@@ -19,8 +19,8 @@ A query is a lazy *simulation* of a parameterized Levenshtein automaton walked
 lock-step with the dictionary; positions track `(term_index, num_errors, is_special)`
 and are pruned online by subsumption. Understanding lazy-vs-eager evaluation is
 the prerequisite for reasoning about the query iterators in
-[Layer 3](../algorithms/03-intersection-traversal/) and the automata in
-[Layer 2](../algorithms/02-levenshtein-automata/).
+[Layer 3](../algorithms/03-intersection-traversal/README.md) and the automata in
+[Layer 2](../algorithms/02-levenshtein-automata/README.md).
 
 **Status: Living reference.**
 

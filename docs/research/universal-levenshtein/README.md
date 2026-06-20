@@ -128,7 +128,7 @@ See [Implementation Strategy](#implementation-strategy) section below for detail
    - Benchmarking methodology
    - **Historical**: See UNIVERSAL_BTREESET_VS_SMALLVEC_RESULTS.md for actual results
 
-8. **[Archived: BTreeSet Implementation](../../archive/universal-levenshtein/btreeset-implementation/)**
+8. **[Archived: BTreeSet Implementation](../../archive/universal-levenshtein/btreeset-implementation/README.md)**
    - Original BTreeSet implementation with error-based early termination
    - Archived with comprehensive documentation explaining why it was replaced
    - Historical reference for educational purposes
@@ -136,7 +136,7 @@ See [Implementation Strategy](#implementation-strategy) section below for detail
 
 #### Phonetic Corrections Research (2025-11-12)
 
-**Location**: [`docs/research/phonetic-corrections/`](../phonetic-corrections/)
+**Location**: [`docs/research/phonetic-corrections/`](../phonetic-corrections/README.md)
 
 9. **[ENGLISH_PHONETIC_FEASIBILITY.md](../phonetic-corrections/ENGLISH_PHONETIC_FEASIBILITY.md)** (~2100 lines) ⭐ **NEW**
    - Comprehensive analysis of English phonetic spelling rules from https://zompist.com/spell.html
@@ -526,13 +526,13 @@ pub enum Algorithm {
 ## Related Documentation
 
 ### Library Documentation
-- [Algorithm Layer](/docs/algorithms/02-levenshtein-automata/README.md) - Current automata implementation
-- [Transducer Module](/src/transducer/mod.rs) - State machines and transitions
-- [Position/State Tracking](/src/transducer/position.rs) - How positions are tracked
+- [Algorithm Layer](../../algorithms/02-levenshtein-automata/README.md) - Current automata implementation
+- [Transducer Module](../../../src/transducer/mod.rs) - State machines and transitions
+- [Position/State Tracking](../../../src/transducer/position.rs) - How positions are tracked
 
 ### Other Research
-- [WallBreaker](/docs/research/wallbreaker/README.md) - Pattern splitting for large error bounds
-- [GPU Acceleration](/docs/research/comparative-analysis/gpu-acceleration.md) - Performance analysis
+- [WallBreaker](../wallbreaker/README.md) - Pattern splitting for large error bounds
+- [GPU Acceleration](../comparative-analysis/gpu-acceleration.md) - Performance analysis
 
 ### Code Locations
 - `/src/transducer/algorithm.rs` - Algorithm enum (Standard, Transposition, MergeAndSplit)

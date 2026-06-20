@@ -281,5 +281,5 @@ See `FUTURE_ENHANCEMENTS.md` for planned improvements.
 
 - **Profiling Guide:** See [`building.md`](building.md#profiling) for profiling instructions
 - **Benchmarks:** Run `cargo bench` to see current performance
-- **Examples:** See [`examples/`](../examples/) for real-world usage patterns
+- **Examples:** See [`examples/`](../examples/README.md) for real-world usage patterns
 - **Contributing:** See [`contributing.md`](contributing.md) for optimization guidelines

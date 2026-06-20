@@ -4,8 +4,8 @@
 
 These guides walk through using specific capabilities of the library end-to-end,
 with worked examples and configuration recipes. They complement the
-[User Guide](../user-guide/) (broad onboarding) and the
-[Algorithm Documentation](../algorithms/) (theory and internals) by focusing on
+[User Guide](../user-guide/README.md) (broad onboarding) and the
+[Algorithm Documentation](../algorithms/README.md) (theory and internals) by focusing on
 concrete tasks: phonetically-informed correction, restricted substitution sets,
 and hierarchical scope-aware completion.
 
@@ -23,7 +23,7 @@ and hierarchical scope-aware completion.
 
 | Directory | Purpose |
 |-----------|---------|
-| [grammar-correction/](grammar-correction/) | Guides for implementing grammar-correction guarantees on top of the correction stack. |
+| [grammar-correction/](grammar-correction/README.md) | Guides for implementing grammar-correction guarantees on top of the correction stack. |
 
 **Status: Living reference.**
 

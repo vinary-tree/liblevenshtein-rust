@@ -4,7 +4,7 @@
 
 These documents show how to apply the contextual completion components to
 real-world workflows. They are the consumer-facing counterpart to the
-[implementation](../implementation/) directory: where that explains the
+[implementation](../implementation/README.md) directory: where that explains the
 internals, these explain how to wire them up for IDE-style completion and
 live, incremental editing.
 

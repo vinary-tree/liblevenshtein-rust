@@ -3,7 +3,7 @@
 This directory contains historical performance optimization documentation for liblevenshtein-rust.
 
 **Status:** Archived - For historical reference only
-**Current Documentation:** See [`docs/PERFORMANCE.md`](../../PERFORMANCE.md) for current performance information
+**Current Documentation:** See [`docs/PERFORMANCE.md`](../../developer-guide/performance.md) for current performance information
 
 ---
 
@@ -30,7 +30,7 @@ These documents track the optimization journey from v0.1.0 through v0.2.0, showi
 
 ### 2. Detailed Phase Reports
 
-See [`../optimization/`](../optimization/) for phase-by-phase optimization journey:
+See [`../optimization/`](../optimization/README.md) for phase-by-phase optimization journey:
 
 - **[Phase 4: SmallVec Investigation](../optimization/PHASE4_SMALLVEC_INVESTIGATION.md)**
   - Stack-allocated vectors for small collections
@@ -192,13 +192,13 @@ archive/performance/
 
 This archived documentation reflects the state of optimizations through v0.2.0. For current performance information, see:
 
-- **[docs/PERFORMANCE.md](../../PERFORMANCE.md)** - Current performance documentation
-- **[docs/FUTURE_ENHANCEMENTS.md](../../FUTURE_ENHANCEMENTS.md)** - Planned future optimizations
+- **[docs/PERFORMANCE.md](../../developer-guide/performance.md)** - Current performance documentation
+- **[docs/FUTURE_ENHANCEMENTS.md](../../research/future-enhancements.md)** - Planned future optimizations
 
 ---
 
 ## Navigation
 
 - **[← Back to Documentation Index](../../README.md)**
-- **[→ Current Performance Docs](../../PERFORMANCE.md)**
+- **[→ Current Performance Docs](../../developer-guide/performance.md)**
 - **[→ Optimization Phases](../optimization/README.md)**

@@ -34,5 +34,5 @@ Recommended next steps and future work:
 
 ## Related Documentation
 
-- [Implementation Status](../implementation-status/) - Current implementation progress
-- [Research](../research/) - Optimization research that informed these phases
+- [Implementation Status](../implementation-status/README.md) - Current implementation progress
+- [Research](../research/README.md) - Optimization research that informed these phases
