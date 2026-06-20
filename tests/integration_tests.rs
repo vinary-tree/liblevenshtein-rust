@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 #[test]
 fn test_high_distance_returns_all_terms() {
-    // Regression test for bug where high max_distance didn't return all terms
+    // Regression test where high max_distance didn't return all terms
     let terms = vec!["foo", "bar", "baz", "qux", "quo"];
     let dict = DoubleArrayTrie::from_terms(terms.clone());
 

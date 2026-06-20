@@ -26,7 +26,7 @@ fn check_1_1_false_subsumes_0_1_true() {
     println!();
 
     if subsumes {
-        println!("❌ BUG FOUND!");
+        println!("❌ REGRESSION FOUND!");
         println!("  (1,1,false) incorrectly subsumes (0,1,true)");
         println!();
         println!("  Let's trace through the subsumption logic:");
@@ -111,10 +111,10 @@ fn check_1_1_false_subsumes_0_1_true() {
         println!("      0 <= 0");
         println!("      → TRUE!");
         println!();
-        println!("  This is the BUG! The adjusted formula for transposition is incorrect.");
+        println!("  This is the defect: the adjusted formula for transposition is incorrect.");
         println!("  A normal position at (1,1) should NOT subsume a special transposition");
         println!("  position at (0,1) - they represent different computational paths!");
-        panic!("Bug confirmed: incorrect transposition subsumption formula");
+        panic!("Defect confirmed: incorrect transposition subsumption formula");
     } else {
         println!("✓ Subsumption check is correct.");
     }

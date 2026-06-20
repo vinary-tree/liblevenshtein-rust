@@ -98,7 +98,7 @@ fn test_ordered_query_distance_10() {
 
 #[test]
 fn test_ordered_query_large_distance() {
-    // Regression test for the bug we just fixed
+    // Regression test for the defect we just fixed
     let terms = vec!["foo", "bar", "baz", "quo", "qux"];
     let dict = DoubleArrayTrie::from_terms(terms);
     let transducer = Transducer::new(dict, Algorithm::Standard);

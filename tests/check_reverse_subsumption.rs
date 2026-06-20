@@ -37,7 +37,7 @@ fn check_transposition_subsumption_both_ways() {
     println!();
 
     if special_subsumes_normal {
-        println!("❌ BUG FOUND!");
+        println!("❌ REGRESSION FOUND!");
         println!("  p_special (0,1,true) subsumes p_normal (0,1,false)");
         println!("  This means when we insert p_special, it REMOVES p_normal!");
         println!("  Then when we insert positions afterward, p_special might get removed.");

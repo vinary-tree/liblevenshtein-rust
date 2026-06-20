@@ -1,4 +1,4 @@
-//! Test for deletion bug fix
+//! Test for deletion defect fixes
 
 use liblevenshtein::prelude::*;
 
@@ -96,7 +96,7 @@ fn test_exact_match_with_prefix() {
 #[test]
 fn test_dat_conflict_rh_qpo_ry() {
     // Regression test: proptest found this minimal case
-    // Bug: DAT conflict resolution didn't preserve all children
+    // Defect: DAT conflict resolution didn't preserve all children
     let dict = DoubleArrayTrie::from_terms(vec!["rh", "qpo", "ry"]);
 
     assert!(dict.contains("rh"), "DAT should contain 'rh'");
@@ -111,7 +111,7 @@ fn test_dat_conflict_rh_qpo_ry() {
 #[test]
 fn test_dat_grandchildren_gjzhkidoa_gl() {
     // Regression test: proptest found this minimal case
-    // Bug: DAT relocation didn't update grandchildren's CHECK pointers
+    // Defect: DAT relocation didn't update grandchildren's CHECK pointers
     let dict = DoubleArrayTrie::from_terms(vec!["gjzhkidoa", "gl"]);
 
     assert!(dict.contains("gjzhkidoa"), "DAT should contain 'gjzhkidoa'");
@@ -128,7 +128,7 @@ fn test_dat_grandchildren_gjzhkidoa_gl() {
 #[test]
 fn test_levenshtein_prefix_ve_v() {
     // Regression test: proptest found this case
-    // Bug: query iteration didn't explore children of final nodes with distance > max
+    // Defect: query iteration didn't explore children of final nodes with distance > max
     let dict = DoubleArrayTrie::from_terms(vec!["ve", "v"]);
 
     let transducer = Transducer::new(dict, Algorithm::Standard);
@@ -143,8 +143,8 @@ fn test_levenshtein_prefix_ve_v() {
 
 #[test]
 fn test_dat_base_calculation_n_a_ag() {
-    // Regression test: original DAT bug from first proptest run
-    // Bug: find_free_base was subtracting bytes[0], causing off-by-one errors
+    // Regression test: original DAT defect from first proptest run
+    // Defect: find_free_base was subtracting bytes[0], causing off-by-one errors
     let dict = DoubleArrayTrie::from_terms(vec!["n", "a", "ag"]);
 
     assert!(dict.contains("n"), "DAT should contain 'n'");

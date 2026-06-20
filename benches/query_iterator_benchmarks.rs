@@ -222,7 +222,7 @@ fn bench_prefix_varying_query_length(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark: Large distance queries (regression test for bug)
+/// Benchmark: large-distance queries (regression coverage)
 fn bench_large_distance_queries(c: &mut Criterion) {
     let dict = DoubleArrayTrie::from_terms(vec!["foo", "bar", "baz", "quo", "qux"]);
     let transducer = Transducer::new(dict, Algorithm::Standard);

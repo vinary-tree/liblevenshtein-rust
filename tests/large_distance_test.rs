@@ -4,7 +4,7 @@ use liblevenshtein::prelude::*;
 
 #[test]
 fn test_query_with_large_distance() {
-    // Reproduce the bug: querying with very large max_distance returns only 2 results
+    // Regression case: querying with very large max_distance returned only 2 results
     let terms = vec!["foo", "bar", "baz", "quo", "qux"];
     let dict = DoubleArrayTrie::from_terms(terms);
     let transducer = Transducer::new(dict, Algorithm::Standard);

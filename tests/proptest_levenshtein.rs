@@ -69,7 +69,7 @@ proptest! {
     fn prop_results_within_distance(
         dict_words in small_dict_strategy(),
         query in word_strategy(),
-        max_dist in 0usize..=5  // Increased from 2 to catch high-distance bugs
+        max_dist in 0usize..=5  // Increased from 2 to catch high-distance regressions
     ) {
         let dict = DoubleArrayTrie::from_terms(dict_words.clone());
         let transducer = Transducer::new(dict, Algorithm::Standard);
@@ -110,12 +110,12 @@ proptest! {
 
     /// Property: All words in dictionary within max_distance should be found
     ///
-    /// This is the key property that can help find the deletion bug!
+    /// This is the key property that can help find deletion regressions.
     #[test]
     fn prop_all_close_words_found(
         dict_words in small_dict_strategy(),
         query in word_strategy(),
-        max_dist in 1usize..=5  // Increased from 2 to catch high-distance bugs
+        max_dist in 1usize..=5  // Increased from 2 to catch high-distance regressions
     ) {
         let dict = DoubleArrayTrie::from_terms(dict_words.clone());
         let transducer = Transducer::new(dict, Algorithm::Standard);
@@ -128,7 +128,7 @@ proptest! {
             if actual_dist <= max_dist {
                 prop_assert!(
                     results.contains(dict_word),
-                    "POTENTIAL BUG: Dictionary {:?}, query '{}', distance {}: \
+                    "POTENTIAL REGRESSION: Dictionary {:?}, query '{}', distance {}: \
                      word '{}' has actual distance {} but was not found in results {:?}",
                     dict_words, query, max_dist, dict_word, actual_dist, results
                 );
@@ -142,12 +142,12 @@ mod manual_shrink_tests {
     use super::*;
 
     /// Regression test: This was a minimal failing case discovered by proptest
-    /// that helped identify the deletion bug. Now fixed and serves as a regression test.
+    /// that helped identify the deletion defect. Now fixed and serves as a regression test.
     #[test]
     fn minimal_failing_case_from_proptest() {
         // Original failing case: Dict ["test", "apple", "world"], query "testt", distance 1
         // Expected: "test" should be found (1 deletion from query)
-        // This bug was fixed in the Levenshtein query iterator
+        // This defect was fixed in the Levenshtein query iterator
 
         let dict = DoubleArrayTrie::from_terms(vec!["test", "apple", "world"]);
         let transducer = Transducer::new(dict, Algorithm::Standard);
