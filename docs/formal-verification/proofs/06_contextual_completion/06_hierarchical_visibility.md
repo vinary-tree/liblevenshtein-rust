@@ -1,7 +1,7 @@
 # Hierarchical Visibility Soundness - Formal Proof Documentation
 
-**Status**: 🚧 Documented (Coq formalization pending)
-**Coq File**: `rocq/liblevenshtein/ContextualCompletion/Visibility.v` (TODO)
+**Status**: Proof sketch documented; no checked contextual Rocq module exists yet
+**Rocq target module**: `rocq/liblevenshtein/ContextualCompletion/Visibility.v`
 **Date**: 2025-01-21
 **Authors**: Formal Verification Team
 
@@ -380,7 +380,7 @@ fn test_is_descendant() {
 
 See test above (`test_complete_hierarchical_visibility`).
 
-**Property-Based Tests** (TODO):
+**Candidate Property-Based Tests**:
 
 Using `proptest` crate:
 
@@ -492,9 +492,9 @@ completions = ["rho", "receive"]  // ✓ "result" is invisible (from inner)
 
 ---
 
-## Future Enhancements (Phase 9.2+)
+## Promotion Criteria and Optimization Notes
 
-### Coq Formalization
+### Rocq Formalization
 
 **File**: `rocq/liblevenshtein/ContextualCompletion/Visibility.v`
 
@@ -527,7 +527,7 @@ Qed.
 
 **Current Implementation**: O(depth) for `is_descendant` check (follows parent chain)
 
-**Optimization** (if needed for large trees):
+**Optimization candidate** (if needed for large trees):
 - **Interval Labeling**: Assign each node `[left, right]` interval during DFS
 - **Descendant Check**: `ctx1` is descendant of `ctx2` iff `left2 < left1 < right1 < right2`
 - **Time**: O(1) check vs O(depth)
@@ -540,4 +540,4 @@ Qed.
 ---
 
 **Last Updated**: 2025-01-21
-**Next Review**: After Coq formalization (Phase 9.2)
+**Review trigger**: Reconcile this page when a checked contextual Rocq module is added.

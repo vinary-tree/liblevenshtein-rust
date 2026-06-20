@@ -1,7 +1,7 @@
 # Levenshtein Distance Correctness - Formal Proof Documentation
 
-**Status**: 🚧 Documented (Coq formalization pending)
-**Coq File**: `rocq/liblevenshtein/ContextualCompletion/Distance.v` (TODO)
+**Status**: Proof sketch documented; no checked contextual Rocq module exists yet
+**Rocq target module**: `rocq/liblevenshtein/ContextualCompletion/Distance.v`
 **Date**: 2025-01-21
 **Authors**: Formal Verification Team
 
@@ -374,7 +374,7 @@ fn test_levenshtein_distance() {
 - `tests/test_completion.rs` - Fuzzy matching with distance thresholds
 - `tests/test_pattern_matching_performance.rs` - Distance calculation performance
 
-**Property-Based Tests** (TODO):
+**Candidate Property-Based Tests**:
 
 Using `proptest` crate:
 
@@ -441,9 +441,9 @@ proptest! {
 
 ---
 
-## Future Enhancements (Phase 9.2+)
+## Promotion Criteria and Optimization Notes
 
-### Coq Formalization
+### Rocq Formalization
 
 **File**: `rocq/liblevenshtein/ContextualCompletion/Distance.v`
 
@@ -484,4 +484,4 @@ if matrix[i].iter().all(|&d| d > max_distance) {
 ---
 
 **Last Updated**: 2025-01-21
-**Next Review**: After Coq formalization (Phase 9.2)
+**Review trigger**: Reconcile this page when a checked contextual Rocq module is added.

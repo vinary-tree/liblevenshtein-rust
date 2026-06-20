@@ -1,7 +1,7 @@
 # Checkpoint Stack Correctness - Formal Proof Documentation
 
-**Status**: 🚧 Documented (Coq formalization pending)
-**Coq File**: `rocq/liblevenshtein/ContextualCompletion/DraftBuffer.v` (TODO)
+**Status**: Proof sketch documented; no checked contextual Rocq module exists yet
+**Rocq target module**: `rocq/liblevenshtein/ContextualCompletion/DraftBuffer.v`
 **Date**: 2025-01-21
 **Authors**: Formal Verification Team
 
@@ -16,7 +16,7 @@
 5. [Key Lemmas](#key-lemmas)
 6. [Implementation Correspondence](#implementation-correspondence)
 7. [Test Coverage](#test-coverage)
-8. [Future Work](#future-work)
+8. [Promotion Criteria](#promotion-criteria)
 
 ---
 
@@ -551,7 +551,7 @@ fn test_completion_with_undo() {
 }
 ```
 
-### Property-Based Tests (TODO)
+### Candidate Property-Based Tests
 
 **Property 1: Restore Idempotence**
 ```rust
@@ -609,11 +609,11 @@ proptest! {
 
 ---
 
-## Future Work
+## Promotion Criteria
 
-### Coq Formalization
+### Rocq Formalization
 
-**Phase 9.2 Tasks**:
+**Target module contents**:
 1. Extend `rocq/liblevenshtein/ContextualCompletion/DraftBuffer.v`
    - Add `Checkpoint`, `CheckpointStack` types
    - Define `restore`, `push`, `pop` functions
@@ -627,11 +627,11 @@ proptest! {
    - Compare with Rust behavior
    - Check edge cases (empty stack, position > length)
 
-### Property-Based Testing
+### Property-Test Specification Coverage
 
 **Priority**: Low (implementation is simple, tests are comprehensive)
 
-**Action Items**:
+**Candidate coverage**:
 1. Add 3 property tests from "Property-Based Tests" section
 2. Test with extreme positions (0, usize::MAX)
 3. Test stack overflow (1000+ checkpoints)
@@ -678,9 +678,9 @@ proptest! {
 - Proof sketch using list lemmas
 - Implementation correspondence (length-only checkpoint design)
 - Test coverage mapping
-- Property-based test suggestions
+- Candidate property-test specifications
 
-**Status**: 🚧 Documentation complete, Coq formalization pending Phase 9.2
+**Status**: Proof-sketch documentation complete; no checked contextual Rocq module exists yet.
 
 **Key Insight**: Length-only checkpoints are sufficient for append-only buffers, achieving 50x memory savings over full content snapshots.
 
@@ -704,4 +704,4 @@ proptest! {
 ---
 
 **Last Updated**: 2025-01-21
-**Next Review**: After Coq formalization (Phase 9.2)
+**Review trigger**: Reconcile this page when a checked contextual Rocq module is added.

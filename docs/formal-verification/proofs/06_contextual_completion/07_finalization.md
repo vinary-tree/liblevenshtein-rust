@@ -1,7 +1,7 @@
 # Finalization Atomicity - Formal Proof Documentation
 
-**Status**: 🚧 Documented (Coq formalization pending)
-**Coq File**: `rocq/liblevenshtein/ContextualCompletion/Finalization.v` (TODO)
+**Status**: Proof sketch documented; no checked contextual Rocq module exists yet
+**Rocq target module**: `rocq/liblevenshtein/ContextualCompletion/Finalization.v`
 **Date**: 2025-01-21
 **Authors**: Formal Verification Team
 
@@ -402,7 +402,7 @@ fn test_finalize_nonexistent_context() {
 }
 ```
 
-**Concurrency Tests** (TODO):
+**Candidate Concurrency Tests**:
 
 Using `loom` for concurrency verification:
 
@@ -448,7 +448,7 @@ mod concurrency_tests {
 }
 ```
 
-**Property-Based Tests** (TODO):
+**Candidate Property-Based Tests**:
 
 Using `proptest` crate:
 
@@ -578,9 +578,9 @@ assert!(engine.has_draft(ctx));  // ✓ User can continue editing
 
 ---
 
-## Future Enhancements (Phase 9.2+)
+## Promotion Criteria and Optimization Notes
 
-### Coq Formalization
+### Rocq Formalization
 
 **File**: `rocq/liblevenshtein/ContextualCompletion/Finalization.v`
 
@@ -624,10 +624,10 @@ Proof.
 Qed.
 ```
 
-### Transaction Abstraction (Future Optimization)
+### Transaction Abstraction Optimization Candidate
 
 **Current**: Manual lock management
-**Future**: Transaction wrapper
+**Candidate**: Transaction wrapper
 
 ```rust
 pub trait Transaction {
@@ -663,4 +663,4 @@ impl Transaction for FinalizeTransaction {
 ---
 
 **Last Updated**: 2025-01-21
-**Next Review**: After Coq formalization (Phase 9.2)
+**Review trigger**: Reconcile this page when a checked contextual Rocq module is added.

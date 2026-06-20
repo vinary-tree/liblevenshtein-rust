@@ -1,7 +1,7 @@
 # Context Tree Visibility - Formal Proof Documentation
 
-**Status**: 🚧 Documented (Coq formalization pending)
-**Coq File**: `rocq/liblevenshtein/ContextualCompletion/Visibility.v` (TODO)
+**Status**: Proof sketch documented; no checked contextual Rocq module exists yet
+**Rocq target module**: `rocq/liblevenshtein/ContextualCompletion/Visibility.v`
 **Date**: 2025-01-21
 **Authors**: Formal Verification Team
 
@@ -16,7 +16,7 @@
 5. [Key Lemmas](#key-lemmas)
 6. [Implementation Correspondence](#implementation-correspondence)
 7. [Test Coverage](#test-coverage)
-8. [Future Work](#future-work)
+8. [Promotion Criteria](#promotion-criteria)
 
 ---
 
@@ -497,7 +497,7 @@ fn test_nested_scope_priority_inner() {
 }
 ```
 
-### Property-Based Tests (TODO)
+### Candidate Property-Based Tests
 
 **Property 1: Soundness**
 ```rust
@@ -557,11 +557,11 @@ proptest! {
 
 ---
 
-## Future Work
+## Promotion Criteria
 
-### Coq Formalization
+### Rocq Formalization
 
-**Phase 9.2 Tasks**:
+**Target module contents**:
 1. Create `rocq/liblevenshtein/ContextualCompletion/Core.v`
    - Define `ContextId`, `ContextTree`, `well_formed` types
    - Prove well-formedness lemmas
@@ -576,11 +576,11 @@ proptest! {
    - Transpile to Rust
    - Compare with existing implementation
 
-### Property-Based Testing
+### Property-Test Specification Coverage
 
 **Priority**: High (validates theorem without full Coq formalization)
 
-**Action Items**:
+**Candidate coverage**:
 1. Add `proptest` dependency to `Cargo.toml`
 2. Implement `arbitrary_context_tree()` generator
 3. Add 3 property tests from "Property-Based Tests" section above
@@ -596,13 +596,13 @@ proptest! {
 - **When useful**: Deep trees (d > 10) with frequent queries
 - **Invalidation**: Must rebuild on tree modification
 
-**Decision**: Defer until profiling shows this is a bottleneck
+**Decision**: Keep the current O(d) implementation unless profiling shows that cached visibility justifies the memory trade-off.
 
 ### Cycle Detection
 
 **Current**: Assumes well-formedness (no cycles)
 
-**Future Enhancement**: Defensive cycle detection
+**Optional extension**: Defensive cycle detection
 ```rust
 pub fn has_cycle(&self, id: ContextId) -> bool {
     let mut visited = HashSet::new();
@@ -645,7 +645,7 @@ pub fn has_cycle(&self, id: ContextId) -> bool {
 - Implementation correspondence analysis
 - Test coverage mapping
 
-**Status**: 🚧 Documentation complete, Coq formalization pending Phase 9.2
+**Status**: Proof-sketch documentation complete; no checked contextual Rocq module exists yet.
 
 ---
 
@@ -666,4 +666,4 @@ pub fn has_cycle(&self, id: ContextId) -> bool {
 ---
 
 **Last Updated**: 2025-01-21
-**Next Review**: After Coq formalization (Phase 9.2)
+**Review trigger**: Reconcile this page when a checked contextual Rocq module is added.

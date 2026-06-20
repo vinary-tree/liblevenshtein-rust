@@ -1,7 +1,7 @@
 # Query Fusion Completeness - Formal Proof Documentation
 
-**Status**: 🚧 Documented (Coq formalization pending)
-**Coq File**: `rocq/liblevenshtein/ContextualCompletion/Query.v` (TODO)
+**Status**: Proof sketch documented; no checked contextual Rocq module exists yet
+**Rocq target module**: `rocq/liblevenshtein/ContextualCompletion/Query.v`
 **Date**: 2025-01-21
 **Authors**: Formal Verification Team
 
@@ -189,4 +189,4 @@ fn test_complete_fusion() {
 ---
 
 **Last Updated**: 2025-01-21
-**Next Review**: After Coq formalization (Phase 9.2)
+**Review trigger**: Reconcile this page when a checked contextual Rocq module is added.

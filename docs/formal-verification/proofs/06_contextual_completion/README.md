@@ -1,7 +1,7 @@
 # Contextual Completion - Formal Verification Documentation
 
 **Category**: Contextual Completion Correctness
-**Status**: 🚧 Phase 9 In Progress
+**Status**: Proof-sketch documentation complete; contextual Rocq modules are not present in this repository yet
 **Started**: 2025-01-21
 **Dependencies**: Core dictionary backends (Phase 10)
 
@@ -116,11 +116,11 @@ Full coverage of all correctness properties:
 
 ### For Formal Verification Engineers
 
-Start with Coq formalization (when available):
+Start with the proof-sketch pages, then compare their assumptions with the existing Rocq core under `rocq/liblevenshtein/`:
 
 1. Read all markdown theorems first (overview)
-2. Study `rocq/liblevenshtein/ContextualCompletion/Core.v` (types)
-3. Work through proofs in dependency order:
+2. Study the checked non-contextual Rocq modules for naming, invariant, and proof-structure conventions
+3. If these sketches are promoted, build contextual modules in dependency order:
    - `Visibility.v` (Theorems 1, 6)
    - `DraftBuffer.v` (Theorems 2, 3)
    - `Query.v` (Theorems 4, 5)
@@ -203,7 +203,7 @@ See `docs/formal-verification/proofs/07_dictionary_backends/README.md` for backe
   - `test_local_symbol_priority_inner` - Tests Theorem 6
   - Completion performance tests - Test Theorem 2, 4
 
-**Property-Based Tests** (TODO):
+**Property-test specifications**:
 
 - Theorem 1, 6: Context visibility is transitive
 - Theorem 2: UTF-8 boundary preservation
@@ -260,49 +260,49 @@ See `docs/formal-verification/proofs/07_dictionary_backends/README.md` for backe
   - Performance benchmarks (depends on Theorem 2, 4)
   - Phase 9 optimization (uses PrefixZipper from Theorem 17)
 
-**Scope Detection** (TODO):
+**Scope-detection specifications**:
 - `/home/dylon/Workspace/f1r3fly.io/rholang-language-server/docs/formal-verification/scope-detection.md`
-  - Will document scope detection verification
+  - Scope detection verification target
   - Depends on Theorems 1, 2, 4, 6 from this category
 
 ---
 
 ## Roadmap
 
-### Phase 9.1: Documentation (Current)
+### Phase 9.1: Documentation
 
 **Goal**: Create markdown documentation for all 7 theorems
 
-**Status**: 🚧 In Progress (Day 1/4)
+**Status**: Complete proof-sketch documentation
 
 **Progress**:
 - [x] Category README.md (this file)
-- [ ] Theorem 1: Context Visibility
-- [ ] Theorem 2: Draft Consistency
-- [ ] Theorem 3: Checkpoint Stack
-- [ ] Theorem 4: Query Fusion
-- [ ] Theorem 5: Distance Correctness
-- [ ] Theorem 6: Hierarchical Visibility
-- [ ] Theorem 7: Finalization Atomicity
+- [x] Theorem 1: Context Visibility
+- [x] Theorem 2: Draft Consistency
+- [x] Theorem 3: Checkpoint Stack
+- [x] Theorem 4: Query Fusion
+- [x] Theorem 5: Distance Correctness
+- [x] Theorem 6: Hierarchical Visibility
+- [x] Theorem 7: Finalization Atomicity
 
-### Phase 9.2: Coq Formalization (Future)
+### Rocq Promotion Targets
 
 **Goal**: Formalize types and theorems in Rocq
 
-**Deliverables**:
+**Candidate modules**:
 - `rocq/liblevenshtein/ContextualCompletion/Core.v` - Type definitions
 - `rocq/liblevenshtein/ContextualCompletion/Visibility.v` - Theorems 1, 6
 - `rocq/liblevenshtein/ContextualCompletion/DraftBuffer.v` - Theorems 2, 3
 - `rocq/liblevenshtein/ContextualCompletion/Query.v` - Theorems 4, 5
 - `rocq/liblevenshtein/ContextualCompletion/Finalization.v` - Theorem 7
 
-**Priority**: Start with Theorems 1, 2, 4 (most critical for LSP)
+**Priority order**: Theorems 1, 2, 4 are the most critical for LSP integration.
 
-### Phase 9.3: Property-Based Testing (Future)
+### Property-Test Promotion Targets
 
 **Goal**: Add property-based tests matching formal specifications
 
-**Deliverables**:
+**Candidate coverage**:
 - Property tests for all 7 theorems using `proptest`
 - Integration with Rust test suite
 - CI enforcement of properties
@@ -338,7 +338,7 @@ Follow the established pattern from `docs/formal-verification/proofs/01_subsumpt
 - This README
 - Theorem documentation planned (7 files)
 
-**Status**: 🚧 Documentation in progress, Coq formalization deferred to Phase 9.2
+**Status**: Proof-sketch documentation complete; contextual Rocq modules are not present in this repository yet.
 
 ---
 
@@ -349,4 +349,4 @@ This formal verification work is part of the liblevenshtein-rust project and fol
 ---
 
 **Last Updated**: 2025-01-21
-**Next Milestone**: Complete Theorem 1-7 documentation (Phase 9.1)
+**Promotion Policy**: These pages are proof-sketch artifacts unless matching checked Rocq modules are added to the manifest.

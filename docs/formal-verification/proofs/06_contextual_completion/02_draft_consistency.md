@@ -1,7 +1,7 @@
 # Draft Buffer Consistency - Formal Proof Documentation
 
-**Status**: 🚧 Documented (Coq formalization pending)
-**Coq File**: `rocq/liblevenshtein/ContextualCompletion/DraftBuffer.v` (TODO)
+**Status**: Proof sketch documented; no checked contextual Rocq module exists yet
+**Rocq target module**: `rocq/liblevenshtein/ContextualCompletion/DraftBuffer.v`
 **Date**: 2025-01-21
 **Authors**: Formal Verification Team
 
@@ -16,7 +16,7 @@
 5. [Key Lemmas](#key-lemmas)
 6. [Implementation Correspondence](#implementation-correspondence)
 7. [Test Coverage](#test-coverage)
-8. [Future Work](#future-work)
+8. [Promotion Criteria](#promotion-criteria)
 
 ---
 
@@ -543,7 +543,7 @@ fn test_unicode_symbols() {
 }
 ```
 
-### Property-Based Tests (TODO)
+### Candidate Property-Based Tests
 
 **Property 1: UTF-8 Round-Trip**
 ```rust
@@ -606,11 +606,11 @@ proptest! {
 
 ---
 
-## Future Work
+## Promotion Criteria
 
-### Coq Formalization
+### Rocq Formalization
 
-**Phase 9.2 Tasks**:
+**Target module contents**:
 1. Update `rocq/liblevenshtein/ContextualCompletion/Core.v`
    - Define `Char`, `DraftBuffer`, `valid_utf8_char` types
    - Add Rust `char` axiom
@@ -624,11 +624,11 @@ proptest! {
    - Compare with existing Rust code
    - Verify `VecDeque<char>` maintains invariants
 
-### Property-Based Testing
+### Property-Test Specification Coverage
 
 **Priority**: Medium (Rust type system already enforces UTF-8)
 
-**Action Items**:
+**Candidate coverage**:
 1. Add 3 property tests from "Property-Based Tests" section
 2. Test with extreme Unicode (U+10FFFF, combining marks, etc.)
 3. Run in CI with 10,000 cases
@@ -642,13 +642,13 @@ proptest! {
 - **Trade-off**: Extra memory for frequent conversions
 - **When useful**: Completion queries (read-heavy workload)
 
-**Decision**: Defer until profiling shows this is a bottleneck
+**Decision**: Keep eager string conversion unless profiling shows that caching justifies the extra memory.
 
 ### Grapheme Cluster Support
 
 **Current**: Operates on Unicode scalar values (code points)
 
-**Future Enhancement**: Grapheme cluster awareness
+**Optional extension**: Grapheme cluster awareness
 - **Issue**: `"é"` can be 1 code point (U+00E9) or 2 (U+0065 + U+0301)
 - **Impact**: User sees 1 character, but buffer has 2
 - **Solution**: Use [unicode-segmentation](https://crates.io/crates/unicode-segmentation) crate
@@ -681,9 +681,9 @@ proptest! {
 - Proof sketch leveraging Rust's type system
 - Implementation correspondence (Rust `char` guarantees)
 - Test coverage mapping
-- Property-based test suggestions
+- Candidate property-test specifications
 
-**Status**: 🚧 Documentation complete, Coq formalization pending Phase 9.2
+**Status**: Proof-sketch documentation complete; no checked contextual Rocq module exists yet.
 
 **Key Insight**: Most correctness comes "for free" from Rust's `char` type. Formal proof mainly needs to capture this guarantee as an axiom.
 
@@ -712,4 +712,4 @@ proptest! {
 ---
 
 **Last Updated**: 2025-01-21
-**Next Review**: After Coq formalization (Phase 9.2)
+**Review trigger**: Reconcile this page when a checked contextual Rocq module is added.
