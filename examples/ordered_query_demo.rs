@@ -13,7 +13,7 @@ fn main() {
     // Create a sample dictionary of similar words
     let words = vec![
         "test", "tests", "tested", "testing", "tester", "best", "rest", "nest", "west", "fest",
-        "zest", "taste", "text", "tent", "temp", "team",
+        "zest", "taste", "text", "tent", "tame", "team",
     ];
 
     let dict = DoubleArrayTrie::from_terms(words.iter().copied());

@@ -446,14 +446,14 @@ let dict = DoubleArrayTrie::from_terms_with_values(vec![
     ("println", 1),    // Global scope
     ("format", 1),     // Global scope
     ("my_var", 42),    // Local scope
-    ("temp", 42),      // Local scope
+    ("scratch", 42),   // Local scope
 ]);
 
 // Query specific value
 assert_eq!(dict.get_value("my_var"), Some(42));
 
 // Check with predicate
-assert!(dict.contains_with_value("temp", |&scope| scope == 42));
+assert!(dict.contains_with_value("scratch", |&scope| scope == 42));
 ```
 
 ### Value Storage Architecture
@@ -483,8 +483,8 @@ use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 let dict = DoubleArrayTrie::from_terms_with_values(vec![
     ("test", 1),
     ("testing", 2),
-    ("temp", 1),
-    ("temporary", 2),
+    ("scratch", 1),
+    ("scratchpad", 2),
 ]);
 
 // Only return results with scope 1
@@ -492,7 +492,7 @@ let automaton = LevenshteinAutomaton::new("tst", 2, Algorithm::Standard)
     .with_value_filter(|&scope| scope == 1);
 
 let results: Vec<String> = automaton.query(&dict).collect();
-// Returns: ["test", "temp"] (scope 1 only)
+// Returns: ["test", "scratch"] (scope 1 only)
 ```
 
 **Performance**: 10-100x faster than post-filtering when filters are selective.

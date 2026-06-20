@@ -124,7 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Identifiers in current scope
     let identifiers = PathMapDictionary::from_terms_with_values([
         ("count", "i32"),
-        ("temp", "String"),
+        ("scratch", "String"),
         ("result", "Vec<u8>"),
         ("old_variable", "bool"),
     ]);
@@ -139,7 +139,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // "old_variable" never accessed
 
     // When memory pressure high, evict LRU
-    let candidates = vec!["count", "temp", "result", "old_variable"];
+    let candidates = vec!["count", "scratch", "result", "old_variable"];
     let evict = lru.find_lru(&candidates);
     assert_eq!(evict, Some("old_variable".to_string()));
 

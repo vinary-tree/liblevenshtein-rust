@@ -132,7 +132,7 @@ fn main() {
         // Inner function scope (2) - visible from global, outer, inner
         Identifier::new("inner", vec![0, 1, 2]),
         Identifier::new("inner2", vec![0, 1, 2]),
-        Identifier::new("temp", vec![0, 1, 2]),
+        Identifier::new("scratch", vec![0, 1, 2]),
         // Another module scope (3) - NOT visible from scope 2
         Identifier::new("other", vec![0, 3]),
         Identifier::new("another", vec![0, 3]),
