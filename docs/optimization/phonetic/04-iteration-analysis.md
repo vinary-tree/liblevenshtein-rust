@@ -114,7 +114,7 @@ for iteration in 0..iterations {           // O(√n)
 - Fuel grows with input size to ensure termination
 - Iterations needed to reach fixed point depend on string structure
 
-**This is NOT a bug** - it's the inherent complexity of the sequential rewrite algorithm!
+**This is NOT a defect** - it's the inherent complexity of the sequential rewrite algorithm!
 
 ---
 
@@ -205,7 +205,7 @@ If performance becomes a bottleneck in practice:
 - Fundamental O(n^1.5) algorithmic complexity
 - iterations ~ O(√n) × work per iteration O(n) = O(n^1.5)
 - This is expected behavior for sequential rewrite systems
-- Not a bug, not a performance regression
+- Not a defect, not a performance regression
 
 **Optimization Achieved**:
 - 27-30% speedup by eliminating allocation overhead
@@ -223,4 +223,4 @@ If performance becomes a bottleneck in practice:
 **Investigation Status**: ✅ **COMPLETE**
 **Optimization Status**: ✅ **SUFFICIENT** (27% speedup)
 **Production Readiness**: ✅ **READY** for v0.8.0
-**Further Optimization**: ⏸️ **DEFERRED** to future release (if needed)
+**Further Optimization**: ⏸️ **Not retained for current release**; keep as future research candidate if needed

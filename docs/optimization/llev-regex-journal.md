@@ -97,25 +97,25 @@ Scientific journal tracking optimization experiments for LLev (phonetic rewrite 
 
 ### Baseline Results
 - Benchmark: [name]
-- Mean: X.XX ms +/- Y.YY ms (95% CI)
-- Median: X.XX ms
-- p95: X.XX ms
+- Mean: [measure] ms +/- [measure] ms (95% CI)
+- Median: [measure] ms
+- p95: [measure] ms
 
 ### Post-Optimization Results
-- Mean: X.XX ms +/- Y.YY ms (95% CI)
-- Median: X.XX ms
-- p95: X.XX ms
+- Mean: [measure] ms +/- [measure] ms (95% CI)
+- Median: [measure] ms
+- p95: [measure] ms
 
 ### Statistical Analysis
-- Improvement: XX.X%
-- t-statistic: X.XX
-- p-value: 0.XXXX
-- Effect size (Cohen's d): X.XX ([interpretation])
+- Improvement: [measure]%
+- t-statistic: [measure]
+- p-value: [measure]
+- Effect size (Cohen's d): [measure] ([interpretation])
 
 ### Decision
 - [x] ACCEPTED - p < 0.05, improvement > 5%
 - [ ] REJECTED - p >= 0.05 or regression
-- [ ] DEFERRED - marginal improvement
+- [ ] INCONCLUSIVE - marginal improvement
 
 ### Flamegraph Comparison
 - Before: `artifacts/flamegraph_baseline_[name].svg`
@@ -176,7 +176,7 @@ Scientific journal tracking optimization experiments for LLev (phonetic rewrite 
 #### Decision
 - [x] **ACCEPTED** - p < 0.05 for all lexer benchmarks, improvement 7-11%
 - [ ] REJECTED
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. This optimization targets the lexer specifically; effects on full pipeline are secondary
@@ -231,7 +231,7 @@ Estimated total improvement in lexer throughput:
 #### Decision
 - [x] **ACCEPTED** - p < 0.05 for most benchmarks, cold start improved 3-4%
 - [ ] REJECTED
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. The large lexer improvements (~9-13%) are cumulative from H1+H2, comparing to the original baseline saved by Criterion
@@ -275,7 +275,7 @@ The regression was unexpected. Possible causes:
 #### Decision
 - [ ] ACCEPTED
 - [x] **REJECTED** - Clear regression of 10-15% in parsing benchmarks
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. FxHashMap is NOT always faster than std::HashMap - depends on usage patterns
@@ -336,7 +336,7 @@ Results were **inconsistent across multiple runs**:
 #### Decision
 - [ ] ACCEPTED
 - [x] **REJECTED** - Inconsistent results, no clear sustained improvement, high variance suggests marginal effect
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. SmallVec optimization is NOT universally beneficial - depends heavily on actual usage patterns
@@ -405,7 +405,7 @@ Results were **inconsistent across multiple runs**:
 #### Decision
 - [ ] ACCEPTED
 - [x] **REJECTED** - Severe regression in most benchmarks (+21% to +98%)
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. Precomputation is NOT universally beneficial - the clone overhead dominates for typical NFA sizes
@@ -488,7 +488,7 @@ Results were **inconsistent across multiple runs**:
 #### Decision
 - [ ] ACCEPTED
 - [x] **REJECTED** - Mixed results with significant regressions in cached operations (+17%)
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. O(1) lookup is NOT always faster than O(n) - constant factors and cache effects matter
@@ -566,7 +566,7 @@ Results were **inconsistent across multiple runs**:
 #### Decision
 - [x] **ACCEPTED** - p < 0.05 for all significant changes, 8 improvements vs 1 regression
 - [ ] REJECTED
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. The 256-state limit covers most practical phonetic NFAs (zompist.llev has ~200 states)
@@ -641,7 +641,7 @@ Results were **inconsistent across multiple runs**:
 #### Decision
 - [x] **ACCEPTED** - p < 0.05 for all significant changes, 5× speedup in lazy DFA
 - [ ] REJECTED
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. This is the highest-impact optimization in the entire study
@@ -735,7 +735,7 @@ Benefits:
    - Offset table provides O(1) lookup vs O(n) filtering
 
 4. **Implementation insight**:
-   - Key bug fix: Added `finalize()` calls in optimizer after each step
+   - Key defect fix: Added `finalize()` calls in optimizer after each step
    - Without finalize(), `transitions()` returned empty slice → all tests failed
    - The pending_transitions → sorted array + offset table conversion is critical
 
@@ -748,7 +748,7 @@ Benefits:
 #### Decision
 - [x] **ACCEPTED** - p < 0.05 for all benchmarks, improvements range from 22% to 87.6%
 - [ ] REJECTED
-- [ ] DEFERRED
+- [ ] NOT RETAINED
 
 #### Notes
 1. CSR format is a well-known sparse matrix optimization, but implementation requires careful state management
@@ -841,4 +841,3 @@ Benefits:
    - `DFAStateId = u32` for compact cache keys
    - State registry maps DFA states to IDs
    - 8-byte cache keys vs 24+ byte Vec keys
-

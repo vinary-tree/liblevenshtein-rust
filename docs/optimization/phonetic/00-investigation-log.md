@@ -178,7 +178,7 @@ for pos in 0..=s.len() {
 - **Fundamental O(n^1.5) algorithmic complexity**
 - Time = iterations × rules × n = O(√n) × 8 × n = O(n^1.5)
 - This is EXPECTED for sequential rewrite systems
-- Not a bug, not a performance regression
+- Not a defect, not a performance regression
 
 **Document**: `04-iteration-analysis.md` created
 
@@ -202,7 +202,7 @@ for pos in 0..=s.len() {
 - 27% improvement is significant
 - Performance is good for production use
 - Further optimization would require algorithmic changes (high risk)
-- Defer to v0.9.0 if real-world usage shows bottlenecks
+- Keep as a v0.9.0+ research candidate only if real-world usage shows bottlenecks
 
 **Status**: ✅ **INVESTIGATION COMPLETE (EXTENDED)**
 
@@ -230,7 +230,7 @@ for pos in 0..=s.len() {
 - **Conclusion**: Slice copying is NOT a bottleneck (2-3% overhead)
 - **Document**: `06-h4-slice-analysis.md`
 
-**Phase 3 - Algorithmic Optimization (Position Skipping)**: ⚠️ UNSAFE - DEFERRED
+**Phase 3 - Algorithmic Optimization (Position Skipping)**: ⚠️ UNSAFE - NOT RETAINED
 - Analyzed position-based early termination
 - **Theoretical Issue**: `Context::Final` rules break correctness
 - **Counterexample**:
@@ -246,7 +246,7 @@ for pos in 0..=s.len() {
     - Safety characterized: unsafe with Context::Final
     - Conditional safety theorem stated (proof strategy outlined)
   - See: `docs/verification/phonetic/00-proof-summary.md`
-- **Decision**: DEFER to v0.9.0+ (formal proof confirms safety concerns)
+- **Decision**: Do not retain for v0.8.0; keep as v0.9.0+ research candidate (formal proof confirms safety concerns)
 - **Document**: `07-algorithmic-optimization-analysis.md`
 
 ---
@@ -275,11 +275,11 @@ for pos in 0..=s.len() {
 | H3 - Cache misses | ✅ | Rejected | <2% | None needed |
 | H4 - Slice copying | ✅ | Rejected | 2-3% | None needed |
 | H5 - Iteration count | ✅ | O(√n) | N/A | Proven sublinear |
-| Position Skipping | ⚠️ | Unsafe | N/A | Deferred (v0.9.0+) |
+| Position Skipping | ⚠️ | Unsafe | N/A | Not retained; v0.9.0+ research candidate |
 
 **Key Lessons**:
 1. Code analysis identified H1 faster than profiling would have
-2. Data-driven investigation revealed O(n^1.5) is expected, not a bug
+2. Data-driven investigation revealed O(n^1.5) is expected, not a defect
 3. Cache and slice copying are already optimal (<5% combined)
 4. Formal reasoning (Coq) valuable for verifying safety of optimizations
 5. All hypotheses systematically tested - complete scientific investigation
@@ -365,7 +365,7 @@ for pos in 0..=s.len() {
 - Main theorems have proof structures outlined showing feasibility
 - Remaining admits are for complex auxiliary lemmas, not fundamental impossibilities
 - Time investment: ~3 additional hours on proof completion effort
-- **Recommendation**: DEFER complete proofs to v0.9.0+ if optimization becomes critical
+- **Recommendation**: Keep complete proofs as a v0.9.0+ research candidate if optimization becomes critical
 
 **Updated Documentation**:
 - `docs/verification/phonetic/00-proof-summary.md` - Updated with detailed verification results
@@ -425,7 +425,6 @@ reflexivity.
 
 **Key Lesson**: When `injection` produces equality in unexpected direction, use backward rewrite (`rewrite <-`) rather than trying to reverse the hypothesis with `symmetry`.
 
-**Remaining Work**: 1 theorem (`position_skip_safe_for_local_contexts`) - estimated 5-7 hours for complete case analysis
+**Unretained proof candidate**: 1 theorem (`position_skip_safe_for_local_contexts`) - not required for the accepted optimization set because position skipping was rejected as unsafe
 
 **Status**: ✅ **Track 1 COMPLETE** - Significant progress toward full formal verification
-
