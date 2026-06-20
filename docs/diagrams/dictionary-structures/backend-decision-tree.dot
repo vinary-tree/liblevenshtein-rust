@@ -1,39 +1,73 @@
-// backend-decision-tree.dot — choosing a dictionary backend. Amber diamonds are
-// decisions; green leaves are the recommended backend.
+// backend-decision-tree.dot — choosing a libdictenstein dictionary backend.
+// Two orthogonal axes: ACCESS PATTERN (prefix / substring / term-id bijection)
+// and STORAGE (in-memory vs disk-persisted). Every Persistent* type is *dynamic*
+// and *disk-persisted* (durable, non-volatile) — "persistent" = on-disk, NOT
+// immutable. Amber = decisions; green = in-memory backends; teal = disk-persisted.
 digraph choose {
   rankdir=TB;
-  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
-         label="Which dictionary backend?"];
+  nodesep=0.35; ranksep=0.55;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=13, labelloc=t,
+         label="Which dictionary backend?  (access pattern × storage)"];
   node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=10,
          color="#455A64", fontcolor="#102027"];
   edge  [color="#37474F", fontname="DejaVu Sans", fontsize=9];
 
-  q_mut  [label="Will the dictionary change after build?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
-  q_disk [label="Larger than RAM / want zero-copy mmap?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
-  q_sub  [label="Need substring / infix search?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
-  q_lock [label="Want lock-free reads under writes?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
-  q_heavy[label="Update-heavy / structural sharing?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
-  q_bidir[label="Need bidirectional substring index?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  // In-memory leaves (green), disk-persisted leaves (teal). Both are real backends.
+  node [fillcolor="#C8E6C9", color="#2E7D32"];  // default: in-memory
 
-  l_dat [label="DoubleArrayTrie(Char)\nfast static, 𝒪(1) transitions", fillcolor="#C8E6C9", color="#2E7D32"];
-  l_art [label="PersistentARTrie(Char)\nmmap, zero-copy", fillcolor="#C8E6C9", color="#2E7D32"];
-  l_sa  [label="SuffixAutomaton(Char)", fillcolor="#C8E6C9", color="#2E7D32"];
-  l_sc  [label="Scdawg(Char)\n(backs WallBreaker)", fillcolor="#C8E6C9", color="#2E7D32"];
-  l_u64 [label="DynamicDawgU64\nlock-free (ArcSwap)", fillcolor="#C8E6C9", color="#2E7D32"];
-  l_dd  [label="DynamicDawg(Char)\nRwLock · SIMD + bloom", fillcolor="#C8E6C9", color="#2E7D32"];
-  l_pm  [label="PathMapDictionary\npersistent backend", fillcolor="#C8E6C9", color="#2E7D32"];
+  // ---- root: access pattern ----
+  q_access [label="Access pattern?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
 
-  q_mut -> q_disk [label="no (static)"];
-  q_disk -> l_art [label="yes"];
-  q_disk -> l_dat [label="no"];
+  // ===== 1. PREFIX / exact membership =====
+  q_pstore [label="Durable on disk\nor in-memory?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_mut    [label="Mutable after build?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_lock   [label="Lock-free reads under\nconcurrent writes?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_heavy  [label="Update-heavy / want a persistent\n(structural-sharing) map?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
 
-  q_mut -> q_sub [label="yes (dynamic)"];
-  q_sub -> q_bidir [label="yes"];
-  q_bidir -> l_sc [label="yes"];
-  q_bidir -> l_sa [label="no"];
-  q_sub -> q_lock [label="no"];
-  q_lock -> l_u64 [label="yes"];
-  q_lock -> q_heavy [label="no"];
-  q_heavy -> l_pm [label="yes"];
-  q_heavy -> l_dd [label="no (default)"];
+  l_dat [label="DoubleArrayTrie(Char)\nstatic (read-only) · wait-free · 𝒪(1)"];
+  l_u64 [label="DynamicDawgU64\ndynamic · lock-free reads (ArcSwap)"];
+  l_pm  [label="PathMapDictionary(Char)\ndynamic · persistent (structural-sharing) map"];
+  l_dd  [label="DynamicDawg(Char)\ndynamic · RwLock · SIMD + bloom"];
+  l_part[label="PersistentARTrie(Char / U64)\ndynamic · DISK-PERSISTED (mmap) · lock-free CAS", fillcolor="#B2DFDB", color="#00695C"];
+
+  q_access -> q_pstore [label="prefix / exact lookup"];
+  q_pstore -> l_part   [label="on disk (durable)"];
+  q_pstore -> q_mut    [label="in-memory"];
+  q_mut -> l_dat       [label="no (static)"];
+  q_mut -> q_lock      [label="yes (dynamic)"];
+  q_lock -> l_u64      [label="yes"];
+  q_lock -> q_heavy    [label="no"];
+  q_heavy -> l_pm      [label="yes"];
+  q_heavy -> l_dd      [label="no (default)"];
+
+  // ===== 2. SUBSTRING / infix =====
+  q_bidir [label="Bidirectional (left + right)\nextension?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_bistore[label="Durable on disk\nor in-memory?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_sastore[label="Durable on disk\nor in-memory?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+
+  l_sc  [label="Scdawg(Char)\ndynamic · bidirectional · backs WallBreaker"];
+  l_psc [label="PersistentScdawg(Char)\ndynamic · DISK-PERSISTED · bidirectional", fillcolor="#B2DFDB", color="#00695C"];
+  l_sa  [label="SuffixAutomaton(Char)\ndynamic · substring"];
+  l_psa [label="PersistentSuffixAutomaton(Char) /\nPersistentSuffixTree(Char)\ndynamic · DISK-PERSISTED · substring", fillcolor="#B2DFDB", color="#00695C"];
+
+  q_access -> q_bidir   [label="substring / infix"];
+  q_bidir -> q_bistore  [label="yes"];
+  q_bistore -> l_psc    [label="on disk"];
+  q_bistore -> l_sc     [label="in-memory"];
+  q_bidir -> q_sastore  [label="no"];
+  q_sastore -> l_psa    [label="on disk"];
+  q_sastore -> l_sa     [label="in-memory"];
+
+  // ===== 3. TERM ↔ INTEGER ID (bijective vocabulary) =====
+  q_vstore [label="Durable on disk\nor in-memory?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  l_bij [label="BijectiveMap\nin-memory · term ↔ id (both directions)"];
+  l_pv  [label="PersistentVocabARTrie\ndynamic · DISK-PERSISTED · term ↔ id", fillcolor="#B2DFDB", color="#00695C"];
+
+  q_access -> q_vstore [label="term ↔ integer id"];
+  q_vstore -> l_pv     [label="on disk"];
+  q_vstore -> l_bij    [label="in-memory"];
+
+  // legend
+  legend [shape=note, fillcolor="#ECEFF1", color="#455A64", fontsize=9,
+          label="green = in-memory backend   ·   teal = disk-persisted (durable) backend\nall Persistent* types are dynamic (insert/remove); every backend has a *Char UTF-8 variant"];
 }

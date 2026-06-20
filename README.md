@@ -208,9 +208,9 @@ Dictionaries store *labels*. Though named for characters, they hold arbitrary va
 | **4 bytes** (`char`/`u32`) | `DoubleArrayTrieChar`, `DynamicDawgChar`, `SuffixAutomatonChar`, `ScdawgChar` | Unicode scalars | 32-bit ints, bit-cast `f32` |
 | **8 bytes** (`u64`) | `DynamicDawgU64` | — | 64-bit ints, bit-cast `f64`, compound keys |
 
-Choosing a backend by access pattern (static vs mutable, substring, wait-free reads, on-disk):
+Choosing a backend by **access pattern** (prefix · substring · term↔id) and **storage** (in-memory vs disk-persisted):
 
-![Decision tree for choosing a dictionary backend: static→DoubleArrayTrie/PersistentARTrie; mutable→DynamicDawg/U64; substring→SuffixAutomaton/Scdawg.](docs/diagrams/dictionary-structures/backend-decision-tree.svg)
+![Decision tree for choosing a dictionary backend by access pattern (prefix, substring, term↔id) and storage — in-memory backends (green) vs the disk-persisted, durable Persistent* family (teal). Every Persistent* backend is dynamic.](docs/diagrams/dictionary-structures/backend-decision-tree.svg)
 
 #### Why the `*Char` variants matter (UTF-8 correctness)
 
@@ -226,17 +226,22 @@ Use `*Char` for any non-ASCII, internationalized, CJK, Cyrillic, Arabic, accente
 
 ### Choosing a backend
 
+Backends come in an **in-memory** family and a **disk-persisted** (durable, memory-mapped) family; the `Persistent*` types are *dynamic* (they persist to disk — "persistent" means non-volatile, not immutable).
+
 | Dictionary | Best for | Characteristics |
 |------------|----------|-----------------|
-| **DoubleArrayTrie** [[11]](#references) | static ASCII dictionaries | `𝒪(1)` per transition, fastest queries; read-only after build |
-| **DynamicDawg** [[8]](#references) | dynamic ASCII dictionaries | atomic insert/remove, SIMD + Bloom-filter pruning |
-| **DynamicDawgU64** | large 64-bit label spaces | identifiers, hashes, compound keys |
+| **DoubleArrayTrie** [[11]](#references) | static ASCII dictionaries | `𝒪(1)` per transition, fastest queries; read-only after build (the only static backend) |
+| **DynamicDawg** [[8]](#references) | dynamic ASCII dictionaries | atomic insert/remove, SIMD + Bloom-filter pruning (RwLock) |
+| **DynamicDawgU64** | large 64-bit label spaces | identifiers, hashes, compound keys; lock-free reads (ArcSwap) |
 | **SuffixAutomaton** | substring / infix search | match a pattern anywhere within terms |
 | **Scdawg** [[9]](#references) | substring search + WallBreaker | bidirectional traversal; backs large-`k` search |
-| **PersistentARTrie** [[12]](#references) | huge dictionaries | memory-mapped, zero-copy disk access (`persistent-artrie`) |
-| **PathMapDictionary** | update-heavy workloads | persistent-map backend (`pathmap-backend`) |
+| **PathMapDictionary** | update-heavy workloads | persistent (structural-sharing) map (`pathmap-backend`) |
+| **BijectiveMap** | term ↔ integer id | bidirectional term/id mapping |
+| **PersistentARTrie** [[12]](#references) | huge / durable prefix dictionaries | **dynamic**, disk-persisted (memory-mapped), lock-free CAS (`persistent-artrie`) |
+| **PersistentScdawg** · **PersistentSuffixAutomaton** · **PersistentSuffixTree** | huge / durable substring dictionaries | disk-persisted, dynamic, lock-free overlay |
+| **PersistentVocabARTrie** | huge / durable term ↔ id vocabulary | disk-persisted, dynamic, lock-free overlay |
 
-Each has a `*Char` Unicode counterpart. Static backends (DoubleArrayTrie, PersistentARTrie) are immutable after construction; dynamic backends (DynamicDawg, SuffixAutomaton, Scdawg) support atomic concurrent modification.
+Each has a `*Char` Unicode counterpart. **`DoubleArrayTrie` is the only static backend** (read-only after construction); every other backend — including the entire disk-persisted `Persistent*` family — is **dynamic**, supporting atomic concurrent insert/remove. The `Persistent*` types are durable (persisted to disk, memory-mapped) and lock-free, *not* immutable.
 
 ```rust
 use liblevenshtein::prelude::*;

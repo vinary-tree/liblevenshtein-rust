@@ -328,7 +328,7 @@ impl<V: PositionVariant> UniversalState<V> {
         // but the integration here needs adjustment based on actual word/input lengths.
         // Keeping this commented out until Phase 4 provides proper context.
 
-        // TODO: Diagonal crossing integration needs fixing
+        // Archived limitation: diagonal crossing integration needs fixing.
         // The diagonal crossing logic is causing premature conversions that violate invariants.
         // Disabling for now until the proper semantics are understood.
         // See PHASE4_BUG_ANALYSIS.md for details.

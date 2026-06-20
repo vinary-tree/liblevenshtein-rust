@@ -3,9 +3,12 @@
 # into a single shared sink, so "tap" and "top" share the final "p".
 direction: down
 
-title: |md
-  # Trie vs DAWG — suffix sharing
-| { near: top-center; style.font-size: 22 }
+title: "Trie vs DAWG — suffix sharing" {
+  near: top-center
+  shape: text
+  style.font-size: 28
+  style.bold: true
+}
 
 panels: "" {
   grid-columns: 2
@@ -36,6 +39,8 @@ panels: "" {
   }
 }
 
-note: |md
-  Both accept { "tap", "top" }; the DAWG merges the equivalent suffix into one node.
-| { near: bottom-center; style.font-size: 13 }
+note: "Both accept the words 'tap' and 'top'; the DAWG merges their shared suffix into one node." {
+  near: bottom-center
+  shape: text
+  style.font-size: 14
+}

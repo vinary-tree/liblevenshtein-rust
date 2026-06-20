@@ -190,15 +190,21 @@ crate (re-exported here; the `*Char` variants are UTF-8 / `char`-level):
 | **DynamicDawgU64** | 64-bit labels / hashes | lock-free (`ArcSwap`) | Yes |
 | **SuffixAutomaton(Char)** | substring / infix matching | `RwLock` | Yes |
 | **Scdawg(Char)** | bidirectional substring (backs WallBreaker) | `RwLock` | Yes |
-| **PersistentARTrie(Char)** | huge on-disk dictionaries (mmap, zero-copy) | wait-free | No |
-| **PathMapDictionary** | update-heavy workloads (persistent backend) | persistent | Yes |
+| **PathMapDictionary(Char)** | update-heavy workloads (persistent structural-sharing map) | persistent | Yes |
+| **BijectiveMap** | term ↔ integer id (both directions) | — | Yes |
+| **PersistentARTrie(Char / U64)** | huge / durable prefix dictionaries (disk-persisted, mmap) | lock-free CAS | Yes |
+| **PersistentScdawg / PersistentSuffixAutomaton / PersistentSuffixTree(Char)** | huge / durable substring dictionaries (disk-persisted) | lock-free | Yes |
+| **PersistentVocabARTrie** | huge / durable term ↔ id vocabulary (disk-persisted) | lock-free | Yes |
+
+> **Persistent ≠ static.** The `Persistent*` family persists to disk (durable, non-volatile, memory-mapped) and is fully **dynamic** (concurrent insert/remove); only `DoubleArrayTrie` is read-only after build.
 
 **Recommendations:**
 - **Default choice**: `DoubleArrayTrie` for the fastest queries over a static dictionary.
 - **Unicode**: any `*Char` variant for correct `char`-level distances.
 - **Need updates**: `DynamicDawg` (or `DynamicDawgU64` for lock-free reads).
 - **Substring matching**: `SuffixAutomaton`; bidirectional / large-`k`: `Scdawg`.
-- **On-disk / huge**: `PersistentARTrie`.
+- **Durable / larger-than-RAM**: the disk-persisted `Persistent*` family — `PersistentARTrie` (prefix), `PersistentScdawg` / `PersistentSuffixAutomaton` (substring), `PersistentVocabARTrie` (vocabulary); all dynamic.
+- **Term ↔ id mapping**: `BijectiveMap` (in-memory) or `PersistentVocabARTrie` (on disk).
 
 For a decision tree, see the [backend selection diagram](../diagrams/dictionary-structures/backend-decision-tree.svg) and the [backends guide](backends.md).
 

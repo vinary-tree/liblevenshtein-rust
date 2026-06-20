@@ -1,7 +1,9 @@
 @startuml backend-taxonomy
 ' The dictionary backends provided by libdictenstein and exposed through
-' liblevenshtein. All implement the Dictionary trait; they differ in mutability,
-' label width (u8 / u32 / u64), concurrency strategy, and intended workload.
+' liblevenshtein. All implement the Dictionary trait; they split into an
+' IN-MEMORY family and a DISK-PERSISTED (durable, non-volatile) family. Every
+' Persistent* type is DYNAMIC (insert/remove) with a lock-free on-disk overlay —
+' "persistent" = persisted to disk, NOT immutable. Each has a *Char UTF-8 variant.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "DejaVu Sans"
@@ -13,49 +15,71 @@ skinparam class {
 }
 skinparam ArrowColor #2E7D32
 
-title Dictionary backend taxonomy (libdictenstein)
+title Dictionary backend taxonomy (libdictenstein) — in-memory vs disk-persisted
 
-class "Dictionary  «trait»" as T #C8E6C9 {
-  contains / prefix / edges
-  build from terms
+interface "Dictionary  «trait»" as T #C8E6C9 {
+  contains · prefix · edges
+  build from terms; optional V values
 }
 
-class "DoubleArrayTrie(Char)" as DAT {
-  label: u8 / u32
-  static (read-only post-build)
-  wait-free reads · 𝒪(1) transitions
-  best: fast static dictionaries
+package "In-memory" #E8F5E9 {
+  class "DoubleArrayTrie(Char)" as DAT {
+    u8 / u32 · **static** (read-only)
+    wait-free · 𝒪(1) transitions
+    best: fast static dictionaries
+  }
+  class "DynamicDawg(Char / U64)" as DD {
+    u8 / u32 / u64 · **dynamic**
+    RwLock · SIMD + bloom
+    (U64 lock-free via ArcSwap)
+    best: general dynamic use
+  }
+  class "SuffixAutomaton(Char)" as SA {
+    u8 / u32 · **dynamic** · RwLock
+    best: substring / infix search
+  }
+  class "Scdawg(Char)" as SC {
+    u8 / u32 · **dynamic** · RwLock
+    bidirectional substring index
+    best: backs WallBreaker
+  }
+  class "PathMapDictionary(Char)" as PM {
+    **dynamic** · persistent
+    (structural-sharing) map
+    best: update-heavy workloads
+  }
+  class "BijectiveMap" as BIJ {
+    **dynamic** · term ↔ integer id
+    (both directions)
+    best: id assignment & lookup
+  }
 }
-class "DynamicDawg(Char/U64)" as DD {
-  label: u8 / u32 / u64
-  dynamic (insert/remove)
-  RwLock · SIMD + bloom pruning
-  (U64 variant lock-free via ArcSwap)
-  best: general dynamic use
-}
-class "SuffixAutomaton(Char)" as SA {
-  label: u8 / u32
-  dynamic
-  best: substring / infix search
-}
-class "Scdawg(Char)" as SC {
-  label: u8 / u32
-  bidirectional substring index
-  best: backs WallBreaker
-}
-class "PersistentARTrie(Char)" as ART {
-  mmap, zero-copy
-  best: huge on-disk dictionaries
-}
-class "PathMapDictionary" as PM {
-  persistent map backend
-  best: update-heavy workloads
+
+package "Disk-persisted  (durable · dynamic · lock-free overlay / CAS)" #B2DFDB {
+  class "PersistentARTrie(Char / U64)" as PART {
+    prefix · mmap · disk-persisted
+    Adaptive Radix Trie + B-trie buckets
+    best: huge / durable prefix dictionaries
+  }
+  class "PersistentScdawg(Char)" as PSC {
+    bidirectional substring · disk-persisted
+  }
+  class "PersistentSuffixAutomaton(Char)\nPersistentSuffixTree(Char)" as PSA {
+    substring · disk-persisted
+  }
+  class "PersistentVocabARTrie" as PV {
+    term ↔ id vocabulary · disk-persisted
+  }
 }
 
 T <|-- DAT
 T <|-- DD
 T <|-- SA
 T <|-- SC
-T <|-- ART
 T <|-- PM
+T <|-- BIJ
+T <|-- PART
+T <|-- PSC
+T <|-- PSA
+T <|-- PV
 @enduml

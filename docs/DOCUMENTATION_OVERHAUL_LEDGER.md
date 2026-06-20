@@ -219,3 +219,38 @@ diagrams **49/49 in sync**; rustdoc **0 missing_docs**; version gate clean.
 (no outbound network) — DOIs are canonical/verified-correct.
 
 Work is on branch `docs/pgmcp-guidelines-overhaul`, uncommitted (commit on request).
+
+### 2026-06-20 — Fix: D2 title/note clipping ✅
+
+User-reported rendering bug: the D2 markdown title blocks (`title: |md  # … |`) were
+emitted by D2 0.7.1 into an undersized `foreignObject` (e.g. 76px tall for an `<h1>`),
+so long titles wrapped and the second line was vertically clipped (only glyph-tops
+visible) — observed on `crate-boundary.svg` and `operation-sets.svg`. **Root cause:**
+D2 underestimates the height of a wrapped markdown `# h1`. **Fix:** converted every D2
+`title:`/`note:` markdown block (7 titles + 2 notes across all 7 `.d2` files) to a
+native `shape: text` node, which the renderer sizes to its content. Result: **0
+`foreignObject` blocks remain in any D2 SVG** — titles/notes are native `<text>`,
+full-text, single-line, within the viewBox; all 49 diagrams re-rendered and back in
+sync.
+
+### 2026-06-20 — Fix: PersistentARTrie correctness + backend-family completeness ✅
+
+User-reported: the backend diagrams (1) wrongly classified **PersistentARTrie as
+static/immutable**, and (2) **omitted the disk-persisted family**. Verified against
+libdictenstein: PersistentARTrie is `insert(&self)`/`remove(&self)`, `SyncStrategy::InternalSync`,
+a **lock-free CAS overlay over memory-mapped disk** — i.e. *dynamic* and *disk-persisted*
+("persistent" = non-volatile, NOT immutable). Enumerated the full `Dictionary` impl set:
+in-memory (DoubleArrayTrie [static], DynamicDawg(/U64), SuffixAutomaton, Scdawg,
+PathMapDictionary, BijectiveMap) + a disk-persisted mirror (PersistentARTrie(/U64),
+PersistentScdawg, PersistentSuffixAutomaton, PersistentSuffixTree, PersistentVocabARTrie —
+all dynamic, lock-free overlay). **Fixes:**
+- `backend-decision-tree.dot` — rebuilt around two axes (access pattern × storage); all 12
+  backend types present; PersistentARTrie + family under "disk-persisted, dynamic" (teal).
+- `backend-taxonomy.puml` — split into In-memory and Disk-persisted packages; added the 5
+  persistent types + BijectiveMap; corrected ART to dynamic.
+- `concurrency-model.puml` — moved PersistentARTrie from the (wrong) "Persistent/immutable"
+  group into "Wait-free / lock-free reads" (lock-free CAS); dropped the empty group; legend updated.
+- `README.md` + `user-guide/getting-started.md` — corrected the "static backends" prose and the
+  PersistentARTrie row (lock-free, dynamic), expanded the backend tables with the persistent
+  family + BijectiveMap, and added a "persistent ≠ static" note.
+- Verified: all 49 diagrams render + in sync; no error graphics; link gate 0 errors.

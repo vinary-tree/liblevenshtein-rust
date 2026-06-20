@@ -3,13 +3,14 @@
 ' Every dictionary backend is Send + Sync and cheap to share via Arc; what differs
 ' is HOW concurrent readers and writers are coordinated.
 ' Color legend:
-'   concurrency  #CFD8DC / #ECEFF1 / #455A64  = the three sync-strategy groups
+'   concurrency  #CFD8DC / #ECEFF1 / #455A64  = the two sync-strategy groups
 '   dictionary   #E8F5E9 (green tint)         = the dictionary backends themselves
 '   border/arrow #455A64 (slate)              = concurrency borders & arrows
-' Strategies:
-'   Wait-free reads  — atomic loads / ArcSwap RCU; readers never block a writer
-'   RwLock readers   — parking_lot read guards; readers block only a concurrent writer
-'   Persistent       — immutable shared structure; reads need no synchronization
+' Strategies (per the SyncStrategy enum):
+'   Wait-free / lock-free reads — readers never block: an immutable snapshot
+'     (DoubleArrayTrie), ArcSwap RCU (DynamicDawgU64), or lock-free CAS over a
+'     memory-mapped overlay (PersistentARTrie — dynamic AND disk-persisted)
+'   RwLock readers — parking_lot read guards; readers block only a concurrent writer
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "DejaVu Sans"
@@ -25,9 +26,10 @@ title Concurrency model — dictionary reads grouped by synchronization strategy
 
 rectangle "All dictionaries: Send + Sync · Arc cheap-clone" as banner #CFD8DC
 
-rectangle "Wait-free reads (atomic / ArcSwap)" as gfree #CFD8DC {
-  rectangle "DoubleArrayTrie\nimmutable array · O(1) reads" as dat #E8F5E9
+rectangle "Wait-free / lock-free reads (immutable · ArcSwap · CAS)" as gfree #CFD8DC {
+  rectangle "DoubleArrayTrie\nimmutable array · O(1) reads · static" as dat #E8F5E9
   rectangle "DynamicDawgU64 (ArcSwap RCU)\nper-node copy-on-write · CAS writes" as ddu64 #E8F5E9
+  rectangle "PersistentARTrie (mmap, disk-persisted)\ndynamic · lock-free CAS reads + writes" as art #E8F5E9
 }
 
 rectangle "RwLock readers (parking_lot)" as glock #CFD8DC {
@@ -36,12 +38,7 @@ rectangle "RwLock readers (parking_lot)" as glock #CFD8DC {
   rectangle "Scdawg" as sc #E8F5E9
 }
 
-rectangle "Persistent / immutable" as gpers #CFD8DC {
-  rectangle "PersistentARTrie (mmap)\nzero-copy · structural sharing" as art #E8F5E9
-}
-
 banner -[#455A64,thickness=3]down-> gfree
 banner -[#455A64,thickness=3]down-> glock
-banner -[#455A64,thickness=3]down-> gpers
 
 @enduml
