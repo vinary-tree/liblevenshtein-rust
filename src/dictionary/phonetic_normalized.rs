@@ -732,6 +732,208 @@ where
     }
 }
 
+/// Opt-in compact phonetic normalized dictionary using term-id payloads.
+///
+/// This variant preserves the normalized-query semantics of
+/// [`PhoneticNormalizedDictionary`] while replacing normalized-form payloads from
+/// `HashSet<String>` to sorted `Vec<u32>` term identifiers. Original spellings
+/// are stored once in `terms`, and normalized trie leaves carry compact ids.
+///
+/// The default dictionary remains unchanged for API compatibility; this type is
+/// intended for memory-sensitive workloads and scientific comparison.
+pub struct PhoneticNormalizedTermIdDictionary {
+    terms: Vec<String>,
+    normalized_multimap: FuzzyMultiMap<Vec<u32>, DynamicDawgChar<Vec<u32>>>,
+    rules: Vec<RewriteRuleChar>,
+    sequential_rules: Vec<RewriteRuleChar>,
+    whole_word_normalizations: HashMap<String, Vec<String>>,
+    fuel: usize,
+}
+
+impl PhoneticNormalizedTermIdDictionary {
+    /// Create from terms with default Zompist rules.
+    pub fn from_terms<I, S>(terms: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        Self::from_terms_with_rules(terms, zompist_rules_char())
+    }
+
+    /// Create from terms with custom rules.
+    pub fn from_terms_with_rules<I, S>(terms: I, rules: Vec<RewriteRuleChar>) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        Self::from_terms_with_rules_and_algorithm(terms, rules, Algorithm::Standard)
+    }
+
+    /// Create from terms with custom rules and algorithm.
+    pub fn from_terms_with_rules_and_algorithm<I, S>(
+        terms: I,
+        rules: Vec<RewriteRuleChar>,
+        algorithm: Algorithm,
+    ) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let fuel = PhoneticNormalizedDictionary::<()>::compute_fuel(&rules);
+        let (sequential_rules, whole_word_normalizations) = split_normalization_rules(&rules);
+        let normalized_dict = DynamicDawgChar::<Vec<u32>>::new();
+        let mut term_table = Vec::new();
+        let mut term_ids = HashMap::new();
+
+        for term in terms {
+            let term = term.as_ref();
+            let term_id = match term_ids.get(term).copied() {
+                Some(term_id) => term_id,
+                None => {
+                    let term_id = term_table.len() as u32;
+                    term_table.push(term.to_string());
+                    term_ids.insert(term.to_string(), term_id);
+                    term_id
+                }
+            };
+
+            for normalized in normalized_forms_char_with_map(
+                term,
+                &sequential_rules,
+                fuel,
+                &whole_word_normalizations,
+            ) {
+                normalized_dict.update_or_insert(&normalized, vec![term_id], |ids| {
+                    match ids.binary_search(&term_id) {
+                        Ok(_) => {}
+                        Err(pos) => ids.insert(pos, term_id),
+                    }
+                });
+            }
+        }
+
+        Self {
+            terms: term_table,
+            normalized_multimap: FuzzyMultiMap::new(normalized_dict, algorithm),
+            rules,
+            sequential_rules,
+            whole_word_normalizations,
+            fuel,
+        }
+    }
+
+    /// Normalize a string using this dictionary's rules.
+    pub fn normalize(&self, term: &str) -> String {
+        self.normalized_forms(term)
+            .into_iter()
+            .next()
+            .unwrap_or_default()
+    }
+
+    /// Return all normalized forms for a term.
+    pub fn normalized_forms(&self, term: &str) -> Vec<String> {
+        normalized_forms_char_with_map(
+            term,
+            &self.sequential_rules,
+            self.fuel,
+            &self.whole_word_normalizations,
+        )
+    }
+
+    /// Number of original terms stored in the compact term table.
+    pub fn term_count(&self) -> usize {
+        self.terms.len()
+    }
+
+    /// Number of unique normalized forms.
+    pub fn normalized_count(&self) -> usize {
+        self.normalized_multimap.dictionary().len().unwrap_or(0)
+    }
+
+    /// Get the phonetic rules being used.
+    pub fn rules(&self) -> &[RewriteRuleChar] {
+        &self.rules
+    }
+
+    /// Get the algorithm used for phonetic queries.
+    pub fn algorithm(&self) -> Algorithm {
+        self.normalized_multimap.algorithm()
+    }
+
+    /// Query for candidates within edit distance in normalized space.
+    pub fn query(&self, query: &str, max_distance: usize) -> Vec<PhoneticNormalizedCandidate> {
+        let normalized_queries = self.normalized_forms(query);
+        let mut by_term_id: HashMap<u32, PhoneticNormalizedCandidate> = HashMap::new();
+
+        if max_distance == 0 {
+            for normalized_query in &normalized_queries {
+                if let Some(term_ids) = self
+                    .normalized_multimap
+                    .dictionary()
+                    .get_value(normalized_query)
+                {
+                    for term_id in term_ids {
+                        self.upsert_candidate(
+                            &mut by_term_id,
+                            term_id,
+                            0,
+                            normalized_query.clone(),
+                        );
+                    }
+                }
+            }
+        } else {
+            for normalized_query in &normalized_queries {
+                for (normalized_form, distance, term_ids) in self
+                    .normalized_multimap
+                    .query_with_distance(normalized_query, max_distance)
+                {
+                    for term_id in term_ids {
+                        self.upsert_candidate(
+                            &mut by_term_id,
+                            term_id,
+                            distance,
+                            normalized_form.clone(),
+                        );
+                    }
+                }
+            }
+        }
+
+        sort_candidates_by_relevance(query, by_term_id.into_values().collect())
+    }
+
+    fn upsert_candidate(
+        &self,
+        by_term_id: &mut HashMap<u32, PhoneticNormalizedCandidate>,
+        term_id: u32,
+        distance: usize,
+        normalized_form: String,
+    ) {
+        let Some(term) = self.terms.get(term_id as usize) else {
+            return;
+        };
+
+        match by_term_id.get_mut(&term_id) {
+            Some(existing) if distance < existing.distance => {
+                existing.distance = distance;
+                existing.normalized_form = normalized_form;
+            }
+            Some(_) => {}
+            None => {
+                by_term_id.insert(
+                    term_id,
+                    PhoneticNormalizedCandidate {
+                        term: term.clone(),
+                        distance,
+                        normalized_form,
+                    },
+                );
+            }
+        }
+    }
+}
+
 // ============================================================================
 // CORE METHODS
 // ============================================================================
@@ -1437,6 +1639,41 @@ mod tests {
 
         // Should find matches
         assert!(!results.is_empty());
+    }
+
+    #[test]
+    fn test_term_id_dictionary_matches_string_payload_exact_query() {
+        let terms = ["phone", "fone", "bone", "cone", "tone", "elephant"];
+        let string_payload = PhoneticNormalizedDictionary::<()>::from_terms(terms);
+        let term_id_payload = PhoneticNormalizedTermIdDictionary::from_terms(terms);
+
+        assert_eq!(term_id_payload.term_count(), terms.len());
+        assert_eq!(
+            term_id_payload.normalized_count(),
+            string_payload.normalized_count()
+        );
+        assert_eq!(
+            term_id_payload.query("fone", 0),
+            string_payload.query("fone", 0)
+        );
+    }
+
+    #[test]
+    fn test_term_id_dictionary_matches_string_payload_fuzzy_query() {
+        let terms = [
+            "phone", "fone", "bone", "cone", "tone", "elephant", "elefant",
+        ];
+        let string_payload = PhoneticNormalizedDictionary::<()>::from_terms(terms);
+        let term_id_payload = PhoneticNormalizedTermIdDictionary::from_terms(terms);
+
+        assert_eq!(
+            term_id_payload.query("elefant", 1),
+            string_payload.query("elefant", 1)
+        );
+        assert_eq!(
+            term_id_payload.query("fone", 1),
+            string_payload.query("fone", 1)
+        );
     }
 
     #[test]

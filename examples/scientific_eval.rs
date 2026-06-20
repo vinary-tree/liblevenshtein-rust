@@ -14,7 +14,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 #[cfg(feature = "phonetic-rules")]
-use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
+use liblevenshtein::dictionary::phonetic_normalized::{
+    PhoneticNormalizedDictionary, PhoneticNormalizedTermIdDictionary,
+};
 #[cfg(all(feature = "phonetic-rules", feature = "embedded-rules"))]
 use liblevenshtein::phonetic::language::rules_for_language;
 #[cfg(feature = "phonetic-rules")]
@@ -84,6 +86,8 @@ enum Workload {
     StateMinimumScalar,
     StateMinimumSimd,
     PhoneticNormalized,
+    PhoneticNormalizedBuildStringPayload,
+    PhoneticNormalizedBuildTermIdPayload,
     PhoneticRegexProduct,
     PhoneticRegexProductScan,
     BirkbeckFawthrop,
@@ -191,6 +195,12 @@ impl Options {
                         "state-minimum-scalar" => Workload::StateMinimumScalar,
                         "state-minimum-simd" => Workload::StateMinimumSimd,
                         "phonetic-normalized" => Workload::PhoneticNormalized,
+                        "phonetic-normalized-build-string-payload" => {
+                            Workload::PhoneticNormalizedBuildStringPayload
+                        }
+                        "phonetic-normalized-build-term-id-payload" => {
+                            Workload::PhoneticNormalizedBuildTermIdPayload
+                        }
                         "phonetic-regex-product" => Workload::PhoneticRegexProduct,
                         "phonetic-regex-product-scan" => Workload::PhoneticRegexProductScan,
                         "birkbeck-fawthrop" => Workload::BirkbeckFawthrop,
@@ -201,7 +211,7 @@ impl Options {
                         "cmudict-phonetic-diagnostic" => Workload::CmudictPhoneticDiagnostic,
                         "phonetic-targeted-rules" => Workload::PhoneticTargetedRules,
                         other => panic!(
-                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, ordered-query-first-k, priority-query-first-k, state-minimum-scalar, state-minimum-simd, phonetic-normalized, phonetic-regex-product, phonetic-regex-product-scan, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
+                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, ordered-query-first-k, priority-query-first-k, state-minimum-scalar, state-minimum-simd, phonetic-normalized, phonetic-normalized-build-string-payload, phonetic-normalized-build-term-id-payload, phonetic-regex-product, phonetic-regex-product-scan, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
                         ),
                     };
                 }
@@ -284,7 +294,7 @@ impl Options {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|ordered-query-first-k|priority-query-first-k|state-minimum-scalar|state-minimum-simd|phonetic-normalized|phonetic-regex-product|phonetic-regex-product-scan|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
+                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|ordered-query-first-k|priority-query-first-k|state-minimum-scalar|state-minimum-simd|phonetic-normalized|phonetic-normalized-build-string-payload|phonetic-normalized-build-term-id-payload|phonetic-regex-product|phonetic-regex-product-scan|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
                     );
                     std::process::exit(0);
                 }
@@ -988,15 +998,12 @@ fn extended_words(count: usize) -> Vec<String> {
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn phonetic_dictionary_from_dialect(
-    terms: &[String],
+fn phonetic_rules_from_dialect(
     dialect: &str,
-) -> PhoneticNormalizedDictionary<()> {
+) -> Vec<liblevenshtein::phonetic::types::RewriteRuleChar> {
     match dialect {
-        "default" | "zompist" | "zompist-default" => {
-            PhoneticNormalizedDictionary::<()>::from_terms(terms)
-        }
-        other => phonetic_dictionary_from_embedded_dialect(terms, other),
+        "default" | "zompist" | "zompist-default" => liblevenshtein::phonetic::zompist_rules_char(),
+        other => phonetic_rules_from_embedded_dialect(other),
     }
 }
 
@@ -1008,15 +1015,26 @@ fn phonetic_dictionary_from_config(
     rule_extensions: &[PathBuf],
     rule_extension_order: RuleExtensionOrder,
 ) -> PhoneticNormalizedDictionary<()> {
+    let rules =
+        phonetic_rules_from_config(dialect, rules_file, rule_extensions, rule_extension_order);
+    PhoneticNormalizedDictionary::<()>::from_terms_with_rules(terms, rules)
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn phonetic_rules_from_config(
+    dialect: &str,
+    rules_file: Option<&Path>,
+    rule_extensions: &[PathBuf],
+    rule_extension_order: RuleExtensionOrder,
+) -> Vec<liblevenshtein::phonetic::types::RewriteRuleChar> {
     if let Some(rules_file) = rules_file {
-        let rules = rules_from_llev_files(rules_file, rule_extensions, rule_extension_order);
-        PhoneticNormalizedDictionary::<()>::from_terms_with_rules(terms, rules)
+        rules_from_llev_files(rules_file, rule_extensions, rule_extension_order)
     } else {
         assert!(
             rule_extensions.is_empty(),
             "--phonetic-rules-extension requires --phonetic-rules-file"
         );
-        phonetic_dictionary_from_dialect(terms, dialect)
+        phonetic_rules_from_dialect(dialect)
     }
 }
 
@@ -1125,20 +1143,17 @@ fn phonetic_label(
 }
 
 #[cfg(all(feature = "phonetic-rules", feature = "embedded-rules"))]
-fn phonetic_dictionary_from_embedded_dialect(
-    terms: &[String],
+fn phonetic_rules_from_embedded_dialect(
     dialect: &str,
-) -> PhoneticNormalizedDictionary<()> {
-    let rules = rules_for_language(dialect)
-        .unwrap_or_else(|| panic!("unsupported liblevenshtein phonetic dialect {dialect:?}"));
-    PhoneticNormalizedDictionary::<()>::from_terms_with_rules(terms, rules)
+) -> Vec<liblevenshtein::phonetic::types::RewriteRuleChar> {
+    rules_for_language(dialect)
+        .unwrap_or_else(|| panic!("unsupported liblevenshtein phonetic dialect {dialect:?}"))
 }
 
 #[cfg(all(feature = "phonetic-rules", not(feature = "embedded-rules")))]
-fn phonetic_dictionary_from_embedded_dialect(
-    _terms: &[String],
+fn phonetic_rules_from_embedded_dialect(
     dialect: &str,
-) -> PhoneticNormalizedDictionary<()> {
+) -> Vec<liblevenshtein::phonetic::types::RewriteRuleChar> {
     panic!(
         "liblevenshtein phonetic dialect {dialect:?} requires building with --features embedded-rules"
     );
@@ -1175,6 +1190,49 @@ fn run_phonetic_normalized(
         &label,
         |_| MeasureOutcome::synthetic(dict.query(black_box("phone"), black_box(2)).len()),
     );
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn run_phonetic_normalized_payload_build(
+    samples: usize,
+    warmups: usize,
+    limit: usize,
+    phonetic_dialect: &str,
+    phonetic_rules_file: Option<&Path>,
+    phonetic_rule_extensions: &[PathBuf],
+    phonetic_rule_extension_order: RuleExtensionOrder,
+    use_term_ids: bool,
+) {
+    let words = extended_words(limit.max(30));
+    let rules = phonetic_rules_from_config(
+        phonetic_dialect,
+        phonetic_rules_file,
+        phonetic_rule_extensions,
+        phonetic_rule_extension_order,
+    );
+    let label = phonetic_label(
+        phonetic_dialect,
+        phonetic_rules_file,
+        phonetic_rule_extensions,
+        phonetic_rule_extension_order,
+    );
+    let workload = if use_term_ids {
+        "phonetic_normalized_build_term_id_payload"
+    } else {
+        "phonetic_normalized_build_string_payload"
+    };
+
+    measure_with_phonetic_dialect(workload, samples, warmups, &label, |_| {
+        if use_term_ids {
+            let dict =
+                PhoneticNormalizedTermIdDictionary::from_terms_with_rules(&words, rules.clone());
+            MeasureOutcome::synthetic(dict.normalized_count())
+        } else {
+            let dict =
+                PhoneticNormalizedDictionary::<()>::from_terms_with_rules(&words, rules.clone());
+            MeasureOutcome::synthetic(dict.normalized_count())
+        }
+    });
 }
 
 #[cfg(feature = "phonetic-rules")]
@@ -1834,6 +1892,36 @@ fn main() {
             opts.phonetic_rules_file.as_deref(),
             &opts.phonetic_rule_extensions,
             opts.phonetic_rule_extension_order,
+        );
+    }
+    if matches!(
+        opts.workload,
+        Workload::All | Workload::PhoneticNormalizedBuildStringPayload
+    ) {
+        run_phonetic_normalized_payload_build(
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            &opts.phonetic_dialect,
+            opts.phonetic_rules_file.as_deref(),
+            &opts.phonetic_rule_extensions,
+            opts.phonetic_rule_extension_order,
+            false,
+        );
+    }
+    if matches!(
+        opts.workload,
+        Workload::All | Workload::PhoneticNormalizedBuildTermIdPayload
+    ) {
+        run_phonetic_normalized_payload_build(
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            &opts.phonetic_dialect,
+            opts.phonetic_rules_file.as_deref(),
+            &opts.phonetic_rule_extensions,
+            opts.phonetic_rule_extension_order,
+            true,
         );
     }
     if matches!(opts.workload, Workload::PhoneticRegexProductScan) {
