@@ -109,19 +109,19 @@ In many applications, we need to find "similar" words in a dictionary:
 ## Document Index
 
 ### Theoretical Foundations
-- **[theoretical-foundations.md](./theoretical-foundations.md)** - Formal definitions, lemmas, theorems, mathematical concepts
+- **`theoretical-foundations.md` (planned)** - Formal definitions, lemmas, theorems, mathematical concepts
 
 ### Core Algorithms
-- **[core-algorithms.md](./core-algorithms.md)** - Elementary transitions, automaton construction, parametric tables
+- **`core-algorithms.md` (planned)** - Elementary transitions, automaton construction, parametric tables
 
 ### Extended Operations
-- **[extended-operations.md](./extended-operations.md)** - Transpositions, merges, splits algorithms
+- **`extended-operations.md` (planned)** - Transpositions, merges, splits algorithms
 
 ### Implementation Mapping
 - **[implementation-mapping.md](./implementation-mapping.md)** - How paper concepts map to liblevenshtein-rust codebase
 
 ### Experimental Results
-- **[experimental-results.md](./experimental-results.md)** - Performance benchmarks from paper
+- **`experimental-results.md` (planned)** - Performance benchmarks from paper
 
 ### Quick Reference
 - **[glossary.md](./glossary.md)** - Key terms, notation, and definitions
@@ -138,7 +138,7 @@ In many applications, we need to find "similar" words in a dictionary:
 ### Chapter 2: Formal Preliminaries (pages 9-12)
 - Finite state automata definitions
 - Levenshtein distance definition
-- Dynamic programming (Wagner-Fisher algorithm)
+- Dynamic programming (Wagner-Fischer algorithm)
 - Trace representations
 
 ### Chapter 3: String Correction with Levenshtein-Automata (pages 13-14)
@@ -226,9 +226,9 @@ The paper provides proofs that the implementation:
 If you want to understand the theory:
 
 1. **Start here**: Read this README for overview
-2. **Theory**: Read [theoretical-foundations.md](./theoretical-foundations.md) for formal definitions
-3. **Algorithms**: Read [core-algorithms.md](./core-algorithms.md) for construction procedures
-4. **Extensions**: Read [extended-operations.md](./extended-operations.md) for transposition/merge/split
+2. **Theory**: Read `theoretical-foundations.md` (planned) for formal definitions
+3. **Algorithms**: Read `core-algorithms.md` (planned) for construction procedures
+4. **Extensions**: Read `extended-operations.md` (planned) for transposition/merge/split
 
 ### For Implementers
 
@@ -237,7 +237,7 @@ If you want to understand the code:
 1. **Start here**: Read this README for context
 2. **Mapping**: Read [implementation-mapping.md](./implementation-mapping.md) to connect paper to code
 3. **Reference**: Use [glossary.md](./glossary.md) for quick lookups while reading code
-4. **Deep dive**: Refer to [core-algorithms.md](./core-algorithms.md) for algorithm details
+4. **Deep dive**: Refer to `core-algorithms.md` (planned) for algorithm details
 
 ### For Contributors
 
@@ -382,7 +382,7 @@ The **Universal Levenshtein Automata** paper (documented in `/docs/research/univ
 
 The paper relates to classical Levenshtein distance computation:
 
-- **Wagner-Fisher**: O(|W|×|V|) time to compute d_L(W,V)
+- **Wagner-Fischer**: O(|W|×|V|) time to compute d_L(W,V)
 - **This paper**: O(|W|) to build automaton accepting all V with d_L(W,V) ≤ n
 - **Advantage**: Amortized efficiency for multiple queries
 

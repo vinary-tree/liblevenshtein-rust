@@ -45,6 +45,12 @@ Output (matches with original forms)
 - Formally verified for termination and bounded expansion
 - Both ASCII (byte-level) and Unicode (character-level) support
 
+> **Terminology.** A **phoneme** is a contrastive unit of sound. A **distinctive (articulatory) feature** is one dimension of a sound — its *place of articulation* (where the vocal tract is constricted), its *manner of articulation* (how airflow is shaped, e.g. *stop*, *fricative*, *nasal*), or its *voicing* (whether the vocal folds vibrate). The **International Phonetic Alphabet (IPA)** assigns one symbol per sound; symbols such as `ʃ` ("sh"), `θ` ("th" in *thin*), `ŋ` ("ng"), `ɲ` (palatal nasal), and `ʎ` (palatal lateral) appear in the rules below. The empty string is written `ε`. See [`../../docs/GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+
+The LLev → NFA compilation pipeline these rules drive is shown below:
+
+![LLev compilation pipeline: an LLev rewrite rule is parsed to an AST, lowered through Thompson construction into an NFA, optimized (epsilon-elimination and dead-state removal), and emitted as a matcher used during phonetic normalization.](../diagrams/phonetic/llev-compilation.svg)
+
 ---
 
 ## Part 1: LLev Grammar
@@ -369,14 +375,14 @@ Feature bundles allow you to specify the **intersection** of multiple phonetic f
 
 | Syntax | Meaning | Result |
 |--------|---------|--------|
-| `[:a b:]` | a ∩ b | Characters with BOTH features |
-| `[:!a:]` | ¬a | Characters WITHOUT feature a |
-| `[:!a b:]` | (¬a) ∩ b | Characters with b but NOT a |
-| `[[:a:][:b:]]` | a ∪ b | Characters with EITHER feature (union) |
+| `[:a b:]` | `a ∩ b` | Characters with BOTH features |
+| `[:!a:]` | `¬a` | Characters WITHOUT feature a |
+| `[:!a b:]` | `(¬a) ∩ b` | Characters with b but NOT a |
+| `[[:a:][:b:]]` | `a ∪ b` | Characters with EITHER feature (union) |
 
 **Why Feature Bundles Matter:**
 
-The nested bracket syntax `[[^[:nasal:]][:stop:]]` creates a **union**: (not nasals) ∪ (stops) = almost everything. Feature bundles with space separation create an **intersection**: `[:!nasal stop:]` = (not nasal) ∩ (stop) = only oral stops.
+The nested bracket syntax `[[^[:nasal:]][:stop:]]` creates a **union**: `(¬nasal) ∪ stop` = almost everything. Feature bundles with space separation create an **intersection**: `[:!nasal stop:]` = `(¬nasal) ∩ stop` = only oral stops.
 
 **Practical Examples:**
 
@@ -412,13 +418,13 @@ Negation follows De Morgan's laws for properly nested classes:
 | Pattern | Equivalent | Description |
 |---------|------------|-------------|
 | `[^[:vowel:]]` | all non-vowels | Simple negation |
-| `[^[:vowel:][:voiced:]]` | ¬(vowel ∪ voiced) | Negate the union |
+| `[^[:vowel:][:voiced:]]` | `¬(vowel ∪ voiced)` | Negate the union |
 | `[^[^[:vowel:]]]` | `[:vowel:]` | Double negation cancels out |
-| `[:!nasal stop:]` | (¬nasal) ∩ stop | Inner negation with intersection |
+| `[:!nasal stop:]` | `(¬nasal) ∩ stop` | Inner negation with intersection |
 
 **De Morgan's Laws:**
-- ¬(A ∪ B) = ¬A ∩ ¬B
-- ¬(A ∩ B) = ¬A ∪ ¬B
+- `¬(A ∪ B) = ¬A ∩ ¬B`
+- `¬(A ∩ B) = ¬A ∪ ¬B`
 
 For feature bundles, `!` inside the bundle negates individual features before intersection:
 - `[:!nasal stop:]` = (NOT nasal) AND (stop) = oral stops only
@@ -1347,4 +1353,9 @@ ff -> f;
 - [EBNF Grammar: LLev](../grammar/llev.ebnf)
 - [EBNF Grammar: Regex](../grammar/regex.ebnf)
 - [Example: Phonetic Spellcheck](../../examples/phonetic_spellcheck/)
-- [Zompist Rules](../../examples/phonetic_spellcheck/rules/zompist.llev)
+- [Example LLev Rule Sets](../../examples/phonetic_spellcheck/rules/) (`base.llev`, `homophones.llev`, `text_speak.llev`)
+- [Built-in Zompist Rules (source)](../../src/phonetic/rules/zompist_char.rs)
+
+---
+
+[← Documentation Index](../README.md)

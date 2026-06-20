@@ -110,7 +110,7 @@ sitting (insertion: g)
 
 ### 1.5 Levenshtein Automata
 
-A Levenshtein automaton accepts all strings within edit distance *n* of a query word. Rather than computing distance for every dictionary word, we build an automaton once and intersect it with the dictionary.
+A Levenshtein automaton accepts all strings within edit distance `n` of a query word. Rather than computing distance for every dictionary word, we build an automaton once and intersect it with the dictionary.
 
 ```
 Query: "cat", max distance: 1
@@ -530,6 +530,8 @@ The **product automaton** does exactly this. We compose:
 
 The result is a single automaton whose states track *both* where we are in the phonetic pattern *and* how many errors we've used.
 
+![Phonetic NFA product pipeline: phonetic rules normalize a term, a Thompson-constructed NFA is intersected with a Levenshtein automaton, and the product automaton walks the dictionary trie lock-step to yield ranked candidates.](../diagrams/phonetic/nfa-product-pipeline.svg)
+
 ### 5.2 Product Automaton States
 
 A state in the product automaton is a pair:
@@ -785,7 +787,7 @@ A dictionary word is accepted if:
 
 1. We've consumed all characters in the word
 2. The NFA can reach an accepting state
-3. Total distance ≤ max_distance
+3. Total distance `≤ max_distance`
 
 But wait—what if we've consumed the whole dictionary word but the NFA still needs more characters?
 
@@ -1142,9 +1144,9 @@ Given the NFA for pattern `(c|k)at` and dictionary `["cat", "kat", "bat", "hat"]
 
 ### Exercise 2: Enumerate Variants
 Given rules:
-- `ph → f` (cost 0.1)
-- `c → k` (cost 0.1)
-- `tion → shun` (cost 0.2)
+- `ph → f` (cost `0.1`)
+- `c → k` (cost `0.1`)
+- `tion → shun` (cost `0.2`)
 
 Enumerate all variants of "action" with their costs.
 
@@ -1178,10 +1180,14 @@ Understanding these trade-offs helps you choose the right approach for your appl
 
 ## References
 
-1. Schulz, K.U. & Mihov, S. (2002). "Fast String Correction with Levenshtein Automata"
-2. Mitankin, P. (2005). "Universal Levenshtein Automata" (TCS 2011)
-3. Zompist's Guide to English Phonetic Rules
-4. Thompson, K. (1968). "Regular Expression Search Algorithm"
+1. Schulz, Klaus U. & Mihov, Stoyan (2002). "Fast String Correction with Levenshtein Automata". *International Journal on Document Analysis and Recognition (IJDAR)* 5(1), pp. 67–85. DOI: [10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
+2. Mihov, Stoyan & Schulz, Klaus U. (2004). "Fast Approximate Search in Large Dictionaries". *Computational Linguistics* 30(4), pp. 451–477. DOI: [10.1162/0891201042544938](https://doi.org/10.1162/0891201042544938)
+3. Thompson, Ken (1968). "Programming Techniques: Regular Expression Search Algorithm". *Communications of the ACM* 11(6), pp. 419–422. DOI: [10.1145/363347.363387](https://doi.org/10.1145/363347.363387)
+4. Rosenfelder, Mark (Zompist). "Sound Change / English Phonetic Rules". https://www.zompist.com/spell.html (No DOI.)
+
+---
+
+[← Documentation Index](../README.md)
 
 ---
 
@@ -1195,7 +1201,7 @@ Understanding these trade-offs helps you choose the right approach for your appl
 
 **Epsilon Closure**: All states reachable via epsilon (free) transitions.
 
-**Levenshtein Automaton**: Accepts all strings within edit distance n of a query.
+**Levenshtein Automaton**: Accepts all strings within edit distance `n` of a query.
 
 **NFA**: Non-deterministic Finite Automaton — can have multiple transitions per input.
 

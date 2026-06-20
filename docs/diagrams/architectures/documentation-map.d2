@@ -1,0 +1,42 @@
+# documentation-map.d2 — the nine-section navigation map for docs/.
+# Mirrors the section structure of docs/README.md so a reader sees the whole
+# documentation surface at a glance. Colour groups by theme.
+direction: down
+
+title: |md
+  # liblevenshtein — Documentation Map
+| { near: top-center; style.font-size: 24 }
+
+map: "" {
+  grid-columns: 3
+  grid-gap: 22
+  style.stroke: transparent
+
+  s1: "1 · Getting Started\nREADME · user-guide/getting-started\nCHANGELOG · examples/01-08" {
+    style.fill: "#B2EBF2"; style.stroke: "#00838F"; style.font-color: "#102027"
+  }
+  s2: "2 · Concepts & Theory\nconcepts/ · theory/\nalgorithms/02 · research/levenshtein-automata" {
+    style.fill: "#BBDEFB"; style.stroke: "#1565C0"; style.font-color: "#102027"
+  }
+  s3: "3 · Architecture\ndeveloper-guide/architecture · architecture/overview\ndesign/ · algorithms/01-09" {
+    style.fill: "#CFD8DC"; style.stroke: "#455A64"; style.font-color: "#102027"
+  }
+  s4: "4 · User Guide\nuser-guide/* · guides/*\nphonetic-extraction/* · grammar/" {
+    style.fill: "#C8E6C9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+  }
+  s5: "5 · Developer Guide\ndeveloper-guide/* · development/\nmigration/ · SECURITY" {
+    style.fill: "#C5CAE9"; style.stroke: "#283593"; style.font-color: "#102027"
+  }
+  s6: "6 · Algorithm Reference\nalgorithms/README\n+ layers 01 … 09" {
+    style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
+  }
+  s7: "7 · Formal Verification\nverification/ (manifest · Rocq · TLA+)\nformal-verification/" {
+    style.fill: "#E1BEE7"; style.stroke: "#6A1B9A"; style.font-color: "#102027"
+  }
+  s8: "8 · Research & Scientific Ledgers\n(append-only · indexed not edited)\nresearch/ · scientific-ledger/ · optimization(s)/\nuniversal/ · generalized/ · mettail/" {
+    style.fill: "#FFF9C4"; style.stroke: "#F9A825"; style.font-color: "#102027"
+  }
+  s9: "9 · Diagrams\ndiagrams/ — this suite\n(source + committed SVG)" {
+    style.fill: "#FFE0B2"; style.stroke: "#EF6C00"; style.font-color: "#102027"
+  }
+}

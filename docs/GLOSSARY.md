@@ -2,7 +2,7 @@
 
 **Comprehensive reference for implementation, performance, and user-facing terminology**
 
-**Last Updated:** 2025-01-06
+**Last Updated:** 2026-06-19  ·  **Version:** 0.9.1
 
 ---
 
@@ -11,6 +11,15 @@
 This glossary covers implementation details, performance optimizations, data structures, and user-facing features in liblevenshtein-rust.
 
 **For theoretical algorithm concepts** (Position, Subsumption, Characteristic Vectors, etc.), see the [Levenshtein Automata Glossary](research/levenshtein-automata/glossary.md).
+
+> **Crate-boundary note.** Since v0.9.0 the dictionary backends were extracted to
+> the sibling [`libdictenstein`](architecture/overview.md) crate and are re-exported
+> here as `#[deprecated]` shims. Some entries below still reference historical
+> `src/dictionary/…` paths; those implementations now live in `libdictenstein`.
+> Terminology introduced after the 2025-01 revision — phonetics, time-series
+> (MSM), the universal/generalized automaton variants, the `.llev`/`.llre` DSLs,
+> and the formal-verification vocabulary — is collected in the
+> [Terminology added since 2025](#terminology-added-since-2025-phonetics--time-series--automaton-variants--dsls--verification) section.
 
 ## How to Use
 
@@ -47,7 +56,7 @@ This glossary covers implementation details, performance optimizations, data str
 
 **Used in:** PathMapDictionary, DictZipper implementations
 
-**Code:** [`src/dictionary/pathmap.rs`](../src/dictionary/pathmap.rs)
+**Code:** `src/dictionary/pathmap.rs` (now in the `libdictenstein` crate)
 
 **See also:** SmallVec, Lazy Edge Iteration
 
@@ -70,7 +79,7 @@ This glossary covers implementation details, performance optimizations, data str
 
 **Used in:** OptimizedDawg, State pools
 
-**Code:** [`src/dictionary/dawg_optimized.rs`](../src/dictionary/dawg_optimized.rs)
+**Code:** `src/dictionary/dawg_optimized.rs` (now in the `libdictenstein` crate)
 
 **See also:** State Pool, Memory Pressure
 
@@ -94,7 +103,7 @@ This glossary covers implementation details, performance optimizations, data str
 
 **Used in:** DynamicDawg
 
-**Code:** [`src/dictionary/dynamic_dawg.rs`](../src/dictionary/dynamic_dawg.rs)
+**Code:** `src/dictionary/dynamic_dawg.rs` (now in the `libdictenstein` crate)
 
 **See also:** Suffix Sharing, Bloom Filter
 
@@ -114,7 +123,7 @@ This glossary covers implementation details, performance optimizations, data str
 
 **Performance:** 30-64% speedup on supported CPUs
 
-**Code:** [`src/transducer/simd/`](../src/transducer/simd/)
+**Code:** [`src/transducer/simd/`](../src/transducer/simd.rs)
 
 **See also:** SSE4.1, Vectorization, Scalar Fallback
 
@@ -140,7 +149,7 @@ if CHECK[result] == state: valid transition
 
 **Used in:** DoubleArrayTrie, DoubleArrayTrieChar
 
-**Code:** [`src/dictionary/double_array_trie.rs`](../src/dictionary/double_array_trie.rs)
+**Code:** `src/dictionary/double_array_trie.rs` (now in the `libdictenstein` crate)
 
 **See also:** Double-Array Trie, Cache Locality
 
@@ -165,7 +174,7 @@ if CHECK[result] == state: valid transition
 
 **Used in:** DynamicDawg
 
-**Code:** [`src/dictionary/dynamic_dawg.rs`](../src/dictionary/dynamic_dawg.rs)
+**Code:** `src/dictionary/dynamic_dawg.rs` (now in the `libdictenstein` crate)
 
 **See also:** Auto-Minimization, Contains Operations
 
@@ -192,7 +201,7 @@ if CHECK[result] == state: valid transition
 
 **Performance:** Character-level adds ~5% overhead for UTF-8 decoding
 
-**Code:** [`src/dictionary/double_array_trie_char.rs`](../src/dictionary/double_array_trie_char.rs)
+**Code:** `src/dictionary/double_array_trie_char.rs` (now in the `libdictenstein` crate)
 
 **See also:** UTF-8 Decoding, CharUnit Trait, Monomorphization
 
@@ -237,7 +246,7 @@ if CHECK[result] == state: valid transition
 
 **Used in:** All dictionary backends (generic over `L: CharUnit`)
 
-**Code:** [`src/dictionary/char_unit.rs`](../src/dictionary/char_unit.rs)
+**Code:** `src/dictionary/char_unit.rs` (now in the `libdictenstein` crate)
 
 **See also:** Byte-Level vs Character-Level, Monomorphization
 
@@ -375,7 +384,7 @@ if CHECK[result] == state: valid transition
 
 **Memory:** ~13-32 bytes per state (depending on variant)
 
-**Code:** [`src/dictionary/dawg.rs`](../src/dictionary/dawg.rs)
+**Code:** `src/dictionary/dawg.rs` (now in the `libdictenstein` crate)
 
 **See also:** Trie, Suffix Sharing, Auto-Minimization
 
@@ -405,7 +414,7 @@ if CHECK[result] == state: valid transition
 - Static (no runtime modifications)
 - Construction slower than PathMap
 
-**Code:** [`src/dictionary/double_array_trie.rs`](../src/dictionary/double_array_trie.rs)
+**Code:** `src/dictionary/double_array_trie.rs` (now in the `libdictenstein` crate)
 
 **See also:** BASE and CHECK Arrays, Cache Locality, Dictionary Automaton
 
@@ -429,7 +438,7 @@ if CHECK[result] == state: valid transition
 
 **Performance:** ~4 µs per character insertion
 
-**Code:** [`src/contextual/draft.rs`](../src/contextual/draft.rs)
+**Code:** [`src/contextual/draft.rs`](../src/contextual/draft_buffer.rs)
 
 **See also:** Finalized State, Checkpoint System, Incremental Typing
 
@@ -456,7 +465,7 @@ if CHECK[result] == state: valid transition
 - Dynamic dictionaries requiring frequent updates
 - Best fuzzy matching performance for dynamic use
 
-**Code:** [`src/dictionary/dynamic_dawg.rs`](../src/dictionary/dynamic_dawg.rs)
+**Code:** `src/dictionary/dynamic_dawg.rs` (now in the `libdictenstein` crate)
 
 **See also:** DAWG, Auto-Minimization, Bloom Filter, Thread-Safe Interior Mutability
 
@@ -479,7 +488,7 @@ if CHECK[result] == state: valid transition
 
 **Threshold:** Enabled for nodes with 16+ children (empirically tuned)
 
-**Code:** [`src/dictionary/simd/edge_lookup.rs`](../src/dictionary/simd/edge_lookup.rs)
+**Code:** `src/dictionary/simd/edge_lookup.rs` (now in the `libdictenstein` crate)
 
 **See also:** AVX2, Vectorization, Threshold Tuning
 
@@ -657,7 +666,7 @@ From Function: can see parameter, result, std::vector, std::string (NOT local_va
 
 **Implementation:** Return `impl Iterator` over internal edge storage
 
-**Code:** [`src/dictionary/pathmap.rs`](../src/dictionary/pathmap.rs)
+**Code:** `src/dictionary/pathmap.rs` (now in the `libdictenstein` crate)
 
 **See also:** Arc Path Sharing, Zero-Copy
 
@@ -807,7 +816,7 @@ Results (in order):
 
 **Performance:** Slightly slower than unordered due to priority queue overhead
 
-**Code:** [`src/transducer/query_ordered.rs`](../src/transducer/query_ordered.rs)
+**Code:** [`src/transducer/query_ordered.rs`](../src/transducer/ordered_query.rs)
 
 **See also:** Query Iterator, Lazy Evaluation
 
@@ -860,7 +869,7 @@ for each dict_edge in dictionary:
 - **PathMapDictionary:** Byte-level
 - **PathMapDictionaryChar:** Character-level (Unicode)
 
-**Code:** [`src/dictionary/pathmap.rs`](../src/dictionary/pathmap.rs)
+**Code:** `src/dictionary/pathmap.rs` (now in the `libdictenstein` crate)
 
 **See also:** Arc Path Sharing, Lazy Edge Iteration, Dynamic DAWG
 
@@ -899,7 +908,7 @@ RUSTFLAGS="-C profile-use=/tmp/pgo -C llvm-args=-pgo-warn-missing-function" carg
 
 **Performance:** 40-60% faster subsumption checking in state operations
 
-**Code:** [`src/transducer/simd/subsumption.rs`](../src/transducer/simd/subsumption.rs)
+**Code:** [`src/transducer/simd/subsumption.rs`](../src/transducer/simd.rs)
 
 **See also:** Subsumption (theory glossary), AVX2, State Operations
 
@@ -957,7 +966,7 @@ RUSTFLAGS="-C profile-use=/tmp/pgo -C llvm-args=-pgo-warn-missing-function" carg
 
 **Implementation:** All zipper operations return new zipper instances
 
-**Code:** [`src/dictionary/pathmap_zipper.rs`](../src/dictionary/pathmap_zipper.rs)
+**Code:** `src/dictionary/pathmap_zipper.rs` (now in the `libdictenstein` crate)
 
 **See also:** Zipper Pattern, Immutable Navigation
 
@@ -984,7 +993,7 @@ if is_x86_feature_detected!("avx2") {
 - Optimal performance on newer CPUs
 - Graceful degradation on older CPUs
 
-**Code:** [`src/transducer/simd/mod.rs`](../src/transducer/simd/mod.rs)
+**Code:** [`src/transducer/simd/mod.rs`](../src/transducer/simd.rs)
 
 **See also:** AVX2, SSE4.1, Scalar Fallback
 
@@ -1087,7 +1096,7 @@ Query in function: sees function + global (NOT block)
 
 **Performance:** 30-50% faster for bulk inserts (1000+ terms)
 
-**Code:** [`src/dictionary/dynamic_dawg.rs`](../src/dictionary/dynamic_dawg.rs)
+**Code:** `src/dictionary/dynamic_dawg.rs` (now in the `libdictenstein` crate)
 
 **See also:** Auto-Minimization, Dynamic DAWG
 
@@ -1107,7 +1116,7 @@ Query in function: sees function + global (NOT block)
 
 **Performance:** 20-30% speedup vs scalar
 
-**Code:** [`src/transducer/simd/`](../src/transducer/simd/)
+**Code:** [`src/transducer/simd/`](../src/transducer/simd.rs)
 
 **See also:** AVX2, Vectorization, Scalar Fallback
 
@@ -1125,7 +1134,7 @@ Query in function: sees function + global (NOT block)
 
 **Usage:** Pass `&mut StatePool` to query operations
 
-**Code:** [`src/transducer/state_pool.rs`](../src/transducer/state_pool.rs)
+**Code:** [`src/transducer/state_pool.rs`](../src/transducer/pool.rs)
 
 **See also:** Arena Allocation, Memory Pressure
 
@@ -1149,7 +1158,7 @@ Query in function: sees function + global (NOT block)
 - No prefix matching support (`.prefix()` unavailable)
 - Different query semantics than other backends
 
-**Code:** [`src/dictionary/suffix_automaton.rs`](../src/dictionary/suffix_automaton.rs)
+**Code:** `src/dictionary/suffix_automaton.rs` (now in the `libdictenstein` crate)
 
 **See also:** DAWG, Trie, Infix Matching
 
@@ -1172,7 +1181,7 @@ Query in function: sees function + global (NOT block)
 
 **Used in:** All DAWG variants
 
-**Code:** [`src/dictionary/dynamic_dawg.rs`](../src/dictionary/dynamic_dawg.rs)
+**Code:** `src/dictionary/dynamic_dawg.rs` (now in the `libdictenstein` crate)
 
 **See also:** DAWG, Auto-Minimization
 
@@ -1324,7 +1333,7 @@ Arc<RwLock<Dictionary>>
 
 **Used in:** All `*Char` dictionary variants
 
-**Code:** [`src/dictionary/char_unit.rs`](../src/dictionary/char_unit.rs)
+**Code:** `src/dictionary/char_unit.rs` (now in the `libdictenstein` crate)
 
 **See also:** Byte-Level vs Character-Level, CharUnit Trait, Monomorphization
 
@@ -1373,7 +1382,7 @@ transducer.query("var", 1).filter(|t| visible_scopes.contains(&t.scope))
 
 **Implementation:** Manual SIMD intrinsics in hot paths
 
-**Code:** [`src/transducer/simd/`](../src/transducer/simd/)
+**Code:** [`src/transducer/simd/`](../src/transducer/simd.rs)
 
 **See also:** AVX2, SSE4.1, SIMD
 
@@ -1461,10 +1470,195 @@ transducer.query("var", 1).filter(|t| visible_scopes.contains(&t.scope))
 - Hierarchical data navigation
 
 **Code:**
-- [`src/dictionary/pathmap_zipper.rs`](../src/dictionary/pathmap_zipper.rs)
+- `src/dictionary/pathmap_zipper.rs` (now in the `libdictenstein` crate)
 - [`src/transducer/intersection_zipper.rs`](../src/transducer/intersection_zipper.rs)
 
 **See also:** Referential Transparency, Immutable Navigation, Context-Preserving Traversal
+
+---
+
+## Terminology added since 2025 (phonetics · time series · automaton variants · DSLs · verification)
+
+The terms below cover subsystems introduced or substantially expanded after the
+2025-01 revision. Each is defined before use elsewhere in the documentation.
+
+### Automaton variants
+
+#### Parameterized (Lazy) Automaton
+**Categories:** [Algorithm]
+
+**Definition:** The default query engine. It *simulates* the Levenshtein automaton `A(W, k)` whose states are reduced *sets* of positions `⟨i, e⟩`, materialising each state on first visit during the dictionary walk — there is no precompiled DFA. Equivalent to the academic "parameterized automaton" / Schulz–Mihov imitation method.
+
+**Code:** [`src/transducer/{query,state,transition,pool}.rs`](../src/transducer/) · **See also:** Imitation Method, Universal Levenshtein Automaton, Generalized Automaton, Characteristic Vector
+
+#### Universal Levenshtein Automaton
+**Categories:** [Algorithm]
+
+**Definition:** A parameter-free deterministic automaton precomputed once for a fixed `k` and reused for any query word (Mitankin 2005). The crate offers it as an eager alternative to the lazy engine when `k` is fixed and queries are numerous.
+
+**Code:** [`src/transducer/universal/`](../src/transducer/universal/) · **See also:** Parameterized Automaton, Subsumption
+
+#### Generalized Automaton
+**Categories:** [Algorithm]
+
+**Definition:** A runtime-configurable automaton whose edit operations are supplied as an `OperationSet` at run time (rather than a compile-time marker type), enabling weighted (`f64`) and phonetic edit costs at ~10–20 % overhead.
+
+**Code:** [`src/transducer/generalized/`](../src/transducer/generalized/) · **See also:** OperationSet, Articulatory Distance
+
+#### OperationSet / SubstitutionSet / SubstitutionPolicy
+**Categories:** [Algorithm], [API]
+
+**Definition:** `OperationSet` enumerates the edit operations a generalized automaton may apply. `SubstitutionSet` restricts *which* character substitutions are permitted (presets: `phonetic_basic`, `keyboard_qwerty`, `leet_speak`, `ocr_friendly`); `SubstitutionPolicy` (`Unrestricted` — a zero-sized default — or `Restricted`) selects the policy at the type level.
+
+**Code:** [`src/transducer/{algorithm,substitution_set,substitution_policy}.rs`](../src/transducer/) · **See also:** Edit Operations, Restricted Substitutions
+
+#### Myers Bit-Parallel Distance
+**Categories:** [Algorithm], [Performance]
+
+**Definition:** Myers' (1999) bit-vector dynamic-programming algorithm computing edit distance in `𝒪(⌈m∕w⌉ · n)` for machine word width `w`. `standard_distance` dispatches to it for short (`≤ 64`-byte) ASCII inputs.
+
+**Code:** [`src/distance/myers.rs`](../src/distance/myers.rs) · **DOI:** [10.1145/316542.316550](https://doi.org/10.1145/316542.316550) · **See also:** SIMD, Scalar Fallback
+
+#### WallBreaker / Pigeonhole Filter
+**Categories:** [Algorithm]
+
+**Definition:** A strategy for large error bounds (`k ≥ 5`): split the query into `k + 1` pieces; by the pigeonhole principle at least one piece is error-free, so it can be located exactly via the SCDAWG and extended/verified. Avoids the state-space blow-up of large-`k` automata.
+
+**Code:** [`src/wallbreaker/`](../src/wallbreaker/) · **See also:** SCDAWG
+
+#### SCDAWG (Symmetric Compact DAWG)
+**Categories:** [Data Structure]
+
+**Definition:** A bidirectional compact DAWG indexing every substring, supporting forward extension and suffix links so a matched region can grow left and right. Backs WallBreaker piece location.
+
+**Code:** `Scdawg` / `ScdawgChar` in `libdictenstein` · **See also:** WallBreaker, DAWG
+
+### Phonetic matching
+
+#### IPA (International Phonetic Alphabet)
+**Categories:** [Unicode], [API]
+
+**Definition:** A standardized symbol set for the sounds of spoken language; the crate uses IPA for language-agnostic syllabification and articulatory-feature comparison.
+
+**Code:** [`src/phonetic/ipa_syllable.rs`](../src/phonetic/ipa_syllable.rs) · **See also:** Articulatory Feature Distance, Syllabification
+
+#### Articulatory Feature Distance
+**Categories:** [Algorithm]
+
+**Definition:** A pronunciation-aware distance in which phonemes are vectors of articulatory features (place and manner of articulation, voicing), and the substitution cost between two phonemes is their feature-vector distance — so `/p/`↔`/b/` (a voicing flip) costs less than `/p/`↔`/k/`.
+
+**Code:** [`src/phonetic/feature_distance.rs`](../src/phonetic/feature_distance.rs), [`src/transducer/articulatory_costs.rs`](../src/transducer/articulatory_costs.rs) · **See also:** Generalized Automaton, IPA
+
+#### Phonetic Normalization
+**Categories:** [Algorithm], [API]
+
+**Definition:** Rewriting a term to a canonical phonetic form (via the rule engine, in 53 languages) before fuzzy matching, so that orthographically different but sound-alike terms collide. Exposed as `PhoneticNormalizedDictionary(Char)`.
+
+**Code:** `src/dictionary/phonetic_normalized.rs` (now in the `libdictenstein` crate), [`src/phonetic/application.rs`](../src/phonetic/application.rs) · **See also:** Soundex, NFA Product
+
+#### Phonetic Algorithms (Soundex · Metaphone · NYSIIS · Caverphone · Cologne · Daitch–Mokotoff · Beider–Morse)
+**Categories:** [Algorithm]
+
+**Definition:** Classical phonetic-encoding schemes that map a word to a code approximating its pronunciation, enabling sound-alike grouping. Each has a dedicated reference under [`docs/phonetic-extraction/`](phonetic-extraction/).
+
+**See also:** Phonetic Normalization
+
+#### NFA Product (Phonetic ∩ Levenshtein)
+**Categories:** [Algorithm]
+
+**Definition:** The product automaton of a phonetic-pattern NFA (built by Thompson construction) with the Levenshtein automaton `A(W, k)`; running it against the dictionary yields candidates that match the pattern *and* lie within edit distance `k`.
+
+**Code:** [`src/phonetic/nfa/product.rs`](../src/phonetic/nfa/product.rs) · **See also:** Thompson Construction, `.llre`
+
+#### Thompson Construction
+**Categories:** [Algorithm]
+
+**Definition:** The classical construction of an ε-NFA from a regular expression by structural induction (concatenation, alternation, Kleene star). Because the result is an NFA simulated in linear time, the `.llre` engine is **ReDoS-resistant by construction**.
+
+**Code:** [`src/phonetic/nfa/thompson.rs`](../src/phonetic/nfa/thompson.rs) · **See also:** `.llre`, NFA Product
+
+### DSLs & formats
+
+#### `.llev`
+**Categories:** [API], [Serialization]
+
+**Definition:** The LibLevenshtein phonetic-rule file format: a source language for phonetic rewrite rule-sets, compiled (lexer → AST → ruleset → compiled) and applied via `apply_rules_seq`.
+
+**Code:** [`src/phonetic/llev/`](../src/phonetic/llev/) · grammar: [`docs/grammar/llev.ebnf`](grammar/llev.ebnf) · **See also:** Phonetic Normalization
+
+#### `.llre` (LibLevenshtein Regex Expression)
+**Categories:** [API]
+
+**Definition:** A regular-expression file format compiled (lexer → parser → AST → symbol expander → NFA compiler) to an NFA for phonetic/pattern matching. ReDoS-resistant via Thompson/Glushkov construction.
+
+**Code:** [`src/phonetic/llre/`](../src/phonetic/llre/) · grammar: [`docs/grammar/llre.ebnf`](grammar/llre.ebnf) · **See also:** Thompson Construction, NFA Product
+
+#### EBNF (Extended Backus–Naur Form)
+**Categories:** [API]
+
+**Definition:** The metasyntax used to specify the `.llev`, `.llre`, and regex grammars under [`docs/grammar/`](grammar/).
+
+**See also:** `.llev`, `.llre`
+
+### Time series
+
+#### MSM (Move–Split–Merge)
+**Categories:** [Algorithm]
+
+**Definition:** A metric for real-valued time series built from three unit-cost-parameterized edits — **Move** (change a value, cost `∣xᵢ − y∣`), **Split** (one value → two), and **Merge** (two adjacent values → one). Unlike DTW, MSM is a true metric (satisfies the triangle inequality), enabling lower-bound pruning.
+
+**Code:** [`src/time_series/msm.rs`](../src/time_series/msm.rs) · **DOI:** [10.1109/TKDE.2012.88](https://doi.org/10.1109/TKDE.2012.88) · **See also:** TimeSeriesIndex, DTW
+
+#### DTW (Dynamic Time Warping)
+**Categories:** [Algorithm]
+
+**Definition:** A classical elastic time-series similarity measure; included here for contrast — DTW is *not* a metric (no triangle inequality), whereas MSM is, which is why this crate indexes with MSM.
+
+**See also:** MSM
+
+#### TimeSeriesIndex / HybridSearchIndex
+**Categories:** [Data Structure], [API]
+
+**Definition:** `TimeSeriesIndex` indexes quantized/encoded series in a `DynamicDawg`; `HybridSearchIndex` adds a two-stage search — a cheap lower-bound filter (`length_lb`, `euclidean_lb`, `l1_lb`, `combined_lb`) followed by exact MSM verification, optionally in parallel with rayon.
+
+**Code:** [`src/time_series/{trie_index,hybrid_search,lower_bounds}.rs`](../src/time_series/) · **See also:** MSM, SAX Encoding
+
+#### SAX Encoding
+**Categories:** [Algorithm], [Data Structure]
+
+**Definition:** Symbolic Aggregate approXimation — one of the `QuantizationConfig` encodings (alongside delta and float quantization) that turns a numeric series into a discrete symbol string so it can be stored in a trie/DAWG.
+
+**Code:** [`src/time_series/encoding.rs`](../src/time_series/encoding.rs) · **See also:** TimeSeriesIndex
+
+### Crates & verification
+
+#### libdictenstein
+**Categories:** [API], [Data Structure]
+
+**Definition:** The sibling crate (path dependency, v0.2) that owns all dictionary backends and the `Dictionary`/`DictionaryNode`/`MappedDictionary` traits, plus SIMD + bloom-filter pruning. Extracted from liblevenshtein in v0.9.0; the old types are re-exported here as deprecation shims.
+
+**See also:** Deprecation Shim, Architecture Overview
+
+#### duallity
+**Categories:** [API]
+
+**Definition:** An external, optional crate providing WFST (weighted finite-state transducer) / language-model composition. Referenced by liblevenshtein for WFST integration but **not** a build dependency of this crate.
+
+**See also:** WFST
+
+#### Deprecation Shim
+**Categories:** [API]
+
+**Definition:** A `#[deprecated]` re-export in `src/dictionary/` (and the prelude) that forwards a historical liblevenshtein dictionary type to its new home in `libdictenstein`, preserving source compatibility across the 0.9.0 extraction.
+
+**Code:** `src/dictionary/mod.rs` (now in the `libdictenstein` crate) · **See also:** libdictenstein
+
+#### Rocq / Coq · TLA+ · trusted/partial/legacy profile
+**Categories:** [Algorithm]
+
+**Definition:** The formal-verification toolchain. **Rocq** (formerly Coq) machine-checked `.v` theories prove metric and algorithmic properties; **TLA+** specifications model-check concurrent and query behaviour. The verification **profile** (trusted / partial / legacy) recorded in [`FORMAL_VERIFICATION_MANIFEST.tsv`](verification/FORMAL_VERIFICATION_MANIFEST.tsv) is the declared source of truth for what is proved versus assumed.
+
+**See also:** [Verification](verification/)
 
 ---
 
@@ -1502,4 +1696,4 @@ transducer.query("var", 1).filter(|t| visible_scopes.contains(&t.scope))
 
 **Contributing:** To add new terms, maintain alphabetical order and include all standard fields (definition, benefits, trade-offs, code references, see also).
 
-**Last Updated:** 2025-01-06
+**Last Updated:** 2026-06-19

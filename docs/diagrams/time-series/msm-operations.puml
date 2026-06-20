@@ -1,0 +1,43 @@
+@startuml msm-operations
+' liblevenshtein — the three Move-Split-Merge (MSM) edit operations on a time series.
+' MSM transforms one numeric series into another using only these three moves; the
+' metric is the minimum total cost over all such transformations.
+' Color legend (time-series / MSM concept):
+'   container  #B2DFDB  (deep-teal)   = the MSM metric / operation set
+'   children   #E0F2F1  (teal tint)   = the individual operations
+'   border     #00695C  (deep teal)   = all time-series borders & arrows
+' Cost model (c = the constant split/merge cost from MsmConfig):
+'   Move  changes one value in place                 → cost = |xᵢ − y|
+'   Split duplicates one value into two copies        → cost = c + |xᵢ − y|
+'   Merge collapses two equal adjacent values into one → cost = c + |xᵢ − xⱼ|
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title MSM metric — edit a series with Move / Split / Merge
+
+rectangle "MSM metric: edit a series with Move / Split / Merge" as title #B2DFDB {
+  rectangle "Move — change a value  xᵢ → y\n(cost = |xᵢ − y|)" as move #E0F2F1
+  rectangle "Split — one value → two copies\n(cost = c + |xᵢ − y|)" as split #E0F2F1
+  rectangle "Merge — two adjacent values → one\n(cost = c + |xᵢ − xⱼ|)" as merge #E0F2F1
+}
+
+move  -[#00695C]right-> split
+split -[#00695C]right-> merge
+
+note bottom of title
+  MSM distance = minimum total cost over all
+  Move / Split / Merge transformations of X into Y.
+  Stefan, Athitsos & Das, "The Move-Split-Merge
+  Metric for Time Series", IEEE TKDE 25(6):1425–1438, 2013.
+  DOI 10.1109/TKDE.2012.88
+end note
+
+@enduml

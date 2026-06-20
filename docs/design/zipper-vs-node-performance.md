@@ -1,5 +1,7 @@
 # Zipper-Based vs Node-Based Query Performance Analysis
 
+[← Documentation Index](../README.md)
+
 **Date:** 2025-11-03
 **Author:** Performance Analysis
 **Status:** Completed
@@ -388,10 +390,10 @@ path: Arc<[u8]>  // Heap allocation even for short paths
 
 **Proposed:**
 ```rust
-path: SmallVec<[u8; 16]>  // Stack allocation for paths ≤16 bytes
+path: SmallVec<[u8; 16]>  // Stack allocation for paths ≤ 16 bytes
 ```
 
-**Benefit:** Most dictionary terms are <16 bytes → no heap allocation.
+**Benefit:** Most dictionary terms are `<16` bytes → no heap allocation.
 
 **Estimated combined impact:** Reduce overhead from 88-97% to 20-30% (1.2-1.3× vs node-based).
 

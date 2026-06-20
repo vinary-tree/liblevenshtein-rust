@@ -1,5 +1,7 @@
 # Grammar and Semantic Error Correction
 
+[← Documentation Index](../../README.md)
+
 **Multi-Layer WFST Architecture for Programming Language Error Correction**
 
 This directory contains comprehensive documentation for a multi-layer error correction system that addresses lexical, grammatical, semantic, and behavioral errors in programming languages, with specific focus on Rholang (a process calculus language).
@@ -136,7 +138,7 @@ For details, see [`theoretical-analysis/quick-reference.md`](theoretical-analysi
 
 **Layer 1: Lexical** - Fixes character-level typos
 - Example: `prnt` → `print`
-- Algorithm: Levenshtein automata (O(n) recognition)
+- Algorithm: Levenshtein automata (`𝒪(n)` recognition)
 - Status: Implemented in liblevenshtein
 
 **Layer 2: Grammar** - Fixes syntax errors
@@ -277,7 +279,7 @@ This design extends the existing liblevenshtein hierarchical correction framewor
 
 ## 🔗 Relationship to WFST Text Normalization Design
 
-This programming language grammar correction design shares the **same three-tier hybrid architecture** with the WFST-based text normalization design ([`../../wfst/`](../../wfst/)), but targets different domains:
+This programming language grammar correction design shares the **same three-tier hybrid architecture** with the WFST-based text normalization design (`../../wfst/` (planned)), but targets different domains:
 
 ### Architectural Alignment
 
@@ -307,19 +309,19 @@ Both designs follow the **Chomsky hierarchy** (Regular → Context-Free → Unre
 
 ### What This Design Can Learn from WFST
 
-**1. Lattice Parsing** ([`../../wfst/lattice_parsing.md`](../../wfst/lattice_parsing.md))
+**1. Lattice Parsing** (`../../wfst/lattice_parsing.md` (planned))
 - **Current approach**: BFS over parser states (Section 8 of MAIN_DESIGN.md)
 - **Enhancement**: Parse compact lattice representation instead of exponential candidates
 - **Benefit**: 3-10× speedup for Layer 2 grammar correction
 - **Effort**: ~2-3 weeks to implement LatticeBuilder + Tree-sitter integration
 
-**2. LLM Integration Patterns** ([`../../wfst/architecture.md#integration-with-large-language-models`](../../wfst/architecture.md#integration-with-large-language-models))
+**2. LLM Integration Patterns** (`../../wfst/architecture.md#integration-with-large-language-models` (planned))
 - **Preprocessing**: Clean user code before sending to Copilot/CodeGPT (15-50ms overhead)
 - **Postprocessing**: Validate LLM-generated code with CFG + type checker (5-20ms overhead)
 - **Hybrid workflows**: Symbolic-first (95% fast path), neural fallback (5% complex cases)
 - **Use cases**: Code completion, code generation, error explanation
 
-**3. Deployment Modes** ([`../../wfst/architecture.md#deployment-modes`](../../wfst/architecture.md#deployment-modes))
+**3. Deployment Modes** (`../../wfst/architecture.md#deployment-modes` (planned))
 - **Fast Mode** (<20ms): Keystroke feedback (Lexical only)
 - **Balanced Mode** (<200ms): Save action (Lexical + Grammar + Validation)
 - **Accurate Mode** (<2s): Fix All (all 5 layers)
@@ -342,10 +344,10 @@ Both designs follow the **Chomsky hierarchy** (Regular → Context-Free → Unre
 ### Cross-References
 
 For detailed comparisons and integration strategies, see:
-- [`../../wfst/README.md`](../../wfst/README.md) - WFST architecture overview
-- [`../../wfst/architecture.md`](../../wfst/architecture.md) - Complete system design
-- [`../../wfst/lattice_parsing.md`](../../wfst/lattice_parsing.md) - Lattice parsing technique
-- [`../../wfst/cfg_grammar_correction.md`](../../wfst/cfg_grammar_correction.md) - CFG-based grammar correction for code
+- `../../wfst/README.md` (planned) - WFST architecture overview
+- `../../wfst/architecture.md` (planned) - Complete system design
+- `../../wfst/lattice_parsing.md` (planned) - Lattice parsing technique
+- `../../wfst/cfg_grammar_correction.md` (planned) - CFG-based grammar correction for code
 
 ---
 

@@ -1,0 +1,36 @@
+// scdawg-structure.dot — the Symmetric Compact DAWG that backs WallBreaker.
+// Forward transitions (solid green) index every substring so a piece is located
+// in 𝒪(|piece|); suffix links (dashed) let a matched region be extended LEFT as
+// well as right — the bidirectionality WallBreaker needs to grow piece matches
+// into full candidates.
+digraph scdawg {
+  rankdir=LR;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="SCDAWG — bidirectional substring index (forward = solid, suffix links = dashed)"];
+  node  [shape=circle, style=filled, fontname="DejaVu Sans", fontsize=11,
+         color="#2E7D32", fillcolor="#E8F5E9", fontcolor="#102027", width=0.4];
+  edge  [fontname="DejaVu Sans", fontsize=10];
+
+  src   [label="src", fillcolor="#C8E6C9"];
+  n1    [label="c"];
+  n2    [label="ca"];
+  n3    [label="cac", fillcolor="#A5D6A7"];   // located piece highlighted
+  n4    [label="caca"];
+  sink  [label="✓", fillcolor="#C8E6C9", shape=doublecircle];
+
+  // forward transitions (solid green) — index substrings of "cacao"
+  src -> n1 [label="c", color="#2E7D32", penwidth=2];
+  n1  -> n2 [label="a", color="#2E7D32", penwidth=2];
+  n2  -> n3 [label="c", color="#2E7D32", penwidth=2];
+  n3  -> n4 [label="a", color="#2E7D32", penwidth=2];
+  n4  -> sink [label="o", color="#2E7D32", penwidth=2];
+
+  // suffix links (dashed) — extend the matched region to the left
+  n3 -> n2 [label="suffix link", color="#0277BD", style=dashed, constraint=false];
+  n2 -> n1 [color="#0277BD", style=dashed, constraint=false];
+
+  // annotation
+  note [shape=note, fillcolor="#FFF3E0", color="#EF6C00",
+        label="WallBreaker locates an exact piece (e.g. \"cac\"),\nthen walks forward + suffix links to extend\nand verify full candidates."];
+  n3 -> note [style=dotted, color="#EF6C00", arrowhead=none];
+}

@@ -17,6 +17,14 @@
 
 The **Zipper** is a functional programming pattern for navigating and updating tree-like data structures. In liblevenshtein, zippers provide a powerful interface for exploring dictionary graphs with precise control over traversal, path tracking, and value access.
 
+![Query iterator hierarchy: how the zipper-backed query iterators (standard, ordered, prefix, filtered) relate to one another](../../diagrams/traversal/query-iterator-hierarchy.svg)
+
+*Query iterator hierarchy: the zipper-backed iterators that surface traversal results to callers.*
+
+![Value-filtered pruning: a value predicate is applied during traversal so non-matching subtrees are skipped before their terms are enumerated](../../diagrams/traversal/value-filtered-pruning.svg)
+
+*Value-filtered pruning: zipper navigation prunes non-matching subtrees during the walk, not after.*
+
 ### What is a Zipper?
 
 A zipper represents a "position" or "focus" within a tree structure, along with enough context to reconstruct the full tree. Think of it as a cursor that can:
@@ -201,7 +209,7 @@ pub struct DoubleArrayTrieZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `u8` (byte-level)
 - **Memory**: ~24 bytes base + path length
-- **Performance**: O(1) descend, O(E) children (E = edge count)
+- **Performance**: `O(1)` descend, `O(E)` children (E = edge count)
 
 **Example**:
 ```rust
@@ -239,7 +247,7 @@ pub struct DoubleArrayTrieCharZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `char` (Unicode code points)
 - **Memory**: ~24 bytes base + path length × 4
-- **Performance**: O(1) descend, O(E) children
+- **Performance**: `O(1)` descend, `O(E)` children
 
 **Example**:
 ```rust
@@ -277,7 +285,7 @@ pub struct PathMapZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `u8` (byte-level)
 - **Memory**: ~24 bytes + path + Arc overhead
-- **Performance**: O(log N) descend (HashMap lookup)
+- **Performance**: `O(log N)` descend (HashMap lookup)
 
 **When to use**: When using PathMapDictionary backend.
 
@@ -285,9 +293,9 @@ pub struct PathMapZipper<V: DictionaryValue = ()> {
 
 | Zipper | Unit | Backend | Descend | Children | Memory | Unicode |
 |--------|------|---------|---------|----------|--------|---------|
-| **DATZipper** | `u8` | DoubleArrayTrie | O(1) | O(E) | Low | Byte |
-| **DATCharZipper** | `char` | DoubleArrayTrieChar | O(1) | O(E) | Medium | ✅ |
-| **PathMapZipper** | `u8` | PathMapDict | O(log N) | O(E) | Medium | Byte |
+| **DATZipper** | `u8` | DoubleArrayTrie | `O(1)` | `O(E)` | Low | Byte |
+| **DATCharZipper** | `char` | DoubleArrayTrieChar | `O(1)` | `O(E)` | Medium | ✅ |
+| **PathMapZipper** | `u8` | PathMapDict | `O(log N)` | `O(E)` | Medium | Byte |
 
 E = average edge count per node (~2-3 for natural language)
 N = total dictionary size
@@ -715,18 +723,18 @@ let z1 = root.descend('a');  // Clone shared Arc: O(1)
 let z2 = z1.clone();          // Clone again: O(1) + path copy
 ```
 
-**Cost**: O(1) for Arc clone + O(P) for path copy (P = path length)
+**Cost**: `O(1)` for Arc clone + `O(P)` for path copy (P = path length)
 
 ### Operation Complexity
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| `new_from_dict()` | O(1) | Initialize at root |
-| `is_final()` | O(1) | Array lookup |
-| `descend(label)` | O(1) | BASE/CHECK lookup |
-| `children()` | O(E) | Iterate precomputed edges |
-| `path()` | O(P) | Clone path vector |
-| `value()` | O(1) | Array lookup |
+| `new_from_dict()` | `O(1)` | Initialize at root |
+| `is_final()` | `O(1)` | Array lookup |
+| `descend(label)` | `O(1)` | BASE/CHECK lookup |
+| `children()` | `O(E)` | Iterate precomputed edges |
+| `path()` | `O(P)` | Clone path vector |
+| `value()` | `O(1)` | Array lookup |
 
 E = average edge count (~2-3)
 P = path length

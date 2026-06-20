@@ -1,0 +1,41 @@
+# dawg-vs-trie.d2 — why a DAWG is smaller than a trie. A trie keeps a distinct
+# subtree per branch; a DAWG (minimal acyclic FSA) merges equivalent suffixes
+# into a single shared sink, so "tap" and "top" share the final "p".
+direction: down
+
+title: |md
+  # Trie vs DAWG — suffix sharing
+| { near: top-center; style.font-size: 22 }
+
+panels: "" {
+  grid-columns: 2
+  grid-gap: 40
+  style.stroke: transparent
+
+  trie: "Trie — no suffix sharing" {
+    style.fill: "#E8F5E9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+    r: "•" { style.fill: "#C8E6C9"; style.stroke: "#2E7D32" }
+    t: "t" { style.fill: "#E8F5E9"; style.stroke: "#2E7D32" }
+    a: "a" { style.fill: "#E8F5E9"; style.stroke: "#2E7D32" }
+    o: "o" { style.fill: "#E8F5E9"; style.stroke: "#2E7D32" }
+    p1: "p ✓" { style.fill: "#C8E6C9"; style.stroke: "#2E7D32" }
+    p2: "p ✓" { style.fill: "#C8E6C9"; style.stroke: "#2E7D32" }
+    r -> t -> a -> p1: { style.stroke: "#2E7D32" }
+    t -> o -> p2: { style.stroke: "#2E7D32" }
+  }
+
+  dawg: "DAWG — shared final 'p'" {
+    style.fill: "#E8F5E9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+    r: "•" { style.fill: "#C8E6C9"; style.stroke: "#2E7D32" }
+    t: "t" { style.fill: "#E8F5E9"; style.stroke: "#2E7D32" }
+    a: "a" { style.fill: "#E8F5E9"; style.stroke: "#2E7D32" }
+    o: "o" { style.fill: "#E8F5E9"; style.stroke: "#2E7D32" }
+    p: "p ✓  (shared)" { style.fill: "#A5D6A7"; style.stroke: "#2E7D32" }
+    r -> t -> a -> p: { style.stroke: "#2E7D32" }
+    t -> o -> p: { style.stroke: "#2E7D32" }
+  }
+}
+
+note: |md
+  Both accept { "tap", "top" }; the DAWG merges the equivalent suffix into one node.
+| { near: bottom-center; style.font-size: 13 }

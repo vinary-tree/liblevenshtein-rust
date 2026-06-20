@@ -101,7 +101,7 @@ Edge labels become **strings** rather than single characters.
 
 ### Edge Label Representation
 
-To avoid O(n²) space for long labels, we represent each label as a pair (start, end) referencing the original string:
+To avoid `𝒪(n²)` space for long labels, we represent each label as a pair (start, end) referencing the original string:
 
 ```
 struct Edge {
@@ -113,7 +113,7 @@ struct Edge {
 // Label is w[start..end]
 ```
 
-This maintains O(n) total space.
+This maintains `𝒪(n)` total space.
 
 ## CDAWG for "abcabcab"
 
@@ -291,6 +291,6 @@ For bidirectional traversal, we need the **Symmetric** Compact DAWG (SCDAWG), co
 | Source | Node for empty string |
 | Sink | Node for complete string |
 
-**Key insight**: Compaction reduces space while preserving the ability to recognize all substrings in O(|pattern|) time.
+**Key insight**: Compaction reduces space while preserving the ability to recognize all substrings in `𝒪(∣pattern∣)` time.
 
 **Next**: [04-scdawg](04-scdawg.md) - Adding left extensions for bidirectional search

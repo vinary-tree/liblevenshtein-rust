@@ -1,5 +1,7 @@
 # Suffix Automaton Design Document
 
+[← Documentation Index](../README.md)
+
 **Version:** 1.0
 **Date:** 2025-10-26
 **Status:** Design Proposal
@@ -7,6 +9,8 @@
 ## Executive Summary
 
 This document proposes adding **suffix automaton** support to liblevenshtein-rust to enable approximate **substring matching** (finding patterns anywhere within text), complementing the existing **prefix-based matching** (whole word matching from the beginning).
+
+![Structure of a suffix-link DAWG (SCDAWG): states grouped by endpos equivalence class, with solid byte-labelled transitions and dashed suffix links between classes.](../diagrams/dictionary-structures/scdawg-structure.svg)
 
 ### Key Goals
 
@@ -114,9 +118,9 @@ for match in transducer.query("conection", 2) {  // typo
 | **Matching Type** | Prefix (whole words) | Substring (anywhere) |
 | **Use Case** | Spell check, completion | Full-text search, pattern finding |
 | **Index Input** | Word list | Text corpus |
-| **Space (n chars)** | O(n) | O(n) states, O(n) edges |
-| **Construction** | O(n) | O(n) online |
-| **Query** | O(m + k) | O(m + k) where m=query, k=results |
+| **Space (`n` chars)** | `𝒪(n)` | `𝒪(n)` states, `𝒪(n)` edges |
+| **Construction** | `𝒪(n)` | `𝒪(n)` online |
+| **Query** | `𝒪(m + k)` | `𝒪(m + k)` where `m` = query, `k` = results |
 | **Dynamic Updates** | Yes (DynamicDawg) | **Yes (proposed)** |
 | **Example Query** | "test" → "test", "testing" | "test" → "contest", "retest", "testing" |
 
@@ -131,8 +135,8 @@ A **suffix automaton** is a minimal deterministic finite automaton (DFA) that ac
 #### Core Properties
 
 1. **Substring Recognition**: Any path from the root represents a substring of the indexed text
-2. **Minimality**: Fewest possible states (typically 2n-1 for string of length n)
-3. **Online Construction**: Characters can be added one at a time in O(1) amortized
+2. **Minimality**: Fewest possible states (typically `2n-1` for string of length `n`)
+3. **Online Construction**: Characters can be added one at a time in `𝒪(1)` amortized
 4. **Endpos Equivalence**: States group substrings by their ending positions
 
 #### Example Construction
@@ -147,7 +151,7 @@ For string `"abcbc"`:
 - `"c"` (from positions 2 and 4)
 - `""` (empty)
 
-**Automaton states** group these by equivalence classes, resulting in ~9 states instead of storing all suffixes separately (which would need O(n²) space).
+**Automaton states** group these by equivalence classes, resulting in ~9 states instead of storing all suffixes separately (which would need `𝒪(n²)` space).
 
 ### Generalized Suffix Automaton
 
@@ -155,13 +159,13 @@ For **multiple strings** (e.g., indexing a document collection):
 
 1. **Concatenation Method**: Join strings with unique separators (`$1`, `$2`, etc.)
 2. **Direct Construction**: Maintain string IDs at final states
-3. **Space Complexity**: Still O(n) for total characters across all strings
+3. **Space Complexity**: Still `𝒪(n)` for total characters across all strings
 
 ### Dynamic Operations
 
 **Insertion (Standard):**
 - Suffix automaton naturally supports **online character insertion** at the end
-- O(1) amortized per character
+- `𝒪(1)` amortized per character
 - Algorithm: Create new state, update suffix links, clone states if needed
 
 **Deletion (Challenging):**
@@ -372,7 +376,7 @@ Positions map:
 9 -> [(0, 4)]  // string_id=0, position=4 (end of "abcbc")
 ```
 
-**Space:** ~9 states for 5 characters = O(n)
+**Space:** ~9 states for 5 characters = `𝒪(n)`
 
 ---
 
@@ -453,8 +457,8 @@ fn extend(&mut self, ch: u8) {
 ```
 
 **Complexity:**
-- **Time:** O(1) amortized per character (proven by Blumer et al.)
-- **Space:** Adds 1 state, possibly 1 clone = O(1) amortized
+- **Time:** `𝒪(1)` amortized per character (proven by Blumer et al.)
+- **Space:** Adds 1 state, possibly 1 clone = `𝒪(1)` amortized
 
 ### 2. Insert String
 
@@ -488,8 +492,8 @@ pub fn insert(&self, text: &str) -> bool {
 ```
 
 **Complexity:**
-- **Time:** O(n) where n = text length
-- **Space:** O(n) new states (amortized)
+- **Time:** `𝒪(n)` where `n` = text length
+- **Space:** `𝒪(n)` new states (amortized)
 
 ### 3. Remove String (Reference Counting)
 
@@ -533,8 +537,8 @@ pub fn remove(&self, text: &str) -> bool {
 ```
 
 **Complexity:**
-- **Time:** O(m) where m = text length
-- **Space:** O(1)
+- **Time:** `𝒪(m)` where `m` = text length
+- **Space:** `𝒪(1)`
 - **Note:** May leave unreachable states; call `compact()` periodically
 
 ### 4. Compaction (Garbage Collection)
@@ -599,9 +603,9 @@ pub fn compact(&self) {
 ```
 
 **Complexity:**
-- **Time:** O(states + edges) = O(n) where n = total indexed characters
-- **Space:** O(n) temporary
-- **Frequency:** Recommended after every N deletions or when memory pressure detected
+- **Time:** `𝒪(states + edges)` = `𝒪(n)` where `n` = total indexed characters
+- **Space:** `𝒪(n)` temporary
+- **Frequency:** Recommended after every `N` deletions or when memory pressure detected
 
 ---
 
@@ -947,32 +951,32 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Operation | Time Complexity | Space Complexity |
 |-----------|----------------|------------------|
-| **Construction (n chars)** | O(n) amortized | O(n) states |
-| **Insert string (m chars)** | O(m) | O(m) states |
-| **Remove string (m chars)** | O(m) | O(1) |
-| **Compact** | O(states + edges) | O(n) temporary |
-| **Query (m chars, k results)** | O(m × max_distance + k) | O(m × max_distance) |
-| **Contains (m chars)** | O(m) | O(1) |
+| **Construction (`n` chars)** | `𝒪(n)` amortized | `𝒪(n)` states |
+| **Insert string (`m` chars)** | `𝒪(m)` | `𝒪(m)` states |
+| **Remove string (`m` chars)** | `𝒪(m)` | `𝒪(1)` |
+| **Compact** | `𝒪(states + edges)` | `𝒪(n)` temporary |
+| **Query (`m` chars, `k` results)** | `𝒪(m × max_distance + k)` | `𝒪(m × max_distance)` |
+| **Contains (`m` chars)** | `𝒪(m)` | `𝒪(1)` |
 
 ### Space Analysis
 
 **Suffix Automaton:**
-- States: ≤ 2n - 1 for string of length n
-- Edges: ≤ 3n - 4
+- States: ≤ `2n - 1` for string of length `n`
+- Edges: ≤ `3n - 4`
 - Per-state overhead: ~40 bytes (Vec, Option, usize fields)
-- Total: ~80n - 160 bytes (worst case)
+- Total: ~`80n - 160` bytes (worst case)
 
 **Comparison:**
-- PathMap: ~24n bytes (trie nodes)
-- DAWG: ~32n bytes (minimized trie)
-- Suffix Automaton: ~80n bytes (all suffixes)
+- PathMap: ~`24n` bytes (trie nodes)
+- DAWG: ~`32n` bytes (minimized trie)
+- Suffix Automaton: ~`80n` bytes (all suffixes)
 
-**Trade-off:** 2-3x more memory than prefix structures, but enables substring matching
+**Trade-off:** `2`–`3×` more memory than prefix structures, but enables substring matching
 
 ### Benchmark Estimates
 
 **Construction (1 MB text):**
-- Estimated: 50-100 ms (online algorithm, O(n))
+- Estimated: 50-100 ms (online algorithm, `𝒪(n)`)
 - Compared to: PathMap ~20-30 ms (simpler structure)
 
 **Query ("algorithm", distance 2):**
@@ -1075,7 +1079,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 ### 1. Incremental Compaction
 
-**Problem:** Current compaction is stop-the-world O(n)
+**Problem:** Current compaction is stop-the-world `𝒪(n)`
 
 **Solution:** Generational GC or incremental marking
 - Track "dirty" regions after deletions
@@ -1143,11 +1147,11 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Feature | Suffix Automaton | Suffix Tree |
 |---------|------------------|-------------|
-| **States** | O(n) | O(n) |
-| **Edges** | O(n) | O(n) |
-| **Construction** | O(n) online | O(n) (Ukkonen) |
-| **Space (practical)** | 2n states, 3n edges | n nodes, 2n edges |
-| **Substring query** | O(m) | O(m) |
+| **States** | `𝒪(n)` | `𝒪(n)` |
+| **Edges** | `𝒪(n)` | `𝒪(n)` |
+| **Construction** | `𝒪(n)` online | `𝒪(n)` (Ukkonen) |
+| **Space (practical)** | `2n` states, `3n` edges | `n` nodes, `2n` edges |
+| **Substring query** | `𝒪(m)` | `𝒪(m)` |
 | **Online insert** | ✅ Yes (natural) | ⚠️ Complex (Ukkonen) |
 | **Dynamic delete** | ⚠️ Via compaction | ⚠️ Via rebuild |
 | **Implementation** | Simpler (DFA) | More complex |
@@ -1158,9 +1162,9 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Feature | Suffix Automaton | Suffix Array |
 |---------|------------------|-------------|
-| **Space** | O(n) states + edges | O(n) integers |
-| **Construction** | O(n) | O(n log n) or O(n) |
-| **Substring query** | O(m) | O(m log n) |
+| **Space** | `𝒪(n)` states + edges | `𝒪(n)` integers |
+| **Construction** | `𝒪(n)` | `𝒪(n log n)` or `𝒪(n)` |
+| **Substring query** | `𝒪(m)` | `𝒪(m log n)` |
 | **Approx. matching** | ✅ Native (Levenshtein) | ⚠️ Requires extensions |
 | **Dynamic insert** | ✅ Yes | ❌ Requires rebuild |
 | **Memory** | Higher | Lower |
@@ -1179,7 +1183,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
    DOI: [10.1016/0304-3975(85)90157-4](https://doi.org/10.1016/0304-3975(85)90157-4)
    - **Foundational paper** introducing suffix automata
    - First linear-time construction algorithm
-   - Proves minimality properties and space bounds (≤ 2n-1 states)
+   - Proves minimality properties and space bounds (≤ `2n-1` states)
    - 357+ citations (Semantic Scholar)
 
 2. **Crochemore, M. (1986)**
@@ -1204,8 +1208,8 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
    Theoretical Computer Science, 410(37), 3553-3562.
    DOI: [10.1016/j.tcs.2009.03.034](https://doi.org/10.1016/j.tcs.2009.03.034)
    - **Generalized suffix automata for multiple strings**
-   - Improved space bounds: ≤ 2Q - 2 states (Q = prefix tree nodes)
-   - Better than Blumer's bound (2∥U∥ - 1) for multiple strings
+   - Improved space bounds: ≤ `2Q - 2` states (`Q` = prefix tree nodes)
+   - Better than Blumer's bound (`2∥U∥ - 1`) for multiple strings
    - Direct relevance to our multi-document indexing use case
 
 5. **Inenaga, S., Hoshino, H., Shinohara, A., Takeda, M., Arikawa, S., Mauri, G., & Pavesi, G. (2001)**
@@ -1270,8 +1274,8 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 - `src/dictionary/dynamic_dawg.rs` - Dynamic updates pattern (reference counting, compaction)
 - `src/dictionary/dawg.rs` - Static construction pattern (minimize, suffix sharing)
-- `docs/PATHMAP_THREAD_SAFETY.md` - Thread safety with RwLock pattern
-- `docs/DYNAMIC_DAWG.md` - Dynamic mutation documentation
+- [`docs/user-guide/thread-safety.md`](../user-guide/thread-safety.md) - Thread safety with RwLock pattern
+- [`docs/design/dynamic-dawg.md`](dynamic-dawg.md) - Dynamic mutation documentation
 
 ---
 
@@ -1334,7 +1338,7 @@ This design proposes a **comprehensive suffix automaton implementation** for lib
 4. ✅ **Maintains thread safety** - RwLock pattern matching other dictionaries
 5. ✅ **Provides rich API** - Construction, mutation, metadata, serialization
 
-The implementation follows established patterns from `DynamicDawg` and leverages proven algorithms (Blumer et al., 1985) with O(n) construction and space complexity.
+The implementation follows established patterns from `DynamicDawg` and leverages proven algorithms (Blumer et al., 1985) with `𝒪(n)` construction and space complexity.
 
 **Estimated Effort:** 5-6 weeks for complete implementation including tests, documentation, and benchmarks.
 

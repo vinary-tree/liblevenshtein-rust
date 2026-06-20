@@ -1,0 +1,57 @@
+@startuml nfa-product-pipeline
+' Phonetic matching = the PRODUCT (intersection) automaton of a phonetic-pattern
+' NFA with the Levenshtein automaton A(W,k). Two independent strands converge:
+'   (1) a phonetic pattern (.llre / rewrite rule) is Thompson-compiled into a
+'       pattern NFA;  (2) the query term W with error bound k yields a Levenshtein
+'       automaton A(W,k).  Their product is walked lock-step over the dictionary,
+'       emitting only terms that are BOTH within edit distance k AND match the
+'       phonetic pattern.
+' Colour mapping (per the canonical legend):
+'   pink  #F8BBD0 / #FCE4EC  = Phonetic engine (pattern strand)
+'   teal  #B2EBF2            = Query input / term  (W, k)
+'   blue  #E3F2FD            = Core Levenshtein automaton A(W,k)
+'   amber #FFE0B2            = Intersection / lock-step traversal (the product)
+'   green #C8E6C9            = Dictionary output (accepted candidates)
+' Arrow colours follow each edge's SOURCE concept (pink / teal / amber).
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Phonetic matching as a product automaton — (pattern NFA) ∩ A(W,k), walked over the dictionary
+
+' ── Phonetic-pattern strand ──────────────────────────────────────────────
+rectangle "Phonetic pattern\n(.llre  /  rewrite rule)" as PAT #F8BBD0
+rectangle "Thompson construction" as THOMP #FCE4EC
+rectangle "Pattern NFA" as PNFA #F8BBD0
+
+' ── Levenshtein strand ───────────────────────────────────────────────────
+rectangle "Query term  W,  k" as QUERY #B2EBF2
+rectangle "Levenshtein automaton\nA(W, k)" as LEV #E3F2FD
+
+' ── Product + traversal + output ─────────────────────────────────────────
+rectangle "Product automaton\n(pattern NFA  ∩  A(W, k))" as PROD #FFE0B2
+rectangle "Lock-step walk over dictionary" as WALK #FFE0B2
+rectangle "Phonetic candidates" as OUT #C8E6C9
+
+' pattern strand (pink edges)
+PAT   -[#AD1457]-> THOMP
+THOMP -[#AD1457]-> PNFA
+
+' levenshtein strand (teal edges)
+QUERY -[#00838F]-> LEV
+
+' both strands feed the product (source-coloured)
+PNFA -[#AD1457]-> PROD
+LEV  -[#00838F]-> PROD
+
+' product → traversal → candidates (amber edges)
+PROD -[#EF6C00]-> WALK
+WALK -[#EF6C00]-> OUT
+@enduml

@@ -1,0 +1,42 @@
+@startuml draft-checkpoint-lifecycle
+' Lifecycle of a DraftBuffer with checkpoint / undo for editor-style completion.
+' A draft is the term being typed at the cursor; checkpoint() pushes a lightweight
+' snapshot (the buffer length) onto the CheckpointStack, and undo() pops the most
+' recent snapshot and truncates the buffer back to it. commit() finalizes the
+' draft; reset() clears everything back to Empty.
+' Color: contextual completion (deep purple #EDE7F6 / #4527A0); the undo edges are
+'   drawn in deletion-red #C62828 because undo discards just-typed characters.
+'   src/contextual/draft_buffer.rs · src/contextual/checkpoint.rs
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+hide empty description
+skinparam state {
+  BackgroundColor #EDE7F6
+  BorderColor #4527A0
+  FontColor #102027
+}
+skinparam ArrowColor #4527A0
+skinparam ArrowThickness 2
+
+title DraftBuffer lifecycle — checkpoint / undo over the term being typed
+
+[*] --> Empty
+
+Empty        --> Editing      : insert(c) / delete()
+Editing      --> Editing      : insert(c) / delete()
+Editing      --> Checkpointed : checkpoint():\npush length to CheckpointStack
+Checkpointed --> Editing      : insert(c) / delete()\n(continue editing)
+
+' undo() pops the most recent checkpoint and truncates the buffer (red = discards input)
+Editing      -[#C62828]->     Editing : undo(): pop checkpoint
+Checkpointed -[#C62828]->     Editing : undo(): pop checkpoint
+
+Editing      --> Committed    : commit()
+Committed    --> [*]
+
+' reset() returns to Empty from any active state
+Editing      --> Empty        : reset()
+Checkpointed --> Empty        : reset()
+Committed    --> Empty        : reset()
+@enduml

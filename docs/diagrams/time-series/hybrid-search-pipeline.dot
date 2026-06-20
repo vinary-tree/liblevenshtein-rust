@@ -1,0 +1,49 @@
+// hybrid-search-pipeline.dot — the hybrid MSM search pipeline: a cheap
+// lower-bound candidate filter prunes most of the database, and only the
+// survivors pay the cost of an exact MSM verification.
+//
+// Flow: query series → encode → candidate filter (lower bounds) → decision
+//       (lower bound > best-so-far?) → prune  OR  exact MSM verify → ranked
+//       results.
+//
+// Color legend:
+//   teal  #B2EBF2 (query input) · #E0F2F1 / #B2DFDB (time-series / MSM)
+//   amber #FFE0B2                 = a pruning decision
+//   red   #FFCDD2 / #C62828       = a pruned (discarded) candidate
+//   green #C8E6C9 / #2E7D32       = exact verification & accepted results
+digraph hybrid_search {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="Hybrid MSM search — cheap lower-bound filter, exact verify"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=10,
+         color="#455A64", fontcolor="#102027"];
+  edge  [color="#37474F", fontname="DejaVu Sans", fontsize=9];
+
+  query   [label="query series", shape=oval, fillcolor="#B2EBF2", color="#00838F"];
+  encode  [label="encode (QuantizationConfig)", fillcolor="#E0F2F1", color="#00695C"];
+  filter  [label="candidate filter:\nlength_lb / euclidean_lb / l1_lb / combined_lb",
+           fillcolor="#B2DFDB", color="#00695C"];
+  decide  [label="lower bound > best-so-far?", shape=diamond,
+           fillcolor="#FFE0B2", color="#EF6C00"];
+  prune   [label="prune\n(skip candidate)", fillcolor="#FFCDD2", color="#C62828"];
+  verify  [label="exact MSM verify (msm_distance)", fillcolor="#C8E6C9", color="#2E7D32"];
+  results [label="ranked results", shape=oval, fillcolor="#C8E6C9", color="#2E7D32"];
+
+  query  -> encode;
+  encode -> filter;
+  filter -> decide;
+  decide -> prune  [label="yes", color="#C62828", fontcolor="#C62828"];
+  decide -> verify [label="no",  color="#2E7D32", fontcolor="#2E7D32"];
+  verify -> results;
+
+  // The pipeline runs candidate-by-candidate; each survivor loops back to test
+  // the next candidate against the updated best-so-far.
+  prune  -> filter  [label="next candidate", style=dashed];
+  verify -> filter  [label="next candidate", style=dashed];
+
+  { rank=same; prune; verify; }
+
+  note [shape=note, fillcolor="#E0F2F1", color="#00695C",
+        label="search_with_lb_parallel runs this filter→verify\nloop across the database with rayon."];
+  results -> note [style=invis];
+}

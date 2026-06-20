@@ -1,0 +1,52 @@
+@startuml dictionary-traits
+' The dictionary trait hierarchy. A Transducer is generic over any Dictionary;
+' value-aware queries additionally require MappedDictionary. Nodes expose edges
+' for the lock-step walk; the sync strategy abstracts the concurrency model.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam class {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+  FontColor #102027
+  AttributeFontColor #102027
+}
+skinparam ArrowColor #2E7D32
+
+title Dictionary trait relationships
+
+interface "Dictionary" as D #C8E6C9 {
+  root() -> Node
+  contains(term) -> bool
+  +prefix / edges
+}
+interface "DictionaryNode" as N #C8E6C9 {
+  edges() -> (label, Node)
+  is_final() -> bool
+}
+interface "MappedDictionary<V>" as M #C8E6C9 {
+  value queries
+  get(term) -> Option<&V>
+}
+interface "MappedDictionaryNode<V>" as MN #C8E6C9 {
+  value() -> Option<&V>
+}
+interface "MutableMappedDictionary<V>" as MM #C8E6C9 {
+  insert(term, V) / remove(term)
+}
+interface "SyncStrategy" as S #ECEFF1 {
+  read / write guards
+  (RwLock | ArcSwap | none)
+}
+
+D *-right- N : root / edges
+D <|-- M
+N <|-- MN
+M <|-- MM
+D ..> S : concurrency via
+
+note bottom of M
+  Value-filtered, value-set, and value-yielding
+  query iterators require a MappedDictionary.
+end note
+@enduml

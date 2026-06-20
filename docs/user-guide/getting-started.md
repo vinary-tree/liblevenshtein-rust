@@ -1,9 +1,15 @@
 # Getting Started with liblevenshtein-rust
 
-**Version**: 0.4.0
-**Last Updated**: 2025-10-31
+**Version**: 0.9.1
+**Last Updated**: 2026-06-19
 
 This guide will help you get started with liblevenshtein-rust for fast approximate string matching.
+
+At a high level, a query builds a Levenshtein automaton `A(W, k)` from your search
+term `W` and error bound `k`, then walks it in lock-step with the dictionary to
+yield every term within edit distance `k`:
+
+![End-to-end spell-check: the term and distance build an automaton that is intersected with the dictionary and ranked by distance.](../diagrams/traversal/end-to-end-spellcheck.svg)
 
 ## Installation
 
@@ -13,7 +19,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", tag = "v0.4.0" }
+liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", tag = "v0.9.1" }
 ```
 
 SIMD (AVX2/SSE4.1) is enabled automatically on x86_64 targets via runtime CPU
@@ -22,7 +28,7 @@ feature detection — no feature flag required.
 ### Installing the CLI Tool
 
 ```bash
-cargo install --git https://github.com/universal-automata/liblevenshtein-rust --tag v0.4.0 \
+cargo install --git https://github.com/universal-automata/liblevenshtein-rust --tag v0.9.1 \
   --features cli,compression,protobuf liblevenshtein
 ```
 
@@ -174,25 +180,27 @@ testing: 1
 
 ## Choosing a Dictionary Backend
 
-liblevenshtein supports multiple dictionary backends optimized for different use cases:
+liblevenshtein queries any backend from the [`libdictenstein`](../architecture/overview.md)
+crate (re-exported here; the `*Char` variants are UTF-8 / `char`-level):
 
-| Backend | Best For | Performance | Memory | Updates |
-|---------|----------|-------------|--------|---------|
-| **DoubleArrayTrie** (default) | Static dictionaries, best overall | Excellent | Minimal | No |
-| **DoubleArrayTrieChar** | Unicode fuzzy matching | Very Good | Moderate | No |
-| **PathMap** | Dynamic dictionaries | Very Good | Moderate | Yes |
-| **PathMapChar** | Dynamic Unicode dictionaries | Good | High | Yes |
-| **DAWG** | Space-efficient storage | Good | Minimal | No |
-| **OptimizedDawg** | Fast construction | Good | Minimal | No |
-| **DynamicDawg** | Dynamic + space-efficient | Good | Low | Yes |
-| **SuffixAutomaton** | Substring/infix matching | Good | Moderate | No |
+| Backend | Best For | Reads | Updates |
+|---------|----------|-------|---------|
+| **DoubleArrayTrie(Char)** (default) | static dictionaries, fastest queries (`𝒪(1)` transitions) | wait-free | No |
+| **DynamicDawg(Char)** | general dynamic use; SIMD + bloom pruning | `RwLock` | Yes |
+| **DynamicDawgU64** | 64-bit labels / hashes | lock-free (`ArcSwap`) | Yes |
+| **SuffixAutomaton(Char)** | substring / infix matching | `RwLock` | Yes |
+| **Scdawg(Char)** | bidirectional substring (backs WallBreaker) | `RwLock` | Yes |
+| **PersistentARTrie(Char)** | huge on-disk dictionaries (mmap, zero-copy) | wait-free | No |
+| **PathMapDictionary** | update-heavy workloads (persistent backend) | persistent | Yes |
 
 **Recommendations:**
-- **Default choice**: Use `DoubleArrayTrie` for best performance with static dictionaries
-- **Unicode**: Use `DoubleArrayTrieChar` or `PathMapDictionaryChar`
-- **Need updates**: Use `PathMapDictionary` or `DynamicDawg`
-- **Memory constrained**: Use `DAWG` or `OptimizedDawg`
-- **Substring matching**: Use `SuffixAutomaton`
+- **Default choice**: `DoubleArrayTrie` for the fastest queries over a static dictionary.
+- **Unicode**: any `*Char` variant for correct `char`-level distances.
+- **Need updates**: `DynamicDawg` (or `DynamicDawgU64` for lock-free reads).
+- **Substring matching**: `SuffixAutomaton`; bidirectional / large-`k`: `Scdawg`.
+- **On-disk / huge**: `PersistentARTrie`.
+
+For a decision tree, see the [backend selection diagram](../diagrams/dictionary-structures/backend-decision-tree.svg) and the [backends guide](backends.md).
 
 ## Next Steps
 
@@ -204,17 +212,19 @@ liblevenshtein supports multiple dictionary backends optimized for different use
 
 ## Examples
 
-Check the `examples/` directory in the repository for more examples:
+The [Examples & Tutorials index](../examples/README.md) walks through the library
+step by step. The runnable programs live in the `examples/` directory:
 
-- `basic_usage.rs` - Simple fuzzy matching
-- `ordered_query.rs` - Sorted results for code completion
-- `prefix_matching.rs` - Autocomplete-style matching
-- `unicode_support.rs` - Unicode character handling
-- `dynamic_dictionary.rs` - Runtime dictionary updates
-- `serialization_basic.rs` - Save/load dictionaries
+- `spell_checker.rs` — simple fuzzy matching
+- `ordered_query_demo.rs` — sorted results for code completion
+- `unicode_diacritics.rs` — Unicode character handling
+- `dynamic_dictionary.rs` — runtime dictionary updates
+- `fuzzy_maps_code_completion.rs` — value-mapped fuzzy lookup
+- `contextual_completion.rs` — scope-aware completion
+- `serialization.rs` — save / load dictionaries
 
 Run an example:
 
 ```bash
-cargo run --example basic_usage --features dat-backend
+cargo run --example spell_checker
 ```

@@ -123,7 +123,7 @@ completion is handled by `StaticContextualCompletionEngine`)
   - File: `src/contextual/draft_buffer.rs`
   - Status: ✅ Complete
   - Completed: 2025-11-03
-  - Notes: VecDeque-based character storage with O(1) insert/delete, 14 tests passing
+  - Notes: VecDeque-based character storage with `𝒪(1)` insert/delete, 14 tests passing
 
 - [x] **3.2: Create Checkpoint System**
   - File: `src/contextual/checkpoint.rs`
@@ -247,8 +247,8 @@ completion is handled by `StaticContextualCompletionEngine`)
 ### Implementation Notes
 
 - Engine struct now holds `Arc<RwLock<Transducer<PathMapDictionary<Vec<ContextId>>>>>`
-- Draft matching still uses naive Levenshtein (O(n*m)) since drafts are in-memory
-- Finalized matching uses automaton-based transducer (O(k) where k = matches)
+- Draft matching still uses naive Levenshtein (`𝒪(n*m)`) since drafts are in-memory
+- Finalized matching uses automaton-based transducer (`𝒪(k)` where `k` = matches)
 - Dictionary access via `transducer.dictionary()` method
 - Module requires `pathmap-backend` feature flag
 
@@ -392,7 +392,7 @@ completion is handled by `StaticContextualCompletionEngine`)
 ## Notes and Decisions
 
 ### Design Decisions
-- **Character-level rollback**: Use VecDeque<char> for O(1) push/pop
+- **Character-level rollback**: Use VecDeque<char> for `𝒪(1)` push/pop
 - **Checkpoints**: Store (position, context) snapshots
 - **Hierarchical visibility**: Child contexts see parent drafts via ContextTree
 - **Lock strategy**: Lock-per-operation for PathMap, DashMap for drafts
@@ -417,7 +417,7 @@ completion is handled by `StaticContextualCompletionEngine`)
 - Benchmark shows zipper ~2x slower for fuzzy queries due to zipper creation overhead and BFS queue management
 
 ### Implementation Notes (Phase 3)
-- DraftBuffer uses VecDeque<char> for O(1) insert/delete at the end (simulating cursor at end of buffer)
+- DraftBuffer uses VecDeque<char> for `𝒪(1)` insert/delete at the end (simulating cursor at end of buffer)
 - Checkpoints are lightweight (8 bytes) storing only position, not full content
 - Checkpoint undo pattern: pop current checkpoint, peek previous checkpoint, restore to previous
 - Redo would require storing full buffer content at each checkpoint (too heavy), so only undo is supported
@@ -474,7 +474,7 @@ When working on a task:
 
 **Optimizations Implemented:**
 1. **Copy-on-Write (COW) Path Storage** - Changed `Arc<Vec<u8>>` to `Arc<[u8]>` in PathMapZipper
-2. **Lock Batching** - Reduced lock acquisitions in `PathMapZipper::children()` from O(n) to O(1)
+2. **Lock Batching** - Reduced lock acquisitions in `PathMapZipper::children()` from `𝒪(n)` to `𝒪(1)`
 3. **Inline Hints** - Added `#[inline]` to hot path methods
 
 **Performance Results:**

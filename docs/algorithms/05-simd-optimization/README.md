@@ -6,6 +6,10 @@
 
 The SIMD (Single Instruction, Multiple Data) Optimization Layer provides **vectorized acceleration** for critical hotspots in fuzzy matching. By processing multiple data elements simultaneously, SIMD instructions can provide **2-4x speedups** for edge label scanning and state transitions.
 
+![Characteristic vector: a query character is compared against a block of dictionary edge labels in one SIMD instruction, yielding a bitmask of matches](../../diagrams/automata/characteristic-vector.svg)
+
+*Characteristic vector: one SIMD compare turns a block of edge labels into a match bitmask.*
+
 ### What is SIMD?
 
 **SIMD** allows a single CPU instruction to operate on multiple data elements in parallel:
@@ -97,7 +101,7 @@ fn find_edge_scalar(edges: &[char], target: char) -> Option<usize> {
 }
 ```
 
-**Performance**: O(N) comparisons, 1 char per cycle
+**Performance**: `O(N)` comparisons, 1 char per cycle
 
 ### SIMD Solution
 
@@ -542,7 +546,7 @@ Fallback to scalar on unsupported platforms.
 ## Related Documentation
 
 - [Intersection Layer](../03-intersection-traversal/README.md) - Where SIMD is applied
-- [Performance Guide](../performance/README.md) - Benchmarking and profiling
+- Performance Guide - Benchmarking and profiling
 - [Dictionary Layer](../01-dictionary-layer/README.md) - Edge structures
 
 ## References
@@ -579,7 +583,7 @@ Fallback to scalar on unsupported platforms.
 
 - **Profiling**: Learn to measure SIMD impact
 - **Traversal**: See [Intersection Layer](../03-intersection-traversal/README.md)
-- **Benchmarking**: Check [Performance Guide](../performance/README.md)
+- **Benchmarking**: Check Performance Guide
 
 ---
 

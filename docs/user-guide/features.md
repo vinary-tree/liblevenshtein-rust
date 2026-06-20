@@ -1,37 +1,70 @@
 # Feature Documentation
 
-**Version**: 0.4.0
-**Last Updated**: 2025-10-25
+**Version**: 0.9.1
+**Last Updated**: 2026-06-19
 
 This document describes all features available in liblevenshtein-rust.
+
+The diagram below shows how the major components stack: the dictionary backends (now
+provided by the **[libdictenstein](https://crates.io/crates/libdictenstein)** crate) sit
+beneath the Levenshtein automata, intersection traversal, and query-iterator layers.
+
+![Component stack: dictionary backends, Levenshtein automata, intersection traversal, query iterators, and the contextual-completion and caching layers built on top](../diagrams/architectures/component-stack.svg)
 
 ## Core Features
 
 ### 1. Dictionary Implementations
 
-#### PathMap Dictionary
-- **Type**: Trie-based using structural sharing
-- **Best for**: General purpose, dynamic modifications
-- **Thread-safe**: Uses RwLock for concurrent access
+The dictionary data structures live in the **[libdictenstein](https://crates.io/crates/libdictenstein)**
+crate and are re-exported by liblevenshtein. The `*Char` variants are the UTF-8
+(`char`/`u32`) counterparts of the byte-level (`u8`) backends. The full set is:
+
+| Backend | Unit | Mutable | Best for |
+|---------|------|---------|----------|
+| `DoubleArrayTrie` / `DoubleArrayTrieChar` | `u8` / `char` | No (read-only) | Static dictionaries, fastest reads (**default**) |
+| `DynamicDawg` / `DynamicDawgChar` | `u8` / `char` | Yes | Runtime insert/delete with space efficiency |
+| `DynamicDawgU64` | `u64` | Yes | Token/ID streams keyed by 64-bit units |
+| `SuffixAutomaton` / `SuffixAutomatonChar` | `u8` / `char` | No | Substring search |
+| `Scdawg` / `ScdawgChar` | `u8` / `char` | No | Compacted DAWG with shared suffixes |
+| `PersistentARTrie` / `PersistentARTrieChar` | `u8` / `char` | Persistent | Lock-free snapshots via structural sharing |
+| `PathMapDictionary` | `u8` | Yes | General-purpose trie with structural sharing |
+
+See the [Backends guide](backends.md) for a full comparison and decision tree.
+
+#### DoubleArrayTrie (Default Choice)
+- **Type**: Double-array trie, optimized for fast reads
+- **Best for**: Static dictionaries that are built once and queried many times
+- **Mutability**: Treat as read-only once constructed
 - **Usage**:
 ```rust
 use liblevenshtein::prelude::*;
 
-let dict = PathMapDictionary::from_iter(vec!["test", "testing"]);
+let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
 ```
 
-#### DynamicDawg Dictionary
+#### DynamicDawg
 - **Type**: DAWG with online insert/delete/minimize operations
 - **Best for**: Dictionaries needing both space efficiency and runtime updates
-- **Thread-safe**: Uses RwLock for concurrent access
+- **Thread-safe**: Uses `RwLock` for concurrent access
 - **Space efficiency**: Maintains DAWG properties through incremental minimization
 - **Usage**:
 ```rust
 use liblevenshtein::prelude::*;
 
-let dict = DynamicDawgDictionary::from_iter(vec!["test", "testing"]);
+let dict = DynamicDawg::from_terms(vec!["test", "testing"]);
 dict.insert("tester");  // Online insertion with minimization
 dict.remove("test");    // Online deletion
+```
+
+#### PathMapDictionary
+- **Type**: Trie-based using structural sharing
+- **Best for**: General-purpose, dynamic modifications
+- **Thread-safe**: Uses `RwLock` for concurrent access
+- **Usage**:
+```rust
+use liblevenshtein::prelude::*;
+
+let dict = PathMapDictionary::from_iter(vec!["test", "testing"]);
 ```
 
 ### 2. Levenshtein Algorithms
@@ -112,7 +145,7 @@ for candidate in transducer
 }
 ```
 
-See [CODE_COMPLETION_GUIDE.md](CODE_COMPLETION_GUIDE.md) for detailed examples.
+See the [Code Completion Guide](code-completion.md) for detailed examples.
 
 ## Optional Features
 
@@ -136,7 +169,7 @@ use liblevenshtein::prelude::*;
 use liblevenshtein::serialization::*;
 use std::fs::File;
 
-// Save dictionary with compression (v0.4.0)
+// Save dictionary with compression
 let dict = PathMapDictionary::from_iter(vec!["test", "testing"]);
 let file = File::create("dict.bin.gz")?;
 GzipSerializer::<BincodeSerializer>::serialize(&dict, file)?;
@@ -216,9 +249,9 @@ liblevenshtein info --dict words.txt --backend path-map
 - **Compressed**: `bincode-gz`, `json-gz`, `protobuf-gz` (.bin.gz, .json.gz, .pb.gz)
 
 **Backend Options**:
-- `path-map`: Default trie-based dictionary
-- `dawg`: Space-efficient DAWG
-- `dynamic-dawg`: DAWG with runtime updates
+- `double-array-trie`: Default read-optimized trie (static dictionaries)
+- `dynamic-dawg`: Space-efficient DAWG with runtime updates
+- `path-map`: General-purpose trie with structural sharing
 
 **Algorithm Options**:
 - `standard`: Insert, delete, substitute
@@ -248,7 +281,7 @@ The library has undergone extensive optimization work:
 - **Arc path sharing**: Reduces PathMapNode cloning by 72%
 - **Lazy iterators**: Eliminates dictionary overhead
 
-See [docs/optimization/OPTIMIZATION_SUMMARY.md](optimization/OPTIMIZATION_SUMMARY.md) for details.
+See the optimization summary documentation for details.
 
 ### Benchmarks
 
@@ -259,8 +292,8 @@ RUSTFLAGS="-C target-cpu=native" cargo bench
 
 ### Memory Usage
 
-- **PathMap**: ~O(n) for n unique prefixes
-- **DAWG**: ~O(m) for m unique substrings (shares prefixes and suffixes)
+- **PathMap**: `~𝒪(n)` for `n` unique prefixes
+- **DAWG**: `~𝒪(m)` for `m` unique substrings (shares prefixes and suffixes)
 - **Position**: 17 bytes (Copy semantics, no heap allocation)
 - **State pooling**: Reuses allocations, LIFO for cache locality
 
@@ -299,7 +332,7 @@ All dictionary implementations are thread-safe:
 ## Dependencies
 
 ### Core
-- `pathmap`: Trie implementation
+- `libdictenstein`: Dictionary backends (double-array tries, DAWGs, suffix automata, persistent tries, PathMap)
 - `smallvec`: Stack-allocated vectors
 
 ### Optional
@@ -326,6 +359,15 @@ cli = ["clap", "anyhow", "serialization"]
 - `serialization,protobuf`: Add cross-language Protobuf support
 - `cli,compression,protobuf`: Full CLI with all formats
 
-## Future Enhancements
+## Related Documentation
 
-See [FUTURE_ENHANCEMENTS.md](FUTURE_ENHANCEMENTS.md) and [JAVA_COMPARISON.md](JAVA_COMPARISON.md) for planned improvements.
+- [Getting Started](getting-started.md) - Basic usage
+- [Backends](backends.md) - Dictionary backend comparison
+- [Algorithms](algorithms.md) - Levenshtein algorithm variants
+- [Serialization](serialization.md) - Save and load dictionaries
+- [Thread Safety](thread-safety.md) - Concurrent access patterns
+- [Code Completion Guide](code-completion.md) - Building completion systems
+
+---
+
+[← Documentation Index](../README.md)

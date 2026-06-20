@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Inference Rules: A Practical Guide for Implementers
 
 This document explains the **typing rules** that arise from type-lifted GSLTs. We

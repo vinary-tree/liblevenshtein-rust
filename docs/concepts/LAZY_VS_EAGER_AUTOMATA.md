@@ -2,7 +2,18 @@
 
 ## Overview
 
-This document explains the two complementary approaches to Levenshtein automata implemented in this library, using intuitive "lazy" and "eager" terminology.
+This document explains the two complementary approaches to Levenshtein automata
+implemented in this library, using intuitive "lazy" and "eager" terminology. The
+**lazy** engine is the production default; the **eager** (universal) engine is a
+parameter-free alternative and a testing oracle. A third, **generalized**
+implementation makes the edit operations configurable at run time.
+
+![The three automaton implementations — lazy/parameterized (default), universal/eager, and generalized/runtime — sharing one position model.](../diagrams/automata/automaton-implementations.svg)
+
+A **Levenshtein automaton** `A(W, k)` for a query word `W` and error bound `k`
+accepts exactly the strings within edit distance `k` of `W`. Its states are
+*sets* of **positions** `⟨i, e⟩` (`i` characters of `W` consumed, `e` edits used),
+kept minimal by **subsumption** (a partial order that drops dominated positions).
 
 ## Terminology
 
@@ -10,33 +21,35 @@ This document explains the two complementary approaches to Levenshtein automata 
 
 **Also known as:** Parameterized Levenshtein Automata
 
-**Key Characteristic:** States are constructed **lazily** (on-demand) during dictionary traversal.
+**Key Characteristic:** States are constructed **lazily** (on-demand) during dictionary traversal — there is no precompiled automaton.
 
-- **Construction**: Happens at query time, specific to each query word
-- **State space**: Minimal - only creates states that are actually reachable
-- **Positions**: Concrete indices into the query word
-- **Dictionary integration**: Fully integrated with DAWG traversal
-- **Location**: `src/transducer/`
-- **Performance**: O(log n) dictionary complexity
-- **Memory**: Fixed StatePool + query-specific states
+- **Construction**: happens at query time, specific to each query word.
+- **State space**: minimal — only states that are actually reachable are created; only `𝒪(∣W∣)` distinct states arise for fixed `k`.
+- **Positions**: concrete indices into the query word.
+- **Dictionary integration**: fully integrated with the DAWG traversal (the lock-step walk).
+- **Location**: `src/transducer/`.
+- **Performance**: `𝒪(log n)` effective dictionary complexity (DAWG pruning).
+- **Memory**: a fixed `StatePool` + the query-specific states.
 
-**Analogy:** Like a JIT (Just-In-Time) compiler - compiles only what's needed, when it's needed.
+**Analogy:** like a JIT (just-in-time) compiler — compiles only what is needed, when it is needed.
+
+![Lazy simulation: states are materialised on demand as the query descends the dictionary, driven only by the characteristic vector χ.](../diagrams/traversal/lazy-simulation.svg)
 
 ### Eager Automata (Mitankin 2005)
 
 **Also known as:** Universal Levenshtein Automata
 
-**Key Characteristic:** Entire automaton structure is constructed **eagerly** (upfront) before any queries.
+**Key Characteristic:** the entire automaton structure is constructed **eagerly** (upfront) before any queries.
 
-- **Construction**: Happens once for a given max_distance
-- **State space**: Complete - all possible states for that distance
-- **Positions**: Abstract I-type/M-type positions (parameter-free)
-- **Dictionary integration**: Standalone (accepts word pairs)
-- **Location**: `src/transducer/universal/`
-- **Performance**: O(n) for linear dictionary scan (currently)
-- **Memory**: O(n²) states for distance n
+- **Construction**: happens once for a given `max_distance` (`k`).
+- **State space**: complete — all possible states for that distance.
+- **Positions**: abstract **I-type** / **M-type** positions. An *I-type* position is measured relative to the abstract *start* parameter and an *M-type* position relative to the abstract *end* parameter, which is what makes the automaton **parameter-free** (independent of the concrete word).
+- **Dictionary integration**: standalone (accepts word pairs).
+- **Location**: `src/transducer/universal/`.
+- **Performance**: `𝒪(n)` for a linear dictionary scan (currently).
+- **Memory**: `𝒪(n²)` states for distance `n`.
 
-**Analogy:** Like an AOT (Ahead-Of-Time) compiler - prepares everything upfront, reuses across inputs.
+**Analogy:** like an AOT (ahead-of-time) compiler — prepares everything upfront, reuses across inputs.
 
 ---
 
@@ -116,7 +129,7 @@ This document explains the two complementary approaches to Levenshtein automata 
 
 **Batch Throughput:** 3.9-4.1 Kelem/s (consistent)
 
-**Dictionary Scaling:** O(log n)
+**Dictionary Scaling:** `𝒪(log n)`
 - 100 terms: 49µs
 - 1K terms: 258µs
 - 10K terms: 1.03ms
@@ -135,7 +148,7 @@ This document explains the two complementary approaches to Levenshtein automata 
 - 1K terms: 799µs
 - 10K terms: 7.83ms
 
-**Growth Rate:** Linear O(n)
+**Growth Rate:** Linear `𝒪(n)`
 
 **Distance Scaling:** Predictable
 - d=1 → d=2: 1.24× increase
@@ -180,9 +193,9 @@ This document explains the two complementary approaches to Levenshtein automata 
    - M-type: Relative to abstract end parameter
    - Parameter-free (works for any word)
 
-2. **CharacteristicVector**: β(x, w)
-   - Encodes which positions in word match character x
-   - Enables parameter-free transitions
+2. **CharacteristicVector**: `β(x, w)`
+   - Encodes which positions in word `w` match character `x`
+   - Enables parameter-free transitions (see the [characteristic-vector diagram](../diagrams/automata/characteristic-vector.svg))
 
 3. **State**: `SmallVec<[UniversalPosition; 8]>`
    - Same optimization as lazy
@@ -201,7 +214,9 @@ This document explains the two complementary approaches to Levenshtein automata 
 
 ## Cross-Validation Strategy
 
-The eager automaton serves as an **oracle** for testing the lazy automaton:
+The eager automaton serves as an **oracle** (an independent reference
+implementation, trusted to give the correct answer) for testing the lazy
+automaton via differential / property-based testing:
 
 ```rust
 // Differential testing
@@ -240,9 +255,9 @@ proptest! {
 
 ### For Lazy Automata
 
-1. **Restricted Substitutions** (in progress)
-   - Allow custom character similarity
-   - Zero-cost abstraction using generic traits
+1. **Restricted Substitutions** (available)
+   - Custom character similarity via `SubstitutionSet` / `SubstitutionPolicy`
+   - Zero-cost abstraction using generic traits (`Unrestricted` is a ZST)
    - Use cases: phonetic matching, OCR, keyboard proximity
 
 2. **Additional Optimizations**
@@ -272,10 +287,10 @@ proptest! {
 ## Academic References
 
 **Lazy Automata:**
-- Schulz, K. U., & Mihov, S. (2002). "Fast string correction with Levenshtein automata." *International Journal on Document Analysis and Recognition*, 5(1), 67-85.
+- Schulz, K. U., & Mihov, S. (2002). "Fast string correction with Levenshtein automata." *International Journal on Document Analysis and Recognition*, 5(1), 67–85. DOI: [10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8).
 
 **Eager Automata:**
-- Mitankin, P. (2005). "Universal Levenshtein automata. Building and properties." *M.Sc. Thesis, Sofia University*.
+- Mitankin, P. (2005). "Universal Levenshtein automata. Building and properties." *M.Sc. Thesis, Sofia University* (no DOI; thesis).
 
 **Terminology:**
 - "Lazy" vs "Eager" evaluation is standard in programming language theory
@@ -294,3 +309,7 @@ proptest! {
 Both approaches have unique strengths for different use cases. The lazy/eager terminology makes the fundamental trade-off clear: **when does construction happen, and what are the consequences?**
 
 For production use, choose **lazy automata**. For testing lazy automata, use **eager automata as oracle**. This dual approach ensures correctness while maintaining optimal performance.
+
+---
+
+[← Documentation Index](../README.md)

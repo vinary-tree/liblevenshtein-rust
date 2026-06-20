@@ -1,3 +1,10 @@
+//! Set-algebra helpers over phonetic character classes.
+//!
+//! Provides the union/negation/intersection primitives used to combine named classes —
+//! e.g. the universe of all phonetic characters (vowels ∪ consonants, ASCII and IPA) that
+//! serves as the complement base for negating a character set. Underpins the intersection
+//! semantics of compound class expressions.
+
 // ============================================================================
 // Feature Bundle Helpers (for intersection semantics)
 // ============================================================================

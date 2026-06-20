@@ -1,5 +1,7 @@
 # Grammar Correction Pipeline: Benchmark Specification
 
+[← Documentation Index](../../README.md)
+
 **Version**: 1.0
 **Date**: 2025-11-21
 **Status**: Specification for Implementation
@@ -265,7 +267,7 @@ Where rank_i = rank of ground truth in top-K results
 **Expected**:
 - Completeness: 100% for `d ≤ 3`
 - Soundness: 100%
-- Time: O(n × d²) (linear in n for fixed d)
+- Time: `𝒪(n × d²)` (linear in n for fixed d)
 - Lattice size: ~1000 nodes for n=50, d=2
 
 **Implementation** (Rust + Criterion):
@@ -465,11 +467,11 @@ cargo bench --bench e2e_fast -- --save-baseline fast_mode
 **Measure**: Median latency for each n
 
 **Expected Complexity**:
-- Layer 1: O(n)
-- Layer 2: O(n) (incremental parsing)
-- Layer 3: O(n)
-- Layer 4: O(n²) (dataflow analysis)
-- Layer 5: O(n²) (graph analysis)
+- Layer 1: `𝒪(n)`
+- Layer 2: `𝒪(n)` (incremental parsing)
+- Layer 3: `𝒪(n)`
+- Layer 4: `𝒪(n²)` (dataflow analysis)
+- Layer 5: `𝒪(n²)` (graph analysis)
 
 **Plot**: Latency (ms) vs. LOC (log-log scale)
 
@@ -732,7 +734,7 @@ n=500:   950ms
 n=1000:  2100ms
 ```
 
-**Fit**: ~O(n^1.2) (subquadratic, better than naive O(n²))
+**Fit**: ~`𝒪(n^1.2)` (subquadratic, better than naive `𝒪(n²)`)
 
 ---
 

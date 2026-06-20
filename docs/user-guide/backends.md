@@ -1,19 +1,25 @@
 # Dictionary Backend Guide
 
-**Version**: 0.8.0
-**Last Updated**: 2025-12-28
+**Version**: 0.9.1
+**Last Updated**: 2026-06-19
 
 This guide explains the different dictionary backends available in liblevenshtein-rust and how to choose the right one for your use case.
 
 ## Overview
 
-liblevenshtein-rust uses a trait-based design that allows multiple dictionary implementations with the same fuzzy matching interface. Each backend has different trade-offs in terms of:
+The dictionary data structures live in the **[libdictenstein](https://crates.io/crates/libdictenstein)** crate. liblevenshtein re-exports them (the `liblevenshtein::prelude` re-exports are deprecated since `0.9.1` for convenience; new code should `use libdictenstein::<module>::<Type>` directly). The `*Char` variants are the UTF-8 (`char`/`u32`) counterparts of the byte-level (`u8`) backends.
+
+liblevenshtein uses a trait-based design that allows multiple dictionary implementations to share the same fuzzy-matching interface. Each backend has different trade-offs in terms of:
 
 - **Construction time**: How long it takes to build the dictionary
 - **Query performance**: How fast fuzzy searches are
 - **Memory usage**: RAM footprint
 - **Update support**: Whether the dictionary can be modified after construction
 - **Use case fit**: What scenarios each backend excels at
+
+The taxonomy below groups the available backends by their core data structure and intended workload.
+
+![Taxonomy of liblevenshtein dictionary backends grouped by underlying data structure: double-array tries, DAWGs, suffix automata, radix tries, and persistent maps](../diagrams/dictionary-structures/backend-taxonomy.svg)
 
 ## Available Backends
 
@@ -188,7 +194,29 @@ println!("Nodes after minimization: {}", dict.node_count());
 
 **Feature flag:** `dawg-backend` (optional)
 
-### 6. SuffixAutomaton (Substring Matching)
+**Unicode:** Use the `DynamicDawgChar` variant for correct character-level distances.
+
+### 6. DynamicDawgU64 (Lock-Free Updates)
+
+**Type**: 64-bit Dynamic DAWG with wait-free reads and 8-byte (`u64`) edge labels
+
+**Characteristics:**
+- **Construction**: Fast (incremental)
+- **Query**: Good (wait-free reads, no blocking)
+- **Memory**: Low (maintains minimization)
+- **Updates**: ✅ Yes (**lock-free**, no `RwLock`)
+- **Concurrency**: Reads are wait-free; writes use lock-free CAS (compare-and-swap) loops via per-node `ArcSwap<EdgeList>` for copy-on-write edge mutation
+
+**When to use:**
+- High-concurrency workloads where readers must never block on a writer
+- Updates and queries interleave heavily from many threads
+- You want lock-free progress guarantees instead of the `RwLock` of `DynamicDawg`
+
+Unlike `DynamicDawg` (whose `RwLock` write blocks all readers), `DynamicDawgU64` is fully lock-free for reads. The trade-off is a wider edge label (`u64`), which trades some memory for wait-free reads. See [Thread Safety](thread-safety.md) for the concurrency model.
+
+**Feature flag:** `dawg-backend` (optional)
+
+### 7. SuffixAutomaton (Substring Matching)
 
 **Type**: Suffix automaton for infix matching
 
@@ -222,19 +250,19 @@ for term in transducer.query("test", 1) {
 
 **Feature flag:** `suffix-automaton-backend` (optional)
 
-### 7. SCDAWG (Symmetric Compact DAWG)
+### 8. Scdawg (Symmetric Compact DAWG)
 
-**Type**: Symmetric Compact Directed Acyclic Word Graph with bidirectional traversal
+**Type**: Symmetric Compact Directed Acyclic Word Graph with bidirectional traversal (`Scdawg`; `ScdawgChar` for UTF-8)
 
 **Characteristics:**
 - **Construction**: Medium (builds suffix automaton per term)
-- **Query**: Excellent for substring (O(|pattern|))
+- **Query**: Excellent for substring (`𝒪(∣pattern∣)`)
 - **Memory**: Moderate
 - **Updates**: No (immutable after construction)
-- **Special**: True suffix automaton indexing ALL substrings with bidirectional edges
+- **Special**: True suffix automaton indexing ALL substrings with bidirectional edges; backs the **WallBreaker** large-`k` query splitter
 
 **When to use:**
-- Need O(|pattern|) substring search
+- Need `𝒪(∣pattern∣)` substring search
 - Bidirectional pattern traversal (left/right extensions)
 - Text indexing with substring frequency queries
 - WallBreaker pattern splitting algorithm
@@ -257,9 +285,9 @@ assert_eq!(matches.len(), 3);  // Found in all three terms
 
 **Feature flag:** `scdawg-backend` (optional)
 
-### 8. PersistentARTrie (Disk-Based)
+### 9. PersistentARTrie (Disk-Based)
 
-**Type**: Persistent Adaptive Radix Trie with memory-mapped storage
+**Type**: Persistent Adaptive Radix Trie with memory-mapped storage (`PersistentARTrie`; `PersistentARTrieChar` for UTF-8)
 
 **Characteristics:**
 - **Construction**: Fast (incremental inserts)
@@ -277,7 +305,7 @@ assert_eq!(matches.len(), 3);  // Found in all three terms
 **Example:**
 
 ```rust
-use liblevenshtein::dictionary::persistent_artrie::PersistentARTrie;
+use libdictenstein::persistent_artrie::PersistentARTrie;
 
 // Create a new persistent dictionary
 let dict = PersistentARTrie::create("words.part")?;
@@ -308,10 +336,11 @@ for result in transducer.query("helo", 1) {
 | Backend | Construction | Query | Memory | Updates | Unicode Variant |
 |---------|-------------|-------|--------|---------|----------------|
 | DoubleArrayTrie | ●●●○○ Medium | ●●●●● Excellent | ●●●●● Minimal | ✗ No | DoubleArrayTrieChar |
-| PathMap | ●●●●○ Fast | ●●●●○ Very Good | ●●●○○ Moderate | ✅ Yes | PathMapDictionaryChar |
-| DynamicDawg | ●●●●○ Fast | ●●●○○ Good | ●●●●○ Low | ✅ Yes | DynamicDawgChar |
+| PathMapDictionary | ●●●●○ Fast | ●●●●○ Very Good | ●●●○○ Moderate | ✅ Yes | PathMapDictionaryChar |
+| DynamicDawg | ●●●●○ Fast | ●●●○○ Good | ●●●●○ Low | ✅ Yes (RwLock) | DynamicDawgChar |
+| DynamicDawgU64 | ●●●●○ Fast | ●●●○○ Good | ●●●●○ Low | ✅ Yes (lock-free) | — (`u64` labels) |
 | SuffixAutomaton | ●●●●○ Fast | ●●●○○ Good | ●●●○○ Moderate | ✗ No | SuffixAutomatonChar |
-| SCDAWG | ●●●○○ Medium | ●●●●● Excellent (substring) | ●●●○○ Moderate | ✗ No | ScdawgChar |
+| Scdawg | ●●●○○ Medium | ●●●●● Excellent (substring) | ●●●○○ Moderate | ✗ No | ScdawgChar |
 | PersistentARTrie | ●●●●○ Fast | ●●●●● Excellent | Disk-based | ✅ Yes | PersistentARTrieChar |
 
 ### Benchmark Results
@@ -325,13 +354,18 @@ Query performance relative to DoubleArrayTrie (100K terms, distance 2):
 | PathMapDictionary | 0.92× | 12.3 |
 | PathMapDictionaryChar | 0.87× | 16.8 |
 | DynamicDawg | 0.85× | 7.8 |
+| DynamicDawgU64 | 0.84× | 9.1 |
 | SuffixAutomaton | 0.82× | 10.5 |
-| SCDAWG | 0.90× (substring: 1.2×) | 14.2 |
+| Scdawg | 0.90× (substring: 1.2×) | 14.2 |
 | PersistentARTrie | 0.88× | Disk + cache |
 
 **Note**: All backends benefit from SIMD acceleration (20-64% faster, automatic on x86_64 with AVX2/SSE4.1).
 
 ## Decision Guide
+
+The flowchart below distills the prose decision criteria into a single path from your requirements to a recommended backend.
+
+![Decision tree for selecting a dictionary backend, branching on update needs, Unicode, dictionary size, substring matching, persistence, and concurrency model](../diagrams/dictionary-structures/backend-decision-tree.svg)
 
 ### Choose DoubleArrayTrie when:
 - ✅ You need the best query performance
@@ -360,14 +394,20 @@ Query performance relative to DoubleArrayTrie (100K terms, distance 2):
 - ✅ Need both updates and space efficiency
 - ✅ Memory constrained but need updates
 - ✅ Can accept slightly slower queries
+- ✅ A single-writer `RwLock` is acceptable
+
+### Choose DynamicDawgU64 when:
+- ✅ Need updates with **lock-free** reads (readers never block on a writer)
+- ✅ High-concurrency, read-write-interleaved workloads
+- ✅ Can accept `u64` (8-byte) edge labels for wait-free reads
 
 ### Choose SuffixAutomaton when:
 - ✅ Need substring/infix matching
 - ✅ Pattern matching within words
 - ✅ Text indexing applications
 
-### Choose SCDAWG when:
-- ✅ Need O(|pattern|) substring search
+### Choose Scdawg when:
+- ✅ Need `𝒪(∣pattern∣)` substring search
 - ✅ Bidirectional pattern traversal required
 - ✅ Pattern splitting (WallBreaker algorithm)
 - ✅ Substring frequency queries
@@ -386,13 +426,13 @@ Enable backends via Cargo features:
 [dependencies]
 liblevenshtein = {
     git = "https://github.com/universal-automata/liblevenshtein-rust",
-    tag = "v0.8.0",
+    tag = "v0.9.1",
     features = [
         "dat-backend",              # DoubleArrayTrie (default)
         "pathmap-backend",          # PathMapDictionary
-        "dawg-backend",             # DynamicDawg
+        "dawg-backend",             # DynamicDawg / DynamicDawgU64
         "suffix-automaton-backend", # SuffixAutomaton
-        "scdawg-backend",           # SCDAWG
+        "scdawg-backend",           # Scdawg
         "persistent-artrie"         # PersistentARTrie
     ]
 }
@@ -400,10 +440,10 @@ liblevenshtein = {
 
 ## Custom Backends
 
-You can implement your own dictionary backend by implementing the `Dictionary` trait:
+You can implement your own dictionary backend by implementing the `Dictionary` trait (defined in `libdictenstein`):
 
 ```rust
-use liblevenshtein::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 
 pub struct MyCustomDictionary {
     // Your implementation
@@ -436,6 +476,8 @@ See [Developer Guide](../developer-guide/architecture.md) for more details on cu
 - [Algorithms](algorithms.md) - Levenshtein algorithm variants
 - [Thread Safety](thread-safety.md) - Concurrent access patterns
 - [Serialization](serialization.md) - Save and load dictionaries
+- [Glossary](../GLOSSARY.md) - Definitions of terms used throughout the docs
+- [Architecture Overview](../architecture/overview.md) - How libdictenstein and liblevenshtein fit together
 - [Benchmarks](../benchmarks/) - Detailed performance measurements
 
 ## References
@@ -444,3 +486,8 @@ See [Developer Guide](../developer-guide/architecture.md) for more details on cu
 - [Directed Acyclic Word Graph (Wikipedia)](https://en.wikipedia.org/wiki/Deterministic_acyclic_finite_state_automaton)
 - [Double-Array Trie](https://linux.thai.net/~thep/datrie/datrie.html)
 - [Suffix Automaton](https://cp-algorithms.com/string/suffix-automaton.html)
+- Morrison, D. R. (1968). "PATRICIA — Practical Algorithm To Retrieve Information Coded in Alphanumeric." *Journal of the ACM*, 15(4), 514–534. DOI: [10.1145/321479.321481](https://doi.org/10.1145/321479.321481)
+
+---
+
+[← Documentation Index](../README.md)

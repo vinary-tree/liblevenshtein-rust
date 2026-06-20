@@ -1,0 +1,32 @@
+// context-scope-tree.dot — the hierarchical ContextTree of completion scopes.
+// Contextual completion narrows fuzzy candidates to the symbols visible at the
+// cursor: each scope is a node, and a child scope inherits its parent's
+// visibility (a `block {}` inside `fn foo` sees foo's locals, its module's
+// items, and the global scope). Walking from a leaf to the root yields the
+// full visible-symbol set for ranking completions.
+//
+// Color: every scope node is deep-purple (contextual completion) —
+//   fillcolor #EDE7F6 (child tint), border #4527A0; one node annotated with its
+//   stable ContextId handle.  src/contextual/context_tree.rs
+digraph context_scope_tree {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="ContextTree — hierarchical completion scopes (child inherits parent visibility)"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=10,
+         fillcolor="#EDE7F6", color="#4527A0", fontcolor="#102027"];
+  edge  [color="#4527A0", fontname="DejaVu Sans", fontsize=9,
+         fontcolor="#4527A0"];
+
+  global  [label="global scope\n(crate root)"];
+  modA    [label="module A"];
+  modB    [label="module B"];
+  fnFoo   [label="fn foo\n«ContextId»"];
+  fnBar   [label="fn bar"];
+  block   [label="block {}"];
+
+  global -> modA  [label="child scope inherits visibility"];
+  global -> modB  [label="child scope inherits visibility"];
+  modA   -> fnFoo [label="child scope inherits visibility"];
+  modA   -> fnBar [label="child scope inherits visibility"];
+  fnFoo  -> block [label="child scope inherits visibility"];
+}

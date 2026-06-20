@@ -1,5 +1,7 @@
 # Grammar Correction Project: Complete Work Summary
 
+[← Documentation Index](../../README.md)
+
 **Date**: 2025-11-21
 **Session**: Continuation from previous work
 **Total Duration**: ~15 hours across all phases
@@ -86,7 +88,7 @@ Create a Coq verification framework that formally proves correctness properties 
    - **Completeness theorem**: All strings within distance are reachable
    - **Soundness theorem**: All reachable strings are within distance
    - **Optimality theorem**: Best paths have minimal distance
-   - **Performance bounds**: O(n×d) states, O(n^d × σ^d) candidates
+   - **Performance bounds**: `𝒪(n×d)` states, `𝒪(n^d × σ^d)` candidates
    - Features: Transposition support, phonetic similarity, keyboard distance
 
 9. **`theories/Layers/Layer2.v`** (90 lines)
@@ -201,7 +203,7 @@ Specify how to extend Weighted Finite-State Transducer (WFST) architectures to h
 - Transition table (match, substitute, delete, insert)
 - Weighted variants (keyboard distance, phonetic similarity)
 - Dictionary constraint via intersection
-- Complexity: O(n × d) states, O(n × d² × |Σ|) time
+- Complexity: `𝒪(n × d)` states, `𝒪(n × d² × ∣Σ∣)` time
 
 **Layer 2: Grammar-Constrained WFST** (~150 lines)
 - Construction from CFG
@@ -404,7 +406,7 @@ fn bench_layer1_completeness(c: &mut Criterion) {
 #### 14. Expected Results
 - Summary table (3 modes × 6 metrics)
 - Per-layer breakdown (bottleneck identification: Layer 2 @ 53%)
-- Scaling behavior: O(n^1.2) empirical fit
+- Scaling behavior: `𝒪(n^1.2)` empirical fit
 
 #### 15. Continuous Benchmarking
 - GitHub Actions CI/CD integration

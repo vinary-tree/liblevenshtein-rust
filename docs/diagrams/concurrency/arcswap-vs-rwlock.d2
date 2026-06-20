@@ -1,0 +1,54 @@
+# arcswap-vs-rwlock.d2 — the two read paths a dictionary backend can offer.
+# Lane A (green): ArcSwap / RCU — a reader atomically loads an Arc<T> snapshot and
+#   uses it without ever blocking; a writer builds a fresh Arc<T> and atomically
+#   swaps it in (read-copy-update). Readers and the writer never contend.
+# Lane B (blue-grey): RwLock (parking_lot) — a reader acquires a shared read guard
+#   (which blocks while a writer holds the lock) and uses &T; a writer acquires the
+#   exclusive write guard.
+# Color legend:
+#   green     #E8F5E9 / #2E7D32  = dictionary (wait-free ArcSwap path)
+#   blue-grey #ECEFF1 / #455A64  = concurrency (RwLock path)
+#   font      #102027            = all node text (house style)
+direction: down
+
+title: |md
+  # Two read paths: wait-free ArcSwap vs RwLock
+| { near: top-center; style.font-size: 24 }
+
+laneA: "Lane A — ArcSwap (wait-free read)" {
+  style.fill: "#E8F5E9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+
+  rload: "reader: atomic load Arc<T>" {
+    style.fill: "#E8F5E9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+  }
+  ruse: "use snapshot (no blocking)" {
+    style.fill: "#E8F5E9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+  }
+  wswap: "writer: build new Arc → atomic swap (RCU)" {
+    style.fill: "#E8F5E9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+  }
+
+  rload -> ruse: "deref" { style.stroke: "#2E7D32"; style.stroke-width: 2 }
+  wswap -> rload: "next load sees new Arc" {
+    style.stroke: "#2E7D32"; style.stroke-width: 2; style.stroke-dash: 4
+  }
+}
+
+laneB: "Lane B — RwLock (parking_lot)" {
+  style.fill: "#ECEFF1"; style.stroke: "#455A64"; style.font-color: "#102027"
+
+  racq: "reader: acquire read guard (may block on writer)" {
+    style.fill: "#ECEFF1"; style.stroke: "#455A64"; style.font-color: "#102027"
+  }
+  ruse2: "use &T" {
+    style.fill: "#ECEFF1"; style.stroke: "#455A64"; style.font-color: "#102027"
+  }
+  wacq: "writer: acquire write guard (exclusive)" {
+    style.fill: "#ECEFF1"; style.stroke: "#455A64"; style.font-color: "#102027"
+  }
+
+  racq -> ruse2: "guard deref" { style.stroke: "#455A64"; style.stroke-width: 2 }
+  wacq -> racq: "blocks readers while held" {
+    style.stroke: "#455A64"; style.stroke-width: 2; style.stroke-dash: 4
+  }
+}

@@ -1,8 +1,10 @@
 # Metaphone and DoubleMetaphone Algorithm Extraction
 
+> **Terminology.** A **phoneme** is a contrastive unit of sound. *Place of articulation* is where the vocal tract is constricted; *manner of articulation* is how the airflow is shaped; *voicing* is whether the vocal folds vibrate. IPA symbols such as `ʃ` (the "sh" sound), `tʃ` ("ch"), `dʒ` ("j"), `ɲ` (palatal nasal), and `ʎ` (palatal lateral) denote sounds in the International Phonetic Alphabet. See [`../GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+
 ## Metaphone Overview
 
-Metaphone was developed by Lawrence Philips in 1990 as an improvement over Soundex. It uses context-sensitive rules based on English pronunciation patterns rather than simple character mapping.
+Metaphone was developed by Lawrence Philips in 1990 as an improvement over Soundex. It uses context-sensitive rules based on English pronunciation patterns rather than simple character mapping. Each extracted rule carries a `weight` in `[0, 1]` expressing the residual edit cost of treating the two spellings as equivalent.
 
 ## Key Improvements over Soundex
 
@@ -145,5 +147,9 @@ Both apply during matching, allowing cross-ethnic name matching with appropriate
 
 ## References
 
-1. Philips, L. (1990). "Hanging on the Metaphone". Computer Language Magazine
-2. Philips, L. (2000). "The Double Metaphone Search Algorithm". C/C++ Users Journal
+1. Philips, Lawrence (1990). "Hanging on the Metaphone". *Computer Language* 7(12), pp. 39–43. (No DOI; canonical source of the Metaphone algorithm.)
+2. Philips, Lawrence (2000). "The Double Metaphone Search Algorithm". *C/C++ Users Journal* 18(6). (No DOI.)
+
+---
+
+[← Documentation Index](../README.md)

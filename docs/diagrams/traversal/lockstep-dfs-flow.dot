@@ -1,0 +1,34 @@
+// lockstep-dfs-flow.dot — the lock-step intersection walk as a control-flow
+// graph. The walk descends the dictionary and advances the automaton together,
+// pruning a subtree the instant the automaton state goes empty (amber decisions,
+// green accept/emit, red prune).
+digraph lockstep {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="Lock-step DFS — walk A(W,k) and the dictionary together; prune dead subtrees"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=10,
+         color="#455A64", fontcolor="#102027"];
+  edge  [color="#37474F", fontname="DejaVu Sans", fontsize=9];
+
+  start   [label="root: q₀  +  dictionary root", shape=oval, fillcolor="#B2EBF2", color="#00838F"];
+  foredge [label="for each dictionary edge (x → child)", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  trans   [label="q' = δχ(q, x)\nreduce by subsumption ≤χ", fillcolor="#E3F2FD", color="#1565C0"];
+  empty   [label="q' empty?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  prune   [label="prune subtree\n(do not descend)", fillcolor="#FFCDD2", color="#C62828"];
+  accept  [label="child terminal ∧ q' accepting?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  emit    [label="emit (term, distance ≤ k)", fillcolor="#C8E6C9", color="#2E7D32"];
+  descend [label="descend into child (recurse)", fillcolor="#E3F2FD", color="#1565C0"];
+  done    [label="all edges done → backtrack", shape=oval, fillcolor="#ECEFF1"];
+
+  start   -> foredge;
+  foredge -> trans      [label="edge"];
+  foredge -> done       [label="exhausted", style=dashed];
+  trans   -> empty;
+  empty   -> prune      [label="yes"];
+  empty   -> accept     [label="no"];
+  accept  -> emit       [label="yes"];
+  accept  -> descend    [label="no"];
+  emit    -> descend;
+  descend -> foredge    [label="child's edges", style=dashed];
+  prune   -> foredge    [label="next edge", style=dashed];
+}

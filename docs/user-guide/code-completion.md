@@ -2,6 +2,15 @@
 
 A comprehensive guide to using liblevenshtein-rust for building intelligent code completion systems.
 
+Code completion is most useful when suggestions respect lexical scope: an identifier
+defined in an inner block should be visible there and in its descendants, but not in
+sibling or parent scopes. The contextual-completion engine models this as a tree of
+scopes, illustrated below.
+
+![Context scope tree: nested completion scopes where child contexts inherit the visible terms of their ancestors (lexical scoping)](../diagrams/contextual/context-scope-tree.svg)
+
+*Context scope tree: child scopes inherit visible terms from their ancestors.*
+
 ## Quick Start
 
 ```rust
@@ -116,7 +125,7 @@ query.prefix().take_while(|c| c.distance <= 1)
 | **Bitmap Masking** | Medium dicts, moderate filtering | O(n) | 2-5x faster | Medium |
 | **Sub-Trie** | Large dicts, restrictive filtering | O(n log n) | 10-200x faster | High |
 
-See [CONTEXTUAL_FILTERING_OPTIMIZATION.md](./CONTEXTUAL_FILTERING_OPTIMIZATION.md) for detailed analysis.
+See [Contextual Filtering Optimization](../archive/performance/CONTEXTUAL_FILTERING_OPTIMIZATION.md) for detailed analysis.
 
 ### Decision Tree
 
@@ -398,10 +407,10 @@ for query in user_queries {
 
 ## Further Reading
 
-- [CONTEXTUAL_FILTERING_OPTIMIZATION.md](./CONTEXTUAL_FILTERING_OPTIMIZATION.md) - Detailed performance guide
-- [examples/code_completion_demo.rs](../examples/code_completion_demo.rs) - Basic usage
-- [examples/advanced_contextual_filtering.rs](../examples/advanced_contextual_filtering.rs) - Bitmap masking
-- [examples/contextual_filtering_optimization.rs](../examples/contextual_filtering_optimization.rs) - Strategy comparison
+- [Contextual Filtering Optimization](../archive/performance/CONTEXTUAL_FILTERING_OPTIMIZATION.md) - Detailed performance guide
+- [examples/code_completion_demo.rs](../../examples/code_completion_demo.rs) - Basic usage
+- [examples/advanced_contextual_filtering.rs](../../examples/advanced_contextual_filtering.rs) - Bitmap masking
+- [examples/contextual_filtering_optimization.rs](../../examples/contextual_filtering_optimization.rs) - Strategy comparison
 
 ## Summary
 
@@ -415,3 +424,7 @@ liblevenshtein-rust provides powerful building blocks for code completion:
 ✅ **Flexible optimization** - Post-filter, bitmap mask, or sub-tries
 
 Choose the right combination of features and optimizations for your use case, and you'll have a fast, robust code completion system.
+
+---
+
+[← Documentation Index](../README.md)

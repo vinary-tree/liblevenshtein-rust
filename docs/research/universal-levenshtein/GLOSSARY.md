@@ -1,7 +1,9 @@
+[← Documentation Index](../../README.md)
+
 # Universal Levenshtein Automata - Glossary
 
 **Document Status**: Complete notation reference
-**Source**: Universal Levenshtein Automata - Building and Properties (2005)
+**Source**: Mitankin, P. N. (2005). *Universal Levenshtein Automata — Building and Properties*. Master's Thesis, Sofia University "St. Kliment Ohridski" (supervisor: S. Mihov). Related journal generalisation: Mitankin, Mihov & Schulz (2011), TCS 412(22):2340–2355, [doi:10.1016/j.tcs.2011.01.013](https://doi.org/10.1016/j.tcs.2011.01.013).
 **Last Updated**: 2025-11-11
 
 ---
@@ -543,8 +545,8 @@ x₁...xₖ ↪ t = {
 **Big-O**: Upper bound on growth rate
 
 **Examples in thesis**:
-- States: O(n²)
-- Construction: O(n² · 2^{2n})
+- States: `𝒪(n²)`
+- Construction: `𝒪(n² · 2^{2n})`
 
 ---
 

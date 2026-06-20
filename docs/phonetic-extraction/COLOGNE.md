@@ -1,8 +1,10 @@
 # Cologne Phonetic (Kölner Phonetik) Algorithm Extraction
 
+> **Terminology.** A **phoneme** is a contrastive unit of sound. The IPA symbols used below denote: `ʃ` the "sh" sound (a voiceless post-alveolar fricative) and `ts` the affricate in German *z*. *Place of articulation* is where the vocal tract is constricted; *manner of articulation* is how airflow is shaped; *voicing* is whether the vocal folds vibrate. See [`../GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+
 ## Algorithm Overview
 
-The Cologne Phonetic (Kölner Phonetik) algorithm was developed by Hans Joachim Postel in 1969 for indexing German names. It is more suitable for German than Soundex because it accounts for German pronunciation patterns.
+The Cologne Phonetic (Kölner Phonetik) algorithm was developed by Hans Joachim Postel in 1969 for indexing German names. It is more suitable for German than Soundex because it accounts for German pronunciation patterns. Each extracted rule carries a `weight` in `[0, 1]` expressing the residual edit cost of treating the two spellings as equivalent.
 
 ## Encoding Table
 
@@ -124,4 +126,8 @@ w -> v;  // Wagner (German W)
 
 ## References
 
-1. Postel, H.J. (1969). "Die Kölner Phonetik. Ein Verfahren zur Identifizierung von Personennamen auf der Grundlage der Gestaltanalyse". IBM-Nachrichten, 19, pp. 925-931
+1. Postel, Hans Joachim (1969). "Die Kölner Phonetik. Ein Verfahren zur Identifizierung von Personennamen auf der Grundlage der Gestaltanalyse". *IBM-Nachrichten* 19, pp. 925–931. (No DOI; canonical source of the Kölner Phonetik algorithm.)
+
+---
+
+[← Documentation Index](../README.md)

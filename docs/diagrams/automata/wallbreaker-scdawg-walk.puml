@@ -1,0 +1,31 @@
+@startuml wallbreaker-scdawg-walk
+' WallBreaker pipeline for large error bounds (k ≥ 5), complementing the
+' pigeonhole-split diagram: split the query into k+1 pieces, locate each exact
+' piece with the bidirectional SCDAWG, then extend & verify candidates.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam sequence {
+  ArrowColor #37474F
+  LifeLineBorderColor #455A64
+  ParticipantBorderColor #D84315
+  ParticipantBackgroundColor #FFCCBC
+  ParticipantFontColor #102027
+}
+
+title WallBreaker — split → locate (SCDAWG) → verify   (large error bound k ≥ 5)
+
+participant "WallBreakerQuery\nW · k" as Q #FFCCBC
+participant "PatternSplitter" as S #FBE9E7
+participant "SCDAWG\nbidirectional substring index" as D #C8E6C9
+participant "Verifier\nexact distance ≤ k" as V #E1BEE7
+
+Q -> S : split W into k+1 pieces
+note over S #FBE9E7: pigeonhole principle —\nat least one piece is error-free
+loop each piece pᵢ
+  S -> D : locate exact occurrences of pᵢ
+  D --> V : candidate terms containing pᵢ
+  V -> V : extend left/right,\ncompute d(W, term)
+end
+V --> Q : terms with d(W, term) ≤ k
+@enduml

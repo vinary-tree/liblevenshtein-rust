@@ -288,7 +288,7 @@ This property is what makes the suffix automaton deterministic: the next state d
 
 ## Construction Complexity
 
-**Theorem 2** (Blumer et al., 1985): The suffix automaton of a string w can be constructed in O(|w|) time and space.
+**Theorem 2** (Blumer et al., 1985): The suffix automaton of a string w can be constructed in `𝒪(∣w∣)` time and space.
 
 The construction algorithm:
 1. Process characters left-to-right

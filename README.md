@@ -137,6 +137,10 @@ Three layers, built bottom-up: dictionary backends (`libdictenstein`) → the co
 
 You pick a **dictionary** for your access pattern, wrap it in a **`Transducer`** with an **`Algorithm`**, and either query directly or reach for a higher-level engine (phonetic, time-series, completion, cache).
 
+The dictionary backends live in the sibling **`libdictenstein`** crate; the optional **`duallity`** crate adds WFST composition. See the [architecture overview](docs/architecture/overview.md) for the cross-crate picture:
+
+![Crate boundary: liblevenshtein depends on libdictenstein for dictionary backends; duallity is an optional WFST integration; the macros crate generates code at compile time.](docs/diagrams/architectures/crate-boundary.svg)
+
 ---
 
 ## Common Use Cases
@@ -203,6 +207,10 @@ Dictionaries store *labels*. Though named for characters, they hold arbitrary va
 | **1 byte** (`u8`) | `DoubleArrayTrie`, `DynamicDawg`, `SuffixAutomaton`, `Scdawg` | ASCII | bytes, small ints (0–255), flags |
 | **4 bytes** (`char`/`u32`) | `DoubleArrayTrieChar`, `DynamicDawgChar`, `SuffixAutomatonChar`, `ScdawgChar` | Unicode scalars | 32-bit ints, bit-cast `f32` |
 | **8 bytes** (`u64`) | `DynamicDawgU64` | — | 64-bit ints, bit-cast `f64`, compound keys |
+
+Choosing a backend by access pattern (static vs mutable, substring, wait-free reads, on-disk):
+
+![Decision tree for choosing a dictionary backend: static→DoubleArrayTrie/PersistentARTrie; mutable→DynamicDawg/U64; substring→SuffixAutomaton/Scdawg.](docs/diagrams/dictionary-structures/backend-decision-tree.svg)
 
 #### Why the `*Char` variants matter (UTF-8 correctness)
 
@@ -297,6 +305,8 @@ let standard      = Transducer::new(dict.clone(), Algorithm::Standard);      // 
 let transposition = Transducer::new(dict.clone(), Algorithm::Transposition); // teh→the = 1
 let merge_split   = Transducer::new(dict,        Algorithm::MergeAndSplit);  // rn↔m  = 1
 ```
+
+![The three Algorithm variants and the edit operations each admits: Standard (match, insert, delete, substitute), Transposition (+ adjacent swap), MergeAndSplit (+ merge and split).](docs/diagrams/automata/operation-sets.svg)
 
 ### How the automaton transitions (literate pseudocode)
 
@@ -767,6 +777,10 @@ See [`docs/verification/README_FORMAL_GATES.md`](docs/verification/README_FORMAL
 | `cli` | command-line tool + REPL |
 | `wasm` | WebAssembly bindings |
 | `grep-documents` / `grep-full` / `parallel-grep` | fuzzy/phonetic document & archive search (PDF, DOCX, XLSX, EPUB, …) |
+
+Enabling a feature enables the features it depends on (`A → B` = "A enables B"):
+
+![Feature-flag dependency graph: features grouped by subsystem (serialization, phonetic, grep, eviction, bindings), with edges from each feature to the features it enables.](docs/diagrams/architectures/feature-flag-dag.svg)
 
 (See [`Cargo.toml`](Cargo.toml) for the complete set, including eviction-optimization profiles.)
 

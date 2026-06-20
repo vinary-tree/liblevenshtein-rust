@@ -151,7 +151,7 @@ This document provides a detailed, phase-by-phase implementation plan for the Co
 ##### 3.1: Create DraftBuffer
 - **File**: `src/contextual/draft_buffer.rs` (new directory: `src/contextual/`)
 - **What to build**:
-  - `DraftBuffer` struct with `VecDeque<char>` for O(1) push/pop
+  - `DraftBuffer` struct with `VecDeque<char>` for `𝒪(1)` push/pop
   - Methods: `push()`, `pop()`, `truncate()`, `len()`, `is_empty()`, `to_string()`
   - Store context ID and creation timestamp
 - **Tests**: `tests/draft_buffer_test.rs`

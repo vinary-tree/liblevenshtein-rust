@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Formal Verification Tools for Rust: Research Summary
 
 **Date**: 2025-10-30

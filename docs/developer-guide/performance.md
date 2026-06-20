@@ -1,7 +1,7 @@
 # Performance Optimizations
 
-**Version:** 0.4.0
-**Last Updated:** 2025-10-26
+**Version:** 0.9.1
+**Last Updated:** 2026-06-19
 
 This document summarizes the key performance optimizations implemented in liblevenshtein-rust.
 
@@ -237,35 +237,35 @@ RUSTFLAGS="-C target-feature=+aes,+sse2" cargo flamegraph --bench profiling_benc
 
 ## Archived Performance Documentation
 
-Detailed historical performance analysis is available in [`archive/performance/`](archive/performance/):
+Detailed historical performance analysis is available in the archived performance documentation:
 
 ### Optimization Phases
-- **[OPTIMIZATION_SUMMARY.md](archive/performance/OPTIMIZATION_SUMMARY.md)** - Complete optimization overview
-- **[optimization/](archive/optimization/)** - Detailed phase-by-phase reports
+- **OPTIMIZATION_SUMMARY.md** - Complete optimization overview
+- **optimization/** - Detailed phase-by-phase reports
   - Phase 4: SmallVec investigation
   - Phase 5: StatePool implementation (exceptional results)
   - Phase 6: Arc path sharing (highly successful)
 
 ### Specific Optimizations
-- **[ARC_OPTIMIZATION_RESULTS.md](archive/performance/ARC_OPTIMIZATION_RESULTS.md)**
-- **[DAWG_OPTIMIZATION_RESULTS.md](archive/performance/DAWG_OPTIMIZATION_RESULTS.md)**
-- **[PATHNODE_OPTIMIZATION_RESULTS.md](archive/performance/PATHNODE_OPTIMIZATION_RESULTS.md)**
-- **[SERIALIZATION_OPTIMIZATION_RESULTS.md](archive/performance/SERIALIZATION_OPTIMIZATION_RESULTS.md)**
+- **ARC_OPTIMIZATION_RESULTS.md**
+- **DAWG_OPTIMIZATION_RESULTS.md**
+- **PATHNODE_OPTIMIZATION_RESULTS.md**
+- **SERIALIZATION_OPTIMIZATION_RESULTS.md**
 
 ### Comparisons & Validation
-- **[DAWG_COMPARISON.md](archive/performance/DAWG_COMPARISON.md)** - DAWG vs PathMap analysis
-- **[JAVA_COMPARISON.md](archive/performance/JAVA_COMPARISON.md)** - vs original Java implementation
-- **[REAL_WORLD_VALIDATION.md](archive/performance/REAL_WORLD_VALIDATION.md)** - System dictionary tests
+- **DAWG_COMPARISON.md** - DAWG vs PathMap analysis
+- **JAVA_COMPARISON.md** - vs original Java implementation
+- **REAL_WORLD_VALIDATION.md** - System dictionary tests
 
 ### Code Completion
-- **[CODE_COMPLETION_PERFORMANCE.md](archive/performance/CODE_COMPLETION_PERFORMANCE.md)** - Filtering optimization strategies
-- **[CONTEXTUAL_FILTERING_OPTIMIZATION.md](archive/performance/CONTEXTUAL_FILTERING_OPTIMIZATION.md)** - Bitmap masking
+- **CODE_COMPLETION_PERFORMANCE.md** - Filtering optimization strategies
+- **CONTEXTUAL_FILTERING_OPTIMIZATION.md** - Bitmap masking
 
 ---
 
 ## Future Optimization Opportunities
 
-See [FUTURE_ENHANCEMENTS.md](FUTURE_ENHANCEMENTS.md) for planned improvements.
+See `FUTURE_ENHANCEMENTS.md` for planned improvements.
 
 ### Potential Areas
 
@@ -279,7 +279,7 @@ See [FUTURE_ENHANCEMENTS.md](FUTURE_ENHANCEMENTS.md) for planned improvements.
 
 ## References
 
-- **Profiling Guide:** See [`building.md`](../BUILD.md#profiling) for profiling instructions
+- **Profiling Guide:** See [`building.md`](building.md#profiling) for profiling instructions
 - **Benchmarks:** Run `cargo bench` to see current performance
 - **Examples:** See [`examples/`](../examples/) for real-world usage patterns
-- **Contributing:** See [`contributing.md`](../CONTRIBUTING.md) for optimization guidelines
+- **Contributing:** See [`contributing.md`](contributing.md) for optimization guidelines

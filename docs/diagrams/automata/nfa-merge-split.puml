@@ -1,0 +1,52 @@
+@startuml nfa-merge-split
+' Merge-and-Split NFA for W = "ab", k = 1 (OCR-style errors).
+' Extends the standard Levenshtein NFA with two operations at cost 1:
+'   MERGE — two characters of W are recognised by ONE input symbol
+'           (e.g. "rn" misread as "m"): advance W by 2, consume 1 input.
+'   SPLIT — one character of W is recognised by TWO input symbols
+'           (e.g. "m" misread as "rn"): advance W by 1, consume 2 input.
+' Edge colours: green = match · purple = substitution · orange = insertion
+'   · red = deletion (ε) · pink = merge/split (+1).
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+hide empty description
+skinparam state {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontColor #0D47A1
+}
+
+title Merge-and-Split NFA — W = "ab",  k = 1   (pink = merge & split, the OCR operations)
+
+state "⟨0,0⟩" as q00
+state "⟨1,0⟩" as q10
+state "⟨2,0⟩ ✓" as q20 #C8E6C9
+state "⟨1,1⟩" as q11
+state "⟨2,1⟩ ✓" as q21 #C8E6C9
+state "s: split W[0]=a\n(reading 2 symbols)" as qs #F8BBD0
+
+[*] --> q00
+
+' match (cost 0)
+q00 -[#2E7D32,thickness=2]-> q10 : a
+q10 -[#2E7D32,thickness=2]-> q20 : b
+q11 -[#2E7D32,thickness=2]-> q21 : b
+
+' substitution (+1)
+q00 -[#6A1B9A]-> q11 : x≠a
+
+' insertion (+1) / deletion (+1, ε)
+q00 -[#EF6C00]-> q11 : any
+q10 -[#C62828]-> q21 : ε
+
+' MERGE (+1): two W chars "ab" recognised by one input symbol
+q00 -[#AD1457,thickness=2]-> q21 : one\nsymbol
+
+' SPLIT (+1): one W char "a" recognised by two input symbols
+q00 -[#AD1457,thickness=2]-> qs : sym₁
+qs  -[#AD1457,thickness=2]-> q11 : sym₂
+
+q20 --> [*]
+q21 --> [*]
+@enduml

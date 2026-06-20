@@ -1,5 +1,7 @@
 # Prefix Matching with Levenshtein Automata
 
+[← Documentation Index](../README.md)
+
 **Version:** 1.0
 **Date:** 2025-10-26
 **Status:** Implemented (Current System)
@@ -7,6 +9,8 @@
 ## Executive Summary
 
 This document describes the **current implementation** of liblevenshtein-rust's core functionality: **approximate prefix matching** using **Universal Levenshtein Automata**. This is the foundation upon which all proposed enhancements (suffix automata, WFST composition) build.
+
+![Dictionary traits: the `Dictionary` / `DictionaryNode` (and zipper) abstractions that let one `Transducer` drive prefix matching uniformly across every backend.](../diagrams/dictionary-structures/dictionary-traits.svg)
 
 ### Key Capabilities
 
@@ -45,12 +49,12 @@ A **Levenshtein automaton** for string `w` and distance `n` is a finite-state au
 For query term `w` of length `m` and maximum distance `n`, the Levenshtein automaton `A(w, n)` is defined as:
 
 - **States:** Tuples `(i, e)` where:
-  - `i` = position in query term (0 ≤ i ≤ m)
-  - `e` = accumulated errors (0 ≤ e ≤ n)
+  - `i` = position in query term (`0 ≤ i ≤ m`)
+  - `e` = accumulated errors (`0 ≤ e ≤ n`)
 
 - **Initial state:** `(0, 0)` - start of term, no errors
 
-- **Final states:** `{(m, e) | 0 ≤ e ≤ n}` - reached end of term within max distance
+- **Final states:** `{(m, e) ∣ 0 ≤ e ≤ n}` - reached end of term within max distance
 
 - **Transitions:** Based on edit operations (insert, delete, substitute)
 
@@ -58,14 +62,14 @@ For query term `w` of length `m` and maximum distance `n`, the Levenshtein autom
 
 **Naive Representation:**
 - Store all reachable `(i, e)` tuples explicitly
-- State count: O((n+1) × (m+1)) = O(n × m)
-- For query length m=10, distance n=2: ~33 possible positions
+- State count: `𝒪((n+1) × (m+1))` = `𝒪(n × m)`
+- For query length `m=10`, distance `n=2`: ~33 possible positions
 
 **Key Observation (Schulz & Mihov):**
-At any point in dictionary traversal, all active positions lie within a **characteristic vector** of length 2n+1:
+At any point in dictionary traversal, all active positions lie within a **characteristic vector** of length `2n+1`:
 - Given current offset `k` in query
-- Active positions: `{(i, e) | k-n ≤ i ≤ k+n, e ≤ n}`
-- This bounds the state space to O(n²) per traversal step
+- Active positions: `{(i, e) ∣ k-n ≤ i ≤ k+n, e ≤ n}`
+- This bounds the state space to `𝒪(n²)` per traversal step
 
 **Position Subsumption (Optimization):**
 
@@ -102,8 +106,8 @@ CV(a) = vector indicating which query positions match character 'a'
 3. Result: Transition function depends only on CV, not explicit query comparison
 
 **Complexity:**
-- Without CV: O(m) comparisons per transition (check each query position)
-- With CV: O(1) lookup + O(active positions) = O(n²) per transition
+- Without CV: `𝒪(m)` comparisons per transition (check each query position)
+- With CV: `𝒪(1)` lookup + `𝒪(active positions)` = `𝒪(n²)` per transition
 
 **Note:** Our implementation uses direct query comparison for simplicity, but could be optimized with characteristic vectors for very large alphabets or long queries.
 
@@ -126,7 +130,7 @@ This allows **on-the-fly** construction during dictionary traversal without pre-
 
 **Prefix Matching Acceptance:** Word accepted if:
 - Dictionary node is final (marks complete word)
-- **Any** state position with term_index ∈ [0, query.len()] and num_errors ≤ max_distance
+- **Any** state position with `term_index ∈ [0, query.len()]` and `num_errors ≤ max_distance`
 - Remaining query characters can be deleted within budget
 
 **Modification:**
@@ -948,7 +952,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 // Result: NO MATCH (doesn't start with "test")
 ```
 
-**Solution:** Suffix automaton (see `docs/SUFFIX_AUTOMATON_DESIGN.md`)
+**Solution:** Suffix automaton (see [`suffix-automaton.md`](suffix-automaton.md))
 
 ### 2. No Context Awareness
 
@@ -961,7 +965,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 // Result: All returned, cannot distinguish which is grammatically correct
 ```
 
-**Solution:** WFST composition (see `docs/HIERARCHICAL_CORRECTION_DESIGN.md`)
+**Solution:** WFST composition (see [`hierarchical-correction.md`](hierarchical-correction.md))
 
 ### 3. State Space Growth
 
@@ -997,7 +1001,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 
 **Workaround:** Pre-normalize text to NFD or NFC
 
-**Future:** Grapheme-aware variant (see `docs/SUFFIX_AUTOMATON_DESIGN.md` Future Enhancements)
+**Future:** Grapheme-aware variant (see [`suffix-automaton.md`](suffix-automaton.md) Future Enhancements)
 
 ---
 
@@ -1032,7 +1036,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
    Journal of the ACM, 21(1), 168-173.
    DOI: [10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
    - Dynamic programming algorithm for edit distance
-   - O(mn) time complexity
+   - `𝒪(mn)` time complexity
 
 5. **Mihov, S., & Schulz, K. U. (2004)**
    *"Fast approximate search in large dictionaries"*
@@ -1056,7 +1060,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
    Blog post: [https://julesjacobs.com/2015/06/17/disqus-levenshtein-simple-and-fast.html](https://julesjacobs.com/2015/06/17/disqus-levenshtein-simple-and-fast.html)
    - Simplified implementation
    - Characteristic vector optimization
-   - Complexity analysis: O(D² N) where D=distance, N=query length
+   - Complexity analysis: `𝒪(D² N)` where `D` = distance, `N` = query length
 
 8. **Bergroth, L., Hakonen, H., & Raita, T. (2000)**
    *"A survey of longest common subsequence algorithms"*
@@ -1091,10 +1095,10 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 
 - `src/transducer/` - Current implementation
 - `src/dictionary/` - Dictionary backends
-- `docs/SUFFIX_AUTOMATON_DESIGN.md` - Substring matching extension
-- `docs/HIERARCHICAL_CORRECTION_DESIGN.md` - Context-aware correction
-- `docs/PERFORMANCE.md` - Optimization details
-- `docs/DYNAMIC_DAWG.md` - Runtime dictionary updates
+- [`suffix-automaton.md`](suffix-automaton.md) - Substring matching extension
+- [`hierarchical-correction.md`](hierarchical-correction.md) - Context-aware correction
+- [`docs/developer-guide/performance.md`](../developer-guide/performance.md) - Optimization details
+- [`dynamic-dawg.md`](dynamic-dawg.md) - Runtime dictionary updates
 
 ---
 
@@ -1104,26 +1108,26 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Construction** | O(1) | Lazy construction during traversal |
-| **Query (worst case)** | O(m × n^d × \|Σ\|^d) | m=query length, n=max distance, Σ=alphabet, d=dictionary depth |
-| **Query (typical)** | O(m × k) | k=result count (with pruning) |
-| **Per-transition** | O(positions) | Typically 10-50 positions for distance 2 |
-| **Subsumption check** | O(positions²) | ~O(p) amortized with sorted positions |
+| **Construction** | `𝒪(1)` | Lazy construction during traversal |
+| **Query (worst case)** | `𝒪(m × n^d × ∣Σ∣^d)` | `m` = query length, `n` = max distance, `Σ` = alphabet, `d` = dictionary depth |
+| **Query (typical)** | `𝒪(m × k)` | `k` = result count (with pruning) |
+| **Per-transition** | `𝒪(positions)` | Typically 10-50 positions for distance 2 |
+| **Subsumption check** | `𝒪(positions²)` | ~`𝒪(p)` amortized with sorted positions |
 
 ### Space Complexity
 
 | Component | Complexity | Typical Size |
 |-----------|-----------|--------------|
 | **Position** | 17 bytes | Fixed |
-| **State** | O(positions) | Vec<Position> |
-| **StatePool** | O(states) | ~1-5 MB (reusable) |
-| **Active stack** | O(depth × branching) | ~10-100 KB |
-| **Path nodes** | O(depth × results) | ~16 bytes each |
+| **State** | `𝒪(positions)` | Vec<Position> |
+| **StatePool** | `𝒪(states)` | ~1-5 MB (reusable) |
+| **Active stack** | `𝒪(depth × branching)` | ~10-100 KB |
+| **Path nodes** | `𝒪(depth × results)` | ~16 bytes each |
 
 ### State Space Bounds
 
 **Without pruning:**
-- Standard (distance n): O((n+1)^(m+1)) states
+- Standard (distance `n`): `𝒪((n+1)^(m+1))` states
 - Example: query length 10, distance 2 → ~60K states
 
 **With subsumption pruning:**
@@ -1143,7 +1147,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 |---------|----------|--------------|---------------|
 | **Operations** | Insert, Delete, Substitute | + Transpose | + Merge, Split |
 | **Typical Use** | General spell check | Typo correction | OCR errors, ligatures |
-| **State complexity** | O(n × m) | O(n × m) | O(n × m²) |
+| **State complexity** | `𝒪(n × m)` | `𝒪(n × m)` | `𝒪(n × m²)` |
 | **Example** | "tset" → "test" (2 edits) | "tset" → "test" (1 edit) | "æ" ↔ "ae" (1 edit) |
 | **Performance** | Baseline | +10-20% overhead | +30-50% overhead |
 

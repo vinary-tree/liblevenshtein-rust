@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Universal Levenshtein Automata - Technical Analysis
 
 **Date**: 2025-11-06
@@ -477,7 +479,7 @@ impl SubstitutionSet {
 
 ### Overhead Sources
 
-1. **Substitution validity check**: O(1) HashSet lookup per potential substitution
+1. **Substitution validity check**: `𝒪(1)` HashSet lookup per potential substitution
    - Typical cost: ~5-10 nanoseconds
    - Per-query impact: Depends on dictionary size and error bound
 
@@ -493,7 +495,7 @@ impl SubstitutionSet {
 
 1. **Perfect hashing**: For static substitution sets
    - Pre-compute minimal perfect hash function
-   - O(1) lookup with zero collisions
+   - `𝒪(1)` lookup with zero collisions
    - Trade-off: Higher setup cost, lower runtime cost
 
 2. **Bit vectors**: For small alphabets (ASCII, DNA)

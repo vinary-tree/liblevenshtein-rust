@@ -352,7 +352,7 @@ For string w of length n:
 - SCDAWG(w) has at most **n + 1 nodes**
 - SCDAWG(w) has at most **4n - 4 edges** (2n-2 right + 2n-2 left)
 
-Space is O(n), same as CDAWG but with doubled edge count.
+Space is `𝒪(n)`, same as CDAWG but with doubled edge count.
 
 ## Comparison: Left Extension vs Backward Edges
 
@@ -396,7 +396,7 @@ The SCDAWG satisfies all WallBreaker requirements from Gerdjikov et al. (2013):
 | **(1b)** | Right extend V → V·σ | Follow right extension edge labeled with σ |
 | **(1c)** | Left extend V → σ·V | Follow left extension edge labeled with σ |
 
-All operations complete in O(|label|) time, where label is the edge label length.
+All operations complete in `𝒪(∣label∣)` time, where label is the edge label length.
 
 ## Summary
 

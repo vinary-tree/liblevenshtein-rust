@@ -1,0 +1,44 @@
+# operation-sets.d2 — the three Algorithm variants and the edit operations each
+# admits. Operation chips are coloured with the edit-edge legend colours.
+direction: down
+
+title: |md
+  # Algorithm Variants & Their Edit Operations
+| { near: top-center; style.font-size: 22 }
+
+panels: "" {
+  grid-columns: 3
+  grid-gap: 26
+  style.stroke: transparent
+
+  standard: "Standard\n(Levenshtein)" {
+    style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
+    m: "match (0)"        { style.fill: "#FFFFFF"; style.stroke: "#2E7D32"; style.font-color: "#2E7D32"; style.stroke-width: 3 }
+    s: "substitution (+1)" { style.fill: "#FFFFFF"; style.stroke: "#6A1B9A"; style.font-color: "#6A1B9A"; style.stroke-width: 3 }
+    i: "insertion (+1)"    { style.fill: "#FFFFFF"; style.stroke: "#EF6C00"; style.font-color: "#EF6C00"; style.stroke-width: 3 }
+    d: "deletion (+1)"     { style.fill: "#FFFFFF"; style.stroke: "#C62828"; style.font-color: "#C62828"; style.stroke-width: 3 }
+  }
+
+  transposition: "Transposition\n(Damerau)" {
+    style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
+    m: "match (0)"         { style.fill: "#FFFFFF"; style.stroke: "#2E7D32"; style.font-color: "#2E7D32"; style.stroke-width: 3 }
+    s: "substitution (+1)" { style.fill: "#FFFFFF"; style.stroke: "#6A1B9A"; style.font-color: "#6A1B9A"; style.stroke-width: 3 }
+    i: "insertion (+1)"    { style.fill: "#FFFFFF"; style.stroke: "#EF6C00"; style.font-color: "#EF6C00"; style.stroke-width: 3 }
+    d: "deletion (+1)"     { style.fill: "#FFFFFF"; style.stroke: "#C62828"; style.font-color: "#C62828"; style.stroke-width: 3 }
+    t: "transposition (+1)\nswap adjacent" { style.fill: "#E1F5FE"; style.stroke: "#0277BD"; style.font-color: "#0277BD"; style.stroke-width: 3 }
+  }
+
+  mergesplit: "MergeAndSplit\n(OCR)" {
+    style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
+    m: "match (0)"         { style.fill: "#FFFFFF"; style.stroke: "#2E7D32"; style.font-color: "#2E7D32"; style.stroke-width: 3 }
+    s: "substitution (+1)" { style.fill: "#FFFFFF"; style.stroke: "#6A1B9A"; style.font-color: "#6A1B9A"; style.stroke-width: 3 }
+    i: "insertion (+1)"    { style.fill: "#FFFFFF"; style.stroke: "#EF6C00"; style.font-color: "#EF6C00"; style.stroke-width: 3 }
+    d: "deletion (+1)"     { style.fill: "#FFFFFF"; style.stroke: "#C62828"; style.font-color: "#C62828"; style.stroke-width: 3 }
+    mg: "merge (+1)\n2 chars → 1" { style.fill: "#FCE4EC"; style.stroke: "#AD1457"; style.font-color: "#AD1457"; style.stroke-width: 3 }
+    sp: "split (+1)\n1 char → 2"  { style.fill: "#FCE4EC"; style.stroke: "#AD1457"; style.font-color: "#AD1457"; style.stroke-width: 3 }
+  }
+}
+
+note: |md
+  Each variant is selected as a zero-cost marker type; `Standard` is the default.
+| { near: bottom-center; style.font-size: 13 }

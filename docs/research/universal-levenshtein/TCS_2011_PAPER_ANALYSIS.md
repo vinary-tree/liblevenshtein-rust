@@ -1,9 +1,11 @@
+[← Documentation Index](../../README.md)
+
 # Universal Neighborhood Automata (TCS 2011) - Comprehensive Analysis
 
-**Paper**: "Deciding Word Neighborhood with Universal Neighborhood Automata"
+**Paper**: "Deciding word neighborhood with universal neighborhood automata"
 **Authors**: Petar Mitankin, Stoyan Mihov, Klaus U. Schulz
-**Journal**: Theoretical Computer Science, Volume 410, Issues 37-39, 2009, Pages 2339-2358
-**DOI**: https://doi.org/10.1016/j.tcs.2009.03.002
+**Journal**: Theoretical Computer Science, Volume 412, Issue 22, 2011, Pages 2340–2355
+**DOI**: [10.1016/j.tcs.2011.01.013](https://doi.org/10.1016/j.tcs.2011.01.013)
 **Published**: 2011
 **Location**: `/home/dylon/Papers/Approximate String Matching/Deciding Word Neighborhood with Universal Neighborhood Automata - Petar Mitankin - Stoyan Mihov - Klaus U. Schulz.pdf`
 
@@ -488,7 +490,7 @@ M[i,j] = min{
 }
 ```
 
-**Complexity**: O(|w| × |v| × |Op|)
+**Complexity**: `𝒪(∣w∣ × ∣v∣ × ∣Op∣)`
 
 **Ukkonen's Optimization** (Section 4, Page 2343):
 
@@ -986,12 +988,12 @@ The 2011 TCS paper provides:
 
 ## References
 
-1. **Primary Paper**: Mitankin, P., Mihov, S., Schulz, K.U. (2011). "Deciding Word Neighborhood with Universal Neighborhood Automata". Theoretical Computer Science, 410(37-39):2339-2358. DOI: 10.1016/j.tcs.2009.03.002
+1. **Primary Paper**: Mitankin, P., Mihov, S., Schulz, K.U. (2011). "Deciding word neighborhood with universal neighborhood automata". Theoretical Computer Science, 412(22):2340–2355. [doi:10.1016/j.tcs.2011.01.013](https://doi.org/10.1016/j.tcs.2011.01.013)
 
 2. **Related Work**:
    - [Mitankin 2005 Thesis](./PAPER_SUMMARY.md)
-   - [Levenshtein 1966]: "Binary codes capable of correcting deletions, insertions, and reversals"
-   - [Wagner-Fischer 1974]: "The string-to-string correction problem"
+   - [Levenshtein 1966]: "Binary codes capable of correcting deletions, insertions, and reversals" — Soviet Physics Doklady 10(8):707–710
+   - [Wagner-Fischer 1974]: "The string-to-string correction problem" — [doi:10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
    - [Ukkonen 1985]: "Algorithms for approximate string matching"
 
 3. **Implementation Documentation**:

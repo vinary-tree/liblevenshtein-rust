@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # TCS 2011 Paper Implementation Mapping
 
 **Date**: 2025-11-12
@@ -96,7 +98,7 @@ pub struct UniversalState<V: PositionVariant> {
 }
 ```
 
-**Why It Applies**: Universal automata use abstract positions `I + offset#errors` which also satisfy the bounded diagonal property, yielding O(n²) state space independent of word length.
+**Why It Applies**: Universal automata use abstract positions `I + offset#errors` which also satisfy the bounded diagonal property, yielding `𝒪(n²)` state space independent of word length.
 
 ---
 
@@ -364,7 +366,7 @@ pub fn add_position(&mut self, pos: UniversalPosition<V>) {
 |--------|------|-----------|
 | **Subsumption Logic** | Distance-based (`\|idx₁ - idx₂\| ≤ err_diff`) | Offset/error comparison |
 | **State Maintenance** | Online anti-chain | Online anti-chain (⊔ operator) |
-| **Complexity** | O(kn) typical, k << n | O(kn) typical, k << n |
+| **Complexity** | `𝒪(kn)` typical, k << n | `𝒪(kn)` typical, k << n |
 | **Performance** | 3.3× faster than batch | Comparable |
 
 **Key Insight**: Both implementations use **online subsumption** (check during insertion) rather than batch (insert all, then prune). This is a significant optimization validated by benchmarks.
@@ -1028,7 +1030,7 @@ Based on the implementation mapping analysis:
 ## References
 
 1. **Primary Paper**:
-   - Mitankin, P., Mihov, S., Schulz, K.U. (2011). "Deciding Word Neighborhood with Universal Neighborhood Automata". *Theoretical Computer Science*, 410(37-39):2339-2358.
+   - Mitankin, P., Mihov, S., Schulz, K.U. (2011). "Deciding word neighborhood with universal neighborhood automata". *Theoretical Computer Science*, 412(22):2340–2355. [doi:10.1016/j.tcs.2011.01.013](https://doi.org/10.1016/j.tcs.2011.01.013)
 
 2. **Related Documentation**:
    - [TCS_2011_PAPER_ANALYSIS.md](./TCS_2011_PAPER_ANALYSIS.md) - Full paper analysis

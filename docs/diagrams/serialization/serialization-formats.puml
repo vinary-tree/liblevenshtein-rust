@@ -1,0 +1,72 @@
+@startuml serialization-formats
+' The dictionary serialization format family (in libdictenstein, re-exported by
+' liblevenshtein::serialization). One Serializer trait abstracts persisting a
+' Dictionary to bytes / a file and reconstructing it; four concrete formats
+' implement it. GzipSerializer is a DECORATOR: it wraps any other serializer and
+' transparently adds gzip compression around the inner format's byte stream.
+' Color: serialization / bindings (lime) — the Dictionary node is dictionary-green
+'   to mark the type that is round-tripped.  Feature gates shown per format.
+'   src/serialization/mod.rs → libdictenstein::serialization::*
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam class {
+  BackgroundColor #F9FBE7
+  BorderColor #9E9D24
+  FontColor #102027
+  AttributeFontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Serialization format family — one Serializer trait, four formats, a gzip-compression decorator
+
+interface "Serializer\n«trait»" as Ser #F0F4C3 {
+  serialize(&Dictionary) -> bytes
+  deserialize(bytes) -> Dictionary
+}
+
+class "BincodeSerializer" as Bin #F9FBE7 {
+  compact binary
+}
+class "JsonSerializer" as Json #F9FBE7 {
+  human-readable
+}
+class "PlainTextSerializer" as Txt #F9FBE7 {
+  one term per line
+}
+class "ProtobufSerializer" as Pb #F9FBE7 {
+  «feature = protobuf»
+}
+
+class "GzipSerializer<S: Serializer>" as Gz #F0F4C3 {
+  inner : S        ' «feature = compression»
+  --
+  serialize()   : gzip(inner.serialize(..))
+  deserialize() : inner.deserialize(gunzip(..))
+}
+
+class "Dictionary" as Dict #C8E6C9 {
+  DoubleArrayTrie · DynamicDawg
+  SuffixAutomaton · Scdawg
+}
+
+' Concrete formats implement the trait.
+Bin  ..|> Ser
+Json ..|> Ser
+Txt  ..|> Ser
+Pb   ..|> Ser
+
+' Gzip is both a Serializer and a wrapper of one (decorator).
+Gz   ..|> Ser : implements
+Gz   o--> Ser : wraps inner S
+
+' A Serializer round-trips a Dictionary to/from bytes or a file.
+Ser  -down-> Dict : "⇄ bytes / file"
+
+note bottom of Gz
+  GzipSerializer<BincodeSerializer> persists
+  the compact binary format under gzip; any
+  format composes the same way.
+end note
+@enduml

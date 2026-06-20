@@ -1,0 +1,30 @@
+<svg xmlns='http://www.w3.org/2000/svg' style='font-size:initial;' class="pikchr" viewBox="0 0 1032.19 308.16" data-pikchr-date="20260403102956">
+<text x="272.16" y="17.28" text-anchor="middle" font-weight="bold" fill="rgb(0,0,0)" dominant-baseline="central">Characteristic vector  χ(x, window of W)</text>
+<path d="M2.16,154.8L81.36,154.8L81.36,82.8L2.16,82.8Z"  style="fill:rgb(178,235,242);stroke-width:2.16;stroke:rgb(0,131,143);" />
+<text x="41.76" y="118.8" text-anchor="middle" fill="rgb(0,131,143)" dominant-baseline="central">x = a</text>
+<path d="M196.56,154.8L275.76,154.8L275.76,82.8L196.56,82.8Z"  style="fill:rgb(200,230,201);stroke-width:2.16;stroke:rgb(46,125,50);" />
+<text x="236.16" y="118.8" text-anchor="middle" fill="rgb(46,125,50)" dominant-baseline="central">a</text>
+<path d="M275.76,154.8L354.96,154.8L354.96,82.8L275.76,82.8Z"  style="fill:rgb(227,242,253);stroke-width:2.16;stroke:rgb(21,101,192);" />
+<text x="315.36" y="118.8" text-anchor="middle" fill="rgb(21,101,192)" dominant-baseline="central">b</text>
+<path d="M354.96,154.8L434.16,154.8L434.16,82.8L354.96,82.8Z"  style="fill:rgb(227,242,253);stroke-width:2.16;stroke:rgb(21,101,192);" />
+<text x="394.56" y="118.8" text-anchor="middle" fill="rgb(21,101,192)" dominant-baseline="central">c</text>
+<path d="M434.16,154.8L513.36,154.8L513.36,82.8L434.16,82.8Z"  style="fill:rgb(200,230,201);stroke-width:2.16;stroke:rgb(46,125,50);" />
+<text x="473.76" y="118.8" text-anchor="middle" fill="rgb(46,125,50)" dominant-baseline="central">a</text>
+<polygon points="196.56,118.8 185.04,123.12 185.04,114.48" style="fill:rgb(0,131,143)"/>
+<path d="M81.36,118.8L190.8,118.8"  style="fill:none;stroke-width:2.16;stroke:rgb(0,131,143);" />
+<text x="354.96" y="40.896" text-anchor="middle" fill="rgb(0,0,0)" font-size="80%" dominant-baseline="central">window over W = a b c a</text>
+<path d="M196.56,306L275.76,306L275.76,234L196.56,234Z"  style="fill:rgb(200,230,201);stroke-width:2.16;stroke:rgb(46,125,50);" />
+<text x="236.16" y="270" text-anchor="middle" fill="rgb(46,125,50)" dominant-baseline="central">1</text>
+<path d="M275.76,306L354.96,306L354.96,234L275.76,234Z"  style="fill:rgb(232,234,246);stroke-width:2.16;stroke:rgb(40,53,147);" />
+<text x="315.36" y="270" text-anchor="middle" fill="rgb(40,53,147)" dominant-baseline="central">0</text>
+<path d="M354.96,306L434.16,306L434.16,234L354.96,234Z"  style="fill:rgb(232,234,246);stroke-width:2.16;stroke:rgb(40,53,147);" />
+<text x="394.56" y="270" text-anchor="middle" fill="rgb(40,53,147)" dominant-baseline="central">0</text>
+<path d="M434.16,306L513.36,306L513.36,234L434.16,234Z"  style="fill:rgb(200,230,201);stroke-width:2.16;stroke:rgb(46,125,50);" />
+<text x="473.76" y="270" text-anchor="middle" fill="rgb(46,125,50)" dominant-baseline="central">1</text>
+<path d="M236.16,154.8L236.16,234"  style="fill:none;stroke-width:2.16;stroke:rgb(69,90,100);stroke-dasharray:7.2,7.2;" />
+<path d="M315.36,154.8L315.36,234"  style="fill:none;stroke-width:2.16;stroke:rgb(69,90,100);stroke-dasharray:7.2,7.2;" />
+<path d="M394.56,154.8L394.56,234"  style="fill:none;stroke-width:2.16;stroke:rgb(69,90,100);stroke-dasharray:7.2,7.2;" />
+<path d="M473.76,154.8L473.76,234"  style="fill:none;stroke-width:2.16;stroke:rgb(69,90,100);stroke-dasharray:7.2,7.2;" />
+<text x="800.496" y="270" text-anchor="middle" fill="rgb(0,0,0)" dominant-baseline="central">χ = 1 0 0 1₂  →  selects the W-independent transition</text>
+</svg>
+

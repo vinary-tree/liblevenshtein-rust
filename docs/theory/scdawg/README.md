@@ -8,15 +8,15 @@
 > This document remains for reference on how SCDAWG integrates with liblevenshtein's
 > WallBreaker algorithm and substring-based fuzzy matching.
 
-This documentation provides a comprehensive, pedagogical treatment of the **Symmetric Compact DAWG** (SCDAWG), a data structure that enables O(|pattern|) substring searching with bidirectional navigation capabilities.
+This documentation provides a comprehensive, pedagogical treatment of the **Symmetric Compact DAWG** (SCDAWG), a data structure that enables `𝒪(∣pattern∣)` substring searching with bidirectional navigation capabilities.
 
 ## Overview
 
 The SCDAWG, also known as **C2S** (Compact Symmetric), is the most space-efficient index structure that supports:
 
-1. **Substring search** in O(|pattern|) time
-2. **Right extension**: given a pattern V, navigate to V followed by character σ
-3. **Left extension**: given a pattern V, navigate to character σ followed by V
+1. **Substring search** in `𝒪(∣pattern∣)` time
+2. **Right extension**: given a pattern `V`, navigate to `V` followed by character `σ`
+3. **Left extension**: given a pattern `V`, navigate to character `σ` followed by `V`
 4. **Occurrence enumeration**: find all positions where a pattern occurs
 
 These capabilities make the SCDAWG ideal for applications like the **WallBreaker** algorithm (Gerdjikov et al., 2013), which requires bidirectional pattern growth during dictionary-based fuzzy string matching.
@@ -45,8 +45,8 @@ Index:  0 1 2 3 4 5 6 7
 ```
 
 Key properties of this example:
-- Length |w| = 8
-- Alphabet Σ = {a, b, c}
+- Length `∣w∣ = 8`
+- Alphabet `Σ = {a, b, c}`
 - Contains repeated patterns: "ab" (3x), "abc" (2x), "bc" (2x), "cab" (2x)
 - No unique end marker in raw form (added during construction)
 
@@ -54,13 +54,13 @@ Key properties of this example:
 
 | Structure | States | Transitions | Space | Query Time |
 |-----------|--------|-------------|-------|------------|
-| Suffix Trie | O(n²) | O(n²) | O(n²) | O(m) |
-| Suffix Tree | O(n) | O(n) | O(n) | O(m) |
-| Suffix Automaton (DAWG) | ≤ 2n-1 | ≤ 3n-4 | O(n) | O(m) |
-| CDAWG | ≤ n+1 | ≤ 2n-2 | O(n) | O(m) |
-| **SCDAWG** | ≤ n+1 | ≤ 4n-4 | O(n) | O(m) |
+| Suffix Trie | `𝒪(n²)` | `𝒪(n²)` | `𝒪(n²)` | `𝒪(m)` |
+| Suffix Tree | `𝒪(n)` | `𝒪(n)` | `𝒪(n)` | `𝒪(m)` |
+| Suffix Automaton (DAWG) | ≤ `2n-1` | ≤ `3n-4` | `𝒪(n)` | `𝒪(m)` |
+| CDAWG | ≤ `n+1` | ≤ `2n-2` | `𝒪(n)` | `𝒪(m)` |
+| **SCDAWG** | ≤ `n+1` | ≤ `4n-4` | `𝒪(n)` | `𝒪(m)` |
 
-Where n = |w| (text length) and m = |pattern| (query length).
+Where `n = ∣w∣` (text length) and `m = ∣pattern∣` (query length).
 
 ## Key Concepts at a Glance
 
@@ -115,7 +115,7 @@ The SCDAWG contains only prime subwords as nodes, making it maximally compact.
 This documentation assumes familiarity with:
 - Basic automata theory (states, transitions, acceptance)
 - Graph terminology (nodes, edges, DAG)
-- Asymptotic complexity notation (O-notation)
+- Asymptotic complexity notation (`𝒪`-notation)
 
 No prior knowledge of suffix structures is required.
 
@@ -128,11 +128,11 @@ The key papers that define and construct the SCDAWG are:
    - Introduces IS (Inverted File) features: freq(), locations()
 
 2. **Inenaga et al. (2001)** - "On-Line Construction of Symmetric Compact Directed Acyclic Word Graphs"
-   - On-line O(n) construction algorithm
-   - Key insight: sext links = edges of CDAWG(w^rev)
+   - On-line `𝒪(n)` construction algorithm
+   - Key insight: sext links = edges of `CDAWG(w^rev)`
 
 3. **Inenaga et al. (2005)** - "On-line construction of compact directed acyclic word graphs"
-   - On-line O(n) CDAWG construction
+   - On-line `𝒪(n)` CDAWG construction
    - Multi-string support with unique end markers
 
 See [07-references](07-references.md) for the complete annotated bibliography.

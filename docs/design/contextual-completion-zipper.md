@@ -1,10 +1,14 @@
 # Hierarchical Zipper Architecture for Contextual Code Completion
 
+[← Documentation Index](../README.md)
+
 ## Document Status
 - **Status**: Design Approved
 - **Created**: 2025-10-31
 - **Last Updated**: 2025-10-31
 - **Implementation Status**: Not Started
+
+![Context scope tree: nested lexical scopes (global → module → class → function) and how a child context inherits visibility of its ancestors' draft and finalized terms.](../diagrams/contextual/context-scope-tree.svg)
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -694,7 +698,7 @@ fn bench_query_with_drafts(b: &mut Bencher) {
 **Fusion overhead:**
 - Finalized query: Uses existing Transducer (baseline)
 - Draft scan: Linear in number of visible drafts (typically < 100)
-- Union + dedup: O(n log n) where n = total results (typically < 1000)
+- Union + dedup: `𝒪(n log n)` where `n` = total results (typically < 1000)
 
 **Expected impact:**
 - Best case (no drafts): 0% overhead
@@ -735,7 +739,7 @@ fn bench_query_with_drafts(b: &mut Bencher) {
 - [Huet's Zipper (1997)](https://www.st.cs.uni-saarland.de/edu/seminare/2005/advanced-fp/docs/huet-zipper.pdf) - Original zipper paper
 - [PathMap crate](https://docs.rs/pathmap/) - Persistent trie with zippers
 - [Levenshtein Automata](https://julesjacobs.com/2015/06/17/disqus-levenshtein-simple-and-fast.html) - Fast fuzzy matching
-- [liblevenshtein architecture](../architecture.md) - Existing system design
+- [liblevenshtein architecture](../developer-guide/architecture.md) - Existing system design
 
 ### Code Locations
 - Existing Dictionary trait: `src/dictionary/mod.rs:111-211`

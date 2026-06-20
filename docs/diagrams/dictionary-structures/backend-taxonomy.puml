@@ -1,0 +1,61 @@
+@startuml backend-taxonomy
+' The dictionary backends provided by libdictenstein and exposed through
+' liblevenshtein. All implement the Dictionary trait; they differ in mutability,
+' label width (u8 / u32 / u64), concurrency strategy, and intended workload.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam class {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+  FontColor #102027
+  AttributeFontColor #102027
+}
+skinparam ArrowColor #2E7D32
+
+title Dictionary backend taxonomy (libdictenstein)
+
+class "Dictionary  «trait»" as T #C8E6C9 {
+  contains / prefix / edges
+  build from terms
+}
+
+class "DoubleArrayTrie(Char)" as DAT {
+  label: u8 / u32
+  static (read-only post-build)
+  wait-free reads · 𝒪(1) transitions
+  best: fast static dictionaries
+}
+class "DynamicDawg(Char/U64)" as DD {
+  label: u8 / u32 / u64
+  dynamic (insert/remove)
+  RwLock · SIMD + bloom pruning
+  (U64 variant lock-free via ArcSwap)
+  best: general dynamic use
+}
+class "SuffixAutomaton(Char)" as SA {
+  label: u8 / u32
+  dynamic
+  best: substring / infix search
+}
+class "Scdawg(Char)" as SC {
+  label: u8 / u32
+  bidirectional substring index
+  best: backs WallBreaker
+}
+class "PersistentARTrie(Char)" as ART {
+  mmap, zero-copy
+  best: huge on-disk dictionaries
+}
+class "PathMapDictionary" as PM {
+  persistent map backend
+  best: update-heavy workloads
+}
+
+T <|-- DAT
+T <|-- DD
+T <|-- SA
+T <|-- SC
+T <|-- ART
+T <|-- PM
+@enduml

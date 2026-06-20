@@ -1,5 +1,7 @@
 # Theoretical Guarantees - Quick Reference
 
+[← Documentation Index](../../../README.md)
+
 **Quick reference for theoretical properties of the multi-layer error correction pipeline**
 
 See `complete-analysis.md` for full analysis with proofs.
@@ -10,11 +12,11 @@ See `complete-analysis.md` for full analysis with proofs.
 
 | Layer | Determinism | Correctness | Optimality | Complexity |
 |-------|-------------|-------------|------------|------------|
-| **1. Lexical** | ✓ (with tie-breaking) | ✓ (all candidates within distance d) | ✓ (top-k by distance) | O(n × d) |
-| **2. Grammar** | ~ (requires unambiguous grammar) | ✓ (syntactically valid) | ~ (BFS optimal for uniform cost) | O(k × d × n × p) beam |
-| **3. Semantic Validation** | ✓ (with deterministic fresh vars) | ✓ (only well-typed pass) | ✓ (perfect filter) | O(n log n) avg |
+| **1. Lexical** | ✓ (with tie-breaking) | ✓ (all candidates within distance d) | ✓ (top-k by distance) | `𝒪(n × d)` |
+| **2. Grammar** | ~ (requires unambiguous grammar) | ✓ (syntactically valid) | ~ (BFS optimal for uniform cost) | `𝒪(k × d × n × p)` beam |
+| **3. Semantic Validation** | ✓ (with deterministic fresh vars) | ✓ (only well-typed pass) | ✓ (perfect filter) | `𝒪(n log n)` avg |
 | **4. Semantic Repair** | ~ (requires deterministic solver) | ✓ (syntactic) ~ (semantic) | ✗ (undecidable) | NP-hard (SMT) |
-| **5. Process Verification** | ✓ | ✓ (session type safety) | N/A (verification only) | O(n) to O(n^k) |
+| **5. Process Verification** | ✓ | ✓ (session type safety) | N/A (verification only) | `𝒪(n)` to `𝒪(n^k)` |
 | **Composition** | ~ (depends on all layers) | ✓ (syntactic) | ✗ (greedy suboptimal) | Sum of layers |
 
 **Legend**: ✓ = Yes, ~ = Conditional, ✗ = No, N/A = Not applicable
@@ -63,23 +65,23 @@ See `complete-analysis.md` for full analysis with proofs.
 
 ### Complexity
 
-**Theorem (Lexical Complexity)**: O(n × d) construction, O(|V|) query per word, O(n × d) space.
+**Theorem (Lexical Complexity)**: `𝒪(n × d)` construction, `𝒪(∣V∣)` query per word, `𝒪(n × d)` space.
 
-**Theorem (Grammar Complexity - Pure BFS)**: O(|Grammar|^d × n × p) worst-case (exponential in d).
+**Theorem (Grammar Complexity - Pure BFS)**: `𝒪(∣Grammar∣^d × n × p)` worst-case (exponential in d).
 
-**Theorem (Grammar Complexity - Beam BFS)**: O(k × d × n × p) (tractable for k = 20-100).
+**Theorem (Grammar Complexity - Beam BFS)**: `𝒪(k × d × n × p)` (tractable for k = 20-100).
 
-**Theorem (Type Inference Complexity)**: O(n log n) average case, exponential worst case (rare in practice).
+**Theorem (Type Inference Complexity)**: `𝒪(n log n)` average case, exponential worst case (rare in practice).
 
 **Theorem (SMT Repair Complexity)**: MaxSMT is NP-hard.
 
-**Theorem (Session Types Complexity)**: O(n) for linear session types, O(n^k) for non-linear.
+**Theorem (Session Types Complexity)**: `𝒪(n)` for linear session types, `𝒪(n^k)` for non-linear.
 
 ### Decidability
 
 **Theorem (Regular Language Decidability)**: Lexical correction is decidable (finite automata).
 
-**Theorem (CFG Parsing Decidability)**: Grammar correction is decidable (O(n³) worst-case parsing).
+**Theorem (CFG Parsing Decidability)**: Grammar correction is decidable (`𝒪(n³)` worst-case parsing).
 
 **Theorem (Type Inference Decidability)**: Hindley-Milner type inference is decidable (Algorithm W always terminates).
 

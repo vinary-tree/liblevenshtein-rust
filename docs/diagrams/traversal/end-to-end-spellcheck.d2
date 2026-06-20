@@ -1,0 +1,45 @@
+# end-to-end-spellcheck.d2 — the full data-flow of "spell-check a word",
+# crossing the crate boundary. Input (teal) → transducer core (blue) → the
+# libdictenstein dictionary (green) → distance ranking (indigo) → results
+# (green). An optional phonetic branch (pink) handles sound-alike matching.
+direction: right
+
+title: |md
+  # End-to-End: spell-check a word
+| { near: top-center; style.font-size: 22 }
+
+inp: "misspelled word W\n+ max distance k" {
+  style.fill: "#B2EBF2"; style.stroke: "#00838F"; style.font-color: "#102027"
+}
+
+build: "Transducer\nbuild A(W, k)  — 𝒪(∣W∣)" {
+  style.fill: "#BBDEFB"; style.stroke: "#1565C0"; style.font-color: "#102027"
+}
+
+dict: "libdictenstein dictionary\n(DAWG / trie / DAT)" {
+  style.fill: "#C8E6C9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+}
+
+walk: "Lock-step DFS\nA(W,k) ∩ D, prune dead subtrees" {
+  style.fill: "#FFE0B2"; style.stroke: "#EF6C00"; style.font-color: "#102027"
+}
+
+rank: "Rank by distance\n(ordered / priority iterator)" {
+  style.fill: "#C5CAE9"; style.stroke: "#283593"; style.font-color: "#102027"
+}
+
+out: "Ranked candidates\n{ (term, distance ≤ k) }" {
+  style.fill: "#C8E6C9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+}
+
+phon: "Phonetic branch (optional)\nnormalise W · PhoneticTransducer\nsound-alike matches" {
+  style.fill: "#F8BBD0"; style.stroke: "#AD1457"; style.font-color: "#102027"
+}
+
+inp -> build: { style.stroke: "#00838F"; style.stroke-width: 2 }
+build -> walk: { style.stroke: "#1565C0"; style.stroke-width: 2 }
+dict -> walk: "traversed in lock-step" { style.stroke: "#2E7D32"; style.stroke-width: 2 }
+walk -> rank: { style.stroke: "#EF6C00"; style.stroke-width: 2 }
+rank -> out: { style.stroke: "#283593"; style.stroke-width: 2 }
+inp -> phon: "if exact/edit search is empty" { style.stroke: "#AD1457"; style.stroke-width: 2; style.stroke-dash: 4 }
+phon -> out: { style.stroke: "#AD1457"; style.stroke-width: 2; style.stroke-dash: 4 }

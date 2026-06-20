@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Native Type Theory (OSLF)
 
 This document presents the OSLF (Operational Semantics via Lawvere and Fibrations)

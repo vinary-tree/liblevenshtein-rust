@@ -1,0 +1,41 @@
+@startuml lazy-simulation
+' The lazy simulation of A(W,k): states are constructed on demand as the query
+' descends the dictionary — there is NO precomputed universal DFA. Each step
+' needs only the characteristic vector χ, so a single W-independent rule applies.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontColor #102027
+  DiamondBackgroundColor #FFE0B2
+  DiamondBorderColor #EF6C00
+  StartColor #2E7D32
+  EndColor #C62828
+  ArrowColor #37474F
+}
+
+title Lazy simulation of A(W,k) — states materialised on demand, never precompiled
+
+start
+:seed state  q₀ = { ⟨0,0⟩ };
+note right
+  No universal DFA is built up front;
+  q₀ is the only state that exists initially.
+end note
+:descend a dictionary edge labelled symbol x;
+:compute characteristic vector  χ(x, window of W);
+:apply the one W-independent transition rule\nq' = δχ(q);
+:reduce q' by subsumption  ≤χ;
+if (q' empty?) then (yes)
+  :prune this subtree;
+  stop
+else (no)
+  if (q' accepting?  ∃⟨|W|,e⟩, e ≤ k) then (yes)
+    :emit candidate (term, e);
+  endif
+  :recurse into q'  (materialise on first visit, reuse from pool);
+endif
+stop
+@enduml

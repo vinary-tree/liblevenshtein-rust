@@ -1,8 +1,10 @@
 # Beider-Morse Phonetic Matching Algorithm Extraction
 
+> **Terminology.** A **phoneme** is a contrastive unit of sound. The IPA symbols used below denote, among others: `ʃ` ("sh"), `tʃ` ("ch"), `dʒ` ("j"), `ʒ` (the "s" in *measure*), `x` (voiceless velar fricative), `ɲ` (palatal nasal), and the palatalized consonants `dʲ`, `tʲ`. *Place of articulation* is where the vocal tract is constricted; *manner of articulation* is how airflow is shaped; *voicing* is whether the vocal folds vibrate; **final devoicing** turns a voiced consonant voiceless at a word boundary. See [`../GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+
 ## Algorithm Overview
 
-Beider-Morse Phonetic Matching (BMPM) was developed by Alexander Beider and Stephen P. Morse in 2008 for matching names of various ethnic origins. Unlike single-language algorithms, BMPM:
+Beider-Morse Phonetic Matching (BMPM) was developed by Alexander Beider and Stephen P. Morse in 2008 for matching names of various ethnic origins. Each extracted rule carries a `weight` in `[0, 1]` expressing the residual edit cost of treating the two forms as equivalent. Unlike single-language algorithms, BMPM:
 
 1. Detects the likely language(s) of a name
 2. Applies language-specific phonetic rules
@@ -228,6 +230,10 @@ The weight system allows:
 
 ## References
 
-1. Beider, A. & Morse, S.P. (2008). "Beider-Morse Phonetic Matching: An Alternative to Soundex with Fewer False Hits"
-2. Beider, A. (2012). "A Dictionary of Ashkenazic Given Names"
-3. https://stevemorse.org/phonetics/bmpm.htm
+1. Beider, Alexander & Morse, Stephen P. (2008). "Beider-Morse Phonetic Matching: An Alternative to Soundex with Fewer False Hits". *Avotaynu: The International Review of Jewish Genealogy* 24(2). (No DOI; canonical source of the BMPM algorithm.)
+2. Beider, Alexander (2001). *A Dictionary of Ashkenazic Given Names: Their Origins, Structure, Pronunciation, and Migrations*. Avotaynu, Bergenfield, NJ. ISBN 978-1-886223-12-1.
+3. Morse, Stephen P. "Phonetic Matching (Beider-Morse)". https://stevemorse.org/phonetics/bmpm.htm
+
+---
+
+[← Documentation Index](../README.md)

@@ -1,3 +1,9 @@
+//! Phonetic class elements: single characters through pentagraphs.
+//!
+//! Defines [`PhonePattern`], the atom of a named phonetic class — a single Unicode/IPA
+//! character or a fixed-length sequence (digraph, trigraph, … pentagraph) that represents
+//! one phonetic unit (e.g. `sh`, an ejective affricate, a prenasalized click).
+
 // ============================================================================
 // PhonePattern - Single char or digraph
 // ============================================================================

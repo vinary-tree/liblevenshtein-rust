@@ -1,0 +1,81 @@
+// feature-flag-dag.dot — the cargo feature dependency graph.
+// An edge A -> B means "enabling feature A also enables feature B".
+// Only internal feature -> feature edges are shown (external crate deps elided
+// for readability). Clusters group features by subsystem, coloured per the
+// liblevenshtein diagram legend.
+digraph features {
+  rankdir=LR;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="liblevenshtein — Feature-Flag Dependency Graph   (A → B: enabling A enables B)"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=10,
+         color="#455A64", fontcolor="#102027"];
+  edge  [color="#37474F", arrowsize=0.7];
+
+  "default"     [fillcolor="#FFFFFF"];
+  "parking_lot" [fillcolor="#CFD8DC"];
+  "default" -> "parking_lot";
+
+  subgraph cluster_ser {
+    label="serialization / persistence"; style="rounded,filled"; fillcolor="#F9FBE7"; color="#9E9D24"; fontname="DejaVu Sans";
+    node [fillcolor="#F0F4C3"];
+    "serialization"; "protobuf"; "compression"; "persistent-artrie";
+  }
+  "protobuf" -> "serialization";
+  "compression" -> "serialization";
+
+  subgraph cluster_phon {
+    label="phonetic"; style="rounded,filled"; fillcolor="#FCE4EC"; color="#AD1457"; fontname="DejaVu Sans";
+    node [fillcolor="#F8BBD0"];
+    "phonetic-rules"; "embedded-rules"; "parallel-grep";
+  }
+  "embedded-rules" -> "phonetic-rules";
+  "parallel-grep"  -> "phonetic-rules";
+
+  subgraph cluster_grep {
+    label="grep"; style="rounded,filled"; fillcolor="#FFF3E0"; color="#EF6C00"; fontname="DejaVu Sans";
+    node [fillcolor="#FFE0B2"];
+    "grep-compression"; "grep-archives"; "grep-pdf"; "grep-pdf-ocr"; "grep-docx";
+    "grep-xlsx"; "grep-epub"; "grep-odt"; "grep-documents"; "grep-full";
+  }
+  "grep-archives"  -> "grep-compression";
+  "grep-pdf-ocr"   -> "grep-pdf";
+  "grep-documents" -> "grep-pdf";
+  "grep-documents" -> "grep-docx";
+  "grep-documents" -> "grep-xlsx";
+  "grep-documents" -> "grep-epub";
+  "grep-documents" -> "grep-odt";
+  "grep-full" -> "parallel-grep";
+  "grep-full" -> "grep-compression";
+  "grep-full" -> "grep-archives";
+  "grep-full" -> "grep-documents";
+
+  subgraph cluster_evict {
+    label="eviction (cache) profiles"; style="rounded,filled"; fillcolor="#FFFDE7"; color="#F9A825"; fontname="DejaVu Sans";
+    node [fillcolor="#FFF9C4"];
+    "eviction-opt-balanced"; "eviction-opt-concurrent"; "eviction-opt-memory";
+    "eviction-parking-lot"; "eviction-dashmap"; "eviction-arc-str"; "eviction-compact-metadata";
+  }
+  "eviction-opt-balanced"   -> "eviction-parking-lot";
+  "eviction-opt-balanced"   -> "eviction-arc-str";
+  "eviction-opt-balanced"   -> "eviction-compact-metadata";
+  "eviction-opt-concurrent" -> "eviction-dashmap";
+  "eviction-opt-concurrent" -> "eviction-parking-lot";
+  "eviction-opt-concurrent" -> "eviction-arc-str";
+  "eviction-opt-concurrent" -> "eviction-compact-metadata";
+  "eviction-opt-memory"     -> "eviction-compact-metadata";
+
+  subgraph cluster_bind {
+    label="bindings"; style="rounded,filled"; fillcolor="#F9FBE7"; color="#9E9D24"; fontname="DejaVu Sans";
+    node [fillcolor="#F0F4C3"];
+    "wasm"; "wasm-phonetic"; "ffi"; "wasm-ffi";
+  }
+  "wasm-phonetic" -> "wasm";
+  "wasm-phonetic" -> "phonetic-rules";
+  "wasm-ffi" -> "wasm";
+  "wasm-ffi" -> "ffi";
+
+  "cli" [fillcolor="#CFD8DC"];
+  "cli" -> "pathmap-backend";
+  "cli" -> "serialization";
+  "pathmap-backend" [fillcolor="#C8E6C9"];
+}

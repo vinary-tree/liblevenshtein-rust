@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # TCS 2011 Paper Applicability to Lazy Automata
 
 **Paper**: "Deciding Word Neighborhood with Universal Neighborhood Automata" (TCS 2011)
@@ -74,8 +76,8 @@ pub struct State {
 ///
 /// This is not empirical tuning - it's a theoretical guarantee.
 ///
-/// Reference: "Deciding Word Neighborhood with Universal Neighborhood Automata",
-/// Theoretical Computer Science, 410(37-39):2339-2358, 2011.
+/// Reference: "Deciding word neighborhood with universal neighborhood automata",
+/// Theoretical Computer Science, 412(22):2340-2355, 2011. doi:10.1016/j.tcs.2011.01.013
 ```
 
 ### 1.2 Generalized Operation Framework
@@ -232,12 +234,12 @@ struct Position {
 **Universal Property**:
 - Build automaton once before any queries
 - All transitions known in advance
-- O(n²) state space (independent of word length)
+- `𝒪(n²)` state space (independent of word length)
 
 **Lazy Construction**:
 - Build automaton **during query execution**
 - Transitions computed on-demand
-- State space size: O(|w| × n) (word-length dependent)
+- State space size: `𝒪(∣w∣ × n)` (word-length dependent)
 
 **Why Not for Lazy**:
 - **Definitional difference**: Lazy = runtime construction
@@ -287,7 +289,7 @@ if query_char == dict_char { ... }
 | Aspect | Lazy | Universal |
 |--------|------|-----------|
 | **States depend on** | Query word w | Abstract parameters I, M |
-| **State space size** | O(\|w\| × n) | O(n²) |
+| **State space size** | `𝒪(∣w∣ × n)` | `𝒪(n²)` |
 | **Construction time** | Query time (runtime) | Before queries (precomputed) |
 | **Automaton count** | One per query | One for all queries |
 | **Position encoding** | Concrete `term_index` | Abstract `I + offset` |
@@ -372,9 +374,9 @@ Add bounded diagonal property documentation:
 ///
 /// # References
 ///
-/// - Mitankin, P., Mihov, S., Schulz, K.U. (2011). "Deciding Word Neighborhood
-///   with Universal Neighborhood Automata". Theoretical Computer Science,
-///   410(37-39):2339-2358.
+/// - Mitankin, P., Mihov, S., Schulz, K.U. (2011). "Deciding word neighborhood
+///   with universal neighborhood automata". Theoretical Computer Science,
+///   412(22):2340-2355. doi:10.1016/j.tcs.2011.01.013
 /// - See: `docs/research/universal-levenshtein/TCS_2011_PAPER_ANALYSIS.md`
 pub struct State {
     positions: SmallVec<[Position; 8]>,
@@ -452,7 +454,7 @@ Your lazy implementation is already excellent and matches the paper's theory whe
    - [THEORETICAL_FOUNDATIONS.md](./THEORETICAL_FOUNDATIONS.md) - Theory overview
 
 2. **Primary Paper**:
-   - Mitankin, P., Mihov, S., Schulz, K.U. (2011). "Deciding Word Neighborhood with Universal Neighborhood Automata". Theoretical Computer Science, 410(37-39):2339-2358.
+   - Mitankin, P., Mihov, S., Schulz, K.U. (2011). "Deciding word neighborhood with universal neighborhood automata". Theoretical Computer Science, 412(22):2340–2355. [doi:10.1016/j.tcs.2011.01.013](https://doi.org/10.1016/j.tcs.2011.01.013)
 
 3. **Implementation Files**:
    - Lazy: `src/transducer/state.rs`, `src/transducer/lazy.rs`

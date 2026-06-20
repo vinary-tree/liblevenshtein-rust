@@ -1,0 +1,36 @@
+@startuml automaton-implementations
+' The three Levenshtein-automaton implementations the crate offers, and when to
+' use each. All share the position/subsumption model; they differ in WHEN the
+' automaton is built and HOW the edit operations are fixed.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #1565C0
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Three automaton implementations — same position model, different trade-offs
+
+rectangle "Shared model\nposition ⟨i,e⟩ · subsumption ≤χ · characteristic vector χ" as M #BBDEFB
+
+rectangle "Lazy / parameterized   (default)\nsrc/transducer/{query,state,transition,pool}\n• states materialised on demand during the query\n• one W-independent transition rule driven by χ\n• best general default — no precompute" as L #E3F2FD
+rectangle "Universal / eager\nsrc/transducer/universal/\n• parameter-free DFA precomputed once per k\n• reused across every query word\n• best when k is fixed and queries are many" as U #E3F2FD
+rectangle "Generalized / runtime\nsrc/transducer/generalized/\n• OperationSet chosen at run time\n• drives weighted f64 & phonetic edits\n• +10–20% overhead for full flexibility" as G #C5CAE9
+
+M -down-> L
+M -down-> U
+M -down-> G
+
+note bottom of L
+  Algorithm ∈ { Standard, Transposition, MergeAndSplit }
+  selected as a zero-cost marker type.
+end note
+note bottom of G
+  Indigo tint = also backs the real-valued
+  (OperationCostsF64) and articulatory cost paths.
+end note
+@enduml

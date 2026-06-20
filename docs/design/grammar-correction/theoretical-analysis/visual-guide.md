@@ -1,5 +1,7 @@
 # Theoretical Properties - Visual Guide
 
+[← Documentation Index](../../../README.md)
+
 This document provides visual representations of the theoretical properties analyzed in `complete-analysis.md`.
 
 ---

@@ -1,5 +1,7 @@
 # Theoretical Analysis: Completion Report
 
+[← Documentation Index](../../../README.md)
+
 **Project**: liblevenshtein-rust
 **Task**: Analyze theoretical properties of multi-layer error correction pipeline
 **Date Started**: 2025-11-04
@@ -23,8 +25,8 @@ Successfully completed comprehensive theoretical analysis of the multi-layer err
 | 1 | **Main Analysis** | `complete-analysis.md` | 52 KB | 2200+ | Formal theorems, proofs, complexity analysis |
 | 2 | **Quick Reference** | `quick-reference.md` | 11 KB | 450+ | Property matrix, key results, checklists |
 | 3 | **Visual Guide** | `visual-guide.md` | 33 KB | 1100+ | ASCII diagrams, trade-off charts |
-| 4 | **Implementation Guide** | `../../guides/grammar-correction/implementing-guarantees.md` | 33 KB | 1300+ | Rust code examples, testing strategies |
-| 5 | **Research Log** | `../../research/grammar-correction/analysis-log.md` | 23 KB | 900+ | Scientific methodology, experiments |
+| 4 | **Implementation Guide** | `../../../guides/grammar-correction/implementing-guarantees.md` | 33 KB | 1300+ | Rust code examples, testing strategies |
+| 5 | **Research Log** | `../../../research/grammar-correction/analysis-log.md` | 23 KB | 900+ | Scientific methodology, experiments |
 | 6 | **Executive Summary** | `executive-summary.md` | 12 KB | 500+ | High-level findings, recommendations |
 | 7 | **README** | `README.md` | 18 KB | 650+ | Document overview, reading paths |
 | 8 | **Index** | `index.md` | 6 KB | 250+ | Quick navigation, key facts |
@@ -140,11 +142,11 @@ Successfully completed comprehensive theoretical analysis of the multi-layer err
 
 | Layer | Time Complexity | Practical (100 tokens) |
 |-------|----------------|------------------------|
-| Layer 1 | O(n × d) | 50ms |
-| Layer 2 | O(k × d × n × p) | 200ms (bottleneck) |
-| Layer 3 | O(n log n) | 50ms |
+| Layer 1 | `𝒪(n × d)` | 50ms |
+| Layer 2 | `𝒪(k × d × n × p)` | 200ms (bottleneck) |
+| Layer 3 | `𝒪(n log n)` | 50ms |
 | Layer 4 | NP-hard | 100ms (timeout) |
-| Layer 5 | O(n) to O(n^k) | 50ms |
+| Layer 5 | `𝒪(n)` to `𝒪(n^k)` | 50ms |
 | **Total** | Sum | **450ms** ✓ |
 
 **Target**: <500ms for IDE (interactive use)
@@ -152,7 +154,7 @@ Successfully completed comprehensive theoretical analysis of the multi-layer err
 **Verdict**: ✓ Performance is acceptable
 
 **Optimizations**:
-- Incremental parsing (Tree-sitter): O(log n) per edit
+- Incremental parsing (Tree-sitter): `𝒪(log n)` per edit
 - Caching (LRU, 1000 entries)
 - Parallelization (Rayon)
 - Timeouts (SMT: 2s, type inference: 1s)
@@ -272,7 +274,7 @@ Following user's instructions for scientific rigor:
 4. **Results Documentation**: Tabulated results with evidence
 5. **Verification**: Counter-examples for negative results, proofs for positive
 6. **Findings**: 8 key findings with implications
-7. **Book Keeping**: Complete research log in `../../research/grammar-correction/analysis-log.md`
+7. **Book Keeping**: Complete research log in `../../../research/grammar-correction/analysis-log.md`
 
 **Result**: Reproducible analysis with clear methodology and findings
 
@@ -326,11 +328,11 @@ Following user's instructions for scientific rigor:
 
 **For Implementation**:
 3. [`quick-reference.md`](./quick-reference.md) - Quick reference
-4. [`implementing-guarantees.md`](../../guides/grammar-correction/implementing-guarantees.md) - Code examples
+4. [`implementing-guarantees.md`](../../../guides/grammar-correction/implementing-guarantees.md) - Code examples
 
 **For Deep Dive**:
 5. [`complete-analysis.md`](./complete-analysis.md) - Formal analysis
-6. [`analysis-log.md`](../../research/grammar-correction/analysis-log.md) - Research process
+6. [`analysis-log.md`](../../../research/grammar-correction/analysis-log.md) - Research process
 
 **For Visuals**:
 7. [`visual-guide.md`](./visual-guide.md) - Diagrams and charts

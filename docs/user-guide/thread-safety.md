@@ -1,5 +1,13 @@
 # PathMap Thread Safety Analysis
 
+The diagram below summarizes the concurrency model: how reads, writes, and snapshots
+are coordinated across the backend wrappers (`RwLock`-guarded, `ArcSwap` copy-on-write,
+and persistent lock-free variants).
+
+![Concurrency model: how reader threads, writer threads, and snapshot readers coordinate through RwLock guards, ArcSwap copy-on-write, and persistent structural sharing](../diagrams/concurrency/concurrency-model.svg)
+
+*Concurrency model: the coordination strategies available to dictionary backends.*
+
 ## Current Understanding
 
 ### PathMap's Internal Structure
@@ -194,3 +202,13 @@ Future optimization possibilities exist if we can verify PathMap's internal thre
 - ✅ Well-documented
 
 **Recommendation**: Ship with RwLock, optimize later with data.
+
+## Related Documentation
+
+- [Backends](backends.md) - Dictionary backend comparison
+- [Features](features.md) - Full feature overview
+- [Getting Started](getting-started.md) - Basic usage
+
+---
+
+[← Documentation Index](../README.md)

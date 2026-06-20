@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Semantic Type Checking Use Cases
 
 This document provides concrete examples of semantic type checking for MeTTa and

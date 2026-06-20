@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Learning Optimal Weights from Confusion Matrices
 
 **How to Derive Operation Costs from Real-World Error Data**
@@ -24,9 +26,9 @@ Given a **confusion matrix** of real-world misspellings (e.g., OCR errors, typin
 
 | Method | Complexity | Expected Improvement | Use Case |
 |--------|-----------|---------------------|----------|
-| **Log-Probability Transformation** | O(\|Σ\|²) | 2-3× MRR | Simple, fast, principled |
-| **Ristad-Yianilos EM Algorithm** | O(iterations × \|training\| × \|W\|²) | 3-5× MRR | Gold standard, proven |
-| **Learning-to-Rank (Pairwise)** | O(epochs × \|pairs\| × \|W\|²) | 2-4× MRR | Direct ranking optimization |
+| **Log-Probability Transformation** | `𝒪(∣Σ∣²)` | 2-3× MRR | Simple, fast, principled |
+| **Ristad-Yianilos EM Algorithm** | `𝒪(iterations × ∣training∣ × ∣W∣²)` | 3-5× MRR | Gold standard, proven |
+| **Learning-to-Rank (Pairwise)** | `𝒪(epochs × ∣pairs∣ × ∣W∣²)` | 2-4× MRR | Direct ranking optimization |
 
 **✅ RECOMMENDATION**: Start with **log-probability transformation** for quick wins (2-3 weeks), optionally upgrade to **Ristad-Yianilos EM** for maximum accuracy (4-6 weeks).
 
@@ -111,10 +113,10 @@ Given query Q (user's typo) and candidates C (dictionary words), we want:
 | Method | Training Time | Query Overhead | Accuracy | Complexity | Recommendation |
 |--------|--------------|----------------|----------|------------|----------------|
 | **Uniform Costs** | None | 1× | Baseline | - | Default |
-| **Log-Probability** | Seconds | 10-50× | 2-3× MRR | O(\|Σ\|²) | ✅ **START HERE** |
-| **Ristad-Yianilos EM** | Minutes-Hours | 10-50× | 3-5× MRR | O(iter × data × W²) | ✅ Optional upgrade |
-| **Learning-to-Rank** | Hours | 10-50× | 2-4× MRR | O(epochs × pairs) | ⚠️ Advanced |
-| **Least Squares** | Seconds | 10-50× | 1.1-1.3× MRR | O(\|Σ\|²) | ❌ **AVOID** |
+| **Log-Probability** | Seconds | 10-50× | 2-3× MRR | `𝒪(∣Σ∣²)` | ✅ **START HERE** |
+| **Ristad-Yianilos EM** | Minutes-Hours | 10-50× | 3-5× MRR | `𝒪(iter × data × W²)` | ✅ Optional upgrade |
+| **Learning-to-Rank** | Hours | 10-50× | 2-4× MRR | `𝒪(epochs × pairs)` | ⚠️ Advanced |
+| **Least Squares** | Seconds | 10-50× | 1.1-1.3× MRR | `𝒪(∣Σ∣²)` | ❌ **AVOID** |
 
 ### Detailed Comparison
 
@@ -128,7 +130,7 @@ Cost(a→b) = -log P(b|a) + λ
 
 **Advantages:**
 - ✅ Simple: One-line formula
-- ✅ Fast: O(\|Σ\|²) training (seconds)
+- ✅ Fast: `𝒪(∣Σ∣²)` training (seconds)
 - ✅ Principled: Information theory foundation
 - ✅ No hyperparameters (except smoothing)
 - ✅ Proven: 2-3× improvement in literature
@@ -363,17 +365,17 @@ P_smoothed(b|a) = (count(a→b) + k) / (count(a) + k×|Σ|)
 
 ### Complexity Analysis
 
-**Training Time**: O(\|Σ\|²)
+**Training Time**: `𝒪(∣Σ∣²)`
 - One pass through confusion matrix
-- Normalization: O(\|Σ\|²)
+- Normalization: `𝒪(∣Σ∣²)`
 - **Total: Seconds** for typical alphabets
 
 **Query Overhead**: Same as discretized weighted automata
-- O(\|W\| × max_cost/ε) construction
-- O(\|D\| × max_cost/ε) query
+- `𝒪(∣W∣ × max_cost/ε)` construction
+- `𝒪(∣D∣ × max_cost/ε)` query
 - **With ε=0.1, max_cost=3.0: ~30× overhead**
 
-**Memory**: O(\|Σ\|²)
+**Memory**: `𝒪(∣Σ∣²)`
 - Store cost for each (char, char) pair
 
 ---
@@ -382,7 +384,7 @@ P_smoothed(b|a) = (count(a→b) + k) / (count(a) + k×|Σ|)
 
 ### Overview
 
-**Paper**: Ristad, E. S., & Yianilos, P. N. (1998). "Learning String-Edit Distance". *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 20(5), 522-532.
+**Paper**: Ristad, E. S., & Yianilos, P. N. (1998). "Learning String-Edit Distance". *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 20(5), 522–532. [doi:10.1109/34.682181](https://doi.org/10.1109/34.682181)
 
 **Key Idea**: Treat edit operations as a **generative stochastic process**:
 1. Each operation (insert, delete, substitute) has probability distribution
@@ -573,8 +575,8 @@ pub fn ristad_yianilos_em(
 ### Complexity
 
 **Per Iteration**:
-- E-step: O(\|training_pairs\| × \|W\|² × \|V\|²)
-- M-step: O(\|Σ\|²)
+- E-step: `𝒪(∣training_pairs∣ × ∣W∣² × ∣V∣²)`
+- M-step: `𝒪(∣Σ∣²)`
 
 **Total**: O(iterations × \|training_pairs\| × avg(\|W\|²))
 

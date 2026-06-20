@@ -1,0 +1,52 @@
+@startuml nfa-transposition
+' Transposition (Damerau-Levenshtein) NFA for W = "ab", k = 1.
+' Extends the standard Levenshtein NFA with a TRANSPOSITION operation that swaps
+' two adjacent characters at cost 1: the input reads W's next two characters in
+' reverse order (here "ba" for W = "ab") through an intermediate t-state.
+' Edge colours:
+'   green = match (0)   purple = substitution (+1)
+'   orange = insertion (+1)   red = deletion (+1, ε)   blue = transposition (+1)
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+hide empty description
+skinparam state {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontColor #0D47A1
+}
+
+title Transposition (Damerau) NFA — W = "ab",  k = 1   (adds the blue transposition path "ba")
+
+state "⟨0,0⟩" as q00
+state "⟨1,0⟩" as q10
+state "⟨2,0⟩ ✓" as q20 #C8E6C9
+state "⟨1,1⟩" as q11
+state "⟨2,1⟩ ✓" as q21 #C8E6C9
+state "t: read W[1]=b\nthen W[0]=a" as qt #BBDEFB
+
+[*] --> q00
+
+' match (cost 0)
+q00 -[#2E7D32,thickness=2]-> q10 : a
+q10 -[#2E7D32,thickness=2]-> q20 : b
+q11 -[#2E7D32,thickness=2]-> q21 : b
+
+' substitution (+1)
+q00 -[#6A1B9A]-> q11 : x≠a
+q10 -[#6A1B9A]-> q21 : x≠b
+
+' insertion (+1)
+q00 -[#EF6C00]-> q11 : any
+
+' deletion (+1, ε)
+q00 -[#C62828]-> q11 : ε
+q10 -[#C62828]-> q21 : ε
+
+' transposition (+1): read "ba" to cover W = "ab"
+q00 -[#0277BD,thickness=2]-> qt : b
+qt  -[#0277BD,thickness=2]-> q21 : a
+
+q20 --> [*]
+q21 --> [*]
+@enduml

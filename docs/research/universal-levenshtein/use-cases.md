@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Universal Levenshtein Automata - Use Cases & Applications
 
 **Date**: 2025-11-06
@@ -631,7 +633,7 @@ let dict = TransducerBuilder::new()
 **Keyboard layouts** (~200-400 pairs): ~5-10 KB
 **Full phonetic** (~1000 pairs): ~20-40 KB
 
-**Recommendation**: Use HashSet for O(1) lookup, minimal memory overhead.
+**Recommendation**: Use HashSet for `𝒪(1)` lookup, minimal memory overhead.
 
 ### Lookup Performance
 

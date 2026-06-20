@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Gph-enriched Lawvere Theories and GSLTs
 
 This document presents Gph-enriched Lawvere theories and Graph-Structured Lambda Theories

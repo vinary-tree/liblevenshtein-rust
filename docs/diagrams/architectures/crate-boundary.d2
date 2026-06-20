@@ -1,0 +1,49 @@
+# crate-boundary.d2 — the three-crate map.
+# liblevenshtein (blue) hard-depends on libdictenstein (green); duallity
+# (light-blue, dashed) is an external, optional WFST integration; the macros
+# crate (grey) generates code for liblevenshtein at compile time.
+direction: right
+
+title: |md
+  # liblevenshtein — Crate Boundary & Responsibilities
+| { near: top-center; style.font-size: 24 }
+
+macros: "liblevenshtein-macros\n(proc-macro: compile-time regex → NFA)" {
+  style.fill: "#ECEFF1"; style.stroke: "#455A64"; style.font-color: "#102027"
+}
+
+lib: "liblevenshtein   (this crate · v0.9.1)" {
+  style.fill: "#BBDEFB"; style.stroke: "#1565C0"; style.font-color: "#102027"
+  core: "Core — Transducer · lazy / universal / generalized automata\nsubsumption · distance (Myers + SIMD) · pre-filters" {
+    style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
+  }
+  engines: "Engines — phonetic · time-series (MSM) · WallBreaker\ncontextual completion · fuzzy cache · grep" {
+    style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
+  }
+  surfaces: "Surfaces — CLI · REPL · WASM · FFI · serialization" {
+    style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
+  }
+}
+
+dict: "libdictenstein   (sibling crate · path dep · v0.2)" {
+  style.fill: "#C8E6C9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+  backends: "Dictionary backends — DoubleArrayTrie · DynamicDawg(U64)\nSuffixAutomaton · Scdawg · PersistentARTrie · PathMapDictionary" {
+    style.fill: "#E8F5E9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+  }
+  traits: "Traits — Dictionary · DictionaryNode · MappedDictionary\n+ SIMD & bloom-filter pruning · prefix zippers" {
+    style.fill: "#E8F5E9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+  }
+}
+
+duallity: "duallity   (external · optional)\nWFST / language-model composition" {
+  style.fill: "#B3E5FC"; style.stroke: "#0277BD"; style.font-color: "#102027"
+  style.stroke-dash: 4
+}
+
+macros -> lib: "generates code for" { style.stroke: "#455A64"; style.stroke-width: 2 }
+lib -> dict: "hard dependency  (backends re-exported\nas #[deprecated] shims since 0.9.0)" {
+  style.stroke: "#2E7D32"; style.stroke-width: 3
+}
+lib -> duallity: "optional WFST composition" {
+  style.stroke: "#0277BD"; style.stroke-width: 2; style.stroke-dash: 4
+}

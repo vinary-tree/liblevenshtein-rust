@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # MeTTaTron: F1R3FLY.io's MeTTa Compiler
 
 This document provides a comprehensive analysis of MeTTaTron, F1R3FLY.io's MeTTa

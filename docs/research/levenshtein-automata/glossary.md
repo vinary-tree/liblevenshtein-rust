@@ -1,8 +1,12 @@
+[← Documentation Index](../../README.md)
+
 # Levenshtein Automata - Glossary
 
 **Quick Reference for Terms, Notation, and Concepts**
 
 **Date**: 2025-11-06
+
+**Source paper**: Schulz, K. U. & Mihov, S. (2002). *Fast string correction with Levenshtein automata*. International Journal on Document Analysis and Recognition (IJDAR) 5, 67–85. [doi:10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
 
 ---
 
@@ -136,8 +140,8 @@
 
 **Final State** - See Accepting State.
 
-**Fixed Degree** - The error bound n is constant (not varying with input size).
-- **Significance**: Enables O(|W|) construction complexity
+**Fixed Degree** - The error bound `n` is constant (not varying with input size).
+- **Significance**: Enables `𝒪(∣W∣)` construction complexity
 
 ### I
 
@@ -183,7 +187,7 @@
 **Parallel Traversal** - Simultaneously traversing dictionary automaton and Levenshtein automaton.
 
 **Parametric Table (T_n)** - Precomputed table describing all states and transitions for error bound n.
-- **Advantage**: Enables O(|W|) automaton construction
+- **Advantage**: Enables `𝒪(∣W∣)` automaton construction
 
 **Position (i#e)** - Pair of index i and error count e.
 - **Interpretation**: "Matched i characters of W with e errors"
@@ -245,7 +249,7 @@
 
 ### W
 
-**Wagner-Fisher Algorithm** - Dynamic programming algorithm for computing Levenshtein distance in O(|W|×|V|) time.
+**Wagner-Fischer Algorithm** - Dynamic programming algorithm for computing Levenshtein distance in `𝒪(∣W∣×∣V∣)` time. See Wagner & Fischer (1974), [doi:10.1145/321796.321811](https://doi.org/10.1145/321796.321811).
 
 **Word** - A string over alphabet Σ.
 

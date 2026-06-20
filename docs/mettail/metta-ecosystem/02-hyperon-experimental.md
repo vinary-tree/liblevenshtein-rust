@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Hyperon-Experimental: MeTTa Reference Implementation
 
 This document provides a technical analysis of hyperon-experimental, the official

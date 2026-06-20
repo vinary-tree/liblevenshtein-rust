@@ -1,4 +1,11 @@
-//! CLI command implementations
+//! Backend-agnostic command primitives shared by the CLI and the REPL.
+//!
+//! This module is the keystone of the command surfaces: the load-dictionary,
+//! save-dictionary, and query operations are written once here and reused by both
+//! [`crate::cli`] (one-shot, clap-driven) and [`crate::repl`] (interactive). Keeping
+//! the logic in one place guarantees the CLI and REPL behave identically — format
+//! detection, serialization round-trips, and query execution have a single source of
+//! truth. The functions are generic over the selected dictionary backend.
 
 use anyhow::{bail, Context, Result};
 use colored::Colorize;

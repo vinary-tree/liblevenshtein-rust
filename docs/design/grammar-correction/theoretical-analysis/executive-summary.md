@@ -1,5 +1,7 @@
 # Executive Summary: Theoretical Analysis of Multi-Layer Error Correction
 
+[← Documentation Index](../../../README.md)
+
 **Date**: 2025-11-04
 **Project**: liblevenshtein-rust
 **Analysis Type**: Formal verification of system properties
@@ -231,11 +233,11 @@ Joint optimization:
 
 | Layer | Time Complexity | Practical Runtime (100 tokens) |
 |-------|----------------|--------------------------------|
-| Layer 1 | O(n × d) | 50ms |
-| Layer 2 (beam) | O(k × d × n × p) | 200ms ⚠️ (bottleneck) |
-| Layer 3 | O(n log n) avg | 50ms |
+| Layer 1 | `𝒪(n × d)` | 50ms |
+| Layer 2 (beam) | `𝒪(k × d × n × p)` | 200ms ⚠️ (bottleneck) |
+| Layer 3 | `𝒪(n log n)` avg | 50ms |
 | Layer 4 | NP-hard (timeout) | 100ms |
-| Layer 5 | O(n) to O(n^k) | 50ms |
+| Layer 5 | `𝒪(n)` to `𝒪(n^k)` | 50ms |
 | **Total** | **Sum of above** | **450ms** ✓ |
 
 **Target**: <500ms for interactive IDE use
@@ -244,7 +246,7 @@ Joint optimization:
 
 ### Optimizations
 
-1. **Incremental Parsing** (Tree-sitter): O(log n) per edit instead of O(n)
+1. **Incremental Parsing** (Tree-sitter): `𝒪(log n)` per edit instead of `𝒪(n)`
 2. **Caching**: Levenshtein automata, parse states (LRU cache, 1000 entries)
 3. **Parallelization**: Layer 1 candidates, Layer 3 validation (Rayon)
 4. **Timeouts**: SMT solver (2s), type inference (1s)

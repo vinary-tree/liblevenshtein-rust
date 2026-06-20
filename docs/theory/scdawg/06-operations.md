@@ -48,9 +48,9 @@ fn contains_substring(pattern: &[Char]) -> bool {
 
 ### Complexity
 
-**Time**: O(|pattern|) - each character is examined once.
+**Time**: `𝒪(∣pattern∣)` - each character is examined once.
 
-**Space**: O(1) additional space beyond the SCDAWG itself.
+**Space**: `𝒪(1)` additional space beyond the SCDAWG itself.
 
 ### Finding the Representative Node
 
@@ -330,7 +330,7 @@ impl WallBreakerSupport for Scdawg {
 }
 ```
 
-**Complexity**: O(|v|)
+**Complexity**: `𝒪(∣v∣)`
 
 ### Requirement (1b): Right Extension
 
@@ -346,7 +346,7 @@ impl WallBreakerSupport for Scdawg {
 }
 ```
 
-**Complexity**: O(1) for single extension, O(|Σ|) for enumeration
+**Complexity**: `𝒪(1)` for single extension, `𝒪(∣Σ∣)` for enumeration
 
 ### Requirement (1c): Left Extension
 
@@ -362,7 +362,7 @@ impl WallBreakerSupport for Scdawg {
 }
 ```
 
-**Complexity**: O(1) for single extension, O(|Σ|) for enumeration
+**Complexity**: `𝒪(1)` for single extension, `𝒪(∣Σ∣)` for enumeration
 
 ## Traversal Patterns
 
@@ -491,15 +491,15 @@ impl Iterator for LocationIterator<'_> {
 
 | Operation | Description | Complexity |
 |-----------|-------------|------------|
-| `contains_substring(P)` | Check if P exists | O(\|P\|) |
-| `find_substring(P)` | Get handle to P if exists | O(\|P\|) |
-| `right_extend(h, c)` | Navigate to h·c | O(1) |
-| `left_extend(h, c)` | Navigate to c·h | O(1) |
-| `right_extensions(h)` | List all right extensions | O(\|Σ\|) |
-| `left_extensions(h)` | List all left extensions | O(\|Σ\|) |
-| `freq(h)` | Count occurrences | O(1) cached, O(n) uncached |
-| `locations(h)` | List all positions | O(occ) where occ = output size |
+| `contains_substring(P)` | Check if P exists | `𝒪(\∣P\∣)` |
+| `find_substring(P)` | Get handle to P if exists | `𝒪(\∣P\∣)` |
+| `right_extend(h, c)` | Navigate to h·c | `𝒪(1)` |
+| `left_extend(h, c)` | Navigate to c·h | `𝒪(1)` |
+| `right_extensions(h)` | List all right extensions | `𝒪(\∣Σ\∣)` |
+| `left_extensions(h)` | List all left extensions | `𝒪(\∣Σ\∣)` |
+| `freq(h)` | Count occurrences | `𝒪(1)` cached, `𝒪(n)` uncached |
+| `locations(h)` | List all positions | `𝒪(occ)` where occ = output size |
 
-**Key insight**: The SCDAWG provides O(|pattern|) substring search with O(1) bidirectional extension, making it ideal for algorithms like WallBreaker that need to grow patterns in both directions.
+**Key insight**: The SCDAWG provides `𝒪(∣pattern∣)` substring search with `𝒪(1)` bidirectional extension, making it ideal for algorithms like WallBreaker that need to grow patterns in both directions.
 
 **Next**: [07-references](07-references.md) - Annotated bibliography of source papers

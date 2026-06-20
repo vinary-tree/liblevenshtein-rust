@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # MORK and PathMap Integration
 
 This document describes the MORK (MeTTa Optimal Reduction Kernel) and PathMap
@@ -534,7 +536,7 @@ impl FuzzySource for PathMap<Vec<u8>, Vec<u8>> {
 ### PhoneticNormalizedDictionary Features
 
 - **Automatic normalization**: Terms normalized at build time using phonetic rules
-- **FuzzyMultiMap acceleration**: O(k log n) fuzzy queries via Levenshtein automaton pruning
+- **FuzzyMultiMap acceleration**: `𝒪(k log n)` fuzzy queries via Levenshtein automaton pruning
 - **Thread-local buffers**: Optimized for concurrent queries (H3 optimization)
 - **Pre-compiled rules**: `english::zompist()`, `english::homophones()`, `english::text_speak()`, `english::combined()`
 

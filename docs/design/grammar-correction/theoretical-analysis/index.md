@@ -1,5 +1,7 @@
 # Theoretical Analysis: Complete Index
 
+[← Documentation Index](../../../README.md)
+
 **Date**: 2025-11-04
 **Project**: liblevenshtein-rust
 **Analysis**: Multi-Layer Error Correction Pipeline
@@ -14,9 +16,9 @@
 | **High-level summary** | Executive Summary | [`executive-summary.md`](./executive-summary.md) | 12 KB | 10 min |
 | **Quick answers** | Quick Reference | [`quick-reference.md`](./quick-reference.md) | 11 KB | 15 min |
 | **Visual explanations** | Visual Guide | [`visual-guide.md`](./visual-guide.md) | 33 KB | 30 min |
-| **Code examples** | Implementation Guide | [`implementing-guarantees.md`](../../guides/grammar-correction/implementing-guarantees.md) | 33 KB | 45 min |
+| **Code examples** | Implementation Guide | [`implementing-guarantees.md`](../../../guides/grammar-correction/implementing-guarantees.md) | 33 KB | 45 min |
 | **Formal proofs** | Main Analysis | [`complete-analysis.md`](./complete-analysis.md) | 52 KB | 2-3 hrs |
-| **Research process** | Research Log | [`analysis-log.md`](../../research/grammar-correction/analysis-log.md) | 23 KB | 1 hr |
+| **Research process** | Research Log | [`analysis-log.md`](../../../research/grammar-correction/analysis-log.md) | 23 KB | 1 hr |
 | **Overview of all docs** | README | [`README.md`](./README.md) | 18 KB | 20 min |
 
 ---
@@ -77,7 +79,7 @@
 ---
 
 ### 4. Implementation Guide (Start Here for Coding)
-**File**: [`implementing-guarantees.md`](../../guides/grammar-correction/implementing-guarantees.md)
+**File**: [`implementing-guarantees.md`](../../../guides/grammar-correction/implementing-guarantees.md)
 
 **For**: Implementers, software engineers, contributors
 
@@ -121,7 +123,7 @@
 ---
 
 ### 6. Research Log (Start Here for Reproducibility)
-**File**: [`analysis-log.md`](../../research/grammar-correction/analysis-log.md)
+**File**: [`analysis-log.md`](../../../research/grammar-correction/analysis-log.md)
 
 **For**: Researchers, scientific reviewers, future maintainers
 

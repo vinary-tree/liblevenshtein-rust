@@ -15,6 +15,10 @@ Value storage enables dictionaries to map terms to associated data, transforming
 
 **Key Insight:** Values are stored per state, not per term. This allows efficient access during graph traversal, enabling filtering **during** search rather than after (10-100x faster for selective filters).
 
+![Value-filtered pruning: a value predicate is evaluated at each state during traversal, so non-matching subtrees are pruned before their terms are enumerated](../../diagrams/traversal/value-filtered-pruning.svg)
+
+*Value-filtered pruning: state-indexed values let the traversal skip non-matching subtrees mid-walk.*
+
 ---
 
 ## Architecture
@@ -641,11 +645,11 @@ pub struct DawgNode<V: DictionaryValue = ()> {
 
 | Dictionary | Storage Location | Memory Overhead | Access Time | Notes |
 |------------|------------------|-----------------|-------------|-------|
-| DoubleArrayTrie | State-indexed array | 8-16 bytes/state | O(1) | Arena-allocated, cache-friendly |
-| DoubleArrayTrieChar | State-indexed array | 8-16 bytes/state | O(1) | Same as byte variant |
-| DynamicDawg | Per-node field | 8-16 bytes/node | O(1) | More flexible |
-| DynamicDawgChar | Per-node field | 8-16 bytes/node | O(1) | Unicode support |
-| PathMap | Persistent structure | Variable | O(1) | Structural sharing |
+| DoubleArrayTrie | State-indexed array | 8-16 bytes/state | `O(1)` | Arena-allocated, cache-friendly |
+| DoubleArrayTrieChar | State-indexed array | 8-16 bytes/state | `O(1)` | Same as byte variant |
+| DynamicDawg | Per-node field | 8-16 bytes/node | `O(1)` | More flexible |
+| DynamicDawgChar | Per-node field | 8-16 bytes/node | `O(1)` | Unicode support |
+| PathMap | Persistent structure | Variable | `O(1)` | Structural sharing |
 
 ---
 
@@ -715,20 +719,20 @@ type ValuedDict = DoubleArrayTrie<usize>;  // V = usize
 
 ## Related Documentation
 
-- [MappedDictionary Trait](theory/mapped-dictionary.md)
+- `MappedDictionary` Trait
 - [DoubleArrayTrie Implementation](../01-dictionary-layer/implementations/double-array-trie.md)
-- [Value-Filtered Queries](../03-intersection-traversal/query-iterators/value-filtered-query.md)
-- [Code Completion Use Case](use-cases/scope-ids.md)
-- [Performance Benchmarks](implementations/comparison.md)
+- Value-Filtered Queries
+- Code Completion Use Case
+- Performance Benchmarks
 
 ---
 
 ## Examples
 
-- [Basic Value Storage](examples/basic-values.rs)
-- [Scope-Aware Completion](examples/scope-tracking.rs)
-- [Fuzzy Map](examples/fuzzy-map.rs)
-- [Filtered Query Performance](examples/filtered-completion.rs)
+- Basic Value Storage
+- Scope-Aware Completion
+- Fuzzy Map
+- Filtered Query Performance
 
 ---
 

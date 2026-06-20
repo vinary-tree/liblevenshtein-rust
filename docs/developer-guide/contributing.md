@@ -1,7 +1,7 @@
 # Contributing to liblevenshtein-rust
 
-**Version**: 0.4.0
-**Last Updated**: 2025-10-25
+**Version**: 0.9.1
+**Last Updated**: 2026-06-19
 
 Thank you for your interest in contributing to liblevenshtein-rust!
 
@@ -19,7 +19,7 @@ This installs hooks that:
 - Prevent accidentally committing local development overrides (e.g., uncommented `[patch]` sections)
 - Ensure Cargo.toml uses git dependencies instead of local paths
 
-See [.githooks/README.md](.githooks/README.md) for more details.
+See [.githooks/README.md](../../.githooks/README.md) for more details.
 
 ### Prerequisites
 
@@ -56,7 +56,7 @@ cd liblevenshtein-rust
 cargo build --all-features
 ```
 
-See [building.md](BUILD.md) for comprehensive build instructions.
+See [building.md](building.md) for comprehensive build instructions.
 
 ### Running Tests
 
@@ -68,7 +68,7 @@ RUSTFLAGS="-C target-cpu=native" cargo test --all-features
 RUSTFLAGS="-C target-cpu=native" cargo test --features compression,protobuf
 ```
 
-### Running Examples (v0.4.0)
+### Running Examples
 
 ```bash
 # Code completion demo
@@ -116,9 +116,9 @@ RUSTFLAGS="-C target-cpu=native" cargo bench --bench filtering_prefix_benchmarks
 8. Push to the branch (`git push origin feature/amazing-feature`)
 9. Open a Pull Request
 
-## Areas for Contribution (v0.4.0)
+## Areas for Contribution
 
-See [docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md) for detailed planned features.
+See `FUTURE_ENHANCEMENTS.md` for detailed planned features.
 
 ### High Priority
 

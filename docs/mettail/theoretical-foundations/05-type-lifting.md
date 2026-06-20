@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Type Lifting: Deriving Types from Operational Semantics
 
 This document explains the **type lifting transformation** - how MeTTaIL systematically

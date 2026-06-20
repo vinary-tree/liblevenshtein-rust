@@ -1,18 +1,22 @@
 # Dynamic DAWG Implementation
 
+[← Documentation Index](../README.md)
+
 ## Overview
 
 The `DynamicDawg` provides a **mutable DAWG** (Directed Acyclic Word Graph) that supports online insertions, deletions, and batch operations while maintaining near-minimal structure.
 
+![DAWG vs. trie: suffix sharing collapses equivalent subtrees, so the DAWG stores fewer nodes than the equivalent trie for the same term set.](../diagrams/dictionary-structures/dawg-vs-trie.svg)
+
 ## Key Features
 
 ### ✅ Online Modifications
-- **Insert**: Add terms dynamically - O(m) per term
-- **Delete**: Remove terms dynamically - O(m) per term
+- **Insert**: Add terms dynamically - `𝒪(m)` per term
+- **Delete**: Remove terms dynamically - `𝒪(m)` per term
 - **Batch operations**: `extend()` and `remove_many()` with automatic compaction
 
 ### ✅ Minimality Management
-- **Compact**: Restore perfect minimality - O(n) total size
+- **Compact**: Restore perfect minimality - `𝒪(n)` total size
 - **Smart tracking**: `needs_compaction()` flag after deletions
 - **Near-minimal**: Structure stays efficient between compactions
 
@@ -112,12 +116,12 @@ dawg.minimize();
 
 | Operation | Time Complexity | Notes |
 |-----------|----------------|-------|
-| `insert(term)` | O(m) | m = term length |
-| `remove(term)` | O(m) | May leave orphaned nodes |
-| `compact()` | O(n log n + n·s) | n = terms, s = signature size |
-| `minimize()` | O(n·s) | n = nodes, s = signature size |
-| `extend(terms)` | O(n log n + n·s) | Includes compaction |
-| `remove_many(terms)` | O(n log n + n·s) | Includes compaction |
+| `insert(term)` | `𝒪(m)` | `m` = term length |
+| `remove(term)` | `𝒪(m)` | May leave orphaned nodes |
+| `compact()` | `𝒪(n log n + n·s)` | `n` = terms, `s` = signature size |
+| `minimize()` | `𝒪(n·s)` | `n` = nodes, `s` = signature size |
+| `extend(terms)` | `𝒪(n log n + n·s)` | Includes compaction |
+| `remove_many(terms)` | `𝒪(n log n + n·s)` | Includes compaction |
 
 ## Space Efficiency
 
@@ -248,8 +252,8 @@ This guarantees perfect minimality after compaction.
 
 | Feature | DynamicDawg | Static DAWG | PathMap |
 |---------|-------------|-------------|---------|
-| Insertions | ✅ O(m) | ❌ No | ✅ O(m) |
-| Deletions | ✅ O(m) | ❌ No | ✅ O(m) |
+| Insertions | ✅ `𝒪(m)` | ❌ No | ✅ `𝒪(m)` |
+| Deletions | ✅ `𝒪(m)` | ❌ No | ✅ `𝒪(m)` |
 | Minimality | 🟡 Near-minimal | ✅ Perfect | ❌ Not minimal |
 | Compaction | ✅ Yes | N/A | N/A |
 | Thread-safe | ✅ RwLock | ✅ Immutable | ✅ RwLock |
@@ -276,9 +280,9 @@ Our compaction achieves this by:
 
 ### Time Complexity
 
-- **Online minimal DAWG**: O(n²) worst case per operation
-- **Our approach**: O(m) per operation + O(n) periodic compaction
-- **Amortized**: O(m) if compaction frequency is bounded
+- **Online minimal DAWG**: `𝒪(n²)` worst case per operation
+- **Our approach**: `𝒪(m)` per operation + `𝒪(n)` periodic compaction
+- **Amortized**: `𝒪(m)` if compaction frequency is bounded
 
 This trade-off makes dynamic operations practical.
 
@@ -289,4 +293,4 @@ Potential optimizations:
 - Lazy compaction (defer until read-heavy phase)
 - Adaptive compaction (based on fragmentation metrics)
 
-See `docs/FUTURE_ENHANCEMENTS.md` for roadmap.
+See [Future Enhancements](../research/future-enhancements.md) for roadmap.

@@ -1,3 +1,5 @@
+//! Unit tests for the phonetic-regex lexer.
+
 use super::*;
 
 #[test]

@@ -1,0 +1,53 @@
+@startuml query-iterator-hierarchy
+' The query-iterator family. These are iterator *adapters* (Rust has no class
+' inheritance); the generalization arrows read as "specialises the base walk".
+' All perform the lock-step A(W,k) ∩ D walk and yield Candidates; they differ in
+' result ORDERING and in value-based FILTERING.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam class {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontColor #102027
+  AttributeFontColor #102027
+}
+skinparam ArrowColor #1565C0
+
+title Query-iterator family — same walk, different ordering & filtering
+
+class "QueryIterator" as QI #BBDEFB {
+  base lock-step DFS
+  yields Candidate { term, distance }
+}
+class "StringQueryIterator" as SQ {
+  yields owned String terms
+}
+class "OrderedQueryIterator" as OQ {
+  distance-then-lexicographic
+}
+class "PriorityQueryIterator" as PQ {
+  best-first by distance (heap)
+}
+class "ValueFilteredQueryIterator" as VF #C5CAE9 {
+  prune by value predicate
+}
+class "ValueSetFilteredQueryIterator" as VSF #C5CAE9 {
+  prune by value ∈ set
+}
+class "ValueYieldingQueryIterator" as VY #C5CAE9 {
+  yields (term, distance, &value)
+}
+
+QI <|-- SQ
+QI <|-- OQ
+QI <|-- PQ
+QI <|-- VF
+VF <|-- VSF
+QI <|-- VY
+
+note bottom of VF
+  Value-aware iterators require a MappedDictionary.
+  Scope filtering here is the 10–100× speedup.
+end note
+@enduml

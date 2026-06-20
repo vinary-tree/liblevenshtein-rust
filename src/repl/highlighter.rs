@@ -1,4 +1,9 @@
-//! Syntax highlighting for REPL input
+//! Syntax highlighting for REPL input.
+//!
+//! Implements the `rustyline` [`Highlighter`] trait to
+//! colourise commands, arguments, and string literals as the user types, giving the
+//! interactive prompt immediate visual feedback. Purely presentational — it does not
+//! parse or execute input (that is [`crate::repl::command`]).
 
 use colored::Colorize;
 use rustyline::highlight::Highlighter;

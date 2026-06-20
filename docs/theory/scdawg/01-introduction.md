@@ -16,18 +16,18 @@ For each word w in dictionary:
             Report match
 ```
 
-**Complexity**: O(N × m) where N = total characters in dictionary, m = query length
+**Complexity**: `𝒪(N × m)` where N = total characters in dictionary, m = query length
 
 For our 88,000-word dictionary (~800,000 total characters), searching for a 5-character query performs ~4 million character comparisons. This is unacceptable for interactive applications.
 
-## The Goal: O(|pattern|) Search
+## The Goal: `𝒪(∣pattern∣)` Search
 
 We want a data structure that answers substring queries in time proportional to the query length alone:
 
 | Approach | Query Time | Space |
 |----------|------------|-------|
-| Naive scan | O(N × m) | O(N) |
-| Build index once, query many | **O(m)** | O(N) |
+| Naive scan | `𝒪(N × m)` | `𝒪(N)` |
+| Build index once, query many | **`𝒪(m)`** | `𝒪(N)` |
 
 The SCDAWG achieves this by precomputing all possible substrings into a graph structure where:
 - Each node represents an equivalence class of substrings
@@ -86,7 +86,7 @@ Suffixes: "abab$", "bab$", "ab$", "b$", "$"
         $
 ```
 
-**Problem**: O(n²) space for n-length input. The string "aaa...a" (n copies of 'a') requires n + (n-1) + ... + 1 = O(n²) nodes.
+**Problem**: `𝒪(n²)` space for n-length input. The string "aaa...a" (n copies of 'a') requires n + (n-1) + ... + 1 = `𝒪(n²)` nodes.
 
 ### Suffix Tree
 
@@ -104,7 +104,7 @@ Input: "abab$"
               $
 ```
 
-**Improvement**: O(n) nodes and edges by storing edge labels as (start, end) pairs into the original string.
+**Improvement**: `𝒪(n)` nodes and edges by storing edge labels as (start, end) pairs into the original string.
 
 **Problem**: Doesn't share common substrings between different suffixes. The substrings "ab" appearing in "abab$" at positions 0 and 2 lead to separate tree locations.
 
@@ -207,5 +207,5 @@ The following documents develop the theory systematically:
 1. **[02-suffix-automaton](02-suffix-automaton.md)**: Defines equivalence classes, suffix links, and the DAWG structure formally
 2. **[03-cdawg](03-cdawg.md)**: Shows how to compact the DAWG while preserving functionality
 3. **[04-scdawg](04-scdawg.md)**: Adds left extension edges and defines prime subwords
-4. **[05-construction](05-construction.md)**: Presents the on-line O(n) construction algorithm
+4. **[05-construction](05-construction.md)**: Presents the on-line `𝒪(n)` construction algorithm
 5. **[06-operations](06-operations.md)**: Describes substring search and IS (Inverted File) features

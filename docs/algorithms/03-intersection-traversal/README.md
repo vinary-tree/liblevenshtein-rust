@@ -8,6 +8,14 @@ The Intersection and Traversal Layer is where **Levenshtein automata meet dictio
 
 This is the "magic" that makes fuzzy matching fast - instead of comparing the query against every dictionary term, we explore only the relevant paths in a single traversal.
 
+![Lock-step DFS sequence: the dictionary node and automaton state advance together, one character at a time, emitting a term when both reach an accepting configuration](../../diagrams/traversal/lockstep-dfs-sequence.svg)
+
+*Lock-step DFS (sequence view): the dictionary and automaton advance together, character by character.*
+
+![Lock-step DFS flow: control flow of the synchronized depth-first traversal, including descent, subsumption pruning, and backtracking](../../diagrams/traversal/lockstep-dfs-flow.svg)
+
+*Lock-step DFS (flow view): descent, pruning, and backtracking in the synchronized traversal.*
+
 ### Key Concept
 
 **Synchronized Traversal**: Walk through the dictionary and automaton in lockstep
@@ -140,7 +148,7 @@ fn dfs_traverse(node: DictNode, auto: AutomatonZipper) -> Vec<String> {
 ```
 
 **Advantages**:
-- Memory efficient: O(depth) stack space
+- Memory efficient: `O(depth)` stack space
 - Simple implementation
 - Good cache locality (explores nearby terms)
 
@@ -177,7 +185,7 @@ fn bfs_traverse(root: DictNode, initial_auto: AutomatonZipper) -> Vec<String> {
 - Better for interactive use (show results incrementally)
 
 **Disadvantages**:
-- Higher memory usage: O(branching^depth)
+- Higher memory usage: `O(branching^depth)`
 
 ### 3. Priority Queue (Best-First)
 
@@ -405,17 +413,17 @@ for term in automaton.query(&dict) {
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Single transition** | O(D²) | D = max distance |
-| **Total traversal** | O(M×D²×B×L) | M = query len, B = branching, L = avg depth |
-| **With early termination** | O(M×D×B×L) | Typically 30-70% reduction |
+| **Single transition** | `O(D²)` | D = max distance |
+| **Total traversal** | `O(M×D²×B×L)` | M = query len, B = branching, L = avg depth |
+| **With early termination** | `O(M×D×B×L)` | Typically 30-70% reduction |
 
 ### Space Complexity
 
 | Component | Complexity | Notes |
 |-----------|-----------|-------|
-| **Call stack (DFS)** | O(L) | L = max dictionary depth |
-| **Automaton state** | O(M×D) | Per recursion level |
-| **Results buffer** | O(K×L) | K = number of matches |
+| **Call stack (DFS)** | `O(L)` | L = max dictionary depth |
+| **Automaton state** | `O(M×D)` | Per recursion level |
+| **Results buffer** | `O(K×L)` | K = number of matches |
 
 ### Benchmark Results
 

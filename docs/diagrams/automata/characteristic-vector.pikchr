@@ -1,0 +1,31 @@
+# characteristic-vector.pikchr — how the characteristic vector χ is formed.
+# For an input symbol x and the window of W around the current offset, χ has a
+# 1 wherever x equals that W character. Because the transition depends ONLY on
+# χ (not on the concrete symbols), one W-independent transition rule suffices.
+boxwid = 0.55
+boxht = 0.5
+linewid = 0.3
+
+Title: text "Characteristic vector  χ(x, window of W)" bold
+
+# Input symbol (teal), placed below the title.
+X: box "x = a" fill 0xB2EBF2 color 0x00838F with .n at Title.s - (1.6, 0.35)
+
+# Window of W to the right of the input (matching cells highlighted green).
+W0: box "a" fill 0xC8E6C9 color 0x2E7D32 with .w at X.e + (0.8, 0)
+W1: box "b" fill 0xE3F2FD color 0x1565C0 with .w at W0.e
+W2: box "c" fill 0xE3F2FD color 0x1565C0 with .w at W1.e
+W3: box "a" fill 0xC8E6C9 color 0x2E7D32 with .w at W2.e
+arrow from X.e to W0.w color 0x00838F
+text "window over W = a b c a" small with .s at W1.e + (0, 0.45)
+
+# χ bit cells beneath each window cell (matches green, non-matches indigo).
+C0: box "1" fill 0xC8E6C9 color 0x2E7D32 with .n at W0.s - (0, 0.55)
+C1: box "0" fill 0xE8EAF6 color 0x283593 with .n at W1.s - (0, 0.55)
+C2: box "0" fill 0xE8EAF6 color 0x283593 with .n at W2.s - (0, 0.55)
+C3: box "1" fill 0xC8E6C9 color 0x2E7D32 with .n at W3.s - (0, 0.55)
+line from W0.s to C0.n dashed color 0x455A64
+line from W1.s to C1.n dashed color 0x455A64
+line from W2.s to C2.n dashed color 0x455A64
+line from W3.s to C3.n dashed color 0x455A64
+text "χ = 1 0 0 1₂  →  selects the W-independent transition" with .w at C3.e + (0.4, 0)

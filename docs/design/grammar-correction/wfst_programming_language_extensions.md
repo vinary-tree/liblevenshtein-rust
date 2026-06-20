@@ -1,5 +1,7 @@
 # WFST Architecture Extensions for Programming Language Error Correction
 
+[← Documentation Index](../../README.md)
+
 **Version**: 1.0
 **Date**: 2025-11-21
 **Status**: Design Specification
@@ -59,19 +61,19 @@ Error Model (WFST) ∘ Dictionary (WFST)
 
 ### 1.2 WFST Fundamentals
 
-A WFST T = (Σ, Δ, Q, I, F, E, λ, ρ) consists of:
-- **Σ**: Input alphabet
-- **Δ**: Output alphabet
-- **Q**: Finite set of states
-- **I ⊆ Q**: Initial states
-- **F ⊆ Q**: Final states
-- **E ⊆ Q × (Σ ∪ {ε}) × (Δ ∪ {ε}) × ℝ⁺ × Q**: Edges with weights
-- **λ: I → ℝ⁺**: Initial weights
-- **ρ: F → ℝ⁺**: Final weights
+A WFST `T = (Σ, Δ, Q, I, F, E, λ, ρ)` consists of:
+- `Σ`: Input alphabet
+- `Δ`: Output alphabet
+- `Q`: Finite set of states
+- `I ⊆ Q`: Initial states
+- `F ⊆ Q`: Final states
+- `E ⊆ Q × (Σ ∪ {ε}) × (Δ ∪ {ε}) × ℝ⁺ × Q`: Edges with weights
+- `λ: I → ℝ⁺`: Initial weights
+- `ρ: F → ℝ⁺`: Final weights
 
 **Operations**:
-- **Composition** (∘): Cascades two transducers
-- **Union** (∪): Combines alternative paths
+- **Composition** (`∘`): Cascades two transducers
+- **Union** (`∪`): Combines alternative paths
 - **Concatenation** (·): Sequences transductions
 - **Kleene Star** (*): Allows repetition
 
@@ -257,10 +259,10 @@ Only keeps paths producing valid keywords/identifiers.
 
 ### 4.5 Complexity
 
-- **States**: O(n × d)
-- **Edges**: O(n × d × |Σ|)
-- **Time**: O(n × d² × |Σ|) for construction
-- **Space**: O(n × d)
+- **States**: `𝒪(n × d)`
+- **Edges**: `𝒪(n × d × ∣Σ∣)`
+- **Time**: `𝒪(n × d² × ∣Σ∣)` for construction
+- **Space**: `𝒪(n × d)`
 
 ---
 
@@ -273,10 +275,10 @@ Accept only candidate strings that parse according to language grammar.
 ### 5.2 Construction from CFG
 
 Given grammar `G = (N, Σ, P, S)`:
-- N: Non-terminals
-- Σ: Terminals
-- P: Production rules
-- S: Start symbol
+- `N`: Non-terminals
+- `Σ`: Terminals
+- `P`: Production rules
+- `S`: Start symbol
 
 **Convert to WFST**:
 1. Each non-terminal → sub-WFST
@@ -576,7 +578,7 @@ T_final = T_L1 ∘ T_L2 ∘ T_L3 ∘ T_L4 ∘ T_L5
 
 **Problem**: Composition is associative but **not commutative**. Order matters!
 
-**Complexity**: O(|Q₁| × |Q₂| × ... × |Q₅|) states (exponential blowup)
+**Complexity**: `𝒪(∣Q₁∣ × ∣Q₂∣ × ... × ∣Q₅∣)` states (exponential blowup)
 
 ### 9.2 On-the-Fly Composition
 
@@ -709,7 +711,7 @@ struct LatticeEdge {
 - Viterbi algorithm for lattices
 
 **Top-K Paths**:
-- Eppstein's algorithm: O(m + n log n + K log K)
+- Eppstein's algorithm: `𝒪(m + n log n + K log K)`
 
 ### 10.3 Caching and Memoization
 
@@ -746,16 +748,16 @@ let results: Vec<Correction> = candidates
 
 | Component | Time Complexity | Space Complexity |
 |-----------|-----------------|------------------|
-| Layer 1 (Levenshtein) | O(n × d² × \|Σ\|) | O(n × d) |
-| Layer 2 (Parsing) | O(n³) (CYK) or O(n) (GLR) | O(n²) |
-| Layer 3 (Type Checking) | O(n × \|Γ\|) | O(\|Γ\|) |
-| Layer 4 (Semantic) | O(n × 2^k) (k = repair complexity) | O(2^k) |
-| Layer 5 (Process Calc) | O(V + E) (graph analysis) | O(V) |
-| **Total (Sequential)** | O(n³ + n × 2^k) | O(n² + 2^k) |
+| Layer 1 (Levenshtein) | `𝒪(n × d² × \∣Σ\∣)` | `𝒪(n × d)` |
+| Layer 2 (Parsing) | `𝒪(n³)` (CYK) or `𝒪(n)` (GLR) | `𝒪(n²)` |
+| Layer 3 (Type Checking) | `𝒪(n × \∣Γ\∣)` | `𝒪(\∣Γ\∣)` |
+| Layer 4 (Semantic) | `𝒪(n × 2^k)` (k = repair complexity) | `𝒪(2^k)` |
+| Layer 5 (Process Calc) | `𝒪(V + E)` (graph analysis) | `𝒪(V)` |
+| **Total (Sequential)** | `𝒪(n³ + n × 2^k)` | `𝒪(n² + 2^k)` |
 
 **With Beam Search** (width = K):
-- Time: O(K × n³)
-- Space: O(K × n²)
+- Time: `𝒪(K × n³)`
+- Space: `𝒪(K × n²)`
 
 ### 11.2 Empirical Performance
 
@@ -772,7 +774,7 @@ let results: Vec<Correction> = candidates
 ### 11.3 Bottlenecks
 
 **Layer 2 (Parsing)**:
-- Tree-sitter GLR parser: O(n) amortized
+- Tree-sitter GLR parser: `𝒪(n)` amortized
 - But parse forest can be large (exponential in ambiguity)
 
 **Layer 4 (Semantic Repair)**:

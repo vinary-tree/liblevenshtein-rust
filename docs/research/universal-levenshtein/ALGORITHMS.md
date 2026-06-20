@@ -1,6 +1,8 @@
+[← Documentation Index](../../README.md)
+
 # Universal Levenshtein Automata - Algorithms
 
-**Source**: "Universal Levenshtein Automata - Building and Properties" (Petar Mitankin, 2005)
+**Source**: "Universal Levenshtein Automata - Building and Properties" (Petar Mitankin, 2005), Master's Thesis, Sofia University "St. Kliment Ohridski"
 **Section**: 6 - Building of A^∀,ε_n, A^∀,t_n and A^∀,ms_n (Pages 48-59)
 
 This document extracts the complete algorithmic content from Section 6, including all pseudocode, type definitions, API functions, complexity analysis, and results tables.
@@ -36,7 +38,7 @@ Section 6 presents the complete construction algorithm for Universal Levenshtein
 - **Uses breadth-first search (BFS)** to generate all states
 - **Handles cycles** using HAS_NEVER_BEEN_PUSHED to avoid revisiting states
 - **Builds A^∀,χ_n** for all three distance variants: χ ∈ {ε, t, ms}
-- **Achieves O(n²) states** with polynomial construction time
+- **Achieves `𝒪(n²)` states** with polynomial construction time
 
 **Key Insight**: The universal automaton is parameter-free and works for any word length by using parametric positions (I, M) instead of concrete word indices.
 
@@ -1020,7 +1022,7 @@ A_k = {A | A ∈ M^ε_states ∧ ∃t(0 ≤ t ≤ k ∧ rm(A) = M - k + t#t)}
 ### Time Complexity
 
 **Construction**:
-- **States**: O(n × 4^{2n})
+- **States**: `𝒪(n × 4^{2n})`
 - **Alphabet size**: |Σ^∀_n| = 2^{2n+2} - 2 (bit vectors of length 1 to 2n+2)
 - **Transitions per state**: At most |Σ^∀_n|
 - **Transition computation**: Polynomial in n (subsumption checks)
@@ -1034,17 +1036,17 @@ O(states × alphabet × poly(n))
 
 **Query time** (given A^∀,χ_n and concrete word w):
 - **Word length**: p = |w|
-- **Bit vector encoding**: h_n(w, x) computed in O(p) per character x
-- **Traversal**: O(|x|) characters × O(2n) transitions per character
-- **Total**: O(|x| × 2n) = O(|x| × n)
+- **Bit vector encoding**: h_n(w, x) computed in `𝒪(p)` per character x
+- **Traversal**: `𝒪(∣x∣)` characters × `𝒪(2n)` transitions per character
+- **Total**: `𝒪(∣x∣ × 2n)` = `𝒪(∣x∣ × n)`
 
 ### Space Complexity
 
 **Storage**:
-- **States**: O(n × 4^{2n})
-- **Transitions**: O(n × 4^{2n} × 2^{2n+2}) = O(n × 4^{4n})
-- **Each state**: Set of at most O(n²) positions (from I^χ_s ∪ M^χ_s)
-- **Each position**: O(log n) bits
+- **States**: `𝒪(n × 4^{2n})`
+- **Transitions**: `𝒪(n × 4^{2n} × 2^{2n+2})` = `𝒪(n × 4^{4n})`
+- **Each state**: Set of at most `𝒪(n²)` positions (from I^χ_s ∪ M^χ_s)
+- **Each position**: `𝒪(log n)` bits
 
 **Total space**:
 ```
@@ -1100,7 +1102,7 @@ O(states × positions_per_state × bits_per_position)
 1. **Precomputation**:
    - Build A^∀,χ_n offline for small n (n ≤ 3)
    - Serialize to disk for fast loading
-   - Amortizes O(4^{4n}) construction cost
+   - Amortizes `𝒪(4^{4n})` construction cost
 
 2. **Caching**:
    - Cache δ^∀,χ_e results for common (q, b) pairs
@@ -1159,7 +1161,7 @@ Section 6 provides a **complete, executable specification** for building Univers
 2. ✅ **Subsumption closure** for state minimization
 3. ✅ **All three variants** (ε, t, ms) supported
 4. ✅ **Polynomial construction time** (though exponential in n)
-5. ✅ **O(|x| × n) query time** for word x
+5. ✅ **`𝒪(∣x∣ × n)` query time** for word x
 
 **Practical Considerations**:
 - Feasible for **n ≤ 3** (real-world edit distances)

@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # MeTTa Operational Semantics
 
 This document presents the operational semantics of MeTTa as a **symmetric reflective
@@ -94,11 +96,11 @@ enum Collection {
 
 | Operation | Complexity | Description |
 |-----------|------------|-------------|
-| `unify(t, u)` | O(n) typical | Pattern matching with occurs check |
-| `substitute(P, σ)` | O(P size) | Apply substitution to process |
-| `structural_eq(P, Q)` | O(n) | Check structural congruence |
-| `step(state)` | O(varies) | One reduction step via COMM |
-| `compile_to_rspace(P)` | O(P size) | Transform to RSpace representation |
+| `unify(t, u)` | `𝒪(n)` typical | Pattern matching with occurs check |
+| `substitute(P, σ)` | `𝒪(P size)` | Apply substitution to process |
+| `structural_eq(P, Q)` | `𝒪(n)` | Check structural congruence |
+| `step(state)` | `𝒪(varies)` | One reduction step via COMM |
+| `compile_to_rspace(P)` | `𝒪(P size)` | Transform to RSpace representation |
 
 ---
 

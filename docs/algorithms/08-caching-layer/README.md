@@ -4,6 +4,10 @@
 
 The Caching Layer provides composable eviction strategy wrappers that add caching behavior to any dictionary implementation. Using the decorator pattern, these wrappers maintain separate metadata (access times, hit counts, sizes) without modifying the underlying dictionary.
 
+![Eviction decorator stack: composable eviction wrappers (LRU, TTL, Noop) layered over an inner dictionary via the decorator pattern](../../diagrams/cache/eviction-decorator-stack.svg)
+
+*Eviction decorator stack: eviction strategies compose as decorators over any inner dictionary.*
+
 **Key Features**:
 - **Composable**: Stack multiple eviction strategies
 - **Non-Intrusive**: No changes to dictionary implementations
@@ -407,9 +411,9 @@ Lru::new(LazyInitDefault::new())
 
 | Operation | Noop | Metadata Wrappers |
 |-----------|------|-------------------|
-| get_value | O(d) | O(d) + O(1) metadata update |
-| contains | O(d) | O(d) + O(1) metadata update |
-| find_lru/lfu | N/A | O(n) scan |
+| get_value | `O(d)` | `O(d)` + `O(1)` metadata update |
+| contains | `O(d)` | `O(d)` + `O(1)` metadata update |
+| find_lru/lfu | N/A | `O(n)` scan |
 
 Where:
 - `d` = dictionary operation complexity

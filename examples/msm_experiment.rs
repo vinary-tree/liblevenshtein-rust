@@ -10,8 +10,10 @@
 //! cargo run --release --example msm_experiment -- approx-control-knn 33 3
 //! cargo run --release --example msm_experiment -- approx-paa-knn 33 3
 //! cargo run --release --example msm_experiment -- ucr-1nn-latency 5 1 target/msm-corpora/ItalyPowerDemand ItalyPowerDemand
+//! cargo run --release --example msm_experiment -- ucr-1nn-outcomes 0 0 target/msm-corpora/ItalyPowerDemand ItalyPowerDemand
 //! ```
 
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -298,6 +300,46 @@ fn ucr_1nn_accuracy(
     (correct, total, accuracy)
 }
 
+fn majority_label(train: &[LabeledSeries]) -> &str {
+    let mut counts = BTreeMap::<&str, usize>::new();
+    for row in train {
+        *counts.entry(row.label.as_str()).or_default() += 1;
+    }
+    counts
+        .into_iter()
+        .max_by(|(left_label, left_count), (right_label, right_count)| {
+            left_count
+                .cmp(right_count)
+                .then_with(|| right_label.cmp(left_label))
+        })
+        .map(|(label, _)| label)
+        .unwrap_or("")
+}
+
+fn ucr_1nn_outcomes(
+    train: &[LabeledSeries],
+    test: &[LabeledSeries],
+    msm: MsmConfig,
+) -> Vec<(bool, bool)> {
+    let majority = majority_label(train);
+    test.iter()
+        .map(|probe| {
+            let predicted = train
+                .iter()
+                .map(|candidate| {
+                    (
+                        candidate.label.as_str(),
+                        msm.distance(&probe.series, &candidate.series),
+                    )
+                })
+                .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+                .map(|(label, _)| label)
+                .unwrap_or("");
+            (majority == probe.label, predicted == probe.label)
+        })
+        .collect()
+}
+
 fn measure_legacy_ratio(scenario: &str) -> f64 {
     let x = generate_series(24, 12345);
     let y = generate_series(24, 67890);
@@ -365,6 +407,23 @@ fn main() {
     };
     let threshold = 24.0;
     let k = 8;
+
+    if scenario == "ucr-1nn-outcomes" {
+        let (train, test) = ucr_case.as_ref().unwrap();
+        println!("scenario,arm,case,correct");
+        for (case, (control_correct, treatment_correct)) in
+            ucr_1nn_outcomes(train, test, MsmConfig::new(1.0))
+                .into_iter()
+                .enumerate()
+        {
+            println!("{scenario},majority,{case},{}", u8::from(control_correct));
+            println!(
+                "{scenario},exact_msm_1nn,{case},{}",
+                u8::from(treatment_correct)
+            );
+        }
+        return;
+    }
 
     println!("scenario,phase,run,elapsed_ms,result_len,checksum");
     for run in 0..total_runs {

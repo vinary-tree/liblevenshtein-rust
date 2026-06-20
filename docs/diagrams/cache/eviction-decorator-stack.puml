@@ -1,0 +1,87 @@
+@startuml eviction-decorator-stack
+' Composable eviction policies as a DECORATOR stack over any Dictionary.
+' Each eviction wrapper IS-A Dictionary (implements the trait) and HAS-A inner
+' Dictionary (the thing it decorates), so wrappers nest freely:
+'   Lru<Ttl<DynamicDawg>>  caps size AND expires stale entries.
+' FuzzyMultiMap drives a fuzzy (Levenshtein) query against the (possibly wrapped)
+' dictionary and aggregates every matching key's values into one collection.
+' Color: cache / eviction (yellow) — Dictionary trait is dictionary-green to show
+'   it is the seam the cache layer plugs into.
+'   src/cache/multimap.rs · src/cache/eviction/{noop,ttl,lru,lfu,age,cost_aware,memory_pressure}.rs
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam class {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+  FontColor #102027
+  AttributeFontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Eviction policies as a decorator stack — every wrapper is a Dictionary that wraps a Dictionary
+
+interface "Dictionary\n«trait»" as Dict #C8E6C9 {
+  contains(term) : bool
+  query(term, k) : matches
+  insert(term)
+  remove(term)
+}
+
+abstract class "EvictionWrapper<D: Dictionary>" as Evict #FFF9C4 {
+  inner : D
+  --
+  on_access(term)   : touch policy bookkeeping
+  evict_if_needed() : drop coldest entry
+}
+
+class "NoopWrapper" as Noop #FFFDE7
+class "TtlWrapper" as Ttl #FFFDE7 {
+  ttl : Duration   ' expire by age
+}
+class "LruWrapper" as Lru #FFFDE7 {
+  capacity : usize ' drop least-recently-used
+}
+class "LfuWrapper" as Lfu #FFFDE7 {
+  capacity : usize ' drop least-frequently-used
+}
+class "AgeWrapper (FIFO)" as Age #FFFDE7 {
+  capacity : usize ' drop oldest-inserted
+}
+class "CostAwareWrapper" as Cost #FFFDE7 {
+  budget : u64     ' drop by value cost
+}
+class "MemoryPressureWrapper" as Mem #FFFDE7 {
+  high_water : bytes ' drop under RSS pressure
+}
+
+class "FuzzyMultiMap<C, D>" as MultiMap #FFF9C4 {
+  dict : D                       ' the (possibly wrapped) backend
+  --
+  get(term, k) -> C              ' fuzzy query → aggregated values
+  insert(term, value)
+}
+
+' An eviction wrapper both IMPLEMENTS Dictionary and WRAPS a Dictionary (decorator).
+Evict ..|> Dict : implements
+Evict o--> Dict : wraps inner D
+
+' Concrete policies specialize the wrapper.
+Noop --|> Evict
+Ttl  --|> Evict
+Lru  --|> Evict
+Lfu  --|> Evict
+Age  --|> Evict
+Cost --|> Evict
+Mem  --|> Evict
+
+' The multimap holds a (possibly decorated) dictionary.
+MultiMap o--> Dict : holds backend
+
+note bottom of Evict
+  Wrappers compose: Lru<Ttl<DynamicDawg>>
+  is still a Dictionary, so it slots in
+  anywhere a Dictionary is expected.
+end note
+@enduml

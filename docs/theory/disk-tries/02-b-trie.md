@@ -342,7 +342,7 @@ function search(query Q):
     return hash_table.search(original_query)
 ```
 
-**Complexity**: O(m) trie traversals + O(log b) binary search, where m = string length, b = strings per bucket.
+**Complexity**: `𝒪(m)` trie traversals + `𝒪(log b)` binary search, where m = string length, b = strings per bucket.
 
 ### Insert
 
@@ -458,7 +458,7 @@ Pointer encoding:
 ```
 
 **Design rationale:**
-- String pointers kept sorted for O(log b) binary search
+- String pointers kept sorted for `𝒪(log b)` binary search
 - String data stored in insertion order (fast append)
 - Initial allocation: 128 pointers, grow as needed
 - 1KB oversize region when loaded into memory (delays splits)
@@ -492,9 +492,9 @@ Compared against standard B+-tree, prefix B+-tree, and Berkeley DB B+-tree:
 
 | Operation | Trie Traversal | Binary Search | Disk I/Os |
 |-----------|----------------|---------------|-----------|
-| Lookup | O(m) | O(log b) | O(h) + 1 |
-| Insert | O(m) | O(log b) | O(h) + 1 write |
-| Delete | O(m) | O(log b) | O(h) + 1 write |
+| Lookup | `𝒪(m)` | `𝒪(log b)` | `𝒪(h)` + 1 |
+| Insert | `𝒪(m)` | `𝒪(log b)` | `𝒪(h)` + 1 write |
+| Delete | `𝒪(m)` | `𝒪(log b)` | `𝒪(h)` + 1 write |
 
 Where:
 - m = string length
@@ -503,7 +503,7 @@ Where:
 
 ### Why B-trie Outperforms B+-tree
 
-1. **No binary search of index**: Trie traversal uses character as array index (O(1) per level)
+1. **No binary search of index**: Trie traversal uses character as array index (`𝒪(1)` per level)
 2. **Smaller index nodes**: 512-byte trie nodes vs 8KB B+-tree nodes → better cache utilization
 3. **Prefix elimination**: Strings in buckets have prefixes removed → more strings per bucket
 4. **Implicit cost-adaptivity**: Frequent strings often consumed by trie → no disk access

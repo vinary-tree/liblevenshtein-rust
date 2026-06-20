@@ -1,0 +1,45 @@
+# color-legend.d2 — the canonical per-concept colour legend for every
+# liblevenshtein diagram. Rendered to color-legend.svg; referenced by
+# docs/diagrams/README.md. Keep this in lock-step with the legend table there.
+direction: down
+
+title: |md
+  # liblevenshtein — Diagram Colour Legend
+| { near: top-center; style.font-size: 24 }
+
+concepts: "Concept fills  (container shade shown; children use the lighter tint)" {
+  grid-columns: 3
+  grid-gap: 18
+  style.font-size: 15
+
+  dict:    "Dictionary backends\n(libdictenstein)"        { style.fill: "#C8E6C9"; style.stroke: "#2E7D32"; style.font-color: "#102027" }
+  core:    "Core transducer\n& Levenshtein automata"      { style.fill: "#BBDEFB"; style.stroke: "#1565C0"; style.font-color: "#102027" }
+  engines: "Higher-level engines"                         { style.fill: "#E1BEE7"; style.stroke: "#6A1B9A"; style.font-color: "#102027" }
+  input:   "Query input / term"                           { style.fill: "#B2EBF2"; style.stroke: "#00838F"; style.font-color: "#102027" }
+  inter:   "Intersection /\nlock-step traversal"          { style.fill: "#FFE0B2"; style.stroke: "#EF6C00"; style.font-color: "#102027" }
+  phon:    "Phonetic engine"                              { style.fill: "#F8BBD0"; style.stroke: "#AD1457"; style.font-color: "#102027" }
+  msm:     "Time-series / MSM"                            { style.fill: "#B2DFDB"; style.stroke: "#00695C"; style.font-color: "#102027" }
+  wall:    "WallBreaker"                                  { style.fill: "#FFCCBC"; style.stroke: "#D84315"; style.font-color: "#102027" }
+  ctx:     "Contextual completion"                        { style.fill: "#D1C4E9"; style.stroke: "#4527A0"; style.font-color: "#102027" }
+  cache:   "Cache / eviction"                             { style.fill: "#FFF9C4"; style.stroke: "#F9A825"; style.font-color: "#102027" }
+  conc:    "Concurrency / locking"                        { style.fill: "#CFD8DC"; style.stroke: "#455A64"; style.font-color: "#102027" }
+  dist:    "Distance / SIMD"                              { style.fill: "#C5CAE9"; style.stroke: "#283593"; style.font-color: "#102027" }
+  dsl:     "DSL (.llev / .llre)\ncompilation"             { style.fill: "#D7CCC8"; style.stroke: "#4E342E"; style.font-color: "#102027" }
+  wfst:    "WFST (duallity,\noptional integration)"       { style.fill: "#B3E5FC"; style.stroke: "#0277BD"; style.font-color: "#102027" }
+  serde:   "Serialization / bindings"                     { style.fill: "#F0F4C3"; style.stroke: "#9E9D24"; style.font-color: "#102027" }
+}
+
+edits: "Edit-operation edge colours  (automaton transitions)" {
+  grid-columns: 3
+  grid-gap: 18
+  style.font-size: 15
+
+  a: "match  (cost 0)"          { style.fill: "#FFFFFF"; style.stroke: "#2E7D32"; style.stroke-width: 4; style.font-color: "#2E7D32" }
+  b: "substitution  (+1)"       { style.fill: "#FFFFFF"; style.stroke: "#6A1B9A"; style.stroke-width: 4; style.font-color: "#6A1B9A" }
+  c: "insertion  (+1)"          { style.fill: "#FFFFFF"; style.stroke: "#EF6C00"; style.stroke-width: 4; style.font-color: "#EF6C00" }
+  d: "deletion  (+1, ε-move)"   { style.fill: "#FFFFFF"; style.stroke: "#C62828"; style.stroke-width: 4; style.font-color: "#C62828" }
+  e: "transposition  (Damerau)" { style.fill: "#FFFFFF"; style.stroke: "#0277BD"; style.stroke-width: 4; style.font-color: "#0277BD" }
+  f: "merge / split  (OCR)"     { style.fill: "#FFFFFF"; style.stroke: "#AD1457"; style.stroke-width: 4; style.font-color: "#AD1457" }
+}
+
+concepts -> edits: { style.opacity: 0 }

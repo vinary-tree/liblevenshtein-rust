@@ -1,6 +1,6 @@
 # Restricted Substitutions Guide
 
-**Version**: 0.6.0
+**Version**: 0.9.1
 **Last Updated**: 2025-11-12
 
 ---
@@ -25,13 +25,15 @@ Restricted substitutions allow you to define **custom character equivalences** f
 ### What Are Restricted Substitutions?
 
 In standard Levenshtein distance:
-- "cat" vs "kat" has distance **1** (c→k substitution costs 1)
-- "cat" vs "cut" has distance **1** (a→u substitution costs 1)
+- "cat" vs "kat" has distance `1` (c→k substitution costs `1`)
+- "cat" vs "cut" has distance `1` (a→u substitution costs `1`)
 
 With restricted substitutions:
 - You can define c↔k as **zero-cost** (phonetically equivalent)
-- "cat" matches "kat" with distance **0** (c↔k is free)
-- "cat" vs "cut" still has distance **1** (a→u costs 1)
+- "cat" matches "kat" with distance `0` (c↔k is free)
+- "cat" vs "cut" still has distance `1` (a→u costs `1`)
+
+![Operation sets: each Levenshtein variant (Standard, Transposition, Merge-and-Split) enables a distinct set of edit operations, and a substitution policy further restricts which character pairs a substitution may apply to.](../diagrams/automata/operation-sets.svg)
 
 ### Why Use Restricted Substitutions?
 
@@ -45,11 +47,11 @@ With restricted substitutions:
 ### Zero-Cost Abstraction
 
 The `Unrestricted` policy (default behavior) is a **zero-sized type** that adds **zero overhead**:
-- Size: 0 bytes
-- Runtime cost: 0 (compiler optimizes away all checks)
+- Size: `0` bytes
+- Runtime cost: `0` (compiler optimizes away all checks)
 - Performance: Identical to pre-generic implementation
 
-Only when you use `Restricted` policy do you pay for the feature (1-5% overhead).
+Only when you use `Restricted` policy do you pay for the feature (`1`–`5%` overhead).
 
 ---
 
@@ -61,7 +63,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-liblevenshtein = "0.6.0"
+liblevenshtein = "0.9.1"
 ```
 
 ### Minimal Example
@@ -553,7 +555,7 @@ let results_d1 = transducer_no_subs.query("kat", 1).collect::<Vec<_>>();
 
 ### Q1: What's the difference between `SubstitutionSet` and `SubstitutionSetChar`?
 
-**A**: `SubstitutionSet` works with **ASCII bytes** (`u8`, 0-127) and is used with `DoubleArrayTrie`. `SubstitutionSetChar` works with **full Unicode characters** (`char`, U+0000-U+10FFFF) and is used with character-level dictionaries.
+**A**: `SubstitutionSet` works with **ASCII bytes** (`u8`, `0`–`127`) and is used with `DoubleArrayTrie`. `SubstitutionSetChar` works with **full Unicode characters** (`char`, `U+0000`–`U+10FFFF`) and is used with character-level dictionaries.
 
 ```rust
 // Byte-level (ASCII only)
@@ -592,8 +594,8 @@ combined.allow('O', '0');
 ### Q4: What's the performance impact?
 
 **A**:
-- **Unrestricted** (default): **0% overhead** (zero-cost abstraction)
-- **Restricted**: **1-5% overhead** (HashSet lookup on mismatches only)
+- **Unrestricted** (default): **`0%` overhead** (zero-cost abstraction)
+- **Restricted**: **`1`–`5%` overhead** (HashSet lookup on mismatches only)
 
 The overhead is minimal because:
 1. Exact matches short-circuit (no lookup)
@@ -678,7 +680,7 @@ Restricted substitutions provide powerful, flexible, and **zero-cost** (when unu
 ✅ **Use `SubstitutionSet` presets** for common scenarios (phonetic, keyboard, leetspeak, OCR)
 ✅ **Use `SubstitutionSetChar`** for Unicode (diacritics, Greek, Cyrillic, Japanese)
 ✅ **Zero overhead when disabled** (default `Unrestricted` policy)
-✅ **1-5% overhead when enabled** (fast HashSet lookups)
+✅ **`1`–`5%` overhead when enabled** (fast HashSet lookups)
 ✅ **Fully backward compatible** (existing code works unchanged)
 
 **Next Steps**:
@@ -691,3 +693,7 @@ Restricted substitutions provide powerful, flexible, and **zero-cost** (when unu
 **Author**: liblevenshtein-rust contributors
 **License**: MIT OR Apache-2.0
 **Repository**: https://github.com/dylon/liblevenshtein-rust
+
+---
+
+[← Documentation Index](../README.md)

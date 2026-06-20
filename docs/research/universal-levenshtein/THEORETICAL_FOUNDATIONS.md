@@ -1,6 +1,8 @@
+[← Documentation Index](../../README.md)
+
 # Universal Levenshtein Automata - Theoretical Foundations
 
-**Source**: "Universal Levenshtein Automata - Building and Properties" (Petar Mitankin, 2005)
+**Source**: "Universal Levenshtein Automata - Building and Properties" (Petar Mitankin, 2005), Master's Thesis, Sofia University "St. Kliment Ohridski"
 **Sections**: All theoretical content - Definitions, Propositions, Lemmas, Theorems
 
 This document extracts the core theoretical foundations including all proofs, lemmas, propositions, and theorems. It complements [PAPER_SUMMARY.md](PAPER_SUMMARY.md) by focusing on mathematical rigor rather than narrative flow.
@@ -800,7 +802,7 @@ Total: O(n × 4^{2n} / √(2n+1))
 ### Property 2: Construction Complexity
 
 **Time**: O(|states| × |alphabet| × poly(n))
-**Space**: O(|states| × n²)
+**Space**: `𝒪(∣states∣ × n²)`
 
 ---
 
@@ -808,14 +810,14 @@ Total: O(n × 4^{2n} / √(2n+1))
 
 **Given A^{∀,χ}_n and word w**:
 
-**Time**: O(|x| × n) to check if x ∈ L^χ_{Lev}(n, w)
+**Time**: `𝒪(∣x∣ × n)` to check if x ∈ L^χ_{Lev}(n, w)
 
 **Process**:
-1. Compute h_n(w, x) incrementally: O(|x| × n)
-2. Traverse A^{∀,χ}_n: O(|x|) transitions
-3. Check final state: O(1)
+1. Compute h_n(w, x) incrementally: `𝒪(∣x∣ × n)`
+2. Traverse A^{∀,χ}_n: `𝒪(∣x∣)` transitions
+3. Check final state: `𝒪(1)`
 
-**Space**: O(n) for current state
+**Space**: `𝒪(n)` for current state
 
 ---
 

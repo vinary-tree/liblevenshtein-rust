@@ -1,0 +1,38 @@
+@startuml value-filtered-pruning
+' Value-filtered querying over a MappedDictionary: the iterator carries a value
+' predicate (e.g. "visible in the current lexical scope"). Whole subtrees whose
+' aggregated value summary cannot satisfy the predicate are skipped, yielding
+' the documented 10–100× reduction in work for scoped completion.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam activity {
+  BackgroundColor #E8EAF6
+  BorderColor #283593
+  FontColor #102027
+  DiamondBackgroundColor #FFE0B2
+  DiamondBorderColor #EF6C00
+  StartColor #2E7D32
+  EndColor #C62828
+  ArrowColor #37474F
+}
+
+title ValueFilteredQueryIterator — prune by value scope (10–100× fewer terms)
+
+start
+:advance automaton along a dictionary edge\n(lock-step DFS as usual);
+if (subtree's value summary can satisfy the predicate?) then (no)
+  #FFCDD2:prune the entire subtree;
+  note right
+    Skips every term beneath this node
+    whose value fails the scope predicate.
+  end note
+  stop
+else (yes)
+  if (terminal ∧ accepting ∧ value matches predicate?) then (yes)
+    #C8E6C9:yield (term, distance, &value);
+  endif
+  :recurse into the surviving subtree;
+endif
+stop
+@enduml

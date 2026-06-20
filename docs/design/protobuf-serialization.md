@@ -1,8 +1,12 @@
 # Protobuf Serialization Format
 
+[← Documentation Index](../README.md)
+
 ## Overview
 
 The protobuf serialization format provides cross-language compatibility for liblevenshtein dictionaries. It's supported across all implementations (Java, C++, Rust) and preserves the internal graph structure.
+
+![Serialization formats: how Bincode, JSON, and Protobuf (V1 / optimized V2) encode the same dictionary, contrasting term-list versus graph-structure layouts and their relative sizes.](../diagrams/serialization/serialization-formats.svg)
 
 ## Format Specification
 

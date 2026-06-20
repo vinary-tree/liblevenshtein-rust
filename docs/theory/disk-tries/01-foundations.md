@@ -47,23 +47,23 @@ A trie T over alphabet Σ is a rooted tree where:
 ### Properties
 
 **Time Complexity:**
-- Lookup: O(m) where m is the length of the query string
-- Insert: O(m)
-- Delete: O(m)
-- Prefix search: O(m + k) where k is the number of matches
+- Lookup: `𝒪(m)` where m is the length of the query string
+- Insert: `𝒪(m)`
+- Delete: `𝒪(m)`
+- Prefix search: `𝒪(m + k)` where k is the number of matches
 
 **Space Complexity:**
-- Worst case: O(n × m × |Σ|) where n is the number of strings and |Σ| is alphabet size
+- Worst case: `𝒪(n × m × ∣Σ∣)` where n is the number of strings and |Σ| is alphabet size
 - In practice: Much better due to prefix sharing
 
 ### Comparison with Other String Structures
 
 | Structure | Lookup | Insert | Space | Notes |
 |-----------|--------|--------|-------|-------|
-| Sorted Array | O(m log n) | O(n) | O(N) | Binary search, N = total chars |
-| Hash Table | O(m) expected | O(m) | O(N) | No prefix queries, hash collisions |
-| Trie | O(m) | O(m) | Variable | Prefix queries, deterministic |
-| BST of strings | O(m log n) | O(m log n) | O(N) | Balanced variants |
+| Sorted Array | `𝒪(m log n)` | `𝒪(n)` | `𝒪(N)` | Binary search, N = total chars |
+| Hash Table | `𝒪(m)` expected | `𝒪(m)` | `𝒪(N)` | No prefix queries, hash collisions |
+| Trie | `𝒪(m)` | `𝒪(m)` | Variable | Prefix queries, deterministic |
+| BST of strings | `𝒪(m log n)` | `𝒪(m log n)` | `𝒪(N)` | Balanced variants |
 
 The key advantage of tries is that lookup time depends only on query length, not the number of stored strings.
 
@@ -196,8 +196,8 @@ B-trees exemplify disk-optimized design:
         [A-C][E-G][I-L][N-S][U-W][Y-Z]
 ```
 
-- **High fanout**: Each node has O(B) children, reducing tree height
-- **Height**: O(log_B N), so only O(log_B N) I/Os per operation
+- **High fanout**: Each node has `𝒪(B)` children, reducing tree height
+- **Height**: `𝒪(log_B N)`, so only `𝒪(log_B N)` I/Os per operation
 - **Node size = block size**: Each node read/write is one I/O
 
 For N = 1 billion items and B = 4KB pages holding 400 keys:
@@ -284,10 +284,10 @@ When comparing disk tries, measure:
 
 This foundation establishes the core concepts:
 
-1. **Tries** provide O(m) lookup independent of dictionary size
+1. **Tries** provide `𝒪(m)` lookup independent of dictionary size
 2. **External memory model** counts I/Os, not CPU operations
 3. **Disk-efficient design** requires high fanout, block packing, and minimizing height
-4. **B-trees** show how to achieve O(log_B N) I/Os; our goal is similar for tries
+4. **B-trees** show how to achieve `𝒪(log_B N)` I/Os; our goal is similar for tries
 
 The following documents explore specific solutions:
 - [02-b-trie](02-b-trie.md): Bucket-based approach from the B-tree world

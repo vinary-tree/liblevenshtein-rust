@@ -53,7 +53,7 @@ Sparse node (3 children):       Dense node (200 children):
 └─────────────────────┘        └─────────────────────────┘
 ```
 
-This adaptivity provides near-optimal space for any fanout distribution while maintaining the O(1) child lookup that makes radix trees fast.
+This adaptivity provides near-optimal space for any fanout distribution while maintaining the `𝒪(1)` child lookup that makes radix trees fast.
 
 ---
 
@@ -67,8 +67,8 @@ A radix tree with span s processes keys s bits at a time. For span-8 (byte keys)
 
 | Aspect | Radix Tree | Comparison Tree (B-tree) |
 |--------|------------|--------------------------|
-| Key comparison | Never compares keys | O(log n) comparisons |
-| Height | O(m) where m = key length | O(log n) |
+| Key comparison | Never compares keys | `𝒪(log n)` comparisons |
+| Height | `𝒪(m)` where m = key length | `𝒪(log n)` |
 | Cache behavior | One cacheline per level | Multiple per node |
 | SIMD potential | High (byte matching) | Limited |
 | Space efficiency | Variable | Generally good |
@@ -192,7 +192,7 @@ fn find_child_node16_simd(node: &Node16, key: u8) -> Option<&Node> {
 
 ### Node48 (17-48 children)
 
-Uses an index array for O(1) lookup without storing 256 pointers.
+Uses an index array for `𝒪(1)` lookup without storing 256 pointers.
 
 **Structure:**
 ```
@@ -473,9 +473,9 @@ fn add_child(node: &mut Node, key: u8, child: Node) {
 **Growth complexity:**
 | Transition | Copy Cost | Frequency |
 |------------|-----------|-----------|
-| Node4 → Node16 | O(1) | Common |
-| Node16 → Node48 | O(1) | Less common |
-| Node48 → Node256 | O(48) | Rare |
+| Node4 → Node16 | `𝒪(1)` | Common |
+| Node16 → Node48 | `𝒪(1)` | Less common |
+| Node48 → Node256 | `𝒪(48)` | Rare |
 
 ### Node Shrink (Contract)
 
@@ -616,10 +616,10 @@ ART is competitive with hash tables for point lookups while supporting ordered o
 
 | Operation | Cache Lines Touched | Branch Predictions |
 |-----------|---------------------|-------------------|
-| Node4 lookup | 1 | O(1) |
-| Node16 lookup (SIMD) | 1 | O(1) |
-| Node48 lookup | 2 | O(1) |
-| Node256 lookup | 1 | O(1) |
+| Node4 lookup | 1 | `𝒪(1)` |
+| Node16 lookup (SIMD) | 1 | `𝒪(1)` |
+| Node48 lookup | 2 | `𝒪(1)` |
+| Node256 lookup | 1 | `𝒪(1)` |
 
 All node types have excellent cache behavior, typically requiring just 1-2 cache line reads.
 
@@ -684,7 +684,7 @@ In ART, leaves often store single values. For disk-based storage, we'll use B-tr
 The Adaptive Radix Tree provides:
 
 1. **Adaptive structure**: Four node types optimize for actual fanout
-2. **O(m) lookup**: Performance independent of tree size
+2. **`𝒪(m)` lookup**: Performance independent of tree size
 3. **Path compression**: Reduces height for common prefix sharing
 4. **SIMD acceleration**: Node16 uses parallel byte comparison
 5. **Cache efficiency**: Most operations touch 1-2 cache lines

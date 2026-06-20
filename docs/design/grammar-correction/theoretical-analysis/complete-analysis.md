@@ -1,5 +1,7 @@
 # Theoretical Guarantees of Multi-Layer Error Correction Pipeline
 
+[← Documentation Index](../../../README.md)
+
 **Analysis Document v1.0**
 **Date**: 2025-11-04
 **Project**: liblevenshtein-rust
@@ -119,39 +121,39 @@ For pipeline L_n ∘ ... ∘ L₁, the total cost is:
 ```
 C_total(x, y) = ∑ᵢ₌₁ⁿ c_Lᵢ(xᵢ₋₁, xᵢ)
 ```
-where x = x₀, x₁ ∈ L₁(x₀), ..., xₙ = y ∈ Lₙ(xₙ₋₁).
+where `x = x₀`, `x₁ ∈ L₁(x₀)`, ..., `xₙ = y ∈ Lₙ(xₙ₋₁)`.
 
 ### 2.2 Pipeline Instantiation
 
 **Layer 1: Lexical Correction**
-- I₁ = Σ* (strings over alphabet Σ)
-- O₁ = (Σ*)^k (k token candidates per position)
-- c₁(s, t) = Levenshtein_distance(s, t)
-- Alg₁ = Levenshtein automaton query
+- `I₁ = Σ*` (strings over alphabet `Σ`)
+- `O₁ = (Σ*)^k` (`k` token candidates per position)
+- `c₁(s, t) = Levenshtein_distance(s, t)`
+- `Alg₁` = Levenshtein automaton query
 
 **Layer 2: Grammar Correction**
-- I₂ = (Σ*)^m (token sequences)
-- O₂ = ParseTree(G) (valid parse trees for grammar G)
-- c₂(tokens, tree) = #syntax_repairs
-- Alg₂ = BFS over parse states + Tree-sitter
+- `I₂ = (Σ*)^m` (token sequences)
+- `O₂ = ParseTree(G)` (valid parse trees for grammar `G`)
+- `c₂(tokens, tree) = #syntax_repairs`
+- `Alg₂` = BFS over parse states + Tree-sitter
 
 **Layer 3: Semantic Validation**
-- I₃ = ParseTree(G)
-- O₃ = {tree ∈ ParseTree(G) | well_typed(tree)}
-- c₃(tree, tree') = 0 if well_typed(tree'), ∞ otherwise
-- Alg₃ = Type inference (Algorithm W) + filter
+- `I₃ = ParseTree(G)`
+- `O₃ = {tree ∈ ParseTree(G) ∣ well_typed(tree)}`
+- `c₃(tree, tree') = 0` if `well_typed(tree')`, `∞` otherwise
+- `Alg₃` = Type inference (Algorithm W) + filter
 
 **Layer 4: Semantic Repair**
-- I₄ = ParseTree(G) with type errors
-- O₄ = {tree ∈ ParseTree(G) | well_typed(tree)}
-- c₄(tree, tree') = #semantic_edits
-- Alg₄ = Template-based / SMT-based / Search-based
+- `I₄ = ParseTree(G)` with type errors
+- `O₄ = {tree ∈ ParseTree(G) ∣ well_typed(tree)}`
+- `c₄(tree, tree') = #semantic_edits`
+- `Alg₄` = Template-based / SMT-based / Search-based
 
 **Layer 5: Process Verification**
-- I₅ = TypedProgram (for process calculi)
-- O₅ = {prog | session_type_check(prog)}
-- c₅(prog, prog') = #protocol_violations_fixed
-- Alg₅ = Session type checker + repair
+- `I₅ = TypedProgram` (for process calculi)
+- `O₅ = {prog ∣ session_type_check(prog)}`
+- `c₅(prog, prog') = #protocol_violations_fixed`
+- `Alg₅` = Session type checker + repair
 
 ### 2.3 Theoretical Tools
 
@@ -168,7 +170,7 @@ We employ the following theoretical frameworks:
 - Progress and preservation theorems
 
 **2.3.3 Complexity Theory**
-- Time complexity: O(f(n))
+- Time complexity: `𝒪(f(n))`
 - Space complexity
 - Decidability (halting problem, type inference, etc.)
 
@@ -257,11 +259,11 @@ If candidates are sorted by Levenshtein distance and ties broken deterministical
 ### 3.5 Complexity Analysis
 
 **Theorem 3.7 (Lexical Complexity)**:
-For word w with |w| = n, dictionary of size m, max distance d:
-- **Automaton construction**: O(n × d) states, O(n × d × |Σ|) transitions
-- **Query per word**: O(length × d) amortized
-- **Total query**: O(m × avg_length × d)
-- **Space**: O(n × d)
+For word `w` with `∣w∣ = n`, dictionary of size `m`, max distance `d`:
+- **Automaton construction**: `𝒪(n × d)` states, `𝒪(n × d × ∣Σ∣)` transitions
+- **Query per word**: `𝒪(length × d)` amortized
+- **Total query**: `𝒪(m × avg_length × d)`
+- **Space**: `𝒪(n × d)`
 
 **Practical Bounds**:
 - Typical: n ≈ 10, d = 2, m = 100k, avg_length = 7
@@ -276,7 +278,7 @@ For word w with |w| = n, dictionary of size m, max distance d:
 | **Correctness** | ✓ Yes | All candidates within distance d |
 | **Optimality** | ✓ Yes | Top-k by distance (per-token) |
 | **Decidability** | ✓ Yes | Finite automaton, regular language |
-| **Complexity** | O(n × d) | Linear in word length and distance |
+| **Complexity** | `𝒪(n × d)` | Linear in word length and distance |
 
 ---
 
@@ -432,16 +434,16 @@ Beam search with beam width k is a **k-approximation** algorithm in certain case
 
 **Theorem 4.15 (BFS Grammar Complexity)**:
 For input length n, max distance d, beam width k, parse time p:
-- **Pure BFS**: O(|Grammar|^d × n × p) worst-case (exponential in d)
-- **Beam BFS**: O(k × d × n × p) (tractable)
-- **Space**: O(k × state_size)
+- **Pure BFS**: `𝒪(∣Grammar∣^d × n × p)` worst-case (exponential in d)
+- **Beam BFS**: `𝒪(k × d × n × p)` (tractable)
+- **Space**: `𝒪(k × state_size)`
 
 **Practical Bounds**:
 - n = 100 tokens, d = 2, k = 20, p ≈ 5ms (Tree-sitter)
 - Beam BFS: ~20 × 2 × 100 × 5ms = 200ms (acceptable for IDE)
 
 **Theorem 4.16 (Parsing Decidability)**:
-Context-free grammar parsing is decidable in O(n³) worst-case (CYK, Earley).
+Context-free grammar parsing is decidable in `𝒪(n³)` worst-case (CYK, Earley).
 
 **Proof**: Chart parsing algorithms [Earley 1970, Younger 1967].
 ∎
@@ -457,7 +459,7 @@ Grammar correction is decidable but potentially expensive. Beam search is necess
 | **Correctness** | ✓ Yes | All parse trees are syntactically valid |
 | **Optimality** | ✗ No (BFS) | Only for uniform costs; beam search is approximate |
 | **Decidability** | ✓ Yes | CFG parsing is decidable |
-| **Complexity** | O(k × d × n × p) | Beam search; exponential without beam |
+| **Complexity** | `𝒪(k × d × n × p)` | Beam search; exponential without beam |
 
 **Key Insight**: **Optimality is sacrificed for tractability**. Beam search provides approximation guarantees.
 
@@ -543,7 +545,7 @@ Layer 3 is optimal: it accepts exactly the well-typed programs.
 
 **Theorem 5.9 (Type Inference Complexity)**:
 Algorithm W for Hindley-Milner has:
-- **Best/Average case**: O(n log n) for program size n
+- **Best/Average case**: `𝒪(n log n)` for program size n
 - **Worst case**: Exponential (due to occurs check)
 - **Practical**: Near-linear for typical programs
 
@@ -568,7 +570,7 @@ Hindley-Milner type inference is decidable.
 | **Correctness** | ✓ Yes | Only well-typed programs pass |
 | **Optimality** | ✓ Yes | Accepts all and only well-typed programs |
 | **Decidability** | ✓ Yes | Hindley-Milner is decidable |
-| **Complexity** | O(n log n) avg | Near-linear for typical programs |
+| **Complexity** | `𝒪(n log n)` avg | Near-linear for typical programs |
 
 **Key Insight**: Layer 3 is a **perfect filter** for type correctness.
 
@@ -705,7 +707,7 @@ MaxSMT is **NP-hard** (even FNP-hard for finding optimal solution).
 ### 6.5 Complexity Analysis
 
 **Theorem 6.12 (Repair Complexity)**:
-- **Template-based**: O(template_count × pattern_match_cost) — polynomial
+- **Template-based**: `𝒪(template_count × pattern_match_cost)` — polynomial
 - **SMT-based**: NP-hard in general, but modern solvers are efficient for typical instances
 - **Search-based**: Exponential in search depth
 
@@ -810,8 +812,8 @@ Session type checking is complete for the session type system: all well-typed pr
 
 **Theorem 7.8 (Session Type Checking Complexity)**:
 For process size n:
-- **Linear session types**: O(n) (single channel, sequential)
-- **Non-linear session types**: O(n^k) for k parallel sessions
+- **Linear session types**: `𝒪(n)` (single channel, sequential)
+- **Non-linear session types**: `𝒪(n^k)` for k parallel sessions
 - **General π-calculus**: Undecidable (name mobility leads to unbounded behavior)
 
 **Proof**:
@@ -848,7 +850,7 @@ Behavioral equivalence checking for π-calculus is undecidable.
 | **Correctness** | ✓ Yes | Session type safety guarantees |
 | **Optimality** | N/A | Verification layer, not optimization |
 | **Decidability** | ✓ Yes (restricted) | For finite session types and bounded processes |
-| **Complexity** | O(n) to O(n^k) | Depends on session type complexity |
+| **Complexity** | `𝒪(n)` to `𝒪(n^k)` | Depends on session type complexity |
 
 **Key Insight**: Layer 5 provides **strong correctness guarantees** for concurrent communication but requires **restrictions** for decidability.
 
@@ -922,8 +924,8 @@ Find (x₁, ..., xₙ) that minimizes C_total = ∑ᵢ c_Lᵢ(xᵢ₋₁, xᵢ) 
 Joint optimization over all layers is **intractable** (exponential search space).
 
 **Proof**:
-- Layer 1: k^n candidates (k per token, n tokens)
-- Layer 2: ~|Grammar|^d parse trees per candidate
+- Layer 1: `k^n` candidates (`k` per token, `n` tokens)
+- Layer 2: ~`∣Grammar∣^d` parse trees per candidate
 - Layers 3-5: Combinatorial explosion
 - Total: Exponential in pipeline length
 ∎
@@ -1396,23 +1398,23 @@ Therefore, semantic optimal repair is undecidable in general.
 
 | Layer | Algorithm | Time Complexity | Space | Decidable? |
 |-------|-----------|----------------|-------|------------|
-| **Layer 1** | Levenshtein Automaton | O(n × d) | O(n × d) | ✓ Yes |
-| **Layer 2** | BFS (pure) | O(\|G\|^d × n × p) | O(\|G\|^d) | ✓ Yes |
-| **Layer 2** | BFS (beam) | O(k × d × n × p) | O(k) | ✓ Yes |
-| **Layer 3** | Type Inference (HM) | O(n log n) avg | O(n) | ✓ Yes |
-| **Layer 4** | Template Repair | O(templates × match) | O(AST) | ✓ Yes |
-| **Layer 4** | SMT Repair | NP-hard | O(constraints) | ✗ No (general) |
-| **Layer 5** | Session Types (linear) | O(n) | O(n) | ✓ Yes |
-| **Layer 5** | Session Types (general) | O(n^k) | O(n^k) | ✗ No (full π-calc) |
+| **Layer 1** | Levenshtein Automaton | `𝒪(n × d)` | `𝒪(n × d)` | ✓ Yes |
+| **Layer 2** | BFS (pure) | `𝒪(\∣G\∣^d × n × p)` | `𝒪(\∣G\∣^d)` | ✓ Yes |
+| **Layer 2** | BFS (beam) | `𝒪(k × d × n × p)` | `𝒪(k)` | ✓ Yes |
+| **Layer 3** | Type Inference (HM) | `𝒪(n log n)` avg | `𝒪(n)` | ✓ Yes |
+| **Layer 4** | Template Repair | `𝒪(templates × match)` | `𝒪(AST)` | ✓ Yes |
+| **Layer 4** | SMT Repair | NP-hard | `𝒪(constraints)` | ✗ No (general) |
+| **Layer 5** | Session Types (linear) | `𝒪(n)` | `𝒪(n)` | ✓ Yes |
+| **Layer 5** | Session Types (general) | `𝒪(n^k)` | `𝒪(n^k)` | ✗ No (full π-calc) |
 | **Full Pipeline** | Sequential | Sum of above | Max of above | ✓ Yes (restricted) |
 | **Joint Optimization** | Exact | Exponential | Exponential | ✗ No (intractable) |
 
 **Notation**:
-- n: Input size (tokens, AST nodes)
-- d: Max edit distance
-- k: Beam width
-- p: Parse time per state
-- |G|: Grammar size
+- `n`: Input size (tokens, AST nodes)
+- `d`: Max edit distance
+- `k`: Beam width
+- `p`: Parse time per state
+- `∣G∣`: Grammar size
 
 ---
 

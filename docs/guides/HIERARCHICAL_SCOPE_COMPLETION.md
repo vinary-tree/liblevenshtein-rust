@@ -14,6 +14,8 @@ This document provides a complete guide to using hierarchical lexical scope filt
 
 Hierarchical scope completion enables contextual code completion that respects lexical scoping rules. When a user types a partial identifier, the completion system only suggests identifiers visible from the current scope.
 
+![Context scope tree: nested lexical scopes form a tree rooted at the global scope; a completion request at an inner scope sees the union of identifiers along the path to the root, while sibling-scope identifiers remain hidden.](../diagrams/contextual/context-scope-tree.svg)
+
 ### Use Cases
 
 - **IDE Code Completion**: Only show variables/functions visible in current context
@@ -48,7 +50,7 @@ Enable the `pathmap-backend` feature in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-liblevenshtein = { version = "0.3", features = ["pathmap-backend"] }
+liblevenshtein = { version = "0.9.1", features = ["pathmap-backend"] }
 ```
 
 ### 2. Basic Usage
@@ -133,14 +135,14 @@ if sorted_vec_intersection(&term_scopes, &visible_scopes) {
 ```
 
 **Characteristics:**
-- Time complexity: O(n + m) worst case, O(1) best case with early termination
+- Time complexity: `𝒪(n + m)` worst case, `𝒪(1)` best case with early termination
 - Space: No additional allocation
-- Performance: 4.7% faster than HashSet
+- Performance: `4.7%` faster than HashSet
 - Works with: Unlimited scope IDs
 
-#### 2. Bitmask Intersection (≤64 Scopes)
+#### 2. Bitmask Intersection (`≤ 64` Scopes)
 
-**Fastest when scope count is guaranteed ≤64**
+**Fastest when scope count is guaranteed `≤ 64`**
 
 ```rust
 use liblevenshtein::transducer::helpers::bitmask_intersection;
@@ -165,10 +167,10 @@ if bitmask_intersection(term_mask, visible_mask) {
 ```
 
 **Characteristics:**
-- Time complexity: O(1) - single bitwise AND
-- Space: 8 bytes per term
-- Performance: 7.9% faster than HashSet, 3.4% faster than sorted vector
-- Limitation: Only works for scope IDs < 64
+- Time complexity: `𝒪(1)` — single bitwise AND
+- Space: `8` bytes per term
+- Performance: `7.9%` faster than HashSet, `3.4%` faster than sorted vector
+- Limitation: Only works for scope IDs `< 64`
 
 ### Advanced: Custom Intersection Logic
 
@@ -208,7 +210,7 @@ Comprehensive benchmarking across 4 scenarios (10,000 terms each):
 ### Performance Tips
 
 1. **Keep scope vectors sorted**: This enables early termination in intersection checks
-2. **Use bitmasks when possible**: If you know scope count ≤64, use bitmasks for maximum performance
+2. **Use bitmasks when possible**: If you know scope count `≤ 64`, use bitmasks for maximum performance
 3. **Reuse visible scope vectors**: Create once per context, reuse for multiple queries
 4. **Minimize scope sets**: Only include scopes where term is actually accessible
 
@@ -235,7 +237,7 @@ Performance degrades gracefully with scope count growth.
    - Memory usage comparison
    - Recommendations for different use cases
 
-3. **Raw Benchmark Output**: [`hierarchical_scope_results.txt`](../../hierarchical_scope_results.txt)
+3. **Raw Benchmark Output**: [`hierarchical_scope_results.txt`](../archive/benchmarks/hierarchical_scope_results.txt)
    - Criterion benchmark output
    - Statistical analysis (outliers, confidence intervals)
    - Exact timing measurements
@@ -250,7 +252,7 @@ Performance degrades gracefully with scope count growth.
    - 4 realistic test scenarios
    - ~540 lines of comprehensive testing
 
-6. **Working Example**: [`examples/hierarchical_scope_completion.rs`](examples/hierarchical_scope_completion.rs:1)
+6. **Working Example**: [`examples/hierarchical_scope_completion.rs`](../../examples/hierarchical_scope_completion.rs)
    - End-to-end demonstration
    - Shows all integration steps
    - Documents performance characteristics
@@ -394,7 +396,7 @@ fn bench_scope_computation(b: &mut Bencher) {
 
 ### Issue: Scope IDs exceed 64 with bitmask approach
 
-**Cause**: Trying to use bitmask with scope IDs ≥64
+**Cause**: Trying to use bitmask with scope IDs `≥ 64`
 
 **Solution**: Switch to sorted vector approach
 
@@ -414,3 +416,7 @@ https://github.com/universal-automata/liblevenshtein-rust/issues
 ## License
 
 This feature is part of liblevenshtein-rust and is licensed under Apache-2.0.
+
+---
+
+[← Documentation Index](../README.md)

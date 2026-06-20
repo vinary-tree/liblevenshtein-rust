@@ -1,7 +1,7 @@
 # Building liblevenshtein
 
-**Version**: 0.4.0
-**Last Updated**: 2025-10-25
+**Version**: 0.9.1
+**Last Updated**: 2026-06-19
 
 Comprehensive guide for building the liblevenshtein CLI and libraries.
 
@@ -18,7 +18,7 @@ cargo build --release --all-features
 # - Static Library:   target/release/libliblevenshtein.rlib
 ```
 
-### Install CLI Globally (v0.4.0)
+### Install CLI Globally
 ```bash
 # Install with all features (compression, protobuf)
 cargo install --path . --features cli,compression,protobuf
@@ -58,7 +58,7 @@ cargo build --bin liblevenshtein --release --features cli
 # Smaller binary, but limited to text format dictionaries
 ```
 
-### With Compression Only (v0.4.0)
+### With Compression Only
 ```bash
 cargo build --bin liblevenshtein --release --features cli,compression
 
@@ -113,16 +113,16 @@ cargo rustc --release --crate-type=staticlib
 
 ## Feature Flags
 
-### Available Features (v0.4.0)
+### Available Features
 
 | Feature | Description | CLI Required | Size Impact |
 |---------|-------------|--------------|-------------|
 | `cli` | Command-line interface and REPL | Yes | +2 MB |
 | `serialization` | Bincode, JSON support | No | +500 KB |
-| `compression` | Gzip compression (v0.4.0) | No | +300 KB |
-| `protobuf` | Protocol Buffers support (v0.4.0) | No | +1 MB |
+| `compression` | Gzip compression | No | +300 KB |
+| `protobuf` | Protocol Buffers support | No | +1 MB |
 
-### Feature Combinations (v0.4.0)
+### Feature Combinations
 
 ```bash
 # Library only (minimal)
@@ -133,11 +133,11 @@ cargo build --release
 cargo build --release --features serialization
 # ~3.5 MB, adds Bincode/JSON support
 
-# Library + Serialization + Compression (v0.4.0)
+# Library + Serialization + Compression
 cargo build --release --features serialization,compression
 # ~3.8 MB, adds gzip compression
 
-# Library + All Serialization (v0.4.0)
+# Library + All Serialization
 cargo build --release --features serialization,compression,protobuf
 # ~4.8 MB, all format support
 
@@ -149,7 +149,7 @@ cargo build --bin liblevenshtein --release --features cli,serialization
 cargo build --bin liblevenshtein --release --features cli,compression
 # ~19.5 MB CLI binary with gzip support
 
-# CLI + All Features (v0.4.0)
+# CLI + All Features
 cargo build --bin liblevenshtein --release --all-features
 # ~20 MB CLI binary with everything
 ```
@@ -410,7 +410,7 @@ cargo clean && cargo build --release --all-features
 
 ## Summary
 
-**Most Common Use Cases (v0.4.0):**
+**Most Common Use Cases:**
 
 1. **Install CLI for daily use:**
    ```bash

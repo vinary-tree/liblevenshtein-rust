@@ -1,0 +1,52 @@
+@startuml position-set-state
+' How a Levenshtein-automaton STATE is represented at run time.
+' A state is a SET of positions ⟨i,e⟩ (i = chars of W consumed, e = edits used),
+' kept minimal by subsumption, stored in a small inline vector, and recycled
+' through a pool so steady-state querying performs no heap allocation.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam class {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontColor #102027
+  AttributeFontColor #102027
+}
+skinparam ArrowColor #1565C0
+skinparam ArrowThickness 2
+
+title Automaton State = a subsumption-reduced set of positions ⟨i,e⟩
+
+class "State" as S #BBDEFB {
+  positions : SmallVec<Position>
+  --
+  insert(⟨i,e⟩)  : drops subsumed positions
+  is_accepting() : any ⟨|W|, e⟩ with e ≤ k
+}
+
+class "Position  ⟨i,e⟩" as P {
+  i : usize   ' chars of W consumed
+  e : usize   ' edits used so far (e ≤ k)
+}
+
+class "StatePool" as Pool #E3F2FD {
+  free : Vec<State>
+  --
+  acquire() -> State   ' reuse, no alloc
+  release(State)
+}
+
+class "Subsumption  ≤χ" as Sub #E3F2FD {
+  ⟨i,e⟩ ≤ ⟨i',e'⟩  iff
+  e ≤ e' ∧ |i − i'| ≤ e' − e
+}
+
+S "1" *-down- "1..*" P : holds
+Pool -right-> S : acquires / recycles
+Sub .up.> S : prunes dominated\npositions on insert
+
+note bottom of P
+  Only 𝒪(|W|) distinct states arise for fixed k;
+  each is computed lazily on first visit.
+end note
+@enduml

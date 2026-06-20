@@ -1,3 +1,9 @@
+//! Name-resolution helpers for named phonetic classes.
+//!
+//! Resolves a (case-insensitive) class name to its [`NamedClass`] in the
+//! [`registry`](super::registry), normalising the name with a stack-allocated lowercase
+//! buffer (bounded by `MAX_CLASS_NAME_LEN`) to avoid heap allocation on the hot path.
+
 // ============================================================================
 // Lookup Functions
 // ============================================================================

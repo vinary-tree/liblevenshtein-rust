@@ -1,5 +1,7 @@
 # Theoretical Analysis of Multi-Layer Error Correction Pipeline
 
+[← Documentation Index](../../../README.md)
+
 **Date**: 2025-11-04
 **Status**: Complete
 **Project**: liblevenshtein-rust
@@ -94,7 +96,7 @@ This directory contains a comprehensive theoretical analysis of the multi-layer 
 
 ### 4. Research Log
 
-**File**: [`../../research/grammar-correction/analysis-log.md`](../../research/grammar-correction/analysis-log.md) (23 KB)
+**File**: [`../../../research/grammar-correction/analysis-log.md`](../../../research/grammar-correction/analysis-log.md) (23 KB)
 
 **Audience**: Researchers, scientific reviewers, future maintainers
 
@@ -127,7 +129,7 @@ This directory contains a comprehensive theoretical analysis of the multi-layer 
 
 ### 5. Implementation Guide
 
-**File**: [`../../guides/grammar-correction/implementing-guarantees.md`](../../guides/grammar-correction/implementing-guarantees.md) (33 KB)
+**File**: [`../../../guides/grammar-correction/implementing-guarantees.md`](../../../guides/grammar-correction/implementing-guarantees.md) (33 KB)
 
 **Audience**: Implementers, software engineers, contributors
 
@@ -158,11 +160,11 @@ This directory contains a comprehensive theoretical analysis of the multi-layer 
 
 | Layer | Determinism | Correctness | Optimality | Complexity | Decidability |
 |-------|-------------|-------------|------------|------------|--------------|
-| **1. Lexical** | ✓ (with tie-breaking) | ✓ (within distance d) | ✓ (top-k by distance) | O(n × d) | ✓ Yes |
-| **2. Grammar** | ~ (requires unambiguous grammar) | ✓ (syntactically valid) | ~ (BFS: uniform cost only) | O(k × d × n × p) beam | ✓ Yes |
-| **3. Semantic Validation** | ✓ (with deterministic fresh vars) | ✓ (only well-typed pass) | ✓ (perfect filter) | O(n log n) avg | ✓ Yes |
+| **1. Lexical** | ✓ (with tie-breaking) | ✓ (within distance d) | ✓ (top-k by distance) | `𝒪(n × d)` | ✓ Yes |
+| **2. Grammar** | ~ (requires unambiguous grammar) | ✓ (syntactically valid) | ~ (BFS: uniform cost only) | `𝒪(k × d × n × p)` beam | ✓ Yes |
+| **3. Semantic Validation** | ✓ (with deterministic fresh vars) | ✓ (only well-typed pass) | ✓ (perfect filter) | `𝒪(n log n)` avg | ✓ Yes |
 | **4. Semantic Repair** | ~ (requires deterministic solver) | ✓ (syntactic) ~ (semantic) | ✗ (undecidable) | NP-hard (SMT) | ~ Conditional |
-| **5. Process Verification** | ✓ | ✓ (session type safety) | N/A (verification) | O(n) to O(n^k) | ✓ Yes (restricted) |
+| **5. Process Verification** | ✓ | ✓ (session type safety) | N/A (verification) | `𝒪(n)` to `𝒪(n^k)` | ✓ Yes (restricted) |
 | **Composition** | ~ (depends on all layers) | ✓ (syntactic) | ✗ (greedy suboptimal) | Sum of layers | ✓ Yes (restricted) |
 
 **Legend**: ✓ = Always holds, ~ = Conditional, ✗ = Does not hold
@@ -267,7 +269,7 @@ Fix: Add domain constraints ("balance must be Int")
 5. Train ranking model on correction corpus
 
 ### For Performance
-1. Use Tree-sitter incremental parsing (O(log n) per edit)
+1. Use Tree-sitter incremental parsing (`𝒪(log n)` per edit)
 2. Cache Levenshtein automata and parse states
 3. Parallelize independent candidates
 4. Set timeouts: SMT 2s, type inference 1s
@@ -342,7 +344,7 @@ Fix: Add domain constraints ("balance must be Int")
 ### For Quick Start
 1. [`quick-reference.md`](./quick-reference.md) (11 KB, 15 min)
 2. [`visual-guide.md`](./visual-guide.md) (33 KB, 30 min)
-3. [`implementing-guarantees.md`](../../guides/grammar-correction/implementing-guarantees.md) (33 KB, 45 min)
+3. [`implementing-guarantees.md`](../../../guides/grammar-correction/implementing-guarantees.md) (33 KB, 45 min)
 
 **Time**: ~90 minutes
 **Outcome**: Understand properties, see visuals, implement
@@ -351,7 +353,7 @@ Fix: Add domain constraints ("balance must be Int")
 
 ### For Deep Understanding
 1. [`complete-analysis.md`](./complete-analysis.md) (52 KB, 2-3 hours)
-2. [`analysis-log.md`](../../research/grammar-correction/analysis-log.md) (23 KB, 1 hour)
+2. [`analysis-log.md`](../../../research/grammar-correction/analysis-log.md) (23 KB, 1 hour)
 3. [`quick-reference.md`](./quick-reference.md) (11 KB, 15 min review)
 
 **Time**: ~4 hours
@@ -361,7 +363,7 @@ Fix: Add domain constraints ("balance must be Int")
 
 ### For Implementation
 1. [`quick-reference.md`](./quick-reference.md) (11 KB, 15 min)
-2. [`implementing-guarantees.md`](../../guides/grammar-correction/implementing-guarantees.md) (33 KB, 45 min)
+2. [`implementing-guarantees.md`](../../../guides/grammar-correction/implementing-guarantees.md) (33 KB, 45 min)
 3. [`complete-analysis.md`](./complete-analysis.md) (52 KB, as reference)
 
 **Time**: ~60 minutes + ongoing reference
@@ -370,7 +372,7 @@ Fix: Add domain constraints ("balance must be Int")
 ---
 
 ### For Research
-1. [`analysis-log.md`](../../research/grammar-correction/analysis-log.md) (23 KB, 1 hour)
+1. [`analysis-log.md`](../../../research/grammar-correction/analysis-log.md) (23 KB, 1 hour)
 2. [`complete-analysis.md`](./complete-analysis.md) (52 KB, 2-3 hours)
 3. Related papers (see references in full document)
 

@@ -1,3 +1,5 @@
+//! Unit tests for the phonetic-regex parser.
+
 use super::*;
 use crate::phonetic::regex::ast::{Regex, RegexFlags};
 use crate::phonetic::regex::error::ParseErrorKind;

@@ -1,0 +1,54 @@
+@startuml wasm-ffi-boundary
+' The two foreign boundaries that wrap the safe Rust core.
+'   • WASM boundary  (wasm_bindgen): exposes the core to JavaScript / the browser.
+'   • FFI boundary    (extern "C"):   exposes a C ABI for C / WASI / native callers,
+'                                      with a matching include/liblevenshtein.h header.
+' The Rust core (Transducer · distance · phonetic) is written once and projected
+' across both boundaries; consumers never touch core internals directly.
+' Color: Rust core = core-automata blue (#E3F2FD); both boundary packages =
+'   serialization/bindings lime (#F0F4C3 container / #F9FBE7 children); the language
+'   consumers = neutral concurrency grey (#ECEFF1). A red note marks the unsafe
+'   pointer contract.  src/wasm/{distance,dictionary,transducer,phonetic}.rs ·
+'   src/ffi/{distance,string}.rs · include/liblevenshtein.h
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam component {
+  BackgroundColor #F9FBE7
+  BorderColor #9E9D24
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title WASM & FFI boundaries around the Rust core
+
+rectangle "Rust core\nTransducer · distance · phonetic" as core #E3F2FD
+
+rectangle "WASM boundary (wasm_bindgen)" as wasm #F0F4C3 {
+  rectangle "wasm/{distance, dictionary,\ntransducer, phonetic}.rs" as wasmmods #F9FBE7
+}
+
+rectangle "FFI boundary (extern \"C\")" as ffi #F0F4C3 {
+  rectangle "ffi/{distance, string}.rs\n+ include/liblevenshtein.h" as ffimods #F9FBE7
+}
+
+rectangle "JavaScript / browser" as js #ECEFF1
+rectangle "C / WASI / native" as c #ECEFF1
+
+core -[#9E9D24,thickness=2]-> wasm : #[wasm_bindgen]
+core -[#9E9D24,thickness=2]-> ffi  : #[no_mangle] extern "C"
+wasm -[#9E9D24,thickness=2]-> js   : JS bindings
+ffi  -[#9E9D24,thickness=2]-> c    : C ABI
+
+note bottom of ffi #FFCDD2
+  <color:#C62828>unsafe boundary:</color> caller must pass valid,
+  NUL-terminated pointers; ownership of returned
+  strings is freed via llev_string_free.
+end note
+@enduml

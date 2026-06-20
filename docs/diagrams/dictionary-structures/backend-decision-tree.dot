@@ -1,0 +1,39 @@
+// backend-decision-tree.dot — choosing a dictionary backend. Amber diamonds are
+// decisions; green leaves are the recommended backend.
+digraph choose {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="Which dictionary backend?"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=10,
+         color="#455A64", fontcolor="#102027"];
+  edge  [color="#37474F", fontname="DejaVu Sans", fontsize=9];
+
+  q_mut  [label="Will the dictionary change after build?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_disk [label="Larger than RAM / want zero-copy mmap?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_sub  [label="Need substring / infix search?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_lock [label="Want lock-free reads under writes?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_heavy[label="Update-heavy / structural sharing?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+  q_bidir[label="Need bidirectional substring index?", shape=diamond, fillcolor="#FFE0B2", color="#EF6C00"];
+
+  l_dat [label="DoubleArrayTrie(Char)\nfast static, 𝒪(1) transitions", fillcolor="#C8E6C9", color="#2E7D32"];
+  l_art [label="PersistentARTrie(Char)\nmmap, zero-copy", fillcolor="#C8E6C9", color="#2E7D32"];
+  l_sa  [label="SuffixAutomaton(Char)", fillcolor="#C8E6C9", color="#2E7D32"];
+  l_sc  [label="Scdawg(Char)\n(backs WallBreaker)", fillcolor="#C8E6C9", color="#2E7D32"];
+  l_u64 [label="DynamicDawgU64\nlock-free (ArcSwap)", fillcolor="#C8E6C9", color="#2E7D32"];
+  l_dd  [label="DynamicDawg(Char)\nRwLock · SIMD + bloom", fillcolor="#C8E6C9", color="#2E7D32"];
+  l_pm  [label="PathMapDictionary\npersistent backend", fillcolor="#C8E6C9", color="#2E7D32"];
+
+  q_mut -> q_disk [label="no (static)"];
+  q_disk -> l_art [label="yes"];
+  q_disk -> l_dat [label="no"];
+
+  q_mut -> q_sub [label="yes (dynamic)"];
+  q_sub -> q_bidir [label="yes"];
+  q_bidir -> l_sc [label="yes"];
+  q_bidir -> l_sa [label="no"];
+  q_sub -> q_lock [label="no"];
+  q_lock -> l_u64 [label="yes"];
+  q_lock -> q_heavy [label="no"];
+  q_heavy -> l_pm [label="yes"];
+  q_heavy -> l_dd [label="no (default)"];
+}

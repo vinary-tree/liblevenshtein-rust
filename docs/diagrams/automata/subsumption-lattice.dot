@@ -1,0 +1,41 @@
+// subsumption-lattice.dot — the subsumption partial order ≤χ as a Hasse diagram.
+// A position ⟨i,e⟩ subsumes ⟨i',e'⟩ iff  e ≤ e'  and  |i − i'| ≤ e' − e.
+// An edge A → B means "A subsumes B", so B is DOMINATED and pruned from the
+// state. Here ⟨2,0⟩ (blue, kept) dominates everything below; the faded nodes are
+// removed when ⟨2,0⟩ is present. Red edges = "subsumes ⇒ prune".
+digraph subsumption {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t, ranksep=0.7,
+         label="Subsumption order ≤χ  (k = 2):  ⟨2,0⟩ dominates and prunes the rest"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+         color="#1565C0", fontcolor="#102027"];
+  edge  [color="#C62828", arrowsize=0.7, fontname="DejaVu Sans", fontsize=9];
+
+  // e = 0 — the surviving (maximal) position
+  p20 [label="⟨2,0⟩  kept", fillcolor="#BBDEFB"];
+
+  // e = 1 — dominated
+  p11 [label="⟨1,1⟩", fillcolor="#E3F2FD"];
+  p21 [label="⟨2,1⟩", fillcolor="#E3F2FD"];
+  p31 [label="⟨3,1⟩", fillcolor="#E3F2FD"];
+
+  // e = 2 — dominated
+  p02 [label="⟨0,2⟩", fillcolor="#ECEFF1"];
+  p12 [label="⟨1,2⟩", fillcolor="#ECEFF1"];
+  p22 [label="⟨2,2⟩", fillcolor="#ECEFF1"];
+  p32 [label="⟨3,2⟩", fillcolor="#ECEFF1"];
+  p42 [label="⟨4,2⟩", fillcolor="#ECEFF1"];
+
+  { rank=same; p11; p21; p31; }
+  { rank=same; p02; p12; p22; p32; p42; }
+
+  // covering relations (Hasse): ⟨2,0⟩ covers the e=1 band
+  p20 -> p11 [label="prune"];
+  p20 -> p21 [label="prune"];
+  p20 -> p31 [label="prune"];
+
+  // each e=1 position covers its e=2 neighbours (|Δi| ≤ 1)
+  p11 -> p02; p11 -> p12; p11 -> p22;
+  p21 -> p12; p21 -> p22; p21 -> p32;
+  p31 -> p22; p31 -> p32; p31 -> p42;
+}

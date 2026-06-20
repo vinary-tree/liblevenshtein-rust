@@ -16,7 +16,15 @@
 
 ## Overview
 
-The Levenshtein Automata Layer provides **finite state machines** for computing approximate string matches efficiently. Instead of comparing every dictionary term individually (O(N) operations), these automata traverse the dictionary graph once, finding all matches within a distance threshold.
+The Levenshtein Automata Layer provides **finite state machines** for computing approximate string matches efficiently. Instead of comparing every dictionary term individually (`𝒪(N)` operations), these automata traverse the dictionary graph once, finding all matches within a distance threshold.
+
+![Levenshtein NFA for a query term and error bound k, with match, insertion, deletion, and substitution transitions between positions](../../diagrams/automata/levenshtein-nfa.svg)
+
+*Levenshtein NFA: the non-deterministic automaton whose accepting runs are exactly the edits within distance `k`.*
+
+![Position-set state: a simulated state is the subsumption-reduced set of (boundary, error) positions reachable while reading the query](../../diagrams/automata/position-set-state.svg)
+
+*Position-set state: each simulated state is a subsumption-reduced set of `(i, e)` positions.*
 
 ### Key Innovation
 
@@ -77,7 +85,7 @@ The **Levenshtein distance** (edit distance) between two strings is the minimum 
 
 ### Dynamic Programming Algorithm
 
-Classic DP computes distance in O(M×N) time:
+Classic DP computes distance in `O(M×N)` time:
 
 ```
      ""  c  a  f  e
@@ -102,8 +110,8 @@ D[i][j] = min(
 ### Limitations of DP for Fuzzy Search
 
 For fuzzy dictionary search with N terms:
-- **Time**: O(N × M × L) where M = query length, L = average term length
-- **Space**: O(M × L) per comparison
+- **Time**: `O(N × M × L)` where M = query length, L = average term length
+- **Space**: `O(M × L)` per comparison
 - **Problem**: Wasteful for large dictionaries!
 
 ## Finite Automata Approach
@@ -152,9 +160,9 @@ The automaton tracks **all possible ways** the query could align with the input,
 
 | Aspect | Dynamic Programming | Levenshtein Automaton |
 |--------|---------------------|----------------------|
-| **Dictionary traversal** | O(N) separate DPs | O(1) shared traversal |
+| **Dictionary traversal** | `O(N)` separate DPs | `O(1)` shared traversal |
 | **Duplicate prefixes** | Recomputed N times | Computed once |
-| **Memory** | O(M×L) per term | O(M×D) for all terms |
+| **Memory** | `O(M×L)` per term | `O(M×D)` for all terms |
 | **Dictionary size** | Linear impact | No impact |
 
 **Example**: For dictionary with 100K terms sharing prefix "test", DP computes "test" 100K times, automaton computes once.
@@ -224,7 +232,7 @@ let automaton = LevenshteinAutomaton::new("test", 2, Algorithm::MergeAndSplit);
 | **Transpositions** | ❌ (cost 2) | ✅ (cost 1) | ❌ (cost 2) |
 | **Adjacent merges** | ❌ | ❌ | ✅ (cost 1) |
 | **Character splits** | ❌ | ❌ | ✅ (cost 1) |
-| **Complexity** | O(M×D) states | O(M×D²) states | O(M×D³) states |
+| **Complexity** | `O(M×D)` states | `O(M×D²)` states | `O(M×D³)` states |
 | **Use case** | General fuzzy search | Spell checking | OCR errors |
 
 **Legend**: I=Insert, D=Delete, S=Substitute, T=Transpose, M=Merge, Sp=Split
@@ -467,18 +475,18 @@ println!("Transposition distance 1: {:?}", results_trans);
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Automaton construction** | O(M×D) | M = query length, D = max distance |
-| **Single transition** | O(D²) | Process D² state components |
-| **Query traversal** | O(M×D²×B) | B = avg branching factor |
-| **Total query** | O(M×D²×B) | **Independent of dictionary size!** |
+| **Automaton construction** | `O(M×D)` | M = query length, D = max distance |
+| **Single transition** | `O(D²)` | Process D² state components |
+| **Query traversal** | `O(M×D²×B)` | B = avg branching factor |
+| **Total query** | `O(M×D²×B)` | **Independent of dictionary size!** |
 
 ### Space Complexity
 
 | Component | Complexity | Notes |
 |-----------|-----------|-------|
-| **State size** | O(M×D) | Position-distance pairs |
-| **Automaton cache** | O(1) | Reused across queries |
-| **Query results** | O(K) | K = number of matches |
+| **State size** | `O(M×D)` | Position-distance pairs |
+| **Automaton cache** | `O(1)` | Reused across queries |
+| **Query results** | `O(K)` | K = number of matches |
 
 ### Benchmark Results
 
@@ -592,8 +600,8 @@ What's your use case?
 
 - [Dictionary Layer](../01-dictionary-layer/README.md) - Data structures traversed by automata
 - [Intersection Layer](../03-intersection-traversal/README.md) - How automata traverse dictionaries
-- [SIMD Optimization](../04-simd-layer/README.md) - Vectorized acceleration
-- [Performance Guide](../performance/README.md) - Detailed benchmarks
+- [SIMD Optimization](../05-simd-optimization/README.md) - Vectorized acceleration
+- Performance Guide - Detailed benchmarks
 
 ## References
 
@@ -646,9 +654,9 @@ What's your use case?
 ## Next Steps
 
 - **Implementation**: Read about [Intersection Layer](../03-intersection-traversal/README.md)
-- **Optimization**: Explore [SIMD Acceleration](../04-simd-layer/README.md)
+- **Optimization**: Explore [SIMD Acceleration](../05-simd-optimization/README.md)
 - **Dictionary**: Review [Dictionary Layer](../01-dictionary-layer/README.md)
-- **Practice**: Try the [Usage Examples](../examples/README.md)
+- **Practice**: Try the [Usage Examples](../../examples/README.md)
 
 ---
 

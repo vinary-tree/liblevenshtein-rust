@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # OpenCog Hyperon Architecture
 
 This document provides a comprehensive overview of OpenCog Hyperon, the cognitive

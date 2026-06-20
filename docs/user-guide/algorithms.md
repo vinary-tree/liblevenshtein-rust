@@ -1,9 +1,13 @@
 # Levenshtein Algorithm Guide
 
-**Version**: 0.4.0
-**Last Updated**: 2025-10-31
+**Version**: 0.9.1
+**Last Updated**: 2026-06-19
 
 This guide explains the Levenshtein distance algorithms supported by liblevenshtein-rust and when to use each one.
+
+The three operation sets supported by the transducer are summarised below. Each variant simply adds elementary edit operations to the standard set; the additions are highlighted per algorithm.
+
+![Levenshtein operation sets: Standard (insert, delete, substitute), Transposition (adds adjacent swap), and Merge-and-Split (adds character merge and split)](../diagrams/automata/operation-sets.svg)
 
 ## What is Levenshtein Distance?
 
@@ -124,17 +128,17 @@ for candidate in transducer.query_with_distance("te st", 2) {
 ### Time Complexity
 
 All algorithms have similar time complexity:
-- **Query time**: O(n × m × k), where:
-  - n = query term length
-  - m = dictionary size
-  - k = maximum distance
+- **Query time**: `𝒪(n × m × k)`, where:
+  - `n` = query term length
+  - `m` = dictionary size
+  - `k` = maximum distance
 - **In practice**: Much faster due to early termination and pruning
 
 ### Space Complexity
 
-- **Standard**: O(n × k) state space
-- **Transposition**: O(n × k) state space with transposition tracking
-- **Merge and Split**: O(n × k) state space with merge/split tracking
+- **Standard**: `𝒪(n × k)` state space
+- **Transposition**: `𝒪(n × k)` state space with transposition tracking
+- **Merge and Split**: `𝒪(n × k)` state space with merge/split tracking
 
 ### Benchmark Comparison
 
@@ -217,9 +221,7 @@ Choosing the right maximum distance (`max_distance`) is crucial:
 
 ### Rule of Thumb
 
-```
-max_distance ≈ word_length / 4
-```
+`max_distance ≈ word_length / 4`
 
 Examples:
 - 4-letter word: distance 1
@@ -317,10 +319,16 @@ for candidate in transducer.query_with_distance("cafe", 1) {
 - [Getting Started](getting-started.md) - Basic usage guide
 - [Features](features.md) - Complete feature list
 - [Code Completion Guide](code-completion.md) - Building code completion
+- [Glossary](../GLOSSARY.md) - Definitions of terms used throughout the docs
+- [Architecture Overview](../architecture/overview.md) - How the crates fit together
 - [Benchmarks](../benchmarks/) - Performance measurements
 
 ## References
 
 - [Levenshtein Distance (Wikipedia)](https://en.wikipedia.org/wiki/Levenshtein_distance)
 - [Damerau-Levenshtein Distance (Wikipedia)](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance)
-- ["Fast String Correction with Levenshtein Automata" by Klaus Schulz and Stoyan Mihov](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.16.652)
+- Schulz, K. U., & Mihov, S. (2002). "Fast string correction with Levenshtein automata." *International Journal on Document Analysis and Recognition (IJDAR)*, 5(1), 67–85. DOI: [10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
+
+---
+
+[← Documentation Index](../README.md)

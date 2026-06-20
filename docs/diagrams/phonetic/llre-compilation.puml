@@ -1,0 +1,47 @@
+@startuml llre-compilation
+' Compilation pipeline for a `.llre` file (LibLevenshtein Regex Expression). The
+' source text is lexed and parsed into an AST; named symbols imported from `.llev`
+' files are inlined by the symbol expander; the NFA compiler lowers the expanded
+' AST to an NFA (stored / serialised via compiled.rs). Because the construction is
+' Thompson/Glushkov, matching is linear-time and ReDoS-resistant by construction.
+' Colour mapping (per the canonical legend):
+'   DSL compilation stages  brown  #D7CCC8 (container) / #EFEBE9 (child tint)
+'   phonetic-engine output  pink   #F8BBD0
+'   safety note            green   #C8E6C9
+' Arrow colour = DSL border #4E342E for the compile flow.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+left to right direction
+
+title `.llre` regex compilation — source → lexer → parser → AST → symbol expander → NFA compiler → NFA
+
+rectangle ".llre source" as SRC #D7CCC8
+rectangle "lexer" as LEX #EFEBE9
+rectangle "parser\n(src/phonetic/llre/parser.rs)" as PARSE #EFEBE9
+rectangle "AST\n(ast.rs)" as AST #EFEBE9
+rectangle "symbol expander\n(symbol_expander.rs)" as EXPAND #EFEBE9
+rectangle "NFA compiler\n(nfa_compiler.rs)" as NFAC #D7CCC8
+rectangle "NFA\n(compiled.rs)" as NFA #F8BBD0
+
+SRC    -[#4E342E]-> LEX
+LEX    -[#4E342E]-> PARSE
+PARSE  -[#4E342E]-> AST
+AST    -[#4E342E]-> EXPAND
+EXPAND -[#4E342E]-> NFAC
+NFAC   -[#AD1457]-> NFA
+
+note bottom of NFAC #C8E6C9
+  Thompson/Glushkov construction ⇒
+  linear-time matching, ReDoS-resistant
+  by construction.
+end note
+@enduml

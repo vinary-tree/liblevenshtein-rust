@@ -1,9 +1,12 @@
 # liblevenshtein-rust Architecture
 
-**Version:** 0.4.0
-**Last Updated:** 2025-10-26
+**Version:** 0.9.1
+**Last Updated:** 2026-06-19
 
-This document describes the architecture and design principles of liblevenshtein-rust.
+This document describes the **intra-crate** architecture and design principles of
+liblevenshtein-rust — how the modules inside this crate fit together. For the
+**inter-crate** view (how liblevenshtein relates to libdictenstein, duallity, and
+the DSL layer) see the [Architecture Overview](../architecture/overview.md).
 
 ---
 
@@ -21,606 +24,302 @@ This document describes the architecture and design principles of liblevenshtein
 
 ## Overview
 
-liblevenshtein-rust is a high-performance library for approximate string matching using Levenshtein automata. The architecture is designed around three core pillars:
+liblevenshtein-rust is a high-performance library for approximate string matching
+using Levenshtein automata. Since v0.9.0 it is layered over a sibling crate:
 
-1. **Pluggable Dictionary Backends** - Multiple trie implementations (PathMap, DoubleArrayTrie, DynamicDawg)
-2. **Efficient Automata** - Optimized state machines for Levenshtein distance computation
-3. **Flexible Serialization** - Multiple formats with optional compression
+1. **Dictionary backends live in [`libdictenstein`](../architecture/overview.md)** —
+   the trie/DAWG implementations (`DoubleArrayTrie`, `DynamicDawg`/`DynamicDawgU64`,
+   `SuffixAutomaton`, `Scdawg`, `PersistentARTrie`, `PathMapDictionary`) and the
+   `Dictionary` / `DictionaryNode` / `MappedDictionary` traits. They are re-exported
+   here as `#[deprecated]` shims for source compatibility.
+2. **The Levenshtein transducer & automata** live in this crate (`src/transducer/`):
+   the lazy/parameterized engine (default), plus eager `universal/` and
+   runtime-configurable `generalized/` implementations.
+3. **Higher-level engines** are built on the core: phonetic matching, time-series
+   (MSM), WallBreaker, contextual completion, fuzzy caching, and grep.
+
+![Three-layer architecture: libdictenstein backends, the Levenshtein transducer core, and the higher-level engines.](../diagrams/architectures/component-stack.svg)
 
 ### Key Characteristics
 
-- **Type-safe** - Extensive use of Rust's type system for correctness
-- **Zero-cost abstractions** - Trait-based design with no runtime overhead
-- **Memory-efficient** - Structural sharing via Arc, object pooling, stack allocation
-- **Concurrent-safe** - RwLock-based interior mutability for shared dictionaries
-- **Feature-gated** - Modular compilation with optional features
+- **Type-safe** — extensive use of Rust's type system for correctness.
+- **Zero-cost abstractions** — trait-based design, monomorphized; the
+  `SubstitutionPolicy` default (`Unrestricted`) is a zero-sized type.
+- **Memory-efficient** — structural sharing via `Arc`, position-set pooling,
+  `SmallVec` stack allocation.
+- **Concurrent-safe** — wait-free reads where possible (`ArcSwap`), `RwLock`
+  readers otherwise; every backend is `Send + Sync` with cheap `Arc` clones.
+- **Feature-gated** — modular compilation (phonetic, serialization, cli, grep, wasm, ffi …).
 
 ---
 
 ## Module Organization
 
-```
+```text
 src/
-├── lib.rs                      # Public API, prelude, feature gates
+├── lib.rs              # Public API, prelude, feature gates
 │
-├── dictionary/                 # Dictionary backends (trait-based)
-│   ├── mod.rs                  # Dictionary trait, DictionaryNode trait
-│   ├── factory.rs              # Unified factory for creating dictionaries
-│   ├── pathmap.rs              # PathMap backend (default, thread-safe)
-│   ├── double_array_trie.rs    # DoubleArrayTrie (O(1) transitions, read-optimized)
-│   ├── dynamic_dawg.rs         # Mutable DAWG (insert/delete/minimize)
-│   └── suffix_automaton.rs     # Suffix automaton (substring matching)
+├── transducer/         # THE CORE — Levenshtein automata & query iterators
+│   ├── mod.rs          #   Transducer<D, P> struct, public API
+│   ├── algorithm.rs    #   Algorithm enum (Standard, Transposition, MergeAndSplit)
+│   ├── state.rs        #   Automaton state = set of positions ⟨i,e⟩
+│   ├── position.rs     #   Position ⟨i,e⟩
+│   ├── transition.rs   #   χ-driven transition rule
+│   ├── pool.rs         #   StatePool — position-set reuse (no steady-state alloc)
+│   ├── intersection.rs #   Dictionary ∩ automaton lock-step walk
+│   ├── query.rs        #   QueryIterator (+ ordered_query, priority_query,
+│   │                   #     value_filtered_query, zipper iterators)
+│   ├── universal/      #   Eager parameter-free DFA (Mitankin 2005)
+│   ├── generalized/    #   Runtime OperationSet (drives weighted/phonetic edits)
+│   ├── *_f64.rs        #   Real-valued (weighted) shadow of the integer path
+│   ├── substitution_set.rs / substitution_policy.rs
+│   └── simd.rs         #   x86_64 SIMD helpers
 │
-├── transducer/                 # Levenshtein automata
-│   ├── mod.rs                  # Transducer struct, public API
-│   ├── algorithm.rs            # Algorithm enum (Standard, Transposition, MergeAndSplit)
-│   ├── state.rs                # Automaton state representation
-│   ├── state_pool.rs           # Object pool for state reuse (major optimization)
-│   ├── transition.rs           # State transition logic
-│   ├── position.rs             # Position in automaton
-│   ├── intersection.rs         # Dictionary-automaton intersection
-│   ├── query.rs                # Unordered query iterator
-│   ├── ordered_query.rs        # Distance-first, lexicographic query iterator
-│   └── builder_api.rs          # Fluent builder pattern (experimental)
+├── distance/           # Direct edit-distance functions
+│   ├── mod.rs          #   standard_distance (auto-dispatch), affix stripping
+│   ├── myers.rs        #   Myers bit-parallel
+│   └── simd.rs         #   AVX2 / SSE4.1 distance (runtime-detected)
 │
-├── distance/                   # Distance calculations
-│   └── mod.rs                  # Levenshtein, Transposition distance functions
+├── filter/             # n-gram / Jaro-Winkler / hybrid pre-filters
+├── dictionary/         # #[deprecated] re-export shims over libdictenstein
+│                       #   (+ phonetic_normalized, the one backend still local)
 │
-├── serialization/              # Dictionary persistence (feature: serialization)
-│   ├── mod.rs                  # Traits, format implementations
-│   ├── bincode_impl.rs         # Bincode format
-│   ├── json_impl.rs            # JSON format
-│   ├── protobuf_impl.rs        # Protobuf format (feature: protobuf)
-│   ├── gzip.rs                 # Gzip compression wrapper (feature: compression)
-│   └── proto.rs                # Generated protobuf code
+├── phonetic/           # Phonetic engine (feature: phonetic-rules)
+│   ├── rules/          #   53-language rewrite rules
+│   ├── nfa/            #   Thompson construction, product automaton, lazy DFA
+│   ├── llev/ · llre/ · regex/   # the .llev / .llre DSLs
+│   └── features.rs · feature_distance.rs   # articulatory features
 │
-├── cli/                        # Shared CLI/REPL infrastructure (feature: cli)
-│   ├── mod.rs                  # CLI module root, public exports
-│   ├── args.rs                 # Clap argument parsing (CLI-specific)
-│   ├── commands.rs             # Shared command execution (load, save, query)
-│   ├── detect.rs               # Format auto-detection (shared)
-│   └── paths.rs                # Path utilities, persistent config (shared)
+├── time_series/        # Move-Split-Merge (MSM) metric, automaton, indexing
+├── wallbreaker/        # Large-k strategy (SCDAWG + pigeonhole)
+├── contextual/         # Hierarchical scopes, draft buffers, checkpoints
+├── cache/              # FuzzyMultiMap + composable eviction wrappers
+├── grep/               # Streaming decompress / archive / document fuzzy search
 │
-└── repl/                       # Interactive REPL (feature: cli)
-    ├── mod.rs                  # REPL module root
-    ├── state.rs                # REPL state management (uses cli::commands)
-    ├── command.rs              # REPL command parsing and execution
-    ├── helper.rs               # Rustyline integration
-    └── highlighter.rs          # Syntax highlighting
+├── serialization/      # bincode / json / protobuf (+ gzip) persistence
+├── cli/ · repl/        # Command-line & interactive surfaces (feature: cli)
+├── wasm/ · ffi/        # JavaScript & C-ABI boundaries
+└── commands/           # Shared load/save/query primitives used by cli & repl
 ```
+
+![Module dependency overview: engines and surfaces build on the transducer core, which traverses the libdictenstein dictionaries.](../diagrams/architectures/module-dependency.svg)
 
 ---
 
 ## Core Components
 
-### 1. Dictionary Abstraction
+For the container-level view of these components and how they relate to the
+external crates, see the C4 container diagram:
 
-**Trait:** `Dictionary`
+![C4 container view of liblevenshtein's subsystems and their external dependencies.](../diagrams/architectures/c4-container.svg)
+
+### 1 · Dictionary abstraction (libdictenstein)
+
+The `Dictionary` trait — now defined in libdictenstein — is the seam between the
+automata and the backends:
 
 ```rust
 pub trait Dictionary: Send + Sync {
     type Node: DictionaryNode;
-
     fn root(&self) -> Self::Node;
     fn len(&self) -> Option<usize>;
     fn sync_strategy(&self) -> SyncStrategy;
 }
 ```
 
-**Purpose:** Provides a unified interface for different trie implementations.
+`SyncStrategy` (defined below in [Thread Safety](#thread-safety)) communicates a
+backend's concurrency model to callers. The concrete backends and a decision tree
+for choosing one are documented in the [dictionary structures
+diagrams](../diagrams/dictionary-structures/backend-decision-tree.svg) and the
+[user-guide backends page](../user-guide/backends.md). New code should import them
+directly from `libdictenstein`.
 
-**Implementations:**
-- **PathMapDictionary** - High-performance trie with structural sharing (default)
-  - Uses `Arc<RwLock<PathMap>>` for thread-safe mutations
-  - Excellent query performance
-  - Lazy edge iteration (15-50% faster)
+### 2 · Transducer (Levenshtein automaton)
 
-- **DawgDictionary** - Static DAWG (Directed Acyclic Word Graph)
-  - Space-efficient via node sharing
-  - Read-only after construction
-  - Best for static dictionaries
-
-- **DynamicDawg** - Mutable DAWG
-  - Online insert/delete operations
-  - Minimize operation for compaction
-  - Reference-counted nodes (Arc)
-
-**Dictionary Factory Pattern:**
+`Transducer<D, P = Unrestricted>` wraps a dictionary and is parameterized by an
+`Algorithm` and a `SubstitutionPolicy`:
 
 ```rust
-pub enum DictContainer {
-    PathMap(PathMapDictionary),
-    Dawg(DawgDictionary),
-    DynamicDawg(DynamicDawg),
-}
-
-impl DictContainer {
-    pub fn from_backend(backend: DictionaryBackend, terms: Vec<String>) -> Self {
-        match backend {
-            DictionaryBackend::PathMap => Self::PathMap(PathMapDictionary::from_terms(terms)),
-            DictionaryBackend::Dawg => Self::Dawg(DawgDictionary::from_terms(terms)),
-            DictionaryBackend::DynamicDawg => Self::DynamicDawg(DynamicDawg::from_terms(terms)),
-        }
-    }
-}
-```
-
-### 2. Transducer (Levenshtein Automaton)
-
-**Struct:** `Transducer<D: Dictionary>`
-
-```rust
-pub struct Transducer<D: Dictionary> {
+pub struct Transducer<D: Dictionary, P: SubstitutionPolicy = Unrestricted> {
     dictionary: D,
     algorithm: Algorithm,
+    policy: P,
 }
 ```
 
-**Purpose:** Coordinates dictionary traversal with Levenshtein automaton.
+A query **lazily simulates** the Levenshtein automaton `A(W, k)` and intersects it
+with the dictionary in one depth-first walk — see
+[Lazy vs. Eager Automata](../concepts/LAZY_VS_EAGER_AUTOMATA.md). Key methods:
+`query`, `query_with_distance`, `query_ordered`/`query_ranked`, and the value-aware
+`query_filtered` / `query_values` / `query_by_value_set` (which require a
+`MappedDictionary`).
 
-**Key Methods:**
-- `query(term, max_distance)` - Unordered results
-- `query_ordered(term, max_distance)` - Distance-first, then lexicographic
-- `query_with_distance(term, max_distance)` - Include edit distances
+### 3 · Query-iterator family
 
-**Query Iterator Architecture:**
+All iterators perform the same lock-step walk and yield `Candidate { term, distance }`,
+differing in ordering and value filtering:
 
-```
-User Query
-    ↓
-Transducer::query()
-    ↓
-QueryIterator
-    ↓
-┌─────────────────┬──────────────────┐
-│  Dictionary     │   Automaton      │
-│  Traversal      │   State Machine  │
-└─────────────────┴──────────────────┘
-    ↓                      ↓
- Trie Edges          State Transitions
-    ↓                      ↓
-        Intersection
-             ↓
-         Results
-```
+![Query-iterator family: base, ordered, priority, and value-filtered/yielding iterators.](../diagrams/traversal/query-iterator-hierarchy.svg)
 
-### 3. Ordered Query Iterator
+`OrderedQueryIterator` returns results distance-first then lexicographically via a
+binary heap; `ValueFilteredQueryIterator` prunes whole subtrees by a value
+predicate — the 10–100× speedup behind scope-aware completion.
 
-**Problem:** Results from basic query are unordered (depth-first traversal)
+### 4 · State pool (object-pool pattern)
 
-**Solution:** Heap-based priority queue for ordered results
+Automaton states are sets of positions reused across query steps through a
+`StatePool` (`src/transducer/pool.rs`), so steady-state querying performs no heap
+allocation. See the [position-set state diagram](../diagrams/automata/position-set-state.svg).
 
-```rust
-pub struct OrderedQueryIterator<N: DictionaryNode> {
-    heap: BinaryHeap<Reverse<Intersection<N>>>,
-    seen: HashSet<Vec<u8>>,
-    max_distance: usize,
-}
-```
+### 5 · Serialization system
 
-**Ordering:** Primary by distance (ascending), secondary by term (lexicographic)
-
-**Optimizations:**
-- Deduplication via `HashSet`
-- Prefix mode support
-- Custom predicate filtering
-
-### 4. State Pool (Object Pool Pattern)
-
-**Problem:** Repeated allocation/deallocation of State objects in hot paths
-
-**Solution:** `StatePool` - reuse State instances
-
-```rust
-pub struct StatePool {
-    pool: RefCell<Vec<State>>,
-}
-
-pub struct PooledState<'pool> {
-    state: Option<State>,
-    pool: &'pool StatePool,
-}
-
-impl Drop for PooledState<'_> {
-    fn drop(&mut self) {
-        if let Some(state) = self.state.take() {
-            self.pool.pool.borrow_mut().push(state);
-        }
-    }
-}
-```
-
-**Impact:** Exceptional performance gains (see `docs/PERFORMANCE.md`)
-
-### 5. Serialization System
-
-**Trait-based design:**
+A trait-based format family (feature: `serialization`):
 
 ```rust
 pub trait DictionarySerializer {
-    fn serialize<D, W>(&self, dictionary: &D, writer: W) -> Result<()>
-    where
-        D: Dictionary,
-        W: Write;
-
-    fn deserialize<D, R>(&self, reader: R) -> Result<D>
-    where
-        D: DictionaryFromTerms,
-        R: Read;
+    fn serialize<D: Dictionary, W: Write>(&self, dict: &D, w: W) -> Result<()>;
+    fn deserialize<D: DictionaryFromTerms, R: Read>(&self, r: R) -> Result<D>;
 }
 ```
 
-**Implementations:**
-- `BincodeSerializer` - Binary format (fast, compact)
-- `JsonSerializer` - JSON format (human-readable)
-- `ProtobufSerializer` - Protocol Buffers (cross-language)
-- `GzipSerializer<S>` - Wrapper for compression (85% size reduction)
+Implementations: `BincodeSerializer`, `JsonSerializer`, `ProtobufSerializer`
+(feature: `protobuf`), and `GzipSerializer<S>` which **wraps** another serializer
+to add compression (feature: `compression`). See the
+[serialization formats diagram](../diagrams/serialization/serialization-formats.svg).
+Format auto-detection uses magic bytes, then extension, then content analysis
+(`cli::detect`).
 
-**Format Auto-Detection:**
-- Magic bytes (exact)
-- File extension (heuristic)
-- Content analysis (fallback)
+### 6 · CLI / REPL architecture
 
-### 6. CLI/REPL Architecture
-
-**Design:** Shared infrastructure with separate interfaces
-
-```
-┌─────────────────────────────────────┐
-│         User Interface              │
-├──────────────────┬──────────────────┤
-│   CLI (Clap)     │   REPL (Rustyline)│
-│   - args.rs      │   - command.rs   │
-│   - One-shot     │   - Interactive  │
-└──────────────────┴──────────────────┘
-           ↓                ↓
-┌─────────────────────────────────────┐
-│      Shared Infrastructure          │
-│   (src/cli/)                        │
-│   - commands.rs                     │
-│     • load_dictionary()             │
-│     • save_dictionary()             │
-│     • query operations              │
-│   - detect.rs                       │
-│     • detect_format()               │
-│   - paths.rs                        │
-│     • config management             │
-│     • path validation               │
-└─────────────────────────────────────┘
-           ↓
-┌─────────────────────────────────────┐
-│      Core Library                   │
-│   - Dictionary                      │
-│   - Transducer                      │
-│   - Serialization                   │
-└─────────────────────────────────────┘
-```
-
-**Shared Components:**
-- `cli::commands::load_dictionary()` - Used by both CLI and REPL
-- `cli::commands::save_dictionary()` - Used by both CLI and REPL
-- `cli::detect::detect_format()` - Format auto-detection
-- `cli::paths::PersistentConfig` - Configuration management
-- `cli::args::SerializationFormat` - Format enum
-
-**CLI-Specific:**
-- `cli::args` - Clap command-line parsing (struct-based)
-- One-shot execution model
-
-**REPL-Specific:**
-- `repl::command` - Text-based command parsing
-- `repl::state` - Persistent REPL session state
-- `repl::helper` - Rustyline integration (completion, history)
-- `repl::highlighter` - Syntax highlighting
-- Interactive session model
-
-**Benefits:**
-- Code reuse between CLI and REPL
-- Consistent behavior (same load/save logic)
-- Single source of truth for format detection
-- Easier maintenance (fix once, works in both)
+The CLI (clap) and REPL (rustyline) are thin front-ends over **shared** primitives
+in `src/commands/` (and `src/cli/commands.rs`): `load_dictionary`,
+`save_dictionary`, and the query operations are written once and reused, so both
+surfaces behave identically. CLI-specific code is argument parsing and one-shot
+execution; REPL-specific code is the interactive session, history, completion, and
+highlighting.
 
 ---
 
 ## Design Principles
 
-### 1. Trait-Based Polymorphism
+### 1 · Trait-based polymorphism
 
-**Philosophy:** Use traits for abstraction, concrete types for performance
+Traits for abstraction (`Dictionary`, `SubstitutionPolicy`), concrete types for
+performance — monomorphized to zero-cost specializations.
 
-```rust
-// Abstraction via traits
-pub trait Dictionary { ... }
+### 2 · Wait-free-where-possible concurrency
 
-// Concrete implementations optimized for specific use cases
-pub struct PathMapDictionary { ... }
-pub struct DawgDictionary { ... }
-```
+Backends expose their model via `SyncStrategy`; readers never block on
+`DoubleArrayTrie` or `DynamicDawgU64` (atomic `ArcSwap`), and take a `parking_lot`
+read guard on the mutable DAWG/automaton backends. `Arc` makes every clone cheap.
 
-**Benefits:**
-- Zero-cost abstraction
-- Easy to add new backends
-- Type-safe API
+### 3 · `Arc` sharing & `SmallVec` stack allocation
 
-### 2. Interior Mutability with RwLock
+Paths and position-sets are shared via `Arc` rather than deep-cloned; small
+collections (edge lists, position vectors) live inline in a `SmallVec` and spill to
+the heap only when they outgrow their inline capacity.
 
-**Pattern:** Shared ownership + interior mutability
+### 4 · Lazy evaluation
 
-```rust
-pub struct PathMapDictionary {
-    map: Arc<RwLock<PathMap<()>>>,
-    term_count: Arc<RwLock<usize>>,
-}
-```
+Queries are iterators that generate results on demand, enabling early termination
+and composition with iterator adapters with `𝒪(1)` iterator state.
 
-**Benefits:**
-- Thread-safe concurrent queries
-- Modifications don't invalidate existing references
-- `Clone` is cheap (Arc increment)
+### 5 · Feature gates
 
-**Trade-offs:**
-- Lock acquisition overhead
-- Potential lock contention
-
-### 3. Arc Path Sharing
-
-**Optimization:** Share paths via Arc instead of cloning
-
-```rust
-pub struct PathMapNode {
-    map: Arc<RwLock<PathMap<()>>>,
-    path: Arc<Vec<u8>>,  // Shared, not cloned
-}
-```
-
-**Before:**
-```rust
-let mut new_path = self.path.clone();  // Deep copy
-new_path.push(label);
-```
-
-**After:**
-```rust
-let new_path = {
-    let mut path = Vec::with_capacity(self.path.len() + 1);
-    path.extend_from_slice(&self.path);
-    path.push(label);
-    Arc::new(path)  // Cheap reference counting
-};
-```
-
-### 4. SmallVec for Stack Allocation
-
-**Pattern:** Stack-allocate small collections
-
-```rust
-use smallvec::SmallVec;
-
-// Stack-allocated for ≤8 elements, heap for larger
-type EdgeList = SmallVec<[(u8, Node); 8]>;
-```
-
-**Benefits:**
-- Reduced heap allocations
-- Better cache locality
-- Zero overhead for small cases
-
-### 5. Lazy Evaluation
-
-**Pattern:** Generate results on-demand via iterators
-
-```rust
-pub fn query<'a>(
-    &'a self,
-    term: &'a str,
-    max_distance: usize,
-) -> impl Iterator<Item = String> + 'a {
-    QueryIterator::new(...)
-}
-```
-
-**Benefits:**
-- Memory-efficient (no intermediate collections)
-- Early termination support
-- Composable with adapters (`.filter()`, `.take()`, etc.)
-
-### 6. Feature Gates
-
-**Pattern:** Modular compilation with cargo features
+Modular compilation keeps the default dependency set minimal:
 
 ```toml
 [features]
-default = []
-serialization = ["serde", "bincode", "serde_json"]
-protobuf = ["prost", "bytes", "prost-build", "serialization"]
-compression = ["flate2", "serialization"]
-cli = ["clap", "anyhow", "rustyline", "colored", "dirs"]
+default          = ["parking_lot"]
+phonetic-rules   = ["unicode-normalization"]
+serialization    = ["serde", "bincode", "serde_json", "libdictenstein/serialization"]
+cli              = ["clap", "rustyline", "pathmap-backend", "serialization"]
+# … grep-*, wasm, ffi, eviction-opt-* …
 ```
 
-**Benefits:**
-- Minimal dependencies for library-only use
-- Faster compilation
-- Smaller binary size
+The full graph is shown in the [feature-flag DAG](../diagrams/architectures/feature-flag-dag.svg).
 
 ---
 
 ## Performance Architecture
 
-### Optimization Stack
+Optimizations are layered from the algorithm down to the compiler:
 
-```
-┌─────────────────────────────────────┐
-│  Application Level                  │
-│  - Lazy evaluation                  │
-│  - Early termination                │
-└─────────────────────────────────────┘
-           ↓
-┌─────────────────────────────────────┐
-│  Algorithm Level                    │
-│  - Ordered heap-based iteration     │
-│  - Prefix mode optimization         │
-│  - Filter predicate evaluation      │
-└─────────────────────────────────────┘
-           ↓
-┌─────────────────────────────────────┐
-│  Data Structure Level               │
-│  - Arc path sharing                 │
-│  - SmallVec stack allocation        │
-│  - Lazy edge iteration              │
-└─────────────────────────────────────┘
-           ↓
-┌─────────────────────────────────────┐
-│  Memory Management Level            │
-│  - StatePool object reuse           │
-│  - Reference counting (Arc)         │
-│  - Interior mutability (RwLock)     │
-└─────────────────────────────────────┘
-           ↓
-┌─────────────────────────────────────┐
-│  Compiler Level                     │
-│  - Aggressive inlining (#[inline])  │
-│  - Target-specific features         │
-│  - LTO (Link-Time Optimization)     │
-└─────────────────────────────────────┘
-```
+- **Algorithm** — lazy simulation (only `𝒪(∣W∣)` distinct states for fixed `k`),
+  subsumption pruning, ordered/priority iteration, value-scope pruning.
+- **Distance** — `standard_distance` dispatches to Myers bit-parallel for short
+  ASCII inputs and AVX2/SSE4.1 SIMD otherwise, with a scalar fallback. See the
+  [distance dispatch diagram](../diagrams/distance/distance-dispatch.svg).
+- **Data structures** — `Arc` sharing, `SmallVec`, the `StatePool`, and (in
+  libdictenstein) SIMD + bloom-filter edge pruning.
+- **Compiler** — aggressive inlining, target features, LTO.
 
-### Hot Paths
-
-**Identified via profiling (flamegraphs):**
-
-1. **State transitions** - `transition.rs`
-   - Inlined transition functions
-   - Optimized epsilon closure
-
-2. **Dictionary traversal** - `pathmap.rs`, `dawg_query.rs`
-   - Lazy edge iteration
-   - Index-based queries for DAWG
-
-3. **Result collection** - `ordered_query.rs`
-   - Heap-based priority queue
-   - Efficient deduplication
-
-### Benchmarking
-
-**Tools:**
-- Criterion.rs - Statistical benchmarking
-- Flamegraph - CPU profiling
-- cargo-llvm-cov - Code coverage
-
-**Key Metrics:**
-- Query throughput (queries/second)
-- Result latency (ms to first result)
-- Memory usage (bytes per term)
-- Serialization speed (MB/s)
-
-See [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) for detailed performance analysis.
+Measured backend numbers are in the [main README's Performance
+section](../../README.md#performance) and the [performance guide](performance.md).
+Benchmarking uses Criterion.rs with `perf`/flamegraph profiling.
 
 ---
 
 ## Thread Safety
 
-### Concurrent Access Patterns
+Every dictionary is `Send + Sync` and cheap to clone (`Arc`). The read path depends
+on the backend:
 
-**Scenario 1: Multiple Readers**
-```rust
-// Multiple threads can query simultaneously
-let dict = PathMapDictionary::from_terms(terms);
-let transducer = Transducer::new(dict.clone(), Algorithm::Standard);
+![Concurrency model: wait-free ArcSwap reads, parking_lot RwLock readers, and persistent backends; all Send + Sync.](../diagrams/concurrency/concurrency-model.svg)
 
-thread::spawn(move || {
-    for result in transducer.query("test", 2) {
-        println!("{}", result);
-    }
-});
-
-// Another thread queries in parallel
-for result in transducer.query("hello", 1) {
-    println!("{}", result);
-}
-```
-
-**Scenario 2: Concurrent Modification**
-```rust
-let dict = PathMapDictionary::from_terms(terms);
-let transducer = Transducer::new(dict.clone(), Algorithm::Standard);
-
-// Background thread modifies dictionary
-thread::spawn(move || {
-    dict.insert("new_term");
-});
-
-// Main thread queries (sees updates after write lock released)
-for result in transducer.query("new", 1) {
-    println!("{}", result);
-}
-```
-
-### SyncStrategy Enum
+`SyncStrategy` communicates the model to callers:
 
 ```rust
 pub enum SyncStrategy {
-    Persistent,    // Immutable, always safe (Dawg)
-    InternalSync,  // Internal synchronization (future: lock-free structures)
-    ExternalSync,  // Requires RwLock (PathMap, DynamicDawg)
+    Persistent,    // Immutable snapshot — always safe (e.g. PersistentARTrie)
+    InternalSync,  // Lock-free internal synchronization (ArcSwap; DynamicDawgU64)
+    ExternalSync,  // RwLock-guarded (DynamicDawg, SuffixAutomaton, Scdawg)
 }
 ```
 
-**Purpose:** Communicates thread-safety requirements to library users
+Multiple threads may query a shared transducer concurrently; on the mutable
+backends a writer briefly excludes readers while it holds the write lock, after
+which queries observe the update. The wait-free backends (`DoubleArrayTrie`,
+`DynamicDawgU64`) never block readers.
 
 ---
 
 ## Future Directions
 
-### Planned Enhancements
+SIMD distance and edge-pruning **shipped** (v0.8+) and are no longer future work.
+Remaining exploratory directions:
 
-1. **SIMD Optimizations** (v0.4.0)
-   - Vectorize distance calculations
-   - Parallel edge traversal
-   - Target: 2-3x speedup for large queries
+1. **Async/streaming query surface** — a `Stream`-returning query for non-blocking
+   integration.
+2. **Custom allocators** — arena allocators scoped to a query session.
+3. **GPU acceleration** (research) — large-scale parallel queries over very large
+   dictionaries.
 
-2. **Async Support** (v0.5.0)
-   - `async fn query()` returning `Stream<Item = String>`
-   - Non-blocking I/O for serialization
-   - Tokio/async-std compatibility
-
-3. **Custom Allocators** (v0.6.0)
-   - Arena allocators for query sessions
-   - Reduce fragmentation
-   - Predictable memory usage
-
-4. **GPU Acceleration** (Research)
-   - Large-scale parallel queries
-   - CUDA/OpenCL backends
-   - Target: 10-100x for very large dictionaries
-
-### Potential Refactorings
-
-1. **Error Types** - Replace `anyhow::Error` with `thiserror` types
-2. **Modular Serialization** - Split `serialization/mod.rs` into `formats/`
-3. **Query Builder** - Promote `builder_api.rs` to stable API
-4. **Plugin System** - Dynamic loading of dictionary backends
-
-See [`docs/FUTURE_ENHANCEMENTS.md`](docs/FUTURE_ENHANCEMENTS.md) for details.
+Recorded design explorations live under [`docs/research/`](../research/) (an
+append-only record) and [`docs/design/`](../design/).
 
 ---
 
 ## References
 
-- **Performance:** [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)
-- **Features:** [`docs/FEATURES.md`](docs/FEATURES.md)
-- **Contributing:** [`contributing.md`](CONTRIBUTING.md)
-- **Build Guide:** [`building.md`](BUILD.md)
+- [Performance guide](performance.md)
+- [Features overview](../user-guide/features.md)
+- [Contributing](contributing.md)
+- [Build guide](building.md)
+- [Architecture Overview (inter-crate)](../architecture/overview.md)
 
 ---
 
 ## Summary
 
-liblevenshtein-rust achieves high performance through:
+liblevenshtein-rust achieves high performance through efficient data structures
+(tries/DAWGs in libdictenstein with structural sharing), smart memory management
+(position-set pooling, `Arc` sharing, `SmallVec`), zero-cost abstractions
+(monomorphized traits, ZST policies), profiling-driven optimization of hot paths,
+and a wait-free-where-possible concurrency design. The architecture is extensible
+(new backends, formats, algorithms, engines) while keeping the core small and the
+crate boundary with libdictenstein clean.
 
-1. **Efficient data structures** - Tries with structural sharing
-2. **Smart memory management** - Object pooling, Arc sharing, stack allocation
-3. **Zero-cost abstractions** - Trait-based design with no runtime overhead
-4. **Profiling-driven optimization** - Targeted improvements to hot paths
-5. **Concurrent-safe design** - RwLock-based interior mutability
+---
 
-The architecture is designed to be **extensible** (easy to add backends, formats, algorithms) while maintaining **performance** (zero-cost abstractions, profiling-guided optimizations) and **safety** (Rust's type system, thread-safety guarantees).
+[← Documentation Index](../README.md)

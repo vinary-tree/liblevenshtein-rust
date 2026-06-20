@@ -321,10 +321,10 @@ pub struct Node256 {
 
 | Type | Capacity | Lookup | Size | Best For |
 |------|----------|--------|------|----------|
-| Node4 | 1-4 | O(4) linear | 64 B | Sparse leaf-adjacent |
-| Node16 | 5-16 | O(1) SIMD | 160 B | Common inner nodes |
-| Node48 | 17-48 | O(1) indexed | 656 B | Moderately dense |
-| Node256 | 49-256 | O(1) direct | 2064 B | Dense (rare) |
+| Node4 | 1-4 | `𝒪(4)` linear | 64 B | Sparse leaf-adjacent |
+| Node16 | 5-16 | `𝒪(1)` SIMD | 160 B | Common inner nodes |
+| Node48 | 17-48 | `𝒪(1)` indexed | 656 B | Moderately dense |
+| Node256 | 49-256 | `𝒪(1)` direct | 2064 B | Dense (rare) |
 
 ---
 
@@ -808,12 +808,12 @@ Block ID allocation:
 
 | Operation | Time Complexity | Expected Disk I/Os |
 |-----------|-----------------|-------------------|
-| Exact lookup | O(m) | 2-4 |
-| Insert | O(m + log B) amortized | 2-4 + 1 write |
-| Delete | O(m + log B) | 2-4 + 1 write |
-| Prefix search | O(m + k) | O(m/fanout + k/B) |
-| Levenshtein (d=1) | O(n·m) | Varies with pruning |
-| Levenshtein (d=2) | O(n·m·d) | Varies with pruning |
+| Exact lookup | `𝒪(m)` | 2-4 |
+| Insert | `𝒪(m + log B)` amortized | 2-4 + 1 write |
+| Delete | `𝒪(m + log B)` | 2-4 + 1 write |
+| Prefix search | `𝒪(m + k)` | `𝒪(m/fanout + k/B)` |
+| Levenshtein (d=1) | `𝒪(n·m)` | Varies with pruning |
+| Levenshtein (d=2) | `𝒪(n·m·d)` | Varies with pruning |
 
 Where:
 - m = term length

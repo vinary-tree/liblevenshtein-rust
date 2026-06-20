@@ -1,0 +1,52 @@
+// thompson-construction.dot — Thompson construction of an NFA from the regex
+// a(b|c)*  (concatenation of the literal `a` with a Kleene star over the
+// alternation b|c). Solid edges are symbol transitions; dashed edges are the
+// ε-moves of the standard Thompson framework (alternation fork/join and the
+// star's enter/loop/skip ε-edges). The accepting state is a doublecircle.
+// Colour mapping (per the canonical legend — Phonetic engine):
+//   states          fill #F8BBD0, border #AD1457 (accepting = doublecircle)
+//   symbol edges    solid #AD1457 (labels a, b, c)
+//   ε-transitions   dashed #757575, label "ε"
+// rankdir=LR so the automaton reads left-to-right like a regex.
+digraph thompson {
+  rankdir=LR;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="Thompson construction: regex a(b|c)* → NFA (ε = dashed)"];
+  node  [shape=circle, style=filled, fontname="DejaVu Sans", fontsize=11,
+         color="#AD1457", fillcolor="#F8BBD0", fontcolor="#102027", width=0.34, fixedsize=true];
+  edge  [fontname="DejaVu Sans", fontsize=10];
+
+  // States: q0 --a--> q1 then a Kleene star over (b|c) reaching the accepting q8.
+  q0 [label="q0"];
+  q1 [label="q1"];                 // end of the `a` fragment / star entry
+  q2 [label="q2"];                 // alternation fork (inside the star body)
+  q3 [label="q3"];                 // b-branch start
+  q4 [label="q4"];                 // b-branch end
+  q5 [label="q5"];                 // c-branch start
+  q6 [label="q6"];                 // c-branch end
+  q7 [label="q7"];                 // alternation join / star body exit
+  q8 [label="q8", shape=doublecircle, fillcolor="#C8E6C9", color="#2E7D32"];  // accept
+
+  // ── literal `a` (symbol transition) ──
+  q0 -> q1 [label="a", color="#AD1457", penwidth=2];
+
+  // ── star: ε from entry into the body, and ε skip straight to accept ──
+  q1 -> q2 [label="ε", color="#757575", style=dashed];          // enter loop body
+  q1 -> q8 [label="ε", color="#757575", style=dashed];          // skip (zero reps)
+
+  // ── alternation b|c inside the body: fork with ε ──
+  q2 -> q3 [label="ε", color="#757575", style=dashed];          // fork → b
+  q2 -> q5 [label="ε", color="#757575", style=dashed];          // fork → c
+
+  // b-branch and c-branch (symbol transitions)
+  q3 -> q4 [label="b", color="#AD1457", penwidth=2];
+  q5 -> q6 [label="c", color="#AD1457", penwidth=2];
+
+  // alternation join with ε
+  q4 -> q7 [label="ε", color="#757575", style=dashed];
+  q6 -> q7 [label="ε", color="#757575", style=dashed];
+
+  // ── star: ε loop back for another rep, and ε exit to accept ──
+  q7 -> q2 [label="ε", color="#757575", style=dashed, constraint=false];  // loop
+  q7 -> q8 [label="ε", color="#757575", style=dashed];                    // exit
+}

@@ -1,7 +1,17 @@
-//! Interactive REPL for liblevenshtein
+//! Interactive REPL for liblevenshtein.
 //!
-//! This module provides a comprehensive Read-Eval-Print Loop for exploring
-//! and manipulating Levenshtein dictionaries interactively.
+//! A comprehensive Read-Eval-Print Loop for exploring and manipulating Levenshtein
+//! dictionaries interactively. All dictionary I/O and querying is delegated to the
+//! shared primitives in [`crate::cli::commands`], so the REPL and the one-shot CLI
+//! behave identically.
+//!
+//! ## Submodules
+//!
+//! - [`command`] — parses and executes a line of REPL input ([`Command`], [`CommandResult`]).
+//! - [`state`] — the persistent session state (loaded dictionary, backend, format).
+//! - [`state_machine`] — drives the prompt's input lifecycle.
+//! - [`helper`] — `rustyline` integration (completion, history, hints).
+//! - [`highlighter`] — syntax highlighting of the input line.
 
 pub mod command;
 pub mod helper;

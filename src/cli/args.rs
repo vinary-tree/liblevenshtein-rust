@@ -1,4 +1,10 @@
-//! CLI argument definitions using flag-based conventions
+//! Command-line argument model (clap).
+//!
+//! Defines the `clap`-derived argument and subcommand structures for the `liblevenshtein`
+//! binary: the dictionary source, backend selection ([`DictionaryBackend`]), serialization
+//! format, query parameters (term, max distance, ordering, limit), and output options.
+//! This module owns only *parsing*; the work is delegated to the backend-agnostic
+//! primitives in [`crate::cli::commands`], which the REPL reuses.
 
 use crate::repl::state::DictionaryBackend;
 use crate::transducer::Algorithm;

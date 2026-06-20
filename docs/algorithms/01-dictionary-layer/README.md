@@ -16,6 +16,14 @@ The Dictionary Layer forms the foundation of liblevenshtein's fuzzy matching cap
 
 This layer abstracts over different data structures (tries, DAWGs, double-array tries) through common traits, allowing you to choose the best backend for your specific use case while maintaining a consistent API.
 
+![Taxonomy of dictionary backends, grouping trie, DAWG, and suffix-automaton families with their byte-level and Unicode (char) variants](../../diagrams/dictionary-structures/backend-taxonomy.svg)
+
+*Backend taxonomy: how the available dictionary implementations relate to one another.*
+
+![The Dictionary, MappedDictionary, and DictionaryNode trait hierarchy and the methods each exposes](../../diagrams/dictionary-structures/dictionary-traits.svg)
+
+*Dictionary trait hierarchy: the common interface every backend implements.*
+
 ## Architecture
 
 ```
@@ -646,14 +654,14 @@ let bytes = std::fs::read("dict.bin")?;
 let dict: DoubleArrayTrie = bincode::deserialize(&bytes)?;
 ```
 
-See [Serialization Guide](../08-serialization/README.md) for details.
+See [Serialization Guide](../../user-guide/serialization.md) for details.
 
 ## Related Documentation
 
 - [Value Storage](../09-value-storage/README.md) - Term-to-value mappings
 - [Automata Layer](../02-levenshtein-automata/README.md) - Levenshtein automata that query dictionaries
 - [Zipper Navigation](../06-zipper-navigation/README.md) - Hierarchical navigation pattern
-- [Performance Guide](../performance/README.md) - Detailed benchmarks and optimization tips
+- Performance Guide - Detailed benchmarks and optimization tips
 
 ## Academic References
 

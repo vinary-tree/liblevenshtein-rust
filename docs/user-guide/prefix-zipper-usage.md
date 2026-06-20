@@ -2,6 +2,14 @@
 
 **Quick practical guide for using PrefixZipper in your applications**
 
+`PrefixZipper` is a trait implemented by the per-backend zipper types (provided by the
+**[libdictenstein](https://crates.io/crates/libdictenstein)** crate and re-exported here).
+The trait hierarchy below shows how the dictionary and zipper traits relate.
+
+![The Dictionary, MappedDictionary, and DictionaryNode trait hierarchy and the methods each exposes](../diagrams/dictionary-structures/dictionary-traits.svg)
+
+*Dictionary trait hierarchy: the zipper types navigate the same backends shown here.*
+
 ---
 
 ## Table of Contents
@@ -23,7 +31,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-liblevenshtein = "0.6"
+liblevenshtein = "0.9.1"
 ```
 
 ### Basic Usage (5 lines of code)
@@ -867,10 +875,18 @@ criterion_main!(benches);
 - **Full API Documentation**: [`docs/design/prefix-zipper.md`](../design/prefix-zipper.md)
 - **Optimization Details**: [`docs/optimization/prefix_zipper_optimization_log.md`](../optimization/prefix_zipper_optimization_log.md)
 - **Benchmark Results**: [`docs/optimization/prefix_zipper_baseline.md`](../optimization/prefix_zipper_baseline.md)
-- **Source Code**: [`src/dictionary/prefix_zipper.rs`](../../src/dictionary/prefix_zipper.rs)
-- **Test Examples**: [`tests/prefix_zipper_tests.rs`](../../tests/prefix_zipper_tests.rs)
+- **Source Code**: [`prefix_zipper.rs`](https://github.com/f1r3fly-io/libdictenstein/blob/main/src/prefix_zipper.rs) (in the libdictenstein crate)
+- **Test Examples**: [`prefix_zipper_tests.rs`](https://github.com/f1r3fly-io/libdictenstein/blob/main/tests/prefix_zipper_tests.rs) (in the libdictenstein crate)
+
+## Related Documentation
+
+- [Backends](backends.md) - Dictionary backend comparison
+- [Code Completion Guide](code-completion.md) - Building completion systems
+- [Getting Started](getting-started.md) - Basic usage
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-10
+**Document Version**: 1.1
+**Last Updated**: 2026-06-19
+
+[← Documentation Index](../README.md)

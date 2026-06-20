@@ -1,0 +1,42 @@
+@startuml llev-compilation
+' Compilation pipeline for a `.llev` phonetic-rule file (the LibLevenshtein
+' phonetic rule-set DSL). Source text is lexed, parsed into an AST, loaded into a
+' ruleset, and lowered to a compiled ruleset; at run time `apply_rules_seq`
+' rewrites a token stream into phonetically-normalised tokens. The bundled rules
+' cover 53 languages.
+' Colour mapping (per the canonical legend):
+'   DSL compilation stages  brown  #D7CCC8 (container) / #EFEBE9 (child tint)
+'   phonetic-engine output  pink   #F8BBD0
+' Arrow colour = DSL border #4E342E for the compile flow.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+left to right direction
+
+title `.llev` phonetic-rule compilation — source → lexer → AST → ruleset → compiled → normalised tokens
+
+rectangle ".llev source" as SRC #D7CCC8
+rectangle "lexer\n(src/phonetic/llev/lexer.rs)" as LEX #EFEBE9
+rectangle "AST\n(ast.rs)" as AST #EFEBE9
+rectangle "loader / ruleset\n(loader.rs, ruleset.rs)" as RULESET #EFEBE9
+rectangle "compiled ruleset\n(compiled.rs)" as COMPILED #D7CCC8
+rectangle "apply_rules_seq →\nphonetically-normalised tokens" as OUT #F8BBD0
+
+SRC      -[#4E342E]-> LEX
+LEX      -[#4E342E]-> AST
+AST      -[#4E342E]-> RULESET
+RULESET  -[#4E342E]-> COMPILED
+COMPILED -[#AD1457]-> OUT
+
+note bottom of RULESET
+  Bundled rule-sets cover 53 languages.
+end note
+@enduml

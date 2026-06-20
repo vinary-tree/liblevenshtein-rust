@@ -1,5 +1,7 @@
 # Contextual Completion API Design
 
+[← Documentation Index](../README.md)
+
 ## Document Status
 - **Status**: Design Approved
 - **Parent**: [contextual-completion-zipper.md](./contextual-completion-zipper.md)
@@ -9,6 +11,8 @@
 ## Overview
 
 This document provides the complete API specification for the Contextual Completion Engine, including all public types, traits, methods, and usage examples.
+
+![Draft-checkpoint lifecycle: a draft buffer accumulates characters, checkpoints capture restorable positions, and finalization promotes the draft into the context-scoped dictionary.](../diagrams/contextual/draft-checkpoint-lifecycle.svg)
 
 ## Core Types
 

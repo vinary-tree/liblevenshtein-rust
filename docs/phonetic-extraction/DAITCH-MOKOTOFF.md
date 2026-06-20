@@ -1,8 +1,10 @@
 # Daitch-Mokotoff Soundex Algorithm Extraction
 
+> **Terminology.** A **phoneme** is a contrastive unit of sound. The IPA symbols used below denote, among others: `ʃ` ("sh"), `tʃ` ("ch"), `dʒ` ("j"), `ʒ` (the "s" in *measure*), and `x` (the voiceless velar fricative, as in Scottish *loch* or Hebrew *chet*). *Place of articulation* is where the vocal tract is constricted; *manner of articulation* is how airflow is shaped; *voicing* is whether the vocal folds vibrate. See [`../GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+
 ## Algorithm Overview
 
-Daitch-Mokotoff Soundex (D-M Soundex) was developed by Gary Mokotoff and Randy Daitch in 1985 specifically for Jewish and Eastern European surnames. It addresses limitations of American Soundex for these names.
+Daitch-Mokotoff Soundex (D-M Soundex) was developed by Gary Mokotoff and Randy Daitch in 1985 specifically for Jewish and Eastern European surnames. It addresses limitations of American Soundex for these names. Each extracted rule carries a `weight` in `[0, 1]` expressing the residual edit cost of treating the two spellings as equivalent.
 
 ## Key Differences from American Soundex
 
@@ -274,6 +276,10 @@ D-M Soundex excels at matching:
 
 ## References
 
-1. Mokotoff, G. (1997). "Soundexing and Genealogy". Avotaynu, 13(3)
-2. Mokotoff, G. & Arick, R. (2004). "Where Once We Walked"
-3. https://www.avotaynu.com/soundex.htm
+1. Mokotoff, Gary & Daitch, Randy (1985). *Daitch-Mokotoff Soundex System*. Avotaynu, Bergenfield, NJ. (No DOI; canonical source of the D-M Soundex algorithm.)
+2. Mokotoff, Gary (1997). "Soundexing and Genealogy". *Avotaynu* 13(3). (No DOI.)
+3. Avotaynu, "Daitch-Mokotoff Soundex Coding". https://www.avotaynu.com/soundex.htm
+
+---
+
+[← Documentation Index](../README.md)

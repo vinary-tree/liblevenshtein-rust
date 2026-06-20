@@ -1,0 +1,30 @@
+# pruning-simd-bloom.pikchr — how DynamicDawg prunes edge fan-out at a node.
+# A per-node bloom filter rejects absent symbols in 𝒪(1); surviving candidates
+# are compared against many edge labels at once with SIMD lanes, so a node with
+# a wide fan-out is matched without scanning every edge.
+boxwid = 1.5
+boxht = 0.55
+linewid = 0.45
+
+Title: text "Edge-lookup pruning at a DynamicDawg node" bold
+
+# DAWG node (green) on the left.
+Node: box "DAWG node" fill 0xC8E6C9 color 0x2E7D32 with .n at Title.s - (2.4, 0.4)
+
+# Bloom filter pre-check (indigo).
+Bloom: box "Bloom filter:" "symbol present?" fill 0xE8EAF6 color 0x283593 with .w at Node.e + (0.6, 0)
+arrow from Node.e to Bloom.w color 0x455A64 "symbol x" above
+
+# Reject path (red).
+Reject: box "reject —" "edge absent" fill 0xFFCDD2 color 0xC62828 with .n at Bloom.s - (0, 0.55)
+arrow from Bloom.s to Reject.n color 0xC62828 "no" aligned
+
+# SIMD compare (indigo) on the "yes" path.
+Simd: box "SIMD compare" "8 edge labels / step" fill 0xC5CAE9 color 0x283593 with .w at Bloom.e + (0.7, 0)
+arrow from Bloom.e to Simd.w color 0x283593 "yes" above
+
+# Matching child (green).
+Child: box "matched child" fill 0xC8E6C9 color 0x2E7D32 with .w at Simd.e + (0.6, 0)
+arrow from Simd.e to Child.w color 0x2E7D32
+
+text "𝒪(1) reject of absent symbols · vectorised label match for present ones" small with .n at Bloom.s - (0, 1.3)

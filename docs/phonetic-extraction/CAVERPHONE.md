@@ -1,8 +1,10 @@
 # Caverphone Algorithm Extraction
 
+> **Terminology.** A **phoneme** is a contrastive unit of sound. The IPA symbols used below denote: `ʃ` the "sh" sound (a voiceless post-alveolar fricative), `ŋ` the velar nasal ("ng" in *sing*), `ʍ` the voiceless "wh", and `ə` the mid-central vowel (schwa). *Place of articulation* is where the vocal tract is constricted; *manner of articulation* is how airflow is shaped; *voicing* is whether the vocal folds vibrate. See [`../GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+
 ## Algorithm Overview
 
-Caverphone was developed by David Hood at the University of Otago in New Zealand in 2002. It is specifically designed for matching New Zealand English names, particularly surnames derived from Maori and British sources.
+Caverphone was developed by David Hood at the University of Otago in New Zealand in 2002. It is specifically designed for matching New Zealand English names, particularly surnames derived from Māori and British sources. Each extracted rule carries a `weight` in `[0, 1]` expressing the residual edit cost of treating the two spellings as equivalent.
 
 ## Versions
 
@@ -202,5 +204,9 @@ Caverphone is particularly effective for:
 
 ## References
 
-1. Hood, D. (2002). "Caverphone: Phonetic matching algorithm". Technical report, University of Otago
-2. Hood, D. (2004). "Caverphone Revisited". Technical report, University of Otago
+1. Hood, David (2002). "Caverphone". *University of Otago Technical Report*, Caversham Project Occasional Paper, Dunedin, NZ. (No DOI; canonical source of the Caverphone algorithm.)
+2. Hood, David (2004). "Caverphone Revisited" (Caverphone 2.0). *University of Otago Technical Report*, Dunedin, NZ. (No DOI.)
+
+---
+
+[← Documentation Index](../README.md)

@@ -1,7 +1,7 @@
 # Serialization Guide
 
-**Version**: 0.4.0
-**Last Updated**: 2025-10-31
+**Version**: 0.9.1
+**Last Updated**: 2026-06-19
 
 This guide explains how to save and load dictionaries using liblevenshtein-rust's serialization support.
 
@@ -14,6 +14,10 @@ Constructing large dictionaries can be time-consuming. Serialization allows you 
 - Share dictionaries across applications
 - Support multiple serialization formats
 
+![Serialization formats: a dictionary is encoded as bincode, JSON, plain text, or protobuf, each optionally wrapped in gzip compression](../diagrams/serialization/serialization-formats.svg)
+
+*Serialization formats: every backend can be written as bincode, JSON, text, or protobuf, optionally gzip-compressed.*
+
 ## Feature Flags
 
 Serialization requires the `serialization` feature:
@@ -22,21 +26,21 @@ Serialization requires the `serialization` feature:
 [dependencies]
 liblevenshtein = {
     git = "https://github.com/universal-automata/liblevenshtein-rust",
-    tag = "v0.4.0",
+    tag = "v0.9.1",
     features = ["serialization"]
 }
 
 # With compression support
 liblevenshtein = {
     git = "https://github.com/universal-automata/liblevenshtein-rust",
-    tag = "v0.4.0",
+    tag = "v0.9.1",
     features = ["serialization", "compression"]
 }
 
 # With Protobuf support
 liblevenshtein = {
     git = "https://github.com/universal-automata/liblevenshtein-rust",
-    tag = "v0.4.0",
+    tag = "v0.9.1",
     features = ["serialization", "protobuf"]
 }
 ```
@@ -468,7 +472,8 @@ liblevenshtein convert -i original-words.txt -o dict-rebuilt.bincode
 
 - [Getting Started](getting-started.md) - Basic usage
 - [Backends](backends.md) - Dictionary backend comparison
-- [CLI Usage](../developer-guide/cli-usage.md) - CLI tool guide
+- [Features](features.md) - Full feature overview
+- CLI Usage - CLI tool guide
 - [Protobuf Design](../design/protobuf-serialization.md) - Protobuf format specification
 
 ## Examples
@@ -478,3 +483,7 @@ See `examples/serialization_basic.rs` in the repository:
 ```bash
 cargo run --example serialization_basic --features serialization
 ```
+
+---
+
+[← Documentation Index](../README.md)

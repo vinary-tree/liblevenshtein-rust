@@ -1,4 +1,12 @@
-//! Dictionary format auto-detection
+//! Serialization-format auto-detection.
+//!
+//! Determines the [`SerializationFormat`] of a dictionary file using a three-stage
+//! cascade: (1) **magic bytes** — an exact signature at the start of the file
+//! (e.g. the gzip header, the bincode/protobuf markers); (2) **file extension** —
+//! a heuristic when no signature matches; (3) **content analysis** — a fallback that
+//! inspects the bytes (e.g. valid UTF-8 / JSON shape) to guess plain-text vs binary.
+//! Used by [`crate::cli::commands`] so both the CLI and REPL load files without an
+//! explicit `--format` flag.
 
 use super::args::SerializationFormat;
 use crate::repl::state::DictionaryBackend;

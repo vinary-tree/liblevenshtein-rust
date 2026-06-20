@@ -94,7 +94,7 @@ Additional benchmarks comparing PersistentARTrie against other dictionary types:
 
 2. **Sub-millisecond Recovery**: Recovery of 1000-term dictionaries completes in under 1ms, enabling fast restarts.
 
-3. **Constant-time Checkpoints**: Checkpoint operations are O(1), allowing frequent checkpoint markers without performance impact.
+3. **Constant-time Checkpoints**: Checkpoint operations are `𝒪(1)`, allowing frequent checkpoint markers without performance impact.
 
 4. **Competitive Lookup**: Despite persistence overhead, lookup performance remains competitive with in-memory structures.
 

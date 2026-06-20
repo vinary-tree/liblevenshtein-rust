@@ -1,0 +1,41 @@
+@startuml timeseries-index
+' liblevenshtein — time-series indexing stack: TimeSeriesIndex and HybridSearchIndex
+' layered over a dictionary backend, with the exact MsmTransducer / msm_distance
+' verifier alongside.
+' Color legend:
+'   green  #C8E6C9 / #E8F5E9 / #2E7D32  = dictionary backend (libdictenstein)
+'   teal   #B2DFDB / #E0F2F1 / #00695C  = time-series / MSM components
+' Files (src/time_series/):
+'   trie_index.rs      → TimeSeriesIndex
+'   hybrid_search.rs   → HybridSearchIndex
+'   encoding.rs        → QuantizationConfig
+'   msm_transducer.rs  → MsmTransducer (+ msm_distance via MsmConfig)
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Time-series indexing — TimeSeriesIndex & HybridSearchIndex over a dictionary
+
+rectangle "TimeSeriesIndex\napproximate similarity search over encoded series" as tsi #B2DFDB
+rectangle "HybridSearchIndex\napproximate filter → exact MSM verify" as hsi #B2DFDB
+
+rectangle "QuantizationConfig\ndelta / float / SAX encoding" as enc #E0F2F1
+
+rectangle "DynamicDawg of encoded series\nprefix-shared quantized byte sequences" as dawg #E8F5E9
+
+rectangle "MsmTransducer / msm_distance\nexact MSM verification (MsmConfig)" as msm #B2DFDB
+
+tsi -[#00695C,thickness=3]down-> enc : encodes via
+hsi -[#00695C,thickness=3]down-> enc : encodes via
+enc -[#2E7D32,thickness=3]down-> dawg : builds
+hsi -[#00695C,thickness=3]right-> msm : lower-bound prune\nthen exact verify
+tsi -[#00695C,dotted,thickness=2]right-> msm : verify candidates
+
+@enduml

@@ -69,12 +69,12 @@ Medium (11 chars):  740 ns   (7.8x from short, 67x from empty)
 Long (17 chars):  1,169 ns   (1.6x from medium)
 ```
 
-Expected O(m×n):
+Expected `𝒪(m×n)`:
 - 4×4 = 16 cells
 - 11×11 = 121 cells (7.6x more)
 - 17×17 = 289 cells (2.4x more than medium)
 
-**Measured scaling closely matches O(m×n)!** ✅
+**Measured scaling closely matches `𝒪(m×n)`!** ✅
 
 #### Throughput Analysis
 
@@ -115,7 +115,7 @@ Throughput decreases with size, suggesting cache/memory effects become more prom
 **Characteristics**:
 - 119ns for short strings (cold cache)
 - <<119ns for warm cache (not yet measured)
-- O(unique_subproblems) space
+- `𝒪(unique_subproblems)` space
 - Cache enables amortized speedup
 
 ### Recursive Overhead Breakdown
@@ -277,7 +277,7 @@ Based on benchmark results, potential bottlenecks ranked by likelihood:
 All implementations perform well:
 - Sub-100ns for short strings
 - Sub-microsecond for medium strings
-- Predictable O(m×n) scaling
+- Predictable `𝒪(m×n)` scaling
 
 ### Recursive Overhead is Acceptable
 

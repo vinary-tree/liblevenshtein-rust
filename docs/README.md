@@ -1,201 +1,117 @@
 # Documentation Index
 
-Comprehensive documentation for liblevenshtein-rust v0.4.0.
+Complete documentation for **liblevenshtein-rust v0.9.1** — Levenshtein and
+related (phonetic, time-series) automata for error-tolerant search over strings
+and byte arrays, with several trie/DAWG dictionaries, fuzzy maps, and fuzzy
+caches.
 
-**Last Updated:** 2025-10-31
+**Last Updated:** 2026-06-19  ·  **Version:** 0.9.1
 
----
-
-## 📚 Getting Started
-
-Start here if you're new to liblevenshtein-rust:
-
-- **[Main README](../README.md)** - Project overview, installation, and quick start examples
-- **[User Guide](user-guide/)** - Getting started, algorithms, backends, features
-- **[CHANGELOG.md](../CHANGELOG.md)** - Version history and release notes (v0.4.0)
+![Documentation map: the nine sections of this documentation set.](diagrams/architectures/documentation-map.svg)
 
 ---
 
-## 📖 User Documentation
+## How this documentation is organized
 
-### [User Guide](user-guide/)
+The set is grouped into nine sections, from first-contact tutorials through deep
+theory, formal proofs, and the project's scientific research record. The
+[main README](../README.md) is the canonical, quality-reference overview; this
+index maps everything else.
 
-Complete user-facing documentation:
+### Document conventions
 
-- **[Getting Started](user-guide/getting-started.md)** - Installation and first queries
-- **[Algorithms](user-guide/algorithms.md)** - Levenshtein distance algorithms
-- **[Dictionary Backends](user-guide/backends.md)** - Backend comparison and selection
-- **[Serialization](user-guide/serialization.md)** - Save and load dictionaries
-- **[Features Overview](user-guide/features.md)** - Complete feature list (v0.4.0)
-- **[Code Completion Guide](user-guide/code-completion.md)** - IDE-style autocomplete
-- **[Thread Safety](user-guide/thread-safety.md)** - Concurrent access patterns
+- **Math** is written in Unicode and wrapped in backticks — every token,
+  including single variables (`` `k` ``, `` `χ` ``, `` `𝒪(∣W∣)` ``). The bar /
+  "such that" symbol is Unicode `∣` (U+2223), never an ASCII `|`. (Markdown table
+  delimiters and code-fence pipes are left as plain `|`.)
+- **Diagrams** live under [`diagrams/`](diagrams/) as text source + a committed
+  SVG, fully coloured per a [shared legend](diagrams/README.md); docs embed the SVG.
+- **Citations** link to DOIs where one exists.
 
----
+### Living vs. Historical — the rule that bounds edits
 
-## 🔧 Developer Documentation
-
-### [Developer Guide](developer-guide/)
-
-For contributors and maintainers:
-
-- **[Architecture](developer-guide/architecture.md)** - System design and core traits
-- **[Building](developer-guide/building.md)** - Build instructions and CLI usage
-- **[Contributing](developer-guide/contributing.md)** - Contribution guidelines
-- **[Performance](developer-guide/performance.md)** - Optimization guide
-- **[Publishing](developer-guide/publishing.md)** - Release procedures
-
----
-
-## 🏗️ Design Documents
-
-### [Design](design/)
-
-Technical specifications for major features:
-
-- **[Dynamic DAWG](design/dynamic-dawg.md)** - Dynamic dictionary implementation
-- **[Hierarchical Correction](design/hierarchical-correction.md)** - Multi-level error correction
-- **[Prefix Matching](design/prefix-matching.md)** - Prefix-based search optimization
-- **[Protobuf Serialization](design/protobuf-serialization.md)** - Protobuf format specification
-- **[Suffix Automaton](design/suffix-automaton.md)** - Suffix automaton design
+> A document is **LIVING** if it describes the *current* behaviour, API, theory,
+> or architecture of liblevenshtein v0.9.1 — something you would consult to *use
+> or extend the library today*. A document is **HISTORICAL** if it is a dated
+> record of *how we got here*: a scientific ledger, hypothesis log, experiment
+> record, phase/session/completion report, or benchmark dump. Per the project's
+> append-only scientific-method practice, **HISTORICAL documents are never
+> rewritten or "cleaned up"** — only indexed and cross-linked. When in doubt, a
+> doc whose path carries a date, phase, hypothesis, or session name is HISTORICAL.
 
 ---
 
-## 🔬 Research & Analysis
+## 1 · Getting Started
 
-### [Research](research/)
+- [Main README](../README.md) — overview, installation, quick start, the full feature tour.
+- [User Guide → Getting Started](user-guide/getting-started.md) — first dictionary and query.
+- [CHANGELOG](../CHANGELOG.md) — version history (current: 0.9.1).
+- [Examples & Tutorials](examples/README.md) — the numbered tutorial series
+  ([01](examples/01-getting-started/) … [08](examples/08-real-world/)) and a map to the runnable `examples/*.rs`.
 
-Performance research and optimization analysis:
+## 2 · Concepts & Theory
 
-- **[SIMD Optimization](research/simd-optimization/)** - SIMD vectorization research
-- **[Distance Optimization](research/distance-optimization/)** - Distance computation optimization
-- **[Comparative Analysis](research/comparative-analysis/)** - Algorithm comparisons
-- **[Eviction Wrapper](research/eviction-wrapper/)** - Cache eviction strategy research
-- **[Future Enhancements](research/future-enhancements.md)** - Roadmap and planned features
+- [Lazy vs. Eager Automata](concepts/LAZY_VS_EAGER_AUTOMATA.md) — the central idea: a query *lazily simulates* a parameterized Levenshtein automaton, it is **not** a precompiled universal DFA.
+- [Levenshtein-automata theory](research/levenshtein-automata/) — the Schulz–Mihov method, glossary, and code-to-paper mapping (theory home; also cross-linked from the glossary).
+- [Algorithm layer 02 — Levenshtein automata](algorithms/02-levenshtein-automata/) — the position/subsumption model, with diagrams.
+- [Theory](theory/) — disk-trie and SCDAWG theory pointers (backend internals now live in `libdictenstein`).
+- Specialized theory: [universal automata](research/universal-levenshtein/) · [weighted automata](research/weighted-levenshtein-automata/) · [bimachines](research/bimachines/).
 
----
+## 3 · Architecture
 
-## ⚡ Performance & Benchmarks
+- [Architecture Overview](architecture/overview.md) — the **inter-crate** view: liblevenshtein ↔ libdictenstein ↔ optional duallity (WFST) ↔ the `.llev`/`.llre` DSL layer.
+- [Developer Guide → Architecture](developer-guide/architecture.md) — the **intra-crate** module design and traits.
+- [Design specifications](design/) — feature-level designs (dynamic DAWG, suffix automaton, contextual completion, protobuf serialization, grammar correction, …).
+- [Algorithm Reference layers 01–09](algorithms/) — the layered architecture, bottom-up.
+- Diagrams: [crate boundary](diagrams/architectures/crate-boundary.svg) · [component stack](diagrams/architectures/component-stack.svg) · [C4 context](diagrams/architectures/c4-context.svg) / [container](diagrams/architectures/c4-container.svg) · [feature-flag DAG](diagrams/architectures/feature-flag-dag.svg) · [module dependencies](diagrams/architectures/module-dependency.svg).
 
-### [Benchmarks](benchmarks/)
+## 4 · User Guide
 
-Performance measurements and analysis:
+- [User Guide](user-guide/) — getting-started, [algorithms](user-guide/algorithms.md), [backends](user-guide/backends.md), [serialization](user-guide/serialization.md), [features](user-guide/features.md), [code completion](user-guide/code-completion.md), [thread safety](user-guide/thread-safety.md), [prefix zipper](user-guide/prefix-zipper-usage.md).
+- [Guides](guides/) — [articulatory distance](guides/articulatory-distance.md), [compositional phonetic + Levenshtein](guides/compositional-phonetic-levenshtein.md), [phonetic-rules developer guide](guides/phonetic-rules-developer-guide.md), [hierarchical scope completion](guides/HIERARCHICAL_SCOPE_COMPLETION.md), [restricted substitutions](guides/RESTRICTED_SUBSTITUTIONS_GUIDE.md), [grammar correction](guides/grammar-correction/).
+- [Phonetic extraction](phonetic-extraction/) — Soundex, Metaphone, NYSIIS, Caverphone, Cologne, Daitch–Mokotoff, Beider–Morse.
+- [DSL grammar reference](grammar/) — the `.llev`, `.llre`, and regex EBNF grammars with prose.
+- [LLRE reference](llre/).
 
-- **[Backend Performance Comparison](benchmarks/BACKEND_PERFORMANCE_COMPARISON.md)** - All backends compared
-- **[DAT Optimization Results](benchmarks/DAT_OPTIMIZATION_RESULTS.md)** - Double Array Trie optimizations
-- **[DAWG Optimization Analysis](benchmarks/DAWG_OPTIMIZATION_ANALYSIS.md)** - DAWG performance analysis
-- **[Optimization Summary](benchmarks/OPTIMIZATION_SUMMARY.md)** - Overall optimization results
+## 5 · Developer Guide
 
----
+- [Developer Guide](developer-guide/) — [building](developer-guide/building.md), [contributing](developer-guide/contributing.md), [performance](developer-guide/performance.md), [publishing](developer-guide/publishing.md).
+- [Security & threat model](SECURITY.md) — untrusted-input surfaces (grep archive/document extraction, FFI/WASM boundaries, serialization, `.llre` ReDoS-resistance).
+- [Migration](migration/) — terminology and version-migration notes (including the libdictenstein extraction).
+- [Development logs](development/) — phase/session implementation logs *(historical)*.
 
-## 🐛 Bug Reports & Fixes
+## 6 · Algorithm Reference
 
-### [Bug Reports](bug-reports/)
+- [Algorithm Reference](algorithms/) — the [documentation index](algorithms/DOCUMENTATION_INDEX.md) and the nine layered READMEs: [01 dictionary](algorithms/01-dictionary-layer/) · [02 Levenshtein automata](algorithms/02-levenshtein-automata/) · [03 intersection traversal](algorithms/03-intersection-traversal/) · [04 distance](algorithms/04-distance-calculation/) · [05 SIMD](algorithms/05-simd-optimization/) · [06 zipper navigation](algorithms/06-zipper-navigation/) · [07 contextual completion](algorithms/07-contextual-completion/) · [08 caching](algorithms/08-caching-layer/) · [09 value storage](algorithms/09-value-storage/).
 
-Detailed bug analysis and fixes:
+## 7 · Formal Verification
 
-- **[Merge-Split Algorithm](bug-reports/merge-split-algorithm.md)** - MergeAndSplit algorithm fixes
-- **[Transposition Bug](bug-reports/transposition-bug.md)** - Transposition operation bug
-- **[Cross-Validation Issues](bug-reports/cross-validation-bug.md)** - Cross-validation fixes
+- [Verification](verification/) — the formal-proof artifacts. **`FORMAL_VERIFICATION_MANIFEST.tsv` is the declared source of truth** for trusted/partial/legacy status; see [INDEX](verification/INDEX.md) and [README_FORMAL_GATES](verification/README_FORMAL_GATES.md). Holds the Rocq (`.v`) theories (core, articulatory, msm, phonetic, wallbreaker, grammar, llre, myers, product) and TLA+ specs ([`tla/`](verification/tla/)).
+- [Formal-verification writeups](formal-verification/) — the parallel markdown proof exposition and findings (defers to the manifest for canonical status).
 
----
+## 8 · Research & Scientific Ledgers — *historical, append-only (indexed, not edited)*
 
-## ✅ Completion Reports
+The project keeps an append-only scientific record. These are preserved as
+written; they are indexed and cross-linked but never rewritten.
 
-### [Completion Reports](completion-reports/)
+- [Research](research/) — per-topic investigations: levenshtein-automata, universal-levenshtein, weighted-levenshtein-automata, [wallbreaker](research/wallbreaker/), [artrie](research/artrie/), simd-optimization, comparative-analysis, bimachines, eviction-wrapper, grammar-correction, phonetic-corrections, batch-processing.
+- [Scientific ledgers](scientific-ledger/) — the canonical ledger home (automata/WFST evaluation, MSM automata evaluation).
+- [Optimization journals](optimization/) and [optimization results](optimizations/) — hypothesis ledgers (H1/H2…), per-topic experiment logs.
+- [Universal](universal/) · [Generalized](generalized/) — phase records for the universal & generalized automaton work.
+- [MeTTaIL](mettail/) — semantic type-checking for MeTTa (a large self-contained subtree: theoretical foundations, correction-WFST, simplification, implementation, ecosystem).
+- [Time-series analysis](time_series/) · [Integration](integration/) (MORK, PathMap) · [Benchmarks](benchmarks/) · [Analysis](analysis/) · [Bug reports](bug-reports/) · [Completion reports](completion-reports/) · [Implementation status](implementation-status/) · [Archive](archive/).
 
-Project milestone reports:
+## 9 · Diagrams
 
-- **[Project Summary](completion-reports/project-summary.md)** - Overall project completion
-- **[Phase 2 Complete](completion-reports/phase2-complete.md)** - Phase 2 milestone
-- **[Optimization Complete](completion-reports/optimization-complete.md)** - Optimization phase
-- **[Next Steps](completion-reports/next-steps.md)** - Future work
-
----
-
-## 📋 Implementation Status
-
-### [Implementation Status](implementation-status/)
-
-Current feature status:
-
-- **[UTF-8 Implementation](implementation-status/utf8-implementation.md)** - UTF-8 support details
-- **[UTF-8 Status](implementation-status/utf8-status.md)** - Current UTF-8 status
-
----
-
-## 📂 Archive
-
-### [Archive](archive/)
-
-Historical documentation (for reference only):
-
-- **[Benchmarks](archive/benchmarks/)** - Historical benchmark results
-- **[Implementation](archive/implementation/)** - Historical implementation plans
-- **[Optimization](archive/optimization/)** - Phase-by-phase optimization history
-- **[Performance](archive/performance/)** - Archived performance analysis
+- [Diagram suite & style guide](diagrams/) — 49 fully-coloured diagrams (source + committed SVG) built from the pgmcp diagramming catalog (PlantUML, Graphviz, D2, Structurizr, Pikchr, Asymptote), with a [shared colour legend](diagrams/_legend/color-legend.svg) and a reproducible [render pipeline](diagrams/render.sh).
 
 ---
 
-## 🔍 Quick Reference
+## Glossary
 
-### For New Users
-
-1. **[User Guide](user-guide/)** - Start here for installation and basic usage
-2. **[Getting Started](user-guide/getting-started.md)** - Quick start guide
-3. **[Algorithms](user-guide/algorithms.md)** - Choose the right algorithm
-4. **[Backends](user-guide/backends.md)** - Choose the right backend
-
-### For Contributors
-
-1. **[Contributing](developer-guide/contributing.md)** - How to contribute
-2. **[Building](developer-guide/building.md)** - Development setup
-3. **[Architecture](developer-guide/architecture.md)** - System design
-4. **[Performance](developer-guide/performance.md)** - Performance optimization guidelines
-
-### For Performance Analysis
-
-1. **[Performance Guide](developer-guide/performance.md)** - Performance overview
-2. **[Benchmarks](benchmarks/)** - Detailed benchmark results
-3. **[Research](research/)** - Optimization research
-
-### For Integration/IDE Developers
-
-1. **[Code Completion Guide](user-guide/code-completion.md)** - Complete integration guide
-2. **[Thread Safety](user-guide/thread-safety.md)** - Concurrency patterns
-3. **[Serialization](user-guide/serialization.md)** - Dictionary persistence
-4. **[Features](user-guide/features.md)** - Available features and APIs
+- [Technical Glossary](GLOSSARY.md) — implementation, performance, and user-facing terms.
+- [Levenshtein-automata theory glossary](research/levenshtein-automata/glossary.md) — Position, Subsumption, Characteristic Vector, and other theoretical terms.
 
 ---
 
-## 📈 What's New in v0.4.0
-
-- ✅ **Unicode Support**: Character-level dictionaries (`*Char` variants) for correct Unicode Levenshtein distances
-- ✅ **Phase 4 SIMD Optimization**: 20-64% performance gains with AVX2/SSE4.1
-- ✅ **Documentation Reorganization**: Intuitive structure with user-guide/, developer-guide/, design/, research/, etc.
-- ✅ **Comprehensive User Guides**: New getting-started, algorithms, backends, and serialization guides
-- ✅ **Full Test Coverage**: 19 Unicode-specific tests, comprehensive doctest coverage
-
-See [CHANGELOG.md](../CHANGELOG.md) for complete v0.4.0 details.
-
----
-
-## 📝 Documentation Status
-
-- **Version**: 0.4.0
-- **Last Updated**: 2025-10-31
-- **Status**: Active development
-- Documentation continuously updated with new features and improvements
-
----
-
-## 🤝 Contributing to Documentation
-
-Found an issue or want to improve documentation?
-
-1. Check [Contributing Guidelines](developer-guide/contributing.md)
-2. Submit a pull request
-3. Report issues on [GitHub](https://github.com/universal-automata/liblevenshtein-rust/issues)
-
----
-
-**Navigation**: [← Back to Main README](../README.md) | [User Guide →](user-guide/) | [Developer Guide →](developer-guide/)
+**Navigation:** [← Main README](../README.md) · [User Guide](user-guide/) · [Developer Guide](developer-guide/) · [Algorithm Reference](algorithms/) · [Diagrams](diagrams/)

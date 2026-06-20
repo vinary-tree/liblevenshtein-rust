@@ -13,7 +13,11 @@ Standard Levenshtein distance treats all character substitutions equally. Replac
 
 When spell-checking phonetic input or matching names across languages, this distinction matters. "bat" for "pat" is a likely typo or mishearing, but "hat" for "pat" is less so.
 
-**Articulatory distance** uses the International Phonetic Alphabet (IPA) feature system to compute *how different* two sounds are, producing a gradient cost rather than a binary 0 or 1.
+**Articulatory distance** uses the International Phonetic Alphabet (IPA) feature system to compute *how different* two sounds are, producing a gradient cost rather than a binary `0` or `1`.
+
+The **International Phonetic Alphabet (IPA)** is a standardized notation in which each symbol denotes one speech sound. A **distinctive (articulatory) feature** is a single dimension of that sound — its *place of articulation* (where the vocal tract is constricted), its *manner of articulation* (how the airflow is shaped), or its *voicing* (whether the vocal folds vibrate). A **phoneme** is a contrastive unit of sound in a language. The model below decomposes each IPA symbol into a feature set and measures distance as the disagreement between feature sets.
+
+![Articulatory feature model: each IPA symbol decomposes into place, manner, and voicing features for consonants, or height, backness, and rounding for vowels, and the articulatory distance sums the per-feature disagreements.](../diagrams/phonetic/articulatory-feature-model.svg)
 
 ---
 
@@ -73,7 +77,7 @@ How does the airflow move past the constriction?
 | Tap/Flap | Brief tongue contact | ɾ |
 | Trill | Vibrating articulator | r |
 
-Related manners have low distance (stop ↔ affricate = 0.2), unrelated manners have higher distance (stop ↔ approximant = 0.4).
+Related manners have low distance (stop ↔ affricate `= 0.2`), unrelated manners have higher distance (stop ↔ approximant `= 0.4`).
 
 #### 3. Voicing
 
@@ -84,7 +88,7 @@ Is the larynx vibrating?
 | Voiceless | No vibration | p, t, k, f, s |
 | Voiced | Vibration | b, d, g, v, z |
 
-Voicing pairs differ by a single binary feature and have low distance (0.1).
+Voicing pairs differ by a single binary feature and have low distance (`0.1`).
 
 ### The Vowel Space
 
@@ -377,7 +381,7 @@ With default settings (`articulation_weight = 0.6`):
 
 ### Free Substitution Threshold
 
-If the articulatory distance is below `free_substitution_threshold` (default: 0.15), the substitution is considered "free" (near-zero cost). This allows voicing pairs to substitute freely:
+If the articulatory distance is below `free_substitution_threshold` (default: `0.15`), the substitution is considered "free" (near-zero cost). This allows voicing pairs to substitute freely:
 
 ```rust
 let costs = ArticulatoryCosts::default();
@@ -555,3 +559,7 @@ This enables phonetically-informed spell correction where similar sounds substit
 - [Compositional Spelling Correction](compositional-phonetic-levenshtein.md) — Full guide to phonetic NFAs + Levenshtein automata
 - [Phonetic Algorithm Extraction](../phonetic-extraction/README.md) — LLev rule enrichment from classic algorithms
 - [Benchmark Results](../benchmarks/improvements-2026-01.md) — Performance measurements for articulatory costs
+
+---
+
+[← Documentation Index](../README.md)

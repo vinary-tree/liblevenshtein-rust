@@ -68,12 +68,12 @@ For the Persistent ARTrie design:
 
 | Operation | Time Complexity | Disk I/Os |
 |-----------|-----------------|-----------|
-| Exact lookup | O(m) | 2-4 (typical) |
-| Insert | O(m + log B) amortized | 2-4 + 1 write |
-| Prefix search | O(m + k) | Depends on k |
-| Levenshtein (d=1,2) | O(n·m·d²) | Varies with pruning |
+| Exact lookup | `𝒪(m)` | 2-4 (typical) |
+| Insert | `𝒪(m + log B)` amortized | 2-4 + 1 write |
+| Prefix search | `𝒪(m + k)` | Depends on `k` |
+| Levenshtein (`d=1,2`) | `𝒪(n·m·d²)` | Varies with pruning |
 
-Where: m = term length, B = bucket size (~100-500), k = result count
+Where: `m` = term length, `B` = bucket size (~100-500), `k` = result count
 
 ## References
 

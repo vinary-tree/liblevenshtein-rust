@@ -1,5 +1,7 @@
 # Hierarchical Error Correction via Automata Composition
 
+[← Documentation Index](../README.md)
+
 **Version:** 1.0
 **Date:** 2025-10-26
 **Status:** Design Proposal
@@ -13,6 +15,8 @@ This document proposes extending liblevenshtein-rust with **weighted finite-stat
 3. **Context-level scoring** - Best path selection using combined scores
 
 This enables applications like **contextual spell checking** ("I saw to movies" → "I saw two movies"), **grammar correction**, and **machine translation** with integrated error handling.
+
+![End-to-end spellcheck pipeline: a query is expanded into per-word Levenshtein candidates, those candidates are composed with an n-gram language model, and `k`-best path search selects the highest-scoring context-aware correction.](../diagrams/traversal/end-to-end-spellcheck.svg)
 
 ---
 
@@ -117,26 +121,26 @@ A **weighted finite-state transducer** extends finite-state automata with:
 
 **Formal Definition:**
 
-A WFST T = (Σ, Δ, Q, I, F, E, λ, ρ) where:
-- Σ: input alphabet
-- Δ: output alphabet
-- Q: finite set of states
-- I ⊆ Q: initial states
-- F ⊆ Q: final states
-- E ⊆ Q × (Σ ∪ {ε}) × (Δ ∪ {ε}) × ℝ × Q: transitions (source, in, out, weight, target)
-- λ: Q → ℝ: initial weights
-- ρ: Q → ℝ: final weights
+A WFST `T = (Σ, Δ, Q, I, F, E, λ, ρ)` where:
+- `Σ`: input alphabet
+- `Δ`: output alphabet
+- `Q`: finite set of states
+- `I ⊆ Q`: initial states
+- `F ⊆ Q`: final states
+- `E ⊆ Q × (Σ ∪ {ε}) × (Δ ∪ {ε}) × ℝ × Q`: transitions (source, in, out, weight, target)
+- `λ: Q → ℝ`: initial weights
+- `ρ: Q → ℝ`: final weights
 
 ### Composition Operation
 
-**Definition:** For transducers T₁: Σ → Γ and T₂: Γ → Δ, their composition T = T₁ ∘ T₂ is a transducer Σ → Δ where:
+**Definition:** For transducers `T₁: Σ → Γ` and `T₂: Γ → Δ`, their composition `T = T₁ ∘ T₂` is a transducer `Σ → Δ` where:
 
-- Input symbols from Σ (T₁'s input)
-- Output symbols to Δ (T₂'s output)
-- Intermediate alphabet Γ (T₁'s output = T₂'s input) is internal
+- Input symbols from `Σ` (`T₁`'s input)
+- Output symbols to `Δ` (`T₂`'s output)
+- Intermediate alphabet `Γ` (`T₁`'s output = `T₂`'s input) is internal
 - Weights are combined (usually addition in log-semiring)
 
-**Path weight:** w(p) = ⊕ᵢ w(eᵢ) where ⊕ is the semiring addition (e.g., min for tropical, + for probability)
+**Path weight:** `w(p) = ⊕ᵢ w(eᵢ)` where `⊕` is the semiring addition (e.g., min for tropical, + for probability)
 
 **Example:**
 
@@ -150,12 +154,12 @@ T = T₁ ∘ T₂:      "saw too" --> "saw two" [weight=3.5]  ✅ Best path
 
 ### Semirings for Different Applications
 
-| Semiring | ⊕ (addition) | ⊗ (multiplication) | Use Case |
+| Semiring | `⊕` (addition) | `⊗` (multiplication) | Use Case |
 |----------|-------------|-------------------|----------|
-| **Tropical** | min | + | Shortest path (edit distance) |
-| **Log** | -log(e^(-x) + e^(-y)) | + | Probability (log-space) |
-| **Probability** | + | × | Probability (linear space) |
-| **Boolean** | ∨ | ∧ | Acceptor (recognition) |
+| **Tropical** | `min` | `+` | Shortest path (edit distance) |
+| **Log** | `-log(e^(-x) + e^(-y))` | `+` | Probability (log-space) |
+| **Probability** | `+` | `×` | Probability (linear space) |
+| **Boolean** | `∨` | `∧` | Acceptor (recognition) |
 
 **Current liblevenshtein:** Uses tropical semiring (minimum edit distance)
 
@@ -220,7 +224,7 @@ T = T₁ ∘ T₂:      "saw too" --> "saw two" [weight=3.5]  ✅ Best path
 
 #### Layer 4: Composition Engine (New)
 - **CompositionEngine**
-- Composes transducers: T₁ ∘ T₂ ∘ ... ∘ Tₙ
+- Composes transducers: `T₁ ∘ T₂ ∘ ... ∘ Tₙ`
 - Lazy evaluation (on-demand path exploration)
 - k-best path extraction (Viterbi, A*)
 
@@ -623,8 +627,8 @@ impl<W: Weight> ComposedTransducer<W> {
 **Idea:** Don't pre-compute entire composed automaton. Generate states and transitions as needed during query.
 
 **Complexity:**
-- **Time:** O(|T₁| × |T₂|) worst case, but often much better with pruning
-- **Space:** O(visited states) - typically << O(|T₁| × |T₂|)
+- **Time:** `𝒪(∣T₁∣ × ∣T₂∣)` worst case, but often much better with pruning
+- **Space:** `𝒪(visited states)` - typically ≪ `𝒪(∣T₁∣ × ∣T₂∣)`
 
 **Pseudocode:**
 
@@ -660,8 +664,8 @@ function LazyCompose(T₁, T₂, input):
 **Idea:** Find top-k shortest paths through composed automaton using A* with admissible heuristic.
 
 **Complexity:**
-- **Time:** O(k × |E| log |V|) using Dijkstra-style priority queue
-- **Space:** O(|V| + k)
+- **Time:** `𝒪(k × ∣E∣ log ∣V∣)` using Dijkstra-style priority queue
+- **Space:** `𝒪(∣V∣ + k)`
 
 **Pseudocode:**
 
@@ -696,16 +700,16 @@ function KBestPaths(T, input, k):
 
 ### Algorithm 3: N-way Composition (Generalization)
 
-**Idea:** Compose n transducers efficiently: T = T₁ ∘ T₂ ∘ ... ∘ Tₙ
+**Idea:** Compose n transducers efficiently: `T = T₁ ∘ T₂ ∘ ... ∘ Tₙ`
 
 **Approaches:**
-1. **Left-associative:** ((T₁ ∘ T₂) ∘ T₃) ∘ ... (standard binary composition)
+1. **Left-associative:** `((T₁ ∘ T₂) ∘ T₃) ∘ ...` (standard binary composition)
 2. **Balanced:** Binary tree of compositions (better parallelization)
 3. **N-way direct:** Simultaneous composition (Allauzen & Mohri, 2009)
 
 **Complexity (Allauzen & Mohri):**
-- **3-way:** O(|T|Q min(d(T₁)d(T₃), d(T₂)) + |T|E)
-- Dramatically faster than binary composition for n > 2
+- **3-way:** `𝒪(∣T∣_Q · min(d(T₁)·d(T₃), d(T₂)) + ∣T∣_E)`
+- Dramatically faster than binary composition for `n > 2`
 
 ---
 
@@ -1597,7 +1601,7 @@ for code in code_snippets {
    - Works with small text snippets
 
 2. **Fast Classification**
-   - O(text length) scoring
+   - `𝒪(text length)` scoring
    - No neural network overhead
    - Suitable for real-time applications
 
@@ -1745,17 +1749,17 @@ println!("{}", corrected.corrected);
 
 | Operation | Time Complexity | Space Complexity |
 |-----------|----------------|------------------|
-| **Composition (T₁ ∘ T₂)** | O(\|T₁\| × \|T₂\|) worst case | O(\|T₁\| × \|T₂\|) |
-| **Lazy Composition** | O(visited states) | O(visited states) |
-| **K-best paths** | O(k × \|E\| log \|V\|) | O(\|V\| + k) |
-| **N-gram training** | O(corpus length × n) | O(distinct n-grams) |
-| **Sentence correction** | O(words × candidates² × k) | O(words × k) |
+| **Composition (`T₁ ∘ T₂`)** | `𝒪(∣T₁∣ × ∣T₂∣)` worst case | `𝒪(∣T₁∣ × ∣T₂∣)` |
+| **Lazy Composition** | `𝒪(visited states)` | `𝒪(visited states)` |
+| **K-best paths** | `𝒪(k × ∣E∣ log ∣V∣)` | `𝒪(∣V∣ + k)` |
+| **N-gram training** | `𝒪(corpus length × n)` | `𝒪(distinct n-grams)` |
+| **Sentence correction** | `𝒪(words × candidates² × k)` | `𝒪(words × k)` |
 
 ### Space Analysis
 
 **N-gram Language Model:**
-- Bigram: O(V²) where V = vocabulary size
-- Trigram: O(V³) (can be large!)
+- Bigram: `𝒪(V²)` where `V` = vocabulary size
+- Trigram: `𝒪(V³)` (can be large!)
 - Practical: Use pruning (remove low-prob n-grams), store sparse
 
 **Example:** 100K vocabulary, bigram
@@ -1764,7 +1768,7 @@ println!("{}", corrected.corrected);
 - Storage: ~40-400 MB (depends on sparsity)
 
 **Composition State Space:**
-- Worst case: |T₁| × |T₂| states
+- Worst case: `∣T₁∣ × ∣T₂∣` states
 - Lazy evaluation: Only generate reachable states
 - Pruning: Discard low-probability paths
 - Typical: 1-10% of worst case
@@ -1814,7 +1818,7 @@ println!("{}", corrected.corrected);
    International Journal of Foundations of Computer Science, 20(4), 613-627.
    DOI: [10.1142/S0129054109006747](https://doi.org/10.1142/S0129054109006747)
    - **Efficient n-way composition**
-   - O(|T| min(d₁d₃, d₂)) for 3-way composition
+   - `𝒪(∣T∣ · min(d₁d₃, d₂))` for 3-way composition
    - Dramatically faster than binary composition
 
 4. **Schulz, K. U., & Mihov, S. (2002)**
@@ -1862,7 +1866,7 @@ println!("{}", corrected.corrected);
 
 - `src/transducer/` - Existing Levenshtein automata (Level 1)
 - `src/dictionary/` - Dictionary backends (can be weighted)
-- `docs/SUFFIX_AUTOMATON_DESIGN.md` - Substring matching (orthogonal feature)
+- [`suffix-automaton.md`](suffix-automaton.md) - Substring matching (orthogonal feature)
 
 ---
 

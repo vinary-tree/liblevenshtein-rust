@@ -1,6 +1,6 @@
 # On-line SCDAWG Construction
 
-This document describes the on-line O(n) algorithm for constructing the SCDAWG, based on Inenaga et al. (2001, 2005). The algorithm processes characters left-to-right, enabling dynamic updates as strings are added.
+This document describes the on-line `𝒪(n)` algorithm for constructing the SCDAWG, based on Inenaga et al. (2001, 2005). The algorithm processes characters left-to-right, enabling dynamic updates as strings are added.
 
 ## Overview
 
@@ -397,16 +397,16 @@ edge.end = OpenEnd::Fixed(current_position);
 ## Complexity Analysis
 
 **Theorem** (Inenaga et al., 2005):
-The on-line CDAWG construction runs in O(n) time and space.
+The on-line CDAWG construction runs in `𝒪(n)` time and space.
 
 **Proof sketch**:
 1. Each character is processed once
-2. Amortized O(1) operations per character via suffix link traversal
-3. At most O(n) nodes and edges created total
-4. Canonize operations traverse at most O(n) total edge length
+2. Amortized `𝒪(1)` operations per character via suffix link traversal
+3. At most `𝒪(n)` nodes and edges created total
+4. Canonize operations traverse at most `𝒪(n)` total edge length
 
 **SCDAWG Extension**:
-Adding sext links adds O(1) work per suffix link, maintaining O(n) complexity.
+Adding sext links adds `𝒪(1)` work per suffix link, maintaining `𝒪(n)` complexity.
 
 ## Worked Example: "abcabcab"
 
@@ -493,6 +493,6 @@ Construction continues similarly, with nodes being created and potentially split
 | Sext links | Left extension edges, maintained via suffix links |
 | Unique end markers | $₁, $₂, ... for multi-string dictionaries |
 
-**Key insight**: On-line construction enables dynamic dictionary updates while maintaining O(n) complexity. Sext links provide left extensions without building CDAWG(w^rev) explicitly.
+**Key insight**: On-line construction enables dynamic dictionary updates while maintaining `𝒪(n)` complexity. Sext links provide left extensions without building CDAWG(w^rev) explicitly.
 
 **Next**: [06-operations](06-operations.md) - Using the SCDAWG for search and IS features

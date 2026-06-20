@@ -6,6 +6,10 @@ The Distance Calculation layer provides direct computation of edit distances bet
 
 This layer implements multiple algorithmic approaches and distance variants, each optimized for different use cases.
 
+![Distance dispatch: how a requested algorithm (standard, transposition, merge-and-split) selects the matching edit-distance routine](../../diagrams/distance/distance-dispatch.svg)
+
+*Distance dispatch: the requested `Algorithm` selects the corresponding edit-distance routine.*
+
 ## Distance Metrics
 
 ### Standard Levenshtein Distance
@@ -19,7 +23,7 @@ assert_eq!(standard_distance("kitten", "sitting"), 3);
 // Edits: k→s, e→i, insert g
 ```
 
-**Complexity**: O(m×n) time, O(min(m,n)) space
+**Complexity**: `O(m×n)` time, `O(min(m,n))` space
 
 ### Damerau-Levenshtein Distance (Transposition)
 
@@ -36,7 +40,7 @@ assert_eq!(standard_distance("test", "tset"), 2);
 // Two substitutions required
 ```
 
-**Complexity**: O(m×n) time, O(min(m,n)) space (3 rows)
+**Complexity**: `O(m×n)` time, `O(min(m,n))` space (3 rows)
 
 ### Merge-and-Split Distance
 
@@ -54,7 +58,7 @@ assert_eq!(merge_and_split_distance("m", "rn", &cache), 1);
 assert_eq!(merge_and_split_distance("rn", "m", &cache), 1);
 ```
 
-**Complexity**: O(m×n) time with memoization
+**Complexity**: `O(m×n)` time with memoization
 
 ## Implementation Approaches
 
@@ -63,8 +67,8 @@ assert_eq!(merge_and_split_distance("rn", "m", &cache), 1);
 Space-optimized DP using 2-3 row vectors instead of full matrix.
 
 **Pros**:
-- Predictable performance: O(m×n) always
-- Low memory footprint: O(min(m,n))
+- Predictable performance: `O(m×n)` always
+- Low memory footprint: `O(min(m,n))`
 - No recursion stack overhead
 - Cache-friendly sequential access
 
@@ -496,10 +500,10 @@ fn main() {
 
 | Implementation | Space Complexity | 1000×1000 Strings |
 |----------------|------------------|-------------------|
-| Full matrix DP | O(m×n) | ~4 MB |
-| 2-row optimized | O(min(m,n)) | ~4 KB |
-| 3-row (transposition) | O(3×min(m,n)) | ~12 KB |
-| Recursive + cache | O(depth + cache) | ~24 KB (1000 cached pairs) |
+| Full matrix DP | `O(m×n)` | ~4 MB |
+| 2-row optimized | `O(min(m,n))` | ~4 KB |
+| 3-row (transposition) | `O(3×min(m,n))` | ~12 KB |
+| Recursive + cache | `O(depth + cache)` | ~24 KB (1000 cached pairs) |
 
 ## Integration with Other Layers
 
@@ -533,7 +537,7 @@ See `src/distance/mod.rs:752-964` for test suite.
 - **[Recursive Memoization](./algorithms/recursive-memoization.md)** - C++-style recursive approach
 - **[Optimizations](./algorithms/optimizations.md)** - Prefix stripping, SIMD, caching strategies
 - **[Layer 2: Levenshtein Automata](../02-levenshtein-automata/README.md)** - Uses distance for validation
-- **[Layer 6: Fuzzy Search](../06-fuzzy-search/README.md)** - Uses distance for ranking
+- **[Fuzzy Search (Intersection & Traversal)](../03-intersection-traversal/README.md)** - Uses distance for ranking
 
 ## References
 

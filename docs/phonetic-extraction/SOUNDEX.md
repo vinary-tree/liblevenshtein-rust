@@ -2,7 +2,11 @@
 
 ## Algorithm Overview
 
-Soundex is a phonetic algorithm for indexing names by sound, developed by Robert C. Russell and Margaret King Odell in the early 1900s. It encodes homophones to the same representation so they can be matched despite minor spelling differences.
+Soundex is a *phonetic algorithm* for indexing names by sound, patented by Robert C. Russell and Margaret King Odell in the early 1900s. It encodes homophones to the same representation so they can be matched despite minor spelling differences. Here, a **phoneme** is a contrastive unit of sound in a language, and a **phonetic algorithm** maps orthography (spelling) to an approximation of pronunciation so that sound-alike strings collide.
+
+> **Terminology.** *Place of articulation* — where in the vocal tract the airflow is constricted (e.g. the lips, the alveolar ridge); *manner of articulation* — how the airflow is shaped (e.g. complete closure for a stop, turbulence for a fricative); *voicing* — whether the vocal folds vibrate (`b` is voiced, `p` is voiceless). The Soundex equivalence classes below group consonants that share an approximate place/manner. See [`../GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+
+![Phonetic NFA product pipeline: phonetic rules normalize a term, a Thompson-constructed NFA is intersected with a Levenshtein automaton, and the product walks the dictionary trie.](../diagrams/phonetic/nfa-product-pipeline.svg)
 
 ## Encoding Rules
 
@@ -10,15 +14,15 @@ The American Soundex algorithm:
 
 1. Retain the first letter of the name
 2. Replace consonants with digits:
-   - B, F, P, V → 1 (labials)
-   - C, G, J, K, Q, S, X, Z → 2 (gutturals/sibilants)
-   - D, T → 3 (dentals)
-   - L → 4 (lateral)
-   - M, N → 5 (nasals)
-   - R → 6 (rhotic)
-3. Remove vowels (A, E, I, O, U) and H, W, Y
+   - `B, F, P, V` → `1` (labials)
+   - `C, G, J, K, Q, S, X, Z` → `2` (gutturals/sibilants)
+   - `D, T` → `3` (dentals)
+   - `L` → `4` (lateral)
+   - `M, N` → `5` (nasals)
+   - `R` → `6` (rhotic)
+3. Remove vowels (`A, E, I, O, U`) and `H, W, Y`
 4. Remove duplicate adjacent digits
-5. Truncate or pad to 4 characters
+5. Truncate or pad to `4` characters
 
 ## Extracted Rules
 

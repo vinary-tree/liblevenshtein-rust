@@ -2,8 +2,8 @@
 
 This document outlines the requirements and steps for publishing `liblevenshtein` to crates.io.
 
-**Version:** 0.4.0
-**Last Updated:** 2025-10-26
+**Version:** 0.9.1
+**Last Updated:** 2026-06-19
 
 ---
 

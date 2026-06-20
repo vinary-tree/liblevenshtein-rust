@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Universal Levenshtein Automata - Paper Summary
 
 **Document Status**: Comprehensive chapter-by-chapter analysis
@@ -1816,11 +1818,11 @@ Implements ▽_a.
 
 **Space Complexity**:
 
-**Theorem**: The number of states in A^∀,ε_n is O(n²).
+**Theorem**: The number of states in A^∀,ε_n is `𝒪(n²)`.
 
 **Proof Sketch**:
 - Each state is a set of positions I + i#e or M + i#e
-- Positions satisfy constraints: |i| ≤ O(n), e ≤ n
+- Positions satisfy constraints: |i| ≤ `𝒪(n)`, e ≤ n
 - Each state is an anti-chain under subsumption
 - Anti-chain property limits the number of positions per state
 - Total number of reachable states is polynomial in n
@@ -1830,9 +1832,9 @@ Implements ▽_a.
 **Time Complexity**:
 
 Building the automaton:
-- States: O(n²) states
-- Transitions per state: O(2^{2n+2}) in worst case (trying all bit vectors)
-- Total: O(n² · 2^{2n+2})
+- States: `𝒪(n²)` states
+- Transitions per state: `𝒪(2^{2n+2})` in worst case (trying all bit vectors)
+- Total: `𝒪(n² · 2^{2n+2})`
 
 In practice, many bit vectors don't produce valid transitions, so actual time is much better.
 
@@ -1977,9 +1979,9 @@ Final observations about:
 
 ### Complexity Results
 
-- **States**: O(n²) for all three variants
+- **States**: `𝒪(n²)` for all three variants
 - **Construction**: Polynomial time in n
-- **Query**: Traverse automaton in O(|x| · 2n) time
+- **Query**: Traverse automaton in `𝒪(∣x∣ · 2n)` time
 
 ### Notation Reference
 

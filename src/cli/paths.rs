@@ -1,4 +1,9 @@
-//! Default paths and configuration directory management
+//! Default paths, persistent configuration, and path validation.
+//!
+//! Resolves the platform configuration directory (via the `dirs` crate), persists the
+//! user's default dictionary/backend/format choices across sessions, and validates
+//! user-supplied paths before they are opened. Shared by [`crate::cli::commands`] so the
+//! CLI and REPL agree on where configuration and default dictionaries live.
 
 use super::args::SerializationFormat;
 use crate::repl::state::DictionaryBackend;

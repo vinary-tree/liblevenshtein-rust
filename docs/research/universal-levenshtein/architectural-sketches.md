@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Universal Levenshtein Automata - Architectural Sketches
 
 **Date**: 2025-11-06

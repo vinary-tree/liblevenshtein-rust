@@ -1,3 +1,10 @@
+//! The built-in named phonetic-class registry.
+//!
+//! Defines [`NamedClass`] and the `NAMED_CLASSES` table that maps a class name
+//! (e.g. `vowel`, `nasal`, `voiced`) to its set of [`PhonePattern`]s, lazily initialised
+//! once via [`std::sync::LazyLock`]. Looked up by [`super::lookup`] when resolving a
+//! named class referenced from a phonetic rule or `.llre` pattern.
+
 // ============================================================================
 // Named Classes Registry
 // ============================================================================

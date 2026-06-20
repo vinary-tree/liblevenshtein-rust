@@ -1,0 +1,56 @@
+// distance-dispatch.dot — runtime dispatch performed by `standard_distance(a, b)`
+// (src/distance/mod.rs). The query is first reduced by stripping common prefix /
+// suffix (strip_common_affixes), then routed to the fastest applicable kernel:
+//   • short ASCII (both ≤ 64 bytes)  → Myers' bit-parallel algorithm
+//   • otherwise, on x86_64           → AVX2 (8-wide) if present,
+//                                       else SSE4.1 (4-wide) if present,
+//   • last resort                    → scalar two-row DP fallback.
+// Colour mapping (per the canonical legend):
+//   start / query input  teal   #B2EBF2, border #00838F
+//   decision diamonds    amber  #FFE0B2, border #EF6C00
+//   compute leaves       indigo #C5CAE9, border #283593  (Distance / SIMD)
+//   affix pre-step       indigo tint #E8EAF6
+//   scalar fallback      neutral grey #ECEFF1, border #455A64
+digraph distance_dispatch {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="standard_distance — runtime dispatch (Myers / AVX2 / SSE4.1 / scalar)"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+         color="#455A64", fontcolor="#102027"];
+  edge  [fontname="DejaVu Sans", fontsize=10, color="#37474F"];
+
+  // entry
+  start [label="standard_distance(a, b)", shape=oval, fillcolor="#B2EBF2", color="#00838F"];
+
+  // pre-processing
+  strip [label="strip common affixes\n(strip_common_affixes)", fillcolor="#E8EAF6", color="#283593"];
+
+  // decision diamonds (amber)
+  d_myers [label="both ASCII and ≤ 64 bytes?", shape=diamond, style=filled,
+           fillcolor="#FFE0B2", color="#EF6C00"];
+  d_avx2  [label="AVX2 available?", shape=diamond, style=filled,
+           fillcolor="#FFE0B2", color="#EF6C00"];
+  d_sse   [label="SSE4.1 available?", shape=diamond, style=filled,
+           fillcolor="#FFE0B2", color="#EF6C00"];
+
+  // compute leaves (indigo)
+  myers [label="Myers bit-parallel", fillcolor="#C5CAE9", color="#283593"];
+  avx2  [label="AVX2 SIMD (8-wide)", fillcolor="#C5CAE9", color="#283593"];
+  sse   [label="SSE4.1 SIMD (4-wide)", fillcolor="#C5CAE9", color="#283593"];
+
+  // fallback (grey)
+  scalar [label="scalar DP fallback", fillcolor="#ECEFF1", color="#455A64"];
+
+  // flow
+  start -> strip;
+  strip -> d_myers;
+
+  d_myers -> myers  [label="yes", color="#2E7D32", fontcolor="#2E7D32"];
+  d_myers -> d_avx2 [label="no",  color="#C62828", fontcolor="#C62828"];
+
+  d_avx2  -> avx2   [label="yes", color="#2E7D32", fontcolor="#2E7D32"];
+  d_avx2  -> d_sse  [label="no",  color="#C62828", fontcolor="#C62828"];
+
+  d_sse   -> sse    [label="yes", color="#2E7D32", fontcolor="#2E7D32"];
+  d_sse   -> scalar [label="no",  color="#C62828", fontcolor="#C62828"];
+}

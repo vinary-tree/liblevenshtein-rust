@@ -1,9 +1,11 @@
+[← Documentation Index](../../README.md)
+
 # Bimachines and liblevenshtein-rust: Applicability Analysis
 
 **Decision:** ❌ **NOT APPLICABLE** - Bimachines should NOT be integrated into liblevenshtein-rust
 
 **Date:** 2025-01-06
-**Paper:** "Space-Efficient Bimachine Construction Based on the Equalizer Accumulation Principle" (Gerdjikov, Mihov, Schulz, 2018)
+**Paper:** "Space-Efficient Bimachine Construction Based on the Equalizer Accumulation Principle" (Gerdjikov, Mihov, Schulz; TCS 790:80–95, 2019; [doi:10.1016/j.tcs.2019.04.027](https://doi.org/10.1016/j.tcs.2019.04.027); preprint arXiv:1803.04312, 2018)
 **Status:** Analysis complete, implementation NOT recommended
 
 ---
@@ -17,7 +19,7 @@
 | Aspect | Finding | Impact |
 |--------|---------|--------|
 | **Problem Domain** | Bimachines solve transduction; we solve matching | ❌ Incompatible |
-| **Performance** | O(2^|Q|) states vs our O(|W|) | ❌ Worse |
+| **Performance** | `𝒪(2^∣Q∣)` states vs our `𝒪(∣W∣)` | ❌ Worse |
 | **Determinism** | Converts non-det → det; we're already det | ❌ Unnecessary |
 | **Output Type** | String → String vs String → Set<String> | ❌ Mismatch |
 | **Integration Cost** | Major architectural overhaul | ❌ High cost, no benefit |
@@ -50,7 +52,7 @@ Where:
 
 **Primary Goal:** Convert non-deterministic functional finite-state transducers into equivalent fully deterministic devices.
 
-**Key Innovation:** "Equalizer accumulation principle" reduces state count from Θ(n!) to O(2^|Q|).
+**Key Innovation:** "Equalizer accumulation principle" reduces state count from Θ(n!) to `𝒪(2^∣Q∣)`.
 
 ### Example Use Case (From Paper)
 
@@ -174,8 +176,8 @@ Example (word length 10, distance 2):
 ```
 
 **Comparison:**
-- Bimachines: O(2^|Q|) → **exponential** (but better than factorial)
-- Levenshtein: O(|W|) → **linear** (optimal for edit distance)
+- Bimachines: `𝒪(2^∣Q∣)` → **exponential** (but better than factorial)
+- Levenshtein: `𝒪(∣W∣)` → **linear** (optimal for edit distance)
 
 **Conclusion:** Levenshtein automata are MORE EFFICIENT than bimachines for this problem.
 
@@ -282,9 +284,9 @@ Can't map set-valued function to monoid-valued function without losing informati
 | Criterion | Bimachines | Current (LA) | Winner |
 |-----------|------------|--------------|--------|
 | **Problem Fit** | String transformation | Edit distance matching | Current ✓ |
-| **Construction** | O(2^|Q|) states | O(|W|) construction | Current ✓ |
-| **Query Speed** | N/A (different problem) | O(|D|) traversal | Current ✓ |
-| **Memory** | O(2^|Q|) space | O(|W|) space | Current ✓ |
+| **Construction** | `𝒪(2^∣Q∣)` states | `𝒪(∣W∣)` construction | Current ✓ |
+| **Query Speed** | N/A (different problem) | `𝒪(∣D∣)` traversal | Current ✓ |
+| **Memory** | `𝒪(2^∣Q∣)` space | `𝒪(∣W∣)` space | Current ✓ |
 | **Determinism** | Enforced | Already guaranteed | Tie |
 | **Simplicity** | 2 automata + output fn | Single automaton | Current ✓ |
 | **Extensibility** | Limited to transduction | Multiple algorithms | Current ✓ |
@@ -340,9 +342,9 @@ transducer.query_with_callback("teh", 1, |term: &str, distance: usize| {
 
 Would require:
 - ❌ Complete architectural rewrite
-- ❌ O(2^|Q|) state explosion
+- ❌ `𝒪(2^∣Q∣)` state explosion
 - ❌ Conflation of matching + transformation
-- ❌ Loss of current performance (O(|W|) → O(2^|Q|))
+- ❌ Loss of current performance (`𝒪(∣W∣)` → `𝒪(2^∣Q∣)`)
 - ❌ Breaking changes to API
 - ❌ Months of development time
 
@@ -410,8 +412,8 @@ With SIMD optimization:
 ```
 
 **These are EXCELLENT numbers** achieving:
-- O(|W|) construction as proven
-- O(|D|) query as proven
+- `𝒪(∣W∣)` construction as proven
+- `𝒪(∣D∣)` query as proven
 - Real-world sub-millisecond to millisecond response times
 
 ### What Bimachines Would Provide
@@ -431,8 +433,8 @@ Best case (with equalizer accumulation):
 
 ### Claim 1: "More Space-Efficient than Standard Bimachine Construction"
 
-**Paper Achievement:** O(2^|Q|) vs Θ(n!)
-**Applicability to us:** ❌ We use O(|W|) - better than both
+**Paper Achievement:** `𝒪(2^∣Q∣)` vs Θ(n!)
+**Applicability to us:** ❌ We use `𝒪(∣W∣)` - better than both
 
 ### Claim 2: "Handles mge Monoids"
 
@@ -483,7 +485,7 @@ Best case (with equalizer accumulation):
 
 ### Expected Outcomes
 
-- ❌ **No performance improvement** (O(2^|Q|) vs current O(|W|))
+- ❌ **No performance improvement** (`𝒪(2^∣Q∣)` vs current `𝒪(∣W∣)`)
 - ❌ **No new capabilities** (transformation can be post-processed)
 - ❌ **Breaking API changes**
 - ❌ **Increased complexity**
@@ -499,7 +501,7 @@ Best case (with equalizer accumulation):
 
 **Reasons:**
 - Wrong problem domain (transduction vs matching)
-- Worse complexity (O(2^|Q|) vs O(|W|))
+- Worse complexity (`𝒪(2^∣Q∣)` vs `𝒪(∣W∣)`)
 - No performance benefit
 - Architectural incompatibility
 - High implementation cost
@@ -568,13 +570,13 @@ The fact that the same authors developed both approaches and chose Levenshtein a
 ### Primary Papers
 
 **Bimachine Paper (Subject of Analysis):**
-- Gerdjikov, S., Mihov, S., & Schulz, K. U. (2018). "Space-Efficient Bimachine Construction Based on the Equalizer Accumulation Principle."
+- Gerdjikov, S., Mihov, S., & Schulz, K. U. (2019). "Space-efficient bimachine construction based on the equalizer accumulation principle." *Theoretical Computer Science*, 790, 80–95. [doi:10.1016/j.tcs.2019.04.027](https://doi.org/10.1016/j.tcs.2019.04.027) (preprint arXiv:1803.04312, 2018).
 
 **Levenshtein Automata (Current Implementation):**
-- Schulz, K. U., & Mihov, S. (2002). "Fast String Correction with Levenshtein-Automata." *International Journal on Document Analysis and Recognition*, 5(1), 67-85.
+- Schulz, K. U., & Mihov, S. (2002). "Fast string correction with Levenshtein automata." *International Journal on Document Analysis and Recognition (IJDAR)*, 5, 67–85. [doi:10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
 
 **Universal Levenshtein Automata (Recommended Next Step):**
-- Mitankin, P., Mihov, S., & Schulz, K. U. (2005). "Universal Levenshtein Automata. Building and Properties." *Information Processing & Management*, 41(4), 687-702.
+- Mitankin, P. N. (2005). "Universal Levenshtein Automata — Building and Properties." Master's Thesis, Sofia University "St. Kliment Ohridski" (supervisor: S. Mihov). See also the journal generalisation: Mitankin, Mihov & Schulz (2011), *Theoretical Computer Science*, 412(22), 2340–2355, [doi:10.1016/j.tcs.2011.01.013](https://doi.org/10.1016/j.tcs.2011.01.013).
 
 ### Project Documentation
 
@@ -592,7 +594,7 @@ The fact that the same authors developed both approaches and chose Levenshtein a
 
 Bimachines are an impressive theoretical achievement for transducer determinization, but they solve a problem liblevenshtein-rust doesn't have. The current Levenshtein automata architecture is:
 
-- ✅ More efficient (O(|W|) vs O(2^|Q|))
+- ✅ More efficient (`𝒪(∣W∣)` vs `𝒪(2^∣Q∣)`)
 - ✅ Already deterministic
 - ✅ Purpose-built for edit distance
 - ✅ Production-proven

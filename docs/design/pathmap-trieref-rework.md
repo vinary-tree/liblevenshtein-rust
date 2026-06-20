@@ -1,5 +1,7 @@
 # PathMap Integration Rework — TrieRef Nodes + Zero-Plumbing Entry Points
 
+[← Documentation Index](../README.md)
+
 **Status:** implemented (libdictenstein + liblevenshtein-rust), tests green, 0.3
 portability confirmed. Benchmarks (H1–H7) pending a quiet measurement window;
 see [`docs/benchmarks/pathmap-trieref-rework.md`](../benchmarks/pathmap-trieref-rework.md).

@@ -1,0 +1,69 @@
+// module-dependency.dot — conceptual dependency graph of the src/ modules.
+// An edge A -> B means "module A builds on / uses module B". Nodes are coloured
+// per the diagram legend by the subsystem each module belongs to.
+digraph modules {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="liblevenshtein — Module Dependency Overview   (A → B: A builds on B)"];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=10,
+         color="#455A64", fontcolor="#102027"];
+  edge  [color="#37474F", arrowsize=0.7];
+
+  // Core (blue)
+  "transducer" [fillcolor="#BBDEFB"];
+  "distance"   [fillcolor="#C5CAE9"];  // distance/SIMD (indigo)
+  "filter"     [fillcolor="#E3F2FD"];
+
+  // Dictionaries (green)
+  "dictionary\n(shim)" [fillcolor="#C8E6C9"];
+  "libdictenstein"     [fillcolor="#C8E6C9", style="rounded,filled,dashed"];
+
+  // Engines
+  "phonetic"    [fillcolor="#F8BBD0"];   // pink
+  "time_series" [fillcolor="#B2DFDB"];   // deep teal
+  "wallbreaker" [fillcolor="#FFCCBC"];   // deep orange
+  "contextual"  [fillcolor="#D1C4E9"];   // deep purple
+  "cache"       [fillcolor="#FFF9C4"];   // yellow
+  "grep"        [fillcolor="#FFE0B2"];   // amber
+
+  // Surfaces
+  "commands"      [fillcolor="#CFD8DC"];
+  "cli"           [fillcolor="#CFD8DC"];
+  "repl"          [fillcolor="#CFD8DC"];
+  "serialization" [fillcolor="#F0F4C3"]; // lime
+  "wasm"          [fillcolor="#F0F4C3"];
+  "ffi"           [fillcolor="#F0F4C3"];
+
+  // Core wiring
+  "transducer" -> "dictionary\n(shim)";
+  "transducer" -> "distance";
+  "transducer" -> "filter";
+  "dictionary\n(shim)" -> "libdictenstein";
+
+  // Engines build on the core
+  "phonetic"    -> "transducer";
+  "phonetic"    -> "dictionary\n(shim)";
+  "time_series" -> "transducer";
+  "time_series" -> "dictionary\n(shim)";
+  "time_series" -> "distance";
+  "wallbreaker" -> "transducer";
+  "wallbreaker" -> "dictionary\n(shim)";
+  "contextual"  -> "transducer";
+  "contextual"  -> "cache";
+  "cache"       -> "dictionary\n(shim)";
+  "grep"        -> "phonetic";
+  "grep"        -> "transducer";
+
+  // Surfaces wrap everything
+  "commands"      -> "transducer";
+  "commands"      -> "serialization";
+  "cli"           -> "commands";
+  "cli"           -> "repl";
+  "repl"          -> "commands";
+  "serialization" -> "dictionary\n(shim)";
+  "wasm"          -> "transducer";
+  "wasm"          -> "phonetic";
+  "wasm"          -> "distance";
+  "ffi"           -> "distance";
+  "ffi"           -> "transducer";
+}

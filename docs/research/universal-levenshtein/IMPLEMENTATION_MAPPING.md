@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Universal Levenshtein Automata - Implementation Mapping
 
 **Purpose**: Bridge theoretical definitions from Mitankin's thesis to Rust implementation in liblevenshtein-rust
@@ -6,7 +8,7 @@
 
 **Prerequisites**:
 - Read [ALGORITHMS.md](./ALGORITHMS.md) for pseudocode
-- Read [THEORETICAL_FOUNDATIONS.md](./THEORETICAL_FOUNDATIONS.MD) for definitions
+- Read [THEORETICAL_FOUNDATIONS.md](./THEORETICAL_FOUNDATIONS.md) for definitions
 - Familiarity with liblevenshtein-rust codebase structure
 
 ---
@@ -814,7 +816,7 @@ fn verify_proposition_19() {
 
 ### Hot Paths to Optimize
 
-1. **Subsumption Checking** (called O(states²) times per transition)
+1. **Subsumption Checking** (called `𝒪(states²)` times per transition)
    - Cache subsumption results
    - Use SIMD for batch checking
 

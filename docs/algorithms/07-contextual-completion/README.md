@@ -27,6 +27,14 @@
 
 The Contextual Completion Engine provides IDE-style code completion with hierarchical scope awareness, character-level draft editing, and checkpoint-based undo/redo. It combines fuzzy matching via Levenshtein automata with scope visibility rules and incremental state management.
 
+![Context scope tree: nested completion scopes where child contexts inherit visible terms from their parents (lexical scoping)](../../diagrams/contextual/context-scope-tree.svg)
+
+*Context scope tree: child scopes inherit visible terms from their ancestors.*
+
+![Draft checkpoint lifecycle: how character-level draft edits, checkpoints, and undo/redo transitions move between states](../../diagrams/contextual/draft-checkpoint-lifecycle.svg)
+
+*Draft checkpoint lifecycle: insert, delete, checkpoint, and undo/redo transitions over draft state.*
+
 ### Key Features
 
 - **Hierarchical Scope Visibility**: Child contexts see parent terms (lexical scoping)

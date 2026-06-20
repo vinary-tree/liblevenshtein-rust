@@ -1,0 +1,29 @@
+<svg xmlns='http://www.w3.org/2000/svg' style='font-size:initial;' class="pikchr" viewBox="0 0 1141.92 384.768" data-pikchr-date="20260403102956">
+<text x="455.76" y="17.28" text-anchor="middle" font-weight="bold" fill="rgb(0,0,0)" dominant-baseline="central">Edge-lookup pruning at a DynamicDawg node</text>
+<path d="M2.16,169.2L218.16,169.2L218.16,90L2.16,90Z"  style="fill:rgb(200,230,201);stroke-width:2.16;stroke:rgb(46,125,50);" />
+<text x="110.16" y="129.6" text-anchor="middle" fill="rgb(46,125,50)" dominant-baseline="central">DAWG node</text>
+<path d="M304.56,169.2L520.56,169.2L520.56,90L304.56,90Z"  style="fill:rgb(232,234,246);stroke-width:2.16;stroke:rgb(40,53,147);" />
+<text x="412.56" y="119.52" text-anchor="middle" fill="rgb(40,53,147)" dominant-baseline="central">Bloom filter:</text>
+<text x="412.56" y="139.68" text-anchor="middle" fill="rgb(40,53,147)" dominant-baseline="central">symbol present?</text>
+<polygon points="304.56,129.6 293.04,133.92 293.04,125.28" style="fill:rgb(69,90,100)"/>
+<path d="M218.16,129.6L298.8,129.6"  style="fill:none;stroke-width:2.16;stroke:rgb(69,90,100);" />
+<text x="261.36" y="117.9" text-anchor="middle" fill="rgb(69,90,100)" dominant-baseline="central">symbol x</text>
+<path d="M304.56,327.6L520.56,327.6L520.56,248.4L304.56,248.4Z"  style="fill:rgb(255,205,210);stroke-width:2.16;stroke:rgb(198,40,40);" />
+<text x="412.56" y="277.92" text-anchor="middle" fill="rgb(198,40,40)" dominant-baseline="central">reject —</text>
+<text x="412.56" y="298.08" text-anchor="middle" fill="rgb(198,40,40)" dominant-baseline="central">edge absent</text>
+<polygon points="412.56,248.4 408.24,236.88 416.88,236.88" style="fill:rgb(198,40,40)"/>
+<path d="M412.56,169.2L412.56,242.64"  style="fill:none;stroke-width:2.16;stroke:rgb(198,40,40);" />
+<text x="412.56" y="208.8" text-anchor="middle" fill="rgb(198,40,40)" transform="rotate(90 412.56,208.8)" dominant-baseline="central">no</text>
+<path d="M621.36,169.2L837.36,169.2L837.36,90L621.36,90Z"  style="fill:rgb(197,202,233);stroke-width:2.16;stroke:rgb(40,53,147);" />
+<text x="729.36" y="119.52" text-anchor="middle" fill="rgb(40,53,147)" dominant-baseline="central">SIMD compare</text>
+<text x="729.36" y="139.68" text-anchor="middle" fill="rgb(40,53,147)" dominant-baseline="central">8 edge labels / step</text>
+<polygon points="621.36,129.6 609.84,133.92 609.84,125.28" style="fill:rgb(40,53,147)"/>
+<path d="M520.56,129.6L615.6,129.6"  style="fill:none;stroke-width:2.16;stroke:rgb(40,53,147);" />
+<text x="570.96" y="117.9" text-anchor="middle" fill="rgb(40,53,147)" dominant-baseline="central">yes</text>
+<path d="M923.76,169.2L1139.76,169.2L1139.76,90L923.76,90Z"  style="fill:rgb(200,230,201);stroke-width:2.16;stroke:rgb(46,125,50);" />
+<text x="1031.76" y="129.6" text-anchor="middle" fill="rgb(46,125,50)" dominant-baseline="central">matched child</text>
+<polygon points="923.76,129.6 912.24,133.92 912.24,125.28" style="fill:rgb(46,125,50)"/>
+<path d="M837.36,129.6L918,129.6"  style="fill:none;stroke-width:2.16;stroke:rgb(46,125,50);" />
+<text x="412.56" y="369.504" text-anchor="middle" fill="rgb(0,0,0)" font-size="80%" dominant-baseline="central">𝒪(1) reject of absent symbols · vectorised label match for present ones</text>
+</svg>
+

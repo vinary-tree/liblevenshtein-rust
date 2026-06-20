@@ -1,8 +1,10 @@
 # NYSIIS Algorithm Extraction
 
+> **Terminology.** A **phoneme** is a contrastive unit of sound; a **phonetic algorithm** maps spelling to an approximation of pronunciation so that sound-alike strings collide. *Place of articulation* (where the vocal tract is constricted), *manner of articulation* (how airflow is shaped), and *voicing* (whether the vocal folds vibrate) are the dimensions that distinguish consonants. See [`../GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+
 ## Algorithm Overview
 
-NYSIIS (New York State Identification and Intelligence System) was developed by the New York State Division of Criminal Justice Services in the 1970s. It was designed for matching American names, particularly for law enforcement and social services applications.
+NYSIIS (New York State Identification and Intelligence System) was published by Robert L. Taft for the New York State Identification and Intelligence System in 1970. It was designed for matching American names, particularly for law enforcement and social services applications. Each extracted rule carries a `weight` in `[0, 1]` expressing the residual edit cost of treating the two spellings as equivalent.
 
 ## Key Features
 
@@ -228,5 +230,8 @@ NYSIIS is particularly effective for:
 
 ## References
 
-1. Taft, R.L. (1970). "Name Search Techniques". New York State Identification and Intelligence System
-2. Pinto, R. & Taft, R. (1970). "NYSIIS: New York State Identification and Intelligence System". Technical report
+1. Taft, Robert L. (1970). "Name Search Techniques". *New York State Identification and Intelligence System*, Special Report No. 1, Albany, NY. (No DOI; canonical source of the NYSIIS algorithm.)
+
+---
+
+[← Documentation Index](../README.md)

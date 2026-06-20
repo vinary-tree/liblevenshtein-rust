@@ -15,7 +15,7 @@ This document provides an annotated bibliography of the key papers that define a
 - Defines the **Symmetric Compact DAWG** (SCDAWG), also called C2S
 - Introduces **prime subwords** and **implications** (imps)
 - Describes **IS (Inverted File) features**: freq(), locations(), find()
-- Proves O(n) space complexity
+- Proves `𝒪(n)` space complexity
 
 **Used In This Implementation**:
 - Definition of prime subwords (Section 4)
@@ -42,7 +42,7 @@ C2S = (V, E_R, E_L) where V = P(S)
 - Defines the **suffix automaton** (DAWG) as the minimal DFA for substrings
 - Introduces **equivalence classes** based on end-position sets
 - Proves the suffix automaton has at most 2n-1 states and 3n-4 edges
-- Presents O(n) construction algorithm
+- Presents `𝒪(n)` construction algorithm
 
 **Used In This Implementation**:
 - Equivalence class theory (foundation for all compact structures)
@@ -64,7 +64,7 @@ Two strings x, y belong to the same equivalence class iff end-pos(x) = end-pos(y
 > *Proceedings of the 8th International Symposium on String Processing and Information Retrieval (SPIRE)*, 96-110.
 
 **Key Contributions**:
-- **On-line O(n) algorithm** for SCDAWG construction
+- **On-line `𝒪(n)` algorithm** for SCDAWG construction
 - **Critical insight**: sext links of CDAWG(w) = edges of CDAWG(w^rev)
 - Shows left extension edges can be maintained **during** construction
 - No need to build CDAWG(w^rev) explicitly
@@ -90,7 +90,7 @@ in CDAWG(w^rev), enabling O(n) SCDAWG construction.
 > *Discrete Applied Mathematics*, 146(2), 156-179.
 
 **Key Contributions**:
-- Detailed **on-line O(n) CDAWG construction** algorithm
+- Detailed **on-line `𝒪(n)` CDAWG construction** algorithm
 - **Reference pairs** for representing implicit nodes
 - **Open edges** technique for efficient extension
 - **Multi-string support** with unique end markers (Section 7)
@@ -100,7 +100,7 @@ in CDAWG(w^rev), enabling O(n) SCDAWG construction.
 - Core CDAWG construction algorithm (update, split_edge, canonize)
 - Reference pair representation for implicit nodes
 - Multi-string dictionary support with unique terminators
-- Open edge technique for O(1) extension
+- Open edge technique for `𝒪(1)` extension
 
 **Key Algorithm (Figure 17)**:
 ```
@@ -264,9 +264,9 @@ We combine:
 4. **Multi-string support** with unique end markers
 
 This yields an SCDAWG that:
-- Constructs in O(n) time
+- Constructs in `𝒪(n)` time
 - Supports dynamic insertions
-- Provides O(|pattern|) substring search
+- Provides `𝒪(∣pattern∣)` substring search
 - Enables bidirectional pattern extension
 - Includes IS features (freq, locations)
 

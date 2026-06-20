@@ -1,8 +1,12 @@
+[← Documentation Index](../../README.md)
+
 # Implementation Mapping: Paper to Code
 
 **How Paper Concepts Map to liblevenshtein-rust**
 
 **Date**: 2025-11-06
+
+**Source paper**: Schulz, K. U. & Mihov, S. (2002). *Fast string correction with Levenshtein automata*. IJDAR 5, 67–85. [doi:10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
 
 ---
 
@@ -362,14 +366,13 @@ impl QueryIterator {
 
 **Paper**: Dictionary automaton A^D traversed in parallel with LEV_n(W)
 
-**Code**: Dictionary implementations in `/src/dictionary/`
+**Code**: Dictionary implementations live in the `libdictenstein` crate (the dictionary family was extracted from `liblevenshtein-rust` into its own crate; see the project's dictionary-family layout). Only `src/dictionary/mod.rs` and `src/dictionary/phonetic_normalized.rs` remain in this crate as the integration surface.
 
-**Dictionary Types**:
+**Dictionary Types** (in `libdictenstein`):
 - DAWG (Directed Acyclic Word Graph)
-- Dynamic DAWG
-- Suffix Automaton
-- PathMap Dictionary
-- Double Array Trie
+- Dynamic DAWG (`DynamicDawg`, `DynamicDawgChar`)
+- Suffix Automaton (`SuffixAutomaton`, `SuffixAutomatonChar`)
+- Double Array Trie (`DoubleArrayTrie`, `DoubleArrayTrieChar`)
 
 **Interface** (conceptual):
 ```rust
@@ -412,35 +415,35 @@ for ch in input_chars {
 - Logic: Implements Cases 1-3 from Table 4.1 (and extensions for Tables 7.1, 8.1)
 
 **Trade-off**:
-- Paper's table approach: O(1) lookup, O(4^n) preprocessing
-- Code's on-demand approach: O(state size) computation, no preprocessing
+- Paper's table approach: `𝒪(1)` lookup, `𝒪(4^n)` preprocessing
+- Code's on-demand approach: `𝒪(state size)` computation, no preprocessing
 
-Both have O(|W|) total complexity for constructing LEV_n(W).
+Both have `𝒪(∣W∣)` total complexity for constructing LEV_n(W).
 
 ---
 
 ## Complexity Verification
 
-### Construction Time: O(|W|)
+### Construction Time: `𝒪(∣W∣)`
 
 **Paper**: Theorem 5.2.1
 
 **Code**: 
-- Builder creates query iterator: O(|W|) to store query characters
-- State initialization: O(1)
-- Per-transition computation: O(state size) = O(1) for fixed n
+- Builder creates query iterator: `𝒪(∣W∣)` to store query characters
+- State initialization: `𝒪(1)`
+- Per-transition computation: `𝒪(state size)` = `𝒪(1)` for fixed n
 
-**Total**: O(|W|) ✓
+**Total**: `𝒪(∣W∣)` ✓
 
-### Query Time: O(|D|)
+### Query Time: `𝒪(∣D∣)`
 
 **Paper**: Chapter 3, parallel traversal
 
 **Code**:
-- Traverse dictionary edges: O(|D|)
-- Compute transitions: O(|D| × state size) = O(|D|) for fixed n
+- Traverse dictionary edges: `𝒪(∣D∣)`
+- Compute transitions: `𝒪(∣D∣ × state size)` = `𝒪(∣D∣)` for fixed n
 
-**Total**: O(|D|) ✓
+**Total**: `𝒪(∣D∣)` ✓
 
 ---
 
@@ -480,7 +483,7 @@ if i < query_chars.len() {
 **Validation Against Paper**:
 - Compare results with known Levenshtein distances
 - Verify automaton accepts L_Lev(n,W)
-- Check performance matches O(|W|) + O(|D|) complexity
+- Check performance matches `𝒪(∣W∣)` + `𝒪(∣D∣)` complexity
 
 ---
 
@@ -508,7 +511,7 @@ if i < query_chars.len() {
 1. Define extended positions (i#e_flag)
 2. Define extended subsumption
 3. Create transition table
-4. Prove O(|W|) complexity
+4. Prove `𝒪(∣W∣)` complexity
 
 **Code Approach**:
 1. Add flag to `Position` struct
@@ -581,7 +584,7 @@ Modify transition logic to check substitution validity.
 
 **Check**:
 1. Subsumption removing redundant positions
-2. State size not growing beyond O(n) positions
+2. State size not growing beyond `𝒪(n)` positions
 3. Dictionary traversal efficient
 
 **Tool**: Profile transition function calls, measure state sizes

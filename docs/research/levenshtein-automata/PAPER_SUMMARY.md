@@ -1,8 +1,12 @@
+[← Documentation Index](../../README.md)
+
 # Fast String Correction with Levenshtein-Automata - Complete Paper Summary
 
 **Comprehensive Documentation of All Chapters**
 
 **Date**: 2025-11-06
+
+**Source paper**: Schulz, K. U. & Mihov, S. (2002). *Fast string correction with Levenshtein automata*. International Journal on Document Analysis and Recognition (IJDAR) 5, 67–85. [doi:10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
 
 ---
 
@@ -47,7 +51,7 @@ Finding correction candidates for garbled input words appears in numerous applic
 **Dictionary Partitioning Methods**:
 - Divide dictionary into blocks based on word properties (length, first letter, etc.)
 - Compute Levenshtein distance only within relevant blocks
-- **Problem**: Still requires O(|block| × |W| × |V|) distance computations
+- **Problem**: Still requires `𝒪(∣block∣ × ∣W∣ × ∣V∣)` distance computations
 
 **Oflazer's Approach** (1996):
 - Use finite state transducers to represent edit operations
@@ -60,7 +64,7 @@ This paper presents **two methods** based on Levenshtein automata:
 **Method 1: Explicit Construction** (Chapter 3-5)
 - Build deterministic automaton LEV_n(W) that accepts exactly L_Lev(n,W)
 - Traverse dictionary and automaton in parallel
-- Construction in O(|W|) time for fixed n
+- Construction in `𝒪(∣W∣)` time for fixed n
 
 **Method 2: Imitation** (Chapter 6)
 - Avoid building LEV_n(W) explicitly
@@ -69,7 +73,7 @@ This paper presents **two methods** based on Levenshtein automata:
 
 ### Key Advantage
 
-**Amortized Efficiency**: Once LEV_n(W) is constructed (or simulated), finding all matching dictionary words requires only O(|D|) time where |D| is dictionary size (measured as total edges in trie representation).
+**Amortized Efficiency**: Once LEV_n(W) is constructed (or simulated), finding all matching dictionary words requires only `𝒪(∣D∣)` time where |D| is dictionary size (measured as total edges in trie representation).
 
 ### Extensions Discussed
 
@@ -116,9 +120,9 @@ d_L("kitten", "sitting") = 3
   sittin → sitting (insert g)
 ```
 
-### Wagner-Fisher Algorithm
+### Wagner-Fischer Algorithm
 
-**Classical Dynamic Programming Approach**:
+**Classical Dynamic Programming Approach** (Wagner & Fischer, 1974; [doi:10.1145/321796.321811](https://doi.org/10.1145/321796.321811)):
 
 Compute matrix M where M[i,j] = d_L(W[1:i], V[1:j]):
 
@@ -132,7 +136,7 @@ M[i,j] = 1 + min(M[i-1,j-1],  # substitution
                   M[i,j-1])    # insertion       if W[i] ≠ V[j]
 ```
 
-**Complexity**: O(|W| × |V|) time and space
+**Complexity**: `𝒪(∣W∣ × ∣V∣)` time and space
 
 **Problem**: For large dictionaries, computing this for every word is expensive.
 
@@ -215,8 +219,8 @@ While stack not empty:
 ```
 
 **Complexity**: 
-- O(|W|) to construct A^W (proven in Chapter 5)
-- O(|D|) for parallel traversal where |D| = number of edges in dictionary
+- `𝒪(∣W∣)` to construct A^W (proven in Chapter 5)
+- `𝒪(∣D∣)` for parallel traversal where |D| = number of edges in dictionary
 
 **Key Insight**: The automaton guides the search, avoiding distance computation for each dictionary word.
 
@@ -434,7 +438,7 @@ For state M = {i#0, π₁,...,π_m}:
 **Proof Sketch**:
 - Deterministic: State transition Δ is a function (not a relation)
 - Acyclic: States are characterized by base position i which only increases
-- Linear size: Number of distinct states bounded by O(|W|) for fixed n
+- Linear size: Number of distinct states bounded by `𝒪(∣W∣)` for fixed n
 - Language: Accepts L_Lev(n,W) by construction (follows from elementary transitions)
 
 ---
@@ -443,7 +447,7 @@ For state M = {i#0, π₁,...,π_m}:
 
 **Pages**: 27-32
 
-This chapter shows how to **construct LEV_n(W) in O(|W|) time** using parametric tables.
+This chapter shows how to **construct LEV_n(W) in `𝒪(∣W∣)` time** using parametric tables.
 
 ### 5.1: Construction for Degree n=1
 
@@ -491,24 +495,24 @@ Output: LEV_1(W)
    and transitions from step 3
 ```
 
-**Complexity**: O(|W| × |Σ|) preprocessing + O(|W|) automaton construction
+**Complexity**: `𝒪(∣W∣ × ∣Σ∣)` preprocessing + `𝒪(∣W∣)` automaton construction
 
 ### 5.2: Extension to Higher Degrees
 
-**Theorem 5.2.1**: For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time and space O(|W|).
+**Theorem 5.2.1**: For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time and space `𝒪(∣W∣)`.
 
 **Approach**:
 1. Use raising lemma to build table T_n from T_{n-1}
 2. Number of state types grows with n, but remains constant for fixed n
-3. Table T_n has size O(1) for fixed n
+3. Table T_n has size `𝒪(1)` for fixed n
 
-**Corollary 5.2.2**: For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space O(|W|).
+**Corollary 5.2.2**: For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space `𝒪(∣W∣)`.
 
 **Practical Impact**: 
 - For n=1: ~5 state types
 - For n=2: ~20 state types
 - For n=3: ~80 state types
-- Pattern: O(4^n) state types, but constant for fixed n
+- Pattern: `𝒪(4^n)` state types, but constant for fixed n
 
 ---
 
@@ -516,7 +520,7 @@ Output: LEV_1(W)
 
 **Pages**: 33-34
 
-**Motivation**: Even with O(|W|) construction, explicitly building LEV_n(W) has overhead. Can we avoid it?
+**Motivation**: Even with `𝒪(∣W∣)` construction, explicitly building LEV_n(W) has overhead. Can we avoid it?
 
 ### Imitation Method
 
@@ -551,7 +555,7 @@ While stack not empty:
 **Advantages**:
 1. **No upfront construction**: States generated on-demand
 2. **Space efficient**: Only active states in memory
-3. **Same time complexity**: Still O(|W|) + O(|D|)
+3. **Same time complexity**: Still `𝒪(∣W∣)` + `𝒪(∣D∣)`
 
 **Characteristic Vector Computation**:
 
@@ -630,7 +634,7 @@ Similar to Table 5.1, but with t-positions:
 
 **Tables 7.2 and 7.3** (pages 40-41): Transition tables for transposition variant
 
-**Theorem 7.2.4**: For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space O(|W|).
+**Theorem 7.2.4**: For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space `𝒪(∣W∣)`.
 
 **State Count**: Approximately double the standard variant (due to transposition flag).
 
@@ -721,7 +725,7 @@ Also relevant for handwriting recognition and biological sequences.
 
 ### Summary of Contributions
 
-1. **Deterministic Levenshtein Automata**: Construction in O(|W|) time for fixed error bound n
+1. **Deterministic Levenshtein Automata**: Construction in `𝒪(∣W∣)` time for fixed error bound n
 
 2. **Parametric Tables**: Precomputed tables T_n enable efficient construction
 
@@ -735,7 +739,7 @@ Also relevant for handwriting recognition and biological sequences.
 
 **Lemma 9.0.2**: For any fixed n, given two words W and V of length w and v, it is decidable in time O(max(w,v)) if the Levenshtein-distance between W and V is ≤ n.
 
-**Proof Idea**: Construct LEV_n(W) in O(w) time, check if V is accepted in O(v) time.
+**Proof Idea**: Construct LEV_n(W) in `𝒪(w)` time, check if V is accepted in `𝒪(v)` time.
 
 **Lemma 9.0.3**: For a fixed alphabet Σ and fixed n, there exists a finite number of minimal Levenshtein-automata of degree n.
 
@@ -757,7 +761,7 @@ Also relevant for handwriting recognition and biological sequences.
 3. **Restricted Substitution Sets**: Only certain character pairs allowed (→ Universal LA paper!)
 4. **Approximate Matching with Wildcards**: Combine with regular expressions
 5. **Phonetic Distance**: Integrate phonetic similarity
-6. **Optimization**: Further reduce constants in O(|W|) complexity
+6. **Optimization**: Further reduce constants in `𝒪(∣W∣)` complexity
 
 **Note**: Several of these directions have been pursued in subsequent work, including the Universal Levenshtein Automata paper (documented in `/docs/research/universal-levenshtein/`).
 
@@ -769,13 +773,13 @@ Also relevant for handwriting recognition and biological sequences.
 LEV_n(W) is a deterministic and acyclic Levenshtein automaton of degree n for W. For fixed degree n, the size of LEV_n(W) is linear in |W|.
 
 ### Theorem 5.2.1 (Construction Complexity)
-For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time and space O(|W|).
+For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time and space `𝒪(∣W∣)`.
 
 ### Corollary 5.2.2 (Minimality)
-For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space O(|W|).
+For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space `𝒪(∣W∣)`.
 
 ### Theorem 7.2.4 (Transposition Variant)
-For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space O(|W|).
+For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space `𝒪(∣W∣)`.
 
 ### Lemma 2.0.2 (Suffix Independence)
 If W = UW' and V = UV', then d_L(V,W) = d_L(V',W').
@@ -822,7 +826,7 @@ For any fixed n, given two words W and V of length w and v, it is decidable in t
 
 The implementation inherits theoretical guarantees from the paper:
 - ✅ **Correctness**: Accepts exactly L_Lev(n,W)
-- ✅ **Efficiency**: O(|W|) construction + O(|D|) query
+- ✅ **Efficiency**: `𝒪(∣W∣)` construction + `𝒪(∣D∣)` query
 - ✅ **Optimality**: Minimal automaton for fixed n
 - ✅ **Practical**: Demonstrated on millions of entries
 
@@ -835,9 +839,9 @@ The implementation inherits theoretical guarantees from the paper:
 2. Universal Levenshtein Automata (Mitankin, Mihov, Schulz) - documented in `/docs/research/universal-levenshtein/`
 
 ### Related Papers
-1. Wagner & Fisher (1974): "The String-to-String Correction Problem"
-2. Damerau (1964): "A technique for computer detection and correction of spelling errors"
-3. Oflazer (1996): "Error-tolerant Finite-state Recognition"
+1. Wagner & Fischer (1974): "The String-to-String Correction Problem" — [doi:10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
+2. Damerau (1964): "A technique for computer detection and correction of spelling errors" — [doi:10.1145/363958.363994](https://doi.org/10.1145/363958.363994)
+3. Oflazer (1996): "Error-tolerant Finite-state Recognition with Applications to Morphological Analysis and Spelling Correction" — Computational Linguistics 22(1), 73–89, [ACL J96-1003](https://aclanthology.org/J96-1003/)
 
 ### Applications
 - Spelling checkers: hunspell, aspell

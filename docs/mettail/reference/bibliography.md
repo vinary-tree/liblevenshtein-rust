@@ -1,3 +1,5 @@
+[← Documentation Index](../../README.md)
+
 # Bibliography
 
 Complete reference list for MeTTaIL semantic type checking documentation.
@@ -16,6 +18,7 @@ arXiv:2305.17218.
 - **Key contribution**: State tuple ⟨i, k, w, o⟩ and five core rules
 - **Relevance**: Foundation for formalizing MeTTa as a λ-theory
 - **Section 8**: Explicitly recommends OSLF for deriving type systems
+- **DOI**: [10.48550/arXiv.2305.17218](https://doi.org/10.48550/arXiv.2305.17218)
 
 ```bibtex
 @article{meredith2023metametta,
@@ -39,6 +42,7 @@ EPTCS 372, pp. 116-132.
 - **Key contribution**: λ-theory →[P]→ presheaf topos →[L]→ type system
 - **Relevance**: Mathematical foundation for semantic type checking
 - **Key concepts**: Presheaf construction, internal language, behavioral types
+- **DOI**: [10.4204/EPTCS.372.9](https://doi.org/10.4204/EPTCS.372.9) (arXiv:2102.04672)
 
 ```bibtex
 @inproceedings{williams2022native,
@@ -64,6 +68,7 @@ arXiv:1704.03080.
 - **Key contribution**: Reductions as edges in hom-graphs
 - **Relevance**: Simpler alternative when binding eliminated via reflection
 - **Key concepts**: Gph-theory, reduction contexts, gas, RHO combinators
+- **DOI**: [10.48550/arXiv.1704.03080](https://doi.org/10.48550/arXiv.1704.03080)
 
 ```bibtex
 @article{stay2017gph,
@@ -87,6 +92,7 @@ ENTCS 141(5), pp. 49-67.
 - **Key contribution**: Names as quoted processes (closed theory)
 - **Relevance**: Theoretical foundation of Rholang
 - **Key concepts**: Quote/drop reflection, N-barbed bisimulation
+- **DOI**: [10.1016/j.entcs.2005.05.016](https://doi.org/10.1016/j.entcs.2005.05.016)
 
 ```bibtex
 @inproceedings{meredith2005rho,

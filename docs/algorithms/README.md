@@ -133,7 +133,7 @@ let results: Vec<String> = dict
 - [**DynamicDawg**](01-dictionary-layer/implementations/dynamic-dawg.md)
   - Thread-safe insert/remove operations
   - Use case: Frequently changing dictionaries
-- [**OptimizedDawg**](01-dictionary-layer/implementations/optimized-dawg.md)
+- **OptimizedDawg**
   - 75% memory reduction, 20-25% faster
   - Use case: Large static dictionaries
 - [**SuffixAutomaton**](01-dictionary-layer/implementations/suffix-automaton.md)
@@ -141,9 +141,9 @@ let results: Vec<String> = dict
   - Use case: Full-text search
 
 **Key Topics:**
-- [Data Structures](01-dictionary-layer/data-structures/node-representations.md)
-- [Value Storage](01-dictionary-layer/data-structures/value-storage.md)
-- [Performance Comparison](01-dictionary-layer/performance/benchmarks.md)
+- Data Structures
+- Value Storage
+- Performance Comparison
 
 ---
 
@@ -152,17 +152,17 @@ let results: Vec<String> = dict
 **Purpose:** Finite state machines for approximate string matching
 
 **Algorithms:**
-- [**Standard**](02-levenshtein-automata/algorithms/standard-algorithm.md) (Insert, Delete, Substitute)
+- **Standard** (Insert, Delete, Substitute)
   - Use case: General fuzzy matching
-- [**Transposition**](02-levenshtein-automata/algorithms/transposition-algorithm.md) (+Adjacent Swap)
+- **Transposition** (+Adjacent Swap)
   - Use case: Typo tolerance, keyboard errors
-- [**Merge-and-Split**](02-levenshtein-automata/algorithms/merge-and-split.md) (+Merge/Split ops)
+- **Merge-and-Split** (+Merge/Split ops)
   - Use case: OCR errors, scanning artifacts
 
 **Core Concepts:**
-- [Position Representation](02-levenshtein-automata/theory/position-representation.md): `(term_index, num_errors, is_special)`
-- [Subsumption](02-levenshtein-automata/theory/subsumption-theory.md): 3.3x faster with online pruning
-- [State Composition](02-levenshtein-automata/implementation/state-representation.md): SmallVec optimization
+- Position Representation: `(term_index, num_errors, is_special)`
+- Subsumption: 3.3x faster with online pruning
+- State Composition: SmallVec optimization
 
 **Performance:**
 - Online subsumption: O(kn) vs O(n²) batch
@@ -175,23 +175,23 @@ let results: Vec<String> = dict
 **Purpose:** Execute queries by traversing Dictionary × Automaton
 
 **Query Types:**
-- [**QueryIterator**](03-intersection-traversal/query-iterators/query-iterator.md)
+- **QueryIterator**
   - Unordered results, streaming
   - Use case: Large result sets
-- [**OrderedQueryIterator**](03-intersection-traversal/query-iterators/ordered-query.md)
+- **OrderedQueryIterator**
   - Distance-first ordering
   - Use case: Autocomplete, top-k results
-- [**ValueFilteredQueryIterator**](03-intersection-traversal/query-iterators/value-filtered-query.md)
+- **ValueFilteredQueryIterator**
   - Filter during traversal (10-100x faster!)
   - Use case: Scope-aware code completion
-- [**ZipperQueryIterator**](03-intersection-traversal/query-iterators/zipper-query.md)
+- **ZipperQueryIterator**
   - Hierarchical navigation
   - Use case: Context-preserving search
 
 **Key Topics:**
-- [Product Construction](03-intersection-traversal/theory/product-construction.md)
-- [Path Tracking](03-intersection-traversal/implementation/path-tracking.md): 15-25% speedup
-- [Lazy Evaluation](03-intersection-traversal/implementation/lazy-evaluation.md)
+- Product Construction
+- Path Tracking: 15-25% speedup
+- Lazy Evaluation
 
 ---
 
@@ -216,19 +216,19 @@ let results: Vec<String> = dict
 **Purpose:** Vectorize hot paths for 20-64% performance gains
 
 **Optimized Operations:**
-- [**Characteristic Vector**](05-simd-optimization/implementations/characteristic-vector-simd.md)
+- **Characteristic Vector**
   - AVX2 (8-wide), SSE4.1 (4-wide)
   - 3-4x speedup in automaton transitions
-- [**Distance Matrix**](05-simd-optimization/implementations/distance-matrix-simd.md)
+- **Distance Matrix**
   - Vectorized DP row updates
   - 20-30% speedup for strings ≥16 chars
-- [**Edge Lookup**](05-simd-optimization/implementations/edge-lookup-simd.md)
+- **Edge Lookup**
   - Optimal for exactly 4 edges
 
 **Key Topics:**
-- [Runtime Detection](05-simd-optimization/implementations/runtime-detection.md): CPU feature flags
-- [Threshold Analysis](05-simd-optimization/performance/threshold-analysis.md): When SIMD helps
-- [Benchmarks](05-simd-optimization/performance/simd-benchmarks.md): 950+ lines of analysis
+- Runtime Detection: CPU feature flags
+- Threshold Analysis: When SIMD helps
+- Benchmarks: 950+ lines of analysis
 
 ---
 
@@ -239,15 +239,15 @@ let results: Vec<String> = dict
 **Pattern:** Huet's Zipper (1997) - functional navigation with context
 
 **Implementations:**
-- [DictZipper](06-zipper-navigation/implementations/dict-zipper.md): Navigate dictionaries
-- [ValuedDictZipper](06-zipper-navigation/implementations/valued-zipper.md): Access values during navigation
-- [AutomatonZipper](06-zipper-navigation/implementations/automaton-zipper.md): Track automaton state
-- [IntersectionZipper](06-zipper-navigation/implementations/intersection-zipper.md): Compose dictionary + automaton
+- `DictZipper`: Navigate dictionaries
+- `ValuedDictZipper`: Access values during navigation
+- `AutomatonZipper`: Track automaton state
+- `IntersectionZipper`: Compose dictionary + automaton
 
 **Use Cases:**
-- [Hierarchical Completion](06-zipper-navigation/use-cases/hierarchical-completion.md)
-- [Scope-aware Search](06-zipper-navigation/use-cases/scope-aware-search.md)
-- [Backtracking](06-zipper-navigation/use-cases/backtracking.md)
+- Hierarchical Completion
+- Scope-aware Search
+- Backtracking
 
 ---
 
@@ -311,15 +311,15 @@ Example:
 - Cloned on access for Rust ownership
 
 **Use Cases:**
-- [Scope IDs](09-value-storage/use-cases/scope-ids.md) for code completion
-- [Categorization](09-value-storage/use-cases/categorization.md) and metadata
-- [Fuzzy Maps](09-value-storage/use-cases/fuzzy-maps.md) - approximate key-value lookup
-- [Filtered Queries](09-value-storage/use-cases/filtered-queries.md) - 10-100x speedup
+- Scope IDs for code completion
+- Categorization and metadata
+- Fuzzy Maps - approximate key-value lookup
+- Filtered Queries - 10-100x speedup
 
 **Key Topics:**
-- [Term-Value Mapping](09-value-storage/theory/term-value-mapping.md)
-- [Memory Layout](09-value-storage/theory/term-value-mapping.md#memory-layout)
-- [Performance Impact](09-value-storage/implementations/comparison.md)
+- Term-Value Mapping
+- Memory Layout
+- Performance Impact
 
 ---
 
@@ -403,32 +403,32 @@ Need to remove terms?
 ## Example Index
 
 ### Getting Started
-- [Hello Fuzzy Search](../examples/01-getting-started/hello-fuzzy.rs)
-- [Basic Query Patterns](../examples/01-getting-started/basic-query.rs)
-- [Distance Calculation](../examples/01-getting-started/distance-calculation.rs)
+- Hello Fuzzy Search
+- Basic Query Patterns
+- Distance Calculation
 
 ### Dictionaries
-- [DoubleArrayTrie Demo](../examples/02-dictionaries/double-array-trie-demo.rs)
-- [Dynamic DAWG Demo](../examples/02-dictionaries/dynamic-dawg-demo.rs)
-- [Unicode Handling](../examples/02-dictionaries/unicode-handling.rs)
-- [Dictionary Comparison](../examples/02-dictionaries/dictionary-comparison.rs)
+- DoubleArrayTrie Demo
+- Dynamic DAWG Demo
+- Unicode Handling
+- Dictionary Comparison
 
 ### Algorithms
-- [Standard Levenshtein](../examples/03-algorithms/standard-levenshtein.rs)
-- [Transposition Demo](../examples/03-algorithms/transposition-demo.rs)
-- [Merge-and-Split Demo](../examples/03-algorithms/merge-split-demo.rs)
+- Standard Levenshtein
+- Transposition Demo
+- Merge-and-Split Demo
 
 ### Value Storage
-- [Term-Value Storage](../examples/05-values/term-value-storage.rs)
-- [Scope-Aware Completion](../examples/05-values/scope-aware-completion.rs)
-- [Fuzzy Map](../examples/05-values/fuzzy-map.rs)
-- [Value Filtering](../examples/05-values/value-filtering.rs)
+- Term-Value Storage
+- Scope-Aware Completion
+- Fuzzy Map
+- Value Filtering
 
 ### Real-World Applications
-- [Spell Checker](../examples/08-real-world/spell-checker.rs)
-- [Autocomplete Server](../examples/08-real-world/autocomplete-server.rs)
-- [Fuzzy Finder](../examples/08-real-world/fuzzy-finder.rs)
-- [LSP Completion](../examples/08-real-world/lsp-completion.rs)
+- Spell Checker
+- Autocomplete Server
+- Fuzzy Finder
+- LSP Completion
 
 ---
 
@@ -460,7 +460,7 @@ Need to remove terms?
    - Journal of Functional Programming 7.5
    - Functional data structure pattern
 
-See [complete reference list](../references/papers.md) for more papers and resources.
+See the complete reference list for more papers and resources.
 
 ---
 
@@ -478,24 +478,24 @@ See [complete reference list](../references/papers.md) for more papers and resou
 - [09-value-storage/](09-value-storage/)
 
 **By Topic:**
-- [Theory Documents](01-dictionary-layer/theory/) (All layers)
+- Theory Documents (All layers)
 - [Implementation Guides](01-dictionary-layer/implementations/) (All layers)
 - [Usage Examples](../examples/)
-- [Performance Analysis](01-dictionary-layer/performance/)
+- Performance Analysis
 - [Diagrams & Visualizations](../diagrams/)
 
 **Quick Links:**
 - [Value Storage Guide](09-value-storage/) (NEW in Phase 6!)
 - [DoubleArrayTrie Guide](01-dictionary-layer/implementations/double-array-trie.md) (Recommended)
 - [Unicode Support](01-dictionary-layer/implementations/double-array-trie-char.md)
-- [Algorithm Comparison](02-levenshtein-automata/algorithms/)
-- [Performance Benchmarks](benchmarks/)
+- Algorithm Comparison
+- Performance Benchmarks
 
 ---
 
 ## Contributing
 
-Found an issue or have suggestions? See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines on improving this documentation.
+Found an issue or have suggestions? See [CONTRIBUTING.md](../developer-guide/contributing.md) for guidelines on improving this documentation.
 
 ## License
 
