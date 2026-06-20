@@ -2,7 +2,7 @@
 
 ## Status: ARCHIVED EXPERIMENTAL / INCOMPLETE
 
-The `CompressedSuffixAutomaton` is a proof-of-concept implementation demonstrating that compression techniques can be applied to suffix automata. However, it has known bugs and is not ready for production use.
+The `CompressedSuffixAutomaton` is a proof-of-concept implementation demonstrating that compression techniques can be applied to suffix automata. However, it has known defects and is not ready for production use.
 
 ## What Works ✅
 
@@ -178,7 +178,7 @@ struct CompressedSuffixAutomatonInner {
 
 ### Arguments for Removing
 
-1. **Not production-ready** - Has known bugs
+1. **Not production-ready** - Has known defects
 2. **Minimal savings** - Only 26% compression isn't compelling
 3. **Maintenance burden** - Another data structure to maintain
 4. **User confusion** - Might use experimental code accidentally

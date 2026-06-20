@@ -596,7 +596,7 @@ This document tracks the implementation progress of Universal Levenshtein Automa
 
 ## Post-Release Tasks
 
-- [ ] Monitor GitHub issues for bug reports
+- [ ] Monitor GitHub issues for defect reports
 - [ ] Gather user feedback on API design
 - [ ] Consider additional preset substitution sets based on user requests
 - [ ] Track performance in real-world use cases

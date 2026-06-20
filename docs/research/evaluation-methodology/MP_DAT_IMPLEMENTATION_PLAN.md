@@ -2037,7 +2037,7 @@ criterion_main!(benches);
 1. ✅ Query performance ≥ 50% of DoubleArrayTrie speed
 2. ✅ Space efficiency >95% after 50% deletions
 3. ✅ Clear use case identified (better than alternatives)
-4. ✅ Implementation quality high (no known bugs)
+4. ✅ Implementation quality high (no known defects)
 5. ✅ Maintenance commitment secured
 
 **Nice to Have**:
@@ -2064,7 +2064,7 @@ criterion_main!(benches);
 
 **Risk 2: TAIL Management Complexity**
 - **Probability**: Medium (memory management is hard)
-- **Impact**: Medium (bugs, leaks)
+- **Impact**: Medium (defects, leaks)
 - **Mitigation**:
   - Thorough testing (valgrind)
   - Property-based tests

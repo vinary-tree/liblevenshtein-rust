@@ -9,11 +9,11 @@
 
 ## Executive Summary
 
-This report documents the successful completion of the first three phases of a comprehensive CLI/REPL enhancement initiative. These improvements significantly enhance developer experience, fix critical bugs, and establish a robust architectural foundation for the interactive REPL.
+This report documents the successful completion of the first three phases of a comprehensive CLI/REPL enhancement initiative. These improvements significantly enhance developer experience, fix critical defects, and establish a robust architectural foundation for the interactive REPL.
 
 ### Key Achievements
 
-- ✅ **6 critical configuration bugs fixed** - Settings now persist correctly
+- ✅ **6 critical configuration defects fixed** - Settings now persist correctly
 - ✅ **State machine architecture implemented** - Robust, testable execution flow
 - ✅ **Professional UI/UX** - Color-coded interface with context-aware prompts
 - ✅ **Enhanced help system** - Comprehensive documentation and quick start guide
@@ -30,19 +30,19 @@ This report documents the successful completion of the first three phases of a c
 
 ### Commits
 
-1. `813a707` - Phase 1: Critical bug fixes
+1. `813a707` - Phase 1: Critical defect fixes
 2. `081560b` - Phase 2: State machine architecture
 3. `ac3af77` - Phase 3: UI/UX enhancements
 
 ---
 
-## Phase 1: Critical Bug Fixes
+## Phase 1: Critical Defect Fixes
 
 **Duration**: 2-3 days
 **Commit**: 813a707
 **Files Modified**: 6 files, 122 insertions(+), 24 deletions(-)
 
-### 1.1 Auto-Complete Bug Fix
+### 1.1 Auto-Complete Defect Fix
 
 **Problem**: Auto-completion didn't add trailing space after completions, making it clunky to continue typing.
 
@@ -54,7 +54,7 @@ This report documents the successful completion of the first three phases of a c
 
 **Impact**: Users can now flow smoothly from one argument to the next without manually adding spaces.
 
-### 1.2 Configuration Persistence Fix (6 Critical Bugs)
+### 1.2 Configuration Persistence Fix (6 Critical Defects)
 
 **Problems Identified**:
 1. Settings never saved when state changed in 8 commands
@@ -174,7 +174,7 @@ if modifies_dict && state.auto_sync {
 ```rust
 #[deprecated(
     since = "0.6.0",
-    note = "This implementation has known bugs with generalized suffix automaton (multiple texts). Use SuffixAutomaton instead for reliable substring matching."
+    note = "This implementation has known defects with generalized suffix automaton (multiple texts). Use SuffixAutomaton instead for reliable substring matching."
 )]
 #[derive(Clone, Debug)]
 pub struct CompressedSuffixAutomaton {
@@ -182,9 +182,9 @@ pub struct CompressedSuffixAutomaton {
 
 **Rationale**:
 - Explicitly marked "EXPERIMENTAL: INCOMPLETE" in documentation
-- Known bugs with multiple-text construction
+- Known defects with multiple-text construction
 - Regular `SuffixAutomaton` is recommended instead
-- ~26% memory savings don't justify the bugs
+- ~26% memory savings don't justify the defects
 
 #### DawgDictionary - Soft Deprecation
 
@@ -849,7 +849,7 @@ Phase 6 will systematically add missing support to bring all dictionary types to
 
 Phases 1-3 of the CLI/REPL enhancement initiative have been successfully completed, delivering:
 
-- ✅ **Stability**: 6 critical configuration bugs fixed
+- ✅ **Stability**: 6 critical configuration defects fixed
 - ✅ **Architecture**: Robust state machine implementation
 - ✅ **Usability**: Professional UI/UX with visual feedback
 - ✅ **Documentation**: Comprehensive help system
