@@ -79,7 +79,10 @@ enum Workload {
     All,
     LevUnordered,
     LevOrdered,
+    OrderedQueryFirstK,
     PriorityQueryFirstK,
+    StateMinimumScalar,
+    StateMinimumSimd,
     PhoneticNormalized,
     PhoneticRegexProduct,
     PhoneticRegexProductScan,
@@ -183,7 +186,10 @@ impl Options {
                         "all" => Workload::All,
                         "lev-unordered" => Workload::LevUnordered,
                         "lev-ordered" => Workload::LevOrdered,
+                        "ordered-query-first-k" => Workload::OrderedQueryFirstK,
                         "priority-query-first-k" => Workload::PriorityQueryFirstK,
+                        "state-minimum-scalar" => Workload::StateMinimumScalar,
+                        "state-minimum-simd" => Workload::StateMinimumSimd,
                         "phonetic-normalized" => Workload::PhoneticNormalized,
                         "phonetic-regex-product" => Workload::PhoneticRegexProduct,
                         "phonetic-regex-product-scan" => Workload::PhoneticRegexProductScan,
@@ -195,7 +201,7 @@ impl Options {
                         "cmudict-phonetic-diagnostic" => Workload::CmudictPhoneticDiagnostic,
                         "phonetic-targeted-rules" => Workload::PhoneticTargetedRules,
                         other => panic!(
-                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, priority-query-first-k, phonetic-normalized, phonetic-regex-product, phonetic-regex-product-scan, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
+                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, ordered-query-first-k, priority-query-first-k, state-minimum-scalar, state-minimum-simd, phonetic-normalized, phonetic-regex-product, phonetic-regex-product-scan, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
                         ),
                     };
                 }
@@ -278,7 +284,7 @@ impl Options {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|priority-query-first-k|phonetic-normalized|phonetic-regex-product|phonetic-regex-product-scan|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
+                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|ordered-query-first-k|priority-query-first-k|state-minimum-scalar|state-minimum-simd|phonetic-normalized|phonetic-regex-product|phonetic-regex-product-scan|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
                     );
                     std::process::exit(0);
                 }
@@ -438,6 +444,29 @@ fn run_lev_ordered(samples: usize, warmups: usize) {
     });
 }
 
+fn run_ordered_query_first_k(
+    samples: usize,
+    warmups: usize,
+    limit: usize,
+    max_distance: usize,
+    k: usize,
+) {
+    let dict = create_dictionary(limit.max(1_000));
+    let transducer = Transducer::new(dict, Algorithm::Standard);
+    let queries = ["test500", "best500", "rest500", "word500", "term500"];
+    let workload = format!("ordered_query_first_k_{}_d{}", k, max_distance);
+
+    measure(&workload, samples, warmups, |sample| {
+        let query = queries[sample % queries.len()];
+        let candidates: Vec<_> = transducer
+            .query_ordered(black_box(query), black_box(max_distance))
+            .take(black_box(k))
+            .collect();
+
+        MeasureOutcome::synthetic(candidates.len())
+    });
+}
+
 fn run_priority_query_first_k(
     samples: usize,
     warmups: usize,
@@ -461,6 +490,57 @@ fn run_priority_query_first_k(
         .collect();
 
         MeasureOutcome::synthetic(candidates.len())
+    });
+}
+
+#[inline(never)]
+fn scalar_minimum_bench(values: &[usize; 8], count: usize) -> usize {
+    values[..count]
+        .iter()
+        .copied()
+        .min()
+        .expect("scalar_minimum_bench: count is non-zero")
+}
+
+fn run_state_minimum_batch(samples: usize, warmups: usize, iterations: usize, use_simd: bool) {
+    let cases = [
+        ([7, 3, 5, 1, 9, 4, 8, 6], 4usize),
+        ([4, 6, 2, 7, 1, 8, 5, 3], 5usize),
+        ([8, 7, 6, 5, 4, 3, 2, 1], 8usize),
+        ([0, 2, 4, 6, 8, 10, 12, 14], 8usize),
+        ([9, 1, 9, 1, 9, 1, 9, 1], 6usize),
+        ([250_000, 42, 99, 120, 18, 77, 66, 55], 8usize),
+    ];
+    let iterations = iterations.max(1);
+    let workload = if use_simd {
+        "state_minimum_simd_batch"
+    } else {
+        "state_minimum_scalar_batch"
+    };
+
+    measure(workload, samples, warmups, |sample| {
+        let mut acc = 0usize;
+        for iteration in 0..iterations {
+            let (values, count) = &cases[(sample + iteration) % cases.len()];
+            let min = if use_simd {
+                #[cfg(target_arch = "x86_64")]
+                {
+                    liblevenshtein::transducer::simd::find_minimum_simd(
+                        black_box(values),
+                        black_box(*count),
+                    )
+                }
+                #[cfg(not(target_arch = "x86_64"))]
+                {
+                    scalar_minimum_bench(black_box(values), black_box(*count))
+                }
+            } else {
+                scalar_minimum_bench(black_box(values), black_box(*count))
+            };
+            acc = acc.wrapping_add(min);
+        }
+
+        MeasureOutcome::synthetic(black_box(acc))
     });
 }
 
@@ -1722,6 +1802,15 @@ fn main() {
     if matches!(opts.workload, Workload::All | Workload::LevOrdered) {
         run_lev_ordered(opts.samples, opts.warmups);
     }
+    if matches!(opts.workload, Workload::All | Workload::OrderedQueryFirstK) {
+        run_ordered_query_first_k(
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            opts.max_distance,
+            opts.recall_k,
+        );
+    }
     if matches!(opts.workload, Workload::All | Workload::PriorityQueryFirstK) {
         run_priority_query_first_k(
             opts.samples,
@@ -1730,6 +1819,12 @@ fn main() {
             opts.max_distance,
             opts.recall_k,
         );
+    }
+    if matches!(opts.workload, Workload::All | Workload::StateMinimumScalar) {
+        run_state_minimum_batch(opts.samples, opts.warmups, opts.corpus_limit, false);
+    }
+    if matches!(opts.workload, Workload::All | Workload::StateMinimumSimd) {
+        run_state_minimum_batch(opts.samples, opts.warmups, opts.corpus_limit, true);
     }
     if matches!(opts.workload, Workload::All | Workload::PhoneticNormalized) {
         run_phonetic_normalized(
