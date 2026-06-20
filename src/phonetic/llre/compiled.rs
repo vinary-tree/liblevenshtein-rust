@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_invalid_magic() {
-        let bytes = b"XXXX\x01\x00";
+        let bytes = b"BAD!\x01\x00";
         let result = from_bytes(bytes);
         assert!(result.is_err());
         let err = result.unwrap_err();
