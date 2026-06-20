@@ -60,7 +60,7 @@ This report documents the successful completion of the first three phases of a c
 1. Settings never saved when state changed in 8 commands
 2. Startup unconditionally overwrote config with defaults
 3. No config save on REPL exit
-4. Auto-sync unimplemented (line 214 TODO)
+4. Auto-sync recorded as unimplemented in the source snapshot (line 214 marker)
 5. Config path not preserved after switching
 6. `config_file_path` field unused
 

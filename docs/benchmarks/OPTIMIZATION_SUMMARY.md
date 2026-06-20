@@ -220,7 +220,7 @@ liblevenshtein's main purpose is **fast approximate string matching** with Leven
 4. **CI_BENCHMARK_INTEGRATION.md** - CI workflow documentation
 
 ### Supporting Files
-5. **COMPRESSED_SUFFIX_AUTOMATON_TODO.md** - Experimental feature status
+5. **COMPRESSED_SUFFIX_AUTOMATON_STATUS.md** - Experimental feature status
 6. **OPTIMIZATION_SUMMARY.md** - This document
 7. **dat_benchmark_results.txt** - Raw benchmark data (before)
 8. **dat_optimized_benchmark.txt** - Raw benchmark data (after)

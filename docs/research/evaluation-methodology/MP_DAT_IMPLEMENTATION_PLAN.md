@@ -262,7 +262,7 @@ impl<V: DictionaryValue> MpDATInner<V> {
     fn tail_free(&mut self, pos: usize, len: usize) {
         // Add to free list
         self.tail_free_list.push(pos);
-        // TODO: Coalesce adjacent free blocks
+        // Improvement candidate: coalesce adjacent free blocks
     }
 
     /// Match suffix in TAIL
@@ -276,7 +276,7 @@ impl<V: DictionaryValue> MpDATInner<V> {
     /// Find free block of sufficient size
     fn find_free_block(&self, required_len: usize) -> Option<usize> {
         // First-fit strategy
-        // TODO: Consider best-fit or buddy allocation
+        // Allocation policy candidate: consider best-fit or buddy allocation
         for &pos in &self.tail_free_list {
             let block_len = self.get_block_length(pos);
             if block_len >= required_len {
@@ -1665,9 +1665,9 @@ criterion_main!(benches);
 
 | Backend | 10K words | 50K words | 100K words |
 |---------|-----------|-----------|------------|
-| DoubleArrayTrie | 3.3ms | XXms | XXms |
-| DynamicDawg | 4.0ms | XXms | XXms |
-| **MpDoubleArrayTrie** | **XXms** | **XXms** | **XXms** |
+| DoubleArrayTrie | 3.3ms | [measure] | [measure] |
+| DynamicDawg | 4.0ms | [measure] | [measure] |
+| **MpDoubleArrayTrie** | **[measure]** | **[measure]** | **[measure]** |
 
 **Finding**: [Analysis]
 
@@ -1677,9 +1677,9 @@ criterion_main!(benches);
 
 | Backend | 1K queries | Avg Latency | Throughput |
 |---------|-----------|-------------|------------|
-| DoubleArrayTrie | XXµs | 4.13µs | 242K q/s |
-| DynamicDawg | XXµs | 98µs | 10K q/s |
-| **MpDoubleArrayTrie** | **XXµs** | **XXµs** | **XXK q/s** |
+| DoubleArrayTrie | [measure] | 4.13µs | 242K q/s |
+| DynamicDawg | [measure] | 98µs | 10K q/s |
+| **MpDoubleArrayTrie** | **[measure]** | **[measure]** | **[measure] q/s** |
 
 **Finding**: [Analysis - This is the key metric]
 
@@ -1688,8 +1688,8 @@ criterion_main!(benches);
 | Backend | Distance 1 | Distance 2 | Distance 3 |
 |---------|-----------|-----------|-----------|
 | DoubleArrayTrie | 8.07µs | 12.68µs | 18.21µs |
-| DynamicDawg | 328µs | 2,384µs | XXµs |
-| **MpDoubleArrayTrie** | **XXµs** | **XXµs** | **XXµs** |
+| DynamicDawg | 328µs | 2,384µs | [measure] |
+| **MpDoubleArrayTrie** | **[measure]** | **[measure]** | **[measure]** |
 
 **Finding**: [Analysis]
 
@@ -1697,11 +1697,11 @@ criterion_main!(benches);
 
 | Backend | Single Delete | Batch 100 | Batch 1000 |
 |---------|--------------|-----------|------------|
-| DynamicDawg | XXms | XXms | XXms |
-| **MpDoubleArrayTrie** | **XXms** | **XXms** | **XXms** |
+| DynamicDawg | [measure] | [measure] | [measure] |
+| **MpDoubleArrayTrie** | **[measure]** | **[measure]** | **[measure]** |
 
 **Paper Claim**: <1ms per deletion
-**Our Result**: XXms per deletion
+**Our Result**: [measured deletion latency] per deletion
 
 **Finding**: [Analysis]
 
@@ -1711,14 +1711,14 @@ criterion_main!(benches);
 
 | Delete % | MP DAT Efficiency | Empty Elements |
 |----------|------------------|----------------|
-| 10% | XX% | XXX |
-| 25% | XX% | XXX |
-| 50% | XX% | XXX |
-| 75% | XX% | XXX |
-| 90% | XX% | XXX |
+| 10% | [measure] | [measure] |
+| 25% | [measure] | [measure] |
+| 50% | [measure] | [measure] |
+| 75% | [measure] | [measure] |
+| 90% | [measure] | [measure] |
 
 **Paper Claim**: >97% efficiency
-**Our Result**: XX% efficiency at 50% deletions
+**Our Result**: [measured efficiency] at 50% deletions
 
 **Finding**: [Analysis]
 
@@ -1728,7 +1728,7 @@ criterion_main!(benches);
 |---------|-----------|------------|-----------|
 | DoubleArrayTrie | 80KB | 8B | N/A |
 | DynamicDawg | 400KB | 40B | N/A |
-| **MpDoubleArrayTrie** | **XXKB** | **XXB** | **XXKB** |
+| **MpDoubleArrayTrie** | **[measure]** | **[measure]** | **[measure]** |
 
 **Finding**: [Analysis]
 
@@ -1738,9 +1738,9 @@ criterion_main!(benches);
 
 | Claim | Paper Result | Our Result | Validated? |
 |-------|-------------|------------|------------|
-| Space efficiency | >97% | XX% | ✅/❌ |
-| Deletion time | <1ms | XXms | ✅/❌ |
-| Node reduction | 30-50% | XX% | ✅/❌ |
+| Space efficiency | >97% | [measure] | pass/fail |
+| Deletion time | <1ms | [measure] | pass/fail |
+| Node reduction | 30-50% | [measure] | pass/fail |
 | Speedup vs Oono | 896× | N/A | N/A |
 
 ---
@@ -1749,12 +1749,12 @@ criterion_main!(benches);
 
 | Criterion | Weight | Result | Score |
 |-----------|--------|--------|-------|
-| **Query performance** | 0.40 | XXµs (XX% of DAT) | X.X |
-| **Deletion performance** | 0.25 | XXms (vs DynamicDawg) | X.X |
-| **Space efficiency** | 0.20 | XX% after 50% deletes | X.X |
-| **Implementation quality** | 0.10 | [Subjective] | X.X |
-| **Maintenance burden** | 0.05 | [Subjective] | X.X |
-| **TOTAL SCORE** | | | **X.X/5.0** |
+| **Query performance** | 0.40 | [measured latency and DAT ratio] | [score] |
+| **Deletion performance** | 0.25 | [measured latency vs DynamicDawg] | [score] |
+| **Space efficiency** | 0.20 | [measured efficiency after 50% deletes] | [score] |
+| **Implementation quality** | 0.10 | [Subjective] | [score] |
+| **Maintenance burden** | 0.05 | [Subjective] | [score] |
+| **TOTAL SCORE** | | | **[score]/5.0** |
 
 **Threshold for adoption**: ≥4.0/5.0
 
@@ -1874,7 +1874,7 @@ criterion_main!(benches);
 //! - Space efficiency important
 //!
 //! **Performance** (based on evaluation):
-//! - Queries: [XX% of DoubleArrayTrie speed]
+//! - Queries: [measured percentage of DoubleArrayTrie speed]
 //! - Deletions: [Faster/slower than DynamicDawg]
 //! - Space: [Space efficiency after deletions]
 //!

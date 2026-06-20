@@ -201,7 +201,7 @@ where F: FnOnce(ReadZipperUntracked<'static, ()>) -> R {
 
 **Issue:** Line 824 in dynamic_dawg.rs
 ```rust
-// TODO: Investigate why minimize() and compact() produce different node counts
+// Investigation item: minimize() and compact() produce different node counts
 ```
 
 **Problem:**

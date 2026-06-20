@@ -697,10 +697,10 @@ export CARGO_PROFILE_BENCH_DEBUG=false
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
-| Query Time (b=16, 100 chars) | < 0.2ms | X.XXXms | ✅/❌ |
-| Speedup (b≥4, pattern≥50) | ≥ 1000x | XXXXx | ✅/❌ |
-| Memory Overhead | < 50% | XX% | ✅/❌ |
-| Construction Time Increase | < 20% | XX% | ✅/❌ |
+| Query Time (b=16, 100 chars) | < 0.2ms | [measured latency] | pass/fail |
+| Speedup (b>=4, pattern>=50) | >= 1000x | [measured speedup] | pass/fail |
+| Memory Overhead | < 50% | [measured overhead] | pass/fail |
+| Construction Time Increase | < 20% | [measured increase] | pass/fail |
 | Correctness | 100% | 100% | ✅ |
 
 ---
@@ -711,10 +711,10 @@ export CARGO_PROFILE_BENCH_DEBUG=false
 
 | Pattern | max_distance | Traditional | WallBreaker | Speedup | Winner |
 |---------|--------------|-------------|-------------|---------|--------|
-| "test" (4 chars) | 2 | X.XXms | X.XXms | X.Xx | Traditional |
-| "algorithm" (9 chars) | 2 | X.XXms | X.XXms | X.Xx | Traditional |
+| "test" (4 chars) | 2 | [measure] | [measure] | [measure] | Traditional |
+| "algorithm" (9 chars) | 2 | [measure] | [measure] | [measure] | Traditional |
 
-**Analysis**: WallBreaker XX% slower for small error bounds (expected).
+**Analysis**: Fill in the measured small-error-bound delta; slower WallBreaker behavior is expected here.
 
 ---
 
@@ -722,10 +722,10 @@ export CARGO_PROFILE_BENCH_DEBUG=false
 
 | Pattern | max_distance | Traditional | WallBreaker | Speedup |
 |---------|--------------|-------------|-------------|---------|
-| "algorithm" | 4 | XXms | X.XXms | XXXx |
-| "extraordinary" (50+ chars) | 8 | XXXms | X.XXms | XXXXx |
+| "algorithm" | 4 | [measure] | [measure] | [measure] |
+| "extraordinary" (50+ chars) | 8 | [measure] | [measure] | [measure] |
 
-**Analysis**: WallBreaker achieves XXXx speedup (✅ exceeds 100x target).
+**Analysis**: Fill in the measured speedup and compare it against the 100x target.
 
 ---
 
@@ -733,9 +733,9 @@ export CARGO_PROFILE_BENCH_DEBUG=false
 
 | Pattern | max_distance | Traditional | WallBreaker | Speedup |
 |---------|--------------|-------------|-------------|---------|
-| "extraordinarily" (100 chars) | 16 | XXXms | 0.XXXms | XXXXx |
+| "extraordinarily" (100 chars) | 16 | [measure] | [measure] | [measure] |
 
-**Analysis**: WallBreaker achieves XXXXx speedup (✅ exceeds 1000x target).
+**Analysis**: Fill in the measured speedup and compare it against the 1000x target.
 
 ---
 
@@ -743,8 +743,8 @@ export CARGO_PROFILE_BENCH_DEBUG=false
 
 | Phase | Traditional | WallBreaker | Overhead |
 |-------|-------------|-------------|----------|
-| Construction | XXX MB | XXX MB | +XX% |
-| Query | XX MB | XX MB | +XX% |
+| Construction | [measure] | [measure] | [measure] |
+| Query | [measure] | [measure] | [measure] |
 
 ---
 

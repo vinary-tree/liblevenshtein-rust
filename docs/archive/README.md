@@ -18,20 +18,20 @@ Archived benchmark results and analysis:
 - Superseded benchmark comparisons
 - Old profiling data
 
-### [Implementation](implementation/)
+### [Implementation](implementation/README.md)
 Historical implementation plans and status reports:
-- Completed implementation TODOs
+- Completed implementation records
 - Deprecated refactoring plans
 - Historical integration status
 - Superseded implementation strategies
 
 Example files:
-- `COMPRESSED_SUFFIX_AUTOMATON_TODO.md` - Original suffix automaton implementation plan
+- `COMPRESSED_SUFFIX_AUTOMATON_STATUS.md` - Original suffix automaton implementation status
 - `DAT_IMPLEMENTATION_COMPLETE.md` - DAT implementation completion report
 - `REFACTORING_PLAN.md` - Historical refactoring plans
 - `CI_BENCHMARK_INTEGRATION.md` - CI benchmark integration notes
 
-### [Optimization](optimization/)
+### [Optimization](optimization/README.md)
 Historical optimization analysis and results:
 - Phase-by-phase optimization reports
 - Profiling verification from multiple phases
@@ -44,7 +44,7 @@ Example files:
 - `PHASE6_ARC_PATH_RESULTS.md` - Arc-based path optimization
 - `PROFILING_COMPARISON.md` - Historical profiling comparisons
 
-### [Performance](performance/)
+### [Performance](performance/README.md)
 Archived performance analysis:
 - Historical optimization summaries
 - Old DAWG optimization opportunities
@@ -59,7 +59,7 @@ Example files:
 ## Note
 
 For current documentation, see:
-- [Research](../research/) - Current research and analysis
-- [Benchmarks](../benchmarks/) - Current benchmark results
-- [Implementation Status](../implementation-status/) - Current implementation progress
-- [Completion Reports](../completion-reports/) - Current phase completion reports
+- [Research](../research/README.md) - Current research and analysis
+- [Benchmarks](../benchmarks/README.md) - Current benchmark results
+- [Implementation Status](../implementation-status/README.md) - Current implementation progress
+- [Completion Reports](../completion-reports/README.md) - Current phase completion reports

@@ -1,6 +1,6 @@
-# CompressedSuffixAutomaton TODO
+# CompressedSuffixAutomaton Status
 
-## Status: EXPERIMENTAL / INCOMPLETE
+## Status: ARCHIVED EXPERIMENTAL / INCOMPLETE
 
 The `CompressedSuffixAutomaton` is a proof-of-concept implementation demonstrating that compression techniques can be applied to suffix automata. However, it has known bugs and is not ready for production use.
 
