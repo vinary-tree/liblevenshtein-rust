@@ -566,7 +566,7 @@ impl GeneralizedState {
                             // Check TWO conditions:
                             // 1. This word character can be split (source check)
                             // 2. Current input character matches first char of target (prevents wrong split entry)
-                            // This fixes the double-split bug where t→th was entered when reading 'a' instead of 't'
+                            // This fixes the double-split defect where t→th was entered when reading 'a' instead of 't'
                             op.can_apply_to_source(word_1char_bytes)
                                 && op.matches_first_target_char(word_1char_bytes, input_char)
                         } else {

@@ -61,7 +61,7 @@ fn manual_trace_ab_to_ba() {
         println!("      ✓ (0,1,true) survived!");
     } else {
         println!("      ❌ (0,1,true) was subsumed!");
-        println!("      This is the BUG!");
+        println!("      This is the defect.");
     }
 
     state1.insert(Position::new(1, 1), algorithm, query_length);
@@ -114,10 +114,10 @@ fn manual_trace_ab_to_ba() {
     println!("  p_normal.subsumes(p_special) = {}", subsumes);
 
     if subsumes {
-        println!("  ❌ BUG FOUND: (0,1,false) incorrectly subsumes (0,1,true)!");
+        println!("  ❌ REGRESSION FOUND: (0,1,false) incorrectly subsumes (0,1,true)!");
         println!("     These are DIFFERENT states in transposition logic.");
         println!("     They should coexist!");
-        panic!("Bug confirmed: normal position incorrectly subsumes special position");
+        panic!("Defect confirmed: normal position incorrectly subsumes special position");
     } else {
         println!("  ✓ Subsumption check is correct.");
         if !has_special {

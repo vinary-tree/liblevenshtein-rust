@@ -97,9 +97,9 @@ pub fn pinyin() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/chinese/pinyin.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded chinese/pinyin.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded chinese/pinyin.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Chinese pinyin rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Chinese pinyin rules - this indicates an internal invariant violation")
     })
 }
 
@@ -150,9 +150,9 @@ pub fn characters() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/chinese/characters.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded chinese/characters.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded chinese/characters.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Chinese character rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Chinese character rules - this indicates an internal invariant violation")
     })
 }
 

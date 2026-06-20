@@ -66,7 +66,7 @@ fn trace_yu_to_uy_detailed() {
         println!("    OK Special position (0,1,true) survived!");
     } else {
         println!("    FAIL Special position was removed!");
-        panic!("Bug: special position removed");
+        panic!("Defect: special position removed");
     }
 
     println!("    Final state: {:?}", state1.positions());

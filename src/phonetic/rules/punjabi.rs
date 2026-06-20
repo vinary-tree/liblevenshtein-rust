@@ -97,9 +97,9 @@ pub fn gurmukhi() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/punjabi/gurmukhi.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded punjabi/gurmukhi.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded punjabi/gurmukhi.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Punjabi Gurmukhi rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Punjabi Gurmukhi rules - this indicates an internal invariant violation")
     })
 }
 
@@ -122,9 +122,9 @@ pub fn shahmukhi() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/punjabi/shahmukhi.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded punjabi/shahmukhi.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded punjabi/shahmukhi.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Punjabi Shahmukhi rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Punjabi Shahmukhi rules - this indicates an internal invariant violation")
     })
 }
 

@@ -495,14 +495,14 @@ proptest! {
 }
 
 // ============================================================================
-// Regression Tests (Known Bug Cases)
+// Regression Tests (Known Defect Cases)
 // ============================================================================
 
 #[cfg(test)]
 mod regression_tests {
     use super::*;
 
-    /// Regression test for deletion bug (from proptest_levenshtein.rs)
+    /// Regression test for deletion defect (from proptest_levenshtein.rs)
     #[test]
     fn test_deletion_bug_cross_validation() {
         let dict_words = vec!["test".to_string(), "apple".to_string(), "world".to_string()];
@@ -514,7 +514,7 @@ mod regression_tests {
 
         assert_eq!(
             automaton_results, linear_results,
-            "Deletion bug regression: automaton should match linear scan"
+            "Deletion regression: automaton should match linear scan"
         );
         assert!(
             automaton_results.contains(&"test".to_string()),

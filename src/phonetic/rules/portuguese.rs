@@ -54,9 +54,9 @@ pub fn base() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/portuguese/base.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded portuguese/base.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded portuguese/base.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Portuguese base rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Portuguese base rules - this indicates an internal invariant violation")
     })
 }
 
@@ -79,9 +79,9 @@ pub fn european() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/portuguese/european.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded portuguese/european.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded portuguese/european.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile European Portuguese rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile European Portuguese rules - this indicates an internal invariant violation")
     })
 }
 
@@ -106,9 +106,9 @@ pub fn brazilian() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/portuguese/brazilian.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded portuguese/brazilian.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded portuguese/brazilian.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file).expect(
-            "Failed to compile Brazilian Portuguese rules - this is a bug in liblevenshtein",
+            "Failed to compile Brazilian Portuguese rules - this indicates an internal invariant violation",
         )
     })
 }

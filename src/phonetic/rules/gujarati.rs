@@ -87,9 +87,9 @@ pub fn base() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/gujarati/base.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded gujarati/base.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded gujarati/base.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Gujarati base rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Gujarati base rules - this indicates an internal invariant violation")
     })
 }
 

@@ -72,9 +72,9 @@ pub fn base() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/swedish/base.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded swedish/base.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded swedish/base.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Swedish base rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Swedish base rules - this indicates an internal invariant violation")
     })
 }
 

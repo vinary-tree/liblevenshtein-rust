@@ -549,14 +549,14 @@ proptest! {
 // Regression Tests
 // ============================================================================
 
-/// Regression test for bug where query_ordered() missed exact matches.
+/// Regression test where query_ordered() missed exact matches.
 /// See: prop_ordered_query_same_results failure with dict=["a", "ar"], query="ar", max_dist=1
 ///
 /// Expected behavior:
 /// - query("ar", 1) returns: ["a", "ar"]
 /// - query_ordered("ar", 1) should return the same set: ["a" (d=1), "ar" (d=0)]
 ///
-/// Bug: query_ordered() was returning only ["a"], missing the exact match "ar" (d=0)
+/// Defect: query_ordered() was returning only ["a"], missing the exact match "ar" (d=0)
 /// Root cause: When a final node's actual distance > min_distance (bucket position),
 /// the node was requeued to the correct bucket but its children were not explored.
 /// Fix: Queue children before requeueing the intersection.

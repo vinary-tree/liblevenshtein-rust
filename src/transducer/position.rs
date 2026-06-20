@@ -123,15 +123,15 @@ impl Position {
                     // A normal position should NEVER subsume a special position, as this
                     // would prematurely terminate exploration of valid transposition paths.
                     //
-                    // Example bug case: Query "ab", dict "ba"
+                    // Example defect case: Query "ab", dict "ba"
                     //   (1,1,false) was incorrectly subsuming (0,1,true)
                     //   The special position is needed to complete the transposition!
                     //
-                    // NOTE: The C++ implementation has a bug at line 24 of subsumes.cpp:
+                    // NOTE: The C++ implementation has a defect at line 24 of subsumes.cpp:
                     //   bool t = lhs->is_special();  // Should be rhs->is_special()
-                    // This bug causes s and t to always have the same value, so the
+                    // This defect causes s and t to always have the same value, so the
                     // C++ code never reaches this branch when !s. This accidentally
-                    // avoids the subsumption bug, but for the wrong reason.
+                    // avoids the subsumption defect, but for the wrong reason.
                     if !s {
                         // lhs is normal, rhs is special → cannot subsume
                         return false;
@@ -286,7 +286,7 @@ mod tests {
         );
 
         // lhs special, rhs not: special should NEVER subsume non-special
-        // Bug fix: Special positions (transposition-in-progress) and normal positions
+        // Defect fix: Special positions (transposition-in-progress) and normal positions
         // represent fundamentally different computational paths that cannot be interchanged.
         let p5 = Position::new_special(5, 2);
         let p6 = Position::new(5, 3);
@@ -295,9 +295,9 @@ mod tests {
             "special(5,2) should NOT subsume normal(5,3) - different computational paths"
         );
 
-        // Regression test for bug case: special(0,2) subsuming normal(0,2) caused false negatives
+        // Regression test for defect case: special(0,2) subsuming normal(0,2) caused false negatives
         // Test case: dict=["auou"], query="ou", max_dist=2
-        // Bug: After processing 'u', (0,2,special) was subsuming (0,2), eliminating valid paths
+        // Defect: After processing 'u', (0,2,special) was subsuming (0,2), eliminating valid paths
         let p5a = Position::new_special(0, 2);
         let p5b = Position::new(0, 2);
         assert!(

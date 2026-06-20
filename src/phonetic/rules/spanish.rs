@@ -55,9 +55,9 @@ pub fn base() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/spanish/base.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded spanish/base.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded spanish/base.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Spanish base rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Spanish base rules - this indicates an internal invariant violation")
     })
 }
 
@@ -79,9 +79,9 @@ pub fn castilian() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/spanish/castilian.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded spanish/castilian.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded spanish/castilian.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Castilian rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Castilian rules - this indicates an internal invariant violation")
     })
 }
 
@@ -104,10 +104,10 @@ pub fn latin_american() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/spanish/latin_american.llev");
         let file = crate::phonetic::llev::parse_str(content).expect(
-            "Invalid embedded spanish/latin_american.llev - this is a bug in liblevenshtein",
+            "Invalid embedded spanish/latin_american.llev - this indicates an internal invariant violation",
         );
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Latin American rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Latin American rules - this indicates an internal invariant violation")
     })
 }
 

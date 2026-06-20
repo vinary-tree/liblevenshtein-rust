@@ -52,9 +52,9 @@ pub fn base() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/french/base.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded french/base.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded french/base.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile French base rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile French base rules - this indicates an internal invariant violation")
     })
 }
 
@@ -76,9 +76,9 @@ pub fn standard() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/french/standard.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded french/standard.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded french/standard.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Standard French rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Standard French rules - this indicates an internal invariant violation")
     })
 }
 
@@ -101,9 +101,9 @@ pub fn canadian() -> &'static RuleSetChar {
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/french/canadian.llev");
         let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded french/canadian.llev - this is a bug in liblevenshtein");
+            .expect("Invalid embedded french/canadian.llev - this indicates an internal invariant violation");
         RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Canadian French rules - this is a bug in liblevenshtein")
+            .expect("Failed to compile Canadian French rules - this indicates an internal invariant violation")
     })
 }
 

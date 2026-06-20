@@ -1709,7 +1709,7 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
 
     // Apply case-insensitivity at compile time by wrapping pattern with (?i:...)
     // This ensures the NFA is built with character classes for both cases,
-    // fixing the bug where --ignore-case didn't work with local distance patterns
+    // fixing the defect where --ignore-case didn't work with local distance patterns
     let pattern = if opts.ignore_case {
         format!("(?i:{})", opts.pattern)
     } else {
