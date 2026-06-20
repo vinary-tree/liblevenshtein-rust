@@ -17,6 +17,8 @@ use std::time::Instant;
 use liblevenshtein::dictionary::phonetic_normalized::{
     PhoneticNormalizedDictionary, PhoneticNormalizedTermIdDictionary,
 };
+#[cfg(feature = "phonetic-rules")]
+use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
 #[cfg(all(feature = "phonetic-rules", feature = "embedded-rules"))]
 use liblevenshtein::phonetic::language::rules_for_language;
 #[cfg(feature = "phonetic-rules")]
@@ -92,6 +94,8 @@ enum Workload {
     PhoneticNormalizedBuildTermIdPayloadSweep,
     PhoneticRegexProduct,
     PhoneticRegexProductScan,
+    PhoneticOnlineStatefulScan,
+    PhoneticOnlineBufferedScan,
     BirkbeckFawthrop,
     MittonSpelling,
     TextCorpusLev,
@@ -211,6 +215,8 @@ impl Options {
                         }
                         "phonetic-regex-product" => Workload::PhoneticRegexProduct,
                         "phonetic-regex-product-scan" => Workload::PhoneticRegexProductScan,
+                        "phonetic-online-stateful-scan" => Workload::PhoneticOnlineStatefulScan,
+                        "phonetic-online-buffered-scan" => Workload::PhoneticOnlineBufferedScan,
                         "birkbeck-fawthrop" => Workload::BirkbeckFawthrop,
                         "mitton-spelling" => Workload::MittonSpelling,
                         "text-corpus-lev" | "pizza-chili-text" => Workload::TextCorpusLev,
@@ -219,7 +225,7 @@ impl Options {
                         "cmudict-phonetic-diagnostic" => Workload::CmudictPhoneticDiagnostic,
                         "phonetic-targeted-rules" => Workload::PhoneticTargetedRules,
                         other => panic!(
-                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, ordered-query-first-k, priority-query-first-k, state-minimum-scalar, state-minimum-simd, phonetic-normalized, phonetic-normalized-build-string-payload, phonetic-normalized-build-string-payload-sweep, phonetic-normalized-build-term-id-payload, phonetic-normalized-build-term-id-payload-sweep, phonetic-regex-product, phonetic-regex-product-scan, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
+                            "unknown workload {other:?}; expected all, lev-unordered, lev-ordered, ordered-query-first-k, priority-query-first-k, state-minimum-scalar, state-minimum-simd, phonetic-normalized, phonetic-normalized-build-string-payload, phonetic-normalized-build-string-payload-sweep, phonetic-normalized-build-term-id-payload, phonetic-normalized-build-term-id-payload-sweep, phonetic-regex-product, phonetic-regex-product-scan, phonetic-online-stateful-scan, phonetic-online-buffered-scan, birkbeck-fawthrop, mitton-spelling, text-corpus-lev, openslr-lexicon, cmudict-phonetic, cmudict-phonetic-diagnostic, or phonetic-targeted-rules"
                         ),
                     };
                 }
@@ -302,7 +308,7 @@ impl Options {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|ordered-query-first-k|priority-query-first-k|state-minimum-scalar|state-minimum-simd|phonetic-normalized|phonetic-normalized-build-string-payload|phonetic-normalized-build-string-payload-sweep|phonetic-normalized-build-term-id-payload|phonetic-normalized-build-term-id-payload-sweep|phonetic-regex-product|phonetic-regex-product-scan|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
+                        "usage: cargo run --release --example scientific_eval -- [--samples N] [--warmups N] [--workload all|lev-unordered|lev-ordered|ordered-query-first-k|priority-query-first-k|state-minimum-scalar|state-minimum-simd|phonetic-normalized|phonetic-normalized-build-string-payload|phonetic-normalized-build-string-payload-sweep|phonetic-normalized-build-term-id-payload|phonetic-normalized-build-term-id-payload-sweep|phonetic-regex-product|phonetic-regex-product-scan|phonetic-online-stateful-scan|phonetic-online-buffered-scan|birkbeck-fawthrop|mitton-spelling|text-corpus-lev|openslr-lexicon|cmudict-phonetic|cmudict-phonetic-diagnostic|phonetic-targeted-rules] [--birkbeck-dir DIR] [--mitton-corpus PATH ...] [--text-corpus PATH ...] [--openslr-lexicon PATH ...] [--cmudict PATH] [--corpus-limit N] [--max-distance N] [--recall-k N] [--phonetic-dialect zompist-default|en-us|en-gb|...] [--phonetic-rules-file PATH] [--phonetic-rules-extension PATH ...] [--phonetic-rules-extension-order before|after] [--phonetic-target-file PATH ...] [--diagnostic-limit N]"
                     );
                     std::process::exit(0);
                 }
@@ -1348,6 +1354,104 @@ fn phonetic_regex_product_scan_count(
 }
 
 #[cfg(feature = "phonetic-rules")]
+fn phonetic_online_documents(token_count: usize) -> Vec<String> {
+    const TOKENS: &[&str] = &[
+        "phone",
+        "fone",
+        "telephone",
+        "elephant",
+        "elefant",
+        "knight",
+        "night",
+        "through",
+        "thru",
+        "colour",
+        "color",
+        "alpha",
+        "bravo",
+        "charlie",
+        "delta",
+        "signal",
+        "packet",
+        "window",
+        "buffer",
+        "stream",
+    ];
+
+    let token_count = token_count.max(64);
+    (0..8)
+        .map(|doc_index| {
+            let mut doc = String::with_capacity(token_count * 8);
+            for token_index in 0..token_count {
+                if token_index > 0 {
+                    doc.push(' ');
+                }
+                let idx = (token_index * 7 + doc_index * 3) % TOKENS.len();
+                doc.push_str(TOKENS[idx]);
+            }
+            doc
+        })
+        .collect()
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn run_phonetic_online_scan(
+    samples: usize,
+    warmups: usize,
+    limit: usize,
+    max_distance: usize,
+    phonetic_dialect: &str,
+    phonetic_rules_file: Option<&Path>,
+    phonetic_rule_extensions: &[PathBuf],
+    phonetic_rule_extension_order: RuleExtensionOrder,
+    use_buffered: bool,
+) {
+    let rules = phonetic_rules_from_config(
+        phonetic_dialect,
+        phonetic_rules_file,
+        phonetic_rule_extensions,
+        phonetic_rule_extension_order,
+    );
+    let label = phonetic_label(
+        phonetic_dialect,
+        phonetic_rules_file,
+        phonetic_rule_extensions,
+        phonetic_rule_extension_order,
+    );
+    let patterns = ["phone", "elephant", "knight", "through", "colour"];
+    let greps: Vec<_> = patterns
+        .iter()
+        .map(|pattern| {
+            PhoneticGrepOnline::with_rules(pattern, rules.clone(), max_distance as u8)
+                .case_insensitive(true)
+        })
+        .collect();
+    let documents = phonetic_online_documents(limit);
+
+    measure_with_phonetic_dialect(
+        if use_buffered {
+            "phonetic_online_buffered_scan"
+        } else {
+            "phonetic_online_stateful_scan"
+        },
+        samples,
+        warmups,
+        &label,
+        |sample| {
+            let grep = &greps[sample % greps.len()];
+            let document = &documents[(sample / greps.len()) % documents.len()];
+            let matches = if use_buffered {
+                grep.scan(black_box(document))
+            } else {
+                grep.scan_stateful(black_box(document))
+            };
+
+            MeasureOutcome::synthetic(matches.len())
+        },
+    );
+}
+
+#[cfg(feature = "phonetic-rules")]
 fn cmudict_base_word(raw: &str) -> Option<String> {
     let base = raw.split_once('(').map_or(raw, |(base, _)| base);
     normalize_ascii_word(base)
@@ -1838,6 +1942,21 @@ fn run_phonetic_regex_product(
 }
 
 #[cfg(not(feature = "phonetic-rules"))]
+fn run_phonetic_online_scan(
+    _samples: usize,
+    _warmups: usize,
+    _limit: usize,
+    _max_distance: usize,
+    _phonetic_dialect: &str,
+    _phonetic_rules_file: Option<&Path>,
+    _phonetic_rule_extensions: &[PathBuf],
+    _phonetic_rule_extension_order: RuleExtensionOrder,
+    _use_buffered: bool,
+) {
+    panic!("phonetic-online-scan workload requires --features phonetic-rules");
+}
+
+#[cfg(not(feature = "phonetic-rules"))]
 fn run_cmudict_phonetic(
     _path: &Path,
     _samples: usize,
@@ -2018,6 +2137,32 @@ fn main() {
             &opts.phonetic_rule_extensions,
             opts.phonetic_rule_extension_order,
             false,
+        );
+    }
+    if matches!(opts.workload, Workload::PhoneticOnlineStatefulScan) {
+        run_phonetic_online_scan(
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            opts.max_distance,
+            &opts.phonetic_dialect,
+            opts.phonetic_rules_file.as_deref(),
+            &opts.phonetic_rule_extensions,
+            opts.phonetic_rule_extension_order,
+            false,
+        );
+    }
+    if matches!(opts.workload, Workload::PhoneticOnlineBufferedScan) {
+        run_phonetic_online_scan(
+            opts.samples,
+            opts.warmups,
+            opts.corpus_limit,
+            opts.max_distance,
+            &opts.phonetic_dialect,
+            opts.phonetic_rules_file.as_deref(),
+            &opts.phonetic_rule_extensions,
+            opts.phonetic_rule_extension_order,
+            true,
         );
     }
     if matches!(opts.workload, Workload::BirkbeckFawthrop)
