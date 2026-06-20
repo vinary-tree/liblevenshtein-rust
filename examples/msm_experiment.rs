@@ -505,3 +505,106 @@ fn main() {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static SCRATCH_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    struct ScratchDir {
+        path: PathBuf,
+    }
+
+    impl ScratchDir {
+        fn new(name: &str) -> Self {
+            let id = SCRATCH_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let path = PathBuf::from("target")
+                .join("test-scratch")
+                .join("msm-experiment")
+                .join(name)
+                .join(format!("{}-{}", std::process::id(), id));
+            let _ = fs::remove_dir_all(&path);
+            fs::create_dir_all(&path).expect("failed to create scratch dir");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for ScratchDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+            if let Some(parent) = self.path.parent() {
+                let _ = fs::remove_dir(parent);
+            }
+        }
+    }
+
+    #[test]
+    fn approximate_paa_case_preserves_recall_floor() {
+        let (index, _database, query, exact) = build_approx_case();
+        let approximate = index.search_knn(&query, exact.len());
+        let recall = recall_at_k(&approximate, &exact);
+
+        assert_eq!(approximate.len(), exact.len());
+        assert!(
+            recall >= 0.875,
+            "deterministic approximate MSM recall floor regressed: {recall}"
+        );
+    }
+
+    #[test]
+    fn ucr_txt_loader_and_1nn_outcomes_are_deterministic() {
+        let scratch = ScratchDir::new("txt");
+        let dataset = "ToyPowerDemand";
+        fs::write(
+            scratch.path().join(format!("{dataset}_TRAIN.txt")),
+            "A 0.0 0.0 0.0\nB 10.0 10.0 10.0\n",
+        )
+        .expect("write train split");
+        fs::write(
+            scratch.path().join(format!("{dataset}_TEST.txt")),
+            "A 0.0 0.0 1.0\nB 10.0 9.0 10.0\n",
+        )
+        .expect("write test split");
+
+        let (train, test) = load_ucr_dataset(scratch.path(), dataset).expect("load UCR txt");
+        let (correct, total, accuracy) = ucr_1nn_accuracy(&train, &test, MsmConfig::new(1.0));
+        assert_eq!((correct, total), (2, 2));
+        assert!((accuracy - 1.0).abs() < 1e-12);
+
+        let outcomes = ucr_1nn_outcomes(&train, &test, MsmConfig::new(1.0));
+        assert_eq!(outcomes, vec![(true, true), (false, true)]);
+    }
+
+    #[test]
+    fn ucr_ts_loader_accepts_uea_style_data_section() {
+        let scratch = ScratchDir::new("ts");
+        let dataset = "ToyUeaArchive";
+        fs::write(
+            scratch.path().join(format!("{dataset}_TRAIN.ts")),
+            "@problemName ToyUeaArchive\n@classLabel true A B\n@data\n0.0,0.0,0.0:A\n10.0,10.0,10.0:B\n",
+        )
+        .expect("write train split");
+        fs::write(
+            scratch.path().join(format!("{dataset}_TEST.ts")),
+            "@problemName ToyUeaArchive\n@classLabel true A B\n@data\n0.0,0.0,1.0:A\n10.0,9.0,10.0:B\n",
+        )
+        .expect("write test split");
+
+        let (train, test) = load_ucr_dataset(scratch.path(), dataset).expect("load UCR ts");
+        assert_eq!(train.len(), 2);
+        assert_eq!(test.len(), 2);
+        assert_eq!(train[0].label, "A");
+        assert_eq!(train[1].label, "B");
+
+        let (correct, total, accuracy) = ucr_1nn_accuracy(&train, &test, MsmConfig::new(1.0));
+        assert_eq!((correct, total), (2, 2));
+        assert!((accuracy - 1.0).abs() < 1e-12);
+    }
+}
