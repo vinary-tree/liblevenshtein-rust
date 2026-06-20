@@ -80,7 +80,7 @@ Implement a **separate** `MpDoubleArrayTrie` backend to evaluate the Minimal Pre
 |---------|---------|------------|-------------|----------|
 | **DoubleArrayTrie** | Static/append-only | Build-time only | Fastest (4-13µs) | Read-heavy workloads |
 | **DynamicDawg** | Dynamic | Runtime insert+remove | Slower (98-2384µs) | Mutable dictionaries |
-| **MP DAT** (Planned) | Evaluation | Runtime insert+remove | Unknown | TBD based on benchmarks |
+| **MP DAT** (Planned) | Evaluation | Runtime insert+remove | Unknown | requires benchmark evidence |
 
 ### Motivation for Separate Implementation
 
