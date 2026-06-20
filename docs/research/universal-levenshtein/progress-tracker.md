@@ -639,18 +639,18 @@ This document tracks the implementation progress of Universal Levenshtein Automa
 
 ### Test Coverage
 
-- **Unit tests**: 0 / TBD
-- **Integration tests**: 0 / TBD
-- **Benchmark tests**: 0 / TBD
+- **Unit tests**: 0 / not enumerated in this archived tracker
+- **Integration tests**: 0 / not enumerated in this archived tracker
+- **Benchmark tests**: 0 / not enumerated in this archived tracker
 - **Coverage percentage**: 0%
 
 *(Update after each phase)*
 
 ### Performance
 
-- **Baseline (no restrictions)**: TBD
-- **With restrictions (QWERTY)**: TBD
-- **Overhead percentage**: TBD
+- **Baseline (no restrictions)**: not measured in this archived tracker
+- **With restrictions (QWERTY)**: not measured in this archived tracker
+- **Overhead percentage**: not measured in this archived tracker
 
 *(Update after Phase 3 benchmarks)*
 
@@ -661,10 +661,10 @@ This document tracks the implementation progress of Universal Levenshtein Automa
 | Phase | Start Date | Target End | Actual End | Status |
 |-------|-----------|------------|------------|--------|
 | Phase 0 (Planning) | 2025-11-06 | 2025-11-06 | 2025-11-06 | ✅ Complete |
-| Phase 1 (Core) | TBD | Week 2 | — | ⏳ Not Started |
-| Phase 2 (Use Cases) | TBD | Week 3 | — | ⏳ Not Started |
-| Phase 3 (Integration) | TBD | Week 4 | — | ⏳ Not Started |
-| Phase 4 (Optimization) | TBD | Week 5 | — | ⏳ Not Started |
+| Phase 1 (Core) | not scheduled | Week 2 | — | ⏳ Not Started |
+| Phase 2 (Use Cases) | not scheduled | Week 3 | — | ⏳ Not Started |
+| Phase 3 (Integration) | not scheduled | Week 4 | — | ⏳ Not Started |
+| Phase 4 (Optimization) | not scheduled | Week 5 | — | ⏳ Not Started |
 
 ---
 
