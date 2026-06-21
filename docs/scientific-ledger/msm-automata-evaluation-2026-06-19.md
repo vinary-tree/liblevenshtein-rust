@@ -19,7 +19,7 @@ work also used the UCR and UEA archive papers as the benchmark plan references:
 The evaluation was tracked in pgmcp under
 `msm-automata-scientific-evaluation`, with protocol-backed experiments
 `msm-002`, `msm-003`, `msm-004`, `msm-006`, `msm-007`, `msm-008`,
-`msm-009`, and `msm-010`.
+`msm-009`, `msm-010`, and `msm-011`.
 
 ## Method
 
@@ -32,9 +32,12 @@ systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0 ...
 No benchmark corpora were placed in `/tmp`. The deterministic local harness is
 `examples/msm_experiment.rs`; Criterion coverage is in
 `benches/msm_benchmarks.rs`. The harness accepts UCR `.txt` splits and
-UEA/tslearn-style `.ts` splits under a caller-supplied dataset directory, so
-large public corpora can be cached under ignored `target/msm-corpora/` or an XDG
-cache instead of being committed or staged in tmpfs.
+UEA/aeon-style `.ts` splits under a caller-supplied dataset directory, so large
+public corpora can be cached under ignored `target/msm-corpora/` or an XDG cache
+instead of being committed or staged in tmpfs. Missing `.ts` values encoded as
+`?` or `NaN` are linearly imputed before distance evaluation, matching the
+standard archive representation while keeping the MSM implementation itself
+strictly numeric.
 
 For the accepted timing experiments, each arm used 51 measured samples after
 warm-up. The deterministic synthetic exact-transducer workload indexes 512
@@ -51,6 +54,7 @@ stable checksum.
 | `msm-005-bin-path-storage` | partially accepted | Precomputed bin bounds retained; path/bucket interning was not retained because it was not isolated as a bottleneck. | `046c5ab` |
 | `msm-008-approximate-msm-ann` | accepted as an opt-in approximate API | `ApproxMsmIndex` uses PAA feature ranking plus exact MSM reranking; deterministic harness coverage now checks a recall floor without changing exact `MsmTransducer` semantics. | `dd534ae` |
 | academic UCR/UEA harness | accepted as adapter coverage | `examples/msm_experiment.rs` loads UCR `.txt` and UEA-style `.ts` train/test splits and reports MSM 1-NN latency, accuracy, and per-case outcomes; repo-local tests cover both parsers and deterministic 1-NN outcomes. | `dd534ae` |
+| `msm-011-ucr-archive-exact-1nn-academic-benchmark` | accepted as paired benchmark evidence | Official UCR/aeon univariate archive slice: exact MSM 1-NN reached `11653/13754 = 0.847244` accuracy versus majority baseline `5664/13754 = 0.411807`; server-computed McNemar evidence had `control_only=415`, `treatment_only=6404`, `n_discordant=6819`, `p=0.0`. | pending commit |
 
 The retained code changes are:
 
@@ -67,6 +71,57 @@ The retained code changes are:
 - The MSM experiment harness supports UCR `.txt` and UEA-style `.ts` split
   formats for standard time-series benchmark evaluation without committing
   large corpora to the repository.
+- The academic archive path uses exact 1-NN with `length_lb` pruning and
+  `MsmConfig::distance_with_cutoff` early abandonment. This preserves exactness
+  while avoiding many full dynamic-programming evaluations after a better
+  nearest-neighbor cutoff is known.
+
+## Academic UCR Archive Result
+
+`msm-011` evaluated the official UCR/aeon univariate archive cached under
+`target/msm-corpora/Univariate_ts`. To keep the capped run bounded on this
+machine, the completed slice included every dataset whose estimated work was at
+most `train_count * test_count * series_len^2 <= 1,000,000,000` dynamic
+programming cells. That deterministic rule selected 51 datasets and excluded 77
+larger datasets from the full 128-dataset archive.
+
+The result artifact is:
+
+```text
+target/msm-corpora/results/msm_ucr_archive_1b_all.csv
+```
+
+The aggregate result was:
+
+| Metric | Value |
+| --- | ---: |
+| Completed datasets | 51 |
+| Test cases | 13,754 |
+| Majority-baseline correct | 5,664 |
+| Exact MSM 1-NN correct | 11,653 |
+| Majority accuracy | 0.411807 |
+| Exact MSM 1-NN accuracy | 0.847244 |
+| Estimated dynamic-programming cells | 19,177,963,729 |
+| Candidate distance evaluations | 1,154,677 |
+| Lower-bound prunes | 152,272 |
+| Cutoff-abandoned evaluations | 1,087,933 |
+
+The paired correctness table recorded in pgmcp is:
+
+| Cell | Count |
+| --- | ---: |
+| Both arms correct | 5,249 |
+| Majority only correct | 415 |
+| Exact MSM 1-NN only correct | 6,404 |
+| Both arms wrong | 1,686 |
+
+pgmcp computed the McNemar result server-side from those counts:
+`statistic = 5258.27012758469`, `n_discordant = 6819`, and `p_value = 0.0`
+as reported by the daemon. The older 139-sample bucket-mean run in MSM-011 was
+marked invalid because it did not match the locked binary unit. The current
+pgmcp hardening API stores the paired-binary evidence but does not yet convert
+that evidence into an `experiment_decide` hypothesis verdict, so the structured
+experiment remains `measuring` while the paired benchmark evidence is auditable.
 
 ## Non-Retained Or Boundary Decisions
 

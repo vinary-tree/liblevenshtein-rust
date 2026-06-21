@@ -68,6 +68,7 @@ rules, and verification gates to the empirical evidence without querying pgmcp.
 | ID | pgmcp experiment | Decision | Evidence |
 |----|------------------|----------|----------|
 | BENCH-005 | `bench-005-academic-corpus-gate` | Require external-validity checks for accepted automata/WFST treatments. | Accepted with `multi_suite_regression_count` improvement, Welch p < 1e-6. The gate covers Birkbeck/Fawthrop, Mitton-style spelling corpora, CMUdict homophones, text throughput/RSS, and OpenSLR/LibriSpeech-style WFST lexicon fixtures. |
+| MSM-011 | `msm-011-ucr-archive-exact-1nn-academic-benchmark` | Accept the official UCR/aeon univariate archive slice as paired benchmark evidence for exact MSM 1-NN. | On 51 datasets bounded by `train * test * length^2 <= 1e9`, exact MSM 1-NN reached `11653/13754 = 0.847244` accuracy versus majority baseline `5664/13754 = 0.411807`. pgmcp's paired-binary endpoint computed McNemar evidence from `control_only=415`, `treatment_only=6404`, `n_discordant=6819`, `p=0.0`; the previous 139-sample bucket run is invalidated. |
 
 ## WFST and Cross-Crate Boundary
 

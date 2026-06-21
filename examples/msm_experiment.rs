@@ -20,14 +20,37 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use liblevenshtein::time_series::{
-    msm_distance_automaton, msm_distance_wavefront, ApproxMsmConfig, ApproxMsmIndex, MsmConfig,
-    MsmTransducer, QuantizationConfig,
+    length_lb, msm_distance_automaton, msm_distance_wavefront, ApproxMsmConfig, ApproxMsmIndex,
+    MsmConfig, MsmTransducer, QuantizationConfig,
 };
 
 #[derive(Debug, Clone)]
 struct LabeledSeries {
     label: String,
     series: Vec<f64>,
+}
+
+#[derive(Debug, Clone)]
+struct DatasetCandidate {
+    name: String,
+    dir: PathBuf,
+    train_count: usize,
+    test_count: usize,
+    series_len: usize,
+    estimated_cells: u128,
+}
+
+#[derive(Debug, Clone)]
+struct DatasetEvaluation {
+    candidate: DatasetCandidate,
+    majority_correct: usize,
+    msm_correct: usize,
+    total: usize,
+    exact_evaluations: usize,
+    lb_pruned: usize,
+    cutoff_abandoned: usize,
+    elapsed_ms: f64,
+    outcomes: Vec<(bool, bool)>,
 }
 
 fn generate_series(len: usize, seed: u64) -> Vec<f64> {
@@ -170,6 +193,53 @@ fn build_approx_case() -> (
     (index, database, query, exact)
 }
 
+fn impute_missing_linear(series: &mut [f64]) {
+    let known: Vec<(usize, f64)> = series
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|(_, value)| value.is_finite())
+        .collect();
+    if known.is_empty() {
+        series.fill(0.0);
+        return;
+    }
+
+    let (first_idx, first_value) = known[0];
+    for value in &mut series[..first_idx] {
+        *value = first_value;
+    }
+
+    for window in known.windows(2) {
+        let (left_idx, left_value) = window[0];
+        let (right_idx, right_value) = window[1];
+        series[left_idx] = left_value;
+        for idx in left_idx + 1..right_idx {
+            let ratio = (idx - left_idx) as f64 / (right_idx - left_idx) as f64;
+            series[idx] = left_value + (right_value - left_value) * ratio;
+        }
+    }
+
+    let (last_idx, last_value) = *known.last().unwrap();
+    series[last_idx] = last_value;
+    for value in &mut series[last_idx + 1..] {
+        *value = last_value;
+    }
+}
+
+fn parse_series_value(path: &Path, line_no: usize, value: &str) -> Result<f64, String> {
+    let trimmed = value.trim();
+    if trimmed == "?" || trimmed.eq_ignore_ascii_case("nan") {
+        return Ok(f64::NAN);
+    }
+    trimmed.parse::<f64>().map_err(|err| {
+        format!(
+            "{path:?}:{} invalid numeric value {value:?}: {err}",
+            line_no
+        )
+    })
+}
+
 fn parse_ucr_ts(path: &Path) -> Result<Vec<LabeledSeries>, String> {
     let content =
         fs::read_to_string(path).map_err(|err| format!("failed to read {path:?}: {err}"))?;
@@ -190,17 +260,11 @@ fn parse_ucr_ts(path: &Path) -> Result<Vec<LabeledSeries>, String> {
         let (values, label) = line
             .rsplit_once(':')
             .ok_or_else(|| format!("{path:?}:{} missing ':' label separator", line_no + 1))?;
-        let series = values
+        let mut series = values
             .split(',')
-            .map(|value| {
-                value.trim().parse::<f64>().map_err(|err| {
-                    format!(
-                        "{path:?}:{} invalid numeric value {value:?}: {err}",
-                        line_no + 1
-                    )
-                })
-            })
+            .map(|value| parse_series_value(path, line_no + 1, value))
             .collect::<Result<Vec<_>, _>>()?;
+        impute_missing_linear(&mut series);
         rows.push(LabeledSeries {
             label: label.trim().to_string(),
             series,
@@ -222,16 +286,10 @@ fn parse_ucr_txt(path: &Path) -> Result<Vec<LabeledSeries>, String> {
         let label = fields
             .next()
             .ok_or_else(|| format!("{path:?}:{} missing label", line_no + 1))?;
-        let series = fields
-            .map(|value| {
-                value.parse::<f64>().map_err(|err| {
-                    format!(
-                        "{path:?}:{} invalid numeric value {value:?}: {err}",
-                        line_no + 1
-                    )
-                })
-            })
+        let mut series = fields
+            .map(|value| parse_series_value(path, line_no + 1, value))
             .collect::<Result<Vec<_>, _>>()?;
+        impute_missing_linear(&mut series);
         rows.push(LabeledSeries {
             label: label.to_string(),
             series,
@@ -269,6 +327,51 @@ fn load_ucr_dataset(
     Ok((parse(&train_path)?, parse(&test_path)?))
 }
 
+fn estimate_dataset_candidate(
+    dataset_dir: &Path,
+    dataset_name: &str,
+) -> Result<DatasetCandidate, String> {
+    let (train, test) = load_ucr_dataset(dataset_dir, dataset_name)?;
+    let series_len = train
+        .first()
+        .or_else(|| test.first())
+        .map(|row| row.series.len())
+        .unwrap_or(0);
+    let estimated_cells =
+        train.len() as u128 * test.len() as u128 * series_len as u128 * series_len as u128;
+    Ok(DatasetCandidate {
+        name: dataset_name.to_string(),
+        dir: dataset_dir.to_path_buf(),
+        train_count: train.len(),
+        test_count: test.len(),
+        series_len,
+        estimated_cells,
+    })
+}
+
+fn discover_ucr_archive(root: &Path) -> Result<Vec<DatasetCandidate>, String> {
+    let mut candidates = Vec::new();
+    for entry in fs::read_dir(root).map_err(|err| format!("failed to read {root:?}: {err}"))? {
+        let entry = entry.map_err(|err| format!("failed to read entry in {root:?}: {err}"))?;
+        if !entry
+            .file_type()
+            .map_err(|err| format!("failed to read file type for {:?}: {err}", entry.path()))?
+            .is_dir()
+        {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        let candidate = estimate_dataset_candidate(&entry.path(), &name)?;
+        candidates.push(candidate);
+    }
+    candidates.sort_by(|left, right| {
+        left.estimated_cells
+            .cmp(&right.estimated_cells)
+            .then_with(|| left.name.cmp(&right.name))
+    });
+    Ok(candidates)
+}
+
 fn ucr_1nn_accuracy(
     train: &[LabeledSeries],
     test: &[LabeledSeries],
@@ -298,6 +401,86 @@ fn ucr_1nn_accuracy(
         correct as f64 / total as f64
     };
     (correct, total, accuracy)
+}
+
+fn predict_1nn_cutoff<'a>(
+    train: &'a [LabeledSeries],
+    probe: &[f64],
+    msm: MsmConfig,
+    exact_evaluations: &mut usize,
+    lb_pruned: &mut usize,
+    cutoff_abandoned: &mut usize,
+) -> &'a str {
+    let mut best_label = "";
+    let mut best_distance = f64::INFINITY;
+
+    for candidate in train {
+        if length_lb(probe, &candidate.series, msm.c) > best_distance {
+            *lb_pruned += 1;
+            continue;
+        }
+        *exact_evaluations += 1;
+        match msm.distance_with_cutoff(probe, &candidate.series, best_distance) {
+            Some(distance) => {
+                if distance < best_distance {
+                    best_distance = distance;
+                    best_label = candidate.label.as_str();
+                }
+            }
+            None => {
+                *cutoff_abandoned += 1;
+            }
+        }
+    }
+
+    best_label
+}
+
+fn evaluate_ucr_dataset(
+    candidate: &DatasetCandidate,
+    msm: MsmConfig,
+) -> Result<DatasetEvaluation, String> {
+    let (train, test) = load_ucr_dataset(&candidate.dir, &candidate.name)?;
+    let majority = majority_label(&train).to_string();
+    let started = Instant::now();
+    let mut majority_correct = 0usize;
+    let mut msm_correct = 0usize;
+    let mut exact_evaluations = 0usize;
+    let mut lb_pruned = 0usize;
+    let mut cutoff_abandoned = 0usize;
+    let mut outcomes = Vec::with_capacity(test.len());
+
+    for probe in &test {
+        let majority_hit = majority == probe.label;
+        if majority_hit {
+            majority_correct += 1;
+        }
+        let predicted = predict_1nn_cutoff(
+            &train,
+            &probe.series,
+            msm,
+            &mut exact_evaluations,
+            &mut lb_pruned,
+            &mut cutoff_abandoned,
+        );
+        let msm_hit = predicted == probe.label;
+        if msm_hit {
+            msm_correct += 1;
+        }
+        outcomes.push((majority_hit, msm_hit));
+    }
+
+    Ok(DatasetEvaluation {
+        candidate: candidate.clone(),
+        majority_correct,
+        msm_correct,
+        total: test.len(),
+        exact_evaluations,
+        lb_pruned,
+        cutoff_abandoned,
+        elapsed_ms: started.elapsed().as_secs_f64() * 1000.0,
+        outcomes,
+    })
 }
 
 fn majority_label(train: &[LabeledSeries]) -> &str {
@@ -335,6 +518,31 @@ fn ucr_1nn_outcomes(
                 .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
                 .map(|(label, _)| label)
                 .unwrap_or("");
+            (majority == probe.label, predicted == probe.label)
+        })
+        .collect()
+}
+
+#[cfg(test)]
+fn ucr_1nn_outcomes_cutoff(
+    train: &[LabeledSeries],
+    test: &[LabeledSeries],
+    msm: MsmConfig,
+) -> Vec<(bool, bool)> {
+    let majority = majority_label(train).to_string();
+    let mut exact_evaluations = 0usize;
+    let mut lb_pruned = 0usize;
+    let mut cutoff_abandoned = 0usize;
+    test.iter()
+        .map(|probe| {
+            let predicted = predict_1nn_cutoff(
+                train,
+                &probe.series,
+                msm,
+                &mut exact_evaluations,
+                &mut lb_pruned,
+                &mut cutoff_abandoned,
+            );
             (majority == probe.label, predicted == probe.label)
         })
         .collect()
@@ -391,6 +599,96 @@ fn main() {
     let (index, query) = build_case();
     let (variable_index, variable_query, variable_threshold) = build_variable_case();
     let approx_case = scenario.starts_with("approx-").then(build_approx_case);
+    if scenario == "ucr-archive-summary" {
+        let archive_root = args
+            .next()
+            .unwrap_or_else(|| "target/msm-corpora/Univariate_ts".to_string());
+        let max_dataset_cells = args
+            .next()
+            .and_then(|s| s.parse::<u128>().ok())
+            .unwrap_or(u128::MAX);
+        let max_datasets = args
+            .next()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(usize::MAX);
+        println!("dataset,train_count,test_count,series_len,estimated_cells,selected");
+        for candidate in discover_ucr_archive(Path::new(&archive_root))
+            .unwrap_or_else(|err| panic!("failed to discover UCR archive: {err}"))
+            .into_iter()
+            .take(max_datasets)
+        {
+            println!(
+                "{},{},{},{},{},{}",
+                candidate.name,
+                candidate.train_count,
+                candidate.test_count,
+                candidate.series_len,
+                candidate.estimated_cells,
+                u8::from(candidate.estimated_cells <= max_dataset_cells),
+            );
+        }
+        return;
+    }
+    if scenario == "ucr-archive-1nn" {
+        let archive_root = args
+            .next()
+            .unwrap_or_else(|| "target/msm-corpora/Univariate_ts".to_string());
+        let max_dataset_cells = args
+            .next()
+            .and_then(|s| s.parse::<u128>().ok())
+            .unwrap_or(1_000_000_000);
+        let max_datasets = args
+            .next()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(usize::MAX);
+        let candidates = discover_ucr_archive(Path::new(&archive_root))
+            .unwrap_or_else(|err| panic!("failed to discover UCR archive: {err}"));
+        println!("record_type,dataset,field_a,field_b,field_c,field_d,field_e,field_f,field_g,field_h,field_i,field_j,field_k");
+        for candidate in candidates
+            .into_iter()
+            .filter(|candidate| candidate.estimated_cells <= max_dataset_cells)
+            .take(max_datasets)
+        {
+            let evaluation = evaluate_ucr_dataset(&candidate, MsmConfig::new(1.0))
+                .unwrap_or_else(|err| panic!("failed to evaluate {}: {err}", candidate.name));
+            let accuracy = if evaluation.total == 0 {
+                0.0
+            } else {
+                evaluation.msm_correct as f64 / evaluation.total as f64
+            };
+            println!(
+                "summary,{},{},{},{},{},{},{},{},{:.12},{},{},{},{}",
+                evaluation.candidate.name,
+                evaluation.candidate.train_count,
+                evaluation.candidate.test_count,
+                evaluation.candidate.series_len,
+                evaluation.candidate.estimated_cells,
+                evaluation.majority_correct,
+                evaluation.msm_correct,
+                evaluation.total,
+                accuracy,
+                evaluation.exact_evaluations,
+                evaluation.lb_pruned,
+                evaluation.cutoff_abandoned,
+                evaluation.elapsed_ms
+            );
+            for (case, (majority_correct, msm_correct)) in evaluation.outcomes.iter().enumerate() {
+                println!(
+                    "case,{},majority,{},{},,,,,,,,,",
+                    evaluation.candidate.name,
+                    case,
+                    u8::from(*majority_correct)
+                );
+                println!(
+                    "case,{},exact_msm_1nn,{},{},,,,,,,,,",
+                    evaluation.candidate.name,
+                    case,
+                    u8::from(*msm_correct)
+                );
+            }
+        }
+        return;
+    }
     let ucr_case = if scenario.starts_with("ucr-") {
         let dataset_dir = args
             .next()
@@ -580,6 +878,9 @@ mod tests {
 
         let outcomes = ucr_1nn_outcomes(&train, &test, MsmConfig::new(1.0));
         assert_eq!(outcomes, vec![(true, true), (false, true)]);
+
+        let cutoff_outcomes = ucr_1nn_outcomes_cutoff(&train, &test, MsmConfig::new(1.0));
+        assert_eq!(cutoff_outcomes, outcomes);
     }
 
     #[test]
@@ -593,7 +894,7 @@ mod tests {
         .expect("write train split");
         fs::write(
             scratch.path().join(format!("{dataset}_TEST.ts")),
-            "@problemName ToyUeaArchive\n@classLabel true A B\n@data\n0.0,0.0,1.0:A\n10.0,9.0,10.0:B\n",
+            "@problemName ToyUeaArchive\n@classLabel true A B\n@data\n0.0,?,1.0:A\n10.0,9.0,10.0:B\n",
         )
         .expect("write test split");
 
@@ -602,9 +903,23 @@ mod tests {
         assert_eq!(test.len(), 2);
         assert_eq!(train[0].label, "A");
         assert_eq!(train[1].label, "B");
+        assert_eq!(test[0].series, vec![0.0, 0.5, 1.0]);
 
         let (correct, total, accuracy) = ucr_1nn_accuracy(&train, &test, MsmConfig::new(1.0));
         assert_eq!((correct, total), (2, 2));
         assert!((accuracy - 1.0).abs() < 1e-12);
+
+        let candidate =
+            estimate_dataset_candidate(scratch.path(), dataset).expect("estimate dataset");
+        assert_eq!(candidate.train_count, 2);
+        assert_eq!(candidate.test_count, 2);
+        assert_eq!(candidate.series_len, 3);
+        assert_eq!(candidate.estimated_cells, 36);
+
+        let evaluation = evaluate_ucr_dataset(&candidate, MsmConfig::new(1.0)).expect("evaluate");
+        assert_eq!(evaluation.majority_correct, 1);
+        assert_eq!(evaluation.msm_correct, 2);
+        assert_eq!(evaluation.total, 2);
+        assert_eq!(evaluation.outcomes, vec![(true, true), (false, true)]);
     }
 }
