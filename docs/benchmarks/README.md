@@ -50,6 +50,14 @@ Comprehensive analysis of DAT implementation:
 
 ### Algorithm-Specific Analysis
 
+#### [Academic Benchmark Reproduction](academic-benchmarks.md)
+Repeatable commands for the UCR/UEA MSM archive benchmark and the CMUdict
+phonetic homophone benchmark:
+- Scripted corpus preparation and cleanup
+- Memory-capped execution with `systemd-run`
+- Cargo aliases for already-prepared corpora
+- Result artifact locations for pgmcp experiment tracking
+
 #### [DAWG Optimization Analysis](DAWG_OPTIMIZATION_ANALYSIS.md)
 Analysis of DAWG optimization techniques:
 - Minimization algorithm

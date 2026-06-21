@@ -28,3 +28,11 @@ rustflags = ["-C", "target-cpu=native"]
 cov = "llvm-cov --branch --all-features --html --output-dir coverage/"
 cov-text = "llvm-cov --branch --all-features --text"
 cov-open = "llvm-cov --branch --all-features --html --open"
+
+# Academic benchmark aliases. These assume corpora have already been prepared
+# under target/academic-benchmarks; use scripts/run-academic-benchmarks.sh for
+# download/extract/cleanup orchestration and memory-capped execution.
+academic-msm-ucr-summary = "run --release --example msm_experiment -- ucr-archive-summary 0 0 target/academic-benchmarks/msm/Univariate_ts 1000000000 1000"
+academic-msm-ucr = "run --release --example msm_experiment -- ucr-archive-1nn 0 0 target/academic-benchmarks/msm/Univariate_ts 1000000000 1000"
+academic-phonetic-cmudict = "run --release --features phonetic-rules,embedded-rules --example scientific_eval -- --workload cmudict-phonetic --cmudict target/academic-benchmarks/phonetic/cmudict.dict --corpus-limit 2048 --samples 2048 --warmups 0 --max-distance 2 --recall-k 5 --phonetic-dialect en-us-cmudict"
+academic-phonetic-cmudict-diagnostic = "run --release --features phonetic-rules,embedded-rules --example scientific_eval -- --workload cmudict-phonetic-diagnostic --cmudict target/academic-benchmarks/phonetic/cmudict.dict --corpus-limit 2048 --diagnostic-limit 2048 --max-distance 2 --recall-k 5 --phonetic-dialect en-us-cmudict"
