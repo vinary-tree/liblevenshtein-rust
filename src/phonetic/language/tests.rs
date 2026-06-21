@@ -411,6 +411,25 @@ fn test_american_english_cmudict_rules_include_exact_homophones() {
 }
 
 #[test]
+fn test_american_english_cmudict_rules_cover_name_variants() {
+    let rules = american_english_cmudict_rules();
+    let dict =
+        PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["acker", "aker", "akre"], rules);
+
+    let candidates = dict.query("acker", 0);
+    let terms = candidates
+        .iter()
+        .map(|candidate| candidate.term.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert!(
+        ["acker", "aker", "akre"]
+            .iter()
+            .all(|term| terms.contains(term)),
+        "expected the CMUdict profile to retrieve the complete AEKER family, got {terms:?}"
+    );
+}
+
+#[test]
 fn test_british_english_rules_not_empty() {
     let rules = british_english_rules();
     assert!(

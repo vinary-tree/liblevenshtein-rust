@@ -32,8 +32,11 @@ pub(crate) fn american_english_rules() -> Vec<RewriteRuleChar> {
 pub(crate) fn american_english_cmudict_rules() -> Vec<RewriteRuleChar> {
     use crate::phonetic::rules::english;
 
-    let mut rules = american_english_rules();
+    let mut rules = Vec::new();
+    // Whole-word CMUdict entries must fire before general grapheme rules; this
+    // mirrors the LLev extension-before profile used by the benchmark harness.
     rules.extend(english::cmudict_homophones().rules.iter().cloned());
+    rules.extend(american_english_rules());
     rules
 }
 
