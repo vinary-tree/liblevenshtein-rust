@@ -488,6 +488,27 @@ The interval lower bounds and quantization soundness carry **admit-free** Coq/Ro
 
 ---
 
+## Completed External-Corpus Benchmark Evidence
+
+The table below lists the completed, non-synthetic benchmark evidence currently
+recorded in pgmcp and the repository scientific ledger. Synthetic microbenchmarks
+and deterministic conformance gates are intentionally omitted from this README
+summary; rerun commands and artifact naming are documented in
+[Academic Benchmark Reproduction](docs/benchmarks/academic-benchmarks.md).
+
+| Automata path | External corpus | Completed measure | Result |
+| --- | --- | --- | --- |
+| Exact MSM automata / `MsmTransducer` k-NN | UCR/aeon 2018 univariate time-series archive slice [[14]](#references) | Exact 1-NN classification against a majority-label baseline | 51 datasets selected by `train_count * test_count * series_len^2 <= 1e9`; exact MSM 1-NN reached `11653/13754 = 0.847244` accuracy versus majority baseline `5664/13754 = 0.411807`. pgmcp recorded paired evidence `control_only=415`, `treatment_only=6404`, `n_discordant=6819`, `p_value=0.0`. The exact run used `1,154,677` candidate distance evaluations, `152,272` lower-bound prunes, and `1,087,933` cutoff-abandoned evaluations. |
+| Phonetic automata / LLev English profiles | CMU Pronouncing Dictionary homophone groups [[15]](#references) | Recall@5 over the first 2048 CMUdict homophone cases | Fixed `en-us-cmudict` matched `3768/3960` expected homophone rows with mean recall@5 `0.985597` and mean reciprocal rank `0.987402`. The comparison profiles were Zompist `2109/3960`, mean recall@5 `0.642223`, and `american.llev + homophones.llev + names.llev` `2086/3960`, mean recall@5 `0.627313`. The post-fix diagnostic found `0` coverage gaps and `0` normalized-index/query bugs; remaining misses were top-k ceiling or ambiguous-pronunciation ranking cases. |
+| Ordered Levenshtein query automata | Birkbeck/Fawthrop spelling-error gate [[16]](#references) | Ordered recall and optimization gate on real spelling-error cases | Recall@5 stayed `50/51`; ordered p95 latency improved with Welch `p < 1e-6` and Cohen's `d ~= -2.16`. Allocation count improved, while allocated bytes increased because the accepted arena treatment stores vector-backed query state. |
+
+Full experiment decisions are summarized in
+[`docs/scientific-ledger/automata-wfst-evaluation.md`](docs/scientific-ledger/automata-wfst-evaluation.md)
+and
+[`docs/scientific-ledger/msm-automata-evaluation-2026-06-19.md`](docs/scientific-ledger/msm-automata-evaluation-2026-06-19.md).
+
+---
+
 ## WallBreaker (Large Error Bounds)
 
 A plain Levenshtein automaton hits a **wall** at large `k`: the first `k` steps must explore *every* prefix of length `≤ k`, regardless of the data. At `k = 16` that is ruinous. **WallBreaker** sidesteps it with the **pigeonhole principle**.
@@ -806,6 +827,9 @@ Enabling a feature enables the features it depends on (`A → B` = "A enables B"
 11. J. Aoe. "An Efficient Digital Search Algorithm by Using a Double-Array Structure." *IEEE Transactions on Software Engineering*, 15(9):1066–1077, 1989. [doi:10.1109/32.31365](https://doi.org/10.1109/32.31365)
 12. V. Leis, A. Kemper, and T. Neumann. "The adaptive radix tree: ARTful indexing for main-memory databases." *IEEE ICDE 2013*, pp. 38–49. [doi:10.1109/ICDE.2013.6544812](https://doi.org/10.1109/ICDE.2013.6544812)
 13. B. H. Bloom. "Space/time trade-offs in hash coding with allowable errors." *Communications of the ACM*, 13(7):422–426, 1970. [doi:10.1145/362686.362692](https://doi.org/10.1145/362686.362692)
+14. H. A. Dau, A. Bagnall, K. Kamgar, C.-C. M. Yeh, Y. Zhu, S. Gharghabi, C. A. Ratanamahatana, and E. Keogh. "The UCR Time Series Archive." arXiv:1810.07758, 2018. [arXiv](https://arxiv.org/abs/1810.07758)
+15. Carnegie Mellon University. "The CMU Pronouncing Dictionary." [cmusphinx/cmudict](https://github.com/cmusphinx/cmudict)
+16. R. Mitton. "Birkbeck spelling error corpus." Oxford Text Archive, ota:0643, 1980. [OTA record](https://ota.bodleian.ox.ac.uk/repository/xmlui/handle/20.500.12024/0643)
 
 **Project documentation:** [algorithm research](docs/research/levenshtein-automata/README.md) · [implementation mapping](docs/research/levenshtein-automata/implementation-mapping.md) · [architecture](docs/developer-guide/architecture.md) · [benchmarks](docs/benchmarks/README.md) · [formal verification](docs/verification/README.md). Upstream: [original Java implementation](https://github.com/universal-automata/liblevenshtein-java).
 
