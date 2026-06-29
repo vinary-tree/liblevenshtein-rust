@@ -5,7 +5,7 @@
 use super::highlighter::CommandHighlighter;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
-use rustyline::highlight::Highlighter;
+use rustyline::highlight::{CmdKind, Highlighter};
 use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Context, Helper};
@@ -186,8 +186,8 @@ impl Highlighter for LevenshteinHelper {
         self.highlighter.highlight(line, pos)
     }
 
-    fn highlight_char(&self, line: &str, pos: usize, _forced: bool) -> bool {
-        self.highlighter.highlight_char(line, pos, _forced)
+    fn highlight_char(&self, line: &str, pos: usize, kind: CmdKind) -> bool {
+        self.highlighter.highlight_char(line, pos, kind)
     }
 }
 

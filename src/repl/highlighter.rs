@@ -6,7 +6,7 @@
 //! parse or execute input (that is [`crate::repl::command`]).
 
 use colored::Colorize;
-use rustyline::highlight::Highlighter;
+use rustyline::highlight::{CmdKind, Highlighter};
 
 /// Command highlighter
 pub struct CommandHighlighter {
@@ -197,7 +197,7 @@ impl Highlighter for CommandHighlighter {
         std::borrow::Cow::Owned(self.highlight_command(line))
     }
 
-    fn highlight_char(&self, _line: &str, _pos: usize, _forced: bool) -> bool {
+    fn highlight_char(&self, _line: &str, _pos: usize, _kind: CmdKind) -> bool {
         true
     }
 }
