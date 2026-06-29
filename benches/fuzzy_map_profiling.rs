@@ -3,7 +3,8 @@
 //! This benchmark is designed to run with flamegraph to identify
 //! bottlenecks in value-filtered queries vs post-filtered queries.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, Criterion};
 use liblevenshtein::prelude::*;
 
 /// Create a dictionary with u32 scope IDs

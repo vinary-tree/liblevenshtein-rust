@@ -10,7 +10,8 @@
 //!   cargo bench --bench scdawg_optimization_benchmarks --features scdawg-bloom
 //!   cargo bench --bench scdawg_optimization_benchmarks --features scdawg-simd
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::scdawg::Scdawg;
 use libdictenstein::{Dictionary, DictionaryNode};
 use std::collections::HashMap;

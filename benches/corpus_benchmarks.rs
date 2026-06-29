@@ -23,7 +23,8 @@
 //! 2. **Realistic Queries**: Query performance with frequency-stratified workload
 //! 3. **Validation Queries**: Performance on real spelling errors (Holbrook/Aspell)
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::corpus::{BigTxtCorpus, MittonCorpus, QueryWorkload};
 use liblevenshtein::prelude::*;

@@ -7,7 +7,8 @@
 //! - Cache behavior (cold, warm)
 //! - Iterative vs recursive implementations
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::distance::{myers, *};
 
 // ============================================================================

@@ -6,7 +6,8 @@
 //! The automaton exploits the structure of the dictionary (trie/DAWG) to prune the search
 //! space, while linear scan must compute distance for every word.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::distance::*;
 use liblevenshtein::prelude::*;
 

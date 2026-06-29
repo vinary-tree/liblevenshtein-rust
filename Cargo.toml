@@ -93,7 +93,7 @@ getrandom = { version = "0.2", features = ["js"], optional = true }
 js-sys = { version = "0.3", optional = true }
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8"
 tempfile = "3.8"
 proptest = "1.4"
 rayon = "1.11"

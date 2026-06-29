@@ -3,7 +3,8 @@
 //! This benchmark runs fewer iterations with longer runtime to make
 //! profiling more effective (easier to see hot paths).
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, Criterion};
 use liblevenshtein::distance::*;
 
 fn profile_standard_iterative(c: &mut Criterion) {

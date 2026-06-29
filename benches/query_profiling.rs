@@ -7,7 +7,8 @@
 //!   RUSTFLAGS="-C target-cpu=native -C force-frame-pointers=yes" \
 //!   cargo flamegraph --bench query_profiling -- --bench --profile-time 30
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, Criterion};
 use liblevenshtein::prelude::*;
 use std::fs;
 

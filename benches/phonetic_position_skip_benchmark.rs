@@ -12,7 +12,8 @@
 //! The Coq proof establishes that position skipping is SAFE when no rules use
 //! `Context::Final`. This benchmark measures the performance impact.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::phonetic::{
     apply_rules_seq, apply_rules_seq_optimized, orthography_rules, phonetic_rules, test_rules,
     zompist_rules, Context, Phone, RewriteRule,

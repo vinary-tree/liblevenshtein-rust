@@ -2,7 +2,8 @@
 
 #[cfg(target_arch = "x86_64")]
 use criterion::BenchmarkId;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, Criterion};
 
 #[cfg(target_arch = "x86_64")]
 use liblevenshtein::transducer::simd::find_edge_label_simd;

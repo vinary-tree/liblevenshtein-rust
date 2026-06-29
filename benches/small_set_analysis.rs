@@ -7,7 +7,8 @@
 //!
 //! Run with: cargo bench --bench small_set_analysis --features rand
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::transducer::SubstitutionSet;
 use rand::prelude::*;
 

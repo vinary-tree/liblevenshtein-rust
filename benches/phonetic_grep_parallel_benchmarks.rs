@@ -6,7 +6,8 @@
 //!
 //! Run with: cargo bench --bench phonetic_grep_parallel_benchmarks --features parallel-grep
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
 use liblevenshtein::phonetic::types::{ContextChar, PhoneChar, RewriteRuleChar};
 

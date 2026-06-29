@@ -19,8 +19,9 @@
 //! RUSTFLAGS="-C target-cpu=native" cargo bench --bench workspace_indexing_benchmark -- --baseline main
 //! ```
 
+use std::hint::black_box;
 use criterion::{
-    black_box, criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration,
+    criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration,
     Throughput,
 };
 use libdictenstein::dynamic_dawg::DynamicDawg;

@@ -8,7 +8,8 @@
 //! To test with SIMD-accelerated BK-tree distance:
 //!   cargo bench --bench bktree_vs_fuzzymap_benchmarks --features "phonetic-rules,simd"
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::collections::{HashMap, HashSet};
 
 // ============================================================================

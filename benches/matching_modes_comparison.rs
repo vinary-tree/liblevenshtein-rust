@@ -5,8 +5,9 @@
 //! - Prefix matching: Standard dictionaries with .prefix()
 //! - Substring matching: Suffix automata (inherently substring-based)
 
+use std::hint::black_box;
 use criterion::{
-    black_box, criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration,
+    criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration,
     Throughput,
 };
 use libdictenstein::pathmap::PathMapDictionary;

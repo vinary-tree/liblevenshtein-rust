@@ -3,7 +3,8 @@
 //! These benchmarks isolate specific optimizations to understand
 //! which changes caused regressions and why.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use liblevenshtein::prelude::*;
 use smallvec::SmallVec;
 

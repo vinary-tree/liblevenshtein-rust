@@ -8,7 +8,8 @@
 // Hardware: Intel Xeon E5-2699 v3 @ 2.30GHz
 // Run with: taskset -c 0 cargo bench --bench generalized_automaton_benchmarks
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
 
 /// Benchmark state transition performance with varying input lengths

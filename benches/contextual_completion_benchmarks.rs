@@ -7,7 +7,8 @@
 //! - Query with drafts (naive Levenshtein)
 //! - Query fusion (both drafts and finalized)
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::contextual::DynamicContextualCompletionEngine as ContextualCompletionEngine;
 use liblevenshtein::transducer::Algorithm;
 

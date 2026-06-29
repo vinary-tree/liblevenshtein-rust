@@ -3,7 +3,8 @@
 //! This benchmark suite measures the performance impact of parallelizing
 //! batch operations using Rayon, comparing against sequential implementations.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::MappedDictionary;
 use liblevenshtein::cache::eviction::Lru;

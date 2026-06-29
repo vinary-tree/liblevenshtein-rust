@@ -1,4 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, Criterion};
 use liblevenshtein::prelude::*;
 
 /// Integration benchmark: End-to-end query performance with Batch 2A SIMD

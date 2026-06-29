@@ -13,7 +13,8 @@
 //! taskset -c 2 cargo bench --bench pathmap_node_ops_benchmark --features pathmap-backend
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use libdictenstein::pathmap::{PathMapDictionary, PathMapDictionaryChar};
 use libdictenstein::{Dictionary, DictionaryNode};
 

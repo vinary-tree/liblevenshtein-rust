@@ -12,7 +12,8 @@
 //! - Query performance at distance 0, 1, 2, 3
 //! - Result ordering overhead
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use liblevenshtein::prelude::*;
 use std::fs;
 

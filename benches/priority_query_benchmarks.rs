@@ -6,7 +6,8 @@
 //! - Time to exhaustive iteration
 //! - Memory overhead comparison
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, Criterion};
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::Dictionary;
 use liblevenshtein::transducer::{Algorithm, OrderedQueryIterator, PriorityQueryIterator};

@@ -11,7 +11,8 @@
 //! taskset -c 0 cargo bench --bench phonetic_compilation_benchmarks --features phonetic-rules
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 #[cfg(feature = "phonetic-rules")]
 mod benchmarks {

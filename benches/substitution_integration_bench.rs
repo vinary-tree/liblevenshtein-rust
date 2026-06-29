@@ -12,7 +12,8 @@
 //!
 //! Run with: cargo bench --bench substitution_integration_bench
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::transducer::{Algorithm, Restricted, SubstitutionSet, Transducer};
 
