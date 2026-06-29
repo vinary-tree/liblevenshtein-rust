@@ -16,6 +16,14 @@ rustflags = ["-C", "target-cpu=native"]
 # Platform-specific flags can be added here if needed
 rustflags = ["-C", "target-cpu=native"]
 
+[target.wasm32-unknown-unknown]
+# getrandom 0.3+ removed the `js` feature; the web/JS backend is now selected
+# by the `getrandom_backend="wasm_js"` cfg in addition to the crate's `wasm_js`
+# feature (enabled in Cargo.toml). Required for `--features wasm` to build for
+# wasm32-unknown-unknown. Note: `target-cpu=native` is intentionally NOT applied
+# here (it is invalid for wasm).
+rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
+
 # Note: With this configuration, you no longer need to set RUSTFLAGS manually:
 # ✅ cargo build                  (works automatically)
 # ✅ cargo test                   (works automatically)
