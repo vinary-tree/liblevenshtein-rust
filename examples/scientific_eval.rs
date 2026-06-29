@@ -1927,6 +1927,21 @@ fn run_phonetic_normalized(
 }
 
 #[cfg(not(feature = "phonetic-rules"))]
+fn run_phonetic_normalized_payload_build(
+    _samples: usize,
+    _warmups: usize,
+    _limit: usize,
+    _phonetic_dialect: &str,
+    _phonetic_rules_file: Option<&Path>,
+    _phonetic_rule_extensions: &[PathBuf],
+    _phonetic_rule_extension_order: RuleExtensionOrder,
+    _use_term_ids: bool,
+    _sweep_sizes: bool,
+) {
+    panic!("phonetic-normalized build-payload workloads require --features phonetic-rules");
+}
+
+#[cfg(not(feature = "phonetic-rules"))]
 fn run_phonetic_regex_product(
     _samples: usize,
     _warmups: usize,
