@@ -231,7 +231,12 @@ impl<R: Read + Seek> Iterator for ZipEntryIterator<R> {
 }
 
 /// Convert a zip file entry to our metadata type.
-fn zip_file_to_meta(entry: &zip::read::ZipFile) -> ArchiveEntryMeta {
+///
+/// `zip` 8.x parameterizes `ZipFile` over the underlying reader (`ZipFile<'a, R>`),
+/// so this helper is generic over `R` to accept entries from any `ZipArchive<R>`.
+fn zip_file_to_meta<R: std::io::Read + ?Sized>(
+    entry: &zip::read::ZipFile<'_, R>,
+) -> ArchiveEntryMeta {
     let path = entry.name().to_string();
     let normalized = path
         .trim_start_matches('/')

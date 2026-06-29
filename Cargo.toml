@@ -63,7 +63,7 @@ xz2 = { version = "0.1", optional = true }
 bzip2 = { version = "0.6", optional = true }
 # Archive formats for grep (optional)
 tar = { version = "0.4", optional = true }
-zip = { version = "2.0", optional = true }
+zip = { version = "8.0", optional = true }
 # Glob pattern matching for archive entry filtering (optional)
 globset = { version = "0.4", optional = true }
 # Document text extraction dependencies (optional)
@@ -72,10 +72,10 @@ globset = { version = "0.4", optional = true }
 pdf-extract = { version = "0.12", optional = true }
 # Suppress stdout during PDF extraction (to hide pdf-extract warnings)
 gag = { version = "1.0", optional = true }
-calamine = { version = "0.26", optional = true }
+calamine = { version = "0.35", optional = true }
 docx-rs = { version = "0.4", optional = true }
 epub = { version = "2.1", optional = true }
-quick-xml = { version = "0.37", optional = true }
+quick-xml = { version = "0.41", optional = true }
 leptess = { version = "0.14", optional = true }
 tempfile = { version = "3.8", optional = true }
 # Unicode normalization for accent-insensitive matching and (?u:NFC) flag

@@ -88,8 +88,14 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
             }
             Ok(Event::Text(ref e)) => {
                 if in_text_element {
-                    if let Ok(text) = e.unescape() {
-                        current_text.push_str(&text);
+                    // quick-xml 0.41 removed `BytesText::unescape`; the reader now
+                    // yields raw (escaped) bytes. Decode the charset, then resolve
+                    // XML entities via the free `escape::unescape` to preserve the
+                    // previous behavior.
+                    if let Ok(decoded) = e.decode() {
+                        if let Ok(text) = quick_xml::escape::unescape(&decoded) {
+                            current_text.push_str(&text);
+                        }
                     }
                 }
             }
