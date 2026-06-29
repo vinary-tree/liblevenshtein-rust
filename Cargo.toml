@@ -31,7 +31,7 @@ smallvec = { version = "1.13", features = ["serde"] }
 # Arena allocation for PathNode (performance optimization)
 typed-arena = { version = "2.0", optional = true }
 # Fast non-cryptographic hashing for internal use
-rustc-hash = "1.1"
+rustc-hash = "2.1"
 # Lock-free atomic Arc swapping for DynamicDawgU64
 arc-swap = "1.7"
 # Error handling
@@ -51,8 +51,8 @@ flate2 = { version = "1.0", optional = true }
 clap = { version = "4.4", features = ["derive"], optional = true }
 anyhow = { version = "1.0", optional = true }
 rustyline = { version = "13.0", optional = true }
-colored = { version = "2.0", optional = true }
-dirs = { version = "5.0", optional = true }
+colored = { version = "3.0", optional = true }
+dirs = { version = "6.0", optional = true }
 # Random number generation for corpus utilities (test/benchmark use)
 rand = { version = "0.8", optional = true }
 # Parallel grep support (optional)
@@ -60,7 +60,7 @@ rayon = { version = "1.11", optional = true }
 # Compression formats for grep (optional)
 zstd = { version = "0.13", optional = true }
 xz2 = { version = "0.1", optional = true }
-bzip2 = { version = "0.5", optional = true }
+bzip2 = { version = "0.6", optional = true }
 # Archive formats for grep (optional)
 tar = { version = "0.4", optional = true }
 zip = { version = "2.0", optional = true }
