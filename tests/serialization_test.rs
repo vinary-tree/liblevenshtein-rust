@@ -57,11 +57,11 @@ mod serialization_tests {
 
         // Serialize
         let mut buffer = Vec::new();
-        bincode::serialize_into(&mut buffer, &dict).expect("Failed to serialize DoubleArrayTrie");
+        bincode::serde::encode_into_std_write(&dict, &mut buffer, bincode::config::legacy()).expect("Failed to serialize DoubleArrayTrie");
 
         // Deserialize
         let deserialized: DoubleArrayTrie =
-            bincode::deserialize(&buffer).expect("Failed to deserialize DoubleArrayTrie");
+            bincode::serde::decode_from_slice(&buffer, bincode::config::legacy()).map(|(__decoded, _)| __decoded).expect("Failed to deserialize DoubleArrayTrie");
 
         // Verify
         for term in &terms {
@@ -81,11 +81,11 @@ mod serialization_tests {
 
         // Serialize
         let mut buffer = Vec::new();
-        bincode::serialize_into(&mut buffer, &dict).expect("Failed to serialize DynamicDawg");
+        bincode::serde::encode_into_std_write(&dict, &mut buffer, bincode::config::legacy()).expect("Failed to serialize DynamicDawg");
 
         // Deserialize
         let deserialized: DynamicDawg<()> =
-            bincode::deserialize(&buffer).expect("Failed to deserialize DynamicDawg");
+            bincode::serde::decode_from_slice(&buffer, bincode::config::legacy()).map(|(__decoded, _)| __decoded).expect("Failed to deserialize DynamicDawg");
 
         // Verify
         for term in &terms {
@@ -107,11 +107,11 @@ mod serialization_tests {
 
         // Serialize
         let mut buffer = Vec::new();
-        bincode::serialize_into(&mut buffer, &dict).expect("Failed to serialize DynamicDawgChar");
+        bincode::serde::encode_into_std_write(&dict, &mut buffer, bincode::config::legacy()).expect("Failed to serialize DynamicDawgChar");
 
         // Deserialize
         let deserialized: DynamicDawgChar<()> =
-            bincode::deserialize(&buffer).expect("Failed to deserialize DynamicDawgChar");
+            bincode::serde::decode_from_slice(&buffer, bincode::config::legacy()).map(|(__decoded, _)| __decoded).expect("Failed to deserialize DynamicDawgChar");
 
         // Verify
         for term in &terms {
@@ -131,11 +131,11 @@ mod serialization_tests {
 
         // Serialize
         let mut buffer = Vec::new();
-        bincode::serialize_into(&mut buffer, &dict).expect("Failed to serialize SuffixAutomaton");
+        bincode::serde::encode_into_std_write(&dict, &mut buffer, bincode::config::legacy()).expect("Failed to serialize SuffixAutomaton");
 
         // Deserialize
         let deserialized: SuffixAutomaton =
-            bincode::deserialize(&buffer).expect("Failed to deserialize SuffixAutomaton");
+            bincode::serde::decode_from_slice(&buffer, bincode::config::legacy()).map(|(__decoded, _)| __decoded).expect("Failed to deserialize SuffixAutomaton");
 
         // Verify
         for term in &terms {
@@ -288,11 +288,11 @@ mod serialization_tests {
         let dict = DoubleArrayTrie::from_terms(terms.clone());
 
         // Serialize to both formats
-        let bincode_bytes = bincode::serialize(&dict).unwrap();
+        let bincode_bytes = bincode::serde::encode_to_vec(&dict, bincode::config::legacy()).unwrap();
         let json_str = serde_json::to_string(&dict).unwrap();
 
         // Deserialize from both
-        let from_bincode: DoubleArrayTrie = bincode::deserialize(&bincode_bytes).unwrap();
+        let from_bincode: DoubleArrayTrie = bincode::serde::decode_from_slice(&bincode_bytes, bincode::config::legacy()).map(|(__decoded, _)| __decoded).unwrap();
         let from_json: DoubleArrayTrie = serde_json::from_str(&json_str).unwrap();
 
         // Both should contain same terms
@@ -333,14 +333,14 @@ mod serialization_tests {
 
         // DoubleArrayTrie
         let dict = DoubleArrayTrie::from_terms(empty_terms.clone());
-        let serialized = bincode::serialize(&dict).unwrap();
-        let deserialized: DoubleArrayTrie = bincode::deserialize(&serialized).unwrap();
+        let serialized = bincode::serde::encode_to_vec(&dict, bincode::config::legacy()).unwrap();
+        let deserialized: DoubleArrayTrie = bincode::serde::decode_from_slice(&serialized, bincode::config::legacy()).map(|(__decoded, _)| __decoded).unwrap();
         assert_eq!(deserialized.len().unwrap_or(0), 0);
 
         // DynamicDawg
         let dict: DynamicDawg<()> = DynamicDawg::from_terms(empty_terms);
-        let serialized = bincode::serialize(&dict).unwrap();
-        let deserialized: DynamicDawg<()> = bincode::deserialize(&serialized).unwrap();
+        let serialized = bincode::serde::encode_to_vec(&dict, bincode::config::legacy()).unwrap();
+        let deserialized: DynamicDawg<()> = bincode::serde::decode_from_slice(&serialized, bincode::config::legacy()).map(|(__decoded, _)| __decoded).unwrap();
         assert_eq!(deserialized.term_count(), 0);
     }
 
@@ -349,8 +349,8 @@ mod serialization_tests {
         let unicode_terms = vec!["hello", "世界", "🌍", "Ñoño", "café"];
 
         let dict = DoubleArrayTrie::from_terms(unicode_terms.clone());
-        let serialized = bincode::serialize(&dict).unwrap();
-        let deserialized: DoubleArrayTrie = bincode::deserialize(&serialized).unwrap();
+        let serialized = bincode::serde::encode_to_vec(&dict, bincode::config::legacy()).unwrap();
+        let deserialized: DoubleArrayTrie = bincode::serde::decode_from_slice(&serialized, bincode::config::legacy()).map(|(__decoded, _)| __decoded).unwrap();
 
         for term in &unicode_terms {
             assert!(
@@ -367,8 +367,8 @@ mod serialization_tests {
         let terms: Vec<String> = (0..1000).map(|i| format!("term_{:04}", i)).collect();
 
         let dict = DoubleArrayTrie::from_terms(terms.clone());
-        let serialized = bincode::serialize(&dict).unwrap();
-        let deserialized: DoubleArrayTrie = bincode::deserialize(&serialized).unwrap();
+        let serialized = bincode::serde::encode_to_vec(&dict, bincode::config::legacy()).unwrap();
+        let deserialized: DoubleArrayTrie = bincode::serde::decode_from_slice(&serialized, bincode::config::legacy()).map(|(__decoded, _)| __decoded).unwrap();
 
         // Spot check
         assert!(deserialized.contains("term_0000"));
@@ -387,8 +387,8 @@ mod serialization_tests {
         dict.insert("date");
 
         // Serialize
-        let serialized = bincode::serialize(&dict).unwrap();
-        let deserialized: DynamicDawg<()> = bincode::deserialize(&serialized).unwrap();
+        let serialized = bincode::serde::encode_to_vec(&dict, bincode::config::legacy()).unwrap();
+        let deserialized: DynamicDawg<()> = bincode::serde::decode_from_slice(&serialized, bincode::config::legacy()).map(|(__decoded, _)| __decoded).unwrap();
 
         // Verify all terms
         assert!(deserialized.contains("apple"));

@@ -107,7 +107,7 @@ pub fn save<P: AsRef<Path>>(ruleset: &RuleSet, path: P) -> LLevResult<()> {
     })?;
 
     // Serialize rule set
-    let encoded = bincode::serialize(ruleset).map_err(|e| {
+    let encoded = bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to serialize ruleset: {}",
             e
@@ -192,7 +192,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> LLevResult<RuleSet> {
         )))
     })?;
 
-    bincode::deserialize(&data).map_err(|e| {
+    bincode::serde::decode_from_slice(&data, bincode::config::legacy()).map(|(__decoded, _)| __decoded).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to deserialize ruleset: {}",
             e
@@ -247,7 +247,7 @@ pub fn save_char<P: AsRef<Path>>(ruleset: &RuleSetChar, path: P) -> LLevResult<(
     })?;
 
     // Serialize rule set
-    let encoded = bincode::serialize(ruleset).map_err(|e| {
+    let encoded = bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to serialize ruleset: {}",
             e
@@ -332,7 +332,7 @@ pub fn load_char<P: AsRef<Path>>(path: P) -> LLevResult<RuleSetChar> {
         )))
     })?;
 
-    bincode::deserialize(&data).map_err(|e| {
+    bincode::serde::decode_from_slice(&data, bincode::config::legacy()).map(|(__decoded, _)| __decoded).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to deserialize ruleset: {}",
             e
@@ -363,7 +363,7 @@ pub fn to_bytes(ruleset: &RuleSet) -> LLevResult<Vec<u8>> {
     data.push(VERSION);
 
     // Serialize rule set
-    let encoded = bincode::serialize(ruleset).map_err(|e| {
+    let encoded = bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to serialize ruleset: {}",
             e
@@ -403,7 +403,7 @@ pub fn from_bytes(data: &[u8]) -> LLevResult<RuleSet> {
     }
 
     // Deserialize rule set
-    bincode::deserialize(&data[HEADER_SIZE..]).map_err(|e| {
+    bincode::serde::decode_from_slice(&data[HEADER_SIZE..], bincode::config::legacy()).map(|(__decoded, _)| __decoded).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to deserialize ruleset: {}",
             e
@@ -422,7 +422,7 @@ pub fn to_bytes_char(ruleset: &RuleSetChar) -> LLevResult<Vec<u8>> {
     data.push(VERSION);
 
     // Serialize rule set
-    let encoded = bincode::serialize(ruleset).map_err(|e| {
+    let encoded = bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to serialize ruleset: {}",
             e
@@ -462,7 +462,7 @@ pub fn from_bytes_char(data: &[u8]) -> LLevResult<RuleSetChar> {
     }
 
     // Deserialize rule set
-    bincode::deserialize(&data[HEADER_SIZE..]).map_err(|e| {
+    bincode::serde::decode_from_slice(&data[HEADER_SIZE..], bincode::config::legacy()).map(|(__decoded, _)| __decoded).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to deserialize ruleset: {}",
             e

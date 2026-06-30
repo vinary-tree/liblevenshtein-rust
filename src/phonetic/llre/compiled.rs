@@ -170,7 +170,7 @@ pub fn to_bytes(compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
 
     // Serialize metadata
     let metadata = CompiledMetadata::from(compiled);
-    let metadata_bytes = bincode::serialize(&metadata)
+    let metadata_bytes = bincode::serde::encode_to_vec(&metadata, bincode::config::legacy())
         .map_err(|e| LLreError::new(LLreErrorKind::SerializationFailed(e.to_string())))?;
 
     // Write metadata length and data
@@ -181,7 +181,7 @@ pub fn to_bytes(compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
     // Keep the symbol-table section in the binary format; LLRE symbols are
     // expanded into the NFA before serialization.
     let symbols = SerializedSymbols::default();
-    let symbols_bytes = bincode::serialize(&symbols)
+    let symbols_bytes = bincode::serde::encode_to_vec(&symbols, bincode::config::legacy())
         .map_err(|e| LLreError::new(LLreErrorKind::SerializationFailed(e.to_string())))?;
 
     // Write symbols length and data
@@ -190,7 +190,7 @@ pub fn to_bytes(compiled: &CompiledNFA) -> LLreResult<Vec<u8>> {
     buffer.extend_from_slice(&symbols_bytes);
 
     // Serialize NFA
-    let nfa_bytes = bincode::serialize(&compiled.nfa)
+    let nfa_bytes = bincode::serde::encode_to_vec(&compiled.nfa, bincode::config::legacy())
         .map_err(|e| LLreError::new(LLreErrorKind::SerializationFailed(e.to_string())))?;
     buffer.extend_from_slice(&nfa_bytes);
 
@@ -251,7 +251,7 @@ pub fn from_bytes(bytes: &[u8]) -> LLreResult<CompiledNFA> {
             "truncated metadata".into(),
         )));
     }
-    let metadata: CompiledMetadata = bincode::deserialize(&bytes[cursor..cursor + metadata_len])
+    let metadata: CompiledMetadata = bincode::serde::decode_from_slice(&bytes[cursor..cursor + metadata_len], bincode::config::legacy()).map(|(__decoded, _)| __decoded)
         .map_err(|e| LLreError::new(LLreErrorKind::DeserializationFailed(e.to_string())))?;
     cursor += metadata_len;
 
@@ -278,7 +278,7 @@ pub fn from_bytes(bytes: &[u8]) -> LLreResult<CompiledNFA> {
     cursor += symbols_len;
 
     // Read NFA
-    let nfa = bincode::deserialize(&bytes[cursor..])
+    let nfa = bincode::serde::decode_from_slice(&bytes[cursor..], bincode::config::legacy()).map(|(__decoded, _)| __decoded)
         .map_err(|e| LLreError::new(LLreErrorKind::DeserializationFailed(e.to_string())))?;
 
     Ok(CompiledNFA {
