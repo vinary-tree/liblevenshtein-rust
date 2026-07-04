@@ -40,56 +40,12 @@
 //! state manipulation during automaton traversal.
 
 use super::algorithm::Algorithm;
+use crate::numeric::nonnegative_floor_to_usize_checked;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 /// Epsilon for float comparisons in subsumption.
 const EPSILON: f64 = 1e-9;
-
-#[inline(always)]
-fn nonnegative_floor_to_usize(value: f64) -> Option<usize> {
-    if value.is_nan() || value < 0.0 {
-        None
-    } else if !value.is_finite() {
-        Some(usize::MAX)
-    } else {
-        finite_nonnegative_floor_to_usize(value).or(Some(usize::MAX))
-    }
-}
-
-fn finite_nonnegative_floor_to_usize(value: f64) -> Option<usize> {
-    debug_assert!(value.is_finite());
-    debug_assert!(value >= 0.0);
-
-    const MANTISSA_BITS: i32 = 52;
-    const EXPONENT_BIAS: i32 = 1023;
-    const EXPONENT_MASK: u64 = 0x7ff;
-    const MANTISSA_MASK: u64 = (1_u64 << MANTISSA_BITS) - 1;
-    const HIDDEN_BIT: u64 = 1_u64 << MANTISSA_BITS;
-
-    let bits = value.to_bits();
-    let exponent_bits = u16::try_from((bits >> MANTISSA_BITS) & EXPONENT_MASK).ok()?;
-
-    if exponent_bits == 0 {
-        return Some(0);
-    }
-
-    let exponent = i32::from(exponent_bits) - EXPONENT_BIAS;
-    if exponent < 0 {
-        return Some(0);
-    }
-
-    let significand = HIDDEN_BIT | (bits & MANTISSA_MASK);
-    let integer = if exponent >= MANTISSA_BITS {
-        let shift = u32::try_from(exponent - MANTISSA_BITS).ok()?;
-        u128::from(significand).checked_shl(shift)?
-    } else {
-        let shift = u32::try_from(MANTISSA_BITS - exponent).ok()?;
-        u128::from(significand >> shift)
-    };
-
-    usize::try_from(integer).ok()
-}
 
 /// A position in the float-weighted Levenshtein automaton state.
 ///
@@ -282,7 +238,7 @@ impl PositionF64 {
                         return i == j;
                     }
                     // lhs special, rhs not: requires rhs at query length and same position
-                    let Some(f_as_usize) = nonnegative_floor_to_usize(f) else {
+                    let Some(f_as_usize) = nonnegative_floor_to_usize_checked(f) else {
                         return false;
                     };
                     return (f_as_usize == query_length) && (i == j);
@@ -407,13 +363,16 @@ mod tests {
 
     #[test]
     fn nonnegative_floor_to_usize_handles_float_boundaries() {
-        assert_eq!(nonnegative_floor_to_usize(f64::NAN), None);
-        assert_eq!(nonnegative_floor_to_usize(-1.0), None);
-        assert_eq!(nonnegative_floor_to_usize(-0.0), Some(0));
-        assert_eq!(nonnegative_floor_to_usize(0.0), Some(0));
-        assert_eq!(nonnegative_floor_to_usize(2.9), Some(2));
-        assert_eq!(nonnegative_floor_to_usize(f64::INFINITY), Some(usize::MAX));
-        assert_eq!(nonnegative_floor_to_usize(f64::MAX), Some(usize::MAX));
+        assert_eq!(nonnegative_floor_to_usize_checked(f64::NAN), None);
+        assert_eq!(nonnegative_floor_to_usize_checked(-1.0), None);
+        assert_eq!(nonnegative_floor_to_usize_checked(-0.0), Some(0));
+        assert_eq!(nonnegative_floor_to_usize_checked(0.0), Some(0));
+        assert_eq!(nonnegative_floor_to_usize_checked(2.9), Some(2));
+        assert_eq!(
+            nonnegative_floor_to_usize_checked(f64::INFINITY),
+            Some(usize::MAX)
+        );
+        assert_eq!(nonnegative_floor_to_usize_checked(f64::MAX), Some(usize::MAX));
     }
 
     #[test]

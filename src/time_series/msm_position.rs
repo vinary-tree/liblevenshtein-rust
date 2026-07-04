@@ -16,21 +16,10 @@
 //! in MSM, where the cost depends on three values: the current value, the previous
 //! query value, and the target value.
 
+use crate::numeric::saturating_usize_difference_i64;
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
-
-#[inline]
-fn saturating_usize_difference_i64(left: usize, right: usize) -> i64 {
-    if left >= right {
-        i64::try_from(left - right).unwrap_or(i64::MAX)
-    } else {
-        match i64::try_from(right - left) {
-            Ok(diff) => -diff,
-            Err(_) => i64::MIN,
-        }
-    }
-}
 
 /// A position in the MSM automaton with value tracking.
 ///

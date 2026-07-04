@@ -23,16 +23,12 @@ use super::{
     Algorithm, OperationCostsF64, PositionF64, StateF64, StatePoolF64, SubstitutionPolicy,
     SubstitutionPolicyFor,
 };
+use crate::numeric::{nonnegative_ceil_to_usize, nonnegative_floor_to_usize_saturating};
 use libdictenstein::CharUnit;
 use smallvec::SmallVec;
 
 /// Epsilon for float comparisons in cost thresholds.
 const COST_EPSILON: f64 = 1e-9;
-const F64_EXPONENT_MASK: u64 = 0x7ff;
-const F64_MANTISSA_BITS: i32 = 52;
-const F64_MANTISSA_MASK: u64 = (1u64 << F64_MANTISSA_BITS) - 1;
-const F64_HIDDEN_BIT: u64 = 1u64 << F64_MANTISSA_BITS;
-const F64_EXPONENT_BIAS: i32 = 1023;
 
 /// Configuration shared by float-weighted state transitions.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -193,76 +189,6 @@ fn checked_successor_or_max(value: usize) -> usize {
 }
 
 #[inline(always)]
-fn nonnegative_floor_to_usize(value: f64) -> usize {
-    if value.is_nan() || value <= 0.0 {
-        0
-    } else if !value.is_finite() {
-        usize::MAX
-    } else {
-        finite_nonnegative_floor_to_usize(value).unwrap_or(usize::MAX)
-    }
-}
-
-#[inline(always)]
-fn nonnegative_ceil_to_usize(value: f64) -> usize {
-    if value.is_nan() || value <= 0.0 {
-        0
-    } else if !value.is_finite() {
-        usize::MAX
-    } else {
-        finite_nonnegative_ceil_to_usize(value).unwrap_or(usize::MAX)
-    }
-}
-
-#[inline(always)]
-fn finite_nonnegative_floor_to_usize(value: f64) -> Option<usize> {
-    let (integer, _) = finite_nonnegative_floor_parts(value)?;
-    usize::try_from(integer).ok()
-}
-
-#[inline(always)]
-fn finite_nonnegative_ceil_to_usize(value: f64) -> Option<usize> {
-    let (integer, has_fraction) = finite_nonnegative_floor_parts(value)?;
-    let ceiling = if has_fraction {
-        integer.checked_add(1)?
-    } else {
-        integer
-    };
-    usize::try_from(ceiling).ok()
-}
-
-#[inline(always)]
-fn finite_nonnegative_floor_parts(value: f64) -> Option<(u128, bool)> {
-    debug_assert!(value.is_finite());
-    debug_assert!(value >= 0.0);
-
-    let bits = value.to_bits();
-    let exponent_bits = u16::try_from((bits >> F64_MANTISSA_BITS) & F64_EXPONENT_MASK).ok()?;
-    let mantissa = bits & F64_MANTISSA_MASK;
-
-    if exponent_bits == 0 {
-        return Some((0, mantissa != 0));
-    }
-
-    let exponent = i32::from(exponent_bits) - F64_EXPONENT_BIAS;
-    if exponent < 0 {
-        return Some((0, true));
-    }
-
-    let significand = F64_HIDDEN_BIT | mantissa;
-    if exponent >= F64_MANTISSA_BITS {
-        let shift = u32::try_from(exponent - F64_MANTISSA_BITS).ok()?;
-        let integer = u128::from(significand).checked_shl(shift)?;
-        return Some((integer, false));
-    }
-
-    let shift = u32::try_from(F64_MANTISSA_BITS - exponent).ok()?;
-    let integer = u128::from(significand >> shift);
-    let fraction_mask = (1u64 << shift) - 1;
-    Some((integer, (significand & fraction_mask) != 0))
-}
-
-#[inline(always)]
 fn query_window_size(query_length: usize) -> usize {
     checked_successor_or_max(query_length).max(1)
 }
@@ -333,7 +259,7 @@ fn compute_window_limit(remaining_cost: f64, deletion_cost: f64) -> usize {
         8 // Use max window size
     } else {
         // How many deletions can we afford?
-        let max_deletions = nonnegative_floor_to_usize(remaining_cost / deletion_cost);
+        let max_deletions = nonnegative_floor_to_usize_saturating(remaining_cost / deletion_cost);
         checked_successor_or_max(max_deletions).min(8) // +1 for the match position, capped at 8
     }
 }
@@ -1132,16 +1058,16 @@ mod tests {
         let exact_large = 4_503_599_627_370_496.0;
         let expected_large = usize::try_from(4_503_599_627_370_496_u128).unwrap_or(usize::MAX);
 
-        assert_eq!(nonnegative_floor_to_usize(f64::NAN), 0);
-        assert_eq!(nonnegative_floor_to_usize(-1.0), 0);
-        assert_eq!(nonnegative_floor_to_usize(-0.0), 0);
-        assert_eq!(nonnegative_floor_to_usize(0.0), 0);
-        assert_eq!(nonnegative_floor_to_usize(0.1), 0);
-        assert_eq!(nonnegative_floor_to_usize(2.0), 2);
-        assert_eq!(nonnegative_floor_to_usize(2.9), 2);
-        assert_eq!(nonnegative_floor_to_usize(exact_large), expected_large);
-        assert_eq!(nonnegative_floor_to_usize(f64::INFINITY), usize::MAX);
-        assert_eq!(nonnegative_floor_to_usize(f64::MAX), usize::MAX);
+        assert_eq!(nonnegative_floor_to_usize_saturating(f64::NAN), 0);
+        assert_eq!(nonnegative_floor_to_usize_saturating(-1.0), 0);
+        assert_eq!(nonnegative_floor_to_usize_saturating(-0.0), 0);
+        assert_eq!(nonnegative_floor_to_usize_saturating(0.0), 0);
+        assert_eq!(nonnegative_floor_to_usize_saturating(0.1), 0);
+        assert_eq!(nonnegative_floor_to_usize_saturating(2.0), 2);
+        assert_eq!(nonnegative_floor_to_usize_saturating(2.9), 2);
+        assert_eq!(nonnegative_floor_to_usize_saturating(exact_large), expected_large);
+        assert_eq!(nonnegative_floor_to_usize_saturating(f64::INFINITY), usize::MAX);
+        assert_eq!(nonnegative_floor_to_usize_saturating(f64::MAX), usize::MAX);
         assert_eq!(nonnegative_ceil_to_usize(f64::NAN), 0);
         assert_eq!(nonnegative_ceil_to_usize(-1.0), 0);
         assert_eq!(nonnegative_ceil_to_usize(-0.0), 0);

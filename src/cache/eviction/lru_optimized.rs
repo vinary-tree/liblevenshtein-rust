@@ -7,6 +7,7 @@
 //! - `eviction-compact-metadata`: Compact metadata representation
 //! - `eviction-coarse-timestamps`: Coarse-grained timestamps (reduce syscalls)
 
+use crate::numeric::duration_millis_u64_saturating;
 use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
@@ -149,10 +150,6 @@ impl EntryMetadata {
             now.saturating_sub(self.last_accessed_ms)
         }
     }
-}
-
-fn duration_millis_u64_saturating(duration: std::time::Duration) -> u64 {
-    u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
 }
 
 #[cfg(any(

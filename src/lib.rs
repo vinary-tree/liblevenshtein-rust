@@ -33,6 +33,10 @@ pub mod contextual;
 pub mod dictionary;
 pub mod distance;
 pub mod filter;
+/// Crate-internal home for pure checked/saturating numeric conversions
+/// (`f64 → usize`, `usize → i64`, `Duration → u64`) shared across the
+/// `transducer`, `time_series`, and `cache` modules.
+pub(crate) mod numeric;
 /// Cross-platform synchronization primitives (parking_lot on native, std::sync on WASM)
 pub mod sync_compat;
 pub mod transducer;

@@ -36,6 +36,7 @@ use super::encoding::QuantizationConfig;
 use super::lower_bounds::{LowerBoundConfig, LowerBoundStats, LowerBoundType};
 use super::msm::MsmConfig;
 use super::trie_index::TimeSeriesIndex;
+use crate::numeric::nonnegative_ceil_to_usize;
 use libdictenstein::DictionaryValue;
 use std::collections::HashMap;
 
@@ -44,11 +45,6 @@ type BucketLocation = (usize, usize);
 const DISTANCE_EPSILON: f64 = 1e-9;
 const DEFAULT_RESULT_BUFFER_CAPACITY: usize = 64;
 const DEFAULT_TRIE_THRESHOLD_MULTIPLIER: f64 = 2.0;
-const F64_EXPONENT_MASK: u64 = 0x7ff;
-const F64_MANTISSA_BITS: i32 = 52;
-const F64_MANTISSA_MASK: u64 = (1u64 << F64_MANTISSA_BITS) - 1;
-const F64_HIDDEN_BIT: u64 = 1u64 << F64_MANTISSA_BITS;
-const F64_EXPONENT_BIAS: i32 = 1023;
 
 #[inline]
 fn normalize_trie_threshold_multiplier(multiplier: f64) -> f64 {
@@ -57,59 +53,6 @@ fn normalize_trie_threshold_multiplier(multiplier: f64) -> f64 {
     } else {
         DEFAULT_TRIE_THRESHOLD_MULTIPLIER
     }
-}
-
-#[inline]
-fn nonnegative_ceil_to_usize(value: f64) -> usize {
-    if value.is_nan() || value <= 0.0 {
-        0
-    } else if !value.is_finite() {
-        usize::MAX
-    } else {
-        finite_nonnegative_ceil_to_usize(value).unwrap_or(usize::MAX)
-    }
-}
-
-#[inline]
-fn finite_nonnegative_ceil_to_usize(value: f64) -> Option<usize> {
-    let (integer, has_fraction) = finite_nonnegative_floor_parts(value)?;
-    let ceiling = if has_fraction {
-        integer.checked_add(1)?
-    } else {
-        integer
-    };
-    usize::try_from(ceiling).ok()
-}
-
-#[inline]
-fn finite_nonnegative_floor_parts(value: f64) -> Option<(u128, bool)> {
-    debug_assert!(value.is_finite());
-    debug_assert!(value >= 0.0);
-
-    let bits = value.to_bits();
-    let exponent_bits = u16::try_from((bits >> F64_MANTISSA_BITS) & F64_EXPONENT_MASK).ok()?;
-    let mantissa = bits & F64_MANTISSA_MASK;
-
-    if exponent_bits == 0 {
-        return Some((0, mantissa != 0));
-    }
-
-    let exponent = i32::from(exponent_bits) - F64_EXPONENT_BIAS;
-    if exponent < 0 {
-        return Some((0, true));
-    }
-
-    let significand = F64_HIDDEN_BIT | mantissa;
-    if exponent >= F64_MANTISSA_BITS {
-        let shift = u32::try_from(exponent - F64_MANTISSA_BITS).ok()?;
-        let integer = u128::from(significand).checked_shl(shift)?;
-        return Some((integer, false));
-    }
-
-    let shift = u32::try_from(F64_MANTISSA_BITS - exponent).ok()?;
-    let integer = u128::from(significand >> shift);
-    let fraction_mask = (1u64 << shift) - 1;
-    Some((integer, (significand & fraction_mask) != 0))
 }
 
 #[derive(Debug)]
