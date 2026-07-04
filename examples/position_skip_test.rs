@@ -14,14 +14,10 @@ fn main() {
 
 #[cfg(feature = "phonetic-rules")]
 fn find_first_match_baseline(rule: &RewriteRuleByte, s: &[PhoneByte]) -> Option<usize> {
-    for pos in 0..=s.len() {
-        if context_matches(&rule.context, s, pos, rule.pattern.len())
+    (0..=s.len()).find(|&pos| {
+        context_matches(&rule.context, s, pos, rule.pattern.len())
             && pattern_matches_at(&rule.pattern, s, pos)
-        {
-            return Some(pos);
-        }
-    }
-    None
+    })
 }
 
 #[cfg(feature = "phonetic-rules")]
@@ -63,16 +59,10 @@ fn find_first_match_from(
     s: &[PhoneByte],
     start_pos: usize,
 ) -> Option<usize> {
-    // Scan from start_pos to end
-    for pos in start_pos..=s.len() {
-        // Inline can_apply_at check
-        if context_matches(&rule.context, s, pos, rule.pattern.len())
+    (start_pos..=s.len()).find(|&pos| {
+        context_matches(&rule.context, s, pos, rule.pattern.len())
             && pattern_matches_at(&rule.pattern, s, pos)
-        {
-            return Some(pos);
-        }
-    }
-    None
+    })
 }
 
 #[cfg(feature = "phonetic-rules")]

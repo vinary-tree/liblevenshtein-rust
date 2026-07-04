@@ -174,12 +174,14 @@ fn recall_at_k(approx: &[(usize, f64)], exact: &[(usize, f64)]) -> f64 {
     hits as f64 / exact.len() as f64
 }
 
-fn build_approx_case() -> (
+type ApproxCase = (
     ApproxMsmIndex<usize>,
     Vec<Vec<f64>>,
     Vec<f64>,
     Vec<(usize, f64)>,
-) {
+);
+
+fn build_approx_case() -> ApproxCase {
     let database = generate_approx_database(1024, 96);
     let mut query = database[321].clone();
     for (i, value) in query.iter_mut().enumerate() {
@@ -214,9 +216,14 @@ fn impute_missing_linear(series: &mut [f64]) {
         let (left_idx, left_value) = window[0];
         let (right_idx, right_value) = window[1];
         series[left_idx] = left_value;
-        for idx in left_idx + 1..right_idx {
+        for (idx, value) in series
+            .iter_mut()
+            .enumerate()
+            .take(right_idx)
+            .skip(left_idx + 1)
+        {
             let ratio = (idx - left_idx) as f64 / (right_idx - left_idx) as f64;
-            series[idx] = left_value + (right_value - left_value) * ratio;
+            *value = left_value + (right_value - left_value) * ratio;
         }
     }
 
@@ -413,9 +420,10 @@ fn predict_1nn_cutoff<'a>(
 ) -> &'a str {
     let mut best_label = "";
     let mut best_distance = f64::INFINITY;
+    let split_merge_cost = msm.split_merge_cost();
 
     for candidate in train {
-        if length_lb(probe, &candidate.series, msm.c) > best_distance {
+        if length_lb(probe, &candidate.series, split_merge_cost) > best_distance {
             *lb_pruned += 1;
             continue;
         }

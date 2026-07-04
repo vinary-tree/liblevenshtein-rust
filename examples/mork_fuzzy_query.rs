@@ -11,7 +11,7 @@
 //!   1. [`PathMapRef::from_map`]`(&space.btm)`        — zero-copy borrow
 //!   2. [`PathMapSnapshot::from_map_ref`]`(&space.btm)` — `𝒪(1)` copy-on-write snapshot
 //!   3. [`PathMapRef::from_trie_ref`]`(space.btm.trie_ref_at_path(prefix))`
-//!                                                     — fuzzy search scoped to a subtrie
+//!      — fuzzy search scoped to a subtrie
 //!
 //! Run with:
 //! ```text

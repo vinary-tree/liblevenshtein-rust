@@ -900,19 +900,25 @@ fn generate_parametric_queries() {
 
 ---
 
-**2. Real-World Workloads** (Partially used):
+**2. Real-World Workloads** (Covered by `corpus_benchmarks`):
 
 ```rust
 // Natural language
 let dict = load_system_dictionary();  // ✅ Used
 
-// Code identifiers (TODO - Gap)
-let code_words = extract_identifiers("src/**/*.rs");
+// Code identifiers
+let code_words = load_code_identifier_workload(Path::new("src"));
 
-// Domain-specific (TODO - Gap)
-let medical_terms = load_medical_dictionary();
-let dna_sequences = load_genome_sequences();
+// Domain-specific
+let medical_terms = medical_term_workload();
+let dna_sequences = dna_sequence_workload();
 ```
+
+The `domain_specific_workloads` Criterion group exercises code identifiers,
+medical vocabulary, and short DNA-like sequences with realistic single- and
+two-edit queries. The code-identifier workload extracts identifiers directly
+from the repository's Rust sources and falls back to deterministic API names
+when source files are unavailable.
 
 **Advantages**: Realistic, validates practical performance
 **Disadvantages**: Non-reproducible, may hide edge cases

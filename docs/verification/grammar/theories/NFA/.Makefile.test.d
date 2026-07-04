@@ -10,10 +10,10 @@ Completeness.vo Completeness.glob Completeness.v.beautified Completeness.require
 Completeness.vos Completeness.vok Completeness.required_vos: Completeness.v Automaton.vos Operations.vos Transitions.vos Types.vos /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
 Soundness.vo Soundness.glob Soundness.v.beautified Soundness.required_vo: Soundness.v Automaton.vo Completeness.vo Operations.vo Transitions.vo Types.vo /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
 Soundness.vos Soundness.vok Soundness.required_vos: Soundness.v Automaton.vos Completeness.vos Operations.vos Transitions.vos Types.vos /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
-Optimality.vo Optimality.glob Optimality.v.beautified Optimality.required_vo: Optimality.v Automaton.vo Operations.vo Types.vo /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
-Optimality.vos Optimality.vok Optimality.required_vos: Optimality.v Automaton.vos Operations.vos Types.vos /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
-Properties.vo Properties.glob Properties.v.beautified Properties.required_vo: Properties.v Automaton.vo Operations.vo Types.vo /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
-Properties.vos Properties.vok Properties.required_vos: Properties.v Automaton.vos Operations.vos Types.vos /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
+Optimality.vo Optimality.glob Optimality.v.beautified Optimality.required_vo: Optimality.v Automaton.vo Completeness.vo Operations.vo Soundness.vo Types.vo /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
+Optimality.vos Optimality.vok Optimality.required_vos: Optimality.v Automaton.vos Completeness.vos Operations.vos Soundness.vos Types.vos /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
+Properties.vo Properties.glob Properties.v.beautified Properties.required_vo: Properties.v Automaton.vo Completeness.vo Operations.vo Types.vo /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
+Properties.vos Properties.vok Properties.required_vos: Properties.v Automaton.vos Completeness.vos Operations.vos Types.vos /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
 StateSpace.vo StateSpace.glob StateSpace.v.beautified StateSpace.required_vo: StateSpace.v Automaton.vo Types.vo /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
 StateSpace.vos StateSpace.vok StateSpace.required_vos: StateSpace.v Automaton.vos Types.vos /home/dylon/.opam/default/lib/rocq-runtime/rocqworker
 TimeComplexity.vo TimeComplexity.glob TimeComplexity.v.beautified TimeComplexity.required_vo: TimeComplexity.v Automaton.vo Types.vo /home/dylon/.opam/default/lib/rocq-runtime/rocqworker

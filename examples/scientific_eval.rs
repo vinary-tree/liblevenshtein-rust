@@ -1207,17 +1207,14 @@ fn run_phonetic_normalized(
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn run_phonetic_normalized_payload_build(
-    samples: usize,
-    warmups: usize,
-    limit: usize,
-    phonetic_dialect: &str,
-    phonetic_rules_file: Option<&Path>,
-    phonetic_rule_extensions: &[PathBuf],
-    phonetic_rule_extension_order: RuleExtensionOrder,
-    use_term_ids: bool,
-    sweep_sizes: bool,
-) {
+fn run_phonetic_normalized_payload_build(opts: &Options, use_term_ids: bool, sweep_sizes: bool) {
+    let samples = opts.samples;
+    let warmups = opts.warmups;
+    let limit = opts.corpus_limit;
+    let phonetic_dialect = &opts.phonetic_dialect;
+    let phonetic_rules_file = opts.phonetic_rules_file.as_deref();
+    let phonetic_rule_extensions = &opts.phonetic_rule_extensions;
+    let phonetic_rule_extension_order = opts.phonetic_rule_extension_order;
     let max_limit = limit.max(30);
     let words = extended_words(max_limit);
     let rules = phonetic_rules_from_config(
@@ -1266,7 +1263,7 @@ fn run_phonetic_normalized_payload_build(
 #[cfg(feature = "phonetic-rules")]
 fn payload_build_sweep_size(sample_index: usize, max_limit: usize, samples: usize) -> usize {
     let samples = samples.max(1);
-    let min_limit = max_limit.min(30).max(1);
+    let min_limit = max_limit.clamp(1, 30);
     if samples == 1 || max_limit <= min_limit {
         return max_limit.max(1);
     }
@@ -1275,17 +1272,15 @@ fn payload_build_sweep_size(sample_index: usize, max_limit: usize, samples: usiz
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn run_phonetic_regex_product(
-    samples: usize,
-    warmups: usize,
-    limit: usize,
-    max_distance: usize,
-    phonetic_dialect: &str,
-    phonetic_rules_file: Option<&Path>,
-    phonetic_rule_extensions: &[PathBuf],
-    phonetic_rule_extension_order: RuleExtensionOrder,
-    use_scan_control: bool,
-) {
+fn run_phonetic_regex_product(opts: &Options, use_scan_control: bool) {
+    let samples = opts.samples;
+    let warmups = opts.warmups;
+    let limit = opts.corpus_limit;
+    let max_distance = opts.max_distance;
+    let phonetic_dialect = &opts.phonetic_dialect;
+    let phonetic_rules_file = opts.phonetic_rules_file.as_deref();
+    let phonetic_rule_extensions = &opts.phonetic_rule_extensions;
+    let phonetic_rule_extension_order = opts.phonetic_rule_extension_order;
     let words = extended_words(limit.max(30));
     let dict = phonetic_dictionary_from_config(
         &words,
@@ -1395,17 +1390,15 @@ fn phonetic_online_documents(token_count: usize) -> Vec<String> {
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn run_phonetic_online_scan(
-    samples: usize,
-    warmups: usize,
-    limit: usize,
-    max_distance: usize,
-    phonetic_dialect: &str,
-    phonetic_rules_file: Option<&Path>,
-    phonetic_rule_extensions: &[PathBuf],
-    phonetic_rule_extension_order: RuleExtensionOrder,
-    use_buffered: bool,
-) {
+fn run_phonetic_online_scan(opts: &Options, use_buffered: bool) {
+    let samples = opts.samples;
+    let warmups = opts.warmups;
+    let limit = opts.corpus_limit;
+    let max_distance = opts.max_distance;
+    let phonetic_dialect = &opts.phonetic_dialect;
+    let phonetic_rules_file = opts.phonetic_rules_file.as_deref();
+    let phonetic_rule_extensions = &opts.phonetic_rule_extensions;
+    let phonetic_rule_extension_order = opts.phonetic_rule_extension_order;
     let rules = phonetic_rules_from_config(
         phonetic_dialect,
         phonetic_rules_file,
@@ -1626,18 +1619,16 @@ fn load_targeted_rule_cases(paths: &[PathBuf], limit: usize) -> Vec<TargetedRule
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn run_cmudict_phonetic(
-    path: &Path,
-    samples: usize,
-    warmups: usize,
-    limit: usize,
-    max_distance: usize,
-    recall_k: usize,
-    phonetic_dialect: &str,
-    phonetic_rules_file: Option<&Path>,
-    phonetic_rule_extensions: &[PathBuf],
-    phonetic_rule_extension_order: RuleExtensionOrder,
-) {
+fn run_cmudict_phonetic(path: &Path, opts: &Options) {
+    let samples = opts.samples;
+    let warmups = opts.warmups;
+    let limit = opts.corpus_limit;
+    let max_distance = opts.max_distance;
+    let recall_k = opts.recall_k;
+    let phonetic_dialect = &opts.phonetic_dialect;
+    let phonetic_rules_file = opts.phonetic_rules_file.as_deref();
+    let phonetic_rule_extensions = &opts.phonetic_rule_extensions;
+    let phonetic_rule_extension_order = opts.phonetic_rule_extension_order;
     let cases = load_cmudict_homophones(path, limit);
     let mut terms = HashSet::new();
     for case in &cases {
@@ -1705,18 +1696,17 @@ fn run_cmudict_phonetic(
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn run_phonetic_targeted_rules(
-    samples: usize,
-    warmups: usize,
-    limit: usize,
-    max_distance: usize,
-    recall_k: usize,
-    phonetic_dialect: &str,
-    phonetic_rules_file: Option<&Path>,
-    phonetic_rule_extensions: &[PathBuf],
-    phonetic_rule_extension_order: RuleExtensionOrder,
-    phonetic_target_files: &[PathBuf],
-) {
+fn run_phonetic_targeted_rules(opts: &Options) {
+    let samples = opts.samples;
+    let warmups = opts.warmups;
+    let limit = opts.corpus_limit;
+    let max_distance = opts.max_distance;
+    let recall_k = opts.recall_k;
+    let phonetic_dialect = &opts.phonetic_dialect;
+    let phonetic_rules_file = opts.phonetic_rules_file.as_deref();
+    let phonetic_rule_extensions = &opts.phonetic_rule_extensions;
+    let phonetic_rule_extension_order = opts.phonetic_rule_extension_order;
+    let phonetic_target_files = &opts.phonetic_target_files;
     let target_files = if phonetic_target_files.is_empty() {
         phonetic_rule_extensions
     } else {
@@ -1782,17 +1772,15 @@ fn run_phonetic_targeted_rules(
 }
 
 #[cfg(feature = "phonetic-rules")]
-fn run_cmudict_phonetic_diagnostic(
-    path: &Path,
-    limit: usize,
-    diagnostic_limit: usize,
-    max_distance: usize,
-    recall_k: usize,
-    phonetic_dialect: &str,
-    phonetic_rules_file: Option<&Path>,
-    phonetic_rule_extensions: &[PathBuf],
-    phonetic_rule_extension_order: RuleExtensionOrder,
-) {
+fn run_cmudict_phonetic_diagnostic(path: &Path, opts: &Options) {
+    let limit = opts.corpus_limit;
+    let diagnostic_limit = opts.diagnostic_limit;
+    let max_distance = opts.max_distance;
+    let recall_k = opts.recall_k;
+    let phonetic_dialect = &opts.phonetic_dialect;
+    let phonetic_rules_file = opts.phonetic_rules_file.as_deref();
+    let phonetic_rule_extensions = &opts.phonetic_rule_extensions;
+    let phonetic_rule_extension_order = opts.phonetic_rule_extension_order;
     let cases = load_cmudict_homophones(path, limit.max(diagnostic_limit));
     let mut query_case_counts = HashMap::new();
     for case in &cases {
@@ -1927,94 +1915,32 @@ fn run_phonetic_normalized(
 }
 
 #[cfg(not(feature = "phonetic-rules"))]
-fn run_phonetic_normalized_payload_build(
-    _samples: usize,
-    _warmups: usize,
-    _limit: usize,
-    _phonetic_dialect: &str,
-    _phonetic_rules_file: Option<&Path>,
-    _phonetic_rule_extensions: &[PathBuf],
-    _phonetic_rule_extension_order: RuleExtensionOrder,
-    _use_term_ids: bool,
-    _sweep_sizes: bool,
-) {
+fn run_phonetic_normalized_payload_build(_opts: &Options, _use_term_ids: bool, _sweep_sizes: bool) {
     panic!("phonetic-normalized build-payload workloads require --features phonetic-rules");
 }
 
 #[cfg(not(feature = "phonetic-rules"))]
-fn run_phonetic_regex_product(
-    _samples: usize,
-    _warmups: usize,
-    _limit: usize,
-    _max_distance: usize,
-    _phonetic_dialect: &str,
-    _phonetic_rules_file: Option<&Path>,
-    _phonetic_rule_extensions: &[PathBuf],
-    _phonetic_rule_extension_order: RuleExtensionOrder,
-    _use_scan_control: bool,
-) {
+fn run_phonetic_regex_product(_opts: &Options, _use_scan_control: bool) {
     panic!("phonetic-regex-product workload requires --features phonetic-rules");
 }
 
 #[cfg(not(feature = "phonetic-rules"))]
-fn run_phonetic_online_scan(
-    _samples: usize,
-    _warmups: usize,
-    _limit: usize,
-    _max_distance: usize,
-    _phonetic_dialect: &str,
-    _phonetic_rules_file: Option<&Path>,
-    _phonetic_rule_extensions: &[PathBuf],
-    _phonetic_rule_extension_order: RuleExtensionOrder,
-    _use_buffered: bool,
-) {
+fn run_phonetic_online_scan(_opts: &Options, _use_buffered: bool) {
     panic!("phonetic-online-scan workload requires --features phonetic-rules");
 }
 
 #[cfg(not(feature = "phonetic-rules"))]
-fn run_cmudict_phonetic(
-    _path: &Path,
-    _samples: usize,
-    _warmups: usize,
-    _limit: usize,
-    _max_distance: usize,
-    _recall_k: usize,
-    _phonetic_dialect: &str,
-    _phonetic_rules_file: Option<&Path>,
-    _phonetic_rule_extensions: &[PathBuf],
-    _phonetic_rule_extension_order: RuleExtensionOrder,
-) {
+fn run_cmudict_phonetic(_path: &Path, _opts: &Options) {
     panic!("cmudict-phonetic workload requires --features phonetic-rules");
 }
 
 #[cfg(not(feature = "phonetic-rules"))]
-fn run_phonetic_targeted_rules(
-    _samples: usize,
-    _warmups: usize,
-    _limit: usize,
-    _max_distance: usize,
-    _recall_k: usize,
-    _phonetic_dialect: &str,
-    _phonetic_rules_file: Option<&Path>,
-    _phonetic_rule_extensions: &[PathBuf],
-    _phonetic_rule_extension_order: RuleExtensionOrder,
-    _phonetic_target_files: &[PathBuf],
-) {
+fn run_phonetic_targeted_rules(_opts: &Options) {
     panic!("phonetic-targeted-rules workload requires --features phonetic-rules");
 }
 
 #[cfg(not(feature = "phonetic-rules"))]
-fn run_cmudict_phonetic_diagnostic(
-    _path: &Path,
-    _limit: usize,
-    _diagnostic_limit: usize,
-    _max_distance: usize,
-    _recall_k: usize,
-    _phonetic_dialect: &str,
-    _phonetic_rules_file: Option<&Path>,
-    _phonetic_rule_extensions: &[PathBuf],
-    _phonetic_rule_extension_order: RuleExtensionOrder,
-) {
+fn run_cmudict_phonetic_diagnostic(_path: &Path, _opts: &Options) {
     panic!("cmudict-phonetic-diagnostic workload requires --features phonetic-rules");
 }
 
@@ -2065,120 +1991,40 @@ fn main() {
         opts.workload,
         Workload::All | Workload::PhoneticNormalizedBuildStringPayload
     ) {
-        run_phonetic_normalized_payload_build(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            false,
-            false,
-        );
+        run_phonetic_normalized_payload_build(&opts, false, false);
     }
     if matches!(
         opts.workload,
         Workload::All | Workload::PhoneticNormalizedBuildStringPayloadSweep
     ) {
-        run_phonetic_normalized_payload_build(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            false,
-            true,
-        );
+        run_phonetic_normalized_payload_build(&opts, false, true);
     }
     if matches!(
         opts.workload,
         Workload::All | Workload::PhoneticNormalizedBuildTermIdPayload
     ) {
-        run_phonetic_normalized_payload_build(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            true,
-            false,
-        );
+        run_phonetic_normalized_payload_build(&opts, true, false);
     }
     if matches!(
         opts.workload,
         Workload::All | Workload::PhoneticNormalizedBuildTermIdPayloadSweep
     ) {
-        run_phonetic_normalized_payload_build(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            true,
-            true,
-        );
+        run_phonetic_normalized_payload_build(&opts, true, true);
     }
     if matches!(opts.workload, Workload::PhoneticRegexProductScan) {
-        run_phonetic_regex_product(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            opts.max_distance,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            true,
-        );
+        run_phonetic_regex_product(&opts, true);
     }
     if matches!(
         opts.workload,
         Workload::All | Workload::PhoneticRegexProduct
     ) {
-        run_phonetic_regex_product(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            opts.max_distance,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            false,
-        );
+        run_phonetic_regex_product(&opts, false);
     }
     if matches!(opts.workload, Workload::PhoneticOnlineStatefulScan) {
-        run_phonetic_online_scan(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            opts.max_distance,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            false,
-        );
+        run_phonetic_online_scan(&opts, false);
     }
     if matches!(opts.workload, Workload::PhoneticOnlineBufferedScan) {
-        run_phonetic_online_scan(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            opts.max_distance,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            true,
-        );
+        run_phonetic_online_scan(&opts, true);
     }
     if matches!(opts.workload, Workload::BirkbeckFawthrop)
         || (matches!(opts.workload, Workload::All) && opts.birkbeck_dir.is_some())
@@ -2239,48 +2085,16 @@ fn main() {
             .cmudict_path
             .as_deref()
             .expect("cmudict-phonetic requires --cmudict PATH");
-        run_cmudict_phonetic(
-            path,
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            opts.max_distance,
-            opts.recall_k,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-        );
+        run_cmudict_phonetic(path, &opts);
     }
     if matches!(opts.workload, Workload::PhoneticTargetedRules) {
-        run_phonetic_targeted_rules(
-            opts.samples,
-            opts.warmups,
-            opts.corpus_limit,
-            opts.max_distance,
-            opts.recall_k,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-            &opts.phonetic_target_files,
-        );
+        run_phonetic_targeted_rules(&opts);
     }
     if matches!(opts.workload, Workload::CmudictPhoneticDiagnostic) {
         let path = opts
             .cmudict_path
             .as_deref()
             .expect("cmudict-phonetic-diagnostic requires --cmudict PATH");
-        run_cmudict_phonetic_diagnostic(
-            path,
-            opts.corpus_limit,
-            opts.diagnostic_limit,
-            opts.max_distance,
-            opts.recall_k,
-            &opts.phonetic_dialect,
-            opts.phonetic_rules_file.as_deref(),
-            &opts.phonetic_rule_extensions,
-            opts.phonetic_rule_extension_order,
-        );
+        run_cmudict_phonetic_diagnostic(path, &opts);
     }
 }

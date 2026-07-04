@@ -100,9 +100,9 @@ char* llev_string_dup(const char* src);
  * edits (insertions, deletions, substitutions) required to change one
  * string into another.
  *
- * @param source Source string (null-terminated UTF-8)
+ * @param source Source UTF-8 byte buffer
  * @param source_len Length of source string in bytes
- * @param target Target string (null-terminated UTF-8)
+ * @param target Target UTF-8 byte buffer
  * @param target_len Length of target string in bytes
  * @return Edit distance, or SIZE_MAX on error (null pointer or invalid UTF-8)
  *
@@ -126,9 +126,9 @@ size_t llev_distance(
  * of computing the exact distance. This can be significantly faster
  * for filtering candidates.
  *
- * @param source Source string (null-terminated UTF-8)
+ * @param source Source UTF-8 byte buffer
  * @param source_len Length of source string in bytes
- * @param target Target string (null-terminated UTF-8)
+ * @param target Target UTF-8 byte buffer
  * @param target_len Length of target string in bytes
  * @param threshold Maximum distance to compute
  * @return Edit distance if <= threshold, SIZE_MAX-1 if > threshold,
@@ -149,9 +149,9 @@ size_t llev_distance_threshold(
  * characters as a single edit. This is often more appropriate for
  * detecting typos.
  *
- * @param source Source string (null-terminated UTF-8)
+ * @param source Source UTF-8 byte buffer
  * @param source_len Length of source string in bytes
- * @param target Target string (null-terminated UTF-8)
+ * @param target Target UTF-8 byte buffer
  * @param target_len Length of target string in bytes
  * @return Edit distance, or SIZE_MAX on error
  *
@@ -172,9 +172,9 @@ size_t llev_damerau_distance(
 /**
  * Calculate Damerau-Levenshtein distance with early termination.
  *
- * @param source Source string (null-terminated UTF-8)
+ * @param source Source UTF-8 byte buffer
  * @param source_len Length of source string in bytes
- * @param target Target string (null-terminated UTF-8)
+ * @param target Target UTF-8 byte buffer
  * @param target_len Length of target string in bytes
  * @param threshold Maximum distance to compute
  * @return Edit distance if <= threshold, SIZE_MAX-1 if > threshold,

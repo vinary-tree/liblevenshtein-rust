@@ -9,12 +9,10 @@ use std::collections::HashSet;
 use std::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
 enum IdentifierType {
     Variable,
     Function,
     Class,
-    Constant,
 }
 
 #[derive(Debug, Clone)]

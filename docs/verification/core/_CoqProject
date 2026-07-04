@@ -70,6 +70,7 @@ theories/Composition/MergeSplitComposition.v
 # Optimal trace construction
 theories/OptimalTrace/Construction.v
 theories/OptimalTrace/CostEquality.v
+theories/OptimalTrace/MergeSplitConstruction.v
 theories/OptimalTrace/Validity.v
 
 # Lower bound proofs

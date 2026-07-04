@@ -25,7 +25,7 @@ All planned phases completed:
 | 7.5 | Wire prefetcher for DFS traversal | Complete |
 | 8.1-8.4 | Integrate WAL with operations | Complete |
 | 9.1-9.2 | Implement startup recovery | Complete |
-| 10.1-10.4 | Complete ART node operations (fix TODOs) | Complete |
+| 10.1-10.4 | Complete ART node operations | Complete |
 | 11 | Performance benchmarking | Complete |
 
 ## Benchmark Results

@@ -35,7 +35,7 @@ fn load_dictionary<P: AsRef<Path>>(path: P) -> Vec<String> {
     let reader = BufReader::new(file);
     reader
         .lines()
-        .filter_map(|line| line.ok())
+        .map_while(Result::ok)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .collect()
 }

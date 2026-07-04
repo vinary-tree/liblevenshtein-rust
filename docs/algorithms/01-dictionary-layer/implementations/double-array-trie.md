@@ -286,44 +286,57 @@ impl<V: DictionaryValue> DoubleArrayTrieBuilder<V> {
     }
 
     fn add_transition(&mut self, from: usize, label: u8) -> usize {
-        // Find BASE value that avoids conflicts
-        let base = self.find_base(from, label);
-        if base >= self.base.len() {
-            self.grow_arrays(base + 256);
+        // Find a BASE value that avoids conflicts, growing storage until
+        // the local transition set can be represented.
+        let base = loop {
+            if let Some(base) = self.find_base(from, label) {
+                break base;
+            }
+            let next_len = self
+                .check
+                .len()
+                .saturating_mul(2)
+                .max(self.check.len().saturating_add(256))
+                .max(256);
+            self.grow_arrays(next_len);
+        };
+
+        let to = base + usize::from(label);
+        if to >= self.base.len() {
+            self.grow_arrays(to + 1);
         }
 
-        let to = (base as usize) + (label as usize);
-
-        self.base[from] = base as i32;
-        self.check[to] = from as i32;
+        self.base[from] = i32::try_from(base).expect("BASE index fits i32 storage");
+        self.check[to] = i32::try_from(from).expect("CHECK parent fits i32 storage");
         self.edges[from].push(label);
 
         to
     }
 
-    fn find_base(&self, state: usize, new_label: u8) -> i32 {
+    fn find_base(&self, state: usize, new_label: u8) -> Option<usize> {
         // Get existing labels from this state
         let existing_labels = &self.edges[state];
 
-        // Try base values starting from reasonable offset
-        for base in (state as i32).. {
+        // Try base values that fit in the currently allocated arrays.
+        for base in state..self.check.len() {
             // Check if this base works for all labels
-            let works = existing_labels.iter().all(|&label| {
-                let target = (base as usize) + (label as usize);
-                target < self.check.len() && self.check[target] < 0
-            });
+            let works = existing_labels
+                .iter()
+                .copied()
+                .chain(std::iter::once(new_label))
+                .all(|label| {
+                    let Some(target) = base.checked_add(usize::from(label)) else {
+                        return false;
+                    };
+                    target < self.check.len() && self.check[target] < 0
+                });
 
-            // Also check new label
-            let new_target = (base as usize) + (new_label as usize);
-            let new_works = new_target < self.check.len() &&
-                           self.check[new_target] < 0;
-
-            if works && new_works {
-                return base;
+            if works {
+                return Some(base);
             }
         }
 
-        unreachable!()
+        None
     }
 }
 ```

@@ -7,7 +7,7 @@
 ##         #     GNU Lesser General Public License Version 2.1          ##
 ##         #     (see LICENSE file for the text of the license)         ##
 ##########################################################################
-## GNUMakefile for Rocq 9.1.0
+## GNUMakefile for Rocq 9.1.1
 
 # For debugging purposes (must stay here, don't move below)
 INITIAL_VARS := $(.VARIABLES)
@@ -167,7 +167,7 @@ destination_path = $(if $(DESTDIR),$(DESTDIR)/$(call windrive_path,$(1)),$(1))
 COQLIBINSTALL ?= $(call destination_path,$(COQLIB)/user-contrib)
 COQDOCINSTALL ?= $(call destination_path,$(DOCDIR)/coq/user-contrib)
 COQPLUGININSTALL ?= $(call destination_path,$(COQCORELIB)/..)
-COQTOPINSTALL ?= $(call destination_path,$(COQLIB)/toploop) # FIXME: Unused variable?
+COQTOPINSTALL ?= $(call destination_path,$(COQLIB)/toploop) # Reserved by coq_makefile install layout.
 
 # findlib files installation
 FINDLIBPREINST= mkdir -p "$(COQPLUGININSTALL)/"
@@ -274,7 +274,7 @@ COQDOCLIBS?=$(COQLIBS_NOML)
 # generated this makefile
 # NB --print-version is not in the rocq shim
 COQ_VERSION:=$(shell $(ROCQ) c --print-version | cut -d " " -f 1)
-COQMAKEFILE_VERSION:=9.1.0
+COQMAKEFILE_VERSION:=9.1.1
 
 # COQ_SRC_SUBDIRS is for user-overriding, usually to add
 # `user-contrib/Foo` to the includes, we keep COQCORE_SRC_SUBDIRS for
@@ -543,9 +543,7 @@ all.pdf: $(VFILES)
 		-toc $(COQDOCFLAGS) -pdf $(GAL) $(COQDOCLIBS) \
 		-o $@ `$(COQDEP) -sort $(VFILES)`
 
-# FIXME: not quite right, since the output name is different
-gallinahtml: GAL=-g
-gallinahtml: html
+gallinahtml: $(GHTMLFILES)
 
 all-gal.ps: GAL=-g
 all-gal.ps: all.ps
@@ -720,12 +718,12 @@ $(MLGFILES:.mlg=.ml): %.ml: %.mlg
 	$(SHOW)'COQPP $<'
 	$(HIDE)$(COQPP) $<
 
-# Stupid hack around a deficient syntax: we cannot concatenate two expansions
+# GNU make static-pattern syntax cannot concatenate these expansions;
 $(filter %.cmo, $(MLFILES:.ml=.cmo) $(MLGFILES:.mlg=.cmo)): %.cmo: %.ml
 	$(SHOW)'CAMLC -c $<'
 	$(HIDE)$(TIMER) $(CAMLC) $(CAMLDEBUG) $(CAMLFLAGS) $(FINDLIBPKGS) $<
 
-# Same hack
+# Same expansion pattern for native objects
 $(filter %.cmx, $(MLFILES:.ml=.cmx) $(MLGFILES:.mlg=.cmx)): %.cmx: %.ml
 	$(SHOW)'CAMLOPT -c $(FOR_PACK) $<'
 	$(HIDE)$(TIMER) $(CAMLOPTC) $(CAMLDEBUG) $(CAMLFLAGS) $(FINDLIBPKGS) $(FOR_PACK) $<
@@ -803,7 +801,8 @@ ifeq ($(COQDONATIVE), "yes")
 	$(HIDE)$(call TIMER,$@.native) $(COQNATIVE) $(COQLIBS) $@
 endif
 
-# this is broken :( todo fix if we ever find a solution that doesn't need grouped targets
+# GNU make without grouped-target support cannot express the coupled .vo/.glob
+# production above, so keep a conservative standalone .glob rule.
 $(GLOBFILES): %.glob: %.v
 	$(SHOW)'ROCQ compile $< (for .glob)'
 	$(HIDE)$(TIMER) $(ROCQ) compile $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $<
