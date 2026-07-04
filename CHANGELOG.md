@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Weighted edit distance now honours non-unit insertion/deletion costs.** The
+  float-weighted transducer (`CandidateIteratorF64` / `OperationCostsF64`) previously
+  returned wrong distances whenever `insertion` or `deletion` differed from `1.0`:
+  trailing deletions needed to reach acceptance were charged at unit cost, and a padded
+  look-ahead window could emit a spurious past-query-end position whose cheaper
+  substitution cost was reported instead of the true edit distance. `StateF64::infer_distance`
+  now charges trailing deletions at `deletion` cost and rejects positions with
+  `term_index > query_length`. Unit-cost results are unchanged.
+- **Weighted subsumption no longer over-prunes for non-unit costs.** `PositionF64::subsumes`
+  scales the index-realignment bound by `max(insertion, deletion)`, so a position leading to
+  the only in-budget match is no longer discarded when `insertion`/`deletion > 1`.
+- **`GeneralizedPosition` ordering** is now consistent with its derived `Eq`/`Hash` (tiebreaks
+  on `entry_char`), restoring the `Ord`/`Eq` contract `binary_search` relies on.
+- **Deterministic tie ordering** for MSM empty-/non-finite-query and hybrid brute-force searches
+  (equal-distance results no longer depend on `HashMap` iteration order).
+
+### Changed
+
+- **Crate-wide numeric hardening**: implicit wraparound, lossy float→int casts, overloaded
+  sentinels, and unchecked capacity arithmetic replaced with checked/saturating/provably-bounded
+  conversions (the sole intentional `wrapping_add` — Myers' bit-parallel recurrence — is documented).
+- **Quantization** (`time_series::encoding`) explicitly clamps `NaN`/`±∞`/out-of-range inputs;
+  `OperationCostsF64::is_valid` also rejects non-finite costs.
+- Hardened UTF-8 span handling in CLI/grep and checked length/capacity conversions in the
+  LLRE/LLEV/compression decoders; added non-ASCII regression coverage.
+- Documented `Algorithm::MergeAndSplit` as an intentional wildcard over-approximation, and
+  `phonetic_weight` / NFA `Transition.weight` as reserved (not applied to matching cost).
+
+See [docs/design/numeric-and-weighted-cost-hardening.md](docs/design/numeric-and-weighted-cost-hardening.md)
+for the full invariant catalogue and verification methodology.
+
 ## [0.9.1] - 2026-06-15
 
 ### Added
