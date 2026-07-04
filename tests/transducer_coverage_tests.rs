@@ -7,10 +7,9 @@
 //!
 //! Coverage improvement goal: Add ~460 branches to test coverage.
 
-mod common;
-
 use liblevenshtein::transducer::generalized::{
     CharacteristicVector as GeneralizedCV, GeneralizedPosition, GeneralizedState,
+    GeneralizedTransitionInput,
 };
 use liblevenshtein::transducer::universal::position::{MergeSplitState, TranspositionState};
 use liblevenshtein::transducer::universal::{
@@ -59,7 +58,7 @@ fn test_transition_f64_at_max_cost_only_matches() {
 
     // Initial state with positions near max cost
     let mut state = StateF64::new();
-    state.insert(PositionF64::new(0, 2.0), Algorithm::Standard, query.len());
+    state.insert(PositionF64::new(0, 2.0), Algorithm::Standard, query.len(), 1.0);
 
     // At max cost, only exact matches should work
     assert!(!state.is_empty());
@@ -309,9 +308,15 @@ fn test_successors_i_type_match() {
     let cv = GeneralizedCV::new('a', "$$abc");
     let word_chars: Vec<char> = "abc".chars().collect();
 
-    if let Some(next) =
-        state.transition(&operations, &cv, "abc", Some(&word_chars), "$$abc", 'a', 1)
-    {
+    if let Some(next) = state.transition(GeneralizedTransitionInput::new(
+        &operations,
+        &cv,
+        "abc",
+        Some(&word_chars),
+        "$$abc",
+        'a',
+        1,
+    )) {
         assert!(!next.is_empty());
     }
 }
@@ -330,8 +335,15 @@ fn test_successors_i_type_no_match() {
     let cv = GeneralizedCV::new('x', "abc");
     let word_chars: Vec<char> = "abc".chars().collect();
 
-    if let Some(next) = state.transition(&operations, &cv, "abc", Some(&word_chars), "abc", 'x', 1)
-    {
+    if let Some(next) = state.transition(GeneralizedTransitionInput::new(
+        &operations,
+        &cv,
+        "abc",
+        Some(&word_chars),
+        "abc",
+        'x',
+        1,
+    )) {
         // Should have delete/insert/substitute successors
         assert!(!next.is_empty());
     }
@@ -352,7 +364,15 @@ fn test_successors_i_type_at_max_errors() {
     let cv = GeneralizedCV::new('x', "abc");
     let word_chars: Vec<char> = "abc".chars().collect();
 
-    let next = state.transition(&operations, &cv, "abc", Some(&word_chars), "abc", 'x', 1);
+    let next = state.transition(GeneralizedTransitionInput::new(
+        &operations,
+        &cv,
+        "abc",
+        Some(&word_chars),
+        "abc",
+        'x',
+        1,
+    ));
     // At max errors with no match, may produce empty state
     if let Some(n) = next {
         // Verify successors don't exceed max_distance
@@ -806,7 +826,7 @@ proptest! {
     ) {
         let pos = PositionF64::new(term_idx, cost);
         // A position always subsumes itself (reflexive)
-        prop_assert!(pos.subsumes(&pos, Algorithm::Standard, 10));
+        prop_assert!(pos.subsumes(&pos, Algorithm::Standard, 10, 1.0));
     }
 
     /// Property: Lower cost position can subsume higher cost at same index
@@ -820,7 +840,7 @@ proptest! {
         let pos2 = PositionF64::new(term_idx, cost1 + cost_diff);
 
         // pos1 (lower cost) should subsume pos2 (higher cost) at same index
-        prop_assert!(pos1.subsumes(&pos2, Algorithm::Standard, 10));
+        prop_assert!(pos1.subsumes(&pos2, Algorithm::Standard, 10, 1.0));
     }
 
     /// Property: Higher cost position cannot subsume lower cost
@@ -833,7 +853,7 @@ proptest! {
         let pos2 = PositionF64::new(term_idx, cost1 - 0.5);
 
         // Higher cost cannot subsume lower cost
-        prop_assert!(!pos1.subsumes(&pos2, Algorithm::Standard, 10));
+        prop_assert!(!pos1.subsumes(&pos2, Algorithm::Standard, 10, 1.0));
     }
 }
 
@@ -856,7 +876,7 @@ proptest! {
         // Generate valid offset
         let offset = (e as i32).min(n as i32);
 
-        if offset.abs() as u8 <= e && e <= n {
+        if offset.unsigned_abs() <= u32::from(e) && e <= n {
             let result = UniversalPosition::<Standard>::new_i(offset, e, n);
             prop_assert!(result.is_ok(), "Valid I-position should be accepted");
         }
@@ -897,7 +917,15 @@ proptest! {
         let cv = GeneralizedCV::new(ch, &word);
         let word_chars: Vec<char> = word.chars().collect();
 
-        let result = state.transition(&operations, &cv, &word, Some(&word_chars), &word, ch, 1);
+        let result = state.transition(GeneralizedTransitionInput::new(
+            &operations,
+            &cv,
+            &word,
+            Some(&word_chars),
+            &word,
+            ch,
+            1,
+        ));
         prop_assert!(result.is_none(), "Empty state should have no successors");
     }
 
@@ -944,7 +972,15 @@ fn test_single_char_query() {
     let cv = GeneralizedCV::new('a', "$$a");
     let word_chars: Vec<char> = "a".chars().collect();
 
-    if let Some(next) = state.transition(&operations, &cv, "a", Some(&word_chars), "$$a", 'a', 1) {
+    if let Some(next) = state.transition(GeneralizedTransitionInput::new(
+        &operations,
+        &cv,
+        "a",
+        Some(&word_chars),
+        "$$a",
+        'a',
+        1,
+    )) {
         assert!(!next.is_empty());
     }
 }

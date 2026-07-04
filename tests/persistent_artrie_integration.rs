@@ -28,7 +28,7 @@ fn make_empty_dict() -> PersistentARTrie<()> {
 
 /// Create a PersistentARTrie from a list of terms for testing
 fn create_test_dict(terms: &[&str]) -> PersistentARTrie<()> {
-    let mut dict = make_empty_dict();
+    let dict = make_empty_dict();
     for term in terms {
         dict.insert(term);
     }
@@ -49,7 +49,7 @@ fn wrap_dict(dict: PersistentARTrie<()>) -> Arc<PersistentARTrie<()>> {
 
 #[test]
 fn test_persistent_artrie_basic_operations() {
-    let mut dict: PersistentARTrie<()> = make_empty_dict();
+    let dict: PersistentARTrie<()> = make_empty_dict();
 
     // Insert terms
     assert!(dict.insert("apple"));
@@ -72,7 +72,7 @@ fn test_persistent_artrie_basic_operations() {
 
 #[test]
 fn test_persistent_artrie_remove() {
-    let mut dict = create_test_dict(&["apple", "banana", "cherry"]);
+    let dict = create_test_dict(&["apple", "banana", "cherry"]);
 
     assert!(dict.remove("banana"));
     assert!(!dict.contains("banana"));
@@ -87,7 +87,7 @@ fn test_persistent_artrie_remove() {
 
 #[test]
 fn test_persistent_artrie_empty_string() {
-    let mut dict: PersistentARTrie<()> = make_empty_dict();
+    let dict: PersistentARTrie<()> = make_empty_dict();
 
     // Insert empty string
     assert!(dict.insert(""));
@@ -358,7 +358,7 @@ fn test_persistent_artrie_concurrent_reads() {
     use std::sync::Arc;
     use std::thread;
 
-    let mut dict: PersistentARTrie<()> = make_empty_dict();
+    let dict: PersistentARTrie<()> = make_empty_dict();
     for i in 0..100 {
         dict.insert(&format!("word{:03}", i));
     }
@@ -398,7 +398,7 @@ fn test_persistent_artrie_single_char_terms() {
 #[test]
 fn test_persistent_artrie_long_term() {
     let long_term = "a".repeat(1000);
-    let mut dict: PersistentARTrie<()> = make_empty_dict();
+    let dict: PersistentARTrie<()> = make_empty_dict();
 
     assert!(dict.insert(&long_term));
     assert!(dict.contains(&long_term));
@@ -406,7 +406,7 @@ fn test_persistent_artrie_long_term() {
 
 #[test]
 fn test_persistent_artrie_many_terms() {
-    let mut dict: PersistentARTrie<()> = make_empty_dict();
+    let dict: PersistentARTrie<()> = make_empty_dict();
 
     // Insert 200 terms, keeping this integration test within the current
     // bucket-capacity envelope exercised by the persistent ARTrie backend.

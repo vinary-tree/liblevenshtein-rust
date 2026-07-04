@@ -517,7 +517,7 @@ mod regression_tests {
             "Deletion regression: automaton should match linear scan"
         );
         assert!(
-            automaton_results.contains(&"test".to_string()),
+            automaton_results.iter().any(|term| term == "test"),
             "Should find 'test' for query 'testt' with distance 1"
         );
     }

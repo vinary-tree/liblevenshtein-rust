@@ -37,12 +37,6 @@ mod cli_integration_tests {
     impl Drop for ScratchDir {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.path);
-            if let Some(parent) = self.path.parent() {
-                let _ = fs::remove_dir(parent);
-                if let Some(root) = parent.parent() {
-                    let _ = fs::remove_dir(root);
-                }
-            }
         }
     }
 

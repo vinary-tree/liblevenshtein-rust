@@ -178,14 +178,14 @@ mod nfa_types_coverage {
 
     #[test]
     fn test_byte_class_from_bytes() {
-        let vowels = CharClass::from_bytes(&[b'a', b'e', b'i', b'o', b'u']);
+        let vowels = CharClass::from_bytes(b"aeiou");
         assert!(vowels.matches(b'a'));
         assert!(!vowels.matches(b'b'));
     }
 
     #[test]
     fn test_byte_class_negation() {
-        let non_vowels = CharClass::from_bytes(&[b'a', b'e', b'i', b'o', b'u']).negated();
+        let non_vowels = CharClass::from_bytes(b"aeiou").negated();
         assert!(!non_vowels.matches(b'a'));
         assert!(non_vowels.matches(b'b'));
     }

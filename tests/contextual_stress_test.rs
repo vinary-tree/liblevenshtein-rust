@@ -218,7 +218,7 @@ mod stress_tests {
                     // Undo (may fail if no checkpoints)
                     let _ = engine.undo(ctx);
                 }
-                _ => unreachable!(),
+                unexpected => panic!("i % 4 produced unexpected remainder {unexpected}"),
             }
 
             if i % 10_000 == 0 {
@@ -323,7 +323,7 @@ mod stress_tests {
                                 .finalize_direct(ctx, &format!("finalized_{}", i))
                                 .unwrap();
                         }
-                        _ => unreachable!(),
+                        unexpected => panic!("i % 3 produced unexpected remainder {unexpected}"),
                     }
                 }
 

@@ -5,8 +5,10 @@
 //! - N-gram filter completeness (no false negatives)
 //! - Hybrid matcher correctness
 
-mod common;
+#[path = "common/ascii_strategies.rs"]
+mod ascii_strategies;
 
+use ascii_strategies::{ascii_word_strategy, small_dict_strategy};
 use liblevenshtein::distance::standard_distance;
 use liblevenshtein::filter::{
     is_similar, jaro_similarity, jaro_winkler_similarity, jaro_winkler_similarity_scaled,
@@ -24,8 +26,8 @@ proptest! {
     /// Jaro similarity is bounded: 0.0 <= sim <= 1.0
     #[test]
     fn prop_jaro_similarity_bounded(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         let sim = jaro_similarity(&s1, &s2);
         prop_assert!(
@@ -38,8 +40,8 @@ proptest! {
     /// Jaro-Winkler similarity is bounded: 0.0 <= sim <= 1.0
     #[test]
     fn prop_jaro_winkler_similarity_bounded(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         let sim = jaro_winkler_similarity(&s1, &s2);
         prop_assert!(
@@ -52,7 +54,7 @@ proptest! {
     /// Jaro similarity identity: sim(s, s) == 1.0
     #[test]
     fn prop_jaro_identity(
-        s in common::strategies::ascii_word_strategy(),
+        s in ascii_word_strategy(),
     ) {
         if s.is_empty() {
             // Empty string has similarity 1.0 with itself
@@ -75,7 +77,7 @@ proptest! {
     /// Jaro-Winkler similarity identity: sim(s, s) == 1.0
     #[test]
     fn prop_jaro_winkler_identity(
-        s in common::strategies::ascii_word_strategy(),
+        s in ascii_word_strategy(),
     ) {
         let sim = jaro_winkler_similarity(&s, &s);
         prop_assert!(
@@ -88,8 +90,8 @@ proptest! {
     /// Jaro similarity symmetry: sim(a, b) == sim(b, a)
     #[test]
     fn prop_jaro_symmetry(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         let sim_12 = jaro_similarity(&s1, &s2);
         let sim_21 = jaro_similarity(&s2, &s1);
@@ -103,8 +105,8 @@ proptest! {
     /// Jaro-Winkler similarity symmetry: sim(a, b) == sim(b, a)
     #[test]
     fn prop_jaro_winkler_symmetry(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         let sim_12 = jaro_winkler_similarity(&s1, &s2);
         let sim_21 = jaro_winkler_similarity(&s2, &s1);
@@ -118,8 +120,8 @@ proptest! {
     /// Jaro-Winkler >= Jaro (prefix bonus never negative)
     #[test]
     fn prop_jaro_winkler_geq_jaro(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         let jaro = jaro_similarity(&s1, &s2);
         let jaro_winkler = jaro_winkler_similarity(&s1, &s2);
@@ -154,8 +156,8 @@ proptest! {
     /// Scaled Jaro-Winkler should also be bounded
     #[test]
     fn prop_scaled_jaro_winkler_bounded(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
         scale in 0.05f64..=0.25f64,
     ) {
         let sim = jaro_winkler_similarity_scaled(&s1, &s2, scale);
@@ -185,8 +187,8 @@ proptest! {
     /// edit distance calculation.
     #[test]
     fn prop_ngram_no_false_negatives(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 1usize..=2,
     ) {
         // Skip very short words where n-gram filtering is unreliable
@@ -238,7 +240,7 @@ proptest! {
     /// N-gram index should find exact matches
     #[test]
     fn prop_ngram_finds_exact_matches(
-        dict_words in common::strategies::small_dict_strategy(),
+        dict_words in small_dict_strategy(),
     ) {
         let dict_words: Vec<_> = dict_words.into_iter().filter(|w| w.len() >= 3).collect();
         if dict_words.is_empty() {
@@ -264,7 +266,7 @@ proptest! {
     /// N-gram index with trigrams should also be complete
     #[test]
     fn prop_ngram_trigrams_complete(
-        dict_words in common::strategies::small_dict_strategy(),
+        dict_words in small_dict_strategy(),
         query in "[a-z]{4,10}",
         max_dist in 1usize..=2,
     ) {
@@ -317,8 +319,8 @@ proptest! {
     /// is_similar should be consistent with jaro_winkler_similarity
     #[test]
     fn prop_is_similar_consistent(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
         threshold in 0.5f64..1.0f64,
     ) {
         let sim = jaro_winkler_similarity(&s1, &s2);
@@ -342,8 +344,8 @@ proptest! {
     /// is_similar with threshold 0 should always return true for non-empty strings
     #[test]
     fn prop_is_similar_threshold_zero(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         // With threshold 0, any string pair should be "similar"
         let is_sim = is_similar(&s1, &s2, 0.0);
@@ -353,7 +355,7 @@ proptest! {
     /// is_similar with threshold 1.0 should only be true for identical strings
     #[test]
     fn prop_is_similar_threshold_one(
-        s in common::strategies::ascii_word_strategy(),
+        s in ascii_word_strategy(),
     ) {
         // With threshold 1.0, only identical strings should match
         let is_sim_same = is_similar(&s, &s, 1.0);
@@ -526,7 +528,7 @@ fn test_filter_pipeline() {
         "project",
     ];
     for term in &terms {
-        index.insert(*term);
+        index.insert(term);
     }
 
     let query = "progam"; // Typo of "program"

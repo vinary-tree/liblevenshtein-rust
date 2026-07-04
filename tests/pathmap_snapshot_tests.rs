@@ -76,7 +76,6 @@ fn transducer_over_borrowed_ref_no_static_bound() {
     assert!(near_bar.contains(&"baz".to_string()));
 
     // The borrow of `map` outlives the transducer and its queries.
-    drop(t);
     drop(map);
 }
 
@@ -89,7 +88,6 @@ fn transducer_over_subtrie_from_read_zippers() {
     let borrowed = PathMapRef::from_read_zipper(&rz);
     let t = Transducer::new(borrowed, Algorithm::Standard);
     assert!(t.query("foo", 0).any(|s| s == "foo"));
-    drop(t);
     drop(rz);
 
     // Owned read zipper rooted at the "foo" prefix => an owned snapshot of that
@@ -146,6 +144,5 @@ fn borrowed_char_ref_transducer() {
     let got = sorted(t.query("中文", 1).collect());
     assert!(got.contains(&"中文".to_string()));
     assert!(got.contains(&"中華".to_string()), "文↔華 is one char edit");
-    drop(t);
     drop(map);
 }

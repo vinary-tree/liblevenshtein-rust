@@ -81,6 +81,37 @@ fn public_api_smoke_range_and_knn() {
     }
 }
 
+#[test]
+fn public_remove_updates_range_knn_and_originals() {
+    let quant = QuantizationConfig::for_u8(0.0, 100.0);
+    let msm = MsmConfig::new(1.0);
+    let mut idx: MsmTransducer<usize> = MsmTransducer::new(quant, msm);
+
+    assert!(idx.insert(0, &[10.0, 20.0, 30.0]));
+    assert!(idx.insert(1, &[10.1, 20.1, 30.1]));
+    assert!(idx.insert(2, &[90.0, 90.0, 90.0]));
+    assert_eq!(idx.len(), 3);
+
+    assert!(idx.remove(1));
+    assert!(!idx.remove(1));
+    assert_eq!(idx.len(), 2);
+    assert_eq!(idx.get_original(&1), None);
+
+    let query = vec![10.1, 20.1, 30.1];
+    let range_ids = ids(&idx.search_range(&query, 5.0));
+    assert_eq!(range_ids, HashSet::from([0]));
+
+    let knn = idx.search_knn(&query, 3, 1.0);
+    assert_eq!(knn.len(), 2);
+    assert!(!knn.iter().any(|(id, _)| *id == 1));
+
+    assert!(idx.remove(0));
+    assert!(idx.remove(2));
+    assert!(idx.is_empty());
+    assert!(idx.search_range(&query, f64::INFINITY).is_empty());
+    assert!(idx.search_knn(&query, 1, 1.0).is_empty());
+}
+
 // ---------------------------------------------------------------------------
 // Empty inputs
 // ---------------------------------------------------------------------------
@@ -112,6 +143,16 @@ fn empty_query_returns_empty_references_exactly() {
 
     assert!(idx.search_range(&[], -2.0 * EPS).is_empty());
 
+    let infinite_range = idx.search_range(&[], f64::INFINITY);
+    assert_eq!(ids(&infinite_range), HashSet::from([0, 1, 2]));
+    for (id, distance) in &infinite_range {
+        match id {
+            0 | 2 => assert!(distance.abs() < EPS),
+            1 => assert!(distance.is_infinite()),
+            _ => panic!("unexpected id {id}"),
+        }
+    }
+
     let knn_one = idx.search_knn(&[], 1, 1.0);
     assert_eq!(knn_one.len(), 1);
     assert!(matches!(knn_one[0].0, 0 | 2));
@@ -123,12 +164,55 @@ fn empty_query_returns_empty_references_exactly() {
 }
 
 #[test]
+fn non_empty_query_infinite_range_includes_empty_references() {
+    let series = vec![Vec::new(), vec![1.0], Vec::new()];
+    let idx = MsmTransducer::from_series(
+        QuantizationConfig::for_u8(0.0, 10.0),
+        MsmConfig::new(1.0),
+        &series,
+    );
+
+    let finite = idx.search_range(&[1.0], 1_000.0);
+    assert_eq!(finite, vec![(1, 0.0)]);
+
+    let infinite = idx.search_range(&[1.0], f64::INFINITY);
+    assert_eq!(ids(&infinite), HashSet::from([0, 1, 2]));
+    assert_eq!(infinite[0], (1, 0.0));
+    assert!(infinite[1..]
+        .iter()
+        .all(|(_, distance)| distance.is_infinite()));
+}
+
+#[test]
 fn empty_index_returns_empty() {
     let idx: MsmTransducer<usize> =
         MsmTransducer::new(QuantizationConfig::for_u8(0.0, 10.0), MsmConfig::new(1.0));
     assert!(idx.is_empty());
     assert!(idx.search_range(&[1.0, 2.0], 100.0).is_empty());
     assert!(idx.search_knn(&[1.0, 2.0], 3, 1.0).is_empty());
+}
+
+#[test]
+fn non_finite_values_never_reach_finite_exact_results() {
+    let mut idx: MsmTransducer<usize> =
+        MsmTransducer::new(QuantizationConfig::for_u8(0.0, 10.0), MsmConfig::new(1.0));
+    assert!(idx.insert(0, &[1.0, 2.0]));
+    assert!(idx.insert(1, &[f64::NAN, 2.0]));
+
+    assert_eq!(idx.search_range(&[f64::NAN, 2.0], 10.0), Vec::new());
+    assert!(idx.search_knn(&[f64::NAN, 2.0], 2, 1.0).is_empty());
+
+    let finite_range = idx.search_range(&[1.0, 2.0], 10.0);
+    assert_eq!(finite_range, vec![(0, 0.0)]);
+
+    let finite_knn = idx.search_knn(&[1.0, 2.0], 2, 1.0);
+    assert_eq!(finite_knn, vec![(0, 0.0)]);
+
+    let infinite_range = idx.search_range(&[f64::NAN, 2.0], f64::INFINITY);
+    assert_eq!(ids(&infinite_range), HashSet::from([0, 1]));
+    assert!(infinite_range
+        .iter()
+        .all(|(_, distance)| distance.is_infinite()));
 }
 
 // ---------------------------------------------------------------------------

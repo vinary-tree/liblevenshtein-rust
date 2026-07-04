@@ -403,11 +403,10 @@ fn test_finalize_empty_draft() {
 
     // Finalize with empty draft
     let result = engine.finalize(ctx);
-    assert!(result.is_ok(), "Finalize should succeed with empty draft");
     assert_eq!(
-        result.unwrap(),
-        "",
-        "Finalized empty draft should return empty string"
+        result,
+        Err(liblevenshtein::contextual::ContextError::EmptyDraft(ctx)),
+        "Finalize should reject empty drafts consistently with the dynamic engine"
     );
 }
 

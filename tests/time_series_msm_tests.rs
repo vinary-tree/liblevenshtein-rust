@@ -6,13 +6,15 @@
 //! - Proven lower-bound validity plus heuristic counterexamples
 //! - Quantization/encoding correctness
 
-mod common;
+#[path = "common/time_series_strategies.rs"]
+mod time_series_strategies;
 
 use liblevenshtein::time_series::{
     combined_lb, euclidean_lb, l1_lb, length_lb, msm_distance_automaton, msm_distance_wavefront,
     MsmConfig, QuantizationConfig,
 };
 use proptest::prelude::*;
+use time_series_strategies::short_time_series_strategy;
 
 // ============================================================================
 // MSM Configuration
@@ -35,7 +37,7 @@ proptest! {
     /// MSM Identity: d(x, x) == 0
     #[test]
     fn prop_msm_identity(
-        series in common::strategies::short_time_series_strategy(),
+        series in short_time_series_strategy(),
     ) {
         let config = test_config();
         let distance = config.distance(&series, &series);
@@ -49,8 +51,8 @@ proptest! {
     /// MSM Symmetry: d(x, y) == d(y, x)
     #[test]
     fn prop_msm_symmetry(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
+        x in short_time_series_strategy(),
+        y in short_time_series_strategy(),
     ) {
         // Skip if either is empty (MSM requires non-empty series for meaningful comparison)
         if x.is_empty() || y.is_empty() {
@@ -71,9 +73,9 @@ proptest! {
     /// MSM Triangle Inequality: d(x, z) <= d(x, y) + d(y, z)
     #[test]
     fn prop_msm_triangle_inequality(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
-        z in common::strategies::short_time_series_strategy(),
+        x in short_time_series_strategy(),
+        y in short_time_series_strategy(),
+        z in short_time_series_strategy(),
     ) {
         // Skip if any is empty
         if x.is_empty() || y.is_empty() || z.is_empty() {
@@ -95,8 +97,8 @@ proptest! {
     /// MSM Non-negativity: d(x, y) >= 0
     #[test]
     fn prop_msm_non_negative(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
+        x in short_time_series_strategy(),
+        y in short_time_series_strategy(),
     ) {
         if x.is_empty() || y.is_empty() {
             return Ok(());
@@ -123,8 +125,8 @@ proptest! {
     /// Wavefront and automaton implementations should produce same results
     #[test]
     fn prop_wavefront_automaton_consistency(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
+        x in short_time_series_strategy(),
+        y in short_time_series_strategy(),
     ) {
         if x.is_empty() || y.is_empty() {
             return Ok(());
@@ -160,8 +162,8 @@ proptest! {
     /// Wavefront with threshold should return same as without when distance is below threshold
     #[test]
     fn prop_wavefront_threshold_consistency(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
+        x in short_time_series_strategy(),
+        y in short_time_series_strategy(),
     ) {
         if x.is_empty() || y.is_empty() {
             return Ok(());
@@ -202,8 +204,8 @@ proptest! {
     /// Length-based lower bound: LB_length(x, y) <= MSM(x, y)
     #[test]
     fn prop_length_lb_valid(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
+        x in short_time_series_strategy(),
+        y in short_time_series_strategy(),
     ) {
         if x.is_empty() || y.is_empty() {
             return Ok(());
@@ -223,8 +225,8 @@ proptest! {
     /// Bound and heuristic scores should be non-negative
     #[test]
     fn prop_lb_non_negative(
-        x in common::strategies::short_time_series_strategy(),
-        y in common::strategies::short_time_series_strategy(),
+        x in short_time_series_strategy(),
+        y in short_time_series_strategy(),
     ) {
         if x.is_empty() || y.is_empty() {
             return Ok(());

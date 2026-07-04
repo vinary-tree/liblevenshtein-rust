@@ -51,15 +51,14 @@ mod pathmap_tests {
 
         let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm::Standard);
 
-        // Access the transducer
-        let transducer_ref = engine.transducer();
-        let transducer = transducer_ref.read().unwrap();
-
         // Access the dictionary through the transducer
-        let dictionary = transducer.dictionary();
-        assert!(dictionary.contains("hello"));
-        assert!(dictionary.contains("world"));
-        assert_eq!(dictionary.len().unwrap(), 2);
+        let len = engine.with_transducer(|transducer| {
+            let dictionary = transducer.dictionary();
+            assert!(dictionary.contains("hello"));
+            assert!(dictionary.contains("world"));
+            dictionary.len().unwrap()
+        });
+        assert_eq!(len, 2);
     }
 
     #[test]

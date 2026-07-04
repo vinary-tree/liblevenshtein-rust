@@ -84,7 +84,7 @@ fn test_e_acute_vs_plain_e() {
     println!("Empty query at distance 1: {:?}", results);
 
     // Should find both (each requires 1 insertion)
-    assert!(results.len() >= 1, "Should find at least one result");
+    assert!(!results.is_empty(), "Should find at least one result");
 }
 
 #[test]

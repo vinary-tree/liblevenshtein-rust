@@ -210,7 +210,7 @@ mod time_series_encoding_coverage {
         // Middle value should be around bin 128
         let bin = config.quantize(50.0);
         assert!(
-            bin >= 125 && bin <= 130,
+            (125..=130).contains(&bin),
             "50.0 should quantize to ~128, got {}",
             bin
         );
@@ -555,7 +555,7 @@ mod filter_ngram_coverage {
         index.insert("world");
 
         let candidates = index.find_candidates("hello", 0);
-        assert!(candidates.iter().any(|c| *c == "hello"));
+        assert!(candidates.contains(&"hello"));
     }
 
     #[test]
@@ -691,7 +691,7 @@ mod filter_jaro_winkler_coverage {
         let len = 5.0;
 
         let sim = distance_to_similarity_approx(dist, len);
-        assert!(sim >= 0.0 && sim <= 1.0);
+        assert!((0.0..=1.0).contains(&sim));
 
         let sim_high = distance_to_similarity_approx(4.0, len);
         assert!(sim_high < sim);
@@ -785,7 +785,7 @@ mod filter_hybrid_coverage {
         let matcher = HybridMatcher::with_config(terms.iter().map(|s| s.to_string()), 2, 0.9);
 
         let results = matcher.filter_candidates("exact", 0);
-        assert!(results.iter().any(|r| *r == "exact"));
+        assert!(results.contains(&"exact"));
     }
 
     #[test]
@@ -882,7 +882,7 @@ mod proptest_additional {
             s2 in "[a-z]{1,10}"
         ) {
             let sim = jaro_similarity(&s1, &s2);
-            prop_assert!(sim >= 0.0 && sim <= 1.0, "Jaro should be in [0,1], got {}", sim);
+            prop_assert!((0.0..=1.0).contains(&sim), "Jaro should be in [0,1], got {}", sim);
         }
 
         #[test]

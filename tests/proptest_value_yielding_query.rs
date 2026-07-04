@@ -12,9 +12,10 @@
 //! All tests use `DoubleArrayTrie` (always compiled) so they run under the
 //! default `cargo test`.
 
-mod common;
+#[path = "common/ascii_strategies.rs"]
+mod ascii_strategies;
 
-use common::strategies::{ascii_word_strategy, small_dict_strategy};
+use ascii_strategies::{ascii_word_strategy, small_dict_strategy};
 use libdictenstein::double_array_trie::DoubleArrayTrieBuilder;
 use liblevenshtein::distance::standard_distance;
 use liblevenshtein::prelude::*;

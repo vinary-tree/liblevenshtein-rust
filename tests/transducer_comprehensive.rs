@@ -7,11 +7,16 @@
 //! - Ordered query behavior
 //! - Value-filtered queries
 
-mod common;
+#[path = "common/ascii_strategies.rs"]
+mod ascii_strategies;
+#[path = "common/transducer_strategies.rs"]
+mod transducer_strategies;
 
+use ascii_strategies::{ascii_word_strategy, small_dict_strategy};
 use liblevenshtein::distance::*;
 use liblevenshtein::prelude::*;
 use proptest::prelude::*;
+use transducer_strategies::{medium_dict_strategy, unicode_dict_strategy, unicode_word_strategy};
 
 // ============================================================================
 // Transducer Construction Tests
@@ -55,7 +60,7 @@ proptest! {
 
     /// Standard distance identity: d(a, a) == 0
     #[test]
-    fn prop_standard_identity(s in common::strategies::ascii_word_strategy()) {
+    fn prop_standard_identity(s in ascii_word_strategy()) {
         let dist = standard_distance(&s, &s);
         prop_assert_eq!(dist, 0, "d('{}', '{}') should be 0", s, s);
     }
@@ -63,8 +68,8 @@ proptest! {
     /// Standard distance symmetry: d(a, b) == d(b, a)
     #[test]
     fn prop_standard_symmetry(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         let d1 = standard_distance(&s1, &s2);
         let d2 = standard_distance(&s2, &s1);
@@ -74,9 +79,9 @@ proptest! {
     /// Standard distance triangle inequality: d(a, c) <= d(a, b) + d(b, c)
     #[test]
     fn prop_standard_triangle(
-        a in common::strategies::ascii_word_strategy(),
-        b in common::strategies::ascii_word_strategy(),
-        c in common::strategies::ascii_word_strategy(),
+        a in ascii_word_strategy(),
+        b in ascii_word_strategy(),
+        c in ascii_word_strategy(),
     ) {
         let d_ac = standard_distance(&a, &c);
         let d_ab = standard_distance(&a, &b);
@@ -92,8 +97,8 @@ proptest! {
     /// Standard distance length bound: d(a, b) >= |len(a) - len(b)|
     #[test]
     fn prop_standard_length_bound(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         let dist = standard_distance(&s1, &s2);
         let len_diff = (s1.len() as isize - s2.len() as isize).unsigned_abs();
@@ -107,7 +112,7 @@ proptest! {
 
     /// Transposition distance identity
     #[test]
-    fn prop_transposition_identity(s in common::strategies::ascii_word_strategy()) {
+    fn prop_transposition_identity(s in ascii_word_strategy()) {
         let dist = transposition_distance(&s, &s);
         prop_assert_eq!(dist, 0);
     }
@@ -115,8 +120,8 @@ proptest! {
     /// Transposition distance symmetry
     #[test]
     fn prop_transposition_symmetry(
-        s1 in common::strategies::ascii_word_strategy(),
-        s2 in common::strategies::ascii_word_strategy(),
+        s1 in ascii_word_strategy(),
+        s2 in ascii_word_strategy(),
     ) {
         let d1 = transposition_distance(&s1, &s2);
         let d2 = transposition_distance(&s2, &s1);
@@ -134,8 +139,8 @@ proptest! {
     /// Verify transducer finds ALL terms within distance (cross-validate with linear scan)
     #[test]
     fn prop_query_completeness_standard(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 0usize..=2,
     ) {
         let dict = DoubleArrayTrie::from_terms(dict_words.clone());
@@ -147,7 +152,7 @@ proptest! {
         let unique_words: std::collections::HashSet<_> = dict_words.iter().collect();
         let expected: Vec<_> = unique_words
             .iter()
-            .filter(|term| standard_distance(&query, **term) <= max_dist)
+            .filter(|term| standard_distance(&query, term) <= max_dist)
             .map(|t| (*t).clone())
             .collect();
 
@@ -173,8 +178,8 @@ proptest! {
     /// Verify transducer with transposition algorithm is complete
     #[test]
     fn prop_query_completeness_transposition(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 0usize..=2,
     ) {
         let dict = DoubleArrayTrie::from_terms(dict_words.clone());
@@ -186,7 +191,7 @@ proptest! {
         let unique_words: std::collections::HashSet<_> = dict_words.iter().collect();
         let expected: Vec<_> = unique_words
             .iter()
-            .filter(|term| transposition_distance(&query, **term) <= max_dist)
+            .filter(|term| transposition_distance(&query, term) <= max_dist)
             .map(|t| (*t).clone())
             .collect();
 
@@ -202,8 +207,8 @@ proptest! {
     /// Verify transducer with merge_and_split algorithm is complete
     #[test]
     fn prop_query_completeness_merge_split(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 0usize..=2,
     ) {
         let dict = DoubleArrayTrie::from_terms(dict_words.clone());
@@ -216,7 +221,7 @@ proptest! {
         let unique_words: std::collections::HashSet<_> = dict_words.iter().collect();
         let expected: Vec<_> = unique_words
             .iter()
-            .filter(|term| merge_and_split_distance(&query, **term, &cache) <= max_dist)
+            .filter(|term| merge_and_split_distance(&query, term, &cache) <= max_dist)
             .map(|t| (*t).clone())
             .collect();
 
@@ -240,8 +245,8 @@ proptest! {
     /// Verify query_ordered returns results in ascending distance order
     #[test]
     fn prop_ordered_query_ascending(
-        dict_words in common::strategies::medium_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in medium_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 1usize..=3,
     ) {
         let dict = DoubleArrayTrie::from_terms(dict_words);
@@ -264,8 +269,8 @@ proptest! {
     /// Verify query_ordered produces same results as unordered (just sorted)
     #[test]
     fn prop_ordered_query_same_results(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 0usize..=2,
     ) {
         let dict1 = DoubleArrayTrie::from_terms(dict_words.clone());
@@ -362,8 +367,8 @@ proptest! {
     /// Test transducer handles Unicode correctly
     #[test]
     fn prop_unicode_handling(
-        dict_words in common::strategies::unicode_dict_strategy(),
-        query in common::strategies::unicode_word_strategy(),
+        dict_words in unicode_dict_strategy(),
+        query in unicode_word_strategy(),
         max_dist in 0usize..=2,
     ) {
         let dict = DoubleArrayTrie::from_terms(dict_words);
@@ -389,8 +394,8 @@ proptest! {
     /// Standard Levenshtein results should be subset of Transposition results
     #[test]
     fn prop_standard_subset_of_transposition(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 1usize..=2,
     ) {
         let dict_std = DoubleArrayTrie::from_terms(dict_words.clone());
@@ -455,7 +460,7 @@ proptest! {
     /// All algorithms should find exact matches
     #[test]
     fn prop_all_algorithms_find_exact_matches(
-        dict_words in common::strategies::small_dict_strategy(),
+        dict_words in small_dict_strategy(),
     ) {
         if dict_words.is_empty() {
             return Ok(());
@@ -521,8 +526,8 @@ proptest! {
     /// DoubleArrayTrie and DynamicDawg should produce identical results
     #[test]
     fn prop_backend_consistency(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 0usize..=2,
     ) {
         let dat = DoubleArrayTrie::from_terms(dict_words.clone());
@@ -656,8 +661,8 @@ proptest! {
     /// DoubleArrayTrie query results within distance
     #[test]
     fn prop_dat_query_within_distance(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 0usize..=2,
     ) {
         let dict = DoubleArrayTrie::from_terms(dict_words);
@@ -676,8 +681,8 @@ proptest! {
     /// DynamicDawg query results within distance
     #[test]
     fn prop_dawg_query_within_distance(
-        dict_words in common::strategies::small_dict_strategy(),
-        query in common::strategies::ascii_word_strategy(),
+        dict_words in small_dict_strategy(),
+        query in ascii_word_strategy(),
         max_dist in 0usize..=2,
     ) {
         let dict: DynamicDawg<()> = DynamicDawg::from_terms(dict_words);

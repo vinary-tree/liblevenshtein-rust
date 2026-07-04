@@ -46,8 +46,8 @@ fn test_query_longer_than_term() {
         for (i, row) in matrix.iter_mut().enumerate().take(len1 + 1) {
             row[0] = i;
         }
-        for j in 0..=len2 {
-            matrix[0][j] = j;
+        for (j, cell) in matrix[0].iter_mut().enumerate().take(len2 + 1) {
+            *cell = j;
         }
 
         let s1_chars: Vec<char> = s1.chars().collect();
