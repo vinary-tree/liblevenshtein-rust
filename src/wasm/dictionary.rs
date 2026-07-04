@@ -2,6 +2,9 @@
 
 use wasm_bindgen::prelude::*;
 
+use super::terms::{
+    double_array_trie_from_sorted_terms, dynamic_dawg_from_sorted_terms, parse_sorted_terms,
+};
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::Dictionary;
@@ -35,18 +38,10 @@ impl WasmDoubleArrayTrie {
     /// * `terms` - Array of strings to add to the dictionary
     #[wasm_bindgen(constructor)]
     pub fn new(terms: Vec<JsValue>) -> Result<WasmDoubleArrayTrie, JsValue> {
-        let terms: Result<Vec<String>, _> = terms
-            .into_iter()
-            .map(|v| {
-                v.as_string()
-                    .ok_or_else(|| JsValue::from_str("all terms must be strings"))
-            })
-            .collect();
-        let terms = terms?;
-        let term_refs: Vec<&str> = terms.iter().map(|s| s.as_str()).collect();
+        let terms = parse_sorted_terms(terms)?;
 
         Ok(WasmDoubleArrayTrie {
-            inner: DoubleArrayTrie::from_terms(term_refs),
+            inner: double_array_trie_from_sorted_terms(terms),
         })
     }
 
@@ -105,18 +100,10 @@ impl WasmDynamicDawg {
     /// * `terms` - Array of strings to add to the dictionary
     #[wasm_bindgen(js_name = fromTerms)]
     pub fn from_terms(terms: Vec<JsValue>) -> Result<WasmDynamicDawg, JsValue> {
-        let terms: Result<Vec<String>, _> = terms
-            .into_iter()
-            .map(|v| {
-                v.as_string()
-                    .ok_or_else(|| JsValue::from_str("all terms must be strings"))
-            })
-            .collect();
-        let terms = terms?;
-        let term_refs: Vec<&str> = terms.iter().map(|s| s.as_str()).collect();
+        let terms = parse_sorted_terms(terms)?;
 
         Ok(WasmDynamicDawg {
-            inner: DynamicDawg::from_terms(term_refs),
+            inner: dynamic_dawg_from_sorted_terms(terms),
         })
     }
 

@@ -2,7 +2,10 @@
 
 use wasm_bindgen::prelude::*;
 
-use crate::distance::{standard_distance, transposition_distance};
+use crate::distance::{
+    standard_distance, standard_distance_bounded, transposition_distance,
+    transposition_distance_bounded,
+};
 
 /// Calculate the Levenshtein distance between two strings.
 ///
@@ -47,12 +50,7 @@ pub fn levenshtein(source: &str, target: &str) -> usize {
 /// The distance if <= threshold, otherwise `null`.
 #[wasm_bindgen]
 pub fn levenshtein_threshold(source: &str, target: &str, threshold: usize) -> Option<usize> {
-    let dist = standard_distance(source, target);
-    if dist <= threshold {
-        Some(dist)
-    } else {
-        None
-    }
+    standard_distance_bounded(source, target, threshold)
 }
 
 /// Calculate the Damerau-Levenshtein distance between two strings.
@@ -97,12 +95,7 @@ pub fn damerau_levenshtein_threshold(
     target: &str,
     threshold: usize,
 ) -> Option<usize> {
-    let dist = transposition_distance(source, target);
-    if dist <= threshold {
-        Some(dist)
-    } else {
-        None
-    }
+    transposition_distance_bounded(source, target, threshold)
 }
 
 /// Calculate edit distances for multiple pairs in batch.
@@ -139,4 +132,21 @@ pub fn levenshtein_batch(pairs: Vec<JsValue>) -> Result<Vec<usize>, JsValue> {
     }
 
     Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn levenshtein_threshold_returns_distance_within_bound() {
+        assert_eq!(levenshtein_threshold("kitten", "sitting", 3), Some(3));
+        assert_eq!(levenshtein_threshold("kitten", "sitting", 2), None);
+    }
+
+    #[test]
+    fn damerau_levenshtein_threshold_returns_distance_within_bound() {
+        assert_eq!(damerau_levenshtein_threshold("ab", "ba", 1), Some(1));
+        assert_eq!(damerau_levenshtein_threshold("kitten", "sitting", 2), None);
+    }
 }

@@ -30,6 +30,7 @@
 
 mod dictionary;
 mod distance;
+mod terms;
 mod transducer;
 
 #[cfg(feature = "phonetic-rules")]

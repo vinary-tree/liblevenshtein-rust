@@ -13,6 +13,7 @@
 //!
 //! All FFI functions are unsafe as they operate on raw pointers. Callers must:
 //! - Ensure pointers are valid and non-null
+//! - Ensure length-bearing buffers are valid for their provided byte length
 //! - Free returned memory using the appropriate free function
 //! - Not use freed pointers
 //!
@@ -54,7 +55,7 @@ mod string;
 pub use distance::*;
 pub use string::*;
 
-use std::ffi::{c_char, CStr};
+use std::{ffi::c_char, slice, str};
 
 /// Algorithm type for transducers.
 #[repr(C)]
@@ -78,14 +79,16 @@ impl From<LlevAlgorithm> for crate::transducer::Algorithm {
     }
 }
 
-/// Convert a C string to a Rust string slice.
+/// Convert a length-bearing UTF-8 buffer to a Rust string slice.
 ///
 /// # Safety
 ///
-/// The input pointer must be valid and null-terminated.
-unsafe fn cstr_to_str<'a>(ptr: *const c_char) -> Option<&'a str> {
+/// The input pointer must be valid for `len` bytes and must point to UTF-8.
+unsafe fn cbuf_to_str<'a>(ptr: *const c_char, len: usize) -> Option<&'a str> {
     if ptr.is_null() {
         return None;
     }
-    CStr::from_ptr(ptr).to_str().ok()
+
+    let bytes = slice::from_raw_parts(ptr.cast::<u8>(), len);
+    str::from_utf8(bytes).ok()
 }

@@ -3,7 +3,10 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::transducer::{Algorithm, Transducer};
+use super::terms::{
+    double_array_trie_from_sorted_terms, dynamic_dawg_from_sorted_terms, parse_sorted_terms,
+};
+use crate::transducer::{Algorithm, OrderedCandidate, Transducer};
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::Dictionary;
@@ -59,18 +62,9 @@ impl WasmTransducer {
     /// - `merge_and_split`: Adds merge/split operations (good for spacing errors)
     #[wasm_bindgen(constructor)]
     pub fn new(terms: Vec<JsValue>, algorithm: &str) -> Result<WasmTransducer, JsValue> {
-        let terms: Result<Vec<String>, _> = terms
-            .into_iter()
-            .map(|v| {
-                v.as_string()
-                    .ok_or_else(|| JsValue::from_str("all terms must be strings"))
-            })
-            .collect();
-        let terms = terms?;
-        let term_refs: Vec<&str> = terms.iter().map(|s| s.as_str()).collect();
-
+        let terms = parse_sorted_terms(terms)?;
         let algorithm = parse_algorithm(algorithm)?;
-        let dict = DoubleArrayTrie::from_terms(term_refs);
+        let dict = double_array_trie_from_sorted_terms(terms);
         let inner = Transducer::new(dict, algorithm);
 
         Ok(WasmTransducer { inner })
@@ -87,17 +81,8 @@ impl WasmTransducer {
     ///
     /// Array of `{ term, distance }` objects sorted by distance.
     pub fn query(&self, query: &str, max_distance: usize) -> Result<JsValue, JsValue> {
-        let candidates: Vec<WasmCandidate> = self
-            .inner
-            .query_with_distance(query, max_distance)
-            .map(|c| WasmCandidate {
-                term: c.term.clone(),
-                distance: c.distance,
-            })
-            .collect();
-
-        serde_wasm_bindgen::to_value(&candidates)
-            .map_err(|e| JsValue::from_str(&format!("serialization error: {}", e)))
+        let candidates = collect_ordered_candidates(self.inner.query_ordered(query, max_distance));
+        serialize_candidates(&candidates)
     }
 
     /// Query and return only the closest matches (lowest distance).
@@ -112,22 +97,9 @@ impl WasmTransducer {
     /// Array of matches with the minimum distance found.
     #[wasm_bindgen(js_name = queryBest)]
     pub fn query_best(&self, query: &str, max_distance: usize) -> Result<JsValue, JsValue> {
-        let mut candidates: Vec<WasmCandidate> = self
-            .inner
-            .query_with_distance(query, max_distance)
-            .map(|c| WasmCandidate {
-                term: c.term.clone(),
-                distance: c.distance,
-            })
-            .collect();
-
-        // Find minimum distance and filter
-        if let Some(min_dist) = candidates.iter().map(|c| c.distance).min() {
-            candidates.retain(|c| c.distance == min_dist);
-        }
-
-        serde_wasm_bindgen::to_value(&candidates)
-            .map_err(|e| JsValue::from_str(&format!("serialization error: {}", e)))
+        let candidates =
+            collect_best_ordered_candidates(self.inner.query_ordered(query, max_distance));
+        serialize_candidates(&candidates)
     }
 
     /// Query and return a limited number of results.
@@ -148,18 +120,9 @@ impl WasmTransducer {
         max_distance: usize,
         limit: usize,
     ) -> Result<JsValue, JsValue> {
-        let candidates: Vec<WasmCandidate> = self
-            .inner
-            .query_with_distance(query, max_distance)
-            .take(limit)
-            .map(|c| WasmCandidate {
-                term: c.term.clone(),
-                distance: c.distance,
-            })
-            .collect();
-
-        serde_wasm_bindgen::to_value(&candidates)
-            .map_err(|e| JsValue::from_str(&format!("serialization error: {}", e)))
+        let candidates =
+            collect_ordered_candidates(self.inner.query_ordered(query, max_distance).take(limit));
+        serialize_candidates(&candidates)
     }
 
     /// Check if a term exists in the dictionary (exact match).
@@ -209,18 +172,9 @@ impl WasmDynamicTransducer {
     /// * `algorithm` - Algorithm type: "standard", "transposition", or "merge_and_split"
     #[wasm_bindgen(constructor)]
     pub fn new(terms: Vec<JsValue>, algorithm: &str) -> Result<WasmDynamicTransducer, JsValue> {
-        let terms: Result<Vec<String>, _> = terms
-            .into_iter()
-            .map(|v| {
-                v.as_string()
-                    .ok_or_else(|| JsValue::from_str("all terms must be strings"))
-            })
-            .collect();
-        let terms = terms?;
-        let term_refs: Vec<&str> = terms.iter().map(|s| s.as_str()).collect();
-
+        let terms = parse_sorted_terms(terms)?;
         let algorithm = parse_algorithm(algorithm)?;
-        let dict = DynamicDawg::from_terms(term_refs);
+        let dict = dynamic_dawg_from_sorted_terms(terms);
 
         Ok(WasmDynamicTransducer { dict, algorithm })
     }
@@ -246,18 +200,32 @@ impl WasmDynamicTransducer {
     ///
     /// Array of `{ term, distance }` objects.
     pub fn query(&self, query: &str, max_distance: usize) -> Result<JsValue, JsValue> {
-        // Clone the dictionary (cheap - it's Arc-based)
         let transducer = Transducer::new(self.dict.clone(), self.algorithm);
-        let candidates: Vec<WasmCandidate> = transducer
-            .query_with_distance(query, max_distance)
-            .map(|c| WasmCandidate {
-                term: c.term.clone(),
-                distance: c.distance,
-            })
-            .collect();
+        let candidates = collect_ordered_candidates(transducer.query_ordered(query, max_distance));
+        serialize_candidates(&candidates)
+    }
 
-        serde_wasm_bindgen::to_value(&candidates)
-            .map_err(|e| JsValue::from_str(&format!("serialization error: {}", e)))
+    /// Query and return only the closest matches (lowest distance).
+    #[wasm_bindgen(js_name = queryBest)]
+    pub fn query_best(&self, query: &str, max_distance: usize) -> Result<JsValue, JsValue> {
+        let transducer = Transducer::new(self.dict.clone(), self.algorithm);
+        let candidates =
+            collect_best_ordered_candidates(transducer.query_ordered(query, max_distance));
+        serialize_candidates(&candidates)
+    }
+
+    /// Query and return a limited number of closest results.
+    #[wasm_bindgen(js_name = queryLimit)]
+    pub fn query_limit(
+        &self,
+        query: &str,
+        max_distance: usize,
+        limit: usize,
+    ) -> Result<JsValue, JsValue> {
+        let transducer = Transducer::new(self.dict.clone(), self.algorithm);
+        let candidates =
+            collect_ordered_candidates(transducer.query_ordered(query, max_distance).take(limit));
+        serialize_candidates(&candidates)
     }
 
     /// Insert a term into the dictionary.
@@ -291,14 +259,143 @@ impl WasmDynamicTransducer {
 }
 
 fn parse_algorithm(s: &str) -> Result<Algorithm, JsValue> {
-    match s.to_lowercase().as_str() {
-        "standard" | "levenshtein" => Ok(Algorithm::Standard),
-        "transposition" | "damerau" | "damerau_levenshtein" | "damerau-levenshtein" => {
-            Ok(Algorithm::Transposition)
-        }
-        "merge_and_split" | "merge-and-split" | "mergesplit" => Ok(Algorithm::MergeAndSplit),
-        _ => Err(JsValue::from_str(
+    if matches_algorithm_alias(s, &["standard", "levenshtein"]) {
+        Ok(Algorithm::Standard)
+    } else if matches_algorithm_alias(
+        s,
+        &[
+            "transposition",
+            "damerau",
+            "damerau_levenshtein",
+            "damerau-levenshtein",
+        ],
+    ) {
+        Ok(Algorithm::Transposition)
+    } else if matches_algorithm_alias(s, &["merge_and_split", "merge-and-split", "mergesplit"]) {
+        Ok(Algorithm::MergeAndSplit)
+    } else {
+        Err(JsValue::from_str(
             "unknown algorithm; use 'standard', 'transposition', or 'merge_and_split'",
-        )),
+        ))
+    }
+}
+
+fn matches_algorithm_alias(input: &str, aliases: &[&str]) -> bool {
+    aliases
+        .iter()
+        .any(|alias| input.eq_ignore_ascii_case(alias))
+}
+
+fn serialize_candidates(candidates: &[WasmCandidate]) -> Result<JsValue, JsValue> {
+    serde_wasm_bindgen::to_value(candidates)
+        .map_err(|e| JsValue::from_str(&format!("serialization error: {}", e)))
+}
+
+fn collect_ordered_candidates<I>(candidates: I) -> Vec<WasmCandidate>
+where
+    I: IntoIterator<Item = OrderedCandidate>,
+{
+    candidates.into_iter().map(WasmCandidate::from).collect()
+}
+
+fn collect_best_ordered_candidates<I>(candidates: I) -> Vec<WasmCandidate>
+where
+    I: IntoIterator<Item = OrderedCandidate>,
+{
+    let mut candidates = candidates.into_iter();
+    let Some(first) = candidates.next() else {
+        return Vec::new();
+    };
+
+    let best_distance = first.distance;
+    let mut best = vec![WasmCandidate::from(first)];
+
+    for candidate in candidates {
+        if candidate.distance != best_distance {
+            break;
+        }
+        best.push(WasmCandidate::from(candidate));
+    }
+
+    best
+}
+
+impl From<OrderedCandidate> for WasmCandidate {
+    fn from(candidate: OrderedCandidate) -> Self {
+        Self {
+            term: candidate.term,
+            distance: candidate.distance,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ordered_candidate(term: &str, distance: usize) -> OrderedCandidate {
+        OrderedCandidate {
+            term: term.to_owned(),
+            distance,
+        }
+    }
+
+    #[test]
+    fn collect_best_ordered_candidates_keeps_only_minimum_distance_group() {
+        let candidates = vec![
+            ordered_candidate("alpha", 1),
+            ordered_candidate("alpine", 1),
+            ordered_candidate("aleph", 2),
+        ];
+
+        let best = collect_best_ordered_candidates(candidates);
+
+        assert_eq!(best.len(), 2);
+        assert_eq!(best[0].term, "alpha");
+        assert_eq!(best[0].distance, 1);
+        assert_eq!(best[1].term, "alpine");
+        assert_eq!(best[1].distance, 1);
+    }
+
+    #[test]
+    fn collect_best_ordered_candidates_returns_empty_for_no_matches() {
+        let best = collect_best_ordered_candidates(Vec::new());
+        assert!(best.is_empty());
+    }
+
+    #[test]
+    fn collect_ordered_candidates_preserves_iterator_order() {
+        let candidates = vec![
+            ordered_candidate("alpha", 0),
+            ordered_candidate("alpine", 1),
+            ordered_candidate("aleph", 2),
+        ];
+
+        let collected = collect_ordered_candidates(candidates);
+
+        assert_eq!(
+            collected
+                .into_iter()
+                .map(|candidate| (candidate.term, candidate.distance))
+                .collect::<Vec<_>>(),
+            vec![
+                ("alpha".to_owned(), 0),
+                ("alpine".to_owned(), 1),
+                ("aleph".to_owned(), 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_algorithm_accepts_case_insensitive_aliases() {
+        assert_eq!(parse_algorithm("STANDARD").unwrap(), Algorithm::Standard);
+        assert_eq!(
+            parse_algorithm("Damerau-Levenshtein").unwrap(),
+            Algorithm::Transposition
+        );
+        assert_eq!(
+            parse_algorithm("merge-and-split").unwrap(),
+            Algorithm::MergeAndSplit
+        );
     }
 }
