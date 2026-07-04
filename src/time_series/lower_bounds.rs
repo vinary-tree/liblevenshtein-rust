@@ -41,6 +41,9 @@
 
 use super::msm::MsmConfig;
 
+const DISTANCE_EPSILON: f64 = 1e-9;
+const DEFAULT_RESULT_BUFFER_CAPACITY: usize = 64;
+
 /// Prefix Euclidean distance heuristic for MSM.
 ///
 /// This is not a correctness-preserving lower bound for general MSM because
@@ -119,7 +122,8 @@ pub fn euclidean_lb(x: &[f64], y: &[f64]) -> f64 {
 /// - Merge (m - n) pairs of elements, or
 /// - Use a combination of moves that effectively does the same
 ///
-/// Each merge operation costs at least `c` (from the C function).
+/// Each merge operation costs at least the effective non-negative split/merge
+/// cost `c` (from the C function).
 /// Therefore: `MSM(X, Y) >= |m - n| * c`
 ///
 /// # Example
@@ -143,8 +147,8 @@ pub fn length_lb(x: &[f64], y: &[f64], c: f64) -> f64 {
         return f64::INFINITY;
     }
 
-    let len_diff = (x.len() as isize - y.len() as isize).unsigned_abs();
-    len_diff as f64 * c
+    let len_diff = x.len().abs_diff(y.len());
+    len_diff as f64 * MsmConfig::new(c).c
 }
 
 /// Combined heuristic using Euclidean and length scores.
@@ -253,7 +257,7 @@ impl LowerBoundConfig {
     /// Create a new configuration.
     pub fn new(c: f64) -> Self {
         Self {
-            c,
+            c: MsmConfig::new(c).c,
             bounds: LowerBoundType::LengthOnly,
         }
     }
@@ -296,6 +300,21 @@ pub fn filter_by_lower_bound<'a, V: Clone + 'a>(
     candidates.filter(move |(_, series)| lb_config.lower_bound(query, series) <= threshold)
 }
 
+#[inline]
+fn is_invalid_threshold(threshold: f64) -> bool {
+    threshold.is_nan() || threshold < 0.0
+}
+
+#[inline]
+fn inclusive_cutoff(threshold: f64) -> f64 {
+    threshold + DISTANCE_EPSILON
+}
+
+#[inline]
+fn result_capacity_hint(candidate_count: usize) -> usize {
+    candidate_count.min(DEFAULT_RESULT_BUFFER_CAPACITY)
+}
+
 /// Brute-force search with safe lower-bound pruning (sequential).
 ///
 /// Uses the default [`LowerBoundConfig`], which is correctness-preserving.
@@ -316,27 +335,30 @@ pub fn search_with_lb<V: Clone>(
     threshold: f64,
     msm_config: &MsmConfig,
 ) -> Vec<(V, f64)> {
-    let lb_config = LowerBoundConfig::new(msm_config.c);
+    if is_invalid_threshold(threshold) || database.is_empty() {
+        return Vec::new();
+    }
 
-    let mut results: Vec<(V, f64)> = database
-        .iter()
-        .filter_map(|(value, series)| {
-            // First check the safe length lower bound.
-            if lb_config.lower_bound(query, series) > threshold {
-                return None;
-            }
+    let lb_config = LowerBoundConfig::new(msm_config.split_merge_cost());
+    let cutoff = inclusive_cutoff(threshold);
 
-            // Compute exact MSM
-            let dist = msm_config.distance(query, series);
-            if dist <= threshold + 1e-9 {
-                Some((value.clone(), dist))
-            } else {
-                None
-            }
-        })
-        .collect();
+    let mut results: Vec<(V, f64)> = Vec::with_capacity(result_capacity_hint(database.len()));
+    for (value, series) in database {
+        // First check the safe length lower bound.
+        if lb_config.lower_bound(query, series) > cutoff {
+            continue;
+        }
 
-    results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        // Compute exact MSM only while the candidate can still qualify.
+        let Some(dist) = msm_config.distance_with_cutoff(query, series, cutoff) else {
+            continue;
+        };
+        if dist <= cutoff {
+            results.push((value.clone(), dist));
+        }
+    }
+
+    results.sort_by(|a, b| a.1.total_cmp(&b.1));
     results
 }
 
@@ -363,27 +385,30 @@ pub fn search_with_lb_parallel<V: Clone + Send + Sync>(
 ) -> Vec<(V, f64)> {
     use rayon::prelude::*;
 
-    let lb_config = LowerBoundConfig::new(msm_config.c);
+    if is_invalid_threshold(threshold) || database.is_empty() {
+        return Vec::new();
+    }
+
+    let lb_config = LowerBoundConfig::new(msm_config.split_merge_cost());
+    let cutoff = inclusive_cutoff(threshold);
 
     let mut results: Vec<(V, f64)> = database
         .par_iter()
         .filter_map(|(value, series)| {
             // First check the safe length lower bound.
-            if lb_config.lower_bound(query, series) > threshold {
+            if lb_config.lower_bound(query, series) > cutoff {
                 return None;
             }
 
-            // Compute exact MSM
-            let dist = msm_config.distance(query, series);
-            if dist <= threshold + 1e-9 {
-                Some((value.clone(), dist))
-            } else {
-                None
-            }
+            // Compute exact MSM only while the candidate can still qualify.
+            msm_config
+                .distance_with_cutoff(query, series, cutoff)
+                .filter(|&dist| dist <= cutoff)
+                .map(|dist| (value.clone(), dist))
         })
         .collect();
 
-    results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    results.sort_by(|a, b| a.1.total_cmp(&b.1));
     results
 }
 
@@ -411,32 +436,38 @@ pub fn search_with_lb_stats<V: Clone>(
     threshold: f64,
     msm_config: &MsmConfig,
 ) -> (Vec<(V, f64)>, LowerBoundStats) {
-    let lb_config = LowerBoundConfig::new(msm_config.c);
-
     let total_candidates = database.len();
+    if is_invalid_threshold(threshold) || database.is_empty() {
+        return (Vec::new(), empty_lower_bound_stats(total_candidates));
+    }
+
+    let lb_config = LowerBoundConfig::new(msm_config.split_merge_cost());
+    let cutoff = inclusive_cutoff(threshold);
     let mut pruned_by_lb = 0;
     let mut passed_lb = 0;
     let mut passed_exact = 0;
 
-    let mut results: Vec<(V, f64)> = Vec::new();
+    let mut results: Vec<(V, f64)> = Vec::with_capacity(result_capacity_hint(database.len()));
 
     for (value, series) in database {
         // Check the safe length lower bound.
-        if lb_config.lower_bound(query, series) > threshold {
+        if lb_config.lower_bound(query, series) > cutoff {
             pruned_by_lb += 1;
             continue;
         }
         passed_lb += 1;
 
-        // Compute exact MSM
-        let dist = msm_config.distance(query, series);
-        if dist <= threshold + 1e-9 {
+        // Compute exact MSM only while the candidate can still qualify.
+        let Some(dist) = msm_config.distance_with_cutoff(query, series, cutoff) else {
+            continue;
+        };
+        if dist <= cutoff {
             passed_exact += 1;
             results.push((value.clone(), dist));
         }
     }
 
-    results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    results.sort_by(|a, b| a.1.total_cmp(&b.1));
 
     let stats = LowerBoundStats {
         total_candidates,
@@ -456,6 +487,17 @@ pub fn search_with_lb_stats<V: Clone>(
     };
 
     (results, stats)
+}
+
+fn empty_lower_bound_stats(total_candidates: usize) -> LowerBoundStats {
+    LowerBoundStats {
+        total_candidates,
+        pruned_by_lb: 0,
+        passed_lb: 0,
+        passed_exact: 0,
+        pruning_rate: 0.0,
+        false_positive_rate: 0.0,
+    }
 }
 
 impl std::fmt::Display for LowerBoundStats {
@@ -534,6 +576,7 @@ mod tests {
         let c = 1.0;
         // |5 - 3| * 1.0 = 2.0
         assert!(approx_eq(length_lb(&x, &y, c), 2.0));
+        assert!(approx_eq(length_lb(&y, &x, c), 2.0));
     }
 
     #[test]
@@ -544,6 +587,19 @@ mod tests {
         assert!(approx_eq(length_lb(&x, &y, 1.0), 3.0));
         assert!(approx_eq(length_lb(&x, &y, 2.0), 6.0));
         assert!(approx_eq(length_lb(&x, &y, 0.5), 1.5));
+    }
+
+    #[test]
+    fn test_length_lb_normalizes_invalid_cost() {
+        let x = vec![1.0, 2.0, 3.0, 4.0];
+        let y = vec![1.0];
+
+        assert!(approx_eq(length_lb(&x, &y, -1.0), 0.0));
+        assert!(approx_eq(length_lb(&x, &y, f64::NAN), 3.0));
+        assert!(approx_eq(
+            LowerBoundConfig::new(f64::INFINITY).c,
+            MsmConfig::default().c
+        ));
     }
 
     #[test]
@@ -610,6 +666,53 @@ mod tests {
     }
 
     #[test]
+    fn test_search_with_lb_preserves_inclusive_epsilon() {
+        let config = MsmConfig::new(1.0);
+        let query = vec![10.0, 20.0, 30.0];
+        let database: Vec<(usize, Vec<f64>)> = vec![
+            (0, query.clone()),
+            (1, vec![10.0, 20.0, 30.0 + EPSILON / 2.0]),
+            (2, vec![100.0, 100.0, 100.0]),
+        ];
+
+        let results = search_with_lb(&query, &database, 0.0, &config);
+        let found_ids: Vec<usize> = results.iter().map(|(id, _)| *id).collect();
+        assert_eq!(found_ids, vec![0, 1]);
+
+        #[cfg(feature = "rayon")]
+        assert_eq!(
+            search_with_lb_parallel(&query, &database, 0.0, &config),
+            results
+        );
+
+        let (stats_results, stats) = search_with_lb_stats(&query, &database, 0.0, &config);
+        assert_eq!(stats_results, results);
+        assert_eq!(stats.total_candidates, 3);
+        assert_eq!(stats.passed_exact, 2);
+    }
+
+    #[test]
+    fn test_search_with_lb_invalid_thresholds_are_empty() {
+        let config = MsmConfig::new(1.0);
+        let query = vec![1.0, 2.0, 3.0];
+        let database: Vec<(usize, Vec<f64>)> = vec![(0, query.clone())];
+
+        for threshold in [f64::NAN, -1.0] {
+            assert!(search_with_lb(&query, &database, threshold, &config).is_empty());
+
+            #[cfg(feature = "rayon")]
+            assert!(search_with_lb_parallel(&query, &database, threshold, &config).is_empty());
+
+            let (results, stats) = search_with_lb_stats(&query, &database, threshold, &config);
+            assert!(results.is_empty());
+            assert_eq!(stats.total_candidates, 1);
+            assert_eq!(stats.pruned_by_lb, 0);
+            assert_eq!(stats.passed_lb, 0);
+            assert_eq!(stats.passed_exact, 0);
+        }
+    }
+
+    #[test]
     fn test_search_with_lb_stats() {
         let config = MsmConfig::new(1.0);
         let database: Vec<(usize, Vec<f64>)> = vec![
@@ -624,7 +727,7 @@ mod tests {
 
         assert_eq!(stats.total_candidates, 4);
         assert!(stats.pruned_by_lb >= 1); // At least one safe length prune happened
-        assert!(results.len() >= 1);
+        assert!(!results.is_empty());
     }
 
     #[test]

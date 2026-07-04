@@ -27,13 +27,27 @@
 //! - `c` is the adjacent value in the target series
 //! - `c_const` is the base cost for split/merge operations
 
+use super::msm::{msm_infinity_matrix, series_pair_values_are_finite, MsmConfig};
 use super::msm_position::MsmPosition;
 use super::msm_state::MsmState;
-use super::MsmConfig;
 use smallvec::SmallVec;
 
 /// Epsilon for float comparisons.
 const COST_EPSILON: f64 = 1e-9;
+
+/// Maximum speculative capacity reserved for one MSM transition step.
+const MSM_TRANSITION_PREALLOC_LIMIT: usize = 4096;
+
+/// Maximum number of outgoing MSM transitions for one active position.
+const MSM_TRANSITION_BRANCHING_FACTOR: usize = 3;
+
+#[inline]
+fn transition_state_capacity(position_count: usize) -> usize {
+    position_count
+        .checked_mul(MSM_TRANSITION_BRANCHING_FACTOR)
+        .map(|capacity| capacity.min(MSM_TRANSITION_PREALLOC_LIMIT))
+        .unwrap_or(MSM_TRANSITION_PREALLOC_LIMIT)
+}
 
 /// Transition a single MSM position given the next values from both series.
 ///
@@ -64,6 +78,23 @@ pub fn transition_msm_position(
     target_length: usize,
 ) -> SmallVec<[MsmPosition; 4]> {
     let mut next_positions = SmallVec::new();
+    if max_cost.is_nan()
+        || max_cost < 0.0
+        || !position.accumulated_cost.is_finite()
+        || !position.last_query_value.is_finite()
+        || !position.last_target_value.is_finite()
+    {
+        return next_positions;
+    }
+    if query_value.is_some_and(|value| !value.is_finite())
+        || target_value.is_some_and(|value| !value.is_finite())
+    {
+        return next_positions;
+    }
+
+    let query_value = query_value.filter(|value| value.is_finite());
+    let target_value = target_value.filter(|value| value.is_finite());
+    let split_merge_cost = config.split_merge_cost();
 
     // Move operation: consume one from both series (diagonal)
     // Cost = |x_i - y_j|
@@ -77,7 +108,8 @@ pub fn transition_msm_position(
                 qv, // Update last query value
                 tv, // Update last target value
             );
-            if new_pos.can_reach_acceptance(query_length, target_length, max_cost, config.c) {
+            if new_pos.can_reach_acceptance(query_length, target_length, max_cost, split_merge_cost)
+            {
                 next_positions.push(new_pos);
             }
         }
@@ -99,7 +131,8 @@ pub fn transition_msm_position(
                 qv,                         // Update last query value
                 position.last_target_value, // Keep last target value
             );
-            if new_pos.can_reach_acceptance(query_length, target_length, max_cost, config.c) {
+            if new_pos.can_reach_acceptance(query_length, target_length, max_cost, split_merge_cost)
+            {
                 next_positions.push(new_pos);
             }
         }
@@ -120,7 +153,8 @@ pub fn transition_msm_position(
                 position.last_query_value, // Keep last query value
                 tv,                        // Update last target value
             );
-            if new_pos.can_reach_acceptance(query_length, target_length, max_cost, config.c) {
+            if new_pos.can_reach_acceptance(query_length, target_length, max_cost, split_merge_cost)
+            {
                 next_positions.push(new_pos);
             }
         }
@@ -162,25 +196,22 @@ pub fn transition_msm_state(
 
     // If no new values, check if we're at the end
     if query_value.is_none() && target_value.is_none() {
-        // Keep positions that have reached the final state
-        let final_positions: Vec<_> = state
+        let mut new_state = MsmState::new();
+        for position in state
             .iter()
             .filter(|p| p.is_final(query_length, target_length))
-            .cloned()
-            .collect();
-
-        if final_positions.is_empty() {
-            return None;
+        {
+            new_state.insert(*position, max_cost, COST_EPSILON);
         }
 
-        let mut new_state = MsmState::with_capacity(final_positions.len());
-        for pos in final_positions {
-            new_state.insert(pos, max_cost, COST_EPSILON);
-        }
-        return Some(new_state);
+        return if new_state.is_empty() {
+            None
+        } else {
+            Some(new_state)
+        };
     }
 
-    let mut new_state = MsmState::with_capacity(state.len() * 3);
+    let mut new_state = MsmState::with_capacity(transition_state_capacity(state.len()));
 
     for position in state.iter() {
         let next_positions = transition_msm_position(
@@ -235,12 +266,20 @@ pub fn initial_msm_state(
         // Can't match empty to non-empty with MSM operations
         return None;
     }
+    if !series_pair_values_are_finite(query, target) {
+        return None;
+    }
 
     // Initial position with first values as context
     let initial_pos = MsmPosition::initial(query[0], target[0]);
 
     // Check if it can possibly reach acceptance
-    if !initial_pos.can_reach_acceptance(query.len(), target.len(), max_cost, config.c) {
+    if !initial_pos.can_reach_acceptance(
+        query.len(),
+        target.len(),
+        max_cost,
+        config.split_merge_cost(),
+    ) {
         return None;
     }
 
@@ -274,6 +313,9 @@ pub fn msm_distance_automaton(
         return Some(0.0);
     }
     if query.is_empty() || target.is_empty() {
+        return None;
+    }
+    if max_cost.is_nan() || max_cost < 0.0 || !series_pair_values_are_finite(query, target) {
         return None;
     }
 
@@ -421,9 +463,12 @@ pub fn msm_distance_wavefront(
     if m == 0 || n == 0 {
         return None;
     }
+    if max_cost.is_nan() || max_cost < 0.0 || !series_pair_values_are_finite(query, target) {
+        return None;
+    }
 
     // Use 2D cost array (same as DP but with early termination potential)
-    let mut cost = vec![vec![f64::INFINITY; n + 1]; m + 1];
+    let mut cost = msm_infinity_matrix(m, n)?;
 
     // Base case
     cost[1][1] = (query[0] - target[0]).abs();
@@ -444,7 +489,6 @@ pub fn msm_distance_wavefront(
     }
 
     // Fill the matrix with early termination
-    let mut has_valid = true;
     for i in 2..=m {
         let mut row_has_valid = false;
         for j in 2..=n {
@@ -461,14 +505,11 @@ pub fn msm_distance_wavefront(
             }
         }
         if !row_has_valid {
-            has_valid = false;
             break;
         }
     }
 
-    if has_valid && cost[m][n] <= max_cost + COST_EPSILON {
-        Some(cost[m][n])
-    } else if cost[m][n].is_finite() {
+    if cost[m][n].is_finite() {
         Some(cost[m][n])
     } else {
         None
@@ -493,7 +534,7 @@ mod tests {
         let next = transition_msm_position(&pos, Some(1.5), Some(2.5), &config, 10.0, 3, 3);
 
         // Should have move, merge, and split transitions
-        assert!(next.len() >= 1);
+        assert!(!next.is_empty());
 
         // Find the move transition
         let move_pos = next
@@ -547,6 +588,43 @@ mod tests {
     }
 
     #[test]
+    fn test_transition_state_capacity_is_checked_and_bounded() {
+        assert_eq!(transition_state_capacity(0), 0);
+        assert_eq!(
+            transition_state_capacity(1),
+            MSM_TRANSITION_BRANCHING_FACTOR
+        );
+        assert_eq!(
+            transition_state_capacity(MSM_TRANSITION_PREALLOC_LIMIT / 2),
+            MSM_TRANSITION_PREALLOC_LIMIT
+        );
+        assert_eq!(
+            transition_state_capacity(usize::MAX),
+            MSM_TRANSITION_PREALLOC_LIMIT
+        );
+    }
+
+    #[test]
+    fn test_transition_msm_state_finalizes_without_new_values() {
+        let config = MsmConfig::new(1.0);
+        let mut state = MsmState::new();
+        state.insert_unchecked(MsmPosition::new(1, 2, 0.5, 1.0, 2.0));
+        state.insert_unchecked(MsmPosition::new(2, 2, 3.0, 2.0, 2.0));
+
+        let final_state = transition_msm_state(&state, None, None, &config, 10.0, 2, 2);
+
+        assert!(final_state.is_some());
+        let final_state = final_state.expect("expected Some final_state in test");
+        assert_eq!(final_state.len(), 1);
+        assert!(approx_eq(
+            final_state
+                .min_final_distance(2, 2)
+                .expect("expected final distance"),
+            3.0
+        ));
+    }
+
+    #[test]
     fn test_initial_msm_state() {
         let query = vec![1.0, 2.0, 3.0];
         let target = vec![1.0, 2.0, 3.0];
@@ -568,6 +646,21 @@ mod tests {
         // One empty
         let state = initial_msm_state(&[1.0], &[], &config, 10.0);
         assert!(state.is_none());
+    }
+
+    #[test]
+    fn non_finite_values_are_rejected_before_transition_arithmetic() {
+        let config = MsmConfig::new(1.0);
+
+        assert!(initial_msm_state(&[f64::NAN], &[1.0], &config, 10.0).is_none());
+        assert!(msm_distance_automaton(&[f64::INFINITY], &[1.0], &config, 10.0).is_none());
+        assert!(msm_distance_wavefront(&[1.0], &[f64::NEG_INFINITY], &config, 10.0).is_none());
+
+        let position = MsmPosition::initial(1.0, 1.0);
+        assert!(
+            transition_msm_position(&position, Some(f64::NAN), Some(1.0), &config, 10.0, 1, 1)
+                .is_empty()
+        );
     }
 
     #[test]

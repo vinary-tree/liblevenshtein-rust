@@ -18,6 +18,19 @@
 
 use std::cmp::Ordering;
 use std::fmt;
+use std::hash::{Hash, Hasher};
+
+#[inline]
+fn saturating_usize_difference_i64(left: usize, right: usize) -> i64 {
+    if left >= right {
+        i64::try_from(left - right).unwrap_or(i64::MAX)
+    } else {
+        match i64::try_from(right - left) {
+            Ok(diff) => -diff,
+            Err(_) => i64::MIN,
+        }
+    }
+}
 
 /// A position in the MSM automaton with value tracking.
 ///
@@ -149,7 +162,7 @@ impl MsmPosition {
     /// This is useful for subsumption checks and pruning.
     #[inline]
     pub fn diagonal_distance(&self) -> i64 {
-        self.query_index as i64 - self.target_index as i64
+        saturating_usize_difference_i64(self.query_index, self.target_index)
     }
 }
 
@@ -180,16 +193,22 @@ impl fmt::Display for MsmPosition {
 
 impl PartialEq for MsmPosition {
     fn eq(&self, other: &Self) -> bool {
-        self.query_index == other.query_index
-            && self.target_index == other.target_index
-            && self.is_special == other.is_special
-            && (self.accumulated_cost - other.accumulated_cost).abs() < 1e-9
-            && (self.last_query_value - other.last_query_value).abs() < 1e-9
-            && (self.last_target_value - other.last_target_value).abs() < 1e-9
+        self.cmp(other) == Ordering::Equal
     }
 }
 
 impl Eq for MsmPosition {}
+
+impl Hash for MsmPosition {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.query_index.hash(state);
+        self.target_index.hash(state);
+        self.accumulated_cost.to_bits().hash(state);
+        self.last_query_value.to_bits().hash(state);
+        self.last_target_value.to_bits().hash(state);
+        self.is_special.hash(state);
+    }
+}
 
 /// Ordering for positions: primarily by accumulated cost, then by indices.
 ///
@@ -202,33 +221,18 @@ impl PartialOrd for MsmPosition {
 
 impl Ord for MsmPosition {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Primary: lower cost is better (comes first)
-        match self
-            .accumulated_cost
-            .partial_cmp(&other.accumulated_cost)
-            .unwrap_or(Ordering::Equal)
-        {
-            Ordering::Equal => {}
-            ord => return ord,
-        }
+        let self_progress = self.query_index.saturating_add(self.target_index);
+        let other_progress = other.query_index.saturating_add(other.target_index);
 
-        // Secondary: higher index progress is better (more consumed)
-        match (self.query_index + self.target_index)
-            .cmp(&(other.query_index + other.target_index))
-            .reverse()
-        {
-            Ordering::Equal => {}
-            ord => return ord,
-        }
-
-        // Tertiary: prefer non-special positions
-        match self.is_special.cmp(&other.is_special) {
-            Ordering::Equal => {}
-            ord => return ord,
-        }
-
-        // Final: arbitrary but consistent ordering by indices
-        (self.query_index, self.target_index).cmp(&(other.query_index, other.target_index))
+        // Lower cost comes first; higher progress breaks ties.
+        self.accumulated_cost
+            .total_cmp(&other.accumulated_cost)
+            .then_with(|| other_progress.cmp(&self_progress))
+            .then_with(|| self.is_special.cmp(&other.is_special))
+            .then_with(|| self.query_index.cmp(&other.query_index))
+            .then_with(|| self.target_index.cmp(&other.target_index))
+            .then_with(|| self.last_query_value.total_cmp(&other.last_query_value))
+            .then_with(|| self.last_target_value.total_cmp(&other.last_target_value))
     }
 }
 
@@ -273,8 +277,16 @@ pub fn msm_subsumes(a: &MsmPosition, b: &MsmPosition, epsilon: f64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
 
     const EPSILON: f64 = 1e-9;
+
+    fn position_hash(position: &MsmPosition) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        position.hash(&mut hasher);
+        hasher.finish()
+    }
 
     #[test]
     fn test_position_creation() {
@@ -335,6 +347,32 @@ mod tests {
     }
 
     #[test]
+    fn test_diagonal_distance_saturates_extreme_indices() {
+        let max_i64_usize = usize::try_from(i64::MAX).unwrap_or(usize::MAX);
+
+        let max_positive = MsmPosition::new(max_i64_usize, 0, 0.0, 0.0, 0.0);
+        assert_eq!(max_positive.diagonal_distance(), i64::MAX);
+        assert_eq!(saturating_usize_difference_i64(usize::MAX, 0), i64::MAX);
+
+        let max_negative = MsmPosition::new(0, max_i64_usize, 0.0, 0.0, 0.0);
+        assert_eq!(max_negative.diagonal_distance(), -i64::MAX);
+
+        if let Some(one_past_i64_max) = max_i64_usize.checked_add(1) {
+            let min_negative = MsmPosition::new(0, one_past_i64_max, 0.0, 0.0, 0.0);
+            assert_eq!(min_negative.diagonal_distance(), i64::MIN);
+        }
+
+        assert_eq!(
+            saturating_usize_difference_i64(0, usize::MAX),
+            if usize::MAX == max_i64_usize {
+                -i64::MAX
+            } else {
+                i64::MIN
+            }
+        );
+    }
+
+    #[test]
     fn test_subsumption() {
         // Same position, A has lower cost
         let a = MsmPosition::new(2, 2, 1.0, 3.0, 4.0);
@@ -368,6 +406,35 @@ mod tests {
 
         // Same cost, more progress comes first
         assert!(pos3 < pos1);
+    }
+
+    #[test]
+    fn test_eq_ord_hash_share_total_float_identity() {
+        let base = MsmPosition::new(2, 2, 1.0, 3.0, 4.0);
+        let near_cost = MsmPosition::new(2, 2, 1.0 + EPSILON / 2.0, 3.0, 4.0);
+
+        assert!(msm_subsumes(&base, &near_cost, EPSILON));
+        assert_ne!(base, near_cost);
+        assert_ne!(base.cmp(&near_cost), Ordering::Equal);
+
+        let positive_zero = MsmPosition::new(0, 0, 0.0, 1.0, 2.0);
+        let negative_zero = MsmPosition::new(0, 0, -0.0, 1.0, 2.0);
+
+        assert_ne!(positive_zero, negative_zero);
+        assert_ne!(positive_zero.cmp(&negative_zero), Ordering::Equal);
+
+        let different_last_value = MsmPosition::new(2, 2, 1.0, 3.0, 5.0);
+        assert_ne!(base, different_last_value);
+        assert_ne!(base.cmp(&different_last_value), Ordering::Equal);
+
+        let nan_position = MsmPosition::new(0, 0, f64::NAN, 1.0, 2.0);
+        let same_nan_position = nan_position;
+        assert_eq!(nan_position, same_nan_position);
+        assert_eq!(nan_position.cmp(&same_nan_position), Ordering::Equal);
+        assert_eq!(
+            position_hash(&nan_position),
+            position_hash(&same_nan_position)
+        );
     }
 
     #[test]

@@ -102,7 +102,8 @@ impl QuantizationConfig {
     ///
     /// # Panics
     ///
-    /// Panics if `min_value >= max_value` or `num_bins == 0`.
+    /// Panics if the bounds are non-finite, `min_value >= max_value`,
+    /// `num_bins == 0`, or the resulting bin width is not finite and positive.
     ///
     /// # Example
     ///
@@ -113,7 +114,7 @@ impl QuantizationConfig {
     /// ```
     pub fn uniform(min_value: f64, max_value: f64, num_bins: u32) -> Self {
         assert!(
-            min_value < max_value,
+            min_value.is_finite() && max_value.is_finite() && min_value < max_value,
             "min_value ({}) must be less than max_value ({})",
             min_value,
             max_value
@@ -121,6 +122,10 @@ impl QuantizationConfig {
         assert!(num_bins > 0, "num_bins must be positive");
 
         let bin_width = (max_value - min_value) / num_bins as f64;
+        assert!(
+            bin_width.is_finite() && bin_width > 0.0,
+            "bin width must be finite and positive"
+        );
 
         Self {
             min_value,
@@ -129,6 +134,34 @@ impl QuantizationConfig {
             bin_width,
             clamp_outliers: true,
         }
+    }
+
+    /// Try to create a uniform quantization configuration.
+    ///
+    /// Returns `None` for non-finite bounds, non-increasing ranges, zero bins,
+    /// or ranges whose bin width cannot be represented as a positive finite
+    /// `f64`.
+    pub fn try_uniform(min_value: f64, max_value: f64, num_bins: u32) -> Option<Self> {
+        if !min_value.is_finite()
+            || !max_value.is_finite()
+            || min_value >= max_value
+            || num_bins == 0
+        {
+            return None;
+        }
+
+        let bin_width = (max_value - min_value) / num_bins as f64;
+        if !bin_width.is_finite() || bin_width <= 0.0 {
+            return None;
+        }
+
+        Some(Self {
+            min_value,
+            max_value,
+            num_bins,
+            bin_width,
+            clamp_outliers: true,
+        })
     }
 
     /// Create a configuration for byte encoding (256 bins).
@@ -173,7 +206,8 @@ impl QuantizationConfig {
     ///
     /// # Returns
     ///
-    /// `None` if data is empty or contains only one unique value.
+    /// `None` if data is empty, has no finite non-constant range, uses zero
+    /// bins, or has a margin that is non-finite or collapses the expanded range.
     ///
     /// # Example
     ///
@@ -186,7 +220,7 @@ impl QuantizationConfig {
     /// assert!(config.max_value > 50.0); // Has margin
     /// ```
     pub fn from_data(data: &[f64], num_bins: u32, margin: f64) -> Option<Self> {
-        if data.is_empty() {
+        if data.is_empty() || num_bins == 0 || !margin.is_finite() {
             return None;
         }
 
@@ -206,12 +240,17 @@ impl QuantizationConfig {
 
         let range = max_val - min_val;
         let margin_amount = range * margin;
+        if !margin_amount.is_finite() {
+            return None;
+        }
 
-        Some(Self::uniform(
-            min_val - margin_amount,
-            max_val + margin_amount,
-            num_bins,
-        ))
+        let expanded_min = min_val - margin_amount;
+        let expanded_max = max_val + margin_amount;
+        if !expanded_min.is_finite() || !expanded_max.is_finite() || expanded_min >= expanded_max {
+            return None;
+        }
+
+        Self::try_uniform(expanded_min, expanded_max, num_bins)
     }
 
     /// Get the bin width.
@@ -240,6 +279,16 @@ impl QuantizationConfig {
     /// ```
     #[inline]
     pub fn quantize(&self, value: f64) -> u32 {
+        if value.is_nan() {
+            return 0;
+        }
+        if value == f64::NEG_INFINITY {
+            return 0;
+        }
+        if value == f64::INFINITY {
+            return self.num_bins - 1;
+        }
+
         if self.clamp_outliers {
             if value <= self.min_value {
                 return 0;
@@ -250,10 +299,22 @@ impl QuantizationConfig {
         }
 
         let normalized = (value - self.min_value) / self.bin_width;
-        let bin = normalized.floor() as u32;
+        Self::normalized_bin_floor(normalized, self.num_bins - 1)
+    }
 
-        // Clamp to valid range
-        bin.min(self.num_bins - 1)
+    #[inline]
+    fn normalized_bin_floor(normalized: f64, max_bin: u32) -> u32 {
+        if normalized.is_nan() || normalized <= 0.0 {
+            return 0;
+        }
+        if normalized >= f64::from(max_bin) {
+            return max_bin;
+        }
+
+        debug_assert!(normalized.is_finite());
+        debug_assert!(normalized > 0.0);
+        debug_assert!(normalized < f64::from(max_bin));
+        normalized.floor() as u32
     }
 
     /// Quantize to u8 (for DynamicDawg compatibility).
@@ -268,7 +329,25 @@ impl QuantizationConfig {
             "Cannot encode {} bins as u8 (max 256)",
             self.num_bins
         );
-        self.quantize(value) as u8
+        u8::try_from(self.quantize(value))
+            .expect("num_bins <= 256 guarantees quantized bin fits in u8")
+    }
+
+    /// Return a byte-encodable quantizer over the same value range.
+    ///
+    /// Byte-trie indexes can store at most 256 distinct bin ids. Wider
+    /// quantizers are coarsened to 256 bins, preserving the range and outlier
+    /// clamping policy. This can reduce pruning selectivity, but exact
+    /// verification layers remain sound because wider bins produce admissible
+    /// lower bounds.
+    pub(crate) fn into_u8_compatible(self) -> Self {
+        if self.num_bins <= 256 {
+            return self;
+        }
+
+        let mut config = Self::uniform(self.min_value, self.max_value, 256);
+        config.clamp_outliers = self.clamp_outliers;
+        config
     }
 
     /// Quantize to u16.
@@ -283,7 +362,8 @@ impl QuantizationConfig {
             "Cannot encode {} bins as u16 (max 65536)",
             self.num_bins
         );
-        self.quantize(value) as u16
+        u16::try_from(self.quantize(value))
+            .expect("num_bins <= 65536 guarantees quantized bin fits in u16")
     }
 
     /// Dequantize a bin index back to an approximate value.
@@ -413,7 +493,18 @@ impl QuantizationConfig {
     /// ```
     #[inline]
     pub fn value_diff_to_bins(&self, value_diff: f64) -> u32 {
-        (value_diff.abs() / self.bin_width).ceil() as u32
+        let bins = value_diff.abs() / self.bin_width;
+        Self::ceil_nonnegative_bins_to_u32(bins)
+    }
+
+    #[inline]
+    fn ceil_nonnegative_bins_to_u32(bins: f64) -> u32 {
+        if !bins.is_finite() || bins >= f64::from(u32::MAX) {
+            u32::MAX
+        } else {
+            debug_assert!(bins >= 0.0);
+            bins.ceil() as u32
+        }
     }
 }
 
@@ -497,13 +588,24 @@ pub mod float_encoding {
     ///
     /// This doubles the sequence length but allows f64 storage in u32-based tries.
     pub fn encode_f64_series_as_u32_pairs(series: &[f64]) -> Vec<u32> {
-        let mut encoded = Vec::with_capacity(series.len() * 2);
+        let Some(capacity) = f64_pair_capacity(series.len()) else {
+            return Vec::new();
+        };
+        let mut encoded = Vec::new();
+        if encoded.try_reserve_exact(capacity).is_err() {
+            return Vec::new();
+        }
+
         for &v in series {
             let bits = encode_f64(v);
             encoded.push((bits >> 32) as u32); // High 32 bits
             encoded.push(bits as u32); // Low 32 bits
         }
         encoded
+    }
+
+    pub(super) fn f64_pair_capacity(series_len: usize) -> Option<usize> {
+        series_len.checked_mul(2)
     }
 
     /// Decode pairs of u32 back to f64.
@@ -587,7 +689,14 @@ pub mod delta_encoding {
 
     /// Reconstruct a series from its deltas and initial value.
     pub fn reconstruct_from_deltas(initial: f64, deltas: &[f64]) -> Vec<f64> {
-        let mut series = Vec::with_capacity(deltas.len() + 1);
+        let Some(capacity) = reconstruction_capacity(deltas.len()) else {
+            return Vec::new();
+        };
+        let mut series = Vec::new();
+        if series.try_reserve_exact(capacity).is_err() {
+            return Vec::new();
+        }
+
         series.push(initial);
         let mut current = initial;
         for &delta in deltas {
@@ -595,6 +704,10 @@ pub mod delta_encoding {
             series.push(current);
         }
         series
+    }
+
+    pub(super) fn reconstruction_capacity(delta_len: usize) -> Option<usize> {
+        delta_len.checked_add(1)
     }
 
     /// Encode a time series using delta encoding with quantization.
@@ -689,17 +802,16 @@ pub mod sax_encoding {
         }
 
         let n = series.len();
-        if num_segments >= n {
-            return series.to_vec();
+        let mut result = Vec::new();
+        if result.try_reserve_exact(num_segments).is_err() {
+            return Vec::new();
         }
 
-        let mut result = Vec::with_capacity(num_segments);
-        let segment_size = n as f64 / num_segments as f64;
-
         for i in 0..num_segments {
-            let start = (i as f64 * segment_size).floor() as usize;
-            let end = ((i + 1) as f64 * segment_size).floor() as usize;
-            let end = end.min(n);
+            let start = scaled_segment_boundary(i, n, num_segments).min(n - 1);
+            let end = scaled_segment_boundary(i + 1, n, num_segments)
+                .max(start + 1)
+                .min(n);
             let segment = &series[start..end];
             let mean = segment.iter().sum::<f64>() / segment.len() as f64;
             result.push(mean);
@@ -708,8 +820,24 @@ pub mod sax_encoding {
         result
     }
 
+    fn scaled_segment_boundary(segment: usize, series_len: usize, num_segments: usize) -> usize {
+        let whole = segment * (series_len / num_segments);
+        let fractional = ((segment as u128 * (series_len % num_segments) as u128)
+            / num_segments as u128) as usize;
+        whole + fractional
+    }
+
     /// Map a z-score value to a SAX symbol.
+    ///
+    /// A `NaN` z-score maps to symbol `0`, matching
+    /// [`super::QuantizationConfig::quantize`]'s `NaN` handling so the two
+    /// encoders agree on degenerate input. Finite values and `±∞` are
+    /// unaffected: the `z < bp` scan already routes `-∞` to symbol `0` and
+    /// `+∞` to the top symbol (`breakpoints.len()`).
     fn zscore_to_symbol(z: f64, breakpoints: &[f64]) -> u8 {
+        if z.is_nan() {
+            return 0;
+        }
         for (i, &bp) in breakpoints.iter().enumerate() {
             if z < bp {
                 return i as u8;
@@ -795,6 +923,34 @@ pub mod sax_encoding {
 
         ratio * sum.sqrt()
     }
+
+    #[cfg(test)]
+    mod sax_symbol_tests {
+        use super::*;
+
+        /// A `NaN` z-score must map to symbol `0`, matching
+        /// [`super::super::QuantizationConfig::quantize`] (which maps both `NaN`
+        /// and `-∞` to bin `0`). Finite values and `±∞` are unchanged.
+        #[test]
+        fn nan_zscore_maps_to_symbol_zero_matching_quantize() {
+            // alphabet_size = 4 -> breakpoints [-0.67, 0.0, 0.67]; top symbol 3.
+            let breakpoints = get_breakpoints(4).expect("alphabet size 4 is valid");
+            let top = breakpoints.len() as u8;
+
+            // The fix: NaN -> 0 (was previously the top symbol).
+            assert_eq!(zscore_to_symbol(f64::NAN, breakpoints), 0);
+
+            // Parity with QuantizationConfig::quantize on the degenerate inputs.
+            let quant = super::super::QuantizationConfig::for_u8(-1.0, 1.0);
+            assert_eq!(quant.quantize_u8(f64::NAN), 0);
+
+            // Unchanged: -∞ -> 0, +∞ -> top, and finite values keep their bins.
+            assert_eq!(zscore_to_symbol(f64::NEG_INFINITY, breakpoints), 0);
+            assert_eq!(zscore_to_symbol(f64::INFINITY, breakpoints), top);
+            assert_eq!(zscore_to_symbol(-1.0, breakpoints), 0);
+            assert_eq!(zscore_to_symbol(0.5, breakpoints), 2);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -817,6 +973,22 @@ mod tests {
     }
 
     #[test]
+    fn test_try_uniform_rejects_invalid_ranges_without_panicking() {
+        assert!(QuantizationConfig::try_uniform(f64::NAN, 1.0, 10).is_none());
+        assert!(QuantizationConfig::try_uniform(0.0, f64::INFINITY, 10).is_none());
+        assert!(QuantizationConfig::try_uniform(1.0, 1.0, 10).is_none());
+        assert!(QuantizationConfig::try_uniform(2.0, 1.0, 10).is_none());
+        assert!(QuantizationConfig::try_uniform(0.0, 1.0, 0).is_none());
+        assert!(QuantizationConfig::try_uniform(-f64::MAX, f64::MAX, 10).is_none());
+
+        let config = QuantizationConfig::try_uniform(-1.0, 1.0, 10)
+            .expect("finite increasing range with bins should be valid");
+        assert_eq!(config.min_value, -1.0);
+        assert_eq!(config.max_value, 1.0);
+        assert_eq!(config.num_bins, 10);
+    }
+
+    #[test]
     fn test_quantize_boundaries() {
         let config = QuantizationConfig::uniform(0.0, 100.0, 100);
 
@@ -834,6 +1006,41 @@ mod tests {
 
         assert_eq!(config.quantize(-10.0), 0);
         assert_eq!(config.quantize(110.0), 99);
+    }
+
+    #[test]
+    fn test_quantize_non_finite_values_are_explicitly_clamped() {
+        let config = QuantizationConfig::uniform(0.0, 100.0, 100);
+
+        assert_eq!(config.quantize(f64::NAN), 0);
+        assert_eq!(config.quantize(f64::NEG_INFINITY), 0);
+        assert_eq!(config.quantize(f64::INFINITY), 99);
+    }
+
+    #[test]
+    fn test_quantize_without_outlier_clamping_is_explicitly_bounded() {
+        let mut config = QuantizationConfig::uniform(0.0, 100.0, 100);
+        config.clamp_outliers = false;
+
+        assert_eq!(config.quantize(-10.0), 0);
+        assert_eq!(config.quantize(-f64::MAX), 0);
+        assert_eq!(config.quantize(110.0), 99);
+        assert_eq!(config.quantize(f64::MAX), 99);
+    }
+
+    #[test]
+    fn test_quantize_typed_width_boundaries_are_checked() {
+        let byte_config = QuantizationConfig::for_u8(0.0, 100.0);
+        assert_eq!(byte_config.quantize_u8(-f64::MAX), 0);
+        assert_eq!(byte_config.quantize_u8(0.0), 0);
+        assert_eq!(byte_config.quantize_u8(100.0), u8::MAX);
+        assert_eq!(byte_config.quantize_u8(f64::MAX), u8::MAX);
+
+        let word_config = QuantizationConfig::for_u16(0.0, 100.0);
+        assert_eq!(word_config.quantize_u16(-f64::MAX), 0);
+        assert_eq!(word_config.quantize_u16(0.0), 0);
+        assert_eq!(word_config.quantize_u16(100.0), u16::MAX);
+        assert_eq!(word_config.quantize_u16(f64::MAX), u16::MAX);
     }
 
     #[test]
@@ -942,18 +1149,50 @@ mod tests {
     }
 
     #[test]
+    fn test_from_data_invalid_config_returns_none() {
+        let data = vec![10.0, 20.0, 30.0];
+
+        assert!(QuantizationConfig::from_data(&data, 0, 0.1).is_none());
+        assert!(QuantizationConfig::from_data(&data, 256, f64::NAN).is_none());
+        assert!(QuantizationConfig::from_data(&data, 256, f64::INFINITY).is_none());
+        assert!(QuantizationConfig::from_data(&data, 256, f64::MAX).is_none());
+        assert!(QuantizationConfig::from_data(&data, 256, -0.5).is_none());
+        assert!(QuantizationConfig::from_data(&data, 256, -1.0).is_none());
+    }
+
+    #[test]
+    fn test_from_data_allows_valid_shrinking_margin() {
+        let data = vec![10.0, 20.0, 30.0];
+        let config = QuantizationConfig::from_data(&data, 10, -0.25)
+            .expect("negative margin above -0.5 preserves a positive range");
+
+        assert!(approx_eq(config.min_value, 15.0));
+        assert!(approx_eq(config.max_value, 25.0));
+        assert_eq!(config.num_bins, 10);
+    }
+
+    #[test]
     fn test_value_diff_to_bins() {
         let config = QuantizationConfig::uniform(0.0, 100.0, 100);
         assert_eq!(config.value_diff_to_bins(10.0), 10);
         assert_eq!(config.value_diff_to_bins(0.5), 1);
         assert_eq!(config.value_diff_to_bins(0.0), 0);
+        assert_eq!(config.value_diff_to_bins(f64::NAN), u32::MAX);
+        assert_eq!(config.value_diff_to_bins(f64::INFINITY), u32::MAX);
+        assert_eq!(config.value_diff_to_bins(f64::NEG_INFINITY), u32::MAX);
+        assert_eq!(config.value_diff_to_bins(f64::MAX), u32::MAX);
+        assert_eq!(
+            config.value_diff_to_bins(f64::from(u32::MAX) - 1.0),
+            u32::MAX - 1
+        );
+        assert_eq!(config.value_diff_to_bins(f64::from(u32::MAX)), u32::MAX);
     }
 
     // ==================== Float Encoding Tests ====================
 
     #[test]
     fn test_f32_encode_decode() {
-        let values = vec![0.0f32, 1.0, -1.0, 3.14159, f32::MAX, f32::MIN];
+        let values = vec![0.0f32, 1.0, -1.0, std::f32::consts::PI, f32::MAX, f32::MIN];
         for v in values {
             let encoded = float_encoding::encode_f32(v);
             let decoded = float_encoding::decode_f32(encoded);
@@ -963,7 +1202,7 @@ mod tests {
 
     #[test]
     fn test_f32_series_roundtrip() {
-        let series = vec![1.0f32, 2.5, 3.14159, -0.001, 1000.0];
+        let series = vec![1.0f32, 2.5, std::f32::consts::PI, -0.001, 1000.0];
         let encoded = float_encoding::encode_f32_series(&series);
         let decoded = float_encoding::decode_f32_series(&encoded);
         assert_eq!(series, decoded);
@@ -971,11 +1210,18 @@ mod tests {
 
     #[test]
     fn test_f64_series_roundtrip() {
-        let series = vec![1.0f64, 2.5, 3.14159265358979, -0.001, 1e100];
+        let series = vec![1.0f64, 2.5, std::f64::consts::PI, -0.001, 1e100];
         let encoded = float_encoding::encode_f64_series_as_u32_pairs(&series);
         assert_eq!(encoded.len(), series.len() * 2);
         let decoded = float_encoding::decode_u32_pairs_to_f64(&encoded);
         assert_eq!(series, decoded);
+    }
+
+    #[test]
+    fn test_f64_pair_capacity_rejects_overflow() {
+        assert_eq!(float_encoding::f64_pair_capacity(0), Some(0));
+        assert_eq!(float_encoding::f64_pair_capacity(3), Some(6));
+        assert_eq!(float_encoding::f64_pair_capacity(usize::MAX), None);
     }
 
     #[test]
@@ -1022,6 +1268,13 @@ mod tests {
     }
 
     #[test]
+    fn test_delta_reconstruction_capacity_rejects_overflow() {
+        assert_eq!(delta_encoding::reconstruction_capacity(0), Some(1));
+        assert_eq!(delta_encoding::reconstruction_capacity(3), Some(4));
+        assert_eq!(delta_encoding::reconstruction_capacity(usize::MAX), None);
+    }
+
+    #[test]
     fn test_delta_encoding_roundtrip() {
         let series = vec![1.0, 3.0, 6.0, 10.0, 8.0, 5.0];
         let delta_config = QuantizationConfig::uniform(-10.0, 10.0, 256);
@@ -1065,6 +1318,16 @@ mod tests {
     }
 
     #[test]
+    fn test_sax_paa_preserves_requested_segment_count_for_short_series() {
+        let series = vec![1.0, 2.0, 3.0];
+        let paa = sax_encoding::paa(&series, 8);
+
+        assert_eq!(paa.len(), 8);
+        assert!(paa.iter().all(|value| value.is_finite()));
+        assert_eq!(paa, vec![1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0]);
+    }
+
+    #[test]
     fn test_sax_encode() {
         let series = vec![1.0, 2.0, 3.0, 4.0, 5.0, 4.0, 3.0, 2.0];
         let sax_word = sax_encoding::encode(&series, 4, 4);
@@ -1074,6 +1337,15 @@ mod tests {
         for &symbol in &sax_word {
             assert!(symbol < 4);
         }
+    }
+
+    #[test]
+    fn test_sax_encode_preserves_requested_word_length_for_short_series() {
+        let series = vec![1.0, 2.0, 3.0];
+        let sax_word = sax_encoding::encode(&series, 8, 4);
+
+        assert_eq!(sax_word.len(), 8);
+        assert!(sax_word.iter().all(|&symbol| symbol < 4));
     }
 
     #[test]

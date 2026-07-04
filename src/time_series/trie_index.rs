@@ -40,10 +40,22 @@
 //!   then verifies with exact MSM distance. Accurate but slower.
 
 use super::encoding::QuantizationConfig;
-use crate::transducer::{Algorithm, Transducer};
+use crate::transducer::transition::{
+    initial_state, transition_state_pooled_ref, TransitionSettings,
+};
+use crate::transducer::{Algorithm, State, StatePool, Unrestricted};
 use libdictenstein::dynamic_dawg::DynamicDawg;
-use libdictenstein::DictionaryValue;
-use std::collections::HashMap;
+use libdictenstein::{Dictionary, DictionaryNode, DictionaryValue, MappedDictionaryNode};
+use std::collections::{HashMap, VecDeque};
+
+struct ByteSearchNode<N> {
+    node: N,
+    state: State,
+}
+
+type BucketLocation = (usize, usize);
+
+const DEFAULT_SEARCH_RESULT_CAPACITY: usize = 64;
 
 /// A time series index using quantized trie storage.
 ///
@@ -64,7 +76,13 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct TimeSeriesIndex<V: DictionaryValue = usize> {
     /// The underlying DAWG storing quantized sequences
-    dawg: DynamicDawg<V>,
+    dawg: DynamicDawg<usize>,
+
+    /// Values grouped by quantized byte sequence.
+    buckets: Vec<Vec<V>>,
+
+    /// Current bucket and slot for each indexed value.
+    locations: HashMap<V, BucketLocation>,
 
     /// Quantization configuration
     config: QuantizationConfig,
@@ -85,7 +103,8 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
     ///
     /// # Arguments
     ///
-    /// * `config` - Quantization configuration for encoding series
+    /// * `config` - Quantization configuration for encoding series. Configs
+    ///   wider than 256 bins are coarsened to byte-compatible 256-bin configs.
     ///
     /// # Example
     ///
@@ -96,13 +115,16 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
     /// let index: TimeSeriesIndex<usize> = TimeSeriesIndex::new(config);
     /// ```
     pub fn new(config: QuantizationConfig) -> Self {
-        Self {
-            dawg: DynamicDawg::new(),
-            config,
-            originals: HashMap::new(),
-            store_originals: false,
-            count: 0,
-        }
+        Self::with_capacity(config, 0)
+    }
+
+    /// Create a new time series index and reserve metadata for `capacity` values.
+    ///
+    /// This is useful when the caller knows the approximate number of inserts in
+    /// advance. The DAWG grows normally, while the bucket table and value-location
+    /// map avoid repeated reallocation during bulk loading.
+    pub fn with_capacity(config: QuantizationConfig, capacity: usize) -> Self {
+        Self::with_options_capacity(config, false, capacity)
     }
 
     /// Create a new index that also stores original series for exact verification.
@@ -110,11 +132,31 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
     /// This enables hybrid search that uses approximate candidates for filtering
     /// then exact MSM distance for verification.
     pub fn new_with_verification(config: QuantizationConfig) -> Self {
+        Self::with_verification_capacity(config, 0)
+    }
+
+    /// Create a verification-capable index and reserve metadata for `capacity` values.
+    pub fn with_verification_capacity(config: QuantizationConfig, capacity: usize) -> Self {
+        Self::with_options_capacity(config, true, capacity)
+    }
+
+    pub(crate) fn with_options_capacity(
+        config: QuantizationConfig,
+        store_originals: bool,
+        capacity: usize,
+    ) -> Self {
+        let config = config.into_u8_compatible();
         Self {
             dawg: DynamicDawg::new(),
+            buckets: Vec::with_capacity(capacity),
+            locations: HashMap::with_capacity(capacity),
             config,
-            originals: HashMap::new(),
-            store_originals: true,
+            originals: if store_originals {
+                HashMap::with_capacity(capacity)
+            } else {
+                HashMap::new()
+            },
+            store_originals,
             count: 0,
         }
     }
@@ -161,16 +203,76 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
     /// ```
     pub fn insert(&mut self, value: V, series: &[f64]) -> bool {
         let encoded = self.config.encode_u8(series);
-        let inserted = self.dawg.insert_bytes_with_value(&encoded, value);
+        let bucket_id = self.bucket_id_for_encoded(&encoded);
 
-        if inserted {
-            self.count += 1;
+        if let Some((old_bucket_id, old_slot)) = self.locations.get(&value).copied() {
+            if old_bucket_id != bucket_id {
+                self.remove_from_bucket(value, old_bucket_id, old_slot);
+                self.push_to_bucket(value, bucket_id);
+            }
             if self.store_originals {
                 self.originals.insert(value, series.to_vec());
             }
+            return false;
         }
 
-        inserted
+        self.push_to_bucket(value, bucket_id);
+        if self.store_originals {
+            self.originals.insert(value, series.to_vec());
+        }
+        self.count += 1;
+        true
+    }
+
+    fn bucket_id_for_encoded(&mut self, encoded: &[u8]) -> usize {
+        if let Some(bucket_id) = self.dawg.get_bytes_value(encoded) {
+            return bucket_id;
+        }
+
+        let bucket_id = self.buckets.len();
+        self.buckets.push(Vec::with_capacity(1));
+        let inserted = self.dawg.insert_bytes_with_value(encoded, bucket_id);
+        debug_assert!(inserted, "new bucket id must be inserted for a new key");
+        bucket_id
+    }
+
+    fn push_to_bucket(&mut self, value: V, bucket_id: usize) {
+        let slot = self.buckets[bucket_id].len();
+        self.buckets[bucket_id].push(value);
+        self.locations.insert(value, (bucket_id, slot));
+    }
+
+    fn remove_from_bucket(&mut self, value: V, bucket_id: usize, slot: usize) {
+        let bucket = &mut self.buckets[bucket_id];
+        debug_assert!(bucket.get(slot).copied() == Some(value));
+        let removed = bucket.swap_remove(slot);
+        debug_assert!(removed == value);
+
+        if let Some(swapped) = bucket.get(slot).copied() {
+            self.locations.insert(swapped, (bucket_id, slot));
+        } else if bucket.is_empty() {
+            *bucket = Vec::new();
+        }
+    }
+
+    /// Remove a value from the index.
+    ///
+    /// This removes the value from its quantized bucket and drops any stored
+    /// original series. Empty buckets remain addressable from the DAWG so older
+    /// bucket IDs stay stable, but their backing storage is released.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the value was present and removed, `false` otherwise.
+    pub fn remove(&mut self, value: V) -> bool {
+        let Some((bucket_id, slot)) = self.locations.remove(&value) else {
+            return false;
+        };
+
+        self.remove_from_bucket(value, bucket_id, slot);
+        self.originals.remove(&value);
+        self.count -= 1;
+        true
     }
 
     /// Check if an exact series exists in the index.
@@ -178,7 +280,10 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
     /// Note: Due to quantization, this checks for the quantized representation.
     pub fn contains(&self, series: &[f64]) -> bool {
         let encoded = self.config.encode_u8(series);
-        self.dawg.contains_bytes(&encoded)
+        self.dawg
+            .get_bytes_value(&encoded)
+            .and_then(|bucket_id| self.buckets.get(bucket_id))
+            .is_some_and(|bucket| !bucket.is_empty())
     }
 
     /// Get the value associated with an exact series match.
@@ -186,7 +291,10 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
     /// Note: Due to quantization, this looks up the quantized representation.
     pub fn get(&self, series: &[f64]) -> Option<V> {
         let encoded = self.config.encode_u8(series);
-        self.dawg.get_bytes_value(&encoded)
+        self.dawg
+            .get_bytes_value(&encoded)
+            .and_then(|bucket_id| self.buckets.get(bucket_id))
+            .and_then(|bucket| bucket.first().copied())
     }
 
     /// Search for similar series within a Levenshtein distance threshold.
@@ -242,24 +350,63 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
         algorithm: Algorithm,
     ) -> Vec<(V, usize)> {
         let encoded = self.config.encode_u8(query);
+        if max_distance == 0 {
+            let Some(bucket) = self
+                .dawg
+                .get_bytes_value(&encoded)
+                .and_then(|bucket_id| self.buckets.get(bucket_id))
+            else {
+                return Vec::new();
+            };
 
-        // Convert encoded bytes to a string for the transducer
-        // Since DynamicDawg stores bytes, we need to use a byte-compatible query
-        // The transducer works on string queries, so we create a "fake" string
-        // from the raw bytes (this is safe because we're only using it for traversal)
-        let query_str = unsafe { std::str::from_utf8_unchecked(&encoded) };
+            let mut results = Vec::with_capacity(bucket.len());
+            results.extend(bucket.iter().map(|&value| (value, 0)));
+            return results;
+        }
 
-        let transducer = Transducer::new(self.dawg.clone(), algorithm);
-        transducer
-            .query_candidates(query_str, max_distance)
-            .filter_map(|candidate| {
-                // The term returned by the transducer is the encoded byte sequence
-                // We look up the value using the raw bytes
-                self.dawg
-                    .get_bytes_value(candidate.term.as_bytes())
-                    .map(|v| (v, candidate.distance))
-            })
-            .collect()
+        let settings = TransitionSettings::new(max_distance, algorithm, false);
+        let mut pending = VecDeque::with_capacity(encoded.len().saturating_add(1));
+        let mut results = Vec::with_capacity(self.count.min(DEFAULT_SEARCH_RESULT_CAPACITY));
+        let mut state_pool = StatePool::new();
+
+        pending.push_back(ByteSearchNode {
+            node: self.dawg.root(),
+            state: initial_state(encoded.len(), max_distance, algorithm),
+        });
+
+        while let Some(current) = pending.pop_front() {
+            if current.node.is_final() {
+                let distance = current
+                    .state
+                    .infer_distance(encoded.len())
+                    .unwrap_or(usize::MAX);
+                if distance <= max_distance {
+                    if let Some(bucket_id) = current.node.value() {
+                        if let Some(bucket) = self.buckets.get(bucket_id) {
+                            results.extend(bucket.iter().map(|&value| (value, distance)));
+                        }
+                    }
+                }
+            }
+
+            for (label, child) in current.node.edges() {
+                if let Some(next_state) = transition_state_pooled_ref(
+                    &current.state,
+                    &mut state_pool,
+                    &Unrestricted,
+                    label,
+                    &encoded,
+                    settings,
+                ) {
+                    pending.push_back(ByteSearchNode {
+                        node: child,
+                        state: next_state,
+                    });
+                }
+            }
+        }
+
+        results
     }
 
     /// Get candidates for exact MSM verification.
@@ -285,14 +432,13 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
         }
 
         let candidates = self.search(query, max_distance);
-        candidates
-            .into_iter()
-            .filter_map(|(value, _)| {
-                self.originals
-                    .get(&value)
-                    .map(|series| (value, series.as_slice()))
-            })
-            .collect()
+        let mut verified = Vec::with_capacity(candidates.len());
+        for (value, _) in candidates {
+            if let Some(series) = self.originals.get(&value) {
+                verified.push((value, series.as_slice()));
+            }
+        }
+        verified
     }
 
     /// Get the original series for a value (if stored).
@@ -331,7 +477,7 @@ impl TimeSeriesIndex<usize> {
     /// assert_eq!(index.len(), 3);
     /// ```
     pub fn from_series(config: QuantizationConfig, series_list: &[Vec<f64>]) -> Self {
-        let mut index = Self::new(config);
+        let mut index = Self::with_capacity(config, series_list.len());
         for (id, series) in series_list.iter().enumerate() {
             index.insert(id, series);
         }
@@ -343,7 +489,7 @@ impl TimeSeriesIndex<usize> {
         config: QuantizationConfig,
         series_list: &[Vec<f64>],
     ) -> Self {
-        let mut index = Self::new_with_verification(config);
+        let mut index = Self::with_verification_capacity(config, series_list.len());
         for (id, series) in series_list.iter().enumerate() {
             index.insert(id, series);
         }
@@ -388,28 +534,34 @@ impl std::fmt::Display for TimeSeriesIndexStats {
 /// Builder for TimeSeriesIndex with customizable options.
 #[derive(Debug, Clone)]
 pub struct TimeSeriesIndexBuilder {
-    config: Option<QuantizationConfig>,
+    config: QuantizationConfig,
     store_originals: bool,
+    capacity: usize,
 }
 
 impl TimeSeriesIndexBuilder {
     /// Create a new builder.
     pub fn new() -> Self {
         Self {
-            config: None,
+            config: QuantizationConfig::default(),
             store_originals: false,
+            capacity: 0,
         }
     }
 
     /// Set the quantization configuration.
     pub fn config(mut self, config: QuantizationConfig) -> Self {
-        self.config = Some(config);
+        self.config = config;
         self
     }
 
     /// Set quantization parameters directly.
+    ///
+    /// Invalid parameters leave the current configuration unchanged.
     pub fn quantization(mut self, min: f64, max: f64, bins: u32) -> Self {
-        self.config = Some(QuantizationConfig::uniform(min, max, bins));
+        if let Some(config) = QuantizationConfig::try_uniform(min, max, bins) {
+            self.config = config;
+        }
         self
     }
 
@@ -419,25 +571,31 @@ impl TimeSeriesIndexBuilder {
         self
     }
 
+    /// Reserve metadata capacity for at least `capacity` indexed values.
+    pub fn capacity(mut self, capacity: usize) -> Self {
+        self.capacity = capacity;
+        self
+    }
+
     /// Auto-configure quantization from sample data.
+    ///
+    /// If the sample is empty, non-finite, or degenerate, the current
+    /// configuration is kept.
     pub fn auto_config(mut self, sample_data: &[f64], bins: u32, margin: f64) -> Self {
-        self.config = QuantizationConfig::from_data(sample_data, bins, margin);
+        if let Some(config) = QuantizationConfig::from_data(sample_data, bins, margin) {
+            self.config = config;
+        }
         self
     }
 
     /// Build the index.
     ///
-    /// # Panics
-    ///
-    /// Panics if no configuration was set.
+    /// Uses [`QuantizationConfig::default`] unless a configuration was provided.
     pub fn build<V: DictionaryValue + std::hash::Hash + Eq + Copy>(self) -> TimeSeriesIndex<V> {
-        let config = self
-            .config
-            .expect("Quantization config must be set before building");
         if self.store_originals {
-            TimeSeriesIndex::new_with_verification(config)
+            TimeSeriesIndex::with_verification_capacity(self.config, self.capacity)
         } else {
-            TimeSeriesIndex::new(config)
+            TimeSeriesIndex::with_capacity(self.config, self.capacity)
         }
     }
 }
@@ -484,15 +642,22 @@ mod tests {
 
         let series = vec![10.0, 20.0, 30.0];
         assert!(index.insert(0usize, &series));
-        // Same quantized series (values within same bins) updates the value
-        assert!(!index.insert(1usize, &series));
-        // Count only includes unique encoded sequences
-        assert_eq!(index.len(), 1);
+        // The same quantized series can carry multiple distinct values.
+        assert!(index.insert(1usize, &series));
+        assert_eq!(index.len(), 2);
+
+        let mut found_ids: Vec<_> = index
+            .search(&series, 0)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        found_ids.sort_unstable();
+        assert_eq!(found_ids, vec![0, 1]);
 
         // Different series should insert as new
         let different_series = vec![50.0, 60.0, 70.0];
         assert!(index.insert(2usize, &different_series));
-        assert_eq!(index.len(), 2);
+        assert_eq!(index.len(), 3);
     }
 
     #[test]
@@ -539,6 +704,17 @@ mod tests {
     }
 
     #[test]
+    fn test_search_exact_match_high_bins() {
+        let config = QuantizationConfig::for_u8(0.0, 100.0);
+        let mut index = TimeSeriesIndex::new(config);
+
+        index.insert(0usize, &[90.0, 95.0, 99.0]);
+
+        let results = index.search(&[90.0, 95.0, 99.0], 0);
+        assert_eq!(results, vec![(0, 0)]);
+    }
+
+    #[test]
     fn test_with_verification() {
         let config = QuantizationConfig::for_u8(0.0, 100.0);
         let mut index = TimeSeriesIndex::new_with_verification(config);
@@ -552,6 +728,86 @@ mod tests {
         // Should be able to retrieve originals
         assert_eq!(index.get_original(&0), Some(series1.as_slice()));
         assert_eq!(index.get_original(&1), Some(series2.as_slice()));
+    }
+
+    #[test]
+    fn quantization_collisions_recover_all_values_and_originals() {
+        let config = QuantizationConfig::uniform(0.0, 100.0, 10);
+        let mut index = TimeSeriesIndex::new_with_verification(config);
+
+        let series1 = vec![10.0, 20.0, 30.0];
+        let series2 = vec![10.1, 20.1, 30.1];
+
+        assert!(index.insert(7usize, &series1));
+        assert!(index.insert(9usize, &series2));
+        assert_eq!(index.len(), 2);
+
+        let mut results: Vec<_> = index.search(&series1, 0).into_iter().collect();
+        results.sort_unstable();
+        assert_eq!(results, vec![(7, 0), (9, 0)]);
+
+        let mut candidates: Vec<_> = index
+            .get_candidates_for_verification(&series1, 0)
+            .into_iter()
+            .map(|(id, series)| (id, series.to_vec()))
+            .collect();
+        candidates.sort_unstable_by_key(|(id, _)| *id);
+        assert_eq!(candidates, vec![(7, series1), (9, series2)]);
+    }
+
+    #[test]
+    fn reinserting_value_relocates_bucket_membership() {
+        let config = QuantizationConfig::uniform(0.0, 100.0, 10);
+        let mut index = TimeSeriesIndex::new_with_verification(config);
+
+        assert!(index.insert(7usize, &[10.0]));
+        assert!(!index.insert(7usize, &[90.0]));
+        assert_eq!(index.len(), 1);
+
+        assert!(!index.contains(&[10.0]));
+        assert!(index.contains(&[90.0]));
+        assert!(index.search(&[10.0], 0).is_empty());
+        assert_eq!(index.search(&[90.0], 0), vec![(7, 0)]);
+        assert_eq!(index.get_original(&7), Some(&[90.0][..]));
+    }
+
+    #[test]
+    fn remove_value_clears_bucket_membership_and_original() {
+        let config = QuantizationConfig::uniform(0.0, 100.0, 10);
+        let mut index = TimeSeriesIndex::new_with_verification(config);
+
+        assert!(index.insert(7usize, &[10.0, 20.0]));
+        let bucket_id = index.locations[&7].0;
+        assert!(index.buckets[bucket_id].capacity() > 0);
+        assert_eq!(index.len(), 1);
+        assert!(index.remove(7));
+        assert!(!index.remove(7));
+
+        assert_eq!(index.len(), 0);
+        assert!(!index.contains(&[10.0, 20.0]));
+        assert!(index.search(&[10.0, 20.0], 0).is_empty());
+        assert_eq!(index.get(&[10.0, 20.0]), None);
+        assert_eq!(index.get_original(&7), None);
+        assert_eq!(index.buckets[bucket_id].capacity(), 0);
+    }
+
+    #[test]
+    fn remove_value_preserves_swapped_bucket_location() {
+        let config = QuantizationConfig::uniform(0.0, 100.0, 10);
+        let mut index = TimeSeriesIndex::new_with_verification(config);
+
+        assert!(index.insert(7usize, &[10.0]));
+        assert!(index.insert(9usize, &[10.01]));
+        assert_eq!(index.len(), 2);
+
+        assert!(index.remove(7));
+        assert_eq!(index.len(), 1);
+        assert_eq!(index.search(&[10.0], 0), vec![(9, 0)]);
+
+        assert!(!index.insert(9usize, &[90.0]));
+        assert!(index.search(&[10.0], 0).is_empty());
+        assert_eq!(index.search(&[90.0], 0), vec![(9, 0)]);
+        assert_eq!(index.get_original(&9), Some(&[90.0][..]));
     }
 
     #[test]
@@ -585,6 +841,37 @@ mod tests {
     }
 
     #[test]
+    fn from_series_reserves_index_metadata() {
+        let config = QuantizationConfig::for_u8(0.0, 100.0);
+        let series_data = vec![
+            vec![10.0, 20.0, 30.0],
+            vec![15.0, 25.0, 35.0],
+            vec![50.0, 60.0, 70.0],
+        ];
+
+        let index: TimeSeriesIndex<usize> = TimeSeriesIndex::with_capacity(config.clone(), 8);
+        assert!(index.buckets.capacity() >= 8);
+        assert!(index.locations.capacity() >= 8);
+
+        let index = TimeSeriesIndex::from_series(config.clone(), &series_data);
+        assert!(index.buckets.capacity() >= series_data.len());
+        assert!(index.locations.capacity() >= series_data.len());
+
+        let index = TimeSeriesIndex::from_series_with_verification(config, &series_data);
+        assert!(index.buckets.capacity() >= series_data.len());
+        assert!(index.locations.capacity() >= series_data.len());
+        assert!(index.originals.capacity() >= series_data.len());
+
+        let index: TimeSeriesIndex<usize> = TimeSeriesIndexBuilder::new()
+            .capacity(8)
+            .with_verification()
+            .build();
+        assert!(index.buckets.capacity() >= 8);
+        assert!(index.locations.capacity() >= 8);
+        assert!(index.originals.capacity() >= 8);
+    }
+
+    #[test]
     fn test_stats() {
         let config = QuantizationConfig::for_u8(0.0, 100.0);
         let mut index = TimeSeriesIndex::new(config);
@@ -611,6 +898,54 @@ mod tests {
     }
 
     #[test]
+    fn test_builder_default_config() {
+        let index: TimeSeriesIndex<usize> = TimeSeriesIndexBuilder::new().build();
+
+        assert!(index.is_empty());
+        assert!(!index.store_originals);
+        assert_eq!(index.config().min_value, 0.0);
+        assert_eq!(index.config().max_value, 1.0);
+        assert_eq!(index.config().num_bins, 256);
+    }
+
+    #[test]
+    fn test_builder_auto_config_keeps_existing_config_for_invalid_data() {
+        let index: TimeSeriesIndex<usize> = TimeSeriesIndexBuilder::new()
+            .quantization(-1.0, 1.0, 64)
+            .auto_config(&[], 256, 0.1)
+            .build();
+
+        assert_eq!(index.config().min_value, -1.0);
+        assert_eq!(index.config().max_value, 1.0);
+        assert_eq!(index.config().num_bins, 64);
+    }
+
+    #[test]
+    fn test_builder_quantization_keeps_existing_config_for_invalid_parameters() {
+        let index: TimeSeriesIndex<usize> = TimeSeriesIndexBuilder::new()
+            .quantization(-1.0, 1.0, 64)
+            .quantization(f64::NAN, 1.0, 10)
+            .quantization(0.0, f64::INFINITY, 10)
+            .quantization(10.0, 0.0, 10)
+            .quantization(0.0, 1.0, 0)
+            .build();
+
+        assert_eq!(index.config().min_value, -1.0);
+        assert_eq!(index.config().max_value, 1.0);
+        assert_eq!(index.config().num_bins, 64);
+    }
+
+    #[test]
+    fn test_new_coarsens_large_quantizer_to_byte_bins() {
+        let mut index: TimeSeriesIndex<usize> =
+            TimeSeriesIndex::new(QuantizationConfig::for_u16(0.0, 100.0));
+
+        assert_eq!(index.config().num_bins, 256);
+        assert!(index.insert(7, &[10.0, 20.0, 30.0]));
+        assert!(index.contains(&[10.0, 20.0, 30.0]));
+    }
+
+    #[test]
     fn test_search_transposition() {
         let config = QuantizationConfig::for_u8(0.0, 100.0);
         let mut index = TimeSeriesIndex::new(config);
@@ -621,7 +956,7 @@ mod tests {
 
         // Transposition search should find both with low distance
         let results = index.search_transposition(&[10.0, 20.0, 30.0], 2);
-        assert!(results.len() >= 1);
+        assert!(!results.is_empty());
     }
 
     #[test]

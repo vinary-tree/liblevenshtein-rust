@@ -122,6 +122,11 @@ pub fn c_func_split_lb(a_lo: f64, a_hi: f64, b: f64, c_lo: f64, c_hi: f64, c_con
     c_const + penalty
 }
 
+#[inline]
+pub(super) fn interval_column_len(query_len: usize) -> Option<usize> {
+    query_len.checked_add(1)
+}
+
 /// Compute the next interval-relaxed MSM DP column.
 ///
 /// Given the column `prev_col` for the query against the first `depth − 1`
@@ -136,9 +141,11 @@ pub fn c_func_split_lb(a_lo: f64, a_hi: f64, b: f64, c_lo: f64, c_hi: f64, c_con
 /// `cost[i][depth]` for every concrete reference consistent with the bins seen
 /// so far. `+∞` marks an unreachable cell.
 ///
-/// # Panics
+/// # Special Cases
 ///
-/// Panics if `query` is empty (the transducer guards this before calling).
+/// If `query` is empty, the returned column has only the unused index-0
+/// sentinel set to `+∞`, which means every non-empty target prefix is
+/// unreachable under MSM's empty/non-empty-series semantics.
 pub fn step_interval_column(
     prev_col: &[f64],
     query: &[f64],
@@ -146,7 +153,10 @@ pub fn step_interval_column(
     prev: Option<(f64, f64)>,
     c_const: f64,
 ) -> Vec<f64> {
-    let mut col = Vec::with_capacity(query.len() + 1);
+    let Some(column_len) = interval_column_len(query.len()) else {
+        return Vec::new();
+    };
+    let mut col = Vec::with_capacity(column_len);
     step_interval_column_into(prev_col, query, curr, prev, c_const, &mut col);
     col
 }
@@ -156,6 +166,9 @@ pub fn step_interval_column(
 /// This is the allocation-reuse companion to [`step_interval_column`]. The
 /// buffer is resized to `query.len() + 1` and fully overwritten, so callers may
 /// safely reuse one column per trie depth during exact MSM-over-trie traversal.
+/// Missing entries in `prev_col` are treated as unreachable (`+∞`) rather than
+/// panicking, which keeps this public helper total for degenerate callers while
+/// preserving admissibility.
 pub fn step_interval_column_into(
     prev_col: &[f64],
     query: &[f64],
@@ -164,38 +177,68 @@ pub fn step_interval_column_into(
     c_const: f64,
     col: &mut Vec<f64>,
 ) {
-    let m = query.len();
-    assert!(m > 0, "step_interval_column requires a non-empty query");
-    let (clo, chi) = curr;
-    col.clear();
-    col.resize(m + 1, f64::INFINITY);
+    let _ = step_interval_column_into_with_bound(prev_col, query, curr, prev, c_const, col);
+}
 
+/// Compute the next interval-relaxed MSM DP column and return its lower bound.
+///
+/// This is identical to [`step_interval_column_into`] but also returns the
+/// minimum live cell while the column is being filled. Exact trie traversal can
+/// use that value directly for subtree pruning, avoiding a second `O(m)` scan of
+/// the just-written column.
+pub fn step_interval_column_into_with_bound(
+    prev_col: &[f64],
+    query: &[f64],
+    curr: (f64, f64),
+    prev: Option<(f64, f64)>,
+    c_const: f64,
+    col: &mut Vec<f64>,
+) -> f64 {
+    let m = query.len();
+    let Some(column_len) = interval_column_len(m) else {
+        col.clear();
+        return f64::INFINITY;
+    };
+    let (clo, chi) = curr;
+    if col.len() < column_len {
+        col.resize(column_len, f64::INFINITY);
+    } else {
+        col.truncate(column_len);
+    }
+    col[0] = f64::INFINITY;
+    if m == 0 {
+        return f64::INFINITY;
+    }
+
+    let mut lower_bound;
     match prev {
         // depth == 1: the first target element. Base case + first column.
         None => {
             // cost[1][1] = |x_0 - y_0|  →  interval_dist over the current bin.
             col[1] = interval_dist(query[0], clo, chi);
+            lower_bound = col[1];
             // cost[i][1] = cost[i-1][1] + C(x_{i-1}, x_{i-2}, y_0)   (Merge over curr)
             for i in 2..=m {
-                if col[i - 1].is_finite() {
-                    col[i] =
-                        col[i - 1] + c_func_merge_lb(query[i - 1], query[i - 2], clo, chi, c_const);
-                }
+                col[i] = if col[i - 1].is_finite() {
+                    col[i - 1] + c_func_merge_lb(query[i - 1], query[i - 2], clo, chi, c_const)
+                } else {
+                    f64::INFINITY
+                };
+                lower_bound = lower_bound.min(col[i]);
             }
         }
         // depth >= 2: general column transition from prev_col.
         Some((plo, phi)) => {
             // First row: cost[1][j] = cost[1][j-1] + C(y_{j-1}, x_0, y_{j-2})  (Split)
-            if prev_col[1].is_finite() {
-                col[1] = prev_col[1] + c_func_split_lb(clo, chi, query[0], plo, phi, c_const);
-            }
+            col[1] = finite_cell(prev_col, 1).map_or(f64::INFINITY, |prev| {
+                prev + c_func_split_lb(clo, chi, query[0], plo, phi, c_const)
+            });
+            lower_bound = col[1];
             for i in 2..=m {
                 // Move: cost[i-1][j-1] + |x_{i-1} - y_{j-1}|
-                let mv = if prev_col[i - 1].is_finite() {
-                    prev_col[i - 1] + interval_dist(query[i - 1], clo, chi)
-                } else {
-                    f64::INFINITY
-                };
+                let mv = finite_cell(prev_col, i - 1).map_or(f64::INFINITY, |prev| {
+                    prev + interval_dist(query[i - 1], clo, chi)
+                });
                 // Merge: cost[i-1][j] + C(x_{i-1}, x_{i-2}, y_{j-1})   (c = curr)
                 let mg = if col[i - 1].is_finite() {
                     col[i - 1] + c_func_merge_lb(query[i - 1], query[i - 2], clo, chi, c_const)
@@ -203,15 +246,20 @@ pub fn step_interval_column_into(
                     f64::INFINITY
                 };
                 // Split: cost[i][j-1] + C(y_{j-1}, x_{i-1}, y_{j-2})   (a = curr, c = prev)
-                let sp = if prev_col[i].is_finite() {
-                    prev_col[i] + c_func_split_lb(clo, chi, query[i - 1], plo, phi, c_const)
-                } else {
-                    f64::INFINITY
-                };
+                let sp = finite_cell(prev_col, i).map_or(f64::INFINITY, |prev| {
+                    prev + c_func_split_lb(clo, chi, query[i - 1], plo, phi, c_const)
+                });
                 col[i] = mv.min(mg).min(sp);
+                lower_bound = lower_bound.min(col[i]);
             }
         }
     }
+    lower_bound
+}
+
+#[inline]
+fn finite_cell(col: &[f64], index: usize) -> Option<f64> {
+    col.get(index).copied().filter(|value| value.is_finite())
 }
 
 /// The admissible subtree lower bound carried by a trie node holding `col`:
@@ -223,7 +271,8 @@ pub fn step_interval_column_into(
 #[inline]
 pub fn column_lower_bound(col: &[f64]) -> f64 {
     // Skip the unused index-0 sentinel.
-    col[1..]
+    col.get(1..)
+        .unwrap_or(&[])
         .iter()
         .copied()
         .fold(f64::INFINITY, |acc, v| acc.min(v))
@@ -243,6 +292,81 @@ mod tests {
         assert_eq!(interval_dist(13.0, 0.0, 10.0), 3.0); // above
         assert_eq!(interval_dist(5.0, f64::NEG_INFINITY, 10.0), 0.0);
         assert_eq!(interval_dist(20.0, 0.0, f64::INFINITY), 0.0);
+    }
+
+    #[test]
+    fn interval_column_len_is_checked() {
+        assert_eq!(interval_column_len(0), Some(1));
+        assert_eq!(interval_column_len(4), Some(5));
+        assert_eq!(interval_column_len(usize::MAX), None);
+    }
+
+    #[test]
+    fn empty_query_interval_column_is_unreachable_sentinel() {
+        let col = step_interval_column(&[], &[], (0.0, 1.0), None, 1.0);
+
+        assert_eq!(col.len(), 1);
+        assert!(col[0].is_infinite());
+        assert!(column_lower_bound(&col).is_infinite());
+
+        let mut reused = vec![0.0, 1.0, 2.0];
+        step_interval_column_into(
+            &[0.0, 1.0],
+            &[],
+            (0.0, 1.0),
+            Some((0.0, 1.0)),
+            1.0,
+            &mut reused,
+        );
+        assert_eq!(reused.len(), 1);
+        assert!(reused[0].is_infinite());
+    }
+
+    #[test]
+    fn column_lower_bound_empty_column_is_infinite() {
+        assert!(column_lower_bound(&[]).is_infinite());
+    }
+
+    #[test]
+    fn short_previous_column_marks_general_column_unreachable() {
+        let mut col = Vec::new();
+
+        let lower_bound = step_interval_column_into_with_bound(
+            &[],
+            &[1.0, 2.0],
+            (0.0, 3.0),
+            Some((0.0, 3.0)),
+            1.0,
+            &mut col,
+        );
+
+        assert_eq!(col.len(), 3);
+        assert!(col[0].is_infinite());
+        assert!(col[1..].iter().all(|value| value.is_infinite()));
+        assert!(lower_bound.is_infinite());
+        assert!(column_lower_bound(&col).is_infinite());
+    }
+
+    #[test]
+    fn returned_lower_bound_matches_column_scan() {
+        let query = [0.4, 2.1, 3.9, 1.2];
+        let bins = [(0.0, 1.0), (2.0, 3.0), (3.0, 4.0)];
+        let mut col = vec![f64::INFINITY; query.len() + 1];
+        let mut prev_interval = None;
+
+        for curr in bins {
+            let lower_bound = step_interval_column_into_with_bound(
+                &col.clone(),
+                &query,
+                curr,
+                prev_interval,
+                1.0,
+                &mut col,
+            );
+
+            assert_eq!(lower_bound, column_lower_bound(&col));
+            prev_interval = Some(curr);
+        }
     }
 
     #[test]

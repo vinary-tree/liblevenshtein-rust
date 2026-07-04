@@ -99,7 +99,7 @@ impl MsmState {
         self.positions
             .iter()
             .map(|p| p.accumulated_cost)
-            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .min_by(|a, b| a.total_cmp(b))
     }
 
     /// Get the minimum distance at final positions.
@@ -112,7 +112,7 @@ impl MsmState {
             .iter()
             .filter(|p| p.is_final(query_length, target_length))
             .map(|p| p.accumulated_cost)
-            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .min_by(|a, b| a.total_cmp(b))
     }
 
     /// Check if any position has reached the final state.
@@ -195,8 +195,8 @@ impl MsmState {
         }
 
         let mut write_idx = 0;
-        for read_idx in 0..self.positions.len() {
-            if keep[read_idx] {
+        for (read_idx, keep_position) in keep.iter().enumerate().take(self.positions.len()) {
+            if *keep_position {
                 if write_idx != read_idx {
                     self.positions[write_idx] = self.positions[read_idx];
                 }
@@ -213,11 +213,7 @@ impl MsmState {
         self.positions.sort_by(|a, b| {
             (a.query_index, a.target_index)
                 .cmp(&(b.query_index, b.target_index))
-                .then_with(|| {
-                    a.accumulated_cost
-                        .partial_cmp(&b.accumulated_cost)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                })
+                .then_with(|| a.accumulated_cost.total_cmp(&b.accumulated_cost))
         });
     }
 
@@ -367,6 +363,20 @@ mod tests {
         state.insert_unchecked(MsmPosition::new(3, 3, 2.0, 0.0, 0.0));
 
         assert!((state.min_cost().expect("expected Some min_cost in test") - 1.0).abs() < EPSILON);
+    }
+
+    #[test]
+    fn test_cost_ordering_is_total_for_nan() {
+        let mut state = MsmState::new();
+
+        state.insert_unchecked(MsmPosition::new(1, 1, f64::NAN, 0.0, 0.0));
+        state.insert_unchecked(MsmPosition::new(1, 1, 1.0, 0.0, 0.0));
+
+        assert_eq!(state.min_cost(), Some(1.0));
+
+        state.sort();
+        assert_eq!(state.positions()[0].accumulated_cost, 1.0);
+        assert!(state.positions()[1].accumulated_cost.is_nan());
     }
 
     #[test]

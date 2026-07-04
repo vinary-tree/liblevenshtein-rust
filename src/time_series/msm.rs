@@ -22,12 +22,51 @@
 use std::fmt;
 
 const CUTOFF_EPSILON: f64 = 1e-9;
+const DEFAULT_MSM_C: f64 = 1.0;
+
+#[inline]
+pub(super) fn series_values_are_finite(series: &[f64]) -> bool {
+    series.iter().all(|value| value.is_finite())
+}
+
+#[inline]
+pub(super) fn series_pair_values_are_finite(x: &[f64], y: &[f64]) -> bool {
+    series_values_are_finite(x) && series_values_are_finite(y)
+}
+
+#[inline]
+pub(super) fn msm_dp_len(series_len: usize) -> Option<usize> {
+    series_len.checked_add(1)
+}
+
+#[inline]
+pub(super) fn msm_dp_shape(row_series_len: usize, col_series_len: usize) -> Option<(usize, usize)> {
+    Some((msm_dp_len(row_series_len)?, msm_dp_len(col_series_len)?))
+}
+
+pub(super) fn msm_infinity_matrix(
+    row_series_len: usize,
+    col_series_len: usize,
+) -> Option<Vec<Vec<f64>>> {
+    let (rows, cols) = msm_dp_shape(row_series_len, col_series_len)?;
+    Some(vec![vec![f64::INFINITY; cols]; rows])
+}
+
+#[inline]
+fn normalize_msm_cost(c: f64) -> f64 {
+    if c.is_finite() {
+        c.max(0.0)
+    } else {
+        DEFAULT_MSM_C
+    }
+}
 
 /// Configuration for MSM distance computation.
 ///
 /// # Fields
 ///
-/// - `c`: The constant cost for split and merge operations. Must be non-negative.
+/// - `c`: The constant cost for split and merge operations. Normalized to a
+///   finite, non-negative value by the constructors and methods in this module.
 ///
 /// # Example
 ///
@@ -49,11 +88,8 @@ impl MsmConfig {
     ///
     /// # Arguments
     ///
-    /// * `c` - The constant cost for split/merge operations. Must be >= 0.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `c` is negative.
+    /// * `c` - The constant cost for split/merge operations. Finite negative
+    ///   values are clamped to `0.0`; non-finite values use the default cost.
     ///
     /// # Example
     ///
@@ -65,12 +101,9 @@ impl MsmConfig {
     /// ```
     #[inline]
     pub fn new(c: f64) -> Self {
-        assert!(
-            c >= 0.0,
-            "Split/merge cost c must be non-negative, got {}",
-            c
-        );
-        Self { c }
+        Self {
+            c: normalize_msm_cost(c),
+        }
     }
 
     /// Create a configuration with the default cost c = 1.0.
@@ -78,13 +111,32 @@ impl MsmConfig {
     /// This is equivalent to `MsmConfig::new(1.0)`.
     #[inline]
     pub fn default_cost() -> Self {
-        Self::new(1.0)
+        Self::new(DEFAULT_MSM_C)
+    }
+
+    /// Return the effective split/merge cost.
+    ///
+    /// This protects algorithms from malformed configurations constructed
+    /// directly with the public `c` field.
+    #[inline]
+    pub fn split_merge_cost(&self) -> f64 {
+        normalize_msm_cost(self.c)
+    }
+
+    /// Return a configuration whose public fields match their effective values.
+    #[inline]
+    pub fn normalized(self) -> Self {
+        Self::new(self.c)
     }
 
     /// Compute the MSM distance between two time series.
     ///
-    /// This implements the O(mn) dynamic programming algorithm from Figure 10
-    /// of the Stefan et al. paper.
+    /// This implements the exact dynamic programming recurrence from Figure 10
+    /// of the Stefan et al. paper using the two-row implementation in
+    /// [`Self::distance_optimized`]. The public default therefore keeps
+    /// `O(mn)` time while using `O(min(m, n))` space. Use
+    /// [`Self::distance_with_matrix`] when the full DP matrix is needed for
+    /// debugging or alignment inspection.
     ///
     /// # Arguments
     ///
@@ -116,53 +168,7 @@ impl MsmConfig {
     /// assert_eq!(config.distance(&[1.0], &[2.0]), 1.0);  // |1.0 - 2.0| = 1.0
     /// ```
     pub fn distance(&self, x: &[f64], y: &[f64]) -> f64 {
-        let m = x.len();
-        let n = y.len();
-
-        // Handle empty series
-        if m == 0 && n == 0 {
-            return 0.0;
-        }
-        if m == 0 || n == 0 {
-            // Can't transform empty to non-empty with Move/Split/Merge
-            return f64::INFINITY;
-        }
-
-        // Allocate DP matrix (1-indexed, so size is (m+1) x (n+1))
-        let mut cost = vec![vec![f64::INFINITY; n + 1]; m + 1];
-
-        // Base case: Cost(1,1) = |x_0 - y_0|
-        cost[1][1] = (x[0] - y[0]).abs();
-
-        // Initialize first column (j=1): accumulate using the C function
-        for i in 2..=m {
-            // Cost(i, 1) = Cost(i-1, 1) + C(x_{i-1}, x_{i-2}, y_0)
-            cost[i][1] = cost[i - 1][1] + self.c_func(x[i - 1], x[i - 2], y[0]);
-        }
-
-        // Initialize first row (i=1): accumulate using the C function
-        for j in 2..=n {
-            // Cost(1, j) = Cost(1, j-1) + C(y_{j-1}, x_0, y_{j-2})
-            cost[1][j] = cost[1][j - 1] + self.c_func(y[j - 1], x[0], y[j - 2]);
-        }
-
-        // Fill the DP matrix
-        for i in 2..=m {
-            for j in 2..=n {
-                // Move: diagonal transition with cost |x_i - y_j|
-                let move_cost = cost[i - 1][j - 1] + (x[i - 1] - y[j - 1]).abs();
-
-                // Merge-like: vertical transition with C(x_i, x_{i-1}, y_j)
-                let merge_cost = cost[i - 1][j] + self.c_func(x[i - 1], x[i - 2], y[j - 1]);
-
-                // Split-like: horizontal transition with C(y_j, x_i, y_{j-1})
-                let split_cost = cost[i][j - 1] + self.c_func(y[j - 1], x[i - 1], y[j - 2]);
-
-                cost[i][j] = move_cost.min(merge_cost).min(split_cost);
-            }
-        }
-
-        cost[m][n]
+        self.distance_optimized(x, y)
     }
 
     /// Compute the MSM distance with space optimization.
@@ -194,10 +200,16 @@ impl MsmConfig {
         if n == 0 {
             return f64::INFINITY;
         }
+        if !series_pair_values_are_finite(x, y) {
+            return f64::INFINITY;
+        }
 
         // Use two rows: previous and current
-        let mut prev = vec![f64::INFINITY; n + 1];
-        let mut curr = vec![f64::INFINITY; n + 1];
+        let Some(row_len) = msm_dp_len(n) else {
+            return f64::INFINITY;
+        };
+        let mut prev = vec![f64::INFINITY; row_len];
+        let mut curr = vec![f64::INFINITY; row_len];
 
         // Initialize first row (i=1)
         prev[1] = (x[0] - y[0]).abs();
@@ -255,9 +267,13 @@ impl MsmConfig {
         if n == 0 {
             return None;
         }
+        if !series_pair_values_are_finite(x, y) {
+            return None;
+        }
 
-        let mut prev = vec![f64::INFINITY; n + 1];
-        let mut curr = vec![f64::INFINITY; n + 1];
+        let row_len = msm_dp_len(n)?;
+        let mut prev = vec![f64::INFINITY; row_len];
+        let mut curr = vec![f64::INFINITY; row_len];
 
         prev[1] = (x[0] - y[0]).abs();
         let mut row_min = prev[1];
@@ -317,12 +333,23 @@ impl MsmConfig {
         if m == 0 || n == 0 {
             return MsmResult {
                 distance: f64::INFINITY,
-                matrix: vec![vec![f64::INFINITY; n + 1]; m + 1],
+                matrix: msm_infinity_matrix(m, n).unwrap_or_default(),
+            };
+        }
+        if !series_pair_values_are_finite(x, y) {
+            return MsmResult {
+                distance: f64::INFINITY,
+                matrix: msm_infinity_matrix(m, n).unwrap_or_default(),
             };
         }
 
         // Allocate DP matrix
-        let mut cost = vec![vec![f64::INFINITY; n + 1]; m + 1];
+        let Some(mut cost) = msm_infinity_matrix(m, n) else {
+            return MsmResult {
+                distance: f64::INFINITY,
+                matrix: Vec::new(),
+            };
+        };
 
         // Base case
         cost[1][1] = (x[0] - y[0]).abs();
@@ -371,13 +398,18 @@ impl MsmConfig {
     /// The cost for this split/merge operation.
     #[inline]
     pub fn c_func(&self, a: f64, b: f64, c: f64) -> f64 {
+        let split_merge_cost = self.split_merge_cost();
+        if !a.is_finite() || !b.is_finite() || !c.is_finite() {
+            return f64::INFINITY;
+        }
+
         // Check if a is between b and c (inclusive)
         let between_bc = (b <= a && a <= c) || (b >= a && a >= c);
 
         if between_bc {
-            self.c
+            split_merge_cost
         } else {
-            self.c + (a - b).abs().min((a - c).abs())
+            split_merge_cost + (a - b).abs().min((a - c).abs())
         }
     }
 }
@@ -431,6 +463,10 @@ mod tests {
         (a - b).abs() < EPSILON
     }
 
+    fn same_distance(a: f64, b: f64) -> bool {
+        a == b || approx_eq(a, b)
+    }
+
     fn assert_msm_case(config: &MsmConfig, x: &[f64], y: &[f64], expected: f64) {
         let standard = config.distance(x, y);
         let optimized = config.distance_optimized(x, y);
@@ -460,6 +496,20 @@ mod tests {
             reverse,
             expected
         );
+    }
+
+    #[test]
+    fn test_msm_dp_dimension_helpers_reject_overflow() {
+        assert_eq!(msm_dp_len(0), Some(1));
+        assert_eq!(msm_dp_len(usize::MAX), None);
+        assert_eq!(msm_dp_shape(2, 3), Some((3, 4)));
+        assert_eq!(msm_dp_shape(usize::MAX, 0), None);
+        assert_eq!(msm_dp_shape(0, usize::MAX), None);
+
+        let matrix = msm_infinity_matrix(1, 2).expect("small matrix should allocate");
+        assert_eq!(matrix.len(), 2);
+        assert_eq!(matrix[0].len(), 3);
+        assert!(matrix.iter().flatten().all(|value| value.is_infinite()));
     }
 
     #[test]
@@ -539,20 +589,31 @@ mod tests {
     }
 
     #[test]
-    fn test_optimized_matches_standard() {
+    fn test_default_distance_matches_matrix_path() {
         let config = MsmConfig::new(1.0);
-        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let y = vec![1.5, 2.5, 3.5, 4.5];
+        let cases: &[(&[f64], &[f64])] = &[
+            (&[], &[]),
+            (&[], &[1.0]),
+            (&[1.0], &[]),
+            (&[1.0, 2.0, 3.0, 4.0, 5.0], &[1.5, 2.5, 3.5, 4.5]),
+            (&[0.0, 100.0], &[0.0, 0.0, 100.0]),
+            (&[3.0, 1.0, 4.0, 1.0], &[2.0, 7.0]),
+        ];
 
-        let d1 = config.distance(&x, &y);
-        let d2 = config.distance_optimized(&x, &y);
+        for &(x, y) in cases {
+            let default = config.distance(x, y);
+            let optimized = config.distance_optimized(x, y);
+            let matrix = config.distance_with_matrix(x, y).distance;
 
-        assert!(
-            approx_eq(d1, d2),
-            "Standard distance {} != optimized distance {}",
-            d1,
-            d2
-        );
+            assert!(
+                same_distance(default, optimized),
+                "default distance {default} != optimized distance {optimized} for {x:?}, {y:?}"
+            );
+            assert!(
+                same_distance(default, matrix),
+                "default distance {default} != matrix distance {matrix} for {x:?}, {y:?}"
+            );
+        }
     }
 
     #[test]
@@ -623,9 +684,76 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "must be non-negative")]
-    fn test_negative_c_panics() {
-        MsmConfig::new(-1.0);
+    fn test_invalid_c_is_normalized() {
+        assert_eq!(MsmConfig::new(-1.0).c, 0.0);
+        assert_eq!(MsmConfig::new(f64::NAN), MsmConfig::default());
+        assert_eq!(MsmConfig::new(f64::INFINITY), MsmConfig::default());
+        assert_eq!(MsmConfig::new(f64::NEG_INFINITY), MsmConfig::default());
+    }
+
+    #[test]
+    fn test_raw_malformed_c_uses_effective_cost() {
+        let negative = MsmConfig { c: -2.0 };
+        let infinite = MsmConfig { c: f64::INFINITY };
+
+        assert_eq!(negative.split_merge_cost(), 0.0);
+        assert_eq!(negative.c_func(5.0, 1.0, 3.0), 2.0);
+        assert_eq!(infinite.split_merge_cost(), MsmConfig::default().c);
+        assert_eq!(
+            infinite.c_func(5.0, 1.0, 3.0),
+            MsmConfig::default().c_func(5.0, 1.0, 3.0)
+        );
+    }
+
+    #[test]
+    fn test_non_finite_series_values_have_infinite_distance() {
+        let config = MsmConfig::new(1.0);
+        let cases: &[(&[f64], &[f64])] = &[
+            (&[f64::NAN], &[1.0]),
+            (&[f64::INFINITY], &[1.0]),
+            (&[1.0], &[f64::NEG_INFINITY]),
+            (&[1.0, f64::NAN], &[1.0, 2.0]),
+        ];
+
+        for &(x, y) in cases {
+            assert!(
+                config.distance(x, y).is_infinite(),
+                "distance for {x:?}, {y:?}"
+            );
+            assert!(
+                config.distance_optimized(x, y).is_infinite(),
+                "optimized distance for {x:?}, {y:?}"
+            );
+
+            let matrix = config.distance_with_matrix(x, y);
+            assert!(
+                matrix.distance.is_infinite(),
+                "matrix distance for {x:?}, {y:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cutoff_rejects_non_finite_series_values_without_nan() {
+        let config = MsmConfig::new(1.0);
+
+        assert_eq!(
+            config.distance_with_cutoff(&[f64::NAN], &[1.0], 100.0),
+            None
+        );
+        assert_eq!(
+            config.distance_with_cutoff(&[f64::NAN], &[1.0], f64::INFINITY),
+            Some(f64::INFINITY)
+        );
+    }
+
+    #[test]
+    fn test_c_function_rejects_non_finite_point_values() {
+        let config = MsmConfig::new(1.0);
+
+        assert!(config.c_func(f64::NAN, 1.0, 2.0).is_infinite());
+        assert!(config.c_func(1.0, f64::INFINITY, 2.0).is_infinite());
+        assert!(config.c_func(1.0, 2.0, f64::NEG_INFINITY).is_infinite());
     }
 
     #[test]
