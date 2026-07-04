@@ -91,6 +91,28 @@ impl fmt::Display for PositionError {
 
 impl std::error::Error for PositionError {}
 
+#[inline]
+fn bounded_bit_index(max_distance: u8, offset: i32, delta: i32, len: usize) -> Option<usize> {
+    let index = i32::from(max_distance)
+        .checked_add(offset)?
+        .checked_add(delta)?;
+    let index = usize::try_from(index).ok()?;
+    (index < len).then_some(index)
+}
+
+#[inline]
+fn i_invariant_violated(offset: i32, errors: u8, max_distance: u8) -> bool {
+    let n = i32::from(max_distance);
+    offset.unsigned_abs() > u32::from(errors) || offset < -n || offset > n || errors > max_distance
+}
+
+#[inline]
+fn m_invariant_violated(offset: i32, errors: u8, max_distance: u8) -> bool {
+    let n = i64::from(max_distance);
+    let offset = i64::from(offset);
+    i64::from(errors) < -offset - n || offset < -2 * n || offset > 0 || errors > max_distance
+}
+
 /// Trait for position variants (Standard, Transposition, MergeAndSplit)
 ///
 /// This trait distinguishes between the three distance variants from the thesis:
@@ -129,6 +151,20 @@ pub trait PositionVariant: Clone + fmt::Debug + PartialEq + Eq + std::hash::Hash
         bit_vector: &crate::transducer::universal::CharacteristicVector,
         max_distance: u8,
     ) -> Vec<UniversalPosition<Self>>;
+
+    /// Compute the variant-specific offset distance for subsumption.
+    ///
+    /// Returning `None` means the lhs state cannot subsume the rhs state
+    /// because their variant states have incompatible continuations.
+    #[inline]
+    fn subsumption_distance(
+        lhs_state: &Self::State,
+        rhs_state: &Self::State,
+        lhs_offset: i32,
+        rhs_offset: i32,
+    ) -> Option<u32> {
+        (lhs_state == rhs_state).then(|| (rhs_offset - lhs_offset).unsigned_abs())
+    }
 }
 
 /// Standard Levenshtein distance variant (χ = ε)
@@ -226,10 +262,9 @@ impl PositionVariant for Transposition {
                 // Add transposition initiation: δ^D,t_e(i#e, b) includes {i#(e+1)_t} if b[1] = 1 ∧ e < n
                 // b[1] refers to position n+offset+1 in the bit vector (next position after current)
                 // Cross-validated with lazy automaton: creates i#(e+1)_t (same i, +1 error)
-                let next_match_index = (max_distance as i32 + offset + 1) as usize;
-                if next_match_index < bit_vector.len()
-                    && bit_vector.is_match(next_match_index)
-                    && errors < max_distance
+                if errors < max_distance
+                    && bounded_bit_index(max_distance, offset, 1, bit_vector.len())
+                        .is_some_and(|idx| bit_vector.is_match(idx))
                 {
                     // Enter transposition state: i#(e+1)_t (same word position i, one more error)
                     // Universal offset for i#(e+1): offset = i - (e+1) = (i-e) - 1 = offset - 1
@@ -248,9 +283,13 @@ impl PositionVariant for Transposition {
             TranspositionState::Transposing => {
                 // In transposition state: δ^D,t_e(i#e_t, b) = {(i+2)#(e-1)} if b[0] = 1, else ∅
                 // Cross-validated with lazy automaton: checks cv[0] and creates (i+2)#e
-                let match_index = (max_distance as i32 + offset) as usize;
+                let Some(completed_errors) = errors.checked_sub(1) else {
+                    return vec![];
+                };
 
-                if match_index < bit_vector.len() && bit_vector.is_match(match_index) {
+                if bounded_bit_index(max_distance, offset, 0, bit_vector.len())
+                    .is_some_and(|idx| bit_vector.is_match(idx))
+                {
                     // Complete transposition: i#(e+1)_t → (i+2)#e
                     // At input k: current word position i = offset + k
                     // Lazy creates: (i+2)#(e-1) (absolute position i+2)
@@ -258,7 +297,7 @@ impl PositionVariant for Transposition {
                     // Therefore: offset' = (offset+k+2) - (k+1) = offset + 1
                     if let Ok(succ) = UniversalPosition::new_i_with_state(
                         offset + 1,
-                        errors - 1,
+                        completed_errors,
                         max_distance,
                         TranspositionState::Usual,
                     ) {
@@ -293,10 +332,9 @@ impl PositionVariant for Transposition {
 
                 // Add transposition initiation: δ^D,t_e(i#e, b) includes {i#(e+1)_t} if b[1] = 1 ∧ e < n
                 // Cross-validated with lazy automaton: creates i#(e+1)_t (same i, +1 error)
-                let next_match_index = (max_distance as i32 + offset + 1) as usize;
-                if next_match_index < bit_vector.len()
-                    && bit_vector.is_match(next_match_index)
-                    && errors < max_distance
+                if errors < max_distance
+                    && bounded_bit_index(max_distance, offset, 1, bit_vector.len())
+                        .is_some_and(|idx| bit_vector.is_match(idx))
                 {
                     // Enter transposition state: i#(e+1)_t (same word position i, one more error)
                     // Universal offset for i#(e+1): offset = i - (e+1) = (i-e) - 1 = offset - 1
@@ -315,9 +353,13 @@ impl PositionVariant for Transposition {
             TranspositionState::Transposing => {
                 // In transposition state: δ^D,t_e(i#e_t, b) = {(i+2)#(e-1)} if b[0] = 1, else ∅
                 // Cross-validated with lazy automaton: checks cv[0] and creates (i+2)#e
-                let match_index = (max_distance as i32 + offset) as usize;
+                let Some(completed_errors) = errors.checked_sub(1) else {
+                    return vec![];
+                };
 
-                if match_index < bit_vector.len() && bit_vector.is_match(match_index) {
+                if bounded_bit_index(max_distance, offset, 0, bit_vector.len())
+                    .is_some_and(|idx| bit_vector.is_match(idx))
+                {
                     // Complete transposition: i#(e+1)_t → (i+2)#e
                     // At input k: current word position i = offset + k
                     // Lazy creates: (i+2)#(e-1) (absolute position i+2)
@@ -325,7 +367,7 @@ impl PositionVariant for Transposition {
                     // Therefore: offset' = (offset+k+2) - (k+1) = offset + 1
                     if let Ok(succ) = UniversalPosition::new_m_with_state(
                         offset + 1,
-                        errors - 1,
+                        completed_errors,
                         max_distance,
                         TranspositionState::Usual,
                     ) {
@@ -338,6 +380,24 @@ impl PositionVariant for Transposition {
                     vec![]
                 }
             }
+        }
+    }
+
+    #[inline]
+    fn subsumption_distance(
+        lhs_state: &Self::State,
+        rhs_state: &Self::State,
+        lhs_offset: i32,
+        rhs_offset: i32,
+    ) -> Option<u32> {
+        match (lhs_state, rhs_state) {
+            (TranspositionState::Usual, TranspositionState::Usual) => {
+                Some((rhs_offset - lhs_offset).unsigned_abs())
+            }
+            (TranspositionState::Transposing, TranspositionState::Usual) => {
+                Some((rhs_offset + 1 - lhs_offset).unsigned_abs())
+            }
+            _ => None,
         }
     }
 }
@@ -389,8 +449,8 @@ impl PositionVariant for MergeAndSplit {
         );
 
         // Bit vector indices
-        let match_index = (max_distance as i32 + offset) as usize;
-        let next_match_index = (max_distance as i32 + offset + 1) as usize;
+        let match_index = bounded_bit_index(max_distance, offset, 0, bit_vector.len());
+        let next_match_index = bounded_bit_index(max_distance, offset, 1, bit_vector.len());
 
         if is_splitting {
             // Split Completion: i#(e+1)_s → (i+1)#e
@@ -398,10 +458,14 @@ impl PositionVariant for MergeAndSplit {
             // Lazy creates: (i+1)#e (absolute position i+1)
             // At next input k+1: need offset' such that offset' + (k+1) = i+1 = (offset+k)+1
             // Therefore: offset' = (offset+k+1) - (k+1) = offset + 0
-            if match_index < bit_vector.len() && bit_vector.is_match(match_index) {
+            if let Some(completed_errors) = errors.checked_sub(1).filter(|_| {
+                match_index
+                    .as_ref()
+                    .is_some_and(|&idx| bit_vector.is_match(idx))
+            }) {
                 if let Ok(succ) = UniversalPosition::new_i_with_state(
-                    offset,     // offset + 0
-                    errors - 1, // Complete split: decrement error back
+                    offset,           // offset + 0
+                    completed_errors, // Complete split: decrement error back
                     max_distance,
                     MergeSplitState::Usual,
                 ) {
@@ -417,9 +481,10 @@ impl PositionVariant for MergeAndSplit {
             // Lazy creates: (i+2)#(e+1) (absolute position i+2)
             // At next input k+1: need offset' such that offset' + (k+1) = i+2 = (offset+k)+2
             // Therefore: offset' = (offset+k+2) - (k+1) = offset + 1
-            if next_match_index < bit_vector.len()
-                && bit_vector.is_match(next_match_index)
-                && errors < max_distance
+            if errors < max_distance
+                && next_match_index
+                    .as_ref()
+                    .is_some_and(|&idx| bit_vector.is_match(idx))
             {
                 if let Ok(merge) = UniversalPosition::new_i_with_state(
                     offset + 1,
@@ -437,9 +502,10 @@ impl PositionVariant for MergeAndSplit {
             // Lazy creates: i#(e+1)_s (same absolute position i, entering split state)
             // At next input k+1: need offset' such that offset' + (k+1) = i = offset+k
             // Therefore: offset' = (offset+k) - (k+1) = offset - 1
-            if match_index < bit_vector.len()
-                && bit_vector.is_match(match_index)
-                && errors < max_distance
+            if errors < max_distance
+                && match_index
+                    .as_ref()
+                    .is_some_and(|&idx| bit_vector.is_match(idx))
             {
                 if let Ok(split) = UniversalPosition::new_i_with_state(
                     offset - 1,
@@ -473,16 +539,20 @@ impl PositionVariant for MergeAndSplit {
         );
 
         // Bit vector indices
-        let match_index = (max_distance as i32 + offset) as usize;
-        let next_match_index = (max_distance as i32 + offset + 1) as usize;
+        let match_index = bounded_bit_index(max_distance, offset, 0, bit_vector.len());
+        let next_match_index = bounded_bit_index(max_distance, offset, 1, bit_vector.len());
 
         if is_splitting {
             // Split Completion: i#(e+1)_s → (i+1)#e
             // Same offset calculation as I-type
-            if match_index < bit_vector.len() && bit_vector.is_match(match_index) {
+            if let Some(completed_errors) = errors.checked_sub(1).filter(|_| {
+                match_index
+                    .as_ref()
+                    .is_some_and(|&idx| bit_vector.is_match(idx))
+            }) {
                 if let Ok(succ) = UniversalPosition::new_m_with_state(
-                    offset,     // offset + 0
-                    errors - 1, // Complete split: decrement error back
+                    offset,           // offset + 0
+                    completed_errors, // Complete split: decrement error back
                     max_distance,
                     MergeSplitState::Usual,
                 ) {
@@ -494,9 +564,10 @@ impl PositionVariant for MergeAndSplit {
 
             // Merge Operation: i#e → (i+2)#(e+1)
             // Same offset calculation as I-type
-            if next_match_index < bit_vector.len()
-                && bit_vector.is_match(next_match_index)
-                && errors < max_distance
+            if errors < max_distance
+                && next_match_index
+                    .as_ref()
+                    .is_some_and(|&idx| bit_vector.is_match(idx))
             {
                 if let Ok(merge) = UniversalPosition::new_m_with_state(
                     offset + 1,
@@ -510,9 +581,10 @@ impl PositionVariant for MergeAndSplit {
 
             // Split Entry: i#e → i#(e+1)_s
             // Same offset calculation as I-type
-            if match_index < bit_vector.len()
-                && bit_vector.is_match(match_index)
-                && errors < max_distance
+            if errors < max_distance
+                && match_index
+                    .as_ref()
+                    .is_some_and(|&idx| bit_vector.is_match(idx))
             {
                 if let Ok(split) = UniversalPosition::new_m_with_state(
                     offset - 1,
@@ -526,6 +598,22 @@ impl PositionVariant for MergeAndSplit {
         }
 
         successors
+    }
+
+    #[inline]
+    fn subsumption_distance(
+        lhs_state: &Self::State,
+        rhs_state: &Self::State,
+        lhs_offset: i32,
+        rhs_offset: i32,
+    ) -> Option<u32> {
+        match (lhs_state, rhs_state) {
+            (MergeSplitState::Usual, MergeSplitState::Usual)
+            | (MergeSplitState::Splitting, MergeSplitState::Usual) => {
+                Some((rhs_offset - lhs_offset).unsigned_abs())
+            }
+            _ => None,
+        }
     }
 }
 
@@ -654,10 +742,8 @@ impl<V: PositionVariant> UniversalPosition<V> {
     /// let pos = UniversalPosition::<Standard>::new_i(-2, 2, 2)?; // I + (-2)#2
     /// ```
     pub fn new_i(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
-
         // Check invariant: |offset| ≤ errors ∧ -n ≤ offset ≤ n ∧ 0 ≤ errors ≤ max_distance
-        if offset.abs() as u8 > errors || offset < -n || offset > n || errors > max_distance {
+        if i_invariant_violated(offset, errors, max_distance) {
             return Err(PositionError::InvalidIPosition {
                 offset,
                 errors,
@@ -692,10 +778,7 @@ impl<V: PositionVariant> UniversalPosition<V> {
     /// let pos = UniversalPosition::<Standard>::new_m(-2, 0, 2)?;  // M + (-2)#0
     /// ```
     pub fn new_m(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
-
-        // Check invariant: errors ≥ -offset - n ∧ -2n ≤ offset ≤ 0 ∧ 0 ≤ errors ≤ max_distance
-        if (errors as i32) < -offset - n || offset < -2 * n || offset > 0 || errors > max_distance {
+        if m_invariant_violated(offset, errors, max_distance) {
             return Err(PositionError::InvalidMPosition {
                 offset,
                 errors,
@@ -735,10 +818,7 @@ impl<V: PositionVariant> UniversalPosition<V> {
         max_distance: u8,
         variant_state: V::State,
     ) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
-
-        // Check invariant: |offset| ≤ errors ∧ -n ≤ offset ≤ n ∧ 0 ≤ errors ≤ max_distance
-        if offset.abs() as u8 > errors || offset < -n || offset > n || errors > max_distance {
+        if i_invariant_violated(offset, errors, max_distance) {
             return Err(PositionError::InvalidIPosition {
                 offset,
                 errors,
@@ -767,10 +847,7 @@ impl<V: PositionVariant> UniversalPosition<V> {
         max_distance: u8,
         variant_state: V::State,
     ) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
-
-        // Check invariant: errors ≥ -offset - n ∧ -2n ≤ offset ≤ 0 ∧ 0 ≤ errors ≤ max_distance
-        if (errors as i32) < -offset - n || offset < -2 * n || offset > 0 || errors > max_distance {
+        if m_invariant_violated(offset, errors, max_distance) {
             return Err(PositionError::InvalidMPosition {
                 offset,
                 errors,
@@ -885,9 +962,7 @@ impl<V: PositionVariant> UniversalPosition<V> {
         // Case 1: Check if there's a match at the current word position
         // For I+offset#errors at input k, the concrete word position is i = offset + k
         // In bit vector s_n(w,k) (which starts at k-n), position i corresponds to index: i - (k-n) = offset + n
-        let match_index = (max_distance as i32 + offset) as usize;
-
-        if match_index < bit_vector.len() {
+        if let Some(match_index) = bounded_bit_index(max_distance, offset, 0, bit_vector.len()) {
             if bit_vector.is_match(match_index) {
                 // MATCH at current word position
                 // δ^D,ε_e(t#e, b) where b[n+t] = 1
@@ -915,11 +990,19 @@ impl<V: PositionVariant> UniversalPosition<V> {
                     // Skip j positions (deleting j characters), consuming j errors
                     for idx in (match_index + 1)..bit_vector.len() {
                         if bit_vector.is_match(idx) {
-                            let skip_distance = (idx - match_index) as i32;
-                            let new_offset = offset + skip_distance;
-                            let new_errors = errors + skip_distance as u8;
+                            let skip_distance = idx - match_index;
+                            let new_error_count = usize::from(errors) + skip_distance;
 
-                            if new_errors <= max_distance {
+                            if new_error_count <= usize::from(max_distance) {
+                                let Some(new_offset) = i32::try_from(skip_distance)
+                                    .ok()
+                                    .and_then(|distance| offset.checked_add(distance))
+                                else {
+                                    break;
+                                };
+                                let Ok(new_errors) = u8::try_from(new_error_count) else {
+                                    break;
+                                };
                                 if let Ok(succ) = Self::new_i(new_offset, new_errors, max_distance)
                                 {
                                     successors.push(succ);
@@ -1039,11 +1122,19 @@ impl<V: PositionVariant> UniversalPosition<V> {
         // Concrete result: (t+j+1)#(e+j)
         // M^ε({(t+j+1)#(e+j)}) = {M + (t+j+1)#(e+j)}
         if let Some(j) = bit_vector.first_match() {
-            let j = j as i32;
-            let new_offset = offset + j + 1;
-            let new_errors = errors + j as u8;
+            let new_error_count = usize::from(errors) + j;
 
-            if new_errors <= max_distance {
+            if new_error_count <= usize::from(max_distance) {
+                let Some(new_offset) = i32::try_from(j)
+                    .ok()
+                    .and_then(|j| offset.checked_add(j))
+                    .and_then(|offset| offset.checked_add(1))
+                else {
+                    return successors;
+                };
+                let Ok(new_errors) = u8::try_from(new_error_count) else {
+                    return successors;
+                };
                 if let Ok(succ) = Self::new_m(new_offset, new_errors, max_distance) {
                     successors.push(succ);
                 }
@@ -1354,11 +1445,96 @@ mod tests {
         assert!(display.contains("n=2"));
     }
 
+    #[test]
+    fn test_m_position_extreme_offset_rejected_without_overflow() {
+        let result = UniversalPosition::<Standard>::new_m(i32::MIN, 0, 2);
+        assert!(matches!(
+            result,
+            Err(PositionError::InvalidMPosition { .. })
+        ));
+
+        let result = UniversalPosition::<Standard>::new_m_with_state(i32::MIN, 0, 2, ());
+        assert!(matches!(
+            result,
+            Err(PositionError::InvalidMPosition { .. })
+        ));
+    }
+
     // =========================================================================
     // Successor Function Tests
     // =========================================================================
 
     use crate::transducer::universal::CharacteristicVector;
+
+    #[test]
+    fn test_transposition_completion_zero_errors_returns_empty() {
+        let pos = UniversalPosition::<Transposition>::new_i_with_state(
+            0,
+            0,
+            2,
+            TranspositionState::Transposing,
+        )
+        .expect("test fixture: UniversalPosition::new_i_with_state with valid args");
+        let bv = CharacteristicVector::new('a', "$$a");
+
+        assert!(pos.successors(&bv, 2).is_empty());
+    }
+
+    #[test]
+    fn test_split_completion_zero_errors_does_not_underflow() {
+        let pos = UniversalPosition::<MergeAndSplit>::new_i_with_state(
+            0,
+            0,
+            2,
+            MergeSplitState::Splitting,
+        )
+        .expect("test fixture: UniversalPosition::new_i_with_state with valid args");
+        let bv = CharacteristicVector::new('a', "$$a");
+
+        let succs = pos.successors(&bv, 2);
+
+        assert_eq!(
+            succs,
+            vec![UniversalPosition::<MergeAndSplit>::new_i(0, 0, 2)
+                .expect("test fixture: UniversalPosition::new_i with valid args")]
+        );
+    }
+
+    #[test]
+    fn test_i_successor_far_skip_match_does_not_wrap_error_count() {
+        let pos = UniversalPosition::<Standard>::new_i(0, 1, 2)
+            .expect("test fixture: UniversalPosition::new_i with valid args");
+        let word = format!("{}a", "x".repeat(257));
+        let bv = CharacteristicVector::new('a', &word);
+
+        let succs = pos.successors(&bv, 2);
+
+        assert_eq!(succs.len(), 2);
+        assert!(succs.contains(
+            &UniversalPosition::<Standard>::new_i(-1, 2, 2)
+                .expect("test fixture: UniversalPosition::new_i with valid args")
+        ));
+        assert!(succs.contains(
+            &UniversalPosition::<Standard>::new_i(0, 2, 2)
+                .expect("test fixture: UniversalPosition::new_i with valid args")
+        ));
+    }
+
+    #[test]
+    fn test_m_successor_far_skip_match_does_not_wrap_error_count() {
+        let pos = UniversalPosition::<Standard>::new_m(0, 1, 2)
+            .expect("test fixture: UniversalPosition::new_m with valid args");
+        let word = format!("{}a", "x".repeat(255));
+        let bv = CharacteristicVector::new('a', &word);
+
+        let succs = pos.successors(&bv, 2);
+
+        assert_eq!(
+            succs,
+            vec![UniversalPosition::<Standard>::new_m(0, 2, 2)
+                .expect("test fixture: UniversalPosition::new_m with valid args")]
+        );
+    }
 
     #[test]
     fn test_successors_match() {

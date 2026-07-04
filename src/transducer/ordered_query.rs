@@ -6,7 +6,7 @@
 //!
 //! This ordering enables efficient "top-k" queries and take-while patterns.
 
-use super::transition::{initial_state, transition_state_pooled};
+use super::transition::{initial_state, transition_state_pooled_ref, TransitionSettings};
 use super::{
     state::State, Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted,
 };
@@ -22,19 +22,19 @@ pub struct OrderedCandidate {
     pub term: String,
 }
 
-const NO_PATH: u32 = u32::MAX;
+const NO_PATH: usize = usize::MAX;
 
 struct OrderedPathNode<U: CharUnit> {
     label: U,
-    depth: u16,
-    parent: u32,
+    depth: usize,
+    parent: usize,
 }
 
 struct OrderedIntersection<N: DictionaryNode> {
     label: Option<N::Unit>,
     node: N,
     state: State,
-    parent: u32,
+    parent: usize,
 }
 
 impl<N: DictionaryNode> OrderedIntersection<N> {
@@ -49,7 +49,7 @@ impl<N: DictionaryNode> OrderedIntersection<N> {
     }
 
     #[inline]
-    fn with_parent(label: N::Unit, node: N, state: State, parent: u32) -> Self {
+    fn with_parent(label: N::Unit, node: N, state: State, parent: usize) -> Self {
         Self {
             label: Some(label),
             node,
@@ -62,7 +62,7 @@ impl<N: DictionaryNode> OrderedIntersection<N> {
         let parent_depth = if self.parent == NO_PATH {
             0
         } else {
-            path_arena[self.parent as usize].depth as usize
+            path_arena[self.parent].depth
         };
         let capacity = parent_depth + usize::from(self.label.is_some());
         let mut units = Vec::with_capacity(capacity);
@@ -73,7 +73,7 @@ impl<N: DictionaryNode> OrderedIntersection<N> {
 
         let mut current = self.parent;
         while current != NO_PATH {
-            let node = &path_arena[current as usize];
+            let node = &path_arena[current];
             units.push(node.label);
             current = node.parent;
         }
@@ -150,8 +150,6 @@ pub struct OrderedQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unres
     substring_mode: bool,
     /// Sorted buffer for current distance level (ensures lexicographic ordering)
     sorted_buffer: Vec<OrderedCandidate>,
-    /// Index into sorted_buffer for next result
-    buffer_index: usize,
 }
 
 impl<N: DictionaryNode> OrderedQueryIterator<N, Unrestricted> {
@@ -225,7 +223,6 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             path_arena: Vec::with_capacity(64),
             substring_mode,
             sorted_buffer: Vec::with_capacity(64), // Heuristic: typical max results per distance
-            buffer_index: 0,
         }
     }
 
@@ -233,9 +230,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
     #[inline]
     fn advance(&mut self) -> Option<OrderedCandidate> {
         // First, check if we have buffered results to yield
-        if self.buffer_index < self.sorted_buffer.len() {
-            let result = self.sorted_buffer[self.buffer_index].clone();
-            self.buffer_index += 1;
+        if let Some(result) = self.sorted_buffer.pop() {
             return Some(result);
         }
 
@@ -243,7 +238,6 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         while self.current_distance <= self.max_distance {
             // Clear buffer and reset index for new distance level
             self.sorted_buffer.clear();
-            self.buffer_index = 0;
 
             // Collect ALL results at the current distance level
             while let Some(intersection) =
@@ -297,26 +291,8 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
             // If we collected any results at this distance, sort them and return first
             if !self.sorted_buffer.is_empty() {
-                // Adaptive sorting: insertion sort for small n, unstable sort for larger n
-                // Threshold of 10 is empirically good for sorting algorithms crossover
-                if self.sorted_buffer.len() <= 10 {
-                    // For small buffers, insertion sort is faster due to better cache locality
-                    for i in 1..self.sorted_buffer.len() {
-                        let mut j = i;
-                        while j > 0 && self.sorted_buffer[j].term < self.sorted_buffer[j - 1].term {
-                            self.sorted_buffer.swap(j, j - 1);
-                            j -= 1;
-                        }
-                    }
-                } else {
-                    // For larger buffers, use unstable sort (faster, doesn't preserve order of equal elements)
-                    self.sorted_buffer
-                        .sort_unstable_by(|a, b| a.term.cmp(&b.term));
-                }
-
-                // Return first result from buffer
-                self.buffer_index = 1;
-                return Some(self.sorted_buffer[0].clone());
+                self.sort_buffer_for_pop();
+                return self.sorted_buffer.pop();
             }
 
             // No results at this distance, move to next
@@ -333,57 +309,82 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
         // Edges are iterated in sorted order (lexicographic) thanks to DAWG construction
         for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled(
+            if let Some(next_state) = transition_state_pooled_ref(
                 &intersection.state,
                 &mut self.state_pool,
-                self.policy, // Use the iterator's policy parameter
+                &self.policy, // Borrow the iterator's policy; avoid per-edge clones
                 label,
                 &self.query,
-                self.max_distance,
-                self.algorithm,
-                self.substring_mode, // Use prefix_mode=true only for substring matching
+                TransitionSettings::new(
+                    self.max_distance,
+                    self.algorithm,
+                    self.substring_mode, // Use prefix_mode=true only for substring matching
+                ),
             ) {
                 // Determine minimum possible distance from this state
-                if let Some(min_dist) = next_state.min_distance() {
-                    if min_dist <= self.max_distance {
-                        let parent_path = match child_parent_path {
-                            Some(path) => path,
-                            None => {
-                                let path = match intersection.label {
-                                    Some(current_label) => {
-                                        self.push_path_node(current_label, intersection.parent)
-                                    }
-                                    None => NO_PATH,
-                                };
-                                child_parent_path = Some(path);
-                                path
-                            }
-                        };
+                let should_enqueue = next_state
+                    .min_distance()
+                    .filter(|&min_dist| min_dist <= self.max_distance);
 
-                        let child = OrderedIntersection::with_parent(
-                            label,
-                            child_node,
-                            next_state,
-                            parent_path,
-                        );
+                if let Some(min_dist) = should_enqueue {
+                    let parent_path = match child_parent_path {
+                        Some(path) => path,
+                        None => {
+                            let path = match intersection.label {
+                                Some(current_label) => {
+                                    self.push_path_node(current_label, intersection.parent)
+                                }
+                                None => NO_PATH,
+                            };
+                            child_parent_path = Some(path);
+                            path
+                        }
+                    };
 
-                        // Add to the appropriate distance bucket
-                        self.pending_by_distance[min_dist].push_back(child);
-                    }
+                    let child = OrderedIntersection::with_parent(
+                        label,
+                        child_node,
+                        next_state,
+                        parent_path,
+                    );
+
+                    // Add to the appropriate distance bucket
+                    self.pending_by_distance[min_dist].push_back(child);
+                } else {
+                    self.state_pool.release(next_state);
                 }
             }
         }
     }
 
     #[inline]
-    fn push_path_node(&mut self, label: N::Unit, parent: u32) -> u32 {
-        assert!(self.path_arena.len() < u32::MAX as usize);
+    fn sort_buffer_for_pop(&mut self) {
+        // Store terms in reverse lexicographic order so pop() yields owned candidates
+        // in ascending lexicographic order without cloning their String payloads.
+        if self.sorted_buffer.len() <= 10 {
+            // For small buffers, insertion sort is faster due to better cache locality
+            for i in 1..self.sorted_buffer.len() {
+                let mut j = i;
+                while j > 0 && self.sorted_buffer[j].term > self.sorted_buffer[j - 1].term {
+                    self.sorted_buffer.swap(j, j - 1);
+                    j -= 1;
+                }
+            }
+        } else {
+            // For larger buffers, use unstable sort (faster, doesn't preserve order of equal elements)
+            self.sorted_buffer
+                .sort_unstable_by(|a, b| b.term.cmp(&a.term));
+        }
+    }
+
+    #[inline]
+    fn push_path_node(&mut self, label: N::Unit, parent: usize) -> usize {
         let depth = if parent == NO_PATH {
             1
         } else {
-            self.path_arena[parent as usize].depth.saturating_add(1)
+            self.path_arena[parent].depth.saturating_add(1)
         };
-        let index = self.path_arena.len() as u32;
+        let index = self.path_arena.len();
         self.path_arena.push(OrderedPathNode {
             label,
             depth,
@@ -499,43 +500,54 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
     /// Advance to the next prefix match in order
     #[inline]
     fn advance_prefix(&mut self) -> Option<OrderedCandidate> {
+        if let Some(result) = self.inner.sorted_buffer.pop() {
+            return Some(result);
+        }
+
         let query_len = self.inner.query.len();
 
         // Explore distance levels in ascending order
         while self.inner.current_distance <= self.inner.max_distance {
-            // Try to get next intersection from current distance level
-            if let Some(intersection) =
+            self.inner.sorted_buffer.clear();
+
+            // Collect all prefix matches at this distance level so ties can be
+            // returned lexicographically, matching OrderedQueryIterator.
+            while let Some(intersection) =
                 self.inner.pending_by_distance[self.inner.current_distance].pop_front()
             {
                 // Check if this is a complete word (final node) that matches our prefix
-                let should_return = if intersection.is_final() {
+                let matched_distance = if intersection.is_final() {
                     // For prefix matching: check if we've consumed the entire query
-                    if let Some(distance) = intersection.state.infer_prefix_distance(query_len) {
-                        distance <= self.inner.max_distance
-                            && distance == self.inner.current_distance
-                    } else {
-                        false
-                    }
+                    intersection
+                        .state
+                        .infer_prefix_distance(query_len)
+                        .filter(|&distance| {
+                            distance <= self.inner.max_distance
+                                && distance == self.inner.current_distance
+                        })
                 } else {
-                    false
+                    None
                 };
 
                 // Always queue children for further exploration
                 self.inner.queue_children(&intersection);
 
                 // Return the result if it's a complete word matching our prefix
-                if should_return {
+                if let Some(distance) = matched_distance {
                     let term = intersection.term(&self.inner.path_arena);
-                    let distance = intersection
-                        .state
-                        .infer_prefix_distance(query_len)
-                        .expect("ordered query: state qualifies as prefix match (checked above)");
-                    return Some(OrderedCandidate { distance, term });
+                    self.inner
+                        .sorted_buffer
+                        .push(OrderedCandidate { distance, term });
                 }
-            } else {
-                // Current distance level exhausted, move to next
-                self.inner.current_distance += 1;
             }
+
+            if !self.inner.sorted_buffer.is_empty() {
+                self.inner.sort_buffer_for_pop();
+                return self.inner.sorted_buffer.pop();
+            }
+
+            // Current distance level exhausted, move to next
+            self.inner.current_distance += 1;
         }
 
         None
@@ -569,6 +581,23 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].term, "test");
         assert_eq!(results[0].distance, 0);
+    }
+
+    #[test]
+    fn test_ordered_query_reconstructs_term_past_initial_path_capacity() {
+        let long_term = "a".repeat(96);
+        let dict = DoubleArrayTrie::from_terms(vec![long_term.as_str()]);
+        let query =
+            OrderedQueryIterator::new(dict.root(), long_term.clone(), 0, Algorithm::Standard);
+
+        let results: Vec<_> = query.collect();
+        assert_eq!(
+            results,
+            vec![OrderedCandidate {
+                distance: 0,
+                term: long_term,
+            }]
+        );
     }
 
     #[test]
@@ -633,6 +662,26 @@ mod tests {
                 dist1[i]
             );
         }
+    }
+
+    #[test]
+    fn test_ordered_large_distance_bucket_lexicographic() {
+        let dict = DoubleArrayTrie::from_terms(vec![
+            "cat", "pat", "nat", "mat", "lat", "kat", "jat", "hat", "gat", "fat", "eat", "dat",
+            "bat",
+        ]);
+
+        let query =
+            OrderedQueryIterator::new(dict.root(), "cat".to_string(), 1, Algorithm::Standard);
+
+        let terms: Vec<_> = query.map(|candidate| candidate.term).collect();
+        assert_eq!(
+            terms,
+            vec![
+                "cat", "bat", "dat", "eat", "fat", "gat", "hat", "jat", "kat", "lat", "mat", "nat",
+                "pat",
+            ]
+        );
     }
 
     #[test]
@@ -891,6 +940,26 @@ mod tests {
         // First results should be distance=0
         let first_distance = results[0].distance;
         assert_eq!(first_distance, 0, "First result should have distance 0");
+    }
+
+    #[test]
+    fn test_prefix_large_distance_bucket_lexicographic() {
+        let dict = DoubleArrayTrie::from_terms(vec![
+            "prez", "prea", "preq", "preb", "prex", "prec", "pred", "pree", "pref", "preg", "preh",
+            "prei", "pre",
+        ]);
+
+        let query =
+            OrderedQueryIterator::new(dict.root(), "pre".to_string(), 0, Algorithm::Standard);
+
+        let terms: Vec<_> = query.prefix().map(|candidate| candidate.term).collect();
+        assert_eq!(
+            terms,
+            vec![
+                "pre", "prea", "preb", "prec", "pred", "pree", "pref", "preg", "preh", "prei",
+                "preq", "prex", "prez",
+            ]
+        );
     }
 
     #[test]

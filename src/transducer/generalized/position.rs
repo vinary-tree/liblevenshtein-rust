@@ -233,16 +233,31 @@ impl Ord for GeneralizedPosition {
             MSplitting { .. } => 5,
         };
 
+        // Splitting variants carry an `entry_char`; use it as a final tiebreaker so
+        // `Ord` stays consistent with the derived `Eq`/`Hash`. Without it, two
+        // ISplitting/MSplitting positions with equal (offset, errors) but distinct
+        // `entry_char` would yield `cmp() == Equal` yet `eq() == false`, violating the
+        // std Ord/Eq contract that `binary_search` and ordered containers rely on.
+        let entry_char_key = |pos: &GeneralizedPosition| -> Option<char> {
+            match pos {
+                ISplitting { entry_char, .. } | MSplitting { entry_char, .. } => Some(*entry_char),
+                _ => None,
+            }
+        };
+
         let p1 = variant_priority(self);
         let p2 = variant_priority(other);
 
         match p1.cmp(&p2) {
             Ordering::Equal => {
-                // Same variant type, sort by (errors, offset)
+                // Same variant type, sort by (errors, offset, entry_char)
                 let e1 = self.errors();
                 let e2 = other.errors();
                 match e1.cmp(&e2) {
-                    Ordering::Equal => self.offset().cmp(&other.offset()),
+                    Ordering::Equal => self
+                        .offset()
+                        .cmp(&other.offset())
+                        .then_with(|| entry_char_key(self).cmp(&entry_char_key(other))),
                     other => other,
                 }
             }
@@ -833,5 +848,54 @@ mod tests {
         // Within M-types: MFinal < MTransposing < MSplitting
         assert!(m_normal < m_transposing);
         assert!(m_transposing < m_splitting);
+    }
+
+    /// Regression: `Ord` must agree with the derived `Eq`/`Hash`, including the
+    /// `entry_char` carried by the Splitting variants. Before the fix, two
+    /// ISplitting/MSplitting positions differing only in `entry_char` compared
+    /// `Equal` yet were `!=`, violating the std Ord/Eq contract that
+    /// `binary_search` and ordered containers depend on.
+    #[test]
+    fn ord_is_consistent_with_eq_for_splitting_entry_char() {
+        use std::cmp::Ordering;
+
+        let a = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a')
+            .expect("test fixture: valid ISplitting");
+        let b = GeneralizedPosition::new_i_splitting(0, 1, 2, 'b')
+            .expect("test fixture: valid ISplitting");
+
+        // Differ only in entry_char: must be unequal AND cmp must not be Equal.
+        assert_ne!(a, b);
+        assert_ne!(a.cmp(&b), Ordering::Equal);
+        assert_eq!(a.cmp(&b), Ordering::Less); // 'a' < 'b'
+        assert_eq!(b.cmp(&a), Ordering::Greater);
+
+        // Identical entry_char: equal AND cmp == Equal.
+        let a2 = GeneralizedPosition::new_i_splitting(0, 1, 2, 'a')
+            .expect("test fixture: valid ISplitting");
+        assert_eq!(a, a2);
+        assert_eq!(a.cmp(&a2), Ordering::Equal);
+
+        // Exhaustive contract check across a mixed set: (cmp == Equal) iff (eq).
+        let positions = [
+            GeneralizedPosition::new_i(0, 1, 2).expect("test fixture: valid INonFinal"),
+            GeneralizedPosition::new_i_splitting(0, 1, 2, 'a')
+                .expect("test fixture: valid ISplitting"),
+            GeneralizedPosition::new_i_splitting(0, 1, 2, 'b')
+                .expect("test fixture: valid ISplitting"),
+            GeneralizedPosition::new_m_splitting(-2, 2, 2, 'a')
+                .expect("test fixture: valid MSplitting"),
+            GeneralizedPosition::new_m_splitting(-2, 2, 2, 'b')
+                .expect("test fixture: valid MSplitting"),
+        ];
+        for x in &positions {
+            for y in &positions {
+                assert_eq!(
+                    x.cmp(y) == Ordering::Equal,
+                    x == y,
+                    "Ord/Eq contract violated for {x:?} vs {y:?}"
+                );
+            }
+        }
     }
 }

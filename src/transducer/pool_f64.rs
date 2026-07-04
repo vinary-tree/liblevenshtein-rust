@@ -25,7 +25,7 @@ use super::state_f64::StateF64;
 /// let mut state = pool.acquire();
 ///
 /// // Use the state...
-/// state.insert(PositionF64::new(0, 0.0), Algorithm::Standard, 4);
+/// state.insert(PositionF64::new(0, 0.0), Algorithm::Standard, 4, 1.0);
 ///
 /// // Return to pool when done
 /// pool.release(state);
@@ -197,7 +197,7 @@ mod tests {
 
         // Acquire a state and add positions
         let mut state = pool.acquire();
-        state.insert(PositionF64::new(1, 0.0), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(1, 0.0), Algorithm::Standard, query_length, 1.0);
         assert_eq!(state.len(), 1);
 
         // Release it

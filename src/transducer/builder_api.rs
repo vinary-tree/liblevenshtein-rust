@@ -3,7 +3,10 @@
 //! This module provides a more ergonomic, self-documenting API for querying
 //! dictionaries with various options.
 
-use super::{Algorithm, OrderedQueryIterator, QueryIterator, SubstitutionPolicyFor, Unrestricted};
+use super::{
+    Algorithm, OrderedQueryIterator, QueryIterator, SubstitutionPolicy, SubstitutionPolicyFor,
+    Unrestricted,
+};
 use libdictenstein::Dictionary;
 
 /// Fluent builder for constructing Levenshtein queries
@@ -32,26 +35,32 @@ use libdictenstein::Dictionary;
 ///     .take(10)
 ///     .collect();
 /// ```
-pub struct QueryBuilder<'a, D: Dictionary> {
+pub struct QueryBuilder<'a, D: Dictionary, P: SubstitutionPolicy = Unrestricted> {
     dictionary: &'a D,
     term: String,
     max_distance: usize,
     algorithm: Algorithm,
+    policy: P,
+    suffix_based: bool,
 }
 
-impl<'a, D: Dictionary> QueryBuilder<'a, D> {
+impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
     /// Create a new query builder
     pub(crate) fn new(
         dictionary: &'a D,
         term: impl Into<String>,
         default_distance: usize,
         algorithm: Algorithm,
+        policy: P,
+        suffix_based: bool,
     ) -> Self {
         Self {
             dictionary,
             term: term.into(),
             max_distance: default_distance,
             algorithm,
+            policy,
+            suffix_based,
         }
     }
 
@@ -92,15 +101,17 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
     /// # Note
     ///
     /// For prefix matching, use `.ordered().prefix()`.
-    pub fn execute(self) -> QueryIterator<D::Node>
+    pub fn execute(self) -> QueryIterator<D::Node, String, P>
     where
-        Unrestricted: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
+        P: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
     {
-        QueryIterator::new(
+        QueryIterator::with_policy_and_substring(
             self.dictionary.root(),
             self.term,
             self.max_distance,
             self.algorithm,
+            self.policy,
+            self.suffix_based,
         )
     }
 
@@ -132,15 +143,17 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
     ///     .prefix()  // Match terms starting with query
     ///     .collect();
     /// ```
-    pub fn ordered(self) -> OrderedQueryIterator<D::Node>
+    pub fn ordered(self) -> OrderedQueryIterator<D::Node, P>
     where
-        Unrestricted: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
+        P: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
     {
-        OrderedQueryIterator::new(
+        OrderedQueryIterator::with_policy_and_substring(
             self.dictionary.root(),
             self.term,
             self.max_distance,
             self.algorithm,
+            self.policy,
+            self.suffix_based,
         )
     }
 
@@ -158,7 +171,7 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
     /// ```
     pub fn collect_vec(self) -> Vec<String>
     where
-        Unrestricted: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
+        P: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
     {
         self.execute().collect()
     }
@@ -175,7 +188,7 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
     /// ```
     pub fn limit(self, n: usize) -> impl Iterator<Item = String>
     where
-        Unrestricted: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
+        P: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
     {
         self.execute().take(n)
     }
@@ -183,7 +196,7 @@ impl<'a, D: Dictionary> QueryBuilder<'a, D> {
 
 #[cfg(test)]
 mod tests {
-    use crate::transducer::{Algorithm, Transducer};
+    use crate::transducer::{Algorithm, SubstitutionSet, Transducer};
     use libdictenstein::double_array_trie::DoubleArrayTrie;
 
     #[test]
@@ -276,5 +289,22 @@ mod tests {
             .collect();
 
         assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_query_builder_preserves_transducer_policy() {
+        let dict = DoubleArrayTrie::from_terms(vec!["cat"]);
+        let mut substitutions = SubstitutionSet::new();
+        substitutions.allow('c', 'k');
+
+        let transducer = Transducer::with_substitutions(dict, Algorithm::Standard, substitutions);
+
+        let results: Vec<_> = transducer
+            .query_builder("kat")
+            .max_distance(0)
+            .execute()
+            .collect();
+
+        assert_eq!(results, vec!["cat"]);
     }
 }

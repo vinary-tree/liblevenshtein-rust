@@ -68,7 +68,9 @@ pub use pool::StatePool;
 pub use pool_f64::StatePoolF64;
 pub use position::Position;
 pub use position_f64::PositionF64;
-pub use priority_query::{priority_query, PriorityCandidate, PriorityQueryIterator};
+pub use priority_query::{
+    priority_query, priority_query_with_policy, PriorityCandidate, PriorityQueryIterator,
+};
 pub use query::{Candidate, CandidateIterator, QueryIterator, StringQueryIterator};
 pub use query_f64::{
     CandidateF64, CandidateIteratorF64, QueryIteratorF64, QueryResultF64, StringQueryIteratorF64,
@@ -77,13 +79,14 @@ pub use query_result::QueryResult;
 pub use state::State;
 pub use state_f64::StateF64;
 pub use substitution_policy::{
-    Restricted, RestrictedChar, SubstitutionPolicy, SubstitutionPolicyChar, SubstitutionPolicyFor,
-    Unrestricted,
+    OwnedRestricted, Restricted, RestrictedChar, SubstitutionPolicy, SubstitutionPolicyChar,
+    SubstitutionPolicyFor, Unrestricted,
 };
 pub use substitution_set::SubstitutionSet;
 pub use substitution_set_char::SubstitutionSetChar;
 pub use transition_f64::{
     initial_state_f64, transition_position_f64, transition_state_f64, transition_state_pooled_f64,
+    TransitionSettingsF64,
 };
 pub use value_filtered_query::{
     ValueFilteredQueryIterator, ValueSetFilteredQueryIterator, ValueYieldingQueryIterator,
@@ -261,13 +264,12 @@ where
         dictionary: D,
         algorithm: Algorithm,
         substitution_set: SubstitutionSet,
-    ) -> Transducer<D, Restricted<'static>>
+    ) -> Transducer<D, OwnedRestricted>
     where
         <D::Node as DictionaryNode>::Unit: From<u8>,
-        Restricted<'static>: SubstitutionPolicyFor<<D::Node as DictionaryNode>::Unit>,
+        OwnedRestricted: SubstitutionPolicyFor<<D::Node as DictionaryNode>::Unit>,
     {
-        let set: &'static SubstitutionSet = Box::leak(Box::new(substitution_set));
-        let policy = Restricted::new(set);
+        let policy = OwnedRestricted::new(substitution_set);
         Transducer::with_policy(dictionary, algorithm, policy)
     }
 }
@@ -386,8 +388,15 @@ impl<
     ///     .map(|c| c.term)
     ///     .collect();
     /// ```
-    pub fn query_builder(&self, term: impl Into<String>) -> QueryBuilder<'_, D> {
-        QueryBuilder::new(&self.dictionary, term, 2, self.algorithm)
+    pub fn query_builder(&self, term: impl Into<String>) -> QueryBuilder<'_, D, P> {
+        QueryBuilder::new(
+            &self.dictionary,
+            term,
+            2,
+            self.algorithm,
+            self.policy.clone(),
+            self.dictionary.is_suffix_based(),
+        )
     }
 
     /// Query for terms within `max_distance` edits of `term`
@@ -399,7 +408,7 @@ impl<
             term.to_string(),
             max_distance,
             self.algorithm,
-            self.policy,
+            self.policy.clone(),
             self.dictionary.is_suffix_based(),
         )
     }
@@ -418,7 +427,7 @@ impl<
             term.to_string(),
             max_distance,
             self.algorithm,
-            self.policy,
+            self.policy.clone(),
             self.dictionary.is_suffix_based(),
         )
     }
@@ -461,7 +470,7 @@ impl<
             term.to_string(),
             max_distance,
             self.algorithm,
-            self.policy,
+            self.policy.clone(),
             self.dictionary.is_suffix_based(),
         )
     }
@@ -549,20 +558,20 @@ where
     D::Node: MappedDictionaryNode<Value = D::Value>,
     P: SubstitutionPolicy + SubstitutionPolicyFor<<D::Node as DictionaryNode>::Unit>,
 {
-    /// Query with value-based filtering during traversal.
+    /// Query with value-based filtering during result collection.
     ///
-    /// This method filters candidates based on their associated values **during**
-    /// graph traversal, providing 10-100x speedup compared to post-filtering for
-    /// selective predicates.
+    /// This method checks each final node's associated value before materializing
+    /// its term string, which reduces allocation work for predicates that reject
+    /// many in-range candidates.
     ///
     /// # Performance
     ///
-    /// - **Post-filtering**: Explores 100% of matches, filters afterwards
-    /// - **Value-filtered**: Only explores branches matching the predicate
+    /// - **Post-filtering**: Materializes fuzzy matches, then filters afterwards
+    /// - **Value-filtered**: Traverses the same automaton graph, but filters before term construction
     ///
-    /// For a query matching 1000 terms where only 10 are in the target scope:
-    /// - Post-filtering: Explores 1000 terms, returns 10 (slow)
-    /// - Value-filtered: Explores ~10-50 terms, returns 10 (fast!)
+    /// For a query matching many terms where only a subset has the target value,
+    /// value-filtered queries avoid allocating returned strings for rejected
+    /// final nodes while still descending through those nodes' children.
     ///
     /// # Example
     ///
@@ -584,7 +593,8 @@ where
     ///     .query_filtered("func", 2, |scope_id| *scope_id == 2)
     ///     .collect();
     ///
-    /// // Returns: [("my_func", 2)] - other_func is never explored!
+    /// // Returns: [("my_func", 2)] - other_func fails the value predicate
+    /// // before its term string is returned.
     /// ```
     ///
     /// # Use Cases
@@ -664,25 +674,24 @@ where
     ///
     /// # Performance
     ///
-    /// For a 10,000-term dictionary where 100 terms are in visible scopes:
-    /// - Post-filtering: ~10ms (explores all 10,000 terms)
-    /// - Value-filtered: ~0.1ms (explores ~100-500 terms)
-    /// - **100x speedup!**
-    pub fn query_by_value_set(
+    /// For a large dictionary with many in-range terms outside the visible set,
+    /// this avoids allocating result strings for rejected terms while preserving
+    /// the same fuzzy traversal semantics as a normal query.
+    pub fn query_by_value_set<'a>(
         &self,
         term: &str,
         max_distance: usize,
-        value_set: &HashSet<D::Value>,
-    ) -> ValueSetFilteredQueryIterator<D::Node, D::Value>
+        value_set: &'a HashSet<D::Value>,
+    ) -> ValueSetFilteredQueryIterator<'a, D::Node, D::Value>
     where
-        D::Value: Eq + std::hash::Hash + Clone,
+        D::Value: Eq + std::hash::Hash,
     {
-        ValueSetFilteredQueryIterator::new(
+        ValueSetFilteredQueryIterator::new_borrowed(
             self.dictionary.root(),
             term.to_string(),
             max_distance,
             self.algorithm,
-            value_set.clone(),
+            value_set,
         )
     }
 }

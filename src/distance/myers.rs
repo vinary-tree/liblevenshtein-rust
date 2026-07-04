@@ -41,6 +41,11 @@ struct PatternMasks {
     peq: [u64; 256],
 }
 
+#[inline]
+fn byte_mask_index(byte: u8) -> usize {
+    usize::from(byte)
+}
+
 impl PatternMasks {
     /// Create pattern masks for the given byte sequence.
     ///
@@ -51,7 +56,7 @@ impl PatternMasks {
         let mut peq = [0u64; 256];
 
         for (i, &byte) in pattern.iter().enumerate().take(64) {
-            peq[byte as usize] |= 1u64 << i;
+            peq[byte_mask_index(byte)] |= 1u64 << i;
         }
 
         Self { peq }
@@ -126,17 +131,164 @@ pub fn myers_distance_bytes(source: &[u8], target: &[u8]) -> usize {
         (target, source)
     };
 
-    // For patterns > 64, fall back to standard DP
-    // Myers is most beneficial for short patterns where the entire
-    // pattern fits in a single 64-bit word
+    // For patterns > 64, fall back to byte-level DP. Do not route through
+    // `str::from_utf8(...).unwrap_or("")`: this API is explicitly byte-based,
+    // and invalid UTF-8 must still produce a real byte edit distance.
     if pattern.len() > 64 {
-        return crate::distance::standard_distance_impl(
-            std::str::from_utf8(source).unwrap_or(""),
-            std::str::from_utf8(target).unwrap_or(""),
-        );
+        return byte_distance_impl(source, target);
     }
 
     myers_core(pattern, text)
+}
+
+/// Compute byte-level Myers distance with a maximum threshold.
+///
+/// Returns `None` when the byte edit distance is greater than `max_distance`.
+/// For short patterns this uses the regular bit-parallel Myers core and checks
+/// the result. For longer patterns it switches to a banded dynamic program, so
+/// tight thresholds avoid the full `O(mn)` matrix scan.
+#[inline]
+pub fn myers_distance_bytes_bounded(
+    source: &[u8],
+    target: &[u8],
+    max_distance: usize,
+) -> Option<usize> {
+    if source == target {
+        return Some(0);
+    }
+
+    let length_delta = source.len().abs_diff(target.len());
+    if length_delta > max_distance {
+        return None;
+    }
+
+    if source.is_empty() {
+        return (target.len() <= max_distance).then_some(target.len());
+    }
+    if target.is_empty() {
+        return (source.len() <= max_distance).then_some(source.len());
+    }
+    if max_distance == 0 {
+        return None;
+    }
+
+    let (pattern, text) = if source.len() <= target.len() {
+        (source, target)
+    } else {
+        (target, source)
+    };
+
+    if pattern.len() <= 64 {
+        let distance = myers_core(pattern, text);
+        return (distance <= max_distance).then_some(distance);
+    }
+
+    byte_distance_bounded_impl(source, target, max_distance)
+}
+
+/// Scalar Levenshtein distance over raw byte slices.
+///
+/// This is the correctness fallback for [`myers_distance_bytes`] when the
+/// shorter input does not fit in a single 64-bit Myers word. It deliberately
+/// preserves byte semantics for arbitrary binary data.
+fn byte_distance_impl(source: &[u8], target: &[u8]) -> usize {
+    let (rows, cols) = if source.len() >= target.len() {
+        (source, target)
+    } else {
+        (target, source)
+    };
+    let m = rows.len();
+    let n = cols.len();
+
+    if n == 0 {
+        return m;
+    }
+
+    let mut prev_row: Vec<usize> = (0..=n).collect();
+    let mut curr_row = vec![0; n + 1];
+
+    for (i, &row_byte) in rows.iter().enumerate() {
+        curr_row[0] = i + 1;
+
+        for (j, &col_byte) in cols.iter().enumerate() {
+            let cost = usize::from(row_byte != col_byte);
+            let col = j + 1;
+            curr_row[col] = (prev_row[col] + 1)
+                .min(curr_row[col - 1] + 1)
+                .min(prev_row[col - 1] + cost);
+        }
+
+        std::mem::swap(&mut prev_row, &mut curr_row);
+    }
+
+    prev_row[n]
+}
+
+fn byte_distance_bounded_impl(source: &[u8], target: &[u8], max_distance: usize) -> Option<usize> {
+    let (rows, cols) = if source.len() >= target.len() {
+        (source, target)
+    } else {
+        (target, source)
+    };
+    let m = rows.len();
+    let n = cols.len();
+
+    if n == 0 {
+        return (m <= max_distance).then_some(m);
+    }
+    if max_distance == usize::MAX {
+        return Some(byte_distance_impl(rows, cols));
+    }
+
+    let cap = max_distance + 1;
+    let mut prev_row = vec![cap; n + 1];
+    let mut curr_row = vec![cap; n + 1];
+
+    for (j, cell) in prev_row
+        .iter_mut()
+        .take(n.min(max_distance) + 1)
+        .enumerate()
+    {
+        *cell = j;
+    }
+
+    for i in 1..=m {
+        let start = i.saturating_sub(max_distance).max(1);
+        let end = n.min(i.saturating_add(max_distance));
+
+        if start > end {
+            return None;
+        }
+
+        let clear_start = start.saturating_sub(1);
+        let clear_end = n.min(end.saturating_add(1));
+        for cell in &mut curr_row[clear_start..=clear_end] {
+            *cell = cap;
+        }
+
+        curr_row[0] = if i <= max_distance { i } else { cap };
+
+        let mut row_min = curr_row[0];
+        for j in start..=end {
+            let cost = usize::from(rows[i - 1] != cols[j - 1]);
+            let best = prev_row[j]
+                .saturating_add(1)
+                .min(cap)
+                .min(curr_row[j - 1].saturating_add(1).min(cap))
+                .min(prev_row[j - 1].saturating_add(cost).min(cap));
+
+            curr_row[j] = best;
+            row_min = row_min.min(best);
+        }
+
+        if row_min > max_distance {
+            return None;
+        }
+
+        std::mem::swap(&mut prev_row, &mut curr_row);
+    }
+
+    (prev_row[n] <= max_distance).then_some(prev_row[n])
 }
 
 /// Core Myers algorithm for patterns ≤64 characters.
@@ -163,10 +315,15 @@ fn myers_core(pattern: &[u8], text: &[u8]) -> usize {
     // Process each character in the text
     for &text_char in text {
         // Get the equivalence mask for this text character
-        let eq = masks.peq[text_char as usize];
+        let eq = masks.peq[byte_mask_index(text_char)];
 
         // Myers' recurrence relations (Algorithm 1 from the paper)
-        // D0 represents positions where the diagonal could be 0 (match or favorable)
+        // D0 represents positions where the diagonal could be 0 (match or favorable).
+        // `wrapping_add` is intentional and load-bearing: the bit-parallel recurrence
+        // relies on modular (two's-complement) carry propagation across the word, so
+        // overflow at the most-significant bit must wrap rather than panic or saturate.
+        // This is the crate's only intentional wrapping arithmetic (Phase 1 residual-cast
+        // audit): every other integer operation is checked, saturating, or provably bounded.
         let d0 = ((eq & vp).wrapping_add(vp)) ^ vp | eq | vn;
 
         // HP (Positive Horizontal): positions with +1 horizontal delta
@@ -226,12 +383,7 @@ fn myers_core(pattern: &[u8], text: &[u8]) -> usize {
 /// assert_eq!(myers_distance_bounded("abc", "xyz", 2), None);
 /// ```
 pub fn myers_distance_bounded(source: &str, target: &str, max_distance: usize) -> Option<usize> {
-    let dist = myers_distance(source, target);
-    if dist <= max_distance {
-        Some(dist)
-    } else {
-        None
-    }
+    myers_distance_bytes_bounded(source.as_bytes(), target.as_bytes(), max_distance)
 }
 
 /// Compute edit distance with adjacent transposition support.
@@ -455,6 +607,24 @@ mod tests {
     }
 
     #[test]
+    fn test_myers_bounded_long_strings_use_thresholded_byte_dp() {
+        let source = format!("{}{}", "x".repeat(80), "shared".repeat(20));
+        let target = format!("{}{}", "y".repeat(80), "shared".repeat(20));
+
+        assert_eq!(myers_distance_bounded(&source, &target, 79), None);
+        assert_eq!(myers_distance_bounded(&source, &target, 80), Some(80));
+    }
+
+    #[test]
+    fn test_myers_bounded_rejects_by_length_delta() {
+        let source = "a".repeat(128);
+        let target = "a".repeat(64);
+
+        assert_eq!(myers_distance_bounded(&source, &target, 63), None);
+        assert_eq!(myers_distance_bounded(&source, &target, 64), Some(64));
+    }
+
+    #[test]
     fn test_myers_long_strings() {
         // Test with strings near the 64-char boundary
         let s32 = "a".repeat(32);
@@ -529,13 +699,24 @@ mod tests {
         let masks = PatternMasks::new(pattern);
 
         // 'a' appears at positions 0 and 3
-        assert_eq!(masks.peq[b'a' as usize], 0b1001);
+        assert_eq!(masks.peq[byte_mask_index(b'a')], 0b1001);
         // 'b' appears at position 1
-        assert_eq!(masks.peq[b'b' as usize], 0b0010);
+        assert_eq!(masks.peq[byte_mask_index(b'b')], 0b0010);
         // 'c' appears at position 2
-        assert_eq!(masks.peq[b'c' as usize], 0b0100);
+        assert_eq!(masks.peq[byte_mask_index(b'c')], 0b0100);
         // 'd' doesn't appear
-        assert_eq!(masks.peq[b'd' as usize], 0);
+        assert_eq!(masks.peq[byte_mask_index(b'd')], 0);
+    }
+
+    #[test]
+    fn test_pattern_masks_cover_byte_index_boundaries() {
+        let pattern = [0x00, 0xff, 0x00, 0xff];
+        let masks = PatternMasks::new(&pattern);
+
+        assert_eq!(byte_mask_index(0x00), 0);
+        assert_eq!(byte_mask_index(0xff), 255);
+        assert_eq!(masks.peq[byte_mask_index(0x00)], 0b0101);
+        assert_eq!(masks.peq[byte_mask_index(0xff)], 0b1010);
     }
 
     #[test]
@@ -556,5 +737,71 @@ mod tests {
         // Verify correctness by comparing with explicit DP call
         let dp_dist = crate::distance::standard_distance_impl(&s, &t);
         assert_eq!(dist, dp_dist);
+    }
+
+    #[test]
+    fn test_myers_long_invalid_utf8_bytes_use_byte_distance() {
+        let mut source = vec![0xff; 65];
+        let mut target = vec![0xff; 65];
+        target[32] = 0xfe;
+
+        assert_eq!(myers_distance_bytes(&source, &target), 1);
+
+        source.push(0x00);
+        assert_eq!(myers_distance_bytes(&source, &target), 2);
+    }
+
+    #[test]
+    fn test_myers_bounded_long_invalid_utf8_bytes_use_byte_distance() {
+        let mut source = vec![0xff; 65];
+        let mut target = vec![0xff; 65];
+        target[32] = 0xfe;
+
+        assert_eq!(myers_distance_bytes_bounded(&source, &target, 0), None);
+        assert_eq!(myers_distance_bytes_bounded(&source, &target, 1), Some(1));
+
+        source.push(0x00);
+        assert_eq!(myers_distance_bytes_bounded(&source, &target, 1), None);
+        assert_eq!(myers_distance_bytes_bounded(&source, &target, 2), Some(2));
+    }
+
+    #[test]
+    fn test_myers_bounded_long_byte_path_matches_unbounded() {
+        let insertion_source = vec![b'a'; 96];
+        let mut insertion_target = insertion_source.clone();
+        insertion_target.splice(48..48, [b'b', b'c', b'd']);
+
+        let cases = vec![
+            (vec![b'a'; 80], vec![b'a'; 80]),
+            (
+                {
+                    let mut v = vec![b'a'; 80];
+                    v[40] = b'b';
+                    v
+                },
+                vec![b'a'; 80],
+            ),
+            (vec![b'x'; 96], vec![b'y'; 88]),
+            (insertion_source, insertion_target),
+            (
+                [vec![0xff; 70], vec![0x00, 0x01, 0x02]].concat(),
+                [vec![0xff; 70], vec![0x00, 0x02]].concat(),
+            ),
+        ];
+
+        for (source, target) in cases {
+            let distance = myers_distance_bytes(&source, &target);
+            for max_distance in 0..=distance + 2 {
+                let expected = (distance <= max_distance).then_some(distance);
+                assert_eq!(
+                    myers_distance_bytes_bounded(&source, &target, max_distance),
+                    expected,
+                    "bounded mismatch for lengths {} and {} at threshold {}",
+                    source.len(),
+                    target.len(),
+                    max_distance
+                );
+            }
+        }
     }
 }

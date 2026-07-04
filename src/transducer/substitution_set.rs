@@ -41,6 +41,11 @@
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
+#[inline]
+fn substitution_upgrade_capacity(existing_len: usize) -> Option<usize> {
+    existing_len.checked_add(1)
+}
+
 /// Internal representation of SubstitutionSet storage.
 ///
 /// Uses a hybrid approach (H3 optimization):
@@ -252,8 +257,10 @@ impl SubstitutionSet {
             }
             SubstitutionSetImpl::Small(vec) => {
                 // Exceeded threshold - upgrade to hash set
-                let mut set =
-                    FxHashSet::with_capacity_and_hasher(vec.len() + 1, Default::default());
+                let mut set = FxHashSet::with_capacity_and_hasher(
+                    substitution_upgrade_capacity(vec.len()).unwrap_or(0),
+                    Default::default(),
+                );
                 for &pair in vec.iter() {
                     set.insert(pair);
                 }
@@ -838,7 +845,10 @@ impl SubstitutionSet {
             MultiCharSubstitutionImpl::Small(vec) => {
                 // Exceeded threshold - upgrade to hash map
                 let mut map: FxHashMap<Box<str>, FxHashSet<Box<str>>> =
-                    FxHashMap::with_capacity_and_hasher(vec.len() + 1, Default::default());
+                    FxHashMap::with_capacity_and_hasher(
+                        substitution_upgrade_capacity(vec.len()).unwrap_or(0),
+                        Default::default(),
+                    );
 
                 for (src, tgt) in vec.drain(..) {
                     map.entry(src)
@@ -1051,7 +1061,7 @@ impl SubstitutionSet {
                     .filter(|(s, _)| s.as_ref() == src_str)
                     .any(|(_, target)| {
                         // target is a Box<str>, check its first char
-                        target.chars().next() == Some(first_char)
+                        target.starts_with(first_char)
                     })
             }
             MultiCharSubstitutionImpl::Large(map) => {
@@ -1061,7 +1071,7 @@ impl SubstitutionSet {
                         // target_set is FxHashSet<Box<str>>
                         target_set
                             .iter()
-                            .any(|target| target.chars().next() == Some(first_char))
+                            .any(|target| target.starts_with(first_char))
                     })
                     .unwrap_or(false)
             }
@@ -1124,6 +1134,12 @@ mod tests {
     #[test]
     fn test_storage_layout_size_budget() {
         assert!(std::mem::size_of::<SubstitutionSet>() <= 128);
+    }
+
+    #[test]
+    fn test_substitution_upgrade_capacity_rejects_overflow() {
+        assert_eq!(substitution_upgrade_capacity(0), Some(1));
+        assert_eq!(substitution_upgrade_capacity(usize::MAX), None);
     }
 
     #[test]

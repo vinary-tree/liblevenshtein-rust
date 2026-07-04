@@ -232,11 +232,18 @@ impl OperationCostsF64 {
         }
     }
 
-    /// Validate that all costs satisfy the metric constraints.
+    /// Validate that all costs satisfy the metric constraints required for
+    /// monotone-cost pruning.
     ///
     /// Returns `true` if:
-    /// - Match cost is 0.0
-    /// - All other costs are non-negative
+    /// - Match cost is exactly `0.0`
+    /// - Every other cost is **finite** (no `NaN`/`±∞`) and **non-negative**
+    ///
+    /// A `NaN` or infinite operation cost would break the admissibility of the
+    /// distance lower bounds used for pruning (a negative or non-finite edge
+    /// weight can make a "closer" path look farther, or vice versa), so both are
+    /// rejected here. This is the invariant `debug_assert!`-ed at automaton
+    /// construction entry points that accept caller-supplied costs.
     ///
     /// # Example
     ///
@@ -247,13 +254,14 @@ impl OperationCostsF64 {
     /// assert!(costs.is_valid());
     /// ```
     pub fn is_valid(&self) -> bool {
+        let non_negative_finite = |cost: f64| cost.is_finite() && cost >= 0.0;
         self.match_cost == 0.0
-            && self.substitution >= 0.0
-            && self.insertion >= 0.0
-            && self.deletion >= 0.0
-            && self.transposition >= 0.0
-            && self.split >= 0.0
-            && self.merge >= 0.0
+            && non_negative_finite(self.substitution)
+            && non_negative_finite(self.insertion)
+            && non_negative_finite(self.deletion)
+            && non_negative_finite(self.transposition)
+            && non_negative_finite(self.split)
+            && non_negative_finite(self.merge)
     }
 
     /// Get the minimum non-zero cost among all operations.
@@ -283,10 +291,7 @@ impl OperationCostsF64 {
             .iter()
             .copied()
             .filter(|&c| c > 0.0)
-            .min_by(|a, b| {
-                a.partial_cmp(b)
-                    .expect("OperationCostsF64: costs are finite (filtered > 0.0)")
-            })
+            .min_by(|a, b| a.total_cmp(b))
             .unwrap_or(1.0)
     }
 
@@ -383,6 +388,50 @@ mod tests {
     fn test_min_nonzero_cost() {
         let costs = OperationCostsF64::custom(1.5, 1.0, 0.8, 0.3, 2.0, 2.0);
         assert!((costs.min_nonzero_cost() - 0.3).abs() < EPSILON);
+    }
+
+    #[test]
+    fn test_min_nonzero_cost_ignores_nan_public_fields() {
+        let costs = OperationCostsF64 {
+            match_cost: 0.0,
+            substitution: f64::NAN,
+            insertion: 0.25,
+            deletion: 0.5,
+            transposition: 1.0,
+            split: 2.0,
+            merge: 3.0,
+        };
+
+        assert_eq!(costs.min_nonzero_cost(), 0.25);
+    }
+
+    #[test]
+    fn test_is_valid_rejects_non_finite_costs() {
+        // Baseline: a finite, non-negative, zero-match config is valid.
+        let costs = OperationCostsF64::standard();
+        assert!(costs.is_valid());
+
+        // +∞ passes a naive `>= 0.0` check but must be rejected — it would break
+        // monotone-cost pruning. This is the injection guarded at construction
+        // via `debug_assert!(costs.is_valid())` (finding F7).
+        let mut inf_costs = OperationCostsF64::standard();
+        inf_costs.substitution = f64::INFINITY;
+        assert!(!inf_costs.is_valid());
+
+        // NaN in any operation cost is likewise invalid.
+        let mut nan_costs = OperationCostsF64::standard();
+        nan_costs.merge = f64::NAN;
+        assert!(!nan_costs.is_valid());
+
+        // A non-zero match cost is invalid regardless of the other fields.
+        let mut bad_match = OperationCostsF64::standard();
+        bad_match.match_cost = 0.5;
+        assert!(!bad_match.is_valid());
+
+        // Negative costs remain invalid.
+        let mut negative = OperationCostsF64::standard();
+        negative.deletion = -1.0;
+        assert!(!negative.is_valid());
     }
 
     #[test]

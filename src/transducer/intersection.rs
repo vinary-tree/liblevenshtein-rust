@@ -28,7 +28,7 @@ pub struct PathNode<U: CharUnit> {
     /// Edge label from parent
     label: U,
     /// Cached depth from root (enables O(1) depth queries and Vec preallocation)
-    depth: u16,
+    depth: usize,
     /// Parent in the path
     parent: Option<Box<PathNode<U>>>,
 }
@@ -37,10 +37,9 @@ impl<U: CharUnit> PathNode<U> {
     /// Create a new path node
     #[inline(always)]
     pub fn new(label: U, parent: Option<Box<PathNode<U>>>) -> Self {
-        let depth = match &parent {
-            Some(p) => p.depth + 1,
-            None => 1,
-        };
+        let depth = parent
+            .as_ref()
+            .map_or(1, |parent| parent.depth.saturating_add(1));
         Self {
             label,
             depth,
@@ -64,7 +63,7 @@ impl<U: CharUnit> PathNode<U> {
     /// Get the depth (number of labels in the path)
     #[inline(always)]
     pub fn depth(&self) -> usize {
-        self.depth as usize
+        self.depth
     }
 }
 
@@ -125,7 +124,7 @@ impl<N: DictionaryNode> Intersection<N> {
 
     /// Reconstruct the term (path) from root to this intersection
     pub fn term(&self) -> String {
-        let mut units = Vec::new();
+        let mut units = Vec::with_capacity(self.depth());
 
         // Collect current label
         if let Some(label) = self.label {
@@ -240,5 +239,31 @@ mod tests {
 
         assert_eq!(i4.term(), "tes");
         assert_eq!(i4.depth(), 3);
+    }
+
+    #[test]
+    fn test_path_node_depth_exceeds_u16_boundary() {
+        let parent = Box::new(PathNode {
+            label: b'a',
+            depth: usize::from(u16::MAX),
+            parent: None,
+        });
+
+        let node = PathNode::new(b'b', Some(parent));
+
+        assert_eq!(node.depth(), usize::from(u16::MAX) + 1);
+    }
+
+    #[test]
+    fn test_path_node_depth_saturates_at_usize_max() {
+        let parent = Box::new(PathNode {
+            label: b'a',
+            depth: usize::MAX,
+            parent: None,
+        });
+
+        let node = PathNode::new(b'b', Some(parent));
+
+        assert_eq!(node.depth(), usize::MAX);
     }
 }

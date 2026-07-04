@@ -21,8 +21,8 @@
 //! use liblevenshtein::transducer::{StateF64, PositionF64, Algorithm};
 //!
 //! let mut state = StateF64::new();
-//! state.insert(PositionF64::new(0, 0.0), Algorithm::Standard, 5);
-//! state.insert(PositionF64::new(1, 1.0), Algorithm::Standard, 5);
+//! state.insert(PositionF64::new(0, 0.0), Algorithm::Standard, 5, 1.0);
+//! state.insert(PositionF64::new(1, 1.0), Algorithm::Standard, 5, 1.0);
 //!
 //! assert!(!state.is_empty());
 //! assert!(state.min_distance().expect("test fixture: min_distance on non-empty state") < 0.0001); // ~0.0
@@ -31,7 +31,6 @@
 use super::algorithm::Algorithm;
 use super::position_f64::PositionF64;
 use smallvec::SmallVec;
-use std::collections::BTreeSet;
 
 /// Epsilon for float comparisons in state operations.
 const EPSILON: f64 = 1e-9;
@@ -150,25 +149,31 @@ impl StateF64 {
     /// use liblevenshtein::transducer::{StateF64, PositionF64, Algorithm};
     ///
     /// let mut state = StateF64::new();
-    /// state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, 10);
+    /// state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, 10, 1.0);
     ///
     /// // This position is subsumed by (5, 2.0) because
     /// // |5-5| = 0 <= (3.0-2.0) = 1.0
-    /// state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, 10);
+    /// state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, 10, 1.0);
     ///
     /// assert_eq!(state.len(), 1); // Only (5, 2.0) remains
     /// ```
-    pub fn insert(&mut self, position: PositionF64, algorithm: Algorithm, query_length: usize) {
+    pub fn insert(
+        &mut self,
+        position: PositionF64,
+        algorithm: Algorithm,
+        query_length: usize,
+        max_index_op_cost: f64,
+    ) {
         // Check if this position is subsumed by an existing one
         for existing in &self.positions {
-            if existing.subsumes(&position, algorithm, query_length) {
+            if existing.subsumes(&position, algorithm, query_length, max_index_op_cost) {
                 return; // Already covered by existing position
             }
         }
 
         // Remove any positions that this new position subsumes
         self.positions
-            .retain(|p| !position.subsumes(p, algorithm, query_length));
+            .retain(|p| !position.subsumes(p, algorithm, query_length, max_index_op_cost));
 
         // Insert in sorted position
         let insert_pos = self
@@ -192,12 +197,18 @@ impl StateF64 {
     /// // Use a position that won't be subsumed
     /// let state2 = StateF64::single(PositionF64::new(3, 0.5));
     ///
-    /// state1.merge(&state2, Algorithm::Standard, 10);
+    /// state1.merge(&state2, Algorithm::Standard, 10, 1.0);
     /// assert_eq!(state1.len(), 2);
     /// ```
-    pub fn merge(&mut self, other: &StateF64, algorithm: Algorithm, query_length: usize) {
+    pub fn merge(
+        &mut self,
+        other: &StateF64,
+        algorithm: Algorithm,
+        query_length: usize,
+        max_index_op_cost: f64,
+    ) {
         for position in &other.positions {
-            self.insert(*position, algorithm, query_length);
+            self.insert(*position, algorithm, query_length, max_index_op_cost);
         }
     }
 
@@ -262,8 +273,8 @@ impl StateF64 {
     /// use liblevenshtein::transducer::{StateF64, PositionF64, Algorithm};
     ///
     /// let mut state = StateF64::new();
-    /// state.insert(PositionF64::new(3, 2.5), Algorithm::Standard, 10);
-    /// state.insert(PositionF64::new(4, 1.5), Algorithm::Standard, 10);
+    /// state.insert(PositionF64::new(3, 2.5), Algorithm::Standard, 10, 1.0);
+    /// state.insert(PositionF64::new(4, 1.5), Algorithm::Standard, 10, 1.0);
     ///
     /// let min = state.min_distance().expect("test fixture: min_distance on non-empty state");
     /// assert!((min - 1.5).abs() < 1e-9);
@@ -292,7 +303,12 @@ impl StateF64 {
     /// # Formula
     ///
     /// For each non-special position:
-    /// `distance = accumulated_cost + (query_length - term_index)`
+    /// `distance = accumulated_cost + (query_length - term_index) * deletion_cost`
+    ///
+    /// The `query_length - term_index` characters left in the query term once a
+    /// dictionary term ends must each be deleted to reach acceptance, so they are
+    /// charged at the configured `deletion_cost` rather than a hard-coded `1.0`.
+    /// Passing `deletion_cost = 1.0` recovers the classic unit-cost edit distance.
     ///
     /// Returns the minimum such distance.
     ///
@@ -302,33 +318,29 @@ impl StateF64 {
     /// use liblevenshtein::transducer::{StateF64, PositionF64, Algorithm};
     ///
     /// let mut state = StateF64::new();
-    /// state.insert(PositionF64::new(3, 1.0), Algorithm::Standard, 7);
+    /// state.insert(PositionF64::new(3, 1.0), Algorithm::Standard, 7, 1.0);
     ///
-    /// // Position at index 3 with cost 1.0, query length 7
-    /// // Distance = 1.0 + (7 - 3) = 5.0
-    /// let dist = state.infer_distance(7);
+    /// // Position at index 3 with cost 1.0, query length 7, unit deletion cost:
+    /// // Distance = 1.0 + (7 - 3) * 1.0 = 5.0
+    /// let dist = state.infer_distance(7, 1.0);
     /// assert!((dist.expect("doc example: distance available") - 5.0).abs() < 1e-9);
     /// ```
     #[inline]
-    pub fn infer_distance(&self, query_length: usize) -> Option<f64> {
-        // Fast path: single position
-        if self.positions.len() == 1 {
-            let p = &self.positions[0];
-            // Skip special positions
-            if p.is_special {
-                return None;
-            }
-            let remaining = query_length.saturating_sub(p.term_index) as f64;
-            return Some(p.accumulated_cost + remaining);
-        }
-
-        // General case: find minimum across all NON-SPECIAL positions
+    pub fn infer_distance(&self, query_length: usize, deletion_cost: f64) -> Option<f64> {
+        // A valid accepting position has consumed at most `query_length` query
+        // characters. Positions with `term_index > query_length` are transition
+        // artifacts — a match/substitution generated one past the query end when the
+        // look-ahead window is padded beyond the query term — and must NOT be treated
+        // as acceptances: doing so previously let their spurious (often cheaper)
+        // substitution cost be reported instead of the true trailing-insertion
+        // distance. Remaining query characters are then deletions, each charged at
+        // `deletion_cost` (unit cost recovers the classic edit distance).
         self.positions
             .iter()
-            .filter(|p| !p.is_special)
+            .filter(|p| !p.is_special && p.term_index <= query_length)
             .map(|p| {
-                let remaining = query_length.saturating_sub(p.term_index) as f64;
-                p.accumulated_cost + remaining
+                let remaining = (query_length - p.term_index) as f64;
+                p.accumulated_cost + remaining * deletion_cost
             })
             .fold(None, |acc, dist| match acc {
                 None => Some(dist),
@@ -348,8 +360,8 @@ impl StateF64 {
     /// use liblevenshtein::transducer::{StateF64, PositionF64, Algorithm};
     ///
     /// let mut state = StateF64::new();
-    /// state.insert(PositionF64::new(5, 1.5), Algorithm::Standard, 5);
-    /// state.insert(PositionF64::new(3, 0.5), Algorithm::Standard, 5);
+    /// state.insert(PositionF64::new(5, 1.5), Algorithm::Standard, 5, 1.0);
+    /// state.insert(PositionF64::new(3, 0.5), Algorithm::Standard, 5, 1.0);
     ///
     /// // Only position at index 5 (>= query_length 5) qualifies
     /// let dist = state.infer_prefix_distance(5);
@@ -388,8 +400,8 @@ impl StateF64 {
     /// use liblevenshtein::transducer::{StateF64, PositionF64, Algorithm};
     ///
     /// let mut state = StateF64::new();
-    /// state.insert(PositionF64::new(0, 2.5), Algorithm::Standard, 5);
-    /// state.insert(PositionF64::new(1, 3.0), Algorithm::Standard, 5);
+    /// state.insert(PositionF64::new(0, 2.5), Algorithm::Standard, 5, 1.0);
+    /// state.insert(PositionF64::new(1, 3.0), Algorithm::Standard, 5, 1.0);
     ///
     /// assert!(state.all_exceed_threshold(2.4));
     /// assert!(!state.all_exceed_threshold(2.5));
@@ -410,8 +422,7 @@ impl Default for StateF64 {
 
 impl FromIterator<PositionF64> for StateF64 {
     fn from_iter<T: IntoIterator<Item = PositionF64>>(iter: T) -> Self {
-        let positions: BTreeSet<PositionF64> = iter.into_iter().collect();
-        Self::from_positions(positions.into_iter().collect())
+        Self::from_positions(iter.into_iter().collect())
     }
 }
 
@@ -453,13 +464,30 @@ mod tests {
     }
 
     #[test]
+    fn test_state_from_iter_sorts_and_deduplicates() {
+        let state: StateF64 = vec![
+            PositionF64::new(3, 2.0),
+            PositionF64::new(1, 0.5),
+            PositionF64::new(3, 2.0),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(state.len(), 2);
+        assert_eq!(state.positions()[0].term_index, 1);
+        assert!(approx_eq(state.positions()[0].accumulated_cost, 0.5));
+        assert_eq!(state.positions()[1].term_index, 3);
+        assert!(approx_eq(state.positions()[1].accumulated_cost, 2.0));
+    }
+
+    #[test]
     fn test_insert_maintains_order() {
         let mut state = StateF64::new();
         let query_length = 10;
 
-        state.insert(PositionF64::new(3, 2.0), Algorithm::Standard, query_length);
-        state.insert(PositionF64::new(1, 1.0), Algorithm::Standard, query_length);
-        state.insert(PositionF64::new(2, 1.5), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(3, 2.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(PositionF64::new(1, 1.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(PositionF64::new(2, 1.5), Algorithm::Standard, query_length, 1.0);
 
         let positions: Vec<_> = state.positions().to_vec();
         assert_eq!(positions[0].term_index, 1);
@@ -473,12 +501,12 @@ mod tests {
         let query_length = 10;
 
         // Insert (5, 3.0) first
-        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length, 1.0);
         assert_eq!(state.len(), 1);
 
         // Insert (5, 2.0) which subsumes (5, 3.0)
         // |5-5| = 0 <= (3.0-2.0) = 1.0 ✓
-        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length, 1.0);
         assert_eq!(state.len(), 1);
 
         // Verify (5, 2.0) is in the state
@@ -493,10 +521,10 @@ mod tests {
         let query_length = 10;
 
         // Insert (5, 2.0) first
-        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length, 1.0);
 
         // Try to insert (5, 3.0) which is subsumed by (5, 2.0)
-        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length, 1.0);
 
         assert_eq!(state.len(), 1);
         assert!(approx_eq(
@@ -513,9 +541,9 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 10;
 
-        state.insert(PositionF64::new(3, 2.5), Algorithm::Standard, query_length);
-        state.insert(PositionF64::new(4, 1.5), Algorithm::Standard, query_length);
-        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(3, 2.5), Algorithm::Standard, query_length, 1.0);
+        state.insert(PositionF64::new(4, 1.5), Algorithm::Standard, query_length, 1.0);
+        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length, 1.0);
 
         assert!(approx_eq(
             state
@@ -530,13 +558,13 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 7;
 
-        state.insert(PositionF64::new(3, 1.0), Algorithm::Standard, query_length);
-        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(3, 1.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length, 1.0);
 
-        // Position (3, 1.0): 1.0 + (7-3) = 5.0
-        // Position (5, 2.0): 2.0 + (7-5) = 4.0
+        // Position (3, 1.0): 1.0 + (7-3) * 1.0 = 5.0
+        // Position (5, 2.0): 2.0 + (7-5) * 1.0 = 4.0
         let dist = state
-            .infer_distance(query_length)
+            .infer_distance(query_length, 1.0)
             .expect("test fixture: infer_distance on non-empty state");
         assert!(approx_eq(dist, 4.0));
     }
@@ -546,8 +574,8 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 5;
 
-        state.insert(PositionF64::new(5, 1.5), Algorithm::Standard, query_length);
-        state.insert(PositionF64::new(3, 0.5), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(5, 1.5), Algorithm::Standard, query_length, 1.0);
+        state.insert(PositionF64::new(3, 0.5), Algorithm::Standard, query_length, 1.0);
 
         // Only (5, 1.5) qualifies (term_index >= query_length)
         let dist = state
@@ -561,8 +589,8 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 10;
 
-        state.insert(PositionF64::new(0, 2.5), Algorithm::Standard, query_length);
-        state.insert(PositionF64::new(1, 3.0), Algorithm::Standard, query_length);
+        state.insert(PositionF64::new(0, 2.5), Algorithm::Standard, query_length, 1.0);
+        state.insert(PositionF64::new(1, 3.0), Algorithm::Standard, query_length, 1.0);
 
         assert!(state.all_exceed_threshold(2.4));
         assert!(!state.all_exceed_threshold(2.5));
@@ -576,7 +604,7 @@ mod tests {
         // But (0,0) does NOT subsume (3, 0.5) because |0-3|=3 > 0.5-0.0=0.5
         let state2 = StateF64::single(PositionF64::new(3, 0.5));
 
-        state1.merge(&state2, Algorithm::Standard, 10);
+        state1.merge(&state2, Algorithm::Standard, 10, 1.0);
         assert_eq!(state1.len(), 2);
     }
 

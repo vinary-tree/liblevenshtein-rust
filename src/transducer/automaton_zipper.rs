@@ -5,7 +5,7 @@
 //! the automaton zipper tracks the current state of the Levenshtein automaton
 //! as it processes input characters.
 
-use crate::transducer::transition::transition_state_pooled;
+use crate::transducer::transition::{transition_state_pooled_ref, TransitionSettings};
 use crate::transducer::{Algorithm, Position, State, StatePool, Unrestricted};
 use std::sync::Arc;
 
@@ -179,15 +179,17 @@ impl AutomatonZipper {
     /// ```
     #[inline]
     pub fn transition(&self, dict_char: u8, pool: &mut StatePool) -> Option<Self> {
-        transition_state_pooled(
+        transition_state_pooled_ref(
             &self.state,
             pool,
-            Unrestricted, // Default policy: allow all substitutions
+            &Unrestricted, // Default policy: allow all substitutions
             dict_char,
             &self.query,
-            self.max_distance,
-            self.algorithm,
-            false, // substring_mode
+            TransitionSettings::new(
+                self.max_distance,
+                self.algorithm,
+                false, // substring_mode
+            ),
         )
         .map(|next_state| {
             AutomatonZipper::with_state(
@@ -234,19 +236,12 @@ impl AutomatonZipper {
     pub fn min_distance_accepting(&self) -> Option<usize> {
         let query_len = self.query.len();
 
-        // Find positions that have consumed all query characters
-        let accepting_positions: Vec<_> = self
-            .state
+        self.state
             .positions()
             .iter()
             .filter(|p| p.term_index == query_len && !p.is_special)
-            .collect();
-
-        if accepting_positions.is_empty() {
-            None
-        } else {
-            accepting_positions.iter().map(|p| p.num_errors).min()
-        }
+            .map(|p| p.num_errors)
+            .min()
     }
 
     /// Get the minimum error count from any position (for substring mode).
@@ -413,6 +408,20 @@ mod tests {
     fn test_root_not_accepting() {
         let zipper = AutomatonZipper::new(b"test", 1, Algorithm::Standard);
         assert_eq!(zipper.min_distance_accepting(), None);
+    }
+
+    #[test]
+    fn test_min_distance_accepting_ignores_non_accepting_and_special_positions() {
+        let state = State::from_positions(vec![
+            Position::new(1, 0),
+            Position::new(3, 2),
+            Position::new_special(3, 0),
+            Position::new(3, 1),
+        ]);
+        let zipper =
+            AutomatonZipper::with_state(state, Arc::new(b"abc".to_vec()), 2, Algorithm::Standard);
+
+        assert_eq!(zipper.min_distance_accepting(), Some(1));
     }
 
     #[test]

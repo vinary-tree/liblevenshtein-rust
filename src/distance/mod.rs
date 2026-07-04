@@ -13,7 +13,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 #[cfg(not(feature = "eviction-dashmap"))]
-use std::sync::RwLock;
+use crate::sync_compat::RwLock;
 
 #[cfg(feature = "eviction-dashmap")]
 use dashmap::DashMap;
@@ -73,31 +73,111 @@ impl Hash for SymmetricPair {
     }
 }
 
-/// Helper function to extract substring from position t+1 onwards (by characters, not bytes).
-/// Mirrors the C++ `f(u, t)` helper function.
-///
-/// # Arguments
-/// * `s` - The string to extract from
-/// * `char_offset` - Number of characters to skip from the beginning
 #[inline(always)]
-fn substring_from(s: &str, char_offset: usize) -> &str {
-    // Find the byte index of the character at char_offset
+fn split_first_char(s: &str) -> Option<(char, &str)> {
     let mut char_indices = s.char_indices();
+    let (_, first) = char_indices.next()?;
+    let tail = char_indices
+        .next()
+        .map_or("", |(byte_idx, _)| &s[byte_idx..]);
+    Some((first, tail))
+}
 
-    // Iterate to find the byte position after skipping char_offset characters
-    for _ in 0..char_offset {
-        if char_indices.next().is_none() {
-            // Not enough characters, return empty string
-            return "";
-        }
+#[inline(always)]
+fn tail_after_chars(s: &str, count: usize) -> Option<&str> {
+    if count == 0 {
+        return Some(s);
     }
 
-    // The next char_indices.next() would give us the character at char_offset
-    // But we want everything from char_offset onwards
-    match char_indices.next() {
-        Some((byte_idx, _)) => &s[byte_idx..],
-        None => "", // Reached end of string
+    let mut char_indices = s.char_indices();
+    for _ in 0..count {
+        char_indices.next()?;
     }
+    Some(
+        char_indices
+            .next()
+            .map_or("", |(byte_idx, _)| &s[byte_idx..]),
+    )
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CommonAffixSlices<'a> {
+    prefix_len: usize,
+    source_len: usize,
+    target_len: usize,
+    source_core: &'a str,
+    target_core: &'a str,
+}
+
+#[inline(always)]
+fn strip_common_affix_slices<'a>(a: &'a str, b: &'a str) -> CommonAffixSlices<'a> {
+    let a_chars: SmallVec<[(usize, char); 32]> = a.char_indices().collect();
+    let b_chars: SmallVec<[(usize, char); 32]> = b.char_indices().collect();
+
+    let len_a = a_chars.len();
+    let len_b = b_chars.len();
+
+    if len_a == 0 || len_b == 0 {
+        return CommonAffixSlices {
+            prefix_len: 0,
+            source_len: len_a,
+            target_len: len_b,
+            source_core: a,
+            target_core: b,
+        };
+    }
+
+    let mut prefix_len = 0;
+    let min_len = len_a.min(len_b);
+    while prefix_len < min_len && a_chars[prefix_len].1 == b_chars[prefix_len].1 {
+        prefix_len += 1;
+    }
+
+    if prefix_len == min_len {
+        return CommonAffixSlices {
+            prefix_len,
+            source_len: len_a - prefix_len,
+            target_len: len_b - prefix_len,
+            source_core: slice_char_range(a, &a_chars, prefix_len, len_a),
+            target_core: slice_char_range(b, &b_chars, prefix_len, len_b),
+        };
+    }
+
+    let mut suffix_len = 0;
+    while suffix_len < (min_len - prefix_len)
+        && a_chars[len_a - 1 - suffix_len].1 == b_chars[len_b - 1 - suffix_len].1
+    {
+        suffix_len += 1;
+    }
+
+    let source_end = len_a - suffix_len;
+    let target_end = len_b - suffix_len;
+
+    CommonAffixSlices {
+        prefix_len,
+        source_len: source_end - prefix_len,
+        target_len: target_end - prefix_len,
+        source_core: slice_char_range(a, &a_chars, prefix_len, source_end),
+        target_core: slice_char_range(b, &b_chars, prefix_len, target_end),
+    }
+}
+
+#[inline(always)]
+fn slice_char_range<'a>(
+    source: &'a str,
+    char_indices: &[(usize, char)],
+    start: usize,
+    end: usize,
+) -> &'a str {
+    let start_byte = char_indices
+        .get(start)
+        .map(|(byte_idx, _)| *byte_idx)
+        .unwrap_or(source.len());
+    let end_byte = char_indices
+        .get(end)
+        .map(|(byte_idx, _)| *byte_idx)
+        .unwrap_or(source.len());
+    &source[start_byte..end_byte]
 }
 
 /// Strip common prefix and suffix from two strings.
@@ -111,41 +191,8 @@ fn substring_from(s: &str, char_offset: usize) -> &str {
 /// strings with substantial overlap.
 #[inline(always)]
 pub fn strip_common_affixes(a: &str, b: &str) -> (usize, usize, usize) {
-    let a_chars: SmallVec<[char; 32]> = a.chars().collect();
-    let b_chars: SmallVec<[char; 32]> = b.chars().collect();
-
-    let len_a = a_chars.len();
-    let len_b = b_chars.len();
-
-    if len_a == 0 || len_b == 0 {
-        return (0, len_a, len_b);
-    }
-
-    // Find common prefix
-    let mut prefix_len = 0;
-    let min_len = len_a.min(len_b);
-    while prefix_len < min_len && a_chars[prefix_len] == b_chars[prefix_len] {
-        prefix_len += 1;
-    }
-
-    if prefix_len == min_len {
-        // One string is a prefix of the other
-        return (prefix_len, len_a - prefix_len, len_b - prefix_len);
-    }
-
-    // Find common suffix (but don't overlap with prefix)
-    let mut suffix_len = 0;
-    while suffix_len < (min_len - prefix_len)
-        && a_chars[len_a - 1 - suffix_len] == b_chars[len_b - 1 - suffix_len]
-    {
-        suffix_len += 1;
-    }
-
-    (
-        prefix_len,
-        len_a - prefix_len - suffix_len,
-        len_b - prefix_len - suffix_len,
-    )
+    let slices = strip_common_affix_slices(a, b);
+    (slices.prefix_len, slices.source_len, slices.target_len)
 }
 
 /// Thread-safe memoization cache for distance functions.
@@ -179,11 +226,7 @@ impl MemoCache {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            self.cache
-                .read()
-                .expect("poisoned RwLock; only fatal if writer panicked")
-                .get(key)
-                .copied()
+            self.cache.read().get(key).copied()
         }
     }
 
@@ -195,10 +238,7 @@ impl MemoCache {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            self.cache
-                .write()
-                .expect("poisoned RwLock; only fatal if writer panicked")
-                .insert(key, value);
+            self.cache.write().insert(key, value);
         }
     }
 
@@ -211,10 +251,7 @@ impl MemoCache {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            self.cache
-                .read()
-                .expect("poisoned RwLock; only fatal if writer panicked")
-                .len()
+            self.cache.read().len()
         }
     }
 }
@@ -311,6 +348,102 @@ pub fn standard_distance_impl(source: &str, target: &str) -> usize {
     prev_row[n]
 }
 
+/// Compute standard Levenshtein distance up to a maximum threshold.
+///
+/// Returns `None` as soon as the distance is proven to exceed `max_distance`.
+/// Unlike the byte-oriented Myers bounded helper, this function preserves the
+/// crate's public Unicode character semantics.
+pub fn standard_distance_bounded(source: &str, target: &str, max_distance: usize) -> Option<usize> {
+    if source == target {
+        return Some(0);
+    }
+
+    let affixes = strip_common_affix_slices(source, target);
+    if affixes.source_len.abs_diff(affixes.target_len) > max_distance {
+        return None;
+    }
+    if affixes.source_len == 0 {
+        return (affixes.target_len <= max_distance).then_some(affixes.target_len);
+    }
+    if affixes.target_len == 0 {
+        return (affixes.source_len <= max_distance).then_some(affixes.source_len);
+    }
+    if max_distance == 0 {
+        return None;
+    }
+    if max_distance == usize::MAX {
+        return Some(standard_distance(affixes.source_core, affixes.target_core));
+    }
+
+    let source_chars: SmallVec<[char; 32]> = affixes.source_core.chars().collect();
+    let target_chars: SmallVec<[char; 32]> = affixes.target_core.chars().collect();
+    bounded_levenshtein_chars(&source_chars, &target_chars, max_distance)
+}
+
+fn bounded_levenshtein_chars(
+    source: &[char],
+    target: &[char],
+    max_distance: usize,
+) -> Option<usize> {
+    let (rows, cols) = if source.len() >= target.len() {
+        (source, target)
+    } else {
+        (target, source)
+    };
+
+    let m = rows.len();
+    let n = cols.len();
+    let cap = max_distance + 1;
+    let mut prev_row = vec![cap; n + 1];
+    let mut curr_row = vec![cap; n + 1];
+
+    for (j, cell) in prev_row
+        .iter_mut()
+        .take(n.min(max_distance) + 1)
+        .enumerate()
+    {
+        *cell = j;
+    }
+
+    for i in 1..=m {
+        let start = i.saturating_sub(max_distance).max(1);
+        let end = n.min(i.saturating_add(max_distance));
+
+        if start > end {
+            return None;
+        }
+
+        let clear_start = start.saturating_sub(1);
+        let clear_end = n.min(end.saturating_add(1));
+        for cell in &mut curr_row[clear_start..=clear_end] {
+            *cell = cap;
+        }
+
+        curr_row[0] = if i <= max_distance { i } else { cap };
+
+        let mut row_min = curr_row[0];
+        for j in start..=end {
+            let cost = usize::from(rows[i - 1] != cols[j - 1]);
+            let best = prev_row[j]
+                .saturating_add(1)
+                .min(cap)
+                .min(curr_row[j - 1].saturating_add(1).min(cap))
+                .min(prev_row[j - 1].saturating_add(cost).min(cap));
+
+            curr_row[j] = best;
+            row_min = row_min.min(best);
+        }
+
+        if row_min > max_distance {
+            return None;
+        }
+
+        std::mem::swap(&mut prev_row, &mut curr_row);
+    }
+
+    (prev_row[n] <= max_distance).then_some(prev_row[n])
+}
+
 /// Compute Levenshtein distance with transposition support.
 ///
 /// Extends standard Levenshtein distance to also consider transposition
@@ -382,6 +515,115 @@ pub fn transposition_distance(source: &str, target: &str) -> usize {
     prev_row[n]
 }
 
+/// Compute Damerau-Levenshtein distance up to a maximum threshold.
+///
+/// This uses the same optimal-string-alignment recurrence as
+/// [`transposition_distance`] and returns `None` when the distance is proven to
+/// exceed `max_distance`.
+pub fn transposition_distance_bounded(
+    source: &str,
+    target: &str,
+    max_distance: usize,
+) -> Option<usize> {
+    if source == target {
+        return Some(0);
+    }
+
+    let affixes = strip_common_affix_slices(source, target);
+    if affixes.source_len.abs_diff(affixes.target_len) > max_distance {
+        return None;
+    }
+    if affixes.source_len == 0 {
+        return (affixes.target_len <= max_distance).then_some(affixes.target_len);
+    }
+    if affixes.target_len == 0 {
+        return (affixes.source_len <= max_distance).then_some(affixes.source_len);
+    }
+    if max_distance == 0 {
+        return None;
+    }
+    if max_distance == usize::MAX {
+        return Some(transposition_distance(
+            affixes.source_core,
+            affixes.target_core,
+        ));
+    }
+
+    let source_chars: SmallVec<[char; 32]> = affixes.source_core.chars().collect();
+    let target_chars: SmallVec<[char; 32]> = affixes.target_core.chars().collect();
+    bounded_transposition_chars(&source_chars, &target_chars, max_distance)
+}
+
+fn bounded_transposition_chars(
+    source: &[char],
+    target: &[char],
+    max_distance: usize,
+) -> Option<usize> {
+    let (rows, cols) = if source.len() >= target.len() {
+        (source, target)
+    } else {
+        (target, source)
+    };
+
+    let m = rows.len();
+    let n = cols.len();
+    let cap = max_distance + 1;
+    let mut two_ago = vec![cap; n + 1];
+    let mut prev_row = vec![cap; n + 1];
+    let mut curr_row = vec![cap; n + 1];
+
+    for (j, cell) in prev_row
+        .iter_mut()
+        .take(n.min(max_distance) + 1)
+        .enumerate()
+    {
+        *cell = j;
+    }
+
+    for i in 1..=m {
+        let start = i.saturating_sub(max_distance).max(1);
+        let end = n.min(i.saturating_add(max_distance));
+
+        if start > end {
+            return None;
+        }
+
+        let clear_start = start.saturating_sub(1);
+        let clear_end = n.min(end.saturating_add(1));
+        for cell in &mut curr_row[clear_start..=clear_end] {
+            *cell = cap;
+        }
+
+        curr_row[0] = if i <= max_distance { i } else { cap };
+
+        let mut row_min = curr_row[0];
+        for j in start..=end {
+            let cost = usize::from(rows[i - 1] != cols[j - 1]);
+            let mut best = prev_row[j]
+                .saturating_add(1)
+                .min(cap)
+                .min(curr_row[j - 1].saturating_add(1).min(cap))
+                .min(prev_row[j - 1].saturating_add(cost).min(cap));
+
+            if i > 1 && j > 1 && rows[i - 1] == cols[j - 2] && rows[i - 2] == cols[j - 1] {
+                best = best.min(two_ago[j - 2].saturating_add(1).min(cap));
+            }
+
+            curr_row[j] = best;
+            row_min = row_min.min(best);
+        }
+
+        if row_min > max_distance {
+            return None;
+        }
+
+        std::mem::swap(&mut two_ago, &mut prev_row);
+        std::mem::swap(&mut prev_row, &mut curr_row);
+    }
+
+    (prev_row[n] <= max_distance).then_some(prev_row[n])
+}
+
 // ============================================================================
 // Recursive Memoized Implementations (C++-style)
 // ============================================================================
@@ -420,44 +662,38 @@ pub fn standard_distance_recursive(source: &str, target: &str, cache: &MemoCache
     }
 
     // Strip common prefix and suffix (major optimization)
-    let (prefix_len, adjusted_source_len, adjusted_target_len) =
-        strip_common_affixes(source, target);
+    let affixes = strip_common_affix_slices(source, target);
 
     // If strings are identical after stripping, distance is 0
-    if adjusted_source_len == 0 && adjusted_target_len == 0 {
+    if affixes.source_len == 0 && affixes.target_len == 0 {
         cache.insert(cache_key, 0);
         return 0;
     }
 
     // If one string is fully consumed, distance is remaining chars in other
-    if adjusted_source_len == 0 {
-        let result = adjusted_target_len;
+    if affixes.source_len == 0 {
+        let result = affixes.target_len;
         cache.insert(cache_key, result);
         return result;
     }
-    if adjusted_target_len == 0 {
-        let result = adjusted_source_len;
+    if affixes.target_len == 0 {
+        let result = affixes.source_len;
         cache.insert(cache_key, result);
         return result;
     }
 
-    // Extract the core substrings (after prefix, before suffix)
-    let source_chars: SmallVec<[char; 32]> = source.chars().collect();
-    let target_chars: SmallVec<[char; 32]> = target.chars().collect();
-
-    let s_remaining: String = source_chars[prefix_len..prefix_len + adjusted_source_len]
-        .iter()
-        .collect();
-    let t_remaining: String = target_chars[prefix_len..prefix_len + adjusted_target_len]
-        .iter()
-        .collect();
-
-    let a = source_chars[prefix_len];
-    let b = target_chars[prefix_len];
-
-    // Compute substrings for recursion
-    let s = substring_from(&s_remaining, 1); // source without first char
-    let t = substring_from(&t_remaining, 1); // target without first char
+    let s_remaining = affixes.source_core;
+    let t_remaining = affixes.target_core;
+    let Some((a, s)) = split_first_char(s_remaining) else {
+        let result = affixes.target_len;
+        cache.insert(cache_key, result);
+        return result;
+    };
+    let Some((b, t)) = split_first_char(t_remaining) else {
+        let result = affixes.source_len;
+        cache.insert(cache_key, result);
+        return result;
+    };
 
     let mut distance;
 
@@ -474,7 +710,7 @@ pub fn standard_distance_recursive(source: &str, target: &str, cache: &MemoCache
         // Characters differ - try all three operations
 
         // Deletion: advance source
-        distance = standard_distance_recursive(s, &t_remaining, cache);
+        distance = standard_distance_recursive(s, t_remaining, cache);
 
         // Early exit
         if distance == 0 {
@@ -483,7 +719,7 @@ pub fn standard_distance_recursive(source: &str, target: &str, cache: &MemoCache
         }
 
         // Insertion: advance target
-        let ins_dist = standard_distance_recursive(&s_remaining, t, cache);
+        let ins_dist = standard_distance_recursive(s_remaining, t, cache);
         distance = distance.min(ins_dist);
 
         // Early exit
@@ -533,43 +769,38 @@ pub fn transposition_distance_recursive(source: &str, target: &str, cache: &Memo
     }
 
     // Strip common prefix and suffix (major optimization)
-    let (prefix_len, adjusted_source_len, adjusted_target_len) =
-        strip_common_affixes(source, target);
+    let affixes = strip_common_affix_slices(source, target);
 
     // If strings are identical after stripping, distance is 0
-    if adjusted_source_len == 0 && adjusted_target_len == 0 {
+    if affixes.source_len == 0 && affixes.target_len == 0 {
         cache.insert(cache_key, 0);
         return 0;
     }
 
     // If one string is fully consumed, distance is remaining chars in other
-    if adjusted_source_len == 0 {
-        let result = adjusted_target_len;
+    if affixes.source_len == 0 {
+        let result = affixes.target_len;
         cache.insert(cache_key, result);
         return result;
     }
-    if adjusted_target_len == 0 {
-        let result = adjusted_source_len;
+    if affixes.target_len == 0 {
+        let result = affixes.source_len;
         cache.insert(cache_key, result);
         return result;
     }
 
-    // Extract the core substrings (after prefix, before suffix)
-    let source_chars: SmallVec<[char; 32]> = source.chars().collect();
-    let target_chars: SmallVec<[char; 32]> = target.chars().collect();
-
-    let s_remaining: String = source_chars[prefix_len..prefix_len + adjusted_source_len]
-        .iter()
-        .collect();
-    let t_remaining: String = target_chars[prefix_len..prefix_len + adjusted_target_len]
-        .iter()
-        .collect();
-
-    let a = source_chars[prefix_len];
-    let b = target_chars[prefix_len];
-
-    let s = substring_from(&s_remaining, 1);
-    let t = substring_from(&t_remaining, 1);
+    let s_remaining = affixes.source_core;
+    let t_remaining = affixes.target_core;
+    let Some((a, s)) = split_first_char(s_remaining) else {
+        let result = affixes.target_len;
+        cache.insert(cache_key, result);
+        return result;
+    };
+    let Some((b, t)) = split_first_char(t_remaining) else {
+        let result = affixes.source_len;
+        cache.insert(cache_key, result);
+        return result;
+    };
 
     let mut distance;
 
@@ -582,14 +813,14 @@ pub fn transposition_distance_recursive(source: &str, target: &str, cache: &Memo
         }
     } else {
         // Standard operations: deletion, insertion, substitution
-        distance = transposition_distance_recursive(s, &t_remaining, cache);
+        distance = transposition_distance_recursive(s, t_remaining, cache);
 
         if distance == 0 {
             cache.insert(cache_key, 1);
             return 1;
         }
 
-        let ins_dist = transposition_distance_recursive(&s_remaining, t, cache);
+        let ins_dist = transposition_distance_recursive(s_remaining, t, cache);
         distance = distance.min(ins_dist);
 
         if distance == 0 {
@@ -602,17 +833,9 @@ pub fn transposition_distance_recursive(source: &str, target: &str, cache: &Memo
 
         // Check for transposition
         // Requires at least 2 chars remaining in both strings
-        if !s.is_empty() && !t.is_empty() {
-            let s_chars: SmallVec<[char; 32]> = s.chars().collect();
-            let t_chars: SmallVec<[char; 32]> = t.chars().collect();
-
-            let a1 = s_chars[0];
-            let b1 = t_chars[0];
-
+        if let (Some((a1, ss)), Some((b1, tt))) = (split_first_char(s), split_first_char(t)) {
             // Transposition: source[0] == target[1] && source[1] == target[0]
             if a == b1 && a1 == b {
-                let ss = substring_from(s, 1);
-                let tt = substring_from(t, 1);
                 let trans_dist = transposition_distance_recursive(ss, tt, cache);
                 distance = distance.min(trans_dist);
             }
@@ -661,43 +884,38 @@ pub fn merge_and_split_distance(source: &str, target: &str, cache: &MemoCache) -
     }
 
     // Strip common prefix and suffix (major optimization)
-    let (prefix_len, adjusted_source_len, adjusted_target_len) =
-        strip_common_affixes(source, target);
+    let affixes = strip_common_affix_slices(source, target);
 
     // If strings are identical after stripping, distance is 0
-    if adjusted_source_len == 0 && adjusted_target_len == 0 {
+    if affixes.source_len == 0 && affixes.target_len == 0 {
         cache.insert(cache_key, 0);
         return 0;
     }
 
     // If one string is fully consumed, distance is remaining chars in other
-    if adjusted_source_len == 0 {
-        let result = adjusted_target_len;
+    if affixes.source_len == 0 {
+        let result = affixes.target_len;
         cache.insert(cache_key, result);
         return result;
     }
-    if adjusted_target_len == 0 {
-        let result = adjusted_source_len;
+    if affixes.target_len == 0 {
+        let result = affixes.source_len;
         cache.insert(cache_key, result);
         return result;
     }
 
-    // Extract the core substrings (after prefix, before suffix)
-    let source_chars: SmallVec<[char; 32]> = source.chars().collect();
-    let target_chars: SmallVec<[char; 32]> = target.chars().collect();
-
-    let s_remaining: String = source_chars[prefix_len..prefix_len + adjusted_source_len]
-        .iter()
-        .collect();
-    let t_remaining: String = target_chars[prefix_len..prefix_len + adjusted_target_len]
-        .iter()
-        .collect();
-
-    let a = source_chars[prefix_len];
-    let b = target_chars[prefix_len];
-
-    let s = substring_from(&s_remaining, 1);
-    let t = substring_from(&t_remaining, 1);
+    let s_remaining = affixes.source_core;
+    let t_remaining = affixes.target_core;
+    let Some((a, s)) = split_first_char(s_remaining) else {
+        let result = affixes.target_len;
+        cache.insert(cache_key, result);
+        return result;
+    };
+    let Some((b, t)) = split_first_char(t_remaining) else {
+        let result = affixes.source_len;
+        cache.insert(cache_key, result);
+        return result;
+    };
 
     let mut distance;
 
@@ -710,14 +928,14 @@ pub fn merge_and_split_distance(source: &str, target: &str, cache: &MemoCache) -
         }
     } else {
         // Standard operations
-        distance = merge_and_split_distance(s, &t_remaining, cache);
+        distance = merge_and_split_distance(s, t_remaining, cache);
 
         if distance == 0 {
             cache.insert(cache_key, 1);
             return 1;
         }
 
-        let ins_dist = merge_and_split_distance(&s_remaining, t, cache);
+        let ins_dist = merge_and_split_distance(s_remaining, t, cache);
         distance = distance.min(ins_dist);
 
         if distance == 0 {
@@ -731,8 +949,7 @@ pub fn merge_and_split_distance(source: &str, target: &str, cache: &MemoCache) -
         // Split operation: one source char → two target chars
         // Skip 2 chars in target (f(w, 1) in C++)
         // Check against t_remaining (w in C++), not t
-        if t_remaining.chars().count() > 1 {
-            let tt = substring_from(&t_remaining, 2); // Skip 2 chars from t_remaining
+        if let Some(tt) = tail_after_chars(t_remaining, 2) {
             let split_dist = merge_and_split_distance(s, tt, cache);
             distance = distance.min(split_dist);
         }
@@ -740,8 +957,7 @@ pub fn merge_and_split_distance(source: &str, target: &str, cache: &MemoCache) -
         // Merge operation: two source chars → one target char
         // Skip 2 chars in source (f(v, 1) in C++)
         // Check against s_remaining (v in C++), not s
-        if s_remaining.chars().count() > 1 {
-            let ss = substring_from(&s_remaining, 2); // Skip 2 chars from s_remaining
+        if let Some(ss) = tail_after_chars(s_remaining, 2) {
             let merge_dist = merge_and_split_distance(ss, t, cache);
             distance = distance.min(merge_dist);
         }
@@ -797,10 +1013,56 @@ mod tests {
     }
 
     #[test]
+    fn test_standard_distance_bounded_matches_exact() {
+        let cases = [
+            ("", ""),
+            ("", "test"),
+            ("kitten", "sitting"),
+            ("saturday", "sunday"),
+            ("café", "cafe"),
+            ("préABCΩ", "préXYZΩ"),
+        ];
+
+        for (source, target) in cases {
+            let exact = standard_distance(source, target);
+            for threshold in 0..=exact + 1 {
+                assert_eq!(
+                    standard_distance_bounded(source, target, threshold),
+                    (exact <= threshold).then_some(exact),
+                    "bounded standard mismatch for '{source}' vs '{target}' at {threshold}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn test_transposition_distance() {
         assert_eq!(transposition_distance("ab", "ba"), 1);
         assert_eq!(transposition_distance("test", "tset"), 1);
         assert_eq!(transposition_distance("abc", "acb"), 1);
+    }
+
+    #[test]
+    fn test_transposition_distance_bounded_matches_exact() {
+        let cases = [
+            ("", ""),
+            ("", "test"),
+            ("ab", "ba"),
+            ("test", "tset"),
+            ("kitten", "sitting"),
+            ("préabΩ", "prébaΩ"),
+        ];
+
+        for (source, target) in cases {
+            let exact = transposition_distance(source, target);
+            for threshold in 0..=exact + 1 {
+                assert_eq!(
+                    transposition_distance_bounded(source, target, threshold),
+                    (exact <= threshold).then_some(exact),
+                    "bounded transposition mismatch for '{source}' vs '{target}' at {threshold}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -953,6 +1215,28 @@ mod tests {
     }
 
     #[test]
+    fn test_common_affix_slices_unicode_core() {
+        let slices = strip_common_affix_slices("préABCΩ", "préXYZΩ");
+
+        assert_eq!(slices.prefix_len, 3);
+        assert_eq!(slices.source_len, 3);
+        assert_eq!(slices.target_len, 3);
+        assert_eq!(slices.source_core, "ABC");
+        assert_eq!(slices.target_core, "XYZ");
+    }
+
+    #[test]
+    fn test_recursive_tail_helpers_preserve_utf8_boundaries() {
+        assert_eq!(split_first_char("éclair"), Some(('é', "clair")));
+        assert_eq!(split_first_char("Ω"), Some(('Ω', "")));
+        assert_eq!(split_first_char(""), None);
+
+        assert_eq!(tail_after_chars("éΩab", 2), Some("ab"));
+        assert_eq!(tail_after_chars("éΩ", 2), Some(""));
+        assert_eq!(tail_after_chars("é", 2), None);
+    }
+
+    #[test]
     fn test_unicode_support() {
         let cache = create_memo_cache();
 
@@ -960,6 +1244,27 @@ mod tests {
         assert_eq!(standard_distance_recursive("café", "cafe", &cache), 1);
         assert_eq!(standard_distance_recursive("日本", "日本", &cache), 0);
         assert_eq!(transposition_distance_recursive("日本", "本日", &cache), 1);
+    }
+
+    #[test]
+    fn test_recursive_distances_use_unicode_affix_boundaries() {
+        let standard_cache = create_memo_cache();
+        assert_eq!(
+            standard_distance_recursive("préABCΩ", "préXYZΩ", &standard_cache),
+            3
+        );
+
+        let transposition_cache = create_memo_cache();
+        assert_eq!(
+            transposition_distance_recursive("préabΩ", "prébaΩ", &transposition_cache),
+            1
+        );
+
+        let merge_split_cache = create_memo_cache();
+        assert_eq!(
+            merge_and_split_distance("prézΩ", "préxyΩ", &merge_split_cache),
+            1
+        );
     }
 
     #[test]

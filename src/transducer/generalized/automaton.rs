@@ -59,7 +59,7 @@
 //! assert!(!automaton.accepts("test", "hello"));
 //! ```
 
-use super::state::GeneralizedState;
+use super::state::{GeneralizedState, GeneralizedTransitionInput};
 use crate::transducer::universal::bit_vector::CharacteristicVector;
 use crate::transducer::OperationSet;
 
@@ -295,11 +295,15 @@ impl GeneralizedAutomaton {
     /// assert!(!automaton.accepts("test", "hello"));
     /// ```
     pub fn accepts(&self, word: &str, input: &str) -> bool {
+        let word_chars: Vec<char> = word.chars().collect();
+        let word_len = word_chars.len();
+        let input_len = input.chars().count();
+
         // Special case 1: Empty input (outside domain of h_n from thesis page 51)
         // From Levenshtein definition: d(w, ε) = |w|
         // Accept if |w| ≤ n
         if input.is_empty() {
-            return word.len() <= self.max_distance as usize;
+            return word_len <= self.max_distance as usize;
         }
 
         // Special case 2: Input too long (encoding h_n undefined)
@@ -319,13 +323,15 @@ impl GeneralizedAutomaton {
             // Upper bound: each word char could expand by max_expansion, plus insertions
             // Example: "kat" with 2 splits ⟨1,2⟩ → 3 + 2*1 = 5 effective chars
             // Conservative bound: |x| ≤ |w| * (1 + max_expansion) + n
-            let max_len = word.len() * (1 + max_expansion as usize) + self.max_distance as usize;
-            if input.len() > max_len {
+            let max_len = word_len
+                .saturating_mul(max_expansion.saturating_add(1))
+                .saturating_add(self.max_distance as usize);
+            if input_len > max_len {
                 return false;
             }
         } else {
             // Standard Levenshtein bound: |x| ≤ |w| + n
-            if input.len() > word.len() + self.max_distance as usize {
+            if input_len > word_len.saturating_add(self.max_distance as usize) {
                 return false;
             }
         }
@@ -333,38 +339,29 @@ impl GeneralizedAutomaton {
         // Start with initial state {I#0}
         let mut state = self.initial_state();
 
-        // H2 Optimization: Conditionally pre-compute character vector
-        // Only pre-compute for max_distance > 1 (eliminates overhead for trivial cases)
-        // For distance > 1: eliminates 20+ repeated word.chars().collect() calls
-        // Target: 8.47% of cycles (Iterator::collect 4.08% + cfree 4.39%)
-        let word_chars: Option<Vec<char>> = if self.max_distance > 1 {
-            Some(word.chars().collect())
-        } else {
-            None
-        };
-
         // Process each character of input
         // This generates the bit vector sequence h_n(w, x) = β(x₁, s_n(w,1))...β(x_t, s_n(w,t))
         for (i, input_char) in input.chars().enumerate() {
             // Compute relevant subword s_n(w, i+1)
             // From thesis page 51: s_n(w, i) = w_{i-n}...w_{min(|w|, i+n+1)}
-            let subword = self.relevant_subword(word, i + 1);
+            let position = i.saturating_add(1);
+            let subword = self.relevant_subword_from_chars(&word_chars, position);
 
             // Compute characteristic vector β(x_i, s_n(w, i))
             let bit_vector = CharacteristicVector::new(input_char, &subword);
 
             // Apply transition: state := δ^∀,χ_n(state, β)
             // Phase 3b: Pass full word, word slice, and input character for phonetic operations
-            // H2 Optimization: Pass pre-computed character vector (conditional for distance > 1)
-            if let Some(next_state) = state.transition(
+            // H2 Optimization: Pass pre-computed character vector for subword and split logic
+            if let Some(next_state) = state.transition(GeneralizedTransitionInput::new(
                 &self.operations,
                 &bit_vector,
                 word,
-                word_chars.as_deref(),
+                Some(&word_chars),
                 &subword,
                 input_char,
-                i + 1,
-            ) {
+                position,
+            )) {
                 state = next_state;
             } else {
                 // Transition failed, reject
@@ -375,8 +372,7 @@ impl GeneralizedAutomaton {
         // Check acceptance using Proposition 11 criterion (thesis page 24)
         // A position i#e is accepting if: p - i ≤ n - e
         // (remaining characters ≤ remaining error budget)
-        let accepted = self.is_accepting(&state, word.len(), input.len());
-        accepted
+        self.is_accepting(&state, word_len, input_len)
     }
 
     /// Compute relevant subword s_n(w, i)
@@ -397,31 +393,28 @@ impl GeneralizedAutomaton {
     /// # Returns
     ///
     /// Relevant subword around position i
+    #[cfg(test)]
     fn relevant_subword(&self, word: &str, position: usize) -> String {
-        let n = self.max_distance as i32;
-        let i = position as i32;
+        let word_chars: Vec<char> = word.chars().collect();
+        self.relevant_subword_from_chars(&word_chars, position)
+    }
 
-        // From thesis page 51: s_n(w, i) = w_{i-n}...w_v where v = min(|w|, i + n + 1)
-        // The notation w_a...w_b means positions from a through b inclusive (1-indexed)
-        let start = i - n;
-        let v = std::cmp::min(word.len() as i32, i + n + 1);
+    fn relevant_subword_from_chars(&self, word_chars: &[char], position: usize) -> String {
+        let n = self.max_distance as usize;
+        let word_len = word_chars.len();
 
-        let mut result = String::new();
+        // From thesis page 51: s_n(w, i) = w_{i-n}...w_v where v = min(|w|, i + n + 1).
+        // Positions are 1-indexed in the thesis, while slices are 0-indexed.
+        let pad_count = n.saturating_add(1).saturating_sub(position);
+        let start = position.saturating_sub(n).max(1);
+        let end = position.saturating_add(n).saturating_add(1).min(word_len);
+        let word_char_count = if start <= end { end - start + 1 } else { 0 };
 
-        // Note: positions are 1-indexed in the thesis, but Rust uses 0-indexing
-        // The range should be inclusive of v (start..=v would work, but v might be past word end)
-        for pos in start..=v {
-            if pos < 1 {
-                // Before the start of the word - pad with '$'
-                result.push('$');
-            } else if pos <= word.len() as i32 {
-                // Convert 1-indexed position to 0-indexed
-                let idx = (pos - 1) as usize;
-                if let Some(ch) = word.chars().nth(idx) {
-                    result.push(ch);
-                }
-            }
-            // If pos > word.len(), we're past the end - don't add anything
+        let mut result = String::with_capacity(pad_count.saturating_add(word_char_count));
+        result.extend(std::iter::repeat('$').take(pad_count));
+
+        if start <= end {
+            result.extend(word_chars[start - 1..end].iter().copied());
         }
 
         result
@@ -438,6 +431,20 @@ mod tests {
         assert_eq!(automaton.max_distance(), 2);
     }
 
+    #[test]
+    fn test_relevant_subword_unicode_character_positions() {
+        let automaton = GeneralizedAutomaton::new(1);
+        let subword = automaton.relevant_subword("éaß", 2);
+        assert_eq!(subword, "éaß");
+    }
+
+    #[test]
+    fn relevant_subword_at_saturated_position_is_empty() {
+        let automaton = GeneralizedAutomaton::new(u8::MAX);
+        let subword = automaton.relevant_subword("abc", usize::MAX);
+        assert_eq!(subword, "");
+    }
+
     fn manual_transition_accepts(
         automaton: &GeneralizedAutomaton,
         word: &str,
@@ -445,12 +452,13 @@ mod tests {
     ) -> bool {
         let mut state = automaton.initial_state();
         let word_chars: Vec<char> = word.chars().collect();
+        let input_len = input.chars().count();
 
         for (i, ch) in input.chars().enumerate() {
-            let subword = automaton.relevant_subword(word, i + 1);
+            let subword = automaton.relevant_subword_from_chars(&word_chars, i + 1);
             let bit_vector = CharacteristicVector::new(ch, &subword);
 
-            match state.transition(
+            match state.transition(GeneralizedTransitionInput::new(
                 &automaton.operations,
                 &bit_vector,
                 word,
@@ -458,13 +466,13 @@ mod tests {
                 &subword,
                 ch,
                 i + 1,
-            ) {
+            )) {
                 Some(next) => state = next,
                 None => return false,
             }
         }
 
-        automaton.is_accepting(&state, word.len(), input.len())
+        automaton.is_accepting(&state, word_chars.len(), input_len)
     }
 
     #[test]
@@ -552,6 +560,15 @@ mod tests {
         assert!(automaton.accepts("test", "text")); // 1 substitution
         assert!(automaton.accepts("test", "tst")); // 1 deletion
         assert!(!automaton.accepts("test", "tx")); // distance 2
+    }
+
+    #[test]
+    fn test_accepts_unicode_by_character_distance() {
+        let automaton = GeneralizedAutomaton::new(1);
+        assert!(automaton.accepts("é", ""));
+        assert!(automaton.accepts("", "é"));
+        assert!(automaton.accepts("café", "cafe"));
+        assert!(!automaton.accepts("éø", ""));
     }
 
     // Phase 2d.3: Transposition tests

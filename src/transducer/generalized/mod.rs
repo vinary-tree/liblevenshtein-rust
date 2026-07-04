@@ -57,5 +57,5 @@ mod subsumption;
 pub use crate::transducer::universal::bit_vector::CharacteristicVector;
 pub use automaton::GeneralizedAutomaton;
 pub use position::{GeneralizedPosition, PositionError};
-pub use state::GeneralizedState;
+pub use state::{GeneralizedState, GeneralizedTransitionInput};
 pub use subsumption::subsumes;

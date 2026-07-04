@@ -392,7 +392,7 @@ impl ArticulatoryCosts {
             .iter()
             .copied()
             .filter(|&c| c > 0.0)
-            .min_by(|a, b| a.partial_cmp(b).expect("valid f64"))
+            .min_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.01) // Fallback for edge cases
     }
 }
@@ -516,6 +516,20 @@ mod tests {
         let min = costs.min_nonzero_cost();
         assert!(min > 0.0);
         assert!(min < 1.0); // Should be the near-zero free substitution minimum
+    }
+
+    #[test]
+    fn test_min_nonzero_cost_ignores_nan_public_fields() {
+        let costs = ArticulatoryCosts {
+            free_substitution_threshold: f64::NAN,
+            base: OperationCostsF64 {
+                insertion: 0.25,
+                ..ArticulatoryCosts::default().base
+            },
+            ..ArticulatoryCosts::default()
+        };
+
+        assert_eq!(costs.min_nonzero_cost(), 0.25);
     }
 
     #[test]

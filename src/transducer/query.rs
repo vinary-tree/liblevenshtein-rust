@@ -2,7 +2,7 @@
 
 use super::query_result::QueryResult;
 use super::state::State;
-use super::transition::{initial_state, transition_state_pooled};
+use super::transition::{initial_state, transition_state_pooled_ref, TransitionSettings};
 use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
@@ -17,19 +17,19 @@ pub struct Candidate {
     pub distance: usize,
 }
 
-const NO_PATH: u32 = u32::MAX;
+const NO_PATH: usize = usize::MAX;
 
 struct QueryPathNode<U: CharUnit> {
     label: U,
-    depth: u16,
-    parent: u32,
+    depth: usize,
+    parent: usize,
 }
 
 struct QueryIntersection<N: DictionaryNode> {
     label: Option<N::Unit>,
     node: N,
     state: State,
-    parent: u32,
+    parent: usize,
 }
 
 impl<N: DictionaryNode> QueryIntersection<N> {
@@ -44,7 +44,7 @@ impl<N: DictionaryNode> QueryIntersection<N> {
     }
 
     #[inline]
-    fn with_parent(label: N::Unit, node: N, state: State, parent: u32) -> Self {
+    fn with_parent(label: N::Unit, node: N, state: State, parent: usize) -> Self {
         Self {
             label: Some(label),
             node,
@@ -57,7 +57,7 @@ impl<N: DictionaryNode> QueryIntersection<N> {
         let parent_depth = if self.parent == NO_PATH {
             0
         } else {
-            path_arena[self.parent as usize].depth as usize
+            path_arena[self.parent].depth
         };
         let capacity = parent_depth + usize::from(self.label.is_some());
         let mut units = Vec::with_capacity(capacity);
@@ -68,7 +68,7 @@ impl<N: DictionaryNode> QueryIntersection<N> {
 
         let mut current = self.parent;
         while current != NO_PATH {
-            let node = &path_arena[current as usize];
+            let node = &path_arena[current];
             units.push(node.label);
             current = node.parent;
         }
@@ -268,15 +268,17 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
         let mut child_parent_path = None;
 
         for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled(
+            if let Some(next_state) = transition_state_pooled_ref(
                 &intersection.state,
                 &mut self.state_pool, // Use pool for State allocation reuse
-                self.policy,          // Use the iterator's policy parameter
+                &self.policy,         // Borrow the iterator's policy; avoid per-edge clones
                 label,
                 &self.query,
-                self.max_distance,
-                self.algorithm,
-                self.substring_mode, // Use prefix_mode=true only for substring matching
+                TransitionSettings::new(
+                    self.max_distance,
+                    self.algorithm,
+                    self.substring_mode, // Use prefix_mode=true only for substring matching
+                ),
             ) {
                 let parent_path = match child_parent_path {
                     Some(path) => path,
@@ -301,14 +303,13 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
     }
 
     #[inline]
-    fn push_path_node(&mut self, label: N::Unit, parent: u32) -> u32 {
-        assert!(self.path_arena.len() < u32::MAX as usize);
+    fn push_path_node(&mut self, label: N::Unit, parent: usize) -> usize {
         let depth = if parent == NO_PATH {
             1
         } else {
-            self.path_arena[parent as usize].depth.saturating_add(1)
+            self.path_arena[parent].depth.saturating_add(1)
         };
-        let index = self.path_arena.len() as u32;
+        let index = self.path_arena.len();
         self.path_arena.push(QueryPathNode {
             label,
             depth,
@@ -393,5 +394,16 @@ mod tests {
         let results: Vec<_> = query.collect();
         // Empty query with distance 0 should match nothing unless dict has empty string
         assert!(results.is_empty() || results.contains(&"".to_string()));
+    }
+
+    #[test]
+    fn test_query_reconstructs_term_past_initial_path_capacity() {
+        let long_term = "a".repeat(96);
+        let dict = DoubleArrayTrie::from_terms(vec![long_term.as_str()]);
+        let query: QueryIterator<_, String> =
+            QueryIterator::new(dict.root(), long_term.clone(), 0, Algorithm::Standard);
+
+        let results: Vec<_> = query.collect();
+        assert_eq!(results, vec![long_term]);
     }
 }

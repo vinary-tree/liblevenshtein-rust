@@ -101,7 +101,7 @@ where
         let automaton = AutomatonZipper::new(query.as_bytes(), max_distance, algorithm);
         let intersection = IntersectionZipper::new(dict_zipper, automaton);
 
-        let mut queue = VecDeque::new();
+        let mut queue = VecDeque::with_capacity(64);
         queue.push_back(intersection);
 
         ZipperQueryIterator {
@@ -129,28 +129,30 @@ where
                         distance,
                     };
 
-                    // Add children to queue for further exploration
-                    let children: Vec<_> = intersection.children(&mut self.pool).collect();
-                    for (_label, child) in children {
-                        if child.is_viable() {
-                            self.queue.push_back(child);
-                        }
-                    }
+                    self.queue_viable_children(&intersection);
 
                     return Some(candidate);
                 }
             }
 
             // Not a match - add viable children to queue
-            let children: Vec<_> = intersection.children(&mut self.pool).collect();
-            for (_label, child) in children {
-                if child.is_viable() {
-                    self.queue.push_back(child);
-                }
-            }
+            self.queue_viable_children(&intersection);
         }
 
         None
+    }
+}
+
+impl<D> ZipperQueryIterator<D>
+where
+    D: DictZipper<Unit = u8>,
+{
+    fn queue_viable_children(&mut self, intersection: &IntersectionZipper<D>) {
+        for (_label, child) in intersection.children(&mut self.pool) {
+            if child.is_viable() {
+                self.queue.push_back(child);
+            }
+        }
     }
 }
 

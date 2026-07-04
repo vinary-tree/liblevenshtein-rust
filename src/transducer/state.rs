@@ -3,7 +3,6 @@
 use super::algorithm::Algorithm;
 use super::position::Position;
 use smallvec::SmallVec;
-use std::collections::BTreeSet;
 
 /// A state in the Levenshtein automaton.
 ///
@@ -217,12 +216,12 @@ impl State {
                 }
             }
 
-            // Scalar fallback for len > 8 or when SIMD unavailable
-            self.positions
+            // Scalar fallback for len > 8 or when SIMD unavailable.
+            self.positions[1..]
                 .iter()
-                .map(|p| p.num_errors)
-                .min()
-                .expect("State::min_distance: positions non-empty (first exists)")
+                .fold(first.num_errors, |min_errors, p| {
+                    min_errors.min(p.num_errors)
+                })
         })
     }
 
@@ -293,8 +292,7 @@ impl Default for State {
 
 impl FromIterator<Position> for State {
     fn from_iter<T: IntoIterator<Item = Position>>(iter: T) -> Self {
-        let positions: BTreeSet<Position> = iter.into_iter().collect();
-        Self::from_positions(positions.into_iter().collect())
+        Self::from_positions(iter.into_iter().collect())
     }
 }
 
@@ -315,6 +313,22 @@ mod tests {
         let state = State::single(pos);
         assert_eq!(state.len(), 1);
         assert_eq!(state.head(), Some(&pos));
+    }
+
+    #[test]
+    fn test_state_from_iter_sorts_and_deduplicates() {
+        let state: State = vec![
+            Position::new(3, 2),
+            Position::new(1, 0),
+            Position::new(3, 2),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(
+            state.positions(),
+            &[Position::new(1, 0), Position::new(3, 2)]
+        );
     }
 
     #[test]

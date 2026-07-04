@@ -422,6 +422,7 @@ impl OperationType {
     /// This maintains the **locality property** - the decision uses only:
     /// 1. O(1) current input character
     /// 2. O(n) word position check (via restriction set)
+    ///
     /// Both are within the allowed O(n) lookahead constraint.
     ///
     /// # Parameters
@@ -502,7 +503,7 @@ impl PartialEq for OperationType {
     fn eq(&self, other: &Self) -> bool {
         self.consume_x == other.consume_x
             && self.consume_y == other.consume_y
-            && (self.weight - other.weight).abs() < f64::EPSILON
+            && self.weight == other.weight
             && self.restriction == other.restriction
             && self.name == other.name
     }
@@ -532,6 +533,19 @@ mod tests {
 
         let delete_op = OperationType::new(1, 0, 1.0, "delete");
         assert!(delete_op.is_deletion());
+    }
+
+    #[test]
+    fn test_operation_type_equality_uses_exact_weight_semantics() {
+        let zero_cost = OperationType::new(1, 1, 0.0, "match");
+        let tiny_cost = OperationType::new(1, 1, f64::MIN_POSITIVE, "match");
+
+        assert!(zero_cost.is_match());
+        assert!(!tiny_cost.is_match());
+        assert_ne!(zero_cost, tiny_cost);
+
+        let negative_zero = OperationType::new(1, 1, -0.0, "match");
+        assert_eq!(zero_cost, negative_zero);
     }
 
     #[test]

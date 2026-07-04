@@ -169,7 +169,9 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     /// `true` if state is accepting (within distance n), `false` otherwise
     #[must_use]
     fn is_accepting(&self, state: &UniversalState<V>, word_len: usize, input_len: usize) -> bool {
-        let n = self.max_distance as i32;
+        let n = i128::from(self.max_distance);
+        let word_len = word_len as i128;
+        let input_len = input_len as i128;
 
         state.positions().any(|pos| {
             if pos.is_m_type() {
@@ -179,17 +181,17 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
             } else {
                 // I-type positions: check if we can reach word end with remaining errors
                 // Current word position = input_len + offset
-                let current_word_pos = input_len as i32 + pos.offset();
+                let current_word_pos = input_len + i128::from(pos.offset());
 
                 if current_word_pos < 0 {
                     return false; // Before word start
                 }
 
                 // Remaining characters to match = word_len - current_word_pos
-                let remaining_chars = word_len as i32 - current_word_pos;
+                let remaining_chars = word_len - current_word_pos;
 
                 // Remaining error budget = max_distance - errors_used
-                let remaining_errors = n - (pos.errors() as i32);
+                let remaining_errors = n - i128::from(pos.errors());
 
                 // Accept if we can delete remaining characters with available errors
                 // Proposition 11: p - i ≤ n - e
@@ -236,16 +238,20 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     /// assert!(!automaton.accepts("test", "hello"));
     /// ```
     pub fn accepts(&self, word: &str, input: &str) -> bool {
+        let word_chars: Vec<char> = word.chars().collect();
+        let word_len = word_chars.len();
+        let input_len = input.chars().count();
+
         // Special case 1: Empty input (outside domain of h_n from thesis page 51)
         // From Levenshtein definition: d(w, ε) = |w|
         // Accept if |w| ≤ n
         if input.is_empty() {
-            return word.len() <= self.max_distance as usize;
+            return word_len <= self.max_distance as usize;
         }
 
         // Special case 2: Input too long (encoding h_n undefined)
         // From thesis page 51: h_n(w, x) defined only if |x| ≤ |w| + n
-        if input.len() > word.len() + self.max_distance as usize {
+        if input_len > word_len.saturating_add(self.max_distance as usize) {
             return false;
         }
 
@@ -257,14 +263,15 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
         for (i, input_char) in input.chars().enumerate() {
             // Compute relevant subword s_n(w, i+1)
             // From thesis page 51: s_n(w, i) = w_{i-n}...w_{min(|w|, i+n+1)}
-            let subword = self.relevant_subword(word, i + 1);
+            let position = i.saturating_add(1);
+            let subword = self.relevant_subword_from_chars(&word_chars, position);
 
             // Compute characteristic vector β(x_i, s_n(w, i))
             let bit_vector = CharacteristicVector::new(input_char, &subword);
 
             // Apply transition: state := δ^∀,χ_n(state, β)
             // Pass input position (1-indexed) as k parameter for diagonal crossing
-            if let Some(next_state) = state.transition(&bit_vector, i + 1) {
+            if let Some(next_state) = state.transition(&bit_vector, position) {
                 state = next_state;
             } else {
                 // Transition failed (¬!), reject
@@ -275,7 +282,7 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
         // Check acceptance using Proposition 11 criterion (thesis page 24)
         // A position i#e is accepting if: p - i ≤ n - e
         // (remaining characters ≤ remaining error budget)
-        self.is_accepting(&state, word.len(), input.len())
+        self.is_accepting(&state, word_len, input_len)
     }
 
     /// Compute relevant subword s_n(w, i)
@@ -296,31 +303,28 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     /// # Returns
     ///
     /// Relevant subword around position i
+    #[cfg(test)]
     fn relevant_subword(&self, word: &str, position: usize) -> String {
-        let n = self.max_distance as i32;
-        let i = position as i32;
+        let word_chars: Vec<char> = word.chars().collect();
+        self.relevant_subword_from_chars(&word_chars, position)
+    }
 
-        // From thesis page 51: s_n(w, i) = w_{i-n}...w_v where v = min(|w|, i + n + 1)
-        // The notation w_a...w_b means positions from a through b inclusive (1-indexed)
-        let start = i - n;
-        let v = std::cmp::min(word.len() as i32, i + n + 1);
+    fn relevant_subword_from_chars(&self, word_chars: &[char], position: usize) -> String {
+        let n = self.max_distance as usize;
+        let word_len = word_chars.len();
 
-        let mut result = String::new();
+        // From thesis page 51: s_n(w, i) = w_{i-n}...w_v where v = min(|w|, i + n + 1).
+        // Positions are 1-indexed in the thesis, while slices are 0-indexed.
+        let pad_count = n.saturating_add(1).saturating_sub(position);
+        let start = position.saturating_sub(n).max(1);
+        let end = position.saturating_add(n).saturating_add(1).min(word_len);
+        let word_char_count = if start <= end { end - start + 1 } else { 0 };
 
-        // Note: positions are 1-indexed in the thesis, but Rust uses 0-indexing
-        // The range should be inclusive of v (start..=v would work, but v might be past word end)
-        for pos in start..=v {
-            if pos < 1 {
-                // Before the start of the word - pad with '$'
-                result.push('$');
-            } else if pos <= word.len() as i32 {
-                // Convert 1-indexed position to 0-indexed
-                let idx = (pos - 1) as usize;
-                if let Some(ch) = word.chars().nth(idx) {
-                    result.push(ch);
-                }
-            }
-            // If pos > word.len(), we're past the end - don't add anything
+        let mut result = String::with_capacity(pad_count.saturating_add(word_char_count));
+        result.extend(std::iter::repeat('$').take(pad_count));
+
+        if start <= end {
+            result.extend(word_chars[start - 1..end].iter().copied());
         }
 
         result
@@ -341,7 +345,7 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
         let mut state = self.initial_state();
 
         for (i, bv) in bit_vectors.iter().enumerate() {
-            state = state.transition(bv, i + 1)?;
+            state = state.transition(bv, i.saturating_add(1))?;
         }
 
         Some(state)
@@ -493,6 +497,20 @@ mod tests {
         assert_eq!(subword, "test");
     }
 
+    #[test]
+    fn test_relevant_subword_unicode_character_positions() {
+        let automaton = UniversalAutomaton::<Standard>::new(1);
+        let subword = automaton.relevant_subword("éaß", 2);
+        assert_eq!(subword, "éaß");
+    }
+
+    #[test]
+    fn relevant_subword_at_saturated_position_is_empty() {
+        let automaton = UniversalAutomaton::<Standard>::new(u8::MAX);
+        let subword = automaton.relevant_subword("abc", usize::MAX);
+        assert_eq!(subword, "");
+    }
+
     // =========================================================================
     // Acceptance Tests
     // =========================================================================
@@ -584,6 +602,15 @@ mod tests {
         assert!(automaton.accepts("test", "best"));
         // Distance 2: should reject (two substitutions needed)
         assert!(!automaton.accepts("test", "bear"));
+    }
+
+    #[test]
+    fn test_accepts_unicode_by_character_distance() {
+        let automaton = UniversalAutomaton::<Standard>::new(1);
+        assert!(automaton.accepts("é", ""));
+        assert!(automaton.accepts("", "é"));
+        assert!(automaton.accepts("café", "cafe"));
+        assert!(!automaton.accepts("éø", ""));
     }
 
     #[test]

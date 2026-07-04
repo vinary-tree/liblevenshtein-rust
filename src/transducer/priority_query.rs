@@ -36,16 +36,34 @@
 //! }
 //! ```
 
-use super::transition::{initial_state, transition_state_pooled};
-use super::{Algorithm, Intersection, PathNode, State, StatePool, Unrestricted};
+use super::transition::{initial_state, transition_state_pooled_ref, TransitionSettings};
+use super::{Algorithm, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
+/// Dictionary node paired with the current Levenshtein automaton state.
+struct PriorityIntersection<N: DictionaryNode> {
+    node: N,
+    state: State,
+}
+
+impl<N: DictionaryNode> PriorityIntersection<N> {
+    #[inline]
+    fn new(node: N, state: State) -> Self {
+        Self { node, state }
+    }
+
+    #[inline(always)]
+    fn is_final(&self) -> bool {
+        self.node.is_final()
+    }
+}
+
 /// Entry in the priority queue for A* search.
 struct SearchEntry<N: DictionaryNode> {
-    /// Current intersection (state + node + path)
-    intersection: Box<Intersection<N>>,
+    /// Current dictionary node and automaton state.
+    intersection: PriorityIntersection<N>,
     /// Cached path units for deterministic heap tie-breaking.
     term_units: Vec<N::Unit>,
     /// Actual cost so far (minimum errors in state)
@@ -56,7 +74,7 @@ struct SearchEntry<N: DictionaryNode> {
 
 impl<N: DictionaryNode> SearchEntry<N> {
     fn new(
-        intersection: Box<Intersection<N>>,
+        intersection: PriorityIntersection<N>,
         term_units: Vec<N::Unit>,
         g_cost: usize,
         h_cost: usize,
@@ -119,7 +137,7 @@ pub struct PriorityCandidate {
 /// # Type Parameters
 ///
 /// * `N` - Dictionary node type
-pub struct PriorityQueryIterator<N: DictionaryNode> {
+pub struct PriorityQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unrestricted> {
     /// Priority queue ordered by f-cost
     queue: BinaryHeap<SearchEntry<N>>,
     /// Query units (bytes or chars)
@@ -130,11 +148,13 @@ pub struct PriorityQueryIterator<N: DictionaryNode> {
     max_distance: usize,
     /// Levenshtein algorithm
     algorithm: Algorithm,
+    /// Substitution policy for matching
+    policy: P,
     /// State pool for allocation reuse
     state_pool: StatePool,
 }
 
-impl<N: DictionaryNode> PriorityQueryIterator<N> {
+impl<N: DictionaryNode> PriorityQueryIterator<N, Unrestricted> {
     /// Create a new priority query iterator.
     ///
     /// # Arguments
@@ -150,6 +170,21 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
     /// let iter = PriorityQueryIterator::new(dict.root(), "test", 2, Algorithm::Standard);
     /// ```
     pub fn new(root: N, query: &str, max_distance: usize, algorithm: Algorithm) -> Self {
+        Self::with_policy(root, query, max_distance, algorithm, Unrestricted)
+    }
+}
+
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    PriorityQueryIterator<N, P>
+{
+    /// Create a new priority query iterator with a custom substitution policy.
+    pub fn with_policy(
+        root: N,
+        query: &str,
+        max_distance: usize,
+        algorithm: Algorithm,
+        policy: P,
+    ) -> Self {
         let query_units = N::Unit::from_str(query);
         let query_len = query_units.len();
         let initial = initial_state(query_len, max_distance, algorithm);
@@ -157,7 +192,7 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
         let mut queue = BinaryHeap::with_capacity(64);
 
         // Initialize with root node
-        let root_intersection = Box::new(Intersection::new(root, initial));
+        let root_intersection = PriorityIntersection::new(root, initial);
         let g_cost = 0; // No errors yet at root
         let h_cost = query_len; // Must consume all query characters
 
@@ -174,6 +209,7 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
             query_len,
             max_distance,
             algorithm,
+            policy,
             state_pool: StatePool::new(),
         }
     }
@@ -229,21 +265,24 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
     #[inline]
     fn expand_children(&mut self, entry: &SearchEntry<N>) {
         for (label, child_node) in entry.intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled(
+            if let Some(next_state) = transition_state_pooled_ref(
                 &entry.intersection.state,
                 &mut self.state_pool,
-                Unrestricted, // Use unrestricted policy
+                &self.policy,
                 label,
                 &self.query,
-                self.max_distance,
-                self.algorithm,
-                false, // Not prefix mode
+                TransitionSettings::new(
+                    self.max_distance,
+                    self.algorithm,
+                    false, // Not prefix mode
+                ),
             ) {
                 // Compute costs for child
                 let g_cost = next_state.min_distance().unwrap_or(0);
 
                 // Prune if already over max distance
                 if g_cost > self.max_distance {
+                    self.state_pool.release(next_state);
                     continue;
                 }
 
@@ -251,21 +290,7 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
                 // This is used for priority ordering, not for pruning
                 let h_cost = self.heuristic(&next_state);
 
-                // Create parent path node from current intersection's label
-                let parent_path = entry.intersection.label.map(|current_label| {
-                    Box::new(PathNode::new(
-                        current_label,
-                        entry.intersection.parent.clone(),
-                    ))
-                });
-
-                // Create child intersection
-                let child_intersection = Box::new(Intersection::with_parent(
-                    label,
-                    child_node,
-                    next_state,
-                    parent_path,
-                ));
+                let child_intersection = PriorityIntersection::new(child_node, next_state);
 
                 let mut child_term_units = entry.term_units.clone();
                 child_term_units.push(label);
@@ -281,7 +306,9 @@ impl<N: DictionaryNode> PriorityQueryIterator<N> {
     }
 }
 
-impl<N: DictionaryNode> Iterator for PriorityQueryIterator<N> {
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> Iterator
+    for PriorityQueryIterator<N, P>
+{
     type Item = PriorityCandidate;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -299,9 +326,26 @@ pub fn priority_query<N: DictionaryNode>(
     PriorityQueryIterator::new(root, query, max_distance, algorithm)
 }
 
+/// Convenience function to create a priority query iterator with a custom policy.
+pub fn priority_query_with_policy<N, P>(
+    root: N,
+    query: &str,
+    max_distance: usize,
+    algorithm: Algorithm,
+    policy: P,
+) -> PriorityQueryIterator<N, P>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+{
+    PriorityQueryIterator::with_policy(root, query, max_distance, algorithm, policy)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transducer::{OwnedRestricted, SubstitutionSet};
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
     use libdictenstein::Dictionary;
 
     fn test_dict() -> libdictenstein::dynamic_dawg::DynamicDawg {
@@ -394,6 +438,17 @@ mod tests {
     }
 
     #[test]
+    fn test_shared_prefix_branching_uses_cached_term_units() {
+        let dict = DoubleArrayTrie::from_terms(vec!["cart", "care", "cars"]);
+        let iter = PriorityQueryIterator::new(dict.root(), "car", 1, Algorithm::Standard);
+
+        let mut results: Vec<_> = iter.into_iter().map(|candidate| candidate.term).collect();
+        results.sort();
+
+        assert_eq!(results, vec!["care", "cars", "cart"]);
+    }
+
+    #[test]
     fn test_transposition() {
         let dict = test_dict();
         let iter = PriorityQueryIterator::new(dict.root(), "tset", 2, Algorithm::Transposition);
@@ -431,6 +486,29 @@ mod tests {
         assert!(
             results.is_empty(),
             "Should find no matches for 'zzzzzzzzz' within distance 1"
+        );
+    }
+
+    #[test]
+    fn test_custom_policy() {
+        let dict = test_dict();
+        let mut substitutions = SubstitutionSet::new();
+        substitutions.allow('a', 'o');
+        let policy = OwnedRestricted::new(substitutions);
+
+        let iter = PriorityQueryIterator::with_policy(
+            dict.root(),
+            "opple",
+            0,
+            Algorithm::Standard,
+            policy,
+        );
+        let results: Vec<_> = iter.collect();
+
+        assert!(
+            results.iter().any(|candidate| candidate.term == "apple"),
+            "custom policy should allow 'opple' to match 'apple' at distance 0: {:?}",
+            results
         );
     }
 }

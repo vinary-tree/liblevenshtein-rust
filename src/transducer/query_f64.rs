@@ -12,12 +12,12 @@
 //! | Costs | Hardcoded `+1` | `OperationCostsF64` |
 //! | Result | `Candidate { distance: usize }` | `CandidateF64 { distance: f64 }` |
 
-use super::intersection::PathNode;
-use super::intersection_f64::IntersectionF64;
-use super::transition_f64::{initial_state_f64, transition_state_pooled_f64};
+use super::transition_f64::{
+    initial_state_f64, transition_state_pooled_f64_ref, TransitionSettingsF64,
+};
 use super::{
-    Algorithm, OperationCostsF64, StatePoolF64, SubstitutionPolicy, SubstitutionPolicyFor,
-    Unrestricted,
+    Algorithm, OperationCostsF64, StateF64, StatePoolF64, SubstitutionPolicy,
+    SubstitutionPolicyFor, Unrestricted,
 };
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
@@ -30,6 +30,72 @@ pub struct CandidateF64 {
     pub term: String,
     /// Edit distance from query (float)
     pub distance: f64,
+}
+
+const NO_PATH: usize = usize::MAX;
+
+struct QueryPathNodeF64<U: CharUnit> {
+    label: U,
+    depth: usize,
+    parent: usize,
+}
+
+struct QueryIntersectionF64<N: DictionaryNode> {
+    label: Option<N::Unit>,
+    node: N,
+    state: StateF64,
+    parent: usize,
+}
+
+impl<N: DictionaryNode> QueryIntersectionF64<N> {
+    #[inline]
+    fn new(node: N, state: StateF64) -> Self {
+        Self {
+            label: None,
+            node,
+            state,
+            parent: NO_PATH,
+        }
+    }
+
+    #[inline]
+    fn with_parent(label: N::Unit, node: N, state: StateF64, parent: usize) -> Self {
+        Self {
+            label: Some(label),
+            node,
+            state,
+            parent,
+        }
+    }
+
+    fn term(&self, path_arena: &[QueryPathNodeF64<N::Unit>]) -> String {
+        let parent_depth = if self.parent == NO_PATH {
+            0
+        } else {
+            path_arena[self.parent].depth
+        };
+        let capacity = parent_depth + usize::from(self.label.is_some());
+        let mut units = Vec::with_capacity(capacity);
+
+        if let Some(label) = self.label {
+            units.push(label);
+        }
+
+        let mut current = self.parent;
+        while current != NO_PATH {
+            let node = &path_arena[current];
+            units.push(node.label);
+            current = node.parent;
+        }
+
+        units.reverse();
+        N::Unit::to_string(&units)
+    }
+
+    #[inline(always)]
+    fn is_final(&self) -> bool {
+        self.node.is_final()
+    }
 }
 
 /// Trait for converting a match (term + float distance) into a result type.
@@ -97,12 +163,13 @@ pub struct QueryIteratorF64<
     R: QueryResultF64 = String,
     P: SubstitutionPolicy = Unrestricted,
 > {
-    pending: VecDeque<Box<IntersectionF64<N>>>,
+    pending: VecDeque<QueryIntersectionF64<N>>,
     query: Vec<N::Unit>,
     max_cost: f64,
     algorithm: Algorithm,
     costs: OperationCostsF64,
     policy: P,
+    path_arena: Vec<QueryPathNodeF64<N::Unit>>,
     finished: bool,
     state_pool: StatePoolF64,
     substring_mode: bool,
@@ -174,7 +241,7 @@ impl<
         let initial = initial_state_f64(query_units.len(), max_cost, algorithm, &costs);
 
         let mut pending = VecDeque::new();
-        pending.push_back(Box::new(IntersectionF64::new(root, initial)));
+        pending.push_back(QueryIntersectionF64::new(root, initial));
 
         Self {
             pending,
@@ -183,6 +250,7 @@ impl<
             algorithm,
             costs,
             policy,
+            path_arena: Vec::with_capacity(64),
             finished: false,
             state_pool: StatePoolF64::new(),
             substring_mode,
@@ -201,12 +269,12 @@ impl<
                 } else {
                     intersection
                         .state
-                        .infer_distance(self.query.len())
+                        .infer_distance(self.query.len(), self.costs.deletion)
                         .unwrap_or(f64::INFINITY)
                 };
 
                 if distance <= self.max_cost + 1e-9 {
-                    let term = intersection.term();
+                    let term = intersection.term(&self.path_arena);
 
                     // Queue children for further exploration
                     self.queue_children(&intersection);
@@ -226,34 +294,59 @@ impl<
     }
 
     /// Queue child intersections for exploration
-    fn queue_children(&mut self, intersection: &IntersectionF64<N>) {
+    fn queue_children(&mut self, intersection: &QueryIntersectionF64<N>) {
+        let mut child_parent_path = None;
+
         for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled_f64(
+            if let Some(next_state) = transition_state_pooled_f64_ref(
                 &intersection.state,
                 &mut self.state_pool,
-                self.policy,
+                &self.policy,
                 label,
                 &self.query,
-                self.max_cost,
-                self.algorithm,
-                &self.costs,
-                self.substring_mode,
+                TransitionSettingsF64::new(
+                    self.max_cost,
+                    self.algorithm,
+                    &self.costs,
+                    self.substring_mode,
+                ),
             ) {
-                // Create lightweight PathNode
-                let parent_path = intersection.label.map(|current_label| {
-                    Box::new(PathNode::new(current_label, intersection.parent.clone()))
-                });
+                let parent_path = match child_parent_path {
+                    Some(path) => path,
+                    None => {
+                        let path = match intersection.label {
+                            Some(current_label) => {
+                                self.push_path_node(current_label, intersection.parent)
+                            }
+                            None => NO_PATH,
+                        };
+                        child_parent_path = Some(path);
+                        path
+                    }
+                };
 
-                let child = Box::new(IntersectionF64::with_parent(
-                    label,
-                    child_node,
-                    next_state,
-                    parent_path,
-                ));
+                let child =
+                    QueryIntersectionF64::with_parent(label, child_node, next_state, parent_path);
 
                 self.pending.push_back(child);
             }
         }
+    }
+
+    #[inline]
+    fn push_path_node(&mut self, label: N::Unit, parent: usize) -> usize {
+        let depth = if parent == NO_PATH {
+            1
+        } else {
+            self.path_arena[parent].depth.saturating_add(1)
+        };
+        let index = self.path_arena.len();
+        self.path_arena.push(QueryPathNodeF64 {
+            label,
+            depth,
+            parent,
+        });
+        index
     }
 }
 
@@ -320,6 +413,24 @@ mod tests {
         assert!(results.contains(&"test".to_string()));
         assert!(results.contains(&"best".to_string()));
         assert!(results.contains(&"rest".to_string()));
+    }
+
+    #[test]
+    fn test_shared_prefix_branching_reconstructs_terms() {
+        let dict = DoubleArrayTrie::from_terms(vec!["cart", "care", "cars"]);
+        let costs = OperationCostsF64::standard();
+        let query: QueryIteratorF64<_, String> = QueryIteratorF64::new(
+            dict.root(),
+            "car".to_string(),
+            1.0,
+            Algorithm::Standard,
+            costs,
+        );
+
+        let mut results: Vec<_> = query.collect();
+        results.sort();
+
+        assert_eq!(results, vec!["care", "cars", "cart"]);
     }
 
     #[test]

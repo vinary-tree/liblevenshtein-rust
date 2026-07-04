@@ -14,9 +14,9 @@ use std::cmp::Ordering;
 ///
 /// # Performance
 ///
-/// Position is `Copy` (17 bytes: 2 usizes + bool) to eliminate allocation
-/// overhead when copying positions during state transitions. This reduces
-/// the overhead of Position cloning from ~7.44% to minimal bitwise copies.
+/// Position is `Copy` (two `usize` fields plus a `bool`, with target-dependent
+/// padding) to eliminate allocation overhead when copying positions during
+/// state transitions. This reduces cloning to a plain bitwise copy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Position {
     /// Index into the query term (characters consumed)
@@ -67,8 +67,7 @@ impl Position {
     /// # Transposition Algorithm
     /// Complex logic considering special positions (transposition states):
     /// - If both special: must be at same position
-    /// - If lhs special, rhs not: requires rhs at max distance and same position
-    /// - If rhs special: adjusted index difference formula
+    /// - If exactly one position is special, neither can subsume the other
     /// - Otherwise: standard formula
     ///
     /// # MergeAndSplit Algorithm
@@ -118,33 +117,15 @@ impl Position {
                 }
 
                 if t {
-                    // CRITICAL: Special positions (transposition-in-progress) represent
-                    // fundamentally different computational paths than normal positions.
-                    // A normal position should NEVER subsume a special position, as this
-                    // would prematurely terminate exploration of valid transposition paths.
+                    // Special positions (transposition-in-progress) represent
+                    // different computational paths than normal positions.
+                    // A normal position cannot subsume a special position,
+                    // or valid transposition completions can be pruned.
                     //
                     // Example defect case: Query "ab", dict "ba"
                     //   (1,1,false) was incorrectly subsuming (0,1,true)
                     //   The special position is needed to complete the transposition!
-                    //
-                    // NOTE: The C++ implementation has a defect at line 24 of subsumes.cpp:
-                    //   bool t = lhs->is_special();  // Should be rhs->is_special()
-                    // This defect causes s and t to always have the same value, so the
-                    // C++ code never reaches this branch when !s. This accidentally
-                    // avoids the subsumption defect, but for the wrong reason.
-                    if !s {
-                        // lhs is normal, rhs is special → cannot subsume
-                        return false;
-                    }
-
-                    // Both special: use adjusted formula
-                    // ((j < i) ? (i - j - 1) : (j - i + 1)) <= (f - e)
-                    let adjusted_diff = if j < i {
-                        i.saturating_sub(j).saturating_sub(1)
-                    } else {
-                        j.saturating_sub(i) + 1
-                    };
-                    return adjusted_diff <= (f - e);
+                    return false;
                 }
 
                 // Neither special: standard formula
@@ -327,6 +308,31 @@ mod tests {
             p11.subsumes(&p12, Algorithm::Transposition, max_distance),
             "normal(5,2) should subsume normal(4,3) - standard formula"
         );
+    }
+
+    #[test]
+    fn test_transposition_special_and_normal_states_do_not_cross_subsume() {
+        let query_length = 4;
+
+        for term_index in 0..=query_length {
+            for num_errors in 0..=2 {
+                let normal = Position::new(term_index, num_errors);
+                let special = Position::new_special(term_index, num_errors);
+
+                assert!(
+                    !normal.subsumes(&special, Algorithm::Transposition, query_length),
+                    "normal position {:?} must not subsume special {:?}",
+                    normal,
+                    special
+                );
+                assert!(
+                    !special.subsumes(&normal, Algorithm::Transposition, query_length),
+                    "special position {:?} must not subsume normal {:?}",
+                    special,
+                    normal
+                );
+            }
+        }
     }
 
     #[test]

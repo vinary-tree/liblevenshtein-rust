@@ -325,34 +325,33 @@ const PADDING_CHAR: char = '$';
 /// let subword = relevant_subword("abc", 1, 2);
 /// assert_eq!(subword, "$$abc");
 /// ```
-fn relevant_subword(word: &str, position: usize, max_distance: u8) -> String {
-    let n = max_distance as i32;
-    let p = word.len() as i32;
-    let i = position as i32;
+fn relevant_subword_from_chars(word_chars: &[char], position: usize, max_distance: u8) -> String {
+    let n = max_distance as usize;
+    let word_len = word_chars.len();
 
-    // Start index: i - n (can be negative, hence need padding)
-    let start = i - n;
+    // Start index: i - n, with '$' padding for positions before the word start.
+    let pad_count = n.saturating_add(1).saturating_sub(position);
+    let start = position.saturating_sub(n).max(1);
 
-    // End index: min(|w|, i + n)
-    // Note: Thesis page 51 says i+n+1, but testing shows i+n gives correct results
-    let end = i32::min(p, i + n);
+    // End index: min(|w|, i + n).
+    // Note: Thesis page 51 says i+n+1, but testing shows i+n gives correct results.
+    let end = position.saturating_add(n).min(word_len);
+    let word_char_count = if start <= end { end - start + 1 } else { 0 };
 
-    let mut result = String::new();
+    let mut result = String::with_capacity(pad_count.saturating_add(word_char_count));
+    result.extend(std::iter::repeat(PADDING_CHAR).take(pad_count));
 
-    // Build the subword character by character
-    // Note: end is inclusive because thesis uses min(|w|, i+n+1) inclusive
-    for j in start..=end {
-        if j < 1 {
-            // Positions before the word start get padding character $
-            result.push(PADDING_CHAR);
-        } else if j <= p {
-            // Valid positions in the word (1-indexed -> 0-indexed)
-            let chars: Vec<char> = word.chars().collect();
-            result.push(chars[(j - 1) as usize]);
-        }
+    if start <= end {
+        result.extend(word_chars[start - 1..end].iter().copied());
     }
 
     result
+}
+
+#[cfg(test)]
+fn relevant_subword(word: &str, position: usize, max_distance: u8) -> String {
+    let word_chars: Vec<char> = word.chars().collect();
+    relevant_subword_from_chars(&word_chars, position, max_distance)
 }
 
 /// Encodes a word pair (w, x) as a sequence of characteristic vectors hₙ(w, x).
@@ -406,25 +405,27 @@ pub fn encode_word_pair(
     input: &str,
     max_distance: u8,
 ) -> Option<Vec<CharacteristicVector>> {
-    let t = input.len();
-    let p = word.len();
+    let word_chars: Vec<char> = word.chars().collect();
+    let input_chars: Vec<char> = input.chars().collect();
+    let t = input_chars.len();
+    let p = word_chars.len();
     let n = max_distance as usize;
 
     // Check validity: t ≤ |w| + n
-    if t > p + n {
+    if t > p.saturating_add(n) {
         return None;
     }
 
-    let input_chars: Vec<char> = input.chars().collect();
     let mut encoding = Vec::with_capacity(t);
 
     // For each position i in input (1-indexed in theory, 0-indexed here)
-    for i in 1..=t {
+    for (i, &character) in input_chars.iter().enumerate() {
+        let position = i.saturating_add(1);
+
         // Get the relevant subword sₙ(w, i)
-        let subword = relevant_subword(word, i, max_distance);
+        let subword = relevant_subword_from_chars(&word_chars, position, max_distance);
 
         // Compute β(xᵢ, sₙ(w, i))
-        let character = input_chars[i - 1];
         let cv = characteristic_vector(character, &subword);
 
         encoding.push(cv);
@@ -483,27 +484,27 @@ mod tests {
     fn test_is_match() {
         let cv = CharacteristicVector::new('a', "banana");
         // "banana" = b(0) a(1) n(2) a(3) n(4) a(5)
-        assert_eq!(cv.is_match(0), false); // b[0] = 0 (b ≠ a)
-        assert_eq!(cv.is_match(1), true); // b[1] = 1 (a = a)
-        assert_eq!(cv.is_match(2), false); // b[2] = 0 (n ≠ a)
-        assert_eq!(cv.is_match(3), true); // b[3] = 1 (a = a)
-        assert_eq!(cv.is_match(4), false); // b[4] = 0 (n ≠ a)
-        assert_eq!(cv.is_match(5), true); // b[5] = 1 (a = a)
+        assert!(!cv.is_match(0)); // b[0] = 0 (b ≠ a)
+        assert!(cv.is_match(1)); // b[1] = 1 (a = a)
+        assert!(!cv.is_match(2)); // b[2] = 0 (n ≠ a)
+        assert!(cv.is_match(3)); // b[3] = 1 (a = a)
+        assert!(!cv.is_match(4)); // b[4] = 0 (n ≠ a)
+        assert!(cv.is_match(5)); // b[5] = 1 (a = a)
     }
 
     #[test]
     fn test_starts_with_one() {
         let cv1 = CharacteristicVector::new('b', "banana");
-        assert_eq!(cv1.starts_with_one(), true); // "100000" (b matches at pos 0)
+        assert!(cv1.starts_with_one()); // "100000" (b matches at pos 0)
 
         let cv2 = CharacteristicVector::new('a', "apple");
-        assert_eq!(cv2.starts_with_one(), true); // "10010" (a matches at pos 0)
+        assert!(cv2.starts_with_one()); // "10010" (a matches at pos 0)
 
         let cv3 = CharacteristicVector::new('x', "");
-        assert_eq!(cv3.starts_with_one(), false); // empty
+        assert!(!cv3.starts_with_one()); // empty
 
         let cv4 = CharacteristicVector::new('a', "banana");
-        assert_eq!(cv4.starts_with_one(), false); // "010101" (starts with 0)
+        assert!(!cv4.starts_with_one()); // "010101" (starts with 0)
     }
 
     #[test]
@@ -595,6 +596,18 @@ mod tests {
         // So we get from i-n=-2 to min(|w|, i+n+1)=min(1,5)=1: "$$$a"
         let subword = relevant_subword("a", 1, 3);
         assert_eq!(subword, "$$$a");
+    }
+
+    #[test]
+    fn test_relevant_subword_unicode_character_positions() {
+        let subword = relevant_subword("éaß", 2, 1);
+        assert_eq!(subword, "éaß");
+    }
+
+    #[test]
+    fn relevant_subword_at_saturated_position_is_empty() {
+        let subword = relevant_subword("abc", usize::MAX, u8::MAX);
+        assert_eq!(subword, "");
     }
 
     // ==================== Word-Pair Encoding Tests ====================
@@ -690,6 +703,19 @@ mod tests {
         // From i-n=1-1=0 to min(1, 1+1+1)=min(1,3)=1
         // Position 0,1 = "$a"
         assert_eq!(encoding[0].to_string(), "01");
+    }
+
+    #[test]
+    fn test_encode_word_pair_unicode_counts_characters() {
+        let exact = encode_word_pair("é", "é", 0)
+            .expect("test fixture: one Unicode scalar at distance 0 is encodable");
+        assert_eq!(exact.len(), 1);
+        assert_eq!(exact[0].to_string(), "1");
+
+        let insertion = encode_word_pair("", "é", 1)
+            .expect("test fixture: one Unicode scalar insertion is within distance 1");
+        assert_eq!(insertion.len(), 1);
+        assert_eq!(insertion[0].to_string(), "0");
     }
 
     #[test]

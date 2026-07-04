@@ -29,6 +29,7 @@
 
 use super::{SubstitutionSet, SubstitutionSetChar};
 use libdictenstein::CharUnit;
+use std::sync::Arc;
 
 /// Zero-cost abstraction for substitution policies.
 ///
@@ -54,7 +55,7 @@ use libdictenstein::CharUnit;
 /// [`SubstitutionPolicy`] itself is the byte-level (`u8`) interface. For
 /// character-level (`char`) dictionaries, use [`SubstitutionPolicyChar`] or
 /// [`SubstitutionPolicyFor<char>`] with [`RestrictedChar`].
-pub trait SubstitutionPolicy: Copy + Clone {
+pub trait SubstitutionPolicy: Clone {
     /// Check if substituting `dict_char` with `query_char` is allowed as a zero-cost operation.
     ///
     /// # Parameters
@@ -287,6 +288,51 @@ impl<'a> SubstitutionPolicyFor<u8> for Restricted<'a> {
     }
 }
 
+/// Owned byte-level restricted substitution policy.
+///
+/// This policy stores its substitution set in an [`Arc`], allowing constructors
+/// such as [`crate::transducer::Transducer::with_substitutions`] to own caller
+/// supplied sets without leaking memory or forcing a borrowed lifetime into the
+/// public transducer type.
+#[derive(Clone, Debug)]
+pub struct OwnedRestricted {
+    set: Arc<SubstitutionSet>,
+}
+
+impl OwnedRestricted {
+    /// Create an owned restricted policy from a substitution set.
+    #[inline]
+    pub fn new(set: SubstitutionSet) -> Self {
+        Self { set: Arc::new(set) }
+    }
+
+    /// Create an owned restricted policy from a shared substitution set.
+    #[inline]
+    pub fn from_arc(set: Arc<SubstitutionSet>) -> Self {
+        Self { set }
+    }
+
+    /// Get a reference to the underlying substitution set.
+    #[inline]
+    pub fn set(&self) -> &SubstitutionSet {
+        &self.set
+    }
+}
+
+impl SubstitutionPolicy for OwnedRestricted {
+    #[inline(always)]
+    fn is_allowed(&self, dict_char: u8, query_char: u8) -> bool {
+        dict_char == query_char || self.set.contains(dict_char, query_char)
+    }
+}
+
+impl SubstitutionPolicyFor<u8> for OwnedRestricted {
+    #[inline(always)]
+    fn is_allowed_for(&self, dict_unit: u8, query_unit: u8) -> bool {
+        dict_unit == query_unit || self.set.contains(dict_unit, query_unit)
+    }
+}
+
 // ============================================================================
 // Character-Level Policy Support (for Unicode)
 // ============================================================================
@@ -410,10 +456,9 @@ impl<'a> SubstitutionPolicyChar for RestrictedChar<'a> {
 // Implement SubstitutionPolicy as a requirement (but should never be called with u8)
 impl<'a> SubstitutionPolicy for RestrictedChar<'a> {
     #[inline(always)]
-    fn is_allowed(&self, _dict_char: u8, _query_char: u8) -> bool {
-        // RestrictedChar is for character-level (char) only
-        // This should never be called in practice due to type constraints
-        unreachable!("RestrictedChar::is_allowed(u8) should never be called - use SubstitutionPolicyFor<char> instead")
+    fn is_allowed(&self, dict_char: u8, query_char: u8) -> bool {
+        // RestrictedChar is for character-level matching; keep the byte shim total.
+        dict_char == query_char
     }
 }
 
@@ -508,6 +553,19 @@ mod tests {
         assert!(!policy.is_allowed(b'c', b'z'), "c->z should NOT be allowed");
     }
 
+    #[test]
+    fn test_owned_restricted_zero_cost_substitutions() {
+        let mut set = SubstitutionSet::new();
+        set.allow('c', 'k');
+
+        let policy = OwnedRestricted::new(set);
+        let cloned = policy.clone();
+
+        assert!(policy.is_allowed(b'c', b'k'));
+        assert!(cloned.is_allowed_for(b'c', b'k'));
+        assert!(!cloned.is_allowed_for(b'k', b'c'));
+    }
+
     // ========================================================================
     // Character-Level Policy Tests
     // ========================================================================
@@ -576,6 +634,15 @@ mod tests {
             !policy.is_allowed_for('é', 'x'),
             "é->x should NOT be allowed"
         );
+    }
+
+    #[test]
+    fn test_restricted_char_byte_shim_is_total() {
+        let set = SubstitutionSetChar::diacritics_latin();
+        let policy = RestrictedChar::new(&set);
+
+        assert!(SubstitutionPolicy::is_allowed(&policy, b'a', b'a'));
+        assert!(!SubstitutionPolicy::is_allowed(&policy, b'e', b'a'));
     }
 
     #[test]

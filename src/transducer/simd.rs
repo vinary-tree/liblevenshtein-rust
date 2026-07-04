@@ -266,6 +266,24 @@ pub fn check_subsumption_simd<'a>(
     debug_assert!(rhs_term_indices.len() >= count);
     debug_assert!(rhs_errors.len() >= count);
 
+    // The SIMD implementations below use u32 lanes. Keep the public usize
+    // contract exact by falling back before any lane would be truncated.
+    if count >= 4
+        && (any_exceeds_u32(lhs_term_indices, count)
+            || any_exceeds_u32(lhs_errors, count)
+            || any_exceeds_u32(rhs_term_indices, count)
+            || any_exceeds_u32(rhs_errors, count))
+    {
+        return check_subsumption_scalar(
+            lhs_term_indices,
+            lhs_errors,
+            rhs_term_indices,
+            rhs_errors,
+            count,
+            results,
+        );
+    }
+
     // Use SIMD for count >= 4 (worth the overhead)
     if count == 8 && is_x86_feature_detected!("avx2") {
         unsafe {
@@ -330,6 +348,14 @@ fn check_subsumption_scalar<'a>(
     &results[..count]
 }
 
+#[inline(always)]
+fn any_exceeds_u32(values: &[usize], count: usize) -> bool {
+    values
+        .iter()
+        .take(count)
+        .any(|&value| value > u32::MAX as usize)
+}
+
 /// AVX2-accelerated subsumption checking
 ///
 /// Processes 8 position pairs at once using 256-bit SIMD vectors.
@@ -343,7 +369,8 @@ unsafe fn check_subsumption_avx2<'a>(
     rhs_errors: &[usize],
     results: &'a mut [bool; 8],
 ) -> &'a [bool] {
-    // Convert usize to u32 for SIMD processing (assume indices fit in u32)
+    // Convert usize to u32 for SIMD processing. The public dispatcher only
+    // calls this path after verifying every lane fits exactly.
     let mut lhs_i_buf = [0u32; 8];
     let mut lhs_e_buf = [0u32; 8];
     let mut rhs_j_buf = [0u32; 8];
@@ -407,7 +434,8 @@ unsafe fn check_subsumption_sse41<'a>(
 ) -> &'a [bool] {
     debug_assert!((4..=8).contains(&count));
 
-    // Process first 4 with SIMD
+    // Process first 4 with SIMD. The public dispatcher only calls this path
+    // after verifying every lane fits exactly.
     let mut lhs_i_buf = [0u32; 4];
     let mut lhs_e_buf = [0u32; 4];
     let mut rhs_j_buf = [0u32; 4];
@@ -648,6 +676,53 @@ mod subsumption_tests {
 
     #[test]
     #[cfg(target_arch = "x86_64")]
+    fn test_subsumption_simd_preserves_usize_values() {
+        let above_u32 = u32::MAX as usize + 1;
+        let lhs_indices = [
+            above_u32 + 1,
+            above_u32 + 2,
+            5,
+            above_u32 + 3,
+            20,
+            above_u32 + 4,
+            30,
+            above_u32 + 5,
+        ];
+        let lhs_errs = [0, 0, above_u32 + 1, 1, 0, 2, 0, 3];
+        let rhs_indices = [0, 1, 5, above_u32 + 4, 21, 0, 29, above_u32 + 9];
+        let rhs_errs = [1, 1, above_u32 + 2, 2, 1, 10, 1, 6];
+
+        for count in [4, 8] {
+            let mut simd_results = [false; 8];
+            let mut scalar_results = [false; 8];
+
+            let simd_result = check_subsumption_simd(
+                &lhs_indices,
+                &lhs_errs,
+                &rhs_indices,
+                &rhs_errs,
+                count,
+                &mut simd_results,
+            );
+            let scalar_result = check_subsumption_scalar(
+                &lhs_indices,
+                &lhs_errs,
+                &rhs_indices,
+                &rhs_errs,
+                count,
+                &mut scalar_results,
+            );
+
+            assert_eq!(
+                simd_result, scalar_result,
+                "usize-preserving SIMD dispatch diverged from scalar for count {}",
+                count
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(target_arch = "x86_64")]
     fn test_subsumption_simd_partial_batches() {
         // Test with count < 8 (SSE4.1 path or scalar)
         let lhs_indices = [5, 5, 3, 3, 10];
@@ -723,10 +798,12 @@ mod subsumption_tests {
 ///
 /// # Arguments
 /// * `values` - Array of values to find minimum of
-/// * `count` - Number of values to consider (must be > 0 and <= 8)
+/// * `count` - Number of prefix values requested. The effective prefix is
+///   bounded by `values.len()` and 8 SIMD lanes.
 ///
 /// # Returns
-/// The minimum value among `values[0..count]`
+/// The minimum value among the effective prefix, or `usize::MAX` when the
+/// effective prefix is empty.
 ///
 /// # Performance
 /// - AVX2: Processes 8 values with horizontal minimum (~5-7 ns)
@@ -734,12 +811,21 @@ mod subsumption_tests {
 /// - Scalar fallback for count < 4 or when SIMD unavailable
 #[cfg(target_arch = "x86_64")]
 pub fn find_minimum_simd(values: &[usize], count: usize) -> usize {
-    debug_assert!(count > 0 && count <= 8, "count must be in range 1..=8");
-    debug_assert!(values.len() >= count);
+    let count = count.min(values.len()).min(8);
+
+    if count == 0 {
+        return usize::MAX;
+    }
 
     // Fast path for single value
     if count == 1 {
         return values[0];
+    }
+
+    // The SIMD paths below operate on u32 lanes. Preserve the public usize
+    // contract by falling back before any value would be truncated.
+    if count >= 4 && any_exceeds_u32(values, count) {
+        return find_minimum_scalar(values, count);
     }
 
     // Use SIMD for count >= 4
@@ -755,17 +841,22 @@ pub fn find_minimum_simd(values: &[usize], count: usize) -> usize {
 /// Scalar fallback for minimum finding
 #[inline(always)]
 fn find_minimum_scalar(values: &[usize], count: usize) -> usize {
-    values[0..count]
-        .iter()
-        .copied()
-        .min()
-        .expect("find_minimum_scalar: count > 0 (caller invariant)")
+    let count = count.min(values.len());
+    if count == 0 {
+        return usize::MAX;
+    }
+
+    let Some((&first, rest)) = values.split_first() else {
+        return usize::MAX;
+    };
+
+    rest.iter().take(count - 1).copied().fold(first, usize::min)
 }
 
 /// AVX2-accelerated minimum finding via horizontal reduction
 ///
-/// Processes 8 usize values (converted to u32) and finds the minimum
-/// using a series of horizontal minimum operations.
+/// Processes 8 usize values known to fit in u32 and finds the minimum using a
+/// series of horizontal minimum operations.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 unsafe fn find_minimum_avx2(values: &[usize]) -> usize {
@@ -920,6 +1011,31 @@ mod minimum_tests {
         let values = vec![10, 5, 3, 7, 2];
         assert_eq!(find_minimum_simd(&values, 5), 2);
         assert_eq!(find_minimum_simd(&values, 3), 3);
+    }
+
+    #[test]
+    #[cfg(target_arch = "x86_64")]
+    fn test_find_minimum_is_total_for_boundary_counts() {
+        assert_eq!(find_minimum_simd(&[], 0), usize::MAX);
+        assert_eq!(find_minimum_simd(&[], 8), usize::MAX);
+        assert_eq!(find_minimum_simd(&[4, 2, 9], 0), usize::MAX);
+        assert_eq!(find_minimum_simd(&[4, 2, 9], 8), 2);
+
+        let values = [9, 8, 7, 6, 5, 4, 3, 2, 0];
+        assert_eq!(find_minimum_simd(&values, 9), 2);
+        assert_eq!(find_minimum_scalar(&values, 9), 0);
+    }
+
+    #[test]
+    #[cfg(target_arch = "x86_64")]
+    fn test_find_minimum_preserves_usize_values() {
+        let above_u32 = u32::MAX as usize + 1;
+
+        let sse_width_values = vec![above_u32, above_u32 + 1, 9, 10];
+        assert_eq!(find_minimum_simd(&sse_width_values, 4), 9);
+
+        let avx_width_values = vec![above_u32, above_u32 + 1, 9, 10, above_u32 + 2, 11, 12, 13];
+        assert_eq!(find_minimum_simd(&avx_width_values, 8), 9);
     }
 
     #[test]
@@ -1178,73 +1294,6 @@ unsafe fn find_edge_label_sse41<T>(
 
     // Extract comparison mask (1 bit per lane, 16 bits total)
     let mask = _mm_movemask_epi8(cmp_result);
-
-    // Find first set bit (= first match)
-    if mask != 0 {
-        let index = mask.trailing_zeros() as usize;
-        // Verify index is within actual edge count (not padding)
-        if index < count {
-            return Some(index);
-        }
-    }
-
-    None
-}
-
-/// AVX2 implementation: Compare 32 edge labels simultaneously.
-///
-/// # Algorithm
-///
-/// 1. Extract labels into temporary buffer (max 32)
-/// 2. Pad buffer to 32 bytes with 0xFF (never matches)
-/// 3. Load labels into 256-bit AVX2 register
-/// 4. Broadcast target across 256-bit register
-/// 5. Compare all 32 lanes simultaneously
-/// 6. Extract bit mask and find first match
-///
-/// # Performance
-///
-/// For 16-31 edges, this provides ~2-3x speedup over scalar linear search.
-/// The AVX2 path handles twice as many comparisons as SSE4.1 in a single
-/// instruction, with minimal additional latency.
-///
-/// # Safety
-///
-/// Requires AVX2 CPU feature. Caller must verify with
-/// `is_x86_feature_detected!("avx2")` before calling.
-///
-/// # Note
-///
-/// Currently unused due to performance analysis showing buffer copy overhead
-/// dominates. Kept for future optimization when pre-extracted label arrays
-/// are implemented. See docs/BATCH2B_PERFORMANCE_ANALYSIS.md for details.
-#[allow(dead_code)]
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx2")]
-unsafe fn find_edge_label_avx2<T>(
-    edges: &[(u8, T)],
-    target_label: u8,
-    count: usize,
-) -> Option<usize> {
-    use std::arch::x86_64::*;
-
-    // Extract edge labels into buffer and pad to 32 bytes
-    let mut labels = [0xFFu8; 32]; // 0xFF = padding byte (never matches ASCII)
-    for (i, (label, _)) in edges.iter().enumerate().take(32.min(count)) {
-        labels[i] = *label;
-    }
-
-    // Load labels into AVX2 register (unaligned load is safe)
-    let labels_vec = _mm256_loadu_si256(labels.as_ptr() as *const __m256i);
-
-    // Broadcast target label to all 32 lanes
-    let target_vec = _mm256_set1_epi8(target_label as i8);
-
-    // Compare all 32 lanes simultaneously (each 0xFF if equal, 0x00 if not)
-    let cmp_result = _mm256_cmpeq_epi8(labels_vec, target_vec);
-
-    // Extract comparison mask (1 bit per lane, 32 bits total)
-    let mask = _mm256_movemask_epi8(cmp_result);
 
     // Find first set bit (= first match)
     if mask != 0 {

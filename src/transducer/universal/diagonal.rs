@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_right_most_single_position() {
-        let positions = vec![UniversalPosition::<Standard>::new_i(0, 1, 2)
+        let positions = [UniversalPosition::<Standard>::new_i(0, 1, 2)
             .expect("test fixture: UniversalPosition::new_i with valid args")];
         let rm =
             right_most(positions.iter()).expect("test fixture: right_most on non-empty iterator");
@@ -220,7 +220,7 @@ mod tests {
     #[test]
     fn test_right_most_multiple_positions() {
         // e - i values: (1 - 0) = 1, (2 - (-2)) = 4, (1 - (-1)) = 2
-        let positions = vec![
+        let positions = [
             UniversalPosition::<Standard>::new_i(0, 1, 2)
                 .expect("test fixture: UniversalPosition::new_i with valid args"),
             UniversalPosition::<Standard>::new_i(-2, 2, 2)
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_right_most_m_type_positions() {
-        let positions = vec![
+        let positions = [
             UniversalPosition::<Standard>::new_m(0, 0, 2)
                 .expect("test fixture: UniversalPosition::new_m with valid args"),
             UniversalPosition::<Standard>::new_m(-1, 1, 2)

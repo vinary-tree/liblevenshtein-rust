@@ -3,8 +3,43 @@
 //! This module provides a zipper that composes dictionary navigation with
 //! automaton state tracking, enabling efficient fuzzy string matching.
 
-use crate::transducer::{AutomatonZipper, PathNode, StatePool};
+use crate::transducer::{AutomatonZipper, StatePool};
 use libdictenstein::zipper::DictZipper;
+use std::sync::Arc;
+
+#[derive(Clone)]
+struct ZipperPathNode {
+    label: u8,
+    depth: usize,
+    parent: Option<Arc<ZipperPathNode>>,
+}
+
+impl ZipperPathNode {
+    #[inline]
+    fn new(label: u8, parent: Option<Arc<ZipperPathNode>>) -> Self {
+        let depth = parent
+            .as_ref()
+            .map_or(1, |parent| parent.depth.saturating_add(1));
+        Self {
+            label,
+            depth,
+            parent,
+        }
+    }
+
+    fn collect_labels(&self, labels: &mut Vec<u8>) {
+        let mut current = Some(self);
+        while let Some(node) = current {
+            labels.push(node.label);
+            current = node.parent.as_deref();
+        }
+    }
+
+    #[inline]
+    fn depth(&self) -> usize {
+        self.depth
+    }
+}
 
 /// Zipper for traversing the intersection of dictionary and Levenshtein automaton.
 ///
@@ -22,7 +57,7 @@ use libdictenstein::zipper::DictZipper;
 /// The intersection zipper maintains:
 /// - Dictionary position via `DictZipper`
 /// - Automaton state via `AutomatonZipper`
-/// - Parent path chain via `PathNode` (for term reconstruction)
+/// - Shared parent path chain (for term reconstruction)
 ///
 /// Navigation (via `children()`) produces child zippers only when both:
 /// 1. The dictionary has an edge with a given label
@@ -30,7 +65,7 @@ use libdictenstein::zipper::DictZipper;
 ///
 /// # Memory Efficiency
 ///
-/// - Uses lightweight `PathNode` for parent chains (~24 bytes vs ~50+ for full Intersection)
+/// - Uses lightweight shared path nodes instead of cloning full parent chains
 /// - Dictionary zipper is generic (can be Copy for index-based or Clone for Arc-based)
 /// - AutomatonZipper uses Arc for query sharing
 ///
@@ -76,8 +111,8 @@ where
     /// Automaton zipper at current state
     automaton: AutomatonZipper,
 
-    /// Parent path for term reconstruction (lightweight)
-    parent: Option<Box<PathNode<u8>>>,
+    /// Parent path for term reconstruction (shared by sibling zippers)
+    parent: Option<Arc<ZipperPathNode>>,
 }
 
 impl<D> IntersectionZipper<D>
@@ -117,7 +152,11 @@ where
     /// Create an intersection zipper with a parent path.
     ///
     /// Used internally when creating child zippers.
-    fn with_parent(dict: D, automaton: AutomatonZipper, parent: Option<Box<PathNode<u8>>>) -> Self {
+    fn with_parent(
+        dict: D,
+        automaton: AutomatonZipper,
+        parent: Option<Arc<ZipperPathNode>>,
+    ) -> Self {
         IntersectionZipper {
             dict,
             automaton,
@@ -242,7 +281,7 @@ where
     /// println!("Matched term: {}", term);
     /// ```
     pub fn term(&self) -> String {
-        let mut units = Vec::new();
+        let mut units = Vec::with_capacity(self.depth());
 
         // Collect labels from parent chain
         if let Some(parent) = &self.parent {
@@ -298,13 +337,16 @@ where
         pool: &'a mut StatePool,
     ) -> impl Iterator<Item = (u8, Self)> + 'a {
         let parent_for_children = self.parent.clone();
-        let automaton = self.automaton.clone();
+        let automaton = &self.automaton;
 
         self.dict.children().filter_map(move |(label, dict_child)| {
             // Try to transition automaton with this label
             automaton.transition(label, pool).map(|auto_child| {
                 // Create parent node for child
-                let new_parent = Some(Box::new(PathNode::new(label, parent_for_children.clone())));
+                let new_parent = Some(Arc::new(ZipperPathNode::new(
+                    label,
+                    parent_for_children.clone(),
+                )));
 
                 let child = IntersectionZipper::with_parent(dict_child, auto_child, new_parent);
 
@@ -356,6 +398,37 @@ where
     }
 }
 
+#[cfg(test)]
+mod path_node_tests {
+    use super::*;
+
+    #[test]
+    fn test_zipper_path_node_depth_exceeds_u16_boundary() {
+        let parent = Arc::new(ZipperPathNode {
+            label: b'a',
+            depth: usize::from(u16::MAX),
+            parent: None,
+        });
+
+        let node = ZipperPathNode::new(b'b', Some(parent));
+
+        assert_eq!(node.depth(), usize::from(u16::MAX) + 1);
+    }
+
+    #[test]
+    fn test_zipper_path_node_depth_saturates_at_usize_max() {
+        let parent = Arc::new(ZipperPathNode {
+            label: b'a',
+            depth: usize::MAX,
+            parent: None,
+        });
+
+        let node = ZipperPathNode::new(b'b', Some(parent));
+
+        assert_eq!(node.depth(), usize::MAX);
+    }
+}
+
 #[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
@@ -388,7 +461,7 @@ mod tests {
         let mut pool = StatePool::new();
 
         // Navigate through "cat"
-        for expected in &[b'c', b'a', b't'] {
+        for expected in b"cat" {
             let children: Vec<_> = intersection.children(&mut pool).collect();
             let mut found = false;
             for (label, child) in children {
@@ -421,7 +494,7 @@ mod tests {
         let mut pool = StatePool::new();
 
         // Navigate through "cat"
-        for expected in &[b'c', b'a', b't'] {
+        for expected in b"cat" {
             let children: Vec<_> = intersection.children(&mut pool).collect();
             let mut found = false;
             for (label, child) in children {
@@ -453,7 +526,7 @@ mod tests {
         let mut pool = StatePool::new();
 
         // Navigate through "cat"
-        for expected in &[b'c', b'a', b't'] {
+        for expected in b"cat" {
             let children: Vec<_> = intersection.children(&mut pool).collect();
             let mut found = false;
             for (label, child) in children {
@@ -571,6 +644,36 @@ mod tests {
 
         assert_eq!(intersection.term(), "hello");
         assert_eq!(intersection.depth(), 5);
+    }
+
+    #[test]
+    fn test_shared_prefix_branching_reconstructs_terms() {
+        let dict = PathMapDictionary::<()>::new();
+        dict.insert("cart");
+        dict.insert("care");
+        dict.insert("cars");
+
+        let dict_zipper = PathMapZipper::new_from_dict(&dict);
+        let auto_zipper = AutomatonZipper::new(b"car", 1, Algorithm::Standard);
+        let mut frontier = vec![IntersectionZipper::new(dict_zipper, auto_zipper)];
+        let mut pool = StatePool::new();
+        let mut matches = Vec::new();
+
+        while let Some(intersection) = frontier.pop() {
+            if intersection.is_match() {
+                matches.push(intersection.term());
+            }
+
+            frontier.extend(
+                intersection
+                    .children(&mut pool)
+                    .map(|(_, child)| child)
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        matches.sort();
+        assert_eq!(matches, vec!["care", "cars", "cart"]);
     }
 
     #[test]

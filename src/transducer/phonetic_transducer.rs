@@ -42,22 +42,105 @@ use crate::phonetic::nfa::product::{ProductAutomaton, ProductAutomatonChar};
 use crate::phonetic::nfa::{NFAChar, NFA};
 use libdictenstein::{Dictionary, DictionaryNode};
 
-use std::collections::VecDeque;
+use std::{
+    cmp::Ordering,
+    collections::VecDeque,
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+};
+
+#[cfg(feature = "phonetic-rules")]
+const PHONETIC_NO_PATH: usize = usize::MAX;
+
+#[cfg(feature = "phonetic-rules")]
+struct PhoneticPathNode<U: Copy> {
+    label: U,
+    parent: usize,
+    depth: usize,
+}
+
+#[cfg(feature = "phonetic-rules")]
+struct PhoneticTraversal<N: DictionaryNode> {
+    node: N,
+    label: Option<N::Unit>,
+    parent: usize,
+    depth: usize,
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<N: DictionaryNode> PhoneticTraversal<N> {
+    #[inline]
+    fn root(node: N) -> Self {
+        Self {
+            node,
+            label: None,
+            parent: PHONETIC_NO_PATH,
+            depth: 0,
+        }
+    }
+
+    #[inline]
+    fn child(node: N, label: N::Unit, parent: usize, depth: usize) -> Self {
+        Self {
+            node,
+            label: Some(label),
+            parent,
+            depth,
+        }
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn collect_path_units<U: Copy>(
+    label: Option<U>,
+    parent: usize,
+    arena: &[PhoneticPathNode<U>],
+) -> Vec<U> {
+    let parent_depth = if parent == PHONETIC_NO_PATH {
+        0
+    } else {
+        arena[parent].depth
+    };
+    let capacity = parent_depth + usize::from(label.is_some());
+    let mut units = Vec::with_capacity(capacity);
+
+    if let Some(label) = label {
+        units.push(label);
+    }
+
+    let mut current = parent;
+    while current != PHONETIC_NO_PATH {
+        let node = &arena[current];
+        units.push(node.label);
+        current = node.parent;
+    }
+
+    units.reverse();
+    units
+}
 
 // ============================================================================
 // Phonetic Candidate
 // ============================================================================
 
 /// A candidate result from phonetic transducer query.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct PhoneticCandidate {
     /// The matching term from the dictionary
     pub term: String,
     /// Edit distance from the query to this term
     pub edit_distance: u8,
-    /// Phonetic transformation cost (0.0 for exact phonetic match)
+    /// Phonetic transformation cost.
+    ///
+    /// Reserved: in the current implementation this is ALWAYS `0.0` — the query
+    /// path constructs every candidate with `phonetic_cost == 0.0` and no
+    /// phonetic weighting is applied. Kept for a future weighted-phonetic-
+    /// matching feature; see `PhoneticTransducerChar::with_phonetic_weight`.
     pub phonetic_cost: f64,
-    /// Combined total cost (edit_distance + phonetic_cost)
+    /// Combined total cost (`edit_distance + phonetic_cost`).
+    ///
+    /// Because `phonetic_cost` is always `0.0` today, this currently equals
+    /// `edit_distance as f64`.
     pub total_cost: f64,
 }
 
@@ -74,7 +157,25 @@ impl PhoneticCandidate {
     }
 }
 
+impl PartialEq for PhoneticCandidate {
+    fn eq(&self, other: &Self) -> bool {
+        self.term == other.term
+            && self.edit_distance == other.edit_distance
+            && self.phonetic_cost.total_cmp(&other.phonetic_cost) == Ordering::Equal
+            && self.total_cost.total_cmp(&other.total_cost) == Ordering::Equal
+    }
+}
+
 impl Eq for PhoneticCandidate {}
+
+impl Hash for PhoneticCandidate {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.term.hash(state);
+        self.edit_distance.hash(state);
+        self.phonetic_cost.to_bits().hash(state);
+        self.total_cost.to_bits().hash(state);
+    }
+}
 
 impl PartialOrd for PhoneticCandidate {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -83,13 +184,20 @@ impl PartialOrd for PhoneticCandidate {
 }
 
 impl Ord for PhoneticCandidate {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         // Order by total_cost (lower is better), then by term alphabetically
-        match self.total_cost.partial_cmp(&other.total_cost) {
-            Some(std::cmp::Ordering::Equal) | None => self.term.cmp(&other.term),
-            Some(ord) => ord,
-        }
+        self.total_cost
+            .total_cmp(&other.total_cost)
+            .then_with(|| self.term.cmp(&other.term))
+            .then_with(|| self.edit_distance.cmp(&other.edit_distance))
+            .then_with(|| self.phonetic_cost.total_cmp(&other.phonetic_cost))
     }
+}
+
+#[cfg(feature = "phonetic-rules")]
+#[inline]
+fn phonetic_child_depth(depth: usize) -> Option<usize> {
+    depth.checked_add(1)
 }
 
 // ============================================================================
@@ -111,7 +219,12 @@ pub struct PhoneticTransducerChar<D: Dictionary> {
     nfa: NFAChar,
     /// Maximum allowed edit distance
     max_distance: u8,
-    /// Weight for phonetic transformations
+    /// Reserved phonetic weight (default: `0.0`).
+    ///
+    /// Currently stored and threaded to the query iterator but NOT applied:
+    /// every emitted [`PhoneticCandidate`] has `phonetic_cost == 0.0`. Clamped
+    /// to `>= 0.0` at construction. Tracked for a future weighted-phonetic-
+    /// matching feature.
     phonetic_weight: f64,
 }
 
@@ -136,10 +249,14 @@ where
         }
     }
 
-    /// Create a phonetic transducer with custom phonetic weight.
+    /// Create a phonetic transducer with a custom phonetic weight.
     ///
-    /// The phonetic weight is added to the total cost for each phonetic
-    /// transformation applied (as opposed to simple edit operations).
+    /// Reserved: the phonetic weight is currently stored (and threaded to the
+    /// query iterator) but NOT applied to matching cost or ranking. Every
+    /// emitted [`PhoneticCandidate`] reports `phonetic_cost == 0.0`, so
+    /// `total_cost == edit_distance`. The value is clamped to `>= 0.0` so a
+    /// future implementation cannot violate monotone-cost pruning. Tracked for a
+    /// future weighted-phonetic-matching feature.
     pub fn with_phonetic_weight(
         dictionary: D,
         nfa: NFAChar,
@@ -150,7 +267,7 @@ where
             dictionary,
             nfa,
             max_distance,
-            phonetic_weight,
+            phonetic_weight: phonetic_weight.max(0.0),
         }
     }
 
@@ -207,11 +324,12 @@ where
 pub struct PhoneticQueryIteratorChar<'a, D: Dictionary> {
     /// Product automaton for matching
     product: ProductAutomatonChar,
-    /// Queue of dictionary nodes to explore: (node, path, depth)
-    queue: VecDeque<(D::Node, String, usize)>,
-    /// The dictionary reference
-    #[allow(dead_code)]
-    dictionary: &'a D,
+    /// Queue of dictionary nodes to explore.
+    queue: VecDeque<PhoneticTraversal<D::Node>>,
+    /// Parent-path arena for reconstructing terms without per-edge path clones.
+    path_arena: Vec<PhoneticPathNode<char>>,
+    /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
+    _dictionary: PhantomData<&'a D>,
     /// Maximum depth (prevents infinite exploration)
     max_depth: usize,
     /// Phonetic weight
@@ -234,8 +352,8 @@ where
         let product = ProductAutomatonChar::new(nfa.clone(), max_distance);
 
         // Initialize queue with root node
-        let mut queue = VecDeque::new();
-        queue.push_back((dictionary.root(), String::new(), 0));
+        let mut queue = VecDeque::with_capacity(1);
+        queue.push_back(PhoneticTraversal::root(dictionary.root()));
 
         // Max depth: reasonable buffer for dictionary traversal
         let max_depth = 100;
@@ -243,10 +361,34 @@ where
         Self {
             product,
             queue,
-            dictionary,
+            path_arena: Vec::with_capacity(64),
+            _dictionary: PhantomData,
             max_depth,
             _phonetic_weight: phonetic_weight,
         }
+    }
+
+    #[inline]
+    fn push_path_node(&mut self, label: char, parent: usize) -> usize {
+        let depth = if parent == PHONETIC_NO_PATH {
+            1
+        } else {
+            self.path_arena[parent].depth.saturating_add(1)
+        };
+        let index = self.path_arena.len();
+        self.path_arena.push(PhoneticPathNode {
+            label,
+            parent,
+            depth,
+        });
+        index
+    }
+
+    #[inline]
+    fn materialize_path(&self, entry: &PhoneticTraversal<D::Node>) -> String {
+        collect_path_units(entry.label, entry.parent, &self.path_arena)
+            .into_iter()
+            .collect()
     }
 }
 
@@ -258,25 +400,36 @@ where
     type Item = PhoneticCandidate;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((node, path, depth)) = self.queue.pop_front() {
+        while let Some(entry) = self.queue.pop_front() {
             // Depth limit to prevent infinite exploration
-            if depth > self.max_depth {
+            if entry.depth > self.max_depth {
                 continue;
             }
 
             // Check if this is a final dictionary node
-            if node.is_final() {
+            if entry.node.is_final() {
                 // Check if the product automaton accepts this path
+                let path = self.materialize_path(&entry);
                 if let Some(distance) = self.product.min_distance(&path) {
-                    return Some(PhoneticCandidate::new(path.clone(), distance, 0.0));
+                    return Some(PhoneticCandidate::new(path, distance, 0.0));
                 }
             }
 
+            let parent = match entry.label {
+                Some(label) => self.push_path_node(label, entry.parent),
+                None => entry.parent,
+            };
+
             // Explore children via edges
-            for (c, child) in node.edges() {
-                let mut child_path = path.clone();
-                child_path.push(c);
-                self.queue.push_back((child, child_path, depth + 1));
+            let Some(child_depth) = phonetic_child_depth(entry.depth) else {
+                continue;
+            };
+            if child_depth > self.max_depth {
+                continue;
+            }
+            for (c, child) in entry.node.edges() {
+                self.queue
+                    .push_back(PhoneticTraversal::child(child, c, parent, child_depth));
             }
         }
 
@@ -298,7 +451,12 @@ pub struct PhoneticTransducer<D: Dictionary> {
     nfa: NFA,
     /// Maximum allowed edit distance
     max_distance: u8,
-    /// Weight for phonetic transformations
+    /// Reserved phonetic weight (default: `0.0`).
+    ///
+    /// Currently stored and threaded to the query iterator but NOT applied:
+    /// every emitted [`PhoneticCandidateByte`] has `phonetic_cost == 0.0`.
+    /// Clamped to `>= 0.0` at construction. Tracked for a future
+    /// weighted-phonetic-matching feature.
     phonetic_weight: f64,
 }
 
@@ -317,7 +475,14 @@ where
         }
     }
 
-    /// Create with custom phonetic weight.
+    /// Create with a custom phonetic weight.
+    ///
+    /// Reserved: the phonetic weight is currently stored (and threaded to the
+    /// query iterator) but NOT applied to matching cost or ranking. Every
+    /// emitted [`PhoneticCandidateByte`] reports `phonetic_cost == 0.0`, so
+    /// `total_cost == edit_distance`. The value is clamped to `>= 0.0` to
+    /// preserve the future monotone-cost-pruning invariant. Tracked for a future
+    /// weighted-phonetic-matching feature.
     pub fn with_phonetic_weight(
         dictionary: D,
         nfa: NFA,
@@ -328,7 +493,7 @@ where
             dictionary,
             nfa,
             max_distance,
-            phonetic_weight,
+            phonetic_weight: phonetic_weight.max(0.0),
         }
     }
 
@@ -375,19 +540,44 @@ where
 }
 
 /// Byte-level phonetic candidate.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct PhoneticCandidateByte {
     /// The matching term from the dictionary
     pub term: Vec<u8>,
     /// Edit distance from the query to this term
     pub edit_distance: u8,
-    /// Phonetic transformation cost
+    /// Phonetic transformation cost.
+    ///
+    /// Reserved: in the current implementation this is ALWAYS `0.0` (the query
+    /// path constructs every candidate with `phonetic_cost == 0.0`). Kept for a
+    /// future weighted-phonetic-matching feature.
     pub phonetic_cost: f64,
-    /// Combined total cost
+    /// Combined total cost (`edit_distance + phonetic_cost`).
+    ///
+    /// Because `phonetic_cost` is always `0.0` today, this currently equals
+    /// `edit_distance as f64`.
     pub total_cost: f64,
 }
 
+impl PartialEq for PhoneticCandidateByte {
+    fn eq(&self, other: &Self) -> bool {
+        self.term == other.term
+            && self.edit_distance == other.edit_distance
+            && self.phonetic_cost.total_cmp(&other.phonetic_cost) == Ordering::Equal
+            && self.total_cost.total_cmp(&other.total_cost) == Ordering::Equal
+    }
+}
+
 impl Eq for PhoneticCandidateByte {}
+
+impl Hash for PhoneticCandidateByte {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.term.hash(state);
+        self.edit_distance.hash(state);
+        self.phonetic_cost.to_bits().hash(state);
+        self.total_cost.to_bits().hash(state);
+    }
+}
 
 impl PhoneticCandidateByte {
     /// Create a new phonetic candidate.
@@ -409,11 +599,12 @@ impl PartialOrd for PhoneticCandidateByte {
 }
 
 impl Ord for PhoneticCandidateByte {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match self.total_cost.partial_cmp(&other.total_cost) {
-            Some(std::cmp::Ordering::Equal) | None => self.term.cmp(&other.term),
-            Some(ord) => ord,
-        }
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.total_cost
+            .total_cmp(&other.total_cost)
+            .then_with(|| self.term.cmp(&other.term))
+            .then_with(|| self.edit_distance.cmp(&other.edit_distance))
+            .then_with(|| self.phonetic_cost.total_cmp(&other.phonetic_cost))
     }
 }
 
@@ -423,10 +614,11 @@ pub struct PhoneticQueryIterator<'a, D: Dictionary> {
     /// Product automaton for matching
     product: ProductAutomaton,
     /// Queue of dictionary nodes to explore
-    queue: VecDeque<(D::Node, Vec<u8>, usize)>,
-    /// The dictionary reference
-    #[allow(dead_code)]
-    dictionary: &'a D,
+    queue: VecDeque<PhoneticTraversal<D::Node>>,
+    /// Parent-path arena for reconstructing terms without per-edge path clones.
+    path_arena: Vec<PhoneticPathNode<u8>>,
+    /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
+    _dictionary: PhantomData<&'a D>,
     /// Maximum depth
     max_depth: usize,
     /// Phonetic weight
@@ -447,18 +639,40 @@ where
     ) -> Self {
         let product = ProductAutomaton::new(nfa.clone(), max_distance);
 
-        let mut queue = VecDeque::new();
-        queue.push_back((dictionary.root(), Vec::new(), 0));
+        let mut queue = VecDeque::with_capacity(1);
+        queue.push_back(PhoneticTraversal::root(dictionary.root()));
 
         let max_depth = 100;
 
         Self {
             product,
             queue,
-            dictionary,
+            path_arena: Vec::with_capacity(64),
+            _dictionary: PhantomData,
             max_depth,
             _phonetic_weight: phonetic_weight,
         }
+    }
+
+    #[inline]
+    fn push_path_node(&mut self, label: u8, parent: usize) -> usize {
+        let depth = if parent == PHONETIC_NO_PATH {
+            1
+        } else {
+            self.path_arena[parent].depth.saturating_add(1)
+        };
+        let index = self.path_arena.len();
+        self.path_arena.push(PhoneticPathNode {
+            label,
+            parent,
+            depth,
+        });
+        index
+    }
+
+    #[inline]
+    fn materialize_path(&self, entry: &PhoneticTraversal<D::Node>) -> Vec<u8> {
+        collect_path_units(entry.label, entry.parent, &self.path_arena)
     }
 }
 
@@ -470,21 +684,32 @@ where
     type Item = PhoneticCandidateByte;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((node, path, depth)) = self.queue.pop_front() {
-            if depth > self.max_depth {
+        while let Some(entry) = self.queue.pop_front() {
+            if entry.depth > self.max_depth {
                 continue;
             }
 
-            if node.is_final() {
+            if entry.node.is_final() {
+                let path = self.materialize_path(&entry);
                 if let Some(distance) = self.product.min_distance(&path) {
-                    return Some(PhoneticCandidateByte::new(path.clone(), distance, 0.0));
+                    return Some(PhoneticCandidateByte::new(path, distance, 0.0));
                 }
             }
 
-            for (b, child) in node.edges() {
-                let mut child_path = path.clone();
-                child_path.push(b);
-                self.queue.push_back((child, child_path, depth + 1));
+            let parent = match entry.label {
+                Some(label) => self.push_path_node(label, entry.parent),
+                None => entry.parent,
+            };
+
+            let Some(child_depth) = phonetic_child_depth(entry.depth) else {
+                continue;
+            };
+            if child_depth > self.max_depth {
+                continue;
+            }
+            for (b, child) in entry.node.edges() {
+                self.queue
+                    .push_back(PhoneticTraversal::child(child, b, parent, child_depth));
             }
         }
 
@@ -500,9 +725,25 @@ where
 #[cfg(feature = "phonetic-rules")]
 mod tests {
     use super::*;
-    use crate::phonetic::nfa::compiler::compile;
-    use crate::phonetic::regex::parse;
+    use crate::phonetic::nfa::compiler::{compile, compile_bytes};
+    use crate::phonetic::regex::{parse, parse_bytes};
     use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
+    use libdictenstein::double_array_trie::DoubleArrayTrie;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    fn candidate_hash<T: Hash>(candidate: &T) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        candidate.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[cfg(feature = "phonetic-rules")]
+    #[test]
+    fn test_phonetic_child_depth_rejects_overflow() {
+        assert_eq!(phonetic_child_depth(0), Some(1));
+        assert_eq!(phonetic_child_depth(usize::MAX), None);
+    }
 
     #[test]
     fn test_phonetic_candidate_ordering() {
@@ -512,6 +753,72 @@ mod tests {
 
         assert!(c1 < c2); // 0.0 < 1.0
         assert!(c1 < c3); // same cost, alphabetically
+    }
+
+    #[test]
+    fn test_phonetic_candidate_eq_ord_hash_contract() {
+        let phonetic_path = PhoneticCandidate::new("same".to_string(), 0, 1.0);
+        let edit_path = PhoneticCandidate::new("same".to_string(), 1, 0.0);
+
+        assert_eq!(phonetic_path.total_cost, edit_path.total_cost);
+        assert_ne!(phonetic_path, edit_path);
+        assert_ne!(phonetic_path.cmp(&edit_path), Ordering::Equal);
+
+        let positive_zero = PhoneticCandidate {
+            term: "zero".to_string(),
+            edit_distance: 0,
+            phonetic_cost: 0.0,
+            total_cost: 0.0,
+        };
+        let negative_zero = PhoneticCandidate {
+            term: "zero".to_string(),
+            edit_distance: 0,
+            phonetic_cost: -0.0,
+            total_cost: -0.0,
+        };
+
+        assert_ne!(positive_zero, negative_zero);
+        assert_ne!(positive_zero.cmp(&negative_zero), Ordering::Equal);
+
+        let same_candidate = phonetic_path.clone();
+        assert_eq!(phonetic_path, same_candidate);
+        assert_eq!(
+            candidate_hash(&phonetic_path),
+            candidate_hash(&same_candidate)
+        );
+    }
+
+    #[test]
+    fn test_phonetic_candidate_byte_eq_ord_hash_contract() {
+        let phonetic_path = PhoneticCandidateByte::new(b"same".to_vec(), 0, 1.0);
+        let edit_path = PhoneticCandidateByte::new(b"same".to_vec(), 1, 0.0);
+
+        assert_eq!(phonetic_path.total_cost, edit_path.total_cost);
+        assert_ne!(phonetic_path, edit_path);
+        assert_ne!(phonetic_path.cmp(&edit_path), Ordering::Equal);
+
+        let positive_zero = PhoneticCandidateByte {
+            term: b"zero".to_vec(),
+            edit_distance: 0,
+            phonetic_cost: 0.0,
+            total_cost: 0.0,
+        };
+        let negative_zero = PhoneticCandidateByte {
+            term: b"zero".to_vec(),
+            edit_distance: 0,
+            phonetic_cost: -0.0,
+            total_cost: -0.0,
+        };
+
+        assert_ne!(positive_zero, negative_zero);
+        assert_ne!(positive_zero.cmp(&negative_zero), Ordering::Equal);
+
+        let same_candidate = phonetic_path.clone();
+        assert_eq!(phonetic_path, same_candidate);
+        assert_eq!(
+            candidate_hash(&phonetic_path),
+            candidate_hash(&same_candidate)
+        );
     }
 
     #[test]
@@ -574,6 +881,22 @@ mod tests {
     }
 
     #[test]
+    fn test_byte_phonetic_transducer_shared_prefix_branching() {
+        let dict = DoubleArrayTrie::from_terms(["phone", "fone", "phony", "bone"]);
+        let nfa = compile_bytes(&parse_bytes(b"(ph|f)one").expect("parse")).expect("compile bytes");
+
+        let transducer = PhoneticTransducer::new(dict, nfa, 1);
+        let mut terms: Vec<_> = transducer
+            .query(b"phone")
+            .map(|candidate| candidate.term)
+            .collect();
+        terms.sort();
+
+        assert!(terms.contains(&b"fone".to_vec()));
+        assert!(terms.contains(&b"phone".to_vec()));
+    }
+
+    #[test]
     fn test_phonetic_transducer_with_distance() {
         let dict = DoubleArrayTrieChar::from_terms(["phone", "phones", "phoned"]);
         let nfa = compile(&parse("phone").expect("parse")).expect("compile");
@@ -599,5 +922,48 @@ mod tests {
 
         // Test into_dictionary
         let _recovered_dict = transducer.into_dictionary();
+    }
+
+    /// F2: a non-zero phonetic weight is stored but INERT. Pin the documented
+    /// contract so the docs and code cannot silently drift apart: every emitted
+    /// candidate must report `phonetic_cost == 0.0` and, consequently,
+    /// `total_cost == edit_distance`.
+    #[test]
+    fn test_phonetic_weight_leaves_candidate_cost_zero() {
+        let dict = DoubleArrayTrieChar::from_terms(["phone", "phones", "phoned"]);
+        let nfa = compile(&parse("phone").expect("parse")).expect("compile");
+
+        // Weight 7.0 is arbitrary and non-zero; it must not change any cost.
+        let transducer = PhoneticTransducerChar::with_phonetic_weight(dict, nfa, 1, 7.0);
+        let results: Vec<_> = transducer.query("phone").collect();
+        assert!(!results.is_empty(), "expected at least the exact match");
+        for candidate in &results {
+            assert_eq!(
+                candidate.phonetic_cost, 0.0,
+                "phonetic_cost must be 0.0 for {:?}",
+                candidate.term
+            );
+            assert_eq!(
+                candidate.total_cost,
+                f64::from(candidate.edit_distance),
+                "total_cost must equal edit_distance for {:?}",
+                candidate.term
+            );
+        }
+    }
+
+    /// F2 (byte-level): mirror of the char contract for `PhoneticCandidateByte`.
+    #[test]
+    fn test_byte_phonetic_weight_leaves_candidate_cost_zero() {
+        let dict = DoubleArrayTrie::from_terms(["phone", "phones", "bone"]);
+        let nfa = compile_bytes(&parse_bytes(b"phone").expect("parse")).expect("compile bytes");
+
+        let transducer = PhoneticTransducer::with_phonetic_weight(dict, nfa, 1, 4.0);
+        let results: Vec<_> = transducer.query(b"phone").collect();
+        assert!(!results.is_empty(), "expected at least the exact match");
+        for candidate in &results {
+            assert_eq!(candidate.phonetic_cost, 0.0);
+            assert_eq!(candidate.total_cost, f64::from(candidate.edit_distance));
+        }
     }
 }
