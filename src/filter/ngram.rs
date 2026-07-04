@@ -63,6 +63,9 @@ pub struct NgramIndex {
     /// Terms stored by ID.
     terms: Vec<String>,
 
+    /// Whether the term ID is currently live.
+    active: Vec<bool>,
+
     /// Term to ID mapping for deduplication.
     term_to_id: FxHashMap<String, usize>,
 }
@@ -74,9 +77,8 @@ impl NgramIndex {
     ///
     /// * `n` - N-gram size (typically 2 for bigrams or 3 for trigrams)
     ///
-    /// # Panics
-    ///
-    /// Panics if `n` is 0.
+    /// A zero value is normalized to 1 so candidate generation remains total
+    /// for externally supplied configuration values.
     ///
     /// # Example
     ///
@@ -87,11 +89,11 @@ impl NgramIndex {
     /// let trigram_index = NgramIndex::new(3);
     /// ```
     pub fn new(n: usize) -> Self {
-        assert!(n > 0, "N-gram size must be at least 1");
         Self {
-            n,
+            n: n.max(1),
             index: FxHashMap::default(),
             terms: Vec::new(),
+            active: Vec::new(),
             term_to_id: FxHashMap::default(),
         }
     }
@@ -115,7 +117,13 @@ impl NgramIndex {
     where
         I: IntoIterator<Item = String>,
     {
+        let terms = terms.into_iter();
+        let (capacity, _) = terms.size_hint();
         let mut index = Self::new(n);
+        index.terms.reserve(capacity);
+        index.active.reserve(capacity);
+        index.term_to_id.reserve(capacity);
+
         for term in terms {
             index.insert(&term);
         }
@@ -128,16 +136,16 @@ impl NgramIndex {
         self.n
     }
 
-    /// Get the number of indexed terms.
+    /// Get the number of live indexed terms.
     #[inline]
     pub fn len(&self) -> usize {
-        self.terms.len()
+        self.term_to_id.len()
     }
 
     /// Check if the index is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.terms.is_empty()
+        self.term_to_id.is_empty()
     }
 
     /// Get the number of unique n-grams in the index.
@@ -177,15 +185,10 @@ impl NgramIndex {
         // Assign new ID
         let id = self.terms.len();
         self.terms.push(term.to_string());
+        self.active.push(true);
         self.term_to_id.insert(term.to_string(), id);
 
-        // Index by n-grams
-        for ngram in self.compute_ngrams(term.as_bytes()) {
-            self.index
-                .entry(ngram)
-                .or_insert_with(FxHashSet::default)
-                .insert(id);
-        }
+        self.index_term_ngrams(term.as_bytes(), id);
 
         id
     }
@@ -203,30 +206,106 @@ impl NgramIndex {
     pub fn remove(&mut self, term: &str) -> bool {
         if let Some(&id) = self.term_to_id.get(term) {
             // Remove from n-gram index
-            for ngram in self.compute_ngrams(term.as_bytes()) {
-                if let Some(ids) = self.index.get_mut(&ngram) {
+            Self::for_each_ngram(self.n, term.as_bytes(), |ngram| {
+                if let Some(ids) = self.index.get_mut(ngram) {
                     ids.remove(&id);
                     // Don't remove empty sets to avoid rehashing
                 }
-            }
+            });
             self.term_to_id.remove(term);
             // Note: We don't remove from terms vec to preserve IDs
-            // Set to empty string to mark as deleted
-            self.terms[id] = String::new();
+            self.active[id] = false;
             true
         } else {
             false
         }
     }
 
+    fn for_each_ngram<'a>(n: usize, bytes: &'a [u8], mut visit: impl FnMut(&'a [u8])) {
+        if bytes.len() < n {
+            // For short strings, use the whole string as a single "n-gram"
+            visit(bytes);
+        } else {
+            for ngram in bytes.windows(n) {
+                visit(ngram);
+            }
+        }
+    }
+
+    fn ngram_count_for_len(&self, byte_len: usize) -> usize {
+        if byte_len < self.n {
+            1
+        } else {
+            byte_len - self.n + 1
+        }
+    }
+
+    fn index_term_ngrams(&mut self, bytes: &[u8], id: usize) {
+        Self::for_each_ngram(self.n, bytes, |ngram| {
+            self.index.entry(ngram.to_vec()).or_default().insert(id);
+        });
+    }
+
     /// Compute n-grams from a byte slice.
     fn compute_ngrams(&self, bytes: &[u8]) -> Vec<Vec<u8>> {
-        if bytes.len() < self.n {
-            // For short strings, use the whole string as a single "n-gram"
-            return vec![bytes.to_vec()];
-        }
+        let mut ngrams = Vec::with_capacity(self.ngram_count_for_len(bytes.len()));
+        Self::for_each_ngram(self.n, bytes, |ngram| ngrams.push(ngram.to_vec()));
+        ngrams
+    }
 
-        bytes.windows(self.n).map(|w| w.to_vec()).collect()
+    fn query_ngram_slices<'a>(&self, query: &'a str) -> FxHashSet<&'a [u8]> {
+        let bytes = query.as_bytes();
+        let mut set = FxHashSet::with_capacity_and_hasher(
+            self.ngram_count_for_len(bytes.len()),
+            Default::default(),
+        );
+        Self::for_each_ngram(self.n, bytes, |ngram| {
+            set.insert(ngram);
+        });
+        set
+    }
+
+    fn min_overlap(&self, query_ngram_count: usize, max_distance: usize) -> usize {
+        query_ngram_count.saturating_sub(max_distance.saturating_mul(self.n))
+    }
+
+    fn live_terms(&self) -> impl Iterator<Item = (usize, &str)> {
+        self.terms
+            .iter()
+            .enumerate()
+            .filter(|(id, _)| self.active.get(*id).copied().unwrap_or(false))
+            .map(|(id, term)| (id, term.as_str()))
+    }
+
+    fn collect_live_terms(&self) -> Vec<&str> {
+        let mut terms = Vec::with_capacity(self.term_to_id.len());
+        terms.extend(self.live_terms().map(|(_, term)| term));
+        terms
+    }
+
+    fn overlap_count_capacity(&self, query_ngrams: &FxHashSet<&[u8]>) -> usize {
+        query_ngrams
+            .iter()
+            .filter_map(|&qgram| self.index.get(qgram))
+            .fold(0usize, |count, term_ids| {
+                count.saturating_add(term_ids.len())
+            })
+            .min(self.term_to_id.len())
+    }
+
+    fn ngram_overlap_counts(&self, query_ngrams: &FxHashSet<&[u8]>) -> FxHashMap<usize, usize> {
+        let mut term_counts = FxHashMap::with_capacity_and_hasher(
+            self.overlap_count_capacity(query_ngrams),
+            Default::default(),
+        );
+        for &qgram in query_ngrams {
+            if let Some(term_ids) = self.index.get(qgram) {
+                for &id in term_ids {
+                    *term_counts.entry(id).or_insert(0) += 1;
+                }
+            }
+        }
+        term_counts
     }
 
     /// Find candidate terms within the given edit distance.
@@ -257,28 +336,22 @@ impl NgramIndex {
     /// // Returns ["hello", "help"] as candidates
     /// ```
     pub fn find_candidates(&self, query: &str, max_distance: usize) -> Vec<&str> {
-        let query_ngrams: FxHashSet<Vec<u8>> =
-            self.compute_ngrams(query.as_bytes()).into_iter().collect();
+        let query_ngrams = self.query_ngram_slices(query);
 
         // Minimum overlap threshold based on edit distance theory:
         // Each edit can destroy up to n n-grams, so we need at least
         // |query_ngrams| - max_distance * n overlap
-        let min_overlap = query_ngrams.len().saturating_sub(max_distance * self.n);
-
-        // Count n-gram matches per term
-        let mut term_counts: FxHashMap<usize, usize> = FxHashMap::default();
-        for qgram in &query_ngrams {
-            if let Some(term_ids) = self.index.get(qgram) {
-                for &id in term_ids {
-                    *term_counts.entry(id).or_insert(0) += 1;
-                }
-            }
+        let min_overlap = self.min_overlap(query_ngrams.len(), max_distance);
+        if min_overlap == 0 {
+            return self.collect_live_terms();
         }
 
         // Filter by minimum overlap and collect results
-        term_counts
+        self.ngram_overlap_counts(&query_ngrams)
             .into_iter()
-            .filter(|&(id, count)| count >= min_overlap && !self.terms[id].is_empty())
+            .filter(|&(id, count)| {
+                count >= min_overlap && self.active.get(id).copied().unwrap_or(false)
+            })
             .map(|(id, _)| self.terms[id].as_str())
             .collect()
     }
@@ -301,28 +374,30 @@ impl NgramIndex {
         query: &str,
         max_distance: usize,
     ) -> Vec<(&str, usize)> {
-        let query_ngrams: FxHashSet<Vec<u8>> =
-            self.compute_ngrams(query.as_bytes()).into_iter().collect();
+        let query_ngrams = self.query_ngram_slices(query);
 
-        let min_overlap = query_ngrams.len().saturating_sub(max_distance * self.n);
+        let min_overlap = self.min_overlap(query_ngrams.len(), max_distance);
+        let term_counts = self.ngram_overlap_counts(&query_ngrams);
 
-        let mut term_counts: FxHashMap<usize, usize> = FxHashMap::default();
-        for qgram in &query_ngrams {
-            if let Some(term_ids) = self.index.get(qgram) {
-                for &id in term_ids {
-                    *term_counts.entry(id).or_insert(0) += 1;
-                }
-            }
-        }
-
-        let mut results: Vec<_> = term_counts
-            .into_iter()
-            .filter(|&(id, count)| count >= min_overlap && !self.terms[id].is_empty())
-            .map(|(id, count)| (self.terms[id].as_str(), count))
-            .collect();
+        let mut results: Vec<_> = if min_overlap == 0 {
+            let mut results = Vec::with_capacity(self.term_to_id.len());
+            results.extend(
+                self.live_terms()
+                    .map(|(id, term)| (term, term_counts.get(&id).copied().unwrap_or(0))),
+            );
+            results
+        } else {
+            term_counts
+                .into_iter()
+                .filter(|&(id, count)| {
+                    count >= min_overlap && self.active.get(id).copied().unwrap_or(false)
+                })
+                .map(|(id, count)| (self.terms[id].as_str(), count))
+                .collect()
+        };
 
         // Sort by overlap count descending (higher overlap = more likely match)
-        results.sort_by(|a, b| b.1.cmp(&a.1));
+        results.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
 
         results
     }
@@ -347,6 +422,7 @@ impl NgramIndex {
     pub fn clear(&mut self) {
         self.index.clear();
         self.terms.clear();
+        self.active.clear();
         self.term_to_id.clear();
     }
 
@@ -354,7 +430,9 @@ impl NgramIndex {
     pub fn iter(&self) -> impl Iterator<Item = &str> {
         self.terms
             .iter()
-            .filter(|t| !t.is_empty())
+            .zip(self.active.iter())
+            .filter(|(_, active)| **active)
+            .map(|(term, _)| term)
             .map(String::as_str)
     }
 }
@@ -385,9 +463,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "N-gram size must be at least 1")]
-    fn test_zero_n_panics() {
-        NgramIndex::new(0);
+    fn test_zero_n_normalizes_to_unigrams() {
+        let index = NgramIndex::new(0);
+        assert_eq!(index.n(), 1);
+        assert_eq!(index.get_ngrams("abc"), vec!["a", "b", "c"]);
     }
 
     #[test]
@@ -440,6 +519,21 @@ mod tests {
     }
 
     #[test]
+    fn test_find_candidates_zero_overlap_threshold_returns_all_live_terms() {
+        let mut index = NgramIndex::new(2);
+        index.insert("abc");
+        index.insert("xyz");
+        index.insert("pqrs");
+        assert!(index.remove("pqrs"));
+
+        let candidates = index.find_candidates("abc", usize::MAX);
+
+        assert!(candidates.contains(&"abc"));
+        assert!(candidates.contains(&"xyz"));
+        assert!(!candidates.contains(&"pqrs"));
+    }
+
+    #[test]
     fn test_find_candidates_with_counts() {
         let mut index = NgramIndex::new(2);
         index.insert("hello");
@@ -455,6 +549,28 @@ mod tests {
     }
 
     #[test]
+    fn test_find_candidates_with_counts_includes_zero_overlap_when_threshold_is_zero() {
+        let mut index = NgramIndex::new(2);
+        index.insert("abc");
+        index.insert("xyz");
+
+        let candidates = index.find_candidates_with_counts("abc", usize::MAX);
+
+        assert!(candidates.contains(&("abc", 2)));
+        assert!(candidates.contains(&("xyz", 0)));
+    }
+
+    #[test]
+    fn test_repeated_query_ngrams_count_once() {
+        let mut index = NgramIndex::new(1);
+        index.insert("a");
+
+        let candidates = index.find_candidates_with_counts("aaa", 0);
+
+        assert_eq!(candidates, vec![("a", 1)]);
+    }
+
+    #[test]
     fn test_remove() {
         let mut index = NgramIndex::new(2);
         index.insert("hello");
@@ -463,10 +579,30 @@ mod tests {
         assert_eq!(index.len(), 2);
         assert!(index.remove("hello"));
         assert!(!index.remove("hello")); // Already removed
+        assert_eq!(index.len(), 1);
 
         // "hello" should no longer appear in candidates
         let candidates = index.find_candidates("hello", 0);
         assert!(!candidates.contains(&"hello"));
+    }
+
+    #[test]
+    fn test_empty_string_is_a_live_term_not_a_tombstone() {
+        let mut index = NgramIndex::new(2);
+        index.insert("");
+        index.insert("abc");
+
+        assert_eq!(index.len(), 2);
+        assert!(index.iter().any(str::is_empty));
+        assert!(index.find_candidates("", 0).contains(&""));
+
+        assert!(index.remove("abc"));
+        let candidates = index.find_candidates("zzz", usize::MAX);
+        assert!(candidates.contains(&""));
+        assert!(!candidates.contains(&"abc"));
+
+        assert!(index.remove(""));
+        assert!(index.is_empty());
     }
 
     #[test]

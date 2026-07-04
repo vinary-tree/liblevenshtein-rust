@@ -30,12 +30,13 @@
 //! assert_eq!(memory_pressure.get_value("foo"), Some(42));
 //! ```
 
+use crate::sync_compat::RwLock;
 use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
 };
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 /// Metadata tracked for each entry.
 #[derive(Debug, Clone)]
@@ -147,10 +148,7 @@ impl<D> MemoryPressure<D> {
     /// Records an entry access with size tracking.
     fn record_access<V: DictionaryValue>(&self, term: &str, _value: &V) {
         let size = std::mem::size_of::<V>();
-        let mut metadata = self
-            .metadata
-            .write()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self.metadata.write();
         metadata
             .entry(term.to_string())
             .and_modify(|m| m.increment())
@@ -161,10 +159,7 @@ impl<D> MemoryPressure<D> {
     ///
     /// Returns `None` if the entry has never been accessed.
     pub fn memory_pressure_score(&self, term: &str) -> Option<f64> {
-        let metadata = self
-            .metadata
-            .read()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self.metadata.read();
         metadata.get(term).map(|m| m.memory_pressure_score())
     }
 
@@ -172,10 +167,7 @@ impl<D> MemoryPressure<D> {
     ///
     /// Returns the term with the highest pressure score (most likely to evict).
     pub fn find_highest_pressure(&self, terms: &[&str]) -> Option<String> {
-        let metadata = self
-            .metadata
-            .read()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self.metadata.read();
         terms
             .iter()
             .filter_map(|&term| {
@@ -183,11 +175,7 @@ impl<D> MemoryPressure<D> {
                     .get(term)
                     .map(|m| (term, m.memory_pressure_score()))
             })
-            .max_by(|(_, score1), (_, score2)| {
-                score1
-                    .partial_cmp(score2)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+            .max_by(|(_, score1), (_, score2)| score1.total_cmp(score2))
             .map(|(term, _)| term.to_string())
     }
 
@@ -196,10 +184,7 @@ impl<D> MemoryPressure<D> {
     /// Returns the evicted term if any.
     pub fn evict_highest_pressure(&self, terms: &[&str]) -> Option<String> {
         if let Some(high_pressure_term) = self.find_highest_pressure(terms) {
-            let mut metadata = self
-                .metadata
-                .write()
-                .expect("poisoned RwLock; only fatal if writer panicked");
+            let mut metadata = self.metadata.write();
             metadata.remove(&high_pressure_term);
             Some(high_pressure_term)
         } else {
@@ -209,10 +194,7 @@ impl<D> MemoryPressure<D> {
 
     /// Clears all metadata.
     pub fn clear_metadata(&self) {
-        let mut metadata = self
-            .metadata
-            .write()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self.metadata.write();
         metadata.clear();
     }
 }

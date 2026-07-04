@@ -45,6 +45,14 @@ const DEFAULT_NGRAM_SIZE: usize = 2;
 /// Default Jaro-Winkler similarity threshold.
 const DEFAULT_JARO_THRESHOLD: f64 = 0.7;
 
+fn normalize_jaro_threshold(threshold: f64) -> f64 {
+    if threshold.is_nan() {
+        DEFAULT_JARO_THRESHOLD
+    } else {
+        threshold.clamp(0.0, 1.0)
+    }
+}
+
 /// Multi-stage hybrid matcher for approximate string matching.
 ///
 /// Combines N-gram indexing with Jaro-Winkler similarity for efficient
@@ -93,25 +101,18 @@ impl HybridMatcher {
     /// * `ngram_size` - N-gram size (typically 2 or 3)
     /// * `jaro_threshold` - Minimum Jaro-Winkler similarity (0.0-1.0)
     ///
-    /// # Panics
-    ///
-    /// Panics if ngram_size is 0 or jaro_threshold is not in [0.0, 1.0].
+    /// `ngram_size` is normalized by [`NgramIndex`] so zero becomes unigram
+    /// filtering. `jaro_threshold` is normalized into `[0.0, 1.0]`; `NaN`
+    /// falls back to the default threshold.
     pub fn with_config<I>(terms: I, ngram_size: usize, jaro_threshold: f64) -> Self
     where
         I: IntoIterator<Item = String>,
     {
-        assert!(ngram_size > 0, "N-gram size must be at least 1");
-        assert!(
-            (0.0..=1.0).contains(&jaro_threshold),
-            "Jaro threshold must be in [0.0, 1.0], got {}",
-            jaro_threshold
-        );
-
         let ngram_index = NgramIndex::from_iter(ngram_size, terms);
 
         Self {
             ngram_index,
-            jaro_threshold,
+            jaro_threshold: normalize_jaro_threshold(jaro_threshold),
             skip_jaro: false,
         }
     }
@@ -158,16 +159,8 @@ impl HybridMatcher {
 
     /// Set the Jaro-Winkler threshold.
     ///
-    /// # Panics
-    ///
-    /// Panics if threshold is not in [0.0, 1.0].
     pub fn set_jaro_threshold(&mut self, threshold: f64) {
-        assert!(
-            (0.0..=1.0).contains(&threshold),
-            "Jaro threshold must be in [0.0, 1.0], got {}",
-            threshold
-        );
-        self.jaro_threshold = threshold;
+        self.jaro_threshold = normalize_jaro_threshold(threshold);
     }
 
     /// Add a term to the index.
@@ -250,7 +243,7 @@ impl HybridMatcher {
             .collect();
 
         // Sort by score descending
-        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| b.1.total_cmp(&a.1));
 
         results
     }
@@ -270,7 +263,7 @@ impl HybridMatcher {
         let distance_factor = 1.0 - (max_distance as f64 / query_len as f64).min(1.0);
 
         // Blend base threshold with distance-adjusted factor
-        (self.jaro_threshold * distance_factor).max(0.0).min(1.0)
+        (self.jaro_threshold * distance_factor).clamp(0.0, 1.0)
     }
 
     /// Get statistics about the filter performance.
@@ -337,12 +330,10 @@ impl HybridMatcherBuilder {
     where
         I: IntoIterator<Item = String>,
     {
-        let ngram_index = NgramIndex::from_iter(self.ngram_size, terms);
-
-        HybridMatcher {
-            ngram_index,
-            jaro_threshold: self.jaro_threshold,
-            skip_jaro: self.skip_jaro,
+        if self.skip_jaro {
+            HybridMatcher::ngram_only(terms, self.ngram_size)
+        } else {
+            HybridMatcher::with_config(terms, self.ngram_size, self.jaro_threshold)
         }
     }
 }
@@ -430,7 +421,7 @@ mod tests {
         assert_eq!(matcher.len(), 11);
 
         assert!(matcher.remove("newterm"));
-        // Note: len doesn't decrease after remove (tombstone approach)
+        assert_eq!(matcher.len(), 10);
         assert!(!matcher.remove("newterm"));
     }
 
@@ -472,10 +463,36 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Jaro threshold must be in [0.0, 1.0]")]
-    fn test_invalid_threshold_panics() {
+    fn test_invalid_thresholds_are_normalized() {
         let mut matcher = HybridMatcher::new(test_terms());
+
         matcher.set_jaro_threshold(1.5);
+        assert_eq!(matcher.jaro_threshold(), 1.0);
+
+        matcher.set_jaro_threshold(-1.0);
+        assert_eq!(matcher.jaro_threshold(), 0.0);
+
+        matcher.set_jaro_threshold(f64::NAN);
+        assert_eq!(matcher.jaro_threshold(), DEFAULT_JARO_THRESHOLD);
+    }
+
+    #[test]
+    fn test_with_config_normalizes_external_configuration() {
+        let matcher = HybridMatcher::with_config(test_terms(), 0, f64::NAN);
+
+        assert_eq!(matcher.ngram_size(), 1);
+        assert_eq!(matcher.jaro_threshold(), DEFAULT_JARO_THRESHOLD);
+    }
+
+    #[test]
+    fn test_builder_normalizes_external_configuration() {
+        let matcher = HybridMatcherBuilder::new()
+            .ngram_size(0)
+            .jaro_threshold(f64::INFINITY)
+            .build(test_terms());
+
+        assert_eq!(matcher.ngram_size(), 1);
+        assert_eq!(matcher.jaro_threshold(), 1.0);
     }
 
     #[test]

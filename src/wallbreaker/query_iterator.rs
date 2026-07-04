@@ -6,17 +6,44 @@
 //! 3. Bidirectional extension from matches
 //! 4. Deduplication of results
 
-use std::collections::HashSet;
+use std::collections::VecDeque;
 
 use crate::distance::{
-    create_memo_cache, merge_and_split_distance, standard_distance, transposition_distance,
+    create_memo_cache, merge_and_split_distance, standard_distance_bounded,
+    transposition_distance_bounded,
 };
+#[cfg(test)]
+use crate::distance::{standard_distance, transposition_distance};
 use crate::transducer::Algorithm;
 use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
 use libdictenstein::Dictionary;
+use rustc_hash::FxHashSet;
 
 use super::extension::BidirectionalExtension;
 use super::pattern_splitter::{PatternPiece, PatternSplitter};
+
+type SeenTerms = FxHashSet<Box<str>>;
+
+fn compute_distance_within(
+    algorithm: Algorithm,
+    max_distance: usize,
+    source: &str,
+    target: &str,
+) -> Option<usize> {
+    match algorithm {
+        Algorithm::Standard => standard_distance_bounded(source, target, max_distance),
+        Algorithm::Transposition => transposition_distance_bounded(source, target, max_distance),
+        Algorithm::MergeAndSplit => {
+            if source.chars().count().abs_diff(target.chars().count()) > max_distance {
+                return None;
+            }
+
+            let cache = create_memo_cache();
+            let distance = merge_and_split_distance(source, target, &cache);
+            (distance <= max_distance).then_some(distance)
+        }
+    }
+}
 
 /// Result from WallBreaker query.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -73,13 +100,10 @@ where
     current_piece_idx: usize,
 
     /// Results from current piece (buffered).
-    current_results: Vec<WallBreakerResult>,
-
-    /// Index into current_results.
-    result_idx: usize,
+    current_results: VecDeque<WallBreakerResult>,
 
     /// Terms already seen (for deduplication).
-    seen_terms: HashSet<String>,
+    seen_terms: SeenTerms,
 
     /// Whether iteration is complete.
     exhausted: bool,
@@ -115,25 +139,15 @@ where
             algorithm,
             pieces,
             current_piece_idx: 0,
-            current_results: Vec::new(),
-            result_idx: 0,
-            seen_terms: HashSet::new(),
+            current_results: VecDeque::new(),
+            seen_terms: SeenTerms::default(),
             exhausted: false,
         }
     }
 
     /// Compute edit distance using the configured algorithm.
-    fn compute_distance(&self, s1: &str, s2: &str) -> usize {
-        match self.algorithm {
-            Algorithm::Standard => standard_distance(s1, s2),
-            Algorithm::Transposition => transposition_distance(s1, s2),
-            Algorithm::MergeAndSplit => {
-                // MergeAndSplit requires a cache; create one per verification
-                // This could be optimized with a thread-local cache if needed
-                let cache = create_memo_cache();
-                merge_and_split_distance(s1, s2, &cache)
-            }
-        }
+    fn compute_distance_within(&self, s1: &str, s2: &str) -> Option<usize> {
+        compute_distance_within(self.algorithm, self.max_distance, s1, s2)
     }
 
     /// Process the next piece and populate current_results.
@@ -164,25 +178,25 @@ where
 
                 for (term, _distance) in extensions {
                     // Skip if already seen
-                    if self.seen_terms.contains(&term) {
+                    if self.seen_terms.contains(term.as_str()) {
                         continue;
                     }
 
                     // Verify the distance is within bounds using the correct algorithm
                     // The extension may have computed partial distances,
                     // so we verify with actual distance computation
-                    let actual_distance = self.compute_distance(&self.query, &term);
-                    if actual_distance <= self.max_distance {
-                        self.seen_terms.insert(term.clone());
+                    if let Some(actual_distance) = self.compute_distance_within(&self.query, &term)
+                    {
+                        self.seen_terms
+                            .insert(term.as_str().to_owned().into_boxed_str());
                         self.current_results
-                            .push(WallBreakerResult::new(term, actual_distance));
+                            .push_back(WallBreakerResult::new(term, actual_distance));
                     }
                 }
             }
 
             // If we found results, return
             if !self.current_results.is_empty() {
-                self.result_idx = 0;
                 return true;
             }
         }
@@ -206,15 +220,9 @@ where
 
         loop {
             // Try to get next result from current batch
-            if self.result_idx < self.current_results.len() {
-                let result = self.current_results[self.result_idx].clone();
-                self.result_idx += 1;
+            if let Some(result) = self.current_results.pop_front() {
                 return Some(result);
             }
-
-            // Clear current batch and process next piece
-            self.current_results.clear();
-            self.result_idx = 0;
 
             if !self.process_next_piece() {
                 self.exhausted = true;
@@ -255,6 +263,30 @@ mod tests {
         assert_eq!(merge_and_split_distance("", "", &cache), 0);
         assert_eq!(merge_and_split_distance("abc", "abc", &cache), 0);
         assert_eq!(merge_and_split_distance("test", "best", &cache), 1);
+    }
+
+    #[test]
+    fn test_compute_distance_within() {
+        assert_eq!(
+            compute_distance_within(Algorithm::Standard, 2, "kitten", "sitting"),
+            None
+        );
+        assert_eq!(
+            compute_distance_within(Algorithm::Standard, 3, "kitten", "sitting"),
+            Some(3)
+        );
+        assert_eq!(
+            compute_distance_within(Algorithm::Transposition, 1, "ab", "ba"),
+            Some(1)
+        );
+        assert_eq!(
+            compute_distance_within(Algorithm::MergeAndSplit, 0, "a", "abc"),
+            None
+        );
+        assert_eq!(
+            compute_distance_within(Algorithm::MergeAndSplit, 1, "m", "rn"),
+            Some(1)
+        );
     }
 
     #[test]

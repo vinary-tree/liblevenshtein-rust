@@ -47,28 +47,41 @@ impl<T> RwLock<T> {
         RwLock(std::sync::RwLock::new(value))
     }
 
-    /// Acquires a read lock, panicking if the lock is poisoned.
+    /// Acquires a read lock.
+    ///
+    /// If a writer panicked while holding the lock, the std backend recovers
+    /// the guard so this API matches `parking_lot`'s non-poisoning behavior.
     #[inline]
     pub fn read(&self) -> std::sync::RwLockReadGuard<'_, T> {
-        self.0.read().expect("RwLock poisoned")
+        self.0
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
-    /// Acquires a write lock, panicking if the lock is poisoned.
+    /// Acquires a write lock.
+    ///
+    /// If the lock was poisoned, the guard is recovered and returned.
     #[inline]
     pub fn write(&self) -> std::sync::RwLockWriteGuard<'_, T> {
-        self.0.write().expect("RwLock poisoned")
+        self.0
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Returns a mutable reference to the underlying data.
     #[inline]
     pub fn get_mut(&mut self) -> &mut T {
-        self.0.get_mut().expect("RwLock poisoned")
+        self.0
+            .get_mut()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Consumes the lock and returns the underlying data.
     #[inline]
     pub fn into_inner(self) -> T {
-        self.0.into_inner().expect("RwLock poisoned")
+        self.0
+            .into_inner()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 }
 
@@ -120,5 +133,45 @@ mod tests {
     fn test_rwlock_into_inner() {
         let lock = RwLock::new(42);
         assert_eq!(lock.into_inner(), 42);
+    }
+
+    #[cfg(any(not(feature = "parking_lot"), target_arch = "wasm32"))]
+    fn poisoned_i32_lock(value: i32) -> RwLock<i32> {
+        let lock = std::sync::Arc::new(RwLock::new(value));
+        let thread_lock = std::sync::Arc::clone(&lock);
+        let result = std::thread::spawn(move || {
+            let mut value = thread_lock.write();
+            *value += 1;
+            panic!("intentional poisoning for sync_compat test");
+        })
+        .join();
+
+        assert!(result.is_err());
+        std::sync::Arc::try_unwrap(lock)
+            .ok()
+            .expect("poison test should hold the only remaining Arc")
+    }
+
+    #[test]
+    #[cfg(any(not(feature = "parking_lot"), target_arch = "wasm32"))]
+    fn test_poisoned_lock_read_and_write_recover() {
+        let lock = poisoned_i32_lock(41);
+
+        assert_eq!(*lock.read(), 42);
+        {
+            let mut value = lock.write();
+            *value = 100;
+        }
+        assert_eq!(*lock.read(), 100);
+    }
+
+    #[test]
+    #[cfg(any(not(feature = "parking_lot"), target_arch = "wasm32"))]
+    fn test_poisoned_lock_get_mut_and_into_inner_recover() {
+        let mut lock = poisoned_i32_lock(41);
+
+        *lock.get_mut() = 100;
+
+        assert_eq!(lock.into_inner(), 100);
     }
 }

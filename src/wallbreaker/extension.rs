@@ -9,6 +9,17 @@
 use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringMatch};
 use libdictenstein::DictionaryNode;
 
+fn path_capacity(query_len: usize, max_distance: usize) -> usize {
+    query_len.saturating_add(max_distance)
+}
+
+fn labels_with_appended<T: Clone>(labels: &[T], label: T) -> Vec<T> {
+    let mut new_labels = Vec::with_capacity(labels.len().saturating_add(1));
+    new_labels.extend_from_slice(labels);
+    new_labels.push(label);
+    new_labels
+}
+
 /// State during bidirectional extension.
 ///
 /// Tracks the current position in both the query and dictionary,
@@ -108,10 +119,9 @@ where
     /// Returns a vector of (term, total_distance) for all dictionary terms
     /// reachable within the distance bound.
     pub fn extend(&self) -> Vec<(String, usize)> {
-        let mut results = Vec::new();
-
         // Get the left extension results (prefix possibilities)
         let left_states = self.extend_left();
+        let mut results = Vec::with_capacity(left_states.len());
 
         // For each left extension, extend right
         for left_state in left_states {
@@ -126,13 +136,9 @@ where
     ///
     /// This handles the portion of the query before the matched piece.
     fn extend_left(&self) -> Vec<LeftExtensionState<N>> {
-        let mut states = Vec::new();
-
         // Characters before the piece in the query
-        let query_prefix: Vec<char> = self.query_chars[..self.piece_start]
-            .iter()
-            .copied()
-            .collect();
+        let query_prefix: Vec<char> = self.query_chars[..self.piece_start].to_vec();
+        let mut states = Vec::with_capacity(path_capacity(query_prefix.len(), self.max_distance));
 
         // Start from the beginning of the matched substring in the dictionary
         // We need to find the node at the START of the match
@@ -144,7 +150,10 @@ where
                 node: start,
                 query_remaining: query_prefix.len(),
                 distance: 0,
-                prefix_labels: Vec::new(),
+                prefix_labels: Vec::with_capacity(path_capacity(
+                    query_prefix.len(),
+                    self.max_distance,
+                )),
             };
 
             self.extend_left_recursive(initial, &query_prefix, &mut states);
@@ -155,9 +164,6 @@ where
 
     /// Find the node at the START of the matched substring.
     fn find_match_start_node(&self) -> Option<N> {
-        // Navigate from root to the position just before the match
-        let _term_chars: Vec<char> = self.match_info.term.chars().collect();
-
         // The match starts at position `match_info.position` in the term
         // We need to traverse to that position
         if self.match_info.position == 0 {
@@ -168,7 +174,7 @@ where
             let mut depth = 0;
 
             // Count how deep we need to go back
-            while let Some(_) = current.parent() {
+            while current.parent().is_some() {
                 depth += 1;
                 if depth >= self.match_info.position + self.match_info.length {
                     break;
@@ -232,8 +238,7 @@ where
 
             if matches {
                 // Match: no distance increase
-                let mut new_labels = state.prefix_labels.clone();
-                new_labels.push(label);
+                let new_labels = labels_with_appended(&state.prefix_labels, label);
                 let new_state = LeftExtensionState {
                     node: parent,
                     query_remaining: state.query_remaining - 1,
@@ -243,9 +248,8 @@ where
                 self.extend_left_recursive(new_state, query_prefix, results);
             } else {
                 // Substitution: distance + 1
-                if state.distance + 1 <= self.max_distance {
-                    let mut new_labels = state.prefix_labels.clone();
-                    new_labels.push(label);
+                if state.distance < self.max_distance {
+                    let new_labels = labels_with_appended(&state.prefix_labels, label);
                     let new_state = LeftExtensionState {
                         node: parent,
                         query_remaining: state.query_remaining - 1,
@@ -258,7 +262,7 @@ where
         }
 
         // Try insertion (consume query char without moving in dictionary)
-        if state.distance + 1 <= self.max_distance {
+        if state.distance < self.max_distance {
             let new_state = LeftExtensionState {
                 node: state.node.clone(),
                 query_remaining: state.query_remaining - 1,
@@ -270,9 +274,8 @@ where
 
         // Try deletion (move in dictionary without consuming query)
         if let (Some(parent), Some(label)) = (state.node.parent(), state.node.parent_label()) {
-            if state.distance + 1 <= self.max_distance {
-                let mut new_labels = state.prefix_labels.clone();
-                new_labels.push(label);
+            if state.distance < self.max_distance {
+                let new_labels = labels_with_appended(&state.prefix_labels, label);
                 let new_state = LeftExtensionState {
                     node: parent,
                     query_remaining: state.query_remaining,
@@ -286,27 +289,31 @@ where
 
     /// Extend rightward from a left extension state.
     fn extend_right(&self, left_state: &LeftExtensionState<N>) -> Vec<(String, usize)> {
-        let mut results = Vec::new();
-
         // Characters after the piece in the query
-        let query_suffix: Vec<char> = self.query_chars[self.piece_end..].iter().copied().collect();
+        let query_suffix: Vec<char> = self.query_chars[self.piece_end..].to_vec();
 
         // Start from the end of the matched substring
         let initial = RightExtensionState {
             node: self.match_info.node.clone(),
             query_remaining: query_suffix.len(),
             distance: left_state.distance,
-            suffix_labels: Vec::new(),
+            suffix_labels: Vec::with_capacity(path_capacity(query_suffix.len(), self.max_distance)),
         };
 
         let right_states = self.extend_right_recursive(initial, &query_suffix);
+        let mut results = Vec::with_capacity(right_states.len());
 
         // Combine left prefix + matched piece + right suffix
         for right_state in right_states {
             if right_state.distance <= self.max_distance && right_state.node.is_final() {
                 // Build the complete term
                 // Left labels are in reverse order, need to reverse
-                let mut term_chars: Vec<char> = Vec::new();
+                let mut term_chars: Vec<char> = Vec::with_capacity(
+                    left_state
+                        .prefix_labels
+                        .len()
+                        .saturating_add(self.match_info.term.chars().count()),
+                );
 
                 // Add left prefix (reversed)
                 for label in left_state.prefix_labels.iter().rev() {
@@ -337,7 +344,7 @@ where
         state: RightExtensionState<N>,
         query_suffix: &[char],
     ) -> Vec<RightExtensionState<N>> {
-        let mut results = Vec::new();
+        let mut results = Vec::with_capacity(1);
 
         // Base case: consumed all query suffix
         if state.query_remaining == 0 {
@@ -362,8 +369,7 @@ where
 
             if matches {
                 // Match
-                let mut new_labels = state.suffix_labels.clone();
-                new_labels.push(label);
+                let new_labels = labels_with_appended(&state.suffix_labels, label);
                 let new_state = RightExtensionState {
                     node: child,
                     query_remaining: state.query_remaining - 1,
@@ -371,10 +377,9 @@ where
                     suffix_labels: new_labels,
                 };
                 results.extend(self.extend_right_recursive(new_state, query_suffix));
-            } else if state.distance + 1 <= self.max_distance {
+            } else if state.distance < self.max_distance {
                 // Substitution
-                let mut new_labels = state.suffix_labels.clone();
-                new_labels.push(label);
+                let new_labels = labels_with_appended(&state.suffix_labels, label);
                 let new_state = RightExtensionState {
                     node: child,
                     query_remaining: state.query_remaining - 1,
@@ -386,7 +391,7 @@ where
         }
 
         // Insertion (skip query char)
-        if state.distance + 1 <= self.max_distance {
+        if state.distance < self.max_distance {
             let new_state = RightExtensionState {
                 node: state.node.clone(),
                 query_remaining: state.query_remaining - 1,
@@ -398,9 +403,8 @@ where
 
         // Deletion (skip dictionary edge)
         for (label, child) in state.node.edges() {
-            if state.distance + 1 <= self.max_distance {
-                let mut new_labels = state.suffix_labels.clone();
-                new_labels.push(label);
+            if state.distance < self.max_distance {
+                let new_labels = labels_with_appended(&state.suffix_labels, label);
                 let new_state = RightExtensionState {
                     node: child,
                     query_remaining: state.query_remaining,

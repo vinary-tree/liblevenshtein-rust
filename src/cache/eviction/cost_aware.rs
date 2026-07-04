@@ -30,12 +30,13 @@
 //! assert_eq!(cost_aware.get_value("foo"), Some(42));
 //! ```
 
+use crate::sync_compat::RwLock;
 use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
 };
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::time::Instant;
 
 /// Metadata tracked for each entry.
@@ -144,10 +145,7 @@ impl<D> CostAware<D> {
     /// Records an entry access with size tracking.
     fn record_access<V: DictionaryValue>(&self, term: &str, _value: &V) {
         let size = std::mem::size_of::<V>();
-        let mut metadata = self
-            .metadata
-            .write()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self.metadata.write();
         metadata
             .entry(term.to_string())
             .and_modify(|m| m.increment())
@@ -158,10 +156,7 @@ impl<D> CostAware<D> {
     ///
     /// Returns `None` if the entry has never been accessed.
     pub fn cost_score(&self, term: &str) -> Option<f64> {
-        let metadata = self
-            .metadata
-            .read()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self.metadata.read();
         metadata.get(term).map(|m| m.cost_score())
     }
 
@@ -169,18 +164,11 @@ impl<D> CostAware<D> {
     ///
     /// Returns the term with the highest cost score (most likely to evict).
     pub fn find_highest_cost(&self, terms: &[&str]) -> Option<String> {
-        let metadata = self
-            .metadata
-            .read()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self.metadata.read();
         terms
             .iter()
             .filter_map(|&term| metadata.get(term).map(|m| (term, m.cost_score())))
-            .max_by(|(_, score1), (_, score2)| {
-                score1
-                    .partial_cmp(score2)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+            .max_by(|(_, score1), (_, score2)| score1.total_cmp(score2))
             .map(|(term, _)| term.to_string())
     }
 
@@ -189,10 +177,7 @@ impl<D> CostAware<D> {
     /// Returns the evicted term if any.
     pub fn evict_highest_cost(&self, terms: &[&str]) -> Option<String> {
         if let Some(high_cost_term) = self.find_highest_cost(terms) {
-            let mut metadata = self
-                .metadata
-                .write()
-                .expect("poisoned RwLock; only fatal if writer panicked");
+            let mut metadata = self.metadata.write();
             metadata.remove(&high_cost_term);
             Some(high_cost_term)
         } else {
@@ -202,10 +187,7 @@ impl<D> CostAware<D> {
 
     /// Clears all metadata.
     pub fn clear_metadata(&self) {
-        let mut metadata = self
-            .metadata
-            .write()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self.metadata.write();
         metadata.clear();
     }
 }

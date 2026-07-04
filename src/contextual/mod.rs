@@ -10,6 +10,7 @@ mod context_tree;
 mod draft_buffer;
 mod engine;
 pub mod error;
+mod locking;
 mod static_engine;
 
 pub use checkpoint::{Checkpoint, CheckpointStack};

@@ -3,17 +3,16 @@
 //! This module implements a buffer for tracking tentative text input with
 //! efficient character-level insertion and deletion (backspace) operations.
 
-use std::collections::VecDeque;
-
 /// Buffer for managing draft text with character-level operations.
 ///
-/// DraftBuffer uses a VecDeque to enable O(1) push/pop operations on both
-/// ends, making it efficient for both forward typing and backspace operations.
+/// DraftBuffer stores text as contiguous UTF-8 while tracking length in
+/// characters, making forward typing, backspace, and string materialization
+/// efficient for editor-style drafts.
 ///
 /// # Memory Efficiency
 ///
-/// - Small allocations: ~24 bytes base + character storage
-/// - VecDeque growth: 2x when capacity exceeded (amortized O(1))
+/// - Small allocations: ~32 bytes base + UTF-8 byte storage
+/// - ASCII drafts use 1 byte per character instead of 4 bytes per `char`
 /// - No allocations for backspace (just decrements length)
 ///
 /// # Use Cases
@@ -44,8 +43,10 @@ use std::collections::VecDeque;
 /// ```
 #[derive(Debug, Clone)]
 pub struct DraftBuffer {
-    /// Character storage (VecDeque for efficient push/pop on both ends)
-    chars: VecDeque<char>,
+    /// UTF-8 draft text.
+    text: String,
+    /// Cached character length for O(1) checkpoint creation.
+    char_len: usize,
 }
 
 impl DraftBuffer {
@@ -62,7 +63,8 @@ impl DraftBuffer {
     /// ```
     pub fn new() -> Self {
         Self {
-            chars: VecDeque::new(),
+            text: String::new(),
+            char_len: 0,
         }
     }
 
@@ -85,7 +87,8 @@ impl DraftBuffer {
     /// ```
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            chars: VecDeque::with_capacity(capacity),
+            text: String::with_capacity(capacity.saturating_mul(4)),
+            char_len: 0,
         }
     }
 
@@ -105,8 +108,15 @@ impl DraftBuffer {
     /// assert_eq!(buffer.len(), 5);
     /// ```
     pub fn from_string(s: &str) -> Self {
-        let chars: VecDeque<char> = s.chars().collect();
-        Self { chars }
+        Self {
+            text: s.to_owned(),
+            char_len: s.chars().count(),
+        }
+    }
+
+    fn from_owned_string(text: String) -> Self {
+        let char_len = text.chars().count();
+        Self { text, char_len }
     }
 
     /// Insert a character at the end of the buffer.
@@ -130,7 +140,35 @@ impl DraftBuffer {
     /// assert_eq!(buffer.as_str(), "ab");
     /// ```
     pub fn insert(&mut self, ch: char) {
-        self.chars.push_back(ch);
+        self.text.push(ch);
+        self.char_len += 1;
+    }
+
+    /// Insert a string at the end of the buffer.
+    ///
+    /// # Arguments
+    ///
+    /// * `s` - String slice to append
+    ///
+    /// # Performance
+    ///
+    /// O(n) in the inserted string length. This performs one append into the
+    /// underlying UTF-8 buffer and updates the cached character length.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use liblevenshtein::contextual::DraftBuffer;
+    ///
+    /// let mut buffer = DraftBuffer::new();
+    /// buffer.insert_str("hello");
+    /// buffer.insert_str(" 世界");
+    /// assert_eq!(buffer.as_str(), "hello 世界");
+    /// assert_eq!(buffer.len(), 8);
+    /// ```
+    pub fn insert_str(&mut self, s: &str) {
+        self.text.push_str(s);
+        self.char_len += s.chars().count();
     }
 
     /// Delete the last character from the buffer (backspace).
@@ -155,7 +193,9 @@ impl DraftBuffer {
     /// assert_eq!(buffer.len(), 2);
     /// ```
     pub fn delete(&mut self) -> Option<char> {
-        self.chars.pop_back()
+        let ch = self.text.pop()?;
+        self.char_len -= 1;
+        Some(ch)
     }
 
     /// Get the buffer length in characters.
@@ -169,7 +209,7 @@ impl DraftBuffer {
     /// assert_eq!(buffer.len(), 5);
     /// ```
     pub fn len(&self) -> usize {
-        self.chars.len()
+        self.char_len
     }
 
     /// Check if the buffer is empty.
@@ -183,14 +223,32 @@ impl DraftBuffer {
     /// assert!(buffer.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
-        self.chars.is_empty()
+        self.char_len == 0
     }
 
-    /// Get the buffer content as a string slice.
+    /// Get the buffer content as a borrowed string slice.
     ///
     /// # Performance
     ///
-    /// O(n) allocation to collect characters into a String.
+    /// O(1). This borrows the underlying UTF-8 buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use liblevenshtein::contextual::DraftBuffer;
+    ///
+    /// let buffer = DraftBuffer::from_string("test");
+    /// assert_eq!(buffer.as_slice(), "test");
+    /// ```
+    pub fn as_slice(&self) -> &str {
+        self.text.as_str()
+    }
+
+    /// Get the buffer content as an owned string.
+    ///
+    /// # Performance
+    ///
+    /// O(n) allocation to clone the underlying UTF-8 buffer.
     ///
     /// # Examples
     ///
@@ -201,7 +259,7 @@ impl DraftBuffer {
     /// assert_eq!(buffer.as_str(), "test");
     /// ```
     pub fn as_str(&self) -> String {
-        self.chars.iter().collect()
+        self.text.clone()
     }
 
     /// Get the buffer content as a byte vector (UTF-8).
@@ -215,7 +273,7 @@ impl DraftBuffer {
     /// assert_eq!(buffer.as_bytes(), b"test");
     /// ```
     pub fn as_bytes(&self) -> Vec<u8> {
-        self.as_str().into_bytes()
+        self.text.as_bytes().to_vec()
     }
 
     /// Clear all content from the buffer.
@@ -230,7 +288,8 @@ impl DraftBuffer {
     /// assert!(buffer.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.chars.clear();
+        self.text.clear();
+        self.char_len = 0;
     }
 
     /// Truncate the buffer to the specified length.
@@ -251,9 +310,22 @@ impl DraftBuffer {
     /// assert_eq!(buffer.as_str(), "hel");
     /// ```
     pub fn truncate(&mut self, len: usize) {
-        if len < self.chars.len() {
-            self.chars.truncate(len);
+        if len >= self.char_len {
+            return;
         }
+        if len == 0 {
+            self.clear();
+            return;
+        }
+
+        let byte_len = self
+            .text
+            .char_indices()
+            .nth(len)
+            .map(|(index, _)| index)
+            .unwrap_or(self.text.len());
+        self.text.truncate(byte_len);
+        self.char_len = len;
     }
 }
 
@@ -265,7 +337,7 @@ impl Default for DraftBuffer {
 
 impl From<String> for DraftBuffer {
     fn from(s: String) -> Self {
-        Self::from_string(&s)
+        Self::from_owned_string(s)
     }
 }
 
@@ -277,7 +349,13 @@ impl From<&str> for DraftBuffer {
 
 impl std::fmt::Display for DraftBuffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
+        f.write_str(self.as_slice())
+    }
+}
+
+impl AsRef<str> for DraftBuffer {
+    fn as_ref(&self) -> &str {
+        self.as_slice()
     }
 }
 
@@ -301,6 +379,15 @@ mod tests {
         buffer.insert('c');
         assert_eq!(buffer.len(), 3);
         assert_eq!(buffer.as_str(), "abc");
+    }
+
+    #[test]
+    fn test_insert_str() {
+        let mut buffer = DraftBuffer::new();
+        buffer.insert_str("hello");
+        buffer.insert_str(" 世界");
+        assert_eq!(buffer.len(), 8);
+        assert_eq!(buffer.as_str(), "hello 世界");
     }
 
     #[test]
@@ -363,9 +450,32 @@ mod tests {
     }
 
     #[test]
+    fn test_truncate_unicode_boundary() {
+        let mut buffer = DraftBuffer::from_string("é😀ab");
+        buffer.truncate(2);
+        assert_eq!(buffer.len(), 2);
+        assert_eq!(buffer.as_str(), "é😀");
+        assert_eq!(buffer.delete(), Some('😀'));
+        assert_eq!(buffer.as_str(), "é");
+    }
+
+    #[test]
     fn test_as_bytes() {
         let buffer = DraftBuffer::from_string("test");
         assert_eq!(buffer.as_bytes(), b"test");
+    }
+
+    #[test]
+    fn test_as_bytes_unicode() {
+        let buffer = DraftBuffer::from_string("é😀");
+        assert_eq!(buffer.as_bytes(), "é😀".as_bytes());
+    }
+
+    #[test]
+    fn test_as_slice() {
+        let buffer = DraftBuffer::from_string("test");
+        assert_eq!(buffer.as_slice(), "test");
+        assert_eq!(buffer.as_ref(), "test");
     }
 
     #[test]

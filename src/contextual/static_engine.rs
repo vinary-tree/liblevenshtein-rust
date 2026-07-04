@@ -5,11 +5,12 @@
 //! are stored separately in a HashMap rather than mutating the dictionary.
 
 use super::error::{ContextError, Result};
+use super::locking::{lock_mutex, read_lock, write_lock};
 use super::{CheckpointStack, Completion, ContextId, ContextTree, DraftBuffer};
 use crate::transducer::{Algorithm, Transducer};
 use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
 use libdictenstein::double_array_trie::DoubleArrayTrie;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, RwLock};
 
 /// Static engine for contextual completion with read-only dictionaries.
@@ -169,6 +170,9 @@ where
     /// Get a reference to the underlying transducer.
     ///
     /// The transducer is wrapped in `Arc<RwLock<>>` for thread-safe access.
+    /// Prefer [`Self::with_transducer`] or [`Self::with_transducer_mut`] for
+    /// poison-tolerant access.
+    ///
     /// Use this to access the dictionary for operations like:
     /// - Cloning the dictionary for serialization
     /// - Querying the dictionary directly
@@ -187,30 +191,43 @@ where
     ///
     /// let engine = StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard);
     ///
-    /// // Access the transducer
-    /// let transducer_ref = engine.transducer();
-    /// let transducer = transducer_ref.read().expect("static engine: transducer RwLock poisoned");
-    ///
     /// // Clone the dictionary for serialization
-    /// let dict = transducer.dictionary().clone();
+    /// let dict = engine.with_transducer(|transducer| transducer.dictionary().clone());
     /// ```
     #[inline]
     pub fn transducer(&self) -> &Arc<RwLock<Transducer<D>>> {
         &self.transducer
     }
 
+    /// Read the underlying transducer through the engine's poison-tolerant lock path.
+    ///
+    /// This accessor is the preferred way to inspect the transducer because it
+    /// preserves engine availability after another thread panics while holding
+    /// the transducer lock.
+    #[inline]
+    pub fn with_transducer<R>(&self, f: impl FnOnce(&Transducer<D>) -> R) -> R {
+        let transducer = read_lock(&self.transducer);
+        f(&transducer)
+    }
+
+    /// Mutate the underlying transducer through the engine's poison-tolerant lock path.
+    ///
+    /// This accessor mirrors write access through [`Self::transducer`] while
+    /// keeping poisoned locks recoverable for long-lived completion services.
+    #[inline]
+    pub fn with_transducer_mut<R>(&self, f: impl FnOnce(&mut Transducer<D>) -> R) -> R {
+        let mut transducer = write_lock(&self.transducer);
+        f(&mut transducer)
+    }
+
     /// Create a root context (top-level scope).
     pub fn create_root_context(&self, id: ContextId) -> Result<ContextId> {
-        let mut tree = self
-            .context_tree
-            .write()
-            .expect("static engine: context_tree RwLock poisoned");
-        tree.create_root(id);
+        {
+            let mut tree = write_lock(&self.context_tree);
+            tree.try_create_root(id)?;
+        }
 
-        let mut drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
+        let mut drafts = lock_mutex(&self.drafts);
         drafts.insert(id, DraftBuffer::new());
 
         Ok(id)
@@ -227,77 +244,85 @@ where
     ///
     /// The child context ID on success, or error if parent doesn't exist
     pub fn create_child_context(&self, id: ContextId, parent_id: ContextId) -> Result<ContextId> {
-        let mut tree = self
-            .context_tree
-            .write()
-            .expect("static engine: context_tree RwLock poisoned");
-        tree.create_child(id, parent_id)
-            .map_err(|_| ContextError::ContextNotFound(parent_id))?;
+        {
+            let mut tree = write_lock(&self.context_tree);
+            tree.create_child(id, parent_id)?;
+        }
 
-        let mut drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
+        let mut drafts = lock_mutex(&self.drafts);
         drafts.insert(id, DraftBuffer::new());
 
         Ok(id)
     }
 
+    fn ensure_context_exists(&self, context: ContextId) -> Result<()> {
+        if read_lock(&self.context_tree).contains(context) {
+            Ok(())
+        } else {
+            Err(ContextError::ContextNotFound(context))
+        }
+    }
+
     /// Insert a character into the draft buffer.
     pub fn insert_char(&self, context: ContextId, ch: char) -> Result<()> {
-        let mut drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
-        let buffer = drafts.entry(context).or_default();
+        self.ensure_context_exists(context)?;
+
+        let mut drafts = lock_mutex(&self.drafts);
+        let buffer = drafts
+            .get_mut(&context)
+            .ok_or(ContextError::NoDraftBuffer(context))?;
         buffer.insert(ch);
         Ok(())
     }
 
     /// Insert a string into the draft buffer.
     pub fn insert_str(&self, context: ContextId, s: &str) -> Result<()> {
-        let mut drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
-        let buffer = drafts.entry(context).or_default();
-        for ch in s.chars() {
-            buffer.insert(ch);
+        self.ensure_context_exists(context)?;
+        if s.is_empty() {
+            return Ok(());
         }
+
+        let mut drafts = lock_mutex(&self.drafts);
+        let buffer = drafts
+            .get_mut(&context)
+            .ok_or(ContextError::NoDraftBuffer(context))?;
+        buffer.insert_str(s);
         Ok(())
     }
 
     /// Delete the last character from the draft buffer (backspace).
     pub fn delete_char(&self, context: ContextId) -> Result<()> {
-        let mut drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
-        if let Some(buffer) = drafts.get_mut(&context) {
-            buffer.delete();
-        }
+        self.ensure_context_exists(context)?;
+
+        let mut drafts = lock_mutex(&self.drafts);
+        let buffer = drafts
+            .get_mut(&context)
+            .ok_or(ContextError::NoDraftBuffer(context))?;
+        buffer.delete();
         Ok(())
     }
 
     /// Clear the draft buffer for a context.
     pub fn clear_draft(&self, context: ContextId) -> Result<()> {
-        let mut drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
-        if let Some(buffer) = drafts.get_mut(&context) {
-            buffer.clear();
-        }
+        self.ensure_context_exists(context)?;
+
+        let mut drafts = lock_mutex(&self.drafts);
+        let buffer = drafts
+            .get_mut(&context)
+            .ok_or(ContextError::NoDraftBuffer(context))?;
+        buffer.clear();
         Ok(())
     }
 
     /// Get the current draft text.
     pub fn get_draft(&self, context: ContextId) -> Result<String> {
-        let drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
-        Ok(drafts.get(&context).map(|b| b.as_str()).unwrap_or_default())
+        self.ensure_context_exists(context)?;
+
+        let drafts = lock_mutex(&self.drafts);
+        drafts
+            .get(&context)
+            .map(|buffer| buffer.as_str())
+            .ok_or(ContextError::NoDraftBuffer(context))
     }
 
     /// Finalize a draft (store in finalized_terms HashMap, not in dictionary).
@@ -306,29 +331,28 @@ where
     /// static dictionary. Instead, finalized terms are stored separately and
     /// queried alongside the dictionary.
     pub fn finalize(&self, context: ContextId) -> Result<String> {
-        let mut drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
+        self.ensure_context_exists(context)?;
+
+        let mut drafts = lock_mutex(&self.drafts);
         let buffer = drafts
             .get_mut(&context)
-            .ok_or(ContextError::ContextNotFound(context))?;
+            .ok_or(ContextError::NoDraftBuffer(context))?;
 
-        let term_owned = buffer.as_str();
-        let term_clone = term_owned.clone();
+        if buffer.is_empty() {
+            return Err(ContextError::EmptyDraft(context));
+        }
+
+        let term = buffer.as_slice().to_owned();
         buffer.clear();
 
         // Store in finalized_terms instead of dictionary
-        let mut finalized = self
-            .finalized_terms
-            .write()
-            .expect("static engine: finalized_terms RwLock poisoned");
-        finalized
-            .entry(term_clone.clone())
-            .or_default()
-            .push(context);
+        let mut finalized = write_lock(&self.finalized_terms);
+        let contexts = finalized.entry(term.clone()).or_default();
+        if !contexts.contains(&context) {
+            contexts.push(context);
+        }
 
-        Ok(term_clone)
+        Ok(term)
     }
 
     /// Complete with query fusion (dictionary + finalized_terms + drafts).
@@ -338,22 +362,24 @@ where
         query: &str,
         max_distance: usize,
     ) -> Result<Vec<Completion>> {
-        let mut results = HashMap::new();
-
         // Query static dictionary (fast!)
         let finalized_dict = self.complete_dictionary(context, query, max_distance)?;
+        let finalized_hash = self.complete_finalized_terms(context, query, max_distance)?;
+        let drafts_results = self.complete_drafts(context, query, max_distance)?;
+
+        let mut results = HashMap::with_capacity(
+            finalized_dict.len() + finalized_hash.len() + drafts_results.len(),
+        );
         for completion in finalized_dict {
             results.entry(completion.term.clone()).or_insert(completion);
         }
 
         // Query finalized terms HashMap (small, rare)
-        let finalized_hash = self.complete_finalized_terms(context, query, max_distance)?;
         for completion in finalized_hash {
             results.entry(completion.term.clone()).or_insert(completion);
         }
 
         // Query drafts (in-memory, always fresh)
-        let drafts_results = self.complete_drafts(context, query, max_distance)?;
         for completion in drafts_results {
             results.insert(completion.term.clone(), completion);
         }
@@ -375,32 +401,27 @@ where
         query: &str,
         max_distance: usize,
     ) -> Result<Vec<Completion>> {
-        let tree = self
-            .context_tree
-            .read()
-            .expect("static engine: context_tree RwLock poisoned");
+        let tree = read_lock(&self.context_tree);
         let visible = tree.visible_contexts(context);
+        if visible.is_empty() {
+            return Ok(Vec::new());
+        }
+        let visible_set: HashSet<ContextId> = visible.iter().copied().collect();
 
-        let transducer = self
-            .transducer
-            .read()
-            .expect("static engine: transducer RwLock poisoned");
-        let candidates: Vec<_> = transducer
-            .query_with_distance(query, max_distance)
-            .collect();
-
+        let transducer = read_lock(&self.transducer);
         let mut results = Vec::new();
-        for candidate in candidates {
+        for candidate in transducer.query_with_distance(query, max_distance) {
             if let Some(contexts) = transducer.dictionary().get_value(&candidate.term) {
-                let visible_contexts: Vec<_> = contexts
-                    .iter()
-                    .filter(|ctx| visible.contains(ctx))
-                    .copied()
-                    .collect();
+                let mut visible_contexts = Vec::with_capacity(contexts.len().min(visible.len()));
+                for ctx in contexts {
+                    if visible_set.contains(&ctx) {
+                        visible_contexts.push(ctx);
+                    }
+                }
 
                 if !visible_contexts.is_empty() {
                     results.push(Completion {
-                        term: candidate.term.clone(),
+                        term: candidate.term,
                         distance: candidate.distance,
                         contexts: visible_contexts,
                         is_draft: false,
@@ -419,68 +440,64 @@ where
         query: &str,
         max_distance: usize,
     ) -> Result<Vec<Completion>> {
-        let tree = self
-            .context_tree
-            .read()
-            .expect("static engine: context_tree RwLock poisoned");
+        let tree = read_lock(&self.context_tree);
         let visible = tree.visible_contexts(context);
+        if visible.is_empty() {
+            return Ok(Vec::new());
+        }
+        let visible_set: HashSet<ContextId> = visible.iter().copied().collect();
 
-        let finalized = self
-            .finalized_terms
-            .read()
-            .expect("static engine: finalized_terms RwLock poisoned");
-        let mut results = Vec::new();
+        let finalized = read_lock(&self.finalized_terms);
+        let mut results = Vec::with_capacity(finalized.len().min(64));
 
         for (term, contexts) in finalized.iter() {
-            let distance = Self::levenshtein_distance(query, term);
-            if distance <= max_distance {
-                let visible_contexts: Vec<_> = contexts
-                    .iter()
-                    .filter(|ctx| visible.contains(ctx))
-                    .copied()
-                    .collect();
+            let Some(distance) = Self::levenshtein_distance_within(query, term, max_distance)
+            else {
+                continue;
+            };
 
-                if !visible_contexts.is_empty() {
-                    results.push(Completion {
-                        term: term.clone(),
-                        distance,
-                        contexts: visible_contexts,
-                        is_draft: false,
-                    });
+            let mut visible_contexts = Vec::with_capacity(contexts.len().min(visible.len()));
+            for &ctx in contexts {
+                if visible_set.contains(&ctx) {
+                    visible_contexts.push(ctx);
                 }
+            }
+
+            if !visible_contexts.is_empty() {
+                results.push(Completion {
+                    term: term.clone(),
+                    distance,
+                    contexts: visible_contexts,
+                    is_draft: false,
+                });
             }
         }
 
         Ok(results)
     }
 
-    /// Query draft buffers with naive Levenshtein.
+    /// Query draft buffers with threshold-bounded Levenshtein.
     fn complete_drafts(
         &self,
         context: ContextId,
         query: &str,
         max_distance: usize,
     ) -> Result<Vec<Completion>> {
-        let tree = self
-            .context_tree
-            .read()
-            .expect("static engine: context_tree RwLock poisoned");
+        let tree = read_lock(&self.context_tree);
         let visible = tree.visible_contexts(context);
 
-        let drafts = self
-            .drafts
-            .lock()
-            .expect("static engine: drafts Mutex poisoned");
-        let mut results = Vec::new();
+        let drafts = lock_mutex(&self.drafts);
+        let mut results = Vec::with_capacity(visible.len());
 
         for &ctx in &visible {
             if let Some(buffer) = drafts.get(&ctx) {
-                let draft_text = buffer.as_str();
+                let draft_text = buffer.as_slice();
                 if !draft_text.is_empty() {
-                    let distance = Self::levenshtein_distance(query, &draft_text);
-                    if distance <= max_distance {
+                    if let Some(distance) =
+                        Self::levenshtein_distance_within(query, draft_text, max_distance)
+                    {
                         results.push(Completion {
-                            term: draft_text,
+                            term: draft_text.to_owned(),
                             distance,
                             contexts: vec![ctx],
                             is_draft: true,
@@ -493,46 +510,9 @@ where
         Ok(results)
     }
 
-    /// Simple Levenshtein distance calculation.
-    fn levenshtein_distance(s1: &str, s2: &str) -> usize {
-        let len1 = s1.chars().count();
-        let len2 = s2.chars().count();
-
-        if len1 == 0 {
-            return len2;
-        }
-        if len2 == 0 {
-            return len1;
-        }
-
-        let mut matrix = vec![vec![0; len2 + 1]; len1 + 1];
-
-        for (i, row) in matrix.iter_mut().enumerate() {
-            row[0] = i;
-        }
-        for (j, cell) in matrix[0].iter_mut().enumerate() {
-            *cell = j;
-        }
-
-        let s1_chars: Vec<char> = s1.chars().collect();
-        let s2_chars: Vec<char> = s2.chars().collect();
-
-        for i in 1..=len1 {
-            for j in 1..=len2 {
-                let cost = if s1_chars[i - 1] == s2_chars[j - 1] {
-                    0
-                } else {
-                    1
-                };
-
-                matrix[i][j] = std::cmp::min(
-                    std::cmp::min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1),
-                    matrix[i - 1][j - 1] + cost,
-                );
-            }
-        }
-
-        matrix[len1][len2]
+    /// Threshold-bounded Levenshtein distance calculation.
+    fn levenshtein_distance_within(s1: &str, s2: &str, max_distance: usize) -> Option<usize> {
+        crate::distance::standard_distance_bounded(s1, s2, max_distance)
     }
 }
 
@@ -548,5 +528,167 @@ where
             transducer: Arc::clone(&self.transducer),
             finalized_terms: Arc::clone(&self.finalized_terms),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn static_engine() -> StaticContextualCompletionEngine<DoubleArrayTrie<Vec<ContextId>>> {
+        let dict: DoubleArrayTrie<Vec<ContextId>> =
+            DoubleArrayTrie::from_terms_with_values([("hello", vec![0])]);
+        StaticContextualCompletionEngine::with_double_array_trie(dict, Algorithm::Standard)
+    }
+
+    #[test]
+    fn recovers_after_internal_locks_are_poisoned() {
+        let engine = std::sync::Arc::new(static_engine());
+        let ctx = engine
+            .create_root_context(0)
+            .expect("test fixture: create root context");
+
+        let thread_engine = std::sync::Arc::clone(&engine);
+        let result = std::thread::spawn(move || {
+            let _guard = thread_engine.context_tree.write().unwrap();
+            panic!("intentional static context tree poisoning for recovery test");
+        })
+        .join();
+        assert!(result.is_err());
+        assert!(engine.complete(ctx, "hello", 0).is_ok());
+
+        let thread_engine = std::sync::Arc::clone(&engine);
+        let result = std::thread::spawn(move || {
+            let mut drafts = thread_engine.drafts.lock().unwrap();
+            let buffer = drafts
+                .get_mut(&ctx)
+                .expect("test fixture: root context has an initialized draft buffer");
+            buffer.insert_str("local");
+            panic!("intentional static draft poisoning for recovery test");
+        })
+        .join();
+        assert!(result.is_err());
+        assert_eq!(
+            engine.get_draft(ctx).expect("test fixture: get draft"),
+            "local"
+        );
+
+        let thread_engine = std::sync::Arc::clone(&engine);
+        let result = std::thread::spawn(move || {
+            let mut finalized = thread_engine.finalized_terms.write().unwrap();
+            finalized.insert("poisoned".to_string(), vec![ctx]);
+            panic!("intentional static finalized_terms poisoning for recovery test");
+        })
+        .join();
+        assert!(result.is_err());
+        assert_eq!(
+            engine.finalize(ctx).expect("test fixture: finalize draft"),
+            "local"
+        );
+
+        let thread_engine = std::sync::Arc::clone(&engine);
+        let result = std::thread::spawn(move || {
+            let _guard = thread_engine.transducer.write().unwrap();
+            panic!("intentional static transducer poisoning for recovery test");
+        })
+        .join();
+        assert!(result.is_err());
+        assert_eq!(
+            engine.with_transducer(|transducer| transducer.algorithm()),
+            Algorithm::Standard
+        );
+        assert_eq!(
+            engine.with_transducer_mut(|transducer| transducer.algorithm()),
+            Algorithm::Standard
+        );
+    }
+
+    #[test]
+    fn create_context_rejects_duplicate_ids_and_self_parent_cycle() {
+        let engine = static_engine();
+        let root = engine
+            .create_root_context(0)
+            .expect("test fixture: create root context");
+
+        assert_eq!(
+            engine.create_root_context(root),
+            Err(ContextError::ContextAlreadyExists(root))
+        );
+        assert_eq!(
+            engine.create_child_context(root, root),
+            Err(ContextError::CircularHierarchy(root, root))
+        );
+
+        let child = engine
+            .create_child_context(1, root)
+            .expect("test fixture: create child context");
+        assert_eq!(
+            engine.create_child_context(child, root),
+            Err(ContextError::ContextAlreadyExists(child))
+        );
+    }
+
+    #[test]
+    fn draft_operations_reject_unknown_contexts() {
+        let engine = static_engine();
+
+        assert_eq!(
+            engine.insert_char(999, 'x'),
+            Err(ContextError::ContextNotFound(999))
+        );
+        assert_eq!(
+            engine.insert_str(999, "x"),
+            Err(ContextError::ContextNotFound(999))
+        );
+        assert_eq!(
+            engine.delete_char(999),
+            Err(ContextError::ContextNotFound(999))
+        );
+        assert_eq!(
+            engine.clear_draft(999),
+            Err(ContextError::ContextNotFound(999))
+        );
+        assert_eq!(
+            engine.get_draft(999),
+            Err(ContextError::ContextNotFound(999))
+        );
+    }
+
+    #[test]
+    fn finalize_rejects_empty_drafts() {
+        let engine = static_engine();
+        let ctx = engine
+            .create_root_context(0)
+            .expect("test fixture: create root context");
+
+        assert_eq!(engine.finalize(ctx), Err(ContextError::EmptyDraft(ctx)));
+    }
+
+    #[test]
+    fn repeated_finalize_deduplicates_context_membership() {
+        let engine = static_engine();
+        let ctx = engine
+            .create_root_context(0)
+            .expect("test fixture: create root context");
+
+        for _ in 0..2 {
+            engine
+                .insert_str(ctx, "local_symbol")
+                .expect("test fixture: insert draft");
+            assert_eq!(
+                engine.finalize(ctx).expect("test fixture: finalize draft"),
+                "local_symbol"
+            );
+        }
+
+        let completions = engine
+            .complete(ctx, "local_symbol", 0)
+            .expect("test fixture: exact complete");
+        let local = completions
+            .iter()
+            .find(|completion| completion.term == "local_symbol")
+            .expect("test fixture: finalized completion is visible");
+
+        assert_eq!(local.contexts, vec![ctx]);
     }
 }

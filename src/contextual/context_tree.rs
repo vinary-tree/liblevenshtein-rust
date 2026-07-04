@@ -5,7 +5,7 @@
 //! in programming languages).
 
 use super::error::{ContextError, Result};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Unique identifier for a context in the tree.
 pub type ContextId = u32;
@@ -110,8 +110,22 @@ impl ContextTree {
     /// assert!(tree.is_root(root));
     /// ```
     pub fn create_root(&mut self, id: ContextId) -> ContextId {
-        self.nodes.insert(id, None);
+        self.nodes.entry(id).or_insert(None);
         id
+    }
+
+    /// Try to create a root context (no parent).
+    ///
+    /// Returns [`ContextError::ContextAlreadyExists`] if the ID is already in
+    /// use. Use this when callers need strict creation semantics rather than
+    /// the idempotent legacy [`Self::create_root`] behavior.
+    pub fn try_create_root(&mut self, id: ContextId) -> Result<ContextId> {
+        if self.nodes.contains_key(&id) {
+            return Err(ContextError::ContextAlreadyExists(id));
+        }
+
+        self.nodes.insert(id, None);
+        Ok(id)
     }
 
     /// Create a child context.
@@ -137,6 +151,12 @@ impl ContextTree {
     /// assert_eq!(tree.parent(child), Some(root));
     /// ```
     pub fn create_child(&mut self, id: ContextId, parent_id: ContextId) -> Result<ContextId> {
+        if id == parent_id {
+            return Err(ContextError::CircularHierarchy(id, parent_id));
+        }
+        if self.nodes.contains_key(&id) {
+            return Err(ContextError::ContextAlreadyExists(id));
+        }
         if !self.nodes.contains_key(&parent_id) {
             return Err(ContextError::ContextNotFound(parent_id));
         }
@@ -242,16 +262,22 @@ impl ContextTree {
     /// assert_eq!(visible, vec![function, module, global]);
     /// ```
     pub fn visible_contexts(&self, id: ContextId) -> Vec<ContextId> {
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(self.nodes.len().min(16));
         let mut current = Some(id);
+        let mut remaining = self.nodes.len();
 
         while let Some(ctx_id) = current {
-            if self.nodes.contains_key(&ctx_id) {
-                result.push(ctx_id);
-                current = self.parent(ctx_id);
-            } else {
+            if remaining == 0 {
                 break;
             }
+            remaining -= 1;
+
+            let Some(parent) = self.nodes.get(&ctx_id).copied() else {
+                break;
+            };
+
+            result.push(ctx_id);
+            current = parent;
         }
 
         result
@@ -285,23 +311,29 @@ impl ContextTree {
             return false;
         }
 
-        // Find all descendants
-        let descendants: Vec<ContextId> = self
-            .nodes
-            .iter()
-            .filter_map(|(child_id, _parent)| {
-                if self.is_descendant(*child_id, id) {
-                    Some(*child_id)
-                } else {
-                    None
-                }
-            })
-            .collect();
+        let mut children_by_parent: HashMap<ContextId, Vec<ContextId>> = HashMap::new();
+        for (&child_id, &parent_id) in &self.nodes {
+            if let Some(parent_id) = parent_id {
+                children_by_parent
+                    .entry(parent_id)
+                    .or_default()
+                    .push(child_id);
+            }
+        }
 
-        // Remove the context and all descendants
-        self.nodes.remove(&id);
-        for desc_id in descendants {
-            self.nodes.remove(&desc_id);
+        let mut pending = vec![id];
+        let mut to_remove = HashSet::with_capacity(1);
+        while let Some(ctx_id) = pending.pop() {
+            if !to_remove.insert(ctx_id) {
+                continue;
+            }
+            if let Some(children) = children_by_parent.get(&ctx_id) {
+                pending.extend(children.iter().copied());
+            }
+        }
+
+        for ctx_id in to_remove {
+            self.nodes.remove(&ctx_id);
         }
 
         true
@@ -338,7 +370,13 @@ impl ContextTree {
         }
 
         let mut current = self.parent(child_id);
+        let mut remaining = self.nodes.len();
         while let Some(parent_id) = current {
+            if remaining == 0 {
+                break;
+            }
+            remaining -= 1;
+
             if parent_id == ancestor_id {
                 return true;
             }
@@ -382,7 +420,13 @@ impl ContextTree {
         let mut depth = 0;
         let mut current = self.parent(id);
 
+        let mut remaining = self.nodes.len();
         while current.is_some() {
+            if remaining == 0 {
+                break;
+            }
+            remaining -= 1;
+
             depth += 1;
             current = current.and_then(|pid| self.parent(pid));
         }
@@ -466,6 +510,31 @@ mod tests {
     }
 
     #[test]
+    fn test_create_root_duplicate_does_not_reparent_existing_context() {
+        let mut tree = ContextTree::new();
+        let root = tree.create_root(1);
+        let child = tree
+            .create_child(2, root)
+            .expect("test fixture: create child");
+
+        assert_eq!(tree.create_root(child), child);
+
+        assert_eq!(tree.parent(child), Some(root));
+        assert_eq!(tree.visible_contexts(child), vec![child, root]);
+    }
+
+    #[test]
+    fn test_try_create_root_rejects_duplicate_id() {
+        let mut tree = ContextTree::new();
+        tree.create_root(1);
+
+        assert_eq!(
+            tree.try_create_root(1),
+            Err(ContextError::ContextAlreadyExists(1))
+        );
+    }
+
+    #[test]
     fn test_create_child() {
         let mut tree = ContextTree::new();
         let root = tree.create_root(1);
@@ -484,6 +553,33 @@ mod tests {
         let mut tree = ContextTree::new();
         let result = tree.create_child(2, 999);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_create_child_rejects_duplicate_id_without_reparenting() {
+        let mut tree = ContextTree::new();
+        let root = tree.create_root(1);
+        let child = tree
+            .create_child(2, root)
+            .expect("test fixture: create child");
+
+        assert_eq!(
+            tree.create_child(child, root),
+            Err(ContextError::ContextAlreadyExists(child))
+        );
+        assert_eq!(tree.parent(child), Some(root));
+    }
+
+    #[test]
+    fn test_create_child_rejects_self_parent_cycle() {
+        let mut tree = ContextTree::new();
+        tree.create_root(1);
+
+        assert_eq!(
+            tree.create_child(1, 1),
+            Err(ContextError::CircularHierarchy(1, 1))
+        );
+        assert_eq!(tree.visible_contexts(1), vec![1]);
     }
 
     #[test]

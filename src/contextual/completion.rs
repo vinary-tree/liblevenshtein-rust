@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn test_sorting_by_distance() {
-        let mut completions = vec![
+        let mut completions = [
             Completion::finalized("c".to_string(), 2, vec![0]),
             Completion::finalized("b".to_string(), 1, vec![0]),
             Completion::finalized("a".to_string(), 0, vec![0]),
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_sorting_by_draft_status() {
-        let mut completions = vec![
+        let mut completions = [
             Completion::draft("draft".to_string(), 1, 0),
             Completion::finalized("finalized".to_string(), 1, vec![0]),
         ];
@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_sorting_by_term() {
-        let mut completions = vec![
+        let mut completions = [
             Completion::finalized("z".to_string(), 0, vec![0]),
             Completion::finalized("a".to_string(), 0, vec![0]),
             Completion::finalized("m".to_string(), 0, vec![0]),
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_sorting_combined() {
-        let mut completions = vec![
+        let mut completions = [
             Completion::draft("z".to_string(), 2, 0),
             Completion::finalized("a".to_string(), 1, vec![0]),
             Completion::draft("b".to_string(), 1, 0),

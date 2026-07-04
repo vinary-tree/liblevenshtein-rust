@@ -5,6 +5,14 @@ use thiserror::Error;
 /// Errors that can occur during contextual completion operations.
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum ContextError {
+    /// The specified context ID is already in use.
+    ///
+    /// Context IDs are stable keys into the context tree, draft buffers, and
+    /// checkpoint stacks. Reusing an ID would overwrite existing state or
+    /// reparent an existing scope, so creation APIs reject duplicates.
+    #[error("Context {0} already exists")]
+    ContextAlreadyExists(crate::contextual::ContextId),
+
     /// The specified context does not exist.
     ///
     /// This error occurs when trying to access a context that hasn't been created

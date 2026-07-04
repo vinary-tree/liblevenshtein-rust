@@ -14,13 +14,8 @@ use libdictenstein::{
 use std::sync::Arc;
 
 // Conditional imports based on feature flags
-#[cfg(all(feature = "eviction-parking-lot", not(feature = "eviction-dashmap")))]
+#[cfg(not(feature = "eviction-dashmap"))]
 use crate::sync_compat::RwLock;
-#[cfg(all(
-    not(feature = "eviction-parking-lot"),
-    not(feature = "eviction-dashmap")
-))]
-use std::sync::RwLock;
 
 #[cfg(feature = "eviction-dashmap")]
 use dashmap::DashMap;
@@ -39,14 +34,10 @@ static COARSE_TIMESTAMP_MS: AtomicU64 = AtomicU64::new(0);
 #[cfg(feature = "eviction-coarse-timestamps")]
 pub(crate) fn init_coarse_timestamp_thread() {
     use std::thread;
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+    use std::time::Duration;
 
     thread::spawn(|| loop {
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system clock predates UNIX epoch")
-            .as_millis() as u64;
-        COARSE_TIMESTAMP_MS.store(now_ms, Ordering::Relaxed);
+        COARSE_TIMESTAMP_MS.store(get_timestamp_ms(), Ordering::Relaxed);
         thread::sleep(Duration::from_millis(100));
     });
 }
@@ -140,7 +131,7 @@ impl EntryMetadata {
             not(feature = "eviction-coarse-timestamps")
         ))]
         {
-            self.last_accessed.elapsed().as_millis() as u64
+            duration_millis_u64_saturating(self.last_accessed.elapsed())
         }
 
         #[cfg(feature = "eviction-coarse-timestamps")]
@@ -160,16 +151,19 @@ impl EntryMetadata {
     }
 }
 
-#[cfg(all(
+fn duration_millis_u64_saturating(duration: std::time::Duration) -> u64 {
+    u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
+}
+
+#[cfg(any(
     feature = "eviction-compact-metadata",
-    not(feature = "eviction-coarse-timestamps")
+    feature = "eviction-coarse-timestamps"
 ))]
 fn get_timestamp_ms() -> u64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .expect("system clock predates UNIX epoch")
-        .as_millis() as u64
+        .map_or(0, duration_millis_u64_saturating)
 }
 
 // Key type
@@ -259,13 +253,7 @@ impl<D> LruOptimized<D> {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            #[cfg(feature = "eviction-parking-lot")]
             let mut metadata = self.metadata.write();
-            #[cfg(not(feature = "eviction-parking-lot"))]
-            let mut metadata = self
-                .metadata
-                .write()
-                .expect("poisoned RwLock; only fatal if writer panicked");
 
             metadata
                 .entry(make_key(term))
@@ -291,13 +279,7 @@ impl<D> LruOptimized<D> {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            #[cfg(feature = "eviction-parking-lot")]
             let metadata = self.metadata.read();
-            #[cfg(not(feature = "eviction-parking-lot"))]
-            let metadata = self
-                .metadata
-                .read()
-                .expect("poisoned RwLock; only fatal if writer panicked");
 
             metadata.get(term).map(|m| m.recency_score())
         }
@@ -324,13 +306,7 @@ impl<D> LruOptimized<D> {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            #[cfg(feature = "eviction-parking-lot")]
             let metadata = self.metadata.read();
-            #[cfg(not(feature = "eviction-parking-lot"))]
-            let metadata = self
-                .metadata
-                .read()
-                .expect("poisoned RwLock; only fatal if writer panicked");
 
             terms
                 .iter()
@@ -360,13 +336,7 @@ impl<D> LruOptimized<D> {
 
             #[cfg(not(feature = "eviction-dashmap"))]
             {
-                #[cfg(feature = "eviction-parking-lot")]
                 let mut metadata = self.metadata.write();
-                #[cfg(not(feature = "eviction-parking-lot"))]
-                let mut metadata = self
-                    .metadata
-                    .write()
-                    .expect("poisoned RwLock; only fatal if writer panicked");
 
                 metadata.remove(lru_term.as_str());
             }
@@ -388,13 +358,7 @@ impl<D> LruOptimized<D> {
 
         #[cfg(not(feature = "eviction-dashmap"))]
         {
-            #[cfg(feature = "eviction-parking-lot")]
             let mut metadata = self.metadata.write();
-            #[cfg(not(feature = "eviction-parking-lot"))]
-            let mut metadata = self
-                .metadata
-                .write()
-                .expect("poisoned RwLock; only fatal if writer panicked");
 
             metadata.clear();
         }
@@ -509,5 +473,32 @@ where
     #[inline]
     fn value(&self) -> Option<Self::Value> {
         self.inner.value()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    #[test]
+    fn duration_millis_u64_saturates_overflow() {
+        assert_eq!(super::duration_millis_u64_saturating(Duration::ZERO), 0);
+        assert_eq!(
+            super::duration_millis_u64_saturating(Duration::from_millis(1234)),
+            1234
+        );
+        assert_eq!(
+            super::duration_millis_u64_saturating(Duration::from_secs(u64::MAX)),
+            u64::MAX
+        );
+    }
+
+    #[cfg(any(
+        feature = "eviction-compact-metadata",
+        feature = "eviction-coarse-timestamps"
+    ))]
+    #[test]
+    fn timestamp_ms_is_total() {
+        let _ = super::get_timestamp_ms();
     }
 }

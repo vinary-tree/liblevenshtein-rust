@@ -30,12 +30,13 @@
 //! assert_eq!(lfu.get_value("foo"), Some(42));
 //! ```
 
+use crate::sync_compat::RwLock;
 use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
 };
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 /// Metadata tracked for each entry.
 #[derive(Debug, Clone)]
@@ -125,10 +126,7 @@ impl<D> Lfu<D> {
 
     /// Records an entry access (updates metadata).
     fn record_access(&self, term: &str) {
-        let mut metadata = self
-            .metadata
-            .write()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self.metadata.write();
         metadata
             .entry(term.to_string())
             .and_modify(|m| m.increment())
@@ -139,10 +137,7 @@ impl<D> Lfu<D> {
     ///
     /// Returns `None` if the entry has never been accessed.
     pub fn access_count(&self, term: &str) -> Option<u32> {
-        let metadata = self
-            .metadata
-            .read()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self.metadata.read();
         metadata.get(term).map(|m| m.access_count)
     }
 
@@ -150,10 +145,7 @@ impl<D> Lfu<D> {
     ///
     /// Returns the term with the lowest access count.
     pub fn find_lfu(&self, terms: &[&str]) -> Option<String> {
-        let metadata = self
-            .metadata
-            .read()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let metadata = self.metadata.read();
         terms
             .iter()
             .filter_map(|&term| metadata.get(term).map(|m| (term, m.access_count)))
@@ -166,10 +158,7 @@ impl<D> Lfu<D> {
     /// Returns the evicted term if any.
     pub fn evict_lfu(&self, terms: &[&str]) -> Option<String> {
         if let Some(lfu_term) = self.find_lfu(terms) {
-            let mut metadata = self
-                .metadata
-                .write()
-                .expect("poisoned RwLock; only fatal if writer panicked");
+            let mut metadata = self.metadata.write();
             metadata.remove(&lfu_term);
             Some(lfu_term)
         } else {
@@ -179,10 +168,7 @@ impl<D> Lfu<D> {
 
     /// Clears all metadata.
     pub fn clear_metadata(&self) {
-        let mut metadata = self
-            .metadata
-            .write()
-            .expect("poisoned RwLock; only fatal if writer panicked");
+        let mut metadata = self.metadata.write();
         metadata.clear();
     }
 }

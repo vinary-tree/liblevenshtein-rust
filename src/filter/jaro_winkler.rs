@@ -49,6 +49,16 @@ const MAX_PREFIX_LENGTH: usize = 4;
 
 /// Scaling factor for prefix bonus in Jaro-Winkler.
 const PREFIX_SCALE: f64 = 0.1;
+const MAX_PREFIX_SCALE: f64 = 0.25;
+
+#[inline]
+fn normalize_prefix_scale(prefix_scale: f64) -> f64 {
+    if prefix_scale.is_finite() {
+        prefix_scale.clamp(0.0, MAX_PREFIX_SCALE)
+    } else {
+        PREFIX_SCALE
+    }
+}
 
 /// Compute Jaro similarity between two strings.
 ///
@@ -206,15 +216,10 @@ fn jaro_winkler_similarity_chars(s1_chars: &[char], s2_chars: &[char]) -> f64 {
 /// * `s2` - Second string
 /// * `prefix_scale` - Scaling factor for prefix bonus (typically 0.1)
 ///
-/// # Panics
-///
-/// Panics if prefix_scale is not in [0.0, 0.25] (to ensure similarity stays in [0, 1]).
+/// The prefix scale is normalized into `[0.0, 0.25]` to keep the result in
+/// `[0.0, 1.0]`. Non-finite values use the default scale.
 pub fn jaro_winkler_similarity_scaled(s1: &str, s2: &str, prefix_scale: f64) -> f64 {
-    assert!(
-        (0.0..=0.25).contains(&prefix_scale),
-        "prefix_scale must be in [0.0, 0.25] to ensure result in [0, 1], got {}",
-        prefix_scale
-    );
+    let prefix_scale = normalize_prefix_scale(prefix_scale);
 
     let s1_chars: Vec<char> = s1.chars().collect();
     let s2_chars: Vec<char> = s2.chars().collect();
@@ -417,9 +422,20 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "prefix_scale must be in [0.0, 0.25]")]
-    fn test_jaro_winkler_scaled_invalid() {
-        jaro_winkler_similarity_scaled("a", "b", 0.3);
+    fn test_jaro_winkler_scaled_normalizes_invalid_scale() {
+        let no_bonus = jaro_similarity("hello", "helo");
+        let default = jaro_winkler_similarity("hello", "helo");
+        let max_bonus = jaro_winkler_similarity_scaled("hello", "helo", MAX_PREFIX_SCALE);
+
+        assert!((jaro_winkler_similarity_scaled("hello", "helo", -0.5) - no_bonus).abs() < EPSILON);
+        assert!(
+            (jaro_winkler_similarity_scaled("hello", "helo", f64::NAN) - default).abs() < EPSILON
+        );
+        assert!(
+            (jaro_winkler_similarity_scaled("hello", "helo", f64::INFINITY) - default).abs()
+                < EPSILON
+        );
+        assert!((jaro_winkler_similarity_scaled("hello", "helo", 2.0) - max_bonus).abs() < EPSILON);
     }
 
     #[test]

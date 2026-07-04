@@ -286,6 +286,10 @@ where
     /// assert_eq!(result, HashSet::from([3, 4, 5]));
     /// ```
     pub fn query(&self, query_term: &str, max_distance: usize) -> Option<C> {
+        if max_distance == 0 {
+            return self.dictionary.get_value(query_term);
+        }
+
         // Optimization: Single-pass collection - avoid double Vec allocation
         // Instead of collecting candidates then mapping to values, we fuse the operations
         let mut values = self
@@ -385,6 +389,14 @@ where
         query_term: &str,
         max_distance: usize,
     ) -> Vec<(String, usize, C)> {
+        if max_distance == 0 {
+            return self
+                .dictionary
+                .get_value(query_term)
+                .map(|value| vec![(query_term.to_string(), 0, value)])
+                .unwrap_or_default();
+        }
+
         self.transducer
             .query_with_distance(query_term, max_distance)
             .filter_map(|candidate| {
@@ -564,6 +576,20 @@ mod tests {
 
     #[test]
     #[cfg(feature = "pathmap-backend")]
+    fn test_fuzzy_multimap_exact_distance_zero_miss() {
+        let dict = PathMapDictionary::from_terms_with_values([
+            ("hello", HashSet::from([1, 2, 3])),
+            ("hallo", HashSet::from([4])),
+        ]);
+
+        let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
+
+        assert_eq!(fuzzy.query("hullo", 0), None);
+        assert!(fuzzy.query_with_distance("hullo", 0).is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "pathmap-backend")]
     fn test_fuzzy_multimap_overlapping_values() {
         // Test that HashSet properly handles duplicate values
         let dict = PathMapDictionary::from_terms_with_values([
@@ -652,5 +678,22 @@ mod tests {
         assert!(near.is_some());
         let (_, distance, _) = near.expect("expected Some near in test");
         assert_eq!(*distance, 1);
+    }
+
+    #[test]
+    #[cfg(feature = "pathmap-backend")]
+    fn test_fuzzy_multimap_query_with_distance_exact_distance_zero() {
+        let dict = PathMapDictionary::from_terms_with_values([
+            ("test", vec!["exact_match".to_string()]),
+            ("tost", vec!["near_match".to_string()]),
+        ]);
+
+        let fuzzy = FuzzyMultiMap::new(dict, Algorithm::Standard);
+
+        let results = fuzzy.query_with_distance("test", 0);
+        assert_eq!(
+            results,
+            vec![("test".to_string(), 0, vec!["exact_match".to_string()])]
+        );
     }
 }
