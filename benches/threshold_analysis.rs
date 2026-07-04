@@ -1,6 +1,6 @@
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use liblevenshtein::prelude::*;
+use std::hint::black_box;
 
 /// Analyze the distribution of edge counts in DAWG nodes
 fn analyze_edge_distribution(dict: &DoubleArrayTrie) -> EdgeDistribution {

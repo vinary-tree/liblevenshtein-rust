@@ -7,10 +7,10 @@
 //! - Query with drafts (naive Levenshtein)
 //! - Query fusion (both drafts and finalized)
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::contextual::DynamicContextualCompletionEngine as ContextualCompletionEngine;
 use liblevenshtein::transducer::Algorithm;
+use std::hint::black_box;
 
 /// Benchmark character-level insertion into draft buffers
 fn bench_insert_char(c: &mut Criterion) {

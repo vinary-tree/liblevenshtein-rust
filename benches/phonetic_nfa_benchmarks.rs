@@ -8,7 +8,6 @@
 
 #![cfg(feature = "phonetic-rules")]
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
 use liblevenshtein::phonetic::nfa::{
@@ -17,6 +16,7 @@ use liblevenshtein::phonetic::nfa::{
 use liblevenshtein::phonetic::regex::parse;
 use liblevenshtein::phonetic::verified::zompist_nfa_char;
 use liblevenshtein::transducer::PhoneticTransducerChar;
+use std::hint::black_box;
 
 // ============================================================================
 // NFA Pattern Matching Benchmarks

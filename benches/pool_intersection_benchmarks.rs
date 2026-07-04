@@ -8,9 +8,9 @@
 //! PathNode and Intersection benchmarks are internal-only since those
 //! types are in private modules. They are tested via integration tests.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use liblevenshtein::transducer::{Algorithm, Position, StatePool};
+use std::hint::black_box;
 
 // ============================================================================
 // StatePool Benchmarks

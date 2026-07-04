@@ -1,9 +1,9 @@
 //! Comprehensive benchmarks for liblevenshtein profiling and performance analysis.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::pathmap::PathMapDictionary;
 use liblevenshtein::prelude::*;
+use std::hint::black_box;
 
 /// Create a dictionary of the specified size with varied word lengths
 fn create_dictionary(size: usize) -> PathMapDictionary {

@@ -1,6 +1,6 @@
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, Criterion};
 use liblevenshtein::prelude::*;
+use std::hint::black_box;
 
 /// Integration benchmark: End-to-end query performance with Batch 2A SIMD
 ///
@@ -147,7 +147,7 @@ fn bench_min_distance_integration(c: &mut Criterion) {
             state.insert(Position::new(i, i % 3), Algorithm::Standard, query_length);
         }
 
-        group.bench_function(&format!("{}_positions", size), |b| {
+        group.bench_function(format!("{}_positions", size), |b| {
             b.iter(|| black_box(state.min_distance()));
         });
     }

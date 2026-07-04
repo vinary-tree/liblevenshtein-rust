@@ -7,10 +7,10 @@
 //!
 //! Run with: cargo bench --bench small_set_analysis --features rand
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::transducer::SubstitutionSet;
 use rand::prelude::*;
+use std::hint::black_box;
 
 /// Generate random byte pairs for testing
 fn generate_byte_pairs(count: usize, seed: u64) -> Vec<(u8, u8)> {
@@ -271,6 +271,16 @@ fn bench_init_small(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("smallvec8", size), size, |b, _| {
             b.iter(|| {
                 let mut set = SmallVec8SubstitutionSet::new();
+                for &(a, c) in &pairs {
+                    set.allow_byte(black_box(a), black_box(c));
+                }
+                black_box(set)
+            });
+        });
+
+        group.bench_with_input(BenchmarkId::new("smallvec16", size), size, |b, _| {
+            b.iter(|| {
+                let mut set = SmallVec16SubstitutionSet::new();
                 for &(a, c) in &pairs {
                     set.allow_byte(black_box(a), black_box(c));
                 }

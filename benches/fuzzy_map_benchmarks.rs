@@ -7,10 +7,10 @@
 //! 4. Different value types: u32, Vec<u32>, String
 //! 5. Dictionary operations with values: insert_with_value, get_value
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
+use std::hint::black_box;
 
 /// Create a dictionary without values (baseline)
 fn create_dict_no_values(size: usize) -> PathMapDictionary<()> {

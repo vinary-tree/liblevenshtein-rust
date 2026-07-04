@@ -3,11 +3,11 @@
 //! This benchmark compares the performance of the new zipper-based
 //! ZipperQueryIterator against the existing node-based QueryIterator.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::pathmap::zipper::PathMapZipper;
 use libdictenstein::pathmap::PathMapDictionary;
 use liblevenshtein::transducer::{Algorithm, Transducer, ZipperQueryIterator};
+use std::hint::black_box;
 
 /// Load dictionary with common English words
 fn load_test_dictionary() -> PathMapDictionary<()> {

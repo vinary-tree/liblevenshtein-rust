@@ -5,14 +5,13 @@
 //! - Prefix matching: Standard dictionaries with .prefix()
 //! - Substring matching: Suffix automata (inherently substring-based)
 
-use std::hint::black_box;
 use criterion::{
-    criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration,
-    Throughput,
+    criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration, Throughput,
 };
 use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::suffix_automaton::SuffixAutomaton;
 use liblevenshtein::transducer::{Algorithm, Transducer};
+use std::hint::black_box;
 
 fn load_dictionary() -> Vec<String> {
     std::fs::read_to_string("/usr/share/dict/words")

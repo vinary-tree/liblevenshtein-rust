@@ -34,10 +34,10 @@
 //! - Distance requirements
 //! - Memory constraints
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::universal::{Standard as UniversalStandard, UniversalAutomaton};
+use std::hint::black_box;
 
 /// Create a dictionary of the specified size with varied word lengths
 fn create_dictionary(size: usize) -> DynamicDawg {

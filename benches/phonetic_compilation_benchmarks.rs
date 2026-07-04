@@ -11,14 +11,14 @@
 //! taskset -c 0 cargo bench --bench phonetic_compilation_benchmarks --features phonetic-rules
 //! ```
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
 
 #[cfg(feature = "phonetic-rules")]
 mod benchmarks {
     use super::*;
     use liblevenshtein::phonetic::llev::lexer::{Lexer, Token};
-    use liblevenshtein::phonetic::llev::{load_file, parse_str, LLevFile};
+    use liblevenshtein::phonetic::llev::{load_file, parse_str};
     use liblevenshtein::phonetic::RuleSetChar;
 
     /// Rule files to benchmark

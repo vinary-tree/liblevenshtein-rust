@@ -7,10 +7,10 @@
 //!   RUSTFLAGS="-C target-cpu=native -C force-frame-pointers=yes" \
 //!   cargo flamegraph --bench query_profiling -- --bench --profile-time 30
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, Criterion};
 use liblevenshtein::prelude::*;
 use std::fs;
+use std::hint::black_box;
 
 /// Load a large dictionary from system dictionary or create one
 fn load_large_dictionary() -> DoubleArrayTrie {

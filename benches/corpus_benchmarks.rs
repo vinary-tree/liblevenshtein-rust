@@ -23,15 +23,151 @@
 //! 2. **Realistic Queries**: Query performance with frequency-stratified workload
 //! 3. **Validation Queries**: Performance on real spelling errors (Holbrook/Aspell)
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::corpus::{BigTxtCorpus, MittonCorpus, QueryWorkload};
 use liblevenshtein::prelude::*;
+use std::collections::BTreeSet;
+use std::fs;
+use std::hint::black_box;
 use std::path::Path;
 use std::time::Duration;
 
 const SEED: u64 = 42;
+
+fn fallback_code_identifiers() -> Vec<String> {
+    [
+        "query_ordered",
+        "query_with_distance",
+        "standard_distance",
+        "transposition_distance",
+        "merge_and_split_distance",
+        "DoubleArrayTrie",
+        "DynamicDawg",
+        "PathMapDictionary",
+        "ValueFilteredQueryIterator",
+        "CharacteristicVector",
+        "OperationSet",
+        "SubstitutionPolicy",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
+}
+
+fn collect_rust_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_rust_files(&path, files);
+        } else if path.extension().is_some_and(|ext| ext == "rs") {
+            files.push(path);
+        }
+    }
+}
+
+fn extract_rust_identifiers(source: &str, identifiers: &mut BTreeSet<String>) {
+    for token in source.split(|c: char| !(c == '_' || c.is_ascii_alphanumeric())) {
+        let Some(first) = token.chars().next() else {
+            continue;
+        };
+
+        if token.len() >= 3 && (first == '_' || first.is_ascii_alphabetic()) {
+            identifiers.insert(token.to_string());
+        }
+    }
+}
+
+fn load_code_identifier_workload(root: &Path) -> Vec<String> {
+    let mut files = Vec::new();
+    collect_rust_files(root, &mut files);
+
+    let mut identifiers = BTreeSet::new();
+    for file in files {
+        if let Ok(source) = fs::read_to_string(file) {
+            extract_rust_identifiers(&source, &mut identifiers);
+        }
+    }
+
+    let identifiers: Vec<_> = identifiers.into_iter().take(10_000).collect();
+    if identifiers.is_empty() {
+        fallback_code_identifiers()
+    } else {
+        identifiers
+    }
+}
+
+fn medical_term_workload() -> Vec<String> {
+    [
+        "acetaminophen",
+        "amoxicillin",
+        "bronchoscopy",
+        "cardiomyopathy",
+        "cholecystectomy",
+        "diagnosis",
+        "electrocardiogram",
+        "hematocrit",
+        "hypertension",
+        "immunotherapy",
+        "metformin",
+        "nephrolithiasis",
+        "ophthalmology",
+        "pharmacy",
+        "rhinorrhea",
+        "sinusitis",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
+}
+
+fn dna_sequence_workload() -> Vec<String> {
+    [
+        "ACGTACGTACGT",
+        "ACGTACGTTCGT",
+        "GATTACAGATTA",
+        "GATTACTGATTA",
+        "TTGACAAGCTTA",
+        "TTGACATGCTTA",
+        "CGTATCGATCGA",
+        "CGTATGGATCGA",
+        "AACCGGTTAACC",
+        "AACCGGCTAACC",
+        "GGGAAATTTCCC",
+        "GGGAAAATTCCC",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
+}
+
+fn workload_queries(name: &str) -> Vec<(&'static str, usize)> {
+    match name {
+        "code_identifiers" => vec![
+            ("query_ordred", 1),
+            ("standrd_distance", 1),
+            ("ValueFilteredQueryItertor", 2),
+            ("CharacteristicVctor", 2),
+        ],
+        "medical_terms" => vec![
+            ("acetominophen", 2),
+            ("amoxycillin", 1),
+            ("cardiomyopthy", 1),
+            ("opthamology", 2),
+        ],
+        "dna_sequences" => vec![
+            ("ACGTACGTACGA", 1),
+            ("GATTACTGATTA", 1),
+            ("TTGACATGCTTA", 1),
+            ("GGGAAAATTCCA", 1),
+        ],
+        _ => Vec::new(),
+    }
+}
 
 fn load_big_txt() -> Option<BigTxtCorpus> {
     let path = "data/corpora/big.txt";
@@ -244,11 +380,49 @@ fn backend_comparison_realistic_workload(c: &mut Criterion) {
     group.finish();
 }
 
+fn domain_specific_workload_benchmarks(c: &mut Criterion) {
+    let workloads = [
+        (
+            "code_identifiers",
+            load_code_identifier_workload(Path::new("src")),
+        ),
+        ("medical_terms", medical_term_workload()),
+        ("dna_sequences", dna_sequence_workload()),
+    ];
+
+    let mut group = c.benchmark_group("domain_specific_workloads");
+    group.sample_size(100);
+
+    for (name, terms) in workloads {
+        let dict = DoubleArrayTrie::from_terms(terms.iter().map(String::as_str));
+        let transducer = Transducer::new(dict, Algorithm::Standard);
+        let queries = workload_queries(name);
+
+        group.bench_with_input(
+            BenchmarkId::new(name, terms.len()),
+            &queries,
+            |b, queries| {
+                let mut idx = 0;
+
+                b.iter(|| {
+                    let (query, distance) = queries[idx % queries.len()];
+                    let results: Vec<_> = transducer.query(black_box(query), distance).collect();
+                    idx = (idx + 1) % queries.len();
+                    black_box(results);
+                });
+            },
+        );
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     construction_benchmarks,
     realistic_query_benchmarks,
     validation_query_benchmarks,
-    backend_comparison_realistic_workload
+    backend_comparison_realistic_workload,
+    domain_specific_workload_benchmarks
 );
 criterion_main!(benches);

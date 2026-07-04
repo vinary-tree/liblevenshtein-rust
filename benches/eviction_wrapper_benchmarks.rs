@@ -3,13 +3,13 @@
 //! These benchmarks measure the overhead of eviction wrappers compared to
 //! unwrapped dictionaries, and compare performance across wrapper types.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::MappedDictionary;
 use liblevenshtein::cache::eviction::{
     Age, CostAware, Lfu, Lru, LruOptimized, MemoryPressure, Noop, Ttl,
 };
+use std::hint::black_box;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;

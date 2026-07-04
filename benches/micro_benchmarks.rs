@@ -3,10 +3,10 @@
 //! These benchmarks isolate specific optimizations to understand
 //! which changes caused regressions and why.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use liblevenshtein::prelude::*;
 use smallvec::SmallVec;
+use std::hint::black_box;
 
 /// Benchmark SmallVec vs Vec for position storage
 fn bench_smallvec_overhead(c: &mut Criterion) {

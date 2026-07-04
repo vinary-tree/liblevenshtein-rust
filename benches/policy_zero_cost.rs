@@ -1,7 +1,7 @@
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, Criterion};
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::{Restricted, SubstitutionSet};
+use std::hint::black_box;
 
 fn benchmark_unrestricted_policy(c: &mut Criterion) {
     let dict = DoubleArrayTrie::from_terms(vec![

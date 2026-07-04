@@ -11,13 +11,13 @@
 //! Compare to baseline:
 //!   cargo bench --bench wallbreaker_benchmarks -- --baseline wallbreaker-baseline
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::scdawg::Scdawg;
 use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::Algorithm;
 use liblevenshtein::wallbreaker::WallBreaker;
 use std::collections::HashSet;
+use std::hint::black_box;
 
 // ============================================================================
 // Test Data Setup

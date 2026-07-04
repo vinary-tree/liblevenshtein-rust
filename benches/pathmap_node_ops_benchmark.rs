@@ -13,10 +13,10 @@
 //! taskset -c 2 cargo bench --bench pathmap_node_ops_benchmark --features pathmap-backend
 //! ```
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use libdictenstein::pathmap::{PathMapDictionary, PathMapDictionaryChar};
 use libdictenstein::{Dictionary, DictionaryNode};
+use std::hint::black_box;
 
 /// H1: cost of a single `transition()` at increasing depth. With TrieRef the
 /// focus descends in `𝒪(1)` per byte, so this should be flat across depth.

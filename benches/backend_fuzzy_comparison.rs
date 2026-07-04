@@ -16,7 +16,6 @@
 //! Save baseline:
 //!   cargo bench --bench backend_fuzzy_comparison -- --save-baseline backend-baseline
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::pathmap::PathMapDictionary;
 use libdictenstein::scdawg::Scdawg;
@@ -24,6 +23,7 @@ use liblevenshtein::prelude::*;
 use liblevenshtein::transducer::Algorithm;
 use liblevenshtein::wallbreaker::WallBreaker;
 use std::collections::HashSet;
+use std::hint::black_box;
 
 // ============================================================================
 // Test Data Setup

@@ -1,9 +1,9 @@
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::transducer::universal::{
     Standard, Transposition, UniversalPosition, UniversalState,
 };
 use smallvec::SmallVec;
+use std::hint::black_box;
 
 /// Generate test positions with varying error distributions
 fn generate_positions<V: liblevenshtein::transducer::universal::PositionVariant>(

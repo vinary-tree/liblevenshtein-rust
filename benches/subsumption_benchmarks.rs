@@ -1,6 +1,6 @@
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::transducer::{Algorithm, Position, State};
+use std::hint::black_box;
 
 /// Generate test positions for benchmarking
 fn generate_positions(count: usize, max_distance: usize, query_length: usize) -> Vec<Position> {

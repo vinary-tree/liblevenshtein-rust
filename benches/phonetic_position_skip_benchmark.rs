@@ -12,13 +12,13 @@
 //! The Coq proof establishes that position skipping is SAFE when no rules use
 //! `Context::Final`. This benchmark measures the performance impact.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::phonetic::{
     apply_rules_seq, apply_rules_seq_optimized, orthography_rules, phonetic_rules, test_rules,
     zompist_rules, Context, Phone, RewriteRule,
 };
 use std::fs::File;
+use std::hint::black_box;
 use std::io::{BufRead, BufReader};
 
 // ============================================================================
@@ -127,20 +127,6 @@ fn generate_localized_transformations(len: usize) -> Vec<Phone<u8>> {
 /// `pos == s.len()`, which changes when strings are shortened.
 fn has_final_context(rules: &[RewriteRule<u8>]) -> bool {
     rules.iter().any(|r| matches!(r.context, Context::Final))
-}
-
-/// Create a safe rule set (no Context::Final).
-///
-/// Uses phonetic rules only, which have no position-dependent contexts.
-fn safe_rules() -> Vec<RewriteRule<u8>> {
-    phonetic_rules()
-}
-
-/// Create an unsafe rule set (contains Context::Final).
-///
-/// Uses orthography rules, which include `rule_silent_e_final` with `Context::Final`.
-fn unsafe_rules() -> Vec<RewriteRule<u8>> {
-    orthography_rules()
 }
 
 // ============================================================================
@@ -515,15 +501,6 @@ enum WordCategory {
 }
 
 impl WordCategory {
-    fn range(&self) -> (usize, usize) {
-        match self {
-            WordCategory::Short => (3, 5),
-            WordCategory::Medium => (6, 10),
-            WordCategory::Long => (11, 15),
-            WordCategory::VeryLong => (16, usize::MAX),
-        }
-    }
-
     fn name(&self) -> &'static str {
         match self {
             WordCategory::Short => "short_3-5",
@@ -547,20 +524,18 @@ fn load_dictionary_words() -> Option<Vec<(WordCategory, Vec<String>)>> {
     let mut long_words = Vec::new();
     let mut very_long_words = Vec::new();
 
-    for line in reader.lines().take(50000) {
-        // Limit to 50k words for reasonable benchmark time
-        if let Ok(word) = line {
-            let word = word.trim().to_lowercase();
-            // Filter to ASCII-only words for byte-level Phone representation
-            if word.chars().all(|c| c.is_ascii_alphabetic()) && word.len() >= 3 {
-                let len = word.len();
-                match len {
-                    3..=5 => short_words.push(word),
-                    6..=10 => medium_words.push(word),
-                    11..=15 => long_words.push(word),
-                    _ if len >= 16 => very_long_words.push(word),
-                    _ => {}
-                }
+    // Limit to 50k words for reasonable benchmark time.
+    for word in reader.lines().take(50000).map_while(Result::ok) {
+        let word = word.trim().to_lowercase();
+        // Filter to ASCII-only words for byte-level Phone representation
+        if word.chars().all(|c| c.is_ascii_alphabetic()) && word.len() >= 3 {
+            let len = word.len();
+            match len {
+                3..=5 => short_words.push(word),
+                6..=10 => medium_words.push(word),
+                11..=15 => long_words.push(word),
+                _ if len >= 16 => very_long_words.push(word),
+                _ => {}
             }
         }
     }

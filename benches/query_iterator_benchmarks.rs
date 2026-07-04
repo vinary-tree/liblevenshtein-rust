@@ -7,9 +7,9 @@
 //! - Different dictionary sizes
 //! - Different algorithms (Standard, Transposition, MergeAndSplit)
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use liblevenshtein::prelude::*;
+use std::hint::black_box;
 
 /// Create a dictionary of the specified size with realistic English-like words
 fn create_dictionary(size: usize) -> DoubleArrayTrie {

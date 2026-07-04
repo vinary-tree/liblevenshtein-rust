@@ -3,11 +3,11 @@
 //! This benchmark is designed to run with flamegraph to identify
 //! bottlenecks in the FuzzyMultiMap query method.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, Criterion};
 use liblevenshtein::cache::multimap::FuzzyMultiMap;
 use liblevenshtein::prelude::*;
 use std::collections::HashSet;
+use std::hint::black_box;
 
 /// Create a large dictionary with HashSet values for profiling
 fn create_fuzzy_multimap_dict(
@@ -58,7 +58,7 @@ fn profile_fuzzy_multimap_vec_concat(c: &mut Criterion) {
     let terms: Vec<(String, Vec<i32>)> = (0..1000)
         .map(|i| {
             let term = format!("term{:04}", i);
-            let values = vec![i as i32, i as i32 * 2, i as i32 * 3];
+            let values = vec![i, i * 2, i * 3];
             (term, values)
         })
         .collect();

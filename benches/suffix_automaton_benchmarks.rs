@@ -1,9 +1,9 @@
 //! Benchmarks for SuffixAutomaton construction and query performance.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::suffix_automaton::SuffixAutomaton;
 use liblevenshtein::transducer::{Algorithm, Transducer};
+use std::hint::black_box;
 
 /// Generate test corpus of varying sizes
 fn generate_corpus(size: usize) -> Vec<String> {

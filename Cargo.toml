@@ -487,6 +487,7 @@ harness = false
 [[bench]]
 name = "backend_fuzzy_comparison"
 harness = false
+required-features = ["pathmap-backend"]
 
 [[bench]]
 name = "filter_benchmarks"

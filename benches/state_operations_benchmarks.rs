@@ -1,6 +1,6 @@
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::transducer::{Algorithm, Position, State};
+use std::hint::black_box;
 
 //==============================================================================
 // HELPER FUNCTIONS

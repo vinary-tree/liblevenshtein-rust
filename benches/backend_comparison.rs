@@ -12,10 +12,10 @@
 //! - Query performance at distance 0, 1, 2, 3
 //! - Result ordering overhead
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use liblevenshtein::prelude::*;
 use std::fs;
+use std::hint::black_box;
 
 // Load dictionary from system words file
 fn load_dictionary() -> Vec<String> {

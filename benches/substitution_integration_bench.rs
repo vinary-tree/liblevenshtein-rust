@@ -12,10 +12,10 @@
 //!
 //! Run with: cargo bench --bench substitution_integration_bench
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::transducer::{Algorithm, Restricted, SubstitutionSet, Transducer};
+use std::hint::black_box;
 
 /// Create a test dictionary with common English words
 fn create_test_dictionary() -> DoubleArrayTrie {
@@ -300,7 +300,7 @@ fn bench_unrestricted_baseline(c: &mut Criterion) {
     let transducer = Transducer::new(dict, Algorithm::Standard);
 
     // Test queries with typos
-    let test_queries = vec![
+    let test_queries = [
         ("aple", 1),       // apple with 1 deletion
         ("appl", 1),       // apple with 1 deletion
         ("aplpy", 2),      // apply with 1 substitution + 1 transposition
@@ -341,7 +341,7 @@ fn bench_phonetic_preset(c: &mut Criterion) {
     let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
 
     // Test queries with phonetic typos
-    let test_queries = vec![
+    let test_queries = [
         ("aple", 1),    // apple -> should match with substitutions
         ("senter", 2),  // center -> c/s substitution
         ("kollege", 2), // college -> c/k substitution
@@ -378,7 +378,7 @@ fn bench_keyboard_preset(c: &mut Criterion) {
     let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
 
     // Test queries with keyboard typos (adjacent keys)
-    let test_queries = vec![
+    let test_queries = [
         ("aoole", 2),    // apple -> p/o substitution (adjacent)
         ("bannna", 2),   // banana -> a/n substitution
         ("vook", 1),     // book -> b/v substitution
@@ -421,7 +421,7 @@ fn bench_custom_small_set(c: &mut Criterion) {
     let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
 
     // Test queries using only allowed substitutions
-    let test_queries = vec![
+    let test_queries = [
         ("epple", 1), // apple -> a/e substitution
         ("benen", 2), // banana -> a/e substitutions
         ("bist", 1),  // best -> e/i substitution

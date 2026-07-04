@@ -5,13 +5,13 @@
 //! - Full edit distance with articulatory costs vs standard
 //! - Overhead of phonetic feature lookup
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::distance::standard_distance;
 use liblevenshtein::phonetic::feature_distance::{
     articulatory_distance, articulatory_distance_weighted, articulatory_edit_distance,
     articulatory_edit_distance_weighted, is_free_substitution, FeatureDistanceWeights,
 };
+use std::hint::black_box;
 
 // ============================================================================
 // Test Data

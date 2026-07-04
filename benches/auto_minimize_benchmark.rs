@@ -1,6 +1,6 @@
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::dynamic_dawg::DynamicDawg;
+use std::hint::black_box;
 
 fn generate_terms(size: usize) -> Vec<String> {
     let mut terms = Vec::with_capacity(size);

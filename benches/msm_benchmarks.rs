@@ -6,13 +6,13 @@
 //! 3. Hybrid search with different configurations
 //! 4. Effect of series length and database size on performance
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::time_series::{
     combined_lb, euclidean_lb, length_lb, msm_distance_automaton, msm_distance_wavefront,
     search_with_lb, HybridSearchIndex, LowerBoundType, MsmConfig, MsmTransducer,
     QuantizationConfig,
 };
+use std::hint::black_box;
 
 /// Generate a random time series
 fn generate_series(len: usize, seed: u64) -> Vec<f64> {

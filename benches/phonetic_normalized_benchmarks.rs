@@ -10,10 +10,10 @@
 //!
 //! Used as the baseline for scientific optimization of the PhoneticNormalizedDictionary.
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use libdictenstein::Dictionary;
 use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
+use std::hint::black_box;
 
 // ============================================================================
 // Test Data

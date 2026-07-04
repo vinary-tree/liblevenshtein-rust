@@ -5,9 +5,9 @@
 //! - Jaro-Winkler similarity computation throughput
 //! - Hybrid filter effectiveness vs full Levenshtein automaton
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::filter::{jaro_similarity, jaro_winkler_similarity, HybridMatcher, NgramIndex};
+use std::hint::black_box;
 
 // ============================================================================
 // Test Data Generation

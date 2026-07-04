@@ -8,9 +8,9 @@
 //! To test with SIMD-accelerated BK-tree distance:
 //!   cargo bench --bench bktree_vs_fuzzymap_benchmarks --features "phonetic-rules,simd"
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::collections::{HashMap, HashSet};
+use std::hint::black_box;
 
 // ============================================================================
 // OLD IMPLEMENTATION: BK-tree + HashMap (for comparison)
@@ -29,7 +29,7 @@ fn levenshtein_distance(a: &str, b: &str) -> usize {
 }
 
 /// Scalar Levenshtein distance implementation (fallback)
-#[allow(dead_code)]
+#[cfg(not(target_arch = "x86_64"))]
 fn levenshtein_distance_scalar(a: &str, b: &str) -> usize {
     let a_chars: Vec<char> = a.chars().collect();
     let b_chars: Vec<char> = b.chars().collect();
@@ -46,8 +46,8 @@ fn levenshtein_distance_scalar(a: &str, b: &str) -> usize {
     let mut prev = vec![0usize; n + 1];
     let mut curr = vec![0usize; n + 1];
 
-    for j in 0..=n {
-        prev[j] = j;
+    for (j, item) in prev.iter_mut().enumerate().take(n + 1) {
+        *item = j;
     }
 
     for i in 1..=m {
@@ -103,18 +103,15 @@ impl BKTree {
                 return;
             }
 
-            if current.children.contains_key(&dist) {
-                current = current.children.get_mut(&dist).expect("key exists");
-            } else {
-                current.children.insert(
-                    dist,
-                    Box::new(BKNode {
-                        value,
-                        children: HashMap::new(),
-                    }),
-                );
+            if let std::collections::hash_map::Entry::Vacant(e) = current.children.entry(dist) {
+                e.insert(Box::new(BKNode {
+                    value,
+                    children: HashMap::new(),
+                }));
                 self.size += 1;
                 return;
+            } else {
+                current = current.children.get_mut(&dist).expect("key exists");
             }
         }
     }
@@ -167,7 +164,7 @@ impl OldPhoneticNormalizedDict {
             }
             normalized_index
                 .entry(normalized)
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(original);
         }
 
@@ -432,12 +429,11 @@ fn load_dictionary_words() -> Vec<String> {
     .collect()
 }
 
-/// Global dictionary cache to avoid repeated file I/O
-static DICTIONARY_WORDS: std::sync::LazyLock<Vec<String>> =
-    std::sync::LazyLock::new(load_dictionary_words);
+/// Global dictionary cache to avoid repeated file I/O.
+static DICTIONARY_WORDS: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
 
 fn generate_test_data(count: usize) -> Vec<(String, String)> {
-    let words = &*DICTIONARY_WORDS;
+    let words = DICTIONARY_WORDS.get_or_init(load_dictionary_words);
 
     // Use deterministic sampling for reproducible benchmarks
     let step = words.len().max(1) / count.max(1);
@@ -457,7 +453,7 @@ fn generate_test_data(count: usize) -> Vec<(String, String)> {
 
 /// Generate realistic query variations (common misspellings/typos)
 fn generate_queries(count: usize) -> Vec<String> {
-    let words = &*DICTIONARY_WORDS;
+    let words = DICTIONARY_WORDS.get_or_init(load_dictionary_words);
 
     // Sample words and apply phonetic normalization (simulating user queries)
     let step = words.len().max(1) / count.max(1);

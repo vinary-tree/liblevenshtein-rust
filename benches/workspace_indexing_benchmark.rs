@@ -19,15 +19,14 @@
 //! RUSTFLAGS="-C target-cpu=native" cargo bench --bench workspace_indexing_benchmark -- --baseline main
 //! ```
 
-use std::hint::black_box;
 use criterion::{
-    criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration,
-    Throughput,
+    criterion_group, criterion_main, BenchmarkId, Criterion, PlotConfiguration, Throughput,
 };
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::{Dictionary, MutableMappedDictionary};
 use rayon::prelude::*;
 use rustc_hash::FxHashSet;
+use std::hint::black_box;
 
 type ContextId = u32;
 
@@ -66,7 +65,7 @@ fn build_doc_dict(doc_id: ContextId, terms: Vec<String>) -> DynamicDawg<Vec<Cont
 }
 
 /// Merge function for context ID vectors
-fn merge_contexts(left: &Vec<ContextId>, right: &Vec<ContextId>) -> Vec<ContextId> {
+fn merge_contexts(left: &[ContextId], right: &[ContextId]) -> Vec<ContextId> {
     let total_len = left.len() + right.len();
 
     if total_len > 50 {
@@ -76,8 +75,8 @@ fn merge_contexts(left: &Vec<ContextId>, right: &Vec<ContextId>) -> Vec<ContextI
         merged.sort_unstable();
         merged
     } else {
-        let mut merged = left.clone();
-        merged.extend(right.clone());
+        let mut merged = left.to_vec();
+        merged.extend_from_slice(right);
         merged.sort_unstable();
         merged.dedup();
         merged
@@ -92,7 +91,7 @@ fn merge_sequential(mut dicts: Vec<DynamicDawg<Vec<ContextId>>>) -> DynamicDawg<
 
     let merged = dicts.remove(0);
     for dict in dicts {
-        merged.union_with(&dict, merge_contexts);
+        merged.union_with(&dict, |left, right| merge_contexts(left, right));
     }
     merged
 }
@@ -109,7 +108,7 @@ fn merge_binary_tree(mut dicts: Vec<DynamicDawg<Vec<ContextId>>>) -> DynamicDawg
             .map(|chunk| {
                 if chunk.len() == 2 {
                     let merged = chunk[0].clone();
-                    merged.union_with(&chunk[1], merge_contexts);
+                    merged.union_with(&chunk[1], |left, right| merge_contexts(left, right));
                     merged
                 } else {
                     chunk[0].clone()

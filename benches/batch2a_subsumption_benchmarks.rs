@@ -1,9 +1,9 @@
 #![cfg_attr(not(target_arch = "x86_64"), allow(unused_variables))]
 
+use criterion::BenchmarkId;
+use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(target_arch = "x86_64")]
 use std::hint::black_box;
-use criterion::{BenchmarkId};
-use criterion::{criterion_group, criterion_main, Criterion};
 
 #[cfg(target_arch = "x86_64")]
 use liblevenshtein::transducer::simd::check_subsumption_simd;

@@ -11,10 +11,10 @@
 //!
 //! Run with: cargo bench --bench substitution_set_microbench
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::transducer::{SubstitutionSet, SubstitutionSetChar};
 use rand::prelude::*;
+use std::hint::black_box;
 
 /// Generate random byte pairs for testing
 fn generate_byte_pairs(count: usize, seed: u64) -> Vec<(u8, u8)> {

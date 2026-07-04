@@ -7,9 +7,9 @@
 //! - Different rule set sizes
 //! - Byte-level vs character-level performance
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::phonetic::*;
+use std::hint::black_box;
 
 // ============================================================================
 // Benchmark Fixtures
@@ -197,7 +197,7 @@ fn bench_fuel_variation(c: &mut Criterion) {
 fn bench_pattern_matching(c: &mut Criterion) {
     let mut group = c.benchmark_group("pattern_matching");
 
-    let patterns = vec![
+    let patterns = [
         vec![Phone::Consonant(b'c')],
         vec![Phone::Consonant(b'c'), Phone::Consonant(b'h')],
         vec![Phone::Consonant(b'p'), Phone::Consonant(b'h')],
@@ -236,7 +236,7 @@ fn bench_pattern_matching(c: &mut Criterion) {
 fn bench_context_matching(c: &mut Criterion) {
     let mut group = c.benchmark_group("context_matching");
 
-    let contexts = vec![
+    let contexts = [
         Context::Initial,
         Context::Final,
         Context::Anywhere,
