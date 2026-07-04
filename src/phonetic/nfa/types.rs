@@ -49,6 +49,21 @@ use std::fmt;
 /// This allows up to ~4 billion states, which is sufficient for any practical NFA.
 pub type StateId = u32;
 
+#[inline]
+pub(crate) fn state_id_from_len(len: usize) -> Option<StateId> {
+    StateId::try_from(len).ok()
+}
+
+#[inline]
+pub(crate) fn state_index(id: StateId) -> Option<usize> {
+    usize::try_from(id).ok()
+}
+
+#[inline]
+pub(crate) fn checked_state_id_add(lhs: StateId, rhs: StateId) -> Option<StateId> {
+    lhs.checked_add(rhs)
+}
+
 /// An NFA state with unique identifier and acceptance status.
 ///
 /// # Fields
@@ -699,7 +714,12 @@ pub struct TransitionChar {
     pub label: TransitionLabelChar,
     /// Destination state
     pub to: StateId,
-    /// Weight/cost of this transition (default: 0.0)
+    /// Weight/cost of this transition (default: `0.0`).
+    ///
+    /// Reserved: preserved through construction and optimization but NOT
+    /// currently applied to matching cost — the product/NFA matchers use
+    /// unit/among-costs, never this field. Kept for a future weighted-NFA-
+    /// matching feature.
     pub weight: f64,
 }
 
@@ -786,7 +806,12 @@ pub struct Transition {
     pub label: TransitionLabel,
     /// Destination state
     pub to: StateId,
-    /// Weight/cost of this transition (default: 0.0)
+    /// Weight/cost of this transition (default: `0.0`).
+    ///
+    /// Reserved: preserved through construction and optimization but NOT
+    /// currently applied to matching cost — the product/NFA matchers use
+    /// unit/among-costs, never this field. Kept for a future weighted-NFA-
+    /// matching feature.
     pub weight: f64,
 }
 
@@ -926,7 +951,7 @@ mod tests {
 
     #[test]
     fn test_byte_class_from_bytes() {
-        let vowels = CharClass::from_bytes(&[b'a', b'e', b'i', b'o', b'u']);
+        let vowels = CharClass::from_bytes(b"aeiou");
         assert!(vowels.matches(b'a'));
         assert!(!vowels.matches(b'b'));
     }

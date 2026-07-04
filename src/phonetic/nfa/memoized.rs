@@ -36,6 +36,99 @@ use super::lazy_dfa::{LazyDFA, LazyDFAChar};
 use super::product::{ProductAutomaton, ProductAutomatonChar};
 use rustc_hash::FxHashMap;
 use std::collections::VecDeque;
+use std::hash::Hash;
+
+#[derive(Debug)]
+struct LruTracker<K> {
+    order: VecDeque<(K, u64)>,
+    generations: FxHashMap<K, u64>,
+    clock: u64,
+}
+
+impl<K> LruTracker<K>
+where
+    K: Clone + Eq + Hash,
+{
+    fn new() -> Self {
+        Self {
+            order: VecDeque::new(),
+            generations: FxHashMap::default(),
+            clock: 0,
+        }
+    }
+
+    fn touch(&mut self, key: K, capacity: usize) {
+        if self.clock == u64::MAX {
+            self.rebase_generations();
+        }
+        self.clock += 1;
+        let generation = self.clock;
+        self.generations.insert(key.clone(), generation);
+        self.order.push_front((key, generation));
+        self.compact_if_sparse(capacity);
+    }
+
+    fn evict_until_below<V>(&mut self, cache: &mut FxHashMap<K, V>, capacity: usize) {
+        if capacity == 0 {
+            cache.clear();
+            self.clear();
+            return;
+        }
+
+        while cache.len() >= capacity {
+            let Some((key, generation)) = self.order.pop_back() else {
+                cache.clear();
+                self.generations.clear();
+                return;
+            };
+
+            if self.generations.get(&key).copied() == Some(generation) {
+                self.generations.remove(&key);
+                cache.remove(&key);
+            }
+        }
+    }
+
+    fn clear(&mut self) {
+        self.order.clear();
+        self.generations.clear();
+        self.clock = 0;
+    }
+
+    fn compact_if_sparse(&mut self, capacity: usize) {
+        let live_len = self.generations.len();
+        let compact_threshold = capacity.max(live_len).saturating_mul(2).max(64);
+        if self.order.len() <= compact_threshold {
+            return;
+        }
+
+        let mut compacted = VecDeque::with_capacity(live_len);
+        for (key, generation) in self.order.drain(..) {
+            if self.generations.get(&key).copied() == Some(generation) {
+                compacted.push_back((key, generation));
+            }
+        }
+        self.order = compacted;
+    }
+
+    fn rebase_generations(&mut self) {
+        let mut next_generation = 0;
+        let mut compacted = VecDeque::with_capacity(self.generations.len());
+        let mut generations = FxHashMap::default();
+
+        for (key, generation) in self.order.drain(..).rev() {
+            if self.generations.get(&key).copied() == Some(generation) {
+                next_generation += 1;
+                generations.insert(key.clone(), next_generation);
+                compacted.push_front((key, next_generation));
+            }
+        }
+
+        self.order = compacted;
+        self.generations = generations;
+        self.clock = next_generation;
+    }
+}
 
 // ============================================================================
 // Character-level Memoized Matcher
@@ -48,6 +141,7 @@ struct CacheEntryChar {
     result: bool,
     /// Minimum distance (if computed)
     min_distance: Option<u8>,
+    min_distance_computed: bool,
 }
 
 /// Memoized matcher for character-level fuzzy regex.
@@ -61,7 +155,7 @@ pub struct MemoizedMatcherChar {
     /// Cache: query -> result
     cache: FxHashMap<String, CacheEntryChar>,
     /// LRU order for eviction
-    lru_order: VecDeque<String>,
+    lru_order: LruTracker<String>,
     /// Maximum cache size
     max_cache_size: usize,
     /// Cache hit count
@@ -76,7 +170,7 @@ impl MemoizedMatcherChar {
         Self {
             product,
             cache: FxHashMap::default(),
-            lru_order: VecDeque::new(),
+            lru_order: LruTracker::new(),
             max_cache_size,
             hits: 0,
             misses: 0,
@@ -90,7 +184,7 @@ impl MemoizedMatcherChar {
         // Check cache - get result first, then update LRU
         if let Some(entry) = self.cache.get(&key).cloned() {
             self.hits += 1;
-            self.update_lru(&key);
+            self.lru_order.touch(key, self.max_cache_size);
             return entry.result;
         }
 
@@ -104,6 +198,7 @@ impl MemoizedMatcherChar {
             CacheEntryChar {
                 result,
                 min_distance: None,
+                min_distance_computed: false,
             },
         );
 
@@ -116,9 +211,9 @@ impl MemoizedMatcherChar {
 
         // Check cache - clone to release borrow
         if let Some(entry) = self.cache.get(&key).cloned() {
-            if entry.min_distance.is_some() {
+            if entry.min_distance_computed {
                 self.hits += 1;
-                self.update_lru(&key);
+                self.lru_order.touch(key, self.max_cache_size);
                 return entry.min_distance;
             }
         }
@@ -134,33 +229,28 @@ impl MemoizedMatcherChar {
             CacheEntryChar {
                 result,
                 min_distance: min_dist,
+                min_distance_computed: true,
             },
         );
 
         min_dist
     }
 
-    /// Update LRU order for a key.
-    fn update_lru(&mut self, key: &str) {
-        // Remove from current position and add to front
-        if let Some(pos) = self.lru_order.iter().position(|k| k == key) {
-            self.lru_order.remove(pos);
-        }
-        self.lru_order.push_front(key.to_string());
-    }
-
     /// Insert into cache with LRU eviction.
     fn insert_cache(&mut self, key: String, entry: CacheEntryChar) {
+        if self.max_cache_size == 0 {
+            return;
+        }
+
         // Evict if at capacity
-        while self.cache.len() >= self.max_cache_size && !self.lru_order.is_empty() {
-            if let Some(evict_key) = self.lru_order.pop_back() {
-                self.cache.remove(&evict_key);
-            }
+        if !self.cache.contains_key(&key) {
+            self.lru_order
+                .evict_until_below(&mut self.cache, self.max_cache_size);
         }
 
         // Insert new entry
         self.cache.insert(key.clone(), entry);
-        self.lru_order.push_front(key);
+        self.lru_order.touch(key, self.max_cache_size);
     }
 
     /// Get cache statistics.
@@ -201,6 +291,7 @@ impl MemoizedMatcherChar {
 struct CacheEntry {
     result: bool,
     min_distance: Option<u8>,
+    min_distance_computed: bool,
 }
 
 /// Memoized matcher for byte-level fuzzy regex.
@@ -208,7 +299,7 @@ struct CacheEntry {
 pub struct MemoizedMatcher {
     product: ProductAutomaton,
     cache: FxHashMap<Vec<u8>, CacheEntry>,
-    lru_order: VecDeque<Vec<u8>>,
+    lru_order: LruTracker<Vec<u8>>,
     max_cache_size: usize,
     hits: usize,
     misses: usize,
@@ -220,7 +311,7 @@ impl MemoizedMatcher {
         Self {
             product,
             cache: FxHashMap::default(),
-            lru_order: VecDeque::new(),
+            lru_order: LruTracker::new(),
             max_cache_size,
             hits: 0,
             misses: 0,
@@ -233,7 +324,7 @@ impl MemoizedMatcher {
 
         if let Some(entry) = self.cache.get(&key).cloned() {
             self.hits += 1;
-            self.update_lru(&key);
+            self.lru_order.touch(key, self.max_cache_size);
             return entry.result;
         }
 
@@ -245,6 +336,7 @@ impl MemoizedMatcher {
             CacheEntry {
                 result,
                 min_distance: None,
+                min_distance_computed: false,
             },
         );
 
@@ -256,9 +348,9 @@ impl MemoizedMatcher {
         let key = input.to_vec();
 
         if let Some(entry) = self.cache.get(&key).cloned() {
-            if entry.min_distance.is_some() {
+            if entry.min_distance_computed {
                 self.hits += 1;
-                self.update_lru(&key);
+                self.lru_order.touch(key, self.max_cache_size);
                 return entry.min_distance;
             }
         }
@@ -272,28 +364,25 @@ impl MemoizedMatcher {
             CacheEntry {
                 result,
                 min_distance: min_dist,
+                min_distance_computed: true,
             },
         );
 
         min_dist
     }
 
-    fn update_lru(&mut self, key: &[u8]) {
-        if let Some(pos) = self.lru_order.iter().position(|k| k == key) {
-            self.lru_order.remove(pos);
-        }
-        self.lru_order.push_front(key.to_vec());
-    }
-
     fn insert_cache(&mut self, key: Vec<u8>, entry: CacheEntry) {
-        while self.cache.len() >= self.max_cache_size && !self.lru_order.is_empty() {
-            if let Some(evict_key) = self.lru_order.pop_back() {
-                self.cache.remove(&evict_key);
-            }
+        if self.max_cache_size == 0 {
+            return;
+        }
+
+        if !self.cache.contains_key(&key) {
+            self.lru_order
+                .evict_until_below(&mut self.cache, self.max_cache_size);
         }
 
         self.cache.insert(key.clone(), entry);
-        self.lru_order.push_front(key);
+        self.lru_order.touch(key, self.max_cache_size);
     }
 
     /// Get cache statistics.
@@ -336,7 +425,7 @@ impl MemoizedMatcher {
 pub struct MemoizedLazyDFAChar {
     dfa: LazyDFAChar,
     result_cache: FxHashMap<String, bool>,
-    lru_order: VecDeque<String>,
+    lru_order: LruTracker<String>,
     max_cache_size: usize,
     hits: usize,
     misses: usize,
@@ -348,7 +437,7 @@ impl MemoizedLazyDFAChar {
         Self {
             dfa,
             result_cache: FxHashMap::default(),
-            lru_order: VecDeque::new(),
+            lru_order: LruTracker::new(),
             max_cache_size,
             hits: 0,
             misses: 0,
@@ -361,7 +450,7 @@ impl MemoizedLazyDFAChar {
 
         if let Some(&result) = self.result_cache.get(&key) {
             self.hits += 1;
-            self.update_lru(&key);
+            self.lru_order.touch(key, self.max_cache_size);
             return result;
         }
 
@@ -372,22 +461,18 @@ impl MemoizedLazyDFAChar {
         result
     }
 
-    fn update_lru(&mut self, key: &str) {
-        if let Some(pos) = self.lru_order.iter().position(|k| k == key) {
-            self.lru_order.remove(pos);
-        }
-        self.lru_order.push_front(key.to_string());
-    }
-
     fn insert_cache(&mut self, key: String, result: bool) {
-        while self.result_cache.len() >= self.max_cache_size && !self.lru_order.is_empty() {
-            if let Some(evict_key) = self.lru_order.pop_back() {
-                self.result_cache.remove(&evict_key);
-            }
+        if self.max_cache_size == 0 {
+            return;
+        }
+
+        if !self.result_cache.contains_key(&key) {
+            self.lru_order
+                .evict_until_below(&mut self.result_cache, self.max_cache_size);
         }
 
         self.result_cache.insert(key.clone(), result);
-        self.lru_order.push_front(key);
+        self.lru_order.touch(key, self.max_cache_size);
     }
 
     /// Get cache statistics.
@@ -430,7 +515,7 @@ impl MemoizedLazyDFAChar {
 pub struct MemoizedLazyDFA {
     dfa: LazyDFA,
     result_cache: FxHashMap<Vec<u8>, bool>,
-    lru_order: VecDeque<Vec<u8>>,
+    lru_order: LruTracker<Vec<u8>>,
     max_cache_size: usize,
     hits: usize,
     misses: usize,
@@ -442,7 +527,7 @@ impl MemoizedLazyDFA {
         Self {
             dfa,
             result_cache: FxHashMap::default(),
-            lru_order: VecDeque::new(),
+            lru_order: LruTracker::new(),
             max_cache_size,
             hits: 0,
             misses: 0,
@@ -455,7 +540,7 @@ impl MemoizedLazyDFA {
 
         if let Some(&result) = self.result_cache.get(&key) {
             self.hits += 1;
-            self.update_lru(&key);
+            self.lru_order.touch(key, self.max_cache_size);
             return result;
         }
 
@@ -466,22 +551,18 @@ impl MemoizedLazyDFA {
         result
     }
 
-    fn update_lru(&mut self, key: &[u8]) {
-        if let Some(pos) = self.lru_order.iter().position(|k| k == key) {
-            self.lru_order.remove(pos);
-        }
-        self.lru_order.push_front(key.to_vec());
-    }
-
     fn insert_cache(&mut self, key: Vec<u8>, result: bool) {
-        while self.result_cache.len() >= self.max_cache_size && !self.lru_order.is_empty() {
-            if let Some(evict_key) = self.lru_order.pop_back() {
-                self.result_cache.remove(&evict_key);
-            }
+        if self.max_cache_size == 0 {
+            return;
+        }
+
+        if !self.result_cache.contains_key(&key) {
+            self.lru_order
+                .evict_until_below(&mut self.result_cache, self.max_cache_size);
         }
 
         self.result_cache.insert(key.clone(), result);
-        self.lru_order.push_front(key);
+        self.lru_order.touch(key, self.max_cache_size);
     }
 
     /// Get cache statistics.
@@ -609,6 +690,67 @@ mod tests {
     }
 
     #[test]
+    fn mixed_accepts_and_min_distance_preserve_recent_lru_entry() {
+        let nfa = compile(&parse("a").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
+        let product = ProductAutomatonChar::new(nfa, 1);
+        let mut cache = MemoizedMatcherChar::new(product, 2);
+
+        assert!(cache.accepts("a"));
+        assert_eq!(cache.min_distance("a"), Some(0));
+        assert!(cache.accepts("b"));
+        assert!(cache.accepts("a"));
+        let hits_before_insert = cache.stats().hits;
+
+        assert!(cache.accepts("c"));
+        assert!(cache.accepts("a"));
+        assert_eq!(cache.stats().hits, hits_before_insert + 1);
+
+        let hits_before_evicted = cache.stats().hits;
+        assert!(cache.accepts("b"));
+        assert_eq!(cache.stats().hits, hits_before_evicted);
+    }
+
+    #[test]
+    fn lru_tracker_rebases_saturated_generation_counter() {
+        let mut tracker = LruTracker::new();
+        let mut cache = FxHashMap::default();
+
+        cache.insert("a".to_string(), ());
+        tracker.touch("a".to_string(), 2);
+        cache.insert("b".to_string(), ());
+        tracker.touch("b".to_string(), 2);
+
+        tracker.clock = u64::MAX;
+        tracker.evict_until_below(&mut cache, 2);
+        cache.insert("c".to_string(), ());
+        tracker.touch("c".to_string(), 2);
+
+        assert!(!cache.contains_key("a"));
+        assert!(cache.contains_key("b"));
+        assert!(cache.contains_key("c"));
+        assert_eq!(tracker.generations.len(), 2);
+        assert_eq!(tracker.clock, 2);
+    }
+
+    #[test]
+    fn min_distance_caches_absent_results() {
+        let nfa = compile(&parse("phone").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
+        let product = ProductAutomatonChar::new(nfa, 1);
+        let mut cache = MemoizedMatcherChar::new(product, 8);
+
+        assert_eq!(cache.min_distance("zzzz"), None);
+        assert_eq!(cache.stats().misses, 1);
+        assert_eq!(cache.min_distance("zzzz"), None);
+
+        let stats = cache.stats();
+        assert_eq!(stats.misses, 1);
+        assert_eq!(stats.hits, 1);
+        assert_eq!(stats.size, 1);
+    }
+
+    #[test]
     fn test_memoized_matcher_clear() {
         let nfa = compile(&parse("test").expect("test fixture: parse must be Ok"))
             .expect("test fixture: compile must be Ok");
@@ -655,6 +797,22 @@ mod tests {
     }
 
     #[test]
+    fn byte_min_distance_caches_absent_results() {
+        let nfa = compile_bytes(&parse_bytes(b"phone").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
+        let product = ProductAutomaton::new(nfa, 1);
+        let mut cache = MemoizedMatcher::new(product, 8);
+
+        assert_eq!(cache.min_distance(b"zzzz"), None);
+        assert_eq!(cache.min_distance(b"zzzz"), None);
+
+        let stats = cache.stats();
+        assert_eq!(stats.misses, 1);
+        assert_eq!(stats.hits, 1);
+        assert_eq!(stats.size, 1);
+    }
+
+    #[test]
     fn test_memoized_lazy_dfa_bytes() {
         let nfa = compile_bytes(&parse_bytes(b"world").expect("test fixture: parse must be Ok"))
             .expect("test fixture: compile must be Ok");
@@ -664,6 +822,45 @@ mod tests {
         assert!(cache.accepts(b"world"));
         assert!(cache.accepts(b"world")); // Hit
         assert_eq!(cache.stats().hits, 1);
+    }
+
+    #[test]
+    fn zero_capacity_caches_do_not_store_entries() {
+        let nfa = compile(&parse("x").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
+        let product = ProductAutomatonChar::new(nfa.clone(), 0);
+        let mut matcher = MemoizedMatcherChar::new(product, 0);
+
+        assert!(matcher.accepts("x"));
+        assert!(matcher.accepts("x"));
+        assert_eq!(matcher.stats().size, 0);
+        assert_eq!(matcher.stats().hits, 0);
+        assert_eq!(matcher.stats().misses, 2);
+
+        let mut lazy = MemoizedLazyDFAChar::new(LazyDFAChar::new(nfa), 0);
+        assert!(lazy.accepts("x"));
+        assert!(lazy.accepts("x"));
+        assert_eq!(lazy.stats().size, 0);
+        assert_eq!(lazy.stats().hits, 0);
+        assert_eq!(lazy.stats().misses, 2);
+
+        let byte_nfa = compile_bytes(&parse_bytes(b"x").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
+        let byte_product = ProductAutomaton::new(byte_nfa.clone(), 0);
+        let mut byte_matcher = MemoizedMatcher::new(byte_product, 0);
+
+        assert!(byte_matcher.accepts(b"x"));
+        assert!(byte_matcher.accepts(b"x"));
+        assert_eq!(byte_matcher.stats().size, 0);
+        assert_eq!(byte_matcher.stats().hits, 0);
+        assert_eq!(byte_matcher.stats().misses, 2);
+
+        let mut byte_lazy = MemoizedLazyDFA::new(LazyDFA::new(byte_nfa), 0);
+        assert!(byte_lazy.accepts(b"x"));
+        assert!(byte_lazy.accepts(b"x"));
+        assert_eq!(byte_lazy.stats().size, 0);
+        assert_eq!(byte_lazy.stats().hits, 0);
+        assert_eq!(byte_lazy.stats().misses, 2);
     }
 
     #[test]

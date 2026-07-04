@@ -482,7 +482,7 @@ impl ContextExpr {
     }
 
     /// Create a NOT context expression.
-    pub fn not(inner: ContextExpr) -> Self {
+    pub fn negate(inner: ContextExpr) -> Self {
         ContextExpr::Not(Box::new(inner))
     }
 
@@ -505,6 +505,14 @@ impl ContextExpr {
             ContextExpr::Pattern(expr) => Some(expr),
             _ => None,
         }
+    }
+}
+
+impl std::ops::Not for ContextExpr {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        ContextExpr::Not(Box::new(self))
     }
 }
 
@@ -1367,7 +1375,7 @@ mod tests {
     fn test_context_expr_not() {
         let inner =
             ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
-        let expr = ContextExpr::not(inner);
+        let expr = ContextExpr::negate(inner);
         assert!(!expr.is_simple());
         assert_eq!(expr.to_string(), "![aeiou]");
     }
@@ -1384,30 +1392,30 @@ mod tests {
     #[test]
     fn test_syllable_condition_from_str() {
         assert_eq!(
-            SyllableCondition::from_str("monosyllable"),
+            SyllableCondition::parse("monosyllable"),
             Some(SyllableCondition::Monosyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("polysyllable"),
+            SyllableCondition::parse("polysyllable"),
             Some(SyllableCondition::Polysyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("open_syllable"),
+            SyllableCondition::parse("open_syllable"),
             Some(SyllableCondition::OpenSyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("closed_syllable"),
+            SyllableCondition::parse("closed_syllable"),
             Some(SyllableCondition::ClosedSyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("final_syllable"),
+            SyllableCondition::parse("final_syllable"),
             Some(SyllableCondition::FinalSyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("initial_syllable"),
+            SyllableCondition::parse("initial_syllable"),
             Some(SyllableCondition::InitialSyllable)
         );
-        assert_eq!(SyllableCondition::from_str("invalid"), None);
+        assert_eq!(SyllableCondition::parse("invalid"), None);
     }
 
     #[test]
@@ -1445,7 +1453,7 @@ mod tests {
     #[test]
     fn test_syllable_expr_not() {
         let inner = SyllableExpr::cond(SyllableCondition::Monosyllable);
-        let expr = SyllableExpr::not(inner);
+        let expr = SyllableExpr::negate(inner);
         assert_eq!(expr.to_string(), "!monosyllable");
     }
 
@@ -1476,7 +1484,7 @@ mod tests {
             ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false));
         let right = ContextExpr::and(
             ContextExpr::pattern(Expression::char_class(vec!['a', 'e', 'i', 'o', 'u'], false)),
-            ContextExpr::not(ContextExpr::pattern(Expression::char('y'))),
+            ContextExpr::negate(ContextExpr::pattern(Expression::char('y'))),
         );
         let ctx = ContextAST::new_expr(Some(left), Some(right));
         let rule = RewriteRuleAST::new(

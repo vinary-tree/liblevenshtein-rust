@@ -6,7 +6,10 @@
 //! test surface.
 
 #[cfg(test)]
-use super::{NFAChar, TransitionLabelChar, NFA};
+use super::{
+    types::{checked_state_id_add, state_id_from_len},
+    NFAChar, TransitionLabelChar, NFA,
+};
 
 // --- NFAChar basic tests ---
 
@@ -30,6 +33,100 @@ fn test_nfa_char_add_state() {
     assert_eq!(nfa.num_states(), 3);
     assert!(!nfa.is_final(q1));
     assert!(nfa.is_final(q2));
+}
+
+#[test]
+fn test_nfa_state_id_conversion_accepts_largest_u32_id() {
+    assert_eq!(state_id_from_len(u32::MAX as usize), Some(u32::MAX));
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn test_nfa_state_id_conversion_rejects_out_of_range_ids() {
+    let out_of_range = (u32::MAX as usize) + 1;
+    assert_eq!(state_id_from_len(out_of_range), None);
+}
+
+#[test]
+fn test_nfa_state_id_addition_rejects_overflow() {
+    assert_eq!(checked_state_id_add(u32::MAX - 1, 1), Some(u32::MAX));
+    assert_eq!(checked_state_id_add(u32::MAX, 1), None);
+}
+
+#[test]
+fn test_nfa_try_add_state_matches_add_state_for_char_and_byte() {
+    let mut char_nfa = NFAChar::new();
+    let mut byte_nfa = NFA::new();
+
+    assert_eq!(char_nfa.try_add_state(true), Some(1));
+    assert_eq!(byte_nfa.try_add_state(true), Some(1));
+    assert!(char_nfa.is_final(1));
+    assert!(byte_nfa.is_final(1));
+}
+
+#[test]
+fn test_nfa_char_invalid_state_id_has_no_transitions() {
+    let mut nfa = NFAChar::new();
+    assert_eq!(nfa.transitions_from(u32::MAX).iter().count(), 0);
+
+    let q1 = nfa.add_state(true);
+    nfa.add_transition_char(nfa.start(), 'a', q1);
+    assert_eq!(nfa.transitions_from(u32::MAX).iter().count(), 0);
+
+    nfa.finalize();
+    assert_eq!(nfa.transitions_from(u32::MAX).iter().count(), 0);
+    nfa.set_final(u32::MAX, true);
+    assert_eq!(nfa.finals().len(), 1);
+}
+
+#[test]
+fn test_nfa_byte_invalid_state_id_has_no_transitions() {
+    let mut nfa = NFA::new();
+    assert_eq!(nfa.transitions_from(u32::MAX).iter().count(), 0);
+
+    let q1 = nfa.add_state(true);
+    nfa.add_transition_byte(nfa.start(), b'a', q1);
+    assert_eq!(nfa.transitions_from(u32::MAX).iter().count(), 0);
+
+    nfa.finalize();
+    assert_eq!(nfa.transitions_from(u32::MAX).iter().count(), 0);
+    nfa.set_final(u32::MAX, true);
+    assert_eq!(nfa.finals().len(), 1);
+}
+
+#[test]
+fn test_nfa_try_combinators_preserve_languages() {
+    let mut char_a = NFAChar::new();
+    let char_a_final = char_a.add_state(true);
+    char_a.add_transition_char(char_a.start(), 'a', char_a_final);
+
+    let mut char_b = NFAChar::new();
+    let char_b_final = char_b.add_state(true);
+    char_b.add_transition_char(char_b.start(), 'b', char_b_final);
+
+    let char_union = char_a
+        .clone()
+        .try_union(char_b.clone())
+        .expect("small NFAs fit in StateId");
+    assert!(char_union.accepts("a"));
+    assert!(char_union.accepts("b"));
+    assert!(!char_union.accepts("c"));
+
+    let char_concat = char_a
+        .clone()
+        .try_concatenate(char_b)
+        .expect("small NFAs fit in StateId");
+    assert!(char_concat.accepts("ab"));
+    assert!(!char_concat.accepts("a"));
+
+    let mut byte_a = NFA::new();
+    let byte_a_final = byte_a.add_state(true);
+    byte_a.add_transition_byte(byte_a.start(), b'a', byte_a_final);
+
+    let byte_star = byte_a.try_kleene_star().expect("small NFAs fit in StateId");
+    assert!(byte_star.accepts(b""));
+    assert!(byte_star.accepts(b"aaa"));
+    assert!(!byte_star.accepts(b"b"));
 }
 
 #[test]

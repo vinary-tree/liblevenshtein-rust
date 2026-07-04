@@ -46,8 +46,16 @@ impl<P> ContextExpr<P> {
     }
 
     /// Create a NOT context expression.
-    pub fn not(inner: ContextExpr<P>) -> Self {
+    pub fn negate(inner: ContextExpr<P>) -> Self {
         ContextExpr::Not(Box::new(inner))
+    }
+}
+
+impl<P> std::ops::Not for ContextExpr<P> {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        ContextExpr::Not(Box::new(self))
     }
 }
 
@@ -108,7 +116,7 @@ mod tests {
     #[test]
     fn test_context_expr_not() {
         let inner = ContextExpr::pattern(TestPattern("a".to_string()));
-        let expr = ContextExpr::not(inner);
+        let expr = ContextExpr::negate(inner);
         assert_eq!(expr.to_string(), "!a");
     }
 
@@ -119,7 +127,7 @@ mod tests {
         let boundary: ContextExpr<TestPattern> = ContextExpr::word_boundary();
         let left = ContextExpr::or(a, boundary);
         let b = ContextExpr::pattern(TestPattern("b".to_string()));
-        let right = ContextExpr::not(b);
+        let right = ContextExpr::negate(b);
         let expr = ContextExpr::and(left, right);
         assert_eq!(expr.to_string(), "((a | #) & !b)");
     }

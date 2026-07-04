@@ -27,7 +27,7 @@ pub enum SyllableCondition {
 
 impl SyllableCondition {
     /// Parse a syllable condition from a string.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "monosyllable" => Some(SyllableCondition::Monosyllable),
             "polysyllable" => Some(SyllableCondition::Polysyllable),
@@ -65,6 +65,14 @@ impl fmt::Display for SyllableCondition {
     }
 }
 
+impl std::str::FromStr for SyllableCondition {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        SyllableCondition::parse(s).ok_or(())
+    }
+}
+
 /// A syllable expression with logical operators.
 ///
 /// Allows combining syllable conditions with AND, OR, NOT.
@@ -98,7 +106,7 @@ impl SyllableExpr {
     }
 
     /// Create a NOT expression.
-    pub fn not(inner: SyllableExpr) -> Self {
+    pub fn negate(inner: SyllableExpr) -> Self {
         SyllableExpr::Not(Box::new(inner))
     }
 
@@ -125,6 +133,14 @@ impl SyllableExpr {
     }
 }
 
+impl std::ops::Not for SyllableExpr {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        SyllableExpr::Not(Box::new(self))
+    }
+}
+
 impl fmt::Display for SyllableExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -143,30 +159,30 @@ mod tests {
     #[test]
     fn test_syllable_condition_from_str() {
         assert_eq!(
-            SyllableCondition::from_str("monosyllable"),
+            SyllableCondition::parse("monosyllable"),
             Some(SyllableCondition::Monosyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("polysyllable"),
+            SyllableCondition::parse("polysyllable"),
             Some(SyllableCondition::Polysyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("open_syllable"),
+            SyllableCondition::parse("open_syllable"),
             Some(SyllableCondition::OpenSyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("closed_syllable"),
+            SyllableCondition::parse("closed_syllable"),
             Some(SyllableCondition::ClosedSyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("final_syllable"),
+            SyllableCondition::parse("final_syllable"),
             Some(SyllableCondition::FinalSyllable)
         );
         assert_eq!(
-            SyllableCondition::from_str("initial_syllable"),
+            SyllableCondition::parse("initial_syllable"),
             Some(SyllableCondition::InitialSyllable)
         );
-        assert_eq!(SyllableCondition::from_str("invalid"), None);
+        assert_eq!(SyllableCondition::parse("invalid"), None);
     }
 
     #[test]
@@ -213,7 +229,7 @@ mod tests {
     #[test]
     fn test_syllable_expr_not() {
         let inner = SyllableExpr::cond(SyllableCondition::FinalSyllable);
-        let expr = SyllableExpr::not(inner);
+        let expr = SyllableExpr::negate(inner);
         assert_eq!(expr.to_string(), "!final_syllable");
     }
 
@@ -221,7 +237,7 @@ mod tests {
     fn test_syllable_expr_complex() {
         // (monosyllable | !final_syllable) & open_syllable
         let mono = SyllableExpr::cond(SyllableCondition::Monosyllable);
-        let not_final = SyllableExpr::not(SyllableExpr::cond(SyllableCondition::FinalSyllable));
+        let not_final = SyllableExpr::negate(SyllableExpr::cond(SyllableCondition::FinalSyllable));
         let left = SyllableExpr::or(mono, not_final);
         let right = SyllableExpr::cond(SyllableCondition::OpenSyllable);
         let expr = SyllableExpr::and(left, right);

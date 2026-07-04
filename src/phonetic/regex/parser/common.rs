@@ -22,7 +22,7 @@ pub(super) fn resolve_feature_bundle_chars(
 ) -> Result<Vec<char>, String> {
     use crate::phonetic::named_classes::{get_chars_only, intersect_char_sets, negate_char_set};
 
-    let mut char_sets: Vec<Vec<char>> = Vec::new();
+    let mut char_sets: Vec<Vec<char>> = Vec::with_capacity(terms.len());
 
     for (name, negated) in terms {
         // Try user symbol first, then built-in

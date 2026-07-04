@@ -59,7 +59,14 @@ pub type NormalizationResultChar = NormalizationResult<char>;
 /// Extracts the characters from vowels, consonants, digraphs, trigraphs, tetragraphs,
 /// pentagraphs, hexagraphs, heptagraphs, and sequences.
 fn phones_to_string<U: PhoneticUnit>(phones: &[Phone<U>]) -> String {
-    let mut result = String::with_capacity(phones.len() * 7);
+    let Some(capacity) = phone_string_capacity(phones.len()) else {
+        return String::new();
+    };
+    let mut result = String::new();
+    if result.try_reserve_exact(capacity).is_err() {
+        return String::new();
+    }
+
     for phone in phones {
         match phone {
             Phone::Vowel(c) | Phone::Consonant(c) => result.push(U::to_char(*c)),
@@ -111,6 +118,10 @@ fn phones_to_string<U: PhoneticUnit>(phones: &[Phone<U>]) -> String {
         }
     }
     result
+}
+
+fn phone_string_capacity(phone_len: usize) -> Option<usize> {
+    phone_len.checked_mul(7)
 }
 
 #[cfg(feature = "perf-instrumentation")]
@@ -304,7 +315,11 @@ pub fn apply_rule_at<U: PhoneticUnit>(
     }
 
     // Build result: prefix + replacement + suffix
-    let mut result = Vec::with_capacity(s.len() + MAX_EXPANSION_FACTOR);
+    let capacity = rule_application_capacity(s.len(), rule.pattern.len(), rule.replacement.len())?;
+    let mut result = Vec::new();
+    if result.try_reserve_exact(capacity).is_err() {
+        return None;
+    }
 
     #[cfg(feature = "perf-instrumentation")]
     {
@@ -319,6 +334,16 @@ pub fn apply_rule_at<U: PhoneticUnit>(
     result.extend_from_slice(&s[(pos + rule.pattern.len())..]);
 
     Some(result)
+}
+
+fn rule_application_capacity(
+    input_len: usize,
+    pattern_len: usize,
+    replacement_len: usize,
+) -> Option<usize> {
+    input_len
+        .checked_sub(pattern_len)?
+        .checked_add(replacement_len)
 }
 
 /// Find the first position where a rule can be applied.
@@ -361,14 +386,7 @@ pub fn find_first_match_from<U: PhoneticUnit>(
     s: &[Phone<U>],
     start_pos: usize,
 ) -> Option<usize> {
-    // Try each position from start_pos to s.len()
-    // Optimization: use can_apply_at() to avoid allocating vectors during search
-    for pos in start_pos..=s.len() {
-        if can_apply_at(rule, s, pos) {
-            return Some(pos);
-        }
-    }
-    None
+    (start_pos..=s.len()).find(|&pos| can_apply_at(rule, s, pos))
 }
 
 /// Apply a list of rules sequentially until fixed point or fuel exhausted.
@@ -921,6 +939,18 @@ mod tests {
     // ========================================================================
 
     #[test]
+    fn test_capacity_helpers_reject_overflow() {
+        assert_eq!(phone_string_capacity(0), Some(0));
+        assert_eq!(phone_string_capacity(3), Some(21));
+        assert_eq!(phone_string_capacity(usize::MAX), None);
+
+        assert_eq!(rule_application_capacity(3, 2, 1), Some(2));
+        assert_eq!(rule_application_capacity(3, 0, 2), Some(5));
+        assert_eq!(rule_application_capacity(1, 2, 0), None);
+        assert_eq!(rule_application_capacity(usize::MAX, 0, 1), None);
+    }
+
+    #[test]
     fn test_apply_rule_at_success() {
         let rule = RewriteRule::<u8> {
             rule_id: 1,
@@ -1294,7 +1324,7 @@ mod tests {
             Phone::Consonant(b'h'),
         ];
 
-        let standard_result = apply_rules_seq(&[rule.clone()], &s, 100);
+        let standard_result = apply_rules_seq(std::slice::from_ref(&rule), &s, 100);
         let optimized_result = apply_rules_seq_optimized(&[rule], &s, 100);
 
         assert_eq!(standard_result, optimized_result);
@@ -1405,7 +1435,7 @@ mod tests {
             Phone::Consonant('h'),
         ];
 
-        let standard_result = apply_rules_seq(&[rule.clone()], &s, 100);
+        let standard_result = apply_rules_seq(std::slice::from_ref(&rule), &s, 100);
         let optimized_result = apply_rules_seq_optimized(&[rule], &s, 100);
 
         assert_eq!(standard_result, optimized_result);

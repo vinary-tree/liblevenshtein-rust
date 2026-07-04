@@ -62,10 +62,134 @@ use crate::phonetic::grep::{GrepError, WordBoundaryIterator};
 use crate::phonetic::nfa::{compile, NFAChar, ProductAutomatonChar, ThompsonBuilderChar};
 use crate::phonetic::types::RewriteRuleChar;
 use crate::phonetic::{apply_rules_seq_char, PhoneChar};
+use std::borrow::Cow;
 
 /// Helper to create a parse error from a message string.
 fn parse_error(msg: &str) -> GrepError {
     GrepError::Compile(format!("parse error: {}", msg))
+}
+
+fn ascii_digit_value_u16(c: char) -> Option<u16> {
+    c.is_ascii_digit()
+        .then(|| c.to_digit(10).and_then(|digit| u16::try_from(digit).ok()))
+        .flatten()
+}
+
+fn token_capacity_hint(input: &str) -> usize {
+    input.split_whitespace().count().max(1)
+}
+
+fn classify_phone_char(c: char) -> PhoneChar {
+    match c {
+        'a' | 'e' | 'i' | 'o' | 'u' | 'A' | 'E' | 'I' | 'O' | 'U' => PhoneChar::Vowel(c),
+        _ => PhoneChar::Consonant(c),
+    }
+}
+
+fn phone_char_utf8_len(phone: &PhoneChar) -> usize {
+    match phone {
+        PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => c.len_utf8(),
+        PhoneChar::Digraph(c1, c2) => c1.len_utf8() + c2.len_utf8(),
+        PhoneChar::Trigraph(c1, c2, c3) => c1.len_utf8() + c2.len_utf8() + c3.len_utf8(),
+        PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+            c1.len_utf8() + c2.len_utf8() + c3.len_utf8() + c4.len_utf8()
+        }
+        PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+            c1.len_utf8() + c2.len_utf8() + c3.len_utf8() + c4.len_utf8() + c5.len_utf8()
+        }
+        PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+            c1.len_utf8()
+                + c2.len_utf8()
+                + c3.len_utf8()
+                + c4.len_utf8()
+                + c5.len_utf8()
+                + c6.len_utf8()
+        }
+        PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+            c1.len_utf8()
+                + c2.len_utf8()
+                + c3.len_utf8()
+                + c4.len_utf8()
+                + c5.len_utf8()
+                + c6.len_utf8()
+                + c7.len_utf8()
+        }
+        PhoneChar::Sequence(chars) => chars.iter().map(|c| c.len_utf8()).sum(),
+        PhoneChar::Silent => 0,
+    }
+}
+
+fn push_phone_char(output: &mut String, phone: &PhoneChar) {
+    match phone {
+        PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => output.push(*c),
+        PhoneChar::Digraph(c1, c2) => {
+            output.push(*c1);
+            output.push(*c2);
+        }
+        PhoneChar::Trigraph(c1, c2, c3) => {
+            output.push(*c1);
+            output.push(*c2);
+            output.push(*c3);
+        }
+        PhoneChar::Tetragraph(c1, c2, c3, c4) => {
+            output.push(*c1);
+            output.push(*c2);
+            output.push(*c3);
+            output.push(*c4);
+        }
+        PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
+            output.push(*c1);
+            output.push(*c2);
+            output.push(*c3);
+            output.push(*c4);
+            output.push(*c5);
+        }
+        PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
+            output.push(*c1);
+            output.push(*c2);
+            output.push(*c3);
+            output.push(*c4);
+            output.push(*c5);
+            output.push(*c6);
+        }
+        PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+            output.push(*c1);
+            output.push(*c2);
+            output.push(*c3);
+            output.push(*c4);
+            output.push(*c5);
+            output.push(*c6);
+            output.push(*c7);
+        }
+        PhoneChar::Sequence(chars) => {
+            for c in chars {
+                output.push(*c);
+            }
+        }
+        PhoneChar::Silent => {}
+    }
+}
+
+fn normalize_with_rules<'a>(text: &'a str, rules: Option<&[RewriteRuleChar]>) -> Cow<'a, str> {
+    match rules {
+        Some(rules) if !rules.is_empty() => {
+            let mut input_phones = Vec::with_capacity(text.chars().count());
+            input_phones.extend(text.chars().map(classify_phone_char));
+
+            match apply_rules_seq_char(rules, &input_phones, 100) {
+                Some(phones) => {
+                    let normalized_len = phones.iter().map(phone_char_utf8_len).sum();
+                    let mut normalized = String::with_capacity(normalized_len);
+                    for phone in &phones {
+                        push_phone_char(&mut normalized, phone);
+                    }
+                    Cow::Owned(normalized)
+                }
+                None => Cow::Borrowed(text),
+            }
+        }
+        _ => Cow::Borrowed(text),
+    }
 }
 
 // ============================================================================
@@ -118,6 +242,13 @@ pub struct CompiledTokenQuery {
     separators: Vec<Separator>,
     /// Optional phonetic rules for normalization
     rules: Option<Vec<RewriteRuleChar>>,
+}
+
+struct ScannedWord<'a> {
+    byte_start: usize,
+    byte_end: usize,
+    original: &'a str,
+    normalized: Cow<'a, str>,
 }
 
 /// Result of a token match.
@@ -185,8 +316,9 @@ impl<'a> QueryParser<'a> {
     }
 
     fn parse(&mut self) -> Result<TokenQuery, GrepError> {
-        let mut tokens = Vec::new();
-        let mut separators = Vec::new();
+        let token_capacity = token_capacity_hint(self.input);
+        let mut tokens = Vec::with_capacity(token_capacity);
+        let mut separators = Vec::with_capacity(token_capacity.saturating_sub(1));
 
         self.skip_whitespace();
 
@@ -246,7 +378,7 @@ impl<'a> QueryParser<'a> {
 
     fn parse_alternation(&mut self) -> Result<TokenPattern, GrepError> {
         self.expect('(')?;
-        let mut alternatives = Vec::new();
+        let mut alternatives = Vec::with_capacity(2);
 
         loop {
             // Parse alternative pattern (can be literal or nested)
@@ -282,7 +414,7 @@ impl<'a> QueryParser<'a> {
 
     fn parse_alternative_pattern(&mut self) -> Result<TokenPattern, GrepError> {
         // Within alternation, parse until we hit | or )
-        let mut chars = String::new();
+        let mut chars = String::with_capacity(self.remaining_len().min(64));
 
         while let Some(c) = self.peek_char() {
             match c {
@@ -312,7 +444,7 @@ impl<'a> QueryParser<'a> {
 
     fn parse_quoted(&mut self) -> Result<TokenPattern, GrepError> {
         self.expect('"')?;
-        let mut chars = String::new();
+        let mut chars = String::with_capacity(self.remaining_len().min(64));
 
         loop {
             match self.peek_char() {
@@ -343,7 +475,7 @@ impl<'a> QueryParser<'a> {
     }
 
     fn parse_literal(&mut self) -> Result<TokenPattern, GrepError> {
-        let mut chars = String::new();
+        let mut chars = String::with_capacity(self.remaining_len().min(64));
 
         while let Some(c) = self.peek_char() {
             match c {
@@ -412,24 +544,30 @@ impl<'a> QueryParser<'a> {
     }
 
     fn parse_distance(&mut self) -> Result<u8, GrepError> {
-        let mut digits = String::new();
+        let mut value = 0u16;
+        let mut has_digit = false;
 
         while let Some(c) = self.peek_char() {
-            if c.is_ascii_digit() {
-                digits.push(c);
-                self.advance();
-            } else {
+            let Some(digit) = ascii_digit_value_u16(c) else {
                 break;
+            };
+
+            has_digit = true;
+            value = value
+                .checked_mul(10)
+                .and_then(|value| value.checked_add(digit))
+                .ok_or_else(|| parse_error("invalid distance (must be 0-255)"))?;
+            if value > u16::from(u8::MAX) {
+                return Err(parse_error("invalid distance (must be 0-255)"));
             }
+            self.advance();
         }
 
-        if digits.is_empty() {
+        if !has_digit {
             return Err(parse_error("expected distance after ':'"));
         }
 
-        digits
-            .parse::<u8>()
-            .map_err(|_| parse_error(&format!("invalid distance: {} (must be 0-255)", digits)))
+        u8::try_from(value).map_err(|_| parse_error("invalid distance (must be 0-255)"))
     }
 
     fn unescape(&self, c: char) -> Result<char, GrepError> {
@@ -441,8 +579,8 @@ impl<'a> QueryParser<'a> {
 
     fn is_wildcard_ahead(&mut self) -> bool {
         // Check if current position is at '.' followed by '*'
-        let chars_copy: Vec<_> = self.input[self.current_pos()..].chars().take(2).collect();
-        chars_copy.len() >= 2 && chars_copy[0] == '.' && chars_copy[1] == '*'
+        let mut chars = self.input[self.current_pos()..].chars();
+        matches!(chars.next(), Some('.')) && matches!(chars.next(), Some('*'))
     }
 
     fn current_pos(&mut self) -> usize {
@@ -450,6 +588,10 @@ impl<'a> QueryParser<'a> {
             .peek()
             .map(|(pos, _)| *pos)
             .unwrap_or(self.input.len())
+    }
+
+    fn remaining_len(&mut self) -> usize {
+        self.input.len() - self.current_pos()
     }
 
     fn peek(&mut self) -> Option<(usize, char)> {
@@ -508,9 +650,10 @@ impl CompiledTokenQuery {
         rules: Option<Vec<RewriteRuleChar>>,
     ) -> Result<Self, GrepError> {
         let mut token_automata = Vec::with_capacity(query.tokens.len());
+        let rules_ref = rules.as_deref();
 
         for token in &query.tokens {
-            let nfa = Self::pattern_to_nfa(&token.pattern)?;
+            let nfa = Self::pattern_to_nfa_with_rules(&token.pattern, rules_ref)?;
             let product = ProductAutomatonChar::new(nfa, token.max_distance);
             token_automata.push(product);
         }
@@ -522,30 +665,27 @@ impl CompiledTokenQuery {
         })
     }
 
-    /// Convert a TokenPattern to an NFA.
-    fn pattern_to_nfa(pattern: &TokenPattern) -> Result<NFAChar, GrepError> {
+    fn pattern_to_nfa_with_rules(
+        pattern: &TokenPattern,
+        rules: Option<&[RewriteRuleChar]>,
+    ) -> Result<NFAChar, GrepError> {
         match pattern {
             TokenPattern::Literal(s) => {
-                // Parse as regex (escaping special chars)
-                let escaped = Self::escape_for_regex(s);
+                let normalized = normalize_with_rules(s, rules);
+                let escaped = Self::escape_for_regex(normalized.as_ref());
                 let regex = crate::phonetic::regex::parse(&escaped)?;
                 compile(&regex).map_err(|e| GrepError::Compile(e.to_string()))
             }
             TokenPattern::Alternation(alts) => {
-                if alts.is_empty() {
-                    return Err(GrepError::Compile("empty alternation".to_string()));
-                }
-
                 let builder = ThompsonBuilderChar::new();
-                let mut nfas = Vec::new();
+                let mut alternatives = alts.iter();
+                let first = alternatives
+                    .next()
+                    .ok_or_else(|| GrepError::Compile("empty alternation".to_string()))?;
 
-                for alt in alts {
-                    nfas.push(Self::pattern_to_nfa(alt)?);
-                }
-
-                // Build alternation NFA
-                let mut result = nfas.remove(0);
-                for nfa in nfas {
+                let mut result = Self::pattern_to_nfa_with_rules(first, rules)?;
+                for alt in alternatives {
+                    let nfa = Self::pattern_to_nfa_with_rules(alt, rules)?;
                     result = builder.alternation(result, nfa);
                 }
 
@@ -556,7 +696,7 @@ impl CompiledTokenQuery {
 
     /// Escape special regex characters in a literal.
     fn escape_for_regex(s: &str) -> String {
-        let mut result = String::with_capacity(s.len() * 2);
+        let mut result = String::with_capacity(Self::escaped_regex_capacity(s.len()).unwrap_or(0));
         for c in s.chars() {
             match c {
                 '.' | '*' | '+' | '?' | '[' | ']' | '(' | ')' | '{' | '}' | '|' | '^' | '$'
@@ -568,6 +708,11 @@ impl CompiledTokenQuery {
             }
         }
         result
+    }
+
+    #[inline]
+    fn escaped_regex_capacity(byte_len: usize) -> Option<usize> {
+        byte_len.checked_mul(2)
     }
 }
 
@@ -621,22 +766,32 @@ impl TokenGrep {
     ///
     /// Returns all non-overlapping matches found in the document.
     pub fn scan(&self, document: &str) -> Vec<TokenMatch> {
-        let mut matches = Vec::new();
-
-        // Get all word positions in the document
-        let words: Vec<(usize, &str, usize)> = WordBoundaryIterator::new(document).collect();
+        let words: Vec<ScannedWord<'_>> = WordBoundaryIterator::new(document)
+            .map(|(byte_start, original, byte_end)| ScannedWord {
+                byte_start,
+                byte_end,
+                original,
+                normalized: self.normalize(original),
+            })
+            .collect();
 
         if words.is_empty() || self.compiled.token_automata.is_empty() {
-            return matches;
+            return Vec::new();
         }
+
+        let max_possible_matches = words
+            .len()
+            .saturating_sub(self.compiled.token_automata.len())
+            .saturating_add(1);
+        let mut matches = Vec::with_capacity(max_possible_matches.min(64));
 
         // Try starting from each word position
         for start_idx in 0..words.len() {
             if let Some(m) = self.try_match_from(&words, start_idx, document) {
                 // Check for overlap with previous match
-                let overlaps = matches.last().map_or(false, |last: &TokenMatch| {
-                    m.byte_range.0 < last.byte_range.1
-                });
+                let overlaps = matches
+                    .last()
+                    .is_some_and(|last: &TokenMatch| m.byte_range.0 < last.byte_range.1);
 
                 if !overlaps {
                     matches.push(m);
@@ -650,11 +805,11 @@ impl TokenGrep {
     /// Try to match the token sequence starting from a word index.
     fn try_match_from(
         &self,
-        words: &[(usize, &str, usize)],
+        words: &[ScannedWord<'_>],
         start_idx: usize,
         document: &str,
     ) -> Option<TokenMatch> {
-        let mut token_matches = Vec::new();
+        let mut token_matches = Vec::with_capacity(self.compiled.token_automata.len());
         let mut word_idx = start_idx;
         let mut total_distance: u8 = 0;
 
@@ -677,7 +832,8 @@ impl TokenGrep {
                     Separator::Wildcard => {
                         // Wildcard: try all remaining words to find a match
                         let mut found = false;
-                        for try_idx in word_idx..words.len() {
+                        let search_start = word_idx;
+                        for try_idx in search_start..words.len() {
                             if let Some(detail) =
                                 self.try_match_token(product, words, try_idx, token_idx)
                             {
@@ -714,7 +870,13 @@ impl TokenGrep {
         let first = &token_matches[0];
         let last = &token_matches[token_matches.len() - 1];
         let byte_range = (first.byte_range.0, last.byte_range.1);
-        let matched_text = document[byte_range.0..byte_range.1].to_string();
+        // Defense-in-depth: word boundaries from `WordBoundaryIterator` are ASCII-aligned
+        // (so `byte_range` currently always lands on char boundaries), but slice via `get`
+        // rather than index so a future non-ASCII-aware tokenizer can never panic here.
+        let matched_text = document
+            .get(byte_range.0..byte_range.1)
+            .unwrap_or_default()
+            .to_string();
 
         Some(TokenMatch {
             byte_range,
@@ -728,100 +890,26 @@ impl TokenGrep {
     fn try_match_token(
         &self,
         product: &ProductAutomatonChar,
-        words: &[(usize, &str, usize)],
+        words: &[ScannedWord<'_>],
         word_idx: usize,
         token_idx: usize,
     ) -> Option<TokenMatchDetail> {
-        let (start, word, end) = words[word_idx];
-        let normalized = self.normalize(word);
+        let word = &words[word_idx];
 
         product
-            .min_distance(&normalized)
+            .min_distance(word.normalized.as_ref())
             .map(|distance| TokenMatchDetail {
                 token_index: token_idx,
-                byte_range: (start, end),
-                original_text: word.to_string(),
-                normalized_text: normalized,
+                byte_range: (word.byte_start, word.byte_end),
+                original_text: word.original.to_string(),
+                normalized_text: word.normalized.to_string(),
                 distance,
             })
     }
 
     /// Normalize text using phonetic rules if available.
-    fn normalize(&self, text: &str) -> String {
-        match &self.compiled.rules {
-            Some(rules) if !rules.is_empty() => {
-                let vowels = ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'];
-                let input_phones: Vec<PhoneChar> = text
-                    .chars()
-                    .map(|c| {
-                        if vowels.contains(&c) {
-                            PhoneChar::Vowel(c)
-                        } else {
-                            PhoneChar::Consonant(c)
-                        }
-                    })
-                    .collect();
-
-                match apply_rules_seq_char(rules, &input_phones, 100) {
-                    Some(phones) => {
-                        let mut s = String::new();
-                        for p in phones.iter() {
-                            match p {
-                                PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => s.push(*c),
-                                PhoneChar::Digraph(c1, c2) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                }
-                                PhoneChar::Trigraph(c1, c2, c3) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                }
-                                PhoneChar::Tetragraph(c1, c2, c3, c4) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                    s.push(*c4);
-                                }
-                                PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                    s.push(*c4);
-                                    s.push(*c5);
-                                }
-                                PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                    s.push(*c4);
-                                    s.push(*c5);
-                                    s.push(*c6);
-                                }
-                                PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                    s.push(*c4);
-                                    s.push(*c5);
-                                    s.push(*c6);
-                                    s.push(*c7);
-                                }
-                                PhoneChar::Sequence(chars) => {
-                                    for c in chars {
-                                        s.push(*c);
-                                    }
-                                }
-                                PhoneChar::Silent => {}
-                            }
-                        }
-                        s
-                    }
-                    None => text.to_string(),
-                }
-            }
-            _ => text.to_string(),
-        }
+    fn normalize<'a>(&self, text: &'a str) -> Cow<'a, str> {
+        normalize_with_rules(text, self.compiled.rules.as_deref())
     }
 }
 
@@ -870,7 +958,7 @@ impl TokenGrep {
         documents: impl IntoIterator<Item = (I, S)>,
     ) -> Vec<DocumentMatch<I>>
     where
-        I: Send + Clone,
+        I: Send,
         S: AsRef<str> + Send,
     {
         use rayon::prelude::*;
@@ -901,7 +989,7 @@ impl TokenGrep {
         documents: impl IntoIterator<Item = (I, S)>,
     ) -> Vec<I>
     where
-        I: Send + Clone,
+        I: Send,
         S: AsRef<str> + Send,
     {
         use rayon::prelude::*;
@@ -985,7 +1073,7 @@ struct MatchAttempt {
     /// Current token index being matched (0-based)
     current_token_idx: usize,
     /// Last word index that matched a token
-    last_matched_word_idx: usize,
+    last_matched_word_idx: Option<usize>,
     /// Accumulated token match details
     token_details: Vec<TokenMatchDetail>,
     /// Total distance accumulated so far
@@ -1078,8 +1166,8 @@ impl StreamingTokenMatcher {
             self.match_attempts.push(MatchAttempt {
                 start_word_idx: current_word_idx,
                 current_token_idx: 0,
-                last_matched_word_idx: current_word_idx.wrapping_sub(1), // Will be set on first match
-                token_details: Vec::new(),
+                last_matched_word_idx: None,
+                token_details: Vec::with_capacity(self.compiled.token_automata.len()),
                 total_distance: 0,
             });
         }
@@ -1117,60 +1205,74 @@ impl StreamingTokenMatcher {
 
     /// Process all active match attempts with the current word.
     fn process_attempts(&mut self, current_word_idx: usize) {
-        let mut i = 0;
-        while i < self.match_attempts.len() {
-            let state = self.try_advance_attempt(i, current_word_idx);
+        let compiled = &self.compiled;
+        let word_buffer = &self.word_buffer;
+        let word_idx_offset = self.word_idx_offset;
+        let completed_matches = &mut self.completed_matches;
 
+        self.match_attempts.retain_mut(|attempt| {
+            let state = Self::try_advance_attempt(
+                compiled,
+                word_buffer,
+                word_idx_offset,
+                attempt,
+                current_word_idx,
+            );
             match state {
                 AttemptState::Complete => {
-                    // Extract and finalize the match
-                    let attempt = self.match_attempts.remove(i);
-                    if let Some(token_match) = self.finalize_attempt(&attempt) {
-                        self.completed_matches.push(token_match);
+                    if let Some(token_match) = Self::finalize_attempt(attempt) {
+                        completed_matches.push(token_match);
                     }
-                    // Don't increment i since we removed an element
+                    false
                 }
-                AttemptState::Failed => {
-                    self.match_attempts.remove(i);
-                    // Don't increment i
-                }
-                AttemptState::InProgress | AttemptState::NoMatch => {
-                    i += 1;
-                }
+                AttemptState::Failed => false,
+                AttemptState::InProgress | AttemptState::NoMatch => true,
             }
-        }
+        });
     }
 
     /// Try to advance a match attempt with the current word.
-    fn try_advance_attempt(&mut self, attempt_idx: usize, current_word_idx: usize) -> AttemptState {
-        let attempt = &self.match_attempts[attempt_idx];
+    fn try_advance_attempt(
+        compiled: &CompiledTokenQuery,
+        word_buffer: &VecDeque<BufferedWord>,
+        word_idx_offset: usize,
+        attempt: &mut MatchAttempt,
+        current_word_idx: usize,
+    ) -> AttemptState {
         let token_idx = attempt.current_token_idx;
 
         // Check if we've matched all tokens
-        if token_idx >= self.compiled.token_automata.len() {
+        if token_idx >= compiled.token_automata.len() {
             return AttemptState::Complete;
         }
 
         // Get the buffer index for the current word
-        let buffer_idx = current_word_idx - self.word_idx_offset;
-        if buffer_idx >= self.word_buffer.len() {
+        let Some(buffer_idx) = current_word_idx.checked_sub(word_idx_offset) else {
+            return AttemptState::Failed;
+        };
+        if buffer_idx >= word_buffer.len() {
             return AttemptState::InProgress; // Word not in buffer yet
         }
 
         // Check separator constraints
         if token_idx > 0 {
             let sep_idx = token_idx - 1;
-            let sep = &self.compiled.separators[sep_idx];
+            let sep = &compiled.separators[sep_idx];
 
             match sep {
                 Separator::Whitespace => {
                     // For whitespace separator, words must be consecutive
                     // (i.e., current word immediately follows the last matched word)
-                    let last_matched = self.match_attempts[attempt_idx].last_matched_word_idx;
-                    if current_word_idx != last_matched + 1 {
+                    let Some(last_matched_word_idx) = attempt.last_matched_word_idx else {
+                        return AttemptState::Failed;
+                    };
+                    let Some(expected_word_idx) = last_matched_word_idx.checked_add(1) else {
+                        return AttemptState::Failed;
+                    };
+                    if current_word_idx != expected_word_idx {
                         // Not consecutive - this attempt cannot use this word
                         // If we're past the expected position, fail the attempt
-                        if current_word_idx > last_matched + 1 {
+                        if current_word_idx > expected_word_idx {
                             return AttemptState::Failed;
                         }
                         return AttemptState::NoMatch;
@@ -1182,20 +1284,18 @@ impl StreamingTokenMatcher {
             }
         } else {
             // First token - only process on the starting word
-            let start_idx = self.match_attempts[attempt_idx].start_word_idx;
-            if current_word_idx != start_idx {
+            if current_word_idx != attempt.start_word_idx {
                 return AttemptState::NoMatch;
             }
         }
 
         // Try to match the current token
-        let word = &self.word_buffer[buffer_idx];
-        let product = &self.compiled.token_automata[token_idx];
+        let word = &word_buffer[buffer_idx];
+        let product = &compiled.token_automata[token_idx];
 
         match product.min_distance(&word.normalized) {
             Some(distance) => {
                 // Token matched! Update the attempt
-                let attempt = &mut self.match_attempts[attempt_idx];
                 attempt.token_details.push(TokenMatchDetail {
                     token_index: token_idx,
                     byte_range: (word.byte_start, word.byte_end),
@@ -1205,10 +1305,10 @@ impl StreamingTokenMatcher {
                 });
                 attempt.total_distance = attempt.total_distance.saturating_add(distance);
                 attempt.current_token_idx += 1;
-                attempt.last_matched_word_idx = current_word_idx;
+                attempt.last_matched_word_idx = Some(current_word_idx);
 
                 // Check if all tokens are now matched
-                if attempt.current_token_idx >= self.compiled.token_automata.len() {
+                if attempt.current_token_idx >= compiled.token_automata.len() {
                     AttemptState::Complete
                 } else {
                     AttemptState::InProgress
@@ -1218,7 +1318,7 @@ impl StreamingTokenMatcher {
                 // No match for this word
                 if token_idx > 0 {
                     let sep_idx = token_idx - 1;
-                    if self.compiled.separators[sep_idx] == Separator::Wildcard {
+                    if compiled.separators[sep_idx] == Separator::Wildcard {
                         // Wildcard: keep trying with subsequent words
                         AttemptState::NoMatch
                     } else {
@@ -1234,7 +1334,7 @@ impl StreamingTokenMatcher {
     }
 
     /// Finalize a completed match attempt into a TokenMatch.
-    fn finalize_attempt(&self, attempt: &MatchAttempt) -> Option<TokenMatch> {
+    fn finalize_attempt(attempt: &MatchAttempt) -> Option<TokenMatch> {
         if attempt.token_details.is_empty() {
             return None;
         }
@@ -1246,12 +1346,19 @@ impl StreamingTokenMatcher {
         // Build matched text from token details
         // Note: This may not capture text between tokens (for wildcards)
         // For a complete solution, we'd need to track all words in the range
-        let matched_text = attempt
+        let matched_text_len = attempt
             .token_details
             .iter()
-            .map(|d| d.original_text.as_str())
-            .collect::<Vec<_>>()
-            .join(" ");
+            .map(|d| d.original_text.len())
+            .sum::<usize>()
+            + attempt.token_details.len().saturating_sub(1);
+        let mut matched_text = String::with_capacity(matched_text_len);
+        for (idx, detail) in attempt.token_details.iter().enumerate() {
+            if idx > 0 {
+                matched_text.push(' ');
+            }
+            matched_text.push_str(&detail.original_text);
+        }
 
         Some(TokenMatch {
             byte_range,
@@ -1303,80 +1410,7 @@ impl StreamingTokenMatcher {
 
     /// Normalize text using phonetic rules if available.
     fn normalize(&self, text: &str) -> String {
-        match &self.compiled.rules {
-            Some(rules) if !rules.is_empty() => {
-                let vowels = ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'];
-                let input_phones: Vec<PhoneChar> = text
-                    .chars()
-                    .map(|c| {
-                        if vowels.contains(&c) {
-                            PhoneChar::Vowel(c)
-                        } else {
-                            PhoneChar::Consonant(c)
-                        }
-                    })
-                    .collect();
-
-                match apply_rules_seq_char(rules, &input_phones, 100) {
-                    Some(phones) => {
-                        let mut s = String::new();
-                        for p in phones.iter() {
-                            match p {
-                                PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => s.push(*c),
-                                PhoneChar::Digraph(c1, c2) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                }
-                                PhoneChar::Trigraph(c1, c2, c3) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                }
-                                PhoneChar::Tetragraph(c1, c2, c3, c4) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                    s.push(*c4);
-                                }
-                                PhoneChar::Pentagraph(c1, c2, c3, c4, c5) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                    s.push(*c4);
-                                    s.push(*c5);
-                                }
-                                PhoneChar::Hexagraph(c1, c2, c3, c4, c5, c6) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                    s.push(*c4);
-                                    s.push(*c5);
-                                    s.push(*c6);
-                                }
-                                PhoneChar::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
-                                    s.push(*c1);
-                                    s.push(*c2);
-                                    s.push(*c3);
-                                    s.push(*c4);
-                                    s.push(*c5);
-                                    s.push(*c6);
-                                    s.push(*c7);
-                                }
-                                PhoneChar::Sequence(chars) => {
-                                    for c in chars {
-                                        s.push(*c);
-                                    }
-                                }
-                                PhoneChar::Silent => {}
-                            }
-                        }
-                        s
-                    }
-                    None => text.to_string(),
-                }
-            }
-            _ => text.to_string(),
-        }
+        normalize_with_rules(text, self.compiled.rules.as_deref()).into_owned()
     }
 }
 
@@ -1423,6 +1457,19 @@ impl Clone for CompiledTokenQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::phonetic::types::ContextChar;
+
+    fn make_rule(pattern: &str, replacement: &str) -> RewriteRuleChar {
+        RewriteRuleChar {
+            rule_id: 1,
+            rule_name: format!("{pattern}->{replacement}"),
+            pattern: pattern.chars().map(classify_phone_char).collect(),
+            replacement: replacement.chars().map(classify_phone_char).collect(),
+            context: ContextChar::Anywhere,
+            weight: 1.0,
+            syllable_condition: None,
+        }
+    }
 
     #[test]
     fn test_parse_simple_query() {
@@ -1460,6 +1507,28 @@ mod tests {
             _ => panic!("expected literal"),
         }
         assert_eq!(query.tokens[1].max_distance, 1);
+    }
+
+    #[test]
+    fn test_parse_distance_bounds() {
+        let query = parse_query("error:255", 0).expect("u8::MAX distance should parse");
+        assert_eq!(query.tokens[0].max_distance, 255);
+
+        let query = parse_query("error:000255", 0).expect("leading-zero u8::MAX should parse");
+        assert_eq!(query.tokens[0].max_distance, 255);
+
+        assert!(parse_query("error:000256", 0).is_err());
+        assert!(parse_query("error:256", 0).is_err());
+        assert!(parse_query("error:999999", 0).is_err());
+        assert!(parse_query("error:", 0).is_err());
+    }
+
+    #[test]
+    fn test_ascii_digit_value_u16_accepts_only_ascii_digits() {
+        assert_eq!(ascii_digit_value_u16('0'), Some(0));
+        assert_eq!(ascii_digit_value_u16('9'), Some(9));
+        assert_eq!(ascii_digit_value_u16('a'), None);
+        assert_eq!(ascii_digit_value_u16('٣'), None);
     }
 
     #[test]
@@ -1513,6 +1582,13 @@ mod tests {
             TokenPattern::Literal(s) => assert_eq!(s, "stack overflow"),
             _ => panic!("expected literal"),
         }
+    }
+
+    #[test]
+    fn test_escape_for_regex_capacity_rejects_overflow() {
+        assert_eq!(CompiledTokenQuery::escaped_regex_capacity(0), Some(0));
+        assert_eq!(CompiledTokenQuery::escaped_regex_capacity(3), Some(6));
+        assert_eq!(CompiledTokenQuery::escaped_regex_capacity(usize::MAX), None);
     }
 
     #[test]
@@ -1576,6 +1652,39 @@ mod tests {
     }
 
     #[test]
+    fn test_scan_with_rules_normalizes_query_and_document() {
+        let grep = TokenGrep::with_rules("phone .* call", vec![make_rule("ph", "f")], 0)
+            .expect("should compile");
+
+        let matches = grep.scan("fone again phone call");
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].total_distance, 0);
+        assert_eq!(matches[0].token_matches[0].original_text, "fone");
+        assert_eq!(matches[0].token_matches[0].normalized_text, "fone");
+        assert_eq!(matches[0].token_matches[1].original_text, "call");
+    }
+
+    #[cfg(feature = "parallel-grep")]
+    #[test]
+    fn test_scan_documents_parallel_accepts_move_only_ids() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct DocumentId(&'static str);
+
+        let grep = TokenGrep::new("error failed", 0).expect("should compile");
+        let documents = vec![
+            (DocumentId("doc1"), "error failed"),
+            (DocumentId("doc2"), "success complete"),
+        ];
+
+        let results = grep.scan_documents_parallel(documents);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].doc_id, DocumentId("doc1"));
+        assert!(!results[0].matches.is_empty());
+    }
+
+    #[test]
     fn test_escaped_characters() {
         // Test escaped backslash
         let query = parse_query(r"C\\Users", 0).expect("should parse");
@@ -1619,6 +1728,25 @@ mod tests {
     }
 
     #[test]
+    fn test_streaming_match_attempt_tracks_first_word_without_sentinel() {
+        let grep = TokenGrep::new("hello world", 0).expect("should compile");
+        let mut stream = grep.streaming();
+
+        let matches = stream.feed_word("hello", 0, 5);
+
+        assert!(matches.is_empty());
+        assert!(stream.match_attempts.iter().any(|attempt| {
+            attempt.start_word_idx == 0
+                && attempt.current_token_idx == 1
+                && attempt.last_matched_word_idx == Some(0)
+        }));
+        assert!(!stream
+            .match_attempts
+            .iter()
+            .any(|attempt| attempt.last_matched_word_idx == Some(usize::MAX)));
+    }
+
+    #[test]
     fn test_streaming_fuzzy() {
         let grep = TokenGrep::new("hello world", 1).expect("should compile");
         let mut stream = grep.streaming();
@@ -1650,6 +1778,7 @@ mod tests {
         assert_eq!(m4[0].token_matches.len(), 2);
         assert_eq!(m4[0].token_matches[0].original_text, "error");
         assert_eq!(m4[0].token_matches[1].original_text, "failed");
+        assert_eq!(m4[0].matched_text, "error failed");
     }
 
     #[test]
@@ -1729,5 +1858,98 @@ mod tests {
         let matches2 = stream.feed_word("helo", 0, 4);
         assert_eq!(matches2.len(), 1);
         assert_eq!(matches2[0].total_distance, 1);
+    }
+
+    // ========================================================================
+    // Non-ASCII regression tests (Phase 4 / item 1781)
+    //
+    // These guard the invariant that every reported `byte_range` lands on UTF-8
+    // char boundaries and slices the source document cleanly, even when the
+    // document contains multi-byte characters (2-byte `é`, 3-byte `中`, 4-byte
+    // `☕`/`🌍`) that shift byte offsets away from character offsets.
+    // ========================================================================
+
+    /// Assert every match in `matches` has char-boundary-aligned byte ranges that
+    /// slice `document` back to the reported `matched_text`.
+    fn assert_char_boundary_invariants(document: &str, matches: &[TokenMatch]) {
+        for m in matches {
+            let (start, end) = m.byte_range;
+            assert!(
+                document.is_char_boundary(start),
+                "byte_range start {} is not a UTF-8 char boundary in {:?}",
+                start,
+                document
+            );
+            assert!(
+                document.is_char_boundary(end),
+                "byte_range end {} is not a UTF-8 char boundary in {:?}",
+                end,
+                document
+            );
+            assert!(
+                document.get(start..end).is_some(),
+                "byte_range {:?} does not slice document {:?}",
+                m.byte_range,
+                document
+            );
+            // `scan` derives `matched_text` from the same slice, so it must agree.
+            assert_eq!(
+                document.get(start..end),
+                Some(m.matched_text.as_str()),
+                "matched_text disagrees with the sliced byte_range {:?}",
+                m.byte_range
+            );
+        }
+    }
+
+    #[test]
+    fn test_scan_non_ascii_document_char_boundaries() {
+        // A 2-byte `é` and a 3-byte `☕` precede the queried token, so the token's
+        // byte offset (10) is shifted past its character offset (7). The scan must
+        // not panic and must return char-boundary-aligned ranges.
+        let grep = TokenGrep::new("munchen", 1).expect("should compile");
+        let document = "café ☕ munchen server";
+
+        let matches = grep.scan(document);
+
+        assert!(
+            !matches.is_empty(),
+            "expected to find 'munchen' in {:?}",
+            document
+        );
+        assert_char_boundary_invariants(document, &matches);
+        // The single-token match must recover the queried word verbatim.
+        assert!(
+            matches.iter().any(|m| m.matched_text == "munchen"),
+            "expected a match whose text is 'munchen', got {:?}",
+            matches.iter().map(|m| &m.matched_text).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_scan_non_ascii_multi_token_char_boundaries() {
+        // The document is prefixed by accented, multi-byte tokens (`héllo`, `wörld`,
+        // 12 chars / 14 bytes with the trailing space) before the ASCII `hello world`.
+        // The matcher operates over UTF-8 bytes, so it reports the exact ASCII phrase
+        // at byte range (14, 25) — an offset that is only correct if the scanner has
+        // accounted for the 2-byte `é` and `ö` in the prefix. Every returned span
+        // must be char-boundary aligned and slice back to its `matched_text`.
+        let grep = TokenGrep::new("hello world", 1).expect("should compile");
+        let document = "héllo wörld hello world";
+
+        let matches = grep.scan(document);
+
+        assert!(
+            !matches.is_empty(),
+            "expected at least one 'hello world' match in {:?}",
+            document
+        );
+        assert_char_boundary_invariants(document, &matches);
+        // The ASCII phrase must be recovered verbatim at its multi-byte-adjusted offset.
+        assert!(
+            matches.iter().any(|m| m.matched_text == "hello world"),
+            "expected the ASCII 'hello world' phrase among matches, got {:?}",
+            matches.iter().map(|m| &m.matched_text).collect::<Vec<_>>()
+        );
     }
 }

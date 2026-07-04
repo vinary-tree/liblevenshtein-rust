@@ -226,7 +226,7 @@ impl<'a> Parser<'a> {
                 // e.g., \v expands to [:vowel:], \V expands to [^:vowel:]
                 use crate::phonetic::named_classes::get_chars_only;
 
-                if let Some(chars) = get_chars_only(&class_name) {
+                if let Some(chars) = get_chars_only(class_name) {
                     let final_chars = if negated {
                         negate_char_class(&chars)
                     } else {
@@ -360,7 +360,7 @@ impl<'a> Parser<'a> {
                     // Phonetic shortcut inside character class: [\v] expands vowels, [\V] expands non-vowels
                     use crate::phonetic::named_classes::get_chars_only;
 
-                    if let Some(class_chars) = get_chars_only(&class_name) {
+                    if let Some(class_chars) = get_chars_only(class_name) {
                         let final_chars = if negated {
                             negate_char_class(&class_chars)
                         } else {
@@ -424,8 +424,7 @@ impl<'a> Parser<'a> {
                 Token::Char(' ') | Token::Char('\t') => {
                     // Space separates terms in feature bundles
                     if !current_name.is_empty() {
-                        terms.push((current_name.clone(), current_negated));
-                        current_name.clear();
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                         current_negated = false;
                     }
                     // Skip additional whitespace
@@ -434,15 +433,14 @@ impl<'a> Parser<'a> {
                     // Negation prefix for feature term
                     if !current_name.is_empty() {
                         // '!' after name chars - push previous term first
-                        terms.push((current_name.clone(), current_negated));
-                        current_name.clear();
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                     }
                     current_negated = true;
                 }
                 Token::Colon => {
                     // Found closing colon - push final term if any
                     if !current_name.is_empty() {
-                        terms.push((current_name.clone(), current_negated));
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                     }
                     break;
                 }
@@ -632,23 +630,21 @@ impl<'a> Parser<'a> {
                     Token::Char(' ') | Token::Char('\t') => {
                         // Space separates terms in feature bundles
                         if !current_name.is_empty() {
-                            terms.push((current_name.clone(), current_negated));
-                            current_name.clear();
+                            terms.push((std::mem::take(&mut current_name), current_negated));
                             current_negated = false;
                         }
                     }
                     Token::Char('!') => {
                         // Negation prefix for feature term
                         if !current_name.is_empty() {
-                            terms.push((current_name.clone(), current_negated));
-                            current_name.clear();
+                            terms.push((std::mem::take(&mut current_name), current_negated));
                         }
                         current_negated = true;
                     }
                     Token::Colon => {
                         // End of feature bundle - push final term if any
                         if !current_name.is_empty() {
-                            terms.push((current_name.clone(), current_negated));
+                            terms.push((std::mem::take(&mut current_name), current_negated));
                         }
                         break;
                     }
@@ -787,7 +783,7 @@ impl<'a> Parser<'a> {
                 } => {
                     // Phonetic shortcut \v, \V, \c, \C, etc.
                     use crate::phonetic::named_classes::get_chars_only;
-                    if let Some(class_chars) = get_chars_only(&class_name) {
+                    if let Some(class_chars) = get_chars_only(class_name) {
                         let final_chars = if negated {
                             negate_char_class(&class_chars)
                         } else {

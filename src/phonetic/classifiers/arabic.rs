@@ -59,28 +59,8 @@ static ARABIC_VOWELS: &[char] = &[
 impl VowelClassifier for ArabicClassifier {
     fn is_vowel(&self, c: char) -> bool {
         let code = c as u32;
-        match code {
-            // Short vowels (harakat)
-            0x064E => true, // Fatha
-            0x064F => true, // Damma
-            0x0650 => true, // Kasra
-
-            // Tanwin (nunation) - nasal vowel endings
-            0x064B => true, // Fathatan
-            0x064C => true, // Dammatan
-            0x064D => true, // Kasratan
-
-            // Superscript Alef (dagger alif)
-            0x0670 => true,
-
-            // Long vowel letters (when configured)
-            0x0627 if self.long_vowels_as_vowels => true, // Alif
-            0x0648 if self.long_vowels_as_vowels => true, // Waw
-            0x064A if self.long_vowels_as_vowels => true, // Ya
-            0x0649 if self.long_vowels_as_vowels => true, // Alif Maksura
-
-            _ => false,
-        }
+        matches!(code, 0x064B..=0x0650 | 0x0670)
+            || (self.long_vowels_as_vowels && matches!(code, 0x0627 | 0x0648 | 0x0649 | 0x064A))
     }
 
     fn script_name(&self) -> &'static str {
@@ -93,58 +73,16 @@ impl VowelClassifier for ArabicClassifier {
 
     fn is_consonant(&self, c: char) -> bool {
         let code = c as u32;
-        match code {
-            // Arabic consonants
-            0x0621 => true, // Hamza
-            0x0622 => true, // Alif with Madda
-            0x0623 => true, // Alif with Hamza Above
-            0x0624 => true, // Waw with Hamza
-            0x0625 => true, // Alif with Hamza Below
-            0x0626 => true, // Ya with Hamza
-            0x0628 => true, // Ba
-            0x062A => true, // Ta
-            0x062B => true, // Tha
-            0x062C => true, // Jim
-            0x062D => true, // Ha
-            0x062E => true, // Kha
-            0x062F => true, // Dal
-            0x0630 => true, // Dhal
-            0x0631 => true, // Ra
-            0x0632 => true, // Zay
-            0x0633 => true, // Sin
-            0x0634 => true, // Shin
-            0x0635 => true, // Sad
-            0x0636 => true, // Dad
-            0x0637 => true, // Ta (emphatic)
-            0x0638 => true, // Za (emphatic)
-            0x0639 => true, // Ayn
-            0x063A => true, // Ghayn
-            0x0641 => true, // Fa
-            0x0642 => true, // Qaf
-            0x0643 => true, // Kaf
-            0x0644 => true, // Lam
-            0x0645 => true, // Mim
-            0x0646 => true, // Nun
-            0x0647 => true, // Ha (final)
-            0x0629 => true, // Ta Marbuta
+        let base_letter =
+            (0x0621..=0x063A).contains(&code) && (code != 0x0627 || !self.long_vowels_as_vowels);
+        let medial_letter = (0x0641..=0x0647).contains(&code)
+            || (!self.long_vowels_as_vowels && matches!(code, 0x0648 | 0x064A));
+        let urdu_extension = matches!(
+            code,
+            0x0679 | 0x067E | 0x0686 | 0x0688 | 0x0691 | 0x0698 | 0x06AF | 0x06BA
+        );
 
-            // Base letters that can be vowels (treat as consonants by default)
-            0x0627 if !self.long_vowels_as_vowels => true, // Alif
-            0x0648 if !self.long_vowels_as_vowels => true, // Waw
-            0x064A if !self.long_vowels_as_vowels => true, // Ya
-
-            // Urdu extensions
-            0x067E => true, // Pe
-            0x0686 => true, // Che
-            0x0698 => true, // Zhe
-            0x06AF => true, // Gaf
-            0x0679 => true, // Tte
-            0x0688 => true, // Ddal
-            0x0691 => true, // Rreh
-            0x06BA => true, // Noon Ghunna
-
-            _ => false,
-        }
+        base_letter || medial_letter || urdu_extension
     }
 
     fn normalize(&self, input: &str) -> String {

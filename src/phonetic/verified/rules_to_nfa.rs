@@ -53,30 +53,6 @@ use crate::phonetic::types::{
 // Character-level conversions
 // ============================================================================
 
-/// Convert a PhoneChar to a character for pattern matching.
-///
-/// This extracts the primary character from a phone unit:
-/// - Vowels and consonants return their character
-/// - Digraphs return their first character (the pattern NFA handles the full digraph)
-/// - Trigraphs return their first character
-/// - Tetragraphs return their first character
-/// - Sequences return their first character
-/// - Silent returns None (no character to match)
-#[allow(dead_code)]
-fn phone_to_char(phone: &PhoneChar) -> Option<char> {
-    match phone {
-        PhoneChar::Vowel(c) | PhoneChar::Consonant(c) => Some(*c),
-        PhoneChar::Digraph(c1, _) => Some(*c1),
-        PhoneChar::Trigraph(c1, _, _) => Some(*c1),
-        PhoneChar::Tetragraph(c1, _, _, _) => Some(*c1),
-        PhoneChar::Pentagraph(c1, _, _, _, _) => Some(*c1),
-        PhoneChar::Hexagraph(c1, _, _, _, _, _) => Some(*c1),
-        PhoneChar::Heptagraph(c1, _, _, _, _, _, _) => Some(*c1),
-        PhoneChar::Sequence(s) => s.first().copied(),
-        PhoneChar::Silent => None,
-    }
-}
-
 /// Convert a pattern of PhoneChar to a string for NFA construction.
 fn pattern_to_string_char(pattern: &[PhoneChar]) -> String {
     let mut result = String::new();
@@ -262,22 +238,6 @@ pub fn zompist_nfa_char() -> NFAChar {
 // ============================================================================
 // Byte-level conversions
 // ============================================================================
-
-/// Convert a Phone to a byte for pattern matching.
-#[allow(dead_code)]
-fn phone_to_byte(phone: &PhoneByte) -> Option<u8> {
-    match phone {
-        PhoneByte::Vowel(b) | PhoneByte::Consonant(b) => Some(*b),
-        PhoneByte::Digraph(b1, _) => Some(*b1),
-        PhoneByte::Trigraph(b1, _, _) => Some(*b1),
-        PhoneByte::Tetragraph(b1, _, _, _) => Some(*b1),
-        PhoneByte::Pentagraph(b1, _, _, _, _) => Some(*b1),
-        PhoneByte::Hexagraph(b1, _, _, _, _, _) => Some(*b1),
-        PhoneByte::Heptagraph(b1, _, _, _, _, _, _) => Some(*b1),
-        PhoneByte::Sequence(s) => s.first().copied(),
-        PhoneByte::Silent => None,
-    }
-}
 
 /// Convert a pattern of Phone to a byte sequence for NFA construction.
 fn pattern_to_bytes(pattern: &[PhoneByte]) -> Vec<u8> {

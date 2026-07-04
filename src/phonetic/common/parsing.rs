@@ -34,12 +34,12 @@ where
     loop {
         let is_pipe = match parser.lexer_mut().peek() {
             Ok(peek) => peek.is_pipe(),
-            Err(e) => return Err(parser.from_lexer_error(e)),
+            Err(e) => return Err(parser.map_lexer_error(e)),
         };
 
         if is_pipe {
             if let Err(e) = parser.lexer_mut().advance() {
-                return Err(parser.from_lexer_error(e));
+                return Err(parser.map_lexer_error(e));
             }
             let right = parse_syllable_and(parser)?;
             left = SyllableExpr::or(left, right);
@@ -63,12 +63,12 @@ where
     loop {
         let is_ampersand = match parser.lexer_mut().peek() {
             Ok(peek) => peek.is_ampersand(),
-            Err(e) => return Err(parser.from_lexer_error(e)),
+            Err(e) => return Err(parser.map_lexer_error(e)),
         };
 
         if is_ampersand {
             if let Err(e) = parser.lexer_mut().advance() {
-                return Err(parser.from_lexer_error(e));
+                return Err(parser.map_lexer_error(e));
             }
             let right = parse_syllable_not(parser)?;
             left = SyllableExpr::and(left, right);
@@ -89,15 +89,15 @@ where
 {
     let is_exclamation = match parser.lexer_mut().peek() {
         Ok(peek) => peek.is_exclamation(),
-        Err(e) => return Err(parser.from_lexer_error(e)),
+        Err(e) => return Err(parser.map_lexer_error(e)),
     };
 
     if is_exclamation {
         if let Err(e) = parser.lexer_mut().advance() {
-            return Err(parser.from_lexer_error(e));
+            return Err(parser.map_lexer_error(e));
         }
         let inner = parse_syllable_not(parser)?;
-        Ok(SyllableExpr::not(inner))
+        Ok(SyllableExpr::negate(inner))
     } else {
         parse_syllable_primary(parser)
     }
@@ -113,19 +113,19 @@ where
     // Check for grouped expression
     let is_group_start = match parser.lexer_mut().peek() {
         Ok(peek) => peek.is_group_start(),
-        Err(e) => return Err(parser.from_lexer_error(e)),
+        Err(e) => return Err(parser.map_lexer_error(e)),
     };
 
     if is_group_start {
         if let Err(e) = parser.lexer_mut().advance() {
-            return Err(parser.from_lexer_error(e));
+            return Err(parser.map_lexer_error(e));
         }
         let expr = parse_syllable_or(parser)?;
 
         // Expect closing paren
         let (is_group_end, found_token) = match parser.lexer_mut().peek() {
             Ok(peek) => (peek.is_group_end(), peek.clone()),
-            Err(e) => return Err(parser.from_lexer_error(e)),
+            Err(e) => return Err(parser.map_lexer_error(e)),
         };
 
         if !is_group_end {
@@ -133,7 +133,7 @@ where
             return Err(parser.make_unexpected_token_error(")", &found_token, position));
         }
         if let Err(e) = parser.lexer_mut().advance() {
-            return Err(parser.from_lexer_error(e));
+            return Err(parser.map_lexer_error(e));
         }
         return Ok(expr);
     }
@@ -141,7 +141,7 @@ where
     // Parse syllable keyword
     let token = match parser.lexer_mut().advance() {
         Ok(t) => t,
-        Err(e) => return Err(parser.from_lexer_error(e)),
+        Err(e) => return Err(parser.map_lexer_error(e)),
     };
 
     match token.as_syllable_condition() {
@@ -183,12 +183,12 @@ where
     loop {
         let is_pipe = match parser.lexer_mut().peek() {
             Ok(peek) => peek.is_pipe(),
-            Err(e) => return Err(parser.from_lexer_error(e)),
+            Err(e) => return Err(parser.map_lexer_error(e)),
         };
 
         if is_pipe {
             if let Err(e) = parser.lexer_mut().advance() {
-                return Err(parser.from_lexer_error(e));
+                return Err(parser.map_lexer_error(e));
             }
             let right = parse_context_and(parser)?;
             left = ContextExpr::Or(Box::new(left), Box::new(right));
@@ -212,12 +212,12 @@ where
     loop {
         let is_ampersand = match parser.lexer_mut().peek() {
             Ok(peek) => peek.is_ampersand(),
-            Err(e) => return Err(parser.from_lexer_error(e)),
+            Err(e) => return Err(parser.map_lexer_error(e)),
         };
 
         if is_ampersand {
             if let Err(e) = parser.lexer_mut().advance() {
-                return Err(parser.from_lexer_error(e));
+                return Err(parser.map_lexer_error(e));
             }
             let right = parse_context_not(parser)?;
             left = ContextExpr::And(Box::new(left), Box::new(right));
@@ -238,12 +238,12 @@ where
 {
     let is_exclamation = match parser.lexer_mut().peek() {
         Ok(peek) => peek.is_exclamation(),
-        Err(e) => return Err(parser.from_lexer_error(e)),
+        Err(e) => return Err(parser.map_lexer_error(e)),
     };
 
     if is_exclamation {
         if let Err(e) = parser.lexer_mut().advance() {
-            return Err(parser.from_lexer_error(e));
+            return Err(parser.map_lexer_error(e));
         }
         let inner = parse_context_not(parser)?;
         Ok(ContextExpr::Not(Box::new(inner)))
@@ -262,12 +262,12 @@ where
     // Check for word boundary
     let is_hash = match parser.lexer_mut().peek() {
         Ok(peek) => peek.is_hash(),
-        Err(e) => return Err(parser.from_lexer_error(e)),
+        Err(e) => return Err(parser.map_lexer_error(e)),
     };
 
     if is_hash {
         if let Err(e) = parser.lexer_mut().advance() {
-            return Err(parser.from_lexer_error(e));
+            return Err(parser.map_lexer_error(e));
         }
         return Ok(ContextExpr::WordBoundary);
     }
@@ -275,19 +275,19 @@ where
     // Check for grouped expression
     let is_group_start = match parser.lexer_mut().peek() {
         Ok(peek) => peek.is_group_start(),
-        Err(e) => return Err(parser.from_lexer_error(e)),
+        Err(e) => return Err(parser.map_lexer_error(e)),
     };
 
     if is_group_start {
         if let Err(e) = parser.lexer_mut().advance() {
-            return Err(parser.from_lexer_error(e));
+            return Err(parser.map_lexer_error(e));
         }
         let expr = parse_context_or(parser)?;
 
         // Expect closing paren
         let (is_group_end, found_token) = match parser.lexer_mut().peek() {
             Ok(peek) => (peek.is_group_end(), peek.clone()),
-            Err(e) => return Err(parser.from_lexer_error(e)),
+            Err(e) => return Err(parser.map_lexer_error(e)),
         };
 
         if !is_group_end {
@@ -295,7 +295,7 @@ where
             return Err(parser.make_unexpected_token_error(")", &found_token, position));
         }
         if let Err(e) = parser.lexer_mut().advance() {
-            return Err(parser.from_lexer_error(e));
+            return Err(parser.map_lexer_error(e));
         }
         return Ok(expr);
     }
@@ -444,7 +444,7 @@ mod tests {
             format!("expected {}, found {:?}", expected, found)
         }
 
-        fn from_lexer_error(&self, err: String) -> String {
+        fn map_lexer_error(&self, err: String) -> String {
             err
         }
     }

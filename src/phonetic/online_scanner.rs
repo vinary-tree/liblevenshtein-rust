@@ -131,6 +131,13 @@ pub struct OnlinePhoneticScannerChar {
 }
 
 impl OnlinePhoneticScannerChar {
+    fn active_match_normalized_limit(query_len: usize, max_distance: u8) -> Option<usize> {
+        query_len
+            .checked_add(usize::from(max_distance))?
+            .checked_add(1)?
+            .checked_mul(2)
+    }
+
     /// Create a new scanner for the given query.
     ///
     /// # Arguments
@@ -333,6 +340,9 @@ impl OnlinePhoneticScannerChar {
         // Distribute original chars to active matches
         // This is approximate - we assign original chars proportionally
         self.distribute_original_chars();
+        let normalized_limit =
+            Self::active_match_normalized_limit(self.query_len, self.max_distance)
+                .unwrap_or(usize::MAX);
 
         for m in &mut self.active_matches {
             if !m.alive {
@@ -367,8 +377,7 @@ impl OnlinePhoneticScannerChar {
                 m.product_state = best;
 
                 // Kill if we've consumed too many chars without hope
-                let max_len = self.query_len + self.max_distance as usize + 1;
-                if m.normalized_chars.len() > max_len * 2 {
+                if m.normalized_chars.len() > normalized_limit {
                     m.alive = false;
                 }
             }
@@ -524,6 +533,22 @@ mod tests {
             weight: 1.0,
             syllable_condition: None,
         }
+    }
+
+    #[test]
+    fn test_active_match_normalized_limit_checks_overflow() {
+        assert_eq!(
+            OnlinePhoneticScannerChar::active_match_normalized_limit(4, 1),
+            Some(12)
+        );
+        assert_eq!(
+            OnlinePhoneticScannerChar::active_match_normalized_limit(usize::MAX, 0),
+            None
+        );
+        assert_eq!(
+            OnlinePhoneticScannerChar::active_match_normalized_limit(usize::MAX / 2, 0),
+            None
+        );
     }
 
     #[test]

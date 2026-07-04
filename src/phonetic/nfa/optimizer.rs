@@ -36,13 +36,21 @@
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::state_set::StateSet;
-use super::types::{StateId, Transition, TransitionChar, TransitionLabel, TransitionLabelChar};
+use super::types::{state_id_from_len, state_index, StateId, TransitionLabel, TransitionLabelChar};
 use super::{NFAChar, NFA};
+
+fn state_ids_for_count(count: usize) -> Option<Vec<StateId>> {
+    (0..count).map(state_id_from_len).collect()
+}
+
+fn closure_for_state(closures: &[StateSet], state: StateId) -> Option<&StateSet> {
+    state_index(state).and_then(|index| closures.get(index))
+}
 
 // ============================================================================
 // Configuration
@@ -340,8 +348,8 @@ fn count_epsilon_transitions_char(nfa: &NFAChar) -> usize {
 /// Remove states not reachable from the start state.
 fn remove_unreachable_char(nfa: NFAChar) -> NFAChar {
     // BFS from start state to find reachable states
-    let mut reachable = FxHashSet::default();
-    let mut queue = VecDeque::new();
+    let mut reachable = FxHashSet::with_capacity_and_hasher(nfa.num_states(), Default::default());
+    let mut queue = VecDeque::with_capacity(nfa.num_states());
 
     reachable.insert(nfa.start());
     queue.push_back(nfa.start());
@@ -366,17 +374,21 @@ fn remove_unreachable_char(nfa: NFAChar) -> NFAChar {
 /// Remove states that cannot reach any final state.
 fn remove_dead_char(nfa: NFAChar) -> NFAChar {
     // Build reverse transition graph
-    let mut reverse_index: HashMap<StateId, Vec<StateId>> = HashMap::new();
+    let mut reverse_index: FxHashMap<StateId, Vec<StateId>> =
+        FxHashMap::with_capacity_and_hasher(nfa.num_states(), Default::default());
     for trans in nfa.transitions() {
         reverse_index.entry(trans.to).or_default().push(trans.from);
     }
 
     // Backward BFS from all final states
-    let mut can_reach_final = FxHashSet::default();
-    let mut queue: VecDeque<StateId> = nfa.finals().iter().copied().collect();
+    let mut can_reach_final =
+        FxHashSet::with_capacity_and_hasher(nfa.num_states(), Default::default());
+    let mut queue = VecDeque::with_capacity(nfa.num_states());
 
     for &final_state in nfa.finals() {
-        can_reach_final.insert(final_state);
+        if can_reach_final.insert(final_state) {
+            queue.push_back(final_state);
+        }
     }
 
     while let Some(state) = queue.pop_front() {
@@ -403,7 +415,11 @@ fn remove_dead_char(nfa: NFAChar) -> NFAChar {
 /// Eliminate epsilon transitions by computing transitive closure.
 fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
     // Precompute epsilon closures for all states
-    let closures: Vec<StateSet> = (0..nfa.num_states() as StateId)
+    let state_ids =
+        state_ids_for_count(nfa.num_states()).expect("NFA state count exceeded StateId capacity");
+    let closures: Vec<StateSet> = state_ids
+        .iter()
+        .copied()
         .map(|s| nfa.epsilon_closure_single(s))
         .collect();
 
@@ -420,14 +436,19 @@ fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
     // (new_nfa.start is already 0, same as nfa.start() typically)
 
     // Update final states: state is final if any state in its epsilon closure is final
-    for state_id in 0..nfa.num_states() as StateId {
-        let is_final = closures[state_id as usize].iter().any(|s| nfa.is_final(s));
+    for &state_id in &state_ids {
+        let Some(closure) = closure_for_state(&closures, state_id) else {
+            continue;
+        };
+        let is_final = closure.iter().any(|s| nfa.is_final(s));
         new_nfa.set_final(state_id, is_final);
     }
 
     // Add non-epsilon transitions with epsilon bypass
-    for state_id in 0..nfa.num_states() as StateId {
-        let closure = &closures[state_id as usize];
+    for &state_id in &state_ids {
+        let Some(closure) = closure_for_state(&closures, state_id) else {
+            continue;
+        };
 
         for reachable in closure.iter() {
             for trans in nfa.transitions_from(reachable) {
@@ -438,7 +459,9 @@ fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
 
                 // For non-epsilon transitions, add transition from original state
                 // to all states in epsilon closure of destination
-                let dest_closure = &closures[trans.to as usize];
+                let Some(dest_closure) = closure_for_state(&closures, trans.to) else {
+                    continue;
+                };
                 for dest in dest_closure.iter() {
                     new_nfa.add_transition_weighted(
                         state_id,
@@ -456,25 +479,29 @@ fn eliminate_epsilon_char(nfa: NFAChar) -> NFAChar {
 
 /// Remove duplicate transitions.
 fn deduplicate_transitions_char(nfa: NFAChar) -> NFAChar {
-    // Use a set to track seen transitions
-    // We need to compare labels, so we'll use a different approach
-    let mut seen: FxHashSet<(StateId, StateId, u64)> = FxHashSet::default();
-    let mut unique_transitions: Vec<TransitionChar> = Vec::new();
+    let unique_transitions = {
+        let transitions = nfa.transitions();
+        let mut seen: FxHashSet<(StateId, StateId, &TransitionLabelChar)> =
+            FxHashSet::with_capacity_and_hasher(transitions.len(), Default::default());
+        let mut unique = Vec::with_capacity(transitions.len());
 
-    for trans in nfa.transitions() {
-        // Hash the label for deduplication
-        let label_hash = hash_label_char(&trans.label);
-        let key = (trans.from, trans.to, label_hash);
-
-        if seen.insert(key) {
-            unique_transitions.push(trans.clone());
+        for trans in transitions {
+            let key = (trans.from, trans.to, &trans.label);
+            if seen.insert(key) {
+                unique.push(trans);
+            }
         }
-    }
 
-    // If no duplicates, return as-is
-    if unique_transitions.len() == nfa.num_transitions() {
+        if unique.len() == transitions.len() {
+            None
+        } else {
+            Some(unique.into_iter().cloned().collect::<Vec<_>>())
+        }
+    };
+
+    let Some(unique_transitions) = unique_transitions else {
         return nfa;
-    }
+    };
 
     // Build new NFA with deduplicated transitions
     let mut new_nfa = NFAChar::new();
@@ -500,12 +527,16 @@ fn deduplicate_transitions_char(nfa: NFAChar) -> NFAChar {
 /// Build a new NFA containing only the specified states.
 fn build_nfa_with_states_char(nfa: &NFAChar, keep_states: &FxHashSet<StateId>) -> NFAChar {
     // Build mapping from old state IDs to new contiguous IDs
-    let mut old_to_new: HashMap<StateId, StateId> = HashMap::new();
-    let mut sorted_states: Vec<StateId> = keep_states.iter().copied().collect();
+    let mut old_to_new: FxHashMap<StateId, StateId> =
+        FxHashMap::with_capacity_and_hasher(keep_states.len(), Default::default());
+    let mut sorted_states = Vec::with_capacity(keep_states.len());
+    sorted_states.extend(keep_states.iter().copied());
     sorted_states.sort_unstable();
 
     for (new_id, &old_id) in sorted_states.iter().enumerate() {
-        old_to_new.insert(old_id, new_id as StateId);
+        let new_id =
+            state_id_from_len(new_id).expect("optimized NFA state count exceeded StateId capacity");
+        old_to_new.insert(old_id, new_id);
     }
 
     // Build new NFA
@@ -541,34 +572,6 @@ fn build_nfa_with_states_char(nfa: &NFAChar, keep_states: &FxHashSet<StateId>) -
     new_nfa
 }
 
-/// Simple hash function for transition labels (for deduplication).
-fn hash_label_char(label: &TransitionLabelChar) -> u64 {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-
-    let mut hasher = DefaultHasher::new();
-    // Hash based on discriminant and content
-    match label {
-        TransitionLabelChar::Epsilon => 0u8.hash(&mut hasher),
-        TransitionLabelChar::Char(c) => {
-            1u8.hash(&mut hasher);
-            c.hash(&mut hasher);
-        }
-        TransitionLabelChar::CharClass(class) => {
-            2u8.hash(&mut hasher);
-            // Hash the ranges
-            format!("{:?}", class).hash(&mut hasher);
-        }
-        TransitionLabelChar::Any => 3u8.hash(&mut hasher),
-        TransitionLabelChar::StartOfLine => 4u8.hash(&mut hasher),
-        TransitionLabelChar::EndOfLine => 5u8.hash(&mut hasher),
-        TransitionLabelChar::StartOfInput => 6u8.hash(&mut hasher),
-        TransitionLabelChar::EndOfInput => 7u8.hash(&mut hasher),
-        TransitionLabelChar::EndOfInputStrict => 8u8.hash(&mut hasher),
-    }
-    hasher.finish()
-}
-
 // ============================================================================
 // Helper Functions (Byte-level)
 // ============================================================================
@@ -583,8 +586,8 @@ fn count_epsilon_transitions(nfa: &NFA) -> usize {
 
 /// Remove states not reachable from the start state (byte-level).
 fn remove_unreachable(nfa: NFA) -> NFA {
-    let mut reachable = FxHashSet::default();
-    let mut queue = VecDeque::new();
+    let mut reachable = FxHashSet::with_capacity_and_hasher(nfa.num_states(), Default::default());
+    let mut queue = VecDeque::with_capacity(nfa.num_states());
 
     reachable.insert(nfa.start());
     queue.push_back(nfa.start());
@@ -606,16 +609,20 @@ fn remove_unreachable(nfa: NFA) -> NFA {
 
 /// Remove states that cannot reach any final state (byte-level).
 fn remove_dead(nfa: NFA) -> NFA {
-    let mut reverse_index: HashMap<StateId, Vec<StateId>> = HashMap::new();
+    let mut reverse_index: FxHashMap<StateId, Vec<StateId>> =
+        FxHashMap::with_capacity_and_hasher(nfa.num_states(), Default::default());
     for trans in nfa.transitions() {
         reverse_index.entry(trans.to).or_default().push(trans.from);
     }
 
-    let mut can_reach_final = FxHashSet::default();
-    let mut queue: VecDeque<StateId> = nfa.finals().iter().copied().collect();
+    let mut can_reach_final =
+        FxHashSet::with_capacity_and_hasher(nfa.num_states(), Default::default());
+    let mut queue = VecDeque::with_capacity(nfa.num_states());
 
     for &final_state in nfa.finals() {
-        can_reach_final.insert(final_state);
+        if can_reach_final.insert(final_state) {
+            queue.push_back(final_state);
+        }
     }
 
     while let Some(state) = queue.pop_front() {
@@ -639,7 +646,11 @@ fn remove_dead(nfa: NFA) -> NFA {
 
 /// Eliminate epsilon transitions (byte-level).
 fn eliminate_epsilon(nfa: NFA) -> NFA {
-    let closures: Vec<StateSet> = (0..nfa.num_states() as StateId)
+    let state_ids =
+        state_ids_for_count(nfa.num_states()).expect("NFA state count exceeded StateId capacity");
+    let closures: Vec<StateSet> = state_ids
+        .iter()
+        .copied()
         .map(|s| nfa.epsilon_closure_single(s))
         .collect();
 
@@ -649,13 +660,18 @@ fn eliminate_epsilon(nfa: NFA) -> NFA {
         new_nfa.add_state(false);
     }
 
-    for state_id in 0..nfa.num_states() as StateId {
-        let is_final = closures[state_id as usize].iter().any(|s| nfa.is_final(s));
+    for &state_id in &state_ids {
+        let Some(closure) = closure_for_state(&closures, state_id) else {
+            continue;
+        };
+        let is_final = closure.iter().any(|s| nfa.is_final(s));
         new_nfa.set_final(state_id, is_final);
     }
 
-    for state_id in 0..nfa.num_states() as StateId {
-        let closure = &closures[state_id as usize];
+    for &state_id in &state_ids {
+        let Some(closure) = closure_for_state(&closures, state_id) else {
+            continue;
+        };
 
         for reachable in closure.iter() {
             for trans in nfa.transitions_from(reachable) {
@@ -663,7 +679,9 @@ fn eliminate_epsilon(nfa: NFA) -> NFA {
                     continue;
                 }
 
-                let dest_closure = &closures[trans.to as usize];
+                let Some(dest_closure) = closure_for_state(&closures, trans.to) else {
+                    continue;
+                };
                 for dest in dest_closure.iter() {
                     new_nfa.add_transition_weighted(
                         state_id,
@@ -681,21 +699,29 @@ fn eliminate_epsilon(nfa: NFA) -> NFA {
 
 /// Remove duplicate transitions (byte-level).
 fn deduplicate_transitions(nfa: NFA) -> NFA {
-    let mut seen: FxHashSet<(StateId, StateId, u64)> = FxHashSet::default();
-    let mut unique_transitions: Vec<Transition> = Vec::new();
+    let unique_transitions = {
+        let transitions = nfa.transitions();
+        let mut seen: FxHashSet<(StateId, StateId, &TransitionLabel)> =
+            FxHashSet::with_capacity_and_hasher(transitions.len(), Default::default());
+        let mut unique = Vec::with_capacity(transitions.len());
 
-    for trans in nfa.transitions() {
-        let label_hash = hash_label(&trans.label);
-        let key = (trans.from, trans.to, label_hash);
-
-        if seen.insert(key) {
-            unique_transitions.push(trans.clone());
+        for trans in transitions {
+            let key = (trans.from, trans.to, &trans.label);
+            if seen.insert(key) {
+                unique.push(trans);
+            }
         }
-    }
 
-    if unique_transitions.len() == nfa.num_transitions() {
+        if unique.len() == transitions.len() {
+            None
+        } else {
+            Some(unique.into_iter().cloned().collect::<Vec<_>>())
+        }
+    };
+
+    let Some(unique_transitions) = unique_transitions else {
         return nfa;
-    }
+    };
 
     let mut new_nfa = NFA::new();
 
@@ -716,12 +742,16 @@ fn deduplicate_transitions(nfa: NFA) -> NFA {
 
 /// Build a new byte-level NFA containing only the specified states.
 fn build_nfa_with_states(nfa: &NFA, keep_states: &FxHashSet<StateId>) -> NFA {
-    let mut old_to_new: HashMap<StateId, StateId> = HashMap::new();
-    let mut sorted_states: Vec<StateId> = keep_states.iter().copied().collect();
+    let mut old_to_new: FxHashMap<StateId, StateId> =
+        FxHashMap::with_capacity_and_hasher(keep_states.len(), Default::default());
+    let mut sorted_states = Vec::with_capacity(keep_states.len());
+    sorted_states.extend(keep_states.iter().copied());
     sorted_states.sort_unstable();
 
     for (new_id, &old_id) in sorted_states.iter().enumerate() {
-        old_to_new.insert(old_id, new_id as StateId);
+        let new_id =
+            state_id_from_len(new_id).expect("optimized NFA state count exceeded StateId capacity");
+        old_to_new.insert(old_id, new_id);
     }
 
     let mut new_nfa = NFA::new();
@@ -747,32 +777,6 @@ fn build_nfa_with_states(nfa: &NFA, keep_states: &FxHashSet<StateId>) -> NFA {
     new_nfa
 }
 
-/// Simple hash function for byte-level transition labels.
-fn hash_label(label: &TransitionLabel) -> u64 {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-
-    let mut hasher = DefaultHasher::new();
-    match label {
-        TransitionLabel::Epsilon => 0u8.hash(&mut hasher),
-        TransitionLabel::Byte(b) => {
-            1u8.hash(&mut hasher);
-            b.hash(&mut hasher);
-        }
-        TransitionLabel::CharClass(class) => {
-            2u8.hash(&mut hasher);
-            format!("{:?}", class).hash(&mut hasher);
-        }
-        TransitionLabel::Any => 3u8.hash(&mut hasher),
-        TransitionLabel::StartOfLine => 4u8.hash(&mut hasher),
-        TransitionLabel::EndOfLine => 5u8.hash(&mut hasher),
-        TransitionLabel::StartOfInput => 6u8.hash(&mut hasher),
-        TransitionLabel::EndOfInput => 7u8.hash(&mut hasher),
-        TransitionLabel::EndOfInputStrict => 8u8.hash(&mut hasher),
-    }
-    hasher.finish()
-}
-
 // ============================================================================
 // Tests
 // ============================================================================
@@ -780,7 +784,7 @@ fn hash_label(label: &TransitionLabel) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::phonetic::nfa::{compile, ThompsonBuilderChar};
+    use crate::phonetic::nfa::{compile, CharClass, CharClassChar, ThompsonBuilderChar};
     use crate::phonetic::regex::parse;
 
     #[test]
@@ -966,6 +970,86 @@ mod tests {
         // H9: Finalize the result to make transitions accessible
         optimized.finalize();
         assert_eq!(optimized.num_transitions(), 1);
+    }
+
+    #[test]
+    fn test_deduplicate_transitions_preserves_distinct_char_classes() {
+        let mut nfa = NFAChar::new();
+        let q1 = nfa.add_state(true);
+        let a_class = CharClassChar::from_chars(&['a']);
+        let b_class = CharClassChar::from_chars(&['b']);
+
+        nfa.add_transition_class(0, a_class.clone(), q1);
+        nfa.add_transition_class(0, a_class, q1);
+        nfa.add_transition_class(0, b_class, q1);
+        nfa.finalize();
+
+        let mut optimized = deduplicate_transitions_char(nfa);
+        optimized.finalize();
+
+        assert_eq!(optimized.num_transitions(), 2);
+        assert!(optimized.accepts("a"));
+        assert!(optimized.accepts("b"));
+        assert!(!optimized.accepts("c"));
+    }
+
+    #[test]
+    fn test_deduplicate_byte_transitions_preserves_distinct_classes() {
+        let mut nfa = NFA::new();
+        let q1 = nfa.add_state(true);
+        let a_class = CharClass::from_bytes(b"a");
+        let b_class = CharClass::from_bytes(b"b");
+
+        nfa.add_transition_class(0, a_class.clone(), q1);
+        nfa.add_transition_class(0, a_class, q1);
+        nfa.add_transition_class(0, b_class, q1);
+        nfa.finalize();
+
+        let mut optimized = deduplicate_transitions(nfa);
+        optimized.finalize();
+
+        assert_eq!(optimized.num_transitions(), 2);
+        assert!(optimized.accepts(b"a"));
+        assert!(optimized.accepts(b"b"));
+        assert!(!optimized.accepts(b"c"));
+    }
+
+    #[test]
+    fn test_char_epsilon_elimination_skips_invalid_transition_destination() {
+        let mut nfa = NFAChar::new();
+        nfa.add_transition_char(nfa.start(), 'a', u32::MAX);
+        nfa.finalize();
+
+        let optimizer = NfaOptimizerChar::new(OptimizationConfig {
+            eliminate_epsilon: true,
+            remove_unreachable: false,
+            remove_dead: false,
+            deduplicate_transitions: false,
+        });
+        let (mut optimized, _stats) = optimizer.optimize(nfa);
+        optimized.finalize();
+
+        assert_eq!(optimized.num_transitions(), 0);
+        assert!(!optimized.accepts("a"));
+    }
+
+    #[test]
+    fn test_byte_epsilon_elimination_skips_invalid_transition_destination() {
+        let mut nfa = NFA::new();
+        nfa.add_transition_byte(nfa.start(), b'a', u32::MAX);
+        nfa.finalize();
+
+        let optimizer = NfaOptimizer::new(OptimizationConfig {
+            eliminate_epsilon: true,
+            remove_unreachable: false,
+            remove_dead: false,
+            deduplicate_transitions: false,
+        });
+        let (mut optimized, _stats) = optimizer.optimize(nfa);
+        optimized.finalize();
+
+        assert_eq!(optimized.num_transitions(), 0);
+        assert!(!optimized.accepts(b"a"));
     }
 
     #[test]

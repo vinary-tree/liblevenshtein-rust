@@ -18,9 +18,9 @@ pub struct LLreError {
     /// Position where the error occurred (if applicable)
     pub position: Option<Position>,
     /// File where the error occurred (if applicable)
-    pub file: Option<PathBuf>,
+    pub file: Option<Box<PathBuf>>,
     /// Additional context about the error
-    pub context: Option<String>,
+    pub context: Option<Box<str>>,
 }
 
 /// The kind of `.llre` error.
@@ -104,11 +104,11 @@ pub enum LLreErrorKind {
     /// Invalid directive value
     InvalidDirectiveValue {
         /// Name of the directive that received the bad value.
-        directive: String,
+        directive: Box<str>,
         /// The offending value.
-        value: String,
+        value: Box<str>,
         /// Why the value is invalid.
-        reason: String,
+        reason: Box<str>,
     },
 
     // ==================== Pattern Errors ====================
@@ -151,21 +151,21 @@ pub enum LLreErrorKind {
     /// Symbol type mismatch
     SymbolTypeMismatch {
         /// Name of the symbol involved in the mismatch.
-        name: String,
+        name: Box<str>,
         /// Type the consumer expected.
-        expected: String,
+        expected: Box<str>,
         /// Type the symbol actually has.
-        found: String,
+        found: Box<str>,
     },
 
     /// Alias conflict (two imports with same alias)
     AliasConflict {
         /// The alias name that is reused.
-        alias: String,
+        alias: Box<str>,
         /// Path of the first import that introduced the alias.
-        path1: String,
+        path1: Box<str>,
         /// Path of the second, conflicting import.
-        path2: String,
+        path2: Box<str>,
     },
 
     /// Cyclic pattern reference detected during symbol expansion
@@ -248,7 +248,7 @@ impl LLreError {
         Self {
             kind,
             position: None,
-            file: Some(file.into()),
+            file: Some(Box::new(file.into())),
             context: None,
         }
     }
@@ -262,14 +262,14 @@ impl LLreError {
         Self {
             kind,
             position: Some(position),
-            file: Some(file.into()),
+            file: Some(Box::new(file.into())),
             context: None,
         }
     }
 
     /// Add context to an error.
     pub fn with_context(mut self, context: impl Into<String>) -> Self {
-        self.context = Some(context.into());
+        self.context = Some(context.into().into_boxed_str());
         self
     }
 

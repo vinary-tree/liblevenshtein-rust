@@ -232,8 +232,9 @@ impl ThompsonBuilderChar {
         let mut nfa = NFAChar::new();
         let mut current = 0;
 
-        for (i, c) in s.chars().enumerate() {
-            let is_last = i == s.chars().count() - 1;
+        let mut chars = s.chars().peekable();
+        while let Some(c) = chars.next() {
+            let is_last = chars.peek().is_none();
             let next = nfa.add_state(is_last);
             nfa.add_transition_char(current, c, next);
             current = next;

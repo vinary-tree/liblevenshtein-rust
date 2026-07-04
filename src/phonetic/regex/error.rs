@@ -13,7 +13,7 @@ pub struct ParseError {
     /// Position where the error occurred
     pub position: Position,
     /// The problematic input (if available)
-    pub context: Option<String>,
+    pub context: Option<Box<str>>,
 }
 
 /// The kind of parse error.
@@ -162,7 +162,7 @@ impl ParseError {
         Self {
             kind,
             position,
-            context: Some(context.into()),
+            context: Some(context.into().into_boxed_str()),
         }
     }
 

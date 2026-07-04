@@ -178,7 +178,7 @@ fn apply_flags_with_context(
         }
 
         // Concat: transform both sides, propagating inline flags
-        Regex::Concat(_, _) => {
+        Regex::Concat(a, b) => {
             // Extract inline flags from leftmost position (handles nested Concats)
             let (leftmost_flags, remaining) = extract_leftmost_inline_flags(regex);
 
@@ -201,17 +201,13 @@ fn apply_flags_with_context(
                 apply_flags_with_context(&remaining, &merged, result)
             } else {
                 // No inline flags - transform both sides normally
-                if let Regex::Concat(a, b) = regex {
-                    let a_transformed = apply_flags_with_context(a, inherited, result);
-                    let b_transformed = apply_flags_with_context(b, inherited, result);
-                    // Eliminate Empty nodes
-                    match (&a_transformed, &b_transformed) {
-                        (Regex::Empty, _) => b_transformed,
-                        (_, Regex::Empty) => a_transformed,
-                        _ => Regex::Concat(Box::new(a_transformed), Box::new(b_transformed)),
-                    }
-                } else {
-                    unreachable!("We matched Regex::Concat above")
+                let a_transformed = apply_flags_with_context(a, inherited, result);
+                let b_transformed = apply_flags_with_context(b, inherited, result);
+                // Eliminate Empty nodes
+                match (&a_transformed, &b_transformed) {
+                    (Regex::Empty, _) => b_transformed,
+                    (_, Regex::Empty) => a_transformed,
+                    _ => Regex::Concat(Box::new(a_transformed), Box::new(b_transformed)),
                 }
             }
         }
@@ -393,27 +389,25 @@ fn expand_char_class(
     accent_insensitive: bool,
     feature_based: bool,
 ) -> Regex {
-    // Collect all characters in the class
-    let mut all_chars: Vec<char> = Vec::new();
+    let base_capacity = char_class_expansion_capacity(class);
+    let variant_factor = 1
+        + usize::from(case_insensitive)
+        + usize::from(accent_insensitive)
+        + usize::from(feature_based);
+    let mut expanded = Vec::with_capacity(base_capacity.saturating_mul(variant_factor));
 
     for &(start, end) in &class.ranges {
         for c in start..=end {
-            all_chars.push(c);
-        }
-    }
-
-    // Expand each character
-    let mut expanded: Vec<char> = Vec::new();
-    for c in all_chars {
-        expanded.push(c);
-        if case_insensitive {
-            add_case_variants_for_char(c, &mut expanded);
-        }
-        if accent_insensitive {
-            add_accent_variants_for_char(c, &mut expanded);
-        }
-        if feature_based {
-            add_feature_variants_for_char(c, &mut expanded);
+            expanded.push(c);
+            if case_insensitive {
+                add_case_variants_for_char(c, &mut expanded);
+            }
+            if accent_insensitive {
+                add_accent_variants_for_char(c, &mut expanded);
+            }
+            if feature_based {
+                add_feature_variants_for_char(c, &mut expanded);
+            }
         }
     }
 
@@ -428,6 +422,26 @@ fn expand_char_class(
     };
 
     Regex::CharClass(new_class)
+}
+
+fn inclusive_char_range_len(start: char, end: char) -> Option<usize> {
+    let start = u32::from(start);
+    let end = u32::from(end);
+    let len = end.checked_sub(start)?.checked_add(1)?;
+    usize::try_from(len).ok()
+}
+
+fn char_class_expansion_capacity(class: &CharClassChar) -> usize {
+    class
+        .ranges
+        .iter()
+        .filter_map(|&(start, end)| inclusive_char_range_len(start, end))
+        .try_fold(0usize, |total, len| total.checked_add(len))
+        .unwrap_or(usize::MAX)
+}
+
+fn adjacent_scalars(previous: char, current: char) -> bool {
+    u32::from(previous).checked_add(1) == Some(u32::from(current))
 }
 
 /// Add case variants to a character list.
@@ -576,12 +590,12 @@ fn chars_to_ranges(chars: &[char]) -> Vec<(char, char)> {
         return Vec::new();
     }
 
-    let mut ranges = Vec::new();
+    let mut ranges = Vec::with_capacity(chars.len());
     let mut start = chars[0];
     let mut end = chars[0];
 
     for &c in chars.iter().skip(1) {
-        if c as u32 == end as u32 + 1 {
+        if adjacent_scalars(end, c) {
             // Extend current range
             end = c;
         } else {
@@ -752,6 +766,58 @@ mod tests {
         assert_eq!(ranges.len(), 2);
         assert_eq!(ranges[0], ('a', 'c'));
         assert_eq!(ranges[1], ('x', 'z'));
+    }
+
+    #[test]
+    fn inclusive_char_range_len_handles_edges() {
+        assert_eq!(inclusive_char_range_len('a', 'a'), Some(1));
+        assert_eq!(inclusive_char_range_len('a', 'c'), Some(3));
+        assert_eq!(inclusive_char_range_len('c', 'a'), None);
+        assert_eq!(inclusive_char_range_len(char::MAX, char::MAX), Some(1));
+    }
+
+    #[test]
+    fn char_class_expansion_capacity_ignores_invalid_ranges() {
+        let class = CharClassChar {
+            ranges: vec![('z', 'a'), ('a', 'c'), (char::MAX, char::MAX)],
+            negated: false,
+        };
+
+        assert_eq!(char_class_expansion_capacity(&class), 4);
+    }
+
+    #[test]
+    fn adjacent_scalars_handles_unicode_maximum() {
+        let before_max = char::from_u32(u32::from(char::MAX) - 1).expect("valid scalar");
+
+        assert!(adjacent_scalars('a', 'b'));
+        assert!(adjacent_scalars(before_max, char::MAX));
+        assert!(!adjacent_scalars(char::MAX, char::MAX));
+        assert!(!adjacent_scalars(char::MAX, '\0'));
+    }
+
+    #[test]
+    fn chars_to_ranges_coalesces_up_to_unicode_maximum() {
+        let before_max = char::from_u32(u32::from(char::MAX) - 1).expect("valid scalar");
+        let ranges = chars_to_ranges(&[before_max, char::MAX]);
+
+        assert_eq!(ranges, vec![(before_max, char::MAX)]);
+    }
+
+    #[test]
+    fn expand_char_class_preserves_unicode_maximum() {
+        let class = CharClassChar {
+            ranges: vec![(char::MAX, char::MAX)],
+            negated: false,
+        };
+
+        match expand_char_class(&class, true, true, true) {
+            Regex::CharClass(expanded) => {
+                assert!(expanded.matches(char::MAX));
+                assert_eq!(expanded.ranges, vec![(char::MAX, char::MAX)]);
+            }
+            other => panic!("expected CharClass, got {other:?}"),
+        }
     }
 
     #[test]

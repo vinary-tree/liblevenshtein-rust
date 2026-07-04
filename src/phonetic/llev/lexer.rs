@@ -384,7 +384,7 @@ impl<'a> Lexer<'a> {
             Err(LLevError::expected_token(
                 format!("{:?}", expected),
                 format!("{:?}", token),
-                self.position.clone(),
+                self.position,
             ))
         }
     }
@@ -585,7 +585,7 @@ impl<'a> Lexer<'a> {
 
     /// Skip a block comment (/* */).
     fn skip_block_comment(&mut self) -> LLevResult<()> {
-        let start_pos = self.position.clone();
+        let start_pos = self.position;
 
         // Consume /*
         self.advance(); // /
@@ -654,7 +654,7 @@ impl<'a> Lexer<'a> {
             Some('U') => {
                 // Check if followed by 8 hex digits (unicode escape) or not (literal 'U')
                 // Peek at the next character to decide
-                if self.peek_char().map_or(false, |c| c.is_ascii_hexdigit()) {
+                if self.peek_char().is_some_and(|c| c.is_ascii_hexdigit()) {
                     self.parse_hex_escape(8)
                 } else {
                     // Return literal 'U'
@@ -664,8 +664,8 @@ impl<'a> Lexer<'a> {
             // Uppercase letters (A-Z, except U handled above) become literals
             // This allows \A, \B, etc. for literal uppercase characters
             Some(c) if c.is_ascii_uppercase() => Ok(c),
-            Some(c) => Err(LLevError::invalid_escape(c, self.position.clone())),
-            None => Err(LLevError::unexpected_eof(self.position.clone())),
+            Some(c) => Err(LLevError::invalid_escape(c, self.position)),
+            None => Err(LLevError::unexpected_eof(self.position)),
         }
     }
 
@@ -682,16 +682,15 @@ impl<'a> Lexer<'a> {
                         LLevErrorKind::InvalidEscape(c),
                         format!("expected hex digit, got '{}'", c),
                     )
-                    .at_position(self.position.clone()));
+                    .at_position(self.position));
                 }
                 None => {
-                    return Err(LLevError::unexpected_eof(self.position.clone()));
+                    return Err(LLevError::unexpected_eof(self.position));
                 }
             }
         }
         char::from_u32(value).ok_or_else(|| {
-            LLevError::new(LLevErrorKind::InvalidCodePoint(value))
-                .at_position(self.position.clone())
+            LLevError::new(LLevErrorKind::InvalidCodePoint(value)).at_position(self.position)
         })
     }
 
@@ -996,7 +995,7 @@ impl<'a> Lexer<'a> {
 
     /// Parse a string literal.
     fn parse_string(&mut self) -> LLevResult<String> {
-        let start_pos = self.position.clone();
+        let start_pos = self.position;
         let mut result = String::new();
 
         loop {
@@ -1095,14 +1094,37 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn ascii_digit_value(c: char) -> Option<u8> {
+        if !c.is_ascii_digit() {
+            return None;
+        }
+
+        c.to_digit(10).and_then(|digit| u8::try_from(digit).ok())
+    }
+
+    fn numeric_literal_too_large(&self) -> LLevError {
+        LLevError::new(LLevErrorKind::InvalidPattern(format!(
+            "numeric literal exceeds maximum supported value ({})",
+            usize::MAX
+        )))
+        .at_position(self.position)
+    }
+
     /// Parse a number.
     fn parse_number(&mut self, first_digit: char) -> LLevResult<Token> {
-        let mut value = first_digit.to_digit(10).expect("is digit") as usize;
+        let Some(first_digit) = Self::ascii_digit_value(first_digit) else {
+            return Err(LLevError::unexpected_char(first_digit, self.position));
+        };
+        let mut value = usize::from(first_digit);
 
         while let Some(c) = self.peek_char() {
-            if c.is_ascii_digit() {
+            if let Some(digit) = Self::ascii_digit_value(c) {
                 self.advance();
-                value = value * 10 + c.to_digit(10).expect("is digit") as usize;
+                let digit = usize::from(digit);
+                value = value
+                    .checked_mul(10)
+                    .and_then(|value| value.checked_add(digit))
+                    .ok_or_else(|| self.numeric_literal_too_large())?;
             } else {
                 break;
             }
@@ -1111,7 +1133,7 @@ impl<'a> Lexer<'a> {
         // Check for float
         if self.peek_char() == Some('.') {
             let next = self.peek_char2();
-            if next.map_or(false, |c| c.is_ascii_digit()) {
+            if next.is_some_and(|c| c.is_ascii_digit()) {
                 self.advance(); // consume '.'
                 let float_val = self.parse_float_decimal(value as f64)?;
                 return Ok(Token::Float(float_val));
@@ -1127,9 +1149,9 @@ impl<'a> Lexer<'a> {
         let mut decimal_place = 0.1;
 
         while let Some(c) = self.peek_char() {
-            if c.is_ascii_digit() {
+            if let Some(digit) = Self::ascii_digit_value(c) {
                 self.advance();
-                value += c.to_digit(10).expect("is digit") as f64 * decimal_place;
+                value += f64::from(digit) * decimal_place;
                 decimal_place *= 0.1;
             } else {
                 break;
@@ -1159,7 +1181,7 @@ impl<'a> Lexer<'a> {
             "description" => Ok(Token::DirectiveDescription),
             "include" => Ok(Token::DirectiveInclude),
             "define" => Ok(Token::DirectiveDefine),
-            _ => Err(LLevError::invalid_directive(name, self.position.clone())),
+            _ => Err(LLevError::invalid_directive(name, self.position)),
         }
     }
 
@@ -1478,7 +1500,7 @@ impl<'a> Lexer<'a> {
                 // Newline in metadata - might be an error
                 Ok(Token::Newline)
             }
-            _ => Err(LLevError::unexpected_char(c, self.position.clone())),
+            _ => Err(LLevError::unexpected_char(c, self.position)),
         }
     }
 }
@@ -1810,6 +1832,48 @@ mod tests {
                 .next_token()
                 .expect("test: lexer.next_token must be Ok"),
             Token::Number(123)
+        );
+    }
+
+    #[test]
+    fn ascii_digit_value_accepts_only_ascii_decimal_digits() {
+        assert_eq!(Lexer::ascii_digit_value('0'), Some(0));
+        assert_eq!(Lexer::ascii_digit_value('9'), Some(9));
+        assert_eq!(Lexer::ascii_digit_value('a'), None);
+        assert_eq!(Lexer::ascii_digit_value('٣'), None);
+    }
+
+    #[test]
+    fn test_lexer_keeps_non_ascii_decimal_digits_as_characters() {
+        let mut lexer = Lexer::new_file("٣3");
+
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: non-ASCII digit-like char must lex"),
+            Token::Char('٣')
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: ASCII digit after non-ASCII char must lex"),
+            Token::Number(3)
+        );
+    }
+
+    #[test]
+    fn test_lexer_rejects_oversized_number() {
+        let oversized = format!("{}0", usize::MAX);
+        let mut lexer = Lexer::new_file(&oversized);
+        let err = lexer
+            .next_token()
+            .expect_err("test: oversized number must be rejected");
+
+        assert!(matches!(&err.kind, LLevErrorKind::InvalidPattern(_)));
+        assert!(
+            err.to_string()
+                .contains("numeric literal exceeds maximum supported value"),
+            "unexpected error: {err}"
         );
     }
 
@@ -2566,7 +2630,7 @@ mod tests {
                     .next_token()
                     .expect("test: lexer.next_token must be Ok"),
                 Token::PhoneticShortcut {
-                    class_name: *expected_class,
+                    class_name: expected_class,
                     negated: *expected_negated
                 },
                 "Failed for input: {}",

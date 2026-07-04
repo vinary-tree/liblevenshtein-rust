@@ -38,7 +38,7 @@
 
 use rustc_hash::FxHashSet;
 use std::collections::HashMap;
-use std::sync::LazyLock;
+use std::sync::OnceLock;
 
 /// Phonetic features for classifying sounds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -151,761 +151,769 @@ pub enum PhoneticFeature {
 }
 
 /// Feature table for common phonetic characters.
-static FEATURE_TABLE: LazyLock<HashMap<char, FxHashSet<PhoneticFeature>>> = LazyLock::new(|| {
-    use PhoneticFeature::*;
+static FEATURE_TABLE: OnceLock<HashMap<char, FxHashSet<PhoneticFeature>>> = OnceLock::new();
 
-    let mut table: HashMap<char, FxHashSet<PhoneticFeature>> = HashMap::new();
+fn feature_table() -> &'static HashMap<char, FxHashSet<PhoneticFeature>> {
+    FEATURE_TABLE.get_or_init(|| {
+        use PhoneticFeature::*;
 
-    // Vowels
-    table.insert('a', [Vowel, Low, Central, Unrounded].into_iter().collect());
-    table.insert('e', [Vowel, Mid, Front, Unrounded].into_iter().collect());
-    table.insert('i', [Vowel, High, Front, Unrounded].into_iter().collect());
-    table.insert('o', [Vowel, Mid, Back, Rounded].into_iter().collect());
-    table.insert('u', [Vowel, High, Back, Rounded].into_iter().collect());
+        let mut table: HashMap<char, FxHashSet<PhoneticFeature>> = HashMap::new();
 
-    // Uppercase vowels
-    table.insert('A', [Vowel, Low, Central, Unrounded].into_iter().collect());
-    table.insert('E', [Vowel, Mid, Front, Unrounded].into_iter().collect());
-    table.insert('I', [Vowel, High, Front, Unrounded].into_iter().collect());
-    table.insert('O', [Vowel, Mid, Back, Rounded].into_iter().collect());
-    table.insert('U', [Vowel, High, Back, Rounded].into_iter().collect());
+        // Vowels
+        table.insert('a', [Vowel, Low, Central, Unrounded].into_iter().collect());
+        table.insert('e', [Vowel, Mid, Front, Unrounded].into_iter().collect());
+        table.insert('i', [Vowel, High, Front, Unrounded].into_iter().collect());
+        table.insert('o', [Vowel, Mid, Back, Rounded].into_iter().collect());
+        table.insert('u', [Vowel, High, Back, Rounded].into_iter().collect());
 
-    // Accented vowels (same features as base)
-    for (accented, base) in [
-        ('à', 'a'),
-        ('á', 'a'),
-        ('â', 'a'),
-        ('ã', 'a'),
-        ('ä', 'a'),
-        ('å', 'a'),
-        ('è', 'e'),
-        ('é', 'e'),
-        ('ê', 'e'),
-        ('ë', 'e'),
-        ('ì', 'i'),
-        ('í', 'i'),
-        ('î', 'i'),
-        ('ï', 'i'),
-        ('ò', 'o'),
-        ('ó', 'o'),
-        ('ô', 'o'),
-        ('õ', 'o'),
-        ('ö', 'o'),
-        ('ù', 'u'),
-        ('ú', 'u'),
-        ('û', 'u'),
-        ('ü', 'u'),
-        ('À', 'A'),
-        ('Á', 'A'),
-        ('Â', 'A'),
-        ('Ã', 'A'),
-        ('Ä', 'A'),
-        ('Å', 'A'),
-        ('È', 'E'),
-        ('É', 'E'),
-        ('Ê', 'E'),
-        ('Ë', 'E'),
-        ('Ì', 'I'),
-        ('Í', 'I'),
-        ('Î', 'I'),
-        ('Ï', 'I'),
-        ('Ò', 'O'),
-        ('Ó', 'O'),
-        ('Ô', 'O'),
-        ('Õ', 'O'),
-        ('Ö', 'O'),
-        ('Ù', 'U'),
-        ('Ú', 'U'),
-        ('Û', 'U'),
-        ('Ü', 'U'),
-    ] {
-        if let Some(features) = table.get(&base) {
-            table.insert(accented, features.clone());
+        // Uppercase vowels
+        table.insert('A', [Vowel, Low, Central, Unrounded].into_iter().collect());
+        table.insert('E', [Vowel, Mid, Front, Unrounded].into_iter().collect());
+        table.insert('I', [Vowel, High, Front, Unrounded].into_iter().collect());
+        table.insert('O', [Vowel, Mid, Back, Rounded].into_iter().collect());
+        table.insert('U', [Vowel, High, Back, Rounded].into_iter().collect());
+
+        // Accented vowels (same features as base)
+        for (accented, base) in [
+            ('à', 'a'),
+            ('á', 'a'),
+            ('â', 'a'),
+            ('ã', 'a'),
+            ('ä', 'a'),
+            ('å', 'a'),
+            ('è', 'e'),
+            ('é', 'e'),
+            ('ê', 'e'),
+            ('ë', 'e'),
+            ('ì', 'i'),
+            ('í', 'i'),
+            ('î', 'i'),
+            ('ï', 'i'),
+            ('ò', 'o'),
+            ('ó', 'o'),
+            ('ô', 'o'),
+            ('õ', 'o'),
+            ('ö', 'o'),
+            ('ù', 'u'),
+            ('ú', 'u'),
+            ('û', 'u'),
+            ('ü', 'u'),
+            ('À', 'A'),
+            ('Á', 'A'),
+            ('Â', 'A'),
+            ('Ã', 'A'),
+            ('Ä', 'A'),
+            ('Å', 'A'),
+            ('È', 'E'),
+            ('É', 'E'),
+            ('Ê', 'E'),
+            ('Ë', 'E'),
+            ('Ì', 'I'),
+            ('Í', 'I'),
+            ('Î', 'I'),
+            ('Ï', 'I'),
+            ('Ò', 'O'),
+            ('Ó', 'O'),
+            ('Ô', 'O'),
+            ('Õ', 'O'),
+            ('Ö', 'O'),
+            ('Ù', 'U'),
+            ('Ú', 'U'),
+            ('Û', 'U'),
+            ('Ü', 'U'),
+        ] {
+            if let Some(features) = table.get(&base) {
+                table.insert(accented, features.clone());
+            }
         }
-    }
-
-    // Bilabial stops
-    table.insert(
-        'p',
-        [Consonant, Stop, Bilabial, Voiceless].into_iter().collect(),
-    );
-    table.insert(
-        'b',
-        [Consonant, Stop, Bilabial, Voiced].into_iter().collect(),
-    );
-    table.insert(
-        'P',
-        [Consonant, Stop, Bilabial, Voiceless].into_iter().collect(),
-    );
-    table.insert(
-        'B',
-        [Consonant, Stop, Bilabial, Voiced].into_iter().collect(),
-    );
-
-    // Alveolar stops
-    table.insert(
-        't',
-        [Consonant, Stop, Alveolar, Voiceless].into_iter().collect(),
-    );
-    table.insert(
-        'd',
-        [Consonant, Stop, Alveolar, Voiced].into_iter().collect(),
-    );
-    table.insert(
-        'T',
-        [Consonant, Stop, Alveolar, Voiceless].into_iter().collect(),
-    );
-    table.insert(
-        'D',
-        [Consonant, Stop, Alveolar, Voiced].into_iter().collect(),
-    );
-
-    // Velar stops
-    table.insert(
-        'k',
-        [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
-    );
-    table.insert('g', [Consonant, Stop, Velar, Voiced].into_iter().collect());
-    table.insert(
-        'K',
-        [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
-    );
-    table.insert('G', [Consonant, Stop, Velar, Voiced].into_iter().collect());
-    table.insert(
-        'c',
-        [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
-    ); // hard c
-    table.insert(
-        'C',
-        [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
-    );
-    table.insert(
-        'q',
-        [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
-    );
-    table.insert(
-        'Q',
-        [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
-    );
-
-    // Labiodental fricatives
-    table.insert(
-        'f',
-        [Consonant, Fricative, Labiodental, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'v',
-        [Consonant, Fricative, Labiodental, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'F',
-        [Consonant, Fricative, Labiodental, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'V',
-        [Consonant, Fricative, Labiodental, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // Alveolar fricatives (sibilants)
-    table.insert(
-        's',
-        [Consonant, Fricative, Alveolar, Voiceless, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'z',
-        [Consonant, Fricative, Alveolar, Voiced, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'S',
-        [Consonant, Fricative, Alveolar, Voiceless, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'Z',
-        [Consonant, Fricative, Alveolar, Voiced, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-
-    // Glottal fricative
-    table.insert(
-        'h',
-        [Consonant, Fricative, Glottal, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'H',
-        [Consonant, Fricative, Glottal, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-
-    // Nasals
-    table.insert(
-        'm',
-        [Consonant, Nasal, Bilabial, Voiced].into_iter().collect(),
-    );
-    table.insert(
-        'n',
-        [Consonant, Nasal, Alveolar, Voiced].into_iter().collect(),
-    );
-    table.insert(
-        'M',
-        [Consonant, Nasal, Bilabial, Voiced].into_iter().collect(),
-    );
-    table.insert(
-        'N',
-        [Consonant, Nasal, Alveolar, Voiced].into_iter().collect(),
-    );
-    table.insert(
-        'ñ',
-        [Consonant, Nasal, Palatal, Voiced].into_iter().collect(),
-    );
-    table.insert(
-        'Ñ',
-        [Consonant, Nasal, Palatal, Voiced].into_iter().collect(),
-    );
-    table.insert('ŋ', [Consonant, Nasal, Velar, Voiced].into_iter().collect()); // ng
-
-    // Approximants
-    table.insert(
-        'l',
-        [Consonant, Approximant, Lateral, Alveolar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'r',
-        [Consonant, Approximant, Rhotic, Alveolar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'w',
-        [Consonant, Approximant, Bilabial, Velar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'y',
-        [Consonant, Approximant, Palatal, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'L',
-        [Consonant, Approximant, Lateral, Alveolar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'R',
-        [Consonant, Approximant, Rhotic, Alveolar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'W',
-        [Consonant, Approximant, Bilabial, Velar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'Y',
-        [Consonant, Approximant, Palatal, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // Special consonants
-    table.insert(
-        'x',
-        [Consonant, Fricative, Velar, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'X',
-        [Consonant, Fricative, Velar, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'j',
-        [Consonant, Affricate, PostAlveolar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'J',
-        [Consonant, Affricate, PostAlveolar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ç',
-        [Consonant, Fricative, Alveolar, Voiceless, Sibilant]
-            .into_iter()
-            .collect(),
-    ); // cedilla c like s
-
-    // ========================================================================
-    // Secondary Articulation Features
-    // ========================================================================
-
-    // Velarized L (dark L)
-    table.insert(
-        'ɫ',
-        [Consonant, Approximant, Lateral, Alveolar, Voiced, Velarized]
-            .into_iter()
-            .collect(),
-    );
-
-    // Aspiration marker (modifier letter)
-    table.insert('\u{02B0}', [Aspirated].into_iter().collect()); // ʰ
-
-    // Pharyngealization marker
-    table.insert('\u{02E4}', [Pharyngealized].into_iter().collect()); // ˤ
-
-    // Labialization marker
-    table.insert('\u{02B7}', [Labialized].into_iter().collect()); // ʷ
-
-    // Velarization marker
-    table.insert('\u{02E0}', [Velarized].into_iter().collect()); // ˠ
-
-    // Tenseness marker (Korean)
-    table.insert('\u{0348}', [Tense].into_iter().collect()); // ͈
-
-    // ========================================================================
-    // Retroflex Consonants (Hindi, Tamil, Telugu, Sanskrit)
-    // ========================================================================
-
-    // Retroflex stops
-    table.insert(
-        'ʈ',
-        [Consonant, Stop, Retroflex, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ɖ',
-        [Consonant, Stop, Retroflex, Voiced].into_iter().collect(),
-    );
-
-    // Retroflex nasal
-    table.insert(
-        'ɳ',
-        [Consonant, Nasal, Retroflex, Voiced].into_iter().collect(),
-    );
-
-    // Retroflex tap/flap
-    table.insert(
-        'ɽ',
-        [Consonant, Tap, Retroflex, Voiced].into_iter().collect(),
-    );
-
-    // Retroflex lateral
-    table.insert(
-        'ɭ',
-        [Consonant, Approximant, Lateral, Retroflex, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // Retroflex fricatives
-    table.insert(
-        'ʂ',
-        [Consonant, Fricative, Retroflex, Voiceless, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʐ',
-        [Consonant, Fricative, Retroflex, Voiced, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-
-    // Retroflex approximant
-    table.insert(
-        'ɻ',
-        [Consonant, Approximant, Retroflex, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // ========================================================================
-    // Uvular Consonants (Arabic, French, German)
-    // ========================================================================
-
-    // Uvular stops
-    table.insert(
-        'q',
-        [Consonant, Stop, Uvular, Voiceless].into_iter().collect(),
-    );
-    table.insert('ɢ', [Consonant, Stop, Uvular, Voiced].into_iter().collect());
-
-    // Uvular nasal
-    table.insert(
-        'ɴ',
-        [Consonant, Nasal, Uvular, Voiced].into_iter().collect(),
-    );
-
-    // Uvular fricatives
-    table.insert(
-        'χ',
-        [Consonant, Fricative, Uvular, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʁ',
-        [Consonant, Fricative, Uvular, Voiced].into_iter().collect(),
-    );
-
-    // Uvular trill
-    table.insert(
-        'ʀ',
-        [Consonant, Trill, Uvular, Voiced].into_iter().collect(),
-    );
-
-    // ========================================================================
-    // Pharyngeal Consonants (Arabic ح, ع)
-    // ========================================================================
-
-    // Pharyngeal fricatives
-    table.insert(
-        'ħ',
-        [Consonant, Fricative, Pharyngeal, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʕ',
-        [Consonant, Fricative, Pharyngeal, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // ========================================================================
-    // Epiglottal Consonants (rare, but IPA complete)
-    // ========================================================================
-
-    // Epiglottal fricatives
-    table.insert(
-        'ʜ',
-        [Consonant, Fricative, Epiglottal, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʢ',
-        [Consonant, Fricative, Epiglottal, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // Epiglottal stop
-    table.insert(
-        'ʡ',
-        [Consonant, Stop, Epiglottal, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-
-    // ========================================================================
-    // Additional IPA Consonants (Tap, Trill, Ejective, Implosive, Click)
-    // ========================================================================
-
-    // Alveolar tap
-    table.insert(
-        'ɾ',
-        [Consonant, Tap, Alveolar, Voiced].into_iter().collect(),
-    );
-
-    // Bilabial trill
-    table.insert(
-        'ʙ',
-        [Consonant, Trill, Bilabial, Voiced].into_iter().collect(),
-    );
-
-    // Alveolar trill (Spanish rr)
-    // Note: 'r' is already in table as approximant; some dialects use trill
-    // table.insert('r', [Consonant, Trill, Alveolar, Voiced].into_iter().collect());
-
-    // Ejective marker
-    table.insert('ʼ', [Ejective].into_iter().collect());
-
-    // Implosives
-    table.insert(
-        'ɓ',
-        [Consonant, Stop, Bilabial, Voiced, Implosive]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ɗ',
-        [Consonant, Stop, Alveolar, Voiced, Implosive]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ɠ',
-        [Consonant, Stop, Velar, Voiced, Implosive]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʄ',
-        [Consonant, Stop, Palatal, Voiced, Implosive]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʛ',
-        [Consonant, Stop, Uvular, Voiced, Implosive]
-            .into_iter()
-            .collect(),
-    );
-
-    // Clicks (bilabial, dental, alveolar, palatal, lateral)
-    table.insert('ʘ', [Consonant, Click, Bilabial].into_iter().collect());
-    table.insert('ǀ', [Consonant, Click, Dental].into_iter().collect());
-    table.insert('ǃ', [Consonant, Click, Alveolar].into_iter().collect());
-    table.insert('ǂ', [Consonant, Click, Palatal].into_iter().collect());
-    table.insert('ǁ', [Consonant, Click, Lateral].into_iter().collect());
-
-    // ========================================================================
-    // Additional IPA Vowels (completeness)
-    // ========================================================================
-
-    // Schwa and near-open central
-    table.insert('ə', [Vowel, Mid, Central, Unrounded].into_iter().collect());
-    table.insert('ɐ', [Vowel, Low, Central, Unrounded].into_iter().collect());
-
-    // Near-close vowels
-    table.insert('ɪ', [Vowel, High, Front, Unrounded].into_iter().collect());
-    table.insert('ʏ', [Vowel, High, Front, Rounded].into_iter().collect());
-    table.insert('ʊ', [Vowel, High, Back, Rounded].into_iter().collect());
-
-    // Open-mid vowels
-    table.insert('ɛ', [Vowel, Mid, Front, Unrounded].into_iter().collect());
-    table.insert('œ', [Vowel, Mid, Front, Rounded].into_iter().collect());
-    table.insert('ɔ', [Vowel, Mid, Back, Rounded].into_iter().collect());
-    table.insert('ʌ', [Vowel, Mid, Back, Unrounded].into_iter().collect());
-
-    // Open vowels
-    table.insert('æ', [Vowel, Low, Front, Unrounded].into_iter().collect());
-    table.insert('ɑ', [Vowel, Low, Back, Unrounded].into_iter().collect());
-    table.insert('ɒ', [Vowel, Low, Back, Rounded].into_iter().collect());
-
-    // Close-mid vowels
-    table.insert('ø', [Vowel, Mid, Front, Rounded].into_iter().collect());
-    table.insert('ɤ', [Vowel, Mid, Back, Unrounded].into_iter().collect());
-
-    // Close vowels
-    table.insert('y', [Vowel, High, Front, Rounded].into_iter().collect());
-    table.insert('ɯ', [Vowel, High, Back, Unrounded].into_iter().collect());
-    table.insert('ɨ', [Vowel, High, Central, Unrounded].into_iter().collect());
-    table.insert('ʉ', [Vowel, High, Central, Rounded].into_iter().collect());
-
-    // Mid central vowels
-    table.insert('ɘ', [Vowel, Mid, Central, Unrounded].into_iter().collect());
-    table.insert('ɵ', [Vowel, Mid, Central, Rounded].into_iter().collect());
-
-    // Open-mid central
-    table.insert('ɜ', [Vowel, Mid, Central, Unrounded].into_iter().collect());
-    table.insert('ɞ', [Vowel, Mid, Central, Rounded].into_iter().collect());
-
-    // Near-open front
-    table.insert('ɶ', [Vowel, Low, Front, Rounded].into_iter().collect());
-
-    // ========================================================================
-    // Palatal Consonants (IPA completeness)
-    // ========================================================================
-
-    // Palatal stops
-    table.insert(
-        'c',
-        [Consonant, Stop, Palatal, Voiceless].into_iter().collect(),
-    );
-    table.insert(
-        'ɟ',
-        [Consonant, Stop, Palatal, Voiced].into_iter().collect(),
-    );
-
-    // Palatal nasal
-    table.insert(
-        'ɲ',
-        [Consonant, Nasal, Palatal, Voiced].into_iter().collect(),
-    );
-
-    // Palatal fricatives
-    table.insert(
-        'ç',
-        [Consonant, Fricative, Palatal, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʝ',
-        [Consonant, Fricative, Palatal, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // Palatal lateral
-    table.insert(
-        'ʎ',
-        [Consonant, Approximant, Lateral, Palatal, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // Palatal approximant
-    table.insert(
-        'j',
-        [Consonant, Approximant, Palatal, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // ========================================================================
-    // PostAlveolar/Alveopalatal Fricatives
-    // ========================================================================
-
-    // PostAlveolar fricatives (English sh, zh)
-    table.insert(
-        'ʃ',
-        [Consonant, Fricative, PostAlveolar, Voiceless, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʒ',
-        [Consonant, Fricative, PostAlveolar, Voiced, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-
-    // Alveopalatal fricatives (Mandarin x, Japanese sh)
-    table.insert(
-        'ɕ',
-        [Consonant, Fricative, PostAlveolar, Voiceless, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ʑ',
-        [Consonant, Fricative, PostAlveolar, Voiced, Sibilant]
-            .into_iter()
-            .collect(),
-    );
-
-    // ========================================================================
-    // Lateral Fricatives (Welsh, Zulu)
-    // ========================================================================
-
-    table.insert(
-        'ɬ',
-        [Consonant, Fricative, Lateral, Alveolar, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ɮ',
-        [Consonant, Fricative, Lateral, Alveolar, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // ========================================================================
-    // Glottal Stop
-    // ========================================================================
-
-    table.insert(
-        'ʔ',
-        [Consonant, Stop, Glottal, Voiceless].into_iter().collect(),
-    );
-
-    // ========================================================================
-    // Dental Fricatives (English th)
-    // ========================================================================
-
-    table.insert(
-        'θ',
-        [Consonant, Fricative, Dental, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'ð',
-        [Consonant, Fricative, Dental, Voiced].into_iter().collect(),
-    );
-
-    // ========================================================================
-    // Labiodental Approximant
-    // ========================================================================
-
-    table.insert(
-        'ʋ',
-        [Consonant, Approximant, Labiodental, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    // ========================================================================
-    // Bilabial Fricatives
-    // ========================================================================
-
-    table.insert(
-        'ɸ',
-        [Consonant, Fricative, Bilabial, Voiceless]
-            .into_iter()
-            .collect(),
-    );
-    table.insert(
-        'β',
-        [Consonant, Fricative, Bilabial, Voiced]
-            .into_iter()
-            .collect(),
-    );
-
-    table
-});
+
+        // Bilabial stops
+        table.insert(
+            'p',
+            [Consonant, Stop, Bilabial, Voiceless].into_iter().collect(),
+        );
+        table.insert(
+            'b',
+            [Consonant, Stop, Bilabial, Voiced].into_iter().collect(),
+        );
+        table.insert(
+            'P',
+            [Consonant, Stop, Bilabial, Voiceless].into_iter().collect(),
+        );
+        table.insert(
+            'B',
+            [Consonant, Stop, Bilabial, Voiced].into_iter().collect(),
+        );
+
+        // Alveolar stops
+        table.insert(
+            't',
+            [Consonant, Stop, Alveolar, Voiceless].into_iter().collect(),
+        );
+        table.insert(
+            'd',
+            [Consonant, Stop, Alveolar, Voiced].into_iter().collect(),
+        );
+        table.insert(
+            'T',
+            [Consonant, Stop, Alveolar, Voiceless].into_iter().collect(),
+        );
+        table.insert(
+            'D',
+            [Consonant, Stop, Alveolar, Voiced].into_iter().collect(),
+        );
+
+        // Velar stops
+        table.insert(
+            'k',
+            [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
+        );
+        table.insert('g', [Consonant, Stop, Velar, Voiced].into_iter().collect());
+        table.insert(
+            'K',
+            [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
+        );
+        table.insert('G', [Consonant, Stop, Velar, Voiced].into_iter().collect());
+        table.insert(
+            'c',
+            [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
+        ); // hard c
+        table.insert(
+            'C',
+            [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
+        );
+        table.insert(
+            'q',
+            [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
+        );
+        table.insert(
+            'Q',
+            [Consonant, Stop, Velar, Voiceless].into_iter().collect(),
+        );
+
+        // Labiodental fricatives
+        table.insert(
+            'f',
+            [Consonant, Fricative, Labiodental, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'v',
+            [Consonant, Fricative, Labiodental, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'F',
+            [Consonant, Fricative, Labiodental, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'V',
+            [Consonant, Fricative, Labiodental, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // Alveolar fricatives (sibilants)
+        table.insert(
+            's',
+            [Consonant, Fricative, Alveolar, Voiceless, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'z',
+            [Consonant, Fricative, Alveolar, Voiced, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'S',
+            [Consonant, Fricative, Alveolar, Voiceless, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'Z',
+            [Consonant, Fricative, Alveolar, Voiced, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+
+        // Glottal fricative
+        table.insert(
+            'h',
+            [Consonant, Fricative, Glottal, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'H',
+            [Consonant, Fricative, Glottal, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+
+        // Nasals
+        table.insert(
+            'm',
+            [Consonant, Nasal, Bilabial, Voiced].into_iter().collect(),
+        );
+        table.insert(
+            'n',
+            [Consonant, Nasal, Alveolar, Voiced].into_iter().collect(),
+        );
+        table.insert(
+            'M',
+            [Consonant, Nasal, Bilabial, Voiced].into_iter().collect(),
+        );
+        table.insert(
+            'N',
+            [Consonant, Nasal, Alveolar, Voiced].into_iter().collect(),
+        );
+        table.insert(
+            'ñ',
+            [Consonant, Nasal, Palatal, Voiced].into_iter().collect(),
+        );
+        table.insert(
+            'Ñ',
+            [Consonant, Nasal, Palatal, Voiced].into_iter().collect(),
+        );
+        table.insert('ŋ', [Consonant, Nasal, Velar, Voiced].into_iter().collect()); // ng
+
+        // Approximants
+        table.insert(
+            'l',
+            [Consonant, Approximant, Lateral, Alveolar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'r',
+            [Consonant, Approximant, Rhotic, Alveolar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'w',
+            [Consonant, Approximant, Bilabial, Velar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'y',
+            [Consonant, Approximant, Palatal, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'L',
+            [Consonant, Approximant, Lateral, Alveolar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'R',
+            [Consonant, Approximant, Rhotic, Alveolar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'W',
+            [Consonant, Approximant, Bilabial, Velar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'Y',
+            [Consonant, Approximant, Palatal, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // Special consonants
+        table.insert(
+            'x',
+            [Consonant, Fricative, Velar, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'X',
+            [Consonant, Fricative, Velar, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'j',
+            [Consonant, Affricate, PostAlveolar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'J',
+            [Consonant, Affricate, PostAlveolar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ç',
+            [Consonant, Fricative, Alveolar, Voiceless, Sibilant]
+                .into_iter()
+                .collect(),
+        ); // cedilla c like s
+
+        // ========================================================================
+        // Secondary Articulation Features
+        // ========================================================================
+
+        // Velarized L (dark L)
+        table.insert(
+            'ɫ',
+            [Consonant, Approximant, Lateral, Alveolar, Voiced, Velarized]
+                .into_iter()
+                .collect(),
+        );
+
+        // Aspiration marker (modifier letter)
+        table.insert('\u{02B0}', [Aspirated].into_iter().collect()); // ʰ
+
+        // Pharyngealization marker
+        table.insert('\u{02E4}', [Pharyngealized].into_iter().collect()); // ˤ
+
+        // Labialization marker
+        table.insert('\u{02B7}', [Labialized].into_iter().collect()); // ʷ
+
+        // Velarization marker
+        table.insert('\u{02E0}', [Velarized].into_iter().collect()); // ˠ
+
+        // Tenseness marker (Korean)
+        table.insert('\u{0348}', [Tense].into_iter().collect()); // ͈
+
+        // ========================================================================
+        // Retroflex Consonants (Hindi, Tamil, Telugu, Sanskrit)
+        // ========================================================================
+
+        // Retroflex stops
+        table.insert(
+            'ʈ',
+            [Consonant, Stop, Retroflex, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ɖ',
+            [Consonant, Stop, Retroflex, Voiced].into_iter().collect(),
+        );
+
+        // Retroflex nasal
+        table.insert(
+            'ɳ',
+            [Consonant, Nasal, Retroflex, Voiced].into_iter().collect(),
+        );
+
+        // Retroflex tap/flap
+        table.insert(
+            'ɽ',
+            [Consonant, Tap, Retroflex, Voiced].into_iter().collect(),
+        );
+
+        // Retroflex lateral
+        table.insert(
+            'ɭ',
+            [Consonant, Approximant, Lateral, Retroflex, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // Retroflex fricatives
+        table.insert(
+            'ʂ',
+            [Consonant, Fricative, Retroflex, Voiceless, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʐ',
+            [Consonant, Fricative, Retroflex, Voiced, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+
+        // Retroflex approximant
+        table.insert(
+            'ɻ',
+            [Consonant, Approximant, Retroflex, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // ========================================================================
+        // Uvular Consonants (Arabic, French, German)
+        // ========================================================================
+
+        // Uvular stops
+        table.insert(
+            'q',
+            [Consonant, Stop, Uvular, Voiceless].into_iter().collect(),
+        );
+        table.insert('ɢ', [Consonant, Stop, Uvular, Voiced].into_iter().collect());
+
+        // Uvular nasal
+        table.insert(
+            'ɴ',
+            [Consonant, Nasal, Uvular, Voiced].into_iter().collect(),
+        );
+
+        // Uvular fricatives
+        table.insert(
+            'χ',
+            [Consonant, Fricative, Uvular, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʁ',
+            [Consonant, Fricative, Uvular, Voiced].into_iter().collect(),
+        );
+
+        // Uvular trill
+        table.insert(
+            'ʀ',
+            [Consonant, Trill, Uvular, Voiced].into_iter().collect(),
+        );
+
+        // ========================================================================
+        // Pharyngeal Consonants (Arabic ح, ع)
+        // ========================================================================
+
+        // Pharyngeal fricatives
+        table.insert(
+            'ħ',
+            [Consonant, Fricative, Pharyngeal, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʕ',
+            [Consonant, Fricative, Pharyngeal, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // ========================================================================
+        // Epiglottal Consonants (rare, but IPA complete)
+        // ========================================================================
+
+        // Epiglottal fricatives
+        table.insert(
+            'ʜ',
+            [Consonant, Fricative, Epiglottal, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʢ',
+            [Consonant, Fricative, Epiglottal, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // Epiglottal stop
+        table.insert(
+            'ʡ',
+            [Consonant, Stop, Epiglottal, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+
+        // ========================================================================
+        // Additional IPA Consonants (Tap, Trill, Ejective, Implosive, Click)
+        // ========================================================================
+
+        // Alveolar tap
+        table.insert(
+            'ɾ',
+            [Consonant, Tap, Alveolar, Voiced].into_iter().collect(),
+        );
+
+        // Bilabial trill
+        table.insert(
+            'ʙ',
+            [Consonant, Trill, Bilabial, Voiced].into_iter().collect(),
+        );
+
+        // Alveolar trill (Spanish rr)
+        // Note: 'r' is already in table as approximant; some dialects use trill
+        // table.insert('r', [Consonant, Trill, Alveolar, Voiced].into_iter().collect());
+
+        // Ejective marker
+        table.insert('ʼ', [Ejective].into_iter().collect());
+
+        // Implosives
+        table.insert(
+            'ɓ',
+            [Consonant, Stop, Bilabial, Voiced, Implosive]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ɗ',
+            [Consonant, Stop, Alveolar, Voiced, Implosive]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ɠ',
+            [Consonant, Stop, Velar, Voiced, Implosive]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʄ',
+            [Consonant, Stop, Palatal, Voiced, Implosive]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʛ',
+            [Consonant, Stop, Uvular, Voiced, Implosive]
+                .into_iter()
+                .collect(),
+        );
+
+        // Clicks (bilabial, dental, alveolar, palatal, lateral)
+        table.insert('ʘ', [Consonant, Click, Bilabial].into_iter().collect());
+        table.insert('ǀ', [Consonant, Click, Dental].into_iter().collect());
+        table.insert('ǃ', [Consonant, Click, Alveolar].into_iter().collect());
+        table.insert('ǂ', [Consonant, Click, Palatal].into_iter().collect());
+        table.insert('ǁ', [Consonant, Click, Lateral].into_iter().collect());
+
+        // ========================================================================
+        // Additional IPA Vowels (completeness)
+        // ========================================================================
+
+        // Schwa and near-open central
+        table.insert('ə', [Vowel, Mid, Central, Unrounded].into_iter().collect());
+        table.insert('ɐ', [Vowel, Low, Central, Unrounded].into_iter().collect());
+
+        // Near-close vowels
+        table.insert('ɪ', [Vowel, High, Front, Unrounded].into_iter().collect());
+        table.insert('ʏ', [Vowel, High, Front, Rounded].into_iter().collect());
+        table.insert('ʊ', [Vowel, High, Back, Rounded].into_iter().collect());
+
+        // Open-mid vowels
+        table.insert('ɛ', [Vowel, Mid, Front, Unrounded].into_iter().collect());
+        table.insert('œ', [Vowel, Mid, Front, Rounded].into_iter().collect());
+        table.insert('ɔ', [Vowel, Mid, Back, Rounded].into_iter().collect());
+        table.insert('ʌ', [Vowel, Mid, Back, Unrounded].into_iter().collect());
+
+        // Open vowels
+        table.insert('æ', [Vowel, Low, Front, Unrounded].into_iter().collect());
+        table.insert('ɑ', [Vowel, Low, Back, Unrounded].into_iter().collect());
+        table.insert('ɒ', [Vowel, Low, Back, Rounded].into_iter().collect());
+
+        // Close-mid vowels
+        table.insert('ø', [Vowel, Mid, Front, Rounded].into_iter().collect());
+        table.insert('ɤ', [Vowel, Mid, Back, Unrounded].into_iter().collect());
+
+        // Close vowels
+        table.insert('y', [Vowel, High, Front, Rounded].into_iter().collect());
+        table.insert('ɯ', [Vowel, High, Back, Unrounded].into_iter().collect());
+        table.insert('ɨ', [Vowel, High, Central, Unrounded].into_iter().collect());
+        table.insert('ʉ', [Vowel, High, Central, Rounded].into_iter().collect());
+
+        // Mid central vowels
+        table.insert('ɘ', [Vowel, Mid, Central, Unrounded].into_iter().collect());
+        table.insert('ɵ', [Vowel, Mid, Central, Rounded].into_iter().collect());
+
+        // Open-mid central
+        table.insert('ɜ', [Vowel, Mid, Central, Unrounded].into_iter().collect());
+        table.insert('ɞ', [Vowel, Mid, Central, Rounded].into_iter().collect());
+
+        // Near-open front
+        table.insert('ɶ', [Vowel, Low, Front, Rounded].into_iter().collect());
+
+        // ========================================================================
+        // Palatal Consonants (IPA completeness)
+        // ========================================================================
+
+        // Palatal stops
+        table.insert(
+            'c',
+            [Consonant, Stop, Palatal, Voiceless].into_iter().collect(),
+        );
+        table.insert(
+            'ɟ',
+            [Consonant, Stop, Palatal, Voiced].into_iter().collect(),
+        );
+
+        // Palatal nasal
+        table.insert(
+            'ɲ',
+            [Consonant, Nasal, Palatal, Voiced].into_iter().collect(),
+        );
+
+        // Palatal fricatives
+        table.insert(
+            'ç',
+            [Consonant, Fricative, Palatal, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʝ',
+            [Consonant, Fricative, Palatal, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // Palatal lateral
+        table.insert(
+            'ʎ',
+            [Consonant, Approximant, Lateral, Palatal, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // Palatal approximant
+        table.insert(
+            'j',
+            [Consonant, Approximant, Palatal, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // ========================================================================
+        // PostAlveolar/Alveopalatal Fricatives
+        // ========================================================================
+
+        // PostAlveolar fricatives (English sh, zh)
+        table.insert(
+            'ʃ',
+            [Consonant, Fricative, PostAlveolar, Voiceless, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʒ',
+            [Consonant, Fricative, PostAlveolar, Voiced, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+
+        // Alveopalatal fricatives (Mandarin x, Japanese sh)
+        table.insert(
+            'ɕ',
+            [Consonant, Fricative, PostAlveolar, Voiceless, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ʑ',
+            [Consonant, Fricative, PostAlveolar, Voiced, Sibilant]
+                .into_iter()
+                .collect(),
+        );
+
+        // ========================================================================
+        // Lateral Fricatives (Welsh, Zulu)
+        // ========================================================================
+
+        table.insert(
+            'ɬ',
+            [Consonant, Fricative, Lateral, Alveolar, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ɮ',
+            [Consonant, Fricative, Lateral, Alveolar, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // ========================================================================
+        // Glottal Stop
+        // ========================================================================
+
+        table.insert(
+            'ʔ',
+            [Consonant, Stop, Glottal, Voiceless].into_iter().collect(),
+        );
+
+        // ========================================================================
+        // Dental Fricatives (English th)
+        // ========================================================================
+
+        table.insert(
+            'θ',
+            [Consonant, Fricative, Dental, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'ð',
+            [Consonant, Fricative, Dental, Voiced].into_iter().collect(),
+        );
+
+        // ========================================================================
+        // Labiodental Approximant
+        // ========================================================================
+
+        table.insert(
+            'ʋ',
+            [Consonant, Approximant, Labiodental, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        // ========================================================================
+        // Bilabial Fricatives
+        // ========================================================================
+
+        table.insert(
+            'ɸ',
+            [Consonant, Fricative, Bilabial, Voiceless]
+                .into_iter()
+                .collect(),
+        );
+        table.insert(
+            'β',
+            [Consonant, Fricative, Bilabial, Voiced]
+                .into_iter()
+                .collect(),
+        );
+
+        table
+    })
+}
 
 /// Reverse index from features to characters.
-static FEATURE_INDEX: LazyLock<HashMap<PhoneticFeature, FxHashSet<char>>> = LazyLock::new(|| {
-    let mut index: HashMap<PhoneticFeature, FxHashSet<char>> = HashMap::new();
+static FEATURE_INDEX: OnceLock<HashMap<PhoneticFeature, FxHashSet<char>>> = OnceLock::new();
 
-    for (c, features) in FEATURE_TABLE.iter() {
-        for feature in features {
-            index.entry(*feature).or_default().insert(*c);
+fn feature_index() -> &'static HashMap<PhoneticFeature, FxHashSet<char>> {
+    FEATURE_INDEX.get_or_init(|| {
+        let mut index: HashMap<PhoneticFeature, FxHashSet<char>> = HashMap::new();
+
+        for (c, features) in feature_table().iter() {
+            for feature in features {
+                index.entry(*feature).or_default().insert(*c);
+            }
         }
-    }
 
-    index
-});
+        index
+    })
+}
 
 /// Get phonetic features for a character.
 ///
 /// Returns an empty set for unknown characters.
 pub fn get_features(c: char) -> FxHashSet<PhoneticFeature> {
-    FEATURE_TABLE.get(&c).cloned().unwrap_or_default()
+    feature_table().get(&c).cloned().unwrap_or_default()
 }
 
 /// Get all characters that have ALL of the specified features.
@@ -917,11 +925,14 @@ pub fn chars_with_features(features: &[PhoneticFeature]) -> FxHashSet<char> {
     }
 
     // Start with chars having the first feature
-    let mut result: FxHashSet<char> = FEATURE_INDEX.get(&features[0]).cloned().unwrap_or_default();
+    let mut result: FxHashSet<char> = feature_index()
+        .get(&features[0])
+        .cloned()
+        .unwrap_or_default();
 
     // Intersect with chars having each subsequent feature
     for feature in &features[1..] {
-        if let Some(chars) = FEATURE_INDEX.get(feature) {
+        if let Some(chars) = feature_index().get(feature) {
             result.retain(|c| chars.contains(c));
         } else {
             return FxHashSet::default();
@@ -938,7 +949,7 @@ pub fn chars_with_any_feature(features: &[PhoneticFeature]) -> FxHashSet<char> {
     let mut result = FxHashSet::default();
 
     for feature in features {
-        if let Some(chars) = FEATURE_INDEX.get(feature) {
+        if let Some(chars) = feature_index().get(feature) {
             result.extend(chars.iter());
         }
     }
@@ -963,7 +974,7 @@ pub fn get_similar_chars(c: char) -> FxHashSet<char> {
     let mut result = FxHashSet::default();
 
     for feature in features {
-        if let Some(chars) = FEATURE_INDEX.get(&feature) {
+        if let Some(chars) = feature_index().get(&feature) {
             result.extend(chars.iter());
         }
     }

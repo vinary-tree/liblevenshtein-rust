@@ -114,7 +114,7 @@ pub trait SyllableParser {
     ) -> Self::Error;
 
     /// Create an error from a lexer error.
-    fn from_lexer_error(&self, err: <Self::Lexer as LexerLike>::Error) -> Self::Error;
+    fn map_lexer_error(&self, err: <Self::Lexer as LexerLike>::Error) -> Self::Error;
 }
 
 /// Trait for parsers that support context expression parsing.

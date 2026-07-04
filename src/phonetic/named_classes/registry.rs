@@ -1,16 +1,18 @@
 //! The built-in named phonetic-class registry.
 //!
 //! Defines [`NamedClass`] and the `NAMED_CLASSES` table that maps a class name
-//! (e.g. `vowel`, `nasal`, `voiced`) to its set of [`PhonePattern`]s, lazily initialised
-//! once via [`std::sync::LazyLock`]. Looked up by [`super::lookup`] when resolving a
-//! named class referenced from a phonetic rule or `.llre` pattern.
+//! (e.g. `vowel`, `nasal`, `voiced`) to its set of [`PhonePattern`]s, lazily
+//! initialised once via [`std::sync::OnceLock`]. Looked up by [`super::lookup`]
+//! when resolving a named class referenced from a phonetic rule or `.llre`
+//! pattern.
 
 // ============================================================================
 // Named Classes Registry
 // ============================================================================
 
 use std::collections::HashMap;
-use std::sync::LazyLock;
+use std::ops::Deref;
+use std::sync::OnceLock;
 
 use super::phone_pattern::PhonePattern;
 
@@ -27,10 +29,48 @@ pub struct NamedClass {
     pub description: &'static str,
 }
 
+/// Lazily initialized built-in named-class registry.
+///
+/// This wrapper keeps call sites ergonomic (`NAMED_CLASSES.get(...)`) while
+/// using [`OnceLock`], which is available at the crate's declared Rust 1.70
+/// minimum supported version.
+pub struct NamedClassRegistry {
+    inner: OnceLock<HashMap<&'static str, NamedClass>>,
+}
+
+impl NamedClassRegistry {
+    /// Create an empty lazy registry.
+    pub const fn new() -> Self {
+        Self {
+            inner: OnceLock::new(),
+        }
+    }
+
+    fn get_or_init(&self) -> &HashMap<&'static str, NamedClass> {
+        self.inner.get_or_init(build_named_classes)
+    }
+}
+
+impl Default for NamedClassRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Deref for NamedClassRegistry {
+    type Target = HashMap<&'static str, NamedClass>;
+
+    fn deref(&self) -> &Self::Target {
+        self.get_or_init()
+    }
+}
+
 /// Built-in named phonetic classes.
 ///
 /// Access classes via [`get_named_class`] which handles case-insensitive lookup.
-pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock::new(|| {
+pub static NAMED_CLASSES: NamedClassRegistry = NamedClassRegistry::new();
+
+fn build_named_classes() -> HashMap<&'static str, NamedClass> {
     use PhonePattern::{Char, Digraph, Hexagraph, Pentagraph, Tetragraph, Trigraph};
 
     let mut m = HashMap::new();
@@ -2422,4 +2462,4 @@ pub static NAMED_CLASSES: LazyLock<HashMap<&'static str, NamedClass>> = LazyLock
     });
 
     m
-});
+}

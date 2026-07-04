@@ -455,7 +455,7 @@ impl ContextExpr {
     }
 
     /// Create a NOT expression.
-    pub fn not(inner: ContextExpr) -> Self {
+    pub fn negate(inner: ContextExpr) -> Self {
         ContextExpr::Not(Box::new(inner))
     }
 
@@ -1019,7 +1019,7 @@ impl ContextExprByte {
     }
 
     /// Create a NOT expression.
-    pub fn not(inner: ContextExprByte) -> Self {
+    pub fn negate(inner: ContextExprByte) -> Self {
         ContextExprByte::Not(Box::new(inner))
     }
 

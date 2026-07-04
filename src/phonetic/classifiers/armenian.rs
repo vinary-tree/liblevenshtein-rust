@@ -54,26 +54,21 @@ static ARMENIAN_VOWELS: &[char] = &[
 
 impl VowelClassifier for ArmenianClassifier {
     fn is_vowel(&self, c: char) -> bool {
-        let code = c as u32;
-        match code {
-            // Uppercase vowels
-            0x0531 => true, // Ա (ayb) - a
-            0x0535 => true, // Delays (ech) - e/ye
-            0x0537 => true, // Է (e) - e
-            0x053B => true, // Delays (ini) - i
-            0x0548 => true, // Ո (oh) - o/vo
-            0x0555 => true, // Օ (o) - o
-
-            // Lowercase vowels
-            0x0561 => true, // ա (ayb) - a
-            0x0565 => true, // ե (ech) - e/ye
-            0x0567 => true, // է (e) - e
-            0x056B => true, // delays (ini) - i
-            0x0578 => true, // delays (oh) - o/vo
-            0x0585 => true, // delays (o) - o
-
-            _ => false,
-        }
+        matches!(
+            c,
+            '\u{0531}'
+                | '\u{0535}'
+                | '\u{0537}'
+                | '\u{053B}'
+                | '\u{0548}'
+                | '\u{0555}'
+                | '\u{0561}'
+                | '\u{0565}'
+                | '\u{0567}'
+                | '\u{056B}'
+                | '\u{0578}'
+                | '\u{0585}'
+        )
     }
 
     fn script_name(&self) -> &'static str {
@@ -86,77 +81,8 @@ impl VowelClassifier for ArmenianClassifier {
 
     fn is_consonant(&self, c: char) -> bool {
         let code = c as u32;
-        match code {
-            // Uppercase consonants (32 letters)
-            0x0532 => true, // Delays (ben) - b/p
-            0x0533 => true, // Delays (gim) - g/k
-            0x0534 => true, // Delays (da) - d/t
-            0x0536 => true, // Delays (za) - z
-            0x0538 => true, // Ը (et) - schwa
-            0x0539 => true, // Delays (to) - t aspirated
-            0x053A => true, // Ժ (zhe) - zh
-            0x053C => true, // Delays (liwn) - l
-            0x053D => true, // Delays (xe) - kh
-            0x053E => true, // Delays (tsa) - ts/dz
-            0x053F => true, // Delays (ken) - k/g
-            0x0540 => true, // Delays (ho) - h
-            0x0541 => true, // Ձ (ja) - dz/ts
-            0x0542 => true, // Delays (ghat) - gh
-            0x0543 => true, // Ճ (che) - ch/j
-            0x0544 => true, // Delays (men) - m
-            0x0545 => true, // Delays (yi) - y/h
-            0x0546 => true, // Ն (nu) - n
-            0x0547 => true, // Delays (sha) - sh
-            0x0549 => true, // Delays (cha) - ch aspirated
-            0x054A => true, // Delays (pe) - p/b
-            0x054B => true, // Ջ (je) - j/ch
-            0x054C => true, // Delays (ra) - rr trilled
-            0x054D => true, // Ս (se) - s
-            0x054E => true, // Delays (vew) - v
-            0x054F => true, // Delays (tiwn) - t/d
-            0x0550 => true, // Delays (re) - r
-            0x0551 => true, // Delays (co) - ts
-            0x0552 => true, // Delays (wiwn) - w (historical)
-            0x0553 => true, // Փ (piwr) - p aspirated
-            0x0554 => true, // Ք (ke) - k aspirated
-            0x0556 => true, // Ֆ (fe) - f
-
-            // Lowercase consonants (32 letters)
-            0x0562 => true, // delays (ben)
-            0x0563 => true, // delays (gim)
-            0x0564 => true, // delays (da)
-            0x0566 => true, // delays (za)
-            0x0568 => true, // delays (et)
-            0x0569 => true, // delays (to)
-            0x056A => true, // ժ (zhe)
-            0x056C => true, // delays (liwn)
-            0x056D => true, // delays (xe)
-            0x056E => true, // delays (tsa)
-            0x056F => true, // delays (ken)
-            0x0570 => true, // delays (ho)
-            0x0571 => true, // ձ (ja)
-            0x0572 => true, // delays (ghat)
-            0x0573 => true, // ճ (che)
-            0x0574 => true, // delays (men)
-            0x0575 => true, // delays (yi)
-            0x0576 => true, // delays (nu)
-            0x0577 => true, // delays (sha)
-            0x0579 => true, // delays (cha)
-            0x057A => true, // delays (pe)
-            0x057B => true, // ջ (je)
-            0x057C => true, // delays (ra)
-            0x057D => true, // delays (se)
-            0x057E => true, // delays (vew)
-            0x057F => true, // delays (tiwn)
-            0x0580 => true, // delays (re)
-            0x0581 => true, // delays (co)
-            0x0582 => true, // delays (wiwn)
-            0x0583 => true, // delays (piwr)
-            0x0584 => true, // delays (ke)
-            0x0586 => true, // delays (fe)
-
-            _ => false,
-        }
+        ((0x0531..=0x0556).contains(&code) || (0x0561..=0x0586).contains(&code))
+            && !self.is_vowel(c)
     }
 }
 

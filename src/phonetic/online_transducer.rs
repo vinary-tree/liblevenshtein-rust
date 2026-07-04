@@ -35,7 +35,7 @@
 use std::collections::VecDeque;
 
 use super::application::can_apply_at_char;
-use super::types::{ContextChar, PhoneChar, RewriteRuleChar};
+use super::types::{compare_rule_weight_desc, ContextChar, PhoneChar, RewriteRuleChar};
 
 /// Online phonetic transducer for streaming normalization.
 ///
@@ -79,11 +79,7 @@ impl OnlinePhoneticTransducerChar {
     /// Rules are automatically sorted by weight (highest first) for priority ordering.
     pub fn new(mut rules: Vec<RewriteRuleChar>) -> Self {
         // Sort rules by weight descending (higher weight = higher priority)
-        rules.sort_by(|a, b| {
-            b.weight
-                .partial_cmp(&a.weight)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        rules.sort_by(compare_rule_weight_desc);
 
         // Compute max pattern length
         let max_pattern_len = rules.iter().map(|r| r.pattern.len()).max().unwrap_or(0);
@@ -95,10 +91,14 @@ impl OnlinePhoneticTransducerChar {
             .max()
             .unwrap_or(0);
 
+        let input_capacity =
+            Self::input_buffer_capacity(max_pattern_len, max_lookahead).unwrap_or(0);
+        let output_capacity = Self::output_buffer_capacity(max_pattern_len).unwrap_or(0);
+
         Self {
             rules,
-            input_buffer: Vec::with_capacity(max_pattern_len + max_lookahead + 1),
-            output_buffer: VecDeque::with_capacity(max_pattern_len * 2),
+            input_buffer: Vec::with_capacity(input_capacity),
+            output_buffer: VecDeque::with_capacity(output_capacity),
             max_pattern_len,
             max_lookahead,
             at_end: false,
@@ -106,6 +106,21 @@ impl OnlinePhoneticTransducerChar {
             chars_processed: 0,
             rules_applied: 0,
         }
+    }
+
+    #[inline]
+    fn input_buffer_capacity(max_pattern_len: usize, max_lookahead: usize) -> Option<usize> {
+        max_pattern_len.checked_add(max_lookahead)?.checked_add(1)
+    }
+
+    #[inline]
+    fn output_buffer_capacity(max_pattern_len: usize) -> Option<usize> {
+        max_pattern_len.checked_mul(2)
+    }
+
+    #[inline]
+    fn required_context_len(&self) -> Option<usize> {
+        self.max_pattern_len.checked_add(self.max_lookahead)
     }
 
     /// Determine how much lookahead a context requires.
@@ -161,6 +176,8 @@ impl OnlinePhoneticTransducerChar {
 
     /// Process the input buffer, applying rules and emitting output.
     fn process_buffer(&mut self) {
+        let required_lookahead = self.required_context_len().unwrap_or(usize::MAX);
+
         // Keep processing until no more progress can be made
         loop {
             let mut applied = false;
@@ -170,7 +187,6 @@ impl OnlinePhoneticTransducerChar {
             while pos < self.input_buffer.len() {
                 // Check if we have enough lookahead for context
                 let remaining = self.input_buffer.len() - pos;
-                let required_lookahead = self.max_pattern_len + self.max_lookahead;
 
                 if remaining < required_lookahead && !self.at_end {
                     // Need more characters for context - emit safe prefix and wait
@@ -179,27 +195,17 @@ impl OnlinePhoneticTransducerChar {
 
                 // Try to apply a rule at this position
                 if let Some((rule_idx, pattern_len)) = self.find_matching_rule(pos) {
-                    // Collect characters to emit before the match point
-                    let prefix_chars: Vec<char> = (0..pos).map(|i| self.input_buffer[i]).collect();
-
-                    // Collect replacement characters
-                    let replacement_chars: Vec<char> = self.rules[rule_idx]
-                        .replacement
-                        .iter()
-                        .filter_map(Self::phone_to_char)
-                        .collect();
-
-                    // Now emit everything (no longer borrowing self.input_buffer or self.rules)
-                    for c in prefix_chars {
-                        self.emit_char(c);
-                    }
-                    for c in replacement_chars {
-                        self.emit_char(c);
-                    }
+                    self.output_buffer.extend(self.input_buffer.drain(..pos));
+                    self.output_buffer.extend(
+                        self.rules[rule_idx]
+                            .replacement
+                            .iter()
+                            .filter_map(Self::phone_to_char),
+                    );
 
                     // Remove processed characters from buffer and track position
                     let remove_count = pos + pattern_len;
-                    self.input_buffer.drain(0..remove_count);
+                    self.input_buffer.drain(..pattern_len);
                     self.buffer_start_pos += remove_count;
 
                     self.rules_applied += 1;
@@ -223,12 +229,8 @@ impl OnlinePhoneticTransducerChar {
         // Try to apply rules one more time with at_end = true
         self.process_buffer();
 
-        // Collect remaining characters first to avoid borrow conflict
-        let remaining: Vec<char> = self.input_buffer.drain(..).collect();
-        let count = remaining.len();
-        for c in remaining {
-            self.emit_char(c);
-        }
+        let count = self.input_buffer.len();
+        self.output_buffer.extend(self.input_buffer.drain(..));
         self.buffer_start_pos += count;
     }
 
@@ -265,14 +267,8 @@ impl OnlinePhoneticTransducerChar {
 
         // For streaming, we may need to defer context evaluation
         // if we don't have enough lookahead
-        if let Some(ctx_result) =
-            self.context_matches_in_buffer(&rule.context, phones, pos, rule.pattern.len())
-        {
-            ctx_result
-        } else {
-            // Need more context - can't determine yet
-            false
-        }
+        self.context_matches_in_buffer(&rule.context, phones, pos, rule.pattern.len())
+            .unwrap_or_default()
     }
 
     /// Evaluate a context condition in the buffer.
@@ -449,11 +445,6 @@ impl OnlinePhoneticTransducerChar {
         }
     }
 
-    /// Emit a character to the output buffer.
-    fn emit_char(&mut self, c: char) {
-        self.output_buffer.push_back(c);
-    }
-
     /// Emit characters from the buffer prefix that cannot start any rule pattern.
     fn emit_safe_prefix(&mut self) {
         if self.input_buffer.is_empty() {
@@ -465,10 +456,8 @@ impl OnlinePhoneticTransducerChar {
         let safe_len = self.find_safe_prefix_length();
 
         // Emit the safe prefix
-        for i in 0..safe_len {
-            self.emit_char(self.input_buffer[i]);
-        }
-        self.input_buffer.drain(0..safe_len);
+        self.output_buffer
+            .extend(self.input_buffer.drain(..safe_len));
         self.buffer_start_pos += safe_len;
     }
 
@@ -481,7 +470,7 @@ impl OnlinePhoneticTransducerChar {
         }
 
         // If we have enough context and no rule matches, the first char is safe
-        let required_context = self.max_pattern_len + self.max_lookahead;
+        let required_context = self.required_context_len().unwrap_or(usize::MAX);
         if self.input_buffer.len() >= required_context || self.at_end {
             // We have enough context - if no rule matched at position 0,
             // the first character is safe to emit
@@ -572,6 +561,40 @@ mod tests {
     }
 
     #[test]
+    fn capacity_helpers_reject_overflow() {
+        assert_eq!(
+            OnlinePhoneticTransducerChar::input_buffer_capacity(2, 1),
+            Some(4)
+        );
+        assert_eq!(
+            OnlinePhoneticTransducerChar::input_buffer_capacity(usize::MAX, 0),
+            None
+        );
+        assert_eq!(
+            OnlinePhoneticTransducerChar::input_buffer_capacity(usize::MAX - 1, 1),
+            None
+        );
+        assert_eq!(
+            OnlinePhoneticTransducerChar::output_buffer_capacity(3),
+            Some(6)
+        );
+        assert_eq!(
+            OnlinePhoneticTransducerChar::output_buffer_capacity(usize::MAX),
+            None
+        );
+
+        let mut transducer = OnlinePhoneticTransducerChar::new(vec![make_rule(
+            "ph",
+            "f",
+            ContextChar::BeforeVowel(vec![]),
+        )]);
+        assert_eq!(transducer.required_context_len(), Some(3));
+        transducer.max_pattern_len = usize::MAX;
+        transducer.max_lookahead = 1;
+        assert_eq!(transducer.required_context_len(), None);
+    }
+
+    #[test]
     fn test_empty_input() {
         let rules = vec![make_rule("ph", "f", ContextChar::Anywhere)];
         let mut transducer = OnlinePhoneticTransducerChar::new(rules);
@@ -596,6 +619,19 @@ mod tests {
 
         let result = transducer.normalize("phone");
         assert_eq!(result, "fone");
+    }
+
+    #[test]
+    fn test_prefix_with_multi_char_replacement() {
+        let rules = vec![
+            make_rule("x", "ks", ContextChar::Anywhere),
+            make_rule("ph", "f", ContextChar::Anywhere),
+        ];
+        let mut transducer = OnlinePhoneticTransducerChar::new(rules);
+
+        let result = transducer.normalize("taxiphone");
+        assert_eq!(result, "taksifone");
+        assert_eq!(transducer.stats(), (9, 2));
     }
 
     #[test]

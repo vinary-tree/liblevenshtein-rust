@@ -107,12 +107,13 @@ pub fn save<P: AsRef<Path>>(ruleset: &RuleSet, path: P) -> LLevResult<()> {
     })?;
 
     // Serialize rule set
-    let encoded = bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
-        LLevError::new(LLevErrorKind::IoError(format!(
-            "Failed to serialize ruleset: {}",
-            e
-        )))
-    })?;
+    let encoded =
+        bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
+            LLevError::new(LLevErrorKind::IoError(format!(
+                "Failed to serialize ruleset: {}",
+                e
+            )))
+        })?;
     writer.write_all(&encoded).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to write ruleset: {}",
@@ -192,12 +193,14 @@ pub fn load<P: AsRef<Path>>(path: P) -> LLevResult<RuleSet> {
         )))
     })?;
 
-    bincode::serde::decode_from_slice(&data, bincode::config::legacy()).map(|(__decoded, _)| __decoded).map_err(|e| {
-        LLevError::new(LLevErrorKind::IoError(format!(
-            "Failed to deserialize ruleset: {}",
-            e
-        )))
-    })
+    bincode::serde::decode_from_slice(&data, bincode::config::legacy())
+        .map(|(__decoded, _)| __decoded)
+        .map_err(|e| {
+            LLevError::new(LLevErrorKind::IoError(format!(
+                "Failed to deserialize ruleset: {}",
+                e
+            )))
+        })
 }
 
 // ============================================================================
@@ -247,12 +250,13 @@ pub fn save_char<P: AsRef<Path>>(ruleset: &RuleSetChar, path: P) -> LLevResult<(
     })?;
 
     // Serialize rule set
-    let encoded = bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
-        LLevError::new(LLevErrorKind::IoError(format!(
-            "Failed to serialize ruleset: {}",
-            e
-        )))
-    })?;
+    let encoded =
+        bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
+            LLevError::new(LLevErrorKind::IoError(format!(
+                "Failed to serialize ruleset: {}",
+                e
+            )))
+        })?;
     writer.write_all(&encoded).map_err(|e| {
         LLevError::new(LLevErrorKind::IoError(format!(
             "Failed to write ruleset: {}",
@@ -332,12 +336,14 @@ pub fn load_char<P: AsRef<Path>>(path: P) -> LLevResult<RuleSetChar> {
         )))
     })?;
 
-    bincode::serde::decode_from_slice(&data, bincode::config::legacy()).map(|(__decoded, _)| __decoded).map_err(|e| {
-        LLevError::new(LLevErrorKind::IoError(format!(
-            "Failed to deserialize ruleset: {}",
-            e
-        )))
-    })
+    bincode::serde::decode_from_slice(&data, bincode::config::legacy())
+        .map(|(__decoded, _)| __decoded)
+        .map_err(|e| {
+            LLevError::new(LLevErrorKind::IoError(format!(
+                "Failed to deserialize ruleset: {}",
+                e
+            )))
+        })
 }
 
 // ============================================================================
@@ -363,12 +369,13 @@ pub fn to_bytes(ruleset: &RuleSet) -> LLevResult<Vec<u8>> {
     data.push(VERSION);
 
     // Serialize rule set
-    let encoded = bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
-        LLevError::new(LLevErrorKind::IoError(format!(
-            "Failed to serialize ruleset: {}",
-            e
-        )))
-    })?;
+    let encoded =
+        bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
+            LLevError::new(LLevErrorKind::IoError(format!(
+                "Failed to serialize ruleset: {}",
+                e
+            )))
+        })?;
     data.extend_from_slice(&encoded);
 
     Ok(data)
@@ -403,12 +410,14 @@ pub fn from_bytes(data: &[u8]) -> LLevResult<RuleSet> {
     }
 
     // Deserialize rule set
-    bincode::serde::decode_from_slice(&data[HEADER_SIZE..], bincode::config::legacy()).map(|(__decoded, _)| __decoded).map_err(|e| {
-        LLevError::new(LLevErrorKind::IoError(format!(
-            "Failed to deserialize ruleset: {}",
-            e
-        )))
-    })
+    bincode::serde::decode_from_slice(&data[HEADER_SIZE..], bincode::config::legacy())
+        .map(|(__decoded, _)| __decoded)
+        .map_err(|e| {
+            LLevError::new(LLevErrorKind::IoError(format!(
+                "Failed to deserialize ruleset: {}",
+                e
+            )))
+        })
 }
 
 /// Serialize a character-level rule set to a byte vector.
@@ -422,12 +431,13 @@ pub fn to_bytes_char(ruleset: &RuleSetChar) -> LLevResult<Vec<u8>> {
     data.push(VERSION);
 
     // Serialize rule set
-    let encoded = bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
-        LLevError::new(LLevErrorKind::IoError(format!(
-            "Failed to serialize ruleset: {}",
-            e
-        )))
-    })?;
+    let encoded =
+        bincode::serde::encode_to_vec(ruleset, bincode::config::legacy()).map_err(|e| {
+            LLevError::new(LLevErrorKind::IoError(format!(
+                "Failed to serialize ruleset: {}",
+                e
+            )))
+        })?;
     data.extend_from_slice(&encoded);
 
     Ok(data)
@@ -462,12 +472,14 @@ pub fn from_bytes_char(data: &[u8]) -> LLevResult<RuleSetChar> {
     }
 
     // Deserialize rule set
-    bincode::serde::decode_from_slice(&data[HEADER_SIZE..], bincode::config::legacy()).map(|(__decoded, _)| __decoded).map_err(|e| {
-        LLevError::new(LLevErrorKind::IoError(format!(
-            "Failed to deserialize ruleset: {}",
-            e
-        )))
-    })
+    bincode::serde::decode_from_slice(&data[HEADER_SIZE..], bincode::config::legacy())
+        .map(|(__decoded, _)| __decoded)
+        .map_err(|e| {
+            LLevError::new(LLevErrorKind::IoError(format!(
+                "Failed to deserialize ruleset: {}",
+                e
+            )))
+        })
 }
 
 // ============================================================================
@@ -478,50 +490,14 @@ pub fn from_bytes_char(data: &[u8]) -> LLevResult<RuleSetChar> {
 mod tests {
     use super::*;
     use crate::phonetic::llev::parser::parse_str;
-    use std::path::{Path, PathBuf};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-
-    static SCRATCH_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-    struct ScratchDir {
-        path: PathBuf,
-    }
-
-    impl ScratchDir {
-        fn new() -> Self {
-            let id = SCRATCH_COUNTER.fetch_add(1, Ordering::Relaxed);
-            let path = PathBuf::from("target")
-                .join("test-scratch")
-                .join("llev-compiled")
-                .join(format!("{}-{}", std::process::id(), id));
-            let _ = std::fs::remove_dir_all(&path);
-            std::fs::create_dir_all(&path).expect("failed to create scratch dir");
-            Self { path }
-        }
-
-        fn path(&self) -> &Path {
-            &self.path
-        }
-    }
-
-    impl Drop for ScratchDir {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.path);
-            if let Some(parent) = self.path.parent() {
-                let _ = std::fs::remove_dir(parent);
-                if let Some(root) = parent.parent() {
-                    let _ = std::fs::remove_dir(root);
-                }
-            }
-        }
-    }
+    use tempfile::TempDir;
 
     #[test]
     fn test_save_load_roundtrip() {
         let file = parse_str("ph -> f; gh -> ;").expect("parse failed");
         let ruleset = RuleSet::from_llev(&file).expect("conversion failed");
 
-        let dir = ScratchDir::new();
+        let dir = TempDir::new().expect("failed to create scratch dir");
         let path = dir.path().join("test.llev.bin");
 
         save(&ruleset, &path).expect("save failed");
@@ -535,7 +511,7 @@ mod tests {
         let file = parse_str("ph -> f; gh -> ;").expect("parse failed");
         let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
 
-        let dir = ScratchDir::new();
+        let dir = TempDir::new().expect("failed to create scratch dir");
         let path = dir.path().join("test.llev.bin");
 
         save_char(&ruleset, &path).expect("save failed");
@@ -657,5 +633,37 @@ mod tests {
             }
             _ => panic!("Expected IoError"),
         }
+    }
+
+    // ========================================================================
+    // Non-ASCII regression tests (Phase 4 / item 1781)
+    //
+    // A char-level rule set (`RuleSetChar`) must preserve rules whose pattern or
+    // replacement contains multi-byte UTF-8 characters across the bincode
+    // round-trip, keeping both the rule count and the transformation behavior.
+    // ========================================================================
+
+    #[test]
+    fn test_bytes_char_roundtrip_non_ascii_rule() {
+        // The rule pattern `é` is a 2-byte UTF-8 literal. Round-tripping the
+        // ruleset must preserve the rule and its rewriting behavior.
+        let file = parse_str("é -> e;").expect("parse failed");
+        let ruleset = RuleSetChar::from_llev(&file).expect("conversion failed");
+        assert_eq!(ruleset.rules.len(), 1, "expected exactly one parsed rule");
+
+        // Capture pre-serialization behavior to compare after the round-trip.
+        let before_accent = ruleset.apply("é");
+        let before_word = ruleset.apply("café");
+
+        let data = to_bytes_char(&ruleset).expect("to_bytes_char failed");
+        let loaded = from_bytes_char(&data).expect("from_bytes_char failed");
+
+        // Rule count and behavior must both survive serialization.
+        assert_eq!(loaded.rules.len(), ruleset.rules.len());
+        assert_eq!(loaded.apply("é"), before_accent);
+        assert_eq!(loaded.apply("café"), before_word);
+        // The accented character must actually be rewritten to its ASCII form.
+        assert_eq!(loaded.apply("é"), "e");
+        assert_eq!(loaded.apply("café"), "cafe");
     }
 }

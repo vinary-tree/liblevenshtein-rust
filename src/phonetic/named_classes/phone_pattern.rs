@@ -175,16 +175,8 @@ impl PhonePattern {
     }
 
     /// Check if this pattern matches a seven-character sequence.
-    pub fn matches_heptagraph(
-        &self,
-        c1: char,
-        c2: char,
-        c3: char,
-        c4: char,
-        c5: char,
-        c6: char,
-        c7: char,
-    ) -> bool {
+    pub fn matches_heptagraph(&self, chars: [char; 7]) -> bool {
+        let [c1, c2, c3, c4, c5, c6, c7] = chars;
         matches!(self, PhonePattern::Heptagraph(h1, h2, h3, h4, h5, h6, h7)
             if *h1 == c1 && *h2 == c2 && *h3 == c3 && *h4 == c4 && *h5 == c5 && *h6 == c6 && *h7 == c7)
     }

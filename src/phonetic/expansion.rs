@@ -37,6 +37,8 @@
 //! ```
 
 use crate::phonetic::types::{PhoneChar, RewriteRuleChar};
+use std::cmp::Reverse;
+use std::rc::Rc;
 
 /// Expand a normalized string into a regex pattern matching phonetic variants.
 ///
@@ -77,85 +79,54 @@ pub fn expand_phonetic_alternatives_char(input: &str, rules: &[RewriteRuleChar])
     let reverse_map = build_reverse_map(rules);
 
     // Use DP to find all possible expansions
-    let chars: Vec<char> = input.chars().collect();
+    let (chars, byte_indices) = chars_and_byte_indices(input);
     let n = chars.len();
 
     if n == 0 {
         return String::new();
     }
 
-    // dp[i] = set of all possible pattern strings that expand chars[0..i]
-    // We use Vec<String> to collect all alternative expansions
-    let mut dp: Vec<Vec<String>> = vec![Vec::new(); n + 1];
-    dp[0].push(String::new()); // Empty prefix has one expansion: empty string
+    // dp[i] = ids of all possible pattern-prefix nodes that expand chars[0..i].
+    // Prefix nodes avoid repeatedly cloning whole partial strings at each
+    // reachable position; complete strings are rendered once at the end.
+    let Some(dp_len) = one_extra_capacity(n) else {
+        return regex_escape(input);
+    };
+    let mut nodes = vec![ExpansionNode::root()];
+    let mut dp: Vec<Vec<usize>> = vec![Vec::new(); dp_len];
+    dp[0].push(0); // Empty prefix has one expansion: the root node.
 
     for i in 0..n {
         if dp[i].is_empty() {
             continue; // No way to reach this position
         }
 
-        let remaining = &input[char_byte_index(input, i)..];
-
-        // Collect all possible matches at this position
-        let mut matches_at_i: Vec<(usize, Vec<String>)> = Vec::new();
+        let remaining = &input[byte_indices[i]..];
+        let mut has_single = false;
 
         // Check all replacements (not just the longest)
-        for (replacement, originals) in &reverse_map {
-            if remaining.starts_with(replacement.as_str()) {
-                let len = replacement.chars().count();
-                let mut alternatives: Vec<String> =
-                    originals.iter().map(|s| regex_escape(s)).collect();
-
-                // Add the replacement itself as an alternative
-                let escaped_replacement = regex_escape(replacement);
-                if !alternatives.contains(&escaped_replacement) {
-                    alternatives.push(escaped_replacement);
+        for entry in &reverse_map {
+            if remaining.starts_with(entry.replacement.as_str()) {
+                has_single |= entry.replacement_char_len == 1;
+                let next_pos = i + entry.replacement_char_len;
+                if next_pos <= n {
+                    push_segment_nodes(&mut dp, &mut nodes, i, next_pos, &entry.segment);
                 }
-
-                matches_at_i.push((len, alternatives));
             }
         }
 
         // Always allow single character match (identity)
-        let single_char = regex_escape_char(chars[i]);
-        let mut has_single = false;
-        for (len, _) in &matches_at_i {
-            if *len == 1 {
-                has_single = true;
-                break;
-            }
-        }
         if !has_single {
-            matches_at_i.push((1, vec![single_char]));
-        }
-
-        // Clone prefixes to avoid borrow conflict
-        let prefixes_at_i: Vec<String> = dp[i].clone();
-
-        // Extend all paths from dp[i]
-        for (len, alternatives) in matches_at_i {
-            let next_pos = i + len;
-            if next_pos > n {
-                continue;
-            }
-
-            // Build the segment pattern
-            let segment = if alternatives.len() > 1 {
-                format!("({})", alternatives.join("|"))
-            } else {
-                alternatives[0].clone()
-            };
-
-            // Extend each existing expansion at position i
-            for prefix in &prefixes_at_i {
-                let new_expansion = format!("{}{}", prefix, segment);
-                dp[next_pos].push(new_expansion);
-            }
+            let single_char = regex_escape_char(chars[i]);
+            push_segment_nodes(&mut dp, &mut nodes, i, i + 1, &single_char);
         }
     }
 
     // Collect all complete expansions and deduplicate
-    let mut final_patterns: Vec<String> = dp[n].clone();
+    let mut final_patterns: Vec<String> = dp[n]
+        .iter()
+        .map(|&node_id| materialize_expansion(node_id, &nodes))
+        .collect();
     final_patterns.sort();
     final_patterns.dedup();
 
@@ -176,8 +147,59 @@ pub fn expand_phonetic_alternatives_char(input: &str, rules: &[RewriteRuleChar])
     format!("({})", final_patterns.join("|"))
 }
 
-/// A reverse mapping entry: replacement string → list of original patterns
-type ReverseMap = Vec<(String, Vec<String>)>;
+struct ReverseMapEntry {
+    replacement: String,
+    replacement_char_len: usize,
+    segment: String,
+}
+
+type ReverseMap = Vec<ReverseMapEntry>;
+
+struct ExpansionNode {
+    parent: Option<usize>,
+    segment: Rc<str>,
+    len: usize,
+}
+
+impl ExpansionNode {
+    fn root() -> Self {
+        Self {
+            parent: None,
+            segment: Rc::from(""),
+            len: 0,
+        }
+    }
+}
+
+#[inline]
+fn one_extra_capacity(len: usize) -> Option<usize> {
+    len.checked_add(1)
+}
+
+#[inline]
+fn escaped_regex_capacity(byte_len: usize) -> Option<usize> {
+    byte_len.checked_mul(2)
+}
+
+#[inline]
+fn expansion_node_len(parent_len: usize, segment_len: usize) -> Option<usize> {
+    parent_len.checked_add(segment_len)
+}
+
+fn alternation_segment_capacity<I>(
+    alternative_count: usize,
+    alternative_lengths: I,
+) -> Option<usize>
+where
+    I: IntoIterator<Item = usize>,
+{
+    let payload_len = alternative_lengths
+        .into_iter()
+        .try_fold(0usize, |total, len| total.checked_add(len))?;
+    let separator_count = alternative_count.saturating_sub(1);
+
+    payload_len.checked_add(separator_count)?.checked_add(2)
+}
 
 /// Build a reverse map from replacement strings to original patterns.
 ///
@@ -186,7 +208,7 @@ type ReverseMap = Vec<(String, Vec<String>)>;
 fn build_reverse_map(rules: &[RewriteRuleChar]) -> ReverseMap {
     use std::collections::HashMap;
 
-    let mut map: HashMap<String, Vec<String>> = HashMap::new();
+    let mut map: HashMap<String, Vec<String>> = HashMap::with_capacity(rules.len());
 
     for rule in rules {
         let original = phones_to_string(&rule.pattern);
@@ -198,9 +220,33 @@ fn build_reverse_map(rules: &[RewriteRuleChar]) -> ReverseMap {
         }
     }
 
-    // Convert to Vec and sort by replacement length (descending) for greedy matching
-    let mut entries: Vec<(String, Vec<String>)> = map.into_iter().collect();
-    entries.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    let mut entries: Vec<ReverseMapEntry> = map
+        .into_iter()
+        .map(|(replacement, originals)| {
+            let replacement_char_len = replacement.chars().count();
+            let mut alternatives: Vec<String> =
+                Vec::with_capacity(one_extra_capacity(originals.len()).unwrap_or(0));
+            alternatives.extend(originals.iter().map(|s| regex_escape(s)));
+
+            // Add the replacement itself as an alternative
+            let escaped_replacement = regex_escape(&replacement);
+            if !alternatives.contains(&escaped_replacement) {
+                alternatives.push(escaped_replacement);
+            }
+
+            ReverseMapEntry {
+                replacement,
+                replacement_char_len,
+                segment: segment_from_escaped_alternatives(alternatives),
+            }
+        })
+        .collect();
+    entries.sort_by_key(|entry| {
+        (
+            Reverse(entry.replacement_char_len),
+            Reverse(entry.replacement.len()),
+        )
+    });
 
     entries
 }
@@ -261,17 +307,95 @@ fn phones_to_string(phones: &[PhoneChar]) -> String {
     result
 }
 
-/// Get the byte index for a character position in a UTF-8 string.
+fn chars_and_byte_indices(s: &str) -> (Vec<char>, Vec<usize>) {
+    let char_count = s.chars().count();
+    let mut chars = Vec::with_capacity(char_count);
+    let mut byte_indices = Vec::with_capacity(one_extra_capacity(char_count).unwrap_or(0));
+
+    for (byte_index, ch) in s.char_indices() {
+        byte_indices.push(byte_index);
+        chars.push(ch);
+    }
+    byte_indices.push(s.len());
+
+    (chars, byte_indices)
+}
+
+#[cfg(test)]
 fn char_byte_index(s: &str, char_index: usize) -> usize {
-    s.char_indices()
-        .nth(char_index)
-        .map(|(i, _)| i)
-        .unwrap_or(s.len())
+    let (_, byte_indices) = chars_and_byte_indices(s);
+    byte_indices.get(char_index).copied().unwrap_or(s.len())
+}
+
+fn segment_from_escaped_alternatives(alternatives: Vec<String>) -> String {
+    if alternatives.len() == 1 {
+        return alternatives
+            .into_iter()
+            .next()
+            .expect("len==1 checked above");
+    }
+
+    let capacity =
+        alternation_segment_capacity(alternatives.len(), alternatives.iter().map(String::len))
+            .unwrap_or(0);
+    let mut segment = String::with_capacity(capacity);
+    segment.push('(');
+    for (index, alternative) in alternatives.iter().enumerate() {
+        if index > 0 {
+            segment.push('|');
+        }
+        segment.push_str(alternative);
+    }
+    segment.push(')');
+    segment
+}
+
+fn push_segment_nodes(
+    dp: &mut [Vec<usize>],
+    nodes: &mut Vec<ExpansionNode>,
+    current_pos: usize,
+    next_pos: usize,
+    segment: &str,
+) {
+    debug_assert!(current_pos < next_pos);
+
+    let (before_target, target_and_after) = dp.split_at_mut(next_pos);
+    let prefixes = &before_target[current_pos];
+    let target = &mut target_and_after[0];
+    target.reserve(prefixes.len());
+    let shared_segment: Rc<str> = Rc::from(segment);
+
+    for &parent in prefixes {
+        let node_id = nodes.len();
+        let parent_len = nodes[parent].len;
+        let len = expansion_node_len(parent_len, segment.len()).unwrap_or(0);
+        nodes.push(ExpansionNode {
+            parent: Some(parent),
+            segment: Rc::clone(&shared_segment),
+            len,
+        });
+        target.push(node_id);
+    }
+}
+
+fn materialize_expansion(node_id: usize, nodes: &[ExpansionNode]) -> String {
+    let mut parts = Vec::new();
+    let mut cursor = node_id;
+    while let Some(parent) = nodes[cursor].parent {
+        parts.push(nodes[cursor].segment.as_ref());
+        cursor = parent;
+    }
+
+    let mut expansion = String::with_capacity(nodes[node_id].len);
+    for segment in parts.into_iter().rev() {
+        expansion.push_str(segment);
+    }
+    expansion
 }
 
 /// Escape a string for use in a regex pattern.
 fn regex_escape(s: &str) -> String {
-    let mut escaped = String::with_capacity(s.len() * 2);
+    let mut escaped = String::with_capacity(escaped_regex_capacity(s.len()).unwrap_or(0));
     for c in s.chars() {
         escaped.push_str(&regex_escape_char(c));
     }
@@ -305,48 +429,20 @@ fn regex_escape_char(c: char) -> String {
 pub fn expand_with_costs(input: &str, rules: &[RewriteRuleChar]) -> (String, f64) {
     let reverse_map = build_reverse_map_with_costs(rules);
 
-    let mut pattern = String::new();
+    let mut pattern = String::with_capacity(input.len());
     let mut total_cost = 0.0;
-    let chars: Vec<char> = input.chars().collect();
+    let (chars, byte_indices) = chars_and_byte_indices(input);
     let mut i = 0;
 
     while i < chars.len() {
-        let remaining = &input[char_byte_index(input, i)..];
+        let remaining = &input[byte_indices[i]..];
         let mut matched = false;
 
-        for (replacement, originals_with_costs) in &reverse_map {
-            if remaining.starts_with(replacement.as_str()) {
-                let mut alternatives: Vec<&str> = originals_with_costs
-                    .iter()
-                    .map(|(s, _)| s.as_str())
-                    .collect();
-
-                // Track the maximum cost among alternatives
-                let max_cost = originals_with_costs
-                    .iter()
-                    .map(|(_, cost)| *cost)
-                    .fold(0.0_f64, f64::max);
-
-                total_cost += max_cost;
-
-                if !alternatives.contains(&replacement.as_str()) {
-                    alternatives.push(replacement);
-                }
-
-                if alternatives.len() > 1 {
-                    pattern.push('(');
-                    for (j, alt) in alternatives.iter().enumerate() {
-                        if j > 0 {
-                            pattern.push('|');
-                        }
-                        pattern.push_str(&regex_escape(alt));
-                    }
-                    pattern.push(')');
-                } else {
-                    pattern.push_str(&regex_escape(alternatives[0]));
-                }
-
-                i += replacement.chars().count();
+        for entry in &reverse_map {
+            if remaining.starts_with(entry.replacement.as_str()) {
+                total_cost += entry.max_cost;
+                pattern.push_str(&entry.segment);
+                i += entry.replacement_char_len;
                 matched = true;
                 break;
             }
@@ -361,14 +457,20 @@ pub fn expand_with_costs(input: &str, rules: &[RewriteRuleChar]) -> (String, f64
     (pattern, total_cost)
 }
 
-/// Reverse map with costs: replacement → [(original, cost), ...]
-type ReverseMapWithCosts = Vec<(String, Vec<(String, f64)>)>;
+struct ReverseMapEntryWithCost {
+    replacement: String,
+    replacement_char_len: usize,
+    segment: String,
+    max_cost: f64,
+}
+
+type ReverseMapWithCosts = Vec<ReverseMapEntryWithCost>;
 
 /// Build a reverse map that includes rule weights.
 fn build_reverse_map_with_costs(rules: &[RewriteRuleChar]) -> ReverseMapWithCosts {
     use std::collections::HashMap;
 
-    let mut map: HashMap<String, Vec<(String, f64)>> = HashMap::new();
+    let mut map: HashMap<String, Vec<(String, f64)>> = HashMap::with_capacity(rules.len());
 
     for rule in rules {
         let original = phones_to_string(&rule.pattern);
@@ -381,8 +483,37 @@ fn build_reverse_map_with_costs(rules: &[RewriteRuleChar]) -> ReverseMapWithCost
         }
     }
 
-    let mut entries: Vec<(String, Vec<(String, f64)>)> = map.into_iter().collect();
-    entries.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    let mut entries: Vec<ReverseMapEntryWithCost> = map
+        .into_iter()
+        .map(|(replacement, originals_with_costs)| {
+            let replacement_char_len = replacement.chars().count();
+            let max_cost = originals_with_costs
+                .iter()
+                .map(|(_, cost)| *cost)
+                .fold(0.0_f64, f64::max);
+            let mut alternatives: Vec<String> =
+                Vec::with_capacity(one_extra_capacity(originals_with_costs.len()).unwrap_or(0));
+            alternatives.extend(originals_with_costs.iter().map(|(s, _)| regex_escape(s)));
+
+            let escaped_replacement = regex_escape(&replacement);
+            if !alternatives.contains(&escaped_replacement) {
+                alternatives.push(escaped_replacement);
+            }
+
+            ReverseMapEntryWithCost {
+                replacement,
+                replacement_char_len,
+                segment: segment_from_escaped_alternatives(alternatives),
+                max_cost,
+            }
+        })
+        .collect();
+    entries.sort_by_key(|entry| {
+        (
+            Reverse(entry.replacement_char_len),
+            Reverse(entry.replacement.len()),
+        )
+    });
 
     entries
 }
@@ -396,11 +527,8 @@ mod tests {
         RewriteRuleChar {
             rule_id: id,
             rule_name: format!("{} -> {}", pattern, replacement),
-            pattern: pattern.chars().map(|c| PhoneChar::Consonant(c)).collect(),
-            replacement: replacement
-                .chars()
-                .map(|c| PhoneChar::Consonant(c))
-                .collect(),
+            pattern: pattern.chars().map(PhoneChar::Consonant).collect(),
+            replacement: replacement.chars().map(PhoneChar::Consonant).collect(),
             context: ContextChar::Anywhere,
             weight,
             syllable_condition: None,
@@ -454,6 +582,16 @@ mod tests {
     }
 
     #[test]
+    fn test_expand_unicode_replacement_uses_character_offsets() {
+        let rules = vec![make_rule(1, "eh", "é", 0.3)];
+
+        let pattern = expand_phonetic_alternatives_char("éx", &rules);
+
+        assert!(pattern.contains("(eh|é)") || pattern.contains("(é|eh)"));
+        assert!(pattern.ends_with('x'));
+    }
+
+    #[test]
     fn test_expand_longer_replacement_first() {
         // Rule 1: tion -> shun (longer replacement)
         // Rule 2: ti -> sh (shorter replacement)
@@ -483,6 +621,17 @@ mod tests {
 
         // Cost should be sum of max costs at each expansion point
         assert!(cost > 0.0);
+    }
+
+    #[test]
+    fn test_expand_with_costs_unicode_replacement_uses_character_offsets() {
+        let rules = vec![make_rule(1, "eh", "é", 0.3)];
+
+        let (pattern, cost) = expand_with_costs("éx", &rules);
+
+        assert!(pattern.contains("(eh|é)") || pattern.contains("(é|eh)"));
+        assert!(pattern.ends_with('x'));
+        assert_eq!(cost, 0.3);
     }
 
     #[test]
@@ -550,6 +699,21 @@ mod tests {
         assert_eq!(regex_escape("$"), "\\$");
         assert_eq!(regex_escape("\\"), "\\\\");
         assert_eq!(regex_escape("abc"), "abc");
+    }
+
+    #[test]
+    fn test_capacity_helpers_reject_overflow() {
+        assert_eq!(one_extra_capacity(0), Some(1));
+        assert_eq!(one_extra_capacity(usize::MAX), None);
+
+        assert_eq!(escaped_regex_capacity(4), Some(8));
+        assert_eq!(escaped_regex_capacity(usize::MAX), None);
+
+        assert_eq!(expansion_node_len(5, 7), Some(12));
+        assert_eq!(expansion_node_len(usize::MAX, 1), None);
+
+        assert_eq!(alternation_segment_capacity(3, [2, 2, 1]), Some(9));
+        assert_eq!(alternation_segment_capacity(2, [usize::MAX, 1]), None);
     }
 
     #[test]

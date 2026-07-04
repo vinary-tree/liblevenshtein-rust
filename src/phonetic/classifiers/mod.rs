@@ -198,12 +198,12 @@ impl DynClassifier {
 
     /// Create a dynamic classifier for Korean Hangul.
     pub fn hangul() -> Self {
-        Self::new(HangulClassifier::default())
+        Self::new(HangulClassifier)
     }
 
     /// Create a dynamic classifier for Hebrew script.
     pub fn hebrew() -> Self {
-        Self::new(HebrewClassifier::default())
+        Self::new(HebrewClassifier)
     }
 
     /// Create a dynamic classifier for Arabic script.
@@ -213,57 +213,57 @@ impl DynClassifier {
 
     /// Create a dynamic classifier for Devanagari script (Hindi).
     pub fn devanagari() -> Self {
-        Self::new(DevanagariClassifier::default())
+        Self::new(DevanagariClassifier)
     }
 
     /// Create a dynamic classifier for Chinese Hanzi.
     pub fn hanzi() -> Self {
-        Self::new(HanziClassifier::default())
+        Self::new(HanziClassifier)
     }
 
     /// Create a dynamic classifier for Greek script.
     pub fn greek() -> Self {
-        Self::new(GreekClassifier::default())
+        Self::new(GreekClassifier)
     }
 
     /// Create a dynamic classifier for Bengali script.
     pub fn bengali() -> Self {
-        Self::new(BengaliClassifier::default())
+        Self::new(BengaliClassifier)
     }
 
     /// Create a dynamic classifier for Gujarati script.
     pub fn gujarati() -> Self {
-        Self::new(GujaratiClassifier::default())
+        Self::new(GujaratiClassifier)
     }
 
     /// Create a dynamic classifier for Telugu script.
     pub fn telugu() -> Self {
-        Self::new(TeluguClassifier::default())
+        Self::new(TeluguClassifier)
     }
 
     /// Create a dynamic classifier for Tamil script.
     pub fn tamil() -> Self {
-        Self::new(TamilClassifier::default())
+        Self::new(TamilClassifier)
     }
 
     /// Create a dynamic classifier for Gurmukhi script (Punjabi - India).
     pub fn gurmukhi() -> Self {
-        Self::new(GurmukhiClassifier::default())
+        Self::new(GurmukhiClassifier)
     }
 
     /// Create a dynamic classifier for Thai script.
     pub fn thai() -> Self {
-        Self::new(ThaiClassifier::default())
+        Self::new(ThaiClassifier)
     }
 
     /// Create a dynamic classifier for Georgian Mkhedruli script.
     pub fn georgian() -> Self {
-        Self::new(GeorgianClassifier::default())
+        Self::new(GeorgianClassifier)
     }
 
     /// Create a dynamic classifier for Armenian script.
     pub fn armenian() -> Self {
-        Self::new(ArmenianClassifier::default())
+        Self::new(ArmenianClassifier)
     }
 }
 

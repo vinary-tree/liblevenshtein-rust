@@ -58,6 +58,7 @@
 
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 
 use super::common::phonetic_unit::PhoneticUnit;
 use super::common::syllable::SyllableExpr;
@@ -473,6 +474,18 @@ pub struct RewriteRule<U: PhoneticUnit> {
     pub syllable_condition: Option<SyllableExpr>,
 }
 
+pub(crate) fn compare_rule_weight_desc<U: PhoneticUnit>(
+    left: &RewriteRule<U>,
+    right: &RewriteRule<U>,
+) -> Ordering {
+    match (left.weight.is_nan(), right.weight.is_nan()) {
+        (true, true) => Ordering::Equal,
+        (true, false) => Ordering::Greater,
+        (false, true) => Ordering::Less,
+        (false, false) => right.weight.total_cmp(&left.weight),
+    }
+}
+
 // ============================================================================
 // Type Aliases for Backward Compatibility
 // ============================================================================
@@ -678,6 +691,31 @@ mod tests {
         assert_eq!(rule.rule_id, 1);
         assert_eq!(rule.pattern.len(), 2);
         assert_eq!(rule.replacement.len(), 1);
+    }
+
+    #[test]
+    fn test_rule_weight_priority_demotes_nan() {
+        fn rule(weight: f64) -> RewriteRule<char> {
+            RewriteRule {
+                rule_id: 0,
+                rule_name: String::new(),
+                pattern: vec![Phone::Consonant('a')],
+                replacement: vec![Phone::Consonant('b')],
+                context: Context::Anywhere,
+                weight,
+                syllable_condition: None,
+            }
+        }
+
+        let high = rule(2.0);
+        let low = rule(1.0);
+        let nan = rule(f64::NAN);
+
+        assert_eq!(compare_rule_weight_desc(&high, &low), Ordering::Less);
+        assert_eq!(compare_rule_weight_desc(&low, &high), Ordering::Greater);
+        assert_eq!(compare_rule_weight_desc(&nan, &high), Ordering::Greater);
+        assert_eq!(compare_rule_weight_desc(&high, &nan), Ordering::Less);
+        assert_eq!(compare_rule_weight_desc(&nan, &nan), Ordering::Equal);
     }
 
     // ========================================================================

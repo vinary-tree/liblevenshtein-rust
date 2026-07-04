@@ -363,7 +363,7 @@ impl<'a> ParserByte<'a> {
         if self.lexer.peek()? == &TokenByte::Exclamation {
             self.lexer.next_token()?; // consume '!'
             let inner = self.parse_context_not()?;
-            Ok(ContextExprByte::not(inner))
+            Ok(ContextExprByte::negate(inner))
         } else {
             self.parse_context_primary()
         }
@@ -388,9 +388,12 @@ impl<'a> ParserByte<'a> {
                 let regex = match token {
                     TokenByte::Byte(b) => RegexByte::byte(b),
                     TokenByte::Dot => RegexByte::any(),
-                    _ => unreachable!(
-                        "outer match peeked TokenByte::Byte|TokenByte::Dot; next_token cannot return a different variant"
-                    ),
+                    _ => {
+                        return Err(ParseError::new(
+                            ParseErrorKind::InvalidContext("expected pattern".to_string()),
+                            self.lexer.position(),
+                        ));
+                    }
                 };
                 Ok(ContextExprByte::pattern(regex))
             }
@@ -454,7 +457,7 @@ impl<'a> ParserByte<'a> {
         if self.lexer.peek()? == &TokenByte::Exclamation {
             self.lexer.next_token()?;
             let inner = self.parse_syllable_not()?;
-            Ok(SyllableExpr::not(inner))
+            Ok(SyllableExpr::negate(inner))
         } else {
             self.parse_syllable_primary()
         }
@@ -593,7 +596,7 @@ impl<'a> SyllableParser for ParserByte<'a> {
         )
     }
 
-    fn from_lexer_error(&self, err: ParseError) -> Self::Error {
+    fn map_lexer_error(&self, err: ParseError) -> Self::Error {
         err
     }
 }

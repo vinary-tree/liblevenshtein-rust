@@ -1,5 +1,7 @@
 //! Unit tests for the phonetic-regex lexer.
 
+use crate::phonetic::regex::error::ParseErrorKind;
+
 use super::*;
 
 #[test]
@@ -273,6 +275,40 @@ fn test_lexer_quantifier() {
             .next_token()
             .expect("test: lexer.next_token must be Ok"),
         Token::QuantifierEnd
+    );
+}
+
+#[test]
+fn char_lexer_rejects_oversized_number_tokens() {
+    let oversized = format!("{}0", usize::MAX);
+    let mut lexer = Lexer::new(&oversized);
+
+    let err = lexer
+        .next_token()
+        .expect_err("oversized char-level numeric token must be rejected");
+
+    assert!(matches!(
+        err.kind,
+        ParseErrorKind::InvalidQuantifier(message)
+            if message.contains("usize::MAX")
+    ));
+}
+
+#[test]
+fn char_lexer_keeps_non_ascii_decimal_digits_as_characters() {
+    let mut lexer = Lexer::new("٣3");
+
+    assert_eq!(
+        lexer
+            .next_token()
+            .expect("test: non-ASCII digit-like char must lex"),
+        Token::Char('٣')
+    );
+    assert_eq!(
+        lexer
+            .next_token()
+            .expect("test: ASCII digit after non-ASCII char must lex"),
+        Token::Number(3)
     );
 }
 
@@ -732,6 +768,22 @@ fn test_lexer_byte_operators() {
             .expect("test: lexer.next_token must be Ok"),
         TokenByte::Plus
     );
+}
+
+#[test]
+fn byte_lexer_rejects_oversized_number_tokens() {
+    let oversized = format!("{}0", usize::MAX);
+    let mut lexer = LexerByte::new(oversized.as_bytes());
+
+    let err = lexer
+        .next_token()
+        .expect_err("oversized byte-level numeric token must be rejected");
+
+    assert!(matches!(
+        err.kind,
+        ParseErrorKind::InvalidQuantifier(message)
+            if message.contains("usize::MAX")
+    ));
 }
 
 #[test]

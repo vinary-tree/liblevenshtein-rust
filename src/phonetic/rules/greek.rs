@@ -65,10 +65,12 @@ pub fn base() -> &'static RuleSetChar {
     static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/greek/base.llev");
-        let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded greek/base.llev - this indicates an internal invariant violation");
-        RuleSetChar::from_llev(&file)
-            .expect("Failed to compile Greek base rules - this indicates an internal invariant violation")
+        let file = crate::phonetic::llev::parse_str(content).expect(
+            "Invalid embedded greek/base.llev - this indicates an internal invariant violation",
+        );
+        RuleSetChar::from_llev(&file).expect(
+            "Failed to compile Greek base rules - this indicates an internal invariant violation",
+        )
     })
 }
 

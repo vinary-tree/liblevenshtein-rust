@@ -20,7 +20,42 @@ use std::fmt;
 use rustc_hash::FxHashSet;
 
 use super::state_set::StateSet;
-use super::types::{CharClass, NFAState, StateId, Transition, TransitionLabel};
+use super::types::{
+    checked_state_id_add, state_id_from_len, state_index, CharClass, NFAState, StateId, Transition,
+    TransitionLabel,
+};
+
+fn csr_offset_len(num_states: usize) -> Option<usize> {
+    num_states.checked_add(1)
+}
+
+fn csr_successor_index(index: usize) -> Option<usize> {
+    index.checked_add(1)
+}
+
+fn increment_csr_offset_count(offsets: &mut [usize], from_index: usize) -> bool {
+    let Some(next_index) = csr_successor_index(from_index) else {
+        return false;
+    };
+    let Some(slot) = offsets.get_mut(next_index) else {
+        return false;
+    };
+    let Some(next_count) = (*slot).checked_add(1) else {
+        return false;
+    };
+    *slot = next_count;
+    true
+}
+
+fn accumulate_csr_offsets(offsets: &mut [usize]) -> bool {
+    for i in 1..offsets.len() {
+        let Some(total) = offsets[i].checked_add(offsets[i - 1]) else {
+            return false;
+        };
+        offsets[i] = total;
+    }
+    true
+}
 
 // ============================================================================
 // Transitions Iterator Types (H9) - byte-level
@@ -84,14 +119,20 @@ impl<'a> Iterator for TransitionsFromOwned<'a> {
             }
             TransitionsFrom::Pending(pending, transitions, offsets, state) => {
                 if self.phase == 0 {
-                    let state_idx = *state as usize;
-                    if state_idx + 1 < offsets.len() {
-                        let start = offsets[state_idx];
-                        let end = offsets[state_idx + 1];
-                        while start + self.idx < end {
-                            let item = &transitions[start + self.idx];
-                            self.idx += 1;
-                            return Some(item);
+                    if let Some(state_idx) = state_index(*state) {
+                        if let Some(next_idx) = csr_successor_index(state_idx) {
+                            if let (Some(&start), Some(&end)) =
+                                (offsets.get(state_idx), offsets.get(next_idx))
+                            {
+                                if let Some(index) =
+                                    start.checked_add(self.idx).filter(|&idx| idx < end)
+                                {
+                                    if let Some(item) = transitions.get(index) {
+                                        self.idx += 1;
+                                        return Some(item);
+                                    }
+                                }
+                            }
                         }
                     }
                     self.phase = 1;
@@ -143,14 +184,20 @@ impl<'a, 'b> Iterator for TransitionsFromIter<'a, 'b> {
             }
             TransitionsFrom::Pending(pending, transitions, offsets, state) => {
                 if self.phase == 0 {
-                    let state_idx = *state as usize;
-                    if state_idx + 1 < offsets.len() {
-                        let start = offsets[state_idx];
-                        let end = offsets[state_idx + 1];
-                        while start + self.idx < end {
-                            let item = &transitions[start + self.idx];
-                            self.idx += 1;
-                            return Some(item);
+                    if let Some(state_idx) = state_index(*state) {
+                        if let Some(next_idx) = csr_successor_index(state_idx) {
+                            if let (Some(&start), Some(&end)) =
+                                (offsets.get(state_idx), offsets.get(next_idx))
+                            {
+                                if let Some(index) =
+                                    start.checked_add(self.idx).filter(|&idx| idx < end)
+                                {
+                                    if let Some(item) = transitions.get(index) {
+                                        self.idx += 1;
+                                        return Some(item);
+                                    }
+                                }
+                            }
                         }
                     }
                     self.phase = 1;
@@ -250,16 +297,27 @@ impl NFA {
         self.transitions.sort_by_key(|t| t.from);
 
         let num_states = self.states.len();
-        let mut offsets = vec![0usize; num_states + 1];
+        let Some(offset_len) = csr_offset_len(num_states) else {
+            self.transition_offsets.clear();
+            self.finalized = true;
+            return;
+        };
+        let mut offsets = vec![0usize; offset_len];
 
         for trans in &self.transitions {
-            if (trans.from as usize) < num_states {
-                offsets[trans.from as usize + 1] += 1;
+            if let Some(from_index) = state_index(trans.from).filter(|&index| index < num_states) {
+                if !increment_csr_offset_count(&mut offsets, from_index) {
+                    self.transition_offsets.clear();
+                    self.finalized = true;
+                    return;
+                }
             }
         }
 
-        for i in 1..=num_states {
-            offsets[i] += offsets[i - 1];
+        if !accumulate_csr_offsets(&mut offsets) {
+            self.transition_offsets.clear();
+            self.finalized = true;
+            return;
         }
 
         self.transition_offsets = offsets;
@@ -316,9 +374,11 @@ impl NFA {
         self.finals.contains(&state)
     }
 
-    /// Add a new state and return its ID.
-    pub fn add_state(&mut self, is_final: bool) -> StateId {
-        let id = self.states.len() as StateId;
+    /// Try to add a new state and return its ID.
+    ///
+    /// Returns `None` if the next compact state ID would exceed `StateId`.
+    pub fn try_add_state(&mut self, is_final: bool) -> Option<StateId> {
+        let id = state_id_from_len(self.states.len())?;
         let state = NFAState::new(id, is_final);
         self.states.push(state);
         if is_final {
@@ -327,12 +387,18 @@ impl NFA {
         // Extend offsets array for new state (H9)
         self.transition_offsets
             .push(self.transition_offsets.last().copied().unwrap_or(0));
-        id
+        Some(id)
+    }
+
+    /// Add a new state and return its ID.
+    pub fn add_state(&mut self, is_final: bool) -> StateId {
+        self.try_add_state(is_final)
+            .expect("NFA state count exceeded StateId capacity")
     }
 
     /// Mark a state as final.
     pub fn set_final(&mut self, state: StateId, is_final: bool) {
-        if let Some(s) = self.states.get_mut(state as usize) {
+        if let Some(s) = state_index(state).and_then(|index| self.states.get_mut(index)) {
             s.is_final = is_final;
             if is_final {
                 self.finals.insert(state);
@@ -348,6 +414,11 @@ impl NFA {
     }
 
     /// Add a weighted transition.
+    ///
+    /// The `weight` is stored on the resulting [`Transition`] and preserved
+    /// through optimization, but is Reserved: it is NOT currently applied to
+    /// matching cost by any matcher (matchers use unit/among-costs). Kept for a
+    /// future weighted-NFA-matching feature.
     pub fn add_transition_weighted(
         &mut self,
         from: StateId,
@@ -384,14 +455,19 @@ impl NFA {
     pub fn transitions_from(&self, state: StateId) -> TransitionsFrom<'_> {
         if self.finalized && self.pending_transitions.is_empty() {
             // CSR fast path
-            let state_idx = state as usize;
-            if state_idx + 1 < self.transition_offsets.len() {
-                let start = self.transition_offsets[state_idx];
-                let end = self.transition_offsets[state_idx + 1];
-                TransitionsFrom::Slice(&self.transitions[start..end])
-            } else {
-                TransitionsFrom::Slice(&[])
+            if let Some(state_idx) = state_index(state) {
+                if let Some(next_idx) = csr_successor_index(state_idx) {
+                    if let (Some(&start), Some(&end)) = (
+                        self.transition_offsets.get(state_idx),
+                        self.transition_offsets.get(next_idx),
+                    ) {
+                        if let Some(transitions) = self.transitions.get(start..end) {
+                            return TransitionsFrom::Slice(transitions);
+                        }
+                    }
+                }
             }
+            TransitionsFrom::Slice(&[])
         } else {
             // Fallback: linear scan through pending_transitions
             TransitionsFrom::Pending(
@@ -669,51 +745,86 @@ impl NFA {
     }
 
     /// Shift all state IDs by an offset.
-    fn shift_states(&mut self, offset: StateId) {
-        self.start += offset;
+    fn shift_states(&mut self, offset: StateId) -> Option<()> {
+        let new_start = checked_state_id_add(self.start, offset)?;
+        let new_state_ids = self
+            .states
+            .iter()
+            .map(|state| checked_state_id_add(state.id, offset))
+            .collect::<Option<Vec<_>>>()?;
+        let new_transition_ids = self
+            .transitions
+            .iter()
+            .map(|trans| {
+                Some((
+                    checked_state_id_add(trans.from, offset)?,
+                    checked_state_id_add(trans.to, offset)?,
+                ))
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let new_pending_transition_ids = self
+            .pending_transitions
+            .iter()
+            .map(|trans| {
+                Some((
+                    checked_state_id_add(trans.from, offset)?,
+                    checked_state_id_add(trans.to, offset)?,
+                ))
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let new_finals = self
+            .finals
+            .iter()
+            .copied()
+            .map(|state| checked_state_id_add(state, offset))
+            .collect::<Option<Vec<_>>>()?;
 
-        for state in &mut self.states {
-            state.id += offset;
+        self.start = new_start;
+
+        for (state, id) in self.states.iter_mut().zip(new_state_ids) {
+            state.id = id;
         }
 
-        for trans in &mut self.transitions {
-            trans.from += offset;
-            trans.to += offset;
+        for (trans, (from, to)) in self.transitions.iter_mut().zip(new_transition_ids) {
+            trans.from = from;
+            trans.to = to;
         }
 
-        // H9: Also shift pending_transitions
-        for trans in &mut self.pending_transitions {
-            trans.from += offset;
-            trans.to += offset;
+        for (trans, (from, to)) in self
+            .pending_transitions
+            .iter_mut()
+            .zip(new_pending_transition_ids)
+        {
+            trans.from = from;
+            trans.to = to;
         }
 
-        let old_finals: Vec<_> = self.finals.drain().collect();
-        for f in old_finals {
-            self.finals.insert(f + offset);
-        }
+        self.finals.clear();
+        self.finals.extend(new_finals);
 
         self.rebuild_index();
+        Some(())
     }
 
-    /// Create a new NFA that is the union of `self` and `other`.
-    pub fn union(self, other: NFA) -> NFA {
+    /// Try to create a new NFA that is the union of `self` and `other`.
+    pub fn try_union(self, other: NFA) -> Option<NFA> {
         let mut result = NFA::new();
 
         let new_start = 0;
 
         let offset_a = 1;
         let mut nfa_a = self;
-        nfa_a.shift_states(offset_a);
+        nfa_a.shift_states(offset_a)?;
         // H9: Ensure pending transitions are merged before copying
         nfa_a.finalize();
 
-        let offset_b = offset_a + nfa_a.num_states() as StateId;
+        let offset_b = checked_state_id_add(offset_a, state_id_from_len(nfa_a.num_states())?)?;
         let mut nfa_b = other;
-        nfa_b.shift_states(offset_b);
+        nfa_b.shift_states(offset_b)?;
         // H9: Ensure pending transitions are merged before copying
         nfa_b.finalize();
 
-        let new_final = offset_b + nfa_b.num_states() as StateId;
+        let new_final = checked_state_id_add(offset_b, state_id_from_len(nfa_b.num_states())?)?;
 
         result.states.clear();
         result.states.push(NFAState::non_final(new_start));
@@ -743,20 +854,26 @@ impl NFA {
         }
 
         result.rebuild_index();
-        result
+        Some(result)
     }
 
-    /// Create a new NFA that is the concatenation of `self` and `other`.
-    pub fn concatenate(self, other: NFA) -> NFA {
+    /// Create a new NFA that is the union of `self` and `other`.
+    pub fn union(self, other: NFA) -> NFA {
+        self.try_union(other)
+            .expect("combined NFA state ids exceeded StateId capacity")
+    }
+
+    /// Try to create a new NFA that is the concatenation of `self` and `other`.
+    pub fn try_concatenate(self, other: NFA) -> Option<NFA> {
         let mut result = NFA::new();
 
         // H9: Ensure pending transitions are merged before copying
         let mut nfa_a = self;
         nfa_a.finalize();
 
-        let offset_b = nfa_a.num_states() as StateId;
+        let offset_b = state_id_from_len(nfa_a.num_states())?;
         let mut nfa_b = other;
-        nfa_b.shift_states(offset_b);
+        nfa_b.shift_states(offset_b)?;
         // H9: Ensure pending transitions are merged before copying
         nfa_b.finalize();
 
@@ -774,21 +891,27 @@ impl NFA {
         }
 
         result.rebuild_index();
-        result
+        Some(result)
     }
 
-    /// Create a new NFA that is the Kleene star of `self`.
-    pub fn kleene_star(self) -> NFA {
+    /// Create a new NFA that is the concatenation of `self` and `other`.
+    pub fn concatenate(self, other: NFA) -> NFA {
+        self.try_concatenate(other)
+            .expect("combined NFA state ids exceeded StateId capacity")
+    }
+
+    /// Try to create a new NFA that is the Kleene star of `self`.
+    pub fn try_kleene_star(self) -> Option<NFA> {
         let mut result = NFA::new();
 
         let offset_a = 1;
         let mut nfa_a = self;
-        nfa_a.shift_states(offset_a);
+        nfa_a.shift_states(offset_a)?;
         // H9: Ensure pending transitions are merged before copying
         nfa_a.finalize();
 
         let new_start = 0;
-        let new_final = offset_a + nfa_a.num_states() as StateId;
+        let new_final = checked_state_id_add(offset_a, state_id_from_len(nfa_a.num_states())?)?;
 
         result.states.clear();
         result.states.push(NFAState::non_final(new_start));
@@ -816,27 +939,39 @@ impl NFA {
         }
 
         result.rebuild_index();
-        result
+        Some(result)
+    }
+
+    /// Create a new NFA that is the Kleene star of `self`.
+    pub fn kleene_star(self) -> NFA {
+        self.try_kleene_star()
+            .expect("combined NFA state ids exceeded StateId capacity")
     }
 
     /// Create a new NFA that is the Kleene plus of `self`.
     pub fn kleene_plus(self) -> NFA {
-        let star = self.clone().kleene_star();
-        self.concatenate(star)
+        self.try_kleene_plus()
+            .expect("combined NFA state ids exceeded StateId capacity")
     }
 
-    /// Create a new NFA that is `self` made optional.
-    pub fn optional(self) -> NFA {
+    /// Try to create a new NFA that is the Kleene plus of `self`.
+    pub fn try_kleene_plus(self) -> Option<NFA> {
+        let star = self.clone().try_kleene_star()?;
+        self.try_concatenate(star)
+    }
+
+    /// Try to create a new NFA that is `self` made optional.
+    pub fn try_optional(self) -> Option<NFA> {
         let mut result = NFA::new();
 
         let offset_a = 1;
         let mut nfa_a = self;
-        nfa_a.shift_states(offset_a);
+        nfa_a.shift_states(offset_a)?;
         // H9: Ensure pending transitions are merged before copying
         nfa_a.finalize();
 
         let new_start = 0;
-        let new_final = offset_a + nfa_a.num_states() as StateId;
+        let new_final = checked_state_id_add(offset_a, state_id_from_len(nfa_a.num_states())?)?;
 
         result.states.clear();
         result.states.push(NFAState::non_final(new_start));
@@ -861,7 +996,13 @@ impl NFA {
         }
 
         result.rebuild_index();
-        result
+        Some(result)
+    }
+
+    /// Create a new NFA that is `self` made optional.
+    pub fn optional(self) -> NFA {
+        self.try_optional()
+            .expect("combined NFA state ids exceeded StateId capacity")
     }
 
     // ========================================================================
@@ -932,5 +1073,49 @@ impl fmt::Display for NFA {
             writeln!(f, "    {}", trans)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn csr_offset_helpers_check_overflow() {
+        assert_eq!(csr_offset_len(0), Some(1));
+        assert_eq!(csr_offset_len(usize::MAX), None);
+        assert_eq!(csr_successor_index(0), Some(1));
+        assert_eq!(csr_successor_index(usize::MAX), None);
+    }
+
+    #[test]
+    fn csr_offset_count_increment_checks_bounds_and_overflow() {
+        let mut offsets = vec![0, 0];
+        assert!(increment_csr_offset_count(&mut offsets, 0));
+        assert_eq!(offsets, vec![0, 1]);
+        assert!(!increment_csr_offset_count(&mut offsets, 1));
+
+        let mut saturated = vec![0, usize::MAX];
+        assert!(!increment_csr_offset_count(&mut saturated, 0));
+        assert_eq!(saturated, vec![0, usize::MAX]);
+    }
+
+    #[test]
+    fn csr_offset_accumulation_checks_overflow() {
+        let mut offsets = vec![0, 2, 3];
+        assert!(accumulate_csr_offsets(&mut offsets));
+        assert_eq!(offsets, vec![0, 2, 5]);
+
+        let mut overflowing = vec![0, usize::MAX, 1];
+        assert!(!accumulate_csr_offsets(&mut overflowing));
+    }
+
+    #[test]
+    fn try_kleene_star_rejects_state_id_shift_overflow() {
+        let mut nfa = NFA::new();
+        nfa.start = u32::MAX;
+        nfa.states[0] = NFAState::non_final(u32::MAX);
+
+        assert!(nfa.try_kleene_star().is_none());
     }
 }

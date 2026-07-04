@@ -13,18 +13,24 @@ use std::collections::HashSet;
 
 use super::lookup::get_chars_only;
 
+#[inline]
+fn phonetic_universe_capacity(vowel_count: usize, consonant_count: usize) -> Option<usize> {
+    vowel_count.checked_add(consonant_count)
+}
+
 /// Get all phonetic characters (union of all vowels and consonants).
 ///
 /// This is used as the universe for computing negation of character sets.
 /// Returns both ASCII and IPA characters.
 pub fn get_all_phonetic_chars() -> Vec<char> {
-    let mut chars: HashSet<char> = HashSet::new();
-    if let Some(v) = get_chars_only("vowel") {
-        chars.extend(v);
-    }
-    if let Some(c) = get_chars_only("consonant") {
-        chars.extend(c);
-    }
+    let vowels = get_chars_only("vowel").unwrap_or_default();
+    let consonants = get_chars_only("consonant").unwrap_or_default();
+
+    let mut chars: HashSet<char> = HashSet::with_capacity(
+        phonetic_universe_capacity(vowels.len(), consonants.len()).unwrap_or(0),
+    );
+    chars.extend(vowels);
+    chars.extend(consonants);
     chars.into_iter().collect()
 }
 
@@ -51,11 +57,30 @@ pub fn intersect_char_sets(sets: &[Vec<char>]) -> Vec<char> {
     if sets.is_empty() {
         return Vec::new();
     }
-    let mut result: HashSet<char> = sets[0].iter().copied().collect();
-    for set in &sets[1..] {
-        let other: HashSet<char> = set.iter().copied().collect();
-        result = result.intersection(&other).copied().collect();
+
+    let Some((smallest_index, smallest)) = sets.iter().enumerate().min_by_key(|(_, set)| set.len())
+    else {
+        return Vec::new();
+    };
+    if smallest.is_empty() {
+        return Vec::new();
     }
+
+    let mut result: HashSet<char> = HashSet::with_capacity(smallest.len());
+    result.extend(smallest.iter().copied());
+
+    for (index, set) in sets.iter().enumerate() {
+        if index == smallest_index {
+            continue;
+        }
+        let mut other: HashSet<char> = HashSet::with_capacity(set.len());
+        other.extend(set.iter().copied());
+        result.retain(|c| other.contains(c));
+        if result.is_empty() {
+            break;
+        }
+    }
+
     result.into_iter().collect()
 }
 
@@ -78,6 +103,21 @@ pub fn intersect_char_sets(sets: &[Vec<char>]) -> Vec<char> {
 /// ```
 pub fn negate_char_set(chars: &[char]) -> Vec<char> {
     let all = get_all_phonetic_chars();
-    let excluded: HashSet<char> = chars.iter().copied().collect();
-    all.into_iter().filter(|c| !excluded.contains(c)).collect()
+    let mut excluded: HashSet<char> = HashSet::with_capacity(chars.len());
+    excluded.extend(chars.iter().copied());
+
+    let mut negated = Vec::with_capacity(all.len());
+    negated.extend(all.into_iter().filter(|c| !excluded.contains(c)));
+    negated
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn phonetic_universe_capacity_rejects_overflow() {
+        assert_eq!(phonetic_universe_capacity(2, 3), Some(5));
+        assert_eq!(phonetic_universe_capacity(usize::MAX, 1), None);
+    }
 }

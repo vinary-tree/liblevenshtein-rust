@@ -32,9 +32,7 @@ impl<'a> Parser<'a> {
     /// Return the numeric value of an upcoming inline rule weight suffix, if present.
     pub(super) fn peek_weight_suffix(&mut self) -> Option<f64> {
         let remaining = self.lexer.remaining_input();
-        let Some(after_open) = remaining.strip_prefix('[') else {
-            return None;
-        };
+        let after_open = remaining.strip_prefix('[')?;
         let close = after_open.find(']')?;
         let value = after_open[..close].trim();
         if !is_inline_weight_literal(value) {
@@ -217,7 +215,7 @@ impl<'a> SyllableParser for Parser<'a> {
         )
     }
 
-    fn from_lexer_error(&self, err: LLevError) -> Self::Error {
+    fn map_lexer_error(&self, err: LLevError) -> Self::Error {
         err
     }
 }

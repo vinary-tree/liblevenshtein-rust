@@ -180,8 +180,7 @@ impl<'a> Parser<'a> {
         let mut rules = Vec::new();
 
         while !self.lexer.is_eof() {
-            // Skip empty lines
-            while self.lexer.peek()? == &Token::Eof {
+            if self.lexer.peek()? == &Token::Eof {
                 break;
             }
 
@@ -401,7 +400,7 @@ impl<'a> Parser<'a> {
             Token::PhoneticShortcut {
                 class_name,
                 negated,
-            } => self.expand_phonetic_shortcut(&class_name, negated),
+            } => self.expand_phonetic_shortcut(class_name, negated),
 
             // Anchors
             Token::StartOfLine => Ok(Regex::StartOfLine),
@@ -466,7 +465,8 @@ impl<'a> Parser<'a> {
                     Ok(chars.clone())
                 } else {
                     // Symbol not found - provide helpful error with available symbols
-                    let available: Vec<String> = symbols.keys().cloned().collect();
+                    let mut available: Vec<String> = symbols.keys().cloned().collect();
+                    available.sort_unstable();
                     Err(ParseError::new(
                         ParseErrorKind::UndefinedSymbol {
                             name: name.to_string(),
@@ -712,7 +712,7 @@ impl<'a> Parser<'a> {
                 Token::Char(':') => {
                     // End of feature bundle - push any accumulated term
                     if !current_name.is_empty() {
-                        terms.push((current_name.clone(), current_negated));
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                     }
                     break;
                 }
@@ -722,16 +722,14 @@ impl<'a> Parser<'a> {
                 Token::Char(' ') | Token::Char('\t') => {
                     // Whitespace separates terms
                     if !current_name.is_empty() {
-                        terms.push((current_name.clone(), current_negated));
-                        current_name.clear();
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                         current_negated = false;
                     }
                 }
                 Token::Char('!') => {
                     // Negation prefix - push any accumulated term first
                     if !current_name.is_empty() {
-                        terms.push((current_name.clone(), current_negated));
-                        current_name.clear();
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                     }
                     current_negated = true;
                 }
@@ -800,7 +798,7 @@ impl<'a> Parser<'a> {
                 Token::Char(':') => {
                     // End of feature bundle - push any accumulated term
                     if !current_name.is_empty() {
-                        terms.push((current_name.clone(), current_negated));
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                     }
                     break;
                 }
@@ -810,16 +808,14 @@ impl<'a> Parser<'a> {
                 Token::Char(' ') | Token::Char('\t') => {
                     // Whitespace separates terms
                     if !current_name.is_empty() {
-                        terms.push((current_name.clone(), current_negated));
-                        current_name.clear();
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                         current_negated = false;
                     }
                 }
                 Token::Char('!') => {
                     // Negation prefix - push any accumulated term first
                     if !current_name.is_empty() {
-                        terms.push((current_name.clone(), current_negated));
-                        current_name.clear();
+                        terms.push((std::mem::take(&mut current_name), current_negated));
                     }
                     current_negated = true;
                 }
@@ -935,7 +931,7 @@ impl<'a> Parser<'a> {
         if self.lexer.peek()? == &Token::Exclamation {
             self.lexer.next_token()?; // consume '!'
             let inner = self.parse_context_not()?;
-            Ok(ContextExpr::not(inner))
+            Ok(ContextExpr::negate(inner))
         } else {
             self.parse_context_primary()
         }
@@ -961,9 +957,12 @@ impl<'a> Parser<'a> {
                 let regex = match token {
                     Token::Char(c) => Regex::char(c),
                     Token::Dot => Regex::any(),
-                    _ => unreachable!(
-                        "outer match peeked Token::Char|Token::Dot; next_token cannot return a different variant"
-                    ),
+                    _ => {
+                        return Err(ParseError::new(
+                            ParseErrorKind::InvalidContext("expected pattern".to_string()),
+                            self.lexer.position(),
+                        ));
+                    }
                 };
                 Ok(ContextExpr::pattern(regex))
             }
@@ -1032,7 +1031,7 @@ impl<'a> Parser<'a> {
         if self.lexer.peek()? == &Token::Exclamation {
             self.lexer.next_token()?; // consume '!'
             let inner = self.parse_syllable_not()?;
-            Ok(SyllableExpr::not(inner))
+            Ok(SyllableExpr::negate(inner))
         } else {
             self.parse_syllable_primary()
         }
@@ -1231,7 +1230,7 @@ impl<'a> SyllableParser for Parser<'a> {
         )
     }
 
-    fn from_lexer_error(&self, err: ParseError) -> Self::Error {
+    fn map_lexer_error(&self, err: ParseError) -> Self::Error {
         err
     }
 }

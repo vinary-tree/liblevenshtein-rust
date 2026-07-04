@@ -56,6 +56,27 @@ fn test_case_insensitive_lookup() {
 }
 
 #[test]
+fn test_case_insensitive_lookup_at_inline_length_boundary() {
+    let nasalized = get_named_class("nasalized_diacritic").expect("lowercase alias");
+    let upper = get_named_class("NASALIZED_DIACRITIC").expect("uppercase alias");
+    let mixed = get_named_class("Nasalized_Diacritic").expect("mixed case alias");
+
+    assert_eq!(nasalized.patterns.len(), upper.patterns.len());
+    assert_eq!(upper.patterns.len(), mixed.patterns.len());
+    assert!(is_builtin_class("NASALIZED_DIACRITIC"));
+}
+
+#[test]
+fn test_long_ascii_and_non_ascii_unknown_classes_do_not_match() {
+    assert!(!is_builtin_class(
+        "THIS_CLASS_NAME_IS_LONGER_THAN_THE_INLINE_BUFFER"
+    ));
+    assert!(get_named_class("THIS_CLASS_NAME_IS_LONGER_THAN_THE_INLINE_BUFFER").is_none());
+    assert!(!is_builtin_class("võwel"));
+    assert!(get_named_class("võwel").is_none());
+}
+
+#[test]
 fn test_full_word_alias() {
     // "plosive" is an alias for "stop"
     let s1 = get_named_class("stop").expect("full name");
@@ -222,7 +243,7 @@ fn test_intersect_char_sets_empty() {
 #[test]
 fn test_intersect_char_sets_single() {
     let stop = get_chars_only("stop").expect("stop class");
-    let result = intersect_char_sets(&[stop.clone()]);
+    let result = intersect_char_sets(std::slice::from_ref(&stop));
 
     // Single set intersection should return the same set
     assert_eq!(result.len(), stop.len());
@@ -626,8 +647,8 @@ fn test_phone_pattern_heptagraph() {
     assert!(!p.is_hexagraph());
     assert_eq!(p.len(), 7);
     assert_eq!(p.as_heptagraph(), Some(('a', 'b', 'c', 'd', 'e', 'f', 'g')));
-    assert!(p.matches_heptagraph('a', 'b', 'c', 'd', 'e', 'f', 'g'));
-    assert!(!p.matches_heptagraph('a', 'b', 'c', 'd', 'e', 'f', 'h'));
+    assert!(p.matches_heptagraph(['a', 'b', 'c', 'd', 'e', 'f', 'g']));
+    assert!(!p.matches_heptagraph(['a', 'b', 'c', 'd', 'e', 'f', 'h']));
     // Display
     assert_eq!(format!("{}", p), "abcdefg");
 }

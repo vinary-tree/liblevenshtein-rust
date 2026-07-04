@@ -289,8 +289,8 @@ pub fn is_open_syllable(word: &str, vowel_pos: usize) -> bool {
     }
 
     // Check what follows the vowel in this syllable
-    for i in (vowel_pos + 1)..syllable_end {
-        if is_consonant(chars[i]) {
+    for &ch in chars.iter().take(syllable_end).skip(vowel_pos + 1) {
+        if is_consonant(ch) {
             return false;
         }
     }
@@ -396,7 +396,7 @@ pub fn evaluate_syllable_condition(
 /// assert!(evaluate_syllable_expr(&expr, "fly", 0));
 ///
 /// // Check if "flying" is NOT a monosyllable - it isn't (polysyllable)
-/// let expr = SyllableExpr::not(SyllableExpr::cond(SyllableCondition::Monosyllable));
+/// let expr = SyllableExpr::negate(SyllableExpr::cond(SyllableCondition::Monosyllable));
 /// assert!(evaluate_syllable_expr(&expr, "flying", 0));
 /// ```
 pub fn evaluate_syllable_expr(expr: &SyllableExpr, word: &str, match_pos: usize) -> bool {
@@ -783,7 +783,7 @@ mod tests {
     #[test]
     fn test_evaluate_syllable_expr_not() {
         // !monosyllable should match polysyllables
-        let not_mono = SyllableExpr::not(SyllableExpr::cond(SyllableCondition::Monosyllable));
+        let not_mono = SyllableExpr::negate(SyllableExpr::cond(SyllableCondition::Monosyllable));
         assert!(!evaluate_syllable_expr(&not_mono, "fly", 0));
         // Note: "flying" is miscounted by orthographic algorithm - use "running" instead
         assert!(evaluate_syllable_expr(&not_mono, "running", 0));
@@ -829,7 +829,7 @@ mod tests {
                 SyllableExpr::cond(SyllableCondition::Monosyllable),
                 SyllableExpr::cond(SyllableCondition::InitialSyllable),
             ),
-            SyllableExpr::not(SyllableExpr::cond(SyllableCondition::FinalSyllable)),
+            SyllableExpr::negate(SyllableExpr::cond(SyllableCondition::FinalSyllable)),
         );
         // In monosyllables, everything is both initial AND final, so NOT final fails
         // Actually, position 0 of "cat" is in final syllable (only syllable)
@@ -966,7 +966,7 @@ mod tests {
     fn test_evaluate_syllable_expr_ipa_compound() {
         // !monosyllable & final_syllable (non-final schwas in Hindi)
         let expr = SyllableExpr::and(
-            SyllableExpr::not(SyllableExpr::cond(SyllableCondition::Monosyllable)),
+            SyllableExpr::negate(SyllableExpr::cond(SyllableCondition::Monosyllable)),
             SyllableExpr::cond(SyllableCondition::FinalSyllable),
         );
 

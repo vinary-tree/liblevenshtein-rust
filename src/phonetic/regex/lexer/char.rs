@@ -257,6 +257,14 @@ impl TokenLike for Token {
     }
 }
 
+fn ascii_digit_value(c: char) -> Option<u8> {
+    if !c.is_ascii_digit() {
+        return None;
+    }
+
+    c.to_digit(10).and_then(|digit| u8::try_from(digit).ok())
+}
+
 /// Lexer for phonetic regex patterns.
 pub struct Lexer<'a> {
     chars: std::iter::Peekable<std::str::CharIndices<'a>>,
@@ -763,11 +771,26 @@ impl<'a> Lexer<'a> {
 
     /// Parse a number.
     fn parse_number(&mut self, first_digit: char) -> ParseResult<usize> {
-        let mut value = first_digit.to_digit(10).expect("is digit") as usize;
+        let Some(first_digit) = ascii_digit_value(first_digit) else {
+            return Err(ParseError::unexpected_char(first_digit, self.position));
+        };
+        let mut value = usize::from(first_digit);
         while let Some(c) = self.peek_char() {
-            if c.is_ascii_digit() {
+            if let Some(digit) = ascii_digit_value(c) {
                 self.advance();
-                value = value * 10 + c.to_digit(10).expect("is digit") as usize;
+                let digit = usize::from(digit);
+                value = value
+                    .checked_mul(10)
+                    .and_then(|value| value.checked_add(digit))
+                    .ok_or_else(|| {
+                        ParseError::with_context(
+                            ParseErrorKind::InvalidQuantifier(
+                                "numeric literal exceeds usize::MAX".to_string(),
+                            ),
+                            self.position,
+                            "numeric literal is too large",
+                        )
+                    })?;
             } else {
                 break;
             }
@@ -785,9 +808,9 @@ impl<'a> Lexer<'a> {
 
             let mut decimal_place = 0.1;
             while let Some(c) = self.peek_char() {
-                if c.is_ascii_digit() {
+                if let Some(digit) = ascii_digit_value(c) {
                     self.advance();
-                    value += c.to_digit(10).expect("is digit") as f64 * decimal_place;
+                    value += f64::from(digit) * decimal_place;
                     decimal_place *= 0.1;
                 } else {
                     break;
@@ -1366,5 +1389,33 @@ impl<'a> LexerLike for Lexer<'a> {
 
     fn position(&self) -> Position {
         Lexer::position(self)
+    }
+}
+
+#[cfg(test)]
+mod digit_conversion_tests {
+    use super::*;
+
+    #[test]
+    fn ascii_digit_value_accepts_only_ascii_decimal_digits() {
+        assert_eq!(ascii_digit_value('0'), Some(0));
+        assert_eq!(ascii_digit_value('9'), Some(9));
+        assert_eq!(ascii_digit_value('a'), None);
+        assert_eq!(ascii_digit_value('٣'), None);
+    }
+
+    #[test]
+    fn parse_float_uses_checked_ascii_digit_values() {
+        let mut lexer = Lexer::new(".75x");
+        let value = lexer
+            .parse_float(0)
+            .expect("test: decimal float parsing must succeed");
+        assert!((value - 0.75).abs() < f64::EPSILON);
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: remaining token must be readable"),
+            Token::Char('x')
+        );
     }
 }

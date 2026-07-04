@@ -45,6 +45,193 @@ use crate::transducer::Algorithm;
 use rustc_hash::FxHashSet;
 use std::collections::VecDeque;
 
+const PRODUCT_COST_KEY_SCALE: f64 = 1_000_000.0;
+const PRODUCT_SEARCH_CAPACITY_LIMIT: usize = 4096;
+const I64_MIN_F64_BOUND: f64 = -9_223_372_036_854_775_808.0;
+const I64_MAX_F64_BOUND: f64 = 9_223_372_036_854_775_808.0;
+const F64_EXPONENT_MASK: u64 = 0x7ff;
+const F64_MANTISSA_BITS: u32 = 52;
+const F64_MANTISSA_MASK: u64 = (1u64 << F64_MANTISSA_BITS) - 1;
+const F64_EXPONENT_BIAS: i32 = 1023;
+
+#[inline]
+fn product_search_capacity(input_len: usize, max_errors: u8) -> usize {
+    input_len
+        .saturating_add(1)
+        .saturating_mul(usize::from(max_errors).saturating_add(1))
+        .clamp(1, PRODUCT_SEARCH_CAPACITY_LIMIT)
+}
+
+#[inline]
+fn deletion_closure_capacity(seed_count: usize, max_errors: u8) -> usize {
+    if seed_count == 0 {
+        0
+    } else {
+        seed_count
+            .saturating_mul(usize::from(max_errors).saturating_add(1))
+            .min(PRODUCT_SEARCH_CAPACITY_LIMIT)
+    }
+}
+
+#[inline]
+fn final_search_capacity(remaining_errors: u8) -> usize {
+    usize::from(remaining_errors)
+        .saturating_add(1)
+        .min(PRODUCT_SEARCH_CAPACITY_LIMIT)
+}
+
+#[inline]
+fn state_set_to_sorted_vec(states: StateSet) -> Vec<StateId> {
+    let mut states_vec: Vec<StateId> = Vec::with_capacity(states.len());
+    states_vec.extend(states.iter());
+    states_vec.sort_unstable();
+    states_vec
+}
+
+#[inline]
+fn enqueue_product_search_state(
+    queue: &mut VecDeque<(usize, Vec<StateId>, u8)>,
+    visited: &mut FxHashSet<(usize, Vec<StateId>, u8)>,
+    pos: usize,
+    states: Vec<StateId>,
+    errors: u8,
+) {
+    if visited.insert((pos, states.clone(), errors)) {
+        queue.push_back((pos, states, errors));
+    }
+}
+
+#[inline]
+fn enqueue_final_search_state(
+    queue: &mut VecDeque<(Vec<StateId>, u8)>,
+    visited: &mut FxHashSet<Vec<StateId>>,
+    states: Vec<StateId>,
+    distance: u8,
+) {
+    if visited.insert(states.clone()) {
+        queue.push_back((states, distance));
+    }
+}
+
+#[inline]
+fn max_distance_budget_len(max_distance: u8) -> usize {
+    usize::from(max_distance)
+}
+
+#[inline]
+fn finite_integral_f64_to_i64(value: f64) -> i64 {
+    debug_assert!(value.is_finite());
+    debug_assert_eq!(value.round(), value);
+    debug_assert!(value > I64_MIN_F64_BOUND);
+    debug_assert!(value < I64_MAX_F64_BOUND);
+
+    if value == 0.0 {
+        return 0;
+    }
+
+    let bits = value.to_bits();
+    let is_negative = (bits >> 63) != 0;
+    let exponent_bits =
+        u16::try_from((bits >> F64_MANTISSA_BITS) & F64_EXPONENT_MASK).expect("masked exponent");
+
+    if exponent_bits == 0 {
+        return 0;
+    }
+
+    let exponent = i32::from(exponent_bits) - F64_EXPONENT_BIAS;
+    if exponent < 0 {
+        return 0;
+    }
+
+    let significand = (1u64 << F64_MANTISSA_BITS) | (bits & F64_MANTISSA_MASK);
+    let magnitude = if exponent >= i32::try_from(F64_MANTISSA_BITS).expect("mantissa bits") {
+        let shift =
+            u32::try_from(exponent - i32::try_from(F64_MANTISSA_BITS).expect("mantissa bits"))
+                .expect("nonnegative shift");
+        u128::from(significand)
+            .checked_shl(shift)
+            .unwrap_or(u128::MAX)
+    } else {
+        let shift =
+            u32::try_from(i32::try_from(F64_MANTISSA_BITS).expect("mantissa bits") - exponent)
+                .expect("nonnegative shift");
+        u128::from(significand >> shift)
+    };
+
+    if is_negative {
+        if magnitude == (1u128 << 63) {
+            i64::MIN
+        } else {
+            -i64::try_from(magnitude).expect("bounded negative magnitude")
+        }
+    } else {
+        i64::try_from(magnitude).expect("bounded positive magnitude")
+    }
+}
+
+#[inline]
+fn finite_positive_ceil_to_u8(value: f64) -> u8 {
+    debug_assert!(value.is_finite());
+    debug_assert!(value > 0.0);
+    debug_assert!(value < f64::from(u8::MAX));
+
+    let mut distance = 1u8;
+    while distance < u8::MAX && f64::from(distance) < value {
+        distance += 1;
+    }
+    distance
+}
+
+#[inline]
+fn product_cost_key(cost: f64) -> i64 {
+    if cost.is_nan() {
+        return i64::MIN;
+    }
+    if cost.is_infinite() {
+        return if cost.is_sign_positive() {
+            i64::MAX
+        } else {
+            i64::MIN + 1
+        };
+    }
+
+    let scaled = (cost * PRODUCT_COST_KEY_SCALE).round();
+    if scaled >= I64_MAX_F64_BOUND {
+        i64::MAX
+    } else if scaled <= I64_MIN_F64_BOUND {
+        i64::MIN
+    } else {
+        finite_integral_f64_to_i64(scaled)
+    }
+}
+
+#[inline]
+fn accumulated_cost_to_u8_distance(cost: f64) -> u8 {
+    if cost.is_nan() {
+        return u8::MAX;
+    }
+    if cost <= 0.0 {
+        return 0;
+    }
+    if cost >= f64::from(u8::MAX) {
+        return u8::MAX;
+    }
+
+    finite_positive_ceil_to_u8(cost)
+}
+
+#[inline]
+fn max_cost_to_u8_distance(max_cost: f64) -> u8 {
+    if max_cost.is_nan() || max_cost <= 0.0 {
+        return 0;
+    }
+    if max_cost >= f64::from(u8::MAX) {
+        return u8::MAX;
+    }
+
+    finite_positive_ceil_to_u8(max_cost)
+}
+
 /// Character-level product automaton: NFA × Levenshtein.
 ///
 /// Computes the intersection of a phonetic NFA with a Levenshtein automaton
@@ -63,7 +250,13 @@ pub struct ProductAutomatonChar {
     nfa: NFAChar,
     /// Maximum accumulated cost (f64 to support fractional articulatory costs)
     max_cost: f64,
-    /// Phonetic weight applied to NFA transitions (default: 0.0)
+    /// Reserved phonetic weight (default: `0.0`).
+    ///
+    /// Currently stored but NOT applied to matching cost or ranking: no
+    /// `accepts`/`min_distance`/`transition` path reads it. Tracked for a
+    /// future weighted-phonetic-matching feature. Invariant: clamped to
+    /// `>= 0.0` at construction so a future implementation cannot violate
+    /// monotone-cost pruning (edge costs must be non-negative).
     phonetic_weight: f64,
     /// Levenshtein algorithm variant (standard, transposition, merge-and-split)
     algorithm: Algorithm,
@@ -83,8 +276,8 @@ pub struct ProductAutomatonChar {
 ///
 /// The `accumulated_cost` field uses `f64` to support fractional articulatory
 /// costs (e.g., `p↔b` might cost 0.1 while `p↔k` costs 0.6). For comparison
-/// purposes, we use bit-level representation with tolerance for floating-point
-/// imprecision.
+/// and hashing, costs are mapped to a fixed micro-cost key so equality remains
+/// transitive and consistent with `Hash`.
 #[derive(Debug, Clone)]
 pub struct ProductStateChar {
     /// Set of active NFA states (after epsilon closure)
@@ -97,7 +290,25 @@ impl ProductStateChar {
     /// Create a new product state.
     pub fn new(nfa_states: FxHashSet<StateId>, accumulated_cost: f64) -> Self {
         let mut states: Vec<StateId> = nfa_states.into_iter().collect();
-        states.sort(); // Canonical ordering for equality comparison
+        states.sort_unstable(); // Canonical ordering for equality comparison
+        Self {
+            nfa_states: states,
+            accumulated_cost,
+        }
+    }
+
+    fn from_state_ids(nfa_states: &[StateId], accumulated_cost: f64) -> Self {
+        let is_canonical = nfa_states.windows(2).all(|pair| pair[0] < pair[1]);
+        if is_canonical {
+            return Self {
+                nfa_states: nfa_states.to_vec(),
+                accumulated_cost,
+            };
+        }
+
+        let mut states = nfa_states.to_vec();
+        states.sort_unstable();
+        states.dedup();
         Self {
             nfa_states: states,
             accumulated_cost,
@@ -111,14 +322,14 @@ impl ProductStateChar {
 
     /// Get the edit distance as an integer (rounds up for fractional costs).
     pub fn edit_distance(&self) -> u8 {
-        self.accumulated_cost.ceil() as u8
+        accumulated_cost_to_u8_distance(self.accumulated_cost)
     }
 }
 
 impl PartialEq for ProductStateChar {
     fn eq(&self, other: &Self) -> bool {
         self.nfa_states == other.nfa_states
-            && (self.accumulated_cost - other.accumulated_cost).abs() < 1e-9
+            && product_cost_key(self.accumulated_cost) == product_cost_key(other.accumulated_cost)
     }
 }
 
@@ -128,12 +339,15 @@ impl std::hash::Hash for ProductStateChar {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.nfa_states.hash(state);
         // Hash the cost with fixed precision to avoid floating-point issues
-        let cost_bits = (self.accumulated_cost * 1_000_000.0).round() as i64;
-        cost_bits.hash(state);
+        product_cost_key(self.accumulated_cost).hash(state);
     }
 }
 
 impl ProductAutomatonChar {
+    fn empty_pattern_distance(input: &str) -> usize {
+        input.chars().count()
+    }
+
     /// Create a new product automaton with default settings.
     ///
     /// # Arguments
@@ -169,19 +383,29 @@ impl ProductAutomatonChar {
 
     /// Create a product automaton with a phonetic weight.
     ///
-    /// The phonetic weight is added to the total cost for each NFA transition
-    /// that consumes input. This allows penalizing phonetic transformations.
+    /// Reserved: the phonetic weight is currently stored but NOT applied to
+    /// matching cost or ranking; no `accepts`/`min_distance`/`transition` path
+    /// reads it, and phonetic-transducer candidates always report
+    /// `phonetic_cost == 0.0`. Tracked for a future weighted-phonetic-matching
+    /// feature. The value is clamped to `>= 0.0` so a future implementation
+    /// cannot violate monotone-cost pruning (edge costs must be non-negative).
     pub fn with_phonetic_weight(nfa: NFAChar, max_distance: u8, phonetic_weight: f64) -> Self {
         Self {
             nfa,
             max_cost: max_distance as f64,
-            phonetic_weight,
+            phonetic_weight: phonetic_weight.max(0.0),
             algorithm: Algorithm::Standard,
             articulatory_costs: None,
         }
     }
 
     /// Create a product automaton with both algorithm and phonetic weight.
+    ///
+    /// Reserved: as with [`Self::with_phonetic_weight`], the phonetic weight is
+    /// stored but NOT applied to matching cost or ranking (`phonetic_cost` is
+    /// always `0.0`). It is clamped to `>= 0.0` to preserve the future
+    /// monotone-cost-pruning invariant. Tracked for a future
+    /// weighted-phonetic-matching feature.
     pub fn with_algorithm_and_weight(
         nfa: NFAChar,
         max_distance: u8,
@@ -191,7 +415,7 @@ impl ProductAutomatonChar {
         Self {
             nfa,
             max_cost: max_distance as f64,
-            phonetic_weight,
+            phonetic_weight: phonetic_weight.max(0.0),
             algorithm,
             articulatory_costs: None,
         }
@@ -227,6 +451,15 @@ impl ProductAutomatonChar {
         algorithm: Algorithm,
         articulatory_costs: ArticulatoryCosts,
     ) -> Self {
+        // F7: reject cost configurations that would break monotone-cost pruning
+        // (negative/NaN/infinite operation costs, or a non-zero match cost).
+        // `ArticulatoryCosts::is_valid()` transitively checks its base
+        // `OperationCostsF64::is_valid()`. Debug-only so valid callers pay
+        // nothing in release builds.
+        debug_assert!(
+            articulatory_costs.is_valid(),
+            "articulatory costs must be finite, non-negative, with match_cost == 0.0: {articulatory_costs}"
+        );
         Self {
             nfa,
             max_cost,
@@ -243,7 +476,7 @@ impl ProductAutomatonChar {
 
     /// Get the maximum edit distance (integer, for backwards compatibility).
     pub fn max_distance(&self) -> u8 {
-        self.max_cost.ceil() as u8
+        max_cost_to_u8_distance(self.max_cost)
     }
 
     /// Get the articulatory costs, if configured.
@@ -251,7 +484,10 @@ impl ProductAutomatonChar {
         self.articulatory_costs.as_ref()
     }
 
-    /// Get the phonetic weight.
+    /// Get the (reserved) phonetic weight.
+    ///
+    /// Returns the stored, clamped (`>= 0.0`) weight. Note this value is NOT
+    /// applied to matching cost or ranking in the current implementation.
     pub fn phonetic_weight(&self) -> f64 {
         self.phonetic_weight
     }
@@ -302,16 +538,14 @@ impl ProductAutomatonChar {
         frontier: &[ProductStateChar],
         c: char,
     ) -> Vec<ProductStateChar> {
-        let mut next = Vec::new();
+        let mut next = Vec::with_capacity(frontier.len().saturating_mul(3));
 
         for state in frontier {
             if state.accumulated_cost > self.max_cost {
                 continue;
             }
 
-            let current_states: FxHashSet<StateId> = state.nfa_states.iter().copied().collect();
-
-            let match_states = self.nfa_step(&current_states, c);
+            let match_states = self.nfa_step_ids(&state.nfa_states, c);
             if !match_states.is_empty() {
                 next.push(ProductStateChar::new(match_states, state.accumulated_cost));
             }
@@ -319,13 +553,16 @@ impl ProductAutomatonChar {
             if state.accumulated_cost < self.max_cost {
                 let next_cost = state.accumulated_cost + 1.0;
 
-                let subst_states = self.nfa_advance(&current_states);
+                let subst_states = self.nfa_advance_ids(&state.nfa_states);
                 if !subst_states.is_empty() && next_cost <= self.max_cost {
                     next.push(ProductStateChar::new(subst_states, next_cost));
                 }
 
                 if next_cost <= self.max_cost {
-                    next.push(ProductStateChar::new(current_states, next_cost));
+                    next.push(ProductStateChar::from_state_ids(
+                        &state.nfa_states,
+                        next_cost,
+                    ));
                 }
             }
         }
@@ -343,9 +580,13 @@ impl ProductAutomatonChar {
     }
 
     fn deletion_closure(&self, seeds: Vec<ProductStateChar>) -> Vec<ProductStateChar> {
+        let seed_count = seeds.len();
+        let capacity = deletion_closure_capacity(seed_count, self.max_distance());
         let mut visited: FxHashSet<ProductStateChar> = FxHashSet::default();
-        let mut queue: VecDeque<ProductStateChar> = seeds.into();
-        let mut closure = Vec::new();
+        visited.reserve(capacity);
+        let mut queue = VecDeque::with_capacity(capacity);
+        queue.extend(seeds);
+        let mut closure = Vec::with_capacity(capacity);
 
         while let Some(state) = queue.pop_front() {
             if state.accumulated_cost > self.max_cost {
@@ -356,8 +597,7 @@ impl ProductAutomatonChar {
             }
 
             if state.accumulated_cost < self.max_cost {
-                let current_states: FxHashSet<StateId> = state.nfa_states.iter().copied().collect();
-                let deleted_states = self.nfa_advance(&current_states);
+                let deleted_states = self.nfa_advance_ids(&state.nfa_states);
                 let next_cost = state.accumulated_cost + 1.0;
                 if !deleted_states.is_empty() && next_cost <= self.max_cost {
                     queue.push_back(ProductStateChar::new(deleted_states, next_cost));
@@ -427,11 +667,14 @@ impl ProductAutomatonChar {
     ///
     /// Set of successor states reachable via matching or edit operations.
     pub fn transition(&self, state: &ProductStateChar, c: char) -> Vec<ProductStateChar> {
-        let mut successors = Vec::new();
-        let current_states: FxHashSet<StateId> = state.nfa_states.iter().copied().collect();
+        let mut successors = Vec::with_capacity(if state.accumulated_cost < self.max_cost {
+            3
+        } else {
+            1
+        });
 
         // 1. NFA Match: consume character in NFA (no cost)
-        let match_states = self.nfa_step(&current_states, c);
+        let match_states = self.nfa_step_ids(&state.nfa_states, c);
         if !match_states.is_empty() {
             successors.push(ProductStateChar::new(match_states, state.accumulated_cost));
         }
@@ -440,8 +683,6 @@ impl ProductAutomatonChar {
         if state.accumulated_cost < self.max_cost {
             // 2. Substitution: NFA doesn't match, consume with articulatory cost
             // For each active state, try all transitions with character-specific cost
-            let mut subst_entries: Vec<(FxHashSet<StateId>, f64)> = Vec::new();
-
             for &nfa_state in &state.nfa_states {
                 for trans in self.nfa.transitions_from(nfa_state) {
                     if trans.label.consumes_input() {
@@ -454,18 +695,13 @@ impl ProductAutomatonChar {
                         if new_cost <= self.max_cost {
                             let closure = self.nfa.epsilon_closure_single(trans.to);
                             let closure_set: FxHashSet<StateId> = closure.into();
-                            subst_entries.push((closure_set, new_cost));
+                            if !closure_set.is_empty() {
+                                let subst_state = ProductStateChar::new(closure_set, new_cost);
+                                if !successors.contains(&subst_state) {
+                                    successors.push(subst_state);
+                                }
+                            }
                         }
-                    }
-                }
-            }
-
-            // Merge substitution states by cost (group states with same cost)
-            for (subst_states, cost) in subst_entries {
-                if !subst_states.is_empty() {
-                    let subst_state = ProductStateChar::new(subst_states, cost);
-                    if !successors.contains(&subst_state) {
-                        successors.push(subst_state);
                     }
                 }
             }
@@ -473,7 +709,10 @@ impl ProductAutomatonChar {
             // 3. Insertion: input has extra char, NFA stays in place
             let ins_cost = state.accumulated_cost + self.insertion_cost();
             if ins_cost <= self.max_cost {
-                successors.push(ProductStateChar::new(current_states.clone(), ins_cost));
+                successors.push(ProductStateChar::from_state_ids(
+                    &state.nfa_states,
+                    ins_cost,
+                ));
             }
 
             // 4. Deletion: NFA pattern has extra char, advance NFA without consuming input
@@ -487,11 +726,21 @@ impl ProductAutomatonChar {
         successors
     }
 
-    /// Advance NFA states by consuming a character.
-    fn nfa_step(&self, states: &FxHashSet<StateId>, c: char) -> FxHashSet<StateId> {
-        let mut next_states = StateSet::new();
+    fn nfa_step_ids(&self, states: &[StateId], c: char) -> FxHashSet<StateId> {
+        self.nfa_step_state_set(states.iter().copied(), c).into()
+    }
 
-        for &state in states {
+    fn nfa_step_vec(&self, states: &[StateId], c: char) -> Vec<StateId> {
+        state_set_to_sorted_vec(self.nfa_step_state_set(states.iter().copied(), c))
+    }
+
+    fn nfa_step_state_set<I>(&self, states: I, c: char) -> StateSet
+    where
+        I: IntoIterator<Item = StateId>,
+    {
+        let mut next_states = StateSet::with_capacity(self.nfa.num_states());
+
+        for state in states {
             for trans in self.nfa.transitions_from(state) {
                 if trans.label.matches(c) && trans.label.consumes_input() {
                     next_states.insert(trans.to);
@@ -499,8 +748,7 @@ impl ProductAutomatonChar {
             }
         }
 
-        // Apply epsilon closure and convert to FxHashSet
-        self.nfa.epsilon_closure(&next_states).into()
+        self.nfa.epsilon_closure(&next_states)
     }
 
     /// Check if the input string is accepted by the fuzzy regex.
@@ -524,7 +772,8 @@ impl ProductAutomatonChar {
     pub fn accepts(&self, input: &str) -> bool {
         // Early exit: empty pattern
         if self.nfa.is_empty() {
-            return input.is_empty() || input.len() <= self.max_distance() as usize;
+            return Self::empty_pattern_distance(input)
+                <= max_distance_budget_len(self.max_distance());
         }
 
         let input_chars: Vec<char> = input.chars().collect();
@@ -532,26 +781,20 @@ impl ProductAutomatonChar {
         let max_errors = self.max_distance(); // Use integer approximation
 
         // BFS state: (nfa_states, input_position, edit_distance)
-        let initial_closure: FxHashSet<StateId> =
-            self.nfa.epsilon_closure_single(self.nfa.start()).into();
+        let initial_closure =
+            state_set_to_sorted_vec(self.nfa.epsilon_closure_single(self.nfa.start()));
 
         // Use dynamic programming / BFS
         // State: (position in input, set of NFA states, edit distance used)
+        let search_capacity = product_search_capacity(n, max_errors);
         let mut visited: FxHashSet<(usize, Vec<StateId>, u8)> = FxHashSet::default();
-        let mut queue: VecDeque<(usize, FxHashSet<StateId>, u8)> = VecDeque::new();
+        visited.reserve(search_capacity);
+        let mut queue: VecDeque<(usize, Vec<StateId>, u8)> =
+            VecDeque::with_capacity(search_capacity);
 
-        queue.push_back((0, initial_closure, 0));
+        enqueue_product_search_state(&mut queue, &mut visited, 0, initial_closure, 0);
 
         while let Some((pos, nfa_states, errors)) = queue.pop_front() {
-            // Convert to canonical form for visited check
-            let mut states_vec: Vec<StateId> = nfa_states.iter().copied().collect();
-            states_vec.sort();
-
-            // Skip if already visited
-            if !visited.insert((pos, states_vec.clone(), errors)) {
-                continue;
-            }
-
             // Prune if over budget
             if errors > max_errors {
                 continue;
@@ -560,7 +803,7 @@ impl ProductAutomatonChar {
             // Check acceptance: at end of input and NFA accepts
             if pos == n {
                 // Check if we can reach final state with remaining budget
-                if self.can_reach_final(&nfa_states, errors, max_errors) {
+                if self.can_reach_final_vec(&nfa_states, errors, max_errors) {
                     return true;
                 }
                 continue;
@@ -569,50 +812,101 @@ impl ProductAutomatonChar {
             let c = input_chars[pos];
 
             // 1. Match: NFA consumes character, no error
-            let match_states = self.nfa_step(&nfa_states, c);
+            let match_states = self.nfa_step_vec(&nfa_states, c);
             if !match_states.is_empty() {
-                queue.push_back((pos + 1, match_states, errors));
+                enqueue_product_search_state(
+                    &mut queue,
+                    &mut visited,
+                    pos + 1,
+                    match_states,
+                    errors,
+                );
             }
 
             if errors < max_errors {
+                let advanced_states = self.nfa_advance_vec(&nfa_states);
+
                 // 2. Substitution: NFA advances (any transition), +1 error
-                let subst_states = self.nfa_advance(&nfa_states);
-                if !subst_states.is_empty() {
-                    queue.push_back((pos + 1, subst_states, errors + 1));
+                if !advanced_states.is_empty() {
+                    enqueue_product_search_state(
+                        &mut queue,
+                        &mut visited,
+                        pos + 1,
+                        advanced_states.clone(),
+                        errors + 1,
+                    );
                 }
 
                 // 3. Insertion: Stay in NFA, consume input char, +1 error
-                queue.push_back((pos + 1, nfa_states.clone(), errors + 1));
+                enqueue_product_search_state(
+                    &mut queue,
+                    &mut visited,
+                    pos + 1,
+                    nfa_states.clone(),
+                    errors + 1,
+                );
 
                 // 4. Deletion: Advance NFA without consuming input, +1 error
-                let del_states = self.nfa_advance(&nfa_states);
-                if !del_states.is_empty() {
-                    queue.push_back((pos, del_states, errors + 1));
+                if !advanced_states.is_empty() {
+                    enqueue_product_search_state(
+                        &mut queue,
+                        &mut visited,
+                        pos,
+                        advanced_states.clone(),
+                        errors + 1,
+                    );
                 }
 
                 // 5. Transposition: swap adjacent characters (e.g., "ab" → "ba")
                 if self.algorithm.supports_transposition() && pos + 1 < n {
                     let next_c = input_chars[pos + 1];
-                    let trans_states = self.nfa_step_transposed(&nfa_states, c, next_c);
+                    let trans_states = self.nfa_step_transposed_vec(&nfa_states, c, next_c);
                     if !trans_states.is_empty() {
-                        queue.push_back((pos + 2, trans_states, errors + 1));
+                        enqueue_product_search_state(
+                            &mut queue,
+                            &mut visited,
+                            pos + 2,
+                            trans_states,
+                            errors + 1,
+                        );
                     }
                 }
 
-                // 6. Merge: two input chars → one NFA transition (e.g., "cl" → "d")
+                // 6. Merge: two adjacent input chars → one NFA edge, cost 1.
+                //    INTENTIONAL wildcard over-approximation: the two chars are
+                //    NOT validated against the edge (can over-match, never
+                //    misses). See `nfa_step_merged_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && pos + 1 < n {
                     let next_c = input_chars[pos + 1];
-                    let merge_states = self.nfa_step_merged(&nfa_states, c, next_c);
-                    if !merge_states.is_empty() {
-                        queue.push_back((pos + 2, merge_states, errors + 1));
+                    if !advanced_states.is_empty() {
+                        let merge_states =
+                            self.nfa_step_merged_from_advance_vec(&advanced_states, c, next_c);
+                        if !merge_states.is_empty() {
+                            enqueue_product_search_state(
+                                &mut queue,
+                                &mut visited,
+                                pos + 2,
+                                merge_states,
+                                errors + 1,
+                            );
+                        }
                     }
                 }
 
-                // 7. Split: one input char → two NFA transitions (e.g., "ä" → "ae")
-                if self.algorithm.supports_merge_split() {
-                    let split_states = self.nfa_step_split(&nfa_states, c);
+                // 7. Split: one input char → two NFA edges, cost 1.
+                //    INTENTIONAL wildcard over-approximation: the char is NOT
+                //    validated against either edge (can over-match, never
+                //    misses). See `nfa_step_split_from_advance_vec`.
+                if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
+                    let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, c);
                     if !split_states.is_empty() {
-                        queue.push_back((pos + 1, split_states, errors + 1));
+                        enqueue_product_search_state(
+                            &mut queue,
+                            &mut visited,
+                            pos + 1,
+                            split_states,
+                            errors + 1,
+                        );
                     }
                 }
             }
@@ -621,11 +915,21 @@ impl ProductAutomatonChar {
         false
     }
 
-    /// Advance NFA states via any consuming transition.
-    fn nfa_advance(&self, states: &FxHashSet<StateId>) -> FxHashSet<StateId> {
-        let mut next_states = StateSet::new();
+    fn nfa_advance_ids(&self, states: &[StateId]) -> FxHashSet<StateId> {
+        self.nfa_advance_state_set(states.iter().copied()).into()
+    }
 
-        for &state in states {
+    fn nfa_advance_vec(&self, states: &[StateId]) -> Vec<StateId> {
+        state_set_to_sorted_vec(self.nfa_advance_state_set(states.iter().copied()))
+    }
+
+    fn nfa_advance_state_set<I>(&self, states: I) -> StateSet
+    where
+        I: IntoIterator<Item = StateId>,
+    {
+        let mut next_states = StateSet::with_capacity(self.nfa.num_states());
+
+        for state in states {
             for trans in self.nfa.transitions_from(state) {
                 if trans.label.consumes_input() {
                     next_states.insert(trans.to);
@@ -633,7 +937,7 @@ impl ProductAutomatonChar {
             }
         }
 
-        self.nfa.epsilon_closure(&next_states).into()
+        self.nfa.epsilon_closure(&next_states)
     }
 
     /// Step NFA with transposed characters.
@@ -641,53 +945,51 @@ impl ProductAutomatonChar {
     /// For transposition, we match c2 first, then c1 (swapped order).
     /// This handles cases like "ab" → "ba" where the input has the characters
     /// in transposed order relative to the pattern.
-    fn nfa_step_transposed(
-        &self,
-        states: &FxHashSet<StateId>,
-        c1: char,
-        c2: char,
-    ) -> FxHashSet<StateId> {
-        // Match c2 first (in NFA), then c1
-        // This corresponds to: pattern expects "ab" but input has "ba"
-        // We consume both input chars (b,a) while matching NFA pattern (a,b)
-        let after_c2 = self.nfa_step(states, c2);
-        self.nfa_step(&after_c2, c1)
+    fn nfa_step_transposed_vec(&self, states: &[StateId], c1: char, c2: char) -> Vec<StateId> {
+        let after_c2 = self.nfa_step_vec(states, c2);
+        self.nfa_step_vec(&after_c2, c1)
     }
 
-    /// Step NFA treating two input chars as merged into one NFA transition.
+    /// Merge step for `Algorithm::MergeAndSplit` — an INTENTIONAL wildcard
+    /// over-approximation.
     ///
-    /// For merge, we consume 2 input chars but advance NFA by only 1 transition.
-    /// This handles OCR errors like "cl" → "d" where two chars merge into one.
-    fn nfa_step_merged(
+    /// Merge collapses two adjacent input characters onto a single consuming
+    /// NFA edge at cost 1. The characters `_c1`/`_c2` are deliberately ignored
+    /// (hence the `_` prefix): ANY two adjacent input chars are treated as
+    /// collapsible onto the one edge already taken by `advanced_states` (a
+    /// wildcard `nfa_advance`). This can accept strings a faithful,
+    /// character-validated merge product would reject, but it never misses a
+    /// real match (no false negatives). Contrast with
+    /// [`Self::nfa_step_transposed_vec`], which DOES validate the swapped
+    /// characters against the NFA edges.
+    fn nfa_step_merged_from_advance_vec(
         &self,
-        _states: &FxHashSet<StateId>,
+        advanced_states: &[StateId],
         _c1: char,
         _c2: char,
-    ) -> FxHashSet<StateId> {
-        // For merge: consume 2 input chars, advance NFA by 1
-        // This is effectively skipping c1 and doing a wildcard match for c2's slot
-        // We advance NFA with any transition (like substitution, but consuming 2 chars)
-        self.nfa_advance(_states)
+    ) -> Vec<StateId> {
+        advanced_states.to_vec()
     }
 
-    /// Step NFA with split (one input char consumes two NFA transitions).
+    /// Split step for `Algorithm::MergeAndSplit` — an INTENTIONAL wildcard
+    /// over-approximation.
     ///
-    /// For split, we consume 1 input char but advance NFA by 2 transitions.
-    /// This handles OCR errors like "ä" → "ae" where one char splits into two.
-    fn nfa_step_split(&self, states: &FxHashSet<StateId>, _c: char) -> FxHashSet<StateId> {
-        // For split: consume 1 input char, advance NFA by 2
-        // We do two wildcard advances in the NFA
-        let after_first = self.nfa_advance(states);
-        self.nfa_advance(&after_first)
+    /// Split covers one input character with two consuming NFA edges at cost 1.
+    /// The character `_c` is deliberately ignored (hence the `_` prefix): the
+    /// single input char is treated as coverable by ANY two wildcard edges
+    /// (`advanced_states` is the first `nfa_advance`; this applies the second).
+    /// Like merge, this can over-match but never misses a real match, whereas
+    /// transposition validates its characters.
+    fn nfa_step_split_from_advance_vec(
+        &self,
+        advanced_states: &[StateId],
+        _c: char,
+    ) -> Vec<StateId> {
+        self.nfa_advance_vec(advanced_states)
     }
 
     /// Check if we can reach a final state with remaining error budget.
-    fn can_reach_final(
-        &self,
-        states: &FxHashSet<StateId>,
-        current_errors: u8,
-        max_errors: u8,
-    ) -> bool {
+    fn can_reach_final_vec(&self, states: &[StateId], current_errors: u8, max_errors: u8) -> bool {
         // If any current state is final, we're done
         if states.iter().any(|&s| self.nfa.is_final(s)) {
             return true;
@@ -700,18 +1002,13 @@ impl ProductAutomatonChar {
         }
 
         // BFS to find path to final within remaining budget
+        let search_capacity = final_search_capacity(remaining);
         let mut visited: FxHashSet<Vec<StateId>> = FxHashSet::default();
-        let mut queue: VecDeque<(FxHashSet<StateId>, u8)> = VecDeque::new();
-        queue.push_back((states.clone(), 0));
+        visited.reserve(search_capacity);
+        let mut queue: VecDeque<(Vec<StateId>, u8)> = VecDeque::with_capacity(search_capacity);
+        enqueue_final_search_state(&mut queue, &mut visited, states.to_vec(), 0);
 
         while let Some((current, dist)) = queue.pop_front() {
-            let mut states_vec: Vec<StateId> = current.iter().copied().collect();
-            states_vec.sort();
-
-            if !visited.insert(states_vec) {
-                continue;
-            }
-
             if dist > remaining {
                 continue;
             }
@@ -721,9 +1018,9 @@ impl ProductAutomatonChar {
             }
 
             // Advance NFA (deletion from pattern)
-            let next = self.nfa_advance(&current);
+            let next = self.nfa_advance_vec(&current);
             if !next.is_empty() {
-                queue.push_back((next, dist + 1));
+                enqueue_final_search_state(&mut queue, &mut visited, next, dist + 1);
             }
         }
 
@@ -741,10 +1038,11 @@ impl ProductAutomatonChar {
     /// Minimum edit distance, or `None` if no match within max_distance.
     pub fn min_distance(&self, input: &str) -> Option<u8> {
         if self.nfa.is_empty() {
-            return if input.is_empty() {
+            let distance = Self::empty_pattern_distance(input);
+            return if distance == 0 {
                 Some(0)
-            } else if input.len() <= self.max_distance() as usize {
-                Some(input.len() as u8)
+            } else if distance <= max_distance_budget_len(self.max_distance()) {
+                u8::try_from(distance).ok()
             } else {
                 None
             };
@@ -752,25 +1050,22 @@ impl ProductAutomatonChar {
 
         let input_chars: Vec<char> = input.chars().collect();
         let n = input_chars.len();
+        let max_errors = self.max_distance();
 
-        let initial_closure: FxHashSet<StateId> =
-            self.nfa.epsilon_closure_single(self.nfa.start()).into();
+        let initial_closure =
+            state_set_to_sorted_vec(self.nfa.epsilon_closure_single(self.nfa.start()));
 
         let mut min_dist: Option<u8> = None;
+        let search_capacity = product_search_capacity(n, max_errors);
         let mut visited: FxHashSet<(usize, Vec<StateId>, u8)> = FxHashSet::default();
-        let mut queue: VecDeque<(usize, FxHashSet<StateId>, u8)> = VecDeque::new();
+        visited.reserve(search_capacity);
+        let mut queue: VecDeque<(usize, Vec<StateId>, u8)> =
+            VecDeque::with_capacity(search_capacity);
 
-        queue.push_back((0, initial_closure, 0));
+        enqueue_product_search_state(&mut queue, &mut visited, 0, initial_closure, 0);
 
         while let Some((pos, nfa_states, errors)) = queue.pop_front() {
-            let mut states_vec: Vec<StateId> = nfa_states.iter().copied().collect();
-            states_vec.sort();
-
-            if !visited.insert((pos, states_vec.clone(), errors)) {
-                continue;
-            }
-
-            if errors > self.max_distance() {
+            if errors > max_errors {
                 continue;
             }
 
@@ -782,7 +1077,7 @@ impl ProductAutomatonChar {
             }
 
             if pos == n {
-                if let Some(final_dist) = self.distance_to_final(&nfa_states, errors) {
+                if let Some(final_dist) = self.distance_to_final_vec(&nfa_states, errors) {
                     match min_dist {
                         None => min_dist = Some(final_dist),
                         Some(current) if final_dist < current => min_dist = Some(final_dist),
@@ -795,50 +1090,101 @@ impl ProductAutomatonChar {
             let c = input_chars[pos];
 
             // 1. Match
-            let match_states = self.nfa_step(&nfa_states, c);
+            let match_states = self.nfa_step_vec(&nfa_states, c);
             if !match_states.is_empty() {
-                queue.push_back((pos + 1, match_states, errors));
+                enqueue_product_search_state(
+                    &mut queue,
+                    &mut visited,
+                    pos + 1,
+                    match_states,
+                    errors,
+                );
             }
 
-            if errors < self.max_distance() {
+            if errors < max_errors {
+                let advanced_states = self.nfa_advance_vec(&nfa_states);
+
                 // 2. Substitution
-                let subst_states = self.nfa_advance(&nfa_states);
-                if !subst_states.is_empty() {
-                    queue.push_back((pos + 1, subst_states, errors + 1));
+                if !advanced_states.is_empty() {
+                    enqueue_product_search_state(
+                        &mut queue,
+                        &mut visited,
+                        pos + 1,
+                        advanced_states.clone(),
+                        errors + 1,
+                    );
                 }
 
                 // 3. Insertion
-                queue.push_back((pos + 1, nfa_states.clone(), errors + 1));
+                enqueue_product_search_state(
+                    &mut queue,
+                    &mut visited,
+                    pos + 1,
+                    nfa_states.clone(),
+                    errors + 1,
+                );
 
                 // 4. Deletion
-                let del_states = self.nfa_advance(&nfa_states);
-                if !del_states.is_empty() {
-                    queue.push_back((pos, del_states, errors + 1));
+                if !advanced_states.is_empty() {
+                    enqueue_product_search_state(
+                        &mut queue,
+                        &mut visited,
+                        pos,
+                        advanced_states.clone(),
+                        errors + 1,
+                    );
                 }
 
                 // 5. Transposition: swap adjacent characters (e.g., "ab" → "ba")
                 if self.algorithm.supports_transposition() && pos + 1 < n {
                     let next_c = input_chars[pos + 1];
-                    let trans_states = self.nfa_step_transposed(&nfa_states, c, next_c);
+                    let trans_states = self.nfa_step_transposed_vec(&nfa_states, c, next_c);
                     if !trans_states.is_empty() {
-                        queue.push_back((pos + 2, trans_states, errors + 1));
+                        enqueue_product_search_state(
+                            &mut queue,
+                            &mut visited,
+                            pos + 2,
+                            trans_states,
+                            errors + 1,
+                        );
                     }
                 }
 
-                // 6. Merge: two input chars → one NFA transition (e.g., "cl" → "d")
+                // 6. Merge: two adjacent input chars → one NFA edge, cost 1.
+                //    INTENTIONAL wildcard over-approximation: the two chars are
+                //    NOT validated against the edge (can over-match, never
+                //    misses). See `nfa_step_merged_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && pos + 1 < n {
                     let next_c = input_chars[pos + 1];
-                    let merge_states = self.nfa_step_merged(&nfa_states, c, next_c);
-                    if !merge_states.is_empty() {
-                        queue.push_back((pos + 2, merge_states, errors + 1));
+                    if !advanced_states.is_empty() {
+                        let merge_states =
+                            self.nfa_step_merged_from_advance_vec(&advanced_states, c, next_c);
+                        if !merge_states.is_empty() {
+                            enqueue_product_search_state(
+                                &mut queue,
+                                &mut visited,
+                                pos + 2,
+                                merge_states,
+                                errors + 1,
+                            );
+                        }
                     }
                 }
 
-                // 7. Split: one input char → two NFA transitions (e.g., "ä" → "ae")
-                if self.algorithm.supports_merge_split() {
-                    let split_states = self.nfa_step_split(&nfa_states, c);
+                // 7. Split: one input char → two NFA edges, cost 1.
+                //    INTENTIONAL wildcard over-approximation: the char is NOT
+                //    validated against either edge (can over-match, never
+                //    misses). See `nfa_step_split_from_advance_vec`.
+                if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
+                    let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, c);
                     if !split_states.is_empty() {
-                        queue.push_back((pos + 1, split_states, errors + 1));
+                        enqueue_product_search_state(
+                            &mut queue,
+                            &mut visited,
+                            pos + 1,
+                            split_states,
+                            errors + 1,
+                        );
                     }
                 }
             }
@@ -848,7 +1194,7 @@ impl ProductAutomatonChar {
     }
 
     /// Compute distance to reach final state from current states.
-    fn distance_to_final(&self, states: &FxHashSet<StateId>, base_dist: u8) -> Option<u8> {
+    fn distance_to_final_vec(&self, states: &[StateId], base_dist: u8) -> Option<u8> {
         if states.iter().any(|&s| self.nfa.is_final(s)) {
             return Some(base_dist);
         }
@@ -858,18 +1204,13 @@ impl ProductAutomatonChar {
             return None;
         }
 
+        let search_capacity = final_search_capacity(remaining);
         let mut visited: FxHashSet<Vec<StateId>> = FxHashSet::default();
-        let mut queue: VecDeque<(FxHashSet<StateId>, u8)> = VecDeque::new();
-        queue.push_back((states.clone(), 0));
+        visited.reserve(search_capacity);
+        let mut queue: VecDeque<(Vec<StateId>, u8)> = VecDeque::with_capacity(search_capacity);
+        enqueue_final_search_state(&mut queue, &mut visited, states.to_vec(), 0);
 
         while let Some((current, dist)) = queue.pop_front() {
-            let mut states_vec: Vec<StateId> = current.iter().copied().collect();
-            states_vec.sort();
-
-            if !visited.insert(states_vec) {
-                continue;
-            }
-
             if dist > remaining {
                 continue;
             }
@@ -878,9 +1219,9 @@ impl ProductAutomatonChar {
                 return Some(base_dist + dist);
             }
 
-            let next = self.nfa_advance(&current);
+            let next = self.nfa_advance_vec(&current);
             if !next.is_empty() {
-                queue.push_back((next, dist + 1));
+                enqueue_final_search_state(&mut queue, &mut visited, next, dist + 1);
             }
         }
 
@@ -899,7 +1240,13 @@ pub struct ProductAutomaton {
     nfa: NFA,
     /// Maximum edit distance
     max_distance: u8,
-    /// Phonetic weight
+    /// Reserved phonetic weight (default: `0.0`).
+    ///
+    /// Currently stored but NOT applied to matching cost or ranking: no
+    /// `accepts`/`min_distance` path reads it. Tracked for a future
+    /// weighted-phonetic-matching feature. Invariant: clamped to `>= 0.0` at
+    /// construction to preserve monotone-cost pruning (edge costs must be
+    /// non-negative).
     phonetic_weight: f64,
     /// Levenshtein algorithm variant
     algorithm: Algorithm,
@@ -918,7 +1265,7 @@ impl ProductState {
     /// Create a new product state.
     pub fn new(nfa_states: FxHashSet<StateId>, edit_distance: u8) -> Self {
         let mut states: Vec<StateId> = nfa_states.into_iter().collect();
-        states.sort();
+        states.sort_unstable();
         Self {
             nfa_states: states,
             edit_distance,
@@ -954,16 +1301,29 @@ impl ProductAutomaton {
     }
 
     /// Create with phonetic weight.
+    ///
+    /// Reserved: the phonetic weight is currently stored but NOT applied to
+    /// matching cost or ranking (no `accepts`/`min_distance` path reads it, and
+    /// phonetic-transducer candidates always report `phonetic_cost == 0.0`).
+    /// Tracked for a future weighted-phonetic-matching feature. The value is
+    /// clamped to `>= 0.0` so a future implementation cannot violate
+    /// monotone-cost pruning (edge costs must be non-negative).
     pub fn with_phonetic_weight(nfa: NFA, max_distance: u8, phonetic_weight: f64) -> Self {
         Self {
             nfa,
             max_distance,
-            phonetic_weight,
+            phonetic_weight: phonetic_weight.max(0.0),
             algorithm: Algorithm::Standard,
         }
     }
 
     /// Create a product automaton with both algorithm and phonetic weight.
+    ///
+    /// Reserved: as with [`Self::with_phonetic_weight`], the phonetic weight is
+    /// stored but NOT applied to matching cost or ranking (`phonetic_cost` is
+    /// always `0.0`). It is clamped to `>= 0.0` to preserve the future
+    /// monotone-cost-pruning invariant. Tracked for a future
+    /// weighted-phonetic-matching feature.
     pub fn with_algorithm_and_weight(
         nfa: NFA,
         max_distance: u8,
@@ -973,7 +1333,7 @@ impl ProductAutomaton {
         Self {
             nfa,
             max_distance,
-            phonetic_weight,
+            phonetic_weight: phonetic_weight.max(0.0),
             algorithm,
         }
     }
@@ -983,7 +1343,11 @@ impl ProductAutomaton {
         self.max_distance
     }
 
-    /// Get the phonetic weight applied to substitutions in this product automaton.
+    /// Get the (reserved) phonetic weight stored in this product automaton.
+    ///
+    /// Returns the stored, clamped (`>= 0.0`) weight. Note this value is NOT
+    /// applied to substitutions, matching cost, or ranking in the current
+    /// implementation.
     pub fn phonetic_weight(&self) -> f64 {
         self.phonetic_weight
     }
@@ -1008,11 +1372,17 @@ impl ProductAutomaton {
         state.nfa_states.iter().any(|&s| self.nfa.is_final(s))
     }
 
-    /// Advance NFA states by consuming a byte.
-    fn nfa_step(&self, states: &FxHashSet<StateId>, b: u8) -> FxHashSet<StateId> {
-        let mut next_states = StateSet::new();
+    fn nfa_step_vec(&self, states: &[StateId], b: u8) -> Vec<StateId> {
+        state_set_to_sorted_vec(self.nfa_step_state_set(states.iter().copied(), b))
+    }
 
-        for &state in states {
+    fn nfa_step_state_set<I>(&self, states: I, b: u8) -> StateSet
+    where
+        I: IntoIterator<Item = StateId>,
+    {
+        let mut next_states = StateSet::with_capacity(self.nfa.num_states());
+
+        for state in states {
             for trans in self.nfa.transitions_from(state) {
                 if trans.label.matches(b) && trans.label.consumes_input() {
                     next_states.insert(trans.to);
@@ -1020,14 +1390,20 @@ impl ProductAutomaton {
             }
         }
 
-        self.nfa.epsilon_closure(&next_states).into()
+        self.nfa.epsilon_closure(&next_states)
     }
 
-    /// Advance NFA states via any consuming transition.
-    fn nfa_advance(&self, states: &FxHashSet<StateId>) -> FxHashSet<StateId> {
-        let mut next_states = StateSet::new();
+    fn nfa_advance_vec(&self, states: &[StateId]) -> Vec<StateId> {
+        state_set_to_sorted_vec(self.nfa_advance_state_set(states.iter().copied()))
+    }
 
-        for &state in states {
+    fn nfa_advance_state_set<I>(&self, states: I) -> StateSet
+    where
+        I: IntoIterator<Item = StateId>,
+    {
+        let mut next_states = StateSet::with_capacity(self.nfa.num_states());
+
+        for state in states {
             for trans in self.nfa.transitions_from(state) {
                 if trans.label.consumes_input() {
                     next_states.insert(trans.to);
@@ -1035,60 +1411,69 @@ impl ProductAutomaton {
             }
         }
 
-        self.nfa.epsilon_closure(&next_states).into()
+        self.nfa.epsilon_closure(&next_states)
     }
 
     /// Step NFA with transposed bytes.
-    fn nfa_step_transposed(
+    fn nfa_step_transposed_vec(&self, states: &[StateId], b1: u8, b2: u8) -> Vec<StateId> {
+        let after_b2 = self.nfa_step_vec(states, b2);
+        self.nfa_step_vec(&after_b2, b1)
+    }
+
+    /// Merge step for `Algorithm::MergeAndSplit` — an INTENTIONAL wildcard
+    /// over-approximation (byte-level analogue of the char version).
+    ///
+    /// Two adjacent input bytes collapse onto one consuming NFA edge at cost 1.
+    /// The bytes `_b1`/`_b2` are deliberately ignored (hence the `_` prefix):
+    /// ANY two adjacent bytes are treated as collapsible onto the edge already
+    /// taken by `advanced_states`. Can over-match but never misses a real match;
+    /// contrast with `nfa_step_transposed_vec`, which validates its bytes.
+    fn nfa_step_merged_from_advance_vec(
         &self,
-        states: &FxHashSet<StateId>,
-        b1: u8,
-        b2: u8,
-    ) -> FxHashSet<StateId> {
-        let after_b2 = self.nfa_step(states, b2);
-        self.nfa_step(&after_b2, b1)
+        advanced_states: &[StateId],
+        _b1: u8,
+        _b2: u8,
+    ) -> Vec<StateId> {
+        advanced_states.to_vec()
     }
 
-    /// Step NFA treating two input bytes as merged.
-    fn nfa_step_merged(&self, states: &FxHashSet<StateId>, _b1: u8, _b2: u8) -> FxHashSet<StateId> {
-        self.nfa_advance(states)
-    }
-
-    /// Step NFA with split (one byte consumes two NFA transitions).
-    fn nfa_step_split(&self, states: &FxHashSet<StateId>, _b: u8) -> FxHashSet<StateId> {
-        let after_first = self.nfa_advance(states);
-        self.nfa_advance(&after_first)
+    /// Split step for `Algorithm::MergeAndSplit` — an INTENTIONAL wildcard
+    /// over-approximation (byte-level analogue of the char version).
+    ///
+    /// One input byte is covered by two consuming NFA edges at cost 1. The byte
+    /// `_b` is deliberately ignored (hence the `_` prefix): it is treated as
+    /// coverable by ANY two wildcard edges. Can over-match but never misses a
+    /// real match.
+    fn nfa_step_split_from_advance_vec(&self, advanced_states: &[StateId], _b: u8) -> Vec<StateId> {
+        self.nfa_advance_vec(advanced_states)
     }
 
     /// Check if input is accepted.
     pub fn accepts(&self, input: &[u8]) -> bool {
         if self.nfa.is_empty() {
-            return input.is_empty() || input.len() <= self.max_distance() as usize;
+            return input.is_empty() || input.len() <= max_distance_budget_len(self.max_distance());
         }
 
         let n = input.len();
-        let initial_closure: FxHashSet<StateId> =
-            self.nfa.epsilon_closure_single(self.nfa.start()).into();
+        let max_errors = self.max_distance();
+        let initial_closure =
+            state_set_to_sorted_vec(self.nfa.epsilon_closure_single(self.nfa.start()));
 
+        let search_capacity = product_search_capacity(n, max_errors);
         let mut visited: FxHashSet<(usize, Vec<StateId>, u8)> = FxHashSet::default();
-        let mut queue: VecDeque<(usize, FxHashSet<StateId>, u8)> = VecDeque::new();
+        visited.reserve(search_capacity);
+        let mut queue: VecDeque<(usize, Vec<StateId>, u8)> =
+            VecDeque::with_capacity(search_capacity);
 
-        queue.push_back((0, initial_closure, 0));
+        enqueue_product_search_state(&mut queue, &mut visited, 0, initial_closure, 0);
 
         while let Some((pos, nfa_states, errors)) = queue.pop_front() {
-            let mut states_vec: Vec<StateId> = nfa_states.iter().copied().collect();
-            states_vec.sort();
-
-            if !visited.insert((pos, states_vec.clone(), errors)) {
-                continue;
-            }
-
-            if errors > self.max_distance() {
+            if errors > max_errors {
                 continue;
             }
 
             if pos == n {
-                if self.can_reach_final(&nfa_states, errors) {
+                if self.can_reach_final_vec(&nfa_states, errors) {
                     return true;
                 }
                 continue;
@@ -1097,50 +1482,99 @@ impl ProductAutomaton {
             let b = input[pos];
 
             // 1. Match
-            let match_states = self.nfa_step(&nfa_states, b);
+            let match_states = self.nfa_step_vec(&nfa_states, b);
             if !match_states.is_empty() {
-                queue.push_back((pos + 1, match_states, errors));
+                enqueue_product_search_state(
+                    &mut queue,
+                    &mut visited,
+                    pos + 1,
+                    match_states,
+                    errors,
+                );
             }
 
-            if errors < self.max_distance() {
+            if errors < max_errors {
+                let advanced_states = self.nfa_advance_vec(&nfa_states);
+
                 // 2. Substitution
-                let subst_states = self.nfa_advance(&nfa_states);
-                if !subst_states.is_empty() {
-                    queue.push_back((pos + 1, subst_states, errors + 1));
+                if !advanced_states.is_empty() {
+                    enqueue_product_search_state(
+                        &mut queue,
+                        &mut visited,
+                        pos + 1,
+                        advanced_states.clone(),
+                        errors + 1,
+                    );
                 }
 
                 // 3. Insertion
-                queue.push_back((pos + 1, nfa_states.clone(), errors + 1));
+                enqueue_product_search_state(
+                    &mut queue,
+                    &mut visited,
+                    pos + 1,
+                    nfa_states.clone(),
+                    errors + 1,
+                );
 
                 // 4. Deletion
-                let del_states = self.nfa_advance(&nfa_states);
-                if !del_states.is_empty() {
-                    queue.push_back((pos, del_states, errors + 1));
+                if !advanced_states.is_empty() {
+                    enqueue_product_search_state(
+                        &mut queue,
+                        &mut visited,
+                        pos,
+                        advanced_states.clone(),
+                        errors + 1,
+                    );
                 }
 
                 // 5. Transposition
                 if self.algorithm.supports_transposition() && pos + 1 < n {
                     let next_b = input[pos + 1];
-                    let trans_states = self.nfa_step_transposed(&nfa_states, b, next_b);
+                    let trans_states = self.nfa_step_transposed_vec(&nfa_states, b, next_b);
                     if !trans_states.is_empty() {
-                        queue.push_back((pos + 2, trans_states, errors + 1));
+                        enqueue_product_search_state(
+                            &mut queue,
+                            &mut visited,
+                            pos + 2,
+                            trans_states,
+                            errors + 1,
+                        );
                     }
                 }
 
-                // 6. Merge
+                // 6. Merge: two adjacent input bytes → one NFA edge, cost 1.
+                //    INTENTIONAL wildcard over-approximation (bytes NOT
+                //    validated); see `nfa_step_merged_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && pos + 1 < n {
                     let next_b = input[pos + 1];
-                    let merge_states = self.nfa_step_merged(&nfa_states, b, next_b);
-                    if !merge_states.is_empty() {
-                        queue.push_back((pos + 2, merge_states, errors + 1));
+                    if !advanced_states.is_empty() {
+                        let merge_states =
+                            self.nfa_step_merged_from_advance_vec(&advanced_states, b, next_b);
+                        if !merge_states.is_empty() {
+                            enqueue_product_search_state(
+                                &mut queue,
+                                &mut visited,
+                                pos + 2,
+                                merge_states,
+                                errors + 1,
+                            );
+                        }
                     }
                 }
 
-                // 7. Split
-                if self.algorithm.supports_merge_split() {
-                    let split_states = self.nfa_step_split(&nfa_states, b);
+                // 7. Split: one input byte → two NFA edges, cost 1.
+                //    INTENTIONAL wildcard over-approximation (byte NOT
+                //    validated); see `nfa_step_split_from_advance_vec`.
+                if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
+                    let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, b);
                     if !split_states.is_empty() {
-                        queue.push_back((pos + 1, split_states, errors + 1));
+                        enqueue_product_search_state(
+                            &mut queue,
+                            &mut visited,
+                            pos + 1,
+                            split_states,
+                            errors + 1,
+                        );
                     }
                 }
             }
@@ -1150,7 +1584,7 @@ impl ProductAutomaton {
     }
 
     /// Check if we can reach a final state.
-    fn can_reach_final(&self, states: &FxHashSet<StateId>, current_errors: u8) -> bool {
+    fn can_reach_final_vec(&self, states: &[StateId], current_errors: u8) -> bool {
         if states.iter().any(|&s| self.nfa.is_final(s)) {
             return true;
         }
@@ -1160,18 +1594,13 @@ impl ProductAutomaton {
             return false;
         }
 
+        let search_capacity = final_search_capacity(remaining);
         let mut visited: FxHashSet<Vec<StateId>> = FxHashSet::default();
-        let mut queue: VecDeque<(FxHashSet<StateId>, u8)> = VecDeque::new();
-        queue.push_back((states.clone(), 0));
+        visited.reserve(search_capacity);
+        let mut queue: VecDeque<(Vec<StateId>, u8)> = VecDeque::with_capacity(search_capacity);
+        enqueue_final_search_state(&mut queue, &mut visited, states.to_vec(), 0);
 
         while let Some((current, dist)) = queue.pop_front() {
-            let mut states_vec: Vec<StateId> = current.iter().copied().collect();
-            states_vec.sort();
-
-            if !visited.insert(states_vec) {
-                continue;
-            }
-
             if dist > remaining {
                 continue;
             }
@@ -1180,9 +1609,9 @@ impl ProductAutomaton {
                 return true;
             }
 
-            let next = self.nfa_advance(&current);
+            let next = self.nfa_advance_vec(&current);
             if !next.is_empty() {
-                queue.push_back((next, dist + 1));
+                enqueue_final_search_state(&mut queue, &mut visited, next, dist + 1);
             }
         }
 
@@ -1194,32 +1623,29 @@ impl ProductAutomaton {
         if self.nfa.is_empty() {
             return if input.is_empty() {
                 Some(0)
-            } else if input.len() <= self.max_distance() as usize {
-                Some(input.len() as u8)
+            } else if input.len() <= max_distance_budget_len(self.max_distance()) {
+                u8::try_from(input.len()).ok()
             } else {
                 None
             };
         }
 
         let n = input.len();
-        let initial_closure: FxHashSet<StateId> =
-            self.nfa.epsilon_closure_single(self.nfa.start()).into();
+        let max_errors = self.max_distance();
+        let initial_closure =
+            state_set_to_sorted_vec(self.nfa.epsilon_closure_single(self.nfa.start()));
 
         let mut min_dist: Option<u8> = None;
+        let search_capacity = product_search_capacity(n, max_errors);
         let mut visited: FxHashSet<(usize, Vec<StateId>, u8)> = FxHashSet::default();
-        let mut queue: VecDeque<(usize, FxHashSet<StateId>, u8)> = VecDeque::new();
+        visited.reserve(search_capacity);
+        let mut queue: VecDeque<(usize, Vec<StateId>, u8)> =
+            VecDeque::with_capacity(search_capacity);
 
-        queue.push_back((0, initial_closure, 0));
+        enqueue_product_search_state(&mut queue, &mut visited, 0, initial_closure, 0);
 
         while let Some((pos, nfa_states, errors)) = queue.pop_front() {
-            let mut states_vec: Vec<StateId> = nfa_states.iter().copied().collect();
-            states_vec.sort();
-
-            if !visited.insert((pos, states_vec.clone(), errors)) {
-                continue;
-            }
-
-            if errors > self.max_distance() {
+            if errors > max_errors {
                 continue;
             }
 
@@ -1230,7 +1656,7 @@ impl ProductAutomaton {
             }
 
             if pos == n {
-                if let Some(final_dist) = self.distance_to_final(&nfa_states, errors) {
+                if let Some(final_dist) = self.distance_to_final_vec(&nfa_states, errors) {
                     match min_dist {
                         None => min_dist = Some(final_dist),
                         Some(current) if final_dist < current => min_dist = Some(final_dist),
@@ -1243,50 +1669,99 @@ impl ProductAutomaton {
             let b = input[pos];
 
             // 1. Match
-            let match_states = self.nfa_step(&nfa_states, b);
+            let match_states = self.nfa_step_vec(&nfa_states, b);
             if !match_states.is_empty() {
-                queue.push_back((pos + 1, match_states, errors));
+                enqueue_product_search_state(
+                    &mut queue,
+                    &mut visited,
+                    pos + 1,
+                    match_states,
+                    errors,
+                );
             }
 
-            if errors < self.max_distance() {
+            if errors < max_errors {
+                let advanced_states = self.nfa_advance_vec(&nfa_states);
+
                 // 2. Substitution
-                let subst_states = self.nfa_advance(&nfa_states);
-                if !subst_states.is_empty() {
-                    queue.push_back((pos + 1, subst_states, errors + 1));
+                if !advanced_states.is_empty() {
+                    enqueue_product_search_state(
+                        &mut queue,
+                        &mut visited,
+                        pos + 1,
+                        advanced_states.clone(),
+                        errors + 1,
+                    );
                 }
 
                 // 3. Insertion
-                queue.push_back((pos + 1, nfa_states.clone(), errors + 1));
+                enqueue_product_search_state(
+                    &mut queue,
+                    &mut visited,
+                    pos + 1,
+                    nfa_states.clone(),
+                    errors + 1,
+                );
 
                 // 4. Deletion
-                let del_states = self.nfa_advance(&nfa_states);
-                if !del_states.is_empty() {
-                    queue.push_back((pos, del_states, errors + 1));
+                if !advanced_states.is_empty() {
+                    enqueue_product_search_state(
+                        &mut queue,
+                        &mut visited,
+                        pos,
+                        advanced_states.clone(),
+                        errors + 1,
+                    );
                 }
 
                 // 5. Transposition
                 if self.algorithm.supports_transposition() && pos + 1 < n {
                     let next_b = input[pos + 1];
-                    let trans_states = self.nfa_step_transposed(&nfa_states, b, next_b);
+                    let trans_states = self.nfa_step_transposed_vec(&nfa_states, b, next_b);
                     if !trans_states.is_empty() {
-                        queue.push_back((pos + 2, trans_states, errors + 1));
+                        enqueue_product_search_state(
+                            &mut queue,
+                            &mut visited,
+                            pos + 2,
+                            trans_states,
+                            errors + 1,
+                        );
                     }
                 }
 
-                // 6. Merge
+                // 6. Merge: two adjacent input bytes → one NFA edge, cost 1.
+                //    INTENTIONAL wildcard over-approximation (bytes NOT
+                //    validated); see `nfa_step_merged_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && pos + 1 < n {
                     let next_b = input[pos + 1];
-                    let merge_states = self.nfa_step_merged(&nfa_states, b, next_b);
-                    if !merge_states.is_empty() {
-                        queue.push_back((pos + 2, merge_states, errors + 1));
+                    if !advanced_states.is_empty() {
+                        let merge_states =
+                            self.nfa_step_merged_from_advance_vec(&advanced_states, b, next_b);
+                        if !merge_states.is_empty() {
+                            enqueue_product_search_state(
+                                &mut queue,
+                                &mut visited,
+                                pos + 2,
+                                merge_states,
+                                errors + 1,
+                            );
+                        }
                     }
                 }
 
-                // 7. Split
-                if self.algorithm.supports_merge_split() {
-                    let split_states = self.nfa_step_split(&nfa_states, b);
+                // 7. Split: one input byte → two NFA edges, cost 1.
+                //    INTENTIONAL wildcard over-approximation (byte NOT
+                //    validated); see `nfa_step_split_from_advance_vec`.
+                if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
+                    let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, b);
                     if !split_states.is_empty() {
-                        queue.push_back((pos + 1, split_states, errors + 1));
+                        enqueue_product_search_state(
+                            &mut queue,
+                            &mut visited,
+                            pos + 1,
+                            split_states,
+                            errors + 1,
+                        );
                     }
                 }
             }
@@ -1296,7 +1771,7 @@ impl ProductAutomaton {
     }
 
     /// Compute distance to final.
-    fn distance_to_final(&self, states: &FxHashSet<StateId>, base_dist: u8) -> Option<u8> {
+    fn distance_to_final_vec(&self, states: &[StateId], base_dist: u8) -> Option<u8> {
         if states.iter().any(|&s| self.nfa.is_final(s)) {
             return Some(base_dist);
         }
@@ -1306,18 +1781,13 @@ impl ProductAutomaton {
             return None;
         }
 
+        let search_capacity = final_search_capacity(remaining);
         let mut visited: FxHashSet<Vec<StateId>> = FxHashSet::default();
-        let mut queue: VecDeque<(FxHashSet<StateId>, u8)> = VecDeque::new();
-        queue.push_back((states.clone(), 0));
+        visited.reserve(search_capacity);
+        let mut queue: VecDeque<(Vec<StateId>, u8)> = VecDeque::with_capacity(search_capacity);
+        enqueue_final_search_state(&mut queue, &mut visited, states.to_vec(), 0);
 
         while let Some((current, dist)) = queue.pop_front() {
-            let mut states_vec: Vec<StateId> = current.iter().copied().collect();
-            states_vec.sort();
-
-            if !visited.insert(states_vec) {
-                continue;
-            }
-
             if dist > remaining {
                 continue;
             }
@@ -1326,9 +1796,9 @@ impl ProductAutomaton {
                 return Some(base_dist + dist);
             }
 
-            let next = self.nfa_advance(&current);
+            let next = self.nfa_advance_vec(&current);
             if !next.is_empty() {
-                queue.push_back((next, dist + 1));
+                enqueue_final_search_state(&mut queue, &mut visited, next, dist + 1);
             }
         }
 
@@ -1341,6 +1811,107 @@ mod tests {
     use super::*;
     use crate::phonetic::nfa::compiler::{compile, compile_bytes};
     use crate::phonetic::regex::{parse, parse_bytes};
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    fn product_state_hash(state: &ProductStateChar) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        state.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[test]
+    fn test_product_search_capacity_accounts_for_error_layers() {
+        assert_eq!(product_search_capacity(4, 0), 5);
+        assert_eq!(product_search_capacity(4, 2), 15);
+        assert_eq!(
+            product_search_capacity(usize::MAX, u8::MAX),
+            PRODUCT_SEARCH_CAPACITY_LIMIT
+        );
+    }
+
+    #[test]
+    fn test_deletion_and_final_search_capacity_are_bounded() {
+        assert_eq!(deletion_closure_capacity(0, u8::MAX), 0);
+        assert_eq!(deletion_closure_capacity(2, 3), 8);
+        assert_eq!(
+            deletion_closure_capacity(usize::MAX, u8::MAX),
+            PRODUCT_SEARCH_CAPACITY_LIMIT
+        );
+        assert_eq!(final_search_capacity(0), 1);
+        assert_eq!(final_search_capacity(u8::MAX), usize::from(u8::MAX) + 1);
+    }
+
+    #[test]
+    fn test_product_cost_distance_narrowing_is_explicitly_bounded() {
+        assert_eq!(finite_integral_f64_to_i64(-1.0), -1);
+        assert_eq!(finite_integral_f64_to_i64(-0.0), 0);
+        assert_eq!(finite_integral_f64_to_i64(0.0), 0);
+        assert_eq!(finite_integral_f64_to_i64(1.0), 1);
+        assert_eq!(
+            finite_integral_f64_to_i64(4_503_599_627_370_496.0),
+            4_503_599_627_370_496
+        );
+
+        assert_eq!(finite_positive_ceil_to_u8(0.1), 1);
+        assert_eq!(finite_positive_ceil_to_u8(1.0), 1);
+        assert_eq!(finite_positive_ceil_to_u8(1.1), 2);
+        assert_eq!(finite_positive_ceil_to_u8(254.0), 254);
+        assert_eq!(finite_positive_ceil_to_u8(254.1), u8::MAX);
+
+        assert_eq!(product_cost_key(f64::NEG_INFINITY), i64::MIN + 1);
+        assert_eq!(product_cost_key(-f64::MAX), i64::MIN);
+        assert_eq!(product_cost_key(-0.000_001), -1);
+        assert_eq!(product_cost_key(0.0), 0);
+        assert_eq!(product_cost_key(0.000_001), 1);
+        assert_eq!(product_cost_key(f64::MAX), i64::MAX);
+        assert_eq!(product_cost_key(f64::INFINITY), i64::MAX);
+        assert_eq!(product_cost_key(f64::NAN), i64::MIN);
+
+        assert_eq!(accumulated_cost_to_u8_distance(-1.0), 0);
+        assert_eq!(accumulated_cost_to_u8_distance(0.0), 0);
+        assert_eq!(accumulated_cost_to_u8_distance(0.1), 1);
+        assert_eq!(accumulated_cost_to_u8_distance(254.0), 254);
+        assert_eq!(accumulated_cost_to_u8_distance(254.1), u8::MAX);
+        assert_eq!(accumulated_cost_to_u8_distance(255.0), u8::MAX);
+        assert_eq!(accumulated_cost_to_u8_distance(f64::INFINITY), u8::MAX);
+        assert_eq!(accumulated_cost_to_u8_distance(f64::NAN), u8::MAX);
+
+        assert_eq!(max_cost_to_u8_distance(-1.0), 0);
+        assert_eq!(max_cost_to_u8_distance(f64::NAN), 0);
+        assert_eq!(max_cost_to_u8_distance(0.1), 1);
+        assert_eq!(max_cost_to_u8_distance(254.0), 254);
+        assert_eq!(max_cost_to_u8_distance(254.1), u8::MAX);
+        assert_eq!(max_cost_to_u8_distance(300.0), u8::MAX);
+        assert_eq!(max_cost_to_u8_distance(f64::INFINITY), u8::MAX);
+    }
+
+    #[test]
+    fn test_max_distance_budget_len_widens_u8_boundaries() {
+        assert_eq!(max_distance_budget_len(0), 0);
+        assert_eq!(max_distance_budget_len(u8::MAX), usize::from(u8::MAX));
+
+        let zero_char = ProductAutomatonChar::new(NFAChar::new(), 0);
+        assert!(zero_char.accepts(""));
+        assert!(!zero_char.accepts("a"));
+        assert_eq!(zero_char.min_distance("a"), None);
+
+        let max_char = ProductAutomatonChar::new(NFAChar::new(), u8::MAX);
+        let max_scalar_input = "a".repeat(usize::from(u8::MAX));
+        let over_scalar_input = "a".repeat(usize::from(u8::MAX) + 1);
+        assert!(max_char.accepts(&max_scalar_input));
+        assert_eq!(max_char.min_distance(&max_scalar_input), Some(u8::MAX));
+        assert!(!max_char.accepts(&over_scalar_input));
+        assert_eq!(max_char.min_distance(&over_scalar_input), None);
+
+        let max_byte = ProductAutomaton::new(NFA::new(), u8::MAX);
+        let max_byte_input = vec![b'a'; usize::from(u8::MAX)];
+        let over_byte_input = vec![b'a'; usize::from(u8::MAX) + 1];
+        assert!(max_byte.accepts(&max_byte_input));
+        assert_eq!(max_byte.min_distance(&max_byte_input), Some(u8::MAX));
+        assert!(!max_byte.accepts(&over_byte_input));
+        assert_eq!(max_byte.min_distance(&over_byte_input), None);
+    }
 
     // ============================================================================
     // ProductAutomatonChar Tests
@@ -1433,6 +2004,55 @@ mod tests {
         assert_eq!(product.min_distance("phon"), Some(1));
         assert_eq!(product.min_distance("phones"), Some(1));
         assert_eq!(product.min_distance("phome"), Some(1));
+    }
+
+    #[test]
+    fn test_empty_char_product_counts_unicode_scalars_not_bytes() {
+        let product = ProductAutomatonChar::new(NFAChar::new(), 1);
+
+        assert!(product.accepts("é"));
+        assert_eq!(product.min_distance("é"), Some(1));
+        assert!(!product.accepts("éé"));
+        assert_eq!(product.min_distance("éé"), None);
+
+        let product = ProductAutomatonChar::new(NFAChar::new(), 2);
+        assert!(product.accepts("éé"));
+        assert_eq!(product.min_distance("éé"), Some(2));
+    }
+
+    #[test]
+    fn test_incremental_frontier_matches_min_distance() {
+        let nfa = compile(&parse("ab").expect("test: parse ab")).expect("test: compile nfa");
+        let product = ProductAutomatonChar::new(nfa, 2);
+
+        for input in ["", "a", "ab", "abc", "ba", "zz"] {
+            let mut frontier = product.initial_frontier();
+            for ch in input.chars() {
+                frontier = product.transition_frontier(&frontier, ch);
+            }
+
+            assert_eq!(
+                product.min_accepting_distance(&frontier),
+                product.min_distance(input),
+                "incremental frontier mismatch for {input:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_product_state_char_eq_matches_hash_key() {
+        let states: FxHashSet<StateId> = [0, 1].into_iter().collect();
+
+        let same_bucket = ProductStateChar::new(states.clone(), 0.500_000_499_90);
+        let same_bucket_roundoff = ProductStateChar::new(states.clone(), 0.500_000_499_91);
+        assert_eq!(same_bucket, same_bucket_roundoff);
+        assert_eq!(
+            product_state_hash(&same_bucket),
+            product_state_hash(&same_bucket_roundoff)
+        );
+
+        let adjacent_bucket = ProductStateChar::new(states, 0.500_000_500_40);
+        assert_ne!(same_bucket, adjacent_bucket);
     }
 
     #[test]
@@ -1612,6 +2232,92 @@ mod tests {
         assert!(transposition.accepts(b"ba")); // distance 1 with transposition
     }
 
+    /// F3: document the ACTUAL accepted language of `Algorithm::MergeAndSplit`.
+    ///
+    /// Merge/split are INTENTIONAL wildcard over-approximations: they accept
+    /// adjacent-char collapses / single-char splits without validating the
+    /// characters. This means they accept strings a faithful (char-validated)
+    /// merge/split product — and the `Standard` algorithm — reject at the same
+    /// distance, while never MISSING anything `Standard` accepts.
+    #[test]
+    fn test_merge_split_is_wildcard_over_approximation() {
+        let nfa = compile(&parse("abc").expect("test: parse abc")).expect("test: compile nfa");
+        let standard = ProductAutomatonChar::new(nfa.clone(), 1);
+        let merge_split =
+            ProductAutomatonChar::with_algorithm(nfa.clone(), 1, Algorithm::MergeAndSplit);
+
+        // Over-match via SPLIT: "zc" is edit-distance 2 from "abc" (Standard
+        // rejects at max 1), but MergeAndSplit accepts it at cost 1 by covering
+        // the single input 'z' with the wildcard "a" and "b" edges, then
+        // matching 'c'. The 'z' is never validated against 'a'/'b'.
+        assert!(!standard.accepts("zc"));
+        assert!(merge_split.accepts("zc"));
+        assert_eq!(merge_split.min_distance("zc"), Some(1));
+
+        // Over-match via MERGE: "zzbc" is edit-distance 2 from "abc" (Standard
+        // rejects at max 1), but MergeAndSplit accepts it at cost 1 by merging
+        // the adjacent "zz" onto the single wildcard "a" edge, then matching
+        // "bc". The "zz" is never validated against 'a'.
+        assert!(!standard.accepts("zzbc"));
+        assert!(merge_split.accepts("zzbc"));
+
+        // Does NOT miss: everything the Standard algorithm accepts within the
+        // same budget is still accepted (exact match + ordinary single edits).
+        assert!(merge_split.accepts("abc")); // exact
+        assert!(merge_split.accepts("ab")); // standard deletion
+        assert!(merge_split.accepts("abcd")); // standard insertion
+        assert_eq!(merge_split.min_distance("abc"), Some(0));
+    }
+
+    /// F2: pin the documented reality that `phonetic_weight` is stored but
+    /// inert — it is clamped to `>= 0.0` and never changes matching results.
+    #[test]
+    fn test_phonetic_weight_is_clamped_and_inert() {
+        let nfa = compile(&parse("phone").expect("test: parse phone")).expect("test: compile nfa");
+
+        // Negative / NaN weights are clamped to >= 0.0 (F2 pruning invariant).
+        let neg = ProductAutomatonChar::with_phonetic_weight(nfa.clone(), 2, -3.5);
+        assert_eq!(neg.phonetic_weight(), 0.0);
+        let nan = ProductAutomatonChar::with_phonetic_weight(nfa.clone(), 2, f64::NAN);
+        assert_eq!(nan.phonetic_weight(), 0.0);
+
+        // A positive weight is stored verbatim...
+        let weighted = ProductAutomatonChar::with_algorithm_and_weight(
+            nfa.clone(),
+            2,
+            Algorithm::Standard,
+            5.0,
+        );
+        assert_eq!(weighted.phonetic_weight(), 5.0);
+
+        // ...but does NOT affect matching: accepts/min_distance are identical to
+        // the zero-weight baseline for every probe.
+        let baseline = ProductAutomatonChar::new(nfa, 2);
+        for probe in ["phone", "phon", "phones", "phome", "xyz"] {
+            assert_eq!(weighted.accepts(probe), baseline.accepts(probe));
+            assert_eq!(weighted.min_distance(probe), baseline.min_distance(probe));
+        }
+
+        // Byte-level automaton mirrors the same clamp + inert contract.
+        let bnfa = compile_bytes(&parse_bytes(b"phone").expect("test: parse phone bytes"))
+            .expect("test: compile nfa bytes");
+        let bneg = ProductAutomaton::with_phonetic_weight(bnfa.clone(), 2, -1.0);
+        assert_eq!(bneg.phonetic_weight(), 0.0);
+        let bweighted = ProductAutomaton::with_algorithm_and_weight(
+            bnfa.clone(),
+            2,
+            Algorithm::Standard,
+            2.0,
+        );
+        assert_eq!(bweighted.phonetic_weight(), 2.0);
+        let bbaseline = ProductAutomaton::new(bnfa, 2);
+        let byte_probes: [&[u8]; 4] = [b"phone", b"phon", b"phones", b"xyz"];
+        for probe in byte_probes {
+            assert_eq!(bweighted.accepts(probe), bbaseline.accepts(probe));
+            assert_eq!(bweighted.min_distance(probe), bbaseline.min_distance(probe));
+        }
+    }
+
     // ============================================================================
     // Articulatory Cost Tests
     // ============================================================================
@@ -1628,12 +2334,8 @@ mod tests {
                 compile(&parse("test").expect("test: parse test")).expect("test: compile nfa");
             let costs = ArticulatoryCosts::default();
 
-            let product = ProductAutomatonChar::with_articulatory_costs(
-                nfa,
-                2.0,
-                Algorithm::Standard,
-                costs.clone(),
-            );
+            let product =
+                ProductAutomatonChar::with_articulatory_costs(nfa, 2.0, Algorithm::Standard, costs);
 
             assert!(product.articulatory_costs().is_some());
             assert!((product.max_cost() - 2.0).abs() < 1e-9);

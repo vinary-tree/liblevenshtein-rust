@@ -228,7 +228,7 @@ impl RuleSetChar {
             .collect();
 
         // Apply rules with generous fuel
-        let fuel = input.len() * 10 + 100;
+        let fuel = input.len().saturating_mul(10).saturating_add(100);
         if let Some(result) = crate::phonetic::apply_rules_seq(&self.rules, &phones, fuel) {
             phones_to_string(&result)
         } else {
@@ -250,7 +250,7 @@ impl RuleSetChar {
 }
 
 fn phones_to_string(phones: &[Phone<char>]) -> String {
-    let mut output = String::with_capacity(phones.len() * 4);
+    let mut output = String::with_capacity(phones_string_capacity(phones).unwrap_or(0));
     for phone in phones {
         match phone {
             Phone::Vowel(c) | Phone::Consonant(c) => output.push(*c),
@@ -302,6 +302,36 @@ fn phones_to_string(phones: &[Phone<char>]) -> String {
         }
     }
     output
+}
+
+fn phones_string_capacity(phones: &[Phone<char>]) -> Option<usize> {
+    phones.iter().try_fold(0usize, |total, phone| {
+        total.checked_add(phone_utf8_len(phone)?)
+    })
+}
+
+fn phone_utf8_len(phone: &Phone<char>) -> Option<usize> {
+    match phone {
+        Phone::Vowel(c) | Phone::Consonant(c) => Some(c.len_utf8()),
+        Phone::Digraph(c1, c2) => chars_utf8_len([*c1, *c2]),
+        Phone::Trigraph(c1, c2, c3) => chars_utf8_len([*c1, *c2, *c3]),
+        Phone::Tetragraph(c1, c2, c3, c4) => chars_utf8_len([*c1, *c2, *c3, *c4]),
+        Phone::Pentagraph(c1, c2, c3, c4, c5) => chars_utf8_len([*c1, *c2, *c3, *c4, *c5]),
+        Phone::Hexagraph(c1, c2, c3, c4, c5, c6) => chars_utf8_len([*c1, *c2, *c3, *c4, *c5, *c6]),
+        Phone::Heptagraph(c1, c2, c3, c4, c5, c6, c7) => {
+            chars_utf8_len([*c1, *c2, *c3, *c4, *c5, *c6, *c7])
+        }
+        Phone::Sequence(s) => chars_utf8_len(s.iter().copied()),
+        Phone::Silent => Some(0),
+    }
+}
+
+fn chars_utf8_len(chars: impl IntoIterator<Item = char>) -> Option<usize> {
+    chars.into_iter().try_fold(0usize, add_char_utf8_len)
+}
+
+fn add_char_utf8_len(total: usize, c: char) -> Option<usize> {
+    total.checked_add(c.len_utf8())
 }
 
 // ============================================================================
@@ -764,6 +794,24 @@ mod tests {
 
         assert_eq!(ruleset.apply("box"), "boks");
         assert_eq!(ruleset.apply_full("box"), "boks");
+    }
+
+    #[test]
+    fn test_phones_string_capacity_is_exact_utf8_bytes() {
+        let phones = vec![
+            Phone::Consonant('p'),
+            Phone::Heptagraph('a', 'b', 'c', 'd', 'e', 'f', 'g'),
+            Phone::Sequence(vec!['é', 'β']),
+            Phone::Silent,
+        ];
+
+        assert_eq!(phones_string_capacity(&phones), Some("pabcdefgéβ".len()));
+        assert_eq!(phones_to_string(&phones), "pabcdefgéβ");
+    }
+
+    #[test]
+    fn test_phone_utf8_len_rejects_overflow() {
+        assert_eq!(add_char_utf8_len(usize::MAX, 'a'), None);
     }
 
     #[test]

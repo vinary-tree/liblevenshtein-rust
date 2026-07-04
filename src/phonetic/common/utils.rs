@@ -81,7 +81,7 @@ where
     N: Fn(&[char]) -> Vec<char>,
     I: Fn(&[Vec<char>]) -> Vec<char>,
 {
-    let mut char_sets: Vec<Vec<char>> = Vec::new();
+    let mut char_sets: Vec<Vec<char>> = Vec::with_capacity(terms.len());
 
     for (name, negated) in terms {
         // Try user symbol first, then built-in
@@ -177,7 +177,7 @@ mod tests {
                     None
                 }
             },
-            |chars| negate_char_class(chars),
+            negate_char_class,
             |sets| {
                 if sets.is_empty() {
                     vec![]
@@ -206,7 +206,7 @@ mod tests {
                     None
                 }
             },
-            |chars| negate_char_class(chars),
+            negate_char_class,
             |sets| {
                 if sets.is_empty() {
                     vec![]
@@ -235,7 +235,7 @@ mod tests {
             &terms,
             Some(&symbols),
             |_| None,
-            |chars| negate_char_class(chars),
+            negate_char_class,
             |sets| {
                 if sets.is_empty() {
                     vec![]
@@ -259,7 +259,7 @@ mod tests {
             &terms,
             None,
             |_| None,
-            |chars| negate_char_class(chars),
+            negate_char_class,
             |sets| {
                 if sets.is_empty() {
                     vec![]
@@ -280,7 +280,7 @@ mod tests {
             &terms,
             None,
             |_| None,
-            |chars| negate_char_class(chars),
+            negate_char_class,
             |sets| {
                 if sets.is_empty() {
                     vec![]

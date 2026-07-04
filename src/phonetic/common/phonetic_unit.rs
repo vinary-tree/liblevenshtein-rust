@@ -201,21 +201,17 @@ impl PhoneticUnit for u8 {
 
     #[inline]
     fn from_char(c: char) -> Option<Self> {
-        if c.is_ascii() {
-            Some(c as u8)
-        } else {
-            None
-        }
+        u8::try_from(u32::from(c)).ok().filter(u8::is_ascii)
     }
 
     #[inline]
     fn to_char(unit: Self) -> char {
-        unit as char
+        char::from(unit)
     }
 
     fn format_for_display(unit: Self) -> String {
         if unit.is_ascii_graphic() || unit == b' ' {
-            (unit as char).to_string()
+            char::from(unit).to_string()
         } else {
             format!("0x{:02X}", unit)
         }
@@ -331,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_u8_units_to_string() {
-        let s = u8::units_to_string(&[b'h', b'e', b'l', b'l', b'o']);
+        let s = u8::units_to_string(b"hello");
         assert_eq!(s, "hello");
     }
 
@@ -358,8 +354,11 @@ mod tests {
 
     #[test]
     fn test_u8_from_char() {
+        assert_eq!(u8::from_char('\0'), Some(0x00));
         assert_eq!(u8::from_char('a'), Some(b'a'));
         assert_eq!(u8::from_char('Z'), Some(b'Z'));
+        assert_eq!(u8::from_char('\u{7F}'), Some(0x7F));
+        assert_eq!(u8::from_char('\u{80}'), None);
         assert_eq!(u8::from_char('é'), None); // Non-ASCII
     }
 
@@ -367,6 +366,7 @@ mod tests {
     fn test_u8_to_char() {
         assert_eq!(u8::to_char(b'a'), 'a');
         assert_eq!(u8::to_char(b'Z'), 'Z');
+        assert_eq!(u8::to_char(0xFF), 'ÿ');
     }
 
     #[test]

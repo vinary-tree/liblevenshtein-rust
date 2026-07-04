@@ -483,8 +483,10 @@ impl IncrementalProductMatcherChar {
         for &(state, dist) in &self.current_states {
             if self.nfa.is_final(state) {
                 // Can we cover remaining word with insertions?
-                let total_dist = dist + remaining_word as u8;
-                if total_dist <= self.max_distance {
+                let Some(total_dist) = usize::from(dist).checked_add(remaining_word) else {
+                    continue;
+                };
+                if total_dist <= usize::from(self.max_distance) {
                     return true;
                 }
             }
@@ -711,6 +713,15 @@ mod tests {
         matcher.feed('t');
 
         assert!(matcher.is_accepting());
+    }
+
+    #[test]
+    fn test_incremental_product_rejects_long_remaining_word_without_distance_wrap() {
+        let nfa = compile(&parse("a*").expect("parse")).expect("compile");
+        let word = "x".repeat(usize::from(u8::MAX) + 1);
+        let matcher = IncrementalProductMatcherChar::new(nfa, &word, 1);
+
+        assert!(!matcher.is_accepting());
     }
 
     #[test]

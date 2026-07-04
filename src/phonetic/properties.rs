@@ -27,16 +27,18 @@ mod tests {
 
     /// Generate arbitrary Phone values
     fn arb_phone() -> impl Strategy<Value = PhoneByte> {
+        const ASCII_PRINTABLE: std::ops::Range<u8> = 32..127;
+
         prop_oneof![
             any::<u8>()
-                .prop_filter("valid ASCII", |&c| c >= 32 && c < 127)
+                .prop_filter("valid ASCII", |&c| ASCII_PRINTABLE.contains(&c))
                 .prop_map(PhoneByte::Vowel),
             any::<u8>()
-                .prop_filter("valid ASCII", |&c| c >= 32 && c < 127)
+                .prop_filter("valid ASCII", |&c| ASCII_PRINTABLE.contains(&c))
                 .prop_map(PhoneByte::Consonant),
             (
-                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
-                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127)
+                any::<u8>().prop_filter("valid ASCII", |&c| ASCII_PRINTABLE.contains(&c)),
+                any::<u8>().prop_filter("valid ASCII", |&c| ASCII_PRINTABLE.contains(&c))
             )
                 .prop_map(|(c1, c2)| PhoneByte::Digraph(c1, c2)),
             Just(PhoneByte::Silent),
@@ -45,26 +47,28 @@ mod tests {
 
     /// Generate arbitrary Context values
     fn arb_context() -> impl Strategy<Value = ContextByte> {
+        const ASCII_PRINTABLE: std::ops::Range<u8> = 32..127;
+
         prop_oneof![
             Just(ContextByte::Initial),
             Just(ContextByte::Final),
             prop::collection::vec(
-                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
+                any::<u8>().prop_filter("valid ASCII", |&c| ASCII_PRINTABLE.contains(&c)),
                 0..5
             )
             .prop_map(ContextByte::BeforeVowel),
             prop::collection::vec(
-                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
+                any::<u8>().prop_filter("valid ASCII", |&c| ASCII_PRINTABLE.contains(&c)),
                 0..5
             )
             .prop_map(ContextByte::AfterConsonant),
             prop::collection::vec(
-                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
+                any::<u8>().prop_filter("valid ASCII", |&c| ASCII_PRINTABLE.contains(&c)),
                 0..5
             )
             .prop_map(ContextByte::BeforeConsonant),
             prop::collection::vec(
-                any::<u8>().prop_filter("valid ASCII", |&c| c >= 32 && c < 127),
+                any::<u8>().prop_filter("valid ASCII", |&c| ASCII_PRINTABLE.contains(&c)),
                 0..5
             )
             .prop_map(ContextByte::AfterVowel),
@@ -351,13 +355,14 @@ mod tests {
         // Order 1: Apply x→yy first, then y→z
         let temp1 = apply_rule_at(rule_x_expand, &input, 0).expect("x→yy should apply");
         // temp1 = [y, y, y] (from x→yy, keeping y)
-        let result1 = apply_rules_seq(&[rule_y_to_z.clone()], &temp1, 10).expect("Should succeed");
+        let result1 =
+            apply_rules_seq(std::slice::from_ref(rule_y_to_z), &temp1, 10).expect("Should succeed");
 
         // Order 2: Apply y→z first, then x→yy
         let temp2 = apply_rule_at(rule_y_to_z, &input, 1).expect("y→z should apply");
         // temp2 = [x, z] (keeping x, y→z)
-        let result2 =
-            apply_rules_seq(&[rule_x_expand.clone()], &temp2, 10).expect("Should succeed");
+        let result2 = apply_rules_seq(std::slice::from_ref(rule_x_expand), &temp2, 10)
+            .expect("Should succeed");
 
         // Results should differ (non-confluence)
         assert_ne!(

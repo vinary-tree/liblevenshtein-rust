@@ -66,10 +66,12 @@ pub fn homophones() -> &'static RuleSetChar {
     static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/english/homophones.llev");
-        let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded homophones.llev - this indicates an internal invariant violation");
-        RuleSetChar::from_llev(&file)
-            .expect("Failed to compile homophones rules - this indicates an internal invariant violation")
+        let file = crate::phonetic::llev::parse_str(content).expect(
+            "Invalid embedded homophones.llev - this indicates an internal invariant violation",
+        );
+        RuleSetChar::from_llev(&file).expect(
+            "Failed to compile homophones rules - this indicates an internal invariant violation",
+        )
     })
 }
 
@@ -105,10 +107,12 @@ pub fn text_speak() -> &'static RuleSetChar {
     static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/english/text_speak.llev");
-        let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded text_speak.llev - this indicates an internal invariant violation");
-        RuleSetChar::from_llev(&file)
-            .expect("Failed to compile text_speak rules - this indicates an internal invariant violation")
+        let file = crate::phonetic::llev::parse_str(content).expect(
+            "Invalid embedded text_speak.llev - this indicates an internal invariant violation",
+        );
+        RuleSetChar::from_llev(&file).expect(
+            "Failed to compile text_speak rules - this indicates an internal invariant violation",
+        )
     })
 }
 
@@ -126,10 +130,12 @@ pub fn american() -> &'static RuleSetChar {
     static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/english/american.llev");
-        let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded american.llev - this indicates an internal invariant violation");
-        RuleSetChar::from_llev(&file)
-            .expect("Failed to compile american rules - this indicates an internal invariant violation")
+        let file = crate::phonetic::llev::parse_str(content).expect(
+            "Invalid embedded american.llev - this indicates an internal invariant violation",
+        );
+        RuleSetChar::from_llev(&file).expect(
+            "Failed to compile american rules - this indicates an internal invariant violation",
+        )
     })
 }
 
@@ -147,10 +153,12 @@ pub fn british() -> &'static RuleSetChar {
     static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
     RULESET.get_or_init(|| {
         let content = include_str!("../../../data/rules/english/british.llev");
-        let file = crate::phonetic::llev::parse_str(content)
-            .expect("Invalid embedded british.llev - this indicates an internal invariant violation");
-        RuleSetChar::from_llev(&file)
-            .expect("Failed to compile british rules - this indicates an internal invariant violation")
+        let file = crate::phonetic::llev::parse_str(content).expect(
+            "Invalid embedded british.llev - this indicates an internal invariant violation",
+        );
+        RuleSetChar::from_llev(&file).expect(
+            "Failed to compile british rules - this indicates an internal invariant violation",
+        )
     })
 }
 

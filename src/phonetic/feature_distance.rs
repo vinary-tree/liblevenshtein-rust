@@ -406,6 +406,10 @@ pub fn articulatory_edit_distance(source: &str, target: &str) -> f64 {
     articulatory_edit_distance_weighted(source, target, &FeatureDistanceWeights::default())
 }
 
+fn articulatory_dp_row_len(target_len: usize) -> Option<usize> {
+    target_len.checked_add(1)
+}
+
 /// Weighted variant of [`articulatory_edit_distance`]: substitution costs use
 /// [`articulatory_distance_weighted`] with the supplied weights.
 pub fn articulatory_edit_distance_weighted(
@@ -426,9 +430,13 @@ pub fn articulatory_edit_distance_weighted(
         return m as f64;
     }
 
+    let Some(row_len) = articulatory_dp_row_len(n) else {
+        return f64::INFINITY;
+    };
+
     // DP with f64 costs
-    let mut prev_row: Vec<f64> = (0..=n).map(|j| j as f64).collect();
-    let mut curr_row = vec![0.0; n + 1];
+    let mut prev_row: Vec<f64> = (0..row_len).map(|j| j as f64).collect();
+    let mut curr_row = vec![0.0; row_len];
 
     for i in 1..=m {
         curr_row[0] = i as f64;
@@ -448,6 +456,13 @@ pub fn articulatory_edit_distance_weighted(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn articulatory_dp_row_len_checks_overflow() {
+        assert_eq!(articulatory_dp_row_len(0), Some(1));
+        assert_eq!(articulatory_dp_row_len(4), Some(5));
+        assert_eq!(articulatory_dp_row_len(usize::MAX), None);
+    }
 
     #[test]
     fn test_same_character() {

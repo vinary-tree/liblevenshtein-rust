@@ -18,9 +18,9 @@ pub struct LLevError {
     /// Position where the error occurred (if applicable)
     pub position: Option<Position>,
     /// File where the error occurred (if applicable)
-    pub file: Option<PathBuf>,
+    pub file: Option<Box<PathBuf>>,
     /// Additional context about the error
-    pub context: Option<String>,
+    pub context: Option<Box<str>>,
 }
 
 /// The kind of `.llev` error.
@@ -229,7 +229,7 @@ impl LLevError {
         Self {
             kind,
             position: Some(position),
-            file: Some(file),
+            file: Some(Box::new(file)),
             context: None,
         }
     }
@@ -240,7 +240,7 @@ impl LLevError {
             kind,
             position: None,
             file: None,
-            context: Some(context.into()),
+            context: Some(context.into().into_boxed_str()),
         }
     }
 
@@ -252,13 +252,13 @@ impl LLevError {
 
     /// Add file to an existing error.
     pub fn in_file(mut self, file: PathBuf) -> Self {
-        self.file = Some(file);
+        self.file = Some(Box::new(file));
         self
     }
 
     /// Add context to an existing error.
     pub fn with_added_context(mut self, context: impl Into<String>) -> Self {
-        self.context = Some(context.into());
+        self.context = Some(context.into().into_boxed_str());
         self
     }
 
@@ -359,7 +359,7 @@ impl LLevError {
         let mut err = Self::with_position(LLevErrorKind::UndefinedSymbol(name), position);
 
         if let Some(suggested) = suggestion {
-            err.context = Some(format!("did you mean '{}'?", suggested));
+            err.context = Some(format!("did you mean '{}'?", suggested).into_boxed_str());
         }
 
         err
@@ -682,54 +682,23 @@ fn find_closest_symbol<'a>(target: &str, candidates: &[&'a str]) -> Option<&'a s
                 None
             }
         })
-        .min_by_key(|(_, d)| *d)
+        .min_by(
+            |(left_symbol, left_distance), (right_symbol, right_distance)| {
+                left_distance
+                    .cmp(right_distance)
+                    .then_with(|| left_symbol.cmp(right_symbol))
+            },
+        )
         .map(|(s, _)| s)
 }
 
 /// Compute the Levenshtein (edit) distance between two strings.
 ///
-/// This is a simple O(n*m) implementation sufficient for symbol suggestions.
+/// Delegates to the crate distance engine so suggestions use the same
+/// character-distance semantics and optimized implementations as runtime
+/// queries.
 fn levenshtein_distance(a: &str, b: &str) -> usize {
-    let a_chars: Vec<char> = a.chars().collect();
-    let b_chars: Vec<char> = b.chars().collect();
-    let m = a_chars.len();
-    let n = b_chars.len();
-
-    if m == 0 {
-        return n;
-    }
-    if n == 0 {
-        return m;
-    }
-
-    // Use two rows instead of full matrix for O(min(m,n)) space
-    let mut prev = vec![0usize; n + 1];
-    let mut curr = vec![0usize; n + 1];
-
-    // Initialize first row
-    for j in 0..=n {
-        prev[j] = j;
-    }
-
-    for i in 1..=m {
-        curr[0] = i;
-
-        for j in 1..=n {
-            let cost = if a_chars[i - 1] == b_chars[j - 1] {
-                0
-            } else {
-                1
-            };
-
-            curr[j] = (prev[j] + 1) // deletion
-                .min(curr[j - 1] + 1) // insertion
-                .min(prev[j - 1] + cost); // substitution
-        }
-
-        std::mem::swap(&mut prev, &mut curr);
-    }
-
-    prev[n]
+    crate::distance::standard_distance(a, b)
 }
 
 #[cfg(test)]
@@ -833,6 +802,10 @@ mod tests {
 
         // Close match for CONSONANT
         assert_eq!(find_closest_symbol("CONSNANT", symbols), Some("CONSONANT"));
+
+        // Equal-distance matches are deterministic even if candidate order is not.
+        let tied_symbols = &["AC", "AA"];
+        assert_eq!(find_closest_symbol("AB", tied_symbols), Some("AA"));
     }
 
     #[test]

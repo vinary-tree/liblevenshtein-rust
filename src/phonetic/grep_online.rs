@@ -52,6 +52,7 @@
 //! let matches = stream.finish();
 //! ```
 
+use std::borrow::Cow;
 use std::path::Path;
 
 #[cfg(feature = "parallel-grep")]
@@ -66,25 +67,53 @@ use super::llev::{load_file, RuleSetChar};
 use super::nfa::product::ProductAutomatonChar;
 use super::nfa::thompson::ThompsonBuilderChar;
 use super::online_scanner::{OnlinePhoneticScannerChar, ScanMatch, ScannerStats};
-use super::types::{PhoneChar, RewriteRuleChar};
+use super::types::{compare_rule_weight_desc, PhoneChar, RewriteRuleChar};
+
+#[derive(Clone, Copy, Debug)]
+struct SourceSpan {
+    byte_start: usize,
+    byte_end: usize,
+    char_start: usize,
+    char_end: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct SourceChar {
+    ch: char,
+    span: SourceSpan,
+}
+
+#[derive(Debug)]
+struct NormalizedDocument {
+    chars: Vec<char>,
+    spans: Vec<SourceSpan>,
+    doc_byte_len: usize,
+    doc_char_len: usize,
+}
+
+#[derive(Debug, Clone)]
+struct CompiledQuery {
+    normalized: String,
+    len: usize,
+    product: ProductAutomatonChar,
+}
+
+struct BufferedCandidate<'a> {
+    start: usize,
+    byte_start: usize,
+    char_start: usize,
+    chars: &'a [char],
+    spans: &'a [SourceSpan],
+    product: &'a ProductAutomatonChar,
+    query_len: usize,
+    original_doc: &'a str,
+    doc_byte_len: usize,
+    doc_char_len: usize,
+}
 
 // ============================================================================
 // Parallel Scanning Data Structures (requires parallel-grep feature)
 // ============================================================================
-
-/// Candidate match position for parallel verification.
-///
-/// During Phase 1 (sequential), we normalize the document and generate
-/// candidate start positions. In Phase 2 (parallel), each candidate
-/// is verified independently using Rayon.
-#[cfg(feature = "parallel-grep")]
-#[derive(Debug, Clone)]
-struct CandidateTask {
-    /// Start position in the original document (bytes).
-    start_byte: usize,
-    /// Start position in the normalized character array.
-    start_char: usize,
-}
 
 /// Shared normalized document output for zero-copy parallel access.
 ///
@@ -95,29 +124,53 @@ struct CandidateTask {
 struct SharedNormalized {
     /// Normalized characters (shared across all threads).
     chars: Arc<[char]>,
-    /// Maps normalized char index to its source byte span.
-    byte_spans: Arc<[(usize, usize)]>,
+    /// Maps normalized char index to its source span.
+    spans: Arc<[SourceSpan]>,
+}
+
+#[cfg(feature = "parallel-grep")]
+struct ParallelCandidate<'a> {
+    start: usize,
+    byte_start: usize,
+    char_start: usize,
+    shared: &'a SharedNormalized,
+    product: &'a ProductAutomatonChar,
+    query_len: usize,
+    original_doc: &'a str,
+    doc_byte_len: usize,
+    doc_char_len: usize,
 }
 
 #[cfg(feature = "parallel-grep")]
 impl SharedNormalized {
     /// Get the byte offset for a character position.
     fn byte_offset(&self, char_pos: usize) -> Option<usize> {
-        self.byte_spans.get(char_pos).map(|span| span.0)
+        self.spans.get(char_pos).map(|span| span.byte_start)
+    }
+
+    /// Get the original document character offset for a normalized position.
+    fn source_char_offset(&self, char_pos: usize) -> Option<usize> {
+        self.spans.get(char_pos).map(|span| span.char_start)
     }
 
     fn byte_end(&self, end_char: usize, doc_byte_len: usize) -> usize {
         if end_char == 0 {
             0
-        } else if end_char <= self.byte_spans.len() {
-            self.byte_spans[end_char - 1].1
+        } else if end_char <= self.spans.len() {
+            self.spans[end_char - 1].byte_end
         } else {
             doc_byte_len
         }
     }
 
-    fn len(&self) -> usize {
-        self.chars.len()
+    fn char_end(&self, end_char: usize, doc_char_len: usize) -> usize {
+        if end_char == 0 {
+            0
+        } else if end_char <= self.spans.len() {
+            self.spans[end_char - 1].char_end
+        } else {
+            doc_char_len
+        }
     }
 }
 
@@ -143,6 +196,7 @@ pub struct PhoneticGrepOnline {
     rules: Vec<RewriteRuleChar>,
     /// The query pattern (before normalization).
     pattern: String,
+    compiled: CompiledQuery,
     /// Maximum edit distance for fuzzy matching.
     max_distance: u8,
     /// Case-insensitive matching.
@@ -170,14 +224,13 @@ impl PhoneticGrepOnline {
     /// );
     /// ```
     pub fn with_rules(pattern: &str, mut rules: Vec<RewriteRuleChar>, max_distance: u8) -> Self {
-        rules.sort_by(|a, b| {
-            b.weight
-                .partial_cmp(&a.weight)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        rules.sort_by(compare_rule_weight_desc);
+        let pattern = pattern.to_string();
+        let compiled = Self::compile_query(&pattern, &rules, false, max_distance);
         Self {
             rules,
-            pattern: pattern.to_string(),
+            pattern,
+            compiled,
             max_distance,
             case_insensitive: false,
         }
@@ -217,19 +270,14 @@ impl PhoneticGrepOnline {
     /// * `pattern` - Pattern to search for
     /// * `max_distance` - Maximum edit distance
     pub fn without_rules(pattern: &str, max_distance: u8) -> Self {
-        Self {
-            rules: Vec::new(),
-            pattern: pattern.to_string(),
-            max_distance,
-            case_insensitive: false,
-        }
+        Self::with_rules(pattern, Vec::new(), max_distance)
     }
 
     /// Enable case-insensitive matching.
     ///
-    /// When enabled, both the pattern and document are converted to lowercase
-    /// before matching. Note that the `original_text` in matches still contains
-    /// the original case.
+    /// When enabled, both the pattern and document are case-folded before
+    /// matching. Note that the `original_text` in matches still contains the
+    /// original case.
     ///
     /// # Example
     ///
@@ -240,7 +288,15 @@ impl PhoneticGrepOnline {
     /// assert_eq!(matches[0].original_text, "HELLO");
     /// ```
     pub fn case_insensitive(mut self, yes: bool) -> Self {
-        self.case_insensitive = yes;
+        if self.case_insensitive != yes {
+            self.case_insensitive = yes;
+            self.compiled = Self::compile_query(
+                &self.pattern,
+                &self.rules,
+                self.case_insensitive,
+                self.max_distance,
+            );
+        }
         self
     }
 
@@ -301,7 +357,7 @@ impl PhoneticGrepOnline {
         let doc = self.prepare_document(document);
 
         let mut scanner = OnlinePhoneticScannerChar::new(&pattern, &self.rules, self.max_distance);
-        scanner.scan(&doc)
+        scanner.scan(doc.as_ref())
     }
 
     /// Scan a document and return matches with statistics.
@@ -316,11 +372,10 @@ impl PhoneticGrepOnline {
     ///
     /// Tuple of (matches, stats).
     pub fn scan_with_stats(&self, document: &str) -> (Vec<ScanMatch>, ScannerStats) {
-        let doc = self.prepare_document(document);
-        let matches = self.scan_buffered(&doc);
+        let matches = self.scan_buffered(document);
         let stats = ScannerStats {
-            chars_scanned: doc.chars().count(),
-            bytes_scanned: doc.len(),
+            chars_scanned: document.chars().count(),
+            bytes_scanned: document.len(),
             matches_found: matches.len(),
             active_matches: 0,
         };
@@ -339,9 +394,7 @@ impl PhoneticGrepOnline {
     /// assert_eq!(grep.normalized_query(), "fone"); // ph → f
     /// ```
     pub fn normalized_query(&self) -> String {
-        let pattern = self.prepare_pattern();
-        let scanner = OnlinePhoneticScannerChar::new(&pattern, &self.rules, self.max_distance);
-        scanner.normalized_query().to_string()
+        self.compiled.normalized.clone()
     }
 
     /// Create a streaming scanner for incremental feeding.
@@ -382,11 +435,11 @@ impl PhoneticGrepOnline {
     }
 
     /// Prepare the document for matching (apply case transformation if needed).
-    fn prepare_document(&self, document: &str) -> String {
+    fn prepare_document<'a>(&self, document: &'a str) -> Cow<'a, str> {
         if self.case_insensitive {
-            document.to_lowercase()
+            Cow::Owned(document.to_lowercase())
         } else {
-            document.to_string()
+            Cow::Borrowed(document)
         }
     }
 
@@ -396,39 +449,41 @@ impl PhoneticGrepOnline {
     /// `O(n * (|query| + d))` candidate verification and avoids maintaining an
     /// active match object for every live start position.
     pub fn scan_buffered(&self, document: &str) -> Vec<ScanMatch> {
-        let pattern = self.prepare_pattern();
-        let doc = self.prepare_document(document);
-        let normalized_query = self.compute_normalized_query(&pattern);
-        let query_len = normalized_query.chars().count();
+        let compiled = &self.compiled;
+        let query_len = compiled.len;
 
-        if query_len == 0 || doc.is_empty() {
+        if query_len == 0 || document.is_empty() {
             return Vec::new();
         }
 
-        let (normalized, byte_spans, doc_byte_len) = self.normalize_document_with_positions(&doc);
-        if normalized.is_empty() {
+        let normalized_doc = self.normalize_document_with_positions(document);
+        if normalized_doc.chars.is_empty() {
             return Vec::new();
         }
 
-        let builder = ThompsonBuilderChar::new();
-        let query_nfa = builder.literal(&normalized_query);
-        let product = ProductAutomatonChar::new(query_nfa, self.max_distance);
+        let candidate_starts =
+            Self::candidate_start_count(normalized_doc.chars.len(), query_len, self.max_distance);
+        if candidate_starts == 0 {
+            return Vec::new();
+        }
 
-        let mut matches = Vec::new();
-        for start_char in 0..normalized.len() {
-            let Some(&(start_byte, _)) = byte_spans.get(start_char) else {
+        let mut matches = Vec::with_capacity(candidate_starts.min(64));
+        for start_char in 0..candidate_starts {
+            let Some(span) = normalized_doc.spans.get(start_char).copied() else {
                 continue;
             };
-            if let Some(scan_match) = self.verify_candidate_buffered(
-                start_char,
-                start_byte,
-                &normalized,
-                &byte_spans,
-                &product,
+            if let Some(scan_match) = self.verify_candidate_buffered(BufferedCandidate {
+                start: start_char,
+                byte_start: span.byte_start,
+                char_start: span.char_start,
+                chars: &normalized_doc.chars,
+                spans: &normalized_doc.spans,
+                product: &compiled.product,
                 query_len,
-                &doc,
-                doc_byte_len,
-            ) {
+                original_doc: document,
+                doc_byte_len: normalized_doc.doc_byte_len,
+                doc_char_len: normalized_doc.doc_char_len,
+            }) {
                 matches.push(scan_match);
             }
         }
@@ -442,71 +497,256 @@ impl PhoneticGrepOnline {
         self.deduplicate_matches(matches)
     }
 
-    /// Normalize document and track source byte spans for each normalized char.
-    fn normalize_document_with_positions(
+    fn best_match_from_frontier(
         &self,
-        document: &str,
-    ) -> (Vec<char>, Vec<(usize, usize)>, usize) {
-        let chars: Vec<(usize, char)> = document.char_indices().collect();
-        if chars.is_empty() {
-            return (Vec::new(), Vec::new(), document.len());
+        product: &ProductAutomatonChar,
+        query_len: usize,
+        chars: &[char],
+        start: usize,
+    ) -> Option<(u8, usize, String)> {
+        let min_len = Self::min_candidate_len(query_len, self.max_distance);
+        let max_len = query_len.saturating_add(self.max_distance as usize);
+        let max_end = chars.len().min(start.saturating_add(max_len));
+
+        let mut frontier = product.initial_frontier();
+        let mut best_match: Option<(u8, usize)> = None;
+
+        for end in start + 1..=max_end {
+            let ch = chars[end - 1];
+            frontier = product.transition_frontier(&frontier, ch);
+            if frontier.is_empty() {
+                break;
+            }
+
+            let len = end - start;
+            if len < min_len {
+                continue;
+            }
+
+            if let Some(distance) = product.min_accepting_distance(&frontier) {
+                match &best_match {
+                    None => best_match = Some((distance, end)),
+                    Some((best_dist, _)) if distance < *best_dist => {
+                        best_match = Some((distance, end));
+                    }
+                    Some((best_dist, best_end)) if distance == *best_dist && end > *best_end => {
+                        best_match = Some((distance, end));
+                    }
+                    _ => {}
+                }
+
+                if distance == 0 {
+                    break;
+                }
+            }
         }
 
-        if self.rules.is_empty() {
-            let mut normalized = Vec::with_capacity(chars.len());
-            let mut spans = Vec::with_capacity(chars.len());
-            for (idx, &(start, ch)) in chars.iter().enumerate() {
-                let end = chars
-                    .get(idx + 1)
-                    .map_or(document.len(), |&(next_start, _)| next_start);
-                normalized.push(ch);
-                spans.push((start, end));
-            }
-            return (normalized, spans, document.len());
+        best_match.map(|(distance, end)| {
+            let normalized_text = Self::collect_chars_exact(&chars[start..end]);
+            (distance, end, normalized_text)
+        })
+    }
+
+    fn min_candidate_len(query_len: usize, max_distance: u8) -> usize {
+        query_len.saturating_sub(max_distance as usize).max(1)
+    }
+
+    fn candidate_start_count(normalized_len: usize, query_len: usize, max_distance: u8) -> usize {
+        let min_len = Self::min_candidate_len(query_len, max_distance);
+        normalized_len
+            .checked_sub(min_len)
+            .and_then(Self::source_index_end)
+            .unwrap_or(0)
+    }
+
+    fn source_index_end(start: usize) -> Option<usize> {
+        start.checked_add(1)
+    }
+
+    fn collect_chars_exact(chars: &[char]) -> String {
+        let byte_len = chars.iter().map(|ch| ch.len_utf8()).sum();
+        let mut text = String::with_capacity(byte_len);
+        for ch in chars {
+            text.push(*ch);
+        }
+        text
+    }
+
+    /// Normalize document and track source spans for each normalized char.
+    fn normalize_document_with_positions(&self, document: &str) -> NormalizedDocument {
+        Self::normalize_text_with_positions(document, &self.rules, self.case_insensitive)
+    }
+
+    fn normalize_text_with_positions(
+        document: &str,
+        rules: &[RewriteRuleChar],
+        case_insensitive: bool,
+    ) -> NormalizedDocument {
+        let doc_byte_len = document.len();
+        if document.is_empty() {
+            return NormalizedDocument {
+                chars: Vec::new(),
+                spans: Vec::new(),
+                doc_byte_len,
+                doc_char_len: 0,
+            };
+        }
+
+        if rules.is_empty() {
+            return Self::normalize_without_rules(document, case_insensitive);
+        }
+
+        let (chars, doc_char_len) = Self::source_chars_with_positions(document, case_insensitive);
+        if chars.is_empty() {
+            return NormalizedDocument {
+                chars: Vec::new(),
+                spans: Vec::new(),
+                doc_byte_len,
+                doc_char_len,
+            };
         }
 
         let phones: Vec<PhoneChar> = chars
             .iter()
-            .map(|&(_, ch)| Self::char_to_phone(ch))
+            .map(|source| Self::char_to_phone(source.ch))
             .collect();
         let mut normalized = Vec::with_capacity(chars.len());
         let mut spans = Vec::with_capacity(chars.len());
         let mut pos = 0;
 
         while pos < chars.len() {
-            if let Some(rule) = self.rules.iter().find(|rule| {
+            if let Some(rule) = rules.iter().find(|rule| {
                 pos + rule.pattern.len() <= phones.len() && can_apply_at_char(rule, &phones, pos)
             }) {
-                let start = chars[pos].0;
                 let end_pos = pos + rule.pattern.len();
-                let end = chars
-                    .get(end_pos)
-                    .map_or(document.len(), |&(next_start, _)| next_start);
+                let span = SourceSpan {
+                    byte_start: chars[pos].span.byte_start,
+                    byte_end: chars[end_pos - 1].span.byte_end,
+                    char_start: chars[pos].span.char_start,
+                    char_end: chars[end_pos - 1].span.char_end,
+                };
                 for phone in &rule.replacement {
                     for ch in phone.chars() {
                         normalized.push(ch);
-                        spans.push((start, end));
+                        spans.push(span);
                     }
                 }
                 pos = end_pos;
             } else {
-                let (start, ch) = chars[pos];
-                let end = chars
-                    .get(pos + 1)
-                    .map_or(document.len(), |&(next_start, _)| next_start);
-                normalized.push(ch);
-                spans.push((start, end));
+                let source = chars[pos];
+                normalized.push(source.ch);
+                spans.push(source.span);
                 pos += 1;
             }
         }
 
-        (normalized, spans, document.len())
+        NormalizedDocument {
+            chars: normalized,
+            spans,
+            doc_byte_len,
+            doc_char_len,
+        }
     }
 
-    /// Compute the normalized form of the query pattern.
-    fn compute_normalized_query(&self, pattern: &str) -> String {
-        let (chars, _, _) = self.normalize_document_with_positions(pattern);
-        chars.into_iter().collect()
+    fn estimated_source_char_count(document: &str) -> usize {
+        if document.is_ascii() {
+            document.len()
+        } else {
+            document.len().saturating_div(2).max(1)
+        }
+    }
+
+    fn normalize_without_rules(document: &str, case_insensitive: bool) -> NormalizedDocument {
+        let estimated_chars = Self::estimated_source_char_count(document);
+        let mut normalized = Vec::with_capacity(estimated_chars);
+        let mut spans = Vec::with_capacity(estimated_chars);
+        let mut doc_char_len = 0;
+
+        for (char_start, (byte_start, ch)) in document.char_indices().enumerate() {
+            let Some(char_end) = Self::source_index_end(char_start) else {
+                break;
+            };
+            let byte_end = byte_start
+                .checked_add(ch.len_utf8())
+                .unwrap_or(document.len());
+            doc_char_len = char_end;
+            let span = SourceSpan {
+                byte_start,
+                byte_end,
+                char_start,
+                char_end,
+            };
+            if case_insensitive {
+                for folded in ch.to_lowercase() {
+                    normalized.push(folded);
+                    spans.push(span);
+                }
+            } else {
+                normalized.push(ch);
+                spans.push(span);
+            }
+        }
+
+        NormalizedDocument {
+            chars: normalized,
+            spans,
+            doc_byte_len: document.len(),
+            doc_char_len,
+        }
+    }
+
+    fn source_chars_with_positions(
+        document: &str,
+        case_insensitive: bool,
+    ) -> (Vec<SourceChar>, usize) {
+        let mut chars = Vec::with_capacity(Self::estimated_source_char_count(document));
+        let mut doc_char_len = 0;
+
+        for (char_start, (byte_start, ch)) in document.char_indices().enumerate() {
+            let Some(char_end) = Self::source_index_end(char_start) else {
+                break;
+            };
+            let byte_end = byte_start
+                .checked_add(ch.len_utf8())
+                .unwrap_or(document.len());
+            doc_char_len = char_end;
+            let span = SourceSpan {
+                byte_start,
+                byte_end,
+                char_start,
+                char_end,
+            };
+            if case_insensitive {
+                chars.extend(ch.to_lowercase().map(|ch| SourceChar { ch, span }));
+            } else {
+                chars.push(SourceChar { ch, span });
+            }
+        }
+
+        (chars, doc_char_len)
+    }
+
+    fn compile_query(
+        pattern: &str,
+        rules: &[RewriteRuleChar],
+        case_insensitive: bool,
+        max_distance: u8,
+    ) -> CompiledQuery {
+        let normalized: String =
+            Self::normalize_text_with_positions(pattern, rules, case_insensitive)
+                .chars
+                .into_iter()
+                .collect();
+        let len = normalized.chars().count();
+        let builder = ThompsonBuilderChar::new();
+        let query_nfa = builder.literal(&normalized);
+        let product = ProductAutomatonChar::new(query_nfa, max_distance);
+
+        CompiledQuery {
+            normalized,
+            len,
+            product,
+        }
     }
 
     fn char_to_phone(ch: char) -> PhoneChar {
@@ -518,54 +758,26 @@ impl PhoneticGrepOnline {
         }
     }
 
-    fn verify_candidate_buffered(
-        &self,
-        start: usize,
-        byte_start: usize,
-        chars: &[char],
-        byte_spans: &[(usize, usize)],
-        product: &ProductAutomatonChar,
-        query_len: usize,
-        original_doc: &str,
-        doc_byte_len: usize,
-    ) -> Option<ScanMatch> {
-        let min_len = query_len.saturating_sub(self.max_distance as usize).max(1);
-        let max_len = query_len + self.max_distance as usize;
-        let max_end = chars.len().min(start + max_len);
-
-        let mut candidate = String::with_capacity(max_len);
-        let mut best_match: Option<(u8, usize, String)> = None;
-
-        for end in start + 1..=max_end {
-            candidate.push(chars[end - 1]);
-            let len = end - start;
-            if len < min_len {
-                continue;
-            }
-
-            if let Some(distance) = product.min_distance(&candidate) {
-                match &best_match {
-                    None => best_match = Some((distance, end, candidate.clone())),
-                    Some((best_dist, _, _)) if distance < *best_dist => {
-                        best_match = Some((distance, end, candidate.clone()));
-                    }
-                    Some((best_dist, best_end, _)) if distance == *best_dist && end > *best_end => {
-                        best_match = Some((distance, end, candidate.clone()));
-                    }
-                    _ => {}
-                }
-
-                if distance == 0 {
-                    break;
-                }
-            }
-        }
+    fn verify_candidate_buffered(&self, candidate_ctx: BufferedCandidate<'_>) -> Option<ScanMatch> {
+        let BufferedCandidate {
+            start,
+            byte_start,
+            char_start,
+            chars,
+            spans,
+            product,
+            query_len,
+            original_doc,
+            doc_byte_len,
+            doc_char_len,
+        } = candidate_ctx;
+        let best_match = self.best_match_from_frontier(product, query_len, chars, start);
 
         best_match.map(|(distance, end, normalized_text)| {
-            let byte_end = if end > 0 && end <= byte_spans.len() {
-                byte_spans[end - 1].1
+            let (byte_end, char_end) = if end > 0 && end <= spans.len() {
+                (spans[end - 1].byte_end, spans[end - 1].char_end)
             } else {
-                doc_byte_len
+                (doc_byte_len, doc_char_len)
             };
             let original_text = original_doc
                 .get(byte_start..byte_end)
@@ -574,7 +786,7 @@ impl PhoneticGrepOnline {
 
             ScanMatch {
                 byte_range: (byte_start, byte_end),
-                char_range: (start, end),
+                char_range: (char_start, char_end),
                 original_text,
                 normalized_text,
                 distance,
@@ -626,54 +838,50 @@ impl PhoneticGrepOnline {
     /// ```
     #[cfg(feature = "parallel-grep")]
     pub fn scan_parallel(&self, document: &str) -> Vec<ScanMatch> {
-        let pattern = self.prepare_pattern();
-        let doc = self.prepare_document(document);
+        let compiled = &self.compiled;
+        let query_len = compiled.len;
+
+        if query_len == 0 || document.is_empty() {
+            return Vec::new();
+        }
 
         // Phase 1: Sequential normalization
-        let (normalized, byte_spans, doc_byte_len) = self.normalize_document_with_positions(&doc);
+        let normalized_doc = self.normalize_document_with_positions(document);
 
-        if normalized.is_empty() {
+        if normalized_doc.chars.is_empty() {
             return Vec::new();
         }
-
-        // Build the query NFA and product automaton
-        let normalized_query = self.compute_normalized_query(&pattern);
-        let query_len = normalized_query.chars().count();
-
-        if query_len == 0 {
-            return Vec::new();
-        }
-
-        let builder = ThompsonBuilderChar::new();
-        let query_nfa = builder.literal(&normalized_query);
-        let product = Arc::new(ProductAutomatonChar::new(query_nfa, self.max_distance));
 
         // Create shared normalized data
+        let normalized_len = normalized_doc.chars.len();
+        let candidate_starts =
+            Self::candidate_start_count(normalized_len, query_len, self.max_distance);
+        if candidate_starts == 0 {
+            return Vec::new();
+        }
+
+        let doc_byte_len = normalized_doc.doc_byte_len;
+        let doc_char_len = normalized_doc.doc_char_len;
         let shared = SharedNormalized {
-            chars: Arc::from(normalized.as_slice()),
-            byte_spans: Arc::from(byte_spans.as_slice()),
+            chars: Arc::from(normalized_doc.chars.into_boxed_slice()),
+            spans: Arc::from(normalized_doc.spans.into_boxed_slice()),
         };
 
-        // Generate candidates (every position is a potential match start)
-        let candidates: Vec<CandidateTask> = (0..normalized.len())
-            .map(|i| CandidateTask {
-                start_byte: shared.byte_offset(i).unwrap_or(0),
-                start_char: i,
-            })
-            .collect();
-
         // Phase 2: Parallel verification
-        let mut matches: Vec<ScanMatch> = candidates
+        let mut matches: Vec<ScanMatch> = (0..candidate_starts)
             .into_par_iter()
-            .filter_map(|candidate| {
-                self.verify_candidate_parallel(
-                    &candidate,
-                    &shared,
-                    &product,
+            .filter_map(|start| {
+                self.verify_candidate_parallel(ParallelCandidate {
+                    start,
+                    byte_start: shared.byte_offset(start).unwrap_or(0),
+                    char_start: shared.source_char_offset(start).unwrap_or(0),
+                    shared: &shared,
+                    product: &compiled.product,
                     query_len,
-                    &doc,
+                    original_doc: document,
                     doc_byte_len,
-                )
+                    doc_char_len,
+                })
             })
             .collect();
 
@@ -691,62 +899,24 @@ impl PhoneticGrepOnline {
 
     /// Verify a single candidate match in parallel.
     #[cfg(feature = "parallel-grep")]
-    fn verify_candidate_parallel(
-        &self,
-        candidate: &CandidateTask,
-        shared: &SharedNormalized,
-        product: &ProductAutomatonChar,
-        query_len: usize,
-        original_doc: &str,
-        doc_byte_len: usize,
-    ) -> Option<ScanMatch> {
-        // Try different end positions (query_len ± max_distance)
-        let min_len = query_len.saturating_sub(self.max_distance as usize).max(1);
-        let max_len = query_len + self.max_distance as usize;
-
-        let start = candidate.start_char;
-
-        // Find the best match (minimum distance) among all possible lengths
-        let mut best_match: Option<(u8, usize, String)> = None; // (distance, end, normalized_text)
-
-        // Check each possible substring length
-        for len in min_len..=max_len {
-            let end = start + len;
-            if end > shared.len() {
-                break;
-            }
-
-            // Extract the candidate substring
-            let candidate_str: String = shared.chars[start..end].iter().collect();
-
-            // Check if it matches within the distance budget
-            if let Some(distance) = product.min_distance(&candidate_str) {
-                // Check if this is the best match so far
-                match &best_match {
-                    None => {
-                        best_match = Some((distance, end, candidate_str));
-                    }
-                    Some((best_dist, _, _)) if distance < *best_dist => {
-                        best_match = Some((distance, end, candidate_str));
-                    }
-                    Some((best_dist, best_end, _)) if distance == *best_dist && end > *best_end => {
-                        // Prefer longer match at same distance
-                        best_match = Some((distance, end, candidate_str));
-                    }
-                    _ => {}
-                }
-
-                // Early exit if we found a perfect match
-                if distance == 0 {
-                    break;
-                }
-            }
-        }
+    fn verify_candidate_parallel(&self, candidate_ctx: ParallelCandidate<'_>) -> Option<ScanMatch> {
+        let ParallelCandidate {
+            start,
+            byte_start,
+            char_start,
+            shared,
+            product,
+            query_len,
+            original_doc,
+            doc_byte_len,
+            doc_char_len,
+        } = candidate_ctx;
+        let best_match = self.best_match_from_frontier(product, query_len, &shared.chars, start);
 
         // Convert best match to ScanMatch
         best_match.map(|(distance, end, normalized_text)| {
-            let byte_start = candidate.start_byte;
             let byte_end = shared.byte_end(end, doc_byte_len);
+            let char_end = shared.char_end(end, doc_char_len);
 
             // Safely extract original text
             let original_text = if byte_start <= byte_end && byte_end <= original_doc.len() {
@@ -760,7 +930,7 @@ impl PhoneticGrepOnline {
 
             ScanMatch {
                 byte_range: (byte_start, byte_end),
-                char_range: (start, end),
+                char_range: (char_start, char_end),
                 original_text,
                 normalized_text,
                 distance,
@@ -775,29 +945,49 @@ impl PhoneticGrepOnline {
         }
 
         let mut result: Vec<ScanMatch> = Vec::with_capacity(matches.len());
-        let mut last_end = 0usize;
+        let mut group_best: Option<ScanMatch> = None;
+        let mut group_end = 0usize;
 
         for m in matches {
-            // Skip if this match starts before the previous match ended
-            if m.byte_range.0 < last_end {
-                // Check if this match is better (lower distance)
-                if let Some(prev) = result.last_mut() {
-                    if m.distance < prev.distance
-                        || (m.distance == prev.distance
-                            && m.byte_range.1 - m.byte_range.0
-                                > prev.byte_range.1 - prev.byte_range.0)
-                    {
-                        *prev = m;
-                        last_end = prev.byte_range.1;
+            match group_best.as_mut() {
+                Some(best) if m.byte_range.0 < group_end => {
+                    group_end = group_end.max(m.byte_range.1);
+                    if Self::is_better_match(&m, best) {
+                        *best = m;
                     }
                 }
-            } else {
-                last_end = m.byte_range.1;
-                result.push(m);
+                Some(_) => {
+                    if let Some(best) = group_best.take() {
+                        result.push(best);
+                    }
+                    group_end = m.byte_range.1;
+                    group_best = Some(m);
+                }
+                None => {
+                    group_end = m.byte_range.1;
+                    group_best = Some(m);
+                }
             }
         }
 
+        if let Some(best) = group_best {
+            result.push(best);
+        }
+
         result
+    }
+
+    fn is_better_match(candidate: &ScanMatch, incumbent: &ScanMatch) -> bool {
+        candidate.distance < incumbent.distance
+            || (candidate.distance == incumbent.distance
+                && Self::match_byte_len(candidate) > Self::match_byte_len(incumbent))
+    }
+
+    fn match_byte_len(scan_match: &ScanMatch) -> usize {
+        scan_match
+            .byte_range
+            .1
+            .saturating_sub(scan_match.byte_range.0)
     }
 
     // ========================================================================
@@ -845,7 +1035,7 @@ impl PhoneticGrepOnline {
     pub fn scan_documents_parallel<'a, I, D>(&self, documents: I) -> Vec<(D, Vec<ScanMatch>)>
     where
         I: IntoIterator<Item = (D, &'a str)>,
-        D: Clone + Send + Sync,
+        D: Send,
     {
         let docs: Vec<(D, &str)> = documents.into_iter().collect();
 
@@ -897,7 +1087,7 @@ impl PhoneticGrepOnline {
     pub fn scan_documents_parallel_nested<'a, I, D>(&self, documents: I) -> Vec<(D, Vec<ScanMatch>)>
     where
         I: IntoIterator<Item = (D, &'a str)>,
-        D: Clone + Send + Sync,
+        D: Send,
     {
         let docs: Vec<(D, &str)> = documents.into_iter().collect();
 
@@ -940,7 +1130,7 @@ impl PhoneticGrepOnline {
     pub fn filter_documents_parallel<'a, I, D>(&self, documents: I) -> Vec<(D, Vec<ScanMatch>)>
     where
         I: IntoIterator<Item = (D, &'a str)>,
-        D: Clone + Send + Sync,
+        D: Send,
     {
         let docs: Vec<(D, &str)> = documents.into_iter().collect();
 
@@ -988,7 +1178,7 @@ impl PhoneticGrepOnline {
     pub fn count_documents_parallel<'a, I, D>(&self, documents: I) -> Vec<(D, usize)>
     where
         I: IntoIterator<Item = (D, &'a str)>,
-        D: Clone + Send + Sync,
+        D: Send,
     {
         let docs: Vec<(D, &str)> = documents.into_iter().collect();
 
@@ -1032,14 +1222,14 @@ impl StreamingScanner {
     ///
     /// * `chunk` - Text chunk to process
     pub fn feed(&mut self, chunk: &str) {
-        let text = if self.case_insensitive {
-            chunk.to_lowercase()
+        if self.case_insensitive {
+            for c in chunk.to_lowercase().chars() {
+                self.inner.feed(c, c.len_utf8());
+            }
         } else {
-            chunk.to_string()
-        };
-
-        for c in text.chars() {
-            self.inner.feed(c, c.len_utf8());
+            for c in chunk.chars() {
+                self.inner.feed(c, c.len_utf8());
+            }
         }
     }
 
@@ -1096,6 +1286,28 @@ mod tests {
             weight: 1.0,
             syllable_condition: None,
         }
+    }
+
+    fn scan_match(byte_range: (usize, usize), distance: u8) -> ScanMatch {
+        ScanMatch {
+            byte_range,
+            char_range: byte_range,
+            original_text: String::new(),
+            normalized_text: String::new(),
+            distance,
+        }
+    }
+
+    #[test]
+    fn test_source_index_end_checks_overflow() {
+        assert_eq!(PhoneticGrepOnline::source_index_end(0), Some(1));
+        assert_eq!(PhoneticGrepOnline::source_index_end(usize::MAX), None);
+    }
+
+    #[test]
+    fn test_candidate_start_count_uses_checked_successor() {
+        assert_eq!(PhoneticGrepOnline::candidate_start_count(5, 3, 0), 3);
+        assert_eq!(PhoneticGrepOnline::candidate_start_count(0, 3, 0), 0);
     }
 
     #[test]
@@ -1166,12 +1378,75 @@ mod tests {
 
     #[test]
     fn test_case_insensitive() {
-        // Case insensitive works by lowercasing both pattern and document
+        // Case insensitive works by folding both pattern and document for matching.
         let grep = PhoneticGrepOnline::without_rules("hello", 0).case_insensitive(true);
 
-        // Match just the lowercased pattern (document converted to lowercase)
+        // Match just the lowercased pattern.
         let matches = grep.scan("HELLO");
         assert!(!matches.is_empty(), "should match case-insensitively");
+    }
+
+    #[test]
+    fn test_case_insensitive_rebuilds_cached_query() {
+        let grep = PhoneticGrepOnline::without_rules("HELLO", 0);
+        assert_eq!(grep.normalized_query(), "HELLO");
+
+        let grep = grep.case_insensitive(true);
+
+        assert_eq!(grep.normalized_query(), "hello");
+        assert_eq!(grep.scan("hello").len(), 1);
+    }
+
+    #[test]
+    fn test_case_insensitive_preserves_original_text_and_stats() {
+        let grep = PhoneticGrepOnline::without_rules("hello", 0).case_insensitive(true);
+        let doc = "Say HELLO World";
+
+        let (matches, stats) = grep.scan_with_stats(doc);
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].original_text, "HELLO");
+        assert_eq!(matches[0].byte_range, (4, 9));
+        assert_eq!(matches[0].char_range, (4, 9));
+        assert_eq!(stats.chars_scanned, doc.chars().count());
+        assert_eq!(stats.bytes_scanned, doc.len());
+        assert_eq!(stats.matches_found, 1);
+    }
+
+    #[test]
+    fn test_case_insensitive_unicode_expansion_preserves_source_span() {
+        let grep = PhoneticGrepOnline::without_rules("i\u{307}", 0).case_insensitive(true);
+
+        let matches = grep.scan("İ");
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].original_text, "İ");
+        assert_eq!(matches[0].normalized_text, "i\u{307}");
+        assert_eq!(matches[0].byte_range, (0, "İ".len()));
+        assert_eq!(matches[0].char_range, (0, 1));
+    }
+
+    #[test]
+    fn test_no_rule_normalization_tracks_case_fold_expansion_spans() {
+        let normalized = PhoneticGrepOnline::normalize_text_with_positions("aİb", &[], true);
+
+        assert_eq!(normalized.chars, vec!['a', 'i', '\u{307}', 'b']);
+        assert_eq!(normalized.doc_byte_len, "aİb".len());
+        assert_eq!(normalized.doc_char_len, 3);
+        assert_eq!(normalized.spans[1].byte_start, 1);
+        assert_eq!(normalized.spans[1].byte_end, 1 + "İ".len());
+        assert_eq!(normalized.spans[1].char_start, 1);
+        assert_eq!(normalized.spans[1].char_end, 2);
+        assert_eq!(
+            normalized.spans[2].byte_start,
+            normalized.spans[1].byte_start
+        );
+        assert_eq!(normalized.spans[2].byte_end, normalized.spans[1].byte_end);
+        assert_eq!(
+            normalized.spans[2].char_start,
+            normalized.spans[1].char_start
+        );
+        assert_eq!(normalized.spans[2].char_end, normalized.spans[1].char_end);
     }
 
     #[test]
@@ -1251,6 +1526,42 @@ mod tests {
     }
 
     #[test]
+    fn test_buffered_scan_checks_last_exact_candidate_start() {
+        let grep = PhoneticGrepOnline::without_rules("phone", 0);
+        let matches = grep.scan("xxphone");
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].original_text, "phone");
+        assert_eq!(matches[0].byte_range, (2, 7));
+        assert_eq!(matches[0].distance, 0);
+    }
+
+    #[test]
+    fn test_buffered_scan_checks_last_fuzzy_candidate_start() {
+        let grep = PhoneticGrepOnline::without_rules("phone", 1);
+        let matches = grep.scan("xxphon");
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].original_text, "phon");
+        assert_eq!(matches[0].byte_range, (2, 6));
+        assert_eq!(matches[0].distance, 1);
+    }
+
+    #[test]
+    fn test_buffered_scan_reports_original_char_range_after_rewrite() {
+        let rules = vec![make_rule("ph", "f", ContextChar::Anywhere)];
+        let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
+
+        let matches = grep.scan("call phone now");
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].original_text, "phone");
+        assert_eq!(matches[0].byte_range, (5, 10));
+        assert_eq!(matches[0].char_range, (5, 10));
+        assert_eq!(matches[0].normalized_text, "fone");
+    }
+
+    #[test]
     fn test_buffered_scan_finds_repeated_phonetic_matches() {
         let rules = vec![make_rule("ph", "f", ContextChar::Anywhere)];
         let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
@@ -1259,6 +1570,53 @@ mod tests {
         let matched_texts: Vec<_> = matches.iter().map(|m| m.original_text.as_str()).collect();
         assert_eq!(matched_texts, vec!["phone", "fone", "phone"]);
         assert!(matches.iter().all(|m| m.distance == 0));
+    }
+
+    #[test]
+    fn test_deduplicate_matches_uses_connected_overlap_groups() {
+        let grep = PhoneticGrepOnline::without_rules("x", 0);
+        let matches = vec![
+            scan_match((0, 10), 2),
+            scan_match((2, 4), 0),
+            scan_match((5, 8), 0),
+            scan_match((12, 15), 1),
+        ];
+
+        let deduplicated = grep.deduplicate_matches(matches);
+
+        assert_eq!(deduplicated.len(), 2);
+        assert_eq!(deduplicated[0].byte_range, (5, 8));
+        assert_eq!(deduplicated[0].distance, 0);
+        assert_eq!(deduplicated[1].byte_range, (12, 15));
+    }
+
+    #[test]
+    fn test_incremental_frontier_distances_match_exact_min_distance() {
+        let grep = PhoneticGrepOnline::without_rules("phone", 2);
+        let normalized_query = grep.normalized_query();
+        let builder = ThompsonBuilderChar::new();
+        let query_nfa = builder.literal(&normalized_query);
+        let product = ProductAutomatonChar::new(query_nfa, grep.max_distance());
+        let chars: Vec<char> = "xxphone phon fone phones".chars().collect();
+        let max_len = normalized_query.chars().count() + grep.max_distance() as usize;
+
+        for start in 0..chars.len() {
+            let mut candidate = String::with_capacity(max_len);
+            let mut frontier = product.initial_frontier();
+            let max_end = chars.len().min(start + max_len);
+
+            for end in start + 1..=max_end {
+                let ch = chars[end - 1];
+                candidate.push(ch);
+                frontier = product.transition_frontier(&frontier, ch);
+
+                assert_eq!(
+                    product.min_accepting_distance(&frontier),
+                    product.min_distance(&candidate),
+                    "distance mismatch for candidate {candidate:?} at {start}..{end}"
+                );
+            }
+        }
     }
 
     // ========================================================================
@@ -1364,6 +1722,19 @@ mod tests {
 
     #[cfg(feature = "parallel-grep")]
     #[test]
+    fn test_parallel_case_insensitive_preserves_original_text() {
+        let grep = PhoneticGrepOnline::without_rules("hello", 0).case_insensitive(true);
+
+        let matches = grep.scan_parallel("Say HELLO World");
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].original_text, "HELLO");
+        assert_eq!(matches[0].byte_range, (4, 9));
+        assert_eq!(matches[0].char_range, (4, 9));
+    }
+
+    #[cfg(feature = "parallel-grep")]
+    #[test]
     fn test_parallel_matches_sequential() {
         // Verify parallel and sequential produce same results
         let rules = vec![
@@ -1402,6 +1773,18 @@ mod tests {
         assert_eq!(matches[0].byte_range.0, 0, "match should be at start");
     }
 
+    #[cfg(feature = "parallel-grep")]
+    #[test]
+    fn test_parallel_checks_last_fuzzy_candidate_start() {
+        let grep = PhoneticGrepOnline::without_rules("phone", 1);
+        let matches = grep.scan_parallel("xxphon");
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].original_text, "phon");
+        assert_eq!(matches[0].byte_range, (2, 6));
+        assert_eq!(matches[0].distance, 1);
+    }
+
     // ========================================================================
     // Inter-Document Parallelism Tests
     // ========================================================================
@@ -1425,17 +1808,36 @@ mod tests {
         let doc3_matches = results.iter().find(|(id, _)| *id == "doc3").map(|(_, m)| m);
 
         assert!(
-            doc1_matches.map_or(false, |m| !m.is_empty()),
+            doc1_matches.is_some_and(|m| !m.is_empty()),
             "doc1 should have matches"
         );
         assert!(
-            doc2_matches.map_or(false, |m| !m.is_empty()),
+            doc2_matches.is_some_and(|m| !m.is_empty()),
             "doc2 should have matches"
         );
         assert!(
-            doc3_matches.map_or(false, |m| m.is_empty()),
+            doc3_matches.is_some_and(|m| m.is_empty()),
             "doc3 should have no matches"
         );
+    }
+
+    #[cfg(feature = "parallel-grep")]
+    #[test]
+    fn test_scan_documents_parallel_accepts_move_only_ids() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct DocumentId(&'static str);
+
+        let grep = PhoneticGrepOnline::without_rules("phone", 0);
+        let documents = vec![(DocumentId("doc1"), "phone"), (DocumentId("doc2"), "hello")];
+
+        let results = grep.scan_documents_parallel(documents);
+
+        assert_eq!(results.len(), 2);
+        let matched = results
+            .iter()
+            .find(|(id, _)| id == &DocumentId("doc1"))
+            .map(|(_, matches)| matches);
+        assert!(matched.is_some_and(|matches| !matches.is_empty()));
     }
 
     #[cfg(feature = "parallel-grep")]
@@ -1513,12 +1915,12 @@ mod tests {
             .map(|(_, c)| *c);
 
         assert!(
-            doc1_count.map_or(false, |c| c >= 1),
+            doc1_count.is_some_and(|c| c >= 1),
             "doc1 should have >= 1 match"
         );
         assert_eq!(doc2_count, Some(0), "doc2 should have 0 matches");
         assert!(
-            doc3_count.map_or(false, |c| c >= 1),
+            doc3_count.is_some_and(|c| c >= 1),
             "doc3 should have >= 1 match"
         );
     }
@@ -1556,5 +1958,81 @@ mod tests {
         for (path, matches) in results {
             assert!(!matches.is_empty(), "{} should have matches", path);
         }
+    }
+
+    // ========================================================================
+    // Non-ASCII regression tests (Phase 4 / item 1781)
+    //
+    // The online scanner reports BOTH a `char_range` and a `byte_range`. For
+    // multi-byte UTF-8 these two must diverge, `byte_range` must land on char
+    // boundaries, and slicing the document by `byte_range` must recover
+    // `original_text` exactly.
+    // ========================================================================
+
+    #[test]
+    fn test_scan_online_non_ascii_two_byte_char_range_and_byte_range() {
+        // `é` is a 2-byte UTF-8 scalar, so char and byte offsets diverge.
+        let grep = PhoneticGrepOnline::without_rules("café", 0);
+        let document = "un café serré";
+
+        let matches = grep.scan(document);
+        assert_eq!(matches.len(), 1, "expected exactly one 'café' match");
+
+        let m = &matches[0];
+        assert_eq!(m.original_text, "café");
+        assert_eq!(m.char_range, (3, 7));
+        assert_eq!(m.byte_range, (3, 3 + "café".len()));
+        // The 2-byte `é` forces the byte range to differ from the char range.
+        assert_ne!(m.byte_range, m.char_range);
+        assert!(document.is_char_boundary(m.byte_range.0));
+        assert!(document.is_char_boundary(m.byte_range.1));
+        assert_eq!(
+            document.get(m.byte_range.0..m.byte_range.1),
+            Some(m.original_text.as_str())
+        );
+    }
+
+    #[test]
+    fn test_scan_online_non_ascii_cjk_three_byte() {
+        // Each CJK ideograph is 3 bytes; byte offsets are 3x the char offsets here.
+        let grep = PhoneticGrepOnline::without_rules("中文", 0);
+        let document = "你好中文世界";
+
+        let matches = grep.scan(document);
+        assert_eq!(matches.len(), 1, "expected exactly one '中文' match");
+
+        let m = &matches[0];
+        assert_eq!(m.original_text, "中文");
+        assert_eq!(m.char_range, (2, 4));
+        assert_eq!(m.byte_range, (6, 12));
+        assert_ne!(m.byte_range, m.char_range);
+        assert!(document.is_char_boundary(m.byte_range.0));
+        assert!(document.is_char_boundary(m.byte_range.1));
+        assert_eq!(
+            document.get(m.byte_range.0..m.byte_range.1),
+            Some(m.original_text.as_str())
+        );
+    }
+
+    #[test]
+    fn test_scan_online_non_ascii_emoji_four_byte() {
+        // `🌍` is a 4-byte (astral-plane) UTF-8 scalar occupying a single char.
+        let grep = PhoneticGrepOnline::without_rules("🌍", 0);
+        let document = "hi 🌍!";
+
+        let matches = grep.scan(document);
+        assert_eq!(matches.len(), 1, "expected exactly one '🌍' match");
+
+        let m = &matches[0];
+        assert_eq!(m.original_text, "🌍");
+        assert_eq!(m.char_range, (3, 4));
+        assert_eq!(m.byte_range, (3, 7));
+        assert_ne!(m.byte_range, m.char_range);
+        assert!(document.is_char_boundary(m.byte_range.0));
+        assert!(document.is_char_boundary(m.byte_range.1));
+        assert_eq!(
+            document.get(m.byte_range.0..m.byte_range.1),
+            Some(m.original_text.as_str())
+        );
     }
 }

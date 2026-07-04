@@ -1524,7 +1524,8 @@ fn test_catalan_alias_catala() {
 #[test]
 fn test_every_aggregator_returns_non_empty_rule_set() {
     use crate::phonetic::types::RewriteRuleChar;
-    let aggregators: &[(&str, fn() -> Vec<RewriteRuleChar>)] = &[
+    type RuleAggregator = fn() -> Vec<RewriteRuleChar>;
+    let aggregators: &[(&str, RuleAggregator)] = &[
         ("american_english", american_english_rules),
         ("american_english_cmudict", american_english_cmudict_rules),
         ("british_english", british_english_rules),

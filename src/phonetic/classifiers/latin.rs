@@ -116,7 +116,7 @@ mod tests {
         let c = LatinClassifier::new();
         assert!(c.is_vowel('á'));
         assert!(c.is_vowel('é'));
-        assert!(c.is_vowel('ñ') == false); // ñ is consonant
+        assert!(!c.is_vowel('ñ')); // ñ is consonant
         assert!(c.is_vowel('ö'));
         assert!(c.is_vowel('ü'));
         assert!(c.is_vowel('ã'));

@@ -24,10 +24,10 @@ use crate::phonetic::types::{Context, Phone, RewriteRule, RewriteRuleByte};
 // ============================================================================
 
 /// Front vowels for velar softening (e, i)
-const FRONT_VOWELS: &[u8] = &[b'e', b'i'];
+const FRONT_VOWELS: &[u8] = b"ei";
 
 /// All vowels (a, e, i, o, u)
-const VOWELS: &[u8] = &[b'a', b'e', b'i', b'o', b'u'];
+const VOWELS: &[u8] = b"aeiou";
 
 // ============================================================================
 // Orthography rules (byte-level) - weight = 0.0

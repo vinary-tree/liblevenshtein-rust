@@ -416,10 +416,9 @@ fn test_parse_symbol_ref_undefined_with_suggestions() {
     let err = result.unwrap_err();
     if let ParseErrorKind::UndefinedSymbol { name, available } = &err.kind {
         assert_eq!(name, "UNDEFINED");
-        // Available should contain our defined symbols
-        assert!(
-            available.contains(&"VOWEL".to_string())
-                || available.contains(&"CONSONANT".to_string())
+        assert_eq!(
+            available,
+            &vec!["CONSONANT".to_string(), "VOWEL".to_string()]
         );
     } else {
         panic!("Expected UndefinedSymbol error");
@@ -754,7 +753,7 @@ fn test_parse_shortcut_affricate() {
     let r = parse(r"\a").expect("test: parse \\a");
     // Should parse successfully (affricates like ch, j)
     // Just check it parses - affricate class may be small
-    assert!(r.to_string().len() > 0);
+    assert!(!r.to_string().is_empty());
 }
 
 #[test]
@@ -784,7 +783,7 @@ fn test_parse_shortcut_mixed_in_pattern() {
     // Test simpler concatenation first
     let r = parse(r"\v\c").expect("test: parse \\v\\c");
     // Just check it parses successfully
-    assert!(r.to_string().len() > 0);
+    assert!(!r.to_string().is_empty());
 }
 
 #[test]
@@ -792,7 +791,7 @@ fn test_parse_shortcut_with_quantifier() {
     // Shortcut with quantifier
     let r = parse(r"\v+").expect("test: parse \\v+");
     // Just check it parses successfully
-    assert!(r.to_string().len() > 0);
+    assert!(!r.to_string().is_empty());
 }
 
 // ========================================================================

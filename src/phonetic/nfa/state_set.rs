@@ -35,6 +35,34 @@ const BITSET_MAX_STATE: StateId = 255;
 /// Number of u64 words in the bitset.
 const WORD_COUNT: usize = 4;
 
+/// Number of states covered by the fixed bitset.
+const BITSET_CAPACITY: usize = 256;
+
+/// Number of states represented by each bitset word.
+const WORD_BITS: StateId = 64;
+
+fn bitset_word_index(state: StateId) -> Option<usize> {
+    if state > BITSET_MAX_STATE {
+        return None;
+    }
+
+    u8::try_from(state / WORD_BITS).ok().map(usize::from)
+}
+
+fn bitset_state_id(word_idx: usize, bit_idx: u32) -> Option<StateId> {
+    if word_idx >= WORD_COUNT || bit_idx >= WORD_BITS {
+        return None;
+    }
+
+    let word_idx = StateId::try_from(word_idx).ok()?;
+    let bit_idx = StateId::try_from(bit_idx).ok()?;
+    word_idx.checked_mul(WORD_BITS)?.checked_add(bit_idx)
+}
+
+fn bitset_count_len(bit_count: u32) -> usize {
+    usize::try_from(bit_count).unwrap_or(usize::MAX)
+}
+
 /// Efficient state set for NFA simulation.
 ///
 /// Uses a 256-bit bitset for NFAs with ≤256 states, falling back to `FxHashSet`
@@ -69,12 +97,12 @@ impl StateSet {
     /// For larger state spaces, preallocates the overflow hash set.
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
-        if capacity > BITSET_MAX_STATE as usize + 1 {
+        if capacity > BITSET_CAPACITY {
             Self {
                 bits: [0; WORD_COUNT],
                 bit_count: 0,
                 overflow: Some(Box::new(FxHashSet::with_capacity_and_hasher(
-                    capacity - 256,
+                    capacity - BITSET_CAPACITY,
                     Default::default(),
                 ))),
             }
@@ -88,9 +116,8 @@ impl StateSet {
     /// Returns `true` if the state was newly inserted.
     #[inline]
     pub fn insert(&mut self, state: StateId) -> bool {
-        if state <= BITSET_MAX_STATE {
-            let word_idx = (state / 64) as usize;
-            let bit_idx = state % 64;
+        if let Some(word_idx) = bitset_word_index(state) {
+            let bit_idx = state % WORD_BITS;
             let mask = 1u64 << bit_idx;
             let was_set = (self.bits[word_idx] & mask) != 0;
             if !was_set {
@@ -113,12 +140,11 @@ impl StateSet {
     #[inline]
     pub fn contains(&self, state: &StateId) -> bool {
         let state = *state;
-        if state <= BITSET_MAX_STATE {
-            let word_idx = (state / 64) as usize;
-            let bit_idx = state % 64;
+        if let Some(word_idx) = bitset_word_index(state) {
+            let bit_idx = state % WORD_BITS;
             (self.bits[word_idx] & (1u64 << bit_idx)) != 0
         } else {
-            self.overflow.as_ref().map_or(false, |o| o.contains(&state))
+            self.overflow.as_ref().is_some_and(|o| o.contains(&state))
         }
     }
 
@@ -128,9 +154,8 @@ impl StateSet {
     #[inline]
     pub fn remove(&mut self, state: &StateId) -> bool {
         let state = *state;
-        if state <= BITSET_MAX_STATE {
-            let word_idx = (state / 64) as usize;
-            let bit_idx = state % 64;
+        if let Some(word_idx) = bitset_word_index(state) {
+            let bit_idx = state % WORD_BITS;
             let mask = 1u64 << bit_idx;
             let was_set = (self.bits[word_idx] & mask) != 0;
             if was_set {
@@ -141,7 +166,7 @@ impl StateSet {
                 false
             }
         } else {
-            self.overflow.as_mut().map_or(false, |o| o.remove(&state))
+            self.overflow.as_mut().is_some_and(|o| o.remove(&state))
         }
     }
 
@@ -154,7 +179,8 @@ impl StateSet {
     /// Get the number of states in the set.
     #[inline]
     pub fn len(&self) -> usize {
-        self.bit_count as usize + self.overflow.as_ref().map_or(0, |o| o.len())
+        bitset_count_len(self.bit_count)
+            .saturating_add(self.overflow.as_ref().map_or(0, |o| o.len()))
     }
 
     /// Clear all states from the set.
@@ -236,8 +262,9 @@ impl StateSet {
             let mut word = self.bits[word_idx];
             while word != 0 {
                 let bit_idx = word.trailing_zeros();
-                let state = (word_idx as StateId) * 64 + bit_idx as StateId;
-                result.push(state);
+                if let Some(state) = bitset_state_id(word_idx, bit_idx) {
+                    result.push(state);
+                }
                 word &= word - 1; // Clear lowest set bit
             }
             self.bits[word_idx] = 0;
@@ -306,9 +333,10 @@ impl<'a> Iterator for StateSetIter<'a> {
         loop {
             if self.current_word != 0 {
                 let bit_idx = self.current_word.trailing_zeros();
-                let state = (self.word_idx as StateId) * 64 + bit_idx as StateId;
                 self.current_word &= self.current_word - 1; // Clear lowest set bit
-                return Some(state);
+                if let Some(state) = bitset_state_id(self.word_idx, bit_idx) {
+                    return Some(state);
+                }
             }
 
             // Move to next word
@@ -365,6 +393,48 @@ impl From<&StateSet> for FxHashSet<StateId> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bitset_word_index_maps_only_fixed_bitset_states() {
+        assert_eq!(bitset_word_index(0), Some(0));
+        assert_eq!(bitset_word_index(63), Some(0));
+        assert_eq!(bitset_word_index(64), Some(1));
+        assert_eq!(bitset_word_index(127), Some(1));
+        assert_eq!(bitset_word_index(128), Some(2));
+        assert_eq!(bitset_word_index(191), Some(2));
+        assert_eq!(bitset_word_index(192), Some(3));
+        assert_eq!(bitset_word_index(255), Some(3));
+        assert_eq!(bitset_word_index(256), None);
+    }
+
+    #[test]
+    fn bitset_state_id_reconstructs_only_valid_bitset_positions() {
+        assert_eq!(bitset_state_id(0, 0), Some(0));
+        assert_eq!(bitset_state_id(0, 63), Some(63));
+        assert_eq!(bitset_state_id(1, 0), Some(64));
+        assert_eq!(bitset_state_id(3, 63), Some(255));
+        assert_eq!(bitset_state_id(4, 0), None);
+        assert_eq!(bitset_state_id(0, 64), None);
+    }
+
+    #[test]
+    fn bitset_count_len_never_panics_on_corrupt_counts() {
+        assert_eq!(bitset_count_len(0), 0);
+        assert_eq!(bitset_count_len(256), 256);
+        assert_eq!(
+            bitset_count_len(u32::MAX),
+            usize::try_from(u32::MAX).unwrap_or(usize::MAX)
+        );
+    }
+
+    #[test]
+    fn with_capacity_allocates_overflow_only_above_bitset_capacity() {
+        let bitset_only = StateSet::with_capacity(BITSET_CAPACITY);
+        assert!(bitset_only.overflow.is_none());
+
+        let with_overflow = StateSet::with_capacity(BITSET_CAPACITY + 1);
+        assert!(with_overflow.overflow.is_some());
+    }
 
     #[test]
     fn test_state_set_basic() {

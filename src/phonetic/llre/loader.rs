@@ -110,8 +110,9 @@ impl Loader {
         // Resolve imports if configured
         if self.config.resolve_imports && !file.imports.is_empty() {
             self.loading_stack.insert(canonical.clone());
-            self.resolve_imports(&mut file, path.parent())?;
+            let result = self.resolve_imports(&mut file, path.parent());
             self.loading_stack.remove(&canonical);
+            result?;
         }
 
         Ok(file)
@@ -124,7 +125,7 @@ impl Loader {
 
     /// Resolve @import directives in the file.
     fn resolve_imports(&mut self, file: &mut LLreFile, base_dir: Option<&Path>) -> LLreResult<()> {
-        let mut resolved_imports = Vec::new();
+        let mut resolved_imports = Vec::with_capacity(file.imports.len());
         let mut symbol_table = SymbolTable::new();
 
         for import in &file.imports {
@@ -579,6 +580,29 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(matches!(err.kind, LLreErrorKind::ImportNotFound { .. }));
+    }
+
+    #[test]
+    fn test_failed_import_does_not_poison_loader_stack() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let llre_path = temp_dir.path().join("test.llre");
+        let llre_content = r#"
+            @import "nonexistent.llev"
+            ^test$
+        "#;
+        std::fs::write(&llre_path, llre_content).expect("Failed to write llre file");
+
+        let mut loader = Loader::with_config(LoaderConfig {
+            search_paths: vec![temp_dir.path().to_path_buf()],
+            ..Default::default()
+        });
+
+        for _ in 0..2 {
+            let err = loader
+                .load(&llre_path)
+                .expect_err("missing import should fail consistently");
+            assert!(matches!(err.kind, LLreErrorKind::ImportNotFound { .. }));
+        }
     }
 
     #[test]

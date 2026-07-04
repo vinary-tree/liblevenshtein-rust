@@ -116,6 +116,14 @@ pub enum TokenByte {
     Eof,
 }
 
+fn ascii_byte_digit_value(byte: u8) -> Option<u8> {
+    if byte.is_ascii_digit() {
+        Some(byte - b'0')
+    } else {
+        None
+    }
+}
+
 impl<'a> LexerByte<'a> {
     /// Create a new byte-level lexer.
     pub fn new(input: &'a [u8]) -> Self {
@@ -251,11 +259,29 @@ impl<'a> LexerByte<'a> {
 
     /// Parse a number.
     fn parse_number(&mut self, first_digit: u8) -> ParseResult<usize> {
-        let mut value = (first_digit - b'0') as usize;
+        let Some(first_digit) = ascii_byte_digit_value(first_digit) else {
+            return Err(ParseError::unexpected_char(
+                char::from(first_digit),
+                self.position,
+            ));
+        };
+        let mut value = usize::from(first_digit);
         while let Some(b) = self.peek_byte() {
-            if b.is_ascii_digit() {
+            if let Some(digit) = ascii_byte_digit_value(b) {
                 self.advance();
-                value = value * 10 + (b - b'0') as usize;
+                let digit = usize::from(digit);
+                value = value
+                    .checked_mul(10)
+                    .and_then(|value| value.checked_add(digit))
+                    .ok_or_else(|| {
+                        ParseError::with_context(
+                            ParseErrorKind::InvalidQuantifier(
+                                "numeric literal exceeds usize::MAX".to_string(),
+                            ),
+                            self.position,
+                            "numeric literal is too large",
+                        )
+                    })?;
             } else {
                 break;
             }
@@ -460,5 +486,58 @@ impl<'a> LexerLike for LexerByte<'a> {
 
     fn position(&self) -> Position {
         LexerByte::position(self)
+    }
+}
+
+#[cfg(test)]
+mod digit_conversion_tests {
+    use super::*;
+
+    #[test]
+    fn ascii_byte_digit_value_accepts_only_ascii_decimal_digits() {
+        assert_eq!(ascii_byte_digit_value(b'0'), Some(0));
+        assert_eq!(ascii_byte_digit_value(b'9'), Some(9));
+        assert_eq!(ascii_byte_digit_value(b'a'), None);
+        assert_eq!(ascii_byte_digit_value(0xff), None);
+    }
+
+    #[test]
+    fn byte_lexer_number_parsing_uses_checked_ascii_digit_values() {
+        let mut lexer = LexerByte::new(b"123x");
+
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: byte number token must parse"),
+            TokenByte::Number(123)
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: trailing byte token must parse"),
+            TokenByte::Byte(b'x')
+        );
+    }
+
+    #[test]
+    fn byte_lexer_treats_non_ascii_digit_bytes_as_literal_bytes() {
+        let mut lexer = LexerByte::new("٣".as_bytes());
+
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: first utf-8 byte must parse as literal byte"),
+            TokenByte::Byte(0xd9)
+        );
+        assert_eq!(
+            lexer
+                .next_token()
+                .expect("test: second utf-8 byte must parse as literal byte"),
+            TokenByte::Byte(0xa3)
+        );
+        assert_eq!(
+            lexer.next_token().expect("test: lexer must reach EOF"),
+            TokenByte::Eof
+        );
     }
 }

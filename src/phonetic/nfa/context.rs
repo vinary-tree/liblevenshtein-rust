@@ -71,11 +71,9 @@ impl BoundaryKind {
     pub fn matches_at(&self, text: &str, pos: usize) -> bool {
         match self {
             BoundaryKind::WordStart => {
-                pos == 0 || Self::is_word_boundary_char(text.chars().nth(pos.saturating_sub(1)))
+                pos == 0 || Self::is_word_boundary_char(char_before(text, pos))
             }
-            BoundaryKind::WordEnd => {
-                pos >= text.len() || Self::is_word_boundary_char(text.chars().nth(pos))
-            }
+            BoundaryKind::WordEnd => Self::is_word_boundary_char(char_at(text, pos)),
         }
     }
 
@@ -106,6 +104,69 @@ impl BoundaryKind {
             Some(b) => !b.is_ascii_alphanumeric() && b != b'_',
         }
     }
+}
+
+fn char_at(text: &str, char_pos: usize) -> Option<char> {
+    text.chars().nth(char_pos)
+}
+
+fn char_before(text: &str, char_pos: usize) -> Option<char> {
+    char_pos
+        .checked_sub(1)
+        .and_then(|prev_pos| char_at(text, prev_pos))
+}
+
+fn byte_index_for_char_pos(text: &str, char_pos: usize) -> Option<usize> {
+    if char_pos == 0 {
+        return Some(0);
+    }
+
+    let mut chars_seen = 0usize;
+    for (byte_idx, _) in text.char_indices() {
+        if chars_seen == char_pos {
+            return Some(byte_idx);
+        }
+        chars_seen += 1;
+    }
+
+    (chars_seen == char_pos).then_some(text.len())
+}
+
+fn byte_range_for_char_range(
+    text: &str,
+    match_start: usize,
+    match_end: usize,
+) -> Option<(usize, usize)> {
+    if match_start > match_end {
+        return None;
+    }
+
+    let start_byte = byte_index_for_char_pos(text, match_start)?;
+    let end_byte = byte_index_for_char_pos(text, match_end)?;
+    Some((start_byte, end_byte))
+}
+
+#[inline]
+fn replacement_splice_capacity(
+    text_len: usize,
+    removed_len: usize,
+    replacement_len: usize,
+) -> Option<usize> {
+    text_len
+        .checked_sub(removed_len)?
+        .checked_add(replacement_len)
+}
+
+fn char_boundary_indices(text: &str) -> Vec<usize> {
+    let char_count = text.chars().count();
+    let mut boundaries = Vec::with_capacity(char_count.saturating_add(1));
+    boundaries.push(0);
+    if text.is_empty() {
+        return boundaries;
+    }
+    boundaries.extend(text.char_indices().skip(1).map(|(byte_idx, _)| byte_idx));
+    boundaries.push(text.len());
+    boundaries
 }
 
 /// Character-level context matcher for rewrite rules.
@@ -262,18 +323,17 @@ impl ContextMatcherChar {
         match pattern {
             ContextPatternChar::Boundary(kind) => kind.matches_at(text, match_start),
             ContextPatternChar::Nfa(nfa) => {
-                // Get the prefix of text before the match
-                let prefix: String = text.chars().take(match_start).collect();
+                let Some(match_byte) = byte_index_for_char_pos(text, match_start) else {
+                    return false;
+                };
+                let prefix = &text[..match_byte];
 
-                // Try matching any suffix of the prefix
-                // Start with the longest suffix and work down
-                for start in 0..=prefix.chars().count() {
-                    let suffix: String = prefix.chars().skip(start).collect();
-                    if nfa.accepts(&suffix) {
+                for (start_byte, _) in prefix.char_indices() {
+                    if nfa.accepts(&text[start_byte..match_byte]) {
                         return true;
                     }
                 }
-                false
+                nfa.accepts("")
             }
             ContextPatternChar::And(a, b) => {
                 self.matches_left_context(a, text, match_start)
@@ -300,14 +360,17 @@ impl ContextMatcherChar {
         match pattern {
             ContextPatternChar::Boundary(kind) => kind.matches_at(text, match_end),
             ContextPatternChar::Nfa(nfa) => {
-                // Get the suffix of text after the match
-                let suffix: String = text.chars().skip(match_end).collect();
+                let Some(match_byte) = byte_index_for_char_pos(text, match_end) else {
+                    return false;
+                };
+                if nfa.accepts("") {
+                    return true;
+                }
 
-                // Try matching any prefix of the suffix
-                // Start with shortest (empty) and work up
-                for len in 0..=suffix.chars().count() {
-                    let prefix: String = suffix.chars().take(len).collect();
-                    if nfa.accepts(&prefix) {
+                let suffix = &text[match_byte..];
+                for (offset, ch) in suffix.char_indices() {
+                    let end_byte = match_byte + offset + ch.len_utf8();
+                    if nfa.accepts(&text[match_byte..end_byte]) {
                         return true;
                     }
                 }
@@ -536,12 +599,12 @@ impl ContextualRewriteRuleChar {
     /// `true` if both the source pattern and context predicates match.
     pub fn can_apply_at(&self, text: &str, match_start: usize, match_end: usize) -> bool {
         // First check if the source pattern matches the substring
-        let substring: String = text
-            .chars()
-            .skip(match_start)
-            .take(match_end - match_start)
-            .collect();
-        if !self.source.accepts(&substring) {
+        let Some((start_byte, end_byte)) = byte_range_for_char_range(text, match_start, match_end)
+        else {
+            return false;
+        };
+        let substring = &text[start_byte..end_byte];
+        if !self.source.accepts(substring) {
             return false;
         }
 
@@ -553,11 +616,20 @@ impl ContextualRewriteRuleChar {
     ///
     /// Assumes `can_apply_at` has already returned true.
     pub fn apply_at(&self, text: &str, match_start: usize, match_end: usize) -> String {
-        let chars: Vec<char> = text.chars().collect();
-        let mut result: Vec<char> = chars[..match_start].to_vec();
-        result.extend(&self.replacement);
-        result.extend(&chars[match_end..]);
-        result.into_iter().collect()
+        let Some((start_byte, end_byte)) = byte_range_for_char_range(text, match_start, match_end)
+        else {
+            return text.to_owned();
+        };
+
+        let removed_len = end_byte - start_byte;
+        let replacement_len: usize = self.replacement.iter().map(|c| c.len_utf8()).sum();
+        let mut result = String::with_capacity(
+            replacement_splice_capacity(text.len(), removed_len, replacement_len).unwrap_or(0),
+        );
+        result.push_str(&text[..start_byte]);
+        result.extend(self.replacement.iter().copied());
+        result.push_str(&text[end_byte..]);
+        result
     }
 
     /// Find the first position where this rule can apply.
@@ -571,13 +643,17 @@ impl ContextualRewriteRuleChar {
     ///
     /// `Some((match_start, match_end))` if a match is found, `None` otherwise.
     pub fn find_first_match(&self, text: &str, start_from: usize) -> Option<(usize, usize)> {
-        let chars: Vec<char> = text.chars().collect();
+        let boundaries = char_boundary_indices(text);
+        let char_count = boundaries.len().saturating_sub(1);
+        if start_from >= char_count {
+            return None;
+        }
 
-        for start in start_from..chars.len() {
+        for start in start_from..char_count {
             // Try different match lengths starting from this position
-            for end in (start + 1)..=chars.len() {
-                let substring: String = chars[start..end].iter().collect();
-                if self.source.accepts(&substring) && self.context.matches_at(text, start, end) {
+            for end in (start + 1)..=char_count {
+                let substring = &text[boundaries[start]..boundaries[end]];
+                if self.source.accepts(substring) && self.context.matches_at(text, start, end) {
                     return Some((start, end));
                 }
             }
@@ -628,9 +704,14 @@ impl ContextualRewriteRule {
 
     /// Apply this rule at a given position.
     pub fn apply_at(&self, text: &[u8], match_start: usize, match_end: usize) -> Vec<u8> {
-        let mut result = text[..match_start].to_vec();
-        result.extend(&self.replacement);
-        result.extend(&text[match_end..]);
+        let removed_len = match_end.saturating_sub(match_start);
+        let mut result = Vec::with_capacity(
+            replacement_splice_capacity(text.len(), removed_len, self.replacement.len())
+                .unwrap_or(0),
+        );
+        result.extend_from_slice(&text[..match_start]);
+        result.extend_from_slice(&self.replacement);
+        result.extend_from_slice(&text[match_end..]);
         result
     }
 
@@ -789,6 +870,37 @@ mod tests {
 
         assert!(rule.can_apply_at("phone", 0, 2));
         assert_eq!(rule.apply_at("phone", 0, 2), "fone");
+    }
+
+    #[test]
+    fn test_contextual_rule_rejects_invalid_char_ranges() {
+        let source = compile(&parse("e").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
+        let rule = ContextualRewriteRuleChar::new(source, vec![], None, None, 0.0);
+
+        assert!(!rule.can_apply_at("phone", 5, 4));
+        assert!(!rule.can_apply_at("phone", 10, 11));
+    }
+
+    #[test]
+    fn test_contextual_rule_uses_char_offsets_for_utf8_slices() {
+        let source = compile(&parse("é").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
+        let right = compile(&parse("β").expect("test fixture: parse must be Ok"))
+            .expect("test fixture: compile must be Ok");
+        let rule = ContextualRewriteRuleChar::new(source, vec!['e'], None, Some(right), 0.0);
+
+        assert!(rule.can_apply_at("aéβ", 1, 2));
+        assert_eq!(rule.apply_at("aéβ", 1, 2), "aeβ");
+        assert_eq!(rule.find_first_match("xaéβ", 0), Some((2, 3)));
+        assert!(!rule.can_apply_at("aéγ", 1, 2));
+    }
+
+    #[test]
+    fn test_replacement_splice_capacity_rejects_overflow() {
+        assert_eq!(replacement_splice_capacity(5, 2, 3), Some(6));
+        assert_eq!(replacement_splice_capacity(2, 3, 1), None);
+        assert_eq!(replacement_splice_capacity(usize::MAX, 0, 1), None);
     }
 
     #[test]

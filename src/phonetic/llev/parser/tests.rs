@@ -721,7 +721,7 @@ fn test_parse_all_syllable_keywords() {
 
     for (kw, expected_cond) in keywords {
         let input = format!("a -> b / _ if {}", kw);
-        let file = parse_str(&input).expect(&format!("failed to parse {}", kw));
+        let file = parse_str(&input).unwrap_or_else(|_| panic!("failed to parse {}", kw));
         assert_eq!(file.rules.len(), 1);
 
         let rule = &file.rules[0].rule;
@@ -996,17 +996,15 @@ fn test_parse_builtin_case_insensitive() {
     ];
 
     for input in inputs {
-        let file = parse_str(input).expect(&format!("should parse: {}", input));
+        let file = parse_str(input).unwrap_or_else(|_| panic!("should parse: {}", input));
         assert_eq!(file.rules.len(), 1);
 
         let rule = &file.rules[0].rule;
         let ctx = rule.context.as_ref().expect("should have context");
 
-        if let Some(ref boxed) = ctx.right {
-            if let ContextExpr::Pattern(ref expr) = **boxed {
-                if let Expression::CharClass { ref chars, .. } = expr {
-                    assert!(chars.contains(&'a'));
-                }
+        if let Some(boxed) = &ctx.right {
+            if let ContextExpr::Pattern(Expression::CharClass { chars, .. }) = &**boxed {
+                assert!(chars.contains(&'a'));
             }
         }
     }
