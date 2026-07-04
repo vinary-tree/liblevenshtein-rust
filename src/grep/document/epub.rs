@@ -3,7 +3,9 @@
 //! This module provides text extraction from EPUB e-books.
 //! EPUB files are ZIP archives containing XHTML content files.
 
+use super::text_output::{push_section, write_section};
 use crate::grep::error::{GrepError, GrepResult};
+use std::borrow::Cow;
 
 /// Extract text from EPUB document bytes.
 ///
@@ -28,23 +30,23 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
     use epub::doc::EpubDoc;
     use std::io::Cursor;
 
-    let cursor = Cursor::new(data.to_vec());
+    let cursor = Cursor::new(data);
     let mut doc = EpubDoc::from_reader(cursor).map_err(|e| GrepError::DocumentExtraction {
         file_path: std::path::PathBuf::from("<memory>"),
         message: format!("EPUB parsing failed: {}", e),
     })?;
 
-    let mut all_text = Vec::new();
+    let mut all_text = String::new();
 
     // Get metadata for context - handle MetadataItem type
     if let Some(title) = doc.mdata("title") {
-        all_text.push(format!("Title: {:?}", title));
+        write_section(&mut all_text, format_args!("Title: {title:?}"));
     }
     if let Some(author) = doc.mdata("creator") {
-        all_text.push(format!("Author: {:?}", author));
+        write_section(&mut all_text, format_args!("Author: {author:?}"));
     }
     if !all_text.is_empty() {
-        all_text.push(String::new()); // Separator after metadata
+        push_section(&mut all_text, ""); // Separator after metadata
     }
 
     // Iterate through spine (reading order)
@@ -54,7 +56,7 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
             // Content is HTML, strip tags to get plain text
             let plain_text = strip_html_tags(&content);
             if !plain_text.trim().is_empty() {
-                all_text.push(plain_text);
+                push_section(&mut all_text, &plain_text);
             }
         }
     }
@@ -65,7 +67,7 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
         )));
     }
 
-    Ok(all_text.join("\n\n"))
+    Ok(all_text)
 }
 
 /// Strip HTML tags from content to get plain text.
@@ -76,24 +78,24 @@ fn strip_html_tags(html: &str) -> String {
     let mut in_style = false;
     let mut last_was_space = true;
 
-    let chars: Vec<char> = html.chars().collect();
     let mut i = 0;
 
-    while i < chars.len() {
-        let c = chars[i];
+    while i < html.len() {
+        let remaining = &html[i..];
+        let c = remaining
+            .chars()
+            .next()
+            .expect("index is advanced only along UTF-8 character boundaries");
 
         if c == '<' {
             // Check for script/style tags
-            let remaining: String = chars[i..].iter().take(10).collect();
-            let remaining_lower = remaining.to_lowercase();
-
-            if remaining_lower.starts_with("<script") {
+            if starts_with_ignore_ascii_case(remaining, "<script") {
                 in_script = true;
-            } else if remaining_lower.starts_with("</script") {
+            } else if starts_with_ignore_ascii_case(remaining, "</script") {
                 in_script = false;
-            } else if remaining_lower.starts_with("<style") {
+            } else if starts_with_ignore_ascii_case(remaining, "<style") {
                 in_style = true;
-            } else if remaining_lower.starts_with("</style") {
+            } else if starts_with_ignore_ascii_case(remaining, "</style") {
                 in_style = false;
             }
 
@@ -103,10 +105,10 @@ fn strip_html_tags(html: &str) -> String {
         } else if !in_tag && !in_script && !in_style {
             // Handle HTML entities
             if c == '&' {
-                let entity_end = chars[i..].iter().position(|&x| x == ';');
+                let entity_end = remaining.find(';');
                 if let Some(end) = entity_end {
-                    let entity: String = chars[i..=i + end].iter().collect();
-                    let decoded = decode_html_entity(&entity);
+                    let entity = &remaining[..=end];
+                    let decoded = decode_html_entity(entity);
                     if decoded == " " || decoded == "\n" {
                         if !last_was_space {
                             result.push(' ');
@@ -116,7 +118,8 @@ fn strip_html_tags(html: &str) -> String {
                         result.push_str(&decoded);
                         last_was_space = false;
                     }
-                    i += end;
+                    i += end + 1;
+                    continue;
                 } else {
                     result.push(c);
                     last_was_space = false;
@@ -132,48 +135,59 @@ fn strip_html_tags(html: &str) -> String {
             }
         }
 
-        i += 1;
+        i += c.len_utf8();
     }
 
-    result.trim().to_string()
+    if result.ends_with(' ') {
+        result.pop();
+    }
+
+    result
+}
+
+fn starts_with_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
+    haystack
+        .as_bytes()
+        .get(..needle.len())
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(needle.as_bytes()))
 }
 
 /// Decode common HTML entities.
-fn decode_html_entity(entity: &str) -> String {
+fn decode_html_entity(entity: &str) -> Cow<'static, str> {
     match entity {
-        "&nbsp;" | "&#160;" => " ".to_string(),
-        "&lt;" | "&#60;" => "<".to_string(),
-        "&gt;" | "&#62;" => ">".to_string(),
-        "&amp;" | "&#38;" => "&".to_string(),
-        "&quot;" | "&#34;" => "\"".to_string(),
-        "&apos;" | "&#39;" => "'".to_string(),
-        "&mdash;" | "&#8212;" => "\u{2014}".to_string(),
-        "&ndash;" | "&#8211;" => "\u{2013}".to_string(),
-        "&hellip;" | "&#8230;" => "\u{2026}".to_string(),
-        "&ldquo;" | "&#8220;" => "\u{201C}".to_string(),
-        "&rdquo;" | "&#8221;" => "\u{201D}".to_string(),
-        "&lsquo;" | "&#8216;" => "\u{2018}".to_string(),
-        "&rsquo;" | "&#8217;" => "\u{2019}".to_string(),
-        "&copy;" | "&#169;" => "\u{00A9}".to_string(),
-        "&reg;" | "&#174;" => "\u{00AE}".to_string(),
+        "&nbsp;" | "&#160;" => Cow::Borrowed(" "),
+        "&lt;" | "&#60;" => Cow::Borrowed("<"),
+        "&gt;" | "&#62;" => Cow::Borrowed(">"),
+        "&amp;" | "&#38;" => Cow::Borrowed("&"),
+        "&quot;" | "&#34;" => Cow::Borrowed("\""),
+        "&apos;" | "&#39;" => Cow::Borrowed("'"),
+        "&mdash;" | "&#8212;" => Cow::Borrowed("\u{2014}"),
+        "&ndash;" | "&#8211;" => Cow::Borrowed("\u{2013}"),
+        "&hellip;" | "&#8230;" => Cow::Borrowed("\u{2026}"),
+        "&ldquo;" | "&#8220;" => Cow::Borrowed("\u{201C}"),
+        "&rdquo;" | "&#8221;" => Cow::Borrowed("\u{201D}"),
+        "&lsquo;" | "&#8216;" => Cow::Borrowed("\u{2018}"),
+        "&rsquo;" | "&#8217;" => Cow::Borrowed("\u{2019}"),
+        "&copy;" | "&#169;" => Cow::Borrowed("\u{00A9}"),
+        "&reg;" | "&#174;" => Cow::Borrowed("\u{00AE}"),
         _ => {
             // Try to decode numeric entities
             if entity.starts_with("&#x") && entity.ends_with(';') {
                 let hex = &entity[3..entity.len() - 1];
                 if let Ok(code) = u32::from_str_radix(hex, 16) {
                     if let Some(c) = char::from_u32(code) {
-                        return c.to_string();
+                        return Cow::Owned(c.to_string());
                     }
                 }
             } else if entity.starts_with("&#") && entity.ends_with(';') {
                 let num = &entity[2..entity.len() - 1];
                 if let Ok(code) = num.parse::<u32>() {
                     if let Some(c) = char::from_u32(code) {
-                        return c.to_string();
+                        return Cow::Owned(c.to_string());
                     }
                 }
             }
-            entity.to_string()
+            Cow::Owned(entity.to_string())
         }
     }
 }

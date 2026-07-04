@@ -50,6 +50,7 @@
 
 pub mod compression;
 pub mod error;
+mod limited_read;
 pub mod position_tracker;
 pub mod result;
 pub mod source;
@@ -86,7 +87,7 @@ pub use archive::ArchiveFormat;
 pub use document::{DocumentExtractor, DocumentExtractorConfig, DocumentFormat};
 
 use std::fs::File;
-use std::io::{self, BufReader, Read};
+use std::io::{self, BufReader};
 use std::path::Path;
 
 use compression::create_decompressor;
@@ -96,6 +97,19 @@ use archive::tar::TarArchiveReader;
 
 #[cfg(feature = "zip")]
 use archive::zip::ZipArchiveReader;
+
+fn initial_plain_read_capacity(
+    file_len: u64,
+    max_file_size: Option<u64>,
+    compression: CompressionFormat,
+) -> usize {
+    if compression != CompressionFormat::None {
+        return 0;
+    }
+
+    let bounded_len = max_file_size.map_or(file_len, |max_size| file_len.min(max_size));
+    limited_read::initial_read_capacity(Some(bounded_len))
+}
 
 /// Configuration for grep source operations.
 #[derive(Debug, Clone)]
@@ -279,17 +293,15 @@ impl GrepSource {
             )));
         }
 
+        let metadata = fs_path.metadata()?;
+
         // Check file size limit
         if let Some(max_size) = self.config.max_file_size {
-            let metadata = fs_path.metadata()?;
             if metadata.len() > max_size {
-                return Err(GrepError::Io(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!(
-                        "file too large: {} bytes (limit: {} bytes)",
-                        metadata.len(),
-                        max_size
-                    ),
+                return Err(GrepError::Io(limited_read::file_too_large_error(
+                    "file",
+                    metadata.len(),
+                    max_size,
                 )));
             }
         }
@@ -303,7 +315,7 @@ impl GrepSource {
 
         #[cfg(any(feature = "tar", feature = "zip"))]
         let archive = if self.config.auto_decompress {
-            path.archive.clone()
+            path.archive
         } else {
             ArchiveFormat::None
         };
@@ -322,7 +334,7 @@ impl GrepSource {
         match archive {
             ArchiveFormat::None => {
                 // Plain file (possibly compressed)
-                self.open_plain_file(fs_path, compression)
+                self.open_plain_file(fs_path, metadata.len(), compression)
             }
             #[cfg(feature = "tar")]
             ArchiveFormat::Tar {
@@ -343,7 +355,7 @@ impl GrepSource {
         #[cfg(not(any(feature = "tar", feature = "zip")))]
         {
             let _ = (archive, filter);
-            self.open_plain_file(fs_path, compression)
+            self.open_plain_file(fs_path, metadata.len(), compression)
         }
     }
 
@@ -351,6 +363,7 @@ impl GrepSource {
     fn open_plain_file(
         &self,
         path: &Path,
+        file_len: u64,
         compression: CompressionFormat,
     ) -> GrepResult<GrepEntryIterator> {
         let file = File::open(path)?;
@@ -358,9 +371,18 @@ impl GrepSource {
         let decompressed = create_decompressor(reader, compression)?;
 
         // Read all content (streaming would require different architecture)
-        let mut content = Vec::new();
+        let mut content = Vec::with_capacity(initial_plain_read_capacity(
+            file_len,
+            self.config.max_file_size,
+            compression,
+        ));
         let mut reader = decompressed;
-        reader.read_to_end(&mut content)?;
+        limited_read::read_to_end_limited(
+            &mut reader,
+            &mut content,
+            self.config.max_file_size,
+            "file",
+        )?;
 
         // Try document extraction if enabled
         #[cfg(any(
@@ -391,10 +413,10 @@ impl GrepSource {
         }
 
         let source_id = SourceId::file(path);
-        let entries = vec![GrepEntry { source_id, content }];
+        let entry = GrepEntry { source_id, content };
 
         Ok(GrepEntryIterator {
-            inner: GrepEntryIteratorInner::Single(entries.into_iter()),
+            inner: GrepEntryIteratorInner::Single(Some(entry).into_iter()),
         })
     }
 
@@ -406,23 +428,19 @@ impl GrepSource {
         compression: CompressionFormat,
         filter: Option<String>,
     ) -> GrepResult<GrepEntryIterator> {
-        let mut reader = TarArchiveReader::open(path, compression)?;
+        let mut reader = TarArchiveReader::open(path, compression)?
+            .with_max_entry_size(self.config.max_file_size);
 
         if let Some(pattern) = filter {
             reader = reader.with_pattern(&pattern)?;
         }
 
-        let entries = reader.entries()?;
-
-        // Collect entries (tar is streaming, but we need the content)
-        let collected: Vec<GrepResult<GrepEntry>> = entries
-            .map(|result| {
-                result.map(|(source_id, _meta, content)| GrepEntry { source_id, content })
-            })
-            .collect();
+        let entries = reader.entries()?.map(|result| {
+            result.map(|(source_id, _meta, content)| GrepEntry { source_id, content })
+        });
 
         Ok(GrepEntryIterator {
-            inner: GrepEntryIteratorInner::Archive(collected.into_iter()),
+            inner: GrepEntryIteratorInner::Archive(Box::new(entries)),
         })
     }
 
@@ -433,23 +451,19 @@ impl GrepSource {
         path: &Path,
         filter: Option<String>,
     ) -> GrepResult<GrepEntryIterator> {
-        let mut reader = ZipArchiveReader::open(path)?;
+        let mut reader =
+            ZipArchiveReader::open(path)?.with_max_entry_size(self.config.max_file_size);
 
         if let Some(pattern) = filter {
             reader = reader.with_pattern(&pattern)?;
         }
 
-        let entries = reader.entries()?;
-
-        // Collect entries
-        let collected: Vec<GrepResult<GrepEntry>> = entries
-            .map(|result| {
-                result.map(|(source_id, _meta, content)| GrepEntry { source_id, content })
-            })
-            .collect();
+        let entries = reader.entries()?.map(|result| {
+            result.map(|(source_id, _meta, content)| GrepEntry { source_id, content })
+        });
 
         Ok(GrepEntryIterator {
-            inner: GrepEntryIteratorInner::Archive(collected.into_iter()),
+            inner: GrepEntryIteratorInner::Archive(Box::new(entries)),
         })
     }
 
@@ -515,10 +529,10 @@ pub struct GrepEntryIterator {
 
 enum GrepEntryIteratorInner {
     /// Single plain file entry.
-    Single(std::vec::IntoIter<GrepEntry>),
-    /// Archive entries (collected).
+    Single(std::option::IntoIter<GrepEntry>),
+    /// Archive entries.
     #[cfg(any(feature = "tar", feature = "zip"))]
-    Archive(std::vec::IntoIter<GrepResult<GrepEntry>>),
+    Archive(Box<dyn Iterator<Item = GrepResult<GrepEntry>>>),
 }
 
 impl Iterator for GrepEntryIterator {
@@ -536,6 +550,11 @@ impl Iterator for GrepEntryIterator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "zip")]
+    use std::fs::File;
+    use std::io::Cursor;
+    #[cfg(feature = "zip")]
+    use std::io::Write;
 
     #[test]
     fn test_grep_config_default() {
@@ -560,6 +579,61 @@ mod tests {
     }
 
     #[test]
+    fn test_initial_plain_read_capacity_uses_plain_file_size() {
+        assert_eq!(
+            initial_plain_read_capacity(4096, Some(10 * 1024), CompressionFormat::None),
+            4096
+        );
+        assert_eq!(
+            initial_plain_read_capacity(4096, Some(1024), CompressionFormat::None),
+            1024
+        );
+    }
+
+    #[test]
+    fn test_initial_plain_read_capacity_is_capped_without_size_limit() {
+        assert_eq!(
+            initial_plain_read_capacity(
+                limited_read::usize_to_u64_saturating(limited_read::MAX_INITIAL_READ_CAPACITY) + 1,
+                None,
+                CompressionFormat::None
+            ),
+            limited_read::MAX_INITIAL_READ_CAPACITY
+        );
+    }
+
+    #[test]
+    fn test_initial_plain_read_capacity_ignores_compressed_size() {
+        assert_eq!(
+            initial_plain_read_capacity(4096, Some(10 * 1024), CompressionFormat::Gzip),
+            0
+        );
+    }
+
+    #[test]
+    fn test_read_to_end_limited_accepts_exact_limit() {
+        let mut reader = Cursor::new(b"hello");
+        let mut content = Vec::new();
+
+        limited_read::read_to_end_limited(&mut reader, &mut content, Some(5), "file")
+            .expect("read within limit");
+
+        assert_eq!(content, b"hello");
+    }
+
+    #[test]
+    fn test_read_to_end_limited_rejects_expanded_content() {
+        let mut reader = Cursor::new(b"hello");
+        let mut content = Vec::new();
+
+        let err = limited_read::read_to_end_limited(&mut reader, &mut content, Some(4), "file")
+            .expect_err("limit exceeded");
+
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(content.is_empty());
+    }
+
+    #[test]
     fn test_grep_entry() {
         let entry = GrepEntry {
             source_id: SourceId::file("test.txt"),
@@ -580,5 +654,37 @@ mod tests {
 
         assert!(entry.is_archive_entry());
         assert_eq!(entry.source_id().display(), "archive.tar.gz:dir/file.txt");
+    }
+
+    #[cfg(feature = "zip")]
+    #[test]
+    fn test_grep_source_applies_max_size_to_zip_entries() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let zip_path = dir.path().join("test.zip");
+
+        let file = File::create(&zip_path).expect("create zip file");
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        let content = vec![b'a'; 1024 * 1024];
+        zip.start_file("large.txt", options)
+            .expect("start zip entry");
+        zip.write_all(&content).expect("write zip entry");
+        zip.finish().expect("finish zip");
+
+        let max_size = zip_path.metadata().expect("stat zip").len() + 1;
+        assert!(limited_read::len_exceeds_limit(content.len(), max_size));
+
+        let source = GrepSource::new(GrepConfig::new().max_size(max_size));
+        let path = GrepPath::parse(zip_path.to_string_lossy().as_ref()).expect("parse zip path");
+        let mut entries = source.open(&path).expect("open zip source");
+        let err = entries
+            .next()
+            .expect("zip should yield one entry")
+            .expect_err("zip entry should exceed max size");
+
+        assert!(
+            matches!(err, GrepError::Io(ref io_err) if io_err.kind() == io::ErrorKind::InvalidData)
+        );
     }
 }

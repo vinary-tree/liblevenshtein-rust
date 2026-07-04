@@ -586,7 +586,7 @@ mod tests {
         use libdictenstein::pathmap::PathMapDictionary;
 
         // Create a dictionary
-        let terms = vec!["apple", "banana", "cherry"];
+        let terms = ["apple", "banana", "cherry"];
         let dict = PathMapDictionary::from_terms(terms.iter().cloned());
         let container = DictContainer::PathMap(dict);
 
@@ -625,7 +625,7 @@ mod tests {
         let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
         writeln!(temp_file, "# This is a comment").expect("write failed");
         writeln!(temp_file, "apple").expect("write failed");
-        writeln!(temp_file, "").expect("write failed");
+        writeln!(temp_file).expect("write failed");
         writeln!(temp_file, "# Another comment").expect("write failed");
         writeln!(temp_file, "banana").expect("write failed");
         temp_file.flush().expect("flush failed");
@@ -670,7 +670,7 @@ mod tests {
     fn test_save_and_load_protobuf_pathmap_dict() {
         use libdictenstein::pathmap::PathMapDictionary;
 
-        let terms = vec!["alpha", "beta", "gamma"];
+        let terms = ["alpha", "beta", "gamma"];
         let dict = PathMapDictionary::from_terms(terms.iter().cloned());
         let container = DictContainer::PathMap(dict);
         let temp_file = NamedTempFile::new().expect("Failed to create temp file");
@@ -733,7 +733,7 @@ mod tests {
     fn test_save_and_load_protobuf_gzip_pathmap_dict() {
         use libdictenstein::pathmap::PathMapDictionary;
 
-        let terms = vec!["delta", "epsilon", "zeta"];
+        let terms = ["delta", "epsilon", "zeta"];
         let dict = PathMapDictionary::from_terms(terms.iter().cloned());
         let container = DictContainer::PathMap(dict);
         let temp_file = NamedTempFile::new().expect("Failed to create temp file");

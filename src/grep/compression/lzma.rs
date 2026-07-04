@@ -75,7 +75,7 @@ mod tests {
     use xz2::write::XzEncoder;
 
     fn compress_data(data: &[u8]) -> Vec<u8> {
-        let mut encoder = XzEncoder::new(Vec::new(), 6);
+        let mut encoder = XzEncoder::new(Vec::with_capacity(data.len()), 6);
         encoder.write_all(data).expect("write should succeed");
         encoder.finish().expect("finish should succeed")
     }
@@ -86,7 +86,7 @@ mod tests {
         let compressed = compress_data(original);
 
         let mut decompressor = XzDecompressor::new(&compressed[..]);
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         decompressor
             .read_to_end(&mut result)
             .expect("read should succeed");
@@ -100,7 +100,7 @@ mod tests {
         let compressed = compress_data(original);
 
         let mut decompressor = XzDecompressor::new(&compressed[..]);
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         decompressor
             .read_to_end(&mut result)
             .expect("read should succeed");
@@ -114,7 +114,7 @@ mod tests {
         let compressed = compress_data(&original);
 
         let mut decompressor = XzDecompressor::new(&compressed[..]);
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         decompressor
             .read_to_end(&mut result)
             .expect("read should succeed");
@@ -128,7 +128,7 @@ mod tests {
         let compressed = compress_data(original);
 
         let mut decompressor = XzDecompressor::new(&compressed[..]);
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         let mut buf = [0u8; 8]; // Small buffer to force multiple reads
 
         loop {
@@ -148,7 +148,7 @@ mod tests {
         let compressed = compress_data(original);
 
         let mut decompressor = XzDecompressor::new(&compressed[..]);
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         decompressor
             .read_to_end(&mut result)
             .expect("read should succeed");

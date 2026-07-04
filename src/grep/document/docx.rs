@@ -3,6 +3,7 @@
 //! This module provides text extraction from Microsoft Word (.docx) documents.
 //! DOCX files are ZIP archives containing XML files with the document content.
 
+use super::text_output::begin_line;
 use crate::grep::error::{GrepError, GrepResult};
 
 /// Extract text from DOCX document bytes.
@@ -32,31 +33,25 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
         message: format!("DOCX parsing failed: {:?}", e),
     })?;
 
-    let mut text_parts = Vec::new();
+    let mut text = String::new();
 
     // Extract text from document body
     for child in &docx.document.children {
-        extract_text_from_content(child, &mut text_parts);
+        extract_text_from_content(child, &mut text);
     }
 
-    Ok(text_parts.join("\n"))
+    Ok(text)
 }
 
 /// Recursively extract text from DOCX content elements.
-fn extract_text_from_content(content: &docx_rs::DocumentChild, parts: &mut Vec<String>) {
+fn extract_text_from_content(content: &docx_rs::DocumentChild, output: &mut String) {
     match content {
         docx_rs::DocumentChild::Paragraph(para) => {
-            let mut para_text = String::new();
-            for child in &para.children {
-                extract_text_from_paragraph_child(child, &mut para_text);
-            }
-            if !para_text.is_empty() {
-                parts.push(para_text);
-            }
+            append_paragraph_text(&para.children, output);
         }
         docx_rs::DocumentChild::Table(table) => {
             for row in &table.rows {
-                extract_text_from_table_row(row, parts);
+                extract_text_from_table_row(row, output);
             }
         }
         _ => {}
@@ -64,34 +59,42 @@ fn extract_text_from_content(content: &docx_rs::DocumentChild, parts: &mut Vec<S
 }
 
 /// Extract text from a table row.
-fn extract_text_from_table_row(row: &docx_rs::TableChild, parts: &mut Vec<String>) {
+fn extract_text_from_table_row(row: &docx_rs::TableChild, output: &mut String) {
     // `docx_rs::TableChild` currently has only the `TableRow` variant; the
     // `if let` is defensive against upstream additions.
     #[allow(irrefutable_let_patterns)]
     if let docx_rs::TableChild::TableRow(tr) = row {
         for cell in &tr.cells {
-            extract_text_from_table_cell(cell, parts);
+            extract_text_from_table_cell(cell, output);
         }
     }
 }
 
 /// Extract text from a table cell.
-fn extract_text_from_table_cell(cell: &docx_rs::TableRowChild, parts: &mut Vec<String>) {
+fn extract_text_from_table_cell(cell: &docx_rs::TableRowChild, output: &mut String) {
     // `docx_rs::TableRowChild` currently has only the `TableCell` variant; the
     // `if let` is defensive against upstream additions.
     #[allow(irrefutable_let_patterns)]
     if let docx_rs::TableRowChild::TableCell(tc) = cell {
         for child in &tc.children {
             if let docx_rs::TableCellContent::Paragraph(para) = child {
-                let mut para_text = String::new();
-                for pchild in &para.children {
-                    extract_text_from_paragraph_child(pchild, &mut para_text);
-                }
-                if !para_text.is_empty() {
-                    parts.push(para_text);
-                }
+                append_paragraph_text(&para.children, output);
             }
         }
+    }
+}
+
+fn append_paragraph_text(children: &[docx_rs::ParagraphChild], output: &mut String) {
+    let line_start = output.len();
+    begin_line(output);
+    let text_start = output.len();
+
+    for child in children {
+        extract_text_from_paragraph_child(child, output);
+    }
+
+    if output.len() == text_start {
+        output.truncate(line_start);
     }
 }
 
@@ -138,6 +141,15 @@ pub fn extract_text_from_file(path: &std::path::Path) -> GrepResult<String> {
 mod tests {
     use super::*;
 
+    fn paragraph_child_text(text: &str) -> docx_rs::ParagraphChild {
+        let mut run = docx_rs::Run::default();
+        run.children.push(docx_rs::RunChild::Text(docx_rs::Text {
+            text: text.to_string(),
+            preserve_space: true,
+        }));
+        docx_rs::ParagraphChild::Run(Box::new(run))
+    }
+
     #[test]
     fn test_extract_invalid_docx() {
         let invalid_data = b"This is not a DOCX file";
@@ -154,5 +166,22 @@ mod tests {
         ];
         let result = extract_text(&empty_zip);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_append_paragraph_text_appends_directly() {
+        let mut output = String::new();
+        append_paragraph_text(&[paragraph_child_text("alpha")], &mut output);
+        append_paragraph_text(&[paragraph_child_text("beta")], &mut output);
+
+        assert_eq!(output, "alpha\nbeta");
+    }
+
+    #[test]
+    fn test_append_paragraph_text_rolls_back_empty_paragraph() {
+        let mut output = String::from("alpha");
+        append_paragraph_text(&[], &mut output);
+
+        assert_eq!(output, "alpha");
     }
 }

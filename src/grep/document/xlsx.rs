@@ -3,7 +3,38 @@
 //! This module provides text extraction from Microsoft Excel (.xlsx, .xls) spreadsheets.
 //! It extracts cell values from all sheets, converting them to text.
 
+use super::text_output::{begin_line, push_line};
 use crate::grep::error::{GrepError, GrepResult};
+use std::fmt::{Display, Write as _};
+
+const CELL_WIDTH_CAPACITY_HINT: usize = 8;
+const MAX_INITIAL_ROW_CAPACITY: usize = 8 * 1024;
+
+fn push_sheet_header(output: &mut String, sheet_name: &str) {
+    begin_line(output);
+    write!(output, "=== {sheet_name} ===").expect("writing to String cannot fail");
+}
+
+fn row_to_text<T: Display>(row: &[T]) -> Option<String> {
+    let initial_capacity = row
+        .len()
+        .saturating_mul(CELL_WIDTH_CAPACITY_HINT)
+        .min(MAX_INITIAL_ROW_CAPACITY);
+    let mut row_text = String::with_capacity(initial_capacity);
+    let mut has_text = false;
+
+    for (index, cell) in row.iter().enumerate() {
+        if index > 0 {
+            row_text.push('\t');
+        }
+
+        let before = row_text.len();
+        write!(&mut row_text, "{cell}").expect("writing to String cannot fail");
+        has_text |= row_text.len() > before;
+    }
+
+    has_text.then_some(row_text)
+}
 
 /// Extract text from XLSX/XLS document bytes.
 ///
@@ -36,7 +67,7 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
             message: format!("Spreadsheet parsing failed: {}", e),
         })?;
 
-    let mut all_text = Vec::new();
+    let mut all_text = String::new();
 
     // Get all sheet names first
     let sheet_names: Vec<String> = workbook.sheet_names().to_vec();
@@ -44,24 +75,19 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
     for sheet_name in sheet_names {
         if let Ok(range) = workbook.worksheet_range(&sheet_name) {
             // Add sheet name as header
-            all_text.push(format!("=== {} ===", sheet_name));
+            push_sheet_header(&mut all_text, &sheet_name);
 
             for row in range.rows() {
-                let row_text: Vec<String> = row.iter().map(|cell| cell.to_string()).collect();
-
-                // Skip completely empty rows
-                if row_text.iter().all(|s| s.is_empty()) {
-                    continue;
+                if let Some(row_text) = row_to_text(row) {
+                    push_line(&mut all_text, &row_text);
                 }
-
-                all_text.push(row_text.join("\t"));
             }
 
-            all_text.push(String::new()); // Empty line between sheets
+            push_line(&mut all_text, ""); // Empty line between sheets
         }
     }
 
-    Ok(all_text.join("\n"))
+    Ok(all_text)
 }
 
 /// Extract text from a spreadsheet file.
@@ -107,20 +133,15 @@ pub fn extract_text_from_sheet(data: &[u8], sheet_name: &str) -> GrepResult<Stri
                 message: format!("Sheet '{}' not found or invalid: {}", sheet_name, e),
             })?;
 
-    let mut all_text = Vec::new();
+    let mut all_text = String::new();
 
     for row in range.rows() {
-        let row_text: Vec<String> = row.iter().map(|cell| cell.to_string()).collect();
-
-        // Skip completely empty rows
-        if row_text.iter().all(|s| s.is_empty()) {
-            continue;
+        if let Some(row_text) = row_to_text(row) {
+            push_line(&mut all_text, &row_text);
         }
-
-        all_text.push(row_text.join("\t"));
     }
 
-    Ok(all_text.join("\n"))
+    Ok(all_text)
 }
 
 #[cfg(test)]
@@ -138,5 +159,18 @@ mod tests {
     fn test_extract_empty_data() {
         let result = extract_text(&[]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_row_to_text_preserves_empty_cells() {
+        assert_eq!(
+            row_to_text(&["alpha", "", "gamma"]).as_deref(),
+            Some("alpha\t\tgamma")
+        );
+    }
+
+    #[test]
+    fn test_row_to_text_skips_completely_empty_rows() {
+        assert_eq!(row_to_text(&["", "", ""]), None);
     }
 }

@@ -97,6 +97,66 @@ pub struct PhoneticNormalizedCandidate {
     pub normalized_form: String,
 }
 
+struct CandidateBestMatch {
+    distance: usize,
+    normalized_form: String,
+}
+
+impl CandidateBestMatch {
+    fn new(distance: usize, normalized_form: &str) -> Self {
+        Self {
+            distance,
+            normalized_form: normalized_form.to_owned(),
+        }
+    }
+
+    fn replace_if_better(&mut self, distance: usize, normalized_form: &str) {
+        if distance < self.distance {
+            self.distance = distance;
+            self.normalized_form.clear();
+            self.normalized_form.push_str(normalized_form);
+        }
+    }
+}
+
+fn upsert_candidate_best_match<T>(
+    by_term: &mut HashMap<String, CandidateBestMatch>,
+    term: T,
+    distance: usize,
+    normalized_form: &str,
+) where
+    T: AsRef<str> + Into<String>,
+{
+    let term_ref = term.as_ref();
+    if term_ref.is_empty() {
+        return;
+    }
+
+    if let Some(existing) = by_term.get_mut(term_ref) {
+        existing.replace_if_better(distance, normalized_form);
+        return;
+    }
+
+    by_term.insert(
+        term.into(),
+        CandidateBestMatch::new(distance, normalized_form),
+    );
+}
+
+fn best_matches_into_candidates(
+    by_term: HashMap<String, CandidateBestMatch>,
+) -> Vec<PhoneticNormalizedCandidate> {
+    let mut candidates = Vec::with_capacity(by_term.len());
+    for (term, best_match) in by_term {
+        candidates.push(PhoneticNormalizedCandidate {
+            term,
+            distance: best_match.distance,
+            normalized_form: best_match.normalized_form,
+        });
+    }
+    candidates
+}
+
 /// Error type for regex query operations.
 #[derive(Debug)]
 pub enum RegexQueryError {
@@ -129,6 +189,30 @@ impl From<RegexParseError> for RegexQueryError {
         RegexQueryError::ParseError(err)
     }
 }
+
+/// Error type for compact term-id dictionary construction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TermIdDictionaryBuildError {
+    /// The compact dictionary stores term identifiers as `u32`; the next
+    /// distinct term would require a wider identifier.
+    TermIdOverflow {
+        /// The first identifier that cannot be represented by the compact `u32` payload.
+        next_id: usize,
+    },
+}
+
+impl fmt::Display for TermIdDictionaryBuildError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TermIdDictionaryBuildError::TermIdOverflow { next_id } => write!(
+                f,
+                "term-id dictionary cannot assign term id {next_id}; compact ids are stored as u32"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for TermIdDictionaryBuildError {}
 
 // ============================================================================
 // CORE TYPES
@@ -193,25 +277,55 @@ pub type PhoneticNormalizedDictionaryChar<V = ()> =
 
 fn sort_candidates_by_relevance(
     query: &str,
-    results: Vec<PhoneticNormalizedCandidate>,
+    mut results: Vec<PhoneticNormalizedCandidate>,
 ) -> Vec<PhoneticNormalizedCandidate> {
-    let mut ranked = Vec::with_capacity(results.len());
-    for candidate in results {
-        let original_distance = standard_distance(query, &candidate.term);
-        ranked.push((candidate.distance, original_distance, candidate));
+    if results.len() < 2 {
+        return results;
     }
 
-    ranked.sort_by(|left, right| {
-        left.0
-            .cmp(&right.0)
-            .then_with(|| left.1.cmp(&right.1))
-            .then_with(|| left.2.term.cmp(&right.2.term))
-    });
+    results.sort_unstable_by_key(|candidate| candidate.distance);
 
-    ranked
-        .into_iter()
-        .map(|(_, _, candidate)| candidate)
-        .collect()
+    let mut sorted = Vec::with_capacity(results.len());
+    let mut candidates = results.into_iter().peekable();
+
+    while let Some(candidate) = candidates.next() {
+        let normalized_distance = candidate.distance;
+
+        if !matches!(
+            candidates.peek(),
+            Some(next) if next.distance == normalized_distance
+        ) {
+            sorted.push(candidate);
+            continue;
+        }
+
+        let mut group = Vec::with_capacity(2);
+        group.push(candidate);
+
+        while let Some(next) = candidates.peek() {
+            if next.distance != normalized_distance {
+                break;
+            }
+            if let Some(next) = candidates.next() {
+                group.push(next);
+            }
+        }
+
+        let mut ranked = Vec::with_capacity(group.len());
+        for candidate in group.drain(..) {
+            let original_distance = standard_distance(query, &candidate.term);
+            ranked.push((original_distance, candidate));
+        }
+
+        ranked.sort_by(|left, right| {
+            left.0
+                .cmp(&right.0)
+                .then_with(|| left.1.term.cmp(&right.1.term))
+        });
+        sorted.extend(ranked.into_iter().map(|(_, candidate)| candidate));
+    }
+
+    sorted
 }
 
 fn is_exact_whole_word_context(context: &ContextChar) -> bool {
@@ -300,7 +414,7 @@ fn split_normalization_rules(
     rules: &[RewriteRuleChar],
 ) -> (Vec<RewriteRuleChar>, HashMap<String, Vec<String>>) {
     let mut sequential_rules = Vec::with_capacity(rules.len());
-    let mut map: HashMap<String, Vec<String>> = HashMap::new();
+    let mut map: HashMap<String, Vec<String>> = HashMap::with_capacity(rules.len());
     for rule in rules {
         if is_exact_whole_word_context(&rule.context) {
             let pattern = phone_chars_to_string(&rule.pattern);
@@ -323,13 +437,7 @@ fn normalized_forms_char_with_map(
     whole_word_normalizations: &HashMap<String, Vec<String>>,
 ) -> Vec<String> {
     if let Some(replacements) = whole_word_normalizations.get(input) {
-        let mut forms: Vec<String> = Vec::with_capacity(replacements.len());
-        for replacement in replacements {
-            if !forms.contains(replacement) {
-                forms.push(replacement.clone());
-            }
-        }
-        return forms;
+        return replacements.clone();
     }
 
     vec![normalize_string_char(input, sequential_rules, fuel)]
@@ -750,6 +858,19 @@ pub struct PhoneticNormalizedTermIdDictionary {
     fuel: usize,
 }
 
+fn compact_term_id_from_len(term_count: usize) -> Result<u32, TermIdDictionaryBuildError> {
+    u32::try_from(term_count).map_err(|_| TermIdDictionaryBuildError::TermIdOverflow {
+        next_id: term_count,
+    })
+}
+
+fn compact_term_id_capacity_hint(size_hint: (usize, Option<usize>)) -> usize {
+    const INITIAL_CAPACITY_LIMIT: usize = 1 << 20;
+
+    let (lower_bound, _) = size_hint;
+    lower_bound.min(INITIAL_CAPACITY_LIMIT)
+}
+
 impl PhoneticNormalizedTermIdDictionary {
     /// Create from terms with default Zompist rules.
     pub fn from_terms<I, S>(terms: I) -> Self
@@ -757,7 +878,17 @@ impl PhoneticNormalizedTermIdDictionary {
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
-        Self::from_terms_with_rules(terms, zompist_rules_char())
+        Self::try_from_terms(terms)
+            .expect("term-id dictionary exceeded the compact u32 identifier capacity")
+    }
+
+    /// Try to create from terms with default Zompist rules.
+    pub fn try_from_terms<I, S>(terms: I) -> Result<Self, TermIdDictionaryBuildError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        Self::try_from_terms_with_rules(terms, zompist_rules_char())
     }
 
     /// Create from terms with custom rules.
@@ -766,7 +897,20 @@ impl PhoneticNormalizedTermIdDictionary {
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
-        Self::from_terms_with_rules_and_algorithm(terms, rules, Algorithm::Standard)
+        Self::try_from_terms_with_rules(terms, rules)
+            .expect("term-id dictionary exceeded the compact u32 identifier capacity")
+    }
+
+    /// Try to create from terms with custom rules.
+    pub fn try_from_terms_with_rules<I, S>(
+        terms: I,
+        rules: Vec<RewriteRuleChar>,
+    ) -> Result<Self, TermIdDictionaryBuildError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        Self::try_from_terms_with_rules_and_algorithm(terms, rules, Algorithm::Standard)
     }
 
     /// Create from terms with custom rules and algorithm.
@@ -779,18 +923,34 @@ impl PhoneticNormalizedTermIdDictionary {
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
+        Self::try_from_terms_with_rules_and_algorithm(terms, rules, algorithm)
+            .expect("term-id dictionary exceeded the compact u32 identifier capacity")
+    }
+
+    /// Try to create from terms with custom rules and algorithm.
+    pub fn try_from_terms_with_rules_and_algorithm<I, S>(
+        terms: I,
+        rules: Vec<RewriteRuleChar>,
+        algorithm: Algorithm,
+    ) -> Result<Self, TermIdDictionaryBuildError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
         let fuel = PhoneticNormalizedDictionary::<()>::compute_fuel(&rules);
         let (sequential_rules, whole_word_normalizations) = split_normalization_rules(&rules);
         let normalized_dict = DynamicDawgChar::<Vec<u32>>::new();
-        let mut term_table = Vec::new();
-        let mut term_ids = HashMap::new();
+        let terms = terms.into_iter();
+        let capacity_hint = compact_term_id_capacity_hint(terms.size_hint());
+        let mut term_table = Vec::with_capacity(capacity_hint);
+        let mut term_ids = HashMap::with_capacity(capacity_hint);
 
         for term in terms {
             let term = term.as_ref();
             let term_id = match term_ids.get(term).copied() {
                 Some(term_id) => term_id,
                 None => {
-                    let term_id = term_table.len() as u32;
+                    let term_id = compact_term_id_from_len(term_table.len())?;
                     term_table.push(term.to_string());
                     term_ids.insert(term.to_string(), term_id);
                     term_id
@@ -812,14 +972,14 @@ impl PhoneticNormalizedTermIdDictionary {
             }
         }
 
-        Self {
+        Ok(Self {
             terms: term_table,
             normalized_multimap: FuzzyMultiMap::new(normalized_dict, algorithm),
             rules,
             sequential_rules,
             whole_word_normalizations,
             fuel,
-        }
+        })
     }
 
     /// Normalize a string using this dictionary's rules.
@@ -863,7 +1023,8 @@ impl PhoneticNormalizedTermIdDictionary {
     /// Query for candidates within edit distance in normalized space.
     pub fn query(&self, query: &str, max_distance: usize) -> Vec<PhoneticNormalizedCandidate> {
         let normalized_queries = self.normalized_forms(query);
-        let mut by_term_id: HashMap<u32, PhoneticNormalizedCandidate> = HashMap::new();
+        let mut by_term_id: HashMap<u32, PhoneticNormalizedCandidate> =
+            HashMap::with_capacity(self.term_count());
 
         if max_distance == 0 {
             for normalized_query in &normalized_queries {
@@ -910,7 +1071,10 @@ impl PhoneticNormalizedTermIdDictionary {
         distance: usize,
         normalized_form: String,
     ) {
-        let Some(term) = self.terms.get(term_id as usize) else {
+        let Some(term_index) = usize::try_from(term_id).ok() else {
+            return;
+        };
+        let Some(term) = self.terms.get(term_index) else {
             return;
         };
 
@@ -1067,34 +1231,39 @@ where
     ///
     /// Note: This iterates over the normalized multimap, which tracks all inserted terms.
     pub fn iter_terms(&self) -> impl Iterator<Item = (String, String)> + '_ {
-        // Iterate over the underlying dictionary and flatten the HashSets
-        let mut seen = HashSet::new();
-        let pairs: Vec<_> = self
-            .normalized_multimap
-            .dictionary()
-            .iter()
-            .flat_map(|(normalized, originals)| {
-                originals
-                    .iter()
-                    .filter(|_| !originals.is_empty()) // Skip empty sets from removals
-                    .map(move |term| (term.clone(), normalized.clone()))
-                    .collect::<Vec<_>>()
-            })
-            .filter(|(term, _)| seen.insert(term.clone()))
-            .collect();
+        let capacity = self.len().unwrap_or(0);
+        let mut seen = HashSet::with_capacity(capacity);
+        let mut pairs = Vec::with_capacity(capacity);
+
+        for (normalized, originals) in self.normalized_multimap.dictionary().iter() {
+            if originals.is_empty() {
+                continue;
+            }
+
+            for term in originals.iter().filter(|term| !term.is_empty()) {
+                if seen.contains(term.as_str()) {
+                    continue;
+                }
+
+                seen.insert(term.clone());
+                pairs.push((term.clone(), normalized.clone()));
+            }
+        }
+
         pairs.into_iter()
     }
 
     /// Iterate over normalized forms and their original terms.
     pub fn iter_normalized(&self) -> impl Iterator<Item = (String, HashSet<String>)> {
-        // Iterate over the underlying dictionary
-        let pairs: Vec<_> = self
-            .normalized_multimap
-            .dictionary()
-            .iter()
-            .filter(|(_, originals)| !originals.is_empty()) // Skip empty sets from removals
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
+        let capacity = self.normalized_multimap.dictionary().len().unwrap_or(0);
+        let mut pairs = Vec::with_capacity(capacity);
+
+        for (normalized, originals) in self.normalized_multimap.dictionary().iter() {
+            if !originals.is_empty() {
+                pairs.push((normalized.clone(), originals.clone()));
+            }
+        }
+
         pairs.into_iter()
     }
 }
@@ -1158,7 +1327,7 @@ where
         let product = ProductAutomatonChar::with_algorithm(nfa, max_distance, self.algorithm());
 
         // Search ORIGINAL terms (not normalized) for matches
-        let mut results = Vec::new();
+        let mut results = Vec::with_capacity(self.originals.len().unwrap_or(0));
 
         for (original, _) in self.originals.iter() {
             if let Some(distance) = product.min_distance(&original) {
@@ -1219,58 +1388,47 @@ where
         // Fast path for exact match (d=0): Direct trie lookup is 100-300× faster
         // than automaton traversal (benchmark: 2µs vs 600µs for 100 queries)
         if max_distance == 0 {
-            let mut by_term = HashMap::new();
+            let mut by_term = HashMap::with_capacity(self.len().unwrap_or(0));
             for normalized_query in &normalized_queries {
                 if let Some(originals) = self
                     .normalized_multimap
                     .dictionary()
                     .get_value(normalized_query)
                 {
-                    for term in originals.iter().filter(|term| !term.is_empty()) {
-                        by_term.entry(term.clone()).or_insert_with(|| {
-                            PhoneticNormalizedCandidate {
-                                term: term.clone(),
-                                distance: 0,
-                                normalized_form: normalized_query.clone(),
-                            }
-                        });
+                    for term in originals {
+                        upsert_candidate_best_match(
+                            &mut by_term,
+                            term.as_str(),
+                            0,
+                            normalized_query,
+                        );
                     }
                 }
             }
-            return sort_candidates_by_relevance(query, by_term.into_values().collect());
+            return sort_candidates_by_relevance(query, best_matches_into_candidates(by_term));
         }
 
         // Fuzzy path (d≥1): Use Levenshtein automaton for efficient trie pruning
-        let mut by_term: HashMap<String, PhoneticNormalizedCandidate> = HashMap::new();
+        let mut by_term: HashMap<String, CandidateBestMatch> =
+            HashMap::with_capacity(self.len().unwrap_or(0));
         for normalized_query in &normalized_queries {
             let fuzzy_results = self
                 .normalized_multimap
                 .query_with_distance(normalized_query, max_distance);
 
             for (normalized_form, distance, originals) in fuzzy_results {
-                for term in originals.into_iter().filter(|term| !term.is_empty()) {
-                    match by_term.get_mut(&term) {
-                        Some(existing) if distance < existing.distance => {
-                            existing.distance = distance;
-                            existing.normalized_form = normalized_form.clone();
-                        }
-                        Some(_) => {}
-                        None => {
-                            by_term.insert(
-                                term.clone(),
-                                PhoneticNormalizedCandidate {
-                                    term,
-                                    distance,
-                                    normalized_form: normalized_form.clone(),
-                                },
-                            );
-                        }
-                    }
+                for term in originals {
+                    upsert_candidate_best_match(
+                        &mut by_term,
+                        term,
+                        distance,
+                        normalized_form.as_str(),
+                    );
                 }
             }
         }
 
-        sort_candidates_by_relevance(query, by_term.into_values().collect())
+        sort_candidates_by_relevance(query, best_matches_into_candidates(by_term))
     }
 
     /// Query using a regex pattern (grep-like semantics).
@@ -1300,27 +1458,7 @@ where
         // Create product automaton for fuzzy matching
         let product = ProductAutomatonChar::with_algorithm(nfa, max_distance, self.algorithm());
 
-        // Search normalized multimap for matches
-        let mut results = Vec::new();
-
-        for (normalized, originals) in self.normalized_multimap.dictionary().iter() {
-            if originals.is_empty() {
-                continue; // Skip empty sets from removals
-            }
-            if let Some(distance) = product.min_distance(&normalized) {
-                for term in originals.iter() {
-                    results.push(PhoneticNormalizedCandidate {
-                        term: term.clone(),
-                        distance: distance as usize,
-                        normalized_form: normalized.clone(),
-                    });
-                }
-            }
-        }
-
-        // Sort by distance for convenience
-        results.sort_by_key(|c| c.distance);
-        Ok(results)
+        Ok(self.query_with_product(&product))
     }
 
     /// Query using a pre-compiled NFA pattern.
@@ -1342,7 +1480,7 @@ where
         &self,
         product: &ProductAutomatonChar,
     ) -> Vec<PhoneticNormalizedCandidate> {
-        let mut results = Vec::new();
+        let mut results = Vec::with_capacity(self.len().unwrap_or(0));
 
         for (normalized, originals) in self.normalized_multimap.dictionary().iter() {
             if originals.is_empty() {
@@ -1367,7 +1505,7 @@ where
         &self,
         product: &ProductAutomatonChar,
     ) -> Vec<PhoneticNormalizedCandidate> {
-        let mut results = Vec::new();
+        let mut results = Vec::with_capacity(self.len().unwrap_or(0));
         let mut normalized_form = String::new();
         let frontier = product.initial_frontier();
 
@@ -1469,11 +1607,8 @@ where
 ///
 /// Vowel bits: a(0), e(4), i(8), o(14), u(20) = 0b100001000100010001 = 0x111111
 /// Bitmask: (1 << 0) | (1 << 4) | (1 << 8) | (1 << 14) | (1 << 20) = 0x104111
-const VOWEL_MASK: u64 = (1 << (b'a' - b'a'))
-    | (1 << (b'e' - b'a'))
-    | (1 << (b'i' - b'a'))
-    | (1 << (b'o' - b'a'))
-    | (1 << (b'u' - b'a'));
+const VOWEL_MASK: u64 =
+    1 | (1 << (b'e' - b'a')) | (1 << (b'i' - b'a')) | (1 << (b'o' - b'a')) | (1 << (b'u' - b'a'));
 
 /// O(1) vowel classification using bitmask.
 ///
@@ -1642,12 +1777,66 @@ mod tests {
     }
 
     #[test]
+    fn test_sort_candidates_by_relevance_preserves_ordering_contract() {
+        let results = sort_candidates_by_relevance(
+            "cat",
+            vec![
+                PhoneticNormalizedCandidate {
+                    term: "bat".to_string(),
+                    distance: 1,
+                    normalized_form: "bat".to_string(),
+                },
+                PhoneticNormalizedCandidate {
+                    term: "far".to_string(),
+                    distance: 0,
+                    normalized_form: "far".to_string(),
+                },
+                PhoneticNormalizedCandidate {
+                    term: "cart".to_string(),
+                    distance: 1,
+                    normalized_form: "cart".to_string(),
+                },
+                PhoneticNormalizedCandidate {
+                    term: "cat".to_string(),
+                    distance: 1,
+                    normalized_form: "cat".to_string(),
+                },
+            ],
+        );
+
+        let terms: Vec<_> = results
+            .iter()
+            .map(|candidate| candidate.term.as_str())
+            .collect();
+        assert_eq!(terms, ["far", "cat", "bat", "cart"]);
+    }
+
+    #[test]
+    fn test_candidate_best_match_keeps_single_best_entry_per_term() {
+        let mut by_term = HashMap::new();
+
+        upsert_candidate_best_match(&mut by_term, "phone".to_string(), 2, "fone");
+        upsert_candidate_best_match(&mut by_term, "phone", 1, "phone");
+        upsert_candidate_best_match(&mut by_term, "phone", 3, "phane");
+        upsert_candidate_best_match(&mut by_term, "", 0, "");
+
+        let candidates = best_matches_into_candidates(by_term);
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].term, "phone");
+        assert_eq!(candidates[0].distance, 1);
+        assert_eq!(candidates[0].normalized_form, "phone");
+    }
+
+    #[test]
     fn test_term_id_dictionary_matches_string_payload_exact_query() {
         let terms = ["phone", "fone", "bone", "cone", "tone", "elephant"];
         let string_payload = PhoneticNormalizedDictionary::<()>::from_terms(terms);
         let term_id_payload = PhoneticNormalizedTermIdDictionary::from_terms(terms);
+        let fallible_term_id_payload = PhoneticNormalizedTermIdDictionary::try_from_terms(terms)
+            .expect("terms fit in u32 ids");
 
         assert_eq!(term_id_payload.term_count(), terms.len());
+        assert_eq!(fallible_term_id_payload.term_count(), terms.len());
         assert_eq!(
             term_id_payload.normalized_count(),
             string_payload.normalized_count()
@@ -1655,6 +1844,32 @@ mod tests {
         assert_eq!(
             term_id_payload.query("fone", 0),
             string_payload.query("fone", 0)
+        );
+        assert_eq!(
+            fallible_term_id_payload.query("fone", 0),
+            string_payload.query("fone", 0)
+        );
+    }
+
+    #[test]
+    fn test_term_id_conversion_accepts_largest_u32_id() {
+        assert_eq!(compact_term_id_from_len(u32::MAX as usize), Ok(u32::MAX));
+    }
+
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn test_term_id_conversion_rejects_ids_beyond_u32_range() {
+        let next_id = u32::MAX as usize + 1;
+
+        let error = compact_term_id_from_len(next_id).expect_err("id must exceed u32");
+
+        assert_eq!(
+            error,
+            TermIdDictionaryBuildError::TermIdOverflow { next_id }
+        );
+        assert_eq!(
+            error.to_string(),
+            "term-id dictionary cannot assign term id 4294967296; compact ids are stored as u32"
         );
     }
 
@@ -1783,7 +1998,7 @@ mod tests {
         println!("Normalized count: {}", count);
 
         // At minimum 1 (if all normalize to same), at most 3 (if all different)
-        assert!(count >= 1 && count <= 3);
+        assert!((1..=3).contains(&count));
     }
 
     #[test]
@@ -1876,6 +2091,21 @@ mod tests {
     }
 
     #[test]
+    fn test_duplicate_whole_word_rules_are_deduplicated_once() {
+        let rules = vec![
+            exact_word_rule(1, "read", "RED"),
+            exact_word_rule(2, "read", "RED"),
+            exact_word_rule(3, "read", "REED"),
+        ];
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["read"], rules);
+
+        assert_eq!(
+            dict.normalized_forms("read"),
+            vec!["RED".to_string(), "REED".to_string()]
+        );
+    }
+
+    #[test]
     fn test_zipper_navigation() {
         let dict = PhoneticNormalizedDictionary::<()>::from_terms(["cat", "car", "card"]);
 
@@ -1907,6 +2137,18 @@ mod tests {
         assert!(terms.contains(&"phone".to_string()));
         assert!(terms.contains(&"fone".to_string()));
         assert!(terms.contains(&"bone".to_string()));
+    }
+
+    #[test]
+    fn test_iter_terms_deduplicates_multiple_normalized_forms() {
+        let rules = vec![
+            exact_word_rule(1, "read", "RED"),
+            exact_word_rule(2, "read", "REED"),
+        ];
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(["read"], rules);
+
+        let terms: Vec<_> = dict.iter_terms().map(|(term, _)| term).collect();
+        assert_eq!(terms, ["read".to_string()]);
     }
 
     #[test]
@@ -1968,6 +2210,34 @@ mod tests {
         scan_results.sort();
 
         assert_eq!(trie_results, scan_results);
+    }
+
+    #[test]
+    fn test_query_regex_matches_precompiled_product_query() {
+        let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+            ["cat", "car", "card", "care", "cart", "bat", "bar"],
+            vec![],
+        );
+        let pattern = "ca.";
+        let ast = parse_regex(pattern).expect("regex should parse");
+        let nfa = compile_nfa(&ast).expect("nfa should compile");
+        let product = ProductAutomatonChar::with_algorithm(nfa, 1, Algorithm::Standard);
+
+        let mut regex_results: Vec<_> = dict
+            .query_regex(pattern, 1)
+            .expect("regex query should succeed")
+            .into_iter()
+            .map(|c| (c.term, c.distance, c.normalized_form))
+            .collect();
+        let mut product_results: Vec<_> = dict
+            .query_with_product(&product)
+            .into_iter()
+            .map(|c| (c.term, c.distance, c.normalized_form))
+            .collect();
+        regex_results.sort();
+        product_results.sort();
+
+        assert_eq!(regex_results, product_results);
     }
 
     #[test]

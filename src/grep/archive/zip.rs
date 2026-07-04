@@ -8,7 +8,9 @@ use std::path::Path;
 
 use zip::ZipArchive;
 
-use crate::grep::archive::entry::{ArchiveEntryMeta, EntryType};
+use crate::grep::archive::entry::{
+    normalize_archive_path, read_to_vec_limited, ArchiveEntryMeta, EntryType,
+};
 use crate::grep::archive::filter::EntryFilter;
 use crate::grep::error::{GrepError, GrepResult};
 use crate::grep::result::SourceId;
@@ -20,6 +22,9 @@ pub struct ZipArchiveReader {
 
     /// Entry filter (if any).
     filter: Option<EntryFilter>,
+
+    /// Maximum uncompressed entry size to read, if any.
+    max_entry_size: Option<u64>,
 }
 
 impl ZipArchiveReader {
@@ -42,12 +47,19 @@ impl ZipArchiveReader {
         Ok(Self {
             path: path.to_path_buf(),
             filter: None,
+            max_entry_size: None,
         })
     }
 
     /// Set an entry filter.
     pub fn with_filter(mut self, filter: EntryFilter) -> Self {
         self.filter = Some(filter);
+        self
+    }
+
+    /// Set the maximum uncompressed entry size to read.
+    pub fn with_max_entry_size(mut self, bytes: Option<u64>) -> Self {
+        self.max_entry_size = bytes;
         self
     }
 
@@ -86,6 +98,7 @@ impl ZipArchiveReader {
             archive_path: self.path.clone(),
             index: 0,
             filter: self.filter.clone(),
+            max_entry_size: self.max_entry_size,
         })
     }
 
@@ -104,8 +117,7 @@ impl ZipArchiveReader {
         })?;
 
         let meta = zip_file_to_meta(&entry);
-        let mut content = Vec::with_capacity(entry.size() as usize);
-        entry.read_to_end(&mut content)?;
+        let content = read_to_vec_limited(&mut entry, meta.size, self.max_entry_size)?;
 
         Ok((meta, content))
     }
@@ -121,8 +133,7 @@ impl ZipArchiveReader {
             .map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
         let meta = zip_file_to_meta(&entry);
-        let mut content = Vec::with_capacity(entry.size() as usize);
-        entry.read_to_end(&mut content)?;
+        let content = read_to_vec_limited(&mut entry, meta.size, self.max_entry_size)?;
 
         Ok((meta, content))
     }
@@ -130,15 +141,11 @@ impl ZipArchiveReader {
     /// List all entries (for debugging/display).
     pub fn list_entries(&self) -> GrepResult<Vec<ArchiveEntryMeta>> {
         let file = File::open(&self.path)?;
-        let archive =
+        let mut archive =
             ZipArchive::new(file).map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
 
         let mut entries = Vec::with_capacity(archive.len());
         for i in 0..archive.len() {
-            let file = File::open(&self.path)?;
-            let mut archive =
-                ZipArchive::new(file).map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
-
             let entry = archive
                 .by_index(i)
                 .map_err(|e| GrepError::archive(&self.path, e.to_string()))?;
@@ -156,6 +163,7 @@ struct ZipEntryIterator<R: Read + Seek> {
     archive_path: std::path::PathBuf,
     index: usize,
     filter: Option<EntryFilter>,
+    max_entry_size: Option<u64>,
 }
 
 impl<R: Read + Seek> Iterator for ZipEntryIterator<R> {
@@ -170,7 +178,7 @@ impl<R: Read + Seek> Iterator for ZipEntryIterator<R> {
             let index = self.index;
             self.index += 1;
 
-            let entry = match self.archive.by_index(index) {
+            let mut entry = match self.archive.by_index(index) {
                 Ok(e) => e,
                 Err(e) => {
                     return Some(Err(GrepError::archive(&self.archive_path, e.to_string())));
@@ -197,31 +205,10 @@ impl<R: Read + Seek> Iterator for ZipEntryIterator<R> {
                 continue;
             }
 
-            // Re-open archive to get a fresh entry reader
-            // (ZipFile borrows the archive)
-            let file = match File::open(&self.archive_path) {
-                Ok(f) => f,
+            let content = match read_to_vec_limited(&mut entry, meta.size, self.max_entry_size) {
+                Ok(content) => content,
                 Err(e) => return Some(Err(GrepError::Io(e))),
             };
-
-            let mut archive = match ZipArchive::new(file) {
-                Ok(a) => a,
-                Err(e) => {
-                    return Some(Err(GrepError::archive(&self.archive_path, e.to_string())));
-                }
-            };
-
-            let mut entry = match archive.by_index(index) {
-                Ok(e) => e,
-                Err(e) => {
-                    return Some(Err(GrepError::archive(&self.archive_path, e.to_string())));
-                }
-            };
-
-            let mut content = Vec::with_capacity(entry.size() as usize);
-            if let Err(e) = entry.read_to_end(&mut content) {
-                return Some(Err(GrepError::Io(e)));
-            }
 
             let source_id = SourceId::archive_entry(self.archive_path.clone(), path);
 
@@ -237,11 +224,7 @@ impl<R: Read + Seek> Iterator for ZipEntryIterator<R> {
 fn zip_file_to_meta<R: std::io::Read + ?Sized>(
     entry: &zip::read::ZipFile<'_, R>,
 ) -> ArchiveEntryMeta {
-    let path = entry.name().to_string();
-    let normalized = path
-        .trim_start_matches('/')
-        .trim_start_matches("./")
-        .replace('\\', "/");
+    let normalized = normalize_archive_path(entry.name()).into_owned();
 
     let entry_type = if entry.is_dir() {
         EntryType::Directory
@@ -255,7 +238,7 @@ fn zip_file_to_meta<R: std::io::Read + ?Sized>(
         path: normalized,
         size: Some(entry.size()),
         entry_type,
-        mtime: entry.last_modified().and_then(|dt| {
+        mtime: entry.last_modified().map(|dt| {
             // Convert zip DateTime to SystemTime
             use std::time::{Duration, UNIX_EPOCH};
 
@@ -271,7 +254,7 @@ fn zip_file_to_meta<R: std::io::Read + ?Sized>(
             let days_since_epoch = (year - 1970) * 365 + (month - 1) * 30 + day;
             let secs = days_since_epoch * 86400 + hour * 3600 + minute * 60 + second;
 
-            Some(UNIX_EPOCH + Duration::from_secs(secs))
+            UNIX_EPOCH + Duration::from_secs(secs)
         }),
         mode: entry.unix_mode(),
     }
@@ -329,6 +312,22 @@ mod tests {
     }
 
     #[test]
+    fn test_read_entry_respects_max_entry_size() {
+        let (_dir, zip_path) = create_test_zip();
+        let reader = ZipArchiveReader::open(&zip_path)
+            .expect("open zip")
+            .with_max_entry_size(Some(4));
+
+        let err = reader
+            .read_entry("file1.txt")
+            .expect_err("entry should exceed max entry size");
+
+        assert!(
+            matches!(err, GrepError::Io(ref io_err) if io_err.kind() == io::ErrorKind::InvalidData)
+        );
+    }
+
+    #[test]
     fn test_iterate_entries() {
         let (_dir, zip_path) = create_test_zip();
         let reader = ZipArchiveReader::open(&zip_path).expect("open zip");
@@ -342,6 +341,20 @@ mod tests {
             assert!(meta.is_file());
             assert!(!content.is_empty());
         }
+    }
+
+    #[test]
+    fn test_iterate_entries_respects_max_entry_size() {
+        let (_dir, zip_path) = create_test_zip();
+        let reader = ZipArchiveReader::open(&zip_path)
+            .expect("open zip")
+            .with_max_entry_size(Some(4));
+
+        let entries: Vec<_> = reader.entries().expect("get entries").collect();
+        assert_eq!(entries.len(), 2);
+        assert!(entries.iter().all(|entry| {
+            matches!(entry, Err(GrepError::Io(io_err)) if io_err.kind() == io::ErrorKind::InvalidData)
+        }));
     }
 
     #[test]
@@ -364,5 +377,35 @@ mod tests {
 
         let (_, meta, _) = entries[0].as_ref().expect("entry should be ok");
         assert_eq!(meta.path, "dir/file2.txt");
+    }
+
+    #[test]
+    fn test_normalizes_archive_paths() {
+        let dir = tempdir().expect("create temp dir");
+        let zip_path = dir.path().join("test.zip");
+
+        let file = File::create(&zip_path).expect("create zip file");
+        let mut zip = zip::ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+
+        zip.start_file("////././dir\\file3.txt", options)
+            .expect("start normalized path file");
+        zip.write_all(b"slash").expect("write normalized path file");
+        zip.finish().expect("finish zip");
+
+        let reader = ZipArchiveReader::open(&zip_path).expect("open zip");
+        let entries = reader.list_entries().expect("list entries");
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].path, "dir/file3.txt");
+
+        let entries: Vec<_> = reader.entries().expect("get entries").collect();
+        assert_eq!(entries.len(), 1);
+        let (_, meta, content) = entries
+            .into_iter()
+            .next()
+            .expect("entry should exist")
+            .expect("entry should be ok");
+        assert_eq!(meta.path, "dir/file3.txt");
+        assert_eq!(content, b"slash");
     }
 }

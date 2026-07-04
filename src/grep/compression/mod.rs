@@ -248,7 +248,7 @@ mod tests {
     fn test_passthrough_reader() {
         let data = b"hello world";
         let mut reader = PassthroughReader::new(&data[..]);
-        let mut buf = Vec::new();
+        let mut buf = Vec::with_capacity(data.len());
         reader.read_to_end(&mut buf).expect("read should succeed");
         assert_eq!(buf, data);
     }

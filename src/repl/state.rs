@@ -205,19 +205,16 @@ impl QueryCache {
     }
 
     fn insert(&mut self, key: QueryCacheKey, results: Vec<(String, usize)>) {
-        if self.entries.contains_key(&key) {
+        if let Some(entry) = self.entries.get_mut(&key) {
             let now = Instant::now();
             let estimated_bytes = estimate_results_bytes(&results);
-            self.entries.insert(
-                key,
-                QueryCacheEntry {
-                    results,
-                    inserted_at: now,
-                    last_accessed: now,
-                    access_count: 1,
-                    estimated_bytes,
-                },
-            );
+            *entry = QueryCacheEntry {
+                results,
+                inserted_at: now,
+                last_accessed: now,
+                access_count: 1,
+                estimated_bytes,
+            };
             return;
         }
 

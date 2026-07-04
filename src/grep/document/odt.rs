@@ -4,6 +4,9 @@
 //! ODT files are ZIP archives containing an XML file (content.xml) with the document content.
 
 use crate::grep::error::{GrepError, GrepResult};
+use crate::grep::limited_read::read_to_vec_limited;
+
+use super::text_output::push_line;
 
 /// Extract text from ODT document bytes.
 ///
@@ -25,9 +28,14 @@ use crate::grep::error::{GrepError, GrepResult};
 /// println!("Extracted text: {}", text);
 /// ```
 pub fn extract_text(data: &[u8]) -> GrepResult<String> {
+    extract_text_limited(data, None)
+}
+
+/// Extract text from ODT document bytes, enforcing a limit on `content.xml`.
+pub fn extract_text_limited(data: &[u8], max_content_xml_size: Option<u64>) -> GrepResult<String> {
     use quick_xml::events::Event;
     use quick_xml::Reader;
-    use std::io::{Cursor, Read};
+    use std::io::Cursor;
     use zip::ZipArchive;
 
     // Open the ODT as a ZIP archive
@@ -38,8 +46,7 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
     })?;
 
     // Find and read content.xml
-    let mut content_xml = String::new();
-    {
+    let content_xml = {
         let mut content_file =
             archive
                 .by_name("content.xml")
@@ -47,19 +54,29 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
                     file_path: std::path::PathBuf::from("<memory>"),
                     message: format!("content.xml not found in ODT: {}", e),
                 })?;
-        content_file.read_to_string(&mut content_xml).map_err(|e| {
-            GrepError::DocumentExtraction {
-                file_path: std::path::PathBuf::from("<memory>"),
-                message: format!("Failed to read content.xml: {}", e),
-            }
+        let content_size = content_file.size();
+        let content_bytes = read_to_vec_limited(
+            &mut content_file,
+            Some(content_size),
+            max_content_xml_size,
+            "content.xml",
+        )
+        .map_err(|e| GrepError::DocumentExtraction {
+            file_path: std::path::PathBuf::from("<memory>"),
+            message: format!("Failed to read content.xml: {}", e),
         })?;
-    }
+
+        String::from_utf8(content_bytes).map_err(|e| GrepError::DocumentExtraction {
+            file_path: std::path::PathBuf::from("<memory>"),
+            message: format!("content.xml is not valid UTF-8: {}", e),
+        })?
+    };
 
     // Parse the XML and extract text
     let mut reader = Reader::from_str(&content_xml);
     reader.config_mut().trim_text(true);
 
-    let mut text_parts = Vec::new();
+    let mut output = String::new();
     let mut current_text = String::new();
     let mut in_text_element = false;
 
@@ -106,7 +123,8 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
                 // End of paragraph or heading - add to results
                 if name == "p" || name == "h" {
                     if !current_text.is_empty() {
-                        text_parts.push(std::mem::take(&mut current_text));
+                        push_line(&mut output, &current_text);
+                        current_text.clear();
                     }
                     in_text_element = false;
                 }
@@ -124,16 +142,16 @@ pub fn extract_text(data: &[u8]) -> GrepResult<String> {
 
     // Add any remaining text
     if !current_text.is_empty() {
-        text_parts.push(current_text);
+        push_line(&mut output, &current_text);
     }
 
-    if text_parts.is_empty() {
+    if output.is_empty() {
         return Err(GrepError::DocumentEmpty(std::path::PathBuf::from(
             "<memory>",
         )));
     }
 
-    Ok(text_parts.join("\n"))
+    Ok(output)
 }
 
 /// Get the space count from a text:s element's c attribute.
@@ -169,6 +187,64 @@ pub fn extract_text_from_file(path: &std::path::Path) -> GrepResult<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Cursor, Write};
+
+    fn odt_content_xml_body(body_xml: &str) -> String {
+        format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?><office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body><office:text>{body_xml}</office:text></office:body></office:document-content>"#
+        )
+    }
+
+    fn odt_content_xml(body: &str) -> String {
+        odt_content_xml_body(&format!(r#"<text:p>{body}</text:p>"#))
+    }
+
+    fn build_odt(content_xml: &str) -> Vec<u8> {
+        let cursor = Cursor::new(Vec::new());
+        let mut zip = zip::ZipWriter::new(cursor);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        zip.start_file("content.xml", options)
+            .expect("start content.xml");
+        zip.write_all(content_xml.as_bytes())
+            .expect("write content.xml");
+        zip.finish().expect("finish odt").into_inner()
+    }
+
+    #[test]
+    fn test_extract_valid_odt() {
+        let data = build_odt(&odt_content_xml("Hello World"));
+
+        let text = extract_text(&data).expect("extract ODT text");
+
+        assert_eq!(text, "Hello World");
+    }
+
+    #[test]
+    fn test_extract_multiple_odt_paragraphs() {
+        let data = build_odt(&odt_content_xml_body(
+            "<text:p>First paragraph</text:p><text:p>Second paragraph</text:p>",
+        ));
+
+        let text = extract_text(&data).expect("extract ODT paragraphs");
+
+        assert_eq!(text, "First paragraph\nSecond paragraph");
+    }
+
+    #[test]
+    fn test_extract_text_limited_rejects_oversized_content_xml() {
+        let body = "a".repeat(4096);
+        let content_xml = odt_content_xml(&body);
+        let data = build_odt(&content_xml);
+
+        let err = extract_text_limited(&data, Some(128))
+            .expect_err("content.xml should exceed the configured limit");
+
+        assert!(
+            matches!(err, GrepError::DocumentExtraction { ref message, .. } if message.contains("content.xml") && message.contains("too large"))
+        );
+    }
 
     #[test]
     fn test_extract_invalid_odt() {

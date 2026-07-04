@@ -2,8 +2,65 @@
 //!
 //! This module provides types for representing entries within archives.
 
+use std::borrow::Cow;
 use std::io::Read;
 use std::time::SystemTime;
+
+use crate::grep::limited_read;
+
+pub(crate) fn read_to_vec_limited<R: Read + ?Sized>(
+    reader: &mut R,
+    size: Option<u64>,
+    max_size: Option<u64>,
+) -> std::io::Result<Vec<u8>> {
+    limited_read::read_to_vec_limited(reader, size, max_size, "archive entry")
+}
+
+fn normalized_prefix_len(path: &str) -> usize {
+    let mut prefix_len = 0;
+    loop {
+        let remaining = &path[prefix_len..];
+        let without_slashes = remaining.trim_start_matches('/');
+        let slash_prefix_len = remaining.len() - without_slashes.len();
+        if slash_prefix_len > 0 {
+            prefix_len += slash_prefix_len;
+            continue;
+        }
+
+        if path[prefix_len..].starts_with("./") {
+            prefix_len += 2;
+            continue;
+        }
+
+        break;
+    }
+    prefix_len
+}
+
+pub(crate) fn normalize_archive_path(path: &str) -> Cow<'_, str> {
+    if path.contains('\\') {
+        return Cow::Owned(normalize_archive_path_owned(path.to_string()));
+    }
+
+    let prefix_len = normalized_prefix_len(path);
+    if prefix_len == 0 {
+        Cow::Borrowed(path)
+    } else {
+        Cow::Owned(path[prefix_len..].to_string())
+    }
+}
+
+pub(crate) fn normalize_archive_path_owned(mut path: String) -> String {
+    if path.contains('\\') {
+        path = path.replace('\\', "/");
+    }
+
+    let prefix_len = normalized_prefix_len(&path);
+    if prefix_len > 0 {
+        path.drain(..prefix_len);
+    }
+    path
+}
 
 /// Metadata about an entry within an archive.
 #[derive(Debug, Clone)]
@@ -101,16 +158,7 @@ impl ArchiveEntryMeta {
 
     /// Normalize the path (remove leading slashes, convert backslashes).
     pub fn normalize_path(&mut self) {
-        // Replace backslashes with forward slashes
-        self.path = self.path.replace('\\', "/");
-        // Remove leading slashes
-        while self.path.starts_with('/') {
-            self.path = self.path[1..].to_string();
-        }
-        // Remove ./ prefix
-        while self.path.starts_with("./") {
-            self.path = self.path[2..].to_string();
-        }
+        self.path = normalize_archive_path_owned(std::mem::take(&mut self.path));
     }
 }
 
@@ -179,10 +227,12 @@ impl<'a> ArchiveEntry<'a> {
 
     /// Read all content as bytes.
     pub fn read_to_vec(&mut self) -> std::io::Result<Vec<u8>> {
-        let capacity = self.meta.size.unwrap_or(1024) as usize;
-        let mut buf = Vec::with_capacity(capacity);
-        self.reader.read_to_end(&mut buf)?;
-        Ok(buf)
+        self.read_to_vec_limited(None)
+    }
+
+    /// Read all content as bytes, enforcing a maximum byte length if provided.
+    pub fn read_to_vec_limited(&mut self, max_size: Option<u64>) -> std::io::Result<Vec<u8>> {
+        read_to_vec_limited(&mut self.reader, self.meta.size, max_size)
     }
 
     /// Read all content as a UTF-8 string.
@@ -245,6 +295,23 @@ mod tests {
     }
 
     #[test]
+    fn test_normalize_path_repeated_prefixes() {
+        let cases = [
+            ("////././path\\to\\file.txt", "path/to/file.txt"),
+            (".//relative\\path", "relative/path"),
+            ("././relative/path", "relative/path"),
+            ("already/clean", "already/clean"),
+            ("/", ""),
+        ];
+
+        for (input, expected) in cases {
+            let mut meta = ArchiveEntryMeta::file(input, None);
+            meta.normalize_path();
+            assert_eq!(meta.path, expected);
+        }
+    }
+
+    #[test]
     fn test_entry_type_char() {
         assert_eq!(EntryType::File.as_char(), '-');
         assert_eq!(EntryType::Directory.as_char(), 'd');
@@ -254,10 +321,77 @@ mod tests {
     #[test]
     fn test_archive_entry_read() {
         let content = b"Hello, World!";
-        let meta = ArchiveEntryMeta::file("test.txt", Some(content.len() as u64));
+        let meta = ArchiveEntryMeta::file(
+            "test.txt",
+            Some(limited_read::usize_to_u64_saturating(content.len())),
+        );
         let mut entry = ArchiveEntry::new(meta, &content[..]);
 
         let result = entry.read_to_string().expect("should read");
         assert_eq!(result, "Hello, World!");
+    }
+
+    #[test]
+    fn test_archive_entry_limited_read_accepts_exact_limit() {
+        let content = b"Hello";
+        let meta = ArchiveEntryMeta::file(
+            "test.txt",
+            Some(limited_read::usize_to_u64_saturating(content.len())),
+        );
+        let mut entry = ArchiveEntry::new(meta, &content[..]);
+
+        let result = entry
+            .read_to_vec_limited(Some(limited_read::usize_to_u64_saturating(content.len())))
+            .expect("read at exact limit");
+
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn test_archive_entry_limited_read_rejects_metadata_over_limit() {
+        let content = b"Hello";
+        let meta = ArchiveEntryMeta::file(
+            "test.txt",
+            Some(limited_read::usize_to_u64_saturating(content.len())),
+        );
+        let mut entry = ArchiveEntry::new(meta, &content[..]);
+
+        let err = entry
+            .read_to_vec_limited(Some(4))
+            .expect_err("metadata should exceed limit");
+
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn test_archive_entry_limited_read_rejects_stream_over_limit_without_size_hint() {
+        let content = b"Hello";
+        let meta = ArchiveEntryMeta::file("test.txt", None);
+        let mut entry = ArchiveEntry::new(meta, &content[..]);
+
+        let err = entry
+            .read_to_vec_limited(Some(4))
+            .expect_err("stream should exceed limit");
+
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn test_initial_read_capacity_is_capped() {
+        assert_eq!(
+            limited_read::initial_read_capacity(None),
+            limited_read::DEFAULT_INITIAL_READ_CAPACITY
+        );
+        assert_eq!(limited_read::initial_read_capacity(Some(42)), 42);
+        assert_eq!(
+            limited_read::initial_read_capacity(Some(
+                limited_read::usize_to_u64_saturating(limited_read::MAX_INITIAL_READ_CAPACITY) + 1
+            )),
+            limited_read::MAX_INITIAL_READ_CAPACITY
+        );
+        assert_eq!(
+            limited_read::initial_read_capacity(Some(u64::MAX)),
+            limited_read::MAX_INITIAL_READ_CAPACITY
+        );
     }
 }

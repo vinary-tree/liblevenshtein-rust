@@ -83,40 +83,75 @@ impl TypoGenerator {
     /// Vector of all possible single-edit typos
     pub fn all_distance_1(&self, word: &str) -> Vec<String> {
         let chars: Vec<char> = word.chars().collect();
-        let mut typos = Vec::new();
+        let char_len = chars.len();
+        let insertion_count = char_len
+            .saturating_add(1)
+            .saturating_mul(self.alphabet.len());
+        let substitution_count = chars.iter().fold(0usize, |count, &source| {
+            count.saturating_add(self.alphabet.iter().filter(|&&c| c != source).count())
+        });
+        let typo_count = char_len
+            .saturating_add(insertion_count)
+            .saturating_add(substitution_count)
+            .saturating_add(char_len.saturating_sub(1));
+        let mut typos = Vec::with_capacity(typo_count);
 
         // Deletions
-        for i in 0..chars.len() {
-            let mut deleted = chars.clone();
-            deleted.remove(i);
-            typos.push(deleted.iter().collect());
+        for i in 0..char_len {
+            let mut deleted = String::with_capacity(word.len().saturating_sub(chars[i].len_utf8()));
+            for (idx, &ch) in chars.iter().enumerate() {
+                if idx != i {
+                    deleted.push(ch);
+                }
+            }
+            typos.push(deleted);
         }
 
         // Insertions
-        for i in 0..=chars.len() {
+        for i in 0..=char_len {
             for &c in &self.alphabet {
-                let mut inserted = chars.clone();
-                inserted.insert(i, c);
-                typos.push(inserted.iter().collect());
+                let mut inserted = String::with_capacity(word.len().saturating_add(c.len_utf8()));
+                for &ch in &chars[..i] {
+                    inserted.push(ch);
+                }
+                inserted.push(c);
+                for &ch in &chars[i..] {
+                    inserted.push(ch);
+                }
+                typos.push(inserted);
             }
         }
 
         // Substitutions
-        for i in 0..chars.len() {
+        for i in 0..char_len {
             for &c in &self.alphabet {
                 if c != chars[i] {
-                    let mut substituted = chars.clone();
-                    substituted[i] = c;
-                    typos.push(substituted.iter().collect());
+                    let mut substituted = String::with_capacity(
+                        word.len()
+                            .saturating_sub(chars[i].len_utf8())
+                            .saturating_add(c.len_utf8()),
+                    );
+                    for (idx, &ch) in chars.iter().enumerate() {
+                        substituted.push(if idx == i { c } else { ch });
+                    }
+                    typos.push(substituted);
                 }
             }
         }
 
         // Transpositions
-        for i in 0..chars.len().saturating_sub(1) {
-            let mut transposed = chars.clone();
-            transposed.swap(i, i + 1);
-            typos.push(transposed.iter().collect());
+        for i in 0..char_len.saturating_sub(1) {
+            let mut transposed = String::with_capacity(word.len());
+            for idx in 0..char_len {
+                if idx == i {
+                    transposed.push(chars[i + 1]);
+                } else if idx == i + 1 {
+                    transposed.push(chars[i]);
+                } else {
+                    transposed.push(chars[idx]);
+                }
+            }
+            typos.push(transposed);
         }
 
         typos
@@ -228,7 +263,8 @@ impl QueryWorkload {
     ///
     /// # Returns
     ///
-    /// Query workload with realistic frequency distribution
+    /// Query workload with realistic frequency distribution. Empty or
+    /// all-zero frequency maps produce an empty workload.
     pub fn from_frequencies(
         frequencies: &HashMap<String, usize>,
         total_tokens: usize,
@@ -248,19 +284,25 @@ impl QueryWorkload {
             sum += freq;
             cumulative.push((word.as_str(), sum));
         }
+        let sampling_total = if total_tokens == sum {
+            total_tokens
+        } else {
+            sum
+        };
+        if sampling_total == 0 {
+            return Self {
+                queries: Vec::new(),
+            };
+        }
 
         // Sample queries according to frequency distribution
         let mut queries = Vec::with_capacity(num_queries);
 
         for _ in 0..num_queries {
-            let sample = rng.gen_range(0..total_tokens);
+            let sample = rng.gen_range(0..sampling_total);
+            let idx = cumulative.partition_point(|&(_, cum)| cum <= sample);
 
-            // Binary search for word
-            let idx = cumulative
-                .binary_search_by(|&(_, cum)| cum.cmp(&sample))
-                .unwrap_or_else(|i| i);
-
-            let word = cumulative[idx.min(cumulative.len() - 1)].0;
+            let word = cumulative[idx].0;
             let freq = frequencies[word];
 
             queries.push((word.to_string(), freq));
@@ -279,16 +321,18 @@ impl QueryWorkload {
     ///
     /// # Returns
     ///
-    /// Query workload with uniform distribution
+    /// Query workload with uniform distribution. If `words` is empty, the
+    /// workload is empty.
     pub fn uniform(words: &[String], num_queries: usize, seed: u64) -> Self {
         let mut rng = StdRng::seed_from_u64(seed);
         let mut queries = Vec::with_capacity(num_queries);
 
         for _ in 0..num_queries {
-            let word = words
-                .choose(&mut rng)
-                .expect("uniform query gen requires non-empty word list");
-            queries.push((word.clone(), 1));
+            if let Some(word) = words.choose(&mut rng) {
+                queries.push((word.clone(), 1));
+            } else {
+                break;
+            }
         }
 
         Self { queries }
@@ -384,6 +428,19 @@ mod tests {
     }
 
     #[test]
+    fn test_typo_generator_all_distance_1_unicode() {
+        let gen = TypoGenerator::new(42);
+        let typos = gen.all_distance_1("é");
+
+        // Deletions: 1, insertions: 2 * 26, substitutions: 26.
+        assert_eq!(typos.len(), 79);
+        assert!(typos.contains(&String::new()));
+        assert!(typos.contains(&"aé".to_string()));
+        assert!(typos.contains(&"éa".to_string()));
+        assert!(typos.contains(&"a".to_string()));
+    }
+
+    #[test]
     fn test_query_workload_uniform() {
         let words = vec!["hello".to_string(), "world".to_string(), "test".to_string()];
 
@@ -393,6 +450,14 @@ mod tests {
 
         let unique = workload.unique_queries();
         assert!(unique.len() <= 3);
+    }
+
+    #[test]
+    fn test_query_workload_uniform_empty_words_is_empty() {
+        let workload = QueryWorkload::uniform(&[], 100, 42);
+
+        assert!(workload.queries.is_empty());
+        assert!(workload.query_strings().is_empty());
     }
 
     #[test]
@@ -412,6 +477,29 @@ mod tests {
         let fox_count = workload.queries.iter().filter(|(w, _)| w == "fox").count();
 
         assert!(the_count > fox_count * 10);
+    }
+
+    #[test]
+    fn test_query_workload_from_frequencies_empty_input_is_empty() {
+        let frequencies = HashMap::new();
+        let workload = QueryWorkload::from_frequencies(&frequencies, 0, 100, 42);
+
+        assert!(workload.queries.is_empty());
+    }
+
+    #[test]
+    fn test_query_workload_from_frequencies_skips_zero_frequency_entries() {
+        let mut frequencies = HashMap::new();
+        frequencies.insert("zero".to_string(), 0);
+        frequencies.insert("one".to_string(), 1);
+
+        let workload = QueryWorkload::from_frequencies(&frequencies, 1, 100, 42);
+
+        assert_eq!(workload.queries.len(), 100);
+        assert!(workload
+            .queries
+            .iter()
+            .all(|(word, freq)| { word == "one" && *freq == 1 }));
     }
 
     #[test]

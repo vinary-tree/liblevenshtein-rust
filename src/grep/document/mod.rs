@@ -18,6 +18,7 @@
 //! - `grep-documents`: Enable all document formats
 
 pub mod detection;
+mod text_output;
 
 #[cfg(feature = "grep-pdf")]
 pub mod pdf;
@@ -41,6 +42,7 @@ pub mod djvu;
 
 use std::path::Path;
 
+use super::limited_read;
 use crate::grep::error::{GrepError, GrepResult};
 
 pub use detection::detect_document_format;
@@ -300,7 +302,7 @@ impl DocumentExtractor {
     pub fn extract_format(&self, data: &[u8], format: DocumentFormat) -> GrepResult<String> {
         // Check size limit
         if let Some(max_size) = self.config.max_size {
-            if data.len() as u64 > max_size {
+            if limited_read::len_exceeds_limit(data.len(), max_size) {
                 return Err(GrepError::DocumentExtraction {
                     file_path: std::path::PathBuf::from("<memory>"),
                     message: format!(
@@ -407,7 +409,7 @@ impl DocumentExtractor {
     fn extract_odt(&self, data: &[u8]) -> GrepResult<String> {
         #[cfg(feature = "grep-odt")]
         {
-            odt::extract_text(data)
+            odt::extract_text_limited(data, self.config.max_size)
         }
 
         #[cfg(not(feature = "grep-odt"))]
@@ -523,5 +525,37 @@ mod tests {
         } else {
             panic!("Expected DocumentExtraction error");
         }
+    }
+
+    #[cfg(feature = "grep-odt")]
+    #[test]
+    fn test_document_extractor_size_limit_applies_to_odt_content_xml() {
+        use std::io::{Cursor, Write};
+
+        let body = "a".repeat(1024 * 1024);
+        let content_xml = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?><office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body><office:text><text:p>{body}</text:p></office:text></office:body></office:document-content>"#
+        );
+
+        let cursor = Cursor::new(Vec::new());
+        let mut zip = zip::ZipWriter::new(cursor);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        zip.start_file("content.xml", options)
+            .expect("start content.xml");
+        zip.write_all(content_xml.as_bytes())
+            .expect("write content.xml");
+        let data = zip.finish().expect("finish odt").into_inner();
+
+        let max_size = limited_read::usize_to_u64_saturating(data.len()) + 1;
+        assert!(limited_read::len_exceeds_limit(content_xml.len(), max_size));
+
+        let extractor =
+            DocumentExtractor::with_config(DocumentExtractorConfig::new().with_max_size(max_size));
+        let result = extractor.extract_format(&data, DocumentFormat::Odt);
+
+        assert!(
+            matches!(result, Err(GrepError::DocumentExtraction { ref message, .. }) if message.contains("content.xml") && message.contains("too large"))
+        );
     }
 }

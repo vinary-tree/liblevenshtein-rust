@@ -6,6 +6,8 @@
 use crate::grep::error::GrepError;
 use crate::grep::error::GrepResult;
 
+use super::entry::normalize_archive_path;
+
 #[cfg(feature = "globset")]
 use globset::{GlobBuilder, GlobMatcher};
 
@@ -75,15 +77,16 @@ impl EntryFilter {
     #[cfg(feature = "globset")]
     pub fn matches(&self, path: &str) -> bool {
         // Normalize path for matching
-        let normalized = path.trim_start_matches('/').trim_start_matches("./");
-        self.matcher.is_match(normalized)
+        let normalized = normalize_archive_path(path);
+        self.matcher.is_match(normalized.as_ref())
     }
 
     /// Check if a path matches this filter (simple substring when globset disabled).
     #[cfg(not(feature = "globset"))]
     pub fn matches(&self, path: &str) -> bool {
         // Fallback: simple substring matching
-        let normalized = path.trim_start_matches('/').trim_start_matches("./");
+        let normalized = normalize_archive_path(path);
+        let normalized = normalized.as_ref();
 
         // Handle simple wildcard patterns
         if self.pattern == "*" {
@@ -227,8 +230,9 @@ mod tests {
 
     #[test]
     fn test_normalized_paths() {
-        let filter = EntryFilter::match_all();
-        assert!(filter.matches("/absolute/path"));
+        let filter = EntryFilter::new("relative/path").expect("should compile");
         assert!(filter.matches("./relative/path"));
+        assert!(filter.matches(".//relative\\path"));
+        assert!(!filter.matches("other/path"));
     }
 }

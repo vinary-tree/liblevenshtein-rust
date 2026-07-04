@@ -113,7 +113,7 @@ impl BigTxtCorpus {
             .map(|(w, &f)| (w.as_str(), f))
             .collect();
 
-        words.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+        words.sort_unstable_by_key(|entry| std::cmp::Reverse(entry.1));
         words
     }
 
@@ -283,7 +283,7 @@ mod tests {
         writeln!(file, "the").expect("test fixture: write must succeed");
         writeln!(file, "quick").expect("test fixture: write must succeed");
         writeln!(file, "brown").expect("test fixture: write must succeed");
-        writeln!(file, "").expect("test fixture: write must succeed"); // Empty line
+        writeln!(file).expect("test fixture: write must succeed"); // Empty line
         file.flush().expect("test fixture: flush must succeed");
 
         let corpus = BigTxtCorpus::load(file.path()).expect("test fixture: load must be Ok");
@@ -304,7 +304,7 @@ mod tests {
         writeln!(file, "$hello").expect("test fixture: write must succeed");
         writeln!(file, "helo 2").expect("test fixture: write must succeed");
         writeln!(file, "hllo 1").expect("test fixture: write must succeed");
-        writeln!(file, "").expect("test fixture: write must succeed"); // Empty line
+        writeln!(file).expect("test fixture: write must succeed"); // Empty line
         writeln!(file, "$world").expect("test fixture: write must succeed");
         writeln!(file, "wrld").expect("test fixture: write must succeed"); // No frequency (default 1)
         file.flush().expect("test fixture: flush must succeed");

@@ -13,22 +13,34 @@ use liblevenshtein::repl::{Command, LevenshteinHelper, ReplConfig, ReplState};
 use rustyline::error::ReadlineError;
 use rustyline::{Config, Editor};
 
+struct ReplLaunchOptions {
+    dict_path: Option<std::path::PathBuf>,
+    backend: Option<liblevenshtein::repl::state::DictionaryBackend>,
+    format: Option<liblevenshtein::cli::args::SerializationFormat>,
+    algorithm: liblevenshtein::transducer::Algorithm,
+    max_distance: usize,
+    prefix: bool,
+    show_distances: bool,
+    limit: Option<usize>,
+    auto_sync: bool,
+}
+
 fn main() {
     let cli = Cli::parse();
 
     let result = if cli.repl {
         // Launch REPL with provided configuration
-        run_repl(
-            cli.dict.clone(),
-            cli.backend,
-            cli.format,
-            cli.algorithm,
-            cli.max_distance,
-            cli.prefix,
-            cli.show_distances,
-            cli.limit,
-            cli.auto_sync,
-        )
+        run_repl(ReplLaunchOptions {
+            dict_path: cli.dict.clone(),
+            backend: cli.backend,
+            format: cli.format,
+            algorithm: cli.algorithm,
+            max_distance: cli.max_distance,
+            prefix: cli.prefix,
+            show_distances: cli.show_distances,
+            limit: cli.limit,
+            auto_sync: cli.auto_sync,
+        })
     } else {
         // Execute CLI command
         commands::execute(&cli)
@@ -40,20 +52,21 @@ fn main() {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn run_repl(
-    dict_path: Option<std::path::PathBuf>,
-    backend_opt: Option<liblevenshtein::repl::state::DictionaryBackend>,
-    format_opt: Option<liblevenshtein::cli::args::SerializationFormat>,
-    algorithm: liblevenshtein::transducer::Algorithm,
-    max_distance: usize,
-    prefix: bool,
-    show_distances: bool,
-    limit: Option<usize>,
-    auto_sync: bool,
-) -> anyhow::Result<()> {
+fn run_repl(options: ReplLaunchOptions) -> anyhow::Result<()> {
     use liblevenshtein::cli::detect::detect_format;
     use liblevenshtein::cli::paths::default_dict_path;
+
+    let ReplLaunchOptions {
+        dict_path,
+        backend: backend_opt,
+        format: format_opt,
+        algorithm,
+        max_distance,
+        prefix,
+        show_distances,
+        limit,
+        auto_sync,
+    } = options;
 
     // Load persistent config
     let config = PersistentConfig::load().unwrap_or_default();

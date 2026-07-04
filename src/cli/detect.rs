@@ -14,6 +14,15 @@ use anyhow::{bail, Context, Result};
 use std::io::Read;
 use std::path::Path;
 
+const CONTENT_DETECTION_PROBE_LIMIT: usize = 1024;
+
+#[inline]
+fn content_detection_probe_len(file_len: u64) -> usize {
+    usize::try_from(file_len).map_or(CONTENT_DETECTION_PROBE_LIMIT, |len| {
+        len.min(CONTENT_DETECTION_PROBE_LIMIT)
+    })
+}
+
 /// Dictionary format detection result
 #[derive(Debug, Clone, Copy)]
 pub struct DictFormat {
@@ -232,7 +241,7 @@ fn detect_by_content(path: &Path) -> Result<FormatDetection> {
     let mut file = std::fs::File::open(path)
         .with_context(|| format!("Failed to open file: {}", path.display()))?;
 
-    let mut buffer = vec![0u8; 1024.min(file.metadata()?.len() as usize)];
+    let mut buffer = vec![0u8; content_detection_probe_len(file.metadata()?.len())];
     file.read_exact(&mut buffer)
         .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
@@ -265,4 +274,30 @@ fn detect_by_content(path: &Path) -> Result<FormatDetection> {
         },
         method: DetectionMethod::Content,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn content_detection_probe_len_bounds_before_narrowing() {
+        let probe_limit =
+            u64::try_from(CONTENT_DETECTION_PROBE_LIMIT).expect("probe cap fits in u64");
+
+        assert_eq!(content_detection_probe_len(0), 0);
+        assert_eq!(content_detection_probe_len(17), 17);
+        assert_eq!(
+            content_detection_probe_len(probe_limit),
+            CONTENT_DETECTION_PROBE_LIMIT
+        );
+        assert_eq!(
+            content_detection_probe_len(probe_limit + 1),
+            CONTENT_DETECTION_PROBE_LIMIT
+        );
+        assert_eq!(
+            content_detection_probe_len(u64::MAX),
+            CONTENT_DETECTION_PROBE_LIMIT
+        );
+    }
 }

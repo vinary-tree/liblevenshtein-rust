@@ -42,8 +42,7 @@ use super::paths::{default_dict_path, PersistentConfig};
 /// Execute a CLI command based on operation flags
 pub fn execute(cli: &Cli) -> Result<()> {
     if cli.repl {
-        // REPL is handled in main.rs
-        unreachable!("REPL operation should be handled in main");
+        bail!("REPL operation should be handled by the CLI entry point");
     } else if cli.compile {
         let input = cli
             .input
@@ -140,28 +139,38 @@ pub fn execute(cli: &Cli) -> Result<()> {
             .pattern
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("--pattern is required for --grep operation"))?;
-        cmd_grep(GrepOptions {
-            pattern,
-            files: &cli.files,
-            rules: cli.rules.as_ref(),
-            max_distance: cli.max_distance as u8,
-            algorithm: cli.algorithm,
-            with_filename: cli.with_filename,
-            no_filename: cli.no_filename,
-            line_number: cli.line_number,
-            column: cli.column,
-            count: cli.count,
-            no_color: cli.no_color,
-            ignore_case: cli.ignore_case,
-            only_matching: cli.only_matching,
-            no_decompress: cli.no_decompress,
-            archive_filter: cli.archive_filter.as_deref(),
-            max_file_size: cli.max_file_size,
-            include_hidden: cli.include_hidden,
-            extract_documents: cli.extract_documents,
-            enable_ocr: cli.enable_ocr,
-            ocr_language: &cli.ocr_language,
-        })
+        {
+            #[cfg(feature = "phonetic-rules")]
+            {
+                cmd_grep(GrepOptions {
+                    pattern,
+                    files: &cli.files,
+                    rules: cli.rules.as_ref(),
+                    max_distance: grep_max_distance(cli.max_distance)?,
+                    algorithm: cli.algorithm,
+                    with_filename: cli.with_filename,
+                    no_filename: cli.no_filename,
+                    line_number: cli.line_number,
+                    column: cli.column,
+                    count: cli.count,
+                    no_color: cli.no_color,
+                    ignore_case: cli.ignore_case,
+                    only_matching: cli.only_matching,
+                    no_decompress: cli.no_decompress,
+                    archive_filter: cli.archive_filter.as_deref(),
+                    max_file_size: cli.max_file_size,
+                    include_hidden: cli.include_hidden,
+                    extract_documents: cli.extract_documents,
+                    enable_ocr: cli.enable_ocr,
+                    ocr_language: &cli.ocr_language,
+                })
+            }
+            #[cfg(not(feature = "phonetic-rules"))]
+            {
+                let _ = pattern;
+                cmd_grep(GrepOptions)
+            }
+        }
     } else {
         bail!("No operation specified. Use --help for available operations.")
     }
@@ -1207,14 +1216,10 @@ fn print_config(config: &PersistentConfig) {
     );
 
     println!();
-    println!(
-        "  Config file: {}",
-        super::paths::config_file_path()
-            .expect("config_file_path must succeed for status display")
-            .display()
-            .to_string()
-            .cyan()
-    );
+    let config_file = super::paths::config_file_path()
+        .map(|path| path.display().to_string().cyan().to_string())
+        .unwrap_or_else(|err| format!("{} ({err})", "unavailable".red()));
+    println!("  Config file: {}", config_file);
 }
 
 /// Compile phonetic rules from .llev to binary format
@@ -1250,8 +1255,7 @@ fn cmd_compile(input: &Path, output: Option<PathBuf>, unicode: bool, verify: boo
     // Determine output path
     let output_path = output.unwrap_or_else(|| {
         let mut out = input.to_path_buf();
-        let ext = if unicode { "llev.bin" } else { "llev.bin" };
-        out.set_extension(ext);
+        out.set_extension("llev.bin");
         out
     });
 
@@ -1676,7 +1680,7 @@ fn cmd_match_regex(
 }
 
 /// Grep command options
-#[cfg_attr(not(feature = "phonetic-rules"), allow(dead_code))]
+#[cfg(feature = "phonetic-rules")]
 struct GrepOptions<'a> {
     pattern: &'a str,
     files: &'a [PathBuf],
@@ -1700,6 +1704,44 @@ struct GrepOptions<'a> {
     extract_documents: bool,
     enable_ocr: bool,
     ocr_language: &'a str,
+}
+
+#[cfg(not(feature = "phonetic-rules"))]
+struct GrepOptions;
+
+#[cfg(feature = "phonetic-rules")]
+fn grep_max_distance(max_distance: usize) -> Result<u8> {
+    u8::try_from(max_distance).with_context(|| {
+        format!(
+            "--max-distance {max_distance} exceeds grep's maximum supported edit distance of {}",
+            u8::MAX
+        )
+    })
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn previous_char_boundary(text: &str, byte_offset: usize) -> usize {
+    let mut boundary = byte_offset.min(text.len());
+    while boundary > 0 && !text.is_char_boundary(boundary) {
+        boundary -= 1;
+    }
+    boundary
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn next_char_boundary(text: &str, byte_offset: usize) -> usize {
+    let mut boundary = byte_offset.min(text.len());
+    while boundary < text.len() && !text.is_char_boundary(boundary) {
+        boundary += 1;
+    }
+    boundary
+}
+
+#[cfg(feature = "phonetic-rules")]
+fn grep_match_byte_span(line: &str, start_column: usize, end_column: usize) -> (usize, usize) {
+    let start = previous_char_boundary(line, start_column.saturating_sub(1));
+    let end = next_char_boundary(line, end_column).max(start);
+    (start, end)
 }
 
 /// Search files for fuzzy phonetic matches
@@ -1759,7 +1801,7 @@ fn cmd_grep(opts: GrepOptions) -> Result<()> {
         let content = stdin
             .lock()
             .lines()
-            .filter_map(|l| l.ok())
+            .map_while(Result::ok)
             .collect::<Vec<_>>()
             .join("\n");
         let matches = process_content(&grep, &content, "(stdin)", show_filename, &opts, use_color)?;
@@ -2122,8 +2164,7 @@ fn print_full_line(
 
     // Print line with highlighted match
     let line = &line_match.line;
-    let start = m.start_column.saturating_sub(1); // 0-indexed
-    let end = m.end_column.min(line.len());
+    let (start, end) = grep_match_byte_span(line, m.start_column, m.end_column);
 
     if use_color {
         let before = &line[..start];
@@ -2150,4 +2191,54 @@ fn cmd_grep(_opts: GrepOptions) -> Result<()> {
         "Grep command requires 'phonetic-rules' feature.\n\
          Rebuild with: cargo build --features \"phonetic-rules\""
     );
+}
+
+#[cfg(all(test, feature = "phonetic-rules"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn grep_max_distance_accepts_u8_domain() {
+        assert_eq!(grep_max_distance(0).expect("0 is a valid grep distance"), 0);
+        assert_eq!(
+            grep_max_distance(usize::from(u8::MAX)).expect("u8::MAX is a valid grep distance"),
+            u8::MAX
+        );
+    }
+
+    #[test]
+    fn grep_max_distance_rejects_values_that_would_wrap() {
+        let err = grep_max_distance(usize::from(u8::MAX) + 1)
+            .expect_err("oversized grep distance should fail");
+
+        assert!(
+            err.to_string().contains("--max-distance 256"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            err.to_string().contains("maximum supported edit distance"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn grep_match_byte_span_preserves_valid_engine_offsets() {
+        let line = "pre café post";
+        let start = line.find("café").expect("test fixture contains cafe");
+        let end = start + "café".len();
+
+        assert_eq!(grep_match_byte_span(line, start + 1, end), (start, end));
+    }
+
+    #[test]
+    fn grep_match_byte_span_snaps_malformed_offsets_to_utf8_boundaries() {
+        let line = "éclair";
+
+        assert_eq!(grep_match_byte_span(line, 2, 1), (0, 2));
+        assert_eq!(grep_match_byte_span(line, 1, usize::MAX), (0, line.len()));
+        assert_eq!(
+            grep_match_byte_span(line, usize::MAX, 0),
+            (line.len(), line.len())
+        );
+    }
 }

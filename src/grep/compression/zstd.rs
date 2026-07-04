@@ -60,7 +60,8 @@ mod tests {
     use std::io::Write;
 
     fn compress_data(data: &[u8]) -> Vec<u8> {
-        let mut encoder = zstd::stream::Encoder::new(Vec::new(), 3).expect("encoder should create");
+        let mut encoder = zstd::stream::Encoder::new(Vec::with_capacity(data.len()), 3)
+            .expect("encoder should create");
         encoder.write_all(data).expect("write should succeed");
         encoder.finish().expect("finish should succeed")
     }
@@ -72,7 +73,7 @@ mod tests {
 
         let mut decompressor =
             ZstdDecompressor::new(&compressed[..]).expect("decompressor should create");
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         decompressor
             .read_to_end(&mut result)
             .expect("read should succeed");
@@ -87,7 +88,7 @@ mod tests {
 
         let mut decompressor =
             ZstdDecompressor::new(&compressed[..]).expect("decompressor should create");
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         decompressor
             .read_to_end(&mut result)
             .expect("read should succeed");
@@ -102,7 +103,7 @@ mod tests {
 
         let mut decompressor =
             ZstdDecompressor::new(&compressed[..]).expect("decompressor should create");
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         decompressor
             .read_to_end(&mut result)
             .expect("read should succeed");
@@ -117,7 +118,7 @@ mod tests {
 
         let mut decompressor =
             ZstdDecompressor::new(&compressed[..]).expect("decompressor should create");
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(original.len());
         let mut buf = [0u8; 8]; // Small buffer to force multiple reads
 
         loop {
