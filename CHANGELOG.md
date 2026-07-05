@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`VersionedQueryCache`** (`liblevenshtein::transducer::VersionedQueryCache`) — an
+  opt-in, dictionary-version-tied cross-query result cache that memoizes
+  `(query, max_distance) → results` and self-invalidates on a dictionary version bump
+  (correct for dynamic dictionaries). On repeated-query workloads a cache hit skips the
+  automaton state-transition inner loop (≈80% of query CPU per AMD uProf profiling);
+  measured ≈11,500× faster on a repeated-query benchmark (pre-registered pgmcp experiment
+  142, Welch t p≈3×10⁻¹⁷⁰, Cohen's d≈−81), with cached results proven identical to
+  uncached. It does not touch the hot path, so unique-query workloads are unaffected. See
+  `docs/scientific-ledger/version-tied-cross-query-result-cache-*.md`.
+
 ### Fixed
 
 - **Weighted edit distance now honours non-unit insertion/deletion costs.** The
