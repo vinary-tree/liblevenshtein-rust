@@ -36,6 +36,7 @@ mod position;
 mod position_f64;
 mod priority_query;
 mod query;
+pub mod query_cache;
 mod query_f64;
 mod query_result;
 mod state;
@@ -53,6 +54,7 @@ mod zipper_query_iterator;
 pub mod simd;
 
 pub use algorithm::Algorithm;
+pub use query_cache::VersionedQueryCache;
 pub use articulatory_costs::ArticulatoryCosts;
 pub use automaton_zipper::AutomatonZipper;
 pub use builder::{BuilderError, TransducerBuilder};
