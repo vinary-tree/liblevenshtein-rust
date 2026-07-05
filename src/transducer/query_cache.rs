@@ -157,7 +157,7 @@ mod tests {
         let _ = cache.get_or_compute("q", 2, 0, || vec![2, 2]); // same query, diff distance
         let _ = cache.get_or_compute("r", 1, 0, || vec![3, 3, 3]); // diff query
         assert_eq!(cache.len(), 3);
-        assert_eq!(&*cache.get_or_compute("q", 2, 0, || vec![]), &[2, 2]);
+        assert_eq!(&*cache.get_or_compute("q", 2, 0, Vec::new), &[2, 2]);
     }
 
     #[test]
