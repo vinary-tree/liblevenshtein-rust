@@ -99,7 +99,7 @@ written; they are indexed and cross-linked but never rewritten.
 - [Optimization journals](optimization/README.md) and [optimization results](optimizations/README.md) — hypothesis ledgers (H1/H2…), per-topic experiment logs.
 - [Universal](universal/README.md) · [Generalized](generalized/README.md) — phase records for the universal & generalized automaton work.
 - [MeTTaIL](mettail/README.md) — semantic type-checking for MeTTa (a large self-contained subtree: theoretical foundations, correction-WFST, simplification, implementation, ecosystem).
-- [Time-series analysis](time_series/README.md) · [Integration](integration/) (MORK, PathMap) · [Benchmarks](benchmarks/README.md) · [Analysis](analysis/) · [Bug reports](bug-reports/README.md) · [Completion reports](completion-reports/README.md) · [Implementation status](implementation-status/README.md) · [Archive](archive/README.md).
+- [Time-series analysis](time_series/README.md) · [Integration](integration/) (MORK, PathMap) · [Benchmarks](benchmarks/README.md) · [Analysis](analysis/) · [Bug reports](bug-reports/README.md) · [Completion reports](completion-reports/README.md) · [Implementation status](implementation-status/README.md) · [Delivery manifest](delivery/verify-manifest.md) — the Phase-10 verify manifest for the optimization/hardening plan (pgmcp 1719): full item set, gate evidence, behavioral impact, residual risk, verification handoff. · [Archive](archive/README.md).
 
 ## 9 · Diagrams
 
