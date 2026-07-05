@@ -2,7 +2,7 @@
 
 [← Documentation Index](../README.md)
 
-**Plan:** `liblevenshtein-rust-architecture-engineering-design-algorithm-and-complexity-optimization-plan-47815a9b` (pgmcp work-item 1719)  
+**Plan:** `liblevenshtein-rust-architecture-engineering-design-algorithm-and-complexity-optimization-plan-47815a9b` (pgmcp work-item 1719)
 **Delivery HEAD:** `c7f6d57`  ·  **Working tree:** clean  ·  **Status:** 138/138 items `claimed_done`, awaiting the trusted `verified` flip.
 
 ---
