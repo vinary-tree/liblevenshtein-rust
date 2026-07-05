@@ -873,9 +873,9 @@ impl ProductAutomatonChar {
                 }
 
                 // 6. Merge: two adjacent input chars → one NFA edge, cost 1.
-                //    INTENTIONAL wildcard over-approximation: the two chars are
-                //    NOT validated against the edge (can over-match, never
-                //    misses). See `nfa_step_merged_from_advance_vec`.
+                //    Generic Merge-and-Split: merge is character-agnostic by
+                //    definition (any two adjacent symbols merge to one), so the
+                //    symbols are not validated. See `nfa_step_merged_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && pos + 1 < n {
                     let next_c = input_chars[pos + 1];
                     if !advanced_states.is_empty() {
@@ -894,9 +894,9 @@ impl ProductAutomatonChar {
                 }
 
                 // 7. Split: one input char → two NFA edges, cost 1.
-                //    INTENTIONAL wildcard over-approximation: the char is NOT
-                //    validated against either edge (can over-match, never
-                //    misses). See `nfa_step_split_from_advance_vec`.
+                //    Generic Merge-and-Split: split is character-agnostic by
+                //    definition (any symbol splits to two), so it is not validated
+                //    against either edge. See `nfa_step_split_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
                     let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, c);
                     if !split_states.is_empty() {
@@ -950,18 +950,21 @@ impl ProductAutomatonChar {
         self.nfa_step_vec(&after_c2, c1)
     }
 
-    /// Merge step for `Algorithm::MergeAndSplit` — an INTENTIONAL wildcard
-    /// over-approximation.
+    /// Merge step for `Algorithm::MergeAndSplit`.
     ///
-    /// Merge collapses two adjacent input characters onto a single consuming
-    /// NFA edge at cost 1. The characters `_c1`/`_c2` are deliberately ignored
-    /// (hence the `_` prefix): ANY two adjacent input chars are treated as
-    /// collapsible onto the one edge already taken by `advanced_states` (a
-    /// wildcard `nfa_advance`). This can accept strings a faithful,
-    /// character-validated merge product would reject, but it never misses a
-    /// real match (no false negatives). Contrast with
-    /// [`Self::nfa_step_transposed_vec`], which DOES validate the swapped
-    /// characters against the NFA edges.
+    /// In the Merge-and-Split edit metric, `merge` collapses two adjacent input
+    /// characters into one at cost 1 as an *unconstrained structural operation*:
+    /// the metric imposes no relation on the specific characters (any two adjacent
+    /// input chars may merge onto any single pattern edge). `_c1`/`_c2` are
+    /// therefore correctly ignored — the operation is character-agnostic *by
+    /// definition* — and the pair collapses onto the one edge already taken by
+    /// `advanced_states` (via `nfa_advance`). This is *exact* for the metric, which
+    /// is deliberately more permissive than plain Levenshtein (the raison d'être of
+    /// merge/split), and never misses a match. (Transposition differs: the swap
+    /// `c1c2`↔`c2c1` is unambiguous, so [`Self::nfa_step_transposed_vec`] validates
+    /// its characters.) A character-*constrained* variant — e.g. an OCR/phonetic
+    /// confusion table such as `rn`↔`m` — would require a merge-relation map and is
+    /// a separate feature, not part of this generic algorithm.
     fn nfa_step_merged_from_advance_vec(
         &self,
         advanced_states: &[StateId],
@@ -971,15 +974,14 @@ impl ProductAutomatonChar {
         advanced_states.to_vec()
     }
 
-    /// Split step for `Algorithm::MergeAndSplit` — an INTENTIONAL wildcard
-    /// over-approximation.
+    /// Split step for `Algorithm::MergeAndSplit`.
     ///
-    /// Split covers one input character with two consuming NFA edges at cost 1.
-    /// The character `_c` is deliberately ignored (hence the `_` prefix): the
-    /// single input char is treated as coverable by ANY two wildcard edges
-    /// (`advanced_states` is the first `nfa_advance`; this applies the second).
-    /// Like merge, this can over-match but never misses a real match, whereas
-    /// transposition validates its characters.
+    /// `split` covers one input character with two consuming NFA edges at cost 1,
+    /// the dual of `merge`. Like merge it is an *unconstrained structural operation*
+    /// of the generic Merge-and-Split metric: any single input char may split across
+    /// any two pattern edges, so `_c` is correctly ignored (character-agnostic by
+    /// definition). `advanced_states` is the first `nfa_advance`; this applies the
+    /// second. Exact for the metric; never misses a match.
     fn nfa_step_split_from_advance_vec(
         &self,
         advanced_states: &[StateId],
@@ -1151,9 +1153,9 @@ impl ProductAutomatonChar {
                 }
 
                 // 6. Merge: two adjacent input chars → one NFA edge, cost 1.
-                //    INTENTIONAL wildcard over-approximation: the two chars are
-                //    NOT validated against the edge (can over-match, never
-                //    misses). See `nfa_step_merged_from_advance_vec`.
+                //    Generic Merge-and-Split: merge is character-agnostic by
+                //    definition (any two adjacent symbols merge to one), so the
+                //    symbols are not validated. See `nfa_step_merged_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && pos + 1 < n {
                     let next_c = input_chars[pos + 1];
                     if !advanced_states.is_empty() {
@@ -1172,9 +1174,9 @@ impl ProductAutomatonChar {
                 }
 
                 // 7. Split: one input char → two NFA edges, cost 1.
-                //    INTENTIONAL wildcard over-approximation: the char is NOT
-                //    validated against either edge (can over-match, never
-                //    misses). See `nfa_step_split_from_advance_vec`.
+                //    Generic Merge-and-Split: split is character-agnostic by
+                //    definition (any symbol splits to two), so it is not validated
+                //    against either edge. See `nfa_step_split_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
                     let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, c);
                     if !split_states.is_empty() {
@@ -1420,14 +1422,14 @@ impl ProductAutomaton {
         self.nfa_step_vec(&after_b2, b1)
     }
 
-    /// Merge step for `Algorithm::MergeAndSplit` — an INTENTIONAL wildcard
-    /// over-approximation (byte-level analogue of the char version).
+    /// Merge step for `Algorithm::MergeAndSplit` (byte-level analogue of the char
+    /// version).
     ///
-    /// Two adjacent input bytes collapse onto one consuming NFA edge at cost 1.
-    /// The bytes `_b1`/`_b2` are deliberately ignored (hence the `_` prefix):
-    /// ANY two adjacent bytes are treated as collapsible onto the edge already
-    /// taken by `advanced_states`. Can over-match but never misses a real match;
-    /// contrast with `nfa_step_transposed_vec`, which validates its bytes.
+    /// Two adjacent input bytes merge into one at cost 1 as the generic metric's
+    /// *unconstrained structural operation*: any two adjacent bytes may merge onto
+    /// any single pattern edge, so `_b1`/`_b2` are correctly ignored (byte-agnostic
+    /// by definition). Exact for the metric; never misses a match. (A byte-constrained
+    /// variant would need a merge-relation map — a separate feature.)
     fn nfa_step_merged_from_advance_vec(
         &self,
         advanced_states: &[StateId],
@@ -1437,13 +1439,12 @@ impl ProductAutomaton {
         advanced_states.to_vec()
     }
 
-    /// Split step for `Algorithm::MergeAndSplit` — an INTENTIONAL wildcard
-    /// over-approximation (byte-level analogue of the char version).
+    /// Split step for `Algorithm::MergeAndSplit` (byte-level analogue of the char
+    /// version).
     ///
-    /// One input byte is covered by two consuming NFA edges at cost 1. The byte
-    /// `_b` is deliberately ignored (hence the `_` prefix): it is treated as
-    /// coverable by ANY two wildcard edges. Can over-match but never misses a
-    /// real match.
+    /// One input byte splits across two consuming NFA edges at cost 1 — the generic
+    /// metric's unconstrained structural dual of merge; `_b` is correctly ignored
+    /// (byte-agnostic by definition). Exact for the metric; never misses a match.
     fn nfa_step_split_from_advance_vec(&self, advanced_states: &[StateId], _b: u8) -> Vec<StateId> {
         self.nfa_advance_vec(advanced_states)
     }
@@ -1543,8 +1544,8 @@ impl ProductAutomaton {
                 }
 
                 // 6. Merge: two adjacent input bytes → one NFA edge, cost 1.
-                //    INTENTIONAL wildcard over-approximation (bytes NOT
-                //    validated); see `nfa_step_merged_from_advance_vec`.
+                //    Generic Merge-and-Split: merge is byte-agnostic by definition
+                //    (bytes not validated); see `nfa_step_merged_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && pos + 1 < n {
                     let next_b = input[pos + 1];
                     if !advanced_states.is_empty() {
@@ -1563,8 +1564,8 @@ impl ProductAutomaton {
                 }
 
                 // 7. Split: one input byte → two NFA edges, cost 1.
-                //    INTENTIONAL wildcard over-approximation (byte NOT
-                //    validated); see `nfa_step_split_from_advance_vec`.
+                //    Generic Merge-and-Split: split is byte-agnostic by definition
+                //    (byte not validated); see `nfa_step_split_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
                     let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, b);
                     if !split_states.is_empty() {
@@ -1730,8 +1731,8 @@ impl ProductAutomaton {
                 }
 
                 // 6. Merge: two adjacent input bytes → one NFA edge, cost 1.
-                //    INTENTIONAL wildcard over-approximation (bytes NOT
-                //    validated); see `nfa_step_merged_from_advance_vec`.
+                //    Generic Merge-and-Split: merge is byte-agnostic by definition
+                //    (bytes not validated); see `nfa_step_merged_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && pos + 1 < n {
                     let next_b = input[pos + 1];
                     if !advanced_states.is_empty() {
@@ -1750,8 +1751,8 @@ impl ProductAutomaton {
                 }
 
                 // 7. Split: one input byte → two NFA edges, cost 1.
-                //    INTENTIONAL wildcard over-approximation (byte NOT
-                //    validated); see `nfa_step_split_from_advance_vec`.
+                //    Generic Merge-and-Split: split is byte-agnostic by definition
+                //    (byte not validated); see `nfa_step_split_from_advance_vec`.
                 if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
                     let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, b);
                     if !split_states.is_empty() {
@@ -2232,32 +2233,34 @@ mod tests {
         assert!(transposition.accepts(b"ba")); // distance 1 with transposition
     }
 
-    /// F3: document the ACTUAL accepted language of `Algorithm::MergeAndSplit`.
+    /// Document the ACTUAL accepted language of `Algorithm::MergeAndSplit`.
     ///
-    /// Merge/split are INTENTIONAL wildcard over-approximations: they accept
-    /// adjacent-char collapses / single-char splits without validating the
-    /// characters. This means they accept strings a faithful (char-validated)
-    /// merge/split product — and the `Standard` algorithm — reject at the same
-    /// distance, while never MISSING anything `Standard` accepts.
+    /// Merge/split are character-agnostic structural operations of the generic
+    /// Merge-and-Split edit metric (any two adjacent symbols merge to one; any
+    /// symbol splits to two, cost 1), so they accept strings the `Standard`
+    /// algorithm rejects at the same budget — the correct, deliberately more
+    /// permissive generic-metric distance — while never MISSING anything
+    /// `Standard` accepts.
     #[test]
-    fn test_merge_split_is_wildcard_over_approximation() {
+    fn test_merge_split_generic_unconstrained_semantics() {
         let nfa = compile(&parse("abc").expect("test: parse abc")).expect("test: compile nfa");
         let standard = ProductAutomatonChar::new(nfa.clone(), 1);
         let merge_split =
             ProductAutomatonChar::with_algorithm(nfa.clone(), 1, Algorithm::MergeAndSplit);
 
-        // Over-match via SPLIT: "zc" is edit-distance 2 from "abc" (Standard
-        // rejects at max 1), but MergeAndSplit accepts it at cost 1 by covering
-        // the single input 'z' with the wildcard "a" and "b" edges, then
-        // matching 'c'. The 'z' is never validated against 'a'/'b'.
+        // Generic SPLIT (character-agnostic by definition): "zc" is Levenshtein
+        // distance 2 from "abc", but its Merge-and-Split distance is 1 — split the
+        // single input 'z' across the pattern's "a" and "b" edges, then match 'c'.
+        // This is the correct generic-metric distance (merge/split are cheaper ops,
+        // deliberately more permissive than Levenshtein), not an over-approximation.
         assert!(!standard.accepts("zc"));
         assert!(merge_split.accepts("zc"));
         assert_eq!(merge_split.min_distance("zc"), Some(1));
 
-        // Over-match via MERGE: "zzbc" is edit-distance 2 from "abc" (Standard
-        // rejects at max 1), but MergeAndSplit accepts it at cost 1 by merging
-        // the adjacent "zz" onto the single wildcard "a" edge, then matching
-        // "bc". The "zz" is never validated against 'a'.
+        // Generic MERGE (character-agnostic by definition): "zzbc" is Levenshtein
+        // distance 2 from "abc", but its Merge-and-Split distance is 1 — merge the
+        // adjacent "zz" onto the single "a" edge, then match "bc". Correct for the
+        // generic metric.
         assert!(!standard.accepts("zzbc"));
         assert!(merge_split.accepts("zzbc"));
 

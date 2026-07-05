@@ -123,10 +123,13 @@ for every returned candidate it asserts soundness. This oracle both guards W1 an
 
 ## 3. Automaton-semantics notes (Phase 2)
 
-- **`Algorithm::MergeAndSplit` is an intentional wildcard over-approximation.** The merge/split NFA
-  steps in `src/phonetic/nfa/product.rs` do not validate the collapsed/split characters, so they may
-  *over-match* (accept strings a faithful merge/split product would reject) but **never miss** a match.
-  Documented at each site; a faithful character-validated implementation is tracked as a follow-up.
+- **`Algorithm::MergeAndSplit` computes the generic (unconstrained) Merge-and-Split metric.** In this
+  metric merge and split are character-agnostic structural operations *by definition* — any two adjacent
+  symbols merge to one, any symbol splits to two, at cost `1` — so `product.rs` correctly does not
+  validate the collapsed/split characters (`nfa_advance` consumes any edge). The result is exact for the
+  metric and deliberately more permissive than plain Levenshtein (the purpose of merge/split); it never
+  misses a match. A character-*constrained* variant (e.g. an OCR/phonetic confusion table such as
+  `rn`↔`m`) would be a separate feature requiring a merge-relation map.
 - **`phonetic_weight` is reserved, not applied.** The parameter is stored (clamped `≥ 0` to preserve
   monotone-cost pruning) but not yet applied to matching cost; `PhoneticCandidate::phonetic_cost` is
   always `0.0`. Docstrings were corrected to remove the earlier false "added to total cost" claim.
