@@ -4,6 +4,11 @@
 **Researcher:** Claude Code (Opus 4.5)
 **Project:** liblevenshtein-rust
 
+> **Branch citations**: the `perf/phonetic-normalized-*` branches named below were
+> retired on 2026-07-09; all of their content is present on `master`. The rejected
+> H5 branch is preserved as the annotated tag `archive/phonetic-normalized-opt-5`.
+> See [`docs/research/branch-archive.md`](../research/branch-archive.md).
+
 ---
 
 ## Overview

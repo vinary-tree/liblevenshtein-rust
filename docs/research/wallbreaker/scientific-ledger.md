@@ -3,6 +3,12 @@
 **Created**: 2025-12-27
 **Purpose**: Track empirical results for WallBreaker optimizations with statistical rigor
 
+> **Branch citations**: the experiment branches named throughout this ledger were
+> retired on 2026-07-09. Every one resolves to a permanent commit — see
+> [`docs/research/branch-archive.md`](../branch-archive.md) for the
+> branch → SHA → durable-ref mapping. The unmerged Experiment 3 implementation
+> survives as the annotated tag `experiment/wallbreaker-freq-split`.
+
 ## Methodology
 
 ### Statistical Requirements
@@ -259,8 +265,8 @@ The suffix links in the current implementation are simplified - they point to ro
 ## Experiment 3: Frequency-Based Pattern Splitting
 
 **Date**: 2025-12-27
-**Branch**: `feat/wallbreaker-freq-split`
-**Baseline**: `feat/wallbreaker-benchmarks` (Experiment 1)
+**Evidence**: tag `experiment/wallbreaker-freq-split` @ `3d372ef` (branch retired 2026-07-09; implementation never merged — this tag is its sole copy)
+**Baseline**: `7543b75` (Experiment 1; formerly branch `feat/wallbreaker-benchmarks`)
 **Status**: ❌ REJECTED (Overall regression)
 
 ### Hypothesis
