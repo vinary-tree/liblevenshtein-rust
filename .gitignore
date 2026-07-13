@@ -52,6 +52,20 @@ fuzzy_multimap_*.txt
 fuzzy_multimap_*.md
 docs/research/artrie/perf-reports/*.txt
 
+# GUARD — documentation is never benchmark scratch.
+#
+# The patterns above (`*_analysis.md`, `fuzzy_multimap_*.md`) were written for generated
+# benchmark output at the repo root, but as bare globs they also match real documentation
+# anywhere in the tree. They were silently excluding committed-worthy docs from version
+# control — `docs/generalized/phase2d_analysis.md` (328 lines) and
+# `docs/time_series/benchmark_analysis.md` (173 lines), both cross-linked from their sibling
+# READMEs — so a fresh clone had dangling links to files that had never been committed.
+#
+# Re-include everything under `docs/`: nothing there is regenerable scratch. (Generated
+# artifacts that DO live under docs/ — perf dumps, Coq .vo/.glob, flamegraphs — are ignored
+# by extension elsewhere in this file, so this negation cannot un-ignore them.)
+!docs/**/*.md
+
 # Analysis scripts (temporary/development)
 analyze_*.py
 extract_*.sh
@@ -126,6 +140,14 @@ flamegraph.svg
 # Generated optimization artifacts
 docs/optimization/*.txt
 perf.data*
+
+# Documentation-tooling scratch.
+# The tools themselves ARE committed — scripts/doc-math-prescan.raku (scanner),
+# scripts/doc-math-convert.raku (guarded converter) and scripts/doc-mathlint.sh (the CI gate
+# over docs/.mathlint-include.txt). The transient reports they emit are regenerable and are not.
+/scratchpad_scan.txt
+/scratchpad/
+/residuals.txt
 
 .pgmcp.toml
 
