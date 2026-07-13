@@ -19,11 +19,11 @@ skinparam state {
 
 title Merge-and-Split NFA — W = "ab",  k = 1   (pink = merge & split, the OCR operations)
 
-state "⟨0,0⟩" as q00
-state "⟨1,0⟩" as q10
-state "⟨2,0⟩ ✓" as q20 #C8E6C9
-state "⟨1,1⟩" as q11
-state "⟨2,1⟩ ✓" as q21 #C8E6C9
+state "<latex>\langle 0,0\rangle</latex>" as q00
+state "<latex>\langle 1,0\rangle</latex>" as q10
+state "<latex>\langle 2,0\rangle</latex> ✓" as q20 #C8E6C9
+state "<latex>\langle 1,1\rangle</latex>" as q11
+state "<latex>\langle 2,1\rangle</latex> ✓" as q21 #C8E6C9
 state "s: split W[0]=a\n(reading 2 symbols)" as qs #F8BBD0
 
 [*] --> q00
@@ -34,18 +34,18 @@ q10 -[#2E7D32,thickness=2]-> q20 : b
 q11 -[#2E7D32,thickness=2]-> q21 : b
 
 ' substitution (+1)
-q00 -[#6A1B9A]-> q11 : x≠a
+q00 -[#6A1B9A]-> q11 : <latex>x \ne a</latex>
 
 ' insertion (+1) / deletion (+1, ε)
 q00 -[#EF6C00]-> q11 : any
-q10 -[#C62828]-> q21 : ε
+q10 -[#C62828]-> q21 : <latex>\varepsilon</latex>
 
 ' MERGE (+1): two W chars "ab" recognised by one input symbol
 q00 -[#AD1457,thickness=2]-> q21 : one\nsymbol
 
 ' SPLIT (+1): one W char "a" recognised by two input symbols
-q00 -[#AD1457,thickness=2]-> qs : sym₁
-qs  -[#AD1457,thickness=2]-> q11 : sym₂
+q00 -[#AD1457,thickness=2]-> qs : <latex>\text{sym}_{1}</latex>
+qs  -[#AD1457,thickness=2]-> q11 : <latex>\text{sym}_{2}</latex>
 
 q20 --> [*]
 q21 --> [*]

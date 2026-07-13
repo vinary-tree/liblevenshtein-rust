@@ -24,9 +24,9 @@ skinparam ArrowThickness 2
 title MSM metric — edit a series with Move / Split / Merge
 
 rectangle "MSM metric: edit a series with Move / Split / Merge" as title #B2DFDB {
-  rectangle "Move — change a value  xᵢ → y\n(cost = |xᵢ − y|)" as move #E0F2F1
-  rectangle "Split — one value → two copies\n(cost = c + |xᵢ − y|)" as split #E0F2F1
-  rectangle "Merge — two adjacent values → one\n(cost = c + |xᵢ − xⱼ|)" as merge #E0F2F1
+  rectangle "Move — change a value  <latex>x_{i}</latex> → y\n(cost = <latex>\vert x_{i} - y\vert</latex>)" as move #E0F2F1
+  rectangle "Split — one value → two copies\n(cost = c + <latex>\vert x_{i} - y\vert</latex>)" as split #E0F2F1
+  rectangle "Merge — two adjacent values → one\n(cost = c + <latex>\vert x_{i} - x_{j}\vert</latex>)" as merge #E0F2F1
 }
 
 move  -[#00695C]right-> split

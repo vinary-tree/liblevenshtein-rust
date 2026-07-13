@@ -24,7 +24,7 @@ concern; a diagram that spans concerns lives with the concern it *teaches*.
 |---|---|
 | `architectures/` | crate boundary, layered component stack, C4 views, feature-flag & module graphs |
 | `automata/` | Levenshtein NFAs, position-sets, subsumption, the three automaton implementations, WallBreaker |
-| `traversal/` | the lazy-simulation query model and the transducer `∩` dictionary lock-step walk |
+| `traversal/` | the lazy-simulation query model and the transducer `$\cap$` dictionary lock-step walk |
 | `dictionary-structures/` | backend taxonomy & decision tree, trait relationships, DAWG/SCDAWG internals |
 | `concurrency/` | the locking / wait-free read model |
 | `distance/` | `standard_distance` SIMD/Myers dispatch |
@@ -149,6 +149,25 @@ then set each node's `fillcolor` from the legend.
 
 **Asymptote** (`.asy`): white background, `defaultpen(fontsize(10pt))`; colour
 points/curves with the legend hues via `rgb("RRGGBB")`.
+
+### Math in labels
+
+Render formulae in diagram labels as **LaTeX**, mirroring the prose math convention — not
+as Unicode literals — wherever the tool supports it:
+
+- **PlantUML** (`.puml`) typesets LaTeX natively through the bundled JLaTeXMath. Use
+  `<latex>…</latex>` for an inline fragment and `<math>…</math>` for a display fragment
+  inside any label, e.g. `state "accept if <latex>d(W,s) \le k</latex>" as A`. Output is
+  embedded vector SVG, so it stays byte-reproducible under `render.sh --check`.
+- **Structurizr** (`.dsl`) exports through PlantUML and inherits the same `<latex>` facility.
+- **Asymptote** (`.asy`) typesets LaTeX directly: `label("$\mathcal{O}(n)$", position)`.
+- **Graphviz** (`.dot`), **D2** (`.d2`), **Pikchr**, and **Mermaid** have **no** LaTeX-label
+  facility, so a formula in one of their labels stays a compact Unicode literal — keep it
+  short, and prefer a PlantUML source when a label is math-heavy:
+
+  ```dot
+  q9 [label="⟨i, e⟩ — 𝒪(k) per step"];   // Unicode literal: DOT/D2 have no LaTeX facility
+  ```
 
 ---
 

@@ -18,11 +18,11 @@ skinparam state {
 
 title Transposition (Damerau) NFA — W = "ab",  k = 1   (adds the blue transposition path "ba")
 
-state "⟨0,0⟩" as q00
-state "⟨1,0⟩" as q10
-state "⟨2,0⟩ ✓" as q20 #C8E6C9
-state "⟨1,1⟩" as q11
-state "⟨2,1⟩ ✓" as q21 #C8E6C9
+state "<latex>\langle 0,0\rangle</latex>" as q00
+state "<latex>\langle 1,0\rangle</latex>" as q10
+state "<latex>\langle 2,0\rangle</latex> ✓" as q20 #C8E6C9
+state "<latex>\langle 1,1\rangle</latex>" as q11
+state "<latex>\langle 2,1\rangle</latex> ✓" as q21 #C8E6C9
 state "t: read W[1]=b\nthen W[0]=a" as qt #BBDEFB
 
 [*] --> q00
@@ -33,15 +33,15 @@ q10 -[#2E7D32,thickness=2]-> q20 : b
 q11 -[#2E7D32,thickness=2]-> q21 : b
 
 ' substitution (+1)
-q00 -[#6A1B9A]-> q11 : x≠a
-q10 -[#6A1B9A]-> q21 : x≠b
+q00 -[#6A1B9A]-> q11 : <latex>x \ne a</latex>
+q10 -[#6A1B9A]-> q21 : <latex>x \ne b</latex>
 
 ' insertion (+1)
 q00 -[#EF6C00]-> q11 : any
 
 ' deletion (+1, ε)
-q00 -[#C62828]-> q11 : ε
-q10 -[#C62828]-> q21 : ε
+q00 -[#C62828]-> q11 : <latex>\varepsilon</latex>
+q10 -[#C62828]-> q21 : <latex>\varepsilon</latex>
 
 ' transposition (+1): read "ba" to cover W = "ab"
 q00 -[#0277BD,thickness=2]-> qt : b

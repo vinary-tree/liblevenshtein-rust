@@ -13,24 +13,24 @@ skinparam sequence {
   ParticipantFontColor #102027
 }
 
-title Transducer ∩ Dictionary — one shared lock-step depth-first walk
+title Transducer <latex>\cap</latex> Dictionary — one shared lock-step depth-first walk
 
 participant "QueryIterator" as Q #BBDEFB
 participant "DictionaryNode\ntrie / DAWG" as D #C8E6C9
-participant "Transition  δχ" as S #E3F2FD
+participant "Transition  <latex>\delta\chi</latex>" as S #E3F2FD
 participant "Subsumption" as Sub #E3F2FD
 
 Q -> D : edges() → (symbol x, child)
 loop each edge (x, child)
-  Q -> S : χ = char_vector(x, W);  q' = δχ(q)
+  Q -> S : <latex>\chi</latex> = char_vector(x, W);  <latex>q' = \delta\chi(q)</latex>
   S -> Sub : reduce(q')
   Sub --> S : minimal q'
   alt q' is empty
-    S --> Q : ∅
+    S --> Q : <latex>\emptyset</latex>
     note over Q #FFCDD2: prune — do NOT descend child
   else q' non-empty
     Q -> D : descend into child (push frame)
-    opt child terminal ∧ q' accepting
+    opt child terminal <latex>\land</latex> q' accepting
       Q -[#2E7D32]-> Q : emit (term, distance)
     end
   end

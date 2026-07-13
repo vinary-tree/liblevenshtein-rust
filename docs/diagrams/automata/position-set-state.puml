@@ -15,18 +15,18 @@ skinparam class {
 skinparam ArrowColor #1565C0
 skinparam ArrowThickness 2
 
-title Automaton State = a subsumption-reduced set of positions ⟨i,e⟩
+title Automaton State = a subsumption-reduced set of positions <latex>\langle i,e\rangle</latex>
 
 class "State" as S #BBDEFB {
   positions : SmallVec<Position>
   --
-  insert(⟨i,e⟩)  : drops subsumed positions
-  is_accepting() : any ⟨|W|, e⟩ with e ≤ k
+  insert(<latex>\langle i,e\rangle</latex>)  : drops subsumed positions
+  is_accepting() : any <latex>\langle \vert W\vert, e\rangle</latex> with <latex>e \le k</latex>
 }
 
-class "Position  ⟨i,e⟩" as P {
+class "Position  <latex>\langle i,e\rangle</latex>" as P {
   i : usize   ' chars of W consumed
-  e : usize   ' edits used so far (e ≤ k)
+  e : usize   ' edits used so far (<latex>e \le k</latex>)
 }
 
 class "StatePool" as Pool #E3F2FD {
@@ -36,9 +36,9 @@ class "StatePool" as Pool #E3F2FD {
   release(State)
 }
 
-class "Subsumption  ≤χ" as Sub #E3F2FD {
-  ⟨i,e⟩ ≤ ⟨i',e'⟩  iff
-  e ≤ e' ∧ |i − i'| ≤ e' − e
+class "Subsumption  <latex>\le\chi</latex>" as Sub #E3F2FD {
+  <latex>\langle i,e\rangle \le \langle i',e'\rangle</latex>  iff
+  <latex>e \le e' \land \vert i - i'\vert \le e' - e</latex>
 }
 
 S "1" *-down- "1..*" P : holds
@@ -46,7 +46,7 @@ Pool -right-> S : acquires / recycles
 Sub .up.> S : prunes dominated\npositions on insert
 
 note bottom of P
-  Only 𝒪(|W|) distinct states arise for fixed k;
+  Only <latex>\mathcal{O}(\vert W\vert)</latex> distinct states arise for fixed k;
   each is computed lazily on first visit.
 end note
 @enduml

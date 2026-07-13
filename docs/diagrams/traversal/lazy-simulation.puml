@@ -19,20 +19,20 @@ skinparam activity {
 title Lazy simulation of A(W,k) — states materialised on demand, never precompiled
 
 start
-:seed state  q₀ = { ⟨0,0⟩ };
+:seed state  <latex>q_{0} = \{ \langle 0,0\rangle \}</latex>;
 note right
   No universal DFA is built up front;
-  q₀ is the only state that exists initially.
+  <latex>q_{0}</latex> is the only state that exists initially.
 end note
 :descend a dictionary edge labelled symbol x;
-:compute characteristic vector  χ(x, window of W);
-:apply the one W-independent transition rule\nq' = δχ(q);
-:reduce q' by subsumption  ≤χ;
+:compute characteristic vector  <latex>\chi</latex>(x, window of W);
+:apply the one W-independent transition rule\n<latex>q' = \delta\chi(q)</latex>;
+:reduce q' by subsumption  <latex>\le\chi</latex>;
 if (q' empty?) then (yes)
   :prune this subtree;
   stop
 else (no)
-  if (q' accepting?  ∃⟨|W|,e⟩, e ≤ k) then (yes)
+  if (q' accepting?  <latex>\exists \langle \vert W\vert, e\rangle, e \le k</latex>) then (yes)
     :emit candidate (term, e);
   endif
   :recurse into q'  (materialise on first visit, reuse from pool);

@@ -25,7 +25,7 @@ interface "Dictionary  «trait»" as T #C8E6C9 {
 package "In-memory" #E8F5E9 {
   class "DoubleArrayTrie(Char)" as DAT {
     u8 / u32 · **static** (read-only)
-    wait-free · 𝒪(1) transitions
+    wait-free · <latex>\mathcal{O}(1)</latex> transitions
     best: fast static dictionaries
   }
   class "DynamicDawg(Char / U64)" as DD {
