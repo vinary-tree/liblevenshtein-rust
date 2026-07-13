@@ -43,7 +43,7 @@ Examples:
 
 ### The Turnstile - "Derives" or "Proves"
 
-The turnstile `|-` (Unicode: `⊢`) means "derives" or "proves":
+The turnstile `|-` (Unicode: `$\vdash$`) means "derives" or "proves":
 
 ```
 G |- A : B     means "in context G, A has type B"
@@ -170,7 +170,7 @@ Each level classifies the level below:
 - Types have kinds
 - Kinds have sorts (in sufficiently powerful systems)
 
-### The s^T Notation
+### The `$s^T$` Notation
 
 In MeTTaIL, we use `s^T` to denote the **classifier** of shape `T` at level `s`:
 
@@ -197,11 +197,11 @@ This forms a hypercube of possible type/kind combinations.
 
 | Calculus | Shapes | Type Levels |
 |----------|--------|-------------|
-| lambda | P | type^P, kind^P |
-| SKI | P | type^P, kind^P |
-| RHO | P, N, R | type^P, type^N, type^R, kind^P, kind^N |
-| Ambient | P, N, M, R | type^P, type^N, type^M, type^R, kind^P, ... |
-| MeTTa | Term, State, KB, List, MSet | type^Term, type^State, type^KB, ... |
+| lambda | P | `$\text{type}^P$`, `$\text{kind}^P$` |
+| SKI | P | `$\text{type}^P$`, `$\text{kind}^P$` |
+| RHO | P, N, R | `$\text{type}^P$`, `$\text{type}^N$`, `$\text{type}^R$`, `$\text{kind}^P$`, `$\text{kind}^N$` |
+| Ambient | P, N, M, R | `$\text{type}^P$`, `$\text{type}^N$`, `$\text{type}^M$`, `$\text{type}^R$`, `$\text{kind}^P$`, ... |
+| MeTTa | Term, State, KB, List, MSet | `$\text{type}^\text{Term}$`, `$\text{type}^\text{State}$`, `$\text{type}^\text{KB}$`, ... |
 
 **Example in RHO**:
 - `00 : type^P` - the nil process type is a process type
@@ -573,7 +573,7 @@ Rather than manually specifying modal types for each context (like `ctxrecv_i`,
 where:
 - `t⃗` is the source term(s)
 - `c` is the **minimal context** (label) enabling the rewrite
-- `d⟨⟨r⃗⟩⟩` is the target term in context d with arguments r⃗
+- `$d\langle \langle r⃗\rangle\rangle$` is the target term in context d with arguments r⃗
 
 **The label `c` represents what the environment must provide to enable the reduction.**
 
@@ -630,8 +630,8 @@ we need conditions on the calculus structure.
 ### Reactive vs Transparent Contexts
 
 **Reactive context**: A context containing a redex pattern. For example:
-- `out(n, −) | in(n, λx.q)` in RHO is reactive (contains comm redex pattern)
-- `App(Lam(K), −)` in lambda-calculus is reactive (contains beta redex pattern)
+- `$\text{out}(n, -) | \text{in}(n, \lambda x.q)$` in RHO is reactive (contains comm redex pattern)
+- `$\text{App}(\text{Lam}(K), -)$` in lambda-calculus is reactive (contains beta redex pattern)
 
 **Transparent context**: A non-reactive context `c` where there exists a unique
 complementary context `c̄` such that for any term `t`:
@@ -648,8 +648,8 @@ then weak bisimilarity is a congruence.
 **The RHO calculus and lambda-calculus are both transparent.**
 
 This means:
-- If `p ≈ q` (p and q are behaviorally equivalent)
-- Then `C[p] ≈ C[q]` for any context C
+- If `$p \approx  q$` (p and q are behaviorally equivalent)
+- Then `$C[p] \approx  C[q]$` for any context C
 
 ### IPO Uniformity (Definition 21)
 

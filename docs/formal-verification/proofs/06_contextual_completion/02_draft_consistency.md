@@ -36,7 +36,7 @@ This theorem establishes that draft buffer operations (`insert`, `delete`) maint
 - **Calculate wrong prefix lengths** (bytes vs characters)
 
 **Performance Impact**: Character-level operations enable:
-- **Sub-millisecond updates** (O(1) insert/delete vs O(n) string rebuild)
+- **Sub-millisecond updates** (`$\mathcal{O}(1)$` insert/delete vs `$\mathcal{O}(n)$` string rebuild)
 - **10,000x speedup** over full re-parsing on each keystroke
 - **Responsive UI** (1-5µs latency per character)
 
@@ -69,7 +69,7 @@ assert_eq!(buffer.as_str(), "result");    // ✓ Valid UTF-8 preserved
 **Correctness Properties**:
 1. **UTF-8 Validity**: Buffer always contains valid UTF-8
 2. **Character Atomicity**: Multi-byte chars inserted/deleted atomically
-3. **Idempotence**: `insert(c); delete() ≡ identity`
+3. **Idempotence**: `$\text{insert}(c);\ \text{delete}() \equiv \text{identity}$`
 4. **Length Consistency**: `len()` counts characters, not bytes
 
 ---
@@ -274,9 +274,9 @@ Theorem draft_buffer_consistency :
 ### Termination
 
 All operations terminate trivially:
-- `insert`: Appends to list (O(1) in VecDeque)
-- `delete`: Pattern match on last element (O(1))
-- `length`: List length (O(1) in implementation, uses cached size)
+- `insert`: Appends to list (`$\mathcal{O}(1)$` in VecDeque)
+- `delete`: Pattern match on last element (`$\mathcal{O}(1)$`)
+- `length`: List length (`$\mathcal{O}(1)$` in implementation, uses cached size)
 
 ---
 
@@ -407,11 +407,11 @@ impl DraftBuffer {
 ### Performance Characteristics
 
 **Time Complexity**:
-- `insert(c)`: O(1) amortized (VecDeque growth)
-- `delete()`: O(1) exact
-- `len()`: O(1) exact (cached)
-- `as_str()`: O(n) allocation
-- `as_bytes()`: O(n) allocation
+- `insert(c)`: `$\mathcal{O}(1)$` amortized (VecDeque growth)
+- `delete()`: `$\mathcal{O}(1)$` exact
+- `len()`: `$\mathcal{O}(1)$` exact (cached)
+- `as_str()`: `$\mathcal{O}(n)$` allocation
+- `as_bytes()`: `$\mathcal{O}(n)$` allocation
 
 **Space Complexity**:
 - Base: ~24 bytes (VecDeque overhead)
@@ -635,7 +635,7 @@ proptest! {
 
 ### Performance Optimization
 
-**Current**: O(1) insert/delete, O(n) string conversion
+**Current**: `$\mathcal{O}(1)$` insert/delete, `$\mathcal{O}(n)$` string conversion
 
 **Potential Optimization**: Lazy string conversion
 - **Idea**: Cache `as_str()` result, invalidate on mutation

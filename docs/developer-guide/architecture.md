@@ -47,8 +47,9 @@ using Levenshtein automata. Since v0.9.0 it is layered over a sibling crate:
   `SubstitutionPolicy` default (`Unrestricted`) is a zero-sized type.
 - **Memory-efficient** — structural sharing via `Arc`, position-set pooling,
   `SmallVec` stack allocation.
-- **Concurrent-safe** — wait-free reads where possible (`ArcSwap`), `RwLock`
-  readers otherwise; every backend is `Send + Sync` with cheap `Arc` clones.
+- **Concurrent-safe** — **lock-free reads on every backend** (immutable arrays on the
+  static dict, `ArcSwap` snapshots on the dynamic ones); every backend is `Send + Sync`
+  with cheap `Arc` clones.
 - **Feature-gated** — modular compilation (phonetic, serialization, cli, grep, wasm, ffi …).
 
 ---
@@ -147,7 +148,7 @@ pub struct Transducer<D: Dictionary, P: SubstitutionPolicy = Unrestricted> {
 }
 ```
 
-A query **lazily simulates** the Levenshtein automaton `A(W, k)` and intersects it
+A query **lazily simulates** the Levenshtein automaton `$A(W, k)$` and intersects it
 with the dictionary in one depth-first walk — see
 [Lazy vs. Eager Automata](../concepts/LAZY_VS_EAGER_AUTOMATA.md). Key methods:
 `query`, `query_with_distance`, `query_ordered`/`query_ranked`, and the value-aware
@@ -222,7 +223,7 @@ the heap only when they outgrow their inline capacity.
 ### 4 · Lazy evaluation
 
 Queries are iterators that generate results on demand, enabling early termination
-and composition with iterator adapters with `𝒪(1)` iterator state.
+and composition with iterator adapters with `$\mathcal{O}(1)$` iterator state.
 
 ### 5 · Feature gates
 
@@ -245,7 +246,7 @@ The full graph is shown in the [feature-flag DAG](../diagrams/architectures/feat
 
 Optimizations are layered from the algorithm down to the compiler:
 
-- **Algorithm** — lazy simulation (only `𝒪(∣W∣)` distinct states for fixed `k`),
+- **Algorithm** — lazy simulation (only `$\mathcal{O}(\lvert W\rvert)$` distinct states for fixed `$k$`),
   subsumption pruning, ordered/priority iteration, value-scope pruning.
 - **Distance** — `standard_distance` dispatches to Myers bit-parallel for short
   ASCII inputs and AVX2/SSE4.1 SIMD otherwise, with a scalar fallback. See the
@@ -265,22 +266,23 @@ Benchmarking uses Criterion.rs with `perf`/flamegraph profiling.
 Every dictionary is `Send + Sync` and cheap to clone (`Arc`). The read path depends
 on the backend:
 
-![Concurrency model: wait-free ArcSwap reads, parking_lot RwLock readers, and persistent backends; all Send + Sync.](../diagrams/concurrency/concurrency-model.svg)
+![Concurrency model: every dictionary backend has lock-free or wait-free reads — immutable arrays (DoubleArrayTrie, wait-free), ArcSwap RCU with lock-free CAS writes (the dynamic DAWG/automaton backends and PathMapDictionary), persistent copy-on-write snapshots, and the disk-persisted CAS/ArcSwap overlay family; all Send + Sync.](../diagrams/concurrency/concurrency-model.svg)
 
 `SyncStrategy` communicates the model to callers:
 
 ```rust
 pub enum SyncStrategy {
-    Persistent,    // Immutable snapshot — always safe (e.g. PersistentARTrie)
-    InternalSync,  // Lock-free internal synchronization (ArcSwap; DynamicDawgU64)
-    ExternalSync,  // RwLock-guarded (DynamicDawg, SuffixAutomaton, Scdawg)
+    Persistent,    // Immutable / copy-on-write snapshot — always safe (e.g. PersistentARTrie, PathMap snapshots)
+    InternalSync,  // Lock-free internal synchronization (ArcSwap / CAS) — every in-memory dynamic backend
+    ExternalSync,  // Trait default (interior mutability behind a lock); reported by the immutable DoubleArrayTrie
 }
 ```
 
-Multiple threads may query a shared transducer concurrently; on the mutable
-backends a writer briefly excludes readers while it holds the write lock, after
-which queries observe the update. The wait-free backends (`DoubleArrayTrie`,
-`DynamicDawgU64`) never block readers.
+Multiple threads may query a shared transducer concurrently; on every backend a writer
+publishes new state by an atomic `ArcSwap` / `compare_exchange` swap without ever
+excluding readers, so queries observe the update as soon as the swap completes. No
+dictionary read blocks on a writer — the static `DoubleArrayTrie` reads immutable arrays,
+and every dynamic backend loads a lock-free `ArcSwap` snapshot.
 
 ---
 

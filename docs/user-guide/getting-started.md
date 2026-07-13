@@ -5,9 +5,9 @@
 
 This guide will help you get started with liblevenshtein-rust for fast approximate string matching.
 
-At a high level, a query builds a Levenshtein automaton `A(W, k)` from your search
-term `W` and error bound `k`, then walks it in lock-step with the dictionary to
-yield every term within edit distance `k`:
+At a high level, a query builds a Levenshtein automaton `$A(W, k)$` from your search
+term `$W$` and error bound `$k$`, then walks it in lock-step with the dictionary to
+yield every term within edit distance `$k$`:
 
 ![End-to-end spell-check: the term and distance build an automaton that is intersected with the dictionary and ranked by distance.](../diagrams/traversal/end-to-end-spellcheck.svg)
 
@@ -185,18 +185,18 @@ crate (re-exported here; the `*Char` variants are UTF-8 / `char`-level):
 
 | Backend | Best For | Reads | Updates |
 |---------|----------|-------|---------|
-| **DoubleArrayTrie(Char)** (default) | static dictionaries, fastest queries (`𝒪(1)` transitions) | wait-free | No |
-| **DynamicDawg(Char)** | general dynamic use; SIMD + bloom pruning | `RwLock` | Yes |
+| **DoubleArrayTrie(Char)** (default) | static dictionaries, fastest queries (`$\mathcal{O}(1)$` transitions) | wait-free | No |
+| **DynamicDawg(Char)** | general dynamic use; SIMD + bloom pruning | lock-free | Yes |
 | **DynamicDawgU64** | 64-bit labels / hashes | lock-free (`ArcSwap`) | Yes |
-| **SuffixAutomaton(Char)** | substring / infix matching | `RwLock` | Yes |
-| **Scdawg(Char)** | bidirectional substring (backs WallBreaker) | `RwLock` | Yes |
+| **SuffixAutomaton(Char)** | substring / infix matching | lock-free | Yes |
+| **Scdawg(Char)** | bidirectional substring (backs WallBreaker) | lock-free | Yes |
 | **PathMapDictionary(Char)** | update-heavy workloads (persistent structural-sharing map) | persistent | Yes |
 | **BijectiveMap** | term ↔ integer id (both directions) | — | Yes |
 | **PersistentARTrie(Char / U64)** | huge / durable prefix dictionaries (disk-persisted, mmap) | lock-free CAS | Yes |
 | **PersistentScdawg / PersistentSuffixAutomaton / PersistentSuffixTree(Char)** | huge / durable substring dictionaries (disk-persisted) | lock-free | Yes |
 | **PersistentVocabARTrie** | huge / durable term ↔ id vocabulary (disk-persisted) | lock-free | Yes |
 
-> **Persistent ≠ static.** The `Persistent*` family persists to disk (durable, non-volatile, memory-mapped) and is fully **dynamic** (concurrent insert/remove); only `DoubleArrayTrie` is read-only after build.
+> **Persistent `$\ne$` static.** The `Persistent*` family persists to disk (durable, non-volatile, memory-mapped) and is fully **dynamic** (concurrent insert/remove); only `DoubleArrayTrie` is read-only after build.
 
 **Recommendations:**
 - **Default choice**: `DoubleArrayTrie` for the fastest queries over a static dictionary.

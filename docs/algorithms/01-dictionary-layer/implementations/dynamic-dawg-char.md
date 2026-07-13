@@ -25,7 +25,7 @@
 
 - ✅ **Correct Unicode distances**: Treats 'é' as 1 character, not 2 bytes
 - 🔄 **Full dynamic updates**: Insert AND remove Unicode terms at runtime
-- 🔒 **Thread-safe**: Safe for concurrent reads and exclusive writes
+- 🔒 **Thread-safe (lock-free)**: Concurrent reads never block; writers publish via CAS
 - 🌍 **Full Unicode support**: CJK, emoji, accents, all scripts
 - 💾 **Space-efficient**: Shares common suffixes (20-40% reduction)
 
@@ -84,7 +84,7 @@ Fuzzy search "cafe" (distance 1):
 **Example: Multi-language Spell Checker**
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -138,24 +138,15 @@ Character │ Code Point │ UTF-8 Bytes       │ Nodes in DAWG
 
 ```rust
 pub struct DynamicDawgChar<V: DictionaryValue = ()> {
-    inner: Arc<RwLock<DynamicDawgCharInner<V>>>,
+    inner: Arc<DynamicDawgCharInner<V>>,
 }
 
-struct DynamicDawgCharInner<V: DictionaryValue> {
-    nodes: Vec<DawgNodeChar<V>>,           // Node storage
-    term_count: usize,                     // Number of terms
-    needs_compaction: bool,                // Deletion flag
-    suffix_cache: FxHashMap<u64, usize>,   // Hash → node index
-    bloom_filter: Option<BloomFilter>,     // Fast negative lookups
-    auto_minimize_threshold: f32,          // Lazy minimization trigger
-}
-
-struct DawgNodeChar<V: DictionaryValue> {
-    edges: SmallVec<[(char, usize); 4]>,  // Character → child index
-    is_final: bool,                        // Marks valid term
-    ref_count: usize,                      // For safe deletion
-    value: Option<V>,                      // Associated value
-}
+// `DynamicDawgCharInner` is the unit-generic lock-free DAWG core,
+// `LockFreeDawg<char, V>`: an atomically reference-counted node graph. Each node
+// publishes an immutable edge-list snapshot via `ArcSwap`; readers load the
+// snapshot without locking and writers install a new one with a
+// `compare_exchange` (CAS) loop.
+type DynamicDawgCharInner<V = ()> = LockFreeDawg<char, V>;
 ```
 
 ### Memory Layout
@@ -170,7 +161,7 @@ struct DawgNodeChar<V: DictionaryValue> {
 │ value (Option)  │ V or 1 byte │ Varies         │
 ├─────────────────┼─────────────┼────────────────┤
 │ Total per node  │ ~49+ bytes  │ ~49 bytes      │
-│ Overhead        │ Arc+RwLock  │ 16 bytes total │
+│ Overhead        │ Arc         │ 8 bytes total  │
 └─────────────────┴─────────────┴────────────────┘
 ```
 
@@ -184,10 +175,10 @@ struct DawgNodeChar<V: DictionaryValue> {
 
 ### Clone Behavior & Memory Semantics
 
-`DynamicDawgChar` uses `Arc<RwLock<...>>` internally, making `.clone()` a **shallow copy** that shares all underlying data structures between clones. The clone behavior is **identical** to `DynamicDawg` - only the edge label types differ (char vs u8).
+`DynamicDawgChar` uses `Arc<...>` internally (the lock-free `LockFreeDawg` core), making `.clone()` a **shallow copy** that shares all underlying data structures between clones. The clone behavior is **identical** to `DynamicDawg` - only the edge label types differ (char vs u8).
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 let dict1 = DynamicDawgChar::from_iter(vec!["café", "naïve"]);
 let dict2 = dict1.clone();  // O(1) - only increments Arc refcount
@@ -205,16 +196,16 @@ assert_eq!(dict2.len(), Some(3));  // Same count
 
 | Property | Behavior | Impact |
 |----------|----------|--------|
-| **Time Complexity** | O(1) | Single atomic increment |
-| **Space Complexity** | O(1) | ~16 bytes (Arc pointer only) |
+| **Time Complexity** | `$\mathcal{O}(1)$` | Single atomic increment |
+| **Space Complexity** | `$\mathcal{O}(1)$` | ~16 bytes (Arc pointer only) |
 | **Data Sharing** | ✅ Complete | All clones share same node graph |
 | **Mutation Visibility** | ✅ Global | Changes via any clone affect all |
-| **Thread Safety** | ✅ RwLock | Multiple readers OR single writer |
+| **Thread Safety** | ✅ Lock-free | Readers never block; writers publish via CAS |
 | **Independence** | ❌ None | No isolation between clones |
 
 #### Unicode Considerations
 
-Clone behavior is **independent of Unicode complexity**. Whether working with ASCII, multi-byte characters, emoji, or combining diacritics, the clone operation remains O(1):
+Clone behavior is **independent of Unicode complexity**. Whether working with ASCII, multi-byte characters, emoji, or combining diacritics, the clone operation remains `$\mathcal{O}(1)$`:
 
 ```rust
 // Simple ASCII
@@ -290,11 +281,17 @@ For **independent copies** with Unicode data:
 
 **Option 1: Serialize/Deserialize**
 ```rust
-use serde::{Serialize, Deserialize};
+use libdictenstein::serialization::bincode_compat;
 
-// Works with all Unicode data
-let bytes = bincode::serialize(&dict1)?;
-let dict2: DynamicDawgChar = bincode::deserialize(&bytes)?;
+// Works with all Unicode data. `DynamicDawgChar` implements serde's `Serialize` /
+// `Deserialize`, so it round-trips through `bincode_compat` (the crate's bincode-2.x
+// shim, which preserves the legacy fixint-LE wire format).
+//
+// NOTE: the `DictionarySerializer` trait's `BincodeSerializer::serialize` is bounded on
+// `Unit = u8`, so it does NOT apply to the `char`-level backends — use `bincode_compat`
+// (or `BincodeSerializer::serialize_with_values_char` for a *valued* char dictionary).
+let bytes = bincode_compat::serialize(&dict1)?;
+let dict2: DynamicDawgChar = bincode_compat::deserialize(&bytes)?;
 
 dict1.insert("新しい");  // Japanese: "new"
 assert!(!dict2.contains("新しい"));  // ✅ Independent
@@ -313,9 +310,9 @@ let dict2 = DynamicDawgChar::from_iter(terms);
 
 | Method | Time | Space | Notes |
 |--------|------|-------|-------|
-| `.clone()` | O(1) | O(1) | Regardless of character encoding |
-| Serialize/Deserialize | O(n) | O(n) | Includes Unicode normalization overhead |
-| Rebuild from terms | O(n·m) | O(n) | m = average chars per term (not bytes!) |
+| `.clone()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Regardless of character encoding |
+| Serialize/Deserialize | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | Includes Unicode normalization overhead |
+| Rebuild from terms | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(n)$` | m = average chars per term (not bytes!) |
 
 **Important:** Rebuilding from terms with DynamicDawgChar is faster than DynamicDawg for the same visual length because it operates on character boundaries, not byte boundaries.
 
@@ -324,7 +321,7 @@ let dict2 = DynamicDawgChar::from_iter(terms);
 | Aspect | DynamicDawg (byte) | DynamicDawgChar (char) |
 |--------|-------------------|------------------------|
 | **Clone type** | Shallow (Arc) | Shallow (Arc) - **identical** |
-| **Clone cost** | O(1) | O(1) - **identical** |
+| **Clone cost** | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` - **identical** |
 | **Data sharing** | ✅ Yes | ✅ Yes - **identical** |
 | **Memory per node** | ~25 bytes | ~49 bytes (char vs u8 labels) |
 | **Use case** | ASCII, raw bytes | Unicode, multi-language |
@@ -348,27 +345,27 @@ let readers: Vec<_> = (0..10).map(|i| {
     })
 }).collect();
 
-// Single writer
+// Concurrent writer (lock-free; does not block readers)
 let writer = {
     let dict = dict.clone();
     thread::spawn(move || {
-        dict.insert("新しい語")  // Unicode insertion still exclusive
+        dict.insert("新しい語")  // Unicode insertion is lock-free (CAS publication)
     })
 };
 ```
 
-**RwLock guarantees remain the same:**
-- Multiple concurrent readers (fast)
-- Single exclusive writer (blocks readers)
+**Concurrency guarantees remain the same:**
+- Multiple concurrent readers, all lock-free (never block)
+- Writers publish new nodes via `compare_exchange` (CAS) without blocking readers
 - No data races regardless of character encoding
 
 #### Summary
 
 **Key Takeaways:**
 1. 🔗 Clone behavior is **identical** to byte-level DynamicDawg
-2. 🚀 **O(1)** regardless of Unicode complexity (ASCII, CJK, emoji, etc.)
+2. 🚀 **`$\mathcal{O}(1)$`** regardless of Unicode complexity (ASCII, CJK, emoji, etc.)
 3. 🔄 **Mutations visible** across all clones for all character types
-4. 🌍 **Unicode-safe** thread synchronization through RwLock
+4. 🌍 **Unicode-safe** lock-free thread synchronization (ArcSwap snapshots, CAS writes)
 5. 📊 For **independence**, use serialization or rebuild (same as byte-level)
 
 ## Construction Methods
@@ -379,10 +376,10 @@ DynamicDawgChar provides the same constructors as `DynamicDawg`, with identical 
 
 | Constructor | Complexity | Use Case | Unicode-Safe |
 |-------------|-----------|----------|--------------|
-| `new()` | O(1) | Empty start | ✅ |
-| `from_iter()` | O(n·m) | Bulk load | ✅ |
-| `from_terms()` | O(n·m) | Simple list | ✅ |
-| `insert_with_value()` | O(m) amortized | Per-term values | ✅ |
+| `new()` | `$\mathcal{O}(1)$` | Empty start | ✅ |
+| `from_iter()` | `$\mathcal{O}(n \cdot m)$` | Bulk load | ✅ |
+| `from_terms()` | `$\mathcal{O}(n \cdot m)$` | Simple list | ✅ |
+| `insert_with_value()` | `$\mathcal{O}(m)$` amortized | Per-term values | ✅ |
 
 Where n = number of terms, m = average **character** count (not bytes!)
 
@@ -391,7 +388,7 @@ Where n = number of terms, m = average **character** count (not bytes!)
 Create an empty dictionary for incremental Unicode text:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 // Create empty dictionary
 let dict: DynamicDawgChar = DynamicDawgChar::new();
@@ -408,7 +405,7 @@ valued_dict.insert_with_value("résumé", 200);
 ```
 
 **Characteristics:**
-- **Time**: O(1) - Same as byte-level variant
+- **Time**: `$\mathcal{O}(1)$` - Same as byte-level variant
 - **Memory**: ~48 bytes initial allocation
 - **Unicode handling**: Automatic - no normalization needed
 
@@ -417,7 +414,7 @@ valued_dict.insert_with_value("résumé", 200);
 Build from any iterator over Unicode strings:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 // Multilingual terms
 let terms = vec!["hello", "مرحبا", "こんにちは", "привет"];
@@ -499,7 +496,7 @@ dict.insert("こんにちは"); // 5 characters (15 bytes UTF-8)
 Unicode-aware term frequencies or context IDs:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 type ContextId = u32;
 
@@ -640,7 +637,7 @@ All accessor methods operate on **character boundaries** (Unicode code points), 
 ### Quick Reference
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 let dict = DynamicDawgChar::from_terms(vec!["café", "naïve", "中文", "🎉"]);
 
@@ -662,7 +659,7 @@ assert!(dict.node_count() > 4);   // More nodes due to char edges
 assert!(!dict.needs_compaction()); // Freshly built
 
 // Traversal (character-level)
-use liblevenshtein::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 let root = dict.root();
 if let Some(c_node) = root.transition('c') { // Note: char, not byte
     if let Some(a_node) = c_node.transition('a') {
@@ -787,10 +784,10 @@ The `union_with()` and `union_replace()` methods enable **merging two DynamicDaw
 - 🗂️ Building composite symbol tables with non-ASCII identifiers
 
 **Key Characteristics**:
-- 🔒 **Thread-safe**: Operations use RwLock for concurrent access
+- 🔒 **Thread-safe**: Lock-free reads; writers publish via CAS
 - 💾 **DAWG-preserving**: Maintains minimization through `insert_with_value()`
 - 🌐 **Unicode-correct**: Operates on `char` (Unicode code points), not bytes
-- ⚡ **Efficient**: O(n·m) traversal with minimal memory overhead
+- ⚡ **Efficient**: `$\mathcal{O}(n \cdot m)$` traversal with minimal memory overhead
 - 🎯 **Flexible**: Custom merge functions for value conflicts
 
 ### union_with() - Merge with Custom Logic
@@ -827,10 +824,10 @@ where
 - Result: Proper handling of multi-byte Unicode sequences (emoji, diacritics, etc.)
 
 **Complexity**:
-- **Time**: O(n·m) where n = terms in `other`, m = average term length **in characters**
-  - O(n·m) for DFS traversal
-  - O(m) per term for `insert_with_value()`
-- **Space**: O(d) where d = maximum trie depth (characters, not bytes)
+- **Time**: `$\mathcal{O}(n \cdot m)$` where n = terms in `other`, m = average term length **in characters**
+  - `$\mathcal{O}(n \cdot m)$` for DFS traversal
+  - `$\mathcal{O}(m)$` per term for `insert_with_value()`
+- **Space**: `$\mathcal{O}(d)$` where d = maximum trie depth (characters, not bytes)
   - DFS stack size proportional to deepest path
   - Constant additional memory
 
@@ -839,8 +836,8 @@ where
 Merge term frequencies across dictionaries with Unicode text:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
+use libdictenstein::MutableMappedDictionary;
 
 // French dictionary: word frequencies
 let dict1: DynamicDawgChar<u32> = DynamicDawgChar::new();
@@ -871,8 +868,8 @@ assert_eq!(processed, 2); // Processed 2 terms from dict2
 Demonstrates correct handling of 4-byte Unicode characters:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
+use libdictenstein::MutableMappedDictionary;
 
 // Dictionary 1: emoji usage counts
 let dict1: DynamicDawgChar<u32> = DynamicDawgChar::new();
@@ -899,8 +896,8 @@ assert_eq!(dict1.get_value("rocket🚀"), Some(7));
 Proper handling of East Asian characters:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
+use libdictenstein::MutableMappedDictionary;
 
 // Japanese dictionary
 let dict1: DynamicDawgChar<u32> = DynamicDawgChar::new();
@@ -927,8 +924,8 @@ assert_eq!(dict1.get_value("大阪"), Some(6));
 Demonstrates proper handling of combining characters vs precomposed:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
+use libdictenstein::MutableMappedDictionary;
 
 let dict1: DynamicDawgChar<Vec<String>> = DynamicDawgChar::new();
 
@@ -965,8 +962,8 @@ where
 
 **Example with Unicode**:
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
+use libdictenstein::MutableMappedDictionary;
 
 let dict1: DynamicDawgChar<&str> = DynamicDawgChar::new();
 dict1.insert_with_value("Zürich", "city_old");      // ü = U+00FC
@@ -1062,10 +1059,10 @@ Same rationale as byte-level variant:
 
 | Operation | Time Complexity | Space Complexity | Typical Performance (10K terms) |
 |-----------|----------------|------------------|--------------------------------|
-| `union_with()` | O(n·m) | O(d) | ~52ms |
-| `union_replace()` | O(n·m) | O(d) | ~52ms |
-| DFS traversal | O(n) | O(d) | ~22ms |
-| Per-term insertion | O(m) | O(1) amortized | ~2-6µs |
+| `union_with()` | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(d)$` | ~52ms |
+| `union_replace()` | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(d)$` | ~52ms |
+| DFS traversal | `$\mathcal{O}(n)$` | `$\mathcal{O}(d)$` | ~22ms |
+| Per-term insertion | `$\mathcal{O}(m)$` | `$\mathcal{O}(1)$` amortized | ~2-6µs |
 
 **Variables**:
 - n = number of terms in source dictionary
@@ -1140,7 +1137,7 @@ dict.insert_with_value(&term, value);
 ### Example 1: Basic Unicode Dictionary
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 let dict = DynamicDawgChar::new();
 
@@ -1163,7 +1160,7 @@ assert!(!dict.contains("café"));
 ### Example 2: Multi-Language User Dictionary
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 // Create user's personal dictionary
 let user_dict = DynamicDawgChar::new();
@@ -1186,8 +1183,8 @@ assert_eq!(user_dict.len(), Some(5));
 ### Example 3: With Values (Language Codes)
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
-use liblevenshtein::dictionary::MappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
+use libdictenstein::MappedDictionary;
 
 let dict: DynamicDawgChar<&str> = DynamicDawgChar::new();
 
@@ -1210,7 +1207,7 @@ assert_eq!(dict.get_value("hola"), None);
 ### Example 4: Fuzzy Matching with Unicode
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -1237,7 +1234,7 @@ println!("{:?}", results);
 ### Example 5: Emoji Support
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 let dict = DynamicDawgChar::new();
 
@@ -1263,7 +1260,7 @@ println!("Matches: {}", results.len());
 ### Example 6: CJK Text
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 let dict = DynamicDawgChar::new();
 
@@ -1291,7 +1288,7 @@ println!("{:?}", results);
 ### Example 7: Thread-Safe Updates
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 use std::sync::Arc;
 use std::thread;
 
@@ -1325,7 +1322,7 @@ assert!(dict.contains("مرحبا"));
 ### Example 8: Compaction with Unicode
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 let dict = DynamicDawgChar::from_terms(vec![
     "café", "cafétéria", "naïve", "résumé", "déjà"
@@ -1354,11 +1351,11 @@ Same as DynamicDawg:
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Insert** | O(m) | m = term length (characters) |
-| **Remove** | O(m) | Plus ref count updates |
-| **Contains** | O(m) | With Bloom filter: O(1) rejection |
-| **Compact** | O(n) | n = total nodes |
-| **Query (fuzzy)** | O(m×d²×b) | d = distance, b = branching |
+| **Insert** | `$\mathcal{O}(m)$` | m = term length (characters) |
+| **Remove** | `$\mathcal{O}(m)$` | Plus ref count updates |
+| **Contains** | `$\mathcal{O}(m)$` | With Bloom filter: `$\mathcal{O}(1)$` rejection |
+| **Compact** | `$\mathcal{O}(n)$` | n = total nodes |
+| **Query (fuzzy)** | `$\mathcal{O}(m \times d^{2} \times b)$` | d = distance, b = branching |
 
 ### Benchmark Results
 

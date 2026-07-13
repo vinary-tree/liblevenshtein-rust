@@ -41,11 +41,11 @@ liblevenshtein applies SIMD to these bottlenecks:
 
 | ISA | Year | Width | Elements | Availability |
 |-----|------|-------|----------|--------------|
-| **SSE4.1** | 2006 | 128-bit | 16× u8 or 4× u32 | ≥99% of CPUs |
-| **AVX2** | 2013 | 256-bit | 32× u8 or 8× u32 | ≥95% of CPUs |
+| **SSE4.1** | 2006 | 128-bit | 16× u8 or 4× u32 | `$\ge 99\%$` of CPUs |
+| **AVX2** | 2013 | 256-bit | 32× u8 or 8× u32 | `$\ge 95\%$` of CPUs |
 | **AVX-512** | 2016 | 512-bit | 64× u8 or 16× u32 | High-end Intel/AMD |
 
-**liblevenshtein** supports SSE4.1 and AVX2, with runtime detection.
+**liblevenshtein** supports SSE4.1 and AVX2 with runtime detection. On `x86_64` this is fully automatic — **no Cargo feature flag is required to enable SIMD**; the fastest available implementation (AVX2, then SSE4.1, then scalar) is chosen per call via `is_x86_feature_detected!`. On non-`x86_64` targets the scalar path runs.
 
 ### Runtime Detection
 
@@ -101,7 +101,7 @@ fn find_edge_scalar(edges: &[char], target: char) -> Option<usize> {
 }
 ```
 
-**Performance**: `O(N)` comparisons, 1 char per cycle
+**Performance**: `$\mathcal{O}(N)$` comparisons, 1 char per cycle
 
 ### SIMD Solution
 
@@ -270,15 +270,14 @@ unsafe fn has_accepting_component_avx2(
 The library automatically uses the best available SIMD:
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::levenshtein::Algorithm;
-use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use liblevenshtein::transducer::{Algorithm, Transducer};
 
 let dict = DoubleArrayTrie::from_terms(vec![/* ... */]);
 
-// SIMD automatically used if available
-let automaton = LevenshteinAutomaton::new("test", 2, Algorithm::Standard);
-let results = automaton.query(&dict);
+// SIMD automatically used if available (runtime AVX2/SSE4.1 detection)
+let transducer = Transducer::new(dict, Algorithm::Standard);
+let results: Vec<String> = transducer.query("test", 2).collect();
 // ↑ Internally uses AVX2/SSE4.1 if CPU supports it
 ```
 

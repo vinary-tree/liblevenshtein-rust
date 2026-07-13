@@ -5,7 +5,7 @@ related (phonetic, time-series) automata for error-tolerant search over strings
 and byte arrays, with several trie/DAWG dictionaries, fuzzy maps, and fuzzy
 caches.
 
-**Last Updated:** 2026-06-19  ·  **Version:** 0.9.1
+**Last Updated:** 2026-07-13  ·  **Version:** 0.9.1
 
 ![Documentation map: the nine sections of this documentation set.](diagrams/architectures/documentation-map.svg)
 
@@ -20,10 +20,15 @@ index maps everything else.
 
 ### Document conventions
 
-- **Math** is written in Unicode and wrapped in backticks — every token,
-  including single variables (`` `k` ``, `` `χ` ``, `` `𝒪(∣W∣)` ``). The bar /
-  "such that" symbol is Unicode `∣` (U+2223), never an ASCII `|`. (Markdown table
-  delimiters and code-fence pipes are left as plain `|`.)
+- **Math** is written as **MathJax LaTeX**, never as Unicode literals. Inline math is a
+  backtick code span whose content is dollar-delimited — `` `$\mathcal{O}(\lvert W\rvert)$` ``
+  renders as `$\mathcal{O}(\lvert W\rvert)$` — and display math is a fenced block whose
+  info-string is `math`. We never use *bare* dollar-delimited math (dollars without the
+  enclosing backticks): GitHub's CommonMark pass strips backslash escapes before MathJax
+  parses them. Cardinality and absolute-value bars are `\lvert … \rvert`; a literal ASCII
+  `|` is reserved for Markdown table delimiters and code. Genuine algorithm listings stay
+  as fenced **pseudocode** (literate form); only standalone formulae, recurrences, and
+  inference rules become `math` blocks.
 - **Diagrams** live under [`diagrams/`](diagrams/README.md) as text source + a committed
   SVG, fully coloured per a [shared legend](diagrams/README.md); docs embed the SVG.
 - **Citations** link to DOIs where one exists.

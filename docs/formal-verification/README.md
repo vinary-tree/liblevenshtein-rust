@@ -134,9 +134,9 @@ docs/formal-verification/      # Human-readable documentation
    - Subsumption relation
    - Helper lemmas
 3. ✅ Three foundational theorems proven:
-   - **Irreflexivity**: `~ (p ⊑ p)`
-   - **Transitivity**: `p₁ ⊑ p₂ → p₂ ⊑ p₃ → p₁ ⊑ p₃`
-   - **Variant restriction**: `variant(p₁) ≠ variant(p₂) → ~ (p₁ ⊑ p₂)`
+   - **Irreflexivity**: `$~ (p \sqsubseteq  p)$`
+   - **Transitivity**: `$p_{1} \sqsubseteq  p_{2} \to  p_{2} \sqsubseteq  p_{3} \to  p_{1} \sqsubseteq  p_{3}$`
+   - **Variant restriction**: `$\text{variant}(p_{1}) \ne  \text{variant}(p_{2}) \to  ~ (p_{1} \sqsubseteq  p_{2})$`
 4. ✅ Comprehensive documentation (`01_subsumption_properties.md`, 600+ lines)
 
 #### Verification
@@ -157,10 +157,10 @@ All proofs compile and verify successfully under Rocq 9.x.
 
 | Theorem | Statement | Significance | Status |
 |---------|-----------|--------------|--------|
-| **Irreflexivity** | `∀p, ¬(p ⊑ p)` | No position subsumes itself | ✅ Proven |
-| **Transitivity** | `p₁⊑p₂ ∧ p₂⊑p₃ → p₁⊑p₃` | Subsumption chains compose | ✅ Proven |
-| **Variant Restriction** | `variant(p₁)≠variant(p₂) → ¬(p₁⊑p₂)` | Different types don't subsume | ✅ Proven |
-| **Anti-Symmetry** | `p₁⊑p₂ ∧ p₂⊑p₁ → False` | No cycles in subsumption | ✅ Proven (derived) |
+| **Irreflexivity** | `$\forall p, \lnot (p \sqsubseteq  p)$` | No position subsumes itself | ✅ Proven |
+| **Transitivity** | `$p_{1}\sqsubseteq p_{2} \land  p_{2}\sqsubseteq p_{3} \to  p_{1}\sqsubseteq p_{3}$` | Subsumption chains compose | ✅ Proven |
+| **Variant Restriction** | `$\text{variant}(p_{1})\ne \text{variant}(p_{2}) \to  \lnot (p_{1}\sqsubseteq p_{2})$` | Different types don't subsume | ✅ Proven |
+| **Anti-Symmetry** | `$p_{1}\sqsubseteq p_{2} \land  p_{2}\sqsubseteq p_{1} \to  \text{False}$` | No cycles in subsumption | ✅ Proven (derived) |
 
 ### Key Insights
 
@@ -406,7 +406,7 @@ mod formal_verification_tests {
 **Key theorems**:
 - `add_position_preserves_anti_chain`: Main correctness theorem
 - `anti_chain_decidable`: Anti-chain checking is computable
-- `state_size_bound`: O(n²) state size
+- `state_size_bound`: `$\mathcal{O}(n^{2})$` state size
 
 ### Phase 6: Specification Extraction (Est. 1 day)
 
@@ -440,7 +440,7 @@ mod formal_verification_tests {
 - Fix failing phonetic tests
 
 **Full automaton acceptance**:
-- Prove `accepts(word, query, n)` ⟺ `distance(word, query) ≤ n`
+- Prove `accepts(word, query, n)` ⟺ `$\text{distance}(\text{word}, \text{query}) \le  n$`
 - Completeness and soundness theorems
 
 **Extraction to verified implementation**:
@@ -470,7 +470,7 @@ mod formal_verification_tests {
    - Proves `complete()` returns union of draft + finalized
    - Soundness, completeness, deduplication, draft priority
 7. ✅ **Theorem 5**: Levenshtein Distance Correctness (full)
-   - Proves naive O(n·m) implementation matches Wagner-Fischer
+   - Proves naive `$\mathcal{O}(n\cdot m)$` implementation matches Wagner-Fischer
    - Triangle inequality, symmetry, identity proofs
 8. ✅ **Theorem 6**: Hierarchical Visibility Soundness (full)
    - Proves children see parents, parents don't see children

@@ -26,9 +26,9 @@ Given a **confusion matrix** of real-world misspellings (e.g., OCR errors, typin
 
 | Method | Complexity | Expected Improvement | Use Case |
 |--------|-----------|---------------------|----------|
-| **Log-Probability Transformation** | `𝒪(∣Σ∣²)` | 2-3× MRR | Simple, fast, principled |
-| **Ristad-Yianilos EM Algorithm** | `𝒪(iterations × ∣training∣ × ∣W∣²)` | 3-5× MRR | Gold standard, proven |
-| **Learning-to-Rank (Pairwise)** | `𝒪(epochs × ∣pairs∣ × ∣W∣²)` | 2-4× MRR | Direct ranking optimization |
+| **Log-Probability Transformation** | `$\mathcal{O}(\lvert \Sigma \rvert^{2})$` | 2-3× MRR | Simple, fast, principled |
+| **Ristad-Yianilos EM Algorithm** | `$\mathcal{O}(\text{iterations} \times  \lvert \text{training}\rvert \times  \lvert W\rvert^{2})$` | 3-5× MRR | Gold standard, proven |
+| **Learning-to-Rank (Pairwise)** | `$\mathcal{O}(\text{epochs} \times  \lvert \text{pairs}\rvert \times  \lvert W\rvert^{2})$` | 2-4× MRR | Direct ranking optimization |
 
 **✅ RECOMMENDATION**: Start with **log-probability transformation** for quick wins (2-3 weeks), optionally upgrade to **Ristad-Yianilos EM** for maximum accuracy (4-6 weeks).
 
@@ -113,10 +113,10 @@ Given query Q (user's typo) and candidates C (dictionary words), we want:
 | Method | Training Time | Query Overhead | Accuracy | Complexity | Recommendation |
 |--------|--------------|----------------|----------|------------|----------------|
 | **Uniform Costs** | None | 1× | Baseline | - | Default |
-| **Log-Probability** | Seconds | 10-50× | 2-3× MRR | `𝒪(∣Σ∣²)` | ✅ **START HERE** |
-| **Ristad-Yianilos EM** | Minutes-Hours | 10-50× | 3-5× MRR | `𝒪(iter × data × W²)` | ✅ Optional upgrade |
-| **Learning-to-Rank** | Hours | 10-50× | 2-4× MRR | `𝒪(epochs × pairs)` | ⚠️ Advanced |
-| **Least Squares** | Seconds | 10-50× | 1.1-1.3× MRR | `𝒪(∣Σ∣²)` | ❌ **AVOID** |
+| **Log-Probability** | Seconds | 10-50× | 2-3× MRR | `$\mathcal{O}(\lvert \Sigma \rvert^{2})$` | ✅ **START HERE** |
+| **Ristad-Yianilos EM** | Minutes-Hours | 10-50× | 3-5× MRR | `$\mathcal{O}(\text{iter} \times  \text{data} \times  W^{2})$` | ✅ Optional upgrade |
+| **Learning-to-Rank** | Hours | 10-50× | 2-4× MRR | `$\mathcal{O}(\text{epochs} \times  \text{pairs})$` | ⚠️ Advanced |
+| **Least Squares** | Seconds | 10-50× | 1.1-1.3× MRR | `$\mathcal{O}(\lvert \Sigma \rvert^{2})$` | ❌ **AVOID** |
 
 ### Detailed Comparison
 
@@ -130,7 +130,7 @@ Cost(a→b) = -log P(b|a) + λ
 
 **Advantages:**
 - ✅ Simple: One-line formula
-- ✅ Fast: `𝒪(∣Σ∣²)` training (seconds)
+- ✅ Fast: `$\mathcal{O}(\lvert \Sigma \rvert^{2})$` training (seconds)
 - ✅ Principled: Information theory foundation
 - ✅ No hyperparameters (except smoothing)
 - ✅ Proven: 2-3× improvement in literature
@@ -365,17 +365,17 @@ P_smoothed(b|a) = (count(a→b) + k) / (count(a) + k×|Σ|)
 
 ### Complexity Analysis
 
-**Training Time**: `𝒪(∣Σ∣²)`
+**Training Time**: `$\mathcal{O}(\lvert \Sigma \rvert^{2})$`
 - One pass through confusion matrix
-- Normalization: `𝒪(∣Σ∣²)`
+- Normalization: `$\mathcal{O}(\lvert \Sigma \rvert^{2})$`
 - **Total: Seconds** for typical alphabets
 
 **Query Overhead**: Same as discretized weighted automata
-- `𝒪(∣W∣ × max_cost/ε)` construction
-- `𝒪(∣D∣ × max_cost/ε)` query
-- **With ε=0.1, max_cost=3.0: ~30× overhead**
+- `$\mathcal{O}(\lvert W\rvert \times  \max _\text{cost}/\varepsilon )$` construction
+- `$\mathcal{O}(\lvert D\rvert \times  \max _\text{cost}/\varepsilon )$` query
+- **With `$\varepsilon =0.1,$` max_cost=3.0: ~30× overhead**
 
-**Memory**: `𝒪(∣Σ∣²)`
+**Memory**: `$\mathcal{O}(\lvert \Sigma \rvert^{2})$`
 - Store cost for each (char, char) pair
 
 ---
@@ -575,10 +575,10 @@ pub fn ristad_yianilos_em(
 ### Complexity
 
 **Per Iteration**:
-- E-step: `𝒪(∣training_pairs∣ × ∣W∣² × ∣V∣²)`
-- M-step: `𝒪(∣Σ∣²)`
+- E-step: `$\mathcal{O}(\lvert \text{training}_\text{pairs}\rvert \times  \lvert W\rvert^{2} \times  \lvert V\rvert^{2})$`
+- M-step: `$\mathcal{O}(\lvert \Sigma \rvert^{2})$`
 
-**Total**: O(iterations × \|training_pairs\| × avg(\|W\|²))
+**Total**: `$\mathcal{O}(\text{iterations} \times  \|\text{training}_\text{pairs}\| \times  \text{avg}(\|W\|^{2})$`)
 
 **Typical**: 10-50 iterations, minutes to hours for 10k-100k pairs
 
@@ -848,7 +848,7 @@ impl WeightedTransducerBuilder {
 
 ### Discretization Strategy
 
-**Key Decision**: Precision ε
+**Key Decision**: Precision `$\varepsilon$`
 
 | Precision | State Overhead | Use Case |
 |-----------|---------------|----------|
@@ -857,7 +857,7 @@ impl WeightedTransducerBuilder {
 | 0.1 | 10-50× | **Recommended for learned costs** |
 | 0.01 | 100-500× | High-precision scientific |
 
-**Recommendation**: ε = 0.1
+**Recommendation**: `$\varepsilon  = 0.1$`
 - Sufficient for log-probability costs (typically 0.5-5.0)
 - Acceptable overhead (10-50×)
 - Smooths out discretization artifacts
@@ -1102,7 +1102,7 @@ rn → m: 0.10   (connected letters)
 m → rn: 0.04
 ```
 
-**Derived Costs** (log-probability, λ=0):
+**Derived Costs** (log-probability, `$\lambda=0$`):
 
 ```rust
 let confusion = hashmap! {

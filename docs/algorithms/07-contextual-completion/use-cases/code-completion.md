@@ -64,7 +64,7 @@ The [Language Server Protocol](https://microsoft.github.io/language-server-proto
 
 ```rust
 use liblevenshtein::contextual::{DynamicContextualCompletionEngine, ContextId};
-use liblevenshtein::dictionary::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 struct LspCompletionServer {
     engine: DynamicContextualCompletionEngine<PathMapDictionary<()>>,
@@ -378,7 +378,7 @@ fn update_scopes_hybrid(&mut self, uri: &str, text: &str) -> Result<()> {
 
 ```rust
 use liblevenshtein::contextual::DynamicContextualCompletionEngine;
-use liblevenshtein::dictionary::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dict = PathMapDictionary::new();

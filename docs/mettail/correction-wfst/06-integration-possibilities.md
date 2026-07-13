@@ -1355,7 +1355,7 @@ The unified correction architecture compares favorably with industry systems:
 2. **Formally verified phonetic rules** (Coq proofs)
 3. **Deterministic symbolic layers** (Tiers 1-2 reproducible)
 4. **Rust native performance** (zero-cost abstractions)
-5. **Composable architecture** (NFA ∩ FST ∩ CFG)
+5. **Composable architecture** (NFA `$\cap$` FST `$\cap$` CFG)
 
 **See**: WFST Architecture - Industry Comparison for detailed analysis.
 

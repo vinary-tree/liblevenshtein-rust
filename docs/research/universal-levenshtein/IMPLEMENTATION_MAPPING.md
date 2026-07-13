@@ -34,7 +34,7 @@
 1. **Type Safety**: Use Rust's type system to enforce theoretical invariants
 2. **Zero-Cost Abstractions**: Theoretical constructs should compile to efficient code
 3. **Ownership**: Leverage Rust ownership to manage automaton lifecycle
-4. **Generics**: Use generics for distance variants (χ ∈ {ε, t, ms})
+4. **Generics**: Use generics for distance variants `$(\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`)
 5. **Const Generics**: Use const n for maximum edit distance at compile time where possible
 
 ### Three-Layer Architecture
@@ -72,10 +72,10 @@
 | **Position i#e** | `Position<V>` | `src/transducer/universal/position.rs` (new) |
 | **Universal I + i#e** | `UniversalPosition<V>::INonFinal(i, e)` | `src/transducer/universal/position.rs` (new) |
 | **Universal M + i#e** | `UniversalPosition<V>::MFinal(i, e)` | `src/transducer/universal/position.rs` (new) |
-| **State q ⊆ positions** | `UniversalState<V>` | `src/transducer/universal/state.rs` (new) |
-| **Variant χ** | `enum Variant { Standard, Transposition, MergeAndSplit }` | `src/transducer/algorithm.rs` (existing) |
+| **State `$q \subseteq$` positions** | `UniversalState<V>` | `src/transducer/universal/state.rs` (new) |
+| **Variant `$\chi **$` |  `enum Variant { Standard, Transposition, MergeAndSplit }` | `src/transducer/algorithm.rs` (existing) |
 | **Bit vector b** | `BitVec` or `Vec<bool>` | `src/transducer/universal/bitvector.rs` (new) |
-| **Automaton A^{∀,χ}_n** | `UniversalAutomaton<V, const N: usize>` | `src/transducer/universal/automaton.rs` (new) |
+| **Automaton `$A^{\forall ,\chi }_n$`** | `UniversalAutomaton<V, const N: usize>` | `src/transducer/universal/automaton.rs` (new) |
 
 ---
 
@@ -219,7 +219,7 @@ impl<V: PositionVariant> UniversalPosition<V> {
 ### 2. Universal State
 
 **Theory** (Def. 15):
-States are **anti-chains** under subsumption relation ≤^χ_s.
+States are **anti-chains** under subsumption relation `$\le ^\chi _s.$`
 
 **Rust Implementation**:
 
@@ -540,17 +540,17 @@ impl DiagonalCrossing {
 
 | Theory Function | Pseudocode (ALGORITHMS.md) | Rust Implementation | Module |
 |-----------------|----------------------------|---------------------|--------|
-| δ^{∀,χ}_n(q, b) | `Delta(n, st, b)` | `UniversalState::transition(&self, b: &BitVec) -> Self` | `state.rs` |
-| δ^{∀,χ}_e(q, b) | `Delta_E(n, q, b)` | `UniversalPosition::elementary_transition(&self, b: &BitVec) -> HashSet<Self>` | `position.rs` |
-| δ^{D,χ}_e(π, h) | `Delta_E_D(n, pt, h)` | `ElementaryTransition::apply(&self, pos, h) -> HashSet<Pos>` | `transition.rs` |
-| ≤^χ_s | `Less_Than_Subsume(q1, q2)` | `subsumes(pos1, pos2, n) -> bool` | `subsumption.rs` |
-| ⊔A | Implicit in `Delta` | `UniversalState::add_position_with_subsumption(&mut self, pos)` | `state.rs` |
+| `$\delta ^{\forall ,\chi }_n(q, b)$` | `Delta(n, st, b)` | `UniversalState::transition(&self, b: &BitVec) -> Self` | `state.rs` |
+| `$\delta ^{\forall ,\chi }_e(q, b)$` | `Delta_E(n, q, b)` | `UniversalPosition::elementary_transition(&self, b: &BitVec) -> HashSet<Self>` | `position.rs` |
+| `$\delta ^{D,\chi }_e(\pi , h)$` | `Delta_E_D(n, pt, h)` | `ElementaryTransition::apply(&self, pos, h) -> HashSet<Pos>` | `transition.rs` |
+`$| \le ^\chi _s |$` `Less_Than_Subsume(q1, q2)` | `subsumes(pos1, pos2, n) -> bool` | `subsumption.rs` |
+`$| \sqcup A |$` Implicit in `Delta` | `UniversalState::add_position_with_subsumption(&mut self, pos)` | `state.rs` |
 | f_n(q, k) | `F(n, pos, k)` | `DiagonalCrossing::should_cross(&self, pos, k) -> bool` | `diagonal.rs` |
 | m_n(q, k) | `M(n, st, k)` | `DiagonalCrossing::convert(&self, pos, k) -> Pos` | `diagonal.rs` |
 | r_n(q, b) | `R(n, pos, b)` | `extract_substring(&self, pos, b) -> &BitVec` | `bitvector.rs` |
 | rm(A) | `RM(st)` | `UniversalState::rightmost(&self) -> Option<&Pos>` | `state.rs` |
 | h_n(w, x) | N/A (computed) | `BitVectorSequence::encode(word, input, n) -> Self` | `bitvector.rs` |
-| β(x, w) | N/A (computed) | `CharacteristicVector::new(ch, word) -> Self` | `bitvector.rs` |
+`$| \beta (x, w) | N/A$` (computed) | `CharacteristicVector::new(ch, word) -> Self` | `bitvector.rs` |
 
 ---
 
@@ -631,7 +631,7 @@ impl TransducerBuilder {
 **Goal**: Implement bit vector computation h_n(w, x).
 
 **Tasks**:
-1. ✅ Implement `CharacteristicVector` (β function)
+1. ✅ Implement `CharacteristicVector` `$(\beta$` function)
 2. ✅ Implement `BitVectorSequence` (h_n function)
 3. ✅ Implement sliding window extraction (s_n function)
 4. ✅ Implement substring extraction (r_n function)
@@ -646,12 +646,12 @@ impl TransducerBuilder {
 
 ### Phase 3: Transitions (Week 3)
 
-**Goal**: Implement transition functions δ^{D,χ}_e, δ^{∀,χ}_e, δ^{∀,χ}_n.
+**Goal**: Implement transition functions `$\delta ^{D,\chi }_e$`, `$\delta ^{\forall ,\chi }_e$`, `$\delta ^{\forall ,\chi }_n$`.
 
 **Tasks**:
 1. ✅ Implement `ElementaryTransition` for Standard variant
 2. ✅ Implement `UniversalPosition::elementary_transition`
-3. ✅ Implement `UniversalState::transition` (full δ^{∀,χ}_n)
+3. ✅ Implement `UniversalState::transition` (full `$\delta ^{\forall ,\chi }_n$`)
 4. ✅ Implement `DiagonalCrossing` (f_n, m_n functions)
 5. ✅ Write unit tests for all transitions
 6. ✅ Property-based tests (QuickCheck)
@@ -816,7 +816,7 @@ fn verify_proposition_19() {
 
 ### Hot Paths to Optimize
 
-1. **Subsumption Checking** (called `𝒪(states²)` times per transition)
+1. **Subsumption Checking** (called `$\mathcal{O}(\text{states}^{2})$` times per transition)
    - Cache subsumption results
    - Use SIMD for batch checking
 

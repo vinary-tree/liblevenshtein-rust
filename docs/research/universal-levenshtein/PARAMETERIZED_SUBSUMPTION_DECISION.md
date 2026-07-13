@@ -24,10 +24,10 @@ pub struct State {
 ```
 
 **Key characteristics**:
-- Stack-allocated for ≤8 positions (no heap allocation)
+- Stack-allocated for `$\le 8$` positions (no heap allocation)
 - Maintained in sorted order via `binary_search` + `insert`
 - Online subsumption during insertion
-- Explicit sorting: O(log n) binary search per insert
+- Explicit sorting: `$\mathcal{O}(\log  n)$` binary search per insert
 
 ### Alternative: BTreeSet Approach (Universal Transducers)
 
@@ -43,7 +43,7 @@ pub struct UniversalState<V: PositionVariant> {
 - Heap-allocated red-black tree
 - Automatic sorting via custom `Ord` implementation
 - Online subsumption during insertion
-- Automatic sorting: O(log n) tree operations
+- Automatic sorting: `$\mathcal{O}(\log  n)$` tree operations
 
 ---
 
@@ -66,8 +66,8 @@ Source: `docs/optimization/SUBSUMPTION_OPTIMIZATION_REPORT.md`
 - ✅ **3.3x faster** than batch unsubsumption (Java-style)
 - ✅ Stack allocation for small states (no heap overhead)
 - ✅ Excellent cache locality (contiguous memory)
-- ✅ O(1) best case with early exit
-- ✅ O(kn) average case where k << n
+- ✅ `$\mathcal{O}(1)$` best case with early exit
+- ✅ `$\mathcal{O}(\text{kn})$` average case where k << n
 
 ### State Size Distribution (Real-World)
 
@@ -80,7 +80,7 @@ From profiling analysis of dictionary queries:
 >15 positions:   <1% of states (rare, large distances)
 ```
 
-**Key insight**: 90% of states have ≤8 positions, making SmallVec's stack allocation optimal.
+**Key insight**: 90% of states have `$\le 8$` positions, making SmallVec's stack allocation optimal.
 
 ---
 
@@ -90,12 +90,12 @@ From profiling analysis of dictionary queries:
 
 | Aspect | SmallVec (Current) | BTreeSet (Alternative) |
 |--------|-------------------|------------------------|
-| **Insert** | O(log n) search + O(n) shift | O(log n) tree operations |
-| **Memory** | Stack (≤8), then heap | Always heap allocated |
+| **Insert** | `$\mathcal{O}(\log  n)$` search + `$\mathcal{O}(n)$` shift | `$\mathcal{O}(\log  n)$` tree operations |
+| **Memory** | Stack `$(\le 8),$` then heap | Always heap allocated |
 | **Cache locality** | Excellent (contiguous) | Good (tree nodes) |
-| **Allocation overhead** | None for ≤8 positions | Every insert allocates |
-| **Iteration** | O(n) sequential | O(n) in-order |
-| **Small states (≤8)** | **Optimal** | Overkill (heap overhead) |
+| **Allocation overhead** | None for `$\le 8$` positions | Every insert allocates |
+| **Iteration** | `$\mathcal{O}(n)$` sequential | `$\mathcal{O}(n)$` in-order |
+| **Small states `$(\le 8)$`** | **Optimal** | Overkill (heap overhead) |
 | **Large states (>8)** | Competitive | Competitive |
 
 ### Algorithmic Equivalence
@@ -146,7 +146,7 @@ pub fn add_position(&mut self, pos: UniversalPosition<V>) {
 }
 ```
 
-**Key difference**: BTreeSet can use `take_while()` for error-based early termination because positions are sorted by `(errors, offset)`. However, SmallVec achieves similar O(kn) performance through online subsumption without this optimization.
+**Key difference**: BTreeSet can use `take_while()` for error-based early termination because positions are sorted by `(errors, offset)`. However, SmallVec achieves similar `$\mathcal{O}(\text{kn})$` performance through online subsumption without this optimization.
 
 ---
 
@@ -158,7 +158,7 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
 
 **Data structure**: Linked list + explicit merge sort
 **Strategy**: Batch unsubsumption (sort → remove subsumed)
-**Complexity**: O(n log n) + O(n*k) where k << n
+**Complexity**: `$\mathcal{O}(n \log  n)$` + `$\mathcal{O}(n*k)$` where k << n
 
 **Recommendation from analysis** (lines 442-459):
 > ### 5. 🔄 Consider Linked List for Parameterized (Optional)
@@ -167,7 +167,7 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
 >
 > **Current**:
 > ```rust
-> positions: SmallVec<[Position; 8]>  // Stack allocation for ≤8 positions
+> positions: SmallVec<[Position; 8]>  // Stack allocation for `$\le 8$` positions
 > ```
 >
 > **Alternative** (Java-style):
@@ -177,7 +177,7 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
 >
 > **Analysis**:
 > - SmallVec is **better for small states** (stack allocation, cache-friendly)
-> - Linked list is **better for large states** (no reallocation, O(1) remove during iteration)
+> - Linked list is **better for large states** (no reallocation, `$\mathcal{O}(1)$` remove during iteration)
 > - **Recommendation**: Keep SmallVec (most states are small)
 
 ---
@@ -187,7 +187,7 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
 ### Why SmallVec is Optimal for Parameterized Transducers
 
 1. **State size distribution favors SmallVec**
-   - 90% of states have ≤8 positions
+   - 90% of states have `$\le 8$` positions
    - Stack allocation eliminates heap overhead for 90% of cases
    - No allocator calls for typical queries
 
@@ -207,7 +207,7 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
    - Clear, idiomatic Rust code
 
 5. **Asymptotic equivalence**
-   - Both SmallVec and BTreeSet achieve O(kn) with early termination
+   - Both SmallVec and BTreeSet achieve `$\mathcal{O}(\text{kn})$` with early termination
    - BTreeSet's `take_while()` optimization doesn't provide measurable benefit
    - SmallVec's constant factors are better for small n
 
@@ -223,7 +223,7 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
    - SmallVec has minimal overhead (just capacity + length)
 
 3. **No performance gain**
-   - Both achieve same O(kn) complexity
+   - Both achieve same `$\mathcal{O}(\text{kn})$` complexity
    - SmallVec has better constant factors for small n
    - Error-based early termination doesn't help enough to offset costs
 
@@ -241,7 +241,7 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
 **Keep the current SmallVec implementation for parameterized transducers.**
 
 **Rationale**:
-1. ✅ Already optimal for 90% of states (≤8 positions)
+1. ✅ Already optimal for 90% of states `$(\le 8$` positions)
 2. ✅ Benchmarked 3.3x faster than alternative approaches
 3. ✅ Superior cache locality and memory efficiency
 4. ✅ Simpler code, easier to maintain
@@ -252,11 +252,11 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
 
 | Aspect | SmallVec (Current) | BTreeSet (Alternative) | Winner |
 |--------|-------------------|------------------------|---------|
-| **Small states (≤8)** | Stack allocated, O(1) | Heap allocated, O(log n) | **SmallVec** |
-| **Large states (>8)** | Heap, O(n) shifts | Heap, O(log n) tree ops | Tie |
+| **Small states `$(\le 8)**$` |  Stack allocated, `$\mathcal{O}(1)$` | Heap allocated, `$\mathcal{O}(\log  n)$` | **SmallVec** |
+| **Large states (>8)** | Heap, `$\mathcal{O}(n)$` shifts | Heap, `$\mathcal{O}(\log  n)$` tree ops | Tie |
 | **Memory overhead** | Minimal (90% stack) | Always heap + metadata | **SmallVec** |
 | **Cache locality** | Excellent | Good | **SmallVec** |
-| **Early termination** | O(kn) with online check | O(k) with take_while() | Tie |
+| **Early termination** | `$\mathcal{O}(\text{kn})$` with online check | `$\mathcal{O}(k)$` with take_while() | Tie |
 | **Code simplicity** | Simple Vec API | Custom Ord required | **SmallVec** |
 | **Overall** | **Optimal** | Overkill | **SmallVec** |
 
@@ -281,7 +281,7 @@ Source: `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST
 
 **Parameterized transducers** (SmallVec):
 - Absolute term indices, simpler subsumption
-- Small state sizes (90% ≤8 positions) make stack allocation dominant
+- Small state sizes (90% `$\le 8$` positions) make stack allocation dominant
 - Online subsumption sufficient without error-based filtering
 - Cache locality more important than tree structure
 

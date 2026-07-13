@@ -74,7 +74,7 @@ CHECK[t] = s       (verify that state t came from state s)
 ```
 
 **Advantages**:
-1. Constant-time transitions: O(1)
+1. Constant-time transitions: `$\mathcal{O}(1)$`
 2. Sequential memory layout: cache-friendly
 3. Predictable access patterns: CPU prefetcher-friendly
 4. Compact representation: ~8 bytes per state
@@ -201,7 +201,7 @@ For a dictionary with N states:
 
 *When V=(), `Option<()>` is zero-sized
 
-**Example**: 50,000-term dictionary ≈ 500KB
+**Example**: 50,000-term dictionary `$\approx$` 500KB
 
 ### Cache Efficiency
 
@@ -343,13 +343,13 @@ impl<V: DictionaryValue> DoubleArrayTrieBuilder<V> {
 
 ### Complexity Analysis
 
-- **Time**: O(N × L × M) where:
+- **Time**: `$\mathcal{O}(N \times L \times M)$` where:
   - N = number of terms
   - L = average term length
   - M = average branching factor (~2-3 for natural language)
 
-- **Space**: O(S) where S = number of states
-  - Typically S ≈ 0.5N to 2N depending on prefix sharing
+- **Space**: `$\mathcal{O}(S)$` where S = number of states
+  - Typically `$S \approx 0.5N$` to `$2N$` depending on prefix sharing
 
 ### Optimization: Sorted Insertion
 
@@ -394,7 +394,7 @@ fn contains(&self, term: &str) -> bool {
 }
 ```
 
-**Complexity**: O(L) where L = term length
+**Complexity**: `$\mathcal{O}(L)$` where L = term length
 
 **Performance**: ~6.6µs for 10,000-term dictionary
 
@@ -414,7 +414,7 @@ let results: Vec<String> = automaton.query(&dict).collect();
 // Returns: ["test"] (transposition distance = 1)
 ```
 
-**Complexity**: O(L × D × B) where:
+**Complexity**: `$\mathcal{O}(L \times D \times B)$` where:
 - L = query length
 - D = max distance
 - B = average branching factor
@@ -452,7 +452,7 @@ impl DictionaryNode for DATNode {
 DoubleArrayTrie supports associating arbitrary values with terms:
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 
 // Create dictionary with scope IDs
 let dict = DoubleArrayTrie::from_terms_with_values(vec![
@@ -517,7 +517,7 @@ See [Value Storage Guide](../../09-value-storage/README.md) for comprehensive do
 ### Example 1: Basic Dictionary
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 
 // Create from terms
 let dict = DoubleArrayTrie::from_terms(vec![
@@ -538,7 +538,7 @@ assert_eq!(dict.len(), Some(4));
 ### Example 2: Append-Only Updates
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 
 // Start with initial terms
 let mut dict = DoubleArrayTrie::from_terms(vec![
@@ -557,7 +557,7 @@ assert!(dict.contains("runtime"));
 ### Example 3: Fuzzy Search
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -576,7 +576,7 @@ println!("{:?}", results);
 ### Example 4: Value-Based Filtering
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -601,7 +601,7 @@ let results: Vec<String> = automaton.query(&dict).collect();
 ### Example 5: Builder Pattern
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrieBuilder;
+use libdictenstein::double_array_trie::DoubleArrayTrieBuilder;
 
 let mut builder = DoubleArrayTrieBuilder::new();
 
@@ -619,7 +619,7 @@ assert_eq!(dict.get_value("second"), Some(2));
 ### Example 6: Thread-Safe Concurrent Queries
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use std::sync::Arc;
 use std::thread;
 
@@ -645,18 +645,19 @@ for handle in handles {
 ### Example 7: Serialization
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use bincode;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 
 let dict = DoubleArrayTrie::from_terms(vec!["save", "load"]);
 
-// Serialize to bytes
-let bytes = bincode::serialize(&dict).unwrap();
-std::fs::write("dict.bin", bytes).unwrap();
+// Serialize to bytes (`Vec<u8>` implements `Write`)
+let mut bytes = Vec::new();
+BincodeSerializer::serialize(&dict, &mut bytes).unwrap();
+std::fs::write("dict.bin", &bytes).unwrap();
 
-// Deserialize
+// Deserialize (`&[u8]` implements `Read`)
 let bytes = std::fs::read("dict.bin").unwrap();
-let loaded: DoubleArrayTrie = bincode::deserialize(&bytes).unwrap();
+let loaded: DoubleArrayTrie = BincodeSerializer::deserialize(&bytes[..]).unwrap();
 
 assert!(loaded.contains("save"));
 ```
@@ -664,7 +665,7 @@ assert!(loaded.contains("save"));
 ### Example 8: Large Dictionary
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use std::fs;
 
 // Load dictionary from file (e.g., /usr/share/dict/words)
@@ -697,7 +698,6 @@ println!("Query took {:?}", start.elapsed());
 ```
 DoubleArrayTrie:     3.2ms
 DynamicDawg:         4.1ms  (+28%)
-DawgDictionary:      7.2ms  (+125%)
 PathMapDictionary:   3.5ms  (+9%)
 ```
 
@@ -707,7 +707,6 @@ PathMapDictionary:   3.5ms  (+9%)
 
 ```
 DoubleArrayTrie:     6.6µs
-DawgDictionary:      19.8µs (+200%)
 PathMapDictionary:   71.1µs (+977%)
 ```
 
@@ -717,7 +716,6 @@ PathMapDictionary:   71.1µs (+977%)
 
 ```
 DoubleArrayTrie:     0.22µs per check
-DawgDictionary:      6.7µs  (+2945%)
 PathMapDictionary:   132µs  (+59900%)
 ```
 
@@ -727,7 +725,6 @@ PathMapDictionary:   132µs  (+59900%)
 
 ```
 DoubleArrayTrie:     12.9µs
-DawgDictionary:      319µs  (+2400%)
 PathMapDictionary:   888µs  (+6800%)
 ```
 
@@ -735,7 +732,6 @@ PathMapDictionary:   888µs  (+6800%)
 
 ```
 DoubleArrayTrie:     16.3µs
-DawgDictionary:      2,150µs (+13100%)
 PathMapDictionary:   5,919µs (+36200%)
 ```
 
@@ -748,7 +744,6 @@ PathMapDictionary:   5,919µs (+36200%)
 ```
 DoubleArrayTrie:     ~8 bytes
 DoubleArrayTrieChar: ~12 bytes (char labels)
-DawgDictionary:      ~16 bytes
 DynamicDawg:         ~24 bytes
 PathMapDictionary:   ~32 bytes
 ```
@@ -757,12 +752,10 @@ PathMapDictionary:   ~32 bytes
 
 **100K words (e.g., English dictionary)**:
 - DoubleArrayTrie: ~800 KB
-- DawgDictionary: ~1.6 MB
 - PathMapDictionary: ~3.2 MB
 
 **1M entries (e.g., product database)**:
 - DoubleArrayTrie: ~8 MB
-- DawgDictionary: ~16 MB
 - PathMapDictionary: ~32 MB
 
 ### Scaling Characteristics
@@ -777,8 +770,8 @@ Dictionary Size  │  Construction  │  Query Time  │  Memory
 ```
 
 **Observations**:
-- Construction: O(N log N) due to sorting
-- Query: O(L) - independent of dictionary size!
+- Construction: `$\mathcal{O}(N \log N)$` due to sorting
+- Query: `$\mathcal{O}(L)$` - independent of dictionary size!
 - Memory: Linear with term count
 
 ### CPU Cache Impact
@@ -796,10 +789,16 @@ Working Set Size  │  Cache Level  │  Query Time
 
 **Takeaway**: DAT benefits massively from cache locality.
 
-### Comparison: DAT vs DAWG
+### Comparison: DAT vs a classic pointer-based DAWG
 
-| Aspect | DoubleArrayTrie | DawgDictionary |
-|--------|-----------------|----------------|
+The right column characterizes the **classic static minimized DAWG** (the pre-0.9.x
+`DawgDictionary`, since **removed** — see the [layer overview](../README.md#removed-backends-historical-note)).
+It is retained here only to illustrate the array-based vs pointer-based access tradeoff;
+for a *current* pointer-based backend that additionally supports updates, see
+[`DynamicDawg`](dynamic-dawg.md).
+
+| Aspect | DoubleArrayTrie | Classic static DAWG (removed) |
+|--------|-----------------|-------------------------------|
 | **Access Pattern** | Sequential arrays | Pointer chasing |
 | **Cache Locality** | Excellent | Poor |
 | **Query Time** | 6.6µs | 19.8µs |
@@ -807,7 +806,8 @@ Working Set Size  │  Cache Level  │  Query Time
 | **Construction** | 3.2ms | 7.2ms |
 | **Updates** | Append-only | Static |
 
-**Verdict**: DAT wins on all metrics for fuzzy matching workloads.
+**Verdict**: DAT wins on all metrics for fuzzy matching workloads against the classic
+static DAWG; against `DynamicDawg` it trades update support for raw read speed and memory.
 
 ## Advanced Topics
 
@@ -816,7 +816,7 @@ Working Set Size  │  Cache Level  │  Query Time
 Any type implementing `DictionaryValue` can be stored:
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -826,7 +826,7 @@ struct Metadata {
     timestamp: u64,
 }
 
-impl liblevenshtein::dictionary::DictionaryValue for Metadata {}
+impl libdictenstein::DictionaryValue for Metadata {}
 
 let dict = DoubleArrayTrie::from_terms_with_values(vec![
     ("term1", Metadata {
@@ -844,7 +844,7 @@ let dict = DoubleArrayTrie::from_terms_with_values(vec![
 For append-only use cases, use the builder:
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrieBuilder;
+use libdictenstein::double_array_trie::DoubleArrayTrieBuilder;
 use std::sync::{Arc, RwLock};
 
 struct AppendOnlyDict {
@@ -880,9 +880,9 @@ impl AppendOnlyDict {
 Use zippers for hierarchical navigation with value access:
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::{DictZipper, ValuedDictZipper};
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::{DictZipper, ValuedDictZipper};
 
 let dict = DoubleArrayTrie::from_terms_with_values(vec![
     ("test", 1),
@@ -921,7 +921,7 @@ See [Zipper Navigation](../../06-zipper-navigation/README.md) for details.
 #### Redis-backed Dictionary
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use redis::Commands;
 
 fn load_from_redis() -> DoubleArrayTrie {
@@ -933,7 +933,9 @@ fn load_from_redis() -> DoubleArrayTrie {
 }
 
 fn save_to_redis(dict: &DoubleArrayTrie) {
-    let bytes = bincode::serialize(dict).unwrap();
+    // `use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};`
+    let mut bytes = Vec::new();
+    BincodeSerializer::serialize(dict, &mut bytes).unwrap();
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let mut con = client.get_connection().unwrap();
     let _: () = con.set("dictionary:dat", bytes).unwrap();
@@ -943,7 +945,7 @@ fn save_to_redis(dict: &DoubleArrayTrie) {
 #### Database-backed Dictionary
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use sqlx::PgPool;
 
 async fn load_from_postgres(pool: &PgPool) -> DoubleArrayTrie<u32> {
@@ -967,26 +969,35 @@ async fn load_from_postgres(pool: &PgPool) -> DoubleArrayTrie<u32> {
 For very large dictionaries, use memory mapping:
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 use memmap2::Mmap;
 use std::fs::File;
 
 // Save dictionary
 let dict = DoubleArrayTrie::from_terms(load_huge_wordlist());
-let bytes = bincode::serialize(&dict).unwrap();
-std::fs::write("huge_dict.bin", bytes).unwrap();
+let mut bytes = Vec::new();
+BincodeSerializer::serialize(&dict, &mut bytes).unwrap();
+std::fs::write("huge_dict.bin", &bytes).unwrap();
 
-// Memory-map for zero-copy loading
+// Memory-map the file, then decode straight from the mapping (`&[u8]: Read`),
+// so the encoded image is never additionally buffered on the heap.
 let file = File::open("huge_dict.bin").unwrap();
 let mmap = unsafe { Mmap::map(&file).unwrap() };
-let dict: DoubleArrayTrie = bincode::deserialize(&mmap).unwrap();
-// 'dict' now references memory-mapped data
+let dict: DoubleArrayTrie = BincodeSerializer::deserialize(&mmap[..]).unwrap();
+// NOTE: `dict` is an owned dictionary rebuilt from the mapping — it does not
+// borrow the mapped pages. Memory-mapping avoids buffering the *file* in RAM;
+// it is not a zero-copy view of the dictionary itself.
 ```
 
 **Benefits**:
-- Zero-copy loading
-- OS manages paging
-- Multiple processes can share memory
+- The encoded image is never buffered on the heap — bincode decodes straight from the mapping
+- OS manages paging of the mapped file
+- Multiple processes can share the mapped pages of the *encoded file*
+
+> The decoded `DoubleArrayTrie` is still an owned, heap-resident structure. For a dictionary
+> that genuinely reads from disk without rebuilding it in memory, use the disk-persisted
+> [`PersistentARTrie`](../../../user-guide/backends.md) family instead.
 
 ## References
 

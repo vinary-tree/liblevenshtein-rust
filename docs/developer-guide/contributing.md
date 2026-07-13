@@ -74,8 +74,8 @@ RUSTFLAGS="-C target-cpu=native" cargo test --features compression,protobuf
 # Code completion demo
 RUSTFLAGS="-C target-cpu=native" cargo run --example code_completion_demo
 
-# DAWG comparison
-RUSTFLAGS="-C target-cpu=native" cargo run --example dawg_demo
+# DynamicDawg demo
+RUSTFLAGS="-C target-cpu=native" cargo run --example dynamic_dawg_demo
 
 # Contextual filtering
 RUSTFLAGS="-C target-cpu=native" cargo run --example advanced_contextual_filtering

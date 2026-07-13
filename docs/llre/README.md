@@ -2,6 +2,8 @@
 
 The `.llre` (LibLevenshtein Regex Expression) file format is a standalone regex pattern format with metadata support, symbol imports from `.llev` files, and AOT (Ahead-of-Time) compilation to NFA binary format.
 
+![LLRE compilation pipeline: a .llre source file is lexed and parsed to an AST, imported .llev symbols are expanded, and the NFA compiler emits an NFA that can be AOT-compiled to a binary for instant loading.](../diagrams/phonetic/llre-compilation.svg)
+
 ## Features
 
 - **Single pattern per file** with descriptive metadata
@@ -154,7 +156,7 @@ For static patterns known at compile time, use the proc macros for zero initiali
 
 ```toml
 [dependencies]
-liblevenshtein = { version = "0.7", features = ["phonetic-rules", "serialization"] }
+liblevenshtein = { version = "0.9.1", features = ["phonetic-rules", "serialization"] }
 liblevenshtein-macros = "0.1"
 ```
 

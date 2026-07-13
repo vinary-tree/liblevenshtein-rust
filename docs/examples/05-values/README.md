@@ -14,7 +14,7 @@ diagram.
 
 ### From fuzzy set to fuzzy map
 
-A plain dictionary answers *"is `s` within distance `k` of `W`?"*. A **fuzzy map**
+A plain dictionary answers *"is `$s$` within distance `$k$` of `$W$`?"*. A **fuzzy map**
 additionally stores a value `V` per term, so a match returns *both* the term and its
 payload. `PathMapDictionary<V>` (feature `pathmap-backend`) is one such backend: it maps
 each term to a value of your choosing (here `u32` scope IDs) and is built with
@@ -61,7 +61,7 @@ Each identifier is tagged with a scope ID (`1` = std, `2` = local, `3` = imports
 dictionary is a `PathMapDictionary<u32>`; the transducer drives fuzzy queries over it.
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 use liblevenshtein::prelude::*;
 
 let identifiers_with_scopes = vec![

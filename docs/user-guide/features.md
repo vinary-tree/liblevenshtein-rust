@@ -45,7 +45,7 @@ let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
 #### DynamicDawg
 - **Type**: DAWG with online insert/delete/minimize operations
 - **Best for**: Dictionaries needing both space efficiency and runtime updates
-- **Thread-safe**: Uses `RwLock` for concurrent access
+- **Thread-safe**: **Lock-free** reads (`LockFreeDawg` core); writes via `compare_exchange`
 - **Space efficiency**: Maintains DAWG properties through incremental minimization
 - **Usage**:
 ```rust
@@ -59,7 +59,7 @@ dict.remove("test");    // Online deletion
 #### PathMapDictionary
 - **Type**: Trie-based using structural sharing
 - **Best for**: General-purpose, dynamic modifications
-- **Thread-safe**: Uses `RwLock` for concurrent access
+- **Thread-safe**: **Lock-free** reads (`Arc<ArcSwap<…>>`); writes publish by atomic swap
 - **Usage**:
 ```rust
 use liblevenshtein::prelude::*;
@@ -131,7 +131,7 @@ for candidate in transducer.query_ordered("aple", 1) {
 
 #### Filtering and Prefix Matching (v0.4.0)
 - **Custom filters**: Apply arbitrary predicates to results
-- **Prefix mode**: Match only terms starting with query ± edits
+- **Prefix mode**: Match only terms starting with query `$\pm$` edits
 - **Optimized**: Bitmap masking for efficient context filtering
 - **Usage**:
 ```rust
@@ -292,18 +292,21 @@ RUSTFLAGS="-C target-cpu=native" cargo bench
 
 ### Memory Usage
 
-- **PathMap**: `~𝒪(n)` for `n` unique prefixes
-- **DAWG**: `~𝒪(m)` for `m` unique substrings (shares prefixes and suffixes)
+- **PathMap**: `$\sim\mathcal{O}(n)$` for `$n$` unique prefixes
+- **DAWG**: `$\sim\mathcal{O}(m)$` for `$m$` unique substrings (shares prefixes and suffixes)
 - **Position**: 17 bytes (Copy semantics, no heap allocation)
 - **State pooling**: Reuses allocations, LIFO for cache locality
 
 ## Thread Safety
 
-All dictionary implementations are thread-safe:
+All dictionary implementations are thread-safe, with **lock-free reads** (a reader never
+blocks on a writer):
 
-- **PathMapDictionary**: Uses `Arc<RwLock<...>>` for concurrent access
-- **DynamicDawg**: Uses `Arc<RwLock<...>>` for concurrent access
+- **PathMapDictionary**: `Arc<ArcSwap<PathMapState>>` — lock-free reads; writes publish a new state by atomic swap
+- **DynamicDawg**: `LockFreeDawg` core — lock-free reads; writes via per-node `compare_exchange`
 - **Transducer**: Clone-cheap, can be shared across threads
+
+See [Thread Safety](thread-safety.md) for the full per-backend concurrency model.
 
 ## Feature Comparison with Java Version
 

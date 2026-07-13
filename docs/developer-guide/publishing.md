@@ -56,7 +56,7 @@ pathmap = "x.y.z"  # Where x.y.z is a published crates.io version
 All required metadata is already present in `Cargo.toml`:
 
 - ✓ `name` = "liblevenshtein"
-- ✓ `version` = "0.3.0"
+- ✓ `version` = "0.9.1"
 - ✓ `edition` = "2021"
 - ✓ `authors` = ["Dylon Edwards <dylon.devo@gmail.com>"]
 - ✓ `license` = "Apache-2.0"
@@ -87,7 +87,7 @@ Current status:
 - ✓ `smallvec` = "1.13" (crates.io)
 - ✓ `thiserror` = "2.0" (crates.io)
 - ✓ `serde` = "1.0" (crates.io)
-- ✓ `bincode` = "1.3" (crates.io)
+- ✓ `bincode` = "2.0" (crates.io)
 - ✓ `serde_json` = "1.0" (crates.io)
 - ✓ `prost` = "0.12" (crates.io)
 - ✓ `bytes` = "1.5" (crates.io)
@@ -151,7 +151,7 @@ cargo fmt -- --check
 
 ### 4. Update version if needed
 
-The current version is `0.3.0`. If you need to bump the version:
+The current version is `0.9.1`. If you need to bump the version:
 
 1. Update `Cargo.toml` line 3: `version = "x.y.z"`
 2. Update `packaging/arch/PKGBUILD` line 4: `pkgver=x.y.z`

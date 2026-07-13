@@ -1,138 +1,63 @@
-# Symmetric Compact Directed Acyclic Word Graph (SCDAWG)
+# SCDAWG — integration with liblevenshtein
 
-> **Note**: The complete SCDAWG theory documentation has been moved to the
-> [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate.
-> See [libdictenstein/docs/theory/scdawg/](../../../../libdictenstein/docs/theory/scdawg/README.md)
-> for the comprehensive pedagogical treatment.
->
-> This document remains for reference on how SCDAWG integrates with liblevenshtein's
-> WallBreaker algorithm and substring-based fuzzy matching.
+> **Source of truth for the theory:** the complete, pedagogical treatment of the
+> **Symmetric Compact Directed Acyclic Word Graph (SCDAWG)** — construction, complexity
+> proofs, and operations — lives in the **[libdictenstein](https://github.com/f1r3fly-io/libdictenstein)**
+> crate that owns the data structure:
+> [`libdictenstein/docs/theory/scdawg/`](../../../../libdictenstein/docs/theory/scdawg/README.md).
+> This page covers only **how liblevenshtein uses it**. The earlier in-repo deep-dive chapters
+> duplicated that treatment and are preserved under
+> [`docs/archive/theory/scdawg/`](../../archive/theory/README.md).
 
-This documentation provides a comprehensive, pedagogical treatment of the **Symmetric Compact DAWG** (SCDAWG), a data structure that enables `𝒪(∣pattern∣)` substring searching with bidirectional navigation capabilities.
+## What it is (in one paragraph)
 
-## Overview
+An **SCDAWG** (also *C2S*, Compact Symmetric) is the most space-efficient index that supports
+substring queries over a fixed text in `$\mathcal{O}(\lvert P\rvert)$` time for a pattern `$P$`,
+**plus bidirectional navigation**: from the locus of a substring `$V$` it can extend to the right
+(`$V\sigma$`) *or* to the left (`$\sigma V$`) by one symbol `$\sigma$`, and enumerate every
+occurrence. It refines the suffix automaton / CDAWG of Blumer et al. [[1]](#references) with reverse
+(left-extension) edges (Inenaga et al. [[2]](#references)). For a text of length `$n$` it has at
+most `$n+1$` states and `$4n-4$` transitions in `$\mathcal{O}(n)$` space, all queries running in
+`$\mathcal{O}(m)$` for a pattern of length `$m$`.
 
-The SCDAWG, also known as **C2S** (Compact Symmetric), is the most space-efficient index structure that supports:
+## Why liblevenshtein needs it
 
-1. **Substring search** in `𝒪(∣pattern∣)` time
-2. **Right extension**: given a pattern `V`, navigate to `V` followed by character `σ`
-3. **Left extension**: given a pattern `V`, navigate to character `σ` followed by `V`
-4. **Occurrence enumeration**: find all positions where a pattern occurs
+Two liblevenshtein capabilities rest on the SCDAWG, exposed through the `Scdawg` (byte / `u8`) and
+`ScdawgChar` (Unicode scalar / `u32`) dictionary backends in the companion `libdictenstein` crate:
 
-These capabilities make the SCDAWG ideal for applications like the **WallBreaker** algorithm (Gerdjikov et al., 2013), which requires bidirectional pattern growth during dictionary-based fuzzy string matching.
+- **Substring / infix fuzzy search.** Unlike a prefix trie, the SCDAWG indexes *all* substrings, so
+  a query can match anywhere inside a dictionary term.
+- **WallBreaker (large error bounds).** The [WallBreaker](../../../README.md#wallbreaker-large-error-bounds)
+  filter splits a long pattern into `$k+1$` (Standard) or `$2k+1$` (Transposition / MergeAndSplit)
+  disjoint pieces; by the pigeonhole principle at least one piece survives error-free, is located
+  exactly in `$\mathcal{O}(\lvert \text{piece}\rvert)$`, and is then **grown left and right** into a
+  candidate. That left-and-right growth is exactly the SCDAWG's bidirectional-extension property —
+  no other index in the toolbox provides it in both directions.
 
-## Document Structure
-
-This documentation builds concepts progressively from fundamental to advanced:
-
-| Document | Topic |
-|----------|-------|
-| [01-introduction](01-introduction.md) | Problem motivation: why we need substring indices |
-| [02-suffix-automaton](02-suffix-automaton.md) | Foundation: equivalence classes, suffix links, end-positions |
-| [03-cdawg](03-cdawg.md) | Compact DAWG: compaction and primary/secondary edges |
-| [04-scdawg](04-scdawg.md) | Symmetric Compact DAWG: left extensions and prime subwords |
-| [05-construction](05-construction.md) | On-line construction algorithm with sext links |
-| [06-operations](06-operations.md) | Substring search, bidirectional extension, IS features |
-| [07-references](07-references.md) | Annotated bibliography of source papers |
-
-## Running Example
-
-Throughout this documentation, we use the string **w = "abcabcab"** as a running example. This string is traced through each data structure:
-
-```
-String: a b c a b c a b
-Index:  0 1 2 3 4 5 6 7
-```
-
-Key properties of this example:
-- Length `∣w∣ = 8`
-- Alphabet `Σ = {a, b, c}`
-- Contains repeated patterns: "ab" (3x), "abc" (2x), "bc" (2x), "cab" (2x)
-- No unique end marker in raw form (added during construction)
-
-## Complexity Summary
-
-| Structure | States | Transitions | Space | Query Time |
-|-----------|--------|-------------|-------|------------|
-| Suffix Trie | `𝒪(n²)` | `𝒪(n²)` | `𝒪(n²)` | `𝒪(m)` |
-| Suffix Tree | `𝒪(n)` | `𝒪(n)` | `𝒪(n)` | `𝒪(m)` |
-| Suffix Automaton (DAWG) | ≤ `2n-1` | ≤ `3n-4` | `𝒪(n)` | `𝒪(m)` |
-| CDAWG | ≤ `n+1` | ≤ `2n-2` | `𝒪(n)` | `𝒪(m)` |
-| **SCDAWG** | ≤ `n+1` | ≤ `4n-4` | `𝒪(n)` | `𝒪(m)` |
-
-Where `n = ∣w∣` (text length) and `m = ∣pattern∣` (query length).
-
-## Key Concepts at a Glance
-
-### Equivalence Classes
-
-Strings belong to the same equivalence class if they share the same **end-position set**:
-
-```
-end-pos("ab") = {2, 5, 8}  (positions after "ab")
-end-pos("cab") = {5, 8}    (positions after "cab")
+```text
+                    ┌──────────────────────────────────────────────┐
+   pattern  P  ───▶ │  split into k+1 disjoint pieces               │
+                    └───────────────┬──────────────────────────────┘
+                                    │  exact locate (pigeonhole survivor)
+                                    ▼
+                    ┌──────────────────────────────────────────────┐
+        Scdawg ───▶ │  locus of piece  →  extend ← and →  →  candidate
+                    └───────────────┬──────────────────────────────┘
+                                    │  verify  d(P, cand) ≤ k
+                                    ▼
+                                 results
 ```
 
-Since "ab" and "cab" have different end-positions, they are in different classes.
+The bidirectional-growth soundness (the `$k+1$` / `$2k+1$` piece counts) is machine-checked,
+admit-free, in `docs/verification/wallbreaker/.../WallBreakerPigeonhole.v`.
 
-### Suffix Links
+## Further reading
 
-Suffix links connect each state to its **longest proper suffix** that forms a distinct equivalence class:
-
-```
-State "abc" --suffix-link--> State "bc" --suffix-link--> State "c"
-```
-
-### Left Extension Edges (SCDAWG-specific)
-
-While right extension edges (standard edges) navigate by **appending** characters:
-
-```
-"ab" --'c'--> "abc"   (append 'c' to "ab")
-```
-
-Left extension edges navigate by **prepending** characters:
-
-```
-"ab" --'c'--> "cab"   (prepend 'c' to "ab")
-```
-
-This bidirectional capability is what makes the SCDAWG "symmetric."
-
-### Prime Subwords
-
-A **prime subword** is a maximal representative of an equivalence class:
-
-```
-If every occurrence of "ab" is preceded by 'c' and followed by 'c',
-then "cabcc" is the implication (prime subword) of "ab".
-```
-
-The SCDAWG contains only prime subwords as nodes, making it maximally compact.
-
-## Prerequisites
-
-This documentation assumes familiarity with:
-- Basic automata theory (states, transitions, acceptance)
-- Graph terminology (nodes, edges, DAG)
-- Asymptotic complexity notation (`𝒪`-notation)
-
-No prior knowledge of suffix structures is required.
+- **Full SCDAWG theory (canonical source):** [`libdictenstein/docs/theory/scdawg/`](../../../../libdictenstein/docs/theory/scdawg/README.md).
+- WallBreaker in liblevenshtein: [`research/wallbreaker/`](../../research/wallbreaker/README.md).
+- Archived in-repo deep-dive chapters (superseded by libdictenstein): [`docs/archive/theory/scdawg/`](../../archive/theory/README.md).
 
 ## References
 
-The key papers that define and construct the SCDAWG are:
-
-1. **Blumer et al. (1987)** - "Complete Inverted Files for Efficient Text Retrieval and Analysis"
-   - Defines the SCDAWG structure (C2S)
-   - Introduces IS (Inverted File) features: freq(), locations()
-
-2. **Inenaga et al. (2001)** - "On-Line Construction of Symmetric Compact Directed Acyclic Word Graphs"
-   - On-line `𝒪(n)` construction algorithm
-   - Key insight: sext links = edges of `CDAWG(w^rev)`
-
-3. **Inenaga et al. (2005)** - "On-line construction of compact directed acyclic word graphs"
-   - On-line `𝒪(n)` CDAWG construction
-   - Multi-string support with unique end markers
-
-See [07-references](07-references.md) for the complete annotated bibliography.
+1. A. Blumer, J. Blumer, D. Haussler, R. McConnell, and A. Ehrenfeucht. "Complete inverted files for efficient text retrieval and analysis." *Journal of the ACM*, 34(3):578–595, 1987. [doi:10.1145/28869.28873](https://doi.org/10.1145/28869.28873)
+2. S. Inenaga, H. Hoshino, A. Shinohara, M. Takeda, S. Arikawa, G. Mauri, and G. Pavesi. "On-line construction of compact directed acyclic word graphs." *Discrete Applied Mathematics*, 146(2):156–179, 2005. [doi:10.1016/j.dam.2004.04.012](https://doi.org/10.1016/j.dam.2004.04.012)

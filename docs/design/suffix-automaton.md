@@ -18,7 +18,7 @@ This document proposes adding **suffix automaton** support to liblevenshtein-rus
 2. **Online Updates**: Support dynamic insert/delete operations like `DynamicDawg`
 3. **Zero Breaking Changes**: Add as new dictionary backend alongside existing ones
 4. **Architecture Compatibility**: Implement via existing `Dictionary` trait
-5. **Thread Safety**: RwLock-based concurrency model matching `PathMapDictionary`
+5. **Thread Safety**: Lock-free concurrency model matching `PathMapDictionary`
 
 ---
 
@@ -118,9 +118,9 @@ for match in transducer.query("conection", 2) {  // typo
 | **Matching Type** | Prefix (whole words) | Substring (anywhere) |
 | **Use Case** | Spell check, completion | Full-text search, pattern finding |
 | **Index Input** | Word list | Text corpus |
-| **Space (`n` chars)** | `𝒪(n)` | `𝒪(n)` states, `𝒪(n)` edges |
-| **Construction** | `𝒪(n)` | `𝒪(n)` online |
-| **Query** | `𝒪(m + k)` | `𝒪(m + k)` where `m` = query, `k` = results |
+| **Space (`$n$` chars)** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` states, `$\mathcal{O}(n)$` edges |
+| **Construction** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` online |
+| **Query** | `$\mathcal{O}(m + k)$` | `$\mathcal{O}(m + k)$` where `$m$` = query, `$k$` = results |
 | **Dynamic Updates** | Yes (DynamicDawg) | **Yes (proposed)** |
 | **Example Query** | "test" → "test", "testing" | "test" → "contest", "retest", "testing" |
 
@@ -135,8 +135,8 @@ A **suffix automaton** is a minimal deterministic finite automaton (DFA) that ac
 #### Core Properties
 
 1. **Substring Recognition**: Any path from the root represents a substring of the indexed text
-2. **Minimality**: Fewest possible states (typically `2n-1` for string of length `n`)
-3. **Online Construction**: Characters can be added one at a time in `𝒪(1)` amortized
+2. **Minimality**: Fewest possible states (typically `$2n-1$` for string of length `$n$`)
+3. **Online Construction**: Characters can be added one at a time in `$\mathcal{O}(1)$` amortized
 4. **Endpos Equivalence**: States group substrings by their ending positions
 
 #### Example Construction
@@ -151,7 +151,7 @@ For string `"abcbc"`:
 - `"c"` (from positions 2 and 4)
 - `""` (empty)
 
-**Automaton states** group these by equivalence classes, resulting in ~9 states instead of storing all suffixes separately (which would need `𝒪(n²)` space).
+**Automaton states** group these by equivalence classes, resulting in ~9 states instead of storing all suffixes separately (which would need `$\mathcal{O}(n^2)$` space).
 
 ### Generalized Suffix Automaton
 
@@ -159,13 +159,13 @@ For **multiple strings** (e.g., indexing a document collection):
 
 1. **Concatenation Method**: Join strings with unique separators (`$1`, `$2`, etc.)
 2. **Direct Construction**: Maintain string IDs at final states
-3. **Space Complexity**: Still `𝒪(n)` for total characters across all strings
+3. **Space Complexity**: Still `$\mathcal{O}(n)$` for total characters across all strings
 
 ### Dynamic Operations
 
 **Insertion (Standard):**
 - Suffix automaton naturally supports **online character insertion** at the end
-- `𝒪(1)` amortized per character
+- `$\mathcal{O}(1)$` amortized per character
 - Algorithm: Create new state, update suffix links, clone states if needed
 
 **Deletion (Challenging):**
@@ -188,7 +188,7 @@ For **multiple strings** (e.g., indexing a document collection):
 Dictionary Trait (Generic)
     ↓
     ├── PathMapDictionary    (prefix trie)
-    ├── DawgDictionary       (minimized prefix trie)
+    ├── DoubleArrayTrie      (static prefix trie)
     └── DynamicDawg          (dynamic prefix trie)
          ↓
     Transducer<D: Dictionary>
@@ -202,7 +202,7 @@ Dictionary Trait (Generic)
 Dictionary Trait (Generic)
     ↓
     ├── PathMapDictionary           (prefix matching)
-    ├── DawgDictionary              (prefix matching)
+    ├── DoubleArrayTrie             (prefix matching, static)
     ├── DynamicDawg                 (prefix matching, dynamic)
     └── SuffixAutomaton  [NEW]      (substring matching, dynamic)
          ↓
@@ -261,13 +261,15 @@ pub trait DictionaryNode: Clone + Send + Sync {
 ///
 /// # Thread Safety
 ///
-/// Uses `Arc<RwLock<...>>` for safe concurrent access with dynamic updates.
+/// Uses `Arc<ArcSwap<...>>` (lock-free) for safe concurrent access with dynamic
+/// updates: readers load an immutable snapshot and never block, while writers
+/// publish a new snapshot with an atomic swap.
 #[derive(Clone, Debug)]
 pub struct SuffixAutomaton {
-    inner: Arc<RwLock<SuffixAutomatonInner>>,
+    inner: Arc<ArcSwap<SuffixAutomatonInner>>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct SuffixAutomatonInner {
     /// Node storage (index-based graph)
     nodes: Vec<SuffixNode>,
@@ -323,8 +325,8 @@ struct SuffixNode {
 /// `Transducer` and query infrastructure.
 #[derive(Clone, Debug)]
 pub struct SuffixNodeHandle {
-    /// Reference to the automaton (for traversal)
-    automaton: Arc<RwLock<SuffixAutomatonInner>>,
+    /// Immutable automaton snapshot captured at `root()` time
+    automaton: Arc<SuffixAutomatonInner>,
 
     /// Current state index
     state_id: usize,
@@ -332,13 +334,13 @@ pub struct SuffixNodeHandle {
 
 impl DictionaryNode for SuffixNodeHandle {
     fn is_final(&self) -> bool {
-        let inner = self.automaton.read().unwrap();
-        inner.nodes[self.state_id].is_final
+        // Lock-free: read directly through the immutable snapshot Arc.
+        self.automaton.nodes[self.state_id].is_final
     }
 
     fn transition(&self, label: u8) -> Option<Self> {
-        let inner = self.automaton.read().unwrap();
-        inner.nodes[self.state_id]
+        // Lock-free: no lock; the snapshot is immutable for this handle's lifetime.
+        self.automaton.nodes[self.state_id]
             .edges
             .iter()
             .find(|(b, _)| *b == label)
@@ -376,7 +378,7 @@ Positions map:
 9 -> [(0, 4)]  // string_id=0, position=4 (end of "abcbc")
 ```
 
-**Space:** ~9 states for 5 characters = `𝒪(n)`
+**Space:** ~9 states for 5 characters = `$\mathcal{O}(n)$`
 
 ---
 
@@ -457,14 +459,16 @@ fn extend(&mut self, ch: u8) {
 ```
 
 **Complexity:**
-- **Time:** `𝒪(1)` amortized per character (proven by Blumer et al.)
-- **Space:** Adds 1 state, possibly 1 clone = `𝒪(1)` amortized
+- **Time:** `$\mathcal{O}(1)$` amortized per character (proven by Blumer et al.)
+- **Space:** Adds 1 state, possibly 1 clone = `$\mathcal{O}(1)$` amortized
 
 ### 2. Insert String
 
 ```rust
 pub fn insert(&self, text: &str) -> bool {
-    let mut inner = self.inner.write().unwrap();
+    // Lock-free: mutate a clone of the current snapshot, then publish it with an
+    // atomic swap (the shipped code retries the publish with compare-and-swap).
+    let mut inner = (**self.inner.load()).clone();
     let string_id = inner.string_count;
 
     let start_state = inner.last_state;
@@ -487,19 +491,22 @@ pub fn insert(&self, text: &str) -> bool {
     // Reset to root for next insertion (generalized automaton)
     inner.last_state = 0;
 
+    self.inner.store(Arc::new(inner));
     true
 }
 ```
 
 **Complexity:**
-- **Time:** `𝒪(n)` where `n` = text length
-- **Space:** `𝒪(n)` new states (amortized)
+- **Time:** `$\mathcal{O}(n)$` where `$n$` = text length
+- **Space:** `$\mathcal{O}(n)$` new states (amortized)
 
 ### 3. Remove String (Reference Counting)
 
 ```rust
 pub fn remove(&self, text: &str) -> bool {
-    let mut inner = self.inner.write().unwrap();
+    // Lock-free: mutate a clone of the current snapshot, then publish it with an
+    // atomic swap (early returns simply drop the clone without publishing).
+    let mut inner = (**self.inner.load()).clone();
 
     // Navigate to final state for this text
     let mut state = 0;
@@ -532,20 +539,23 @@ pub fn remove(&self, text: &str) -> bool {
     inner.needs_compaction = true;
     inner.string_count -= 1;
 
+    self.inner.store(Arc::new(inner));
     true
 }
 ```
 
 **Complexity:**
-- **Time:** `𝒪(m)` where `m` = text length
-- **Space:** `𝒪(1)`
+- **Time:** `$\mathcal{O}(m)$` where `$m$` = text length
+- **Space:** `$\mathcal{O}(1)$`
 - **Note:** May leave unreachable states; call `compact()` periodically
 
 ### 4. Compaction (Garbage Collection)
 
 ```rust
 pub fn compact(&self) {
-    let mut inner = self.inner.write().unwrap();
+    // Lock-free: mutate a clone of the current snapshot, then publish it with an
+    // atomic swap (a no-op early return simply drops the clone).
+    let mut inner = (**self.inner.load()).clone();
 
     if !inner.needs_compaction {
         return;
@@ -599,12 +609,14 @@ pub fn compact(&self) {
     inner.positions = new_positions;
     inner.last_state = 0;
     inner.needs_compaction = false;
+
+    self.inner.store(Arc::new(inner));
 }
 ```
 
 **Complexity:**
-- **Time:** `𝒪(states + edges)` = `𝒪(n)` where `n` = total indexed characters
-- **Space:** `𝒪(n)` temporary
+- **Time:** `$\mathcal{O}(\text{states} + \text{edges})$` = `$\mathcal{O}(n)$` where `$n$` = total indexed characters
+- **Space:** `$\mathcal{O}(n)$` temporary
 - **Frequency:** Recommended after every `N` deletions or when memory pressure detected
 
 ---
@@ -682,7 +694,8 @@ impl Dictionary for SuffixAutomaton {
 
     fn root(&self) -> Self::Node {
         SuffixNodeHandle {
-            automaton: Arc::clone(&self.inner),
+            // Capture an immutable snapshot; traversal then needs no locks.
+            automaton: self.inner.load_full(),
             state_id: 0,
         }
     }
@@ -704,7 +717,7 @@ impl Dictionary for SuffixAutomaton {
     }
 
     fn sync_strategy(&self) -> SyncStrategy {
-        SyncStrategy::ExternalSync  // Uses RwLock
+        SyncStrategy::InternalSync  // Lock-free internal synchronization (ArcSwap)
     }
 }
 ```
@@ -715,7 +728,7 @@ impl Dictionary for SuffixAutomaton {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 
 // Index a code snippet
 let code = r#"
@@ -835,8 +848,8 @@ for candidate in transducer
 5. ✅ Add basic tests for construction
 
 **Dependencies:**
-- Existing: `std::sync::{Arc, RwLock}`, `std::collections::HashMap`
-- No new external dependencies
+- Standard library: `std::sync::Arc`, `std::collections::HashMap`
+- External: `arc_swap::ArcSwap` (lock-free atomic `Arc` snapshotting)
 
 ### Phase 2: Dynamic Operations (Week 2-3)
 
@@ -879,8 +892,8 @@ for candidate in transducer
 5. ✅ Add serialization benchmarks
 
 **Considerations:**
-- `Arc<RwLock<...>>` requires custom serialization
-- Serialize inner state, deserialize and wrap in Arc/RwLock
+- `Arc<ArcSwap<...>>` requires custom serialization
+- Serialize inner state, deserialize and wrap in Arc/ArcSwap
 
 ### Phase 5: CLI Integration (Week 4-5)
 
@@ -940,7 +953,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 **Optimization Targets:**
 - Edge lookup: Consider binary search or hashmap for large alphabets
-- State traversal: Cache reads to avoid repeated lock acquisition
+- State traversal: Reuse one captured snapshot handle to avoid repeated atomic reloads
 - Compaction: Incremental GC instead of full mark-and-sweep
 
 ---
@@ -951,18 +964,18 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Operation | Time Complexity | Space Complexity |
 |-----------|----------------|------------------|
-| **Construction (`n` chars)** | `𝒪(n)` amortized | `𝒪(n)` states |
-| **Insert string (`m` chars)** | `𝒪(m)` | `𝒪(m)` states |
-| **Remove string (`m` chars)** | `𝒪(m)` | `𝒪(1)` |
-| **Compact** | `𝒪(states + edges)` | `𝒪(n)` temporary |
-| **Query (`m` chars, `k` results)** | `𝒪(m × max_distance + k)` | `𝒪(m × max_distance)` |
-| **Contains (`m` chars)** | `𝒪(m)` | `𝒪(1)` |
+| **Construction (`$n$` chars)** | `$\mathcal{O}(n)$` amortized | `$\mathcal{O}(n)$` states |
+| **Insert string (`$m$` chars)** | `$\mathcal{O}(m)$` | `$\mathcal{O}(m)$` states |
+| **Remove string (`$m$` chars)** | `$\mathcal{O}(m)$` | `$\mathcal{O}(1)$` |
+| **Compact** | `$\mathcal{O}(\text{states} + \text{edges})$` | `$\mathcal{O}(n)$` temporary |
+| **Query (`$m$` chars, `$k$` results)** | `$\mathcal{O}(m \times \text{max\_distance} + k)$` | `$\mathcal{O}(m \times \text{max\_distance})$` |
+| **Contains (`$m$` chars)** | `$\mathcal{O}(m)$` | `$\mathcal{O}(1)$` |
 
 ### Space Analysis
 
 **Suffix Automaton:**
-- States: ≤ `2n - 1` for string of length `n`
-- Edges: ≤ `3n - 4`
+- States: `$\le 2n - 1$` for string of length `$n$`
+- Edges: `$\le 3n - 4$`
 - Per-state overhead: ~40 bytes (Vec, Option, usize fields)
 - Total: ~`80n - 160` bytes (worst case)
 
@@ -976,7 +989,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 ### Benchmark Estimates
 
 **Construction (1 MB text):**
-- Estimated: 50-100 ms (online algorithm, `𝒪(n)`)
+- Estimated: 50-100 ms (online algorithm, `$\mathcal{O}(n)$`)
 - Compared to: PathMap ~20-30 ms (simpler structure)
 
 **Query ("algorithm", distance 2):**
@@ -1035,7 +1048,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 3. **Thread Safety**
    - Concurrent reads: multiple threads query simultaneously
    - Concurrent writes: insert/remove from multiple threads
-   - Read during write: verify RwLock behavior
+   - Read during write: verify readers observe a consistent snapshot during concurrent writes
 
 ### Benchmark Tests
 
@@ -1079,7 +1092,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 ### 1. Incremental Compaction
 
-**Problem:** Current compaction is stop-the-world `𝒪(n)`
+**Problem:** Current compaction is stop-the-world `$\mathcal{O}(n)$`
 
 **Solution:** Generational GC or incremental marking
 - Track "dirty" regions after deletions
@@ -1147,11 +1160,11 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Feature | Suffix Automaton | Suffix Tree |
 |---------|------------------|-------------|
-| **States** | `𝒪(n)` | `𝒪(n)` |
-| **Edges** | `𝒪(n)` | `𝒪(n)` |
-| **Construction** | `𝒪(n)` online | `𝒪(n)` (Ukkonen) |
-| **Space (practical)** | `2n` states, `3n` edges | `n` nodes, `2n` edges |
-| **Substring query** | `𝒪(m)` | `𝒪(m)` |
+| **States** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` |
+| **Edges** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` |
+| **Construction** | `$\mathcal{O}(n)$` online | `$\mathcal{O}(n)$` (Ukkonen) |
+| **Space (practical)** | `$2n$` states, `$3n$` edges | `$n$` nodes, `$2n$` edges |
+| **Substring query** | `$\mathcal{O}(m)$` | `$\mathcal{O}(m)$` |
 | **Online insert** | ✅ Yes (natural) | ⚠️ Complex (Ukkonen) |
 | **Dynamic delete** | ⚠️ Via compaction | ⚠️ Via rebuild |
 | **Implementation** | Simpler (DFA) | More complex |
@@ -1162,9 +1175,9 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Feature | Suffix Automaton | Suffix Array |
 |---------|------------------|-------------|
-| **Space** | `𝒪(n)` states + edges | `𝒪(n)` integers |
-| **Construction** | `𝒪(n)` | `𝒪(n log n)` or `𝒪(n)` |
-| **Substring query** | `𝒪(m)` | `𝒪(m log n)` |
+| **Space** | `$\mathcal{O}(n)$` states + edges | `$\mathcal{O}(n)$` integers |
+| **Construction** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n \log n)$` or `$\mathcal{O}(n)$` |
+| **Substring query** | `$\mathcal{O}(m)$` | `$\mathcal{O}(m \log n)$` |
 | **Approx. matching** | ✅ Native (Levenshtein) | ⚠️ Requires extensions |
 | **Dynamic insert** | ✅ Yes | ❌ Requires rebuild |
 | **Memory** | Higher | Lower |
@@ -1183,7 +1196,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
    DOI: [10.1016/0304-3975(85)90157-4](https://doi.org/10.1016/0304-3975(85)90157-4)
    - **Foundational paper** introducing suffix automata
    - First linear-time construction algorithm
-   - Proves minimality properties and space bounds (≤ `2n-1` states)
+   - Proves minimality properties and space bounds (`$\le 2n-1$` states)
    - 357+ citations (Semantic Scholar)
 
 2. **Crochemore, M. (1986)**
@@ -1208,8 +1221,8 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
    Theoretical Computer Science, 410(37), 3553-3562.
    DOI: [10.1016/j.tcs.2009.03.034](https://doi.org/10.1016/j.tcs.2009.03.034)
    - **Generalized suffix automata for multiple strings**
-   - Improved space bounds: ≤ `2Q - 2` states (`Q` = prefix tree nodes)
-   - Better than Blumer's bound (`2∥U∥ - 1`) for multiple strings
+   - Improved space bounds: `$\le 2Q - 2$` states (`$Q$` = prefix tree nodes)
+   - Better than Blumer's bound (`$2\lVert U\rVert - 1$`) for multiple strings
    - Direct relevance to our multi-document indexing use case
 
 5. **Inenaga, S., Hoshino, H., Shinohara, A., Takeda, M., Arikawa, S., Mauri, G., & Pavesi, G. (2001)**
@@ -1274,7 +1287,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 - `src/dictionary/dynamic_dawg.rs` - Dynamic updates pattern (reference counting, compaction)
 - `src/dictionary/dawg.rs` - Static construction pattern (minimize, suffix sharing)
-- [`docs/user-guide/thread-safety.md`](../user-guide/thread-safety.md) - Thread safety with RwLock pattern
+- [`docs/user-guide/thread-safety.md`](../user-guide/thread-safety.md) - Thread safety with the lock-free `ArcSwap` pattern
 - [`docs/design/dynamic-dawg.md`](dynamic-dawg.md) - Dynamic mutation documentation
 
 ---
@@ -1335,10 +1348,10 @@ This design proposes a **comprehensive suffix automaton implementation** for lib
 1. ✅ **Enables substring matching** - Find approximate patterns anywhere in text
 2. ✅ **Supports dynamic updates** - Insert/delete with periodic compaction
 3. ✅ **Integrates seamlessly** - No changes to existing `Transducer` or query code
-4. ✅ **Maintains thread safety** - RwLock pattern matching other dictionaries
+4. ✅ **Maintains thread safety** - Lock-free `ArcSwap` pattern matching other dictionaries
 5. ✅ **Provides rich API** - Construction, mutation, metadata, serialization
 
-The implementation follows established patterns from `DynamicDawg` and leverages proven algorithms (Blumer et al., 1985) with `𝒪(n)` construction and space complexity.
+The implementation follows established patterns from `DynamicDawg` and leverages proven algorithms (Blumer et al., 1985) with `$\mathcal{O}(n)$` construction and space complexity.
 
 **Estimated Effort:** 5-6 weeks for complete implementation including tests, documentation, and benchmarks.
 

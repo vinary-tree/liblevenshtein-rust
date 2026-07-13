@@ -24,7 +24,7 @@
 ### Key Advantages
 
 - 🔄 **Full dynamic updates**: Insert AND remove terms at runtime
-- 🔒 **Thread-safe**: Safe for concurrent reads and exclusive writes
+- 🔒 **Thread-safe (lock-free)**: Concurrent reads never block; writers publish via CAS
 - 💾 **Space-efficient**: Shares common suffixes (20-40% reduction)
 - ⚡ **Good performance**: Suitable for dictionaries with frequent updates
 - 📊 **Reference counting**: Safe deletion without orphaning nodes
@@ -98,7 +98,9 @@ Adding a term while maintaining minimality:
 
 ```rust
 fn insert(&self, term: &str) {
-    let mut lock = self.inner.write();  // Exclusive lock
+    let mut lock = self.inner.write();  // simplified pseudocode — the real backend is
+                                        // lock-free: it mutates a cloned snapshot and
+                                        // publishes it via CAS (see "Thread Safety" below)
 
     // Traverse existing path
     let mut node_idx = 0;  // Root
@@ -124,7 +126,7 @@ fn insert(&self, term: &str) {
 }
 ```
 
-**Complexity**: O(m) where m = term length
+**Complexity**: `$\mathcal{O}(m)$` where m = term length
 
 ### Deletion Algorithm
 
@@ -167,7 +169,7 @@ fn remove(&self, term: &str) -> bool {
 }
 ```
 
-**Complexity**: O(m)
+**Complexity**: `$\mathcal{O}(m)$`
 
 ### Compaction
 
@@ -192,7 +194,7 @@ pub fn compact(&self) {
 }
 ```
 
-**Complexity**: O(n) where n = total nodes
+**Complexity**: `$\mathcal{O}(n)$` where n = total nodes
 
 **When to compact**:
 - After many deletions (10%+ of dictionary removed)
@@ -205,24 +207,15 @@ pub fn compact(&self) {
 
 ```rust
 pub struct DynamicDawg<V: DictionaryValue = ()> {
-    inner: Arc<RwLock<DynamicDawgInner<V>>>,
+    inner: Arc<DynamicDawgInner<V>>,
 }
 
-struct DynamicDawgInner<V: DictionaryValue> {
-    nodes: Vec<DawgNode<V>>,           // Node storage
-    term_count: usize,                 // Number of terms
-    needs_compaction: bool,            // Deletion flag
-    suffix_cache: FxHashMap<u64, usize>, // Hash → node index
-    bloom_filter: Option<BloomFilter>, // Fast negative lookups
-    auto_minimize_threshold: f32,      // Lazy minimization trigger
-}
-
-struct DawgNode<V: DictionaryValue> {
-    edges: SmallVec<[(u8, usize); 4]>, // Label → child index
-    is_final: bool,                    // Marks valid term
-    ref_count: usize,                  // For safe deletion
-    value: Option<V>,                  // Associated value
-}
+// `DynamicDawgInner` is the unit-generic lock-free DAWG core,
+// `LockFreeDawg<u8, V>`: an atomically reference-counted node graph. Each node
+// publishes an immutable edge-list snapshot via `ArcSwap`; readers load the
+// snapshot without locking and writers install a new one with a
+// `compare_exchange` (CAS) loop.
+type DynamicDawgInner<V = ()> = LockFreeDawg<u8, V>;
 ```
 
 ### Memory Layout
@@ -237,18 +230,18 @@ struct DawgNode<V: DictionaryValue> {
 │ value (Option)  │ V or 1 byte │ Varies         │
 ├─────────────────┼─────────────┼────────────────┤
 │ Total per node  │ ~25+ bytes  │ ~25 bytes      │
-│ Overhead        │ Arc+RwLock  │ 16 bytes total │
+│ Overhead        │ Arc         │ 8 bytes total  │
 └─────────────────┴─────────────┴────────────────┘
 ```
 
-**Example**: 10,000-term dictionary ≈ 250KB (nodes) + 32KB (suffix cache)
+**Example**: 10,000-term dictionary `$\approx$` 250KB (nodes) + 32KB (suffix cache)
 
 ### Clone Behavior & Memory Semantics
 
-`DynamicDawg` uses `Arc<RwLock<...>>` internally, making `.clone()` a **shallow copy** that shares all underlying data structures between clones:
+`DynamicDawg` uses `Arc<...>` internally (the lock-free `LockFreeDawg` core), making `.clone()` a **shallow copy** that shares all underlying data structures between clones:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 let dict1 = DynamicDawg::from_iter(vec!["test", "testing"]);
 let dict2 = dict1.clone();  // O(1) - only increments Arc refcount
@@ -266,11 +259,11 @@ assert_eq!(dict2.len(), Some(3));  // Same count
 
 | Property | Behavior | Impact |
 |----------|----------|--------|
-| **Time Complexity** | O(1) | Single atomic increment |
-| **Space Complexity** | O(1) | ~16 bytes (Arc pointer only) |
+| **Time Complexity** | `$\mathcal{O}(1)$` | Single atomic increment |
+| **Space Complexity** | `$\mathcal{O}(1)$` | ~16 bytes (Arc pointer only) |
 | **Data Sharing** | ✅ Complete | All clones share same node graph |
 | **Mutation Visibility** | ✅ Global | Changes via any clone affect all |
-| **Thread Safety** | ✅ RwLock | Multiple readers OR single writer |
+| **Thread Safety** | ✅ Lock-free | Readers never block; writers publish via CAS |
 | **Independence** | ❌ None | No isolation between clones |
 
 #### How Clone Works
@@ -279,7 +272,7 @@ The clone operation only increments an atomic reference counter:
 
 ```rust
 pub struct DynamicDawg<V> {
-    inner: Arc<RwLock<DynamicDawgInner<V>>>,  // ← Single Arc
+    inner: Arc<DynamicDawgInner<V>>,  // ← Single Arc
 }
 
 // Cloning increments Arc's atomic refcount
@@ -290,8 +283,8 @@ let dict2 = dict1.clone();
 
 **What gets cloned:**
 - ✅ Arc smart pointer (~16 bytes on stack)
-- ❌ NOT the RwLock
-- ❌ NOT the node graph (Vec<DawgNode>)
+- ❌ NOT the lock-free core (shared, never copied)
+- ❌ NOT the node graph
 - ❌ NOT the suffix cache or bloom filter
 - ❌ NOT any internal structures
 
@@ -371,11 +364,12 @@ If you need **independent copies** where modifications don't affect other instan
 
 **Option 1: Serialize/Deserialize**
 ```rust
-use serde::{Serialize, Deserialize};
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 
-// Create deep copy via serialization
-let bytes = bincode::serialize(&dict1)?;
-let dict2: DynamicDawg = bincode::deserialize(&bytes)?;
+// Create deep copy via serialization (`Vec<u8>: Write`, `&[u8]: Read`)
+let mut bytes = Vec::new();
+BincodeSerializer::serialize(&dict1, &mut bytes)?;
+let dict2: DynamicDawg = BincodeSerializer::deserialize(&bytes[..])?;
 
 // Now dict1 and dict2 are truly independent
 dict1.insert("new");
@@ -397,9 +391,9 @@ let dict2 = DynamicDawg::from_iter(terms);
 
 | Method | Time | Space | Independence |
 |--------|------|-------|--------------|
-| `.clone()` | O(1) | O(1) | ❌ Shared |
-| Serialize/Deserialize | O(n) | O(n) | ✅ Full |
-| Rebuild from terms | O(n·m) | O(n) | ✅ Full |
+| `.clone()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | ❌ Shared |
+| Serialize/Deserialize | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | ✅ Full |
+| Rebuild from terms | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(n)$` | ✅ Full |
 
 #### Comparison with Other Dictionaries
 
@@ -407,11 +401,11 @@ Different dictionary implementations have different clone semantics:
 
 | Dictionary | Clone Type | Cost | Shared Data? |
 |------------|------------|------|--------------|
-| **DynamicDawg** | Shallow (Arc) | O(1) | ✅ Yes |
-| **DynamicDawgChar** | Shallow (Arc) | O(1) | ✅ Yes |
-| **PathMapDictionary** | Shallow (Arc) | O(1) | ✅ Yes |
-| **DoubleArrayTrie** | Deep copy | O(n) | ❌ No |
-| **DoubleArrayTrieChar** | Deep copy | O(n) | ❌ No |
+| **DynamicDawg** | Shallow (Arc) | `$\mathcal{O}(1)$` | ✅ Yes |
+| **DynamicDawgChar** | Shallow (Arc) | `$\mathcal{O}(1)$` | ✅ Yes |
+| **PathMapDictionary** | Shallow (Arc) | `$\mathcal{O}(1)$` | ✅ Yes |
+| **DoubleArrayTrie** | Deep copy | `$\mathcal{O}(n)$` | ❌ No |
+| **DoubleArrayTrieChar** | Deep copy | `$\mathcal{O}(n)$` | ❌ No |
 
 **Why the difference?**
 - **Mutable dictionaries** (DynamicDawg, PathMap) use Arc for shared ownership with interior mutability
@@ -435,40 +429,40 @@ let readers: Vec<_> = (0..10).map(|i| {
     })
 }).collect();
 
-// Single writer (blocks readers during write)
+// Concurrent writer (lock-free; does not block readers)
 let writer = {
     let dict = dict.clone();
     thread::spawn(move || {
-        dict.insert("new_term")  // Exclusive write access
+        dict.insert("new_term")  // Lock-free insertion (CAS publication)
     })
 };
 ```
 
-**RwLock semantics:**
-- **Multiple readers** can access simultaneously (read locks don't block each other)
-- **Single writer** gets exclusive access (write lock blocks all readers and other writers)
+**Concurrency semantics:**
+- **Readers are lock-free** — each loads an `ArcSwap` edge-list snapshot and never blocks
+- **Writers publish new nodes** via `compare_exchange` (CAS) loops and do not block readers
 - Write operations: `insert()`, `remove()`, `union_with()`, `compact()`
 - Read operations: `contains()`, `get_value()`, `len()`, iteration
 
-**Performance impact:**
-- Read locks: ~10-20ns overhead (atomic operations)
-- Write locks: ~50-100ns + potential thread wake-up costs
-- Contention: High write frequency can create bottlenecks
+**Performance impact (historical):**
+- Earlier `RwLock`-based releases measured ~10-20ns read-lock and ~50-100ns write-lock overhead
+- The backend is now lock-free: reads incur only an atomic `ArcSwap` load, and writes a CAS publication
+- Concurrent readers therefore no longer serialize behind writers
 
 #### Summary
 
 **Key Takeaways:**
 1. 🔗 `.clone()` creates a **shallow copy** - all clones share the same data
-2. 🚀 **O(1)** time and space - just increments atomic reference count
+2. 🚀 **`$\mathcal{O}(1)$`** time and space - just increments atomic reference count
 3. 🔄 **Mutations are visible** across all clones (by design)
-4. 🔒 **Thread-safe** through RwLock (multiple readers, single writer)
-5. 📊 For **independence**, use serialization or rebuild from terms (O(n) cost)
+4. 🔒 **Thread-safe and lock-free** — readers never block; writers publish via `compare_exchange` (CAS)
+5. 📊 For **independence**, use serialization or rebuild from terms (`$\mathcal{O}(n)$` cost)
 
 ### Optimizations
 
 #### 1. SmallVec for Edges
 
-Most nodes have ≤4 edges. `SmallVec` avoids heap allocation:
+Most nodes have `$\le 4$` edges. `SmallVec` avoids heap allocation:
 
 ```rust
 // Inline storage for ≤4 edges (stack allocated)
@@ -540,7 +534,7 @@ if nodes.len() > last_minimized * auto_minimize_threshold {
 }
 ```
 
-**Impact**: Amortizes O(n) cost over many insertions
+**Impact**: Amortizes `$\mathcal{O}(n)$` cost over many insertions
 
 ## Construction Methods
 
@@ -550,10 +544,10 @@ DynamicDawg provides multiple constructors for different initialization patterns
 
 | Constructor | Complexity | Use Case | Thread-Safe |
 |-------------|-----------|----------|-------------|
-| `new()` | O(1) | Empty start, incremental | ✅ |
-| `from_iter()` | O(n·m) | Bulk load from iterator | ✅ |
-| `from_terms()` | O(n·m) | Simple term list | ✅ |
-| `insert_with_value()` | O(m) amortized | Per-term values | ✅ |
+| `new()` | `$\mathcal{O}(1)$` | Empty start, incremental | ✅ |
+| `from_iter()` | `$\mathcal{O}(n \cdot m)$` | Bulk load from iterator | ✅ |
+| `from_terms()` | `$\mathcal{O}(n \cdot m)$` | Simple term list | ✅ |
+| `insert_with_value()` | `$\mathcal{O}(m)$` amortized | Per-term values | ✅ |
 
 Where n = number of terms, m = average term length
 
@@ -562,7 +556,7 @@ Where n = number of terms, m = average term length
 Create an empty dictionary for incremental population:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 // Create empty dictionary
 let dict: DynamicDawg = DynamicDawg::new();
@@ -578,8 +572,8 @@ valued_dict.insert_with_value("world", 200);
 ```
 
 **Characteristics:**
-- **Time**: O(1) - Allocates minimal structure
-- **Memory**: ~48 bytes (Arc + RwLock + empty DynamicDawgInner)
+- **Time**: `$\mathcal{O}(1)$` - Allocates minimal structure
+- **Memory**: small fixed allocation (Arc + empty lock-free DynamicDawgInner)
 - **Use case**: Real-time incremental updates, streaming input
 
 **When to use:**
@@ -592,7 +586,7 @@ valued_dict.insert_with_value("world", 200);
 Build dictionary from any iterator over string-like items:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 // From Vec
 let terms = vec!["apple", "banana", "cherry"];
@@ -613,7 +607,7 @@ let dict = DynamicDawg::from_iter(lines);
 ```
 
 **Characteristics:**
-- **Time**: O(n·m) where n=terms, m=avg length
+- **Time**: `$\mathcal{O}(n \cdot m)$` where n=terms, m=avg length
 - **Memory**: Linear with term count (~250KB for 10K terms)
 - **Optimization**: Pre-sorting terms improves cache locality
 
@@ -630,7 +624,7 @@ let dict = DynamicDawg::from_iter(terms);
 Convenience wrapper for common case of Vec/slice of terms:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 // Direct from slice
 let dict = DynamicDawg::from_terms(&["test", "testing", "tester"]);
@@ -647,7 +641,7 @@ let dict = DynamicDawg::from_terms(terms);
 Insert terms with associated metadata (frequencies, IDs, etc.):
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 // Example: Term frequencies
 let dict: DynamicDawg<u32> = DynamicDawg::new();
@@ -778,14 +772,14 @@ DynamicDawg provides comprehensive methods for querying dictionary contents and 
 
 | Method | Returns | Complexity | Thread-Safe | Description |
 |--------|---------|------------|-------------|-------------|
-| `contains(term)` | `bool` | O(m) | ✅ Yes | Check if term exists |
-| `get_value(term)` | `Option<V>` | O(m) | ✅ Yes | Retrieve associated value |
-| `len()` | `Option<usize>` | O(1) | ✅ Yes | Get term count (Dictionary trait) |
-| `is_empty()` | `bool` | O(1) | ✅ Yes | Check if empty (Dictionary trait) |
-| `term_count()` | `usize` | O(1) | ✅ Yes | Get exact term count |
-| `node_count()` | `usize` | O(1) | ✅ Yes | Get internal node count |
-| `needs_compaction()` | `bool` | O(1) | ✅ Yes | Check if compaction recommended |
-| `root()` | `DynamicDawgNode` | O(1) | ✅ Yes | Get root node for traversal |
+| `contains(term)` | `bool` | `$\mathcal{O}(m)$` | ✅ Yes | Check if term exists |
+| `get_value(term)` | `Option<V>` | `$\mathcal{O}(m)$` | ✅ Yes | Retrieve associated value |
+| `len()` | `Option<usize>` | `$\mathcal{O}(1)$` | ✅ Yes | Get term count (Dictionary trait) |
+| `is_empty()` | `bool` | `$\mathcal{O}(1)$` | ✅ Yes | Check if empty (Dictionary trait) |
+| `term_count()` | `usize` | `$\mathcal{O}(1)$` | ✅ Yes | Get exact term count |
+| `node_count()` | `usize` | `$\mathcal{O}(1)$` | ✅ Yes | Get internal node count |
+| `needs_compaction()` | `bool` | `$\mathcal{O}(1)$` | ✅ Yes | Check if compaction recommended |
+| `root()` | `DynamicDawgNode` | `$\mathcal{O}(1)$` | ✅ Yes | Get root node for traversal |
 
 *Note*: `m` = term length (in bytes).
 
@@ -801,13 +795,13 @@ pub fn contains(&self, term: &str) -> bool
 ```
 
 **Performance**:
-- **Complexity**: O(m) where m is term length
+- **Complexity**: `$\mathcal{O}(m)$` where m is term length
 - **Optimizations**: Bloom filter for fast negative lookups (~100× faster rejection)
-- **Lock contention**: Read lock (shared access)
+- **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 let dict = DynamicDawg::from_terms(vec!["cat", "dog"]);
 
@@ -871,12 +865,12 @@ where
 - `None` if term doesn't exist or has no value
 
 **Performance**:
-- **Complexity**: O(m) where m is term length
-- **Lock contention**: Read lock (shared access)
+- **Complexity**: `$\mathcal{O}(m)$` where m is term length
+- **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 // Dictionary with integer values
 let dict: DynamicDawg<u32> = DynamicDawg::new();
@@ -927,12 +921,12 @@ fn is_empty(&self) -> bool      // Dictionary trait
 - `is_empty()`: `true` if no terms, `false` otherwise
 
 **Performance**:
-- **Complexity**: O(1) - stored counter
-- **Lock contention**: Read lock (shared access)
+- **Complexity**: `$\mathcal{O}(1)$` - stored counter
+- **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
 ```rust
-use liblevenshtein::dictionary::{Dictionary, dynamic_dawg::DynamicDawg};
+use libdictenstein::{Dictionary, dynamic_dawg::DynamicDawg};
 
 let dict = DynamicDawg::new();
 assert_eq!(dict.len(), Some(0));
@@ -961,8 +955,8 @@ pub fn term_count(&self) -> usize
 ```
 
 **Performance**:
-- **Complexity**: O(1) - stored counter
-- **Lock contention**: Read lock (shared access)
+- **Complexity**: `$\mathcal{O}(1)$` - stored counter
+- **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
 ```rust
@@ -996,8 +990,8 @@ pub fn node_count(&self) -> usize
 **Returns**: Total number of DAWG nodes (including non-final nodes)
 
 **Performance**:
-- **Complexity**: O(1) - stored counter
-- **Lock contention**: Read lock (shared access)
+- **Complexity**: `$\mathcal{O}(1)$` - stored counter
+- **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
 ```rust
@@ -1020,7 +1014,7 @@ assert_eq!(removed, 0); // Already minimal
 
 **Interpretation**:
 - Higher node count → More memory usage
-- `node_count()` ≈ `term_count()` → Good compression (lots of sharing)
+- `node_count()` `$\approx$` `term_count()` → Good compression (lots of sharing)
 - `node_count()` >> `term_count()` → Poor compression (deletions without compaction)
 
 **Monitoring Example**:
@@ -1054,8 +1048,8 @@ pub fn needs_compaction(&self) -> bool
 - `false` if structure is minimal or only insertions occurred
 
 **Performance**:
-- **Complexity**: O(1) - flag check
-- **Lock contention**: Read lock (shared access)
+- **Complexity**: `$\mathcal{O}(1)$` - flag check
+- **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
 ```rust
@@ -1088,7 +1082,7 @@ if dict.needs_compaction() {
 ```
 
 **Performance Guidance**:
-- Compaction is O(n) where n = total characters
+- Compaction is `$\mathcal{O}(n)$` where n = total characters
 - Compact periodically, not after every deletion
 - Typical trigger: After removing >10% of terms
 
@@ -1106,12 +1100,12 @@ fn root(&self) -> DynamicDawgNode // From Dictionary trait
 **Returns**: Node at root of DAWG (entry point for traversal)
 
 **Performance**:
-- **Complexity**: O(1)
-- **Lock contention**: Read lock acquired per node operation
+- **Complexity**: `$\mathcal{O}(1)$`
+- **Concurrency**: Lock-free traversal (per-node `ArcSwap` snapshot)
 
 **Example**:
 ```rust
-use liblevenshtein::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 
 let dict = DynamicDawg::from_terms(vec!["cat", "car", "card"]);
 
@@ -1137,8 +1131,8 @@ if let Some(c_node) = root.transition(b'c') {
 **Zipper-Based Traversal** (preferred for complex navigation):
 
 ```rust
-use liblevenshtein::dictionary::zipper::DictZipper;
-use liblevenshtein::dictionary::dynamic_dawg_zipper::DynamicDawgZipper;
+use libdictenstein::zipper::DictZipper;
+use libdictenstein::dynamic_dawg::DynamicDawgZipper;
 
 let dict: DynamicDawg<u32> = DynamicDawg::new();
 dict.insert_with_value("hello", 42);
@@ -1176,11 +1170,11 @@ if let Some(final_zipper) = result {
 | `needs_compaction()` | ~2ns | 500M ops/sec | Flag read |
 | `root()` | ~3ns | 333M ops/sec | Return node 0 |
 
-**Lock Contention**:
-- All accessors use read locks (shared access)
+**Concurrency**:
+- All accessors are lock-free reads (no reader lock)
 - Multiple threads can query concurrently
-- No contention with other readers
-- Blocked during write operations (insert/remove)
+- Readers never block on other readers or on writers
+- Writers publish new state via `compare_exchange` (CAS)
 
 **Memory Overhead**:
 - Term count: 8 bytes (usize)
@@ -1283,9 +1277,9 @@ The `union_with()` and `union_replace()` methods enable **merging two DynamicDaw
 - 🔢 Building composite symbol tables
 
 **Key Characteristics**:
-- 🔒 **Thread-safe**: Operations use RwLock for concurrent access
+- 🔒 **Thread-safe**: Lock-free reads; writers publish via CAS
 - 💾 **DAWG-preserving**: Maintains minimization through `insert_with_value()`
-- ⚡ **Efficient**: O(n·m) traversal with minimal memory overhead
+- ⚡ **Efficient**: `$\mathcal{O}(n \cdot m)$` traversal with minimal memory overhead
 - 🎯 **Flexible**: Custom merge functions for value conflicts
 
 ### union_with() - Merge with Custom Logic
@@ -1317,10 +1311,10 @@ where
 5. Repeat until stack empty
 
 **Complexity**:
-- **Time**: O(n·m) where n = terms in `other`, m = average term length
-  - O(n·m) for DFS traversal
-  - O(m) per term for `insert_with_value()`
-- **Space**: O(d) where d = maximum trie depth (typically < 50)
+- **Time**: `$\mathcal{O}(n \cdot m)$` where n = terms in `other`, m = average term length
+  - `$\mathcal{O}(n \cdot m)$` for DFS traversal
+  - `$\mathcal{O}(m)$` per term for `insert_with_value()`
+- **Space**: `$\mathcal{O}(d)$` where d = maximum trie depth (typically < 50)
   - DFS stack size proportional to deepest path
   - Constant additional memory
 
@@ -1329,8 +1323,8 @@ where
 Merge term counts by summing conflicting values:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::MutableMappedDictionary;
 
 // First dataset: word frequencies
 let dict1: DynamicDawg<u32> = DynamicDawg::new();
@@ -1362,8 +1356,8 @@ assert_eq!(processed, 3); // Processed 3 terms from dict2
 Merge lists of associated IDs, eliminating duplicates:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::MutableMappedDictionary;
 
 // First dictionary: terms with associated document IDs
 let dict1: DynamicDawg<Vec<u32>> = DynamicDawg::new();
@@ -1396,8 +1390,8 @@ assert_eq!(dict1.get_value("algorithm"), Some(vec![1, 2, 4, 5]));
 Keep the highest value when terms conflict:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::MutableMappedDictionary;
 
 // Dictionary 1: initial scores
 let dict1: DynamicDawg<i32> = DynamicDawg::new();
@@ -1426,8 +1420,8 @@ assert_eq!(dict1.get_value("reliability"), Some(92));
 Demonstrates correct behavior with terms sharing common prefixes:
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::MutableMappedDictionary;
 
 // Dictionary with "test" prefix family
 let dict1: DynamicDawg<u32> = DynamicDawg::new();
@@ -1463,8 +1457,8 @@ where
 
 **Example**:
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::MutableMappedDictionary;
 
 let dict1: DynamicDawg<&str> = DynamicDawg::new();
 dict1.insert_with_value("version", "1.0");
@@ -1533,7 +1527,7 @@ fn union_with<F>(&self, other: &Self, merge_fn: F) -> usize {
 
 **Why Iterative DFS?**
 - ✅ **No stack overflow**: Handles very deep tries (e.g., long terms)
-- ✅ **Memory efficient**: O(d) space vs O(n) for recursion
+- ✅ **Memory efficient**: `$\mathcal{O}(d)$` space vs `$\mathcal{O}(n)$` for recursion
 - ✅ **Consistent ordering**: Reversed edges ensure predictable traversal
 - ✅ **Debuggable**: Explicit stack state visible at each step
 
@@ -1552,10 +1546,10 @@ The implementation delegates to `insert_with_value()` rather than manipulating n
 
 | Operation | Time Complexity | Space Complexity | Typical Performance (10K terms) |
 |-----------|----------------|------------------|--------------------------------|
-| `union_with()` | O(n·m) | O(d) | ~50ms |
-| `union_replace()` | O(n·m) | O(d) | ~50ms |
-| DFS traversal | O(n) | O(d) | ~20ms |
-| Per-term insertion | O(m) | O(1) amortized | ~2-5µs |
+| `union_with()` | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(d)$` | ~50ms |
+| `union_replace()` | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(d)$` | ~50ms |
+| DFS traversal | `$\mathcal{O}(n)$` | `$\mathcal{O}(d)$` | ~20ms |
+| Per-term insertion | `$\mathcal{O}(m)$` | `$\mathcal{O}(1)$` amortized | ~2-5µs |
 
 **Variables**:
 - n = number of terms in source dictionary
@@ -1596,14 +1590,14 @@ No heap allocations during traversal (Vec reused)
 - Merging dictionaries where conflicts indicate stale data
 
 ⚠️ **Consider alternatives when:**
-- **Dictionaries are static**: Pre-merge at build time with [`from_terms_with_values()`](dynamic-dawg.md#example-2-dictionary-with-values)
+- **Dictionaries are static**: Pre-merge at build time with [`from_terms_with_values()`](dynamic-dawg.md#example-2-with-values)
 - **One dictionary much larger**: Iterate the smaller dictionary and insert into larger (avoids traversing large dict)
 - **No value merging needed**: Use simple iteration: `for (term, value) in dict2.iter() { dict1.insert_with_value(term, value); }`
 - **Frequent unions on same dictionaries**: Cache union result or use different data structure (e.g., separate indices)
 
 ### Thread Safety Considerations
 
-Union operations are **fully thread-safe** due to RwLock usage:
+Union operations are **fully thread-safe** (lock-free reads; CAS-published writes):
 
 ```rust
 use std::sync::Arc;
@@ -1632,10 +1626,10 @@ for h in handles { h.join().unwrap(); }
 dict1.union_with(&dict2, |a, b| a + b);
 ```
 
-**Lock Contention**: Union acquires a read lock on `other` and write lock on `self`. This blocks:
-- ❌ Concurrent mutations to `self` (expected)
-- ❌ Concurrent reads from `self` (temporary)
-- ✅ Concurrent reads from `other` (allowed)
+**Concurrency**: Union traverses an immutable snapshot of `other` while publishing lock-free `compare_exchange` (CAS) insertions into `self`:
+- ✅ Concurrent reads from `self` never block (readers load an atomic snapshot)
+- ✅ Concurrent reads from `other` are always safe
+- ⚠️ Concurrent writers to `self` contend only at the CAS boundary (retry on conflict)
 
 For high-concurrency scenarios, consider:
 1. Performing union on a clone
@@ -1647,7 +1641,7 @@ For high-concurrency scenarios, consider:
 ### Example 1: Basic Usage
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 // Create empty DAWG
 let dict = DynamicDawg::new();
@@ -1669,8 +1663,8 @@ assert_eq!(dict.len(), Some(2));
 ### Example 2: With Values
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::MappedDictionary;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::MappedDictionary;
 
 let dict: DynamicDawg<u32> = DynamicDawg::new();
 
@@ -1690,7 +1684,7 @@ assert_eq!(dict.get_value("testing"), Some(2));
 ### Example 3: From Existing Terms
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 let dict = DynamicDawg::from_terms(vec![
     "algorithm", "approximate", "automaton"
@@ -1706,7 +1700,7 @@ assert!(dict.contains("analysis"));
 ### Example 4: Thread-Safe Updates
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 use std::sync::Arc;
 use std::thread;
 
@@ -1735,7 +1729,7 @@ for handle in handles {
 ### Example 5: Compaction
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 
 let dict = DynamicDawg::from_terms(vec![
     "test1", "test2", "test3", "test4", "test5"
@@ -1759,7 +1753,7 @@ println!("After compaction: {} nodes", dict.node_count());
 ### Example 6: Fuzzy Search with Dynamic Updates
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -1784,11 +1778,11 @@ println!("{:?}", results);  // ["test", "tester"]
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Insert** | O(m) | m = term length |
-| **Remove** | O(m) | Plus ref count updates |
-| **Contains** | O(m) | With Bloom filter: O(1) rejection |
-| **Compact** | O(n) | n = total nodes |
-| **Query (fuzzy)** | O(m×d²×b) | d = distance, b = branching |
+| **Insert** | `$\mathcal{O}(m)$` | m = term length |
+| **Remove** | `$\mathcal{O}(m)$` | Plus ref count updates |
+| **Contains** | `$\mathcal{O}(m)$` | With Bloom filter: `$\mathcal{O}(1)$` rejection |
+| **Compact** | `$\mathcal{O}(n)$` | n = total nodes |
+| **Query (fuzzy)** | `$\mathcal{O}(m \times d^{2} \times b)$` | d = distance, b = branching |
 
 ### Benchmark Results
 

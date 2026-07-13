@@ -6,6 +6,8 @@ This document describes the enrichment of liblevenshtein's LLev phonetic rules t
 
 The LLev (Levenshtein Language) rule system provides phonetic normalization through rewrite transformation rules. This project enriched the existing 125+ language rule sets by systematically extracting patterns from established phonetic matching algorithms.
 
+> **Terminology.** A *phonetic algorithm* maps orthography (spelling) to an approximation of pronunciation so that sound-alike strings collide; a *phoneme* is a contrastive unit of sound. Symbols such as `ʃ` (the "sh" sound) are drawn from the **IPA** (International Phonetic Alphabet). Consonants are distinguished along three dimensions: *place of articulation* (where the vocal tract is constricted), *manner of articulation* (how airflow is shaped), and *voicing* (whether the vocal folds vibrate). See [`../GLOSSARY.md`](../GLOSSARY.md) for fuller definitions. These rules ship behind the `phonetic-rules` Cargo feature (liblevenshtein 0.9.1).
+
 ## Algorithms Integrated
 
 | Algorithm | Languages | Rule IDs | Rules Added |
@@ -112,6 +114,8 @@ To prevent conflicts, rules use non-overlapping ID ranges:
 
 The rule-based phonetic patterns described above handle *known* phonetic equivalences through explicit transformations. For *residual* substitutions not covered by rules, liblevenshtein also provides **articulatory distance**—a feature-based approach that computes phonetic similarity between any two IPA characters based on their articulatory properties.
 
+![Articulatory feature space grounding phonetic edit costs: consonants placed by place of articulation (bilabial, alveolar, velar) on the horizontal axis and by manner (plosive, nasal) on the vertical axis; voiced/voiceless cognate pairs share a cell (filled dot = voiced, open dot = voiceless), and a dashed arc marks the small feature distance of a single voicing change.](../diagrams/phonetic/articulatory-feature-model.svg)
+
 | Approach | Strengths | Use Case |
 |----------|-----------|----------|
 | **LLev Rules** | Context-sensitive, language-specific, explicit patterns | Known phonetic alternations (tion→ʃən, ph→f) |
@@ -174,10 +178,17 @@ See individual documentation files for detailed algorithm analysis:
 
 ## References
 
-1. Knuth, D.E. (1973). The Art of Computer Programming, Vol. 3: Sorting and Searching
-2. Philips, L. (1990). "Hanging on the Metaphone". Computer Language Magazine
-3. Philips, L. (2000). "The Double Metaphone Search Algorithm". C/C++ Users Journal
-4. Postel, H.J. (1969). "Die Kölner Phonetik". IBM-Nachrichten
-5. Hood, D. (2002). "Caverphone: Phonetic matching algorithm". Technical report
-6. Beider, A. & Morse, S.P. (2008). "Beider-Morse Phonetic Matching"
-7. Mokotoff, G. (1997). "Soundexing and Genealogy". Avotaynu
+Every classic phonetic algorithm below predates the DOI system or was published in a
+patent, trade magazine, technical report, or genealogy journal that was never assigned a
+DOI; the per-source notes record this explicitly, and the per-algorithm documents carry
+the full citations.
+
+1. Russell, Robert C. & Odell, Margaret K. *US Patents 1,261,167 (1918) and 1,435,663 (1922)* — the Soundex phonetic index; the refined variant is commonly called "American Soundex". (No DOI; patents are not assigned DOIs.) See [SOUNDEX.md](SOUNDEX.md).
+2. Philips, Lawrence (1990). "Hanging on the Metaphone". *Computer Language* 7(12), pp. 39–43. (No DOI.) See [METAPHONE.md](METAPHONE.md).
+3. Philips, Lawrence (2000). "The Double Metaphone Search Algorithm". *C/C++ Users Journal* 18(6). (No DOI.)
+4. Taft, Robert L. (1970). "Name Search Techniques". *New York State Identification and Intelligence System*, Special Report No. 1, Albany, NY. (No DOI.) See [NYSIIS.md](NYSIIS.md).
+5. Postel, Hans Joachim (1969). "Die Kölner Phonetik". *IBM-Nachrichten* 19, pp. 925–931. (No DOI.) See [COLOGNE.md](COLOGNE.md).
+6. Hood, David (2002). "Caverphone". *University of Otago Technical Report*, Dunedin, NZ. (No DOI.) See [CAVERPHONE.md](CAVERPHONE.md).
+7. Beider, Alexander & Morse, Stephen P. (2008). "Beider-Morse Phonetic Matching: An Alternative to Soundex with Fewer False Hits". *Avotaynu* 24(2). (No DOI.) See [BEIDER-MORSE.md](BEIDER-MORSE.md).
+8. Mokotoff, Gary & Daitch, Randy (1985). *Daitch-Mokotoff Soundex System*; Mokotoff, Gary (1997). "Soundexing and Genealogy". *Avotaynu* 13(3). (No DOI.) See [DAITCH-MOKOTOFF.md](DAITCH-MOKOTOFF.md).
+9. Knuth, Donald E. (1973). *The Art of Computer Programming, Vol. 3: Sorting and Searching*, §6. Addison-Wesley. (No DOI; ISBN 978-0-201-89685-5.)

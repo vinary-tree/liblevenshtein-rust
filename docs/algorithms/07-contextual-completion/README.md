@@ -247,10 +247,10 @@ Global Scope (context 0)
 When completing in context `C`:
 
 1. **Compute visible contexts**: `V = visible_contexts(C)` (ancestor chain)
-2. **Query finalized terms**: Get all dictionary terms where `term.contexts ∩ V ≠ ∅`
+2. **Query finalized terms**: Get all dictionary terms where `$\text{term}.\text{contexts} \cap  V \ne  \emptyset$`
 3. **Query draft terms**: Get all draft buffers for contexts in `V`
 4. **Merge results**: Union finalized + drafts, mark drafts with `is_draft = true`
-5. **Fuzzy match**: Filter by Levenshtein distance ≤ `max_distance`
+5. **Fuzzy match**: Filter by Levenshtein distance `$\le$` `max_distance`
 6. **Sort**: By distance → term (lexicographic)
 
 **Example**:
@@ -475,7 +475,7 @@ assert_eq!(engine.get_draft(ctx)?, "text");
 
 ```rust
 use liblevenshtein::contextual::StaticContextualCompletionEngine;
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::transducer::Algorithm;
 
 // Build static dictionary with standard library terms
@@ -541,7 +541,7 @@ assert!(!results_b.iter().any(|c| c.term == "alpha"));  // A not visible from B
 
 ```rust
 use liblevenshtein::contextual::DynamicContextualCompletionEngine;
-use liblevenshtein::dictionary::pathmap_char::PathMapDictionaryChar;
+use libdictenstein::pathmap::PathMapDictionaryChar;
 
 // Use Unicode-aware backend
 let engine = DynamicContextualCompletionEngine::with_pathmap_char(

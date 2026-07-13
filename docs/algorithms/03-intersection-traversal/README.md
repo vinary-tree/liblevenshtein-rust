@@ -148,7 +148,7 @@ fn dfs_traverse(node: DictNode, auto: AutomatonZipper) -> Vec<String> {
 ```
 
 **Advantages**:
-- Memory efficient: `O(depth)` stack space
+- Memory efficient: `$\mathcal{O}(\text{depth})$` stack space
 - Simple implementation
 - Good cache locality (explores nearby terms)
 
@@ -185,7 +185,7 @@ fn bfs_traverse(root: DictNode, initial_auto: AutomatonZipper) -> Vec<String> {
 - Better for interactive use (show results incrementally)
 
 **Disadvantages**:
-- Higher memory usage: `O(branching^depth)`
+- Higher memory usage: `$\mathcal{O}(\text{branching}^{\text{depth}})$`
 
 ### 3. Priority Queue (Best-First)
 
@@ -314,7 +314,7 @@ impl LazyAutomatonState {
 ### Example 1: Basic Query
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -334,7 +334,7 @@ println!("{:?}", results);
 ### Example 2: Custom Traversal with Value Filtering
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -358,7 +358,7 @@ println!("{:?}", results);
 ### Example 3: Iterative Result Collection
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -382,7 +382,7 @@ for (i, term) in automaton.query(&dict).enumerate() {
 ### Example 4: Distance Reporting
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 use liblevenshtein::distance::standard_distance;
@@ -413,17 +413,17 @@ for term in automaton.query(&dict) {
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Single transition** | `O(D²)` | D = max distance |
-| **Total traversal** | `O(M×D²×B×L)` | M = query len, B = branching, L = avg depth |
-| **With early termination** | `O(M×D×B×L)` | Typically 30-70% reduction |
+| **Single transition** | `$\mathcal{O}(D^{2})$` | `$D$` = max distance |
+| **Total traversal** | `$\mathcal{O}(M \times D^{2} \times B \times L)$` | `$M$` = query len, `$B$` = branching, `$L$` = avg depth |
+| **With early termination** | `$\mathcal{O}(M \times D \times B \times L)$` | Typically 30-70% reduction |
 
 ### Space Complexity
 
 | Component | Complexity | Notes |
 |-----------|-----------|-------|
-| **Call stack (DFS)** | `O(L)` | L = max dictionary depth |
-| **Automaton state** | `O(M×D)` | Per recursion level |
-| **Results buffer** | `O(K×L)` | K = number of matches |
+| **Call stack (DFS)** | `$\mathcal{O}(L)$` | `$L$` = max dictionary depth |
+| **Automaton state** | `$\mathcal{O}(M \times D)$` | Per recursion level |
+| **Results buffer** | `$\mathcal{O}(K \times L)$` | `$K$` = number of matches |
 
 ### Benchmark Results
 

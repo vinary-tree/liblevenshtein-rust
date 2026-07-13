@@ -95,7 +95,7 @@ edges, enabling higher-order relationships.
 
 A metagraph M = (V, E) where:
 - V is a set of vertices (Atoms)
-- E ⊆ P(V ∪ E) × P(V ∪ E) is a set of hyperedges that can connect vertices or other edges
+`$- E \subseteq  P(V \cup  E) \times  P(V \cup  E)$` is a set of hyperedges that can connect vertices or other edges
 
 ### Key Properties
 
@@ -298,7 +298,7 @@ Where BindingsSet = { σ₁, σ₂, ... } and each σᵢ : Var → Atom
 ```
 
 **Algorithm Properties**:
-- **Soundness**: σ(pattern) = target for all σ in result
+- **Soundness**: `$\sigma(\text{pattern})$` = target for all `$\sigma$` in result
 - **Completeness**: All unifiers found
 - **Most general**: Returns MGU when unique
 

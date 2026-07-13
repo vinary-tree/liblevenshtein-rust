@@ -269,7 +269,7 @@ See `FUTURE_ENHANCEMENTS.md` for planned improvements.
 
 ### Potential Areas
 
-1. **SIMD Operations** - Vectorize distance calculations
+1. **SIMD distance** — **shipped** (AVX2/SSE4.1, automatic on x86_64); deeper query-loop vectorization remains open
 2. **Parallel Queries** - Rayon-based parallelization for large result sets
 3. **Custom Allocators** - Specialized allocators for specific workloads
 4. **Better Heuristics** - Adaptive thresholds based on dictionary characteristics
@@ -279,7 +279,7 @@ See `FUTURE_ENHANCEMENTS.md` for planned improvements.
 
 ## References
 
-- **Profiling Guide:** See [`building.md`](building.md#profiling) for profiling instructions
+- **Profiling Guide:** See [`building.md`](building.md#build-for-profiling) for profiling instructions
 - **Benchmarks:** Run `cargo bench` to see current performance
 - **Examples:** See [`examples/`](../examples/README.md) for real-world usage patterns
 - **Contributing:** See [`contributing.md`](contributing.md) for optimization guidelines

@@ -264,8 +264,6 @@ fn bench_construction(c: &mut Criterion) {
 | DoubleArrayTrie | 3.3 ms | ~80 KB | Fastest, cache-friendly |
 | DynamicDAWG | 4.0 ms | ~400 KB | Thread-safe, mutable |
 | PathMap | 3.1 ms | ~640 KB | Structural sharing |
-| DAWG | 6.2 ms | ~320 KB | Immutable, compact |
-| OptimizedDawg | 5.6 ms | ~130 KB | Arena-allocated |
 | SuffixAutomaton | 13.1 ms | ~480 KB | Infix matching support |
 
 ### Query Performance
@@ -368,10 +366,8 @@ fn measure_memory_footprint() {
 | Backend | Total Memory (10K words) | Bytes/Node | Cache Efficiency |
 |---------|-------------------------|------------|------------------|
 | DoubleArrayTrie | ~80 KB | 8 B | Excellent (sequential) |
-| DAWG | ~320 KB | 32 B | Good (pointer-based) |
 | PathMap | ~640 KB | 64 B | Fair (complex sharing) |
 | DynamicDAWG | ~400 KB | 40 B | Good (thread-safe) |
-| OptimizedDawg | ~130 KB | 13 B avg | Very Good (arena) |
 | SuffixAutomaton | ~480 KB | 48 B | Fair (dense edges) |
 
 **Memory Access Profiling** (using `perf`):
@@ -647,16 +643,14 @@ MergeAndSplit:   15.82 µs  (+25%)
 | Backend | Construction | Exact Match | Distance 1 | Distance 2 | Contains | Memory |
 |---------|-------------|------------|-----------|-----------|----------|--------|
 | **DoubleArrayTrie** | 3.3 ms | 4.13 µs | 8.07 µs | 12.68 µs | 231 ns | 80 KB |
-| **DAWG** | 6.2 ms | 86 µs | 291 µs | 2,120 µs | 6.5 µs | 320 KB |
 | **PathMap** | 3.1 ms | 284 µs | 887 µs | 5,550 µs | 116 µs | 640 KB |
 | **DynamicDAWG** | 4.0 ms | 98 µs | 328 µs | 2,384 µs | 24 µs | 400 KB |
-| **OptimizedDawg** | 5.6 ms | 89 µs | 333 µs | 2,341 µs | 6.4 µs | 130 KB |
 | **SuffixAutomaton** | 13.1 ms | 11,250 µs | 37,087 µs | 183,810 µs | 25 µs | 480 KB |
 
 **Key Findings**:
 
 1. **DoubleArrayTrie dominates** for fuzzy matching:
-   - 38× faster than DAWG (distance 2)
+   - Two-to-three orders of magnitude faster than the pointer-based `DynamicDawg` and `PathMap` backends (distance 2)
    - 175× faster than SuffixAutomaton (distance 2)
    - Best cache locality (sequential array access)
 
@@ -680,8 +674,8 @@ MergeAndSplit:   15.82 µs  (+25%)
 **Naive Algorithm**: Compute Levenshtein distance for every dictionary word
 
 **Complexity**:
-- Time: O(|D| × |W| × |V|) where V = average word length
-- Space: O(|W| × |V|) for DP matrix
+- Time: `$\mathcal{O}(\lvert D\rvert \times \lvert W\rvert \times \lvert V\rvert)$` where `$V$` = average word length
+- Space: `$\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)$` for DP matrix
 
 **Comparison** (10,000 words, distance=2):
 
@@ -829,9 +823,9 @@ fn bench_scalability(c: &mut Criterion) {
 ```
 
 **Expected Behavior**:
-- Construction: Linear with size O(|D|)
-- Query: Linear with edges O(|D|)
-- Memory: Linear with size O(|D|)
+- Construction: Linear with size `$\mathcal{O}(\lvert D\rvert)$`
+- Query: Linear with edges `$\mathcal{O}(\lvert D\rvert)$`
+- Memory: Linear with size `$\mathcal{O}(\lvert D\rvert)$`
 
 ---
 
@@ -1147,11 +1141,11 @@ perf report
 
 **Micro-Benchmarks** (10 files):
 - `state_operations_benchmarks.rs` - Position creation, subsumption
-- `transition_benchmarks.rs` - Elementary transition functions (δ)
+- `transition_benchmarks.rs` - Elementary transition functions (`$\delta$`)
 - `subsumption_benchmarks.rs` - Subsumption relation checking
 - `distance_benchmarks.rs` - Levenshtein distance variants
 - `position_benchmarks.rs` - Position structure operations
-- `characteristic_vector_benchmarks.rs` - χ(x,V) computation
+- `characteristic_vector_benchmarks.rs` - `$\chi(x,V)$` computation
 - `unicode_benchmarks.rs` - UTF-8 vs char operations
 - `hash_benchmarks.rs` - Hash function performance
 - `pool_benchmarks.rs` - State pool allocation
@@ -1183,7 +1177,7 @@ perf report
 - `batch2_simd_benchmarks.rs` - SIMD Phase 2 evaluation
 - `batch3_simd_benchmarks.rs` - SIMD Phase 3 evaluation
 - `batch4_simd_benchmarks.rs` - SIMD Phase 4 evaluation
-- `dawg_query_comparison.rs` - DAWG variants
+- `backend_fuzzy_comparison.rs` - Fuzzy-query comparison across dictionary backends
 - `real_world_benchmark.rs` - Production workload simulation
 
 **Specialized Benchmarks** (5+ files):
@@ -1417,7 +1411,7 @@ fn bench_large_scale(c: &mut Criterion) {
 ```
 
 **Expected Impact**:
-- Validates O(|D|) scaling
+- Validates `$\mathcal{O}(\lvert D\rvert)$` scaling
 - Identifies memory bottlenecks
 - Confidence for large deployments
 
@@ -1575,7 +1569,7 @@ impl<D> BatchQuery for Transducer<D> {
 
 This evaluation framework provides:
 
-1. **Algorithmic Validation** - Verifies O(|W|) and O(|D|) complexity
+1. **Algorithmic Validation** - Verifies `$\mathcal{O}(\lvert W\rvert)$` and `$\mathcal{O}(\lvert D\rvert)$` complexity
 2. **Performance Measurement** - Latency, throughput, memory across 6 backends
 3. **Quality Assurance** - Completeness, precision, ranking metrics
 4. **Comparative Analysis** - vs Baselines, variants, backends

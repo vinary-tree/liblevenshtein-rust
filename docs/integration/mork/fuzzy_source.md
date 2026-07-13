@@ -1,7 +1,7 @@
 # Phase A: FuzzySource Implementation Guide
 
 **Last Updated**: 2025-12-23
-**Version**: v0.8.x (PhoneticNormalizedDictionary API)
+**Version**: 0.9.1 (PhoneticNormalizedDictionary API)
 **Status**: Implementation Guide
 
 This document provides detailed implementation guidance for MORK integration: creating FuzzySource and FuzzyPhoneticSource that enable approximate string matching in MeTTa queries.
@@ -33,9 +33,9 @@ PhoneticNormalizedDictionary<V, D>
 
 **Key Optimizations:**
 - **Exact match fast path (d=0)**: Direct trie lookup is **100-300× faster** than automaton traversal
-- **FuzzyMultiMap**: O(k log n) fuzzy queries via Levenshtein automaton pruning
+- **FuzzyMultiMap**: `$\mathcal{O}(k \log n)$` fuzzy queries via Levenshtein automaton pruning
 - **Thread-local NormalizeBuffers (H3)**: Reuses buffers to reduce allocations
-- **O(1) vowel classification**: Bitmask lookup instead of linear array search
+- **`$\mathcal{O}(1)$` vowel classification**: Bitmask lookup instead of linear array search
 
 ### Building a Dictionary
 
@@ -203,7 +203,7 @@ fuzzy = []  # NEW: Enable fuzzy matching support
 //! knowledge graphs.
 
 use liblevenshtein::transducer::{Algorithm, Candidate, Transducer};
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 use mork_expr::{Expr, ExprEnv, item_byte, Tag};
 use pathmap::PathMap;
 use pathmap::zipper::{ReadZipperUntracked, Zipper, ZipperMoving, ZipperIteration};
@@ -1132,7 +1132,7 @@ The `FuzzyDictionaryView::new()` function iterates over all values under a prefi
 Target: <10ms for typical queries (1-3 terms, distance 1-2, dictionary size <100K).
 
 Factors affecting latency:
-- Dictionary size: O(n) iteration to find all candidates
+- Dictionary size: `$\mathcal{O}(n)$` iteration to find all candidates
 - Max distance: Higher distance = more candidates to check
 - Algorithm: Transposition slightly slower than Standard
 

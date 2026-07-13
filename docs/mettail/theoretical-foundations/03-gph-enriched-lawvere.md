@@ -329,7 +329,7 @@ Multiple edges between the same vertices are allowed (multi-graph).
 
 Gph is **cartesian closed**:
 - Products G × H exist (vertex pairs, edge pairs)
-- Exponentials G^H exist (graph of homomorphisms from H to G)
+- Exponentials `$G^H$` exist (graph of homomorphisms from H to G)
 
 ### Enrichment
 
@@ -429,7 +429,7 @@ A **Graph-Structured Lambda Theory (GSLT)** is:
 2. **Graph-structured**: A functor from Th(Gph) → Th embedding the source/target
    maps s, t : R → P
 
-3. **Magmal**: A distinguished binary morphism ⊙ : X × Y → P called the
+3. **Magmal**: A distinguished binary morphism `$\odot$` : X × Y → P called the
    **interaction**, where X, Y are sorts
 
 4. **Lambda theory**: A cartesian closed category, automatically handling bound
@@ -438,7 +438,7 @@ A **Graph-Structured Lambda Theory (GSLT)** is:
 ### Why "Magmal"?
 
 The term "magmal" refers to the algebraic structure where we have a binary operation
-(the interaction ⊙) without requiring associativity or other laws. This is
+(the interaction `$\odot )$` without requiring associativity or other laws. This is
 appropriate because:
 
 - In **lambda calculus**, beta reduction is of the form:
@@ -461,10 +461,10 @@ The magmal structure gives rise to **modal types**. Consider the type of terms:
 ⟨⊙([], A)⟩B
 ```
 
-This represents terms that, when placed into a context ⊙([], x) where x : A, may
+This represents terms that, when placed into a context `$\odot ([], x)$` where x : A, may
 reduce to a term of type B.
 
-| Calculus | Interaction ⊙ | Modal Type | Interpretation |
+| Calculus | Interaction `$\odot$` |  Modal Type | Interpretation |
 |----------|---------------|------------|----------------|
 | Lambda calculus | Application | A ⇒ B | Function type |
 | Pi calculus | Parallel | ◇(A ▷ B) | Possibility modal |
@@ -499,7 +499,7 @@ A finitely generated GSLT can be presented concisely using:
 
 ### Rewrite Constructor Constraints
 
-A rewrite constructor r : ∏ᵢ Zᵢ → R whose codomain does not contain a factor of R
+A rewrite constructor r : `$\prod _{i} Z_{i} \to  R$` whose codomain does not contain a factor of R
 must factor through the interaction:
 
 ```
@@ -564,7 +564,7 @@ Gph-Theory SKI:
     ι : (I z) ⇒ z                         ; I-reduction
 ```
 
-The reductions σ, κ, ι are **edges in the hom-graph** Hom(T³, T), Hom(T², T), Hom(T, T)
+The reductions `$\sigma , \kappa , \iota$` are **edges in the hom-graph** Hom(T³, T), Hom(T², T), Hom(T, T)
 respectively.
 
 ### Example 2: Untyped Lambda Calculus as GSLT
@@ -798,7 +798,7 @@ Using combinators, this becomes:
 inp(x, λy.P)    ; λ represented via SKI
 ```
 
-The reflection mechanism `⌈⌊x⌋⌉ ≡_N x` (quote-drop identity) ensures this encoding
+The reflection mechanism `$\lceil \lfloor x\rfloor\rceil \equiv _N x$` (quote-drop identity) ensures this encoding
 is faithful.
 
 ### RHO Reductions
@@ -821,8 +821,8 @@ Reductions:
 
 The paper proves (Theorem 4):
 
-> The Gph-theory RHO preserves barbed bisimilarity: if P ≈ Q in the standard RHO
-> calculus, then P ≈ Q in the Gph-theory interpretation.
+> The Gph-theory RHO preserves barbed bisimilarity: if `$P \approx  Q$` in the standard RHO
+> calculus, then `$P \approx  Q$` in the Gph-theory interpretation.
 
 This validates that the combinator encoding faithfully represents the original
 calculus.
@@ -850,7 +850,7 @@ Interpreter = ∑ for(LHS_Pattern <- @0) {
 
 Where:
 - `LHS` and `RHS` mean left- and right-hand side
-- `∑` indicates mutually exclusive options (a disjunction)
+- `$\sum$` indicates mutually exclusive options (a disjunction)
 - The term picks one rewrite from among matching possibilities, then proceeds
 
 ### Handling Unbounded Patterns
@@ -941,7 +941,7 @@ Lam[A, B] : (P[A] → P[B]) → P[A → B]
 
 ### Modal Types via Interaction
 
-The interaction operator ⊙ gives rise to modal types. For lambda calculus:
+The interaction operator `$\odot$` gives rise to modal types. For lambda calculus:
 
 ```
 ⟨App([], A)⟩B  ≈  A → B    (arrow type)

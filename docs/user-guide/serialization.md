@@ -61,7 +61,7 @@ liblevenshtein = {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::{DictionarySerializer, Format};
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 use std::fs::File;
 
 // Create a dictionary
@@ -71,19 +71,19 @@ let dict = DoubleArrayTrie::from_terms(vec![
 
 // Save to file
 let file = File::create("dictionary.bin")?;
-dict.serialize(file, Format::Bincode)?;
+BincodeSerializer::serialize(&dict, file)?;
 ```
 
 ### Loading a Dictionary
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::{DictionaryDeserializer, Format};
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 use std::fs::File;
 
 // Load from file
 let file = File::open("dictionary.bin")?;
-let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::Bincode)?;
+let dict: DoubleArrayTrie = BincodeSerializer::deserialize(file)?;
 
 // Use the dictionary
 let transducer = Transducer::new(dict, Algorithm::Standard);
@@ -104,18 +104,18 @@ for term in transducer.query("test", 1) {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::{DictionarySerializer, Format};
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 use std::fs::File;
 
 let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
 
 // Save
 let file = File::create("dict.bincode")?;
-dict.serialize(file, Format::Bincode)?;
+BincodeSerializer::serialize(&dict, file)?;
 
 // Load
 let file = File::open("dict.bincode")?;
-let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::Bincode)?;
+let dict: DoubleArrayTrie = BincodeSerializer::deserialize(file)?;
 ```
 
 **When to use:** Default choice for Rust-to-Rust serialization.
@@ -130,18 +130,18 @@ let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::Bincode)?
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::{DictionarySerializer, Format};
+use libdictenstein::serialization::{JsonSerializer, DictionarySerializer};
 use std::fs::File;
 
 let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
 
 // Save
 let file = File::create("dict.json")?;
-dict.serialize(file, Format::Json)?;
+JsonSerializer::serialize(&dict, file)?;
 
 // Load
 let file = File::open("dict.json")?;
-let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::Json)?;
+let dict: DoubleArrayTrie = JsonSerializer::deserialize(file)?;
 ```
 
 **When to use:** Debugging, inspection, cross-language interop.
@@ -156,14 +156,14 @@ let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::Json)?;
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::{DictionarySerializer, Format};
+use libdictenstein::serialization::{PlainTextSerializer, DictionarySerializer};
 use std::fs::File;
 
 let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
 
 // Save
 let file = File::create("terms.txt")?;
-dict.serialize(file, Format::Text)?;
+PlainTextSerializer::serialize(&dict, file)?;
 
 // The file contains:
 // test
@@ -172,7 +172,7 @@ dict.serialize(file, Format::Text)?;
 
 // Load (rebuilds dictionary from terms)
 let file = File::open("terms.txt")?;
-let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::Text)?;
+let dict: DoubleArrayTrie = PlainTextSerializer::deserialize(file)?;
 ```
 
 **When to use:** Simple term lists, manual editing, universal compatibility.
@@ -189,25 +189,25 @@ let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::Text)?;
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::{DictionarySerializer, Format};
+use libdictenstein::serialization::{OptimizedProtobufSerializer, DictionarySerializer};
 use std::fs::File;
 
 let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
 
 // Save with Protobuf V2 (optimized)
 let file = File::create("dict.pb")?;
-dict.serialize(file, Format::ProtobufV2)?;
+OptimizedProtobufSerializer::serialize(&dict, file)?;
 
 // Load
 let file = File::open("dict.pb")?;
-let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::ProtobufV2)?;
+let dict: DoubleArrayTrie = OptimizedProtobufSerializer::deserialize(file)?;
 ```
 
 **Protobuf Format Variants:**
-- `Format::Protobuf` - Standard protobuf format
-- `Format::ProtobufV2` - Optimized format (62% smaller)
-- `Format::ProtobufDat` - DoubleArrayTrie-specific optimization
-- `Format::ProtobufSuffixAutomaton` - SuffixAutomaton-specific optimization
+- `ProtobufSerializer` - Standard protobuf format
+- `OptimizedProtobufSerializer` - Optimized format (62% smaller)
+- `DatProtobufSerializer` - DoubleArrayTrie-specific optimization
+- `SuffixAutomatonProtobufSerializer` - SuffixAutomaton-specific optimization
 
 **When to use:** Cross-language applications, optimized storage, production systems.
 
@@ -223,24 +223,24 @@ let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::ProtobufV
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::{DictionarySerializer, Format};
+use libdictenstein::serialization::{BincodeSerializer, GzipSerializer, DictionarySerializer};
 use std::fs::File;
 
 let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
 
 // Save with gzip compression
 let file = File::create("dict.bincode.gz")?;
-dict.serialize(file, Format::BincodeGz)?;
+GzipSerializer::<BincodeSerializer>::serialize(&dict, file)?;
 
 // Load compressed
 let file = File::open("dict.bincode.gz")?;
-let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::BincodeGz)?;
+let dict: DoubleArrayTrie = GzipSerializer::<BincodeSerializer>::deserialize(file)?;
 ```
 
 **Compressed format variants:**
-- `Format::BincodeGz` - Bincode with gzip
-- `Format::JsonGz` - JSON with gzip
-- `Format::TextGz` - Plain text with gzip
+- `GzipSerializer::<BincodeSerializer>` - Bincode with gzip
+- `GzipSerializer::<JsonSerializer>` - JSON with gzip
+- `GzipSerializer::<PlainTextSerializer>` - Plain text with gzip
 
 **When to use:** Network transfer, storage optimization, backups.
 
@@ -277,20 +277,21 @@ let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::BincodeGz
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::{DictionarySerializer, Format, SerializationError};
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer, SerializationError};
 use std::fs::File;
 
 fn save_dictionary(dict: &DoubleArrayTrie, path: &str) -> Result<(), SerializationError> {
     let file = File::create(path)
         .map_err(|e| SerializationError::Io(e))?;
-    dict.serialize(file, Format::Bincode)?;
+    // `dict` is already a `&DoubleArrayTrie`, so pass it straight through.
+    BincodeSerializer::serialize(dict, file)?;
     Ok(())
 }
 
 fn load_dictionary(path: &str) -> Result<DoubleArrayTrie, SerializationError> {
     let file = File::open(path)
         .map_err(|e| SerializationError::Io(e))?;
-    DoubleArrayTrie::deserialize(file, Format::Bincode)
+    BincodeSerializer::deserialize(file)
 }
 ```
 
@@ -308,19 +309,26 @@ liblevenshtein query dict.bincode.gz "test" 2
 
 ### Custom Serialization
 
-For advanced use cases, you can manually serialize dictionary components:
+For advanced use cases you can bypass the dictionary serializers and encode a backend
+through **serde** directly. `bincode 2.x` removed the crate-root `serialize` / `deserialize`
+functions, so use the crate's shim `bincode_compat`, which restores the bincode-1.x API on
+top of bincode 2.x and pins the legacy fixint-little-endian wire format:
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::serialization::DictionarySerializer;
+use libdictenstein::serialization::bincode_compat;
 
-// Serialize to bytes
+// Serialize to bytes (DoubleArrayTrie derives serde under the `serialization` feature)
 let dict = DoubleArrayTrie::from_terms(vec!["test"]);
-let bytes = bincode::serialize(&dict)?;
+let bytes: Vec<u8> = bincode_compat::serialize(&dict)?;
 
 // Deserialize from bytes
-let dict: DoubleArrayTrie = bincode::deserialize(&bytes)?;
+let dict: DoubleArrayTrie = bincode_compat::deserialize(&bytes)?;
 ```
+
+> Prefer `BincodeSerializer` (above) for ordinary dictionary I/O — it works for **every**
+> byte-level backend, including `PathMapDictionary`, which implements no serde traits at all.
+> The serde path only works for backends that derive `Serialize`/`Deserialize`.
 
 ## CLI Tool Usage
 
@@ -367,28 +375,34 @@ liblevenshtein repl dict.bincode
 ### 1. Choose the Right Format
 
 ```rust
+use libdictenstein::serialization::{
+    BincodeSerializer, DictionarySerializer, GzipSerializer, JsonSerializer,
+    OptimizedProtobufSerializer,
+};
+
 // Development/debugging: JSON
-dict.serialize(file, Format::Json)?;
+JsonSerializer::serialize(&dict, file)?;
 
 // Production (Rust-only): Bincode
-dict.serialize(file, Format::Bincode)?;
+BincodeSerializer::serialize(&dict, file)?;
 
 // Production (cross-language): Protobuf V2
-dict.serialize(file, Format::ProtobufV2)?;
+OptimizedProtobufSerializer::serialize(&dict, file)?;
 
 // Network transfer: Compressed
-dict.serialize(file, Format::BincodeGz)?;
+GzipSerializer::<BincodeSerializer>::serialize(&dict, file)?;
 ```
 
 ### 2. Version Your Dictionaries
 
 ```rust
+use libdictenstein::serialization::bincode_compat;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 struct VersionedDictionary {
     version: String,
-    dict: DoubleArrayTrie,
+    dict: DoubleArrayTrie,  // derives serde under the `serialization` feature
 }
 
 let versioned = VersionedDictionary {
@@ -396,16 +410,17 @@ let versioned = VersionedDictionary {
     dict,
 };
 
-// Save with version info
-let file = File::create("dict-v1.0.0.bincode")?;
-bincode::serialize_into(file, &versioned)?;
+// Save with version info (`serialize_into` takes `&mut W`)
+let mut file = File::create("dict-v1.0.0.bincode")?;
+bincode_compat::serialize_into(&mut file, &versioned)?;
 ```
 
 ### 3. Validate After Loading
 
 ```rust
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 // Load dictionary
-let dict: DoubleArrayTrie = DoubleArrayTrie::deserialize(file, Format::Bincode)?;
+let dict: DoubleArrayTrie = BincodeSerializer::deserialize(file)?;
 
 // Validate
 if let Some(len) = dict.len() {
@@ -423,12 +438,13 @@ if !dict.contains("test") {
 ### 4. Handle Large Dictionaries
 
 ```rust
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 use std::io::BufWriter;
 
 // Use buffered writer for large dictionaries
 let file = File::create("large-dict.bincode")?;
 let writer = BufWriter::new(file);
-dict.serialize(writer, Format::Bincode)?;
+BincodeSerializer::serialize(&dict, writer)?;
 ```
 
 ## Performance Tips

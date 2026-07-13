@@ -25,8 +25,8 @@
 
 `DraftBuffer` is a character-level text buffer optimized for incremental typing scenarios. It supports:
 
-- **O(1) character insertion** (append)
-- **O(1) character deletion** (backspace)
+- **`$\mathcal{O}(1)$` character insertion** (append)
+- **`$\mathcal{O}(1)$` character deletion** (backspace)
 - **Unicode correctness** (operates on `char`, not bytes)
 - **Minimal allocations** (amortized constant time growth)
 
@@ -75,13 +75,13 @@ pub struct DraftBuffer {
 
 | Consideration | `String` | `VecDeque<char>` (chosen) |
 |---------------|----------|---------------------------|
-| **Character-level delete** | Requires byte boundary checks | ✓ O(1) `pop_back()` |
+| **Character-level delete** | Requires byte boundary checks | ✓ `$\mathcal{O}(1)$` `pop_back()` |
 | **Unicode correctness** | Easy to break (byte-level) | ✓ Guaranteed correct |
 | **Memory efficiency** | ✓ Compact (UTF-8) | ✗ 4 bytes per char |
-| **Insertion/deletion** | Reallocation for shrink | ✓ O(1) amortized |
-| **String conversion** | ✓ Zero-copy | ✗ O(n) collect |
+| **Insertion/deletion** | Reallocation for shrink | ✓ `$\mathcal{O}(1)$` amortized |
+| **String conversion** | ✓ Zero-copy | ✗ `$\mathcal{O}(n)$` collect |
 
-**Trade-off Decision**: Correctness and O(1) operations outweigh memory overhead for typical identifier lengths (5-20 chars = 20-80 bytes vs 5-20 bytes).
+**Trade-off Decision**: Correctness and `$\mathcal{O}(1)$` operations outweigh memory overhead for typical identifier lengths (5-20 chars = 20-80 bytes vs 5-20 bytes).
 
 ### Memory Layout
 
@@ -119,7 +119,7 @@ pub fn with_capacity(capacity: usize) -> Self;
 pub fn from_string(s: &str) -> Self;
 ```
 
-**Complexity**: All O(n) for `from_string` (must iterate characters), O(1) otherwise.
+**Complexity**: All `$\mathcal{O}(n)$` for `from_string` (must iterate characters), `$\mathcal{O}(1)$` otherwise.
 
 **Example**:
 
@@ -145,7 +145,7 @@ pub fn insert(&mut self, ch: char);
 
 **Behavior**: Appends character to end of buffer.
 
-**Complexity**: O(1) amortized (may trigger reallocation).
+**Complexity**: `$\mathcal{O}(1)$` amortized (may trigger reallocation).
 
 **Example**:
 
@@ -178,7 +178,7 @@ pub fn delete(&mut self) -> Option<char>;
 - `Some(ch)` if character was deleted
 - `None` if buffer was empty
 
-**Complexity**: O(1) - no allocation, just decrements length.
+**Complexity**: `$\mathcal{O}(1)$` - no allocation, just decrements length.
 
 **Example**:
 
@@ -196,7 +196,7 @@ pub fn as_str(&self) -> String;
 pub fn as_bytes(&self) -> Vec<u8>;
 ```
 
-**Complexity**: O(n) - must collect characters into String.
+**Complexity**: `$\mathcal{O}(n)$` - must collect characters into String.
 
 **Note**: Not zero-copy due to character-level storage.
 
@@ -219,7 +219,7 @@ pub fn truncate(&mut self, len: usize);
 
 **Behavior**: Truncates buffer to `len` characters (no-op if len >= current length).
 
-**Complexity**: O(k) where k = (current_len - len).
+**Complexity**: `$\mathcal{O}(k)$` where k = (current_len - len).
 
 **Use Case**: Restore to checkpoint position.
 
@@ -239,7 +239,7 @@ pub fn clear(&mut self);
 
 **Behavior**: Removes all characters (sets length to 0).
 
-**Complexity**: O(1) - does not deallocate.
+**Complexity**: `$\mathcal{O}(1)$` - does not deallocate.
 
 **Example**:
 
@@ -256,7 +256,7 @@ pub fn len(&self) -> usize;
 pub fn is_empty(&self) -> bool;
 ```
 
-**Complexity**: O(1).
+**Complexity**: `$\mathcal{O}(1)$`.
 
 **Example**:
 
@@ -511,16 +511,16 @@ println!("{}", buffer); // Prints: hello
 
 | Operation | Time Complexity | Allocates? | Notes |
 |-----------|----------------|------------|-------|
-| `new()` | O(1) | Yes (header) | Minimal allocation |
-| `with_capacity(n)` | O(1) | Yes (n chars) | Pre-allocates buffer |
-| `from_string(s)` | O(n) | Yes | Must iterate characters |
-| `insert(ch)` | O(1) amortized | Rare | 2x growth when full |
-| `delete()` | O(1) | No | Just decrements length |
-| `as_str()` | O(n) | Yes | Collects into String |
-| `clear()` | O(1) | No | Sets length to 0 |
-| `truncate(len)` | O(k) | No | k = chars removed |
-| `len()` | O(1) | No | Field access |
-| `is_empty()` | O(1) | No | Length check |
+| `new()` | `$\mathcal{O}(1)$` | Yes (header) | Minimal allocation |
+| `with_capacity(n)` | `$\mathcal{O}(1)$` | Yes (n chars) | Pre-allocates buffer |
+| `from_string(s)` | `$\mathcal{O}(n)$` | Yes | Must iterate characters |
+| `insert(ch)` | `$\mathcal{O}(1)$` amortized | Rare | 2x growth when full |
+| `delete()` | `$\mathcal{O}(1)$` | No | Just decrements length |
+| `as_str()` | `$\mathcal{O}(n)$` | Yes | Collects into String |
+| `clear()` | `$\mathcal{O}(1)$` | No | Sets length to 0 |
+| `truncate(len)` | `$\mathcal{O}(k)$` | No | k = chars removed |
+| `len()` | `$\mathcal{O}(1)$` | No | Field access |
+| `is_empty()` | `$\mathcal{O}(1)$` | No | Length check |
 
 ### Benchmarks
 
@@ -576,16 +576,16 @@ println!("{}", buffer); // Prints: hello
 
 | Feature | `Vec<char>` | `VecDeque<char>` (chosen) |
 |---------|-------------|---------------------------|
-| **Push back** | ✓ O(1) | ✓ O(1) |
-| **Pop back** | ✓ O(1) | ✓ O(1) |
-| **Push front** | ✗ O(n) | ✓ O(1) |
-| **Pop front** | ✗ O(n) | ✓ O(1) |
-| **Indexing** | ✓ O(1) | ✓ O(1) |
+| **Push back** | ✓ `$\mathcal{O}(1)$` | ✓ `$\mathcal{O}(1)$` |
+| **Pop back** | ✓ `$\mathcal{O}(1)$` | ✓ `$\mathcal{O}(1)$` |
+| **Push front** | ✗ `$\mathcal{O}(n)$` | ✓ `$\mathcal{O}(1)$` |
+| **Pop front** | ✗ `$\mathcal{O}(n)$` | ✓ `$\mathcal{O}(1)$` |
+| **Indexing** | ✓ `$\mathcal{O}(1)$` | ✓ `$\mathcal{O}(1)$` |
 | **Contiguous memory** | ✓ Yes | ✗ No (ring buffer) |
 | **Memory overhead** | Lower | Higher (~24 bytes) |
 
 **Decision**: `VecDeque` chosen for:
-- Consistent O(1) operations on both ends
+- Consistent `$\mathcal{O}(1)$` operations on both ends
 - Future support for insert-at-cursor (not just append)
 - Minimal overhead difference (24 bytes) negligible
 
@@ -628,10 +628,10 @@ for i in 0..5 {
 
 | Operation | UTF-8 String | Vec<char> (chosen) |
 |-----------|--------------|-------------------|
-| Insert | ✓ O(1) append | ✓ O(1) push |
-| Delete | ✗ O(n) find boundary | ✓ O(1) pop |
-| Length | ✗ O(n) count chars | ✓ O(1) field |
-| To String | ✓ O(1) clone | ✗ O(n) collect |
+| Insert | ✓ `$\mathcal{O}(1)$` append | ✓ `$\mathcal{O}(1)$` push |
+| Delete | ✗ `$\mathcal{O}(n)$` find boundary | ✓ `$\mathcal{O}(1)$` pop |
+| Length | ✗ `$\mathcal{O}(n)$` count chars | ✓ `$\mathcal{O}(1)$` field |
+| To String | ✓ `$\mathcal{O}(1)$` clone | ✗ `$\mathcal{O}(n)$` collect |
 
 **Decision**: Optimize for insertion/deletion (hot path) at expense of string conversion (cold path).
 

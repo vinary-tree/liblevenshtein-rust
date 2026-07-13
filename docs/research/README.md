@@ -2,20 +2,14 @@
 
 Performance research, optimization analysis, and experimental features.
 
-## Active Research Initiatives (2025-11-11)
+## Early planning docs (archived)
 
-**Status**: Phase 6 complete (100% feature parity) - Ready for advanced optimizations
-
-### 📋 Planning Documents
-- **[Research Initiatives](./RESEARCH_INITIATIVES.md)** - Comprehensive plans for 3 research projects (50+ pages)
-- **[Research Tracking](./RESEARCH_TRACKING.md)** - Progress tracking, methodology standards, decision log
-
-### 🎯 Planned Initiatives
-1. **SIMD Edge Search** (2-4 weeks) - Extract SIMD from OptimizedDawg, test in DynamicDawg
-2. **Hybrid Storage** (4-6 weeks) - Arena/per-node hybrid for immutable dictionaries
-3. **DAT/DAWG Hybrid** (8-12 weeks) - Novel BASE+CHECK + suffix sharing algorithm
-
-**Context**: Identified during OptimizedDawg deprecation analysis (deprecated: 5-12× slower than DynamicDawg)
+> An early (2025-11-11) never-executed planning pair —
+> [`RESEARCH_INITIATIVES.md`](../archive/research/RESEARCH_INITIATIVES.md) and
+> [`RESEARCH_TRACKING.md`](../archive/research/RESEARCH_TRACKING.md) — is preserved under
+> `docs/archive/research/`.
+> Its premise (an `OptimizedDawg` deprecation analysis) has since been resolved: `OptimizedDawg`
+> was removed from the source tree, so the proposals it framed are superseded.
 
 ## Contents
 

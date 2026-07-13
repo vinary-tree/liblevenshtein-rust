@@ -6,6 +6,8 @@ This document details the performance optimizations applied to Levenshtein dista
 
 These optimizations can provide 2-18× speedup depending on input characteristics.
 
+These techniques build on the classic dynamic-programming formulation of Wagner & Fischer [3]; the early-termination strategies are instances of the bounded-distance cutoff analysed by Ukkonen [4], while the diagonal structure exploited by the SIMD path mirrors Myers' `$\mathcal{O}(ND)$` difference algorithm [5].
+
 ## Optimization Categories
 
 ### 1. Space Optimization (Row-Based DP)
@@ -26,7 +28,7 @@ These optimizations can provide 2-18× speedup depending on input characteristic
 
 ### Problem
 
-Traditional DP stores full m×n matrix:
+Traditional DP stores full `$m \times n$` matrix:
 
 ```
 Memory: O(m×n) = 1000×1000 = 4 MB (for usize = 4 bytes)
@@ -306,7 +308,7 @@ if is_x86_feature_detected!("avx2") {
 
 ### Symmetric Pair Deduplication
 
-Exploit d(a,b) = d(b,a):
+Exploit `$d(a,b) = d(b,a)$`:
 
 ```rust
 struct SymmetricPair {
@@ -338,7 +340,7 @@ second: Arc<str>,
 ```
 
 **Benefits**:
-- Efficient cloning: O(1) reference count increment
+- Efficient cloning: `$\mathcal{O}(1)$` reference count increment
 - Shared memory: Multiple cache entries can reference same string
 - Memory reduction: ~16 bytes per Arc vs full string copy
 
@@ -452,8 +454,8 @@ let target_chars: SmallVec<[char; 32]> = target.chars().collect();
 ```
 
 **Behavior**:
-- Strings ≤32 chars: Stack allocation (zero-cost)
-- Strings >32 chars: Heap allocation (same as Vec)
+- Strings `$\le 32$` chars: Stack allocation (zero-cost)
+- Strings `$> 32$` chars: Heap allocation (same as Vec)
 
 ### Benefits
 
@@ -561,7 +563,10 @@ cargo bench --bench real_world_benchmark
 
 1. Intel Intrinsics Guide: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/
 2. SmallVec crate: https://docs.rs/smallvec/
-3. Source code:
+3. Wagner, R. A., & Fischer, M. J. (1974). "The String-to-String Correction Problem". *Journal of the ACM*, 21(1), 168-173. DOI: [10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
+4. Ukkonen, E. (1985). "Algorithms for approximate string matching". *Information and Control*, 64(1-3), 100-118. DOI: [10.1016/S0019-9958(85)80046-2](https://doi.org/10.1016/S0019-9958(85)80046-2)
+5. Myers, E. W. (1986). "An `$\mathcal{O}(ND)$` Difference Algorithm and Its Variations". *Algorithmica*, 1(1-4), 251-266. DOI: [10.1007/BF01840446](https://doi.org/10.1007/BF01840446)
+6. Source code:
    - `src/distance/mod.rs:111-147` (prefix stripping)
    - `src/distance/simd.rs` (SIMD implementations)
-4. Benchmark data from `benches/real_world_benchmark.rs`
+7. Benchmark data from `benches/real_world_benchmark.rs`

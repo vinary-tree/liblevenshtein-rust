@@ -22,20 +22,20 @@
 
 ## Overview
 
-This document provides comprehensive documentation for the three foundational properties of the subsumption relation (⊑) used in Levenshtein automata for state minimization. These properties establish that subsumption forms a **strict partial order**, which is essential for maintaining anti-chain states.
+This document provides comprehensive documentation for the three foundational properties of the subsumption relation `$(\sqsubseteq )$` used in Levenshtein automata for state minimization. These properties establish that subsumption forms a **strict partial order**, which is essential for maintaining anti-chain states.
 
 ### Why Subsumption Matters
 
 In Levenshtein automata, states consist of sets of positions. As the automaton processes input, the number of positions can grow exponentially. **Subsumption** provides a mathematical foundation for removing redundant positions:
 
-- If position p₁ **subsumes** position p₂ (written p₁ ⊑ p₂), then p₂ is redundant
+- If position p₁ **subsumes** position p₂ (written `$p_{1} \sqsubseteq  p_{2}),$` then p₂ is redundant
 - Any string accepted from p₂ is also accepted from p₁
 - We can safely discard p₂ without affecting correctness
 
 The three theorems proven here ensure this minimization is:
 1. **Sound**: Never removes necessary positions
 2. **Complete**: Removes all redundant positions
-3. **Efficient**: Maintains O(n²) state size bound
+3. **Efficient**: Maintains `$\mathcal{O}(n^{2})$` state size bound
 
 ---
 
@@ -73,7 +73,7 @@ Notation "p1 '⊑' p2" := (subsumes p1 p2) (at level 70).
 **Informal Definition**: Position p₁ subsumes p₂ if:
 1. They have the same variant (same position type)
 2. p₂ has less remaining error budget (errors₂ > errors₁)
-3. The offset distance is within the error gap: |offset₂ - offset₁| ≤ errors₂ - errors₁
+3. The offset distance is within the error gap: `$\lvert \text{offset}_2 - \text{offset}_1\rvert \le \text{errors}_2 - \text{errors}_1$`
 
 **Geometric Meaning**: The reachable region R(p₂) is contained within R(p₁):
 ```
@@ -100,7 +100,7 @@ Theorem subsumes_irreflexive : forall p, ~ (p ⊑ p).
 
 ### Proof Intuition
 
-The subsumption relation requires `errors₂ > errors₁`. For p ⊑ p, we would need `errors(p) > errors(p)`, which is impossible since a natural number cannot be strictly greater than itself.
+The subsumption relation requires `errors₂ > errors₁`. For `$p \sqsubseteq  p,$` we would need `errors(p) > errors(p)`, which is impossible since a natural number cannot be strictly greater than itself.
 
 This is an immediate consequence of the strict inequality in the definition.
 
@@ -109,7 +109,7 @@ This is an immediate consequence of the strict inequality in the definition.
 **Type**: Proof by contradiction
 
 **Steps**:
-1. Assume p ⊑ p for some position p
+1. Assume `$p \sqsubseteq  p$` for some position p
 2. Unfold definition of subsumption
 3. Extract the condition errors(p) > errors(p)
 4. Lia solver derives contradiction (n > n is false)
@@ -162,12 +162,12 @@ Theorem subsumes_transitive : forall p1 p2 p3,
 
 ### Proof Intuition
 
-**Geometric interpretation**: If R(p₂) ⊆ R(p₁) and R(p₃) ⊆ R(p₂), then R(p₃) ⊆ R(p₁) by set containment transitivity.
+**Geometric interpretation**: If `$R(p_{2}) \subseteq  R(p_{1})$` and `$R(p_{3}) \subseteq  R(p_{2}),$` then `$R(p_{3}) \subseteq  R(p_{1})$` by set containment transitivity.
 
 **Algebraic reasoning**:
 - Error gaps add: (e₃ - e₂) + (e₂ - e₁) = e₃ - e₁
-- Triangle inequality: |o₃ - o₁| ≤ |o₃ - o₂| + |o₂ - o₁|
-- Combining: |o₃ - o₁| ≤ |o₃ - o₂| + |o₂ - o₁| ≤ (e₃ - e₂) + (e₂ - e₁) = e₃ - e₁
+- Triangle inequality: `$|o_{3} - o_{1}| \le  |o_{3} - o_{2}| + |o_{2} - o_{1}|$`
+- Combining: `$|o_{3} - o_{1}| \le  |o_{3} - o_{2}| + |o_{2} - o_{1}| \le  (e_{3} - e_{2}) + (e_{2} - e_{1}) = e_{3} - e_{1}$`
 
 The key insight is that Manhattan distance satisfies the triangle inequality, and error gaps are additive, so containment chains compose naturally.
 
@@ -182,7 +182,7 @@ The key insight is that Manhattan distance satisfies the triangle inequality, an
 2. **Error gap**: Show errors(p₃) > errors(p₁)
    - From e₃ > e₂ > e₁ (transitive inequality)
 
-3. **Offset bound**: Show |offset(p₃) - offset(p₁)| ≤ errors(p₃) - errors(p₁)
+3. **Offset bound**: Show `$\lvert \text{offset}(p_3) - \text{offset}(p_1)\rvert \le \text{errors}(p_3) - \text{errors}(p_1)$`
    - Step 3a: Apply triangle inequality:
      ```
      |o₃ - o₁| ≤ |o₃ - o₂| + |o₂ - o₁|
@@ -259,7 +259,7 @@ Qed.
    - Allows us to work with natural number arithmetic
 
 3. **lia**: Linear Integer Arithmetic decision procedure
-   - Automatically solves goals involving +, -, ≤, <, =
+   - Automatically solves goals involving `$+, -, \le , <, =$`
    - Handles both Z and nat (with %nat scope)
 
 ### Implementation Impact
@@ -283,11 +283,11 @@ self.positions.retain(|existing| {
 ```
 
 Without transitivity, this algorithm could fail:
-- Suppose p₁ ⊑ p₂ and p₂ ⊑ p₃
+- Suppose `$p_{1} \sqsubseteq  p_{2}$` and `$p_{2} \sqsubseteq  p_{3}$`
 - If we keep p₁ and p₃ but remove p₂, we violate the anti-chain property
 - Transitivity ensures that if we keep p₁, we must also remove p₃
 
-**Complexity impact**: Transitivity justifies the O(|Q|²) subsumption check complexity, where |Q| = O(n²). Without transitivity, we might need to maintain full subsumption closure, which could be exponential.
+**Complexity impact**: Transitivity justifies the `$\mathcal{O}(|Q|^{2})$` subsumption check complexity, where |Q| = `$\mathcal{O}(n^{2})$`. Without transitivity, we might need to maintain full subsumption closure, which could be exponential.
 
 ### Visual Example
 
@@ -395,8 +395,8 @@ If variants differ, the first conjunct is false, so the entire conjunction is fa
 **Type**: Proof by contradiction (immediate)
 
 **Steps**:
-1. Assume variant(p₁) ≠ variant(p₂)
-2. Assume p₁ ⊑ p₂
+1. Assume `$\text{variant}(p_1) \ne \text{variant}(p_2)$`
+2. Assume `$p_{1} \sqsubseteq  p_{2}$`
 3. Extract variant(p₁) = variant(p₂) from subsumption
 4. Contradiction with step 1
 
@@ -456,7 +456,7 @@ if std::mem::discriminant(pos1) != std::mem::discriminant(pos2) {
 // Only check numeric conditions if variants match
 ```
 
-This reduces subsumption checks from O(1) to O(0) for mismatched variants (just a discriminant comparison, no arithmetic).
+This reduces subsumption checks from `$\mathcal{O}(1)$` to `$\mathcal{O}(0)$` for mismatched variants (just a discriminant comparison, no arithmetic).
 
 **State minimization impact**: Anti-chain maintenance preserves all six variant types:
 
@@ -488,7 +488,7 @@ Theorem subsumes_antisymmetric : forall p1 p2,
 
 ### Proof Intuition
 
-If p₁ ⊑ p₂ and p₂ ⊑ p₁, then by transitivity, p₁ ⊑ p₁, contradicting irreflexivity.
+If `$p_{1} \sqsubseteq  p_{2}$` and `$p_{2} \sqsubseteq  p_{1},$` then by transitivity, `$p_1 \sqsubseteq p_1$`, contradicting irreflexivity.
 
 ### Coq Proof
 
@@ -617,7 +617,7 @@ Compare proven specification with Rust implementation:
 
 - **Lemma 3.1** (Subsumption Correctness): Geometric justification for the definition
 - **Lemma 3.2** (Subsumption Transitivity): Edit graph path composition
-- **Lemma 4.5** (State Size Bound): O(n²) positions per state
+- **Lemma 4.5** (State Size Bound): `$\mathcal{O}(n^{2})$` positions per state
 
 ### Implementation
 
@@ -639,7 +639,7 @@ Compare proven specification with Rust implementation:
 
 - **lia**: Linear Integer Arithmetic decision procedure
   - Automatically solves arithmetic goals
-  - Handles +, -, ≤, <, = for both Z and nat
+  - Handles `$+, -, \le , <, =$` for both Z and nat
 
 ---
 

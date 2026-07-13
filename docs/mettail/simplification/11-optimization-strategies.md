@@ -10,7 +10,7 @@ Strategies for program optimization that use bisimulation as the soundness crite
 ## Overview
 
 Bisimulation provides a rigorous foundation for program optimization:
-- **Soundness**: If `P ≈ Q`, replacing P with Q preserves all observable behaviors
+- **Soundness**: If `$P \approx  Q$`, replacing P with Q preserves all observable behaviors
 - **Completeness**: Bisimulation captures exactly the observable distinctions
 - **Compositionality**: Bisimilar subterms can be replaced in any context
 
@@ -22,7 +22,7 @@ This document describes optimization strategies that exploit these properties to
 
 ### Optimization Soundness Theorem
 
-**Statement**: An optimization `opt: P → Q` is sound if `P ≈ Q`.
+**Statement**: An optimization `opt: P → Q` is sound if `$P \approx  Q$`.
 
 **Implication**:
 - Any behavior exhibited by P is also exhibited by Q
@@ -48,11 +48,11 @@ Remove code that doesn't contribute to observable behavior.
 
 ### Applicable Laws
 
-1. **Nil Identity**: `P | 0 ≡ P`
+1. **Nil Identity**: `$P | 0 \equiv  P$`
    - Nil processes contribute nothing
    - Safe to remove
 
-2. **Dead Scope Elimination**: `new x.P ≡ P` when `x ∉ FV(P)`
+2. **Dead Scope Elimination**: `$\text{new} x.P \equiv  P$` when `$x \notin  \text{FV}(P)$`
    - Unused bindings contribute nothing
    - Safe to remove
 
@@ -135,11 +135,11 @@ Flatten nested parallel compositions for more efficient representation.
 
 ### Applicable Laws
 
-1. **Associativity**: `(P | Q) | R ≡ P | (Q | R)`
+1. **Associativity**: `$(P | Q) | R \equiv  P | (Q | R)$`
    - Nested Par can be flattened to list
    - Canonical form: right-associative
 
-2. **Commutativity**: `P | Q ≡ Q | P`
+2. **Commutativity**: `$P | Q \equiv  Q | P$`
    - Enables reordering for cache locality
    - Enables grouping related processes
 
@@ -210,7 +210,7 @@ impl ParallelFusion {
 
 **Metric**: Tree traversal depth reduction
 
-**Target**: O(n) traversal instead of O(n²) for nested structures
+**Target**: `$\mathcal{O}(n)$` traversal instead of `$\mathcal{O}(n^{2})$` for nested structures
 
 **Trade-off**: Flattening time vs. subsequent operation efficiency
 
@@ -225,7 +225,7 @@ Push bindings as deep as possible to enable more dead code elimination.
 ### Applicable Laws
 
 1. **Scope Extrusion** (reverse direction):
-   - `(new x.P) | Q → new x.(P | Q)` when `x ∉ FV(Q)`
+   - `(new x.P) | Q → new x.(P | Q)` when `$x \notin  \text{FV}(Q)$`
    - Push scope inward
 
 2. **Scope Splitting**:
@@ -405,10 +405,10 @@ Optimize for specific resource constraints while maintaining bisimilarity.
 
 | Constraint | Primary Strategy | Secondary Strategy | Guarantee |
 |------------|-----------------|-------------------|-----------|
-| **Memory** | Dead code elimination | Scope minimization | `P ≈ simplify(P)` |
-| **Latency** | Communication fusion | Inline expansion | `P ≈ optimize(P)` |
-| **Parallelism** | Scope extrusion | Parallel fusion | `P ≈ parallelize(P)` |
-| **Bandwidth** | Message coalescing | Batch sends | `P ≈ coalesce(P)` |
+| **Memory** | Dead code elimination | Scope minimization | `$P \approx  \text{simplify}(P)$` |
+| **Latency** | Communication fusion | Inline expansion | `$P \approx  \text{optimize}(P)$` |
+| **Parallelism** | Scope extrusion | Parallel fusion | `$P \approx  \text{parallelize}(P)$` |
+| **Bandwidth** | Message coalescing | Batch sends | `$P \approx  \text{coalesce}(P)$` |
 
 ### Memory Optimization
 

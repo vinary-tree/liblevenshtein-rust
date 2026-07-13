@@ -119,11 +119,11 @@ Desired: ph↔f with weight 0.2, c↔k/c↔s with weight 0.3
 
 ## 2. Theoretical Foundation
 
-![Operation sets: how the Standard, Transposition, and Merge-and-Split presets compose edit operations from `⟨t^x, t^y, t^w⟩` triples, and how restricted substitution sets layer onto them.](../diagrams/automata/operation-sets.svg)
+![Operation sets: how the Standard, Transposition, and Merge-and-Split presets compose edit operations from operation triples (characters consumed from the first word, characters consumed from the second word, and a weight), and how restricted substitution sets layer onto them.](../diagrams/automata/operation-sets.svg)
 
 ### From TCS 2011 Paper (Section 3, Pages 2341-2342)
 
-**Operation Type**: A triple `t = ⟨t^x, t^y, t^w⟩` where:
+**Operation Type**: A triple `$t = \langle t^x, t^y, t^w\rangle$` where:
 - `t^x`: Number of characters consumed from first word
 - `t^y`: Number of characters consumed from second word
 - `t^w`: Operation weight/cost
@@ -137,8 +137,8 @@ Deletion:      ⟨1, 0, 1⟩  (consume first only, cost 1)
 Transposition: ⟨2, 2, 1⟩  (consume 2 from each, cost 1)
 ```
 
-**Restricted Operations**: `op = ⟨op^x, op^y, op^r, op^w⟩` where:
-- `op^r ⊆ Σ^{op^x} × Σ^{op^y}`: Allowed character pair replacements (`Σ` denotes the alphabet)
+**Restricted Operations**: `$op = \langle op^x, op^y, op^r, op^w\rangle$` where:
+- `$op^r \subseteq \Sigma^{op^x} \times \Sigma^{op^y}$`: Allowed character pair replacements (`$\Sigma$` denotes the alphabet)
 
 **Examples**:
 ```
@@ -158,14 +158,14 @@ Phonetic similarity:
 - All **zero-weighted** operations must be **length-preserving**
 - i.e., if `t^w = 0`, then `t^x = t^y`
 
-**Implication**: Match operation must consume same characters from both words (`⟨1,1,0⟩`).
+**Implication**: Match operation must consume same characters from both words (`$\langle 1,1,0\rangle$`).
 
 ### Operation Set Requirements
 
 An operation set `Op` must satisfy:
-1. **Contains match**: `⟨1, 1, 0⟩ ∈ Op` (required for bounded diagonal)
-2. **Finite**: `∣Op∣ < ∞`
-3. **Bounded consumption**: `max(t^x, t^y) ≤ k` for some constant `k`
+1. **Contains match**: `$\langle 1, 1, 0\rangle \in Op$` (required for bounded diagonal)
+2. **Finite**: `$\lvert Op\rvert < \infty$`
+3. **Bounded consumption**: `$\max(t^x, t^y) \le k$` for some constant `$k$`
 
 ---
 
@@ -1189,7 +1189,7 @@ impl LearnedOperationSet {
 
 **Goal**: Support operations consuming >2 characters
 
-Current limitation: `t^x, t^y ≤ 2` (hardcoded in successor logic, where `k = 2`)
+Current limitation: `$t^x, t^y \le 2$` (hardcoded in successor logic, where `$k = 2$`)
 
 Extension:
 

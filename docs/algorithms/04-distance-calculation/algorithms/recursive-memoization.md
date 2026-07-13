@@ -14,17 +14,18 @@ The recursive memoization approach implements Levenshtein distance computation u
 
 ### Recursive Definition
 
+Writing `$s_0$` for the first character of `$s$` and `$s_{1..}$` for its remaining suffix, the edit distance satisfies the recurrence
+
+```math
+\mathrm{distance}(s, t) = \begin{cases}
+  \lvert t\rvert & \text{if } s \text{ is empty} \\
+  \lvert s\rvert & \text{if } t \text{ is empty} \\
+  \mathrm{distance}(s_{1..},\ t_{1..}) & \text{if } s_0 = t_0 \\
+  1 + \min\bigl(\mathrm{distance}(s_{1..},\ t),\ \mathrm{distance}(s,\ t_{1..}),\ \mathrm{distance}(s_{1..},\ t_{1..})\bigr) & \text{otherwise}
+\end{cases}
 ```
-distance(s, t) =
-  | len(t)                                    if s is empty
-  | len(s)                                    if t is empty
-  | distance(s[1..], t[1..])                  if s[0] == t[0]
-  | 1 + min(
-      distance(s[1..], t),         -- deletion
-      distance(s, t[1..]),         -- insertion
-      distance(s[1..], t[1..])     -- substitution
-    )                                         otherwise
-```
+
+The three arguments to `$\min$` are the costs of **deletion** (advance `$s$`), **insertion** (advance `$t$`), and **substitution** (advance both), respectively.
 
 ### Implementation with Optimizations
 
@@ -135,7 +136,7 @@ pub fn standard_distance_recursive(source: &str, target: &str, cache: &MemoCache
 
 ### SymmetricPair Design
 
-Exploits the symmetric property: d(a,b) = d(b,a)
+Exploits the symmetric property: `$d(a,b) = d(b,a)$`
 
 ```rust
 struct SymmetricPair {
@@ -297,22 +298,22 @@ let d2 = standard_distance_recursive("testing", "tested", &cache);
 
 | Scenario | Complexity | Explanation |
 |----------|------------|-------------|
-| Worst case (cold cache) | O(m×n) | Explore all subproblems |
-| Best case (cache hit) | O(1) | Instant lookup |
-| Common prefix (80% overlap) | O(k×l) | k,l = remaining lengths after stripping |
-| Early exit (identical strings) | O(prefix_len) | Linear scan for prefix |
+| Worst case (cold cache) | `$\mathcal{O}(mn)$` | Explore all subproblems |
+| Best case (cache hit) | `$\mathcal{O}(1)$` | Instant lookup |
+| Common prefix (80% overlap) | `$\mathcal{O}(kl)$` | `$k, l$` = remaining lengths after stripping |
+| Early exit (identical strings) | `$\mathcal{O}(\text{prefix length})$` | Linear scan for prefix |
 
 ### Space Complexity
 
 | Component | Space | Explanation |
 |-----------|-------|-------------|
-| Recursion stack | O(max(m,n)) | Worst case depth |
-| Cache entries | O(|unique pairs|) | ~24 bytes per pair |
-| Character vectors | O(m + n) | Temporary for each call |
+| Recursion stack | `$\mathcal{O}(\max(m,n))$` | Worst case depth |
+| Cache entries | `$\mathcal{O}(\lvert \text{unique pairs}\rvert)$` | ~24 bytes per pair |
+| Character vectors | `$\mathcal{O}(m + n)$` | Temporary for each call |
 
-**Total**: O(max(m,n) + cache_size)
+**Total**: `$\mathcal{O}(\max(m,n) + \text{cache size})$`
 
-With prefix stripping: **O(max(k,l) + cache_size)** where k,l << m,n
+With prefix stripping: **`$\mathcal{O}(\max(k,l) + \text{cache size})$`** where `$k, l \ll m, n$`
 
 ## Worked Example
 
@@ -481,7 +482,7 @@ pub fn transposition_distance_recursive(source: &str, target: &str, cache: &Memo
 
 1. **Cache Overhead**: ~16-24 bytes per unique pair
 2. **Cold Cache Penalty**: 1.05× slower than iterative (cold cache)
-3. **Recursion Stack**: O(depth) stack frames (mitigated by prefix stripping)
+3. **Recursion Stack**: `$\mathcal{O}(\text{depth})$` stack frames (mitigated by prefix stripping)
 4. **Cache Contention**: Lock overhead in high-concurrency scenarios (RwLock only)
 
 ## Usage Guidelines
@@ -508,6 +509,6 @@ pub fn transposition_distance_recursive(source: &str, target: &str, cache: &Memo
 
 ## References
 
-1. Levenshtein, V. I. (1966). "Binary codes capable of correcting deletions, insertions, and reversals"
-2. Wagner, R. A., & Fischer, M. J. (1974). "The String-to-String Correction Problem"
+1. Levenshtein, V. I. (1966). "Binary codes capable of correcting deletions, insertions, and reversals". *Soviet Physics Doklady*, 10(8), 707-710.
+2. Wagner, R. A., & Fischer, M. J. (1974). "The String-to-String Correction Problem". *Journal of the ACM*, 21(1), 168-173. DOI: [10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
 3. Source code: `src/distance/mod.rs:365-730`

@@ -8,6 +8,12 @@
 
 ---
 
+> **Currency note (2026-07).** This analysis dates from 2025-11-03, when the PathMap zipper
+> held its trie behind an `Arc<RwLock<PathMap>>`. The subsequent **TrieRef rework** made
+> `PathMapZipper` lock-free (it now focuses a copy-on-write `TrieRef` snapshot), so the
+> `RwLock` "lock overhead" discussed below no longer applies. The structural conclusions
+> (zipper layering vs. direct node traversal) still hold.
+
 ## Executive Summary
 
 This document analyzes the performance trade-offs between zipper-based and node-based query iteration for fuzzy string matching in liblevenshtein-rust.

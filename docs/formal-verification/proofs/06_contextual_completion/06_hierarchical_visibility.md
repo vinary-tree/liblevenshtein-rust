@@ -124,7 +124,7 @@ Theorem hierarchical_visibility_soundness :
 **Proof**:
 1. By definition: `is_parent tree parent child` means `parent(child) = Some(parent)`
 2. By definition of `visible_from`: `visible_from tree parent child` iff `parent = child` OR `is_ancestor tree parent child = true`
-3. Since `child ≠ parent` (well-formedness: no self-loops)
+3. Since `child <> parent` (well-formedness: no self-loops)
 4. We need to show: `is_ancestor tree parent child = true`
 5. By definition of `is_ancestor`:
    ```
@@ -134,38 +134,38 @@ Theorem hierarchical_visibility_soundness :
    ```
 6. Since `parent(child) = Some(parent)`, the `if` condition succeeds
 7. Therefore: `is_ancestor tree parent child = true`
-8. Therefore: `visible_from tree parent child` ✓ ∎
+8. Therefore: `visible_from tree parent child` ✓ `$\blacksquare$`
 
 ### Part 2: Parents Don't See Children (No Downward Visibility)
 
 **Claim**: If `child` is a child of `parent`, then `child` is NOT visible from `parent`.
 
 **Proof**:
-1. By definition: `invisible_from tree child parent` iff `child ≠ parent` AND `is_ancestor tree child parent = false`
+1. By definition: `invisible_from tree child parent` iff `child <> parent` AND `is_ancestor tree child parent = false`
 2. **Case 1**: `child = parent`
    - Contradicts well-formedness (no cycles)
-   - Therefore `child ≠ parent` ✓
+   - Therefore `child <> parent` ✓
 3. **Case 2**: Show `is_ancestor tree child parent = false`
    - Assume for contradiction: `is_ancestor tree child parent = true`
    - Then there exists a path: `parent → ... → child → ... → parent` (cycle!)
    - This contradicts well-formedness (trees are acyclic)
    - Therefore `is_ancestor tree child parent = false` ✓
-4. Therefore: `invisible_from tree child parent` ✓ ∎
+4. Therefore: `invisible_from tree child parent` ✓ `$\blacksquare$`
 
 ### Part 3: Siblings Don't See Each Other (No Lateral Visibility)
 
 **Claim**: If `sibling` and `child` are distinct children of `parent`, then `sibling` is NOT visible from `child`.
 
 **Proof**:
-1. By definition: `invisible_from tree sibling child` iff `sibling ≠ child` AND `is_ancestor tree sibling child = false`
-2. Given: `sibling ≠ child` (by assumption) ✓
+1. By definition: `invisible_from tree sibling child` iff `sibling <> child` AND `is_ancestor tree sibling child = false`
+2. Given: `sibling <> child` (by assumption) ✓
 3. **Show**: `is_ancestor tree sibling child = false`
    - By definition: `is_ancestor tree sibling child` iff `sibling` is on the path from `child` to root
    - Path from `child` to root: `child → parent → ... → root`
    - Path from `sibling` to root: `sibling → parent → ... → root`
    - These paths **diverge** at `parent` (sibling is NOT on child's path)
    - Therefore: `is_ancestor tree sibling child = false` ✓
-4. Therefore: `invisible_from tree sibling child` ✓ ∎
+4. Therefore: `invisible_from tree sibling child` ✓ `$\blacksquare$`
 
 ### Part 4: Visibility is Transitive Upward
 
@@ -175,25 +175,25 @@ Theorem hierarchical_visibility_soundness :
 1. Given: `is_ancestor tree ancestor child = true`
 2. By definition of `visible_from`: `visible_from tree ancestor child` iff `ancestor = child` OR `is_ancestor tree ancestor child = true`
 3. Since we have `is_ancestor tree ancestor child = true`, the second disjunct holds
-4. Therefore: `visible_from tree ancestor child` ✓ ∎
+4. Therefore: `visible_from tree ancestor child` ✓ `$\blacksquare$`
 
 ### Part 5: Invisibility is Transitive Downward
 
 **Claim**: If `descendant` is a descendant of `parent` (but not equal to `child`), then `descendant` is NOT visible from `parent`.
 
 **Proof**:
-1. Given: `is_descendant tree descendant parent = true` AND `descendant ≠ child`
+1. Given: `is_descendant tree descendant parent = true` AND `descendant <> child`
 2. By definition: `is_descendant tree descendant parent` = `is_ancestor tree parent descendant`
 3. So we have: `is_ancestor tree parent descendant = true`
 4. **Show**: `invisible_from tree descendant parent`
-   - Need: `descendant ≠ parent` (given by well-formedness: ancestors ≠ descendants)
+   - Need: `descendant <> parent` (given by well-formedness: ancestors `$\ne$` descendants)
    - Need: `is_ancestor tree descendant parent = false`
    - Assume for contradiction: `is_ancestor tree descendant parent = true`
    - Then: `is_ancestor tree parent descendant = true` AND `is_ancestor tree descendant parent = true`
    - This creates a cycle: `parent → ... → descendant → ... → parent`
    - Contradicts well-formedness (acyclic tree)
    - Therefore: `is_ancestor tree descendant parent = false` ✓
-5. Therefore: `invisible_from tree descendant parent` ✓ ∎
+5. Therefore: `invisible_from tree descendant parent` ✓ `$\blacksquare$`
 
 ---
 
@@ -275,7 +275,7 @@ pub fn is_descendant(&self, child_id: ContextId, ancestor_id: ContextId) -> bool
 ```
 
 **Correspondence**:
-- **Line 336-338**: Implements `child ≠ ancestor` check (non-reflexive)
+- **Line 336-338**: Implements `child <> ancestor` check (non-reflexive)
 - **Line 340**: Starts at parent of `child_id` (upward traversal)
 - **Line 341-345**: Follows parent chain (implements `is_ancestor` recursion)
 - **Line 348**: Returns `false` if ancestor not found (not in parent chain)
@@ -525,12 +525,12 @@ Qed.
 
 ### Performance Considerations
 
-**Current Implementation**: O(depth) for `is_descendant` check (follows parent chain)
+**Current Implementation**: `$\mathcal{O}(\text{depth})$` for `is_descendant` check (follows parent chain)
 
 **Optimization candidate** (if needed for large trees):
 - **Interval Labeling**: Assign each node `[left, right]` interval during DFS
 - **Descendant Check**: `ctx1` is descendant of `ctx2` iff `left2 < left1 < right1 < right2`
-- **Time**: O(1) check vs O(depth)
+- **Time**: `$\mathcal{O}(1)$` check vs `$\mathcal{O}(\text{depth})$`
 - **Space**: 2 integers per node (16 bytes overhead)
 
 **When to optimize**:

@@ -6,6 +6,8 @@ The Distance Calculation layer provides direct computation of edit distances bet
 
 This layer implements multiple algorithmic approaches and distance variants, each optimized for different use cases.
 
+Throughout this layer, `$m$` and `$n$` denote the lengths (in characters) of the two strings being compared.
+
 ![Distance dispatch: how a requested algorithm (standard, transposition, merge-and-split) selects the matching edit-distance routine](../../diagrams/distance/distance-dispatch.svg)
 
 *Distance dispatch: the requested `Algorithm` selects the corresponding edit-distance routine.*
@@ -23,7 +25,7 @@ assert_eq!(standard_distance("kitten", "sitting"), 3);
 // Edits: k→s, e→i, insert g
 ```
 
-**Complexity**: `O(m×n)` time, `O(min(m,n))` space
+**Complexity**: `$\mathcal{O}(mn)$` time, `$\mathcal{O}(\min(m,n))$` space
 
 ### Damerau-Levenshtein Distance (Transposition)
 
@@ -40,7 +42,7 @@ assert_eq!(standard_distance("test", "tset"), 2);
 // Two substitutions required
 ```
 
-**Complexity**: `O(m×n)` time, `O(min(m,n))` space (3 rows)
+**Complexity**: `$\mathcal{O}(mn)$` time, `$\mathcal{O}(\min(m,n))$` space (3 rows)
 
 ### Merge-and-Split Distance
 
@@ -58,7 +60,7 @@ assert_eq!(merge_and_split_distance("m", "rn", &cache), 1);
 assert_eq!(merge_and_split_distance("rn", "m", &cache), 1);
 ```
 
-**Complexity**: `O(m×n)` time with memoization
+**Complexity**: `$\mathcal{O}(mn)$` time with memoization
 
 ## Implementation Approaches
 
@@ -67,8 +69,8 @@ assert_eq!(merge_and_split_distance("rn", "m", &cache), 1);
 Space-optimized DP using 2-3 row vectors instead of full matrix.
 
 **Pros**:
-- Predictable performance: `O(m×n)` always
-- Low memory footprint: `O(min(m,n))`
+- Predictable performance: `$\mathcal{O}(mn)$` always
+- Low memory footprint: `$\mathcal{O}(\min(m,n))$`
 - No recursion stack overhead
 - Cache-friendly sequential access
 
@@ -164,7 +166,7 @@ src/distance/
    │ (scalar)     │
    └──────────────┘
        │
-       │ feature="simd" + len>16?
+       │ x86_64 + len>16?
        ▼
   ┌───────────────────┐
   │ standard_distance │
@@ -192,7 +194,7 @@ pub fn strip_common_affixes(a: &str, b: &str) -> (usize, usize, usize) {
 
 ### 2. Space Optimization (Row-Based DP)
 
-Use 2-3 row vectors instead of full m×n matrix.
+Use 2-3 row vectors instead of full `$m \times n$` matrix.
 
 ```
 Traditional:  O(m×n) space → Full matrix
@@ -500,10 +502,10 @@ fn main() {
 
 | Implementation | Space Complexity | 1000×1000 Strings |
 |----------------|------------------|-------------------|
-| Full matrix DP | `O(m×n)` | ~4 MB |
-| 2-row optimized | `O(min(m,n))` | ~4 KB |
-| 3-row (transposition) | `O(3×min(m,n))` | ~12 KB |
-| Recursive + cache | `O(depth + cache)` | ~24 KB (1000 cached pairs) |
+| Full matrix DP | `$\mathcal{O}(mn)$` | ~4 MB |
+| 2-row optimized | `$\mathcal{O}(\min(m,n))$` | ~4 KB |
+| 3-row (transposition) | `$\mathcal{O}(3\min(m,n))$` | ~12 KB |
+| Recursive + cache | `$\mathcal{O}(\text{depth} + \text{cache})$` | ~24 KB (1000 cached pairs) |
 
 ## Integration with Other Layers
 
@@ -541,10 +543,10 @@ See `src/distance/mod.rs:752-964` for test suite.
 
 ## References
 
-1. Levenshtein, V. I. (1966). "Binary codes capable of correcting deletions, insertions, and reversals"
-2. Damerau, F. J. (1964). "A technique for computer detection and correction of spelling errors"
-3. Wagner, R. A., & Fischer, M. J. (1974). "The String-to-String Correction Problem"
-4. Hyyrö, H. (2001). "A Bit-Vector Algorithm for Computing Levenshtein and Damerau Edit Distances"
+1. Levenshtein, V. I. (1966). "Binary codes capable of correcting deletions, insertions, and reversals". *Soviet Physics Doklady*, 10(8), 707-710.
+2. Damerau, F. J. (1964). "A technique for computer detection and correction of spelling errors". *Communications of the ACM*, 7(3), 171-176. DOI: [10.1145/363958.363994](https://doi.org/10.1145/363958.363994)
+3. Wagner, R. A., & Fischer, M. J. (1974). "The String-to-String Correction Problem". *Journal of the ACM*, 21(1), 168-173. DOI: [10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
+4. Hyyrö, H. (2001). "A Bit-Vector Algorithm for Computing Levenshtein and Damerau Edit Distances". *Technical Report A-2001-10, University of Tampere*.
 5. Benchmark data from `benches/real_world_benchmark.rs`
 
 ## Quick Reference

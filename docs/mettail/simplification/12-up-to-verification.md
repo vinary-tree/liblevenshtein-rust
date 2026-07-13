@@ -9,11 +9,11 @@ Modular bisimulation verification using up-to techniques to reduce complexity.
 
 ## Overview
 
-Full bisimulation verification has **O(n²)** complexity where n is the number of LTS states. For large programs, this is prohibitive. **Up-to techniques** provide sound methods to reduce this complexity while maintaining correctness guarantees.
+Full bisimulation verification has **`$\mathcal{O}(n^{2})$`** complexity where n is the number of LTS states. For large programs, this is prohibitive. **Up-to techniques** provide sound methods to reduce this complexity while maintaining correctness guarantees.
 
 ---
 
-## The Problem: O(n²) Verification
+## The Problem: `$\mathcal{O}(n^{2})$` Verification
 
 ### Standard Bisimulation Checking
 
@@ -24,7 +24,7 @@ The partition refinement algorithm for bisimulation:
 3. Repeat until fixed point
 4. Check if initial states are in the same block
 
-**Complexity**: O(n² log n) for the standard algorithm, where n = |states|
+**Complexity**: `$\mathcal{O}(n^{2} \log  n)$` for the standard algorithm, where n = |states|
 
 ### Why This Is Prohibitive
 
@@ -44,7 +44,7 @@ Up-to techniques reduce verification complexity by exploiting known equivalences
 
 ### Core Idea
 
-Instead of verifying `P ≈ Q` directly, verify a weaker condition that implies bisimilarity.
+Instead of verifying `$P \approx  Q$` directly, verify a weaker condition that implies bisimilarity.
 
 ### Three Key Techniques
 
@@ -58,7 +58,7 @@ Instead of verifying `P ≈ Q` directly, verify a weaker condition that implies 
 
 ### Principle
 
-If `P ≡ P'` (structural congruence) and `P' ≈ Q'` and `Q' ≡ Q`, then `P ≈ Q`.
+If `$P \equiv  P'$` (structural congruence) and `$P' \approx  Q'$` and `$Q' \equiv  Q$`, then `$P \approx  Q$`.
 
 ### Algorithm
 
@@ -92,19 +92,19 @@ fn canonicalize(proc: &Proc) -> Proc {
 
 **Theorem**: Up-to congruence is sound.
 
-**Proof**: Structural congruence `≡` implies bisimilarity `≈` (proven in [09-rpo-congruence-proofs.md](09-rpo-congruence-proofs.md)). Therefore:
-- `P ≡ P'` implies `P ≈ P'`
-- `P' ≈ Q'` by verification
-- `Q' ≡ Q` implies `Q' ≈ Q`
-- By transitivity: `P ≈ Q` ∎
+**Proof**: Structural congruence `$\equiv$` implies bisimilarity `$\approx$` (proven in [09-rpo-congruence-proofs.md](09-rpo-congruence-proofs.md)). Therefore:
+- `$P \equiv  P'$` implies `$P \approx  P'$`
+- `$P' \approx  Q'$` by verification
+- `$Q' \equiv  Q$` implies `$Q' \approx  Q$`
+- By transitivity: `$P \approx  Q$` `$\blacksquare$`
 
 ### Complexity Improvement
 
 | Aspect | Before | After |
 |--------|--------|-------|
-| State count | n | n / α (where α = reduction factor) |
-| Verification | O(n²) | O((n/α)²) = O(n²/α²) |
-| Typical α | - | 2-10x |
+| State count | n | `$n / \alpha$` (where `$\alpha =$` reduction factor) |
+| Verification | `$\mathcal{O}(n^{2})$` | `$\mathcal{O}((n/\alpha)$`²) = `$\mathcal{O}(n^{2}/\alpha ^{2})$` |
+| Typical `$\alpha$` | - | 2-10x | 
 | **Speedup** | - | **4-100x** |
 
 ---
@@ -114,7 +114,7 @@ fn canonicalize(proc: &Proc) -> Proc {
 ### Principle
 
 Cache previous bisimilarity results and reuse them:
-- If we know `P ≈ P'` and `P' ≈ Q` from earlier, conclude `P ≈ Q` without re-checking.
+- If we know `$P \approx  P'$` and `$P' \approx  Q$` from earlier, conclude `$P \approx  Q$` without re-checking.
 
 ### Algorithm
 
@@ -185,16 +185,16 @@ fn check_bisimilar_up_to_transitivity(
 **Theorem**: Up-to transitivity is sound.
 
 **Proof**: Bisimilarity is an equivalence relation (reflexive, symmetric, transitive). Caching preserves these properties:
-- If `P ≈ Q` was verified, it remains true
-- If `P ≈ P'` and `P' ≈ Q` are cached, transitivity gives `P ≈ Q` ∎
+- If `$P \approx  Q$` was verified, it remains true
+- If `$P \approx  P'$` and `$P' \approx  Q$` are cached, transitivity gives `$P \approx  Q$` `$\blacksquare$`
 
 ### Complexity Improvement
 
 | Aspect | Before | After |
 |--------|--------|-------|
-| Repeated checks | O(n²) each | O(1) after first |
-| Total for m queries | O(m · n²) | O(n² + m) |
-| **Amortized** | O(n²) | **O(n²/m) → O(1)** |
+| Repeated checks | `$\mathcal{O}(n^{2})$` each | `$\mathcal{O}(1)$` after first |
+| Total for m queries | `$\mathcal{O}(m \cdot  n^{2})$` | `$\mathcal{O}(n^{2} + m)$` |
+| **Amortized** | `$\mathcal{O}(n^{2})$` | **`$\mathcal{O}(n^{2}/m)$` → `$\mathcal{O}(1)$`** |
 
 ---
 
@@ -314,14 +314,14 @@ fn interface_bisimilar(
 **Proof Sketch**:
 - Observable behavior is determined by interface actions
 - If interfaces are bisimilar, processes are observationally equivalent
-- Observational equivalence implies bisimilarity (for our notion of observation) ∎
+- Observational equivalence implies bisimilarity (for our notion of observation) `$\blacksquare$`
 
 ### Complexity Improvement
 
 | Aspect | Before | After |
 |--------|--------|-------|
 | States considered | n (all) | k (interface states) |
-| Verification | O(n²) | O(k²) |
+| Verification | `$\mathcal{O}(n^{2})$` | `$\mathcal{O}(k^{2})$` |
 | Typical k/n | - | 0.01-0.1 |
 | **Speedup** | - | **100-10,000x** |
 
@@ -374,9 +374,9 @@ pub fn check_bisimilar_upto(
 | Technique | Individual Speedup | Combined Effect |
 |-----------|-------------------|-----------------|
 | Up-to congruence | 4-100x | |
-| Up-to transitivity | O(1) amortized | |
+| Up-to transitivity | `$\mathcal{O}(1)$` amortized | |
 | Up-to context | 100-10,000x | |
-| **Combined** | | **O(n²) → O(k²) + O(1) amortized** |
+| **Combined** | | **`$\mathcal{O}(n^{2})$` → `$\mathcal{O}(k^{2})$` + `$\mathcal{O}(1)$` amortized** |
 
 For typical programs:
 - n = 10,000 states
@@ -545,7 +545,7 @@ Each technique is independently sound. Their composition is sound by:
 - Transitivity caches only verified results
 - Context restriction is a conservative approximation
 
-**Conclusion**: If `check_bisimilar_upto(P, Q) = true`, then `P ≈ Q`. ∎
+**Conclusion**: If `check_bisimilar_upto(P, Q) = true`, then `$P \approx  Q. \blacksquare$`
 
 ### Completeness Note
 

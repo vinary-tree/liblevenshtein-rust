@@ -1,12 +1,12 @@
 # Phase C: WFST Composition Guide
 
 **Last Updated**: 2025-12-21
-**Version**: v0.8.0
+**Version**: 0.9.1
 **Status**: PROPOSED
 
 > ⚠️ **PROPOSAL NOTICE**: This document describes a **proposed** `src/wfst/` module for full WFST support. The proposed structure is a design specification for future implementation.
 >
-> **Current Implementation**: liblevenshtein v0.8.0 provides `ProductAutomatonChar` (NFA × Levenshtein composition) in `src/phonetic/nfa/`. See [Current v0.8.0 Capabilities](#current-v080-capabilities) for what's available today.
+> **Current Implementation**: liblevenshtein 0.9.1 provides `ProductAutomatonChar` (NFA × Levenshtein composition) in `src/phonetic/nfa/`. See [Current Capabilities](#current-capabilities) for what's available today.
 
 This document provides detailed implementation guidance for Phase C of the MORK integration: full Weighted Finite State Transducer (WFST) implementation with phonetic NFA composition.
 
@@ -18,9 +18,9 @@ This document provides detailed implementation guidance for Phase C of the MORK 
 
 ---
 
-## Current v0.8.0 Capabilities
+## Current Capabilities
 
-Before implementing the proposed WFST module, liblevenshtein v0.8.0 provides these building blocks:
+Before implementing the proposed WFST module, liblevenshtein 0.9.1 provides these building blocks:
 
 ### What's Available Now
 
@@ -61,7 +61,7 @@ assert!(product.accepts("fone"));
 ### Current Module Structure
 
 ```
-src/phonetic/           # CURRENT - Available in v0.8.0
+src/phonetic/           # CURRENT - Available in 0.9.1
 ├── nfa/
 │   ├── mod.rs
 │   ├── nfa.rs          # NFAChar implementation
@@ -168,7 +168,7 @@ pub trait Semiring: Clone + Copy + PartialEq + Sized {
 
 ### Tropical Semiring
 
-The **tropical semiring** (ℝ ∪ {∞}, min, +, ∞, 0) is used for shortest-path problems:
+The **tropical semiring** `$(\mathbb{R} \cup \{\infty\}, \min, +, \infty, 0)$` is used for shortest-path problems:
 
 ```rust
 /// Tropical semiring weight (min, +).
@@ -1070,7 +1070,7 @@ for candidate in composed.query("phone", 2) {
 
 ### Composition Complexity
 
-- NFA × Levenshtein: O(|NFA| × |LEV states|)
+- NFA × Levenshtein: `$\mathcal{O}(\lvert\mathrm{NFA}\rvert \times \lvert\text{LEV states}\rvert)$`
 - Practical limit: ~1000 NFA states, ~10 Levenshtein states
 - Memoization helps for repeated queries
 

@@ -16,13 +16,13 @@ The automaton-based approach has a precise cost model — the whole reason it sc
 
 | Operation | Complexity |
 |---|---|
-| Per-query setup | `𝒪(∣W∣)` — linear in query length |
-| Per-symbol transition | `𝒪(k)` — constant for fixed `k` |
-| Traversal | `𝒪(∣D∣)` worst case — pruned to the near-match frontier in practice |
-| Live state space | `𝒪(∣W∣)` for fixed `k` |
+| Per-query setup | `$\mathcal{O}(\lvert W\rvert)$` — linear in query length |
+| Per-symbol transition | `$\mathcal{O}(k)$` — constant for fixed `$k$` |
+| Traversal | `$\mathcal{O}(\lvert D\rvert)$` worst case — pruned to the near-match frontier in practice |
+| Live state space | `$\mathcal{O}(\lvert W\rvert)$` for fixed `$k$` |
 
-> Terms recalled. `∣W∣` = query length, `k` = error bound, `∣D∣` = number of dictionary
-> edges. Because each automaton step is `𝒪(k)` and dead branches are pruned immediately,
+> Terms recalled. `$\lvert W\rvert$` = query length, `$k$` = error bound, `$\lvert D\rvert$` = number of dictionary
+> edges. Because each automaton step is `$\mathcal{O}(k)$` and dead branches are pruned immediately,
 > total work tracks the *explored near-match frontier* — not the dictionary size.
 
 ### Backend choice dominates fuzzy throughput
@@ -39,7 +39,7 @@ Measured on a 10,000-word dictionary (AMD Ryzen Threadripper PRO 5975WX,
 
 For *static* dictionaries `DoubleArrayTrie` is the clear leader — here 38–175× faster
 fuzzy matching than the dynamic alternatives — because its two-array packing gives
-`𝒪(1)` transitions with cache-friendly, branch-light access. The dynamic backends trade
+`$\mathcal{O}(1)$` transitions with cache-friendly, branch-light access. The dynamic backends trade
 some of that for runtime mutability; bloom-filter pre-filtering and runtime SIMD
 (AVX2/SSE4.1, auto-detected — no feature flag) narrow the gap.
 
@@ -48,17 +48,19 @@ some of that for runtime mutability; bloom-filter pre-filtering and runtime SIMD
 ### Concurrency model
 
 Every dictionary is `Send + Sync` and cheap to clone (handles share one backing store).
-Reads are:
+Reads never block on a writer on any in-memory backend:
 
-- **lock-free** on the static backends (`DoubleArrayTrie`, `SuffixAutomaton`) and on
-  `DynamicDawgU64`, so any number of threads query in parallel with zero contention; and
-- **reader-locked** (`RwLock`) on the other dynamic backends, so concurrent readers still
-  proceed together while a writer takes the exclusive side only briefly.
+- **wait-free** on the static `DoubleArrayTrie`, which is immutable once built, so any
+  number of threads query in parallel with zero contention; and
+- **lock-free** on the dynamic backends (`DynamicDawg`, `DynamicDawgU64`,
+  `SuffixAutomaton`, `Scdawg`, `PathMapDictionary`), which serve each read from an
+  atomically-swapped snapshot (`ArcSwap` / CAS) while a writer publishes new state with a
+  single atomic swap.
 
 This is why the [dynamic-dictionary example](../02-dictionaries/README.md) can query from
 one thread while another inserts, with no external synchronization.
 
-![Concurrency model: multiple reader threads sharing a dictionary — lock-free fast paths on static / u64 backends and a reader-writer lock on the mutable ones, with a single writer taking the exclusive side.](../../diagrams/concurrency/concurrency-model.svg)
+![Concurrency model: multiple reader threads sharing a dictionary — every backend reads lock-free (immutable arrays on the static DoubleArrayTrie, ArcSwap snapshots on the dynamic backends and PathMapDictionary); a writer publishes new state by an atomic swap / CAS and never blocks readers.](../../diagrams/concurrency/concurrency-model.svg)
 
 ---
 
@@ -87,7 +89,7 @@ println!("Built in {:?}, {} terms", start.elapsed(), real_dat.len().unwrap_or(0)
 
 ### 2 · Time exact membership
 
-`contains` is the exact-match (`k = 0`) fast path. The benchmark hammers it 100×
+`contains` is the exact-match (`$k = 0$`) fast path. The benchmark hammers it 100×
 over 10,000 words and reports microseconds *per call*:
 
 ```rust
@@ -152,13 +154,13 @@ methodology and ledgers live in [`docs/benchmarks/`](../../benchmarks/README.md)
 
 ## Key takeaways
 
-- Query cost is `𝒪(∣W∣)` setup + `𝒪(k)` per step, pruned to the near-match frontier — it
-  scales with **matches, not `∣D∣`**.
+- Query cost is `$\mathcal{O}(\lvert W\rvert)$` setup + `$\mathcal{O}(k)$` per step, pruned to the near-match frontier — it
+  scales with **matches, not `$\lvert D\rvert$`**.
 - For static dictionaries, **`DoubleArrayTrie`** is the fuzzy-match leader (38–175× over
   the dynamic backends in the cited run); dynamic backends add mutability and lean on
   bloom filters + runtime SIMD.
-- Dictionaries are `Send + Sync`: reads are **lock-free** on static backends and
-  `DynamicDawgU64`, **reader-locked** elsewhere — share freely across threads.
+- Dictionaries are `Send + Sync`: reads are **lock-free** on every in-memory backend
+  (wait-free on the static `DoubleArrayTrie`) — share freely across threads.
 - Always benchmark in `--release`, pinned to a core, reading the corpus from the repo
   root.
 

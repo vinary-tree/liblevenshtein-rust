@@ -60,7 +60,7 @@ impl<D: MappedDictionary<V>, V> MappedDictionary<V> for Ttl<D> {
 }
 ```
 
-**Complexity**: O(1) expiration check + O(d) inner lookup
+**Complexity**: `$\mathcal{O}(1)$` expiration check + `$\mathcal{O}(d)$` inner lookup
 
 ## Usage Examples
 
@@ -179,8 +179,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Operation | Complexity | Notes |
 |-----------|------------|-------|
-| get_value | O(1) + O(d) | Expiration check + inner lookup |
-| contains | O(1) + O(d) | Expiration check + inner contains |
+| get_value | `$\mathcal{O}(1)$` + `$\mathcal{O}(d)$` | Expiration check + inner lookup |
+| contains | `$\mathcal{O}(1)$` + `$\mathcal{O}(d)$` | Expiration check + inner contains |
 
 ### Space Complexity
 

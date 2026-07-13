@@ -26,16 +26,16 @@ This glossary provides a comprehensive reference for all mathematical notation, 
 
 | Symbol | Meaning | Page |
 |--------|---------|------|
-| χ | Metasymbol: ε (standard), t (transposition), ms (merge/split) | 3 |
-| d^χ_L(v, w) | Levenshtein distance between v and w | 3-5 |
+`$| \chi  |$` Metasymbol: `$\varepsilon$` (standard), t (transposition), ms (merge/split) | 3 |
+`$| d^\chi _L(v, w) |$` Levenshtein distance between v and w | 3-5 |
 | i#e | Fixed-word position: position i, error count e | 9 |
 | I + i#e | Universal non-final position | 30 |
 | M + i#e | Universal final position | 33 |
-| A^∀,χ_n | Universal Levenshtein automaton | 30 |
+`$| A^\forall ,\chi _n |$` Universal Levenshtein automaton | 30 |
 | h_n(w, x) | Bit vector encoding of word pair | 51 |
-| β(x, w) | Characteristic vector | 17 |
-| ≤^χ_s | Subsumption relation | 18 |
-| ⊔A | Subsumption closure | 21 |
+`$| \beta (x, w) |$` Characteristic vector | 17 |
+`$| \le ^\chi _s |$` Subsumption relation | 18 |
+`$| \sqcup A |$` Subsumption closure | 21 |
 
 ---
 
@@ -43,21 +43,21 @@ This glossary provides a comprehensive reference for all mathematical notation, 
 
 ### 1. Metasymbols and Variants
 
-#### χ (Chi) - Distance Variant Metasymbol
-**Definition**: χ ∈ {ε, t, ms}
-- **χ = ε** (or χ = ²): Standard Levenshtein distance
-- **χ = t**: Levenshtein distance with transposition
-- **χ = ms**: Levenshtein distance with merge and split
+#### `$\chi$` (Chi) - Distance Variant Metasymbol
+**Definition**: `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`
+- **`$\chi  = \varepsilon$`** (or `$\chi  = ^{2})$`: Standard Levenshtein distance
+`$- **\chi  = t**$`: Levenshtein distance with transposition
+`$- **\chi  =$` ms**: Levenshtein distance with merge and split
 
 **Usage**: Throughout the thesis as a placeholder for any of the three variants
 
-**Example**: d^χ_L means d²_L, d^t_L, or d^ms_L depending on context
+**Example**: `$d^\chi _L$` means d²_L, `$d^t_L$`, or `$d^\text{ms}_L$` depending on context
 
 ---
 
 ### 2. Distance Functions
 
-#### d²_L : Σ* × Σ* → ℕ
+#### d²_L : `$\Sigma * \times  \Sigma * \to  \mathbb{N}$`
 **Standard Levenshtein Distance** (Page 3)
 
 Minimum cost to transform v into w using:
@@ -69,7 +69,7 @@ Minimum cost to transform v into w using:
 - d²_L(v, w) = 0 ⇔ v = w
 - d²_L(v, w) = d²_L(w, v) (symmetric)
 
-#### d^t_L : Σ* × Σ* → ℕ
+#### `$d^t_L$` : `$\Sigma * \times  \Sigma * \to  \mathbb{N}$`
 **Levenshtein Distance with Transposition** (Page 4)
 
 Standard operations plus:
@@ -77,23 +77,23 @@ Standard operations plus:
 
 **⚠️ WARNING**: Does NOT satisfy triangle inequality!
 - Not a proper metric
-- Example: d^t_L(abcd, abdc) + d^t_L(abdc, bdac) < d^t_L(abcd, bdac)
+- Example: `$d^t_L(\text{abcd}, \text{abdc})$` + `$d^t_L(\text{abdc}, \text{bdac})$` < `$d^t_L(\text{abcd}, \text{bdac})$`
 
-#### d^ms_L : Σ* × Σ* → ℕ
+#### `$d^\text{ms}_L$` : `$\Sigma * \times  \Sigma * \to  \mathbb{N}$`
 **Levenshtein Distance with Merge/Split** (Page 5)
 
 Standard operations plus:
 - Merge: Two characters → one character (cost 1)
 - Split: One character → two characters (cost 1)
 
-#### d^χ_L : Σ* × Σ* → ℕ
+#### `$d^\chi _L$` : `$\Sigma * \times  \Sigma * \to  \mathbb{N}$`
 **Generic notation** for any of the above three distances
 
 ---
 
 ### 3. Language and Sets
 
-#### L^χ_Lev(n, w) : 𝒫(Σ*)
+#### `$L^\chi _\text{Lev}(n, w)$` : `$\mathcal{P}(\Sigma *)$`
 **Levenshtein Language** (Page 6)
 
 ```
@@ -102,15 +102,15 @@ L^χ_Lev(n, w) = {v | d^χ_L(v, w) ≤ n}
 
 The set of all words within distance n from w.
 
-#### R^χ(n, w) : 𝒫(Σ*)
+#### `$R^\chi (n, w)$` : `$\mathcal{P}(\Sigma *)$`
 **Extension Function** (Page 7)
 
-Recursive decomposition of L^χ_Lev(n, w):
-- For χ = ε: Includes insertion, deletion, substitution, match terms
-- For χ = t: Adds transposition term
-- For χ = ms: Adds merge and split terms
+Recursive decomposition of `$L^\chi _\text{Lev}(n, w)$`:
+- For `$\chi  = \varepsilon$`: Includes insertion, deletion, substitution, match terms
+- For `$\chi  = t$`: Adds transposition term
+- For `$\chi  =$` ms: Adds merge and split terms
 
-**Key Property**: L^χ_Lev(n, w) = R^χ(n, w)
+**Key Property**: `$L^\chi _\text{Lev}(n, w)$` = `$R^\chi (n, w)$`
 
 ---
 
@@ -119,24 +119,24 @@ Recursive decomposition of L^χ_Lev(n, w):
 #### i#e
 **Standard Position** (Page 9)
 
-Compact notation for ⟨⟨i, 0⟩, e⟩
+Compact notation for `$\langle \langle i, 0\rangle, e\rangle$`
 
-- **i**: Position in word w (0 ≤ i ≤ |w|)
-- **e**: Error count consumed (0 ≤ e ≤ n)
+- **i**: Position in word `$w (0 \le  i \le  |w|)$`
+- **e**: Error count consumed `$(0 \le  e \le  n)$`
 
-**Language**: L(i#e) = L^χ_Lev(n - e, w_{i+1}...w_p)
+**Language**: L(i#e) = `$L^\chi _\text{Lev}(n - e, w_{i+1}...w_p)$`
 
 #### i#e_t
 **Transposition Position** (Page 10)
 
-Compact notation for ⟨⟨i, 1⟩, e⟩
+Compact notation for `$\langle \langle i, 1\rangle, e\rangle$`
 
 Used when detecting transposition of w_{i+1} and w_{i+2}
 
 #### i#e_s
 **Merge/Split Position** (Page 10)
 
-Compact notation for ⟨⟨i, 2⟩, e⟩
+Compact notation for `$\langle \langle i, 2\rangle, e\rangle$`
 
 Used when processing merge or split operations
 
@@ -147,115 +147,115 @@ Used when processing merge or split operations
 #### I + i#e
 **Universal Non-Final Standard Position** (Page 29)
 
-Compact notation for ⟨⟨λI.I+i, 0⟩, e⟩
+Compact notation for `$\langle \langle \lambda I.I+i, 0\rangle, e\rangle$`
 
 - **I**: Parameter (to be substituted with 0 for word start)
-- **i**: Relative offset (-n ≤ i ≤ n)
-- **e**: Error count (0 ≤ e ≤ n)
+- **i**: Relative offset `$(-n \le  i \le  n)$`
+- **e**: Error count `$(0 \le  e \le  n)$`
 
-**Constraint**: |i| ≤ e
+**Constraint**: `$|i| \le  e$`
 
 #### It + i#e
 **Universal Non-Final Transposition Position** (Page 31)
 
-Compact notation for ⟨⟨λI.I+i, 1⟩, e⟩
+Compact notation for `$\langle \langle \lambda I.I+i, 1\rangle, e\rangle$`
 
 #### Is + i#e
 **Universal Non-Final Split Position** (Page 32)
 
-Compact notation for ⟨⟨λI.I+i, 2⟩, e⟩
+Compact notation for `$\langle \langle \lambda I.I+i, 2\rangle, e\rangle$`
 
 #### M + i#e
 **Universal Final Standard Position** (Page 33)
 
-Compact notation for ⟨⟨λM.M+i, 3⟩, e⟩
+Compact notation for `$\langle \langle \lambda M.M+i, 3\rangle, e\rangle$`
 
 - **M**: Parameter (to be substituted with |w| for word end)
-- **i**: Relative offset (-2n ≤ i ≤ 0)
-- **e**: Error count (0 ≤ e ≤ n)
+- **i**: Relative offset `$(-2n \le  i \le  0)$`
+- **e**: Error count `$(0 \le  e \le  n)$`
 
-**Constraint**: e ≥ -i - n
+**Constraint**: `$e \ge  -i - n$`
 
 #### Mt + i#e
 **Universal Final Transposition Position** (Page 34)
 
-Compact notation for ⟨⟨λM.M+i, 4⟩, e⟩
+Compact notation for `$\langle \langle \lambda M.M+i, 4\rangle, e\rangle$`
 
 #### Ms + i#e
 **Universal Final Split Position** (Page 35)
 
-Compact notation for ⟨⟨λM.M+i, 5⟩, e⟩
+Compact notation for `$\langle \langle \lambda M.M+i, 5\rangle, e\rangle$`
 
 ---
 
 ### 6. Automata
 
-#### A^ND,χ_n(w)
+#### `$A^\text{ND},\chi _n(w)$`
 **Nondeterministic Levenshtein Automaton** (Page 9)
 
 ```
 A^ND,χ_n(w) = ⟨Σ, Q^ND,χ_n, I^ND,χ, F^ND,χ_n*, δ^ND,χ_n⟩
 ```
 
-- **Alphabet**: Σ ∪ {ε}
+- **Alphabet**: `$\Sigma  \cup$` `$\{\varepsilon\}$`
 - **States**: Positions i#e (and i#e_t, i#e_s for t, ms)
-- **Language**: L^χ_Lev(n, w)
+- **Language**: `$L^\chi _\text{Lev}(n, w)$`
 
-#### A^D,χ_n(w)
+#### `$A^D,\chi _n(w)$`
 **Deterministic Levenshtein Automaton** (Page 23)
 
 ```
 A^D,χ_n(w) = ⟨Σ, Q^D,χ_n, I^D,χ, F^D,χ_n, δ^D,χ_n⟩
 ```
 
-- **Alphabet**: Σ
+- **Alphabet**: `$\Sigma$`
 - **States**: Sets of positions (anti-chains under subsumption)
-- **Language**: L^χ_Lev(n, w)
+- **Language**: `$L^\chi _\text{Lev}(n, w)$`
 
-#### A^∀,χ_n
+#### `$A^\forall ,\chi _n$`
 **Universal Levenshtein Automaton** (Page 30)
 
 ```
 A^∀,χ_n = ⟨Σ^∀_n, Q^∀,χ_n, I^∀,χ, F^∀,χ_n, δ^∀,χ_n⟩
 ```
 
-- **Alphabet**: Σ^∀_n = {x ∈ {0,1}⁺ | |x| ≤ 2n + 2}
+- **Alphabet**: `$\Sigma^\forall_n = \{x \in \{0,1\}^+ \mid \lvert x\rvert \le 2n + 2\}$`
 - **States**: Sets of universal positions
-- **Language**: {h_n(w, x) | d^χ_L(w, x) ≤ n}
+- **Language**: `$\{h_n(w, x) | ﷐0﷑ \le  n\}$`
 
 ---
 
 ### 7. State Sets
 
-#### Q^ND,χ_n
+#### `$Q^\text{ND},\chi _n$`
 **NFA State Set** (Page 9)
 
-For χ = ε: {i#e | 0 ≤ i ≤ p ∧ 0 ≤ e ≤ n}
+For `$\chi  = \varepsilon$`: `$\{i#e | 0 \le  i \le  p \land  0 \le  e \le  n\}$`
 
 Plus transposition/split states for t, ms variants.
 
-#### Q^D,χ_n
+#### `$Q^D,\chi _n$`
 **DFA State Set** (Page 23)
 
 Sets of positions that are:
-1. Anti-chains under ≤^χ_s (no position subsumes another)
+1. Anti-chains under `$\le ^\chi _s$` (no position subsumes another)
 2. Have a common base position
 
-#### I^χ_s
+#### `$I^\chi _s$`
 **Universal Non-Final Position Set** (Page 30-32)
 
-All valid I-type positions for variant χ.
+All valid I-type positions for variant `$\chi .$`
 
-For χ = ε: {I + t#k | |t| ≤ k ∧ -n ≤ t ≤ n ∧ 0 ≤ k ≤ n}
+For `$\chi  = \varepsilon$`: `$\{I + t#k | |t| \le  k \land  -n \le  t \le  n \land  0 \le  k \le  n\}$`
 
-#### M^χ_s
+#### `$M^\chi _s$`
 **Universal Final Position Set** (Page 33-35)
 
-All valid M-type positions for variant χ.
+All valid M-type positions for variant `$\chi .$`
 
-For χ = ε: {M + t#k | k ≥ -t - n ∧ -2n ≤ t ≤ 0 ∧ 0 ≤ k ≤ n}
+For `$\chi  = \varepsilon$`: `$\{M + t#k | k \ge  -t - n \land  -2n \le  t \le  0 \land  0 \le  k \le  n\}$`
 
-#### I^χ_states
+#### `$I^\chi _\text{states}$`
 **Universal Non-Final States** (Page 38)
 
 ```
@@ -264,7 +264,7 @@ I^χ_states = {Q | Q ⊆ I^χ_s ∧ ∀q₁,q₂ ∈ Q (q₁ ⊀^χ_s q₂)} \ {
 
 Anti-chains of non-final positions.
 
-#### M^χ_states
+#### `$M^\chi _\text{states}$`
 **Universal Final States** (Page 38)
 
 ```
@@ -277,22 +277,22 @@ Anti-chains of final positions with additional constraints.
 
 ### 8. Transition Functions
 
-#### δ^ND,χ_n : Q^ND,χ_n × (Σ ∪ {ε}) → 𝒫(Q^ND,χ_n)
+#### `$\delta ^\text{ND}$`,`$\chi _n$` : `$Q^\text{ND},\chi _n \times  (\Sigma  \cup$` `$\{\varepsilon\}$`) `$\to  \mathcal{P}$`(`$Q^\text{ND},\chi _n)$`
 **NFA Transition** (Page 9-10)
 
-Standard NFA transitions with ε-transitions for insertions.
+Standard NFA transitions with `$\varepsilon$`-transitions for insertions.
 
-#### δ^ND,χ_n* : Q^ND,χ_n × Σ* → 𝒫(Q^ND,χ_n)
+#### `$\delta ^\text{ND}$`,`$\chi _n$`* : `$Q^\text{ND},\chi _n \times  \Sigma$`* `$\to  \mathcal{P}(Q^\text{ND},\chi _n)$`
 **Extended NFA Transition** (Page 11)
 
-Handles sequences with ε-closure.
+Handles sequences with `$\varepsilon$`-closure.
 
-#### δ^D,χ_e : Q^ND,χ × {0,1}* → 𝒫(Q^ND,χ)
+#### `$\delta ^D,\chi _e$` : `$Q^\text{ND},\chi  \times$` {0,1}* `$\to  \mathcal{P}(Q^\text{ND},\chi )$`
 **Elementary Transition Function** (Page 14-16)
 
 Given position and bit vector, compute reachable positions.
 
-#### δ^D,χ_n : Q^D,χ_n × Σ → Q^D,χ_n
+#### `$\delta ^D,\chi _n$` : `$Q^D,\chi _n \times  \Sigma  \to  Q^D,\chi _n$`
 **DFA Transition** (Page 23)
 
 ```
@@ -301,12 +301,12 @@ Given position and bit vector, compute reachable positions.
 
 Apply elementary transitions and subsumption closure.
 
-#### δ^∀,χ_e : (I^χ_s ∪ M^χ_s) × Σ^∀_n → 𝒫(I^χ_s ∪ M^χ_s)
+#### `$\delta ^\forall ,\chi _e$` : `$(I^\chi _s \cup  M^\chi _s) \times  \Sigma ^\forall _n \to  \mathcal{P}(I^\chi _s \cup  M^\chi _s)$`
 **Universal Elementary Transition** (Page 46)
 
-Extract relevant subvector, apply δ^D,χ_e, convert back to universal positions.
+Extract relevant subvector, apply `$\delta ^D,\chi _e,$` convert back to universal positions.
 
-#### δ^∀,χ_n : Q^∀,χ_n × Σ^∀_n → Q^∀,χ_n
+#### `$\delta ^\forall ,\chi _n$` : `$Q^\forall ,\chi _n \times  \Sigma ^\forall _n \to  Q^\forall ,\chi _n$`
 **Universal Transition** (Page 48)
 
 ```
@@ -323,17 +323,17 @@ Includes diagonal crossing check and I/M conversion.
 
 ### 9. Helper Functions
 
-#### w[π] : Relevant Subword
-**Definition** (Page 17): For position π = i#e, returns w_{i+1}...w_{i+k} where k = min(n - e + 1, p - i)
+#### `$w[\pi ]$` : Relevant Subword
+**Definition** (Page 17): For position `$\pi  = i$`#e, returns w_{i+1}...w_{i+k} where k = min(n - e + 1, p - i)
 
-#### β(x, w) : Characteristic Vector
-**Definition** (Page 17): β : Σ × Σ* → {0,1}*
+#### `$\beta (x, w)$` : Characteristic Vector
+**Definition** (Page 17): `$\beta$` : `$\Sigma  \times  \Sigma * \to$` {0,1}*
 
 ```
 β(x, w₁w₂...w_p) = b₁b₂...b_p where b_i = (1 if x = w_i else 0)
 ```
 
-**Example**: β('a', "banana") = "101010"
+**Example**: `$\beta ('a',$` "banana") = "101010"
 
 #### s_n(w, i) : Relevant Subword for Position
 **Definition** (Page 51): Returns window around position i
@@ -351,7 +351,7 @@ With padding: w_{-n+1} = ... = w_0 = $
 h_n(w, x₁...x_t) = β(x₁, s_n(w,1))...β(x_t, s_n(w,t))
 ```
 
-**Key Property**: x ∈ L^χ_Lev(n, w) ⇔ h_n(w, x) ∈ L(A^∀,χ_n)
+**Key Property**: `$x \in$` `$L^\chi _\text{Lev}(n, w)$` `$\Leftrightarrow  h_n(w, x) \in  L(A^\forall,\chi _n)$`
 
 #### r_n : Relevant Subvector
 **Definition** (Page 39): Extracts relevant portion of bit vector for a universal position
@@ -370,7 +370,7 @@ m_n(M + i#e, k) = I + (i - n - 1 + k)#e
 #### f_n : Diagonal Check
 **Definition** (Page 43): Checks if position crossed diagonal
 
-For I + i#e: f_n(S, k) = true if k ≤ 2n + 1 ∧ e ≤ i + 2n + 1 - k
+For I + i#e: f_n(S, k) = true if `$k \le  2n + 1 \land  e \le  i + 2n + 1 - k$`
 For M + i#e: f_n(S, k) = true if e > i + n
 
 #### rm : Right-Most Element
@@ -383,17 +383,17 @@ rm(A) = position with max(e - i)
 #### ▽_a : Allowed Lengths
 **Definition** (Page 47): Returns valid input lengths for a state
 
-For {I#0}: {k | n ≤ k ≤ 2n + 2}
+For {I#0}: `$\{k | n \le  k \le  2n + 2\}$`
 For other states: Computed based on right-most element
 
 ---
 
 ### 10. Subsumption Relations
 
-#### ≤^χ_s : Subsumption Relation
+#### `$\le ^\chi _s$` : Subsumption Relation
 **Definition** (Page 18-19): Partial order on positions
 
-**For χ = ε**:
+**For `$\chi  = \varepsilon **$`:
 ```
 i#e ≤^ε_s j#f ⇔ f > e ∧ |j - i| ≤ f - e
 ```
@@ -407,14 +407,14 @@ M + i#e ≤^χ_s M + j#f ⇔ i#e ≤^χ_s j#f
 ```
 
 **Properties**:
-- Reflexive: π ≤^χ_s π
-- Antisymmetric: π₁ ≤^χ_s π₂ ∧ π₂ ≤^χ_s π₁ ⇒ π₁ = π₂
-- Transitive: π₁ ≤^χ_s π₂ ∧ π₂ ≤^χ_s π₃ ⇒ π₁ ≤^χ_s π₃
+- Reflexive: `$\pi  \le ^\chi _s \pi$`
+- Antisymmetric: `$\pi _{1} \le ^\chi _s \pi _{2} \land  \pi _{2} \le ^\chi _s \pi _{1} \Rightarrow  \pi _{1} = \pi _{2}$`
+- Transitive: `$\pi _{1} \le ^\chi _s \pi _{2} \land  \pi _{2} \le ^\chi _s \pi _{3} \Rightarrow  \pi _{1} \le ^\chi _s \pi _{3}$`
 
-#### <^χ_s : Strict Subsumption
-**Definition**: π₁ <^χ_s π₂ ⇔ π₁ ≤^χ_s π₂ ∧ π₁ ≠ π₂
+#### `$<^\chi _s$` : Strict Subsumption
+**Definition**: `$\pi _{1} <^\chi _s \pi _{2} \Leftrightarrow  \pi _{1} \le ^\chi _s \pi _{2} \land  \pi _{1} \ne  \pi _{2}$`
 
-#### ⊔A : Subsumption Closure
+#### `$\sqcup A$` : Subsumption Closure
 **Definition** (Page 21, 47): Removes subsumed elements
 
 ```
@@ -427,7 +427,7 @@ Returns maximal elements (anti-chain).
 
 ### 11. Conversion Functions
 
-#### I^χ : 𝒫(Q^ND,χ) → 𝒫(P^χ)
+#### `$I^\chi$` : `$\mathcal{P}(Q^\text{ND},\chi ) \to  \mathcal{P}(P^\chi$`)
 **Concrete to Universal (Non-Final)** (Page 44)
 
 ```
@@ -436,7 +436,7 @@ I^ε(A) = {I + (i - 1)#e | i#e ∈ A}
 
 Shifts positions by -1 and adds I parameter.
 
-#### M^χ : 𝒫(Q^ND,χ) → 𝒫(P^χ)
+#### `$M^\chi$` : `$\mathcal{P}(Q^\text{ND},\chi ) \to  \mathcal{P}(P^\chi$`)
 **Concrete to Universal (Final)** (Page 44)
 
 ```
@@ -445,7 +445,7 @@ M^ε(A) = {M + i#e | i#e ∈ A}
 
 Adds M parameter without shift.
 
-#### d : (I^χ_s ∪ M^χ_s) × ℕ → Q^ND,χ
+#### d : (`$I^\chi _s$` `$\cup$` `$M^\chi _s) \times  \mathbb{N}  \to$` `$Q^\text{ND},\chi$`
 **Universal to Concrete** (Page 52)
 
 ```
@@ -472,14 +472,14 @@ x₁...xₖ ↪ t = {
 #### < : Prefix Relation
 **Definition** (Page 4): c < d means c is a prefix of d
 
-#### μz[A] : Minimum
+#### `$\mu z[A]$` : Minimum
 **Definition** (Page 14): The least z such that property A holds
 
 #### ! : Definedness
-**Definition**: !x means x is defined (not ¬!)
+**Definition**: !x means x is defined (not `$\lnot$`!)
 
-#### ¬! : Undefinedness
-**Definition**: ¬!x means x is undefined
+#### `$\lnot$`! : Undefinedness
+**Definition**: `$\lnot$`!x means x is undefined
 
 #### def= : Definition
 **Definition**: x def= y means x is defined to equal y
@@ -488,31 +488,31 @@ x₁...xₖ ↪ t = {
 
 ### 13. Set Notation
 
-#### Σ
+#### `$\Sigma$`
 **Alphabet**: Finite set of symbols
 
-#### Σ*
-**All words**: Set of all finite sequences over Σ (including empty word ε)
+#### `$\Sigma *$`
+**All words**: Set of all finite sequences over `$\Sigma$` (including empty word `$\varepsilon )$`
 
-#### Σ⁺
-**Non-empty words**: Σ* \ {ε}
+#### `$\Sigma ^{+}$`
+**Non-empty words**: `$\Sigma *$` \ `$\{\varepsilon\}$`
 
-#### ε
+#### `$\varepsilon$`
 **Empty word**: Word of length 0
 
 #### |w|
 **Word length**: Number of characters in w
 
-#### 𝒫(A)
+#### `$\mathcal{P}(A)$`
 **Power set**: Set of all subsets of A
 
-#### ℕ
+#### `$\mathbb{N}$`
 **Natural numbers**: {0, 1, 2, ...}
 
-#### ℕ⁺
+#### `$\mathbb{N} ^{+}$`
 **Positive integers**: {1, 2, 3, ...}
 
-#### ℤ
+#### `$\mathbb{Z}$`
 **Integers**: {..., -2, -1, 0, 1, 2, ...}
 
 ---
@@ -528,49 +528,49 @@ x₁...xₖ ↪ t = {
 #### F
 **Final states**: Accepting states
 
-#### δ
+#### `$\delta$`
 **Transition function**: Maps (state, symbol) to states
 
 #### L(A)
 **Language of automaton**: Set of words accepted by A
 
-#### L(π)
-**Language of state**: Set of words accepted starting from state π
+#### `$L(\pi )$`
+**Language of state**: Set of words accepted starting from state `$\pi$`
 
 ---
 
 ### 15. Complexity Notation
 
-#### O(f(n))
+#### `$\mathcal{O}(f(n)$`)
 **Big-O**: Upper bound on growth rate
 
 **Examples in thesis**:
-- States: `𝒪(n²)`
-- Construction: `𝒪(n² · 2^{2n})`
+- States: `$\mathcal{O}(n^{2})$`
+- Construction: `$\mathcal{O}(n^{2} \cdot  2^{2n})$`
 
 ---
 
 ## Cross-Reference by Section
 
 ### Section 1: Introduction
-- d^t_L triangle inequality violation warning
+- `$d^t_L$` triangle inequality violation warning
 
 ### Section 2: Distance Definitions (Pages 3-8)
-- d²_L, d^t_L, d^ms_L
-- ↪, <, L^χ_Lev, R^χ
+- d²_L, `$d^t_L$`, `$d^\text{ms}_L$`
+- ↪, <, `$L^\chi _\text{Lev}$`, `$R^\chi$`
 
 ### Section 3: Nondeterministic Automata (Pages 8-13)
 - i#e, i#e_t, i#e_s
-- A^ND,χ_n(w), δ^ND,χ_n, Clε
+- `$A^{\text{ND},\chi}_n(w)$`, `$\delta^{\text{ND},\chi}_n$`, `$\text{Cl}_\varepsilon$`
 
 ### Section 4: Deterministic Automata (Pages 13-28)
-- δ^D,χ_e, β, w[π]
-- ≤^χ_s, ⊔, A^D,χ_n(w)
+`$- \delta ^D,\chi _e, \beta , w[\pi ]$`
+`$- \le ^\chi _s, \sqcup , A^D,\chi _n(w)$`
 
 ### Section 5: Universal Automata (Pages 28-48)
 - I + i#e, M + i#e, It, Is, Mt, Ms
-- A^∀,χ_n, r_n, m_n, f_n, rm, ▽_a
-- h_n, s_n, I^χ, M^χ, d
+`$- A^\forall ,\chi _n, r_n, m_n, f_n,$` rm, ▽_a
+`$- h_n, s_n, I^\chi , M^\chi , d$`
 
 ### Section 6: Building (Pages 48-59)
 - Construction algorithms (see ALGORITHMS.md)
@@ -586,14 +586,14 @@ x₁...xₖ ↪ t = {
 ## Usage Tips
 
 ### For Reading the Paper
-1. Start with χ = ε (standard) before tackling transposition/merge-split
+1. Start with `$\chi  = \varepsilon$` (standard) before tackling transposition/merge-split
 2. Understand fixed-word automata (Sections 3-4) before universal (Section 5)
-3. Remember: d^t_L violates triangle inequality (affects subsumption logic)
+3. Remember: `$d^t_L$` violates triangle inequality (affects subsumption logic)
 4. Universal positions use parameters (I, M) that get substituted with concrete values (0, |w|)
 
 ### For Implementation
-1. Implement subsumption (≤^χ_s, ⊔) correctly - critical for correctness
-2. Bit vector encoding (β, h_n) must be efficient
+1. Implement subsumption `$(\le ^\chi _s, \sqcup )$` correctly - critical for correctness
+2. Bit vector encoding `$(\beta , h_n)$` must be efficient
 3. Diagonal crossing (f_n, m_n) handles I/M conversion
 4. Test against fixed-word automata for validation
 
@@ -618,7 +618,7 @@ x₁...xₖ ↪ t = {
 Conversion happens when crossing diagonal (detected by f_n).
 
 ### 3. Subsumption Direction
-i#e ≤^χ_s j#f means j#f **subsumes** i#e (j#f recognizes more words)
+i#`$e \le ^\chi _s j$`#f means j#f **subsumes** i#e (j#f recognizes more words)
 
 In state sets, we keep only maximal elements (not subsumed by others).
 
@@ -627,7 +627,7 @@ h_n(w, x) produces a **sequence** of bit vectors (one per character of x)
 Each bit vector encodes matches with a window around that position in w
 
 ### 5. Triangle Inequality
-Only d^t_L violates it! d²_L and d^ms_L may satisfy it (not proven in thesis).
+Only `$d^t_L$` violates it! d²_L and `$d^\text{ms}_L$` may satisfy it (not proven in thesis).
 
 ---
 
@@ -635,14 +635,14 @@ Only d^t_L violates it! d²_L and d^ms_L may satisfy it (not proven in thesis).
 
 | To find... | Look for... |
 |------------|-------------|
-| Distance definition | Section 2, d^χ_L |
+| Distance definition | Section `$2, d^\chi _L$` | 
 | Fixed-word position | Section 3, i#e |
 | Universal position | Section 5, I + i#e, M + i#e |
-| Subsumption | Section 4, ≤^χ_s |
-| Bit encoding | Section 5, h_n, β |
+| Subsumption | Section `$4, \le ^\chi _s$` | 
+| Bit encoding | Section `$5, h_n, \beta$` | 
 | Conversion I↔M | Section 5, m_n |
 | Diagonal check | Section 5, f_n |
-| Transition function | δ^ND,χ_n, δ^D,χ_n, δ^∀,χ_n |
+| Transition function | `$\delta ^\text{ND}$`,`$\chi _n, \delta ^D,\chi _n, \delta ^\forall ,\chi _n$` | 
 | Construction algorithm | Section 6, Build_Automaton |
 | Correctness proof | Section 5, Proposition 19 |
 | Minimality proof | Section 7 |

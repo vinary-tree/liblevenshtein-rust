@@ -28,7 +28,7 @@ The TCS 2011 paper's **theoretical foundations** apply to lazy automata, but the
 | **Bounded Diagonal Property** | ✅ YES | HIGH | Proves SmallVec size=8 is sound |
 | **Subsumption Theory** | ✅ YES | MEDIUM | Validates anti-chain maintenance |
 | **Generalized Operations** | ✅ YES | MEDIUM | Roadmap for extending `Algorithm` |
-| **Restricted Substitutions** | ✅ YES | HIGH | Direct path for op^r implementation |
+| **Restricted Substitutions** | ✅ YES | HIGH | Direct path for `$\text{op}^r$` implementation |
 | **Alphabet Independence** | ❌ NO | N/A | Universal-specific (not needed) |
 | **Word-Agnostic States** | ❌ NO | N/A | Contradicts lazy definition |
 | **Precomputed Transitions** | ❌ NO | N/A | Lazy builds at query time |
@@ -157,7 +157,7 @@ where op^r ⊆ Σ^{op^x} × Σ^{op^y}: allowed replacement relation
    op^r = {(è,e), (é,e), (æ,ae), ...}
    ```
 
-**Your Current Work**: `SubstitutionSet` directly corresponds to paper's op^r!
+**Your Current Work**: `SubstitutionSet` directly corresponds to paper's `$\text{op}^r$`!
 
 **Action**: Continue current implementation using paper's framework as guide.
 
@@ -234,12 +234,12 @@ struct Position {
 **Universal Property**:
 - Build automaton once before any queries
 - All transitions known in advance
-- `𝒪(n²)` state space (independent of word length)
+- `$\mathcal{O}(n^{2})$` state space (independent of word length)
 
 **Lazy Construction**:
 - Build automaton **during query execution**
 - Transitions computed on-demand
-- State space size: `𝒪(∣w∣ × n)` (word-length dependent)
+- State space size: `$\mathcal{O}(\lvert w\rvert \times  n)$` (word-length dependent)
 
 **Why Not for Lazy**:
 - **Definitional difference**: Lazy = runtime construction
@@ -289,7 +289,7 @@ if query_char == dict_char { ... }
 | Aspect | Lazy | Universal |
 |--------|------|-----------|
 | **States depend on** | Query word w | Abstract parameters I, M |
-| **State space size** | `𝒪(∣w∣ × n)` | `𝒪(n²)` |
+| **State space size** | `$\mathcal{O}(\lvert w\rvert \times  n)$` | `$\mathcal{O}(n^{2})$` |
 | **Construction time** | Query time (runtime) | Before queries (precomputed) |
 | **Automaton count** | One per query | One for all queries |
 | **Position encoding** | Concrete `term_index` | Abstract `I + offset` |
@@ -332,7 +332,7 @@ if query_char == dict_char { ... }
 ### 4.3 Restricted Substitutions (HIGH VALUE)
 
 **What You Gain**:
-- Direct implementation guide via op^r
+- Direct implementation guide via `$\text{op}^r$`
 - Presets for common use cases (keyboard layouts, OCR, phonetics)
 - Type-aware substitution encoding
 
@@ -386,7 +386,7 @@ pub struct State {
 
 ### Priority 2: Restricted Substitutions (In Progress)
 
-Continue current work on `SubstitutionSet`, using paper's op^r framework:
+Continue current work on `SubstitutionSet`, using paper's `$\text{op}^r$` framework:
 
 1. Define `RestrictedSubstitution` struct
 2. Implement presets (keyboard, OCR, phonetic)

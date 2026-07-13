@@ -18,8 +18,6 @@ This index shows what's documented and where to find it. The documentation is or
 | **SuffixAutomatonChar** | 📝 Planned (Unicode substring matching) | [Layer README](01-dictionary-layer/README.md) |
 | **PathMapDictionary** | ⭐ Comprehensive (persistent trie) | [Detailed guide](01-dictionary-layer/implementations/pathmap-dictionary.md) |
 | **PathMapDictionaryChar** | ✅ Overview + comparison | [Layer README](01-dictionary-layer/README.md) |
-| **DawgDictionary** | ✅ Overview + comparison | [Layer README](01-dictionary-layer/README.md#7-dawgdictionary) |
-| **OptimizedDawg** | ✅ Overview + comparison | [Layer README](01-dictionary-layer/README.md#8-optimizeddawg) |
 
 **Key sections in Dictionary Layer README**:
 - Decision flowchart for choosing a dictionary type
@@ -159,7 +157,7 @@ Comprehensive implementation for IDE-style code completion in [docs/design](../d
   - Online construction algorithm
   - Endpos equivalence and suffix links
   - 8 usage examples (code search, log analysis, DNA sequences)
-  - ≤2n-1 states for n-character text
+  - `$\le 2n-1$` states for `$n$`-character text
 
 - SuffixAutomatonChar (📝 Planned, ~1100 lines)
   - Character-level (Unicode) substring matching
@@ -262,11 +260,6 @@ Detailed implementation guides could be added for these dictionary types:
   - Priority: HIGH - Character-level variant of implemented SuffixAutomaton
   - Would match pattern of other *Char guides (DoubleArrayTrieChar, DynamicDawgChar)
 
-- [ ] OptimizedDawg implementation details (static, space-optimized)
-  - Priority: MEDIUM - Specialized use case (maximum space efficiency)
-
-- [ ] DawgDictionary implementation details (classic DAWG)
-  - Priority: LOW - Legacy/compatibility, DoubleArrayTrie preferred
 
 - [ ] PathMapDictionaryChar implementation details (Unicode variant)
   - Priority: LOW - PathMapDictionary handles Unicode naturally

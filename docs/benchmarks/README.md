@@ -7,13 +7,17 @@ Performance benchmarks, measurements, and comparative analysis.
 ### Backend Comparisons
 
 #### [Backend Performance Comparison](BACKEND_PERFORMANCE_COMPARISON.md)
-Comprehensive comparison of all dictionary backends:
+Comprehensive comparison of the dictionary backends:
 - PathMap
-- DAWG (Directed Acyclic Word Graph)
-- Optimized DAWG
-- Dynamic DAWG
+- Dynamic DAWG (`DynamicDawg` — the current directed-acyclic-word-graph backend)
 - Suffix Automaton
 - Double Array Trie
+
+> **Historical note.** Earlier revisions of the linked report also benchmarked the
+> classic static `DawgDictionary` and the arena-optimized `OptimizedDawg`. Both were
+> **removed in the 0.9.x line** (backends extracted to `libdictenstein`); their roles are
+> now covered by `DynamicDawg` and `DoubleArrayTrie`. Any such rows in the report are
+> retained only as a historical baseline.
 
 #### [Final Backend Comparison](FINAL_BACKEND_COMPARISON.md)
 Final comprehensive backend benchmark results:

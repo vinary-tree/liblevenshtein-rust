@@ -209,13 +209,13 @@ pub struct DoubleArrayTrieZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `u8` (byte-level)
 - **Memory**: ~24 bytes base + path length
-- **Performance**: `O(1)` descend, `O(E)` children (E = edge count)
+- **Performance**: `$\mathcal{O}(1)$` descend, `$\mathcal{O}(E)$` children (E = edge count)
 
 **Example**:
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::DictZipper;
 
 let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
 let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
@@ -247,13 +247,13 @@ pub struct DoubleArrayTrieCharZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `char` (Unicode code points)
 - **Memory**: ~24 bytes base + path length × 4
-- **Performance**: `O(1)` descend, `O(E)` children
+- **Performance**: `$\mathcal{O}(1)$` descend, `$\mathcal{O}(E)$` children
 
 **Example**:
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
-use liblevenshtein::dictionary::double_array_trie_char_zipper::DoubleArrayTrieCharZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieCharZipper;
+use libdictenstein::zipper::DictZipper;
 
 let dict = DoubleArrayTrieChar::from_terms(vec!["café", "中文", "🎉"]);
 let zipper = DoubleArrayTrieCharZipper::new_from_dict(&dict);
@@ -285,7 +285,7 @@ pub struct PathMapZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `u8` (byte-level)
 - **Memory**: ~24 bytes + path + Arc overhead
-- **Performance**: `O(log N)` descend (HashMap lookup)
+- **Performance**: `$\mathcal{O}(\log N)$` descend (HashMap lookup)
 
 **When to use**: When using PathMapDictionary backend.
 
@@ -293,9 +293,9 @@ pub struct PathMapZipper<V: DictionaryValue = ()> {
 
 | Zipper | Unit | Backend | Descend | Children | Memory | Unicode |
 |--------|------|---------|---------|----------|--------|---------|
-| **DATZipper** | `u8` | DoubleArrayTrie | `O(1)` | `O(E)` | Low | Byte |
-| **DATCharZipper** | `char` | DoubleArrayTrieChar | `O(1)` | `O(E)` | Medium | ✅ |
-| **PathMapZipper** | `u8` | PathMapDict | `O(log N)` | `O(E)` | Medium | Byte |
+| **DATZipper** | `u8` | DoubleArrayTrie | `$\mathcal{O}(1)$` | `$\mathcal{O}(E)$` | Low | Byte |
+| **DATCharZipper** | `char` | DoubleArrayTrieChar | `$\mathcal{O}(1)$` | `$\mathcal{O}(E)$` | Medium | ✅ |
+| **PathMapZipper** | `u8` | PathMapDict | `$\mathcal{O}(\log N)$` | `$\mathcal{O}(E)$` | Medium | Byte |
 
 E = average edge count per node (~2-3 for natural language)
 N = total dictionary size
@@ -305,9 +305,9 @@ N = total dictionary size
 ### Example 1: Basic Navigation
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::DictZipper;
 
 let dict = DoubleArrayTrie::from_terms(vec!["cat", "car", "card"]);
 let root = DoubleArrayTrieZipper::new_from_dict(&dict);
@@ -339,9 +339,9 @@ assert_eq!(car.path(), b"car");
 ### Example 2: Exploring Children
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::DictZipper;
 
 let dict = DoubleArrayTrie::from_terms(vec!["ab", "ac", "ad"]);
 let root = DoubleArrayTrieZipper::new_from_dict(&dict);
@@ -374,9 +374,9 @@ for (label, child) in a.children() {
 ### Example 3: Value Access
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::{DictZipper, ValuedDictZipper};
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::{DictZipper, ValuedDictZipper};
 
 let dict = DoubleArrayTrie::from_terms_with_values(vec![
     ("test", 1),
@@ -422,9 +422,9 @@ assert_eq!(tested.value(), Some(3));  // ✓ Value at "tested"
 ### Example 4: Unicode Navigation
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
-use liblevenshtein::dictionary::double_array_trie_char_zipper::DoubleArrayTrieCharZipper;
-use liblevenshtein::dictionary::zipper::{DictZipper, ValuedDictZipper};
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieCharZipper;
+use libdictenstein::zipper::{DictZipper, ValuedDictZipper};
 
 let dict = DoubleArrayTrieChar::from_terms_with_values(vec![
     ("café", "French"),
@@ -462,9 +462,9 @@ assert_eq!(emoji.value(), Some("Emoji"));
 ### Example 5: Depth-First Traversal
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::DictZipper;
 
 fn collect_all_terms(zipper: &DoubleArrayTrieZipper) -> Vec<String> {
     let mut results = Vec::new();
@@ -496,9 +496,9 @@ println!("Found terms: {:?}", terms);
 ### Example 6: Prefix Matching
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::DictZipper;
 
 fn find_with_prefix(dict: &DoubleArrayTrie, prefix: &str) -> Vec<String> {
     let root = DoubleArrayTrieZipper::new_from_dict(dict);
@@ -548,9 +548,9 @@ println!("{:?}", completions);
 ### Example 7: Custom Traversal with Value Filtering
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::{DictZipper, ValuedDictZipper};
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::{DictZipper, ValuedDictZipper};
 
 fn find_in_scope(
     dict: &DoubleArrayTrie<u32>,
@@ -616,9 +616,9 @@ println!("{:?}", results);
 ### Example 8: Hierarchical Scopes
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::{DictZipper, ValuedDictZipper};
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::{DictZipper, ValuedDictZipper};
 
 #[derive(Clone, Debug, PartialEq)]
 struct ScopeInfo {
@@ -626,7 +626,7 @@ struct ScopeInfo {
     parent: Option<u32>,  // Hierarchical scope chain
 }
 
-impl liblevenshtein::dictionary::DictionaryValue for ScopeInfo {}
+impl libdictenstein::DictionaryValue for ScopeInfo {}
 
 fn find_in_scope_hierarchy(
     dict: &DoubleArrayTrie<ScopeInfo>,
@@ -723,18 +723,18 @@ let z1 = root.descend('a');  // Clone shared Arc: O(1)
 let z2 = z1.clone();          // Clone again: O(1) + path copy
 ```
 
-**Cost**: `O(1)` for Arc clone + `O(P)` for path copy (P = path length)
+**Cost**: `$\mathcal{O}(1)$` for Arc clone + `$\mathcal{O}(P)$` for path copy (P = path length)
 
 ### Operation Complexity
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| `new_from_dict()` | `O(1)` | Initialize at root |
-| `is_final()` | `O(1)` | Array lookup |
-| `descend(label)` | `O(1)` | BASE/CHECK lookup |
-| `children()` | `O(E)` | Iterate precomputed edges |
-| `path()` | `O(P)` | Clone path vector |
-| `value()` | `O(1)` | Array lookup |
+| `new_from_dict()` | `$\mathcal{O}(1)$` | Initialize at root |
+| `is_final()` | `$\mathcal{O}(1)$` | Array lookup |
+| `descend(label)` | `$\mathcal{O}(1)$` | BASE/CHECK lookup |
+| `children()` | `$\mathcal{O}(E)$` | Iterate precomputed edges |
+| `path()` | `$\mathcal{O}(P)$` | Clone path vector |
+| `value()` | `$\mathcal{O}(1)$` | Array lookup |
 
 E = average edge count (~2-3)
 P = path length
@@ -793,9 +793,9 @@ For 100 concurrent searches: ~275 KB
 ### Pattern 1: Zipper-Based Trie Iterator
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::DictZipper;
 
 struct TrieIterator {
     stack: Vec<DoubleArrayTrieZipper>,
@@ -845,8 +845,8 @@ assert_eq!(iter.next(), None);
 ### Pattern 2: Bounded Search
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::DictZipper;
 
 fn search_with_depth_limit(
     zipper: &DoubleArrayTrieZipper,
@@ -891,9 +891,9 @@ println!("{} terms ≤ 5 chars", short_terms.len());
 ### Pattern 3: Parallel Exploration
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::DictZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::DictZipper;
 use rayon::prelude::*;
 
 fn parallel_prefix_search(dict: &DoubleArrayTrie, prefixes: &[&str]) -> Vec<Vec<String>> {
@@ -937,9 +937,9 @@ println!("{:?}", results);
 ### Pattern 4: Contextual Completion Engine
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
-use liblevenshtein::dictionary::zipper::{DictZipper, ValuedDictZipper};
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::{DictZipper, ValuedDictZipper};
 
 struct CompletionEngine {
     dict: DoubleArrayTrie<u32>,  // Scope IDs

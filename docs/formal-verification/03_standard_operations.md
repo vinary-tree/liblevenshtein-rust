@@ -75,18 +75,18 @@ Phase 3 completed the formal verification of all standard Levenshtein operations
 | Operation | Preconditions | Offset Change | Error Cost | Validated |
 |-----------|---------------|---------------|------------|-----------|
 | **Match** | `has_match(cv, offset + n)` | 0 (diagonal) | 0 | ✅ |
-| **Delete** | `errors < n` ∧ `offset > -n` | -1 (left) | +1 | ✅ |
+| **Delete** | `errors < n` `$\land$` `offset > -n` | -1 (left) | +1 | ✅ |
 | **Insert** | `errors < n` | 0 (stay) | +1 | ✅ |
-| **Substitute** | `errors < n` ∧ `¬has_match(cv, offset + n)` | 0 (diagonal) | +1 | ✅ |
+| **Substitute** | `errors < n` `$\land$` `$\lnot \text{has}_\text{match}(\text{cv}, \text{offset} + n)$` | 0 (diagonal) | +1 | ✅ |
 
 ### M-Type Operations
 
 | Operation | Preconditions | Offset Change | Error Cost | Validated |
 |-----------|---------------|---------------|------------|-----------|
-| **Match** | `has_match(cv, offset + 2n)` ∧ `offset < 0` | +1 (toward 0) | 0 | ✅ |
+| **Match** | `has_match(cv, offset + 2n)` `$\land$` `offset < 0` | +1 (toward 0) | 0 | ✅ |
 | **Delete** | `errors < n` | 0 (no word left) | +1 | ✅ |
-| **Insert** | `errors < n` ∧ `offset < 0` | +1 (toward 0) | +1 | ✅ |
-| **Substitute** | `errors < n` ∧ `¬has_match(cv, offset + 2n)` ∧ `offset < 0` | +1 (toward 0) | +1 | ✅ |
+| **Insert** | `errors < n` `$\land$` `offset < 0` | +1 (toward 0) | +1 | ✅ |
+| **Substitute** | `errors < n` `$\land$` `$\lnot \text{has}_\text{match}(\text{cv}, \text{offset} + 2n)$` `$\land$` `offset < 0` | +1 (toward 0) | +1 | ✅ |
 
 ### Key Differences
 
@@ -138,9 +138,9 @@ errors' = errors + distance
 
 **Preconditions**:
 - `distance > 0`
-- `errors + distance ≤ n`
-- `-n ≤ offset ≤ n`
-- `|offset| ≤ errors`
+- `$\text{errors} + \text{distance} \le  n$`
+- `$-n \le  \text{offset} \le  n$`
+- `$|\text{offset}| \le  \text{errors}$`
 
 **Example**:
 ```
@@ -164,9 +164,9 @@ errors' = errors + distance
 
 **Preconditions**:
 - `distance > 0`
-- `errors + distance ≤ n`
-- `-2n ≤ offset ≤ 0`
-- `|offset| ≤ errors`
+- `$\text{errors} + \text{distance} \le  n$`
+- `$-2n \le  \text{offset} \le  0$`
+- `$|\text{offset}| \le  \text{errors}$`
 
 **Rationale**: M-type has already consumed the entire word, so skip-to-match only affects error budget, not position.
 
@@ -193,7 +193,7 @@ Theorem i_delete_preserves_invariant : forall p cv p',
   i_invariant p'.
 ```
 **Status**: ✅ Proven without admits
-**Key insight**: Requires `offset > -n` precondition to ensure `offset - 1 ≥ -n`
+**Key insight**: Requires `offset > -n` precondition to ensure `$\text{offset} - 1 \ge  -n$`
 
 #### 3. `i_insert_preserves_invariant`
 ```coq

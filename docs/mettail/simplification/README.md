@@ -48,7 +48,7 @@ The simplification transpiler uses **bisimulation** as the soundness criterion f
 
 | Property | Description |
 |----------|-------------|
-| **Soundness** | If `P ≈ Q`, replacing P with Q preserves all observable behaviors |
+| **Soundness** | If `$P \approx  Q$`, replacing P with Q preserves all observable behaviors |
 | **Completeness** | Bisimulation captures exactly the observable distinctions |
 | **Compositionality** | Bisimilar subterms can be replaced in any context |
 
@@ -56,9 +56,9 @@ The simplification transpiler uses **bisimulation** as the soundness criterion f
 
 | Constraint | Strategy | Guarantee |
 |------------|----------|-----------|
-| Memory | Dead code elimination, scope minimization | `P ≈ simplify(P)` |
-| Latency | Communication fusion, inlining | `P ≈ optimize(P)` |
-| Parallelism | Scope extrusion, parallel fusion | `P ≈ parallelize(P)` |
+| Memory | Dead code elimination, scope minimization | `$P \approx  \text{simplify}(P)$` |
+| Latency | Communication fusion, inlining | `$P \approx  \text{optimize}(P)$` |
+| Parallelism | Scope extrusion, parallel fusion | `$P \approx  \text{parallelize}(P)$` |
 
 ### Verification Efficiency
 
@@ -67,7 +67,7 @@ Up-to techniques reduce verification complexity:
 | Technique | Speedup |
 |-----------|---------|
 | Up-to congruence | 4-100x |
-| Up-to transitivity | O(1) amortized |
+| Up-to transitivity | `$\mathcal{O}(1)$` amortized |
 | Up-to context | 100-10,000x |
 
 See [11-optimization-strategies.md](11-optimization-strategies.md) and [12-up-to-verification.md](12-up-to-verification.md) for details.

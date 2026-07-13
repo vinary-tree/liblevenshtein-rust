@@ -23,7 +23,7 @@
 ### Key Advantages
 
 - 🔄 **Full dynamic updates**: Insert AND remove at runtime
-- 🔒 **Thread-safe**: Safe concurrent reads, exclusive writes
+- 🔒 **Thread-safe**: Lock-free concurrent reads, atomic-swap writes
 - 📦 **Simple implementation**: Thin wrapper around PathMap
 - 💎 **Persistent semantics**: Structural sharing between versions
 - 🎯 **Easy to use**: Straightforward API
@@ -95,7 +95,7 @@ New tree (after adding "team"):
 Nodes marked "Shared" are reused, not copied
 ```
 
-**Memory**: Only O(m) new nodes for m-character insert
+**Memory**: Only `$\mathcal{O}(m)$` new nodes for m-character insert
 
 ## PathMap Library
 
@@ -112,7 +112,7 @@ Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-liblevenshtein = { version = "0.4", features = ["pathmap-backend"] }
+liblevenshtein = { version = "0.9", features = ["pathmap-backend"] }
 ```
 
 Or use CLI:
@@ -134,8 +134,9 @@ cargo add liblevenshtein --features pathmap-backend
 
 ```rust
 pub struct PathMapDictionary<V: DictionaryValue = ()> {
-    map: Arc<RwLock<PathMap<V>>>,       // Underlying PathMap
-    term_count: Arc<RwLock<usize>>,     // Term count tracking
+    // Single lock-free snapshot: the PathMap handle and the term count are
+    // published together inside one immutable `PathMapState<V>`.
+    state: Arc<ArcSwap<PathMapState<V>>>,
 }
 ```
 
@@ -145,7 +146,7 @@ PathMapDictionary is a thin wrapper that:
 1. Manages PathMap lifecycle
 2. Tracks term count
 3. Provides liblevenshtein Dictionary trait
-4. Handles thread safety via RwLock
+4. Handles thread safety via a lock-free atomic snapshot (`ArcSwap`)
 
 ### Memory Layout
 
@@ -153,8 +154,8 @@ PathMapDictionary is a thin wrapper that:
 ┌─────────────────┬─────────────────┐
 │ Component       │ Overhead        │
 ├─────────────────┼─────────────────┤
-│ Arc pointers    │ 16 bytes        │
-│ RwLock          │ 8 bytes         │
+│ Arc pointer     │ 8 bytes         │
+│ ArcSwap cell    │ 8 bytes (atomic)│
 │ PathMap         │ ~32 bytes/node  │
 │ term_count      │ 8 bytes         │
 └─────────────────┴─────────────────┘
@@ -162,17 +163,17 @@ PathMapDictionary is a thin wrapper that:
 
 **Per-node overhead**: ~32 bytes (HashMap-based)
 
-**Example**: 10,000-term dictionary ≈ 320 KB
+**Example**: 10,000-term dictionary `$\approx$` 320 KB
 
 ### Clone Behavior & Memory Semantics
 
-`PathMapDictionary` uses **two separate** `Arc<RwLock<...>>` instances internally, making `.clone()` a **shallow copy** that shares all underlying data. The clone behavior is similar to `DynamicDawg`, but with dual Arc-wrapped components:
+`PathMapDictionary` holds a **single** `Arc<ArcSwap<PathMapState<V>>>` internally, making `.clone()` a **shallow copy** that shares all underlying data. The clone behavior is like `DynamicDawg`: one lock-free, Arc-wrapped component:
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 let dict1: PathMapDictionary = PathMapDictionary::from_terms(vec!["test", "testing"]);
-let dict2 = dict1.clone();  // O(1) - increments TWO Arc refcounts
+let dict2 = dict1.clone();  // O(1) - increments ONE Arc refcount
 
 // Both dict1 and dict2 share the SAME underlying PathMap and term count
 dict1.insert("new_term");
@@ -187,58 +188,57 @@ assert_eq!(dict2.len(), Some(3));  // Same count
 
 | Property | Behavior | Impact |
 |----------|----------|--------|
-| **Time Complexity** | O(1) | Two atomic increments |
-| **Space Complexity** | O(1) | ~32 bytes (two Arc pointers) |
+| **Time Complexity** | `$\mathcal{O}(1)$` | One atomic increment |
+| **Space Complexity** | `$\mathcal{O}(1)$` | ~8 bytes (one Arc pointer) |
 | **Data Sharing** | ✅ Complete | All clones share PathMap + term count |
 | **Mutation Visibility** | ✅ Global | Changes via any clone affect all |
-| **Thread Safety** | ✅ RwLock | Multiple readers OR single writer |
+| **Thread Safety** | ✅ Lock-free | Readers never block; writers swap atomically |
 | **Independence** | ❌ None | No isolation between clones |
 
 #### How Clone Works
 
-The clone operation increments **two** atomic reference counters:
+The clone operation increments a **single** atomic reference counter:
 
 ```rust
 pub struct PathMapDictionary<V> {
-    map: Arc<RwLock<PathMap<V>>>,       // ← Arc #1
-    term_count: Arc<RwLock<usize>>,     // ← Arc #2
+    state: Arc<ArcSwap<PathMapState<V>>>,  // ← single lock-free Arc
 }
 
-// Cloning increments both Arc refcounts
+// Cloning increments the single Arc refcount
 let dict2 = dict1.clone();
 // Equivalent to:
-// Arc::clone(&dict1.map) + Arc::clone(&dict1.term_count)
-// Cost: ~2-4 CPU cycles (two atomic increments)
+// Arc::clone(&dict1.state)
+// Cost: ~1-2 CPU cycles (one atomic increment)
 ```
 
 **What gets cloned:**
-- ✅ Arc smart pointer for PathMap (~16 bytes on stack)
-- ✅ Arc smart pointer for term_count (~16 bytes on stack)
-- ❌ NOT the RwLocks
+- ✅ Arc smart pointer for the shared state (~8 bytes on stack)
+- ❌ NOT the ArcSwap cell
 - ❌ NOT the PathMap trie structure
 - ❌ NOT the term count value itself
 
 **Memory allocation:**
 - Zero heap allocation
-- Only stack space for two Arc pointers (~32 bytes)
+- Only stack space for one Arc pointer (~8 bytes)
 - All data remains shared
 
-#### Dual-Arc Design
+#### Single-Arc Lock-Free Design
 
-PathMapDictionary's dual-Arc design enables independent locking of map and count:
+PathMapDictionary publishes one immutable snapshot behind a single atomic pointer,
+so readers never take a lock and never block a writer:
 
 ```rust
-// Concurrent readers can lock map and count independently
-let map_lock = self.map.read();      // Lock PathMap
-let count_lock = self.term_count.read();  // Lock count separately
+// Readers load the current immutable snapshot with no lock (lock-free)
+let state = self.state.load_full();   // Arc<PathMapState<V>>: PathMap + term count
+// `state.map` is the shared PathMap; `state.len` is the term count.
 
-// Reduces lock contention compared to single lock
+// Writers build a new PathMapState and publish it with an atomic compare-and-swap.
 ```
 
-**Why two Arcs?**
-- **Flexibility**: Can read count without locking PathMap
-- **Granularity**: Finer-grained synchronization
-- **Cost trade-off**: Slightly more expensive clone (2 increments vs 1)
+**Why a single Arc?**
+- **Consistency**: The PathMap handle and term count are published together, so a reader never observes a torn map/count pair
+- **Lock-free reads**: A reader loads a snapshot without blocking a concurrent writer
+- **Cheaper clone**: One atomic increment instead of two
 
 #### Structural Sharing vs Arc Sharing
 
@@ -345,11 +345,14 @@ For **independent copies** where mutations don't affect other instances:
 
 **Option 1: Serialize/Deserialize**
 ```rust
-use serde::{Serialize, Deserialize};
+use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
 
-// Create deep copy via serialization
-let bytes = bincode::serialize(&dict1)?;
-let dict2: PathMapDictionary = bincode::deserialize(&bytes)?;
+// Create a deep copy via serialization. `PathMapDictionary` does not implement serde's
+// `Serialize`/`Deserialize`; it round-trips through `BincodeSerializer`, which encodes the
+// dictionary's *terms* via the `Dictionary` trait and rebuilds it with `DictionaryFromTerms`.
+let mut bytes = Vec::new();
+BincodeSerializer::serialize(&dict1, &mut bytes)?;
+let dict2: PathMapDictionary = BincodeSerializer::deserialize(&bytes[..])?;
 
 // Now independent
 dict1.insert("new");
@@ -380,29 +383,29 @@ let dict2: PathMapDictionary<V> = PathMapDictionary::from_terms_with_values(entr
 
 | Method | Time | Space | Independence |
 |--------|------|-------|--------------|
-| `.clone()` | O(1) | O(1) | ❌ Shared |
-| Serialize/Deserialize | O(n) | O(n) | ✅ Full |
-| Rebuild from terms | O(n·log m) | O(n) | ✅ Full |
-| Rebuild with values | O(n·log m) | O(n) | ✅ Full |
+| `.clone()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | ❌ Shared |
+| Serialize/Deserialize | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | ✅ Full |
+| Rebuild from terms | `$\mathcal{O}(n \cdot \log m)$` | `$\mathcal{O}(n)$` | ✅ Full |
+| Rebuild with values | `$\mathcal{O}(n \cdot \log m)$` | `$\mathcal{O}(n)$` | ✅ Full |
 
 #### Comparison with Other Dictionaries
 
 | Dictionary | Arc Count | Clone Cost | Shared Data? |
 |------------|-----------|------------|--------------|
-| **PathMapDictionary** | 2 (map + count) | O(1) | ✅ Yes |
-| **DynamicDawg** | 1 (inner) | O(1) | ✅ Yes |
-| **DynamicDawgChar** | 1 (inner) | O(1) | ✅ Yes |
-| **DoubleArrayTrie** | 0 (no Arc) | O(n) | ❌ No |
-| **DoubleArrayTrieChar** | 0 (no Arc) | O(n) | ❌ No |
+| **PathMapDictionary** | 1 (state) | `$\mathcal{O}(1)$` | ✅ Yes |
+| **DynamicDawg** | 1 (inner) | `$\mathcal{O}(1)$` | ✅ Yes |
+| **DynamicDawgChar** | 1 (inner) | `$\mathcal{O}(1)$` | ✅ Yes |
+| **DoubleArrayTrie** | 0 (no Arc) | `$\mathcal{O}(n)$` | ❌ No |
+| **DoubleArrayTrieChar** | 0 (no Arc) | `$\mathcal{O}(n)$` | ❌ No |
 
 **Key differences:**
-- PathMapDictionary: Two Arc increments (map + count)
+- PathMapDictionary: One Arc increment (single lock-free state snapshot)
 - DynamicDawg variants: One Arc increment (inner struct contains count)
 - DoubleArrayTrie: Full deep copy (immutable, no Arc needed)
 
 #### Thread Safety Considerations
 
-PathMapDictionary's dual-Arc design provides flexible locking:
+PathMapDictionary's single lock-free snapshot supports unlimited concurrent readers:
 
 ```rust
 use std::thread;
@@ -420,7 +423,7 @@ let readers: Vec<_> = (0..10).map(|i| {
     })
 }).collect();
 
-// Single writer (blocks all readers)
+// Concurrent writer (does NOT block readers; publishes via atomic swap)
 let writer = {
     let dict = dict.clone();
     thread::spawn(move || {
@@ -429,25 +432,25 @@ let writer = {
 };
 ```
 
-**RwLock semantics:**
-- **Read operations**: `contains()`, `get_value()`, `len()`, iteration
-- **Write operations**: `insert()`, `insert_with_value()`, `remove()`, `union_with()`
-- **Lock granularity**: Map and count can be locked independently for reads
+**Lock-free semantics:**
+- **Read operations** (lock-free snapshot load): `contains()`, `get_value()`, `len()`, iteration
+- **Write operations** (atomic snapshot publish): `insert()`, `insert_with_value()`, `remove()`, `union_with()`
+- **Atomicity**: The PathMap and term count are published together in one `PathMapState`, so a reader never observes a torn map/count pair
 
 **Performance implications:**
-- Read lock overhead: ~10-20ns per operation
-- Write lock overhead: ~50-100ns + contention costs
-- Dual-Arc trade-off: More flexible locking, slightly higher clone cost
+- Reads are lock-free: a reader atomically loads a snapshot and never blocks
+- Writes publish a new snapshot via compare-and-swap (retried under contention)
+- Historical note (pre-lock-free `RwLock` model): read-lock overhead was ~10-20ns and write-lock overhead ~50-100ns plus contention; the lock-free model removes the read-lock cost entirely
 
 #### Summary
 
 **Key Takeaways:**
-1. 🔗 `.clone()` creates **shallow copy** with two Arc increments (map + count)
-2. 🚀 **O(1)** time and space - just atomic reference counting
+1. 🔗 `.clone()` creates **shallow copy** with one Arc increment (state snapshot)
+2. 🚀 **`$\mathcal{O}(1)$`** time and space - just atomic reference counting
 3. 🔄 **Mutations visible** across all clones (Arc-based sharing)
 4. 🌳 **Structural sharing** is separate (PathMap's persistent trie optimization)
-5. 🔒 **Thread-safe** with dual RwLocks for flexible granularity
-6. 📊 For **independence**, use serialization or rebuild from terms (O(n) cost)
+5. 🔒 **Thread-safe** via a single lock-free atomic snapshot (readers never block)
+6. 📊 For **independence**, use serialization or rebuild from terms (`$\mathcal{O}(n)$` cost)
 
 ## Construction Methods
 
@@ -457,20 +460,20 @@ PathMapDictionary provides constructors optimized for simple use cases and rapid
 
 | Constructor | Complexity | Use Case | Thread-Safe |
 |-------------|-----------|----------|-------------|
-| `new()` | O(1) | Empty start | ✅ |
-| `from_terms()` | O(n·log m) | Simple list | ✅ |
-| `from_terms_with_values()` | O(n·log m) | With metadata | ✅ |
+| `new()` | `$\mathcal{O}(1)$` | Empty start | ✅ |
+| `from_terms()` | `$\mathcal{O}(n \cdot \log m)$` | Simple list | ✅ |
+| `from_terms_with_values()` | `$\mathcal{O}(n \cdot \log m)$` | With metadata | ✅ |
 
 Where n = number of terms, m = dictionary size (grows with insertions)
 
-**Note**: PathMapDictionary uses `insert()` internally which is O(log m), making bulk construction O(n·log m) vs O(n·m) for DAWG variants.
+**Note**: PathMapDictionary uses `insert()` internally which is `$\mathcal{O}(\log m)$`, making bulk construction `$\mathcal{O}(n \cdot \log m)$` vs `$\mathcal{O}(n \cdot m)$` for DAWG variants.
 
 ### Empty Dictionary
 
 Create an empty dictionary for incremental updates:
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 // Create empty dictionary
 let dict: PathMapDictionary = PathMapDictionary::new();
@@ -486,8 +489,8 @@ valued_dict.insert_with_value("banana", 200);
 ```
 
 **Characteristics:**
-- **Time**: O(1) - Minimal initialization
-- **Memory**: ~80 bytes (two Arc pointers + empty PathMap + term count)
+- **Time**: `$\mathcal{O}(1)$` - Minimal initialization
+- **Memory**: ~80 bytes (one Arc pointer + empty PathMap + term count)
 - **Simplicity**: Easiest to use, minimal boilerplate
 
 **When to use:**
@@ -500,7 +503,7 @@ valued_dict.insert_with_value("banana", 200);
 Build from iterator of terms:
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 // From Vec
 let terms = vec!["test", "testing", "tester"];
@@ -513,7 +516,7 @@ let dict = PathMapDictionary::from_terms(term_set);
 ```
 
 **Characteristics:**
-- **Time**: O(n·log m) where m grows from 0 to n
+- **Time**: `$\mathcal{O}(n \cdot \log m)$` where m grows from 0 to n
 - **Memory**: ~32 bytes per node (HashMap-based)
 - **Structural sharing**: Minimal (PathMap not optimized for bulk insert)
 
@@ -522,7 +525,7 @@ let dict = PathMapDictionary::from_terms(term_set);
 Build with associated values (frequencies, IDs, etc.):
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 type ContextId = u32;
 
@@ -689,17 +692,17 @@ PathMapDictionary accessor methods have **simpler** implementations but **slower
 
 | Method | PathMapDictionary | DynamicDawg | Performance Impact |
 |--------|-------------------|-------------|---------------------|
-| `contains(term)` | `O(m·log k)` | `O(m)` | ~2-3× slower |
-| `get_value(term)` | `O(m·log k)` | `O(m)` | ~2-3× slower |
-| `term_count()` | `O(1)` | `O(1)` | Similar |
-| `len()` / `is_empty()` | `O(1)` | `O(1)` | Similar |
+| `contains(term)` | `$\mathcal{O}(m \cdot \log k)$` | `$\mathcal{O}(m)$` | ~2-3× slower |
+| `get_value(term)` | `$\mathcal{O}(m \cdot \log k)$` | `$\mathcal{O}(m)$` | ~2-3× slower |
+| `term_count()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Similar |
+| `len()` / `is_empty()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Similar |
 
 *Where*: `m` = term length, `k` = average branching factor (~26 for English)
 
 ### Quick Reference
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 let dict = PathMapDictionary::from_terms(vec!["test", "testing", "tested"]);
 
@@ -723,7 +726,7 @@ assert!(!dict.is_empty());
 // No needs_compaction() (not applicable to PathMap)
 
 // Traversal (via Dictionary trait)
-use liblevenshtein::dictionary::{Dictionary, DictionaryNode};
+use libdictenstein::{Dictionary, DictionaryNode};
 let root = dict.root();
 // ... navigate via transition() as with other backends
 ```
@@ -809,7 +812,7 @@ The `union_with()` and `union_replace()` methods enable **merging two PathMapDic
 - 💾 Creating snapshots with incremental updates
 
 **Key Characteristics**:
-- 🔒 **Thread-safe**: Operations use RwLock for concurrent access
+- 🔒 **Thread-safe**: Writers publish a new snapshot via atomic swap; reads stay lock-free
 - 🌳 **Structural sharing**: Leverages PathMap's persistent data structure benefits
 - ⚡ **Iterator-based**: Uses PathMap's efficient iteration over key-value pairs
 - 🎯 **Flexible**: Custom merge functions for value conflicts
@@ -833,19 +836,19 @@ where
 - **Returns**: Number of terms processed from `other`
 
 **Algorithm**: Iteration-based insertion
-1. Acquire read lock on `other.map`
-2. Acquire write lock on `self.map`
-3. Iterate all `(key, value)` pairs in `other.map`
+1. Load an immutable snapshot of `other`'s state (lock-free)
+2. Clone `self`'s current `PathMapState` to build the next revision off to the side
+3. Iterate all `(key, value)` pairs in `other`
 4. For each pair:
-   - If key exists in `self.map`: Apply `merge_fn` and update
+   - If key exists in the working map: Apply `merge_fn` and update
    - If key is new: Insert with cloned value
-5. Update `self.term_count` for new entries
+5. Publish the updated `PathMapState` (map + term count) with an atomic compare-and-swap (retry on contention)
 
 **Complexity**:
-- **Time**: O(n·log m) where n = terms in `other`, m = terms in `self`
-  - O(n) for iteration over `other`
-  - O(log m) per PathMap insertion/lookup
-- **Space**: O(log m) for PathMap tree height (structural sharing reduces actual allocation)
+- **Time**: `$\mathcal{O}(n \cdot \log m)$` where n = terms in `other`, m = terms in `self`
+  - `$\mathcal{O}(n)$` for iteration over `other`
+  - `$\mathcal{O}(\log m)$` per PathMap insertion/lookup
+- **Space**: `$\mathcal{O}(\log m)$` for PathMap tree height (structural sharing reduces actual allocation)
 
 ### Why Iteration Instead of PathMap's join()?
 
@@ -857,9 +860,9 @@ pub fn join_into<V: Lattice>(&mut self, other: &PathMap<V>) { ... }
 ```
 
 **Limitation**: The `Lattice` trait requires specific algebraic properties:
-- Commutative: `a ⊔ b = b ⊔ a`
-- Associative: `(a ⊔ b) ⊔ c = a ⊔ (b ⊔ c)`
-- Idempotent: `a ⊔ a = a`
+- Commutative: `$a \sqcup b = b \sqcup a$`
+- Associative: `$(a \sqcup b) \sqcup c = a \sqcup (b \sqcup c)$`
+- Idempotent: `$a \sqcup a = a$`
 
 **Our approach**: Uses **arbitrary merge functions** without algebraic constraints:
 - ✅ Supports non-commutative merges: `(old, new) → new` (last-writer-wins)
@@ -871,8 +874,8 @@ pub fn join_into<V: Lattice>(&mut self, other: &PathMap<V>) { ... }
 ### Example 1: Sum Aggregation
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::MutableMappedDictionary;
 
 // First dataset: term frequencies
 let dict1: PathMapDictionary<u32> = PathMapDictionary::new();
@@ -901,8 +904,8 @@ assert_eq!(processed, 2);
 Demonstrates typical use case of layering configurations:
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::MutableMappedDictionary;
 
 // System defaults
 let defaults: PathMapDictionary<String> = PathMapDictionary::new();
@@ -932,8 +935,8 @@ assert_eq!(defaults.get_value("font_size"), Some("12".to_string()));
 Merge lists of associated data:
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::MutableMappedDictionary;
 
 let dict1: PathMapDictionary<Vec<u32>> = PathMapDictionary::new();
 dict1.insert_with_value("rust", vec![1, 2, 3]);
@@ -971,8 +974,8 @@ where
 
 **Example**:
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::MutableMappedDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::MutableMappedDictionary;
 
 let dict1: PathMapDictionary<&str> = PathMapDictionary::new();
 dict1.insert_with_value("status", "draft");
@@ -992,33 +995,41 @@ assert_eq!(dict1.get_value("author"), Some("alice"));
 
 ### Implementation Details
 
-The union operation uses **PathMap's iterator** with lock-based synchronization:
+The union operation uses **PathMap's iterator** with lock-free snapshot publication:
 
 ```rust
-// Simplified implementation
+// Simplified implementation (lock-free publish via compare-and-swap)
 fn union_with<F>(&self, other: &Self, merge_fn: F) -> usize {
-    let other_map = other.map.read().unwrap();
-    let mut self_map = self.map.write().unwrap();
-    let mut self_term_count = self.term_count.write().unwrap();
+    let other_state = other.load_state();   // immutable snapshot of `other`
+    let mut backoff = CasBackoff::new();
 
-    let mut processed = 0;
+    loop {
+        let current = self.load_state();
+        let mut next_map = current.map.clone();  // persistent clone (structural sharing)
+        let mut next_len = current.len;
+        let mut processed = 0;
 
-    // Iterate over all entries in other
-    for (key_bytes, other_value) in other_map.iter() {
-        processed += 1;
+        // Iterate over all entries in other's snapshot
+        for (key_bytes, other_value) in other_state.map.iter() {
+            processed += 1;
 
-        if let Some(self_value) = self_map.get(&key_bytes) {
-            // Key exists: merge the values
-            let merged = merge_fn(self_value, other_value);
-            self_map.insert(&key_bytes, merged);
-        } else {
-            // Key doesn't exist: insert from other
-            self_map.insert(&key_bytes, other_value.clone());
-            *self_term_count += 1;
+            if let Some(self_value) = next_map.get(&key_bytes) {
+                // Key exists: merge the values
+                let merged = merge_fn(self_value, other_value);
+                next_map.insert(&key_bytes, merged);
+            } else {
+                // Key doesn't exist: insert from other
+                next_map.insert(&key_bytes, other_value.clone());
+                next_len += 1;
+            }
         }
-    }
 
-    processed
+        // Publish atomically; retry if another writer won the race
+        if self.compare_store_state(&current, PathMapState::new(next_map, next_len)) {
+            return processed;
+        }
+        backoff.snooze();
+    }
 }
 ```
 
@@ -1026,22 +1037,22 @@ fn union_with<F>(&self, other: &Self, merge_fn: F) -> usize {
 
 1. **Simplicity**: Leverages PathMap's well-tested iterator
 2. **Flexibility**: No trait constraints on value types
-3. **Correctness**: RwLock ensures thread-safe updates
+3. **Correctness**: The compare-and-swap publish makes each union atomic to readers
 4. **Structural sharing**: PathMap automatically shares structure between old and new versions
 
-**Lock Semantics**:
-- Read lock on `other`: Allows concurrent reads
-- Write lock on `self`: Blocks all access during union
-- Single transaction: All updates atomic from external perspective
+**Publish Semantics**:
+- Snapshot read of `other`: Lock-free; never blocks
+- Atomic publish to `self`: A new `PathMapState` is installed with compare-and-swap
+- Single transaction: Readers see either the pre-union or post-union snapshot, never a partial state
 
 ### Performance Characteristics
 
 | Operation | Time Complexity | Space Complexity | Typical Performance (10K terms) |
 |-----------|----------------|------------------|--------------------------------|
-| `union_with()` | O(n·log m) | O(log m) | ~80ms |
-| `union_replace()` | O(n·log m) | O(log m) | ~80ms |
-| Iteration | O(n) | O(1) | ~15ms |
-| Per-term insertion | O(log m) | O(log m) | ~5-8µs |
+| `union_with()` | `$\mathcal{O}(n \cdot \log m)$` | `$\mathcal{O}(\log m)$` | ~80ms |
+| `union_replace()` | `$\mathcal{O}(n \cdot \log m)$` | `$\mathcal{O}(\log m)$` | ~80ms |
+| Iteration | `$\mathcal{O}(n)$` | `$\mathcal{O}(1)$` | ~15ms |
+| Per-term insertion | `$\mathcal{O}(\log m)$` | `$\mathcal{O}(\log m)$` | ~5-8µs |
 
 **Variables**:
 - n = number of terms in source dictionary
@@ -1112,7 +1123,7 @@ dict1.union_with(&dict2, |a, b| a + b);
 **Benefits**:
 - 💾 **Memory efficient**: Only delta nodes allocated
 - 🔒 **Safe snapshots**: Old version still accessible
-- 🚀 **Fast clones**: O(1) shallow copy of Arc
+- 🚀 **Fast clones**: `$\mathcal{O}(1)$` shallow copy of Arc
 
 **Caveats**:
 - Lock contention on write during union
@@ -1124,7 +1135,7 @@ dict1.union_with(&dict2, |a, b| a + b);
 ### Example 1: Basic Usage
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 // Create empty dictionary
 let dict: PathMapDictionary<()> = PathMapDictionary::new();
@@ -1146,7 +1157,7 @@ assert_eq!(dict.len(), Some(2));
 ### Example 2: From Existing Terms
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 let dict = PathMapDictionary::from_terms(vec![
     "algorithm",
@@ -1165,8 +1176,8 @@ assert_eq!(dict.len(), Some(4));
 ### Example 3: With Values
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::MappedDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::MappedDictionary;
 
 // Map terms to category IDs
 let dict: PathMapDictionary<u32> = PathMapDictionary::from_terms_with_values(vec![
@@ -1187,7 +1198,7 @@ assert_eq!(dict.get_value("test"), Some(99));
 ### Example 4: Fuzzy Search
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -1206,7 +1217,7 @@ println!("{:?}", results);
 ### Example 5: Thread-Safe Updates
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 use std::sync::Arc;
 use std::thread;
 
@@ -1235,7 +1246,7 @@ for handle in handles {
 ### Example 6: Dynamic User Dictionary
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 // User's personal dictionary
 let user_dict = PathMapDictionary::new();
@@ -1259,8 +1270,8 @@ assert!(!user_dict.contains("debugging"));
 ### Example 7: Metadata Storage
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::MappedDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::MappedDictionary;
 
 #[derive(Clone, Debug)]
 struct TermMetadata {
@@ -1268,7 +1279,7 @@ struct TermMetadata {
     last_used: u64,
 }
 
-impl liblevenshtein::dictionary::DictionaryValue for TermMetadata {}
+impl libdictenstein::DictionaryValue for TermMetadata {}
 
 let dict: PathMapDictionary<TermMetadata> = PathMapDictionary::new();
 
@@ -1292,7 +1303,7 @@ if let Some(meta) = dict.get_value("test") {
 ### Example 8: Prototyping
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -1319,10 +1330,10 @@ prototype_fuzzy_matcher(
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Insert** | O(m log n) | m = term length, n = dict size |
-| **Remove** | O(m log n) | HashMap operations |
-| **Contains** | O(m log n) | Tree traversal + lookups |
-| **Fuzzy search** | O(m×d²×b×log n) | Additional log factor |
+| **Insert** | `$\mathcal{O}(m \log n)$` | m = term length, n = dict size |
+| **Remove** | `$\mathcal{O}(m \log n)$` | HashMap operations |
+| **Contains** | `$\mathcal{O}(m \log n)$` | Tree traversal + lookups |
+| **Fuzzy search** | `$\mathcal{O}(m \times d^{2} \times b \times \log n)$` | Additional log factor |
 
 ### Benchmark Results
 

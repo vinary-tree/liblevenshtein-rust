@@ -15,7 +15,7 @@ This directory contains **complete documentation** of Universal Levenshtein Auto
 3. **Algorithm Details** - Full pseudocode and construction algorithms
 4. **Cross-Reference Materials** - Bridging theory to practice
 
-**Universal Levenshtein Automata** are parameter-free, deterministic finite automata that recognize the Levenshtein neighborhood L^χ_{Lev}(n, w) for **any word w** without modification. This directory covers both the core theory and planned extensions (restricted substitutions).
+**Universal Levenshtein Automata** are parameter-free, deterministic finite automata that recognize the Levenshtein neighborhood `$L^\chi _{\text{Lev}}(n, w)$` for **any word w** without modification. This directory covers both the core theory and planned extensions (restricted substitutions).
 
 ---
 
@@ -114,7 +114,7 @@ See [Implementation Strategy](#implementation-strategy) section below for detail
 
 **State Container Optimization** (2025-11-11):
 
-6. **[UNIVERSAL_BTREESET_VS_SMALLVEC_RESULTS.md](./UNIVERSAL_BTREESET_VS_SMALLVEC_RESULTS.md)** (~1400 lines) ⭐
+6. **[UNIVERSAL_BTREESET_VS_SMALLVEC_RESULTS.md](../../archive/universal-levenshtein/UNIVERSAL_BTREESET_VS_SMALLVEC_RESULTS.md)** (~1400 lines, *archived*) ⭐
    - Comprehensive benchmark analysis comparing BTreeSet vs SmallVec
    - 24 benchmark scenarios across Standard and Transposition algorithms
    - Performance results: SmallVec wins 75% with 1.08-2.06× speedup
@@ -122,7 +122,7 @@ See [Implementation Strategy](#implementation-strategy) section below for detail
    - **Current implementation**: SmallVec (canonical approach as of commit ce7ccca)
    - **Use this** to understand state container design decisions
 
-7. **[BTREESET_VS_SMALLVEC_COMPARISON.md](./BTREESET_VS_SMALLVEC_COMPARISON.md)** (~350 lines)
+7. **[BTREESET_VS_SMALLVEC_COMPARISON.md](../../archive/universal-levenshtein/BTREESET_VS_SMALLVEC_COMPARISON.md)** (~350 lines, *archived*)
    - Initial comparison guide (pre-benchmarking)
    - Theoretical analysis of both approaches
    - Benchmarking methodology
@@ -171,16 +171,16 @@ See [Implementation Strategy](#implementation-strategy) section below for detail
 
 From Mitankin's 2005 thesis:
 
-1. **Parameter-Free Automaton**: A^{∀,χ}_n works for **any word length** without modification
+1. **Parameter-Free Automaton**: `$A^{\forall ,\chi }_n$` works for **any word length** without modification
 2. **Three Distance Variants**:
-   - χ = ε (standard Levenshtein)
-   - χ = t (with transposition)
-   - χ = ms (with merge/split)
+   `$- \chi  = \varepsilon$` (standard Levenshtein)
+   `$- \chi  = t$` (with transposition)
+   `$- \chi  =$` ms (with merge/split)
 3. **Bit Vector Encoding**: h_n(w, x) converts word pairs to bit vector sequences
 4. **Universal Positions**: I + i#e and M + i#e with parameters I, M
-5. **Subsumption Relation**: ≤^χ_s for state minimization
-6. **Minimality Proof**: A^{∀,χ}_n has minimum states (Section 7)
-7. **O(n²) State Complexity**: Exact formulas and bounds (Section 6.3)
+5. **Subsumption Relation**: `$\le ^\chi _s$` for state minimization
+6. **Minimality Proof**: `$A^{\forall ,\chi }_n$` has minimum states (Section 7)
+7. **`$\mathcal{O}(n^{2})$` State Complexity**: Exact formulas and bounds (Section 6.3)
 
 ### Critical Warnings
 
@@ -190,7 +190,7 @@ d^t_L does NOT satisfy the triangle inequality!
 ```
 
 Counterexample: v="ac", w="ca", x="aa"
-- d^t_L(v,x) = 2 > d^t_L(v,w) + d^t_L(w,x) = 1 + 1
+- `$d^t_L(v,x)$` = 2 > `$d^t_L(v,w)$` + `$d^t_L(w,x)$` = 1 + 1
 
 **Implication**: Cannot use triangle inequality for pruning with transposition variant.
 
@@ -209,7 +209,7 @@ Standard Levenshtein distance allows **any** character to be substituted for any
 
 ### The Solution: Restricted Substitutions
 
-Instead of allowing **all** substitutions, define a set `S ⊆ Σ × Σ` of **allowed** character pairs:
+Instead of allowing **all** substitutions, define a set `$S \subseteq  \Sigma  \times  \Sigma$` of **allowed** character pairs:
 
 ```
 Standard Levenshtein:  Can substitute any (a,b)
@@ -249,7 +249,7 @@ This **improves precision** by rejecting unrealistic error patterns.
 1. Extends universal Levenshtein automata to handle restricted substitutions
 2. Maintains **deterministic** automaton property
 3. Works with additional operations (transposition, merge, split)
-4. Provides construction algorithm for universal automaton A_n^∀
+4. Provides construction algorithm for universal automaton `$A_n^\forall$`
 
 ---
 
@@ -327,23 +327,23 @@ This **improves precision** by rejecting unrealistic error patterns.
 The generalized distance `d_L^S(w, x)` is defined as the minimum number of operations to transform `w` into `x`, where:
 - **Insert**: Add a character (cost = 1)
 - **Delete**: Remove a character (cost = 1)
-- **Substitute**: Replace character `a` with `b` **only if** `(a,b) ∈ S` (cost = 1)
+- **Substitute**: Replace character `a` with `b` **only if** `$(a,b) \in  S$` (cost = 1)
 
-When `S = Σ × Σ` (all pairs), this reduces to standard Levenshtein distance.
+When `$S = \Sigma  \times  \Sigma$` (all pairs), this reduces to standard Levenshtein distance.
 
 ### Characteristic Vector Extension
 
-**Standard Levenshtein**: Uses characteristic vector χ(a, w[i:j])
+**Standard Levenshtein**: Uses characteristic vector `$\chi (a, w[i$`:j])
 - Binary: 1 if character `a` appears at position, 0 otherwise
 
-**Universal with S**: Uses S-characteristic vector χ_s(a, w[i:j])
-- Binary: 1 if `(w[i], a) ∈ S` (substitution allowed), 0 otherwise
+**Universal with S**: Uses S-characteristic vector `$\chi _s(a, w[i$`:j])
+- Binary: 1 if `$(w[i], a) \in  S$` (substitution allowed), 0 otherwise
 
 This is the **key modification** needed in the codebase.
 
-### Universal Automaton A_n^∀
+### Universal Automaton `$A_n^\forall$`
 
-The paper constructs a **universal automaton** `A_n^∀` that:
+The paper constructs a **universal automaton** `$A_n^\forall$` that:
 - Is **independent** of specific query/dictionary words
 - Works for **any** error bound `n`
 - Maintains **deterministic** property
@@ -388,7 +388,7 @@ The paper constructs a **universal automaton** `A_n^∀` that:
 
 1. **NOT weighted/variable costs**
    - All allowed operations still cost = 1
-   - Restricted substitutions are **binary**: either allowed (cost=1) or blocked (cost=∞)
+   - Restricted substitutions are **binary**: either allowed (cost=1) or blocked (cost=`$\infty )$`
    - For continuous costs, see weighted Levenshtein distance (different approach)
 
 2. **NOT arbitrary new operation types**
@@ -468,8 +468,8 @@ pub enum Algorithm {
    - Serialization support
 
 2. ✅ **S-characteristic vector**
-   - Extend current χ implementation
-   - Check `(query_char, dict_char) ∈ S` for substitutions
+   - Extend current `$\chi$` implementation
+   - Check `$(\text{query}_\text{char}, \text{dict}_\text{char}) \in  S$` for substitutions
 
 3. ⚠️ **Modified transition functions**
    - transition.rs: Check substitution validity
@@ -503,7 +503,7 @@ pub enum Algorithm {
 **Worst-case**: 30% slowdown (if substitution set is large and lookups are slow)
 
 **Mitigation strategies**:
-- Use HashSet for O(1) lookup
+- Use HashSet for `$\mathcal{O}(1)$` lookup
 - Consider perfect hashing for static sets
 - Cache lookup results in hot paths
 - SIMD-friendly data structures

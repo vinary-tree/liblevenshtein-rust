@@ -28,7 +28,7 @@ The termination argument relies on three mechanisms:
 
 ### Term Measure
 
-Define a measure function `M: Proc → (ℕ × ℕ × ℕ)` that maps terms to lexicographically ordered triples:
+Define a measure function `$M: \text{Proc} \to  (\mathbb{N}  \times  \mathbb{N}  \times  \mathbb{N} )$` that maps terms to lexicographically ordered triples:
 
 ```
 M(term) = (size(term), depth(term), complexity(term))
@@ -50,7 +50,7 @@ Triples are compared lexicographically:
     (a₁ = a₂ and b₁ = b₂ and c₁ < c₂)
 ```
 
-This ordering is well-founded (no infinite descending chains) because ℕ is well-founded.
+This ordering is well-founded (no infinite descending chains) because `$\mathbb{N}$` is well-founded.
 
 ---
 
@@ -96,10 +96,10 @@ These rules preserve `size` but may change `depth` or `complexity`:
 **Termination argument**:
 1. All rules in this phase have `termination_weight < 0`
 2. Each rule application strictly decreases `size(term)`
-3. `size(term) ∈ ℕ`, so cannot decrease forever
-4. ∴ Phase terminates in at most `size(initial)` iterations
+3. `$\text{size}(\text{term}) \in  \mathbb{N}$`, so cannot decrease forever
+`$4. \therefore$` Phase terminates in at most `size(initial)` iterations
 
-**Bound**: O(n) iterations where n = initial term size
+**Bound**: `$\mathcal{O}(n)$` iterations where n = initial term size
 
 ### Phase 2: AnalysisDriven
 
@@ -109,9 +109,9 @@ These rules preserve `size` but may change `depth` or `complexity`:
 1. Dead code rules have `termination_weight < 0` (remove unreachable code)
 2. Constant folding replaces expressions with values (weight < 0)
 3. Each application decreases size
-4. ∴ Phase terminates
+`$4. \therefore$` Phase terminates
 
-**Bound**: O(n) iterations
+**Bound**: `$\mathcal{O}(n)$` iterations
 
 ### Phase 3: StructuralNormalization
 
@@ -125,30 +125,30 @@ This phase is more complex because some rules are size-preserving.
 - Pattern: `P | 0` → `P`
 - Weight: -1 (size-reducing)
 - Applied first, eliminates all Nil nodes
-- Terminates in O(n) steps
+- Terminates in `$\mathcal{O}(n)$` steps
 
 **Step 2**: Associativity rules
 - Pattern: `(P|Q)|R` → `P|(Q|R)`
 - Weight: 0 (size-preserving)
 - Directed: always reassociate to right
 - Each Par node is reassociated at most once
-- Terminates in O(n) steps
+- Terminates in `$\mathcal{O}(n)$` steps
 
 **Step 3**: Commutativity rules
 - Pattern: `P|Q` → `Q|P` when `order(P) > order(Q)`
 - Weight: 0 (size-preserving)
 - **Key**: Guard ensures we only swap toward canonical ordering
 - Once in canonical order, guard fails - no more applications
-- Terminates in O(n²) steps (like bubble sort)
+- Terminates in `$\mathcal{O}(n^{2})$` steps (like bubble sort)
 
 **Step 4**: Scope extrusion
-- Pattern: `new x.(P|Q)` → `(new x.P)|Q` when `x ∉ FV(Q)`
+- Pattern: `new x.(P|Q)` → `(new x.P)|Q` when `$x \notin  \text{FV}(Q)$`
 - Weight: 0 (size-preserving)
 - **Key**: New binding moves outward until it hits a use
 - Each New can extrude at most `depth(term)` times
-- Terminates in O(n × d) steps where d = depth
+- Terminates in `$\mathcal{O}(n \times  d)$` steps where d = depth
 
-**Combined bound**: O(n² + n × d) = O(n²) for Phase 3
+**Combined bound**: `$\mathcal{O}(n^{2} + n \times  d)$` = `$\mathcal{O}(n^{2})$` for Phase 3
 
 ### Phase 4: TypeDirected
 
@@ -158,9 +158,9 @@ This phase is more complex because some rules are size-preserving.
 1. Cast removal has weight < 0 (removes nodes)
 2. Inlining is guarded by benefit heuristics
 3. All applications decrease size or improve cost
-4. ∴ Phase terminates
+`$4. \therefore$` Phase terminates
 
-**Bound**: O(n) iterations
+**Bound**: `$\mathcal{O}(n)$` iterations
 
 ---
 
@@ -173,24 +173,24 @@ This phase is more complex because some rules are size-preserving.
 Let `T₀` be the initial term with `size(T₀) = n`.
 
 1. **Phase bounds**: Each phase terminates with bound:
-   - Phase 1: O(n)
-   - Phase 2: O(n)
-   - Phase 3: O(n²)
-   - Phase 4: O(n)
+   - Phase 1: `$\mathcal{O}(n)$`
+   - Phase 2: `$\mathcal{O}(n)$`
+   - Phase 3: `$\mathcal{O}(n^{2})$`
+   - Phase 4: `$\mathcal{O}(n)$`
 
 2. **Cross-phase reanalysis**: When Phase 2 or 4 makes changes, we may re-run earlier phases. However:
    - Size can only decrease (size-reducing rules)
-   - Total size reduction across all reanalysis cycles ≤ n
-   - ∴ Total reanalysis overhead is O(n × phases) = O(n)
+   - Total size reduction across all reanalysis cycles `$\le  n$`
+   `$- \therefore$` Total reanalysis overhead is `$\mathcal{O}(n \times  \text{phases})$` = `$\mathcal{O}(n)$`
 
 3. **Cycle detection**: The visited set `V` tracks all seen terms by hash:
-   - If `T ∈ V`, we stop (would repeat)
-   - Since hash is content-based, `|V| ≤ number of distinct terms seen`
-   - Since terms only get smaller, `|V| ≤ 2^n` (actually much less)
+   - If `$T \in  V$`, we stop (would repeat)
+   - Since hash is content-based, `$|V| \le  \text{number} \text{of} \text{distinct} \text{terms} \text{seen}$`
+   - Since terms only get smaller, `$|V| \le  2^n$` (actually much less)
 
 4. **Absolute bound**: Configuration provides `max_iterations` as hard limit
 
-**Total complexity**: O(n² × p) where p = number of phases = O(n²)
+**Total complexity**: `$\mathcal{O}(n^{2} \times  p)$` where p = number of phases = `$\mathcal{O}(n^{2})$`
 
 □
 
@@ -397,11 +397,11 @@ impl TerminationGuard {
 
 | Phase | Time Complexity | Space Complexity |
 |-------|-----------------|------------------|
-| LocalSimplification | O(n) | O(1) |
-| AnalysisDriven | O(n) | O(n) for analysis facts |
-| StructuralNormalization | O(n²) | O(n) for canonical form |
-| TypeDirected | O(n) | O(n) for types |
-| **Total** | **O(n²)** | **O(n)** |
+| LocalSimplification | `$\mathcal{O}(n)$` | `$\mathcal{O}(1)$` |
+| AnalysisDriven | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` for analysis facts |
+| StructuralNormalization | `$\mathcal{O}(n^{2})$` | `$\mathcal{O}(n)$` for canonical form |
+| TypeDirected | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` for types |
+| **Total** | **`$\mathcal{O}(n^{2})$`** | **`$\mathcal{O}(n)$`** |
 
 Where n = size of input term.
 

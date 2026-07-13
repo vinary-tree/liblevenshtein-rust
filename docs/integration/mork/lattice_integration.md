@@ -1,12 +1,12 @@
 # Phase B: Lattice Integration Guide
 
 **Last Updated**: 2025-12-21
-**Version**: v0.8.0
+**Version**: 0.9.1
 **Status**: PROPOSED
 
 > ⚠️ **PROPOSAL NOTICE**: This document describes a **proposed** `src/lattice/` module for structured multi-candidate output. This structure is a design specification for future implementation.
 >
-> **Current Implementation**: liblevenshtein v0.8.0 returns flat iterators from transducer queries. See [Current v0.8.0 Capabilities](#current-v080-capabilities) for available features.
+> **Current Implementation**: liblevenshtein 0.9.1 returns flat iterators from transducer queries. See [Current Capabilities](#current-capabilities) for available features.
 
 This document provides detailed implementation guidance for Phase B of the MORK integration: creating lattice data structures for ranked, multi-candidate approximate matching.
 
@@ -18,9 +18,9 @@ This document provides detailed implementation guidance for Phase B of the MORK 
 
 ---
 
-## Current v0.8.0 Capabilities
+## Current Capabilities
 
-Before implementing the proposed lattice module, liblevenshtein v0.8.0 provides:
+Before implementing the proposed lattice module, liblevenshtein 0.9.1 provides:
 
 ### What's Available Now
 
@@ -34,7 +34,7 @@ Before implementing the proposed lattice module, liblevenshtein v0.8.0 provides:
 
 ```rust
 use liblevenshtein::transducer::{Algorithm, Transducer};
-use liblevenshtein::dictionary::DynamicDawgChar;
+use libdictenstein::dynamic_dawg::DynamicDawgChar;
 
 let dict = DynamicDawgChar::from_iter(["the", "ten", "tea", "cat", "bat", "car"]);
 let transducer = Transducer::new(&dict, Algorithm::Standard);
@@ -1170,9 +1170,9 @@ for path in lattice.k_best_paths(10) {
 
 ### Lattice Size
 
-- **Nodes**: O(n+1) where n = number of tokens
-- **Edges**: O(n × k) where k = average candidates per token
-- **Paths**: O(k^n) worst case (exponential)
+- **Nodes**: `$\mathcal{O}(n+1)$` where `$n$` = number of tokens
+- **Edges**: `$\mathcal{O}(n \times k)$` where `$k$` = average candidates per token
+- **Paths**: `$\mathcal{O}(k^n)$` worst case (exponential)
 
 ### Memory Optimization
 
@@ -1182,7 +1182,7 @@ for path in lattice.k_best_paths(10) {
 
 ### K-Best Extraction
 
-- **Dijkstra-based**: O(k × log(E)) where E = number of edges
+- **Dijkstra-based**: `$\mathcal{O}(k \times \log(E))$` where `$E$` = number of edges
 - **Avoids path explosion**: Only materializes top-k paths
 
 ---

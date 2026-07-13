@@ -69,7 +69,7 @@ Incremental editing is the process of tracking text changes character-by-charact
 
 ```rust
 use liblevenshtein::contextual::DynamicContextualCompletionEngine;
-use liblevenshtein::dictionary::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 fn handle_char_insert(
     engine: &mut DynamicContextualCompletionEngine<PathMapDictionary<()>>,
@@ -264,7 +264,7 @@ fn longest_common_prefix(completions: &[Completion]) -> String {
 
 ```rust
 use liblevenshtein::contextual::DynamicContextualCompletionEngine;
-use liblevenshtein::dictionary::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dict = PathMapDictionary::new();

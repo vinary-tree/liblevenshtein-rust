@@ -6,9 +6,9 @@
 [![Release](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/release.yml/badge.svg)](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Approximate string matching that scales with matches, not dictionary size.** Instead of computing an edit distance against every entry, `liblevenshtein` represents the query `W` and an error bound `k` as a **Levenshtein automaton** — the set of still-viable `⟨position, errors⟩` states that together accept exactly the strings within distance `k` of `W` — and walks it **in lock-step** with the dictionary (a trie/DAWG), advancing both together and pruning a branch the instant no automaton state survives. The automaton is **simulated on the fly**, never built as a standalone table. Per-query setup is `𝒪(∣W∣)`; each automaton step costs `𝒪(k)` — a constant for fixed `k` — so total work tracks the explored near-match frontier rather than the size of the dictionary.
+**Approximate string matching that scales with matches, not dictionary size.** Instead of computing an edit distance against every entry, `liblevenshtein` represents the query `$W$` and an error bound `$k$` as a **Levenshtein automaton** — the set of still-viable `$\langle \text{position}, \text{errors}\rangle$` states that together accept exactly the strings within distance `$k$` of `$W$` — and walks it **in lock-step** with the dictionary (a trie/DAWG), advancing both together and pruning a branch the instant no automaton state survives. The automaton is **simulated on the fly**, never built as a standalone table. Per-query setup is `$\mathcal{O}(\lvert W\rvert)$`; each automaton step costs `$\mathcal{O}(k)$` — a constant for fixed `$k$` — so total work tracks the explored near-match frontier rather than the size of the dictionary.
 
-On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted/weighted edits, **phonetic** matching (53 built-in languages), **time-series** similarity (Move–Split–Merge), the **WallBreaker** filter for very large error bounds, IDE-style **contextual completion**, composable fuzzy **caches**, and **WFST** adapters for language-model composition (in the companion **duallity** crate). Every dictionary is `Send + Sync` and cheap to share across threads; reads run concurrently — lock-free on the static backends and `DynamicDawgU64`, reader-locked on the `RwLock`-backed dynamic ones.
+On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted/weighted edits, **phonetic** matching (53 built-in languages), **time-series** similarity (Move–Split–Merge), the **WallBreaker** filter for very large error bounds, IDE-style **contextual completion**, composable fuzzy **caches**, and **WFST** adapters for language-model composition (in the companion **duallity** crate). Every dictionary is `Send + Sync` and cheap to share across threads; reads run concurrently and **lock-free** on every backend — static dicts read immutable arrays, dynamic dicts load an `ArcSwap` snapshot, and a reader never blocks on a writer.
 
 > Based on Schulz & Mihov, *Fast String Correction with Levenshtein-Automata* (2002) [[1]](#references), and the universal construction of Mitankin, Mihov & Schulz (2009) [[2]](#references).
 
@@ -44,7 +44,7 @@ On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted
 
 ## Why automata?
 
-The **Levenshtein (edit) distance** `d(W, s)` between two strings is the minimum number of single-character **insertions**, **deletions**, and **substitutions** that turn `W` into `s`. The textbook way to compute it fills a dynamic-programming matrix (Wagner–Fischer [[3]](#references)):
+The **Levenshtein (edit) distance** `$d(W, s)$` between two strings is the minimum number of single-character **insertions**, **deletions**, and **substitutions** that turn `$W$` into `$s$`. The textbook way to compute it fills a dynamic-programming matrix (Wagner–Fischer [[3]](#references)):
 
 ```text
 edit_distance(W, s):
@@ -57,9 +57,9 @@ edit_distance(W, s):
   return D[∣W∣, ∣s∣]
 ```
 
-Spell-checking a query against a dictionary `D` this way costs `𝒪(∣D∣ · ∣W∣ · ∣s∣)` — you re-pay the *∣W∣* factor for every entry. The automaton approach avoids that:
+Spell-checking a query against a dictionary `$D$` this way costs `$\mathcal{O}(\lvert D\rvert \cdot \lvert W\rvert \cdot \lvert s\rvert)$` — you re-pay the `$\lvert W\rvert$` factor for every entry. The automaton approach avoids that:
 
-1. **Simulate** a Levenshtein automaton `A(W, k)` whose language is exactly the strings `s` with `d(W, s) ≤ k`. Each of its states is a *set* of still-viable `⟨position, errors⟩` positions; for fixed `k` only `𝒪(∣W∣)` distinct states ever arise, and each is computed lazily as the search needs it.
+1. **Simulate** a Levenshtein automaton `$A(W, k)$` whose language is exactly the strings `$s$` with `$d(W, s) \le k$`. Each of its states is a *set* of still-viable `$\langle \text{position}, \text{errors}\rangle$` positions; for fixed `$k$` only `$\mathcal{O}(\lvert W\rvert)$` distinct states ever arise, and each is computed lazily as the search needs it.
 2. **Walk** `A(W, k)` and the dictionary — a trie/DAWG — together in one shared depth-first traversal (their language **intersection**). A subtree is pruned the instant no automaton state survives, so the cost tracks the matching frontier, not the dictionary size.
 
 ![How an approximate query is answered: build one automaton from the query, then intersect it with the dictionary in a single traversal.](docs/diagrams/traversal/query-flow.svg)
@@ -74,19 +74,19 @@ Defined once, used throughout.
 
 | Symbol / term | Meaning |
 |---|---|
-| `Σ` | the *alphabet* (bytes `u8`, Unicode scalars `char`/`u32`, or arbitrary `u64` labels) |
-| `W`, `∣W∣` | the *query* (pattern) string and its length |
-| `s` | a *candidate* string drawn from the dictionary |
-| `D`, `∣D∣` | the *dictionary* and its number of edges (transitions) |
-| `k` | the maximum edit distance / *error bound* |
-| `d(W, s)` | edit distance between `W` and `s` |
+| `$\Sigma$` | the *alphabet* (bytes `u8`, Unicode scalars `char`/`u32`, or arbitrary `u64` labels) |
+| `$W$`, `$\lvert W\rvert$` | the *query* (pattern) string and its length |
+| `$s$` | a *candidate* string drawn from the dictionary |
+| `$D$`, `$\lvert D\rvert$` | the *dictionary* and its number of edges (transitions) |
+| `$k$` | the maximum edit distance / *error bound* |
+| `$d(W, s)$` | edit distance between `$W$` and `$s$` |
 | **edit operations** | insertion, deletion, substitution (+ transposition, merge/split — see below) |
-| **position** `⟨i, e⟩` | automaton state: `i` characters of `W` consumed, `e` edits spent (`e ≤ k`) |
-| **characteristic vector** `χ` | bit pattern marking where the input symbol matches inside `W`'s active window |
+| **position** `$\langle i, e\rangle$` | automaton state: `$i$` characters of `$W$` consumed, `$e$` edits spent (`$e \le k$`) |
+| **characteristic vector** `$\chi$` | bit pattern marking where the input symbol matches inside `$W$`'s active window |
 | **subsumption** | a cheaper position dominating a costlier nearby one, pruned to keep states minimal |
 | **NFA / DFA** | non-deterministic / deterministic finite automaton |
 | **DAWG** | Directed Acyclic Word Graph — a trie with shared suffixes (Blumer et al. [[8]](#references)) |
-| **DAT** | Double-Array Trie — a trie packed into two integer arrays for `𝒪(1)`-per-transition lookups (Aoe [[11]](#references)) |
+| **DAT** | Double-Array Trie — a trie packed into two integer arrays for `$\mathcal{O}(1)$`-per-transition lookups (Aoe [[11]](#references)) |
 | **SCDAWG** | Symmetric Compact DAWG — indexes *all substrings*, traversable in both directions (Inenaga et al. [[9]](#references)) |
 | **ART** | Adaptive Radix Tree — a space-adaptive radix trie (Leis et al. [[12]](#references)) |
 | **transducer** | here, the object that runs an automaton against a dictionary and *yields* matches |
@@ -117,13 +117,13 @@ for candidate in transducer.query_with_distance("tset", 2) {
 
 ```toml
 [dependencies]
-liblevenshtein = "0.8"
+liblevenshtein = "0.9"
 
 # Phonetic rules, time-series, persistence, etc. are opt-in features:
-# liblevenshtein = { version = "0.8", features = ["phonetic-rules"] }
+# liblevenshtein = { version = "0.9", features = ["phonetic-rules"] }
 ```
 
-SIMD (AVX2/SSE4.1) is automatic on `x86_64` via runtime CPU detection — no feature flag. Dictionary backends live in the companion crate **`libdictenstein`** and are re-exported through `liblevenshtein::prelude` (byte-level types) or imported directly (`use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;` for the Unicode variants).
+SIMD (AVX2/SSE4.1) is automatic on `x86_64` via runtime CPU detection — no feature flag. Dictionary backends live in the companion crate **`libdictenstein`** and are re-exported through `liblevenshtein::prelude` (byte-level types) or imported directly (`use libdictenstein::double_array_trie::DoubleArrayTrieChar;` for the Unicode variants).
 
 > **crates.io note:** the optional `pathmap-backend` uses a git dependency and is unavailable from a plain `crates.io` install; build from source with `--features pathmap-backend` to use it.
 
@@ -156,7 +156,7 @@ The dictionary backends live in the sibling **`libdictenstein`** crate; the opti
 | **Time-series similarity** | Move–Split–Merge metric | [Time Series](#time-series-movesplitmerge) |
 | **Keyboard typo correction** | Transposition algorithm + QWERTY substitutions | [Algorithm Variants](#algorithm-variants) |
 | **OCR error correction** | MergeAndSplit + restricted substitutions | [Restricted Substitutions](#restricted--custom-substitutions) |
-| **Large error bounds** (`k ≥ 5`) | WallBreaker with SCDAWG | [WallBreaker](#wallbreaker-large-error-bounds) |
+| **Large error bounds** (`$k \ge 5$`) | WallBreaker with SCDAWG | [WallBreaker](#wallbreaker-large-error-bounds) |
 | **Substring / infix fuzzy search** | SuffixAutomaton / SCDAWG | [Dictionary Types](#dictionary-types) |
 | **Persistent / mmap dictionaries** | Memory-mapped ARTrie | [Dictionary Types](#dictionary-types) |
 | **Language-model composition** | WFST adapters (`duallity` crate) | [WFST Integration](#wfst-integration) |
@@ -170,8 +170,8 @@ Built for concurrent workloads from the ground up. **All dictionary types are `S
 
 | Operation | Semantics |
 |-----------|-----------|
-| **Query / Contains** | Concurrent; lock-free on static dicts & `DynamicDawgU64` (atomics), reader-lock (`RwLock`) on the other dynamic dicts |
-| **Insert / Remove** (dynamic dicts) | Atomic; lock-free on `DynamicDawgU64`, writer-exclusive on the `RwLock`-backed dicts |
+| **Query / Contains** | Concurrent and **lock-free** on every backend — static dicts read immutable arrays, dynamic dicts load an `ArcSwap` snapshot; a reader never blocks on a writer |
+| **Insert / Remove** (dynamic dicts) | **Lock-free**: writers publish new state by an atomic pointer swap / `compare_exchange` CAS, never excluding readers |
 
 ```rust
 use std::thread;
@@ -230,7 +230,7 @@ Backends come in an **in-memory** family and a **disk-persisted** (durable, memo
 
 | Dictionary | Best for | Characteristics |
 |------------|----------|-----------------|
-| **DoubleArrayTrie** [[11]](#references) | static ASCII dictionaries | `𝒪(1)` per transition, fastest queries; read-only after build (the only static backend) |
+| **DoubleArrayTrie** [[11]](#references) | static ASCII dictionaries | `$\mathcal{O}(1)$` per transition, fastest queries; read-only after build (the only static backend) |
 | **DynamicDawg** [[8]](#references) | dynamic ASCII dictionaries | atomic insert/remove, SIMD + Bloom-filter pruning (RwLock) |
 | **DynamicDawgU64** | large 64-bit label spaces | identifiers, hashes, compound keys; lock-free reads (ArcSwap) |
 | **SuffixAutomaton** | substring / infix search | match a pattern anywhere within terms |
@@ -245,7 +245,7 @@ Each has a `*Char` Unicode counterpart. **`DoubleArrayTrie` is the only static b
 
 ```rust
 use liblevenshtein::prelude::*;
-use libdictenstein::double_array_trie_char::DoubleArrayTrieChar;   // Unicode (4-byte) variant
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;   // Unicode (4-byte) variant
 
 let ascii = DoubleArrayTrie::from_terms(vec!["hello", "world"]);
 let unicode: DoubleArrayTrieChar = DoubleArrayTrieChar::from_terms(vec!["café", "naïve", "中文"]);
@@ -315,7 +315,7 @@ let merge_split   = Transducer::new(dict,        Algorithm::MergeAndSplit);  // 
 
 ### How the automaton transitions (literate pseudocode)
 
-A state is a **set of positions** `⟨i, e⟩` (`i` chars of `W` matched, `e` errors spent). Reading a candidate symbol `x` advances every position in lock-step; the four elementary edits are exactly the colored edges below.
+A state is a **set of positions** `$\langle i, e\rangle$` (`$i$` chars of `$W$` matched, `$e$` errors spent). Reading a candidate symbol `$x$` advances every position in lock-step; the four elementary edits are exactly the colored edges below.
 
 ![Levenshtein NFA for W = "ab" with k = 1, with match/insert/substitute/delete edges color-coded.](docs/diagrams/automata/levenshtein-nfa.svg)
 
@@ -337,7 +337,7 @@ transition(State, x):
 #   (a position reachable with fewer errors dominates nearby costlier ones)
 ```
 
-Accept when some position reaches `i = ∣W∣`; that position's `e` is the match distance. Because the update depends only on `χ`, one fixed transition rule (independent of `W`) serves every query. This crate **simulates** the deterministic Levenshtein automaton's states — reduced sets of positions, kept minimal by subsumption — directly during the dictionary walk, never materializing a standalone automaton: this is Schulz & Mihov's *imitation* method [[1]](#references). The pseudocode above *is* that simulation. (A separate eager `universal` automaton, and the bit-vector *universal* construction of Mitankin et al. [[2]](#references), are alternatives — not the default `query` path.)
+Accept when some position reaches `$i = \lvert W\rvert$`; that position's `$e$` is the match distance. Because the update depends only on `$\chi$`, one fixed transition rule (independent of `$W$`) serves every query. This crate **simulates** the deterministic Levenshtein automaton's states — reduced sets of positions, kept minimal by subsumption — directly during the dictionary walk, never materializing a standalone automaton: this is Schulz & Mihov's *imitation* method [[1]](#references). The pseudocode above *is* that simulation. (A separate eager `universal` automaton, and the bit-vector *universal* construction of Mitankin et al. [[2]](#references), are alternatives — not the default `query` path.)
 
 ### Query methods
 
@@ -452,16 +452,17 @@ Plug the weights into a transducer's substitution cost via `ArticulatoryCosts::w
 
 ## Time Series (Move–Split–Merge)
 
-**MSM** [[10]](#references) is a metric for real-valued sequences built from three operations: **Move** a value (cost `∣Δ∣`), **Split** one element into two equal copies, and **Merge** two equal adjacent elements (Split/Merge share a configurable cost `c`). Unlike DTW it is a true metric (it obeys the triangle inequality), and it is robust to temporal misalignment. The cost obeys the recurrence
+**MSM** [[10]](#references) is a metric for real-valued sequences built from three operations: **Move** a value (cost `$\lvert \Delta\rvert$`), **Split** one element into two equal copies, and **Merge** two equal adjacent elements (Split/Merge share a configurable cost `$c$`). Unlike DTW it is a true metric (it obeys the triangle inequality), and it is robust to temporal misalignment. The cost obeys the recurrence
 
-```text
-Cost(i, j) = min(
-    Cost(i−1, j−1) + ∣xᵢ − yⱼ∣,                  # Move
-    Cost(i−1, j  ) + splitmerge(xᵢ, xᵢ₋₁, yⱼ),   # Split/Merge on X
-    Cost(i,   j−1) + splitmerge(yⱼ, yⱼ₋₁, xᵢ) )  # Split/Merge on Y
+```math
+\mathrm{Cost}(i, j) = \min \begin{cases}
+  \mathrm{Cost}(i-1, j-1) + \lvert x_i - y_j\rvert & \text{(Move)} \\
+  \mathrm{Cost}(i-1, j) + \mathrm{splitmerge}(x_i, x_{i-1}, y_j) & \text{(Split/Merge on } X\text{)} \\
+  \mathrm{Cost}(i, j-1) + \mathrm{splitmerge}(y_j, y_{j-1}, x_i) & \text{(Split/Merge on } Y\text{)}
+\end{cases}
 ```
 
-where `splitmerge(a, b, c) = c` when `a` lies between `b` and `c`, else `c + min(∣a−b∣, ∣a−c∣)`.
+where `$\mathrm{splitmerge}(a, b, c) = c$` when `$a$` lies between `$b$` and `$c$`, else `$c + \min(\lvert a-b\rvert, \lvert a-c\rvert)$`.
 
 **`MsmTransducer`** indexes a set of reference series in a *quantized trie* and answers **exact** range and `k`-NN queries. Non-empty queries walk the trie with an *interval-relaxed* MSM dynamic program; empty queries use the exact empty-series branch directly. Its column lower bounds are admissible — so no true neighbor within the threshold is ever pruned — and surviving candidates are re-scored at full precision:
 
@@ -511,7 +512,7 @@ and
 
 ## WallBreaker (Large Error Bounds)
 
-A plain Levenshtein automaton hits a **wall** at large `k`: the first `k` steps must explore *every* prefix of length `≤ k`, regardless of the data. At `k = 16` that is ruinous. **WallBreaker** sidesteps it with the **pigeonhole principle**.
+A plain Levenshtein automaton hits a **wall** at large `$k$`: the first `$k$` steps must explore *every* prefix of length `$\le k$`, regardless of the data. At `$k = 16$` that is ruinous. **WallBreaker** sidesteps it with the **pigeonhole principle**.
 
 ![WallBreaker pigeonhole filtering: split the pattern into k+1 pieces, at least one is error-free, locate it exactly in the SCDAWG, then extend and verify.](docs/diagrams/automata/wallbreaker-pigeonhole.svg)
 
@@ -527,13 +528,13 @@ wallbreaker(P, k, scdawg):
   return dedup(results)
 ```
 
-**Why `p` pieces?** Spread `≤ k` edits across `p` disjoint pieces. A Standard edit corrupts at most **one** piece, so `k + 1` pieces guarantee a survivor that matches exactly; a transposition or merge/split can straddle a boundary and corrupt **two**, needing `2k + 1`. These bounds are proved in Coq/Rocq (`WallBreakerPigeonhole.v`).
+**Why `$p$` pieces?** Spread `$\le k$` edits across `$p$` disjoint pieces. A Standard edit corrupts at most **one** piece, so `$k + 1$` pieces guarantee a survivor that matches exactly; a transposition or merge/split can straddle a boundary and corrupt **two**, needing `$2k + 1$`. These bounds are proved in Coq/Rocq (`WallBreakerPigeonhole.v`).
 
 | `Algorithm` | Minimum pieces | Reason |
 |-------------|---------------:|--------|
-| **Standard** | `k + 1` | each edit corrupts `≤ 1` piece |
-| **Transposition** | `2k + 1` | a swap can straddle a boundary |
-| **MergeAndSplit** | `2k + 1` | merge/split can span a boundary |
+| **Standard** | `$k + 1$` | each edit corrupts `$\le 1$` piece |
+| **Transposition** | `$2k + 1$` | a swap can straddle a boundary |
+| **MergeAndSplit** | `$2k + 1$` | merge/split can span a boundary |
 
 ```rust
 use liblevenshtein::prelude::*;
@@ -546,7 +547,7 @@ for result in wallbreaker.query("mispeled") {
 }
 ```
 
-For long patterns and large `k` this turns the exponential wall into a handful of `𝒪(∣piece∣)` substring lookups; the project's design analysis projects **~2,000–3,300×** over a plain transducer at `k ≈ 16` on a 750k-word lexicon ([decision matrix](docs/research/wallbreaker/decision-matrix.md)). Use the plain transducer for short queries and small `k` (`≤ 3`); reach for WallBreaker when `k ≥ 5` or patterns exceed ~50 characters.
+For long patterns and large `$k$` this turns the exponential wall into a handful of `$\mathcal{O}(\lvert piece\rvert)$` substring lookups; the project's design analysis projects **~2,000–3,300×** over a plain transducer at `$k \approx 16$` on a 750k-word lexicon ([decision matrix](docs/research/wallbreaker/decision-matrix.md)). Use the plain transducer for short queries and small `$k$` (`$\le 3$`); reach for WallBreaker when `$k \ge 5$` or patterns exceed ~50 characters.
 
 ---
 
@@ -697,8 +698,8 @@ Cache wrappers stack via the **decorator pattern** (innermost applied first); al
 | **Ttl** | age &gt; duration | session caches |
 | **Lru** / **Age** | least-recently-used / FIFO | general / fair |
 | **Lfu** | lowest access count | long-lived caches |
-| **CostAware** | `(age × size) / (hits + 1)` | balance regeneration cost vs. space |
-| **MemoryPressure** | `size / (hit_rate + 0.1)` | memory-constrained |
+| **CostAware** | `$(\text{age} \times \text{size}) / (\text{hits} + 1)$` | balance regeneration cost vs. space |
+| **MemoryPressure** | `$\text{size} / (\text{hit\_rate} + 0.1)$` | memory-constrained |
 
 ```rust
 use liblevenshtein::prelude::*;
@@ -737,10 +738,10 @@ let dict: DoubleArrayTrie = GzipSerializer::<BincodeSerializer>::deserialize(Fil
 
 | Operation | Complexity |
 |-----------|------------|
-| Per-query setup | `𝒪(∣W∣)` — linear in query length |
-| Per-symbol transition | `𝒪(k)` — constant for fixed `k` |
-| Traversal | `𝒪(∣D∣)` worst case — pruned to the near-match frontier in practice |
-| Space | `𝒪(∣W∣)` live states for fixed `k` |
+| Per-query setup | `$\mathcal{O}(\lvert W\rvert)$` — linear in query length |
+| Per-symbol transition | `$\mathcal{O}(k)$` — constant for fixed `$k$` |
+| Traversal | `$\mathcal{O}(\lvert D\rvert)$` worst case — pruned to the near-match frontier in practice |
+| Space | `$\mathcal{O}(\lvert W\rvert)$` live states for fixed `$k$` |
 
 Measured backend comparison — 10,000-word dictionary, AMD Ryzen Threadripper PRO 5975WX, `target-cpu=native`, 2025-10-28 ([full report](docs/benchmarks/BACKEND_PERFORMANCE_COMPARISON.md)):
 
@@ -754,25 +755,25 @@ For static dictionaries, `DoubleArrayTrie` is the clear leader (38–175× faste
 
 ### PathMap TrieRef rework (2026-06-11)
 
-The PathMap backend was rebuilt on pathmap's lock-free `TrieRef` node handles ([design](docs/design/pathmap-trieref-rework.md)): `root()` takes an `𝒪(1)` copy-on-write snapshot and traversal descends `𝒪(1)` per byte from the focus — no per-operation lock and no replay of the path from the root. Measured directly against the frozen pre-rework (path-replay) node, same bench (`backend_fuzzy_comparison`, `Standard`, `taskset -c 2`, sub-1% CIs):
+The PathMap backend was rebuilt on pathmap's lock-free `TrieRef` node handles ([design](docs/design/pathmap-trieref-rework.md)): `root()` takes an `$\mathcal{O}(1)$` copy-on-write snapshot and traversal descends `$\mathcal{O}(1)$` per byte from the focus — no per-operation lock and no replay of the path from the root. Measured directly against the frozen pre-rework (path-replay) node, same bench (`backend_fuzzy_comparison`, `Standard`, `taskset -c 2`, sub-1% CIs):
 
 | `Standard` | old PathMap | **new PathMap** | speedup | new vs `DynamicDawg` |
 |------------|------------:|----------------:|--------:|---------------------:|
 | `k=1` | 4.77 ms | **3.17 ms** | 1.5× | 1.01× |
 | `k=2` | 45.7 ms | **28.8 ms** | 1.6× | 1.00× |
 
-The rework yields a **≈1.5–1.6× full-query speedup** and **closes the gap to `DynamicDawg` from ≈1.5× to ≈1.0×** — PathMap is now on par with the dynamic DAWG (`DoubleArrayTrie` stays the static-dictionary leader for read-only sets). Subtracting the backend-independent automaton floor (every backend shares the `Transducer`; `DoubleArrayTrie` ≈ floor), the node cost the rework *actually controls* drops **2.27×** (2.86 → 1.26 ms at `k=1`, now ≈ DynamicDawg's node); the full-query figure is that gain diluted by the ~1.9 ms shared floor.
+The rework yields a **`$\approx$`1.5–1.6× full-query speedup** and **closes the gap to `DynamicDawg` from `$\approx$`1.5× to `$\approx$`1.0×** — PathMap is now on par with the dynamic DAWG (`DoubleArrayTrie` stays the static-dictionary leader for read-only sets). Subtracting the backend-independent automaton floor (every backend shares the `Transducer`; `DoubleArrayTrie` `$\approx$` floor), the node cost the rework *actually controls* drops **2.27×** (2.86 → 1.26 ms at `$k=1$`, now `$\approx$` DynamicDawg's node); the full-query figure is that gain diluted by the ~1.9 ms shared floor.
 
-Node-level micro-benchmarks (`pathmap_node_ops_benchmark`, run on **both** trees for a direct pre/post) pin down *why*. The first pass used compression-degenerate inputs (a single `"a"`-chain that pathmap path-compresses, plus root-depth nodes) and read flat/below-threshold — so the experiments were rebuilt with **comb** structures (a branch at every level) that defeat compression and reach the depth regime the hypotheses target. There the old path-replay node is `𝒪(depth)` — it re-walks the path from the root, per operation and (for `edges()`) per child — while the TrieRef node is `𝒪(1)` from its focus:
+Node-level micro-benchmarks (`pathmap_node_ops_benchmark`, run on **both** trees for a direct pre/post) pin down *why*. The first pass used compression-degenerate inputs (a single `"a"`-chain that pathmap path-compresses, plus root-depth nodes) and read flat/below-threshold — so the experiments were rebuilt with **comb** structures (a branch at every level) that defeat compression and reach the depth regime the hypotheses target. There the old path-replay node is `$\mathcal{O}(\text{depth})$` — it re-walks the path from the root, per operation and (for `edges()`) per child — while the TrieRef node is `$\mathcal{O}(1)$` from its focus:
 
 | node op (branching / deep) | old (path-replay) | new (TrieRef) | speedup |
 |----------------------------|------------------:|--------------:|--------:|
-| `transition()` @ depth 40 | 182 ns (`𝒪(depth)`) | 27 ns (`𝒪(1)`) | **6.7×** |
-| `edges()` @ depth 32, fanout 8 | 1632 ns (`𝒪(w·depth)`) | 185 ns (`𝒪(w)`) | **8.8×** |
-| char `edges()` @ depth 32, width 8 | 4.78 µs (`𝒪(w·depth)`) | 914 ns (`𝒪(w)`) | **5.2×** |
+| `transition()` @ depth 40 | 182 ns (`$\mathcal{O}(\text{depth})$`) | 27 ns (`$\mathcal{O}(1)$`) | **6.7×** |
+| `edges()` @ depth 32, fanout 8 | 1632 ns (`$\mathcal{O}(w \cdot \text{depth})$`) | 185 ns (`$\mathcal{O}(w)$`) | **8.8×** |
+| char `edges()` @ depth 32, width 8 | 4.78 µs (`$\mathcal{O}(w \cdot \text{depth})$`) | 914 ns (`$\mathcal{O}(w)$`) | **5.2×** |
 | `root()` snapshot | 7.6 ns | 47 ns | 0.16× |
 
-The `root()` row is the rework's lone regression — an `𝒪(1)` copy-on-write snapshot taken once per query, the one-time price that makes every subsequent op lock-free (≪ 1 µs, < 0.01 % of a query). The two readings are complementary: on **compressed / shallow** structure the rework is a 1.4–2.4× constant-factor win (lock + per-op zipper re-creation removed); on **branching / deep** structure it is an unbounded `𝒪(depth)` win; a real dictionary is the blend that yields the 2.27× node-overhead reduction above. The rework also lets a caller fuzzy-query a borrowed or `𝒪(1)`-snapshotted `PathMap` (e.g. MORK's `Space.btm`) with no copy and no lock — see [`examples/mork_fuzzy_query.rs`](examples/mork_fuzzy_query.rs). Full ledger: [`docs/benchmarks/pathmap-trieref-rework.md`](docs/benchmarks/pathmap-trieref-rework.md).
+The `root()` row is the rework's lone regression — an `$\mathcal{O}(1)$` copy-on-write snapshot taken once per query, the one-time price that makes every subsequent op lock-free (`$\ll 1$` µs, `$< 0.01\%$` of a query). The two readings are complementary: on **compressed / shallow** structure the rework is a 1.4–2.4× constant-factor win (lock + per-op zipper re-creation removed); on **branching / deep** structure it is an unbounded `$\mathcal{O}(\text{depth})$` win; a real dictionary is the blend that yields the 2.27× node-overhead reduction above. The rework also lets a caller fuzzy-query a borrowed or `$\mathcal{O}(1)$`-snapshotted `PathMap` (e.g. MORK's `Space.btm`) with no copy and no lock — see [`examples/mork_fuzzy_query.rs`](examples/mork_fuzzy_query.rs). Full ledger: [`docs/benchmarks/pathmap-trieref-rework.md`](docs/benchmarks/pathmap-trieref-rework.md).
 
 ---
 

@@ -162,10 +162,10 @@ The behavioral modalities from OSLF:
 
 | Modality | Symbol | Meaning |
 |----------|--------|---------|
-| Eventually | ◇φ | φ holds at some reachable state |
-| Always | □φ | φ holds at all reachable states |
-| Can step | F!(φ) | Exists transition to state where φ |
-| Must step | F*(φ) | All transitions lead to state where φ |
+| Eventually | ◇`$\varphi$` | `$\varphi$` holds at some reachable state |
+| Always | □`$\varphi$` | `$\varphi$` holds at all reachable states |
+| Can step | F!`$(\varphi )$` |  Exists transition to state where `$\varphi$` | 
+| Must step  | `$F*(\varphi )$` |  All transitions lead to state where `$\varphi$` | 
 
 ```metta
 ; Eventually: least fixed point of possibility

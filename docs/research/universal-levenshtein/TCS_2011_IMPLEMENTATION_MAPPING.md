@@ -22,14 +22,14 @@ This document provides a concrete mapping between theoretical concepts from the 
 | Paper Concept | Section | Lazy Code | Universal Code |
 |---------------|---------|-----------|----------------|
 | Bounded Diagonal Property | [§1](#1-bounded-diagonal-property-theorem-82) | ✅ Applied | ✅ Applied |
-| Operation Types (t^x, t^y, t^w) | [§2](#2-generalized-operation-types) | ⚠️ Hardcoded | ⚠️ Hardcoded |
-| Subsumption (<^χ_s) | [§3](#3-subsumption-relation) | ✅ Implemented | ✅ Implemented |
-| State Anti-chain (⊔) | [§4](#4-anti-chain-property--join-operator) | ✅ Implemented | ✅ Implemented |
+| Operation Types (`$t^x$`, `$t^y$`, `$t^w$`) | [§2](#2-generalized-operation-types) | ⚠️ Hardcoded | ⚠️ Hardcoded |
+| Subsumption `$(<^\chi _s)$` | [§3](#3-subsumption-relation) | ✅ Implemented | ✅ Implemented |
+| State Anti-chain `$(\sqcup )$` | [§4](#4-anti-chain-property--join-operator) | ✅ Implemented | ✅ Implemented |
 | Matrix-State Construction | [§5](#5-matrix-state-construction) | ❌ N/A | ✅ Implemented |
-| Preprocessing χ[Op,r] | [§6](#6-preprocessing-function-χopr) | ❌ N/A | ✅ Implemented |
-| Restricted Substitutions (op^r) | [§7](#7-restricted-substitutions-opr) | 🚧 In Progress | 🚧 In Progress |
+| Preprocessing `$\chi[\text{Op},r]$` | [§6](#6-preprocessing-function) | ❌ N/A | ✅ Implemented |
+| Restricted Substitutions (`$\text{op}^r$`) | [§7](#7-restricted-substitutions) | 🚧 In Progress | 🚧 In Progress |
 | Diagonal Crossing (f_n, m_n) | [§8](#8-diagonal-crossing-f_n-m_n-rm) | ❌ N/A | ✅ Consumption-aware |
-| Characteristic Vector β | [§9](#9-characteristic-vector-β) | ❌ N/A | ✅ Implemented |
+| Characteristic Vector `$\beta$` | [§9](#9-characteristic-vector) | ❌ N/A | ✅ Implemented |
 
 **Legend**:
 - ✅ Fully implemented
@@ -46,12 +46,12 @@ This document provides a concrete mapping between theoretical concepts from the 
 **Theorem 8.2**: The following are equivalent:
 1. R[Op,r] has bounded length difference
 2. There exists constant c such that every Op instance satisfies c-bounded diagonal property
-3. Every zero-weighted type in Υ is length preserving
+3. Every zero-weighted type in `$\Upsilon$` is length preserving
 
 For Standard Levenshtein (n=2):
 - Diagonal bound: c = 2
 - Band width: 2c + 1 = 5 diagonals
-- Typical state size: ≤ 8 positions (with subsumption)
+- Typical state size: `$\le  8$` positions (with subsumption)
 
 ### Lazy Implementation
 
@@ -98,7 +98,7 @@ pub struct UniversalState<V: PositionVariant> {
 }
 ```
 
-**Why It Applies**: Universal automata use abstract positions `I + offset#errors` which also satisfy the bounded diagonal property, yielding `𝒪(n²)` state space independent of word length.
+**Why It Applies**: Universal automata use abstract positions `I + offset#errors` which also satisfy the bounded diagonal property, yielding `$\mathcal{O}(n^{2})$` state space independent of word length.
 
 ---
 
@@ -106,7 +106,7 @@ pub struct UniversalState<V: PositionVariant> {
 
 ### Paper Definition (Section 3, Pages 2341-2342)
 
-**Operation Type**: t = ⟨t^x, t^y, t^w⟩
+**Operation Type**: `$t = \langle t^x, t^y, t^w\rangle$`
 
 Where:
 - `t^x`: Characters consumed from first word (|u|)
@@ -142,7 +142,7 @@ pub enum Algorithm {
 
 **Status**: ⚠️ **Hardcoded variants** - not generalized to support arbitrary operation types
 
-**Gap**: No representation of `⟨t^x, t^y, t^w⟩` triples. Operations are implicit in the transition logic rather than data-driven.
+**Gap**: No representation of `$\langle t^x, t^y, t^w\rangle$` triples. Operations are implicit in the transition logic rather than data-driven.
 
 **Transition Logic** (implicit operations): `src/transducer/lazy.rs:200-350`
 
@@ -181,7 +181,7 @@ pub struct MergeAndSplit;
 
 **Status**: ⚠️ **Hardcoded variants** via phantom types
 
-**Gap**: No explicit `⟨t^x, t^y, t^w⟩` representation. Operations encoded implicitly in successor generation logic.
+**Gap**: No explicit `$\langle t^x, t^y, t^w\rangle$` representation. Operations encoded implicitly in successor generation logic.
 
 **Successor Logic** (implicit operations): `src/transducer/universal/position.rs:200-400`
 
@@ -246,7 +246,9 @@ impl OperationSet {
 
 ---
 
-## 3. Subsumption Relation (<^χ_s)
+## 3. Subsumption Relation
+
+*Notation:* the subsumption relation is written `$<^\chi _s$`.
 
 ### Paper Definition (Implicit in state minimization)
 
@@ -358,30 +360,32 @@ pub fn add_position(&mut self, pos: UniversalPosition<V>) {
 }
 ```
 
-**Status**: ✅ **Fully implemented** - Online subsumption via ⊔ operator
+**Status**: ✅ **Fully implemented** - Online subsumption via `$\sqcup$` operator
 
 ### Comparison
 
 | Aspect | Lazy | Universal |
 |--------|------|-----------|
-| **Subsumption Logic** | Distance-based (`\|idx₁ - idx₂\| ≤ err_diff`) | Offset/error comparison |
-| **State Maintenance** | Online anti-chain | Online anti-chain (⊔ operator) |
-| **Complexity** | `𝒪(kn)` typical, k << n | `𝒪(kn)` typical, k << n |
+| **Subsumption Logic** | Distance-based (`$\|\text{idx}_{1} - \text{idx}_{2}\| \le  \text{err}_\text{diff}$`) | Offset/error comparison |
+| **State Maintenance** | Online anti-chain | Online anti-chain `$(\sqcup$` operator) |
+| **Complexity** | `$\mathcal{O}(\text{kn})$` typical, k << n | `$\mathcal{O}(\text{kn})$` typical, k << n |
 | **Performance** | 3.3× faster than batch | Comparable |
 
 **Key Insight**: Both implementations use **online subsumption** (check during insertion) rather than batch (insert all, then prune). This is a significant optimization validated by benchmarks.
 
 ---
 
-## 4. Anti-chain Property & Join Operator (⊔)
+## 4. Anti-chain Property & Join Operator
+
+*Notation:* the join operator is written `$\sqcup$`.
 
 ### Paper Definition (Definition 15, Page 38)
 
 **Anti-chain Property**: For all positions p₁, p₂ in state Q:
-- p₁ ⊀^χ_s p₂ (p₁ does not subsume p₂)
-- p₂ ⊀^χ_s p₁ (p₂ does not subsume p₁)
+`$- p_{1} \nprec ^\chi _s p_{2} (p_{1}$` does not subsume p₂)
+`$- p_{2} \nprec ^\chi _s p_{1} (p_{2}$` does not subsume p₁)
 
-**Join Operator (⊔)**: Subsumption closure when adding position to state:
+**Join Operator `$(\sqcup )**$`: Subsumption closure when adding position to state:
 1. Remove all positions subsumed by new position
 2. Add new position if not subsumed by existing positions
 
@@ -409,7 +413,7 @@ pub fn insert(&mut self, position: Position, algorithm: Algorithm, query_length:
 }
 ```
 
-**Status**: ✅ Implicit ⊔ operator via insert logic
+**Status**: ✅ Implicit `$\sqcup$` operator via insert logic
 
 ### Universal Implementation
 
@@ -437,11 +441,11 @@ pub fn add_position(&mut self, pos: UniversalPosition<V>) {
 }
 ```
 
-**Status**: ✅ Explicit ⊔ operator implementation
+**Status**: ✅ Explicit `$\sqcup$` operator implementation
 
 ### Comparison
 
-Both implementations are **functionally identical** — they maintain the anti-chain property via online subsumption. The universal version has explicit documentation referencing the paper's ⊔ operator, while the lazy version achieves the same result with different naming.
+Both implementations are **functionally identical** — they maintain the anti-chain property via online subsumption. The universal version has explicit documentation referencing the paper's `$\sqcup$` operator, while the lazy version achieves the same result with different naming.
 
 ---
 
@@ -524,14 +528,16 @@ pub fn initial(max_distance: u8) -> Self {
 
 ---
 
-## 6. Preprocessing Function χ[Op,r]
+## 6. Preprocessing Function
+
+*Notation:* the preprocessing (characteristic-vector) function is written `$\chi[\text{Op},r]$`.
 
 ### Paper Definition (Section 4, Pages 2342-2343)
 
-**Preprocessing Function**: χ[Op,r] computes characteristic information for operations:
+**Preprocessing Function**: `$\chi$`[Op,r] computes characteristic information for operations:
 - Maps characters to operation applicability
 - Encodes which operations can apply at each position
-- Used to construct characteristic vectors β(a, w)
+- Used to construct characteristic vectors `$\beta (a, w)$`
 
 **Purpose**: Enables alphabet-independent automaton construction — precompute all character relationships once, then use for any word pair.
 
@@ -614,18 +620,20 @@ impl<V: PositionVariant> UniversalPosition<V> {
 
 ---
 
-## 7. Restricted Substitutions (op^r)
+## 7. Restricted Substitutions
+
+*Notation:* a restricted substitution's replacement relation is written `$\text{op}^r$`.
 
 ### Paper Definition (Section 3.2, Page 2342)
 
-**Restricted Operation**: op = ⟨op^x, op^y, op^r, op^w⟩
+**Restricted Operation**: op `$= \langle\text{op}^x$`, `$\text{op}^y$`, `$\text{op}^r$`, `$\text{op}^w\rangle$`
 
-Where `op^r ⊆ Σ^{op^x} × Σ^{op^y}` is the allowed replacement relation.
+Where `$\text{op}^r \subseteq  \Sigma ^{\text{op}^x} \times  \Sigma ^{\text{op}^y}$` is the allowed replacement relation.
 
 **Examples**:
-- **Keyboard proximity**: op^r = {(q,w), (q,a), (w,e), ...}
-- **OCR confusion**: op^r = {(O,0), (I,1), (l,I), ...}
-- **Phonetic similarity**: op^r = {(f,ph), (c,k), (c,s), ...}
+- **Keyboard proximity**: `$\text{op}^r$` = {(q,w), (q,a), (w,e), ...}
+- **OCR confusion**: `$\text{op}^r$` = {(O,0), (I,1), (l,I), ...}
+- **Phonetic similarity**: `$\text{op}^r$` = {(f,ph), (c,k), (c,s), ...}
 
 ### Lazy Implementation
 
@@ -736,7 +744,7 @@ fn successors_with_policy<P: SubstitutionPolicy>(
 
 ### Comparison
 
-Both implementations share the **same underlying `SubstitutionSet` data structure**, which directly corresponds to the paper's op^r concept. The main difference is:
+Both implementations share the **same underlying `SubstitutionSet` data structure**, which directly corresponds to the paper's `$\text{op}^r$` concept. The main difference is:
 - **Lazy**: Direct character comparison at transition time
 - **Universal**: Policy check via characteristic vector
 
@@ -843,17 +851,19 @@ With explicit `length_diff`, diagonal crossing can be correctly detected:
 
 ---
 
-## 9. Characteristic Vector (β)
+## 9. Characteristic Vector
+
+*Notation:* the characteristic vector is written `$\beta$`.
 
 ### Paper Definition (Section 4, Page 2342)
 
-**Characteristic Vector**: β(a, w) is a bit vector where:
-- β(a, w)[i] = 1 if w[i] = a
-- β(a, w)[i] = 0 otherwise
+**Characteristic Vector**: `$\beta (a, w)$` is a bit vector where:
+`$- \beta (a, w)[i] = 1$` if w[i] = a
+`$- \beta (a, w)[i] = 0$` otherwise
 
-**Example**: β('b', "abc") = [0, 1, 0] = "010"
+**Example**: `$\beta ('b',$` "abc") = [0, 1, 0] = "010"
 
-**Purpose**: Abstracts character matching for alphabet-independent automaton construction. Universal automaton uses β instead of direct character comparison.
+**Purpose**: Abstracts character matching for alphabet-independent automaton construction. Universal automaton uses `$\beta$` instead of direct character comparison.
 
 ### Lazy Implementation
 
@@ -946,7 +956,7 @@ impl<V: PositionVariant> UniversalPosition<V> {
 
 | Aspect | Lazy | Universal |
 |--------|------|-----------|
-| **Character Encoding** | Direct comparison | Bit vector (β) |
+| **Character Encoding** | Direct comparison | Bit vector `$(\beta )$` | 
 | **Alphabet Dependence** | Word-specific | Alphabet-independent |
 | **Preprocessing** | None needed | Required for each character |
 | **Purpose** | Runtime matching | Precomputed matching |
@@ -962,9 +972,9 @@ impl<V: PositionVariant> UniversalPosition<V> {
 | Bounded Diagonal Property | ✅ Applied | ✅ Applied | Complete |
 | Operation Types | ⚠️ Hardcoded | ⚠️ Hardcoded | Medium |
 | Subsumption | ✅ Implemented | ✅ Implemented | Complete |
-| Anti-chain (⊔) | ✅ Implemented | ✅ Implemented | Complete |
+| Anti-chain `$(\sqcup )$` |  ✅ Implemented | ✅ Implemented | Complete |
 | Matrix-State | ❌ N/A | ✅ Implemented | Complete |
-| Preprocessing χ | ❌ N/A | ✅ Implemented | Complete |
+| Preprocessing `$\chi$` |  ❌ N/A | ✅ Implemented | Complete |
 | Restricted Substitutions | 🚧 In Progress | 🚧 In Progress | High |
 | Diagonal Crossing | ❌ N/A | ✅ Consumption-aware | Complete |
 | Characteristic Vector | ❌ N/A | ✅ Implemented | Complete |
@@ -1013,7 +1023,7 @@ Based on the implementation mapping analysis:
 
 ### Priority 3: Design Generalized Operations (Medium)
 **New File**: `docs/design/generalized-operations.md`
-- Define `OperationType` struct matching paper's ⟨t^x, t^y, t^w⟩
+- Define `OperationType` struct matching paper's `$\langle t^x, t^y, t^w\rangle$`
 - Design API for custom operation sets
 - Plan migration path from hardcoded `Algorithm` enum
 - Consider impact on both lazy and universal implementations
@@ -1022,7 +1032,7 @@ Based on the implementation mapping analysis:
 **New Files**: Test files validating paper concepts
 - Test bounded diagonal property holds for various n values
 - Test subsumption matches paper's definition
-- Test characteristic vector encoding matches β definition
+- Test characteristic vector encoding matches `$\beta$` definition
 - Validate against paper's examples (Section 11)
 
 ---

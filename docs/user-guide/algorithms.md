@@ -127,18 +127,20 @@ for candidate in transducer.query_with_distance("te st", 2) {
 
 ### Time Complexity
 
-All algorithms have similar time complexity:
-- **Query time**: `𝒪(n × m × k)`, where:
-  - `n` = query term length
-  - `m` = dictionary size
-  - `k` = maximum distance
-- **In practice**: Much faster due to early termination and pruning
+All algorithms share the same asymptotics, differing only by small constant factors:
+- **Worst-case query time**: `$\mathcal{O}(n \times m \times k)$`, where:
+  - `$n$` = query term length
+  - `$m$` = dictionary size (number of edges)
+  - `$k$` = maximum distance
+- **In practice**: far faster — the automaton is walked in lock-step with the
+  dictionary, so work tracks the explored near-match frontier (early termination
+  and subsumption pruning), not the full dictionary size `$m$`.
 
 ### Space Complexity
 
-- **Standard**: `𝒪(n × k)` state space
-- **Transposition**: `𝒪(n × k)` state space with transposition tracking
-- **Merge and Split**: `𝒪(n × k)` state space with merge/split tracking
+- **Standard**: `$\mathcal{O}(n \times k)$` state space
+- **Transposition**: `$\mathcal{O}(n \times k)$` state space with transposition tracking
+- **Merge and Split**: `$\mathcal{O}(n \times k)$` state space with merge/split tracking
 
 ### Benchmark Comparison
 
@@ -221,7 +223,7 @@ Choosing the right maximum distance (`max_distance`) is crucial:
 
 ### Rule of Thumb
 
-`max_distance ≈ word_length / 4`
+`$\text{max\_distance} \approx \text{word\_length} / 4$`
 
 Examples:
 - 4-letter word: distance 1

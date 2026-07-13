@@ -27,14 +27,14 @@ Two concrete problems followed from this:
 - **Path-replay pathology.** The old `PathMapNode` stored
   `{ Arc<RwLock<PathMap>>, Arc<Vec<u8>> path }` and, on **every** operation,
   acquired a read lock and called `read_zipper_at_path(path)` — re-walking the
-  whole path from the root. Walking a term of length `n` cost `𝒪(n²)` byte-steps
+  whole path from the root. Walking a term of length `n` cost `$\mathcal{O}(n^{2})$` byte-steps
   plus `n` lock round-trips; `edges()` additionally scanned all 256 possible
   child bytes and re-validated each survivor with another lock + replay. This is
   why the PathMap backend benched markedly slower than `DynamicDawg`.
 
 ## 2. The primitive — `TrieRef`
 
-`TrieRef` (pathmap ≥ 0.2.2) is a cheap, lock-free, `Clone`/`Send`/`Sync`
+`TrieRef` (pathmap `$\ge  0.2.2)$` is a cheap, lock-free, `Clone`/`Send`/`Sync`
 value-type handle on a trie **node**:
 
 - `TrieRefOwned<V>` — owns its focus node by refcount (clone = a bump); no
@@ -43,9 +43,9 @@ value-type handle on a trie **node**:
 
 Both expose `path_exists`, `is_val`, `child_count`, `child_mask` (via `Zipper`),
 `val` (via `ZipperValues`), and `trie_ref_at_path` (via `ZipperReadOnlySubtries`)
-which descends **from the focus** in `𝒪(1)` per byte — no root replay, no lock.
+which descends **from the focus** in `$\mathcal{O}(1)$` per byte — no root replay, no lock.
 
-### Source-verified facts (pathmap 0.2.2 ⋂ 0.3.0)
+### Source-verified facts (pathmap `$0.2.2 \bigcap  0.3.0)$`
 
 - `TrieRefOwned<V>` / `TrieRefBorrowed<'a, V>` are `Send + Sync` for
   `V: Send + Sync` — `trait TrieNode: … + Send + Sync`, so `Arc<dyn TrieNode>`
@@ -57,10 +57,10 @@ which descends **from the focus** in `𝒪(1)` per byte — no root replay, no l
   `TrieRefBorrowed` directly.
 - `ByteMask::iter()` is a word-skipping iterator yielding `u8` (no 256-way scan).
 - `trie_ref_at_path` on a non-existent path **never panics**: a dangling
-  remainder ≤ 48 bytes (`MAX_NODE_KEY_BYTES`) is stored as a node key with
+  remainder `$\le  48$` bytes (`MAX_NODE_KEY_BYTES`) is stored as a node key with
   `path_exists() == false`; a longer remainder yields an invalid-sentinel ref
   (all ops return false/empty/`None`).
-- `PathMap::clone()` is `𝒪(1)` (root refcount bump); all writes go through
+- `PathMap::clone()` is `$\mathcal{O}(1)$` (root refcount bump); all writes go through
   `make_mut`, which copies shared nodes — a snapshot is never observed
   mid-mutation.
 - **No `'static`/`Send` obligation anywhere in the `Transducer` /
@@ -115,9 +115,14 @@ were private — no downstream breakage).
 
 `PathMapDictionary` / `PathMapDictionaryChar` keep their mutable API behind
 `Arc<RwLock>`, but `root()` now locks **once**, does `map.read().clone()` (an
-`𝒪(1)` CoW snapshot) and returns a `TrieRefNode`. Queries then run **lock-free**
+`$\mathcal{O}(1)$` CoW snapshot) and returns a `TrieRefNode`. Queries then run **lock-free**
 over a consistent snapshot. A new `snapshot()` method returns a
 `PathMapSnapshot`/`PathMapSnapshotChar`.
+
+> **Since superseded (2026-07).** `PathMapDictionary` has since replaced the `Arc<RwLock>`
+> mutable API with a fully lock-free `Arc<ArcSwap<PathMapState>>`: writes publish a new
+> state by an atomic pointer swap, so even the single `root()` lock described here is gone.
+> The `TrieRef`-based lock-free query path this rework introduced remains.
 
 **Snapshot-isolation semantics (documented, non-breaking).** A node/zipper binds
 to the trie at creation; in-flight traversals no longer observe concurrent
@@ -130,7 +135,7 @@ visibility (the concurrent test takes fresh roots and joins before asserting).
 
 | Type | Root handle | Construct | Lifetime |
 |···|···|···|···|
-| `PathMapSnapshot<V>` | `TrieRefOwned` | `𝒪(1)` CoW bump | owned |
+| `PathMapSnapshot<V>` | `TrieRefOwned` | `$\mathcal{O}(1)$` CoW bump | owned |
 | `PathMapRef<'a, V>` | `TrieRefBorrowed` | zero-copy borrow | `'a` |
 | `PathMapSnapshotChar<V>` / `PathMapRefChar<'a, V>` | … | … | … |
 
@@ -182,7 +187,7 @@ reference was rewritten to the real path (`super::sub::` within a family,
 `pathmap = { version = ">=0.2.2, <0.4", optional = true }` in both crates:
 publishable (resolves to 0.2.2 on crates.io today; 0.3.0 is local-only) and
 accepts `[patch.crates-io] pathmap = { path = "../PathMap" }` for local 0.3
-experiments. The code targets only the verified 0.2.2 ⋂ 0.3.0 API intersection.
+experiments. The code targets only the verified `$0.2.2 \bigcap  0.3.0$` API intersection.
 
 **0.3 portability — confirmed.** With the patch applied, both crates compile
 against local PathMap 0.3.0 with **0 API errors** (0.3 transitively requires
@@ -198,7 +203,7 @@ needed for normal in-crate builds). Patch removed after the check.
   not a layer that keeps the old flat paths alive. Replaced by updating every
   real reference instead.
 - **Keeping the live `Arc<RwLock<PathMap>>` per-operation lock model.** Rejected:
-  it is the source of both the plumbing friction and the `𝒪(n²)`-per-walk
+  it is the source of both the plumbing friction and the `$\mathcal{O}(n^{2})$`-per-walk
   path-replay cost. Snapshot isolation is strictly better-defined.
 
 ## 7. Validation

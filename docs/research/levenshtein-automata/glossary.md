@@ -20,23 +20,23 @@
 
 | Symbol | Meaning | Example |
 |--------|---------|---------|
-| **Σ** | Alphabet (set of characters) | {a, b, c, ..., z} |
-| **ε** | Empty string | "" |
-| **W, V, U** | Words/strings | "hello", "world" |
-| **\|W\|, w** | Length of word W | \|"hello"\| = 5 |
-| **W[i]** | Character at position i in W | "hello"[2] = 'l' |
-| **W[i:j]** | Substring from i to j | "hello"[1:3] = "el" |
-| **a, b, x, y** | Individual characters | 'h', 'e', 'l' |
+| **`$\Sigma$`** | Alphabet (set of characters) | {a, b, c, ..., z} |
+| **`$\varepsilon$`** | Empty string | "" |
+| **`$W, V, U$`** | Words/strings | "hello", "world" |
+| **`$\lvert W\rvert, w$`** | Length of word W | `$\lvert\text{"hello"}\rvert = 5$` |
+| **`$W[i]$`** | Character at position i in W | "hello"[2] = 'l' |
+| **`$W[i:j]$`** | Substring from i to j | "hello"[1:3] = "el" |
+| **`$a, b, x, y$`** | Individual characters | 'h', 'e', 'l' |
 
 ### Distance and Languages
 
 | Symbol | Meaning | Paper Section |
 |--------|---------|---------------|
-| **d_L(W,V)** | Levenshtein distance between W and V | Definition 2.0.1 |
-| **L_Lev(n,W)** | Set of all words within distance n from W | Definition 3.0.4 |
-| **LEV_n(W)** | Levenshtein automaton of degree n for W | Definition 4.0.28 |
-| **L(A)** | Language accepted by automaton A | Section 2 |
-| **L(π)** | Language accepted from position π | Proposition 4.0.31 |
+| **`$d_L(W,V)$`** | Levenshtein distance between W and V | Definition 2.0.1 |
+| **`$L_{\mathrm{Lev}}(n,W)$`** | Set of all words within distance n from W | Definition 3.0.4 |
+| **`$\mathrm{LEV}_n(W)$`** | Levenshtein automaton of degree n for W | Definition 4.0.28 |
+| **`$L(A)$`** | Language accepted by automaton A | Section 2 |
+| **`$L(\pi)$`** | Language accepted from position `$\pi$` | Proposition 4.0.31 |
 
 ### Positions and States
 
@@ -45,10 +45,10 @@
 | **i#e** | Position: index i, error count e | Definition 4.0.12 |
 | **i#e_t** | t-position (with transposition flag) | Definition 7.1.1 |
 | **i#e_s** | s-position (with merge/split flag) | Definition 8.1.1 |
-| **π, ρ** | Position variables | Throughout |
+`$| **\pi , \rho ** |$` Position variables | Throughout |
 | **M, N** | State variables (sets of positions) | Definition 4.0.18 |
-| **⊑** | Subsumption relation | Definition 4.0.15 |
-| **[π]↑e** | Raised position | Definition 4.0.26 |
+`$| **\sqsubseteq ** |$` Subsumption relation | Definition 4.0.15 |
+`$| **[\pi ]$`↑e** | Raised position | Definition 4.0.26 |
 | **[M]↑e** | Raised state | Definition 4.0.26 |
 
 ### Automata Components
@@ -59,29 +59,29 @@
 | **Q** | State set | Standard FSA notation |
 | **q₀** | Initial state | Standard FSA notation |
 | **F** | Set of final/accepting states | Standard FSA notation |
-| **δ** | Transition function (single position) | Definition 4.0.24 |
-| **Δ** | Transition function (state/set of positions) | Definition 4.0.28 |
-| **Δ_*^W** | Extended transition using table | Chapter 6 |
+`$| **\delta ** |$` Transition function (single position) | Definition 4.0.24 |
+`$| **\Delta ** |$` Transition function (state/set of positions) | Definition 4.0.28 |
+`$| **\Delta _*^W** |$` Extended transition using table | Chapter 6 |
 
 ### Characteristic Vectors and Profiles
 
 | Symbol | Meaning | Paper Section |
 |--------|---------|---------------|
-| **χ(x,V)** | Characteristic vector of x in V | Definition 4.0.10 |
+`$| **\chi (x,V)** |$` Characteristic vector of x in V | Definition 4.0.10 |
 | **Pr(U)** | Profile of word U | Definition 4.0.6 |
 | **Pr_k(U)** | k-profile of word U | Definition 4.0.8 |
-| **⟨b₁,...,b_k⟩** | Bit-vector notation | Throughout |
+`$| **\langle b_{1},...,b_k\rangle** |$` Bit-vector notation | Throughout |
 
 ### Operations
 
 | Symbol | Meaning | Example |
 |--------|---------|---------|
-| **⊔** | Join/union operation on states | M ⊔ N |
-| **∪** | Set union | A ∪ B |
-| **∩** | Set intersection | A ∩ B |
-| **×** | Cartesian product | Σ × Σ |
-| **⊆** | Subset relation | A ⊆ B |
-| **∈** | Element of | x ∈ Σ |
+`$| **\sqcup ** |$` Join/union operation on states `$| M \sqcup  N |$`
+`$| **\cup ** |$` Set union `$| A \cup  B |$`
+`$| **\cap ** |$` Set intersection `$| A \cap  B |$`
+| **×** | Cartesian product  | `$\Sigma  \times  \Sigma$` | 
+`$| **\subseteq ** |$` Subset relation `$| A \subseteq  B |$`
+`$| **\in ** |$` Element of `$| x \in  \Sigma  |$`
 
 ---
 
@@ -93,7 +93,7 @@
 
 **Acyclic** - An automaton with no cycles in its state graph. LEV_n(W) is always acyclic (Theorem 4.0.32).
 
-**Alphabet (Σ)** - The set of all possible characters in strings.
+**Alphabet `$(\Sigma )** -$` The set of all possible characters in strings.
 
 ### B
 
@@ -103,7 +103,7 @@
 
 ### C
 
-**Characteristic Vector χ(x,V)** - A bit-vector ⟨b₁,...,b_v⟩ where b_j = 1 if V[j] = x, otherwise 0.
+**Characteristic Vector `$\chi (x,V)** - A$` bit-vector `$\langle b_{1},...,b_v\rangle$` where b_j = 1 if V[j] = x, otherwise 0.
 - **Purpose**: Encodes where character x appears in word V
 - **Use**: Determines transition behavior in elementary transitions
 
@@ -117,7 +117,7 @@
 
 **Deterministic** - An automaton where each state has at most one outgoing transition for each input symbol.
 
-**Dictionary Automaton (A^D)** - Finite state automaton representing a dictionary of valid words.
+**Dictionary Automaton (`$A^D$`)** - Finite state automaton representing a dictionary of valid words.
 
 **Distance** - See Levenshtein Distance.
 
@@ -129,7 +129,7 @@
 - **Standard**: insertion, deletion, substitution
 - **Extended**: transposition, merge, split
 
-**Elementary Transition δ(π,x)** - Transition from a single position π under input character x.
+**Elementary Transition `$\delta (\pi ,x)** -$` Transition from a single position `$\pi$` under input character x.
 - **Defined in**: Table 4.1 (standard), Table 7.1 (transposition), Table 8.1 (merge/split)
 
 **Error Bound (n)** - Maximum allowed Levenshtein distance for matching.
@@ -141,7 +141,7 @@
 **Final State** - See Accepting State.
 
 **Fixed Degree** - The error bound `n` is constant (not varying with input size).
-- **Significance**: Enables `𝒪(∣W∣)` construction complexity
+- **Significance**: Enables `$\mathcal{O}(\lvert W\rvert)$` construction complexity
 
 ### I
 
@@ -187,11 +187,11 @@
 **Parallel Traversal** - Simultaneously traversing dictionary automaton and Levenshtein automaton.
 
 **Parametric Table (T_n)** - Precomputed table describing all states and transitions for error bound n.
-- **Advantage**: Enables `𝒪(∣W∣)` automaton construction
+- **Advantage**: Enables `$\mathcal{O}(\lvert W\rvert)$` automaton construction
 
 **Position (i#e)** - Pair of index i and error count e.
 - **Interpretation**: "Matched i characters of W with e errors"
-- **Range**: 0 ≤ i ≤ |W|, 0 ≤ e ≤ n
+- **Range**: `$0 \le  i \le  |W|, 0 \le  e \le  n$`
 
 **Profile Pr(U)** - Sequence encoding structural properties of word U based on character repetition patterns.
 
@@ -203,7 +203,7 @@
 
 **Raised Position [i#e]↑k** - Position (i+k)#(e+k) obtained by "raising" i#e.
 
-**Relevant Subword W[π]** - For position π = i#e, the subword W[i+1:i+k] where k = min(n-e+1, |W|-i).
+**Relevant Subword `$W[\pi ]** -$` For position `$\pi  = i$`#e, the subword W[i+1:i+k] where k = min(n-e+1, |W|-i).
 
 ### S
 
@@ -222,10 +222,10 @@
 - **Example**: "hello" → "hallo" (substitute 'e' with 'a')
 - **Cost**: 1
 
-**Subsumption (π ⊑ ρ)** - Position i#e subsumes j#f if:
+**Subsumption `$(\pi  \sqsubseteq  \rho )** -$` Position i#e subsumes j#f if:
 - e < f (fewer errors)
-- |j-i| ≤ f-e (within error budget)
-- **Meaning**: π is "better" than ρ, making ρ redundant
+`$- |j-i| \le  f-e ($`within error budget)
+- **Meaning**: `$\pi$` is "better" than `$\rho ,$` making `$\rho$` redundant
 
 ### T
 
@@ -234,8 +234,8 @@
 **Trace** - Graphical representation of an edit operation sequence.
 
 **Transition Function** - Function describing how automaton changes state on input.
-- **δ(π,x)**: Elementary transition (single position)
-- **Δ(M,x)**: State transition (set of positions)
+`$- **\delta (\pi ,x)**$`: Elementary transition (single position)
+`$- **\Delta (M,x)**$`: State transition (set of positions)
 
 **Transposition** - Edit operation: swapping two adjacent characters.
 - **Example**: "hello" → "hlelo" (swap 'e' and 'l')
@@ -245,13 +245,13 @@
 
 ### U
 
-**Union (⊔)** - Combining sets of positions, removing subsumed positions.
+**Union `$(\sqcup )** -$` Combining sets of positions, removing subsumed positions.
 
 ### W
 
-**Wagner-Fischer Algorithm** - Dynamic programming algorithm for computing Levenshtein distance in `𝒪(∣W∣×∣V∣)` time. See Wagner & Fischer (1974), [doi:10.1145/321796.321811](https://doi.org/10.1145/321796.321811).
+**Wagner-Fischer Algorithm** - Dynamic programming algorithm for computing Levenshtein distance in `$\mathcal{O}(\lvert W\rvert\times \lvert V\rvert)$` time. See Wagner & Fischer (1974), [doi:10.1145/321796.321811](https://doi.org/10.1145/321796.321811).
 
-**Word** - A string over alphabet Σ.
+**Word** - A string over alphabet `$\Sigma .$`
 
 ---
 
@@ -296,7 +296,7 @@ L({i#e}) = L_Lev(n-e, W[i+1:|W|])
 
 ### Elementary Transition Cases (Standard)
 
-For position π = i#e and character x:
+For position `$\pi  = i$`#e and character x:
 
 ```
 χ(x,W[π]) = ⟨1,b₂,...,b_k⟩   ⟹  δ(π,x) = {(i+1)#e}
@@ -366,7 +366,7 @@ From Table 5.1, the parametric states for degree 1:
 
 1. **Position values**: Check i and e are within valid ranges
 2. **Subsumption**: Verify no position in state subsumes another
-3. **Characteristic vectors**: Ensure correct computation for W[π]
+3. **Characteristic vectors**: Ensure correct computation for `$W[\pi ]$`
 4. **Transitions**: Match against tables in paper
 
 ---

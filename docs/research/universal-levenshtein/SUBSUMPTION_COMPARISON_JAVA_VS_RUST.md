@@ -7,7 +7,7 @@
 - **Java**: Uses linked lists + merge sort + nested iteration with early termination
 - **Rust**: Uses BTreeSet with custom Ord + automatic sorting + early termination via `take_while()`
 
-Both achieve O(k) average-case subsumption checks where k << n, but through different mechanisms.
+Both achieve `$\mathcal{O}(k)$` average-case subsumption checks where k << n, but through different mechanisms.
 
 ---
 
@@ -46,8 +46,8 @@ private Position mergeSort(final Comparator<Position> comparator, final Position
 ```
 
 **Algorithm**: Classic merge sort on linked list
-- **Time**: O(n log n)
-- **Space**: O(log n) for recursion stack (in-place on linked list)
+- **Time**: `$\mathcal{O}(n \log  n)$`
+- **Space**: `$\mathcal{O}(\log  n)$` for recursion stack (in-place on linked list)
 - **Stability**: Yes (maintains relative order of equal elements)
 
 ### Unsubsumption Logic (UnsubsumeFunction.java, lines 44-67)
@@ -82,7 +82,7 @@ public void at(final State state, final int queryLength) {
 ```
 
 **Key insights**:
-1. **Nested iteration**: O(n²) worst case, but with early termination
+1. **Nested iteration**: `$\mathcal{O}(n^{2})$` worst case, but with early termination
 2. **Early termination** (lines 52-58): Skips positions until `errors > outerErrors`
    - Relies on positions being **sorted by errors ascending**
    - Breaks inner loop when it reaches positions that could be subsumed
@@ -103,7 +103,7 @@ public boolean at(final Position lhs, final Position rhs, final int n) {
 }
 ```
 
-**Formula**: `|j - i| ≤ (f - e)`
+**Formula**: `$\lvert j - i\rvert \le (f - e)$`
 **Note**: Missing explicit check for `f > e`, relies on caller to ensure this via sorting
 
 ---
@@ -185,7 +185,7 @@ pub fn add_position(&mut self, pos: UniversalPosition<V>) {
    - Positions with fewer/equal errors cannot be subsumed by pos
 3. **Early termination** (line 176): `.take_while(|p| p.errors() < pos_errors)`
    - Only positions with fewer errors can subsume pos
-   - Iterator stops at first position with errors ≥ pos.errors
+   - Iterator stops at first position with errors `$\ge$` pos.errors
 4. **Automatic ordering**: BTreeSet maintains sort during insert/remove
 
 ### Subsumption Check (subsumption.rs, lines 113-142)
@@ -212,7 +212,7 @@ pub fn subsumes<V: PositionVariant>(
 }
 ```
 
-**Formula**: `f > e AND |j - i| ≤ (f - e)`
+**Formula**: `$f > e \;\text{and}\; \lvert j - i\rvert \le (f - e)$`
 **Note**: Explicit check for `f > e`, more defensive than Java version
 
 ---
@@ -223,12 +223,12 @@ pub fn subsumes<V: PositionVariant>(
 
 | Aspect | Java (Linked List) | Rust (BTreeSet) |
 |--------|-------------------|-----------------|
-| **Insert** | O(1) at head/tail, O(n) middle | O(log n) anywhere |
-| **Remove** | O(1) with iterator | O(log n) |
-| **Iteration** | O(n) sequential | O(n) in-order |
+| **Insert** | `$\mathcal{O}(1)$` at head/tail, `$\mathcal{O}(n)$` middle | `$\mathcal{O}(\log  n)$` anywhere |
+| **Remove** | `$\mathcal{O}(1)$` with iterator | `$\mathcal{O}(\log  n)$` |
+| **Iteration** | `$\mathcal{O}(n)$` sequential | `$\mathcal{O}(n)$` in-order |
 | **Memory** | 1-2 pointers per node | Tree nodes + color bits |
 | **Cache locality** | Poor (scattered nodes) | Better (nodes in cache lines) |
-| **Sorting** | Explicit O(n log n) | Automatic during insert |
+| **Sorting** | Explicit `$\mathcal{O}(n \log  n)$` | Automatic during insert |
 
 ### 2. Algorithmic Equivalence
 
@@ -249,16 +249,16 @@ pub fn subsumes<V: PositionVariant>(
 ```
 
 **Asymptotic comparison**:
-- Java: O(n log n) + O(n * k) for batch unsubsume
-- Rust: O(n * (log n + k)) for online unsubsume during inserts
+- Java: `$\mathcal{O}(n \log  n)$` + `$\mathcal{O}(n * k)$` for batch unsubsume
+- Rust: `$\mathcal{O}(n * (\log  n + k)$`) for online unsubsume during inserts
 
 **When k << log n** (sparse error distribution):
-- Java: ~O(n log n) dominated by sort
-- Rust: ~O(n log n) dominated by tree operations
+- Java: ~`$\mathcal{O}(n \log  n)$` dominated by sort
+- Rust: ~`$\mathcal{O}(n \log  n)$` dominated by tree operations
 
-**When k ≈ n** (dense error distribution):
-- Java: ~O(n²)
-- Rust: ~O(n²)
+**When `$k \approx  n$`** (dense error distribution):
+- Java: ~`$\mathcal{O}(n^{2})$`
+- Rust: ~`$\mathcal{O}(n^{2})$`
 
 **Conclusion**: Asymptotically equivalent for typical cases!
 
@@ -363,7 +363,7 @@ self.positions.retain(|p| {
 ## Performance Implications
 
 ### Java Advantages:
-1. **Single sort**: O(n log n) once, then O(k) checks
+1. **Single sort**: `$\mathcal{O}(n \log  n)$` once, then `$\mathcal{O}(k)$` checks
 2. **In-place**: Linked list mutations don't reallocate
 3. **Cache-friendly**: Sequential access after sort
 4. **Batch-optimized**: Amortizes sort cost over many subsumption checks
@@ -393,7 +393,7 @@ For **large states** (many positions):
 The Rust BTreeSet approach **is equivalent** to Java's linked list + merge sort approach:
 - Both sort by errors ascending
 - Both use early termination
-- Both achieve O(k) subsumption checks where k << n
+- Both achieve `$\mathcal{O}(k)$` subsumption checks where k << n
 
 ### 2. ⚠️ Potential Optimization: Batch Mode
 
@@ -454,7 +454,7 @@ positions: Option<Box<Position>>  // Linked list like Java
 
 **Analysis**:
 - SmallVec is **better for small states** (stack allocation, cache-friendly)
-- Linked list is **better for large states** (no reallocation, O(1) remove during iteration)
+- Linked list is **better for large states** (no reallocation, `$\mathcal{O}(1)$` remove during iteration)
 - **Recommendation**: Keep SmallVec (most states are small)
 
 ---
@@ -470,8 +470,8 @@ positions: Option<Box<Position>>  // Linked list like Java
 | **Sorting strategy** | Explicit merge sort | Automatic via BTreeSet |
 | **Sort order** | By errors ascending | By (errors, offset) ascending |
 | **Early termination** | Explicit break in loop | `.take_while()` iterator |
-| **Subsumption checks** | O(k) where k << n | O(k) where k << n |
-| **Asymptotic complexity** | O(n log n + n*k) | O(n log n + n*k) |
+| **Subsumption checks** | `$\mathcal{O}(k)$` where k << n | `$\mathcal{O}(k)$` where k << n |
+| **Asymptotic complexity** | `$\mathcal{O}(n \log  n + n*k)$` | `$\mathcal{O}(n \log  n + n*k)$` |
 
 ### Question 2: What can be gleaned from Java version?
 

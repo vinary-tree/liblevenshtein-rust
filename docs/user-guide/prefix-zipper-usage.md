@@ -38,7 +38,7 @@ liblevenshtein = "0.9.1"
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 // 1. Create dictionary
 let dict = DoubleArrayTrie::from_terms(vec!["apple", "apply"].iter());
@@ -61,8 +61,8 @@ if let Some(iter) = zipper.with_prefix(b"app") {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
-use liblevenshtein::dictionary::double_array_trie_zipper::DoubleArrayTrieZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
 
 fn prefix_search(dictionary_terms: Vec<&str>, user_prefix: &str) -> Vec<String> {
     // Build dictionary
@@ -100,7 +100,7 @@ fn main() {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 struct Autocompleter {
     dict: DoubleArrayTrie,
@@ -139,7 +139,7 @@ fn main() {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::ValuedPrefixZipper;
+use libdictenstein::prefix_zipper::ValuedPrefixZipper;
 
 fn ranked_completions(
     terms_with_scores: Vec<(&str, usize)>,
@@ -188,7 +188,7 @@ fn main() {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 struct LanguageServer {
     keywords: DoubleArrayTrie,
@@ -260,7 +260,7 @@ fn main() {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 struct IncrementalSearch {
     dict: DoubleArrayTrie,
@@ -335,9 +335,9 @@ fn main() {
 **Use case**: Non-ASCII text (international languages)
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
-use liblevenshtein::dictionary::double_array_trie_char_zipper::DoubleArrayTrieCharZipper;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieCharZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 fn unicode_completion(terms: Vec<&str>, prefix: &str) -> Vec<String> {
     // Use char-based dictionary for Unicode
@@ -382,7 +382,7 @@ fn main() {
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 fn has_prefix(dict: &DoubleArrayTrie, prefix: &str) -> bool {
     let zipper = DoubleArrayTrieZipper::new_from_dict(dict);
@@ -442,7 +442,7 @@ Do you also need substring matching (not just prefix)?
 
 ```rust
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 let dict = DoubleArrayTrie::from_terms(vec!["term1", "term2"].iter());
 let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
@@ -452,9 +452,9 @@ let results = zipper.with_prefix(b"term");
 #### DoubleArrayTrieChar (Unicode)
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
-use liblevenshtein::dictionary::double_array_trie_char_zipper::DoubleArrayTrieCharZipper;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieCharZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 let dict = DoubleArrayTrieChar::from_terms(vec!["café", "naïve"].iter());
 let zipper = DoubleArrayTrieCharZipper::new_from_dict(&dict);
@@ -465,9 +465,9 @@ let results = zipper.with_prefix(&prefix);
 #### DynamicDawg (Mutable)
 
 ```rust
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
-use liblevenshtein::dictionary::dynamic_dawg_zipper::DynamicDawgZipper;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawgZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 let mut dict = DynamicDawg::from_terms(vec!["term1"].iter());
 
@@ -481,9 +481,9 @@ let results = zipper.with_prefix(b"term");
 #### PathMapDictionary (Simple)
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
-use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 let dict = PathMapDictionary::from_terms(vec!["term1", "term2"].iter());
 let zipper = PathMapZipper::new_from_dict(&dict);
@@ -568,7 +568,7 @@ for term_bytes in results {
 ```rust
 use rayon::prelude::*;
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 fn parallel_completions(
     dict: &DoubleArrayTrie,
@@ -654,7 +654,7 @@ let results: Vec<_> = /* ... */;
 **Solution**: Use char-level dictionary
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 
 let dict = DoubleArrayTrieChar::from_terms(vec!["café"].iter());
 // Now works correctly with Unicode
@@ -703,7 +703,7 @@ error[E0599]: no method named `with_prefix` found for type `...`
 **Solution**: Import the trait
 
 ```rust
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 ```
 
 **Error**: Type mismatch with `Unit`
@@ -808,7 +808,7 @@ zipper
 **A**: Use `ValuedPrefixZipper` trait:
 
 ```rust
-use liblevenshtein::dictionary::prefix_zipper::ValuedPrefixZipper;
+use libdictenstein::prefix_zipper::ValuedPrefixZipper;
 
 let dict = DoubleArrayTrie::from_terms_with_values(
     vec![("apple", 10), ("apply", 20)].into_iter()
@@ -827,8 +827,8 @@ if let Some(iter) = zipper.with_prefix_values(b"app") {
 **A**: Unlimited (bounded only by dictionary structure). However:
 
 - **Practical limit**: Longest term in dictionary
-- **Performance**: Still O(k) for any k
-- **Memory**: O(1) during navigation
+- **Performance**: Still `$\mathcal{O}(k)$` for any `$k$`
+- **Memory**: `$\mathcal{O}(1)$` during navigation
 
 ### Q: Can I modify the dictionary while iterating?
 
@@ -849,7 +849,7 @@ if let Some(iter) = zipper.with_prefix_values(b"app") {
 ```rust
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use liblevenshtein::prelude::*;
-use liblevenshtein::dictionary::prefix_zipper::PrefixZipper;
+use libdictenstein::prefix_zipper::PrefixZipper;
 
 fn benchmark_my_use_case(c: &mut Criterion) {
     let dict = DoubleArrayTrie::from_terms(/* your terms */);

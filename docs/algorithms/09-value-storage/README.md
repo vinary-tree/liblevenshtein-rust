@@ -237,7 +237,8 @@ let results: Vec<(String, i32)> = dict
 ### Zipper Navigation with Values
 
 ```rust
-use liblevenshtein::dictionary::zipper::*;
+use libdictenstein::double_array_trie::DoubleArrayTrieZipper;
+use libdictenstein::zipper::{DictZipper, ValuedDictZipper};
 
 let zipper = DoubleArrayTrieZipper::new_from_dict(&dict);
 
@@ -645,11 +646,11 @@ pub struct DawgNode<V: DictionaryValue = ()> {
 
 | Dictionary | Storage Location | Memory Overhead | Access Time | Notes |
 |------------|------------------|-----------------|-------------|-------|
-| DoubleArrayTrie | State-indexed array | 8-16 bytes/state | `O(1)` | Arena-allocated, cache-friendly |
-| DoubleArrayTrieChar | State-indexed array | 8-16 bytes/state | `O(1)` | Same as byte variant |
-| DynamicDawg | Per-node field | 8-16 bytes/node | `O(1)` | More flexible |
-| DynamicDawgChar | Per-node field | 8-16 bytes/node | `O(1)` | Unicode support |
-| PathMap | Persistent structure | Variable | `O(1)` | Structural sharing |
+| DoubleArrayTrie | State-indexed array | 8-16 bytes/state | `$\mathcal{O}(1)$` | Arena-allocated, cache-friendly |
+| DoubleArrayTrieChar | State-indexed array | 8-16 bytes/state | `$\mathcal{O}(1)$` | Same as byte variant |
+| DynamicDawg | Per-node field | 8-16 bytes/node | `$\mathcal{O}(1)$` | More flexible |
+| DynamicDawgChar | Per-node field | 8-16 bytes/node | `$\mathcal{O}(1)$` | Unicode support |
+| PathMap | Persistent structure | Variable | `$\mathcal{O}(1)$` | Structural sharing |
 
 ---
 

@@ -270,3 +270,297 @@ Scanned **all 573 markdown files** (custom resolver + `lychee --offline`):
   (`[…](n, |(.(in(m…)`), rustdoc `crate::…` paths in a completion report, the fenced embedding
   *examples* in `diagrams/README.md`, and the gitignored generated `pkg/README.md`.
 - **Result:** `lychee --offline docs` over the entire docs tree (3,344 links) → **0 errors**.
+
+---
+
+## Campaign 2 — 2026-07-12: MathJax migration + content refresh
+
+A second overhaul campaign, opened after the pgmcp documentation guidelines evolved. This
+section is **append-only** like the rest of this ledger; it records the campaign design,
+the empirical baseline, and per-phase results as they land.
+
+- **Branch:** `docs/mathjax-migration-campaign-2`
+- **Plan of record:** `~/.claude/plans/rewrite-all-the-non-archived-synthetic-yeti.md`
+- **Prompted by:** "Rewrite all the non-archived documentation under `docs/` to align with the
+  documentation guidelines of pgmcp" + "update the documentation in the process; archive
+  deprecated documentation that should not be rewritten; include the root `README.md`."
+
+### Why (the reversal)
+
+The 2026-06-19 overhaul (Campaign 1, above) deliberately standardized the corpus onto
+**backticked Unicode-literal math** (`` `𝒪(∣W∣)` ``, bar = `∣` U+2223), and codified that
+house style in `docs/README.md`. The pgmcp guidelines (26 rules;
+`mcp__pgmcp__documentation_guidelines`) now require **MathJax LaTeX** instead — inline as a
+backtick code span whose content is dollar-delimited (`` `$\mathcal{O}(\lvert W\rvert)$` ``)
+and display as a fenced `math` block. Campaign 2 **reverses** the notation convention across
+the living docs and, per the user's instruction, additionally refreshes drifted content and
+archives deprecated docs.
+
+### Empirical baseline (three parallel audits, 2026-07-12)
+
+- **0** files use MathJax today; **150** files carry **1451** backticked-Unicode-math spans;
+  **170** files carry ≈**1426** bare undelimited `O(...)`; genuine forbidden `$…$` is
+  essentially absent (**1** real case — a BibTeX `$\pi$` in `mettail/reference/bibliography.md`).
+- Content drift since Campaign 1 (20 `src/` commits): dictionary backends extracted to
+  **`libdictenstein`** and the local re-exports now `#[deprecated]` (`src/lib.rs:185–265`),
+  yet **31 living docs** still teach `liblevenshtein::dictionary::…`. Undocumented new
+  features: `VersionedQueryCache`, the Phases 1–9 hardening campaign, bincode 1.3→2.0,
+  MergeAndSplit-semantics correction.
+- Diagram infra: **49** sources; **36** embed Unicode-literal math in labels; **0** use
+  PlantUML `<latex>`.
+
+### Decisions locked with the user (2026-07-12)
+
+| # | Decision | Ruling |
+|---|---|---|
+| Q1 | Dated append-only records (~150–170 files) | **Leave untouched** — rewrite only living/explanatory docs. |
+| Q2 | `docs/theory/` deep-dives duplicated in `libdictenstein` | **Trim to integration pointers.** |
+| Q3 | Depth of the content refresh | **Full refresh** — fix deprecated imports, document new features, correct stale claims. |
+
+### Append-only integrity rule (unchanged, restated)
+
+Campaign 1's rule stands verbatim: dated scientific ledgers, hypothesis/experiment/phase/
+session/completion reports, and benchmark dumps are **append-only** — never altered. `.v`
+Rocq theories and `.tla` specs are never reworded. Campaign 2 tightens the earlier "fix
+pure notation" latitude: per Q1, the **records are not touched at all** (not even for
+notation); only the LIVING/explanatory set is rewritten. A `git diff` gate proves zero
+changes to record paths.
+
+### Tooling (P0)
+
+- `scripts/doc-math-prescan.raku` — fence-aware scanner: `--key` prints the Unicode→LaTeX
+  conversion key; default mode briefs a rewrite agent per file; `--lint` is the machine gate.
+  Honors the guards (µ U+00B5 ≠ μ U+03BC; MeTTa `$var`/currency/regex `$`; code fences;
+  table pipes). Validated: correctly flags 48 constructs in `README.md`, skips fenced-code
+  math, ignores converted `` `$…$` `` spans and `` ```math `` blocks.
+- `scripts/doc-mathlint.sh` — CI gate wrapping the scanner over the living-doc allow-list
+  manifest `docs/.mathlint-include.txt`; PASS ⇔ 0 residual old-style math in living docs.
+
+### Phase log
+
+| Phase | Workstream | Status |
+|---|---|---|
+| P0 | Conventions (`docs/README.md` + `diagrams/README.md`), tooling, ledger | ✅ done |
+| P1 | Root `README.md` flagship rewrite | 🔄 |
+| P2 | Living-doc cluster rewrites (~180 files) | ⏳ |
+| P3 | `theory/` trim to pointers | ⏳ |
+| P4 | Diagram-label LaTeX (25 `.puml`) + new figures | ⏳ |
+| P5 | Archive deprecated docs (Bucket C) | ⏳ |
+| P6 | Verification gates + close-out | ⏳ |
+
+#### 2026-07-12 — P0 — Conventions, tooling, ledger ✅
+
+- Rewrote the `docs/README.md` "Document conventions → **Math**" bullet from the Unicode-
+  backtick rule to the MathJax backtick-dollar + fenced-`math` convention (drops the "bar is
+  `∣` never ASCII `|`" clause; adds the pseudocode-vs-`math`-block distinction).
+- Added a "Math in labels" subsection to `docs/diagrams/README.md` §4 (PlantUML/Structurizr/
+  Asymptote `<latex>`/`$…$`; Unicode fallback for DOT/D2/Pikchr/Mermaid), and converted the
+  one `∩` in its own diagram-registry prose to `` `$\cap$` ``.
+- Authored + validated the two tooling scripts above.
+- This campaign section appended to the ledger (Campaign 1 untouched).
+
+#### 2026-07-13 — P1/P3/P5 + P2 (partial) progress ✅🔄
+
+- **P1 ✅** root `README.md`: 48 math spans → MathJax, MSM recurrence → a ```math `cases` block,
+  pseudocode kept as literate fences, install pin `0.8`→`0.9`, exemplar import path corrected
+  (`double_array_trie_char`→`double_array_trie`).
+- **P3 ✅** `theory/{scdawg,disk-tries}/README.md` trimmed to libdictenstein integration pointers;
+  the 14 duplicated deep-dive chapters `git mv`'d to `docs/archive/theory/` (indexed there).
+- **P2 🔄 (partial)** conformed & scanner-verified (0 findings) via parallel subagents:
+  `guides`+`grammar`+`llre`, `GLOSSARY.md`, `user-guide`+`concepts`+`architecture`, caching (algo 08),
+  `developer-guide`+`examples`+`migration`, `phonetic-extraction`+`integration`, algorithm layers
+  01–06 + 09 + indexes, `SECURITY.md`, `design/hierarchical-correction.md`. Subagents also fixed
+  ~200 deprecated `liblevenshtein::dictionary::…` → `libdictenstein::…` imports, several µ-codepoint
+  errors (U+03BC→U+00B5 for microseconds), stale versions, a wrong Inenaga DOI, and broken
+  placeholder URLs. **Remaining (theory-heavy, bare-unicode/display-math — needs judgment):** mettail
+  foundations+simplification+applied subtrees, `research/universal-levenshtein` explanatory subset,
+  `research/levenshtein-automata/{glossary,implementation-mapping}`, `weighted` README, algorithm 07
+  (contextual), grammar-correction (incl. `MAIN_DESIGN.md`), design leftovers, verification reference set.
+- **libdictenstein canonical import paths** (verified against its `src/lib.rs` module re-exports):
+  types are re-exported at module level — `double_array_trie::{DoubleArrayTrie,DoubleArrayTrieChar,
+  DoubleArrayTrieZipper,DoubleArrayTrieCharZipper}`, `scdawg::{Scdawg,ScdawgChar}`, `prefix_zipper::…`,
+  crate-root traits `{Dictionary,DictionaryNode,SyncStrategy}`. Deep `::char::`/`::zipper::` paths and
+  the non-existent `double_array_trie_char`/`_zipper` top-level modules are normalized at P6.
+- **Tooling:** added `scripts/doc-math-convert.raku`, a guarded mechanical converter (backticked-math
+  + bare-`O(` → MathJax). It is reliable for clean symbolic math but NOT for pseudocode spans bearing
+  incidental Greek (it cannot tell a code signature from a formula), so it is used only on clean-math
+  files; the theory files use judgment-based subagents.
+- **P5 ✅ (archive)** `git mv` of the Bucket-C deprecation manifest into `docs/archive/` (28 files:
+  `research/RESEARCH_{INITIATIVES,TRACKING}`, the universal-levenshtein BTreeSet trio + PHASE4/DIAGONAL
+  debug scratch, one-off development/verification/formal-verification debug & session notes, 10 scratch
+  `test_*.v`); removed the 3 empty `formal-verification/proofs/{07,08,09}` dirs and fixed the
+  `proofs/README.md` bullets; repointed the living `research/README.md` planning section. `.v` files
+  moved verbatim, never reworded. (Optional `optimizations/`→`optimization/dynamic-dawg/` fold deferred.)
+- **Process note:** parallel subagents are budget-expensive (~200k tokens each); running 11 at once
+  exhausted the session window. Future waves are paced to 2–3 concurrent.
+
+#### 2026-07-13 — Mechanical conversion pass (session endpoint) 🔄
+
+Built a full guarded converter `scripts/doc-math-convert.raku` (fence-aware; backticked-math + bare-`O(`
++ a bare-Unicode run-detector with a "stop at any 2+-letter word" prose guard, an embedded-context
+guard against fragmenting `A^{ND,χ}_n`-style notation, a `--bare-only` mode, and `*`-excluded MATHOPS
+so markdown bold never breaks a run). Applied across the living set with per-batch backups + a
+mangling/fragmentation restore loop; verified **0 fragmentation** and **balanced delimiters** (3
+apparent imbalances are JS-template / `$1` regex false positives in code spans — not math).
+
+**State:** ~**186 / 219 living docs fully MathJax-conformant** (0 scanner findings). **33 files retain
+356 findings that require whole-expression JUDGMENT** (not safely mechanizable): ~257 are the
+`docs/research/universal-levenshtein/` dense TCS-2011 automata notation (ASCII `^{}_` super/subscripts
+interleaved with Unicode — e.g. `A^{ND,χ}_n(w)`, `L^χ_Lev`), and ~99 are display-math inference rules
+(→ ```math blocks), named-function applications (`cost(T1∘T2)`, `|pattern|`), and Greek-in-terminology
+(`λ-Theory`, `ε-transition` in headings — legitimately Unicode; converting breaks anchors). These, plus
+P4 (diagram `<latex>`) and P6 (final gates, PathMap-concurrency currency, nav refresh, memory update),
+are the agent-appropriate remainder — blocked only by the subagent session budget (resets 04:30 ET).
+Full residual inventory: `scratchpad/RESIDUALS.txt` + `scratchpad/CAMPAIGN_STATE.md`.
+
+#### 2026-07-13 — P2/P4/P6 completion — all gates green ✅
+
+The remainder flagged at the previous session endpoint is **done**; every verification gate now
+passes. Work completed, and the defects the campaign's own tooling introduced (found and repaired).
+
+**Math (P2 close-out).** The residual judgment-heavy files were converted and the living-doc
+allow-list `docs/.mathlint-include.txt` was **completed to 248 entries** — the earlier 228-entry
+manifest was missing the whole `formal-verification/proofs/06_contextual_completion/` prose-proof
+set (8 files), the six navigational TOC READMEs (`benchmarks/`, `bug-reports/`, `completion-reports/`,
+`implementation-status/`, `optimization/`, `research/`), and four `universal-levenshtein/`
+explanatory docs — so the gate had never scanned them. Guard #7 was applied to the Coq prose proofs:
+inline-code lemma statements keep their **ASCII Coq operators** (`<=`, `>=`, `<>`) rather than being
+forced into MathJax, matching sibling claims like `` `parent = child` ``.
+
+**Converter defects found and repaired (this is the important finding).** The guarded converter
+`scripts/doc-math-convert.raku` produced two classes of corruption that the math-lint gate could not
+see (it checks glyphs, not markdown well-formedness):
+
+1. **76 malformed adjacent spans** across 7 files — e.g. `` `$A^\forall$``$,\chi _n$` ``. CommonMark
+   cannot close a 1-backtick span with a 2-backtick run, so these rendered as literal `$…$` garbage.
+   Repaired by deleting the 4-char sequence `` $``$ ``, which merges each pair into one valid span
+   (`` `$A^\forall,\chi _n$` `` — faithful to the original `A^∀,χ_n`).
+2. **52 table rows whose math span swallowed the cell delimiter** across 15 files — e.g.
+   `` | Match `$| \langle 1,1,0\rangle |$` Identity | `` — destroying the table structure. Repaired by
+   splitting each span at its **unescaped** pipes and re-emitting the delimiters (rows that correctly
+   used an **escaped** `\|` inside math were left untouched).
+
+Also removed formulas from section **headings** (they produce ugly, fragile GitHub slugs and had
+broken every TOC link into them); the notation is now restated in the section body instead.
+
+**Content currency (P2).** Beyond math: the removed backends **`DawgDictionary` / `OptimizedDawg`**
+(absent from both crates) were still taught as usable in 9 living docs — sections, imports,
+constructors, benchmark rows, glossary entries, the algorithms index — all corrected to
+`DynamicDawg` / `DoubleArrayTrie` with explicit "removed in 0.9.x" notes. The remaining deprecated
+`liblevenshtein::dictionary::…` imports in the `07-contextual-completion/` cluster were repointed to
+`libdictenstein::…`. `mork/` version labels (v0.8.0 → 0.9.1) and a `version = "0.4"` dependency
+example were refreshed.
+
+**Concurrency model corrected — the largest content defect.** Verified against libdictenstein 0.2.0
+(the `path = "../libdictenstein"` dependency this repo actually builds): **every in-memory dictionary
+backend is now lock-free** and reports `SyncStrategy::InternalSync` — `DynamicDawg(Char)` /
+`DynamicDawgU64` (`LockFreeDawg`, per-node `ArcSwap<EdgeList>` + `compare_exchange`),
+`SuffixAutomaton(Char)` (`LockFreeSuffixAutomaton`), `Scdawg(Char)` (`LockFreeScdawg`),
+`PathMapDictionary(Char)` (`Arc<ArcSwap<PathMapState>>`), and `BijectiveMap`. `parking_lot::RwLock`
+survives **only** inside the disk-backed `persistent_artrie` engine — never on a dictionary read path.
+The docs still described the *retired* RwLock model (and `thread-safety.md` even carried an "intended
+direction" note for a migration that had already shipped), which contradicted the observable runtime
+contract. Corrected across ~20 files (`thread-safety.md`, `backends.md`, `features.md`, root
+`README.md`, `architecture.md`, `getting-started.md`, `examples/`, the five per-backend implementation
+docs, four design docs) plus the `concurrency-model` diagram. Measured historical figures (the PathMap
+**~3.82× RwLock read-throughput** result; the ~10–20 ns / ~50–100 ns lock overheads) are **preserved as
+dated historical notes**, not deleted. RwLock mentions that are *legitimate* were verified against
+`src/` and left: the contextual-completion engine (`src/contextual/engine.rs` really does hold
+`Arc<RwLock<ContextTree>>` + `Arc<RwLock<Transducer>>`), the cache/eviction layer, distance
+memoization, and a user-code hot-swap example.
+
+**P4 diagrams ✅.** PlantUML `<latex>` was validated end-to-end (JLaTeXMath typesets it to vector paths
+in this repo's pipeline), then applied: **16 `.puml` converted**, every rendered label now LaTeX
+(Unicode remains only in non-rendered source comments, which is correct). All **49 SVGs re-rendered
+and in sync**; `xmllint` clean; no PlantUML error graphics; no leaked `<latex>` literals. The
+`arcswap-vs-rwlock` diagram is retained as a *conceptual* contrast (it names no backend).
+
+**Gate results (all green).**
+
+| Gate | Result |
+|---|---|
+| #1 math-lint (`scripts/doc-mathlint.sh`) | ✅ **0** old-style constructs across **248** living docs |
+| #2 diagrams (`render.sh --check`) | ✅ all **49** SVGs in sync; xmllint clean; no error graphics |
+| #3 links (`lychee --offline --include-fragments`) | ✅ **0 errors** / 2602 OK (was 29 — 4 archive-move file links + 25 broken anchors) |
+| #4 deprecated imports | ✅ only the deliberate deprecation *prose* in `architecture/overview.md:40` |
+| #4b removed types | ✅ no `DawgDictionary`/`OptimizedDawg` presented as usable |
+| #6 append-only integrity | ✅ **0** `.v`/`.tla` content changes (archive moves are pure `git mv`); ledger **+142 / −0** |
+| #7 rustdoc | ✅ **0** `missing_docs`; `cargo doc` exit 0 |
+
+**Known follow-up (deliberately NOT guessed at).** Several docs still show the **bincode 1.x** API
+(`bincode::serialize` / `deserialize`), which cannot compile against the pinned `bincode = "2.0"`.
+The correct replacement could not be established: `serialization.md` documents
+`dict.serialize(file, Format::Bincode)`, but no such method is locatable in `src/`, `tests/`, or
+`examples/` (tests use `serialize_paths`), so the real serialization API — likely split across
+liblevenshtein and libdictenstein — needs a dedicated audit. Rewriting these examples against a
+guessed API would have shipped *wrong code*, which is worse than the current consistent staleness;
+they are therefore left as-is and recorded here.
+
+#### 2026-07-13 — Serialization API corrected — supersedes the "known follow-up" above ✅
+
+The preceding entry closed with a **deferral**: the bincode-1.x examples were left in place
+because "the correct replacement could not be established". That was a **failure of
+investigation, not an actual dead end** — and it is now resolved. The deferral is withdrawn.
+
+**What the earlier investigation missed.** It concluded "no such method exists" from greps
+over `src/serialization/*.rs`, never noticing that file is a **39-line re-export shim**
+(`pub use libdictenstein::serialization::*`). The whole API lives in **libdictenstein**, and
+the repo already shipped a *working, compiling* `examples/serialization.rs` demonstrating it.
+
+**The real API** (verified against `libdictenstein/src/serialization/`, and against that
+existing example):
+
+- One **serializer type per format**, all implementing the `DictionarySerializer` trait:
+  `BincodeSerializer`, `JsonSerializer`, `PlainTextSerializer`, `ProtobufSerializer`,
+  `OptimizedProtobufSerializer`, `DatProtobufSerializer`, `SuffixAutomatonProtobufSerializer`,
+  and the generic wrapper `GzipSerializer<S>` (used as `GzipSerializer::<BincodeSerializer>`).
+- `fn serialize<D, W>(dict: &D, writer: W)` — bounded on **`D::Node: DictionaryNode<Unit = u8>`**
+  — and `fn deserialize<D, R>(reader: R)` — bounded on `D: DictionaryFromTerms`. It encodes the
+  dictionary's *terms* through the `Dictionary` trait; it does **not** go through serde.
+- **`libdictenstein::serialization::bincode_compat`** — a public shim restoring the bincode-1.x
+  free functions (`serialize`, `deserialize`, `serialize_into`, `deserialize_from`) on top of
+  bincode 2.x, pinned to the legacy fixint-LE wire format. This is the drop-in for the old calls.
+
+**Two defects this uncovered, both worse than the bincode calls themselves:**
+
+1. **`docs/user-guide/serialization.md` documented a wholly fictional API.** A `Format` enum
+   (`Format::Bincode`, `::Json`, `::Text`, `::ProtobufV2`, `::BincodeGz`, …), a
+   `DictionaryDeserializer` trait, and a method-style `dict.serialize(file, Format::X)` — **none
+   of which exist anywhere in either crate**. All 11 code blocks were rewritten to the real
+   serializer types.
+2. **`pathmap-dictionary.md` taught a serde round-trip that is impossible** — `PathMapDictionary`
+   implements **no serde traits at all**. It must use `BincodeSerializer` (which works via the
+   `Dictionary`/`DictionaryFromTerms` traits). Conversely `DynamicDawgChar` is `Unit = char`, so
+   the `DictionarySerializer` trait does *not* apply to it; it derives serde and must go through
+   `bincode_compat`. The docs now state both constraints explicitly.
+
+Also corrected while in there: `double-array-trie.md` claimed memory-mapping gave a "zero-copy"
+dictionary that "references memory-mapped data" — false; `deserialize` rebuilds an owned,
+heap-resident dictionary. The claim now says what mmap actually buys and points at the
+`Persistent*` family for genuine on-disk reads.
+
+**Gate #5 (code-snippet validity) is now enforced, not spot-checked.** Added
+`examples/doc_serialization_check.rs` (registered in `Cargo.toml` with
+`required-features = ["serialization"]`), which reproduces **every** serialization pattern the
+docs teach — including the `&D`-receiver case, the char-vs-byte split, the gzip wrapper, and the
+versioned-struct `serialize_into`. It compiles with **0 errors and 0 warnings** under both
+`--features serialization` and `--all-features`, and **runs green** (the round-trip asserts pass).
+Any future drift in a documented serialization API now breaks the build.
+
+Writing that check immediately caught a real bug in my own first draft: `PathMapDictionary::contains`
+is a `Dictionary` **trait** method (the other backends also expose an inherent one), so the trait
+must be in scope — proof that the compile gate earns its keep.
+
+**Final gate results — all green.**
+
+| Gate | Result |
+|---|---|
+| #1 math-lint | ✅ 0 across 248 living docs |
+| #2 diagrams | ✅ 49/49 SVGs in sync |
+| #3 links | ✅ **0 errors** / 2603 OK |
+| #4 deprecated imports | ✅ only `phonetic_normalized` (legitimate) + the deprecation prose |
+| #5 code validity | ✅ **`doc_serialization_check` compiles (0 warnings) and runs** |
+| #6 append-only integrity | ✅ 0 `.v`/`.tla` content changes |
+| #7 rustdoc | ✅ 0 `missing_docs` |
+
+**No deferrals remain.**

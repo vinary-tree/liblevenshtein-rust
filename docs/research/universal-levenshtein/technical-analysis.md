@@ -43,7 +43,7 @@ pub enum Algorithm {
 
 **Implication for Universal LA**:
 - Universal LA maintains uniform cost = 1 for allowed operations
-- Restricted substitutions are **binary**: either allowed (cost=1) or blocked (cost=∞)
+- Restricted substitutions are **binary**: either allowed (cost=1) or blocked (cost=`$\infty$`)
 - This aligns well with current architecture - no cost model changes needed
 
 ---
@@ -87,11 +87,11 @@ pub(crate) fn characteristic_vector(
 }
 ```
 
-**Key concept**: The characteristic vector χ(a, w) represents where character `a` appears in word `w`.
+**Key concept**: The characteristic vector `$\chi(a, w)$` represents where character `a` appears in word `w`.
 
 **Universal LA modification needed**:
-- Current: χ(a, w[i]) = 1 if w[i] == a, else 0
-- **New S-characteristic vector**: χ_s(a, w[i]) = 1 if (w[i], a) ∈ S (substitution allowed), else 0
+- Current: `$\chi(a, w[i]) = 1$` if `w[i] == a`, else 0
+- **New S-characteristic vector**: `$\chi_s(a, w[i]) = 1$` if `$(w[i], a) \in S$` (substitution allowed), else 0
 
 **Implementation approach**:
 ```rust
@@ -356,8 +356,8 @@ Universal LA: May violate triangle inequality when substitution paths are blocke
 ### What's Missing ❌
 
 1. **SubstitutionSet structure**: Need to represent set S
-2. **S-characteristic vectors**: Modified χ_s computation
-3. **Substitution validation**: Check (a, b) ∈ S in transitions
+2. **S-characteristic vectors**: Modified `$\chi_s$` computation
+3. **Substitution validation**: Check `$(a, b) \in S$` in transitions
 4. **Builder configuration**: Add substitution_set field
 5. **Preset substitution sets**: QWERTY, OCR, phonetic, etc.
 6. **Serialization support**: Save/load SubstitutionSet with dictionaries
@@ -425,8 +425,8 @@ impl SubstitutionSet {
 
 **What**:
 - Add `s_characteristic_vector()` function
-- Check (term_char, query_char) ∈ S for substitutions
-- Fall back to standard χ when substitution_set is None
+- Check `$(\text{term\_char}, \text{query\_char}) \in S$` for substitutions
+- Fall back to standard `$\chi$` when `substitution_set` is None
 
 ---
 
@@ -479,7 +479,7 @@ impl SubstitutionSet {
 
 ### Overhead Sources
 
-1. **Substitution validity check**: `𝒪(1)` HashSet lookup per potential substitution
+1. **Substitution validity check**: `$\mathcal{O}(1)$` HashSet lookup per potential substitution
    - Typical cost: ~5-10 nanoseconds
    - Per-query impact: Depends on dictionary size and error bound
 
@@ -495,7 +495,7 @@ impl SubstitutionSet {
 
 1. **Perfect hashing**: For static substitution sets
    - Pre-compute minimal perfect hash function
-   - `𝒪(1)` lookup with zero collisions
+   - `$\mathcal{O}(1)$` lookup with zero collisions
    - Trade-off: Higher setup cost, lower runtime cost
 
 2. **Bit vectors**: For small alphabets (ASCII, DNA)

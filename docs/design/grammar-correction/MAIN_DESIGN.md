@@ -12,20 +12,21 @@
 1. [Introduction](#1-introduction)
 2. [Theoretical Foundations](#2-theoretical-foundations)
 3. [String vs Tree Edit Distance](#3-string-vs-tree-edit-distance)
-4. [Parsing Algorithms](#4-parsing-algorithms)
+   - [3.7 Integration with Large Language Models (LLM)](#37-integration-with-large-language-models-llm)
+4. [Parsing Algorithms and Optimizations](#4-parsing-algorithms-and-optimizations)
 5. [Error Correction Theory](#5-error-correction-theory)
-6. [Search Strategies for Correction](#6-search-strategies-for-correction)
-7. [Tree-sitter Integration](#7-tree-sitter-integration)
-8. [BFS Grammar Correction: Detailed Algorithm](#8-bfs-grammar-correction-detailed-algorithm)
-9. [Semantic Error Detection](#9-semantic-error-detection)
-10. [Semantic Error Correction Approaches](#10-semantic-error-correction-approaches)
-11. [Process Calculi and Session Types](#11-process-calculi-and-session-types)
-12. [WFST Composition for Multi-Layer Correction](#12-wfst-composition-for-multi-layer-correction)
-13. [Implementation Design](#13-implementation-design)
-14. [Testing and Evaluation](#14-testing-and-evaluation)
-15. [Implementation Roadmap](#15-implementation-roadmap)
-16. [Open-Access References](#16-open-access-references)
-17. [Open Questions and Future Work](#17-open-questions-and-future-work)
+6. [Type Systems and Semantic Analysis](#6-type-systems-and-semantic-analysis)
+7. [Search Strategies and Heuristics](#7-search-strategies-and-heuristics)
+8. [Process Calculus and Session Types (Layer 5)](#8-process-calculus-and-session-types-layer-5)
+9. [Composition and Feedback](#9-composition-and-feedback)
+10. [Implementation Architecture](#10-implementation-architecture)
+11. [Testing and Validation](#11-testing-and-validation)
+12. [Performance Optimization](#12-performance-optimization)
+13. [Deployment and Integration](#13-deployment-and-integration)
+14. [Future Work and Extensions](#14-future-work-and-extensions)
+15. [References](#15-references)
+16. [Appendices](#16-appendices)
+17. [Conclusion](#17-conclusion)
 
 ---
 
@@ -152,13 +153,13 @@ This design integrates with and extends the existing `hierarchical-correction.md
 
 Levenshtein automata work beautifully for spell checking because strings are **linear**:
 - State = (position, errors_remaining)
-- Size = `𝒪(n × k)` for string length n, max errors k
-- Recognition in `𝒪(n)` time
+- Size = `$\mathcal{O}(n \times  k)$` for string length n, max errors k
+- Recognition in `$\mathcal{O}(n)$` time
 
 Parse trees are **hierarchical**:
 - State must track position in tree + error context for all subtrees
 - Size explodes exponentially
-- Tree edit distance requires `𝒪(n²m²)` dynamic programming (Zhang-Shasha algorithm)
+- Tree edit distance requires `$\mathcal{O}(n^{2}m^{2})$` dynamic programming (Zhang-Shasha algorithm)
 
 **We cannot directly build a "parse tree Levenshtein automaton"**. Instead, we use **BFS over parser states**.
 
@@ -166,10 +167,10 @@ Parse trees are **hierarchical**:
 
 | Level | Algorithm | Time Complexity | Space |
 |-------|-----------|----------------|-------|
-| Lexical | Levenshtein automaton | `𝒪(n)` | `𝒪(n)` |
-| Grammar | BFS + parsing | `𝒪(beam × d × parse)` | `𝒪(beam)` |
-| Semantic | Type inference | `𝒪(n log n)` avg | `𝒪(n)` |
-| Process | Session types | `𝒪(n)` | `𝒪(n)` |
+| Lexical | Levenshtein automaton | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` |
+| Grammar | BFS + parsing | `$\mathcal{O}(\text{beam} \times  d \times  \text{parse})$` | `$\mathcal{O}(\text{beam})$` |
+| Semantic | Type inference | `$\mathcal{O}(n \log  n)$` avg | `$\mathcal{O}(n)$` |
+| Process | Session types | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` |
 
 For a 100-token program with distance d=2, beam width=20:
 - Grammar: ~20 × 2 × 5ms = 200ms
@@ -276,10 +277,10 @@ Type 3: Regular Languages ◄── FOCUS (lexical analysis)
 **Relevance to Error Correction**:
 - **Lexical errors** (Layer 1) operate at Type 3 (regular languages)
   - Levenshtein automata are finite automata
-  - Efficient: `𝒪(n)` recognition
+  - Efficient: `$\mathcal{O}(n)$` recognition
 - **Grammar errors** (Layer 2) operate at Type 2 (context-free languages)
   - Requires pushdown automata or equivalent (GLR parsing)
-  - Less efficient: `𝒪(n³)` worst-case parsing
+  - Less efficient: `$\mathcal{O}(n^{3})$` worst-case parsing
 - **Semantic/Process errors** (Layers 3-5) operate beyond Chomsky hierarchy
   - Require external semantic models (type systems, session types)
   - Can be undecidable in general
@@ -298,12 +299,12 @@ But cannot express (require Type 1 or semantic checks):
 
 ### 2.2 Regular Languages and Finite Automata
 
-**Definition**: A **finite automaton** is a 5-tuple `M = (Q, Σ, δ, q₀, F)` where:
+**Definition**: A **finite automaton** is a 5-tuple `$M = (Q, \Sigma , \delta , q_{0}, F)$` where:
 - `Q`: Finite set of states
-- `Σ`: Input alphabet
-- `δ: Q × Σ → Q` (transition function, DFA) or `δ: Q × Σ → 2^Q` (NFA)
-- `q₀ ∈ Q`: Initial state
-- `F ⊆ Q`: Accepting states
+- `$\Sigma$`: Input alphabet
+- `$\delta : Q \times  \Sigma  \to  Q$` (transition function, DFA) or `$\delta : Q \times  \Sigma  \to  2^Q$` (NFA)
+- `$q_{0} \in  Q$`: Initial state
+- `$F \subseteq  Q$`: Accepting states
 
 **Example**: DFA recognizing strings with even number of 'a's:
 
@@ -327,14 +328,14 @@ Accepting: F = {q₀}
 ```
 
 **Closure Properties** (used in error correction):
-- **Union**: L₁ ∪ L₂ is regular (combine automata)
+- **Union**: `$L_{1} \cup  L_{2}$` is regular (combine automata)
 - **Concatenation**: L₁ · L₂ is regular
 - **Kleene Star**: L* is regular
 - **Complement**: Regular languages closed under complement
 
 **Key Property**: Regular languages have **finite memory** (bounded by number of states). This makes Levenshtein automata possible for spell checking.
 
-**Non-Example**: L = {a^n b^n | n ≥ 0} is **not regular**
+**Non-Example**: L = {`$a^n$` `$b^n$` | `$n \ge 0$`} is **not regular**
 - Requires unbounded counting
 - Pumping lemma proves this
 
@@ -342,11 +343,11 @@ This is why balanced parentheses (CFG, not regular) require more powerful parsin
 
 ### 2.3 Context-Free Grammars
 
-**Definition**: A **context-free grammar** is a 4-tuple `G = (V, Σ, R, S)` where:
+**Definition**: A **context-free grammar** is a 4-tuple `$G = (V, \Sigma , R, S)$` where:
 - `V`: Finite set of non-terminal symbols
-- `Σ`: Finite set of terminal symbols (`V ∩ Σ = ∅`)
-- `R`: Finite set of production rules (`V → (V ∪ Σ)*`)
-- `S ∈ V`: Start symbol
+- `$\Sigma$`: Finite set of terminal symbols (`$V \cap  \Sigma  = \emptyset$`)
+- `R`: Finite set of production rules (`$V \to  (V \cup  \Sigma )*$`)
+- `$S \in  V$`: Start symbol
 
 **Example**: Arithmetic expression grammar:
 
@@ -363,7 +364,7 @@ F → ( E )
 ```
 
 Non-terminals: `V = {E, T, F}`
-Terminals: `Σ = {+, *, (, ), number, identifier}`
+Terminals: `$\Sigma  = {+, *, (, ), \text{number}, \text{identifier}}$`
 Start symbol: `S = E`
 
 **Derivation** (how to produce strings):
@@ -419,7 +420,7 @@ Right tree: 1 + (2 * 3) = 7  [WRONG for typical precedence]
 
 **Solution**: Use precedence and associativity (see grammar at start of section).
 
-**Left Recursion**: Production A → Aα is **left-recursive**.
+**Left Recursion**: Production `$A \to  A\alpha$` is **left-recursive**.
 - Problem: Naive top-down parsers loop infinitely
 - Solution: Left-recursion elimination (transform grammar)
 
@@ -430,18 +431,18 @@ Right tree: 1 + (2 * 3) = 7  [WRONG for typical precedence]
 
 ### 2.4 Pushdown Automata
 
-**Definition**: A **pushdown automaton (PDA)** is a 7-tuple `M = (Q, Σ, Γ, δ, q₀, Z₀, F)` where:
+**Definition**: A **pushdown automaton (PDA)** is a 7-tuple `$M = (Q, \Sigma , \Gamma , \delta , q_{0}, Z_{0}, F)$` where:
 - `Q`: Finite set of states
-- `Σ`: Input alphabet
-- `Γ`: Stack alphabet
-- `δ: Q × (Σ ∪ {ε}) × Γ → P(Q × Γ*)` (transition function)
-- `q₀ ∈ Q`: Initial state
-- `Z₀ ∈ Γ`: Initial stack symbol
-- `F ⊆ Q`: Accepting states
+- `$\Sigma$`: Input alphabet
+- `$\Gamma$`: Stack alphabet
+- `$\delta : Q \times  (\Sigma  \cup  {\varepsilon }) \times  \Gamma  \to  P(Q \times  \Gamma *)$` (transition function)
+- `$q_{0} \in  Q$`: Initial state
+- `$Z_{0} \in  \Gamma$`: Initial stack symbol
+- `$F \subseteq  Q$`: Accepting states
 
 **Key Difference from Finite Automata**: Unbounded **stack** for memory.
 
-**Example**: PDA for L = {a^n b^n | n ≥ 0} (balanced strings):
+**Example**: PDA for L = {`$a^n$` `$b^n$` | `$n \ge 0$`} (balanced strings):
 
 ```
 States: Q = {q₀, q₁, q₂}
@@ -571,10 +572,10 @@ Contexts:  Γ ::= ∅ | Γ, x:τ
 ```
 
 Where:
-- α: Base types (Int, Bool, etc.)
-- τ₁ → τ₂: Function type (τ₁ to τ₂)
+`$- \alpha$`: Base types (Int, Bool, etc.)
+`$- \tau _{1} \to  \tau _{2}$`: Function type `$(\tau _{1}$` to `$\tau _{2})$`
 - x: Variables
-- λx:τ. e: Lambda abstraction (function definition)
+`$- \lambda x$`:`$\tau . e$`: Lambda abstraction (function definition)
 - e₁ e₂: Application (function call)
 
 **Typing Rules**:
@@ -615,10 +616,10 @@ Derivation:
 
 **Type Safety** (fundamental theorems):
 
-**Progress**: If ∅ ⊢ e : τ, then either e is a value or e → e' for some e'.
+**Progress**: If `$\emptyset  \vdash  e$` : `$\tau ,$` then either e is a value or e → e' for some e'.
 - *Well-typed terms don't get stuck*
 
-**Preservation**: If Γ ⊢ e : τ and e → e', then Γ ⊢ e' : τ.
+**Preservation**: If `$\Gamma  \vdash  e$` : `$\tau$` and e → e', then `$\Gamma  \vdash  e'$` : `$\tau .$`
 - *Types are preserved during evaluation*
 
 **Relevance to Error Correction**:
@@ -722,7 +723,7 @@ Result: λx. x + 1 :: Int → Int
 ```
 
 **Complexity**:
-- Best/Average: `𝒪(n log n)` where n = term size
+- Best/Average: `$\mathcal{O}(n \log  n)$` where n = term size
 - Worst: Exponential (due to occurs check in unification)
 - Practice: Near-linear for typical programs
 
@@ -860,20 +861,20 @@ Now S can use *(@Q) to execute the received process Q.
 
 ### 2.8 Computational Complexity Primer
 
-**Big-O Notation**: f(n) ∈ `𝒪(g(n))` if ∃c, n₀ such that f(n) ≤ c · g(n) for all n ≥ n₀.
+**Big-O Notation**: `$f(n) \in$` `$\mathcal{O}(g(n))$` if `$\exists c, n_{0}$` such that `$f(n) \le  c \cdot  g(n)$` for all `$n \ge  n_{0}.$`
 
 **Common Complexities** (from fastest to slowest):
 
 | Notation | Name | Example |
 |----------|------|---------|
-| `𝒪(1)` | Constant | Array indexing |
-| `𝒪(log n)` | Logarithmic | Binary search |
-| `𝒪(n)` | Linear | Array scan |
-| `𝒪(n log n)` | Linearithmic | Merge sort, Hindley-Milner (average) |
-| `𝒪(n²)` | Quadratic | Naive string matching, unification (worst) |
-| `𝒪(n³)` | Cubic | CYK parsing, Earley parsing (worst) |
-| `𝒪(2^n)` | Exponential | Naive constraint solving |
-| `𝒪(n!)` | Factorial | Traveling salesman (brute force) |
+| `$\mathcal{O}(1)$` | Constant | Array indexing |
+| `$\mathcal{O}(\log  n)$` | Logarithmic | Binary search |
+| `$\mathcal{O}(n)$` | Linear | Array scan |
+| `$\mathcal{O}(n \log  n)$` | Linearithmic | Merge sort, Hindley-Milner (average) |
+| `$\mathcal{O}(n^{2})$` | Quadratic | Naive string matching, unification (worst) |
+| `$\mathcal{O}(n^{3})$` | Cubic | CYK parsing, Earley parsing (worst) |
+| `$\mathcal{O}(2^n)$` | Exponential | Naive constraint solving |
+| `$\mathcal{O}(n!)$` | Factorial | Traveling salesman (brute force) |
 
 **Dynamic Programming**: Technique to avoid recomputation by memoizing subproblem results.
 
@@ -894,20 +895,20 @@ def fib_dp(n):
 ```
 
 **Relevance to Error Correction**:
-- Wagner-Fischer (string edit distance): `𝒪(mn)` via DP
-- Zhang-Shasha (tree edit distance): `𝒪(n²m²)` via DP
-- Earley parsing: `𝒪(n³)` via chart (DP on substrings × grammar symbols)
-- Algorithm W (type inference): `𝒪(n log n)` average, `𝒪(n²)` worst
+- Wagner-Fischer (string edit distance): `$\mathcal{O}(\text{mn})$` via DP
+- Zhang-Shasha (tree edit distance): `$\mathcal{O}(n^{2}m^{2})$` via DP
+- Earley parsing: `$\mathcal{O}(n^{3})$` via chart (DP on substrings × grammar symbols)
+- Algorithm W (type inference): `$\mathcal{O}(n \log  n)$` average, `$\mathcal{O}(n^{2})$` worst
 
 **Amortized Complexity**: Average cost per operation over sequence.
 
 **Example**: Dynamic array (vector) push:
-- Individual push may take `𝒪(n)` (when resizing)
-- Amortized cost: `𝒪(1)` (resize infrequent)
+- Individual push may take `$\mathcal{O}(n)$` (when resizing)
+- Amortized cost: `$\mathcal{O}(1)$` (resize infrequent)
 
 **Relevance**:
-- Tree-sitter incremental parsing: `𝒪(log n)` amortized per edit
-- Union-Find (unification): `𝒪(α(n))` amortized, where α is inverse Ackermann (effectively constant)
+- Tree-sitter incremental parsing: `$\mathcal{O}(\log  n)$` amortized per edit
+- Union-Find (unification): `$\mathcal{O}(\alpha (n))$` amortized, where `$\alpha$` is inverse Ackermann (effectively constant)
 
 ### 2.9 Summary of Theoretical Foundations
 
@@ -1019,8 +1020,8 @@ def edit_distance(s, t):
 ```
 
 **Complexity**:
-- Time: `𝒪(m × n)` where `m = ∣s∣`, `n = ∣t∣`
-- Space: `𝒪(m × n)` (can be optimized to `𝒪(min(m, n))` with rolling array)
+- Time: `$\mathcal{O}(m \times  n)$` where `$m = \lvert s\rvert$`, `$n = \lvert t\rvert$`
+- Space: `$\mathcal{O}(m \times  n)$` (can be optimized to `$\mathcal{O}(\min (m, n))$` with rolling array)
 
 **Backtracking** (recover edit sequence):
 
@@ -1066,12 +1067,12 @@ def edit_distance_with_path(s, t):
 - **Optimal Substructure**: Optimal solution contains optimal solutions to subproblems
 - **Overlapping Subproblems**: Same subproblems computed multiple times (DP helps)
 - **Symmetry**: d(s, t) = d(t, s)
-- **Triangle Inequality**: d(s, u) ≤ d(s, t) + d(t, u)
-- **Non-negativity**: d(s, t) ≥ 0, with d(s, t) = 0 ⟺ s = t
+- **Triangle Inequality**: `$d(s, u) \le  d(s, t) + d(t, u)$`
+- **Non-negativity**: `$d(s, t) \ge  0,$` with d(s, t) = 0 ⟺ s = t
 
 ### 3.3 Levenshtein Automata
 
-**Key Insight**: For fixed string W and distance bound n, we can construct a finite automaton that recognizes exactly the language {V | d(V, W) ≤ n}.
+**Key Insight**: For fixed string W and distance bound n, we can construct a finite automaton that recognizes exactly the language `$\{V \mid d(V, W) \le n\}$`.
 
 **State Representation**: (position in W, errors remaining, is_special)
 
@@ -1144,12 +1145,12 @@ def levenshtein_automaton(word, max_dist):
 ```
 
 **Complexity**:
-- **Construction**: `𝒪(∣W∣ × n)` where `∣W∣` = word length, `n` = max distance
-- **Recognition**: `𝒪(∣V∣)` where `∣V∣` = input string length
-- **States**: `𝒪(∣W∣ × n)` (linear in word length!)
+- **Construction**: `$\mathcal{O}(\lvert W\rvert \times  n)$` where `$\lvert W\rvert$` = word length, `n` = max distance
+- **Recognition**: `$\mathcal{O}(\lvert V\rvert)$` where `$\lvert V\rvert$` = input string length
+- **States**: `$\mathcal{O}(\lvert W\rvert \times  n)$` (linear in word length!)
 
 **Why This Works**:
-1. **Finite state space**: Position `∈ [0, ∣W∣]`, errors `∈ [0, n]`
+1. **Finite state space**: Position `$\in  [0, \lvert W\rvert]$`, errors `$\in  [0, n]$`
 2. **Markov property**: Future depends only on current state, not history
 3. **Sequential nature**: Strings are 1-dimensional
 
@@ -1263,12 +1264,12 @@ def zhang_shasha(T1, T2):
     return dp[n][m]
 ```
 
-**Complexity**: `𝒪(n² m²)` time, `𝒪(nm)` space
+**Complexity**: `$\mathcal{O}(n^{2} m^{2})$` time, `$\mathcal{O}(\text{nm})$` space
 
 **Limitation**: Does not directly apply to our problem because:
 1. **Input format**: We have **candidate strings**, not candidate parse trees
 2. **Parse tree generation**: Must parse each candidate (expensive)
-3. **Exponential candidates**: K corrections per token → K^n candidates
+3. **Exponential candidates**: K corrections per token → `$K^n$` candidates
 
 **Next Section**: We address this with BFS over parse states instead of enumerating all tree candidates.
 
@@ -2762,9 +2763,9 @@ fn parse_lattice(lattice: &Lattice, parser: &mut Parser) -> Vec<(Tree, f64)> {
 ```
 
 **Complexity Analysis**:
-- **Without lattice**: `𝒪(C^T × P)`, where C = candidates per token, T = num typos, P = parse cost
+- **Without lattice**: `$\mathcal{O}(C^T \times  P)$`, where C = candidates per token, T = num typos, P = parse cost
   - Example: 3^10 × P = 59,049 × P
-- **With lattice**: `𝒪(E × P)`, where E = num edges in lattice
+- **With lattice**: `$\mathcal{O}(E \times  P)$`, where E = num edges in lattice
   - Example: (10 tokens × 3 candidates) × P = 30 × P
 
 **Speedup**: 59,049 / 30 = **1,968× faster** for this example!
@@ -2878,10 +2879,10 @@ impl LatticeParse {
 **Memoization**: The `states` map prevents re-exploring the same (node, parser_state) with worse scores, giving us **dynamic programming** efficiency.
 
 **Realistic Complexity**:
-- States: `𝒪(N × S)`, where N = lattice nodes, S = parser states
+- States: `$\mathcal{O}(N \times  S)$`, where N = lattice nodes, S = parser states
 - For typical code with 100 tokens, 10 typos, 3 candidates each:
-  - N ≈ 100 nodes
-  - S ≈ 50 parser states (depends on grammar)
+  `$- N \approx  100$` nodes
+  `$- S \approx  50$` parser states (depends on grammar)
   - Total states: 100 × 50 = 5,000
 - Without lattice: 3^10 = 59,049 candidate sequences
 
@@ -3106,7 +3107,7 @@ An alternative to lattice parsing is to **compose** Layer 1 (Lexical) and Layer 
 
 1. **Layer 1 as WFST**: `T_lex: Error → Correction` with edit distance weights
 2. **Layer 2 as WFST**: `T_gram: Tokens → ParseTree` with grammar weights
-3. **Composition**: `T_lex ∘ T_gram` produces a transducer from errors to parse trees
+3. **Composition**: `$T_\text{lex} \circ  T_\text{gram}$` produces a transducer from errors to parse trees
 4. **Search**: Find shortest path in composed transducer
 
 **Benefits**:
@@ -3171,14 +3172,14 @@ This section establishes the theoretical foundations for multi-layer error corre
 
 **Definition 5.1 (Error Correction Function)**
 
-An **error correction function** is a relation `C ⊆ Σ* × Σ* × ℝ` where:
-- `Σ*` is the set of all strings over alphabet `Σ`
-- For `(s, t, w) ∈ C`, we have:
+An **error correction function** is a relation `$C \subseteq  \Sigma * \times  \Sigma * \times  \mathbb{R}$` where:
+- `$\Sigma *$` is the set of all strings over alphabet `$\Sigma$`
+- For `$(s, t, w) \in  C$`, we have:
   - `s` is the **source** (erroneous input)
   - `t` is the **target** (corrected output)
   - `w` is the **weight** (correction confidence score)
 
-**Notation**: `s →_C^w t` means `(s, t, w) ∈ C`
+**Notation**: `s →_C^w t` means `$(s, t, w) \in  C$`
 
 **Example (Lexical Layer)**:
 ```
@@ -3189,9 +3190,9 @@ An **error correction function** is a relation `C ⊆ Σ* × Σ* × ℝ` where:
 
 **Properties of a Well-Formed Correction Function**:
 
-1. **Reflexivity**: `∀s ∈ Σ*. (s, s, 1.0) ∈ C` (identity correction has maximum weight)
-2. **Finite branching**: `∀s ∈ Σ*. |{(t, w) | (s, t, w) ∈ C}| < ∞` (finite candidates per input)
-3. **Weight normalization**: `∀s. ∀(s, t, w) ∈ C. 0 ≤ w ≤ 1` (weights in [0, 1])
+1. **Reflexivity**: `$\forall s \in  \Sigma *. (s, s, 1.0) \in  C$` (identity correction has maximum weight)
+2. **Finite branching**: `$\forall s \in  \Sigma *. |{(t, w) | (s, t, w) \in  C}| < \infty$` (finite candidates per input)
+3. **Weight normalization**: `$\forall s. \forall (s, t, w) \in  C. 0 \le  w \le  1$` (weights in [0, 1])
 
 ---
 
@@ -3228,11 +3229,11 @@ Composition:
 
 **Theorem 5.1 (Composition Preserves Well-Formedness)**
 
-If `C₁, C₂, ..., Cₙ` are well-formed correction functions with finite branching, then `C₁ ⊙ C₂ ⊙ ... ⊙ Cₙ` is also well-formed with finite branching.
+If `C₁, C₂, ..., Cₙ` are well-formed correction functions with finite branching, then `$C_{1} \odot  C_{2} \odot  ... \odot  C_{n}$` is also well-formed with finite branching.
 
 **Proof Sketch**:
 - Reflexivity: Identity path `s →^1.0 s →^1.0 ... →^1.0 s` exists
-- Finite branching: Each layer has finite candidates, so composition has at most `∏ᵢ |Cᵢ(s)|` candidates
+- Finite branching: Each layer has finite candidates, so composition has at most `$\prod _{i} |C_{i}(s)|$` candidates
 - Weight normalization: Product of values in [0, 1] is in [0, 1]
 
 ---
@@ -3255,7 +3256,7 @@ For the grammar correction layer `C_gram`, if `s →_C_gram^w t` with `w > 0`, t
 - By construction, Layer 2 uses Tree-sitter parser
 - Only candidates with valid parse trees (no error nodes) are emitted
 - Tree-sitter guarantees parse validity by definition
-- Therefore, all outputs with `w > 0` are syntactically correct ∎
+- Therefore, all outputs with `w > 0` are syntactically correct `$\blacksquare$`
 
 **Theorem 5.3 (Layer 3 Guarantees Semantic Correctness)**
 
@@ -3265,11 +3266,11 @@ For the semantic validation layer `C_type`, if `s →_C_type^w t` with `w > 0`, 
 - Layer 3 uses Hindley-Milner type inference (Algorithm W)
 - Algorithm W is **sound**: if it infers a type for program `t`, then `t` is well-typed
 - Layer 3 only emits candidates that pass type inference
-- Therefore, all outputs are semantically correct ∎
+- Therefore, all outputs are semantically correct `$\blacksquare$`
 
 **Corollary 5.1 (Pipeline Correctness)**
 
-For the full pipeline `C_lex ⊙ C_gram ⊙ C_type`, all corrections with `w > 0` are both syntactically and semantically correct.
+For the full pipeline `$C_\text{lex} \odot  C_\text{gram} \odot  C_\text{type}$`, all corrections with `w > 0` are both syntactically and semantically correct.
 
 ---
 
@@ -3277,7 +3278,7 @@ For the full pipeline `C_lex ⊙ C_gram ⊙ C_type`, all corrections with `w > 0
 
 **Definition 5.5 (Optimal Correction)**
 
-A correction `s →_C^w* t*` is **optimal** if `w* ≥ w` for all other corrections `s →_C^w t`.
+A correction `s →_C^w* t*` is **optimal** if `$w* \ge  w$` for all other corrections `s →_C^w t`.
 
 **Question**: Does the pipeline composition preserve optimality?
 
@@ -3413,9 +3414,9 @@ If `C` has tie-breaking rules that totally order all candidates with equal weigh
 
 **Theorem 5.8 (Decidability of Layer 1-3)**
 
-- **Layer 1 (Lexical)**: Decidable, `𝒪(n)` with Levenshtein automata
-- **Layer 2 (Grammar)**: Decidable, `𝒪(n³)` with GLR parsing (worst case)
-- **Layer 3 (Type Validation)**: Decidable, `𝒪(n³)` with Hindley-Milner (worst case)
+- **Layer 1 (Lexical)**: Decidable, `$\mathcal{O}(n)$` with Levenshtein automata
+- **Layer 2 (Grammar)**: Decidable, `$\mathcal{O}(n^{3})$` with GLR parsing (worst case)
+- **Layer 3 (Type Validation)**: Decidable, `$\mathcal{O}(n^{3})$` with Hindley-Milner (worst case)
 
 **Theorem 5.9 (Undecidability of Layer 4)**
 
@@ -3429,9 +3430,9 @@ Semantic repair (Layer 4) is **undecidable** in general, because it requires:
 
 | **Layer** | **Problem**          | **Decidability** | **Complexity**     |
 |-----------|----------------------|------------------|--------------------|
-| 1         | Lexical correction   | Decidable        | `𝒪(n)`               |
-| 2         | Grammar correction   | Decidable        | `𝒪(n³)`              |
-| 3         | Type validation      | Decidable        | `𝒪(n³)`              |
+| 1         | Lexical correction   | Decidable        | `$\mathcal{O}(n)$`               |
+| 2         | Grammar correction   | Decidable        | `$\mathcal{O}(n^{3})$`              |
+| 3         | Type validation      | Decidable        | `$\mathcal{O}(n^{3})$`              |
 | 4         | Semantic repair      | Undecidable      | Approximation      |
 | 5         | Process verification | Decidable (†)    | PSPACE-complete    |
 
@@ -3504,9 +3505,9 @@ This section covers Layer 3 (Semantic Validation) and Layer 4 (Semantic Repair),
 
 **Key Concepts**:
 
-1. **Type variables**: `α, β, γ, ...` represent unknown types
-2. **Type schemes**: `∀α. τ` represents polymorphic types (e.g., `∀α. α → α`)
-3. **Substitution**: `[α ↦ int]` replaces type variable `α` with concrete type `int`
+1. **Type variables**: `$\alpha , \beta , \gamma , ...$` represent unknown types
+2. **Type schemes**: `$\forall \alpha . \tau$` represents polymorphic types (e.g., `$\forall \alpha . \alpha  \to  \alpha$`)
+3. **Substitution**: `$[\alpha  \mapsto  \text{int}]$` replaces type variable `$\alpha$` with concrete type `int`
 4. **Unification**: Find a substitution that makes two types equal
 
 **Algorithm W (Simplified)**:
@@ -3550,12 +3551,12 @@ twice id 42
 
 **Type Inference Steps**:
 
-1. `id: ∀α. α → α` (polymorphic identity)
-2. `twice: ∀α β. (α → α) → α → α` (apply function twice)
-3. `twice id: ∀α. α → α` (instantiate with α = α)
-4. `twice id 42: int` (instantiate with α = int)
+1. `$\text{id}: \forall \alpha . \alpha  \to  \alpha$` (polymorphic identity)
+2. `$\text{twice}: \forall \alpha  \beta . (\alpha  \to  \alpha ) \to  \alpha  \to  \alpha$` (apply function twice)
+3. `$\text{twice} \text{id}: \forall \alpha . \alpha  \to  \alpha$` (instantiate with `$\alpha  = \alpha )$`
+4. `twice id 42: int` (instantiate with `$\alpha  =$` int)
 
-**Complexity**: `𝒪(n³)` worst case, `𝒪(n)` average case (where n = AST size)
+**Complexity**: `$\mathcal{O}(n^{3})$` worst case, `$\mathcal{O}(n)$` average case (where n = AST size)
 
 ---
 
@@ -3714,7 +3715,7 @@ If the constraint graph correctly models the type system, then fixing all locati
 **Proof Sketch**:
 - Minimum vertex cover removes all conflicting constraints
 - Remaining constraints are satisfiable
-- Therefore, program with fixes will type-check ∎
+- Therefore, program with fixes will type-check `$\blacksquare$`
 
 ---
 
@@ -3872,7 +3873,7 @@ dual(Client, Server) = true
 
 1. **Hindley-Milner Type Inference** (Algorithm W):
    - Infers most general types without annotations
-   - `𝒪(n³)` worst case, `𝒪(n)` average case
+   - `$\mathcal{O}(n^{3})$` worst case, `$\mathcal{O}(n)$` average case
    - Soundness: if it type-checks, it's correct
 
 2. **Constraint-Based Type Inference**:
@@ -3921,14 +3922,14 @@ This section covers the search algorithms and heuristics used to efficiently nav
 **Size of Correction Space**:
 
 For a program with `T` tokens, `E` errors, and `C` candidates per error:
-- **Lexical space**: `𝒪(C^E)` candidate token sequences
-- **Grammar space**: `𝒪(C^E × P)` parse trees (P = parser ambiguity)
-- **Semantic space**: `𝒪(C^E × P × S)` typed programs (S = type solutions)
+- **Lexical space**: `$\mathcal{O}(C^E)$` candidate token sequences
+- **Grammar space**: `$\mathcal{O}(C^E \times  P)$` parse trees (P = parser ambiguity)
+- **Semantic space**: `$\mathcal{O}(C^E \times  P \times  S)$` typed programs (S = type solutions)
 
 **Example**: 100-token program, 10 errors, 3 candidates each:
 - Lexical: 3^10 = 59,049 sequences
-- Grammar: 59,049 × 5 ≈ 300,000 parses
-- Semantic: 300,000 × 10 ≈ 3,000,000 typed programs
+- Grammar: `$59,049 \times  5 \approx  300,000$` parses
+- Semantic: `$300,000 \times  10 \approx  3,000,000$` typed programs
 
 **Challenge**: Enumerate and evaluate 3M programs in <200ms for Balanced Mode.
 
@@ -3967,7 +3968,7 @@ fn bfs_correction(input: &str, max_distance: usize) -> Vec<Correction> {
 }
 ```
 
-**Complexity**: `𝒪(b^d)` where b = branching factor, d = max depth
+**Complexity**: `$\mathcal{O}(b^d)$` where b = branching factor, d = max depth
 **Pro**: Finds optimal solution (shortest path)
 **Con**: Exponential time and memory
 
@@ -4007,7 +4008,7 @@ fn beam_search(input: &str, beam_width: usize) -> Vec<Correction> {
 }
 ```
 
-**Complexity**: `𝒪(k × b × L)` where k = beam width, b = branching, L = layers
+**Complexity**: `$\mathcal{O}(k \times  b \times  L)$` where k = beam width, b = branching, L = layers
 **Pro**: Polynomial time, good quality (92% at k=20)
 **Con**: May miss optimal solution
 
@@ -4049,8 +4050,8 @@ fn astar_correction(input: &str, heuristic: fn(&str) -> f64) -> Correction {
 ```
 
 **Heuristic**: Estimate remaining edit distance to valid program
-**Admissibility**: h(n) ≤ actual cost → A\* finds optimal solution
-**Complexity**: `𝒪(b^d)` worst case, often much better with good heuristic
+**Admissibility**: `$h(n) \le$` actual cost → A\* finds optimal solution
+**Complexity**: `$\mathcal{O}(b^d)$` worst case, often much better with good heuristic
 
 ---
 
@@ -4168,9 +4169,9 @@ fn pareto_frontier(candidates: Vec<Correction>) -> Vec<Correction> {
 
 | **Algorithm** | **Optimality** | **Complexity** | **Use Case** |
 |---------------|----------------|----------------|--------------|
-| BFS           | Optimal        | `𝒪(b^d)`         | Small spaces |
-| Beam Search   | ~92% (k=20)    | `𝒪(k×b×L)`       | Large spaces |
-| A\*           | Optimal        | `𝒪(b^d)`*        | With heuristic |
+| BFS           | Optimal        | `$\mathcal{O}(b^d)$`         | Small spaces |
+| Beam Search   | ~92% (k=20)    | `$\mathcal{O}(k\times b\times L)$`       | Large spaces |
+| A\*           | Optimal        | `$\mathcal{O}(b^d)$`*        | With heuristic |
 
 *Often much better than BFS with admissible heuristic
 
@@ -4312,7 +4313,7 @@ impl SessionTypeChecker {
 }
 ```
 
-**Soundness**: If `⊢ P : T`, then `P` respects protocol `T` (no protocol violations at runtime).
+**Soundness**: If `$\vdash  P : T$`, then `P` respects protocol `T` (no protocol violations at runtime).
 
 ---
 
@@ -4376,7 +4377,7 @@ fn has_cycle(graph: &Graph) -> bool {
 }
 ```
 
-**Complexity**: `𝒪(V + E)` where V = processes + channels, E = dependencies
+**Complexity**: `$\mathcal{O}(V + E)$` where V = processes + channels, E = dependencies
 
 ---
 
@@ -4435,7 +4436,7 @@ fn conflicts(a: &Access, b: &Access) -> bool {
 **Layer 5 Capabilities**:
 
 1. **Session Type Checking**: Verify protocol compliance
-2. **Deadlock Detection**: `𝒪(V + E)` cycle detection
+2. **Deadlock Detection**: `$\mathcal{O}(V + E)$` cycle detection
 3. **Race Condition Analysis**: Identify unsynchronized accesses
 4. **Duality Checking**: Ensure client-server compatibility
 
@@ -4593,10 +4594,10 @@ fn iterative_pipeline(input: &str, max_iterations: usize) -> String {
 
 | **Strategy** | **Quality** | **Speed** | **Complexity** |
 |--------------|-------------|-----------|----------------|
-| Sequential   | 75%         | Fastest   | `𝒪(L × C)`       |
-| Lattice      | 92%         | Moderate  | `𝒪(L × C × k)`   |
-| Feedback     | 85%         | Fast      | `𝒪(L² × C)`      |
-| Iterative    | 88%         | Slow      | `𝒪(I × L × C)`   |
+| Sequential   | 75%         | Fastest   | `$\mathcal{O}(L \times  C)$`       |
+| Lattice      | 92%         | Moderate  | `$\mathcal{O}(L \times  C \times  k)$`   |
+| Feedback     | 85%         | Fast      | `$\mathcal{O}(L^{2} \times  C)$`      |
+| Iterative    | 88%         | Slow      | `$\mathcal{O}(I \times  L \times  C)$`   |
 
 **Recommendation**: Lattice-based composition with beam search (k=20) for Balanced Mode.
 
@@ -5064,14 +5065,14 @@ This design document is part of a larger correction architecture:
 
 | **Layer** | **Operation** | **Time Complexity** | **Space Complexity** |
 |-----------|---------------|---------------------|----------------------|
-| 1         | Levenshtein   | `𝒪(n)`                | `𝒪(n)`                 |
-| 1         | Phonetic      | `𝒪(n)`                | `𝒪(n)`                 |
-| 2         | GLR Parsing   | `𝒪(n³)`               | `𝒪(n²)`                |
-| 2         | Lattice Parse | `𝒪(E × n²)`           | `𝒪(E + n²)`            |
-| 3         | Type Inference| `𝒪(n³)`               | `𝒪(n²)`                |
+| 1         | Levenshtein   | `$\mathcal{O}(n)$`                | `$\mathcal{O}(n)$`                 |
+| 1         | Phonetic      | `$\mathcal{O}(n)$`                | `$\mathcal{O}(n)$`                 |
+| 2         | GLR Parsing   | `$\mathcal{O}(n^{3})$`               | `$\mathcal{O}(n^{2})$`                |
+| 2         | Lattice Parse | `$\mathcal{O}(E \times  n^{2})$`           | `$\mathcal{O}(E + n^{2})$`            |
+| 3         | Type Inference| `$\mathcal{O}(n^{3})$`               | `$\mathcal{O}(n^{2})$`                |
 | 4         | SMT Repair    | Undecidable         | -                    |
-| 5         | Session Types | `𝒪(n)`                | `𝒪(n)`                 |
-| 5         | Deadlock Det. | `𝒪(V + E)`            | `𝒪(V)`                 |
+| 5         | Session Types | `$\mathcal{O}(n)$`                | `$\mathcal{O}(n)$`                 |
+| 5         | Deadlock Det. | `$\mathcal{O}(V + E)$`            | `$\mathcal{O}(V)$`                 |
 
 ---
 

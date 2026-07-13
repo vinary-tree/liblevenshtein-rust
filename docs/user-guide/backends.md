@@ -29,7 +29,7 @@ The taxonomy below groups the available backends by their core data structure an
 
 **Characteristics:**
 - **Construction**: Medium (conflict resolution)
-- **Query**: Excellent (O(1) transitions, excellent cache locality)
+- **Query**: Excellent (`$\mathcal{O}(1)$` transitions, excellent cache locality)
 - **Memory**: Minimal
 - **Updates**: No (immutable after construction)
 - **Unicode**: Use `DoubleArrayTrieChar` variant
@@ -104,7 +104,7 @@ for candidate in transducer.query_with_distance("cafe", 1) {
 - **Construction**: Fast
 - **Query**: Very Good
 - **Memory**: Moderate
-- **Updates**: ✅ Yes (thread-safe with `RwLock`)
+- **Updates**: ✅ Yes (thread-safe, **lock-free** reads via `Arc<ArcSwap<…>>`)
 - **Unicode**: Use `PathMapDictionaryChar` variant
 
 **When to use:**
@@ -136,8 +136,8 @@ for term in transducer.query("test", 1) {
 ```
 
 **Thread safety:**
-- Multiple concurrent readers
-- Exclusive writer access via `RwLock`
+- Lock-free reads (`Arc<ArcSwap<PathMapState>>`) — readers never block on a writer
+- Writers publish a new state by an atomic pointer swap
 - Queries see updates immediately
 
 **Feature flag:** `pathmap-backend` (optional)
@@ -168,7 +168,7 @@ for term in transducer.query("test", 1) {
 - **Construction**: Fast (incremental)
 - **Query**: Good
 - **Memory**: Low (maintains minimization)
-- **Updates**: ✅ Yes (thread-safe with `RwLock`)
+- **Updates**: ✅ Yes (thread-safe, **lock-free** reads via the `LockFreeDawg` core)
 
 **When to use:**
 - Need both updates and space efficiency
@@ -204,15 +204,19 @@ println!("Nodes after minimization: {}", dict.node_count());
 - **Construction**: Fast (incremental)
 - **Query**: Good (wait-free reads, no blocking)
 - **Memory**: Low (maintains minimization)
-- **Updates**: ✅ Yes (**lock-free**, no `RwLock`)
+- **Updates**: ✅ Yes (**lock-free** reads; CAS writes)
 - **Concurrency**: Reads are wait-free; writes use lock-free CAS (compare-and-swap) loops via per-node `ArcSwap<EdgeList>` for copy-on-write edge mutation
 
 **When to use:**
-- High-concurrency workloads where readers must never block on a writer
-- Updates and queries interleave heavily from many threads
-- You want lock-free progress guarantees instead of the `RwLock` of `DynamicDawg`
+- High-concurrency workloads where updates and queries interleave heavily from many threads
+- Alphabets or edge payloads that need the wider 8-byte (`u64`) edge label
+- You prefer the `u64`-labelled variant of the shared lock-free DAWG core
 
-Unlike `DynamicDawg` (whose `RwLock` write blocks all readers), `DynamicDawgU64` is fully lock-free for reads. The trade-off is a wider edge label (`u64`), which trades some memory for wait-free reads. See [Thread Safety](thread-safety.md) for the concurrency model.
+Both `DynamicDawg` and `DynamicDawgU64` are fully lock-free for reads — they share the
+same `LockFreeDawg` core (reads `load()` a per-node `ArcSwap<EdgeList>` snapshot; writes
+use lock-free `compare_exchange` loops). They differ only in the edge-label width:
+`DynamicDawg` uses a 1-byte `u8` label, `DynamicDawgU64` a wider `u64` label (more label
+space at some extra memory). See [Thread Safety](thread-safety.md) for the concurrency model.
 
 **Feature flag:** `dawg-backend` (optional)
 
@@ -256,13 +260,13 @@ for term in transducer.query("test", 1) {
 
 **Characteristics:**
 - **Construction**: Medium (builds suffix automaton per term)
-- **Query**: Excellent for substring (`𝒪(∣pattern∣)`)
+- **Query**: Excellent for substring (`$\mathcal{O}(\lvert pattern\rvert)$`)
 - **Memory**: Moderate
 - **Updates**: No (immutable after construction)
 - **Special**: True suffix automaton indexing ALL substrings with bidirectional edges; backs the **WallBreaker** large-`k` query splitter
 
 **When to use:**
-- Need `𝒪(∣pattern∣)` substring search
+- Need `$\mathcal{O}(\lvert pattern\rvert)$` substring search
 - Bidirectional pattern traversal (left/right extensions)
 - Text indexing with substring frequency queries
 - WallBreaker pattern splitting algorithm
@@ -337,7 +341,7 @@ for result in transducer.query("helo", 1) {
 |---------|-------------|-------|--------|---------|----------------|
 | DoubleArrayTrie | ●●●○○ Medium | ●●●●● Excellent | ●●●●● Minimal | ✗ No | DoubleArrayTrieChar |
 | PathMapDictionary | ●●●●○ Fast | ●●●●○ Very Good | ●●●○○ Moderate | ✅ Yes | PathMapDictionaryChar |
-| DynamicDawg | ●●●●○ Fast | ●●●○○ Good | ●●●●○ Low | ✅ Yes (RwLock) | DynamicDawgChar |
+| DynamicDawg | ●●●●○ Fast | ●●●○○ Good | ●●●●○ Low | ✅ Yes (lock-free) | DynamicDawgChar |
 | DynamicDawgU64 | ●●●●○ Fast | ●●●○○ Good | ●●●●○ Low | ✅ Yes (lock-free) | — (`u64` labels) |
 | SuffixAutomaton | ●●●●○ Fast | ●●●○○ Good | ●●●○○ Moderate | ✗ No | SuffixAutomatonChar |
 | Scdawg | ●●●○○ Medium | ●●●●● Excellent (substring) | ●●●○○ Moderate | ✗ No | ScdawgChar |
@@ -394,7 +398,7 @@ The flowchart below distills the prose decision criteria into a single path from
 - ✅ Need both updates and space efficiency
 - ✅ Memory constrained but need updates
 - ✅ Can accept slightly slower queries
-- ✅ A single-writer `RwLock` is acceptable
+- ✅ Want lock-free reads with compact single-byte (`u8`) edge labels
 
 ### Choose DynamicDawgU64 when:
 - ✅ Need updates with **lock-free** reads (readers never block on a writer)
@@ -407,7 +411,7 @@ The flowchart below distills the prose decision criteria into a single path from
 - ✅ Text indexing applications
 
 ### Choose Scdawg when:
-- ✅ Need `𝒪(∣pattern∣)` substring search
+- ✅ Need `$\mathcal{O}(\lvert pattern\rvert)$` substring search
 - ✅ Bidirectional pattern traversal required
 - ✅ Pattern splitting (WallBreaker algorithm)
 - ✅ Substring frequency queries

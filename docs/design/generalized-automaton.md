@@ -61,14 +61,14 @@ let custom = GeneralizedAutomaton::new(2, phonetic_english_basic());
 ### Primary Goals
 
 1. **Runtime Operation Configuration**: Accept `OperationSet` parameter
-2. **Single-Character Operations First**: Support `⟨1,1,w⟩` operations initially
+2. **Single-Character Operations First**: Support `$\langle 1,1,w\rangle$` operations initially
 3. **Backward Compatibility**: Existing code unchanged, zero regressions
 4. **Clear Semantics**: No confusion about compile vs runtime operations
 5. **Testability**: Independent test suite, isolated from universal tests
 
 ### Non-Goals (Phase 1)
 
-- Multi-character operations (`⟨m,n,w⟩` where `m>1` or `n>1`)
+- Multi-character operations (`$\langle m,n,w\rangle$` where `$m>1$` or `$n>1$`)
 - Weighted operations (fractional costs)
 - Context-dependent operations
 - Performance optimization (focus on correctness first)
@@ -372,8 +372,8 @@ fn test_custom_operations() {
 **For Typical Use Cases:**
 - Standard ops: ~15% slower than Universal (acceptable tradeoff)
 - Phonetic ops: Enables new functionality (no Universal equivalent)
-- Small operation sets (`≤10` ops): Minimal overhead
-- Large operation sets (`>20` ops): May see more overhead
+- Small operation sets (`$\le 10$` ops): Minimal overhead
+- Large operation sets (`$>20$` ops): May see more overhead
 
 ### Optimization Opportunities (Future)
 
@@ -388,7 +388,7 @@ fn test_custom_operations() {
 
 ### Phase 2: Multi-Character Operations
 
-**Goal**: Support `⟨m,n,w⟩` where `m>1` or `n>1` (transposition, merge, split, phonetic digraphs).
+**Goal**: Support `$\langle m,n,w\rangle$` where `$m>1$` or `$n>1$` (transposition, merge, split, phonetic digraphs).
 
 **Required Changes:**
 1. Extend `CharacteristicVector` to match patterns

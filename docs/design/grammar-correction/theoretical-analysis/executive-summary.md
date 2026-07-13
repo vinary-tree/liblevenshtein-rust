@@ -32,7 +32,7 @@ We conducted a rigorous formal analysis of the 5-layer error correction pipeline
 ### Key Findings
 
 1. **Most layers work well individually** (4/5 layers fully deterministic and correct)
-2. **Composition is the challenge** (optimal solutions per-layer ≠ optimal overall)
+2. **Composition is the challenge** (optimal solutions per-layer `$\ne$` optimal overall)
 3. **Practical solutions exist** (beam search, Pareto optimization provide 90-95% quality)
 4. **Performance is acceptable** (450ms for 100 tokens, within IDE budget)
 
@@ -41,7 +41,7 @@ We conducted a rigorous formal analysis of the 5-layer error correction pipeline
 | Risk | Level | Mitigation |
 |------|-------|------------|
 | Non-deterministic behavior | Medium | Implement deterministic mode for testing |
-| Suboptimal corrections | Low-Medium | Use beam search (k≥20) + Pareto optimization |
+| Suboptimal corrections | Low-Medium | Use beam search `$(k\ge 20) +$` Pareto optimization |
 | Semantic incorrectness | Medium | Double-check repairs + user feedback |
 | Performance issues | Low | Incremental parsing + caching + parallelization |
 
@@ -233,11 +233,11 @@ Joint optimization:
 
 | Layer | Time Complexity | Practical Runtime (100 tokens) |
 |-------|----------------|--------------------------------|
-| Layer 1 | `𝒪(n × d)` | 50ms |
-| Layer 2 (beam) | `𝒪(k × d × n × p)` | 200ms ⚠️ (bottleneck) |
-| Layer 3 | `𝒪(n log n)` avg | 50ms |
+| Layer 1 | `$\mathcal{O}(n \times  d)$` | 50ms |
+| Layer 2 (beam) | `$\mathcal{O}(k \times  d \times  n \times  p)$` | 200ms ⚠️ (bottleneck) |
+| Layer 3 | `$\mathcal{O}(n \log  n)$` avg | 50ms |
 | Layer 4 | NP-hard (timeout) | 100ms |
-| Layer 5 | `𝒪(n)` to `𝒪(n^k)` | 50ms |
+| Layer 5 | `$\mathcal{O}(n)$` to `$\mathcal{O}(n^k)$` | 50ms |
 | **Total** | **Sum of above** | **450ms** ✓ |
 
 **Target**: <500ms for interactive IDE use
@@ -246,7 +246,7 @@ Joint optimization:
 
 ### Optimizations
 
-1. **Incremental Parsing** (Tree-sitter): `𝒪(log n)` per edit instead of `𝒪(n)`
+1. **Incremental Parsing** (Tree-sitter): `$\mathcal{O}(\log  n)$` per edit instead of `$\mathcal{O}(n)$`
 2. **Caching**: Levenshtein automata, parse states (LRU cache, 1000 entries)
 3. **Parallelization**: Layer 1 candidates, Layer 3 validation (Rayon)
 4. **Timeouts**: SMT solver (2s), type inference (1s)
@@ -270,7 +270,7 @@ Joint optimization:
 
 | Approach | Quality | Latency | Use Case |
 |----------|---------|---------|----------|
-| Exact (joint optimization) | 100% | ∞ (intractable) | Not feasible |
+| Exact (joint optimization) | 100% | `$\infty$` (intractable) | Not feasible |
 | Beam (k=100) | 96% | 800ms | Batch processing |
 | Beam (k=20) | 92% | 200ms | Interactive IDE |
 | Greedy (k=1) | 70% | 50ms | Fast feedback |
@@ -374,7 +374,7 @@ Joint optimization:
 **Impact**: Low-Medium (user dissatisfaction if corrections are significantly worse)
 
 **Mitigation**:
-- Use beam search with k≥20 (90-95% quality)
+- Use beam search with `$k\ge 20 (90-95$`% quality)
 - Present multiple options (Pareto frontier)
 - Collect user feedback for ranking
 
@@ -424,19 +424,19 @@ Joint optimization:
 ### Quality Metrics
 
 1. **Precision**: % of corrections that are valid programs
-   - **Target**: ≥95%
+   - **Target**: `$\ge 95$`%
    - **Measurement**: Property-based testing
 
 2. **Recall**: % of errors detected and corrected
-   - **Target**: ≥80% (depends on error type)
+   - **Target**: `$\ge 80$`% (depends on error type)
    - **Measurement**: Benchmark suite with known errors
 
 3. **F1 Score**: Harmonic mean of precision and recall
-   - **Target**: ≥85%
+   - **Target**: `$\ge 85$`%
    - **Measurement**: Benchmark evaluation
 
 4. **Approximation Ratio**: Correction cost vs optimal cost
-   - **Target**: ≤1.1 (within 10% of optimal)
+   - **Target**: `$\le 1.1$` (within 10% of optimal)
    - **Measurement**: Compare against ground truth
 
 ### Performance Metrics
@@ -446,7 +446,7 @@ Joint optimization:
    - **Measurement**: Performance tests
 
 6. **Throughput**: Corrections per second
-   - **Target**: ≥2 corrections/sec
+   - **Target**: `$\ge 2$` corrections/sec
    - **Measurement**: Batch processing tests
 
 ### Reliability Metrics

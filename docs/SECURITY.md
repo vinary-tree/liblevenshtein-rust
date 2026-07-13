@@ -14,7 +14,7 @@ it crosses**.
 
 | Surface | Untrusted input | Trust boundary | Posture / mitigation |
 |---|---|---|---|
-| Core query API | query term `W`, distance `k` | none (pure, in-process) | total functions; `k` bounds the search; no allocation proportional to attacker-chosen constants beyond `𝒪(∣W∣)` state |
+| Core query API | query term `$W$`, distance `$k$` | none (pure, in-process) | total functions; `$k$` bounds the search; no allocation proportional to attacker-chosen constants beyond `$\mathcal{O}(\lvert W\rvert)$` state |
 | `.llre` / regex DSL | a regular expression | `src/phonetic/regex`, `src/phonetic/llre` | compiled to an NFA (Thompson/Glushkov) → **linear-time matching, no catastrophic backtracking (ReDoS-resistant by construction)** |
 | Grep (`grep-*` features) | files, archives, compressed & document formats | `src/grep/source.rs` | streaming extraction with archive-entry filtering; integrators must bound decompression (see below) |
 | Serialization (`serialization`) | a serialized dictionary file | `src/serialization` | deserialize only trusted/own-produced artifacts; treat third-party blobs as untrusted |
@@ -24,9 +24,9 @@ it crosses**.
 ## 1 · Core query API — no trust boundary
 
 The transducer query path is pure and in-process. Query construction is
-`𝒪(∣W∣)`; each step is `𝒪(k)`; the search is bounded by the dictionary and the
-error bound `k`. A hostile `(W, k)` cannot induce unbounded work beyond what `k`
-and the dictionary size permit, and there is no path-dependent allocation an
+`$\mathcal{O}(\lvert W\rvert)$`; each step is `$\mathcal{O}(k)$`; the search is bounded by
+the dictionary and the error bound `$k$`. A hostile `$(W, k)$` cannot induce unbounded work
+beyond what `$k$` and the dictionary size permit, and there is no path-dependent allocation an
 attacker can exploit. No special handling is required.
 
 ## 2 · The `.llre` / regex DSL — ReDoS-resistant by construction
@@ -102,7 +102,7 @@ back a dangling pointer and validates nullness where it can).
 
 The `wasm` bindings (`src/wasm/`) run inside the host's WebAssembly sandbox, which
 provides memory isolation. The residual concern is resource use: a caller can ask
-for a large dictionary or a high-`k` query. Validate term counts/sizes and `k`
+for a large dictionary or a high-`$k$` query. Validate term counts/sizes and `$k$`
 at the JavaScript host before crossing into Wasm.
 
 ## Scope

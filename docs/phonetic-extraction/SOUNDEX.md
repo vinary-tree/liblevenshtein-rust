@@ -95,5 +95,5 @@ The extracted rules capture the equivalence classes without the mechanical encod
 
 ## References
 
-1. Russell, R.C. (1918). US Patent 1,261,167
-2. Knuth, D.E. (1973). The Art of Computer Programming, Vol. 3
+1. Russell, Robert C. & Odell, Margaret K. *US Patents 1,261,167 (1918) and 1,435,663 (1922)* — the Soundex phonetic index; the refined variant is commonly called "American Soundex". (No DOI; patents are not assigned DOIs.)
+2. Knuth, Donald E. (1973). *The Art of Computer Programming, Vol. 3: Sorting and Searching*, §6. Addison-Wesley. (No DOI; ISBN 978-0-201-89685-5.)

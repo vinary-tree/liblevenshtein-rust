@@ -121,26 +121,26 @@ A **weighted finite-state transducer** extends finite-state automata with:
 
 **Formal Definition:**
 
-A WFST `T = (Σ, Δ, Q, I, F, E, λ, ρ)` where:
-- `Σ`: input alphabet
-- `Δ`: output alphabet
-- `Q`: finite set of states
-- `I ⊆ Q`: initial states
-- `F ⊆ Q`: final states
-- `E ⊆ Q × (Σ ∪ {ε}) × (Δ ∪ {ε}) × ℝ × Q`: transitions (source, in, out, weight, target)
-- `λ: Q → ℝ`: initial weights
-- `ρ: Q → ℝ`: final weights
+A WFST `$T = (\Sigma, \Delta, Q, I, F, E, \lambda, \rho)$` where:
+- `$\Sigma$`: input alphabet
+- `$\Delta$`: output alphabet
+- `$Q$`: finite set of states
+- `$I \subseteq Q$`: initial states
+- `$F \subseteq Q$`: final states
+- `$E \subseteq Q \times (\Sigma \cup \{\varepsilon\}) \times (\Delta \cup \{\varepsilon\}) \times \mathbb{R} \times Q$`: transitions (source, in, out, weight, target)
+- `$\lambda: Q \to \mathbb{R}$`: initial weights
+- `$\rho: Q \to \mathbb{R}$`: final weights
 
 ### Composition Operation
 
-**Definition:** For transducers `T₁: Σ → Γ` and `T₂: Γ → Δ`, their composition `T = T₁ ∘ T₂` is a transducer `Σ → Δ` where:
+**Definition:** For transducers `$T_1: \Sigma \to \Gamma$` and `$T_2: \Gamma \to \Delta$`, their composition `$T = T_1 \circ T_2$` is a transducer `$\Sigma \to \Delta$` where:
 
-- Input symbols from `Σ` (`T₁`'s input)
-- Output symbols to `Δ` (`T₂`'s output)
-- Intermediate alphabet `Γ` (`T₁`'s output = `T₂`'s input) is internal
+- Input symbols from `$\Sigma$` (`$T_1$`'s input)
+- Output symbols to `$\Delta$` (`$T_2$`'s output)
+- Intermediate alphabet `$\Gamma$` (`$T_1$`'s output = `$T_2$`'s input) is internal
 - Weights are combined (usually addition in log-semiring)
 
-**Path weight:** `w(p) = ⊕ᵢ w(eᵢ)` where `⊕` is the semiring addition (e.g., min for tropical, + for probability)
+**Path weight:** `$w(p) = \bigoplus_i w(e_i)$` where `$\oplus$` is the semiring addition (e.g., min for tropical, + for probability)
 
 **Example:**
 
@@ -154,12 +154,12 @@ T = T₁ ∘ T₂:      "saw too" --> "saw two" [weight=3.5]  ✅ Best path
 
 ### Semirings for Different Applications
 
-| Semiring | `⊕` (addition) | `⊗` (multiplication) | Use Case |
+| Semiring | `$\oplus$` (addition) | `$\otimes$` (multiplication) | Use Case |
 |----------|-------------|-------------------|----------|
-| **Tropical** | `min` | `+` | Shortest path (edit distance) |
-| **Log** | `-log(e^(-x) + e^(-y))` | `+` | Probability (log-space) |
-| **Probability** | `+` | `×` | Probability (linear space) |
-| **Boolean** | `∨` | `∧` | Acceptor (recognition) |
+| **Tropical** | `$\min$` | `$+$` | Shortest path (edit distance) |
+| **Log** | `$-\log(e^{-x} + e^{-y})$` | `$+$` | Probability (log-space) |
+| **Probability** | `$+$` | `$\times$` | Probability (linear space) |
+| **Boolean** | `$\lor$` | `$\land$` | Acceptor (recognition) |
 
 **Current liblevenshtein:** Uses tropical semiring (minimum edit distance)
 
@@ -206,7 +206,7 @@ T = T₁ ∘ T₂:      "saw too" --> "saw two" [weight=3.5]  ✅ Best path
 ### Component Layers
 
 #### Layer 1: Dictionary Backend (Existing)
-- **PathMapDictionary**, **DawgDictionary**, **SuffixAutomaton**
+- **PathMapDictionary**, **DynamicDawg**, **SuffixAutomaton**
 - Provides word recognition
 - No weights (boolean acceptors)
 
@@ -224,7 +224,7 @@ T = T₁ ∘ T₂:      "saw too" --> "saw two" [weight=3.5]  ✅ Best path
 
 #### Layer 4: Composition Engine (New)
 - **CompositionEngine**
-- Composes transducers: `T₁ ∘ T₂ ∘ ... ∘ Tₙ`
+- Composes transducers: `$T_1 \circ T_2 \circ \cdots \circ T_n$`
 - Lazy evaluation (on-demand path exploration)
 - k-best path extraction (Viterbi, A*)
 
@@ -627,8 +627,8 @@ impl<W: Weight> ComposedTransducer<W> {
 **Idea:** Don't pre-compute entire composed automaton. Generate states and transitions as needed during query.
 
 **Complexity:**
-- **Time:** `𝒪(∣T₁∣ × ∣T₂∣)` worst case, but often much better with pruning
-- **Space:** `𝒪(visited states)` - typically ≪ `𝒪(∣T₁∣ × ∣T₂∣)`
+- **Time:** `$\mathcal{O}(\lvert T_{1}\rvert \times  \lvert T_{2}\rvert)$` worst case, but often much better with pruning
+- **Space:** `$\mathcal{O}(\text{visited} \text{states})$` - typically `$\ll$` `$\mathcal{O}(\lvert T_{1}\rvert \times  \lvert T_{2}\rvert)$`
 
 **Pseudocode:**
 
@@ -664,8 +664,8 @@ function LazyCompose(T₁, T₂, input):
 **Idea:** Find top-k shortest paths through composed automaton using A* with admissible heuristic.
 
 **Complexity:**
-- **Time:** `𝒪(k × ∣E∣ log ∣V∣)` using Dijkstra-style priority queue
-- **Space:** `𝒪(∣V∣ + k)`
+- **Time:** `$\mathcal{O}(k \times  \lvert E\rvert \log  \lvert V\rvert)$` using Dijkstra-style priority queue
+- **Space:** `$\mathcal{O}(\lvert V\rvert + k)$`
 
 **Pseudocode:**
 
@@ -700,15 +700,15 @@ function KBestPaths(T, input, k):
 
 ### Algorithm 3: N-way Composition (Generalization)
 
-**Idea:** Compose n transducers efficiently: `T = T₁ ∘ T₂ ∘ ... ∘ Tₙ`
+**Idea:** Compose n transducers efficiently: `$T = T_{1} \circ  T_{2} \circ  ... \circ  T_{n}$`
 
 **Approaches:**
-1. **Left-associative:** `((T₁ ∘ T₂) ∘ T₃) ∘ ...` (standard binary composition)
+1. **Left-associative:** `$((T_{1} \circ  T_{2}) \circ  T_{3}) \circ  ...$` (standard binary composition)
 2. **Balanced:** Binary tree of compositions (better parallelization)
 3. **N-way direct:** Simultaneous composition (Allauzen & Mohri, 2009)
 
 **Complexity (Allauzen & Mohri):**
-- **3-way:** `𝒪(∣T∣_Q · min(d(T₁)·d(T₃), d(T₂)) + ∣T∣_E)`
+- **3-way:** `$\mathcal{O}(\lvert T\rvert_Q \cdot  \min (d(T_{1})\cdot d(T_{3}), d(T_{2})) + \lvert T\rvert_E)$`
 - Dramatically faster than binary composition for `n > 2`
 
 ---
@@ -1601,7 +1601,7 @@ for code in code_snippets {
    - Works with small text snippets
 
 2. **Fast Classification**
-   - `𝒪(text length)` scoring
+   - `$\mathcal{O}(\text{text} \text{length})$` scoring
    - No neural network overhead
    - Suitable for real-time applications
 
@@ -1696,7 +1696,7 @@ println!("{}", corrected.corrected);
 **Tasks:**
 1. ✅ Implement lazy composition (on-demand state generation)
 2. ✅ Implement k-best paths (Dijkstra/A* variant)
-3. ✅ Implement ε-transition handling
+3. ✅ Implement `$\varepsilon$`-transition handling
 4. ✅ Add pruning for efficiency (beam search)
 5. ✅ Add tests: verify composition correctness
 6. ✅ Add benchmarks: composition of large automata
@@ -1749,17 +1749,17 @@ println!("{}", corrected.corrected);
 
 | Operation | Time Complexity | Space Complexity |
 |-----------|----------------|------------------|
-| **Composition (`T₁ ∘ T₂`)** | `𝒪(∣T₁∣ × ∣T₂∣)` worst case | `𝒪(∣T₁∣ × ∣T₂∣)` |
-| **Lazy Composition** | `𝒪(visited states)` | `𝒪(visited states)` |
-| **K-best paths** | `𝒪(k × ∣E∣ log ∣V∣)` | `𝒪(∣V∣ + k)` |
-| **N-gram training** | `𝒪(corpus length × n)` | `𝒪(distinct n-grams)` |
-| **Sentence correction** | `𝒪(words × candidates² × k)` | `𝒪(words × k)` |
+| **Composition (`$T_{1} \circ  T_{2}$`)** | `$\mathcal{O}(\lvert T_{1}\rvert \times  \lvert T_{2}\rvert)$` worst case | `$\mathcal{O}(\lvert T_{1}\rvert \times  \lvert T_{2}\rvert)$` |
+| **Lazy Composition** | `$\mathcal{O}(\text{visited} \text{states})$` | `$\mathcal{O}(\text{visited} \text{states})$` |
+| **K-best paths** | `$\mathcal{O}(k \times  \lvert E\rvert \log  \lvert V\rvert)$` | `$\mathcal{O}(\lvert V\rvert + k)$` |
+| **N-gram training** | `$\mathcal{O}(\text{corpus} \text{length} \times  n)$` | `$\mathcal{O}(\text{distinct} n-\text{grams})$` |
+| **Sentence correction** | `$\mathcal{O}(\text{words} \times  \text{candidates}^{2} \times  k)$` | `$\mathcal{O}(\text{words} \times  k)$` |
 
 ### Space Analysis
 
 **N-gram Language Model:**
-- Bigram: `𝒪(V²)` where `V` = vocabulary size
-- Trigram: `𝒪(V³)` (can be large!)
+- Bigram: `$\mathcal{O}(V^{2})$` where `V` = vocabulary size
+- Trigram: `$\mathcal{O}(V^{3})$` (can be large!)
 - Practical: Use pruning (remove low-prob n-grams), store sparse
 
 **Example:** 100K vocabulary, bigram
@@ -1768,7 +1768,7 @@ println!("{}", corrected.corrected);
 - Storage: ~40-400 MB (depends on sparsity)
 
 **Composition State Space:**
-- Worst case: `∣T₁∣ × ∣T₂∣` states
+- Worst case: `$\lvert T_1\rvert \times \lvert T_2\rvert$` states
 - Lazy evaluation: Only generate reachable states
 - Pruning: Discard low-probability paths
 - Typical: 1-10% of worst case
@@ -1818,7 +1818,7 @@ println!("{}", corrected.corrected);
    International Journal of Foundations of Computer Science, 20(4), 613-627.
    DOI: [10.1142/S0129054109006747](https://doi.org/10.1142/S0129054109006747)
    - **Efficient n-way composition**
-   - `𝒪(∣T∣ · min(d₁d₃, d₂))` for 3-way composition
+   - `$\mathcal{O}(\lvert T\rvert \cdot  \min (d_{1}d_{3}, d_{2}))$` for 3-way composition
    - Dramatically faster than binary composition
 
 4. **Schulz, K. U., & Mihov, S. (2002)**

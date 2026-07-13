@@ -40,11 +40,11 @@ This document specifies the complete formal verification architecture for the li
 
 **Standard Definition** (Schulz & Mihov, 2002):
 - Given word `w` and distance `n`, construct automaton `A_n(w)`
-- Accepts all strings `s` where `edit_distance(w, s) ≤ n`
+- Accepts all strings `s` where `$\text{edit}_\text{distance}(w, s) \le  n$`
 - Three operations: insert, delete, substitute (cost 1 each)
 
 **Our Extension**:
-- Multi-character operations: transpose ⟨2,2⟩, merge ⟨2,1⟩, split ⟨1,2⟩
+- Multi-character operations: transpose `$\langle 2,2\rangle,$` merge `$\langle 2,1\rangle,$` split `$\langle 1,2\rangle$`
 - Weighted operations: phonetic rules have weight 0.15 (effectively 0 after truncation)
 - Context-dependent operations: rules apply only in specific contexts
 
@@ -80,20 +80,20 @@ apply_rules_seq (r::rs) s fuel =
 ```
 
 **Key Properties** (to be proven):
-1. **Termination**: `∃ fuel. apply_rules_seq rules s fuel = Some result`
+1. **Termination**: `$\exists  \text{fuel}. \text{apply}_\text{rules}_\text{seq} \text{rules} s \text{fuel} = \text{Some} \text{result}$`
 2. **Idempotence**: `apply_rules_seq rules result fuel = Some result`
-3. **Bounded Expansion**: `|result| ≤ |s| + max_expansion_factor`
+3. **Bounded Expansion**: `$|\text{result}| \le  |s| + \max _\text{expansion}_\text{factor}$`
 
 #### 3. Fuzzy Regular Expression Matching
 
 **Definition** (Wu & Manber, 1992):
-- Given regex pattern `P` and text `T`, find all matches with ≤ k errors
+- Given regex pattern `P` and text `T`, find all matches with `$\le  k$` errors
 - Uses bit-parallel NFA simulation with error counters
 
 **Our Approach**:
 - Thompson construction: `Regex → NFA`
 - Extended transition: `(NFA_State, Errors) × Char → Set (NFA_State, Errors)`
-- Accept if: `(state ∈ final_states) ∧ (errors ≤ max_distance)`
+- Accept if: `$(\text{state} \in  \text{final}_\text{states}) \land  (\text{errors} \le  \max _\text{distance})$`
 
 **Integration with Phonetics**:
 ```
@@ -475,17 +475,17 @@ Theorem rule_application_bounded :
 3. Rewrite: `|s'| = |prefix| + |replacement| + |suffix|`
 4. Use lemma: `|prefix| = pos`
 5. Use lemma: `|suffix| = |s| - pos - |pattern|`
-6. Use lemma: `|replacement| ≤ 2` (proved by enumeration)
+6. Use lemma: `$|\text{replacement}| \le  2$` (proved by enumeration)
 7. Arithmetic: `|s'| = pos + |replacement| + (|s| - pos - |pattern|)`
               `     = |s| + |replacement| - |pattern|`
-              `     ≤ |s| + 2 - 1` (since |pattern| ≥ 1)
+              `$     \le  |s| + 2 - 1$` (since `$\lvert \text{pattern}\rvert \ge 1$`)
               `     = |s| + 1`
-              `     ≤ |s| + 3`
+              `$     \le  |s| + 3$`
 
 **Status**: 🔄 IN PROGRESS (arithmetic details `Admitted`)
 
 **Remaining Work**:
-- Prove `firstn_length_le`: `pos ≤ length s → length (firstn pos s) = pos`
+- Prove `firstn_length_le`: `$\text{pos} \le  \text{length} s \to  \text{length} (\text{firstn} \text{pos} s) = \text{pos}$`
 - Prove `skipn_length`: `length (skipn n s) = length s - n`
 - Complete omega arithmetic
 
@@ -565,8 +565,8 @@ proof READMEs for active status.
 - ✅ c → s / _[ie] (velar softening)
 - ✅ c → k (elsewhere)
 - ✅ g → j / _[ie] (velar softening)
-- ✅ e → ∅ / _# (silent e)
-- ✅ gh → ∅ (silent gh)
+- ✅ `$e \to  \emptyset  / _$`# (silent e)
+- ✅ `$\text{gh} \to \emptyset$` (silent gh)
 - ✅ th → t (phonetic, weight 0.15)
 - ✅ qu → kw (phonetic, weight 0.15)
 - ✅ kw → qu (phonetic reverse, weight 0.15)

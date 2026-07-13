@@ -13,14 +13,13 @@
 ## Table of Contents
 1. [Overview](#overview)
 2. [Use Case](#use-case)
-3. [Architecture](#architecture)
-4. [Design Requirements](#design-requirements)
+3. [Design Requirements](#design-requirements)
+4. [Architecture](#architecture)
 5. [Zipper Hierarchy](#zipper-hierarchy)
-6. [API Design](#api-design)
-7. [Implementation Plan](#implementation-plan)
-8. [Testing Strategy](#testing-strategy)
-9. [Performance Considerations](#performance-considerations)
-10. [References](#references)
+6. [Implementation Plan](#implementation-plan)
+7. [Testing Strategy](#testing-strategy)
+8. [Performance Considerations](#performance-considerations)
+9. [References](#references)
 
 ## Overview
 
@@ -215,13 +214,13 @@ pub trait ValuedDictionaryZipper: DictionaryZipper {
 #### PathMapZipper Implementation
 
 ```rust
-/// Zipper for PathMapDictionary backend
+/// Zipper for PathMapDictionary backend (lock-free, TrieRef-based)
 pub struct PathMapZipper<V: DictionaryValue> {
-    /// Shared reference to PathMap (wrapped in Arc<RwLock>)
-    map: Arc<RwLock<PathMap<V>>>,
+    /// Lock-free focus handle over a copy-on-write `TrieRef` snapshot of the PathMap
+    root: TrieRefLike,
 
-    /// Current path from root (recreate zipper on each operation)
-    path: Arc<Vec<u8>>,
+    /// Current path from root
+    path: Arc<[u8]>,
 }
 
 impl<V: DictionaryValue> DictionaryZipper for PathMapZipper<V> {
@@ -698,7 +697,7 @@ fn bench_query_with_drafts(b: &mut Bencher) {
 **Fusion overhead:**
 - Finalized query: Uses existing Transducer (baseline)
 - Draft scan: Linear in number of visible drafts (typically < 100)
-- Union + dedup: `𝒪(n log n)` where `n` = total results (typically < 1000)
+- Union + dedup: `$\mathcal{O}(n \log  n)$` where `n` = total results (typically < 1000)
 
 **Expected impact:**
 - Best case (no drafts): 0% overhead

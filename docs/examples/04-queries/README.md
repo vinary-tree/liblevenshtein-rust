@@ -2,7 +2,7 @@
 
 **What you'll learn.** How `liblevenshtein` handles **Unicode** and how to declare that
 certain character pairs should be treated as *free* (zero-cost) substitutions — so that
-`é` matches `e`, `Α` matches `α`, or `あ` matches `ア` without spending an edit. You'll
+`é` matches `e`, `Α` matches `$\alpha$`, or `あ` matches `ア` without spending an edit. You'll
 use `SubstitutionSetChar`, both via ready-made presets (Latin diacritics, Greek /
 Cyrillic case-folding, Japanese kana) and by building a custom set pair-by-pair.
 
@@ -19,12 +19,12 @@ letter is one symbol and edit distances are computed in *characters*, not bytes.
 
 > Terms defined. A **Unicode scalar value** is a single `char` (any code point except
 > surrogates). A **diacritic** is an accent mark such as the acute in `é` or the tilde in
-> `ñ`. **Case-folding** treats an upper- and lower-case letter as equivalent (`Α` ≡ `α`).
+> `ñ`. **Case-folding** treats an upper- and lower-case letter as equivalent (`$A \equiv \alpha$`).
 
 ### What a substitution set does
 
 By default, replacing one symbol with a *different* symbol costs one edit. A
-**substitution set** is a relation `χ ⊆ Σ × Σ` of ordered pairs `(a, b)` that the
+**substitution set** is a relation `$\chi \subseteq \Sigma \times \Sigma$` of ordered pairs `(a, b)` that the
 automaton is allowed to treat as a **zero-cost** substitution — i.e. `a` and `b` are
 considered "the same" for matching purposes. `SubstitutionSetChar` is the Unicode
 (`char`) form. This is the mechanism behind *restricted* and *generalized* edits: instead
@@ -38,12 +38,12 @@ two-method core:
 - `contains(a, b)` — test whether `(a, b)` is in the set.
 - `len()` — how many pairs the set holds.
 
-![Levenshtein NFA: the non-deterministic automaton for a query, showing the match, insertion, deletion, and substitution transitions out of each ⟨position, errors⟩ state — the substitution edges are the ones a substitution set can make free.](../../diagrams/automata/levenshtein-nfa.svg)
+![Levenshtein NFA: the non-deterministic automaton for a query, showing the match, insertion, deletion, and substitution transitions out of each (position, errors) state — the substitution edges are the ones a substitution set can make free.](../../diagrams/automata/levenshtein-nfa.svg)
 
 ### Why presets *and* custom sets
 
 International search ("résumé" should match "resume"), case-insensitive matching in
-non-Latin scripts, and script-bridging (Greek `α` ↔ Latin `a`) are common enough to
+non-Latin scripts, and script-bridging (Greek `$\alpha$` ↔ Latin `a`) are common enough to
 warrant batteries-included presets — but domain glossaries (chemical symbols, currency
 signs, emoji skin-tone variants) need ad-hoc pairs, so you can also build a set by hand.
 
@@ -71,7 +71,7 @@ assert!(!diacritics.contains('x', 'y'));  // unrelated pair: still a real edit
 ### 2 · Case-folding presets for Greek and Cyrillic
 
 `greek_case_insensitive()` and `cyrillic_case_insensitive()` fold upper- and lower-case
-across the whole alphabet — including special forms such as Greek final sigma `ς`:
+across the whole alphabet — including special forms such as Greek final sigma `$\varsigma$`:
 
 ```rust
 let greek = SubstitutionSetChar::greek_case_insensitive();

@@ -1025,7 +1025,7 @@ pub fn parallel_repair(ast: &Ast, rules: &[RepairRule]) -> Vec<RepairCandidate> 
 
 - [Grammar Correction via MORK](./grammar_correction.md) - Phase D foundation
 - WFST Architecture - Three-tier pipeline
-- [MORK Pattern Matching](https://github.com/your-org/MORK/docs/pattern_matching.md) - MORK `match2()` reference
+- [MORK Pattern Matching](https://github.com/trueagi-io/MORK/tree/main/expr) - MORK `match2()` reference (the `expr` crate)
 - Tree-sitter Integration - Parser integration
 
 ---

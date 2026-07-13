@@ -21,8 +21,8 @@
 ### Key Advantages
 
 - 🔍 **Substring matching**: Find patterns anywhere, not just at word boundaries
-- 💾 **Space-efficient**: ≤ 2n-1 states for n characters
-- ⚡ **Fast construction**: O(n) online construction
+- 💾 **Space-efficient**: `$\le 2n-1$` states for `$n$` characters
+- ⚡ **Fast construction**: `$\mathcal{O}(n)$` online construction
 - 🔄 **Dynamic updates**: Insert and remove text at runtime
 - 📍 **Position tracking**: Know where matches occur in source text
 
@@ -124,7 +124,7 @@ Substrings ending at position 5 (all suffixes):
 States in suffix automaton ≈ equivalence classes of endpos sets
 ```
 
-**Minimality**: This grouping ensures ≤ 2n-1 states for n characters.
+**Minimality**: This grouping ensures `$\le 2n-1$` states for `$n$` characters.
 
 ### Suffix Links
 
@@ -195,7 +195,10 @@ println!("Found at positions: {:?}", positions);
 
 ```rust
 pub struct SuffixAutomaton {
-    inner: Arc<RwLock<SuffixAutomatonInner>>,
+    // Lock-free: the whole automaton lives behind one atomic pointer.
+    // (Shipped as the `LockFreeSuffixAutomaton<u8, V>` newtype, which wraps
+    //  `Arc<ArcSwap<SuffixAutomatonInner>>`.)
+    inner: Arc<ArcSwap<SuffixAutomatonInner>>,
 }
 
 struct SuffixAutomatonInner {
@@ -231,10 +234,10 @@ struct SuffixNode {
 ```
 
 **For text of n characters**:
-- States: ≤ 2n-1 (typically ~1.5n)
+- States: `$\le 2n-1$` (typically `$\approx 1.5n$`)
 - Total memory: ~85n bytes
 
-**Example**: 10,000-character document ≈ 850 KB
+**Example**: 10,000-character document `$\approx$` 850 KB
 
 ## Construction Algorithm
 
@@ -289,7 +292,7 @@ fn extend(&mut self, byte: u8) {
 }
 ```
 
-**Complexity**: O(1) amortized per character
+**Complexity**: `$\mathcal{O}(1)$` amortized per character
 
 ### From Multiple Texts
 
@@ -311,24 +314,28 @@ where
 }
 
 fn insert(&self, text: &str) {
-    let mut lock = self.inner.write().unwrap();
+    // Lock-free: mutate a clone of the current snapshot, then publish it with
+    // an atomic swap (the shipped code retries the publish with compare-and-swap).
+    let mut next = (**self.inner.load()).clone();
 
     // Reset to root for new text
-    lock.last_state = 0;
+    next.last_state = 0;
 
     // Extend with each character
     for byte in text.bytes() {
-        lock.extend(byte);
+        next.extend(byte);
     }
 
     // Mark final states
-    let mut state = lock.last_state;
+    let mut state = next.last_state;
     while let Some(s) = state {
-        lock.nodes[s].is_final = true;
-        state = lock.nodes[s].suffix_link;
+        next.nodes[s].is_final = true;
+        state = next.nodes[s].suffix_link;
     }
 
-    lock.text_count += 1;
+    next.text_count += 1;
+
+    self.inner.store(Arc::new(next));
 }
 ```
 
@@ -337,7 +344,7 @@ fn insert(&self, text: &str) {
 ### Example 1: Basic Substring Search
 
 ```rust
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 
 let text = "the quick brown fox jumps over the lazy dog";
 let dict = SuffixAutomaton::from_text(text);
@@ -353,7 +360,7 @@ assert!(!dict.contains("fast"));       // ❌ Not in text
 ### Example 2: Code Search
 
 ```rust
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -380,7 +387,7 @@ println!("{:?}", results);
 ### Example 3: Multi-Document Search
 
 ```rust
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 
 let documents = vec![
     "Levenshtein automata for approximate matching",
@@ -400,7 +407,7 @@ assert!(dict.contains("for"));          // All docs (common word)
 ### Example 4: Position Tracking
 
 ```rust
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 
 let text = "banana";
 let dict = SuffixAutomaton::from_text(text);
@@ -419,7 +426,7 @@ println!("'ana' appears at positions: {:?}", positions);
 ### Example 5: Dynamic Updates
 
 ```rust
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 
 let dict = SuffixAutomaton::new();
 
@@ -442,7 +449,7 @@ if dict.needs_compaction() {
 ### Example 6: Log Analysis
 
 ```rust
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -466,7 +473,7 @@ println!("Error codes found: {:?}", results);
 ### Example 7: DNA Sequence Search
 
 ```rust
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 
 let dna_sequence = "ATCGATCGATCGATCGTAGCTAGCTAGCT";
 let dict = SuffixAutomaton::from_text(dna_sequence);
@@ -486,7 +493,7 @@ println!("Motifs (distance ≤1): {:?}", results);
 ### Example 8: Incremental Indexing
 
 ```rust
-use liblevenshtein::dictionary::suffix_automaton::SuffixAutomaton;
+use libdictenstein::suffix_automaton::SuffixAutomaton;
 
 let dict = SuffixAutomaton::new();
 
@@ -512,11 +519,11 @@ if dict.text_count() > 1000 && dict.needs_compaction() {
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Construction** | O(n) | n = text length |
-| **Insert character** | O(1) amortized | Online construction |
-| **Contains (exact)** | O(m) | m = query length |
-| **Fuzzy search** | O(m×d²×b) | d = distance, b = branching |
-| **Compact** | O(s) | s = number of states |
+| **Construction** | `$\mathcal{O}(n)$` | n = text length |
+| **Insert character** | `$\mathcal{O}(1)$` amortized | Online construction |
+| **Contains (exact)** | `$\mathcal{O}(m)$` | m = query length |
+| **Fuzzy search** | `$\mathcal{O}(m \times d^{2} \times b)$` | d = distance, b = branching |
+| **Compact** | `$\mathcal{O}(s)$` | s = number of states |
 
 ### Benchmark Results
 
@@ -633,7 +640,7 @@ Substring matching? ❌             ✅           ❌          ✅
 
 3. **Inenaga, S., Hoshino, H., Shinohara, A., Takeda, M., & Arikawa, S. (2005)**. "On-line construction of symmetric compact directed acyclic word graphs"
    - *Discrete Applied Mathematics*, 146(2), 156-179
-   - DOI: [10.1016/j.dam.2004.05.007](https://doi.org/10.1016/j.dam.2004.05.007)
+   - DOI: [10.1016/j.dam.2004.04.012](https://doi.org/10.1016/j.dam.2004.04.012)
    - 📄 Generalized suffix automaton
 
 ### Textbooks

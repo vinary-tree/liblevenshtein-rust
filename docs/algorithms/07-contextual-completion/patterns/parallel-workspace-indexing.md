@@ -158,7 +158,8 @@ let engine = DynamicContextualCompletionEngine::with_dictionary(
 
 4. **Engine Injection**:
    - Call `with_dictionary(merged, algorithm)`
-   - Dictionary wrapped in `Arc<RwLock<>>` by engine
+   - The engine wraps the *`Transducer`* in `Arc<RwLock<>>` for its own checkpointed
+     mutation; the dictionary itself is already lock-free
    - Ready for concurrent queries
 
 ## Complete Working Example
@@ -167,7 +168,7 @@ let engine = DynamicContextualCompletionEngine::with_dictionary(
 
 ```rust
 use liblevenshtein::contextual::DynamicContextualCompletionEngine;
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 use liblevenshtein::transducer::Algorithm;
 use rayon::prelude::*;
 use rustc_hash::FxHashSet;
@@ -424,9 +425,9 @@ fn test_parallel_build_preserves_isolation() {
 
 | Approach | Construction | Merge | Total | Parallelism |
 |----------|-------------|-------|-------|-------------|
-| **Sequential Insert** | O(N·n·m) | N/A | O(N·n·m) | ❌ None |
-| **Sequential Merge** | O(N·n·m) | O(N²·n·m) | O(N²·n·m) | ⚠️ Build only |
-| **Binary Tree Merge** | O(N·n·m) | O(N·n·m·log N) | O(N·n·m·log N) | ✅ Full |
+| **Sequential Insert** | `$\mathcal{O}(N\cdot n\cdot m)$` | N/A | `$\mathcal{O}(N\cdot n\cdot m)$` | ❌ None |
+| **Sequential Merge** | `$\mathcal{O}(N\cdot n\cdot m)$` | `$\mathcal{O}(N^{2}\cdot n\cdot m)$` | `$\mathcal{O}(N^{2}\cdot n\cdot m)$` | ⚠️ Build only |
+| **Binary Tree Merge** | `$\mathcal{O}(N\cdot n\cdot m)$` | `$\mathcal{O}(N\cdot n\cdot m\cdot \log  N)$` | `$\mathcal{O}(N\cdot n\cdot m\cdot \log  N)$` | ✅ Full |
 
 Where:
 - N = number of documents
@@ -495,11 +496,11 @@ let merged = dicts.into_iter().reduce(|mut acc, dict| {
 }).unwrap();
 ```
 
-**Complexity**: O(N²·n·m)
+**Complexity**: `$\mathcal{O}(N^{2}\cdot n\cdot m)$`
 - First merge: n terms
 - Second merge: 2n terms (re-traverses accumulated dict)
 - Third merge: 3n terms
-- Total: n + 2n + 3n + ... + Nn = O(N²·n)
+- Total: n + 2n + 3n + ... + Nn = `$\mathcal{O}(N^{2}\cdot n)$`
 
 **Performance**: 100 docs × 1K terms = **~5 seconds** (single-threaded)
 
@@ -529,7 +530,7 @@ fn merge_tree_parallel(mut dicts: Vec<DynamicDawg<Vec<ContextId>>>)
 }
 ```
 
-**Complexity**: O(N·n·m·log N) sequential, **O(n·m·log N) parallel**
+**Complexity**: `$\mathcal{O}(N\cdot n\cdot m\cdot \log  N)$` sequential, **`$\mathcal{O}(n\cdot m\cdot \log  N)$` parallel**
 - Each round merges N/2 pairs in parallel
 - log₂(N) rounds total
 - Each merge processes ~n terms
@@ -597,9 +598,9 @@ let merged = dicts.into_iter().reduce(|mut acc, dict| {
 - **Iteration 1**: Merge dict₁ (size n) into dict₂ (size n) → 2n work
 - **Iteration 2**: Merge dict₃ (size n) into accumulated dict (size 2n) → 3n work
 - **Iteration k**: Merge dictₖ into accumulated dict (size k·n) → (k+1)·n work
-- **Total Work**: W = 2n + 3n + 4n + ... + N·n = **O(N²·n·m)**
-- **Span**: S = N rounds (sequential) = **O(N·n·m)**
-- **Parallelism**: P_max = O(N²·n·m) / O(N·n·m) = **O(N)** (limited!)
+- **Total Work**: W = 2n + 3n + 4n + ... + N·n = **`$\mathcal{O}(N^{2}\cdot n\cdot m)$`**
+- **Span**: S = N rounds (sequential) = **`$\mathcal{O}(N\cdot n\cdot m)$`**
+- **Parallelism**: P_max = `$\mathcal{O}(N^{2}\cdot n\cdot m)$` / `$\mathcal{O}(N\cdot n\cdot m)$` = **`$\mathcal{O}(N)$`** (limited!)
 
 Where:
 - N = number of dictionaries
@@ -623,10 +624,10 @@ while dicts.len() > 1 {
 - **Total Rounds**: log₂(N)
 - **Total Work**: W = N/2 · n·m + N/4 · 2n·m + N/8 · 4n·m + ...
   - Each round: (N/2^k) · (2^k · n·m) = N·n·m work total
-  - Sum over log₂(N) rounds: **O(N·n·m·log N)**
+  - Sum over log₂(N) rounds: **`$\mathcal{O}(N\cdot n\cdot m\cdot \log  N)$`**
 - **Span** (parallel): S = log₂(N) rounds, max work per round = 2^k·n·m
-  - Worst-case span: **O(n·m·log N)**
-- **Parallelism**: P_max = O(N·n·m·log N) / O(n·m·log N) = **O(N)** (full utilization!)
+  - Worst-case span: **`$\mathcal{O}(n\cdot m\cdot \log  N)$`**
+- **Parallelism**: P_max = `$\mathcal{O}(N\cdot n\cdot m\cdot \log  N)$` / `$\mathcal{O}(n\cdot m\cdot \log  N)$` = **`$\mathcal{O}(N)$`** (full utilization!)
 
 ### Speedup Analysis
 
@@ -640,7 +641,7 @@ Speedup = Work_sequential / Work_parallel
 
 For N = 100 documents:
 - Sequential: 100² = 10,000 units of work
-- Binary tree: 100 · log₂(100) ≈ 664 units of work
+- Binary tree: `$100 \cdot \log_2(100) \approx 664$` units of work
 - **Speedup**: ~15× even on single processor (better algorithm!)
 - **With 8 cores**: Additional 6-7× speedup → **~100× total speedup**
 
@@ -672,9 +673,9 @@ fn merge_deduplicated(left: &Vec<u32>, right: &Vec<u32>) -> Vec<u32> {
 ```
 
 **Associativity proof**:
-- Set union is associative: (A ∪ B) ∪ C = A ∪ (B ∪ C)
+- Set union is associative: `$(A \cup  B) \cup  C = A \cup  (B \cup  C)$`
 - Our merge function computes set union (sort + dedup)
-- ∴ Dictionary union is associative ✓
+`$- \therefore$` Dictionary union is associative ✓
 
 **Non-associative operations** (e.g., string concatenation with separators) cannot use tree reduction without careful handling.
 
@@ -692,7 +693,7 @@ The work-span model abstracts the **Parallel Random Access Machine (PRAM)**, a t
 
 Our binary tree reduction:
 - **Works on EREW PRAM**: Each processor operates on independent dictionary pairs
-- **Time complexity**: O(log N) with N/2 processors
+- **Time complexity**: `$\mathcal{O}(\log  N)$` with N/2 processors
 - **Optimal**: Matches lower bound for combining N elements
 
 ### Practical Deviations from Theory
@@ -710,7 +711,7 @@ Real hardware differs from PRAM:
 - ✅ **Cache-friendly**: Each merge operates on localized data
 - ✅ **Embarrassingly parallel**: No synchronization within rounds
 - ⚠️ **Memory bandwidth**: Later rounds merge larger dictionaries (limits speedup)
-- ⚠️ **Core count**: Speedup saturates at P ≈ N/2 cores
+- ⚠️ **Core count**: Speedup saturates at `$P \approx  N/2$` cores
 
 **Measured efficiency** (100 docs, 8 cores):
 - Theoretical speedup: 8×
@@ -731,11 +732,11 @@ T(n) = {
 **Master Theorem Analysis**:
 - a = 2 (two subproblems)
 - b = 2 (half the size)
-- f(n) = O(n) (merge cost)
+- f(n) = `$\mathcal{O}(n)$` (merge cost)
 - log_b(a) = log₂(2) = 1
-- **Case 2**: f(n) = Θ(n^log_b(a)) → **T(n) = Θ(n log n)**
+- **Case 2**: `$f(n) = \Theta (n^\log _b(a)$`) → **`$T(n) = \Theta (n$` log n)**
 
-This matches our empirical complexity O(N·n·m·log N).
+This matches our empirical complexity `$\mathcal{O}(N\cdot n\cdot m\cdot \log  N)$`.
 
 ### Memory Locality and Cache Efficiency
 
@@ -747,7 +748,7 @@ Round 1: Access dict₁ (cold) + dict₂ (cold) → store in accumulated
 Round 2: Access accumulated (N/2 cold misses) + dict₃ (cold)
 Round k: Access accumulated (k·n cache lines, mostly cold)
 ```
-Cache miss rate: **O(N²·n)** - accumulated dictionary exceeds cache!
+Cache miss rate: **`$\mathcal{O}(N^{2}\cdot n)$`** - accumulated dictionary exceeds cache!
 
 **Binary Tree**:
 ```
@@ -755,7 +756,7 @@ Round 1: Each merge accesses 2n terms (fits in L2 cache: ~9MB)
 Round 2: Each merge accesses 4n terms (fits in L3 cache: ~45MB)
 Round 3: Larger merges (may spill to RAM)
 ```
-Cache miss rate: **O(N·n·log N)** - each round's data fits in progressively larger cache levels!
+Cache miss rate: **`$\mathcal{O}(N\cdot n\cdot \log  N)$`** - each round's data fits in progressively larger cache levels!
 
 **Cache line utilization**:
 - DAWG nodes: ~64 bytes (matches cache line size)
@@ -820,8 +821,8 @@ fn merge_deduplicated(left: &Vec<u32>, right: &Vec<u32>) -> Vec<u32> {
 ```
 
 **Rationale**:
-- Small lists (≤50): Vec operations have lower constant overhead
-- Large lists (>50): HashSet's O(n) dedup beats O(n log n) sort
+- Small lists `$(\le 50)$`: Vec operations have lower constant overhead
+- Large lists (>50): HashSet's `$\mathcal{O}(n)$` dedup beats `$\mathcal{O}(n \log  n)$` sort
 - Threshold tuned empirically (architecture-dependent)
 
 **Speedup**: 5-10× for context lists with 100+ entries
@@ -955,7 +956,7 @@ rayon::join(
 ```
 
 **Guarantees**:
-- Each dictionary has its own `Arc<RwLock<DynamicDawgInner>>`
+- Each dictionary has its own `Arc<DynamicDawgInner>` (a lock-free `LockFreeDawg` core)
 - No global/static state
 - No data races (verified by Rust's type system)
 - Tested in `/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/tests/concurrency_test.rs`
@@ -966,19 +967,19 @@ rayon::join(
 
 ```rust
 let result = dict1.clone();  // Shallow clone (Arc)
-result.union_with(&dict2, merge_fn);  // Acquires dict2.read(), result.write()
+result.union_with(&dict2, merge_fn);  // Reads dict2's entries (lock-free), inserts into result
 ```
 
-**Lock semantics**:
-- `union_with()` acquires:
-  - Read lock on source dictionary (`other.inner.read()`)
-  - Write lock on destination (`self.inner.write()`)
+**Merge semantics** (lock-free):
+- `union_with()` takes no locks:
+  - Iterates the source dictionary's entries from a lock-free `ArcSwap` snapshot (`other.inner`)
+  - Inserts each into the destination via the lock-free CAS insert path (`self.inner`)
 - Different dictionary instances can be merged concurrently:
   ```rust
   rayon::join(
       || merged1.union_with(&dict1, merge_fn),
       || merged2.union_with(&dict2, merge_fn)
-  );  // ✅ Safe: different RwLocks
+  );  // ✅ Safe: independent lock-free instances
   ```
 
 ### Engine Query Safety
@@ -1138,19 +1139,19 @@ fn extract_identifiers(path: &Path) -> Vec<String> {
   - **Open Access**: [CMU Technical Report](https://www.cs.cmu.edu/~guyb/papers/Ble93.pdf)
   - Seminal work on scan/reduce operations as parallel primitives
   - Applications to sorting, graph algorithms, and computational geometry
-  - Work-efficient parallel scan: O(n) work, O(log n) depth
+  - Work-efficient parallel scan: `$\mathcal{O}(n)$` work, `$\mathcal{O}(\log  n)$` depth
 
 - **Blelloch, Leiserson et al. (1989)**. "Scans as Primitive Parallel Operations"
   - **Open Access**: [Berkeley CS Paper](https://people.eecs.berkeley.edu/~culler/cs262b/papers/scan89.pdf)
   - Theoretical analysis of scan primitives in PRAM model
   - Demonstrates how associative operators enable parallel decomposition
-  - Work-depth complexity: O(n) work, O(log n) depth for reduction
+  - Work-depth complexity: `$\mathcal{O}(n)$` work, `$\mathcal{O}(\log  n)$` depth for reduction
 
 #### Tree-Based Parallel Algorithms
 
 - **Gary L. Miller, John H. Reif, and Leslie G. Valiant (1988)**. "Optimal Tree Contraction in the EREW Model"
   - **Open Access**: [CMU Technical Report](https://www.cs.cmu.edu/~glmiller/Publications/Papers/GMT88.pdf)
-  - Analyzes tree contraction algorithms achieving O(n log n / P) time
+  - Analyzes tree contraction algorithms achieving `$\mathcal{O}(n \log  n / P)$` time
   - Proves optimality for P processors on EREW PRAM
   - Relevant to understanding tree reduction complexity
 

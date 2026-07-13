@@ -36,7 +36,7 @@ Before diving into OSLF, ensure you understand this notation:
 
 | Symbol | Name | Meaning | Example |
 |--------|------|---------|---------|
-| `⊢` | Turnstile | "derives" or "proves" | `Γ ⊢ A : B` |
+| `$\vdash$` | Turnstile | "derives" or "proves" | `$\Gamma  \vdash  A : B$` |
 | `:` | Colon | "has type" | `x : Nat` |
 | `G` | Gamma | Context (assumptions) | `x : Int, y : Bool` |
 | `->` | Arrow | Function type | `Int -> Bool` |
@@ -50,7 +50,7 @@ Before diving into OSLF, ensure you understand this notation:
 | `Hom(A, B)` | Hom-set | Morphisms from A to B |
 | `F : C -> D` | Functor | Structure-preserving map between categories |
 | `y` | Yoneda embedding | Maps objects to representable presheaves |
-| `P(T)` | Presheaf category | Category of functors T^op -> Set |
+| `P(T)` | Presheaf category | Category of functors `$T^\text{op}$` -> Set |
 | `Omega` | Subobject classifier | "Type of propositions" |
 
 ### OSLF-Specific Notation
@@ -68,7 +68,7 @@ Before diving into OSLF, ensure you understand this notation:
 
 ### Reading Complex Expressions
 
-Example: `Γ ⊢ {x:A \| φ(x)} type`
+Example: `$\Gamma  \vdash  {x:A \| \varphi (x)} \text{type}$`
 
 Read as: "In context G, the subset type {x:A \| phi(x)} is a valid type"
 
@@ -167,7 +167,7 @@ Theory T_MeTTa:
 
 Given a λ-theory T viewed as a category, the **presheaf category** P(T) consists of:
 
-- **Objects**: Functors F : T^op → Set (contravariant functors to sets)
+- **Objects**: Functors F : `$T^\text{op}$` → Set (contravariant functors to sets)
 - **Morphisms**: Natural transformations between functors
 
 ### The Yoneda Embedding
@@ -188,8 +188,8 @@ The presheaf category P(T) is a **topos**, meaning it has:
 
 1. **All finite limits** (products, equalizers, pullbacks)
 2. **Exponentials** [P, Q] for any presheaves P, Q
-3. **Subobject classifier** Ω (the "type of propositions")
-4. **Power objects** ΩP for predicate formation
+3. **Subobject classifier** `$\Omega$` (the "type of propositions")
+4. **Power objects** `$\Omega P$` for predicate formation
 
 ### Computing Internal Homs
 
@@ -211,7 +211,7 @@ Every topos E has an **internal language** L(E), which is a type theory with:
 
 - **Types** from objects of E
 - **Terms** from morphisms of E
-- **Propositions** from subobjects (maps to Ω)
+- **Propositions** from subobjects (maps to `$\Omega )$`
 - **Quantifiers** from adjoints to substitution
 
 ### The Functor L
@@ -225,8 +225,8 @@ L(E) = ⟨Types, Terms, Props, ⊢⟩
 Where:
 - Types = objects of E
 - Terms(A) = global elements 1 → A
-- Props(A) = subobjects of A (maps A → Ω)
-- ⊢ = derivability from categorical structure
+- Props(A) = subobjects of A (maps `$A \to  \Omega )$`
+`$- \vdash  =$` derivability from categorical structure
 
 ### Composition LP
 
@@ -248,7 +248,7 @@ This type theory:
 
 ### Definition: Native Type
 
-A **native type** in LP(T) is a predicate φ : A → Ω over some object A, expressing
+A **native type** in LP(T) is a predicate `$\varphi$` : `$A \to  \Omega$` over some object A, expressing
 a property that terms of sort A may satisfy.
 
 ### Structural Types (Codespaces)
@@ -280,15 +280,15 @@ From the internal language, we get type formation rules:
 
 ### Substitution as Pattern Matching
 
-Given a morphism f : B → A and a predicate φ : A → Ω, we can form the **substitution**:
+Given a morphism f : B → A and a predicate `$\varphi$` : `$A \to  \Omega ,$` we can form the **substitution**:
 
 ```
 φ[f] : B → Ω
 φ[f](b) = φ(f(b))
 ```
 
-This captures pattern matching: φ[unify(p, −)] checks if a term matches pattern p
-with predicate φ on the result.
+This captures pattern matching: `$\varphi[\text{unify}(p, -)]$` checks if a term matches pattern p
+with predicate `$\varphi$` on the result.
 
 ---
 
@@ -406,7 +406,7 @@ OSLF supports **refined binding** where pattern variables have constrained types
 [$x : Number, parent($x, Bob)]
 ```
 
-This is represented using the internal hom [φ, ψ] for conditioned contexts.
+This is represented using the internal hom `$[\varphi , \psi ]$` for conditioned contexts.
 
 ---
 
@@ -477,7 +477,7 @@ This is natural numbers with addition.
 
 The presheaf category P(T_Simple) has:
 
-**Objects**: Functors F : T_Simple^op -> Set
+**Objects**: Functors F : `$T_\text{Simple}^\text{op}$` -> Set
 
 Key presheaves include:
 - `y(T)` = Hom(-, T) - the representable presheaf for terms

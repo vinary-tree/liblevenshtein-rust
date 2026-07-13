@@ -521,7 +521,7 @@ Lattice with phonetic-weighted edges
 
 **Key Concepts**:
 
-| Semiring | ⊕ (combine) | ⊗ (extend) | Use Case |
+| Semiring | `$\oplus$` (combine) | `$\otimes$` (extend) | Use Case |
 |----------|-------------|------------|----------|
 | **Tropical** | min | + | Shortest path (Viterbi) |
 | **Log** | log-sum-exp | + | Probabilistic (forward-backward) |
@@ -548,7 +548,7 @@ Cost: 1.0
 |----------|----------|---------|
 | `match2()` | expr/src/lib.rs:921 | Recursive structural matching |
 | `unify()` | expr/src/lib.rs:1849 | Variable binding + constraints |
-| `query_multi_i()` | kernel/src/space.rs:992 | O(K×N) lattice queries |
+| `query_multi_i()` | kernel/src/space.rs:992 | `$\mathcal{O}(K\times N)$` lattice queries |
 | `transform_multi_multi_()` | kernel/src/space.rs:1221 | Pattern→template application |
 
 **Integration Point**: Tier 2 (Syntactic Validation) rule engine.
@@ -587,9 +587,9 @@ Best correction: "the"  (matches "cat sat" semantic context)
 
 | Tier | Complexity | Candidates |
 |------|------------|------------|
-| 1 | O(n × d) | Generate many |
-| 2 | O(n × g) | Filter structurally |
-| 3 | O(n × t) | Verify semantically |
+| 1 | `$\mathcal{O}(n \times  d)$` | Generate many |
+| 2 | `$\mathcal{O}(n \times  g)$` | Filter structurally |
+| 3 | `$\mathcal{O}(n \times  t)$` | Verify semantically |
 
 Where:
 - n = number of candidates

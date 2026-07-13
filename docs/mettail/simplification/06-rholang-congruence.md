@@ -11,7 +11,7 @@ Detailed specification of Rholang structural congruence laws for process simplif
 
 Rholang's structural congruence laws define when two syntactically different processes are semantically equivalent. These laws form the foundation for process simplification and normalization.
 
-The structural congruence relation `≡` is the smallest congruence satisfying:
+The structural congruence relation `$\equiv$` is the smallest congruence satisfying:
 - Nil identity laws
 - Commutativity and associativity of parallel composition
 - Scope extrusion laws
@@ -27,12 +27,12 @@ Each structural congruence law preserves behavioral equivalence (bisimilarity). 
 
 | Law | Statement | Bisimilarity | Proof Reference |
 |-----|-----------|--------------|-----------------|
-| Nil Identity | `P \| 0 ≡ P` | `P \| 0 ≈ P` | [RPO Proof §1](09-rpo-congruence-proofs.md#law-1-nil-identity) |
-| Commutativity | `P \| Q ≡ Q \| P` | `P \| Q ≈ Q \| P` | [RPO Proof §2](09-rpo-congruence-proofs.md#law-2-commutativity) |
-| Associativity | `(P \| Q) \| R ≡ P \| (Q \| R)` | `(P \| Q) \| R ≈ P \| (Q \| R)` | [RPO Proof §3](09-rpo-congruence-proofs.md#law-3-associativity) |
-| Scope Extrusion | `new x.(P \| Q) ≡ (new x.P) \| Q` | `new x.(P \| Q) ≈ (new x.P) \| Q` | [RPO Proof §4](09-rpo-congruence-proofs.md#law-4-scope-extrusion) |
-| Scope Fusion | `new x.new x.P ≡ new x.P` | `new x.new x.P ≈ new x.P` | [RPO Proof §5](09-rpo-congruence-proofs.md#law-5-scope-fusion) |
-| Dead Scope | `new x.P ≡ P` (when `x ∉ FV(P)`) | `new x.P ≈ P` | [RPO Proof §6](09-rpo-congruence-proofs.md#law-6-dead-scope-elimination) |
+| Nil Identity | `$P \| 0 \equiv  P$` | `$P \| 0 \approx  P$` | [RPO Proof §1](09-rpo-congruence-proofs.md#law-1-nil-identity) |
+| Commutativity | `$P \| Q \equiv  Q \| P$` | `$P \| Q \approx  Q \| P$` | [RPO Proof §2](09-rpo-congruence-proofs.md#law-2-commutativity) |
+| Associativity | `$(P \| Q) \| R \equiv  P \| (Q \| R)$` | `$(P \| Q) \| R \approx  P \| (Q \| R)$` | [RPO Proof §3](09-rpo-congruence-proofs.md#law-3-associativity) |
+| Scope Extrusion | `$\text{new} x.(P \| Q) \equiv  (\text{new} x.P) \| Q$` | `$\text{new} x.(P \| Q) \approx  (\text{new} x.P) \| Q$` | [RPO Proof §4](09-rpo-congruence-proofs.md#law-4-scope-extrusion) |
+| Scope Fusion | `$\text{new} x.\text{new} x.P \equiv  \text{new} x.P$` | `$\text{new} x.\text{new} x.P \approx  \text{new} x.P$` | [RPO Proof §5](09-rpo-congruence-proofs.md#law-5-scope-fusion) |
+| Dead Scope | `$\text{new} x.P \equiv  P$` (when `$x \notin  \text{FV}(P)$`) | `$\text{new} x.P \approx  P$` | [RPO Proof §6](09-rpo-congruence-proofs.md#law-6-dead-scope-elimination) |
 
 ### Implication for Simplification
 
@@ -616,7 +616,7 @@ For efficient normalization, apply rules in this order:
 
 This order ensures:
 - Size-reducing rules apply first
-- Normalization completes in O(n² log n) time
+- Normalization completes in `$\mathcal{O}(n^{2} \log  n)$` time
 - Result is always canonical
 
 ---

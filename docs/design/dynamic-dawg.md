@@ -11,18 +11,18 @@ The `DynamicDawg` provides a **mutable DAWG** (Directed Acyclic Word Graph) that
 ## Key Features
 
 ### ✅ Online Modifications
-- **Insert**: Add terms dynamically - `𝒪(m)` per term
-- **Delete**: Remove terms dynamically - `𝒪(m)` per term
+- **Insert**: Add terms dynamically - `$\mathcal{O}(m)$` per term
+- **Delete**: Remove terms dynamically - `$\mathcal{O}(m)$` per term
 - **Batch operations**: `extend()` and `remove_many()` with automatic compaction
 
 ### ✅ Minimality Management
-- **Compact**: Restore perfect minimality - `𝒪(n)` total size
+- **Compact**: Restore perfect minimality - `$\mathcal{O}(n)$` total size
 - **Smart tracking**: `needs_compaction()` flag after deletions
 - **Near-minimal**: Structure stays efficient between compactions
 
 ### ✅ Thread Safety
-- Uses `Arc<RwLock<...>>` for concurrent access
-- Multiple readers OR single writer
+- Uses `Arc<...>` internally (the lock-free `LockFreeDawg` core) for concurrent access
+- Lock-free reads (readers never block); writers publish new nodes via `compare_exchange` (CAS)
 - Same safety guarantees as `PathMapDictionary`
 
 ## API Reference
@@ -116,12 +116,12 @@ dawg.minimize();
 
 | Operation | Time Complexity | Notes |
 |-----------|----------------|-------|
-| `insert(term)` | `𝒪(m)` | `m` = term length |
-| `remove(term)` | `𝒪(m)` | May leave orphaned nodes |
-| `compact()` | `𝒪(n log n + n·s)` | `n` = terms, `s` = signature size |
-| `minimize()` | `𝒪(n·s)` | `n` = nodes, `s` = signature size |
-| `extend(terms)` | `𝒪(n log n + n·s)` | Includes compaction |
-| `remove_many(terms)` | `𝒪(n log n + n·s)` | Includes compaction |
+| `insert(term)` | `$\mathcal{O}(m)$` | `$m$` = term length |
+| `remove(term)` | `$\mathcal{O}(m)$` | May leave orphaned nodes |
+| `compact()` | `$\mathcal{O}(n \log n + n \cdot s)$` | `$n$` = terms, `$s$` = signature size |
+| `minimize()` | `$\mathcal{O}(n \cdot s)$` | `$n$` = nodes, `$s$` = signature size |
+| `extend(terms)` | `$\mathcal{O}(n \log n + n \cdot s)$` | Includes compaction |
+| `remove_many(terms)` | `$\mathcal{O}(n \log n + n \cdot s)$` | Includes compaction |
 
 ## Space Efficiency
 
@@ -252,11 +252,11 @@ This guarantees perfect minimality after compaction.
 
 | Feature | DynamicDawg | Static DAWG | PathMap |
 |---------|-------------|-------------|---------|
-| Insertions | ✅ `𝒪(m)` | ❌ No | ✅ `𝒪(m)` |
-| Deletions | ✅ `𝒪(m)` | ❌ No | ✅ `𝒪(m)` |
+| Insertions | ✅ `$\mathcal{O}(m)$` | ❌ No | ✅ `$\mathcal{O}(m)$` |
+| Deletions | ✅ `$\mathcal{O}(m)$` | ❌ No | ✅ `$\mathcal{O}(m)$` |
 | Minimality | 🟡 Near-minimal | ✅ Perfect | ❌ Not minimal |
 | Compaction | ✅ Yes | N/A | N/A |
-| Thread-safe | ✅ RwLock | ✅ Immutable | ✅ RwLock |
+| Thread-safe | ✅ Lock-free | ✅ Immutable | ✅ Lock-free |
 | Space | 🟡 Good | ✅ Excellent | 🟡 Good |
 
 ## Examples
@@ -280,9 +280,9 @@ Our compaction achieves this by:
 
 ### Time Complexity
 
-- **Online minimal DAWG**: `𝒪(n²)` worst case per operation
-- **Our approach**: `𝒪(m)` per operation + `𝒪(n)` periodic compaction
-- **Amortized**: `𝒪(m)` if compaction frequency is bounded
+- **Online minimal DAWG**: `$\mathcal{O}(n^2)$` worst case per operation
+- **Our approach**: `$\mathcal{O}(m)$` per operation + `$\mathcal{O}(n)$` periodic compaction
+- **Amortized**: `$\mathcal{O}(m)$` if compaction frequency is bounded
 
 This trade-off makes dynamic operations practical.
 

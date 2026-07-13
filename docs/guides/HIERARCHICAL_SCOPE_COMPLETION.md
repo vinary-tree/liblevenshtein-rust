@@ -135,14 +135,14 @@ if sorted_vec_intersection(&term_scopes, &visible_scopes) {
 ```
 
 **Characteristics:**
-- Time complexity: `𝒪(n + m)` worst case, `𝒪(1)` best case with early termination
+- Time complexity: `$\mathcal{O}(n + m)$` worst case, `$\mathcal{O}(1)$` best case with early termination
 - Space: No additional allocation
 - Performance: `4.7%` faster than HashSet
 - Works with: Unlimited scope IDs
 
-#### 2. Bitmask Intersection (`≤ 64` Scopes)
+#### 2. Bitmask Intersection (`$\le 64$` Scopes)
 
-**Fastest when scope count is guaranteed `≤ 64`**
+**Fastest when scope count is guaranteed `$\le 64$`**
 
 ```rust
 use liblevenshtein::transducer::helpers::bitmask_intersection;
@@ -167,10 +167,10 @@ if bitmask_intersection(term_mask, visible_mask) {
 ```
 
 **Characteristics:**
-- Time complexity: `𝒪(1)` — single bitwise AND
+- Time complexity: `$\mathcal{O}(1)$` — single bitwise AND
 - Space: `8` bytes per term
 - Performance: `7.9%` faster than HashSet, `3.4%` faster than sorted vector
-- Limitation: Only works for scope IDs `< 64`
+- Limitation: Only works for scope IDs `$< 64$`
 
 ### Advanced: Custom Intersection Logic
 
@@ -202,23 +202,23 @@ Comprehensive benchmarking across 4 scenarios (10,000 terms each):
 
 | Approach | Average Time | vs HashSet | Best For |
 |----------|--------------|------------|----------|
-| **Sorted Vector** | 400.2μs | **-4.7%** | General purpose |
-| **Bitmask (≤64)** | 386.7μs | **-7.9%** | Small scope counts |
-| HashSet (baseline) | 419.8μs | 0% | Reference |
-| Hybrid | 409.3μs | -2.5% | Not recommended |
+| **Sorted Vector** | 400.2µs | **-4.7%** | General purpose |
+| **Bitmask (`$\le 64$`)** | 386.7µs | **-7.9%** | Small scope counts |
+| HashSet (baseline) | 419.8µs | 0% | Reference |
+| Hybrid | 409.3µs | -2.5% | Not recommended |
 
 ### Performance Tips
 
 1. **Keep scope vectors sorted**: This enables early termination in intersection checks
-2. **Use bitmasks when possible**: If you know scope count `≤ 64`, use bitmasks for maximum performance
+2. **Use bitmasks when possible**: If you know scope count `$\le 64$`, use bitmasks for maximum performance
 3. **Reuse visible scope vectors**: Create once per context, reuse for multiple queries
 4. **Minimize scope sets**: Only include scopes where term is actually accessible
 
 ### Scalability
 
-- **10 scopes**: ~390μs per query (10K terms)
-- **100 scopes**: ~399μs per query (10K terms)
-- **1000 scopes**: ~417μs per query (10K terms)
+- **10 scopes**: ~390µs per query (10K terms)
+- **100 scopes**: ~399µs per query (10K terms)
+- **1000 scopes**: ~417µs per query (10K terms)
 
 Performance degrades gracefully with scope count growth.
 
@@ -396,7 +396,7 @@ fn bench_scope_computation(b: &mut Bencher) {
 
 ### Issue: Scope IDs exceed 64 with bitmask approach
 
-**Cause**: Trying to use bitmask with scope IDs `≥ 64`
+**Cause**: Trying to use bitmask with scope IDs `$\ge 64$`
 
 **Solution**: Switch to sorted vector approach
 

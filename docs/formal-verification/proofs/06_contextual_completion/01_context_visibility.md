@@ -387,12 +387,12 @@ pub fn create_child(&mut self, id: ContextId, parent_id: ContextId)
 
 ### Performance Characteristics
 
-**Time Complexity**: O(d) where d = depth of context in tree
-- **Best case**: O(1) - root context
-- **Worst case**: O(n) - deeply nested context (n = total contexts)
-- **Typical**: O(log n) - balanced tree
+**Time Complexity**: `$\mathcal{O}(d)$` where d = depth of context in tree
+- **Best case**: `$\mathcal{O}(1)$` - root context
+- **Worst case**: `$\mathcal{O}(n)$` - deeply nested context (n = total contexts)
+- **Typical**: `$\mathcal{O}(\log  n)$` - balanced tree
 
-**Space Complexity**: O(d) for result vector
+**Space Complexity**: `$\mathcal{O}(d)$` for result vector
 - **In-place**: No additional heap allocation beyond result
 - **No recursion**: Iterative implementation avoids stack overhead
 
@@ -588,15 +588,15 @@ proptest! {
 
 ### Performance Optimization
 
-**Current**: O(d) time, O(d) space (d = depth)
+**Current**: `$\mathcal{O}(d)$` time, `$\mathcal{O}(d)$` space (d = depth)
 
 **Potential Optimization**: Cache visibility results
 - **Idea**: Store `Vec<ContextId>` in each context node
-- **Trade-off**: 2x memory for O(1) lookup
+- **Trade-off**: 2x memory for `$\mathcal{O}(1)$` lookup
 - **When useful**: Deep trees (d > 10) with frequent queries
 - **Invalidation**: Must rebuild on tree modification
 
-**Decision**: Keep the current O(d) implementation unless profiling shows that cached visibility justifies the memory trade-off.
+**Decision**: Keep the current `$\mathcal{O}(d)$` implementation unless profiling shows that cached visibility justifies the memory trade-off.
 
 ### Cycle Detection
 

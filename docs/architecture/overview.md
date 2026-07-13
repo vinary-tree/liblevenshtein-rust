@@ -41,7 +41,7 @@ they were extracted to **libdictenstein** for three reasons:
 resolve, as `#[deprecated]` shims in [`src/dictionary/mod.rs`](../../src/dictionary/mod.rs)
 that forward to libdictenstein. Existing code keeps compiling; the deprecation
 warning points each call site at its new home. New code should import the backends
-directly from `libdictenstein` (or its `*_char` modules for the UTF-8 variants).
+directly from `libdictenstein` (or its `::char` submodules for the UTF-8 variants).
 The only dictionary still *implemented* in this crate is
 `PhoneticNormalizedDictionary(Char)`, because it is intrinsically tied to the
 phonetic engine.
@@ -70,13 +70,13 @@ A query threads through all three areas in one lock-step pass:
 
 1. A `Transducer<D, P>` wraps any `D: Dictionary` from libdictenstein and is
    parameterized by an `Algorithm` and a `SubstitutionPolicy`.
-2. A query **lazily simulates** a parameterized Levenshtein automaton `A(W, k)`
+2. A query **lazily simulates** a parameterized Levenshtein automaton `$A(W, k)$`
    (position-sets reduced by subsumption) and **intersects** it with the
    dictionary in a single depth-first walk, pruning the instant no automaton state
    survives — see [Lazy vs. Eager Automata](../concepts/LAZY_VS_EAGER_AUTOMATA.md).
 3. The **engines** are built on that core: phonetic matching forms the product of
    a pattern NFA with the Levenshtein automaton; time-series search reuses the
-   position machinery for the MSM metric; WallBreaker splits large-`k` queries and
+   position machinery for the MSM metric; WallBreaker splits large-`$k$` queries and
    verifies pieces via the SCDAWG; contextual completion adds hierarchical scopes
    and draft buffers; the fuzzy cache wraps a dictionary in eviction policies.
 4. **WFST composition** with `duallity` is an optional outer layer for

@@ -1,12 +1,12 @@
 # Phase D: Grammar Correction via MORK Pattern Matching
 
 **Last Updated**: 2025-12-21
-**Version**: v0.8.0
+**Version**: 0.9.1
 **Status**: PROPOSED
 
 > ⚠️ **PROPOSAL NOTICE**: This document describes a **proposed** `src/grammar/` module for CFG-based grammatical error correction. This structure is a design specification for future implementation.
 >
-> **Current Implementation**: liblevenshtein v0.8.0 provides phonetic rules (`english::base()`, `llev!` macro) that handle spelling-level corrections, but not grammar-level corrections.
+> **Current Implementation**: liblevenshtein 0.9.1 provides phonetic rules (`english::base()`, `llev!` macro) that handle spelling-level corrections, but not grammar-level corrections.
 
 This document describes how MORK's pattern matching capabilities can serve as the rule engine for CFG-based grammatical error correction, building on the WFST infrastructure from Phases A-C.
 
@@ -18,9 +18,9 @@ This document describes how MORK's pattern matching capabilities can serve as th
 
 ---
 
-## Current v0.8.0 Capabilities
+## Current Capabilities
 
-Before implementing full grammar correction, liblevenshtein v0.8.0 provides:
+Before implementing full grammar correction, liblevenshtein 0.9.1 provides:
 
 ### What's Available Now (Spelling-Level)
 
@@ -94,7 +94,7 @@ Phase D proposes extending to grammar correction via MORK pattern matching.
 |--------------|------------------------|
 | `match2()` | Recursive structural matching of AST nodes |
 | `unify()` | Variable binding for feature agreement |
-| `query_multi_i()` | O(K×N) lattice processing (not O(K^N)) |
+| `query_multi_i()` | `$\mathcal{O}(K \times N)$` lattice processing (not `$\mathcal{O}(K^N)$`) |
 | `transform_multi_multi_()` | Apply pattern→template corrections |
 | De Bruijn indices | Feature propagation without name lookup |
 | PathMap backend | Efficient rule storage and lookup |
@@ -675,11 +675,11 @@ for correction in result.corrections {
 
 ### Efficiency
 
-MORK's `query_multi_i()` provides **O(K×N)** complexity where:
+MORK's `query_multi_i()` provides **`$\mathcal{O}(K \times N)$`** complexity where:
 - K = average candidates per position
 - N = number of positions
 
-This avoids the **O(K^N)** path enumeration of naive approaches.
+This avoids the **`$\mathcal{O}(K^N)$`** path enumeration of naive approaches.
 
 ### Optimization Strategies
 

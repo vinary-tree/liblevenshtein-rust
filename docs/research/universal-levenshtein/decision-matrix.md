@@ -258,7 +258,7 @@ let dict = TransducerBuilder::new()
 
 From **Section 2** of "Universal Levenshtein Automata for a Generalization of the Levenshtein Distance":
 
-> "We consider a generalization of the Levenshtein distance where substitutions are restricted to pairs in a set **S ⊆ Σ × Σ**."
+> "We consider a generalization of the Levenshtein distance where substitutions are restricted to pairs in a set **`$S \subseteq \Sigma \times \Sigma$`**."
 
 Key observation: The set **S** is a **parameter to the distance function**, not a fundamentally different algorithm.
 

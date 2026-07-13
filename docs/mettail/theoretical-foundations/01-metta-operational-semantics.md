@@ -38,7 +38,7 @@ Before diving into details, here's what you need to know:
 **Essential concepts** (handle 80% of use cases):
 1. The **COMM rule**: Two for-comprehensions at the same channel unify and reduce
 2. **Spaces as tags**: Atoms are tagged with spaces, not placed in containers
-3. The four-component state: `⟨i, k, w, o⟩` (input, knowledge, workspace, output)
+3. The four-component state: `$\langle i, k, w, o\rangle$` (input, knowledge, workspace, output)
 4. **Structural congruence**: Parallel composition is commutative and associative
 
 **Advanced concepts** (for complete implementation):
@@ -96,11 +96,11 @@ enum Collection {
 
 | Operation | Complexity | Description |
 |-----------|------------|-------------|
-| `unify(t, u)` | `𝒪(n)` typical | Pattern matching with occurs check |
-| `substitute(P, σ)` | `𝒪(P size)` | Apply substitution to process |
-| `structural_eq(P, Q)` | `𝒪(n)` | Check structural congruence |
-| `step(state)` | `𝒪(varies)` | One reduction step via COMM |
-| `compile_to_rspace(P)` | `𝒪(P size)` | Transform to RSpace representation |
+| `unify(t, u)` | `$\mathcal{O}(n)$` typical | Pattern matching with occurs check |
+| `$\text{substitute}(P, \sigma )$` | `$\mathcal{O}(P \text{size})$` | Apply substitution to process |
+| `structural_eq(P, Q)` | `$\mathcal{O}(n)$` | Check structural congruence |
+| `step(state)` | `$\mathcal{O}(\text{varies})$` | One reduction step via COMM |
+| `compile_to_rspace(P)` | `$\mathcal{O}(P \text{size})$` | Transform to RSpace representation |
 
 ---
 
@@ -223,7 +223,7 @@ These algebras interrelate, meaning spaces can be nested or mutually recursively
 
 ## Structural Congruence
 
-Structural congruence (≡) defines when two syntactically different processes are
+Structural congruence `$(\equiv )$` defines when two syntactically different processes are
 semantically equivalent.
 
 ### Parallel Composition Equations
@@ -418,8 +418,8 @@ unify(t₁, t₂) =
 
 ### Substitution Application
 
-When applying substitution `σ` to process `P`, written `P·σ`:
-- Replace each free variable `x` with `σ(x)`
+When applying substitution `$\sigma$` to process `P`, written `$P\cdot \sigma$`:
+- Replace each free variable `x` with `$\sigma (x)$`
 - Avoid capture by renaming bound variables as needed
 
 The dotted substitution `σ̇` converts process bindings to name bindings:
@@ -449,7 +449,7 @@ blocking** - instead, we store continuations at keys.
 Where:
 - The key is the **hash of the channel**
 - The value is a **pattern-matching lambda** from target to body
-- `⊕` is RSpace parallel composition (defined below)
+- `$\oplus$` is RSpace parallel composition (defined below)
 
 ### RSpace Parallel Composition
 
@@ -581,7 +581,7 @@ for(
 
 MeTTa includes builtin operations for:
 - Arithmetic: `+`, `-`, `*`, `/`
-- Comparison: `<`, `>`, `=`, `≤`, `≥`
+- Comparison: `<`, `>`, `=`, `$\le$`, `$\ge$`
 - Logic: `and`, `or`, `not`
 - Type checking: `get-type`, `has-type`
 
@@ -651,7 +651,7 @@ Understanding how MeTTa relates to other calculi clarifies implementation choice
 
 | Calculus | State Model | Key Feature |
 |----------|-------------|-------------|
-| **MeTTa** | Process soup + `⟨i, k, w, o⟩` | Spaces as tags, reflection |
+| **MeTTa** | Process soup + `$\langle i, k, w, o\rangle$` | Spaces as tags, reflection |
 | **Lambda** | Term only | Pure substitution |
 | **SKI** | Term only | Combinator-based |
 | **RHO** | Process soup (multiset) | Reflection via quote/drop |
@@ -662,10 +662,10 @@ Understanding how MeTTa relates to other calculi clarifies implementation choice
 | Calculus | Binding Mechanism | Variable Scope |
 |----------|-------------------|----------------|
 | **MeTTa** | For-comprehension (`for(t <- x)`) | Continuation scope |
-| **Lambda** | Lambda abstraction (`λx.`) | Lexical |
+| **Lambda** | Lambda abstraction (`$\lambda x.$`) | Lexical |
 | **SKI** | None (combinator encoding) | N/A |
 | **RHO** | Input prefix (`x(y).P`) | Continuation scope |
-| **Ambient** | Restriction (`νn.P`) | Lexical |
+| **Ambient** | Restriction (`$\nu n.P$`) | Lexical |
 
 ### Interaction Patterns
 

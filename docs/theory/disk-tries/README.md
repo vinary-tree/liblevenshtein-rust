@@ -1,105 +1,52 @@
-# Disk-Based Trie Data Structures
+# Disk-based tries (PersistentARTrie) — integration with liblevenshtein
 
-> **Note**: This disk-trie theory documentation has been moved to the
-> [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate.
-> See [libdictenstein/docs/theory/disk-tries/](../../../../libdictenstein/docs/theory/disk-tries/README.md)
-> for the complete documentation.
->
-> This document remains for reference on how PersistentARTrie integrates with
-> liblevenshtein's Levenshtein transducers for disk-based fuzzy matching.
+> **Source of truth for the theory:** the complete treatment of disk-based tries — B-tries,
+> the Adaptive Radix Tree (ART), pointer swizzling, buffer management, and the hybrid
+> **Persistent Adaptive Radix Trie (PART)** design — lives in the
+> **[libdictenstein](https://github.com/f1r3fly-io/libdictenstein)** crate that owns the
+> structure: [`libdictenstein/docs/theory/disk-tries/`](../../../../libdictenstein/docs/theory/disk-tries/README.md).
+> This page covers only **how liblevenshtein uses it**. The earlier in-repo deep-dive chapters
+> duplicated that treatment and are preserved under
+> [`docs/archive/theory/disk-tries/`](../../archive/theory/README.md).
 
-This documentation series provides a comprehensive, pedagogical introduction to disk-based trie data structures, culminating in the design of the **Persistent Adaptive Radix Trie (PART)** - a hybrid structure combining the Adaptive Radix Tree (ART) with B-trie-style bucket storage.
+## What it is (in one paragraph)
 
-## Motivation
+When a dictionary exceeds available RAM, liblevenshtein reaches for a **disk-persisted** backend.
+The **PersistentARTrie** (`libdictenstein`) is a hybrid of the **Adaptive Radix Tree** (ART) of
+Leis et al. [[2]](#references) — whose adaptive `Node4/16/48/256` layout keeps exact lookup at
+`$\mathcal{O}(m)$` for a term of length `$m$` — with **B-trie**-style bucket storage on disk
+(Askitis & Zobel [[1]](#references)), memory-mapped and reached through a **lock-free CAS overlay**.
+"Persistent" here means *non-volatile* (durable on SSD/HDD), **not** immutable: the
+`Persistent*` family is fully **dynamic**, supporting atomic concurrent insert/remove.
 
-When dictionaries exceed available RAM, we need data structures that efficiently manage data on secondary storage (SSD/HDD). Traditional in-memory tries waste space and incur excessive I/O when naively persisted to disk. This series explores specialized techniques for building tries that minimize disk I/O while maintaining fast lookup and update operations.
+## Why liblevenshtein needs it
 
-## Document Organization
+liblevenshtein's transducer walks *any* `Dictionary` in lock-step with a simulated Levenshtein
+automaton. When the backend is a `PersistentARTrie` (or the disk-persisted `PersistentScdawg`,
+`PersistentSuffixAutomaton`, `PersistentSuffixTree`, `PersistentVocabARTrie`), that lock-step walk
+runs directly over the **memory-mapped, lock-free** structure — so a dictionary far larger than RAM
+is fuzzy-searched with the same `$\mathcal{O}(\lvert W\rvert)$` per-query setup and `$\mathcal{O}(k)$`
+per-transition cost as an in-memory backend, the difference being page-cache-bounded disk I/O rather
+than resident memory. The ART node handles are the disk analogue of the in-memory `TrieRef` snapshot
+that makes traversal `$\mathcal{O}(1)$` per byte from the focus (see
+[`docs/design/pathmap-trieref-rework.md`](../../design/pathmap-trieref-rework.md)).
 
-The documents are numbered to indicate the recommended reading order:
+| Operation (PersistentARTrie) | Time | Disk I/Os (typical) |
+|---|---|---|
+| Exact lookup | `$\mathcal{O}(m)$` | 2–4 |
+| Insert | `$\mathcal{O}(m + \log B)$` amortized | 2–4 + 1 write |
+| Prefix search | `$\mathcal{O}(m + r)$` | depends on `$r$` |
+| Levenshtein (`$k = 1, 2$`) | `$\mathcal{O}(n \cdot m \cdot k^{2})$` before pruning | varies with pruning |
 
-| Document | Topic | Prerequisites |
-|----------|-------|---------------|
-| [01-foundations](01-foundations.md) | Trie basics and disk I/O fundamentals | None |
-| [02-b-trie](02-b-trie.md) | B-trie architecture (Askitis & Zobel 2009) | 01 |
-| [03-adaptive-radix-tree](03-adaptive-radix-tree.md) | Adaptive Radix Tree theory (Leis et al. 2013) | 01 |
-| [04-persistent-art](04-persistent-art.md) | Disk persistence with pointer swizzling | 01, 03 |
-| [05-buffer-management](05-buffer-management.md) | Page cache, WAL, and crash recovery | 01 |
-| [06-persistent-artrie-design](06-persistent-artrie-design.md) | Our hybrid PART design | All previous |
+where `$m$` = term length, `$B$` = bucket size (~100–500), `$r$` = result count, `$n$` = dictionary size.
 
-## Reading Paths
+## Further reading
 
-Depending on your background and goals, consider these reading paths:
-
-### For Newcomers to Disk-Based Data Structures
-Read all documents in order: 01 → 02 → 03 → 04 → 05 → 06
-
-### For Those Familiar with B-trees but New to Tries
-Start with 01 (trie foundations), then 02 (B-trie), then 06 (design summary)
-
-### For Implementers
-Focus on 04 (persistence techniques), 05 (buffer management), and 06 (final design)
-
-### Quick Reference
-Jump directly to 06 for a summary of the final design with references back to detailed explanations
-
-## Key Concepts Quick Reference
-
-### Data Structures
-
-| Structure | Description | Best For |
-|-----------|-------------|----------|
-| **B-trie** | Disk-based burst trie with buckets | Balanced read/write, space efficiency |
-| **ART** | Adaptive Radix Tree with Node4/16/48/256 | Low-latency lookups, SIMD acceleration |
-| **PART** | Persistent ART + B-trie buckets | Our hybrid combining both strengths |
-
-### Storage Techniques
-
-| Technique | Purpose |
-|-----------|---------|
-| **Pointer Swizzling** | Dual memory/disk addressing in single 64-bit pointer |
-| **Buffer Manager** | Page cache with LRU eviction and pinning |
-| **Write-Ahead Log (WAL)** | Crash recovery through operation logging |
-| **Path Compression** | Reduce tree height by collapsing single-child chains |
-
-### Complexity Summary
-
-For the Persistent ARTrie design:
-
-| Operation | Time Complexity | Disk I/Os |
-|-----------|-----------------|-----------|
-| Exact lookup | `𝒪(m)` | 2-4 (typical) |
-| Insert | `𝒪(m + log B)` amortized | 2-4 + 1 write |
-| Prefix search | `𝒪(m + k)` | Depends on `k` |
-| Levenshtein (`d=1,2`) | `𝒪(n·m·d²)` | Varies with pruning |
-
-Where: `m` = term length, `B` = bucket size (~100-500), `k` = result count
+- **Full disk-trie / PART theory (canonical source):** [`libdictenstein/docs/theory/disk-tries/`](../../../../libdictenstein/docs/theory/disk-tries/README.md).
+- Backend selection in liblevenshtein: [`user-guide/backends.md`](../../user-guide/backends.md).
+- Archived in-repo deep-dive chapters (superseded by libdictenstein): [`docs/archive/theory/disk-tries/`](../../archive/theory/README.md).
 
 ## References
 
-Primary sources underlying this documentation:
-
-1. **B-tries for disk-based string management**
-   Askitis, N. & Zobel, J. (2009). *The VLDB Journal*, 18(1), 157-179.
-   [DOI: 10.1007/s00778-008-0094-1](https://doi.org/10.1007/s00778-008-0094-1)
-
-2. **The Adaptive Radix Tree: ARTful Indexing for Main-Memory Databases**
-   Leis, V., Kemper, A., & Neumann, T. (2013). *ICDE*.
-   [PDF](https://db.in.tum.de/~leis/papers/ART.pdf)
-
-3. **Persistent Storage of Adaptive Radix Trees in DuckDB**
-   DuckDB Team (2022).
-   [Blog Post](https://duckdb.org/2022/07/27/art-storage)
-
-4. **SMART: A High-Performance Adaptive Radix Tree for Disaggregated Memory**
-   Luo, X. et al. (2023). *OSDI*.
-   [PDF](https://www.usenix.org/system/files/osdi23-luo.pdf)
-
-5. **HOT: A Height Optimized Trie Index for Main-Memory Database Systems**
-   Binna, R. et al. (2018). *SIGMOD*.
-   [PDF](https://15721.courses.cs.cmu.edu/spring2019/papers/08-oltpindexes2/p521-binna.pdf)
-
-## Related Documentation
-
-- [SCDAWG Theory](../scdawg/README.md) - Symmetric Compact Directed Acyclic Word Graph
-- [Levenshtein Automata](../../algorithms/README.md) - Fuzzy string matching algorithms
+1. N. Askitis and J. Zobel. "B-tries for disk-based string management." *The VLDB Journal*, 18(1):157–179, 2009. [doi:10.1007/s00778-008-0094-1](https://doi.org/10.1007/s00778-008-0094-1)
+2. V. Leis, A. Kemper, and T. Neumann. "The adaptive radix tree: ARTful indexing for main-memory databases." *IEEE ICDE 2013*, pp. 38–49. [doi:10.1109/ICDE.2013.6544812](https://doi.org/10.1109/ICDE.2013.6544812)

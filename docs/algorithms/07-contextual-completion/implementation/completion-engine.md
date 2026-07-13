@@ -186,7 +186,7 @@ let engine = DynamicContextualCompletionEngine::with_dynamic_dawg_char(Algorithm
 #### Custom Backend
 
 ```rust
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 let dict = PathMapDictionary::new();
 let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm::Standard);
@@ -198,7 +198,7 @@ let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm:
 
 ```rust
 use liblevenshtein::contextual::{DynamicContextualCompletionEngine, ContextId};
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 use liblevenshtein::transducer::Algorithm;
 use rayon::prelude::*;
 
@@ -295,8 +295,8 @@ let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm:
 
 | Pattern | Time (100 docs, 1K terms/doc) | Notes |
 |---------|-------------------------------|-------|
-| Sequential merge | ~50s | O(N²·n·m) - avoid! |
-| Binary tree parallel merge | ~0.3s | O(n·m·log N) with parallelism |
+| Sequential merge | ~50s | `$\mathcal{O}(N^{2}\cdot n\cdot m)$` - avoid! |
+| Binary tree parallel merge | ~0.3s | `$\mathcal{O}(n\cdot m\cdot \log  N)$` with parallelism |
 | Direct injection | <1ms | Zero overhead constructor |
 
 **→ See**: [Parallel Workspace Indexing Pattern](../patterns/parallel-workspace-indexing.md) for complete production-ready implementation with benchmarks and best practices.
@@ -465,7 +465,7 @@ assert_eq!(engine.checkpoint_count(ctx), 0);
 
 ```rust
 use liblevenshtein::contextual::StaticContextualCompletionEngine;
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::transducer::Algorithm;
 
 // Build static dictionary
@@ -641,7 +641,7 @@ Future optimization could use `DashMap` for drafts/checkpoints to eliminate lock
 
 ```rust
 use liblevenshtein::contextual::StaticContextualCompletionEngine;
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 
 // Pre-build standard library dictionary
 let mut builder = DoubleArrayTrie::builder();

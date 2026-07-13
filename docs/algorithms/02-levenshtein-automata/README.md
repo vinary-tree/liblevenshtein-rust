@@ -16,7 +16,7 @@
 
 ## Overview
 
-The Levenshtein Automata Layer provides **finite state machines** for computing approximate string matches efficiently. Instead of comparing every dictionary term individually (`𝒪(N)` operations), these automata traverse the dictionary graph once, finding all matches within a distance threshold.
+The Levenshtein Automata Layer provides **finite state machines** for computing approximate string matches efficiently. Instead of comparing every dictionary term individually (`$\mathcal{O}(N)$` operations, where `$N$` is the dictionary size), these automata traverse the dictionary graph once, finding all matches within a distance threshold.
 
 ![Levenshtein NFA for a query term and error bound k, with match, insertion, deletion, and substitution transitions between positions](../../diagrams/automata/levenshtein-nfa.svg)
 
@@ -85,7 +85,7 @@ The **Levenshtein distance** (edit distance) between two strings is the minimum 
 
 ### Dynamic Programming Algorithm
 
-Classic DP computes distance in `O(M×N)` time:
+Classic DP computes distance in `$\mathcal{O}(M \times N)$` time (`$M$`, `$N$` the two string lengths):
 
 ```
      ""  c  a  f  e
@@ -109,9 +109,9 @@ D[i][j] = min(
 
 ### Limitations of DP for Fuzzy Search
 
-For fuzzy dictionary search with N terms:
-- **Time**: `O(N × M × L)` where M = query length, L = average term length
-- **Space**: `O(M × L)` per comparison
+For fuzzy dictionary search with `$N$` terms:
+- **Time**: `$\mathcal{O}(N \times M \times L)$` where `$M$` = query length, `$L$` = average term length
+- **Space**: `$\mathcal{O}(M \times L)$` per comparison
 - **Problem**: Wasteful for large dictionaries!
 
 ## Finite Automata Approach
@@ -160,9 +160,9 @@ The automaton tracks **all possible ways** the query could align with the input,
 
 | Aspect | Dynamic Programming | Levenshtein Automaton |
 |--------|---------------------|----------------------|
-| **Dictionary traversal** | `O(N)` separate DPs | `O(1)` shared traversal |
-| **Duplicate prefixes** | Recomputed N times | Computed once |
-| **Memory** | `O(M×L)` per term | `O(M×D)` for all terms |
+| **Dictionary traversal** | `$\mathcal{O}(N)$` separate DPs | `$\mathcal{O}(1)$` shared traversal |
+| **Duplicate prefixes** | Recomputed `$N$` times | Computed once |
+| **Memory** | `$\mathcal{O}(M \times L)$` per term | `$\mathcal{O}(M \times D)$` for all terms |
 | **Dictionary size** | Linear impact | No impact |
 
 **Example**: For dictionary with 100K terms sharing prefix "test", DP computes "test" 100K times, automaton computes once.
@@ -232,7 +232,7 @@ let automaton = LevenshteinAutomaton::new("test", 2, Algorithm::MergeAndSplit);
 | **Transpositions** | ❌ (cost 2) | ✅ (cost 1) | ❌ (cost 2) |
 | **Adjacent merges** | ❌ | ❌ | ✅ (cost 1) |
 | **Character splits** | ❌ | ❌ | ✅ (cost 1) |
-| **Complexity** | `O(M×D)` states | `O(M×D²)` states | `O(M×D³)` states |
+| **Complexity** | `$\mathcal{O}(M \times D)$` states | `$\mathcal{O}(M \times D^{2})$` states | `$\mathcal{O}(M \times D^{3})$` states |
 | **Use case** | General fuzzy search | Spell checking | OCR errors |
 
 **Legend**: I=Insert, D=Delete, S=Substitute, T=Transpose, M=Merge, Sp=Split
@@ -327,7 +327,7 @@ fn transition(state: &State, input: char, query: &[char], max_dist: usize) -> St
 ### Example 1: Basic Fuzzy Search
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -346,7 +346,7 @@ println!("{:?}", results);
 ### Example 2: Transposition for Typos
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -371,7 +371,7 @@ println!("{:?}", results_std);
 ### Example 3: Unicode Fuzzy Matching
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -390,7 +390,7 @@ println!("{:?}", results);
 ### Example 4: Value Filtering During Traversal
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -413,7 +413,7 @@ println!("{:?}", results);
 ### Example 5: Distance Threshold Exploration
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -444,7 +444,7 @@ for max_distance in 0..=3 {
 ### Example 6: Custom Algorithm Selection
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -475,18 +475,18 @@ println!("Transposition distance 1: {:?}", results_trans);
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Automaton construction** | `O(M×D)` | M = query length, D = max distance |
-| **Single transition** | `O(D²)` | Process D² state components |
-| **Query traversal** | `O(M×D²×B)` | B = avg branching factor |
-| **Total query** | `O(M×D²×B)` | **Independent of dictionary size!** |
+| **Automaton construction** | `$\mathcal{O}(M \times D)$` | `$M$` = query length, `$D$` = max distance |
+| **Single transition** | `$\mathcal{O}(D^{2})$` | Process `$D^{2}$` state components |
+| **Query traversal** | `$\mathcal{O}(M \times D^{2} \times B)$` | `$B$` = avg branching factor |
+| **Total query** | `$\mathcal{O}(M \times D^{2} \times B)$` | **Independent of dictionary size!** |
 
 ### Space Complexity
 
 | Component | Complexity | Notes |
 |-----------|-----------|-------|
-| **State size** | `O(M×D)` | Position-distance pairs |
-| **Automaton cache** | `O(1)` | Reused across queries |
-| **Query results** | `O(K)` | K = number of matches |
+| **State size** | `$\mathcal{O}(M \times D)$` | Position-distance pairs |
+| **Automaton cache** | `$\mathcal{O}(1)$` | Reused across queries |
+| **Query results** | `$\mathcal{O}(K)$` | `$K$` = number of matches |
 
 ### Benchmark Results
 

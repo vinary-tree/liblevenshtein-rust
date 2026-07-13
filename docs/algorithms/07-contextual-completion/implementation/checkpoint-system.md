@@ -45,7 +45,7 @@ Total: 16 bytes (buffer content stored once)
 - Traditional: ~1,000 bytes (50 × 20 chars)
 - Our approach: ~400 bytes (50 × 8 bytes)
 
-**Restoration**: Truncate buffer to checkpoint position (O(1) operation).
+**Restoration**: Truncate buffer to checkpoint position (`$\mathcal{O}(1)$` operation).
 
 ### Components
 
@@ -91,7 +91,7 @@ pub struct CheckpointStack {
 ```
 
 **Properties**:
-- **Vec-based**: O(1) push/pop
+- **Vec-based**: `$\mathcal{O}(1)$` push/pop
 - **Stack semantics**: LIFO (Last In, First Out)
 - **Growable**: Dynamically allocates as needed
 
@@ -125,7 +125,7 @@ pub fn from_buffer(buffer: &DraftBuffer) -> Checkpoint;
 pub fn at(position: usize) -> Checkpoint;
 ```
 
-**Complexity**: O(1) - just reads buffer length.
+**Complexity**: `$\mathcal{O}(1)$` - just reads buffer length.
 
 **Example**:
 
@@ -145,7 +145,7 @@ pub fn restore(&self, buffer: &mut DraftBuffer);
 
 **Behavior**: Truncates buffer to checkpoint position.
 
-**Complexity**: O(k) where k = (current_len - checkpoint_position).
+**Complexity**: `$\mathcal{O}(k)$` where k = (current_len - checkpoint_position).
 
 **Example**:
 
@@ -180,7 +180,7 @@ pub fn is_empty(&self) -> bool;
 pub fn clear(&mut self);
 ```
 
-**All operations**: O(1) except `clear()` which is O(n).
+**All operations**: `$\mathcal{O}(1)$` except `clear()` which is `$\mathcal{O}(n)$`.
 
 ---
 
@@ -532,14 +532,14 @@ assert_eq!(editor.buffer.as_str(), "hi");
 
 | Operation | Time | Space | Notes |
 |-----------|------|-------|-------|
-| `Checkpoint::from_buffer()` | O(1) | O(1) | Read buffer length |
-| `Checkpoint::at()` | O(1) | O(1) | Direct creation |
-| `Checkpoint::restore()` | O(k) | O(1) | k = chars removed |
-| `CheckpointStack::new()` | O(1) | O(1) | Empty Vec |
-| `CheckpointStack::push()` | O(1) amortized | O(1) | May trigger reallocation |
-| `CheckpointStack::pop()` | O(1) | O(1) | Decrements length |
-| `CheckpointStack::peek()` | O(1) | O(1) | Read last element |
-| `CheckpointStack::clear()` | O(1) | O(1) | Sets length to 0 |
+| `Checkpoint::from_buffer()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Read buffer length |
+| `Checkpoint::at()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Direct creation |
+| `Checkpoint::restore()` | `$\mathcal{O}(k)$` | `$\mathcal{O}(1)$` | k = chars removed |
+| `CheckpointStack::new()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Empty Vec |
+| `CheckpointStack::push()` | `$\mathcal{O}(1)$` amortized | `$\mathcal{O}(1)$` | May trigger reallocation |
+| `CheckpointStack::pop()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Decrements length |
+| `CheckpointStack::peek()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Read last element |
+| `CheckpointStack::clear()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Sets length to 0 |
 
 ### Benchmarks
 
@@ -595,8 +595,8 @@ struct Checkpoint {
 ```
 
 **Problems**:
-- **Memory**: N checkpoints × M chars/checkpoint = O(NM) memory
-- **Copy cost**: O(M) per checkpoint creation
+- **Memory**: N checkpoints × M chars/checkpoint = `$\mathcal{O}(\text{NM})$` memory
+- **Copy cost**: `$\mathcal{O}(M)$` per checkpoint creation
 - **Waste**: Most undo spans few characters, not entire buffer
 
 **Our Approach**: Store position, rely on buffer truncation.
@@ -609,9 +609,9 @@ struct Checkpoint {
 ```
 
 **Benefits**:
-- ✓ Memory: O(N) for N checkpoints (independent of buffer size)
-- ✓ Creation: O(1) per checkpoint
-- ✓ Restoration: O(k) where k = chars removed (typically small)
+- ✓ Memory: `$\mathcal{O}(N)$` for N checkpoints (independent of buffer size)
+- ✓ Creation: `$\mathcal{O}(1)$` per checkpoint
+- ✓ Restoration: `$\mathcal{O}(k)$` where k = chars removed (typically small)
 
 **Trade-off**: Cannot restore if buffer is mutated after checkpoint (e.g., insert in middle). Our use case (append-only typing) fits perfectly.
 
@@ -621,10 +621,10 @@ struct Checkpoint {
 
 | Feature | `Vec<Checkpoint>` (chosen) | `VecDeque<Checkpoint>` |
 |---------|----------------------------|------------------------|
-| Push back | ✓ O(1) | ✓ O(1) |
-| Pop back | ✓ O(1) | ✓ O(1) |
-| Push front | ✗ O(n) | ✓ O(1) |
-| Pop front | ✗ O(n) | ✓ O(1) |
+| Push back | ✓ `$\mathcal{O}(1)$` | ✓ `$\mathcal{O}(1)$` |
+| Pop back | ✓ `$\mathcal{O}(1)$` | ✓ `$\mathcal{O}(1)$` |
+| Push front | ✗ `$\mathcal{O}(n)$` | ✓ `$\mathcal{O}(1)$` |
+| Pop front | ✗ `$\mathcal{O}(n)$` | ✓ `$\mathcal{O}(1)$` |
 | Memory | Lower | Higher (~24 bytes) |
 | Contiguous | ✓ Yes | ✗ No |
 
@@ -663,8 +663,8 @@ checkpoints: Arc<Mutex<HashMap<ContextId, CheckpointStack>>>,
 ```
 
 **Locking Strategy**:
-- **Checkpoint creation**: Brief Mutex lock (O(1))
-- **Undo operation**: Brief Mutex lock (O(1) pop + O(k) restore)
+- **Checkpoint creation**: Brief Mutex lock (`$\mathcal{O}(1)$`)
+- **Undo operation**: Brief Mutex lock (`$\mathcal{O}(1)$` pop + `$\mathcal{O}(k)$` restore)
 - **Contention**: Low (checkpoints rare, typically user-initiated)
 
 ---

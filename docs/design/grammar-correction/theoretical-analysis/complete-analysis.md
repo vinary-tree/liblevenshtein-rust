@@ -77,7 +77,7 @@ f(x) = y₁ and f(x) = y₂ ⟹ y₁ = y₂
 For our pipeline, this means running the same input multiple times produces identical output.
 
 **Definition 1.2 (Correctness)**:
-A correction function f mapping inputs I to outputs O is **correct** if for all i ∈ I:
+A correction function f mapping inputs I to outputs O is **correct** if for all `$i \in  I$`:
 ```
 f(i) ∈ Valid(I)
 ```
@@ -85,7 +85,7 @@ f(i) ∈ Valid(I)
 where Valid(I) is the set of valid programs (syntactically, semantically, or behaviorally correct depending on layer).
 
 **Definition 1.3 (Optimality)**:
-A correction function f with cost function c: I × O → ℝ is **optimal** if for all i ∈ I:
+A correction function f with cost function c: `$I \times  O \to  \mathbb{R}$` is **optimal** if for all `$i \in  I$`:
 ```
 f(i) = argmin_{o ∈ Valid(I)} c(i, o)
 ```
@@ -106,52 +106,52 @@ Solution x is **Pareto optimal** if there is no solution y such that:
 **Definition 2.1 (Layer)**:
 A layer L is a tuple (I_L, O_L, c_L, Alg_L) where:
 - I_L: Input domain
-- O_L: Output domain (O_L ⊆ I_{L+1} for sequential composition)
-- c_L: I_L × O_L → ℝ₊ (cost function)
+- `$O_L$`: Output domain (`$O_L \subseteq I_{L+1}$` for sequential composition)
+- `$c_L$`: `$I_L \times O_L \to \mathbb{R}_+$` (cost function)
 - Alg_L: I_L → 2^{O_L} (algorithm returning candidate set)
 
 **Definition 2.2 (Sequential Composition)**:
-Layers L₁ and L₂ compose sequentially as L₂ ∘ L₁:
+Layers L₁ and L₂ compose sequentially as `$L_{2} \circ  L_{1}$`:
 ```
 (L₂ ∘ L₁)(x) = { y ∈ O_L₂ | ∃z ∈ L₁(x), y ∈ L₂(z) }
 ```
 
 **Definition 2.3 (Total Cost)**:
-For pipeline L_n ∘ ... ∘ L₁, the total cost is:
+For pipeline `$L_n \circ  ... \circ  L_{1},$` the total cost is:
 ```
 C_total(x, y) = ∑ᵢ₌₁ⁿ c_Lᵢ(xᵢ₋₁, xᵢ)
 ```
-where `x = x₀`, `x₁ ∈ L₁(x₀)`, ..., `xₙ = y ∈ Lₙ(xₙ₋₁)`.
+where `x = x₀`, `$x_{1} \in  L_{1}(x_{0})$`, ..., `$x_{n} = y \in  L_{n}(x_{n-1})$`.
 
 ### 2.2 Pipeline Instantiation
 
 **Layer 1: Lexical Correction**
-- `I₁ = Σ*` (strings over alphabet `Σ`)
-- `O₁ = (Σ*)^k` (`k` token candidates per position)
+- `$I_{1} = \Sigma *$` (strings over alphabet `$\Sigma$`)
+- `$O_{1} = (\Sigma *)^k$` (`k` token candidates per position)
 - `c₁(s, t) = Levenshtein_distance(s, t)`
 - `Alg₁` = Levenshtein automaton query
 
 **Layer 2: Grammar Correction**
-- `I₂ = (Σ*)^m` (token sequences)
+- `$I_{2} = (\Sigma *)^m$` (token sequences)
 - `O₂ = ParseTree(G)` (valid parse trees for grammar `G`)
 - `c₂(tokens, tree) = #syntax_repairs`
 - `Alg₂` = BFS over parse states + Tree-sitter
 
 **Layer 3: Semantic Validation**
 - `I₃ = ParseTree(G)`
-- `O₃ = {tree ∈ ParseTree(G) ∣ well_typed(tree)}`
-- `c₃(tree, tree') = 0` if `well_typed(tree')`, `∞` otherwise
+- `$O_{3} = {\text{tree} \in  \text{ParseTree}(G) \lvert  \text{well}_\text{typed}(\text{tree})}$`
+- `c₃(tree, tree') = 0` if `well_typed(tree')`, `$\infty$` otherwise
 - `Alg₃` = Type inference (Algorithm W) + filter
 
 **Layer 4: Semantic Repair**
 - `I₄ = ParseTree(G)` with type errors
-- `O₄ = {tree ∈ ParseTree(G) ∣ well_typed(tree)}`
+- `$O_{4} = {\text{tree} \in  \text{ParseTree}(G) \lvert  \text{well}_\text{typed}(\text{tree})}$`
 - `c₄(tree, tree') = #semantic_edits`
 - `Alg₄` = Template-based / SMT-based / Search-based
 
 **Layer 5: Process Verification**
 - `I₅ = TypedProgram` (for process calculi)
-- `O₅ = {prog ∣ session_type_check(prog)}`
+- `$O_{5} = {\text{prog} \lvert  \text{session}_\text{type}_\text{check}(\text{prog})}$`
 - `c₅(prog, prog') = #protocol_violations_fixed`
 - `Alg₅` = Session type checker + repair
 
@@ -170,7 +170,7 @@ We employ the following theoretical frameworks:
 - Progress and preservation theorems
 
 **2.3.3 Complexity Theory**
-- Time complexity: `𝒪(f(n))`
+- Time complexity: `$\mathcal{O}(f(n))$`
 - Space complexity
 - Decidability (halting problem, type inference, etc.)
 
@@ -209,7 +209,7 @@ The Levenshtein automaton construction is deterministic: for fixed word w and di
 - Construction is algorithmic (Schulz-Mihov algorithm)
 - No random choices in state transitions
 - DFA minimization (if applied) is unique
-∎
+`$\blacksquare$`
 
 **Corollary 3.2 (Query Determinism with Tie-Breaking)**:
 Lexical correction is deterministic if:
@@ -236,7 +236,7 @@ L(A_w,d) = {v ∈ Σ* | Levenshtein(w, v) ≤ d}
 ```
 
 **Proof**: By construction of automaton states and transitions [Schulz & Mihov 2002].
-∎
+`$\blacksquare$`
 
 **Corollary 3.5 (Candidate Validity)**:
 All returned candidates are valid dictionary words within the specified distance.
@@ -250,7 +250,7 @@ If candidates are sorted by Levenshtein distance and ties broken deterministical
 - Levenshtein distance is computed exactly (Wagner-Fischer)
 - Sorting ensures minimum distances are returned first
 - k smallest distances are optimal
-∎
+`$\blacksquare$`
 
 **Limitations**:
 - Optimality is **per-token**, not per-sentence
@@ -259,14 +259,14 @@ If candidates are sorted by Levenshtein distance and ties broken deterministical
 ### 3.5 Complexity Analysis
 
 **Theorem 3.7 (Lexical Complexity)**:
-For word `w` with `∣w∣ = n`, dictionary of size `m`, max distance `d`:
-- **Automaton construction**: `𝒪(n × d)` states, `𝒪(n × d × ∣Σ∣)` transitions
-- **Query per word**: `𝒪(length × d)` amortized
-- **Total query**: `𝒪(m × avg_length × d)`
-- **Space**: `𝒪(n × d)`
+For word `w` with `$\lvert w\rvert = n$`, dictionary of size `m`, max distance `d`:
+- **Automaton construction**: `$\mathcal{O}(n \times  d)$` states, `$\mathcal{O}(n \times  d \times  \lvert \Sigma \rvert)$` transitions
+- **Query per word**: `$\mathcal{O}(\text{length} \times  d)$` amortized
+- **Total query**: `$\mathcal{O}(m \times  \text{avg}_\text{length} \times  d)$`
+- **Space**: `$\mathcal{O}(n \times  d)$`
 
 **Practical Bounds**:
-- Typical: n ≈ 10, d = 2, m = 100k, avg_length = 7
+- Typical: `$n \approx  10, d = 2, m = 100k,$` avg_length = 7
 - Construction: ~20 states, ~1000 transitions → negligible
 - Query: ~14M character comparisons → ~10ms on modern CPU
 
@@ -278,7 +278,7 @@ For word `w` with `∣w∣ = n`, dictionary of size `m`, max distance `d`:
 | **Correctness** | ✓ Yes | All candidates within distance d |
 | **Optimality** | ✓ Yes | Top-k by distance (per-token) |
 | **Decidability** | ✓ Yes | Finite automaton, regular language |
-| **Complexity** | `𝒪(n × d)` | Linear in word length and distance |
+| **Complexity** | `$\mathcal{O}(n \times  d)$` | Linear in word length and distance |
 
 ---
 
@@ -337,7 +337,7 @@ Grammar correction becomes deterministic if:
 3. BFS exploration order is deterministic (FIFO queue)
 
 **Proof**: With fixed exploration order and deterministic tie-breaking, the first parse tree found at distance d is always the same.
-∎
+`$\blacksquare$`
 
 **Corollary 4.4 (Beam Search Non-Determinism)**:
 Beam search is non-deterministic unless beam selection is deterministic (sorted by score, then tie-broken).
@@ -345,7 +345,7 @@ Beam search is non-deterministic unless beam selection is deterministic (sorted 
 ### 4.3 Correctness Analysis
 
 **Definition 4.5 (Syntactic Correctness)**:
-Parse tree T is syntactically correct for grammar G if T ∈ ParseTree(G).
+Parse tree T is syntactically correct for grammar G if `$T \in$` ParseTree(G).
 
 **Theorem 4.6 (Grammar Correction Correctness)**:
 All parse trees returned by BFS grammar correction are syntactically valid.
@@ -355,7 +355,7 @@ All parse trees returned by BFS grammar correction are syntactically valid.
 - LookaheadIterator returns only symbols that lead to valid parse states
 - Tree-sitter guarantees parse validity
 - Complete parse states correspond to valid parse trees
-∎
+`$\blacksquare$`
 
 **Caveat**: Error recovery in Tree-sitter may produce parse trees with error nodes. For true correctness, filter out trees with error nodes.
 
@@ -363,7 +363,7 @@ All parse trees returned by BFS grammar correction are syntactically valid.
 For max distance d, all returned parse trees are within d edits of the input.
 
 **Proof**: By BFS termination condition (cost > d → prune).
-∎
+`$\blacksquare$`
 
 ### 4.4 Optimality Analysis
 
@@ -376,7 +376,7 @@ If all edits have cost 1, BFS finds the minimum-distance parse tree.
 - BFS explores states in order of increasing distance
 - First complete parse at distance d is guaranteed to be optimal
 - No parse tree at distance < d exists (would have been found earlier)
-∎
+`$\blacksquare$`
 
 **Theorem 4.9 (BFS Non-Optimality for Non-Uniform Cost)**:
 For non-uniform edit costs, BFS does **not** guarantee optimality.
@@ -421,7 +421,7 @@ Beam search with beam width k is a **k-approximation** algorithm in certain case
 - At each level, keep top-k by heuristic score
 - If heuristic is admissible (never overestimates), beam search is guided toward optimal
 - Approximation ratio depends on heuristic quality
-∎
+`$\blacksquare$`
 
 **Practical Heuristics**:
 1. **A* heuristic**: f(n) = g(n) + h(n) where:
@@ -434,19 +434,19 @@ Beam search with beam width k is a **k-approximation** algorithm in certain case
 
 **Theorem 4.15 (BFS Grammar Complexity)**:
 For input length n, max distance d, beam width k, parse time p:
-- **Pure BFS**: `𝒪(∣Grammar∣^d × n × p)` worst-case (exponential in d)
-- **Beam BFS**: `𝒪(k × d × n × p)` (tractable)
-- **Space**: `𝒪(k × state_size)`
+- **Pure BFS**: `$\mathcal{O}(\lvert \text{Grammar}\rvert^d \times  n \times  p)$` worst-case (exponential in d)
+- **Beam BFS**: `$\mathcal{O}(k \times  d \times  n \times  p)$` (tractable)
+- **Space**: `$\mathcal{O}(k \times  \text{state}_\text{size})$`
 
 **Practical Bounds**:
-- n = 100 tokens, d = 2, k = 20, p ≈ 5ms (Tree-sitter)
+- n = 100 tokens, d = 2, k = 20, p `$\approx$` 5ms (Tree-sitter)
 - Beam BFS: ~20 × 2 × 100 × 5ms = 200ms (acceptable for IDE)
 
 **Theorem 4.16 (Parsing Decidability)**:
-Context-free grammar parsing is decidable in `𝒪(n³)` worst-case (CYK, Earley).
+Context-free grammar parsing is decidable in `$\mathcal{O}(n^{3})$` worst-case (CYK, Earley).
 
 **Proof**: Chart parsing algorithms [Earley 1970, Younger 1967].
-∎
+`$\blacksquare$`
 
 **Corollary 4.17**:
 Grammar correction is decidable but potentially expensive. Beam search is necessary for real-time use.
@@ -459,7 +459,7 @@ Grammar correction is decidable but potentially expensive. Beam search is necess
 | **Correctness** | ✓ Yes | All parse trees are syntactically valid |
 | **Optimality** | ✗ No (BFS) | Only for uniform costs; beam search is approximate |
 | **Decidability** | ✓ Yes | CFG parsing is decidable |
-| **Complexity** | `𝒪(k × d × n × p)` | Beam search; exponential without beam |
+| **Complexity** | `$\mathcal{O}(k \times  d \times  n \times  p)$` | Beam search; exponential without beam |
 
 **Key Insight**: **Optimality is sacrificed for tractability**. Beam search provides approximation guarantees.
 
@@ -495,7 +495,7 @@ Algorithm W (Hindley-Milner type inference) is deterministic: for a given AST, i
 - Algorithm W is a deterministic algorithm
 - Unification (Robinson's algorithm) is deterministic
 - Principal type is unique (Hindley-Milner theorem)
-∎
+`$\blacksquare$`
 
 **Caveat**: Type inference may involve generating fresh type variables. If fresh variable generation is non-deterministic (e.g., based on system state), types may differ syntactically but are equivalent up to renaming.
 
@@ -507,19 +507,19 @@ Semantic validation is deterministic if type inference is deterministic.
 ### 5.3 Correctness Analysis
 
 **Definition 5.3 (Semantic Correctness - Type Level)**:
-Program P is semantically correct (at type level) if ∅ ⊢ P : τ for some type τ.
+Program P is semantically correct (at type level) if `$\emptyset  \vdash  P$` : `$\tau$` for some type `$\tau .$`
 
 **Theorem 5.4 (Validation Correctness)**:
 All programs passing Layer 3 are well-typed.
 
 **Proof**: By construction; Algorithm W only succeeds if type derivation exists.
-∎
+`$\blacksquare$`
 
 **Theorem 5.5 (Type Safety)**:
 Well-typed programs don't go wrong (Progress + Preservation).
 
 **Proof**: Fundamental theorems of type theory [Wright & Felleisen 1994].
-∎
+`$\blacksquare$`
 
 **Implications**: Layer 3 guarantees absence of type errors (but not absence of all bugs).
 
@@ -537,7 +537,7 @@ Layer 3 is optimal: it accepts exactly the well-typed programs.
 **Proof**:
 - Completeness: All well-typed programs are accepted (Algorithm W completeness)
 - Soundness: All accepted programs are well-typed (Algorithm W soundness)
-∎
+`$\blacksquare$`
 
 **Caveat**: Optimality is with respect to **type correctness**, not overall error correction. A well-typed program may still be semantically wrong (e.g., wrong logic).
 
@@ -545,18 +545,18 @@ Layer 3 is optimal: it accepts exactly the well-typed programs.
 
 **Theorem 5.9 (Type Inference Complexity)**:
 Algorithm W for Hindley-Milner has:
-- **Best/Average case**: `𝒪(n log n)` for program size n
+- **Best/Average case**: `$\mathcal{O}(n \log  n)$` for program size n
 - **Worst case**: Exponential (due to occurs check)
 - **Practical**: Near-linear for typical programs
 
 **Proof**: Empirical analysis [McBride 2003, Heeren 2005].
-∎
+`$\blacksquare$`
 
 **Theorem 5.10 (Type Inference Decidability)**:
 Hindley-Milner type inference is decidable.
 
 **Proof**: Algorithm W always terminates [Damas & Milner 1982].
-∎
+`$\blacksquare$`
 
 **Extension: System F**:
 - System F (polymorphic λ-calculus with explicit type abstraction) has undecidable type inference
@@ -570,7 +570,7 @@ Hindley-Milner type inference is decidable.
 | **Correctness** | ✓ Yes | Only well-typed programs pass |
 | **Optimality** | ✓ Yes | Accepts all and only well-typed programs |
 | **Decidability** | ✓ Yes | Hindley-Milner is decidable |
-| **Complexity** | `𝒪(n log n)` avg | Near-linear for typical programs |
+| **Complexity** | `$\mathcal{O}(n \log  n)$` avg | Near-linear for typical programs |
 
 **Key Insight**: Layer 3 is a **perfect filter** for type correctness.
 
@@ -636,7 +636,7 @@ Repair is correct if the repaired program is well-typed.
 Template-based repair is correct if templates are manually verified.
 
 **Proof**: If template T: Error → Valid is verified, applying T produces valid program.
-∎
+`$\blacksquare$`
 
 **Theorem 6.6 (SMT Correctness)**:
 SMT-based repair is correct if:
@@ -647,7 +647,7 @@ SMT-based repair is correct if:
 - SMT model satisfies constraints
 - Constraints encode type correctness
 - Verification confirms well-typedness
-∎
+`$\blacksquare$`
 
 **Caveat**: SMT repair may produce **semantically wrong** programs (e.g., changes variable that should not be changed).
 
@@ -679,7 +679,7 @@ SMT repair (type-correct but semantically wrong):
 MaxSMT finds the optimal solution for the **given constraint set** (maximizes satisfied soft constraints).
 
 **Proof**: By definition of MaxSMT optimization [Nieuwenhuis & Oliveras 2006].
-∎
+`$\blacksquare$`
 
 **Limitation**: Optimality is relative to the **constraint encoding**, not the true semantic intent.
 
@@ -689,7 +689,7 @@ There is no algorithm that, for arbitrary programs and type errors, computes the
 **Proof Sketch**:
 - Semantic intent is not formally specified
 - Even with formal specs, equivalence checking is undecidable (Rice's theorem)
-∎
+`$\blacksquare$`
 
 **Corollary 6.10**: We can only approximate semantic optimality via heuristics (e.g., prefer smaller edits, preserve variable roles).
 
@@ -697,7 +697,7 @@ There is no algorithm that, for arbitrary programs and type errors, computes the
 MaxSMT is **NP-hard** (even FNP-hard for finding optimal solution).
 
 **Proof**: Reduction from weighted MAX-SAT [Garey & Johnson 1979].
-∎
+`$\blacksquare$`
 
 **Practical Approaches**:
 1. **Timeout**: Run SMT solver for bounded time
@@ -707,7 +707,7 @@ MaxSMT is **NP-hard** (even FNP-hard for finding optimal solution).
 ### 6.5 Complexity Analysis
 
 **Theorem 6.12 (Repair Complexity)**:
-- **Template-based**: `𝒪(template_count × pattern_match_cost)` — polynomial
+- **Template-based**: `$\mathcal{O}(\text{template}_\text{count} \times  \text{pattern}_\text{match}_\text{cost})$` — polynomial
 - **SMT-based**: NP-hard in general, but modern solvers are efficient for typical instances
 - **Search-based**: Exponential in search depth
 
@@ -770,7 +770,7 @@ Session type checking is deterministic for deterministic processes.
 **Proof**:
 - Type checking algorithm is deterministic
 - Process semantics are deterministic (for π-calculus)
-∎
+`$\blacksquare$`
 
 **Caveat**: ρ-calculus (Rholang) has non-deterministic choice (e.g., parallel composition with race conditions). Session type checking must account for all possible interleavings.
 
@@ -788,13 +788,13 @@ If P has session type S and type checking succeeds:
 2. **Deadlock freedom**: No circular waits (if types are dual)
 
 **Proof**: Fundamental theorem of session types [Honda et al. 1998].
-∎
+`$\blacksquare$`
 
 **Theorem 7.5 (Progress for Session Types)**:
 Well-typed processes with dual session types make progress (no deadlock).
 
 **Proof**: By duality, sends are matched with receives [Wadler 2012].
-∎
+`$\blacksquare$`
 
 ### 7.4 Optimality Analysis
 
@@ -806,21 +806,21 @@ suggest repairs; repair synthesis is outside the Layer 5 contract.
 Session type checking is complete for the session type system: all well-typed processes are accepted.
 
 **Proof**: By soundness and completeness of session type system [Honda et al. 1998].
-∎
+`$\blacksquare$`
 
 ### 7.5 Complexity Analysis
 
 **Theorem 7.8 (Session Type Checking Complexity)**:
 For process size n:
-- **Linear session types**: `𝒪(n)` (single channel, sequential)
-- **Non-linear session types**: `𝒪(n^k)` for k parallel sessions
+- **Linear session types**: `$\mathcal{O}(n)$` (single channel, sequential)
+- **Non-linear session types**: `$\mathcal{O}(n^k)$` for k parallel sessions
 - **General π-calculus**: Undecidable (name mobility leads to unbounded behavior)
 
 **Proof**:
 - Linear case: Traverse process once
 - Non-linear: Track channel interactions (polynomial)
 - General: Reduction from halting problem
-∎
+`$\blacksquare$`
 
 **Practical Approach**:
 - Restrict to linear session types or bounded non-linearity
@@ -832,13 +832,13 @@ For process size n:
 Session type checking is decidable for **finite session types** and **bounded processes**.
 
 **Proof**: Finite session types have regular structure; checking reduces to finite state verification.
-∎
+`$\blacksquare$`
 
 **Theorem 7.10 (Undecidability for General π-Calculus)**:
 Behavioral equivalence checking for π-calculus is undecidable.
 
 **Proof**: Reduction from halting problem [Palamidessi 2003].
-∎
+`$\blacksquare$`
 
 **Implication**: Layer 5 is decidable for Rholang **if session types are finite and process behavior is bounded**.
 
@@ -850,7 +850,7 @@ Behavioral equivalence checking for π-calculus is undecidable.
 | **Correctness** | ✓ Yes | Session type safety guarantees |
 | **Optimality** | N/A | Verification layer, not optimization |
 | **Decidability** | ✓ Yes (restricted) | For finite session types and bounded processes |
-| **Complexity** | `𝒪(n)` to `𝒪(n^k)` | Depends on session type complexity |
+| **Complexity** | `$\mathcal{O}(n)$` to `$\mathcal{O}(n^k)$` | Depends on session type complexity |
 
 **Key Insight**: Layer 5 provides **strong correctness guarantees** for concurrent communication but requires **restrictions** for decidability.
 
@@ -863,7 +863,7 @@ Behavioral equivalence checking for π-calculus is undecidable.
 **Question**: If each layer is correct, is the composed pipeline correct?
 
 **Theorem 8.1 (Compositional Correctness)**:
-If each layer L_i is correct (produces valid outputs), the composition L_n ∘ ... ∘ L_1 is correct.
+If each layer L_i is correct (produces valid outputs), the composition `$L_n \circ  ... \circ  L_1$` is correct.
 
 **Proof**:
 - L_1 produces valid tokens → input to L_2 is valid
@@ -871,7 +871,7 @@ If each layer L_i is correct (produces valid outputs), the composition L_n ∘ .
 - L_3 filters for well-typed trees → input to L_4 is valid
 - L_4 repairs to well-typed programs → input to L_5 is valid
 - L_5 verifies session types → output is session-correct
-∎
+`$\blacksquare$`
 
 **Caveat**: This assumes **no errors propagate**. If L_i produces output with hidden errors, later layers may not detect them.
 
@@ -913,22 +913,22 @@ Sequential composition chose "print" prematurely.
 Sequential (greedy) composition of optimal layers is suboptimal for the global objective.
 
 **Proof**: By counter-example above. Sequential composition commits to Layer 1 choices before seeing Layer 2 constraints.
-∎
+`$\blacksquare$`
 
 ### 8.3 Joint Optimization
 
 **Definition 8.5 (Joint Optimization)**:
-Find (x₁, ..., xₙ) that minimizes C_total = ∑ᵢ c_Lᵢ(xᵢ₋₁, xᵢ) subject to validity constraints at each layer.
+Find (x₁, ..., xₙ) that minimizes C_total `$= \sum _{i} c_L_{i}(x_{i-1}, x_{i})$` subject to validity constraints at each layer.
 
 **Theorem 8.6 (Joint Optimization Intractability)**:
 Joint optimization over all layers is **intractable** (exponential search space).
 
 **Proof**:
 - Layer 1: `k^n` candidates (`k` per token, `n` tokens)
-- Layer 2: ~`∣Grammar∣^d` parse trees per candidate
+- Layer 2: ~`$\lvert \text{Grammar}\rvert^d$` parse trees per candidate
 - Layers 3-5: Combinatorial explosion
 - Total: Exponential in pipeline length
-∎
+`$\blacksquare$`
 
 **Practical Approximations**:
 
@@ -957,7 +957,7 @@ Keep top-k candidates at each layer, score with heuristic considering downstream
 Beam search with lookahead provides better approximation than sequential greedy, but no worst-case guarantee.
 
 **Proof**: Lookahead avoids premature commitment; beam width controls quality/performance tradeoff. No formal bound without specific assumptions.
-∎
+`$\blacksquare$`
 
 ### 8.4 Pareto Optimality
 
@@ -1007,7 +1007,7 @@ Feedback mechanism breaks determinism unless feedback updates are deterministic.
 **Proof**:
 - Feedback updates weights based on past corrections
 - If past corrections depend on user choices (non-deterministic), feedback is non-deterministic
-∎
+`$\blacksquare$`
 
 **Theorem 8.11 (Feedback May Improve Approximation)**:
 Feedback can improve approximation by biasing toward semantically valid corrections.
@@ -1015,7 +1015,7 @@ Feedback can improve approximation by biasing toward semantically valid correcti
 **Proof Sketch**:
 - Statistical learning: Frequent patterns guide search
 - If feedback is based on correct resolutions, it approximates optimal prior
-∎
+`$\blacksquare$`
 
 **Practical Implementation**:
 - Use machine learning (e.g., ranking model) to learn weights
@@ -1220,7 +1220,7 @@ Suggested corrections:
 ### 10.1 Theoretical Open Problems
 
 **Problem 10.1 (Approximation Ratio for Beam Search)**:
-Is there a beam width k such that beam search guarantees an α-approximation for some constant α?
+Is there a beam width k such that beam search guarantees an α-approximation for some constant `$\alpha$`?
 
 **Difficulty**: Depends on grammar structure and error distribution. May require average-case analysis.
 
@@ -1309,7 +1309,7 @@ Combine text-based correction with test-based repair (e.g., fix to pass tests).
 
 [12] Nieuwenhuis, R., & Oliveras, A. (2006). "On SAT Modulo Theories and Optimization Problems." *Proceedings of the 9th International Conference on Theory and Applications of Satisfiability Testing*, 156-169.
 
-[13] Bjørner, N., Phan, A. D., & Fleckenstein, L. (2015). "νZ - An Optimizing SMT Solver." *Proceedings of the 21st International Conference on Tools and Algorithms for the Construction and Analysis of Systems*, 194-199.
+[13] Bjørner, N., Phan, A. D., & Fleckenstein, L. (2015). "`$\nu Z -$` An Optimizing SMT Solver." *Proceedings of the 21st International Conference on Tools and Algorithms for the Construction and Analysis of Systems*, 194-199.
 
 ### 11.6 Process Calculi and Session Types
 
@@ -1336,7 +1336,7 @@ Combine text-based correction with test-based repair (e.g., fix to pass tests).
 **Proof**:
 Let d* be the minimum distance to a valid parse tree.
 
-1. **BFS explores by increasing distance**: At iteration k, BFS has explored all states reachable with cost ≤ k.
+1. **BFS explores by increasing distance**: At iteration k, BFS has explored all states reachable with cost `$\le  k.$`
 
 2. **Completeness**: If a valid parse tree exists at distance d*, BFS will reach it by iteration d*.
 
@@ -1345,7 +1345,7 @@ Let d* be the minimum distance to a valid parse tree.
 4. **First valid tree is optimal**: The first valid parse tree found has minimum distance, as no shorter path exists (would have been found earlier).
 
 Therefore, BFS finds the minimum-distance parse tree for uniform costs.
-∎
+`$\blacksquare$`
 
 ### A.2 Proof of Theorem 8.2 (Non-Compositional Optimality)
 
@@ -1366,7 +1366,7 @@ Input: "prnt(x + y"
 - If "prnt" is defined, this is valid with total cost 1 < 2
 
 Therefore, sequential composition of optimal layers produced suboptimal result (cost 2 vs. 1).
-∎
+`$\blacksquare$`
 
 ### A.3 Proof Sketch of Theorem 6.9 (Repair Undecidability)
 
@@ -1379,7 +1379,7 @@ Therefore, sequential composition of optimal layers produced suboptimal result (
    - Given program P with type error and specification S, does P have a repair that satisfies S?
 
 3. This reduces to the problem of program equivalence modulo specification:
-   - Does there exist P' such that P' is well-typed and P' ≡_S P (equivalent under specification S)?
+   - Does there exist P' such that P' is well-typed and `$P' \equiv_S P$` (equivalent under specification S)?
 
 4. Program equivalence is undecidable by **Rice's Theorem**:
    - Rice's Theorem: Any non-trivial property of program behavior is undecidable.
@@ -1388,7 +1388,7 @@ Therefore, sequential composition of optimal layers produced suboptimal result (
 5. If R exists, we could decide program equivalence (contradiction).
 
 Therefore, semantic optimal repair is undecidable in general.
-∎
+`$\blacksquare$`
 
 (Note: This does not preclude decidable approximations for restricted program classes.)
 
@@ -1398,14 +1398,14 @@ Therefore, semantic optimal repair is undecidable in general.
 
 | Layer | Algorithm | Time Complexity | Space | Decidable? |
 |-------|-----------|----------------|-------|------------|
-| **Layer 1** | Levenshtein Automaton | `𝒪(n × d)` | `𝒪(n × d)` | ✓ Yes |
-| **Layer 2** | BFS (pure) | `𝒪(\∣G\∣^d × n × p)` | `𝒪(\∣G\∣^d)` | ✓ Yes |
-| **Layer 2** | BFS (beam) | `𝒪(k × d × n × p)` | `𝒪(k)` | ✓ Yes |
-| **Layer 3** | Type Inference (HM) | `𝒪(n log n)` avg | `𝒪(n)` | ✓ Yes |
-| **Layer 4** | Template Repair | `𝒪(templates × match)` | `𝒪(AST)` | ✓ Yes |
-| **Layer 4** | SMT Repair | NP-hard | `𝒪(constraints)` | ✗ No (general) |
-| **Layer 5** | Session Types (linear) | `𝒪(n)` | `𝒪(n)` | ✓ Yes |
-| **Layer 5** | Session Types (general) | `𝒪(n^k)` | `𝒪(n^k)` | ✗ No (full π-calc) |
+| **Layer 1** | Levenshtein Automaton | `$\mathcal{O}(n \times  d)$` | `$\mathcal{O}(n \times  d)$` | ✓ Yes |
+| **Layer 2** | BFS (pure) | `$\mathcal{O}(\\lvert G\\rvert^d \times  n \times  p)$` | `$\mathcal{O}(\\lvert G\\rvert^d)$` | ✓ Yes |
+| **Layer 2** | BFS (beam) | `$\mathcal{O}(k \times  d \times  n \times  p)$` | `$\mathcal{O}(k)$` | ✓ Yes |
+| **Layer 3** | Type Inference (HM) | `$\mathcal{O}(n \log  n)$` avg | `$\mathcal{O}(n)$` | ✓ Yes |
+| **Layer 4** | Template Repair | `$\mathcal{O}(\text{templates} \times  \text{match})$` | `$\mathcal{O}(\text{AST})$` | ✓ Yes |
+| **Layer 4** | SMT Repair | NP-hard | `$\mathcal{O}(\text{constraints})$` | ✗ No (general) |
+| **Layer 5** | Session Types (linear) | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | ✓ Yes |
+| **Layer 5** | Session Types (general) | `$\mathcal{O}(n^k)$` | `$\mathcal{O}(n^k)$` | ✗ No (full π-calc) |
 | **Full Pipeline** | Sequential | Sum of above | Max of above | ✓ Yes (restricted) |
 | **Joint Optimization** | Exact | Exponential | Exponential | ✗ No (intractable) |
 
@@ -1414,7 +1414,7 @@ Therefore, semantic optimal repair is undecidable in general.
 - `d`: Max edit distance
 - `k`: Beam width
 - `p`: Parse time per state
-- `∣G∣`: Grammar size
+- `$\lvert G\rvert$`: Grammar size
 
 ---
 

@@ -133,9 +133,6 @@ let results: Vec<String> = dict
 - [**DynamicDawg**](01-dictionary-layer/implementations/dynamic-dawg.md)
   - Thread-safe insert/remove operations
   - Use case: Frequently changing dictionaries
-- **OptimizedDawg**
-  - 75% memory reduction, 20-25% faster
-  - Use case: Large static dictionaries
 - [**SuffixAutomaton**](01-dictionary-layer/implementations/suffix-automaton.md)
   - Substring/infix matching
   - Use case: Full-text search
@@ -165,7 +162,7 @@ let results: Vec<String> = dict
 - State Composition: SmallVec optimization
 
 **Performance:**
-- Online subsumption: O(kn) vs O(n²) batch
+- Online subsumption: `$\mathcal{O}(kn)$` vs `$\mathcal{O}(n^{2})$` batch
 - SIMD acceleration: 3-4x on characteristic vector
 
 ---
@@ -200,7 +197,7 @@ let results: Vec<String> = dict
 **Purpose:** Direct string distance computation (non-automaton approach)
 
 **Algorithms:**
-- [Iterative DP](04-distance-calculation/algorithms/iterative-dp.md): 2-row optimization, O(mn) time, O(min(m,n)) space
+- [Iterative DP](04-distance-calculation/algorithms/iterative-dp.md): 2-row optimization, `$\mathcal{O}(mn)$` time, `$\mathcal{O}(\min(m,n))$` space
 - [Recursive + Memoization](04-distance-calculation/algorithms/recursive-memoization.md): C++-style with caching
 - [Optimizations](04-distance-calculation/algorithms/optimizations.md): Prefix/suffix stripping, early termination
 
@@ -221,7 +218,7 @@ let results: Vec<String> = dict
   - 3-4x speedup in automaton transitions
 - **Distance Matrix**
   - Vectorized DP row updates
-  - 20-30% speedup for strings ≥16 chars
+  - 20-30% speedup for strings `$\ge 16$` chars
 - **Edge Lookup**
   - Optimal for exactly 4 edges
 
@@ -338,7 +335,7 @@ Example:
 | Component | Scalar | AVX2 | Speedup |
 |-----------|--------|------|---------|
 | Characteristic Vector | 100% | 3-4x | 300-400% |
-| Distance Matrix (≥16 chars) | 100% | 1.2-1.3x | 20-30% |
+| Distance Matrix (`$\ge 16$` chars) | 100% | 1.2-1.3x | 20-30% |
 | Overall Workload | 100% | 1.2-1.64x | 20-64% |
 
 ### Value Filtering Speedup
@@ -438,27 +435,27 @@ Need to remove terms?
 
 1. **Schulz & Mihov (2002)** - "Fast string correction with Levenshtein automata"
    - International Journal on Document Analysis and Recognition 5.1
-   - [Available on ResearchGate](https://www.researchgate.net/)
+   - DOI: [10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
 
 2. **Blumer et al. (1985)** - "The smallest automaton recognizing the subwords of a text"
    - Theoretical Computer Science 40
-   - Core suffix automaton algorithm
+   - DOI: [10.1016/0304-3975(85)90157-4](https://doi.org/10.1016/0304-3975(85)90157-4)
 
 3. **Aoe (1989)** - "An Efficient Digital Search Algorithm by Using a Double-Array Structure"
-   - IEEE Transactions on Software Engineering
-   - Double-array trie foundation
+   - IEEE Transactions on Software Engineering 15.9
+   - DOI: [10.1109/32.31365](https://doi.org/10.1109/32.31365)
 
 4. **Damerau (1964)** - "A technique for computer detection and correction of spelling errors"
    - Communications of the ACM 7.3
-   - Transposition distance
+   - DOI: [10.1145/363958.363994](https://doi.org/10.1145/363958.363994)
 
 5. **Wagner & Fischer (1974)** - "The String-to-String Correction Problem"
    - Journal of the ACM 21.1
-   - Dynamic programming for edit distance
+   - DOI: [10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
 
 6. **Huet (1997)** - "The Zipper"
    - Journal of Functional Programming 7.5
-   - Functional data structure pattern
+   - DOI: [10.1017/S0956796897002864](https://doi.org/10.1017/S0956796897002864)
 
 See the complete reference list for more papers and resources.
 

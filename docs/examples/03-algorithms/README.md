@@ -4,7 +4,7 @@
 (`Standard`, `Transposition`, `MergeAndSplit`), and — the focus of this tutorial — how
 to get results back in a useful **order**. `query` walks the trie depth-first and yields
 matches in traversal order; `query_ordered` returns them **distance-first, then
-lexicographically**, which is exactly what autocomplete and "top-`k` nearest neighbors"
+lexicographically**, which is exactly what autocomplete and "top-`$k$` nearest neighbors"
 want. You'll see how laziness makes `.take(k)` and `.take_while(…)` genuinely cheap.
 
 ---
@@ -20,7 +20,7 @@ API) is unchanged:
 | `Algorithm` | Operations counted as one edit | Example it uniquely catches |
 |---|---|---|
 | **`Standard`** | insertion, deletion, substitution | `"aple"` → `"apple"` |
-| **`Transposition`** | the above **+ adjacent swap** | `"tset"` → `"test"` at `k = 1` |
+| **`Transposition`** | the above **+ adjacent swap** | `"tset"` → `"test"` at `$k = 1$` |
 | **`MergeAndSplit`** | the above **+ merge two→one / split one→two** | `"rn"` ↔ `"m"` OCR confusions |
 
 > Terms defined. A **transposition** swaps two adjacent characters (`ab` → `ba`) and
@@ -44,7 +44,7 @@ Both iterators yield the same *set* of matches within distance `k`; they differ 
 
 Crucially, `query_ordered` is **lazy**: it only computes as many results as you actually
 consume. So `query_ordered(W, k).take(5)` does the work for ~5 results, not for the
-whole near-match frontier — the basis of an efficient top-`k`.
+whole near-match frontier — the basis of an efficient top-`$k$`.
 
 ### Why ordering matters
 
@@ -83,7 +83,7 @@ for (rank, candidate) in transducer.query_ordered("tset", 3).enumerate() {
 ### 2 · Top-`k` nearest neighbors for free
 
 Because the iterator is lazy, `.take(5)` computes only what it needs — an efficient
-top-`k` with no manual heap:
+top-`$k$` with no manual heap:
 
 ```rust
 for candidate in transducer.query_ordered("tset", 3).take(5) {
@@ -120,7 +120,7 @@ let unordered: Vec<_> = transducer.query("test", 1).collect();   // traversal or
 ```
 
 For an autocomplete box this is the whole game: `query_ordered(prefix, k).take(n)` gives
-the `n` best corrections, best-first, computing only what it shows.
+the `$n$` best corrections, best-first, computing only what it shows.
 
 ---
 
@@ -140,10 +140,10 @@ histogram. A companion micro-benchmark lives in `examples/ordered_query_benchmar
 
 ## Key takeaways
 
-- **`Algorithm`** picks the operation set: `Standard` ⊂ `Transposition` ⊂ `MergeAndSplit`.
+- **`Algorithm`** picks the operation set: `$\texttt{Standard} \subset \texttt{Transposition} \subset \texttt{MergeAndSplit}$`.
 - **`query`** yields terms in traversal order; **`query_ordered`** yields
   `{ term, distance }` distance-first, then alphabetical.
-- `query_ordered` is **lazy** — `.take(k)` and `.take_while(…)` make top-`k` and
+- `query_ordered` is **lazy** — `.take(k)` and `.take_while(…)` make top-`$k$` and
   distance-bounded queries cheap, with the lexicographic tiebreak free from the trie.
 
 ---

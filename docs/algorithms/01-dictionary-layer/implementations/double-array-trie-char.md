@@ -302,7 +302,7 @@ Unicode code points range from U+0000 to U+10FFFF (~1.1 million possible values)
 ### Example 1: Basic Unicode Dictionary
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 
 let dict = DoubleArrayTrieChar::from_terms(vec![
     "café",      // French: accented e
@@ -325,7 +325,7 @@ assert_eq!(dict.len(), Some(7));
 ### Example 2: Correct Unicode Distances
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -346,7 +346,7 @@ assert!(results.contains(&"café".to_string()));
 ### Example 3: Multi-Language Search
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -382,7 +382,7 @@ println!("French matches: {:?}", results);
 ### Example 4: Value Storage with Unicode
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 
 // Map terms to language codes
 let dict = DoubleArrayTrieChar::from_terms_with_values(vec![
@@ -408,7 +408,7 @@ let french_terms: Vec<String> = /* iterate and filter by "fr" */;
 ### Example 5: Emoji Handling
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 
 let dict = DoubleArrayTrieChar::from_terms(vec![
     "🎉",     // Party popper
@@ -434,7 +434,7 @@ println!("{:?}", results);
 ### Example 6: Combining Characters
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 
 // Two representations of "é"
 let composed = "café";        // é as single code point (U+00E9)
@@ -452,7 +452,7 @@ assert!(!dict.contains(decomposed));  // Different representation!
 ### Example 7: CJK Text Processing
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 use liblevenshtein::levenshtein::Algorithm;
 use liblevenshtein::levenshtein_automaton::LevenshteinAutomaton;
 
@@ -477,7 +477,7 @@ println!("{:?}", results);
 ### Example 8: Runtime Insertions
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 
 let mut dict = DoubleArrayTrieChar::from_terms(vec![
     "hello", "world"
@@ -500,9 +500,9 @@ assert!(dict.contains("مرحبا"));
 ### Example 9: Zipper Navigation
 
 ```rust
-use liblevenshtein::dictionary::double_array_trie_char::DoubleArrayTrieChar;
-use liblevenshtein::dictionary::double_array_trie_char_zipper::DoubleArrayTrieCharZipper;
-use liblevenshtein::dictionary::zipper::{DictZipper, ValuedDictZipper};
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieCharZipper;
+use libdictenstein::zipper::{DictZipper, ValuedDictZipper};
 
 let dict = DoubleArrayTrieChar::from_terms_with_values(vec![
     ("café", 1),

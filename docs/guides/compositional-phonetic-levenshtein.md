@@ -51,7 +51,7 @@ If we're in state 2 and see "t", we move to state 3 (accepting). If we see anyth
 A **Deterministic Finite Automaton (DFA)** has exactly one next state for each input character. A **Non-deterministic Finite Automaton (NFA)** can have:
 
 - **Multiple transitions** on the same character (try all paths)
-- **Epsilon (ε) transitions**: Move without consuming input
+- **Epsilon (`$\varepsilon$`) transitions**: Move without consuming input
 
 ```
 Example: NFA that accepts "phone" OR "fone"
@@ -787,7 +787,7 @@ A dictionary word is accepted if:
 
 1. We've consumed all characters in the word
 2. The NFA can reach an accepting state
-3. Total distance `≤ max_distance`
+3. Total distance `$\le$` `max_distance`
 
 But wait—what if we've consumed the whole dictionary word but the NFA still needs more characters?
 
@@ -1007,13 +1007,13 @@ class PhoneticTransducer:
 
 | Metric | Approach 1 | Approach 2 | Approach 3 |
 |--------|-----------|-----------|-----------|
-| Build Time | O(D·L·R) | O(D·V·L) | O(D·L) |
-| Memory | O(D·L) | O(D·V·L) | O(D·L) |
-| Query Time | O(m·R + m·n·L) | O(V_q·m·n·L) | O(\|NFA\|·n·m·L) |
+| Build Time | `$\mathcal{O}(D \cdot L \cdot R)$` | `$\mathcal{O}(D \cdot V \cdot L)$` | `$\mathcal{O}(D \cdot L)$` |
+| Memory | `$\mathcal{O}(D \cdot L)$` | `$\mathcal{O}(D \cdot V \cdot L)$` | `$\mathcal{O}(D \cdot L)$` |
+| Query Time | `$\mathcal{O}(m \cdot R + m \cdot n \cdot L)$` | `$\mathcal{O}(V_q \cdot m \cdot n \cdot L)$` | `$\mathcal{O}(\lvert NFA\rvert \cdot n \cdot m \cdot L)$` |
 | Flexibility | Low | Medium | High |
 | Cost Decomposition | No | Yes | Yes |
 
-Where: D=dictionary size, L=avg word length, R=rules, V=variants/word, m=query length, n=max distance, |NFA|=NFA states
+Where: D=dictionary size, L=avg word length, R=rules, V=variants/word, m=query length, n=max distance, `$\lvert NFA\rvert$`=NFA states
 
 ### 6.3 Memory vs Speed Trade-off
 
@@ -1077,7 +1077,7 @@ liblevenshtein-rust/
 use liblevenshtein::phonetic::nfa::{compile, NFAChar};
 use liblevenshtein::phonetic::regex::parse;
 use liblevenshtein::transducer::PhoneticTransducerChar;
-use liblevenshtein::dictionary::DoubleArrayTrieChar;
+use libdictenstein::double_array_trie::DoubleArrayTrieChar;
 
 // Build dictionary
 let dict = DoubleArrayTrieChar::from_terms(["phone", "fone", "bone", "cone"]);

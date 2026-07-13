@@ -404,8 +404,8 @@ let results = dict.fuzzy_search("mon", 1).collect();
 ### Problem
 
 Documents with **mixed scripts** (Latin, Cyrillic, Greek) can have accidental character confusions, but most are impossible:
-- Latin 'A' ≠ Cyrillic 'А' (visually identical, different Unicode)
-- Greek 'α' ≠ Latin 'a' (visually similar)
+- Latin 'A' `$\ne$` Cyrillic 'А' (visually identical, different Unicode)
+- Greek '`$\alpha$`' `$\ne$` Latin 'a' (visually similar)
 
 Some substitutions should be **blocked** to prevent false matches across scripts.
 
@@ -633,7 +633,7 @@ let dict = TransducerBuilder::new()
 **Keyboard layouts** (~200-400 pairs): ~5-10 KB
 **Full phonetic** (~1000 pairs): ~20-40 KB
 
-**Recommendation**: Use HashSet for `𝒪(1)` lookup, minimal memory overhead.
+**Recommendation**: Use HashSet for `$\mathcal{O}(1)$` lookup, minimal memory overhead.
 
 ### Lookup Performance
 

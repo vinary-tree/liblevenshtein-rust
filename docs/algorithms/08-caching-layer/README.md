@@ -243,7 +243,7 @@ assert_eq!(lfu_entry, Some("rare".to_string()));
 
 #### CostAware
 
-Balances age, size, and hit count using formula: `(age * size) / (hits + 1)`
+Balances age, size, and hit count using formula: `$(\text{age} \times \text{size}) / (\text{hits} + 1)$`
 
 ```rust
 use liblevenshtein::cache::eviction::CostAware;
@@ -274,7 +274,7 @@ assert_eq!(high_cost, Some("large_cold".to_string()));
 - `access_count: usize`
 - `size: usize`
 
-**Eviction Criterion**: Highest `(age * size) / (hits + 1)`
+**Eviction Criterion**: Highest `$(\text{age} \times \text{size}) / (\text{hits} + 1)$`
 
 **Use Cases**:
 - Memory-constrained systems
@@ -283,7 +283,7 @@ assert_eq!(high_cost, Some("large_cold".to_string()));
 
 #### MemoryPressure
 
-Memory-aware eviction using formula: `size / (hit_rate + 0.1)`
+Memory-aware eviction using formula: `$\text{size} / (\text{hit\_rate} + 0.1)$`
 
 ```rust
 use liblevenshtein::cache::eviction::MemoryPressure;
@@ -314,7 +314,7 @@ assert_eq!(high_pressure, Some("wasteful".to_string()));
 - `total_accesses: usize`
 - `hits: usize`
 
-**Eviction Criterion**: Highest `size / (hit_rate + 0.1)`
+**Eviction Criterion**: Highest `$\text{size} / (\text{hit\_rate} + 0.1)$`
 
 **Use Cases**:
 - Low-memory environments
@@ -411,9 +411,9 @@ Lru::new(LazyInitDefault::new())
 
 | Operation | Noop | Metadata Wrappers |
 |-----------|------|-------------------|
-| get_value | `O(d)` | `O(d)` + `O(1)` metadata update |
-| contains | `O(d)` | `O(d)` + `O(1)` metadata update |
-| find_lru/lfu | N/A | `O(n)` scan |
+| get_value | `$\mathcal{O}(d)$` | `$\mathcal{O}(d)$` + `$\mathcal{O}(1)$` metadata update |
+| contains | `$\mathcal{O}(d)$` | `$\mathcal{O}(d)$` + `$\mathcal{O}(1)$` metadata update |
+| find_lru/lfu | N/A | `$\mathcal{O}(n)$` scan |
 
 Where:
 - `d` = dictionary operation complexity
@@ -480,10 +480,10 @@ pub fn dictionary(&self) -> &D
 **Example with Eviction Wrapper**:
 ```rust
 use liblevenshtein::cache::eviction::Lru;
-use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+use libdictenstein::pathmap::PathMapDictionary;
 
 let dict = PathMapDictionary::from_terms(vec!["test", "testing", "tested"]);
-let cached = Lru::new(dict, 100); // LRU cache with 100-entry limit
+let cached = Lru::new(dict); // LRU eviction wrapper
 
 // Access the underlying dictionary
 let inner_dict = cached.dictionary();
@@ -498,7 +498,7 @@ let dict_clone = cached.dictionary().clone();
 **Example with FuzzyMultiMap**:
 ```rust
 use liblevenshtein::cache::multimap::FuzzyMultiMap;
-use liblevenshtein::dictionary::dynamic_dawg::DynamicDawg;
+use libdictenstein::dynamic_dawg::DynamicDawg;
 use liblevenshtein::transducer::Algorithm;
 use std::collections::HashSet;
 
@@ -548,7 +548,7 @@ use liblevenshtein::cache::eviction::{Lru, Ttl};
 
 let dict = PathMapDictionary::from_terms(vec!["test"]);
 let with_ttl = Ttl::new(dict, Duration::from_secs(60));
-let with_lru = Lru::new(with_ttl, 100);
+let with_lru = Lru::new(with_ttl);
 
 // Access outermost layer
 let ttl_wrapper = with_lru.dictionary();

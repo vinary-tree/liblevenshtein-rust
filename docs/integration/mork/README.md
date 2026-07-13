@@ -1,11 +1,11 @@
 # MORK FuzzySource Adapter for Approximate String Matching
 
 **Last Updated**: 2025-12-21
-**Version**: v0.8.0
+**Version**: 0.9.1
 
 This document describes how MORK (MeTTa Optimal Reduction Kernel) integrates with liblevenshtein as an external library to enable fuzzy pattern matching in MeTTa queries over PathMap-backed knowledge graphs.
 
-> **Note on Current vs. Proposed Features**: This document contains both currently implemented features (v0.8.0) and proposed future features. Sections marked with **[CURRENT]** describe available functionality, while sections marked with **[PROPOSED]** describe planned future work.
+> **Note on Current vs. Proposed Features**: This document contains both currently implemented features (0.9.1) and proposed future features. Sections marked with **[CURRENT]** describe available functionality, while sections marked with **[PROPOSED]** describe planned future work.
 
 ## Table of Contents
 
@@ -109,9 +109,9 @@ PhoneticNormalizedDictionary<V, D>
 
 **Key Optimizations:**
 - **Exact match fast path (d=0)**: Direct trie lookup is **100-300× faster** than automaton traversal
-- **FuzzyMultiMap**: O(k log n) fuzzy queries via Levenshtein automaton pruning
+- **FuzzyMultiMap**: `$\mathcal{O}(k \log n)$` fuzzy queries via Levenshtein automaton pruning
 - **Thread-local NormalizeBuffers (H3)**: Reuses buffers to reduce allocations
-- **O(1) vowel classification**: Bitmask lookup instead of linear array search
+- **`$\mathcal{O}(1)$` vowel classification**: Bitmask lookup instead of linear array search
 
 ### Basic Usage
 
@@ -408,7 +408,7 @@ WITH FuzzySource (single MORK query):
 | **Query execution** | Single pass | Multiple round-trips |
 | **Ranking** | Native (distance in results) | Must be reconstructed |
 | **Optimization** | MORK optimizer sees full query | Each sub-query optimized separately |
-| **Lattice efficiency** | O(K×N) edge processing | O(K^N) path enumeration |
+| **Lattice efficiency** | `$\mathcal{O}(K \times N)$` edge processing | `$\mathcal{O}(K^N)$` path enumeration |
 | **Variable binding** | Unified across constraints | Per-query, then merged |
 
 ---
@@ -477,7 +477,7 @@ WITH FuzzySource (single MORK query):
 
 **Goal**: Complete WFST implementation with weighted transitions, phonetic NFA composition, and FST composition operators.
 
-> **Note**: liblevenshtein v0.8.0 provides `ProductAutomatonChar` for NFA × Levenshtein composition. This phase proposes extending to full WFST with arbitrary semiring weights.
+> **Note**: liblevenshtein 0.9.1 provides `ProductAutomatonChar` for NFA × Levenshtein composition. This phase proposes extending to full WFST with arbitrary semiring weights.
 
 **Acceptance Criteria**:
 1. Weighted transitions with configurable cost functions
@@ -489,7 +489,7 @@ WITH FuzzySource (single MORK query):
 - `liblevenshtein-rust/src/wfst/mod.rs` - WFST module root
 - `liblevenshtein-rust/src/wfst/weight.rs` - Tropical semiring weights
 - `liblevenshtein-rust/src/wfst/nfa.rs` - Phonetic NFA (Thompson's)
-- `liblevenshtein-rust/src/wfst/composition.rs` - FST ∘ FST composition
+- `liblevenshtein-rust/src/wfst/composition.rs` - `$\mathrm{FST} \circ \mathrm{FST}$` composition
 - `MORK/kernel/src/fuzzy_source.rs` - Add WFST support
 
 **Example Usage**:
@@ -604,7 +604,7 @@ MORK's `transform_multi_multi_()` (space.rs:1221) is designed exactly for this p
 ### Efficient Lattice Processing
 
 MORK's `query_multi_i()` handles lattice inputs efficiently:
-- **O(K×N)** edge processing instead of **O(K^N)** path enumeration
+- **`$\mathcal{O}(K \times N)$`** edge processing instead of **`$\mathcal{O}(K^N)$`** path enumeration
 - Native PathMap storage with trie-based memoization
 - Variable binding via De Bruijn levels for feature propagation
 
@@ -748,7 +748,7 @@ Phase D (Grammar)
   - Added `fuzzy-phonetic` MeTTa syntax for phonetic-aware matching
   - Updated Data Flow diagram to show PhoneticNormalizedDictionary.query()
   - Marked Phonetic Matching as [CURRENT] (no longer Phase C)
-  - Added key optimizations: exact match fast path (100-300× faster), O(1) vowel classification
+  - Added key optimizations: exact match fast path (100-300× faster), `$\mathcal{O}(1)$` vowel classification
 - **2025-12-21**: Updated for v0.8.0 APIs
   - Added v0.8.0 API Highlights section (llre!/llev!, ProductAutomatonChar, english::*)
   - Added [CURRENT] vs [PROPOSED] markers throughout document

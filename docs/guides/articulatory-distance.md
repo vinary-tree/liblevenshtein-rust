@@ -49,13 +49,13 @@ The 12 places of articulation form a chain from the lips to the glottis:
 |----------|-------|---------|
 | 0 | Bilabial | p, b, m |
 | 1 | Labiodental | f, v |
-| 2 | Dental | θ, ð |
+| 2 | Dental | &#952;, ð |
 | 3 | Alveolar | t, d, n, s, z |
 | 4 | Post-alveolar | ʃ, ʒ |
 | 5 | Retroflex | ʈ, ɖ |
 | 6 | Palatal | j, ɲ |
 | 7 | Velar | k, g, ŋ |
-| 8 | Uvular | ʁ, χ |
+| 8 | Uvular | ʁ, &#967; |
 | 9 | Pharyngeal | ħ, ʕ |
 | 10 | Epiglottal | ʡ, ʜ |
 | 11 | Glottal | h, ʔ |

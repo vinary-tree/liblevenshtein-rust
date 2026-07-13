@@ -27,7 +27,7 @@ runtime):
 
 > Terms defined. **DAWG** = *Directed Acyclic Word Graph*, a trie whose equivalent
 > suffixes are shared, shrinking the node count. **DAT** = *Double-Array Trie*, a trie
-> packed into two integer arrays giving `𝒪(1)` lookups per transition. "Static" here
+> packed into two integer arrays giving `$\mathcal{O}(1)$` lookups per transition. "Static" here
 > means *read-only once built* — not *compile-time*; you still build it at runtime from a
 > word list.
 
@@ -37,11 +37,12 @@ runtime):
 
 `DynamicDawg<V>` is generic over a value type `V` (use `()` for a plain set with no
 attached values). It is `Clone` and internally reference-counted: cloning the dictionary
-and cloning it *into* a `Transducer` both share the **same** underlying graph behind a
-reader-writer lock (`RwLock`). Consequently an `insert` or `remove` on one handle is
-immediately visible through every other handle — including the one the transducer holds —
-so a long-lived transducer never goes stale. Reads take the shared (reader) side of the
-lock and run concurrently; writes take the exclusive side briefly.
+and cloning it *into* a `Transducer` both share the **same** underlying graph.
+Consequently an `insert` or `remove` on one handle is immediately visible through every
+other handle — including the one the transducer holds — so a long-lived transducer never
+goes stale. Reads are lock-free and never block on a writer; a writer publishes each
+update with a single atomic swap (compare-and-swap), so an in-flight query always sees a
+consistent snapshot.
 
 ### Why this matters
 
@@ -94,7 +95,7 @@ let hits: Vec<_> = transducer.query("brd", 1).collect();      // "bird" no longe
 
 ### 3 · Concurrent reads while another thread writes
 
-Because the shared graph is `RwLock`-backed and the handles are `Send + Sync`, one
+Because reads on the shared graph are lock-free and the handles are `Send + Sync`, one
 thread can `insert` while another queries — no external synchronization required:
 
 ```rust
@@ -106,20 +107,20 @@ let writer = dict2.clone();
 
 let handle = thread::spawn(move || {
     for word in ["testing", "tested", "tester", "tests"] {
-        writer.insert(word);                       // exclusive lock, briefly
+        writer.insert(word);                       // atomic-swap publish
     }
 });
 
 // Meanwhile, the main thread keeps querying:
-let _matches: Vec<_> = transducer2.query("test", 0).collect();   // shared lock
+let _matches: Vec<_> = transducer2.query("test", 0).collect();   // lock-free read
 handle.join().expect("writer thread panicked");
 
 let all: Vec<_> = transducer2.query("test", 2).collect();        // sees everything added
 ```
 
-> Concurrency note. Reads on `DynamicDawg` are *reader-locked* (they share the lock and
-> run in parallel with each other). The static backends and `DynamicDawgU64` go further
-> and are fully lock-free on reads — see [07 · Performance](../07-performance/README.md).
+> Concurrency note. Reads on `DynamicDawg` are *lock-free* — they never block on a writer
+> and run fully in parallel. The static backends and `DynamicDawgU64` use the same
+> lock-free read model — see [07 · Performance](../07-performance/README.md).
 
 ---
 
@@ -169,8 +170,8 @@ cargo run --example serialization --features serialization
 - Choose **`DoubleArrayTrie`** for static word lists (fastest reads),
   **`DynamicDawg`** when the dictionary changes at runtime, and the `…Char` variants for
   Unicode alphabets.
-- A `DynamicDawg` handle and its `Transducer` share one reference-counted, `RwLock`-backed
-  graph: `insert` / `remove` are seen immediately, with concurrent reader access.
+- A `DynamicDawg` handle and its `Transducer` share one reference-counted, lock-free
+  graph: `insert` / `remove` are seen immediately, with concurrent lock-free reads.
 - `BincodeSerializer` / `JsonSerializer` save and load static dictionaries with identical
   query behavior after a round-trip.
 
