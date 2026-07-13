@@ -315,6 +315,12 @@ required-features = ["cli"]
 name = "serialization"
 required-features = ["serialization"]
 
+# Compile-check for every serialization pattern taught in docs/user-guide/serialization.md
+# and the per-backend implementation guides. Fails the moment a documented API drifts.
+[[example]]
+name = "doc_serialization_check"
+required-features = ["serialization"]
+
 [[example]]
 name = "phonetic_rewrite"
 required-features = ["phonetic-rules"]
