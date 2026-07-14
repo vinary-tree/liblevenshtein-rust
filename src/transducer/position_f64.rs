@@ -372,7 +372,10 @@ mod tests {
             nonnegative_floor_to_usize_checked(f64::INFINITY),
             Some(usize::MAX)
         );
-        assert_eq!(nonnegative_floor_to_usize_checked(f64::MAX), Some(usize::MAX));
+        assert_eq!(
+            nonnegative_floor_to_usize_checked(f64::MAX),
+            Some(usize::MAX)
+        );
     }
 
     #[test]

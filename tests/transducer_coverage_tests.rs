@@ -58,7 +58,12 @@ fn test_transition_f64_at_max_cost_only_matches() {
 
     // Initial state with positions near max cost
     let mut state = StateF64::new();
-    state.insert(PositionF64::new(0, 2.0), Algorithm::Standard, query.len(), 1.0);
+    state.insert(
+        PositionF64::new(0, 2.0),
+        Algorithm::Standard,
+        query.len(),
+        1.0,
+    );
 
     // At max cost, only exact matches should work
     assert!(!state.is_empty());

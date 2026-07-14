@@ -485,9 +485,24 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 10;
 
-        state.insert(PositionF64::new(3, 2.0), Algorithm::Standard, query_length, 1.0);
-        state.insert(PositionF64::new(1, 1.0), Algorithm::Standard, query_length, 1.0);
-        state.insert(PositionF64::new(2, 1.5), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(3, 2.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
+        state.insert(
+            PositionF64::new(1, 1.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
+        state.insert(
+            PositionF64::new(2, 1.5),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
 
         let positions: Vec<_> = state.positions().to_vec();
         assert_eq!(positions[0].term_index, 1);
@@ -501,12 +516,22 @@ mod tests {
         let query_length = 10;
 
         // Insert (5, 3.0) first
-        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(5, 3.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
         assert_eq!(state.len(), 1);
 
         // Insert (5, 2.0) which subsumes (5, 3.0)
         // |5-5| = 0 <= (3.0-2.0) = 1.0 ✓
-        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(5, 2.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
         assert_eq!(state.len(), 1);
 
         // Verify (5, 2.0) is in the state
@@ -521,10 +546,20 @@ mod tests {
         let query_length = 10;
 
         // Insert (5, 2.0) first
-        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(5, 2.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
 
         // Try to insert (5, 3.0) which is subsumed by (5, 2.0)
-        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(5, 3.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
 
         assert_eq!(state.len(), 1);
         assert!(approx_eq(
@@ -541,9 +576,24 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 10;
 
-        state.insert(PositionF64::new(3, 2.5), Algorithm::Standard, query_length, 1.0);
-        state.insert(PositionF64::new(4, 1.5), Algorithm::Standard, query_length, 1.0);
-        state.insert(PositionF64::new(5, 3.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(3, 2.5),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
+        state.insert(
+            PositionF64::new(4, 1.5),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
+        state.insert(
+            PositionF64::new(5, 3.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
 
         assert!(approx_eq(
             state
@@ -558,8 +608,18 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 7;
 
-        state.insert(PositionF64::new(3, 1.0), Algorithm::Standard, query_length, 1.0);
-        state.insert(PositionF64::new(5, 2.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(3, 1.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
+        state.insert(
+            PositionF64::new(5, 2.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
 
         // Position (3, 1.0): 1.0 + (7-3) * 1.0 = 5.0
         // Position (5, 2.0): 2.0 + (7-5) * 1.0 = 4.0
@@ -574,8 +634,18 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 5;
 
-        state.insert(PositionF64::new(5, 1.5), Algorithm::Standard, query_length, 1.0);
-        state.insert(PositionF64::new(3, 0.5), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(5, 1.5),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
+        state.insert(
+            PositionF64::new(3, 0.5),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
 
         // Only (5, 1.5) qualifies (term_index >= query_length)
         let dist = state
@@ -589,8 +659,18 @@ mod tests {
         let mut state = StateF64::new();
         let query_length = 10;
 
-        state.insert(PositionF64::new(0, 2.5), Algorithm::Standard, query_length, 1.0);
-        state.insert(PositionF64::new(1, 3.0), Algorithm::Standard, query_length, 1.0);
+        state.insert(
+            PositionF64::new(0, 2.5),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
+        state.insert(
+            PositionF64::new(1, 3.0),
+            Algorithm::Standard,
+            query_length,
+            1.0,
+        );
 
         assert!(state.all_exceed_threshold(2.4));
         assert!(!state.all_exceed_threshold(2.5));

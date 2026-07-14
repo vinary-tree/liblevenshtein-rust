@@ -113,7 +113,10 @@ fn assert_sound(terms: &[String], query: &str, sub: f64, indel: f64, max_cost: f
 /// position that reaches it.
 #[test]
 fn audit_counterexample_indel_cost_two_is_not_over_pruned() {
-    let terms: Vec<String> = ["b", "ab", "abc", "xy"].iter().map(|s| s.to_string()).collect();
+    let terms: Vec<String> = ["b", "ab", "abc", "xy"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
     // indel = 2.0, substitution = 1.0.
     assert_sound(&terms, "ab", 1.0, 2.0, 2.0);
     // A tighter budget where only the exact and the single-substitution match fit.

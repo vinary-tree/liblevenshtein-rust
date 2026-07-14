@@ -1065,8 +1065,14 @@ mod tests {
         assert_eq!(nonnegative_floor_to_usize_saturating(0.1), 0);
         assert_eq!(nonnegative_floor_to_usize_saturating(2.0), 2);
         assert_eq!(nonnegative_floor_to_usize_saturating(2.9), 2);
-        assert_eq!(nonnegative_floor_to_usize_saturating(exact_large), expected_large);
-        assert_eq!(nonnegative_floor_to_usize_saturating(f64::INFINITY), usize::MAX);
+        assert_eq!(
+            nonnegative_floor_to_usize_saturating(exact_large),
+            expected_large
+        );
+        assert_eq!(
+            nonnegative_floor_to_usize_saturating(f64::INFINITY),
+            usize::MAX
+        );
         assert_eq!(nonnegative_floor_to_usize_saturating(f64::MAX), usize::MAX);
         assert_eq!(nonnegative_ceil_to_usize(f64::NAN), 0);
         assert_eq!(nonnegative_ceil_to_usize(-1.0), 0);

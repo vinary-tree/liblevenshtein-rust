@@ -21,7 +21,9 @@ fn main() {
 
     // Repeated-query workload: a fixed set of 50 queries re-issued every
     // replicate — the canonical spell-check / autocomplete / batch-rescan shape.
-    let queries: Vec<String> = (0..50).map(|i| format!("word{:04}", (i * 17) % 1000)).collect();
+    let queries: Vec<String> = (0..50)
+        .map(|i| format!("word{:04}", (i * 17) % 1000))
+        .collect();
     let max_distance = 2usize;
     let replicates = 60usize; // first 3 are warm-up (discarded) → 57 measured (>= protocol 51)
 
@@ -31,13 +33,18 @@ fn main() {
         for q in &queries {
             let mut uncached: Vec<String> = transducer.query(q, max_distance).collect();
             let mut cached: Vec<String> = cache
-                .get_or_compute(q, max_distance, 0, || transducer.query(q, max_distance).collect())
+                .get_or_compute(q, max_distance, 0, || {
+                    transducer.query(q, max_distance).collect()
+                })
                 .to_vec();
             uncached.sort();
             cached.sort();
             assert_eq!(uncached, cached, "cache correctness mismatch for {q:?}");
         }
-        eprintln!("correctness: OK ({} queries identical cached vs uncached)", queries.len());
+        eprintln!(
+            "correctness: OK ({} queries identical cached vs uncached)",
+            queries.len()
+        );
     }
 
     // Control arm: uncached.
@@ -60,14 +67,22 @@ fn main() {
         let start = Instant::now();
         let mut acc = 0usize;
         for q in &queries {
-            let r = cache.get_or_compute(q, max_distance, 0, || transducer.query(q, max_distance).collect());
+            let r = cache.get_or_compute(q, max_distance, 0, || {
+                transducer.query(q, max_distance).collect()
+            });
             acc = acc.wrapping_add(r.len());
         }
         std::hint::black_box(acc);
         treatment.push(start.elapsed().as_nanos() as f64 / queries.len() as f64);
     }
 
-    let fmt = |v: &[f64]| v[3..].iter().map(|x| format!("{x:.1}")).collect::<Vec<_>>().join(",");
+    let fmt = |v: &[f64]| {
+        v[3..]
+            .iter()
+            .map(|x| format!("{x:.1}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
     println!("control_ns_per_query={}", fmt(&control));
     println!("treatment_ns_per_query={}", fmt(&treatment));
 }

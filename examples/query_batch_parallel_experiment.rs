@@ -22,14 +22,25 @@ fn main() {
     let transducer = Transducer::new(dict, Algorithm::Standard);
 
     // A batch (query distribution) of 512 distinct queries at max_distance 2.
-    let queries: Vec<String> = (0..512).map(|i| format!("word{:04}", (i * 7) % 2000)).collect();
+    let queries: Vec<String> = (0..512)
+        .map(|i| format!("word{:04}", (i * 7) % 2000))
+        .collect();
     let d = 2usize;
     let replicates = 60usize; // first 3 warm-up → 57 measured (>= protocol 51)
 
     // Correctness gate: parallel per-query result counts must equal sequential.
-    let seq_counts: Vec<usize> = queries.iter().map(|q| transducer.query(q, d).count()).collect();
-    let par_counts: Vec<usize> = queries.par_iter().map(|q| transducer.query(q, d).count()).collect();
-    assert_eq!(seq_counts, par_counts, "parallel batch result-count mismatch");
+    let seq_counts: Vec<usize> = queries
+        .iter()
+        .map(|q| transducer.query(q, d).count())
+        .collect();
+    let par_counts: Vec<usize> = queries
+        .par_iter()
+        .map(|q| transducer.query(q, d).count())
+        .collect();
+    assert_eq!(
+        seq_counts, par_counts,
+        "parallel batch result-count mismatch"
+    );
     eprintln!(
         "correctness: OK (batch={}, rayon threads={})",
         queries.len(),
@@ -39,7 +50,10 @@ fn main() {
     let run = |parallel: bool| -> f64 {
         let start = Instant::now();
         let total: usize = if parallel {
-            queries.par_iter().map(|q| transducer.query(q, d).count()).sum()
+            queries
+                .par_iter()
+                .map(|q| transducer.query(q, d).count())
+                .sum()
         } else {
             queries.iter().map(|q| transducer.query(q, d).count()).sum()
         };
@@ -56,7 +70,13 @@ fn main() {
         treatment.push(run(true));
     }
 
-    let fmt = |v: &[f64]| v[3..].iter().map(|x| format!("{x:.4}")).collect::<Vec<_>>().join(",");
+    let fmt = |v: &[f64]| {
+        v[3..]
+            .iter()
+            .map(|x| format!("{x:.4}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
     println!("control_ms={}", fmt(&control));
     println!("treatment_ms={}", fmt(&treatment));
 }
