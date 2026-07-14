@@ -54,7 +54,6 @@ mod zipper_query_iterator;
 pub mod simd;
 
 pub use algorithm::Algorithm;
-pub use query_cache::VersionedQueryCache;
 pub use articulatory_costs::ArticulatoryCosts;
 pub use automaton_zipper::AutomatonZipper;
 pub use builder::{BuilderError, TransducerBuilder};
@@ -73,9 +72,14 @@ pub use position_f64::PositionF64;
 pub use priority_query::{
     priority_query, priority_query_with_policy, PriorityCandidate, PriorityQueryIterator,
 };
-pub use query::{Candidate, CandidateIterator, QueryIterator, StringQueryIterator};
+pub use query::{
+    Candidate, CandidateIterator, QueryIterator, StringQueryIterator, UnitCandidate,
+    UnitCandidateIterator, UnitQueryIterator,
+};
+pub use query_cache::VersionedQueryCache;
 pub use query_f64::{
     CandidateF64, CandidateIteratorF64, QueryIteratorF64, QueryResultF64, StringQueryIteratorF64,
+    UnitCandidateF64, UnitCandidateIteratorF64, UnitQueryIteratorF64,
 };
 pub use query_result::QueryResult;
 pub use state::State;
@@ -91,14 +95,16 @@ pub use transition_f64::{
     TransitionSettingsF64,
 };
 pub use value_filtered_query::{
-    ValueFilteredQueryIterator, ValueSetFilteredQueryIterator, ValueYieldingQueryIterator,
+    ValueFilteredQueryIterator, ValueSetFilteredQueryIterator, ValueTerm,
+    ValueYieldingQueryIterator,
 };
 pub use zipper_query_iterator::ZipperQueryIterator;
 
 #[cfg(feature = "phonetic-rules")]
 pub use phonetic_transducer::{
     PhoneticCandidate, PhoneticCandidateByte, PhoneticQueryIterator, PhoneticQueryIteratorChar,
-    PhoneticTransducer, PhoneticTransducerChar,
+    PhoneticTransducer, PhoneticTransducerChar, PhoneticValueCandidate, PhoneticValueCandidateByte,
+    PhoneticValueQueryIterator, PhoneticValueQueryIteratorChar,
 };
 
 use libdictenstein::{Dictionary, DictionaryNode, MappedDictionary, MappedDictionaryNode};
@@ -434,6 +440,81 @@ impl<
         )
     }
 
+    /// Query for terms within `max_distance` edits of a raw **unit sequence**.
+    ///
+    /// The units-native analogue of [`query`](Self::query): it takes the query as a
+    /// `&[Unit]` slice — bypassing the `&str` → units conversion — and yields each
+    /// match as its raw `Vec<Unit>` sequence. This is the entry point for token-id
+    /// (`u64`) dictionaries built via `insert_sequence(&[u64])`: the string path
+    /// ([`query`](Self::query)) would byte-pack the query via `CharUnit::from_str`
+    /// and never match sequence-built data. For `u8`/`char` dictionaries it is
+    /// equivalent to `query`, just returning `Vec<u8>`/`Vec<char>` instead of `String`.
+    ///
+    /// The automaton engine is fully unit-generic (equality-based characteristic
+    /// vector), so all three [`Algorithm`]s work over any `Unit` under the default
+    /// `Unrestricted` policy.
+    pub fn query_units(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        max_distance: usize,
+    ) -> QueryIterator<D::Node, Vec<<D::Node as DictionaryNode>::Unit>, P> {
+        QueryIterator::with_units(
+            self.dictionary.root(),
+            units.to_vec(),
+            max_distance,
+            self.algorithm,
+            self.policy.clone(),
+            self.dictionary.is_suffix_based(),
+        )
+    }
+
+    /// Query for unit-sequence terms with their edit distances.
+    ///
+    /// The units-native analogue of [`query_with_distance`](Self::query_with_distance):
+    /// yields [`UnitCandidate`] (`{ term: Vec<Unit>, distance }`). See
+    /// [`query_units`](Self::query_units) for why the `&[Unit]` surface is required
+    /// for `u64` token dictionaries.
+    pub fn query_units_with_distance(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        max_distance: usize,
+    ) -> QueryIterator<D::Node, UnitCandidate<<D::Node as DictionaryNode>::Unit>, P> {
+        QueryIterator::with_units(
+            self.dictionary.root(),
+            units.to_vec(),
+            max_distance,
+            self.algorithm,
+            self.policy.clone(),
+            self.dictionary.is_suffix_based(),
+        )
+    }
+
+    /// Query for unit-sequence terms within a **weighted** cost budget, using
+    /// per-operation float costs ([`OperationCostsF64`]).
+    ///
+    /// The units-native, float-weighted analogue of [`query_units`](Self::query_units):
+    /// it takes the query as a `&[Unit]` slice and yields [`UnitCandidateF64`]
+    /// (`{ term: Vec<Unit>, distance: f64 }`), where `distance` is the minimal
+    /// **weighted** edit cost `<= max_cost`. This lets a single `u64` token search
+    /// prune on a combined cost (e.g. per-word substitution weights, or an n-gram
+    /// `−log P` folded into `costs`) rather than plain unit-cost edit distance.
+    pub fn query_units_weighted(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        max_cost: f64,
+        costs: OperationCostsF64,
+    ) -> QueryIteratorF64<D::Node, UnitCandidateF64<<D::Node as DictionaryNode>::Unit>, P> {
+        QueryIteratorF64::with_units(
+            self.dictionary.root(),
+            units.to_vec(),
+            max_cost,
+            self.algorithm,
+            costs,
+            self.policy.clone(),
+            self.dictionary.is_suffix_based(),
+        )
+    }
+
     /// Query for terms in distance-first, lexicographic order
     ///
     /// Returns an iterator that yields results ordered by:
@@ -634,6 +715,28 @@ where
         ValueYieldingQueryIterator::new(
             self.dictionary.root(),
             term.to_string(),
+            max_distance,
+            self.algorithm,
+        )
+    }
+
+    /// Query yielding `(term: Vec<Unit>, distance, value)` for each match within
+    /// `max_distance` of a raw **unit sequence**.
+    ///
+    /// The units-native analogue of [`query_values`](Self::query_values): it takes the
+    /// query as a `&[Unit]` slice (bypassing the lossy `&str`→units byte-packing) and
+    /// yields the matched key as its raw `Vec<Unit>` together with its stored value —
+    /// so `T_lex`/`T_gram` recover both the corrected token-id sequence **and** its
+    /// per-sequence value (e.g. an n-gram frequency or a term-id) in one pass, with no
+    /// string round-trip. See [`query_units`](Self::query_units).
+    pub fn query_units_values(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        max_distance: usize,
+    ) -> ValueYieldingQueryIterator<D::Node, Vec<<D::Node as DictionaryNode>::Unit>> {
+        ValueYieldingQueryIterator::with_unit_query(
+            self.dictionary.root(),
+            units.to_vec(),
             max_distance,
             self.algorithm,
         )

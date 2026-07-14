@@ -40,7 +40,13 @@
 use crate::phonetic::nfa::product::{ProductAutomaton, ProductAutomatonChar};
 #[cfg(feature = "phonetic-rules")]
 use crate::phonetic::nfa::{NFAChar, NFA};
+#[cfg(feature = "phonetic-rules")]
+use crate::transducer::articulatory_costs::ArticulatoryCosts;
+#[cfg(feature = "phonetic-rules")]
+use crate::transducer::Algorithm;
 use libdictenstein::{Dictionary, DictionaryNode};
+#[cfg(feature = "phonetic-rules")]
+use libdictenstein::{MappedDictionary, MappedDictionaryNode};
 
 use std::{
     cmp::Ordering,
@@ -128,19 +134,29 @@ fn collect_path_units<U: Copy>(
 pub struct PhoneticCandidate {
     /// The matching term from the dictionary
     pub term: String,
-    /// Edit distance from the query to this term
+    /// Edit distance from the query to this term (integer operation count,
+    /// independent of articulatory weighting).
     pub edit_distance: u8,
-    /// Phonetic transformation cost.
+    /// Articulatory adjustment to the raw edit distance.
     ///
-    /// Reserved: in the current implementation this is ALWAYS `0.0` — the query
-    /// path constructs every candidate with `phonetic_cost == 0.0` and no
-    /// phonetic weighting is applied. Kept for a future weighted-phonetic-
-    /// matching feature; see `PhoneticTransducerChar::with_phonetic_weight`.
+    /// When the transducer is built with
+    /// [`PhoneticTransducerChar::with_articulatory_costs`] this is the *signed*
+    /// articulatory component `min_cost − edit_distance`, where `min_cost` is the
+    /// articulatory-weighted alignment cost
+    /// ([`ProductAutomatonChar::min_cost`](crate::phonetic::nfa::product::ProductAutomatonChar::min_cost)).
+    /// Because a phonetically near substitution costs less than a full edit
+    /// (`substitution_cost ∈ [0, base]`), this value is `≤ 0`: it is the
+    /// *discount* a sound-alike alignment earns over a plain edit. It is exactly
+    /// `0.0` for an exact match and for the default (non-articulatory) query
+    /// path, so `total_cost == edit_distance` there.
     pub phonetic_cost: f64,
     /// Combined total cost (`edit_distance + phonetic_cost`).
     ///
-    /// Because `phonetic_cost` is always `0.0` today, this currently equals
-    /// `edit_distance as f64`.
+    /// Equals the articulatory-weighted alignment cost `min_cost` when
+    /// articulatory costs are configured (`≤ edit_distance`), and
+    /// `edit_distance as f64` otherwise. This is the field candidates are ranked
+    /// by (lower is better), so a sound-alike match outranks a same-edit-distance
+    /// but phonetically distant one.
     pub total_cost: f64,
 }
 
@@ -194,6 +210,49 @@ impl Ord for PhoneticCandidate {
     }
 }
 
+/// A value-returning candidate from a character-level phonetic query.
+///
+/// Identical to [`PhoneticCandidate`] but additionally carries the dictionary's
+/// stored `value` at the matched term (e.g. a term-id), so a caller such as a
+/// lexical corrector can emit `(value, total_cost)` in one pass, with no second
+/// string lookup. `edit_distance` / `phonetic_cost` / `total_cost` carry exactly
+/// the same meaning and ranking as [`PhoneticCandidate`].
+///
+/// `V` is left free of trait bounds here; ordering helpers such as
+/// [`PhoneticTransducerChar::query_values_sorted`] rank by `total_cost` and so
+/// never require `V: Ord`.
+#[cfg(feature = "phonetic-rules")]
+#[derive(Debug, Clone)]
+pub struct PhoneticValueCandidate<V> {
+    /// The matching term from the dictionary.
+    pub term: String,
+    /// Edit distance from the query to this term (integer operation count).
+    pub edit_distance: u8,
+    /// Articulatory adjustment to the raw edit distance; see
+    /// [`PhoneticCandidate::phonetic_cost`]. `≤ 0` under an articulatory cost
+    /// model, exactly `0.0` on the default (integer) path.
+    pub phonetic_cost: f64,
+    /// Combined total cost (`edit_distance + phonetic_cost`); the ranking key.
+    pub total_cost: f64,
+    /// The dictionary value stored at the matched term (e.g. a term-id).
+    pub value: V,
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<V> PhoneticValueCandidate<V> {
+    /// Create a new value-returning phonetic candidate, deriving `total_cost`.
+    pub fn new(term: String, edit_distance: u8, phonetic_cost: f64, value: V) -> Self {
+        let total_cost = f64::from(edit_distance) + phonetic_cost;
+        Self {
+            term,
+            edit_distance,
+            phonetic_cost,
+            total_cost,
+            value,
+        }
+    }
+}
+
 #[cfg(feature = "phonetic-rules")]
 #[inline]
 fn phonetic_child_depth(depth: usize) -> Option<usize> {
@@ -221,11 +280,20 @@ pub struct PhoneticTransducerChar<D: Dictionary> {
     max_distance: u8,
     /// Reserved phonetic weight (default: `0.0`).
     ///
+    /// A flat, pattern-agnostic weight knob, distinct from `articulatory_costs`.
     /// Currently stored and threaded to the query iterator but NOT applied:
-    /// every emitted [`PhoneticCandidate`] has `phonetic_cost == 0.0`. Clamped
-    /// to `>= 0.0` at construction. Tracked for a future weighted-phonetic-
-    /// matching feature.
+    /// every emitted [`PhoneticCandidate`] takes its (non-zero) phonetic cost
+    /// from `articulatory_costs`, not from this field. Clamped to `>= 0.0` at
+    /// construction. Tracked for a future flat-weighting feature.
     phonetic_weight: f64,
+    /// Optional articulatory (feature-distance) cost model.
+    ///
+    /// When `Some`, the query builds its product automaton
+    /// ([`ProductAutomatonChar::with_articulatory_costs`]) with these costs and
+    /// reports each candidate's articulatory-weighted `total_cost` /
+    /// `phonetic_cost`. When `None` (the default), the query is a pure integer
+    /// edit-distance search and every candidate has `phonetic_cost == 0.0`.
+    articulatory_costs: Option<ArticulatoryCosts>,
 }
 
 #[cfg(feature = "phonetic-rules")]
@@ -246,6 +314,45 @@ where
             nfa,
             max_distance,
             phonetic_weight: 0.0,
+            articulatory_costs: None,
+        }
+    }
+
+    /// Create a phonetic transducer that scores matches with an **articulatory
+    /// (feature-distance) cost model**.
+    ///
+    /// This is the "full articulatory" query path. Instead of a pure integer
+    /// edit-distance search, each candidate's `total_cost` is the
+    /// articulatory-weighted alignment cost
+    /// ([`ProductAutomatonChar::min_cost`](crate::phonetic::nfa::product::ProductAutomatonChar::min_cost)):
+    /// a substitution between phonetically near symbols (e.g. a voiced/voiceless
+    /// pair such as `p`↔`b`) costs a fraction of a full edit, so sound-alike
+    /// terms rank ahead of same-edit-distance but phonetically distant ones. The
+    /// integer `edit_distance` is still reported (from
+    /// [`min_distance`](crate::phonetic::nfa::product::ProductAutomatonChar::min_distance)),
+    /// and `phonetic_cost = total_cost − edit_distance ≤ 0` is the articulatory
+    /// discount.
+    ///
+    /// # Arguments
+    ///
+    /// * `dictionary` - The dictionary to search
+    /// * `nfa` - The phonetic NFA pattern
+    /// * `max_distance` - Maximum edit distance allowed (admission is still gated
+    ///   by the integer edit distance; the articulatory cost only *ranks* the
+    ///   admitted candidates)
+    /// * `articulatory_costs` - The feature-distance cost model
+    pub fn with_articulatory_costs(
+        dictionary: D,
+        nfa: NFAChar,
+        max_distance: u8,
+        articulatory_costs: ArticulatoryCosts,
+    ) -> Self {
+        Self {
+            dictionary,
+            nfa,
+            max_distance,
+            phonetic_weight: 0.0,
+            articulatory_costs: Some(articulatory_costs),
         }
     }
 
@@ -268,6 +375,7 @@ where
             nfa,
             max_distance,
             phonetic_weight: phonetic_weight.max(0.0),
+            articulatory_costs: None,
         }
     }
 
@@ -281,6 +389,7 @@ where
             input,
             self.max_distance,
             self.phonetic_weight,
+            self.articulatory_costs,
         )
     }
 
@@ -312,6 +421,47 @@ where
     /// Extract the dictionary, consuming the transducer.
     pub fn into_dictionary(self) -> D {
         self.dictionary
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<D> PhoneticTransducerChar<D>
+where
+    D: MappedDictionary,
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = char>,
+{
+    /// Query for dictionary terms matching the phonetic pattern, returning each
+    /// match's stored dictionary value (e.g. a term-id) alongside its costs.
+    ///
+    /// This is the value-returning counterpart of [`query`](Self::query): it
+    /// yields [`PhoneticValueCandidate`] (a [`PhoneticCandidate`] plus the
+    /// `value` at the matched term), so a lexical corrector can emit
+    /// `(term_id, total_cost)` in a single pass with no string round-trip.
+    /// Articulatory weighting (if the transducer was built with
+    /// [`with_articulatory_costs`](Self::with_articulatory_costs)) applies here
+    /// exactly as it does for [`query`](Self::query).
+    pub fn query_values(&self, input: &str) -> PhoneticValueQueryIteratorChar<'_, D> {
+        PhoneticValueQueryIteratorChar::new(
+            &self.dictionary,
+            &self.nfa,
+            input,
+            self.max_distance,
+            self.articulatory_costs,
+        )
+    }
+
+    /// Query and collect value-returning results, sorted by total cost.
+    ///
+    /// Ranks by `total_cost` (then term); requires no `Ord` bound on the value
+    /// type.
+    pub fn query_values_sorted(&self, input: &str) -> Vec<PhoneticValueCandidate<D::Value>> {
+        let mut results: Vec<_> = self.query_values(input).collect();
+        results.sort_by(|a, b| {
+            a.total_cost
+                .total_cmp(&b.total_cost)
+                .then_with(|| a.term.cmp(&b.term))
+        });
+        results
     }
 }
 
@@ -347,9 +497,23 @@ where
         _input: &str,
         max_distance: u8,
         phonetic_weight: f64,
+        articulatory_costs: Option<ArticulatoryCosts>,
     ) -> Self {
-        // Create product automaton for this query
-        let product = ProductAutomatonChar::new(nfa.clone(), max_distance);
+        // Create product automaton for this query. With articulatory costs the
+        // product accumulates fractional feature-distance substitution cost (so
+        // `min_cost` yields a phonetically weighted total); otherwise it is a
+        // pure integer edit-distance automaton (`min_distance` only). The
+        // articulatory product uses the same `Algorithm::Standard` and
+        // `max_distance`-as-cost budget as [`ProductAutomatonChar::new`].
+        let product = match articulatory_costs {
+            Some(costs) => ProductAutomatonChar::with_articulatory_costs(
+                nfa.clone(),
+                f64::from(max_distance),
+                Algorithm::Standard,
+                costs,
+            ),
+            None => ProductAutomatonChar::new(nfa.clone(), max_distance),
+        };
 
         // Initialize queue with root node
         let mut queue = VecDeque::with_capacity(1);
@@ -406,30 +570,219 @@ where
                 continue;
             }
 
-            // Check if this is a final dictionary node
-            if entry.node.is_final() {
+            // Determine whether this node yields a candidate, but do NOT return
+            // yet: its children must still be enqueued below, or every term that
+            // extends a matched prefix (e.g. "phones"/"phoned" past a final
+            // "phone") would be skipped.
+            let candidate = if entry.node.is_final() {
                 // Check if the product automaton accepts this path
                 let path = self.materialize_path(&entry);
-                if let Some(distance) = self.product.min_distance(&path) {
-                    return Some(PhoneticCandidate::new(path, distance, 0.0));
+                self.product.min_distance(&path).map(|distance| {
+                    // Default (integer) path: phonetic_cost = 0. Articulatory
+                    // path: the signed articulatory discount
+                    // `min_cost − edit_distance` (≤ 0), so that
+                    // `total_cost = edit_distance + phonetic_cost = min_cost`
+                    // ranks sound-alike matches ahead of phonetically distant
+                    // ones at the same edit distance. The candidate is already
+                    // admitted (within `max_distance` edits), so `min_cost`
+                    // (≤ `min_distance`) is always `Some`.
+                    let phonetic_cost = if self.product.articulatory_costs().is_some() {
+                        let total = self
+                            .product
+                            .min_cost(&path)
+                            .unwrap_or_else(|| f64::from(distance));
+                        total - f64::from(distance)
+                    } else {
+                        0.0
+                    };
+                    PhoneticCandidate::new(path, distance, phonetic_cost)
+                })
+            } else {
+                None
+            };
+
+            // Explore children via edges (bounded by max_depth) BEFORE returning
+            // any candidate, so the traversal state advances past this node.
+            let parent = match entry.label {
+                Some(label) => self.push_path_node(label, entry.parent),
+                None => entry.parent,
+            };
+            if let Some(child_depth) = phonetic_child_depth(entry.depth) {
+                if child_depth <= self.max_depth {
+                    for (c, child) in entry.node.edges() {
+                        self.queue.push_back(PhoneticTraversal::child(
+                            child,
+                            c,
+                            parent,
+                            child_depth,
+                        ));
+                    }
                 }
             }
+
+            if let Some(candidate) = candidate {
+                return Some(candidate);
+            }
+        }
+
+        None
+    }
+}
+
+// ============================================================================
+// Value-returning Query Iterator (Character-level)
+// ============================================================================
+
+/// Iterator over value-returning phonetic query results (character-level).
+///
+/// Like [`PhoneticQueryIteratorChar`] but yields [`PhoneticValueCandidate`],
+/// reading the dictionary's stored value at each matched term. Requires the
+/// dictionary to be a [`MappedDictionary`] whose nodes are
+/// [`MappedDictionaryNode`]s (e.g. a term → term-id vocabulary trie).
+#[cfg(feature = "phonetic-rules")]
+pub struct PhoneticValueQueryIteratorChar<'a, D: MappedDictionary>
+where
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = char>,
+{
+    /// Product automaton for matching (articulatory-aware when configured).
+    product: ProductAutomatonChar,
+    /// Queue of dictionary nodes to explore.
+    queue: VecDeque<PhoneticTraversal<D::Node>>,
+    /// Parent-path arena for reconstructing terms without per-edge path clones.
+    path_arena: Vec<PhoneticPathNode<char>>,
+    /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
+    _dictionary: PhantomData<&'a D>,
+    /// Maximum depth (prevents infinite exploration).
+    max_depth: usize,
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<'a, D: MappedDictionary> PhoneticValueQueryIteratorChar<'a, D>
+where
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = char>,
+{
+    fn new(
+        dictionary: &'a D,
+        nfa: &NFAChar,
+        _input: &str,
+        max_distance: u8,
+        articulatory_costs: Option<ArticulatoryCosts>,
+    ) -> Self {
+        // Same product construction as `PhoneticQueryIteratorChar::new`.
+        let product = match articulatory_costs {
+            Some(costs) => ProductAutomatonChar::with_articulatory_costs(
+                nfa.clone(),
+                f64::from(max_distance),
+                Algorithm::Standard,
+                costs,
+            ),
+            None => ProductAutomatonChar::new(nfa.clone(), max_distance),
+        };
+
+        let mut queue = VecDeque::with_capacity(1);
+        queue.push_back(PhoneticTraversal::root(dictionary.root()));
+
+        Self {
+            product,
+            queue,
+            path_arena: Vec::with_capacity(64),
+            _dictionary: PhantomData,
+            max_depth: 100,
+        }
+    }
+
+    #[inline]
+    fn push_path_node(&mut self, label: char, parent: usize) -> usize {
+        let depth = if parent == PHONETIC_NO_PATH {
+            1
+        } else {
+            self.path_arena[parent].depth.saturating_add(1)
+        };
+        let index = self.path_arena.len();
+        self.path_arena.push(PhoneticPathNode {
+            label,
+            parent,
+            depth,
+        });
+        index
+    }
+
+    #[inline]
+    fn materialize_path(&self, entry: &PhoneticTraversal<D::Node>) -> String {
+        collect_path_units(entry.label, entry.parent, &self.path_arena)
+            .into_iter()
+            .collect()
+    }
+
+    /// Articulatory discount for an admitted path; `0.0` on the default path.
+    /// See [`PhoneticCandidate::phonetic_cost`].
+    #[inline]
+    fn phonetic_cost(&self, path: &str, distance: u8) -> f64 {
+        if self.product.articulatory_costs().is_some() {
+            let total = self
+                .product
+                .min_cost(path)
+                .unwrap_or_else(|| f64::from(distance));
+            total - f64::from(distance)
+        } else {
+            0.0
+        }
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<D: MappedDictionary> Iterator for PhoneticValueQueryIteratorChar<'_, D>
+where
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = char>,
+{
+    type Item = PhoneticValueCandidate<D::Value>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(entry) = self.queue.pop_front() {
+            if entry.depth > self.max_depth {
+                continue;
+            }
+
+            // A candidate requires a stored value at this node (a value-bearing
+            // terminal) AND a phonetic/edit match. Compute it but do NOT return
+            // yet — children are enqueued below so extensions of a matched prefix
+            // are not skipped.
+            let candidate = if let Some(value) = entry.node.value() {
+                let path = self.materialize_path(&entry);
+                if let Some(distance) = self.product.min_distance(&path) {
+                    let phonetic_cost = self.phonetic_cost(&path, distance);
+                    Some(PhoneticValueCandidate::new(
+                        path,
+                        distance,
+                        phonetic_cost,
+                        value,
+                    ))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
 
             let parent = match entry.label {
                 Some(label) => self.push_path_node(label, entry.parent),
                 None => entry.parent,
             };
-
-            // Explore children via edges
-            let Some(child_depth) = phonetic_child_depth(entry.depth) else {
-                continue;
-            };
-            if child_depth > self.max_depth {
-                continue;
+            if let Some(child_depth) = phonetic_child_depth(entry.depth) {
+                if child_depth <= self.max_depth {
+                    for (c, child) in entry.node.edges() {
+                        self.queue.push_back(PhoneticTraversal::child(
+                            child,
+                            c,
+                            parent,
+                            child_depth,
+                        ));
+                    }
+                }
             }
-            for (c, child) in entry.node.edges() {
-                self.queue
-                    .push_back(PhoneticTraversal::child(child, c, parent, child_depth));
+
+            if let Some(candidate) = candidate {
+                return Some(candidate);
             }
         }
 
@@ -539,6 +892,34 @@ where
     }
 }
 
+#[cfg(feature = "phonetic-rules")]
+impl<D> PhoneticTransducer<D>
+where
+    D: MappedDictionary,
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = u8>,
+{
+    /// Query for dictionary terms matching the phonetic pattern, returning each
+    /// match's stored dictionary value (e.g. a term-id) alongside its costs.
+    ///
+    /// The byte counterpart of [`PhoneticTransducerChar::query_values`]. Yields
+    /// [`PhoneticValueCandidateByte`]; `phonetic_cost` is always `0.0` for the
+    /// byte path.
+    pub fn query_values(&self, input: &[u8]) -> PhoneticValueQueryIterator<'_, D> {
+        PhoneticValueQueryIterator::new(&self.dictionary, &self.nfa, input, self.max_distance)
+    }
+
+    /// Query and collect value-returning results, sorted by total cost.
+    pub fn query_values_sorted(&self, input: &[u8]) -> Vec<PhoneticValueCandidateByte<D::Value>> {
+        let mut results: Vec<_> = self.query_values(input).collect();
+        results.sort_by(|a, b| {
+            a.total_cost
+                .total_cmp(&b.total_cost)
+                .then_with(|| a.term.cmp(&b.term))
+        });
+        results
+    }
+}
+
 /// Byte-level phonetic candidate.
 #[derive(Debug, Clone)]
 pub struct PhoneticCandidateByte {
@@ -546,15 +927,19 @@ pub struct PhoneticCandidateByte {
     pub term: Vec<u8>,
     /// Edit distance from the query to this term
     pub edit_distance: u8,
-    /// Phonetic transformation cost.
+    /// Phonetic transformation cost — always `0.0` for the byte path.
     ///
-    /// Reserved: in the current implementation this is ALWAYS `0.0` (the query
-    /// path constructs every candidate with `phonetic_cost == 0.0`). Kept for a
-    /// future weighted-phonetic-matching feature.
+    /// Articulatory (feature-distance) costs are defined over phonemes
+    /// (`char`s), and the byte NFA's transition label carries no "expected byte"
+    /// to weight a substitution against, so a per-substitution articulatory cost
+    /// is not expressible at byte granularity. Byte-level phonetic matching is
+    /// therefore integer edit distance only; use
+    /// [`PhoneticTransducerChar::with_articulatory_costs`] for the weighted
+    /// (articulatory) path.
     pub phonetic_cost: f64,
     /// Combined total cost (`edit_distance + phonetic_cost`).
     ///
-    /// Because `phonetic_cost` is always `0.0` today, this currently equals
+    /// Because `phonetic_cost` is always `0.0` for bytes, this equals
     /// `edit_distance as f64`.
     pub total_cost: f64,
 }
@@ -605,6 +990,42 @@ impl Ord for PhoneticCandidateByte {
             .then_with(|| self.term.cmp(&other.term))
             .then_with(|| self.edit_distance.cmp(&other.edit_distance))
             .then_with(|| self.phonetic_cost.total_cmp(&other.phonetic_cost))
+    }
+}
+
+/// A value-returning candidate from a byte-level phonetic query.
+///
+/// The byte analogue of [`PhoneticValueCandidate`]: it carries the dictionary's
+/// stored `value` at the matched term alongside the byte term. `phonetic_cost`
+/// is always `0.0` for the byte path (see [`PhoneticCandidateByte::phonetic_cost`]),
+/// so `total_cost == edit_distance`.
+#[cfg(feature = "phonetic-rules")]
+#[derive(Debug, Clone)]
+pub struct PhoneticValueCandidateByte<V> {
+    /// The matching term from the dictionary.
+    pub term: Vec<u8>,
+    /// Edit distance from the query to this term.
+    pub edit_distance: u8,
+    /// Phonetic transformation cost — always `0.0` for the byte path.
+    pub phonetic_cost: f64,
+    /// Combined total cost (`edit_distance + phonetic_cost`); the ranking key.
+    pub total_cost: f64,
+    /// The dictionary value stored at the matched term (e.g. a term-id).
+    pub value: V,
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<V> PhoneticValueCandidateByte<V> {
+    /// Create a new value-returning byte phonetic candidate, deriving `total_cost`.
+    pub fn new(term: Vec<u8>, edit_distance: u8, phonetic_cost: f64, value: V) -> Self {
+        let total_cost = f64::from(edit_distance) + phonetic_cost;
+        Self {
+            term,
+            edit_distance,
+            phonetic_cost,
+            total_cost,
+            value,
+        }
     }
 }
 
@@ -689,27 +1110,166 @@ where
                 continue;
             }
 
-            if entry.node.is_final() {
+            // Determine whether this node yields a candidate, but do NOT return
+            // yet: its children must still be enqueued below, or every term that
+            // extends a matched prefix would be skipped. `phonetic_cost` is
+            // `0.0` for the byte path by construction — articulatory (feature)
+            // distances are defined over phonemes (`char`s), and the byte NFA's
+            // transition label exposes no "expected byte", so a per-substitution
+            // articulatory cost is not expressible here (see the char transducer,
+            // `PhoneticTransducerChar::with_articulatory_costs`, for the weighted
+            // path).
+            let candidate = if entry.node.is_final() {
                 let path = self.materialize_path(&entry);
-                if let Some(distance) = self.product.min_distance(&path) {
-                    return Some(PhoneticCandidateByte::new(path, distance, 0.0));
+                self.product
+                    .min_distance(&path)
+                    .map(|distance| PhoneticCandidateByte::new(path, distance, 0.0))
+            } else {
+                None
+            };
+
+            // Explore children via edges (bounded by max_depth) BEFORE returning
+            // any candidate, so the traversal state advances past this node.
+            let parent = match entry.label {
+                Some(label) => self.push_path_node(label, entry.parent),
+                None => entry.parent,
+            };
+            if let Some(child_depth) = phonetic_child_depth(entry.depth) {
+                if child_depth <= self.max_depth {
+                    for (b, child) in entry.node.edges() {
+                        self.queue.push_back(PhoneticTraversal::child(
+                            child,
+                            b,
+                            parent,
+                            child_depth,
+                        ));
+                    }
                 }
             }
+
+            if let Some(candidate) = candidate {
+                return Some(candidate);
+            }
+        }
+
+        None
+    }
+}
+
+// ============================================================================
+// Value-returning Query Iterator (Byte-level)
+// ============================================================================
+
+/// Iterator over value-returning byte-level phonetic query results.
+///
+/// The byte analogue of [`PhoneticValueQueryIteratorChar`]: yields
+/// [`PhoneticValueCandidateByte`], reading the dictionary's stored value at each
+/// matched term. Requires the dictionary to be a [`MappedDictionary`] whose
+/// nodes are [`MappedDictionaryNode`]s. `phonetic_cost` is `0.0` (byte paths are
+/// integer edit distance only).
+#[cfg(feature = "phonetic-rules")]
+pub struct PhoneticValueQueryIterator<'a, D: MappedDictionary>
+where
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = u8>,
+{
+    /// Product automaton for matching.
+    product: ProductAutomaton,
+    /// Queue of dictionary nodes to explore.
+    queue: VecDeque<PhoneticTraversal<D::Node>>,
+    /// Parent-path arena for reconstructing terms without per-edge path clones.
+    path_arena: Vec<PhoneticPathNode<u8>>,
+    /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
+    _dictionary: PhantomData<&'a D>,
+    /// Maximum depth (prevents infinite exploration).
+    max_depth: usize,
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<'a, D: MappedDictionary> PhoneticValueQueryIterator<'a, D>
+where
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = u8>,
+{
+    fn new(dictionary: &'a D, nfa: &NFA, _input: &[u8], max_distance: u8) -> Self {
+        let product = ProductAutomaton::new(nfa.clone(), max_distance);
+
+        let mut queue = VecDeque::with_capacity(1);
+        queue.push_back(PhoneticTraversal::root(dictionary.root()));
+
+        Self {
+            product,
+            queue,
+            path_arena: Vec::with_capacity(64),
+            _dictionary: PhantomData,
+            max_depth: 100,
+        }
+    }
+
+    #[inline]
+    fn push_path_node(&mut self, label: u8, parent: usize) -> usize {
+        let depth = if parent == PHONETIC_NO_PATH {
+            1
+        } else {
+            self.path_arena[parent].depth.saturating_add(1)
+        };
+        let index = self.path_arena.len();
+        self.path_arena.push(PhoneticPathNode {
+            label,
+            parent,
+            depth,
+        });
+        index
+    }
+
+    #[inline]
+    fn materialize_path(&self, entry: &PhoneticTraversal<D::Node>) -> Vec<u8> {
+        collect_path_units(entry.label, entry.parent, &self.path_arena)
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<D: MappedDictionary> Iterator for PhoneticValueQueryIterator<'_, D>
+where
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = u8>,
+{
+    type Item = PhoneticValueCandidateByte<D::Value>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(entry) = self.queue.pop_front() {
+            if entry.depth > self.max_depth {
+                continue;
+            }
+
+            // A value-bearing terminal that is also a phonetic/edit match.
+            // Compute but do NOT return yet — children are enqueued below so
+            // extensions of a matched prefix are not skipped.
+            let candidate = if let Some(value) = entry.node.value() {
+                let path = self.materialize_path(&entry);
+                self.product
+                    .min_distance(&path)
+                    .map(|distance| PhoneticValueCandidateByte::new(path, distance, 0.0, value))
+            } else {
+                None
+            };
 
             let parent = match entry.label {
                 Some(label) => self.push_path_node(label, entry.parent),
                 None => entry.parent,
             };
-
-            let Some(child_depth) = phonetic_child_depth(entry.depth) else {
-                continue;
-            };
-            if child_depth > self.max_depth {
-                continue;
+            if let Some(child_depth) = phonetic_child_depth(entry.depth) {
+                if child_depth <= self.max_depth {
+                    for (b, child) in entry.node.edges() {
+                        self.queue.push_back(PhoneticTraversal::child(
+                            child,
+                            b,
+                            parent,
+                            child_depth,
+                        ));
+                    }
+                }
             }
-            for (b, child) in entry.node.edges() {
-                self.queue
-                    .push_back(PhoneticTraversal::child(child, b, parent, child_depth));
+
+            if let Some(candidate) = candidate {
+                return Some(candidate);
             }
         }
 

@@ -19,6 +19,29 @@ use std::hash::Hash;
 
 type SeenTerms = FxHashSet<Box<str>>;
 
+/// The emitted term type for [`ValueYieldingQueryIterator`]: either the
+/// reconstructed text (`String`) or the raw unit sequence (`Vec<U>`, lossless for
+/// `u64` token dictionaries whose `to_string` is a lossy byte-unpack). The type
+/// doubles as the per-term deduplication key, so it must be `Eq + Hash`.
+pub trait ValueTerm<U: CharUnit>: Clone + Eq + Hash {
+    /// Build the term from the matched unit sequence.
+    fn from_units(units: &[U]) -> Self;
+}
+
+impl<U: CharUnit> ValueTerm<U> for String {
+    #[inline]
+    fn from_units(units: &[U]) -> Self {
+        U::to_string(units)
+    }
+}
+
+impl<U: CharUnit> ValueTerm<U> for Vec<U> {
+    #[inline]
+    fn from_units(units: &[U]) -> Self {
+        units.to_vec()
+    }
+}
+
 const NO_PATH: usize = usize::MAX;
 
 struct ValueQueryPathNode<U: CharUnit> {
@@ -55,7 +78,8 @@ impl<N: MappedDictionaryNode> ValueQueryIntersection<N> {
         }
     }
 
-    fn term(&self, path_arena: &[ValueQueryPathNode<N::Unit>]) -> String {
+    /// Reconstruct the matched term as its raw unit sequence (root → this node).
+    fn units(&self, path_arena: &[ValueQueryPathNode<N::Unit>]) -> Vec<N::Unit> {
         let parent_depth = if self.parent == NO_PATH {
             0
         } else {
@@ -76,7 +100,13 @@ impl<N: MappedDictionaryNode> ValueQueryIntersection<N> {
         }
 
         units.reverse();
-        N::Unit::to_string(&units)
+        units
+    }
+
+    /// Reconstruct the matched term as text (via [`CharUnit::to_string`]).
+    #[inline]
+    fn term(&self, path_arena: &[ValueQueryPathNode<N::Unit>]) -> String {
+        N::Unit::to_string(&self.units(path_arena))
     }
 
     #[inline(always)]
@@ -355,11 +385,11 @@ where
 /// edit-distance threshold, reading each final node's value *during* traversal
 /// so the caller needs no second dictionary lookup. Final nodes whose value is
 /// `None` are skipped (they terminate no stored entry).
-pub struct ValueYieldingQueryIterator<N>
+pub struct ValueYieldingQueryIterator<N, T = String>
 where
     N: MappedDictionaryNode,
 {
-    /// Query units (bytes or chars)
+    /// Query units (bytes, chars, or `u64` tokens)
     query: Vec<N::Unit>,
     /// Maximum edit distance
     max_distance: usize,
@@ -369,21 +399,58 @@ where
     pending: VecDeque<ValueQueryIntersection<N>>,
     /// Arena of shared parent path nodes used to reconstruct yielded terms.
     path_arena: Vec<ValueQueryPathNode<N::Unit>>,
-    /// Set of seen terms (for deduplication)
-    seen: SeenTerms,
+    /// Set of seen terms (for deduplication), keyed on the emitted term type `T`.
+    seen: FxHashSet<T>,
     /// State pool for efficient state allocation reuse
     state_pool: StatePool,
     /// Iterator finished flag
     finished: bool,
 }
 
-impl<N> ValueYieldingQueryIterator<N>
+impl<N> ValueYieldingQueryIterator<N, String>
 where
     N: MappedDictionaryNode,
 {
-    /// Create a new value-yielding query iterator.
+    /// Create a new value-yielding query iterator over a string query.
+    ///
+    /// Yields `(term: String, distance, value)`. For a `u64` token dictionary use
+    /// [`with_unit_query`](ValueYieldingQueryIterator::with_unit_query) instead —
+    /// `from_str` byte-packs the query.
     pub fn new(root: N, term: String, max_distance: usize, algorithm: Algorithm) -> Self {
         let query_units = N::Unit::from_str(&term);
+        Self::with_units(root, query_units, max_distance, algorithm)
+    }
+}
+
+impl<N> ValueYieldingQueryIterator<N, Vec<N::Unit>>
+where
+    N: MappedDictionaryNode,
+{
+    /// Create a value-yielding query iterator over a raw unit sequence, yielding
+    /// `(term: Vec<Unit>, distance, value)` — the units-native, lossless variant
+    /// required for `u64` token-id dictionaries.
+    pub fn with_unit_query(
+        root: N,
+        query_units: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+    ) -> Self {
+        Self::with_units(root, query_units, max_distance, algorithm)
+    }
+}
+
+impl<N, T> ValueYieldingQueryIterator<N, T>
+where
+    N: MappedDictionaryNode,
+{
+    /// Shared constructor from a pre-computed unit query. The emitted term type `T`
+    /// (`String` or `Vec<Unit>`) is chosen by the caller / return type.
+    fn with_units(
+        root: N,
+        query_units: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+    ) -> Self {
         let initial = initial_state(query_units.len(), max_distance, algorithm);
 
         let mut pending = VecDeque::with_capacity(1);
@@ -395,20 +462,21 @@ where
             algorithm,
             pending,
             path_arena: Vec::with_capacity(64),
-            seen: SeenTerms::default(),
+            seen: FxHashSet::default(),
             state_pool: StatePool::new(),
             finished: false,
         }
     }
 }
 
-impl<N> Iterator for ValueYieldingQueryIterator<N>
+impl<N, T> Iterator for ValueYieldingQueryIterator<N, T>
 where
     N: MappedDictionaryNode,
     N::Value: DictionaryValue,
+    T: ValueTerm<N::Unit>,
     Unrestricted: SubstitutionPolicyFor<N::Unit>,
 {
-    type Item = (String, usize, N::Value);
+    type Item = (T, usize, N::Value);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -424,11 +492,12 @@ where
                     .unwrap_or(usize::MAX);
 
                 if distance <= self.max_distance {
-                    let term = intersection.term(&self.path_arena);
+                    let term = T::from_units(&intersection.units(&self.path_arena));
                     // Deduplicate by term; children are queued exactly once,
                     // on the first visit of each term (matching the
-                    // value-filtered iterator's discipline).
-                    if mark_seen_term(&mut self.seen, &term) {
+                    // value-filtered iterator's discipline). `insert` returns
+                    // `true` the first time a term is seen.
+                    if self.seen.insert(term.clone()) {
                         self.queue_children(&intersection);
                         // Read the value during traversal — no second lookup.
                         if let Some(value) = intersection.node.value() {
@@ -450,7 +519,7 @@ where
     }
 }
 
-impl<N> ValueYieldingQueryIterator<N>
+impl<N, T> ValueYieldingQueryIterator<N, T>
 where
     N: MappedDictionaryNode,
     N::Value: DictionaryValue,

@@ -89,7 +89,71 @@ fn main() {
     example_3_transposition_errors(&dictionary);
     example_4_combined_errors(&dictionary);
     example_5_comparison_matrix(&dictionary);
-    example_6_performance_notes();
+    example_6_articulatory_cost_ranking();
+    example_7_performance_notes();
+}
+
+/// Example 6: Articulatory cost ranking + value-returning phonetic queries
+///
+/// The prior examples pre-normalize with rewrite rules. This one instead uses
+/// [`PhoneticTransducerChar`] with an **articulatory (feature-distance) cost
+/// model**, so the query itself charges each substitution its phonetic distance:
+/// a sound-alike pair (e.g. the voiced/voiceless `p`↔`b`) costs a fraction of a
+/// full edit and ranks ahead of a phonetically distant substitution at the same
+/// integer edit distance. It also shows `query_values`, which returns the
+/// dictionary's stored term-id at each match with no string round-trip.
+fn example_6_articulatory_cost_ranking() {
+    use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
+    use liblevenshtein::phonetic::nfa::compile;
+    use liblevenshtein::phonetic::regex::parse;
+    use liblevenshtein::transducer::{ArticulatoryCosts, PhoneticTransducerChar};
+
+    println!("{}", "─".repeat(80));
+    println!("EXAMPLE 6: Articulatory Cost Ranking + Value-returning Queries");
+    println!("{}", "─".repeat(80));
+    println!();
+    println!("Pattern 'pat'; each dictionary term is one substitution away. The");
+    println!("articulatory cost model ranks sound-alikes ahead of distant edits.");
+    println!();
+
+    // A term → term-id vocabulary. Every term is edit distance 1 from "pat".
+    let dict = DoubleArrayTrieChar::from_terms_with_values([
+        ("pat", 10u64),
+        ("bat", 20u64), // p→b : voiced/voiceless pair — articulatorily NEAR
+        ("cat", 30u64), // p→c : different place/manner — articulatorily FAR
+        ("pad", 40u64), // t→d : voiced/voiceless pair — articulatorily NEAR
+    ]);
+    let nfa = compile(&parse("pat").expect("parse")).expect("compile");
+    let transducer =
+        PhoneticTransducerChar::with_articulatory_costs(dict, nfa, 1, ArticulatoryCosts::default());
+
+    println!(
+        "  {:<8} {:>9} {:>14} {:>12}   term-id",
+        "term", "edit", "phonetic", "total"
+    );
+    println!("  {}", "┈".repeat(60));
+
+    // `query_values` yields the stored term-id alongside the articulatory cost.
+    let mut results = transducer.query_values_sorted("pat");
+    // Already sorted by total cost; print in that order.
+    for c in &results {
+        println!(
+            "  {:<8} {:>9} {:>14.4} {:>12.4}   {}",
+            c.term, c.edit_distance, c.phonetic_cost, c.total_cost, c.value
+        );
+    }
+    println!();
+
+    results.sort_by(|a, b| a.total_cost.total_cmp(&b.total_cost));
+    if let (Some(best), Some(worst)) = (results.first(), results.last()) {
+        println!(
+            "  Cheapest correction: '{}' (id {}, total {:.4});  most distant: '{}' (total {:.4}).",
+            best.term, best.value, best.total_cost, worst.term, worst.total_cost
+        );
+        println!("  Note: every term is edit distance 1, yet the articulatory total ranks the");
+        println!("        sound-alike substitutions far cheaper than the distant one.");
+    }
+    println!();
 }
 
 /// Example 1: Basic Phonetic Normalization + Levenshtein
@@ -486,12 +550,12 @@ fn example_5_comparison_matrix(dictionary: &[&str]) {
     println!();
 }
 
-/// Example 6: Performance Notes
+/// Example 7: Performance Notes
 ///
 /// Discusses performance characteristics and trade-offs.
-fn example_6_performance_notes() {
+fn example_7_performance_notes() {
     println!("{}", "─".repeat(80));
-    println!("EXAMPLE 6: Performance Notes and Best Practices");
+    println!("EXAMPLE 7: Performance Notes and Best Practices");
     println!("{}", "─".repeat(80));
     println!();
 

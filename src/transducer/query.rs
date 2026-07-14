@@ -17,6 +17,21 @@ pub struct Candidate {
     pub distance: usize,
 }
 
+/// Query result containing the matched term as a raw unit sequence and its distance.
+///
+/// The units-native analogue of [`Candidate`]: `term` is the matched dictionary key
+/// as a `Vec<U>` (e.g. a `Vec<u64>` token-id sequence) with **no** `String`
+/// reconstruction, so it is lossless for alphabets whose `to_string` is not
+/// round-trippable (notably `u64` token sequences). See [`QueryIterator`] and
+/// [`Transducer::query_units_with_distance`](crate::transducer::Transducer::query_units_with_distance).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnitCandidate<U: CharUnit> {
+    /// The matching term as its unit sequence.
+    pub term: Vec<U>,
+    /// Edit distance from the query.
+    pub distance: usize,
+}
+
 const NO_PATH: usize = usize::MAX;
 
 struct QueryPathNode<U: CharUnit> {
@@ -53,7 +68,12 @@ impl<N: DictionaryNode> QueryIntersection<N> {
         }
     }
 
-    fn term(&self, path_arena: &[QueryPathNode<N::Unit>]) -> String {
+    /// Reconstruct the matched term as its raw unit sequence (root → this node).
+    ///
+    /// Result types convert this via [`QueryResult::from_match`]; `String`/`Candidate`
+    /// apply `CharUnit::to_string`, while `Vec<U>`/`UnitCandidate` keep the units
+    /// verbatim (lossless for `u64` token sequences).
+    fn units(&self, path_arena: &[QueryPathNode<N::Unit>]) -> Vec<N::Unit> {
         let parent_depth = if self.parent == NO_PATH {
             0
         } else {
@@ -74,7 +94,7 @@ impl<N: DictionaryNode> QueryIntersection<N> {
         }
 
         units.reverse();
-        N::Unit::to_string(&units)
+        units
     }
 
     #[inline(always)]
@@ -132,11 +152,7 @@ impl<N: DictionaryNode> QueryIntersection<N> {
 ///     println!("{}: {}", candidate.term, candidate.distance);
 /// }
 /// ```
-pub struct QueryIterator<
-    N: DictionaryNode,
-    R: QueryResult = String,
-    P: SubstitutionPolicy = Unrestricted,
-> {
+pub struct QueryIterator<N: DictionaryNode, R = String, P: SubstitutionPolicy = Unrestricted> {
     pending: VecDeque<QueryIntersection<N>>,
     query: Vec<N::Unit>,
     max_distance: usize,
@@ -149,7 +165,7 @@ pub struct QueryIterator<
     _result_type: PhantomData<R>, // Zero-sized marker for result type
 }
 
-impl<N: DictionaryNode, R: QueryResult> QueryIterator<N, R, Unrestricted> {
+impl<N: DictionaryNode, R: QueryResult<N::Unit>> QueryIterator<N, R, Unrestricted> {
     /// Create a new query iterator with unrestricted policy (standard Levenshtein)
     pub fn new(root: N, query: String, max_distance: usize, algorithm: Algorithm) -> Self {
         Self::with_substring_mode(root, query, max_distance, algorithm, false)
@@ -174,8 +190,11 @@ impl<N: DictionaryNode, R: QueryResult> QueryIterator<N, R, Unrestricted> {
     }
 }
 
-impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
-    QueryIterator<N, R, P>
+impl<
+        N: DictionaryNode,
+        R: QueryResult<N::Unit>,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    > QueryIterator<N, R, P>
 {
     /// Create a new query iterator with custom substitution policy
     pub fn with_policy(
@@ -197,7 +216,37 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
         policy: P,
         substring_mode: bool,
     ) -> Self {
+        // `from_str` derives units from the query string. For `u8`/`char` alphabets
+        // this is the term itself; for a `u64` token alphabet it byte-packs the UTF-8
+        // (lossy) — such callers must use [`with_units`](Self::with_units) instead.
         let query_units = N::Unit::from_str(&query);
+        Self::with_units(
+            root,
+            query_units,
+            max_distance,
+            algorithm,
+            policy,
+            substring_mode,
+        )
+    }
+
+    /// Create a query iterator from a pre-computed unit sequence, bypassing the
+    /// `&str` → units conversion.
+    ///
+    /// This is the units-native entry point required for alphabets whose
+    /// `CharUnit::from_str` is not the identity — notably a `u64` token-id
+    /// dictionary built via `insert_sequence(&[u64])`, where the `&str` path would
+    /// byte-pack the query and never match. The automaton core is fully
+    /// unit-generic, so this differs from [`with_policy_and_substring`](Self::with_policy_and_substring)
+    /// only in skipping `from_str`.
+    pub fn with_units(
+        root: N,
+        query_units: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+        policy: P,
+        substring_mode: bool,
+    ) -> Self {
         let initial = initial_state(query_units.len(), max_distance, algorithm);
 
         let mut pending = VecDeque::new();
@@ -238,15 +287,16 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
                 };
 
                 if distance <= self.max_distance {
-                    let term = intersection.term(&self.path_arena);
+                    let units = intersection.units(&self.path_arena);
 
                     // Queue children for further exploration
                     self.queue_children(&intersection);
 
-                    // Convert (term, distance) to result type R
+                    // Convert (units, distance) to result type R
                     // This is zero-cost: QueryResult::from_match is inlined
-                    // and monomorphized at compile time
-                    return Some(R::from_match(term, distance));
+                    // and monomorphized at compile time. String/Candidate apply
+                    // CharUnit::to_string; Vec<U>/UnitCandidate keep the units verbatim.
+                    return Some(R::from_match(&units, distance));
                 } else {
                     // Even if this final node is too far, we must still explore its children
                     // Example: dict ["z", "za"], query "za" (dist=0)
@@ -319,8 +369,11 @@ impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPoli
     }
 }
 
-impl<N: DictionaryNode, R: QueryResult, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
-    Iterator for QueryIterator<N, R, P>
+impl<
+        N: DictionaryNode,
+        R: QueryResult<N::Unit>,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    > Iterator for QueryIterator<N, R, P>
 {
     type Item = R;
 
@@ -343,6 +396,16 @@ pub type StringQueryIterator<N> = QueryIterator<N, String>;
 ///
 /// Equivalent to `QueryIterator<N, Candidate>`.
 pub type CandidateIterator<N> = QueryIterator<N, Candidate>;
+
+/// Type alias for a query iterator that returns matched terms as raw unit
+/// sequences (`Vec<N::Unit>`) — the units-native, lossless counterpart of
+/// [`StringQueryIterator`] (e.g. `Vec<u64>` token-id sequences).
+pub type UnitQueryIterator<N> = QueryIterator<N, Vec<<N as DictionaryNode>::Unit>>;
+
+/// Type alias for a query iterator that returns [`UnitCandidate`] structs
+/// (unit-sequence term + distance) — the units-native counterpart of
+/// [`CandidateIterator`].
+pub type UnitCandidateIterator<N> = QueryIterator<N, UnitCandidate<<N as DictionaryNode>::Unit>>;
 
 #[cfg(test)]
 mod tests {

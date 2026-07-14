@@ -42,8 +42,9 @@ use super::types::StateId;
 use super::{NFAChar, NFA};
 use crate::transducer::articulatory_costs::ArticulatoryCosts;
 use crate::transducer::Algorithm;
-use rustc_hash::FxHashSet;
-use std::collections::VecDeque;
+use rustc_hash::{FxHashMap, FxHashSet};
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, VecDeque};
 
 const PRODUCT_COST_KEY_SCALE: f64 = 1_000_000.0;
 const PRODUCT_SEARCH_CAPACITY_LIMIT: usize = 4096;
@@ -1229,6 +1230,272 @@ impl ProductAutomatonChar {
 
         None
     }
+
+    /// Deletion cost (skip a pattern symbol). Fixed `1.0` unless articulatory
+    /// costs are configured; mirrors [`insertion_cost`](Self::insertion_cost).
+    #[inline]
+    fn deletion_cost(&self) -> f64 {
+        match &self.articulatory_costs {
+            Some(costs) => costs.deletion_cost(),
+            None => 1.0,
+        }
+    }
+
+    /// Transposition cost (swap two adjacent input symbols). Fixed `1.0` unless
+    /// articulatory costs are configured.
+    #[inline]
+    fn transposition_cost(&self) -> f64 {
+        match &self.articulatory_costs {
+            Some(costs) => costs.transposition_cost(),
+            None => 1.0,
+        }
+    }
+
+    /// Merge cost (two input symbols collapse onto one pattern edge). Fixed
+    /// `1.0` unless articulatory costs are configured.
+    #[inline]
+    fn merge_cost(&self) -> f64 {
+        match &self.articulatory_costs {
+            Some(costs) => costs.merge_cost(),
+            None => 1.0,
+        }
+    }
+
+    /// Split cost (one input symbol splits across two pattern edges). Fixed
+    /// `1.0` unless articulatory costs are configured.
+    #[inline]
+    fn split_cost(&self) -> f64 {
+        match &self.articulatory_costs {
+            Some(costs) => costs.split_cost(),
+            None => 1.0,
+        }
+    }
+
+    /// Minimum *articulatory-weighted* cost to accept `input`, or `None` if the
+    /// least-cost alignment exceeds `max_cost`.
+    ///
+    /// This is the fractional twin of [`min_distance`](Self::min_distance): it
+    /// runs the same seven product operations (match, substitution, insertion,
+    /// deletion, transposition, merge, split) but accumulates a real-valued
+    /// cost, where a substitution is charged its *articulatory* (feature)
+    /// distance when [`ArticulatoryCosts`] are configured — so a phonetically
+    /// near substitution (e.g. a voiced/voiceless pair) costs a fraction of a
+    /// full edit. With no articulatory costs configured every operation costs
+    /// `1.0` and the result equals `min_distance` cast to `f64`.
+    ///
+    /// # Algorithm
+    ///
+    /// A uniform-cost (Dijkstra) search over product states `(position, NFA
+    /// state set)`. Every edit edge carries a non-negative cost, so the first
+    /// accepting configuration popped from the min-priority frontier is
+    /// provably optimal. `deletion` advances the NFA past a pattern symbol
+    /// *without* consuming input at any position, which subsumes the "reach a
+    /// final state through trailing deletions" case that `min_distance` handles
+    /// with a separate `distance_to_final_vec` walk. The frontier is ordered by
+    /// `product_cost_key`, a monotone `f64 -> i64` map, which also keys the
+    /// closed set.
+    ///
+    /// The returned cost is `<= min_distance(input)` — substitutions are only
+    /// ever discounted, never inflated, relative to the unit-cost model.
+    pub fn min_cost(&self, input: &str) -> Option<f64> {
+        // Local min-priority frontier node, ordered solely by `cost_key`.
+        struct CostFrontierNode {
+            cost_key: i64,
+            cost: f64,
+            pos: usize,
+            states: Vec<StateId>,
+        }
+        impl PartialEq for CostFrontierNode {
+            fn eq(&self, other: &Self) -> bool {
+                self.cost_key == other.cost_key
+            }
+        }
+        impl Eq for CostFrontierNode {}
+        impl PartialOrd for CostFrontierNode {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+        impl Ord for CostFrontierNode {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.cost_key.cmp(&other.cost_key)
+            }
+        }
+
+        let ins_cost = self.insertion_cost();
+        let del_cost = self.deletion_cost();
+        // Small tolerance so an alignment whose cost lands exactly on the budget
+        // is not rejected by floating-point rounding.
+        let budget = self.max_cost + 1e-9;
+
+        if self.nfa.is_empty() {
+            // Empty pattern: the only alignment inserts every input character.
+            let cost = input.chars().count() as f64 * ins_cost;
+            return (cost <= budget).then_some(cost);
+        }
+
+        let input_chars: Vec<char> = input.chars().collect();
+        let n = input_chars.len();
+
+        let initial = state_set_to_sorted_vec(self.nfa.epsilon_closure_single(self.nfa.start()));
+
+        let mut frontier: BinaryHeap<Reverse<CostFrontierNode>> = BinaryHeap::new();
+        // Dijkstra closed set: least cost-key already settled per (pos, states).
+        let mut best: FxHashMap<(usize, Vec<StateId>), i64> = FxHashMap::default();
+
+        frontier.push(Reverse(CostFrontierNode {
+            cost_key: product_cost_key(0.0),
+            cost: 0.0,
+            pos: 0,
+            states: initial,
+        }));
+
+        while let Some(Reverse(node)) = frontier.pop() {
+            let CostFrontierNode {
+                cost, pos, states, ..
+            } = node;
+            if cost > budget {
+                continue;
+            }
+
+            // Skip if this configuration was already settled at an equal-or-lower cost.
+            let cost_key = product_cost_key(cost);
+            let key = (pos, states.clone());
+            match best.get(&key) {
+                Some(&settled) if settled <= cost_key => continue,
+                _ => {
+                    best.insert(key, cost_key);
+                }
+            }
+
+            // Accept: all input consumed AND some NFA state is final. Dijkstra
+            // guarantees this first accepting pop is the global minimum.
+            if pos == n && states.iter().any(|&s| self.nfa.is_final(s)) {
+                return Some(cost);
+            }
+
+            // Deletion: advance the NFA past one pattern symbol, input position
+            // unchanged. Available at every position (including `pos == n`),
+            // which is how trailing pattern symbols reach a final state.
+            let advanced = self.nfa_advance_vec(&states);
+            if !advanced.is_empty() {
+                let next_cost = cost + del_cost;
+                if next_cost <= budget {
+                    frontier.push(Reverse(CostFrontierNode {
+                        cost_key: product_cost_key(next_cost),
+                        cost: next_cost,
+                        pos,
+                        states: advanced.clone(),
+                    }));
+                }
+            }
+
+            if pos < n {
+                let c = input_chars[pos];
+
+                // 1. Match: consume input against a matching edge (no cost).
+                let matched = self.nfa_step_vec(&states, c);
+                if !matched.is_empty() {
+                    frontier.push(Reverse(CostFrontierNode {
+                        cost_key,
+                        cost,
+                        pos: pos + 1,
+                        states: matched,
+                    }));
+                }
+
+                // 2. Substitution: consume input against a *non*-matching edge,
+                //    charged the articulatory distance to that edge's symbol.
+                for &nfa_state in &states {
+                    for trans in self.nfa.transitions_from(nfa_state) {
+                        if trans.label.consumes_input() {
+                            let sub_cost = self.substitution_cost(c, trans.label.expected_char());
+                            let next_cost = cost + sub_cost;
+                            if next_cost <= budget {
+                                let closure = state_set_to_sorted_vec(
+                                    self.nfa.epsilon_closure_single(trans.to),
+                                );
+                                if !closure.is_empty() {
+                                    frontier.push(Reverse(CostFrontierNode {
+                                        cost_key: product_cost_key(next_cost),
+                                        cost: next_cost,
+                                        pos: pos + 1,
+                                        states: closure,
+                                    }));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Insertion: consume input with no NFA move.
+                let next_cost = cost + ins_cost;
+                if next_cost <= budget {
+                    frontier.push(Reverse(CostFrontierNode {
+                        cost_key: product_cost_key(next_cost),
+                        cost: next_cost,
+                        pos: pos + 1,
+                        states: states.clone(),
+                    }));
+                }
+
+                // 4. Transposition: swap two adjacent input symbols.
+                if self.algorithm.supports_transposition() && pos + 1 < n {
+                    let transposed = self.nfa_step_transposed_vec(&states, c, input_chars[pos + 1]);
+                    if !transposed.is_empty() {
+                        let next_cost = cost + self.transposition_cost();
+                        if next_cost <= budget {
+                            frontier.push(Reverse(CostFrontierNode {
+                                cost_key: product_cost_key(next_cost),
+                                cost: next_cost,
+                                pos: pos + 2,
+                                states: transposed,
+                            }));
+                        }
+                    }
+                }
+
+                // 5/6. Merge & Split (generic Merge-and-Split), both off the
+                //      NFA-advanced state set.
+                if self.algorithm.supports_merge_split() && !advanced.is_empty() {
+                    // Merge: two input symbols collapse onto one pattern edge.
+                    if pos + 1 < n {
+                        let merged = self.nfa_step_merged_from_advance_vec(
+                            &advanced,
+                            c,
+                            input_chars[pos + 1],
+                        );
+                        if !merged.is_empty() {
+                            let next_cost = cost + self.merge_cost();
+                            if next_cost <= budget {
+                                frontier.push(Reverse(CostFrontierNode {
+                                    cost_key: product_cost_key(next_cost),
+                                    cost: next_cost,
+                                    pos: pos + 2,
+                                    states: merged,
+                                }));
+                            }
+                        }
+                    }
+                    // Split: one input symbol splits across two pattern edges.
+                    let split = self.nfa_step_split_from_advance_vec(&advanced, c);
+                    if !split.is_empty() {
+                        let next_cost = cost + self.split_cost();
+                        if next_cost <= budget {
+                            frontier.push(Reverse(CostFrontierNode {
+                                cost_key: product_cost_key(next_cost),
+                                cost: next_cost,
+                                pos: pos + 1,
+                                states: split,
+                            }));
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
 }
 
 // ============================================================================
@@ -2306,12 +2573,8 @@ mod tests {
             .expect("test: compile nfa bytes");
         let bneg = ProductAutomaton::with_phonetic_weight(bnfa.clone(), 2, -1.0);
         assert_eq!(bneg.phonetic_weight(), 0.0);
-        let bweighted = ProductAutomaton::with_algorithm_and_weight(
-            bnfa.clone(),
-            2,
-            Algorithm::Standard,
-            2.0,
-        );
+        let bweighted =
+            ProductAutomaton::with_algorithm_and_weight(bnfa.clone(), 2, Algorithm::Standard, 2.0);
         assert_eq!(bweighted.phonetic_weight(), 2.0);
         let bbaseline = ProductAutomaton::new(bnfa, 2);
         let byte_probes: [&[u8]; 4] = [b"phone", b"phon", b"phones", b"xyz"];
@@ -2533,6 +2796,78 @@ mod tests {
                 sh_cost,
                 sh_p_cost
             );
+        }
+
+        #[test]
+        fn test_min_cost_exact_match_is_zero() {
+            let nfa = compile(&parse("pat").expect("parse")).expect("compile");
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                2.0,
+                Algorithm::Standard,
+                ArticulatoryCosts::default(),
+            );
+            assert_eq!(product.min_cost("pat"), Some(0.0));
+        }
+
+        #[test]
+        fn test_min_cost_equals_min_distance_without_articulatory() {
+            // With no articulatory costs every operation costs 1.0, so the
+            // uniform-cost search must agree with the integer edit distance.
+            let nfa = compile(&parse("pat").expect("parse")).expect("compile");
+            let product = ProductAutomatonChar::new(nfa, 3);
+            for input in ["pat", "bat", "pot", "pats", "at", "ppat"] {
+                let cost = product.min_cost(input);
+                let dist = product.min_distance(input).map(f64::from);
+                assert_eq!(
+                    cost, dist,
+                    "min_cost must equal min_distance (as f64) without articulatory costs, for {input:?}"
+                );
+            }
+        }
+
+        #[test]
+        fn test_min_cost_discounts_soundalike_substitution() {
+            // Pattern "pat"; align dictionary terms "bat" (b→p, near) and "cat"
+            // (c→p, far). Both are one integer edit, but the articulatory cost of
+            // the near pair must be strictly smaller, and both below a full edit.
+            let nfa = compile(&parse("pat").expect("parse")).expect("compile");
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                2.0,
+                Algorithm::Standard,
+                ArticulatoryCosts::default(),
+            );
+
+            let bat = product.min_cost("bat").expect("bat within budget");
+            let cat = product.min_cost("cat").expect("cat within budget");
+
+            assert_eq!(product.min_distance("bat"), Some(1));
+            assert_eq!(product.min_distance("cat"), Some(1));
+            assert!(
+                bat < 1.0,
+                "near substitution discounted below a full edit: {bat}"
+            );
+            assert!(
+                bat < cat,
+                "near pair (b→p = {bat}) must cost less than far pair (c→p = {cat})"
+            );
+            // min_cost never exceeds min_distance (substitutions only discount).
+            assert!(bat <= 1.0 && cat <= 1.0);
+        }
+
+        #[test]
+        fn test_min_cost_respects_budget() {
+            // A term needing more than the cost budget yields None.
+            let nfa = compile(&parse("pat").expect("parse")).expect("compile");
+            let product = ProductAutomatonChar::with_articulatory_costs(
+                nfa,
+                1.0,
+                Algorithm::Standard,
+                ArticulatoryCosts::default(),
+            );
+            // "xyzzy" is far more than 1.0 in articulatory cost from "pat".
+            assert_eq!(product.min_cost("xyzzy"), None);
         }
 
         /// Test that max_cost threshold is respected.

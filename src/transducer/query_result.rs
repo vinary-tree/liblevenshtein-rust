@@ -8,7 +8,8 @@
 //! factory pattern, providing zero-cost abstraction through Rust's
 //! monomorphization.
 
-use super::query::Candidate;
+use super::query::{Candidate, UnitCandidate};
+use libdictenstein::CharUnit;
 
 /// Trait for converting a match (term + distance) into a result type.
 ///
@@ -52,30 +53,60 @@ use super::query::Candidate;
 ///     println!("{}: distance {}", candidate.term, candidate.distance);
 /// }
 /// ```
-pub trait QueryResult: Sized {
+pub trait QueryResult<U: CharUnit>: Sized {
     /// Convert a match into the result type.
     ///
     /// # Parameters
-    /// - `term`: The matched dictionary term
+    /// - `units`: The matched dictionary term as its raw unit sequence
     /// - `distance`: The edit distance from the query
     ///
     /// # Returns
-    /// The result in the appropriate format (String, Candidate, etc.)
-    fn from_match(term: String, distance: usize) -> Self;
+    /// The result in the appropriate format. `String`/`Candidate` reconstruct the
+    /// term text via [`CharUnit::to_string`]; `Vec<U>`/`UnitCandidate` keep the units
+    /// verbatim (lossless for `u64` token sequences, whose `to_string` is a lossy
+    /// byte-unpack).
+    fn from_match(units: &[U], distance: usize) -> Self;
 }
 
-/// Implementation for String: returns just the term, ignoring distance.
-impl QueryResult for String {
+/// Implementation for `String`: reconstructs the term text, ignoring distance.
+///
+/// For a `u64` (token-sequence) dictionary this is a **lossy** byte-unpack; prefer a
+/// `Vec<u64>` / [`UnitCandidate`] result there.
+impl<U: CharUnit> QueryResult<U> for String {
     #[inline]
-    fn from_match(term: String, _distance: usize) -> Self {
-        term
+    fn from_match(units: &[U], _distance: usize) -> Self {
+        U::to_string(units)
     }
 }
 
-/// Implementation for Candidate: returns both term and distance.
-impl QueryResult for Candidate {
+/// Implementation for `Candidate`: reconstructs the term text plus its distance.
+impl<U: CharUnit> QueryResult<U> for Candidate {
     #[inline]
-    fn from_match(term: String, distance: usize) -> Self {
-        Candidate { term, distance }
+    fn from_match(units: &[U], distance: usize) -> Self {
+        Candidate {
+            term: U::to_string(units),
+            distance,
+        }
+    }
+}
+
+/// Implementation for `Vec<U>`: the matched term as its raw unit sequence — the
+/// units-native result (e.g. a `Vec<u64>` token-id sequence), with no `String`
+/// round-trip. Lossless for every alphabet.
+impl<U: CharUnit> QueryResult<U> for Vec<U> {
+    #[inline]
+    fn from_match(units: &[U], _distance: usize) -> Self {
+        units.to_vec()
+    }
+}
+
+/// Implementation for [`UnitCandidate`]: units-native term plus its distance.
+impl<U: CharUnit> QueryResult<U> for UnitCandidate<U> {
+    #[inline]
+    fn from_match(units: &[U], distance: usize) -> Self {
+        UnitCandidate {
+            term: units.to_vec(),
+            distance,
+        }
     }
 }
