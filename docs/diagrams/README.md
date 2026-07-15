@@ -24,7 +24,7 @@ concern; a diagram that spans concerns lives with the concern it *teaches*.
 |---|---|
 | `architectures/` | crate boundary, layered component stack, C4 views, feature-flag & module graphs |
 | `automata/` | Levenshtein NFAs, position-sets, subsumption, the three automaton implementations, WallBreaker |
-| `traversal/` | the lazy-simulation query model and the transducer `$\cap$` dictionary lock-step walk |
+| `traversal/` | the lazy-simulation query model and the transducer $`\cap`$ dictionary lock-step walk |
 | `dictionary-structures/` | backend taxonomy & decision tree, trait relationships, DAWG/SCDAWG internals |
 | `concurrency/` | the locking / wait-free read model |
 | `distance/` | `standard_distance` SIMD/Myers dispatch |
@@ -152,15 +152,35 @@ points/curves with the legend hues via `rgb("RRGGBB")`.
 
 ### Math in labels
 
-Render formulae in diagram labels as **LaTeX**, mirroring the prose math convention — not
-as Unicode literals — wherever the tool supports it:
+Diagram math follows a **HYBRID** rule, mirroring the prose MathJax convention but adapted to the
+renderers' limits:
 
-- **PlantUML** (`.puml`) typesets LaTeX natively through the bundled JLaTeXMath. Use
-  `<latex>…</latex>` for an inline fragment and `<math>…</math>` for a display fragment
-  inside any label, e.g. `state "accept if <latex>d(W,s) \le k</latex>" as A`. Output is
-  embedded vector SVG, so it stays byte-reproducible under `render.sh --check`.
+- **A genuine multi-symbol formula** — big-O, an (in)equality between math terms, a set-builder, a
+  bracketed position tuple, a transition equation — is typeset as **one cohesive LaTeX unit**.
+  **Never split ASCII text and LaTeX inside a single expression** (the anti-pattern
+  `O(<latex>\vert W\vert</latex>)` — plain `O(` around a LaTeX `|W|` — is what this rule forbids;
+  write `<latex>\mathcal{O}(\vert W\vert)</latex>`). Use `\text{…}` for prose words that sit
+  *inside* a formula, e.g. `<latex>\{ (\text{term}, \text{distance}) : \text{distance} \le k \}</latex>`.
+- **A lone standalone symbol** beside prose — a single relation/operator (`∩ ∈ ≤ × ↔ ⇒ ⇄ ∧ ∅`), a
+  lone Greek letter (`χ δ ε λ`), or a standalone sub/superscripted identifier Unicode can render
+  (`q₀`, `Pᵢ`, `sym₁`) — stays a **Unicode literal at the body font size (14 px)**. Bare single
+  variables (`k`, `W`, `D`) likewise stay plain text.
+
+Why the split: PlantUML/JLaTeXMath renders each `<latex>` as a **fixed-size raster image ~1.4× the
+14 px body text**, and there is **no** skinparam/scale knob to shrink it. Wrapping a lone glyph
+therefore just floats an oversized symbol in the text; wrapping a whole formula earns the size
+because Unicode cannot typeset it cleanly. Keep body text the dominant 14 px size so a
+font-matching viewer normalises the figure to prose scale.
+
+Per tool:
+
+- **PlantUML** (`.puml`) — bundled JLaTeXMath. `<latex>…</latex>` inline, `<math>…</math>` display,
+  e.g. `rectangle "construction:  <latex>\mathcal{O}(\vert W\vert)</latex>" as A`. **JLaTeXMath is
+  NOT full MathJax:** use `\vert … \vert` for bars — **not** `\lvert`/`\rvert`, which throw
+  `Unknown symbol 'lvert'` — and `\mathcal{O}(…)` for big-O. Output is embedded vector SVG, so it
+  stays byte-reproducible under `render.sh --check`.
 - **Structurizr** (`.dsl`) exports through PlantUML and inherits the same `<latex>` facility.
-- **Asymptote** (`.asy`) typesets LaTeX directly: `label("$\mathcal{O}(n)$", position)`.
+- **Asymptote** (`.asy`) typesets LaTeX directly via `$…$`: `label("$\mathcal{O}(n)$", position)`.
 - **Graphviz** (`.dot`), **D2** (`.d2`), **Pikchr**, and **Mermaid** have **no** LaTeX-label
   facility, so a formula in one of their labels stays a compact Unicode literal — keep it
   short, and prefer a PlantUML source when a label is math-heavy:

@@ -16,14 +16,14 @@ skinparam state {
   FontColor #0D47A1
 }
 
-title Transposition (Damerau) NFA — W = "ab",  k = 1   (adds the blue transposition path "ba")
+title Transposition (Damerau) NFA — <latex>W = \text{"ab"}</latex>,  <latex>k = 1</latex>   (adds the blue transposition path "ba")
 
 state "<latex>\langle 0,0\rangle</latex>" as q00
 state "<latex>\langle 1,0\rangle</latex>" as q10
 state "<latex>\langle 2,0\rangle</latex> ✓" as q20 #C8E6C9
 state "<latex>\langle 1,1\rangle</latex>" as q11
 state "<latex>\langle 2,1\rangle</latex> ✓" as q21 #C8E6C9
-state "t: read W[1]=b\nthen W[0]=a" as qt #BBDEFB
+state "t: read <latex>W[1]=b</latex>\nthen <latex>W[0]=a</latex>" as qt #BBDEFB
 
 [*] --> q00
 
@@ -40,8 +40,8 @@ q10 -[#6A1B9A]-> q21 : <latex>x \ne b</latex>
 q00 -[#EF6C00]-> q11 : any
 
 ' deletion (+1, ε)
-q00 -[#C62828]-> q11 : <latex>\varepsilon</latex>
-q10 -[#C62828]-> q21 : <latex>\varepsilon</latex>
+q00 -[#C62828]-> q11 : ε
+q10 -[#C62828]-> q21 : ε
 
 ' transposition (+1): read "ba" to cover W = "ab"
 q00 -[#0277BD,thickness=2]-> qt : b

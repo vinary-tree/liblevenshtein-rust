@@ -59,8 +59,8 @@ for (int i = 0; i < m; ++i) {
 // 4. Axes and arrows.
 draw((0, 0)--(m + 0.4, 0), axisPen, Arrow(4));
 draw((0, 0)--(0, n + 0.4), axisPen, Arrow(4));
-label("X (query series) $\to$", (m / 2, -0.7), rgb("455A64"));
-label(rotate(90) * "Y (candidate) $\to$", (-0.7, n / 2), rgb("455A64"));
+label("$X$ (query series) $\to$", (m / 2, -0.7), rgb("455A64"));
+label(rotate(90) * "$Y$ (candidate) $\to$", (-0.7, n / 2), rgb("455A64"));
 
 // 5. Title.
 label("MSM wavefront — frontier of the cost matrix", (m / 2, n + 1.1),

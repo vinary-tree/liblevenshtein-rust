@@ -20,11 +20,11 @@ title Query: find every dictionary term within edit distance k of W
 rectangle "Query term  W\nmax edit distance  k" as W #B2EBF2
 rectangle "Dictionary  D\nDAWG / trie / DAWG-of-suffixes" as D #C8E6C9
 
-rectangle "Build Levenshtein automaton  A(W, k)\nrecognizes every string s with  d(W, s) <latex>\le</latex> k\nconstruction:  O(<latex>\vert W\vert</latex>)" as A #E3F2FD
+rectangle "Build Levenshtein automaton  <latex>A(W, k)</latex>\nrecognizes every string s with  <latex>d(W, s) \le k</latex>\nconstruction:  <latex>\mathcal{O}(\vert W\vert)</latex>" as A #E3F2FD
 
-rectangle "Simultaneous traversal   A(W, k)  <latex>\cap</latex>  D\none depth-first pass over shared edges\ntraversal:  O(<latex>\vert D\vert</latex>)" as I #FFE0B2
+rectangle "Simultaneous traversal   <latex>A(W, k) \cap D</latex>\none depth-first pass over shared edges\ntraversal:  <latex>\mathcal{O}(\vert D\vert)</latex>" as I #FFE0B2
 
-rectangle "Candidates\n{ (term, distance) : distance <latex>\le</latex> k }" as C #C8E6C9
+rectangle "Candidates\n<latex>\{ (\text{term}, \text{distance}) : \text{distance} \le k \}</latex>" as C #C8E6C9
 
 W -[#00838F,thickness=2]down-> A
 A -[#1565C0,thickness=2]down-> I

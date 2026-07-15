@@ -36,7 +36,7 @@ class "StatePool" as Pool #E3F2FD {
   release(State)
 }
 
-class "Subsumption  <latex>\le\chi</latex>" as Sub #E3F2FD {
+class "Subsumption  ≤χ" as Sub #E3F2FD {
   <latex>\langle i,e\rangle \le \langle i',e'\rangle</latex>  iff
   <latex>e \le e' \land \vert i - i'\vert \le e' - e</latex>
 }

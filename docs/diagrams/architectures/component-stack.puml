@@ -32,7 +32,7 @@ rectangle "Core — Levenshtein transducer & automata" as L2 #BBDEFB {
 }
 
 rectangle "libdictenstein — dictionary backends" as L1 #C8E6C9 {
-  rectangle "DoubleArrayTrie(Char)\nstatic · O(1) transitions" as dat #E8F5E9
+  rectangle "DoubleArrayTrie(Char)\nstatic · <latex>\mathcal{O}(1)</latex> transitions" as dat #E8F5E9
   rectangle "DynamicDawg(Char/U64)\nupdatable · SIMD + Bloom" as dg #E8F5E9
   rectangle "SuffixAutomaton(Char)\nsubstring search" as sa #E8F5E9
   rectangle "Scdawg(Char)\nbidirectional · WallBreaker" as sc #E8F5E9

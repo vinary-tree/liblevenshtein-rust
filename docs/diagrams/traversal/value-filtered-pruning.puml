@@ -29,7 +29,7 @@ if (subtree's value summary can satisfy the predicate?) then (no)
   end note
   stop
 else (yes)
-  if (terminal <latex>\land</latex> accepting <latex>\land</latex> value matches predicate?) then (yes)
+  if (terminal ∧ accepting ∧ value matches predicate?) then (yes)
     #C8E6C9:yield (term, distance, &value);
   endif
   :recurse into the surviving subtree;

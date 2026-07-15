@@ -24,7 +24,7 @@ skinparam rectangle {
 skinparam ArrowColor #37474F
 skinparam ArrowThickness 2
 
-title Phonetic matching as a product automaton — (pattern NFA) <latex>\cap</latex> A(W,k), walked over the dictionary
+title Phonetic matching as a product automaton — (pattern NFA) ∩ <latex>A(W,k)</latex>, walked over the dictionary
 
 ' ── Phonetic-pattern strand ──────────────────────────────────────────────
 rectangle "Phonetic pattern\n(.llre  /  rewrite rule)" as PAT #F8BBD0
@@ -33,10 +33,10 @@ rectangle "Pattern NFA" as PNFA #F8BBD0
 
 ' ── Levenshtein strand ───────────────────────────────────────────────────
 rectangle "Query term  W,  k" as QUERY #B2EBF2
-rectangle "Levenshtein automaton\nA(W, k)" as LEV #E3F2FD
+rectangle "Levenshtein automaton\n<latex>A(W, k)</latex>" as LEV #E3F2FD
 
 ' ── Product + traversal + output ─────────────────────────────────────────
-rectangle "Product automaton\n(pattern NFA  <latex>\cap</latex>  A(W, k))" as PROD #FFE0B2
+rectangle "Product automaton\n(pattern NFA ∩ <latex>A(W, k)</latex>)" as PROD #FFE0B2
 rectangle "Lock-step walk over dictionary" as WALK #FFE0B2
 rectangle "Phonetic candidates" as OUT #C8E6C9
 

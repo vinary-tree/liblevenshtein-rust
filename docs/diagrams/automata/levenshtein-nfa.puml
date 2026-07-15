@@ -17,7 +17,7 @@ skinparam state {
   FontColor #0D47A1
 }
 
-title Levenshtein NFA — W = "ab",  k = 1   (state <latex>\langle i,e\rangle</latex> = <latex>\langle \text{W chars consumed, edits used}\rangle</latex>)
+title Levenshtein NFA — <latex>W = \text{"ab"}</latex>,  <latex>k = 1</latex>   (state <latex>\langle i,e\rangle = \langle \text{W chars consumed, edits used}\rangle</latex>)
 
 state "<latex>\langle 0,0\rangle</latex>" as q00
 state "<latex>\langle 1,0\rangle</latex>" as q10
@@ -44,8 +44,8 @@ q10 -[#EF6C00]-> q11 : any
 q20 -[#EF6C00]-> q21 : any
 
 ' deletion (+1, ε)
-q00 -[#C62828]-> q11 : <latex>\varepsilon</latex>
-q10 -[#C62828]-> q21 : <latex>\varepsilon</latex>
+q00 -[#C62828]-> q11 : ε
+q10 -[#C62828]-> q21 : ε
 
 q20 --> [*]
 q21 --> [*]

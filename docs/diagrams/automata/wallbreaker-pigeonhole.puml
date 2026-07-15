@@ -16,24 +16,24 @@ skinparam rectangle {
 skinparam ArrowColor #37474F
 skinparam ArrowThickness 2
 
-title WallBreaker — pigeonhole filtering   (shown: k = 2 ⇒ k+1 = 3 pieces)
+title WallBreaker — pigeonhole filtering   (shown: <latex>k = 2</latex> ⇒ <latex>k+1 = 3</latex> pieces)
 
-rectangle "Pattern  P   (|P| = m)" as P #B2EBF2
+rectangle "Pattern  P   (<latex>\vert P\vert = m</latex>)" as P #B2EBF2
 
 together {
-  rectangle "<latex>P_{1}</latex>\n(exact)" as p1 #C8E6C9
-  rectangle "<latex>P_{2}</latex>\n(1 edit)" as p2 #FFCDD2
-  rectangle "<latex>P_{3}</latex>\n(exact)" as p3 #C8E6C9
+  rectangle "P₁\n(exact)" as p1 #C8E6C9
+  rectangle "P₂\n(1 edit)" as p2 #FFCDD2
+  rectangle "P₃\n(exact)" as p3 #C8E6C9
 }
 note right of p3
-  With <latex>\le</latex> k edits spread across k+1 disjoint pieces,
-  by the pigeonhole principle at least one piece (here <latex>P_{1}</latex>, <latex>P_{3}</latex>)
+  With <latex>\le k</latex> edits spread across k+1 disjoint pieces,
+  by the pigeonhole principle at least one piece (here P₁, P₃)
   must be error-free.
 end note
 
-rectangle "Locate the error-free piece exactly in the SCDAWG\nO(<latex>\vert P_{i}\vert</latex>) — no wall, no prefix blow-up" as M #C8E6C9
+rectangle "Locate the error-free piece exactly in the SCDAWG\n<latex>\mathcal{O}(\vert P_{i}\vert)</latex> — no wall, no prefix blow-up" as M #C8E6C9
 rectangle "Extend the match bidirectionally\n(left ← and → right) within the remaining edit budget" as E #E1BEE7
-rectangle "Verify total edits <latex>\le</latex> k\n→ candidate (term, distance)" as V #C8E6C9
+rectangle "Verify total edits <latex>\le k</latex>\n→ candidate (term, distance)" as V #C8E6C9
 
 P -[#00838F]down-> p2 : "split into k+1 pieces"
 p1 -[hidden]right- p2

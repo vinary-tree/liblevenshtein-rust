@@ -33,7 +33,7 @@ class "ValueFilteredQueryIterator" as VF #C5CAE9 {
   prune by value predicate
 }
 class "ValueSetFilteredQueryIterator" as VSF #C5CAE9 {
-  prune by value <latex>\in</latex> set
+  prune by value ∈ set
 }
 class "ValueYieldingQueryIterator" as VY #C5CAE9 {
   yields (term, distance, &value)
