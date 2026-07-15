@@ -699,7 +699,7 @@ Cache wrappers stack via the **decorator pattern** (innermost applied first); al
 | **Lru** / **Age** | least-recently-used / FIFO | general / fair |
 | **Lfu** | lowest access count | long-lived caches |
 | **CostAware** | $`(\text{age} \times \text{size}) \div (\text{hits} + 1)`$ | balance regeneration cost vs. space |
-| **MemoryPressure** | $`\text{size} \div (\text{hit_rate} + 0.1)`$ | memory-constrained |
+| **MemoryPressure** | $`\text{size} \div (\text{hit\_rate} + 0.1)`$ | memory-constrained |
 
 ```rust
 use liblevenshtein::prelude::*;
